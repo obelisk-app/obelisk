@@ -1,0 +1,178 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Server {
+  id         String    @id @default(cuid())
+  name       String
+  icon       String?
+  banner     String?
+  ownerPubkey String
+  joinMode   String    @default("open") // open | invite-only
+  createdAt  DateTime  @default(now())
+
+  categories Category[]
+  channels   Channel[]
+  members    Member[]
+  bans       Ban[]
+  mutes      Mute[]
+  warnings   Warning[]
+  reports    Report[]
+  moderationActions ModerationAction[]
+}
+
+model Category {
+  id       String    @id @default(cuid())
+  serverId String
+  name     String
+  position Int       @default(0)
+
+  server   Server    @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  channels Channel[]
+
+  @@index([serverId])
+}
+
+model Channel {
+  id         String    @id @default(cuid())
+  serverId   String
+  categoryId String?
+  name       String
+  emoji      String?
+  type       String    @default("text") // text | voice | forum
+  position   Int       @default(0)
+  createdAt  DateTime  @default(now())
+
+  server   Server    @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  messages Message[]
+
+  @@index([serverId])
+  @@index([categoryId])
+}
+
+model Message {
+  id           String    @id @default(cuid())
+  channelId    String
+  authorPubkey String
+  content      String
+  replyToId    String?
+  createdAt    DateTime  @default(now())
+  deletedAt    DateTime?
+
+  channel  Channel   @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  replyTo  Message?  @relation("MessageReplies", fields: [replyToId], references: [id])
+  replies  Message[] @relation("MessageReplies")
+  reports  Report[]
+
+  @@index([channelId, createdAt])
+  @@index([authorPubkey])
+}
+
+model Member {
+  id       String   @id @default(cuid())
+  serverId String
+  pubkey   String
+  role     String   @default("member") // owner | admin | mod | member
+  joinedAt DateTime @default(now())
+
+  // Cached Nostr profile data
+  displayName String?
+  picture     String?
+  nip05       String?
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@unique([serverId, pubkey])
+  @@index([serverId])
+  @@index([pubkey])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  pubkey    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([pubkey])
+  @@index([token])
+}
+
+model Ban {
+  id            String   @id @default(cuid())
+  serverId      String
+  pubkey        String
+  bannedByPubkey String
+  reason        String?
+  createdAt     DateTime @default(now())
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@unique([serverId, pubkey])
+  @@index([serverId])
+}
+
+model Mute {
+  id            String   @id @default(cuid())
+  serverId      String
+  targetPubkey  String
+  mutedByPubkey String
+  expiresAt     DateTime
+  reason        String?
+  createdAt     DateTime @default(now())
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@index([serverId, targetPubkey])
+}
+
+model Warning {
+  id             String   @id @default(cuid())
+  serverId       String
+  targetPubkey   String
+  issuedByPubkey String
+  reason         String
+  createdAt      DateTime @default(now())
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@index([serverId, targetPubkey])
+}
+
+model Report {
+  id              String    @id @default(cuid())
+  serverId        String
+  messageId       String
+  reporterPubkey  String
+  reason          String
+  status          String    @default("pending") // pending | resolved | dismissed
+  createdAt       DateTime  @default(now())
+  resolvedAt      DateTime?
+  resolvedByPubkey String?
+
+  server  Server  @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([serverId, status])
+}
+
+model ModerationAction {
+  id           String   @id @default(cuid())
+  serverId     String
+  actorPubkey  String
+  targetPubkey String?
+  action       String   // ban | unban | kick | mute | unmute | warn | delete_message | role_change
+  reason       String?
+  metadata     String?  // JSON string for extra data
+  createdAt    DateTime @default(now())
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@index([serverId, createdAt])
+}

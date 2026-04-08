@@ -23,6 +23,7 @@ Your goal: help them build a winning Nostr Identity app using this starter kit.
 - **Zustand** — lightweight state management
 - **nostr-tools** — low-level Nostr utilities
 - **qrcode.react** — QR code generation for NIP-46 bunker flow
+- **Vitest** + **React Testing Library** — component and unit testing
 
 ## Project Structure
 ```
@@ -50,6 +51,9 @@ src/
 npm install          # Install dependencies
 npm run dev          # Dev server at localhost:3000
 npm run build        # Production build
+npm run test         # Run all tests once
+npm run test:watch   # Run tests in watch mode (re-runs on file changes)
+npm run test:coverage # Run tests with coverage report
 ```
 
 ## What's Already Built
@@ -118,6 +122,174 @@ These are high-impact features a participant could build to win. Suggest the one
 16. **Multi-identity manager** — Switch between multiple Nostr identities
 17. **Identity recovery flow** — Social recovery using trusted contacts
 
+## Testing
+
+### Stack
+- **Vitest** — fast test runner built on Vite, recommended for Next.js
+- **React Testing Library** — DOM-based component testing (renders like a real user sees it)
+- **jsdom** — browser environment simulation for Node.js
+
+### Setup (one-time)
+If not already installed, run:
+```bash
+npm install -D vitest @testing-library/react @testing-library/jest-dom @vitejs/plugin-react jsdom
+```
+
+The project includes a `vitest.config.ts` at the root:
+```typescript
+import { defineConfig } from 'vitest/config';
+import react from '@vitejs/plugin-react';
+import path from 'path';
+
+export default defineConfig({
+  plugins: [react()],
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.ts'],
+    globals: true,
+    css: false,
+    include: ['src/**/*.test.{ts,tsx}'],
+  },
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
+});
+```
+
+And a setup file at `src/test/setup.ts`:
+```typescript
+import '@testing-library/jest-dom/vitest';
+```
+
+### File Conventions
+- **Co-located tests:** Place test files next to the source file they test
+  - `src/components/Profile.tsx` → `src/components/Profile.test.tsx`
+  - `src/lib/nostr.ts` → `src/lib/nostr.test.ts`
+  - `src/store/auth.ts` → `src/store/auth.test.ts`
+- **File naming:** Always use `.test.ts` for logic or `.test.tsx` for components
+- **Test helpers:** Place shared mocks and test utilities in `src/test/`
+
+### What to Test for Each Feature Type
+
+#### Components (`.tsx`)
+- Renders without crashing
+- Displays skeleton loading state when data is loading
+- Renders correct content when data is available
+- User interactions (clicks, form submissions) trigger expected behavior
+- Conditional rendering (logged in vs. logged out, empty states)
+
+#### Stores (Zustand)
+- Initial state is correct
+- Actions update state as expected
+- Persistence (localStorage) works if applicable
+
+#### Library functions (`lib/`)
+- Pure functions return expected outputs
+- Async functions handle timeouts and errors
+- NDK interactions use mocked NDK instances
+
+### Writing Tests — Patterns
+
+#### Component test example:
+```typescript
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { describe, it, expect, vi } from 'vitest';
+import { MyComponent } from './MyComponent';
+
+// Mock NDK or stores as needed
+vi.mock('@/lib/nostr', () => ({
+  getNDK: vi.fn(() => mockNDK),
+  connectNDK: vi.fn(),
+}));
+
+describe('MyComponent', () => {
+  it('renders skeleton while loading', () => {
+    render(<MyComponent />);
+    expect(screen.getByTestId('skeleton')).toBeInTheDocument();
+  });
+
+  it('renders profile data when loaded', async () => {
+    render(<MyComponent pubkey="abc123" />);
+    expect(await screen.findByText('Alice')).toBeInTheDocument();
+  });
+
+  it('handles button click', async () => {
+    const user = userEvent.setup();
+    render(<MyComponent />);
+    await user.click(screen.getByRole('button', { name: /follow/i }));
+    expect(mockPublish).toHaveBeenCalled();
+  });
+});
+```
+
+#### Zustand store test example:
+```typescript
+import { describe, it, expect, beforeEach } from 'vitest';
+import { useAuthStore } from './auth';
+
+describe('useAuthStore', () => {
+  beforeEach(() => {
+    useAuthStore.setState(useAuthStore.getInitialState());
+  });
+
+  it('starts logged out', () => {
+    expect(useAuthStore.getState().pubkey).toBeNull();
+  });
+
+  it('sets pubkey on login', () => {
+    useAuthStore.getState().login('abc123');
+    expect(useAuthStore.getState().pubkey).toBe('abc123');
+  });
+});
+```
+
+#### Mocking NDK:
+```typescript
+// src/test/mocks/ndk.ts
+import { vi } from 'vitest';
+
+export const mockNDK = {
+  connect: vi.fn(),
+  fetchEvents: vi.fn().mockResolvedValue(new Set()),
+  getUser: vi.fn(() => ({
+    pubkey: 'test-pubkey',
+    fetchProfile: vi.fn().mockResolvedValue({ name: 'Test User' }),
+  })),
+  signer: { sign: vi.fn() },
+};
+```
+
+### Workflow: After Finishing Every Feature
+
+> **CRITICAL — NON-NEGOTIABLE RULE:**
+> A feature is **NOT done** until its tests are written, passing, and the full suite runs green.
+> Do NOT move on to the next task, do NOT report completion, do NOT ask the user what's next,
+> until `npm run test` passes with the new tests included.
+> This applies to EVERY change: new components, new stores, new API routes, new lib functions.
+> **No exceptions. No "I'll write tests later." Tests are part of the implementation, not an afterthought.**
+
+**Every time you finish implementing or editing a feature, you MUST:**
+
+1. **Create the test file** next to the source file (e.g., `MyComponent.test.tsx`)
+2. **Write tests** covering: rendering, loading states, user interactions, edge cases
+3. **Run the tests** with `npm run test` and verify they pass
+4. **Fix any failures** before considering the feature done
+5. **Run the full suite** (`npm run test`) to ensure no regressions
+6. **Only THEN** mark the task as complete or move on
+
+> **Rule:** No feature is complete without passing tests. If tests fail, fix the code or the test before moving on. Always run `npm run test` as the final step after any edit.
+
+### Adding `data-testid` Attributes
+When creating components, add `data-testid` attributes to key elements for reliable test selectors:
+```tsx
+<div data-testid="profile-skeleton" className="lc-skeleton" />
+<button data-testid="follow-btn">Follow</button>
+<div data-testid="badge-list">{/* badges */}</div>
+```
+
 ## How to Help the Participant
 
 ### When they first arrive:
@@ -132,6 +304,7 @@ These are high-impact features a participant could build to win. Suggest the one
 - Follow the La Crypta design system — use the `lc-*` CSS classes and color tokens
 - Add skeleton loading for any new data-fetching component
 - Add new sections by: creating a component, adding to `Section` type in `store/nav.ts`, adding nav link in `Navbar.tsx`, rendering in `page.tsx`
+- **Always write tests** for new features — create a `.test.tsx` file next to each new component or module, then run `npm run test` to verify (see the Testing section above)
 
 ### NDK Quick Reference:
 ```typescript

@@ -8,8 +8,12 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'Nostr Starter Kit - La Crypta Hackathon',
-  description: 'Build your first Nostr app. Connect with extension, nsec, or bunker.',
+  title: 'Obelisk — Chat with Nostr Identity',
+  description: 'Discord-like chat app powered by Nostr identity. Built for La Crypta Identity Hackathon 2026.',
+  icons: {
+    icon: '/obelisk.png',
+    apple: '/obelisk.png',
+  },
 };
 
 export default function RootLayout({

@@ -5,6 +5,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { useAuthStore } from '@/store/auth';
 import {
   connectNDK,
+  getNDK,
   loginWithExtension,
   loginWithNsec,
   loginWithBunker,
@@ -12,15 +13,17 @@ import {
   LoginMethod,
   NostrConnectSession,
 } from '@/lib/nostr';
+import { authenticateWithBackend } from '@/lib/backend-auth';
 
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
 type BunkerTab = 'qr' | 'url';
 
-export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
+export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
   const [method, setMethod] = useState<LoginMethod | null>(null);
   const [nsecInput, setNsecInput] = useState('');
   const [bunkerInput, setBunkerInput] = useState('');
@@ -63,8 +66,12 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
         const user = await session.waitForConnection();
         if (cancelled || !user) return;
 
+        // Backend auth BEFORE showing as connected
+        await authenticateWithBackend(getNDK());
+
         setUser(user, 'bunker');
         onClose();
+        onSuccess?.();
       } catch (err) {
         if (!cancelled) {
           console.error('NostrConnect error:', err);
@@ -147,8 +154,12 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
       }
 
       if (user) {
+        // Backend challenge-response auth BEFORE showing connected
+        await authenticateWithBackend(getNDK());
+
         setUser(user, loginMethod);
         onClose();
+        onSuccess?.();
       }
     } catch (err) {
       console.error('Login error:', err);

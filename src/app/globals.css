@@ -187,3 +187,65 @@ body {
   background: rgba(180, 249, 83, 0.25);
   color: #fafafa;
 }
+
+/* === Hero SVG Animations === */
+
+/* Floating chat bubbles */
+@keyframes float-up {
+  0% {
+    transform: translateY(0) translateX(0);
+    opacity: var(--bubble-opacity, 0.08);
+  }
+  50% {
+    opacity: var(--bubble-opacity, 0.08);
+  }
+  100% {
+    transform: translateY(-100vh) translateX(20px);
+    opacity: 0;
+  }
+}
+
+.animate-float-up {
+  animation: float-up var(--float-duration, 18s) linear infinite;
+  animation-delay: var(--float-delay, 0s);
+}
+
+/* Orbiting keys */
+@keyframes orbit {
+  from { transform: rotate(0deg) translateX(80px) rotate(0deg); }
+  to   { transform: rotate(360deg) translateX(80px) rotate(-360deg); }
+}
+
+.animate-orbit {
+  animation: orbit var(--orbit-duration, 20s) linear infinite;
+}
+
+/* Relay dash flow */
+@keyframes dash-flow {
+  from { stroke-dashoffset: 0; }
+  to   { stroke-dashoffset: -40; }
+}
+
+.animate-dash-flow {
+  animation: dash-flow 2s linear infinite;
+}
+
+/* Relay dot pulse */
+@keyframes dot-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.4; }
+  50%      { transform: scale(1.6); opacity: 1; }
+}
+
+.animate-dot-pulse {
+  animation: dot-pulse 3s ease-in-out infinite;
+}
+
+/* Accessibility: disable all hero animations */
+@media (prefers-reduced-motion: reduce) {
+  .animate-float-up,
+  .animate-orbit,
+  .animate-dash-flow,
+  .animate-dot-pulse {
+    animation: none;
+  }
+}

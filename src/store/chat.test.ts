@@ -1,0 +1,99 @@
+import { describe, it, expect, beforeEach } from 'vitest';
+import { useChatStore } from './chat';
+
+describe('useChatStore', () => {
+  beforeEach(() => {
+    useChatStore.setState(useChatStore.getInitialState());
+  });
+
+  it('starts with correct initial state', () => {
+    const state = useChatStore.getState();
+    expect(state.servers).toEqual([]);
+    expect(state.activeServerId).toBeNull();
+    expect(state.pinnedChannels).toEqual([]);
+    expect(state.categories).toEqual([]);
+    expect(state.activeChannelId).toBeNull();
+    expect(state.messages).toEqual([]);
+    expect(state.isLoadingChannels).toBe(true);
+    expect(state.isLoadingMessages).toBe(false);
+    expect(state.replyingTo).toBeNull();
+  });
+
+  it('setServers updates server list', () => {
+    const servers = [{ id: 's1', name: 'Test', icon: null, banner: null }];
+    useChatStore.getState().setServers(servers);
+    expect(useChatStore.getState().servers).toEqual(servers);
+  });
+
+  it('setActiveServer resets channel state', () => {
+    useChatStore.getState().setChannels(
+      [{ id: 'ch1', name: 'gen', emoji: null, type: 'text', position: 0, categoryId: null }],
+      []
+    );
+    useChatStore.getState().setActiveServer('s2');
+    const state = useChatStore.getState();
+    expect(state.activeServerId).toBe('s2');
+    expect(state.pinnedChannels).toEqual([]);
+    expect(state.activeChannelId).toBeNull();
+    expect(state.isLoadingChannels).toBe(true);
+  });
+
+  it('setChannels updates pinned channels and categories', () => {
+    const pinned = [{ id: 'ch1', name: 'general', emoji: '💬', type: 'text', position: 0, categoryId: null }];
+    const categories = [{
+      id: 'cat1', name: 'OFICIAL', position: 0,
+      channels: [{ id: 'ch2', name: 'anuncios', emoji: '📢', type: 'text', position: 0, categoryId: 'cat1' }],
+    }];
+    useChatStore.getState().setChannels(pinned, categories);
+
+    const state = useChatStore.getState();
+    expect(state.pinnedChannels).toEqual(pinned);
+    expect(state.categories).toEqual(categories);
+    expect(state.isLoadingChannels).toBe(false);
+  });
+
+  it('setActiveChannel clears messages, reply, and sets loading', () => {
+    useChatStore.getState().addMessage({
+      id: 'm1', channelId: 'ch1', authorPubkey: 'pk1',
+      content: 'hello', replyToId: null, createdAt: new Date().toISOString(),
+    });
+    useChatStore.getState().setReplyingTo({
+      id: 'm1', channelId: 'ch1', authorPubkey: 'pk1',
+      content: 'hello', replyToId: null, createdAt: new Date().toISOString(),
+    });
+
+    useChatStore.getState().setActiveChannel('ch2');
+    const state = useChatStore.getState();
+    expect(state.activeChannelId).toBe('ch2');
+    expect(state.messages).toEqual([]);
+    expect(state.replyingTo).toBeNull();
+    expect(state.isLoadingMessages).toBe(true);
+  });
+
+  it('addMessage appends to messages', () => {
+    const msg1 = { id: 'm1', channelId: 'ch1', authorPubkey: 'pk1', content: 'first', replyToId: null, createdAt: '2024-01-01' };
+    const msg2 = { id: 'm2', channelId: 'ch1', authorPubkey: 'pk2', content: 'second', replyToId: null, createdAt: '2024-01-02' };
+
+    useChatStore.getState().addMessage(msg1);
+    useChatStore.getState().addMessage(msg2);
+    expect(useChatStore.getState().messages).toEqual([msg1, msg2]);
+  });
+
+  it('removeMessage removes a message by id', () => {
+    const msg1 = { id: 'm1', channelId: 'ch1', authorPubkey: 'pk1', content: 'first', replyToId: null, createdAt: '2024-01-01' };
+    const msg2 = { id: 'm2', channelId: 'ch1', authorPubkey: 'pk2', content: 'second', replyToId: null, createdAt: '2024-01-02' };
+    useChatStore.getState().addMessage(msg1);
+    useChatStore.getState().addMessage(msg2);
+    useChatStore.getState().removeMessage('m1');
+    expect(useChatStore.getState().messages).toEqual([msg2]);
+  });
+
+  it('setReplyingTo sets and clears reply state', () => {
+    const msg = { id: 'm1', channelId: 'ch1', authorPubkey: 'pk1', content: 'hello', replyToId: null, createdAt: '2024-01-01' };
+    useChatStore.getState().setReplyingTo(msg);
+    expect(useChatStore.getState().replyingTo).toEqual(msg);
+
+    useChatStore.getState().setReplyingTo(null);
+    expect(useChatStore.getState().replyingTo).toBeNull();
+  });
+});
