@@ -82,6 +82,7 @@ model Channel {
   messages     Message[]
   voiceStates  VoiceState[]
   forumTags    ForumTag[]
+  readStates   ChannelReadState[]
 
   @@index([serverId])
   @@index([categoryId])
@@ -118,6 +119,7 @@ model Message {
   reports   Report[]
   reactions Reaction[]
   tags      ForumTagOnMessage[]
+  mentions  Mention[]
 
   @@index([channelId, createdAt])
   @@index([authorPubkey])
@@ -264,4 +266,40 @@ model ModerationAction {
   server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
 
   @@index([serverId, createdAt])
+}
+
+model ChannelReadState {
+  id                String   @id @default(cuid())
+  channelId         String
+  pubkey            String
+  lastReadAt        DateTime @default(now())
+  lastReadMessageId String?
+
+  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@unique([channelId, pubkey])
+  @@index([pubkey])
+}
+
+model Mention {
+  id        String   @id @default(cuid())
+  messageId String
+  pubkey    String
+  channelId String
+  createdAt DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, pubkey])
+  @@index([pubkey, createdAt])
+  @@index([channelId, pubkey])
+}
+
+model DMReadState {
+  id           String   @id @default(cuid())
+  pubkey       String
+  threadPubkey String
+  lastReadAt   DateTime @default(now())
+
+  @@unique([pubkey, threadPubkey])
 }

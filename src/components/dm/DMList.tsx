@@ -1,6 +1,7 @@
 'use client';
 
 import { useDMStore } from '@/store/dm';
+import { useNotificationStore } from '@/store/notification';
 
 interface DMListProps {
   onNewDM: () => void;
@@ -8,6 +9,7 @@ interface DMListProps {
 
 export default function DMList({ onNewDM }: DMListProps) {
   const { threads, activeDMPubkey, setActiveDM } = useDMStore();
+  const dmUnreads = useNotificationStore((s) => s.dmUnreads);
 
   return (
     <div className="w-60 bg-lc-dark border-r border-lc-border flex flex-col shrink-0" data-testid="dm-list">
@@ -59,9 +61,9 @@ export default function DMList({ onNewDM }: DMListProps) {
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-lc-white truncate">{thread.displayName}</span>
-                {thread.unreadCount > 0 && (
+                {(dmUnreads[thread.pubkey] || 0) > 0 && (
                   <span className="bg-lc-green text-lc-black text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center shrink-0">
-                    {thread.unreadCount}
+                    {dmUnreads[thread.pubkey]}
                   </span>
                 )}
               </div>

@@ -145,6 +145,70 @@ app.prepare().then(async () => {
         });
 
         io.to(`channel:${channelId}`).emit('new-message', message);
+
+        // Extract mentions and create Mention records
+        const mentionRegex = /nostr:npub1([a-f0-9]{64})/g;
+        const mentionedPubkeys: string[] = [];
+        let mentionMatch: RegExpExecArray | null;
+        while ((mentionMatch = mentionRegex.exec(content)) !== null) {
+          mentionedPubkeys.push(mentionMatch[1]);
+        }
+
+        if (mentionedPubkeys.length > 0) {
+          const uniquePubkeys = [...new Set(mentionedPubkeys)];
+
+          // Bulk-create Mention rows (skip duplicates)
+          await prisma.mention.createMany({
+            data: uniquePubkeys.map(pk => ({
+              messageId: message.id,
+              pubkey: pk,
+              channelId,
+            })),
+            skipDuplicates: true,
+          });
+
+          // Notify mentioned users via their sockets
+          const preview = content.slice(0, 100);
+          for (const mentionedPubkey of uniquePubkeys) {
+            if (mentionedPubkey === pubkey) continue; // don't notify self
+            const targetSockets = pubkeySockets.get(mentionedPubkey);
+            if (targetSockets) {
+              for (const sid of targetSockets) {
+                io.to(sid).emit('notification', {
+                  type: 'mention',
+                  channelId,
+                  serverId,
+                  messageId: message.id,
+                  senderPubkey: pubkey,
+                  preview,
+                  createdAt: message.createdAt,
+                });
+              }
+            }
+          }
+        }
+
+        // Emit unread-update to server members not in the channel room
+        const channelRoom = io.sockets.adapter.rooms.get(`channel:${channelId}`);
+        const channelSocketIds = channelRoom ? [...channelRoom] : [];
+        const channelPubkeys = new Set<string>();
+        for (const sid of channelSocketIds) {
+          const s = io.sockets.sockets.get(sid);
+          if (s?.data.pubkey) channelPubkeys.add(s.data.pubkey);
+        }
+
+        // Find all server members who are online but NOT in this channel
+        for (const [memberPubkey, memberSocketIds] of pubkeySockets) {
+          if (memberPubkey === pubkey) continue; // don't notify sender
+          if (channelPubkeys.has(memberPubkey)) continue; // already in channel
+          for (const sid of memberSocketIds) {
+            io.to(sid).emit('unread-update', {
+              channelId,
+              serverId,
+              hasMention: mentionedPubkeys.includes(memberPubkey),
+            });
+          }
+        }
       } catch (err) {
         console.error('[socket] Failed to create message:', err);
         socket.emit('message-error', { error: 'Failed to send message' });
@@ -263,6 +327,28 @@ app.prepare().then(async () => {
             io.to(sid).emit('dm-user-typing', { pubkey });
           }
         }
+      }
+    });
+
+    // ── Mark channel as read (via socket to avoid HTTP round-trip) ──
+    socket.on('mark-read', async (data: { channelId: string; lastMessageId?: string }) => {
+      if (!data?.channelId || typeof data.channelId !== 'string') return;
+      try {
+        await prisma.channelReadState.upsert({
+          where: { channelId_pubkey: { channelId: data.channelId, pubkey } },
+          create: {
+            channelId: data.channelId,
+            pubkey,
+            lastReadAt: new Date(),
+            lastReadMessageId: data.lastMessageId ?? null,
+          },
+          update: {
+            lastReadAt: new Date(),
+            lastReadMessageId: data.lastMessageId ?? null,
+          },
+        });
+      } catch (err) {
+        console.error('[socket] Failed to mark read:', err);
       }
     });
 

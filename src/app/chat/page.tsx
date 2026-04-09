@@ -23,6 +23,8 @@ import { discoverDMThreads, subscribeDMs } from '@/lib/dm';
 import type { DMMessage } from '@/lib/dm';
 import { formatPubkey } from '@/lib/nostr';
 import MemberList from '@/components/chat/MemberList';
+import { useNotificationStore } from '@/store/notification';
+import { requestNotificationPermission, showBrowserNotification } from '@/lib/browser-notifications';
 
 function TypingIndicator({ profileCache }: { profileCache: Map<string, { name?: string; picture?: string }> }) {
   const { typingUsers } = useChatStore();
@@ -142,6 +144,27 @@ export default function ChatPage() {
     fetchServers();
   }, [sessionChecked, setServers, setActiveServer]);
 
+  // Fetch initial unread counts
+  useEffect(() => {
+    if (!sessionChecked) return;
+    fetch('/api/unread')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data) {
+          useNotificationStore.getState().setBulkUnreads(data);
+        }
+      })
+      .catch(() => {});
+  }, [sessionChecked]);
+
+  // Request browser notification permission after login
+  useEffect(() => {
+    if (!sessionChecked) return;
+    requestNotificationPermission().then((granted) => {
+      useNotificationStore.getState().setPermission(granted);
+    });
+  }, [sessionChecked]);
+
   // Fetch channels for the active server
   useEffect(() => {
     if (!sessionChecked || !activeServerId) return;
@@ -153,6 +176,13 @@ export default function ChatPage() {
         const data = await res.json();
 
         setChannels(data.pinnedChannels, data.categories);
+
+        // Build channel-server map for notification aggregation
+        const allChs = [...data.pinnedChannels, ...data.categories.flatMap((c: any) => c.channels)];
+        const map: Record<string, string> = {};
+        for (const ch of allChs) map[ch.id] = activeServerId;
+        const notifStore = useNotificationStore.getState();
+        notifStore.setChannelServerMap({ ...notifStore.channelServerMap, ...map });
 
         // Auto-select first pinned channel or first category channel
         const firstChannel = data.pinnedChannels[0]
@@ -338,6 +368,34 @@ export default function ChatPage() {
       useVoiceStore.getState().removeRemoteScreen(pk);
     });
 
+    // Notification events
+    socket.on('notification', (data: { type: string; channelId?: string; serverId?: string; senderPubkey: string; preview?: string }) => {
+      const notifStore = useNotificationStore.getState();
+      if (data.type === 'mention' && data.channelId) {
+        notifStore.incrementChannelUnread(data.channelId, true);
+        if (document.hidden) {
+          showBrowserNotification('New mention', data.preview || 'You were mentioned in a message');
+        }
+      } else if (data.type === 'dm') {
+        notifStore.setDMUnread(data.senderPubkey, (notifStore.dmUnreads[data.senderPubkey] || 0) + 1);
+        if (document.hidden) {
+          showBrowserNotification('New DM', data.preview || 'You have a new direct message');
+        }
+      }
+    });
+
+    socket.on('unread-update', (data: { channelId: string; serverId: string; hasMention: boolean }) => {
+      const notifStore = useNotificationStore.getState();
+      notifStore.incrementChannelUnread(data.channelId, data.hasMention);
+      // Update channel-server mapping
+      if (data.serverId) {
+        notifStore.setChannelServerMap({
+          ...notifStore.channelServerMap,
+          [data.channelId]: data.serverId,
+        });
+      }
+    });
+
     socket.on('connect_error', (err) => {
       console.warn('Socket connection error:', err.message);
     });
@@ -360,6 +418,9 @@ export default function ChatPage() {
     }
     if (activeChannelId) {
       socket.emit('join-channel', activeChannelId);
+      // Mark channel as read and clear unread badge
+      socket.emit('mark-read', { channelId: activeChannelId });
+      useNotificationStore.getState().clearChannelUnread(activeChannelId);
     }
     prevChannelRef.current = activeChannelId;
     activeChannelIdRef.current = activeChannelId;

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useChatStore, Category, Channel } from '@/store/chat';
 import { useAuthStore } from '@/store/auth';
+import { useNotificationStore } from '@/store/notification';
 
 function ChannelTypeIcon({ type }: { type: string }) {
   if (type === 'forum') {
@@ -25,18 +26,33 @@ function ChannelTypeIcon({ type }: { type: string }) {
 }
 
 function ChannelItem({ channel, isActive, onClick }: { channel: Channel; isActive: boolean; onClick: () => void }) {
+  const unreadCount = useNotificationStore((s) => s.channelUnreads[channel.id] || 0);
+  const hasMention = useNotificationStore((s) => s.channelMentions[channel.id] || false);
+  const hasUnread = unreadCount > 0;
+
   return (
     <button
       onClick={onClick}
       className={`w-full flex items-center gap-1.5 px-2 py-1 rounded-md text-sm transition-colors ${
         isActive
           ? 'bg-lc-border text-lc-white font-medium'
-          : 'text-lc-muted hover:text-lc-white hover:bg-lc-border/50'
+          : hasUnread
+            ? 'text-lc-white font-semibold hover:bg-lc-border/50'
+            : 'text-lc-muted hover:text-lc-white hover:bg-lc-border/50'
       }`}
     >
       <ChannelTypeIcon type={channel.type} />
       {channel.emoji && <span className="text-sm">{channel.emoji}</span>}
       <span className="truncate">{channel.name}</span>
+      {hasUnread && !isActive && (
+        <span className={`ml-auto shrink-0 text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1 ${
+          hasMention
+            ? 'bg-red-500 text-white'
+            : 'bg-lc-muted/30 text-lc-white'
+        }`}>
+          {hasMention ? '@' : unreadCount}
+        </span>
+      )}
     </button>
   );
 }

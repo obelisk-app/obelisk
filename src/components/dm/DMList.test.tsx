@@ -3,10 +3,12 @@ import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import DMList from './DMList';
 import { useDMStore } from '@/store/dm';
+import { useNotificationStore } from '@/store/notification';
 
 describe('DMList', () => {
   beforeEach(() => {
     useDMStore.setState(useDMStore.getInitialState());
+    useNotificationStore.setState(useNotificationStore.getInitialState());
   });
 
   it('shows empty state', () => {
@@ -18,9 +20,10 @@ describe('DMList', () => {
     useDMStore.setState({
       threads: [
         { pubkey: 'pk1', displayName: 'Alice', unreadCount: 0 },
-        { pubkey: 'pk2', displayName: 'Bob', lastMessage: 'Hey!', unreadCount: 3 },
+        { pubkey: 'pk2', displayName: 'Bob', lastMessage: 'Hey!', unreadCount: 0 },
       ],
     });
+    useNotificationStore.setState({ dmUnreads: { pk2: 3 } });
 
     render(<DMList onNewDM={vi.fn()} />);
     expect(screen.getByText('Alice')).toBeInTheDocument();
