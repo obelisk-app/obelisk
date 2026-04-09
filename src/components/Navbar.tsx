@@ -2,13 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/store/auth';
+import { useTranslation } from '@/i18n/context';
 import LoginModal from './LoginModal';
 import ObeliskIcon from './ObeliskIcon';
+import LanguageToggle from './LanguageToggle';
 
 const NAV_LINKS = [
-  { href: '#features', label: 'Features' },
-  { href: '#how-it-works', label: 'How it works' },
-  { href: '#roadmap', label: 'Roadmap' },
+  { href: '#features', key: 'nav.features' },
+  { href: '#how-it-works', key: 'nav.howItWorks' },
+  { href: '#roadmap', key: 'nav.roadmap' },
 ];
 
 export default function Navbar({ onLoginSuccess }: { onLoginSuccess?: () => void } = {}) {
@@ -16,6 +18,7 @@ export default function Navbar({ onLoginSuccess }: { onLoginSuccess?: () => void
   const [showMenu, setShowMenu] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const { isConnected, profile, logout } = useAuthStore();
+  const { t } = useTranslation();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -26,32 +29,31 @@ export default function Navbar({ onLoginSuccess }: { onLoginSuccess?: () => void
   return (
     <>
       <nav className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${
-        scrolled ? 'bg-lc-black/95 backdrop-blur-xl border-b border-lc-border/50' : 'bg-transparent'
+        scrolled ? 'bg-lc-black/95 backdrop-blur-xl' : 'bg-transparent'
       }`}>
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           {/* Logo */}
           <a href="#" className="flex items-center gap-3">
             <ObeliskIcon className="w-12 h-12 text-lc-green" />
-            <span className="font-bold text-lg text-lc-white tracking-tight">
-              Obelisk
-            </span>
+            <span className="font-extrabold text-2xl text-lc-white tracking-tight">Obelisk</span>
           </a>
 
           {/* Nav links */}
           <div className="hidden md:flex items-center gap-1">
-            {NAV_LINKS.map(({ href, label }) => (
+            {NAV_LINKS.map(({ href, key }) => (
               <a
                 key={href}
                 href={href}
                 className="px-3 py-1.5 rounded-lg text-sm font-medium text-lc-muted hover:text-lc-white transition-colors"
               >
-                {label}
+                {t(key)}
               </a>
             ))}
           </div>
 
           {/* Right side */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <LanguageToggle />
             {isConnected && profile ? (
               <div className="relative">
                 <button
@@ -95,7 +97,7 @@ export default function Navbar({ onLoginSuccess }: { onLoginSuccess?: () => void
                           <polyline points="16 17 21 12 16 7"/>
                           <line x1="21" y1="12" x2="9" y2="12"/>
                         </svg>
-                        Disconnect
+                        {t('nav.disconnect')}
                       </button>
                     </div>
                   </>
@@ -106,7 +108,7 @@ export default function Navbar({ onLoginSuccess }: { onLoginSuccess?: () => void
                 onClick={() => setShowLogin(true)}
                 className="lc-pill lc-pill-primary text-sm flex items-center gap-2"
               >
-                Launch App
+                {t('nav.launchApp')}
               </button>
             )}
           </div>

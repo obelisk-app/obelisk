@@ -1,20 +1,40 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, type RefObject } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import LoginModal from '@/components/LoginModal';
 import ObeliskIcon from '@/components/ObeliskIcon';
+import ShootingStars from '@/components/ShootingStars';
+import { useTranslation } from '@/i18n/context';
 
-const FEATURES = [
+function useScrollReveal<T extends HTMLElement>(): [RefObject<T | null>, boolean] {
+  const ref = useRef<T | null>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setVisible(true); observer.disconnect(); } },
+      { threshold: 0.15 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return [ref, visible];
+}
+
+const FEATURE_KEYS = [
   {
     icon: (
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
       </svg>
     ),
-    title: 'Nostr Identity',
-    description: 'Sign in with your Nostr keys. No email, no password. Your cryptographic identity is your passport.',
+    titleKey: 'features.nostrIdentity.title',
+    descKey: 'features.nostrIdentity.desc',
   },
   {
     icon: (
@@ -22,8 +42,8 @@ const FEATURES = [
         <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
       </svg>
     ),
-    title: 'Real-time Channels',
-    description: 'Discord-like channels with WebSocket messaging. Threads, reactions, and media — all in real-time.',
+    titleKey: 'features.realtimeChat.title',
+    descKey: 'features.realtimeChat.desc',
   },
   {
     icon: (
@@ -32,8 +52,8 @@ const FEATURES = [
         <path d="M7 11V7a5 5 0 0110 0v4"/>
       </svg>
     ),
-    title: 'Encrypted DMs',
-    description: 'Private messages encrypted via Nostr relays. Only you and the recipient can read them.',
+    titleKey: 'features.encryptedDMs.title',
+    descKey: 'features.encryptedDMs.desc',
   },
   {
     icon: (
@@ -44,8 +64,8 @@ const FEATURES = [
         <path d="M16 3.13a4 4 0 010 7.75"/>
       </svg>
     ),
-    title: 'Roles & Permissions',
-    description: 'Admin, moderator, and member roles. Control who can do what in your server.',
+    titleKey: 'features.roles.title',
+    descKey: 'features.roles.desc',
   },
   {
     icon: (
@@ -55,19 +75,8 @@ const FEATURES = [
         <path d="M2 12l10 5 10-5"/>
       </svg>
     ),
-    title: 'Self-Hosted',
-    description: 'Run your own server. Your data, your rules. No corporate middlemen.',
-  },
-  {
-    icon: (
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="10"/>
-        <line x1="2" y1="12" x2="22" y2="12"/>
-        <path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/>
-      </svg>
-    ),
-    title: 'Open Protocol',
-    description: 'Built on Nostr — an open, censorship-resistant protocol. Interoperable by design.',
+    titleKey: 'features.selfHosted.title',
+    descKey: 'features.selfHosted.desc',
   },
   {
     icon: (
@@ -76,72 +85,62 @@ const FEATURES = [
         <path d="M9 12l2 2 4-4"/>
       </svg>
     ),
-    title: 'Spam Resistant',
-    description: 'Web of Trust filtering powered by Nostr identity. Verify who is who through your social graph — no CAPTCHAs needed.',
+    titleKey: 'features.spamResistant.title',
+    descKey: 'features.spamResistant.desc',
   },
 ];
 
-const STEPS = [
-  {
-    num: '01',
-    title: 'Sign in with Nostr',
-    description: 'Use a browser extension (NIP-07), paste your nsec, or scan a QR code for NIP-46 bunker login.',
-  },
-  {
-    num: '02',
-    title: 'Join a server',
-    description: 'Enter an invite link or create your own server. Each server is independently hosted.',
-  },
-  {
-    num: '03',
-    title: 'Start chatting',
-    description: 'Jump into channels, send messages, react, thread replies — just like you\'re used to, but sovereign.',
-  },
+const STEP_ICONS = [
+  <svg key="s1" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+  </svg>,
+  <svg key="s2" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+    <path d="M2 17l10 5 10-5"/>
+    <path d="M2 12l10 5 10-5"/>
+  </svg>,
+  <svg key="s3" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+  </svg>,
 ];
 
-const ROADMAP = [
-  {
-    phase: 'Phase 1',
-    title: 'Auth + Basic Chat',
-    status: 'in-progress' as const,
-    items: ['Nostr challenge-response auth', 'Channel CRUD & messaging', 'WebSocket real-time', 'Threads & media'],
-  },
-  {
-    phase: 'Phase 2',
-    title: 'Core Features',
-    status: 'upcoming' as const,
-    items: ['Voice channels (WebRTC)', 'Roles & permissions', 'Invite system', 'DMs via Nostr relays'],
-  },
-  {
-    phase: 'Phase 3',
-    title: 'Advanced',
-    status: 'upcoming' as const,
-    items: ['App profiles', 'File uploads', 'Search', 'Bot integrations'],
-  },
-  {
-    phase: 'Phase 4',
-    title: 'Open Database',
-    status: 'upcoming' as const,
-    items: ['Public-access chat archives', 'Full-text search engine', 'Public threads visible on the web', 'SEO-friendly thread pages'],
-  },
-  {
-    phase: 'Phase 5',
-    title: 'Polish & Launch',
-    status: 'upcoming' as const,
-    items: ['Push notifications', 'Custom themes', 'Mobile optimization', 'Production deploy'],
-  },
+const ROADMAP_PHASES = [
+  { key: 'phase0', phase: 'Phase 0', status: 'done' as const },
+  { key: 'phase1', phase: 'Phase 1', status: 'done' as const },
+  { key: 'phase1_5', phase: 'Phase 1.5', status: 'in-progress' as const },
+  { key: 'phase2', phase: 'Phase 2', status: 'in-progress' as const },
+  { key: 'phase3', phase: 'Phase 3', status: 'upcoming' as const },
+  { key: 'phase4', phase: 'Phase 4', status: 'upcoming' as const },
+];
+
+const TECH_STACK: { name: string; desc: string; color: string; icon?: string; img?: string; href: string }[] = [
+  { name: 'Next.js 16', desc: 'React framework', color: 'text-white', icon: '▲', href: 'https://nextjs.org' },
+  { name: 'Nostr (NDK)', desc: 'Identity & auth', color: 'text-purple-400', icon: '⚡', href: 'https://github.com/nostr-dev-kit/ndk' },
+  { name: 'Nostr WoT', desc: 'Web of Trust spam filter', color: 'text-indigo-400', img: '/nostr-wot-logo.png', href: 'https://nostr-wot.com' },
+  { name: 'WebRTC', desc: 'Voice channels', color: 'text-rose-400', icon: '🎙', href: 'https://webrtc.org' },
+  { name: 'Socket.io', desc: 'Real-time messaging', color: 'text-yellow-400', icon: '⇌', href: 'https://socket.io' },
+  { name: 'PostgreSQL', desc: 'Database', color: 'text-emerald-400', icon: '◆', href: 'https://www.postgresql.org' },
 ];
 
 export default function Home() {
   const [showLogin, setShowLogin] = useState(false);
   const router = useRouter();
+  const { t } = useTranslation();
+
+  const [featuresRef, featuresVisible] = useScrollReveal<HTMLElement>();
+  const [stepsRef, stepsVisible] = useScrollReveal<HTMLElement>();
+  const [roadmapRef, roadmapVisible] = useScrollReveal<HTMLElement>();
+  const [stackRef, stackVisible] = useScrollReveal<HTMLElement>();
+  const [ctaRef, ctaVisible] = useScrollReveal<HTMLElement>();
 
   const handleLoginSuccess = () => {
     router.push('/chat');
   };
 
   return (
-    <main className="min-h-screen bg-lc-black lc-grid-bg">
+    <main className="min-h-screen bg-lc-black lc-grid-bg relative">
+      <ShootingStars />
+      <div className="relative z-10">
       <Navbar onLoginSuccess={handleLoginSuccess} />
 
       {/* Hero */}
@@ -160,8 +159,6 @@ export default function Home() {
             { left: '65%', bottom: '-12%', size: 18, opacity: 0.09, duration: '21s', delay: '9s' },
             { left: '75%', bottom: '-18%', size: 22, opacity: 0.06, duration: '24s', delay: '2s' },
             { left: '88%', bottom: '-6%',  size: 15, opacity: 0.08, duration: '17s', delay: '6s' },
-            { left: '50%', bottom: '-14%', size: 13, opacity: 0.05, duration: '20s', delay: '11s' },
-            { left: '35%', bottom: '-16%', size: 19, opacity: 0.07, duration: '23s', delay: '4s' },
           ].map((b, i) => (
             <svg
               key={i}
@@ -185,37 +182,88 @@ export default function Home() {
           ))}
         </div>
 
-        {/* Orbiting Nostr key pair */}
-        <div className="absolute top-32 left-1/2 -translate-x-1/2 pointer-events-none" aria-hidden="true" style={{ width: 200, height: 80 }}>
-          <div className="relative w-full h-full" style={{ transform: 'scaleY(0.4)' }}>
+        {/* Orbiting Nostr keys + sun/moon around obelisk */}
+        <div className="absolute top-28 left-1/2 -translate-x-1/2 pointer-events-none" aria-hidden="true" style={{ width: 300, height: 200 }}>
+          {/* Sun & Moon — vertical orbit, bottom half clipped to hide behind obelisk */}
+          <div className="absolute left-1/2 -translate-x-1/2" style={{ top: -60, width: 300, height: 320, clipPath: 'inset(0 0 50% 0)' }}>
+            <div className="relative w-full" style={{ height: 320 }}>
+              {/* Sun */}
+              <svg
+                width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
+                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-yellow-400 animate-orbit-vertical drop-shadow-[0_0_10px_rgba(250,204,21,0.6)]"
+                style={{ '--orbit-radius': '120px', '--orbit-duration': '28s' } as React.CSSProperties}
+              >
+                <circle cx="12" cy="12" r="5"/>
+                <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+              </svg>
+              {/* Moon — opposite side */}
+              <svg
+                width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
+                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-slate-300 animate-orbit-vertical drop-shadow-[0_0_8px_rgba(203,213,225,0.5)]"
+                style={{ '--orbit-radius': '120px', '--orbit-duration': '28s', animationDelay: '-14s' } as React.CSSProperties}
+              >
+                <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+              </svg>
+            </div>
+          </div>
+
+          {/* Pulsing glow behind obelisk */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-lc-green/8 rounded-full animate-glow-pulse" />
+
+          {/* Floating particles */}
+          {[
+            { size: 3, x: '15%', y: '20%', delay: '0s', dur: '6s' },
+            { size: 2, x: '80%', y: '30%', delay: '2s', dur: '8s' },
+            { size: 3, x: '85%', y: '75%', delay: '4s', dur: '7s' },
+            { size: 2, x: '10%', y: '70%', delay: '1s', dur: '9s' },
+          ].map((p, i) => (
+            <div
+              key={`particle-${i}`}
+              className="absolute rounded-full bg-lc-green animate-particle"
+              style={{
+                width: p.size,
+                height: p.size,
+                left: p.x,
+                top: p.y,
+                '--particle-delay': p.delay,
+                '--particle-duration': p.dur,
+              } as React.CSSProperties}
+            />
+          ))}
+
+          {/* 3D orbit container — scaleY creates the perspective ellipse */}
+          <div className="relative w-full h-full" style={{ transform: 'scaleY(0.35)' }}>
             {/* Public key (outline) */}
             <svg
-              width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-lc-green animate-orbit"
-              style={{ '--orbit-duration': '20s', transform: 'scaleY(2.5)' } as React.CSSProperties}
+              width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-lc-green animate-orbit drop-shadow-[0_0_8px_rgba(180,249,83,0.5)]"
+              style={{ '--orbit-radius': '110px', '--orbit-duration': '16s', transform: 'scaleY(2.85)' } as React.CSSProperties}
             >
               <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
             </svg>
-            {/* Private key (filled) */}
+            {/* Private key (filled) — opposite side */}
             <svg
               width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-lc-green animate-orbit"
-              style={{ '--orbit-duration': '20s', animationDelay: '-10s', transform: 'scaleY(2.5)' } as React.CSSProperties}
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-lc-green animate-orbit drop-shadow-[0_0_8px_rgba(180,249,83,0.4)]"
+              style={{ '--orbit-radius': '110px', '--orbit-duration': '16s', animationDelay: '-8s', transform: 'scaleY(2.85)' } as React.CSSProperties}
             >
               <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
             </svg>
+
           </div>
         </div>
 
         <div className="max-w-6xl mx-auto flex flex-col items-center text-center relative z-10">
           <ObeliskIcon className="w-24 h-auto mb-8 text-lc-green opacity-90" />
           <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight leading-[1.1] mb-6">
-            Chat with{' '}
-            <span className="text-lc-green lc-glow-text">Nostr Identity</span>
+            {t('hero.title')}{' '}
+            <span className="text-lc-green lc-glow-text">{t('hero.titleHighlight')}</span>
           </h1>
           <p className="text-lg md:text-xl text-lc-muted max-w-2xl mb-10 leading-relaxed">
-            Discord-like servers and channels, powered by your Nostr keys.
-            No email. No corporation. Just cryptographic identity and real-time chat.
+            {t('hero.subtitle')}
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
             <button
@@ -227,7 +275,7 @@ export default function Home() {
                 <polyline points="10 17 15 12 10 7"/>
                 <line x1="15" y1="12" x2="3" y2="12"/>
               </svg>
-              Launch App
+              {t('hero.launchApp')}
             </button>
             <a
               href="https://github.com/Fabricio333/obelisk"
@@ -238,7 +286,7 @@ export default function Home() {
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
               </svg>
-              GitHub
+              {t('hero.github')}
             </a>
           </div>
         </div>
@@ -247,7 +295,6 @@ export default function Home() {
       {/* Relay connection pulse */}
       <div className="relative py-4 pointer-events-none" aria-hidden="true">
         <svg viewBox="0 0 500 20" className="w-full max-w-2xl mx-auto block" preserveAspectRatio="xMidYMid meet">
-          {/* Dashed connecting lines */}
           {[0, 1, 2, 3].map((i) => (
             <line
               key={`line-${i}`}
@@ -259,7 +306,6 @@ export default function Home() {
               style={{ opacity: 0.3 }}
             />
           ))}
-          {/* Relay dots */}
           {[0, 1, 2, 3, 4].map((i) => (
             <circle
               key={`dot-${i}`}
@@ -273,24 +319,24 @@ export default function Home() {
       </div>
 
       {/* Features */}
-      <section id="features" className="py-24 px-6">
+      <section id="features" ref={featuresRef} className={`py-24 px-6 ${featuresVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Built different<span className="text-lc-green">.</span>
+              {t('features.heading')}<span className="text-lc-green">.</span>
             </h2>
             <p className="text-lc-muted text-lg max-w-xl mx-auto">
-              The best of Discord&apos;s UX with Nostr&apos;s sovereign identity model.
+              {t('features.subtitle')}
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {FEATURES.map((f) => (
-              <div key={f.title} className="lc-card p-6 group">
+            {FEATURE_KEYS.map((f) => (
+              <div key={f.titleKey} className="lc-card p-6 group">
                 <div className="w-12 h-12 rounded-xl bg-lc-olive/50 flex items-center justify-center text-lc-green mb-4 group-hover:bg-lc-olive transition-colors">
                   {f.icon}
                 </div>
-                <h3 className="text-lg font-semibold text-lc-white mb-2">{f.title}</h3>
-                <p className="text-sm text-lc-muted leading-relaxed">{f.description}</p>
+                <h3 className="text-lg font-semibold text-lc-white mb-2">{t(f.titleKey)}</h3>
+                <p className="text-sm text-lc-muted leading-relaxed">{t(f.descKey)}</p>
               </div>
             ))}
           </div>
@@ -298,124 +344,162 @@ export default function Home() {
       </section>
 
       {/* How it works */}
-      <section id="how-it-works" className="py-24 px-6">
+      <section id="how-it-works" ref={stepsRef} className={`py-24 px-6 ${stepsVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              {t('steps.heading')}<span className="text-lc-green">.</span>
+            </h2>
+            <p className="text-lc-muted text-lg">{t('steps.subtitle')}</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative">
+            {/* Connector line (desktop only) */}
+            <div className="hidden md:block absolute top-12 left-[calc(33.33%+0.75rem)] right-[calc(33.33%+0.75rem)] h-px bg-gradient-to-r from-lc-green/30 via-lc-green/20 to-lc-green/30" />
+            {[1, 2, 3].map((num, i) => (
+              <div key={num} className="lc-card p-6 relative group">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-full bg-lc-green/10 border border-lc-green/30 flex items-center justify-center text-lc-green text-sm font-bold group-hover:bg-lc-green/20 transition-colors">
+                    {String(num).padStart(2, '0')}
+                  </div>
+                  <div className="w-9 h-9 rounded-lg bg-lc-olive/30 flex items-center justify-center text-lc-green">
+                    {STEP_ICONS[i]}
+                  </div>
+                </div>
+                <h3 className="text-lg font-semibold text-lc-white mb-2">{t(`steps.${num}.title`)}</h3>
+                <p className="text-sm text-lc-muted leading-relaxed">{t(`steps.${num}.desc`)}</p>
+                {i < 2 && (
+                  <div className="md:hidden flex justify-center py-2 mt-4 text-lc-green/30">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 5v14M5 12l7 7 7-7"/>
+                    </svg>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Roadmap — vertical timeline */}
+      <section id="roadmap" ref={roadmapRef} className={`py-24 px-6 ${roadmapVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Three steps<span className="text-lc-green">.</span>
-            </h2>
-            <p className="text-lc-muted text-lg">No signup forms. No email verification. Just keys.</p>
-          </div>
-          <div className="space-y-8">
-            {STEPS.map((s) => (
-              <div key={s.num} className="flex gap-6 items-start">
-                <div className="text-4xl font-extrabold text-lc-green/20 select-none leading-none pt-1">
-                  {s.num}
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold text-lc-white mb-1">{s.title}</h3>
-                  <p className="text-lc-muted leading-relaxed">{s.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Roadmap */}
-      <section id="roadmap" className="py-24 px-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Roadmap<span className="text-lc-green">.</span>
+              {t('roadmap.heading')}<span className="text-lc-green">.</span>
             </h2>
             <p className="text-lc-muted text-lg max-w-xl mx-auto">
-              We&apos;re building this in the open. Here&apos;s what&apos;s coming.
+              {t('roadmap.subtitle')}
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {ROADMAP.map((r) => (
-              <div key={r.phase} className="lc-card p-6">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                    r.status === 'in-progress'
-                      ? 'bg-lc-green/20 text-lc-green'
-                      : 'bg-lc-border text-lc-muted'
-                  }`}>
-                    {r.status === 'in-progress' ? 'In Progress' : 'Upcoming'}
-                  </span>
-                </div>
-                <h3 className="text-sm font-bold text-lc-green mb-1">{r.phase}</h3>
-                <h4 className="text-lg font-semibold text-lc-white mb-3">{r.title}</h4>
-                <ul className="space-y-1.5">
-                  {r.items.map((item) => (
-                    <li key={item} className="text-sm text-lc-muted flex items-start gap-2">
-                      <span className="text-lc-border mt-1.5 text-[8px]">&#9679;</span>
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+          <div className="relative">
+            {/* Timeline line */}
+            <div className="absolute left-4 md:left-6 top-0 bottom-0 w-px bg-gradient-to-b from-lc-green/40 via-lc-green/20 to-lc-border" />
 
-      {/* Tech Stack */}
-      <section id="stack" className="py-24 px-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Tech stack<span className="text-lc-green">.</span>
-            </h2>
-            <p className="text-lc-muted text-lg max-w-xl mx-auto">
-              Modern, open-source tools — no vendor lock-in.
-            </p>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {[
-              { name: 'Next.js 16', desc: 'React framework', color: 'text-white' },
-              { name: 'TypeScript', desc: 'Type safety', color: 'text-blue-400' },
-              { name: 'Tailwind CSS', desc: 'Utility-first styling', color: 'text-cyan-400' },
-              { name: 'NDK', desc: 'Nostr Dev Kit', color: 'text-purple-400' },
-              { name: 'Zustand', desc: 'State management', color: 'text-orange-400' },
-              { name: 'Prisma', desc: 'Database ORM', color: 'text-emerald-400' },
-            ].map((tech) => (
-              <div key={tech.name} className="lc-card p-5 text-center group">
-                <h3 className={`text-sm font-bold ${tech.color} mb-1 group-hover:scale-105 transition-transform`}>
-                  {tech.name}
-                </h3>
-                <p className="text-xs text-lc-muted">{tech.desc}</p>
-              </div>
-            ))}
-            <div className="lc-card p-5 text-center group col-span-2">
-              <div className="flex items-center justify-center gap-3">
-                <img src="/nostr-wot-logo.png" alt="Nostr WoT" className="w-10 h-10 rounded-lg" />
-                <div className="text-left">
-                  <h3 className="text-sm font-bold text-indigo-400 group-hover:scale-105 transition-transform">Nostr WoT</h3>
-                  <p className="text-xs text-lc-muted">Web of Trust spam filtering</p>
-                </div>
-              </div>
+            <div className="space-y-8">
+              {ROADMAP_PHASES.map((r) => {
+                const items = t(`roadmap.${r.key}.items`).split('|');
+                return (
+                  <div key={r.key} className="relative pl-12 md:pl-16">
+                    {/* Timeline dot */}
+                    <div className={`absolute left-2.5 md:left-4.5 top-1.5 w-3 h-3 rounded-full border-2 ${
+                      r.status === 'done'
+                        ? 'bg-lc-green border-lc-green'
+                        : r.status === 'in-progress'
+                          ? 'bg-lc-green/50 border-lc-green animate-pulse'
+                          : 'bg-lc-dark border-lc-border'
+                    }`} />
+
+                    <div className="lc-card p-5">
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="text-xs font-bold text-lc-green">{r.phase}</span>
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                          r.status === 'done'
+                            ? 'bg-lc-green/20 text-lc-green'
+                            : r.status === 'in-progress'
+                              ? 'bg-lc-green/10 text-lc-green animate-pulse'
+                              : 'bg-lc-border text-lc-muted'
+                        }`}>
+                          {r.status === 'done' ? `✓ ${t('roadmap.done')}` : r.status === 'in-progress' ? t('roadmap.inProgress') : t('roadmap.upcoming')}
+                        </span>
+                      </div>
+                      <h4 className="text-lg font-semibold text-lc-white mb-2">{t(`roadmap.${r.key}.title`)}</h4>
+                      <ul className="space-y-1">
+                        {items.map((item) => (
+                          <li key={item} className="text-sm text-lc-muted flex items-start gap-2">
+                            {r.status === 'done' ? (
+                              <span className="text-lc-green mt-0.5 text-xs">✓</span>
+                            ) : (
+                              <span className="text-lc-border mt-1.5 text-[8px]">●</span>
+                            )}
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
       </section>
 
+      {/* Tech Stack */}
+      <section id="stack" ref={stackRef} className={`py-24 px-6 ${stackVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              {t('stack.heading')}<span className="text-lc-green">.</span>
+            </h2>
+            <p className="text-lc-muted text-lg max-w-xl mx-auto">
+              {t('stack.subtitle')}
+            </p>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {TECH_STACK.map((tech) => (
+              <a
+                key={tech.name}
+                href={tech.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="lc-card p-5 group hover:border-lc-green/20 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  {tech.img ? (
+                    <img src={tech.img} alt={tech.name} className="w-10 h-10 rounded-lg shrink-0" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-lg bg-lc-olive/30 flex items-center justify-center text-sm shrink-0">
+                      <span className={tech.color}>{tech.icon}</span>
+                    </div>
+                  )}
+                  <div>
+                    <h3 className={`text-sm font-bold ${tech.color} group-hover:scale-105 transition-transform origin-left`}>
+                      {tech.name}
+                    </h3>
+                    <p className="text-xs text-lc-muted">{tech.desc}</p>
+                  </div>
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* CTA */}
-      <section className="py-24 px-6">
+      <section ref={ctaRef} className={`py-24 px-6 ${ctaVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
         <div className="max-w-3xl mx-auto text-center">
           <div className="lc-card p-12 lc-glow">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Ready to chat sovereign<span className="text-lc-green">?</span>
+              {t('cta.heading')}<span className="text-lc-green">?</span>
             </h2>
             <p className="text-lc-muted text-lg mb-8 max-w-lg mx-auto">
-              Connect with your Nostr identity and join the conversation.
+              {t('cta.subtitle')}
             </p>
             <button
               onClick={() => setShowLogin(true)}
               className="lc-pill lc-pill-primary text-base px-10 py-3.5"
             >
-              Get Started
+              {t('cta.button')}
             </button>
           </div>
         </div>
@@ -426,7 +510,7 @@ export default function Home() {
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-sm text-lc-muted">
             <ObeliskIcon className="w-5 h-5 text-lc-muted opacity-60" />
-            Obelisk — Built for La Crypta Identity Hackathon 2026
+            {t('footer.tagline')}
           </div>
           <div className="flex items-center gap-6 text-sm text-lc-muted">
             <a href="https://lacrypta.ar" target="_blank" rel="noopener noreferrer" className="hover:text-lc-white transition-colors">
@@ -443,6 +527,7 @@ export default function Home() {
       </footer>
 
       <LoginModal isOpen={showLogin} onClose={() => setShowLogin(false)} onSuccess={handleLoginSuccess} />
+      </div>
     </main>
   );
 }

@@ -1,5 +1,8 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
+import { cookies } from 'next/headers';
+import { LocaleProvider } from '@/i18n/context';
+import type { Locale } from '@/i18n/index';
 import './globals.css';
 
 const inter = Inter({
@@ -16,15 +19,20 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const cookieStore = await cookies();
+  const locale = (cookieStore.get('locale')?.value as Locale) || 'es';
+
   return (
-    <html lang="en">
+    <html lang={locale}>
       <body className={`${inter.className} bg-lc-black text-lc-white antialiased`}>
-        {children}
+        <LocaleProvider initialLocale={locale}>
+          {children}
+        </LocaleProvider>
       </body>
     </html>
   );

@@ -212,15 +212,87 @@ body {
   animation-delay: var(--float-delay, 0s);
 }
 
-/* Orbiting keys */
+/* Orbiting keys — uses CSS custom property for radius */
 @keyframes orbit {
-  from { transform: rotate(0deg) translateX(80px) rotate(0deg); }
-  to   { transform: rotate(360deg) translateX(80px) rotate(-360deg); }
+  from { transform: rotate(0deg) translateX(var(--orbit-radius, 110px)) rotate(0deg); }
+  to   { transform: rotate(360deg) translateX(var(--orbit-radius, 110px)) rotate(-360deg); }
 }
 
 .animate-orbit {
-  animation: orbit var(--orbit-duration, 20s) linear infinite;
+  animation: orbit var(--orbit-duration, 18s) linear infinite;
 }
+
+/* Reverse orbit */
+@keyframes orbit-reverse {
+  from { transform: rotate(360deg) translateX(var(--orbit-radius, 80px)) rotate(-360deg); }
+  to   { transform: rotate(0deg) translateX(var(--orbit-radius, 80px)) rotate(0deg); }
+}
+
+.animate-orbit-reverse {
+  animation: orbit-reverse var(--orbit-duration, 24s) linear infinite;
+}
+
+/* Slow spin for glow rings */
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 30s linear infinite;
+}
+
+/* Pulsing glow behind obelisk */
+@keyframes glow-pulse {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.3; }
+  50%      { transform: translate(-50%, -50%) scale(1.4); opacity: 0.6; }
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 4s ease-in-out infinite;
+}
+
+/* Floating particles */
+@keyframes particle {
+  0%   { opacity: 0; transform: translateY(0) scale(0.5); }
+  20%  { opacity: 0.6; transform: translateY(-5px) scale(1); }
+  80%  { opacity: 0.4; transform: translateY(-15px) scale(0.8); }
+  100% { opacity: 0; transform: translateY(-25px) scale(0.3); }
+}
+
+.animate-particle {
+  animation: particle var(--particle-duration, 6s) ease-in-out infinite;
+  animation-delay: var(--particle-delay, 0s);
+}
+
+/* Vertical orbit (sun/moon rising and setting over the obelisk) */
+@keyframes orbit-vertical {
+  from { transform: rotate(0deg) translateY(var(--orbit-radius, 100px)) rotate(0deg); }
+  to   { transform: rotate(360deg) translateY(var(--orbit-radius, 100px)) rotate(-360deg); }
+}
+
+.animate-orbit-vertical {
+  animation: orbit-vertical var(--orbit-duration, 30s) linear infinite;
+}
+
+/* Scroll-triggered fade-in */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  opacity: 0;
+  animation: fade-in-up 0.6s ease-out forwards;
+  animation-delay: var(--fade-delay, 0s);
+}
+
 
 /* Relay dash flow */
 @keyframes dash-flow {
@@ -244,8 +316,14 @@ body {
 
 /* Accessibility: disable all hero animations */
 @media (prefers-reduced-motion: reduce) {
+  .animate-fade-in-up,
   .animate-float-up,
   .animate-orbit,
+  .animate-orbit-reverse,
+  .animate-orbit-vertical,
+  .animate-spin-slow,
+  .animate-glow-pulse,
+  .animate-particle,
   .animate-dash-flow,
   .animate-dot-pulse {
     animation: none;
