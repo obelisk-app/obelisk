@@ -33,6 +33,7 @@ export default function VoiceChannel({
     isMuted,
     isDeafened,
     isConnecting,
+    error,
   } = useVoiceStore();
 
   const isInThisChannel = currentVoiceChannelId === channelId;
@@ -51,6 +52,12 @@ export default function VoiceChannel({
 
   return (
     <div className="flex-1 flex flex-col min-h-0" data-testid="voice-channel">
+      {/* Error display (visible even when not connected) */}
+      {error && !isInThisChannel && (
+        <div className="px-6 pt-4">
+          <p className="text-xs text-red-400 bg-red-600/10 px-3 py-2 rounded-lg text-center" data-testid="voice-join-error">{error}</p>
+        </div>
+      )}
       {/* Participant grid */}
       <div className="flex-1 overflow-y-auto p-6">
         {voiceParticipants.length === 0 && !isInThisChannel && (

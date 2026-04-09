@@ -62,8 +62,7 @@ async function main() {
       { serverId: server.id, categoryId: merito.id, name: 'acero', emoji: '🎖️', position: 1 },
 
       // VOZ
-      { serverId: server.id, categoryId: voz.id, name: 'menu-de-creador', emoji: '⚙️', position: 0 },
-      { serverId: server.id, categoryId: voz.id, name: 'Crear canal', emoji: '🔊', position: 1, type: 'voice' },
+      { serverId: server.id, categoryId: voz.id, name: 'Canal de Voz', emoji: '🔊', position: 0, type: 'voice' },
 
       // TEXTO
       { serverId: server.id, categoryId: texto.id, name: 'bienvenida', emoji: '👋', position: 0 },

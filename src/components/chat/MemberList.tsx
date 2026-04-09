@@ -25,22 +25,28 @@ export default function MemberList({ profileCache }: MemberListProps) {
           return (
             <div
               key={member.pubkey}
-              className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors"
+              className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors group"
             >
-              {picture ? (
-                <img
-                  src={picture}
-                  alt=""
-                  className="w-8 h-8 rounded-full object-cover shrink-0"
-                />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-lc-border flex items-center justify-center shrink-0">
-                  <span className="text-xs text-lc-muted">
-                    {name.slice(0, 2).toUpperCase()}
-                  </span>
-                </div>
-              )}
-              <span className="text-sm text-lc-white truncate">{name}</span>
+              <div className="relative shrink-0">
+                {picture ? (
+                  <img
+                    src={picture}
+                    alt=""
+                    className="w-8 h-8 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-lc-olive flex items-center justify-center">
+                    <span className="text-xs font-medium text-lc-green">
+                      {name.slice(0, 2).toUpperCase()}
+                    </span>
+                  </div>
+                )}
+                {/* Online indicator */}
+                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-lc-green rounded-full border-2 border-lc-dark" />
+              </div>
+              <span className="text-sm text-lc-white truncate group-hover:text-white transition-colors">
+                {name}
+              </span>
             </div>
           );
         })}

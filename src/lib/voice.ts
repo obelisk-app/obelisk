@@ -22,7 +22,7 @@ export interface VoiceParticipant {
 
 // Audio config
 const SAMPLE_RATE = 48000;
-const FRAME_SIZE = 960; // 20ms at 48kHz
+const FRAME_SIZE = 1024; // ~21ms at 48kHz (must be power of 2 for ScriptProcessorNode)
 
 // Video config
 const VIDEO_BITRATE = 500_000; // 500 kbps — reasonable for WebSocket relay
