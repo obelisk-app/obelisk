@@ -128,7 +128,8 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
     setError(null);
 
     try {
-      await connectNDK();
+      // Start relay connections in background — never block login on relay connectivity
+      connectNDK().catch(() => {});
 
       let user = null;
 

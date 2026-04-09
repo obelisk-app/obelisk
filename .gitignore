@@ -48,3 +48,7 @@ next-env.d.ts
 *.db-journal
 *.sqlite
 *.sqlite-journal
+
+# Dev SSL certs
+cert.pem
+key.pem

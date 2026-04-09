@@ -89,16 +89,10 @@ export async function loginWithExtension(): Promise<NDKUser | null> {
     // Explicitly request access and wait for the extension to be ready.
     const user = await signer.blockUntilReady();
 
-    // fetchProfile can hang — add a timeout
-    try {
-      await Promise.race([
-        user.fetchProfile(),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
-      ]);
-    } catch {
-      // Profile fetch failed or timed out — continue with basic user info
-      console.warn('Profile fetch timed out or failed, continuing with pubkey only');
-    }
+    // Fetch profile in background — never block login
+    user.fetchProfile().catch(() => {
+      console.warn('Profile fetch failed, continuing with pubkey only');
+    });
 
     return user;
   } catch (error) {

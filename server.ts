@@ -1,11 +1,18 @@
 import next from 'next';
 import { createServer } from 'http';
+import { createServer as createHttpsServer } from 'https';
+import { readFileSync, existsSync } from 'fs';
 import { Server as SocketServer } from 'socket.io';
 import { parse } from 'url';
 
 const dev = process.env.NODE_ENV !== 'production';
-const hostname = 'localhost';
+const hostname = process.env.HOST || '0.0.0.0';
 const port = parseInt(process.env.PORT || '3000', 10);
+
+// Use HTTPS in dev if certs exist (needed for NIP-07 on LAN)
+const certPath = './cert.pem';
+const keyPath = './key.pem';
+const useHttps = dev && existsSync(certPath) && existsSync(keyPath);
 
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
@@ -17,15 +24,19 @@ app.prepare().then(async () => {
   // Dynamic import to let Next.js set up its module resolution first
   const { prisma } = await import('./src/lib/db-server');
 
-  const httpServer = createServer((req, res) => {
+  const requestHandler = (req: any, res: any) => {
     const parsedUrl = parse(req.url!, true);
     handle(req, res, parsedUrl);
-  });
+  };
+
+  const httpServer = useHttps
+    ? createHttpsServer({ cert: readFileSync(certPath), key: readFileSync(keyPath) }, requestHandler)
+    : createServer(requestHandler);
 
   const io = new SocketServer(httpServer, {
     cors: {
       origin: dev
-        ? [`http://${hostname}:${port}`]
+        ? true
         : process.env.CORS_ORIGIN
           ? [process.env.CORS_ORIGIN]
           : [],
@@ -520,7 +531,8 @@ app.prepare().then(async () => {
     io.emit(event, data);
   };
 
-  httpServer.listen(port, () => {
-    console.log(`> Obelisk ready on http://${hostname}:${port}`);
+  httpServer.listen(port, hostname, () => {
+    const proto = useHttps ? 'https' : 'http';
+    console.log(`> Obelisk ready on ${proto}://${hostname}:${port}`);
   });
 });
