@@ -22,10 +22,13 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    ports:
+      - "40000-40100:40000-40100/udp"
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-obelisk}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-obelisk}
       NODE_ENV: production
       CORS_ORIGIN: https://${DOMAIN}
+      MEDIASOUP_ANNOUNCED_IP: ${PUBLIC_IP}
     networks:
       - obelisk
 

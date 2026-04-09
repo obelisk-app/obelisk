@@ -3,6 +3,8 @@ FROM node:20-alpine AS base
 # --- Dependencies ---
 FROM base AS deps
 WORKDIR /app
+# mediasoup requires native C++ compilation
+RUN apk add --no-cache python3 make g++ linux-headers
 COPY package.json package-lock.json ./
 COPY prisma ./prisma/
 COPY prisma.config.ts ./
@@ -40,6 +42,8 @@ COPY docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x ./docker-entrypoint.sh
 
 EXPOSE 3000
+# mediasoup UDP ports for WebRTC media
+EXPOSE 40000-40100/udp
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 

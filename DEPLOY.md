@@ -12,9 +12,10 @@ Everything runs on a single server via Docker Compose: the app, PostgreSQL, and 
 
 ```
 Internet → Caddy (:443 HTTPS + auto SSL) → Obelisk (:3000 Next.js + Socket.io) → PostgreSQL (:5432)
+                                          → mediasoup (:40000-40100 UDP, WebRTC media)
 ```
 
-All three services run in Docker containers on a single machine. Caddy handles HTTPS automatically via Let's Encrypt.
+All three services run in Docker containers on a single machine. Caddy handles HTTPS automatically via Let's Encrypt. Voice/video media flows directly over UDP (ports 40000-40100) via WebRTC/mediasoup.
 
 ## Setup (5 minutes)
 
@@ -46,6 +47,12 @@ Edit `.env.production`:
 ```bash
 DOMAIN=obelisk.yourdomain.com
 POSTGRES_PASSWORD=a-strong-random-password
+PUBLIC_IP=YOUR_SERVER_IP          # Required for voice — your VPS public IP address
+```
+
+Open UDP ports for voice/video (WebRTC media):
+```bash
+sudo ufw allow 40000:40100/udp
 ```
 
 ### 4. Deploy

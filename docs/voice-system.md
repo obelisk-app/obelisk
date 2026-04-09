@@ -7,17 +7,23 @@ Voice, video, and screen sharing in Obelisk are all sent over the existing Socke
 ### How audio works
 
 ```
-Mic → getUserMedia() → ScriptProcessorNode → Float32 PCM frames
-  → socket.emit('voice-audio', buffer)
+Mic → getUserMedia() → AudioWorklet (20ms frames + VAD)
+  → AudioEncoder (Opus 48kbps) → [seqNo|opus payload] → socket.emit('voice-audio')
   → Server broadcasts to all other sockets in voice:channelId room
-  → socket.on('voice-audio') → Ring buffer AudioBufferSourceNode → Speakers
+  → socket.on('voice-audio') → Jitter Buffer → AudioDecoder (Opus)
+  → AudioWorklet playback → GainNode → Speakers
 ```
 
 1. **Capture**: Browser captures microphone via `getUserMedia()` with echo cancellation, noise suppression, and auto gain control.
-2. **Encode**: A `ScriptProcessorNode` captures PCM Float32 frames (960 samples = 20ms at 48kHz).
-3. **Send**: Raw PCM data is sent via Socket.io `voice-audio` event as an `ArrayBuffer`.
-4. **Relay**: Server broadcasts to all other sockets in the same `voice:channelId` room.
-5. **Playback**: Each client writes incoming PCM frames into a looping `AudioBuffer` ring buffer connected to speakers via a `GainNode`.
+2. **AudioWorklet**: `voice-capture-worklet.js` runs on the audio thread, accumulating samples into 960-sample frames (20ms at 48kHz). Includes energy-based VAD with 300ms hangover — silent frames are not transmitted.
+3. **Encode**: WebCodecs `AudioEncoder` compresses PCM to Opus at 48 kbps (~120 bytes per 20ms frame vs ~4KB raw PCM). Each packet is prefixed with a uint16 sequence number for the jitter buffer.
+4. **Send**: Encoded Opus packets sent via Socket.io `voice-audio` event as an `ArrayBuffer`.
+5. **Relay**: Server broadcasts to all other sockets in the same `voice:channelId` room (format-agnostic).
+6. **Jitter Buffer**: Incoming packets are buffered by sequence number with adaptive depth (40-160ms). Handles packet reordering and loss gracefully.
+7. **Decode**: WebCodecs `AudioDecoder` decompresses Opus back to PCM. On packet loss, Opus PLC (Packet Loss Concealment) fills gaps.
+8. **Playback**: `voice-playback-worklet.js` runs on the audio thread, reading decoded PCM from a ring buffer into the output.
+
+**Fallback**: Browsers without WebCodecs (Safari) fall back to raw Float32 PCM without compression or jitter buffering. Browsers without AudioWorklet fall back to ScriptProcessorNode.
 
 ### How video / screen sharing works
 
@@ -39,9 +45,12 @@ Camera/Screen → getDisplayMedia() / getUserMedia({video}) → MediaRecorder (V
 
 | File | Purpose |
 |------|---------|
-| `src/lib/voice.ts` | `WebSocketVoiceClient` class — audio/video/screen capture, send/receive, playback |
+| `src/lib/voice.ts` | `WebSocketVoiceClient` class — Opus encode/decode, AudioWorklet, jitter buffer, VAD |
+| `src/lib/jitter-buffer.ts` | Adaptive jitter buffer — reorders packets, handles loss, adapts to network jitter |
+| `public/voice-capture-worklet.js` | AudioWorklet for mic capture — 20ms framing, energy-based VAD |
+| `public/voice-playback-worklet.js` | AudioWorklet for playback — ring buffer output on audio thread |
 | `server.ts` | Media relay events — broadcasts audio/video/screen to voice room |
-| `src/store/voice.ts` | Zustand store — channel, participants, mute/deafen, camera/screen state |
+| `src/store/voice.ts` | Zustand store — channel, participants, mute/deafen, camera/screen, speaking state |
 | `src/components/chat/VoiceChannel.tsx` | Voice channel UI — participant grid, join button |
 | `src/components/chat/VoiceControls.tsx` | Mute/deafen/camera/screen/disconnect controls |
 | `src/app/chat/page.tsx` | Wires `WebSocketVoiceClient` to UI handlers |
@@ -56,11 +65,13 @@ Camera/Screen → getDisplayMedia() / getUserMedia({video}) → MediaRecorder (V
 
 | Metric | WebSocket (current) | WebRTC (future) |
 |--------|---------------------|-----------------|
-| Latency | ~200-400ms | ~50-100ms |
-| Audio codec | Raw PCM (uncompressed) | Opus (compressed) |
-| Audio bandwidth / user | ~768 kbps | ~32-64 kbps |
-| Echo cancellation | Browser-side only | Browser + network-level |
-| Jitter handling | Ring buffer (basic) | WebRTC jitter buffer (advanced) |
+| Latency | ~80-150ms | ~50-100ms |
+| Audio codec | Opus 48kbps (WebCodecs) | Opus (WebRTC native) |
+| Audio bandwidth / user | ~48 kbps (+ ~16x less than raw PCM) | ~32-64 kbps |
+| Echo cancellation | Browser-side | Browser + network-level |
+| Jitter handling | Adaptive jitter buffer (40-160ms) | WebRTC jitter buffer |
+| VAD | Energy-based with 300ms hangover | WebRTC VAD |
+| Audio thread | AudioWorklet (off main thread) | WebRTC (off main thread) |
 
 ### Video quality & latency
 
@@ -75,7 +86,7 @@ Camera/Screen → getDisplayMedia() / getUserMedia({video}) → MediaRecorder (V
 
 ### Bandwidth concerns
 
-**Audio**: Raw Float32 PCM at 48kHz is ~768 kbps per stream. With 5 participants, the server relays ~3.8 Mbps.
+**Audio**: Opus at 48 kbps per stream. With 5 participants, the server relays ~240 kbps. (Previously raw PCM at ~768 kbps per stream = ~3.8 Mbps for 5 participants.)
 
 **Video**: VP8 at 500 kbps per stream. With 3 video streams + 1 screen share, the server relays ~2 Mbps. This is manageable for small groups but doesn't scale.
 
@@ -88,12 +99,9 @@ Camera/Screen → getDisplayMedia() / getUserMedia({video}) → MediaRecorder (V
 - **Browser compatibility**: MediaSource + VP8 works in Chrome/Edge/Firefox. Safari support is limited.
 - **No adaptive bitrate**: Fixed 500 kbps regardless of network conditions. Poor connections will see buffering.
 
-### ScriptProcessorNode deprecation
+### AudioWorklet & legacy fallback
 
-`ScriptProcessorNode` is deprecated in favor of `AudioWorklet`. It still works in all browsers but runs on the main thread. Migration to AudioWorklet would:
-- Move audio processing off the main thread
-- Reduce audio glitches during UI interactions
-- Require serving a separate worklet JS file
+The primary pipeline uses `AudioWorklet` (off main thread). Browsers without AudioWorklet support fall back to the deprecated `ScriptProcessorNode` (main thread). Both paths feed into the same Opus encoder when WebCodecs is available.
 
 ---
 
@@ -163,7 +171,7 @@ Voice state is persisted in the database so the API endpoint (`GET /api/channels
 ### Audio
 | Event | Direction | Payload | Purpose |
 |-------|-----------|---------|---------|
-| `voice-audio` | C → S | `ArrayBuffer` (Float32 PCM) | Send audio frame |
+| `voice-audio` | C → S | `ArrayBuffer` ([u16 seqNo][Opus] or Float32 PCM fallback) | Send audio frame |
 | `voice-audio` | S → C | `{ pubkey, data }` | Receive audio from another participant |
 
 ### Video (Camera)
@@ -206,5 +214,6 @@ interface VoiceState {
   isScreenSharing: boolean;
   remoteVideos: Set<string>;   // pubkeys with camera on
   remoteScreens: Set<string>;  // pubkeys sharing screen
+  isSpeaking: boolean;         // local user VAD state
 }
 ```

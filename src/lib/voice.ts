@@ -1,17 +1,15 @@
 /**
- * WebSocket Voice/Video/Screen Client
+ * mediasoup WebRTC Voice/Video/Screen Client
  *
- * Sends/receives audio, video, and screen share over Socket.io.
- * This works through tunnels and proxies (Cloudflare Tunnel, etc.)
- * at the cost of higher latency compared to WebRTC.
+ * Audio/Video/Screen all go through WebRTC via a mediasoup SFU.
+ * Signaling happens over Socket.io. Media flows over UDP (WebRTC).
  *
- * Audio: Mic → ScriptProcessorNode → PCM Float32 → Socket.io → Ring buffer playback
- * Video/Screen: MediaRecorder (VP8 webm) → chunks → Socket.io → MediaSource playback
- *
- * See /docs/voice-system.md for limitations and upgrade path.
+ * This gives us: Opus codec, built-in echo cancellation, adaptive
+ * jitter buffer, ~50-100ms latency — all handled by the browser.
  */
 
 import type { Socket } from 'socket.io-client';
+import { Device, types as msTypes } from 'mediasoup-client';
 
 export interface VoiceParticipant {
   pubkey: string;
@@ -20,46 +18,39 @@ export interface VoiceParticipant {
   joinedAt: string;
 }
 
-// Audio config
-const SAMPLE_RATE = 48000;
-const FRAME_SIZE = 1024; // ~21ms at 48kHz (must be power of 2 for ScriptProcessorNode)
-
-// Video config
-const VIDEO_BITRATE = 500_000; // 500 kbps — reasonable for WebSocket relay
-const VIDEO_FRAME_RATE = 15;
-const RECORDER_TIMESLICE = 200; // ms between MediaRecorder chunks
-
 export class WebSocketVoiceClient {
   private socket: Socket;
-  private audioContext: AudioContext | null = null;
-  private localStream: MediaStream | null = null;
-  private sourceNode: MediaStreamAudioSourceNode | null = null;
-  private processorNode: ScriptProcessorNode | null = null;
-  private remoteGainNodes: Map<string, { gainNode: GainNode; nextWriteOffset: number; buffer: AudioBuffer }> = new Map();
-  private channelId: string | null = null;
-  private isMuted = false;
-  private isDeafened = false;
+  private device: Device | null = null;
+  private sendTransport: msTypes.Transport | null = null;
+  private recvTransport: msTypes.Transport | null = null;
 
-  // Video/Screen state
+  // Producers (what we send)
+  private audioProducer: msTypes.Producer | null = null;
+  private videoProducer: msTypes.Producer | null = null;
+  private screenProducer: msTypes.Producer | null = null;
+
+  // Consumers (what we receive)
+  private consumers: Map<string, msTypes.Consumer> = new Map();
+  private remoteAudioElements: Map<string, HTMLAudioElement> = new Map();
+
+  private channelId: string | null = null;
+  private localStream: MediaStream | null = null;
   private cameraStream: MediaStream | null = null;
   private screenStream: MediaStream | null = null;
-  private cameraRecorder: MediaRecorder | null = null;
-  private screenRecorder: MediaRecorder | null = null;
+  private isMuted = false;
+  private isDeafened = false;
+  private rtpCapabilities: msTypes.RtpCapabilities | null = null;
+  private recvTransportId: string | null = null;
 
-  // Remote video playback: pubkey → video element
+  // Remote video playback
   private remoteVideoElements: Map<string, HTMLVideoElement> = new Map();
   private remoteScreenElements: Map<string, HTMLVideoElement> = new Map();
-  // MediaSource for receiving video chunks
-  private remoteVideoSources: Map<string, { ms: MediaSource; sb: SourceBuffer | null; queue: ArrayBuffer[] }> = new Map();
-  private remoteScreenSources: Map<string, { ms: MediaSource; sb: SourceBuffer | null; queue: ArrayBuffer[] }> = new Map();
 
-  // Callbacks the UI can subscribe to
+  // Callbacks
   onConnectionStateChange?: (state: string) => void;
   onError?: (error: string) => void;
-  // Called when a remote video/screen element is created or removed
   onRemoteVideoElement?: (pubkey: string, element: HTMLVideoElement | null) => void;
   onRemoteScreenElement?: (pubkey: string, element: HTMLVideoElement | null) => void;
-  // Called with local preview streams
   onLocalCameraStream?: (stream: MediaStream | null) => void;
   onLocalScreenStream?: (stream: MediaStream | null) => void;
 
@@ -67,99 +58,109 @@ export class WebSocketVoiceClient {
     this.socket = socket;
   }
 
+  // ── Join / Leave ─────────────────────────────────────────────
+
   async join(channelId: string): Promise<void> {
     this.channelId = channelId;
 
-    // 1. Create AudioContext
-    this.audioContext = new AudioContext({ sampleRate: SAMPLE_RATE });
+    // 1. Join voice room — get router RTP capabilities + existing producers
+    const joinResult = await this.emitWithAck('join-voice', channelId);
+    if (joinResult.error) throw new Error(joinResult.error);
 
-    // 2. Get microphone
+    this.rtpCapabilities = joinResult.rtpCapabilities;
+
+    // 2. Create mediasoup Device and load capabilities
+    this.device = new Device();
+    await this.device.load({ routerRtpCapabilities: joinResult.rtpCapabilities });
+
+    // 3. Create send and recv transports
+    this.sendTransport = await this.createTransport('send');
+    this.recvTransport = await this.createTransport('recv');
+    this.recvTransportId = this.recvTransport.id;
+
+    // 4. Get mic and produce audio
     this.localStream = await navigator.mediaDevices.getUserMedia({
       audio: {
         echoCancellation: true,
         noiseSuppression: true,
         autoGainControl: true,
-        sampleRate: SAMPLE_RATE,
+        sampleRate: 48000,
       },
       video: false,
     });
 
-    // 3. Set up capture pipeline: mic → processor → socket
-    this.sourceNode = this.audioContext.createMediaStreamSource(this.localStream);
-    this.processorNode = this.audioContext.createScriptProcessor(FRAME_SIZE, 1, 1);
+    const audioTrack = this.localStream.getAudioTracks()[0];
+    this.audioProducer = await this.sendTransport.produce({
+      track: audioTrack,
+      codecOptions: { opusStereo: false, opusDtx: true },
+      appData: { type: 'audio' },
+    });
 
-    this.processorNode.onaudioprocess = (e) => {
-      if (this.isMuted) return;
-      const inputData = e.inputBuffer.getChannelData(0);
-      const buffer = new Float32Array(inputData.length);
-      buffer.set(inputData);
-      this.socket.emit('voice-audio', buffer.buffer);
-    };
+    // 5. Consume existing producers from other peers
+    for (const p of joinResult.existingProducers || []) {
+      await this.consumeProducer(p.producerId, p.pubkey, p.kind, p.appData);
+    }
 
-    this.sourceNode.connect(this.processorNode);
-    this.processorNode.connect(this.audioContext.destination);
-
-    // 4. Listen for incoming media
-    this.socket.on('voice-audio', this.handleRemoteAudio);
-    this.socket.on('voice-video', this.handleRemoteVideo);
-    this.socket.on('voice-screen', this.handleRemoteScreen);
-    this.socket.on('voice-video-start', this.handleRemoteVideoStart);
-    this.socket.on('voice-video-stop', this.handleRemoteVideoStop);
-    this.socket.on('voice-screen-start', this.handleRemoteScreenStart);
-    this.socket.on('voice-screen-stop', this.handleRemoteScreenStop);
-
-    // 5. Join the voice room on server
-    this.socket.emit('join-voice', channelId);
+    // 6. Listen for new producers
+    this.socket.on('new-producer', this.handleNewProducer);
+    this.socket.on('producer-closed', this.handleProducerClosed);
 
     this.onConnectionStateChange?.('connected');
   }
 
   async leave(): Promise<void> {
-    // Stop camera/screen if active
     await this.stopCamera();
     await this.stopScreenShare();
 
-    // Remove socket listeners
-    this.socket.off('voice-audio', this.handleRemoteAudio);
-    this.socket.off('voice-video', this.handleRemoteVideo);
-    this.socket.off('voice-screen', this.handleRemoteScreen);
-    this.socket.off('voice-video-start', this.handleRemoteVideoStart);
-    this.socket.off('voice-video-stop', this.handleRemoteVideoStop);
-    this.socket.off('voice-screen-start', this.handleRemoteScreenStart);
-    this.socket.off('voice-screen-stop', this.handleRemoteScreenStop);
+    this.socket.off('new-producer', this.handleNewProducer);
+    this.socket.off('producer-closed', this.handleProducerClosed);
 
-    // Disconnect audio pipeline
-    if (this.processorNode) {
-      this.processorNode.disconnect();
-      this.processorNode.onaudioprocess = null;
-      this.processorNode = null;
+    // Close all consumers
+    for (const consumer of this.consumers.values()) {
+      consumer.close();
     }
-    if (this.sourceNode) {
-      this.sourceNode.disconnect();
-      this.sourceNode = null;
-    }
+    this.consumers.clear();
 
-    // Stop mic
+    // Clean up remote audio elements
+    for (const el of this.remoteAudioElements.values()) {
+      el.pause();
+      el.srcObject = null;
+    }
+    this.remoteAudioElements.clear();
+
+    // Clean up remote video elements
+    for (const [pk, el] of this.remoteVideoElements) {
+      el.pause(); el.srcObject = null;
+      this.onRemoteVideoElement?.(pk, null);
+    }
+    this.remoteVideoElements.clear();
+    for (const [pk, el] of this.remoteScreenElements) {
+      el.pause(); el.srcObject = null;
+      this.onRemoteScreenElement?.(pk, null);
+    }
+    this.remoteScreenElements.clear();
+
+    // Close producers
+    if (this.audioProducer) { this.audioProducer.close(); this.audioProducer = null; }
+    if (this.videoProducer) { this.videoProducer.close(); this.videoProducer = null; }
+    if (this.screenProducer) { this.screenProducer.close(); this.screenProducer = null; }
+
+    // Close transports
+    if (this.sendTransport) { this.sendTransport.close(); this.sendTransport = null; }
+    if (this.recvTransport) { this.recvTransport.close(); this.recvTransport = null; }
+
+    // Stop local mic
     if (this.localStream) {
       this.localStream.getTracks().forEach(t => t.stop());
       this.localStream = null;
     }
 
-    // Clean up remote audio
-    for (const { gainNode } of this.remoteGainNodes.values()) {
-      gainNode.disconnect();
+    this.device = null;
+    this.rtpCapabilities = null;
+
+    if (this.channelId) {
+      this.socket.emit('leave-voice', this.channelId);
     }
-    this.remoteGainNodes.clear();
-
-    // Clean up remote video/screen elements
-    this.cleanupAllRemoteMedia();
-
-    // Close audio context
-    if (this.audioContext && this.audioContext.state !== 'closed') {
-      await this.audioContext.close();
-      this.audioContext = null;
-    }
-
     this.channelId = null;
     this.onConnectionStateChange?.('disconnected');
   }
@@ -168,289 +169,258 @@ export class WebSocketVoiceClient {
 
   mute(): void {
     this.isMuted = true;
-    if (this.localStream) {
-      this.localStream.getAudioTracks().forEach(t => { t.enabled = false; });
+    if (this.audioProducer && !this.audioProducer.closed) {
+      this.audioProducer.pause();
+      this.socket.emit('producer-pause', { producerId: this.audioProducer.id });
     }
+    this.localStream?.getAudioTracks().forEach(t => { t.enabled = false; });
   }
 
   unmute(): void {
     this.isMuted = false;
-    if (this.localStream) {
-      this.localStream.getAudioTracks().forEach(t => { t.enabled = true; });
+    if (this.audioProducer && !this.audioProducer.closed) {
+      this.audioProducer.resume();
+      this.socket.emit('producer-resume', { producerId: this.audioProducer.id });
     }
+    this.localStream?.getAudioTracks().forEach(t => { t.enabled = true; });
   }
 
   setDeafened(deafened: boolean): void {
     this.isDeafened = deafened;
-    for (const { gainNode } of this.remoteGainNodes.values()) {
-      gainNode.gain.value = deafened ? 0 : 1;
+    for (const el of this.remoteAudioElements.values()) {
+      el.muted = deafened;
+    }
+    for (const el of this.remoteVideoElements.values()) {
+      el.muted = deafened;
     }
   }
 
   // ── Camera ───────────────────────────────────────────────────
 
   async startCamera(): Promise<void> {
-    if (this.cameraStream) return;
-
+    if (this.cameraStream || !this.sendTransport) return;
+    if (!navigator.mediaDevices?.getUserMedia) {
+      throw new Error('Camera is not supported on this device');
+    }
     this.cameraStream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        width: { ideal: 640 },
-        height: { ideal: 480 },
-        frameRate: { ideal: VIDEO_FRAME_RATE },
-      },
+      video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 15 } },
       audio: false,
     });
-
     this.onLocalCameraStream?.(this.cameraStream);
-    this.startMediaRecorder(this.cameraStream, 'voice-video', (recorder) => {
-      this.cameraRecorder = recorder;
+
+    const videoTrack = this.cameraStream.getVideoTracks()[0];
+    this.videoProducer = await this.sendTransport.produce({
+      track: videoTrack,
+      appData: { type: 'camera' },
     });
-    this.socket.emit('voice-video-start');
   }
 
   async stopCamera(): Promise<void> {
-    if (this.cameraRecorder) {
-      this.cameraRecorder.stop();
-      this.cameraRecorder = null;
+    if (this.videoProducer && !this.videoProducer.closed) {
+      this.socket.emit('producer-close', { producerId: this.videoProducer.id });
+      this.videoProducer.close();
     }
+    this.videoProducer = null;
     if (this.cameraStream) {
       this.cameraStream.getTracks().forEach(t => t.stop());
       this.cameraStream = null;
       this.onLocalCameraStream?.(null);
-      this.socket.emit('voice-video-stop');
     }
   }
 
   // ── Screen Share ─────────────────────────────────────────────
 
   async startScreenShare(): Promise<void> {
-    if (this.screenStream) return;
-
+    if (this.screenStream || !this.sendTransport) return;
+    if (!navigator.mediaDevices?.getDisplayMedia) {
+      throw new Error('Screen sharing is not supported on this device');
+    }
     this.screenStream = await navigator.mediaDevices.getDisplayMedia({
-      video: {
-        frameRate: { ideal: VIDEO_FRAME_RATE },
-      },
+      video: { frameRate: { ideal: 15 } },
       audio: false,
     });
-
-    // Handle user clicking "Stop sharing" in browser UI
-    this.screenStream.getVideoTracks()[0].onended = () => {
-      this.stopScreenShare();
-    };
-
+    this.screenStream.getVideoTracks()[0].onended = () => { this.stopScreenShare(); };
     this.onLocalScreenStream?.(this.screenStream);
-    this.startMediaRecorder(this.screenStream, 'voice-screen', (recorder) => {
-      this.screenRecorder = recorder;
+
+    const screenTrack = this.screenStream.getVideoTracks()[0];
+    this.screenProducer = await this.sendTransport.produce({
+      track: screenTrack,
+      appData: { type: 'screen' },
     });
-    this.socket.emit('voice-screen-start');
   }
 
   async stopScreenShare(): Promise<void> {
-    if (this.screenRecorder) {
-      this.screenRecorder.stop();
-      this.screenRecorder = null;
+    if (this.screenProducer && !this.screenProducer.closed) {
+      this.socket.emit('producer-close', { producerId: this.screenProducer.id });
+      this.screenProducer.close();
     }
+    this.screenProducer = null;
     if (this.screenStream) {
       this.screenStream.getTracks().forEach(t => t.stop());
       this.screenStream = null;
       this.onLocalScreenStream?.(null);
-      this.socket.emit('voice-screen-stop');
     }
   }
 
-  destroy(): void {
-    this.leave();
-  }
+  destroy(): void { this.leave(); }
 
-  // ── Private: MediaRecorder helpers ───────────────────────────
+  // ── Private: Transport creation ──────────────────────────────
 
-  private startMediaRecorder(
-    stream: MediaStream,
-    socketEvent: string,
-    onRecorder: (recorder: MediaRecorder) => void,
-  ): void {
-    // Pick a supported codec
-    const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp8')
-      ? 'video/webm;codecs=vp8'
-      : 'video/webm';
+  private async createTransport(direction: 'send' | 'recv'): Promise<msTypes.Transport> {
+    const result = await this.emitWithAck('create-transport', {});
+    if (result.error) throw new Error(result.error);
 
-    const recorder = new MediaRecorder(stream, {
-      mimeType,
-      videoBitsPerSecond: VIDEO_BITRATE,
-    });
-
-    recorder.ondataavailable = async (e) => {
-      if (e.data.size > 0) {
-        const buffer = await e.data.arrayBuffer();
-        this.socket.emit(socketEvent, buffer);
-      }
-    };
-
-    recorder.start(RECORDER_TIMESLICE);
-    onRecorder(recorder);
-  }
-
-  // ── Private: Audio handling ──────────────────────────────────
-
-  private handleRemoteAudio = ({ pubkey, data }: { pubkey: string; data: ArrayBuffer }) => {
-    if (!this.audioContext || this.audioContext.state === 'closed') return;
-
-    const pcmData = new Float32Array(data);
-
-    let remote = this.remoteGainNodes.get(pubkey);
-    if (!remote) {
-      const buffer = this.audioContext.createBuffer(1, SAMPLE_RATE, SAMPLE_RATE);
-      const gainNode = this.audioContext.createGain();
-      gainNode.gain.value = this.isDeafened ? 0 : 1;
-      gainNode.connect(this.audioContext.destination);
-
-      const bufferSource = this.audioContext.createBufferSource();
-      bufferSource.buffer = buffer;
-      bufferSource.loop = true;
-      bufferSource.connect(gainNode);
-      bufferSource.start();
-
-      remote = { gainNode, nextWriteOffset: 0, buffer };
-      this.remoteGainNodes.set(pubkey, remote);
-    }
-
-    const channelData = remote.buffer.getChannelData(0);
-    for (let i = 0; i < pcmData.length; i++) {
-      channelData[(remote.nextWriteOffset + i) % channelData.length] = pcmData[i];
-    }
-    remote.nextWriteOffset = (remote.nextWriteOffset + pcmData.length) % channelData.length;
-  };
-
-  // ── Private: Video/Screen handling ───────────────────────────
-
-  private handleRemoteVideoStart = ({ pubkey }: { pubkey: string }) => {
-    this.ensureRemoteVideoElement(pubkey, 'video');
-  };
-
-  private handleRemoteVideoStop = ({ pubkey }: { pubkey: string }) => {
-    this.cleanupRemoteMedia(pubkey, 'video');
-  };
-
-  private handleRemoteScreenStart = ({ pubkey }: { pubkey: string }) => {
-    this.ensureRemoteVideoElement(pubkey, 'screen');
-  };
-
-  private handleRemoteScreenStop = ({ pubkey }: { pubkey: string }) => {
-    this.cleanupRemoteMedia(pubkey, 'screen');
-  };
-
-  private handleRemoteVideo = ({ pubkey, data }: { pubkey: string; data: ArrayBuffer }) => {
-    this.feedRemoteChunk(pubkey, data, 'video');
-  };
-
-  private handleRemoteScreen = ({ pubkey, data }: { pubkey: string; data: ArrayBuffer }) => {
-    this.feedRemoteChunk(pubkey, data, 'screen');
-  };
-
-  private ensureRemoteVideoElement(pubkey: string, type: 'video' | 'screen'): HTMLVideoElement {
-    const elementsMap = type === 'video' ? this.remoteVideoElements : this.remoteScreenElements;
-    const sourcesMap = type === 'video' ? this.remoteVideoSources : this.remoteScreenSources;
-
-    let el = elementsMap.get(pubkey);
-    if (el) return el;
-
-    // Create video element
-    el = document.createElement('video');
-    el.autoplay = true;
-    el.playsInline = true;
-    el.muted = true; // video element is muted — audio comes via audio pipeline
-    el.setAttribute('data-pubkey', pubkey);
-    el.setAttribute('data-media-type', type);
-    elementsMap.set(pubkey, el);
-
-    // Set up MediaSource for chunk-based playback
-    const ms = new MediaSource();
-    const entry = { ms, sb: null as SourceBuffer | null, queue: [] as ArrayBuffer[] };
-    sourcesMap.set(pubkey, entry);
-
-    el.src = URL.createObjectURL(ms);
-
-    ms.addEventListener('sourceopen', () => {
-      try {
-        const mimeType = 'video/webm;codecs=vp8';
-        entry.sb = ms.addSourceBuffer(mimeType);
-        entry.sb.mode = 'sequence';
-        entry.sb.addEventListener('updateend', () => {
-          // Flush queued chunks
-          if (entry.queue.length > 0 && entry.sb && !entry.sb.updating) {
-            const next = entry.queue.shift()!;
-            entry.sb.appendBuffer(next);
-          }
+    const transport = direction === 'send'
+      ? this.device!.createSendTransport({
+          id: result.id,
+          iceParameters: result.iceParameters,
+          iceCandidates: result.iceCandidates,
+          dtlsParameters: result.dtlsParameters,
+        })
+      : this.device!.createRecvTransport({
+          id: result.id,
+          iceParameters: result.iceParameters,
+          iceCandidates: result.iceCandidates,
+          dtlsParameters: result.dtlsParameters,
         });
-        // Flush any chunks that arrived before sourceopen
-        if (entry.queue.length > 0 && !entry.sb.updating) {
-          const next = entry.queue.shift()!;
-          entry.sb.appendBuffer(next);
-        }
-      } catch (err) {
-        console.error('[voice] Failed to create SourceBuffer:', err);
+
+    transport.on('connect', async ({ dtlsParameters }, callback, errback) => {
+      try {
+        const res = await this.emitWithAck('connect-transport', {
+          transportId: transport.id,
+          dtlsParameters,
+        });
+        if (res.error) throw new Error(res.error);
+        callback();
+      } catch (err: any) {
+        errback(err);
       }
     });
 
-    // Notify UI
-    if (type === 'video') this.onRemoteVideoElement?.(pubkey, el);
-    else this.onRemoteScreenElement?.(pubkey, el);
+    if (direction === 'send') {
+      transport.on('produce', async ({ kind, rtpParameters, appData }, callback, errback) => {
+        try {
+          const res = await this.emitWithAck('produce', {
+            transportId: transport.id,
+            kind,
+            rtpParameters,
+            appData,
+          });
+          if (res.error) throw new Error(res.error);
+          callback({ id: res.id });
+        } catch (err: any) {
+          errback(err);
+        }
+      });
+    }
 
-    return el;
+    return transport;
   }
 
-  private feedRemoteChunk(pubkey: string, data: ArrayBuffer, type: 'video' | 'screen'): void {
-    const sourcesMap = type === 'video' ? this.remoteVideoSources : this.remoteScreenSources;
+  // ── Private: Consuming remote producers ──────────────────────
 
-    // Ensure element exists
-    this.ensureRemoteVideoElement(pubkey, type);
+  private handleNewProducer = async ({ producerId, pubkey, kind, appData }: any) => {
+    await this.consumeProducer(producerId, pubkey, kind, appData);
+  };
 
-    const entry = sourcesMap.get(pubkey);
-    if (!entry) return;
-
-    if (entry.sb && !entry.sb.updating) {
-      try {
-        entry.sb.appendBuffer(data);
-      } catch {
-        // Buffer full or error — skip frame
+  private handleProducerClosed = ({ producerId }: any) => {
+    for (const [cid, consumer] of this.consumers) {
+      if (consumer.producerId === producerId) {
+        consumer.close();
+        this.consumers.delete(cid);
+        break;
       }
-    } else {
-      // Queue if SourceBuffer is busy or not ready yet
-      entry.queue.push(data);
-      // Keep queue bounded to prevent memory growth
-      if (entry.queue.length > 30) entry.queue.shift();
-    }
-  }
-
-  private cleanupRemoteMedia(pubkey: string, type: 'video' | 'screen'): void {
-    const elementsMap = type === 'video' ? this.remoteVideoElements : this.remoteScreenElements;
-    const sourcesMap = type === 'video' ? this.remoteVideoSources : this.remoteScreenSources;
-
-    const el = elementsMap.get(pubkey);
-    if (el) {
-      el.pause();
-      el.removeAttribute('src');
-      el.load();
-      elementsMap.delete(pubkey);
-      if (type === 'video') this.onRemoteVideoElement?.(pubkey, null);
-      else this.onRemoteScreenElement?.(pubkey, null);
     }
 
-    const source = sourcesMap.get(pubkey);
-    if (source) {
-      if (source.ms.readyState === 'open') {
-        try { source.ms.endOfStream(); } catch {}
+    const audioEl = this.remoteAudioElements.get(producerId);
+    if (audioEl) {
+      audioEl.pause();
+      audioEl.srcObject = null;
+      this.remoteAudioElements.delete(producerId);
+    }
+
+    for (const [pk, el] of this.remoteVideoElements) {
+      if (el.dataset.producerId === producerId) {
+        el.pause(); el.srcObject = null;
+        this.remoteVideoElements.delete(pk);
+        this.onRemoteVideoElement?.(pk, null);
+        break;
       }
-      sourcesMap.delete(pubkey);
+    }
+    for (const [pk, el] of this.remoteScreenElements) {
+      if (el.dataset.producerId === producerId) {
+        el.pause(); el.srcObject = null;
+        this.remoteScreenElements.delete(pk);
+        this.onRemoteScreenElement?.(pk, null);
+        break;
+      }
+    }
+  };
+
+  private async consumeProducer(
+    producerId: string,
+    pubkey: string,
+    kind: string,
+    appData: any,
+  ): Promise<void> {
+    if (!this.recvTransport || !this.device) return;
+
+    const result = await this.emitWithAck('consume', {
+      transportId: this.recvTransportId,
+      producerId,
+      rtpCapabilities: this.device.rtpCapabilities,
+    });
+    if (result.error) {
+      console.error('[voice] consume error:', result.error);
+      return;
+    }
+
+    const consumer = await this.recvTransport.consume({
+      id: result.id,
+      producerId: result.producerId,
+      kind: result.kind,
+      rtpParameters: result.rtpParameters,
+    });
+
+    this.consumers.set(consumer.id, consumer);
+
+    // Resume on server (consumers start paused)
+    await this.emitWithAck('resume-consumer', { consumerId: consumer.id });
+
+    const track = consumer.track;
+    const mediaType = appData?.type || kind;
+
+    if (kind === 'audio') {
+      const audioEl = new Audio();
+      audioEl.srcObject = new MediaStream([track]);
+      audioEl.muted = this.isDeafened;
+      audioEl.play().catch(() => {});
+      this.remoteAudioElements.set(producerId, audioEl);
+    } else if (kind === 'video') {
+      const videoEl = document.createElement('video');
+      videoEl.srcObject = new MediaStream([track]);
+      videoEl.autoplay = true;
+      videoEl.playsInline = true;
+      videoEl.muted = true;
+      videoEl.dataset.producerId = producerId;
+
+      if (mediaType === 'screen') {
+        this.remoteScreenElements.set(pubkey, videoEl);
+        this.onRemoteScreenElement?.(pubkey, videoEl);
+      } else {
+        this.remoteVideoElements.set(pubkey, videoEl);
+        this.onRemoteVideoElement?.(pubkey, videoEl);
+      }
     }
   }
 
-  private cleanupAllRemoteMedia(): void {
-    for (const pubkey of this.remoteVideoElements.keys()) {
-      this.cleanupRemoteMedia(pubkey, 'video');
-    }
-    for (const pubkey of this.remoteScreenElements.keys()) {
-      this.cleanupRemoteMedia(pubkey, 'screen');
-    }
+  // ── Private: Socket helper ───────────────────────────────────
+
+  private emitWithAck(event: string, data: any): Promise<any> {
+    return new Promise((resolve) => {
+      this.socket.emit(event, data, (response: any) => {
+        resolve(response || {});
+      });
+    });
   }
 }
