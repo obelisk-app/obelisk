@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { DMMessage } from '@/lib/dm';
+import type { DMMessage, DMProtocol } from '@/lib/dm';
 
 export interface DMThread {
   pubkey: string; // the other participant
@@ -8,6 +8,7 @@ export interface DMThread {
   lastMessage?: string;
   lastMessageAt?: number;
   unreadCount: number;
+  protocol?: DMProtocol; // last known protocol used in this thread
 }
 
 interface DMState {
@@ -16,6 +17,11 @@ interface DMState {
   threads: DMThread[];
   messages: DMMessage[];
   isLoadingMessages: boolean;
+  isLoadingThreads: boolean;
+  /** Per-thread protocol preference chosen by user (overrides auto-detect) */
+  protocolOverrides: Record<string, DMProtocol>;
+  /** Show the protocol choice popup */
+  showProtocolPrompt: string | null; // pubkey to prompt for, or null
 
   setDMMode: (active: boolean) => void;
   setActiveDM: (pubkey: string | null) => void;
@@ -25,6 +31,9 @@ interface DMState {
   setMessages: (messages: DMMessage[]) => void;
   addMessage: (message: DMMessage) => void;
   setLoadingMessages: (loading: boolean) => void;
+  setLoadingThreads: (loading: boolean) => void;
+  setProtocolOverride: (pubkey: string, protocol: DMProtocol) => void;
+  setShowProtocolPrompt: (pubkey: string | null) => void;
 }
 
 export const useDMStore = create<DMState>()((set) => ({
@@ -33,6 +42,9 @@ export const useDMStore = create<DMState>()((set) => ({
   threads: [],
   messages: [],
   isLoadingMessages: false,
+  isLoadingThreads: false,
+  protocolOverrides: {},
+  showProtocolPrompt: null,
 
   setDMMode: (active) => set({ isDMMode: active }),
   setActiveDM: (pubkey) => set({ activeDMPubkey: pubkey, messages: [], isLoadingMessages: !!pubkey }),
@@ -48,4 +60,10 @@ export const useDMStore = create<DMState>()((set) => ({
     messages: [...state.messages, message],
   })),
   setLoadingMessages: (loading) => set({ isLoadingMessages: loading }),
+  setLoadingThreads: (loading) => set({ isLoadingThreads: loading }),
+  setProtocolOverride: (pubkey, protocol) => set((state) => ({
+    protocolOverrides: { ...state.protocolOverrides, [pubkey]: protocol },
+    showProtocolPrompt: null,
+  })),
+  setShowProtocolPrompt: (pubkey) => set({ showProtocolPrompt: pubkey }),
 }));

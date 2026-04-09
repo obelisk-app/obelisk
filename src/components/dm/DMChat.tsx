@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useDMStore } from '@/store/dm';
 import { useAuthStore } from '@/store/auth';
-import { sendDM, fetchDMHistory } from '@/lib/dm';
+import { sendDM, fetchDMHistory, detectNip04InRecent } from '@/lib/dm';
+import type { DMProtocol } from '@/lib/dm';
 import { formatPubkey } from '@/lib/nostr';
 
 interface DMChatProps {
@@ -11,24 +12,44 @@ interface DMChatProps {
 }
 
 export default function DMChat({ profileCache }: DMChatProps) {
-  const { activeDMPubkey, messages, isLoadingMessages, setMessages, addMessage } = useDMStore();
+  const {
+    activeDMPubkey, messages, isLoadingMessages,
+    setMessages, addMessage, protocolOverrides, setShowProtocolPrompt,
+    updateThread,
+  } = useDMStore();
   const { profile } = useAuthStore();
   const [content, setContent] = useState('');
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const protocolChecked = useRef<string | null>(null);
 
   const otherProfile = activeDMPubkey ? profileCache.get(activeDMPubkey) : null;
   const otherName = otherProfile?.name || (activeDMPubkey ? formatPubkey(activeDMPubkey) : '');
 
+  // Determine send protocol for active conversation
+  const sendProtocol: DMProtocol = activeDMPubkey
+    ? (protocolOverrides[activeDMPubkey] || 'nip17')
+    : 'nip17';
+
   // Fetch DM history when active DM changes
   useEffect(() => {
     if (!activeDMPubkey || !profile?.pubkey) return;
+    protocolChecked.current = null;
 
     fetchDMHistory(profile.pubkey, activeDMPubkey).then((msgs) => {
       setMessages(msgs);
+
+      // Check if NIP-04 messages present in recent history — prompt if so and no override set
+      if (
+        detectNip04InRecent(msgs) &&
+        !useDMStore.getState().protocolOverrides[activeDMPubkey] &&
+        protocolChecked.current !== activeDMPubkey
+      ) {
+        protocolChecked.current = activeDMPubkey;
+        setShowProtocolPrompt(activeDMPubkey);
+      }
     });
-  }, [activeDMPubkey, profile?.pubkey, setMessages]);
+  }, [activeDMPubkey, profile?.pubkey, setMessages, setShowProtocolPrompt]);
 
   // Auto-scroll
   useEffect(() => {
@@ -41,14 +62,20 @@ export default function DMChat({ profileCache }: DMChatProps) {
     const text = content.trim();
     setContent('');
 
-    const event = await sendDM(activeDMPubkey, text);
+    const event = await sendDM(activeDMPubkey, text, sendProtocol);
     if (event && profile) {
-      addMessage({
-        id: event.id,
+      const msg = {
+        id: event.id || crypto.randomUUID(),
         senderPubkey: profile.pubkey,
         recipientPubkey: activeDMPubkey,
         content: text,
         createdAt: Math.floor(Date.now() / 1000),
+        protocol: sendProtocol,
+      };
+      addMessage(msg);
+      updateThread(activeDMPubkey, {
+        lastMessage: text,
+        lastMessageAt: msg.createdAt,
       });
     }
     setSending(false);
@@ -87,6 +114,9 @@ export default function DMChat({ profileCache }: DMChatProps) {
           </div>
         )}
         <span className="text-sm font-semibold text-lc-white">{otherName}</span>
+        <span className="text-xs text-lc-muted ml-auto" title={`Sending via ${sendProtocol.toUpperCase()}`}>
+          {sendProtocol === 'nip17' ? '🔒 NIP-17' : '⚠️ NIP-04'}
+        </span>
       </div>
 
       {/* Messages */}
@@ -144,7 +174,7 @@ export default function DMChat({ profileCache }: DMChatProps) {
       <div className="px-4 pb-4 pt-2 shrink-0">
         <div className="bg-lc-border/50 flex items-end gap-2 px-4 py-2 rounded-xl">
           <textarea
-            ref={textareaRef}
+            ref={useRef<HTMLTextAreaElement>(null)}
             value={content}
             onChange={(e) => setContent(e.target.value)}
             onKeyDown={handleKeyDown}

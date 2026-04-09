@@ -14,10 +14,14 @@ import SearchBar from '@/components/chat/SearchBar';
 import DMList from '@/components/dm/DMList';
 import DMChat from '@/components/dm/DMChat';
 import NewDMModal from '@/components/dm/NewDMModal';
+import ProtocolPrompt from '@/components/dm/ProtocolPrompt';
 import VoiceChannel from '@/components/chat/VoiceChannel';
 import { useDMStore } from '@/store/dm';
 import { useVoiceStore } from '@/store/voice';
 import { WebSocketVoiceClient } from '@/lib/voice';
+import { discoverDMThreads, subscribeDMs } from '@/lib/dm';
+import type { DMMessage } from '@/lib/dm';
+import { formatPubkey } from '@/lib/nostr';
 import MemberList from '@/components/chat/MemberList';
 
 function TypingIndicator({ profileCache }: { profileCache: Map<string, { name?: string; picture?: string }> }) {
@@ -193,6 +197,82 @@ export default function ChatPage() {
 
     fetchMembers();
   }, [profileSynced, profileCache]);
+
+  // Discover existing DM threads from Nostr relays on login
+  useEffect(() => {
+    if (!sessionChecked || !profile?.pubkey) return;
+
+    const dmStore = useDMStore.getState();
+    dmStore.setLoadingThreads(true);
+
+    discoverDMThreads(profile.pubkey).then((threadMap) => {
+      const threads = Array.from(threadMap.entries())
+        .sort((a, b) => b[1].lastMessageAt - a[1].lastMessageAt)
+        .map(([pubkey, info]) => {
+          const cached = profileCache.get(pubkey);
+          return {
+            pubkey,
+            displayName: cached?.name || formatPubkey(pubkey),
+            picture: cached?.picture,
+            lastMessage: info.lastMessage,
+            lastMessageAt: info.lastMessageAt,
+            unreadCount: 0,
+            protocol: info.protocol,
+          };
+        });
+      useDMStore.getState().setThreads(threads);
+      useDMStore.getState().setLoadingThreads(false);
+    }).catch(() => {
+      useDMStore.getState().setLoadingThreads(false);
+    });
+  }, [sessionChecked, profile?.pubkey, profileCache]);
+
+  // Subscribe to incoming DMs (NIP-04 + NIP-17) in real-time
+  useEffect(() => {
+    if (!sessionChecked || !profile?.pubkey) return;
+
+    const cleanup = subscribeDMs(profile.pubkey, (msg: DMMessage) => {
+      const dmStore = useDMStore.getState();
+      const otherPubkey = msg.senderPubkey === profile.pubkey
+        ? msg.recipientPubkey
+        : msg.senderPubkey;
+
+      // Update thread list
+      const existingThread = dmStore.threads.find(t => t.pubkey === otherPubkey);
+      if (existingThread) {
+        dmStore.updateThread(otherPubkey, {
+          lastMessage: msg.content,
+          lastMessageAt: msg.createdAt,
+          unreadCount: dmStore.activeDMPubkey === otherPubkey
+            ? 0
+            : existingThread.unreadCount + 1,
+        });
+      } else {
+        const cached = profileCache.get(otherPubkey);
+        dmStore.addThread({
+          pubkey: otherPubkey,
+          displayName: cached?.name || formatPubkey(otherPubkey),
+          picture: cached?.picture,
+          lastMessage: msg.content,
+          lastMessageAt: msg.createdAt,
+          unreadCount: dmStore.activeDMPubkey === otherPubkey ? 0 : 1,
+        });
+      }
+
+      // Add to active conversation if viewing this thread
+      if (dmStore.activeDMPubkey === otherPubkey) {
+        // Avoid duplicates
+        const exists = dmStore.messages.some(m => m.id === msg.id);
+        if (!exists) {
+          dmStore.addMessage(msg);
+        }
+      }
+    });
+
+    return () => {
+      if (cleanup) cleanup();
+    };
+  }, [sessionChecked, profile?.pubkey, profileCache]);
 
   // Connect Socket.io
   useEffect(() => {
@@ -527,6 +607,7 @@ export default function ChatPage() {
               <span className="text-sm font-semibold text-lc-white">Direct Messages</span>
             </div>
             <DMChat profileCache={profileCache} />
+            <ProtocolPrompt />
             {showNewDMModal && (
               <NewDMModal
                 onClose={() => setShowNewDMModal(false)}

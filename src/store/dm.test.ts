@@ -22,7 +22,7 @@ describe('useDMStore', () => {
   });
 
   it('sets active DM and clears messages', () => {
-    useDMStore.setState({ messages: [{ id: '1', senderPubkey: 'a', recipientPubkey: 'b', content: 'hi', createdAt: 0 }] });
+    useDMStore.setState({ messages: [{ id: '1', senderPubkey: 'a', recipientPubkey: 'b', content: 'hi', createdAt: 0, protocol: 'nip17' }] });
     useDMStore.getState().setActiveDM('pk1');
     expect(useDMStore.getState().activeDMPubkey).toBe('pk1');
     expect(useDMStore.getState().messages).toEqual([]);
@@ -46,8 +46,8 @@ describe('useDMStore', () => {
   });
 
   it('adds messages', () => {
-    useDMStore.getState().addMessage({ id: '1', senderPubkey: 'a', recipientPubkey: 'b', content: 'hi', createdAt: 100 });
-    useDMStore.getState().addMessage({ id: '2', senderPubkey: 'b', recipientPubkey: 'a', content: 'hello', createdAt: 101 });
+    useDMStore.getState().addMessage({ id: '1', senderPubkey: 'a', recipientPubkey: 'b', content: 'hi', createdAt: 100, protocol: 'nip04' });
+    useDMStore.getState().addMessage({ id: '2', senderPubkey: 'b', recipientPubkey: 'a', content: 'hello', createdAt: 101, protocol: 'nip17' });
     expect(useDMStore.getState().messages).toHaveLength(2);
   });
 });
