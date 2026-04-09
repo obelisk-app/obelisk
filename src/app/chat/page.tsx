@@ -363,7 +363,8 @@ export default function ChatPage() {
 
     socket.on('voice-state-update', ({ channelId, participants }: { channelId: string; participants: any[] }) => {
       const voiceStore = useVoiceStore.getState();
-      if (voiceStore.currentVoiceChannelId === channelId) {
+      // Update if we're in this voice channel OR currently viewing it
+      if (voiceStore.currentVoiceChannelId === channelId || activeChannelIdRef.current === channelId) {
         voiceStore.setParticipants(participants);
       }
     });
@@ -515,14 +516,15 @@ export default function ChatPage() {
       client.onError = (error) => {
         useVoiceStore.getState().setError(error);
       };
+      voiceStore.setVoiceChannel(channelId);
       await client.join(channelId);
       voiceClientRef.current = client;
-      voiceStore.setVoiceChannel(channelId);
       voiceStore.setConnectionState('connected');
     } catch (err: any) {
       console.error('Failed to join voice:', err);
       voiceStore.setError(err?.message || 'Failed to join voice channel');
       voiceStore.setConnectionState('failed');
+      voiceStore.setVoiceChannel(null);
     } finally {
       voiceStore.setConnecting(false);
     }
