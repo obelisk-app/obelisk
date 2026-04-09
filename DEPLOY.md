@@ -71,6 +71,7 @@ docker compose --env-file .env.production exec app npx prisma db seed
 
 Visit `https://obelisk.yourdomain.com` — you should see the app with full functionality including real-time messaging.
 
+
 ## Updating
 
 ```bash

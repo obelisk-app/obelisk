@@ -12,6 +12,8 @@ describe('useVoiceStore', () => {
     expect(state.voiceParticipants).toEqual([]);
     expect(state.isMuted).toBe(false);
     expect(state.isDeafened).toBe(false);
+    expect(state.connectionState).toBe('disconnected');
+    expect(state.error).toBeNull();
   });
 
   it('sets voice channel', () => {
@@ -49,12 +51,28 @@ describe('useVoiceStore', () => {
     expect(useVoiceStore.getState().isDeafened).toBe(true);
   });
 
+  it('sets connectionState and error', () => {
+    useVoiceStore.getState().setConnectionState('connecting');
+    expect(useVoiceStore.getState().connectionState).toBe('connecting');
+
+    useVoiceStore.getState().setConnectionState('connected');
+    expect(useVoiceStore.getState().connectionState).toBe('connected');
+
+    useVoiceStore.getState().setError('mic denied');
+    expect(useVoiceStore.getState().error).toBe('mic denied');
+
+    useVoiceStore.getState().setError(null);
+    expect(useVoiceStore.getState().error).toBeNull();
+  });
+
   it('leaveVoice resets all state', () => {
     useVoiceStore.setState({
       currentVoiceChannelId: 'ch1',
       voiceParticipants: [{ pubkey: 'pk1', muted: false, deafened: false, joinedAt: '' }],
       isMuted: true,
       isDeafened: true,
+      connectionState: 'connected',
+      error: 'some error',
     });
 
     useVoiceStore.getState().leaveVoice();
@@ -63,5 +81,7 @@ describe('useVoiceStore', () => {
     expect(state.voiceParticipants).toEqual([]);
     expect(state.isMuted).toBe(false);
     expect(state.isDeafened).toBe(false);
+    expect(state.connectionState).toBe('disconnected');
+    expect(state.error).toBeNull();
   });
 });

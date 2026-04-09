@@ -17,7 +17,7 @@ import NewDMModal from '@/components/dm/NewDMModal';
 import VoiceChannel from '@/components/chat/VoiceChannel';
 import { useDMStore } from '@/store/dm';
 import { useVoiceStore } from '@/store/voice';
-import { getLocalAudioStream, stopLocalAudioStream, setLocalMuted } from '@/lib/voice';
+import { WebSocketVoiceClient } from '@/lib/voice';
 import MemberList from '@/components/chat/MemberList';
 
 function TypingIndicator({ profileCache }: { profileCache: Map<string, { name?: string; picture?: string }> }) {
@@ -61,6 +61,7 @@ export default function ChatPage() {
     setMemberList,
   } = useChatStore();
   const socketRef = useRef<Socket | null>(null);
+  const voiceClientRef = useRef<WebSocketVoiceClient | null>(null);
   const prevChannelRef = useRef<string | null>(null);
   const activeChannelIdRef = useRef<string | null>(null);
   const [profileCache] = useState(() => new Map<string, { name?: string; picture?: string }>());
@@ -243,6 +244,20 @@ export default function ChatPage() {
       }
     });
 
+    // Track remote video/screen state in the store
+    socket.on('voice-video-start', ({ pubkey: pk }: { pubkey: string }) => {
+      useVoiceStore.getState().addRemoteVideo(pk);
+    });
+    socket.on('voice-video-stop', ({ pubkey: pk }: { pubkey: string }) => {
+      useVoiceStore.getState().removeRemoteVideo(pk);
+    });
+    socket.on('voice-screen-start', ({ pubkey: pk }: { pubkey: string }) => {
+      useVoiceStore.getState().addRemoteScreen(pk);
+    });
+    socket.on('voice-screen-stop', ({ pubkey: pk }: { pubkey: string }) => {
+      useVoiceStore.getState().removeRemoteScreen(pk);
+    });
+
     socket.on('connect_error', (err) => {
       console.warn('Socket connection error:', err.message);
     });
@@ -333,12 +348,26 @@ export default function ChatPage() {
     if (!socket) return;
     const voiceStore = useVoiceStore.getState();
     voiceStore.setConnecting(true);
+    voiceStore.setConnectionState('connecting');
+    voiceStore.setError(null);
     try {
-      await getLocalAudioStream();
-      socket.emit('join-voice', channelId);
+      const client = new WebSocketVoiceClient(socket);
+      client.onConnectionStateChange = (state) => {
+        useVoiceStore.getState().setConnectionState(
+          state === 'connected' ? 'connected' : state === 'failed' ? 'failed' : 'connecting',
+        );
+      };
+      client.onError = (error) => {
+        useVoiceStore.getState().setError(error);
+      };
+      await client.join(channelId);
+      voiceClientRef.current = client;
       voiceStore.setVoiceChannel(channelId);
-    } catch (err) {
-      console.error('Failed to get microphone:', err);
+      voiceStore.setConnectionState('connected');
+    } catch (err: any) {
+      console.error('Failed to join voice:', err);
+      voiceStore.setError(err?.message || 'Failed to join voice channel');
+      voiceStore.setConnectionState('failed');
     } finally {
       voiceStore.setConnecting(false);
     }
@@ -348,10 +377,14 @@ export default function ChatPage() {
     const socket = socketRef.current;
     const voiceStore = useVoiceStore.getState();
     const channelId = voiceStore.currentVoiceChannelId;
+
+    if (voiceClientRef.current) {
+      voiceClientRef.current.leave();
+      voiceClientRef.current = null;
+    }
     if (socket && channelId) {
       socket.emit('leave-voice', channelId);
     }
-    stopLocalAudioStream();
     voiceStore.leaveVoice();
   }, []);
 
@@ -361,7 +394,11 @@ export default function ChatPage() {
     const channelId = voiceStore.currentVoiceChannelId;
     const newMuted = !voiceStore.isMuted;
     voiceStore.setMuted(newMuted);
-    setLocalMuted(newMuted);
+
+    if (voiceClientRef.current) {
+      if (newMuted) voiceClientRef.current.mute();
+      else voiceClientRef.current.unmute();
+    }
     if (socket && channelId) {
       socket.emit('voice-mute', { channelId, muted: newMuted });
     }
@@ -375,10 +412,52 @@ export default function ChatPage() {
     voiceStore.setDeafened(newDeafened);
     if (newDeafened) {
       voiceStore.setMuted(true);
-      setLocalMuted(true);
+      if (voiceClientRef.current) voiceClientRef.current.mute();
+    }
+    if (voiceClientRef.current) {
+      voiceClientRef.current.setDeafened(newDeafened);
     }
     if (socket && channelId) {
       socket.emit('voice-deafen', { channelId, deafened: newDeafened });
+    }
+  }, []);
+
+  const handleToggleCamera = useCallback(async () => {
+    const client = voiceClientRef.current;
+    if (!client) return;
+    const voiceStore = useVoiceStore.getState();
+    try {
+      if (voiceStore.isCameraOn) {
+        await client.stopCamera();
+        voiceStore.setCameraOn(false);
+      } else {
+        await client.startCamera();
+        voiceStore.setCameraOn(true);
+      }
+    } catch (err: any) {
+      console.error('Camera error:', err);
+      useVoiceStore.getState().setError(err?.message || 'Failed to start camera');
+    }
+  }, []);
+
+  const handleToggleScreenShare = useCallback(async () => {
+    const client = voiceClientRef.current;
+    if (!client) return;
+    const voiceStore = useVoiceStore.getState();
+    try {
+      if (voiceStore.isScreenSharing) {
+        await client.stopScreenShare();
+        voiceStore.setScreenSharing(false);
+      } else {
+        await client.startScreenShare();
+        voiceStore.setScreenSharing(true);
+      }
+    } catch (err: any) {
+      // User cancelled screen share picker — not an error
+      if (err?.name !== 'NotAllowedError') {
+        console.error('Screen share error:', err);
+        useVoiceStore.getState().setError(err?.message || 'Failed to share screen');
+      }
     }
   }, []);
 
@@ -504,6 +583,8 @@ export default function ChatPage() {
                   onLeave={handleLeaveVoice}
                   onToggleMute={handleToggleVoiceMute}
                   onToggleDeafen={handleToggleVoiceDeafen}
+                  onToggleCamera={handleToggleCamera}
+                  onToggleScreenShare={handleToggleScreenShare}
                 />
               ) : (
                 <>

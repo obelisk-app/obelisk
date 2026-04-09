@@ -11,17 +11,19 @@ Nostr handles **identity & auth** (keys, profiles, NIP-05, signing). The server 
 ```
 Frontend          Next.js + Tailwind (La Crypta UI)
 Auth              Nostr (NIP-07 / nsec / NIP-46 bunker)
-Backend           Next.js API Routes (Vercel serverless)
-Database          PostgreSQL (Neon via Vercel)
+Backend           Next.js API Routes + custom server (server.ts)
+Database          PostgreSQL (self-hosted via Docker)
 ORM               Prisma 7 + @prisma/adapter-pg
-Real-time         Socket.io (local dev only — not available on Vercel)
+Real-time         Socket.io (via server.ts)
+Voice             WebSocket audio relay (via server.ts + Socket.io)
 ```
 
 ## Stack
 - **Next.js 16** + TypeScript + Tailwind CSS v4
 - **NDK** (Nostr Dev Kit v3) — Nostr abstraction for auth & profiles
-- **Prisma 7** — ORM with PostgreSQL (Neon) via `@prisma/adapter-pg`
-- **Socket.io** — Real-time messaging (local dev only via `server.ts`, not available on Vercel)
+- **Prisma 7** — ORM with PostgreSQL via `@prisma/adapter-pg`
+- **Socket.io** — Real-time messaging (via `server.ts`)
+- **WebSocket Audio** — Voice channels via Socket.io audio relay (works through tunnels/proxies, see `docs/voice-system.md`)
 - **Zustand** — client-side state management
 - **nostr-tools** — low-level Nostr utilities
 - **Vitest** + **React Testing Library** — testing
@@ -91,49 +93,26 @@ npx prisma migrate dev  # Run database migrations (dev)
 npx prisma db seed      # Seed the database
 ```
 
-## Deployment (Vercel + Neon)
+## Deployment (Self-Hosted Docker)
+
+See [DEPLOY.md](DEPLOY.md) for full setup instructions.
 
 ### Infrastructure
-- **Hosting:** Vercel (serverless Next.js)
-- **Database:** Neon Postgres (via Vercel Storage integration)
-- **Real-time:** Not available on Vercel (Socket.io requires persistent connections)
+```
+Internet → Caddy (:443 HTTPS + auto SSL) → Obelisk (:3000 Next.js + Socket.io) → PostgreSQL (:5432)
+```
+- **Hosting:** Self-hosted via Docker Compose (VPS with 2GB+ RAM)
+- **Database:** PostgreSQL (Docker container)
+- **Real-time:** Socket.io via `server.ts` (persistent WebSocket connections)
+- **SSL:** Caddy with automatic Let's Encrypt certificates
 
-### Environment Variables (Vercel)
-- `DATABASE_URL` — Neon Postgres pooled connection string (set automatically by Vercel Storage)
+### Environment Variables
+- `DOMAIN` — your domain name
+- `POSTGRES_PASSWORD` — database password
+- `DATABASE_URL` — PostgreSQL connection string (composed from above)
 
-### Build Pipeline
-Vercel runs `npm run build` which executes:
-1. `prisma generate` — generates the Prisma client
-2. `prisma migrate deploy` — applies pending migrations to Neon
-3. `next build` — builds the Next.js app
-
-### Known Limitations on Vercel
-Vercel is serverless — no persistent processes, no WebSocket connections. This means:
-
-| Feature | Status | Why |
-|---------|--------|-----|
-| Auth (login/logout/sessions) | Works | HTTP-based |
-| Channels CRUD | Works | HTTP-based |
-| Send/edit/delete messages | Works | HTTP-based (via API routes) |
-| Admin panel | Works | HTTP-based |
-| Moderation | Works | HTTP-based |
-| Forum posts | Works | HTTP-based |
-| **Live message delivery** | **Missing** | Requires Socket.io |
-| **Typing indicators** | **Missing** | Requires Socket.io |
-| **Live reactions** | **Missing** | Requires Socket.io |
-| **Voice channels** | **Missing** | Requires Socket.io + WebRTC |
-| **Force disconnect on ban/kick** | **Missing** | Requires Socket.io |
-| **Live moderation events** | **Missing** | Requires Socket.io |
-
-**Workaround:** Messages sent via API routes are saved to the database. Users need to refresh or re-fetch to see new messages. A polling fallback or migration to a real-time service (Pusher, Ably) can restore live updates.
-
-### Future: Full Real-time Support
-To restore Socket.io, deploy `server.ts` on a platform that supports persistent connections:
-- **Railway** — easiest, supports custom Node servers + WebSockets
-- **Fly.io** — global edge deployment with persistent connections
-- **Render** — simple Node.js hosting with WebSocket support
-
-The client would connect Socket.io to the external server URL instead of the same origin.
+### All features work in self-hosted mode
+Auth, channels, messages, real-time delivery, typing indicators, reactions, voice channels, force disconnect, admin, moderation, forum posts.
 
 ## Auth Flow
 1. Client requests login (NIP-07 extension, nsec, or NIP-46 bunker)

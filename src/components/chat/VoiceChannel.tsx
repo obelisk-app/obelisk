@@ -12,6 +12,8 @@ interface VoiceChannelProps {
   onLeave: () => void;
   onToggleMute: () => void;
   onToggleDeafen: () => void;
+  onToggleCamera: () => void;
+  onToggleScreenShare: () => void;
 }
 
 export default function VoiceChannel({
@@ -22,6 +24,8 @@ export default function VoiceChannel({
   onLeave,
   onToggleMute,
   onToggleDeafen,
+  onToggleCamera,
+  onToggleScreenShare,
 }: VoiceChannelProps) {
   const {
     currentVoiceChannelId,
@@ -152,6 +156,8 @@ export default function VoiceChannel({
           onToggleMute={onToggleMute}
           onToggleDeafen={onToggleDeafen}
           onLeave={onLeave}
+          onToggleCamera={onToggleCamera}
+          onToggleScreenShare={onToggleScreenShare}
         />
       )}
     </div>

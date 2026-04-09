@@ -27,6 +27,8 @@ describe('VoiceChannel', () => {
         onLeave={vi.fn()}
         onToggleMute={vi.fn()}
         onToggleDeafen={vi.fn()}
+        onToggleCamera={vi.fn()}
+        onToggleScreenShare={vi.fn()}
       />
     );
     expect(screen.getByText('Voice Channel — #voice-chat')).toBeInTheDocument();
@@ -45,6 +47,8 @@ describe('VoiceChannel', () => {
         onLeave={vi.fn()}
         onToggleMute={vi.fn()}
         onToggleDeafen={vi.fn()}
+        onToggleCamera={vi.fn()}
+        onToggleScreenShare={vi.fn()}
       />
     );
     await user.click(screen.getByTestId('join-voice-btn'));
@@ -69,6 +73,8 @@ describe('VoiceChannel', () => {
         onLeave={vi.fn()}
         onToggleMute={vi.fn()}
         onToggleDeafen={vi.fn()}
+        onToggleCamera={vi.fn()}
+        onToggleScreenShare={vi.fn()}
       />
     );
     expect(screen.getAllByTestId('voice-participant')).toHaveLength(2);
@@ -92,6 +98,8 @@ describe('VoiceChannel', () => {
         onLeave={vi.fn()}
         onToggleMute={vi.fn()}
         onToggleDeafen={vi.fn()}
+        onToggleCamera={vi.fn()}
+        onToggleScreenShare={vi.fn()}
       />
     );
     expect(screen.queryByTestId('voice-controls')).not.toBeInTheDocument();

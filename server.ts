@@ -10,6 +10,9 @@ const port = parseInt(process.env.PORT || '3000', 10);
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
 
+// Track which socket is in which voice channel (for audio relay)
+const voiceSockets = new Map<string, string>(); // socketId → channelId
+
 app.prepare().then(async () => {
   // Dynamic import to let Next.js set up its module resolution first
   const { prisma } = await import('./src/lib/db-server');
@@ -263,7 +266,7 @@ app.prepare().then(async () => {
       }
     });
 
-    // Voice channel events
+    // ── Voice channel events ────────────────────────────────────
     socket.on('join-voice', async (channelId: string) => {
       if (!channelId || typeof channelId !== 'string') return;
       try {
@@ -273,6 +276,8 @@ app.prepare().then(async () => {
           create: { channelId, pubkey },
         });
         socket.join(`voice:${channelId}`);
+        voiceSockets.set(socket.id, channelId);
+
         const participants = await prisma.voiceState.findMany({
           where: { channelId },
           select: { pubkey: true, muted: true, deafened: true, joinedAt: true },
@@ -286,6 +291,7 @@ app.prepare().then(async () => {
     socket.on('leave-voice', async (channelId: string) => {
       if (!channelId || typeof channelId !== 'string') return;
       try {
+        voiceSockets.delete(socket.id);
         await prisma.voiceState.deleteMany({ where: { channelId, pubkey } });
         socket.leave(`voice:${channelId}`);
         const participants = await prisma.voiceState.findMany({
@@ -332,13 +338,61 @@ app.prepare().then(async () => {
       } catch {}
     });
 
-    // WebRTC signaling relay (for SFU)
-    socket.on('voice-signal', ({ channelId, signal }: { channelId: string; signal: any }) => {
+    // ── WebSocket media relay ──────────────────────────────────
+    // Audio: raw PCM Float32 frames
+    socket.on('voice-audio', (data: ArrayBuffer) => {
+      const channelId = voiceSockets.get(socket.id);
       if (!channelId) return;
-      socket.to(`voice:${channelId}`).emit('voice-signal', { pubkey, signal });
+      socket.to(`voice:${channelId}`).emit('voice-audio', { pubkey, data });
+    });
+
+    // Video/Screen: encoded webm chunks from MediaRecorder
+    socket.on('voice-video', (data: ArrayBuffer) => {
+      const channelId = voiceSockets.get(socket.id);
+      if (!channelId) return;
+      socket.to(`voice:${channelId}`).emit('voice-video', { pubkey, data });
+    });
+
+    socket.on('voice-screen', (data: ArrayBuffer) => {
+      const channelId = voiceSockets.get(socket.id);
+      if (!channelId) return;
+      socket.to(`voice:${channelId}`).emit('voice-screen', { pubkey, data });
+    });
+
+    // Notify peers when camera/screen starts or stops
+    socket.on('voice-video-start', () => {
+      const channelId = voiceSockets.get(socket.id);
+      if (!channelId) return;
+      socket.to(`voice:${channelId}`).emit('voice-video-start', { pubkey });
+    });
+
+    socket.on('voice-video-stop', () => {
+      const channelId = voiceSockets.get(socket.id);
+      if (!channelId) return;
+      socket.to(`voice:${channelId}`).emit('voice-video-stop', { pubkey });
+    });
+
+    socket.on('voice-screen-start', () => {
+      const channelId = voiceSockets.get(socket.id);
+      if (!channelId) return;
+      socket.to(`voice:${channelId}`).emit('voice-screen-start', { pubkey });
+    });
+
+    socket.on('voice-screen-stop', () => {
+      const channelId = voiceSockets.get(socket.id);
+      if (!channelId) return;
+      socket.to(`voice:${channelId}`).emit('voice-screen-stop', { pubkey });
     });
 
     socket.on('disconnect', async () => {
+      // Notify voice room that this user's video/screen stopped
+      const voiceChannelId = voiceSockets.get(socket.id);
+      if (voiceChannelId) {
+        socket.to(`voice:${voiceChannelId}`).emit('voice-video-stop', { pubkey });
+        socket.to(`voice:${voiceChannelId}`).emit('voice-screen-stop', { pubkey });
+      }
+      voiceSockets.delete(socket.id);
+
       pubkeySockets.get(pubkey)?.delete(socket.id);
       if (pubkeySockets.get(pubkey)?.size === 0) {
         pubkeySockets.delete(pubkey);
