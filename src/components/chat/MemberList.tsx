@@ -10,7 +10,7 @@ export default function MemberList({ profileCache }: MemberListProps) {
   const memberList = useChatStore(s => s.memberList);
 
   return (
-    <div className="w-60 bg-lc-dark border-l border-lc-border flex flex-col shrink-0">
+    <div className="w-60 bg-lc-dark border-l border-r border-lc-border flex flex-col shrink-0">
       <div className="px-4 py-3 border-b border-lc-border">
         <h3 className="text-xs font-semibold text-lc-muted uppercase tracking-wide">
           Members — {memberList.length}

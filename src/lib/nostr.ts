@@ -25,7 +25,7 @@ export function getNDK(): NDK {
 
 export async function connectNDK(): Promise<NDK> {
   const ndk = getNDK();
-  ndk.connect();
+  await ndk.connect();
   return ndk;
 }
 

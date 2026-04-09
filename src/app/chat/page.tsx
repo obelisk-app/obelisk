@@ -21,7 +21,7 @@ import { useVoiceStore } from '@/store/voice';
 import { WebSocketVoiceClient } from '@/lib/voice';
 import { discoverDMThreads, subscribeDMs } from '@/lib/dm';
 import type { DMMessage } from '@/lib/dm';
-import { formatPubkey } from '@/lib/nostr';
+import { formatPubkey, getNDK, connectNDK } from '@/lib/nostr';
 import MemberList from '@/components/chat/MemberList';
 import { useNotificationStore } from '@/store/notification';
 import { requestNotificationPermission, showBrowserNotification } from '@/lib/browser-notifications';
@@ -78,17 +78,31 @@ export default function ChatPage() {
   const [showNewDMModal, setShowNewDMModal] = useState(false);
 
   // On mount, validate session with backend. If no valid session, redirect to landing.
-  // This doesn't depend on Zustand state at all — it checks the httpOnly cookie directly.
+  // Also restore NDK connection + signer so DMs and Nostr features work after refresh.
   useEffect(() => {
     if (sessionCheckStarted.current) return;
     sessionCheckStarted.current = true;
 
-    restoreSession().then((valid) => {
+    restoreSession().then(async (valid) => {
       if (!valid) {
         router.push('/');
-      } else {
-        setSessionChecked(true);
+        return;
       }
+
+      // Restore NDK connection and signer for Nostr features (DMs, etc.)
+      const loginMethod = useAuthStore.getState().loginMethod;
+      const ndk = getNDK();
+      try {
+        await connectNDK();
+        if (!ndk.signer && loginMethod === 'extension' && typeof window !== 'undefined' && window.nostr) {
+          const { NDKNip07Signer } = await import('@nostr-dev-kit/ndk');
+          ndk.signer = new NDKNip07Signer(4000, ndk);
+        }
+      } catch (err) {
+        console.warn('Failed to restore NDK connection:', err);
+      }
+
+      setSessionChecked(true);
     });
   }, [restoreSession, router]);
 
