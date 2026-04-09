@@ -1,0 +1,7 @@
+{$DOMAIN} {
+	reverse_proxy app:3000 {
+		# WebSocket support for Socket.io
+		header_up Connection {>Connection}
+		header_up Upgrade {>Upgrade}
+	}
+}

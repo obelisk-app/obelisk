@@ -21,7 +21,11 @@ app.prepare().then(async () => {
 
   const io = new SocketServer(httpServer, {
     cors: {
-      origin: dev ? [`http://${hostname}:${port}`] : [],
+      origin: dev
+        ? [`http://${hostname}:${port}`]
+        : process.env.CORS_ORIGIN
+          ? [process.env.CORS_ORIGIN]
+          : [],
       credentials: true,
     },
   });
@@ -89,27 +93,35 @@ app.prepare().then(async () => {
       }
 
       try {
-        // Check ban/mute before allowing message
-        const server = await prisma.server.findFirst({ select: { id: true } });
-        if (server) {
-          const ban = await prisma.ban.findUnique({
-            where: { serverId_pubkey: { serverId: server.id, pubkey } },
-          });
-          if (ban) {
-            socket.emit('message-error', { error: 'You are banned from this server' });
-            return;
-          }
+        // Resolve serverId from the channel
+        const channel = await prisma.channel.findUnique({
+          where: { id: channelId },
+          select: { serverId: true },
+        });
+        if (!channel) {
+          socket.emit('message-error', { error: 'Channel not found' });
+          return;
+        }
+        const serverId = channel.serverId;
 
-          const activeMute = await prisma.mute.findFirst({
-            where: { serverId: server.id, targetPubkey: pubkey, expiresAt: { gt: new Date() } },
+        // Check ban/mute before allowing message
+        const ban = await prisma.ban.findUnique({
+          where: { serverId_pubkey: { serverId, pubkey } },
+        });
+        if (ban) {
+          socket.emit('message-error', { error: 'You are banned from this server' });
+          return;
+        }
+
+        const activeMute = await prisma.mute.findFirst({
+          where: { serverId, targetPubkey: pubkey, expiresAt: { gt: new Date() } },
+        });
+        if (activeMute) {
+          socket.emit('message-error', {
+            error: 'You are muted',
+            mutedUntil: activeMute.expiresAt,
           });
-          if (activeMute) {
-            socket.emit('message-error', {
-              error: 'You are muted',
-              mutedUntil: activeMute.expiresAt,
-            });
-            return;
-          }
+          return;
         }
 
         const message = await prisma.message.create({
@@ -118,6 +130,14 @@ app.prepare().then(async () => {
             authorPubkey: pubkey,
             content: content.trim(),
             replyToId: replyToId || null,
+          },
+          include: {
+            replyTo: {
+              select: { id: true, content: true, authorPubkey: true },
+            },
+            reactions: {
+              select: { id: true, messageId: true, authorPubkey: true, emoji: true },
+            },
           },
         });
 
@@ -128,15 +148,215 @@ app.prepare().then(async () => {
       }
     });
 
+    socket.on('edit-message', async (data: { messageId: string; channelId: string; content: string }) => {
+      const { messageId, channelId, content } = data;
+
+      if (!messageId || !channelId || !content?.trim()) return;
+      if (content.length > 4000) {
+        socket.emit('message-error', { error: 'Message too long (max 4000 chars)' });
+        return;
+      }
+
+      try {
+        const existing = await prisma.message.findUnique({
+          where: { id: messageId },
+          select: { authorPubkey: true, channelId: true, deletedAt: true },
+        });
+
+        if (!existing || existing.deletedAt || existing.channelId !== channelId || existing.authorPubkey !== pubkey) {
+          socket.emit('message-error', { error: 'Cannot edit this message' });
+          return;
+        }
+
+        const updated = await prisma.message.update({
+          where: { id: messageId },
+          data: { content: content.trim(), editedAt: new Date() },
+          include: {
+            replyTo: { select: { id: true, content: true, authorPubkey: true } },
+            reactions: { select: { id: true, messageId: true, authorPubkey: true, emoji: true } },
+          },
+        });
+
+        io.to(`channel:${channelId}`).emit('message-edited', updated);
+      } catch (err) {
+        console.error('[socket] Failed to edit message:', err);
+        socket.emit('message-error', { error: 'Failed to edit message' });
+      }
+    });
+
+    socket.on('toggle-reaction', async (data: { messageId: string; channelId: string; emoji: string }) => {
+      const { messageId, channelId, emoji } = data;
+
+      if (!messageId || !channelId || !emoji) return;
+
+      try {
+        const message = await prisma.message.findUnique({
+          where: { id: messageId },
+          select: { channelId: true, deletedAt: true },
+        });
+
+        if (!message || message.deletedAt || message.channelId !== channelId) return;
+
+        const existing = await prisma.reaction.findUnique({
+          where: { messageId_authorPubkey_emoji: { messageId, authorPubkey: pubkey, emoji } },
+        });
+
+        if (existing) {
+          await prisma.reaction.delete({ where: { id: existing.id } });
+        } else {
+          await prisma.reaction.create({ data: { messageId, authorPubkey: pubkey, emoji } });
+        }
+
+        const reactions = await prisma.reaction.findMany({
+          where: { messageId },
+          select: { id: true, messageId: true, authorPubkey: true, emoji: true },
+        });
+
+        io.to(`channel:${channelId}`).emit('reaction-updated', { messageId, reactions });
+      } catch (err) {
+        console.error('[socket] Failed to toggle reaction:', err);
+      }
+    });
+
+    socket.on('delete-message', async (data: { messageId: string; channelId: string }) => {
+      const { messageId, channelId } = data;
+      if (!messageId || !channelId) return;
+
+      try {
+        const existing = await prisma.message.findUnique({
+          where: { id: messageId },
+          select: { authorPubkey: true, channelId: true, deletedAt: true },
+        });
+
+        if (!existing || existing.deletedAt || existing.channelId !== channelId || existing.authorPubkey !== pubkey) {
+          socket.emit('message-error', { error: 'Cannot delete this message' });
+          return;
+        }
+
+        await prisma.message.update({
+          where: { id: messageId },
+          data: { deletedAt: new Date() },
+        });
+
+        io.to(`channel:${channelId}`).emit('message-deleted', { messageId });
+      } catch (err) {
+        console.error('[socket] Failed to delete message:', err);
+        socket.emit('message-error', { error: 'Failed to delete message' });
+      }
+    });
+
     socket.on('typing', (channelId: string) => {
       if (typeof channelId === 'string' && channelId.length > 0) {
         socket.to(`channel:${channelId}`).emit('user-typing', { pubkey, channelId });
       }
     });
 
-    socket.on('disconnect', () => {
+    // DM typing indicator
+    socket.on('dm-typing', (targetPubkey: string) => {
+      if (typeof targetPubkey === 'string') {
+        const targetSockets = pubkeySockets.get(targetPubkey);
+        if (targetSockets) {
+          for (const sid of targetSockets) {
+            io.to(sid).emit('dm-user-typing', { pubkey });
+          }
+        }
+      }
+    });
+
+    // Voice channel events
+    socket.on('join-voice', async (channelId: string) => {
+      if (!channelId || typeof channelId !== 'string') return;
+      try {
+        await prisma.voiceState.upsert({
+          where: { channelId_pubkey: { channelId, pubkey } },
+          update: {},
+          create: { channelId, pubkey },
+        });
+        socket.join(`voice:${channelId}`);
+        const participants = await prisma.voiceState.findMany({
+          where: { channelId },
+          select: { pubkey: true, muted: true, deafened: true, joinedAt: true },
+        });
+        io.to(`voice:${channelId}`).emit('voice-state-update', { channelId, participants });
+      } catch (err) {
+        console.error('[socket] Failed to join voice:', err);
+      }
+    });
+
+    socket.on('leave-voice', async (channelId: string) => {
+      if (!channelId || typeof channelId !== 'string') return;
+      try {
+        await prisma.voiceState.deleteMany({ where: { channelId, pubkey } });
+        socket.leave(`voice:${channelId}`);
+        const participants = await prisma.voiceState.findMany({
+          where: { channelId },
+          select: { pubkey: true, muted: true, deafened: true, joinedAt: true },
+        });
+        io.to(`voice:${channelId}`).emit('voice-state-update', { channelId, participants });
+      } catch (err) {
+        console.error('[socket] Failed to leave voice:', err);
+      }
+    });
+
+    socket.on('voice-mute', async ({ channelId, muted }: { channelId: string; muted: boolean }) => {
+      if (!channelId) return;
+      try {
+        await prisma.voiceState.update({
+          where: { channelId_pubkey: { channelId, pubkey } },
+          data: { muted },
+        });
+        io.to(`voice:${channelId}`).emit('voice-state-update', {
+          channelId,
+          participants: await prisma.voiceState.findMany({
+            where: { channelId },
+            select: { pubkey: true, muted: true, deafened: true, joinedAt: true },
+          }),
+        });
+      } catch {}
+    });
+
+    socket.on('voice-deafen', async ({ channelId, deafened }: { channelId: string; deafened: boolean }) => {
+      if (!channelId) return;
+      try {
+        await prisma.voiceState.update({
+          where: { channelId_pubkey: { channelId, pubkey } },
+          data: { deafened, muted: deafened ? true : undefined },
+        });
+        io.to(`voice:${channelId}`).emit('voice-state-update', {
+          channelId,
+          participants: await prisma.voiceState.findMany({
+            where: { channelId },
+            select: { pubkey: true, muted: true, deafened: true, joinedAt: true },
+          }),
+        });
+      } catch {}
+    });
+
+    // WebRTC signaling relay (for SFU)
+    socket.on('voice-signal', ({ channelId, signal }: { channelId: string; signal: any }) => {
+      if (!channelId) return;
+      socket.to(`voice:${channelId}`).emit('voice-signal', { pubkey, signal });
+    });
+
+    socket.on('disconnect', async () => {
       pubkeySockets.get(pubkey)?.delete(socket.id);
-      if (pubkeySockets.get(pubkey)?.size === 0) pubkeySockets.delete(pubkey);
+      if (pubkeySockets.get(pubkey)?.size === 0) {
+        pubkeySockets.delete(pubkey);
+        // Clean up voice states on disconnect
+        try {
+          const voiceStates = await prisma.voiceState.findMany({ where: { pubkey }, select: { channelId: true } });
+          if (voiceStates.length > 0) {
+            await prisma.voiceState.deleteMany({ where: { pubkey } });
+            for (const vs of voiceStates) {
+              const participants = await prisma.voiceState.findMany({
+                where: { channelId: vs.channelId },
+                select: { pubkey: true, muted: true, deafened: true, joinedAt: true },
+              });
+              io.to(`voice:${vs.channelId}`).emit('voice-state-update', { channelId: vs.channelId, participants });
+            }
+          }
+        } catch {}
+      }
       console.log(`[socket] Disconnected: ${pubkey.slice(0, 8)}...`);
     });
   });

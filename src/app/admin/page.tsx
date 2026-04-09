@@ -4,9 +4,10 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth';
 import MemberRow from '@/components/admin/MemberRow';
+import ChannelManager from '@/components/admin/ChannelManager';
 import type { Role } from '@/lib/auth-roles';
 
-type Tab = 'members' | 'settings' | 'bans';
+type Tab = 'members' | 'channels' | 'settings' | 'bans';
 
 interface MemberData {
   id: string;
@@ -35,6 +36,7 @@ export default function AdminPage() {
   const [server, setServer] = useState<ServerSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [accessDenied, setAccessDenied] = useState(false);
 
   // Check auth and role via backend (no dependency on Zustand isConnected)
   useEffect(() => {
@@ -46,7 +48,7 @@ export default function AdminPage() {
       .then((data) => {
         if (!data) return;
         if (data.role !== 'owner' && data.role !== 'admin') {
-          router.push('/chat');
+          setAccessDenied(true);
         } else {
           setRole(data.role);
         }
@@ -83,11 +85,11 @@ export default function AdminPage() {
     if (res.ok) fetchMembers();
   };
 
-  const handleBan = async (pubkey: string) => {
+  const handleBan = async (pubkey: string, reason: string) => {
     const res = await fetch(`/api/admin/members/${pubkey}/ban`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
+      body: JSON.stringify({ reason: reason || undefined }),
     });
     if (res.ok) fetchMembers();
   };
@@ -125,6 +127,29 @@ export default function AdminPage() {
     await fetchServer();
   };
 
+  if (accessDenied) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-lc-black">
+        <div className="text-center max-w-sm mx-4">
+          <div className="w-16 h-16 rounded-full bg-red-600/10 flex items-center justify-center mx-auto mb-4">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0110 0v4"/>
+            </svg>
+          </div>
+          <h2 className="text-lg font-semibold text-lc-white mb-2">Access Denied</h2>
+          <p className="text-sm text-lc-muted mb-6">You need admin or owner permissions to access this page.</p>
+          <button
+            onClick={() => router.push('/chat')}
+            className="lc-pill-primary px-6 py-2 text-sm font-medium"
+          >
+            Back to Chat
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (!role || loading) {
     return (
       <div className="h-screen flex items-center justify-center bg-lc-black">
@@ -160,7 +185,7 @@ export default function AdminPage() {
       {/* Tabs */}
       <div className="max-w-4xl mx-auto px-6">
         <div className="flex gap-1 border-b border-lc-border mt-4">
-          {(['members', 'settings', 'bans'] as Tab[]).map((t) => (
+          {(['members', 'channels', 'settings', 'bans'] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -190,6 +215,13 @@ export default function AdminPage() {
                 onUnban={handleUnban}
               />
             ))}
+          </div>
+        )}
+
+        {/* Channels Tab */}
+        {tab === 'channels' && (
+          <div className="mt-4" data-testid="channels-tab">
+            <ChannelManager isOwner={isOwner} />
           </div>
         )}
 

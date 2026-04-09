@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import RoleBadge from './RoleBadge';
 import ConfirmDialog from './ConfirmDialog';
+import BanReasonDialog from './BanReasonDialog';
 import type { Role } from '@/lib/auth-roles';
 
 interface MemberData {
@@ -21,7 +22,7 @@ interface MemberRowProps {
   isOwner: boolean; // is the viewer the owner?
   onRoleChange: (pubkey: string, role: Role) => void;
   onKick: (pubkey: string) => void;
-  onBan: (pubkey: string) => void;
+  onBan: (pubkey: string, reason: string) => void;
   onUnban: (pubkey: string) => void;
 }
 
@@ -112,11 +113,9 @@ export default function MemberRow({ member, isOwner, onRoleChange, onKick, onBan
         />
       )}
       {confirm === 'ban' && (
-        <ConfirmDialog
-          title="Ban Member"
-          message={`Ban ${member.displayName || shortPubkey}? They will be removed and cannot rejoin.`}
-          confirmLabel="Ban"
-          onConfirm={() => { onBan(member.pubkey); setConfirm(null); }}
+        <BanReasonDialog
+          memberName={member.displayName || shortPubkey}
+          onConfirm={(reason) => { onBan(member.pubkey, reason); setConfirm(null); }}
           onCancel={() => setConfirm(null)}
         />
       )}

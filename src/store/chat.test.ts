@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useChatStore } from './chat';
 
 describe('useChatStore', () => {
@@ -55,11 +55,11 @@ describe('useChatStore', () => {
   it('setActiveChannel clears messages, reply, and sets loading', () => {
     useChatStore.getState().addMessage({
       id: 'm1', channelId: 'ch1', authorPubkey: 'pk1',
-      content: 'hello', replyToId: null, createdAt: new Date().toISOString(),
+      content: 'hello', replyToId: null, editedAt: null, createdAt: new Date().toISOString(),
     });
     useChatStore.getState().setReplyingTo({
       id: 'm1', channelId: 'ch1', authorPubkey: 'pk1',
-      content: 'hello', replyToId: null, createdAt: new Date().toISOString(),
+      content: 'hello', replyToId: null, editedAt: null, createdAt: new Date().toISOString(),
     });
 
     useChatStore.getState().setActiveChannel('ch2');
@@ -71,8 +71,8 @@ describe('useChatStore', () => {
   });
 
   it('addMessage appends to messages', () => {
-    const msg1 = { id: 'm1', channelId: 'ch1', authorPubkey: 'pk1', content: 'first', replyToId: null, createdAt: '2024-01-01' };
-    const msg2 = { id: 'm2', channelId: 'ch1', authorPubkey: 'pk2', content: 'second', replyToId: null, createdAt: '2024-01-02' };
+    const msg1 = { id: 'm1', channelId: 'ch1', authorPubkey: 'pk1', content: 'first', replyToId: null, editedAt: null, createdAt: '2024-01-01' };
+    const msg2 = { id: 'm2', channelId: 'ch1', authorPubkey: 'pk2', content: 'second', replyToId: null, editedAt: null, createdAt: '2024-01-02' };
 
     useChatStore.getState().addMessage(msg1);
     useChatStore.getState().addMessage(msg2);
@@ -80,8 +80,8 @@ describe('useChatStore', () => {
   });
 
   it('removeMessage removes a message by id', () => {
-    const msg1 = { id: 'm1', channelId: 'ch1', authorPubkey: 'pk1', content: 'first', replyToId: null, createdAt: '2024-01-01' };
-    const msg2 = { id: 'm2', channelId: 'ch1', authorPubkey: 'pk2', content: 'second', replyToId: null, createdAt: '2024-01-02' };
+    const msg1 = { id: 'm1', channelId: 'ch1', authorPubkey: 'pk1', content: 'first', replyToId: null, editedAt: null, createdAt: '2024-01-01' };
+    const msg2 = { id: 'm2', channelId: 'ch1', authorPubkey: 'pk2', content: 'second', replyToId: null, editedAt: null, createdAt: '2024-01-02' };
     useChatStore.getState().addMessage(msg1);
     useChatStore.getState().addMessage(msg2);
     useChatStore.getState().removeMessage('m1');
@@ -89,11 +89,63 @@ describe('useChatStore', () => {
   });
 
   it('setReplyingTo sets and clears reply state', () => {
-    const msg = { id: 'm1', channelId: 'ch1', authorPubkey: 'pk1', content: 'hello', replyToId: null, createdAt: '2024-01-01' };
+    const msg = { id: 'm1', channelId: 'ch1', authorPubkey: 'pk1', content: 'hello', replyToId: null, editedAt: null, createdAt: '2024-01-01' };
     useChatStore.getState().setReplyingTo(msg);
     expect(useChatStore.getState().replyingTo).toEqual(msg);
 
     useChatStore.getState().setReplyingTo(null);
     expect(useChatStore.getState().replyingTo).toBeNull();
+  });
+
+  it('starts with correct pagination initial state', () => {
+    const state = useChatStore.getState();
+    expect(state.messageCursor).toBeNull();
+    expect(state.hasMoreMessages).toBe(false);
+    expect(state.typingUsers).toEqual({});
+  });
+
+  it('setMessageCursor updates cursor and hasMore', () => {
+    useChatStore.getState().setMessageCursor('cursor-123', true);
+    const state = useChatStore.getState();
+    expect(state.messageCursor).toBe('cursor-123');
+    expect(state.hasMoreMessages).toBe(true);
+  });
+
+  it('prependMessages adds messages at the beginning', () => {
+    const msg1 = { id: 'm1', channelId: 'ch1', authorPubkey: 'pk1', content: 'first', replyToId: null, editedAt: null, createdAt: '2024-01-01' };
+    const msg2 = { id: 'm2', channelId: 'ch1', authorPubkey: 'pk2', content: 'second', replyToId: null, editedAt: null, createdAt: '2024-01-02' };
+    const older = { id: 'm0', channelId: 'ch1', authorPubkey: 'pk1', content: 'older', replyToId: null, editedAt: null, createdAt: '2023-12-31' };
+
+    useChatStore.getState().addMessage(msg1);
+    useChatStore.getState().addMessage(msg2);
+    useChatStore.getState().prependMessages([older]);
+
+    const msgs = useChatStore.getState().messages;
+    expect(msgs[0]).toEqual(older);
+    expect(msgs).toHaveLength(3);
+  });
+
+  it('setActiveChannel resets pagination and typing', () => {
+    useChatStore.getState().setMessageCursor('cursor-123', true);
+    useChatStore.getState().setActiveChannel('ch2');
+    const state = useChatStore.getState();
+    expect(state.messageCursor).toBeNull();
+    expect(state.hasMoreMessages).toBe(false);
+    expect(state.typingUsers).toEqual({});
+  });
+
+  it('setTyping adds pubkey to typingUsers', () => {
+    vi.useFakeTimers();
+    useChatStore.getState().setTyping('pk-typer');
+    expect(Object.keys(useChatStore.getState().typingUsers)).toContain('pk-typer');
+    vi.useRealTimers();
+  });
+
+  it('clearTyping removes pubkey from typingUsers', () => {
+    vi.useFakeTimers();
+    useChatStore.getState().setTyping('pk-typer');
+    useChatStore.getState().clearTyping('pk-typer');
+    expect(Object.keys(useChatStore.getState().typingUsers)).not.toContain('pk-typer');
+    vi.useRealTimers();
   });
 });

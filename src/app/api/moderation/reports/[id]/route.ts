@@ -29,5 +29,15 @@ export async function PATCH(
     data: { status, resolvedAt: new Date(), resolvedByPubkey: actor.pubkey },
   });
 
+  // Log to audit trail
+  await prisma.moderationAction.create({
+    data: {
+      serverId,
+      actorPubkey: actor.pubkey,
+      action: status === 'resolved' ? 'resolve_report' : 'dismiss_report',
+      metadata: JSON.stringify({ reportId: id, messageId: report.messageId }),
+    },
+  });
+
   return NextResponse.json(updated);
 }

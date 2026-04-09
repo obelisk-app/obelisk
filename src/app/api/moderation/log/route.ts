@@ -20,8 +20,11 @@ export async function GET(req: NextRequest) {
       ...(cursor ? { createdAt: { lt: new Date(cursor) } } : {}),
     },
     orderBy: { createdAt: 'desc' },
-    take: 50,
+    take: 51,
   });
 
-  return NextResponse.json(actions);
+  const hasMore = actions.length > 50;
+  if (hasMore) actions.pop();
+
+  return NextResponse.json({ actions, hasMore });
 }

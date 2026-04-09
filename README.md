@@ -1,88 +1,105 @@
-# 🔐 Nostr Starter Kit
+# Obelisk — Discord-like Chat with Nostr Identity
 
-Starter kit para la hackathon **IDENTITY** de La Crypta — Abril 2026.
+A Discord-style group chat app where your identity **is** your Nostr keypair. No emails, no passwords — just cryptographic identity.
 
-Conectate a Nostr con extensión (Alby), nsec, o bunker. Mirá tu perfil como si fuera Twitter.
+Built for La Crypta's **IDENTITY Hackathon** (April 2026).
+
+## Why
+
+Nostr DMs are limited — NIP-04 leaks metadata, NIP-17 is spam-prone. Group chat over relays doesn't scale. But Nostr **identity** is solid: keys, profiles, NIP-05 verification, badges, web of trust.
+
+Obelisk uses Nostr for what it does best (identity & auth) and a traditional server for what it needs (channels, messages, permissions, real-time delivery).
+
+## Architecture
+
+```
+Frontend          Next.js + Tailwind (La Crypta UI)
+Auth              Nostr (NIP-07 / nsec / NIP-46 bunker)
+Backend           Next.js API Routes + Socket.io
+Database          SQLite (dev) / PostgreSQL (prod)
+ORM               Prisma
+```
+
+**Nostr handles:** Authentication (sign-in with keys), profile data (kind 0), DMs (encrypted via relays)
+**Server handles:** Channels, messages, members, roles, permissions, real-time delivery
 
 ## Quick Start
 
 ```bash
-# Clonar
-git clone https://github.com/lacrypta/nostr-starter
-cd nostr-starter
-
-# Instalar
+git clone https://github.com/fabrica/obelisk
+cd obelisk
 npm install
-
-# Correr
 npm run dev
 ```
 
-Abrí [http://localhost:3000](http://localhost:3000)
+Open [http://localhost:3000](http://localhost:3000)
 
 ## Features
 
-- 🔑 **3 métodos de login:** Extension (Alby/nos2x), nsec, Bunker (NIP-46)
-- 👤 **Perfil completo:** Avatar, banner, bio, links, Lightning address
-- 📊 **Stats:** Followers, following, cantidad de notas
-- 📝 **Timeline:** Tus últimas notas con timestamps relativos
-- 🌐 **Multi-relay:** Conecta a Damus, Nostr.band, nos.lol, Primal
+- **Nostr login:** Extension (Alby/nos2x), nsec, or NIP-46 bunker
+- **Servers & channels:** Discord-like hierarchy with real-time messaging
+- **Nostr profiles:** Avatar, banner, bio, NIP-05 — pulled from the network
+- **Web of Trust:** Spam resistance via Nostr's social graph
+- **La Crypta UI:** Dark theme, green accents, skeleton loading
 
 ## Stack
 
-- [Next.js 16](https://nextjs.org/) + TypeScript
-- [Tailwind CSS](https://tailwindcss.com/)
-- [NDK](https://ndk.fyi/) (Nostr Dev Kit)
-- [Zustand](https://zustand-demo.pmnd.rs/) (State)
+| Layer | Tech |
+|-------|------|
+| Frontend | Next.js 16 + TypeScript + Tailwind v4 |
+| Auth | Nostr (NDK + nostr-tools) |
+| API | Next.js API Routes |
+| Realtime | Socket.io |
+| DB | SQLite (dev) / PostgreSQL (prod) |
+| ORM | Prisma |
+| State | Zustand |
 
-## Estructura
+## Data Model
 
 ```
-src/
-├── components/
-│   ├── Navbar.tsx      # Navegación + botón login
-│   ├── LoginModal.tsx  # Modal de autenticación
-│   └── Profile.tsx     # Vista de perfil
-├── lib/
-│   └── nostr.ts        # Funciones Nostr
-└── store/
-    └── auth.ts         # Estado de autenticación
+Server
+  -> channels[]
+  -> members[]
+
+Channel
+  -> messages[]
+
+Message
+  -> author (Nostr pubkey)
+  -> reactions[]
+  -> reply_to (threads)
+
+Member
+  -> pubkey + role + cached Nostr profile
 ```
 
-## NIPs Utilizados
+## Auth Flow
 
-- **NIP-01:** Basic protocol
-- **NIP-02:** Contact list (following)
-- **NIP-05:** DNS-based verification
-- **NIP-07:** Browser extension
-- **NIP-46:** Nostr Connect (bunker)
+1. Client requests login
+2. Server generates challenge (random string + timestamp)
+3. Client signs challenge with Nostr key (NIP-07 / nsec / bunker)
+4. Server verifies signature against pubkey
+5. Server issues JWT/session token
 
-## Ideas para tu Proyecto
+## Roadmap
 
-1. **Perfil Público** — Ver perfil de cualquier npub
-2. **Editor de Perfil** — Actualizar kind 0
-3. **Verificador NIP-05** — Check de identidad
-4. **Social Feed** — Timeline de seguidos
-5. **Nostr Login** — Auth para tu app con Nostr
-6. **Badge System** — Badges verificables
-7. **Reputation Score** — Basado en follows/WoT
+See [ROADMAP.md](ROADMAP.md) for the full development plan.
 
-## Recursos
+## Why This Wins
 
-- 📚 [Nostr Protocol](https://nostr.com)
-- 📖 [NIPs](https://github.com/nostr-protocol/nips)
-- 🛠️ [NDK Docs](https://ndk.fyi)
-- 🦊 [Alby Extension](https://getalby.com)
+1. **Solves a real problem** — La Crypta uses Discord, but their identity lives on Nostr
+2. **Identity innovation** — Nostr keys as universal identity, badges as roles, NIP-05 as verification
+3. **Impressive demo** — Real-time chat always impresses
+4. **Pragmatic** — Uses each technology where it makes sense
+5. **Extensible** — Voice, video, bots, bridges to Nostr relays
 
-## Hackathon
+## Resources
 
-**IDENTITY — Nostr Identity & Social**
-
-- 📅 Abril 2026
-- ⭐ Nivel: Beginner
-- 💰 Premios: 1,000,000 sats
-- 📝 [Inscribite](https://tally.so/r/9qDNEY)
+- [NDK Documentation](https://ndk.fyi)
+- [Nostr Protocol](https://nostr.com)
+- [NIPs Repository](https://github.com/nostr-protocol/nips)
+- [La Crypta](https://lacrypta.ar)
 
 ---
 
-Built with ⚡ by [La Crypta](https://lacrypta.ar)
+Built with lightning by [La Crypta](https://lacrypta.ar)

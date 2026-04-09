@@ -55,8 +55,10 @@ body {
 }
 
 /* Pill button style */
-.lc-pill {
-  border-radius: 9999px;
+.lc-pill,
+.lc-pill-primary,
+.lc-pill-secondary {
+  border-radius: 9999px !important;
   padding: 10px 24px;
   font-weight: 600;
   transition: all 0.2s ease;

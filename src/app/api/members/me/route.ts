@@ -16,9 +16,17 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'No server' }, { status: 404 });
   }
 
-  const member = await prisma.member.update({
+  const member = await prisma.member.upsert({
     where: { serverId_pubkey: { serverId: server.id, pubkey } },
-    data: {
+    update: {
+      displayName: displayName || null,
+      picture: picture || null,
+      nip05: nip05 || null,
+    },
+    create: {
+      serverId: server.id,
+      pubkey,
+      role: 'member',
       displayName: displayName || null,
       picture: picture || null,
       nip05: nip05 || null,

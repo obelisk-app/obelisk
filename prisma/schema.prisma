@@ -4,7 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 model Server {
@@ -24,6 +24,35 @@ model Server {
   warnings   Warning[]
   reports    Report[]
   moderationActions ModerationAction[]
+  invitations      Invitation[]
+}
+
+model DirectMessageThread {
+  id           String   @id @default(cuid())
+  participant1 String   // pubkey (sorted: participant1 < participant2)
+  participant2 String
+  updatedAt    DateTime @default(now()) @updatedAt
+
+  @@unique([participant1, participant2])
+  @@index([participant1])
+  @@index([participant2])
+}
+
+model Invitation {
+  id           String    @id @default(cuid())
+  serverId     String
+  code         String    @unique
+  createdBy    String    // pubkey of inviter
+  targetPubkey String?   // null = anyone, set = specific npub
+  maxUses      Int       @default(1)
+  uses         Int       @default(0)
+  expiresAt    DateTime?
+  createdAt    DateTime  @default(now())
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@index([serverId])
+  @@index([code])
 }
 
 model Category {
@@ -50,28 +79,88 @@ model Channel {
 
   server   Server    @relation(fields: [serverId], references: [id], onDelete: Cascade)
   category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  messages Message[]
+  messages     Message[]
+  voiceStates  VoiceState[]
+  forumTags    ForumTag[]
 
   @@index([serverId])
   @@index([categoryId])
+}
+
+model VoiceState {
+  id        String   @id @default(cuid())
+  channelId String
+  pubkey    String
+  muted     Boolean  @default(false)
+  deafened  Boolean  @default(false)
+  joinedAt  DateTime @default(now())
+
+  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@unique([channelId, pubkey])
+  @@index([channelId])
 }
 
 model Message {
   id           String    @id @default(cuid())
   channelId    String
   authorPubkey String
+  title        String?   // null for chat messages, set for forum posts
   content      String
   replyToId    String?
   createdAt    DateTime  @default(now())
+  editedAt     DateTime?
   deletedAt    DateTime?
 
-  channel  Channel   @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  replyTo  Message?  @relation("MessageReplies", fields: [replyToId], references: [id])
-  replies  Message[] @relation("MessageReplies")
-  reports  Report[]
+  channel   Channel    @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  replyTo   Message?   @relation("MessageReplies", fields: [replyToId], references: [id])
+  replies   Message[]  @relation("MessageReplies")
+  reports   Report[]
+  reactions Reaction[]
+  tags      ForumTagOnMessage[]
 
   @@index([channelId, createdAt])
   @@index([authorPubkey])
+}
+
+model Reaction {
+  id           String   @id @default(cuid())
+  messageId    String
+  authorPubkey String
+  emoji        String
+  createdAt    DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, authorPubkey, emoji])
+  @@index([messageId])
+}
+
+model ForumTag {
+  id        String @id @default(cuid())
+  channelId String
+  name      String
+  color     String @default("#b4f953") // hex color for the tag pill
+  position  Int    @default(0)
+
+  channel  Channel            @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  messages ForumTagOnMessage[]
+
+  @@unique([channelId, name])
+  @@index([channelId])
+}
+
+model ForumTagOnMessage {
+  id        String @id @default(cuid())
+  messageId String
+  tagId     String
+
+  message Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  tag     ForumTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, tagId])
+  @@index([messageId])
+  @@index([tagId])
 }
 
 model Member {

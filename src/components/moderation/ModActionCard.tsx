@@ -19,6 +19,8 @@ const ACTION_LABELS: Record<string, { label: string; color: string }> = {
   warn: { label: 'Warned', color: 'text-yellow-400' },
   delete_message: { label: 'Deleted message', color: 'text-red-300' },
   role_change: { label: 'Changed role', color: 'text-blue-400' },
+  resolve_report: { label: 'Resolved report', color: 'text-lc-green' },
+  dismiss_report: { label: 'Dismissed report', color: 'text-lc-muted' },
 };
 
 function shortKey(key: string) {

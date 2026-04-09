@@ -25,7 +25,7 @@ describe('MessageArea', () => {
 
   it('shows "Select a channel" when no channel is active', () => {
     useChatStore.setState({ activeChannelId: null });
-    render(<MessageArea profileCache={profileCache} />);
+    render(<MessageArea profileCache={profileCache} onEdit={vi.fn()} onDelete={vi.fn()} onToggleReaction={vi.fn()} />);
     expect(screen.getByText('Select a channel')).toBeInTheDocument();
   });
 
@@ -36,7 +36,7 @@ describe('MessageArea', () => {
       pinnedChannels: [{ id: 'ch1', name: 'general', emoji: null, type: 'text', position: 0, categoryId: null }],
       categories: [],
     });
-    const { container } = render(<MessageArea profileCache={profileCache} />);
+    const { container } = render(<MessageArea profileCache={profileCache} onEdit={vi.fn()} onDelete={vi.fn()} onToggleReaction={vi.fn()} />);
     expect(container.querySelectorAll('.lc-skeleton').length).toBeGreaterThan(0);
   });
 
@@ -48,7 +48,7 @@ describe('MessageArea', () => {
       pinnedChannels: [{ id: 'ch1', name: 'general', emoji: null, type: 'text', position: 0, categoryId: null }],
       categories: [],
     });
-    render(<MessageArea profileCache={profileCache} />);
+    render(<MessageArea profileCache={profileCache} onEdit={vi.fn()} onDelete={vi.fn()} onToggleReaction={vi.fn()} />);
     expect(screen.getByText('No messages yet')).toBeInTheDocument();
   });
 
@@ -58,13 +58,13 @@ describe('MessageArea', () => {
       activeChannelId: 'ch1',
       isLoadingMessages: false,
       messages: [
-        { id: 'm1', channelId: 'ch1', authorPubkey: 'pk1', content: 'Hello everyone!', replyToId: null, createdAt: new Date().toISOString() },
+        { id: 'm1', channelId: 'ch1', authorPubkey: 'pk1', content: 'Hello everyone!', replyToId: null, editedAt: null, createdAt: new Date().toISOString() },
       ],
       pinnedChannels: [{ id: 'ch1', name: 'general', emoji: null, type: 'text', position: 0, categoryId: null }],
       categories: [],
     });
 
-    render(<MessageArea profileCache={profileCache} />);
+    render(<MessageArea profileCache={profileCache} onEdit={vi.fn()} onDelete={vi.fn()} onToggleReaction={vi.fn()} />);
     expect(screen.getByText('Alice')).toBeInTheDocument();
     expect(screen.getByText('Hello everyone!')).toBeInTheDocument();
   });
@@ -74,14 +74,47 @@ describe('MessageArea', () => {
       activeChannelId: 'ch1',
       isLoadingMessages: false,
       messages: [
-        { id: 'm1', channelId: 'ch1', authorPubkey: 'pk1', content: 'Check this https://example.com/photo.jpg', replyToId: null, createdAt: new Date().toISOString() },
+        { id: 'm1', channelId: 'ch1', authorPubkey: 'pk1', content: 'Check this https://example.com/photo.jpg', replyToId: null, editedAt: null, createdAt: new Date().toISOString() },
       ],
       pinnedChannels: [{ id: 'ch1', name: 'general', emoji: null, type: 'text', position: 0, categoryId: null }],
       categories: [],
     });
 
-    const { container } = render(<MessageArea profileCache={profileCache} />);
+    const { container } = render(<MessageArea profileCache={profileCache} onEdit={vi.fn()} onDelete={vi.fn()} onToggleReaction={vi.fn()} />);
     const img = container.querySelector('img[src="https://example.com/photo.jpg"]');
     expect(img).toBeInTheDocument();
+  });
+
+  it('shows Load earlier button when hasMoreMessages is true', () => {
+    useChatStore.setState({
+      activeChannelId: 'ch1',
+      isLoadingMessages: false,
+      messages: [
+        { id: 'm1', channelId: 'ch1', authorPubkey: 'pk1', content: 'msg', replyToId: null, editedAt: null, createdAt: new Date().toISOString() },
+      ],
+      pinnedChannels: [{ id: 'ch1', name: 'general', emoji: null, type: 'text', position: 0, categoryId: null }],
+      categories: [],
+      hasMoreMessages: true,
+      messageCursor: 'cursor-1',
+    });
+
+    render(<MessageArea profileCache={profileCache} onEdit={vi.fn()} onDelete={vi.fn()} onToggleReaction={vi.fn()} />);
+    expect(screen.getByTestId('load-older-btn')).toBeInTheDocument();
+  });
+
+  it('hides Load earlier button when hasMoreMessages is false', () => {
+    useChatStore.setState({
+      activeChannelId: 'ch1',
+      isLoadingMessages: false,
+      messages: [
+        { id: 'm1', channelId: 'ch1', authorPubkey: 'pk1', content: 'msg', replyToId: null, editedAt: null, createdAt: new Date().toISOString() },
+      ],
+      pinnedChannels: [{ id: 'ch1', name: 'general', emoji: null, type: 'text', position: 0, categoryId: null }],
+      categories: [],
+      hasMoreMessages: false,
+    });
+
+    render(<MessageArea profileCache={profileCache} onEdit={vi.fn()} onDelete={vi.fn()} onToggleReaction={vi.fn()} />);
+    expect(screen.queryByTestId('load-older-btn')).not.toBeInTheDocument();
   });
 });

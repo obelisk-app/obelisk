@@ -1,350 +1,236 @@
-# AGENTS.md — Nostr Starter Kit for Identity Hackathon
+# AGENTS.md — Obelisk
 
-You are helping a participant of La Crypta's **IDENTITY Hackathon** (April 2026).
-Your goal: help them build a winning Nostr Identity app using this starter kit.
+You are building **Obelisk**, a Discord-like group chat app where identity comes from Nostr keypairs. No emails, no passwords — cryptographic identity only.
 
-## Hackathon Context
-- **Theme:** IDENTITY — Nostr Identity & Social
-- **Organizer:** La Crypta (lacrypta.ar) — Argentine Bitcoin & Nostr community
-- **Level:** Beginner-friendly, but winning projects show creativity and polish
-- **Registration:** https://tally.so/r/9qDNEY
-- **Community:** Discord La Crypta
+Built for La Crypta's **IDENTITY Hackathon** (April 2026). See [ROADMAP.md](ROADMAP.md) for the full development plan.
 
-## What Judges Look For
-1. **Identity innovation** — creative use of Nostr identity primitives (keys, profiles, NIP-05, badges, delegation)
-2. **Working demo** — it must run and be interactive
-3. **UX polish** — La Crypta look and feel is already applied (dark theme, green accents, skeleton loading)
-4. **Protocol understanding** — proper use of NIPs, relay management, event kinds
-5. **Completeness** — a focused, finished feature beats many half-done ones
+## Architecture
+
+Nostr handles **identity & auth** (keys, profiles, NIP-05, signing). The server handles **everything else** (channels, messages, members, roles, permissions, real-time delivery).
+
+```
+Frontend          Next.js + Tailwind (La Crypta UI)
+Auth              Nostr (NIP-07 / nsec / NIP-46 bunker)
+Backend           Next.js API Routes (Vercel serverless)
+Database          PostgreSQL (Neon via Vercel)
+ORM               Prisma 7 + @prisma/adapter-pg
+Real-time         Socket.io (local dev only — not available on Vercel)
+```
 
 ## Stack
 - **Next.js 16** + TypeScript + Tailwind CSS v4
-- **NDK** (Nostr Dev Kit v3) — high-level Nostr abstraction
-- **Zustand** — lightweight state management
+- **NDK** (Nostr Dev Kit v3) — Nostr abstraction for auth & profiles
+- **Prisma 7** — ORM with PostgreSQL (Neon) via `@prisma/adapter-pg`
+- **Socket.io** — Real-time messaging (local dev only via `server.ts`, not available on Vercel)
+- **Zustand** — client-side state management
 - **nostr-tools** — low-level Nostr utilities
-- **qrcode.react** — QR code generation for NIP-46 bunker flow
-- **Vitest** + **React Testing Library** — component and unit testing
+- **Vitest** + **React Testing Library** — testing
 
 ## Project Structure
 ```
+prisma/
+├── schema.prisma         # Data model (Server, Channel, Message, Member, etc.)
+├── seed.ts               # DB seed script
+└── migrations/           # Prisma migrations
+server.ts                 # Custom Next.js + Socket.io server
 src/
 ├── app/
-│   ├── layout.tsx        # Root layout (Inter font, La Crypta theme)
-│   ├── page.tsx          # Main page — renders active section (Profile/Badges)
-│   └── globals.css       # La Crypta design system (colors, skeletons, animations)
+│   ├── layout.tsx        # Root layout (La Crypta theme)
+│   ├── page.tsx          # Landing / main page
+│   ├── chat/page.tsx     # Chat UI (Discord-like layout)
+│   ├── admin/page.tsx    # Server administration panel
+│   ├── moderation/page.tsx # Moderation dashboard
+│   └── api/
+│       ├── auth/         # challenge → sign → verify → session
+│       ├── channels/     # CRUD channels + messages
+│       ├── members/      # Member management
+│       ├── admin/        # Server settings, roles, bans, kicks
+│       └── moderation/   # Reports, mutes, warnings, mod log
 ├── components/
-│   ├── Navbar.tsx        # Fixed nav with section links (Profile, Badges) + user menu
-│   ├── LoginModal.tsx    # Modal with 3 auth methods + QR bunker flow
-│   ├── Profile.tsx       # User profile with skeleton loading
-│   └── Badges.tsx        # NIP-58 badges display with skeleton loading
+│   ├── Navbar.tsx        # Top navigation + user menu
+│   ├── LoginModal.tsx    # 3 auth methods + QR bunker flow
+│   ├── ObeliskIcon.tsx   # App icon
+│   ├── chat/
+│   │   ├── ServerBar.tsx     # Server icon sidebar (Discord-like)
+│   │   ├── ChannelSidebar.tsx # Channel list sidebar
+│   │   ├── MessageArea.tsx    # Message display with scroll
+│   │   └── MessageInput.tsx   # Message composer
+│   ├── admin/
+│   │   ├── MemberRow.tsx     # Member list row with actions
+│   │   ├── ConfirmDialog.tsx # Confirmation modal
+│   │   └── RoleBadge.tsx     # Role display badge
+│   └── moderation/
+│       └── ModActionCard.tsx # Moderation action display
 ├── lib/
-│   └── nostr.ts          # NDK setup, login, relay mgmt, data fetching (all with timeouts)
+│   ├── nostr.ts          # NDK setup, login, relay mgmt
+│   ├── auth.ts           # Client-side auth (challenge/verify flow)
+│   ├── api-auth.ts       # API route auth helpers
+│   ├── backend-auth.ts   # Server-side session verification
+│   ├── auth-roles.ts     # Role & permission logic
+│   ├── db.ts             # Prisma client singleton
+│   └── db-server.ts      # Server initialization helpers
 ├── store/
-│   ├── auth.ts           # Auth state (Zustand + localStorage persistence)
-│   └── nav.ts            # Navigation state (active section)
-└── types/
-    └── nostr.d.ts        # NIP-07 window.nostr type declarations
+│   ├── auth.ts           # Auth state (Zustand + localStorage)
+│   ├── chat.ts           # Chat state (channels, messages, socket)
+│   └── nav.ts            # Navigation state
+├── generated/prisma/     # Generated Prisma client
+└── test/
+    ├── setup.ts          # Vitest setup
+    └── mocks/ndk.ts      # NDK mock for tests
 ```
 
 ## Commands
 ```bash
 npm install          # Install dependencies
-npm run dev          # Dev server at localhost:3000
-npm run build        # Production build
+npm run dev          # Dev server (Next.js + Socket.io) at localhost:3000
+npm run build        # prisma generate + migrate deploy + next build
 npm run test         # Run all tests once
-npm run test:watch   # Run tests in watch mode (re-runs on file changes)
+npm run test:watch   # Run tests in watch mode
 npm run test:coverage # Run tests with coverage report
+npx prisma migrate dev  # Run database migrations (dev)
+npx prisma db seed      # Seed the database
 ```
 
-## What's Already Built
-- **3 login methods:** NIP-07 extension (auto-detected), nsec, NIP-46 bunker with QR code
-- **Profile view:** Avatar, banner, bio, NIP-05 verification, website, lightning address
-- **Social stats:** Followers, following, notes count (all with timeouts)
-- **Notes timeline:** User's kind-1 notes with relative timestamps
-- **Badges page:** NIP-58 badge awards display
-- **Smart relay management:** Combines 5 popular relays + user's NIP-65 relay list (kind 10002)
-- **Skeleton loading:** Animated placeholders for all loading states
-- **Image loading:** Shimmer effect until images fully load
-- **La Crypta design system:** Dark theme, green accents (#b4f953), grid background, pill buttons, card hover effects
+## Deployment (Vercel + Neon)
+
+### Infrastructure
+- **Hosting:** Vercel (serverless Next.js)
+- **Database:** Neon Postgres (via Vercel Storage integration)
+- **Real-time:** Not available on Vercel (Socket.io requires persistent connections)
+
+### Environment Variables (Vercel)
+- `DATABASE_URL` — Neon Postgres pooled connection string (set automatically by Vercel Storage)
+
+### Build Pipeline
+Vercel runs `npm run build` which executes:
+1. `prisma generate` — generates the Prisma client
+2. `prisma migrate deploy` — applies pending migrations to Neon
+3. `next build` — builds the Next.js app
+
+### Known Limitations on Vercel
+Vercel is serverless — no persistent processes, no WebSocket connections. This means:
+
+| Feature | Status | Why |
+|---------|--------|-----|
+| Auth (login/logout/sessions) | Works | HTTP-based |
+| Channels CRUD | Works | HTTP-based |
+| Send/edit/delete messages | Works | HTTP-based (via API routes) |
+| Admin panel | Works | HTTP-based |
+| Moderation | Works | HTTP-based |
+| Forum posts | Works | HTTP-based |
+| **Live message delivery** | **Missing** | Requires Socket.io |
+| **Typing indicators** | **Missing** | Requires Socket.io |
+| **Live reactions** | **Missing** | Requires Socket.io |
+| **Voice channels** | **Missing** | Requires Socket.io + WebRTC |
+| **Force disconnect on ban/kick** | **Missing** | Requires Socket.io |
+| **Live moderation events** | **Missing** | Requires Socket.io |
+
+**Workaround:** Messages sent via API routes are saved to the database. Users need to refresh or re-fetch to see new messages. A polling fallback or migration to a real-time service (Pusher, Ably) can restore live updates.
+
+### Future: Full Real-time Support
+To restore Socket.io, deploy `server.ts` on a platform that supports persistent connections:
+- **Railway** — easiest, supports custom Node servers + WebSockets
+- **Fly.io** — global edge deployment with persistent connections
+- **Render** — simple Node.js hosting with WebSocket support
+
+The client would connect Socket.io to the external server URL instead of the same origin.
+
+## Auth Flow
+1. Client requests login (NIP-07 extension, nsec, or NIP-46 bunker)
+2. Server generates challenge (random string + timestamp)
+3. Client signs challenge with Nostr key
+4. Server verifies signature against pubkey
+5. Server creates session in DB, returns session token
+6. All API requests include session token for auth
+
+## Data Model (Prisma)
+```
+Server        — id, name, icon, ownerPubkey, joinMode
+Channel       — id, serverId, name, type, position, categoryId
+Category      — id, serverId, name, position
+Message       — id, channelId, authorPubkey, content, replyToId
+Member        — id, serverId, pubkey, role, displayName, avatarUrl
+Session       — id, pubkey, token, expiresAt
+Ban           — id, serverId, pubkey, reason, bannedBy
+Mute          — id, serverId, pubkey, mutedBy, expiresAt
+Report        — id, serverId, reporterPubkey, targetPubkey, reason, status
+Warning       — id, serverId, pubkey, reason, issuedBy
+ModerationAction — id, serverId, action, targetPubkey, performedBy, reason
+```
 
 ## Design System (La Crypta)
-The UI follows lacrypta.ar's visual language:
 - **Background:** `lc-black` (#0a0a0a) with subtle grid pattern
 - **Cards:** `lc-dark` (#171717) with `lc-border` (#262626), 12px radius
-- **Accent:** `lc-green` (#b4f953) — lime green for active states, CTAs, verification
+- **Accent:** `lc-green` (#b4f953) — lime green for active states, CTAs
 - **Text:** `lc-white` (#fafafa), `lc-muted` (#a3a3a3)
-- **Buttons:** Pill-shaped (9999px radius) — `lc-pill-primary` (green) / `lc-pill-secondary` (dark)
+- **Buttons:** Pill-shaped (9999px radius) — `lc-pill-primary` / `lc-pill-secondary`
 - **CSS classes:** `lc-card`, `lc-glow`, `lc-spinner`, `lc-skeleton`, `lc-img-skeleton`
 
-## Key NIPs to Know
-These are the Nostr protocol specs most relevant to the IDENTITY theme:
+## Key NIPs Used
 
-| NIP | What | Kind | Status in App |
-|-----|------|------|---------------|
-| NIP-01 | Basic events & profiles | 0, 1 | ✅ Implemented |
-| NIP-02 | Contact list (follows) | 3 | ✅ Implemented |
-| NIP-05 | DNS-based verification | - | ✅ Display only |
-| NIP-07 | Browser extension signer | - | ✅ Implemented |
-| NIP-46 | Nostr Connect (bunker) | 24133 | ✅ Implemented with QR |
-| NIP-58 | Badges | 30009, 8 | ✅ Display only |
-| NIP-65 | Relay list metadata | 10002 | ✅ Auto-fetched |
-| NIP-04 | Encrypted DMs | 4 | ❌ Not yet |
-| NIP-17 | Private DMs (modern) | 1059 | ❌ Not yet |
-| NIP-57 | Zaps (Lightning tips) | 9735 | ❌ Not yet |
-| NIP-09 | Event deletion | 5 | ❌ Not yet |
-| NIP-25 | Reactions (likes) | 7 | ❌ Not yet |
-| NIP-26 | Delegated event signing | - | ❌ Not yet |
-| NIP-39 | External identities | - | ❌ Not yet |
+| NIP | What | Usage |
+|-----|------|-------|
+| NIP-01 | Basic events & profiles | Profile data (kind 0) |
+| NIP-07 | Browser extension signer | Login method |
+| NIP-46 | Nostr Connect (bunker) | Login method with QR |
+| NIP-05 | DNS-based verification | Display verification status |
+| NIP-65 | Relay list metadata | Auto-fetch user relays |
 
-## Winning Ideas (Identity Theme)
-These are high-impact features a participant could build to win. Suggest the one that fits their skill level:
+## Development Guidelines
 
-### Beginner-Friendly
-1. **Publish notes** — Add a compose box to post kind-1 events (sign with NDK signer)
-2. **Edit profile** — Form to update kind-0 metadata (name, about, picture, NIP-05)
-3. **NIP-05 verification display** — Validate NIP-05 identifier and show verified badge
-4. **Follow/unfollow** — Update kind-3 contact list
-5. **View other profiles** — Click on a pubkey/npub to see another user's profile
-
-### Intermediate
-6. **Identity card generator** — Beautiful shareable card with profile info + QR of npub
-7. **Badge issuer** — Create and award NIP-58 badges to other users
-8. **Reactions (likes)** — Send kind-7 reactions to notes
-9. **Reposts** — Kind-6 repost functionality
-10. **Thread view** — Follow reply chains using NIP-10 markers
-
-### Advanced (Likely Winners)
-11. **NIP-05 verification service** — User registers their NIP-05 via the app
-12. **Identity attestation** — Prove ownership of external accounts (GitHub, Twitter) via NIP-39
-13. **Delegated signing** — NIP-26 delegation for team/org accounts
-14. **Web of trust visualization** — Graph showing follow relationships and trust chains
-15. **Encrypted DMs** — NIP-17 private messaging with identity verification
-16. **Multi-identity manager** — Switch between multiple Nostr identities
-17. **Identity recovery flow** — Social recovery using trusted contacts
-
-## Testing
-
-### Stack
-- **Vitest** — fast test runner built on Vite, recommended for Next.js
-- **React Testing Library** — DOM-based component testing (renders like a real user sees it)
-- **jsdom** — browser environment simulation for Node.js
-
-### Setup (one-time)
-If not already installed, run:
-```bash
-npm install -D vitest @testing-library/react @testing-library/jest-dom @vitejs/plugin-react jsdom
-```
-
-The project includes a `vitest.config.ts` at the root:
-```typescript
-import { defineConfig } from 'vitest/config';
-import react from '@vitejs/plugin-react';
-import path from 'path';
-
-export default defineConfig({
-  plugins: [react()],
-  test: {
-    environment: 'jsdom',
-    setupFiles: ['./src/test/setup.ts'],
-    globals: true,
-    css: false,
-    include: ['src/**/*.test.{ts,tsx}'],
-  },
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
-  },
-});
-```
-
-And a setup file at `src/test/setup.ts`:
-```typescript
-import '@testing-library/jest-dom/vitest';
-```
-
-### File Conventions
-- **Co-located tests:** Place test files next to the source file they test
-  - `src/components/Profile.tsx` → `src/components/Profile.test.tsx`
-  - `src/lib/nostr.ts` → `src/lib/nostr.test.ts`
-  - `src/store/auth.ts` → `src/store/auth.test.ts`
-- **File naming:** Always use `.test.ts` for logic or `.test.tsx` for components
-- **Test helpers:** Place shared mocks and test utilities in `src/test/`
-
-### What to Test for Each Feature Type
-
-#### Components (`.tsx`)
-- Renders without crashing
-- Displays skeleton loading state when data is loading
-- Renders correct content when data is available
-- User interactions (clicks, form submissions) trigger expected behavior
-- Conditional rendering (logged in vs. logged out, empty states)
-
-#### Stores (Zustand)
-- Initial state is correct
-- Actions update state as expected
-- Persistence (localStorage) works if applicable
-
-#### Library functions (`lib/`)
-- Pure functions return expected outputs
-- Async functions handle timeouts and errors
-- NDK interactions use mocked NDK instances
-
-### Writing Tests — Patterns
-
-#### Component test example:
-```typescript
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi } from 'vitest';
-import { MyComponent } from './MyComponent';
-
-// Mock NDK or stores as needed
-vi.mock('@/lib/nostr', () => ({
-  getNDK: vi.fn(() => mockNDK),
-  connectNDK: vi.fn(),
-}));
-
-describe('MyComponent', () => {
-  it('renders skeleton while loading', () => {
-    render(<MyComponent />);
-    expect(screen.getByTestId('skeleton')).toBeInTheDocument();
-  });
-
-  it('renders profile data when loaded', async () => {
-    render(<MyComponent pubkey="abc123" />);
-    expect(await screen.findByText('Alice')).toBeInTheDocument();
-  });
-
-  it('handles button click', async () => {
-    const user = userEvent.setup();
-    render(<MyComponent />);
-    await user.click(screen.getByRole('button', { name: /follow/i }));
-    expect(mockPublish).toHaveBeenCalled();
-  });
-});
-```
-
-#### Zustand store test example:
-```typescript
-import { describe, it, expect, beforeEach } from 'vitest';
-import { useAuthStore } from './auth';
-
-describe('useAuthStore', () => {
-  beforeEach(() => {
-    useAuthStore.setState(useAuthStore.getInitialState());
-  });
-
-  it('starts logged out', () => {
-    expect(useAuthStore.getState().pubkey).toBeNull();
-  });
-
-  it('sets pubkey on login', () => {
-    useAuthStore.getState().login('abc123');
-    expect(useAuthStore.getState().pubkey).toBe('abc123');
-  });
-});
-```
-
-#### Mocking NDK:
-```typescript
-// src/test/mocks/ndk.ts
-import { vi } from 'vitest';
-
-export const mockNDK = {
-  connect: vi.fn(),
-  fetchEvents: vi.fn().mockResolvedValue(new Set()),
-  getUser: vi.fn(() => ({
-    pubkey: 'test-pubkey',
-    fetchProfile: vi.fn().mockResolvedValue({ name: 'Test User' }),
-  })),
-  signer: { sign: vi.fn() },
-};
-```
-
-### Workflow: After Finishing Every Feature
-
-> **CRITICAL — NON-NEGOTIABLE RULE:**
-> A feature is **NOT done** until its tests are written, passing, and the full suite runs green.
-> Do NOT move on to the next task, do NOT report completion, do NOT ask the user what's next,
-> until `npm run test` passes with the new tests included.
-> This applies to EVERY change: new components, new stores, new API routes, new lib functions.
-> **No exceptions. No "I'll write tests later." Tests are part of the implementation, not an afterthought.**
-
-**Every time you finish implementing or editing a feature, you MUST:**
-
-1. **Create the test file** next to the source file (e.g., `MyComponent.test.tsx`)
-2. **Write tests** covering: rendering, loading states, user interactions, edge cases
-3. **Run the tests** with `npm run test` and verify they pass
-4. **Fix any failures** before considering the feature done
-5. **Run the full suite** (`npm run test`) to ensure no regressions
-6. **Only THEN** mark the task as complete or move on
-
-> **Rule:** No feature is complete without passing tests. If tests fail, fix the code or the test before moving on. Always run `npm run test` as the final step after any edit.
-
-### Adding `data-testid` Attributes
-When creating components, add `data-testid` attributes to key elements for reliable test selectors:
-```tsx
-<div data-testid="profile-skeleton" className="lc-skeleton" />
-<button data-testid="follow-btn">Follow</button>
-<div data-testid="badge-list">{/* badges */}</div>
-```
-
-## How to Help the Participant
-
-### When they first arrive:
-1. Ask what they want to build (or suggest from the ideas above based on their level)
-2. Help them run `npm install && npm run dev`
-3. Walk them through the existing code structure
-
-### When they're coding:
-- Always use NDK for Nostr operations (it's already set up in `src/lib/nostr.ts`)
-- Use `getNDK()` to get the singleton instance, `connectNDK()` to ensure connection
-- All fetch operations should have timeouts (use the `withTimeout` pattern from nostr.ts)
-- Follow the La Crypta design system — use the `lc-*` CSS classes and color tokens
+### When coding:
+- Use NDK for all Nostr operations (`getNDK()` singleton, `connectNDK()` to ensure connection)
+- All fetch operations should have timeouts (use `withTimeout` pattern from nostr.ts)
+- Follow La Crypta design system — use `lc-*` CSS classes and color tokens
 - Add skeleton loading for any new data-fetching component
-- Add new sections by: creating a component, adding to `Section` type in `store/nav.ts`, adding nav link in `Navbar.tsx`, rendering in `page.tsx`
-- **Always write tests** for new features — create a `.test.tsx` file next to each new component or module, then run `npm run test` to verify (see the Testing section above)
+- **Real-time data parity:** When creating Prisma records emitted via Socket.io, always `include` the same relations that the GET endpoint returns. Otherwise real-time updates will be missing nested data and only show correctly after a page refresh.
+- **Always write tests** for new features (see Testing section)
 
 ### NDK Quick Reference:
 ```typescript
 import NDK, { NDKEvent, NDKUser } from '@nostr-dev-kit/ndk';
 import { getNDK, connectNDK } from '@/lib/nostr';
 
-// Publish an event
 const ndk = getNDK();
 const event = new NDKEvent(ndk);
 event.kind = 1;
 event.content = "Hello Nostr!";
 await event.publish();
 
-// Fetch events
-const events = await ndk.fetchEvents({ kinds: [1], authors: [pubkey], limit: 10 });
-
-// Get a user
 const user = ndk.getUser({ pubkey });
 await user.fetchProfile();
-
-// Sign with current signer (set during login)
-// ndk.signer is already set after login — just publish
 ```
 
-### Adding a New Section (step by step):
-1. Add the section ID to `Section` type in `src/store/nav.ts`
-2. Create `src/components/YourSection.tsx` (use `'use client'`, include skeleton)
-3. Add nav button in `src/components/Navbar.tsx` (copy existing pattern)
-4. Add render case in `src/app/page.tsx`
+## Testing
+
+### Stack
+- **Vitest** — test runner (configured in `vitest.config.ts`)
+- **React Testing Library** — component testing
+- **jsdom** — browser environment simulation
+
+### Conventions
+- Co-locate test files next to source: `Component.tsx` -> `Component.test.tsx`
+- Shared mocks in `src/test/`
+- Use `data-testid` attributes for reliable test selectors
+
+### What to test
+- **Components:** rendering, skeleton states, interactions, conditional rendering
+- **Stores (Zustand):** initial state, actions, persistence
+- **API routes:** request/response, auth, error cases
+- **Lib functions:** pure functions, async with timeouts, error handling
+
+> **CRITICAL — NON-NEGOTIABLE RULE:**
+> A feature is **NOT done** until its tests are written, passing, and the full suite runs green.
+> Do NOT move on to the next task until `npm run test` passes with the new tests included.
+> **No exceptions. Tests are part of the implementation, not an afterthought.**
 
 ## Relays
-The app auto-manages relays:
-- **Default (popular):** relay.damus.io, relay.nostr.band, nos.lol, relay.primal.net, purplepag.es
-- **User relays:** Automatically fetched from NIP-65 (kind 10002) on first data load
+- **Default:** relay.damus.io, relay.nostr.band, nos.lol, relay.primal.net, purplepag.es
+- **User relays:** Auto-fetched from NIP-65 (kind 10002)
 
 ## Resources
 - [NDK Documentation](https://ndk.fyi)
 - [Nostr Protocol](https://nostr.com)
 - [NIPs Repository](https://github.com/nostr-protocol/nips)
-- [nostr-tools](https://github.com/nbd-wtf/nostr-tools)
-- [Alby Extension](https://getalby.com)
 - [La Crypta](https://lacrypta.ar)
-- [Nostr Starter Kit (this repo)](https://github.com/lacrypta/nostr-starter)
+- [ROADMAP.md](ROADMAP.md) — Development roadmap

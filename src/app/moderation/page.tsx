@@ -65,11 +65,21 @@ export default function ModerationPage() {
   const [tab, setTab] = useState<Tab>('reports');
   const [role, setRole] = useState<Role | null>(null);
   const [loading, setLoading] = useState(true);
+  const [accessDenied, setAccessDenied] = useState(false);
   const [reports, setReports] = useState<Report[]>([]);
   const [mutes, setMutes] = useState<MuteEntry[]>([]);
   const [warnings, setWarnings] = useState<Warning[]>([]);
   const [log, setLog] = useState<ModAction[]>([]);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [hasMoreLog, setHasMoreLog] = useState(false);
+
+  // Mute form
+  const [muteForm, setMuteForm] = useState({ pubkey: '', duration: '60', reason: '' });
+  const [muteSaving, setMuteSaving] = useState(false);
+
+  // Warn form
+  const [warnForm, setWarnForm] = useState({ pubkey: '', reason: '' });
+  const [warnSaving, setWarnSaving] = useState(false);
 
   // Auth check via backend (no dependency on Zustand isConnected)
   useEffect(() => {
@@ -82,7 +92,7 @@ export default function ModerationPage() {
         if (!data) return;
         const r = data.role as Role;
         if (r !== 'owner' && r !== 'admin' && r !== 'mod') {
-          router.push('/chat');
+          setAccessDenied(true);
         } else {
           setRole(r);
         }
@@ -105,9 +115,18 @@ export default function ModerationPage() {
     if (res.ok) setWarnings(await res.json());
   }, []);
 
-  const fetchLog = useCallback(async () => {
-    const res = await fetch('/api/moderation/log');
-    if (res.ok) setLog(await res.json());
+  const fetchLog = useCallback(async (cursor?: string) => {
+    const url = cursor ? `/api/moderation/log?cursor=${cursor}` : '/api/moderation/log';
+    const res = await fetch(url);
+    if (res.ok) {
+      const data = await res.json();
+      if (cursor) {
+        setLog((prev) => [...prev, ...data.actions]);
+      } else {
+        setLog(data.actions);
+      }
+      setHasMoreLog(data.hasMore ?? false);
+    }
   }, []);
 
   useEffect(() => {
@@ -138,6 +157,71 @@ export default function ModerationPage() {
     fetchMutes();
     fetchLog();
   };
+
+  const handleMuteUser = async () => {
+    if (!muteForm.pubkey.trim() || !muteForm.duration) return;
+    setMuteSaving(true);
+    const res = await fetch('/api/moderation/mutes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        targetPubkey: muteForm.pubkey.trim(),
+        duration: parseInt(muteForm.duration),
+        reason: muteForm.reason || undefined,
+      }),
+    });
+    if (res.ok) {
+      setMuteForm({ pubkey: '', duration: '60', reason: '' });
+      await Promise.all([fetchMutes(), fetchLog()]);
+    }
+    setMuteSaving(false);
+  };
+
+  const handleWarnUser = async () => {
+    if (!warnForm.pubkey.trim() || !warnForm.reason.trim()) return;
+    setWarnSaving(true);
+    const res = await fetch('/api/moderation/warnings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        targetPubkey: warnForm.pubkey.trim(),
+        reason: warnForm.reason.trim(),
+      }),
+    });
+    if (res.ok) {
+      setWarnForm({ pubkey: '', reason: '' });
+      await Promise.all([fetchWarnings(), fetchLog()]);
+    }
+    setWarnSaving(false);
+  };
+
+  const handleLoadMoreLog = () => {
+    const last = log[log.length - 1];
+    if (last) fetchLog(last.createdAt);
+  };
+
+  if (accessDenied) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-lc-black">
+        <div className="text-center max-w-sm mx-4">
+          <div className="w-16 h-16 rounded-full bg-red-600/10 flex items-center justify-center mx-auto mb-4">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0110 0v4"/>
+            </svg>
+          </div>
+          <h2 className="text-lg font-semibold text-lc-white mb-2">Access Denied</h2>
+          <p className="text-sm text-lc-muted mb-6">You need moderator, admin, or owner permissions to access this page.</p>
+          <button
+            onClick={() => router.push('/chat')}
+            className="lc-pill-primary px-6 py-2 text-sm font-medium"
+          >
+            Back to Chat
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (!role || loading) {
     return (
@@ -238,7 +322,48 @@ export default function ModerationPage() {
 
         {/* Mutes Tab */}
         {tab === 'mutes' && (
-          <div className="mt-4 space-y-2" data-testid="mutes-tab">
+          <div className="mt-4 space-y-4" data-testid="mutes-tab">
+            {/* Mute User Form */}
+            <div className="lc-card p-4 space-y-3" data-testid="mute-form">
+              <h3 className="text-sm font-semibold text-lc-white">Mute User</h3>
+              <div className="flex gap-2">
+                <input
+                  value={muteForm.pubkey}
+                  onChange={(e) => setMuteForm({ ...muteForm, pubkey: e.target.value })}
+                  placeholder="Pubkey (hex)"
+                  className="flex-1 px-3 py-2 rounded-lg bg-lc-black border border-lc-border text-lc-white text-sm focus:border-lc-green focus:outline-none font-mono"
+                  data-testid="mute-pubkey"
+                />
+                <input
+                  value={muteForm.duration}
+                  onChange={(e) => setMuteForm({ ...muteForm, duration: e.target.value })}
+                  placeholder="Minutes"
+                  type="number"
+                  min="1"
+                  className="w-24 px-3 py-2 rounded-lg bg-lc-black border border-lc-border text-lc-white text-sm focus:border-lc-green focus:outline-none"
+                  data-testid="mute-duration"
+                />
+              </div>
+              <div className="flex gap-2">
+                <input
+                  value={muteForm.reason}
+                  onChange={(e) => setMuteForm({ ...muteForm, reason: e.target.value })}
+                  placeholder="Reason (optional)"
+                  className="flex-1 px-3 py-2 rounded-lg bg-lc-black border border-lc-border text-lc-white text-sm focus:border-lc-green focus:outline-none"
+                  data-testid="mute-reason"
+                />
+                <button
+                  onClick={handleMuteUser}
+                  disabled={muteSaving || !muteForm.pubkey.trim()}
+                  className="px-4 py-2 rounded-full bg-amber-500 text-black text-sm font-medium hover:bg-amber-400 transition-colors disabled:opacity-50"
+                  data-testid="mute-submit"
+                >
+                  {muteSaving ? 'Muting...' : 'Mute'}
+                </button>
+              </div>
+            </div>
+
+            {/* Active Mutes */}
             {mutes.length === 0 ? (
               <p className="text-sm text-lc-muted py-8 text-center">No active mutes</p>
             ) : (
@@ -265,7 +390,38 @@ export default function ModerationPage() {
 
         {/* Warnings Tab */}
         {tab === 'warnings' && (
-          <div className="mt-4 space-y-2" data-testid="warnings-tab">
+          <div className="mt-4 space-y-4" data-testid="warnings-tab">
+            {/* Warn User Form */}
+            <div className="lc-card p-4 space-y-3" data-testid="warn-form">
+              <h3 className="text-sm font-semibold text-lc-white">Warn User</h3>
+              <input
+                value={warnForm.pubkey}
+                onChange={(e) => setWarnForm({ ...warnForm, pubkey: e.target.value })}
+                placeholder="Pubkey (hex)"
+                className="w-full px-3 py-2 rounded-lg bg-lc-black border border-lc-border text-lc-white text-sm focus:border-lc-green focus:outline-none font-mono"
+                data-testid="warn-pubkey"
+              />
+              <div className="flex gap-2">
+                <textarea
+                  value={warnForm.reason}
+                  onChange={(e) => setWarnForm({ ...warnForm, reason: e.target.value })}
+                  placeholder="Reason"
+                  rows={2}
+                  className="flex-1 px-3 py-2 rounded-lg bg-lc-black border border-lc-border text-lc-white text-sm focus:border-lc-green focus:outline-none resize-none"
+                  data-testid="warn-reason"
+                />
+                <button
+                  onClick={handleWarnUser}
+                  disabled={warnSaving || !warnForm.pubkey.trim() || !warnForm.reason.trim()}
+                  className="self-end px-4 py-2 rounded-full bg-yellow-500 text-black text-sm font-medium hover:bg-yellow-400 transition-colors disabled:opacity-50"
+                  data-testid="warn-submit"
+                >
+                  {warnSaving ? 'Warning...' : 'Warn'}
+                </button>
+              </div>
+            </div>
+
+            {/* Warnings List */}
             {warnings.length === 0 ? (
               <p className="text-sm text-lc-muted py-8 text-center">No warnings issued</p>
             ) : (
@@ -291,7 +447,18 @@ export default function ModerationPage() {
             {log.length === 0 ? (
               <p className="text-sm text-lc-muted py-8 text-center">No moderation actions yet</p>
             ) : (
-              log.map((a) => <ModActionCard key={a.id} action={a} />)
+              <>
+                {log.map((a) => <ModActionCard key={a.id} action={a} />)}
+                {hasMoreLog && (
+                  <button
+                    onClick={handleLoadMoreLog}
+                    className="w-full py-2 text-sm text-lc-muted hover:text-lc-white transition-colors mt-2"
+                    data-testid="load-more-log"
+                  >
+                    Load more...
+                  </button>
+                )}
+              </>
             )}
           </div>
         )}

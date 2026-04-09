@@ -70,7 +70,7 @@ describe('MessageInput', () => {
       ...useChatStore.getState(),
       replyingTo: {
         id: 'm1', channelId: 'ch1', authorPubkey: 'pk123456', content: 'Original message',
-        replyToId: null, createdAt: new Date().toISOString(),
+        replyToId: null, editedAt: null, createdAt: new Date().toISOString(),
       },
     });
 
@@ -85,7 +85,7 @@ describe('MessageInput', () => {
       ...useChatStore.getState(),
       replyingTo: {
         id: 'm1', channelId: 'ch1', authorPubkey: 'pk1', content: 'test',
-        replyToId: null, createdAt: new Date().toISOString(),
+        replyToId: null, editedAt: null, createdAt: new Date().toISOString(),
       },
     });
 
@@ -93,5 +93,15 @@ describe('MessageInput', () => {
     const textarea = screen.getByPlaceholderText('Message #general');
     await user.type(textarea, 'My reply{enter}');
     expect(mockOnSend).toHaveBeenCalledWith('My reply', 'm1');
+  });
+
+  it('calls onTyping when typing', async () => {
+    const onTyping = vi.fn();
+    const user = userEvent.setup();
+    render(<MessageInput onSend={mockOnSend} onTyping={onTyping} />);
+
+    const textarea = screen.getByPlaceholderText('Message #general');
+    await user.type(textarea, 'hi');
+    expect(onTyping).toHaveBeenCalled();
   });
 });

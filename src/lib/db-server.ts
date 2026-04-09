@@ -1,14 +1,12 @@
 // Server-compatible DB client — uses relative imports for tsx/custom server context
 // This is the canonical Prisma instance. Both db.ts (Next.js) and server.ts use this.
 import { PrismaClient } from '../generated/prisma/client';
-import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
+import { PrismaPg } from '@prisma/adapter-pg';
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
 function createPrismaClient() {
-  const adapter = new PrismaBetterSqlite3({
-    url: 'file:./dev.db',
-  });
+  const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
   return new PrismaClient({ adapter });
 }
 
