@@ -73,12 +73,12 @@ export default function ChatPage() {
   const [profileCache] = useState(() => new Map<string, { name?: string; picture?: string }>());
   const [sessionChecked, setSessionChecked] = useState(false);
   const sessionCheckStarted = useRef(false);
+  const [ndkReady, setNdkReady] = useState(false);
   const [messageError, setMessageError] = useState<string | null>(null);
   const { isDMMode } = useDMStore();
   const [showNewDMModal, setShowNewDMModal] = useState(false);
 
   // On mount, validate session with backend. If no valid session, redirect to landing.
-  // Also restore NDK connection + signer so DMs and Nostr features work after refresh.
   useEffect(() => {
     if (sessionCheckStarted.current) return;
     sessionCheckStarted.current = true;
@@ -88,23 +88,29 @@ export default function ChatPage() {
         router.push('/');
         return;
       }
-
-      // Restore NDK connection and signer for Nostr features (DMs, etc.)
-      const loginMethod = useAuthStore.getState().loginMethod;
-      const ndk = getNDK();
-      try {
-        await connectNDK();
-        if (!ndk.signer && loginMethod === 'extension' && typeof window !== 'undefined' && window.nostr) {
-          const { NDKNip07Signer } = await import('@nostr-dev-kit/ndk');
-          ndk.signer = new NDKNip07Signer(4000, ndk);
-        }
-      } catch (err) {
-        console.warn('Failed to restore NDK connection:', err);
-      }
-
+      // Let the page render immediately — NDK connects in background
       setSessionChecked(true);
     });
   }, [restoreSession, router]);
+
+  // Restore NDK connection + signer in background (non-blocking)
+  useEffect(() => {
+    if (!sessionChecked) return;
+
+    const loginMethod = useAuthStore.getState().loginMethod;
+    const ndk = getNDK();
+
+    connectNDK().then(async () => {
+      if (!ndk.signer && loginMethod === 'extension' && typeof window !== 'undefined' && window.nostr) {
+        const { NDKNip07Signer } = await import('@nostr-dev-kit/ndk');
+        ndk.signer = new NDKNip07Signer(4000, ndk);
+      }
+      setNdkReady(true);
+    }).catch((err) => {
+      console.warn('Failed to restore NDK connection:', err);
+      setNdkReady(true); // still mark ready so DM UI doesn't hang
+    });
+  }, [sessionChecked]);
 
   // Add own profile to cache
   useEffect(() => {
@@ -242,9 +248,9 @@ export default function ChatPage() {
     fetchMembers();
   }, [profileSynced, profileCache]);
 
-  // Discover existing DM threads from Nostr relays on login
+  // Discover existing DM threads from Nostr relays (waits for NDK to be ready)
   useEffect(() => {
-    if (!sessionChecked || !profile?.pubkey) return;
+    if (!ndkReady || !profile?.pubkey) return;
 
     const dmStore = useDMStore.getState();
     dmStore.setLoadingThreads(true);
@@ -269,11 +275,11 @@ export default function ChatPage() {
     }).catch(() => {
       useDMStore.getState().setLoadingThreads(false);
     });
-  }, [sessionChecked, profile?.pubkey, profileCache]);
+  }, [ndkReady, profile?.pubkey, profileCache]);
 
-  // Subscribe to incoming DMs (NIP-04 + NIP-17) in real-time
+  // Subscribe to incoming DMs (NIP-04 + NIP-17) — waits for NDK to be ready
   useEffect(() => {
-    if (!sessionChecked || !profile?.pubkey) return;
+    if (!ndkReady || !profile?.pubkey) return;
 
     const cleanup = subscribeDMs(profile.pubkey, (msg: DMMessage) => {
       const dmStore = useDMStore.getState();
@@ -316,7 +322,7 @@ export default function ChatPage() {
     return () => {
       if (cleanup) cleanup();
     };
-  }, [sessionChecked, profile?.pubkey, profileCache]);
+  }, [ndkReady, profile?.pubkey, profileCache]);
 
   // Connect Socket.io
   useEffect(() => {
@@ -759,7 +765,7 @@ export default function ChatPage() {
             </div>
 
             {/* Member list sidebar — hidden on mobile */}
-            <div className="hidden md:block">
+            <div className="hidden md:flex h-full">
               <MemberList profileCache={profileCache} />
             </div>
           </div>

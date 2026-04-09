@@ -299,7 +299,7 @@ export async function discoverDMThreads(
 
   const threads = new Map<string, { lastMessage: string; lastMessageAt: number; protocol: DMProtocol }>();
 
-  // NIP-04
+  // NIP-04 — discover threads without decrypting (avoids NIP-07 popup flood)
   const nip04Filters: NDKFilter[] = [
     { kinds: [4], '#p': [myPubkey], limit: 100 },
     { kinds: [4], authors: [myPubkey], limit: 100 },
@@ -315,27 +315,24 @@ export async function discoverDMThreads(
           const otherPubkey = event.pubkey === myPubkey ? recipientPubkey : event.pubkey;
           if (!otherPubkey) continue;
 
-          const otherUser = new NDKUser({ pubkey: otherPubkey });
-          otherUser.ndk = ndk;
-          await event.decrypt(otherUser, ndk.signer!, 'nip04');
-
           const ts = event.created_at || 0;
           const existing = threads.get(otherPubkey);
           if (!existing || ts > existing.lastMessageAt) {
-            threads.set(otherPubkey, { lastMessage: event.content, lastMessageAt: ts, protocol: 'nip04' });
+            threads.set(otherPubkey, { lastMessage: '', lastMessageAt: ts, protocol: 'nip04' });
           }
         } catch { /* skip */ }
       }
     } catch { /* relay error */ }
   }
 
-  // NIP-17
+  // NIP-17 — gift wraps must be unwrapped to discover the sender,
+  // but we limit to a small batch to avoid excessive decrypt prompts
   try {
     const { giftUnwrap } = await import('@nostr-dev-kit/ndk');
     const wrapEvents = await ndk.fetchEvents({
       kinds: [1059],
       '#p': [myPubkey],
-      limit: 100,
+      limit: 30,
     });
 
     for (const wrap of wrapEvents) {
@@ -352,7 +349,7 @@ export async function discoverDMThreads(
         const ts = rumor.created_at || 0;
         const existing = threads.get(otherPubkey);
         if (!existing || ts > existing.lastMessageAt) {
-          threads.set(otherPubkey, { lastMessage: rumor.content, lastMessageAt: ts, protocol: 'nip17' });
+          threads.set(otherPubkey, { lastMessage: '', lastMessageAt: ts, protocol: 'nip17' });
         }
       } catch { /* skip */ }
     }
