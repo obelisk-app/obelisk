@@ -126,4 +126,47 @@ describe('ChannelSidebar', () => {
     await user.click(screen.getByText('general'));
     expect(useChatStore.getState().activeChannelId).toBe('ch1');
   });
+
+  it('calls onChannelSelect when clicking a pinned channel', async () => {
+    const user = userEvent.setup();
+    const onChannelSelect = vi.fn();
+    useChatStore.setState({
+      isLoadingChannels: false,
+      servers: [{ id: 's1', name: 'Test', icon: null, banner: null }],
+      activeServerId: 's1',
+      pinnedChannels: [
+        { id: 'ch1', name: 'general', emoji: null, type: 'text', position: 0, categoryId: null },
+      ],
+      categories: [],
+      activeChannelId: null,
+    });
+
+    render(<ChannelSidebar onChannelSelect={onChannelSelect} />);
+    await user.click(screen.getByText('general'));
+    expect(onChannelSelect).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls onChannelSelect when clicking a category channel', async () => {
+    const user = userEvent.setup();
+    const onChannelSelect = vi.fn();
+    useChatStore.setState({
+      isLoadingChannels: false,
+      servers: [{ id: 's1', name: 'Test', icon: null, banner: null }],
+      activeServerId: 's1',
+      pinnedChannels: [],
+      categories: [
+        {
+          id: 'cat1', name: 'INFO', position: 0,
+          channels: [
+            { id: 'ch2', name: 'news', emoji: null, type: 'text', position: 0, categoryId: 'cat1' },
+          ],
+        },
+      ],
+      activeChannelId: null,
+    });
+
+    render(<ChannelSidebar onChannelSelect={onChannelSelect} />);
+    await user.click(screen.getByText('news'));
+    expect(onChannelSelect).toHaveBeenCalledTimes(1);
+  });
 });

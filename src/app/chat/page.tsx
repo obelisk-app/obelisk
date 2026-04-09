@@ -389,6 +389,8 @@ export default function ChatPage() {
   ];
   const activeChannel = allChannels.find(c => c.id === activeChannelId);
 
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   // Loading state while checking session
   if (!sessionChecked) {
     return (
@@ -402,43 +404,86 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="h-screen flex bg-lc-black">
-      {/* Server icon bar */}
-      <ServerBar />
+    <div className="h-screen flex bg-lc-black relative">
+      {/* Mobile sidebar overlay backdrop */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/60 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
-      {/* DM or Channel view */}
-      {isDMMode ? (
-        <>
+      {/* Sidebars — always visible on desktop, slide-out drawer on mobile */}
+      <div className={`
+        fixed inset-y-0 left-0 z-50 flex
+        transform transition-transform duration-200 ease-in-out
+        md:relative md:translate-x-0
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+      `}>
+        <ServerBar />
+        {isDMMode ? (
           <DMList onNewDM={() => setShowNewDMModal(true)} />
-          <DMChat profileCache={profileCache} />
-          {showNewDMModal && (
-            <NewDMModal
-              onClose={() => setShowNewDMModal(false)}
-              profileCache={profileCache}
-            />
-          )}
-        </>
-      ) : (
-        <>
-          {/* Channel sidebar */}
-          <ChannelSidebar />
+        ) : (
+          <ChannelSidebar onChannelSelect={() => setSidebarOpen(false)} />
+        )}
+      </div>
 
-          {/* Main chat area + member list */}
+      {/* Main content area */}
+      <div className="flex-1 flex flex-col min-h-0 min-w-0">
+        {isDMMode ? (
+          <>
+            {/* DM top bar with mobile hamburger */}
+            <div className="h-12 px-3 flex items-center gap-3 border-b border-lc-border shrink-0 bg-lc-dark md:hidden">
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="p-1.5 rounded-lg text-lc-muted hover:text-lc-white hover:bg-lc-border/50 transition-colors"
+                aria-label="Open sidebar"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <line x1="3" y1="6" x2="21" y2="6"/>
+                  <line x1="3" y1="12" x2="21" y2="12"/>
+                  <line x1="3" y1="18" x2="21" y2="18"/>
+                </svg>
+              </button>
+              <span className="text-sm font-semibold text-lc-white">Direct Messages</span>
+            </div>
+            <DMChat profileCache={profileCache} />
+            {showNewDMModal && (
+              <NewDMModal
+                onClose={() => setShowNewDMModal(false)}
+                profileCache={profileCache}
+              />
+            )}
+          </>
+        ) : (
           <div className="flex-1 flex min-h-0">
-            <div className="flex-1 flex flex-col min-h-0">
-              {/* Top bar — channel info */}
-              <div className="h-12 px-4 flex items-center justify-between border-b border-lc-border shrink-0 bg-lc-dark">
-                {activeChannel ? (
-                  <div className="flex items-center gap-2">
-                    <span className="text-lc-muted font-bold">
-                      {activeChannel.type === 'forum' ? '💬' : activeChannel.type === 'voice' ? '🎙' : '#'}
-                    </span>
-                    {activeChannel.emoji && <span className="text-sm">{activeChannel.emoji}</span>}
-                    <h3 className="font-semibold text-lc-white text-sm">{activeChannel.name}</h3>
-                  </div>
-                ) : (
-                  <span className="text-sm text-lc-muted">Select a channel</span>
-                )}
+            <div className="flex-1 flex flex-col min-h-0 min-w-0">
+              {/* Top bar — channel info with mobile hamburger */}
+              <div className="h-12 px-3 md:px-4 flex items-center justify-between border-b border-lc-border shrink-0 bg-lc-dark">
+                <div className="flex items-center gap-2 min-w-0">
+                  <button
+                    onClick={() => setSidebarOpen(true)}
+                    className="p-1.5 rounded-lg text-lc-muted hover:text-lc-white hover:bg-lc-border/50 transition-colors md:hidden shrink-0"
+                    aria-label="Open sidebar"
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <line x1="3" y1="6" x2="21" y2="6"/>
+                      <line x1="3" y1="12" x2="21" y2="12"/>
+                      <line x1="3" y1="18" x2="21" y2="18"/>
+                    </svg>
+                  </button>
+                  {activeChannel ? (
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-lc-muted font-bold shrink-0">
+                        {activeChannel.type === 'forum' ? '💬' : activeChannel.type === 'voice' ? '🎙' : '#'}
+                      </span>
+                      {activeChannel.emoji && <span className="text-sm shrink-0">{activeChannel.emoji}</span>}
+                      <h3 className="font-semibold text-lc-white text-sm truncate">{activeChannel.name}</h3>
+                    </div>
+                  ) : (
+                    <span className="text-sm text-lc-muted">Select a channel</span>
+                  )}
+                </div>
                 <SearchBar serverId={activeServerId} profileCache={profileCache} />
               </div>
 
@@ -474,11 +519,13 @@ export default function ChatPage() {
               )}
             </div>
 
-            {/* Member list sidebar */}
-            <MemberList profileCache={profileCache} />
+            {/* Member list sidebar — hidden on mobile */}
+            <div className="hidden md:block">
+              <MemberList profileCache={profileCache} />
+            </div>
           </div>
-        </>
-      )}
+        )}
+      </div>
     </div>
   );
 }

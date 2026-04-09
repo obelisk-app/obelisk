@@ -121,7 +121,7 @@ function UserPanel() {
   );
 }
 
-export default function ChannelSidebar() {
+export default function ChannelSidebar({ onChannelSelect }: { onChannelSelect?: () => void } = {}) {
   const { servers, activeServerId, pinnedChannels, categories, activeChannelId, setActiveChannel, isLoadingChannels } = useChatStore();
 
   const activeServer = servers.find(s => s.id === activeServerId);
@@ -185,7 +185,7 @@ export default function ChannelSidebar() {
                   key={ch.id}
                   channel={ch}
                   isActive={ch.id === activeChannelId}
-                  onClick={() => setActiveChannel(ch.id)}
+                  onClick={() => { setActiveChannel(ch.id); onChannelSelect?.(); }}
                 />
               ))}
             </div>
@@ -198,7 +198,7 @@ export default function ChannelSidebar() {
             key={cat.id}
             category={cat}
             activeChannelId={activeChannelId}
-            onSelectChannel={setActiveChannel}
+            onSelectChannel={(id) => { setActiveChannel(id); onChannelSelect?.(); }}
           />
         ))}
       </nav>

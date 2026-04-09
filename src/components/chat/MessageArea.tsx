@@ -319,7 +319,7 @@ function MessageBubble({ message, profileCache, onReply, onReport, onEdit, onDel
         <ReplyPreview replyTo={message.replyTo} profileCache={profileCache} />
       )}
 
-      <div ref={rowRef} className="flex items-start gap-3 px-4 py-1.5 hover:bg-lc-border/20 transition-colors relative">
+      <div ref={rowRef} className="flex items-start gap-2 md:gap-3 px-2 md:px-4 py-1.5 hover:bg-lc-border/20 transition-colors relative">
         {/* Avatar */}
         {profile?.picture ? (
           <img

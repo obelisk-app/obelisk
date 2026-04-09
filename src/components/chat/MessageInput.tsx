@@ -153,7 +153,7 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
   if (!activeChannelId) return null;
 
   return (
-    <div className="px-4 pb-4 pt-2 shrink-0 relative">
+    <div className="px-2 md:px-4 pb-3 md:pb-4 pt-2 shrink-0 relative">
       {/* Mention autocomplete */}
       {mentionQuery !== null && mentionResults.length > 0 && (
         <MentionAutocomplete
