@@ -23,6 +23,7 @@ services:
       db:
         condition: service_healthy
     ports:
+      - "3000:3000"
       - "40000-40100:40000-40100/udp"
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-obelisk}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-obelisk}

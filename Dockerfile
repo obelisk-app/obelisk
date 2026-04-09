@@ -4,7 +4,9 @@ FROM node:20-alpine AS base
 FROM base AS deps
 WORKDIR /app
 # mediasoup requires native C++ compilation
-RUN apk add --no-cache python3 make g++ linux-headers
+RUN apk add --no-cache python3 py3-pip make g++ linux-headers
+# Fix GCC 15 compat: mediasoup C++ needs cstdint explicitly
+ENV CXXFLAGS="-include cstdint"
 COPY package.json package-lock.json ./
 COPY prisma ./prisma/
 COPY prisma.config.ts ./
