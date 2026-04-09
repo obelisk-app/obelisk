@@ -11,11 +11,26 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'Obelisk — Chat with Nostr Identity',
-  description: 'Discord-like chat app powered by Nostr identity. Built for La Crypta Identity Hackathon 2026.',
+  title: 'Obelisk — Chat grupal con identidad Nostr',
+  description:
+    'App de chat grupal estilo Discord impulsada por identidad Nostr. Sin emails, sin contraseñas — identidad criptográfica. Creada para el Hackathon IDENTITY de La Crypta 2026.',
   icons: {
     icon: '/obelisk.png',
     apple: '/obelisk.png',
+  },
+  openGraph: {
+    title: 'Obelisk — Chat grupal con identidad Nostr',
+    description:
+      'Chat grupal estilo Discord con identidad criptográfica Nostr. Sin emails, sin contraseñas.',
+    siteName: 'Obelisk',
+    locale: 'es_AR',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Obelisk — Chat grupal con identidad Nostr',
+    description:
+      'Chat grupal estilo Discord con identidad criptográfica Nostr. Sin emails, sin contraseñas.',
   },
 };
 
