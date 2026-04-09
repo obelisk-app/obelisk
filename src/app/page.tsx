@@ -2,12 +2,10 @@
 
 import { useState, useEffect, useRef, type RefObject } from 'react';
 import { useRouter } from 'next/navigation';
-import dynamic from 'next/dynamic';
 import Navbar from '@/components/Navbar';
 import LoginModal from '@/components/LoginModal';
 import ObeliskIcon from '@/components/ObeliskIcon';
-
-const ShootingStars = dynamic(() => import('@/components/ShootingStars'), { ssr: false });
+import ShootingStars from '@/components/ShootingStars';
 import { useTranslation } from '@/i18n/context';
 
 function useScrollReveal<T extends HTMLElement>(): [RefObject<T | null>, boolean] {
