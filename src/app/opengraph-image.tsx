@@ -42,8 +42,8 @@ export default function OGImage() {
             position: 'absolute',
             top: '80px',
             display: 'flex',
-            width: '260px',
-            height: '260px',
+            width: '340px',
+            height: '340px',
             borderRadius: '50%',
             background:
               'radial-gradient(circle, rgba(180,249,83,0.35) 0%, rgba(180,249,83,0.1) 40%, transparent 70%)',
@@ -56,8 +56,8 @@ export default function OGImage() {
             position: 'absolute',
             top: '140px',
             display: 'flex',
-            width: '100px',
-            height: '100px',
+            width: '130px',
+            height: '130px',
             borderRadius: '50%',
             backgroundColor: '#b4f953',
             boxShadow: '0 0 60px rgba(180,249,83,0.5)',
@@ -67,9 +67,9 @@ export default function OGImage() {
         {/* Obelisk SVG */}
         <svg
           viewBox="0 0 512 512"
-          width="200"
-          height="200"
-          style={{ marginTop: -20, position: 'relative' }}
+          width="280"
+          height="280"
+          style={{ marginTop: -30, position: 'relative' }}
         >
           <path
             d="M 256,16 L 220,72 L 196,460 L 200,464 L 256,464 L 256,72 Z"
@@ -94,7 +94,7 @@ export default function OGImage() {
         >
           <span
             style={{
-              fontSize: 56,
+              fontSize: 72,
               fontWeight: 800,
               color: '#fafafa',
               letterSpacing: '-0.02em',
@@ -104,7 +104,7 @@ export default function OGImage() {
           </span>
           <span
             style={{
-              fontSize: 22,
+              fontSize: 28,
               color: '#a3a3a3',
               marginTop: 4,
             }}
@@ -125,7 +125,7 @@ export default function OGImage() {
         >
           <span
             style={{
-              fontSize: 16,
+              fontSize: 20,
               color: '#b4f953',
               fontWeight: 600,
             }}
