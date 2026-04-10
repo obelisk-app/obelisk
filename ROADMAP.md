@@ -69,6 +69,12 @@
 - [ ] Canales de voz — chat dentro del canal de voz
 - [ ] Sistema de invitaciones (links de un uso / por npub) — anti-spam
 - [x] Menciones (@usuario) resueltas desde Nostr profiles
+- [x] Renderizado de texto enriquecido en mensajes
+  - [x] Markdown: bold, italic, strikethrough, inline code, code blocks con syntax highlighting
+  - [x] Blockquotes y listas
+  - [x] Spoiler tags (||texto oculto||)
+  - [x] Link previews (OG metadata: titulo, descripcion, imagen, favicon)
+  - [x] Embeds de video (YouTube)
 - [ ] Mejoras a posts de foro (estilo Discord publicaciones)
   - [ ] Posts como sub-chats dentro del canal (cada post abre su propio thread de mensajes)
   - [ ] Vista de lista: titulo, autor, preview, imagen thumbnail, tags, conteo de reacciones/respuestas

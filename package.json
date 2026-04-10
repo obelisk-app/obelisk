@@ -29,6 +29,9 @@
     "qrcode.react": "^4.2.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "shiki": "^4.0.2",
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
     "zustand": "^5.0.12"

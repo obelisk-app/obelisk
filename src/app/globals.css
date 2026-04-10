@@ -190,6 +190,23 @@ body {
   color: #fafafa;
 }
 
+/* Markdown content in chat messages */
+[data-testid="message-content"] p {
+  margin: 0;
+}
+
+[data-testid="message-content"] p + p {
+  margin-top: 0.25em;
+}
+
+/* line-clamp utility for link preview descriptions */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 /* === Hero SVG Animations === */
 
 /* Floating chat bubbles */

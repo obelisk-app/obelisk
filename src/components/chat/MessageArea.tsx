@@ -4,63 +4,7 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 import { useChatStore, Message } from '@/store/chat';
 import { useAuthStore } from '@/store/auth';
 import { formatPubkey } from '@/lib/nostr';
-import { parseMentions } from '@/lib/mentions';
-
-export function MessageContent({ content }: { content: string }) {
-  const { memberList } = useChatStore();
-  const urlRegex = /(https?:\/\/[^\s]+)/g;
-  const imageExtensions = /\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i;
-
-  // First parse mentions, then handle URLs within text segments
-  const mentionSegments = parseMentions(content, memberList);
-
-  return (
-    <>
-      {mentionSegments.map((segment, si) => {
-        if (segment.type === 'mention') {
-          return (
-            <span
-              key={si}
-              className="bg-lc-green/20 text-lc-green rounded px-1 py-0.5 text-sm font-medium cursor-default"
-              title={segment.pubkey}
-              data-testid="mention-highlight"
-            >
-              @{segment.displayName}
-            </span>
-          );
-        }
-
-        // For text segments, parse URLs
-        const parts = segment.text.split(urlRegex);
-        return parts.map((part, i) => {
-          if (urlRegex.test(part)) {
-            urlRegex.lastIndex = 0;
-            if (imageExtensions.test(part)) {
-              return (
-                <span key={`${si}-${i}`}>
-                  <a href={part} target="_blank" rel="noopener noreferrer" className="text-lc-green/80 hover:underline text-xs break-all">{part}</a>
-                  <img
-                    src={part}
-                    alt=""
-                    loading="lazy"
-                    className="mt-1 max-w-sm max-h-80 rounded-lg object-contain bg-lc-black/50"
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                  />
-                </span>
-              );
-            }
-            return (
-              <a key={`${si}-${i}`} href={part} target="_blank" rel="noopener noreferrer" className="text-lc-green/80 hover:underline break-all">
-                {part}
-              </a>
-            );
-          }
-          return <span key={`${si}-${i}`}>{part}</span>;
-        });
-      })}
-    </>
-  );
-}
+import MessageContent from './MessageContent';
 
 function ReplyPreview({ replyTo, profileCache }: {
   replyTo: { id: string; content: string; authorPubkey: string };

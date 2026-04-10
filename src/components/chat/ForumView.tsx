@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useAuthStore } from '@/store/auth';
 import { ForumTag } from '@/store/chat';
-import { MessageContent } from './MessageArea';
+import MessageContent from './MessageContent';
 
 interface PostTag {
   id: string;
