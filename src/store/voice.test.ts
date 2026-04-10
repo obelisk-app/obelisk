@@ -65,6 +65,51 @@ describe('useVoiceStore', () => {
     expect(useVoiceStore.getState().error).toBeNull();
   });
 
+  it('manages remote video tracking with elements', () => {
+    const el = document.createElement('video') as HTMLVideoElement;
+    useVoiceStore.getState().addRemoteVideo('pk1', el);
+    expect(useVoiceStore.getState().remoteVideos.has('pk1')).toBe(true);
+    expect(useVoiceStore.getState().videoElements.get('pk1')).toBe(el);
+
+    useVoiceStore.getState().removeRemoteVideo('pk1');
+    expect(useVoiceStore.getState().remoteVideos.has('pk1')).toBe(false);
+    expect(useVoiceStore.getState().videoElements.has('pk1')).toBe(false);
+  });
+
+  it('manages remote screen tracking with elements', () => {
+    const el = document.createElement('video') as HTMLVideoElement;
+    useVoiceStore.getState().addRemoteScreen('pk1', el);
+    expect(useVoiceStore.getState().remoteScreens.has('pk1')).toBe(true);
+    expect(useVoiceStore.getState().screenElements.get('pk1')).toBe(el);
+
+    useVoiceStore.getState().removeRemoteScreen('pk1');
+    expect(useVoiceStore.getState().remoteScreens.has('pk1')).toBe(false);
+    expect(useVoiceStore.getState().screenElements.has('pk1')).toBe(false);
+  });
+
+  it('sets local camera and screen streams', () => {
+    const stream = { id: 'mock' } as any as MediaStream;
+    useVoiceStore.getState().setLocalCameraStream(stream);
+    expect(useVoiceStore.getState().localCameraStream).toBe(stream);
+
+    useVoiceStore.getState().setLocalScreenStream(stream);
+    expect(useVoiceStore.getState().localScreenStream).toBe(stream);
+  });
+
+  it('leaveVoice clears video/screen elements and streams', () => {
+    const el = document.createElement('video') as HTMLVideoElement;
+    useVoiceStore.getState().addRemoteVideo('pk1', el);
+    useVoiceStore.getState().addRemoteScreen('pk2', el);
+    useVoiceStore.getState().setLocalCameraStream({ id: 'mock' } as any);
+
+    useVoiceStore.getState().leaveVoice();
+    const state = useVoiceStore.getState();
+    expect(state.videoElements.size).toBe(0);
+    expect(state.screenElements.size).toBe(0);
+    expect(state.localCameraStream).toBeNull();
+    expect(state.localScreenStream).toBeNull();
+  });
+
   it('leaveVoice resets all state', () => {
     useVoiceStore.setState({
       currentVoiceChannelId: 'ch1',

@@ -16,6 +16,11 @@ interface VoiceState {
   // Track which remote peers have camera/screen active
   remoteVideos: Set<string>;   // pubkeys with camera on
   remoteScreens: Set<string>;  // pubkeys sharing screen
+  // Video element refs (non-reactive maps, mutated in place)
+  videoElements: Map<string, HTMLVideoElement>;   // pubkey → camera element
+  screenElements: Map<string, HTMLVideoElement>;  // pubkey → screen element
+  localCameraStream: MediaStream | null;
+  localScreenStream: MediaStream | null;
 
   setVoiceChannel: (channelId: string | null) => void;
   setParticipants: (participants: VoiceParticipant[]) => void;
@@ -29,10 +34,12 @@ interface VoiceState {
   setError: (error: string | null) => void;
   setCameraOn: (on: boolean) => void;
   setScreenSharing: (on: boolean) => void;
-  addRemoteVideo: (pubkey: string) => void;
+  addRemoteVideo: (pubkey: string, element?: HTMLVideoElement) => void;
   removeRemoteVideo: (pubkey: string) => void;
-  addRemoteScreen: (pubkey: string) => void;
+  addRemoteScreen: (pubkey: string, element?: HTMLVideoElement) => void;
   removeRemoteScreen: (pubkey: string) => void;
+  setLocalCameraStream: (stream: MediaStream | null) => void;
+  setLocalScreenStream: (stream: MediaStream | null) => void;
   leaveVoice: () => void;
 }
 
@@ -48,6 +55,10 @@ export const useVoiceStore = create<VoiceState>()((set) => ({
   isScreenSharing: false,
   remoteVideos: new Set<string>(),
   remoteScreens: new Set<string>(),
+  videoElements: new Map<string, HTMLVideoElement>(),
+  screenElements: new Map<string, HTMLVideoElement>(),
+  localCameraStream: null,
+  localScreenStream: null,
 
   setVoiceChannel: (channelId) => set({ currentVoiceChannelId: channelId }),
   setParticipants: (participants) => set({ voiceParticipants: participants }),
@@ -67,27 +78,36 @@ export const useVoiceStore = create<VoiceState>()((set) => ({
   setError: (error) => set({ error }),
   setCameraOn: (isCameraOn) => set({ isCameraOn }),
   setScreenSharing: (isScreenSharing) => set({ isScreenSharing }),
-  addRemoteVideo: (pubkey) => set((state) => {
+  addRemoteVideo: (pubkey, element) => set((state) => {
     const next = new Set(state.remoteVideos);
     next.add(pubkey);
+    if (element) state.videoElements.set(pubkey, element);
     return { remoteVideos: next };
   }),
   removeRemoteVideo: (pubkey) => set((state) => {
     const next = new Set(state.remoteVideos);
     next.delete(pubkey);
+    state.videoElements.delete(pubkey);
     return { remoteVideos: next };
   }),
-  addRemoteScreen: (pubkey) => set((state) => {
+  addRemoteScreen: (pubkey, element) => set((state) => {
     const next = new Set(state.remoteScreens);
     next.add(pubkey);
+    if (element) state.screenElements.set(pubkey, element);
     return { remoteScreens: next };
   }),
   removeRemoteScreen: (pubkey) => set((state) => {
     const next = new Set(state.remoteScreens);
     next.delete(pubkey);
+    state.screenElements.delete(pubkey);
     return { remoteScreens: next };
   }),
-  leaveVoice: () => set({
+  setLocalCameraStream: (stream) => set({ localCameraStream: stream }),
+  setLocalScreenStream: (stream) => set({ localScreenStream: stream }),
+  leaveVoice: () => set((state) => {
+    state.videoElements.clear();
+    state.screenElements.clear();
+    return {
     currentVoiceChannelId: null,
     voiceParticipants: [],
     isMuted: false,
@@ -99,5 +119,7 @@ export const useVoiceStore = create<VoiceState>()((set) => ({
     isScreenSharing: false,
     remoteVideos: new Set<string>(),
     remoteScreens: new Set<string>(),
-  }),
+    localCameraStream: null,
+    localScreenStream: null,
+  }; }),
 }));

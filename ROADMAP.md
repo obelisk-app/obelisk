@@ -7,11 +7,11 @@
 - [x] Relay management
 
 ## Fase 0.5 — Landing Page
-- [ ] Landing page con branding del proyecto
-- [ ] i18n (ES/EN) — todo el sitio bilingue
-- [ ] Secciones: hero, features, how it works, CTA (login/register)
-- [ ] Design badass — dark theme, animaciones, glows, glassmorphism, La Crypta aesthetic
-- [ ] Responsive (mobile/desktop)
+- [x] Landing page con branding del proyecto
+- [x] i18n (ES/EN) — todo el sitio bilingue
+- [x] Secciones: hero, features, how it works, CTA (login/register)
+- [x] Design badass — dark theme, animaciones, glows, glassmorphism, La Crypta aesthetic
+- [x] Responsive (mobile/desktop)
 
 ## Fase 1 — Auth + Chat Basico (single server)
 > Scope: UN solo servidor (host). No multi-server todavia.
@@ -28,10 +28,19 @@
 - [x] Edicion de mensajes
 
 ## Fase 1.5 — Admin, Moderacion & Foros
-- [ ] Panel de admin (/admin) — miembros, configuracion, bans
-- [ ] Sistema de roles (owner/admin/mod/member) con jerarquia
-- [ ] Moderacion (/moderation) — reportes, mutes, warnings, audit log
-- [ ] CRUD de canales y categorias (admin)
+- [ ] Rediseñar panel de admin (/admin) para multi-server
+  - [ ] Selector de servidor — cada server tiene su propia config
+  - [ ] CRUD de canales y categorias por servidor
+  - [ ] Gestion de miembros, bans, configuracion por servidor
+- [ ] Sistema de roles y permisos por servidor
+  - [ ] Roles (owner/admin/mod/member) con permisos granulares
+  - [ ] Asignar roles por servidor (mod en server A, member en server B)
+  - [ ] Permisos configurables por rol (que puede hacer cada rol en cada servidor)
+  - [ ] Roles custom para acceso a servidores (ej: rol "VIP" da acceso a server privado)
+  - [ ] Control de acceso por rol — quien puede ver/unirse a cada servidor
+- [ ] Rediseñar panel de moderacion (/moderation) para multi-server
+  - [ ] Reportes, mutes, warnings, audit log scoped por servidor
+  - [ ] Mods solo ven/actuan en servidores donde tienen permisos
 - [x] Formularios de mute y warn en la UI de moderacion
 - [x] Razon de ban requerida via BanReasonDialog
 - [x] Audit log con paginacion y report resolution logging
@@ -45,9 +54,12 @@
 - [x] Tests: 146+ tests cubriendo stores, componentes, y API routes
 
 ## Fase 2 — Funcionalidades Core
-- [ ] Canales de voz (via [HiveTalk SFU](https://github.com/HiveTalk/hivetalksfu) — WebRTC SFU self-hosted)
+- [x] Canales de voz — audio (via mediasoup WebRTC SFU)
+- [x] Canales de voz — video y screen sharing
+- [ ] Canales de voz — chat dentro del canal de voz
 - [ ] Sistema de invitaciones (links de un uso / por npub) — anti-spam
-- [ ] Menciones (@usuario) resueltas desde Nostr profiles
+- [x] Menciones (@usuario) resueltas desde Nostr profiles
+- [ ] Canales de anuncios (solo admins/mods pueden postear, miembros solo lectura)
 - [ ] Multi-server (crear/unirse a varios servidores)
 - [ ] DMs via Nostr relays (encrypt/decrypt con el signer del usuario, NIP-04/NIP-17)
 
@@ -56,7 +68,12 @@
 - [ ] Exportar conversaciones (JSON / texto plano)
 - [ ] Bots / integraciones
 - [x] Busqueda de mensajes (Discord-style: from:, in:, has:, before:, after:, mentions:, "exact phrases")
-- [ ] Upload de archivos/media (almacenado en el servidor del host)
+- [ ] Upload de archivos/media
+  - [ ] Drag & drop y boton de adjuntar en el message input
+  - [ ] Preview inline de imagenes, videos y audio
+  - [ ] Soporte para archivos genericos (PDF, ZIP, etc.) con icono y descarga
+  - [ ] Limites configurables de tamaño por servidor
+  - [ ] Almacenamiento en el servidor del host (no depende de servicios externos)
 
 ## Fase 4 — Polish & Launch
 - [ ] PWA (Progressive Web App) — installable, offline support, service worker
@@ -131,17 +148,22 @@ Despues de completar la experiencia Discord-like (Fases 1-5), construir un clien
 - El admin gestiona desde Obelisk full, los usuarios usan Lite para chatear
 
 ## Test Suite (continuo)
-> No mocks. Tests reales contra infraestructura real.
+> 47+ test files. Vitest + React Testing Library.
 
-- [ ] Setup: Vitest/Jest + Playwright (e2e) + test DB (SQLite en memoria)
-- [ ] Auth tests: Login real con nsec/npub generados, firma de challenges, verificacion de sesion
-- [ ] Channel tests: CRUD canales, permisos, orden
-- [ ] Message tests: Envio, recepcion via WebSocket, threads, historial, paginacion
-- [ ] Multimedia tests: Upload, preview, limites de tamano, tipos permitidos
-- [ ] DM tests: Encrypt/decrypt real con keypairs de test via relays de test
-- [ ] WebSocket tests: Conexion, reconexion, multiples clientes simultaneos, broadcast
-- [ ] Members tests: Join, leave, roles, permisos por rol
-- [ ] E2E flows: Usuario se registra -> entra a canal -> manda mensaje -> otro usuario lo ve
-- [ ] Load tests: Multiples usuarios concurrentes, flood de mensajes
-- [ ] i18n tests: Todas las strings en ES y EN presentes y correctas
+- [x] Setup: Vitest + jsdom + React Testing Library
+- [x] Auth tests: roles, permisos, auth stores
+- [x] Channel tests: CRUD canales, categorias, sidebar, foros
+- [x] Message tests: envio, reacciones, posts, MessageArea, MessageInput
+- [x] DM tests: store, DMList, ProtocolPrompt
+- [x] Members tests: MemberRow, invitaciones
+- [x] Search tests: SearchBar, search store, search lib
+- [x] Voice tests: VoiceChannel, VoiceControls, voice store
+- [x] Admin tests: admin page, ChannelManager, InviteManager, ConfirmDialog, BanReasonDialog, RoleBadge
+- [x] Moderation tests: moderation page, ModActionCard
+- [x] i18n tests: LanguageToggle, strings ES/EN
+- [x] Store tests: auth, chat, dm, nav, notification, search, voice
+- [ ] Multimedia tests: Upload, preview, limites de tamaño, tipos permitidos
+- [ ] WebSocket tests: conexion, reconexion, multiples clientes simultaneos, broadcast
+- [ ] E2E flows: Playwright — usuario se registra -> entra a canal -> manda mensaje -> otro usuario lo ve
+- [ ] Load tests: multiples usuarios concurrentes, flood de mensajes
 - [ ] CI pipeline: tests corren en cada PR

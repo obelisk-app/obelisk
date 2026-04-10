@@ -81,6 +81,92 @@ describe('VoiceChannel', () => {
     expect(screen.getByTestId('voice-controls')).toBeInTheDocument();
   });
 
+  it('renders screen share area when remote screen is active', () => {
+    const screenEl = document.createElement('video');
+    const screenElements = new Map<string, HTMLVideoElement>();
+    screenElements.set('pk1', screenEl);
+
+    useVoiceStore.setState({
+      currentVoiceChannelId: 'vc1',
+      voiceParticipants: [
+        { pubkey: 'pk1', muted: false, deafened: false, joinedAt: '2026-01-01' },
+      ],
+      remoteScreens: new Set(['pk1']),
+      screenElements,
+    });
+
+    render(
+      <VoiceChannel
+        channelId="vc1"
+        channelName="voice-chat"
+        profileCache={profileCache}
+        onJoin={vi.fn()}
+        onLeave={vi.fn()}
+        onToggleMute={vi.fn()}
+        onToggleDeafen={vi.fn()}
+        onToggleCamera={vi.fn()}
+        onToggleScreenShare={vi.fn()}
+      />
+    );
+    expect(screen.getByTestId('screen-share-area')).toBeInTheDocument();
+    expect(screen.getByText(/sharing their screen/)).toBeInTheDocument();
+  });
+
+  it('shows camera badge when remote video is active', () => {
+    const videoEl = document.createElement('video');
+    const videoElements = new Map<string, HTMLVideoElement>();
+    videoElements.set('pk1', videoEl);
+
+    useVoiceStore.setState({
+      currentVoiceChannelId: 'vc1',
+      voiceParticipants: [
+        { pubkey: 'pk1', muted: false, deafened: false, joinedAt: '2026-01-01' },
+      ],
+      remoteVideos: new Set(['pk1']),
+      videoElements,
+    });
+
+    render(
+      <VoiceChannel
+        channelId="vc1"
+        channelName="voice-chat"
+        profileCache={profileCache}
+        onJoin={vi.fn()}
+        onLeave={vi.fn()}
+        onToggleMute={vi.fn()}
+        onToggleDeafen={vi.fn()}
+        onToggleCamera={vi.fn()}
+        onToggleScreenShare={vi.fn()}
+      />
+    );
+    expect(screen.getByTestId('camera-badge')).toBeInTheDocument();
+  });
+
+  it('shows local screen share indicator', () => {
+    useVoiceStore.setState({
+      currentVoiceChannelId: 'vc1',
+      voiceParticipants: [
+        { pubkey: 'pk1', muted: false, deafened: false, joinedAt: '2026-01-01' },
+      ],
+      isScreenSharing: true,
+    });
+
+    render(
+      <VoiceChannel
+        channelId="vc1"
+        channelName="voice-chat"
+        profileCache={profileCache}
+        onJoin={vi.fn()}
+        onLeave={vi.fn()}
+        onToggleMute={vi.fn()}
+        onToggleDeafen={vi.fn()}
+        onToggleCamera={vi.fn()}
+        onToggleScreenShare={vi.fn()}
+      />
+    );
+    expect(screen.getByTestId('local-screen-share-indicator')).toBeInTheDocument();
+  });
+
   it('shows voice controls only when in the channel', () => {
     useVoiceStore.setState({
       currentVoiceChannelId: 'other-channel',

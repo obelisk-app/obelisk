@@ -522,6 +522,22 @@ export default function ChatPage() {
       client.onError = (error) => {
         useVoiceStore.getState().setError(error);
       };
+      client.onRemoteVideoElement = (pubkey, element) => {
+        const vs = useVoiceStore.getState();
+        if (element) vs.addRemoteVideo(pubkey, element);
+        else vs.removeRemoteVideo(pubkey);
+      };
+      client.onRemoteScreenElement = (pubkey, element) => {
+        const vs = useVoiceStore.getState();
+        if (element) vs.addRemoteScreen(pubkey, element);
+        else vs.removeRemoteScreen(pubkey);
+      };
+      client.onLocalCameraStream = (stream) => {
+        useVoiceStore.getState().setLocalCameraStream(stream);
+      };
+      client.onLocalScreenStream = (stream) => {
+        useVoiceStore.getState().setLocalScreenStream(stream);
+      };
       voiceStore.setVoiceChannel(channelId);
       await client.join(channelId);
       voiceClientRef.current = client;
