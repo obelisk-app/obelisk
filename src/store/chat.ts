@@ -50,6 +50,7 @@ export interface ServerInfo {
   name: string;
   icon: string | null;
   banner: string | null;
+  ownerPubkey?: string;
 }
 
 interface ChatState {

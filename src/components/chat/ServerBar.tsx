@@ -2,12 +2,14 @@
 
 import { useState } from 'react';
 import { useChatStore } from '@/store/chat';
+import { useAuthStore } from '@/store/auth';
 import { useDMStore } from '@/store/dm';
 import { useNotificationStore } from '@/store/notification';
 import CreateServerModal from './CreateServerModal';
 
 export default function ServerBar() {
   const { servers, activeServerId, setActiveServer, addServer } = useChatStore();
+  const user = useAuthStore((s) => s.user);
   const { isDMMode, setDMMode } = useDMStore();
   const { channelUnreads, channelMentions, channelServerMap, dmUnreads } = useNotificationStore();
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -93,18 +95,20 @@ export default function ServerBar() {
         );
       })}
 
-      {/* Add server button */}
-      <button
-        onClick={() => setShowCreateModal(true)}
-        className="w-12 h-12 rounded-2xl bg-lc-dark hover:bg-lc-green/20 flex items-center justify-center text-lc-green/60 hover:text-lc-green transition-all hover:rounded-xl"
-        title="Add a Server"
-        data-testid="add-server-btn"
-      >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-          <line x1="12" y1="5" x2="12" y2="19"/>
-          <line x1="5" y1="12" x2="19" y2="12"/>
-        </svg>
-      </button>
+      {/* Add server button — only visible to server owners */}
+      {user && servers.some((s) => s.ownerPubkey === user.pubkey) && (
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="w-12 h-12 rounded-2xl bg-lc-dark hover:bg-lc-green/20 flex items-center justify-center text-lc-green/60 hover:text-lc-green transition-all hover:rounded-xl"
+          title="Add a Server"
+          data-testid="add-server-btn"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+        </button>
+      )}
 
       {showCreateModal && (
         <CreateServerModal

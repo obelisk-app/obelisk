@@ -3,18 +3,22 @@ import userEvent from '@testing-library/user-event';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import ServerBar from './ServerBar';
 import { useChatStore } from '@/store/chat';
+import { useAuthStore } from '@/store/auth';
+
+const OWNER_PUBKEY = 'owner-pubkey-123';
 
 describe('ServerBar', () => {
   beforeEach(() => {
     useChatStore.setState(useChatStore.getInitialState());
+    useAuthStore.setState({ user: { pubkey: OWNER_PUBKEY } as any, isConnected: true });
     global.fetch = vi.fn();
   });
 
   it('renders server icons', () => {
     useChatStore.setState({
       servers: [
-        { id: 's1', name: 'La Crypta', icon: null, banner: null },
-        { id: 's2', name: 'Bitcoin', icon: null, banner: null },
+        { id: 's1', name: 'La Crypta', icon: null, banner: null, ownerPubkey: OWNER_PUBKEY },
+        { id: 's2', name: 'Bitcoin', icon: null, banner: null, ownerPubkey: 'other' },
       ],
       activeServerId: 's1',
     });
@@ -26,7 +30,7 @@ describe('ServerBar', () => {
 
   it('active server has indicator styling', () => {
     useChatStore.setState({
-      servers: [{ id: 's1', name: 'Test', icon: null, banner: null }],
+      servers: [{ id: 's1', name: 'Test', icon: null, banner: null, ownerPubkey: OWNER_PUBKEY }],
       activeServerId: 's1',
     });
 
@@ -39,8 +43,8 @@ describe('ServerBar', () => {
     const user = userEvent.setup();
     useChatStore.setState({
       servers: [
-        { id: 's1', name: 'Server1', icon: null, banner: null },
-        { id: 's2', name: 'Server2', icon: null, banner: null },
+        { id: 's1', name: 'Server1', icon: null, banner: null, ownerPubkey: OWNER_PUBKEY },
+        { id: 's2', name: 'Server2', icon: null, banner: null, ownerPubkey: 'other' },
       ],
       activeServerId: 's1',
     });
@@ -53,7 +57,7 @@ describe('ServerBar', () => {
   it('Add Server button opens create/join modal', async () => {
     const user = userEvent.setup();
     useChatStore.setState({
-      servers: [{ id: 's1', name: 'Test', icon: null, banner: null }],
+      servers: [{ id: 's1', name: 'Test', icon: null, banner: null, ownerPubkey: OWNER_PUBKEY }],
       activeServerId: 's1',
     });
 
@@ -64,10 +68,21 @@ describe('ServerBar', () => {
     expect(screen.getByTestId('server-name-input')).toBeInTheDocument();
   });
 
+  it('hides Add Server button for non-owners', () => {
+    useAuthStore.setState({ user: { pubkey: 'non-owner' } as any, isConnected: true });
+    useChatStore.setState({
+      servers: [{ id: 's1', name: 'Test', icon: null, banner: null, ownerPubkey: OWNER_PUBKEY }],
+      activeServerId: 's1',
+    });
+
+    render(<ServerBar />);
+    expect(screen.queryByTitle('Add a Server')).not.toBeInTheDocument();
+  });
+
   it('DMs button toggles DM mode', async () => {
     const user = userEvent.setup();
     useChatStore.setState({
-      servers: [{ id: 's1', name: 'Test', icon: null, banner: null }],
+      servers: [{ id: 's1', name: 'Test', icon: null, banner: null, ownerPubkey: OWNER_PUBKEY }],
       activeServerId: 's1',
     });
 
@@ -85,7 +100,7 @@ describe('ServerBar', () => {
   it('create modal dismissible by Cancel button', async () => {
     const user = userEvent.setup();
     useChatStore.setState({
-      servers: [{ id: 's1', name: 'Test', icon: null, banner: null }],
+      servers: [{ id: 's1', name: 'Test', icon: null, banner: null, ownerPubkey: OWNER_PUBKEY }],
       activeServerId: 's1',
     });
 
