@@ -37,6 +37,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
   const [newAccountNsec, setNewAccountNsec] = useState<string | null>(null);
   const [nsecCopied, setNsecCopied] = useState(false);
   const [creatingAccount, setCreatingAccount] = useState(false);
+  const [backupConfirmed, setBackupConfirmed] = useState(false);
   const sessionRef = useRef<NostrConnectSession | null>(null);
   const { setUser, setLoading, setError, isLoading, error, syncProfile } = useAuthStore();
 
@@ -104,6 +105,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
       setNewAccountNsec(null);
       setNsecCopied(false);
       setCreatingAccount(false);
+      setBackupConfirmed(false);
       sessionRef.current?.cancel();
       sessionRef.current = null;
     }
@@ -225,6 +227,20 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
     setTimeout(() => setNsecCopied(false), 2000);
   };
 
+  const handleDownloadNsec = () => {
+    if (!newAccountNsec) return;
+    const content = `Obelisk — Nostr Private Key Backup\n\nKeep this file safe and secret. Anyone with this key controls your account. There is no recovery if you lose it.\n\nPrivate Key (nsec):\n${newAccountNsec}\n`;
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'obelisk-nsec-backup.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-lc-dark rounded-2xl max-w-md w-full p-8 border border-lc-border shadow-2xl">
@@ -312,7 +328,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
               </p>
               <div className="flex flex-col gap-2">
                 <a
-                  href="https://chromewebstore.google.com/detail/nostr-wot/hhaplmbmjdbkphepjffjblocfifkaael"
+                  href="https://chromewebstore.google.com/detail/nostr-wot/gfmefgdkmjpjinecjchlangpamhclhdo"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 text-sm text-lc-green hover:text-lc-green/80 transition"
@@ -341,8 +357,33 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
             </div>
 
             <button
+              onClick={handleDownloadNsec}
+              className="w-full lc-pill lc-pill-secondary text-sm flex items-center justify-center gap-2"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Download backup (.txt)
+            </button>
+
+            <label className="flex items-start gap-3 p-3 bg-lc-black/40 border border-lc-border rounded-xl cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={backupConfirmed}
+                onChange={(e) => setBackupConfirmed(e.target.checked)}
+                className="mt-0.5 w-4 h-4 accent-lc-green flex-shrink-0 cursor-pointer"
+              />
+              <span className="text-xs text-lc-muted leading-relaxed">
+                I have securely backed up my private key (nsec) and understand that if I lose it, I lose access to my account forever.
+              </span>
+            </label>
+
+            <button
               onClick={() => { onClose(); onSuccess?.(); }}
-              className="w-full lc-pill lc-pill-primary text-sm flex items-center justify-center gap-2"
+              disabled={!backupConfirmed}
+              className="w-full lc-pill lc-pill-primary text-sm flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               I&apos;ve saved my key — Continue
             </button>

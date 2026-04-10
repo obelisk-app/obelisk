@@ -98,9 +98,15 @@ describe('LoginModal', () => {
 
     // Shows continue button
     expect(screen.getByText("I've saved my key — Continue")).toBeInTheDocument();
+
+    // Shows download backup button
+    expect(screen.getByText('Download backup (.txt)')).toBeInTheDocument();
+
+    // Shows backup confirmation checkbox
+    expect(screen.getByRole('checkbox')).toBeInTheDocument();
   });
 
-  it('calls onClose and onSuccess when continue clicked after account creation', async () => {
+  it('disables continue until backup is confirmed via checkbox', async () => {
     const user = userEvent.setup();
     vi.mocked(createNewAccount).mockResolvedValue({
       user: { pubkey: 'abc123', fetchProfile: vi.fn() },
@@ -114,9 +120,66 @@ describe('LoginModal', () => {
       expect(screen.getByText('Account Created')).toBeInTheDocument();
     });
 
+    const continueBtn = screen.getByText("I've saved my key — Continue");
+    expect(continueBtn).toBeDisabled();
+
+    // Clicking while disabled should not advance
+    await user.click(continueBtn);
+    expect(mockOnClose).not.toHaveBeenCalled();
+    expect(mockOnSuccess).not.toHaveBeenCalled();
+
+    // Tick the confirmation checkbox
+    await user.click(screen.getByRole('checkbox'));
+    expect(continueBtn).not.toBeDisabled();
+  });
+
+  it('calls onClose and onSuccess when continue clicked after confirming backup', async () => {
+    const user = userEvent.setup();
+    vi.mocked(createNewAccount).mockResolvedValue({
+      user: { pubkey: 'abc123', fetchProfile: vi.fn() },
+      nsec: 'nsec1testkey123',
+    });
+
+    render(<LoginModal isOpen={true} onClose={mockOnClose} onSuccess={mockOnSuccess} />);
+    await user.click(screen.getByText('Create New Account'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Account Created')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('checkbox'));
     await user.click(screen.getByText("I've saved my key — Continue"));
     expect(mockOnClose).toHaveBeenCalled();
     expect(mockOnSuccess).toHaveBeenCalled();
+  });
+
+  it('downloads nsec as a txt file when download backup clicked', async () => {
+    const user = userEvent.setup();
+    vi.mocked(createNewAccount).mockResolvedValue({
+      user: { pubkey: 'abc123', fetchProfile: vi.fn() },
+      nsec: 'nsec1testkey123',
+    });
+
+    const createObjectURL = vi.fn(() => 'blob:mock');
+    const revokeObjectURL = vi.fn();
+    (URL as any).createObjectURL = createObjectURL;
+    (URL as any).revokeObjectURL = revokeObjectURL;
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+
+    render(<LoginModal isOpen={true} onClose={mockOnClose} onSuccess={mockOnSuccess} />);
+    await user.click(screen.getByText('Create New Account'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Account Created')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByText('Download backup (.txt)'));
+
+    expect(createObjectURL).toHaveBeenCalled();
+    expect(clickSpy).toHaveBeenCalled();
+    expect(revokeObjectURL).toHaveBeenCalled();
+
+    clickSpy.mockRestore();
   });
 
   it('shows extension button text with nostr-wot first', () => {
