@@ -196,8 +196,8 @@ export async function createNostrConnectSession(relay?: string): Promise<NostrCo
   const connectRelay = relay || 'wss://relay.nsec.app';
 
   const signer = NDKNip46Signer.nostrconnect(ndk, connectRelay, undefined, {
-    name: 'Nostr Starter Kit',
-    url: typeof window !== 'undefined' ? window.location.origin : 'https://nostr-starter.local',
+    name: 'Obelisk',
+    url: typeof window !== 'undefined' ? window.location.origin : 'https://obelisk.ar',
   });
 
   const uri = signer.nostrConnectUri || '';
