@@ -232,19 +232,59 @@ export default function ChatPage() {
         if (!res.ok) return;
         const data = await res.json();
         const memberInfoList: MemberInfo[] = [];
+        const missingProfiles: string[] = [];
         for (const member of data.members) {
           const name = member.nickname || member.displayName || undefined;
-          profileCache.set(member.pubkey, {
-            name,
-            picture: member.picture || undefined,
-          });
+          const picture = member.picture || undefined;
+          profileCache.set(member.pubkey, { name, picture });
           memberInfoList.push({
             pubkey: member.pubkey,
             displayName: name || member.pubkey.slice(0, 8) + '...',
-            picture: member.picture || undefined,
+            picture,
           });
+          if (!name && !picture) {
+            missingProfiles.push(member.pubkey);
+          }
         }
         setMemberList(memberInfoList);
+
+        // Fetch missing profiles from Nostr relays client-side
+        if (missingProfiles.length > 0) {
+          const ndk = getNDK();
+          for (const pubkey of missingProfiles) {
+            try {
+              const user = ndk.getUser({ pubkey });
+              await Promise.race([
+                user.fetchProfile(),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
+              ]);
+              if (user.profile) {
+                const p = user.profile;
+                const name = (p.displayName || (p as Record<string, unknown>).display_name || p.name) as string | undefined;
+                const picture = ((p as Record<string, unknown>).image || (p as Record<string, unknown>).picture) as string | undefined;
+                if (name || picture) {
+                  profileCache.set(pubkey, { name, picture });
+                  // Update the member list in real-time
+                  const current = useChatStore.getState().memberList;
+                  const updated = current.map(m =>
+                    m.pubkey === pubkey
+                      ? { ...m, displayName: name || m.displayName, picture: picture || m.picture }
+                      : m
+                  );
+                  setMemberList(updated);
+                  // Sync to server DB in background
+                  fetch('/api/members/sync-profile', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pubkey, name, picture }),
+                  }).catch(() => {});
+                }
+              }
+            } catch {
+              // Skip this member, relay fetch failed
+            }
+          }
+        }
       } catch {
         // Silently fail — profiles will show pubkey fallback
       }

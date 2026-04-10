@@ -36,6 +36,8 @@ export default function AdminPage() {
   const [server, setServer] = useState<ServerSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<string | null>(null);
   const [accessDenied, setAccessDenied] = useState(false);
 
   // Check auth and role via backend (no dependency on Zustand isConnected)
@@ -203,7 +205,36 @@ export default function AdminPage() {
         {/* Members Tab */}
         {tab === 'members' && (
           <div className="mt-4 space-y-1" data-testid="members-tab">
-            <p className="text-xs text-lc-muted mb-3">{activeMembers.length} members</p>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs text-lc-muted">{activeMembers.length} members</p>
+              <button
+                onClick={async () => {
+                  setSyncing(true);
+                  setSyncResult(null);
+                  try {
+                    const res = await fetch('/api/admin/refresh-profiles', { method: 'POST' });
+                    if (res.ok) {
+                      const data = await res.json();
+                      setSyncResult(`Synced ${data.updated} profiles`);
+                      await fetchMembers();
+                    } else {
+                      setSyncResult('Sync failed');
+                    }
+                  } catch {
+                    setSyncResult('Sync failed');
+                  } finally {
+                    setSyncing(false);
+                  }
+                }}
+                disabled={syncing}
+                className="px-4 py-1.5 rounded-full text-xs font-medium border border-lc-border text-lc-muted hover:text-lc-white hover:border-lc-green transition-colors disabled:opacity-50"
+              >
+                {syncing ? 'Syncing...' : 'Sync Nostr Profiles'}
+              </button>
+            </div>
+            {syncResult && (
+              <p className="text-xs text-lc-green mb-2">{syncResult}</p>
+            )}
             {activeMembers.map((m) => (
               <MemberRow
                 key={m.id}
