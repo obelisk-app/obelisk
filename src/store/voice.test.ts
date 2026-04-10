@@ -110,6 +110,20 @@ describe('useVoiceStore', () => {
     expect(state.localScreenStream).toBeNull();
   });
 
+  it('manages focusedPubkey', () => {
+    useVoiceStore.getState().setFocusedPubkey('pk1');
+    expect(useVoiceStore.getState().focusedPubkey).toBe('pk1');
+
+    useVoiceStore.getState().setFocusedPubkey(null);
+    expect(useVoiceStore.getState().focusedPubkey).toBeNull();
+  });
+
+  it('leaveVoice resets focusedPubkey', () => {
+    useVoiceStore.getState().setFocusedPubkey('pk1');
+    useVoiceStore.getState().leaveVoice();
+    expect(useVoiceStore.getState().focusedPubkey).toBeNull();
+  });
+
   it('leaveVoice resets all state', () => {
     useVoiceStore.setState({
       currentVoiceChannelId: 'ch1',
