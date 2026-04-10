@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { nip19 } from 'nostr-tools';
 import { parseMentions, serializeMention, filterMembers, MemberInfo } from './mentions';
 
 const members: MemberInfo[] = [
@@ -38,15 +39,39 @@ describe('parseMentions', () => {
     expect(result[2]).toEqual({ type: 'mention', pubkey: 'b'.repeat(64), displayName: 'Bob' });
   });
 
-  it('shows truncated pubkey for unknown members', () => {
+  it('shows truncated npub for unknown members', () => {
     const unknownPk = 'd'.repeat(64);
     const content = `nostr:npub1${unknownPk}`;
     const result = parseMentions(content, members);
-    expect(result[0]).toEqual({
+    expect(result[0]).toMatchObject({
       type: 'mention',
       pubkey: unknownPk,
-      displayName: 'dddddddd...',
     });
+    const seg = result[0] as { type: 'mention'; displayName: string };
+    expect(seg.displayName.startsWith('npub1')).toBe(true);
+    expect(seg.displayName.length).toBeLessThanOrEqual(12);
+    expect(seg.displayName).not.toContain(unknownPk);
+  });
+
+  it('parses a real bech32 nostr:npub1 mention', () => {
+    const pk = 'a'.repeat(64);
+    const npub = nip19.npubEncode(pk); // real bech32 npub
+    const content = `hey nostr:${npub} there`;
+    const result = parseMentions(content, members);
+    expect(result).toEqual([
+      { type: 'text', text: 'hey ' },
+      { type: 'mention', pubkey: pk, displayName: 'Alice' },
+      { type: 'text', text: ' there' },
+    ]);
+  });
+
+  it('parses a bare bech32 npub1 mention (no nostr: prefix)', () => {
+    const pk = 'b'.repeat(64);
+    const npub = nip19.npubEncode(pk);
+    const content = `ping ${npub}!`;
+    const result = parseMentions(content, members);
+    expect(result[0]).toEqual({ type: 'text', text: 'ping ' });
+    expect(result[1]).toEqual({ type: 'mention', pubkey: pk, displayName: 'Bob' });
   });
 
   it('roundtrips with serializeMention', () => {
