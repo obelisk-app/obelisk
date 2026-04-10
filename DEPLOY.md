@@ -72,6 +72,8 @@ This will:
 
 > **Note — ARM64 (Hetzner CAX, Apple Silicon):** The Dockerfile includes fixes for building mediasoup on ARM64 with GCC 15 (`py3-pip` for the build toolchain and `CXXFLAGS="-include cstdint"` for C++ compatibility). This is handled automatically.
 
+> **Build caching:** The Dockerfile uses BuildKit cache mounts for npm and separates dependency installation from Prisma schema copying. This means code-only changes rebuild in ~30s instead of re-running `npm ci` (~9min). Dependencies are only reinstalled when `package.json` or `package-lock.json` change.
+
 ### 4. Set up routing (choose one)
 
 #### Option A: Cloudflare Tunnel

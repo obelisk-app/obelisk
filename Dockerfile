@@ -8,17 +8,19 @@ RUN apk add --no-cache python3 py3-pip make g++ linux-headers
 # Fix GCC 15 compat: mediasoup C++ needs cstdint explicitly
 ENV CXXFLAGS="-include cstdint"
 COPY package.json package-lock.json ./
+RUN --mount=type=cache,target=/root/.npm npm ci
+# Copy prisma after npm ci so dependency cache isn't invalidated by schema changes
 COPY prisma ./prisma/
 COPY prisma.config.ts ./
-RUN npm ci
+RUN npx prisma generate
 
 # --- Builder ---
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/src/generated ./src/generated
 COPY . .
 ENV NODE_ENV=production
-RUN npx prisma generate
 RUN npx next build
 
 # --- Production ---
