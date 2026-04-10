@@ -50,4 +50,17 @@ describe('useDMStore', () => {
     useDMStore.getState().addMessage({ id: '2', senderPubkey: 'b', recipientPubkey: 'a', content: 'hello', createdAt: 101, protocol: 'nip17' });
     expect(useDMStore.getState().messages).toHaveLength(2);
   });
+
+  it('deduplicates messages by id', () => {
+    useDMStore.getState().addMessage({ id: '1', senderPubkey: 'a', recipientPubkey: 'b', content: 'hi', createdAt: 100, protocol: 'nip04' });
+    useDMStore.getState().addMessage({ id: '1', senderPubkey: 'a', recipientPubkey: 'b', content: 'hi', createdAt: 100, protocol: 'nip04' });
+    expect(useDMStore.getState().messages).toHaveLength(1);
+  });
+
+  it('sets protocol override and clears prompt', () => {
+    useDMStore.setState({ showProtocolPrompt: 'pk1' });
+    useDMStore.getState().setProtocolOverride('pk1', 'nip04');
+    expect(useDMStore.getState().protocolOverrides['pk1']).toBe('nip04');
+    expect(useDMStore.getState().showProtocolPrompt).toBeNull();
+  });
 });

@@ -56,9 +56,10 @@ export const useDMStore = create<DMState>()((set) => ({
     threads: state.threads.map(t => t.pubkey === pubkey ? { ...t, ...updates } : t),
   })),
   setMessages: (messages) => set({ messages, isLoadingMessages: false }),
-  addMessage: (message) => set((state) => ({
-    messages: [...state.messages, message],
-  })),
+  addMessage: (message) => set((state) => {
+    if (state.messages.some(m => m.id === message.id)) return state;
+    return { messages: [...state.messages, message] };
+  }),
   setLoadingMessages: (loading) => set({ isLoadingMessages: loading }),
   setLoadingThreads: (loading) => set({ isLoadingThreads: loading }),
   setProtocolOverride: (pubkey, protocol) => set((state) => ({

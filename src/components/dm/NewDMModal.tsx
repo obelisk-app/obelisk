@@ -2,19 +2,35 @@
 
 import { useState } from 'react';
 import { useDMStore } from '@/store/dm';
+import { nip19 } from 'nostr-tools';
 
 interface NewDMModalProps {
   onClose: () => void;
   profileCache: Map<string, { name?: string; picture?: string }>;
 }
 
+function resolveToHex(input: string): string | null {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+  if (/^[0-9a-f]{64}$/i.test(trimmed)) return trimmed.toLowerCase();
+  try {
+    const decoded = nip19.decode(trimmed);
+    if (decoded.type === 'npub') return decoded.data as string;
+  } catch { /* not a valid nip19 string */ }
+  return null;
+}
+
 export default function NewDMModal({ onClose, profileCache }: NewDMModalProps) {
   const [pubkey, setPubkey] = useState('');
+  const [error, setError] = useState('');
   const { addThread, setActiveDM } = useDMStore();
 
   const handleStart = () => {
-    const pk = pubkey.trim();
-    if (!pk) return;
+    const pk = resolveToHex(pubkey);
+    if (!pk) {
+      setError('Enter a valid hex pubkey or npub');
+      return;
+    }
 
     const profile = profileCache.get(pk);
     addThread({
@@ -37,13 +53,14 @@ export default function NewDMModal({ onClose, profileCache }: NewDMModalProps) {
         <input
           type="text"
           value={pubkey}
-          onChange={(e) => setPubkey(e.target.value)}
+          onChange={(e) => { setPubkey(e.target.value); setError(''); }}
           placeholder="Enter npub or hex pubkey"
           className="w-full px-3 py-2 rounded-lg bg-lc-black border border-lc-border text-lc-white text-sm focus:border-lc-green focus:outline-none mb-3"
           onKeyDown={(e) => e.key === 'Enter' && handleStart()}
           autoFocus
           data-testid="new-dm-pubkey-input"
         />
+        {error && <p className="text-xs text-red-400 mb-2" data-testid="new-dm-error">{error}</p>}
         <div className="flex gap-3 justify-end">
           <button
             onClick={onClose}

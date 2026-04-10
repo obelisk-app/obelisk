@@ -38,6 +38,7 @@
 - [x] Edicion de mensajes
 
 ## Fase 1.5 — Admin, Moderacion & Foros
+> ⚠️ **URGENTE:** El panel de admin necesita mejoras criticas — no se pueden eliminar servidores creados.
 - [ ] Rediseñar panel de admin (/admin) para multi-server
   - [ ] Selector de servidor — cada server tiene su propia config
   - [ ] CRUD de canales y categorias por servidor
@@ -95,7 +96,13 @@
   - [ ] Selector de idioma en la configuracion del servidor (admin)
   - [ ] Fallback a "es" si no se configura
 - [ ] Multi-server (crear/unirse a varios servidores)
-- [ ] DMs via Nostr relays (encrypt/decrypt con el signer del usuario, NIP-04/NIP-17)
+- [x] DMs via Nostr relays (encrypt/decrypt con el signer del usuario, NIP-04/NIP-17)
+- [ ] Eliminacion de cuenta y datos del usuario
+  - [ ] Opcion en settings/perfil para eliminar cuenta
+  - [ ] Eliminar todos los mensajes del usuario (o reemplazar con "[mensaje eliminado]")
+  - [ ] Eliminar membresías, sesiones, bans, mutes, warnings y reports asociados
+  - [ ] Confirmacion explicita antes de proceder (accion irreversible)
+  - [ ] API endpoint protegido (solo el propio usuario puede eliminar su cuenta)
 
 ## Fase 3 — Features Avanzados
 - [ ] Perfiles de app (avatar, bio, display name — datos propios, no de Nostr)
@@ -214,6 +221,11 @@ Despues de completar la experiencia Discord-like (Fases 1-6), construir un clien
 - Miembros, roles, bans, mutes — todo compartido
 - El admin gestiona desde Obelisk full, los usuarios usan Lite para chatear
 
+## Known Bugs
+- [ ] Online users not updating — all users appear as online regardless of actual status
+- [ ] No way to delete servers from /admin — created servers cannot be removed
+- [ ] Server creation UI visible to all users — should be restricted (only owner/admin)
+
 ## Test Suite (continuo)
 > 47+ test files. Vitest + React Testing Library.
 
@@ -221,7 +233,7 @@ Despues de completar la experiencia Discord-like (Fases 1-6), construir un clien
 - [x] Auth tests: roles, permisos, auth stores
 - [x] Channel tests: CRUD canales, categorias, sidebar, foros
 - [x] Message tests: envio, reacciones, posts, MessageArea, MessageInput
-- [x] DM tests: store, DMList, ProtocolPrompt
+- [x] DM tests: store, DMList, DMChat, NewDMModal, ProtocolPrompt, dm lib (send/discover/detect)
 - [x] Members tests: MemberRow, invitaciones
 - [x] Search tests: SearchBar, search store, search lib
 - [x] Voice tests: VoiceChannel, VoiceControls, voice store
