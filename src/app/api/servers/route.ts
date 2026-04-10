@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
     where: { pubkey },
     include: {
       server: {
-        select: { id: true, name: true, icon: true, banner: true },
+        select: { id: true, name: true, icon: true, banner: true, ownerPubkey: true },
       },
     },
     orderBy: { joinedAt: 'asc' },
@@ -30,6 +30,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  // Only existing server owners can create new servers
+  const ownsAny = await prisma.server.findFirst({ where: { ownerPubkey: pubkey } });
+  if (!ownsAny) {
+    return NextResponse.json({ error: 'Only server owners can create new servers' }, { status: 403 });
+  }
+
   const { name, icon } = await req.json();
   if (!name || typeof name !== 'string' || !name.trim()) {
     return NextResponse.json({ error: 'Name required' }, { status: 400 });
@@ -44,10 +50,13 @@ export async function POST(req: NextRequest) {
         create: { pubkey, role: 'owner' },
       },
       channels: {
-        create: { name: 'general', type: 'text' },
+        create: [
+          { name: 'bienvenida', type: 'text', position: 0 },
+          { name: 'general', type: 'text', position: 1 },
+        ],
       },
     },
-    select: { id: true, name: true, icon: true, banner: true },
+    select: { id: true, name: true, icon: true, banner: true, ownerPubkey: true },
   });
 
   return NextResponse.json(server, { status: 201 });

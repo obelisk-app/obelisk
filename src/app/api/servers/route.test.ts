@@ -4,7 +4,7 @@ import { NextRequest } from 'next/server';
 vi.mock('@/lib/db', () => ({
   prisma: {
     member: { findMany: vi.fn() },
-    server: { create: vi.fn() },
+    server: { create: vi.fn(), findFirst: vi.fn() },
   },
 }));
 
@@ -68,12 +68,21 @@ describe('POST /api/servers', () => {
 
   it('returns 400 without name', async () => {
     mockGetAuth.mockResolvedValue('pk1');
+    mockPrisma.server.findFirst.mockResolvedValue({ id: 'existing' });
     const res = await POST(makeRequest('POST', {}));
     expect(res.status).toBe(400);
   });
 
+  it('returns 403 if user does not own any server', async () => {
+    mockGetAuth.mockResolvedValue('pk1');
+    mockPrisma.server.findFirst.mockResolvedValue(null);
+    const res = await POST(makeRequest('POST', { name: 'My Server' }));
+    expect(res.status).toBe(403);
+  });
+
   it('creates a server', async () => {
     mockGetAuth.mockResolvedValue('pk1');
+    mockPrisma.server.findFirst.mockResolvedValue({ id: 'existing' });
     mockPrisma.server.create.mockResolvedValue({
       id: 'new-srv', name: 'My Server', icon: null, banner: null,
     });
