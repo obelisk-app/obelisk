@@ -157,10 +157,38 @@
 - [ ] Busqueda semantica sobre la knowledge base indexada
 - [ ] Auto-tagging de threads por el LLM
 
-## Fase 6 — Obelisk Lite (Web + Mobile)
+## Fase 6 — Lightning Network Zaps
+> Pagos nativos entre usuarios via Lightning Network. Una wallet, todos los servidores.
+
+### Wallet
+- [ ] Wallet Lightning integrada por usuario (una sola wallet para todos los servidores)
+- [ ] Conectar wallet existente (NWC — Nostr Wallet Connect, NIP-47)
+- [ ] Balance visible en la UI (sidebar o navbar)
+- [ ] Historial de transacciones (zaps enviados/recibidos)
+
+### Zaps entre usuarios
+- [ ] Zap rapido desde el perfil de un usuario (click en el avatar → zap)
+- [ ] Zap en mensajes (boton de zap junto a reacciones)
+- [ ] Monto personalizado o presets configurables (ej: 21, 100, 500, 1000 sats)
+- [ ] Animacion/efecto visual al recibir un zap (notificacion + efecto en el mensaje)
+- [ ] Zap con mensaje opcional (nota adjunta al pago)
+
+### Emoji Zaps (reacciones con sats)
+- [ ] Emojis predefinidos con monto de zap asociado (ej: ⚡ = 21 sats, 🔥 = 100 sats, 🚀 = 500 sats, 💎 = 1000 sats)
+- [ ] Configuracion de emoji-zaps por servidor (admin elige emojis y montos)
+- [ ] Un click en emoji-zap = reaccion + pago instantaneo
+- [ ] Contador visible de sats acumulados por mensaje
+- [ ] Leaderboard de zaps por canal/servidor (top zappers, top zapped)
+
+### Integracion Nostr
+- [ ] Zaps como eventos Nostr (NIP-57 — Lightning Zaps)
+- [ ] Verificacion de zap receipts desde relays
+- [ ] Zap splits (distribuir un zap entre multiples usuarios)
+
+## Fase 7 — Obelisk Lite (Web + Mobile)
 > Una app nueva, simple, zero learning curve — misma red, misma gente, otra experiencia.
 
-Despues de completar la experiencia Discord-like (Fases 1-5), construir un cliente alternativo pensado para usuarios no-tecnicos. Intercompatible al 100% con Obelisk: mismos servidores, canales, mensajes, miembros.
+Despues de completar la experiencia Discord-like (Fases 1-6), construir un cliente alternativo pensado para usuarios no-tecnicos. Intercompatible al 100% con Obelisk: mismos servidores, canales, mensajes, miembros.
 
 ### Filosofia
 - **Zero learning curve** — si sabes usar WhatsApp/Telegram, sabes usar Obelisk Lite
