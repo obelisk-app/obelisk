@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthPubkey } from '@/lib/api-auth';
+import { isInstanceOwner } from '@/lib/instance-owner';
 
 // GET /api/servers — list servers the user is a member of
 export async function GET(req: NextRequest) {
@@ -30,10 +31,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Only existing server owners can create new servers
-  const ownsAny = await prisma.server.findFirst({ where: { ownerPubkey: pubkey } });
-  if (!ownsAny) {
-    return NextResponse.json({ error: 'Only server owners can create new servers' }, { status: 403 });
+  // The instance owner can always create servers. Otherwise the caller must
+  // already own at least one server (anti-spam: stops random users from
+  // spinning up servers but lets the operator hand out ownership).
+  if (!isInstanceOwner(pubkey)) {
+    const ownsAny = await prisma.server.findFirst({ where: { ownerPubkey: pubkey } });
+    if (!ownsAny) {
+      return NextResponse.json(
+        { error: 'Only the instance owner or an existing server owner can create new servers' },
+        { status: 403 }
+      );
+    }
   }
 
   const { name, icon } = await req.json();

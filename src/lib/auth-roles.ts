@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthPubkey } from './api-auth';
 import { prisma } from './db';
+import { isInstanceOwner } from './instance-owner';
 
 export type Role = 'owner' | 'admin' | 'mod' | 'member';
 
@@ -22,11 +23,17 @@ export interface AuthMember {
   role: Role;
   displayName: string | null;
   picture: string | null;
+  /** True if this caller is the global instance owner (env-configured). */
+  instanceOwner: boolean;
 }
 
 /**
  * Get the authenticated member for a server.
- * Resolves owner role from Server.ownerPubkey (authoritative).
+ *
+ * Owner role precedence:
+ *   1. INSTANCE_OWNER_PUBKEY (global, beats everything — no Member row required)
+ *   2. Server.ownerPubkey (per-server)
+ *   3. Member.role
  */
 export async function getAuthMember(
   req: NextRequest,
@@ -45,10 +52,30 @@ export async function getAuthMember(
     }),
   ]);
 
-  if (!member) return null;
+  if (!server) return null;
 
-  // Owner role is authoritative from Server.ownerPubkey
-  const role: Role = server?.ownerPubkey === pubkey ? 'owner' : (member.role as Role);
+  const instanceOwner = isInstanceOwner(pubkey);
+
+  // Instance owner gets owner-level access on every server, even without
+  // a Member row. Synthesize a virtual member if missing.
+  if (!member) {
+    if (!instanceOwner) return null;
+    return {
+      id: 'instance-owner',
+      serverId,
+      pubkey,
+      role: 'owner',
+      displayName: null,
+      picture: null,
+      instanceOwner: true,
+    };
+  }
+
+  // Resolve effective role: instance owner > server owner > member.role
+  const role: Role =
+    instanceOwner || server.ownerPubkey === pubkey
+      ? 'owner'
+      : (member.role as Role);
 
   return {
     id: member.id,
@@ -57,6 +84,7 @@ export async function getAuthMember(
     role,
     displayName: member.displayName,
     picture: member.picture,
+    instanceOwner,
   };
 }
 
@@ -82,9 +110,40 @@ export async function requireRole(
 }
 
 /**
- * Get the default (first) server ID. Used by routes that don't take serverId as param.
+ * Get the default (first) server ID.
+ *
+ * @deprecated Multi-server admin: prefer reading serverId from the request query
+ *   (`getServerIdFromQuery`) or deriving it from the target resource. This helper
+ *   silently picks an arbitrary server and is only kept for narrow legacy paths
+ *   (e.g. `/api/members/me` until that route is migrated).
  */
 export async function getDefaultServerId(): Promise<string | null> {
   const server = await prisma.server.findFirst({ select: { id: true } });
   return server?.id ?? null;
+}
+
+/**
+ * Read `?serverId=...` from the request URL. Returns null if missing/empty.
+ * Routes that scope to a server should call this and 400 on null.
+ */
+export function getServerIdFromQuery(req: NextRequest): string | null {
+  const sid = new URL(req.url).searchParams.get('serverId');
+  return sid && sid.trim().length > 0 ? sid.trim() : null;
+}
+
+/**
+ * Convenience: read `?serverId=...` and return a 400 NextResponse if absent.
+ * Used at the top of admin route handlers that take serverId via query.
+ */
+export function requireServerIdFromQuery(
+  req: NextRequest
+): string | NextResponse {
+  const serverId = getServerIdFromQuery(req);
+  if (!serverId) {
+    return NextResponse.json(
+      { error: 'serverId query parameter is required' },
+      { status: 400 }
+    );
+  }
+  return serverId;
 }

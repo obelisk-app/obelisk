@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthPubkey } from '@/lib/api-auth';
+import { getAuthorProfile } from '@/lib/profile-sync';
 
 // GET /api/channels/:channelId/messages?cursor=&limit=
 export async function GET(
@@ -128,7 +129,7 @@ export async function POST(
     },
   });
 
-  // Bump activity timestamp for invite-credit eligibility (best-effort).
+  // Bump "last seen" timestamp on the member row (best-effort).
   prisma.member
     .updateMany({
       where: { serverId: channel.serverId, pubkey },
@@ -136,13 +137,18 @@ export async function POST(
     })
     .catch(() => {});
 
+  // Attach author profile so real-time clients render immediately
+  // without a separate fetch round-trip.
+  const author = await getAuthorProfile(pubkey, channel.serverId);
+  const enriched = { ...message, author };
+
   // Broadcast via Socket.io if available
   const io = (globalThis as any).__io;
   if (io) {
-    io.to(`channel:${channelId}`).emit('new-message', message);
+    io.to(`channel:${channelId}`).emit('new-message', enriched);
   }
 
-  return NextResponse.json(message, { status: 201 });
+  return NextResponse.json(enriched, { status: 201 });
 }
 
 // PATCH /api/channels/:channelId/messages — edit a message

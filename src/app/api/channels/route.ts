@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthPubkey } from '@/lib/api-auth';
-import { requireRole, getDefaultServerId } from '@/lib/auth-roles';
+import { requireRole } from '@/lib/auth-roles';
 
 // GET /api/channels — list all channels grouped by category
 export async function GET(req: NextRequest) {
@@ -40,20 +40,20 @@ export async function GET(req: NextRequest) {
   });
 }
 
-// POST /api/channels — create a new channel (admin+ only)
+// POST /api/channels — create a new channel (admin+ only). Body must include serverId.
 export async function POST(req: NextRequest) {
-  const serverId = await getDefaultServerId();
-  if (!serverId) {
-    return NextResponse.json({ error: 'No server' }, { status: 404 });
+  const body = await req.json();
+  const { name, categoryId, type = 'text', serverId } = body;
+
+  if (!serverId || typeof serverId !== 'string') {
+    return NextResponse.json({ error: 'serverId required' }, { status: 400 });
+  }
+  if (!name) {
+    return NextResponse.json({ error: 'Name required' }, { status: 400 });
   }
 
   const actor = await requireRole(req, serverId, 'admin');
   if (actor instanceof NextResponse) return actor;
-
-  const { name, categoryId, type = 'text' } = await req.json();
-  if (!name) {
-    return NextResponse.json({ error: 'Name required' }, { status: 400 });
-  }
 
   const channel = await prisma.channel.create({
     data: {

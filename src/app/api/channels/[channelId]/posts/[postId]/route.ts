@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthPubkey } from '@/lib/api-auth';
+import { getAuthorProfile } from '@/lib/profile-sync';
 
 // GET /api/channels/[channelId]/posts/[postId] — get a forum post with replies
 export async function GET(
@@ -99,11 +100,15 @@ export async function POST(
     },
   });
 
+  // Attach author profile for real-time clients
+  const author = await getAuthorProfile(pubkey, channel.serverId);
+  const enriched = { ...reply, author };
+
   // Broadcast via Socket.io if available
   const io = (globalThis as any).__io;
   if (io) {
-    io.to(`channel:${channelId}`).emit('new-message', reply);
+    io.to(`channel:${channelId}`).emit('new-message', enriched);
   }
 
-  return NextResponse.json(reply, { status: 201 });
+  return NextResponse.json(enriched, { status: 201 });
 }

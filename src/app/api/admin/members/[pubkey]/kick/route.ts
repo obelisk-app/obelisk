@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireRole, getDefaultServerId } from '@/lib/auth-roles';
+import { requireRole, requireServerIdFromQuery } from '@/lib/auth-roles';
 
-// POST /api/admin/members/[pubkey]/kick — kick a member (admin+)
+// POST /api/admin/members/[pubkey]/kick?serverId=... — kick a member (admin+)
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ pubkey: string }> }
 ) {
   const { pubkey } = await params;
-  const serverId = await getDefaultServerId();
-  if (!serverId) return NextResponse.json({ error: 'No server' }, { status: 404 });
+  const serverIdOrError = requireServerIdFromQuery(req);
+  if (serverIdOrError instanceof NextResponse) return serverIdOrError;
+  const serverId = serverIdOrError;
 
   const actor = await requireRole(req, serverId, 'admin');
   if (actor instanceof NextResponse) return actor;

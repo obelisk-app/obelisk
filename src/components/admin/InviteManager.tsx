@@ -2,6 +2,15 @@
 
 import { useState, useEffect } from 'react';
 
+interface InvitationMember {
+  id: string;
+  pubkey: string;
+  displayName: string | null;
+  picture: string | null;
+  nip05: string | null;
+  joinedAt: string;
+}
+
 interface Invitation {
   id: string;
   code: string;
@@ -11,6 +20,8 @@ interface Invitation {
   uses: number;
   expiresAt: string | null;
   createdAt: string;
+  /** Members who actually joined through this invite. */
+  members?: InvitationMember[];
 }
 
 interface InviteManagerProps {
@@ -133,37 +144,83 @@ export default function InviteManager({ serverId }: InviteManagerProps) {
         {invitations.length === 0 && (
           <p className="text-sm text-lc-muted text-center py-4">No invitations yet</p>
         )}
-        {invitations.map((inv) => (
-          <div
-            key={inv.id}
-            className={`flex items-center justify-between bg-lc-dark border border-lc-border rounded-xl px-4 py-3 ${
-              isExpired(inv) ? 'opacity-50' : ''
-            }`}
-            data-testid="invite-row"
-          >
-            <div className="min-w-0 flex-1">
-              <code className="text-sm text-lc-green font-mono">{inv.code.slice(0, 12)}...</code>
-              <div className="flex gap-3 mt-1 text-xs text-lc-muted">
-                <span>{inv.uses}/{inv.maxUses} uses</span>
-                {inv.expiresAt && (
-                  <span>Expires {new Date(inv.expiresAt).toLocaleDateString()}</span>
-                )}
-                {inv.targetPubkey && (
-                  <span>For: {inv.targetPubkey.slice(0, 8)}...</span>
+        {invitations.map((inv) => {
+          const members = inv.members ?? [];
+          return (
+            <div
+              key={inv.id}
+              className={`bg-lc-dark border border-lc-border rounded-xl px-4 py-3 ${
+                isExpired(inv) ? 'opacity-50' : ''
+              }`}
+              data-testid="invite-row"
+            >
+              <div className="flex items-center justify-between">
+                <div className="min-w-0 flex-1">
+                  <code className="text-sm text-lc-green font-mono">{inv.code.slice(0, 12)}...</code>
+                  <div className="flex gap-3 mt-1 text-xs text-lc-muted">
+                    <span>{inv.uses}/{inv.maxUses} uses</span>
+                    {inv.expiresAt && (
+                      <span>Expires {new Date(inv.expiresAt).toLocaleDateString()}</span>
+                    )}
+                    {inv.targetPubkey && (
+                      <span>For: {inv.targetPubkey.slice(0, 8)}...</span>
+                    )}
+                  </div>
+                </div>
+                {!isExpired(inv) && (
+                  <button
+                    onClick={() => copyInviteLink(inv.code)}
+                    className="text-xs text-lc-muted hover:text-lc-green transition-colors ml-2"
+                    data-testid="copy-invite-btn"
+                  >
+                    {copied === inv.code ? 'Copied!' : 'Copy link'}
+                  </button>
                 )}
               </div>
+
+              {/* Joined members — only shown when at least one user came in via this link */}
+              {members.length > 0 && (
+                <div
+                  className="mt-3 pt-3 border-t border-lc-border/60"
+                  data-testid="invite-joined-members"
+                >
+                  <p className="text-[10px] uppercase tracking-wider text-lc-muted font-semibold mb-2">
+                    Joined via this link
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {members.map((m) => {
+                      const short = m.pubkey.slice(0, 8) + '…' + m.pubkey.slice(-4);
+                      const label = m.displayName || m.nip05 || short;
+                      return (
+                        <div
+                          key={m.id}
+                          className="flex items-center gap-2 px-2 py-1 rounded-full bg-lc-black border border-lc-border/60"
+                          title={`${label} • joined ${new Date(m.joinedAt).toLocaleString()}`}
+                        >
+                          {m.picture ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={m.picture}
+                              alt=""
+                              className="w-5 h-5 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-5 h-5 rounded-full bg-lc-olive flex items-center justify-center text-[10px] font-bold text-lc-green">
+                              {label[0]?.toUpperCase() ?? '?'}
+                            </div>
+                          )}
+                          <span className="text-xs text-lc-white truncate max-w-[140px]">
+                            {label}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
-            {!isExpired(inv) && (
-              <button
-                onClick={() => copyInviteLink(inv.code)}
-                className="text-xs text-lc-muted hover:text-lc-green transition-colors ml-2"
-                data-testid="copy-invite-btn"
-              >
-                {copied === inv.code ? 'Copied!' : 'Copy link'}
-              </button>
-            )}
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

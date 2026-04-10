@@ -25,7 +25,7 @@ function makeRequest(method: string, body?: any) {
     init.body = JSON.stringify(body);
     init.headers['content-type'] = 'application/json';
   }
-  return new NextRequest('http://localhost/api/admin/categories', init);
+  return new NextRequest('http://localhost/api/admin/categories?serverId=srv1', init);
 }
 
 function mockAdmin() {

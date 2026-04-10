@@ -50,6 +50,12 @@ Edit `.env.production`:
 DOMAIN=obelisk.yourdomain.com
 POSTGRES_PASSWORD=a-strong-random-password
 PUBLIC_IP=YOUR_SERVER_IP          # Required for voice — your VPS public IPv4 address
+
+# Optional but recommended: the global "instance owner" pubkey. The account
+# you set here gets owner-level access on every server in this instance,
+# can transfer Server.ownerPubkey, create new servers from /admin, and edit
+# any user's cross-server memberships. See docs/multi-server-admin.md.
+INSTANCE_OWNER_PUBKEY=your-64-char-hex-pubkey
 ```
 
 Open UDP ports for voice/video (WebRTC media):
@@ -118,13 +124,81 @@ Visit `https://obelisk.yourdomain.com` — you should see the app with full func
 
 ## Updating
 
+> **Always back up the database before pulling.** Migrations are designed to
+> be additive but human error happens, and a 2-second `pg_dump` saves hours
+> if anything goes sideways.
+
 ```bash
 cd obelisk
+
+# 1. Backup the DB to a timestamped file
+docker compose --env-file .env.production exec -T db \
+  pg_dump -U obelisk obelisk | gzip > "obelisk-backup-$(date +%Y%m%d-%H%M).sql.gz"
+
+# 2. Pull the new code
 git pull
-docker compose --env-file .env.production up -d --build
+
+# 3. Rebuild and roll only the app container (DB stays up — zero data downtime)
+docker compose --env-file .env.production up -d --build app
 ```
 
-Migrations run automatically on startup.
+Migrations run automatically on startup as part of `npm run build`
+(`prisma generate && prisma migrate deploy && next build`). Only the `app`
+container is recreated; PostgreSQL keeps running and serving the existing
+volume.
+
+### Restoring from a backup
+
+```bash
+gunzip < obelisk-backup-YYYYMMDD-HHMM.sql.gz | \
+  docker compose --env-file .env.production exec -T db psql -U obelisk obelisk
+```
+
+### Rollback
+
+The schema is forward-compatible — old code ignores new columns, so you can
+roll back the app container without rolling back the database:
+
+```bash
+git checkout <previous-commit-sha>
+docker compose --env-file .env.production up -d --build app
+```
+
+## Migration safety
+
+Every migration in `prisma/migrations/` is reviewed to be **additive only**.
+We never `DROP` columns/tables, never add `NOT NULL` without a default, and
+never delete rows in a migration. That means:
+
+- Existing messages, members, channels, reactions, etc. are never touched.
+- Existing rows get safe defaults (e.g. `wotEnabled = false`) for any new
+  columns added by a migration.
+- A `prisma migrate deploy` against a populated production database is safe
+  to run during a rolling deploy.
+
+If a future PR ever needs a destructive migration, it will be flagged in
+the PR description and ROADMAP entry — and the deploy steps will include an
+explicit data-migration script run *before* `migrate deploy`.
+
+## Behavioral changes between releases
+
+These are runtime changes that don't lose data but do affect how users
+interact with the app. Re-read this section after every `git pull` so you
+know what shifted.
+
+### Multi-server admin + WoT enforcement (post-`2428137`)
+
+| Change | Impact |
+|---|---|
+| **Login no longer auto-joins a server.** `POST /api/auth/verify` only authenticates now; it doesn't create `Member` rows. | Existing members keep all their rows. New users after deploy land in chat with no servers and must hit `/invite/[code]` or `POST /api/servers/[id]/join` to get in. |
+| **`POST /api/servers/[id]/join` now enforces WoT.** When `Server.wotEnabled = true`, the join endpoint requires the caller to be in `WotEntry` or `WotOverride`. | If WoT is off (default), nothing changes. If you've turned it on, make sure to **Refresh WoT** in `/admin → Access` so the cached follow list is populated before users try to join. |
+| **`POST /api/channels` now requires `serverId` in the body.** | Web UI is updated. External scripts/curl calls must include `{ "serverId": "..." }`. |
+| **All `/api/admin/*` routes now require `?serverId=`** (collection routes) or derive `serverId` from the resource (`[id]` routes). | Web UI is updated. External scripts/curl calls must add `?serverId=`. |
+| **`/admin` is now a redirect** to `/admin/[serverId]`. | Bookmarks still work (the index page fetches `/api/admin/servers` and `router.replace`s to the first visible server). |
+| **`INSTANCE_OWNER_PUBKEY` env var.** Without it, no one has cross-server super-admin powers — but per-server owners (anyone in `Server.ownerPubkey`) still work normally. | Set it in `.env.production` to unlock the new features: server picker, ownership transfer, cross-server membership editor, and "+ New Server" in the picker dropdown. |
+
+See [docs/multi-server-admin.md](docs/multi-server-admin.md) for the full
+multi-server model and role hierarchy.
 
 ## Useful commands
 

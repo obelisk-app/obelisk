@@ -122,30 +122,11 @@ export default function ChatPage() {
     }
   }, [profile, profileCache]);
 
-  // Sync own profile to backend Member table, then fetch member list
-  const [profileSynced, setProfileSynced] = useState(false);
-  useEffect(() => {
-    if (!sessionChecked) return;
-    if (!profile) {
-      setProfileSynced(true);
-      return;
-    }
-    fetch('/api/members/me', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        displayName: profile.displayName || profile.name || null,
-        picture: profile.picture || null,
-        nip05: profile.nip05 || null,
-        about: profile.about || null,
-        banner: profile.banner || null,
-        lud16: profile.lud16 || null,
-        website: profile.website || null,
-      }),
-    })
-      .then(() => setProfileSynced(true))
-      .catch(() => setProfileSynced(true));
-  }, [sessionChecked, profile]);
+  // `restoreSession` in the auth store already triggers the canonical
+  // server-side profile sync via `/api/members/me/sync-nostr`. No client-side
+  // PATCH is needed here — previously this component re-sent Zustand-cached
+  // profile values (which could be stale) and caused write drift.
+  const profileSynced = sessionChecked;
 
   // Fetch user's servers on mount
   useEffect(() => {
@@ -222,7 +203,10 @@ export default function ChatPage() {
     fetchChannels();
   }, [sessionChecked, activeServerId, setChannels, setActiveChannel]);
 
-  // Fetch all member profiles for the profileCache
+  // Fetch all member profiles for the profileCache. Any members with null
+  // profile fields will be filled in automatically by the server's
+  // `triggerBackgroundRefreshIfStale` on GET /api/members — no client-side
+  // NDK fallback needed.
   useEffect(() => {
     if (!profileSynced) return;
 
@@ -232,7 +216,6 @@ export default function ChatPage() {
         if (!res.ok) return;
         const data = await res.json();
         const memberInfoList: MemberInfo[] = [];
-        const missingProfiles: string[] = [];
         for (const member of data.members) {
           const name = member.nickname || member.displayName || undefined;
           const picture = member.picture || undefined;
@@ -242,49 +225,8 @@ export default function ChatPage() {
             displayName: name || member.pubkey.slice(0, 8) + '...',
             picture,
           });
-          if (!name && !picture) {
-            missingProfiles.push(member.pubkey);
-          }
         }
         setMemberList(memberInfoList);
-
-        // Fetch missing profiles from Nostr relays client-side
-        if (missingProfiles.length > 0) {
-          const ndk = getNDK();
-          for (const pubkey of missingProfiles) {
-            try {
-              const user = ndk.getUser({ pubkey });
-              await Promise.race([
-                user.fetchProfile(),
-                new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
-              ]);
-              if (user.profile) {
-                const p = user.profile;
-                const name = (p.displayName || (p as Record<string, unknown>).display_name || p.name) as string | undefined;
-                const picture = ((p as Record<string, unknown>).image || (p as Record<string, unknown>).picture) as string | undefined;
-                if (name || picture) {
-                  profileCache.set(pubkey, { name, picture });
-                  // Update the member list in real-time
-                  const current = useChatStore.getState().memberList;
-                  const updated = current.map(m =>
-                    m.pubkey === pubkey
-                      ? { ...m, displayName: name || m.displayName, picture: picture || m.picture }
-                      : m
-                  );
-                  setMemberList(updated);
-                  // Sync to server DB in background
-                  fetch('/api/members/sync-profile', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ pubkey, name, picture }),
-                  }).catch(() => {});
-                }
-              }
-            } catch {
-              // Skip this member, relay fetch failed
-            }
-          }
-        }
       } catch {
         // Silently fail — profiles will show pubkey fallback
       }
@@ -388,6 +330,28 @@ export default function ChatPage() {
     });
 
     socket.on('new-message', (message: Message) => {
+      // Seed profileCache from the embedded author so messages from
+      // never-seen pubkeys render immediately with name + avatar.
+      if (message.author && !profileCache.has(message.authorPubkey)) {
+        const name = message.author.nickname || message.author.displayName || undefined;
+        const picture = message.author.picture || undefined;
+        if (name || picture) {
+          profileCache.set(message.authorPubkey, { name, picture });
+          // Also append to the member list if this pubkey isn't there yet,
+          // so the sidebar stays in sync without a page refresh.
+          const current = useChatStore.getState().memberList;
+          if (!current.some((m) => m.pubkey === message.authorPubkey)) {
+            setMemberList([
+              ...current,
+              {
+                pubkey: message.authorPubkey,
+                displayName: name || message.authorPubkey.slice(0, 8) + '...',
+                picture,
+              },
+            ]);
+          }
+        }
+      }
       addMessage(message);
     });
 

@@ -134,8 +134,16 @@ export const useAuthStore = create<AuthState>()(
               nip05: data.nip05,
             },
           });
-          // Trigger background profile sync from Nostr relays
-          get().syncProfile();
+          // If the DB has no cached profile for us yet (new user, first
+          // login after join), block on the Nostr relay sync so the UI
+          // never flashes blank. Otherwise refresh in the background.
+          const hasCachedProfile =
+            !!(data.displayName || data.picture || currentProfile?.displayName || currentProfile?.picture);
+          if (hasCachedProfile) {
+            void get().syncProfile();
+          } else {
+            await get().syncProfile();
+          }
           return true;
         } catch {
           set({ isConnected: false });

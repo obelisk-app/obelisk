@@ -29,6 +29,7 @@ const voiceSockets = new Map<string, string>(); // socketId → channelId
 app.prepare().then(async () => {
   // Dynamic import to let Next.js set up its module resolution first
   const { prisma } = await import('./src/lib/db-server');
+  const { getAuthorProfile } = await import('./src/lib/profile-sync');
 
   // Start mediasoup worker
   msWorker = await mediasoup.createWorker(workerSettings);
@@ -191,7 +192,12 @@ app.prepare().then(async () => {
           })
           .catch(() => {});
 
-        io.to(`channel:${channelId}`).emit('new-message', message);
+        // Attach author profile so real-time clients render immediately
+        // without a separate fetch round-trip.
+        const author = await getAuthorProfile(pubkey, serverId);
+        const enriched = { ...message, author };
+
+        io.to(`channel:${channelId}`).emit('new-message', enriched);
 
         // Extract mentions and create Mention records
         const mentionRegex = /nostr:npub1([a-f0-9]{64})/g;

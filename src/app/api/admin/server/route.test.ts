@@ -1,0 +1,147 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { NextRequest } from 'next/server';
+
+vi.mock('@/lib/db', () => ({
+  prisma: {
+    server: { findUnique: vi.fn(), update: vi.fn() },
+    member: { findUnique: vi.fn(), upsert: vi.fn() },
+    moderationAction: { create: vi.fn() },
+  },
+}));
+vi.mock('@/lib/api-auth', () => ({ getAuthPubkey: vi.fn() }));
+vi.mock('@/lib/auth', () => ({ validateSession: vi.fn() }));
+
+import { GET, PATCH } from './route';
+import { prisma } from '@/lib/db';
+import { getAuthPubkey } from '@/lib/api-auth';
+
+const mockPrisma = prisma as any;
+const mockGetAuth = getAuthPubkey as ReturnType<typeof vi.fn>;
+
+const ENV_KEY = 'INSTANCE_OWNER_PUBKEY';
+let originalEnv: string | undefined;
+
+function makeRequest(method: string, body?: any, query = '?serverId=srv1') {
+  const init: any = { method, headers: { cookie: 'session=tok' } };
+  if (body) {
+    init.body = JSON.stringify(body);
+    init.headers['content-type'] = 'application/json';
+  }
+  return new NextRequest(`http://localhost/api/admin/server${query}`, init);
+}
+
+const VALID_PUBKEY = 'a'.repeat(64);
+
+describe('GET /api/admin/server', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    originalEnv = process.env[ENV_KEY];
+  });
+
+  afterEach(() => {
+    if (originalEnv === undefined) delete process.env[ENV_KEY];
+    else process.env[ENV_KEY] = originalEnv;
+  });
+
+  it('returns 400 when serverId is missing', async () => {
+    mockGetAuth.mockResolvedValue('admin-pk');
+    const res = await GET(makeRequest('GET', undefined, ''));
+    expect(res.status).toBe(400);
+  });
+
+  it('returns server settings for admin', async () => {
+    mockGetAuth.mockResolvedValue('admin-pk');
+    mockPrisma.server.findUnique
+      .mockResolvedValueOnce({ ownerPubkey: 'owner-pk' }) // for getAuthMember
+      .mockResolvedValueOnce({ id: 'srv1', name: 'Test', joinMode: 'open', ownerPubkey: 'owner-pk' });
+    mockPrisma.member.findUnique.mockResolvedValue({
+      id: 'm1', serverId: 'srv1', pubkey: 'admin-pk', role: 'admin',
+    });
+
+    const res = await GET(makeRequest('GET'));
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.id).toBe('srv1');
+  });
+
+  it('returns 403 for non-admin', async () => {
+    mockGetAuth.mockResolvedValue('member-pk');
+    mockPrisma.server.findUnique.mockResolvedValue({ ownerPubkey: 'owner-pk' });
+    mockPrisma.member.findUnique.mockResolvedValue({
+      id: 'm1', serverId: 'srv1', pubkey: 'member-pk', role: 'member',
+    });
+
+    const res = await GET(makeRequest('GET'));
+    expect(res.status).toBe(403);
+  });
+});
+
+describe('PATCH /api/admin/server', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    originalEnv = process.env[ENV_KEY];
+  });
+
+  afterEach(() => {
+    if (originalEnv === undefined) delete process.env[ENV_KEY];
+    else process.env[ENV_KEY] = originalEnv;
+  });
+
+  it('owner can update name/icon/banner', async () => {
+    mockGetAuth.mockResolvedValue('owner-pk');
+    mockPrisma.server.findUnique.mockResolvedValue({ ownerPubkey: 'owner-pk' });
+    mockPrisma.member.findUnique.mockResolvedValue({
+      id: 'm1', serverId: 'srv1', pubkey: 'owner-pk', role: 'owner',
+    });
+    mockPrisma.server.update.mockResolvedValue({ id: 'srv1', name: 'New Name' });
+
+    const res = await PATCH(makeRequest('PATCH', { name: 'New Name' }));
+    expect(res.status).toBe(200);
+    expect(mockPrisma.server.update).toHaveBeenCalledWith({
+      where: { id: 'srv1' },
+      data: { name: 'New Name' },
+    });
+  });
+
+  it('rejects ownerPubkey transfer for non-instance owner', async () => {
+    delete process.env[ENV_KEY];
+    mockGetAuth.mockResolvedValue('owner-pk');
+    mockPrisma.server.findUnique.mockResolvedValue({ ownerPubkey: 'owner-pk' });
+    mockPrisma.member.findUnique.mockResolvedValue({
+      id: 'm1', serverId: 'srv1', pubkey: 'owner-pk', role: 'owner',
+    });
+
+    const res = await PATCH(makeRequest('PATCH', { ownerPubkey: VALID_PUBKEY }));
+    expect(res.status).toBe(403);
+    expect(mockPrisma.server.update).not.toHaveBeenCalled();
+  });
+
+  it('instance owner can transfer ownerPubkey', async () => {
+    process.env[ENV_KEY] = 'instance-pk';
+    mockGetAuth.mockResolvedValue('instance-pk');
+    mockPrisma.server.findUnique.mockResolvedValue({ ownerPubkey: 'old-owner' });
+    mockPrisma.member.findUnique.mockResolvedValue(null); // instance owner has no Member row
+    mockPrisma.member.upsert.mockResolvedValue({});
+    mockPrisma.moderationAction.create.mockResolvedValue({});
+    mockPrisma.server.update.mockResolvedValue({ id: 'srv1', ownerPubkey: VALID_PUBKEY });
+
+    const res = await PATCH(makeRequest('PATCH', { ownerPubkey: VALID_PUBKEY }));
+    expect(res.status).toBe(200);
+    expect(mockPrisma.server.update).toHaveBeenCalledWith({
+      where: { id: 'srv1' },
+      data: { ownerPubkey: VALID_PUBKEY.toLowerCase() },
+    });
+    expect(mockPrisma.member.upsert).toHaveBeenCalled();
+    expect(mockPrisma.moderationAction.create).toHaveBeenCalled();
+  });
+
+  it('rejects malformed ownerPubkey', async () => {
+    process.env[ENV_KEY] = 'instance-pk';
+    mockGetAuth.mockResolvedValue('instance-pk');
+    mockPrisma.server.findUnique.mockResolvedValue({ ownerPubkey: 'old-owner' });
+    mockPrisma.member.findUnique.mockResolvedValue(null);
+
+    const res = await PATCH(makeRequest('PATCH', { ownerPubkey: 'not-a-valid-pubkey' }));
+    expect(res.status).toBe(400);
+  });
+});

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';
 
 vi.mock('@/lib/db', () => ({
@@ -91,5 +91,33 @@ describe('POST /api/servers', () => {
     expect(res.status).toBe(201);
     const data = await res.json();
     expect(data.name).toBe('My Server');
+  });
+
+  describe('instance owner', () => {
+    const ENV_KEY = 'INSTANCE_OWNER_PUBKEY';
+    let original: string | undefined;
+
+    beforeEach(() => {
+      original = process.env[ENV_KEY];
+      process.env[ENV_KEY] = 'instance-pk';
+    });
+
+    afterEach(() => {
+      if (original === undefined) delete process.env[ENV_KEY];
+      else process.env[ENV_KEY] = original;
+    });
+
+    it('allows instance owner to create even if they own no servers', async () => {
+      mockGetAuth.mockResolvedValue('instance-pk');
+      mockPrisma.server.findFirst.mockResolvedValue(null);
+      mockPrisma.server.create.mockResolvedValue({
+        id: 'new-srv', name: 'Bootstrap', icon: null, banner: null,
+      });
+
+      const res = await POST(makeRequest('POST', { name: 'Bootstrap' }));
+      expect(res.status).toBe(201);
+      // Crucially: the ownership pre-check was skipped for the instance owner
+      expect(mockPrisma.server.findFirst).not.toHaveBeenCalled();
+    });
   });
 });

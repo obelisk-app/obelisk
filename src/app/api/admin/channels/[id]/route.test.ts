@@ -43,7 +43,7 @@ describe('PATCH /api/admin/channels/[id]', () => {
 
   it('returns 403 for member role', async () => {
     mockGetAuth.mockResolvedValue('member-pk');
-    mockPrisma.server.findFirst.mockResolvedValue({ id: 'srv1' });
+    mockPrisma.channel.findUnique.mockResolvedValue({ id: 'ch1', serverId: 'srv1' });
     mockPrisma.server.findUnique.mockResolvedValue({ ownerPubkey: 'owner-pk' });
     mockPrisma.member.findUnique.mockResolvedValue({
       id: 'm1', serverId: 'srv1', pubkey: 'member-pk', role: 'member',
@@ -98,7 +98,7 @@ describe('DELETE /api/admin/channels/[id]', () => {
 
   it('returns 403 for member role', async () => {
     mockGetAuth.mockResolvedValue('member-pk');
-    mockPrisma.server.findFirst.mockResolvedValue({ id: 'srv1' });
+    mockPrisma.channel.findUnique.mockResolvedValue({ id: 'ch1', serverId: 'srv1' });
     mockPrisma.server.findUnique.mockResolvedValue({ ownerPubkey: 'owner-pk' });
     mockPrisma.member.findUnique.mockResolvedValue({
       id: 'm1', serverId: 'srv1', pubkey: 'member-pk', role: 'member',

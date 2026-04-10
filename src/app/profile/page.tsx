@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import ProfileHeader from '@/components/profile/ProfileHeader';
 import ActivityCard from '@/components/profile/ActivityCard';
-import InviteCreditsCard, { InviteCredits } from '@/components/invites/InviteCreditsCard';
 import MyInvitationsList from '@/components/invites/MyInvitationsList';
 
 interface ProfileServer {
@@ -19,8 +18,7 @@ interface ProfileServer {
   picture: string | null;
   nip05: string | null;
   about: string | null;
-  adminBypass: boolean;
-  credits: InviteCredits | null;
+  canMintInvites: boolean;
 }
 
 interface ProfileData {
@@ -98,27 +96,6 @@ export default function ProfilePage() {
                   serverName={s.serverName}
                   joinedAt={s.joinedAt}
                   lastActivityAt={s.lastActivityAt}
-                  messageCount={s.credits?.messageCount ?? 0}
-                  daysActive={s.credits?.daysActive ?? 0}
-                />
-              ))}
-            </div>
-          )}
-        </section>
-
-        <section>
-          <h2 className="text-sm font-semibold text-lc-white mb-3">Invite credits</h2>
-          {data.servers.length === 0 ? (
-            <p className="text-sm text-lc-muted">No servers to mint invites for.</p>
-          ) : (
-            <div className="grid gap-3 md:grid-cols-2">
-              {data.servers.map((s) => (
-                <InviteCreditsCard
-                  key={s.serverId}
-                  serverId={s.serverId}
-                  serverName={s.serverName}
-                  credits={s.credits}
-                  onMinted={load}
                 />
               ))}
             </div>

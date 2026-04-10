@@ -15,18 +15,30 @@ interface MemberData {
   nip05: string | null;
   joinedAt: string;
   banned: boolean;
+  joinedViaInvite?: { id: string; code: string; createdBy: string } | null;
 }
 
 interface MemberRowProps {
   member: MemberData;
   isOwner: boolean; // is the viewer the owner?
+  isInstanceOwner?: boolean; // is the viewer the instance owner? unlocks cross-server actions
   onRoleChange: (pubkey: string, role: Role) => void;
   onKick: (pubkey: string) => void;
   onBan: (pubkey: string, reason: string) => void;
   onUnban: (pubkey: string) => void;
+  onManageMemberships?: (pubkey: string, displayName: string | null) => void;
 }
 
-export default function MemberRow({ member, isOwner, onRoleChange, onKick, onBan, onUnban }: MemberRowProps) {
+export default function MemberRow({
+  member,
+  isOwner,
+  isInstanceOwner = false,
+  onRoleChange,
+  onKick,
+  onBan,
+  onUnban,
+  onManageMemberships,
+}: MemberRowProps) {
   const [confirm, setConfirm] = useState<'kick' | 'ban' | null>(null);
   const isTargetOwner = member.role === 'owner';
   const shortPubkey = member.pubkey.slice(0, 8) + '...' + member.pubkey.slice(-4);
@@ -45,13 +57,21 @@ export default function MemberRow({ member, isOwner, onRoleChange, onKick, onBan
 
         {/* Info */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-medium text-lc-white truncate">
               {member.displayName || shortPubkey}
             </span>
             <RoleBadge role={member.role} />
             {member.banned && (
               <span className="text-xs bg-red-600 text-white px-2 py-0.5 rounded-full">BANNED</span>
+            )}
+            {member.joinedViaInvite && (
+              <span
+                className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-300 font-semibold"
+                title={`Joined via invite ${member.joinedViaInvite.code} created by ${member.joinedViaInvite.createdBy.slice(0, 8)}…`}
+              >
+                via invite
+              </span>
             )}
           </div>
           <div className="text-xs text-lc-muted truncate">
@@ -60,47 +80,61 @@ export default function MemberRow({ member, isOwner, onRoleChange, onKick, onBan
         </div>
 
         {/* Actions */}
-        {!isTargetOwner && (
-          <div className="flex items-center gap-2 shrink-0">
-            {/* Role selector (owner only) */}
-            {isOwner && (
-              <select
-                value={member.role}
-                onChange={(e) => onRoleChange(member.pubkey, e.target.value as Role)}
-                className="text-xs bg-lc-dark border border-lc-border rounded-lg px-2 py-1.5 text-lc-white"
-                data-testid="role-select"
-              >
-                <option value="admin">Admin</option>
-                <option value="mod">Mod</option>
-                <option value="member">Member</option>
-              </select>
-            )}
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Cross-server membership editor — instance owner only, always visible */}
+          {isInstanceOwner && onManageMemberships && (
+            <button
+              onClick={() => onManageMemberships(member.pubkey, member.displayName)}
+              className="text-xs px-3 py-1.5 rounded-full border border-purple-500/30 text-purple-300 hover:border-purple-400 hover:text-purple-200 transition-colors"
+              data-testid="manage-memberships-btn"
+              title="Edit which servers this user belongs to (instance owner)"
+            >
+              Servers
+            </button>
+          )}
 
-            {member.banned ? (
-              <button
-                onClick={() => onUnban(member.pubkey)}
-                className="text-xs px-3 py-1.5 rounded-full border border-lc-green text-lc-green hover:bg-lc-green/10 transition-colors"
-              >
-                Unban
-              </button>
-            ) : (
-              <>
-                <button
-                  onClick={() => setConfirm('kick')}
-                  className="text-xs px-3 py-1.5 rounded-full border border-lc-border text-lc-muted hover:border-amber-500 hover:text-amber-500 transition-colors"
+          {!isTargetOwner && (
+            <>
+              {/* Role selector (owner only) */}
+              {isOwner && (
+                <select
+                  value={member.role}
+                  onChange={(e) => onRoleChange(member.pubkey, e.target.value as Role)}
+                  className="text-xs bg-lc-dark border border-lc-border rounded-lg px-2 py-1.5 text-lc-white"
+                  data-testid="role-select"
                 >
-                  Kick
-                </button>
+                  <option value="admin">Admin</option>
+                  <option value="mod">Mod</option>
+                  <option value="member">Member</option>
+                </select>
+              )}
+
+              {member.banned ? (
                 <button
-                  onClick={() => setConfirm('ban')}
-                  className="text-xs px-3 py-1.5 rounded-full border border-lc-border text-lc-muted hover:border-red-500 hover:text-red-500 transition-colors"
+                  onClick={() => onUnban(member.pubkey)}
+                  className="text-xs px-3 py-1.5 rounded-full border border-lc-green text-lc-green hover:bg-lc-green/10 transition-colors"
                 >
-                  Ban
+                  Unban
                 </button>
-              </>
-            )}
-          </div>
-        )}
+              ) : (
+                <>
+                  <button
+                    onClick={() => setConfirm('kick')}
+                    className="text-xs px-3 py-1.5 rounded-full border border-lc-border text-lc-muted hover:border-amber-500 hover:text-amber-500 transition-colors"
+                  >
+                    Kick
+                  </button>
+                  <button
+                    onClick={() => setConfirm('ban')}
+                    className="text-xs px-3 py-1.5 rounded-full border border-lc-border text-lc-muted hover:border-red-500 hover:text-red-500 transition-colors"
+                  >
+                    Ban
+                  </button>
+                </>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       {confirm === 'kick' && (

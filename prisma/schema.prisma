@@ -63,7 +63,8 @@ model Invitation {
   expiresAt    DateTime?
   createdAt    DateTime  @default(now())
 
-  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  server  Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  members Member[] @relation("InvitationMembers")
 
   @@index([serverId])
   @@index([code])
@@ -200,11 +201,17 @@ model Member {
   // Activity tracking for invite-credit eligibility (anti-sybil)
   lastActivityAt   DateTime?
 
+  // Source tracking — when set, this member joined via the given invite link.
+  // Surfaced in the admin panel so owners can see who came from where.
+  joinedViaInviteId String?
+  joinedViaInvite   Invitation? @relation("InvitationMembers", fields: [joinedViaInviteId], references: [id], onDelete: SetNull)
+
   server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
 
   @@unique([serverId, pubkey])
   @@index([serverId])
   @@index([pubkey])
+  @@index([joinedViaInviteId])
 }
 
 model Session {

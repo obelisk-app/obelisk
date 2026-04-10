@@ -2,16 +2,12 @@ interface ActivityCardProps {
   serverName: string;
   joinedAt: string;
   lastActivityAt: string | null;
-  messageCount: number;
-  daysActive: number;
 }
 
 export default function ActivityCard({
   serverName,
   joinedAt,
   lastActivityAt,
-  messageCount,
-  daysActive,
 }: ActivityCardProps) {
   return (
     <div className="lc-card p-4" data-testid="activity-card">
@@ -26,14 +22,6 @@ export default function ActivityCard({
           <p className="text-lc-white">
             {lastActivityAt ? new Date(lastActivityAt).toLocaleDateString() : '—'}
           </p>
-        </div>
-        <div>
-          <p className="text-lc-muted">Days active</p>
-          <p className="text-lc-white">{daysActive}</p>
-        </div>
-        <div>
-          <p className="text-lc-muted">Messages</p>
-          <p className="text-lc-white">{messageCount}</p>
         </div>
       </div>
     </div>

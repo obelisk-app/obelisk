@@ -43,6 +43,67 @@ describe('InviteManager', () => {
     });
   });
 
+  it('renders the joined-members list under an invite', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        invitations: [
+          {
+            id: 'inv1',
+            code: 'abcdef1234567890',
+            createdBy: 'pk1',
+            targetPubkey: null,
+            maxUses: 10,
+            uses: 2,
+            expiresAt: null,
+            createdAt: '2026-04-09',
+            members: [
+              { id: 'm1', pubkey: 'aaaaaaaa11111111', displayName: 'Alice', picture: null, nip05: null, joinedAt: '2026-04-10' },
+              { id: 'm2', pubkey: 'bbbbbbbb22222222', displayName: 'Bob', picture: null, nip05: null, joinedAt: '2026-04-10' },
+            ],
+          },
+        ],
+      }),
+    }) as any;
+
+    render(<InviteManager serverId="srv1" />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('invite-joined-members')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Alice')).toBeInTheDocument();
+    expect(screen.getByText('Bob')).toBeInTheDocument();
+    expect(screen.getByText('Joined via this link')).toBeInTheDocument();
+  });
+
+  it('does not render the joined-members section when no one has used the invite', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        invitations: [
+          {
+            id: 'inv1',
+            code: 'abcdef1234567890',
+            createdBy: 'pk1',
+            targetPubkey: null,
+            maxUses: 10,
+            uses: 0,
+            expiresAt: null,
+            createdAt: '2026-04-09',
+            members: [],
+          },
+        ],
+      }),
+    }) as any;
+
+    render(<InviteManager serverId="srv1" />);
+
+    await waitFor(() => {
+      expect(screen.getByText('0/10 uses')).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId('invite-joined-members')).not.toBeInTheDocument();
+  });
+
   it('creates an invitation', async () => {
     const user = userEvent.setup();
     let callCount = 0;

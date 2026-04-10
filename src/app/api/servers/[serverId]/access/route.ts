@@ -17,10 +17,6 @@ export async function GET(
       referentePubkey: true,
       wotEnabled: true,
       referenteFetchedAt: true,
-      minDaysActive: true,
-      minMessages: true,
-      invitesPerUser: true,
-      inviteExpiryHours: true,
       joinMode: true,
     },
   });
@@ -29,7 +25,12 @@ export async function GET(
   return NextResponse.json(server);
 }
 
-// PATCH /api/servers/:serverId/access — update WoT + invite policy (owner only)
+// PATCH /api/servers/:serverId/access — update WoT settings (owner only).
+//
+// The activity-based invite-credit policy fields (minDaysActive, minMessages,
+// invitesPerUser, inviteExpiryHours) were removed from this endpoint when the
+// invite-credits feature was retired. The columns still exist in the schema
+// (additive removal would lose data) but they are no longer read or written.
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ serverId: string }> }
@@ -49,18 +50,6 @@ export async function PATCH(
   if ('wotEnabled' in body && typeof body.wotEnabled === 'boolean') {
     data.wotEnabled = body.wotEnabled;
   }
-  if ('minDaysActive' in body && Number.isInteger(body.minDaysActive)) {
-    data.minDaysActive = Math.max(0, body.minDaysActive);
-  }
-  if ('minMessages' in body && Number.isInteger(body.minMessages)) {
-    data.minMessages = Math.max(0, body.minMessages);
-  }
-  if ('invitesPerUser' in body && Number.isInteger(body.invitesPerUser)) {
-    data.invitesPerUser = Math.max(0, body.invitesPerUser);
-  }
-  if ('inviteExpiryHours' in body && Number.isInteger(body.inviteExpiryHours)) {
-    data.inviteExpiryHours = Math.max(1, body.inviteExpiryHours);
-  }
 
   // Reset cache timestamp when referente changes so the next refresh re-fetches.
   if ('referentePubkey' in data) {
@@ -74,10 +63,6 @@ export async function PATCH(
       referentePubkey: true,
       wotEnabled: true,
       referenteFetchedAt: true,
-      minDaysActive: true,
-      minMessages: true,
-      invitesPerUser: true,
-      inviteExpiryHours: true,
     },
   });
 

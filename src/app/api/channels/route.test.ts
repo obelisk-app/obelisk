@@ -80,25 +80,30 @@ describe('POST /api/channels', () => {
 
   it('returns 401 without session', async () => {
     mockGetAuth.mockResolvedValue(null);
-    const res = await POST(makeRequest('POST', { name: 'test' }));
+    mockPrisma.server.findUnique.mockResolvedValue({ ownerPubkey: 'owner-pk' });
+    const res = await POST(makeRequest('POST', { serverId: 'srv1', name: 'test' }));
     expect(res.status).toBe(401);
+  });
+
+  it('returns 400 without serverId', async () => {
+    mockGetAuth.mockResolvedValue('admin-pubkey');
+    const res = await POST(makeRequest('POST', { name: 'test' }));
+    expect(res.status).toBe(400);
   });
 
   it('returns 403 for member role', async () => {
     mockGetAuth.mockResolvedValue('member-pubkey');
-    mockPrisma.server.findFirst.mockResolvedValue({ id: 'srv1', ownerPubkey: 'owner-pk' });
     mockPrisma.server.findUnique.mockResolvedValue({ ownerPubkey: 'owner-pk' });
     mockPrisma.member.findUnique.mockResolvedValue({
       id: 'm1', serverId: 'srv1', pubkey: 'member-pubkey', role: 'member',
     });
 
-    const res = await POST(makeRequest('POST', { name: 'test' }));
+    const res = await POST(makeRequest('POST', { serverId: 'srv1', name: 'test' }));
     expect(res.status).toBe(403);
   });
 
   it('returns 201 for admin role', async () => {
     mockGetAuth.mockResolvedValue('admin-pubkey');
-    mockPrisma.server.findFirst.mockResolvedValue({ id: 'srv1', ownerPubkey: 'owner-pk' });
     mockPrisma.server.findUnique.mockResolvedValue({ ownerPubkey: 'owner-pk' });
     mockPrisma.member.findUnique.mockResolvedValue({
       id: 'm1', serverId: 'srv1', pubkey: 'admin-pubkey', role: 'admin',
@@ -107,7 +112,7 @@ describe('POST /api/channels', () => {
       id: 'ch1', serverId: 'srv1', name: 'test', type: 'text',
     });
 
-    const res = await POST(makeRequest('POST', { name: 'Test Channel' }));
+    const res = await POST(makeRequest('POST', { serverId: 'srv1', name: 'Test Channel' }));
     expect(res.status).toBe(201);
     const data = await res.json();
     expect(data.name).toBe('test');
@@ -115,13 +120,12 @@ describe('POST /api/channels', () => {
 
   it('returns 400 without name', async () => {
     mockGetAuth.mockResolvedValue('admin-pubkey');
-    mockPrisma.server.findFirst.mockResolvedValue({ id: 'srv1', ownerPubkey: 'owner-pk' });
     mockPrisma.server.findUnique.mockResolvedValue({ ownerPubkey: 'owner-pk' });
     mockPrisma.member.findUnique.mockResolvedValue({
       id: 'm1', serverId: 'srv1', pubkey: 'admin-pubkey', role: 'admin',
     });
 
-    const res = await POST(makeRequest('POST', {}));
+    const res = await POST(makeRequest('POST', { serverId: 'srv1' }));
     expect(res.status).toBe(400);
   });
 });

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthPubkey } from '@/lib/api-auth';
+import { triggerBackgroundRefreshIfStale } from '@/lib/profile-sync';
 
 // GET /api/members — list all members of the current server
 export async function GET(req: NextRequest) {
@@ -13,6 +14,11 @@ export async function GET(req: NextRequest) {
   if (!server) {
     return NextResponse.json({ error: 'No server' }, { status: 404 });
   }
+
+  // Opportunistic background refresh of stale profiles (>6h old or never
+  // fetched). Non-blocking, rate-limited to 60s per server. This replaces
+  // the manual "Refresh profiles" admin button for the common case.
+  void triggerBackgroundRefreshIfStale(server.id, 6).catch(() => {});
 
   const members = await prisma.member.findMany({
     where: { serverId: server.id },

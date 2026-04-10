@@ -6,6 +6,8 @@
  * The follow list is cached locally in WotEntry rows and refreshed lazily.
  *
  * See docs/wot-and-invite-credits.md for full feature documentation.
+ * (Note: the activity-based invite-credit half of that doc was retired —
+ * only admins+ can mint invitations now. WoT is still active.)
  */
 import { prisma } from './db';
 import { fetchFollowing } from './nostr';

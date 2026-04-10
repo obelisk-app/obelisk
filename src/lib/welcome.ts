@@ -1,4 +1,5 @@
 import { prisma } from './db';
+import { getAuthorProfile } from './profile-sync';
 
 const SYSTEM_PUBKEY = '0000000000000000000000000000000000000000000000000000000000000000';
 
@@ -39,11 +40,16 @@ export async function postWelcomeMessage(serverId: string, memberPubkey: string)
     },
   });
 
+  // Welcome messages are posted by the system bot — no Member row exists
+  // for SYSTEM_PUBKEY, so author is null. Clients render the system avatar.
+  const author = await getAuthorProfile(SYSTEM_PUBKEY, serverId);
+  const enriched = { ...message, author };
+
   // Broadcast via Socket.io if available
   const io = (globalThis as any).__io;
   if (io) {
-    io.to(`channel:${bienvenida.id}`).emit('new-message', message);
+    io.to(`channel:${bienvenida.id}`).emit('new-message', enriched);
   }
 
-  return { message, channelId: bienvenida.id };
+  return { message: enriched, channelId: bienvenida.id };
 }

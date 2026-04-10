@@ -38,7 +38,10 @@ describe('postWelcomeMessage', () => {
 
     const result = await postWelcomeMessage('server1', 'pubkey1');
     expect(result).not.toBeNull();
-    expect(result!.message).toBe(fakeMessage);
+    // The returned message is enriched with an `author` field (null for the
+    // system welcome bot, which is not a Member row).
+    expect(result!.message).toMatchObject({ id: 'msg1', content: 'welcome', channelId: 'ch1' });
+    expect(result!.message.author).toBeNull();
     expect(result!.channelId).toBe('ch1');
 
     // Verify the message content includes the display name
@@ -77,6 +80,11 @@ describe('postWelcomeMessage', () => {
     await postWelcomeMessage('server1', 'pubkey1');
 
     expect(mockTo).toHaveBeenCalledWith('channel:ch1');
-    expect(mockEmit).toHaveBeenCalledWith('new-message', fakeMessage);
+    // The emitted payload is the bare message plus an embedded author
+    // profile (null for the system welcome bot).
+    expect(mockEmit).toHaveBeenCalledWith(
+      'new-message',
+      expect.objectContaining({ id: 'msg1', author: null }),
+    );
   });
 });

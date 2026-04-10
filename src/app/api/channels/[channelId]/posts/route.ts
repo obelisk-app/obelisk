@@ -111,7 +111,7 @@ export async function POST(
     },
   });
 
-  // Bump activity timestamp for invite-credit eligibility (best-effort).
+  // Bump "last seen" timestamp on the member row (best-effort).
   prisma.member
     .updateMany({
       where: { serverId: channel.serverId, pubkey },

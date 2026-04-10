@@ -39,11 +39,27 @@ export default function InvitePage() {
     setError('');
     try {
       const res = await fetch(`/api/invitations/${code}`, { method: 'POST' });
+      const data = await res.json().catch(() => ({}));
+
       if (!res.ok) {
-        const data = await res.json();
-        setError(data.error || 'Failed to join');
+        if (data.banned) {
+          setError(
+            data.reason
+              ? `You are banned from this server. Reason: ${data.reason}`
+              : 'You are banned from this server.'
+          );
+        } else {
+          setError(data.error || 'Failed to join');
+        }
         return;
       }
+
+      if (data.alreadyMember) {
+        // Already in — go straight to chat without re-consuming the invite.
+        router.push('/chat');
+        return;
+      }
+
       router.push('/chat');
     } catch {
       setError('Network error');

@@ -39,10 +39,16 @@
 
 ## Fase 1.5 — Admin, Moderacion & Foros
 > ⚠️ **URGENTE:** El panel de admin necesita mejoras criticas — no se pueden eliminar servidores creados.
-- [ ] Rediseñar panel de admin (/admin) para multi-server
-  - [ ] Selector de servidor — cada server tiene su propia config
-  - [ ] CRUD de canales y categorias por servidor
-  - [ ] Gestion de miembros, bans, configuracion por servidor
+- [x] Rediseñar panel de admin (/admin) para multi-server — ver [docs/multi-server-admin.md](docs/multi-server-admin.md)
+  - [x] Selector de servidor — cada server tiene su propia config (ServerPicker dropdown)
+  - [x] CRUD de canales y categorias por servidor (server-scoped via query/resource)
+  - [x] Gestion de miembros, bans, configuracion por servidor
+  - [x] **Instance owner** (env: `INSTANCE_OWNER_PUBKEY`) — acceso global a todos los servers, transferencia de `Server.ownerPubkey` desde Settings
+  - [x] **Crear servidores desde /admin** — boton "+ New Server" en el ServerPicker (instance owner only)
+  - [x] **Editor de membresias cross-server** — instance owner puede agregar/remover usuarios de cualquier server desde el row de un miembro
+  - [x] **Tracking de invite source** — Member.joinedViaInviteId, badge "via invite" en el panel admin, dedupe + ban reason en /api/invitations/[code]
+  - [x] **Reconciliación joinMode vs WoT** — Access Control tab unifica join-mode selector + WoT + invitations en una sola sección coherente; Settings ya no duplica controles de acceso
+  - [ ] **Wizard de setup inicial / instance owner desde UI** — actualmente `INSTANCE_OWNER_PUBKEY` se hardcodea en `.env.production` y los operadores tienen que editar el archivo manualmente. Para mejorar el self-hosting, agregar un flow de setup en la primera visita: si no hay instance owner configurado, el primer usuario que loguee con NIP-07 puede claim el instance owner role, persistido en DB (nueva tabla `Instance` o columna en `Server`). Permite editar después desde un panel especial /admin/instance.
   - [ ] **Seccion "Acceso al servidor"** en /admin (por servidor):
     - [ ] Input para setear el **npub referente** del servidor — preview del perfil Nostr + conteo de seguidos
     - [ ] Boton "Refrescar WoT" que re-fetchea el kind 3 del referente desde relays
@@ -52,8 +58,8 @@
     - [ ] Override manual: admin puede whitelistear un npub que no esta en la WoT
   - [ ] Config de umbrales para que usuarios comunes desbloqueen invites (dias activos, mensajes minimos, invites por usuario)
 - [ ] Sistema de roles y permisos por servidor
-  - [ ] Roles (owner/admin/mod/member) con permisos granulares
-  - [ ] Asignar roles por servidor (mod en server A, member en server B)
+  - [x] Roles (owner/admin/mod/member) por servidor — instance owner global
+  - [x] Asignar roles por servidor (mod en server A, member en server B) — schema soporta, /admin permite cambiar role
   - [ ] Permisos configurables por rol (que puede hacer cada rol en cada servidor)
   - [ ] Roles custom para acceso a servidores (ej: rol "VIP" da acceso a server privado)
   - [ ] Control de acceso por rol — quien puede ver/unirse a cada servidor
@@ -83,14 +89,18 @@
   - [ ] Endpoint `/api/servers/:id/wot-check` — verifica si un npub esta en la WoT del referente
   - [ ] Flujo de registro: login -> chequeo WoT -> acceso directo sin invite si hay match
   - [ ] Config del referente desde /admin (por servidor)
-- [ ] **Sistema de invitaciones desbloqueable por actividad** (feature core anti-spam) — ver [docs/wot-and-invite-credits.md](docs/wot-and-invite-credits.md)
-  - [ ] Usuarios registrados ganan "invite credits" despues de X dias de actividad (configurable por servidor)
-  - [ ] Criterios de actividad: dias desde registro, mensajes enviados, ultima conexion (anti-sybil)
-  - [ ] Cada usuario puede generar invites (links de un uso o por npub target) con sus credits
-  - [ ] Los invites tienen expiracion y son trackeables (quien invito a quien → grafo de invitaciones)
-  - [ ] Panel en /admin para emision/revocacion de invites, override manual, y ver el grafo de invitaciones
-  - [ ] Config por servidor: `min_days_active`, `min_messages`, `invites_per_user`, `invite_expiry`
-  - [ ] UI en el perfil del usuario para ver sus credits disponibles y generar invites
+- ~~**Sistema de invitaciones desbloqueable por actividad**~~ — **descartado**.
+  El feature de invite credits fue removido en su totalidad: la UI de admin
+  (form de policy en `AccessPanel`), el endpoint `/api/servers/:id/invite-credits`,
+  el helper `lib/invite-credits.ts`, el `InviteCreditsCard` del perfil, y el
+  enforcement en `POST /api/servers/:id/invitations`. Ahora **solo admins+
+  pueden crear invites** (modelo Discord). Las columnas `minDaysActive`,
+  `minMessages`, `invitesPerUser`, `inviteExpiryHours` siguen en `Server`
+  para no perder data, pero no se leen ni escriben.
+  - [x] Tracking de invite source — `Member.joinedViaInviteId` + lista de
+    miembros que entraron por cada link en el InviteManager
+  - [x] Lista de invites activos por servidor con dedupe (already-member
+    no consume usos) y razón de ban en respuestas 403
 - [x] Menciones (@usuario) resueltas desde Nostr profiles
 - [x] Renderizado de texto enriquecido en mensajes
   - [x] Markdown: bold, italic, strikethrough, inline code, code blocks con syntax highlighting
@@ -99,16 +109,41 @@
   - [x] Link previews (OG metadata: titulo, descripcion, imagen, favicon)
   - [x] Embeds de video (YouTube)
 - [ ] Mejoras a posts de foro (estilo Discord publicaciones)
-  - [ ] Posts como sub-chats dentro del canal (cada post abre su propio thread de mensajes)
-  - [ ] Vista de lista: titulo, autor, preview, imagen thumbnail, tags, conteo de reacciones/respuestas
-  - [ ] Filtros por tags y ordenamiento
-  - [ ] Barra de busqueda dentro del canal de foro
-  - [ ] Imagen de portada para posts
-  - [ ] El creador del post puede editar su contenido
-  - [ ] Moderadores pueden editar cualquier post
-  - [ ] Vista detalle: post completo + thread de respuestas (como un chat)
-  - [ ] Gestion de posts desde /admin (editar, eliminar, pin, gestionar tags)
-- [ ] Canales de anuncios (solo admins/mods pueden postear, miembros solo lectura)
+  > **Contexto tecnico:** los posts de foro son sub-chats creados por usuarios — cada post es su propio chat, no un thread de respuestas planas. Hoy `ForumView.tsx` reimplementa el chat con un textarea + REST puro, sin Socket.io, sin reusar `MessageArea`/`MessageInput`. Por eso le faltan features que el chat regular ya tiene. La fix correcta es **reusar los mismos componentes** del chat regular dentro de la vista detalle del post, no re-implementarlos.
+  - **Refactor base (paridad arquitectonica):**
+    - [ ] Vista detalle del post usa `MessageArea` + `MessageInput` (los mismos del chat regular) en vez de los custom de `ForumView.tsx`
+    - [ ] Replies de posts viajan por Socket.io (no REST), reusando los mismos handlers de `message:new`, `message:edit`, `message:delete`, `message:reaction`
+    - [ ] API de replies devuelve el mismo shape que mensajes regulares (incluir `reactions`, `editedAt`, `deletedAt`, `replyTo`, autor completo) — el schema ya lo soporta
+  - **Paridad de features con el chat regular** (todo lo de abajo debe funcionar dentro de un post igual que en un canal de texto):
+    - [ ] Menciones (@usuario) con autocomplete y resolucion desde Nostr profiles
+    - [ ] Reacciones con emoji
+    - [ ] Edicion de mensajes (autor) y borrado (autor + mods)
+    - [ ] Reply / quote dentro del post-chat
+    - [ ] Indicador de "escribiendo..."
+    - [ ] Paginacion de respuestas (load earlier)
+    - [ ] Multimedia inline (imagenes, links, embeds, YouTube — ya parcialmente via `MessageContent`)
+    - [ ] Busqueda de mensajes dentro del post-chat
+  - **Estructura tipo Discord forum:**
+    - [ ] Vista de lista: titulo, autor, preview, imagen thumbnail, tags, conteo de reacciones/respuestas
+    - [ ] Vista detalle: post completo + chat de respuestas reusando `MessageArea`/`MessageInput`
+    - [ ] Imagen de portada para posts
+    - [ ] Tags por post + filtros y ordenamiento
+    - [ ] Barra de busqueda dentro del canal de foro
+  - **Permisos y gestion:**
+    - [ ] El creador del post puede editar su contenido
+    - [ ] Moderadores pueden editar/eliminar cualquier post
+    - [ ] Pin de posts (mods/admin)
+    - [ ] Gestion de posts desde /admin (editar, eliminar, pin, gestionar tags)
+- [ ] **Canales/posts bloqueados (write-locked) — solo admins/mods pueden escribir o editar**
+  - [ ] Flag `writeLocked` (o `writeRole: "everyone" | "mod" | "admin"`) en `Channel` — y equivalente para posts de foro individuales
+  - [ ] Enforcement en backend: REST + Socket.io rechazan `message:new` / `message:edit` / `message:delete` si el usuario no cumple el rol requerido en el canal/post bloqueado
+  - [ ] UI: input deshabilitado con tooltip "Solo mods/admins pueden escribir aqui" para usuarios sin permiso
+  - [ ] Indicador visual en sidebar/lista (icono de candado) para canales y posts bloqueados
+  - [ ] Toggle en /admin → ChannelManager: por canal, elegir quien puede escribir (everyone / mod / admin)
+  - [ ] Toggle por post de foro: el autor o un mod puede bloquear su propio post (read-only para el resto)
+  - [ ] Reusar el mismo permission check que `auth-roles.ts` ya expone para acciones admin
+  - [ ] Tests: REST + Socket rechazan writes sin permiso, UI deshabilita input, /admin persiste cambios
+- [ ] Canales de anuncios (solo admins/mods pueden postear, miembros solo lectura) — caso particular del flag `writeLocked` de arriba
 - [x] Canal de bienvenida — mensaje automatico con banner personalizado cuando un miembro se une
 - [ ] Idioma canonico del servidor
   - [ ] Campo `language` en Server (ej: "es", "en", "pt") — configurable desde /admin
@@ -246,7 +281,9 @@ Despues de completar la experiencia Discord-like (Fases 1-6), construir un clien
 ## Known Bugs
 - [ ] Online users not updating — all users appear as online regardless of actual status
 - [ ] No way to delete servers from /admin — created servers cannot be removed
-- [ ] Server creation UI visible to all users — should be restricted (only owner/admin)
+- [x] Server creation UI visible to all users — fixed: instance owner or existing owners only
+- [x] WoT bypass on signup — fixed: login no longer auto-joins; `/api/servers/[id]/join` enforces WoT
+- [ ] Lateral member list does not update per server — debe reflejar los miembros del servidor que el usuario esta viendo actualmente (cambiar de servidor debe re-cargar la lista de miembros, roles y estado online correspondientes)
 
 ## Test Suite (continuo)
 > 47+ test files. Vitest + React Testing Library.

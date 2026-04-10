@@ -39,7 +39,14 @@ export async function GET(
   });
 }
 
-// POST /api/invitations/:code — accept/redeem an invitation
+// POST /api/invitations/:code — accept/redeem an invitation.
+//
+// Behavior:
+//   - Existing members: returns 200 + alreadyMember=true. No invite use is consumed.
+//   - Banned users: 403 with the ban reason (if any). No use consumed.
+//   - New members: creates a Member row tagged with joinedViaInviteId so the
+//     admin panel can show "joined via <code>". Increments invite uses.
+//     Posts the welcome message.
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ code: string }> }
@@ -75,25 +82,42 @@ export async function POST(
     return NextResponse.json({ error: 'This invitation is for a different user' }, { status: 403 });
   }
 
-  // Check ban
+  // Check ban — surface the reason if available
   const ban = await prisma.ban.findUnique({
     where: { serverId_pubkey: { serverId: invitation.serverId, pubkey } },
   });
   if (ban) {
-    return NextResponse.json({ error: 'You are banned from this server' }, { status: 403 });
+    return NextResponse.json(
+      {
+        error: 'You are banned from this server',
+        banned: true,
+        reason: ban.reason ?? null,
+      },
+      { status: 403 }
+    );
   }
 
-  // Check if already a member (for welcome message)
+  // Already a member? Don't consume the invite, don't re-post welcome.
   const existingMember = await prisma.member.findUnique({
     where: { serverId_pubkey: { serverId: invitation.serverId, pubkey } },
   });
+  if (existingMember) {
+    return NextResponse.json({
+      server: invitation.server,
+      alreadyMember: true,
+      message: 'You are already a member of this server',
+    });
+  }
 
-  // Join server + increment uses in a transaction
+  // New member: create + tag with invite source + increment uses atomically.
   await prisma.$transaction([
-    prisma.member.upsert({
-      where: { serverId_pubkey: { serverId: invitation.serverId, pubkey } },
-      update: {},
-      create: { serverId: invitation.serverId, pubkey, role: 'member' },
+    prisma.member.create({
+      data: {
+        serverId: invitation.serverId,
+        pubkey,
+        role: 'member',
+        joinedViaInviteId: invitation.id,
+      },
     }),
     prisma.invitation.update({
       where: { id: invitation.id },
@@ -101,10 +125,7 @@ export async function POST(
     }),
   ]);
 
-  // Post welcome message for new members
-  if (!existingMember) {
-    await postWelcomeMessage(invitation.serverId, pubkey);
-  }
+  await postWelcomeMessage(invitation.serverId, pubkey);
 
   return NextResponse.json({ server: invitation.server });
 }

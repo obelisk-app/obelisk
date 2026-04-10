@@ -7,10 +7,6 @@ interface AccessConfig {
   referentePubkey: string | null;
   wotEnabled: boolean;
   referenteFetchedAt: string | null;
-  minDaysActive: number;
-  minMessages: number;
-  invitesPerUser: number;
-  inviteExpiryHours: number;
 }
 
 interface WotEntry {
@@ -54,7 +50,6 @@ export default function AccessPanel({ serverId, isOwner }: AccessPanelProps) {
   const [refreshing, setRefreshing] = useState(false);
   const [refreshMsg, setRefreshMsg] = useState<string | null>(null);
   const [referenteInput, setReferenteInput] = useState('');
-  const [savingPolicy, setSavingPolicy] = useState(false);
   const [search, setSearch] = useState('');
   const [overrideInput, setOverrideInput] = useState('');
   const [overrideReason, setOverrideReason] = useState('');
@@ -147,29 +142,6 @@ export default function AccessPanel({ serverId, isOwner }: AccessPanelProps) {
     } finally {
       setRefreshing(false);
     }
-  };
-
-  const savePolicy = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!config) return;
-    setSavingPolicy(true);
-    const form = new FormData(e.currentTarget);
-    const body = {
-      minDaysActive: Number(form.get('minDaysActive')),
-      minMessages: Number(form.get('minMessages')),
-      invitesPerUser: Number(form.get('invitesPerUser')),
-      inviteExpiryHours: Number(form.get('inviteExpiryHours')),
-    };
-    const res = await fetch(`/api/servers/${serverId}/access`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    if (res.ok) {
-      const c = await res.json();
-      setConfig((prev) => (prev ? { ...prev, ...c } : c));
-    }
-    setSavingPolicy(false);
   };
 
   const addOverride = async () => {
@@ -356,70 +328,6 @@ export default function AccessPanel({ serverId, isOwner }: AccessPanelProps) {
         </div>
       </section>
 
-      {/* Invite credit policy */}
-      <section className="bg-lc-dark border border-lc-border rounded-xl p-4">
-        <h3 className="text-sm font-semibold text-lc-white mb-1">Invite credit policy</h3>
-        <p className="text-xs text-lc-muted mb-3">
-          Activity thresholds for regular members to mint invite links. Admins bypass these.
-        </p>
-        <form onSubmit={savePolicy} className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-xs text-lc-muted block mb-1">Min days active</label>
-            <input
-              name="minDaysActive"
-              type="number"
-              min={0}
-              defaultValue={config.minDaysActive}
-              disabled={!isOwner}
-              className="w-full px-3 py-2 rounded-lg bg-lc-black border border-lc-border text-lc-white text-sm focus:border-lc-green focus:outline-none disabled:opacity-50"
-            />
-          </div>
-          <div>
-            <label className="text-xs text-lc-muted block mb-1">Min messages</label>
-            <input
-              name="minMessages"
-              type="number"
-              min={0}
-              defaultValue={config.minMessages}
-              disabled={!isOwner}
-              className="w-full px-3 py-2 rounded-lg bg-lc-black border border-lc-border text-lc-white text-sm focus:border-lc-green focus:outline-none disabled:opacity-50"
-            />
-          </div>
-          <div>
-            <label className="text-xs text-lc-muted block mb-1">Invites per user</label>
-            <input
-              name="invitesPerUser"
-              type="number"
-              min={0}
-              defaultValue={config.invitesPerUser}
-              disabled={!isOwner}
-              className="w-full px-3 py-2 rounded-lg bg-lc-black border border-lc-border text-lc-white text-sm focus:border-lc-green focus:outline-none disabled:opacity-50"
-            />
-          </div>
-          <div>
-            <label className="text-xs text-lc-muted block mb-1">Invite expiry (hours)</label>
-            <input
-              name="inviteExpiryHours"
-              type="number"
-              min={1}
-              defaultValue={config.inviteExpiryHours}
-              disabled={!isOwner}
-              className="w-full px-3 py-2 rounded-lg bg-lc-black border border-lc-border text-lc-white text-sm focus:border-lc-green focus:outline-none disabled:opacity-50"
-            />
-          </div>
-          {isOwner && (
-            <div className="col-span-2">
-              <button
-                type="submit"
-                disabled={savingPolicy}
-                className="lc-pill-primary px-6 py-2 text-sm font-medium disabled:opacity-50"
-              >
-                {savingPolicy ? 'Saving...' : 'Save Policy'}
-              </button>
-            </div>
-          )}
-        </form>
-      </section>
     </div>
   );
 }

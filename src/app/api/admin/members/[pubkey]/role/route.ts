@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireRole, getDefaultServerId, type Role } from '@/lib/auth-roles';
+import { requireRole, requireServerIdFromQuery, type Role } from '@/lib/auth-roles';
 
-// PATCH /api/admin/members/[pubkey]/role — change member role (owner only)
+// PATCH /api/admin/members/[pubkey]/role?serverId=... — change member role (owner only)
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ pubkey: string }> }
 ) {
   const { pubkey } = await params;
-  const serverId = await getDefaultServerId();
-  if (!serverId) return NextResponse.json({ error: 'No server' }, { status: 404 });
+  const serverIdOrError = requireServerIdFromQuery(req);
+  if (serverIdOrError instanceof NextResponse) return serverIdOrError;
+  const serverId = serverIdOrError;
 
   const actor = await requireRole(req, serverId, 'owner');
   if (actor instanceof NextResponse) return actor;

@@ -33,6 +33,14 @@ export interface Reaction {
   emoji: string;
 }
 
+export interface EmbeddedAuthor {
+  pubkey: string;
+  displayName: string | null;
+  picture: string | null;
+  nip05: string | null;
+  nickname: string | null;
+}
+
 export interface Message {
   id: string;
   channelId: string;
@@ -43,6 +51,9 @@ export interface Message {
   editedAt: string | null;
   replyTo?: { id: string; content: string; authorPubkey: string } | null;
   reactions?: Reaction[];
+  // Embedded author profile attached by the server on Socket.io emits,
+  // so clients never need to wait for a separate profile fetch.
+  author?: EmbeddedAuthor | null;
 }
 
 export interface ServerInfo {

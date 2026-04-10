@@ -20,10 +20,11 @@ interface AdminCategory {
 }
 
 interface ChannelManagerProps {
+  serverId: string;
   isOwner: boolean;
 }
 
-export default function ChannelManager({ isOwner }: ChannelManagerProps) {
+export default function ChannelManager({ serverId, isOwner }: ChannelManagerProps) {
   const [categories, setCategories] = useState<AdminCategory[]>([]);
   const [uncategorized, setUncategorized] = useState<AdminChannel[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,14 +49,15 @@ export default function ChannelManager({ isOwner }: ChannelManagerProps) {
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'channel' | 'category'; id: string; name: string } | null>(null);
 
   const fetchData = useCallback(async () => {
-    const res = await fetch('/api/admin/categories');
+    setLoading(true);
+    const res = await fetch(`/api/admin/categories?serverId=${encodeURIComponent(serverId)}`);
     if (res.ok) {
       const data = await res.json();
       setCategories(data.categories);
       setUncategorized(data.uncategorizedChannels);
     }
     setLoading(false);
-  }, []);
+  }, [serverId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -66,6 +68,7 @@ export default function ChannelManager({ isOwner }: ChannelManagerProps) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        serverId,
         name: newChannel.name,
         type: newChannel.type,
         categoryId: newChannel.categoryId || null,
@@ -91,7 +94,7 @@ export default function ChannelManager({ isOwner }: ChannelManagerProps) {
   const handleCreateCategory = async () => {
     if (!newCategoryName.trim()) return;
     setSavingCategory(true);
-    const res = await fetch('/api/admin/categories', {
+    const res = await fetch(`/api/admin/categories?serverId=${encodeURIComponent(serverId)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: newCategoryName }),

@@ -15,7 +15,7 @@ const mockUncategorized = [
 
 beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn((url: string, opts?: any) => {
-    if (url === '/api/admin/categories' && (!opts || opts.method === undefined || opts.method === 'GET')) {
+    if (url.startsWith('/api/admin/categories') && (!opts || opts.method === undefined || opts.method === 'GET')) {
       return Promise.resolve({
         ok: true,
         json: () => Promise.resolve({ categories: mockCategories, uncategorizedChannels: mockUncategorized }),
@@ -27,7 +27,7 @@ beforeEach(() => {
 
 describe('ChannelManager', () => {
   it('renders categories and channels after loading', async () => {
-    render(<ChannelManager isOwner={true} />);
+    render(<ChannelManager serverId="srv1" isOwner={true} />);
 
     await waitFor(() => {
       expect(screen.getByText('General')).toBeInTheDocument();
@@ -37,14 +37,14 @@ describe('ChannelManager', () => {
   });
 
   it('shows skeleton while loading', () => {
-    render(<ChannelManager isOwner={true} />);
+    render(<ChannelManager serverId="srv1" isOwner={true} />);
     const skeletons = document.querySelectorAll('.lc-skeleton');
     expect(skeletons.length).toBeGreaterThan(0);
   });
 
   it('clicking New Channel shows the creation form', async () => {
     const user = userEvent.setup();
-    render(<ChannelManager isOwner={true} />);
+    render(<ChannelManager serverId="srv1" isOwner={true} />);
 
     await waitFor(() => expect(screen.getByTestId('new-channel-btn')).toBeInTheDocument());
     await user.click(screen.getByTestId('new-channel-btn'));
@@ -55,7 +55,7 @@ describe('ChannelManager', () => {
 
   it('clicking New Category shows the creation form', async () => {
     const user = userEvent.setup();
-    render(<ChannelManager isOwner={true} />);
+    render(<ChannelManager serverId="srv1" isOwner={true} />);
 
     await waitFor(() => expect(screen.getByTestId('new-category-btn')).toBeInTheDocument());
     await user.click(screen.getByTestId('new-category-btn'));
@@ -72,7 +72,7 @@ describe('ChannelManager', () => {
       })
     ));
 
-    render(<ChannelManager isOwner={true} />);
+    render(<ChannelManager serverId="srv1" isOwner={true} />);
 
     await waitFor(() => {
       expect(screen.getByText(/No channels yet/)).toBeInTheDocument();

@@ -1,26 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireRole, getDefaultServerId } from '@/lib/auth-roles';
+import { requireRole } from '@/lib/auth-roles';
 
 const VALID_TYPES = ['text', 'voice', 'forum'];
 
 // PATCH /api/admin/channels/[id] — edit a channel
+// (serverId is derived from the resource)
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const serverId = await getDefaultServerId();
-  if (!serverId) return NextResponse.json({ error: 'No server' }, { status: 404 });
-
-  const actor = await requireRole(req, serverId, 'admin');
-  if (actor instanceof NextResponse) return actor;
-
   const { id } = await params;
 
   const channel = await prisma.channel.findUnique({ where: { id } });
-  if (!channel || channel.serverId !== serverId) {
+  if (!channel) {
     return NextResponse.json({ error: 'Channel not found' }, { status: 404 });
   }
+
+  const actor = await requireRole(req, channel.serverId, 'admin');
+  if (actor instanceof NextResponse) return actor;
 
   const body = await req.json();
   const data: Record<string, any> = {};
@@ -61,18 +59,15 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const serverId = await getDefaultServerId();
-  if (!serverId) return NextResponse.json({ error: 'No server' }, { status: 404 });
-
-  const actor = await requireRole(req, serverId, 'admin');
-  if (actor instanceof NextResponse) return actor;
-
   const { id } = await params;
 
   const channel = await prisma.channel.findUnique({ where: { id } });
-  if (!channel || channel.serverId !== serverId) {
+  if (!channel) {
     return NextResponse.json({ error: 'Channel not found' }, { status: 404 });
   }
+
+  const actor = await requireRole(req, channel.serverId, 'admin');
+  if (actor instanceof NextResponse) return actor;
 
   await prisma.channel.delete({ where: { id } });
 

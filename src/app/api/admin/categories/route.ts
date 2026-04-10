@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireRole, getDefaultServerId } from '@/lib/auth-roles';
+import { requireRole, requireServerIdFromQuery } from '@/lib/auth-roles';
 
-// GET /api/admin/categories — list categories with channels + uncategorized channels
+// GET /api/admin/categories?serverId=... — list categories with channels + uncategorized channels
 export async function GET(req: NextRequest) {
-  const serverId = await getDefaultServerId();
-  if (!serverId) return NextResponse.json({ error: 'No server' }, { status: 404 });
+  const serverIdOrError = requireServerIdFromQuery(req);
+  if (serverIdOrError instanceof NextResponse) return serverIdOrError;
+  const serverId = serverIdOrError;
 
   const actor = await requireRole(req, serverId, 'admin');
   if (actor instanceof NextResponse) return actor;
@@ -27,10 +28,11 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ categories, uncategorizedChannels });
 }
 
-// POST /api/admin/categories — create a category
+// POST /api/admin/categories?serverId=... — create a category
 export async function POST(req: NextRequest) {
-  const serverId = await getDefaultServerId();
-  if (!serverId) return NextResponse.json({ error: 'No server' }, { status: 404 });
+  const serverIdOrError = requireServerIdFromQuery(req);
+  if (serverIdOrError instanceof NextResponse) return serverIdOrError;
+  const serverId = serverIdOrError;
 
   const actor = await requireRole(req, serverId, 'admin');
   if (actor instanceof NextResponse) return actor;

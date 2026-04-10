@@ -4,7 +4,7 @@ import { NextRequest } from 'next/server';
 vi.mock('@/lib/db', () => ({
   prisma: {
     invitation: { findUnique: vi.fn(), update: vi.fn() },
-    member: { upsert: vi.fn(), findUnique: vi.fn() },
+    member: { upsert: vi.fn(), findUnique: vi.fn(), create: vi.fn() },
     ban: { findUnique: vi.fn() },
     $transaction: vi.fn(),
   },
@@ -115,11 +115,55 @@ describe('POST /api/invitations/:code', () => {
       server: { id: 's1', name: 'Test', icon: null, banner: null },
     });
     mockPrisma.ban.findUnique.mockResolvedValue(null);
+    mockPrisma.member.findUnique.mockResolvedValue(null);
     mockPrisma.$transaction.mockResolvedValue([{}, {}]);
 
     const res = await POST(makeRequest('POST'), { params: makeParams('test') });
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.server.name).toBe('Test');
+    expect(data.alreadyMember).toBeUndefined();
+    // Verify the new Member is tagged with the invite id
+    expect(mockPrisma.$transaction).toHaveBeenCalled();
+  });
+
+  it('returns alreadyMember=true without consuming the invite', async () => {
+    mockGetAuth.mockResolvedValue('pk1');
+    mockPrisma.invitation.findUnique.mockResolvedValue({
+      id: 'inv1', serverId: 's1', code: 'test', maxUses: 5, uses: 2,
+      expiresAt: null, targetPubkey: null,
+      server: { id: 's1', name: 'Test', icon: null, banner: null },
+    });
+    mockPrisma.ban.findUnique.mockResolvedValue(null);
+    mockPrisma.member.findUnique.mockResolvedValue({
+      id: 'm1', serverId: 's1', pubkey: 'pk1', role: 'member',
+    });
+
+    const res = await POST(makeRequest('POST'), { params: makeParams('test') });
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.alreadyMember).toBe(true);
+    expect(data.message).toMatch(/already a member/i);
+    // Crucially, no transaction (no use consumed, no member create)
+    expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('returns 403 with ban reason when user is banned', async () => {
+    mockGetAuth.mockResolvedValue('pk1');
+    mockPrisma.invitation.findUnique.mockResolvedValue({
+      id: 'inv1', serverId: 's1', code: 'test', maxUses: 5, uses: 2,
+      expiresAt: null, targetPubkey: null,
+      server: { id: 's1', name: 'Test', icon: null, banner: null },
+    });
+    mockPrisma.ban.findUnique.mockResolvedValue({
+      id: 'b1', serverId: 's1', pubkey: 'pk1', reason: 'spam',
+    });
+
+    const res = await POST(makeRequest('POST'), { params: makeParams('test') });
+    expect(res.status).toBe(403);
+    const data = await res.json();
+    expect(data.banned).toBe(true);
+    expect(data.reason).toBe('spam');
+    expect(mockPrisma.$transaction).not.toHaveBeenCalled();
   });
 });

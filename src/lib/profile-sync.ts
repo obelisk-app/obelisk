@@ -88,14 +88,20 @@ async function getPrisma() {
 
 /**
  * Sync profile data to the Member table for a given pubkey+server.
+ *
+ * `markFresh` (default true) stamps `profileUpdatedAt = now`. Pass `false`
+ * when writing an incomplete profile (e.g. only name+picture) so the stale
+ * refresh pass can still pick it up for a full relay fetch later.
  */
 export async function syncProfileToDb(
   pubkey: string,
   serverId: string,
   profile: Partial<NostrProfile>,
+  options: { markFresh?: boolean } = {},
 ) {
+  const { markFresh = true } = options;
   const prisma = await getPrisma();
-  const data = {
+  const data: Record<string, unknown> = {
     displayName: profile.displayName || profile.name || null,
     picture: profile.picture || null,
     nip05: profile.nip05 || null,
@@ -103,8 +109,10 @@ export async function syncProfileToDb(
     banner: profile.banner || null,
     lud16: profile.lud16 || null,
     website: profile.website || null,
-    profileUpdatedAt: new Date(),
   };
+  if (markFresh) {
+    data.profileUpdatedAt = new Date();
+  }
 
   return prisma.member.upsert({
     where: { serverId_pubkey: { serverId, pubkey } },
@@ -122,17 +130,148 @@ export async function fetchAndSyncProfile(pubkey: string, serverId: string) {
   return syncProfileToDb(pubkey, serverId, profile);
 }
 
+/**
+ * Dedupes concurrent profile fetches for the same `(serverId, pubkey)` pair.
+ * All concurrent callers share one relay round-trip.
+ */
+const inFlight = new Map<string, Promise<Awaited<ReturnType<typeof fetchAndSyncProfile>>>>();
+
+export function fetchAndSyncProfileDeduped(pubkey: string, serverId: string) {
+  const key = `${serverId}:${pubkey}`;
+  const existing = inFlight.get(key);
+  if (existing) return existing;
+
+  const promise = fetchAndSyncProfile(pubkey, serverId).finally(() => {
+    inFlight.delete(key);
+  });
+  inFlight.set(key, promise);
+  return promise;
+}
+
+/**
+ * Fire-and-forget opportunistic background refresh. Triggered on hot reads
+ * (GET /api/members, GET /api/admin/members) to keep profile data fresh
+ * automatically without a cron job.
+ *
+ * Per-server cooldown (default 60s) prevents thrash when many users hit
+ * /api/members in quick succession. Returns immediately; the actual refresh
+ * runs in the background.
+ */
+const lastRefreshByServer = new Map<string, number>();
+const REFRESH_COOLDOWN_MS = 60_000;
+
+export async function triggerBackgroundRefreshIfStale(
+  serverId: string,
+  ttlHours = 6,
+): Promise<void> {
+  const now = Date.now();
+  const last = lastRefreshByServer.get(serverId) ?? 0;
+  if (now - last < REFRESH_COOLDOWN_MS) return;
+
+  const prisma = await getPrisma();
+  const cutoff = new Date(now - ttlHours * 60 * 60 * 1000);
+  const staleCount = await prisma.member.count({
+    where: {
+      serverId,
+      OR: [
+        { profileUpdatedAt: null },
+        { profileUpdatedAt: { lt: cutoff } },
+      ],
+    },
+  });
+  if (staleCount === 0) return;
+
+  lastRefreshByServer.set(serverId, now);
+  // Fire-and-forget — errors are logged inside refreshStaleProfiles.
+  void refreshStaleProfiles(ttlHours / 24, serverId).catch((err) => {
+    console.warn('[profile-sync] Background refresh failed:', err);
+  });
+}
+
+/**
+ * Shape of the author profile embedded in real-time `new-message` events.
+ * Kept small on purpose — chat clients only need these fields to render.
+ */
+export interface EmbeddedAuthorProfile {
+  pubkey: string;
+  displayName: string | null;
+  picture: string | null;
+  nip05: string | null;
+  nickname: string | null;
+}
+
+/**
+ * Look up a Member's cached profile to embed in a Socket.io `new-message`
+ * event. Returns null if the author is not a Member of the server (e.g. the
+ * system welcome bot). If the Member exists but has no cached profile, fires
+ * a background fetch (non-blocking) so the next emit has data.
+ *
+ * Callers: every site that emits `new-message` — src/server.ts,
+ * src/app/api/channels/[channelId]/messages/route.ts,
+ * src/app/api/channels/[channelId]/posts/[postId]/route.ts,
+ * src/lib/welcome.ts.
+ */
+export async function getAuthorProfile(
+  pubkey: string,
+  serverId: string,
+): Promise<EmbeddedAuthorProfile | null> {
+  try {
+    const prisma = await getPrisma();
+    const member = await prisma.member.findUnique({
+      where: { serverId_pubkey: { serverId, pubkey } },
+      select: {
+        pubkey: true,
+        displayName: true,
+        picture: true,
+        nip05: true,
+        nickname: true,
+        profileUpdatedAt: true,
+      },
+    });
+    if (!member) return null;
+
+    // If the row exists but has no cached profile, trigger a background
+    // fetch so the NEXT emit has data. Non-blocking.
+    if (member.profileUpdatedAt === null) {
+      void fetchAndSyncProfileDeduped(pubkey, serverId).catch(() => {});
+    }
+
+    return {
+      pubkey: member.pubkey,
+      displayName: member.displayName,
+      picture: member.picture,
+      nip05: member.nip05,
+      nickname: member.nickname,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Test helper: clears module-level dedup and cooldown state. Do not call
+ * from production code.
+ */
+export function __resetProfileSyncState() {
+  inFlight.clear();
+  lastRefreshByServer.clear();
+}
+
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 /**
  * Refresh profiles that are stale (older than maxAgeDays) or never fetched.
  */
-export async function refreshStaleProfiles(maxAgeDays = 1): Promise<number> {
+export async function refreshStaleProfiles(
+  maxAgeDays = 1,
+  serverId?: string
+): Promise<number> {
   const prisma = await getPrisma();
   const cutoff = new Date(Date.now() - maxAgeDays * 24 * 60 * 60 * 1000);
 
   const staleMembers = await prisma.member.findMany({
     where: {
+      ...(serverId ? { serverId } : {}),
       OR: [
         { profileUpdatedAt: null },
         { profileUpdatedAt: { lt: cutoff } },

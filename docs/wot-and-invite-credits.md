@@ -96,7 +96,42 @@ timestamp.
 
 ---
 
-## Invite credits
+## Invite credits — REMOVED
+
+> ⚠️ **The activity-based invite-credit feature has been retired.**
+>
+> The original design (described below for historical context) let regular
+> members earn a pool of invite credits after meeting activity thresholds.
+> In practice the feature was incomplete, the UI was confusing, and the
+> simpler model — **only admins+ can mint invitations** — covers the same
+> anti-spam goal without the moving parts.
+>
+> What was removed:
+>
+> - `src/lib/invite-credits.ts` and its test
+> - `src/components/invites/InviteCreditsCard.tsx` and its test
+> - `src/app/api/servers/[serverId]/invite-credits/route.ts` and its test
+> - The "Invite credit policy" form section in `AccessPanel`
+> - The "Invite credits" section on the user profile page
+> - All `computeCredits` enforcement in `POST /api/servers/:id/invitations`
+>   and `GET /api/profile/me`
+>
+> What stayed:
+>
+> - The `Server.minDaysActive`, `minMessages`, `invitesPerUser`, and
+>   `inviteExpiryHours` columns. They are no longer read or written, but
+>   dropping them would lose data — they're additive dead weight.
+> - The `Member.lastActivityAt` timestamp. Still bumped on every message
+>   and post, but now used purely as a "last seen" indicator on the profile
+>   page.
+> - The Web of Trust system (the rest of this doc) — that's still active.
+>
+> If you want to bring credits back, the schema is ready and the design
+> below remains valid; it would just need a fresh implementation pass.
+
+---
+
+## Original design (historical)
 
 ### Eligibility formula
 

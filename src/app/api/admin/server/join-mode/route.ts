@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireRole, getDefaultServerId } from '@/lib/auth-roles';
+import { requireRole, requireServerIdFromQuery } from '@/lib/auth-roles';
 
-// PATCH /api/admin/server/join-mode — toggle join mode (owner only)
+// PATCH /api/admin/server/join-mode?serverId=... — toggle join mode (owner only)
 export async function PATCH(req: NextRequest) {
-  const serverId = await getDefaultServerId();
-  if (!serverId) return NextResponse.json({ error: 'No server' }, { status: 404 });
+  const serverIdOrError = requireServerIdFromQuery(req);
+  if (serverIdOrError instanceof NextResponse) return serverIdOrError;
+  const serverId = serverIdOrError;
 
   const actor = await requireRole(req, serverId, 'owner');
   if (actor instanceof NextResponse) return actor;
