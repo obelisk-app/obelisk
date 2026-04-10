@@ -86,6 +86,14 @@
   - [ ] Vista detalle: post completo + thread de respuestas (como un chat)
   - [ ] Gestion de posts desde /admin (editar, eliminar, pin, gestionar tags)
 - [ ] Canales de anuncios (solo admins/mods pueden postear, miembros solo lectura)
+- [x] Canal de bienvenida — mensaje automatico con banner personalizado cuando un miembro se une
+- [ ] Idioma canonico del servidor
+  - [ ] Campo `language` en Server (ej: "es", "en", "pt") — configurable desde /admin
+  - [ ] Mensajes del sistema (bienvenida, avisos de moderacion, placeholders) usan el idioma del servidor
+  - [ ] UI del chat respeta el idioma del servidor (labels, tooltips, timestamps locale)
+  - [ ] El idioma del servidor es independiente del idioma de la landing (i18n del sitio)
+  - [ ] Selector de idioma en la configuracion del servidor (admin)
+  - [ ] Fallback a "es" si no se configura
 - [ ] Multi-server (crear/unirse a varios servidores)
 - [ ] DMs via Nostr relays (encrypt/decrypt con el signer del usuario, NIP-04/NIP-17)
 

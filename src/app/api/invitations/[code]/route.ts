@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthPubkey } from '@/lib/api-auth';
+import { postWelcomeMessage } from '@/lib/welcome';
 
 // GET /api/invitations/:code — validate an invitation (public info)
 export async function GET(
@@ -82,6 +83,11 @@ export async function POST(
     return NextResponse.json({ error: 'You are banned from this server' }, { status: 403 });
   }
 
+  // Check if already a member (for welcome message)
+  const existingMember = await prisma.member.findUnique({
+    where: { serverId_pubkey: { serverId: invitation.serverId, pubkey } },
+  });
+
   // Join server + increment uses in a transaction
   await prisma.$transaction([
     prisma.member.upsert({
@@ -94,6 +100,11 @@ export async function POST(
       data: { uses: { increment: 1 } },
     }),
   ]);
+
+  // Post welcome message for new members
+  if (!existingMember) {
+    await postWelcomeMessage(invitation.serverId, pubkey);
+  }
 
   return NextResponse.json({ server: invitation.server });
 }

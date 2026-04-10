@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthPubkey } from '@/lib/api-auth';
+import { postWelcomeMessage } from '@/lib/welcome';
 
 // POST /api/servers/:serverId/join — join an open server
 export async function POST(
@@ -34,12 +35,21 @@ export async function POST(
     return NextResponse.json({ error: 'You are banned from this server' }, { status: 403 });
   }
 
-  // Upsert member (idempotent)
+  // Upsert member (idempotent) — check if new
+  const existingMember = await prisma.member.findUnique({
+    where: { serverId_pubkey: { serverId, pubkey } },
+  });
+
   await prisma.member.upsert({
     where: { serverId_pubkey: { serverId, pubkey } },
     update: {},
     create: { serverId, pubkey, role: 'member' },
   });
+
+  // Post welcome message for new members
+  if (!existingMember) {
+    await postWelcomeMessage(serverId, pubkey);
+  }
 
   return NextResponse.json({ server: { id: server.id, name: server.name, icon: server.icon, banner: server.banner } });
 }

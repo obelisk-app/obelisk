@@ -4,10 +4,14 @@ import { NextRequest } from 'next/server';
 vi.mock('@/lib/db', () => ({
   prisma: {
     invitation: { findUnique: vi.fn(), update: vi.fn() },
-    member: { upsert: vi.fn() },
+    member: { upsert: vi.fn(), findUnique: vi.fn() },
     ban: { findUnique: vi.fn() },
     $transaction: vi.fn(),
   },
+}));
+
+vi.mock('@/lib/welcome', () => ({
+  postWelcomeMessage: vi.fn().mockResolvedValue(null),
 }));
 
 vi.mock('@/lib/api-auth', () => ({
