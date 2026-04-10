@@ -80,4 +80,75 @@ describe('useAuthStore', () => {
     useAuthStore.getState().setHasHydrated(true);
     expect(useAuthStore.getState()._hasHydrated).toBe(true);
   });
+
+  it('starts with isSyncing false', () => {
+    expect(useAuthStore.getState().isSyncing).toBe(false);
+  });
+
+  it('syncProfile fetches from relay endpoint and updates profile', async () => {
+    // Set initial profile first
+    useAuthStore.getState().setUser({
+      pubkey: 'abc123',
+      profile: { name: 'Alice' },
+    } as any, 'extension');
+
+    // Now stub fetch for the sync call
+    const mockFetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({
+        pubkey: 'abc123',
+        displayName: 'Updated Alice',
+        picture: 'https://example.com/pic.jpg',
+        nip05: 'alice@example.com',
+        about: 'Hello',
+        banner: null,
+        lud16: null,
+        website: null,
+      }),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    await useAuthStore.getState().syncProfile();
+
+    const state = useAuthStore.getState();
+    expect(state.isSyncing).toBe(false);
+    expect(state.profile?.displayName).toBe('Updated Alice');
+    expect(state.profile?.picture).toBe('https://example.com/pic.jpg');
+    expect(mockFetch).toHaveBeenCalledWith('/api/members/me/sync-nostr', { method: 'POST' });
+  });
+
+  it('restoreSession triggers syncProfile in background', async () => {
+    const mockFetch = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({
+          pubkey: 'abc123',
+          displayName: 'Alice',
+          picture: null,
+          nip05: null,
+          role: 'member',
+        }),
+      })
+      // syncProfile call
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({
+          pubkey: 'abc123',
+          displayName: 'Alice Updated',
+          picture: 'https://pic.jpg',
+          nip05: null,
+          about: null,
+          banner: null,
+          lud16: null,
+          website: null,
+        }),
+      });
+    vi.stubGlobal('fetch', mockFetch);
+
+    const result = await useAuthStore.getState().restoreSession();
+    expect(result).toBe(true);
+    expect(useAuthStore.getState().isConnected).toBe(true);
+    // syncProfile was called (second fetch)
+    expect(mockFetch).toHaveBeenCalledWith('/api/members/me/sync-nostr', { method: 'POST' });
+  });
 });

@@ -38,7 +38,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
   const [nsecCopied, setNsecCopied] = useState(false);
   const [creatingAccount, setCreatingAccount] = useState(false);
   const sessionRef = useRef<NostrConnectSession | null>(null);
-  const { setUser, setLoading, setError, isLoading, error } = useAuthStore();
+  const { setUser, setLoading, setError, isLoading, error, syncProfile } = useAuthStore();
 
   useEffect(() => {
     if (!isOpen) return;
@@ -74,6 +74,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
         await authenticateWithBackend(getNDK());
 
         setUser(user, 'bunker');
+        syncProfile();
         onClose();
         onSuccess?.();
       } catch (err) {
@@ -166,6 +167,8 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
         await authenticateWithBackend(getNDK());
 
         setUser(user, loginMethod);
+        // Sync profile from Nostr relays to DB in background
+        syncProfile();
         onClose();
         onSuccess?.();
       }
@@ -197,6 +200,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
       await authenticateWithBackend(getNDK());
       setNewAccountNsec(nsec);
       setUser(user, 'nsec');
+      syncProfile();
     } catch (err) {
       console.error('Account creation error:', err);
       setError(err instanceof Error ? err.message : 'Failed to create account');

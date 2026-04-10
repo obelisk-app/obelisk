@@ -6,6 +6,7 @@ import { NostrProfile, parseProfile, LoginMethod, resetUserRelays } from '@/lib/
 interface AuthState {
   isConnected: boolean;
   isLoading: boolean;
+  isSyncing: boolean;
   user: NDKUser | null;
   profile: NostrProfile | null;
   loginMethod: LoginMethod | null;
@@ -18,6 +19,7 @@ interface AuthState {
   logout: () => void;
   setHasHydrated: (hydrated: boolean) => void;
   restoreSession: () => Promise<boolean>;
+  syncProfile: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -25,6 +27,7 @@ export const useAuthStore = create<AuthState>()(
     (set, get) => ({
       isConnected: false,
       isLoading: false,
+      isSyncing: false,
       user: null,
       profile: null,
       loginMethod: null,
@@ -67,6 +70,44 @@ export const useAuthStore = create<AuthState>()(
 
       setHasHydrated: (hydrated) => set({ _hasHydrated: hydrated }),
 
+      // Fetch fresh profile from Nostr relays and sync to DB
+      syncProfile: async () => {
+        set({ isSyncing: true });
+        try {
+          const res = await fetch('/api/members/me/sync-nostr', { method: 'POST' });
+          if (!res.ok) return;
+          const data = await res.json();
+          const currentProfile = get().profile;
+          set({
+            profile: currentProfile ? {
+              ...currentProfile,
+              name: data.displayName || currentProfile.name,
+              displayName: data.displayName || currentProfile.displayName,
+              picture: data.picture || currentProfile.picture,
+              nip05: data.nip05 || currentProfile.nip05,
+              about: data.about || currentProfile.about,
+              banner: data.banner || currentProfile.banner,
+              lud16: data.lud16 || currentProfile.lud16,
+              website: data.website || currentProfile.website,
+            } : {
+              pubkey: data.pubkey,
+              npub: '',
+              displayName: data.displayName,
+              picture: data.picture,
+              nip05: data.nip05,
+              about: data.about,
+              banner: data.banner,
+              lud16: data.lud16,
+              website: data.website,
+            },
+          });
+        } catch {
+          // silent — sync is best-effort
+        } finally {
+          set({ isSyncing: false });
+        }
+      },
+
       // Check backend session cookie — used on page load to restore session
       restoreSession: async () => {
         try {
@@ -93,6 +134,8 @@ export const useAuthStore = create<AuthState>()(
               nip05: data.nip05,
             },
           });
+          // Trigger background profile sync from Nostr relays
+          get().syncProfile();
           return true;
         } catch {
           set({ isConnected: false });

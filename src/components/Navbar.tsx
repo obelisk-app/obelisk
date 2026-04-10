@@ -17,7 +17,7 @@ export default function Navbar({ onLoginSuccess }: { onLoginSuccess?: () => void
   const [showLogin, setShowLogin] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const { isConnected, profile, logout } = useAuthStore();
+  const { isConnected, profile, logout, syncProfile, isSyncing } = useAuthStore();
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -88,6 +88,22 @@ export default function Navbar({ onLoginSuccess }: { onLoginSuccess?: () => void
                           {profile.npub.slice(0, 20)}...
                         </div>
                       </div>
+                      <button
+                        onClick={() => { syncProfile(); }}
+                        disabled={isSyncing}
+                        className="w-full p-3 text-left text-sm text-lc-muted hover:bg-lc-border/50 hover:text-lc-white transition flex items-center gap-2 disabled:opacity-50"
+                      >
+                        {isSyncing ? (
+                          <div className="lc-spinner w-4 h-4" />
+                        ) : (
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="23 4 23 10 17 10"/>
+                            <polyline points="1 20 1 14 7 14"/>
+                            <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+                          </svg>
+                        )}
+                        {isSyncing ? 'Syncing...' : 'Sync Profile'}
+                      </button>
                       <button
                         onClick={() => { logout(); setShowMenu(false); }}
                         className="w-full p-3 text-left text-sm text-red-400 hover:bg-lc-border/50 transition flex items-center gap-2"

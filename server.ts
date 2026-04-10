@@ -669,9 +669,12 @@ app.prepare().then(async () => {
     const proto = useHttps ? 'https' : 'http';
     console.log(`> Obelisk ready on ${proto}://${hostname}:${port}`);
 
-    // Profile caching: backfill past users on startup, then refresh daily
+    // Profile caching: backfill missing profiles, then refresh stale ones every 6 hours
     const { backfillMissingProfiles, refreshStaleProfiles } = await import('./src/lib/profile-sync');
-    setTimeout(() => backfillMissingProfiles().catch(console.error), 10_000);
-    setInterval(() => refreshStaleProfiles(1).catch(console.error), 24 * 60 * 60 * 1000);
+    setTimeout(async () => {
+      await backfillMissingProfiles().catch(console.error);
+      await refreshStaleProfiles(0.25).catch(console.error); // refresh profiles older than 6h
+    }, 10_000);
+    setInterval(() => refreshStaleProfiles(0.25).catch(console.error), 6 * 60 * 60 * 1000);
   });
 });

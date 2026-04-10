@@ -41,6 +41,7 @@ describe('LoginModal', () => {
   const mockSetUser = vi.fn();
   const mockSetLoading = vi.fn();
   const mockSetError = vi.fn();
+  const mockSyncProfile = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -48,6 +49,7 @@ describe('LoginModal', () => {
       setUser: mockSetUser,
       setLoading: mockSetLoading,
       setError: mockSetError,
+      syncProfile: mockSyncProfile,
       isLoading: false,
       error: null,
     });
