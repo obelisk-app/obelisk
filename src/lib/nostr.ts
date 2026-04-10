@@ -1,5 +1,5 @@
 import NDK, { NDKEvent, NDKUser, NDKNip07Signer, NDKPrivateKeySigner } from '@nostr-dev-kit/ndk';
-import { nip19 } from 'nostr-tools';
+import { nip19, generateSecretKey, getPublicKey } from 'nostr-tools';
 
 // Popular relays (high availability)
 const POPULAR_RELAYS = [
@@ -128,6 +128,20 @@ export async function loginWithNsec(nsec: string): Promise<NDKUser | null> {
   await user.fetchProfile();
   
   return user;
+}
+
+export async function createNewAccount(): Promise<{ user: NDKUser; nsec: string }> {
+  const secretKey = generateSecretKey();
+  const nsec = nip19.nsecEncode(secretKey);
+  const privateKeyHex = Array.from(secretKey).map(b => b.toString(16).padStart(2, '0')).join('');
+
+  const ndk = getNDK();
+  const signer = new NDKPrivateKeySigner(privateKeyHex);
+  ndk.signer = signer;
+
+  const user = await signer.user();
+
+  return { user, nsec };
 }
 
 export async function loginWithBunker(bunkerUrl: string): Promise<NDKUser | null> {
