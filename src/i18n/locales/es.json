@@ -24,7 +24,7 @@
   "features.selfHosted.title": "Self-Hosted",
   "features.selfHosted.desc": "Corré tu propio servidor con Docker. Tus datos, tus reglas. Sin intermediarios corporativos.",
   "features.spamResistant.title": "Anti-Spam",
-  "features.spamResistant.desc": "Filtrado Web of Trust con identidad Nostr. Verificá a través de tu grafo social — sin CAPTCHAs.",
+  "features.spamResistant.desc": "Filtro Anti-Kuka y Comedores de Empanada mediante Nostr Web of Trust y modelo de ingreso por referidos.",
 
   "steps.heading": "Tres pasos",
   "steps.subtitle": "Sin formularios. Sin verificación de email. Solo claves.",
