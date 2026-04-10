@@ -667,7 +667,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="h-screen flex bg-lc-black relative">
+    <div className="h-dvh flex bg-lc-black relative overflow-hidden">
       {/* Mobile sidebar overlay backdrop */}
       {sidebarOpen && (
         <div
