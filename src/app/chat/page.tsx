@@ -137,6 +137,10 @@ export default function ChatPage() {
         displayName: profile.displayName || profile.name || null,
         picture: profile.picture || null,
         nip05: profile.nip05 || null,
+        about: profile.about || null,
+        banner: profile.banner || null,
+        lud16: profile.lud16 || null,
+        website: profile.website || null,
       }),
     })
       .then(() => setProfileSynced(true))
@@ -229,13 +233,14 @@ export default function ChatPage() {
         const data = await res.json();
         const memberInfoList: MemberInfo[] = [];
         for (const member of data.members) {
+          const name = member.nickname || member.displayName || undefined;
           profileCache.set(member.pubkey, {
-            name: member.displayName || undefined,
+            name,
             picture: member.picture || undefined,
           });
           memberInfoList.push({
             pubkey: member.pubkey,
-            displayName: member.displayName || member.pubkey.slice(0, 8) + '...',
+            displayName: name || member.pubkey.slice(0, 8) + '...',
             picture: member.picture || undefined,
           });
         }

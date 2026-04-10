@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useChatStore, Category, Channel } from '@/store/chat';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notification';
+import ProfilePanel from './ProfilePanel';
 
 function ChannelTypeIcon({ type }: { type: string }) {
   if (type === 'forum') {
@@ -97,15 +98,20 @@ function CategorySection({ category, activeChannelId, onSelectChannel }: {
 function UserPanel() {
   const router = useRouter();
   const { profile, logout } = useAuthStore();
+  const [showProfile, setShowProfile] = useState(false);
 
   const handleLogout = () => {
     logout();
+    setShowProfile(false);
     router.push('/');
   };
 
   return (
-    <div className="p-2 border-t border-lc-border bg-lc-black/50 shrink-0">
-      <div className="flex items-center gap-2 p-1.5 rounded-lg">
+    <div className="p-2 border-t border-lc-border bg-lc-black/50 shrink-0 relative">
+      <button
+        onClick={() => setShowProfile(!showProfile)}
+        className="w-full flex items-center gap-2 p-1.5 rounded-lg hover:bg-lc-border/30 transition"
+      >
         {profile?.picture ? (
           <img src={profile.picture} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" />
         ) : (
@@ -113,7 +119,7 @@ function UserPanel() {
             {(profile?.name || profile?.displayName || 'A')[0].toUpperCase()}
           </div>
         )}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 text-left">
           <div className="text-sm font-medium text-lc-white truncate">
             {profile?.displayName || profile?.name || 'Anon'}
           </div>
@@ -121,18 +127,14 @@ function UserPanel() {
             {profile?.npub ? `${profile.npub.slice(0, 16)}...` : ''}
           </div>
         </div>
-        <button
-          onClick={handleLogout}
-          className="p-1.5 rounded-md text-lc-muted hover:text-red-400 hover:bg-lc-border/50 transition shrink-0"
-          title="Logout"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
-            <polyline points="16 17 21 12 16 7"/>
-            <line x1="21" y1="12" x2="9" y2="12"/>
-          </svg>
-        </button>
-      </div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-lc-muted shrink-0">
+          <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+        </svg>
+      </button>
+
+      {showProfile && (
+        <ProfilePanel onClose={() => setShowProfile(false)} onLogout={handleLogout} />
+      )}
     </div>
   );
 }

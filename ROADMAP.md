@@ -13,6 +13,16 @@
 - [x] Design badass — dark theme, animaciones, glows, glassmorphism, La Crypta aesthetic
 - [x] Responsive (mobile/desktop)
 
+## ⚡ PRIORIDAD — Cache de perfiles Nostr
+> Los perfiles (avatar, nombre, NIP-05) se traen de relays en cada render. Hay que cachearlos localmente.
+
+- [x] Al hacer login, guardar perfil completo en DB (avatar, displayName, banner, about, nip05)
+- [x] Servir perfiles desde DB en vez de consultar relays en cada request
+- [x] Job periodico (1x/dia) que actualiza todos los perfiles cacheados desde relays
+- [x] Backfill de perfiles de usuarios anteriores al startup
+- [x] Boton "Sincronizar desde Nostr" en panel de perfil del usuario
+- [x] Nickname local por servidor (override del nombre Nostr dentro de Obelisk)
+
 ## Fase 1 — Auth + Chat Basico (single server)
 > Scope: UN solo servidor (host). No multi-server todavia.
 
@@ -59,12 +69,24 @@
 - [ ] Canales de voz — chat dentro del canal de voz
 - [ ] Sistema de invitaciones (links de un uso / por npub) — anti-spam
 - [x] Menciones (@usuario) resueltas desde Nostr profiles
+- [ ] Mejoras a posts de foro (estilo Discord publicaciones)
+  - [ ] Posts como sub-chats dentro del canal (cada post abre su propio thread de mensajes)
+  - [ ] Vista de lista: titulo, autor, preview, imagen thumbnail, tags, conteo de reacciones/respuestas
+  - [ ] Filtros por tags y ordenamiento
+  - [ ] Barra de busqueda dentro del canal de foro
+  - [ ] Imagen de portada para posts
+  - [ ] El creador del post puede editar su contenido
+  - [ ] Moderadores pueden editar cualquier post
+  - [ ] Vista detalle: post completo + thread de respuestas (como un chat)
+  - [ ] Gestion de posts desde /admin (editar, eliminar, pin, gestionar tags)
 - [ ] Canales de anuncios (solo admins/mods pueden postear, miembros solo lectura)
 - [ ] Multi-server (crear/unirse a varios servidores)
 - [ ] DMs via Nostr relays (encrypt/decrypt con el signer del usuario, NIP-04/NIP-17)
 
 ## Fase 3 — Features Avanzados
 - [ ] Perfiles de app (avatar, bio, display name — datos propios, no de Nostr)
+- [ ] Edicion de perfil Nostr desde Obelisk (publicar kind 0 a relays)
+  > ⚠️ **CUIDADO:** Publicar un kind 0 (metadata) sobreescribe TODA la metadata del usuario en los relays. Antes de implementar: (1) siempre leer el kind 0 actual del usuario, (2) mergear solo los campos editados, (3) mostrar preview/diff antes de publicar, (4) pedir confirmacion explicita, (5) nunca enviar campos vacios que borren datos existentes. Un campo mal enviado puede destruir avatar, bio, NIP-05 del usuario en todo Nostr.
 - [ ] Exportar conversaciones (JSON / texto plano)
 - [ ] Bots / integraciones
 - [x] Busqueda de mensajes (Discord-style: from:, in:, has:, before:, after:, mentions:, "exact phrases")
@@ -79,7 +101,10 @@
 - [ ] PWA (Progressive Web App) — installable, offline support, service worker
 - [ ] Notificaciones (push / in-app)
 - [ ] Temas personalizados por servidor
-- [ ] Mobile responsive
+- [ ] Mejorar experiencia mobile
+  - [ ] Elementos que se ocultan o quedan inaccesibles en pantallas chicas
+  - [ ] Pantallas que no respetan el tamaño del viewport (scroll roto, overflow)
+  - [ ] Revisar todas las vistas: chat, admin, moderacion, voice, foros
 - [x] Deploy a produccion (Vercel + Neon Postgres)
 - [ ] Restaurar real-time (Socket.io en Railway/Fly.io, o migrar a Pusher/Ably)
 

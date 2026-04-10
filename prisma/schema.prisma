@@ -173,9 +173,15 @@ model Member {
   joinedAt DateTime @default(now())
 
   // Cached Nostr profile data
-  displayName String?
-  picture     String?
-  nip05       String?
+  displayName      String?
+  picture          String?
+  nip05            String?
+  about            String?
+  banner           String?
+  lud16            String?
+  website          String?
+  nickname         String?  // Obelisk-local server nickname override
+  profileUpdatedAt DateTime?
 
   server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
 

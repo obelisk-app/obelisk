@@ -60,5 +60,20 @@
   "cta.subtitle": "Connect with your Nostr identity and join the conversation.",
   "cta.button": "Get Started",
 
-  "footer.tagline": "Obelisk — Built for La Crypta Identity Hackathon 2026"
+  "footer.tagline": "Obelisk — Built for La Crypta Identity Hackathon 2026",
+
+  "profile.title": "Profile",
+  "profile.nostrSection": "Nostr Profile",
+  "profile.syncFromNostr": "Sync from Nostr",
+  "profile.syncing": "Syncing...",
+  "profile.syncSuccess": "Profile updated from Nostr",
+  "profile.syncError": "Could not fetch profile",
+  "profile.obeliskSection": "Obelisk Settings",
+  "profile.nickname": "Server nickname",
+  "profile.nicknamePlaceholder": "Leave empty to use your Nostr name",
+  "profile.save": "Save",
+  "profile.saved": "Saved",
+  "profile.about": "About",
+  "profile.nip05": "NIP-05",
+  "profile.logout": "Disconnect"
 }
