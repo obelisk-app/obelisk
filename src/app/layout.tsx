@@ -11,7 +11,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.CORS_ORIGIN || 'https://obelisk.fabri.lat'),
+  metadataBase: new URL(process.env.CORS_ORIGIN || 'https://obelisk.ar'),
   title: 'Obelisk — Chat grupal con identidad Nostr',
   description:
     'App de chat grupal estilo Discord impulsada por identidad Nostr. Sin emails, sin contraseñas — identidad criptográfica. Creada para el Hackathon IDENTITY de La Crypta 2026.',
