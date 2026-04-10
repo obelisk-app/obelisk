@@ -171,6 +171,14 @@ app.prepare().then(async () => {
           },
         });
 
+        // Bump activity timestamp for invite-credit eligibility (best-effort).
+        prisma.member
+          .updateMany({
+            where: { serverId, pubkey },
+            data: { lastActivityAt: new Date() },
+          })
+          .catch(() => {});
+
         io.to(`channel:${channelId}`).emit('new-message', message);
 
         // Extract mentions and create Mention records

@@ -43,6 +43,14 @@
   - [ ] Selector de servidor — cada server tiene su propia config
   - [ ] CRUD de canales y categorias por servidor
   - [ ] Gestion de miembros, bans, configuracion por servidor
+  - [ ] **Seccion "Acceso al servidor"** en /admin (por servidor):
+    - [ ] Input para setear el **npub referente** del servidor — preview del perfil Nostr + conteo de seguidos
+    - [ ] Boton "Refrescar WoT" que re-fetchea el kind 3 del referente desde relays
+    - [ ] Lista de npubs auto-autorizados (los que el referente sigue) con busqueda
+    - [ ] **Generador de invite links** — boton "Crear invite", copia al portapapeles, muestra URL, expiracion, max usos
+    - [ ] Tabla de invites activos por servidor: link, creado por, usos/max, expira, estado, accion revocar
+    - [ ] Override manual: admin puede whitelistear un npub que no esta en la WoT
+  - [ ] Config de umbrales para que usuarios comunes desbloqueen invites (dias activos, mensajes minimos, invites por usuario)
 - [ ] Sistema de roles y permisos por servidor
   - [ ] Roles (owner/admin/mod/member) con permisos granulares
   - [ ] Asignar roles por servidor (mod en server A, member en server B)
@@ -68,7 +76,21 @@
 - [x] Canales de voz — audio (via mediasoup WebRTC SFU)
 - [x] Canales de voz — video y screen sharing
 - [ ] Canales de voz — chat dentro del canal de voz
-- [ ] Sistema de invitaciones (links de un uso / por npub) — anti-spam
+- [ ] **WoT — Registro automatico via Web of Trust** (feature core anti-spam) — ver [docs/wot-and-invite-credits.md](docs/wot-and-invite-credits.md)
+  - [ ] Cada servidor define una cuenta "referente" (npub) — ej: La Crypta para el server de La Crypta
+  - [ ] Cualquier npub seguido por el referente puede registrarse automaticamente en ese servidor
+  - [ ] Fetch del kind 3 (contact list) del referente desde relays, cache en DB con refresh periodico
+  - [ ] Endpoint `/api/servers/:id/wot-check` — verifica si un npub esta en la WoT del referente
+  - [ ] Flujo de registro: login -> chequeo WoT -> acceso directo sin invite si hay match
+  - [ ] Config del referente desde /admin (por servidor)
+- [ ] **Sistema de invitaciones desbloqueable por actividad** (feature core anti-spam) — ver [docs/wot-and-invite-credits.md](docs/wot-and-invite-credits.md)
+  - [ ] Usuarios registrados ganan "invite credits" despues de X dias de actividad (configurable por servidor)
+  - [ ] Criterios de actividad: dias desde registro, mensajes enviados, ultima conexion (anti-sybil)
+  - [ ] Cada usuario puede generar invites (links de un uso o por npub target) con sus credits
+  - [ ] Los invites tienen expiracion y son trackeables (quien invito a quien → grafo de invitaciones)
+  - [ ] Panel en /admin para emision/revocacion de invites, override manual, y ver el grafo de invitaciones
+  - [ ] Config por servidor: `min_days_active`, `min_messages`, `invites_per_user`, `invite_expiry`
+  - [ ] UI en el perfil del usuario para ver sus credits disponibles y generar invites
 - [x] Menciones (@usuario) resueltas desde Nostr profiles
 - [x] Renderizado de texto enriquecido en mensajes
   - [x] Markdown: bold, italic, strikethrough, inline code, code blocks con syntax highlighting

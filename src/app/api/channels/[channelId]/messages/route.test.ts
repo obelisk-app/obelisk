@@ -7,6 +7,7 @@ vi.mock('@/lib/db', () => ({
     message: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
     ban: { findUnique: vi.fn() },
     mute: { findFirst: vi.fn() },
+    member: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
   },
 }));
 

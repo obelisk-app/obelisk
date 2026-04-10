@@ -213,3 +213,4 @@ await user.fetchProfile();
 - [NIPs Repository](https://github.com/nostr-protocol/nips)
 - [La Crypta](https://lacrypta.ar)
 - [ROADMAP.md](ROADMAP.md) — Development roadmap
+- [docs/wot-and-invite-credits.md](docs/wot-and-invite-credits.md) — WoT auto-registration + activity-based invite credits (anti-spam core)

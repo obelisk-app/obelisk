@@ -16,6 +16,18 @@ model Server {
   joinMode   String    @default("open") // open | invite-only
   createdAt  DateTime  @default(now())
 
+  // Web of Trust (anti-spam): when wotEnabled, only users followed by referentePubkey
+  // (or in WotOverride, or holding a valid invite) can join. joinMode is ignored.
+  referentePubkey    String?
+  wotEnabled         Boolean   @default(false)
+  referenteFetchedAt DateTime?
+
+  // Activity-based invite credits policy
+  minDaysActive     Int @default(7)
+  minMessages       Int @default(20)
+  invitesPerUser    Int @default(3)
+  inviteExpiryHours Int @default(168) // 7 days
+
   categories Category[]
   channels   Channel[]
   members    Member[]
@@ -25,6 +37,8 @@ model Server {
   reports    Report[]
   moderationActions ModerationAction[]
   invitations      Invitation[]
+  wotEntries       WotEntry[]
+  wotOverrides     WotOverride[]
 }
 
 model DirectMessageThread {
@@ -183,6 +197,9 @@ model Member {
   nickname         String?  // Obelisk-local server nickname override
   profileUpdatedAt DateTime?
 
+  // Activity tracking for invite-credit eligibility (anti-sybil)
+  lastActivityAt   DateTime?
+
   server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
 
   @@unique([serverId, pubkey])
@@ -308,4 +325,33 @@ model DMReadState {
   lastReadAt   DateTime @default(now())
 
   @@unique([pubkey, threadPubkey])
+}
+
+// Cached follow list of a server's referente. Refreshed lazily on login + by admin.
+model WotEntry {
+  id        String   @id @default(cuid())
+  serverId  String
+  pubkey    String
+  addedAt   DateTime @default(now())
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@unique([serverId, pubkey])
+  @@index([serverId])
+  @@index([pubkey])
+}
+
+// Manual whitelist for npubs not in the referente's WoT but explicitly allowed by admins.
+model WotOverride {
+  id        String   @id @default(cuid())
+  serverId  String
+  pubkey    String
+  addedBy   String
+  reason    String?
+  createdAt DateTime @default(now())
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@unique([serverId, pubkey])
+  @@index([serverId])
 }

@@ -128,6 +128,14 @@ export async function POST(
     },
   });
 
+  // Bump activity timestamp for invite-credit eligibility (best-effort).
+  prisma.member
+    .updateMany({
+      where: { serverId: channel.serverId, pubkey },
+      data: { lastActivityAt: new Date() },
+    })
+    .catch(() => {});
+
   // Broadcast via Socket.io if available
   const io = (globalThis as any).__io;
   if (io) {

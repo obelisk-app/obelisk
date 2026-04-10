@@ -111,6 +111,14 @@ export async function POST(
     },
   });
 
+  // Bump activity timestamp for invite-credit eligibility (best-effort).
+  prisma.member
+    .updateMany({
+      where: { serverId: channel.serverId, pubkey },
+      data: { lastActivityAt: new Date() },
+    })
+    .catch(() => {});
+
   return NextResponse.json({
     ...post,
     tags: post.tags.map((t) => ({ id: t.tag.id, name: t.tag.name, color: t.tag.color })),

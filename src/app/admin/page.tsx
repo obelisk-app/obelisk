@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth';
 import MemberRow from '@/components/admin/MemberRow';
 import ChannelManager from '@/components/admin/ChannelManager';
+import AccessPanel from '@/components/admin/AccessPanel';
+import InviteManager from '@/components/admin/InviteManager';
 import type { Role } from '@/lib/auth-roles';
 
-type Tab = 'members' | 'channels' | 'settings' | 'bans';
+type Tab = 'members' | 'channels' | 'access' | 'invitations' | 'settings' | 'bans';
 
 interface MemberData {
   id: string;
@@ -187,7 +189,7 @@ export default function AdminPage() {
       {/* Tabs */}
       <div className="max-w-4xl mx-auto px-6">
         <div className="flex gap-1 border-b border-lc-border mt-4">
-          {(['members', 'channels', 'settings', 'bans'] as Tab[]).map((t) => (
+          {(['members', 'channels', 'access', 'invitations', 'settings', 'bans'] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -253,6 +255,20 @@ export default function AdminPage() {
         {tab === 'channels' && (
           <div className="mt-4" data-testid="channels-tab">
             <ChannelManager isOwner={isOwner} />
+          </div>
+        )}
+
+        {/* Access Tab — WoT + invite credit policy */}
+        {tab === 'access' && server && (
+          <div className="mt-4" data-testid="access-tab">
+            <AccessPanel serverId={server.id} isOwner={isOwner} />
+          </div>
+        )}
+
+        {/* Invitations Tab */}
+        {tab === 'invitations' && server && (
+          <div className="mt-4" data-testid="invitations-tab">
+            <InviteManager serverId={server.id} />
           </div>
         )}
 

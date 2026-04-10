@@ -88,6 +88,17 @@ export default function Navbar({ onLoginSuccess }: { onLoginSuccess?: () => void
                           {profile.npub.slice(0, 20)}...
                         </div>
                       </div>
+                      <a
+                        href="/profile"
+                        className="w-full p-3 text-left text-sm text-lc-muted hover:bg-lc-border/50 hover:text-lc-white transition flex items-center gap-2"
+                        data-testid="nav-profile-link"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+                          <circle cx="12" cy="7" r="4"/>
+                        </svg>
+                        Profile
+                      </a>
                       <button
                         onClick={() => { syncProfile(); }}
                         disabled={isSyncing}
