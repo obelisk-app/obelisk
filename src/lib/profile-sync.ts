@@ -22,6 +22,28 @@ function getServerNDK(): NDK {
 async function ensureConnected(): Promise<NDK> {
   const ndk = getServerNDK();
   await ndk.connect();
+
+  // Wait until at least one relay is actually connected (up to 5s)
+  const hasConnectedRelay = () =>
+    Array.from(ndk.pool?.relays?.values() ?? []).some(
+      (r) => r.connectivity?.status === 1,
+    );
+
+  if (!hasConnectedRelay()) {
+    await new Promise<void>((resolve) => {
+      const check = setInterval(() => {
+        if (hasConnectedRelay()) {
+          clearInterval(check);
+          resolve();
+        }
+      }, 200);
+      setTimeout(() => {
+        clearInterval(check);
+        resolve();
+      }, 5000);
+    });
+  }
+
   return ndk;
 }
 
