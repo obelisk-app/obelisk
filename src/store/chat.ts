@@ -77,6 +77,9 @@ interface ChatState {
   // Members (for mentions autocomplete)
   memberList: MemberInfo[];
 
+  // Presence: pubkeys currently connected via Socket.io
+  onlinePubkeys: Set<string>;
+
   // Typing indicator
   typingUsers: Record<string, number>; // pubkey -> timeout id
 
@@ -107,6 +110,10 @@ interface ChatState {
   // Typing
   setTyping: (pubkey: string) => void;
   clearTyping: (pubkey: string) => void;
+
+  // Presence
+  setOnlinePubkeys: (pubkeys: string[]) => void;
+  setPresence: (pubkey: string, online: boolean) => void;
 }
 
 export const useChatStore = create<ChatState>()((set) => ({
@@ -125,6 +132,7 @@ export const useChatStore = create<ChatState>()((set) => ({
   typingUsers: {},
   highlightedMessageId: null,
   memberList: [],
+  onlinePubkeys: new Set<string>(),
 
   setMemberList: (members) => set({ memberList: members }),
   setServers: (servers) => set({ servers }),
@@ -184,5 +192,13 @@ export const useChatStore = create<ChatState>()((set) => ({
   clearTyping: (pubkey) => set((state) => {
     const { [pubkey]: _, ...rest } = state.typingUsers;
     return { typingUsers: rest };
+  }),
+
+  setOnlinePubkeys: (pubkeys) => set({ onlinePubkeys: new Set(pubkeys) }),
+  setPresence: (pubkey, online) => set((state) => {
+    const next = new Set(state.onlinePubkeys);
+    if (online) next.add(pubkey);
+    else next.delete(pubkey);
+    return { onlinePubkeys: next };
   }),
 }));

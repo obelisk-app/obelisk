@@ -377,6 +377,14 @@ export default function ChatPage() {
 
     socket.on('connect', () => {
       console.log('Socket connected');
+      // Snapshot currently-online pubkeys
+      socket.emit('presence-sync', (pubkeys: string[]) => {
+        useChatStore.getState().setOnlinePubkeys(pubkeys);
+      });
+    });
+
+    socket.on('presence-update', ({ pubkey: pk, online }: { pubkey: string; online: boolean }) => {
+      useChatStore.getState().setPresence(pk, online);
     });
 
     socket.on('new-message', (message: Message) => {
@@ -471,6 +479,7 @@ export default function ChatPage() {
     return () => {
       socket.disconnect();
       socketRef.current = null;
+      useChatStore.getState().setOnlinePubkeys([]);
     };
   }, [sessionChecked, addMessage, removeMessage, updateMessage, updateReactions, logout, router]);
 

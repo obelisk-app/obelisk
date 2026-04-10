@@ -148,4 +148,56 @@ describe('useChatStore', () => {
     expect(Object.keys(useChatStore.getState().typingUsers)).not.toContain('pk-typer');
     vi.useRealTimers();
   });
+
+  describe('presence', () => {
+    it('starts with an empty onlinePubkeys Set', () => {
+      const { onlinePubkeys } = useChatStore.getState();
+      expect(onlinePubkeys).toBeInstanceOf(Set);
+      expect(onlinePubkeys.size).toBe(0);
+    });
+
+    it('setOnlinePubkeys replaces the set with the given pubkeys', () => {
+      useChatStore.getState().setOnlinePubkeys(['a', 'b', 'c']);
+      const { onlinePubkeys } = useChatStore.getState();
+      expect(onlinePubkeys.size).toBe(3);
+      expect(onlinePubkeys.has('a')).toBe(true);
+      expect(onlinePubkeys.has('b')).toBe(true);
+      expect(onlinePubkeys.has('c')).toBe(true);
+    });
+
+    it('setOnlinePubkeys([]) clears the set', () => {
+      useChatStore.getState().setOnlinePubkeys(['a']);
+      useChatStore.getState().setOnlinePubkeys([]);
+      expect(useChatStore.getState().onlinePubkeys.size).toBe(0);
+    });
+
+    it('setPresence adds a pubkey when online=true', () => {
+      useChatStore.getState().setPresence('a', true);
+      expect(useChatStore.getState().onlinePubkeys.has('a')).toBe(true);
+    });
+
+    it('setPresence removes a pubkey when online=false', () => {
+      useChatStore.getState().setOnlinePubkeys(['a', 'b']);
+      useChatStore.getState().setPresence('a', false);
+      const { onlinePubkeys } = useChatStore.getState();
+      expect(onlinePubkeys.has('a')).toBe(false);
+      expect(onlinePubkeys.has('b')).toBe(true);
+    });
+
+    it('setPresence is idempotent when toggling the same state twice', () => {
+      useChatStore.getState().setPresence('a', true);
+      useChatStore.getState().setPresence('a', true);
+      expect(useChatStore.getState().onlinePubkeys.size).toBe(1);
+      useChatStore.getState().setPresence('a', false);
+      useChatStore.getState().setPresence('a', false);
+      expect(useChatStore.getState().onlinePubkeys.size).toBe(0);
+    });
+
+    it('setPresence returns a new Set reference so subscribers re-render', () => {
+      const before = useChatStore.getState().onlinePubkeys;
+      useChatStore.getState().setPresence('a', true);
+      const after = useChatStore.getState().onlinePubkeys;
+      expect(after).not.toBe(before);
+    });
+  });
 });

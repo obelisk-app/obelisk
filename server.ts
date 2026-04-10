@@ -99,6 +99,18 @@ app.prepare().then(async () => {
     if (!pubkeySockets.has(pubkey)) pubkeySockets.set(pubkey, new Set());
     pubkeySockets.get(pubkey)!.add(socket.id);
 
+    // Presence: announce online on first socket for this pubkey
+    if (pubkeySockets.get(pubkey)!.size === 1) {
+      io.emit('presence-update', { pubkey, online: true });
+    }
+
+    // Presence: snapshot of currently-online pubkeys
+    socket.on('presence-sync', (cb?: (pubkeys: string[]) => void) => {
+      if (typeof cb === 'function') {
+        cb([...pubkeySockets.keys()]);
+      }
+    });
+
     socket.on('join-channel', (channelId: string) => {
       if (typeof channelId === 'string' && channelId.length > 0) {
         socket.join(`channel:${channelId}`);
@@ -635,6 +647,8 @@ app.prepare().then(async () => {
       pubkeySockets.get(pubkey)?.delete(socket.id);
       if (pubkeySockets.get(pubkey)?.size === 0) {
         pubkeySockets.delete(pubkey);
+        // Presence: announce offline on last socket disconnect (before DB cleanup)
+        io.emit('presence-update', { pubkey, online: false });
         // Clean up voice states on disconnect
         try {
           const voiceStates = await prisma.voiceState.findMany({ where: { pubkey }, select: { channelId: true } });
