@@ -16,35 +16,35 @@ const mockPrisma = {
 vi.mock('./db-server', () => ({ prisma: mockPrisma }));
 vi.mock('@/lib/db-server', () => ({ prisma: mockPrisma }));
 
-// Mock NDK so fetchProfileFromRelay never actually hits the network.
-// `ensureConnected` in profile-sync.ts waits up to 5s for a relay with
-// `connectivity.status === 1`, so we seed one fake "connected" relay.
+// Mock nostr-tools so fetchProfileFromRelay never actually hits the network.
+//
+// `mockFetchProfile` returns one of:
+//   - null                  → simulates a transport failure (rejects)
+//   - undefined / []        → simulates "no kind 0 event found"
+//   - [{ content }]         → simulates events with the given content JSON
 const mockFetchProfile = vi.fn();
-vi.mock('@nostr-dev-kit/ndk', () => {
-  class NDK {
-    pool = {
-      relays: new Map<string, { connectivity: { status: number } }>([
-        ['wss://mock', { connectivity: { status: 1 } }],
-      ]),
-    };
-    async connect() {}
-    getUser() {
-      return {
-        pubkey: 'pk',
-        profile: null as any,
-        async fetchProfile() {
-          const result = await mockFetchProfile();
-          (this as any).profile = result;
-          return result;
-        },
-      };
+vi.mock('nostr-tools/pool', () => {
+  class SimplePool {
+    async querySync() {
+      const result = await mockFetchProfile();
+      // null → simulate transport failure (rejects to mimic real relay errors)
+      if (result === null) throw new Error('mock transport failure');
+      // undefined → empty result array
+      if (result === undefined) return [];
+      // Accept either an array or a Set (legacy test calls).
+      return Array.isArray(result) ? result : Array.from(result);
     }
   }
-  return { default: NDK };
+  return {
+    SimplePool,
+    useWebSocketImplementation: () => {},
+  };
 });
+vi.mock('ws', () => ({ default: class {} }));
 
 import {
   syncProfileToDb,
+  fetchAndSyncProfile,
   fetchAndSyncProfileDeduped,
   triggerBackgroundRefreshIfStale,
   getAuthorProfile,
@@ -128,6 +128,87 @@ describe('profile-sync', () => {
       await fetchAndSyncProfileDeduped('pk1', 's1');
       await fetchAndSyncProfileDeduped('pk1', 's1');
       expect(mockFetchProfile).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('fetchAndSyncProfile', () => {
+    it('parses kind 0 content and writes a fresh row', async () => {
+      mockFetchProfile.mockResolvedValue(
+        new Set([
+          {
+            content: JSON.stringify({
+              name: 'alice',
+              display_name: 'Alice',
+              picture: 'pic.jpg',
+              nip05: 'alice@example.com',
+            }),
+            created_at: 1700000000,
+          },
+        ]),
+      );
+      mockPrisma.member.upsert.mockResolvedValue({});
+
+      await fetchAndSyncProfile('pk1', 's1');
+
+      const call = mockPrisma.member.upsert.mock.calls[0][0];
+      expect(call.update.displayName).toBe('Alice');
+      expect(call.update.picture).toBe('pic.jpg');
+      expect(call.update.nip05).toBe('alice@example.com');
+      expect(call.update.profileUpdatedAt).toBeInstanceOf(Date);
+    });
+
+    it('marks the row fresh even when no kind 0 event is found', async () => {
+      // No event → fetcher returns {} → still writes & stamps profileUpdatedAt
+      // so the user is not re-queried on every refresh pass forever.
+      mockFetchProfile.mockResolvedValue(undefined);
+      mockPrisma.member.upsert.mockResolvedValue({});
+
+      await fetchAndSyncProfile('pk1', 's1');
+
+      expect(mockPrisma.member.upsert).toHaveBeenCalledOnce();
+      const call = mockPrisma.member.upsert.mock.calls[0][0];
+      expect(call.update.displayName).toBeNull();
+      expect(call.update.profileUpdatedAt).toBeInstanceOf(Date);
+    });
+
+    it('does NOT write the DB on transport failure', async () => {
+      // null → mock throws → fetcher returns null → no DB write so the
+      // refresh pass picks the user up again next cycle.
+      mockFetchProfile.mockResolvedValue(null);
+
+      const result = await fetchAndSyncProfile('pk1', 's1');
+      expect(result).toBeNull();
+      expect(mockPrisma.member.upsert).not.toHaveBeenCalled();
+    });
+
+    it('picks the newest event when relays return multiple', async () => {
+      mockFetchProfile.mockResolvedValue(
+        new Set([
+          { content: JSON.stringify({ name: 'old' }), created_at: 1000 },
+          { content: JSON.stringify({ name: 'newest' }), created_at: 3000 },
+          { content: JSON.stringify({ name: 'middle' }), created_at: 2000 },
+        ]),
+      );
+      mockPrisma.member.upsert.mockResolvedValue({});
+
+      await fetchAndSyncProfile('pk1', 's1');
+
+      const call = mockPrisma.member.upsert.mock.calls[0][0];
+      expect(call.update.displayName).toBe('newest');
+    });
+
+    it('handles malformed kind 0 JSON without crashing', async () => {
+      mockFetchProfile.mockResolvedValue(
+        new Set([{ content: 'not-valid-json{', created_at: 1000 }]),
+      );
+      mockPrisma.member.upsert.mockResolvedValue({});
+
+      await fetchAndSyncProfile('pk1', 's1');
+
+      // Still marks the row fresh — we successfully queried, the data is just garbage.
+      const call = mockPrisma.member.upsert.mock.calls[0][0];
+      expect(call.update.displayName).toBeNull();
+      expect(call.update.profileUpdatedAt).toBeInstanceOf(Date);
     });
   });
 

@@ -1,8 +1,10 @@
-import NDK, { NDKUser } from '@nostr-dev-kit/ndk';
+import { SimplePool, useWebSocketImplementation } from 'nostr-tools/pool';
+import WebSocket from 'ws';
 import type { NostrProfile } from './nostr';
 
-// Server-side NDK instance for profile fetching (separate from client singleton)
-let serverNDK: NDK | null = null;
+// nostr-tools needs a WebSocket implementation in Node. Set it once at
+// module load (idempotent if other modules also call it).
+useWebSocketImplementation(WebSocket);
 
 const RELAYS = [
   'wss://relay.damus.io',
@@ -12,68 +14,88 @@ const RELAYS = [
   'wss://purplepag.es',
 ];
 
-function getServerNDK(): NDK {
-  if (!serverNDK) {
-    serverNDK = new NDK({ explicitRelayUrls: [...RELAYS] });
+// Server-side relay pool. We deliberately use nostr-tools instead of NDK
+// here because NDK's `connect()` promise never resolves in Node and its
+// `fetchEvents` hangs even after the underlying WebSockets are open. NDK is
+// still used everywhere else (browser, signing, NIP-46) — this module is the
+// only server-side relay reader.
+let serverPool: SimplePool | null = null;
+function getServerPool(): SimplePool {
+  if (!serverPool) {
+    serverPool = new SimplePool();
   }
-  return serverNDK;
+  return serverPool;
 }
 
-async function ensureConnected(): Promise<NDK> {
-  const ndk = getServerNDK();
-  await ndk.connect();
-
-  // Wait until at least one relay is actually connected (up to 5s)
-  const hasConnectedRelay = () =>
-    Array.from(ndk.pool?.relays?.values() ?? []).some(
-      (r) => r.connectivity?.status === 1,
-    );
-
-  if (!hasConnectedRelay()) {
-    await new Promise<void>((resolve) => {
-      const check = setInterval(() => {
-        if (hasConnectedRelay()) {
-          clearInterval(check);
-          resolve();
-        }
-      }, 200);
-      setTimeout(() => {
-        clearInterval(check);
-        resolve();
-      }, 5000);
-    });
-  }
-
-  return ndk;
+interface RawKind0Content {
+  name?: unknown;
+  display_name?: unknown;
+  displayName?: unknown;
+  about?: unknown;
+  picture?: unknown;
+  image?: unknown;
+  banner?: unknown;
+  nip05?: unknown;
+  lud16?: unknown;
+  website?: unknown;
 }
 
-function parseNDKProfile(user: NDKUser): Partial<NostrProfile> {
-  const p = user.profile || {};
+function asString(v: unknown): string | undefined {
+  return typeof v === 'string' && v.length > 0 ? v : undefined;
+}
+
+function parseKind0Content(content: string): Partial<NostrProfile> | null {
+  let raw: RawKind0Content;
+  try {
+    raw = JSON.parse(content);
+  } catch {
+    return null;
+  }
+  if (!raw || typeof raw !== 'object') return null;
   return {
-    name: p.name,
-    displayName: (p.displayName || p.display_name) as string | undefined,
-    about: p.about as string | undefined,
-    picture: (p.image || p.picture) as string | undefined,
-    banner: p.banner,
-    nip05: p.nip05,
-    lud16: p.lud16,
-    website: p.website,
+    name: asString(raw.name),
+    displayName: asString(raw.displayName) || asString(raw.display_name),
+    about: asString(raw.about),
+    picture: asString(raw.picture) || asString(raw.image),
+    banner: asString(raw.banner),
+    nip05: asString(raw.nip05),
+    lud16: asString(raw.lud16),
+    website: asString(raw.website),
   };
 }
 
 /**
- * Fetch a profile from Nostr relays. Returns null on failure.
+ * Fetch a profile from Nostr relays via a direct kind:0 query.
+ *
+ * Uses nostr-tools `SimplePool.querySync` rather than NDK because NDK's
+ * server-side relay path is broken (its `connect()` promise never resolves
+ * and `fetchEvents` hangs in Node).
+ *
+ * Return values:
+ *   - `null`             — transport failure (timeout, no relays connected). Caller should retry later.
+ *   - `{}`               — successfully queried but no kind 0 event found. Caller should mark as checked.
+ *   - `{ name, ... }`    — event found and parsed.
  */
 export async function fetchProfileFromRelay(pubkey: string): Promise<Partial<NostrProfile> | null> {
   try {
-    const ndk = await ensureConnected();
-    const user = ndk.getUser({ pubkey });
-    await Promise.race([
-      user.fetchProfile(),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 10000)),
-    ]);
-    if (!user.profile) return null;
-    return parseNDKProfile(user);
+    const pool = getServerPool();
+    const events = await pool.querySync(
+      RELAYS,
+      { kinds: [0], authors: [pubkey], limit: 1 },
+      { maxWait: 8000 },
+    );
+
+    // Pick the newest event (relays may return multiple)
+    let newest: { content: string; created_at: number } | null = null;
+    for (const ev of events) {
+      const created = ev.created_at ?? 0;
+      if (!newest || created > newest.created_at) {
+        newest = { content: ev.content, created_at: created };
+      }
+    }
+    if (!newest) return {};
+
+    return parseKind0Content(newest.content) ?? {};
   } catch (err) {
     console.warn(`[profile-sync] Failed to fetch profile for ${pubkey.slice(0, 8)}:`, err);
     return null;
@@ -123,11 +145,18 @@ export async function syncProfileToDb(
 
 /**
  * Fetch profile from relay and save to DB.
+ *
+ * Always marks the row as fresh on a successful query (even when the relay
+ * had no kind 0 event for the pubkey) — otherwise users who genuinely have
+ * no profile would be re-queried on every refresh pass forever.
+ *
+ * Only `null` from the fetcher (transport failure) leaves the row stale so
+ * the next refresh pass picks it up again.
  */
 export async function fetchAndSyncProfile(pubkey: string, serverId: string) {
   const profile = await fetchProfileFromRelay(pubkey);
-  if (!profile) return null;
-  return syncProfileToDb(pubkey, serverId, profile);
+  if (profile === null) return null;
+  return syncProfileToDb(pubkey, serverId, profile, { markFresh: true });
 }
 
 /**

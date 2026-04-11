@@ -77,3 +77,28 @@ export async function PATCH(req: NextRequest) {
   const updated = await prisma.server.update({ where: { id: serverId }, data });
   return NextResponse.json(updated);
 }
+
+// DELETE /api/admin/server?serverId=... — permanently delete a server (owner only)
+//
+// Cascades through every relation (Channel, Category, Member, Message, Ban,
+// Mute, Warning, Report, ModerationAction, Invitation, WotEntry, WotOverride,
+// ReadState…) via Prisma onDelete: Cascade. Irreversible.
+export async function DELETE(req: NextRequest) {
+  const serverIdOrError = requireServerIdFromQuery(req);
+  if (serverIdOrError instanceof NextResponse) return serverIdOrError;
+  const serverId = serverIdOrError;
+
+  const actor = await requireRole(req, serverId, 'owner');
+  if (actor instanceof NextResponse) return actor;
+
+  const existing = await prisma.server.findUnique({
+    where: { id: serverId },
+    select: { id: true },
+  });
+  if (!existing) {
+    return NextResponse.json({ error: 'Server not found' }, { status: 404 });
+  }
+
+  await prisma.server.delete({ where: { id: serverId } });
+  return NextResponse.json({ ok: true });
+}

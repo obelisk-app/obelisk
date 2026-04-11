@@ -208,11 +208,11 @@ export default function ChatPage() {
   // `triggerBackgroundRefreshIfStale` on GET /api/members — no client-side
   // NDK fallback needed.
   useEffect(() => {
-    if (!profileSynced) return;
+    if (!profileSynced || !activeServerId) return;
 
     const fetchMembers = async () => {
       try {
-        const res = await fetch('/api/members');
+        const res = await fetch(`/api/members?serverId=${encodeURIComponent(activeServerId)}`);
         if (!res.ok) return;
         const data = await res.json();
         const memberInfoList: MemberInfo[] = [];
@@ -233,7 +233,7 @@ export default function ChatPage() {
     };
 
     fetchMembers();
-  }, [profileSynced, profileCache]);
+  }, [profileSynced, activeServerId, profileCache, setMemberList]);
 
   // Discover existing DM threads from Nostr relays (waits for NDK to be ready)
   useEffect(() => {

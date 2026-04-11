@@ -66,6 +66,7 @@ export async function GET(req: NextRequest) {
             icon: true,
             banner: true,
             ownerPubkey: true,
+            createdAt: true,
           },
         },
       },
@@ -79,12 +80,13 @@ export async function GET(req: NextRequest) {
         icon: true,
         banner: true,
         ownerPubkey: true,
+        createdAt: true,
       },
     }),
   ]);
 
   // Merge: dedupe by id, prefer owner role from Server.ownerPubkey
-  const byId = new Map<string, AdminServer>();
+  const byId = new Map<string, AdminServer & { createdAt: Date }>();
   for (const m of memberships) {
     const role: AdminRole =
       m.server.ownerPubkey === pubkey ? 'owner' : (m.role as AdminRole);
@@ -100,8 +102,15 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // Stable order across both branches: oldest server first. Without this the
+  // /admin redirect (which picks servers[0]) lands on whichever server happened
+  // to come first in the merge — usually the wrong one.
+  const servers: AdminServer[] = Array.from(byId.values())
+    .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+    .map(({ createdAt: _createdAt, ...rest }) => rest);
+
   return NextResponse.json({
-    servers: Array.from(byId.values()),
+    servers,
     instanceOwner: false,
   });
 }

@@ -105,6 +105,7 @@ Internet → Caddy (:443 HTTPS + auto SSL) → Obelisk (:3000 Next.js + Socket.i
 - **Database:** PostgreSQL (Docker container)
 - **Real-time:** Socket.io via `server.ts` (persistent WebSocket connections)
 - **SSL:** Caddy with automatic Let's Encrypt certificates
+- **Build caching:** Dockerfile uses BuildKit cache mounts for npm; Prisma schema is copied after `npm ci` so dependency cache survives schema changes
 
 ### Environment Variables
 - `DOMAIN` — your domain name

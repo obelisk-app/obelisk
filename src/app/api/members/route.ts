@@ -3,14 +3,18 @@ import { prisma } from '@/lib/db';
 import { getAuthPubkey } from '@/lib/api-auth';
 import { triggerBackgroundRefreshIfStale } from '@/lib/profile-sync';
 
-// GET /api/members — list all members of the current server
+// GET /api/members?serverId=... — list all members of the given server.
+// If `serverId` is omitted, falls back to the first server (legacy behavior).
 export async function GET(req: NextRequest) {
   const pubkey = await getAuthPubkey(req);
   if (!pubkey) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const server = await prisma.server.findFirst();
+  const serverIdParam = req.nextUrl.searchParams.get('serverId');
+  const server = serverIdParam
+    ? await prisma.server.findUnique({ where: { id: serverIdParam }, select: { id: true } })
+    : await prisma.server.findFirst({ select: { id: true } });
   if (!server) {
     return NextResponse.json({ error: 'No server' }, { status: 404 });
   }

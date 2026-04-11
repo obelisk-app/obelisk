@@ -79,6 +79,8 @@ export default function AdminServerPage({
   const [accessDenied, setAccessDenied] = useState(false);
   const [showCreateServer, setShowCreateServer] = useState(false);
   const [memberToManage, setMemberToManage] = useState<{ pubkey: string; displayName: string | null } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Auth + role check (server-scoped via query param)
   useEffect(() => {
@@ -135,6 +137,7 @@ export default function AdminServerPage({
   }, [role, serverId, fetchMembers, fetchServer]);
 
   const handleRoleChange = async (pubkey: string, newRole: Role) => {
+    if (!serverId) return;
     const res = await fetch(
       `/api/admin/members/${pubkey}/role?serverId=${encodeURIComponent(serverId)}`,
       {
@@ -147,6 +150,7 @@ export default function AdminServerPage({
   };
 
   const handleKick = async (pubkey: string) => {
+    if (!serverId) return;
     const res = await fetch(
       `/api/admin/members/${pubkey}/kick?serverId=${encodeURIComponent(serverId)}`,
       { method: 'POST' }
@@ -155,6 +159,7 @@ export default function AdminServerPage({
   };
 
   const handleBan = async (pubkey: string, reason: string) => {
+    if (!serverId) return;
     const res = await fetch(
       `/api/admin/members/${pubkey}/ban?serverId=${encodeURIComponent(serverId)}`,
       {
@@ -167,6 +172,7 @@ export default function AdminServerPage({
   };
 
   const handleUnban = async (pubkey: string) => {
+    if (!serverId) return;
     const res = await fetch(
       `/api/admin/members/${pubkey}/ban?serverId=${encodeURIComponent(serverId)}`,
       { method: 'DELETE' }
@@ -174,9 +180,41 @@ export default function AdminServerPage({
     if (res.ok) fetchMembers();
   };
 
+  const handleDeleteServer = async () => {
+    if (!server || !serverId) return;
+    const confirmText = window.prompt(
+      `This will PERMANENTLY delete "${server.name}" along with every channel, message, member, role, ban, invite and forum post. This cannot be undone.\n\nType the server name to confirm:`
+    );
+    if (confirmText === null) return; // user cancelled
+    if (confirmText !== server.name) {
+      setDeleteError('Server name did not match. Deletion cancelled.');
+      return;
+    }
+    setDeleteError(null);
+    setDeleting(true);
+    try {
+      const res = await fetch(
+        `/api/admin/server?serverId=${encodeURIComponent(serverId)}`,
+        { method: 'DELETE' }
+      );
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setDeleteError(data?.error || `Delete failed (HTTP ${res.status})`);
+        setDeleting(false);
+        return;
+      }
+      // Send the user back to /admin so the redirect picks the next server
+      // (or shows "no admin access" if none remain).
+      router.replace('/admin');
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Delete failed');
+      setDeleting(false);
+    }
+  };
+
   const handleSaveServer = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!server) return;
+    if (!server || !serverId) return;
     setSaving(true);
     const form = new FormData(e.currentTarget);
     const body: Record<string, string | null> = {
@@ -455,6 +493,35 @@ export default function AdminServerPage({
                   data-testid="goto-access-control"
                 >
                   Open Access Control →
+                </button>
+              </div>
+            )}
+
+            {/* Danger Zone — owner only */}
+            {isOwner && (
+              <div
+                className="rounded-xl border border-red-500/40 bg-red-500/5 p-6 space-y-3"
+                data-testid="danger-zone"
+              >
+                <h3 className="text-sm font-semibold text-red-300">Danger Zone</h3>
+                <p className="text-xs text-lc-muted">
+                  Permanently delete this server and every channel, message,
+                  member, role, ban and invitation linked to it. This action
+                  cannot be undone.
+                </p>
+                {deleteError && (
+                  <p className="text-xs text-red-400" data-testid="delete-error">
+                    {deleteError}
+                  </p>
+                )}
+                <button
+                  type="button"
+                  onClick={handleDeleteServer}
+                  disabled={deleting}
+                  className="px-4 py-2 rounded-full bg-red-600 text-white text-xs font-semibold hover:brightness-110 transition disabled:opacity-50"
+                  data-testid="delete-server-button"
+                >
+                  {deleting ? 'Deleting…' : 'Delete server'}
                 </button>
               </div>
             )}

@@ -57,12 +57,33 @@
     - [ ] Tabla de invites activos por servidor: link, creado por, usos/max, expira, estado, accion revocar
     - [ ] Override manual: admin puede whitelistear un npub que no esta en la WoT
   - [ ] Config de umbrales para que usuarios comunes desbloqueen invites (dias activos, mensajes minimos, invites por usuario)
-- [ ] Sistema de roles y permisos por servidor
+- [ ] Sistema de roles y permisos por servidor — ver [docs/permissions-plan.md](docs/permissions-plan.md) (write-locks por canal/post ya documentados); ahora ampliar a **roles custom + acceso por canal**
   - [x] Roles (owner/admin/mod/member) por servidor — instance owner global
   - [x] Asignar roles por servidor (mod en server A, member en server B) — schema soporta, /admin permite cambiar role
-  - [ ] Permisos configurables por rol (que puede hacer cada rol en cada servidor)
-  - [ ] Roles custom para acceso a servidores (ej: rol "VIP" da acceso a server privado)
-  - [ ] Control de acceso por rol — quien puede ver/unirse a cada servidor
+  - [ ] **Roles custom por servidor** (ej: "Gold", "VIP", "Founder", "Beta Tester") — el admin define nombre, color, icono y prioridad/orden
+    - [ ] Nuevo modelo `Role { id, serverId, name, color, icon, priority }` y tabla pivote `MemberRole { memberId, roleId }` (un miembro puede tener varios roles custom + el role base owner/admin/mod/member)
+    - [ ] CRUD de roles desde /admin → nueva tab "Roles" (crear, editar, borrar, reordenar, asignar a miembros)
+    - [ ] Badges de roles custom visibles en el sidebar de miembros y en los mensajes (al lado del nombre)
+  - [ ] **Permisos configurables por rol** — matriz de permisos (quien puede crear canales, invitar, kickear, banear, mutear, gestionar roles, gestionar webhooks, etc.) editable desde /admin
+  - [ ] **Canales privados por rol (read-access gating)** — además del `writePermission` ya planeado, agregar `readPermission`/`allowedRoleIds` por canal
+    - [ ] Schema: `Channel.allowedRoleIds String[]` (vacío = visible para todos los miembros). Si tiene roles, solo miembros con al menos uno de esos roles pueden listarlo, conectarse al socket room, y leer mensajes
+    - [ ] Enforcement en backend: GET de canales filtra por rol del miembro; REST y Socket.io rechazan suscripciones / mensajes de usuarios sin permiso
+    - [ ] UI: ChannelSidebar oculta canales no permitidos; ChannelManager en /admin permite seleccionar qué roles ven cada canal (multi-select)
+    - [ ] Caso de uso: canal "#gold-lounge" solo visible para miembros con role "Gold"; canal "#mods-only" solo visible para mods+
+  - [ ] Control de acceso a servidores por rol — quien puede ver/unirse a cada servidor (servidores privados solo para roles dados)
+- [ ] **Templates de canales (channel templates)** — para que crear servidores nuevos sea instantáneo
+  - [ ] Templates predefinidos: "Community" (general, anuncios, off-topic, suggestions, foro-help), "Gaming" (general, voice-lobby, voice-game, lfg, clips), "DAO" (anuncios, propuestas, votaciones, tesoro, foro-debate), "Dev Team" (general, standup, prs, deploys, bugs, foro-design)
+  - [ ] Cada template define categorías + canales + tipos (text/voice/forum) + permisos por defecto
+  - [ ] Selector de template al crear un nuevo servidor desde /admin → "+ New Server" (incluye opción "Empty / Custom")
+  - [ ] **Custom templates** — el admin puede guardar la estructura actual de un servidor como template propio y reutilizarla
+  - [ ] Aplicar template a un servidor existente (merge no destructivo: solo agrega canales/categorías que no existen)
+- [ ] **Admin panel — mejoras de UX para gestionar canales y roles**
+  - [ ] Drag & drop para reordenar canales y categorías directamente en /admin (hoy hay que usar inputs de posición numéricos)
+  - [ ] Edición inline del nombre, tipo, descripción y permisos de un canal sin abrir un modal
+  - [ ] Bulk actions: seleccionar varios canales para borrar, mover de categoría, o cambiar permisos en lote
+  - [ ] Vista preview del sidebar tal como lo verá un miembro con cierto rol (rol switcher para testear visibilidad de canales privados)
+  - [ ] Editor visual de la matriz de permisos por rol (checkboxes en grid, igual que Discord)
+  - [ ] Confirm dialogs claros para acciones destructivas (borrar canal con N mensajes, borrar rol asignado a N miembros)
 - [ ] Rediseñar panel de moderacion (/moderation) para multi-server
   - [ ] Reportes, mutes, warnings, audit log scoped por servidor
   - [ ] Mods solo ven/actuan en servidores donde tienen permisos

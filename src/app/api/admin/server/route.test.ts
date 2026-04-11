@@ -3,7 +3,7 @@ import { NextRequest } from 'next/server';
 
 vi.mock('@/lib/db', () => ({
   prisma: {
-    server: { findUnique: vi.fn(), update: vi.fn() },
+    server: { findUnique: vi.fn(), update: vi.fn(), delete: vi.fn() },
     member: { findUnique: vi.fn(), upsert: vi.fn() },
     moderationAction: { create: vi.fn() },
   },
@@ -11,7 +11,7 @@ vi.mock('@/lib/db', () => ({
 vi.mock('@/lib/api-auth', () => ({ getAuthPubkey: vi.fn() }));
 vi.mock('@/lib/auth', () => ({ validateSession: vi.fn() }));
 
-import { GET, PATCH } from './route';
+import { GET, PATCH, DELETE } from './route';
 import { prisma } from '@/lib/db';
 import { getAuthPubkey } from '@/lib/api-auth';
 
@@ -143,5 +143,81 @@ describe('PATCH /api/admin/server', () => {
 
     const res = await PATCH(makeRequest('PATCH', { ownerPubkey: 'not-a-valid-pubkey' }));
     expect(res.status).toBe(400);
+  });
+});
+
+describe('DELETE /api/admin/server', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    originalEnv = process.env[ENV_KEY];
+  });
+
+  afterEach(() => {
+    if (originalEnv === undefined) delete process.env[ENV_KEY];
+    else process.env[ENV_KEY] = originalEnv;
+  });
+
+  it('returns 400 when serverId is missing', async () => {
+    mockGetAuth.mockResolvedValue('owner-pk');
+    const res = await DELETE(makeRequest('DELETE', undefined, ''));
+    expect(res.status).toBe(400);
+    expect(mockPrisma.server.delete).not.toHaveBeenCalled();
+  });
+
+  it('owner can delete their server', async () => {
+    mockGetAuth.mockResolvedValue('owner-pk');
+    mockPrisma.server.findUnique
+      .mockResolvedValueOnce({ ownerPubkey: 'owner-pk' }) // for getAuthMember
+      .mockResolvedValueOnce({ id: 'srv1' }); // existence check
+    mockPrisma.member.findUnique.mockResolvedValue({
+      id: 'm1', serverId: 'srv1', pubkey: 'owner-pk', role: 'owner',
+    });
+    mockPrisma.server.delete.mockResolvedValue({ id: 'srv1' });
+
+    const res = await DELETE(makeRequest('DELETE'));
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.ok).toBe(true);
+    expect(mockPrisma.server.delete).toHaveBeenCalledWith({ where: { id: 'srv1' } });
+  });
+
+  it('returns 403 for non-owner admin', async () => {
+    mockGetAuth.mockResolvedValue('admin-pk');
+    mockPrisma.server.findUnique.mockResolvedValue({ ownerPubkey: 'someone-else' });
+    mockPrisma.member.findUnique.mockResolvedValue({
+      id: 'm1', serverId: 'srv1', pubkey: 'admin-pk', role: 'admin',
+    });
+
+    const res = await DELETE(makeRequest('DELETE'));
+    expect(res.status).toBe(403);
+    expect(mockPrisma.server.delete).not.toHaveBeenCalled();
+  });
+
+  it('instance owner can delete any server', async () => {
+    process.env[ENV_KEY] = 'instance-pk';
+    mockGetAuth.mockResolvedValue('instance-pk');
+    mockPrisma.server.findUnique
+      .mockResolvedValueOnce({ ownerPubkey: 'someone-else' }) // for getAuthMember
+      .mockResolvedValueOnce({ id: 'srv1' }); // existence check
+    mockPrisma.member.findUnique.mockResolvedValue(null); // no member row
+    mockPrisma.server.delete.mockResolvedValue({ id: 'srv1' });
+
+    const res = await DELETE(makeRequest('DELETE'));
+    expect(res.status).toBe(200);
+    expect(mockPrisma.server.delete).toHaveBeenCalled();
+  });
+
+  it('returns 404 when server does not exist', async () => {
+    mockGetAuth.mockResolvedValue('owner-pk');
+    mockPrisma.server.findUnique
+      .mockResolvedValueOnce({ ownerPubkey: 'owner-pk' }) // for getAuthMember
+      .mockResolvedValueOnce(null); // existence check
+    mockPrisma.member.findUnique.mockResolvedValue({
+      id: 'm1', serverId: 'srv1', pubkey: 'owner-pk', role: 'owner',
+    });
+
+    const res = await DELETE(makeRequest('DELETE'));
+    expect(res.status).toBe(404);
+    expect(mockPrisma.server.delete).not.toHaveBeenCalled();
   });
 });

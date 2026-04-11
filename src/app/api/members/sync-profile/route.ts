@@ -19,15 +19,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const server = await prisma.server.findFirst();
-  if (!server) {
-    return NextResponse.json({ error: 'No server' }, { status: 404 });
-  }
-
   const body = await req.json().catch(() => ({}));
-  const { pubkey } = body as { pubkey?: unknown };
+  const { pubkey, serverId: bodyServerId } = body as { pubkey?: unknown; serverId?: unknown };
   if (!pubkey || typeof pubkey !== 'string') {
     return NextResponse.json({ error: 'Missing pubkey' }, { status: 400 });
+  }
+
+  // Prefer explicit serverId from the body. Fall back to the legacy
+  // first-server lookup so older callers don't break.
+  const server = bodyServerId && typeof bodyServerId === 'string'
+    ? await prisma.server.findUnique({ where: { id: bodyServerId }, select: { id: true } })
+    : await prisma.server.findFirst({ select: { id: true } });
+  if (!server) {
+    return NextResponse.json({ error: 'No server' }, { status: 404 });
   }
 
   // Only sync existing members — do not upsert (which would silently

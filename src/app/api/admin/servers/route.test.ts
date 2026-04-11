@@ -47,8 +47,8 @@ describe('GET /api/admin/servers', () => {
     process.env[ENV_KEY] = 'instance-pk';
     mockGetAuth.mockResolvedValue('instance-pk');
     mockPrisma.server.findMany.mockResolvedValue([
-      { id: 'srv1', name: 'A', icon: null, banner: null, ownerPubkey: 'someone' },
-      { id: 'srv2', name: 'B', icon: null, banner: null, ownerPubkey: 'someone-else' },
+      { id: 'srv1', name: 'A', icon: null, banner: null, ownerPubkey: 'someone', createdAt: new Date('2026-01-01') },
+      { id: 'srv2', name: 'B', icon: null, banner: null, ownerPubkey: 'someone-else', createdAt: new Date('2026-01-02') },
     ]);
 
     const res = await GET(makeRequest());
@@ -72,6 +72,7 @@ describe('GET /api/admin/servers', () => {
           icon: null,
           banner: null,
           ownerPubkey: 'someone-else',
+          createdAt: new Date('2026-01-01'),
         },
       },
       {
@@ -82,6 +83,7 @@ describe('GET /api/admin/servers', () => {
           icon: null,
           banner: null,
           ownerPubkey: 'another',
+          createdAt: new Date('2026-01-02'),
         },
       },
     ]);
@@ -92,6 +94,7 @@ describe('GET /api/admin/servers', () => {
         icon: null,
         banner: null,
         ownerPubkey: 'user-pk',
+        createdAt: new Date('2026-01-03'),
       },
     ]);
 
@@ -106,6 +109,8 @@ describe('GET /api/admin/servers', () => {
     expect(byId.srv2.role).toBe('mod');
     expect(byId.srv3.role).toBe('owner');
     expect(data.servers.every((s: any) => s.viaInstanceOwner === false)).toBe(true);
+    // createdAt is stripped from the response
+    expect(data.servers.every((s: any) => s.createdAt === undefined)).toBe(true);
   });
 
   it('promotes per-server owner role when caller is Server.ownerPubkey', async () => {
@@ -121,6 +126,7 @@ describe('GET /api/admin/servers', () => {
           icon: null,
           banner: null,
           ownerPubkey: 'user-pk',
+          createdAt: new Date('2026-01-01'),
         },
       },
     ]);
@@ -129,5 +135,47 @@ describe('GET /api/admin/servers', () => {
     const res = await GET(makeRequest());
     const data = await res.json();
     expect(data.servers[0].role).toBe('owner');
+  });
+
+  it('orders merged servers by createdAt ascending (oldest first)', async () => {
+    delete process.env[ENV_KEY];
+    mockGetAuth.mockResolvedValue('user-pk');
+    // Memberships return the NEWER server first (e.g. user is owner of a recent test server).
+    mockPrisma.member.findMany.mockResolvedValue([
+      {
+        role: 'owner',
+        server: {
+          id: 'newer',
+          name: 'New',
+          icon: null,
+          banner: null,
+          ownerPubkey: 'user-pk',
+          createdAt: new Date('2026-04-10'),
+        },
+      },
+    ]);
+    // owned returns the older server (where user is also ownerPubkey).
+    mockPrisma.server.findMany.mockResolvedValue([
+      {
+        id: 'older',
+        name: 'Old',
+        icon: null,
+        banner: null,
+        ownerPubkey: 'user-pk',
+        createdAt: new Date('2026-04-09'),
+      },
+      {
+        id: 'newer',
+        name: 'New',
+        icon: null,
+        banner: null,
+        ownerPubkey: 'user-pk',
+        createdAt: new Date('2026-04-10'),
+      },
+    ]);
+
+    const res = await GET(makeRequest());
+    const data = await res.json();
+    expect(data.servers.map((s: any) => s.id)).toEqual(['older', 'newer']);
   });
 });
