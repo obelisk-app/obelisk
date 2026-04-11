@@ -25,7 +25,12 @@ export async function GET(req: NextRequest) {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: '#171717',
+          // Transparent background so the animated shooting-stars canvas
+          // drawn behind the <img> can show through the empty parts of the
+          // banner. The wrapper <span> in WelcomeBanner provides the dark
+          // card color. Border stays on the PNG so the card still looks
+          // right when fetched standalone.
+          backgroundColor: 'transparent',
           borderRadius: '16px',
           border: '1px solid #262626',
           fontFamily: 'Inter, sans-serif',
@@ -33,17 +38,6 @@ export async function GET(req: NextRequest) {
           overflow: 'hidden',
         }}
       >
-        {/* Background grid */}
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            display: 'flex',
-            backgroundImage:
-              'linear-gradient(rgba(180,249,83,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(180,249,83,0.03) 1px, transparent 1px)',
-            backgroundSize: '30px 30px',
-          }}
-        />
 
         {/* Green glow behind avatar */}
         <div
@@ -61,27 +55,24 @@ export async function GET(req: NextRequest) {
 
         {/* Avatar or Obelisk icon */}
         {picture ? (
-          <div
+          // Satori (next/og) does not clip child images with overflow:hidden,
+          // so the border-radius must live on the <img> itself — otherwise the
+          // square picture renders with a circle ring drawn on top.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={picture}
+            alt=""
+            width={120}
+            height={120}
             style={{
-              display: 'flex',
               width: '120px',
               height: '120px',
               borderRadius: '50%',
-              overflow: 'hidden',
+              objectFit: 'cover',
               border: '3px solid #b4f953',
               boxShadow: '0 0 30px rgba(180,249,83,0.3)',
-              position: 'relative',
             }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={picture}
-              alt=""
-              width={120}
-              height={120}
-              style={{ objectFit: 'cover', width: '120px', height: '120px' }}
-            />
-          </div>
+          />
         ) : (
           <div
             style={{

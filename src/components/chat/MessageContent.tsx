@@ -18,6 +18,7 @@ import YouTubeEmbed from './YouTubeEmbed';
 import LinkPreview from './LinkPreview';
 import AttachmentCard from './AttachmentCard';
 import ImageGallery from './ImageGallery';
+import ShootingStars from '../ShootingStars';
 import type { Components } from 'react-markdown';
 
 function MentionChip({ pubkey, displayName }: { pubkey: string; displayName: string }) {
@@ -43,6 +44,37 @@ function CustomEmojiImg({ name, url }: { name: string; url: string }) {
     />
   );
 }
+
+/**
+ * Welcome banner wrapper — the welcome bot posts a markdown image pointing
+ * at /api/welcome-banner. We detect that URL and render the image inside a
+ * container with the same canvas-based shooting-stars effect the landing
+ * page uses. The canvas sits BEHIND the <img> so the streaks only show
+ * through the banner's transparent background — they never overlap the
+ * avatar, text, or glow, which are baked into the PNG.
+ */
+function WelcomeBanner({ src, alt }: { src: string; alt: string }) {
+  return (
+    <span
+      className="relative block mt-1 max-w-sm rounded-2xl overflow-hidden bg-lc-dark"
+      data-testid="welcome-banner"
+    >
+      {/* Canvas shooting stars sit at the bottom of the stacking order —
+          behind the <img>. The banner PNG has a transparent background, so
+          stars show through empty areas but are hidden behind any baked-in
+          pixel (avatar, text, glow). */}
+      <ShootingStars contained count={4} />
+      <img
+        src={src}
+        alt={alt}
+        loading="lazy"
+        className="relative z-[1] block w-full"
+        data-testid="welcome-banner-img"
+      />
+    </span>
+  );
+}
+
 
 /**
  * Swap mention + custom-emoji placeholders in a text string with their
@@ -111,6 +143,11 @@ function renderWithMentions(
   return parts.length > 0 ? parts : [text];
 }
 
+// Matches `![alt](url)` when the url points at /api/welcome-banner. We detect
+// this before markdown parsing so the banner can be hoisted out and rendered
+// by <WelcomeBanner> (with animated stars) instead of a generic <img>.
+const WELCOME_BANNER_MD_REGEX = /!\[([^\]]*)\]\(([^)\s]*\/api\/welcome-banner[^)\s]*)\)/;
+
 export default function MessageContent({ content }: { content: string }) {
   const { memberList, serverEmojis } = useChatStore();
 
@@ -126,16 +163,25 @@ export default function MessageContent({ content }: { content: string }) {
     };
   }, [content]);
 
+  // Detect and hoist the welcome banner markdown image. Relative URLs don't
+  // match `extractUrls` (which requires http(s)://), so the generic strip
+  // pipeline above misses it. We parse it out ourselves.
+  const welcomeBanner = useMemo(() => {
+    const m = content.match(WELCOME_BANNER_MD_REGEX);
+    if (!m) return null;
+    return { alt: m[1], src: m[2], raw: m[0] };
+  }, [content]);
+
   const bodyContent = useMemo(() => {
     const toStrip = [...imageUrls, ...videoUrls, ...audioUrls];
-    if (toStrip.length === 0) return content;
     let stripped = content;
+    if (welcomeBanner) stripped = stripped.split(welcomeBanner.raw).join('');
     for (const url of toStrip) {
       stripped = stripped.split(url).join('');
     }
     // collapse stray whitespace/newlines left behind
     return stripped.replace(/\n{3,}/g, '\n\n').trim();
-  }, [content, imageUrls, videoUrls, audioUrls]);
+  }, [content, imageUrls, videoUrls, audioUrls, welcomeBanner]);
 
   // Resolve `:name:` shortcodes before markdown parsing. Unicode shortcodes
   // are replaced inline (no placeholder — the char is just a char), while
@@ -261,6 +307,11 @@ export default function MessageContent({ content }: { content: string }) {
         >
           {text}
         </ReactMarkdown>
+      )}
+      {/* Welcome bot banner — hoisted so it renders with animated stars
+          instead of as a generic markdown <img>. */}
+      {welcomeBanner && (
+        <WelcomeBanner src={welcomeBanner.src} alt={welcomeBanner.alt} />
       )}
       {/* Image matrix hoisted out of the body text */}
       {imageUrls.length > 0 && <ImageGallery urls={imageUrls} />}

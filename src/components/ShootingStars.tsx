@@ -13,7 +13,18 @@ interface Star {
   interval: number;
 }
 
-export default function ShootingStars() {
+interface ShootingStarsProps {
+  /**
+   * When true, the canvas sizes to its containing element (absolute inset-0)
+   * instead of the viewport. Use this to drop the effect inside a card, like
+   * the welcome bot banner.
+   */
+  contained?: boolean;
+  /** How many streaks to pool at once. Defaults to 5. */
+  count?: number;
+}
+
+export default function ShootingStars({ contained = false, count = 5 }: ShootingStarsProps = {}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [mounted, setMounted] = useState(false);
 
@@ -29,17 +40,31 @@ export default function ShootingStars() {
 
     let animId: number;
     const stars: Star[] = [];
-    const STAR_COUNT = 5;
+    const STAR_COUNT = count;
     const ANGLE = (155 * Math.PI) / 180; // top-right to bottom-left
     const cosA = Math.cos(ANGLE);
     const sinA = Math.sin(ANGLE);
 
+    // In contained mode we follow the parent's size via ResizeObserver so the
+    // canvas always matches its card. In viewport mode we just track window.
+    const parent = contained ? canvas.parentElement : null;
     function resize() {
-      canvas!.width = window.innerWidth;
-      canvas!.height = window.innerHeight;
+      if (contained && parent) {
+        canvas!.width = parent.clientWidth;
+        canvas!.height = parent.clientHeight;
+      } else {
+        canvas!.width = window.innerWidth;
+        canvas!.height = window.innerHeight;
+      }
     }
     resize();
-    window.addEventListener('resize', resize);
+    let ro: ResizeObserver | null = null;
+    if (contained && parent && typeof ResizeObserver !== 'undefined') {
+      ro = new ResizeObserver(() => resize());
+      ro.observe(parent);
+    } else {
+      window.addEventListener('resize', resize);
+    }
 
     function resetStar(s: Star) {
       s.active = false;
@@ -123,16 +148,21 @@ export default function ShootingStars() {
 
     return () => {
       cancelAnimationFrame(animId);
-      window.removeEventListener('resize', resize);
+      if (ro) ro.disconnect();
+      else window.removeEventListener('resize', resize);
     };
-  }, [mounted]);
+  }, [mounted, contained, count]);
 
   if (!mounted) return null;
 
   return (
     <canvas
       ref={canvasRef}
-      className="fixed inset-0 pointer-events-none z-0"
+      className={
+        contained
+          ? 'absolute inset-0 pointer-events-none w-full h-full'
+          : 'fixed inset-0 pointer-events-none z-0'
+      }
       aria-hidden="true"
     />
   );
