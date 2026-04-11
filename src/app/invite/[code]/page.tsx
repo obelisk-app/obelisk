@@ -1,7 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useAuthStore } from '@/store/auth';
+import LoginModal from '@/components/LoginModal';
 
 interface ServerInfo {
   id: string;
@@ -14,10 +16,22 @@ interface ServerInfo {
 export default function InvitePage() {
   const { code } = useParams<{ code: string }>();
   const router = useRouter();
+  const { isConnected, restoreSession } = useAuthStore();
   const [server, setServer] = useState<ServerInfo | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
+  const pendingJoinRef = useRef(false);
+  const sessionCheckStarted = useRef(false);
+
+  // Restore session on mount so we know whether the user is already logged in.
+  useEffect(() => {
+    if (sessionCheckStarted.current) return;
+    sessionCheckStarted.current = true;
+    restoreSession().finally(() => setAuthChecked(true));
+  }, [restoreSession]);
 
   useEffect(() => {
     fetch(`/api/invitations/${code}`)
@@ -34,7 +48,7 @@ export default function InvitePage() {
       .finally(() => setLoading(false));
   }, [code]);
 
-  const handleJoin = async () => {
+  const performJoin = async () => {
     setJoining(true);
     setError('');
     try {
@@ -42,6 +56,11 @@ export default function InvitePage() {
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
+        if (res.status === 401) {
+          // Session expired or missing — prompt login.
+          setShowLogin(true);
+          return;
+        }
         if (data.banned) {
           setError(
             data.reason
@@ -68,7 +87,26 @@ export default function InvitePage() {
     }
   };
 
-  if (loading) {
+  const handleJoin = async () => {
+    if (!isConnected) {
+      // Not logged in — open the login modal and queue the join to run
+      // automatically once authentication succeeds.
+      pendingJoinRef.current = true;
+      setShowLogin(true);
+      return;
+    }
+    await performJoin();
+  };
+
+  const handleLoginSuccess = () => {
+    setShowLogin(false);
+    if (pendingJoinRef.current) {
+      pendingJoinRef.current = false;
+      void performJoin();
+    }
+  };
+
+  if (loading || !authChecked) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-lc-black">
         <div className="lc-spinner" style={{ width: 32, height: 32 }} />
@@ -103,6 +141,12 @@ export default function InvitePage() {
         <h2 className="text-xl font-bold text-lc-white mb-1">{server?.name}</h2>
         <p className="text-sm text-lc-muted mb-4">{server?._count.members} members</p>
 
+        {!isConnected && (
+          <p className="text-xs text-lc-muted mb-3">
+            You need to log in or create an account to accept this invitation.
+          </p>
+        )}
+
         {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
 
         <button
@@ -111,9 +155,22 @@ export default function InvitePage() {
           className="lc-pill-primary px-6 py-2.5 text-sm font-medium w-full disabled:opacity-50"
           data-testid="accept-invite-btn"
         >
-          {joining ? 'Joining...' : 'Accept Invite'}
+          {joining
+            ? 'Joining...'
+            : isConnected
+            ? 'Accept Invite'
+            : 'Log in to Accept Invite'}
         </button>
       </div>
+
+      <LoginModal
+        isOpen={showLogin}
+        onClose={() => {
+          setShowLogin(false);
+          pendingJoinRef.current = false;
+        }}
+        onSuccess={handleLoginSuccess}
+      />
     </div>
   );
 }
