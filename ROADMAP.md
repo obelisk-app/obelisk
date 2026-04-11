@@ -77,6 +77,11 @@
   - [ ] Selector de template al crear un nuevo servidor desde /admin → "+ New Server" (incluye opción "Empty / Custom")
   - [ ] **Custom templates** — el admin puede guardar la estructura actual de un servidor como template propio y reutilizarla
   - [ ] Aplicar template a un servidor existente (merge no destructivo: solo agrega canales/categorías que no existen)
+- [ ] **Designar un canal como "welcome channel" desde /admin** — hoy el mensaje de bienvenida automático está acoplado a un canal hardcoded; debería ser configurable
+  - [ ] Campo `Server.welcomeChannelId` (FK opcional a `Channel`) editable desde /admin → Settings → "Welcome channel" (dropdown con los canales de texto del server)
+  - [ ] El job que postea el mensaje de bienvenida (banner + saludo) lee `welcomeChannelId`; si es null, no postea nada
+  - [ ] Preview del mensaje de bienvenida en /admin con el avatar/nombre del último miembro como ejemplo
+  - [ ] Validación: si el canal seleccionado se borra, `welcomeChannelId` se setea a null automáticamente (onDelete SET NULL)
 - [ ] **Admin panel — mejoras de UX para gestionar canales y roles**
   - [ ] Drag & drop para reordenar canales y categorías directamente en /admin (hoy hay que usar inputs de posición numéricos)
   - [ ] Edición inline del nombre, tipo, descripción y permisos de un canal sin abrir un modal
