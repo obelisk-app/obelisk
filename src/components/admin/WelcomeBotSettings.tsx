@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { getWelcomeTemplate } from '@/lib/welcome-templates';
 import type { Locale } from '@/i18n';
 
 interface TextChannelOption {
@@ -84,15 +83,6 @@ export default function WelcomeBotSettings({
     if (previewMember?.picture) params.set('picture', previewMember.picture);
     return `/api/welcome-banner?${params.toString()}`;
   }, [previewDisplayName, previewMember?.picture]);
-  const previewContent = useMemo(
-    () =>
-      getWelcomeTemplate(previewLocale, {
-        displayName: previewDisplayName,
-        bannerUrl: previewBannerUrl,
-        serverName,
-      }),
-    [previewLocale, previewDisplayName, previewBannerUrl, serverName]
-  );
 
   const disabled = channelId === '';
 
@@ -183,12 +173,61 @@ export default function WelcomeBotSettings({
           </div>
         ) : (
           <div
-            className="rounded-lg border border-lc-border bg-lc-black/60 p-4 space-y-2"
+            className="rounded-lg border border-lc-border bg-lc-black/60 p-4 space-y-3"
             data-testid="welcome-preview"
           >
-            <pre className="whitespace-pre-wrap break-words text-xs text-lc-white font-sans">
-              {previewContent}
-            </pre>
+            {/* Rendered preview — mirrors how the bot actually posts */}
+            <div className="flex items-start gap-3">
+              {previewMember?.picture ? (
+                <img
+                  src={previewMember.picture}
+                  alt={previewDisplayName}
+                  className="w-8 h-8 rounded-full object-cover shrink-0"
+                  data-testid="welcome-preview-avatar"
+                />
+              ) : (
+                <div
+                  className="w-8 h-8 rounded-full bg-lc-olive flex items-center justify-center text-lc-green text-xs font-semibold shrink-0"
+                  data-testid="welcome-preview-avatar-fallback"
+                >
+                  {previewDisplayName[0]?.toUpperCase() || '?'}
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="text-sm text-lc-white">
+                  <span className="font-semibold">@{previewDisplayName}</span>
+                  {previewLocale === 'en'
+                    ? ' welcome to '
+                    : ' bienvenid@ a '}
+                  <span className="font-semibold">{serverName}</span>{' '}
+                  🥳
+                </div>
+              </div>
+            </div>
+
+            {/* The actual rendered welcome banner — this is what the bot
+                posts. It's a live request to /api/welcome-banner so the
+                admin sees the real image the joining user would see. */}
+            <img
+              src={previewBannerUrl}
+              alt={`Welcome banner for ${previewDisplayName}`}
+              className="w-full rounded-lg border border-lc-border/60"
+              data-testid="welcome-preview-banner"
+            />
+
+            {previewMember ? (
+              <p className="text-[11px] text-lc-muted">
+                Using{' '}
+                <span className="text-lc-white">{previewDisplayName}</span>
+                {previewMember.picture ? "'s profile picture" : ' (no picture set)'}
+                {' '}as the example.
+              </p>
+            ) : (
+              <p className="text-[11px] text-lc-muted">
+                No members yet — showing a generic placeholder.
+              </p>
+            )}
+
             <p className="text-[11px] text-lc-muted pt-1 border-t border-lc-border/60">
               Click <span className="text-lc-green font-medium">Save Changes</span> below to apply.
             </p>
