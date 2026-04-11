@@ -50,7 +50,7 @@ function getReq() {
   return new NextRequest('http://localhost/api/admin/channels/ch1/system-messages');
 }
 
-const params = Promise.resolve({ channelId: 'ch1' });
+const params = Promise.resolve({ id: 'ch1' });
 
 const adminActor = {
   id: 'm-admin',
