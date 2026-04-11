@@ -15,6 +15,13 @@ export const ALLOWED_IMAGE_TYPES = [
   'image/webp',
 ] as const;
 
+export const ALLOWED_VIDEO_TYPES = [
+  'video/mp4',
+  'video/webm',
+  'video/quicktime', // .mov
+  'video/ogg',
+] as const;
+
 export const ALLOWED_DOC_TYPES = [
   'application/pdf',
   'text/plain',
@@ -27,13 +34,25 @@ export const ALLOWED_DOC_TYPES = [
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 ] as const;
 
-export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10 MB
+// No compression/transcoding is done — files are written byte-for-byte.
+// Per-category caps below are enforced at upload time. `MAX_UPLOAD_BYTES`
+// is the overall ceiling used as a fallback and for back-compat.
+export const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10 MB
+export const MAX_VIDEO_BYTES = 50 * 1024 * 1024; // 50 MB
+export const MAX_DOC_BYTES = 25 * 1024 * 1024; // 25 MB
+export const MAX_UPLOAD_BYTES = MAX_VIDEO_BYTES; // overall ceiling
+
+export const MAX_ATTACHMENTS_PER_MESSAGE = 10;
 
 const EXT_BY_MIME: Record<string, string> = {
   'image/png': 'png',
   'image/jpeg': 'jpg',
   'image/gif': 'gif',
   'image/webp': 'webp',
+  'video/mp4': 'mp4',
+  'video/webm': 'webm',
+  'video/quicktime': 'mov',
+  'video/ogg': 'ogv',
   'application/pdf': 'pdf',
   'text/plain': 'txt',
   'text/markdown': 'md',
@@ -48,12 +67,37 @@ const EXT_BY_MIME: Record<string, string> = {
 export function isAllowedMime(mime: string): boolean {
   return (
     (ALLOWED_IMAGE_TYPES as readonly string[]).includes(mime) ||
+    (ALLOWED_VIDEO_TYPES as readonly string[]).includes(mime) ||
     (ALLOWED_DOC_TYPES as readonly string[]).includes(mime)
   );
 }
 
 export function isImageMime(mime: string): boolean {
   return (ALLOWED_IMAGE_TYPES as readonly string[]).includes(mime);
+}
+
+export function isVideoMime(mime: string): boolean {
+  return (ALLOWED_VIDEO_TYPES as readonly string[]).includes(mime);
+}
+
+/**
+ * Per-category byte cap. Falls back to the overall ceiling for unknown mimes
+ * (which should never hit if `isAllowedMime` passed, but guards the math).
+ */
+export function maxBytesFor(mime: string): number {
+  if (isImageMime(mime)) return MAX_IMAGE_BYTES;
+  if (isVideoMime(mime)) return MAX_VIDEO_BYTES;
+  if ((ALLOWED_DOC_TYPES as readonly string[]).includes(mime)) return MAX_DOC_BYTES;
+  return MAX_UPLOAD_BYTES;
+}
+
+/**
+ * Does this URL look like a hosted video? Used by MessageContent to hoist
+ * video uploads out of the body and render them with <video controls>.
+ */
+const VIDEO_EXT_REGEX = /\.(mp4|webm|mov|ogv)(\?.*)?$/i;
+export function isVideoUrl(url: string): boolean {
+  return VIDEO_EXT_REGEX.test(url);
 }
 
 export function extensionFor(mime: string, fallbackName?: string): string {

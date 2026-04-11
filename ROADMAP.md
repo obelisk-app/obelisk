@@ -13,6 +13,21 @@
 - [x] Design badass — dark theme, animaciones, glows, glassmorphism, La Crypta aesthetic
 - [x] Responsive (mobile/desktop)
 
+## ⚡ PRIORIDAD — i18n de toda la app (por usuario)
+> Hoy solo la landing page esta traducida (ES/EN). El resto de la app (chat, admin, moderacion, foros, settings, modales, toasts, errores) esta en una mezcla de espanol e ingles hardcodeada. Hay que migrar todos los strings a i18n y que cada usuario tenga su propio idioma persistido.
+
+- [ ] Auditoria: listar todos los strings hardcodeados en `src/components/**`, `src/app/**`, toasts, errores de API, placeholders, tooltips, aria-labels
+- [ ] Reusar la infraestructura i18n existente de la landing (mismo provider, mismos archivos `es.json`/`en.json`) y extenderla a toda la app
+- [ ] Namespaces por area: `chat`, `admin`, `moderation`, `forum`, `settings`, `auth`, `common`, `errors` — para no tener un unico diccionario gigante
+- [ ] Migracion incremental por area (chat → admin → moderation → forum → settings → modales/toasts → mensajes de error del backend)
+- [ ] **Deteccion de idioma inicial por IP en el primer login** — endpoint server-side que resuelve el pais via IP (Cloudflare `CF-IPCountry` header o similar) y mapea a idioma default (ej: AR/ES/MX/CL/UY/... → `es`, resto → `en`). Se setea al crear el `Member`/`User` la primera vez
+- [ ] Fallback al `Accept-Language` del browser si la IP no resuelve
+- [ ] **Preferencia de idioma por usuario persistida en DB** — nuevo campo `User.language` (o `Member.language` si es per-server, pero preferir per-user global) — default se llena con la deteccion por IP en el primer login
+- [ ] Selector de idioma en `/settings` (o menu de usuario) que actualiza `User.language` via PATCH y refresca la UI en caliente sin recargar
+- [ ] El idioma del usuario tiene precedencia sobre cualquier default del servidor (el "idioma canonico del servidor" de Fase 2 sigue aplicando solo para mensajes del sistema generados por el server, no para la UI del cliente)
+- [ ] SSR-friendly: el layout raiz lee `User.language` de la sesion y setea `<html lang>` + hidrata el provider con el idioma correcto para evitar flash de idioma incorrecto
+- [ ] Tests: deteccion por IP con headers mockeados, fallback a Accept-Language, PATCH de preferencia, render de componentes clave en ES y EN, no quedan strings hardcodeados en los archivos migrados (lint rule o test de snapshot por locale)
+
 ## ⚡ PRIORIDAD — Cache de perfiles Nostr
 > Los perfiles (avatar, nombre, NIP-05) se traen de relays en cada render. Hay que cachearlos localmente.
 
@@ -230,9 +245,14 @@
     - [ ] Render en `MessageContent`: reemplazar `:name:` por el emoji correspondiente en el texto
     - [ ] Emojis custom por servidor (tabla `ServerEmoji { serverId, name, url }`, admin UI para subir, render como `<img>` inline)
     - [ ] Reacciones usando shortcodes custom del servidor ademas de unicode
+  - [x] **Videos** (MP4, WebM, MOV, OGV) con reproductor inline (`<video controls>`) hoisted del body igual que las imagenes
+  - [x] Preview de video en el chip de adjuntos pendientes (thumb del frame 0 + overlay play)
+  - [x] **Caps por categoria** en `src/lib/attachments.ts`: imagenes 10 MB, videos 50 MB, documentos 25 MB (`maxBytesFor(mime)` enforced en el endpoint)
+  - [x] **Maximo 10 archivos por mensaje** (`MAX_ATTACHMENTS_PER_MESSAGE`), enforced en client con error message si se sobrepasa
   - [ ] Drag & drop de archivos sobre el message input
-  - [ ] Preview inline de videos y audio
-  - [ ] Limites configurables de tamaño por servidor (hoy hardcodeado a 10 MB en `src/lib/attachments.ts`)
+  - [ ] Preview inline de audio (hoy solo imagenes + videos)
+  - [ ] **Compresion / transcoding**: hoy los archivos se guardan byte-por-byte. Futuro: recomprimir imagenes grandes con sharp, re-encodear/thumbnailear videos con ffmpeg, strip EXIF
+  - [ ] Limites configurables **por servidor** (hoy son constantes globales en `attachments.ts`)
   - [ ] Allowlist de tipos configurable por servidor (hoy hardcodeada)
   - [ ] Subida multiple con progreso **individual** (hoy hay spinner agregado, no por-archivo)
   - [ ] Thumbnails para documentos (preview de primera pagina de PDFs)

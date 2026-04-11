@@ -5,6 +5,7 @@ import { useChatStore } from '@/store/chat';
 import { filterMembers, serializeMention, MemberInfo } from '@/lib/mentions';
 import MentionAutocomplete from './MentionAutocomplete';
 import EmojiPicker from './EmojiPicker';
+import { MAX_ATTACHMENTS_PER_MESSAGE } from '@/lib/attachments';
 
 interface MessageInputProps {
   onSend: (content: string, replyToId?: string) => void;
@@ -19,6 +20,7 @@ interface PendingAttachment {
   type: string;
   size: number;
   isImage: boolean;
+  isVideo: boolean;
 }
 
 export default function MessageInput({ onSend, onEditSave, onTyping }: MessageInputProps) {
@@ -68,12 +70,12 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
   }, [editingMessage]);
 
   const buildPayload = (): string => {
-    // Attachments are serialized into the message body: images as bare URLs
-    // (picked up by the inline image renderer), docs as markdown links
-    // (rendered as AttachmentCard). Keeping this in `content` means the
-    // backend doesn't need a separate column — a pragmatic choice for now.
+    // Attachments are serialized into the message body: images & videos as
+    // bare URLs (picked up by the inline media renderers), docs as markdown
+    // links (rendered as AttachmentCard). Keeping this in `content` means
+    // the backend doesn't need a separate column — pragmatic for now.
     const attachmentLines = attachments.map((a) =>
-      a.isImage ? a.url : `[${a.name}](${a.url})`,
+      a.isImage || a.isVideo ? a.url : `[${a.name}](${a.url})`,
     );
     const text = content.trim();
     if (attachmentLines.length === 0) return text;
@@ -221,6 +223,7 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
         size: number;
         type: string;
         isImage: boolean;
+        isVideo: boolean;
       } = await res.json();
       setAttachments((prev) => [
         ...prev,
@@ -231,6 +234,7 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
           type: data.type,
           size: data.size,
           isImage: data.isImage,
+          isVideo: data.isVideo,
         },
       ]);
     } catch (err) {
@@ -241,10 +245,26 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
   const uploadFiles = async (files: File[]) => {
     if (files.length === 0) return;
     setUploadError(null);
+
+    // Enforce the per-message attachment cap before hitting the network.
+    const remaining = MAX_ATTACHMENTS_PER_MESSAGE - attachments.length;
+    if (remaining <= 0) {
+      setUploadError(
+        `Máximo ${MAX_ATTACHMENTS_PER_MESSAGE} archivos por mensaje`,
+      );
+      return;
+    }
+    const accepted = files.slice(0, remaining);
+    if (files.length > remaining) {
+      setUploadError(
+        `Solo se aceptaron ${remaining} archivos (máximo ${MAX_ATTACHMENTS_PER_MESSAGE} por mensaje)`,
+      );
+    }
+
     setUploading(true);
     try {
       // Upload in parallel — backend is stateless per request.
-      await Promise.all(files.map((f) => uploadFile(f)));
+      await Promise.all(accepted.map((f) => uploadFile(f)));
     } finally {
       setUploading(false);
     }
@@ -366,6 +386,21 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
                     alt={a.name}
                     className="w-20 h-20 object-cover"
                   />
+                ) : a.isVideo ? (
+                  <div className="relative w-20 h-20">
+                    <video
+                      src={a.url}
+                      muted
+                      playsInline
+                      preload="metadata"
+                      className="w-20 h-20 object-cover bg-lc-black"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="white" className="drop-shadow">
+                        <polygon points="6 4 20 12 6 20 6 4" />
+                      </svg>
+                    </div>
+                  </div>
                 ) : (
                   <div className="w-36 h-20 flex items-center gap-2 px-2">
                     <div className="shrink-0 w-9 h-9 rounded bg-lc-border/60 flex items-center justify-center">

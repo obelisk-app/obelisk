@@ -5,7 +5,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkSpoiler from '@/lib/remark-spoiler';
 import { preprocessForMarkdown, MENTION_PLACEHOLDER_REGEX, isImageUrl, extractYouTubeId, extractUrls } from '@/lib/markdown';
-import { isUploadUrl, filenameFromUrl } from '@/lib/attachments';
+import { isUploadUrl, filenameFromUrl, isVideoUrl } from '@/lib/attachments';
 import { useChatStore } from '@/store/chat';
 import type { MemberInfo } from '@/lib/mentions';
 import SpoilerText from './SpoilerText';
@@ -60,32 +60,43 @@ function renderWithMentions(text: string, mentions: Map<string, { pubkey: string
 export default function MessageContent({ content }: { content: string }) {
   const { memberList } = useChatStore();
 
-  // Hoist image URLs out of the message body so we can render them as a
-  // single gallery grid below the text (Discord-style matrix). Without this
-  // each image would render inline wherever its URL appears.
-  const imageUrls = useMemo(() => {
-    return extractUrls(content).filter(isImageUrl);
+  // Hoist image + video URLs out of the message body so we can render them
+  // as a gallery / inline player below the text. Without this, each URL
+  // would render inline wherever it appears in the markdown.
+  const { imageUrls, videoUrls } = useMemo(() => {
+    const urls = extractUrls(content);
+    return {
+      imageUrls: urls.filter(isImageUrl),
+      videoUrls: urls.filter(isVideoUrl),
+    };
   }, [content]);
 
   const bodyContent = useMemo(() => {
-    if (imageUrls.length === 0) return content;
+    const toStrip = [...imageUrls, ...videoUrls];
+    if (toStrip.length === 0) return content;
     let stripped = content;
-    for (const url of imageUrls) {
+    for (const url of toStrip) {
       stripped = stripped.split(url).join('');
     }
     // collapse stray whitespace/newlines left behind
     return stripped.replace(/\n{3,}/g, '\n\n').trim();
-  }, [content, imageUrls]);
+  }, [content, imageUrls, videoUrls]);
 
   const { text, mentions } = useMemo(
     () => preprocessForMarkdown(bodyContent, memberList as MemberInfo[]),
     [bodyContent, memberList]
   );
 
-  // Collect non-image, non-youtube, non-upload URLs for link previews
+  // Collect non-image, non-video, non-youtube, non-upload URLs for link previews
   const previewUrls = useMemo(() => {
     const urls = extractUrls(bodyContent);
-    return urls.filter(u => !isImageUrl(u) && !extractYouTubeId(u) && !isUploadUrl(u));
+    return urls.filter(
+      (u) =>
+        !isImageUrl(u) &&
+        !isVideoUrl(u) &&
+        !extractYouTubeId(u) &&
+        !isUploadUrl(u),
+    );
   }, [bodyContent]);
 
   const components: Components = useMemo(() => ({
@@ -189,6 +200,17 @@ export default function MessageContent({ content }: { content: string }) {
       )}
       {/* Image matrix hoisted out of the body text */}
       {imageUrls.length > 0 && <ImageGallery urls={imageUrls} />}
+      {/* Videos: inline native player, one per video */}
+      {videoUrls.map((url) => (
+        <video
+          key={url}
+          src={url}
+          controls
+          preload="metadata"
+          className="mt-1 max-w-sm max-h-80 rounded-lg bg-lc-black/50"
+          data-testid="video-player"
+        />
+      ))}
       {/* Link previews for non-image, non-youtube URLs */}
       {previewUrls.map((url) => (
         <LinkPreview key={url} url={url} />

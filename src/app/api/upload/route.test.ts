@@ -91,6 +91,21 @@ describe('POST /api/upload', () => {
     expect(readdirSync(uploadDir).some((f) => f.endsWith('.png'))).toBe(true);
   });
 
+  it('accepts mp4 video', async () => {
+    mockAuth.mockResolvedValue('pub1');
+    const fd = new FormData();
+    fd.append(
+      'file',
+      new File([new Uint8Array([0, 0, 0, 0x20])], 'clip.mp4', { type: 'video/mp4' }),
+    );
+    const res = await POST(makeRequest(fd));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.isVideo).toBe(true);
+    expect(body.isImage).toBe(false);
+    expect(body.url.endsWith('.mp4')).toBe(true);
+  });
+
   it('accepts pdf document', async () => {
     mockAuth.mockResolvedValue('pub1');
     const fd = new FormData();

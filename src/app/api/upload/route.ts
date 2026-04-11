@@ -4,10 +4,11 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { getAuthPubkey } from '@/lib/api-auth';
 import {
-  MAX_UPLOAD_BYTES,
   extensionFor,
   isAllowedMime,
   isImageMime,
+  isVideoMime,
+  maxBytesFor,
 } from '@/lib/attachments';
 
 export const runtime = 'nodejs';
@@ -38,16 +39,18 @@ export async function POST(req: NextRequest) {
   if (file.size === 0) {
     return NextResponse.json({ error: 'Empty file' }, { status: 400 });
   }
-  if (file.size > MAX_UPLOAD_BYTES) {
-    return NextResponse.json(
-      { error: `File exceeds ${MAX_UPLOAD_BYTES} bytes` },
-      { status: 413 },
-    );
-  }
   if (!isAllowedMime(file.type)) {
     return NextResponse.json(
       { error: `Unsupported file type: ${file.type || 'unknown'}` },
       { status: 415 },
+    );
+  }
+  const cap = maxBytesFor(file.type);
+  if (file.size > cap) {
+    const capMb = Math.round(cap / (1024 * 1024));
+    return NextResponse.json(
+      { error: `File exceeds ${capMb} MB limit for this type` },
+      { status: 413 },
     );
   }
 
@@ -69,5 +72,6 @@ export async function POST(req: NextRequest) {
     size: file.size,
     type: file.type,
     isImage: isImageMime(file.type),
+    isVideo: isVideoMime(file.type),
   });
 }
