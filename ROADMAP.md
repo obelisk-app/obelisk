@@ -64,6 +64,7 @@
     - [ ] Nuevo modelo `Role { id, serverId, name, color, icon, priority }` y tabla pivote `MemberRole { memberId, roleId }` (un miembro puede tener varios roles custom + el role base owner/admin/mod/member)
     - [ ] CRUD de roles desde /admin → nueva tab "Roles" (crear, editar, borrar, reordenar, asignar a miembros)
     - [ ] Badges de roles custom visibles en el sidebar de miembros y en los mensajes (al lado del nombre)
+    - [ ] **Member list agrupada por rol (estilo Discord)** — el sidebar lateral de miembros se separa en secciones por rol, ordenadas por `priority`. Cada sección muestra el nombre del rol + conteo de miembros online en ese rol (ej: "Owner — 1", "Gold — 12", "Members — 47", "Offline — 23"). Un miembro aparece bajo su rol custom de mayor prioridad (los roles base owner/admin/mod cuentan como secciones también si no tiene custom). Sección "Offline" colapsable al final.
   - [ ] **Permisos configurables por rol** — matriz de permisos (quien puede crear canales, invitar, kickear, banear, mutear, gestionar roles, gestionar webhooks, etc.) editable desde /admin
   - [ ] **Canales privados por rol (read-access gating)** — además del `writePermission` ya planeado, agregar `readPermission`/`allowedRoleIds` por canal
     - [ ] Schema: `Channel.allowedRoleIds String[]` (vacío = visible para todos los miembros). Si tiene roles, solo miembros con al menos uno de esos roles pueden listarlo, conectarse al socket room, y leer mensajes
@@ -193,6 +194,14 @@
   > ⚠️ **CUIDADO:** Publicar un kind 0 (metadata) sobreescribe TODA la metadata del usuario en los relays. Antes de implementar: (1) siempre leer el kind 0 actual del usuario, (2) mergear solo los campos editados, (3) mostrar preview/diff antes de publicar, (4) pedir confirmacion explicita, (5) nunca enviar campos vacios que borren datos existentes. Un campo mal enviado puede destruir avatar, bio, NIP-05 del usuario en todo Nostr.
 - [ ] Exportar conversaciones (JSON / texto plano)
 - [ ] Bots / integraciones
+  - [ ] **Compatibilidad con bots de Discord existentes** — que un bot escrito para Discord pueda apuntar a Obelisk cambiando solo el endpoint, sin reescribir el código
+    - [ ] Implementar un subset del Discord REST API v10 bajo `/api/discord/v10/*` (gateway-compatible shapes para `Guild`, `Channel`, `Message`, `Member`, `Role`, `User`) que mapea contra los modelos internos de Obelisk
+    - [ ] Implementar un Gateway WebSocket compatible (opcodes 0/1/2/10/11 mínimo: dispatch, heartbeat, identify, hello, heartbeat ack) que reemite eventos `MESSAGE_CREATE`, `MESSAGE_UPDATE`, `MESSAGE_DELETE`, `GUILD_MEMBER_ADD`, `INTERACTION_CREATE`, etc. desde Socket.io
+    - [ ] Bot tokens: nuevo modelo `BotAccount { id, serverId, name, token, ownerPubkey, permissions }` — generables desde /admin → tab "Bots", el bot autentica con `Authorization: Bot <token>` igual que Discord
+    - [ ] Mapeo de IDs: snowflake-like IDs (string) en la capa compat para no romper bots que asumen IDs numéricos largos; tabla de traducción interna `discord_id ↔ obelisk_id`
+    - [ ] Soporte para slash commands / interactions (subset de application commands) para que bots de música, moderación, polls, etc. funcionen out of the box
+    - [ ] Documentar incompatibilidades conocidas (features de Discord no soportadas: stages, threads de Discord, stickers, etc.) en `docs/discord-bot-compat.md`
+    - [ ] Test de smoke: correr un bot público popular (ej: un bot de polls minimal) contra Obelisk y validar que funciona sin cambios de código
 - [x] Busqueda de mensajes (Discord-style: from:, in:, has:, before:, after:, mentions:, "exact phrases")
 - [ ] Upload de archivos/media
   - [ ] Drag & drop y boton de adjuntar en el message input
