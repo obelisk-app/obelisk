@@ -212,12 +212,31 @@
     - [ ] Documentar incompatibilidades conocidas (features de Discord no soportadas: stages, threads de Discord, stickers, etc.) en `docs/discord-bot-compat.md`
     - [ ] Test de smoke: correr un bot público popular (ej: un bot de polls minimal) contra Obelisk y validar que funciona sin cambios de código
 - [x] Busqueda de mensajes (Discord-style: from:, in:, has:, before:, after:, mentions:, "exact phrases")
-- [ ] Upload de archivos/media
-  - [ ] Drag & drop y boton de adjuntar en el message input
-  - [ ] Preview inline de imagenes, videos y audio
-  - [ ] Soporte para archivos genericos (PDF, ZIP, etc.) con icono y descarga
-  - [ ] Limites configurables de tamaño por servidor
-  - [ ] Almacenamiento en el servidor del host (no depende de servicios externos)
+- [~] Upload de archivos/media
+  - [x] Boton de adjuntar en el message input (menu "+", opcion "Subir un archivo")
+  - [x] Subida **multiple** (file input con `multiple`, paste de multiples items, upload en paralelo)
+  - [x] Paste de imagenes desde el portapapeles (Cmd/Ctrl+V)
+  - [x] Preview chips **antes de enviar** (thumbnails + tarjetas de doc con boton X para remover cada adjunto)
+  - [x] Preview inline de imagenes (via `MessageContent` / `isImageUrl`, con URL crudo oculto)
+  - [x] **Matrix dinamica de imagenes estilo Discord** (`ImageGallery`): 1 grande, 2 lado a lado, 3 (1 grande + 2 stack), 4 en 2x2; 5+ muestra las primeras 4 con overlay "+N" y abre lightbox
+  - [x] **Lightbox / carousel** con flechas prev/next, teclado (← → Esc), contador "n / total"
+  - [x] Soporte para archivos genericos (PDF, DOC, ZIP, TXT, etc.) renderizados como `AttachmentCard` con icono y descarga
+  - [x] Almacenamiento en el servidor del host (`public/uploads/`, sirve via `/uploads/<name>`)
+  - [x] Emoji picker (curated unicode, sin dependencias externas)
+  - [x] **Busqueda bilingue en el emoji picker** (keywords EN + ES, accent-insensitive)
+  - [ ] **Shortcodes `:name:` para emojis** — autocomplete al tipear `:smi...` con sugerencias, reemplazo al enviar (compat con formato tipo Discord/Slack). Soportar tanto unicode (`:smile:` → 😄) como emojis custom del servidor (imagenes subidas, estilo `:partyparrot:`)
+    - [ ] Dataset de shortcodes → unicode (reutilizar keywords del `EmojiPicker` o importar una tabla estandar)
+    - [ ] Autocomplete inline en `MessageInput` (disparo al tipear `:`, similar al de menciones)
+    - [ ] Render en `MessageContent`: reemplazar `:name:` por el emoji correspondiente en el texto
+    - [ ] Emojis custom por servidor (tabla `ServerEmoji { serverId, name, url }`, admin UI para subir, render como `<img>` inline)
+    - [ ] Reacciones usando shortcodes custom del servidor ademas de unicode
+  - [ ] Drag & drop de archivos sobre el message input
+  - [ ] Preview inline de videos y audio
+  - [ ] Limites configurables de tamaño por servidor (hoy hardcodeado a 10 MB en `src/lib/attachments.ts`)
+  - [ ] Allowlist de tipos configurable por servidor (hoy hardcodeada)
+  - [ ] Subida multiple con progreso **individual** (hoy hay spinner agregado, no por-archivo)
+  - [ ] Thumbnails para documentos (preview de primera pagina de PDFs)
+  - [ ] Zoom / pan dentro del lightbox (hoy solo contain al viewport)
 
 ## Fase 4 — Polish & Launch
 - [ ] PWA (Progressive Web App) — installable, offline support, service worker
@@ -335,6 +354,41 @@ Despues de completar la experiencia Discord-like (Fases 1-6), construir un clien
 - Un mensaje enviado desde Lite aparece en Obelisk full y viceversa
 - Miembros, roles, bans, mutes — todo compartido
 - El admin gestiona desde Obelisk full, los usuarios usan Lite para chatear
+
+## Fase 8 — Security Audit & Code Quality
+> Deep security review del frontend + refactor de calidad de codigo antes del hackathon. Prerequisito para release publica.
+
+### Security testing (frontend)
+- [ ] Auditoria de XSS — revisar todo `dangerouslySetInnerHTML`, renderizado de markdown, links en mensajes, bios, nombres de canal/servidor
+- [ ] Sanitizacion de contenido de mensajes, emojis custom, attachments, previews de links
+- [ ] CSRF / session hijacking — revisar manejo de session tokens, storage, expiracion
+- [ ] Validacion de firmas Nostr en cliente y servidor (no confiar en `pubkey` del cliente)
+- [ ] Auth bypass — probar acceso a endpoints admin/moderacion sin rol, manipulacion de `serverId` en requests
+- [ ] Rate limiting — mensajes, reacciones, uploads, auth challenges
+- [ ] Upload de archivos — validar tipo/tamaño server-side, revisar path traversal, SVG con scripts
+- [ ] WebSocket — validar auth por conexion, spoofing de eventos, flood protection
+- [ ] Dependencias — `npm audit`, Snyk/Socket.dev, revisar paquetes Nostr/NDK
+- [ ] Leak de pubkeys/metadata de usuarios privados en respuestas API
+- [ ] Content Security Policy (CSP) estricta + headers de seguridad (HSTS, X-Frame-Options, Referrer-Policy)
+- [ ] Pentest manual sobre staging — OWASP Top 10 checklist aplicada a chat apps
+
+### Code quality & refactor
+- [ ] Identificar codigo duplicado en componentes chat/admin/moderacion y extraer a componentes reutilizables
+- [ ] Libreria de componentes UI base (`Button`, `Modal`, `Dialog`, `Input`, `Dropdown`, `Avatar`, `Tooltip`, `Badge`, `Tabs`) con design system La Crypta
+- [ ] Consolidar modales de confirmacion (`ConfirmDialog`, `BanReasonDialog`, etc.) en un componente generico
+- [ ] Custom hooks reutilizables: `useSocket`, `usePermission`, `useServerRole`, `usePagination`, `useDebounce`
+- [ ] Normalizar patrones de fetch — helper unificado con timeout, auth, error handling
+- [ ] Tipado estricto — eliminar `any`, habilitar `strict` + `noUncheckedIndexedAccess` en tsconfig
+- [ ] ESLint + Prettier config endurecida, pre-commit hooks (husky + lint-staged)
+- [ ] Accesibilidad (a11y) — roles ARIA, navegacion por teclado, contraste, screen readers en chat y modales
+
+### Documentacion
+- [ ] `docs/security.md` — modelo de amenazas, mitigaciones, reportar vulnerabilidades
+- [ ] `docs/components.md` — catalogo de componentes reutilizables con props y ejemplos
+- [ ] `docs/architecture.md` — diagrama de auth flow, data flow, socket.io events
+- [ ] `CONTRIBUTING.md` — guia de setup, convenciones de codigo, PR checklist
+- [ ] JSDoc / TSDoc en componentes publicos, hooks y lib functions
+- [ ] Storybook (o Ladle) para componentes reutilizables — opcional pero recomendado
 
 ## Known Bugs
 - [ ] Online users not updating — all users appear as online regardless of actual status

@@ -5,12 +5,15 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkSpoiler from '@/lib/remark-spoiler';
 import { preprocessForMarkdown, MENTION_PLACEHOLDER_REGEX, isImageUrl, extractYouTubeId, extractUrls } from '@/lib/markdown';
+import { isUploadUrl, filenameFromUrl } from '@/lib/attachments';
 import { useChatStore } from '@/store/chat';
 import type { MemberInfo } from '@/lib/mentions';
 import SpoilerText from './SpoilerText';
 import CodeBlock from './CodeBlock';
 import YouTubeEmbed from './YouTubeEmbed';
 import LinkPreview from './LinkPreview';
+import AttachmentCard from './AttachmentCard';
+import ImageGallery from './ImageGallery';
 import type { Components } from 'react-markdown';
 
 function MentionChip({ pubkey, displayName }: { pubkey: string; displayName: string }) {
@@ -57,16 +60,33 @@ function renderWithMentions(text: string, mentions: Map<string, { pubkey: string
 export default function MessageContent({ content }: { content: string }) {
   const { memberList } = useChatStore();
 
+  // Hoist image URLs out of the message body so we can render them as a
+  // single gallery grid below the text (Discord-style matrix). Without this
+  // each image would render inline wherever its URL appears.
+  const imageUrls = useMemo(() => {
+    return extractUrls(content).filter(isImageUrl);
+  }, [content]);
+
+  const bodyContent = useMemo(() => {
+    if (imageUrls.length === 0) return content;
+    let stripped = content;
+    for (const url of imageUrls) {
+      stripped = stripped.split(url).join('');
+    }
+    // collapse stray whitespace/newlines left behind
+    return stripped.replace(/\n{3,}/g, '\n\n').trim();
+  }, [content, imageUrls]);
+
   const { text, mentions } = useMemo(
-    () => preprocessForMarkdown(content, memberList as MemberInfo[]),
-    [content, memberList]
+    () => preprocessForMarkdown(bodyContent, memberList as MemberInfo[]),
+    [bodyContent, memberList]
   );
 
-  // Collect non-image, non-youtube URLs for link previews
+  // Collect non-image, non-youtube, non-upload URLs for link previews
   const previewUrls = useMemo(() => {
-    const urls = extractUrls(content);
-    return urls.filter(u => !isImageUrl(u) && !extractYouTubeId(u));
-  }, [content]);
+    const urls = extractUrls(bodyContent);
+    return urls.filter(u => !isImageUrl(u) && !extractYouTubeId(u) && !isUploadUrl(u));
+  }, [bodyContent]);
 
   const components: Components = useMemo(() => ({
     // Code blocks and inline code
@@ -92,13 +112,10 @@ export default function MessageContent({ content }: { content: string }) {
     a({ href, children }) {
       if (!href) return <>{children}</>;
 
-      // Image URL
+      // Image URL — render only the image, suppress raw URL text
       if (isImageUrl(href)) {
         return (
-          <span>
-            <a href={href} target="_blank" rel="noopener noreferrer" className="text-lc-green/80 hover:underline text-xs break-all">
-              {children}
-            </a>
+          <a href={href} target="_blank" rel="noopener noreferrer" className="block">
             <img
               src={href}
               alt=""
@@ -106,21 +123,19 @@ export default function MessageContent({ content }: { content: string }) {
               className="mt-1 max-w-sm max-h-80 rounded-lg object-contain bg-lc-black/50"
               onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
             />
-          </span>
+          </a>
         );
       }
 
-      // YouTube URL
+      // Uploaded attachment (non-image): render as download card only
+      if (isUploadUrl(href)) {
+        return <AttachmentCard url={href} name={filenameFromUrl(href)} />;
+      }
+
+      // YouTube URL — render only the embed, suppress raw URL text
       const ytId = extractYouTubeId(href);
       if (ytId) {
-        return (
-          <span>
-            <a href={href} target="_blank" rel="noopener noreferrer" className="text-lc-green/80 hover:underline break-all">
-              {children}
-            </a>
-            <YouTubeEmbed videoId={ytId} />
-          </span>
-        );
+        return <YouTubeEmbed videoId={ytId} />;
       }
 
       // Regular link
@@ -162,14 +177,18 @@ export default function MessageContent({ content }: { content: string }) {
 
   return (
     <span data-testid="message-content">
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkSpoiler]}
-        components={components}
-        // Allow our custom spoiler element
-        allowedElements={undefined}
-      >
-        {text}
-      </ReactMarkdown>
+      {text && (
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm, remarkSpoiler]}
+          components={components}
+          // Allow our custom spoiler element
+          allowedElements={undefined}
+        >
+          {text}
+        </ReactMarkdown>
+      )}
+      {/* Image matrix hoisted out of the body text */}
+      {imageUrls.length > 0 && <ImageGallery urls={imageUrls} />}
       {/* Link previews for non-image, non-youtube URLs */}
       {previewUrls.map((url) => (
         <LinkPreview key={url} url={url} />
