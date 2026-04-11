@@ -19,8 +19,9 @@ import VoiceChannel from '@/components/chat/VoiceChannel';
 import { useDMStore } from '@/store/dm';
 import { useVoiceStore } from '@/store/voice';
 import { WebSocketVoiceClient } from '@/lib/voice';
-import { discoverDMThreads, subscribeDMs } from '@/lib/dm';
+import { discoverDMThreads, subscribeDMs, computeUnreadCounts } from '@/lib/dm';
 import type { DMMessage } from '@/lib/dm';
+import { publishInboxRelays } from '@/lib/dm-inbox';
 import { formatPubkey, getNDK, connectNDK } from '@/lib/nostr';
 import { shortNpub } from '@/lib/mentions';
 import {
@@ -391,38 +392,102 @@ export default function ChatPage() {
     });
   }, [activeServerId, servers, profileCache]);
 
-  // Discover existing DM threads from Nostr relays (waits for NDK to be ready)
-  useEffect(() => {
-    if (!ndkReady || !profile?.pubkey) return;
+  // Discover DM threads lazily: we only hit relays (and publish our NIP-17
+  // inbox relay list) the first time the user enters DM mode, not on chat
+  // page mount. Fetching on every chat load would burn signer popups for
+  // users who never open DMs during a session. The ref makes repeated
+  // sidebar toggles a no-op; the refresh button in DMList calls the helper
+  // below directly to force a re-sync.
+  const dmDiscoveryRanRef = useRef(false);
 
-    const dmStore = useDMStore.getState();
-    dmStore.setLoadingThreads(true);
+  const runDMDiscovery = useCallback(
+    async (force = false) => {
+      if (!profile?.pubkey) return;
+      const myPubkey = profile.pubkey;
 
-    discoverDMThreads(profile.pubkey).then((threadMap) => {
-      const threads = Array.from(threadMap.entries())
-        .sort((a, b) => b[1].lastMessageAt - a[1].lastMessageAt)
-        .map(([pubkey, info]) => {
-          const cached = profileCache.get(pubkey);
-          return {
-            pubkey,
-            displayName: cached?.name || formatPubkey(pubkey),
-            picture: cached?.picture,
-            lastMessage: info.lastMessage,
-            lastMessageAt: info.lastMessageAt,
-            unreadCount: 0,
-            protocol: info.protocol,
-          };
+      useDMStore.getState().setLoadingThreads(true);
+
+      const threadsFromMap = (threadMap: Map<string, { lastMessage: string; lastMessageAt: number; protocol: 'nip04' | 'nip17' }>) =>
+        Array.from(threadMap.entries())
+          .sort((a, b) => b[1].lastMessageAt - a[1].lastMessageAt)
+          .map(([pubkey, info]) => {
+            const cached = profileCache.get(pubkey);
+            const existing = useDMStore.getState().threads.find((t) => t.pubkey === pubkey);
+            return {
+              pubkey,
+              displayName: cached?.name || formatPubkey(pubkey),
+              picture: cached?.picture,
+              lastMessage: info.lastMessage,
+              lastMessageAt: info.lastMessageAt,
+              unreadCount: existing?.unreadCount ?? 0,
+              protocol: info.protocol,
+            };
+          });
+
+      const recomputeUnreads = () => {
+        const notif = useNotificationStore.getState();
+        const counts = computeUnreadCounts(myPubkey, notif.dmLastReadAt);
+        notif.setDMUnreads(counts);
+        const currentThreads = useDMStore.getState().threads;
+        useDMStore.getState().setThreads(
+          currentThreads.map((t) => ({ ...t, unreadCount: counts[t.pubkey] ?? 0 })),
+        );
+      };
+
+      try {
+        // Phase A returns immediately from the localStorage cache.
+        const cachedMap = await discoverDMThreads(myPubkey, {
+          forceFullScan: force,
+          onUpdate: (updatedMap) => {
+            // Phase B (relay sync) finished — re-render with fresh data and
+            // flip the spinner off once we have real data.
+            useDMStore.getState().setThreads(threadsFromMap(updatedMap));
+            useDMStore.getState().setLoadingThreads(false);
+            recomputeUnreads();
+          },
         });
-      useDMStore.getState().setThreads(threads);
-      useDMStore.getState().setLoadingThreads(false);
-    }).catch(() => {
-      useDMStore.getState().setLoadingThreads(false);
-    });
-  }, [ndkReady, profile?.pubkey, profileCache]);
 
-  // Subscribe to incoming DMs (NIP-04 + NIP-17) — waits for NDK to be ready
+        const hasCache = cachedMap.size > 0;
+        useDMStore.getState().setThreads(threadsFromMap(cachedMap));
+        // If Phase A was empty, keep the spinner on — Phase B will clear it
+        // via onUpdate once relays respond. Otherwise show the cached view now.
+        if (hasCache) {
+          useDMStore.getState().setLoadingThreads(false);
+          recomputeUnreads();
+        }
+
+        // Publish inbox relays lazily, same gate as discovery.
+        void publishInboxRelays(myPubkey);
+      } catch {
+        useDMStore.getState().setLoadingThreads(false);
+      }
+    },
+    [profile?.pubkey, profileCache],
+  );
+
+  // Trigger the first discovery pass the moment the user enters DM mode.
+  // Subsequent toggles are a no-op; the refresh button calls runDMDiscovery
+  // directly with force=true.
   useEffect(() => {
-    if (!ndkReady || !profile?.pubkey) return;
+    if (!isDMMode || !ndkReady || !profile?.pubkey) return;
+    if (dmDiscoveryRanRef.current) return;
+    dmDiscoveryRanRef.current = true;
+    void runDMDiscovery();
+  }, [isDMMode, ndkReady, profile?.pubkey, runDMDiscovery]);
+
+  // Reset the guard whenever the user logs out / switches accounts so the
+  // next login re-runs discovery for the new pubkey.
+  useEffect(() => {
+    dmDiscoveryRanRef.current = false;
+  }, [profile?.pubkey]);
+
+  // Subscribe to incoming DMs (NIP-04 + NIP-17). Gated on isDMMode so we
+  // don't open a history-replaying subscription (NDK fetches until EOSE
+  // before streaming) on every chat page load — the user explicitly wants
+  // DM traffic to happen only when they're in the DM view. Notifications
+  // while browsing channels are intentionally deferred until they switch.
+  useEffect(() => {
+    if (!isDMMode || !ndkReady || !profile?.pubkey) return;
 
     const cleanup = subscribeDMs(profile.pubkey, (msg: DMMessage) => {
       const dmStore = useDMStore.getState();
@@ -469,7 +534,7 @@ export default function ChatPage() {
     return () => {
       if (cleanup) cleanup();
     };
-  }, [ndkReady, profile?.pubkey, profileCache]);
+  }, [isDMMode, ndkReady, profile?.pubkey, profileCache]);
 
   // Connect Socket.io
   useEffect(() => {
@@ -976,7 +1041,7 @@ export default function ChatPage() {
       `}>
         <ServerBar />
         {isDMMode ? (
-          <DMList onNewDM={() => setShowNewDMModal(true)} />
+          <DMList onNewDM={() => setShowNewDMModal(true)} onRefresh={() => runDMDiscovery(true)} />
         ) : (
           <ChannelSidebar onChannelSelect={() => setSidebarOpen(false)} />
         )}

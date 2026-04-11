@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import DMChat from './DMChat';
@@ -6,8 +6,8 @@ import { useDMStore } from '@/store/dm';
 import { useAuthStore } from '@/store/auth';
 
 vi.mock('@/lib/dm', () => ({
-  sendDM: vi.fn().mockResolvedValue({ id: 'sent-1' }),
-  fetchDMHistory: vi.fn().mockResolvedValue([]),
+  sendDM: vi.fn().mockResolvedValue({ id: 'sent-1', created_at: 1700000000 }),
+  fetchDMHistory: vi.fn().mockResolvedValue({ messages: [], hasMore: false }),
   detectNip04InRecent: vi.fn().mockReturnValue(false),
 }));
 
@@ -22,7 +22,17 @@ profileCache.set('sender-pk', { name: 'Alice', picture: 'https://example.com/ali
 
 describe('DMChat', () => {
   beforeEach(() => {
-    useDMStore.setState(useDMStore.getInitialState());
+    useDMStore.setState({
+      isDMMode: false,
+      activeDMPubkey: null,
+      threads: [],
+      messages: [],
+      isLoadingMessages: false,
+      isLoadingThreads: false,
+      hasMoreHistory: false,
+      protocolOverrides: {},
+      showProtocolPrompt: null,
+    });
     useAuthStore.setState({
       ...useAuthStore.getState(),
       profile: { pubkey: 'my-pubkey', displayName: 'Me' } as never,
@@ -70,7 +80,7 @@ describe('DMChat', () => {
     expect(screen.getByText('⚠️ NIP-04')).toBeInTheDocument();
   });
 
-  it('sends message on Enter and clears input', async () => {
+  it('optimistically inserts a pending message, then replaces it on publish', async () => {
     const { sendDM } = await import('@/lib/dm');
     useDMStore.setState({ activeDMPubkey: 'sender-pk', isLoadingMessages: false, messages: [] });
     const user = userEvent.setup();
@@ -80,12 +90,62 @@ describe('DMChat', () => {
     await user.type(input, 'Hello world');
     await user.keyboard('{Enter}');
 
-    expect(sendDM).toHaveBeenCalledWith('sender-pk', 'Hello world', 'nip17');
+    // sendDM was called with protocol + myPubkey
+    expect(sendDM).toHaveBeenCalledWith('sender-pk', 'Hello world', 'nip17', 'my-pubkey');
+
+    // After resolve the store contains exactly one message with the real id
+    await waitFor(() => {
+      const msgs = useDMStore.getState().messages;
+      expect(msgs).toHaveLength(1);
+      expect(msgs[0].id).toBe('sent-1');
+      expect(msgs[0].isPending).toBeUndefined();
+    });
+  });
+
+  it('marks optimistic message as failed and shows retry button on publish error', async () => {
+    const { sendDM } = await import('@/lib/dm');
+    (sendDM as unknown as { mockRejectedValueOnce: (v: unknown) => void }).mockRejectedValueOnce(new Error('no relay'));
+    useDMStore.setState({ activeDMPubkey: 'sender-pk', isLoadingMessages: false, messages: [] });
+    const user = userEvent.setup();
+    render(<DMChat profileCache={profileCache} />);
+
+    const input = screen.getByTestId('dm-input');
+    await user.type(input, 'broken');
+    await user.keyboard('{Enter}');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('dm-retry')).toBeInTheDocument();
+    });
+    const msgs = useDMStore.getState().messages;
+    expect(msgs).toHaveLength(1);
+    expect(msgs[0].sendError).toBe('no relay');
   });
 
   it('shows empty message hint', () => {
     useDMStore.setState({ activeDMPubkey: 'sender-pk', isLoadingMessages: false, messages: [] });
     render(<DMChat profileCache={profileCache} />);
     expect(screen.getByText('No messages yet. Say hello!')).toBeInTheDocument();
+  });
+
+  it('opens protocol prompt on send when thread has NIP-04 and no override', async () => {
+    const { detectNip04InRecent } = await import('@/lib/dm');
+    (detectNip04InRecent as unknown as { mockReturnValueOnce: (v: boolean) => void }).mockReturnValueOnce(true);
+    useDMStore.setState({
+      activeDMPubkey: 'sender-pk',
+      isLoadingMessages: false,
+      messages: [
+        { id: '1', senderPubkey: 'sender-pk', recipientPubkey: 'my-pubkey', content: 'legacy', createdAt: 1700000000, protocol: 'nip04' },
+      ],
+    });
+    const user = userEvent.setup();
+    render(<DMChat profileCache={profileCache} />);
+
+    const input = screen.getByTestId('dm-input');
+    await user.type(input, 'reply');
+    await user.keyboard('{Enter}');
+
+    // Protocol prompt should be triggered and text restored to input
+    expect(useDMStore.getState().showProtocolPrompt).toBe('sender-pk');
+    expect((input as HTMLTextAreaElement).value).toBe('reply');
   });
 });

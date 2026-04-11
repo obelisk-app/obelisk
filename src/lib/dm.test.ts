@@ -1,9 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { threadKey, detectNip04InRecent } from './dm';
 import type { DMMessage } from './dm';
+import { clearCache, getCachedEvents, getPlaintext, getRumor, getSyncState } from './dm-cache';
+
+const ME = 'a'.repeat(64);
+const ALICE = 'b'.repeat(64);
 
 // Mock NDK module
 const mockEncrypt = vi.fn().mockResolvedValue(undefined);
+const mockDecrypt = vi.fn().mockImplementation(async function (this: { content: string }) {
+  this.content = 'decrypted:' + this.content;
+});
 const mockPublish = vi.fn().mockResolvedValue(undefined);
 const mockSubscribe = vi.fn();
 const mockFetchEvents = vi.fn().mockResolvedValue(new Set());
@@ -15,19 +22,29 @@ vi.mock('./nostr', () => ({
     subscribe: mockSubscribe,
     fetchEvents: mockFetchEvents,
     getUser: (opts: { pubkey: string }) => ({ pubkey: opts.pubkey, ndk: {} }),
+    pool: { relays: new Map() },
   }),
 }));
 
+let ndkEventIdCounter = 0;
+
 vi.mock('@nostr-dev-kit/ndk', () => {
-  const NDKEventClass = vi.fn().mockImplementation(function (this: Record<string, unknown>) {
-    this.kind = 0;
-    this.content = '';
-    this.tags = [];
+  const NDKEventClass = vi.fn().mockImplementation(function (
+    this: Record<string, unknown>,
+    _ndk?: unknown,
+    raw?: Record<string, unknown>,
+  ) {
+    ndkEventIdCounter += 1;
+    this.kind = (raw?.kind as number) ?? 0;
+    this.content = (raw?.content as string) ?? '';
+    this.tags = (raw?.tags as string[][]) ?? [];
     this.encrypt = mockEncrypt;
+    this.decrypt = mockDecrypt;
     this.publish = mockPublish;
-    this.id = 'mock-event-id';
-    this.pubkey = '';
-    this.created_at = Math.floor(Date.now() / 1000);
+    this.id = (raw?.id as string) ?? `mock-event-${ndkEventIdCounter}`;
+    this.pubkey = (raw?.pubkey as string) ?? '';
+    this.created_at = (raw?.created_at as number) ?? Math.floor(Date.now() / 1000);
+    this.sig = (raw?.sig as string) ?? 'sig';
   });
   return {
     NDKEvent: NDKEventClass,
@@ -36,6 +53,7 @@ vi.mock('@nostr-dev-kit/ndk', () => {
       this.ndk = {};
     }),
     giftWrap: vi.fn().mockImplementation(async () => ({
+      id: 'wrap-id-' + Math.random().toString(36).slice(2, 8),
       publish: mockPublish,
     })),
     giftUnwrap: vi.fn(),
@@ -43,6 +61,10 @@ vi.mock('@nostr-dev-kit/ndk', () => {
 });
 
 describe('dm utils', () => {
+  beforeEach(() => {
+    clearCache(ME);
+  });
+
   describe('threadKey', () => {
     it('returns sorted pubkeys', () => {
       expect(threadKey('b', 'a')).toEqual(['a', 'b']);
@@ -103,72 +125,184 @@ describe('dm utils', () => {
   describe('sendNip04DM', () => {
     beforeEach(() => {
       vi.clearAllMocks();
+      clearCache(ME);
     });
 
-    it('sends a kind 4 event', async () => {
+    it('sends a kind 4 event and caches it', async () => {
       const { sendNip04DM } = await import('./dm');
-      const result = await sendNip04DM('recipient-pk', 'hello');
+      const result = await sendNip04DM(ALICE, 'hello', ME);
       expect(result).not.toBeNull();
       expect(mockEncrypt).toHaveBeenCalled();
       expect(mockPublish).toHaveBeenCalled();
+      // Cached as the raw (post-encrypt) event + plaintext preserved for preview
+      expect(getCachedEvents(ME)).toHaveLength(1);
+      expect(getPlaintext(ME, getCachedEvents(ME)[0].id)).toBe('hello');
     });
 
-    it('returns null on encrypt failure', async () => {
+    it('returns null on encrypt failure and does not cache', async () => {
       mockEncrypt.mockRejectedValueOnce(new Error('encrypt failed'));
       const { sendNip04DM } = await import('./dm');
-      const result = await sendNip04DM('recipient-pk', 'hello');
+      const result = await sendNip04DM(ALICE, 'hello', ME);
       expect(result).toBeNull();
+      expect(getCachedEvents(ME)).toHaveLength(0);
     });
   });
 
   describe('sendNip17DM', () => {
     beforeEach(() => {
       vi.clearAllMocks();
+      clearCache(ME);
     });
 
-    it('sends a gift-wrapped kind 14 event', async () => {
+    it('sends a gift-wrapped kind 14 event and caches the rumor', async () => {
       const { sendNip17DM } = await import('./dm');
-      const result = await sendNip17DM('recipient-pk', 'secret hello');
+      const result = await sendNip17DM(ALICE, 'secret hello', ME);
       expect(result).not.toBeNull();
       expect(mockPublish).toHaveBeenCalled();
+      const events = getCachedEvents(ME);
+      expect(events).toHaveLength(1);
+      const rumor = getRumor(ME, events[0].id);
+      expect(rumor?.content).toBe('secret hello');
+      expect(rumor?.senderPubkey).toBe(ME);
+      expect(rumor?.recipientPubkey).toBe(ALICE);
     });
   });
 
   describe('sendDM', () => {
     beforeEach(() => {
       vi.clearAllMocks();
+      clearCache(ME);
     });
 
     it('defaults to NIP-17', async () => {
       const { giftWrap } = await import('@nostr-dev-kit/ndk');
       const { sendDM } = await import('./dm');
-      await sendDM('recipient-pk', 'test');
+      await sendDM(ALICE, 'test', 'nip17', ME);
       expect(giftWrap).toHaveBeenCalled();
     });
 
     it('uses NIP-04 when specified', async () => {
       const { sendDM } = await import('./dm');
-      await sendDM('recipient-pk', 'test', 'nip04');
+      await sendDM(ALICE, 'test', 'nip04', ME);
       expect(mockEncrypt).toHaveBeenCalled();
+    });
+
+    it('throws if publish fails', async () => {
+      mockPublish.mockRejectedValueOnce(new Error('no relay'));
+      const { sendDM } = await import('./dm');
+      await expect(sendDM(ALICE, 'test', 'nip04', ME)).rejects.toThrow(/sendDM failed/);
+    });
+  });
+
+  describe('fetchDMHistory', () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+      clearCache(ME);
+    });
+
+    it('returns messages with hasMore flag', async () => {
+      // Simulate a NIP-04 fetch returning 50 events (at cap) for one filter
+      const events = new Set(
+        Array.from({ length: 50 }, (_, i) => ({
+          id: `ev${i}`,
+          pubkey: ALICE,
+          kind: 4,
+          content: `enc-${i}`,
+          tags: [['p', ME]],
+          created_at: 1000 + i,
+          decrypt: mockDecrypt,
+        })),
+      );
+      mockFetchEvents.mockResolvedValue(events);
+
+      const { fetchDMHistory } = await import('./dm');
+      const { messages, hasMore } = await fetchDMHistory(ME, ALICE, { limit: 50 });
+      expect(messages.length).toBeGreaterThan(0);
+      expect(hasMore).toBe(true);
+      // Plaintext now cached
+      expect(getPlaintext(ME, 'ev0')).toBe('decrypted:enc-0');
+    });
+
+    it('passes `before` as `until` filter when paginating', async () => {
+      mockFetchEvents.mockResolvedValue(new Set());
+      const { fetchDMHistory } = await import('./dm');
+      await fetchDMHistory(ME, ALICE, { before: 500, limit: 10 });
+
+      const calls = mockFetchEvents.mock.calls;
+      expect(calls.length).toBeGreaterThan(0);
+      // Every call should carry until:500
+      for (const [filter] of calls) {
+        expect(filter.until).toBe(500);
+      }
+    });
+
+    it('returns cache hit on first page without `before`', async () => {
+      // Pre-seed cache with a plaintext NIP-04 message between me and Alice
+      const { putEvent, putPlaintext } = await import('./dm-cache');
+      putEvent(ME, {
+        id: 'cached-1',
+        pubkey: ALICE,
+        kind: 4,
+        content: '<enc>',
+        tags: [['p', ME]],
+        created_at: 100,
+      });
+      putPlaintext(ME, 'cached-1', 'hello from cache');
+
+      mockFetchEvents.mockResolvedValue(new Set());
+      const { fetchDMHistory } = await import('./dm');
+      const { messages } = await fetchDMHistory(ME, ALICE, { limit: 50 });
+      expect(messages.some((m) => m.id === 'cached-1' && m.content === 'hello from cache')).toBe(true);
     });
   });
 
   describe('discoverDMThreads', () => {
     beforeEach(() => {
       vi.clearAllMocks();
+      clearCache(ME);
     });
 
-    it('discovers NIP-04 threads from events', async () => {
-      const fakeEvents = new Set([
-        { pubkey: 'other-pk', tags: [['p', 'my-pk']], created_at: 100 },
-        { pubkey: 'my-pk', tags: [['p', 'other-pk']], created_at: 200 },
-      ]);
-      mockFetchEvents.mockResolvedValue(fakeEvents);
-
+    it('returns empty map when cache empty and no signer', async () => {
       const { discoverDMThreads } = await import('./dm');
-      const result = await discoverDMThreads('my-pk');
-      expect(result.has('other-pk')).toBe(true);
-      expect(result.get('other-pk')?.lastMessageAt).toBe(200);
+      const threads = await discoverDMThreads(ME);
+      expect(threads.size).toBe(0);
+    });
+
+    it('returns cached threads instantly without waiting on relay sync', async () => {
+      const { putEvent, putRumor } = await import('./dm-cache');
+      putEvent(ME, {
+        id: 'wrap-1',
+        pubkey: 'ephemeral',
+        kind: 1059,
+        content: '<sealed>',
+        tags: [['p', ME]],
+        created_at: 500,
+      });
+      putRumor(ME, {
+        rumorId: 'r-1',
+        wrapId: 'wrap-1',
+        senderPubkey: ALICE,
+        recipientPubkey: ME,
+        content: 'hi there',
+        createdAt: 500,
+      });
+
+      mockFetchEvents.mockResolvedValue(new Set());
+      const { discoverDMThreads } = await import('./dm');
+      const threads = await discoverDMThreads(ME);
+      expect(threads.has(ALICE)).toBe(true);
+      expect(threads.get(ALICE)?.lastMessage).toBe('hi there');
+      expect(threads.get(ALICE)?.protocol).toBe('nip17');
+    });
+
+    it('updates lastFullScanAt after a forced full scan', async () => {
+      mockFetchEvents.mockResolvedValue(new Set());
+      const { discoverDMThreads } = await import('./dm');
+      await discoverDMThreads(ME, { forceFullScan: true });
+      // Background task is async; wait a microtask
+      await new Promise((r) => setTimeout(r, 10));
+      const sync = getSyncState(ME);
+      expect(sync.lastFullScanAt).toBeGreaterThan(0);
     });
   });
 });

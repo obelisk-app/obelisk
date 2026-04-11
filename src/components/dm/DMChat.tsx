@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDMStore } from '@/store/dm';
 import { useAuthStore } from '@/store/auth';
 import { sendDM, fetchDMHistory, detectNip04InRecent } from '@/lib/dm';
-import type { DMProtocol } from '@/lib/dm';
+import type { DMMessage, DMProtocol } from '@/lib/dm';
 import { formatPubkey } from '@/lib/nostr';
 
 interface DMChatProps {
@@ -13,48 +13,122 @@ interface DMChatProps {
 
 export default function DMChat({ profileCache }: DMChatProps) {
   const {
-    activeDMPubkey, messages, isLoadingMessages,
-    setMessages, addMessage, protocolOverrides, setShowProtocolPrompt,
+    activeDMPubkey,
+    messages,
+    isLoadingMessages,
+    hasMoreHistory,
+    setMessages,
+    addMessage,
+    prependMessages,
+    replaceMessage,
+    markMessageFailed,
+    protocolOverrides,
+    setShowProtocolPrompt,
+    setHasMoreHistory,
     updateThread,
   } = useDMStore();
   const { profile } = useAuthStore();
   const [content, setContent] = useState('');
   const [sending, setSending] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const protocolChecked = useRef<string | null>(null);
+  const topSentinelRef = useRef<HTMLDivElement>(null);
 
   const otherProfile = activeDMPubkey ? profileCache.get(activeDMPubkey) : null;
   const otherName = otherProfile?.name || (activeDMPubkey ? formatPubkey(activeDMPubkey) : '');
 
-  // Determine send protocol for active conversation
+  // Determine send protocol for active conversation. Default NIP-17; respect
+  // a persisted override set via the ProtocolPrompt.
   const sendProtocol: DMProtocol = activeDMPubkey
-    ? (protocolOverrides[activeDMPubkey] || 'nip17')
+    ? protocolOverrides[activeDMPubkey] || 'nip17'
     : 'nip17';
 
-  // Fetch DM history when active DM changes
+  // Fetch DM history when active DM changes (cache-first via lib/dm).
   useEffect(() => {
     if (!activeDMPubkey || !profile?.pubkey) return;
-    protocolChecked.current = null;
+    let cancelled = false;
 
-    fetchDMHistory(profile.pubkey, activeDMPubkey).then((msgs) => {
-      setMessages(msgs);
-
-      // Check if NIP-04 messages present in recent history — prompt if so and no override set
-      if (
-        detectNip04InRecent(msgs) &&
-        !useDMStore.getState().protocolOverrides[activeDMPubkey] &&
-        protocolChecked.current !== activeDMPubkey
-      ) {
-        protocolChecked.current = activeDMPubkey;
-        setShowProtocolPrompt(activeDMPubkey);
-      }
+    fetchDMHistory(profile.pubkey, activeDMPubkey).then((result) => {
+      if (cancelled) return;
+      setMessages(result.messages);
+      setHasMoreHistory(result.hasMore);
     });
-  }, [activeDMPubkey, profile?.pubkey, setMessages, setShowProtocolPrompt]);
 
-  // Auto-scroll
+    return () => {
+      cancelled = true;
+    };
+  }, [activeDMPubkey, profile?.pubkey, setMessages, setHasMoreHistory]);
+
+  // Auto-scroll on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages.length]);
+
+  // Infinite scroll: when the top sentinel becomes visible, fetch older history.
+  useEffect(() => {
+    if (!activeDMPubkey || !profile?.pubkey) return;
+    if (!hasMoreHistory) return;
+    const sentinel = topSentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      async (entries) => {
+        if (!entries[0].isIntersecting || loadingOlder) return;
+        setLoadingOlder(true);
+        const oldest = useDMStore.getState().messages[0]?.createdAt;
+        const result = await fetchDMHistory(profile.pubkey!, activeDMPubkey, {
+          before: oldest,
+          limit: 50,
+        });
+        if (result.messages.length > 0) {
+          prependMessages(result.messages);
+        }
+        setHasMoreHistory(result.hasMore);
+        setLoadingOlder(false);
+      },
+      { root: sentinel.parentElement, threshold: 0.1 },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [activeDMPubkey, profile?.pubkey, hasMoreHistory, loadingOlder, prependMessages, setHasMoreHistory]);
+
+  /**
+   * Core optimistic send: inject a pending message, publish in the background,
+   * then replace with the real event or mark the pending row as failed.
+   */
+  const doSend = useCallback(
+    async (text: string, protocol: DMProtocol) => {
+      if (!activeDMPubkey || !profile?.pubkey) return;
+      const pendingId = `pending-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const optimistic: DMMessage = {
+        id: pendingId,
+        senderPubkey: profile.pubkey,
+        recipientPubkey: activeDMPubkey,
+        content: text,
+        createdAt: Math.floor(Date.now() / 1000),
+        protocol,
+        isPending: true,
+      };
+      addMessage(optimistic);
+      updateThread(activeDMPubkey, { lastMessage: text, lastMessageAt: optimistic.createdAt });
+
+      try {
+        const event = await sendDM(activeDMPubkey, text, protocol, profile.pubkey);
+        replaceMessage(pendingId, {
+          id: event.id || pendingId,
+          senderPubkey: profile.pubkey,
+          recipientPubkey: activeDMPubkey,
+          content: text,
+          createdAt: event.created_at ?? optimistic.createdAt,
+          protocol,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'failed to send';
+        markMessageFailed(pendingId, message);
+      }
+    },
+    [activeDMPubkey, profile?.pubkey, addMessage, replaceMessage, markMessageFailed, updateThread],
+  );
 
   const handleSend = async () => {
     if (!content.trim() || !activeDMPubkey || sending) return;
@@ -62,23 +136,30 @@ export default function DMChat({ profileCache }: DMChatProps) {
     const text = content.trim();
     setContent('');
 
-    const event = await sendDM(activeDMPubkey, text, sendProtocol);
-    if (event && profile) {
-      const msg = {
-        id: event.id || crypto.randomUUID(),
-        senderPubkey: profile.pubkey,
-        recipientPubkey: activeDMPubkey,
-        content: text,
-        createdAt: Math.floor(Date.now() / 1000),
-        protocol: sendProtocol,
-      };
-      addMessage(msg);
-      updateThread(activeDMPubkey, {
-        lastMessage: text,
-        lastMessageAt: msg.createdAt,
-      });
+    // Protocol prompt kicks in only when there's no stored override and the
+    // thread has recent NIP-04 history. Mirrors nostrito-app's send-attempt
+    // decision model — never prompt on thread-open, only on actual send.
+    const existingOverride = protocolOverrides[activeDMPubkey];
+    if (!existingOverride && detectNip04InRecent(useDMStore.getState().messages)) {
+      // Defer the actual send until the user picks a protocol. Stash the
+      // text back into the input so they don't lose it if they cancel.
+      setContent(text);
+      setShowProtocolPrompt(activeDMPubkey);
+      setSending(false);
+      return;
     }
+
+    await doSend(text, sendProtocol);
     setSending(false);
+  };
+
+  const handleRetry = async (msg: DMMessage) => {
+    if (!activeDMPubkey || !profile?.pubkey) return;
+    // Remove the failed bubble by replacing its id — doSend will create a new
+    // pending bubble with a fresh id.
+    const { messages: current } = useDMStore.getState();
+    useDMStore.setState({ messages: current.filter((m) => m.id !== msg.id) });
+    await doSend(msg.content, msg.protocol);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -121,6 +202,13 @@ export default function DMChat({ profileCache }: DMChatProps) {
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto py-4">
+        {/* Top sentinel for infinite scroll — observed only when hasMoreHistory */}
+        {hasMoreHistory && (
+          <div ref={topSentinelRef} className="h-8 flex items-center justify-center" data-testid="dm-top-sentinel">
+            {loadingOlder ? <span className="lc-spinner" /> : null}
+          </div>
+        )}
+
         {isLoadingMessages ? (
           <div className="px-4 space-y-4">
             {[1, 2, 3].map((i) => (
@@ -144,9 +232,15 @@ export default function DMChat({ profileCache }: DMChatProps) {
             const senderName = senderProfile?.name || formatPubkey(msg.senderPubkey);
             const time = new Date(msg.createdAt * 1000);
             const timeStr = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const failed = !!msg.sendError;
+            const pending = !!msg.isPending;
 
             return (
-              <div key={msg.id} className="flex items-start gap-3 px-4 py-1.5 hover:bg-lc-border/20 transition-colors">
+              <div
+                key={msg.id}
+                className={`flex items-start gap-3 px-4 py-1.5 hover:bg-lc-border/20 transition-colors ${pending ? 'opacity-60' : ''} ${failed ? 'bg-red-950/20' : ''}`}
+                data-testid={failed ? 'dm-msg-failed' : pending ? 'dm-msg-pending' : 'dm-msg'}
+              >
                 {senderProfile?.picture ? (
                   <img src={senderProfile.picture} alt="" className="w-8 h-8 rounded-full object-cover shrink-0 mt-0.5" />
                 ) : (
@@ -160,6 +254,16 @@ export default function DMChat({ profileCache }: DMChatProps) {
                       {senderName}
                     </span>
                     <span className="text-xs text-lc-muted">{timeStr}</span>
+                    {pending && <span className="text-xs text-lc-muted italic">sending…</span>}
+                    {failed && (
+                      <button
+                        onClick={() => handleRetry(msg)}
+                        className="text-xs text-red-400 hover:text-red-300 underline"
+                        data-testid="dm-retry"
+                      >
+                        failed — retry
+                      </button>
+                    )}
                   </div>
                   <p className="text-sm text-lc-white/90 break-words whitespace-pre-wrap">{msg.content}</p>
                 </div>
@@ -174,7 +278,6 @@ export default function DMChat({ profileCache }: DMChatProps) {
       <div className="px-4 pb-4 pt-2 shrink-0">
         <div className="bg-lc-border/50 flex items-end gap-2 px-4 py-2 rounded-xl">
           <textarea
-            ref={useRef<HTMLTextAreaElement>(null)}
             value={content}
             onChange={(e) => setContent(e.target.value)}
             onKeyDown={handleKeyDown}

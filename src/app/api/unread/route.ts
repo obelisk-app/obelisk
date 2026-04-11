@@ -65,7 +65,12 @@ export async function GET(req: NextRequest) {
     })
   );
 
-  // DM unreads: compare DMReadState.lastReadAt vs DirectMessageThread.updatedAt
+  // DM read state: we never decrypt DM content server-side, so we can't
+  // count messages here. Instead we return (a) a per-thread `lastReadAt`
+  // timestamp (in unix ms) so the client can compute real unread counts
+  // against its local Nostr cache, and (b) a legacy `dms` binary map for
+  // any consumer that hasn't migrated yet (thread flagged when server-known
+  // activity is newer than lastRead).
   const dmThreads = await prisma.directMessageThread.findMany({
     where: {
       OR: [{ participant1: pubkey }, { participant2: pubkey }],
@@ -77,15 +82,16 @@ export async function GET(req: NextRequest) {
   });
   const dmReadMap = new Map(dmReadStates.map(rs => [rs.threadPubkey, rs.lastReadAt]));
 
-  const dmUnreads: Record<string, number> = {};
+  const dmLastReadAt: Record<string, number> = {};
+  const dms: Record<string, number> = {};
   for (const thread of dmThreads) {
     const otherPubkey = thread.participant1 === pubkey ? thread.participant2 : thread.participant1;
-    const lastRead = dmReadMap.get(otherPubkey) ?? new Date(0);
-    if (thread.updatedAt > lastRead) {
-      // We don't store DM messages in DB, so just flag as 1 unread
-      dmUnreads[otherPubkey] = 1;
+    const lastRead = dmReadMap.get(otherPubkey);
+    dmLastReadAt[otherPubkey] = lastRead ? lastRead.getTime() : 0;
+    if (thread.updatedAt > (lastRead ?? new Date(0))) {
+      dms[otherPubkey] = 1;
     }
   }
 
-  return NextResponse.json({ channels: channelUnreads, dms: dmUnreads, mentionChannels });
+  return NextResponse.json({ channels: channelUnreads, dms, dmLastReadAt, mentionChannels });
 }

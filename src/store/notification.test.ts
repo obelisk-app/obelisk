@@ -58,15 +58,26 @@ describe('useNotificationStore', () => {
     useNotificationStore.getState().setBulkUnreads({
       channels: { ch1: 2, ch2: 5 },
       dms: { pk1: 1 },
+      dmLastReadAt: { pk1: 1000 },
       mentionChannels: { ch2: true },
     });
 
     const state = useNotificationStore.getState();
     expect(state.channelUnreads).toEqual({ ch1: 2, ch2: 5 });
     expect(state.dmUnreads).toEqual({ pk1: 1 });
+    expect(state.dmLastReadAt).toEqual({ pk1: 1000 });
     expect(state.channelMentions).toEqual({ ch2: true });
     // old channel should be gone
     expect(state.channelUnreads['old']).toBeUndefined();
+  });
+
+  it('setDMLastReadAt and setDMUnreads', () => {
+    useNotificationStore.getState().setDMLastReadAt('alice', 5000);
+    useNotificationStore.getState().setDMLastReadAt('bob', 6000);
+    expect(useNotificationStore.getState().dmLastReadAt).toEqual({ alice: 5000, bob: 6000 });
+
+    useNotificationStore.getState().setDMUnreads({ alice: 2, bob: 0 });
+    expect(useNotificationStore.getState().dmUnreads).toEqual({ alice: 2, bob: 0 });
   });
 
   it('setChannelServerMap updates mapping', () => {

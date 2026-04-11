@@ -14,6 +14,12 @@ interface NotificationState {
   channelUnreads: Record<string, number>;
   channelMentions: Record<string, boolean>;
   dmUnreads: Record<string, number>;
+  /**
+   * Server-authoritative per-thread read cursor (unix ms). Used client-side
+   * together with the local Nostr cache to compute real DM unread counts
+   * (since DM content is never decrypted server-side).
+   */
+  dmLastReadAt: Record<string, number>;
   // channelId -> serverId mapping for server-level aggregation
   channelServerMap: Record<string, string>;
   permissionGranted: boolean;
@@ -22,10 +28,13 @@ interface NotificationState {
   incrementChannelUnread: (channelId: string, hasMention?: boolean) => void;
   clearChannelUnread: (channelId: string) => void;
   setDMUnread: (pubkey: string, count: number) => void;
+  setDMUnreads: (counts: Record<string, number>) => void;
   clearDMUnread: (pubkey: string) => void;
+  setDMLastReadAt: (pubkey: string, tsMs: number) => void;
   setBulkUnreads: (data: {
     channels: Record<string, number>;
     dms: Record<string, number>;
+    dmLastReadAt?: Record<string, number>;
     mentionChannels: Record<string, boolean>;
   }) => void;
   setChannelServerMap: (map: Record<string, string>) => void;
@@ -36,6 +45,7 @@ export const useNotificationStore = create<NotificationState>()((set) => ({
   channelUnreads: {},
   channelMentions: {},
   dmUnreads: {},
+  dmLastReadAt: {},
   channelServerMap: {},
   permissionGranted: false,
 
@@ -66,16 +76,23 @@ export const useNotificationStore = create<NotificationState>()((set) => ({
     dmUnreads: { ...state.dmUnreads, [pubkey]: count },
   })),
 
+  setDMUnreads: (counts) => set({ dmUnreads: counts }),
+
   clearDMUnread: (pubkey) => set((state) => {
     const { [pubkey]: _, ...rest } = state.dmUnreads;
     return { dmUnreads: rest };
   }),
 
-  setBulkUnreads: (data) => set({
+  setDMLastReadAt: (pubkey, tsMs) => set((state) => ({
+    dmLastReadAt: { ...state.dmLastReadAt, [pubkey]: tsMs },
+  })),
+
+  setBulkUnreads: (data) => set((state) => ({
     channelUnreads: data.channels,
     dmUnreads: data.dms,
+    dmLastReadAt: data.dmLastReadAt ?? state.dmLastReadAt,
     channelMentions: data.mentionChannels,
-  }),
+  })),
 
   setChannelServerMap: (map) => set({ channelServerMap: map }),
 
