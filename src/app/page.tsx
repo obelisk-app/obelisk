@@ -124,6 +124,7 @@ const TECH_STACK: { name: string; desc: string; color: string; icon?: string; im
 
 export default function Home() {
   const [showLogin, setShowLogin] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
   const router = useRouter();
   const { t } = useTranslation();
 
@@ -134,8 +135,20 @@ export default function Home() {
   const [ctaRef, ctaVisible] = useScrollReveal<HTMLElement>();
 
   const handleLoginSuccess = () => {
+    setIsNavigating(true);
     router.push('/chat');
   };
+
+  if (isNavigating) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-lc-black">
+        <div className="flex flex-col items-center gap-3">
+          <div className="lc-spinner" style={{ width: 32, height: 32 }} />
+          <span className="text-sm text-lc-muted">Loading...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-lc-black lc-grid-bg relative">
