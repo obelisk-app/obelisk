@@ -69,7 +69,7 @@
     - [ ] Boton "Refrescar WoT" que re-fetchea el kind 3 del referente desde relays
     - [ ] Lista de npubs auto-autorizados (los que el referente sigue) con busqueda
     - [ ] **Generador de invite links** — boton "Crear invite", copia al portapapeles, muestra URL, expiracion, max usos
-    - [ ] Tabla de invites activos por servidor: link, creado por, usos/max, expira, estado, accion revocar
+    - [x] **Revocacion de invite links** — boton "Revoke" en `InviteManager`, soft-delete (`revokedAt`/`revokedBy`), redeem devuelve 410 "Invitation revoked", historia de quien entro preservada en /admin
     - [ ] Override manual: admin puede whitelistear un npub que no esta en la WoT
   - [ ] Config de umbrales para que usuarios comunes desbloqueen invites (dias activos, mensajes minimos, invites por usuario)
 - [ ] Sistema de roles y permisos por servidor — ver [docs/permissions-plan.md](docs/permissions-plan.md) (write-locks por canal/post ya documentados); ahora ampliar a **roles custom + acceso por canal**
@@ -153,6 +153,17 @@
   - [x] Lista de invites activos por servidor con dedupe (already-member
     no consume usos) y razón de ban en respuestas 403
 - [x] Menciones (@usuario) resueltas desde Nostr profiles
+- [ ] **Links relativos a canales / posts / threads (`#{nombre}`) — autocomplete estilo Discord**
+  - [ ] Trigger `#` en `MessageInput` abre un `ChannelAutocomplete` (espejo de `MentionAutocomplete` / `EmojiAutocomplete`) con regex `/#([\w-]*)$/`, keyboard nav (↑ ↓ Enter Tab Esc) y cursor-restore via `requestAnimationFrame`
+  - [ ] Lista fuzzy-match sobre canales del servidor actual (texto, voz, foro) + posts de foro abiertos + threads; agrupado por tipo con iconos (`#` texto, `🔊` voz, `📋` foro, `💬` thread/post)
+  - [ ] Resolución server-side: al enviar, matchear `#{nombre}` contra canales/posts del `serverId` y persistir como placeholder estable (ej: `\u3008CHANNEL:<id>\u3009` / `\u3008POST:<id>\u3009` / `\u3008THREAD:<id>\u3009`) — análogo a cómo se persisten mentions/emojis
+  - [ ] Render en `MessageContent`: placeholder → pill clickeable con el nombre actual del canal/post (re-resuelto en render, así un rename se refleja sin tocar el mensaje); fallback a texto crudo `#nombre` si el target fue borrado
+  - [ ] Click navega al canal/post/thread dentro del mismo servidor sin full reload (actualiza `chat` store + URL)
+  - [ ] Cross-server: si el nombre es ambiguo o el usuario quiere apuntar a otro servidor, soportar `#server:canal` (opcional, fase 2)
+  - [ ] Permisos: el autocomplete sólo sugiere canales/posts que el usuario puede ver; al renderizar para otro usuario sin acceso, mostrar pill deshabilitada con tooltip "Sin acceso"
+  - [ ] Notificación: si el canal linkeado es un post/thread del que el autor es dueño, contar como "mención a post" (reusar sistema de notifications)
+  - [ ] Paridad con posts de foro: el mismo autocomplete funciona dentro de `ForumView` una vez que reusa `MessageInput` (ver refactor de foros)
+  - [ ] Tests: regex del trigger, fuzzy match, resolución placeholder, render con rename/delete, navegación al click, gating por permisos
 - [x] Renderizado de texto enriquecido en mensajes
   - [x] Markdown: bold, italic, strikethrough, inline code, code blocks con syntax highlighting
   - [x] Blockquotes y listas
