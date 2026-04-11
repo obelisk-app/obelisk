@@ -10,9 +10,10 @@ import CreateServerModal from '@/components/admin/CreateServerModal';
 import MembershipsModal from '@/components/admin/MembershipsModal';
 import WelcomeBotSettings from '@/components/admin/WelcomeBotSettings';
 import EmojiManager from '@/components/admin/EmojiManager';
+import SystemContentManager from '@/components/admin/SystemContentManager';
 import type { Role } from '@/lib/auth-roles';
 
-type Tab = 'members' | 'channels' | 'access' | 'settings' | 'bans' | 'emojis';
+type Tab = 'members' | 'channels' | 'access' | 'settings' | 'bans' | 'emojis' | 'content';
 
 interface MemberData {
   id: string;
@@ -56,6 +57,7 @@ const TAB_LABELS: Record<Tab, string> = {
   settings: 'Settings',
   bans: 'Bans',
   emojis: 'Emojis',
+  content: 'Content',
 };
 
 export default function AdminServerPage({
@@ -334,7 +336,7 @@ export default function AdminServerPage({
         {/* Tabs */}
         <div className="max-w-5xl mx-auto px-6">
           <div className="flex gap-1 -mb-px overflow-x-auto">
-            {(['members', 'channels', 'access', 'settings', 'emojis', 'bans'] as Tab[]).map((t) => {
+            {(['members', 'channels', 'content', 'access', 'settings', 'emojis', 'bans'] as Tab[]).map((t) => {
               const isActive = tab === t;
               return (
                 <button
@@ -424,6 +426,13 @@ export default function AdminServerPage({
         {tab === 'emojis' && (
           <div data-testid="emojis-tab">
             <EmojiManager serverId={serverId} />
+          </div>
+        )}
+
+        {/* Content Tab — "post as the server" welcome messages + forum posts */}
+        {tab === 'content' && (
+          <div data-testid="content-tab">
+            <SystemContentManager serverId={serverId} />
           </div>
         )}
 
