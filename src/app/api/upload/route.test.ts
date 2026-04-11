@@ -27,12 +27,17 @@ import { prisma } from '@/lib/db';
 const mockAuth = getAuthPubkey as ReturnType<typeof vi.fn>;
 const mockPrisma = prisma as any;
 
-function makeRequest(formData: FormData, query = '') {
+function makeRequest(
+  formData: FormData,
+  query = '',
+  headers: Record<string, string> = {},
+) {
   // NextRequest's init drops body for multipart; wrap a native Request instead
   // so the multipart boundary / content-type are preserved.
   const base = new Request(`http://localhost:3000/api/upload${query}`, {
     method: 'POST',
     body: formData,
+    headers,
   });
   return new NextRequest(base);
 }
@@ -165,6 +170,33 @@ describe('POST /api/upload', () => {
     fd.append('file', new File([big], 'big.png', { type: 'image/png' }));
     const res = await POST(makeRequest(fd, '?serverId=srv1'));
     expect(res.status).toBe(413);
+  });
+
+  it('builds the response URL from the request Host + x-forwarded-proto, not nextUrl.origin', async () => {
+    // Regression test: in production the app runs behind Caddy in a Docker
+    // custom server (HOSTNAME=0.0.0.0). `req.nextUrl.origin` resolves to
+    // `http://0.0.0.0:3000`, which is unreachable from the browser. We must
+    // honour the forwarded Host + proto so the URL we embed in messages is
+    // actually loadable.
+    mockAuth.mockResolvedValue('pub1');
+    const fd = new FormData();
+    fd.append(
+      'file',
+      new File([new Uint8Array([137, 80, 78, 71])], 'pixel.png', {
+        type: 'image/png',
+      }),
+    );
+    const res = await POST(
+      makeRequest(fd, '', {
+        host: 'obelisk.ar',
+        'x-forwarded-proto': 'https',
+      }),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.url).toMatch(/^https:\/\/obelisk\.ar\/uploads\/[a-f0-9]+\.png$/);
+    expect(body.url).not.toContain('0.0.0.0');
+    expect(body.url).not.toContain(':3000');
   });
 
   it('rejects types excluded by server allowedMimeTypes', async () => {

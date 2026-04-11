@@ -113,8 +113,19 @@ export async function POST(req: NextRequest) {
   const bytes = Buffer.from(await file.arrayBuffer());
   await writeFile(path.join(uploadDir, storedName), bytes);
 
-  const origin = req.nextUrl.origin;
-  const url = `${origin}/uploads/${storedName}`;
+  // Build the absolute URL from the actual request headers, NOT
+  // `req.nextUrl.origin`. In a Next.js custom server (`server.ts`) the
+  // underlying `req.url` is only the path, so `nextUrl` is built from the
+  // hostname Next was started with (`0.0.0.0:3000` in production) instead of
+  // the incoming `Host` header. Caddy forwards the real Host + an
+  // `X-Forwarded-Proto: https` header — use those so the URL we hand back
+  // (and embed in message bodies) is actually reachable from the browser.
+  const host = req.headers.get('host') ?? req.nextUrl.host;
+  const proto =
+    req.headers.get('x-forwarded-proto') ??
+    req.nextUrl.protocol.replace(':', '') ??
+    'https';
+  const url = `${proto}://${host}/uploads/${storedName}`;
 
   return NextResponse.json({
     url,
