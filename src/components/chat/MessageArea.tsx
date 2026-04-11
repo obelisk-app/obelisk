@@ -56,7 +56,7 @@ function EmojiPicker({ onSelect, onClose, openBelow }: {
   return (
     <div
       ref={ref}
-      className={`absolute right-0 z-50 bg-lc-dark border border-lc-border rounded-xl shadow-lg w-72 max-h-80 flex flex-col ${openBelow ? 'top-full mt-2' : 'bottom-full mb-2'}`}
+      className={`absolute right-0 z-50 bg-lc-dark border border-lc-border rounded-xl shadow-lg w-72 max-h-80 flex flex-col ${openBelow ? 'top-full mt-1' : 'bottom-full mb-1'}`}
       data-testid="emoji-picker"
     >
       <div className="p-2 border-b border-lc-border">
@@ -176,7 +176,7 @@ function ContextMenu({ isMe, openBelow, onReply, onReport, onEdit, onDelete, onC
   return (
     <div
       ref={menuRef}
-      className={`absolute right-2 z-50 bg-lc-dark border border-lc-border rounded-xl shadow-lg py-1 min-w-[180px] ${openBelow ? 'top-full mt-1' : 'bottom-full mb-1'}`}
+      className={`absolute right-0 z-50 bg-lc-dark border border-lc-border rounded-xl shadow-lg py-1 min-w-[180px] ${openBelow ? 'top-full mt-1' : 'bottom-full mb-1'}`}
       data-testid="context-menu"
     >
       <button onClick={() => { onAddReaction(); }} className={`${itemClass} text-lc-white`}>
@@ -295,8 +295,11 @@ function MessageBubble({ message, profileCache, canPin, onReply, onReport, onDel
           </div>
         </div>
 
-        {/* Action toolbar — shown on hover */}
-        <div className="absolute right-2 top-1 opacity-0 group-hover:opacity-100 flex gap-0.5 transition-all bg-lc-dark border border-lc-border rounded-lg p-0.5 shadow-lg z-10" data-testid="message-toolbar">
+        {/* Action toolbar + popups — anchored to top-right of row */}
+        <div
+          className={`absolute right-2 top-1 z-20 ${showMenu || showEmojiPicker ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}
+        >
+          <div className="flex gap-0.5 bg-lc-dark border border-lc-border rounded-lg p-0.5 shadow-lg" data-testid="message-toolbar">
             {/* Quick reaction emojis */}
             {QUICK_EMOJIS.map((emoji) => (
               <button
@@ -365,29 +368,30 @@ function MessageBubble({ message, profileCache, canPin, onReply, onReport, onDel
             </button>
           </div>
 
-        {/* Context menu dropdown */}
-        {showMenu && (
-          <ContextMenu
-            isMe={isMe}
-            openBelow={popupBelow}
-            onReply={() => onReply(message)}
-            onReport={() => onReport(message)}
-            onEdit={() => setEditingMessage(message)}
-            onDelete={() => onDelete(message)}
-            onCopyText={handleCopyText}
-            onAddReaction={() => { setShowMenu(false); setShowEmojiPicker(true); }}
-            onClose={() => setShowMenu(false)}
-          />
-        )}
+          {/* Context menu dropdown — anchored to toolbar */}
+          {showMenu && (
+            <ContextMenu
+              isMe={isMe}
+              openBelow={popupBelow}
+              onReply={() => onReply(message)}
+              onReport={() => onReport(message)}
+              onEdit={() => setEditingMessage(message)}
+              onDelete={() => onDelete(message)}
+              onCopyText={handleCopyText}
+              onAddReaction={() => { setShowMenu(false); setShowEmojiPicker(true); }}
+              onClose={() => setShowMenu(false)}
+            />
+          )}
 
-        {/* Emoji picker */}
-        {showEmojiPicker && (
-          <EmojiPicker
-            openBelow={popupBelow}
-            onSelect={(emoji) => onToggleReaction(message.id, emoji)}
-            onClose={() => setShowEmojiPicker(false)}
-          />
-        )}
+          {/* Emoji picker — anchored to toolbar */}
+          {showEmojiPicker && (
+            <EmojiPicker
+              openBelow={popupBelow}
+              onSelect={(emoji) => onToggleReaction(message.id, emoji)}
+              onClose={() => setShowEmojiPicker(false)}
+            />
+          )}
+        </div>
       </div>
 
       {/* Reactions display */}
