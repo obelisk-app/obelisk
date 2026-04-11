@@ -104,4 +104,35 @@ describe('MessageInput', () => {
     await user.type(textarea, 'hi');
     expect(onTyping).toHaveBeenCalled();
   });
+
+  it('disables textarea in admin-only channel for regular member', () => {
+    useChatStore.setState({
+      ...useChatStore.getState(),
+      myRole: 'member',
+      pinnedChannels: [{
+        id: 'ch1', name: 'announce', emoji: null, type: 'text',
+        position: 0, categoryId: null, writePermission: 'admin',
+      }],
+    });
+
+    render(<MessageInput onSend={mockOnSend} />);
+    const textarea = screen.getByTestId('message-textarea') as HTMLTextAreaElement;
+    expect(textarea.disabled).toBe(true);
+    expect(textarea.placeholder).toMatch(/Only admins/i);
+  });
+
+  it('allows admin to post in admin-only channel', () => {
+    useChatStore.setState({
+      ...useChatStore.getState(),
+      myRole: 'admin',
+      pinnedChannels: [{
+        id: 'ch1', name: 'announce', emoji: null, type: 'text',
+        position: 0, categoryId: null, writePermission: 'admin',
+      }],
+    });
+
+    render(<MessageInput onSend={mockOnSend} />);
+    const textarea = screen.getByTestId('message-textarea') as HTMLTextAreaElement;
+    expect(textarea.disabled).toBe(false);
+  });
 });

@@ -17,6 +17,8 @@ export interface Channel {
   position: number;
   categoryId: string | null;
   forumTags?: ForumTag[];
+  /** null/"everyone" = anyone, "mod" = mods+, "admin" = admins+. */
+  writePermission?: string | null;
 }
 
 export interface Category {

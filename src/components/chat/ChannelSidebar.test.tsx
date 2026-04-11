@@ -146,6 +146,27 @@ describe('ChannelSidebar', () => {
     expect(onChannelSelect).toHaveBeenCalledTimes(1);
   });
 
+  it('shows a lock icon on channels the current user cannot write to', () => {
+    useChatStore.setState({
+      isLoadingChannels: false,
+      servers: [{ id: 's1', name: 'Test', icon: null, banner: null }],
+      activeServerId: 's1',
+      myRole: 'member',
+      pinnedChannels: [
+        { id: 'ch-open', name: 'open', emoji: null, type: 'text', position: 0, categoryId: null, writePermission: null },
+        { id: 'ch-locked', name: 'locked-chan', emoji: null, type: 'text', position: 1, categoryId: null, writePermission: 'admin' },
+      ],
+      categories: [],
+    });
+
+    render(<ChannelSidebar />);
+    const lockIcons = screen.getAllByTestId('channel-write-lock-icon');
+    expect(lockIcons).toHaveLength(1);
+    // The lock should be inside the "locked-chan" row
+    const lockedBtn = screen.getByText('locked-chan').closest('button');
+    expect(lockedBtn?.contains(lockIcons[0])).toBe(true);
+  });
+
   it('calls onChannelSelect when clicking a category channel', async () => {
     const user = userEvent.setup();
     const onChannelSelect = vi.fn();

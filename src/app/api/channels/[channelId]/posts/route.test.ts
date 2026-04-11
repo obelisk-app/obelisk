@@ -7,7 +7,8 @@ vi.mock('@/lib/db', () => ({
     message: { findMany: vi.fn(), create: vi.fn() },
     ban: { findUnique: vi.fn() },
     mute: { findFirst: vi.fn() },
-    member: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
+    member: { updateMany: vi.fn().mockResolvedValue({ count: 1 }), findUnique: vi.fn() },
+    server: { findUnique: vi.fn() },
   },
 }));
 vi.mock('@/lib/api-auth', () => ({ getAuthPubkey: vi.fn() }));
@@ -94,5 +95,24 @@ describe('POST /api/channels/[channelId]/posts', () => {
 
     const res = await POST(makeRequest('POST', { content: 'body' }), ctx);
     expect(res.status).toBe(400);
+  });
+
+  it('returns 403 channel_write_locked when member posts in mod-only forum channel', async () => {
+    mockGetAuth.mockResolvedValue('member-pk');
+    mockPrisma.channel.findUnique.mockResolvedValue({
+      id: 'ch1', type: 'forum', serverId: 'srv1', writePermission: 'mod',
+    });
+    mockPrisma.ban.findUnique.mockResolvedValue(null);
+    mockPrisma.mute.findFirst.mockResolvedValue(null);
+    mockPrisma.server.findUnique.mockResolvedValue({ ownerPubkey: 'owner-pk' });
+    mockPrisma.member.findUnique.mockResolvedValue({
+      id: 'm1', serverId: 'srv1', pubkey: 'member-pk', role: 'member',
+      displayName: null, picture: null,
+    });
+
+    const res = await POST(makeRequest('POST', { title: 'x', content: 'y' }), ctx);
+    expect(res.status).toBe(403);
+    const data = await res.json();
+    expect(data.error).toBe('channel_write_locked');
   });
 });

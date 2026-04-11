@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthPubkey } from '@/lib/api-auth';
+import { canWriteInChannel, getAuthMember } from '@/lib/auth-roles';
 
 // GET /api/channels/[channelId]/posts — list forum posts (top-level messages)
 export async function GET(
@@ -72,7 +73,7 @@ export async function POST(
 
   const channel = await prisma.channel.findUnique({
     where: { id: channelId },
-    select: { id: true, type: true, serverId: true },
+    select: { id: true, type: true, serverId: true, writePermission: true },
   });
   if (!channel) return NextResponse.json({ error: 'Channel not found' }, { status: 404 });
   if (channel.type !== 'forum') return NextResponse.json({ error: 'Not a forum channel' }, { status: 400 });
@@ -87,6 +88,15 @@ export async function POST(
     where: { serverId: channel.serverId, targetPubkey: pubkey, expiresAt: { gt: new Date() } },
   });
   if (mute) return NextResponse.json({ error: 'You are muted', mutedUntil: mute.expiresAt }, { status: 403 });
+
+  // Channel-level write permission
+  if (channel.writePermission) {
+    const authMember = await getAuthMember(req, channel.serverId);
+    const role = authMember?.role ?? 'member';
+    if (!canWriteInChannel(role, { writePermission: channel.writePermission })) {
+      return NextResponse.json({ error: 'channel_write_locked' }, { status: 403 });
+    }
+  }
 
   const { title, content, tagIds } = await req.json();
   if (!title || typeof title !== 'string' || !title.trim()) {

@@ -7,7 +7,8 @@ vi.mock('@/lib/db', () => ({
     message: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
     ban: { findUnique: vi.fn() },
     mute: { findFirst: vi.fn() },
-    member: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
+    member: { updateMany: vi.fn().mockResolvedValue({ count: 1 }), findUnique: vi.fn() },
+    server: { findUnique: vi.fn() },
   },
 }));
 
@@ -97,6 +98,47 @@ describe('POST /api/channels/[channelId]/messages', () => {
     mockGetAuth.mockResolvedValue('good-user');
     const res = await POST(makeRequest({ content: '' }), routeContext);
     expect(res.status).toBe(400);
+  });
+
+  it('returns 403 channel_write_locked when member posts in admin-only channel', async () => {
+    mockGetAuth.mockResolvedValue('member-pk');
+    mockPrisma.channel.findUnique.mockResolvedValue({
+      id: 'ch1', serverId: 'srv1', writePermission: 'admin',
+    });
+    mockPrisma.ban.findUnique.mockResolvedValue(null);
+    mockPrisma.mute.findFirst.mockResolvedValue(null);
+    mockPrisma.server.findUnique.mockResolvedValue({ ownerPubkey: 'owner-pk' });
+    mockPrisma.member.findUnique.mockResolvedValue({
+      id: 'm1', serverId: 'srv1', pubkey: 'member-pk', role: 'member',
+      displayName: null, picture: null,
+    });
+
+    const res = await POST(makeRequest({ content: 'hello' }), routeContext);
+    expect(res.status).toBe(403);
+    const data = await res.json();
+    expect(data.error).toBe('channel_write_locked');
+  });
+
+  it('allows admin to post in admin-only channel', async () => {
+    mockGetAuth.mockResolvedValue('admin-pk');
+    mockPrisma.channel.findUnique.mockResolvedValue({
+      id: 'ch1', serverId: 'srv1', writePermission: 'admin',
+    });
+    mockPrisma.ban.findUnique.mockResolvedValue(null);
+    mockPrisma.mute.findFirst.mockResolvedValue(null);
+    mockPrisma.server.findUnique.mockResolvedValue({ ownerPubkey: 'owner-pk' });
+    mockPrisma.member.findUnique.mockResolvedValue({
+      id: 'm1', serverId: 'srv1', pubkey: 'admin-pk', role: 'admin',
+      displayName: null, picture: null,
+    });
+    mockPrisma.message.create.mockResolvedValue({
+      id: 'msg1', channelId: 'ch1', authorPubkey: 'admin-pk',
+      content: 'hello', replyToId: null, createdAt: new Date().toISOString(),
+      replyTo: null,
+    });
+
+    const res = await POST(makeRequest({ content: 'hello' }), routeContext);
+    expect(res.status).toBe(201);
   });
 });
 

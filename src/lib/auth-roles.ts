@@ -2,19 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthPubkey } from './api-auth';
 import { prisma } from './db';
 import { isInstanceOwner } from './instance-owner';
+import { hasRole, canWriteInChannel, type Role } from './roles';
 
-export type Role = 'owner' | 'admin' | 'mod' | 'member';
-
-const ROLE_HIERARCHY: Record<Role, number> = {
-  owner: 4,
-  admin: 3,
-  mod: 2,
-  member: 1,
-};
-
-export function hasRole(memberRole: Role, minimumRole: Role): boolean {
-  return (ROLE_HIERARCHY[memberRole] ?? 0) >= (ROLE_HIERARCHY[minimumRole] ?? 0);
-}
+// Re-export pure helpers so existing server-side imports keep working.
+export { hasRole, canWriteInChannel };
+export type { Role };
 
 export interface AuthMember {
   id: string;

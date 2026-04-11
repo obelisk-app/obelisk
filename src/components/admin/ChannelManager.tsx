@@ -10,7 +10,10 @@ interface AdminChannel {
   type: string;
   position: number;
   categoryId: string | null;
+  writePermission: string | null;
 }
+
+type WritePermissionValue = 'everyone' | 'mod' | 'admin';
 
 interface AdminCategory {
   id: string;
@@ -41,7 +44,12 @@ export default function ChannelManager({ serverId, isOwner }: ChannelManagerProp
 
   // Edit states
   const [editingChannel, setEditingChannel] = useState<string | null>(null);
-  const [editChannelData, setEditChannelData] = useState({ name: '', emoji: '', type: 'text' });
+  const [editChannelData, setEditChannelData] = useState<{
+    name: string;
+    emoji: string;
+    type: string;
+    writePermission: WritePermissionValue;
+  }>({ name: '', emoji: '', type: 'text', writePermission: 'everyone' });
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [editCategoryName, setEditCategoryName] = useState('');
 
@@ -115,6 +123,7 @@ export default function ChannelManager({ serverId, isOwner }: ChannelManagerProp
         name: editChannelData.name,
         emoji: editChannelData.emoji || null,
         type: editChannelData.type,
+        writePermission: editChannelData.writePermission,
       }),
     });
     if (res.ok) {
@@ -149,7 +158,12 @@ export default function ChannelManager({ serverId, isOwner }: ChannelManagerProp
 
   const startEditChannel = (ch: AdminChannel) => {
     setEditingChannel(ch.id);
-    setEditChannelData({ name: ch.name, emoji: ch.emoji || '', type: ch.type });
+    setEditChannelData({
+      name: ch.name,
+      emoji: ch.emoji || '',
+      type: ch.type,
+      writePermission: (ch.writePermission as WritePermissionValue) || 'everyone',
+    });
   };
 
   const startEditCategory = (cat: AdminCategory) => {
@@ -170,30 +184,50 @@ export default function ChannelManager({ serverId, isOwner }: ChannelManagerProp
   const renderChannelRow = (ch: AdminChannel) => (
     <div key={ch.id} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-lc-card/50 group" data-testid="channel-row">
       {editingChannel === ch.id ? (
-        <div className="flex-1 flex items-center gap-2">
-          <input
-            value={editChannelData.emoji}
-            onChange={(e) => setEditChannelData({ ...editChannelData, emoji: e.target.value })}
-            placeholder="Emoji"
-            className="w-12 px-1 py-1 rounded bg-lc-black border border-lc-border text-lc-white text-sm text-center"
-          />
-          <input
-            value={editChannelData.name}
-            onChange={(e) => setEditChannelData({ ...editChannelData, name: e.target.value })}
-            className="flex-1 px-2 py-1 rounded bg-lc-black border border-lc-border text-lc-white text-sm"
-            data-testid="edit-channel-name"
-          />
-          <select
-            value={editChannelData.type}
-            onChange={(e) => setEditChannelData({ ...editChannelData, type: e.target.value })}
-            className="text-xs bg-lc-black border border-lc-border rounded px-2 py-1 text-lc-white"
-          >
-            <option value="text">Text</option>
-            <option value="voice">Voice</option>
-            <option value="forum">Forum</option>
-          </select>
-          <button onClick={() => handleEditChannel(ch.id)} className="text-xs text-lc-green hover:underline">Save</button>
-          <button onClick={() => setEditingChannel(null)} className="text-xs text-lc-muted hover:underline">Cancel</button>
+        <div className="flex-1 flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <input
+              value={editChannelData.emoji}
+              onChange={(e) => setEditChannelData({ ...editChannelData, emoji: e.target.value })}
+              placeholder="Emoji"
+              className="w-12 px-1 py-1 rounded bg-lc-black border border-lc-border text-lc-white text-sm text-center"
+            />
+            <input
+              value={editChannelData.name}
+              onChange={(e) => setEditChannelData({ ...editChannelData, name: e.target.value })}
+              className="flex-1 px-2 py-1 rounded bg-lc-black border border-lc-border text-lc-white text-sm"
+              data-testid="edit-channel-name"
+            />
+            <select
+              value={editChannelData.type}
+              onChange={(e) => setEditChannelData({ ...editChannelData, type: e.target.value })}
+              className="text-xs bg-lc-black border border-lc-border rounded px-2 py-1 text-lc-white"
+            >
+              <option value="text">Text</option>
+              <option value="voice">Voice</option>
+              <option value="forum">Forum</option>
+            </select>
+            <button onClick={() => handleEditChannel(ch.id)} className="text-xs text-lc-green hover:underline">Save</button>
+            <button onClick={() => setEditingChannel(null)} className="text-xs text-lc-muted hover:underline">Cancel</button>
+          </div>
+          <div className="flex items-center gap-2 pl-14">
+            <label className="text-xs text-lc-muted">Who can post:</label>
+            <select
+              value={editChannelData.writePermission}
+              onChange={(e) =>
+                setEditChannelData({
+                  ...editChannelData,
+                  writePermission: e.target.value as WritePermissionValue,
+                })
+              }
+              className="text-xs bg-lc-black border border-lc-border rounded px-2 py-1 text-lc-white"
+              data-testid="edit-channel-write-permission"
+            >
+              <option value="everyone">Everyone</option>
+              <option value="mod">Mods &amp; admins only</option>
+              <option value="admin">Admins only</option>
+            </select>
+          </div>
         </div>
       ) : (
         <>

@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { requireRole } from '@/lib/auth-roles';
 
 const VALID_TYPES = ['text', 'voice', 'forum'];
+const VALID_WRITE_PERMISSIONS = ['everyone', 'mod', 'admin'];
 
 // PATCH /api/admin/channels/[id] — edit a channel
 // (serverId is derived from the resource)
@@ -40,6 +41,19 @@ export async function PATCH(
   }
   if (body.position !== undefined) {
     data.position = Number(body.position);
+  }
+  if (body.writePermission !== undefined) {
+    if (body.writePermission === null) {
+      data.writePermission = null;
+    } else if (typeof body.writePermission === 'string' && VALID_WRITE_PERMISSIONS.includes(body.writePermission)) {
+      // Normalize "everyone" → null so the default has a single canonical form.
+      data.writePermission = body.writePermission === 'everyone' ? null : body.writePermission;
+    } else {
+      return NextResponse.json(
+        { error: `Invalid writePermission. Must be one of: ${VALID_WRITE_PERMISSIONS.join(', ')}` },
+        { status: 400 }
+      );
+    }
   }
 
   if (Object.keys(data).length === 0) {

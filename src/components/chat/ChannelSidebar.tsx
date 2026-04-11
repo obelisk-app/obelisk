@@ -6,6 +6,7 @@ import { useChatStore, Category, Channel } from '@/store/chat';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notification';
 import ProfilePanel from './ProfilePanel';
+import { canWriteInChannel } from '@/lib/roles';
 
 function ChannelTypeIcon({ type }: { type: string }) {
   if (type === 'forum') {
@@ -26,10 +27,35 @@ function ChannelTypeIcon({ type }: { type: string }) {
   return <span className="shrink-0 text-lc-muted/60 font-bold text-xs">#</span>;
 }
 
+function LockIcon() {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="shrink-0 text-lc-muted"
+      aria-label="Write-locked channel"
+      data-testid="channel-write-lock-icon"
+    >
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+      <path d="M7 11V7a5 5 0 0110 0v4"/>
+    </svg>
+  );
+}
+
 function ChannelItem({ channel, isActive, onClick }: { channel: Channel; isActive: boolean; onClick: () => void }) {
   const unreadCount = useNotificationStore((s) => s.channelUnreads[channel.id] || 0);
   const hasMention = useNotificationStore((s) => s.channelMentions[channel.id] || false);
   const hasUnread = unreadCount > 0;
+  const myRole = useChatStore((s) => s.myRole);
+  const isWriteLocked = !canWriteInChannel(myRole ?? 'member', {
+    writePermission: channel.writePermission ?? null,
+  });
 
   return (
     <button
@@ -45,6 +71,7 @@ function ChannelItem({ channel, isActive, onClick }: { channel: Channel; isActiv
       <ChannelTypeIcon type={channel.type} />
       {channel.emoji && <span className="text-sm">{channel.emoji}</span>}
       <span className="truncate">{channel.name}</span>
+      {isWriteLocked && <LockIcon />}
       {hasUnread && !isActive && (
         <span className={`ml-auto shrink-0 text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1 ${
           hasMention

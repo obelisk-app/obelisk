@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthPubkey } from '@/lib/api-auth';
 import { getAuthorProfile } from '@/lib/profile-sync';
+import { canWriteInChannel, getAuthMember } from '@/lib/auth-roles';
 
 // GET /api/channels/:channelId/messages?cursor=&limit=
 export async function GET(
@@ -79,7 +80,7 @@ export async function POST(
   // Validate channel exists
   const channel = await prisma.channel.findUnique({
     where: { id: channelId },
-    select: { id: true, serverId: true },
+    select: { id: true, serverId: true, writePermission: true },
   });
   if (!channel) {
     return NextResponse.json({ error: 'Channel not found' }, { status: 404 });
@@ -99,6 +100,16 @@ export async function POST(
   });
   if (mute) {
     return NextResponse.json({ error: 'You are muted', mutedUntil: mute.expiresAt }, { status: 403 });
+  }
+
+  // Channel-level write permission (who-can-post). Resolves server-owner /
+  // instance-owner to the 'owner' role so elevated callers always pass.
+  if (channel.writePermission) {
+    const authMember = await getAuthMember(req, channel.serverId);
+    const role = authMember?.role ?? 'member';
+    if (!canWriteInChannel(role, { writePermission: channel.writePermission })) {
+      return NextResponse.json({ error: 'channel_write_locked' }, { status: 403 });
+    }
   }
 
   // Validate replyToId if provided

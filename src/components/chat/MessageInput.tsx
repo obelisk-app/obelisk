@@ -19,6 +19,7 @@ import {
   type PendingAttachment,
 } from '@/lib/attachments';
 import { searchShortcodes } from '@/lib/emoji-shortcodes';
+import { canWriteInChannel } from '@/lib/roles';
 
 interface MessageInputProps {
   onSend: (content: string, replyToId?: string) => void;
@@ -41,6 +42,7 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
     setEditingMessage,
     memberList,
     serverEmojis,
+    myRole,
   } = useChatStore();
 
   // Attach menu / upload / emoji state
@@ -99,6 +101,19 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
     ...categories.flatMap(c => c.channels),
   ];
   const activeChannel = allChannels.find(c => c.id === activeChannelId);
+
+  // Channel write-permission gate. When the channel is locked to a role the
+  // current user doesn't meet, disable the composer with an explanatory
+  // placeholder. Server-side enforcement in the POST handlers is the real
+  // gate — this is UX only.
+  const writePermission = activeChannel?.writePermission ?? null;
+  const canWrite = canWriteInChannel(myRole ?? 'member', { writePermission });
+  const writeLockedPlaceholder =
+    writePermission === 'admin'
+      ? 'Only admins can post in this channel'
+      : writePermission === 'mod'
+      ? 'Only mods and admins can post in this channel'
+      : '';
 
   useEffect(() => {
     textareaRef.current?.focus();
@@ -812,9 +827,17 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
           onChange={handleInput}
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
-          placeholder={`Message #${activeChannel?.name || 'channel'}`}
+          disabled={!canWrite}
+          placeholder={
+            canWrite
+              ? `Message #${activeChannel?.name || 'channel'}`
+              : writeLockedPlaceholder
+          }
           rows={1}
-          className="flex-1 bg-transparent text-sm text-lc-white placeholder-lc-muted resize-none outline-none max-h-[200px] py-1.5"
+          className={`flex-1 bg-transparent text-sm text-lc-white placeholder-lc-muted resize-none outline-none max-h-[200px] py-1.5 ${
+            canWrite ? '' : 'cursor-not-allowed opacity-60'
+          }`}
+          data-testid="message-textarea"
         />
 
         {/* Emoji picker */}
@@ -844,7 +867,7 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
 
         <button
           onClick={handleSubmit}
-          disabled={(!content.trim() && attachments.length === 0) || uploading}
+          disabled={(!content.trim() && attachments.length === 0) || uploading || !canWrite}
           className="p-1.5 rounded-lg text-lc-muted hover:text-lc-green disabled:opacity-30 disabled:hover:text-lc-muted transition-colors shrink-0"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
