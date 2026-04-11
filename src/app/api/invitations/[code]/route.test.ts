@@ -57,6 +57,18 @@ describe('GET /api/invitations/:code', () => {
     expect(res.status).toBe(410);
   });
 
+  it('returns 410 for revoked invitation', async () => {
+    mockPrisma.invitation.findUnique.mockResolvedValue({
+      id: 'inv1', code: 'test', maxUses: 5, uses: 1,
+      expiresAt: null, revokedAt: new Date('2026-04-10'),
+      server: { id: 's1', name: 'Test', icon: null, banner: null, _count: { members: 5 } },
+    });
+    const res = await GET(makeRequest('GET'), { params: makeParams('test') });
+    expect(res.status).toBe(410);
+    const data = await res.json();
+    expect(data.error).toMatch(/revoked/i);
+  });
+
   it('returns 410 for fully used invitation', async () => {
     mockPrisma.invitation.findUnique.mockResolvedValue({
       id: 'inv1', code: 'test', maxUses: 1, uses: 1,
@@ -146,6 +158,23 @@ describe('POST /api/invitations/:code', () => {
     expect(data.message).toMatch(/already a member/i);
     // Crucially, no transaction (no use consumed, no member create)
     expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('rejects revoked invitations with 410 and does not create a member', async () => {
+    mockGetAuth.mockResolvedValue('pk1');
+    mockPrisma.invitation.findUnique.mockResolvedValue({
+      id: 'inv1', serverId: 's1', code: 'test', maxUses: 5, uses: 2,
+      expiresAt: null, targetPubkey: null,
+      revokedAt: new Date('2026-04-10'), revokedBy: 'admin-pk',
+      server: { id: 's1', name: 'Test', icon: null, banner: null },
+    });
+
+    const res = await POST(makeRequest('POST'), { params: makeParams('test') });
+    expect(res.status).toBe(410);
+    const data = await res.json();
+    expect(data.error).toMatch(/revoked/i);
+    expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+    expect(mockPrisma.ban.findUnique).not.toHaveBeenCalled();
   });
 
   it('returns 403 with ban reason when user is banned', async () => {
