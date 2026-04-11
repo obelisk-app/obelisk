@@ -19,6 +19,12 @@ vi.mock('@/components/LoginModal', () => ({
     ) : null,
 }));
 
+// Stub the shooting-stars canvas — jsdom has no 2D context and the real
+// component would error out during render.
+vi.mock('@/components/ShootingStars', () => ({
+  default: () => <div data-testid="shooting-stars" />,
+}));
+
 // Controllable auth store mock.
 let isConnectedMock = false;
 const restoreSessionMock = vi.fn(async () => isConnectedMock);
@@ -137,6 +143,35 @@ describe('InvitePage (auth flow)', () => {
     await waitFor(() => {
       expect(screen.getByTestId('login-modal')).toBeInTheDocument();
     });
+  });
+
+  it('shows "already a member" state and routes to /chat without POSTing', async () => {
+    isConnectedMock = true;
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      // GET returns alreadyMember:true — no POST should be issued.
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () =>
+          Promise.resolve({ server: serverInfo, alreadyMember: true }),
+      } as Response);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<InvitePage />);
+
+    await screen.findByTestId('already-member-msg');
+    const goBtn = screen.getByTestId('go-to-channel-btn');
+    expect(screen.queryByTestId('accept-invite-btn')).not.toBeInTheDocument();
+
+    fireEvent.click(goBtn);
+    expect(mockPush).toHaveBeenCalledWith('/chat');
+
+    // Critically: no POST to /api/invitations/* — the invite code is not consumed.
+    const postCalls = fetchMock.mock.calls.filter(
+      ([, init]) => (init as RequestInit | undefined)?.method === 'POST'
+    );
+    expect(postCalls).toHaveLength(0);
   });
 
   it('joins directly when the user is already authenticated', async () => {

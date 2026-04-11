@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth';
 import LoginModal from '@/components/LoginModal';
+import ShootingStars from '@/components/ShootingStars';
 
 interface ServerInfo {
   id: string;
@@ -18,6 +19,7 @@ export default function InvitePage() {
   const router = useRouter();
   const { isConnected, restoreSession } = useAuthStore();
   const [server, setServer] = useState<ServerInfo | null>(null);
+  const [alreadyMember, setAlreadyMember] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
@@ -33,9 +35,17 @@ export default function InvitePage() {
     restoreSession().finally(() => setAuthChecked(true));
   }, [restoreSession]);
 
+  // Fetch invite info once the session has been restored so the server can
+  // tell us whether the authenticated viewer is already a member. Re-runs
+  // after a successful login so the "already a member" state appears
+  // without needing a manual refresh.
   useEffect(() => {
+    if (!authChecked) return;
+    let cancelled = false;
+    setLoading(true);
     fetch(`/api/invitations/${code}`)
       .then(async (res) => {
+        if (cancelled) return;
         if (!res.ok) {
           const data = await res.json();
           setError(data.error || 'Invalid invitation');
@@ -43,10 +53,18 @@ export default function InvitePage() {
         }
         const data = await res.json();
         setServer(data.server);
+        setAlreadyMember(!!data.alreadyMember);
       })
-      .catch(() => setError('Failed to load invitation'))
-      .finally(() => setLoading(false));
-  }, [code]);
+      .catch(() => {
+        if (!cancelled) setError('Failed to load invitation');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [code, authChecked, isConnected]);
 
   const performJoin = async () => {
     setJoining(true);
@@ -108,16 +126,18 @@ export default function InvitePage() {
 
   if (loading || !authChecked) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-lc-black">
-        <div className="lc-spinner" style={{ width: 32, height: 32 }} />
+      <div className="min-h-screen flex items-center justify-center bg-lc-black lc-grid-bg relative">
+        <ShootingStars />
+        <div className="lc-spinner relative z-10" style={{ width: 32, height: 32 }} />
       </div>
     );
   }
 
   if (error && !server) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-lc-black">
-        <div className="lc-card p-6 max-w-sm text-center">
+      <div className="min-h-screen flex items-center justify-center bg-lc-black lc-grid-bg relative">
+        <ShootingStars />
+        <div className="lc-card p-6 max-w-sm text-center relative z-10">
           <h2 className="text-lg font-semibold text-lc-white mb-2">Invalid Invitation</h2>
           <p className="text-sm text-lc-muted mb-4">{error}</p>
           <button onClick={() => router.push('/')} className="lc-pill-primary px-5 py-2 text-sm">
@@ -129,8 +149,9 @@ export default function InvitePage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-lc-black">
-      <div className="lc-card p-6 max-w-sm w-full mx-4 text-center">
+    <div className="min-h-screen flex items-center justify-center bg-lc-black lc-grid-bg relative">
+      <ShootingStars />
+      <div className="lc-card p-6 max-w-sm w-full mx-4 text-center relative z-10">
         {server?.icon ? (
           <img src={server.icon} alt={server.name} className="w-16 h-16 rounded-full mx-auto mb-4 object-cover" />
         ) : (
@@ -141,26 +162,43 @@ export default function InvitePage() {
         <h2 className="text-xl font-bold text-lc-white mb-1">{server?.name}</h2>
         <p className="text-sm text-lc-muted mb-4">{server?._count.members} members</p>
 
-        {!isConnected && (
-          <p className="text-xs text-lc-muted mb-3">
-            You need to log in or create an account to accept this invitation.
-          </p>
+        {alreadyMember ? (
+          <>
+            <p className="text-sm text-lc-muted mb-4" data-testid="already-member-msg">
+              You&apos;re already a member of this server.
+            </p>
+            <button
+              onClick={() => router.push('/chat')}
+              className="lc-pill-primary px-6 py-2.5 text-sm font-medium w-full"
+              data-testid="go-to-channel-btn"
+            >
+              Go to Channel
+            </button>
+          </>
+        ) : (
+          <>
+            {!isConnected && (
+              <p className="text-xs text-lc-muted mb-3">
+                You need to log in or create an account to accept this invitation.
+              </p>
+            )}
+
+            {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
+
+            <button
+              onClick={handleJoin}
+              disabled={joining}
+              className="lc-pill-primary px-6 py-2.5 text-sm font-medium w-full disabled:opacity-50"
+              data-testid="accept-invite-btn"
+            >
+              {joining
+                ? 'Joining...'
+                : isConnected
+                ? 'Accept Invite'
+                : 'Log in to Accept Invite'}
+            </button>
+          </>
         )}
-
-        {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
-
-        <button
-          onClick={handleJoin}
-          disabled={joining}
-          className="lc-pill-primary px-6 py-2.5 text-sm font-medium w-full disabled:opacity-50"
-          data-testid="accept-invite-btn"
-        >
-          {joining
-            ? 'Joining...'
-            : isConnected
-            ? 'Accept Invite'
-            : 'Log in to Accept Invite'}
-        </button>
       </div>
 
       <LoginModal

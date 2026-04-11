@@ -38,9 +38,28 @@ export async function GET(
     return NextResponse.json({ error: 'Invitation fully used' }, { status: 410 });
   }
 
+  // If the caller is already authenticated and a member of this server, tell
+  // the client so the invite page can render the "already joined" state
+  // instead of the Accept Invite button. No invite use is consumed here.
+  let alreadyMember = false;
+  let pubkey: string | null = null;
+  try {
+    pubkey = (await getAuthPubkey(req)) ?? null;
+  } catch {
+    pubkey = null;
+  }
+  if (pubkey) {
+    const existingMember = await prisma.member.findUnique({
+      where: { serverId_pubkey: { serverId: invitation.serverId, pubkey } },
+      select: { id: true },
+    });
+    alreadyMember = !!existingMember;
+  }
+
   return NextResponse.json({
     server: invitation.server,
     targetPubkey: invitation.targetPubkey,
+    alreadyMember,
   });
 }
 
