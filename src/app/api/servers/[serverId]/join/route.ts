@@ -3,7 +3,6 @@ import { prisma } from '@/lib/db';
 import { getAuthPubkey } from '@/lib/api-auth';
 import { postWelcomeMessage } from '@/lib/welcome';
 import { isInWot, maybeAutoRefreshWot } from '@/lib/wot';
-import { fetchAndSyncProfileDeduped } from '@/lib/profile-sync';
 
 /**
  * POST /api/servers/:serverId/join — join a server.
@@ -96,22 +95,15 @@ export async function POST(
     data: { serverId, pubkey, role: 'member' },
   });
 
-  // Best-effort inline profile fetch so the new member shows up with a
-  // display name and avatar immediately — no F5, no admin refresh needed.
-  // Relay failure is non-fatal: the row exists and lazy refresh
-  // (triggerBackgroundRefreshIfStale on GET /api/members) will retry.
-  try {
-    await Promise.race([
-      fetchAndSyncProfileDeduped(pubkey, serverId),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('profile-fetch-timeout')), 3000),
-      ),
-    ]);
-  } catch {
-    // non-fatal
-  }
-
-  await postWelcomeMessage(serverId, pubkey);
+  // Fire-and-forget: `postWelcomeMessage` awaits a profile fetch when the
+  // member has never been synced (see welcome.ts), which can take up to 8s.
+  // Running it inline would stall the join response for slow relays and
+  // leave the user staring at a spinner. Doing it in the background lets
+  // the UI redirect immediately; the welcome message drops into the
+  // channel via Socket.io as soon as the profile lands.
+  void postWelcomeMessage(serverId, pubkey).catch((err) => {
+    console.warn('[join] postWelcomeMessage failed:', err);
+  });
 
   return NextResponse.json({
     server: { id: server.id, name: server.name, icon: server.icon, banner: server.banner },

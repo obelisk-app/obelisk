@@ -230,10 +230,22 @@ export interface EmbeddedAuthorProfile {
 }
 
 /**
+ * The "system bot" pubkey. Any message posted with this author is assumed
+ * to come from the server itself (welcome bot, server announcements, etc.).
+ * Clients see the server's name + icon in place of an actual user profile.
+ */
+export const SYSTEM_PUBKEY =
+  '0000000000000000000000000000000000000000000000000000000000000000';
+
+/**
  * Look up a Member's cached profile to embed in a Socket.io `new-message`
- * event. Returns null if the author is not a Member of the server (e.g. the
- * system welcome bot). If the Member exists but has no cached profile, fires
- * a background fetch (non-blocking) so the next emit has data.
+ * event. Returns null if the author is not a Member of the server. If the
+ * Member exists but has no cached profile, fires a background fetch
+ * (non-blocking) so the next emit has data.
+ *
+ * Special case: when `pubkey === SYSTEM_PUBKEY`, returns a synthetic profile
+ * derived from the server (name + icon), so system messages render with the
+ * server logo and name instead of a generic placeholder.
  *
  * Callers: every site that emits `new-message` — src/server.ts,
  * src/app/api/channels/[channelId]/messages/route.ts,
@@ -246,6 +258,22 @@ export async function getAuthorProfile(
 ): Promise<EmbeddedAuthorProfile | null> {
   try {
     const prisma = await getPrisma();
+
+    if (pubkey === SYSTEM_PUBKEY) {
+      const server = await prisma.server.findUnique({
+        where: { id: serverId },
+        select: { name: true, icon: true },
+      });
+      if (!server) return null;
+      return {
+        pubkey: SYSTEM_PUBKEY,
+        displayName: server.name,
+        picture: server.icon,
+        nip05: null,
+        nickname: null,
+      };
+    }
+
     const member = await prisma.member.findUnique({
       where: { serverId_pubkey: { serverId, pubkey } },
       select: {

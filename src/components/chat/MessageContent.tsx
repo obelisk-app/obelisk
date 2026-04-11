@@ -5,8 +5,12 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkSpoiler from '@/lib/remark-spoiler';
 import { preprocessForMarkdown, MENTION_PLACEHOLDER_REGEX, isImageUrl, extractYouTubeId, extractUrls } from '@/lib/markdown';
-import { isUploadUrl, filenameFromUrl, isVideoUrl } from '@/lib/attachments';
+import { isUploadUrl, filenameFromUrl, isVideoUrl, isAudioUrl } from '@/lib/attachments';
 import { useChatStore } from '@/store/chat';
+import {
+  replaceShortcodes,
+  CUSTOM_EMOJI_PLACEHOLDER_REGEX,
+} from '@/lib/emoji-shortcodes';
 import type { MemberInfo } from '@/lib/mentions';
 import SpoilerText from './SpoilerText';
 import CodeBlock from './CodeBlock';
@@ -28,51 +32,102 @@ function MentionChip({ pubkey, displayName }: { pubkey: string; displayName: str
   );
 }
 
+function CustomEmojiImg({ name, url }: { name: string; url: string }) {
+  return (
+    <img
+      src={url}
+      alt={`:${name}:`}
+      title={`:${name}:`}
+      className="inline-block w-5 h-5 align-text-bottom object-contain"
+      data-testid="custom-emoji"
+    />
+  );
+}
+
 /**
- * Swap mention placeholders in a text string with MentionChip components.
+ * Swap mention + custom-emoji placeholders in a text string with their
+ * respective components. Both placeholder kinds coexist in the same string
+ * so we need a single scanning pass that picks whichever token appears next
+ * at each step.
  */
-function renderWithMentions(text: string, mentions: Map<string, { pubkey: string; displayName: string }>): ReactNode[] {
-  MENTION_PLACEHOLDER_REGEX.lastIndex = 0;
+function renderWithMentions(
+  text: string,
+  mentions: Map<string, { pubkey: string; displayName: string }>,
+  serverEmojis: Record<string, string>,
+): ReactNode[] {
   const parts: ReactNode[] = [];
-  let lastIdx = 0;
-  let match: RegExpExecArray | null;
-
-  while ((match = MENTION_PLACEHOLDER_REGEX.exec(text)) !== null) {
-    if (match.index > lastIdx) {
-      parts.push(text.slice(lastIdx, match.index));
+  let idx = 0;
+  let i = 0;
+  const len = text.length;
+  while (i < len) {
+    // Scan for the next `\u3008` which is our shared placeholder prefix marker.
+    const start = text.indexOf('\u3008', i);
+    if (start === -1) {
+      parts.push(text.slice(i));
+      break;
     }
-    const mentionData = mentions.get(match[1]);
-    if (mentionData) {
-      parts.push(
-        <MentionChip key={`m-${match[1]}`} pubkey={mentionData.pubkey} displayName={mentionData.displayName} />
-      );
-    }
-    lastIdx = match.index + match[0].length;
-  }
+    if (start > i) parts.push(text.slice(i, start));
 
-  if (lastIdx < text.length) {
-    parts.push(text.slice(lastIdx));
+    // Mention: \u3008MENTION:<key>\u3009
+    MENTION_PLACEHOLDER_REGEX.lastIndex = start;
+    const mm = MENTION_PLACEHOLDER_REGEX.exec(text);
+    if (mm && mm.index === start) {
+      const mentionData = mentions.get(mm[1]);
+      if (mentionData) {
+        parts.push(
+          <MentionChip
+            key={`m-${idx++}-${mm[1]}`}
+            pubkey={mentionData.pubkey}
+            displayName={mentionData.displayName}
+          />,
+        );
+      }
+      i = start + mm[0].length;
+      continue;
+    }
+
+    // Custom emoji: \u3008EMOJI:<name>\u3009
+    CUSTOM_EMOJI_PLACEHOLDER_REGEX.lastIndex = start;
+    const em = CUSTOM_EMOJI_PLACEHOLDER_REGEX.exec(text);
+    if (em && em.index === start) {
+      const name = em[1];
+      const url = serverEmojis[name];
+      if (url) {
+        parts.push(<CustomEmojiImg key={`e-${idx++}-${name}`} name={name} url={url} />);
+      } else {
+        // Emoji no longer exists on this server — fall back to the raw `:name:`
+        parts.push(`:${name}:`);
+      }
+      i = start + em[0].length;
+      continue;
+    }
+
+    // Lone `\u3008` that doesn't match either placeholder — emit verbatim and
+    // advance by one to avoid an infinite loop.
+    parts.push('\u3008');
+    i = start + 1;
   }
 
   return parts.length > 0 ? parts : [text];
 }
 
 export default function MessageContent({ content }: { content: string }) {
-  const { memberList } = useChatStore();
+  const { memberList, serverEmojis } = useChatStore();
 
-  // Hoist image + video URLs out of the message body so we can render them
-  // as a gallery / inline player below the text. Without this, each URL
-  // would render inline wherever it appears in the markdown.
-  const { imageUrls, videoUrls } = useMemo(() => {
+  // Hoist image + video + audio URLs out of the message body so we can
+  // render them as a gallery / inline player below the text. Without this,
+  // each URL would render inline wherever it appears in the markdown.
+  const { imageUrls, videoUrls, audioUrls } = useMemo(() => {
     const urls = extractUrls(content);
     return {
       imageUrls: urls.filter(isImageUrl),
       videoUrls: urls.filter(isVideoUrl),
+      audioUrls: urls.filter(isAudioUrl),
     };
   }, [content]);
 
   const bodyContent = useMemo(() => {
-    const toStrip = [...imageUrls, ...videoUrls];
+    const toStrip = [...imageUrls, ...videoUrls, ...audioUrls];
     if (toStrip.length === 0) return content;
     let stripped = content;
     for (const url of toStrip) {
@@ -80,11 +135,20 @@ export default function MessageContent({ content }: { content: string }) {
     }
     // collapse stray whitespace/newlines left behind
     return stripped.replace(/\n{3,}/g, '\n\n').trim();
-  }, [content, imageUrls, videoUrls]);
+  }, [content, imageUrls, videoUrls, audioUrls]);
+
+  // Resolve `:name:` shortcodes before markdown parsing. Unicode shortcodes
+  // are replaced inline (no placeholder — the char is just a char), while
+  // custom server emojis are replaced with placeholder tokens that
+  // `processChildren` below swaps for <img> elements, mirroring mentions.
+  const shortcodeResolved = useMemo(
+    () => replaceShortcodes(bodyContent, serverEmojis),
+    [bodyContent, serverEmojis],
+  );
 
   const { text, mentions } = useMemo(
-    () => preprocessForMarkdown(bodyContent, memberList as MemberInfo[]),
-    [bodyContent, memberList]
+    () => preprocessForMarkdown(shortcodeResolved, memberList as MemberInfo[]),
+    [shortcodeResolved, memberList]
   );
 
   // Collect non-image, non-video, non-youtube, non-upload URLs for link previews
@@ -169,22 +233,22 @@ export default function MessageContent({ content }: { content: string }) {
     h2({ children }) { return <p className="text-base font-bold text-lc-white">{children}</p>; },
     h3({ children }) { return <p className="text-sm font-bold text-lc-white">{children}</p>; },
     // Text formatting
-    strong({ children }) { return <strong className="font-bold text-lc-white">{processChildren(children, mentions)}</strong>; },
-    em({ children }) { return <em className="italic text-lc-white/80">{processChildren(children, mentions)}</em>; },
-    del({ children }) { return <del className="line-through text-lc-muted">{processChildren(children, mentions)}</del>; },
+    strong({ children }) { return <strong className="font-bold text-lc-white">{processChildren(children, mentions, serverEmojis)}</strong>; },
+    em({ children }) { return <em className="italic text-lc-white/80">{processChildren(children, mentions, serverEmojis)}</em>; },
+    del({ children }) { return <del className="line-through text-lc-muted">{processChildren(children, mentions, serverEmojis)}</del>; },
     // Lists
     ul({ children }) { return <ul className="list-disc list-inside my-1 text-lc-white/90">{children}</ul>; },
     ol({ children }) { return <ol className="list-decimal list-inside my-1 text-lc-white/90">{children}</ol>; },
-    li({ children }) { return <li className="text-sm">{processChildren(children, mentions)}</li>; },
+    li({ children }) { return <li className="text-sm">{processChildren(children, mentions, serverEmojis)}</li>; },
     // Paragraph — swap mention placeholders
     p({ children }) {
-      return <p className="my-0">{processChildren(children, mentions)}</p>;
+      return <p className="my-0">{processChildren(children, mentions, serverEmojis)}</p>;
     },
     // Spoiler nodes (from our remark plugin)
     spoiler({ children }: { children?: ReactNode }) {
       return <SpoilerText>{children}</SpoilerText>;
     },
-  }), [mentions]);
+  }), [mentions, serverEmojis]);
 
   return (
     <span data-testid="message-content">
@@ -211,6 +275,18 @@ export default function MessageContent({ content }: { content: string }) {
           data-testid="video-player"
         />
       ))}
+      {/* Audio: native <audio controls>, one per file. Matches the video
+          hoisting pattern so an `.mp3` upload renders as an inline player. */}
+      {audioUrls.map((url) => (
+        <audio
+          key={url}
+          src={url}
+          controls
+          preload="metadata"
+          className="mt-1 max-w-sm block"
+          data-testid="audio-player"
+        />
+      ))}
       {/* Link previews for non-image, non-youtube URLs */}
       {previewUrls.map((url) => (
         <LinkPreview key={url} url={url} />
@@ -220,20 +296,27 @@ export default function MessageContent({ content }: { content: string }) {
 }
 
 /**
- * Process React children, replacing string nodes that contain mention placeholders.
+ * Process React children, replacing string nodes that contain mention or
+ * custom-emoji placeholders with their corresponding components.
  */
-function processChildren(children: ReactNode, mentions: Map<string, { pubkey: string; displayName: string }>): ReactNode {
+function processChildren(
+  children: ReactNode,
+  mentions: Map<string, { pubkey: string; displayName: string }>,
+  serverEmojis: Record<string, string>,
+): ReactNode {
+  const hasPlaceholder = (s: string) => s.includes('\u3008MENTION:') || s.includes('\u3008EMOJI:');
+
   if (typeof children === 'string') {
-    if (children.includes('\u3008MENTION:')) {
-      return renderWithMentions(children, mentions);
+    if (hasPlaceholder(children)) {
+      return renderWithMentions(children, mentions, serverEmojis);
     }
     return children;
   }
 
   if (Array.isArray(children)) {
     return children.map((child, i) => {
-      if (typeof child === 'string' && child.includes('\u3008MENTION:')) {
-        return <span key={i}>{renderWithMentions(child, mentions)}</span>;
+      if (typeof child === 'string' && hasPlaceholder(child)) {
+        return <span key={i}>{renderWithMentions(child, mentions, serverEmojis)}</span>;
       }
       return child;
     });

@@ -22,16 +22,32 @@ import { WebSocketVoiceClient } from '@/lib/voice';
 import { discoverDMThreads, subscribeDMs } from '@/lib/dm';
 import type { DMMessage } from '@/lib/dm';
 import { formatPubkey, getNDK, connectNDK } from '@/lib/nostr';
+import { shortNpub } from '@/lib/mentions';
+import {
+  isUserWatchingChannel,
+  handleIncomingChannelMessage,
+  handleIncomingDM,
+} from '@/lib/read-gates';
 import MemberList from '@/components/chat/MemberList';
 import { useNotificationStore } from '@/store/notification';
 import { requestNotificationPermission, showBrowserNotification } from '@/lib/browser-notifications';
+import { useReadTracker } from '@/hooks/useReadTracker';
+import { useFaviconBadge } from '@/hooks/useFaviconBadge';
+import { subscribeBroadcast } from '@/lib/notification-broadcast';
+import { clearBadge } from '@/lib/favicon-badge';
 
 function TypingIndicator({ profileCache }: { profileCache: Map<string, { name?: string; picture?: string }> }) {
-  const { typingUsers } = useChatStore();
+  const { typingUsers, memberList } = useChatStore();
   const typingPubkeys = Object.keys(typingUsers);
   if (typingPubkeys.length === 0) return null;
 
-  const names = typingPubkeys.map((pk) => profileCache.get(pk)?.name || pk.slice(0, 8) + '...');
+  const names = typingPubkeys.map((pk) => {
+    const cached = profileCache.get(pk)?.name;
+    if (cached) return cached;
+    const member = memberList.find((m) => m.pubkey === pk);
+    if (member?.displayName) return member.displayName;
+    return shortNpub(pk);
+  });
   const text = names.length === 1
     ? `${names[0]} is typing...`
     : `${names.join(', ')} are typing...`;
@@ -47,6 +63,7 @@ export default function ChatPage() {
   const router = useRouter();
   const { isConnected, profile, logout, restoreSession } = useAuthStore();
   const {
+    servers,
     activeServerId,
     activeChannelId,
     pinnedChannels,
@@ -65,12 +82,35 @@ export default function ChatPage() {
     setMessageCursor,
     setTyping,
     setMemberList,
+    setMyRole,
+    setServerEmojis,
   } = useChatStore();
   const socketRef = useRef<Socket | null>(null);
+  const [socketInstance, setSocketInstance] = useState<Socket | null>(null);
   const voiceClientRef = useRef<WebSocketVoiceClient | null>(null);
   const prevChannelRef = useRef<string | null>(null);
   const activeChannelIdRef = useRef<string | null>(null);
+  const profilePubkeyRef = useRef<string | null>(null);
   const [profileCache] = useState(() => new Map<string, { name?: string; picture?: string }>());
+
+  // Location restoration on refresh: the user's last server/channel/message
+  // are encoded into URL query params (?s=, ?c=, ?m=). On initial mount we
+  // read them once and use them to override the "pick the first server /
+  // first channel" defaults. `pendingHighlightRef` carries the target message
+  // id across the async channel-fetch boundary so MessageArea can scroll to
+  // it once the messages for the restored channel actually arrive.
+  const initialUrlRef = useRef<{ s: string | null; c: string | null; m: string | null } | null>(null);
+  if (initialUrlRef.current === null) {
+    if (typeof window !== 'undefined') {
+      const sp = new URLSearchParams(window.location.search);
+      initialUrlRef.current = { s: sp.get('s'), c: sp.get('c'), m: sp.get('m') };
+    } else {
+      initialUrlRef.current = { s: null, c: null, m: null };
+    }
+  }
+  const initialUrlAppliedRef = useRef({ server: false, channel: false });
+  const pendingHighlightRef = useRef<{ channelId: string; messageId: string } | null>(null);
+
   const [sessionChecked, setSessionChecked] = useState(false);
   const sessionCheckStarted = useRef(false);
   const [ndkReady, setNdkReady] = useState(false);
@@ -119,6 +159,9 @@ export default function ChatPage() {
         name: profile.displayName || profile.name,
         picture: profile.picture,
       });
+      profilePubkeyRef.current = profile.pubkey;
+    } else {
+      profilePubkeyRef.current = null;
     }
   }, [profile, profileCache]);
 
@@ -139,7 +182,18 @@ export default function ChatPage() {
         const data = await res.json();
         setServers(data.servers);
         if (data.servers.length > 0 && !activeServerId) {
-          setActiveServer(data.servers[0].id);
+          // Prefer the server encoded in the URL (?s=) on the initial mount —
+          // this is what makes a browser refresh land on the same server the
+          // user was viewing. Fall back to the first server otherwise.
+          let chosen: string = data.servers[0].id;
+          if (!initialUrlAppliedRef.current.server && initialUrlRef.current?.s) {
+            const urlS = initialUrlRef.current.s;
+            if (data.servers.some((s: any) => s.id === urlS)) {
+              chosen = urlS;
+            }
+          }
+          initialUrlAppliedRef.current.server = true;
+          setActiveServer(chosen);
         }
       } catch (err) {
         console.error('Failed to fetch servers:', err);
@@ -189,11 +243,49 @@ export default function ChatPage() {
         const notifStore = useNotificationStore.getState();
         notifStore.setChannelServerMap({ ...notifStore.channelServerMap, ...map });
 
-        // Auto-select first pinned channel or first category channel
-        const firstChannel = data.pinnedChannels[0]
-          || data.categories[0]?.channels[0];
-        if (firstChannel) {
-          setActiveChannel(firstChannel.id);
+        // Choose which channel to auto-select. On the initial mount, prefer
+        // the channel encoded in the URL (?c=) so refresh lands the user on
+        // the exact channel they were in. Otherwise pick the first pinned
+        // channel or the first channel in the first category.
+        const allChans = [
+          ...data.pinnedChannels,
+          ...data.categories.flatMap((c: any) => c.channels),
+        ];
+        let chosenChannel: string | null = null;
+        if (!initialUrlAppliedRef.current.channel && initialUrlRef.current?.c) {
+          const urlC = initialUrlRef.current.c;
+          if (allChans.some((ch: any) => ch.id === urlC)) {
+            chosenChannel = urlC;
+          }
+        }
+        if (!chosenChannel) {
+          const firstChannel = data.pinnedChannels[0]
+            || data.categories[0]?.channels[0];
+          if (firstChannel) chosenChannel = firstChannel.id;
+        }
+        if (chosenChannel) {
+          // On initial mount, queue a highlight so MessageArea scrolls to the
+          // last-viewed message once messages load for this channel. Prefer
+          // the URL ?m= param; fall back to the per-channel last-seen stored
+          // in localStorage by MessageArea's scroll observer.
+          if (!initialUrlAppliedRef.current.channel) {
+            let restoreId: string | null = initialUrlRef.current?.m ?? null;
+            if (!restoreId && typeof window !== 'undefined') {
+              try {
+                restoreId = localStorage.getItem(`chat:lastSeen:${chosenChannel}`);
+              } catch {
+                restoreId = null;
+              }
+            }
+            if (restoreId) {
+              pendingHighlightRef.current = {
+                channelId: chosenChannel,
+                messageId: restoreId,
+              };
+            }
+          }
+          initialUrlAppliedRef.current.channel = true;
+          setActiveChannel(chosenChannel);
         }
       } catch (err) {
         console.error('Failed to fetch channels:', err);
@@ -222,7 +314,7 @@ export default function ChatPage() {
           profileCache.set(member.pubkey, { name, picture });
           memberInfoList.push({
             pubkey: member.pubkey,
-            displayName: name || member.pubkey.slice(0, 8) + '...',
+            displayName: name || shortNpub(member.pubkey),
             picture,
           });
         }
@@ -234,6 +326,70 @@ export default function ChatPage() {
 
     fetchMembers();
   }, [profileSynced, activeServerId, profileCache, setMemberList]);
+
+  // Fetch the authed user's role on the active server so the UI can gate
+  // admin-only affordances (pinning, etc). API enforces auth regardless —
+  // this just controls which buttons are visible.
+  useEffect(() => {
+    if (!sessionChecked || !activeServerId) {
+      setMyRole(null);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/auth/me/role?serverId=${encodeURIComponent(activeServerId)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (cancelled) return;
+        if (data?.role) setMyRole(data.role);
+        else setMyRole('member');
+      })
+      .catch(() => {
+        if (!cancelled) setMyRole('member');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionChecked, activeServerId, setMyRole]);
+
+  // Fetch custom server emojis so `:name:` shortcodes resolve in messages
+  // and reactions. Silently fall back to an empty map on error — messages
+  // render the raw `:name:` text which is the intended degradation.
+  useEffect(() => {
+    if (!activeServerId) {
+      setServerEmojis({});
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/admin/emojis?serverId=${encodeURIComponent(activeServerId)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (cancelled || !data?.emojis) return;
+        const map: Record<string, string> = {};
+        for (const e of data.emojis) map[e.name] = e.url;
+        setServerEmojis(map);
+      })
+      .catch(() => {
+        if (!cancelled) setServerEmojis({});
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeServerId, setServerEmojis]);
+
+  // Seed the profileCache with the "system bot" entry (all-zero pubkey) using
+  // the active server's name + icon. This makes welcome-bot / pinned-system
+  // messages render with the server logo instead of a generic placeholder,
+  // both for Socket.io messages and REST-loaded history.
+  useEffect(() => {
+    if (!activeServerId) return;
+    const active = servers.find((s) => s.id === activeServerId);
+    if (!active) return;
+    const SYSTEM_PUBKEY = '0000000000000000000000000000000000000000000000000000000000000000';
+    profileCache.set(SYSTEM_PUBKEY, {
+      name: active.name,
+      picture: active.icon || undefined,
+    });
+  }, [activeServerId, servers, profileCache]);
 
   // Discover existing DM threads from Nostr relays (waits for NDK to be ready)
   useEffect(() => {
@@ -273,16 +429,20 @@ export default function ChatPage() {
       const otherPubkey = msg.senderPubkey === profile.pubkey
         ? msg.recipientPubkey
         : msg.senderPubkey;
+      const isOwnMessage = msg.senderPubkey === profile.pubkey;
 
-      // Update thread list
+      // Never increment unread for your own outgoing messages, and never
+      // auto-clear on incoming — useReadTracker decides that based on
+      // visibility + focus. `handleIncomingDM` also mirrors the count into
+      // the notification store so the favicon badge reflects DMs.
       const existingThread = dmStore.threads.find(t => t.pubkey === otherPubkey);
+      const currentUnread = existingThread?.unreadCount ?? 0;
+      const { nextUnread } = handleIncomingDM(otherPubkey, isOwnMessage, currentUnread);
       if (existingThread) {
         dmStore.updateThread(otherPubkey, {
           lastMessage: msg.content,
           lastMessageAt: msg.createdAt,
-          unreadCount: dmStore.activeDMPubkey === otherPubkey
-            ? 0
-            : existingThread.unreadCount + 1,
+          unreadCount: nextUnread,
         });
       } else {
         const cached = profileCache.get(otherPubkey);
@@ -292,7 +452,7 @@ export default function ChatPage() {
           picture: cached?.picture,
           lastMessage: msg.content,
           lastMessageAt: msg.createdAt,
-          unreadCount: dmStore.activeDMPubkey === otherPubkey ? 0 : 1,
+          unreadCount: nextUnread,
         });
       }
 
@@ -345,7 +505,7 @@ export default function ChatPage() {
               ...current,
               {
                 pubkey: message.authorPubkey,
-                displayName: name || message.authorPubkey.slice(0, 8) + '...',
+                displayName: name || shortNpub(message.authorPubkey),
                 picture,
               },
             ]);
@@ -353,6 +513,19 @@ export default function ChatPage() {
         }
       }
       addMessage(message);
+
+      // Badge channels the user isn't actively watching — backgrounded tab,
+      // blurred window, scrolled up, or a different channel open. The
+      // server's `unread-update` loop deliberately skips anyone in the
+      // channel room, so this client-side path is the only one that covers
+      // "in-room but not watching". See `handleIncomingChannelMessage`.
+      const { incremented, hasMention } = handleIncomingChannelMessage(
+        message,
+        profilePubkeyRef.current,
+      );
+      if (incremented && hasMention && document.hidden) {
+        showBrowserNotification('New mention', message.content.slice(0, 140));
+      }
     });
 
     socket.on('message-deleted', ({ messageId }: { messageId: string }) => {
@@ -367,8 +540,20 @@ export default function ChatPage() {
       updateReactions(messageId, reactions);
     });
 
+    socket.on('message-pinned', (message: Message) => {
+      useChatStore.getState().updatePinState(
+        message.id,
+        message.pinnedAt ?? null,
+        message.pinnedByPubkey ?? null,
+      );
+    });
+
     socket.on('force-disconnect', ({ reason }: { reason: string }) => {
       alert(reason);
+      // Reset title + favicon explicitly in case the layout switch tears
+      // down `useFaviconBadge` before its cleanup can run.
+      document.title = 'Obelisk';
+      void clearBadge();
       logout();
       router.push('/');
     });
@@ -406,13 +591,35 @@ export default function ChatPage() {
       useVoiceStore.getState().removeRemoteScreen(pk);
     });
 
-    // Notification events
+    // Notification events.
+    //
+    // Design note: this handler is a pure side-effect. It surfaces the
+    // mention flag + browser notification, but NEVER increments the unread
+    // counter. Count increments come from exactly one of two places:
+    //   - `new-message` (this client is in the channel room) — handled above
+    //   - `unread-update` (this client is NOT in the channel room) — below
+    // Doing it this way means a single server-side event becomes exactly one
+    // client-side count bump, regardless of whether the user is mentioned.
     socket.on('notification', (data: { type: string; channelId?: string; serverId?: string; senderPubkey: string; preview?: string }) => {
       const notifStore = useNotificationStore.getState();
-      if (data.type === 'mention' && data.channelId) {
-        notifStore.incrementChannelUnread(data.channelId, true);
+      const isMentionLike = data.type === 'mention' || data.type === 'reply';
+      if (isMentionLike && data.channelId) {
+        // Skip flag set if the user is actively watching this channel —
+        // otherwise the mention dot would stick around until the next
+        // unread flush, which won't re-trigger because the count is 0.
+        if (isUserWatchingChannel(data.channelId)) return;
+        // Set mention flag without touching the count.
+        notifStore.setChannelUnread(
+          data.channelId,
+          notifStore.channelUnreads[data.channelId] || 0,
+          true,
+        );
         if (document.hidden) {
-          showBrowserNotification('New mention', data.preview || 'You were mentioned in a message');
+          const title = data.type === 'reply' ? 'New reply' : 'New mention';
+          const fallback = data.type === 'reply'
+            ? 'Someone replied to your message'
+            : 'You were mentioned in a message';
+          showBrowserNotification(title, data.preview || fallback);
         }
       } else if (data.type === 'dm') {
         notifStore.setDMUnread(data.senderPubkey, (notifStore.dmUnreads[data.senderPubkey] || 0) + 1);
@@ -420,6 +627,18 @@ export default function ChatPage() {
           showBrowserNotification('New DM', data.preview || 'You have a new direct message');
         }
       }
+    });
+
+    // Cross-device / other-tab read sync. Fired by server.ts after it
+    // persists a `mark-read` or `dm-read` from any of this user's other
+    // sockets. Clears the local unread state without another DB round-trip.
+    socket.on('read-update', ({ channelId }: { channelId: string }) => {
+      useNotificationStore.getState().clearChannelUnread(channelId);
+    });
+
+    socket.on('dm-read-update', ({ pubkey: otherPubkey }: { pubkey: string }) => {
+      useNotificationStore.getState().clearDMUnread(otherPubkey);
+      useDMStore.getState().updateThread(otherPubkey, { unreadCount: 0 });
     });
 
     socket.on('unread-update', (data: { channelId: string; serverId: string; hasMention: boolean }) => {
@@ -439,15 +658,42 @@ export default function ChatPage() {
     });
 
     socketRef.current = socket;
+    setSocketInstance(socket);
 
     return () => {
       socket.disconnect();
       socketRef.current = null;
+      setSocketInstance(null);
       useChatStore.getState().setOnlinePubkeys([]);
     };
   }, [sessionChecked, addMessage, removeMessage, updateMessage, updateReactions, logout, router]);
 
-  // Join/leave channel rooms
+  // Keep URL query params (?s=, ?c=) in sync with active server/channel so
+  // that a browser refresh lands the user back on the same spot. The ?m=
+  // param (scroll anchor) is managed separately by MessageArea on scroll —
+  // we clear it on channel change so the stale message id from the previous
+  // channel doesn't leak into the new one.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const sp = new URLSearchParams(window.location.search);
+    if (activeServerId) sp.set('s', activeServerId);
+    else sp.delete('s');
+    if (activeChannelId) {
+      sp.set('c', activeChannelId);
+      sp.delete('m');
+    } else {
+      sp.delete('c');
+      sp.delete('m');
+    }
+    const qs = sp.toString();
+    const url = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+    window.history.replaceState(null, '', url);
+  }, [activeServerId, activeChannelId]);
+
+  // Join/leave channel rooms. Mark-as-read is deliberately NOT triggered here
+  // anymore — useReadTracker below decides when the channel actually becomes
+  // "seen" based on visibility + focus + scroll position. Clicking into a
+  // channel while backgrounded or scrolled up no longer clears its unread.
   useEffect(() => {
     const socket = socketRef.current;
     if (!socket) return;
@@ -457,13 +703,32 @@ export default function ChatPage() {
     }
     if (activeChannelId) {
       socket.emit('join-channel', activeChannelId);
-      // Mark channel as read and clear unread badge
-      socket.emit('mark-read', { channelId: activeChannelId });
-      useNotificationStore.getState().clearChannelUnread(activeChannelId);
     }
     prevChannelRef.current = activeChannelId;
     activeChannelIdRef.current = activeChannelId;
   }, [activeChannelId]);
+
+  // Same-browser multi-tab sync: mirror clear events posted by sibling
+  // tabs into this tab's notification + DM store. (scenario 11, same
+  // browser.) Cross-device sync is handled by the Socket.io read-update
+  // events above.
+  useEffect(() => {
+    const unsub = subscribeBroadcast((msg) => {
+      if (msg.kind === 'clear-channel') {
+        useNotificationStore.getState().clearChannelUnread(msg.channelId);
+      } else if (msg.kind === 'clear-dm') {
+        useNotificationStore.getState().clearDMUnread(msg.pubkey);
+        useDMStore.getState().updateThread(msg.pubkey, { unreadCount: 0 });
+      }
+    });
+    return unsub;
+  }, []);
+
+  // Centralized mark-as-read gating (visibility + focus + scroll-to-bottom).
+  useReadTracker(socketInstance);
+
+  // Mirror unread total into favicon + document.title (Discord-style).
+  useFaviconBadge();
 
   // Fetch messages when channel changes
   useEffect(() => {
@@ -476,6 +741,19 @@ export default function ChatPage() {
         const data = await res.json();
         setMessages(data.messages);
         setMessageCursor(data.nextCursor ?? null, !!data.nextCursor);
+
+        // Refresh-restore: if a highlight was queued for this channel (from
+        // URL ?m= or per-channel localStorage), and the target message is in
+        // the freshly-loaded batch, kick MessageArea into scrolling there.
+        // Messages outside the latest page are silently skipped — the user
+        // just lands at the bottom, which is the same behavior as today.
+        const pending = pendingHighlightRef.current;
+        if (pending && pending.channelId === activeChannelId) {
+          pendingHighlightRef.current = null;
+          if (data.messages.some((m: any) => m.id === pending.messageId)) {
+            useChatStore.setState({ highlightedMessageId: pending.messageId });
+          }
+        }
       } catch (err) {
         console.error('Failed to fetch messages:', err);
         setLoadingMessages(false);
@@ -483,7 +761,7 @@ export default function ChatPage() {
     };
 
     fetchMessages();
-  }, [activeChannelId, setMessages, setLoadingMessages]);
+  }, [activeChannelId, setMessages, setLoadingMessages, setMessageCursor]);
 
   // Send message via socket (with optional replyToId)
   const handleSend = useCallback((content: string, replyToId?: string) => {
@@ -786,7 +1064,7 @@ export default function ChatPage() {
                 />
               ) : (
                 <>
-                  <MessageArea profileCache={profileCache} onEdit={handleEdit} onDelete={handleDelete} onToggleReaction={handleToggleReaction} />
+                  <MessageArea profileCache={profileCache} onDelete={handleDelete} onToggleReaction={handleToggleReaction} />
                   {messageError && (
                     <div className="px-4 py-2 bg-red-600/20 border-t border-red-600/30">
                       <p className="text-sm text-red-400">{messageError}</p>

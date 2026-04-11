@@ -3,6 +3,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useVoiceStore } from '@/store/voice';
 import VoiceControls from './VoiceControls';
+import { shortNpub } from '@/lib/mentions';
 
 interface VoiceChannelProps {
   channelId: string;
@@ -81,7 +82,7 @@ function AudioParticipantBadge({ pubkey, profile, muted, deafened }: {
   muted: boolean;
   deafened: boolean;
 }) {
-  const name = profile?.name || pubkey.slice(0, 8) + '...';
+  const name = profile?.name || shortNpub(pubkey);
   return (
     <div
       className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${
@@ -236,7 +237,7 @@ export default function VoiceChannel({
   // Render a video tile (used in both grid and focused view)
   const renderVideoTile = (pubkey: string, isFocused: boolean) => {
     const profile = profileCache.get(pubkey);
-    const name = profile?.name || pubkey.slice(0, 8) + '...';
+    const name = profile?.name || shortNpub(pubkey);
     const participant = voiceParticipants.find((p) => p.pubkey === pubkey);
     const isRemote = remoteVideos.has(pubkey);
     const remoteVideoEl = isRemote ? videoElements.get(pubkey) || null : null;
@@ -316,7 +317,7 @@ export default function VoiceChannel({
               <div className="mb-4 space-y-3" data-testid="screen-share-area">
                 {screenSharers.map(({ pubkey, element }) => {
                   const profile = profileCache.get(pubkey);
-                  const name = profile?.name || pubkey.slice(0, 8) + '...';
+                  const name = profile?.name || shortNpub(pubkey);
                   const isFocused = focusedPubkey === pubkey;
                   return (
                     <div
@@ -410,7 +411,7 @@ export default function VoiceChannel({
                 }>
                   {audioOnlyParticipants.map((participant) => {
                     const profile = profileCache.get(participant.pubkey);
-                    const name = profile?.name || participant.pubkey.slice(0, 8) + '...';
+                    const name = profile?.name || shortNpub(participant.pubkey);
 
                     if (anyVideoActive) {
                       // Compact badge when videos are active

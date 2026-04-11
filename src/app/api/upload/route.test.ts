@@ -14,15 +14,23 @@ vi.mock('@/lib/api-auth', () => ({
   getAuthPubkey: vi.fn(),
 }));
 
+vi.mock('@/lib/db', () => ({
+  prisma: {
+    server: { findUnique: vi.fn() },
+  },
+}));
+
 import { POST } from './route';
 import { getAuthPubkey } from '@/lib/api-auth';
+import { prisma } from '@/lib/db';
 
 const mockAuth = getAuthPubkey as ReturnType<typeof vi.fn>;
+const mockPrisma = prisma as any;
 
-function makeRequest(formData: FormData) {
+function makeRequest(formData: FormData, query = '') {
   // NextRequest's init drops body for multipart; wrap a native Request instead
   // so the multipart boundary / content-type are preserved.
-  const base = new Request('http://localhost:3000/api/upload', {
+  const base = new Request(`http://localhost:3000/api/upload${query}`, {
     method: 'POST',
     body: formData,
   });
@@ -118,5 +126,60 @@ describe('POST /api/upload', () => {
     const body = await res.json();
     expect(body.isImage).toBe(false);
     expect(body.url.endsWith('.pdf')).toBe(true);
+  });
+
+  it('accepts audio and flags isAudio', async () => {
+    mockAuth.mockResolvedValue('pub1');
+    const fd = new FormData();
+    fd.append(
+      'file',
+      new File([new Uint8Array([0xff, 0xfb, 0x90, 0])], 'song.mp3', {
+        type: 'audio/mpeg',
+      }),
+    );
+    const res = await POST(makeRequest(fd));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.isAudio).toBe(true);
+    expect(body.isVideo).toBe(false);
+    expect(body.isImage).toBe(false);
+    expect(body.url.endsWith('.mp3')).toBe(true);
+  });
+
+  it('applies per-server cap when serverId is supplied', async () => {
+    mockAuth.mockResolvedValue('pub1');
+    // Configure a tiny 1 KB image cap on this server.
+    mockPrisma.server.findUnique.mockResolvedValue({
+      maxImageBytes: 1024,
+      maxVideoBytes: null,
+      maxDocBytes: null,
+      maxAudioBytes: null,
+      allowedMimeTypes: null,
+    });
+    const big = new Uint8Array(2048); // 2 KB
+    big[0] = 137;
+    big[1] = 80;
+    const fd = new FormData();
+    fd.append('file', new File([big], 'big.png', { type: 'image/png' }));
+    const res = await POST(makeRequest(fd, '?serverId=srv1'));
+    expect(res.status).toBe(413);
+  });
+
+  it('rejects types excluded by server allowedMimeTypes', async () => {
+    mockAuth.mockResolvedValue('pub1');
+    mockPrisma.server.findUnique.mockResolvedValue({
+      maxImageBytes: null,
+      maxVideoBytes: null,
+      maxDocBytes: null,
+      maxAudioBytes: null,
+      allowedMimeTypes: JSON.stringify(['image/png']),
+    });
+    const fd = new FormData();
+    fd.append(
+      'file',
+      new File([new Uint8Array([0, 0, 0, 0x20])], 'clip.mp4', { type: 'video/mp4' }),
+    );
+    const res = await POST(makeRequest(fd, '?serverId=srv1'));
+    expect(res.status).toBe(415);
   });
 });

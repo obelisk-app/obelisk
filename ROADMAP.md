@@ -239,42 +239,69 @@
   - [x] Almacenamiento en el servidor del host (`public/uploads/`, sirve via `/uploads/<name>`)
   - [x] Emoji picker (curated unicode, sin dependencias externas)
   - [x] **Busqueda bilingue en el emoji picker** (keywords EN + ES, accent-insensitive)
-  - [ ] **Shortcodes `:name:` para emojis** — autocomplete al tipear `:smi...` con sugerencias, reemplazo al enviar (compat con formato tipo Discord/Slack). Soportar tanto unicode (`:smile:` → 😄) como emojis custom del servidor (imagenes subidas, estilo `:partyparrot:`)
-    - [ ] Dataset de shortcodes → unicode (reutilizar keywords del `EmojiPicker` o importar una tabla estandar)
-    - [ ] Autocomplete inline en `MessageInput` (disparo al tipear `:`, similar al de menciones)
-    - [ ] Render en `MessageContent`: reemplazar `:name:` por el emoji correspondiente en el texto
-    - [ ] Emojis custom por servidor (tabla `ServerEmoji { serverId, name, url }`, admin UI para subir, render como `<img>` inline)
-    - [ ] Reacciones usando shortcodes custom del servidor ademas de unicode
   - [x] **Videos** (MP4, WebM, MOV, OGV) con reproductor inline (`<video controls>`) hoisted del body igual que las imagenes
   - [x] Preview de video en el chip de adjuntos pendientes (thumb del frame 0 + overlay play)
   - [x] **Caps por categoria** en `src/lib/attachments.ts`: imagenes 10 MB, videos 50 MB, documentos 25 MB (`maxBytesFor(mime)` enforced en el endpoint)
   - [x] **Maximo 10 archivos por mensaje** (`MAX_ATTACHMENTS_PER_MESSAGE`), enforced en client con error message si se sobrepasa
-  - [ ] Drag & drop de archivos sobre el message input
-  - [ ] Preview inline de audio (hoy solo imagenes + videos)
-  - [ ] **Compresion / transcoding**: hoy los archivos se guardan byte-por-byte. Futuro: recomprimir imagenes grandes con sharp, re-encodear/thumbnailear videos con ffmpeg, strip EXIF
-  - [ ] Limites configurables **por servidor** (hoy son constantes globales en `attachments.ts`)
-  - [ ] Allowlist de tipos configurable por servidor (hoy hardcodeada)
-  - [ ] Subida multiple con progreso **individual** (hoy hay spinner agregado, no por-archivo)
-  - [ ] Thumbnails para documentos (preview de primera pagina de PDFs)
-  - [ ] Zoom / pan dentro del lightbox (hoy solo contain al viewport)
+
+  > **Plan de trabajo para los items pendientes**: `~/.claude/plans/tingly-whistling-meteor.md` — ordenado por PR con verificacion por paso. Decisiones clave: shortcodes se resuelven en **render-time** (la DB guarda `:smile:`), emojis custom uploadables por **mod+**, compresion/transcoding **deferred** (requiere cambios al Docker image).
+
+  - [x] **Composer UX polish**
+    - [x] Drag & drop de archivos sobre el message input (overlay visual, reusa `uploadFiles` existente, respeta el cap de 10)
+    - [x] Preview inline de **audio** (mp3/ogg/wav/m4a/webm) — mismo patron de hoist que video + `<audio controls>`, nueva constante `MAX_AUDIO_BYTES`
+    - [x] **Zoom + pan dentro del lightbox** (`ImageGallery`): wheel = zoom (1x–5x), click-drag = pan cuando zoom > 1, dblclick = reset, backdrop-close deshabilitado mientras esta zoomeado
+    - [x] **Progreso individual por archivo** en los chips pendientes (switch de `fetch` a `XMLHttpRequest.upload.onprogress`; el chip se inserta con `uploading: true, progress: 0` y se finaliza on load)
+  - [x] **Shortcodes `:name:` para emojis** — resolucion en **render-time** (la DB guarda `:smile:`, `MessageContent` hace el swap)
+    - [x] `src/lib/emoji-shortcodes.ts`: mapa `name → unicode` construido desde `EmojiEntry.keywords[0]` del picker + aliases curados (`+1`, `thumbsup`, `heart`...); export `resolveUnicodeShortcode(name)`
+    - [x] `EmojiAutocomplete` (espejo de `MentionAutocomplete`) disparado por regex `/:([\w+-]*)$/` en `MessageInput`, con keyboard nav (↑ ↓ Enter Tab Esc) y cursor-restore via `requestAnimationFrame`
+    - [x] Render swap en `MessageContent` antes del markdown: regex con word-boundary que preserva bloques de codigo y URLs (`http://x.com/:colon:` NO matchea); follow-up = remark plugin AST-correcto
+    - [x] Tests: code block preservation, URL con colons, multiples shortcodes por linea
+  - [x] **Emojis custom por servidor**
+    - [x] Modelo `ServerEmoji { id, serverId, name, url, createdBy, createdAt }` con `@@unique([serverId, name])`, name regex `[a-z0-9_-]{2,32}`
+    - [x] Migration `add_server_emojis_and_upload_limits`
+    - [x] `GET /api/admin/emojis?serverId=…` — abierto a miembros del servidor para que el cliente resuelva; `POST` y `DELETE` — **mod+** (`requireRole('mod')`)
+    - [x] UI `EmojiManager` (nueva tab "Emojis" en `src/app/admin/[serverId]/page.tsx`): upload + name, lista con boton borrar
+    - [x] `serverEmojis: Record<string, string>` en el store de chat, fetch al entrar al servidor
+    - [x] Render en `MessageContent`: unicode primero, luego `serverEmojis[name]`; placeholders tipo mentions (`\u3008EMOJI:<name>\u3009`) swappeados a `<img class="inline-block w-5 h-5">`, fallback al texto crudo si el emoji no existe
+    - [x] Reacciones custom en `MessageArea.ReactionsDisplay` (sin cambio de schema — la columna `Reaction.emoji` sigue siendo String, resolve via helper `resolveReactionEmoji`)
+    - [x] Categoria "Server" al tope del `EmojiPicker` cuando hay emojis custom
+  - [x] **Limites configurables por servidor**
+    - [x] Migration: `maxImageBytes`, `maxVideoBytes`, `maxDocBytes`, `maxAudioBytes` (Int, defaults = constantes actuales), `allowedMimeTypes` (`String?`, JSON array; null = allowlist global)
+    - [x] Extender el `allowed` whitelist de `PATCH /api/admin/server` con los nuevos fields; validacion de rango + **ceiling absoluto de 500 MB**
+    - [x] `POST /api/upload?serverId=…` lee el server, construye `UploadLimits` via nuevo `parseServerLimits()` en `attachments.ts`, aplica override del cap; mensajes 413 citan el cap configurado
+    - [x] Admin UI: `UploadLimitsForm` en la tab Settings con 4 number inputs en MB + 4 checkboxes por categoria; conversion MB ↔ bytes en el cliente
+  - [ ] **Thumbnails de PDF** (primera pagina) — *deferred: requiere canvas native binding*
+    - [x] `AttachmentCard` acepta `thumbnailUrl?: string` opcional (UI ready)
+    - [ ] Generacion server-side con `pdfjs-dist` + `@napi-rs/canvas` (requiere rebuild del Docker image)
+    - [ ] `MessageContent` deriva la thumbnail URL por convencion (`<url>.png`) y la pasa al card
+  - [ ] **Compresion / transcoding** *(deferred — follow-up issue aparte)*
+    > Requiere cambios al Docker image y deps nativas. Trackear en un issue separado con este plan como contexto.
+    - Imagenes: `sharp` para re-encode + resize + strip EXIF en uploads grandes
+    - Videos: `ffmpeg-static` para transcode uniforme (mp4 H.264) + thumbnails automaticos
+    - Preservar original opcionalmente como fallback para descarga
 
 ## Fase 4 — Polish & Launch
 - [ ] PWA (Progressive Web App) — installable, offline support, service worker
 - [ ] **Notificaciones — fix + mejoras (estilo Discord)**
-  > Hoy las notificaciones están rotas / inconsistentes. Hay que auditar el flujo end-to-end y dejarlo confiable antes de agregar features encima.
-  - [ ] Auditar el estado actual: por qué no disparan, qué eventos las generan, qué store las trackea, qué pasa en background tab vs foreground
+  > Fases 1-2 shipped: read-tracking logic fix, bech32/reply mentions, separador "New messages", favicon badge + title counter. Pendiente: per-channel settings, mute, sonido + toast, fix conteo de DMs.
+  - [x] Auditar el estado actual: por qué no disparan, qué eventos las generan, qué store las trackea, qué pasa en background tab vs foreground
+  - [x] **Fix crítico del mark-as-read**: un canal/DM sólo se marca leído cuando el tab está visible + enfocado + scrolleado al fondo (hook `useReadTracker`), con debounce 250ms. Antes, clickear un canal lo marcaba leído aunque estuvieras en otro tab
+  - [x] **Fix menciones bech32**: el regex server-side sólo matcheaba hex, por lo que menciones `nostr:npub1<bech32>` (pegadas desde otros clientes) no creaban `Mention` ni disparaban `notification`. Extraído `extractMentionPubkeys()` en `src/lib/mentions.ts` con `nip19.decode`
+  - [x] **Notificación de reply**: responder a un mensaje sin `@` ahora notifica al autor original (socket event `type: 'reply'` + `Mention` persistido)
   - [ ] Notificaciones in-app confiables: sonido + toast cuando llega un mensaje en un canal donde tenés permiso, una mención (@usuario), un reply a tu mensaje, o un DM
   - [ ] Notificaciones del browser (Notification API) cuando la pestaña está en background, con permission request explícito en settings
   - [ ] Settings de notificaciones por servidor y por canal: All / Mentions only / Nothing (igual que Discord), persistido en DB (`MemberChannelSettings { memberId, channelId, notify }`)
   - [ ] Mute de servidor / canal con duración (15min, 1h, 8h, 24h, hasta que reabra)
-  - [ ] **Badge de unread count en el favicon** — número rojo encima del favicon con la cantidad total de menciones + DMs sin leer (estilo Discord)
-    - [ ] Lib `lib/favicon-badge.ts`: dibuja el favicon base en un `<canvas>`, superpone un círculo rojo con el número (si > 99 muestra "99+"), exporta como dataURL y reemplaza `<link rel="icon">` dinámicamente
-    - [ ] Hook `useFaviconBadge(count)` que se suscribe al store de notificaciones y actualiza el favicon en cada cambio
-    - [ ] Resetea a 0 cuando la pestaña vuelve a foco y el usuario está leyendo el canal/DM con unreads
-    - [ ] Title de la pestaña también muestra el contador: `(3) Obelisk` para reforzar la señal
-  - [ ] Indicadores de unread en la UI: bullet point al lado del nombre del canal/server con unreads, badge con número para menciones, separador visual "New messages" en el chat
-  - [ ] Tracking server-side de `lastReadAt` por miembro/canal y por DM, sincronizado vía Socket.io para que el contador sea consistente entre dispositivos
-  - [ ] Tests: store de notificaciones, lib favicon-badge (canvas mock), hook con cambios de count, settings persistence
+  - [x] **Badge de unread count en el favicon** — número rojo encima del favicon con la cantidad total de menciones + DMs sin leer (estilo Discord)
+    - [x] Lib `lib/favicon-badge.ts`: dibuja el favicon base en un `<canvas>`, superpone un círculo rojo con el número (si > 99 muestra "99+"), exporta como dataURL y reemplaza `<link rel="icon">` dinámicamente
+    - [x] Hook `useFaviconBadge(count)` que se suscribe al store de notificaciones y actualiza el favicon en cada cambio
+    - [x] Resetea a 0 cuando la pestaña vuelve a foco y el usuario está leyendo el canal/DM con unreads (vía `useReadTracker`, que clea el store y el hook reacciona)
+    - [x] Title de la pestaña también muestra el contador: `(3) Obelisk` para reforzar la señal
+  - [x] Indicadores de unread en la UI: bullet point al lado del nombre del canal/server con unreads, badge con número para menciones, separador visual "New messages" en el chat
+  - [x] Tracking server-side de `lastReadAt` por miembro/canal y por DM, sincronizado vía Socket.io para que el contador sea consistente entre dispositivos
+  - [ ] Fix conteo de DMs en `/api/unread`: hoy devuelve binario (1 o 0 por thread) en vez del count real de mensajes no leídos
+  - [x] Tests: store de notificaciones, lib favicon-badge (canvas mock), hook con cambios de count, `useReadTracker` (visibility/focus/scroll gating), `extractMentionPubkeys` (hex + bech32)
+  - [ ] Tests pendientes: settings persistence (Phase 3)
 - [ ] Temas personalizados por servidor
 - [ ] Mejorar experiencia mobile
   - [ ] Elementos que se ocultan o quedan inaccesibles en pantallas chicas

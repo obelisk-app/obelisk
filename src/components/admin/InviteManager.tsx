@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { shortNpub } from '@/lib/mentions';
 
 interface InvitationMember {
   id: string;
@@ -20,6 +21,8 @@ interface Invitation {
   uses: number;
   expiresAt: string | null;
   createdAt: string;
+  revokedAt: string | null;
+  revokedBy: string | null;
   /** Members who actually joined through this invite. */
   members?: InvitationMember[];
 }
@@ -32,6 +35,7 @@ export default function InviteManager({ serverId }: InviteManagerProps) {
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [revokingId, setRevokingId] = useState<string | null>(null);
   const [maxUses, setMaxUses] = useState(1);
   const [expiresInHours, setExpiresInHours] = useState(24);
   const [targetPubkey, setTargetPubkey] = useState('');
@@ -82,8 +86,33 @@ export default function InviteManager({ serverId }: InviteManagerProps) {
     setTimeout(() => setCopied(null), 2000);
   };
 
+  // Soft-revoke: the row stays in the list (grayed out) so admins can still
+  // see who joined via this link historically. The API sets revokedAt and
+  // the redeem endpoint rejects revoked invites with 410.
+  const revokeInvite = async (inv: Invitation) => {
+    if (!window.confirm(`Revoke invite ${inv.code.slice(0, 12)}...? Existing members who joined with it stay, but the link will stop working.`)) {
+      return;
+    }
+    setRevokingId(inv.id);
+    try {
+      const res = await fetch(`/api/servers/${serverId}/invitations/${inv.id}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setInvitations((prev) =>
+          prev.map((x) => (x.id === inv.id ? { ...x, ...data.invitation } : x))
+        );
+      }
+    } finally {
+      setRevokingId(null);
+    }
+  };
+
+  const isRevoked = (inv: Invitation) => inv.revokedAt != null;
   const isExpired = (inv: Invitation) =>
     (inv.expiresAt && new Date(inv.expiresAt) < new Date()) || inv.uses >= inv.maxUses;
+  const isInactive = (inv: Invitation) => isRevoked(inv) || isExpired(inv);
 
   if (loading) {
     return <div className="space-y-3">{[1, 2, 3].map(i => <div key={i} className="lc-skeleton h-12" />)}</div>;
@@ -146,18 +175,35 @@ export default function InviteManager({ serverId }: InviteManagerProps) {
         )}
         {invitations.map((inv) => {
           const members = inv.members ?? [];
+          const revoked = isRevoked(inv);
+          const expired = isExpired(inv);
           return (
             <div
               key={inv.id}
               className={`bg-lc-dark border border-lc-border rounded-xl px-4 py-3 ${
-                isExpired(inv) ? 'opacity-50' : ''
+                isInactive(inv) ? 'opacity-60' : ''
               }`}
               data-testid="invite-row"
             >
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0 flex-1">
-                  <code className="text-sm text-lc-green font-mono">{inv.code.slice(0, 12)}...</code>
-                  <div className="flex gap-3 mt-1 text-xs text-lc-muted">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <code className="text-sm text-lc-green font-mono">{inv.code.slice(0, 12)}...</code>
+                    {revoked && (
+                      <span
+                        className="text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/30"
+                        data-testid="invite-revoked-badge"
+                      >
+                        Revoked
+                      </span>
+                    )}
+                    {!revoked && expired && (
+                      <span className="text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full bg-lc-border/60 text-lc-muted">
+                        Expired
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex gap-3 mt-1 text-xs text-lc-muted flex-wrap">
                     <span>{inv.uses}/{inv.maxUses} uses</span>
                     {inv.expiresAt && (
                       <span>Expires {new Date(inv.expiresAt).toLocaleDateString()}</span>
@@ -165,20 +211,39 @@ export default function InviteManager({ serverId }: InviteManagerProps) {
                     {inv.targetPubkey && (
                       <span>For: {inv.targetPubkey.slice(0, 8)}...</span>
                     )}
+                    {revoked && inv.revokedBy && (
+                      <span data-testid="invite-revoked-by">
+                        Revoked by {shortNpub(inv.revokedBy)}
+                      </span>
+                    )}
                   </div>
                 </div>
-                {!isExpired(inv) && (
-                  <button
-                    onClick={() => copyInviteLink(inv.code)}
-                    className="text-xs text-lc-muted hover:text-lc-green transition-colors ml-2"
-                    data-testid="copy-invite-btn"
-                  >
-                    {copied === inv.code ? 'Copied!' : 'Copy link'}
-                  </button>
-                )}
+                <div className="flex items-center gap-3 ml-2 shrink-0">
+                  {!isInactive(inv) && (
+                    <button
+                      onClick={() => copyInviteLink(inv.code)}
+                      className="text-xs text-lc-muted hover:text-lc-green transition-colors"
+                      data-testid="copy-invite-btn"
+                    >
+                      {copied === inv.code ? 'Copied!' : 'Copy link'}
+                    </button>
+                  )}
+                  {!revoked && (
+                    <button
+                      onClick={() => revokeInvite(inv)}
+                      disabled={revokingId === inv.id}
+                      className="text-xs text-lc-muted hover:text-red-400 transition-colors disabled:opacity-50"
+                      data-testid="revoke-invite-btn"
+                    >
+                      {revokingId === inv.id ? 'Revoking...' : 'Revoke'}
+                    </button>
+                  )}
+                </div>
               </div>
 
-              {/* Joined members — only shown when at least one user came in via this link */}
+              {/* Joined members — only shown when at least one user came in via this link.
+                  Intentionally rendered even for revoked invites so the admin panel keeps
+                  the historical record of who used this link. */}
               {members.length > 0 && (
                 <div
                   className="mt-3 pt-3 border-t border-lc-border/60"
@@ -189,7 +254,7 @@ export default function InviteManager({ serverId }: InviteManagerProps) {
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {members.map((m) => {
-                      const short = m.pubkey.slice(0, 8) + '…' + m.pubkey.slice(-4);
+                      const short = shortNpub(m.pubkey);
                       const label = m.displayName || m.nip05 || short;
                       return (
                         <div

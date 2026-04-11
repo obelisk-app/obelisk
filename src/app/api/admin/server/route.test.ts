@@ -5,6 +5,7 @@ vi.mock('@/lib/db', () => ({
   prisma: {
     server: { findUnique: vi.fn(), update: vi.fn(), delete: vi.fn() },
     member: { findUnique: vi.fn(), upsert: vi.fn() },
+    channel: { findFirst: vi.fn() },
     moderationAction: { create: vi.fn() },
   },
 }));
@@ -143,6 +144,82 @@ describe('PATCH /api/admin/server', () => {
 
     const res = await PATCH(makeRequest('PATCH', { ownerPubkey: 'not-a-valid-pubkey' }));
     expect(res.status).toBe(400);
+  });
+
+  describe('welcome bot fields', () => {
+    function mockOwnerAuth() {
+      mockGetAuth.mockResolvedValue('owner-pk');
+      mockPrisma.server.findUnique.mockResolvedValue({ ownerPubkey: 'owner-pk' });
+      mockPrisma.member.findUnique.mockResolvedValue({
+        id: 'm1',
+        serverId: 'srv1',
+        pubkey: 'owner-pk',
+        role: 'owner',
+      });
+    }
+
+    it('owner can set welcomeChannelId to a valid text channel', async () => {
+      mockOwnerAuth();
+      mockPrisma.channel.findFirst.mockResolvedValue({ id: 'ch1' });
+      mockPrisma.server.update.mockResolvedValue({ id: 'srv1', welcomeChannelId: 'ch1' });
+
+      const res = await PATCH(
+        makeRequest('PATCH', { welcomeChannelId: 'ch1', welcomeLocale: 'es' }),
+      );
+      expect(res.status).toBe(200);
+      expect(mockPrisma.channel.findFirst).toHaveBeenCalledWith({
+        where: { id: 'ch1', serverId: 'srv1', type: 'text' },
+        select: { id: true },
+      });
+      expect(mockPrisma.server.update).toHaveBeenCalledWith({
+        where: { id: 'srv1' },
+        data: { welcomeChannelId: 'ch1', welcomeLocale: 'es' },
+      });
+    });
+
+    it('owner can disable the welcome bot by sending null', async () => {
+      mockOwnerAuth();
+      mockPrisma.server.update.mockResolvedValue({ id: 'srv1', welcomeChannelId: null });
+
+      const res = await PATCH(
+        makeRequest('PATCH', { welcomeChannelId: null, welcomeLocale: null }),
+      );
+      expect(res.status).toBe(200);
+      expect(mockPrisma.channel.findFirst).not.toHaveBeenCalled();
+      expect(mockPrisma.server.update).toHaveBeenCalledWith({
+        where: { id: 'srv1' },
+        data: { welcomeChannelId: null, welcomeLocale: null },
+      });
+    });
+
+    it('rejects welcomeChannelId that does not match a text channel in this server', async () => {
+      mockOwnerAuth();
+      mockPrisma.channel.findFirst.mockResolvedValue(null);
+
+      const res = await PATCH(makeRequest('PATCH', { welcomeChannelId: 'foreign' }));
+      expect(res.status).toBe(400);
+      expect(mockPrisma.server.update).not.toHaveBeenCalled();
+    });
+
+    it('rejects an invalid welcomeLocale', async () => {
+      mockOwnerAuth();
+
+      const res = await PATCH(makeRequest('PATCH', { welcomeLocale: 'fr' }));
+      expect(res.status).toBe(400);
+      expect(mockPrisma.server.update).not.toHaveBeenCalled();
+    });
+
+    it('accepts welcomeLocale "en"', async () => {
+      mockOwnerAuth();
+      mockPrisma.server.update.mockResolvedValue({ id: 'srv1', welcomeLocale: 'en' });
+
+      const res = await PATCH(makeRequest('PATCH', { welcomeLocale: 'en' }));
+      expect(res.status).toBe(200);
+      expect(mockPrisma.server.update).toHaveBeenCalledWith({
+        where: { id: 'srv1' },
+        data: { welcomeLocale: 'en' },
+      });
+    });
   });
 });
 

@@ -5,6 +5,7 @@ import RoleBadge from './RoleBadge';
 import ConfirmDialog from './ConfirmDialog';
 import BanReasonDialog from './BanReasonDialog';
 import type { Role } from '@/lib/auth-roles';
+import { shortNpub } from '@/lib/mentions';
 
 interface MemberData {
   id: string;
@@ -41,7 +42,7 @@ export default function MemberRow({
 }: MemberRowProps) {
   const [confirm, setConfirm] = useState<'kick' | 'ban' | null>(null);
   const isTargetOwner = member.role === 'owner';
-  const shortPubkey = member.pubkey.slice(0, 8) + '...' + member.pubkey.slice(-4);
+  const shortPubkey = shortNpub(member.pubkey);
 
   return (
     <>
@@ -68,7 +69,7 @@ export default function MemberRow({
             {member.joinedViaInvite && (
               <span
                 className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-300 font-semibold"
-                title={`Joined via invite ${member.joinedViaInvite.code} created by ${member.joinedViaInvite.createdBy.slice(0, 8)}…`}
+                title={`Joined via invite ${member.joinedViaInvite.code} created by ${shortNpub(member.joinedViaInvite.createdBy)}`}
               >
                 via invite
               </span>

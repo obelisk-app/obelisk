@@ -30,6 +30,8 @@ app.prepare().then(async () => {
   // Dynamic import to let Next.js set up its module resolution first
   const { prisma } = await import('./src/lib/db-server');
   const { getAuthorProfile } = await import('./src/lib/profile-sync');
+  const { extractMentionPubkeys } = await import('./src/lib/mentions');
+  const { fanOutReadUpdate } = await import('./src/lib/read-fanout');
 
   // Start mediasoup worker
   msWorker = await mediasoup.createWorker(workerSettings);
@@ -199,20 +201,26 @@ app.prepare().then(async () => {
 
         io.to(`channel:${channelId}`).emit('new-message', enriched);
 
-        // Extract mentions and create Mention records
-        const mentionRegex = /nostr:npub1([a-f0-9]{64})/g;
-        const mentionedPubkeys: string[] = [];
-        let mentionMatch: RegExpExecArray | null;
-        while ((mentionMatch = mentionRegex.exec(content)) !== null) {
-          mentionedPubkeys.push(mentionMatch[1]);
+        // Extract mentions (hex + bech32) and create Mention records.
+        // Also treat a reply to someone else's message as an implicit mention
+        // of the original author — that's how Discord surfaces replies.
+        const mentionedPubkeys = extractMentionPubkeys(content);
+        const notifiedPubkeys = new Set<string>(); // pubkey → already emitted
+        const mentionedSet = new Set(mentionedPubkeys);
+
+        // Resolve reply-target author (if any) and fold into the mention set.
+        let replyTargetPubkey: string | null = null;
+        if (replyToId && message.replyTo?.authorPubkey) {
+          if (message.replyTo.authorPubkey !== pubkey) {
+            replyTargetPubkey = message.replyTo.authorPubkey;
+            mentionedSet.add(replyTargetPubkey);
+          }
         }
 
-        if (mentionedPubkeys.length > 0) {
-          const uniquePubkeys = [...new Set(mentionedPubkeys)];
-
+        if (mentionedSet.size > 0) {
           // Bulk-create Mention rows (skip duplicates)
           await prisma.mention.createMany({
-            data: uniquePubkeys.map(pk => ({
+            data: [...mentionedSet].map(pk => ({
               messageId: message.id,
               pubkey: pk,
               channelId,
@@ -222,22 +230,26 @@ app.prepare().then(async () => {
 
           // Notify mentioned users via their sockets
           const preview = content.slice(0, 100);
-          for (const mentionedPubkey of uniquePubkeys) {
+          for (const mentionedPubkey of mentionedSet) {
             if (mentionedPubkey === pubkey) continue; // don't notify self
             const targetSockets = pubkeySockets.get(mentionedPubkey);
-            if (targetSockets) {
-              for (const sid of targetSockets) {
-                io.to(sid).emit('notification', {
-                  type: 'mention',
-                  channelId,
-                  serverId,
-                  messageId: message.id,
-                  senderPubkey: pubkey,
-                  preview,
-                  createdAt: message.createdAt,
-                });
-              }
+            if (!targetSockets) continue;
+            // 'reply' vs 'mention' gives the client room to tailor copy/sound later.
+            const notifType = mentionedPubkey === replyTargetPubkey && !mentionedPubkeys.includes(mentionedPubkey)
+              ? 'reply'
+              : 'mention';
+            for (const sid of targetSockets) {
+              io.to(sid).emit('notification', {
+                type: notifType,
+                channelId,
+                serverId,
+                messageId: message.id,
+                senderPubkey: pubkey,
+                preview,
+                createdAt: message.createdAt,
+              });
             }
+            notifiedPubkeys.add(mentionedPubkey);
           }
         }
 
@@ -258,7 +270,7 @@ app.prepare().then(async () => {
             io.to(sid).emit('unread-update', {
               channelId,
               serverId,
-              hasMention: mentionedPubkeys.includes(memberPubkey),
+              hasMention: mentionedSet.has(memberPubkey),
             });
           }
         }
@@ -400,8 +412,48 @@ app.prepare().then(async () => {
             lastReadMessageId: data.lastMessageId ?? null,
           },
         });
+
+        // Fan out to sibling sockets of the same user (scenario 11 — read
+        // in one tab clears the badge on another tab / device).
+        fanOutReadUpdate(
+          pubkeySockets,
+          pubkey,
+          socket.id,
+          'read-update',
+          { channelId: data.channelId },
+          (sid, event, payload) => io.to(sid).emit(event, payload),
+        );
       } catch (err) {
         console.error('[socket] Failed to mark read:', err);
+      }
+    });
+
+    // ── Mark DM thread as read (via socket, mirrors /api/dm/:pubkey/read) ──
+    socket.on('dm-read', async (data: { pubkey: string }) => {
+      if (!data?.pubkey || typeof data.pubkey !== 'string') return;
+      try {
+        await prisma.dMReadState.upsert({
+          where: { pubkey_threadPubkey: { pubkey, threadPubkey: data.pubkey } },
+          create: {
+            pubkey,
+            threadPubkey: data.pubkey,
+            lastReadAt: new Date(),
+          },
+          update: {
+            lastReadAt: new Date(),
+          },
+        });
+
+        fanOutReadUpdate(
+          pubkeySockets,
+          pubkey,
+          socket.id,
+          'dm-read-update',
+          { pubkey: data.pubkey },
+          (sid, event, payload) => io.to(sid).emit(event, payload),
+        );
+      } catch (err) {
+        console.error('[socket] Failed to mark DM read:', err);
       }
     });
 

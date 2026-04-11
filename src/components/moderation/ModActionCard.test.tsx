@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import ModActionCard from './ModActionCard';
+import { shortNpub } from '@/lib/mentions';
 
 describe('ModActionCard', () => {
   const baseAction = {
@@ -23,9 +24,11 @@ describe('ModActionCard', () => {
     expect(screen.getByText('Reason: Spam')).toBeInTheDocument();
   });
 
-  it('renders target pubkey shortened', () => {
+  it('renders target pubkey as a short npub label', () => {
     render(<ModActionCard action={baseAction} />);
-    expect(screen.getByText('1111aaaa...ffff')).toBeInTheDocument();
+    // Pubkeys render through shortNpub() so the user sees a recognizable
+    // "npub1abcd…" form instead of raw hex — see src/lib/mentions.ts.
+    expect(screen.getByText(shortNpub(baseAction.targetPubkey))).toBeInTheDocument();
   });
 
   it('handles null target', () => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface ImageGalleryProps {
   urls: string[];
@@ -157,16 +157,87 @@ interface LightboxProps {
 }
 
 function Lightbox({ urls, index, onClose, onPrev, onNext }: LightboxProps) {
+  // Zoom + pan state. `scale` is clamped to [1, 5]; panning is only enabled
+  // when scale > 1. Resets whenever the shown index changes.
+  const [scale, setScale] = useState(1);
+  const [tx, setTx] = useState(0);
+  const [ty, setTy] = useState(0);
+  const dragging = useRef(false);
+  const lastPoint = useRef<{ x: number; y: number } | null>(null);
+  const didDrag = useRef(false);
+
+  useEffect(() => {
+    setScale(1);
+    setTx(0);
+    setTy(0);
+  }, [index]);
+
+  const isZoomed = scale > 1;
+
+  const onWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    const delta = -e.deltaY / 500; // 500 ≈ one mousewheel notch == ~0.2 scale
+    setScale((s) => {
+      const next = Math.max(1, Math.min(5, s + delta));
+      if (next === 1) {
+        setTx(0);
+        setTy(0);
+      }
+      return next;
+    });
+  };
+
+  const onMouseDown = (e: React.MouseEvent) => {
+    if (!isZoomed) return;
+    e.stopPropagation();
+    dragging.current = true;
+    didDrag.current = false;
+    lastPoint.current = { x: e.clientX, y: e.clientY };
+  };
+  const onMouseMove = (e: React.MouseEvent) => {
+    if (!dragging.current || !lastPoint.current) return;
+    const dx = e.clientX - lastPoint.current.x;
+    const dy = e.clientY - lastPoint.current.y;
+    lastPoint.current = { x: e.clientX, y: e.clientY };
+    if (Math.abs(dx) + Math.abs(dy) > 2) didDrag.current = true;
+    setTx((v) => v + dx);
+    setTy((v) => v + dy);
+  };
+  const onMouseUp = () => {
+    dragging.current = false;
+    lastPoint.current = null;
+  };
+
+  const onDoubleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setScale(1);
+    setTx(0);
+    setTy(0);
+  };
+
+  // Backdrop click closes only when we're neither zoomed nor dragging —
+  // prevents accidental closes mid-pan.
+  const handleBackdropClick = () => {
+    if (isZoomed || didDrag.current) return;
+    onClose();
+  };
+
   return (
     <div
       className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center"
-      onClick={onClose}
+      onClick={handleBackdropClick}
+      onMouseUp={onMouseUp}
+      onMouseLeave={onMouseUp}
+      onMouseMove={onMouseMove}
       data-testid="lightbox"
     >
       <button
         type="button"
         aria-label="Close"
-        onClick={onClose}
+        onClick={(e) => {
+          e.stopPropagation();
+          onClose();
+        }}
         className="absolute top-4 right-4 w-10 h-10 rounded-full bg-lc-black/70 text-lc-white flex items-center justify-center hover:bg-lc-black z-10"
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
@@ -184,7 +255,7 @@ function Lightbox({ urls, index, onClose, onPrev, onNext }: LightboxProps) {
               e.stopPropagation();
               onPrev();
             }}
-            className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-lc-black/70 text-lc-white flex items-center justify-center hover:bg-lc-black"
+            className={`absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-lc-black/70 text-lc-white flex items-center justify-center hover:bg-lc-black ${isZoomed ? 'pointer-events-none opacity-50' : ''}`}
             data-testid="lightbox-prev"
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -198,7 +269,7 @@ function Lightbox({ urls, index, onClose, onPrev, onNext }: LightboxProps) {
               e.stopPropagation();
               onNext();
             }}
-            className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-lc-black/70 text-lc-white flex items-center justify-center hover:bg-lc-black"
+            className={`absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-lc-black/70 text-lc-white flex items-center justify-center hover:bg-lc-black ${isZoomed ? 'pointer-events-none opacity-50' : ''}`}
             data-testid="lightbox-next"
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -208,12 +279,29 @@ function Lightbox({ urls, index, onClose, onPrev, onNext }: LightboxProps) {
         </>
       )}
 
-      <img
-        src={urls[index]}
-        alt=""
+      <div
+        className="max-w-[90vw] max-h-[90vh]"
+        onWheel={onWheel}
         onClick={(e) => e.stopPropagation()}
-        className="max-w-[90vw] max-h-[90vh] object-contain"
-      />
+        onDoubleClick={onDoubleClick}
+        onMouseDown={onMouseDown}
+        style={{
+          cursor: isZoomed ? (dragging.current ? 'grabbing' : 'grab') : 'zoom-in',
+        }}
+        data-testid="lightbox-viewport"
+      >
+        <img
+          src={urls[index]}
+          alt=""
+          draggable={false}
+          className="max-w-[90vw] max-h-[90vh] object-contain select-none"
+          style={{
+            transform: `translate(${tx}px, ${ty}px) scale(${scale})`,
+            transformOrigin: 'center center',
+            transition: dragging.current ? 'none' : 'transform 0.1s ease-out',
+          }}
+        />
+      </div>
 
       {urls.length > 1 && (
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs text-lc-white bg-lc-black/70 px-3 py-1 rounded-full">

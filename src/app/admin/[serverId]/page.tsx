@@ -8,9 +8,11 @@ import AccessControlPanel from '@/components/admin/AccessControlPanel';
 import ServerPicker, { type AdminServerOption } from '@/components/admin/ServerPicker';
 import CreateServerModal from '@/components/admin/CreateServerModal';
 import MembershipsModal from '@/components/admin/MembershipsModal';
+import WelcomeBotSettings from '@/components/admin/WelcomeBotSettings';
+import EmojiManager from '@/components/admin/EmojiManager';
 import type { Role } from '@/lib/auth-roles';
 
-type Tab = 'members' | 'channels' | 'access' | 'settings' | 'bans';
+type Tab = 'members' | 'channels' | 'access' | 'settings' | 'bans' | 'emojis';
 
 interface MemberData {
   id: string;
@@ -31,6 +33,13 @@ interface ServerSettings {
   joinMode: string;
   wotEnabled: boolean;
   ownerPubkey: string;
+  welcomeChannelId: string | null;
+  welcomeLocale: string | null;
+  maxImageBytes: number;
+  maxVideoBytes: number;
+  maxDocBytes: number;
+  maxAudioBytes: number;
+  allowedMimeTypes: string | null;
 }
 
 interface RoleResponse {
@@ -46,6 +55,7 @@ const TAB_LABELS: Record<Tab, string> = {
   access: 'Access Control',
   settings: 'Settings',
   bans: 'Bans',
+  emojis: 'Emojis',
 };
 
 export default function AdminServerPage({
@@ -217,10 +227,17 @@ export default function AdminServerPage({
     if (!server || !serverId) return;
     setSaving(true);
     const form = new FormData(e.currentTarget);
+    const rawWelcomeChannel = (form.get('welcomeChannelId') as string) ?? '';
+    const rawWelcomeLocale = (form.get('welcomeLocale') as string) ?? '';
     const body: Record<string, string | null> = {
       name: form.get('name') as string,
       icon: (form.get('icon') as string) || null,
       banner: (form.get('banner') as string) || null,
+      welcomeChannelId: rawWelcomeChannel === '' ? null : rawWelcomeChannel,
+      // When the bot is disabled (no channel), also clear the locale so the
+      // stored state stays consistent. Otherwise persist whatever the admin
+      // picked (defaults to 'es' in the component).
+      welcomeLocale: rawWelcomeChannel === '' ? null : rawWelcomeLocale || 'es',
     };
     // ownerPubkey transfer is instance-owner only
     if (instanceOwner) {
@@ -317,7 +334,7 @@ export default function AdminServerPage({
         {/* Tabs */}
         <div className="max-w-5xl mx-auto px-6">
           <div className="flex gap-1 -mb-px overflow-x-auto">
-            {(['members', 'channels', 'access', 'settings', 'bans'] as Tab[]).map((t) => {
+            {(['members', 'channels', 'access', 'settings', 'emojis', 'bans'] as Tab[]).map((t) => {
               const isActive = tab === t;
               return (
                 <button
@@ -403,6 +420,13 @@ export default function AdminServerPage({
           </div>
         )}
 
+        {/* Emojis Tab */}
+        {tab === 'emojis' && (
+          <div data-testid="emojis-tab">
+            <EmojiManager serverId={serverId} />
+          </div>
+        )}
+
         {/* Access Control Tab — unified join mode + WoT + invitations */}
         {tab === 'access' && server && (
           <div data-testid="access-tab">
@@ -446,6 +470,21 @@ export default function AdminServerPage({
                 </div>
               </div>
 
+              {/* Welcome bot */}
+              {serverId && (
+                <WelcomeBotSettings
+                  serverId={serverId}
+                  serverName={server.name}
+                  currentChannelId={server.welcomeChannelId}
+                  currentLocale={server.welcomeLocale}
+                  previewMember={
+                    members.length > 0
+                      ? { displayName: members[0].displayName, picture: members[0].picture }
+                      : null
+                  }
+                />
+              )}
+
               {/* Ownership — instance-owner only */}
               {instanceOwner && (
                 <div className="rounded-xl border border-purple-500/30 bg-purple-500/5 p-6 space-y-3" data-testid="ownership-section">
@@ -477,6 +516,17 @@ export default function AdminServerPage({
                 {saving ? 'Saving...' : 'Save Changes'}
               </button>
             </form>
+
+            {/* Upload limits — owner only, separate form to keep the main
+                profile save path untouched. Fields use MB in the UI and are
+                converted to bytes before sending. */}
+            {isOwner && (
+              <UploadLimitsForm
+                serverId={serverId}
+                server={server}
+                onSaved={fetchServer}
+              />
+            )}
 
             {/* Access controls live in the dedicated Access Control tab. */}
             {isOwner && (
@@ -580,5 +630,205 @@ export default function AdminServerPage({
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * Owner-facing upload-limits form. MB in the UI, bytes on the wire. Mime
+ * categories are shown as 4 checkboxes; null `allowedMimeTypes` means "use
+ * global allowlist" (all boxes treated as checked).
+ */
+const MIME_CATEGORIES: {
+  label: string;
+  mimes: string[];
+}[] = [
+  { label: 'Images', mimes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp'] },
+  { label: 'Videos', mimes: ['video/mp4', 'video/webm', 'video/quicktime', 'video/ogg'] },
+  { label: 'Audio', mimes: ['audio/mpeg', 'audio/ogg', 'audio/wav', 'audio/mp4', 'audio/webm'] },
+  {
+    label: 'Documents',
+    mimes: [
+      'application/pdf',
+      'text/plain',
+      'text/markdown',
+      'application/zip',
+      'application/json',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    ],
+  },
+];
+
+function UploadLimitsForm({
+  serverId,
+  server,
+  onSaved,
+}: {
+  serverId: string;
+  server: ServerSettings;
+  onSaved: () => Promise<void> | void;
+}) {
+  const toMb = (b: number) => Math.round(b / (1024 * 1024));
+  const [imageMb, setImageMb] = useState(toMb(server.maxImageBytes));
+  const [videoMb, setVideoMb] = useState(toMb(server.maxVideoBytes));
+  const [audioMb, setAudioMb] = useState(toMb(server.maxAudioBytes));
+  const [docMb, setDocMb] = useState(toMb(server.maxDocBytes));
+
+  // Parse the stored JSON into a per-category checkbox state. null = all on.
+  const parseAllowed = (raw: string | null): Record<string, boolean> => {
+    const map: Record<string, boolean> = {};
+    let list: string[] | null = null;
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) list = parsed.filter((x): x is string => typeof x === 'string');
+      } catch {
+        list = null;
+      }
+    }
+    for (const cat of MIME_CATEGORIES) {
+      map[cat.label] = list === null ? true : cat.mimes.every((m) => list!.includes(m));
+    }
+    return map;
+  };
+  const [enabledCats, setEnabledCats] = useState(parseAllowed(server.allowedMimeTypes));
+  const [saving, setSaving] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setStatus(null);
+    // If every category is enabled, send null so we fall back to the global
+    // allowlist. Otherwise flatten the enabled mimes into an array.
+    const allEnabled = MIME_CATEGORIES.every((c) => enabledCats[c.label]);
+    const allowedMimeTypes: string[] | null = allEnabled
+      ? null
+      : MIME_CATEGORIES.filter((c) => enabledCats[c.label]).flatMap((c) => c.mimes);
+
+    const body = {
+      maxImageBytes: imageMb * 1024 * 1024,
+      maxVideoBytes: videoMb * 1024 * 1024,
+      maxAudioBytes: audioMb * 1024 * 1024,
+      maxDocBytes: docMb * 1024 * 1024,
+      allowedMimeTypes,
+    };
+    try {
+      const res = await fetch(`/api/admin/server?serverId=${encodeURIComponent(serverId)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setStatus(data?.error || `Save failed (${res.status})`);
+        return;
+      }
+      setStatus('Saved');
+      await onSaved();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <form
+      onSubmit={handleSave}
+      className="rounded-xl border border-lc-border bg-lc-dark/40 p-6 space-y-5"
+      data-testid="upload-limits-form"
+    >
+      <div>
+        <h3 className="text-sm font-semibold text-lc-white">Upload limits</h3>
+        <p className="text-xs text-lc-muted">
+          Per-category caps (in MB) and which file types are accepted on this server.
+          Absolute ceiling is 500 MB regardless of configuration.
+        </p>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <label className="block text-xs text-lc-muted uppercase tracking-wider">
+          Images (MB)
+          <input
+            type="number"
+            min={1}
+            max={500}
+            value={imageMb}
+            onChange={(e) => setImageMb(Math.max(1, Number(e.target.value)))}
+            className="mt-1 w-full px-3 py-2 rounded-lg bg-lc-black border border-lc-border text-lc-white text-sm"
+            data-testid="limit-image"
+          />
+        </label>
+        <label className="block text-xs text-lc-muted uppercase tracking-wider">
+          Videos (MB)
+          <input
+            type="number"
+            min={1}
+            max={500}
+            value={videoMb}
+            onChange={(e) => setVideoMb(Math.max(1, Number(e.target.value)))}
+            className="mt-1 w-full px-3 py-2 rounded-lg bg-lc-black border border-lc-border text-lc-white text-sm"
+            data-testid="limit-video"
+          />
+        </label>
+        <label className="block text-xs text-lc-muted uppercase tracking-wider">
+          Audio (MB)
+          <input
+            type="number"
+            min={1}
+            max={500}
+            value={audioMb}
+            onChange={(e) => setAudioMb(Math.max(1, Number(e.target.value)))}
+            className="mt-1 w-full px-3 py-2 rounded-lg bg-lc-black border border-lc-border text-lc-white text-sm"
+            data-testid="limit-audio"
+          />
+        </label>
+        <label className="block text-xs text-lc-muted uppercase tracking-wider">
+          Documents (MB)
+          <input
+            type="number"
+            min={1}
+            max={500}
+            value={docMb}
+            onChange={(e) => setDocMb(Math.max(1, Number(e.target.value)))}
+            className="mt-1 w-full px-3 py-2 rounded-lg bg-lc-black border border-lc-border text-lc-white text-sm"
+            data-testid="limit-doc"
+          />
+        </label>
+      </div>
+      <div>
+        <p className="text-xs text-lc-muted uppercase tracking-wider mb-2">Allowed types</p>
+        <div className="flex flex-wrap gap-3">
+          {MIME_CATEGORIES.map((cat) => (
+            <label
+              key={cat.label}
+              className="inline-flex items-center gap-2 text-sm text-lc-white"
+            >
+              <input
+                type="checkbox"
+                checked={!!enabledCats[cat.label]}
+                onChange={(e) =>
+                  setEnabledCats((prev) => ({ ...prev, [cat.label]: e.target.checked }))
+                }
+                data-testid={`mime-cat-${cat.label.toLowerCase()}`}
+              />
+              {cat.label}
+            </label>
+          ))}
+        </div>
+      </div>
+      {status && (
+        <p className="text-xs text-lc-green" data-testid="upload-limits-status">
+          {status}
+        </p>
+      )}
+      <button
+        type="submit"
+        disabled={saving}
+        className="px-5 py-2 rounded-full bg-lc-green text-lc-black font-semibold text-xs hover:brightness-110 transition disabled:opacity-50"
+      >
+        {saving ? 'Saving…' : 'Save upload limits'}
+      </button>
+    </form>
   );
 }

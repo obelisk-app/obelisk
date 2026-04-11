@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { shortNpub } from '@/lib/mentions';
 
 interface ServerMembership {
   id: string;
@@ -89,7 +90,7 @@ export default function MembershipsModal({ pubkey, displayName, onClose }: Membe
     }
   };
 
-  const shortPubkey = pubkey.slice(0, 8) + '…' + pubkey.slice(-4);
+  const shortPubkey = shortNpub(pubkey);
 
   return (
     <div

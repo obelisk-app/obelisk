@@ -23,6 +23,11 @@ export async function GET(
     return NextResponse.json({ error: 'Invalid invitation' }, { status: 404 });
   }
 
+  // Check revoked (soft-delete — history is preserved in the admin panel)
+  if (invitation.revokedAt) {
+    return NextResponse.json({ error: 'Invitation revoked' }, { status: 410 });
+  }
+
   // Check expiry
   if (invitation.expiresAt && invitation.expiresAt < new Date()) {
     return NextResponse.json({ error: 'Invitation expired' }, { status: 410 });
@@ -67,6 +72,10 @@ export async function POST(
 
   if (!invitation) {
     return NextResponse.json({ error: 'Invalid invitation' }, { status: 404 });
+  }
+
+  if (invitation.revokedAt) {
+    return NextResponse.json({ error: 'Invitation revoked' }, { status: 410 });
   }
 
   if (invitation.expiresAt && invitation.expiresAt < new Date()) {
@@ -125,7 +134,14 @@ export async function POST(
     }),
   ]);
 
-  await postWelcomeMessage(invitation.serverId, pubkey);
+  // Fire-and-forget — `postWelcomeMessage` awaits a profile fetch for
+  // freshly-joined users so the welcome banner includes their avatar
+  // (see welcome.ts). Running inline would stall the invite acceptance
+  // for up to 8s on slow relays. Background posting delivers the
+  // welcome message via Socket.io once the profile lands.
+  void postWelcomeMessage(invitation.serverId, pubkey).catch((err) => {
+    console.warn('[invitations] postWelcomeMessage failed:', err);
+  });
 
   return NextResponse.json({ server: invitation.server });
 }

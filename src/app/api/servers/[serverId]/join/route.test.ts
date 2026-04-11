@@ -16,20 +16,17 @@ vi.mock('@/lib/wot', () => ({
   isInWot: vi.fn(),
   maybeAutoRefreshWot: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock('@/lib/profile-sync', () => ({
-  fetchAndSyncProfileDeduped: vi.fn().mockResolvedValue(null),
-}));
 
 import { POST } from './route';
 import { prisma } from '@/lib/db';
 import { getAuthPubkey } from '@/lib/api-auth';
 import { isInWot } from '@/lib/wot';
-import { fetchAndSyncProfileDeduped } from '@/lib/profile-sync';
+import { postWelcomeMessage } from '@/lib/welcome';
 
 const mockPrisma = prisma as any;
 const mockGetAuth = getAuthPubkey as ReturnType<typeof vi.fn>;
 const mockIsInWot = isInWot as ReturnType<typeof vi.fn>;
-const mockFetchAndSync = fetchAndSyncProfileDeduped as ReturnType<typeof vi.fn>;
+const mockPostWelcome = postWelcomeMessage as ReturnType<typeof vi.fn>;
 
 const params = Promise.resolve({ serverId: 'srv1' });
 
@@ -144,7 +141,7 @@ describe('POST /api/servers/[serverId]/join', () => {
     expect(mockPrisma.member.create).toHaveBeenCalled();
   });
 
-  it('triggers an inline profile fetch after creating the member', async () => {
+  it('fires the welcome bot in the background after creating the member', async () => {
     mockGetAuth.mockResolvedValue('pk1');
     mockPrisma.server.findUnique.mockResolvedValue({
       id: 'srv1', name: 'Test', icon: null, banner: null, joinMode: 'open', wotEnabled: false,
@@ -152,14 +149,14 @@ describe('POST /api/servers/[serverId]/join', () => {
     mockPrisma.member.findUnique.mockResolvedValue(null);
     mockPrisma.ban.findUnique.mockResolvedValue(null);
     mockPrisma.member.create.mockResolvedValue({ id: 'm1' });
-    mockFetchAndSync.mockResolvedValue({ id: 'm1' });
+    mockPostWelcome.mockResolvedValue(null);
 
     const res = await POST(makeRequest(), { params });
     expect(res.status).toBe(200);
-    expect(mockFetchAndSync).toHaveBeenCalledWith('pk1', 'srv1');
+    expect(mockPostWelcome).toHaveBeenCalledWith('srv1', 'pk1');
   });
 
-  it('succeeds even if the inline profile fetch fails — lazy refresh will retry', async () => {
+  it('returns success even if the background welcome bot rejects', async () => {
     mockGetAuth.mockResolvedValue('pk1');
     mockPrisma.server.findUnique.mockResolvedValue({
       id: 'srv1', name: 'Test', icon: null, banner: null, joinMode: 'open', wotEnabled: false,
@@ -167,10 +164,15 @@ describe('POST /api/servers/[serverId]/join', () => {
     mockPrisma.member.findUnique.mockResolvedValue(null);
     mockPrisma.ban.findUnique.mockResolvedValue(null);
     mockPrisma.member.create.mockResolvedValue({ id: 'm1' });
-    mockFetchAndSync.mockRejectedValue(new Error('relay down'));
+    // The route fires-and-forgets postWelcomeMessage; a rejected promise
+    // must not bubble up and fail the join response. We silence the
+    // unhandled-rejection warning by suppressing console.warn for this test.
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    mockPostWelcome.mockRejectedValue(new Error('welcome bot failure'));
 
     const res = await POST(makeRequest(), { params });
     expect(res.status).toBe(200);
     expect(mockPrisma.member.create).toHaveBeenCalled();
+    warnSpy.mockRestore();
   });
 });

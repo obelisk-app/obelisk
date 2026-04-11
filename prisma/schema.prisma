@@ -28,6 +28,22 @@ model Server {
   invitesPerUser    Int @default(3)
   inviteExpiryHours Int @default(168) // 7 days
 
+  // Welcome bot: admin-configurable channel + language for auto-welcome on join.
+  // welcomeChannelId null OR welcomeLocale null => bot disabled.
+  welcomeChannelId String? @unique
+  welcomeLocale    String? // 'es' | 'en'
+  welcomeChannel   Channel? @relation("ServerWelcomeChannel", fields: [welcomeChannelId], references: [id], onDelete: SetNull)
+
+  // Per-server upload limits. Defaults match the global constants in
+  // src/lib/attachments.ts. allowedMimeTypes is an optional JSON-encoded
+  // string array; null means "use the global allowlist". Absolute ceiling
+  // (500 MB) is enforced server-side independently.
+  maxImageBytes    Int     @default(10485760)  // 10 MB
+  maxVideoBytes    Int     @default(52428800)  // 50 MB
+  maxDocBytes      Int     @default(26214400)  // 25 MB
+  maxAudioBytes    Int     @default(26214400)  // 25 MB
+  allowedMimeTypes String?
+
   categories Category[]
   channels   Channel[]
   members    Member[]
@@ -39,6 +55,26 @@ model Server {
   invitations      Invitation[]
   wotEntries       WotEntry[]
   wotOverrides     WotOverride[]
+  emojis           ServerEmoji[]
+}
+
+// Custom per-server emoji (`:partyparrot:` style). Uploaded by mod+ via
+// /api/admin/emojis. Rendered inline in messages/reactions when a shortcode
+// matches a name stored here. See `src/lib/emoji-shortcodes.ts` for the
+// unicode fallback and `src/components/chat/MessageContent.tsx` for the
+// render-time swap.
+model ServerEmoji {
+  id        String   @id @default(cuid())
+  serverId  String
+  name      String   // [a-z0-9_-]{2,32}, no colons
+  url       String
+  createdBy String
+  createdAt DateTime @default(now())
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@unique([serverId, name])
+  @@index([serverId])
 }
 
 model DirectMessageThread {
@@ -62,6 +98,8 @@ model Invitation {
   uses         Int       @default(0)
   expiresAt    DateTime?
   createdAt    DateTime  @default(now())
+  revokedAt    DateTime? // soft-revoke: null = active, set = no new joins but history preserved
+  revokedBy    String?   // pubkey of admin who revoked
 
   server  Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
   members Member[] @relation("InvitationMembers")
@@ -98,6 +136,7 @@ model Channel {
   voiceStates  VoiceState[]
   forumTags    ForumTag[]
   readStates   ChannelReadState[]
+  welcomeForServer Server? @relation("ServerWelcomeChannel")
 
   @@index([serverId])
   @@index([categoryId])
@@ -128,6 +167,11 @@ model Message {
   editedAt     DateTime?
   deletedAt    DateTime?
 
+  // Pinning (admin-only). Mirrors the editedAt pattern — pinnedAt null means
+  // the message is not pinned. pinnedByPubkey records who pinned it last.
+  pinnedAt       DateTime?
+  pinnedByPubkey String?
+
   channel   Channel    @relation(fields: [channelId], references: [id], onDelete: Cascade)
   replyTo   Message?   @relation("MessageReplies", fields: [replyToId], references: [id])
   replies   Message[]  @relation("MessageReplies")
@@ -138,6 +182,7 @@ model Message {
 
   @@index([channelId, createdAt])
   @@index([authorPubkey])
+  @@index([channelId, pinnedAt])
 }
 
 model Reaction {

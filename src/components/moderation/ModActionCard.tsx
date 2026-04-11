@@ -1,5 +1,7 @@
 'use client';
 
+import { shortNpub } from '@/lib/mentions';
+
 interface ModAction {
   id: string;
   actorPubkey: string;
@@ -23,10 +25,6 @@ const ACTION_LABELS: Record<string, { label: string; color: string }> = {
   dismiss_report: { label: 'Dismissed report', color: 'text-lc-muted' },
 };
 
-function shortKey(key: string) {
-  return key.slice(0, 8) + '...' + key.slice(-4);
-}
-
 function timeAgo(dateStr: string) {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
@@ -48,7 +46,7 @@ export default function ModActionCard({ action }: { action: ModAction }) {
           {action.targetPubkey && (
             <>
               <span className="text-lc-muted">→</span>
-              <span className="text-lc-white font-mono text-xs">{shortKey(action.targetPubkey)}</span>
+              <span className="text-lc-white font-mono text-xs">{shortNpub(action.targetPubkey)}</span>
             </>
           )}
         </div>
@@ -56,7 +54,7 @@ export default function ModActionCard({ action }: { action: ModAction }) {
           <p className="text-xs text-lc-muted mt-1">Reason: {action.reason}</p>
         )}
         <div className="text-xs text-lc-muted mt-1">
-          by <span className="font-mono">{shortKey(action.actorPubkey)}</span> · {timeAgo(action.createdAt)}
+          by <span className="font-mono">{shortNpub(action.actorPubkey)}</span> · {timeAgo(action.createdAt)}
         </div>
       </div>
     </div>

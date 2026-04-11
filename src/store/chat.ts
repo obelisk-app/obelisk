@@ -49,12 +49,16 @@ export interface Message {
   replyToId: string | null;
   createdAt: string;
   editedAt: string | null;
+  pinnedAt?: string | null;
+  pinnedByPubkey?: string | null;
   replyTo?: { id: string; content: string; authorPubkey: string } | null;
   reactions?: Reaction[];
   // Embedded author profile attached by the server on Socket.io emits,
   // so clients never need to wait for a separate profile fetch.
   author?: EmbeddedAuthor | null;
 }
+
+export type MyServerRole = 'owner' | 'admin' | 'mod' | 'member' | null;
 
 export interface ServerInfo {
   id: string;
@@ -97,7 +101,23 @@ interface ChatState {
   // Search: jump to message highlight
   highlightedMessageId: string | null;
 
+  // Scroll gate used by useReadTracker to decide whether the user is
+  // "actually looking at" the latest messages. True when the message list
+  // is within ~100px of the bottom. Reset to true on channel change so a
+  // freshly-opened channel with no scroll activity still qualifies.
+  isNearBottom: boolean;
+
+  // Role of the authed user on the active server. Populated by the chat
+  // page after load. Used to gate admin-only UI affordances (e.g. pinning).
+  myRole: MyServerRole;
+
+  // Custom server emojis (name → image URL). Refreshed on server select via
+  // `GET /api/admin/emojis?serverId=…`. Used by `MessageContent` and
+  // `EmojiPicker` to render `:partyparrot:` inline. Empty object = no customs.
+  serverEmojis: Record<string, string>;
+
   setMemberList: (members: MemberInfo[]) => void;
+  setServerEmojis: (emojis: Record<string, string>) => void;
   setServers: (servers: ServerInfo[]) => void;
   addServer: (server: ServerInfo) => void;
   removeServer: (serverId: string) => void;
@@ -125,6 +145,19 @@ interface ChatState {
   // Presence
   setOnlinePubkeys: (pubkeys: string[]) => void;
   setPresence: (pubkey: string, online: boolean) => void;
+
+  // Scroll gate
+  setIsNearBottom: (near: boolean) => void;
+
+  // Role on active server
+  setMyRole: (role: MyServerRole) => void;
+
+  // Pin state updates (applied to existing messages in the active channel)
+  updatePinState: (
+    messageId: string,
+    pinnedAt: string | null,
+    pinnedByPubkey: string | null,
+  ) => void;
 }
 
 export const useChatStore = create<ChatState>()((set) => ({
@@ -144,8 +177,12 @@ export const useChatStore = create<ChatState>()((set) => ({
   highlightedMessageId: null,
   memberList: [],
   onlinePubkeys: new Set<string>(),
+  isNearBottom: true,
+  myRole: null,
+  serverEmojis: {},
 
   setMemberList: (members) => set({ memberList: members }),
+  setServerEmojis: (emojis) => set({ serverEmojis: emojis }),
   setServers: (servers) => set({ servers }),
   addServer: (server) => set((state) => ({
     servers: [...state.servers, server],
@@ -160,9 +197,10 @@ export const useChatStore = create<ChatState>()((set) => ({
     activeChannelId: null,
     messages: [],
     isLoadingChannels: true,
+    serverEmojis: {},
   }),
   setChannels: (pinnedChannels, categories) => set({ pinnedChannels, categories, isLoadingChannels: false }),
-  setActiveChannel: (channelId) => set({ activeChannelId: channelId, messages: [], isLoadingMessages: true, replyingTo: null, messageCursor: null, hasMoreMessages: false, typingUsers: {} }),
+  setActiveChannel: (channelId) => set({ activeChannelId: channelId, messages: [], isLoadingMessages: true, replyingTo: null, messageCursor: null, hasMoreMessages: false, typingUsers: {}, isNearBottom: true }),
   setMessages: (messages) => set({ messages, isLoadingMessages: false }),
   addMessage: (message) => set((state) => ({
     messages: [...state.messages, message],
@@ -204,6 +242,16 @@ export const useChatStore = create<ChatState>()((set) => ({
     const { [pubkey]: _, ...rest } = state.typingUsers;
     return { typingUsers: rest };
   }),
+
+  setIsNearBottom: (near) => set((state) => (state.isNearBottom === near ? state : { isNearBottom: near })),
+
+  setMyRole: (role) => set({ myRole: role }),
+
+  updatePinState: (messageId, pinnedAt, pinnedByPubkey) => set((state) => ({
+    messages: state.messages.map((m) =>
+      m.id === messageId ? { ...m, pinnedAt, pinnedByPubkey } : m
+    ),
+  })),
 
   setOnlinePubkeys: (pubkeys) => set({ onlinePubkeys: new Set(pubkeys) }),
   setPresence: (pubkey, online) => set((state) => {

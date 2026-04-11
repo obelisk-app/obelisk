@@ -1,6 +1,7 @@
 'use client';
 
 import { useChatStore } from '@/store/chat';
+import { shortNpub } from '@/lib/mentions';
 
 interface MemberListProps {
   profileCache: Map<string, { name?: string; picture?: string }>;
@@ -31,7 +32,7 @@ export default function MemberList({ profileCache }: MemberListProps) {
       <div className="flex-1 overflow-y-auto px-2 py-2 space-y-0.5">
         {sortedMembers.map(member => {
           const cached = profileCache.get(member.pubkey);
-          const name = member.displayName || cached?.name || member.pubkey.slice(0, 8) + '...';
+          const name = member.displayName || cached?.name || shortNpub(member.pubkey);
           const picture = member.picture || cached?.picture;
           const isOnline = onlinePubkeys.has(member.pubkey);
 
