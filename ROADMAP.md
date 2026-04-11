@@ -203,7 +203,21 @@
 
 ## Fase 4 — Polish & Launch
 - [ ] PWA (Progressive Web App) — installable, offline support, service worker
-- [ ] Notificaciones (push / in-app)
+- [ ] **Notificaciones — fix + mejoras (estilo Discord)**
+  > Hoy las notificaciones están rotas / inconsistentes. Hay que auditar el flujo end-to-end y dejarlo confiable antes de agregar features encima.
+  - [ ] Auditar el estado actual: por qué no disparan, qué eventos las generan, qué store las trackea, qué pasa en background tab vs foreground
+  - [ ] Notificaciones in-app confiables: sonido + toast cuando llega un mensaje en un canal donde tenés permiso, una mención (@usuario), un reply a tu mensaje, o un DM
+  - [ ] Notificaciones del browser (Notification API) cuando la pestaña está en background, con permission request explícito en settings
+  - [ ] Settings de notificaciones por servidor y por canal: All / Mentions only / Nothing (igual que Discord), persistido en DB (`MemberChannelSettings { memberId, channelId, notify }`)
+  - [ ] Mute de servidor / canal con duración (15min, 1h, 8h, 24h, hasta que reabra)
+  - [ ] **Badge de unread count en el favicon** — número rojo encima del favicon con la cantidad total de menciones + DMs sin leer (estilo Discord)
+    - [ ] Lib `lib/favicon-badge.ts`: dibuja el favicon base en un `<canvas>`, superpone un círculo rojo con el número (si > 99 muestra "99+"), exporta como dataURL y reemplaza `<link rel="icon">` dinámicamente
+    - [ ] Hook `useFaviconBadge(count)` que se suscribe al store de notificaciones y actualiza el favicon en cada cambio
+    - [ ] Resetea a 0 cuando la pestaña vuelve a foco y el usuario está leyendo el canal/DM con unreads
+    - [ ] Title de la pestaña también muestra el contador: `(3) Obelisk` para reforzar la señal
+  - [ ] Indicadores de unread en la UI: bullet point al lado del nombre del canal/server con unreads, badge con número para menciones, separador visual "New messages" en el chat
+  - [ ] Tracking server-side de `lastReadAt` por miembro/canal y por DM, sincronizado vía Socket.io para que el contador sea consistente entre dispositivos
+  - [ ] Tests: store de notificaciones, lib favicon-badge (canvas mock), hook con cambios de count, settings persistence
 - [ ] Temas personalizados por servidor
 - [ ] Mejorar experiencia mobile
   - [ ] Elementos que se ocultan o quedan inaccesibles en pantallas chicas
