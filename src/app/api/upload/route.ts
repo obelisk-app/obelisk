@@ -20,7 +20,12 @@ import {
 export const runtime = 'nodejs';
 
 function getUploadDir() {
-  return path.join(process.cwd(), 'public', 'uploads');
+  // Stored outside `public/` on purpose: in production Next.js indexes `public/`
+  // at build time and does not serve files written there at runtime, so files
+  // end up 404ing in the deployed container. We write to `./uploads/` and serve
+  // them via the route handler at `src/app/uploads/[name]/route.ts`, which is
+  // backed by a persistent Docker volume (see docker-compose.yml).
+  return path.join(process.cwd(), 'uploads');
 }
 
 // POST /api/upload — accepts a multipart form with field "file".

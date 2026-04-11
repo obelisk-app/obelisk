@@ -5,7 +5,7 @@ import { mkdtempSync, rmSync, existsSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-// Route saves under `${process.cwd()}/public/uploads` — redirect cwd to a tmp dir.
+// Route saves under `${process.cwd()}/uploads` — redirect cwd to a tmp dir.
 const TMP_CWD = mkdtempSync(path.join(tmpdir(), 'obelisk-upload-'));
 const realCwd = process.cwd;
 process.cwd = () => TMP_CWD;
@@ -80,7 +80,7 @@ describe('POST /api/upload', () => {
     expect(res.status).toBe(400);
   });
 
-  it('accepts image and stores it under public/uploads', async () => {
+  it('accepts image and stores it under uploads/ (outside public)', async () => {
     mockAuth.mockResolvedValue('pub1');
     const fd = new FormData();
     const bytes = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]); // PNG magic
@@ -94,9 +94,11 @@ describe('POST /api/upload', () => {
     expect(body.name).toBe('pixel.png');
     expect(body.url).toMatch(/^http:\/\/localhost:3000\/uploads\/[a-f0-9]+\.png$/);
 
-    const uploadDir = path.join(TMP_CWD, 'public', 'uploads');
+    const uploadDir = path.join(TMP_CWD, 'uploads');
     expect(existsSync(uploadDir)).toBe(true);
     expect(readdirSync(uploadDir).some((f) => f.endsWith('.png'))).toBe(true);
+    // Must NOT be written to public/uploads — that path is dead in production.
+    expect(existsSync(path.join(TMP_CWD, 'public', 'uploads'))).toBe(false);
   });
 
   it('accepts mp4 video', async () => {

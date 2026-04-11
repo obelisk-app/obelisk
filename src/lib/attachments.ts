@@ -1,8 +1,10 @@
 /**
  * Attachment utilities for file uploads.
  *
- * Uploaded files live under `/public/uploads/` and are served as static assets
- * from `/uploads/<name>`. Messages reference them via an absolute URL inserted
+ * Uploaded files live under `./uploads/` (outside `public/` so the Next.js
+ * production build does not try to index them at build time) and are served
+ * by the route handler at `src/app/uploads/[name]/route.ts` at the URL
+ * `/uploads/<name>`. Messages reference them via an absolute URL inserted
  * into the message content (plain URL for images so the existing inline image
  * rendering kicks in, markdown link for generic documents).
  */

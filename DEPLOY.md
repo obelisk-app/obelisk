@@ -186,6 +186,65 @@ These are runtime changes that don't lose data but do affect how users
 interact with the app. Re-read this section after every `git pull` so you
 know what shifted.
 
+### User uploads moved out of `public/` + now persisted via Docker volume
+
+Previously, pasted/uploaded images (via `POST /api/upload`) were written to
+`public/uploads/` inside the container. This had two problems on deploy:
+
+1. In a Next.js **production** build, `public/` is indexed at build time, so
+   files written to `public/uploads/` at runtime were **never served** — every
+   GET to `/uploads/<file>` returned 404. (Dev worked because Next.js re-reads
+   `public/` on every request.)
+2. Even if they had been served, there was no Docker volume mounted, so every
+   `docker compose up -d --build` wiped all previously uploaded files.
+
+**What changed:**
+
+- The upload route now writes to `./uploads/` (a sibling of `public/`, not
+  inside it).
+- A new Route Handler at `src/app/uploads/[name]/route.ts` streams those
+  files back at the same public URL (`/uploads/<name>`), so no client code,
+  message content, or emoji URL changed.
+- `docker-compose.yml` now mounts a named volume `uploads:/app/uploads` on
+  the `app` service so files persist across restarts and rebuilds.
+
+**What you (the operator) need to do on the next deploy:**
+
+```bash
+cd obelisk
+# 1. Backup DB as usual
+docker compose --env-file .env.production exec -T db \
+  pg_dump -U obelisk obelisk | gzip > "obelisk-backup-$(date +%Y%m%d-%H%M).sql.gz"
+
+# 2. Pull and rebuild — the named `uploads` volume is created automatically
+git pull
+docker compose --env-file .env.production up -d --build app
+```
+
+No manual volume creation is needed — `docker compose` creates the named
+volume from the `volumes:` block on first run. You can verify it exists with:
+
+```bash
+docker volume ls | grep uploads
+```
+
+**Note on old uploads:** Any images pasted on previous deploys are gone —
+they were ephemeral (stored on the overlay filesystem of a now-destroyed
+container). There is nothing to migrate. From this deploy onward, uploads
+persist.
+
+**If you want to back up uploads** along with the database, add this to your
+backup routine:
+
+```bash
+# Back up uploads volume as a tarball
+docker run --rm -v obelisk_uploads:/data -v "$PWD":/backup alpine \
+  tar -czf "/backup/uploads-backup-$(date +%Y%m%d-%H%M).tar.gz" -C /data .
+```
+
+(Replace `obelisk_uploads` with whatever `docker volume ls` reports — Compose
+prefixes the volume name with the project directory.)
+
 ### Multi-server admin + WoT enforcement (post-`2428137`)
 
 | Change | Impact |

@@ -20,7 +20,9 @@
 # production
 /build
 
-# user uploads (served from /public/uploads)
+# user uploads (written by /api/upload, served by /uploads/[name])
+/uploads
+# legacy location from before the uploads-path refactor — keep ignored
 /public/uploads
 
 # misc
