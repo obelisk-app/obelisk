@@ -17,7 +17,7 @@ export default function Navbar({ onLoginSuccess }: { onLoginSuccess?: () => void
   const [showLogin, setShowLogin] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const { isConnected, profile, logout, syncProfile, isSyncing } = useAuthStore();
+  const { isConnected, profile, logout, syncProfile, isSyncing, restoreSession, _hasHydrated } = useAuthStore();
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -25,6 +25,18 @@ export default function Navbar({ onLoginSuccess }: { onLoginSuccess?: () => void
     window.addEventListener('scroll', onScroll);
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  // Landing/Navbar renders outside /chat, so nothing else has rehydrated the
+  // session yet. Only `loginMethod` is persisted to localStorage — identity
+  // must come from the backend session cookie. Without this, a logged-in user
+  // who lands on (or refreshes) `/` sees the "Launch App" CTA instead of their
+  // avatar, which looks like a silent logout. Especially bad on mobile where
+  // Safari tends to dump users onto the landing URL after tab restore.
+  useEffect(() => {
+    if (!_hasHydrated) return;
+    if (isConnected) return;
+    void restoreSession();
+  }, [_hasHydrated, isConnected, restoreSession]);
 
   return (
     <>
