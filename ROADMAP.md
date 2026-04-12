@@ -114,6 +114,15 @@
   - [ ] Vista preview del sidebar tal como lo verá un miembro con cierto rol (rol switcher para testear visibilidad de canales privados)
   - [ ] Editor visual de la matriz de permisos por rol (checkboxes en grid, igual que Discord)
   - [ ] Confirm dialogs claros para acciones destructivas (borrar canal con N mensajes, borrar rol asignado a N miembros)
+- [ ] **Dashboard de estadísticas para el instance owner** — `/admin/stats` con métricas agregadas de uso y media del deployment
+  - [ ] Storage: uso total de `/uploads/` + breakdown por tipo (imágenes, audio, emojis, stickers) + top 20 archivos/uploaders por tamaño
+  - [ ] Media: cantidad de mensajes con attachments, distribución por mime-type, tasa de crecimiento semanal/mensual
+  - [ ] Actividad: mensajes/día, usuarios activos (DAU/WAU/MAU), canales más activos, minutos en voz, peak concurrent sockets
+  - [ ] Usuarios: total miembros, signups via WoT vs invite vs manual, retención (cohorts), top posters
+  - [ ] Servidores: breakdown por server (mensajes, miembros, storage) para detectar hotspots
+  - [ ] DB: tamaño de tablas principales (Message, Member, Upload), índice de crecimiento
+  - [ ] Export CSV/JSON de cada vista + endpoint `/api/admin/stats` (instance owner only)
+  - [ ] Tests: agregaciones correctas, role guard (solo instance owner), performance con datasets grandes (usar queries agregadas, no cargar todo en memoria)
 - [ ] Rediseñar panel de moderacion (/moderation) para multi-server
   - [ ] Reportes, mutes, warnings, audit log scoped por servidor
   - [ ] Mods solo ven/actuan en servidores donde tienen permisos
