@@ -21,11 +21,17 @@ interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  /**
+   * When true, the modal is rendered without its dark/blurred backdrop so the
+   * underlying page background (e.g. matrix grid + shooting stars) shows
+   * through. Used on /chat when the session is invalid.
+   */
+  transparentBackdrop?: boolean;
 }
 
 type BunkerTab = 'qr' | 'url';
 
-export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
+export default function LoginModal({ isOpen, onClose, onSuccess, transparentBackdrop = false }: LoginModalProps) {
   const [method, setMethod] = useState<LoginMethod | null>(null);
   const [nsecInput, setNsecInput] = useState('');
   const [bunkerInput, setBunkerInput] = useState('');
@@ -244,7 +250,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className={`fixed inset-0 flex items-center justify-center z-50 p-4 ${transparentBackdrop ? '' : 'bg-black/70 backdrop-blur-sm'}`}>
       <div className="bg-lc-dark rounded-2xl max-w-md w-full p-8 border border-lc-border shadow-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">

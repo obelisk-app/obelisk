@@ -8,6 +8,7 @@ import { useChatStore, Message, MemberInfo } from '@/store/chat';
 import ServerBar from '@/components/chat/ServerBar';
 import ChannelSidebar from '@/components/chat/ChannelSidebar';
 import MessageArea from '@/components/chat/MessageArea';
+import PinnedMessagesPanel from '@/components/chat/PinnedMessagesPanel';
 import MessageInput from '@/components/chat/MessageInput';
 import ForumView from '@/components/chat/ForumView';
 import SearchBar from '@/components/chat/SearchBar';
@@ -30,6 +31,8 @@ import {
   handleIncomingDM,
 } from '@/lib/read-gates';
 import MemberList from '@/components/chat/MemberList';
+import LoginModal from '@/components/LoginModal';
+import ShootingStars from '@/components/ShootingStars';
 import { useNotificationStore } from '@/store/notification';
 import { requestNotificationPermission, showBrowserNotification } from '@/lib/browser-notifications';
 import { useReadTracker } from '@/hooks/useReadTracker';
@@ -113,9 +116,11 @@ export default function ChatPage() {
   const pendingHighlightRef = useRef<{ channelId: string; messageId: string } | null>(null);
 
   const [sessionChecked, setSessionChecked] = useState(false);
+  const [sessionInvalid, setSessionInvalid] = useState(false);
   const sessionCheckStarted = useRef(false);
   const [ndkReady, setNdkReady] = useState(false);
   const [messageError, setMessageError] = useState<string | null>(null);
+  const [serversLoaded, setServersLoaded] = useState(false);
   const { isDMMode } = useDMStore();
   const [showNewDMModal, setShowNewDMModal] = useState(false);
 
@@ -126,7 +131,7 @@ export default function ChatPage() {
 
     restoreSession().then(async (valid) => {
       if (!valid) {
-        router.push('/');
+        setSessionInvalid(true);
         return;
       }
       // Let the page render immediately — NDK connects in background
@@ -141,6 +146,16 @@ export default function ChatPage() {
     const loginMethod = useAuthStore.getState().loginMethod;
     const ndk = getNDK();
 
+    // nsec login stores the private key only in memory — on page reload the
+    // signer is gone and cannot be restored. Log out and show the login modal
+    // so the user can re-enter their nsec (or pick another method).
+    if (loginMethod === 'nsec' && !ndk.signer) {
+      logout();
+      setSessionChecked(false);
+      setSessionInvalid(true);
+      return;
+    }
+
     connectNDK().then(async () => {
       if (!ndk.signer && loginMethod === 'extension' && typeof window !== 'undefined' && window.nostr) {
         const { NDKNip07Signer } = await import('@nostr-dev-kit/ndk');
@@ -151,7 +166,7 @@ export default function ChatPage() {
       console.warn('Failed to restore NDK connection:', err);
       setNdkReady(true); // still mark ready so DM UI doesn't hang
     });
-  }, [sessionChecked]);
+  }, [sessionChecked, logout]);
 
   // Add own profile to cache
   useEffect(() => {
@@ -182,6 +197,7 @@ export default function ChatPage() {
         if (!res.ok) return;
         const data = await res.json();
         setServers(data.servers);
+        setServersLoaded(true);
         if (data.servers.length > 0 && !activeServerId) {
           // Prefer the server encoded in the URL (?s=) on the initial mount —
           // this is what makes a browser refresh land on the same server the
@@ -198,6 +214,7 @@ export default function ChatPage() {
         }
       } catch (err) {
         console.error('Failed to fetch servers:', err);
+        setServersLoaded(true);
       }
     };
 
@@ -317,6 +334,8 @@ export default function ChatPage() {
             pubkey: member.pubkey,
             displayName: name || shortNpub(member.pubkey),
             picture,
+            role: member.role,
+            customRoles: member.customRoles?.map((cr: { role: { id: string; name: string; color: string; icon?: string | null; priority: number } }) => cr.role),
           });
         }
         setMemberList(memberInfoList);
@@ -1010,6 +1029,27 @@ export default function ChatPage() {
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // No valid session — show login modal with matrix background
+  if (sessionInvalid) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-lc-black lc-grid-bg relative">
+        <ShootingStars />
+        <LoginModal
+          isOpen={true}
+          transparentBackdrop
+          onClose={() => router.push('/')}
+          onSuccess={() => {
+            setSessionInvalid(false);
+            sessionCheckStarted.current = false;
+            restoreSession().then((valid) => {
+              if (valid) setSessionChecked(true);
+            });
+          }}
+        />
+      </div>
+    );
+  }
+
   // Loading state while checking session
   if (!sessionChecked) {
     return (
@@ -1075,6 +1115,26 @@ export default function ChatPage() {
               />
             )}
           </>
+        ) : serversLoaded && servers.length === 0 ? (
+          <div className="flex-1 flex items-center justify-center bg-lc-black">
+            <div className="flex flex-col items-center gap-4 max-w-md text-center px-6">
+              <div className="w-16 h-16 rounded-2xl bg-lc-dark border border-lc-border flex items-center justify-center">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-lc-muted">
+                  <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/>
+                </svg>
+              </div>
+              <h2 className="text-xl font-semibold text-lc-white">No servers yet</h2>
+              <p className="text-lc-muted text-sm leading-relaxed">
+                You&apos;re not a member of any server. Ask a server admin for an invite link to get started, or use Direct Messages to chat with other Nostr users.
+              </p>
+              <button
+                onClick={() => useDMStore.getState().setDMMode(true)}
+                className="lc-pill-secondary text-sm px-5 py-2"
+              >
+                Open Direct Messages
+              </button>
+            </div>
+          </div>
         ) : (
           <div className="flex-1 flex min-h-0">
             <div className="flex-1 flex flex-col min-h-0 min-w-0">
@@ -1104,7 +1164,18 @@ export default function ChatPage() {
                     <span className="text-sm text-lc-muted">Select a channel</span>
                   )}
                 </div>
-                <SearchBar serverId={activeServerId} profileCache={profileCache} />
+                <div className="flex items-center gap-2 shrink-0">
+                  {activeChannel && activeChannelId && activeChannel.type !== 'forum' && activeChannel.type !== 'voice' && (
+                    <PinnedMessagesPanel
+                      channelId={activeChannelId}
+                      profileCache={profileCache}
+                      onJumpToMessage={(id) => {
+                        /* handled by MessageArea scroll */
+                      }}
+                    />
+                  )}
+                  <SearchBar serverId={activeServerId} profileCache={profileCache} />
+                </div>
               </div>
 
               {/* Forum, Voice, or Chat */}
