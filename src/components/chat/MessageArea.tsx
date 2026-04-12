@@ -6,7 +6,6 @@ import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notification';
 import { formatPubkey } from '@/lib/nostr';
 import MessageContent from './MessageContent';
-import PinnedMessagesPanel from './PinnedMessagesPanel';
 import { resolveReactionEmoji } from '@/lib/emoji-shortcodes';
 
 function ReplyPreview({ replyTo, profileCache }: {
@@ -25,7 +24,31 @@ function ReplyPreview({ replyTo, profileCache }: {
   );
 }
 
-const QUICK_EMOJIS = ['❤️', '🔥', '😂'];
+const DEFAULT_QUICK_EMOJIS = ['❤️', '🔥', '😂'];
+const RECENT_EMOJIS_KEY = 'obelisk:recent-reaction-emojis';
+const MAX_RECENT = 3;
+
+function getRecentEmojis(): string[] {
+  if (typeof window === 'undefined') return DEFAULT_QUICK_EMOJIS;
+  try {
+    const stored = localStorage.getItem(RECENT_EMOJIS_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored) as string[];
+      if (parsed.length >= MAX_RECENT) return parsed.slice(0, MAX_RECENT);
+    }
+  } catch { /* ignore */ }
+  return DEFAULT_QUICK_EMOJIS;
+}
+
+function trackRecentEmoji(emoji: string) {
+  // Only track native unicode emojis, not custom shortcodes
+  if (emoji.startsWith(':') && emoji.endsWith(':')) return;
+  try {
+    const current = getRecentEmojis();
+    const updated = [emoji, ...current.filter((e) => e !== emoji)].slice(0, MAX_RECENT);
+    localStorage.setItem(RECENT_EMOJIS_KEY, JSON.stringify(updated));
+  } catch { /* ignore */ }
+}
 
 const EMOJI_CATEGORIES: { name: string; emojis: string[] }[] = [
   { name: 'Frecuentes', emojis: ['❤️', '🔥', '😂', '👍', '👎', '😍', '🎉', '😢', '😮', '🤔', '💀', '🙏'] },
@@ -35,13 +58,15 @@ const EMOJI_CATEGORIES: { name: string; emojis: string[] }[] = [
   { name: 'Objetos', emojis: ['🎉', '🎊', '🎈', '🎁', '🏆', '🥇', '🎯', '🎮', '🎲', '🧩', '🔔', '📢', '💡', '📌', '🔗', '🛠️', '⚙️', '🔒', '🔑', '🗑️'] },
 ];
 
-function EmojiPicker({ onSelect, onClose, openBelow }: {
+function EmojiPicker({ onSelect, onClose, openBelow, serverEmojis }: {
   onSelect: (emoji: string) => void;
   onClose: () => void;
   openBelow?: boolean;
+  serverEmojis?: Record<string, string>;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [search, setSearch] = useState('');
+  const customEntries = serverEmojis ? Object.entries(serverEmojis) : [];
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -52,6 +77,8 @@ function EmojiPicker({ onSelect, onClose, openBelow }: {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [onClose]);
+
+  const searchLower = search.trim().toLowerCase();
 
   return (
     <div
@@ -70,9 +97,33 @@ function EmojiPicker({ onSelect, onClose, openBelow }: {
         />
       </div>
       <div className="overflow-y-auto p-2 flex-1">
+        {/* Server custom emojis */}
+        {customEntries.length > 0 && (() => {
+          const filtered = searchLower
+            ? customEntries.filter(([name]) => name.toLowerCase().includes(searchLower))
+            : customEntries;
+          if (filtered.length === 0) return null;
+          return (
+            <div className="mb-2">
+              <div className="text-xs text-lc-muted mb-1 px-1">Server</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '2px' }}>
+                {filtered.map(([name, url]) => (
+                  <button
+                    key={name}
+                    onClick={() => { onSelect(`:${name}:`); onClose(); }}
+                    className="p-1 rounded hover:bg-lc-border/60 transition-colors flex items-center justify-center"
+                    title={`:${name}:`}
+                  >
+                    <img src={url} alt={name} className="w-6 h-6 object-contain" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
         {EMOJI_CATEGORIES.map((cat) => {
-          const filtered = search
-            ? cat.emojis.filter(() => cat.name.toLowerCase().includes(search.toLowerCase()))
+          const filtered = searchLower
+            ? cat.emojis.filter((emoji) => emoji.includes(searchLower) || cat.name.toLowerCase().includes(searchLower))
             : cat.emojis;
           if (filtered.length === 0) return null;
           return (
@@ -232,8 +283,19 @@ function MessageBubble({ message, profileCache, canPin, onReply, onReport, onDel
   const [showMenu, setShowMenu] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [popupBelow, setPopupBelow] = useState(false);
+  const [quickEmojis, setQuickEmojis] = useState(DEFAULT_QUICK_EMOJIS);
   const rowRef = useRef<HTMLDivElement>(null);
   const { setEditingMessage, serverEmojis } = useChatStore();
+
+  useEffect(() => {
+    setQuickEmojis(getRecentEmojis());
+  }, []);
+
+  const handleReaction = useCallback((messageId: string, emoji: string) => {
+    trackRecentEmoji(emoji);
+    setQuickEmojis(getRecentEmojis());
+    onToggleReaction(messageId, emoji);
+  }, [onToggleReaction]);
 
   // Determine if popups should open below (message is in top half of viewport)
   const shouldOpenBelow = useCallback(() => {
@@ -301,10 +363,10 @@ function MessageBubble({ message, profileCache, canPin, onReply, onReport, onDel
         >
           <div className="flex gap-0.5 bg-lc-dark border border-lc-border rounded-lg p-0.5 shadow-lg" data-testid="message-toolbar">
             {/* Quick reaction emojis */}
-            {QUICK_EMOJIS.map((emoji) => (
+            {quickEmojis.map((emoji) => (
               <button
                 key={emoji}
-                onClick={() => onToggleReaction(message.id, emoji)}
+                onClick={() => handleReaction(message.id, emoji)}
                 className="p-1 rounded hover:bg-lc-border/60 text-sm transition-all"
                 title={`React ${emoji}`}
                 data-testid={`quick-react-${emoji}`}
@@ -387,8 +449,9 @@ function MessageBubble({ message, profileCache, canPin, onReply, onReport, onDel
           {showEmojiPicker && (
             <EmojiPicker
               openBelow={popupBelow}
-              onSelect={(emoji) => onToggleReaction(message.id, emoji)}
+              onSelect={(emoji) => handleReaction(message.id, emoji)}
               onClose={() => setShowEmojiPicker(false)}
+              serverEmojis={serverEmojis}
             />
           )}
         </div>
@@ -398,7 +461,7 @@ function MessageBubble({ message, profileCache, canPin, onReply, onReport, onDel
       <ReactionsDisplay
         reactions={message.reactions}
         myPubkey={myProfile?.pubkey}
-        onToggle={(emoji) => onToggleReaction(message.id, emoji)}
+        onToggle={(emoji) => handleReaction(message.id, emoji)}
         serverEmojis={serverEmojis}
       />
     </div>
@@ -671,29 +734,6 @@ export default function MessageArea({ profileCache, onDelete, onToggleReaction }
         </div>
       )}
 
-      {/* Channel header — thin strip with channel name + pinned-messages button */}
-      {activeChannel && activeChannelId && (
-        <div className="flex items-center justify-between px-4 py-2 border-b border-lc-border bg-lc-dark/40 shrink-0">
-          <div className="flex items-center gap-1.5 min-w-0">
-            <span className="text-lc-muted">#</span>
-            <span className="text-sm font-semibold text-lc-white truncate">
-              {activeChannel.emoji ? `${activeChannel.emoji} ` : ''}{activeChannel.name}
-            </span>
-          </div>
-          <PinnedMessagesPanel
-            channelId={activeChannelId}
-            profileCache={profileCache}
-            onJumpToMessage={(id) => {
-              const el = messageRefs.current.get(id);
-              if (el) {
-                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                el.classList.add('search-highlight');
-                setTimeout(() => el.classList.remove('search-highlight'), 2000);
-              }
-            }}
-          />
-        </div>
-      )}
 
       {/* Messages — scrollable */}
       <div
