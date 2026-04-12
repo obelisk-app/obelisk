@@ -23,7 +23,8 @@ import { WebSocketVoiceClient } from '@/lib/voice';
 import { discoverDMThreads, subscribeDMs, computeUnreadCounts } from '@/lib/dm';
 import type { DMMessage } from '@/lib/dm';
 import { publishInboxRelays } from '@/lib/dm-inbox';
-import { formatPubkey, getNDK, connectNDK, addDMInboxRelays } from '@/lib/nostr';
+import { formatPubkey, getNDK, connectNDK, addDMInboxRelays, restoreRemoteSigner } from '@/lib/nostr';
+import { DM_FEATURE_ENABLED } from '@/lib/feature-flags';
 import { shortNpub } from '@/lib/mentions';
 import {
   isUserWatchingChannel,
@@ -161,6 +162,13 @@ export default function ChatPage() {
       if (!ndk.signer && loginMethod === 'extension' && typeof window !== 'undefined' && window.nostr) {
         const { NDKNip07Signer } = await import('@nostr-dev-kit/ndk');
         ndk.signer = new NDKNip07Signer(4000, ndk);
+      }
+      // Bunker / NostrConnect: rebuild the signer from the payload stashed
+      // in localStorage at login. Without this the signer dies on every
+      // reload and DMs silently fail.
+      if (!ndk.signer && loginMethod === 'bunker') {
+        const ok = await restoreRemoteSigner();
+        if (!ok) console.warn('[chat] bunker signer restore failed');
       }
       setNdkReady(true);
     }).catch((err) => {
@@ -514,6 +522,7 @@ export default function ChatPage() {
   // On toggle-off the interval is torn down — we don't want to hold a
   // DM subscription open while the user is in a regular channel.
   useEffect(() => {
+    if (!DM_FEATURE_ENABLED) return;
     console.log('[dm] effect fired', {
       isDMMode,
       ndkReady,
@@ -557,6 +566,7 @@ export default function ChatPage() {
   // DM traffic to happen only when they're in the DM view. Notifications
   // while browsing channels are intentionally deferred until they switch.
   useEffect(() => {
+    if (!DM_FEATURE_ENABLED) return;
     if (!isDMMode || !ndkReady || !profile?.pubkey) return;
 
     const cleanup = subscribeDMs(profile.pubkey, (msg: DMMessage) => {
@@ -1131,7 +1141,7 @@ export default function ChatPage() {
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
         <ServerBar />
-        {isDMMode ? (
+        {DM_FEATURE_ENABLED && isDMMode ? (
           <DMList onNewDM={() => setShowNewDMModal(true)} />
         ) : (
           <ChannelSidebar onChannelSelect={() => setSidebarOpen(false)} />
@@ -1140,7 +1150,7 @@ export default function ChatPage() {
 
       {/* Main content area */}
       <div className="flex-1 flex flex-col min-h-0 min-w-0">
-        {isDMMode ? (
+        {DM_FEATURE_ENABLED && isDMMode ? (
           <>
             {/* DM top bar with mobile hamburger */}
             <div className="h-12 px-3 flex items-center gap-3 border-b border-lc-border shrink-0 bg-lc-dark md:hidden">
@@ -1176,14 +1186,16 @@ export default function ChatPage() {
               </div>
               <h2 className="text-xl font-semibold text-lc-white">No servers yet</h2>
               <p className="text-lc-muted text-sm leading-relaxed">
-                You&apos;re not a member of any server. Ask a server admin for an invite link to get started, or use Direct Messages to chat with other Nostr users.
+                You&apos;re not a member of any server. Ask a server admin for an invite link to get started.
               </p>
-              <button
-                onClick={() => useDMStore.getState().setDMMode(true)}
-                className="lc-pill-secondary text-sm px-5 py-2"
-              >
-                Open Direct Messages
-              </button>
+              {DM_FEATURE_ENABLED && (
+                <button
+                  onClick={() => useDMStore.getState().setDMMode(true)}
+                  className="lc-pill-secondary text-sm px-5 py-2"
+                >
+                  Open Direct Messages
+                </button>
+              )}
             </div>
           </div>
         ) : (

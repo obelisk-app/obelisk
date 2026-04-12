@@ -93,11 +93,11 @@
   - [ ] Selector de template al crear un nuevo servidor desde /admin → "+ New Server" (incluye opción "Empty / Custom")
   - [ ] **Custom templates** — el admin puede guardar la estructura actual de un servidor como template propio y reutilizarla
   - [ ] Aplicar template a un servidor existente (merge no destructivo: solo agrega canales/categorías que no existen)
-- [ ] **Designar un canal como "welcome channel" desde /admin** — hoy el mensaje de bienvenida automático está acoplado a un canal hardcoded; debería ser configurable
-  - [ ] Campo `Server.welcomeChannelId` (FK opcional a `Channel`) editable desde /admin → Settings → "Welcome channel" (dropdown con los canales de texto del server)
-  - [ ] El job que postea el mensaje de bienvenida (banner + saludo) lee `welcomeChannelId`; si es null, no postea nada
-  - [ ] Preview del mensaje de bienvenida en /admin con el avatar/nombre del último miembro como ejemplo
-  - [ ] Validación: si el canal seleccionado se borra, `welcomeChannelId` se setea a null automáticamente (onDelete SET NULL)
+- [x] **Designar un canal como "welcome channel" desde /admin** — configurable desde admin con WelcomeBotSettings
+  - [x] Campo `Server.welcomeChannelId` (FK opcional a `Channel`) editable desde /admin
+  - [x] El job que postea el mensaje de bienvenida lee `welcomeChannelId`; si es null, no postea nada
+  - [x] Preview del mensaje de bienvenida en /admin con el avatar/nombre del último miembro como ejemplo
+  - [x] Validación: si el canal seleccionado se borra, `welcomeChannelId` se setea a null automáticamente (onDelete SET NULL)
 - [ ] **Pinned messages + contenido editable de canales desde /admin (paridad con `prisma/seed.ts`)**
   > **Contexto:** la versión deployed de La Crypta está atrasada respecto a `prisma/seed.ts` porque el contenido inicial (mensaje de bienvenida en `empezá-acá`, posts del foro `indice` con reglas/actividades/proyectos/redes, posts del foro `méritos` con plantillas de reclamo, descripciones de canales, emojis, tags, etc.) está **hardcoded en el seeder** y solo se aplica en la creación inicial. Una vez que el server existe, no hay forma de editar ese contenido desde la UI — habría que re-correr el seeder y eso no actualiza filas existentes. Hay que migrar todo eso a entidades editables desde /admin para que el deploy de prod no quede atrás del código.
   - [ ] **Pinned messages por canal** — schema: `Message.pinned Boolean @default(false)` + `Message.pinnedAt`, `Message.pinnedBy`. Backend: endpoint `PATCH /api/admin/messages/[id]/pin` (admin+) y `GET /api/channels/[id]/pins`. UI: panel "Pinned" en el header del canal estilo Discord (dropdown con los pinned), botón "Pin message" en el menu contextual del mensaje (admin/mod+), badge 📌 en el mensaje pinneado dentro del scroll. Funciona también para forum posts (pinned posts aparecen primero en la lista).
@@ -441,6 +441,19 @@ Despues de completar la experiencia Discord-like (Fases 1-6), construir un clien
 - [ ] Tipado estricto — eliminar `any`, habilitar `strict` + `noUncheckedIndexedAccess` en tsconfig
 - [ ] ESLint + Prettier config endurecida, pre-commit hooks (husky + lint-staged)
 - [ ] Accesibilidad (a11y) — roles ARIA, navegacion por teclado, contraste, screen readers en chat y modales
+
+### Optimizacion & Performance
+- [ ] Lazy loading de rutas — `next/dynamic` para `/admin`, `/moderation`, `/profile` y modales pesados
+- [ ] Virtualizacion de listas — virtualizar lista de mensajes, miembros y canales para servidores grandes (`react-window` o `@tanstack/virtual`)
+- [ ] Bundle analysis — `@next/bundle-analyzer`, identificar y eliminar imports pesados, tree-shake NDK/nostr-tools
+- [ ] Optimizacion de imagenes — `next/image` con sizing correcto, lazy loading, formatos WebP/AVIF para avatars y uploads
+- [ ] Caching de queries DB — indices en columnas frecuentes (`channelId+createdAt`, `serverId+pubkey`), revisar queries N+1 con Prisma
+- [ ] Paginacion de mensajes — cursor-based pagination en lugar de cargar historial completo, infinite scroll eficiente
+- [ ] Debounce/throttle — typing indicators, busqueda de usuarios, resize handlers
+- [ ] Memoizacion de componentes — `React.memo` / `useMemo` en listas de mensajes, miembros, canales que re-renderizan innecesariamente
+- [ ] Compresion de WebSocket payloads — evaluar `perMessageDeflate` en Socket.io para reducir bandwidth
+- [ ] Prefetch de datos — prefetch de canales y miembros al seleccionar servidor, prefetch de perfiles Nostr frecuentes
+- [ ] Service Worker — cache de assets estaticos, offline fallback para UI shell
 
 ### Documentacion
 - [ ] `docs/security.md` — modelo de amenazas, mitigaciones, reportar vulnerabilidades

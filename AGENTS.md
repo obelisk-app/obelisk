@@ -215,3 +215,4 @@ await user.fetchProfile();
 - [La Crypta](https://lacrypta.ar)
 - [ROADMAP.md](ROADMAP.md) — Development roadmap
 - [docs/wot-and-invite-credits.md](docs/wot-and-invite-credits.md) — WoT auto-registration + activity-based invite credits (anti-spam core)
+- [docs/uploads.md](docs/uploads.md) — `/uploads/<name>` storage, URL format, and access model (NOT auth-gated — unlisted-not-private)

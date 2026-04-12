@@ -59,15 +59,7 @@ describe('DMList', () => {
     expect(onNewDM).toHaveBeenCalled();
   });
 
-  it('calls onRefresh when clicking refresh button', async () => {
-    const onRefresh = vi.fn();
-    const user = userEvent.setup();
-    render(<DMList onNewDM={vi.fn()} onRefresh={onRefresh} />);
-    await user.click(screen.getByTestId('dm-refresh-btn'));
-    expect(onRefresh).toHaveBeenCalled();
-  });
-
-  it('hides refresh button when onRefresh is not provided', () => {
+  it('does not render a refresh button (polling handles refresh)', () => {
     render(<DMList onNewDM={vi.fn()} />);
     expect(screen.queryByTestId('dm-refresh-btn')).not.toBeInTheDocument();
   });

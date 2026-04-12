@@ -5,11 +5,9 @@ import { useNotificationStore } from '@/store/notification';
 
 interface DMListProps {
   onNewDM: () => void;
-  /** Optional manual refresh hook — re-runs relay discovery with forceFullScan. */
-  onRefresh?: () => void;
 }
 
-export default function DMList({ onNewDM, onRefresh }: DMListProps) {
+export default function DMList({ onNewDM }: DMListProps) {
   const { threads, activeDMPubkey, setActiveDM, isLoadingThreads } = useDMStore();
   const dmUnreads = useNotificationStore((s) => s.dmUnreads);
 
@@ -18,31 +16,6 @@ export default function DMList({ onNewDM, onRefresh }: DMListProps) {
       <div className="p-3 border-b border-lc-border flex items-center justify-between">
         <h3 className="text-sm font-semibold text-lc-white">Direct Messages</h3>
         <div className="flex items-center gap-1">
-          {onRefresh && (
-            <button
-              onClick={onRefresh}
-              className="text-lc-muted hover:text-lc-green transition-colors p-1"
-              title="Refresh DMs from relays"
-              data-testid="dm-refresh-btn"
-              disabled={isLoadingThreads}
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className={isLoadingThreads ? 'animate-spin' : ''}
-              >
-                <polyline points="23 4 23 10 17 10" />
-                <polyline points="1 20 1 14 7 14" />
-                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-              </svg>
-            </button>
-          )}
           <button
             onClick={onNewDM}
             className="text-lc-muted hover:text-lc-green transition-colors p-1"

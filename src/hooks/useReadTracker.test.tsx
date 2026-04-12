@@ -256,12 +256,13 @@ describe('useReadTracker — DM gating', () => {
     vi.restoreAllMocks();
   });
 
-  it('emits dm-read via socket when DM is active + visible + focused + has unread', () => {
+  it('clears DM unread locally (localStorage) without contacting the server', () => {
     const other = 'aa'.repeat(32);
     useDMStore.setState({
       activeDMPubkey: other,
       messages: [{ id: 'd1' }] as any,
       threads: [{ pubkey: other, displayName: 'x', unreadCount: 2 }],
+      readCursors: {},
     } as any);
     useNotificationStore.getState().setDMUnread(other, 2);
 
@@ -270,19 +271,22 @@ describe('useReadTracker — DM gating', () => {
       vi.advanceTimersByTime(300);
     });
 
-    expect(socket.emit).toHaveBeenCalledWith('dm-read', { pubkey: other });
+    // No network calls of any kind — DM read state is device-local.
+    expect(socket.emit).not.toHaveBeenCalled();
     expect(fetch).not.toHaveBeenCalled();
     expect(useNotificationStore.getState().dmUnreads[other]).toBeUndefined();
     expect(useDMStore.getState().threads.find(t => t.pubkey === other)?.unreadCount).toBe(0);
+    expect(useDMStore.getState().readCursors[other]).toBeGreaterThan(0);
     expect(broadcast.postClearDM).toHaveBeenCalledWith(other);
   });
 
-  it('falls back to REST when there is no socket', () => {
+  it('clears DM unread locally even when no socket is provided', () => {
     const other = 'cc'.repeat(32);
     useDMStore.setState({
       activeDMPubkey: other,
       messages: [{ id: 'd1' }] as any,
       threads: [{ pubkey: other, displayName: 'x', unreadCount: 1 }],
+      readCursors: {},
     } as any);
     useNotificationStore.getState().setDMUnread(other, 1);
 
@@ -291,8 +295,9 @@ describe('useReadTracker — DM gating', () => {
       vi.advanceTimersByTime(300);
     });
 
-    expect(fetch).toHaveBeenCalledWith(`/api/dm/${other}/read`, { method: 'POST' });
+    expect(fetch).not.toHaveBeenCalled();
     expect(useNotificationStore.getState().dmUnreads[other]).toBeUndefined();
+    expect(useDMStore.getState().readCursors[other]).toBeGreaterThan(0);
   });
 
   it('does NOT emit when tab is hidden', () => {

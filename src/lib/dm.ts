@@ -474,20 +474,19 @@ interface DiscoverOptions {
 }
 
 /**
- * Compute real DM unread counts from the local cache, using the per-thread
- * `lastReadAt` cursors the server provides via `/api/unread`. Events older
- * than the cursor (or sent by us) don't count. Returns a map per partner
- * pubkey → number of incoming messages since lastReadAt.
+ * Compute DM unread counts from the local cache, using per-partner
+ * read cursors that live on this device (localStorage — see useDMStore).
+ * Events older than the cursor (or sent by us) don't count.
  */
 export function computeUnreadCounts(
   myPubkey: string,
-  dmLastReadAt: Record<string, number>,
+  readCursors: Record<string, number>,
 ): Record<string, number> {
   const out: Record<string, number> = {};
   const consider = (partner: string, senderPubkey: string, tsSec: number) => {
     if (!partner || partner === myPubkey) return;
     if (senderPubkey === myPubkey) return; // our own sends don't count
-    const cutoffMs = dmLastReadAt[partner] ?? 0;
+    const cutoffMs = readCursors[partner] ?? 0;
     if (tsSec * 1000 <= cutoffMs) return;
     out[partner] = (out[partner] ?? 0) + 1;
   };
@@ -525,7 +524,10 @@ export async function discoverDMThreads(
 
   // ── Phase B: background relay sync ───────────────────────────────────────
   const ndk = getNDK();
-  if (!ndk.signer) return threads;
+  if (!ndk.signer) {
+    console.warn('[dm] discoverDMThreads: no signer, skipping relay sync');
+    return threads;
+  }
 
   const sync = getSyncState(myPubkey);
   const now = Date.now();
@@ -535,7 +537,9 @@ export async function discoverDMThreads(
   // map immediately and receive updates via onUpdate.
   void (async () => {
     try {
-      await runRelaySync(myPubkey, shouldFullScan);
+      console.log('[dm] starting relay sync', { fullScan: shouldFullScan, relays: ndk.pool?.relays?.size });
+      const stats = await runRelaySync(myPubkey, shouldFullScan);
+      console.log('[dm] relay sync done', stats);
       setSyncState(myPubkey, { lastPollAt: now, ...(shouldFullScan ? { lastFullScanAt: now } : {}) });
       if (options.onUpdate) {
         options.onUpdate(buildThreadsFromCache(myPubkey));
@@ -578,7 +582,10 @@ function buildThreadsFromCache(myPubkey: string): Map<string, ThreadSummary> {
  * previews. `fullScan` triggers a wider sweep; otherwise we only pull since
  * the last poll.
  */
-async function runRelaySync(myPubkey: string, fullScan: boolean): Promise<void> {
+async function runRelaySync(
+  myPubkey: string,
+  fullScan: boolean,
+): Promise<{ fetched: number; unwrapped: number; errors: number }> {
   const ndk = getNDK();
   const sync = getSyncState(myPubkey);
   const since = fullScan ? undefined : Math.max(0, Math.floor(sync.lastPollAt / 1000) - 60);
@@ -590,9 +597,14 @@ async function runRelaySync(myPubkey: string, fullScan: boolean): Promise<void> 
     { kinds: [1059], '#p': [myPubkey], limit, ...(since ? { since } : {}) },
   ];
 
+  let fetched = 0;
+  let unwrapped = 0;
+  let errors = 0;
+
   for (const filter of filters) {
     try {
       const events = await ndk.fetchEvents(filter);
+      fetched += events.size;
       for (const event of events) {
         putEvent(myPubkey, toCachedEvent(event));
         if (event.kind === 1059 && !getRumor(myPubkey, event.id)) {
@@ -609,13 +621,15 @@ async function runRelaySync(myPubkey: string, fullScan: boolean): Promise<void> 
               content: rumor.content,
               createdAt: rumor.created_at || 0,
             });
+            unwrapped++;
           } catch {
             /* skip */
           }
         }
       }
-    } catch {
-      /* relay error */
+    } catch (err) {
+      errors++;
+      console.warn('[dm] filter failed:', filter, err);
     }
   }
 
@@ -648,4 +662,6 @@ async function runRelaySync(myPubkey: string, fullScan: boolean): Promise<void> 
       /* skip */
     }
   }
+
+  return { fetched, unwrapped, errors };
 }

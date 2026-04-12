@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import type { Socket } from 'socket.io-client';
 import { useChatStore } from '@/store/chat';
-import { useDMStore } from '@/store/dm';
+import { useDMStore, markThreadRead } from '@/store/dm';
 import { useNotificationStore } from '@/store/notification';
 import { isUserWatchingChannel, isUserWatchingDM } from '@/lib/read-gates';
 import { postClearChannel, postClearDM } from '@/lib/notification-broadcast';
@@ -91,7 +91,8 @@ export function useReadTracker(socket: Socket | null) {
     return () => clearTimeout(timer);
   }, [activeChannelId, isNearBottom, isVisible, isFocused, messagesLength, lastMessageId, socket]);
 
-  // DM mark-read effect — same gating, hits the REST endpoint.
+  // DM mark-read effect — device-local only. DM read state is not synced
+  // to the server; see `markThreadRead` in `@/store/dm`.
   useEffect(() => {
     if (!activeDMPubkey) return;
     if (!isVisible || !isFocused) return;
@@ -104,16 +105,8 @@ export function useReadTracker(socket: Socket | null) {
     const timer = setTimeout(() => {
       if (!isUserWatchingDM(activeDMPubkey)) return;
 
-      // Prefer the socket event (which fans out to sibling sockets for
-      // cross-device sync). Fall back to the REST endpoint when no socket
-      // is connected — same DB write on the server side.
-      if (socket) {
-        socket.emit('dm-read', { pubkey: activeDMPubkey });
-      } else {
-        fetch(`/api/dm/${activeDMPubkey}/read`, { method: 'POST' }).catch(() => {});
-      }
+      void markThreadRead(activeDMPubkey);
       useNotificationStore.getState().clearDMUnread(activeDMPubkey);
-      useDMStore.getState().updateThread(activeDMPubkey, { unreadCount: 0 });
       postClearDM(activeDMPubkey);
     }, 250);
 

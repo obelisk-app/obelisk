@@ -23,6 +23,7 @@ describe('useDMStore', () => {
       isLoadingThreads: false,
       hasMoreHistory: false,
       protocolOverrides: {},
+      readCursors: {},
       showProtocolPrompt: null,
     });
   });
@@ -166,6 +167,7 @@ describe('markThreadRead', () => {
     fetchMock.mockClear();
     useDMStore.setState({
       threads: [{ pubkey: 'alice', displayName: 'Alice', unreadCount: 5 }],
+      readCursors: {},
     });
   });
 
@@ -173,15 +175,21 @@ describe('markThreadRead', () => {
     globalThis.fetch = originalFetch;
   });
 
-  it('clears unread locally and hits /api/dm/<pk>/read', async () => {
+  it('clears unread locally and sets a read cursor, without hitting the server', async () => {
+    const before = Date.now();
     await markThreadRead('alice');
     expect(useDMStore.getState().threads[0].unreadCount).toBe(0);
-    expect(fetchMock).toHaveBeenCalledWith('/api/dm/alice/read', { method: 'POST' });
+    const cursor = useDMStore.getState().readCursors['alice'];
+    expect(cursor).toBeGreaterThanOrEqual(before);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
+});
 
-  it('swallows fetch errors', async () => {
-    fetchMock.mockRejectedValueOnce(new Error('offline'));
-    await expect(markThreadRead('alice')).resolves.toBeUndefined();
-    expect(useDMStore.getState().threads[0].unreadCount).toBe(0);
+describe('readCursors', () => {
+  it('setReadCursor updates the cursor map', () => {
+    useDMStore.getState().setReadCursor('bob', 123456789);
+    expect(useDMStore.getState().readCursors['bob']).toBe(123456789);
+    useDMStore.getState().setReadCursor('bob', 987654321);
+    expect(useDMStore.getState().readCursors['bob']).toBe(987654321);
   });
 });

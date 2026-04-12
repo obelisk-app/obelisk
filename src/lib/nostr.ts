@@ -1,4 +1,10 @@
-import NDK, { NDKEvent, NDKUser, NDKNip07Signer, NDKPrivateKeySigner } from '@nostr-dev-kit/ndk';
+import NDK, {
+  NDKEvent,
+  NDKUser,
+  NDKNip07Signer,
+  NDKPrivateKeySigner,
+  NDKRelayAuthPolicies,
+} from '@nostr-dev-kit/ndk';
 import { nip19, generateSecretKey, getPublicKey } from 'nostr-tools';
 
 // Popular relays (high availability)
@@ -10,6 +16,17 @@ const POPULAR_RELAYS = [
   'wss://purplepag.es',
 ];
 
+/**
+ * NIP-17 inbox relays — used as a fallback when a user has no kind 10050
+ * advertised. Several of these require NIP-42 AUTH to read, which is why
+ * `relayAuthDefaultPolicy` must be set below before adding them.
+ */
+const NIP17_INBOX_FALLBACK_RELAYS = [
+  'wss://auth.nostr1.com',
+  'wss://relay.0xchat.com',
+  'wss://inbox.nostr.wine',
+];
+
 // Global NDK instance
 let ndkInstance: NDK | null = null;
 let userRelaysAdded = false;
@@ -19,8 +36,69 @@ export function getNDK(): NDK {
     ndkInstance = new NDK({
       explicitRelayUrls: [...POPULAR_RELAYS],
     });
+    // NIP-42: sign AUTH challenges whenever a relay demands them. Required
+    // for NIP-17 gift-wrap inbox relays (auth.nostr1.com, 0xchat, etc.),
+    // which reject DM reads otherwise. Uses whichever signer was set by
+    // the login flow — works identically for NIP-07, nsec, and NIP-46.
+    ndkInstance.relayAuthDefaultPolicy = NDKRelayAuthPolicies.signIn({
+      ndk: ndkInstance,
+    });
   }
   return ndkInstance;
+}
+
+/**
+ * Add NIP-17 inbox relays so gift-wrapped DMs addressed to the user can
+ * be fetched. Looks up the user's kind 10050 list first; falls back to a
+ * curated AUTH-required relay set if none is advertised. NDK's AUTH policy
+ * (set in `getNDK`) handles the NIP-42 handshake transparently.
+ */
+export async function addDMInboxRelays(pubkey: string): Promise<void> {
+  const ndk = getNDK();
+  const added = new Set<string>();
+
+  try {
+    const events = await withTimeout(
+      ndk.fetchEvents({ kinds: [10050], authors: [pubkey], limit: 1 }),
+      5000,
+    );
+    const ev = Array.from(events)[0];
+    if (ev) {
+      for (const tag of ev.tags) {
+        // NIP-17 uses either 'relay' or 'r' tags in the wild; accept both.
+        if ((tag[0] === 'relay' || tag[0] === 'r') && typeof tag[1] === 'string' && tag[1].startsWith('wss://')) {
+          try {
+            ndk.addExplicitRelay(tag[1]);
+            added.add(tag[1]);
+          } catch {
+            /* already added */
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[dm] kind-10050 lookup failed:', err);
+  }
+
+  if (added.size === 0) {
+    for (const url of NIP17_INBOX_FALLBACK_RELAYS) {
+      try {
+        ndk.addExplicitRelay(url);
+        added.add(url);
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+
+  console.log('[dm] inbox relays added', Array.from(added));
+  // New explicit relays need an explicit connect cycle; NDK's pool will
+  // negotiate NIP-42 AUTH using the policy set in getNDK().
+  try {
+    await ndk.connect();
+  } catch (err) {
+    console.warn('[dm] ndk.connect after inbox-relay add failed:', err);
+  }
 }
 
 export async function connectNDK(): Promise<NDK> {
@@ -73,6 +151,71 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 
 // Login methods
 export type LoginMethod = 'extension' | 'nsec' | 'bunker';
+
+// ─── Signer persistence (bunker / NostrConnect only) ─────────────────────────
+// NDK's built-in signer serialization. We persist the payload on login so
+// bunker sessions survive page reloads — without this, the signer dies on
+// refresh and DMs/NIP-42 AUTH stop working until the user re-scans the QR.
+// nsec is intentionally NOT persisted (the key would end up in localStorage);
+// NIP-07 needs no persistence (the extension keeps the key).
+const SIGNER_PAYLOAD_KEY = 'obelisk-signer-payload';
+
+function saveSignerPayload(payload: string): void {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    localStorage.setItem(SIGNER_PAYLOAD_KEY, payload);
+  } catch {
+    /* quota / disabled storage */
+  }
+}
+
+function readSignerPayload(): string | null {
+  if (typeof localStorage === 'undefined') return null;
+  try {
+    return localStorage.getItem(SIGNER_PAYLOAD_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function clearSignerPayload(): void {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    localStorage.removeItem(SIGNER_PAYLOAD_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * Rebuild the remote signer (bunker / NostrConnect) from the payload saved
+ * at login time. Returns true if a signer was restored. Safe to call with
+ * no saved payload — returns false without side effects.
+ */
+export async function restoreRemoteSigner(): Promise<boolean> {
+  const payload = readSignerPayload();
+  if (!payload) return false;
+
+  const ndk = getNDK();
+  try {
+    const { ndkSignerFromPayload } = await import('@nostr-dev-kit/ndk');
+    const signer = await ndkSignerFromPayload(payload, ndk);
+    if (!signer) return false;
+    ndk.signer = signer;
+    // Block until the bunker handshake is ready so DM fetches can decrypt
+    // immediately. If the bunker is offline this will throw after its own
+    // timeout; caller decides whether to log out or wait.
+    if (typeof (signer as unknown as { blockUntilReady?: () => Promise<unknown> }).blockUntilReady === 'function') {
+      await (signer as unknown as { blockUntilReady: () => Promise<unknown> }).blockUntilReady();
+    }
+    return true;
+  } catch (err) {
+    console.warn('[nostr] restoreRemoteSigner failed:', err);
+    // Wipe broken payload so we don't keep retrying forever.
+    clearSignerPayload();
+    return false;
+  }
+}
 
 export async function loginWithExtension(): Promise<NDKUser | null> {
   if (typeof window === 'undefined') {
@@ -166,6 +309,13 @@ export async function loginWithBunker(bunkerUrl: string): Promise<NDKUser | null
   await bunkerSigner.blockUntilReady();
   ndk.signer = bunkerSigner;
 
+  // Persist so page reloads don't drop the signer.
+  try {
+    saveSignerPayload(bunkerSigner.toPayload());
+  } catch (err) {
+    console.warn('[nostr] failed to persist bunker signer payload:', err);
+  }
+
   const user = await bunkerSigner.user();
   try {
     await Promise.race([
@@ -209,6 +359,11 @@ export async function createNostrConnectSession(relay?: string): Promise<NostrCo
       const user = await signer.blockUntilReady();
       if (cancelled) return null;
       ndk.signer = signer;
+      try {
+        saveSignerPayload(signer.toPayload());
+      } catch (err) {
+        console.warn('[nostr] failed to persist nostrconnect signer payload:', err);
+      }
       try {
         await Promise.race([
           user.fetchProfile(),

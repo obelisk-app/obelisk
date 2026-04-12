@@ -79,22 +79,15 @@ describe('ServerBar', () => {
     expect(screen.queryByTitle('Add a Server')).not.toBeInTheDocument();
   });
 
-  it('DMs button toggles DM mode', async () => {
-    const user = userEvent.setup();
+  it('DMs button is hidden while the DM feature flag is off', () => {
     useChatStore.setState({
       servers: [{ id: 's1', name: 'Test', icon: null, banner: null, ownerPubkey: OWNER_PUBKEY }],
       activeServerId: 's1',
     });
 
-    const { useDMStore } = await import('@/store/dm');
-    useDMStore.setState(useDMStore.getInitialState());
-
     render(<ServerBar />);
-    await user.click(screen.getByTitle('Direct Messages'));
-    expect(useDMStore.getState().isDMMode).toBe(true);
-
-    await user.click(screen.getByTitle('Direct Messages'));
-    expect(useDMStore.getState().isDMMode).toBe(false);
+    expect(screen.queryByTitle('Direct Messages')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('dm-btn')).not.toBeInTheDocument();
   });
 
   it('create modal dismissible by Cancel button', async () => {

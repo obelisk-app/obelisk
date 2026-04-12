@@ -10,6 +10,7 @@ vi.mock('@/lib/nostr', () => ({
     displayName: user.profile?.displayName,
   })),
   resetUserRelays: vi.fn(),
+  clearSignerPayload: vi.fn(),
 }));
 
 // Mock fetch for logout

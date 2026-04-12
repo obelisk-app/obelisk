@@ -5,16 +5,16 @@
   "nav.launchApp": "Launch App",
   "nav.disconnect": "Disconnect",
 
-  "hero.title": "Chat with",
-  "hero.titleHighlight": "Nostr Identity",
-  "hero.subtitle": "Discord-like servers and channels, powered by your Nostr keys. Cryptographic identity, real-time chat, and voice channels.",
+  "hero.title": "The Discord alternative with",
+  "hero.titleHighlight": "Nostr login",
+  "hero.subtitle": "Group chat for crypto and privacy folks. No email, no password, no phone number — just your Nostr keys. Servers, channels, voice and encrypted DMs, with Web of Trust spam resistance.",
   "hero.launchApp": "Launch App",
   "hero.github": "GitHub",
 
-  "features.heading": "Built different",
-  "features.subtitle": "The best of Discord's UX with Nostr's sovereign identity model.",
-  "features.nostrIdentity.title": "Nostr Identity",
-  "features.nostrIdentity.desc": "Sign in with your Nostr keys. No email, no password. Your cryptographic identity is your passport.",
+  "features.heading": "Why Obelisk",
+  "features.subtitle": "Discord's UX, Nostr's sovereign identity, and no email/password in sight.",
+  "features.nostrIdentity.title": "Nostr login — your keys, your account",
+  "features.nostrIdentity.desc": "Sign in with NIP-07, nsec, or a NIP-46 bunker. No email, no password, no phone number. Your Nostr key is your account across every Obelisk server.",
   "features.realtimeChat.title": "Real-time Chat & Voice",
   "features.realtimeChat.desc": "Discord-like channels with WebSocket messaging and WebRTC voice. Threads, reactions, media — all in real-time.",
   "features.encryptedDMs.title": "Encrypted DMs",
@@ -23,8 +23,8 @@
   "features.roles.desc": "Admin, moderator, and member roles. Control who can do what in your server.",
   "features.selfHosted.title": "Self-Hosted",
   "features.selfHosted.desc": "Run your own server with Docker. Your data, your rules. No corporate middlemen.",
-  "features.spamResistant.title": "Spam Resistant",
-  "features.spamResistant.desc": "Web of Trust filtering powered by Nostr identity. Verify through your social graph — no CAPTCHAs needed.",
+  "features.spamResistant.title": "Web of Trust, not CAPTCHAs",
+  "features.spamResistant.desc": "New accounts are filtered through your server's Nostr social graph. Real people get in; spam bots don't. No CAPTCHAs, no KYC, no phone number.",
 
   "steps.heading": "Three steps",
   "steps.subtitle": "No signup forms. No email verification. Just keys.",
@@ -56,9 +56,9 @@
   "stack.heading": "Tech stack",
   "stack.subtitle": "Modern, open-source tools — no vendor lock-in.",
 
-  "cta.heading": "Ready to chat sovereign",
-  "cta.subtitle": "Connect with your Nostr identity and join the conversation.",
-  "cta.button": "Get Started",
+  "cta.heading": "Ready to ditch the email signup",
+  "cta.subtitle": "Log in with your Nostr keys and start chatting in seconds. No email, no password, no phone number.",
+  "cta.button": "Launch Obelisk",
 
   "footer.tagline": "Obelisk — Built for La Crypta Identity Hackathon 2026",
 

@@ -5,6 +5,7 @@ import { useChatStore } from '@/store/chat';
 import { useAuthStore } from '@/store/auth';
 import { useDMStore } from '@/store/dm';
 import { useNotificationStore } from '@/store/notification';
+import { DM_FEATURE_ENABLED } from '@/lib/feature-flags';
 import CreateServerModal from './CreateServerModal';
 
 export default function ServerBar() {
@@ -28,30 +29,35 @@ export default function ServerBar() {
 
   return (
     <aside className="w-[72px] bg-lc-black flex flex-col items-center py-3 gap-2 shrink-0 overflow-y-auto">
-      {/* DMs button */}
-      <div className="relative">
-        <button
-          onClick={() => setDMMode(!isDMMode)}
-          className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all hover:rounded-xl ${
-            isDMMode
-              ? 'bg-lc-green/20 text-lc-green rounded-xl'
-              : 'bg-lc-dark hover:bg-lc-green/20 text-lc-muted hover:text-lc-green'
-          }`}
-          title="Direct Messages"
-          data-testid="dm-btn"
-        >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-          </svg>
-        </button>
-        {totalDMUnreads > 0 && (
-          <span className="absolute -bottom-0.5 -right-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
-            {totalDMUnreads > 99 ? '99+' : totalDMUnreads}
-          </span>
-        )}
-      </div>
+      {/* DMs button — gated behind DM_FEATURE_ENABLED while the signer
+          lifecycle (bunker reload, NIP-42 AUTH) stabilizes. */}
+      {DM_FEATURE_ENABLED && (
+        <>
+          <div className="relative">
+            <button
+              onClick={() => setDMMode(!isDMMode)}
+              className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all hover:rounded-xl ${
+                isDMMode
+                  ? 'bg-lc-green/20 text-lc-green rounded-xl'
+                  : 'bg-lc-dark hover:bg-lc-green/20 text-lc-muted hover:text-lc-green'
+              }`}
+              title="Direct Messages"
+              data-testid="dm-btn"
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+              </svg>
+            </button>
+            {totalDMUnreads > 0 && (
+              <span className="absolute -bottom-0.5 -right-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                {totalDMUnreads > 99 ? '99+' : totalDMUnreads}
+              </span>
+            )}
+          </div>
 
-      <div className="w-8 h-0.5 bg-lc-border rounded-full mx-auto" />
+          <div className="w-8 h-0.5 bg-lc-border rounded-full mx-auto" />
+        </>
+      )}
 
       {/* Server icons */}
       {servers.map((server) => {

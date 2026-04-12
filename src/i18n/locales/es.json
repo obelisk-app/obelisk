@@ -5,16 +5,16 @@
   "nav.launchApp": "Entrar",
   "nav.disconnect": "Desconectar",
 
-  "hero.title": "Chateá con",
-  "hero.titleHighlight": "Identidad Nostr",
-  "hero.subtitle": "Servidores y canales estilo Discord, con tus claves Nostr. Identidad criptográfica, chat en tiempo real y canales de voz.",
+  "hero.title": "La alternativa a Discord con",
+  "hero.titleHighlight": "login Nostr",
+  "hero.subtitle": "Chat grupal para cripto y privacidad. Sin email, sin contraseña, sin número de teléfono — solo tus claves Nostr. Servidores, canales, voz y DMs encriptados, con anti-spam por Web of Trust.",
   "hero.launchApp": "Entrar",
   "hero.github": "GitHub",
 
-  "features.heading": "Hecho diferente",
-  "features.subtitle": "Lo mejor de la UX de Discord con el modelo de identidad soberana de Nostr.",
-  "features.nostrIdentity.title": "Identidad Nostr",
-  "features.nostrIdentity.desc": "Iniciá sesión con tus claves Nostr. Sin email, sin contraseña. Tu identidad criptográfica es tu pasaporte.",
+  "features.heading": "Por qué Obelisk",
+  "features.subtitle": "La UX de Discord con la identidad soberana de Nostr. Sin email ni contraseña.",
+  "features.nostrIdentity.title": "Login Nostr — tus claves, tu cuenta",
+  "features.nostrIdentity.desc": "Entrá con NIP-07, nsec o bunker NIP-46. Sin email, sin contraseña, sin número de teléfono. Tu clave Nostr es tu cuenta en todo Obelisk.",
   "features.realtimeChat.title": "Chat y Voz en Tiempo Real",
   "features.realtimeChat.desc": "Canales estilo Discord con mensajería WebSocket y voz WebRTC. Hilos, reacciones, multimedia — todo en tiempo real.",
   "features.encryptedDMs.title": "DMs Encriptados",
@@ -23,8 +23,8 @@
   "features.roles.desc": "Roles de admin, moderador y miembro. Controlá quién puede hacer qué en tu servidor.",
   "features.selfHosted.title": "Self-Hosted",
   "features.selfHosted.desc": "Corré tu propio servidor con Docker. Tus datos, tus reglas. Sin intermediarios corporativos.",
-  "features.spamResistant.title": "Anti-Spam",
-  "features.spamResistant.desc": "Filtro Anti-Kuka y Comedores de Empanada mediante Nostr Web of Trust y modelo de ingreso por referidos.",
+  "features.spamResistant.title": "Web of Trust, no CAPTCHAs",
+  "features.spamResistant.desc": "Filtro Anti-Kuka y Comedores de Empanada: las cuentas nuevas pasan por el grafo social Nostr de tu servidor. Entran personas reales, no bots. Sin CAPTCHAs, sin KYC, sin número de teléfono.",
 
   "steps.heading": "Tres pasos",
   "steps.subtitle": "Sin formularios. Sin verificación de email. Solo claves.",
@@ -56,9 +56,9 @@
   "stack.heading": "Tech stack",
   "stack.subtitle": "Herramientas modernas y open-source — sin vendor lock-in.",
 
-  "cta.heading": "Listo para chatear soberano",
-  "cta.subtitle": "Conectá con tu identidad Nostr y sumate a la conversación.",
-  "cta.button": "Empezar",
+  "cta.heading": "Listo para dejar el email",
+  "cta.subtitle": "Entrá con tus claves Nostr y empezá a chatear en segundos. Sin email, sin contraseña, sin teléfono.",
+  "cta.button": "Entrar a Obelisk",
 
   "footer.tagline": "Obelisk — Hecho para el Hackathon IDENTITY de La Crypta 2026",
 

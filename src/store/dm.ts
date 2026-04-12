@@ -14,6 +14,13 @@ export interface DMThread {
 
 interface DMPersistedState {
   protocolOverrides: Record<string, DMProtocol>;
+  /**
+   * Per-partner read cursors in unix milliseconds. Messages whose created_at
+   * is <= cursor are considered read. Device-local by design — NIP-17
+   * inbox relays are not a reliable shared read state, and we don't want
+   * the server to learn who the user is DMing with.
+   */
+  readCursors: Record<string, number>;
 }
 
 interface DMState extends DMPersistedState {
@@ -46,6 +53,7 @@ interface DMState extends DMPersistedState {
   incrementUnread: (pubkey: string) => void;
   clearUnread: (pubkey: string) => void;
   totalUnread: () => number;
+  setReadCursor: (pubkey: string, tsMs: number) => void;
 }
 
 export const useDMStore = create<DMState>()(
@@ -59,6 +67,7 @@ export const useDMStore = create<DMState>()(
       isLoadingThreads: false,
       hasMoreHistory: false,
       protocolOverrides: {},
+      readCursors: {},
       showProtocolPrompt: null,
 
       setDMMode: (active) => set({ isDMMode: active }),
@@ -115,6 +124,10 @@ export const useDMStore = create<DMState>()(
           threads: state.threads.map((t) => (t.pubkey === pubkey ? { ...t, unreadCount: 0 } : t)),
         })),
       totalUnread: () => get().threads.reduce((sum, t) => sum + (t.unreadCount ?? 0), 0),
+      setReadCursor: (pubkey, tsMs) =>
+        set((state) => ({
+          readCursors: { ...state.readCursors, [pubkey]: tsMs },
+        })),
     }),
     {
       name: 'obelisk-dm-store',
@@ -130,21 +143,25 @@ export const useDMStore = create<DMState>()(
         }
         return localStorage;
       }),
-      // Only persist the protocol overrides — everything else is derived / ephemeral.
-      partialize: (state) => ({ protocolOverrides: state.protocolOverrides }) as DMPersistedState,
+      // Persist protocol overrides + device-local read cursors. Everything
+      // else is derived from cache or ephemeral UI state.
+      partialize: (state) =>
+        ({
+          protocolOverrides: state.protocolOverrides,
+          readCursors: state.readCursors,
+        }) as DMPersistedState,
     },
   ),
 );
 
 /**
- * Mark a DM thread as read on the server. Thin wrapper used by components
- * and hooks so the read-sync surface lives in one place.
+ * Mark a DM thread as read on this device. Read state is intentionally
+ * local-only (localStorage via the persist middleware): DMs are E2E
+ * encrypted and the server has no business tracking which conversations
+ * the user opens.
  */
 export async function markThreadRead(pubkey: string): Promise<void> {
-  useDMStore.getState().clearUnread(pubkey);
-  try {
-    await fetch(`/api/dm/${pubkey}/read`, { method: 'POST' });
-  } catch {
-    /* best effort */
-  }
+  const store = useDMStore.getState();
+  store.clearUnread(pubkey);
+  store.setReadCursor(pubkey, Date.now());
 }
