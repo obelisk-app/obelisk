@@ -359,6 +359,7 @@ export default function AdminServerPage({
                 currentServerId={serverId}
                 canCreateServer={instanceOwner}
                 onCreateServer={() => setShowCreateServer(true)}
+                showAllUsersEntry={instanceOwner}
               />
             )}
           </div>
@@ -367,7 +368,7 @@ export default function AdminServerPage({
         {/* Tabs */}
         <div className="max-w-5xl mx-auto px-6">
           <div className="flex gap-1 -mb-px overflow-x-auto">
-            {(['members', 'channels', 'content', 'access', 'settings', 'emojis', 'gifs', 'bans'] as Tab[]).map((t) => {
+            {(['members', 'channels', 'roles', 'content', 'access', 'settings', 'emojis', 'gifs', 'bans'] as Tab[]).map((t) => {
               const isActive = tab === t;
               return (
                 <button

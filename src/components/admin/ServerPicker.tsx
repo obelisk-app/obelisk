@@ -18,6 +18,10 @@ interface ServerPickerProps {
   canCreateServer?: boolean;
   /** Called when the user clicks "+ New Server". */
   onCreateServer?: () => void;
+  /** Show the "All users" entry (instance owner only). Navigates to /admin/all. */
+  showAllUsersEntry?: boolean;
+  /** True when the trigger should render as "All users" (on /admin/all). */
+  isAllUsersView?: boolean;
 }
 
 /**
@@ -29,6 +33,8 @@ export default function ServerPicker({
   currentServerId,
   canCreateServer = false,
   onCreateServer,
+  showAllUsersEntry = false,
+  isAllUsersView = false,
 }: ServerPickerProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -45,7 +51,7 @@ export default function ServerPicker({
     return () => document.removeEventListener('mousedown', onClick);
   }, [open]);
 
-  if (!current) return null;
+  if (!current && !isAllUsersView) return null;
 
   return (
     <div ref={ref} className="relative">
@@ -55,15 +61,21 @@ export default function ServerPicker({
         className="flex items-center gap-2.5 px-3 py-1.5 rounded-full border border-lc-border hover:border-lc-green/50 bg-lc-dark transition-colors"
         data-testid="server-picker-trigger"
       >
-        {current.icon ? (
+        {isAllUsersView ? (
+          <div className="w-6 h-6 rounded-full bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-[10px] font-bold text-purple-300">
+            ALL
+          </div>
+        ) : current!.icon ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={current.icon} alt="" className="w-6 h-6 rounded-full object-cover" />
+          <img src={current!.icon} alt="" className="w-6 h-6 rounded-full object-cover" />
         ) : (
           <div className="w-6 h-6 rounded-full bg-lc-border flex items-center justify-center text-[10px] font-bold text-lc-muted">
-            {current.name.slice(0, 2).toUpperCase()}
+            {current!.name.slice(0, 2).toUpperCase()}
           </div>
         )}
-        <span className="text-sm font-medium text-lc-white max-w-[200px] truncate">{current.name}</span>
+        <span className="text-sm font-medium text-lc-white max-w-[200px] truncate">
+          {isAllUsersView ? 'All users' : current!.name}
+        </span>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-lc-muted">
           <polyline points="6 9 12 15 18 9" />
         </svg>
@@ -78,6 +90,37 @@ export default function ServerPicker({
             Switch server
           </div>
           <div className="max-h-80 overflow-y-auto py-1">
+            {showAllUsersEntry && (
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  if (!isAllUsersView) router.push('/admin/all');
+                }}
+                className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${
+                  isAllUsersView ? 'bg-purple-500/10' : 'hover:bg-white/5'
+                }`}
+                data-testid="all-users-entry"
+              >
+                <div className="w-8 h-8 rounded-full bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-[10px] font-bold text-purple-300 flex-shrink-0">
+                  ALL
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm text-lc-white truncate">All users</div>
+                  <div className="text-[10px] uppercase font-semibold tracking-wider text-purple-400 mt-0.5">
+                    instance-wide
+                  </div>
+                </div>
+                {isAllUsersView && (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="text-lc-green flex-shrink-0">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                )}
+              </button>
+            )}
+            {showAllUsersEntry && servers.length > 0 && (
+              <div className="my-1 border-t border-lc-border" />
+            )}
             {servers.map((s) => {
               const active = s.id === currentServerId;
               return (
