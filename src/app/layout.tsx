@@ -58,9 +58,9 @@ export const metadata: Metadata = {
     },
   },
   icons: {
-    icon: '/obelisk.png',
-    apple: '/obelisk.png',
-    shortcut: '/obelisk.png',
+    icon: '/obelisk-favicon.png',
+    apple: '/obelisk-favicon.png',
+    shortcut: '/obelisk-favicon.png',
   },
   manifest: '/manifest.webmanifest',
   openGraph: {
