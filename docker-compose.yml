@@ -30,6 +30,7 @@ services:
       NODE_ENV: production
       CORS_ORIGIN: https://${DOMAIN}
       MEDIASOUP_ANNOUNCED_IP: ${PUBLIC_IP}
+      INSTANCE_OWNER_PUBKEY: ${INSTANCE_OWNER_PUBKEY}
     volumes:
       # Persist user uploads across container restarts. The path inside the
       # container matches getUploadDir() in src/app/api/upload/route.ts and the

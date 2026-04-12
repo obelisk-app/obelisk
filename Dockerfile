@@ -10,7 +10,7 @@ ENV CXXFLAGS="-include cstdint"
 COPY package.json package-lock.json ./
 COPY prisma ./prisma/
 COPY prisma.config.ts ./
-RUN --mount=type=cache,target=/root/.npm npm ci
+RUN --mount=type=cache,target=/root/.npm npm ci --legacy-peer-deps
 
 # --- Builder ---
 FROM base AS builder

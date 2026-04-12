@@ -112,6 +112,40 @@ describe('MemberList role grouping', () => {
     expect(items).toHaveLength(1);
   });
 
+  it('renders custom role emoji icon next to member name', () => {
+    useChatStore.getState().setMemberList([
+      {
+        pubkey: 'pk-star',
+        displayName: 'Star User',
+        role: 'member',
+        customRoles: [{ id: 'r1', name: 'Stars', color: '#ffd700', icon: '⭐', priority: 500 }],
+      },
+    ]);
+    useChatStore.getState().setOnlinePubkeys(['pk-star']);
+
+    render(<MemberList profileCache={emptyProfileCache} />);
+
+    expect(screen.getByText('⭐')).toBeInTheDocument();
+  });
+
+  it('renders custom role URL icon as img next to member name', () => {
+    useChatStore.getState().setMemberList([
+      {
+        pubkey: 'pk-img',
+        displayName: 'Img User',
+        role: 'member',
+        customRoles: [{ id: 'r2', name: 'Custom', color: '#00ff00', icon: '/uploads/icon.png', priority: 500 }],
+      },
+    ]);
+    useChatStore.getState().setOnlinePubkeys(['pk-img']);
+
+    render(<MemberList profileCache={emptyProfileCache} />);
+
+    const item = screen.getByTestId('member-item');
+    const img = item.querySelector('img[src="/uploads/icon.png"]');
+    expect(img).toBeTruthy();
+  });
+
   it('colors username by highest-priority custom role', () => {
     useChatStore.getState().setMemberList([
       {
