@@ -18,7 +18,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { displayName, picture, nip05, about, banner, lud16, website, nickname } = await req.json();
+  const { displayName, picture, nip05, about, banner, lud16, website, nickname, serverId } = await req.json();
 
   // Find every server where the caller has a Member row AND is NOT banned.
   const [memberships, bans] = await Promise.all([
@@ -42,31 +42,41 @@ export async function PATCH(req: NextRequest) {
     );
   }
 
-  const profileData = {
-    displayName: displayName || null,
-    picture: picture || null,
-    nip05: nip05 || null,
-    about: about || null,
-    banner: banner || null,
-    lud16: lud16 || null,
-    website: website || null,
-    profileUpdatedAt: new Date(),
-  };
+  // Only include profile fields that were explicitly provided (don't overwrite with null)
+  const profileData: Record<string, unknown> = { profileUpdatedAt: new Date() };
+  if (displayName !== undefined) profileData.displayName = displayName || null;
+  if (picture !== undefined) profileData.picture = picture || null;
+  if (nip05 !== undefined) profileData.nip05 = nip05 || null;
+  if (about !== undefined) profileData.about = about || null;
+  if (banner !== undefined) profileData.banner = banner || null;
+  if (lud16 !== undefined) profileData.lud16 = lud16 || null;
+  if (website !== undefined) profileData.website = website || null;
 
-  // Only include nickname if explicitly provided (don't overwrite with null)
-  const updateData = nickname !== undefined
-    ? { ...profileData, nickname: nickname || null }
-    : profileData;
+  // Apply profile data to all servers
+  if (Object.keys(profileData).length > 1) {
+    await prisma.member.updateMany({
+      where: { id: { in: updatable.map((m) => m.id) } },
+      data: profileData,
+    });
+  }
 
-  await prisma.member.updateMany({
-    where: { id: { in: updatable.map((m) => m.id) } },
-    data: updateData,
-  });
+  // Nickname is per-server — only update the specific server's member row
+  if (nickname !== undefined && serverId) {
+    const target = updatable.find((m) => m.serverId === serverId);
+    if (target) {
+      await prisma.member.update({
+        where: { id: target.id },
+        data: { nickname: nickname || null },
+      });
+    }
+  }
 
-  // Return the updated row from any one of the servers — the data is the same
-  // shape across all of them. We just need to give the caller a coherent payload.
+  // Return the row for the requested server, or fall back to first updatable.
+  const targetId = serverId
+    ? (updatable.find((m) => m.serverId === serverId)?.id ?? updatable[0].id)
+    : updatable[0].id;
   const sample = await prisma.member.findUnique({
-    where: { id: updatable[0].id },
+    where: { id: targetId },
   });
 
   if (!sample) {
@@ -83,5 +93,40 @@ export async function PATCH(req: NextRequest) {
     lud16: sample.lud16,
     website: sample.website,
     nickname: sample.nickname,
+  });
+}
+
+/**
+ * GET /api/members/me?serverId=xxx — fetch own member data for a specific server.
+ */
+export async function GET(req: NextRequest) {
+  const pubkey = await getAuthPubkey(req);
+  if (!pubkey) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const serverId = req.nextUrl.searchParams.get('serverId');
+  if (!serverId) {
+    return NextResponse.json({ error: 'serverId required' }, { status: 400 });
+  }
+
+  const member = await prisma.member.findFirst({
+    where: { pubkey, serverId },
+  });
+
+  if (!member) {
+    return NextResponse.json({ error: 'Not a member' }, { status: 404 });
+  }
+
+  return NextResponse.json({
+    pubkey: member.pubkey,
+    displayName: member.displayName,
+    picture: member.picture,
+    nip05: member.nip05,
+    about: member.about,
+    banner: member.banner,
+    lud16: member.lud16,
+    website: member.website,
+    nickname: member.nickname,
   });
 }

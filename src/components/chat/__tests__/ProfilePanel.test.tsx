@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { LocaleProvider } from '@/i18n/context';
 import ProfilePanel from '../ProfilePanel';
 import { useAuthStore } from '@/store/auth';
+import { useChatStore } from '@/store/chat';
 
 // Mock fetch globally
 const mockFetch = vi.fn();
@@ -34,7 +35,9 @@ describe('ProfilePanel', () => {
         banner: 'https://example.com/banner.jpg',
       },
     });
-    // Mock PATCH /api/members/me to return empty nickname
+    // Set active server for nickname loading
+    useChatStore.setState({ activeServerId: 'server-1' });
+    // Mock GET /api/members/me?serverId=... to return empty nickname
     mockFetch.mockResolvedValue({ ok: true, json: async () => ({ nickname: '' }) });
   });
 

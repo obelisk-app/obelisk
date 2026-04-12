@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useAuthStore } from '@/store/auth';
+import { useChatStore } from '@/store/chat';
 import { useTranslation } from '@/i18n/context';
 import ProfileEditor from '@/components/ProfileEditor';
 
@@ -12,6 +13,7 @@ interface ProfilePanelProps {
 
 export default function ProfilePanel({ onClose, onLogout }: ProfilePanelProps) {
   const { profile } = useAuthStore();
+  const activeServerId = useChatStore((s) => s.activeServerId);
   const { t } = useTranslation();
   const [nickname, setNickname] = useState('');
   const [nicknameLoaded, setNicknameLoaded] = useState(false);
@@ -24,10 +26,12 @@ export default function ProfilePanel({ onClose, onLogout }: ProfilePanelProps) {
   // Load current nickname from server on first render
   if (!nicknameLoaded) {
     setNicknameLoaded(true);
-    fetch('/api/members/me', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: '{}' })
-      .then(r => r.json())
-      .then(data => { if (data.nickname) setNickname(data.nickname); })
-      .catch(() => {});
+    if (activeServerId) {
+      fetch(`/api/members/me?serverId=${activeServerId}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { if (data?.nickname) setNickname(data.nickname); })
+        .catch(() => {});
+    }
   }
 
   const handleSyncNostr = async () => {
@@ -67,7 +71,7 @@ export default function ProfilePanel({ onClose, onLogout }: ProfilePanelProps) {
       await fetch('/api/members/me', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nickname: nickname || null }),
+        body: JSON.stringify({ nickname: nickname || null, serverId: activeServerId }),
       });
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus('idle'), 2000);
