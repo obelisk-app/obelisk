@@ -214,7 +214,9 @@
   - [ ] El idioma del servidor es independiente del idioma de la landing (i18n del sitio)
   - [ ] Selector de idioma en la configuracion del servidor (admin)
   - [ ] Fallback a "es" si no se configura
-- [ ] Multi-server (crear/unirse a varios servidores)
+- [ ] **Multi-server (crear/unirse a varios servidores)** ⚠️ IMPORTANTE
+  - [ ] Flujo de "sin servidores": cuando un usuario loguea y no es miembro de ningún servidor, mostrar pantalla de onboarding (unirse via invite, buscar servidores públicos, o crear uno nuevo)
+  - [ ] Creación de servidores por cualquier usuario: UI + API para que cualquier usuario autenticado pueda crear su propio servidor (nombre, icono, configuración inicial)
 - [x] DMs via Nostr relays (encrypt/decrypt con el signer del usuario, NIP-04/NIP-17)
 - [ ] Eliminacion de cuenta y datos del usuario
   - [ ] Opcion en settings/perfil para eliminar cuenta
