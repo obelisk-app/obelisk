@@ -11,6 +11,9 @@ vi.mock('@/lib/nostr', () => ({
   })),
   resetUserRelays: vi.fn(),
   clearSignerPayload: vi.fn(),
+  getNDK: vi.fn(() => ({
+    getUser: ({ pubkey }: { pubkey: string }) => ({ pubkey, npub: 'npub1test' }),
+  })),
 }));
 
 // Mock fetch for logout

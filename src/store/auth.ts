@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { NDKUser } from '@nostr-dev-kit/ndk';
-import { NostrProfile, parseProfile, LoginMethod, resetUserRelays, clearSignerPayload } from '@/lib/nostr';
+import { NostrProfile, parseProfile, LoginMethod, resetUserRelays, clearSignerPayload, getNDK } from '@/lib/nostr';
 
 interface AuthState {
   isConnected: boolean;
@@ -109,27 +109,33 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      // Check backend session cookie — used on page load to restore session
+      // Check backend session cookie — used on page load to restore session.
+      // Identity is ALWAYS derived from the backend-validated cookie, never
+      // from persisted client state. If the cookie is missing/invalid, all
+      // auth state is cleared so stale localStorage can never impersonate
+      // a logged-in user.
       restoreSession: async () => {
         try {
           const res = await fetch('/api/auth/me');
           if (!res.ok) {
-            set({ isConnected: false });
+            set({
+              isConnected: false,
+              user: null,
+              profile: null,
+              loginMethod: null,
+            });
             return false;
           }
           const data = await res.json();
-          // Restore profile from backend data
-          const currentProfile = get().profile;
+          const ndk = getNDK();
+          const user = ndk.getUser({ pubkey: data.pubkey });
+          const npub = (() => { try { return user.npub; } catch { return ''; } })();
           set({
             isConnected: true,
-            profile: currentProfile ? {
-              ...currentProfile,
-              displayName: data.displayName || currentProfile.displayName,
-              picture: data.picture || currentProfile.picture,
-              nip05: data.nip05 || currentProfile.nip05,
-            } : {
+            user,
+            profile: {
               pubkey: data.pubkey,
-              npub: '',
+              npub,
               displayName: data.displayName,
               picture: data.picture,
               nip05: data.nip05,
@@ -138,8 +144,7 @@ export const useAuthStore = create<AuthState>()(
           // If the DB has no cached profile for us yet (new user, first
           // login after join), block on the Nostr relay sync so the UI
           // never flashes blank. Otherwise refresh in the background.
-          const hasCachedProfile =
-            !!(data.displayName || data.picture || currentProfile?.displayName || currentProfile?.picture);
+          const hasCachedProfile = !!(data.displayName || data.picture);
           if (hasCachedProfile) {
             void get().syncProfile();
           } else {
@@ -147,17 +152,24 @@ export const useAuthStore = create<AuthState>()(
           }
           return true;
         } catch {
-          set({ isConnected: false });
+          set({
+            isConnected: false,
+            user: null,
+            profile: null,
+            loginMethod: null,
+          });
           return false;
         }
       },
     }),
     {
       name: 'nostr-auth',
-      // Do NOT persist isConnected — always validate with backend on page load
+      // Only persist loginMethod (needed to rebuild the signer on reload).
+      // Identity (user/profile/isConnected) MUST come from a server-validated
+      // session cookie via restoreSession — never from localStorage, or a
+      // stale cache could impersonate a logged-in user.
       partialize: (state) => ({
         loginMethod: state.loginMethod,
-        profile: state.profile,
       }),
       onRehydrateStorage: () => {
         return (_state, error) => {
