@@ -349,10 +349,39 @@ app.prepare().then(async () => {
       try {
         const existing = await prisma.message.findUnique({
           where: { id: messageId },
-          select: { authorPubkey: true, channelId: true, deletedAt: true },
+          select: {
+            authorPubkey: true,
+            channelId: true,
+            deletedAt: true,
+            channel: { select: { serverId: true } },
+          },
         });
 
-        if (!existing || existing.deletedAt || existing.channelId !== channelId || existing.authorPubkey !== pubkey) {
+        if (!existing || existing.deletedAt || existing.channelId !== channelId) {
+          socket.emit('message-error', { error: 'Cannot delete this message' });
+          return;
+        }
+
+        let allowed = existing.authorPubkey === pubkey;
+        if (!allowed) {
+          const server = await prisma.server.findUnique({
+            where: { id: existing.channel.serverId },
+            select: { ownerPubkey: true },
+          });
+          const isOwner = server?.ownerPubkey === pubkey;
+          const { isInstanceOwner } = await import('./src/lib/instance-owner');
+          allowed = isOwner || isInstanceOwner(pubkey);
+          if (!allowed) {
+            const caller = await prisma.member.findUnique({
+              where: { serverId_pubkey: { serverId: existing.channel.serverId, pubkey } },
+              select: { role: true },
+            });
+            const role = caller?.role as any;
+            allowed = role === 'owner' || role === 'admin' || role === 'mod';
+          }
+        }
+
+        if (!allowed) {
           socket.emit('message-error', { error: 'Cannot delete this message' });
           return;
         }
