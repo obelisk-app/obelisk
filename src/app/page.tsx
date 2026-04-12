@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef, type RefObject } from 'react';
-import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import LoginModal from '@/components/LoginModal';
 import ObeliskIcon from '@/components/ObeliskIcon';
@@ -125,7 +124,6 @@ const TECH_STACK: { name: string; desc: string; color: string; icon?: string; im
 export default function Home() {
   const [showLogin, setShowLogin] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
-  const router = useRouter();
   const { t } = useTranslation();
 
   const [featuresRef, featuresVisible] = useScrollReveal<HTMLElement>();
@@ -136,7 +134,11 @@ export default function Home() {
 
   const handleLoginSuccess = () => {
     setIsNavigating(true);
-    router.push('/chat');
+    // Full-page navigation instead of router.push: on mobile Safari/Chrome,
+    // client-side routing can fire the next /api/auth/me fetch before the
+    // freshly-issued Set-Cookie is committed, which makes /chat treat the
+    // session as invalid and bounce the user back to landing.
+    window.location.assign('/chat');
   };
 
   if (isNavigating) {
