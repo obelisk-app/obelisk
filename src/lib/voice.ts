@@ -187,7 +187,13 @@ export class WebSocketVoiceClient {
 
     // Open a PC to each existing peer. We are the "new" arrival, so we
     // initiate — our `onnegotiationneeded` will fire once we addTrack.
+    // Dedup: an early `voice-signal` during the ack await can cause
+    // `handleSignal` to auto-create the peer before we get here. Calling
+    // createPeer again would orphan the first RTCPeerConnection — its
+    // pending offer's answer would then route to the replacement PC
+    // (wrong m-lines), and the existing peer's mic/camera never attach.
     for (const peer of (res.peers || []) as Array<{ socketId: string; pubkey: string }>) {
+      if (this.peers.has(peer.socketId)) continue;
       this.createPeer(peer.socketId, peer.pubkey);
     }
 
