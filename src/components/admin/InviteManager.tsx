@@ -205,6 +205,7 @@ export default function InviteManager({ serverId }: InviteManagerProps) {
                   </div>
                   <div className="flex gap-3 mt-1 text-xs text-lc-muted flex-wrap">
                     <span>{inv.uses}/{inv.maxUses} uses</span>
+                    <span>By {shortNpub(inv.createdBy)}</span>
                     {inv.expiresAt && (
                       <span>Expires {new Date(inv.expiresAt).toLocaleDateString()}</span>
                     )}

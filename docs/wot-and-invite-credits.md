@@ -17,11 +17,11 @@ Obelisk solves it with **Nostr identity + the social graph**:
    (their kind 3 contact list) is auto-admitted to the server, no invite
    required. This turns the referente's existing social graph into the
    server's pre-approved member pool.
-2. **Activity-based invite credits** — established members earn invite
-   credits after meeting activity thresholds (days since join + messages
-   sent). They can spend those credits to mint single-use invite links for
-   people *outside* the WoT. This grows the community organically through
-   vouching, not through admin bottlenecks.
+2. **Tenure-based invite credits** — members who have been in the server for
+   a minimum number of days (default 7) earn a limited pool of single-use,
+   auto-expiring invite links they can share with friends outside the WoT.
+   This grows the community organically through vouching, not through admin
+   bottlenecks.
 
 Together they let a server bootstrap from a trusted root and grow through
 legitimate human relationships, while making sybil/spam attacks expensive:
@@ -96,97 +96,53 @@ timestamp.
 
 ---
 
-## Invite credits — REMOVED
+## Tenure-based invite credits
 
-> ⚠️ **The activity-based invite-credit feature has been retired.**
->
-> The original design (described below for historical context) let regular
-> members earn a pool of invite credits after meeting activity thresholds.
-> In practice the feature was incomplete, the UI was confusing, and the
-> simpler model — **only admins+ can mint invitations** — covers the same
-> anti-spam goal without the moving parts.
->
-> What was removed:
->
-> - `src/lib/invite-credits.ts` and its test
-> - `src/components/invites/InviteCreditsCard.tsx` and its test
-> - `src/app/api/servers/[serverId]/invite-credits/route.ts` and its test
-> - The "Invite credit policy" form section in `AccessPanel`
-> - The "Invite credits" section on the user profile page
-> - All `computeCredits` enforcement in `POST /api/servers/:id/invitations`
->   and `GET /api/profile/me`
->
-> What stayed:
->
-> - The `Server.minDaysActive`, `minMessages`, `invitesPerUser`, and
->   `inviteExpiryHours` columns. They are no longer read or written, but
->   dropping them would lose data — they're additive dead weight.
-> - The `Member.lastActivityAt` timestamp. Still bumped on every message
->   and post, but now used purely as a "last seen" indicator on the profile
->   page.
-> - The Web of Trust system (the rest of this doc) — that's still active.
->
-> If you want to bring credits back, the schema is ready and the design
-> below remains valid; it would just need a fresh implementation pass.
+### Eligibility
 
----
-
-## Original design (historical)
-
-### Eligibility formula
-
-A member becomes eligible to mint invites when **both** thresholds are met:
+A member becomes eligible to mint invites when:
 
 ```
-daysActive >= server.minDaysActive  AND  messageCount >= server.minMessages
+daysAsMember >= server.minDaysActive
 ```
 
-- `daysActive` = `floor((now − member.joinedAt) / 1 day)`
-- `messageCount` = number of non-deleted messages authored by the member in
-  any channel of the server (computed on demand from the `Message` table).
+- `daysAsMember` = `(now − member.joinedAt) / 1 day`
 
-If either threshold is unmet, the API returns the remaining gap as a
-human-readable reason (e.g. `"3 more messages required"`,
-`"2 more days of activity required"`). The profile UI uses these to render
-progress bars.
+If the threshold is unmet, the API returns the remaining gap and the UI
+shows "You can invite friends after being a member for X days (Y remaining)".
 
 ### Credit pool
 
-Each eligible member starts with `server.invitesPerUser` total credits.
-The available count is computed as:
+Each eligible member gets `server.invitesPerUser` total credits (default 3).
+The available count is:
 
 ```
-available = max(0, invitesPerUser − count(invitations created by this member in this server))
+remaining = max(0, invitesPerUser − count(invitations created by this member in this server))
 ```
 
-When `available` reaches 0 the member can no longer mint invites until an
-admin raises `invitesPerUser` (existing invites are not invalidated).
+Set `invitesPerUser = 0` to disable member invites entirely.
 
 ### Forced constraints on member-minted invites
 
 When a regular member mints an invite, the API forces:
 
 - `maxUses = 1` — single-use only.
-- `expiresAt = now + server.inviteExpiryHours` — bounded lifetime.
-- `targetPubkey` — optional, member-supplied; restricts redemption to a
-  specific npub if set.
+- `expiresAt = now + server.inviteExpiryHours` — bounded lifetime (default 7 days).
+- `targetPubkey = null` — member invites are open (no targeting).
 
-Admins can pass any value for `maxUses` / `expiresInHours` and are not
-counted against any pool.
+Admins can pass any value for `maxUses` / `expiresInHours` / `targetPubkey`
+and are not counted against any pool.
 
-### Admin bypass
+### UI
 
-Members with role `admin` or `owner` are exempt from the credit pool entirely.
-The credits API returns `adminBypass: true` for them and the UI shows an
-"Admin · unlimited" badge. This preserves the existing admin invite UX.
-
-### Activity tracking
-
-`Member.lastActivityAt` is updated (best-effort, fire-and-forget) every time
-a member sends a message in any text or forum channel. It is not used in the
-eligibility formula directly — the formula uses `Message.count()` for
-accuracy — but `lastActivityAt` is exposed in the profile UI and is useful
-for future anti-sybil heuristics ("last seen X days ago").
+- **Admin panel** (`/admin → Access`): "Member Invites" policy section lets
+  owners configure `invitesPerUser`, `inviteExpiryHours`, `minDaysActive`,
+  or disable member invites entirely. The invite list shows "By [npub]"
+  for each invite so admins can see who created what.
+- **Channel sidebar**: "Invite Friends" button opens the `MemberInviteCard`
+  showing remaining credits, a generate button, and the member's own invites.
+- **`GET /api/servers/:serverId/my-invites`**: member endpoint returning
+  credit status and the member's own invite list.
 
 ---
 
@@ -200,8 +156,7 @@ All settings live on the `Server` row and are managed from `/admin → Access`.
 | `wotEnabled`          | `false` | Master switch. When `true`, replaces `joinMode`                        |
 | `referenteFetchedAt`  | `null`  | Timestamp of the last successful WoT cache refresh                     |
 | `minDaysActive`       | `7`     | Days since joining required for invite eligibility                     |
-| `minMessages`         | `20`    | Messages sent required for invite eligibility                          |
-| `invitesPerUser`      | `3`     | Total credit pool per eligible member                                  |
+| `invitesPerUser`      | `3`     | Total credit pool per eligible member (0 = disabled)                   |
 | `inviteExpiryHours`   | `168`   | Forced expiry for member-minted invites (default 7 days)               |
 
 `referentePubkey` and `wotEnabled` can only be edited by the server **owner**.
@@ -216,11 +171,11 @@ All routes return JSON. Auth is via the existing `session` cookie.
 
 ### `GET /api/servers/:serverId/access`
 Read current access config. **Auth:** admin+.
-**Returns:** `{ referentePubkey, wotEnabled, referenteFetchedAt, minDaysActive, minMessages, invitesPerUser, inviteExpiryHours, joinMode }`.
+**Returns:** `{ referentePubkey, wotEnabled, referenteFetchedAt, joinMode, invitesPerUser, inviteExpiryHours, minDaysActive }`.
 
 ### `PATCH /api/servers/:serverId/access`
 Update access config. **Auth:** owner only.
-**Body:** any subset of `{ referentePubkey, wotEnabled, minDaysActive, minMessages, invitesPerUser, inviteExpiryHours }`.
+**Body:** any subset of `{ referentePubkey, wotEnabled, invitesPerUser, inviteExpiryHours, minDaysActive }`.
 Setting `referentePubkey` resets `referenteFetchedAt` so the next access triggers a refresh.
 
 ### `GET /api/servers/:serverId/wot-check`
@@ -250,23 +205,17 @@ Add or update an override. **Auth:** admin+.
 Remove an override. **Auth:** admin+.
 **Returns:** `{ ok: true }`.
 
-### `GET /api/servers/:serverId/invite-credits`
-Get the authed user's credit status. **Auth:** any member.
-**Returns:** `InviteCredits` plus `adminBypass: boolean`. For admins, returns `{ adminBypass: true, eligible: true, available: Infinity, ... }`.
+### `GET /api/servers/:serverId/my-invites`
+Get the authed member's credit status and their own invites. **Auth:** any member.
+**Returns:** `{ eligible, used, total, remaining, minDaysActive, memberSince, invites: [...] }`.
 
-### `POST /api/servers/:serverId/invitations` *(modified)*
-Mint an invitation. **Auth:** any member.
-- **Admins+:** can pass `{ maxUses, expiresInHours, targetPubkey }` freely.
-- **Members:** must be eligible and have available credits. `maxUses` is forced to `1` and `expiresInHours` to `server.inviteExpiryHours`. Returns `403` with `reasons` if ineligible or `403` with `credits` payload if no credits remain.
+### `POST /api/servers/:serverId/invitations`
+Create an invitation. **Auth:** any member.
+- **Admins+:** full flexibility over `{ maxUses, expiresInHours, targetPubkey }`.
+- **Members:** must meet tenure threshold and have remaining credits. Invites are forced to `maxUses=1`, auto-expiry, no `targetPubkey`. Returns `403` if ineligible or out of credits.
 
-### `GET /api/servers/:serverId/invitations` *(modified)*
-List invitations. **Auth:** any member.
-- **Admins+:** see all invitations for the server.
-- **Members:** see only invitations they personally created.
-
-### `GET /api/profile/me`
-Full profile snapshot for the authed user. **Auth:** any session.
-**Returns:** `{ pubkey, servers: [{ serverId, serverName, role, joinedAt, lastActivityAt, credits, ... }], invitations: [...] }`. Used by `/profile`.
+### `GET /api/servers/:serverId/invitations`
+List all invitations. **Auth:** admin+.
 
 ---
 
@@ -306,7 +255,6 @@ referentePubkey     String?
 wotEnabled          Boolean   @default(false)
 referenteFetchedAt  DateTime?
 minDaysActive       Int       @default(7)
-minMessages         Int       @default(20)
 invitesPerUser      Int       @default(3)
 inviteExpiryHours   Int       @default(168)
 ```
@@ -328,10 +276,8 @@ lastActivityAt  DateTime?
   > 6h old) and on the admin "Refresh WoT" button. If you operate a high-
   activity server you may want to add a periodic refresh later, but it is not
   necessary for correctness.
-- **Activity counters are computed on demand.** No denormalized counter — the
-  source of truth is the `Message` table. This avoids drift but means a
-  `count()` query per credits check. For very large servers consider adding
-  a denormalized `messageCount` field on `Member`.
+- **Credit counts are computed on demand.** The source of truth is the count
+  of `Invitation` rows created by the member. This is a simple indexed query.
 
 ## Threat model
 
@@ -366,4 +312,4 @@ lastActivityAt  DateTime?
 - **Multiple referentes per server** with quorum logic ("must be followed
   by at least 2 of 3 referentes").
 - **Webhook on WoT change** so external systems can react.
-- **Denormalized message counters** for performance at scale.
+- **Credit decay** — unused credits expire after N days, freeing the slot.

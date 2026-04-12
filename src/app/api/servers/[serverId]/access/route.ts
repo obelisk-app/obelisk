@@ -18,6 +18,9 @@ export async function GET(
       wotEnabled: true,
       referenteFetchedAt: true,
       joinMode: true,
+      invitesPerUser: true,
+      inviteExpiryHours: true,
+      minDaysActive: true,
     },
   });
 
@@ -25,12 +28,7 @@ export async function GET(
   return NextResponse.json(server);
 }
 
-// PATCH /api/servers/:serverId/access — update WoT settings (owner only).
-//
-// The activity-based invite-credit policy fields (minDaysActive, minMessages,
-// invitesPerUser, inviteExpiryHours) were removed from this endpoint when the
-// invite-credits feature was retired. The columns still exist in the schema
-// (additive removal would lose data) but they are no longer read or written.
+// PATCH /api/servers/:serverId/access — update WoT and invite credit settings (owner only).
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ serverId: string }> }
@@ -51,6 +49,20 @@ export async function PATCH(
     data.wotEnabled = body.wotEnabled;
   }
 
+  // Invite credit policy fields
+  if ('invitesPerUser' in body) {
+    const v = Number(body.invitesPerUser);
+    if (Number.isInteger(v) && v >= 0) data.invitesPerUser = v;
+  }
+  if ('inviteExpiryHours' in body) {
+    const v = Number(body.inviteExpiryHours);
+    if (Number.isInteger(v) && v > 0) data.inviteExpiryHours = v;
+  }
+  if ('minDaysActive' in body) {
+    const v = Number(body.minDaysActive);
+    if (Number.isInteger(v) && v >= 0) data.minDaysActive = v;
+  }
+
   // Reset cache timestamp when referente changes so the next refresh re-fetches.
   if ('referentePubkey' in data) {
     data.referenteFetchedAt = null;
@@ -63,6 +75,9 @@ export async function PATCH(
       referentePubkey: true,
       wotEnabled: true,
       referenteFetchedAt: true,
+      invitesPerUser: true,
+      inviteExpiryHours: true,
+      minDaysActive: true,
     },
   });
 

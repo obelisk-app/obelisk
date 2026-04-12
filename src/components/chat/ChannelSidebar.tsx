@@ -6,6 +6,7 @@ import { useChatStore, Category, Channel } from '@/store/chat';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notification';
 import ProfilePanel from './ProfilePanel';
+import MemberInviteCard from '../invites/MemberInviteCard';
 import { canWriteInChannel } from '@/lib/roles';
 
 function ChannelTypeIcon({ type }: { type: string }) {
@@ -168,6 +169,7 @@ function UserPanel() {
 
 export default function ChannelSidebar({ onChannelSelect }: { onChannelSelect?: () => void } = {}) {
   const { servers, activeServerId, pinnedChannels, categories, activeChannelId, setActiveChannel, isLoadingChannels } = useChatStore();
+  const [showInviteCard, setShowInviteCard] = useState(false);
 
   const activeServer = servers.find(s => s.id === activeServerId);
 
@@ -210,11 +212,30 @@ export default function ChannelSidebar({ onChannelSelect }: { onChannelSelect?: 
             </div>
           )}
           <h2 className="font-semibold text-lc-white truncate text-sm">{activeServer?.name || 'Server'}</h2>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="text-lc-muted ml-auto shrink-0">
-            <path d="M7 10l5 5 5-5z"/>
-          </svg>
+          <button
+            onClick={() => setShowInviteCard(true)}
+            className="ml-auto shrink-0 p-1 rounded hover:bg-lc-border/50 text-lc-muted hover:text-lc-green transition-colors"
+            title="Invite friends"
+            data-testid="invite-friends-btn"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+              <circle cx="8.5" cy="7" r="4"/>
+              <line x1="20" y1="8" x2="20" y2="14"/>
+              <line x1="23" y1="11" x2="17" y2="11"/>
+            </svg>
+          </button>
         </div>
       </div>
+
+      {/* Invite friends modal */}
+      {showInviteCard && activeServerId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setShowInviteCard(false)}>
+          <div className="w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
+            <MemberInviteCard serverId={activeServerId} onClose={() => setShowInviteCard(false)} />
+          </div>
+        </div>
+      )}
 
       {/* Channel list — scrollable */}
       <nav className="flex-1 overflow-y-auto p-2">

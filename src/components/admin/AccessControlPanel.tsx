@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import AccessPanel from './AccessPanel';
 import InviteManager from './InviteManager';
+import InviteCreditPolicy from './InviteCreditPolicy';
 
 type JoinMode = 'open' | 'invite-only' | 'wot';
 
@@ -17,6 +18,9 @@ interface ServerAccessConfig {
   joinMode: 'open' | 'invite-only';
   wotEnabled: boolean;
   referentePubkey: string | null;
+  invitesPerUser: number;
+  inviteExpiryHours: number;
+  minDaysActive: number;
 }
 
 /**
@@ -43,6 +47,9 @@ export default function AccessControlPanel({ serverId, isOwner, onModeChanged }:
         joinMode: data.joinMode ?? 'open',
         wotEnabled: !!data.wotEnabled,
         referentePubkey: data.referentePubkey ?? null,
+        invitesPerUser: data.invitesPerUser ?? 3,
+        inviteExpiryHours: data.inviteExpiryHours ?? 168,
+        minDaysActive: data.minDaysActive ?? 7,
       });
     } else {
       setError('Failed to load access config');
@@ -192,6 +199,17 @@ export default function AccessControlPanel({ serverId, isOwner, onModeChanged }:
           Always shown so admins can configure them ahead of switching to WoT mode.
           The existing AccessPanel already includes everything. */}
       <AccessPanel serverId={serverId} isOwner={isOwner} />
+
+      {/* Member invite credit policy — owner-only */}
+      {isOwner && config && (
+        <InviteCreditPolicy
+          serverId={serverId}
+          invitesPerUser={config.invitesPerUser}
+          inviteExpiryHours={config.inviteExpiryHours}
+          minDaysActive={config.minDaysActive}
+          onSaved={loadConfig}
+        />
+      )}
 
       {/* Active invitations + create form. Shown for all modes since invites
           remain useful as targeted invites even in WoT mode. */}
