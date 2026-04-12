@@ -227,6 +227,16 @@
   - [ ] Flujo de "sin servidores": cuando un usuario loguea y no es miembro de ningún servidor, mostrar pantalla de onboarding (unirse via invite, buscar servidores públicos, o crear uno nuevo)
   - [ ] Creación de servidores por cualquier usuario: UI + API para que cualquier usuario autenticado pueda crear su propio servidor (nombre, icono, configuración inicial)
 - [x] DMs via Nostr relays (encrypt/decrypt con el signer del usuario, NIP-04/NIP-17)
+- [ ] **Vista personalizada de canales/posts por actividad del usuario**
+  > Cada usuario ve en su sidebar solo los canales/posts con los que realmente interactua, no la lista completa del servidor. Ej: el foro "Plaza Publica" tiene 200 posts; al usuario solo le interesan los 3 en los que esta participando, no el resto. Reduce ruido y hace la navegacion personal.
+  - [ ] Tracking de interaccion por usuario: ultima vez que el usuario escribio o reacciono en un canal/post (campo `lastInteractionAt` en una tabla `UserChannelActivity { userPubkey, channelId, lastInteractionAt, lastReadAt }` — o reusar/extender el tracking de read-state de notificaciones)
+  - [ ] Sidebar del chat: por defecto muestra canales/posts ordenados por `lastInteractionAt` desc (los que el usuario "habita"), no la lista completa
+  - [ ] En canales de foro: la vista detalle de cada post aparece en el sidebar del usuario una vez que escribio o reacciono en el post; posts donde nunca interactuo quedan solo en la lista del foro, no en el sidebar
+  - [ ] Toggle "ver todos los canales" para expandir y ver la lista completa del servidor (comportamiento actual)
+  - [ ] **Pin manual por usuario**: cada usuario puede fijar canales/posts a su propia vista (independiente de los pins de mods/admins a nivel servidor); modelo `UserPin { userPubkey, channelId? , postId?, pinnedAt }`
+  - [ ] Los pins del usuario quedan arriba del sidebar, luego el resto ordenado por actividad reciente
+  - [ ] Respeta permisos de lectura: si el usuario pierde acceso a un canal/post, desaparece de su vista personalizada
+  - [ ] Tests: ordenamiento por `lastInteractionAt`, pin/unpin personal, posts aparecen solo tras interactuar, permisos de lectura filtran la vista
 - [ ] Eliminacion de cuenta y datos del usuario
   - [ ] Opcion en settings/perfil para eliminar cuenta
   - [ ] Eliminar todos los mensajes del usuario (o reemplazar con "[mensaje eliminado]")
