@@ -283,6 +283,12 @@
     - [x] Extender el `allowed` whitelist de `PATCH /api/admin/server` con los nuevos fields; validacion de rango + **ceiling absoluto de 500 MB**
     - [x] `POST /api/upload?serverId=…` lee el server, construye `UploadLimits` via nuevo `parseServerLimits()` en `attachments.ts`, aplica override del cap; mensajes 413 citan el cap configurado
     - [x] Admin UI: `UploadLimitsForm` en la tab Settings con 4 number inputs en MB + 4 checkboxes por categoria; conversion MB ↔ bytes en el cliente
+  - [ ] **Stickers por servidor** — boton dedicado en el composer (al lado del GIF), imagenes curadas por mods estilo Discord stickers
+    - [ ] Modelo `ServerSticker { id, serverId, name, url, createdBy, createdAt }` con `@@unique([serverId, name])`
+    - [ ] `GET /api/admin/stickers?serverId=…` (miembros); `POST`/`DELETE` mod+
+    - [ ] `StickerPicker` component (espejo de `GifPicker`) abierto desde un boton `sticker-button` en `MessageInput` al lado del GIF
+    - [ ] Admin UI: nueva tab "Stickers" en `src/app/admin/[serverId]/page.tsx` (upload + delete)
+    - [ ] Mensaje de tipo sticker: render como imagen grande inline (no inline emoji-size); decidir si es un attachment o un campo dedicado
   - [ ] **Thumbnails de PDF** (primera pagina) — *deferred: requiere canvas native binding*
     - [x] `AttachmentCard` acepta `thumbnailUrl?: string` opcional (UI ready)
     - [ ] Generacion server-side con `pdfjs-dist` + `@napi-rs/canvas` (requiere rebuild del Docker image)

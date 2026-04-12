@@ -883,7 +883,7 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
             type="button"
             aria-label="GIF"
             onClick={() => setGifOpen((o) => !o)}
-            className="px-1.5 py-1 rounded-lg text-lc-muted hover:text-lc-green transition-colors text-[10px] font-bold tracking-wide border border-current/30"
+            className="w-8 h-8 inline-flex items-center justify-center rounded-lg text-lc-muted hover:text-lc-green transition-colors text-[10px] font-bold tracking-wide border border-current/30"
             data-testid="gif-button"
             title="Insert GIF from server library"
           >
