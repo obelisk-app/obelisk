@@ -7,18 +7,14 @@ import { setBadgeCount, clearBadge } from '@/lib/favicon-badge';
 const BASE_TITLE = 'Obelisk';
 
 /**
- * Compute the "attention-worthy" unread total = every channel mention +
- * every DM unread. Non-mention channel unreads are intentionally excluded
- * because they would cause the favicon to constantly show a number for
- * chatty rooms — Discord uses the same rule.
+ * Compute the unread total = every channel unread + every DM unread.
+ * Surfaces all unread activity on the favicon + title, not just mentions.
  */
 function computeTotal(): number {
   const state = useNotificationStore.getState();
   let total = 0;
-  for (const [channelId, isMention] of Object.entries(state.channelMentions)) {
-    if (isMention) {
-      total += state.channelUnreads[channelId] || 1;
-    }
+  for (const count of Object.values(state.channelUnreads)) {
+    total += count;
   }
   for (const count of Object.values(state.dmUnreads)) {
     total += count;

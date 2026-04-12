@@ -24,7 +24,7 @@ export function showBrowserNotification(
 
   const notification = new Notification(title, {
     body,
-    icon: '/obelisk-icon.png',
+    icon: '/obelisk-favicon.png',
     tag: `obelisk-${Date.now()}`,
   });
 

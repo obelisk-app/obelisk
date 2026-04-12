@@ -11,6 +11,8 @@ import MessageArea from '@/components/chat/MessageArea';
 import PinnedMessagesPanel from '@/components/chat/PinnedMessagesPanel';
 import MessageInput from '@/components/chat/MessageInput';
 import ForumView from '@/components/chat/ForumView';
+import ChannelTopicModal from '@/components/chat/ChannelTopicModal';
+import ChannelEmoji from '@/components/chat/ChannelEmoji';
 import SearchBar from '@/components/chat/SearchBar';
 import DMList from '@/components/dm/DMList';
 import DMChat from '@/components/dm/DMChat';
@@ -668,8 +670,9 @@ export default function ChatPage() {
         message,
         profilePubkeyRef.current,
       );
-      if (incremented && hasMention && document.hidden) {
-        showBrowserNotification('New mention', message.content.slice(0, 140));
+      if (incremented && document.hidden) {
+        const title = hasMention ? 'New mention' : 'New message';
+        showBrowserNotification(title, message.content.slice(0, 140));
       }
     });
 
@@ -786,7 +789,7 @@ export default function ChatPage() {
       useDMStore.getState().updateThread(otherPubkey, { unreadCount: 0 });
     });
 
-    socket.on('unread-update', (data: { channelId: string; serverId: string; hasMention: boolean }) => {
+    socket.on('unread-update', (data: { channelId: string; serverId: string; hasMention: boolean; preview?: string }) => {
       const notifStore = useNotificationStore.getState();
       notifStore.incrementChannelUnread(data.channelId, data.hasMention);
       // Update channel-server mapping
@@ -795,6 +798,12 @@ export default function ChatPage() {
           ...notifStore.channelServerMap,
           [data.channelId]: data.serverId,
         });
+      }
+      // Toast non-mention messages too (mentions are handled by the
+      // `notification` event above with richer copy). Only when hidden so
+      // the foreground tab isn't spammed.
+      if (document.hidden && !data.hasMention) {
+        showBrowserNotification('New message', data.preview || 'You have a new message');
       }
     });
 
@@ -1089,6 +1098,7 @@ export default function ChatPage() {
   const activeChannel = allChannels.find(c => c.id === activeChannelId);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showChannelTopic, setShowChannelTopic] = useState(false);
 
   // No valid session — show login modal with matrix background
   if (sessionInvalid) {
@@ -1220,8 +1230,21 @@ export default function ChatPage() {
                       <span className="text-lc-muted font-bold shrink-0">
                         {activeChannel.type === 'forum' ? '💬' : activeChannel.type === 'voice' ? '🎙' : '#'}
                       </span>
-                      {activeChannel.emoji && <span className="text-sm shrink-0">{activeChannel.emoji}</span>}
-                      <h3 className="font-semibold text-lc-white text-sm truncate">{activeChannel.name}</h3>
+                      {activeChannel.emoji && <ChannelEmoji value={activeChannel.emoji} className="text-sm shrink-0" />}
+                      <h3 className="font-semibold text-lc-white text-sm truncate shrink-0">{activeChannel.name}</h3>
+                      {activeChannel.description && (
+                        <>
+                          <span className="text-lc-border shrink-0">|</span>
+                          <button
+                            onClick={() => setShowChannelTopic(true)}
+                            className="text-xs text-lc-muted hover:text-lc-white truncate text-left transition-colors min-w-0"
+                            title="Ver tema del canal"
+                            data-testid="channel-topic-btn"
+                          >
+                            {activeChannel.description}
+                          </button>
+                        </>
+                      )}
                     </div>
                   ) : (
                     <span className="text-sm text-lc-muted">Select a channel</span>
@@ -1240,6 +1263,16 @@ export default function ChatPage() {
                   <SearchBar serverId={activeServerId} profileCache={profileCache} />
                 </div>
               </div>
+
+              {showChannelTopic && activeChannel?.description && (
+                <ChannelTopicModal
+                  channelName={activeChannel.name}
+                  channelType={activeChannel.type}
+                  channelEmoji={activeChannel.emoji}
+                  description={activeChannel.description}
+                  onClose={() => setShowChannelTopic(false)}
+                />
+              )}
 
               {/* Forum, Voice, or Chat */}
               {activeChannel?.type === 'forum' ? (

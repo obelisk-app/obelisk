@@ -34,20 +34,20 @@ describe('useFaviconBadge', () => {
     expect(faviconBadge.clearBadge).toHaveBeenCalled();
   });
 
-  it('counts only mention channels (not plain unread channels)', () => {
+  it('sums all channel unreads (mention or not)', () => {
     useNotificationStore.getState().setBulkUnreads({
       channels: { ch1: 5, ch2: 3 },
       dms: {},
-      mentionChannels: { ch1: true }, // only ch1 counts
+      mentionChannels: { ch1: true },
     });
 
     renderHook(() => useFaviconBadge());
 
-    expect(faviconBadge.setBadgeCount).toHaveBeenCalledWith(5);
-    expect(document.title).toBe(`(5) ${originalTitle}`);
+    expect(faviconBadge.setBadgeCount).toHaveBeenCalledWith(8);
+    expect(document.title).toBe(`(8) ${originalTitle}`);
   });
 
-  it('sums mention channels + DM unreads', () => {
+  it('sums channel unreads + DM unreads', () => {
     useNotificationStore.getState().setBulkUnreads({
       channels: { ch1: 2 },
       dms: { alice: 3, bob: 4 },
@@ -56,7 +56,7 @@ describe('useFaviconBadge', () => {
 
     renderHook(() => useFaviconBadge());
 
-    // 2 from ch1 mention + 3 alice + 4 bob = 9
+    // 2 from ch1 + 3 alice + 4 bob = 9
     expect(faviconBadge.setBadgeCount).toHaveBeenCalledWith(9);
     expect(document.title).toBe(`(9) ${originalTitle}`);
   });
