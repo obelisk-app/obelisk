@@ -60,7 +60,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     },
   });
 
-  return NextResponse.json(updated);
+  return NextResponse.json({ ...updated, permissions: updated.permissions.toString() });
 }
 
 // DELETE /api/admin/roles/[roleId] — delete a custom role (admin+)

@@ -58,11 +58,17 @@ function groupMembers(
     let groupColor: string | undefined;
     let sortPriority: number;
 
-    if (topCustom && topCustom.priority > basePriority) {
+    // A custom role always outranks the generic "member" tier. For staff
+    // (mod/admin/owner) we still require the custom priority to numerically
+    // beat the staff priority, so they keep their own sections by default.
+    const baseIsMember = (m.role ?? 'member') === 'member';
+    const customWins = topCustom && (baseIsMember || topCustom.priority > basePriority);
+
+    if (customWins && topCustom) {
       groupKey = `custom:${topCustom.id}`;
       groupLabel = topCustom.name;
       groupColor = topCustom.color;
-      sortPriority = topCustom.priority;
+      sortPriority = Math.max(topCustom.priority, basePriority + 1);
     } else {
       groupKey = `base:${m.role ?? 'member'}`;
       groupLabel = (m.role ?? 'member').charAt(0).toUpperCase() + (m.role ?? 'member').slice(1);

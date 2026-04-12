@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useChatStore, Category, Channel } from '@/store/chat';
 import { useAuthStore } from '@/store/auth';
@@ -8,6 +8,7 @@ import { useNotificationStore } from '@/store/notification';
 import ProfilePanel from './ProfilePanel';
 import MemberInviteCard from '../invites/MemberInviteCard';
 import { canWriteInChannel } from '@/lib/roles';
+import ChannelEmoji from './ChannelEmoji';
 
 function ChannelTypeIcon({ type }: { type: string }) {
   if (type === 'forum') {
@@ -70,7 +71,7 @@ function ChannelItem({ channel, isActive, onClick }: { channel: Channel; isActiv
       }`}
     >
       <ChannelTypeIcon type={channel.type} />
-      {channel.emoji && <span className="text-sm">{channel.emoji}</span>}
+      {channel.emoji && <ChannelEmoji value={channel.emoji} />}
       <span className="truncate">{channel.name}</span>
       {isWriteLocked && <LockIcon />}
       {hasUnread && !isActive && (
@@ -167,15 +168,79 @@ function UserPanel() {
   );
 }
 
+const MIN_WIDTH = 200;
+const MAX_WIDTH = 360;
+const DEFAULT_WIDTH = 240;
+const STORAGE_KEY = 'obelisk:channel-sidebar-width';
+
+function useSidebarWidth() {
+  const [width, setWidth] = useState(DEFAULT_WIDTH);
+
+  useEffect(() => {
+    const saved = Number(localStorage.getItem(STORAGE_KEY));
+    if (saved >= MIN_WIDTH && saved <= MAX_WIDTH) setWidth(saved);
+  }, []);
+
+  const setAndPersist = useCallback((w: number) => {
+    const clamped = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, w));
+    setWidth(clamped);
+    localStorage.setItem(STORAGE_KEY, String(clamped));
+  }, []);
+
+  return [width, setAndPersist] as const;
+}
+
+function ResizeHandle({ onResize }: { onResize: (w: number) => void }) {
+  const draggingRef = useRef(false);
+
+  const onMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    draggingRef.current = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const onMove = (ev: MouseEvent) => {
+      if (!draggingRef.current) return;
+      onResize(ev.clientX);
+    };
+    const onUp = () => {
+      draggingRef.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  };
+
+  return (
+    <div
+      onMouseDown={onMouseDown}
+      role="separator"
+      aria-orientation="vertical"
+      data-testid="channel-sidebar-resize-handle"
+      className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-lc-green/40 active:bg-lc-green/60 transition-colors z-10"
+    />
+  );
+}
+
 export default function ChannelSidebar({ onChannelSelect }: { onChannelSelect?: () => void } = {}) {
   const { servers, activeServerId, pinnedChannels, categories, activeChannelId, setActiveChannel, isLoadingChannels } = useChatStore();
   const [showInviteCard, setShowInviteCard] = useState(false);
+  const asideRef = useRef<HTMLElement>(null);
+  const [width, setWidth] = useSidebarWidth();
+
+  const handleResize = useCallback((clientX: number) => {
+    const left = asideRef.current?.getBoundingClientRect().left ?? 0;
+    setWidth(clientX - left);
+  }, [setWidth]);
 
   const activeServer = servers.find(s => s.id === activeServerId);
 
   if (isLoadingChannels) {
     return (
-      <aside className="w-60 bg-lc-dark border-r border-lc-border flex flex-col shrink-0">
+      <aside ref={asideRef} style={{ width }} className="relative bg-lc-dark border-r border-lc-border flex flex-col shrink-0">
         <div className="p-4 border-b border-lc-border">
           <div className="lc-skeleton h-6 w-32" />
         </div>
@@ -185,12 +250,13 @@ export default function ChannelSidebar({ onChannelSelect }: { onChannelSelect?: 
           ))}
         </div>
         <UserPanel />
+        <ResizeHandle onResize={handleResize} />
       </aside>
     );
   }
 
   return (
-    <aside className="w-60 bg-lc-dark border-r border-lc-border flex flex-col shrink-0">
+    <aside ref={asideRef} style={{ width }} className="relative bg-lc-dark border-r border-lc-border flex flex-col shrink-0">
       {/* Server header with banner */}
       <div className="relative shrink-0">
         {activeServer?.banner && (
@@ -271,6 +337,7 @@ export default function ChannelSidebar({ onChannelSelect }: { onChannelSelect?: 
 
       {/* User panel — always visible at bottom */}
       <UserPanel />
+      <ResizeHandle onResize={handleResize} />
     </aside>
   );
 }

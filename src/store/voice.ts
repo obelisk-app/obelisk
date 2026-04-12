@@ -22,6 +22,7 @@ interface VoiceState {
   localCameraStream: MediaStream | null;
   localScreenStream: MediaStream | null;
   focusedPubkey: string | null;
+  limitNotice: string | null;
 
   setVoiceChannel: (channelId: string | null) => void;
   setParticipants: (participants: VoiceParticipant[]) => void;
@@ -42,6 +43,7 @@ interface VoiceState {
   setLocalCameraStream: (stream: MediaStream | null) => void;
   setLocalScreenStream: (stream: MediaStream | null) => void;
   setFocusedPubkey: (pubkey: string | null) => void;
+  setLimitNotice: (msg: string | null) => void;
   leaveVoice: () => void;
 }
 
@@ -62,6 +64,7 @@ export const useVoiceStore = create<VoiceState>()((set) => ({
   localCameraStream: null,
   localScreenStream: null,
   focusedPubkey: null,
+  limitNotice: null,
 
   setVoiceChannel: (channelId) => set({ currentVoiceChannelId: channelId }),
   setParticipants: (participants) => set({ voiceParticipants: participants }),
@@ -108,6 +111,7 @@ export const useVoiceStore = create<VoiceState>()((set) => ({
   setLocalCameraStream: (stream) => set({ localCameraStream: stream }),
   setLocalScreenStream: (stream) => set({ localScreenStream: stream }),
   setFocusedPubkey: (focusedPubkey) => set({ focusedPubkey }),
+  setLimitNotice: (limitNotice) => set({ limitNotice }),
   leaveVoice: () => set((state) => {
     state.videoElements.clear();
     state.screenElements.clear();
@@ -126,5 +130,6 @@ export const useVoiceStore = create<VoiceState>()((set) => ({
     localCameraStream: null,
     localScreenStream: null,
     focusedPubkey: null,
+    limitNotice: null,
   }; }),
 }));

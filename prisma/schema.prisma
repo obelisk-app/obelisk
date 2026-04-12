@@ -158,9 +158,11 @@ model Channel {
   categoryId String?
   name       String
   emoji      String?
+  description String?
   type       String    @default("text") // text | voice | forum
   position   Int       @default(0)
-  writePermission String?                // null = everyone; "mod" | "admin"
+  writePermission String?                // null = everyone; "mod" | "admin" | "roles"
+  writeRoleIds    String[] @default([])  // used when writePermission = "roles"
   createdAt  DateTime  @default(now())
 
   server   Server    @relation(fields: [serverId], references: [id], onDelete: Cascade)

@@ -1,6 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import { useVoiceStore } from '@/store/voice';
+import { getVoiceQuality, setVoiceQuality } from '@/lib/voice';
 
 interface VoiceControlsProps {
   isMuted: boolean;
@@ -18,6 +20,13 @@ export default function VoiceControls({
   onToggleCamera, onToggleScreenShare,
 }: VoiceControlsProps) {
   const { connectionState, error, isCameraOn, isScreenSharing } = useVoiceStore();
+  const [showSettings, setShowSettings] = useState(false);
+  const [quality, setQuality] = useState(() => getVoiceQuality());
+
+  const updateQuality = (patch: Partial<ReturnType<typeof getVoiceQuality>>) => {
+    setVoiceQuality(patch);
+    setQuality(getVoiceQuality());
+  };
 
   return (
     <div className="px-4 py-3 border-t border-lc-border bg-lc-dark flex flex-col items-center gap-2" data-testid="voice-controls">
@@ -123,6 +132,69 @@ export default function VoiceControls({
             {isScreenSharing && <path d="M8 10l3 3 5-6" stroke="currentColor" strokeWidth="2"/>}
           </svg>
         </button>
+
+        {/* Settings */}
+        <div className="relative">
+          <button
+            onClick={() => setShowSettings((s) => !s)}
+            className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+              showSettings
+                ? 'bg-lc-green/20 text-lc-green'
+                : 'bg-lc-border text-lc-white hover:bg-lc-border/80'
+            }`}
+            title="Voice settings"
+            data-testid="voice-settings-btn"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.14.35.37.64.66.85.29.21.64.32 1 .34H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+          </button>
+          {showSettings && (
+            <div className="absolute bottom-12 right-0 w-64 p-3 rounded-xl bg-lc-dark border border-lc-border shadow-2xl z-50 text-xs text-lc-white space-y-3" data-testid="voice-settings-panel">
+              <div>
+                <label className="block text-lc-muted mb-1">Camera resolution</label>
+                <select
+                  className="w-full bg-lc-black border border-lc-border rounded px-2 py-1.5 text-lc-white"
+                  value={`${quality.cameraWidth}x${quality.cameraHeight}`}
+                  onChange={(e) => {
+                    const [w, h] = e.target.value.split('x').map(Number);
+                    updateQuality({ cameraWidth: w, cameraHeight: h });
+                  }}
+                >
+                  <option value="640x480">480p (640×480)</option>
+                  <option value="1280x720">720p (1280×720)</option>
+                  <option value="1920x1080">1080p (1920×1080)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-lc-muted mb-1">Camera framerate</label>
+                <select
+                  className="w-full bg-lc-black border border-lc-border rounded px-2 py-1.5 text-lc-white"
+                  value={quality.cameraFps}
+                  onChange={(e) => updateQuality({ cameraFps: Number(e.target.value) })}
+                >
+                  <option value={15}>15 fps</option>
+                  <option value={30}>30 fps</option>
+                  <option value={60}>60 fps</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-lc-muted mb-1">Screen-share framerate</label>
+                <select
+                  className="w-full bg-lc-black border border-lc-border rounded px-2 py-1.5 text-lc-white"
+                  value={quality.screenFps}
+                  onChange={(e) => updateQuality({ screenFps: Number(e.target.value) })}
+                >
+                  <option value={15}>15 fps</option>
+                  <option value={30}>30 fps</option>
+                  <option value={60}>60 fps</option>
+                </select>
+              </div>
+              <p className="text-[10px] text-lc-muted">Applies the next time you start camera / screen share.</p>
+            </div>
+          )}
+        </div>
 
         {/* Disconnect */}
         <button

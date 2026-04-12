@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import RoleBadge, { type CustomRoleBadgeData } from './RoleBadge';
 import ConfirmDialog from './ConfirmDialog';
 import BanReasonDialog from './BanReasonDialog';
@@ -53,6 +53,23 @@ export default function MemberRow({
   onCustomRoleToggle,
 }: MemberRowProps) {
   const [confirm, setConfirm] = useState<'kick' | 'ban' | null>(null);
+  const [rolesMenuOpen, setRolesMenuOpen] = useState(false);
+  const [rolesFilter, setRolesFilter] = useState('');
+  const rolesMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!rolesMenuOpen) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (!rolesMenuRef.current?.contains(e.target as Node)) setRolesMenuOpen(false);
+    };
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [rolesMenuOpen]);
+
+  const assignedRoleIds = new Set((member.customRoles ?? []).map((cr) => cr.role.id));
+  const filteredRoles = (serverCustomRoles ?? []).filter((r) =>
+    r.name.toLowerCase().includes(rolesFilter.toLowerCase())
+  );
   const isTargetOwner = member.role === 'owner';
   const shortPubkey = shortNpub(member.pubkey);
 
@@ -125,28 +142,79 @@ export default function MemberRow({
                 </select>
               )}
 
-              {/* Custom role toggles (admin+) */}
+              {/* Custom role selector dropdown (admin+) */}
               {serverCustomRoles && serverCustomRoles.length > 0 && onCustomRoleToggle && !member.banned && (
-                <div className="flex items-center gap-1 flex-wrap" data-testid="custom-role-toggles">
-                  {serverCustomRoles.map((cr) => {
-                    const assigned = member.customRoles?.some((mcr) => mcr.role.id === cr.id) ?? false;
-                    return (
-                      <button
-                        key={cr.id}
-                        onClick={() => onCustomRoleToggle(member.id, cr.id, !assigned)}
-                        className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
-                          assigned
-                            ? 'border-transparent font-semibold'
-                            : 'border-lc-border text-lc-muted hover:border-lc-green/50'
-                        }`}
-                        style={assigned ? { backgroundColor: cr.color, color: '#fff' } : undefined}
-                        title={assigned ? `Remove ${cr.name}` : `Assign ${cr.name}`}
-                        data-testid={`toggle-role-${cr.id}`}
-                      >
-                        {assigned ? `- ${cr.name}` : `+ ${cr.name}`}
-                      </button>
-                    );
-                  })}
+                <div className="relative" ref={rolesMenuRef} data-testid="custom-role-toggles">
+                  <button
+                    type="button"
+                    onClick={() => setRolesMenuOpen((v) => !v)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-lc-border bg-lc-black text-lc-white text-xs hover:border-lc-green/50 transition-colors"
+                    data-testid="roles-dropdown-btn"
+                  >
+                    <span className="text-lc-muted">Roles</span>
+                    {assignedRoleIds.size > 0 ? (
+                      <span className="px-1.5 py-0.5 rounded-full bg-lc-green/20 text-lc-green text-[10px] font-semibold">
+                        {assignedRoleIds.size}
+                      </span>
+                    ) : (
+                      <span className="text-lc-muted/60">none</span>
+                    )}
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" className="text-lc-muted">
+                      <path d="M7 10l5 5 5-5z" />
+                    </svg>
+                  </button>
+
+                  {rolesMenuOpen && (
+                    <div className="absolute right-0 top-full mt-2 z-40 w-64 rounded-xl border border-lc-border bg-lc-dark shadow-xl overflow-hidden">
+                      <div className="p-2 border-b border-lc-border">
+                        <input
+                          autoFocus
+                          value={rolesFilter}
+                          onChange={(e) => setRolesFilter(e.target.value)}
+                          placeholder="Search roles…"
+                          className="w-full px-2 py-1.5 rounded-md bg-lc-black border border-lc-border text-xs text-lc-white focus:outline-none focus:border-lc-green"
+                        />
+                      </div>
+                      <div className="max-h-64 overflow-y-auto py-1">
+                        {filteredRoles.length === 0 ? (
+                          <p className="px-3 py-2 text-xs text-lc-muted italic">No roles match</p>
+                        ) : (
+                          filteredRoles.map((cr) => {
+                            const assigned = assignedRoleIds.has(cr.id);
+                            return (
+                              <button
+                                key={cr.id}
+                                type="button"
+                                onClick={() => onCustomRoleToggle(member.id, cr.id, !assigned)}
+                                className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left hover:bg-lc-border/50"
+                                data-testid={`toggle-role-${cr.id}`}
+                              >
+                                <span
+                                  className="inline-block w-2.5 h-2.5 rounded-full shrink-0"
+                                  style={{ backgroundColor: cr.color }}
+                                />
+                                <span className="flex-1 text-lc-white truncate">{cr.name}</span>
+                                <span
+                                  className={`shrink-0 w-4 h-4 rounded border flex items-center justify-center ${
+                                    assigned
+                                      ? 'bg-lc-green border-lc-green text-lc-black'
+                                      : 'border-lc-border bg-lc-black'
+                                  }`}
+                                  aria-hidden
+                                >
+                                  {assigned && (
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                      <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                  )}
+                                </span>
+                              </button>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

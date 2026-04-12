@@ -4,10 +4,6 @@ import { createServer as createHttpsServer } from 'https';
 import { readFileSync, existsSync } from 'fs';
 import { Server as SocketServer } from 'socket.io';
 import { parse } from 'url';
-import * as mediasoup from 'mediasoup';
-import { workerSettings, routerOptions } from './src/lib/mediasoup-config';
-import { MediasoupRoom } from './src/lib/mediasoup-room';
-
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = process.env.HOST || '0.0.0.0';
 const port = parseInt(process.env.PORT || '3000', 10);
@@ -20,11 +16,16 @@ const useHttps = dev && existsSync(certPath) && existsSync(keyPath);
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
 
-// mediasoup worker + voice rooms
-let msWorker: mediasoup.types.Worker;
-const voiceRooms = new Map<string, MediasoupRoom>(); // channelId → room
-// Track which socket is in which voice channel
+// P2P mesh voice: the server only relays signaling. No media passes through.
+// Track which socket is in which voice channel.
 const voiceSockets = new Map<string, string>(); // socketId → channelId
+// Track pubkey for each socketId in a voice channel (for signaling targets).
+const voiceSocketPubkey = new Map<string, string>(); // socketId → pubkey
+// Per-voice-channel caps on concurrent camera / screen streams.
+const MAX_CAMERAS_PER_CHANNEL = 4;
+const MAX_SCREENS_PER_CHANNEL = 2;
+const cameraSharers = new Map<string, Set<string>>(); // channelId → pubkeys
+const screenSharers = new Map<string, Set<string>>(); // channelId → pubkeys
 
 app.prepare().then(async () => {
   // Dynamic import to let Next.js set up its module resolution first
@@ -32,16 +33,6 @@ app.prepare().then(async () => {
   const { getAuthorProfile } = await import('./src/lib/profile-sync');
   const { extractMentionPubkeys } = await import('./src/lib/mentions');
   const { fanOutReadUpdate } = await import('./src/lib/read-fanout');
-
-  // Start mediasoup worker
-  msWorker = await mediasoup.createWorker(workerSettings);
-  msWorker.on('died', () => {
-    console.error('[mediasoup] Worker died, restarting in 2s...');
-    setTimeout(async () => {
-      msWorker = await mediasoup.createWorker(workerSettings);
-    }, 2000);
-  });
-  console.log(`[mediasoup] Worker started (pid: ${msWorker.pid}, ports: ${workerSettings.rtcMinPort}-${workerSettings.rtcMaxPort})`);
 
   const requestHandler = (req: any, res: any) => {
     const parsedUrl = parse(req.url!, true);
@@ -271,6 +262,7 @@ app.prepare().then(async () => {
               channelId,
               serverId,
               hasMention: mentionedSet.has(memberPubkey),
+              preview: content.slice(0, 100),
             });
           }
         }
@@ -457,39 +449,47 @@ app.prepare().then(async () => {
       }
     });
 
-    // ── Voice channel events (mediasoup SFU) ─────────────────────
+    // ── Voice channel events (P2P mesh — signaling only) ─────────
+
+    // Helper: return peers currently in a voice channel (excluding a socket).
+    const getVoicePeers = (channelId: string, excludeSocketId?: string) => {
+      const room = io.sockets.adapter.rooms.get(`voice:${channelId}`);
+      if (!room) return [];
+      const peers: Array<{ socketId: string; pubkey: string }> = [];
+      for (const sid of room) {
+        if (sid === excludeSocketId) continue;
+        const pk = voiceSocketPubkey.get(sid);
+        if (pk) peers.push({ socketId: sid, pubkey: pk });
+      }
+      return peers;
+    };
 
     socket.on('join-voice', async (channelId: string, cb?: (res: any) => void) => {
       if (!channelId || typeof channelId !== 'string') return;
       try {
-        // DB state
         await prisma.voiceState.upsert({
           where: { channelId_pubkey: { channelId, pubkey } },
           update: {},
           create: { channelId, pubkey },
         });
+        const peers = getVoicePeers(channelId, socket.id);
         socket.join(`voice:${channelId}`);
         voiceSockets.set(socket.id, channelId);
+        voiceSocketPubkey.set(socket.id, pubkey);
 
-        // Create or get mediasoup room
-        let room = voiceRooms.get(channelId);
-        if (!room) {
-          const router = await msWorker.createRouter(routerOptions);
-          room = new MediasoupRoom(channelId, router);
-          voiceRooms.set(channelId, room);
-        }
-        room.addPeer(socket.id, pubkey);
+        // Tell existing peers a newcomer arrived.
+        socket.to(`voice:${channelId}`).emit('voice-peer-joined', {
+          socketId: socket.id,
+          pubkey,
+        });
 
-        // Broadcast participant update
         const participants = await prisma.voiceState.findMany({
           where: { channelId },
           select: { pubkey: true, muted: true, deafened: true, joinedAt: true },
         });
         io.to(`voice:${channelId}`).emit('voice-state-update', { channelId, participants });
 
-        // Return router capabilities + existing producers to the joining peer
-        const existingProducers = room.getOtherProducers(socket.id);
-        cb?.({ rtpCapabilities: room.rtpCapabilities, existingProducers });
+        cb?.({ selfSocketId: socket.id, peers });
       } catch (err) {
         console.error('[socket] Failed to join voice:', err);
         cb?.({ error: 'Failed to join voice channel' });
@@ -499,24 +499,16 @@ app.prepare().then(async () => {
     socket.on('leave-voice', async (channelId: string) => {
       if (!channelId || typeof channelId !== 'string') return;
       try {
-        // Clean up mediasoup peer
-        const room = voiceRooms.get(channelId);
-        if (room) {
-          // Notify others about closed producers
-          const peer = room.getPeer(socket.id);
-          if (peer) {
-            for (const producer of peer.producers.values()) {
-              socket.to(`voice:${channelId}`).emit('producer-closed', { producerId: producer.id });
-            }
-          }
-          room.removePeer(socket.id);
-          if (room.isEmpty) {
-            room.close();
-            voiceRooms.delete(channelId);
-          }
-        }
-
+        socket.to(`voice:${channelId}`).emit('voice-peer-left', {
+          socketId: socket.id,
+          pubkey,
+        });
+        screenSharers.get(channelId)?.delete(pubkey);
+        if (screenSharers.get(channelId)?.size === 0) screenSharers.delete(channelId);
+        cameraSharers.get(channelId)?.delete(pubkey);
+        if (cameraSharers.get(channelId)?.size === 0) cameraSharers.delete(channelId);
         voiceSockets.delete(socket.id);
+        voiceSocketPubkey.delete(socket.id);
         await prisma.voiceState.deleteMany({ where: { channelId, pubkey } });
         socket.leave(`voice:${channelId}`);
         const participants = await prisma.voiceState.findMany({
@@ -527,6 +519,140 @@ app.prepare().then(async () => {
       } catch (err) {
         console.error('[socket] Failed to leave voice:', err);
       }
+    });
+
+    // Capacity locks: at most N cameras / M screens per voice channel.
+    const claimSlot = (
+      map: Map<string, Set<string>>,
+      channelId: string,
+      max: number,
+      busyMessage: string,
+      cb?: (res: any) => void,
+    ) => {
+      if (!channelId || typeof channelId !== 'string') return cb?.({ error: 'Bad channel' });
+      if (voiceSockets.get(socket.id) !== channelId) return cb?.({ error: 'Not in this voice channel' });
+      let set = map.get(channelId);
+      if (!set) { set = new Set(); map.set(channelId, set); }
+      if (set.has(pubkey)) return cb?.({ ok: true });
+      if (set.size >= max) return cb?.({ error: busyMessage });
+      set.add(pubkey);
+      cb?.({ ok: true });
+    };
+    const releaseSlot = (map: Map<string, Set<string>>, channelId: string) => {
+      if (!channelId || typeof channelId !== 'string') return;
+      const set = map.get(channelId);
+      if (!set) return;
+      set.delete(pubkey);
+      if (set.size === 0) map.delete(channelId);
+    };
+
+    socket.on('voice-screen-claim', (channelId: string, cb?: (res: any) => void) => {
+      claimSlot(
+        screenSharers, channelId, MAX_SCREENS_PER_CHANNEL,
+        `Screen-share limit reached (${MAX_SCREENS_PER_CHANNEL}). Please wait until someone else stops sharing.`,
+        cb,
+      );
+    });
+    socket.on('voice-screen-release', (channelId: string) => releaseSlot(screenSharers, channelId));
+
+    socket.on('voice-camera-claim', (channelId: string, cb?: (res: any) => void) => {
+      claimSlot(
+        cameraSharers, channelId, MAX_CAMERAS_PER_CHANNEL,
+        `Camera limit reached (${MAX_CAMERAS_PER_CHANNEL}). Please wait until someone else turns off their camera.`,
+        cb,
+      );
+    });
+    socket.on('voice-camera-release', (channelId: string) => releaseSlot(cameraSharers, channelId));
+
+    // Moderator actions in voice: mute / turn off camera / stop screen share of a target.
+    // Requires caller to be owner/admin/mod of the server that owns the channel.
+    socket.on('voice-mod-action', async (
+      data: { channelId: string; targetPubkey: string; action: 'mute' | 'camera-off' | 'screen-off' },
+      cb?: (res: any) => void,
+    ) => {
+      const { channelId, targetPubkey, action } = data || ({} as any);
+      if (!channelId || !targetPubkey || !action) return cb?.({ error: 'Bad request' });
+      if (targetPubkey === pubkey) return cb?.({ error: 'Cannot target yourself' });
+      try {
+        const channel = await prisma.channel.findUnique({
+          where: { id: channelId }, select: { serverId: true },
+        });
+        if (!channel) return cb?.({ error: 'Channel not found' });
+        const server = await prisma.server.findUnique({
+          where: { id: channel.serverId }, select: { ownerPubkey: true },
+        });
+        const isOwner = server?.ownerPubkey === pubkey;
+        const { isInstanceOwner } = await import('./src/lib/instance-owner');
+        let allowed = isOwner || isInstanceOwner(pubkey);
+        if (!allowed) {
+          const caller = await prisma.member.findUnique({
+            where: { serverId_pubkey: { serverId: channel.serverId, pubkey } },
+            select: { role: true },
+          });
+          const role = caller?.role as any;
+          allowed = role === 'owner' || role === 'admin' || role === 'mod';
+        }
+        if (!allowed) return cb?.({ error: 'Not authorized' });
+
+        const targetSocketIds = pubkeySockets.get(targetPubkey);
+        if (!targetSocketIds || targetSocketIds.size === 0) {
+          return cb?.({ error: 'Target is not connected' });
+        }
+        const event =
+          action === 'mute' ? 'voice-force-mute' :
+          action === 'camera-off' ? 'voice-force-camera-off' :
+          action === 'screen-off' ? 'voice-force-screen-off' : null;
+        if (!event) return cb?.({ error: 'Bad action' });
+
+        // Only fire if the target is actually in this voice channel.
+        for (const sid of targetSocketIds) {
+          if (voiceSockets.get(sid) !== channelId) continue;
+          io.to(sid).emit(event, { reason: `A moderator ${action === 'mute' ? 'muted you' : action === 'camera-off' ? 'turned off your camera' : 'stopped your screen share'}` });
+        }
+        // If we forced camera/screen off, also release the slot so others can use it.
+        if (action === 'camera-off') {
+          cameraSharers.get(channelId)?.delete(targetPubkey);
+          if (cameraSharers.get(channelId)?.size === 0) cameraSharers.delete(channelId);
+        }
+        if (action === 'screen-off') {
+          screenSharers.get(channelId)?.delete(targetPubkey);
+          if (screenSharers.get(channelId)?.size === 0) screenSharers.delete(channelId);
+        }
+        // Mirror mute state in DB so the UI indicator updates.
+        if (action === 'mute') {
+          try {
+            await prisma.voiceState.update({
+              where: { channelId_pubkey: { channelId, pubkey: targetPubkey } },
+              data: { muted: true },
+            });
+            io.to(`voice:${channelId}`).emit('voice-state-update', {
+              channelId,
+              participants: await prisma.voiceState.findMany({
+                where: { channelId },
+                select: { pubkey: true, muted: true, deafened: true, joinedAt: true },
+              }),
+            });
+          } catch {}
+        }
+        cb?.({ ok: true });
+      } catch (err) {
+        console.error('[socket] voice-mod-action error:', err);
+        cb?.({ error: 'Mod action failed' });
+      }
+    });
+
+    // Signaling relay: forward SDP / ICE / track-info to a specific peer.
+    socket.on('voice-signal', ({ toSocketId, payload }: { toSocketId: string; payload: any }) => {
+      if (!toSocketId || typeof toSocketId !== 'string' || !payload) return;
+      const fromChannel = voiceSockets.get(socket.id);
+      const toChannel = voiceSockets.get(toSocketId);
+      // Only allow signaling between peers in the same voice channel.
+      if (!fromChannel || fromChannel !== toChannel) return;
+      io.to(toSocketId).emit('voice-signal', {
+        fromSocketId: socket.id,
+        fromPubkey: pubkey,
+        payload,
+      });
     });
 
     socket.on('voice-mute', async ({ channelId, muted }: { channelId: string; muted: boolean }) => {
@@ -563,144 +689,23 @@ app.prepare().then(async () => {
       } catch {}
     });
 
-    // ── mediasoup signaling events ─────────────────────────────
-
-    socket.on('create-transport', async (_data: unknown, cb?: (res: any) => void) => {
-      const channelId = voiceSockets.get(socket.id);
-      if (!channelId) return cb?.({ error: 'Not in a voice channel' });
-      const room = voiceRooms.get(channelId);
-      if (!room) return cb?.({ error: 'Room not found' });
-      try {
-        const transport = await room.createWebRtcTransport();
-        const peer = room.getPeer(socket.id);
-        if (!peer) return cb?.({ error: 'Peer not found' });
-        peer.transports.set(transport.id, transport);
-        cb?.({
-          id: transport.id,
-          iceParameters: transport.iceParameters,
-          iceCandidates: transport.iceCandidates,
-          dtlsParameters: transport.dtlsParameters,
-        });
-      } catch (err: any) {
-        console.error('[mediasoup] create-transport error:', err);
-        cb?.({ error: err.message });
-      }
-    });
-
-    socket.on('connect-transport', async ({ transportId, dtlsParameters }: any, cb?: (res: any) => void) => {
-      const channelId = voiceSockets.get(socket.id);
-      const room = channelId ? voiceRooms.get(channelId) : null;
-      const peer = room?.getPeer(socket.id);
-      if (!peer) return cb?.({ error: 'Peer not found' });
-      try {
-        await peer.connectTransport(transportId, dtlsParameters);
-        cb?.({ success: true });
-      } catch (err: any) {
-        console.error('[mediasoup] connect-transport error:', err);
-        cb?.({ error: err.message });
-      }
-    });
-
-    socket.on('produce', async ({ transportId, kind, rtpParameters, appData }: any, cb?: (res: any) => void) => {
-      const channelId = voiceSockets.get(socket.id);
-      const room = channelId ? voiceRooms.get(channelId) : null;
-      const peer = room?.getPeer(socket.id);
-      if (!peer || !room) return cb?.({ error: 'Peer not found' });
-      try {
-        const producer = await peer.createProducer(transportId, kind, rtpParameters, appData || {});
-        cb?.({ id: producer.id });
-        // Notify all other peers in the room
-        socket.to(`voice:${channelId}`).emit('new-producer', {
-          producerId: producer.id,
-          pubkey,
-          kind: producer.kind,
-          appData: producer.appData,
-        });
-      } catch (err: any) {
-        console.error('[mediasoup] produce error:', err);
-        cb?.({ error: err.message });
-      }
-    });
-
-    socket.on('consume', async ({ transportId, producerId, rtpCapabilities }: any, cb?: (res: any) => void) => {
-      const channelId = voiceSockets.get(socket.id);
-      const room = channelId ? voiceRooms.get(channelId) : null;
-      const peer = room?.getPeer(socket.id);
-      if (!peer || !room) return cb?.({ error: 'Peer not found' });
-      try {
-        const consumer = await peer.createConsumer(transportId, producerId, rtpCapabilities, room.router);
-        if (!consumer) return cb?.({ error: 'Cannot consume' });
-        cb?.({
-          id: consumer.id,
-          producerId: consumer.producerId,
-          kind: consumer.kind,
-          rtpParameters: consumer.rtpParameters,
-        });
-      } catch (err: any) {
-        console.error('[mediasoup] consume error:', err);
-        cb?.({ error: err.message });
-      }
-    });
-
-    socket.on('resume-consumer', async ({ consumerId }: any, cb?: (res: any) => void) => {
-      const channelId = voiceSockets.get(socket.id);
-      const room = channelId ? voiceRooms.get(channelId) : null;
-      const peer = room?.getPeer(socket.id);
-      const consumer = peer?.consumers.get(consumerId);
-      if (consumer) { await consumer.resume(); }
-      cb?.({ success: true });
-    });
-
-    socket.on('producer-pause', async ({ producerId }: any) => {
-      const channelId = voiceSockets.get(socket.id);
-      const room = channelId ? voiceRooms.get(channelId) : null;
-      const peer = room?.getPeer(socket.id);
-      const producer = peer?.producers.get(producerId);
-      if (producer) { await producer.pause(); }
-    });
-
-    socket.on('producer-resume', async ({ producerId }: any) => {
-      const channelId = voiceSockets.get(socket.id);
-      const room = channelId ? voiceRooms.get(channelId) : null;
-      const peer = room?.getPeer(socket.id);
-      const producer = peer?.producers.get(producerId);
-      if (producer) { await producer.resume(); }
-    });
-
-    socket.on('producer-close', async ({ producerId }: any) => {
-      const channelId = voiceSockets.get(socket.id);
-      const room = channelId ? voiceRooms.get(channelId) : null;
-      const peer = room?.getPeer(socket.id);
-      const producer = peer?.producers.get(producerId);
-      if (producer) {
-        producer.close();
-        peer!.producers.delete(producerId);
-        if (channelId) {
-          socket.to(`voice:${channelId}`).emit('producer-closed', { producerId });
-        }
-      }
-    });
-
     socket.on('disconnect', async () => {
-      // Clean up mediasoup peer
+      // Notify voice peers this socket is gone.
       const voiceChannelId = voiceSockets.get(socket.id);
       if (voiceChannelId) {
-        const room = voiceRooms.get(voiceChannelId);
-        if (room) {
-          const peer = room.getPeer(socket.id);
-          if (peer) {
-            for (const producer of peer.producers.values()) {
-              socket.to(`voice:${voiceChannelId}`).emit('producer-closed', { producerId: producer.id });
-            }
-          }
-          room.removePeer(socket.id);
-          if (room.isEmpty) {
-            room.close();
-            voiceRooms.delete(voiceChannelId);
-          }
-        }
+        socket.to(`voice:${voiceChannelId}`).emit('voice-peer-left', {
+          socketId: socket.id,
+          pubkey,
+        });
+      }
+      if (voiceChannelId) {
+        screenSharers.get(voiceChannelId)?.delete(pubkey);
+        if (screenSharers.get(voiceChannelId)?.size === 0) screenSharers.delete(voiceChannelId);
+        cameraSharers.get(voiceChannelId)?.delete(pubkey);
+        if (cameraSharers.get(voiceChannelId)?.size === 0) cameraSharers.delete(voiceChannelId);
       }
       voiceSockets.delete(socket.id);
+      voiceSocketPubkey.delete(socket.id);
 
       pubkeySockets.get(pubkey)?.delete(socket.id);
       if (pubkeySockets.get(pubkey)?.size === 0) {

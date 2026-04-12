@@ -1,15 +1,17 @@
 /**
- * mediasoup WebRTC Voice/Video/Screen Client
+ * P2P Mesh WebRTC Voice/Video/Screen Client
  *
- * Audio/Video/Screen all go through WebRTC via a mediasoup SFU.
- * Signaling happens over Socket.io. Media flows over UDP (WebRTC).
+ * Every participant opens a direct RTCPeerConnection to every other
+ * participant. The server only relays signaling (SDP + ICE + track-type)
+ * — media never touches the server. Bandwidth is bounded by each peer's
+ * own uplink, not shared server capacity, so we can run full-rate video
+ * (720p30 camera, up to 60fps screen share) without SFU concerns.
  *
- * This gives us: Opus codec, built-in echo cancellation, adaptive
- * jitter buffer, ~50-100ms latency — all handled by the browser.
+ * Scaling trade-off: uplink is O(N-1). Fine for small rooms (2–6), starts
+ * to hurt past ~8 participants — expected mesh behavior.
  */
 
 import type { Socket } from 'socket.io-client';
-import { Device, types as msTypes } from 'mediasoup-client';
 
 export interface VoiceParticipant {
   pubkey: string;
@@ -18,37 +20,95 @@ export interface VoiceParticipant {
   joinedAt: string;
 }
 
+type TrackType = 'audio' | 'camera' | 'screen' | 'screen-audio';
+
+interface PeerConn {
+  socketId: string;
+  pubkey: string;
+  pc: RTCPeerConnection;
+  polite: boolean;
+  makingOffer: boolean;
+  ignoreOffer: boolean;
+  // Outgoing senders per track type
+  senders: Partial<Record<TrackType, RTCRtpSender>>;
+  // Remote trackId → track type (sent out-of-band before ontrack fires)
+  remoteTrackTypes: Map<string, TrackType>;
+  // Tracks that fired ontrack before we learned their type
+  pendingTracks: Map<string, MediaStreamTrack>;
+  audioElement: HTMLAudioElement | null;
+  screenAudioElement: HTMLAudioElement | null;
+  cameraElement: HTMLVideoElement | null;
+  screenElement: HTMLVideoElement | null;
+}
+
+// User-tunable quality — read from localStorage so the Settings modal can change it.
+export interface VoiceQualitySettings {
+  cameraWidth: number;
+  cameraHeight: number;
+  cameraFps: number;
+  cameraMaxBitrate: number;
+  screenFps: number;
+  screenMaxBitrate: number;
+}
+const VOICE_QUALITY_DEFAULTS: VoiceQualitySettings = {
+  cameraWidth: 1280,
+  cameraHeight: 720,
+  cameraFps: 60,
+  cameraMaxBitrate: 4_000_000,
+  screenFps: 60,
+  screenMaxBitrate: 10_000_000,
+};
+export function getVoiceQuality(): VoiceQualitySettings {
+  if (typeof localStorage === 'undefined') return VOICE_QUALITY_DEFAULTS;
+  try {
+    const raw = localStorage.getItem('voice-quality');
+    if (raw) return { ...VOICE_QUALITY_DEFAULTS, ...JSON.parse(raw) };
+  } catch {}
+  return VOICE_QUALITY_DEFAULTS;
+}
+export function setVoiceQuality(partial: Partial<VoiceQualitySettings>): void {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    const merged = { ...getVoiceQuality(), ...partial };
+    localStorage.setItem('voice-quality', JSON.stringify(merged));
+  } catch {}
+}
+
+const ICE_SERVERS: RTCIceServer[] = (() => {
+  const servers: RTCIceServer[] = [{ urls: 'stun:stun.l.google.com:19302' }];
+  const turnUrl = typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_TURN_URL : undefined;
+  const turnUser = typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_TURN_USERNAME : undefined;
+  const turnPass = typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_TURN_PASSWORD : undefined;
+  if (turnUrl && turnUser && turnPass) {
+    servers.push({ urls: turnUrl, username: turnUser, credential: turnPass });
+  }
+  return servers;
+})();
+
 export class WebSocketVoiceClient {
   private socket: Socket;
-  private device: Device | null = null;
-  private sendTransport: msTypes.Transport | null = null;
-  private recvTransport: msTypes.Transport | null = null;
+  private peers: Map<string, PeerConn> = new Map(); // remote socketId → peer
+  private mySocketId: string | null = null;
 
-  // Producers (what we send)
-  private audioProducer: msTypes.Producer | null = null;
-  private videoProducer: msTypes.Producer | null = null;
-  private screenProducer: msTypes.Producer | null = null;
-
-  // Consumers (what we receive)
-  private consumers: Map<string, msTypes.Consumer> = new Map();
-  private remoteAudioElements: Map<string, HTMLAudioElement> = new Map();
-
-  private channelId: string | null = null;
-  private localStream: MediaStream | null = null;
+  // Local tracks
+  private audioStream: MediaStream | null = null;
   private cameraStream: MediaStream | null = null;
   private screenStream: MediaStream | null = null;
+  private audioTrack: MediaStreamTrack | null = null;
+  private cameraTrack: MediaStreamTrack | null = null;
+  private screenTrack: MediaStreamTrack | null = null;
+  private screenAudioTrack: MediaStreamTrack | null = null;
+
+  private channelId: string | null = null;
   private isMuted = false;
   private isDeafened = false;
-  private rtpCapabilities: msTypes.RtpCapabilities | null = null;
-  private recvTransportId: string | null = null;
 
-  // Remote video playback
-  private remoteVideoElements: Map<string, HTMLVideoElement> = new Map();
-  private remoteScreenElements: Map<string, HTMLVideoElement> = new Map();
-
-  // Callbacks
+  // Callbacks (preserved API)
   onConnectionStateChange?: (state: string) => void;
   onError?: (error: string) => void;
+  onForceMute?: (reason: string) => void;
+  onForceCameraOff?: (reason: string) => void;
+  onForceScreenOff?: (reason: string) => void;
   onRemoteVideoElement?: (pubkey: string, element: HTMLVideoElement | null) => void;
   onRemoteScreenElement?: (pubkey: string, element: HTMLVideoElement | null) => void;
   onLocalCameraStream?: (stream: MediaStream | null) => void;
@@ -62,48 +122,31 @@ export class WebSocketVoiceClient {
 
   async join(channelId: string): Promise<void> {
     this.channelId = channelId;
+    this.mySocketId = this.socket.id || null;
 
-    // 1. Join voice room — get router RTP capabilities + existing producers
-    const joinResult = await this.emitWithAck('join-voice', channelId);
-    if (joinResult.error) throw new Error(joinResult.error);
-
-    this.rtpCapabilities = joinResult.rtpCapabilities;
-
-    // 2. Create mediasoup Device and load capabilities
-    this.device = new Device();
-    await this.device.load({ routerRtpCapabilities: joinResult.rtpCapabilities });
-
-    // 3. Create send and recv transports
-    this.sendTransport = await this.createTransport('send');
-    this.recvTransport = await this.createTransport('recv');
-    this.recvTransportId = this.recvTransport.id;
-
-    // 4. Get mic and produce audio
-    this.localStream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true,
-        sampleRate: 48000,
-      },
+    // Capture mic first so the initial offer to each peer already has the track.
+    this.audioStream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, sampleRate: 48000 },
       video: false,
     });
+    this.audioTrack = this.audioStream.getAudioTracks()[0] || null;
 
-    const audioTrack = this.localStream.getAudioTracks()[0];
-    this.audioProducer = await this.sendTransport.produce({
-      track: audioTrack,
-      codecOptions: { opusStereo: false, opusDtx: true },
-      appData: { type: 'audio' },
-    });
+    this.socket.on('voice-peer-joined', this.handlePeerJoined);
+    this.socket.on('voice-peer-left', this.handlePeerLeft);
+    this.socket.on('voice-signal', this.handleSignal);
+    this.socket.on('voice-force-mute', this.handleForceMute);
+    this.socket.on('voice-force-camera-off', this.handleForceCameraOff);
+    this.socket.on('voice-force-screen-off', this.handleForceScreenOff);
 
-    // 5. Consume existing producers from other peers
-    for (const p of joinResult.existingProducers || []) {
-      await this.consumeProducer(p.producerId, p.pubkey, p.kind, p.appData);
+    const res = await this.emitWithAck('join-voice', channelId);
+    if (res?.error) throw new Error(res.error);
+    this.mySocketId = res.selfSocketId || this.socket.id || null;
+
+    // Open a PC to each existing peer. We are the "new" arrival, so we
+    // initiate — our `onnegotiationneeded` will fire once we addTrack.
+    for (const peer of (res.peers || []) as Array<{ socketId: string; pubkey: string }>) {
+      this.createPeer(peer.socketId, peer.pubkey);
     }
-
-    // 6. Listen for new producers
-    this.socket.on('new-producer', this.handleNewProducer);
-    this.socket.on('producer-closed', this.handleProducerClosed);
 
     this.onConnectionStateChange?.('connected');
   }
@@ -112,51 +155,23 @@ export class WebSocketVoiceClient {
     await this.stopCamera();
     await this.stopScreenShare();
 
-    this.socket.off('new-producer', this.handleNewProducer);
-    this.socket.off('producer-closed', this.handleProducerClosed);
+    this.socket.off('voice-peer-joined', this.handlePeerJoined);
+    this.socket.off('voice-peer-left', this.handlePeerLeft);
+    this.socket.off('voice-signal', this.handleSignal);
+    this.socket.off('voice-force-mute', this.handleForceMute);
+    this.socket.off('voice-force-camera-off', this.handleForceCameraOff);
+    this.socket.off('voice-force-screen-off', this.handleForceScreenOff);
 
-    // Close all consumers
-    for (const consumer of this.consumers.values()) {
-      consumer.close();
+    for (const peer of this.peers.values()) {
+      this.closePeer(peer);
     }
-    this.consumers.clear();
+    this.peers.clear();
 
-    // Clean up remote audio elements
-    for (const el of this.remoteAudioElements.values()) {
-      el.pause();
-      el.srcObject = null;
+    if (this.audioStream) {
+      this.audioStream.getTracks().forEach(t => t.stop());
+      this.audioStream = null;
+      this.audioTrack = null;
     }
-    this.remoteAudioElements.clear();
-
-    // Clean up remote video elements
-    for (const [pk, el] of this.remoteVideoElements) {
-      el.pause(); el.srcObject = null;
-      this.onRemoteVideoElement?.(pk, null);
-    }
-    this.remoteVideoElements.clear();
-    for (const [pk, el] of this.remoteScreenElements) {
-      el.pause(); el.srcObject = null;
-      this.onRemoteScreenElement?.(pk, null);
-    }
-    this.remoteScreenElements.clear();
-
-    // Close producers
-    if (this.audioProducer) { this.audioProducer.close(); this.audioProducer = null; }
-    if (this.videoProducer) { this.videoProducer.close(); this.videoProducer = null; }
-    if (this.screenProducer) { this.screenProducer.close(); this.screenProducer = null; }
-
-    // Close transports
-    if (this.sendTransport) { this.sendTransport.close(); this.sendTransport = null; }
-    if (this.recvTransport) { this.recvTransport.close(); this.recvTransport = null; }
-
-    // Stop local mic
-    if (this.localStream) {
-      this.localStream.getTracks().forEach(t => t.stop());
-      this.localStream = null;
-    }
-
-    this.device = null;
-    this.rtpCapabilities = null;
 
     if (this.channelId) {
       this.socket.emit('leave-voice', this.channelId);
@@ -165,256 +180,450 @@ export class WebSocketVoiceClient {
     this.onConnectionStateChange?.('disconnected');
   }
 
+  destroy(): void { this.leave(); }
+
   // ── Audio controls ───────────────────────────────────────────
 
   mute(): void {
     this.isMuted = true;
-    if (this.audioProducer && !this.audioProducer.closed) {
-      this.audioProducer.pause();
-      this.socket.emit('producer-pause', { producerId: this.audioProducer.id });
-    }
-    this.localStream?.getAudioTracks().forEach(t => { t.enabled = false; });
+    if (this.audioTrack) this.audioTrack.enabled = false;
   }
 
   unmute(): void {
     this.isMuted = false;
-    if (this.audioProducer && !this.audioProducer.closed) {
-      this.audioProducer.resume();
-      this.socket.emit('producer-resume', { producerId: this.audioProducer.id });
-    }
-    this.localStream?.getAudioTracks().forEach(t => { t.enabled = true; });
+    if (this.audioTrack) this.audioTrack.enabled = true;
   }
 
   setDeafened(deafened: boolean): void {
     this.isDeafened = deafened;
-    for (const el of this.remoteAudioElements.values()) {
-      el.muted = deafened;
-    }
-    for (const el of this.remoteVideoElements.values()) {
-      el.muted = deafened;
+    for (const peer of this.peers.values()) {
+      if (peer.audioElement) peer.audioElement.muted = deafened;
+      if (peer.screenAudioElement) peer.screenAudioElement.muted = deafened;
+      if (peer.cameraElement) peer.cameraElement.muted = deafened;
+      if (peer.screenElement) peer.screenElement.muted = deafened;
     }
   }
 
   // ── Camera ───────────────────────────────────────────────────
 
   async startCamera(): Promise<void> {
-    if (this.cameraStream || !this.sendTransport) return;
+    if (this.cameraStream) return;
     if (!navigator.mediaDevices?.getUserMedia) {
       throw new Error('Camera is not supported on this device');
     }
+    const q = getVoiceQuality();
+    if (this.channelId) {
+      const claim = await this.emitWithAck('voice-camera-claim', this.channelId);
+      if (claim?.error) throw new Error(claim.error);
+    }
     this.cameraStream = await navigator.mediaDevices.getUserMedia({
-      video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 15 } },
+      video: {
+        width: { ideal: q.cameraWidth },
+        height: { ideal: q.cameraHeight },
+        frameRate: { ideal: q.cameraFps, max: q.cameraFps },
+      },
       audio: false,
     });
+    this.cameraTrack = this.cameraStream.getVideoTracks()[0] || null;
     this.onLocalCameraStream?.(this.cameraStream);
 
-    const videoTrack = this.cameraStream.getVideoTracks()[0];
-    this.videoProducer = await this.sendTransport.produce({
-      track: videoTrack,
-      appData: { type: 'camera' },
-    });
+    if (this.cameraTrack) {
+      for (const peer of this.peers.values()) {
+        this.sendTrackInfo(peer, this.cameraTrack.id, 'camera');
+        const sender = peer.pc.addTrack(this.cameraTrack, this.cameraStream);
+        peer.senders.camera = sender;
+        this.tuneVideoSender(sender, q.cameraMaxBitrate, q.cameraFps);
+      }
+    }
   }
 
   async stopCamera(): Promise<void> {
-    if (this.videoProducer && !this.videoProducer.closed) {
-      this.socket.emit('producer-close', { producerId: this.videoProducer.id });
-      this.videoProducer.close();
+    if (this.cameraTrack) {
+      for (const peer of this.peers.values()) {
+        const sender = peer.senders.camera;
+        if (sender) {
+          try { peer.pc.removeTrack(sender); } catch {}
+          delete peer.senders.camera;
+        }
+      }
+      this.cameraTrack.stop();
+      this.cameraTrack = null;
     }
-    this.videoProducer = null;
     if (this.cameraStream) {
       this.cameraStream.getTracks().forEach(t => t.stop());
       this.cameraStream = null;
       this.onLocalCameraStream?.(null);
+    }
+    if (this.channelId) {
+      this.socket.emit('voice-camera-release', this.channelId);
     }
   }
 
   // ── Screen Share ─────────────────────────────────────────────
 
   async startScreenShare(): Promise<void> {
-    if (this.screenStream || !this.sendTransport) return;
+    if (this.screenStream) return;
     if (!navigator.mediaDevices?.getDisplayMedia) {
       throw new Error('Screen sharing is not supported on this device');
     }
+    // Ask the server for exclusive screen-share rights first.
+    if (this.channelId) {
+      const claim = await this.emitWithAck('voice-screen-claim', this.channelId);
+      if (claim?.error) {
+        throw new Error(claim.error);
+      }
+    }
+    const q = getVoiceQuality();
     this.screenStream = await navigator.mediaDevices.getDisplayMedia({
-      video: { frameRate: { ideal: 15 } },
-      audio: false,
+      video: { frameRate: { ideal: q.screenFps, max: q.screenFps } },
+      // Browsers that don't support share-audio will silently return no audio track.
+      audio: true,
     });
-    this.screenStream.getVideoTracks()[0].onended = () => { this.stopScreenShare(); };
+    this.screenTrack = this.screenStream.getVideoTracks()[0] || null;
+    this.screenAudioTrack = this.screenStream.getAudioTracks()[0] || null;
+    if (this.screenTrack) {
+      this.screenTrack.contentHint = 'motion';
+      this.screenTrack.onended = () => { this.stopScreenShare(); };
+    }
     this.onLocalScreenStream?.(this.screenStream);
 
-    const screenTrack = this.screenStream.getVideoTracks()[0];
-    this.screenProducer = await this.sendTransport.produce({
-      track: screenTrack,
-      appData: { type: 'screen' },
-    });
+    if (this.screenTrack) {
+      for (const peer of this.peers.values()) {
+        this.sendTrackInfo(peer, this.screenTrack.id, 'screen');
+        const sender = peer.pc.addTrack(this.screenTrack, this.screenStream);
+        peer.senders.screen = sender;
+        this.tuneVideoSender(sender, q.screenMaxBitrate, q.screenFps);
+      }
+    }
+    if (this.screenAudioTrack) {
+      for (const peer of this.peers.values()) {
+        this.sendTrackInfo(peer, this.screenAudioTrack.id, 'screen-audio');
+        peer.senders['screen-audio'] = peer.pc.addTrack(this.screenAudioTrack, this.screenStream);
+      }
+    }
   }
 
   async stopScreenShare(): Promise<void> {
-    if (this.screenProducer && !this.screenProducer.closed) {
-      this.socket.emit('producer-close', { producerId: this.screenProducer.id });
-      this.screenProducer.close();
+    if (this.screenTrack) {
+      for (const peer of this.peers.values()) {
+        const sender = peer.senders.screen;
+        if (sender) {
+          try { peer.pc.removeTrack(sender); } catch {}
+          delete peer.senders.screen;
+        }
+      }
+      this.screenTrack.stop();
+      this.screenTrack = null;
     }
-    this.screenProducer = null;
+    if (this.screenAudioTrack) {
+      for (const peer of this.peers.values()) {
+        const sender = peer.senders['screen-audio'];
+        if (sender) {
+          try { peer.pc.removeTrack(sender); } catch {}
+          delete peer.senders['screen-audio'];
+        }
+      }
+      this.screenAudioTrack.stop();
+      this.screenAudioTrack = null;
+    }
     if (this.screenStream) {
       this.screenStream.getTracks().forEach(t => t.stop());
       this.screenStream = null;
       this.onLocalScreenStream?.(null);
     }
+    if (this.channelId) {
+      this.socket.emit('voice-screen-release', this.channelId);
+    }
   }
 
-  destroy(): void { this.leave(); }
+  // ── Peer management ──────────────────────────────────────────
 
-  // ── Private: Transport creation ──────────────────────────────
+  private createPeer(remoteSocketId: string, remotePubkey: string): PeerConn {
+    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
 
-  private async createTransport(direction: 'send' | 'recv'): Promise<msTypes.Transport> {
-    const result = await this.emitWithAck('create-transport', {});
-    if (result.error) throw new Error(result.error);
+    // Polite peer = the one with the lexicographically larger socketId.
+    // Perfect-negotiation rollback happens on the polite side.
+    const polite = (this.mySocketId || '') > remoteSocketId;
 
-    const transport = direction === 'send'
-      ? this.device!.createSendTransport({
-          id: result.id,
-          iceParameters: result.iceParameters,
-          iceCandidates: result.iceCandidates,
-          dtlsParameters: result.dtlsParameters,
-        })
-      : this.device!.createRecvTransport({
-          id: result.id,
-          iceParameters: result.iceParameters,
-          iceCandidates: result.iceCandidates,
-          dtlsParameters: result.dtlsParameters,
+    const peer: PeerConn = {
+      socketId: remoteSocketId,
+      pubkey: remotePubkey,
+      pc,
+      polite,
+      makingOffer: false,
+      ignoreOffer: false,
+      senders: {},
+      remoteTrackTypes: new Map(),
+      pendingTracks: new Map(),
+      audioElement: null,
+      screenAudioElement: null,
+      cameraElement: null,
+      screenElement: null,
+    };
+
+    pc.onicecandidate = ({ candidate }) => {
+      if (candidate) {
+        this.socket.emit('voice-signal', {
+          toSocketId: remoteSocketId,
+          payload: { ice: candidate.toJSON() },
         });
+      }
+    };
 
-    transport.on('connect', async ({ dtlsParameters }, callback, errback) => {
+    pc.onnegotiationneeded = async () => {
       try {
-        const res = await this.emitWithAck('connect-transport', {
-          transportId: transport.id,
-          dtlsParameters,
+        peer.makingOffer = true;
+        await pc.setLocalDescription();
+        this.socket.emit('voice-signal', {
+          toSocketId: remoteSocketId,
+          payload: { sdp: pc.localDescription },
         });
-        if (res.error) throw new Error(res.error);
-        callback();
-      } catch (err: any) {
-        errback(err);
+      } catch (err) {
+        console.error('[voice] negotiation error:', err);
+      } finally {
+        peer.makingOffer = false;
       }
-    });
+    };
 
-    if (direction === 'send') {
-      transport.on('produce', async ({ kind, rtpParameters, appData }, callback, errback) => {
-        try {
-          const res = await this.emitWithAck('produce', {
-            transportId: transport.id,
-            kind,
-            rtpParameters,
-            appData,
-          });
-          if (res.error) throw new Error(res.error);
-          callback({ id: res.id });
-        } catch (err: any) {
-          errback(err);
-        }
-      });
+    pc.ontrack = (ev) => {
+      const track = ev.track;
+      const type = peer.remoteTrackTypes.get(track.id);
+      if (type) {
+        this.attachRemoteTrack(peer, track, type);
+      } else {
+        peer.pendingTracks.set(track.id, track);
+      }
+    };
+
+    pc.onconnectionstatechange = () => {
+      console.log('[voice] peer', remotePubkey.slice(0, 8), 'connection:', pc.connectionState);
+      if (pc.connectionState === 'failed') {
+        this.onError?.(`Peer ${remotePubkey.slice(0, 8)} connection failed`);
+      }
+    };
+    pc.oniceconnectionstatechange = () => {
+      console.log('[voice] peer', remotePubkey.slice(0, 8), 'ice:', pc.iceConnectionState);
+    };
+
+    // Always send our mic track so the first offer carries audio.
+    if (this.audioTrack && this.audioStream) {
+      this.sendTrackInfo(peer, this.audioTrack.id, 'audio');
+      peer.senders.audio = pc.addTrack(this.audioTrack, this.audioStream);
+    }
+    // If camera/screen are already on (rejoining peers mid-share), add them too.
+    if (this.cameraTrack && this.cameraStream) {
+      const q = getVoiceQuality();
+      this.sendTrackInfo(peer, this.cameraTrack.id, 'camera');
+      const s = pc.addTrack(this.cameraTrack, this.cameraStream);
+      peer.senders.camera = s;
+      this.tuneVideoSender(s, q.cameraMaxBitrate, q.cameraFps);
+    }
+    if (this.screenTrack && this.screenStream) {
+      const q = getVoiceQuality();
+      this.sendTrackInfo(peer, this.screenTrack.id, 'screen');
+      const s = pc.addTrack(this.screenTrack, this.screenStream);
+      peer.senders.screen = s;
+      this.tuneVideoSender(s, q.screenMaxBitrate, q.screenFps);
+    }
+    if (this.screenAudioTrack && this.screenStream) {
+      this.sendTrackInfo(peer, this.screenAudioTrack.id, 'screen-audio');
+      peer.senders['screen-audio'] = pc.addTrack(this.screenAudioTrack, this.screenStream);
     }
 
-    return transport;
+    this.peers.set(remoteSocketId, peer);
+    return peer;
   }
 
-  // ── Private: Consuming remote producers ──────────────────────
-
-  private handleNewProducer = async ({ producerId, pubkey, kind, appData }: any) => {
-    await this.consumeProducer(producerId, pubkey, kind, appData);
-  };
-
-  private handleProducerClosed = ({ producerId }: any) => {
-    for (const [cid, consumer] of this.consumers) {
-      if (consumer.producerId === producerId) {
-        consumer.close();
-        this.consumers.delete(cid);
-        break;
-      }
+  private closePeer(peer: PeerConn): void {
+    try { peer.pc.close(); } catch {}
+    if (peer.audioElement) {
+      peer.audioElement.pause();
+      peer.audioElement.srcObject = null;
+      peer.audioElement.remove();
+      peer.audioElement = null;
     }
-
-    const audioEl = this.remoteAudioElements.get(producerId);
-    if (audioEl) {
-      audioEl.pause();
-      audioEl.srcObject = null;
-      this.remoteAudioElements.delete(producerId);
+    if (peer.screenAudioElement) {
+      peer.screenAudioElement.pause();
+      peer.screenAudioElement.srcObject = null;
+      peer.screenAudioElement.remove();
+      peer.screenAudioElement = null;
     }
-
-    for (const [pk, el] of this.remoteVideoElements) {
-      if (el.dataset.producerId === producerId) {
-        el.pause(); el.srcObject = null;
-        this.remoteVideoElements.delete(pk);
-        this.onRemoteVideoElement?.(pk, null);
-        break;
-      }
+    if (peer.cameraElement) {
+      peer.cameraElement.pause();
+      peer.cameraElement.srcObject = null;
+      peer.cameraElement = null;
+      this.onRemoteVideoElement?.(peer.pubkey, null);
     }
-    for (const [pk, el] of this.remoteScreenElements) {
-      if (el.dataset.producerId === producerId) {
-        el.pause(); el.srcObject = null;
-        this.remoteScreenElements.delete(pk);
-        this.onRemoteScreenElement?.(pk, null);
-        break;
-      }
+    if (peer.screenElement) {
+      peer.screenElement.pause();
+      peer.screenElement.srcObject = null;
+      peer.screenElement = null;
+      this.onRemoteScreenElement?.(peer.pubkey, null);
     }
-  };
+  }
 
-  private async consumeProducer(
-    producerId: string,
-    pubkey: string,
-    kind: string,
-    appData: any,
-  ): Promise<void> {
-    if (!this.recvTransport || !this.device) return;
+  private attachRemoteTrack(peer: PeerConn, track: MediaStreamTrack, type: TrackType): void {
+    const stream = new MediaStream([track]);
 
-    const result = await this.emitWithAck('consume', {
-      transportId: this.recvTransportId,
-      producerId,
-      rtpCapabilities: this.device.rtpCapabilities,
-    });
-    if (result.error) {
-      console.error('[voice] consume error:', result.error);
+    if (type === 'audio' || type === 'screen-audio') {
+      // Attach to DOM for reliable autoplay in Chromium/Safari.
+      const el = document.createElement('audio');
+      el.srcObject = stream;
+      el.autoplay = true;
+      el.muted = this.isDeafened;
+      (el as any).playsInline = true;
+      el.style.display = 'none';
+      document.body.appendChild(el);
+      el.play().catch((err) => {
+        console.warn('[voice] audio play() blocked — will retry on user gesture:', err);
+      });
+      if (type === 'audio') peer.audioElement = el;
+      else peer.screenAudioElement = el;
       return;
     }
 
-    const consumer = await this.recvTransport.consume({
-      id: result.id,
-      producerId: result.producerId,
-      kind: result.kind,
-      rtpParameters: result.rtpParameters,
-    });
+    const videoEl = document.createElement('video');
+    videoEl.srcObject = stream;
+    videoEl.autoplay = true;
+    videoEl.playsInline = true;
+    videoEl.muted = true;
 
-    this.consumers.set(consumer.id, consumer);
-
-    // Resume on server (consumers start paused)
-    await this.emitWithAck('resume-consumer', { consumerId: consumer.id });
-
-    const track = consumer.track;
-    const mediaType = appData?.type || kind;
-
-    if (kind === 'audio') {
-      const audioEl = new Audio();
-      audioEl.srcObject = new MediaStream([track]);
-      audioEl.muted = this.isDeafened;
-      audioEl.play().catch(() => {});
-      this.remoteAudioElements.set(producerId, audioEl);
-    } else if (kind === 'video') {
-      const videoEl = document.createElement('video');
-      videoEl.srcObject = new MediaStream([track]);
-      videoEl.autoplay = true;
-      videoEl.playsInline = true;
-      videoEl.muted = true;
-      videoEl.dataset.producerId = producerId;
-
-      if (mediaType === 'screen') {
-        this.remoteScreenElements.set(pubkey, videoEl);
-        this.onRemoteScreenElement?.(pubkey, videoEl);
-      } else {
-        this.remoteVideoElements.set(pubkey, videoEl);
-        this.onRemoteVideoElement?.(pubkey, videoEl);
+    track.onended = () => {
+      if (type === 'camera' && peer.cameraElement === videoEl) {
+        peer.cameraElement = null;
+        this.onRemoteVideoElement?.(peer.pubkey, null);
+      } else if (type === 'screen' && peer.screenElement === videoEl) {
+        peer.screenElement = null;
+        this.onRemoteScreenElement?.(peer.pubkey, null);
       }
+    };
+    track.onmute = () => {
+      // sender removed the track — treat as ended
+      if (type === 'camera' && peer.cameraElement === videoEl) {
+        peer.cameraElement = null;
+        this.onRemoteVideoElement?.(peer.pubkey, null);
+      } else if (type === 'screen' && peer.screenElement === videoEl) {
+        peer.screenElement = null;
+        this.onRemoteScreenElement?.(peer.pubkey, null);
+      }
+    };
+
+    if (type === 'camera') {
+      peer.cameraElement = videoEl;
+      this.onRemoteVideoElement?.(peer.pubkey, videoEl);
+    } else {
+      peer.screenElement = videoEl;
+      this.onRemoteScreenElement?.(peer.pubkey, videoEl);
     }
   }
 
-  // ── Private: Socket helper ───────────────────────────────────
+  private sendTrackInfo(peer: PeerConn, trackId: string, type: TrackType): void {
+    this.socket.emit('voice-signal', {
+      toSocketId: peer.socketId,
+      payload: { trackInfo: { trackId, type } },
+    });
+  }
+
+  private tuneVideoSender(sender: RTCRtpSender, maxBitrate: number, maxFramerate: number): void {
+    try {
+      const params = sender.getParameters();
+      params.encodings = params.encodings && params.encodings.length > 0
+        ? params.encodings
+        : [{}];
+      params.encodings[0].maxBitrate = maxBitrate;
+      (params.encodings[0] as any).maxFramerate = maxFramerate;
+      sender.setParameters(params).catch((err) => {
+        console.warn('[voice] setParameters failed:', err);
+      });
+    } catch (err) {
+      console.warn('[voice] getParameters failed:', err);
+    }
+  }
+
+  // ── Signaling handlers ───────────────────────────────────────
+
+  private handlePeerJoined = ({ socketId, pubkey }: { socketId: string; pubkey: string }) => {
+    if (this.peers.has(socketId)) return;
+    // The existing peer (us) waits for the newcomer to open the PC;
+    // but we pre-create it so we're ready for their offer, and since
+    // we don't addTrack-from-scratch here we won't negotiate first —
+    // the newcomer's addTrack will fire negotiationneeded on their side.
+    // However we DO addTrack our existing tracks below; that will also
+    // fire negotiationneeded on our side. Perfect negotiation handles
+    // the glare.
+    this.createPeer(socketId, pubkey);
+  };
+
+  private handlePeerLeft = ({ socketId, pubkey }: { socketId: string; pubkey: string }) => {
+    const peer = this.peers.get(socketId);
+    if (!peer) return;
+    this.closePeer(peer);
+    this.peers.delete(socketId);
+  };
+
+  private handleForceMute = ({ reason }: { reason?: string } = {}) => {
+    this.mute();
+    this.onForceMute?.(reason || 'A moderator muted you');
+  };
+  private handleForceCameraOff = ({ reason }: { reason?: string } = {}) => {
+    this.stopCamera().catch(() => {});
+    this.onForceCameraOff?.(reason || 'A moderator turned off your camera');
+  };
+  private handleForceScreenOff = ({ reason }: { reason?: string } = {}) => {
+    this.stopScreenShare().catch(() => {});
+    this.onForceScreenOff?.(reason || 'A moderator stopped your screen share');
+  };
+
+  private handleSignal = async ({ fromSocketId, fromPubkey, payload }: any) => {
+    let peer = this.peers.get(fromSocketId);
+    if (!peer) {
+      // First message from a peer we didn't know about — create on demand.
+      peer = this.createPeer(fromSocketId, fromPubkey);
+    }
+
+    try {
+      if (payload.trackInfo) {
+        const { trackId, type } = payload.trackInfo;
+        peer.remoteTrackTypes.set(trackId, type);
+        const pending = peer.pendingTracks.get(trackId);
+        if (pending) {
+          peer.pendingTracks.delete(trackId);
+          this.attachRemoteTrack(peer, pending, type);
+        }
+        return;
+      }
+
+      if (payload.sdp) {
+        const desc = payload.sdp as RTCSessionDescriptionInit;
+        const offerCollision =
+          desc.type === 'offer' &&
+          (peer.makingOffer || peer.pc.signalingState !== 'stable');
+
+        peer.ignoreOffer = !peer.polite && offerCollision;
+        if (peer.ignoreOffer) return;
+
+        await peer.pc.setRemoteDescription(desc);
+        if (desc.type === 'offer') {
+          await peer.pc.setLocalDescription();
+          this.socket.emit('voice-signal', {
+            toSocketId: fromSocketId,
+            payload: { sdp: peer.pc.localDescription },
+          });
+        }
+        return;
+      }
+
+      if (payload.ice) {
+        try {
+          await peer.pc.addIceCandidate(payload.ice);
+        } catch (err) {
+          if (!peer.ignoreOffer) console.warn('[voice] addIceCandidate failed:', err);
+        }
+      }
+    } catch (err) {
+      console.error('[voice] signal handling error:', err);
+    }
+  };
 
   private emitWithAck(event: string, data: any): Promise<any> {
     return new Promise((resolve) => {

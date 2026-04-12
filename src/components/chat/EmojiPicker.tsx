@@ -13,9 +13,15 @@ interface EmojiPickerProps {
    * resolver can swap them back to <img> tags.
    */
   serverEmojis?: Record<string, string>;
+  /**
+   * Override positioning. Defaults to the chat-input placement (opens upward
+   * from the bottom-right). Pass e.g. "absolute top-full left-0 mt-2 z-50"
+   * for a dropdown that opens below.
+   */
+  className?: string;
 }
 
-export default function EmojiPicker({ onSelect, onClose, serverEmojis }: EmojiPickerProps) {
+export default function EmojiPicker({ onSelect, onClose, serverEmojis, className }: EmojiPickerProps) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -45,7 +51,7 @@ export default function EmojiPicker({ onSelect, onClose, serverEmojis }: EmojiPi
   return (
     <div
       ref={ref}
-      className="absolute bottom-full right-2 mb-2 z-50"
+      className={className ?? 'absolute bottom-full right-2 mb-2 z-50'}
       data-testid="emoji-picker"
     >
       <Picker

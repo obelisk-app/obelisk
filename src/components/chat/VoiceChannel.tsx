@@ -15,6 +15,8 @@ interface VoiceChannelProps {
   onToggleDeafen: () => void;
   onToggleCamera: () => void;
   onToggleScreenShare: () => void;
+  canModerate?: boolean;
+  onModAction?: (targetPubkey: string, action: 'mute' | 'camera-off' | 'screen-off') => void;
 }
 
 /** Mounts an HTMLVideoElement into a container div */
@@ -24,7 +26,7 @@ function VideoContainer({ videoElement, className }: { videoElement: HTMLVideoEl
   useEffect(() => {
     const container = containerRef.current;
     if (!container || !videoElement) return;
-    videoElement.className = 'w-full h-full object-cover';
+    videoElement.className = 'w-full h-full object-contain bg-black';
     container.appendChild(videoElement);
     return () => {
       if (container.contains(videoElement)) container.removeChild(videoElement);
@@ -128,6 +130,8 @@ export default function VoiceChannel({
   onToggleDeafen,
   onToggleCamera,
   onToggleScreenShare,
+  canModerate = false,
+  onModAction,
 }: VoiceChannelProps) {
   const {
     currentVoiceChannelId,
@@ -143,10 +147,13 @@ export default function VoiceChannel({
     videoElements,
     screenElements,
     localCameraStream,
+    localScreenStream,
     focusedPubkey,
+    limitNotice,
   } = useVoiceStore();
 
   const setFocusedPubkey = useVoiceStore((s) => s.setFocusedPubkey);
+  const setLimitNotice = useVoiceStore((s) => s.setLimitNotice);
   const isInThisChannel = currentVoiceChannelId === channelId;
 
   // Fetch participants when viewing a voice channel
@@ -224,15 +231,38 @@ export default function VoiceChannel({
     }
   };
 
-  // Handle double-click for fullscreen
-  const handleDoubleClick = (e: React.MouseEvent) => {
-    const el = e.currentTarget as HTMLElement;
+  // Toggle fullscreen on a given element
+  const toggleFullscreen = (el: HTMLElement | null | undefined) => {
+    if (!el) return;
     if (document.fullscreenElement) {
       document.exitFullscreen();
     } else {
       el.requestFullscreen?.();
     }
   };
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    toggleFullscreen(e.currentTarget as HTMLElement);
+  };
+  const handleFullscreenBtn = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    const tile = (e.currentTarget as HTMLElement).closest('[data-tile]') as HTMLElement | null;
+    toggleFullscreen(tile);
+  };
+  const FullscreenBtn = () => (
+    <button
+      onClick={handleFullscreenBtn}
+      className="absolute top-2 left-2 bg-black/50 hover:bg-black/70 rounded-full p-1.5 text-white transition-colors"
+      title="Fullscreen"
+      data-testid="fullscreen-btn"
+    >
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+        <path d="M4 9V5a1 1 0 0 1 1-1h4"/>
+        <path d="M20 9V5a1 1 0 0 0-1-1h-4"/>
+        <path d="M4 15v4a1 1 0 0 0 1 1h4"/>
+        <path d="M20 15v4a1 1 0 0 1-1 1h-4"/>
+      </svg>
+    </button>
+  );
 
   // Render a video tile (used in both grid and focused view)
   const renderVideoTile = (pubkey: string, isFocused: boolean) => {
@@ -252,15 +282,44 @@ export default function VoiceChannel({
             : 'border border-lc-border hover:border-lc-green/50 aspect-video bg-black'
         }`}
         onClick={() => handleFocusClick(pubkey)}
-        onDoubleClick={isFocused ? handleDoubleClick : undefined}
+        onDoubleClick={handleDoubleClick}
+        data-tile
         data-testid={isFocused ? 'focused-video' : 'video-tile'}
       >
         {isRemote && remoteVideoEl ? (
           <VideoContainer videoElement={remoteVideoEl} className="w-full h-full" />
         ) : isLocal && localCameraStream ? (
-          <LocalVideoPreview stream={localCameraStream} className="w-full h-full object-cover" />
+          <LocalVideoPreview stream={localCameraStream} className="w-full h-full object-contain bg-black" />
         ) : null}
         <NameOverlay name={name} muted={participant?.muted} deafened={participant?.deafened} />
+        <FullscreenBtn />
+        {canModerate && !isLocal && onModAction && (
+          <div className="absolute top-2 right-10 flex gap-1">
+            <button
+              onClick={(e) => { e.stopPropagation(); onModAction(pubkey, 'mute'); }}
+              className="bg-black/60 hover:bg-red-600/80 rounded-full p-1.5 text-white"
+              title="Mute user (mod)"
+              data-testid="mod-mute-btn"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <line x1="1" y1="1" x2="23" y2="23"/>
+                <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/>
+                <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2c0 .74-.11 1.46-.33 2.13"/>
+              </svg>
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); onModAction(pubkey, 'camera-off'); }}
+              className="bg-black/60 hover:bg-red-600/80 rounded-full p-1.5 text-white"
+              title="Turn off user's camera (mod)"
+              data-testid="mod-camera-off-btn"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="1" y1="1" x2="23" y2="23"/>
+                <path d="M21 21H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3m3-3h6l2 3h4a2 2 0 0 1 2 2v9.34"/>
+              </svg>
+            </button>
+          </div>
+        )}
         {/* Camera badge */}
         <div className="absolute top-2 right-2 bg-lc-green rounded-full p-1" data-testid="camera-badge">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" strokeWidth="2.5" strokeLinecap="round">
@@ -312,9 +371,31 @@ export default function VoiceChannel({
 
         {(voiceParticipants.length > 0 || isInThisChannel) && (
           <>
-            {/* Screen share view */}
-            {screenSharers.length > 0 && (
+            {/* Screen share view (remote + local) */}
+            {(screenSharers.length > 0 || (isScreenSharing && localScreenStream)) && (
               <div className="mb-4 space-y-3" data-testid="screen-share-area">
+                {isScreenSharing && localScreenStream && (
+                  <div
+                    key="screen-local"
+                    className="rounded-xl overflow-hidden cursor-pointer transition-all border border-lc-green/30 hover:border-lc-green/50 bg-lc-dark relative"
+                    onDoubleClick={handleDoubleClick}
+                    data-tile
+                    data-testid="local-screen-share"
+                  >
+                    <div className="px-3 py-1.5 bg-lc-green/10 border-b border-lc-green/20 flex items-center gap-2">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b4f953" strokeWidth="2" strokeLinecap="round">
+                        <rect x="2" y="3" width="20" height="14" rx="2"/>
+                        <line x1="8" y1="21" x2="16" y2="21"/>
+                        <line x1="12" y1="17" x2="12" y2="21"/>
+                      </svg>
+                      <span className="text-xs text-lc-green font-medium">You are sharing your screen</span>
+                    </div>
+                    <div className="relative w-full aspect-video bg-black">
+                      <LocalVideoPreview stream={localScreenStream} className="w-full h-full object-contain bg-black" />
+                      <FullscreenBtn />
+                    </div>
+                  </div>
+                )}
                 {screenSharers.map(({ pubkey, element }) => {
                   const profile = profileCache.get(pubkey);
                   const name = profile?.name || shortNpub(pubkey);
@@ -324,9 +405,10 @@ export default function VoiceChannel({
                       key={`screen-${pubkey}`}
                       className={`rounded-xl overflow-hidden cursor-pointer transition-all ${
                         isFocused ? 'border-2 border-lc-green' : 'border border-lc-green/30 hover:border-lc-green/50'
-                      } bg-lc-dark`}
+                      } bg-lc-dark relative`}
                       onClick={() => handleFocusClick(pubkey)}
-                      onDoubleClick={isFocused ? handleDoubleClick : undefined}
+                      onDoubleClick={handleDoubleClick}
+                      data-tile
                     >
                       <div className="px-3 py-1.5 bg-lc-green/10 border-b border-lc-green/20 flex items-center gap-2">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b4f953" strokeWidth="2" strokeLinecap="round">
@@ -336,26 +418,44 @@ export default function VoiceChannel({
                         </svg>
                         <span className="text-xs text-lc-green font-medium">{name} is sharing their screen</span>
                       </div>
-                      <VideoContainer
-                        videoElement={element}
-                        className="w-full aspect-video bg-black"
-                      />
+                      <div className="relative w-full aspect-video bg-black">
+                        <VideoContainer
+                          videoElement={element}
+                          className="w-full h-full"
+                        />
+                        <FullscreenBtn />
+                        {canModerate && onModAction && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onModAction(pubkey, 'screen-off'); }}
+                            className="absolute top-2 right-10 bg-black/60 hover:bg-red-600/80 rounded-full p-1.5 text-white"
+                            title="Stop user's screen share (mod)"
+                            data-testid="mod-screen-off-btn"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                              <line x1="1" y1="1" x2="23" y2="23"/>
+                              <rect x="2" y="3" width="20" height="14" rx="2"/>
+                            </svg>
+                          </button>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
               </div>
             )}
 
-            {/* Local screen share indicator */}
-            {isScreenSharing && !screenSharers.some(s => remoteScreens.has(s.pubkey) && s.pubkey === localPubkey) && (
-              <div className="mb-4 rounded-xl border border-lc-green/30 bg-lc-dark p-3 text-center" data-testid="local-screen-share-indicator">
-                <div className="flex items-center justify-center gap-2 text-lc-green text-sm">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                    <rect x="2" y="3" width="20" height="14" rx="2"/>
-                    <line x1="8" y1="21" x2="16" y2="21"/>
-                    <line x1="12" y1="17" x2="12" y2="21"/>
-                  </svg>
-                  You are sharing your screen
+            {/* Limit-reached modal */}
+            {limitNotice && (
+              <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" data-testid="voice-limit-modal">
+                <div className="bg-lc-dark border border-lc-border rounded-xl p-6 max-w-sm mx-4 shadow-2xl">
+                  <p className="text-sm text-lc-white mb-4">{limitNotice}</p>
+                  <button
+                    onClick={() => setLimitNotice(null)}
+                    className="lc-pill-primary px-4 py-2 text-sm font-medium w-full"
+                    data-testid="voice-limit-dismiss"
+                  >
+                    OK
+                  </button>
                 </div>
               </div>
             )}

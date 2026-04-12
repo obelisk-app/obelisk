@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db';
 import { requireRole } from '@/lib/auth-roles';
 
 const VALID_TYPES = ['text', 'voice', 'forum'];
-const VALID_WRITE_PERMISSIONS = ['everyone', 'mod', 'admin'];
+const VALID_WRITE_PERMISSIONS = ['everyone', 'mod', 'admin', 'roles'];
 
 // PATCH /api/admin/channels/[id] — edit a channel
 // (serverId is derived from the resource)
@@ -30,6 +30,19 @@ export async function PATCH(
   if (body.emoji !== undefined) {
     data.emoji = body.emoji || null;
   }
+  if (body.description !== undefined) {
+    if (body.description === null || body.description === '') {
+      data.description = null;
+    } else if (typeof body.description === 'string') {
+      const trimmed = body.description.trim();
+      if (trimmed.length > 1024) {
+        return NextResponse.json({ error: 'Description too long (max 1024 chars)' }, { status: 400 });
+      }
+      data.description = trimmed || null;
+    } else {
+      return NextResponse.json({ error: 'Invalid description' }, { status: 400 });
+    }
+  }
   if (body.type !== undefined) {
     if (!VALID_TYPES.includes(body.type)) {
       return NextResponse.json({ error: `Invalid type. Must be one of: ${VALID_TYPES.join(', ')}` }, { status: 400 });
@@ -54,6 +67,22 @@ export async function PATCH(
         { status: 400 }
       );
     }
+  }
+  if (body.writeRoleIds !== undefined) {
+    if (!Array.isArray(body.writeRoleIds) || !body.writeRoleIds.every((x: unknown) => typeof x === 'string')) {
+      return NextResponse.json({ error: 'writeRoleIds must be an array of strings' }, { status: 400 });
+    }
+    const unique = Array.from(new Set(body.writeRoleIds as string[]));
+    if (unique.length > 0) {
+      const valid = await prisma.customRole.findMany({
+        where: { id: { in: unique }, serverId: channel.serverId },
+        select: { id: true },
+      });
+      if (valid.length !== unique.length) {
+        return NextResponse.json({ error: 'One or more writeRoleIds invalid for this server' }, { status: 400 });
+      }
+    }
+    data.writeRoleIds = unique;
   }
 
   if (Object.keys(data).length === 0) {

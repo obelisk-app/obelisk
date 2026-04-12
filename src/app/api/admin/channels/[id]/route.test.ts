@@ -108,6 +108,40 @@ describe('PATCH /api/admin/channels/[id]', () => {
     expect(res.status).toBe(400);
   });
 
+  it('updates description and trims whitespace', async () => {
+    mockAdmin();
+    mockPrisma.channel.findUnique.mockResolvedValue({ id: 'ch1', serverId: 'srv1' });
+    mockPrisma.channel.update.mockResolvedValue({ id: 'ch1', description: 'Topic' });
+
+    const res = await PATCH(makeRequest('PATCH', { description: '  Topic  ' }), ctx);
+    expect(res.status).toBe(200);
+    expect(mockPrisma.channel.update).toHaveBeenCalledWith({
+      where: { id: 'ch1' },
+      data: { description: 'Topic' },
+    });
+  });
+
+  it('clears description when empty string', async () => {
+    mockAdmin();
+    mockPrisma.channel.findUnique.mockResolvedValue({ id: 'ch1', serverId: 'srv1' });
+    mockPrisma.channel.update.mockResolvedValue({ id: 'ch1', description: null });
+
+    const res = await PATCH(makeRequest('PATCH', { description: '' }), ctx);
+    expect(res.status).toBe(200);
+    expect(mockPrisma.channel.update).toHaveBeenCalledWith({
+      where: { id: 'ch1' },
+      data: { description: null },
+    });
+  });
+
+  it('returns 400 when description exceeds 1024 chars', async () => {
+    mockAdmin();
+    mockPrisma.channel.findUnique.mockResolvedValue({ id: 'ch1', serverId: 'srv1' });
+
+    const res = await PATCH(makeRequest('PATCH', { description: 'x'.repeat(1025) }), ctx);
+    expect(res.status).toBe(400);
+  });
+
   it('returns 404 for non-existent channel', async () => {
     mockAdmin();
     mockPrisma.channel.findUnique.mockResolvedValue(null);

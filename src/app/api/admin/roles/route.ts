@@ -19,7 +19,9 @@ export async function GET(req: NextRequest) {
     },
   });
 
-  return NextResponse.json(roles);
+  return NextResponse.json(
+    roles.map((r) => ({ ...r, permissions: r.permissions.toString() }))
+  );
 }
 
 // POST /api/admin/roles?serverId=... — create a custom role (admin+)
@@ -75,5 +77,5 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  return NextResponse.json(role, { status: 201 });
+  return NextResponse.json({ ...role, permissions: role.permissions.toString() }, { status: 201 });
 }

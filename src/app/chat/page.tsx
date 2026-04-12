@@ -988,6 +988,21 @@ export default function ChatPage() {
       client.onLocalScreenStream = (stream) => {
         useVoiceStore.getState().setLocalScreenStream(stream);
       };
+      client.onForceMute = (reason) => {
+        const vs = useVoiceStore.getState();
+        vs.setMuted(true);
+        vs.setLimitNotice(reason);
+      };
+      client.onForceCameraOff = (reason) => {
+        const vs = useVoiceStore.getState();
+        vs.setCameraOn(false);
+        vs.setLimitNotice(reason);
+      };
+      client.onForceScreenOff = (reason) => {
+        const vs = useVoiceStore.getState();
+        vs.setScreenSharing(false);
+        vs.setLimitNotice(reason);
+      };
       voiceStore.setVoiceChannel(channelId);
       await client.join(channelId);
       voiceClientRef.current = client;
@@ -1064,8 +1079,13 @@ export default function ChatPage() {
         voiceStore.setCameraOn(true);
       }
     } catch (err: any) {
+      const msg = err?.message || 'Failed to start camera';
       console.error('Camera error:', err);
-      useVoiceStore.getState().setError(err?.message || 'Failed to start camera');
+      if (/limit|already sharing/i.test(msg)) {
+        useVoiceStore.getState().setLimitNotice(msg);
+      } else {
+        useVoiceStore.getState().setError(msg);
+      }
     }
   }, []);
 
@@ -1083,11 +1103,27 @@ export default function ChatPage() {
       }
     } catch (err: any) {
       // User cancelled screen share picker — not an error
-      if (err?.name !== 'NotAllowedError') {
-        console.error('Screen share error:', err);
-        useVoiceStore.getState().setError(err?.message || 'Failed to share screen');
+      if (err?.name === 'NotAllowedError') return;
+      const msg = err?.message || 'Failed to share screen';
+      console.error('Screen share error:', err);
+      if (/limit|already sharing/i.test(msg)) {
+        useVoiceStore.getState().setLimitNotice(msg);
+      } else {
+        useVoiceStore.getState().setError(msg);
       }
     }
+  }, []);
+
+  const myRoleForVoice = useChatStore((s) => s.myRole);
+  const canModerateVoice = myRoleForVoice === 'owner' || myRoleForVoice === 'admin' || myRoleForVoice === 'mod';
+
+  const handleVoiceModAction = useCallback((targetPubkey: string, action: 'mute' | 'camera-off' | 'screen-off') => {
+    const socket = socketRef.current;
+    const channelId = useVoiceStore.getState().currentVoiceChannelId;
+    if (!socket || !channelId) return;
+    socket.emit('voice-mod-action', { channelId, targetPubkey, action }, (res: any) => {
+      if (res?.error) useVoiceStore.getState().setError(res.error);
+    });
   }, []);
 
   // Find active channel name for top bar
@@ -1293,6 +1329,8 @@ export default function ChatPage() {
                   onToggleDeafen={handleToggleVoiceDeafen}
                   onToggleCamera={handleToggleCamera}
                   onToggleScreenShare={handleToggleScreenShare}
+                  canModerate={canModerateVoice}
+                  onModAction={handleVoiceModAction}
                 />
               ) : (
                 <>

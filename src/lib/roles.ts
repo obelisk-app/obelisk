@@ -27,11 +27,18 @@ export function hasRole(memberRole: Role, minimumRole: Role): boolean {
  */
 export function canWriteInChannel(
   memberRole: Role,
-  channel: { writePermission: string | null }
+  channel: { writePermission: string | null; writeRoleIds?: string[] | null },
+  memberCustomRoleIds: string[] = []
 ): boolean {
   const wp = channel.writePermission;
   if (!wp || wp === 'everyone') return true;
   if (wp === 'mod') return hasRole(memberRole, 'mod');
   if (wp === 'admin') return hasRole(memberRole, 'admin');
+  if (wp === 'roles') {
+    if (hasRole(memberRole, 'admin')) return true;
+    const allowed = channel.writeRoleIds ?? [];
+    if (allowed.length === 0) return false;
+    return memberCustomRoleIds.some((id) => allowed.includes(id));
+  }
   return true;
 }

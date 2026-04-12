@@ -80,7 +80,7 @@ export async function POST(
   // Validate channel exists
   const channel = await prisma.channel.findUnique({
     where: { id: channelId },
-    select: { id: true, serverId: true, writePermission: true },
+    select: { id: true, serverId: true, writePermission: true, writeRoleIds: true },
   });
   if (!channel) {
     return NextResponse.json({ error: 'Channel not found' }, { status: 404 });
@@ -107,7 +107,21 @@ export async function POST(
   if (channel.writePermission) {
     const authMember = await getAuthMember(req, channel.serverId);
     const role = authMember?.role ?? 'member';
-    if (!canWriteInChannel(role, { writePermission: channel.writePermission })) {
+    let memberCustomRoleIds: string[] = [];
+    if (channel.writePermission === 'roles' && authMember?.id) {
+      const links = await prisma.memberCustomRole.findMany({
+        where: { memberId: authMember.id },
+        select: { roleId: true },
+      });
+      memberCustomRoleIds = links.map((l) => l.roleId);
+    }
+    if (
+      !canWriteInChannel(
+        role,
+        { writePermission: channel.writePermission, writeRoleIds: channel.writeRoleIds },
+        memberCustomRoleIds
+      )
+    ) {
       return NextResponse.json({ error: 'channel_write_locked' }, { status: 403 });
     }
   }

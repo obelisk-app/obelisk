@@ -13,6 +13,7 @@ export interface Channel {
   id: string;
   name: string;
   emoji: string | null;
+  description?: string | null;
   type: string;
   position: number;
   categoryId: string | null;
