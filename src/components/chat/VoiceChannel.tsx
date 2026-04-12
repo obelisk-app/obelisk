@@ -231,14 +231,63 @@ export default function VoiceChannel({
     }
   };
 
-  // Toggle fullscreen on a given element
+  // Toggle fullscreen on a given element.
+  // iOS Safari only fullscreens <video> elements (webkitEnterFullscreen), not arbitrary divs,
+  // so fall back to the first <video> inside the tile when the standard API is absent.
   const toggleFullscreen = (el: HTMLElement | null | undefined) => {
     if (!el) return;
-    if (document.fullscreenElement) {
-      document.exitFullscreen();
-    } else {
-      el.requestFullscreen?.();
+    const doc = document as Document & {
+      webkitFullscreenElement?: Element;
+      webkitExitFullscreen?: () => void;
+    };
+    const fsEl = document.fullscreenElement || doc.webkitFullscreenElement;
+    if (fsEl) {
+      if (document.exitFullscreen) document.exitFullscreen();
+      else if (doc.webkitExitFullscreen) doc.webkitExitFullscreen();
+      return;
     }
+    const anyEl = el as HTMLElement & {
+      webkitRequestFullscreen?: () => void;
+    };
+    const afterEnter = () => {
+      // On Android mobile, a landscape video in a portrait phone looks tiny.
+      // Lock the screen to landscape so the video actually fills the display.
+      const orientation = screen.orientation as (ScreenOrientation & {
+        lock?: (o: string) => Promise<void>;
+      }) | undefined;
+      const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+      if (isMobile && orientation?.lock) {
+        // Pick orientation based on the video's intrinsic aspect ratio.
+        const video = el.querySelector('video') as HTMLVideoElement | null;
+        const wantLandscape = !video || video.videoWidth >= video.videoHeight;
+        orientation.lock(wantLandscape ? 'landscape' : 'portrait').catch(() => {});
+        const release = () => {
+          if (!document.fullscreenElement && !(document as any).webkitFullscreenElement) {
+            try { screen.orientation.unlock?.(); } catch {}
+            document.removeEventListener('fullscreenchange', release);
+          }
+        };
+        document.addEventListener('fullscreenchange', release);
+      }
+    };
+    if (el.requestFullscreen) {
+      el.requestFullscreen().then(afterEnter).catch(() => tryVideoFullscreen(el));
+    } else if (anyEl.webkitRequestFullscreen) {
+      anyEl.webkitRequestFullscreen();
+      afterEnter();
+    } else {
+      tryVideoFullscreen(el);
+    }
+  };
+  const tryVideoFullscreen = (el: HTMLElement) => {
+    const video = el.querySelector('video') as (HTMLVideoElement & {
+      webkitEnterFullscreen?: () => void;
+      webkitRequestFullscreen?: () => void;
+    }) | null;
+    if (!video) return;
+    if (video.webkitEnterFullscreen) video.webkitEnterFullscreen();
+    else if (video.webkitRequestFullscreen) video.webkitRequestFullscreen();
+    else if (video.requestFullscreen) video.requestFullscreen().catch(() => {});
   };
   const handleDoubleClick = (e: React.MouseEvent) => {
     toggleFullscreen(e.currentTarget as HTMLElement);
@@ -345,7 +394,7 @@ export default function VoiceChannel({
       )}
 
       {/* Main content area */}
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-6">
         {voiceParticipants.length === 0 && !isInThisChannel && (
           <div className="flex items-center justify-center h-full">
             <div className="text-center text-lc-muted">
@@ -382,7 +431,7 @@ export default function VoiceChannel({
                     data-tile
                     data-testid="local-screen-share"
                   >
-                    <div className="px-3 py-1.5 bg-lc-green/10 border-b border-lc-green/20 flex items-center gap-2">
+                    <div data-screen-header className="px-3 py-1.5 bg-lc-green/10 border-b border-lc-green/20 flex items-center gap-2">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b4f953" strokeWidth="2" strokeLinecap="round">
                         <rect x="2" y="3" width="20" height="14" rx="2"/>
                         <line x1="8" y1="21" x2="16" y2="21"/>
@@ -390,7 +439,7 @@ export default function VoiceChannel({
                       </svg>
                       <span className="text-xs text-lc-green font-medium">You are sharing your screen</span>
                     </div>
-                    <div className="relative w-full aspect-video bg-black">
+                    <div data-screen-video className="relative w-full aspect-video bg-black">
                       <LocalVideoPreview stream={localScreenStream} className="w-full h-full object-contain bg-black" />
                       <FullscreenBtn />
                     </div>
@@ -410,7 +459,7 @@ export default function VoiceChannel({
                       onDoubleClick={handleDoubleClick}
                       data-tile
                     >
-                      <div className="px-3 py-1.5 bg-lc-green/10 border-b border-lc-green/20 flex items-center gap-2">
+                      <div data-screen-header className="px-3 py-1.5 bg-lc-green/10 border-b border-lc-green/20 flex items-center gap-2">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b4f953" strokeWidth="2" strokeLinecap="round">
                           <rect x="2" y="3" width="20" height="14" rx="2"/>
                           <line x1="8" y1="21" x2="16" y2="21"/>
@@ -418,7 +467,7 @@ export default function VoiceChannel({
                         </svg>
                         <span className="text-xs text-lc-green font-medium">{name} is sharing their screen</span>
                       </div>
-                      <div className="relative w-full aspect-video bg-black">
+                      <div data-screen-video className="relative w-full aspect-video bg-black">
                         <VideoContainer
                           videoElement={element}
                           className="w-full h-full"
@@ -460,7 +509,7 @@ export default function VoiceChannel({
               </div>
             )}
 
-            {/* Focused view */}
+            {/* Focused view — big main + lateral thumbnails */}
             {focusedPubkey && focusedIsVideo && (
               <div className="mb-4" data-testid="focused-view">
                 <div className="flex items-center justify-between mb-2">
@@ -476,25 +525,39 @@ export default function VoiceChannel({
                     </svg>
                   </button>
                 </div>
-                {renderVideoTile(focusedPubkey, true)}
+                <div className="flex flex-col md:flex-row gap-3">
+                  <div className="flex-1 min-w-0">
+                    {renderVideoTile(focusedPubkey, true)}
+                  </div>
+                  {videoParticipantsFinal.filter((p) => p.pubkey !== focusedPubkey).length > 0 && (
+                    <div
+                      className="flex md:flex-col gap-2 md:gap-3 md:w-48 lg:w-56 md:max-h-[70vh] overflow-x-auto md:overflow-y-auto md:overflow-x-hidden flex-shrink-0"
+                      data-testid="focus-thumbnails"
+                    >
+                      {videoParticipantsFinal
+                        .filter((p) => p.pubkey !== focusedPubkey)
+                        .map((p) => (
+                          <div key={p.pubkey} className="w-40 md:w-full flex-shrink-0">
+                            {renderVideoTile(p.pubkey, false)}
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
-            {/* Video participants grid */}
-            {anyVideoActive && (
+            {/* Video participants grid (non-focused) */}
+            {anyVideoActive && !focusedPubkey && (
               <div className="mb-4">
                 <div className={`grid gap-3 ${
-                  focusedPubkey
-                    ? 'grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6'
-                    : videoParticipantsFinal.length === 1
-                      ? 'grid-cols-1 max-w-2xl'
-                      : videoParticipantsFinal.length === 2
-                        ? 'grid-cols-2 max-w-3xl'
-                        : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4'
+                  videoParticipantsFinal.length === 1
+                    ? 'grid-cols-1 max-w-2xl'
+                    : videoParticipantsFinal.length === 2
+                      ? 'grid-cols-1 sm:grid-cols-2 max-w-3xl'
+                      : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
                 }`} data-testid="video-grid">
-                  {videoParticipantsFinal
-                    .filter((p) => p.pubkey !== focusedPubkey)
-                    .map((p) => renderVideoTile(p.pubkey, false))}
+                  {videoParticipantsFinal.map((p) => renderVideoTile(p.pubkey, false))}
                 </div>
               </div>
             )}

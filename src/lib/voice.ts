@@ -74,6 +74,43 @@ export function setVoiceQuality(partial: Partial<VoiceQualitySettings>): void {
   } catch {}
 }
 
+// Bump Opus bitrate in outgoing SDP without touching risky params (stereo/dtx).
+// Safari silently drops the audio section when sprop-stereo or usedtx are forced,
+// so we only *merge* maxaveragebitrate/useinbandfec into the existing fmtp line
+// and leave everything the browser negotiated on its own.
+function enhanceOpusSdp(desc: RTCSessionDescription | null): RTCSessionDescriptionInit | null {
+  if (!desc?.sdp) return desc;
+  const lines = desc.sdp.split(/\r\n/);
+  const opusPts = new Set<string>();
+  for (const line of lines) {
+    const m = /^a=rtpmap:(\d+)\s+opus\/48000\/2/i.exec(line);
+    if (m) opusPts.add(m[1]);
+  }
+  if (opusPts.size === 0) return desc;
+  const wanted: Record<string, string> = {
+    maxaveragebitrate: '128000',
+    maxplaybackrate: '48000',
+    useinbandfec: '1',
+  };
+  const next = lines.map((line) => {
+    const fmtp = /^a=fmtp:(\d+)\s+(.*)$/.exec(line);
+    if (!fmtp || !opusPts.has(fmtp[1])) return line;
+    const existing = new Map<string, string>();
+    for (const kv of fmtp[2].split(';')) {
+      const [k, v] = kv.split('=');
+      if (k) existing.set(k.trim(), (v ?? '').trim());
+    }
+    for (const [k, v] of Object.entries(wanted)) {
+      if (!existing.has(k)) existing.set(k, v);
+    }
+    const merged = Array.from(existing.entries())
+      .map(([k, v]) => (v ? `${k}=${v}` : k))
+      .join(';');
+    return `a=fmtp:${fmtp[1]} ${merged}`;
+  });
+  return { type: desc.type, sdp: next.join('\r\n') };
+}
+
 const ICE_SERVERS: RTCIceServer[] = (() => {
   const servers: RTCIceServer[] = [{ urls: 'stun:stun.l.google.com:19302' }];
   const turnUrl = typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_TURN_URL : undefined;
@@ -126,10 +163,16 @@ export class WebSocketVoiceClient {
 
     // Capture mic first so the initial offer to each peer already has the track.
     this.audioStream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, sampleRate: 48000 },
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        sampleRate: 48000,
+      },
       video: false,
     });
     this.audioTrack = this.audioStream.getAudioTracks()[0] || null;
+    if (this.audioTrack) this.audioTrack.contentHint = 'speech';
 
     this.socket.on('voice-peer-joined', this.handlePeerJoined);
     this.socket.on('voice-peer-left', this.handlePeerLeft);
@@ -275,16 +318,26 @@ export class WebSocketVoiceClient {
     }
     const q = getVoiceQuality();
     this.screenStream = await navigator.mediaDevices.getDisplayMedia({
-      video: { frameRate: { ideal: q.screenFps, max: q.screenFps } },
+      video: {
+        frameRate: { ideal: q.screenFps, max: q.screenFps },
+        width: { ideal: 1920, max: 3840 },
+        height: { ideal: 1080, max: 2160 },
+      },
       // Browsers that don't support share-audio will silently return no audio track.
-      audio: true,
+      audio: {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
+      },
     });
     this.screenTrack = this.screenStream.getVideoTracks()[0] || null;
     this.screenAudioTrack = this.screenStream.getAudioTracks()[0] || null;
     if (this.screenTrack) {
-      this.screenTrack.contentHint = 'motion';
+      // 'detail' keeps text/UI sharp; 'motion' blurs it into mush.
+      this.screenTrack.contentHint = 'detail';
       this.screenTrack.onended = () => { this.stopScreenShare(); };
     }
+    if (this.screenAudioTrack) this.screenAudioTrack.contentHint = 'music';
     this.onLocalScreenStream?.(this.screenStream);
 
     if (this.screenTrack) {
@@ -292,7 +345,7 @@ export class WebSocketVoiceClient {
         this.sendTrackInfo(peer, this.screenTrack.id, 'screen');
         const sender = peer.pc.addTrack(this.screenTrack, this.screenStream);
         peer.senders.screen = sender;
-        this.tuneVideoSender(sender, q.screenMaxBitrate, q.screenFps);
+        this.tuneVideoSender(sender, q.screenMaxBitrate, q.screenFps, 'maintain-resolution');
       }
     }
     if (this.screenAudioTrack) {
@@ -376,7 +429,7 @@ export class WebSocketVoiceClient {
         await pc.setLocalDescription();
         this.socket.emit('voice-signal', {
           toSocketId: remoteSocketId,
-          payload: { sdp: pc.localDescription },
+          payload: { sdp: enhanceOpusSdp(pc.localDescription) },
         });
       } catch (err) {
         console.error('[voice] negotiation error:', err);
@@ -408,7 +461,9 @@ export class WebSocketVoiceClient {
     // Always send our mic track so the first offer carries audio.
     if (this.audioTrack && this.audioStream) {
       this.sendTrackInfo(peer, this.audioTrack.id, 'audio');
-      peer.senders.audio = pc.addTrack(this.audioTrack, this.audioStream);
+      const s = pc.addTrack(this.audioTrack, this.audioStream);
+      peer.senders.audio = s;
+      this.tuneAudioSender(s);
     }
     // If camera/screen are already on (rejoining peers mid-share), add them too.
     if (this.cameraTrack && this.cameraStream) {
@@ -423,7 +478,7 @@ export class WebSocketVoiceClient {
       this.sendTrackInfo(peer, this.screenTrack.id, 'screen');
       const s = pc.addTrack(this.screenTrack, this.screenStream);
       peer.senders.screen = s;
-      this.tuneVideoSender(s, q.screenMaxBitrate, q.screenFps);
+      this.tuneVideoSender(s, q.screenMaxBitrate, q.screenFps, 'maintain-resolution');
     }
     if (this.screenAudioTrack && this.screenStream) {
       this.sendTrackInfo(peer, this.screenAudioTrack.id, 'screen-audio');
@@ -524,20 +579,39 @@ export class WebSocketVoiceClient {
     });
   }
 
-  private tuneVideoSender(sender: RTCRtpSender, maxBitrate: number, maxFramerate: number): void {
+  private tuneVideoSender(
+    sender: RTCRtpSender,
+    maxBitrate: number,
+    maxFramerate: number,
+    degradationPreference: RTCDegradationPreference = 'maintain-framerate',
+  ): void {
     try {
-      const params = sender.getParameters();
+      const params = sender.getParameters() as RTCRtpSendParameters & {
+        degradationPreference?: RTCDegradationPreference;
+      };
       params.encodings = params.encodings && params.encodings.length > 0
         ? params.encodings
         : [{}];
       params.encodings[0].maxBitrate = maxBitrate;
       (params.encodings[0] as any).maxFramerate = maxFramerate;
+      params.degradationPreference = degradationPreference;
       sender.setParameters(params).catch((err) => {
         console.warn('[voice] setParameters failed:', err);
       });
     } catch (err) {
       console.warn('[voice] getParameters failed:', err);
     }
+  }
+
+  private tuneAudioSender(sender: RTCRtpSender, maxBitrate = 128_000): void {
+    try {
+      const params = sender.getParameters();
+      params.encodings = params.encodings && params.encodings.length > 0
+        ? params.encodings
+        : [{}];
+      params.encodings[0].maxBitrate = maxBitrate;
+      sender.setParameters(params).catch(() => {});
+    } catch {}
   }
 
   // ── Signaling handlers ───────────────────────────────────────
@@ -607,7 +681,7 @@ export class WebSocketVoiceClient {
           await peer.pc.setLocalDescription();
           this.socket.emit('voice-signal', {
             toSocketId: fromSocketId,
-            payload: { sdp: peer.pc.localDescription },
+            payload: { sdp: enhanceOpusSdp(peer.pc.localDescription) },
           });
         }
         return;

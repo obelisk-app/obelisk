@@ -29,7 +29,7 @@ export default function VoiceControls({
   };
 
   return (
-    <div className="px-4 py-3 border-t border-lc-border bg-lc-dark flex flex-col items-center gap-2" data-testid="voice-controls">
+    <div className="px-2 sm:px-4 py-3 border-t border-lc-border bg-lc-dark flex flex-col items-center gap-2 safe-bottom" data-testid="voice-controls">
       {/* Connection state / error */}
       {error && (
         <p className="text-xs text-red-400 bg-red-600/10 px-3 py-1 rounded-full" data-testid="voice-error">{error}</p>
@@ -38,7 +38,7 @@ export default function VoiceControls({
         <p className="text-xs text-lc-muted animate-pulse">Connecting…</p>
       )}
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center justify-center flex-wrap gap-2 sm:gap-3 max-w-full">
         {/* Mute */}
         <button
           onClick={onToggleMute}
@@ -151,47 +151,45 @@ export default function VoiceControls({
             </svg>
           </button>
           {showSettings && (
-            <div className="absolute bottom-12 right-0 w-64 p-3 rounded-xl bg-lc-dark border border-lc-border shadow-2xl z-50 text-xs text-lc-white space-y-3" data-testid="voice-settings-panel">
-              <div>
-                <label className="block text-lc-muted mb-1">Camera resolution</label>
-                <select
-                  className="w-full bg-lc-black border border-lc-border rounded px-2 py-1.5 text-lc-white"
-                  value={`${quality.cameraWidth}x${quality.cameraHeight}`}
-                  onChange={(e) => {
-                    const [w, h] = e.target.value.split('x').map(Number);
-                    updateQuality({ cameraWidth: w, cameraHeight: h });
-                  }}
-                >
-                  <option value="640x480">480p (640×480)</option>
-                  <option value="1280x720">720p (1280×720)</option>
-                  <option value="1920x1080">1080p (1920×1080)</option>
-                </select>
+            <div className="absolute bottom-12 right-0 w-[min(18rem,calc(100vw-1rem))] p-4 rounded-xl bg-lc-dark border border-lc-border shadow-2xl z-50 text-xs text-lc-white space-y-3 lc-glow" data-testid="voice-settings-panel">
+              <div className="flex items-center justify-between pb-2 border-b border-lc-border">
+                <h3 className="text-sm font-semibold text-lc-white">Voice settings</h3>
+                <span className="text-[10px] uppercase tracking-wider text-lc-green">Quality</span>
               </div>
-              <div>
-                <label className="block text-lc-muted mb-1">Camera framerate</label>
-                <select
-                  className="w-full bg-lc-black border border-lc-border rounded px-2 py-1.5 text-lc-white"
-                  value={quality.cameraFps}
-                  onChange={(e) => updateQuality({ cameraFps: Number(e.target.value) })}
-                >
-                  <option value={15}>15 fps</option>
-                  <option value={30}>30 fps</option>
-                  <option value={60}>60 fps</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-lc-muted mb-1">Screen-share framerate</label>
-                <select
-                  className="w-full bg-lc-black border border-lc-border rounded px-2 py-1.5 text-lc-white"
-                  value={quality.screenFps}
-                  onChange={(e) => updateQuality({ screenFps: Number(e.target.value) })}
-                >
-                  <option value={15}>15 fps</option>
-                  <option value={30}>30 fps</option>
-                  <option value={60}>60 fps</option>
-                </select>
-              </div>
-              <p className="text-[10px] text-lc-muted">Applies the next time you start camera / screen share.</p>
+              <LcSelect
+                label="Camera resolution"
+                value={`${quality.cameraWidth}x${quality.cameraHeight}`}
+                onChange={(v) => {
+                  const [w, h] = v.split('x').map(Number);
+                  updateQuality({ cameraWidth: w, cameraHeight: h });
+                }}
+                options={[
+                  { value: '640x480', label: '480p (640×480)' },
+                  { value: '1280x720', label: '720p (1280×720)' },
+                  { value: '1920x1080', label: '1080p (1920×1080)' },
+                ]}
+              />
+              <LcSelect
+                label="Camera framerate"
+                value={String(quality.cameraFps)}
+                onChange={(v) => updateQuality({ cameraFps: Number(v) })}
+                options={[
+                  { value: '15', label: '15 fps' },
+                  { value: '30', label: '30 fps' },
+                  { value: '60', label: '60 fps' },
+                ]}
+              />
+              <LcSelect
+                label="Screen-share framerate"
+                value={String(quality.screenFps)}
+                onChange={(v) => updateQuality({ screenFps: Number(v) })}
+                options={[
+                  { value: '15', label: '15 fps' },
+                  { value: '30', label: '30 fps' },
+                  { value: '60', label: '60 fps' },
+                ]}
+              />
+              <p className="text-[10px] text-lc-muted pt-1 border-t border-lc-border/60">Applies the next time you start camera / screen share.</p>
             </div>
           )}
         </div>
@@ -210,5 +208,49 @@ export default function VoiceControls({
         </button>
       </div>
     </div>
+  );
+}
+
+interface LcSelectProps {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+}
+
+function LcSelect({ label, value, onChange, options }: LcSelectProps) {
+  return (
+    <label className="block group">
+      <span className="block text-[11px] font-medium text-lc-muted mb-1.5 group-focus-within:text-lc-green transition-colors">
+        {label}
+      </span>
+      <div className="relative">
+        <select
+          className="w-full appearance-none bg-lc-black border border-lc-border rounded-lg pl-3 pr-9 py-2 text-xs text-lc-white cursor-pointer hover:border-lc-green/50 focus:border-lc-green focus:outline-none focus:ring-2 focus:ring-lc-green/30 transition-colors"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+        >
+          {options.map((o) => (
+            <option key={o.value} value={o.value} className="bg-lc-dark text-lc-white">
+              {o.label}
+            </option>
+          ))}
+        </select>
+        <svg
+          aria-hidden
+          className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-lc-muted group-focus-within:text-lc-green transition-colors"
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </div>
+    </label>
   );
 }

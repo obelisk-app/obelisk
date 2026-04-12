@@ -346,3 +346,37 @@ body {
     animation: none;
   }
 }
+
+/* Video tile fullscreen: drop aspect-ratio/borders so the video fills the whole screen. */
+[data-tile]:fullscreen,
+[data-tile]:-webkit-full-screen {
+  width: 100vw !important;
+  height: 100vh !important;
+  aspect-ratio: auto !important;
+  max-width: none !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+[data-tile]:fullscreen video,
+[data-tile]:-webkit-full-screen video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain;
+}
+
+/* Hide the "is sharing their screen" header bar when the tile is fullscreen. */
+[data-tile]:fullscreen [data-screen-header],
+[data-tile]:-webkit-full-screen [data-screen-header] {
+  display: none !important;
+}
+/* Let the inner video wrapper fill the whole fullscreen surface. */
+[data-tile]:fullscreen [data-screen-video],
+[data-tile]:-webkit-full-screen [data-screen-video] {
+  width: 100% !important;
+  height: 100% !important;
+  aspect-ratio: auto !important;
+}
