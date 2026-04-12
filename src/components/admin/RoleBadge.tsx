@@ -20,9 +20,18 @@ export interface CustomRoleBadgeData {
 interface RoleBadgeProps {
   role: Role;
   customRoles?: CustomRoleBadgeData[];
+  maxCustom?: number;
+  onOverflowClick?: () => void;
 }
 
-export default function RoleBadge({ role, customRoles }: RoleBadgeProps) {
+function isIconUrl(icon: string): boolean {
+  return /^(https?:)?\/\//i.test(icon) || icon.startsWith('/');
+}
+
+export default function RoleBadge({ role, customRoles, maxCustom, onOverflowClick }: RoleBadgeProps) {
+  const all = customRoles ?? [];
+  const visible = typeof maxCustom === 'number' ? all.slice(0, maxCustom) : all;
+  const overflow = all.length - visible.length;
   return (
     <span className="inline-flex items-center gap-1 flex-wrap">
       <span
@@ -31,20 +40,37 @@ export default function RoleBadge({ role, customRoles }: RoleBadgeProps) {
       >
         {role}
       </span>
-      {customRoles?.map((cr) => (
+      {visible.map((cr) => (
         <span
           key={cr.id}
           data-testid="custom-role-badge"
-          className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs font-semibold"
+          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold max-w-[12rem]"
           style={{
             backgroundColor: cr.color,
             color: isLightColor(cr.color) ? '#000' : '#fff',
           }}
         >
-          {cr.icon && <span>{cr.icon}</span>}
-          {cr.name}
+          {cr.icon && (
+            isIconUrl(cr.icon) ? (
+              <img src={cr.icon} alt="" className="w-3.5 h-3.5 object-contain shrink-0" />
+            ) : (
+              <span>{cr.icon}</span>
+            )
+          )}
+          <span className="truncate">{cr.name}</span>
         </span>
       ))}
+      {overflow > 0 && (
+        <button
+          type="button"
+          onClick={onOverflowClick}
+          data-testid="custom-role-overflow"
+          className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-lc-border/60 text-lc-white hover:bg-lc-border transition-colors"
+          title="Edit roles"
+        >
+          +{overflow}
+        </button>
+      )}
     </span>
   );
 }

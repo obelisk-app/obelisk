@@ -425,7 +425,7 @@ export default function AdminServerPage({
               </button>
             </div>
             {syncResult && <p className="text-xs text-lc-green mb-2">{syncResult}</p>}
-            <div className="rounded-xl border border-lc-border bg-lc-dark/40 divide-y divide-lc-border/60 overflow-hidden">
+            <div className="rounded-xl border border-lc-border bg-lc-dark/40 divide-y divide-lc-border/60">
               {activeMembers.length === 0 ? (
                 <p className="text-sm text-lc-muted py-12 text-center">No members yet</p>
               ) : (
@@ -667,7 +667,7 @@ export default function AdminServerPage({
                 <p className="text-sm text-lc-muted text-center">No banned users</p>
               </div>
             ) : (
-              <div className="rounded-xl border border-lc-border bg-lc-dark/40 divide-y divide-lc-border/60 overflow-hidden">
+              <div className="rounded-xl border border-lc-border bg-lc-dark/40 divide-y divide-lc-border/60">
                 {bannedMembers.map((m) => (
                   <MemberRow
                     key={m.id}

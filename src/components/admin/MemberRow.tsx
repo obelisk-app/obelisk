@@ -94,6 +94,12 @@ export default function MemberRow({
             <RoleBadge
               role={member.role}
               customRoles={member.customRoles?.map((cr) => cr.role)}
+              maxCustom={2}
+              onOverflowClick={
+                serverCustomRoles && serverCustomRoles.length > 0 && onCustomRoleToggle && !member.banned
+                  ? () => setRolesMenuOpen(true)
+                  : undefined
+              }
             />
             {member.banned && (
               <span className="text-xs bg-red-600 text-white px-2 py-0.5 rounded-full">BANNED</span>
@@ -126,24 +132,22 @@ export default function MemberRow({
             </button>
           )}
 
-          {!isTargetOwner && (
-            <>
-              {/* Role selector (owner only) */}
-              {isOwner && (
-                <select
-                  value={member.role}
-                  onChange={(e) => onRoleChange(member.pubkey, e.target.value as Role)}
-                  className="text-xs bg-lc-dark border border-lc-border rounded-lg px-2 py-1.5 text-lc-white"
-                  data-testid="role-select"
-                >
-                  <option value="admin">Admin</option>
-                  <option value="mod">Mod</option>
-                  <option value="member">Member</option>
-                </select>
-              )}
+          {/* Base role selector (owner only, not for owner target) */}
+          {!isTargetOwner && isOwner && (
+            <select
+              value={member.role}
+              onChange={(e) => onRoleChange(member.pubkey, e.target.value as Role)}
+              className="text-xs bg-lc-dark border border-lc-border rounded-lg px-2 py-1.5 text-lc-white"
+              data-testid="role-select"
+            >
+              <option value="admin">Admin</option>
+              <option value="mod">Mod</option>
+              <option value="member">Member</option>
+            </select>
+          )}
 
-              {/* Custom role selector dropdown (admin+) */}
-              {serverCustomRoles && serverCustomRoles.length > 0 && onCustomRoleToggle && !member.banned && (
+          {/* Custom role selector dropdown — available for every member (including owner) */}
+          {serverCustomRoles && serverCustomRoles.length > 0 && onCustomRoleToggle && !member.banned && (
                 <div className="relative" ref={rolesMenuRef} data-testid="custom-role-toggles">
                   <button
                     type="button"
@@ -215,33 +219,33 @@ export default function MemberRow({
                       </div>
                     </div>
                   )}
-                </div>
-              )}
+            </div>
+          )}
 
-              {member.banned ? (
+          {!isTargetOwner && (
+            member.banned ? (
+              <button
+                onClick={() => onUnban(member.pubkey)}
+                className="text-xs px-3 py-1.5 rounded-full border border-lc-green text-lc-green hover:bg-lc-green/10 transition-colors"
+              >
+                Unban
+              </button>
+            ) : (
+              <>
                 <button
-                  onClick={() => onUnban(member.pubkey)}
-                  className="text-xs px-3 py-1.5 rounded-full border border-lc-green text-lc-green hover:bg-lc-green/10 transition-colors"
+                  onClick={() => setConfirm('kick')}
+                  className="text-xs px-3 py-1.5 rounded-full border border-lc-border text-lc-muted hover:border-amber-500 hover:text-amber-500 transition-colors"
                 >
-                  Unban
+                  Kick
                 </button>
-              ) : (
-                <>
-                  <button
-                    onClick={() => setConfirm('kick')}
-                    className="text-xs px-3 py-1.5 rounded-full border border-lc-border text-lc-muted hover:border-amber-500 hover:text-amber-500 transition-colors"
-                  >
-                    Kick
-                  </button>
-                  <button
-                    onClick={() => setConfirm('ban')}
-                    className="text-xs px-3 py-1.5 rounded-full border border-lc-border text-lc-muted hover:border-red-500 hover:text-red-500 transition-colors"
-                  >
-                    Ban
-                  </button>
-                </>
-              )}
-            </>
+                <button
+                  onClick={() => setConfirm('ban')}
+                  className="text-xs px-3 py-1.5 rounded-full border border-lc-border text-lc-muted hover:border-red-500 hover:text-red-500 transition-colors"
+                >
+                  Ban
+                </button>
+              </>
+            )
           )}
         </div>
       </div>
