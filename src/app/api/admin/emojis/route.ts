@@ -101,6 +101,66 @@ export async function POST(req: NextRequest) {
   }
 }
 
+// PATCH /api/admin/emojis?serverId=...&id=... — rename a custom emoji. Mod+.
+// Body: { name }. Only the name is mutable; url/createdBy are immutable (to
+// rebind a shortcode to a new image, delete and re-upload).
+export async function PATCH(req: NextRequest) {
+  const serverIdOrError = requireServerIdFromQuery(req);
+  if (serverIdOrError instanceof NextResponse) return serverIdOrError;
+  const serverId = serverIdOrError;
+
+  const actor = await requireRole(req, serverId, 'mod');
+  if (actor instanceof NextResponse) return actor;
+
+  const id = req.nextUrl.searchParams.get('id');
+  if (!id) {
+    return NextResponse.json({ error: 'id query parameter is required' }, { status: 400 });
+  }
+
+  let body: { name?: unknown };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
+
+  const name = typeof body.name === 'string' ? body.name.trim().toLowerCase() : '';
+  if (!NAME_REGEX.test(name)) {
+    return NextResponse.json(
+      { error: 'name must match [a-z0-9_-]{2,32}' },
+      { status: 400 },
+    );
+  }
+
+  try {
+    const result = await prisma.serverEmoji.updateMany({
+      where: { id, serverId },
+      data: { name },
+    });
+    if (result.count === 0) {
+      return NextResponse.json({ error: 'Emoji not found' }, { status: 404 });
+    }
+    const updated = await prisma.serverEmoji.findUnique({
+      where: { id },
+      select: { id: true, name: true, url: true, createdBy: true, createdAt: true },
+    });
+    return NextResponse.json({ emoji: updated });
+  } catch (err: unknown) {
+    if (
+      typeof err === 'object' &&
+      err !== null &&
+      'code' in err &&
+      (err as { code?: string }).code === 'P2002'
+    ) {
+      return NextResponse.json(
+        { error: `An emoji named :${name}: already exists on this server` },
+        { status: 409 },
+      );
+    }
+    throw err;
+  }
+}
+
 // DELETE /api/admin/emojis?serverId=...&id=... — remove a custom emoji. Mod+.
 export async function DELETE(req: NextRequest) {
   const serverIdOrError = requireServerIdFromQuery(req);

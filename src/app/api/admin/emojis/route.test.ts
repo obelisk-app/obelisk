@@ -7,14 +7,16 @@ vi.mock('@/lib/db', () => ({
     member: { findUnique: vi.fn() },
     serverEmoji: {
       findMany: vi.fn(),
+      findUnique: vi.fn(),
       create: vi.fn(),
+      updateMany: vi.fn(),
       deleteMany: vi.fn(),
     },
   },
 }));
 vi.mock('@/lib/api-auth', () => ({ getAuthPubkey: vi.fn() }));
 
-import { GET, POST, DELETE } from './route';
+import { GET, POST, PATCH, DELETE } from './route';
 import { prisma } from '@/lib/db';
 import { getAuthPubkey } from '@/lib/api-auth';
 
@@ -127,6 +129,62 @@ describe('POST /api/admin/emojis', () => {
     mockMemberAuth('mod');
     mockPrisma.serverEmoji.create.mockRejectedValue({ code: 'P2002' });
     const res = await POST(makeRequest('POST', { name: 'dupe', url: '/uploads/d.png' }));
+    expect(res.status).toBe(409);
+  });
+});
+
+describe('PATCH /api/admin/emojis', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns 403 for non-mod members', async () => {
+    mockMemberAuth('member');
+    const res = await PATCH(makeRequest('PATCH', { name: 'renamed' }, '?serverId=srv1&id=e1'));
+    expect(res.status).toBe(403);
+    expect(mockPrisma.serverEmoji.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when id is missing', async () => {
+    mockMemberAuth('mod');
+    const res = await PATCH(makeRequest('PATCH', { name: 'renamed' }, '?serverId=srv1'));
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects invalid names', async () => {
+    mockMemberAuth('mod');
+    const res = await PATCH(makeRequest('PATCH', { name: 'X' }, '?serverId=srv1&id=e1'));
+    expect(res.status).toBe(400);
+    expect(mockPrisma.serverEmoji.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('mods can rename an emoji', async () => {
+    mockMemberAuth('mod');
+    mockPrisma.serverEmoji.updateMany.mockResolvedValue({ count: 1 });
+    mockPrisma.serverEmoji.findUnique.mockResolvedValue({
+      id: 'e1',
+      name: 'renamed',
+      url: '/uploads/p.png',
+      createdBy: 'x',
+      createdAt: new Date(),
+    });
+    const res = await PATCH(makeRequest('PATCH', { name: 'renamed' }, '?serverId=srv1&id=e1'));
+    expect(res.status).toBe(200);
+    expect(mockPrisma.serverEmoji.updateMany).toHaveBeenCalledWith({
+      where: { id: 'e1', serverId: 'srv1' },
+      data: { name: 'renamed' },
+    });
+  });
+
+  it('returns 404 when emoji is not in this server', async () => {
+    mockMemberAuth('mod');
+    mockPrisma.serverEmoji.updateMany.mockResolvedValue({ count: 0 });
+    const res = await PATCH(makeRequest('PATCH', { name: 'renamed' }, '?serverId=srv1&id=ghost'));
+    expect(res.status).toBe(404);
+  });
+
+  it('returns 409 on name collision', async () => {
+    mockMemberAuth('mod');
+    mockPrisma.serverEmoji.updateMany.mockRejectedValue({ code: 'P2002' });
+    const res = await PATCH(makeRequest('PATCH', { name: 'dupe' }, '?serverId=srv1&id=e1'));
     expect(res.status).toBe(409);
   });
 });
