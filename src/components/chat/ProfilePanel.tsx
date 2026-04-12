@@ -73,6 +73,18 @@ export default function ProfilePanel({ onClose, onLogout }: ProfilePanelProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nickname: nickname || null, serverId: activeServerId }),
       });
+      // Reflect the new alias in the local member list so the active user's
+      // own messages re-render with the alias without needing a page refresh.
+      const ownPubkey = profile?.pubkey;
+      if (ownPubkey) {
+        const chat = useChatStore.getState();
+        const fallback = profile?.displayName || profile?.name || '';
+        const nextName = (nickname || fallback).trim() || fallback;
+        const next = chat.memberList.map((m) =>
+          m.pubkey === ownPubkey ? { ...m, displayName: nextName } : m
+        );
+        chat.setMemberList(next);
+      }
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus('idle'), 2000);
     } catch {

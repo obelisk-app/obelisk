@@ -179,18 +179,24 @@ export default function ChatPage() {
     });
   }, [sessionChecked, logout]);
 
-  // Add own profile to cache
+  // Add own profile to cache. Prefer the per-server nickname (tracked in
+  // memberList as `displayName`) over the Nostr displayName so that messages
+  // from the signed-in user render with their alias, matching what other
+  // members see.
+  const ownMember = useChatStore((s) =>
+    profile ? s.memberList.find((m) => m.pubkey === profile.pubkey) : undefined
+  );
   useEffect(() => {
     if (profile) {
       profileCache.set(profile.pubkey, {
-        name: profile.displayName || profile.name,
-        picture: profile.picture,
+        name: ownMember?.displayName || profile.displayName || profile.name,
+        picture: ownMember?.picture || profile.picture,
       });
       profilePubkeyRef.current = profile.pubkey;
     } else {
       profilePubkeyRef.current = null;
     }
-  }, [profile, profileCache]);
+  }, [profile, profileCache, ownMember]);
 
   // `restoreSession` in the auth store already triggers the canonical
   // server-side profile sync via `/api/members/me/sync-nostr`. No client-side
