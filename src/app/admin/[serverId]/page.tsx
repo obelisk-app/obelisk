@@ -10,10 +10,11 @@ import CreateServerModal from '@/components/admin/CreateServerModal';
 import MembershipsModal from '@/components/admin/MembershipsModal';
 import WelcomeBotSettings from '@/components/admin/WelcomeBotSettings';
 import EmojiManager from '@/components/admin/EmojiManager';
+import RoleManager from '@/components/admin/RoleManager';
 import SystemContentManager from '@/components/admin/SystemContentManager';
 import type { Role } from '@/lib/auth-roles';
 
-type Tab = 'members' | 'channels' | 'access' | 'settings' | 'bans' | 'emojis' | 'content';
+type Tab = 'members' | 'channels' | 'roles' | 'access' | 'settings' | 'bans' | 'emojis' | 'content';
 
 interface MemberData {
   id: string;
@@ -24,6 +25,7 @@ interface MemberData {
   nip05: string | null;
   joinedAt: string;
   banned: boolean;
+  customRoles?: { role: { id: string; name: string; color: string; icon: string | null; priority: number } }[];
 }
 
 interface ServerSettings {
@@ -53,6 +55,7 @@ interface RoleResponse {
 const TAB_LABELS: Record<Tab, string> = {
   members: 'Members',
   channels: 'Channels',
+  roles: 'Roles',
   access: 'Access Control',
   settings: 'Settings',
   bans: 'Bans',
@@ -93,6 +96,7 @@ export default function AdminServerPage({
   const [memberToManage, setMemberToManage] = useState<{ pubkey: string; displayName: string | null } | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [serverCustomRoles, setServerCustomRoles] = useState<{ id: string; name: string; color: string }[]>([]);
 
   // Auth + role check (server-scoped via query param)
   useEffect(() => {
@@ -143,10 +147,35 @@ export default function AdminServerPage({
     if (res.ok) setServer(await res.json());
   }, [serverId]);
 
+  const fetchCustomRoles = useCallback(async () => {
+    if (!serverId) return;
+    const res = await fetch(`/api/admin/roles?serverId=${encodeURIComponent(serverId)}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setServerCustomRoles(data.map((r: { id: string; name: string; color: string }) => ({
+          id: r.id, name: r.name, color: r.color,
+        })));
+      }
+    }
+  }, [serverId]);
+
   useEffect(() => {
     if (!role || !serverId) return;
-    Promise.all([fetchMembers(), fetchServer()]).finally(() => setLoading(false));
-  }, [role, serverId, fetchMembers, fetchServer]);
+    Promise.all([fetchMembers(), fetchServer(), fetchCustomRoles()]).finally(() => setLoading(false));
+  }, [role, serverId, fetchMembers, fetchServer, fetchCustomRoles]);
+
+  const handleCustomRoleToggle = async (memberId: string, roleId: string, assign: boolean) => {
+    const method = assign ? 'POST' : 'DELETE';
+    const res = await fetch(`/api/admin/roles/${roleId}/members`, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ memberId }),
+    });
+    if (res.ok) {
+      await fetchMembers();
+    }
+  };
 
   const handleRoleChange = async (pubkey: string, newRole: Role) => {
     if (!serverId) return;
@@ -403,7 +432,9 @@ export default function AdminServerPage({
                     member={m}
                     isOwner={isOwner}
                     isInstanceOwner={instanceOwner}
+                    serverCustomRoles={serverCustomRoles}
                     onRoleChange={handleRoleChange}
+                    onCustomRoleToggle={handleCustomRoleToggle}
                     onKick={handleKick}
                     onBan={handleBan}
                     onUnban={handleUnban}
@@ -419,6 +450,13 @@ export default function AdminServerPage({
         {tab === 'channels' && (
           <div data-testid="channels-tab">
             <ChannelManager serverId={serverId} isOwner={isOwner} />
+          </div>
+        )}
+
+        {/* Roles Tab */}
+        {tab === 'roles' && (
+          <div data-testid="roles-tab">
+            <RoleManager serverId={serverId} />
           </div>
         )}
 
@@ -626,7 +664,9 @@ export default function AdminServerPage({
                     member={m}
                     isOwner={isOwner}
                     isInstanceOwner={instanceOwner}
+                    serverCustomRoles={serverCustomRoles}
                     onRoleChange={handleRoleChange}
+                    onCustomRoleToggle={handleCustomRoleToggle}
                     onKick={handleKick}
                     onBan={handleBan}
                     onUnban={handleUnban}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import RoleBadge from './RoleBadge';
+import RoleBadge, { type CustomRoleBadgeData } from './RoleBadge';
 import ConfirmDialog from './ConfirmDialog';
 import BanReasonDialog from './BanReasonDialog';
 import type { Role } from '@/lib/auth-roles';
@@ -17,10 +17,20 @@ interface MemberData {
   joinedAt: string;
   banned: boolean;
   joinedViaInvite?: { id: string; code: string; createdBy: string } | null;
+  customRoles?: { role: CustomRoleBadgeData }[];
+}
+
+/** Available custom roles on this server (for the assignment dropdown). */
+export interface ServerCustomRole {
+  id: string;
+  name: string;
+  color: string;
 }
 
 interface MemberRowProps {
   member: MemberData;
+  serverCustomRoles?: ServerCustomRole[];
+  onCustomRoleToggle?: (memberId: string, roleId: string, assign: boolean) => void;
   isOwner: boolean; // is the viewer the owner?
   isInstanceOwner?: boolean; // is the viewer the instance owner? unlocks cross-server actions
   onRoleChange: (pubkey: string, role: Role) => void;
@@ -34,11 +44,13 @@ export default function MemberRow({
   member,
   isOwner,
   isInstanceOwner = false,
+  serverCustomRoles,
   onRoleChange,
   onKick,
   onBan,
   onUnban,
   onManageMemberships,
+  onCustomRoleToggle,
 }: MemberRowProps) {
   const [confirm, setConfirm] = useState<'kick' | 'ban' | null>(null);
   const isTargetOwner = member.role === 'owner';
@@ -62,7 +74,10 @@ export default function MemberRow({
             <span className="text-sm font-medium text-lc-white truncate">
               {member.displayName || shortPubkey}
             </span>
-            <RoleBadge role={member.role} />
+            <RoleBadge
+              role={member.role}
+              customRoles={member.customRoles?.map((cr) => cr.role)}
+            />
             {member.banned && (
               <span className="text-xs bg-red-600 text-white px-2 py-0.5 rounded-full">BANNED</span>
             )}
@@ -108,6 +123,31 @@ export default function MemberRow({
                   <option value="mod">Mod</option>
                   <option value="member">Member</option>
                 </select>
+              )}
+
+              {/* Custom role toggles (admin+) */}
+              {serverCustomRoles && serverCustomRoles.length > 0 && onCustomRoleToggle && !member.banned && (
+                <div className="flex items-center gap-1 flex-wrap" data-testid="custom-role-toggles">
+                  {serverCustomRoles.map((cr) => {
+                    const assigned = member.customRoles?.some((mcr) => mcr.role.id === cr.id) ?? false;
+                    return (
+                      <button
+                        key={cr.id}
+                        onClick={() => onCustomRoleToggle(member.id, cr.id, !assigned)}
+                        className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
+                          assigned
+                            ? 'border-transparent font-semibold'
+                            : 'border-lc-border text-lc-muted hover:border-lc-green/50'
+                        }`}
+                        style={assigned ? { backgroundColor: cr.color, color: '#fff' } : undefined}
+                        title={assigned ? `Remove ${cr.name}` : `Assign ${cr.name}`}
+                        data-testid={`toggle-role-${cr.id}`}
+                      >
+                        {assigned ? `- ${cr.name}` : `+ ${cr.name}`}
+                      </button>
+                    );
+                  })}
+                </div>
               )}
 
               {member.banned ? (

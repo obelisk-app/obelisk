@@ -1,9 +1,19 @@
 import { nip19 } from 'nostr-tools';
 
+export interface MemberCustomRoleInfo {
+  id: string;
+  name: string;
+  color: string;
+  icon?: string | null;
+  priority: number;
+}
+
 export interface MemberInfo {
   pubkey: string;
   displayName: string;
   picture?: string;
+  role?: string; // base role: owner | admin | mod | member
+  customRoles?: MemberCustomRoleInfo[];
 }
 
 export type MentionSegment =

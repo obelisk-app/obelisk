@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import MemberList from './MemberList';
 import { useChatStore } from '@/store/chat';
 
@@ -50,5 +50,82 @@ describe('MemberList presence indicator', () => {
     useChatStore.getState().setOnlinePubkeys(['pk-online']);
     render(<MemberList profileCache={emptyProfileCache} />);
     expect(screen.getByText(/1\/2 online/i)).toBeInTheDocument();
+  });
+});
+
+describe('MemberList role grouping', () => {
+  beforeEach(() => {
+    useChatStore.setState(useChatStore.getInitialState());
+  });
+
+  it('groups online members by base role', () => {
+    useChatStore.getState().setMemberList([
+      { pubkey: 'pk-owner', displayName: 'Owner', role: 'owner' },
+      { pubkey: 'pk-admin', displayName: 'Admin', role: 'admin' },
+      { pubkey: 'pk-member', displayName: 'Member', role: 'member' },
+    ]);
+    useChatStore.getState().setOnlinePubkeys(['pk-owner', 'pk-admin', 'pk-member']);
+
+    render(<MemberList profileCache={emptyProfileCache} />);
+
+    expect(screen.getByText(/Owner — 1/)).toBeInTheDocument();
+    expect(screen.getByText(/Admin — 1/)).toBeInTheDocument();
+    expect(screen.getByText(/Member — 1/)).toBeInTheDocument();
+  });
+
+  it('groups by custom role when its priority exceeds base role', () => {
+    useChatStore.getState().setMemberList([
+      {
+        pubkey: 'pk-vip',
+        displayName: 'VIP User',
+        role: 'member',
+        customRoles: [{ id: 'r1', name: 'VIP', color: '#ff0000', priority: 500 }],
+      },
+      { pubkey: 'pk-normal', displayName: 'Normal', role: 'member' },
+    ]);
+    useChatStore.getState().setOnlinePubkeys(['pk-vip', 'pk-normal']);
+
+    render(<MemberList profileCache={emptyProfileCache} />);
+
+    expect(screen.getByText(/VIP — 1/)).toBeInTheDocument();
+    expect(screen.getByText(/Member — 1/)).toBeInTheDocument();
+  });
+
+  it('places offline members in collapsible section', () => {
+    useChatStore.getState().setMemberList([
+      { pubkey: 'pk-online', displayName: 'Alice', role: 'member' },
+      { pubkey: 'pk-offline', displayName: 'Bob', role: 'member' },
+    ]);
+    useChatStore.getState().setOnlinePubkeys(['pk-online']);
+
+    render(<MemberList profileCache={emptyProfileCache} />);
+
+    expect(screen.getByText(/Offline — 1/)).toBeInTheDocument();
+    // Bob should be visible
+    expect(screen.getByText('Bob')).toBeInTheDocument();
+
+    // Click to collapse
+    fireEvent.click(screen.getByTestId('offline-toggle'));
+    // Bob should be hidden
+    const items = screen.getAllByTestId('member-item');
+    // Only Alice should remain
+    expect(items).toHaveLength(1);
+  });
+
+  it('colors username by highest-priority custom role', () => {
+    useChatStore.getState().setMemberList([
+      {
+        pubkey: 'pk-gold',
+        displayName: 'Gold User',
+        role: 'member',
+        customRoles: [{ id: 'r1', name: 'Gold', color: '#ffd700', priority: 500 }],
+      },
+    ]);
+    useChatStore.getState().setOnlinePubkeys(['pk-gold']);
+
+    render(<MemberList profileCache={emptyProfileCache} />);
+
+    const nameEl = screen.getByText('Gold User');
+    expect(nameEl.style.color).toBe('rgb(255, 215, 0)');
   });
 });

@@ -38,6 +38,11 @@ export async function GET(req: NextRequest) {
       website: true,
       nickname: true,
       joinedAt: true,
+      customRoles: {
+        select: {
+          role: { select: { id: true, name: true, color: true, icon: true, priority: true } },
+        },
+      },
     },
     orderBy: { joinedAt: 'asc' },
   });

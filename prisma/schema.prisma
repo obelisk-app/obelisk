@@ -22,9 +22,10 @@ model Server {
   wotEnabled         Boolean   @default(false)
   referenteFetchedAt DateTime?
 
-  // Activity-based invite credits policy
+  // Member invite credits: members with tenure >= minDaysActive days can
+  // create up to invitesPerUser single-use invites that auto-expire after
+  // inviteExpiryHours. Set invitesPerUser=0 to disable member invites.
   minDaysActive     Int @default(7)
-  minMessages       Int @default(20)
   invitesPerUser    Int @default(3)
   inviteExpiryHours Int @default(168) // 7 days
 
@@ -56,6 +57,8 @@ model Server {
   wotEntries       WotEntry[]
   wotOverrides     WotOverride[]
   emojis           ServerEmoji[]
+  gifs             ServerGif[]
+  customRoles      CustomRole[]
 }
 
 // Custom per-server emoji (`:partyparrot:` style). Uploaded by mod+ via
@@ -75,6 +78,29 @@ model ServerEmoji {
 
   @@unique([serverId, name])
   @@index([serverId])
+}
+
+// Curated per-server GIF library. Uploaded by mod+ via /api/admin/gifs and
+// shown in the composer's GIF picker. Unlike ServerEmoji, GIFs are full-size
+// images inserted into messages as URLs (rendered inline via the existing
+// image-gallery pipeline in MessageContent). `tags` is a comma-separated list
+// used by the picker's search.
+model ServerGif {
+  id         String   @id @default(cuid())
+  serverId   String
+  name       String   // free-form label (2–64 chars), displayed in picker
+  url        String   // /uploads/<id>.gif — hosted by our own upload route
+  tags       String   @default("") // comma-separated, lowercased
+  width      Int?
+  height     Int?
+  sizeBytes  Int?
+  uploadedBy String
+  createdAt  DateTime @default(now())
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@index([serverId])
+  @@index([serverId, createdAt])
 }
 
 model DirectMessageThread {
@@ -100,12 +126,18 @@ model Invitation {
   createdAt    DateTime  @default(now())
   revokedAt    DateTime? // soft-revoke: null = active, set = no new joins but history preserved
   revokedBy    String?   // pubkey of admin who revoked
+  // True when this invite was minted against the creator's member credit pool
+  // (tenure-based). Admin-minted invites stay false regardless of who created
+  // them, so an admin who also holds a member row doesn't see admin invites
+  // bleeding into their "My Invites" card or eating member credits.
+  memberCreated Boolean  @default(false)
 
   server  Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
   members Member[] @relation("InvitationMembers")
 
   @@index([serverId])
   @@index([code])
+  @@index([serverId, createdBy, memberCreated])
 }
 
 model Category {
@@ -252,7 +284,8 @@ model Member {
   joinedViaInviteId String?
   joinedViaInvite   Invitation? @relation("InvitationMembers", fields: [joinedViaInviteId], references: [id], onDelete: SetNull)
 
-  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  server      Server             @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  customRoles MemberCustomRole[]
 
   @@unique([serverId, pubkey])
   @@index([serverId])
@@ -407,4 +440,38 @@ model WotOverride {
 
   @@unique([serverId, pubkey])
   @@index([serverId])
+}
+
+// Custom roles per server (e.g. "VIP", "Artist", "Gold"). Layered on top of
+// the base role (owner/admin/mod/member). A member can hold multiple custom
+// roles; effective permissions = base role defaults | all custom role bits.
+model CustomRole {
+  id          String   @id @default(cuid())
+  serverId    String
+  name        String   // display name, e.g. "Gold"
+  color       String   @default("#99aab5") // hex color for badge + username tint
+  icon        String?  // emoji or image URL
+  priority    Int      @default(0)         // higher = shown first in member list
+  permissions BigInt   @default(0)         // bitfield, see src/lib/permissions.ts
+  createdAt   DateTime @default(now())
+
+  server  Server             @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  members MemberCustomRole[]
+
+  @@unique([serverId, name])
+  @@index([serverId])
+}
+
+// Pivot table: which members hold which custom roles.
+model MemberCustomRole {
+  id       String @id @default(cuid())
+  memberId String
+  roleId   String
+
+  member Member     @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  role   CustomRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, roleId])
+  @@index([memberId])
+  @@index([roleId])
 }

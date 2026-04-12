@@ -28,6 +28,11 @@ export async function GET(req: NextRequest) {
         joinedViaInvite: {
           select: { id: true, code: true, createdBy: true },
         },
+        customRoles: {
+          include: {
+            role: { select: { id: true, name: true, color: true, icon: true, priority: true } },
+          },
+        },
       },
     }),
     prisma.ban.findMany({
