@@ -30,6 +30,16 @@ vi.mock('qrcode.react', () => ({
   QRCodeSVG: () => null,
 }));
 
+vi.mock('@/components/ProfileEditor', () => ({
+  default: ({ mode, onComplete, onSkip }: { mode: string; onComplete: () => void; onSkip?: () => void }) => (
+    <div data-testid="profile-editor">
+      <div>{mode === 'setup' ? 'profileEditor.setupTitle' : 'profileEditor.editTitle'}</div>
+      <button onClick={onComplete}>complete</button>
+      {onSkip && <button onClick={onSkip}>skip</button>}
+    </div>
+  ),
+}));
+
 import LoginModal from './LoginModal';
 import { createNewAccount } from '@/lib/nostr';
 import { useAuthStore } from '@/store/auth';
@@ -133,7 +143,7 @@ describe('LoginModal', () => {
     expect(continueBtn).not.toBeDisabled();
   });
 
-  it('calls onClose and onSuccess when continue clicked after confirming backup', async () => {
+  it('shows profile setup when continue clicked after confirming backup', async () => {
     const user = userEvent.setup();
     vi.mocked(createNewAccount).mockResolvedValue({
       user: { pubkey: 'abc123', fetchProfile: vi.fn() },
@@ -149,8 +159,11 @@ describe('LoginModal', () => {
 
     await user.click(screen.getByRole('checkbox'));
     await user.click(screen.getByText("I've saved my key — Continue"));
-    expect(mockOnClose).toHaveBeenCalled();
-    expect(mockOnSuccess).toHaveBeenCalled();
+
+    // Should now show profile setup instead of closing
+    await waitFor(() => {
+      expect(screen.getByText('profileEditor.setupTitle')).toBeInTheDocument();
+    });
   });
 
   it('downloads nsec as a txt file when download backup clicked', async () => {

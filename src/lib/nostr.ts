@@ -311,6 +311,56 @@ export async function fetchUserNotes(pubkey: string, limit = 20): Promise<NDKEve
   }
 }
 
+// Fetch current kind 0 metadata from relays
+export async function fetchCurrentKind0(pubkey: string): Promise<Record<string, unknown>> {
+  const ndk = getNDK();
+  try {
+    const event = await withTimeout(
+      ndk.fetchEvent({ kinds: [0], authors: [pubkey] }),
+      10000
+    );
+    if (event?.content) {
+      return JSON.parse(event.content);
+    }
+  } catch {
+    console.warn('fetchCurrentKind0 failed or timed out');
+  }
+  return {};
+}
+
+// Publish kind 0 profile metadata to Nostr relays
+// SAFETY: merges with existing metadata — never overwrites unedited fields
+export async function publishProfile(fields: {
+  name?: string;
+  display_name?: string;
+  picture?: string;
+  about?: string;
+}): Promise<NDKEvent> {
+  const ndk = getNDK();
+  if (!ndk.signer) throw new Error('No signer available');
+
+  const user = await ndk.signer.user();
+  const existing = await fetchCurrentKind0(user.pubkey);
+
+  // Merge: only overwrite fields that are explicitly provided and non-empty
+  const merged = { ...existing };
+  for (const [key, value] of Object.entries(fields)) {
+    if (value !== undefined && value !== null && value !== '') {
+      merged[key] = value;
+    }
+  }
+
+  const event = new NDKEvent(ndk);
+  event.kind = 0;
+  event.content = JSON.stringify(merged);
+  await event.publish();
+
+  // Re-fetch profile into NDK user cache
+  user.profile = merged as Record<string, string>;
+
+  return event;
+}
+
 // Format pubkey for display
 export function formatPubkey(pubkey: string): string {
   const npub = nip19.npubEncode(pubkey);

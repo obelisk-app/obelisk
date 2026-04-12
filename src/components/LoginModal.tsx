@@ -15,6 +15,7 @@ import {
   NostrConnectSession,
 } from '@/lib/nostr';
 import { authenticateWithBackend } from '@/lib/backend-auth';
+import ProfileEditor from '@/components/ProfileEditor';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -38,6 +39,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
   const [nsecCopied, setNsecCopied] = useState(false);
   const [creatingAccount, setCreatingAccount] = useState(false);
   const [backupConfirmed, setBackupConfirmed] = useState(false);
+  const [showProfileSetup, setShowProfileSetup] = useState(false);
   const sessionRef = useRef<NostrConnectSession | null>(null);
   const { setUser, setLoading, setError, isLoading, error, syncProfile } = useAuthStore();
 
@@ -202,7 +204,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
       await authenticateWithBackend(getNDK());
       setNewAccountNsec(nsec);
       setUser(user, 'nsec');
-      syncProfile();
+      // Skip syncProfile — a brand-new account has no Nostr profile on relays yet
     } catch (err) {
       console.error('Account creation error:', err);
       setError(err instanceof Error ? err.message : 'Failed to create account');
@@ -243,7 +245,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-lc-dark rounded-2xl max-w-md w-full p-8 border border-lc-border shadow-2xl">
+      <div className="bg-lc-dark rounded-2xl max-w-md w-full p-8 border border-lc-border shadow-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>
@@ -274,7 +276,14 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
         )}
 
         {/* Screens */}
-        {newAccountNsec ? (
+        {showProfileSetup ? (
+          <ProfileEditor
+            mode="setup"
+            onComplete={() => { onClose(); onSuccess?.(); }}
+            onSkip={() => { onClose(); onSuccess?.(); }}
+          />
+
+        ) : newAccountNsec ? (
           <div className="space-y-5">
             <div className="text-center">
               <div className="w-14 h-14 bg-lc-green/15 rounded-2xl flex items-center justify-center mx-auto mb-4">
@@ -324,7 +333,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
             {/* nostr-wot recommendation */}
             <div className="p-4 bg-lc-olive/20 border border-lc-green/10 rounded-xl space-y-3">
               <p className="text-sm text-lc-muted">
-                For the best experience, use the <span className="text-lc-white font-medium">nostr-wot</span> browser extension to manage your keys securely.
+                For the best experience using the nostr ecosystem, use the <span className="text-lc-white font-medium">nostr-wot</span> browser extension to manage your keys securely.
               </p>
               <div className="flex flex-col gap-2">
                 <a
@@ -381,7 +390,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
             </label>
 
             <button
-              onClick={() => { onClose(); onSuccess?.(); }}
+              onClick={() => setShowProfileSetup(true)}
               disabled={!backupConfirmed}
               className="w-full lc-pill lc-pill-primary text-sm flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
             >

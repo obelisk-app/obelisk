@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useAuthStore } from '@/store/auth';
 import { useTranslation } from '@/i18n/context';
+import ProfileEditor from '@/components/ProfileEditor';
 
 interface ProfilePanelProps {
   onClose: () => void;
@@ -18,6 +19,7 @@ export default function ProfilePanel({ onClose, onLogout }: ProfilePanelProps) {
   const [syncStatus, setSyncStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved'>('idle');
+  const [editingProfile, setEditingProfile] = useState(false);
 
   // Load current nickname from server on first render
   if (!nicknameLoaded) {
@@ -131,26 +133,44 @@ export default function ProfilePanel({ onClose, onLogout }: ProfilePanelProps) {
 
         <div className="border-t border-lc-border mt-3" />
 
-        {/* Nostr section — read only + sync button */}
+        {/* Nostr section — edit profile + sync */}
         <div className="px-4 py-3">
           <div className="text-[10px] uppercase tracking-wider text-lc-muted font-semibold mb-2">
             {t('profile.nostrSection')}
           </div>
-          <button
-            onClick={handleSyncNostr}
-            disabled={syncing}
-            className="w-full flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-lc-border/50 text-lc-white hover:bg-lc-border transition disabled:opacity-50"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={syncing ? 'animate-spin' : ''}>
-              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0118.8-4.3M22 12.5a10 10 0 01-18.8 4.3"/>
-            </svg>
-            {syncing ? t('profile.syncing') : t('profile.syncFromNostr')}
-          </button>
-          {syncStatus === 'success' && (
-            <div className="text-[10px] text-lc-green mt-1 text-center">{t('profile.syncSuccess')}</div>
-          )}
-          {syncStatus === 'error' && (
-            <div className="text-[10px] text-red-400 mt-1 text-center">{t('profile.syncError')}</div>
+          <div className="space-y-2">
+            <button
+              onClick={() => setEditingProfile(true)}
+              className="w-full flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-lc-green/20 text-lc-green hover:bg-lc-green/30 transition"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+              </svg>
+              {t('profile.editNostr')}
+            </button>
+            <button
+              onClick={handleSyncNostr}
+              disabled={syncing}
+              className="w-full flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-lc-border/50 text-lc-white hover:bg-lc-border transition disabled:opacity-50"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={syncing ? 'animate-spin' : ''}>
+                <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0118.8-4.3M22 12.5a10 10 0 01-18.8 4.3"/>
+              </svg>
+              {syncing ? t('profile.syncing') : t('profile.syncFromNostr')}
+            </button>
+            {syncStatus === 'success' && (
+              <div className="text-[10px] text-lc-green mt-1 text-center">{t('profile.syncSuccess')}</div>
+            )}
+            {syncStatus === 'error' && (
+              <div className="text-[10px] text-red-400 mt-1 text-center">{t('profile.syncError')}</div>
+            )}
+          </div>
+          {editingProfile && (
+            <ProfileEditor
+              mode="edit"
+              onComplete={() => setEditingProfile(false)}
+            />
           )}
         </div>
 
