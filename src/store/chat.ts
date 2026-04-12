@@ -70,6 +70,18 @@ export interface ServerInfo {
   ownerPubkey?: string;
 }
 
+// One row of the server's GIF library. Mirrors the shape returned by GET
+// /api/gifs (member-facing) — a minimal view that omits admin-only fields
+// like `uploadedBy` and `sizeBytes`.
+export interface ServerGif {
+  id: string;
+  name: string;
+  url: string;
+  tags: string; // comma-separated, lowercased
+  width: number | null;
+  height: number | null;
+}
+
 interface ChatState {
   // Multi-server support
   servers: ServerInfo[];
@@ -118,8 +130,14 @@ interface ChatState {
   // `EmojiPicker` to render `:partyparrot:` inline. Empty object = no customs.
   serverEmojis: Record<string, string>;
 
+  // Curated per-server GIF library. Refreshed on server select via
+  // `GET /api/gifs?serverId=…`. Used by the composer's GIF picker. Empty
+  // array = no GIFs uploaded yet. Ordered newest-first to match the API.
+  serverGifs: ServerGif[];
+
   setMemberList: (members: MemberInfo[]) => void;
   setServerEmojis: (emojis: Record<string, string>) => void;
+  setServerGifs: (gifs: ServerGif[]) => void;
   setServers: (servers: ServerInfo[]) => void;
   addServer: (server: ServerInfo) => void;
   removeServer: (serverId: string) => void;
@@ -182,9 +200,11 @@ export const useChatStore = create<ChatState>()((set) => ({
   isNearBottom: true,
   myRole: null,
   serverEmojis: {},
+  serverGifs: [],
 
   setMemberList: (members) => set({ memberList: members }),
   setServerEmojis: (emojis) => set({ serverEmojis: emojis }),
+  setServerGifs: (gifs) => set({ serverGifs: gifs }),
   setServers: (servers) => set({ servers }),
   addServer: (server) => set((state) => ({
     servers: [...state.servers, server],
@@ -200,6 +220,7 @@ export const useChatStore = create<ChatState>()((set) => ({
     messages: [],
     isLoadingChannels: true,
     serverEmojis: {},
+    serverGifs: [],
   }),
   setChannels: (pinnedChannels, categories) => set({ pinnedChannels, categories, isLoadingChannels: false }),
   setActiveChannel: (channelId) => set({ activeChannelId: channelId, messages: [], isLoadingMessages: true, replyingTo: null, messageCursor: null, hasMoreMessages: false, typingUsers: {}, isNearBottom: true }),

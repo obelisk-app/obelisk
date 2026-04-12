@@ -23,7 +23,7 @@ import { WebSocketVoiceClient } from '@/lib/voice';
 import { discoverDMThreads, subscribeDMs, computeUnreadCounts } from '@/lib/dm';
 import type { DMMessage } from '@/lib/dm';
 import { publishInboxRelays } from '@/lib/dm-inbox';
-import { formatPubkey, getNDK, connectNDK } from '@/lib/nostr';
+import { formatPubkey, getNDK, connectNDK, addDMInboxRelays } from '@/lib/nostr';
 import { shortNpub } from '@/lib/mentions';
 import {
   isUserWatchingChannel,
@@ -88,6 +88,7 @@ export default function ChatPage() {
     setMemberList,
     setMyRole,
     setServerEmojis,
+    setServerGifs,
   } = useChatStore();
   const socketRef = useRef<Socket | null>(null);
   const [socketInstance, setSocketInstance] = useState<Socket | null>(null);
@@ -396,6 +397,29 @@ export default function ChatPage() {
     };
   }, [activeServerId, setServerEmojis]);
 
+  // Fetch the server's GIF library so the composer's GIF picker has content
+  // to show. Same fail-soft pattern as emojis — on error, leave the picker
+  // empty rather than blocking the UI.
+  useEffect(() => {
+    if (!activeServerId) {
+      setServerGifs([]);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/gifs?serverId=${encodeURIComponent(activeServerId)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (cancelled || !data?.gifs) return;
+        setServerGifs(data.gifs);
+      })
+      .catch(() => {
+        if (!cancelled) setServerGifs([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeServerId, setServerGifs]);
+
   // Seed the profileCache with the "system bot" entry (all-zero pubkey) using
   // the active server's name + icon. This makes welcome-bot / pinned-system
   // messages render with the server logo instead of a generic placeholder,
@@ -444,9 +468,9 @@ export default function ChatPage() {
           });
 
       const recomputeUnreads = () => {
-        const notif = useNotificationStore.getState();
-        const counts = computeUnreadCounts(myPubkey, notif.dmLastReadAt);
-        notif.setDMUnreads(counts);
+        const { readCursors } = useDMStore.getState();
+        const counts = computeUnreadCounts(myPubkey, readCursors);
+        useNotificationStore.getState().setDMUnreads(counts);
         const currentThreads = useDMStore.getState().threads;
         useDMStore.getState().setThreads(
           currentThreads.map((t) => ({ ...t, unreadCount: counts[t.pubkey] ?? 0 })),
@@ -484,14 +508,41 @@ export default function ChatPage() {
     [profile?.pubkey, profileCache],
   );
 
-  // Trigger the first discovery pass the moment the user enters DM mode.
-  // Subsequent toggles are a no-op; the refresh button calls runDMDiscovery
-  // directly with force=true.
+  // Trigger the first discovery pass the moment the user enters DM mode,
+  // then keep re-polling every DM_POLL_INTERVAL_MS while the user stays in
+  // the DM view so new messages trickle in without a manual refresh.
+  // On toggle-off the interval is torn down — we don't want to hold a
+  // DM subscription open while the user is in a regular channel.
   useEffect(() => {
+    console.log('[dm] effect fired', {
+      isDMMode,
+      ndkReady,
+      pubkey: profile?.pubkey,
+      signer: !!getNDK().signer,
+      alreadyRan: dmDiscoveryRanRef.current,
+    });
     if (!isDMMode || !ndkReady || !profile?.pubkey) return;
-    if (dmDiscoveryRanRef.current) return;
-    dmDiscoveryRanRef.current = true;
-    void runDMDiscovery();
+
+    const myPubkey = profile.pubkey;
+
+    // First-time gate: on initial entry, also register NIP-17 inbox relays
+    // (and resolve user's kind 10050 list). This opens AUTH-required relays
+    // via the policy set in getNDK(). Subsequent entries skip this work.
+    if (!dmDiscoveryRanRef.current) {
+      dmDiscoveryRanRef.current = true;
+      void addDMInboxRelays(myPubkey).then(() => runDMDiscovery());
+    } else {
+      void runDMDiscovery();
+    }
+
+    const DM_POLL_INTERVAL_MS = 60_000;
+    const interval = setInterval(() => {
+      // Incremental poll — the sync state inside discoverDMThreads already
+      // narrows the filter to `since = lastPollAt`, so this is cheap.
+      void runDMDiscovery();
+    }, DM_POLL_INTERVAL_MS);
+
+    return () => clearInterval(interval);
   }, [isDMMode, ndkReady, profile?.pubkey, runDMDiscovery]);
 
   // Reset the guard whenever the user logs out / switches accounts so the
@@ -1081,7 +1132,7 @@ export default function ChatPage() {
       `}>
         <ServerBar />
         {isDMMode ? (
-          <DMList onNewDM={() => setShowNewDMModal(true)} onRefresh={() => runDMDiscovery(true)} />
+          <DMList onNewDM={() => setShowNewDMModal(true)} />
         ) : (
           <ChannelSidebar onChannelSelect={() => setSidebarOpen(false)} />
         )}

@@ -12,6 +12,7 @@ import {
 } from '@/lib/mentions';
 import MentionAutocomplete from './MentionAutocomplete';
 import EmojiPicker from './EmojiPicker';
+import GifPicker from './GifPicker';
 import EmojiAutocomplete, { type ShortcodeSuggestion } from './EmojiAutocomplete';
 import {
   MAX_ATTACHMENTS_PER_MESSAGE,
@@ -42,12 +43,14 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
     setEditingMessage,
     memberList,
     serverEmojis,
+    serverGifs,
     myRole,
   } = useChatStore();
 
-  // Attach menu / upload / emoji state
+  // Attach menu / upload / emoji / gif state
   const [attachMenuOpen, setAttachMenuOpen] = useState(false);
   const [emojiOpen, setEmojiOpen] = useState(false);
+  const [gifOpen, setGifOpen] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
 
@@ -555,6 +558,15 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
     setEmojiOpen(false);
   };
 
+  // GIF picker: drop the URL into the composer. The existing URL-extraction in
+  // MessageContent will hoist it out and render it inline in the image gallery,
+  // so the user can optionally add text around it before sending. Space-pad so
+  // adjacent text doesn't glue to the URL and break the detector.
+  const onGifSelect = (url: string) => {
+    insertAtCursor(` ${url} `);
+    setGifOpen(false);
+  };
+
   if (!activeChannelId) return null;
 
   return (
@@ -861,6 +873,27 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
               onSelect={onEmojiSelect}
               onClose={() => setEmojiOpen(false)}
               serverEmojis={serverEmojis}
+            />
+          )}
+        </div>
+
+        {/* GIF picker — opens the server's curated GIF library */}
+        <div className="relative shrink-0">
+          <button
+            type="button"
+            aria-label="GIF"
+            onClick={() => setGifOpen((o) => !o)}
+            className="px-1.5 py-1 rounded-lg text-lc-muted hover:text-lc-green transition-colors text-[10px] font-bold tracking-wide border border-current/30"
+            data-testid="gif-button"
+            title="Insert GIF from server library"
+          >
+            GIF
+          </button>
+          {gifOpen && (
+            <GifPicker
+              gifs={serverGifs}
+              onSelect={onGifSelect}
+              onClose={() => setGifOpen(false)}
             />
           )}
         </div>

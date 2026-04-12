@@ -15,6 +15,30 @@ interface EmojiManagerProps {
 }
 
 const NAME_REGEX = /^[a-z0-9_-]{2,32}$/;
+// Static images stay tight (256 KB) to keep the picker snappy, but animated
+// GIFs need more headroom — even a small animation is typically 500 KB+.
+const MAX_EMOJI_BYTES_STATIC = 256 * 1024;
+const MAX_EMOJI_BYTES_GIF = 2 * 1024 * 1024;
+
+function maxBytesForEmoji(mime: string): number {
+  return mime === 'image/gif' ? MAX_EMOJI_BYTES_GIF : MAX_EMOJI_BYTES_STATIC;
+}
+
+/**
+ * Derive a reasonable emoji name from a filename. Strips the extension and
+ * sanitizes whitespace, punctuation, and uppercase to match NAME_REGEX. Useful
+ * as a starting point for the user so they don't have to retype what their
+ * file was already called. Returns empty string if nothing valid remains.
+ */
+function suggestNameFromFile(filename: string): string {
+  const base = filename.replace(/\.[^.]+$/, '');
+  const cleaned = base
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 32);
+  return cleaned.length >= 2 ? cleaned : '';
+}
 
 /**
  * Mod+ admin UI for managing custom per-server emojis. Upload → name → POST,
@@ -54,9 +78,16 @@ export default function EmojiManager({ serverId }: EmojiManagerProps) {
       setError('Select an image file');
       return;
     }
+    const cap = maxBytesForEmoji(file.type);
+    if (file.size > cap) {
+      const kb = Math.round(file.size / 1024);
+      const capKb = Math.round(cap / 1024);
+      setError(`File is ${kb} KB — limit is ${capKb} KB for ${file.type || 'this type'}. Shrink the image first.`);
+      return;
+    }
     const cleanName = name.trim().toLowerCase();
     if (!NAME_REGEX.test(cleanName)) {
-      setError('Name must be 2–32 lowercase letters, digits, _ or -');
+      setError('Name must be 2–32 characters: letters, digits, _ or -');
       return;
     }
     setSaving(true);
@@ -120,16 +151,31 @@ export default function EmojiManager({ serverId }: EmojiManagerProps) {
             ref={fileInputRef}
             type="file"
             accept="image/png,image/jpeg,image/gif,image/webp"
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
+            onChange={(e) => {
+              const f = e.target.files?.[0] || null;
+              setFile(f);
+              setError(null);
+              // Auto-suggest a name from the filename if the user hasn't typed one yet.
+              if (f && !name.trim()) {
+                const suggested = suggestNameFromFile(f.name);
+                if (suggested) setName(suggested);
+              }
+            }}
             className="text-xs text-lc-muted file:mr-3 file:px-3 file:py-1.5 file:rounded-full file:border-0 file:bg-lc-border file:text-lc-white file:text-xs file:cursor-pointer"
             data-testid="emoji-file-input"
           />
           <input
             type="text"
             value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder=":name:"
-            pattern="[a-z0-9_\-]{2,32}"
+            onChange={(e) => {
+              // Auto-lowercase and strip disallowed chars as the user types so the
+              // field always reflects what the server will actually accept. This
+              // avoids "name is wrong" errors on inputs the user considers valid.
+              const cleaned = e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '');
+              setName(cleaned.slice(0, 32));
+            }}
+            placeholder="name"
+            maxLength={32}
             className="flex-1 px-3 py-1.5 rounded-lg bg-lc-black border border-lc-border text-lc-white text-sm focus:border-lc-green focus:outline-none"
             data-testid="emoji-name-input"
           />
@@ -148,7 +194,7 @@ export default function EmojiManager({ serverId }: EmojiManagerProps) {
           </p>
         )}
         <p className="text-[11px] text-lc-muted">
-          PNG, JPEG, GIF, or WebP. Recommended: ≤ 128×128 px, ≤ 256 KB.
+          PNG, JPEG, WebP up to 256 KB · animated GIF up to 2 MB. Recommended: ≤ 128×128 px.
         </p>
       </form>
 

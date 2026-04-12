@@ -10,11 +10,12 @@ import CreateServerModal from '@/components/admin/CreateServerModal';
 import MembershipsModal from '@/components/admin/MembershipsModal';
 import WelcomeBotSettings from '@/components/admin/WelcomeBotSettings';
 import EmojiManager from '@/components/admin/EmojiManager';
+import GifManager from '@/components/admin/GifManager';
 import RoleManager from '@/components/admin/RoleManager';
 import SystemContentManager from '@/components/admin/SystemContentManager';
 import type { Role } from '@/lib/auth-roles';
 
-type Tab = 'members' | 'channels' | 'roles' | 'access' | 'settings' | 'bans' | 'emojis' | 'content';
+type Tab = 'members' | 'channels' | 'roles' | 'access' | 'settings' | 'bans' | 'emojis' | 'gifs' | 'content';
 
 interface MemberData {
   id: string;
@@ -60,6 +61,7 @@ const TAB_LABELS: Record<Tab, string> = {
   settings: 'Settings',
   bans: 'Bans',
   emojis: 'Emojis',
+  gifs: 'GIFs',
   content: 'Content',
 };
 
@@ -365,7 +367,7 @@ export default function AdminServerPage({
         {/* Tabs */}
         <div className="max-w-5xl mx-auto px-6">
           <div className="flex gap-1 -mb-px overflow-x-auto">
-            {(['members', 'channels', 'content', 'access', 'settings', 'emojis', 'bans'] as Tab[]).map((t) => {
+            {(['members', 'channels', 'content', 'access', 'settings', 'emojis', 'gifs', 'bans'] as Tab[]).map((t) => {
               const isActive = tab === t;
               return (
                 <button
@@ -464,6 +466,13 @@ export default function AdminServerPage({
         {tab === 'emojis' && (
           <div data-testid="emojis-tab">
             <EmojiManager serverId={serverId} />
+          </div>
+        )}
+
+        {/* GIFs Tab — curated per-server GIF library */}
+        {tab === 'gifs' && (
+          <div data-testid="gifs-tab">
+            <GifManager serverId={serverId} />
           </div>
         )}
 

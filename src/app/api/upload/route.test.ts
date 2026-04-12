@@ -97,7 +97,7 @@ describe('POST /api/upload', () => {
 
     expect(body.isImage).toBe(true);
     expect(body.name).toBe('pixel.png');
-    expect(body.url).toMatch(/^http:\/\/localhost:3000\/uploads\/[a-f0-9]+\.png$/);
+    expect(body.url).toMatch(/^\/uploads\/[a-f0-9]+\.png$/);
 
     const uploadDir = path.join(TMP_CWD, 'uploads');
     expect(existsSync(uploadDir)).toBe(true);
