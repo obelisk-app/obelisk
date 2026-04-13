@@ -721,34 +721,6 @@ export default function ForumView({ channelId, channelName, profileCache, availa
     }
   };
 
-  const togglePostReaction = async (postId: string, emoji: string) => {
-    if (!myPubkey) return;
-    setPosts((cur) => cur.map((p) => {
-      if (p.id !== postId) return p;
-      const current = p.reactions ?? [];
-      const existing = current.find((r) => r.authorPubkey === myPubkey && r.emoji === emoji);
-      const next = existing
-        ? current.filter((r) => r.id !== existing.id)
-        : [...current, { id: `tmp-${Date.now()}`, messageId: postId, authorPubkey: myPubkey, emoji }];
-      return { ...p, reactions: next };
-    }));
-    try {
-      const res = await fetch(`/api/channels/${channelId}/messages/${postId}/reactions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ emoji }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.reactions) {
-          setPosts((cur) => cur.map((p) => p.id === postId
-            ? { ...p, reactions: data.reactions.map((r: { id: string; authorPubkey: string; emoji: string }) => ({ ...r, messageId: postId })) }
-            : p));
-        }
-      }
-    } catch { /* optimistic stays */ }
-  };
-
   const handleReply = async () => {
     if (!replyContent.trim() || !selectedPostId) return;
     setReplying(true);
@@ -1339,6 +1311,33 @@ export default function ForumView({ channelId, channelName, profileCache, availa
                     <p className="text-xs text-lc-muted line-clamp-2 mb-1.5">{post.content}</p>
                     <div className="flex items-center gap-3 text-[11px] text-lc-muted">
                       <span>{getName(post.authorPubkey)}</span>
+                      {(() => {
+                        const rs = post.reactions ?? [];
+                        if (rs.length === 0) return null;
+                        const counts = new Map<string, number>();
+                        for (const r of rs) counts.set(r.emoji, (counts.get(r.emoji) ?? 0) + 1);
+                        let top = '';
+                        let topCount = 0;
+                        for (const [emoji, count] of counts) {
+                          if (count > topCount) { top = emoji; topCount = count; }
+                        }
+                        const custom = top.startsWith(':') && top.endsWith(':')
+                          ? serverEmojis.find((e) => `:${e.name}:` === top)
+                          : null;
+                        return (
+                          <span
+                            className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-lc-olive/60 border border-lc-border"
+                            data-testid="forum-post-card-top-reaction"
+                          >
+                            {custom ? (
+                              <img src={custom.url} alt={top} className="w-3 h-3 object-contain" />
+                            ) : (
+                              <span className="text-[11px] leading-none">{top}</span>
+                            )}
+                            <span className="text-[11px] leading-none">{topCount}</span>
+                          </span>
+                        );
+                      })()}
                       <span className="flex items-center gap-1">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
@@ -1359,16 +1358,6 @@ export default function ForumView({ channelId, channelName, profileCache, availa
                   ) : null}
                 </div>
                 </button>
-                <div className="px-4 pb-3 -mt-1">
-                  <MessageReactions
-                    reactions={post.reactions}
-                    myPubkey={myPubkey}
-                    serverEmojis={serverEmojis}
-                    size="sm"
-                    showAddButton
-                    onToggle={(emoji) => void togglePostReaction(post.id, emoji)}
-                  />
-                </div>
               </div>
             ))}
             {hasMore && (
