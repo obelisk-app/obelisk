@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthPubkey } from '@/lib/api-auth';
 import { requireRole } from '@/lib/auth-roles';
+import { resolveMemberAccess } from '@/lib/channel-access';
+import { canReadChannel } from '@/lib/roles';
 
 // GET /api/channels — list all channels grouped by category
 export async function GET(req: NextRequest) {
@@ -28,6 +30,16 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'No server found' }, { status: 404 });
   }
 
+  const access = await resolveMemberAccess(pubkey, server.id);
+  const visible = (ch: { readPermission: string | null; readRoleIds: string[] }) =>
+    canReadChannel(access.role, ch, access.customRoleIds);
+
+  const pinnedChannels = server.channels.filter(visible);
+  const categories = server.categories.map((cat) => ({
+    ...cat,
+    channels: cat.channels.filter(visible),
+  }));
+
   return NextResponse.json({
     server: {
       id: server.id,
@@ -35,8 +47,8 @@ export async function GET(req: NextRequest) {
       icon: server.icon,
       banner: server.banner,
     },
-    pinnedChannels: server.channels,
-    categories: server.categories,
+    pinnedChannels,
+    categories,
   });
 }
 

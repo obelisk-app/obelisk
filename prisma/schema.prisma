@@ -163,6 +163,8 @@ model Channel {
   position   Int       @default(0)
   writePermission String?                // null = everyone; "mod" | "admin" | "roles"
   writeRoleIds    String[] @default([])  // used when writePermission = "roles"
+  readPermission  String?                // null = everyone; "mod" | "admin" | "roles"
+  readRoleIds     String[] @default([])  // used when readPermission = "roles"
   createdAt  DateTime  @default(now())
 
   server   Server    @relation(fields: [serverId], references: [id], onDelete: Cascade)

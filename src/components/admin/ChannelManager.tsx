@@ -15,6 +15,8 @@ interface AdminChannel {
   categoryId: string | null;
   writePermission: string | null;
   writeRoleIds: string[];
+  readPermission: string | null;
+  readRoleIds: string[];
 }
 
 interface AdminCustomRole {
@@ -26,6 +28,7 @@ interface AdminCustomRole {
 }
 
 type WritePermissionValue = 'everyone' | 'mod' | 'admin' | 'roles';
+type ReadPermissionValue = 'everyone' | 'mod' | 'admin' | 'roles';
 
 interface AdminCategory {
   id: string;
@@ -63,10 +66,22 @@ export default function ChannelManager({ serverId, isOwner }: ChannelManagerProp
     type: string;
     writePermission: WritePermissionValue;
     writeRoleIds: string[];
-  }>({ name: '', emoji: '', description: '', type: 'text', writePermission: 'everyone', writeRoleIds: [] });
+    readPermission: ReadPermissionValue;
+    readRoleIds: string[];
+  }>({
+    name: '',
+    emoji: '',
+    description: '',
+    type: 'text',
+    writePermission: 'everyone',
+    writeRoleIds: [],
+    readPermission: 'everyone',
+    readRoleIds: [],
+  });
   const [customRoles, setCustomRoles] = useState<AdminCustomRole[]>([]);
   const [serverEmojis, setServerEmojis] = useState<Record<string, string>>({});
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
+  const [newEmojiPickerOpen, setNewEmojiPickerOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [editCategoryName, setEditCategoryName] = useState('');
 
@@ -255,6 +270,8 @@ export default function ChannelManager({ serverId, isOwner }: ChannelManagerProp
         type: editChannelData.type,
         writePermission: editChannelData.writePermission,
         writeRoleIds: editChannelData.writePermission === 'roles' ? editChannelData.writeRoleIds : [],
+        readPermission: editChannelData.readPermission,
+        readRoleIds: editChannelData.readPermission === 'roles' ? editChannelData.readRoleIds : [],
       }),
     });
     if (res.ok) {
@@ -296,6 +313,8 @@ export default function ChannelManager({ serverId, isOwner }: ChannelManagerProp
       type: ch.type,
       writePermission: (ch.writePermission as WritePermissionValue) || 'everyone',
       writeRoleIds: ch.writeRoleIds ?? [],
+      readPermission: (ch.readPermission as ReadPermissionValue) || 'everyone',
+      readRoleIds: ch.readRoleIds ?? [],
     });
   };
 
@@ -501,7 +520,80 @@ export default function ChannelManager({ serverId, isOwner }: ChannelManagerProp
                             className="inline-block w-2 h-2 rounded-full"
                             style={{ backgroundColor: r.color }}
                           />
-                          {r.icon && <span>{r.icon}</span>}
+                          {r.icon && <ChannelEmoji value={r.icon} imgClassName="w-4 h-4 object-contain" className="text-sm" />}
+                          <span>{r.name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Who can see */}
+          <div>
+            <label className="text-[11px] font-medium text-lc-muted block mb-1">Who can see</label>
+            <select
+              value={editChannelData.readPermission}
+              onChange={(e) =>
+                setEditChannelData({
+                  ...editChannelData,
+                  readPermission: e.target.value as ReadPermissionValue,
+                })
+              }
+              className="w-full px-3 py-2 rounded-lg bg-lc-black border border-lc-border text-lc-white text-sm focus:border-lc-green focus:outline-none"
+              data-testid="edit-channel-read-permission"
+            >
+              <option value="everyone">Everyone</option>
+              <option value="mod">Mods &amp; admins only</option>
+              <option value="admin">Admins only</option>
+              <option value="roles">Specific roles…</option>
+            </select>
+
+            {editChannelData.readPermission === 'roles' && (
+              <div
+                className="mt-2 p-3 rounded-lg border border-lc-border bg-lc-black/60"
+                data-testid="edit-channel-read-role-picker"
+              >
+                <div className="text-[11px] text-lc-muted mb-2">
+                  Members who hold <strong>any</strong> of these roles can see this channel. Admins &amp; owners always can.
+                </div>
+                {customRoles.length === 0 ? (
+                  <div className="text-xs text-lc-muted italic">
+                    No custom roles yet — create one in the Roles section first.
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {customRoles.map((r) => {
+                      const checked = editChannelData.readRoleIds.includes(r.id);
+                      return (
+                        <label
+                          key={r.id}
+                          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs cursor-pointer border transition-colors ${
+                            checked
+                              ? 'bg-lc-green/15 border-lc-green text-lc-white'
+                              : 'bg-lc-black border-lc-border text-lc-muted hover:text-lc-white'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            className="sr-only"
+                            checked={checked}
+                            onChange={() => {
+                              setEditChannelData((prev) => ({
+                                ...prev,
+                                readRoleIds: checked
+                                  ? prev.readRoleIds.filter((id) => id !== r.id)
+                                  : [...prev.readRoleIds, r.id],
+                              }));
+                            }}
+                          />
+                          <span
+                            className="inline-block w-2 h-2 rounded-full"
+                            style={{ backgroundColor: r.color }}
+                          />
+                          {r.icon && <ChannelEmoji value={r.icon} imgClassName="w-4 h-4 object-contain" className="text-sm" />}
                           <span>{r.name}</span>
                         </label>
                       );
@@ -569,12 +661,47 @@ export default function ChannelManager({ serverId, isOwner }: ChannelManagerProp
       {showNewChannel && (
         <div className="p-4 rounded-xl border border-lc-border bg-lc-dark space-y-3" data-testid="new-channel-form">
           <div className="flex gap-2">
-            <input
-              value={newChannel.emoji}
-              onChange={(e) => setNewChannel({ ...newChannel, emoji: e.target.value })}
-              placeholder="Emoji"
-              className="w-16 px-2 py-2 rounded-lg bg-lc-black border border-lc-border text-lc-white text-sm text-center"
-            />
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setNewEmojiPickerOpen((v) => !v)}
+                className="w-14 h-10 rounded-lg bg-lc-black border border-lc-border text-lc-white text-sm flex items-center justify-center hover:border-lc-green focus:border-lc-green focus:outline-none"
+                title="Pick emoji"
+                data-testid="new-channel-emoji-btn"
+              >
+                {newChannel.emoji ? (
+                  <ChannelEmoji value={newChannel.emoji} imgClassName="w-5 h-5 object-contain" className="text-base" />
+                ) : (
+                  <span className="text-lc-muted">＋</span>
+                )}
+              </button>
+              {newChannel.emoji && (
+                <button
+                  type="button"
+                  onClick={() => setNewChannel({ ...newChannel, emoji: '' })}
+                  className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-lc-border text-lc-muted hover:text-red-400 text-[10px] flex items-center justify-center"
+                  title="Clear"
+                >
+                  ✕
+                </button>
+              )}
+              {newEmojiPickerOpen && (
+                <EmojiPicker
+                  className="absolute top-full left-0 mt-2 z-50"
+                  serverEmojis={serverEmojis}
+                  onSelect={(val) => {
+                    const match = /^:([a-z0-9_-]+):$/i.exec(val);
+                    if (match && serverEmojis[match[1]]) {
+                      setNewChannel((prev) => ({ ...prev, emoji: serverEmojis[match[1]] }));
+                    } else {
+                      setNewChannel((prev) => ({ ...prev, emoji: val }));
+                    }
+                    setNewEmojiPickerOpen(false);
+                  }}
+                  onClose={() => setNewEmojiPickerOpen(false)}
+                />
+              )}
+            </div>
             <input
               value={newChannel.name}
               onChange={(e) => setNewChannel({ ...newChannel, name: e.target.value })}

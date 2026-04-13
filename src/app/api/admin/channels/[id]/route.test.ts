@@ -6,6 +6,7 @@ vi.mock('@/lib/db', () => ({
     server: { findFirst: vi.fn(), findUnique: vi.fn() },
     channel: { findUnique: vi.fn(), update: vi.fn(), delete: vi.fn() },
     member: { findUnique: vi.fn() },
+    customRole: { findMany: vi.fn().mockResolvedValue([]) },
   },
 }));
 vi.mock('@/lib/api-auth', () => ({ getAuthPubkey: vi.fn() }));
@@ -139,6 +140,63 @@ describe('PATCH /api/admin/channels/[id]', () => {
     mockPrisma.channel.findUnique.mockResolvedValue({ id: 'ch1', serverId: 'srv1' });
 
     const res = await PATCH(makeRequest('PATCH', { description: 'x'.repeat(1025) }), ctx);
+    expect(res.status).toBe(400);
+  });
+
+  it('accepts readPermission "mod" and persists it', async () => {
+    mockAdmin();
+    mockPrisma.channel.findUnique.mockResolvedValue({ id: 'ch1', serverId: 'srv1' });
+    mockPrisma.channel.update.mockResolvedValue({ id: 'ch1', readPermission: 'mod' });
+
+    const res = await PATCH(makeRequest('PATCH', { readPermission: 'mod' }), ctx);
+    expect(res.status).toBe(200);
+    expect(mockPrisma.channel.update).toHaveBeenCalledWith({
+      where: { id: 'ch1' },
+      data: { readPermission: 'mod' },
+    });
+  });
+
+  it('normalizes readPermission "everyone" to null', async () => {
+    mockAdmin();
+    mockPrisma.channel.findUnique.mockResolvedValue({ id: 'ch1', serverId: 'srv1' });
+    mockPrisma.channel.update.mockResolvedValue({ id: 'ch1', readPermission: null });
+
+    const res = await PATCH(makeRequest('PATCH', { readPermission: 'everyone' }), ctx);
+    expect(res.status).toBe(200);
+    expect(mockPrisma.channel.update).toHaveBeenCalledWith({
+      where: { id: 'ch1' },
+      data: { readPermission: null },
+    });
+  });
+
+  it('returns 400 for invalid readPermission value', async () => {
+    mockAdmin();
+    mockPrisma.channel.findUnique.mockResolvedValue({ id: 'ch1', serverId: 'srv1' });
+
+    const res = await PATCH(makeRequest('PATCH', { readPermission: 'nope' }), ctx);
+    expect(res.status).toBe(400);
+  });
+
+  it('validates readRoleIds belong to the server', async () => {
+    mockAdmin();
+    mockPrisma.channel.findUnique.mockResolvedValue({ id: 'ch1', serverId: 'srv1' });
+    mockPrisma.customRole.findMany.mockResolvedValueOnce([{ id: 'r1' }]);
+    mockPrisma.channel.update.mockResolvedValue({ id: 'ch1', readRoleIds: ['r1'] });
+
+    const res = await PATCH(makeRequest('PATCH', { readRoleIds: ['r1'] }), ctx);
+    expect(res.status).toBe(200);
+    expect(mockPrisma.channel.update).toHaveBeenCalledWith({
+      where: { id: 'ch1' },
+      data: { readRoleIds: ['r1'] },
+    });
+  });
+
+  it('rejects readRoleIds that do not exist on the server', async () => {
+    mockAdmin();
+    mockPrisma.channel.findUnique.mockResolvedValue({ id: 'ch1', serverId: 'srv1' });
+    mockPrisma.customRole.findMany.mockResolvedValueOnce([]); // none matched
+
+    const res = await PATCH(makeRequest('PATCH', { readRoleIds: ['r-bad'] }), ctx);
     expect(res.status).toBe(400);
   });
 

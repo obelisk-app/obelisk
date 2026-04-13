@@ -4,6 +4,7 @@ import { requireRole } from '@/lib/auth-roles';
 
 const VALID_TYPES = ['text', 'voice', 'forum'];
 const VALID_WRITE_PERMISSIONS = ['everyone', 'mod', 'admin', 'roles'];
+const VALID_READ_PERMISSIONS = ['everyone', 'mod', 'admin', 'roles'];
 
 // PATCH /api/admin/channels/[id] — edit a channel
 // (serverId is derived from the resource)
@@ -83,6 +84,34 @@ export async function PATCH(
       }
     }
     data.writeRoleIds = unique;
+  }
+  if (body.readPermission !== undefined) {
+    if (body.readPermission === null) {
+      data.readPermission = null;
+    } else if (typeof body.readPermission === 'string' && VALID_READ_PERMISSIONS.includes(body.readPermission)) {
+      data.readPermission = body.readPermission === 'everyone' ? null : body.readPermission;
+    } else {
+      return NextResponse.json(
+        { error: `Invalid readPermission. Must be one of: ${VALID_READ_PERMISSIONS.join(', ')}` },
+        { status: 400 }
+      );
+    }
+  }
+  if (body.readRoleIds !== undefined) {
+    if (!Array.isArray(body.readRoleIds) || !body.readRoleIds.every((x: unknown) => typeof x === 'string')) {
+      return NextResponse.json({ error: 'readRoleIds must be an array of strings' }, { status: 400 });
+    }
+    const unique = Array.from(new Set(body.readRoleIds as string[]));
+    if (unique.length > 0) {
+      const valid = await prisma.customRole.findMany({
+        where: { id: { in: unique }, serverId: channel.serverId },
+        select: { id: true },
+      });
+      if (valid.length !== unique.length) {
+        return NextResponse.json({ error: 'One or more readRoleIds invalid for this server' }, { status: 400 });
+      }
+    }
+    data.readRoleIds = unique;
   }
 
   if (Object.keys(data).length === 0) {

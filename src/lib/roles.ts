@@ -42,3 +42,32 @@ export function canWriteInChannel(
   }
   return true;
 }
+
+/**
+ * Channel-level "who can see" check. Mirrors canWriteInChannel but for
+ * visibility: a user who fails this should not see the channel in the
+ * sidebar, load its history, or receive its realtime events.
+ *
+ * `readPermission` values:
+ *   - null / "everyone" — anyone (member+) can see
+ *   - "mod"             — only mods, admins, owners can see
+ *   - "admin"           — only admins and owners can see
+ *   - "roles"           — members holding any of `readRoleIds` (admins+owners always can)
+ */
+export function canReadChannel(
+  memberRole: Role,
+  channel: { readPermission?: string | null; readRoleIds?: string[] | null },
+  memberCustomRoleIds: string[] = []
+): boolean {
+  const rp = channel.readPermission;
+  if (!rp || rp === 'everyone') return true;
+  if (rp === 'mod') return hasRole(memberRole, 'mod');
+  if (rp === 'admin') return hasRole(memberRole, 'admin');
+  if (rp === 'roles') {
+    if (hasRole(memberRole, 'admin')) return true;
+    const allowed = channel.readRoleIds ?? [];
+    if (allowed.length === 0) return false;
+    return memberCustomRoleIds.some((id) => allowed.includes(id));
+  }
+  return true;
+}

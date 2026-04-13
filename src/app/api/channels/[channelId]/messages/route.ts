@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db';
 import { getAuthPubkey } from '@/lib/api-auth';
 import { getAuthorProfile } from '@/lib/profile-sync';
 import { canWriteInChannel, getAuthMember } from '@/lib/auth-roles';
+import { canReadChannel } from '@/lib/roles';
+import { resolveMemberAccess } from '@/lib/channel-access';
 
 // GET /api/channels/:channelId/messages?cursor=&limit=
 export async function GET(
@@ -19,10 +21,17 @@ export async function GET(
   // Validate channel exists
   const channel = await prisma.channel.findUnique({
     where: { id: channelId },
-    select: { id: true },
+    select: { id: true, serverId: true, readPermission: true, readRoleIds: true },
   });
   if (!channel) {
     return NextResponse.json({ error: 'Channel not found' }, { status: 404 });
+  }
+
+  if (channel.readPermission) {
+    const access = await resolveMemberAccess(pubkey, channel.serverId);
+    if (!canReadChannel(access.role, channel, access.customRoleIds)) {
+      return NextResponse.json({ error: 'Channel not found' }, { status: 404 });
+    }
   }
 
   const { searchParams } = new URL(req.url);
@@ -80,10 +89,24 @@ export async function POST(
   // Validate channel exists
   const channel = await prisma.channel.findUnique({
     where: { id: channelId },
-    select: { id: true, serverId: true, writePermission: true, writeRoleIds: true },
+    select: {
+      id: true,
+      serverId: true,
+      writePermission: true,
+      writeRoleIds: true,
+      readPermission: true,
+      readRoleIds: true,
+    },
   });
   if (!channel) {
     return NextResponse.json({ error: 'Channel not found' }, { status: 404 });
+  }
+
+  if (channel.readPermission) {
+    const access = await resolveMemberAccess(pubkey, channel.serverId);
+    if (!canReadChannel(access.role, channel, access.customRoleIds)) {
+      return NextResponse.json({ error: 'Channel not found' }, { status: 404 });
+    }
   }
 
   // Check if user is banned

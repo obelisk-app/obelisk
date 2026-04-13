@@ -33,6 +33,8 @@ app.prepare().then(async () => {
   const { getAuthorProfile } = await import('./src/lib/profile-sync');
   const { extractMentionPubkeys } = await import('./src/lib/mentions');
   const { fanOutReadUpdate } = await import('./src/lib/read-fanout');
+  const { resolveMemberAccess } = await import('./src/lib/channel-access');
+  const { canReadChannel } = await import('./src/lib/roles');
 
   const requestHandler = (req: any, res: any) => {
     const parsedUrl = parse(req.url!, true);
@@ -105,9 +107,21 @@ app.prepare().then(async () => {
       }
     });
 
-    socket.on('join-channel', (channelId: string) => {
-      if (typeof channelId === 'string' && channelId.length > 0) {
+    socket.on('join-channel', async (channelId: string) => {
+      if (typeof channelId !== 'string' || channelId.length === 0) return;
+      try {
+        const channel = await prisma.channel.findUnique({
+          where: { id: channelId },
+          select: { serverId: true, readPermission: true, readRoleIds: true },
+        });
+        if (!channel) return;
+        if (channel.readPermission) {
+          const access = await resolveMemberAccess(pubkey, channel.serverId);
+          if (!canReadChannel(access.role, channel, access.customRoleIds)) return;
+        }
         socket.join(`channel:${channelId}`);
+      } catch (err) {
+        console.error('[socket] join-channel error:', err);
       }
     });
 
@@ -132,13 +146,22 @@ app.prepare().then(async () => {
         // Resolve serverId from the channel
         const channel = await prisma.channel.findUnique({
           where: { id: channelId },
-          select: { serverId: true },
+          select: { serverId: true, readPermission: true, readRoleIds: true },
         });
         if (!channel) {
           socket.emit('message-error', { error: 'Channel not found' });
           return;
         }
         const serverId = channel.serverId;
+
+        // Sender must also be allowed to read (can't post where you can't see).
+        if (channel.readPermission) {
+          const access = await resolveMemberAccess(pubkey, serverId);
+          if (!canReadChannel(access.role, channel, access.customRoleIds)) {
+            socket.emit('message-error', { error: 'Channel not found' });
+            return;
+          }
+        }
 
         // Check ban/mute before allowing message
         const ban = await prisma.ban.findUnique({
@@ -253,10 +276,16 @@ app.prepare().then(async () => {
           if (s?.data.pubkey) channelPubkeys.add(s.data.pubkey);
         }
 
-        // Find all server members who are online but NOT in this channel
+        // Find all server members who are online but NOT in this channel.
+        // For read-gated channels, filter out users who can't see the channel
+        // so hidden channels don't leak via unread badges.
         for (const [memberPubkey, memberSocketIds] of pubkeySockets) {
           if (memberPubkey === pubkey) continue; // don't notify sender
           if (channelPubkeys.has(memberPubkey)) continue; // already in channel
+          if (channel.readPermission) {
+            const access = await resolveMemberAccess(memberPubkey, serverId);
+            if (!canReadChannel(access.role, channel, access.customRoleIds)) continue;
+          }
           for (const sid of memberSocketIds) {
             io.to(sid).emit('unread-update', {
               channelId,
