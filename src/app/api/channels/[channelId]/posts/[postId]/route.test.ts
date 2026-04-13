@@ -9,6 +9,17 @@ vi.mock('@/lib/db', () => ({
     mute: { findFirst: vi.fn() },
     member: { findUnique: vi.fn() },
     server: { findUnique: vi.fn() },
+    forumTag: {
+      findMany: vi.fn().mockResolvedValue([]),
+      findFirst: vi.fn().mockResolvedValue(null),
+      findUnique: vi.fn().mockResolvedValue(null),
+      create: vi.fn(),
+    },
+    forumTagOnMessage: {
+      deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
+      createMany: vi.fn().mockResolvedValue({ count: 0 }),
+    },
+    $transaction: vi.fn((ops: any[]) => Promise.all(ops)),
   },
 }));
 vi.mock('@/lib/api-auth', () => ({ getAuthPubkey: vi.fn() }));
@@ -113,6 +124,7 @@ describe('PATCH /api/channels/[channelId]/posts/[postId]', () => {
       title: data.title ?? 'Old',
       coverImage: data.coverImage === undefined ? null : data.coverImage,
       content: 'body', createdAt: new Date(), editedAt: data.editedAt,
+      tags: [],
     }));
     mockMember.mockResolvedValue({ role: 'member' });
   });
@@ -173,5 +185,23 @@ describe('PATCH /api/channels/[channelId]/posts/[postId]', () => {
     mockPrisma.message.findUnique.mockResolvedValue(null);
     const res = await callPatch({ title: 'x' });
     expect(res.status).toBe(404);
+  });
+
+  it('updates tags when tagNames is provided, auto-creating unknown ones', async () => {
+    mockPrisma.forumTag.findMany.mockResolvedValue([]);
+    mockPrisma.forumTag.findFirst.mockResolvedValue(null);
+    mockPrisma.forumTag.create.mockResolvedValueOnce({ id: 'new-tag', name: '🔥 hot' });
+    const res = await callPatch({ tagNames: ['🔥 hot'] });
+    expect(res.status).toBe(200);
+    expect(mockPrisma.forumTagOnMessage.deleteMany).toHaveBeenCalledWith({
+      where: { messageId: 'p1' },
+    });
+    const createManyCall = mockPrisma.forumTagOnMessage.createMany.mock.calls[0][0];
+    expect(createManyCall.data).toEqual([{ messageId: 'p1', tagId: 'new-tag' }]);
+  });
+
+  it('accepts tag-only updates without requiring title/cover', async () => {
+    const res = await callPatch({ tagIds: [] });
+    expect(res.status).toBe(200);
   });
 });

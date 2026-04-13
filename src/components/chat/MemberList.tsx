@@ -35,12 +35,15 @@ interface RoleGroup {
 function groupMembers(
   members: MemberInfo[],
   onlinePubkeys: Set<string>,
-): { online: RoleGroup[]; offline: MemberInfo[] } {
+): { bots: MemberInfo[]; online: RoleGroup[]; offline: MemberInfo[] } {
+  const botMembers: MemberInfo[] = [];
   const onlineMembers: MemberInfo[] = [];
   const offlineMembers: MemberInfo[] = [];
 
   for (const m of members) {
-    if (onlinePubkeys.has(m.pubkey)) {
+    if (m.isBot) {
+      botMembers.push(m);
+    } else if (onlinePubkeys.has(m.pubkey)) {
       onlineMembers.push(m);
     } else {
       offlineMembers.push(m);
@@ -93,7 +96,7 @@ function groupMembers(
     return bp - ap;
   });
 
-  return { online: sorted, offline: offlineMembers };
+  return { bots: botMembers, online: sorted, offline: offlineMembers };
 }
 
 export default function MemberList({ profileCache }: MemberListProps) {
@@ -101,12 +104,13 @@ export default function MemberList({ profileCache }: MemberListProps) {
   const onlinePubkeys = useChatStore(s => s.onlinePubkeys);
   const [offlineCollapsed, setOfflineCollapsed] = useState(false);
 
-  const { online, offline } = useMemo(
+  const { bots, online, offline } = useMemo(
     () => groupMembers(memberList, onlinePubkeys),
     [memberList, onlinePubkeys],
   );
 
-  const onlineCount = memberList.reduce(
+  const humanMembers = memberList.filter((m) => !m.isBot);
+  const onlineCount = humanMembers.reduce(
     (acc, m) => acc + (onlinePubkeys.has(m.pubkey) ? 1 : 0),
     0,
   );
@@ -115,10 +119,29 @@ export default function MemberList({ profileCache }: MemberListProps) {
     <div className="w-60 h-full bg-lc-dark border-l border-lc-border flex flex-col shrink-0">
       <div className="px-4 py-3 border-b border-lc-border">
         <h3 className="text-xs font-semibold text-lc-muted uppercase tracking-wide">
-          Members — {onlineCount}/{memberList.length} online
+          Members — {onlineCount}/{humanMembers.length} online
         </h3>
       </div>
       <div className="flex-1 overflow-y-auto px-2 py-2 space-y-2" data-testid="member-list">
+        {/* Bots group: always rendered first, never marked online/offline */}
+        {bots.length > 0 && (
+          <div data-testid="bots-group">
+            <div className="flex items-center gap-1.5 px-2 py-1">
+              <span className="text-[10px] font-semibold text-lc-muted uppercase tracking-wider">
+                Bots — {bots.length}
+              </span>
+            </div>
+            {bots.map((member) => (
+              <MemberItem
+                key={member.pubkey}
+                member={member}
+                profileCache={profileCache}
+                isOnline
+              />
+            ))}
+          </div>
+        )}
+
         {/* Online groups */}
         {online.map((group) => (
           <div key={group.key}>
@@ -193,10 +216,12 @@ function MemberItem({
     : null;
   const nameColor = topCustom?.color;
 
+  const isBot = !!member.isBot;
+
   return (
     <div
       className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors group"
-      data-testid="member-item"
+      data-testid={isBot ? 'bot-item' : 'member-item'}
     >
       <div className={`relative shrink-0 ${isOnline ? '' : 'opacity-60'}`}>
         {picture ? (
@@ -212,12 +237,14 @@ function MemberItem({
             </span>
           </div>
         )}
-        <div
-          className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-lc-dark ${
-            isOnline ? 'bg-lc-green' : 'bg-lc-muted'
-          }`}
-          title={isOnline ? 'Online' : 'Offline'}
-        />
+        {!isBot && (
+          <div
+            className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-lc-dark ${
+              isOnline ? 'bg-lc-green' : 'bg-lc-muted'
+            }`}
+            title={isOnline ? 'Online' : 'Offline'}
+          />
+        )}
       </div>
       {topCustom?.icon && (
         isIconUrl(topCustom.icon) ? (
@@ -226,14 +253,24 @@ function MemberItem({
           <span className="text-sm shrink-0">{topCustom.icon}</span>
         )
       )}
-      <span
-        className={`text-sm truncate transition-colors ${
-          isOnline ? 'group-hover:text-white' : 'text-lc-muted'
-        }`}
-        style={isOnline && nameColor ? { color: nameColor } : isOnline ? { color: 'var(--color-lc-white)' } : undefined}
-      >
-        {name}
-      </span>
+      <div className="flex flex-col min-w-0 flex-1">
+        <span
+          className={`text-sm truncate transition-colors ${
+            isOnline ? 'group-hover:text-white' : 'text-lc-muted'
+          }`}
+          style={isOnline && nameColor ? { color: nameColor } : isOnline ? { color: 'var(--color-lc-white)' } : undefined}
+        >
+          {name}
+        </span>
+        {isBot && member.statusText && (
+          <span
+            className="text-[10px] text-lc-green font-mono truncate"
+            data-testid="bot-status"
+          >
+            {member.statusText}
+          </span>
+        )}
+      </div>
     </div>
   );
 }

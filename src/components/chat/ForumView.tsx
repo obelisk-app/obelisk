@@ -7,6 +7,7 @@ import MessageContent from './MessageContent';
 import EmojiPicker from './EmojiPicker';
 import PostReactions from './PostReactions';
 import PostEditModal from './PostEditModal';
+import TagEditor, { type TagDraft, splitDrafts } from './TagEditor';
 import { createPortal } from 'react-dom';
 import MessageInput from './MessageInput';
 import { slugify } from '@/lib/slug';
@@ -396,7 +397,7 @@ function PostHeaderActions({
   );
 }
 
-function PostCardMenu({ postId, channelName, authorPubkey, title, coverImage, onDeleted, onEdited }: { postId: string; channelName: string; authorPubkey: string; title: string | null; coverImage: string | null; onDeleted?: (id: string) => void; onEdited?: (id: string, update: { title: string; coverImage: string | null }) => void }) {
+function PostCardMenu({ postId, channelName, authorPubkey, title, coverImage, tags, availableTags, onDeleted, onEdited }: { postId: string; channelName: string; authorPubkey: string; title: string | null; coverImage: string | null; tags?: PostTag[]; availableTags?: ForumTag[]; onDeleted?: (id: string) => void; onEdited?: (id: string, update: { title: string; coverImage: string | null; tags: PostTag[] }) => void }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -505,6 +506,8 @@ function PostCardMenu({ postId, channelName, authorPubkey, title, coverImage, on
           channelId={useChatStore.getState().activeChannelId ?? ''}
           initialTitle={title ?? ''}
           initialCoverImage={coverImage ?? null}
+          initialTags={tags}
+          availableTags={availableTags}
           onClose={() => setEditing(false)}
           onSaved={(u) => onEdited?.(postId, u)}
         />
@@ -527,43 +530,6 @@ function TagPill({ tag, small }: { tag: PostTag; small?: boolean }) {
     >
       {tag.name}
     </span>
-  );
-}
-
-function TagSelector({
-  available,
-  selected,
-  onToggle,
-}: {
-  available: ForumTag[];
-  selected: string[];
-  onToggle: (id: string) => void;
-}) {
-  if (available.length === 0) return null;
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {available.map((tag) => {
-        const isSelected = selected.includes(tag.id);
-        return (
-          <button
-            key={tag.id}
-            type="button"
-            onClick={() => onToggle(tag.id)}
-            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium transition-all ${
-              isSelected ? 'ring-1' : 'opacity-50 hover:opacity-80'
-            }`}
-            style={{
-              backgroundColor: tag.color + (isSelected ? '30' : '15'),
-              color: tag.color,
-              border: `1px solid ${tag.color}${isSelected ? '60' : '30'}`,
-              ...(isSelected ? { ringColor: tag.color } : {}),
-            }}
-          >
-            {tag.name}
-          </button>
-        );
-      })}
-    </div>
   );
 }
 
@@ -598,7 +564,7 @@ export default function ForumView({ channelId, channelName, profileCache, availa
   const [newContent, setNewContent] = useState('');
   const [newCoverImage, setNewCoverImage] = useState<string | null>(null);
   const [uploadingCover, setUploadingCover] = useState(false);
-  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [newTagDrafts, setNewTagDrafts] = useState<TagDraft[]>([]);
   const [posting, setPosting] = useState(false);
 
   // Edit mode on post detail
@@ -722,13 +688,15 @@ export default function ForumView({ channelId, channelName, profileCache, availa
   const handleCreatePost = async () => {
     if (!newTitle.trim() || !newContent.trim()) return;
     setPosting(true);
+    const { tagIds, tagNames } = splitDrafts(newTagDrafts);
     const res = await fetch(`/api/channels/${channelId}/posts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         title: newTitle,
         content: newContent,
-        tagIds: selectedTagIds,
+        tagIds,
+        tagNames,
         coverImage: newCoverImage,
       }),
     });
@@ -736,7 +704,7 @@ export default function ForumView({ channelId, channelName, profileCache, availa
       setNewTitle('');
       setNewContent('');
       setNewCoverImage(null);
-      setSelectedTagIds([]);
+      setNewTagDrafts([]);
       setShowNewPost(false);
       await fetchPosts();
     }
@@ -760,37 +728,6 @@ export default function ForumView({ channelId, channelName, profileCache, availa
     setEditing(false);
     setEditTitle('');
     setEditCoverImage(null);
-  };
-
-  const togglePostReaction = async (emoji: string) => {
-    if (!selectedPostId || !selectedPost || !myPubkey) return;
-    const existing = (selectedPost.reactions ?? []).find(
-      (r) => r.authorPubkey === myPubkey && r.emoji === emoji,
-    );
-    // Optimistic update
-    setSelectedPost((prev) => {
-      if (!prev) return prev;
-      const current = prev.reactions ?? [];
-      const next = existing
-        ? current.filter((r) => r.id !== existing.id)
-        : [...current, {
-            id: `tmp-${Date.now()}`,
-            messageId: selectedPostId,
-            authorPubkey: myPubkey,
-            emoji,
-          }];
-      return { ...prev, reactions: next };
-    });
-    try {
-      await fetch(
-        `/api/channels/${channelId}/messages/${selectedPostId}/reactions`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ emoji }),
-        },
-      );
-    } catch { /* ignore — optimistic state may be wrong, but this is best-effort */ }
   };
 
   const shareSelectedPost = async () => {
@@ -869,14 +806,17 @@ export default function ForumView({ channelId, channelName, profileCache, availa
     }
   };
 
-  const toggleTag = (id: string) => {
-    setSelectedTagIds((prev) =>
-      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]
-    );
-  };
-
   const getName = (pubkey: string) => profileCache.get(pubkey)?.name || shortPubkey(pubkey);
   const getPicture = (pubkey: string) => profileCache.get(pubkey)?.picture;
+
+  // Filter bar shows only tags in actual use on loaded posts, so custom/newly-
+  // created tags appear as soon as someone uses them and unused channel tag
+  // definitions don't clutter the bar.
+  const filterableTags = (() => {
+    const map = new Map<string, PostTag>();
+    for (const p of posts) for (const t of p.tags ?? []) if (!map.has(t.id)) map.set(t.id, t);
+    return Array.from(map.values());
+  })();
 
   const q = searchQuery.trim().toLowerCase();
   const filteredPosts = posts.filter((p) => {
@@ -995,22 +935,6 @@ export default function ForumView({ channelId, channelName, profileCache, availa
                   />
                 )}
                 <div className="p-5">
-                  <div className="flex items-center gap-2 mb-3">
-                    {getPicture(selectedPost.authorPubkey) ? (
-                      <img src={getPicture(selectedPost.authorPubkey)} alt="" className="w-8 h-8 rounded-full object-cover" />
-                    ) : (
-                      <div className="w-8 h-8 rounded-full bg-lc-olive flex items-center justify-center text-lc-green text-xs font-semibold">
-                        {getName(selectedPost.authorPubkey)[0]?.toUpperCase()}
-                      </div>
-                    )}
-                    <div>
-                      <span className="text-sm font-medium text-lc-white">{getName(selectedPost.authorPubkey)}</span>
-                      <span className="text-xs text-lc-muted ml-2">{timeAgo(selectedPost.createdAt)}</span>
-                      {selectedPost.editedAt && (
-                        <span className="text-[10px] text-lc-muted ml-2" title={`Edited ${timeAgo(selectedPost.editedAt)}`}>(edited)</span>
-                      )}
-                    </div>
-                  </div>
                   {editing ? (
                     <div className="space-y-3" data-testid="forum-post-edit-form">
                       <input
@@ -1086,33 +1010,44 @@ export default function ForumView({ channelId, channelName, profileCache, availa
                     <>
                       <h2 className="text-lg font-semibold text-lc-white mb-2">{selectedPost.title}</h2>
                       {selectedPost.tags?.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 mb-3">
+                        <div className="flex flex-wrap gap-1.5">
                           {selectedPost.tags.map((tag) => (
                             <TagPill key={tag.id} tag={tag} />
                           ))}
                         </div>
                       )}
-                      <div className="text-sm text-lc-white/90 whitespace-pre-wrap">
-                        <MessageContent content={selectedPost.content} />
-                      </div>
-                      <div className="mt-4">
-                        <PostReactionsRow
-                          reactions={selectedPost.reactions}
-                          myPubkey={myPubkey}
-                          onToggle={togglePostReaction}
-                          serverEmojis={serverEmojis}
-                        />
-                      </div>
                     </>
                   )}
                 </div>
               </div>
 
-              {/* Replies */}
+              {/* Thread: the post's content is the first message, then replies.
+                  Reactions on the OP go through the same messages/reactions
+                  endpoint used for replies, so we can reuse ReplyRow. */}
               <div className="space-y-1">
-                <p className="text-xs text-lc-muted font-semibold uppercase tracking-wider px-1">
-                  {replies.length} {replies.length === 1 ? 'Reply' : 'Replies'}
-                </p>
+                <ReplyRow
+                  reply={{
+                    id: selectedPost.id,
+                    authorPubkey: selectedPost.authorPubkey,
+                    content: selectedPost.content,
+                    createdAt: selectedPost.createdAt,
+                    editedAt: selectedPost.editedAt,
+                    reactions: selectedPost.reactions,
+                  }}
+                  channelId={channelId}
+                  myPubkey={myPubkey}
+                  serverEmojis={serverEmojis}
+                  getName={getName}
+                  getPicture={getPicture}
+                  onReactionsChanged={(_id, reactions) => {
+                    setSelectedPost((prev) => prev ? { ...prev, reactions } : prev);
+                  }}
+                />
+                {replies.length > 0 && (
+                  <p className="text-xs text-lc-muted font-semibold uppercase tracking-wider px-1 pt-3">
+                    {replies.length} {replies.length === 1 ? 'Reply' : 'Replies'}
+                  </p>
+                )}
                 {replies.map((r) => (
                   <ReplyRow
                     key={r.id}
@@ -1198,9 +1133,9 @@ export default function ForumView({ channelId, channelName, profileCache, availa
       </div>
 
       {/* Tag filter bar */}
-      {availableTags.length > 0 && (
+      {filterableTags.length > 0 && (
         <div className="px-4 py-2 border-b border-lc-border/50 flex items-center gap-2 overflow-x-auto">
-          {availableTags.map((tag) => {
+          {filterableTags.map((tag) => {
             const active = filterTag === tag.id;
             return (
               <button
@@ -1239,7 +1174,7 @@ export default function ForumView({ channelId, channelName, profileCache, availa
         {showNewPost && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-            onClick={() => { setShowNewPost(false); setSelectedTagIds([]); }}
+            onClick={() => { setShowNewPost(false); setNewTagDrafts([]); }}
             data-testid="new-post-modal"
           >
           <div
@@ -1307,12 +1242,15 @@ export default function ForumView({ channelId, channelName, profileCache, availa
               className="w-full px-3 py-2 rounded-lg bg-lc-black border border-lc-border text-lc-white text-sm focus:border-lc-green focus:outline-none resize-none"
               data-testid="new-post-content"
             />
-            {availableTags.length > 0 && (
-              <div>
-                <label className="text-[10px] text-lc-muted uppercase tracking-wider mb-1 block">Tags</label>
-                <TagSelector available={availableTags} selected={selectedTagIds} onToggle={toggleTag} />
-              </div>
-            )}
+            <div>
+              <label className="text-[10px] text-lc-muted uppercase tracking-wider mb-1 block">Tags</label>
+              <TagEditor
+                available={availableTags}
+                value={newTagDrafts}
+                onChange={setNewTagDrafts}
+                serverEmojis={serverEmojis}
+              />
+            </div>
             <div className="flex gap-2">
               <button
                 onClick={handleCreatePost}
@@ -1322,7 +1260,7 @@ export default function ForumView({ channelId, channelName, profileCache, availa
                 {posting ? 'Posting...' : 'Create Post'}
               </button>
               <button
-                onClick={() => { setShowNewPost(false); setSelectedTagIds([]); }}
+                onClick={() => { setShowNewPost(false); setNewTagDrafts([]); }}
                 className="text-sm text-lc-muted hover:text-lc-white px-3 py-2"
               >
                 Cancel
@@ -1367,10 +1305,16 @@ export default function ForumView({ channelId, channelName, profileCache, availa
                     authorPubkey={post.authorPubkey}
                     title={post.title}
                     coverImage={post.coverImage ?? null}
+                    tags={post.tags}
+                    availableTags={availableTags}
                     onDeleted={(id) => setPosts((cur) => cur.filter((p) => p.id !== id))}
                     onEdited={(id, u) =>
                       setPosts((cur) =>
-                        cur.map((p) => (p.id === id ? { ...p, title: u.title, coverImage: u.coverImage } : p)),
+                        cur.map((p) =>
+                          p.id === id
+                            ? { ...p, title: u.title, coverImage: u.coverImage, tags: u.tags }
+                            : p,
+                        ),
                       )
                     }
                   />

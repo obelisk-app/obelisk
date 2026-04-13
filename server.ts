@@ -881,5 +881,10 @@ app.prepare().then(async () => {
       await refreshStaleProfiles(0.25).catch(console.error); // refresh profiles older than 6h
     }, 10_000);
     setInterval(() => refreshStaleProfiles(0.25).catch(console.error), 6 * 60 * 60 * 1000);
+
+    // Bot poller: refreshes enabled ServerBots on their configured intervals
+    // and broadcasts `bot-updated` so member lists update live.
+    const { startBotPoller } = await import('./src/lib/bots/poller');
+    startBotPoller(io);
   });
 });

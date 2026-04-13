@@ -66,6 +66,28 @@ model Server {
   emojis           ServerEmoji[]
   gifs             ServerGif[]
   customRoles      CustomRole[]
+  bots             ServerBot[]
+}
+
+// Prebuilt, per-server "bots" that surface as pseudo-members in the right
+// sidebar. They don't post messages; their current value is shown inline as
+// status text next to the bot's name. See `src/lib/bots/registry.ts` for the
+// type → fetcher mapping and `src/lib/bots/poller.ts` for the refresh loop.
+model ServerBot {
+  id          String    @id @default(cuid())
+  serverId    String
+  type        String    // "btc-usd" | "sats-ars" | "peronio-ars" | "dolar-ars"
+  enabled     Boolean   @default(true)
+  displayName String?   // override, else registry default
+  avatarUrl   String?   // override, else registry default
+  lastValue   String?   // last rendered status, e.g. "$63,412"
+  lastFetchAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@unique([serverId, type])
+  @@index([serverId])
 }
 
 // Custom per-server emoji (`:partyparrot:` style). Uploaded by mod+ via

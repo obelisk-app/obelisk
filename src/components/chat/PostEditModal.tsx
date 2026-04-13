@@ -2,15 +2,20 @@
 
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useChatStore } from '@/store/chat';
+import { useChatStore, type ForumTag } from '@/store/chat';
+import TagEditor, { type TagDraft, splitDrafts } from './TagEditor';
+
+interface PostTag { id: string; name: string; color: string }
 
 interface Props {
   postId: string;
   channelId: string;
   initialTitle: string;
   initialCoverImage: string | null;
+  initialTags?: PostTag[];
+  availableTags?: ForumTag[];
   onClose: () => void;
-  onSaved: (updated: { title: string; coverImage: string | null }) => void;
+  onSaved: (updated: { title: string; coverImage: string | null; tags: PostTag[] }) => void;
 }
 
 export default function PostEditModal({
@@ -18,15 +23,21 @@ export default function PostEditModal({
   channelId,
   initialTitle,
   initialCoverImage,
+  initialTags = [],
+  availableTags = [],
   onClose,
   onSaved,
 }: Props) {
   const [title, setTitle] = useState(initialTitle);
   const [cover, setCover] = useState<string | null>(initialCoverImage);
+  const [tags, setTags] = useState<TagDraft[]>(
+    initialTags.map((t) => ({ id: t.id, name: t.name, color: t.color })),
+  );
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const activeServerId = useChatStore((s) => s.activeServerId);
+  const serverEmojis = useChatStore((s) => s.serverEmojis);
 
   useEffect(() => {
     const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -51,10 +62,11 @@ export default function PostEditModal({
     setSaving(true);
     setError(null);
     try {
+      const { tagIds, tagNames } = splitDrafts(tags);
       const res = await fetch(`/api/channels/${channelId}/posts/${postId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: title.trim(), coverImage: cover }),
+        body: JSON.stringify({ title: title.trim(), coverImage: cover, tagIds, tagNames }),
       });
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
@@ -65,6 +77,9 @@ export default function PostEditModal({
       const updated = {
         title: data.post?.title ?? title.trim(),
         coverImage: data.post?.coverImage ?? cover ?? null,
+        tags: Array.isArray(data.post?.tags)
+          ? data.post.tags as PostTag[]
+          : tags.filter((t): t is TagDraft & { id: string } => !!t.id).map((t) => ({ id: t.id, name: t.name, color: t.color })),
       };
       // Keep the sidebar's followed-post metadata in sync so the row shows
       // the new title instead of "Untitled".
@@ -164,6 +179,16 @@ export default function PostEditModal({
               />
             </label>
           )}
+        </div>
+
+        <div>
+          <label className="text-[10px] text-lc-muted uppercase tracking-wider mb-1 block">Tags</label>
+          <TagEditor
+            available={availableTags}
+            value={tags}
+            onChange={setTags}
+            serverEmojis={serverEmojis}
+          />
         </div>
 
         {error && <p className="text-xs text-red-400">{error}</p>}

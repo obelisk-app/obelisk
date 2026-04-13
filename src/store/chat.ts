@@ -177,6 +177,17 @@ interface ChatState {
   suppressedAutoFollowPostIds: string[];
 
   setMemberList: (members: MemberInfo[]) => void;
+  // Apply a bot-updated socket payload: patches the matching bot row in
+  // memberList with a new displayName / avatar / statusText. No-op if the
+  // bot isn't in the current list (wrong active server, etc).
+  applyBotUpdate: (update: {
+    serverId: string;
+    id: string;
+    type: string;
+    displayName?: string | null;
+    avatarUrl?: string | null;
+    lastValue?: string | null;
+  }) => void;
   setServerEmojis: (emojis: Record<string, string>) => void;
   setServerGifs: (gifs: ServerGif[]) => void;
   setServers: (servers: ServerInfo[]) => void;
@@ -262,6 +273,19 @@ export const useChatStore = create<ChatState>()((set) => ({
   suppressedAutoFollowPostIds: [],
 
   setMemberList: (members) => set({ memberList: members }),
+  applyBotUpdate: (update) => set((state) => {
+    const botPk = `bot:${update.id}`;
+    const idx = state.memberList.findIndex((m) => m.pubkey === botPk);
+    if (idx === -1) return state;
+    const next = [...state.memberList];
+    next[idx] = {
+      ...next[idx],
+      displayName: update.displayName ?? next[idx].displayName,
+      picture: update.avatarUrl ?? next[idx].picture,
+      statusText: update.lastValue ?? next[idx].statusText ?? null,
+    };
+    return { memberList: next };
+  }),
   setServerEmojis: (emojis) => set({ serverEmojis: emojis }),
   setServerGifs: (gifs) => set({ serverGifs: gifs }),
   setServers: (servers) => set({ servers }),

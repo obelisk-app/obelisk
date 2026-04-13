@@ -10,6 +10,7 @@ import CreateServerModal from '@/components/admin/CreateServerModal';
 import MembershipsModal from '@/components/admin/MembershipsModal';
 import WelcomeBotSettings from '@/components/admin/WelcomeBotSettings';
 import LandingChannelSettings from '@/components/admin/LandingChannelSettings';
+import BotsSettings from '@/components/admin/BotsSettings';
 import EmojiManager from '@/components/admin/EmojiManager';
 import GifManager from '@/components/admin/GifManager';
 import RoleManager from '@/components/admin/RoleManager';
@@ -604,6 +605,9 @@ export default function AdminServerPage({
                 onSaved={fetchServer}
               />
             )}
+
+            {/* Prebuilt price-ticker bots (yadio.io). Admin+ can enable per server. */}
+            {serverId && <BotsSettings serverId={serverId} />}
 
             {/* Upload limits — owner only, separate form to keep the main
                 profile save path untouched. Fields use MB in the UI and are

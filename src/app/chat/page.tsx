@@ -501,6 +501,9 @@ export default function ChatPage() {
             nip05: member.nip05 || undefined,
             about: member.about || undefined,
             joinedAt: member.joinedAt,
+            isBot: member.isBot,
+            botType: member.botType,
+            statusText: member.statusText ?? null,
           });
         }
         setMemberList(memberInfoList);
@@ -788,6 +791,12 @@ export default function ChatPage() {
 
     socket.on('presence-update', ({ pubkey: pk, online }: { pubkey: string; online: boolean }) => {
       useChatStore.getState().setPresence(pk, online);
+    });
+
+    socket.on('bot-updated', (update: { serverId: string; id: string; type: string; displayName?: string; avatarUrl?: string; lastValue?: string }) => {
+      const state = useChatStore.getState();
+      if (state.activeServerId && update.serverId !== state.activeServerId) return;
+      state.applyBotUpdate(update);
     });
 
     socket.on('new-message', (message: Message) => {

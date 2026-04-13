@@ -146,6 +146,43 @@ describe('MemberList role grouping', () => {
     expect(img).toBeTruthy();
   });
 
+  it('renders bots in a dedicated group with status text and no presence dot', () => {
+    useChatStore.getState().setMemberList([
+      { pubkey: 'bot:b1', displayName: 'BTC/USD', isBot: true, statusText: 'BTC $63,412' },
+      { pubkey: 'pk-real', displayName: 'Alice', role: 'member' },
+    ]);
+    useChatStore.getState().setOnlinePubkeys(['pk-real']);
+
+    render(<MemberList profileCache={emptyProfileCache} />);
+
+    expect(screen.getByTestId('bots-group')).toBeInTheDocument();
+    expect(screen.getByText(/Bots — 1/)).toBeInTheDocument();
+    expect(screen.getByTestId('bot-status')).toHaveTextContent('BTC $63,412');
+    // Header counts only human members
+    expect(screen.getByText(/1\/1 online/i)).toBeInTheDocument();
+    // Bot row should not have an Online/Offline badge
+    const botItem = screen.getByTestId('bot-item');
+    expect(botItem.querySelector('[title="Online"]')).toBeNull();
+    expect(botItem.querySelector('[title="Offline"]')).toBeNull();
+  });
+
+  it('applyBotUpdate patches the bot row live', () => {
+    useChatStore.getState().setMemberList([
+      { pubkey: 'bot:b1', displayName: 'BTC/USD', isBot: true, statusText: null },
+    ]);
+    const { rerender } = render(<MemberList profileCache={emptyProfileCache} />);
+    expect(screen.queryByTestId('bot-status')).toBeNull();
+
+    useChatStore.getState().applyBotUpdate({
+      serverId: 's1',
+      id: 'b1',
+      type: 'btc-usd',
+      lastValue: 'BTC $1,000',
+    });
+    rerender(<MemberList profileCache={emptyProfileCache} />);
+    expect(screen.getByTestId('bot-status')).toHaveTextContent('BTC $1,000');
+  });
+
   it('colors username by highest-priority custom role', () => {
     useChatStore.getState().setMemberList([
       {

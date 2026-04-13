@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthPubkey } from '@/lib/api-auth';
 import { canWriteInChannel, getAuthMember } from '@/lib/auth-roles';
+import { resolveForumTagIds } from '@/lib/forum-tags';
 
 // GET /api/channels/[channelId]/posts — list forum posts (top-level messages)
 export async function GET(
@@ -117,7 +118,7 @@ export async function POST(
     }
   }
 
-  const { title, content, tagIds, coverImage } = await req.json();
+  const { title, content, tagIds, tagNames, coverImage } = await req.json();
   if (!title || typeof title !== 'string' || !title.trim()) {
     return NextResponse.json({ error: 'Title required' }, { status: 400 });
   }
@@ -128,6 +129,8 @@ export async function POST(
     ? coverImage.trim()
     : null;
 
+  const resolvedTagIds = await resolveForumTagIds(channelId, tagIds, tagNames);
+
   const post = await prisma.message.create({
     data: {
       channelId,
@@ -135,8 +138,8 @@ export async function POST(
       title: title.trim(),
       coverImage: coverImageClean,
       content: content.trim(),
-      ...(Array.isArray(tagIds) && tagIds.length > 0
-        ? { tags: { create: tagIds.map((tagId: string) => ({ tagId })) } }
+      ...(resolvedTagIds.length > 0
+        ? { tags: { create: resolvedTagIds.map((tagId) => ({ tagId })) } }
         : {}),
     },
     include: {

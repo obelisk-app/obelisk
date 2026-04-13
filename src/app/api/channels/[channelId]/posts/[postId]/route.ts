@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { getAuthPubkey } from '@/lib/api-auth';
 import { getAuthorProfile } from '@/lib/profile-sync';
 import { canWriteInChannel, getAuthMember } from '@/lib/auth-roles';
+import { resolveForumTagIds } from '@/lib/forum-tags';
 
 // GET /api/channels/[channelId]/posts/[postId] — get a forum post with replies
 export async function GET(
@@ -124,10 +125,27 @@ export async function PATCH(
       updates.coverImage = body.coverImage.trim();
     }
   }
-  if (Object.keys(updates).length === 0) {
+  const wantsTagUpdate = body.tagIds !== undefined || body.tagNames !== undefined;
+
+  if (Object.keys(updates).length === 0 && !wantsTagUpdate) {
     return NextResponse.json({ error: 'No changes' }, { status: 400 });
   }
   updates.editedAt = new Date();
+
+  if (wantsTagUpdate) {
+    const resolvedTagIds = await resolveForumTagIds(channelId, body.tagIds, body.tagNames);
+    await prisma.$transaction([
+      prisma.forumTagOnMessage.deleteMany({ where: { messageId: postId } }),
+      ...(resolvedTagIds.length > 0
+        ? [
+            prisma.forumTagOnMessage.createMany({
+              data: resolvedTagIds.map((tagId) => ({ messageId: postId, tagId })),
+              skipDuplicates: true,
+            }),
+          ]
+        : []),
+    ]);
+  }
 
   const updated = await prisma.message.update({
     where: { id: postId },
@@ -135,10 +153,16 @@ export async function PATCH(
     select: {
       id: true, title: true, coverImage: true, content: true,
       editedAt: true, authorPubkey: true, channelId: true, createdAt: true,
+      tags: { include: { tag: true } },
     },
   });
 
-  return NextResponse.json({ post: updated });
+  return NextResponse.json({
+    post: {
+      ...updated,
+      tags: updated.tags.map((t) => ({ id: t.tag.id, name: t.tag.name, color: t.tag.color })),
+    },
+  });
 }
 
 // POST /api/channels/[channelId]/posts/[postId] — reply to a forum post

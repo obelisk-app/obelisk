@@ -18,6 +18,11 @@ export interface MemberInfo {
   nip05?: string;
   about?: string;
   joinedAt?: string;
+  // Prebuilt server bots surface as pseudo-members with these two fields.
+  // Regular Nostr members always have isBot=false/undefined.
+  isBot?: boolean;
+  botType?: string;
+  statusText?: string | null;
 }
 
 export type MentionSegment =

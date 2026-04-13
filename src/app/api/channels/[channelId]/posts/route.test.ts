@@ -9,6 +9,12 @@ vi.mock('@/lib/db', () => ({
     mute: { findFirst: vi.fn() },
     member: { updateMany: vi.fn().mockResolvedValue({ count: 1 }), findUnique: vi.fn() },
     server: { findUnique: vi.fn() },
+    forumTag: {
+      findMany: vi.fn().mockResolvedValue([]),
+      findFirst: vi.fn().mockResolvedValue(null),
+      findUnique: vi.fn().mockResolvedValue(null),
+      create: vi.fn(),
+    },
   },
 }));
 vi.mock('@/lib/api-auth', () => ({ getAuthPubkey: vi.fn() }));
@@ -95,6 +101,35 @@ describe('POST /api/channels/[channelId]/posts', () => {
 
     const res = await POST(makeRequest('POST', { content: 'body' }), ctx);
     expect(res.status).toBe(400);
+  });
+
+  it('auto-creates custom tags from tagNames', async () => {
+    mockGetAuth.mockResolvedValue('pk1');
+    mockPrisma.channel.findUnique.mockResolvedValue({ id: 'ch1', type: 'forum', serverId: 'srv1' });
+    mockPrisma.ban.findUnique.mockResolvedValue(null);
+    mockPrisma.mute.findFirst.mockResolvedValue(null);
+    // No existing tags — helper will create them.
+    mockPrisma.forumTag.findMany.mockResolvedValue([]);
+    mockPrisma.forumTag.findFirst.mockResolvedValue(null);
+    mockPrisma.forumTag.create
+      .mockResolvedValueOnce({ id: 't1', name: '🔥 hot' })
+      .mockResolvedValueOnce({ id: 't2', name: 'question' });
+    mockPrisma.message.create.mockImplementation(async (args: any) => ({
+      id: 'p1', channelId: 'ch1', authorPubkey: 'pk1',
+      title: args.data.title, content: args.data.content, tags: [],
+    }));
+
+    const res = await POST(
+      makeRequest('POST', { title: 'T', content: 'C', tagNames: ['🔥 hot', 'question'] }),
+      ctx,
+    );
+    expect(res.status).toBe(201);
+    expect(mockPrisma.forumTag.create).toHaveBeenCalledTimes(2);
+    const createArg = mockPrisma.message.create.mock.calls[0][0];
+    expect(createArg.data.tags.create).toEqual([
+      { tagId: 't1' },
+      { tagId: 't2' },
+    ]);
   });
 
   it('returns 403 channel_write_locked when member posts in mod-only forum channel', async () => {
