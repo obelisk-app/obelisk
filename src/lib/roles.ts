@@ -27,7 +27,7 @@ export function hasRole(memberRole: Role, minimumRole: Role): boolean {
  */
 export function canWriteInChannel(
   memberRole: Role,
-  channel: { writePermission: string | null; writeRoleIds?: string[] | null },
+  channel: { writePermission?: string | null; writeRoleIds?: string[] | null },
   memberCustomRoleIds: string[] = []
 ): boolean {
   const wp = channel.writePermission;

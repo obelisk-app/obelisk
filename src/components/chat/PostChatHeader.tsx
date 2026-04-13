@@ -214,7 +214,7 @@ export default function PostChatHeader({ postId, parentChannelName, onClose }: P
           initialCoverImage={post?.coverImage ?? null}
           onClose={() => setEditing(false)}
           availableTags={
-            useChatStore.getState().channels.find((c) => c.id === activeChannelId)?.forumTags ?? []
+            [...useChatStore.getState().pinnedChannels, ...useChatStore.getState().categories.flatMap((c) => c.channels)].find((c) => c.id === activeChannelId)?.forumTags ?? []
           }
           onSaved={(u) =>
             setPost((p) => (p ? { ...p, title: u.title, coverImage: u.coverImage } : p))
