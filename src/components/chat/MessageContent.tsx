@@ -4,7 +4,7 @@ import { useMemo, type ReactNode } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkSpoiler from '@/lib/remark-spoiler';
-import { preprocessForMarkdown, MENTION_PLACEHOLDER_REGEX, isImageUrl, extractYouTubeId, extractUrls } from '@/lib/markdown';
+import { preprocessForMarkdown, MENTION_PLACEHOLDER_REGEX, EVERYONE_PLACEHOLDER, isImageUrl, extractYouTubeId, extractUrls } from '@/lib/markdown';
 import { isUploadUrl, filenameFromUrl, isVideoUrl, isAudioUrl } from '@/lib/attachments';
 import { useChatStore } from '@/store/chat';
 import {
@@ -34,6 +34,17 @@ function MentionChip({ pubkey, displayName }: { pubkey: string; displayName: str
     >
       @{displayName}
     </button>
+  );
+}
+
+function EveryoneChip() {
+  return (
+    <span
+      className="bg-lc-green/20 text-lc-green rounded px-1 py-0.5 text-sm font-semibold"
+      data-testid="everyone-mention"
+    >
+      @everyone
+    </span>
   );
 }
 
@@ -103,6 +114,13 @@ function renderWithMentions(
       break;
     }
     if (start > i) parts.push(text.slice(i, start));
+
+    // @everyone broadcast: \u3008EVERYONE\u3009
+    if (text.startsWith(EVERYONE_PLACEHOLDER, start)) {
+      parts.push(<EveryoneChip key={`ev-${idx++}-${start}`} />);
+      i = start + EVERYONE_PLACEHOLDER.length;
+      continue;
+    }
 
     // Mention: \u3008MENTION:<key>\u3009
     MENTION_PLACEHOLDER_REGEX.lastIndex = start;
@@ -405,7 +423,8 @@ function processChildren(
   mentions: Map<string, { pubkey: string; displayName: string }>,
   serverEmojis: Record<string, string>,
 ): ReactNode {
-  const hasPlaceholder = (s: string) => s.includes('\u3008MENTION:') || s.includes('\u3008EMOJI:');
+  const hasPlaceholder = (s: string) =>
+    s.includes('\u3008MENTION:') || s.includes('\u3008EMOJI:') || s.includes(EVERYONE_PLACEHOLDER);
 
   if (typeof children === 'string') {
     if (hasPlaceholder(children)) {

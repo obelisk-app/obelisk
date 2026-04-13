@@ -31,10 +31,10 @@ app.prepare().then(async () => {
   // Dynamic import to let Next.js set up its module resolution first
   const { prisma } = await import('./src/lib/db-server');
   const { getAuthorProfile } = await import('./src/lib/profile-sync');
-  const { extractMentionPubkeys } = await import('./src/lib/mentions');
+  const { extractMentionPubkeys, hasEveryoneMention } = await import('./src/lib/mentions');
   const { fanOutReadUpdate } = await import('./src/lib/read-fanout');
   const { resolveMemberAccess } = await import('./src/lib/channel-access');
-  const { canReadChannel } = await import('./src/lib/roles');
+  const { canReadChannel, hasRole } = await import('./src/lib/roles');
 
   const requestHandler = (req: any, res: any) => {
     const parsedUrl = parse(req.url!, true);
@@ -231,6 +231,30 @@ app.prepare().then(async () => {
           }
         }
 
+        // `@everyone` broadcast: mod+ fans out a Mention row to every
+        // member of the server who can read this channel. Below that role,
+        // the token renders as a pill but triggers no notification — the
+        // gate here is the spam protection.
+        let everyoneBroadcast = false;
+        if (hasEveryoneMention(content)) {
+          const authorAccess = await resolveMemberAccess(pubkey, serverId);
+          if (hasRole(authorAccess.role, 'mod')) {
+            everyoneBroadcast = true;
+            const serverMembers = await prisma.member.findMany({
+              where: { serverId },
+              select: { pubkey: true },
+            });
+            for (const m of serverMembers) {
+              if (m.pubkey === pubkey) continue;
+              if (channel.readPermission) {
+                const access = await resolveMemberAccess(m.pubkey, serverId);
+                if (!canReadChannel(access.role, channel, access.customRoleIds)) continue;
+              }
+              mentionedSet.add(m.pubkey);
+            }
+          }
+        }
+
         if (mentionedSet.size > 0) {
           // Bulk-create Mention rows (skip duplicates)
           await prisma.mention.createMany({
@@ -248,10 +272,19 @@ app.prepare().then(async () => {
             if (mentionedPubkey === pubkey) continue; // don't notify self
             const targetSockets = pubkeySockets.get(mentionedPubkey);
             if (!targetSockets) continue;
-            // 'reply' vs 'mention' gives the client room to tailor copy/sound later.
-            const notifType = mentionedPubkey === replyTargetPubkey && !mentionedPubkeys.includes(mentionedPubkey)
-              ? 'reply'
-              : 'mention';
+            // 'reply' vs 'mention' vs 'everyone' gives the client room to
+            // tailor copy/sound. Priority: a direct per-user mention wins
+            // over a broadcast, and a reply-only notification only kicks in
+            // when the target wasn't otherwise mentioned.
+            const isDirectMention = mentionedPubkeys.includes(mentionedPubkey);
+            const notifType =
+              mentionedPubkey === replyTargetPubkey && !isDirectMention
+                ? 'reply'
+                : isDirectMention
+                  ? 'mention'
+                  : everyoneBroadcast
+                    ? 'everyone'
+                    : 'mention';
             for (const sid of targetSockets) {
               io.to(sid).emit('notification', {
                 type: notifType,

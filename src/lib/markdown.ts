@@ -1,7 +1,9 @@
-import { parseMentions, MemberInfo } from './mentions';
+import { parseMentions, MemberInfo, EVERYONE_REGEX_GLOBAL } from './mentions';
 
 const PLACEHOLDER_PREFIX = '\u3008MENTION:';
 const PLACEHOLDER_SUFFIX = '\u3009';
+
+export const EVERYONE_PLACEHOLDER = '\u3008EVERYONE\u3009';
 
 export interface MentionData {
   pubkey: string;
@@ -30,7 +32,7 @@ export function preprocessForMarkdown(content: string, members: MemberInfo[]): P
       text += `${PLACEHOLDER_PREFIX}${key}${PLACEHOLDER_SUFFIX}`;
       idx++;
     } else {
-      text += seg.text;
+      text += seg.text.replace(EVERYONE_REGEX_GLOBAL, EVERYONE_PLACEHOLDER);
     }
   }
 

@@ -113,6 +113,25 @@ export function parseMentions(content: string, members: MemberInfo[]): MentionSe
   return segments;
 }
 
+// Matches the literal `@everyone` when it isn't embedded inside another
+// word or email-like token. Used by parser + renderer + server fan-out.
+const EVERYONE_REGEX = /(?<![\w@])@everyone(?![\w.])/;
+const EVERYONE_REGEX_GLOBAL = /(?<![\w@])@everyone(?![\w.])/g;
+
+export { EVERYONE_REGEX_GLOBAL };
+
+/**
+ * Does this message contain an `@everyone` broadcast token?
+ *
+ * Returns true only when the token stands on its own — not inside words
+ * (`@everyones`), identifiers (`foo@everyone`), or domain-like strings
+ * (`@everyone.com`). The server uses this to decide whether to fan out
+ * notifications to all members; gated on the author's role separately.
+ */
+export function hasEveryoneMention(content: string): boolean {
+  return EVERYONE_REGEX.test(content);
+}
+
 /**
  * Extract the unique set of mentioned pubkeys (hex) from a message content
  * string. Handles both the legacy hex form (`nostr:npub1<64 hex>`) and real

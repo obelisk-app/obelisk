@@ -87,6 +87,14 @@
     - [ ] UI: ChannelSidebar oculta canales no permitidos; ChannelManager en /admin permite seleccionar qué roles ven cada canal (multi-select)
     - [ ] Caso de uso: canal "#gold-lounge" solo visible para miembros con role "Gold"; canal "#mods-only" solo visible para mods+
   - [ ] Control de acceso a servidores por rol — quien puede ver/unirse a cada servidor (servidores privados solo para roles dados)
+- [ ] **Canal tipo "updates" / anuncios del servidor** — un tipo de canal exclusivo para novedades del servidor
+  - [ ] Nuevo valor en `Channel.type`: `updates` (además de `text`, `voice`, `forum`)
+  - [ ] Solo owner/admin (y roles con permiso `postUpdates`) pueden publicar; el resto solo lee y reacciona
+  - [ ] Formato de post tipo "announcement": título + cuerpo markdown + cover image opcional (reusar `Message.coverImageUrl`) + tags de versión/categoría (`release | changelog | event | notice`)
+  - [ ] Un solo canal `updates` puede designarse como el "feed oficial" del servidor (`Server.updatesChannelId`, FK opcional) — las nuevas entradas disparan notificación push a todos los miembros (respetando settings de notificaciones) y aparecen pinneadas en el sidebar con un badge
+  - [ ] Cross-post / follow: un update publicado en un server puede ser seguido por otros servers (estilo Discord "Announcement channels") — opcional, detrás de un flag
+  - [ ] UI: render distinto al chat normal — layout tipo "blog post" con reacciones pero sin thread inline (las respuestas abren un sub-thread estilo forum)
+  - [ ] Tests: role guard de posting, notificación disparada, render correcto del layout, cross-post si se implementa
 - [ ] **Templates de canales (channel templates)** — para que crear servidores nuevos sea instantáneo
   - [ ] Templates predefinidos: "Community" (general, anuncios, off-topic, suggestions, foro-help), "Gaming" (general, voice-lobby, voice-game, lfg, clips), "DAO" (anuncios, propuestas, votaciones, tesoro, foro-debate), "Dev Team" (general, standup, prs, deploys, bugs, foro-design)
   - [ ] Cada template define categorías + canales + tipos (text/voice/forum) + permisos por defecto

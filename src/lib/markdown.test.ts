@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { preprocessForMarkdown, extractUrls, isImageUrl, extractYouTubeId } from './markdown';
+import { preprocessForMarkdown, EVERYONE_PLACEHOLDER, extractUrls, isImageUrl, extractYouTubeId } from './markdown';
 import type { MemberInfo } from './mentions';
 
 const members: MemberInfo[] = [
@@ -29,6 +29,16 @@ describe('preprocessForMarkdown', () => {
     expect(result.mentions.size).toBe(2);
     expect(result.mentions.get('0')?.displayName).toBe('Alice');
     expect(result.mentions.get('1')?.displayName).toBe('Bob');
+  });
+
+  it('swaps @everyone with the broadcast placeholder', () => {
+    const result = preprocessForMarkdown('heads up @everyone!', members);
+    expect(result.text).toBe(`heads up ${EVERYONE_PLACEHOLDER}!`);
+  });
+
+  it('leaves @everyone untouched when embedded in a word', () => {
+    const result = preprocessForMarkdown('@everyones party', members);
+    expect(result.text).toBe('@everyones party');
   });
 
   it('preserves markdown syntax around mentions', () => {

@@ -8,6 +8,7 @@ import {
   contentToDisplayTokens,
   displayTokensToContent,
   shortNpub,
+  hasEveryoneMention,
   MemberInfo,
 } from './mentions';
 
@@ -136,6 +137,35 @@ describe('extractMentionPubkeys (server-safe)', () => {
   it('ignores malformed npub bodies', () => {
     // not 64 hex, not valid bech32
     expect(extractMentionPubkeys('nostr:npub1zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz')).toEqual([]);
+  });
+});
+
+describe('hasEveryoneMention', () => {
+  it('matches a bare @everyone', () => {
+    expect(hasEveryoneMention('@everyone')).toBe(true);
+  });
+
+  it('matches @everyone mid-sentence', () => {
+    expect(hasEveryoneMention('hey @everyone check this')).toBe(true);
+    expect(hasEveryoneMention('heads up @everyone!')).toBe(true);
+  });
+
+  it('does not match when embedded in a word', () => {
+    expect(hasEveryoneMention('@everyones')).toBe(false);
+    expect(hasEveryoneMention('@everyone_thing')).toBe(false);
+  });
+
+  it('does not match when preceded by word chars or another @', () => {
+    expect(hasEveryoneMention('foo@everyone')).toBe(false);
+    expect(hasEveryoneMention('@@everyone')).toBe(false);
+  });
+
+  it('does not match domain-like strings', () => {
+    expect(hasEveryoneMention('@everyone.com')).toBe(false);
+  });
+
+  it('returns false for plain text', () => {
+    expect(hasEveryoneMention('nothing to see here')).toBe(false);
   });
 });
 

@@ -20,7 +20,7 @@ import {
   type PendingAttachment,
 } from '@/lib/attachments';
 import { searchShortcodes } from '@/lib/emoji-shortcodes';
-import { canWriteInChannel } from '@/lib/roles';
+import { canWriteInChannel, hasRole } from '@/lib/roles';
 
 interface MessageInputProps {
   onSend: (content: string, replyToId?: string) => void;
@@ -90,6 +90,15 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
     () => mentionQuery !== null ? filterMembers(memberList, mentionQuery).slice(0, 8) : [],
     [memberList, mentionQuery]
   );
+
+  // Admin+ can trigger `@everyone` — show the synthetic autocomplete row
+  // when the user types `@` (empty query) or any prefix of `everyone`.
+  const canBroadcastEveryone = hasRole(myRole ?? 'member', 'mod');
+  const showEveryone =
+    canBroadcastEveryone &&
+    mentionQuery !== null &&
+    (mentionQuery === '' || 'everyone'.startsWith(mentionQuery.toLowerCase()));
+  const mentionListLength = mentionResults.length + (showEveryone ? 1 : 0);
 
   // Shortcode (`:name:`) autocomplete state — parallel to mention state
   const [shortcodeQuery, setShortcodeQuery] = useState<string | null>(null);
@@ -199,6 +208,27 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
     }
   };
 
+  const insertEveryone = () => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    const cursorPos = ta.selectionStart;
+    const textBefore = content.slice(0, cursorPos);
+    const atIndex = textBefore.lastIndexOf('@');
+    if (atIndex === -1) return;
+    const before = content.slice(0, atIndex);
+    const after = content.slice(cursorPos);
+    const token = '@everyone ';
+    const newContent = `${before}${token}${after}`;
+    setContent(newContent);
+    setMentionQuery(null);
+    setMentionIndex(0);
+    requestAnimationFrame(() => {
+      const newPos = before.length + token.length;
+      ta.setSelectionRange(newPos, newPos);
+      ta.focus();
+    });
+  };
+
   const insertMention = (member: MemberInfo) => {
     const ta = textareaRef.current;
     if (!ta) return;
@@ -279,20 +309,26 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
     }
 
     // Mention autocomplete navigation
-    if (mentionQuery !== null && mentionResults.length > 0) {
+    if (mentionQuery !== null && mentionListLength > 0) {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setMentionIndex(i => (i + 1) % mentionResults.length);
+        setMentionIndex(i => (i + 1) % mentionListLength);
         return;
       }
       if (e.key === 'ArrowUp') {
         e.preventDefault();
-        setMentionIndex(i => (i - 1 + mentionResults.length) % mentionResults.length);
+        setMentionIndex(i => (i - 1 + mentionListLength) % mentionListLength);
         return;
       }
       if (e.key === 'Enter' || e.key === 'Tab') {
         e.preventDefault();
-        insertMention(mentionResults[mentionIndex]);
+        if (showEveryone && mentionIndex === 0) {
+          insertEveryone();
+        } else {
+          const offset = showEveryone ? 1 : 0;
+          const picked = mentionResults[mentionIndex - offset];
+          if (picked) insertMention(picked);
+        }
         return;
       }
       if (e.key === 'Escape') {
@@ -625,12 +661,14 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
       )}
 
       {/* Mention autocomplete */}
-      {mentionQuery !== null && mentionResults.length > 0 && (
+      {mentionQuery !== null && mentionListLength > 0 && (
         <MentionAutocomplete
           members={mentionResults}
           onSelect={insertMention}
           onClose={() => setMentionQuery(null)}
           selectedIndex={mentionIndex}
+          showEveryone={showEveryone}
+          onSelectEveryone={insertEveryone}
         />
       )}
 
