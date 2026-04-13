@@ -9,11 +9,11 @@ import { nip19, generateSecretKey, getPublicKey } from 'nostr-tools';
 
 // Popular relays (high availability)
 const POPULAR_RELAYS = [
-  'wss://relay.damus.io',
-  'wss://relay.nostr.band',
-  'wss://nos.lol',
   'wss://relay.primal.net',
-  'wss://purplepag.es',
+  'wss://relay.damus.io',
+  'wss://relay.nsec.app',
+  'wss://theforest.nostr1.com',
+  'wss://nostr.otxr.dev',
 ];
 
 /**
@@ -300,44 +300,133 @@ export async function createNewAccount(): Promise<{ user: NDKUser; nsec: string 
 }
 
 export async function loginWithBunker(bunkerUrl: string): Promise<NDKUser | null> {
-  // bunker://pubkey?relay=wss://relay.nsecbunker.com
+  const L = (...args: unknown[]) => console.log('[bunker]', ...args);
+  const t0 = performance.now();
+  L('=== loginWithBunker START ===');
+  L('raw input:', bunkerUrl);
+
   const ndk = getNDK();
+  const token = bunkerUrl.trim();
+  L('trimmed token:', token);
 
-  // Parse bunker URL
-  const url = new URL(bunkerUrl);
-  const remotePubkey = url.hostname;
-  const relayUrl = url.searchParams.get('relay');
-
-  if (!remotePubkey || !relayUrl) {
-    throw new Error('Invalid bunker URL format');
+  if (!token.startsWith('bunker://')) {
+    L('ERROR: token does not start with bunker://');
+    throw new Error('Invalid bunker URL — must start with bunker://');
   }
 
-  // Dynamic import for bunker signer
+  let parsed: URL;
+  try {
+    parsed = new URL(token);
+  } catch (e) {
+    L('ERROR: URL() parse failed:', e);
+    throw new Error('Invalid bunker URL — malformed');
+  }
+  const bunkerPubkey = parsed.hostname || parsed.pathname.replace(/^\/\//, '');
+  const rawRelays = parsed.searchParams.getAll('relay');
+  // Sanitize: drop malformed relays (e.g. "wss://was//relay.damus.io")
+  const relayUrls = rawRelays.filter((r) => {
+    try {
+      const u = new URL(r);
+      const ok = (u.protocol === 'wss:' || u.protocol === 'ws:') && !!u.host && !u.pathname.startsWith('//');
+      if (!ok) L('WARN dropping malformed relay from bunker URL:', r);
+      return ok;
+    } catch {
+      L('WARN dropping unparseable relay from bunker URL:', r);
+      return false;
+    }
+  });
+  if (rawRelays.length !== relayUrls.length) {
+    L('WARN raw relays:', rawRelays, '-> sanitized:', relayUrls);
+  }
+  const secret = parsed.searchParams.get('secret');
+  const userPubkeyParam = parsed.searchParams.get('pubkey');
+  L('parsed bunker URL:', {
+    bunkerPubkey,
+    bunkerPubkeyLen: bunkerPubkey.length,
+    relayUrls,
+    hasSecret: !!secret,
+    secretLen: secret?.length,
+    userPubkeyParam,
+  });
+  if (!bunkerPubkey || relayUrls.length === 0) {
+    L('ERROR: missing pubkey or relay');
+    throw new Error('Invalid bunker URL — missing pubkey or relay');
+  }
+
+  L('kicking off ndk.connect() in background');
+  ndk.connect().then(
+    () => L('ndk.connect() resolved'),
+    (e) => L('ndk.connect() rejected:', e),
+  );
+
+  L('dynamic import NDKNip46Signer...');
   const { NDKNip46Signer } = await import('@nostr-dev-kit/ndk');
+  L('NDKNip46Signer imported');
 
   const localSigner = NDKPrivateKeySigner.generate();
-  const bunkerSigner = new NDKNip46Signer(ndk, remotePubkey, localSigner);
+  L('localSigner generated, local pubkey =', localSigner.pubkey);
 
-  await bunkerSigner.blockUntilReady();
-  ndk.signer = bunkerSigner;
+  // Rebuild bunker:// URL manually — URL() mangles non-special schemes on round-trip
+  const params = new URLSearchParams();
+  for (const r of relayUrls) params.append('relay', r);
+  if (secret) params.set('secret', secret);
+  if (userPubkeyParam) params.set('pubkey', userPubkeyParam);
+  const cleanToken = `bunker://${bunkerPubkey}?${params.toString()}`;
+  L('sanitized bunker token:', cleanToken);
 
-  // Persist so page reloads don't drop the signer.
+  const bunkerSigner = NDKNip46Signer.bunker(ndk, cleanToken, localSigner);
+  L('bunkerSigner constructed. state:', {
+    bunkerPubkey: bunkerSigner.bunkerPubkey,
+    userPubkey: bunkerSigner.userPubkey,
+    relayUrls: bunkerSigner.relayUrls,
+    hasSecret: !!bunkerSigner.secret,
+  });
+
+  bunkerSigner.on('authUrl', (url: string) => {
+    L('>>> authUrl event:', url);
+    try {
+      const w = window.open(url, 'nostr-auth', 'width=600,height=700');
+      if (!w) L('WARN: window.open returned null (popup blocked?) — URL:', url);
+    } catch (e) {
+      L('ERROR opening authUrl popup:', e, 'URL:', url);
+    }
+  });
+  // Forward every RPC event for visibility
+  bunkerSigner.rpc.on('response', (r: unknown) => L('rpc response:', r));
+  bunkerSigner.rpc.on('request', (r: unknown) => L('rpc request:', r));
+
+  L('calling bunkerSigner.blockUntilReady() — awaiting signer handshake...');
+  let user: NDKUser;
   try {
-    saveSignerPayload(bunkerSigner.toPayload());
-  } catch (err) {
-    console.warn('[nostr] failed to persist bunker signer payload:', err);
+    user = await bunkerSigner.blockUntilReady();
+    L('blockUntilReady resolved. user.pubkey =', user.pubkey, 'elapsed ms =', Math.round(performance.now() - t0));
+  } catch (e) {
+    L('ERROR blockUntilReady failed:', e, 'elapsed ms =', Math.round(performance.now() - t0));
+    throw e;
   }
 
-  const user = await bunkerSigner.user();
+  ndk.signer = bunkerSigner;
+  L('ndk.signer assigned');
+
+  try {
+    saveSignerPayload(bunkerSigner.toPayload());
+    L('signer payload persisted');
+  } catch (err) {
+    L('WARN failed to persist bunker signer payload:', err);
+  }
+
+  L('fetching profile (8s timeout)...');
   try {
     await Promise.race([
       user.fetchProfile(),
       new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
     ]);
-  } catch {
-    console.warn('Profile fetch timed out or failed');
+    L('profile fetched');
+  } catch (e) {
+    L('WARN profile fetch failed/timeout:', e);
   }
 
+  L('=== loginWithBunker DONE. total ms =', Math.round(performance.now() - t0));
   return user;
 }
 
@@ -349,49 +438,90 @@ export interface NostrConnectSession {
 }
 
 export async function createNostrConnectSession(relay?: string): Promise<NostrConnectSession> {
-  const ndk = getNDK();
-  // Don't await — NDK connects in the background
-  ndk.connect();
+  const L = (...args: unknown[]) => console.log('[nostrconnect]', ...args);
+  const t0 = performance.now();
+  L('=== createNostrConnectSession START ===');
 
+  const ndk = getNDK();
+  L('ndk obtained, kicking off ndk.connect()');
+  ndk.connect().then(
+    () => L('ndk.connect() resolved'),
+    (e) => L('ndk.connect() rejected:', e),
+  );
+
+  L('dynamic import NDKNip46Signer...');
   const { NDKNip46Signer } = await import('@nostr-dev-kit/ndk');
+  L('NDKNip46Signer imported');
 
   const connectRelay = relay || 'wss://relay.nsec.app';
+  L('using connect relay:', connectRelay);
 
   const signer = NDKNip46Signer.nostrconnect(ndk, connectRelay, undefined, {
     name: 'Obelisk',
     url: typeof window !== 'undefined' ? window.location.origin : 'https://obelisk.ar',
   });
+  L('signer constructed. state:', {
+    localPubkey: signer.localSigner.pubkey,
+    relayUrls: signer.relayUrls,
+    hasUri: !!signer.nostrConnectUri,
+  });
+  L('nostrConnectUri:', signer.nostrConnectUri);
+
+  signer.on('authUrl', (url: string) => {
+    L('>>> authUrl event:', url);
+    try {
+      const w = window.open(url, 'nostr-auth', 'width=600,height=700');
+      if (!w) L('WARN: window.open returned null (popup blocked?) — URL:', url);
+    } catch (e) {
+      L('ERROR opening authUrl popup:', e, 'URL:', url);
+    }
+  });
+  signer.rpc.on('response', (r: unknown) => L('rpc response:', r));
+  signer.rpc.on('request', (r: unknown) => L('rpc request:', r));
 
   const uri = signer.nostrConnectUri || '';
+  L('setup done. elapsed ms =', Math.round(performance.now() - t0));
 
   let cancelled = false;
 
   const waitForConnection = async (): Promise<NDKUser | null> => {
+    L('waitForConnection: awaiting blockUntilReady...');
+    const tw = performance.now();
     try {
       const user = await signer.blockUntilReady();
-      if (cancelled) return null;
+      L('blockUntilReady resolved. user.pubkey =', user.pubkey, 'wait ms =', Math.round(performance.now() - tw));
+      if (cancelled) {
+        L('waitForConnection: cancelled after resolve, bailing');
+        return null;
+      }
       ndk.signer = signer;
+      L('ndk.signer assigned');
       try {
         saveSignerPayload(signer.toPayload());
+        L('signer payload persisted');
       } catch (err) {
-        console.warn('[nostr] failed to persist nostrconnect signer payload:', err);
+        L('WARN persist signer payload failed:', err);
       }
+      L('fetching profile (8s timeout)...');
       try {
         await Promise.race([
           user.fetchProfile(),
           new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
         ]);
-      } catch {
-        console.warn('Profile fetch timed out or failed');
+        L('profile fetched');
+      } catch (e) {
+        L('WARN profile fetch failed/timeout:', e);
       }
       return user;
     } catch (err) {
+      L('ERROR blockUntilReady rejected:', err, 'wait ms =', Math.round(performance.now() - tw));
       if (cancelled) return null;
       throw err;
     }
   };
 
   const cancel = () => {
+    L('cancel() called');
     cancelled = true;
   };
 
