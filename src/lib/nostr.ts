@@ -299,7 +299,13 @@ export async function createNewAccount(): Promise<{ user: NDKUser; nsec: string 
   return { user, nsec };
 }
 
-export async function loginWithBunker(bunkerUrl: string): Promise<NDKUser | null> {
+export interface BunkerLoginOptions {
+  /** Invoked when signer emits auth_url. Use this to render a tap-to-open
+   *  link in the UI (mobile-safe) instead of relying on window.open. */
+  onAuthUrl?: (url: string) => void;
+}
+
+export async function loginWithBunker(bunkerUrl: string, options?: BunkerLoginOptions): Promise<NDKUser | null> {
   const L = (...args: unknown[]) => console.log('[bunker]', ...args);
   const t0 = performance.now();
   L('=== loginWithBunker START ===');
@@ -384,6 +390,10 @@ export async function loginWithBunker(bunkerUrl: string): Promise<NDKUser | null
 
   bunkerSigner.on('authUrl', (url: string) => {
     L('>>> authUrl event:', url);
+    if (options?.onAuthUrl) {
+      options.onAuthUrl(url);
+      return;
+    }
     try {
       const w = window.open(url, 'nostr-auth', 'width=600,height=700');
       if (!w) L('WARN: window.open returned null (popup blocked?) — URL:', url);
@@ -437,7 +447,7 @@ export interface NostrConnectSession {
   cancel: () => void;
 }
 
-export async function createNostrConnectSession(relay?: string): Promise<NostrConnectSession> {
+export async function createNostrConnectSession(relay?: string, options?: BunkerLoginOptions): Promise<NostrConnectSession> {
   const L = (...args: unknown[]) => console.log('[nostrconnect]', ...args);
   const t0 = performance.now();
   L('=== createNostrConnectSession START ===');
@@ -469,6 +479,10 @@ export async function createNostrConnectSession(relay?: string): Promise<NostrCo
 
   signer.on('authUrl', (url: string) => {
     L('>>> authUrl event:', url);
+    if (options?.onAuthUrl) {
+      options.onAuthUrl(url);
+      return;
+    }
     try {
       const w = window.open(url, 'nostr-auth', 'width=600,height=700');
       if (!w) L('WARN: window.open returned null (popup blocked?) — URL:', url);

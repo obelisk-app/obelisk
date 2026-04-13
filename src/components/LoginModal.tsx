@@ -46,6 +46,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, transparentBack
   const [creatingAccount, setCreatingAccount] = useState(false);
   const [backupConfirmed, setBackupConfirmed] = useState(false);
   const [showProfileSetup, setShowProfileSetup] = useState(false);
+  const [authChallengeUrl, setAuthChallengeUrl] = useState<string | null>(null);
   const sessionRef = useRef<NostrConnectSession | null>(null);
   const { setUser, setLoading, setError, isLoading, error, syncProfile } = useAuthStore();
 
@@ -66,7 +67,9 @@ export default function LoginModal({ isOpen, onClose, onSuccess, transparentBack
 
     const generate = async () => {
       try {
-        const session = await createNostrConnectSession();
+        const session = await createNostrConnectSession(undefined, {
+          onAuthUrl: (url) => setAuthChallengeUrl(url),
+        });
         if (cancelled) {
           session.cancel();
           return;
@@ -116,6 +119,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, transparentBack
       setBackupConfirmed(false);
       sessionRef.current?.cancel();
       sessionRef.current = null;
+      setAuthChallengeUrl(null);
     }
   }, [isOpen]);
 
@@ -168,7 +172,9 @@ export default function LoginModal({ isOpen, onClose, onSuccess, transparentBack
           if (!bunkerInput.trim()) {
             throw new Error('Please enter your bunker URL');
           }
-          user = await loginWithBunker(bunkerInput);
+          user = await loginWithBunker(bunkerInput, {
+            onAuthUrl: (url) => setAuthChallengeUrl(url),
+          });
           break;
       }
 
@@ -198,6 +204,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, transparentBack
     setCopied(false);
     sessionRef.current?.cancel();
     sessionRef.current = null;
+    setAuthChallengeUrl(null);
     setError(null);
   };
 
@@ -549,7 +556,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, transparentBack
               disabled={isLoading || !nsecInput.trim()}
               className="w-full lc-pill lc-pill-primary text-sm disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {loadingMethod === 'nsec' && <div className="lc-spinner" style={{ borderTopColor: '#0a0a0a', borderColor: 'rgba(10,10,10,0.3)' }} />}
+              {loadingMethod === 'nsec' && <div className="lc-spinner" style={{ borderColor: 'rgba(10,10,10,0.3)', borderTopColor: '#0a0a0a' }} />}
               {loadingMethod === 'nsec' ? 'Connecting...' : 'Connect'}
             </button>
           </div>
@@ -563,6 +570,18 @@ export default function LoginModal({ isOpen, onClose, onSuccess, transparentBack
               </svg>
               Back
             </button>
+
+            {authChallengeUrl && (
+              <a
+                href={authChallengeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setAuthChallengeUrl(null)}
+                className="block p-3 rounded-xl border border-lc-green/60 bg-lc-green/10 text-lc-green text-sm font-medium text-center hover:bg-lc-green/20 transition"
+              >
+                Your signer wants you to approve this connection — tap here to open the authorization page
+              </a>
+            )}
 
             {/* Bunker tabs */}
             <div className="flex bg-lc-black rounded-xl p-1 border border-lc-border/50">
@@ -656,7 +675,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, transparentBack
                   disabled={isLoading || !bunkerInput.trim()}
                   className="w-full lc-pill lc-pill-primary text-sm disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  {loadingMethod === 'bunker' && <div className="lc-spinner" style={{ borderTopColor: '#0a0a0a', borderColor: 'rgba(10,10,10,0.3)' }} />}
+                  {loadingMethod === 'bunker' && <div className="lc-spinner" style={{ borderColor: 'rgba(10,10,10,0.3)', borderTopColor: '#0a0a0a' }} />}
                   {loadingMethod === 'bunker' ? 'Connecting...' : 'Connect'}
                 </button>
               </div>
