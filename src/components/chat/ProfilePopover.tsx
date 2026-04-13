@@ -8,6 +8,7 @@ import {
   replaceShortcodes,
   CUSTOM_EMOJI_PLACEHOLDER_REGEX,
 } from '@/lib/emoji-shortcodes';
+import ChannelEmoji from './ChannelEmoji';
 
 function renderWithEmojis(text: string, serverEmojis: Record<string, string>): ReactNode {
   if (!text) return text;
@@ -99,7 +100,7 @@ export default function ProfilePopover({ pubkey, onClose }: {
       <div
         ref={panelRef}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-sm bg-lc-dark border border-lc-border rounded-xl shadow-2xl overflow-hidden"
+        className="w-full max-w-sm max-h-[calc(100dvh-2rem)] overflow-y-auto bg-lc-dark border border-lc-border rounded-xl shadow-2xl"
         data-testid="profile-popover"
         role="dialog"
       >
@@ -180,7 +181,9 @@ export default function ProfilePopover({ pubkey, onClose }: {
                     style={{ borderColor: r.color, color: r.color }}
                     data-testid="profile-custom-role"
                   >
-                    {r.icon ? <span>{r.icon}</span> : (
+                    {r.icon ? (
+                      <ChannelEmoji value={r.icon} imgClassName="inline-block w-3.5 h-3.5 object-contain" className="text-sm" />
+                    ) : (
                       <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: r.color }} />
                     )}
                     {renderWithEmojis(r.name, serverEmojis)}

@@ -16,6 +16,7 @@ import PostChatHeader from '@/components/chat/PostChatHeader';
 import ChannelTopicModal from '@/components/chat/ChannelTopicModal';
 import ChannelEmoji from '@/components/chat/ChannelEmoji';
 import SearchBar from '@/components/chat/SearchBar';
+import { useSearchStore } from '@/store/search';
 import DMList from '@/components/dm/DMList';
 import DMChat from '@/components/dm/DMChat';
 import NewDMModal from '@/components/dm/NewDMModal';
@@ -71,6 +72,7 @@ function TypingIndicator({ profileCache }: { profileCache: Map<string, { name?: 
 export default function ChatPage() {
   const router = useRouter();
   const { isConnected, profile, logout, restoreSession } = useAuthStore();
+  const isSearchOpen = useSearchStore((s) => s.isOpen);
   const {
     servers,
     activeServerId,
@@ -1017,6 +1019,33 @@ export default function ChatPage() {
       useNotificationStore.getState().incrementPostUnread(data.postId, data.hasMention);
     });
 
+    // Fired when the server auto-subscribes the viewer to a forum post
+    // (e.g. because they were @-mentioned in it). Thread the post meta
+    // straight into followedPostIds/Meta so the thread row appears under
+    // its forum channel in the sidebar without a refetch.
+    socket.on('post-subscribed', (data: { postId: string; title: string; channelId: string; channelName: string; serverId: string }) => {
+      const state = useChatStore.getState();
+      if (state.followedPostIds.includes(data.postId)) return;
+      useChatStore.setState({
+        followedPostIds: [...state.followedPostIds, data.postId],
+        followedPostMeta: {
+          ...state.followedPostMeta,
+          [data.postId]: {
+            id: data.postId,
+            title: data.title,
+            channelId: data.channelId,
+            channelName: data.channelName,
+            serverId: data.serverId,
+          },
+        },
+        // A fresh mention is a strong enough signal to clear an earlier
+        // explicit-unfollow suppression so the thread re-appears.
+        suppressedAutoFollowPostIds: state.suppressedAutoFollowPostIds.filter(
+          (id) => id !== data.postId,
+        ),
+      });
+    });
+
     socket.on('connect_error', (err) => {
       console.warn('Socket connection error:', err.message);
     });
@@ -1599,7 +1628,7 @@ export default function ChatPage() {
                   )}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  {activeChannel && activeChannelId && activeChannel.type !== 'forum' && activeChannel.type !== 'voice' && (
+                  {activeChannel && activeChannelId && activeChannel.type !== 'forum' && activeChannel.type !== 'voice' && !isSearchOpen && (
                     <PinnedMessagesPanel
                       channelId={activeChannelId}
                       profileCache={profileCache}
