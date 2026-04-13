@@ -116,7 +116,13 @@ export const useAuthStore = create<AuthState>()(
       // a logged-in user.
       restoreSession: async () => {
         try {
-          const res = await fetch('/api/auth/me');
+          // Retry once on 401 — after a full-page nav post-login, mobile
+          // browsers can race the session cookie commit vs. this fetch.
+          let res = await fetch('/api/auth/me', { cache: 'no-store' });
+          if (res.status === 401) {
+            await new Promise((r) => setTimeout(r, 300));
+            res = await fetch('/api/auth/me', { cache: 'no-store' });
+          }
           if (!res.ok) {
             set({
               isConnected: false,
