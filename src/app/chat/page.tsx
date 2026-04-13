@@ -150,27 +150,26 @@ export default function ChatPage() {
     const loginMethod = useAuthStore.getState().loginMethod;
     const ndk = getNDK();
 
-    // nsec login stores the private key only in memory — on page reload the
-    // signer is gone and cannot be restored. Log out and show the login modal
-    // so the user can re-enter their nsec (or pick another method).
-    if (loginMethod === 'nsec' && !ndk.signer) {
-      logout();
-      setSessionChecked(false);
-      setSessionInvalid(true);
-      return;
-    }
-
     connectNDK().then(async () => {
       if (!ndk.signer && loginMethod === 'extension' && typeof window !== 'undefined' && window.nostr) {
         const { NDKNip07Signer } = await import('@nostr-dev-kit/ndk');
         ndk.signer = new NDKNip07Signer(4000, ndk);
       }
-      // Bunker / NostrConnect: rebuild the signer from the payload stashed
-      // in localStorage at login. Without this the signer dies on every
-      // reload and DMs silently fail.
-      if (!ndk.signer && loginMethod === 'bunker') {
+      // nsec / bunker / NostrConnect: rebuild the signer from the payload
+      // stashed in localStorage at login. Without this the signer dies on
+      // every reload (or mobile background eviction) and the user gets
+      // silently logged out.
+      if (!ndk.signer && (loginMethod === 'nsec' || loginMethod === 'bunker')) {
         const ok = await restoreRemoteSigner();
-        if (!ok) console.warn('[chat] bunker signer restore failed');
+        if (!ok) {
+          console.warn(`[chat] ${loginMethod} signer restore failed`);
+          if (loginMethod === 'nsec') {
+            logout();
+            setSessionChecked(false);
+            setSessionInvalid(true);
+            return;
+          }
+        }
       }
       setNdkReady(true);
     }).catch((err) => {

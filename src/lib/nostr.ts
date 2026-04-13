@@ -266,10 +266,16 @@ export async function loginWithNsec(nsec: string): Promise<NDKUser | null> {
   const ndk = getNDK();
   const signer = new NDKPrivateKeySigner(privateKey);
   ndk.signer = signer;
-  
+
+  try {
+    saveSignerPayload(signer.toPayload());
+  } catch (err) {
+    console.warn('[nostr] failed to persist nsec signer payload:', err);
+  }
+
   const user = await signer.user();
   await user.fetchProfile();
-  
+
   return user;
 }
 
@@ -281,6 +287,12 @@ export async function createNewAccount(): Promise<{ user: NDKUser; nsec: string 
   const ndk = getNDK();
   const signer = new NDKPrivateKeySigner(privateKeyHex);
   ndk.signer = signer;
+
+  try {
+    saveSignerPayload(signer.toPayload());
+  } catch (err) {
+    console.warn('[nostr] failed to persist nsec signer payload:', err);
+  }
 
   const user = await signer.user();
 

@@ -84,8 +84,8 @@ export default function LoginModal({ isOpen, onClose, onSuccess, transparentBack
 
         setUser(user, 'bunker');
         syncProfile();
-        onClose();
-        onSuccess?.();
+        if (onSuccess) onSuccess();
+        else onClose();
       } catch (err) {
         if (!cancelled) {
           console.error('NostrConnect error:', err);
@@ -179,8 +179,8 @@ export default function LoginModal({ isOpen, onClose, onSuccess, transparentBack
         setUser(user, loginMethod);
         // Sync profile from Nostr relays to DB in background
         syncProfile();
-        onClose();
-        onSuccess?.();
+        if (onSuccess) onSuccess();
+        else onClose();
       }
     } catch (err) {
       console.error('Login error:', err);
@@ -285,8 +285,8 @@ export default function LoginModal({ isOpen, onClose, onSuccess, transparentBack
         {showProfileSetup ? (
           <ProfileEditor
             mode="setup"
-            onComplete={() => { onClose(); onSuccess?.(); }}
-            onSkip={() => { onClose(); onSuccess?.(); }}
+            onComplete={() => { if (onSuccess) onSuccess(); else onClose(); }}
+            onSkip={() => { if (onSuccess) onSuccess(); else onClose(); }}
           />
 
         ) : newAccountNsec ? (
