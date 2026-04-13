@@ -483,7 +483,14 @@ export class WebSocketVoiceClient {
 
     pc.ontrack = (ev) => {
       const track = ev.track;
-      const type = peer.remoteTrackTypes.get(track.id);
+      let type = peer.remoteTrackTypes.get(track.id);
+      if (!type) {
+        // Fallback: on mid-session renegotiation (e.g. peer turns on camera
+        // after we're already connected), the remote track id delivered by
+        // ontrack can differ from the sender-side id we received via
+        // trackInfo. Match by kind against any unattached expected type.
+        type = this.findUnattachedTrackType(peer, track.kind as 'audio' | 'video');
+      }
       if (type) {
         this.attachRemoteTrack(peer, track, type);
       } else {
@@ -558,6 +565,25 @@ export class WebSocketVoiceClient {
       peer.screenElement = null;
       this.onRemoteScreenElement?.(peer.pubkey, null);
     }
+  }
+
+  private findUnattachedTrackType(
+    peer: PeerConn,
+    kind: 'audio' | 'video',
+  ): TrackType | undefined {
+    const candidates: TrackType[] = kind === 'video'
+      ? ['camera', 'screen']
+      : ['audio', 'screen-audio'];
+    const attached = new Set<TrackType>();
+    if (peer.audioElement) attached.add('audio');
+    if (peer.screenAudioElement) attached.add('screen-audio');
+    if (peer.cameraElement) attached.add('camera');
+    if (peer.screenElement) attached.add('screen');
+    const expected = new Set(peer.remoteTrackTypes.values());
+    for (const c of candidates) {
+      if (expected.has(c) && !attached.has(c)) return c;
+    }
+    return undefined;
   }
 
   private attachRemoteTrack(peer: PeerConn, track: MediaStreamTrack, type: TrackType): void {
@@ -702,11 +728,21 @@ export class WebSocketVoiceClient {
       if (payload.trackInfo) {
         const { trackId, type } = payload.trackInfo;
         peer.remoteTrackTypes.set(trackId, type);
-        const pending = peer.pendingTracks.get(trackId);
-        if (pending) {
+        let pending = peer.pendingTracks.get(trackId);
+        if (!pending) {
+          // Track id mismatch fallback: drain a pending track of matching kind.
+          const wantKind = (type === 'audio' || type === 'screen-audio') ? 'audio' : 'video';
+          for (const [pid, ptrack] of peer.pendingTracks) {
+            if (ptrack.kind === wantKind) {
+              pending = ptrack;
+              peer.pendingTracks.delete(pid);
+              break;
+            }
+          }
+        } else {
           peer.pendingTracks.delete(trackId);
-          this.attachRemoteTrack(peer, pending, type);
         }
+        if (pending) this.attachRemoteTrack(peer, pending, type);
         return;
       }
 

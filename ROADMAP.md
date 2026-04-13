@@ -142,6 +142,19 @@
 - [x] Canales de voz — audio (via mediasoup WebRTC SFU)
 - [x] Canales de voz — video y screen sharing
 - [ ] Canales de voz — chat dentro del canal de voz
+- [ ] **Canales de voz — modo "town hall" / llamadas masivas con raise hand**
+  - [ ] Nuevo tipo de permiso por canal de voz: `voiceMode` = `open` (todos hablan, actual) | `moderated` (raise-hand)
+  - [ ] En modo `moderated`: los participantes entran muteados a nivel de servidor y sin poder desmutearse por su cuenta
+  - [ ] Boton "Raise hand" en `VoiceControls` — emite evento socket `voice-raise-hand` / `voice-lower-hand`
+  - [ ] Cola de manos levantadas visible para owner/admin/mod del server (orden FIFO con timestamp)
+  - [ ] Acciones del moderador sobre una mano levantada: `grant-speak` (otorga permiso temporal para desmutearse) / `deny` (baja la mano) / `revoke-speak` (fuerza mute de nuevo cuando termina)
+  - [ ] Nuevos eventos server: `voice-hand-raised`, `voice-hand-lowered`, `voice-speak-granted`, `voice-speak-revoked` — broadcast al room `voice:${channelId}`
+  - [ ] Nuevo modelo `VoiceHand` (o campos en `VoiceState`): `pubkey`, `channelId`, `raisedAt`, `speakGrantedBy`, `speakGrantedAt`
+  - [ ] Enforcement server-side: `voice-camera-claim` y el gate de unmute chequean `voiceMode` + permiso otorgado; el cliente no alcanza, tiene que validarlo el server
+  - [ ] UI: indicador visual de "mano levantada" en la tarjeta del participante + panel lateral con la cola para moderadores
+  - [ ] Limite configurable de hablantes concurrentes en modo `moderated` (ej: solo N pueden estar con permiso a la vez)
+  - [ ] Auto-revoke de permiso cuando el usuario se silencia o sale del canal
+  - [ ] Tests: cambio de modo por admin, raise/lower hand, grant/revoke, enforcement de mute cuando no hay permiso, cola ordenada, limite de hablantes
 - [ ] **WoT — Registro automatico via Web of Trust** (feature core anti-spam) — ver [docs/wot-and-invite-credits.md](docs/wot-and-invite-credits.md)
   - [ ] Cada servidor define una cuenta "referente" (npub) — ej: La Crypta para el server de La Crypta
   - [ ] Cualquier npub seguido por el referente puede registrarse automaticamente en ese servidor
