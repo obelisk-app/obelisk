@@ -39,7 +39,18 @@ interface PeerConn {
   screenAudioElement: HTMLAudioElement | null;
   cameraElement: HTMLVideoElement | null;
   screenElement: HTMLVideoElement | null;
+  // Reconnection state. The impolite side (polite === false) drives recovery;
+  // the polite side just waits for a new offer or a reset signal.
+  reconnectTimer: ReturnType<typeof setTimeout> | null;
+  reconnectAttempts: number;
+  closed: boolean;
 }
+
+// Start small so transient ICE hiccups (WiFi roam, ~1–2s) self-heal without
+// a visible gap, then back off to avoid hammering dead peers.
+const RECONNECT_DELAYS_MS = [1500, 3000, 6000, 10000, 15000];
+// After this many ICE-restart attempts we escalate to a full PC recreate.
+const ICE_RESTART_LIMIT = 3;
 
 // User-tunable quality — read from localStorage so the Settings modal can change it.
 export interface VoiceQualitySettings {
@@ -455,6 +466,9 @@ export class WebSocketVoiceClient {
       screenAudioElement: null,
       cameraElement: null,
       screenElement: null,
+      reconnectTimer: null,
+      reconnectAttempts: 0,
+      closed: false,
     };
 
     pc.onicecandidate = ({ candidate }) => {
@@ -500,12 +514,22 @@ export class WebSocketVoiceClient {
 
     pc.onconnectionstatechange = () => {
       console.log('[voice] peer', remotePubkey.slice(0, 8), 'connection:', pc.connectionState);
-      if (pc.connectionState === 'failed') {
-        this.onError?.(`Peer ${remotePubkey.slice(0, 8)} connection failed`);
+      if (pc.connectionState === 'connected') {
+        peer.reconnectAttempts = 0;
+        if (peer.reconnectTimer) {
+          clearTimeout(peer.reconnectTimer);
+          peer.reconnectTimer = null;
+        }
+      } else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
+        this.scheduleReconnect(peer);
       }
     };
     pc.oniceconnectionstatechange = () => {
       console.log('[voice] peer', remotePubkey.slice(0, 8), 'ice:', pc.iceConnectionState);
+      // Some browsers surface failure here before connectionState flips.
+      if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
+        this.scheduleReconnect(peer);
+      }
     };
 
     // Always send our mic track so the first offer carries audio.
@@ -540,6 +564,11 @@ export class WebSocketVoiceClient {
   }
 
   private closePeer(peer: PeerConn): void {
+    peer.closed = true;
+    if (peer.reconnectTimer) {
+      clearTimeout(peer.reconnectTimer);
+      peer.reconnectTimer = null;
+    }
     try { peer.pc.close(); } catch {}
     if (peer.audioElement) {
       peer.audioElement.pause();
@@ -565,6 +594,76 @@ export class WebSocketVoiceClient {
       peer.screenElement = null;
       this.onRemoteScreenElement?.(peer.pubkey, null);
     }
+  }
+
+  // ── Reconnection ─────────────────────────────────────────────
+  //
+  // ICE can drop for all sorts of reasons (WiFi roam, NAT rebinding, brief
+  // uplink loss). The built-in RTCPeerConnection does not recover on its own,
+  // so we drive recovery here: ICE restart first (cheap, preserves tracks),
+  // then a coordinated full PC recreate as a last resort. Only the impolite
+  // side (polite === false) initiates; the polite side waits so the two
+  // don't fight each other with simultaneous restart offers.
+
+  private scheduleReconnect(peer: PeerConn): void {
+    if (peer.closed) return;
+    if (peer.reconnectTimer) return;
+    if (peer.pc.connectionState === 'connected') return;
+    // Polite side is passive — it either receives a new offer or a reset.
+    if (peer.polite) return;
+
+    const delay = RECONNECT_DELAYS_MS[
+      Math.min(peer.reconnectAttempts, RECONNECT_DELAYS_MS.length - 1)
+    ];
+    peer.reconnectTimer = setTimeout(() => {
+      peer.reconnectTimer = null;
+      if (peer.closed) return;
+      const state = peer.pc.connectionState;
+      if (state === 'connected') {
+        peer.reconnectAttempts = 0;
+        return;
+      }
+      peer.reconnectAttempts += 1;
+      if (peer.reconnectAttempts <= ICE_RESTART_LIMIT) {
+        this.performIceRestart(peer);
+      } else {
+        this.performHardReset(peer);
+      }
+      // Check again later — if this attempt doesn't land, try again.
+      this.scheduleReconnect(peer);
+    }, delay);
+  }
+
+  private performIceRestart(peer: PeerConn): void {
+    console.log('[voice] ICE restart for', peer.pubkey.slice(0, 8),
+      'attempt', peer.reconnectAttempts);
+    try {
+      // restartIce triggers onnegotiationneeded, which re-sends an offer
+      // with fresh ICE credentials through our existing signaling path.
+      peer.pc.restartIce();
+    } catch (err) {
+      console.warn('[voice] restartIce failed:', err);
+    }
+  }
+
+  private performHardReset(peer: PeerConn): void {
+    console.log('[voice] hard reset for', peer.pubkey.slice(0, 8));
+    // Tell the remote side to tear down and rebuild too, otherwise they'd
+    // keep feeding offers to our dead PC.
+    this.socket.emit('voice-signal', {
+      toSocketId: peer.socketId,
+      payload: { reset: true },
+    });
+    this.recreatePeer(peer);
+  }
+
+  private recreatePeer(peer: PeerConn): void {
+    const { socketId, pubkey } = peer;
+    this.closePeer(peer);
+    this.peers.delete(socketId);
+    // createPeer re-attaches local tracks; impolite side's addTrack will
+    // fire onnegotiationneeded and drive a fresh offer.
+    this.createPeer(socketId, pubkey);
   }
 
   private findUnattachedTrackType(
@@ -725,6 +824,17 @@ export class WebSocketVoiceClient {
     }
 
     try {
+      if (payload.reset) {
+        // Remote side hit its recreate threshold. Tear down and rebuild our
+        // PC so their fresh offer lands on a clean slate. We intentionally
+        // do not echo the reset back — the remote already recreated theirs.
+        const { socketId, pubkey } = peer;
+        this.closePeer(peer);
+        this.peers.delete(socketId);
+        this.createPeer(socketId, pubkey);
+        return;
+      }
+
       if (payload.trackInfo) {
         const { trackId, type } = payload.trackInfo;
         peer.remoteTrackTypes.set(trackId, type);
