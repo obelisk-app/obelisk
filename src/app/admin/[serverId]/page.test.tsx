@@ -79,6 +79,12 @@ function mockFetch({ role = 'owner', instanceOwner = false, members = [], server
         json: () => Promise.resolve({ categories: [], uncategorizedChannels: [] }),
       });
     }
+    if (url.startsWith('/api/admin/emojis')) {
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ emojis: [] }) });
+    }
+    if (url.startsWith('/api/admin/roles')) {
+      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+    }
     // AccessControlPanel + AccessPanel + InviteManager probes
     if (url.includes('/access')) {
       return Promise.resolve({

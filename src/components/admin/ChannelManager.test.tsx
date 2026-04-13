@@ -21,6 +21,12 @@ beforeEach(() => {
         json: () => Promise.resolve({ categories: mockCategories, uncategorizedChannels: mockUncategorized }),
       });
     }
+    if (url.startsWith('/api/admin/emojis')) {
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ emojis: [] }) });
+    }
+    if (url.startsWith('/api/admin/roles')) {
+      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+    }
     return Promise.resolve({ ok: true, json: () => Promise.resolve({ id: 'new', name: 'test' }) });
   }));
 });
@@ -73,6 +79,12 @@ describe('ChannelManager', () => {
           json: () => Promise.resolve({ categories: mockCategories, uncategorizedChannels: mockUncategorized }),
         });
       }
+      if (url.startsWith('/api/admin/emojis')) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ emojis: [] }) });
+      }
+      if (url.startsWith('/api/admin/roles') && (!opts || opts.method === undefined || opts.method === 'GET')) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+      }
       if (url.startsWith('/api/admin/channels/') && opts?.method === 'PATCH') {
         patchCalls.push({ url, body: JSON.parse(opts.body) });
         return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
@@ -104,12 +116,18 @@ describe('ChannelManager', () => {
   });
 
   it('shows empty state when no channels exist', async () => {
-    vi.stubGlobal('fetch', vi.fn(() =>
-      Promise.resolve({
+    vi.stubGlobal('fetch', vi.fn((url: string) => {
+      if (url.startsWith('/api/admin/emojis')) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ emojis: [] }) });
+      }
+      if (url.startsWith('/api/admin/roles')) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+      }
+      return Promise.resolve({
         ok: true,
         json: () => Promise.resolve({ categories: [], uncategorizedChannels: [] }),
-      })
-    ));
+      });
+    }));
 
     render(<ChannelManager serverId="srv1" isOwner={true} />);
 

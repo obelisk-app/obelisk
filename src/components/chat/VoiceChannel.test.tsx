@@ -161,10 +161,11 @@ describe('VoiceChannel', () => {
         { pubkey: 'pk1', muted: false, deafened: false, joinedAt: '2026-01-01' },
       ],
       isScreenSharing: true,
+      localScreenStream: {} as MediaStream,
     });
 
     render(<VoiceChannel {...defaultProps} />);
-    expect(screen.getByTestId('local-screen-share-indicator')).toBeInTheDocument();
+    expect(screen.getByTestId('local-screen-share')).toBeInTheDocument();
   });
 
   it('shows voice controls only when in the channel', () => {
