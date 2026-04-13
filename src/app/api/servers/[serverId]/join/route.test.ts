@@ -6,6 +6,8 @@ vi.mock('@/lib/db', () => ({
     server: { findUnique: vi.fn() },
     member: { findUnique: vi.fn(), create: vi.fn() },
     ban: { findUnique: vi.fn() },
+    channel: { findMany: vi.fn().mockResolvedValue([]) },
+    channelReadState: { createMany: vi.fn().mockResolvedValue({ count: 0 }) },
   },
 }));
 vi.mock('@/lib/api-auth', () => ({ getAuthPubkey: vi.fn() }));
@@ -38,7 +40,11 @@ function makeRequest() {
 }
 
 describe('POST /api/servers/[serverId]/join', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockPrisma.channel.findMany.mockResolvedValue([]);
+    mockPrisma.channelReadState.createMany.mockResolvedValue({ count: 0 });
+  });
 
   it('returns 401 without session', async () => {
     mockGetAuth.mockResolvedValue(null);
@@ -154,6 +160,96 @@ describe('POST /api/servers/[serverId]/join', () => {
     const res = await POST(makeRequest(), { params });
     expect(res.status).toBe(200);
     expect(mockPostWelcome).toHaveBeenCalledWith('srv1', 'pk1');
+  });
+
+  it('seeds ChannelReadState=now for every text/forum channel on first join', async () => {
+    mockGetAuth.mockResolvedValue('pk1');
+    mockPrisma.server.findUnique.mockResolvedValue({
+      id: 'srv1', name: 'Test', icon: null, banner: null, joinMode: 'open', wotEnabled: false,
+    });
+    mockPrisma.member.findUnique.mockResolvedValue(null);
+    mockPrisma.ban.findUnique.mockResolvedValue(null);
+    mockPrisma.member.create.mockResolvedValue({ id: 'm1' });
+    mockPrisma.channel.findMany.mockResolvedValue([
+      { id: 'c-general' },
+      { id: 'c-landing' },
+      { id: 'c-welcome' },
+    ]);
+
+    const before = Date.now();
+    const res = await POST(makeRequest(), { params });
+    expect(res.status).toBe(200);
+
+    expect(mockPrisma.channel.findMany).toHaveBeenCalledWith({
+      where: { serverId: 'srv1', type: { in: ['text', 'forum'] } },
+      select: { id: true },
+    });
+    expect(mockPrisma.channelReadState.createMany).toHaveBeenCalledTimes(1);
+    const call = mockPrisma.channelReadState.createMany.mock.calls[0][0];
+    expect(call.skipDuplicates).toBe(true);
+    expect(call.data).toHaveLength(3);
+    const ids = call.data.map((d: any) => d.channelId).sort();
+    expect(ids).toEqual(['c-general', 'c-landing', 'c-welcome']);
+    for (const row of call.data) {
+      expect(row.pubkey).toBe('pk1');
+      expect(row.lastReadAt).toBeInstanceOf(Date);
+      expect(row.lastReadAt.getTime()).toBeGreaterThanOrEqual(before);
+      expect(row.lastReadAt.getTime()).toBeLessThanOrEqual(Date.now());
+    }
+  });
+
+  it('seeds read state BEFORE firing welcome bot so the bot message lands after lastReadAt', async () => {
+    mockGetAuth.mockResolvedValue('pk1');
+    mockPrisma.server.findUnique.mockResolvedValue({
+      id: 'srv1', name: 'Test', icon: null, banner: null, joinMode: 'open', wotEnabled: false,
+    });
+    mockPrisma.member.findUnique.mockResolvedValue(null);
+    mockPrisma.ban.findUnique.mockResolvedValue(null);
+    mockPrisma.member.create.mockResolvedValue({ id: 'm1' });
+    mockPrisma.channel.findMany.mockResolvedValue([{ id: 'c-welcome' }]);
+
+    const order: string[] = [];
+    mockPrisma.channelReadState.createMany.mockImplementation(async () => {
+      order.push('seed');
+      return { count: 1 };
+    });
+    mockPostWelcome.mockImplementation(async () => {
+      order.push('welcome');
+      return null;
+    });
+
+    await POST(makeRequest(), { params });
+    // Flush the fire-and-forget microtask.
+    await new Promise((r) => setImmediate(r));
+
+    expect(order).toEqual(['seed', 'welcome']);
+  });
+
+  it('skips the read-state seed when the server has no text/forum channels', async () => {
+    mockGetAuth.mockResolvedValue('pk1');
+    mockPrisma.server.findUnique.mockResolvedValue({
+      id: 'srv1', name: 'Test', icon: null, banner: null, joinMode: 'open', wotEnabled: false,
+    });
+    mockPrisma.member.findUnique.mockResolvedValue(null);
+    mockPrisma.ban.findUnique.mockResolvedValue(null);
+    mockPrisma.member.create.mockResolvedValue({ id: 'm1' });
+    mockPrisma.channel.findMany.mockResolvedValue([]);
+
+    const res = await POST(makeRequest(), { params });
+    expect(res.status).toBe(200);
+    expect(mockPrisma.channelReadState.createMany).not.toHaveBeenCalled();
+  });
+
+  it('does not reseed read state on the alreadyMember idempotent path', async () => {
+    mockGetAuth.mockResolvedValue('pk1');
+    mockPrisma.server.findUnique.mockResolvedValue({
+      id: 'srv1', name: 'Test', icon: null, banner: null, joinMode: 'open', wotEnabled: false,
+    });
+    mockPrisma.member.findUnique.mockResolvedValue({ id: 'm1' });
+
+    await POST(makeRequest(), { params });
+    expect(mockPrisma.channel.findMany).not.toHaveBeenCalled();
+    expect(mockPrisma.channelReadState.createMany).not.toHaveBeenCalled();
   });
 
   it('returns success even if the background welcome bot rejects', async () => {

@@ -95,6 +95,27 @@ export async function POST(
     data: { serverId, pubkey, role: 'member' },
   });
 
+  // Treat all pre-join history as read. Without this, `/api/unread` falls
+  // back to `lastReadAt = 0` and every historical message shows up unread.
+  // The welcome-bot message is posted below, after this seed, so it and
+  // its mention land *after* lastReadAt and correctly highlight the
+  // welcome channel.
+  const existingChannels = await prisma.channel.findMany({
+    where: { serverId, type: { in: ['text', 'forum'] } },
+    select: { id: true },
+  });
+  if (existingChannels.length > 0) {
+    const now = new Date();
+    await prisma.channelReadState.createMany({
+      data: existingChannels.map((c) => ({
+        channelId: c.id,
+        pubkey,
+        lastReadAt: now,
+      })),
+      skipDuplicates: true,
+    });
+  }
+
   // Fire-and-forget: `postWelcomeMessage` awaits a profile fetch when the
   // member has never been synced (see welcome.ts), which can take up to 8s.
   // Running it inline would stall the join response for slow relays and
