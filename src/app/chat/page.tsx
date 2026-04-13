@@ -1012,6 +1012,9 @@ export default function ChatPage() {
       voiceStore.setVoiceChannel(channelId);
       await client.join(channelId);
       voiceClientRef.current = client;
+      // Mic is deferred — reflect that in UI (muted until user unmutes).
+      voiceStore.setMuted(true);
+      if (socket) socket.emit('voice-mute', { channelId, muted: true });
       voiceStore.setConnectionState('connected');
     } catch (err: any) {
       console.error('Failed to join voice:', err);
@@ -1038,17 +1041,26 @@ export default function ChatPage() {
     voiceStore.leaveVoice();
   }, []);
 
-  const handleToggleVoiceMute = useCallback(() => {
+  const handleToggleVoiceMute = useCallback(async () => {
     const socket = socketRef.current;
     const voiceStore = useVoiceStore.getState();
     const channelId = voiceStore.currentVoiceChannelId;
     const newMuted = !voiceStore.isMuted;
-    voiceStore.setMuted(newMuted);
+    const client = voiceClientRef.current;
 
-    if (voiceClientRef.current) {
-      if (newMuted) voiceClientRef.current.mute();
-      else voiceClientRef.current.unmute();
+    if (client) {
+      if (newMuted) {
+        client.mute();
+      } else {
+        try {
+          await client.unmute();
+        } catch (err: any) {
+          useVoiceStore.getState().setError(err?.message || 'Failed to enable microphone');
+          return;
+        }
+      }
     }
+    voiceStore.setMuted(newMuted);
     if (socket && channelId) {
       socket.emit('voice-mute', { channelId, muted: newMuted });
     }

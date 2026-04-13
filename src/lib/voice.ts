@@ -161,18 +161,12 @@ export class WebSocketVoiceClient {
     this.channelId = channelId;
     this.mySocketId = this.socket.id || null;
 
-    // Capture mic first so the initial offer to each peer already has the track.
-    this.audioStream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true,
-        sampleRate: 48000,
-      },
-      video: false,
-    });
-    this.audioTrack = this.audioStream.getAudioTracks()[0] || null;
-    if (this.audioTrack) this.audioTrack.contentHint = 'speech';
+    // Mic capture is deferred until the user unmutes. This lets participants
+    // join on insecure origins (no HTTPS ⇒ no mediaDevices) or with permission
+    // denied and still *hear* everyone. Without a local audio track the
+    // initial offer carries no audio m-line; adding one later triggers
+    // renegotiation via onnegotiationneeded, which peers handle normally.
+    this.isMuted = true;
 
     this.socket.on('voice-peer-joined', this.handlePeerJoined);
     this.socket.on('voice-peer-left', this.handlePeerLeft);
@@ -238,9 +232,52 @@ export class WebSocketVoiceClient {
     if (this.audioTrack) this.audioTrack.enabled = false;
   }
 
-  unmute(): void {
+  async unmute(): Promise<void> {
     this.isMuted = false;
-    if (this.audioTrack) this.audioTrack.enabled = true;
+    if (!this.audioTrack) {
+      await this.enableMic();
+      return;
+    }
+    this.audioTrack.enabled = true;
+  }
+
+  /**
+   * Acquire the mic and attach it to every existing peer. Safe to call
+   * multiple times — no-ops if the track already exists. Throws a
+   * user-facing Error on insecure origin or permission denial so the
+   * caller can surface it via onError / UI toast.
+   */
+  async enableMic(): Promise<void> {
+    if (this.audioTrack) return;
+    if (!navigator.mediaDevices?.getUserMedia) {
+      throw new Error(
+        typeof window !== 'undefined' && window.isSecureContext
+          ? 'Microphone is not supported on this device'
+          : 'Microphone requires a secure context (HTTPS or localhost)',
+      );
+    }
+    this.audioStream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        sampleRate: 48000,
+      },
+      video: false,
+    });
+    this.audioTrack = this.audioStream.getAudioTracks()[0] || null;
+    if (!this.audioTrack) return;
+    this.audioTrack.contentHint = 'speech';
+    this.audioTrack.enabled = !this.isMuted;
+
+    // Attach to every existing peer; renegotiation fires automatically.
+    for (const peer of this.peers.values()) {
+      if (peer.senders.audio) continue;
+      this.sendTrackInfo(peer, this.audioTrack.id, 'audio');
+      const s = peer.pc.addTrack(this.audioTrack, this.audioStream);
+      peer.senders.audio = s;
+      this.tuneAudioSender(s);
+    }
   }
 
   setDeafened(deafened: boolean): void {
