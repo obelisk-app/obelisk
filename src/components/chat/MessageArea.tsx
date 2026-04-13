@@ -7,7 +7,9 @@ import { useNotificationStore } from '@/store/notification';
 import { formatPubkey } from '@/lib/nostr';
 import MessageContent from './MessageContent';
 import EmojiPicker from './EmojiPicker';
+import ProfilePopover from './ProfilePopover';
 import { resolveReactionEmoji } from '@/lib/emoji-shortcodes';
+import { slugify } from '@/lib/slug';
 
 function ReplyPreview({ replyTo, profileCache }: {
   replyTo: { id: string; content: string; authorPubkey: string };
@@ -101,7 +103,7 @@ function ReactionsDisplay({ reactions, myPubkey, onToggle, serverEmojis }: {
   );
 }
 
-function ContextMenu({ isMe, canModerate, openBelow, onReply, onReport, onEdit, onDelete, onCopyText, onAddReaction, onClose }: {
+function ContextMenu({ isMe, canModerate, openBelow, onReply, onReport, onEdit, onDelete, onCopyText, onCopyLink, copyLinkLabel, onAddReaction, onClose }: {
   isMe: boolean;
   canModerate: boolean;
   openBelow?: boolean;
@@ -110,6 +112,8 @@ function ContextMenu({ isMe, canModerate, openBelow, onReply, onReport, onEdit, 
   onEdit: () => void;
   onDelete: () => void;
   onCopyText: () => void;
+  onCopyLink: () => void;
+  copyLinkLabel: string;
   onAddReaction: () => void;
   onClose: () => void;
 }) {
@@ -151,6 +155,14 @@ function ContextMenu({ isMe, canModerate, openBelow, onReply, onReport, onEdit, 
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
         Copiar texto
       </button>
+      <button
+        onClick={() => { onCopyLink(); }}
+        className={`${itemClass} text-lc-white`}
+        data-testid="copy-message-link-btn"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+        {copyLinkLabel}
+      </button>
       {(isMe || canModerate) && (
         <button onClick={() => { onDelete(); onClose(); }} className={`${itemClass} text-red-400`} data-testid="delete-btn">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
@@ -189,6 +201,7 @@ function MessageBubble({ message, profileCache, canPin, canModerate, onReply, on
   const [popupBelow, setPopupBelow] = useState(false);
   const [quickEmojis, setQuickEmojis] = useState(DEFAULT_QUICK_EMOJIS);
   const rowRef = useRef<HTMLDivElement>(null);
+  const openProfilePopup = useChatStore((s) => s.openProfilePopup);
   const { setEditingMessage, serverEmojis } = useChatStore();
 
   useEffect(() => {
@@ -208,8 +221,32 @@ function MessageBubble({ message, profileCache, canPin, canModerate, onReply, on
     return rect.top < window.innerHeight / 2;
   }, []);
 
+  const { activeServerId } = useChatStore();
+  const [copyLinkLabel, setCopyLinkLabel] = useState('Copiar enlace');
+
   const handleCopyText = () => {
     navigator.clipboard.writeText(message.content);
+  };
+
+  const handleCopyLink = () => {
+    if (typeof window === 'undefined') return;
+    const { pinnedChannels, categories } = useChatStore.getState();
+    const all = [
+      ...pinnedChannels,
+      ...categories.flatMap((c) => c.channels),
+    ];
+    const ch = all.find((c) => c.id === message.channelId);
+    if (!ch) return;
+    const slug = slugify(ch.name);
+    const url = `${window.location.origin}/chat?c=${slug}&m=${message.id}`;
+    try {
+      navigator.clipboard.writeText(url);
+      setCopyLinkLabel('Copiado ✓');
+      setTimeout(() => setCopyLinkLabel('Copiar enlace'), 1200);
+    } catch {
+      setCopyLinkLabel('Error');
+      setTimeout(() => setCopyLinkLabel('Copiar enlace'), 1200);
+    }
   };
 
   return (
@@ -221,24 +258,37 @@ function MessageBubble({ message, profileCache, canPin, canModerate, onReply, on
 
       <div ref={rowRef} className="flex items-start gap-2 md:gap-3 px-2 md:px-4 py-1.5 hover:bg-lc-border/20 transition-colors relative">
         {/* Avatar */}
-        {profile?.picture ? (
-          <img
-            src={profile.picture}
-            alt={displayName}
-            className="w-8 h-8 rounded-full object-cover shrink-0 mt-0.5"
-          />
-        ) : (
-          <div className="w-8 h-8 rounded-full bg-lc-olive flex items-center justify-center text-lc-green text-xs font-semibold shrink-0 mt-0.5">
-            {displayName[0]?.toUpperCase() || '?'}
-          </div>
-        )}
+        <button
+          type="button"
+          onClick={() => openProfilePopup(message.authorPubkey)}
+          className="shrink-0 mt-0.5 rounded-full focus:outline-none focus:ring-2 focus:ring-lc-green/50"
+          aria-label={`Ver perfil de ${displayName}`}
+          data-testid="message-avatar-btn"
+        >
+          {profile?.picture ? (
+            <img
+              src={profile.picture}
+              alt={displayName}
+              className="w-8 h-8 rounded-full object-cover"
+            />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-lc-olive flex items-center justify-center text-lc-green text-xs font-semibold">
+              {displayName[0]?.toUpperCase() || '?'}
+            </div>
+          )}
+        </button>
 
         {/* Content */}
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-2">
-            <span className={`text-sm font-semibold ${isMe ? 'text-lc-green' : 'text-lc-white'}`}>
+            <button
+              type="button"
+              onClick={() => openProfilePopup(message.authorPubkey)}
+              className={`text-sm font-semibold hover:underline focus:outline-none focus:underline ${isMe ? 'text-lc-green' : 'text-lc-white'}`}
+              data-testid="message-author-btn"
+            >
               {displayName}
-            </span>
+            </button>
             <span className="text-xs text-lc-muted">{timeStr}</span>
             {message.editedAt && (
               <span className="text-xs text-lc-muted italic" data-testid="edited-indicator">(editado)</span>
@@ -345,6 +395,8 @@ function MessageBubble({ message, profileCache, canPin, canModerate, onReply, on
               onEdit={() => setEditingMessage(message)}
               onDelete={() => onDelete(message)}
               onCopyText={handleCopyText}
+              onCopyLink={handleCopyLink}
+              copyLinkLabel={copyLinkLabel}
               onAddReaction={() => { setShowMenu(false); setShowEmojiPicker(true); }}
               onClose={() => setShowMenu(false)}
             />
@@ -369,6 +421,7 @@ function MessageBubble({ message, profileCache, canPin, canModerate, onReply, on
         onToggle={(emoji) => handleReaction(message.id, emoji)}
         serverEmojis={serverEmojis}
       />
+
     </div>
   );
 }

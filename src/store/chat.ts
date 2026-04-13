@@ -74,6 +74,21 @@ export interface ServerInfo {
 // One row of the server's GIF library. Mirrors the shape returned by GET
 // /api/gifs (member-facing) — a minimal view that omits admin-only fields
 // like `uploadedBy` and `sizeBytes`.
+export interface SlugCacheEntry {
+  channelName: string | null;
+  channelId: string | null;
+  serverId: string | null;
+  postTitle: string | null;
+  messageAuthorName: string | null;
+  noAccess: boolean;
+  notFound: boolean;
+  loading: boolean;
+}
+
+export function slugCacheKey(slug: string, opts?: { p?: string; m?: string }): string {
+  return `${slug}|p=${opts?.p ?? ''}|m=${opts?.m ?? ''}`;
+}
+
 export interface ServerGif {
   id: string;
   name: string;
@@ -107,6 +122,11 @@ interface ChatState {
   // Members (for mentions autocomplete)
   memberList: MemberInfo[];
 
+  // Profile popover — when non-null, ProfilePopover is shown for this pubkey.
+  profilePopupPubkey: string | null;
+  openProfilePopup: (pubkey: string) => void;
+  closeProfilePopup: () => void;
+
   // Presence: pubkeys currently connected via Socket.io
   onlinePubkeys: Set<string>;
 
@@ -135,6 +155,19 @@ interface ChatState {
   // `GET /api/gifs?serverId=…`. Used by the composer's GIF picker. Empty
   // array = no GIFs uploaded yet. Ordered newest-first to match the API.
   serverGifs: ServerGif[];
+
+  // Cache of resolved share-link slugs. Keyed by `<slug>|p=<id>|m=<id>` so
+  // each variant caches independently. `ChannelLinkPill` reads this to render
+  // the resolved channel/post/message label instead of the raw slug.
+  slugCache: Record<string, SlugCacheEntry>;
+
+  // Followed forum post ids (localStorage-backed today; see FORUM_PLAN.md
+  // Phase F for the future DB-backed subscription model). Rendered as
+  // expandable subchannel rows under their forum channel in ChannelSidebar.
+  followedPostIds: string[];
+  // Resolved metadata for followed posts. Fetched via GET /api/forum/posts/meta.
+  followedPostMeta: Record<string, { id: string; title: string; channelId: string; channelName: string; serverId: string }>;
+  followedPostsLoading: boolean;
 
   setMemberList: (members: MemberInfo[]) => void;
   setServerEmojis: (emojis: Record<string, string>) => void;
@@ -173,6 +206,14 @@ interface ChatState {
   // Role on active server
   setMyRole: (role: MyServerRole) => void;
 
+  // Share-link slug resolver — fires a fetch if the key isn't cached yet.
+  resolveSlug: (slug: string, opts?: { p?: string; m?: string }) => Promise<void>;
+
+  // Sync followedPostIds from localStorage + fetch metadata for any unknown ids.
+  loadFollowedPosts: () => Promise<void>;
+  // Toggle follow/unfollow for a given post. Updates localStorage + store.
+  toggleFollowPost: (postId: string, meta?: { title: string; channelId: string; channelName: string; serverId: string }) => Promise<void>;
+
   // Pin state updates (applied to existing messages in the active channel)
   updatePinState: (
     messageId: string,
@@ -197,11 +238,18 @@ export const useChatStore = create<ChatState>()((set) => ({
   typingUsers: {},
   highlightedMessageId: null,
   memberList: [],
+  profilePopupPubkey: null,
+  openProfilePopup: (pubkey) => set({ profilePopupPubkey: pubkey }),
+  closeProfilePopup: () => set({ profilePopupPubkey: null }),
   onlinePubkeys: new Set<string>(),
   isNearBottom: true,
   myRole: null,
   serverEmojis: {},
   serverGifs: [],
+  slugCache: {},
+  followedPostIds: [],
+  followedPostMeta: {},
+  followedPostsLoading: false,
 
   setMemberList: (members) => set({ memberList: members }),
   setServerEmojis: (emojis) => set({ serverEmojis: emojis }),
@@ -276,6 +324,139 @@ export const useChatStore = create<ChatState>()((set) => ({
       m.id === messageId ? { ...m, pinnedAt, pinnedByPubkey } : m
     ),
   })),
+
+  resolveSlug: async (slug, opts) => {
+    const key = slugCacheKey(slug, opts);
+    const existing = useChatStore.getState().slugCache[key];
+    if (existing) return; // cached (loading, resolved, or failed)
+    set((state) => ({
+      slugCache: {
+        ...state.slugCache,
+        [key]: {
+          channelName: null,
+          channelId: null,
+          serverId: null,
+          postTitle: null,
+          messageAuthorName: null,
+          noAccess: false,
+          notFound: false,
+          loading: true,
+        },
+      },
+    }));
+    try {
+      const params = new URLSearchParams({ c: slug });
+      if (opts?.p) params.set('p', opts.p);
+      if (opts?.m) params.set('m', opts.m);
+      const res = await fetch(`/api/channels/resolve-slug?${params.toString()}`);
+      if (res.status === 404) {
+        set((state) => ({
+          slugCache: {
+            ...state.slugCache,
+            [key]: {
+              channelName: null,
+              channelId: null,
+              serverId: null,
+              postTitle: null,
+              messageAuthorName: null,
+              noAccess: false,
+              notFound: true,
+              loading: false,
+            },
+          },
+        }));
+        return;
+      }
+      if (!res.ok) throw new Error(`resolve-slug ${res.status}`);
+      const data = await res.json();
+      set((state) => ({
+        slugCache: {
+          ...state.slugCache,
+          [key]: {
+            channelName: data.channelName ?? null,
+            channelId: data.channelId ?? null,
+            serverId: data.serverId ?? null,
+            postTitle: data.postTitle ?? null,
+            messageAuthorName: data.messageAuthorName ?? null,
+            noAccess: !!data.noAccess,
+            notFound: false,
+            loading: false,
+          },
+        },
+      }));
+    } catch {
+      set((state) => ({
+        slugCache: {
+          ...state.slugCache,
+          [key]: {
+            channelName: null,
+            channelId: null,
+            serverId: null,
+            postTitle: null,
+            messageAuthorName: null,
+            noAccess: false,
+            notFound: true,
+            loading: false,
+          },
+        },
+      }));
+    }
+  },
+
+  loadFollowedPosts: async () => {
+    if (typeof window === 'undefined') return;
+    let ids: string[] = [];
+    try {
+      const raw = localStorage.getItem('obelisk:followed-posts');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) ids = parsed.filter((x): x is string => typeof x === 'string');
+      }
+    } catch { /* ignore */ }
+    const current = useChatStore.getState();
+    const have = new Set(Object.keys(current.followedPostMeta));
+    const missing = ids.filter((id) => !have.has(id));
+    set({ followedPostIds: ids, followedPostsLoading: missing.length > 0 });
+    if (missing.length === 0) {
+      set({ followedPostsLoading: false });
+      return;
+    }
+    try {
+      const res = await fetch(`/api/forum/posts/meta?ids=${encodeURIComponent(missing.join(','))}`);
+      if (res.ok) {
+        const data = await res.json();
+        const next = { ...useChatStore.getState().followedPostMeta };
+        for (const p of data.posts as Array<{ id: string; title: string; channelId: string; channelName: string; serverId: string }>) {
+          next[p.id] = p;
+        }
+        set({ followedPostMeta: next });
+      }
+    } catch { /* ignore */ }
+    set({ followedPostsLoading: false });
+  },
+
+  toggleFollowPost: async (postId, meta) => {
+    if (typeof window === 'undefined') return;
+    const state = useChatStore.getState();
+    const following = state.followedPostIds.includes(postId);
+    const nextIds = following
+      ? state.followedPostIds.filter((x) => x !== postId)
+      : [...state.followedPostIds, postId];
+    try {
+      localStorage.setItem('obelisk:followed-posts', JSON.stringify(nextIds));
+    } catch { /* ignore */ }
+    const nextMeta = { ...state.followedPostMeta };
+    if (following) {
+      delete nextMeta[postId];
+    } else if (meta) {
+      nextMeta[postId] = { id: postId, ...meta };
+    }
+    set({ followedPostIds: nextIds, followedPostMeta: nextMeta });
+    // If we just followed a post and don't have metadata yet, fetch it.
+    if (!following && !meta) {
+      await useChatStore.getState().loadFollowedPosts();
+    }
+  },
 
   setOnlinePubkeys: (pubkeys) => set({ onlinePubkeys: new Set(pubkeys) }),
   setPresence: (pubkey, online) => set((state) => {

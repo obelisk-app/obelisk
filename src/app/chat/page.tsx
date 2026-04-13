@@ -8,6 +8,7 @@ import { useChatStore, Message, MemberInfo } from '@/store/chat';
 import ServerBar from '@/components/chat/ServerBar';
 import ChannelSidebar from '@/components/chat/ChannelSidebar';
 import MessageArea from '@/components/chat/MessageArea';
+import ProfilePopover from '@/components/chat/ProfilePopover';
 import PinnedMessagesPanel from '@/components/chat/PinnedMessagesPanel';
 import MessageInput from '@/components/chat/MessageInput';
 import ForumView from '@/components/chat/ForumView';
@@ -107,15 +108,67 @@ export default function ChatPage() {
   // first channel" defaults. `pendingHighlightRef` carries the target message
   // id across the async channel-fetch boundary so MessageArea can scroll to
   // it once the messages for the restored channel actually arrive.
-  const initialUrlRef = useRef<{ s: string | null; c: string | null; m: string | null } | null>(null);
+  const initialUrlRef = useRef<{ s: string | null; c: string | null; m: string | null; p: string | null } | null>(null);
   if (initialUrlRef.current === null) {
     if (typeof window !== 'undefined') {
       const sp = new URLSearchParams(window.location.search);
-      initialUrlRef.current = { s: sp.get('s'), c: sp.get('c'), m: sp.get('m') };
+      initialUrlRef.current = { s: sp.get('s'), c: sp.get('c'), m: sp.get('m'), p: sp.get('p') };
     } else {
-      initialUrlRef.current = { s: null, c: null, m: null };
+      initialUrlRef.current = { s: null, c: null, m: null, p: null };
     }
   }
+  // Capture `?p=<postId>` once so it can be passed to <ForumView> the first
+  // time a forum channel mounts. We consume it rather than re-reading so a
+  // back/forth navigation doesn't reopen the deep-linked post.
+  const initialForumPostIdRef = useRef<string | null>(initialUrlRef.current?.p ?? null);
+  const [initialForumPostId, setInitialForumPostId] = useState<string | null>(initialForumPostIdRef.current);
+  useEffect(() => {
+    // Clear after first use so switching forums doesn't keep reopening the
+    // deep-linked post id.
+    if (initialForumPostId) {
+      const t = setTimeout(() => setInitialForumPostId(null), 0);
+      return () => clearTimeout(t);
+    }
+  }, [initialForumPostId]);
+  // Slug share-links (e.g. /chat?c=plaza-publica&m=<id>) are resolved via
+  // /api/channels/resolve-slug before the server/channel auto-select kicks
+  // in, so the user lands on the right server + channel. If the incoming
+  // `c` is a cuid, this is a no-op.
+  // Gated: server auto-select (below) waits until slug resolution finishes
+  // so `?c=plaza-publica` lands on the right server instead of the first
+  // server in the list.
+  const [slugResolutionDone, setSlugResolutionDone] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    const c = initialUrlRef.current?.c;
+    if (!c) return true;
+    const looksLikeId = /^[a-z0-9]{20,32}$/i.test(c) && !c.includes('-');
+    return looksLikeId;
+  });
+  const slugResolvedRef = useRef(false);
+  useEffect(() => {
+    if (slugResolvedRef.current) return;
+    const c = initialUrlRef.current?.c;
+    const s = initialUrlRef.current?.s;
+    if (!c) { setSlugResolutionDone(true); return; }
+    const looksLikeId = /^[a-z0-9]{20,32}$/i.test(c) && !c.includes('-');
+    if (looksLikeId) { setSlugResolutionDone(true); return; }
+    slugResolvedRef.current = true;
+    const qs = new URLSearchParams({ c });
+    if (s) qs.set('s', s);
+    fetch(`/api/channels/resolve-slug?${qs.toString()}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && data.serverId && data.channelId) {
+          initialUrlRef.current = {
+            ...(initialUrlRef.current ?? { s: null, c: null, m: null, p: null }),
+            s: data.serverId,
+            c: data.channelId,
+          };
+        }
+      })
+      .catch(() => {})
+      .finally(() => setSlugResolutionDone(true));
+  }, []);
   const initialUrlAppliedRef = useRef({ server: false, channel: false });
   const pendingHighlightRef = useRef<{ channelId: string; messageId: string } | null>(null);
 
@@ -206,6 +259,11 @@ export default function ChatPage() {
   // Fetch user's servers on mount
   useEffect(() => {
     if (!sessionChecked) return;
+    // Wait for `?c=<slug>` resolution so the initial-server picker can see
+    // the resolved `s` id. Without this gate, the first server in the list
+    // gets selected before the resolver returns and the slug link lands on
+    // the wrong server.
+    if (!slugResolutionDone) return;
 
     const fetchServers = async () => {
       try {
@@ -235,7 +293,7 @@ export default function ChatPage() {
     };
 
     fetchServers();
-  }, [sessionChecked, setServers, setActiveServer]);
+  }, [sessionChecked, slugResolutionDone, setServers, setActiveServer]);
 
   // Fetch initial unread counts
   useEffect(() => {
@@ -329,6 +387,76 @@ export default function ChatPage() {
     fetchChannels();
   }, [sessionChecked, activeServerId, setChannels, setActiveChannel]);
 
+  // popstate: when a rendered #channel-link pill is clicked (or browser
+  // back/forward fires), re-read ?c/?m/?p and navigate in-app. The slug is
+  // resolved via the same endpoint used on initial mount.
+  useEffect(() => {
+    if (!sessionChecked) return;
+    const onPop = async () => {
+      if (typeof window === 'undefined') return;
+      const sp = new URLSearchParams(window.location.search);
+      const c = sp.get('c');
+      const m = sp.get('m');
+      const p = sp.get('p');
+      if (!c) return;
+      const looksLikeCuid = /^[a-z0-9]{20,32}$/i.test(c) && !c.includes('-');
+      let serverId: string | null = null;
+      let channelId: string | null = null;
+      if (looksLikeCuid) {
+        channelId = c;
+      } else {
+        try {
+          const res = await fetch(
+            `/api/channels/resolve-slug?c=${encodeURIComponent(c)}`,
+          );
+          if (res.ok) {
+            const data = await res.json();
+            if (data?.serverId && data?.channelId) {
+              serverId = data.serverId;
+              channelId = data.channelId;
+            }
+          }
+        } catch { /* ignore */ }
+      }
+      if (!channelId) return;
+      if (serverId && serverId !== useChatStore.getState().activeServerId) {
+        setActiveServer(serverId);
+      }
+      if (channelId !== useChatStore.getState().activeChannelId) {
+        if (m) {
+          pendingHighlightRef.current = { channelId, messageId: m };
+        }
+        setActiveChannel(channelId);
+      } else if (m) {
+        // Already on the right channel — just trigger the highlight if the
+        // target message is loaded; otherwise fetch ?around=.
+        const msgs = useChatStore.getState().messages;
+        if (msgs.some((x) => x.id === m)) {
+          useChatStore.setState({ highlightedMessageId: m });
+        } else {
+          try {
+            const r = await fetch(
+              `/api/channels/${channelId}/messages?around=${encodeURIComponent(m)}`,
+            );
+            if (r.ok) {
+              const d = await r.json();
+              useChatStore.getState().setMessages(d.messages);
+              useChatStore.getState().setMessageCursor(d.nextCursor ?? null, !!d.nextCursor);
+              if (d.messages.some((x: any) => x.id === m)) {
+                useChatStore.setState({ highlightedMessageId: m });
+              }
+            }
+          } catch { /* ignore */ }
+        }
+      }
+      if (p) {
+        setInitialForumPostId(p);
+      }
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [sessionChecked, setActiveServer, setActiveChannel]);
+
   // Fetch all member profiles for the profileCache. Any members with null
   // profile fields will be filled in automatically by the server's
   // `triggerBackgroundRefreshIfStale` on GET /api/members — no client-side
@@ -352,6 +480,10 @@ export default function ChatPage() {
             picture,
             role: member.role,
             customRoles: member.customRoles?.map((cr: { role: { id: string; name: string; color: string; icon?: string | null; priority: number } }) => cr.role),
+            banner: member.banner || undefined,
+            nip05: member.nip05 || undefined,
+            about: member.about || undefined,
+            joinedAt: member.joinedAt,
           });
         }
         setMemberList(memberInfoList);
@@ -895,22 +1027,62 @@ export default function ChatPage() {
 
     const fetchMessages = async () => {
       try {
+        const pending = pendingHighlightRef.current;
+        const hasPendingForThisChannel =
+          !!pending && pending.channelId === activeChannelId;
+
         const res = await fetch(`/api/channels/${activeChannelId}/messages`);
         if (!res.ok) return;
         const data = await res.json();
-        setMessages(data.messages);
-        setMessageCursor(data.nextCursor ?? null, !!data.nextCursor);
 
         // Refresh-restore: if a highlight was queued for this channel (from
         // URL ?m= or per-channel localStorage), and the target message is in
         // the freshly-loaded batch, kick MessageArea into scrolling there.
-        // Messages outside the latest page are silently skipped — the user
-        // just lands at the bottom, which is the same behavior as today.
-        const pending = pendingHighlightRef.current;
-        if (pending && pending.channelId === activeChannelId) {
+        // If the target isn't in the latest page (old deep-link from "Copiar
+        // enlace"), re-fetch with ?around= so the message lands centered.
+        if (hasPendingForThisChannel) {
+          const inLatest = data.messages.some(
+            (m: any) => m.id === pending!.messageId,
+          );
+          if (!inLatest) {
+            try {
+              const aroundRes = await fetch(
+                `/api/channels/${activeChannelId}/messages?around=${encodeURIComponent(
+                  pending!.messageId,
+                )}`,
+              );
+              if (aroundRes.ok) {
+                const aroundData = await aroundRes.json();
+                setMessages(aroundData.messages);
+                setMessageCursor(
+                  aroundData.nextCursor ?? null,
+                  !!aroundData.nextCursor,
+                );
+                pendingHighlightRef.current = null;
+                if (
+                  aroundData.messages.some(
+                    (m: any) => m.id === pending!.messageId,
+                  )
+                ) {
+                  useChatStore.setState({
+                    highlightedMessageId: pending!.messageId,
+                  });
+                }
+                return;
+              }
+            } catch {
+              // fall through — just render the latest page below.
+            }
+          }
+        }
+
+        setMessages(data.messages);
+        setMessageCursor(data.nextCursor ?? null, !!data.nextCursor);
+
+        if (hasPendingForThisChannel) {
           pendingHighlightRef.current = null;
-          if (data.messages.some((m: any) => m.id === pending.messageId)) {
-            useChatStore.setState({ highlightedMessageId: pending.messageId });
+          if (data.messages.some((m: any) => m.id === pending!.messageId)) {
+            useChatStore.setState({ highlightedMessageId: pending!.messageId });
           }
         }
       } catch (err) {
@@ -1334,6 +1506,7 @@ export default function ChatPage() {
                   channelName={activeChannel.name}
                   profileCache={profileCache}
                   availableTags={activeChannel.forumTags}
+                  initialPostId={initialForumPostId}
                 />
               ) : activeChannel?.type === 'voice' ? (
                 <VoiceChannel
@@ -1370,6 +1543,14 @@ export default function ChatPage() {
           </div>
         )}
       </div>
+      <GlobalProfilePopover />
     </div>
   );
+}
+
+function GlobalProfilePopover() {
+  const pubkey = useChatStore((s) => s.profilePopupPubkey);
+  const close = useChatStore((s) => s.closeProfilePopup);
+  if (!pubkey) return null;
+  return <ProfilePopover pubkey={pubkey} onClose={close} />;
 }

@@ -14,6 +14,7 @@ import {
 import type { MemberInfo } from '@/lib/mentions';
 import SpoilerText from './SpoilerText';
 import CodeBlock from './CodeBlock';
+import ChannelLinkPill from './ChannelLinkPill';
 import YouTubeEmbed from './YouTubeEmbed';
 import LinkPreview from './LinkPreview';
 import AttachmentCard from './AttachmentCard';
@@ -22,14 +23,17 @@ import ShootingStars from '../ShootingStars';
 import type { Components } from 'react-markdown';
 
 function MentionChip({ pubkey, displayName }: { pubkey: string; displayName: string }) {
+  const openProfilePopup = useChatStore((s) => s.openProfilePopup);
   return (
-    <span
-      className="bg-lc-green/20 text-lc-green rounded px-1 py-0.5 text-sm font-medium cursor-default"
+    <button
+      type="button"
+      onClick={() => openProfilePopup(pubkey)}
+      className="bg-lc-green/20 text-lc-green rounded px-1 py-0.5 text-sm font-medium hover:bg-lc-green/30 transition-colors cursor-pointer"
       title={pubkey}
       data-testid="mention-highlight"
     >
       @{displayName}
-    </span>
+    </button>
   );
 }
 
@@ -257,6 +261,52 @@ export default function MessageContent({ content }: { content: string }) {
       const ytId = extractYouTubeId(href);
       if (ytId) {
         return <YouTubeEmbed videoId={ytId} />;
+      }
+
+      // Same-origin /chat?c=<slug>[&m=|&p=] links render as a Discord-style
+      // pill (#slug, with ↩ prefix for deep-links to specific messages or
+      // posts) and navigate smoothly via pushState + popstate — no full
+      // reload.
+      try {
+        const url = new URL(href, typeof window !== 'undefined' ? window.location.href : 'http://x');
+        if (
+          typeof window !== 'undefined' &&
+          url.origin === window.location.origin &&
+          url.pathname === '/chat'
+        ) {
+          const sp = url.searchParams;
+          const slug = sp.get('c');
+          const messageId = sp.get('m') || undefined;
+          const postId = sp.get('p') || undefined;
+          const onClick = (e: React.MouseEvent) => {
+            if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+            e.preventDefault();
+            window.history.pushState(null, '', url.pathname + url.search);
+            window.dispatchEvent(new PopStateEvent('popstate'));
+          };
+          if (slug) {
+            return (
+              <ChannelLinkPill
+                href={href}
+                slug={slug}
+                messageId={messageId}
+                postId={postId}
+              />
+            );
+          }
+          // Fallback: other /chat URLs without a slug (e.g. profile deep-links)
+          return (
+            <a
+              href={href}
+              className="text-lc-green/80 hover:underline break-all"
+              onClick={onClick}
+            >
+              {children}
+            </a>
+          );
+        }
+      } catch {
+        // fall through to external-link rendering
       }
 
       // Regular link

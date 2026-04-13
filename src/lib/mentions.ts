@@ -14,6 +14,10 @@ export interface MemberInfo {
   picture?: string;
   role?: string; // base role: owner | admin | mod | member
   customRoles?: MemberCustomRoleInfo[];
+  banner?: string;
+  nip05?: string;
+  about?: string;
+  joinedAt?: string;
 }
 
 export type MentionSegment =

@@ -139,6 +139,21 @@
 - [x] Tests: 146+ tests cubriendo stores, componentes, y API routes
 
 ## Fase 2 — Funcionalidades Core
+- [x] Popover de perfil al click en avatar/nombre/mencion — foto, banner, display name (con emoji shortcodes resueltos), NIP-05, roles (base + custom) y fecha de ingreso al server
+- [ ] **Mensajes directos (DMs) 1-a-1**
+  - [ ] Boton "Enviar mensaje" en `ProfilePopover` (pendiente — agregar cuando DMs esten implementados)
+  - [ ] Nuevo modelo `DirectConversation` + `DirectMessage` en Prisma (scoped por pubkey pair, no por server)
+  - [ ] API routes: `GET/POST /api/dms`, `GET/POST /api/dms/[conversationId]/messages`
+  - [ ] Socket.io rooms `dm:${conversationId}` con misma semantica de typing/reactions/edits que canales
+  - [ ] UI: inbox de DMs en `ServerBar` (icono aparte) + `DMSidebar` con lista de conversaciones
+  - [ ] Enforcement: solo puede iniciar DM si ambos comparten al menos un server (anti-spam)
+  - [ ] Tests: apertura de conversacion, envio/recepcion, enforcement de server en comun
+- [ ] **Llamadas directas 1-a-1 (audio/video)**
+  - [ ] Boton "Llamar" en `ProfilePopover` (pendiente — agregar cuando este feature este listo)
+  - [ ] Reuso del pipeline WebRTC peer-to-peer existente pero sin SFU (directo entre dos peers)
+  - [ ] Señalizacion via Socket.io events `dm-call-invite` / `dm-call-accept` / `dm-call-reject` / `dm-call-end`
+  - [ ] UI de llamada entrante (modal con ringtone) + UI de llamada en curso (reusa `VoiceControls`)
+  - [ ] Tests: invite/accept/reject flow, fin de llamada, cleanup de peer connection
 - [x] Canales de voz — audio (via mediasoup WebRTC SFU)
 - [x] Canales de voz — video y screen sharing
 - [ ] Canales de voz — chat dentro del canal de voz
@@ -509,6 +524,7 @@ Despues de completar la experiencia Discord-like (Fases 1-6), construir un clien
 - [ ] Lateral member list does not update per server — debe reflejar los miembros del servidor que el usuario esta viendo actualmente (cambiar de servidor debe re-cargar la lista de miembros, roles y estado online correspondientes)
 - [ ] **Nuevo miembro no aparece en tiempo real en la member list de los demás** — cuando Bob se une a un server donde Alice ya está conectada, Alice no ve a Bob en el sidebar hasta que recarga la página (o hasta que Bob manda un mensaje regular, que embeba su profile en el payload del `new-message`). Falta emitir un evento `member-joined` desde `server.ts` al crear la Member row (join route + invitations route) con `{ pubkey, displayName, picture, nip05, role }`, y un listener en `src/app/chat/page.tsx` que lo añada a `memberList` + `profileCache`. Debe filtrarse por `serverId` para no contaminar otros servers donde Alice también esté.
 - [ ] **MessageBubble ignora el `message.author` embebido** — `src/components/chat/MessageArea.tsx:213-214` resuelve el avatar/nombre sólo vía `profileCache.get(authorPubkey)`, desperdiciando el perfil que el server ya adjunta en cada emit de `new-message` (ver `getAuthorProfile` en `src/lib/profile-sync.ts:255`). El primer mensaje de un usuario jamás visto renderiza con la letra de fallback hasta que el seed de `chat/page.tsx:426-445` llega al cache y se dispara un re-render. Fix: cadena de prioridad `message.author?.picture ?? profileCache.get(pk)?.picture` (y lo mismo para `displayName`), para que el primer render ya tenga los datos correctos sin depender del seed racing contra `addMessage`.
+- [ ] **Mentions autocomplete leaks private/hidden channel membership** — el buscador de menciones (`@user`) debe filtrar los resultados al conjunto de usuarios que realmente pueden leer el canal actual. En canales privados/ocultos, sólo deben aparecer miembros con permiso de lectura sobre ese canal (respetando role-gating y overrides por canal); de lo contrario se filtra indirectamente quién tiene acceso y se generan menciones que el target no puede ver.
 - [ ] **Deployed La Crypta server is behind `prisma/seed.ts`** — el contenido inicial de canales (mensaje de bienvenida en `empezá-acá`, posts del foro `indice` con reglas/actividades/proyectos/redes, posts del foro `méritos` con plantillas de reclamo, descripciones, emojis, tags) está hardcoded en el seeder y solo se aplica en la creación inicial del server. La instancia deployed nunca recibe los updates posteriores del seeder, y los admins no tienen forma de editar ese contenido desde la UI. Fix tracked en Fase 1.5: **"Pinned messages + contenido editable de canales desde /admin (paridad con `prisma/seed.ts`)"**, incluye migración one-shot que mueve todo lo seeded a la DB como pinned messages / forum posts editables.
 
 ## Test Suite (continuo)
@@ -531,3 +547,14 @@ Despues de completar la experiencia Discord-like (Fases 1-6), construir un clien
 - [ ] E2E flows: Playwright — usuario se registra -> entra a canal -> manda mensaje -> otro usuario lo ve
 - [ ] Load tests: multiples usuarios concurrentes, flood de mensajes
 - [ ] CI pipeline: tests corren en cada PR
+
+## Known bugs / tech debt
+
+- [ ] **Channel emoji should be part of the channel name, not a separate
+      field.** Currently `Channel.name` and `Channel.emoji` are stored
+      independently in the admin panel, which forces every renderer to stitch
+      them back together (`<ChannelEmoji value={channel.emoji} /> {channel.name}`)
+      and complicates slugs, share-links, and mentions. Migrate the admin UX
+      so the emoji is typed as part of the single name input (e.g.
+      `💬 chat-general`), store it inline in `name`, and drop the separate
+      `emoji` column in a follow-up migration.
