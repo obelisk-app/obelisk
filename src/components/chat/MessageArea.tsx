@@ -6,6 +6,7 @@ import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notification';
 import { formatPubkey } from '@/lib/nostr';
 import MessageContent from './MessageContent';
+import EmojiPicker from './EmojiPicker';
 import { resolveReactionEmoji } from '@/lib/emoji-shortcodes';
 
 function ReplyPreview({ replyTo, profileCache }: {
@@ -48,105 +49,6 @@ function trackRecentEmoji(emoji: string) {
     const updated = [emoji, ...current.filter((e) => e !== emoji)].slice(0, MAX_RECENT);
     localStorage.setItem(RECENT_EMOJIS_KEY, JSON.stringify(updated));
   } catch { /* ignore */ }
-}
-
-const EMOJI_CATEGORIES: { name: string; emojis: string[] }[] = [
-  { name: 'Frecuentes', emojis: ['❤️', '🔥', '😂', '👍', '👎', '😍', '🎉', '😢', '😮', '🤔', '💀', '🙏'] },
-  { name: 'Caras', emojis: ['😀', '😃', '😄', '😁', '😆', '🤣', '😅', '😊', '😇', '🙂', '😉', '😌', '😋', '😜', '🤪', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '😣', '😖', '😫', '😩', '🥺', '😤', '😠', '😡', '🤬', '😈', '💀', '☠️', '🤡', '👻', '😺', '😸', '😻'] },
-  { name: 'Gestos', emojis: ['👍', '👎', '👏', '🙌', '🤝', '✌️', '🤞', '🤟', '🤘', '👌', '🤌', '👈', '👉', '👆', '👇', '☝️', '✋', '🤚', '🖐️', '🖖', '👋', '🤙', '💪', '🦾', '🙏'] },
-  { name: 'Símbolos', emojis: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '⭐', '🌟', '✨', '⚡', '🔥', '💯', '🎵', '🎶'] },
-  { name: 'Objetos', emojis: ['🎉', '🎊', '🎈', '🎁', '🏆', '🥇', '🎯', '🎮', '🎲', '🧩', '🔔', '📢', '💡', '📌', '🔗', '🛠️', '⚙️', '🔒', '🔑', '🗑️'] },
-];
-
-function EmojiPicker({ onSelect, onClose, openBelow, serverEmojis }: {
-  onSelect: (emoji: string) => void;
-  onClose: () => void;
-  openBelow?: boolean;
-  serverEmojis?: Record<string, string>;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [search, setSearch] = useState('');
-  const customEntries = serverEmojis ? Object.entries(serverEmojis) : [];
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        onClose();
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [onClose]);
-
-  const searchLower = search.trim().toLowerCase();
-
-  return (
-    <div
-      ref={ref}
-      className={`absolute right-0 z-50 bg-lc-dark border border-lc-border rounded-xl shadow-lg w-72 max-h-80 flex flex-col ${openBelow ? 'top-full mt-1' : 'bottom-full mb-1'}`}
-      data-testid="emoji-picker"
-    >
-      <div className="p-2 border-b border-lc-border">
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar emoji..."
-          className="w-full px-2 py-1 rounded-lg bg-lc-black border border-lc-border text-lc-white text-sm focus:outline-none focus:border-lc-green/50"
-          autoFocus
-        />
-      </div>
-      <div className="overflow-y-auto p-2 flex-1">
-        {/* Server custom emojis */}
-        {customEntries.length > 0 && (() => {
-          const filtered = searchLower
-            ? customEntries.filter(([name]) => name.toLowerCase().includes(searchLower))
-            : customEntries;
-          if (filtered.length === 0) return null;
-          return (
-            <div className="mb-2">
-              <div className="text-xs text-lc-muted mb-1 px-1">Server</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '2px' }}>
-                {filtered.map(([name, url]) => (
-                  <button
-                    key={name}
-                    onClick={() => { onSelect(`:${name}:`); onClose(); }}
-                    className="p-1 rounded hover:bg-lc-border/60 transition-colors flex items-center justify-center"
-                    title={`:${name}:`}
-                  >
-                    <img src={url} alt={name} className="w-6 h-6 object-contain" />
-                  </button>
-                ))}
-              </div>
-            </div>
-          );
-        })()}
-        {EMOJI_CATEGORIES.map((cat) => {
-          const filtered = searchLower
-            ? cat.emojis.filter((emoji) => emoji.includes(searchLower) || cat.name.toLowerCase().includes(searchLower))
-            : cat.emojis;
-          if (filtered.length === 0) return null;
-          return (
-            <div key={cat.name} className="mb-2">
-              <div className="text-xs text-lc-muted mb-1 px-1">{cat.name}</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '2px' }}>
-                {filtered.map((emoji, idx) => (
-                  <button
-                    key={`${emoji}-${idx}`}
-                    onClick={() => { onSelect(emoji); onClose(); }}
-                    className="p-1 rounded hover:bg-lc-border/60 transition-colors"
-                    style={{ fontSize: '20px', lineHeight: 1, textAlign: 'center' }}
-                  >
-                    {emoji}
-                  </button>
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
 }
 
 function ReactionsDisplay({ reactions, myPubkey, onToggle, serverEmojis }: {
@@ -361,7 +263,7 @@ function MessageBubble({ message, profileCache, canPin, canModerate, onReply, on
 
         {/* Action toolbar + popups — anchored to top-right of row */}
         <div
-          className={`absolute right-2 top-1 z-20 ${showMenu || showEmojiPicker ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}
+          className={`absolute right-2 top-1 z-20 ${showMenu || showEmojiPicker ? 'opacity-100' : 'opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100'} transition-opacity`}
         >
           <div className="flex gap-0.5 bg-lc-dark border border-lc-border rounded-lg p-0.5 shadow-lg" data-testid="message-toolbar">
             {/* Quick reaction emojis */}
@@ -451,7 +353,7 @@ function MessageBubble({ message, profileCache, canPin, canModerate, onReply, on
           {/* Emoji picker — anchored to toolbar */}
           {showEmojiPicker && (
             <EmojiPicker
-              openBelow={popupBelow}
+              className={`absolute right-0 z-50 ${popupBelow ? 'top-full mt-1' : 'bottom-full mb-1'}`}
               onSelect={(emoji) => handleReaction(message.id, emoji)}
               onClose={() => setShowEmojiPicker(false)}
               serverEmojis={serverEmojis}

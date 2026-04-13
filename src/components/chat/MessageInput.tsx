@@ -558,12 +558,32 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
     setEmojiOpen(false);
   };
 
-  // GIF picker: drop the URL into the composer. The existing URL-extraction in
-  // MessageContent will hoist it out and render it inline in the image gallery,
-  // so the user can optionally add text around it before sending. Space-pad so
-  // adjacent text doesn't glue to the URL and break the detector.
+  // GIF picker: add the GIF as a pending attachment chip (thumbnail preview)
+  // instead of dumping the raw URL into the textarea. `existing: true` skips
+  // the upload flow — buildPayload serializes the URL back on submit.
   const onGifSelect = (url: string) => {
-    insertAtCursor(` ${url} `);
+    const name = (() => {
+      try {
+        const p = new URL(url).pathname;
+        return decodeURIComponent(p.slice(p.lastIndexOf('/') + 1)) || 'gif';
+      } catch {
+        return 'gif';
+      }
+    })();
+    setAttachments((prev) => [
+      ...prev,
+      {
+        id: `gif-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        url,
+        name,
+        type: 'image/gif',
+        size: 0,
+        isImage: true,
+        isVideo: false,
+        isAudio: false,
+        existing: true,
+      },
+    ]);
     setGifOpen(false);
   };
 
