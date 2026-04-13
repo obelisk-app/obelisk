@@ -240,17 +240,19 @@ export default function ChatPage() {
   const ownMember = useChatStore((s) =>
     profile ? s.memberList.find((m) => m.pubkey === profile.pubkey) : undefined
   );
-  useEffect(() => {
-    if (profile) {
-      profileCache.set(profile.pubkey, {
-        name: ownMember?.displayName || profile.displayName || profile.name,
-        picture: ownMember?.picture || profile.picture,
-      });
-      profilePubkeyRef.current = profile.pubkey;
-    } else {
-      profilePubkeyRef.current = null;
-    }
-  }, [profile, profileCache, ownMember]);
+  // Write synchronously during render so that the alias flows into this
+  // render's child tree. An effect would mutate the Map *after* commit, and
+  // since Map mutation doesn't trigger a re-render, stale names would linger
+  // in MessageArea until some unrelated state change forced another render.
+  if (profile) {
+    profileCache.set(profile.pubkey, {
+      name: ownMember?.displayName || profile.displayName || profile.name,
+      picture: ownMember?.picture || profile.picture,
+    });
+    profilePubkeyRef.current = profile.pubkey;
+  } else {
+    profilePubkeyRef.current = null;
+  }
 
   // `restoreSession` in the auth store already triggers the canonical
   // server-side profile sync via `/api/members/me/sync-nostr`. No client-side
