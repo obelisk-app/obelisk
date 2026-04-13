@@ -96,4 +96,12 @@ describe('MessageContent', () => {
     render(<MessageContent content={`see ${url} here`} />);
     expect(screen.getByTestId('channel-link-pill')).toBeInTheDocument();
   });
+
+  it('does not render a link-preview card for same-origin /chat?c=... deep-links', () => {
+    // Internal chat deep-links should only show as a pill — no preview card.
+    const url = `${window.location.origin}/chat?c=las-3-cosas&m=abc123`;
+    render(<MessageContent content={`check ${url}`} />);
+    expect(screen.getByTestId('channel-link-pill')).toBeInTheDocument();
+    expect(screen.queryByTestId('link-preview')).not.toBeInTheDocument();
+  });
 });

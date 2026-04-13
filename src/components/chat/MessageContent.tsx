@@ -219,16 +219,25 @@ export default function MessageContent({ content }: { content: string }) {
     [shortcodeResolved, memberList]
   );
 
-  // Collect non-image, non-video, non-youtube, non-upload URLs for link previews
+  // Collect non-image, non-video, non-youtube, non-upload URLs for link previews.
+  // Same-origin /chat links (channel/message/post deep-links) are rendered as
+  // ChannelLinkPill inline and must NOT also get a preview card.
   const previewUrls = useMemo(() => {
     const urls = extractUrls(bodyContent);
-    return urls.filter(
-      (u) =>
-        !isImageUrl(u) &&
-        !isVideoUrl(u) &&
-        !extractYouTubeId(u) &&
-        !isUploadUrl(u),
-    );
+    return urls.filter((u) => {
+      if (isImageUrl(u) || isVideoUrl(u) || extractYouTubeId(u) || isUploadUrl(u)) return false;
+      if (typeof window !== 'undefined') {
+        try {
+          const parsed = new URL(u, window.location.href);
+          if (parsed.origin === window.location.origin && parsed.pathname === '/chat') {
+            return false;
+          }
+        } catch {
+          /* fall through */
+        }
+      }
+      return true;
+    });
   }, [bodyContent]);
 
   const components: Components = useMemo(() => ({

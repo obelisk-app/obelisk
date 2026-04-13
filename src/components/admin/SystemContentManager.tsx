@@ -1,8 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ConfirmDialog from './ConfirmDialog';
 import { emojiForOptionText } from '@/components/chat/ChannelEmoji';
+import EmojiPicker from '@/components/chat/EmojiPicker';
+import MessageContent from '@/components/chat/MessageContent';
 
 /**
  * Admin UI for "post as the server" content — welcome messages at the top
@@ -80,6 +82,51 @@ export default function SystemContentManager({ serverId }: SystemContentManagerP
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<SystemMessage | null>(null);
+  const [emojiOpen, setEmojiOpen] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [serverEmojis, setServerEmojis] = useState<Record<string, string>>({});
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Fetch custom server emojis once so the picker can offer them.
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/admin/emojis?serverId=${encodeURIComponent(serverId)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (cancelled || !data) return;
+        const map: Record<string, string> = {};
+        for (const e of (data.emojis || []) as { name: string; url: string }[]) {
+          map[e.name] = e.url;
+        }
+        setServerEmojis(map);
+      })
+      .catch(() => {
+        /* emoji list is optional — picker still works with unicode */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [serverId]);
+
+  const insertAtCursor = useCallback((text: string) => {
+    const ta = textareaRef.current;
+    if (!ta) {
+      setDraft((prev) => ({ ...prev, content: prev.content + text }));
+      return;
+    }
+    const start = ta.selectionStart ?? ta.value.length;
+    const end = ta.selectionEnd ?? ta.value.length;
+    const before = ta.value.slice(0, start);
+    const after = ta.value.slice(end);
+    const next = before + text + after;
+    setDraft((prev) => ({ ...prev, content: next }));
+    requestAnimationFrame(() => {
+      if (!textareaRef.current) return;
+      textareaRef.current.focus();
+      const pos = start + text.length;
+      textareaRef.current.setSelectionRange(pos, pos);
+    });
+  }, []);
 
   const selectedChannel = useMemo(
     () => channels.find((c) => c.id === selectedChannelId) || null,
@@ -359,22 +406,74 @@ export default function SystemContentManager({ serverId }: SystemContentManagerP
         )}
 
         <div>
-          <label className="block text-xs text-lc-muted mb-1.5 uppercase tracking-wider">
-            Content
-          </label>
-          <textarea
-            value={draft.content}
-            onChange={(e) => setDraft({ ...draft, content: e.target.value })}
-            rows={isForum ? 6 : 10}
-            className="w-full px-3 py-2 rounded-lg bg-lc-black border border-lc-border text-lc-white text-sm focus:border-lc-green focus:outline-none transition-colors font-mono"
-            data-testid="system-content-body"
-            maxLength={4000}
-            placeholder={
-              isForum
-                ? 'Forum post body. Markdown supported.'
-                : 'Message body. Markdown supported: **bold**, # heading, lists, links.'
-            }
-          />
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="block text-xs text-lc-muted uppercase tracking-wider">
+              Content
+            </label>
+            <button
+              type="button"
+              onClick={() => setShowPreview((v) => !v)}
+              className="text-xs text-lc-muted hover:text-lc-green transition-colors"
+              data-testid="system-content-preview-toggle"
+            >
+              {showPreview ? 'Edit' : 'Preview'}
+            </button>
+          </div>
+          {showPreview ? (
+            <div
+              className="w-full min-h-[10rem] px-3 py-2 rounded-lg bg-lc-black border border-lc-border text-lc-white text-sm"
+              data-testid="system-content-preview"
+            >
+              {draft.content.trim() ? (
+                <MessageContent content={draft.content} />
+              ) : (
+                <span className="text-lc-muted italic">Nothing to preview yet.</span>
+              )}
+            </div>
+          ) : (
+            <div className="relative">
+              <textarea
+                ref={textareaRef}
+                value={draft.content}
+                onChange={(e) => setDraft({ ...draft, content: e.target.value })}
+                rows={isForum ? 6 : 10}
+                className="w-full px-3 py-2 pr-10 rounded-lg bg-lc-black border border-lc-border text-lc-white text-sm focus:border-lc-green focus:outline-none transition-colors font-mono"
+                data-testid="system-content-body"
+                maxLength={4000}
+                placeholder={
+                  isForum
+                    ? 'Forum post body. Markdown supported.'
+                    : 'Message body. Markdown supported: **bold**, # heading, lists, links.'
+                }
+              />
+              <div className="absolute bottom-2 right-2">
+                <button
+                  type="button"
+                  aria-label="Emoji"
+                  onClick={() => setEmojiOpen((o) => !o)}
+                  className="p-1.5 rounded-lg text-lc-muted hover:text-lc-green transition-colors"
+                  data-testid="system-content-emoji-button"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+                    <line x1="9" y1="9" x2="9.01" y2="9" />
+                    <line x1="15" y1="9" x2="15.01" y2="9" />
+                  </svg>
+                </button>
+                {emojiOpen && (
+                  <EmojiPicker
+                    onSelect={(emoji) => {
+                      insertAtCursor(emoji);
+                      setEmojiOpen(false);
+                    }}
+                    onClose={() => setEmojiOpen(false)}
+                    serverEmojis={serverEmojis}
+                  />
+                )}
+              </div>
+            </div>
+          )}
           <p className="text-xs text-lc-muted mt-1">
             Supports Markdown: <code>**bold**</code>, <code># heading</code>, lists, links.
           </p>
@@ -490,9 +589,9 @@ export default function SystemContentManager({ serverId }: SystemContentManagerP
                     {m.title && (
                       <p className="text-sm font-semibold text-lc-white truncate">{m.title}</p>
                     )}
-                    <p className="text-xs text-lc-muted line-clamp-3 whitespace-pre-wrap">
-                      {m.content}
-                    </p>
+                    <div className="text-xs text-lc-muted break-words">
+                      <MessageContent content={m.content} />
+                    </div>
                     <div className="flex flex-wrap items-center gap-2 mt-2">
                       {m.pinnedAt && (
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-lc-green/15 text-lc-green border border-lc-green/30">
