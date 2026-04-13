@@ -63,6 +63,7 @@ async function handle(req: NextRequest) {
     channelName: string;
     serverId: string;
     unreadCount: number;
+    hasMention: boolean;
     lastReadAt: string | null;
   }> = [];
 
@@ -102,6 +103,10 @@ async function handle(req: NextRequest) {
   // Batch-count unread replies (messages with replyToId === postId and not by
   // the viewer) per followed post, filtered by lastReadAt when present.
   const unreadCounts: Record<string, number> = {};
+  // And check per-post whether any Mention row targets the viewer since
+  // their last read of that post — needed so the red `@` badge persists
+  // across page reloads (realtime-only flagging evaporates on refresh).
+  const hasMentionByPost: Record<string, boolean> = {};
   for (const sub of visibleSubs) {
     const where: {
       replyToId: string;
@@ -115,6 +120,26 @@ async function handle(req: NextRequest) {
     };
     if (sub.lastReadAt) where.createdAt = { gt: sub.lastReadAt };
     unreadCounts[sub.id] = await prisma.message.count({ where });
+
+    // Mention lookup: any Mention row for this viewer whose messageId is
+    // the post itself OR a reply anchored in the post's thread, created
+    // after the viewer's per-post lastReadAt.
+    const mentionWhere: {
+      pubkey: string;
+      channelId: string;
+      createdAt?: { gt: Date };
+      message: { OR: Array<{ id: string } | { replyToId: string }>; deletedAt: null };
+    } = {
+      pubkey,
+      channelId: sub.channelId,
+      message: {
+        OR: [{ id: sub.id }, { replyToId: sub.id }],
+        deletedAt: null,
+      },
+    };
+    if (sub.lastReadAt) mentionWhere.createdAt = { gt: sub.lastReadAt };
+    const mentionCount = await prisma.mention.count({ where: mentionWhere });
+    hasMentionByPost[sub.id] = mentionCount > 0;
   }
 
   for (const sub of visibleSubs) {
@@ -126,6 +151,7 @@ async function handle(req: NextRequest) {
       channelName: sub.channelName,
       serverId: sub.serverId,
       unreadCount: unreadCounts[sub.id] ?? 0,
+      hasMention: hasMentionByPost[sub.id] ?? false,
       lastReadAt: sub.lastReadAt ? sub.lastReadAt.toISOString() : null,
     });
   }

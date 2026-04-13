@@ -1652,34 +1652,42 @@ export default function ChatPage() {
               )}
 
               {/* Forum, Voice, or Chat */}
-              {activeChannel?.type === 'forum' && activePostId ? (
+              {activeChannel?.type === 'forum' ? (
                 <>
-                  <PostChatHeader
-                    postId={activePostId}
-                    parentChannelName={activeChannel.name}
-                    parentChannelEmoji={activeChannel.emoji}
-                    profileCache={profileCache}
-                    onClose={() => {
-                      setActivePostId(null);
-                    }}
-                  />
-                  <MessageArea profileCache={profileCache} onDelete={handleDelete} onToggleReaction={handleToggleReaction} />
-                  {messageError && (
-                    <div className="px-4 py-2 bg-red-600/20 border-t border-red-600/30">
-                      <p className="text-sm text-red-400">{messageError}</p>
-                    </div>
+                  {/* ForumView stays mounted even when a thread is open so
+                      its post list doesn't re-fetch / flash on close.
+                      Thread view overlays via its own stack of components. */}
+                  <div className={activePostId ? 'hidden' : 'flex flex-col flex-1 min-h-0'}>
+                    <ForumView
+                      channelId={activeChannel.id}
+                      channelName={activeChannel.name}
+                      profileCache={profileCache}
+                      availableTags={activeChannel.forumTags}
+                      initialPostId={initialForumPostId}
+                    />
+                  </div>
+                  {activePostId && (
+                    <>
+                      <PostChatHeader
+                        postId={activePostId}
+                        parentChannelName={activeChannel.name}
+                        parentChannelEmoji={activeChannel.emoji}
+                        profileCache={profileCache}
+                        onClose={() => {
+                          setActivePostId(null);
+                        }}
+                      />
+                      <MessageArea profileCache={profileCache} onDelete={handleDelete} onToggleReaction={handleToggleReaction} />
+                      {messageError && (
+                        <div className="px-4 py-2 bg-red-600/20 border-t border-red-600/30">
+                          <p className="text-sm text-red-400">{messageError}</p>
+                        </div>
+                      )}
+                      <TypingIndicator profileCache={profileCache} />
+                      <MessageInput onSend={handleSend} onEditSave={handleEdit} onTyping={handleTyping} />
+                    </>
                   )}
-                  <TypingIndicator profileCache={profileCache} />
-                  <MessageInput onSend={handleSend} onEditSave={handleEdit} onTyping={handleTyping} />
                 </>
-              ) : activeChannel?.type === 'forum' ? (
-                <ForumView
-                  channelId={activeChannel.id}
-                  channelName={activeChannel.name}
-                  profileCache={profileCache}
-                  availableTags={activeChannel.forumTags}
-                  initialPostId={initialForumPostId}
-                />
               ) : activeChannel?.type === 'voice' ? (
                 <VoiceChannel
                   channelId={activeChannel.id}

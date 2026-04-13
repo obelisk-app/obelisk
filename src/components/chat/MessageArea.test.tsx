@@ -158,24 +158,26 @@ describe('MessageArea', () => {
     expect(screen.getByText('msg 15')).toBeInTheDocument();
   });
 
-  it('separator skips own messages when they interleave with unread (own-as-unread regression)', () => {
-    // Server-side `channelUnreads` excludes the viewer's own messages. The
-    // local `messages` array includes them (via `new-message` from other
-    // tabs/devices). The separator must walk from the end and skip
-    // viewer-authored messages, otherwise the user's own recent messages
-    // render under the red "New messages" line.
+  it('anchors separator at lastReadAt so own messages sent before the boundary render above (own-as-unread regression)', () => {
+    // Regression guard: pre-fix, the separator was computed as
+    // `messages.length - unreadCount`. Since the server excludes own
+    // messages from unreadCount but the local `messages` array does not,
+    // any own message among the last N slots slid under "New messages".
+    //
+    // Fix: anchor by server-authored `channelLastReadAt`. The separator
+    // lands above the first other-authored message newer than lastRead.
     const now = Date.now();
-    // 5 messages: 3 from others + 2 from self interleaved.
-    // server says 3 unread (only counts others). Separator should anchor
-    // on the first (oldest) of those 3 others.
+    const lastRead = now + 2500; // my own 'b' and the 'a' arrived before
     const messages = [
       { id: 'a', channelId: 'ch1', authorPubkey: 'other', content: 'msg a', replyToId: null, editedAt: null, createdAt: new Date(now + 1000).toISOString() },
-      { id: 'b', channelId: 'ch1', authorPubkey: 'my-pubkey', content: 'msg b (mine)', replyToId: null, editedAt: null, createdAt: new Date(now + 2000).toISOString() },
+      { id: 'b', channelId: 'ch1', authorPubkey: 'my-pubkey', content: 'msg b (mine pre-read)', replyToId: null, editedAt: null, createdAt: new Date(now + 2000).toISOString() },
       { id: 'c', channelId: 'ch1', authorPubkey: 'other', content: 'msg c', replyToId: null, editedAt: null, createdAt: new Date(now + 3000).toISOString() },
-      { id: 'd', channelId: 'ch1', authorPubkey: 'my-pubkey', content: 'msg d (mine)', replyToId: null, editedAt: null, createdAt: new Date(now + 4000).toISOString() },
-      { id: 'e', channelId: 'ch1', authorPubkey: 'other', content: 'msg e', replyToId: null, editedAt: null, createdAt: new Date(now + 5000).toISOString() },
+      { id: 'd', channelId: 'ch1', authorPubkey: 'other', content: 'msg d', replyToId: null, editedAt: null, createdAt: new Date(now + 4000).toISOString() },
     ];
-    useNotificationStore.getState().setChannelUnread('ch1', 3, false);
+    useNotificationStore.getState().setChannelUnread('ch1', 2, false);
+    useNotificationStore.setState({
+      channelLastReadAt: { ch1: lastRead },
+    } as any);
     useChatStore.setState({
       activeChannelId: 'ch1',
       isLoadingMessages: false,
@@ -184,28 +186,23 @@ describe('MessageArea', () => {
       categories: [],
     });
 
-    render(<MessageArea profileCache={profileCache} onDelete={vi.fn()} onToggleReaction={vi.fn()} />);
+    const { container } = render(<MessageArea profileCache={profileCache} onDelete={vi.fn()} onToggleReaction={vi.fn()} />);
 
     const separator = screen.getByTestId('new-messages-separator');
     expect(separator).toBeInTheDocument();
-    // Own message 'msg b (mine)' is chronologically BEFORE the separator
-    // because only 'a' is older than all 3 other-authored unreads; the
-    // oldest other-authored unread is 'a' itself. Separator should sit
-    // right above 'msg a'.
-    const separatorTop = separator.getBoundingClientRect().top;
-    const msgA = screen.getByText('msg a').getBoundingClientRect().top;
-    const msgB = screen.getByText('msg b (mine)').getBoundingClientRect().top;
-    const msgD = screen.getByText('msg d (mine)').getBoundingClientRect().top;
-    // jsdom returns 0 for all bounding rects — skip positional check there.
-    if (separatorTop !== 0 || msgA !== 0) {
-      expect(msgA).toBeGreaterThanOrEqual(separatorTop);
-    }
-    // Structural check that works in jsdom: both own messages 'b' and 'd'
-    // must be rendered. Before the fix, 'd' would have slid below the
-    // separator; we just want to ensure they all render without crash.
-    expect(screen.getByText('msg b (mine)')).toBeInTheDocument();
-    expect(screen.getByText('msg d (mine)')).toBeInTheDocument();
-    void msgB; void msgD;
+
+    // Scan the DOM in render order to locate whether each own msg is
+    // above or below the separator.
+    const allNodes = Array.from(container.querySelectorAll('*'));
+    const separatorPos = allNodes.indexOf(separator);
+    const msgBNode = screen.getByText('msg b (mine pre-read)');
+    const msgCNode = screen.getByText('msg c');
+    const msgBPos = allNodes.indexOf(msgBNode);
+    const msgCPos = allNodes.indexOf(msgCNode);
+    // Own msg 'b' (pre-read) must render BEFORE the separator.
+    expect(msgBPos).toBeLessThan(separatorPos);
+    // 'c' is the first unread other-authored message — at/after separator.
+    expect(msgCPos).toBeGreaterThan(separatorPos);
   });
 
   it('does not render the separator when there are no unread', () => {

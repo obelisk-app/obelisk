@@ -261,8 +261,35 @@ function ChannelItem({ channel, isActive, onClick, followedPosts, activePostId, 
   const hasFollowedPosts = (followedPosts?.length ?? 0) > 0;
   const [expanded, setExpanded] = useState(true);
   const canExpand = channel.type === 'forum' && hasFollowedPosts;
-  const unreadCount = useNotificationStore((s) => s.channelUnreads[channel.id] || 0);
-  const hasMention = useNotificationStore((s) => s.channelMentions[channel.id] || false);
+  const channelUnread = useNotificationStore((s) => s.channelUnreads[channel.id] || 0);
+  const channelMention = useNotificationStore((s) => s.channelMentions[channel.id] || false);
+  const postUnreadsMap = useNotificationStore((s) => s.postUnreads);
+  const postMentionsMap = useNotificationStore((s) => s.postMentions);
+  // Forum channels use their followed-thread tallies as the source of truth
+  // for the parent badge. `channelUnreads` double-counts what's already in
+  // `postUnreads` (every forum reply bumps both), so aggregating them would
+  // inflate the number the user sees. Mentions: a non-follower view can't
+  // get a forum mention today — we auto-subscribe on mention — so the
+  // channel-level flag just mirrors one of the post flags anyway.
+  //
+  // Plain text channels have no sub-threads and use the raw channel tallies.
+  const [unreadCount, hasMention] = (() => {
+    if (channel.type !== 'forum') {
+      return [channelUnread, channelMention] as const;
+    }
+    let sum = 0;
+    let mention = false;
+    if (followedPosts) {
+      for (const p of followedPosts) {
+        sum += postUnreadsMap[p.id] || 0;
+        if (postMentionsMap[p.id]) mention = true;
+      }
+    }
+    // A mention flagged on the channel (e.g. from legacy hydration paths)
+    // still counts — don't drop it on the floor.
+    if (channelMention) mention = true;
+    return [sum, mention] as const;
+  })();
   const hasUnread = unreadCount > 0;
   const myRole = useChatStore((s) => s.myRole);
   const activeServerId = useChatStore((s) => s.activeServerId);

@@ -30,6 +30,14 @@ export interface MentionFanoutInput {
   /** Optional post ID (forum post this message belongs to or is). Enables
    *  thread-level mention flagging client-side. */
   postId?: string;
+  /** Metadata about the forum post. When provided alongside `postId`, the
+   *  mentioned users are auto-subscribed to the post and receive a
+   *  `post-subscribed` socket event carrying this meta so the thread shows
+   *  up in their followed-posts sidebar immediately. */
+  postMeta?: {
+    title: string;
+    channelName: string;
+  };
   /** If this is a reply, the author of the message being replied to — treated
    *  as an implicit mention (Discord-style). */
   replyToAuthorPubkey?: string | null;
@@ -62,7 +70,7 @@ export interface MentionFanoutResult {
 export async function fanOutMentions(input: MentionFanoutInput): Promise<MentionFanoutResult> {
   const {
     prisma, io, messageId, channelId, serverId, authorPubkey, content,
-    postId, replyToAuthorPubkey, channel, createdAt,
+    postId, postMeta, replyToAuthorPubkey, channel, createdAt,
   } = input;
 
   const directMentions = extractMentionPubkeys(content);
@@ -110,6 +118,23 @@ export async function fanOutMentions(input: MentionFanoutInput): Promise<Mention
     skipDuplicates: true,
   });
 
+  // Auto-subscribe mentioned users to the forum post so the thread shows up
+  // in their followed-posts list — without this the `@` badge on the forum
+  // channel leads to a forum index with no visible pointer to the thread.
+  // Users can unfollow explicitly; `suppressedAutoFollowPostIds` on the
+  // client only prevents auto-follow-on-send, not auto-follow-on-mention
+  // (a mention is a stronger signal of interest from the author's side).
+  if (postId) {
+    try {
+      await prisma.postSubscription.createMany({
+        data: [...mentionedSet].map((pubkey) => ({ postId, pubkey })),
+        skipDuplicates: true,
+      });
+    } catch (err) {
+      console.error('[fanOutMentions] post auto-subscribe failed', err);
+    }
+  }
+
   const preview = content.slice(0, 100);
   const createdAtIso = typeof createdAt === 'string' ? createdAt : createdAt.toISOString();
   const directSet = new Set(directMentions);
@@ -143,6 +168,17 @@ export async function fanOutMentions(input: MentionFanoutInput): Promise<Mention
 
     // For forum threads, also bump the thread-level unread + flag.
     if (postId) {
+      // Push the post meta so the client can add it to followed-posts
+      // state immediately (no round-trip to /api/forum/posts/followed).
+      if (postMeta) {
+        io.to(`pubkey:${pubkey}`).emit('post-subscribed', {
+          postId,
+          title: postMeta.title,
+          channelId,
+          channelName: postMeta.channelName,
+          serverId,
+        });
+      }
       io.to(`pubkey:${pubkey}`).emit('post-unread', {
         postId,
         messageId,

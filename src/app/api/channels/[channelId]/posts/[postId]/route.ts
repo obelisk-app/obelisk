@@ -197,14 +197,14 @@ export async function POST(
   const channel = await prisma.channel.findUnique({
     where: { id: channelId },
     select: {
-      id: true, serverId: true, writePermission: true, writeRoleIds: true,
+      id: true, name: true, serverId: true, writePermission: true, writeRoleIds: true,
       readPermission: true, readRoleIds: true,
     },
   });
   if (!channel) return NextResponse.json({ error: 'Channel not found' }, { status: 404 });
 
   // Verify post exists
-  const post = await prisma.message.findUnique({ where: { id: postId }, select: { id: true, channelId: true } });
+  const post = await prisma.message.findUnique({ where: { id: postId }, select: { id: true, channelId: true, title: true } });
   if (!post || post.channelId !== channelId) {
     return NextResponse.json({ error: 'Post not found' }, { status: 404 });
   }
@@ -310,6 +310,10 @@ export async function POST(
         authorPubkey: pubkey,
         content: reply.content,
         postId,
+        postMeta: {
+          title: post.title ?? '',
+          channelName: channel.name,
+        },
         replyToAuthorPubkey: reply.replyTo?.authorPubkey ?? null,
         channel: {
           readPermission: channel.readPermission,

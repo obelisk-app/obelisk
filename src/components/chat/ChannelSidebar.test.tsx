@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import ChannelSidebar from './ChannelSidebar';
 import { useChatStore } from '@/store/chat';
+import { useNotificationStore } from '@/store/notification';
 
 // Mock Next.js router
 vi.mock('next/navigation', () => ({
@@ -25,6 +26,7 @@ vi.mock('@/store/auth', () => {
 describe('ChannelSidebar', () => {
   beforeEach(() => {
     useChatStore.setState(useChatStore.getInitialState());
+    useNotificationStore.setState(useNotificationStore.getInitialState());
   });
 
   it('renders skeleton while loading', () => {
@@ -352,5 +354,117 @@ describe('ChannelSidebar', () => {
 
     window.removeEventListener('popstate', popSpy);
     pushSpy.mockRestore();
+  });
+
+  it('channel row shows both @ and count when mention + unread are present', () => {
+    useChatStore.setState({
+      isLoadingChannels: false,
+      servers: [{ id: 's1', name: 'Test', icon: null, banner: null }],
+      activeServerId: 's1',
+      pinnedChannels: [
+        { id: 'ch1', name: 'general', emoji: null, type: 'text', position: 0, categoryId: null },
+      ],
+      categories: [],
+    });
+    useNotificationStore.setState({
+      channelUnreads: { ch1: 3 },
+      channelMentions: { ch1: true },
+    } as any);
+
+    render(<ChannelSidebar />);
+    const row = screen.getByText('general').closest('button')!;
+    // Badge text contains BOTH the '@' marker and the count. Pre-fix it
+    // was mutually exclusive (`hasMention ? '@' : count`).
+    const badgeText = row.textContent ?? '';
+    expect(badgeText).toContain('@');
+    expect(badgeText).toContain('3');
+  });
+
+  it('forum channel badge aggregates followed-post unreads + mentions', () => {
+    // Regression guard: pre-fix, parent forum showed its own channelUnread
+    // while child thread showed a different postUnread — user sees "@ 1"
+    // on parent and "3" on thread with no parent reflection of the 3.
+    // Parent must fold thread totals in.
+    localStorage.setItem('obelisk:followed-posts', JSON.stringify(['post-a']));
+    useChatStore.setState({
+      isLoadingChannels: false,
+      servers: [{ id: 's1', name: 'Test', icon: null, banner: null }],
+      activeServerId: 's1',
+      pinnedChannels: [],
+      categories: [
+        {
+          id: 'cat1', name: 'FORO', position: 0,
+          channels: [
+            { id: 'fch1', name: 'plaza-publica', emoji: null, type: 'forum', position: 0, categoryId: 'cat1' },
+          ],
+        },
+      ],
+      followedPostIds: ['post-a'],
+      followedPostMeta: {
+        'post-a': {
+          id: 'post-a',
+          title: 'Test Shade',
+          channelId: 'fch1',
+          channelName: 'plaza-publica',
+          serverId: 's1',
+        },
+      },
+    });
+    useNotificationStore.setState({
+      // Server would bump BOTH channelUnreads and postUnreads for the
+      // same reply — aggregating them would double-count (user saw 4
+      // when the thread only had 3 replies). Parent forum must use the
+      // followed-thread sum as source of truth.
+      channelUnreads: { fch1: 1 },
+      channelMentions: { fch1: true },
+      postUnreads: { 'post-a': 3 },
+      postMentions: { 'post-a': true },
+    } as any);
+
+    render(<ChannelSidebar />);
+    const parentRow = screen.getByText('plaza-publica').closest('button')!;
+    const badgeText = parentRow.textContent ?? '';
+    // Sum of followed-post unreads (not channel + posts). Mention: any source.
+    expect(badgeText).toContain('@');
+    expect(badgeText).toContain('3');
+    expect(badgeText).not.toContain('4');
+  });
+
+  it('forum post row shows both @ and count when the thread has a mention', () => {
+    localStorage.setItem('obelisk:followed-posts', JSON.stringify(['post-a']));
+    useChatStore.setState({
+      isLoadingChannels: false,
+      servers: [{ id: 's1', name: 'Test', icon: null, banner: null }],
+      activeServerId: 's1',
+      pinnedChannels: [],
+      categories: [
+        {
+          id: 'cat1', name: 'FORO', position: 0,
+          channels: [
+            { id: 'fch1', name: 'plaza-publica', emoji: null, type: 'forum', position: 0, categoryId: 'cat1' },
+          ],
+        },
+      ],
+      followedPostIds: ['post-a'],
+      followedPostMeta: {
+        'post-a': {
+          id: 'post-a',
+          title: 'Only Claws',
+          channelId: 'fch1',
+          channelName: 'plaza-publica',
+          serverId: 's1',
+        },
+      },
+    });
+    useNotificationStore.setState({
+      postUnreads: { 'post-a': 2 },
+      postMentions: { 'post-a': true },
+    } as any);
+
+    render(<ChannelSidebar />);
+    const row = screen.getByTestId('sidebar-post-row-post-a');
+    const badgeText = row.textContent ?? '';
+    expect(badgeText).toContain('@');
+    expect(badgeText).toContain('2');
   });
 });

@@ -45,6 +45,7 @@ interface NotificationState {
     channels: Record<string, number>;
     dms: Record<string, number>;
     dmLastReadAt?: Record<string, number>;
+    channelLastReadAt?: Record<string, number>;
     mentionChannels: Record<string, boolean>;
   }) => void;
   setChannelServerMap: (map: Record<string, string>) => void;
@@ -54,6 +55,7 @@ interface NotificationState {
 export const useNotificationStore = create<NotificationState>()((set) => ({
   channelUnreads: {},
   channelMentions: {},
+  channelLastReadAt: {},
   postUnreads: {},
   postMentions: {},
   dmUnreads: {},
@@ -133,6 +135,7 @@ export const useNotificationStore = create<NotificationState>()((set) => ({
     channelUnreads: data.channels,
     dmUnreads: data.dms,
     dmLastReadAt: data.dmLastReadAt ?? state.dmLastReadAt,
+    channelLastReadAt: data.channelLastReadAt ?? state.channelLastReadAt,
     channelMentions: data.mentionChannels,
   })),
 

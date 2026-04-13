@@ -82,6 +82,7 @@ export async function POST(
     where: { id: channelId },
     select: {
       id: true,
+      name: true,
       type: true,
       serverId: true,
       writePermission: true,
@@ -182,6 +183,10 @@ export async function POST(
         authorPubkey: pubkey,
         content: scanContent,
         postId: post.id,
+        postMeta: {
+          title: post.title ?? '',
+          channelName: channel.name,
+        },
         channel: {
           readPermission: channel.readPermission,
           readRoleIds: channel.readRoleIds,

@@ -473,17 +473,23 @@ export const useChatStore = create<ChatState>()((set) => ({
         const ids: string[] = [];
         const meta: Record<string, { id: string; title: string; channelId: string; channelName: string; serverId: string }> = {};
         const unreads: Record<string, number> = {};
-        for (const p of data.posts as Array<{ id: string; title: string; channelId: string; channelName: string; serverId: string; unreadCount?: number }>) {
+        const mentions: Record<string, boolean> = {};
+        for (const p of data.posts as Array<{ id: string; title: string; channelId: string; channelName: string; serverId: string; unreadCount?: number; hasMention?: boolean }>) {
           ids.push(p.id);
           meta[p.id] = p;
           if (typeof p.unreadCount === 'number' && p.unreadCount > 0) {
             unreads[p.id] = p.unreadCount;
           }
+          if (p.hasMention) {
+            mentions[p.id] = true;
+          }
         }
         set({ followedPostIds: ids, followedPostMeta: meta });
-        // Hydrate per-post unread counts from the server.
+        // Hydrate per-post unread counts + mention flags from the server.
+        // Without the mention flag the red `@` only survives until the next
+        // page refresh, since realtime-only flagging has no persistence.
         const { useNotificationStore } = await import('./notification');
-        useNotificationStore.getState().setPostUnreads(unreads);
+        useNotificationStore.getState().setPostUnreads(unreads, mentions);
       }
     } catch { /* ignore */ }
     set({ followedPostsLoading: false });

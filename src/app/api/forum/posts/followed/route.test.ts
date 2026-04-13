@@ -6,6 +6,7 @@ vi.mock('@/lib/db', () => ({
     postSubscription: { findMany: vi.fn() },
     member: { findMany: vi.fn() },
     message: { count: vi.fn(), findMany: vi.fn() },
+    mention: { count: vi.fn() },
   },
 }));
 vi.mock('@/lib/api-auth', () => ({ getAuthPubkey: vi.fn() }));
@@ -37,6 +38,7 @@ describe('GET /api/forum/posts/followed', () => {
     mockPrisma.member.findMany.mockResolvedValue([{ serverId: 's1' }]);
     mockPrisma.message.count.mockResolvedValue(0);
     mockPrisma.message.findMany.mockResolvedValue([]);
+    mockPrisma.mention.count.mockResolvedValue(0);
   });
 
   it('401 without auth', async () => {
@@ -64,9 +66,24 @@ describe('GET /api/forum/posts/followed', () => {
         channelName: 'forum',
         serverId: 's1',
         unreadCount: 0,
+        hasMention: false,
         lastReadAt: null,
       },
     ]);
+  });
+
+  it('surfaces hasMention when a Mention row targets the viewer in the post thread', async () => {
+    mockPrisma.postSubscription.findMany.mockResolvedValue([{ postId: 'p1', lastReadAt: null }]);
+    mockPrisma.message.findMany.mockResolvedValue([
+      {
+        id: 'p1', title: 'Hello', coverImage: null, deletedAt: null,
+        channel: { id: 'c1', name: 'forum', serverId: 's1', readPermission: null, readRoleIds: [] },
+      },
+    ]);
+    mockPrisma.mention.count.mockResolvedValue(1);
+    const res = await GET(req());
+    const data = await res.json();
+    expect(data.posts[0].hasMention).toBe(true);
   });
 
   it('omits deleted or non-post messages', async () => {
