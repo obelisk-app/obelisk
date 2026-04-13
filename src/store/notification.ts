@@ -13,6 +13,10 @@ export interface NotificationEvent {
 interface NotificationState {
   channelUnreads: Record<string, number>;
   channelMentions: Record<string, boolean>;
+  /** Server-authoritative per-channel read cursor (unix ms). Used client-side
+   *  to anchor the "New messages" separator exactly at the read boundary so
+   *  the viewer's own messages don't appear below it. */
+  channelLastReadAt: Record<string, number>;
   postUnreads: Record<string, number>;
   postMentions: Record<string, boolean>;
   dmUnreads: Record<string, number>;
@@ -30,6 +34,7 @@ interface NotificationState {
   incrementChannelUnread: (channelId: string, hasMention?: boolean) => void;
   clearChannelUnread: (channelId: string) => void;
   incrementPostUnread: (postId: string, hasMention?: boolean) => void;
+  setPostMention: (postId: string, hasMention: boolean) => void;
   clearPostUnread: (postId: string) => void;
   setPostUnreads: (counts: Record<string, number>, mentions?: Record<string, boolean>) => void;
   setDMUnread: (pubkey: string, count: number) => void;
@@ -87,6 +92,15 @@ export const useNotificationStore = create<NotificationState>()((set) => ({
     postMentions: hasMention
       ? { ...state.postMentions, [postId]: true }
       : state.postMentions,
+  })),
+
+  setPostMention: (postId, hasMention) => set((state) => ({
+    postMentions: hasMention
+      ? { ...state.postMentions, [postId]: true }
+      : (() => {
+          const { [postId]: _, ...rest } = state.postMentions;
+          return rest;
+        })(),
   })),
 
   clearPostUnread: (postId) => set((state) => {

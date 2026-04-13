@@ -32,6 +32,11 @@ export async function GET(req: NextRequest) {
   // Count unread messages per channel
   const channelUnreads: Record<string, number> = {};
   const mentionChannels: Record<string, boolean> = {};
+  // Expose per-channel lastReadAt (unix ms) so the client can anchor the
+  // "New messages" separator to the actual read boundary instead of
+  // guessing from the count — avoids placing own-authored messages below
+  // the separator when they interleave with unread messages from others.
+  const channelLastReadAt: Record<string, number> = {};
 
   await Promise.all(
     channelIds.map(async (channelId) => {
@@ -61,6 +66,9 @@ export async function GET(req: NextRequest) {
       }
       if (mentionCount > 0) {
         mentionChannels[channelId] = true;
+      }
+      if (readState?.lastReadAt) {
+        channelLastReadAt[channelId] = readState.lastReadAt.getTime();
       }
     })
   );
@@ -93,5 +101,5 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ channels: channelUnreads, dms, dmLastReadAt, mentionChannels });
+  return NextResponse.json({ channels: channelUnreads, dms, dmLastReadAt, mentionChannels, channelLastReadAt });
 }

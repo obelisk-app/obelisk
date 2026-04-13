@@ -74,6 +74,62 @@ describe('ForumView', () => {
     expect(useChatStore.getState().activePostId).toBe('p1');
   });
 
+  it('clicking reply button on a thread message stages it in the chat store', async () => {
+    const user = userEvent.setup();
+    const { useChatStore } = await import('@/store/chat');
+    useChatStore.setState({ replyingTo: null });
+    render(
+      <ForumView
+        channelId="ch1"
+        channelName="forum-test"
+        profileCache={profileCache}
+        initialPostId="p1"
+      />,
+    );
+
+    const btn = await screen.findByTestId('forum-reply-reply-r1');
+    await user.click(btn);
+    const state = useChatStore.getState();
+    expect(state.replyingTo?.id).toBe('r1');
+    expect(state.replyingTo?.content).toBe('Nice post!');
+  });
+
+  it('renders reply-to preview when a thread message carries replyTo', async () => {
+    vi.stubGlobal('fetch', vi.fn((url: string) => {
+      if (url.match(/\/posts\/p1$/)) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            post: mockPostDetail.post,
+            replies: [
+              { id: 'r1', channelId: 'ch1', authorPubkey: 'reply-pk', content: 'Nice post!', createdAt: new Date().toISOString() },
+              {
+                id: 'r2', channelId: 'ch1', authorPubkey: 'reply-pk',
+                content: 'Thanks!', createdAt: new Date().toISOString(),
+                replyTo: { id: 'r1', content: 'Nice post!', authorPubkey: 'reply-pk' },
+              },
+            ],
+            hasMore: false,
+          }),
+        });
+      }
+      if (url.match(/\/posts/)) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ posts: mockPosts, hasMore: false }) });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    }));
+    render(
+      <ForumView
+        channelId="ch1"
+        channelName="forum-test"
+        profileCache={profileCache}
+        initialPostId="p1"
+      />,
+    );
+    const preview = await screen.findByTestId('forum-reply-preview');
+    expect(preview).toHaveTextContent('Nice post!');
+  });
+
   it('New Post button shows creation form', async () => {
     const user = userEvent.setup();
     render(<ForumView channelId="ch1" channelName="forum-test" profileCache={profileCache} />);

@@ -420,6 +420,17 @@ export default function MessageArea({ profileCache, onDelete, onToggleReaction }
   // Snapshot the unread count at channel-open time so the "New messages"
   // separator is anchored above the first unread message and doesn't jump
   // when the read-tracker clears the badge.
+  //
+  // Important: `channelUnreads` is server-authored and excludes the viewer's
+  // own messages (see `/api/unread`). The local `messages` array does NOT —
+  // it includes messages the viewer authored from other tabs/devices. So we
+  // can't use `messages.length - count` directly, or the user's own recent
+  // messages get rendered under the red "New messages" line.
+  //
+  // Instead, walk from the end and skip `count` *other-authored* messages to
+  // find the anchor — that matches the server's counting semantics.
+  const { profile: viewerProfile } = useAuthStore();
+  const viewerPubkey = viewerProfile?.pubkey ?? null;
   const separatorCountRef = useRef<number>(0);
   const separatorChannelRef = useRef<string | null>(null);
   if (activeChannelId && separatorChannelRef.current !== activeChannelId) {
@@ -427,10 +438,20 @@ export default function MessageArea({ profileCache, onDelete, onToggleReaction }
     const notif = useNotificationStore.getState();
     separatorCountRef.current = notif.channelUnreads[activeChannelId] || 0;
   }
-  // If messages aren't loaded yet, we don't know where the separator goes.
-  const separatorIndex = separatorCountRef.current > 0 && messages.length >= separatorCountRef.current
-    ? messages.length - separatorCountRef.current
-    : -1;
+  const separatorIndex = (() => {
+    const count = separatorCountRef.current;
+    if (count <= 0 || messages.length === 0) return -1;
+    let remaining = count;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].authorPubkey !== viewerPubkey) {
+        remaining--;
+        if (remaining === 0) return i;
+      }
+    }
+    // Fewer unread-other messages loaded than the snapshot claimed — hide
+    // the separator rather than place it incorrectly.
+    return -1;
+  })();
 
   const allChannels = [
     ...pinnedChannels,

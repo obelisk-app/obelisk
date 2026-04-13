@@ -239,6 +239,7 @@ app.prepare().then(async () => {
                 postId: replyToId,
                 messageId: message.id,
                 authorPubkey: pubkey,
+                hasMention: false,
               });
             }
           }

@@ -4,6 +4,7 @@ import { getAuthPubkey } from '@/lib/api-auth';
 import { getAuthorProfile } from '@/lib/profile-sync';
 import { canWriteInChannel, getAuthMember } from '@/lib/auth-roles';
 import { resolveForumTagIds } from '@/lib/forum-tags';
+import { fanOutMentions, fanOutChannelUnread } from '@/lib/mention-fanout';
 
 // GET /api/channels/[channelId]/posts/[postId] — get a forum post with replies
 export async function GET(
@@ -35,14 +36,32 @@ export async function GET(
   const cursor = searchParams.get('cursor');
   const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
 
+  // Collect every message in the thread via BFS so that nested replies
+  // (reply-to-reply) are included, not only direct children of the OP.
+  const threadIds: string[] = [];
+  let frontier: string[] = [postId];
+  while (frontier.length > 0) {
+    const next = await prisma.message.findMany({
+      where: { replyToId: { in: frontier }, deletedAt: null },
+      select: { id: true },
+    });
+    const newIds = next.map((n) => n.id).filter((id) => !threadIds.includes(id));
+    if (newIds.length === 0) break;
+    threadIds.push(...newIds);
+    frontier = newIds;
+  }
+
   const replies = await prisma.message.findMany({
-    where: { replyToId: postId, deletedAt: null },
+    where: { id: { in: threadIds }, deletedAt: null },
     orderBy: { createdAt: 'asc' },
     take: limit + 1,
     ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
     include: {
       reactions: {
         select: { id: true, messageId: true, authorPubkey: true, emoji: true },
+      },
+      replyTo: {
+        select: { id: true, content: true, authorPubkey: true },
       },
     },
   });
@@ -177,7 +196,10 @@ export async function POST(
 
   const channel = await prisma.channel.findUnique({
     where: { id: channelId },
-    select: { id: true, serverId: true, writePermission: true, writeRoleIds: true },
+    select: {
+      id: true, serverId: true, writePermission: true, writeRoleIds: true,
+      readPermission: true, readRoleIds: true,
+    },
   });
   if (!channel) return NextResponse.json({ error: 'Channel not found' }, { status: 404 });
 
@@ -221,9 +243,38 @@ export async function POST(
     }
   }
 
-  const { content } = await req.json();
+  const { content, replyToId: rawReplyToId } = await req.json();
   if (!content || typeof content !== 'string' || !content.trim()) {
     return NextResponse.json({ error: 'Content required' }, { status: 400 });
+  }
+
+  // Resolve the reply target. Defaults to the post itself (top-level reply).
+  // If the client supplies a replyToId, it must belong to this thread:
+  // either it's the post, or its own replyToId chains back to the post.
+  let finalReplyToId = postId;
+  if (rawReplyToId && typeof rawReplyToId === 'string' && rawReplyToId !== postId) {
+    const target = await prisma.message.findUnique({
+      where: { id: rawReplyToId },
+      select: { id: true, channelId: true, deletedAt: true, replyToId: true },
+    });
+    if (!target || target.channelId !== channelId || target.deletedAt) {
+      return NextResponse.json({ error: 'Invalid replyToId' }, { status: 400 });
+    }
+    // Walk up to ensure target is rooted at this post (bounded walk).
+    let cursor: { replyToId: string | null } | null = target;
+    let inThread = false;
+    for (let i = 0; i < 50 && cursor; i++) {
+      if (cursor.replyToId === postId) { inThread = true; break; }
+      if (!cursor.replyToId) break;
+      cursor = await prisma.message.findUnique({
+        where: { id: cursor.replyToId },
+        select: { replyToId: true },
+      });
+    }
+    if (!inThread) {
+      return NextResponse.json({ error: 'Reply target not in this thread' }, { status: 400 });
+    }
+    finalReplyToId = rawReplyToId;
   }
 
   const reply = await prisma.message.create({
@@ -231,7 +282,10 @@ export async function POST(
       channelId,
       authorPubkey: pubkey,
       content: content.trim(),
-      replyToId: postId,
+      replyToId: finalReplyToId,
+    },
+    include: {
+      replyTo: { select: { id: true, content: true, authorPubkey: true } },
     },
   });
 
@@ -244,35 +298,70 @@ export async function POST(
   if (io) {
     io.to(`channel:${channelId}`).emit('new-message', enriched);
 
-    // Notification fan-out: emit `post-reply` to every subscriber of the
-    // parent post (excluding the reply's author — they don't need to be
-    // notified of their own reply). Rooms are joined per-pubkey on
-    // connection (see server.ts), so we can target by pubkey directly.
+    // Mention fan-out (unconditional — not gated by subscription).
+    let mentionedPubkeys = new Set<string>();
+    try {
+      const result = await fanOutMentions({
+        prisma,
+        io,
+        messageId: reply.id,
+        channelId,
+        serverId: channel.serverId,
+        authorPubkey: pubkey,
+        content: reply.content,
+        postId,
+        replyToAuthorPubkey: reply.replyTo?.authorPubkey ?? null,
+        channel: {
+          readPermission: channel.readPermission,
+          readRoleIds: channel.readRoleIds,
+        },
+        createdAt: reply.createdAt,
+      });
+      mentionedPubkeys = new Set(result.mentionedPubkeys);
+    } catch (err) {
+      console.error('[posts/postId POST] mention fan-out failed', err);
+    }
+
+    // Channel-level unread fan-out: bumps parent forum channel count for
+    // users not currently in the channel room.
+    try {
+      await fanOutChannelUnread({
+        prisma,
+        io,
+        channelId,
+        serverId: channel.serverId,
+        authorPubkey: pubkey,
+        content: reply.content,
+        mentionedPubkeys,
+        channel: {
+          readPermission: channel.readPermission,
+          readRoleIds: channel.readRoleIds,
+        },
+      });
+    } catch (err) {
+      console.error('[posts/postId POST] channel unread fan-out failed', err);
+    }
+
+    // Subscriber fan-out for non-mentioned subscribers: emit `post-unread`
+    // so their thread row bumps even if they weren't @-mentioned. Already-
+    // mentioned subscribers got a `post-unread` (with hasMention: true) from
+    // fanOutMentions above, so we skip them here to avoid a double-bump.
     try {
       const subs = await prisma.postSubscription.findMany({
         where: { postId, pubkey: { not: pubkey } },
         select: { pubkey: true },
       });
-      const payload = {
-        postId,
-        channelId,
-        serverId: channel.serverId,
-        replyId: reply.id,
-        replyAuthorPubkey: pubkey,
-        replyContent: reply.content.slice(0, 200),
-        postTitle: null as string | null,
-      };
-      // Title is useful for notification UX; fetch once.
-      const post = await prisma.message.findUnique({
-        where: { id: postId },
-        select: { title: true },
-      });
-      if (post) payload.postTitle = post.title;
       for (const s of subs) {
-        io.to(`pubkey:${s.pubkey}`).emit('post-reply', payload);
+        if (mentionedPubkeys.has(s.pubkey)) continue;
+        io.to(`pubkey:${s.pubkey}`).emit('post-unread', {
+          postId,
+          messageId: reply.id,
+          authorPubkey: pubkey,
+          hasMention: false,
+        });
       }
-    } catch {
-      // Fan-out is best-effort — failure must not block the reply POST.
+    } catch (err) {
+      console.error('[posts/postId POST] subscriber fan-out failed', err);
     }
   }
 

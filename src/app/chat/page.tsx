@@ -833,9 +833,20 @@ export default function ChatPage() {
           const isForum = channel?.type === 'forum';
           const ap = state.activePostId;
           const anyMsg = message as unknown as { title?: string | null };
+          // When viewing a forum post, accept any message that belongs to the
+          // post's thread — either a direct reply (replyToId === postId) or a
+          // nested reply whose immediate parent is already in the local
+          // messages list (i.e. we've seen it, so it's in-thread by
+          // definition). Keeps reply-to-reply visible without needing to
+          // re-fetch the whole tree on every socket event.
+          const inThread = ap
+            ? message.replyToId === ap ||
+              (message.replyToId != null &&
+                state.messages.some((m) => m.id === message.replyToId))
+            : false;
           const accept = isForum
             ? ap
-              ? message.replyToId === ap
+              ? inThread
               : !!anyMsg.title && !message.replyToId
             : true;
           if (accept) addMessage(message);
@@ -931,20 +942,29 @@ export default function ChatPage() {
     //   - `unread-update` (this client is NOT in the channel room) — below
     // Doing it this way means a single server-side event becomes exactly one
     // client-side count bump, regardless of whether the user is mentioned.
-    socket.on('notification', (data: { type: string; channelId?: string; serverId?: string; senderPubkey: string; preview?: string }) => {
+    socket.on('notification', (data: { type: string; channelId?: string; postId?: string; serverId?: string; senderPubkey: string; preview?: string }) => {
       const notifStore = useNotificationStore.getState();
-      const isMentionLike = data.type === 'mention' || data.type === 'reply';
+      const isMentionLike = data.type === 'mention' || data.type === 'reply' || data.type === 'everyone';
       if (isMentionLike && data.channelId) {
-        // Skip flag set if the user is actively watching this channel —
-        // otherwise the mention dot would stick around until the next
-        // unread flush, which won't re-trigger because the count is 0.
-        if (isUserWatchingChannel(data.channelId)) return;
-        // Set mention flag without touching the count.
+        // Skip flag set if the user is actively watching this channel AND
+        // (for forum posts) the specific post — otherwise the mention dot
+        // would stick around until the next unread flush.
+        const watchingChannel = isUserWatchingChannel(data.channelId);
+        const watchingPost = data.postId
+          ? useChatStore.getState().activePostId === data.postId
+          : false;
+        if (watchingChannel && (!data.postId || watchingPost)) return;
+        // Set mention flag on the channel without touching the count.
         notifStore.setChannelUnread(
           data.channelId,
           notifStore.channelUnreads[data.channelId] || 0,
           true,
         );
+        // Also flag the thread row when this mention came from a forum post.
+        // Flag-only: count is bumped by the paired `post-unread` event.
+        if (data.postId) {
+          notifStore.setPostMention(data.postId, true);
+        }
         if (document.hidden) {
           const title = data.type === 'reply' ? 'New reply' : 'New mention';
           const fallback = data.type === 'reply'
@@ -990,9 +1010,9 @@ export default function ChatPage() {
       }
     });
 
-    socket.on('post-unread', (data: { postId: string; messageId: string; authorPubkey: string }) => {
+    socket.on('post-unread', (data: { postId: string; messageId: string; authorPubkey: string; hasMention?: boolean }) => {
       if (data.postId === useChatStore.getState().activePostId) return;
-      useNotificationStore.getState().incrementPostUnread(data.postId);
+      useNotificationStore.getState().incrementPostUnread(data.postId, data.hasMention);
     });
 
     socket.on('connect_error', (err) => {

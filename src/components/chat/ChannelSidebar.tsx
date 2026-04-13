@@ -160,11 +160,12 @@ function ForumPostRow({
         data-testid={`sidebar-post-row-${post.id}`}
       >
         <span className="truncate flex-1 text-left">{post.title?.trim() || '…'}</span>
-        {hasUnread && !isActive && (
-          <span className={`shrink-0 text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1 ${
+        {(hasUnread || hasMention) && !isActive && (
+          <span className={`shrink-0 text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5 gap-0.5 ${
             hasMention ? 'bg-red-500 text-white' : 'bg-lc-muted/30 text-lc-white'
           }`}>
-            {hasMention ? '@' : unreadCount}
+            {hasMention && <span aria-label="mentioned">@</span>}
+            {hasUnread && <span>{unreadCount}</span>}
           </span>
         )}
       </button>
@@ -340,13 +341,12 @@ function ChannelItem({ channel, isActive, onClick, followedPosts, activePostId, 
         {channel.emoji && <ChannelEmoji value={channel.emoji} />}
         <span className="truncate">{channel.name}</span>
         {isWriteLocked && <LockIcon />}
-        {hasUnread && !isActive && (
-          <span className={`ml-auto shrink-0 text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1 ${
-            hasMention
-              ? 'bg-red-500 text-white'
-              : 'bg-lc-muted/30 text-lc-white'
+        {(hasUnread || hasMention) && !isActive && (
+          <span className={`ml-auto shrink-0 text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5 gap-0.5 ${
+            hasMention ? 'bg-red-500 text-white' : 'bg-lc-muted/30 text-lc-white'
           }`}>
-            {hasMention ? '@' : unreadCount}
+            {hasMention && <span aria-label="mentioned">@</span>}
+            {hasUnread && <span>{unreadCount}</span>}
           </span>
         )}
       </button>

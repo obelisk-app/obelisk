@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { getAuthPubkey } from '@/lib/api-auth';
 import { canWriteInChannel, getAuthMember } from '@/lib/auth-roles';
 import { resolveForumTagIds } from '@/lib/forum-tags';
+import { fanOutMentions, fanOutChannelUnread } from '@/lib/mention-fanout';
 
 // GET /api/channels/[channelId]/posts — list forum posts (top-level messages)
 export async function GET(
@@ -79,7 +80,15 @@ export async function POST(
 
   const channel = await prisma.channel.findUnique({
     where: { id: channelId },
-    select: { id: true, type: true, serverId: true, writePermission: true, writeRoleIds: true },
+    select: {
+      id: true,
+      type: true,
+      serverId: true,
+      writePermission: true,
+      writeRoleIds: true,
+      readPermission: true,
+      readRoleIds: true,
+    },
   });
   if (!channel) return NextResponse.json({ error: 'Channel not found' }, { status: 404 });
   if (channel.type !== 'forum') return NextResponse.json({ error: 'Not a forum channel' }, { status: 400 });
@@ -154,6 +163,54 @@ export async function POST(
       data: { lastActivityAt: new Date() },
     })
     .catch(() => {});
+
+  // Broadcast + mention fan-out. Mentions in a forum post's title or body
+  // must reach the mentioned user regardless of subscription (which can't
+  // exist yet for a brand-new post). Per-user muting is a roadmap feature,
+  // not a default gate — see memory `feedback_mentions_unconditional`.
+  const io = (globalThis as any).__io;
+  if (io) {
+    const scanContent = `${post.title ?? ''}\n${post.content}`;
+    let mentionedPubkeys = new Set<string>();
+    try {
+      const result = await fanOutMentions({
+        prisma,
+        io,
+        messageId: post.id,
+        channelId,
+        serverId: channel.serverId,
+        authorPubkey: pubkey,
+        content: scanContent,
+        postId: post.id,
+        channel: {
+          readPermission: channel.readPermission,
+          readRoleIds: channel.readRoleIds,
+        },
+        createdAt: post.createdAt,
+      });
+      mentionedPubkeys = new Set(result.mentionedPubkeys);
+    } catch (err) {
+      console.error('[posts POST] mention fan-out failed', err);
+    }
+
+    try {
+      await fanOutChannelUnread({
+        prisma,
+        io,
+        channelId,
+        serverId: channel.serverId,
+        authorPubkey: pubkey,
+        content: scanContent,
+        mentionedPubkeys,
+        channel: {
+          readPermission: channel.readPermission,
+          readRoleIds: channel.readRoleIds,
+        },
+      });
+    } catch (err) {
+      console.error('[posts POST] channel unread fan-out failed', err);
+    }
+  }
 
   return NextResponse.json({
     ...post,

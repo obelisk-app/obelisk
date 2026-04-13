@@ -92,6 +92,66 @@ describe('POST /api/channels/[channelId]/posts/[postId] reply', () => {
 
     const res = await POST(makeRequest({ content: 'reply' }), ctx);
     expect(res.status).toBe(201);
+    expect(mockPrisma.message.create).toHaveBeenCalled();
+    const call = mockPrisma.message.create.mock.calls[0][0];
+    expect(call.data.replyToId).toBe('p1');
+  });
+
+  it('forwards a valid in-thread replyToId to the created message', async () => {
+    mockGetAuth.mockResolvedValue('member-pk');
+    mockPrisma.channel.findUnique.mockResolvedValue({
+      id: 'ch1', serverId: 'srv1', writePermission: null,
+    });
+    // 1st call: post lookup. 2nd call: target reply. No further walk needed
+    // because target.replyToId === postId.
+    mockPrisma.message.findUnique
+      .mockResolvedValueOnce({ id: 'p1', channelId: 'ch1' })
+      .mockResolvedValueOnce({ id: 'r1', channelId: 'ch1', deletedAt: null, replyToId: 'p1' });
+    mockPrisma.ban.findUnique.mockResolvedValue(null);
+    mockPrisma.mute.findFirst.mockResolvedValue(null);
+    mockPrisma.message.create.mockResolvedValue({
+      id: 'r2', channelId: 'ch1', authorPubkey: 'member-pk',
+      content: 'nested', replyToId: 'r1', createdAt: new Date().toISOString(),
+    });
+
+    const res = await POST(makeRequest({ content: 'nested', replyToId: 'r1' }), ctx);
+    expect(res.status).toBe(201);
+    const call = mockPrisma.message.create.mock.calls[0][0];
+    expect(call.data.replyToId).toBe('r1');
+  });
+
+  it('rejects a replyToId that does not chain back to this post', async () => {
+    mockGetAuth.mockResolvedValue('member-pk');
+    mockPrisma.channel.findUnique.mockResolvedValue({
+      id: 'ch1', serverId: 'srv1', writePermission: null,
+    });
+    // Post lookup, then a target reply that points at an unrelated post.
+    mockPrisma.message.findUnique
+      .mockResolvedValueOnce({ id: 'p1', channelId: 'ch1' })
+      .mockResolvedValueOnce({ id: 'other', channelId: 'ch1', deletedAt: null, replyToId: 'p2' })
+      .mockResolvedValueOnce({ replyToId: null });
+    mockPrisma.ban.findUnique.mockResolvedValue(null);
+    mockPrisma.mute.findFirst.mockResolvedValue(null);
+
+    const res = await POST(makeRequest({ content: 'x', replyToId: 'other' }), ctx);
+    expect(res.status).toBe(400);
+    expect(mockPrisma.message.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects a replyToId in a different channel', async () => {
+    mockGetAuth.mockResolvedValue('member-pk');
+    mockPrisma.channel.findUnique.mockResolvedValue({
+      id: 'ch1', serverId: 'srv1', writePermission: null,
+    });
+    mockPrisma.message.findUnique
+      .mockResolvedValueOnce({ id: 'p1', channelId: 'ch1' })
+      .mockResolvedValueOnce({ id: 'x', channelId: 'ch2', deletedAt: null, replyToId: 'p1' });
+    mockPrisma.ban.findUnique.mockResolvedValue(null);
+    mockPrisma.mute.findFirst.mockResolvedValue(null);
+
+    const res = await POST(makeRequest({ content: 'x', replyToId: 'x' }), ctx);
+    expect(res.status).toBe(400);
+    expect(mockPrisma.message.create).not.toHaveBeenCalled();
   });
 });
 

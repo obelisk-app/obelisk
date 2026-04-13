@@ -41,11 +41,30 @@ export async function GET(
   const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
 
   const isForum = channel.type === 'forum';
-  const forumFilter = isForum
-    ? postId
-      ? { replyToId: postId }
-      : { title: { not: null } as const, replyToId: null }
-    : {};
+  // When loading a forum post thread, gather every descendant of the post via
+  // BFS so that replies-to-replies (nested at any depth) are included. A flat
+  // `replyToId: postId` filter would only return direct children and drop
+  // nested replies from the thread view.
+  let forumFilter: Record<string, unknown> = {};
+  if (isForum) {
+    if (postId) {
+      const threadIds: string[] = [];
+      let frontier: string[] = [postId];
+      while (frontier.length > 0) {
+        const next = await prisma.message.findMany({
+          where: { channelId, replyToId: { in: frontier }, deletedAt: null },
+          select: { id: true },
+        });
+        const newIds = next.map((n) => n.id).filter((id) => !threadIds.includes(id));
+        if (newIds.length === 0) break;
+        threadIds.push(...newIds);
+        frontier = newIds;
+      }
+      forumFilter = { id: { in: threadIds } };
+    } else {
+      forumFilter = { title: { not: null } as const, replyToId: null };
+    }
+  }
 
   const include = {
     replyTo: {
