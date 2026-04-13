@@ -12,6 +12,7 @@ interface TextChannelOption {
 interface LandingChannelSettingsProps {
   serverId: string;
   currentChannelId: string | null;
+  onSaved?: () => void | Promise<void>;
 }
 
 interface AdminChannel {
@@ -29,9 +30,41 @@ interface CategoriesResponse {
 export default function LandingChannelSettings({
   serverId,
   currentChannelId,
+  onSaved,
 }: LandingChannelSettingsProps) {
   const [channels, setChannels] = useState<TextChannelOption[]>([]);
   const [channelId, setChannelId] = useState<string>(currentChannelId ?? '');
+  const [saving, setSaving] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const dirty = channelId !== (currentChannelId ?? '');
+
+  const handleSave = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch(
+        `/api/admin/server?serverId=${encodeURIComponent(serverId)}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            landingChannelId: channelId === '' ? null : channelId,
+          }),
+        },
+      );
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || 'Failed to save');
+        return;
+      }
+      setJustSaved(true);
+      setTimeout(() => setJustSaved(false), 2500);
+      await onSaved?.();
+    } finally {
+      setSaving(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -110,6 +143,31 @@ export default function LandingChannelSettings({
         <p className="text-[11px] text-lc-muted mt-1">
           Only text channels from this server.
         </p>
+      </div>
+
+      <div className="flex items-center gap-3 pt-2 border-t border-lc-border/60">
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving || !dirty}
+          data-testid="landing-channel-save"
+          className={`px-5 py-2 rounded-full font-semibold text-sm transition disabled:opacity-50 disabled:cursor-not-allowed ${
+            dirty
+              ? 'bg-lc-green text-lc-black hover:brightness-110'
+              : 'bg-lc-border text-lc-muted'
+          }`}
+        >
+          {saving ? 'Saving…' : 'Save landing channel'}
+        </button>
+        {justSaved && <span className="text-xs text-lc-green">✓ Saved</span>}
+        {dirty && !saving && (
+          <span className="text-xs text-lc-muted">Unsaved changes</span>
+        )}
+        {error && (
+          <span className="text-xs text-red-400" data-testid="landing-channel-error">
+            {error}
+          </span>
+        )}
       </div>
     </div>
   );

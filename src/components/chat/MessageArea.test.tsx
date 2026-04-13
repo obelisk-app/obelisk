@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import MessageArea from './MessageArea';
 import { useChatStore } from '@/store/chat';
@@ -170,6 +170,50 @@ describe('MessageArea', () => {
     });
     render(<MessageArea profileCache={profileCache} onDelete={vi.fn()} onToggleReaction={vi.fn()} />);
     expect(screen.queryByTestId('new-messages-separator')).not.toBeInTheDocument();
+  });
+
+  it('context menu "Copiar enlace" copies /chat?s=&c=&m= to clipboard', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText },
+      writable: true,
+      configurable: true,
+    });
+    Object.defineProperty(window, 'location', {
+      value: { origin: 'https://obelisk.test', pathname: '/chat', search: '' },
+      writable: true,
+    });
+
+    useChatStore.setState({
+      activeServerId: 'srv1',
+      activeChannelId: 'ch1',
+      isLoadingMessages: false,
+      messages: [
+        {
+          id: 'm1',
+          channelId: 'ch1',
+          authorPubkey: 'pk1',
+          content: 'hello',
+          replyToId: null,
+          editedAt: null,
+          createdAt: new Date().toISOString(),
+        },
+      ] as any,
+      pinnedChannels: [{ id: 'ch1', name: 'general', emoji: null, type: 'text', position: 0, categoryId: null }],
+      categories: [],
+    });
+
+    render(<MessageArea profileCache={profileCache} onDelete={vi.fn()} onToggleReaction={vi.fn()} />);
+
+    fireEvent.click(screen.getByTestId('menu-btn'));
+    const copyBtn = screen.getByTestId('copy-message-link-btn');
+    await act(async () => {
+      fireEvent.click(copyBtn);
+    });
+
+    expect(writeText).toHaveBeenCalledWith(
+      'https://obelisk.test/chat?c=general&m=m1',
+    );
   });
 
   it('hides Load earlier button when hasMoreMessages is false', () => {

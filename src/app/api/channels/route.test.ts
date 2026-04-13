@@ -6,7 +6,7 @@ vi.mock('@/lib/db', () => ({
   prisma: {
     server: { findFirst: vi.fn(), findUnique: vi.fn() },
     channel: { create: vi.fn() },
-    member: { findUnique: vi.fn() },
+    member: { findUnique: vi.fn(), updateMany: vi.fn().mockResolvedValue({ count: 0 }) },
     memberCustomRole: { findMany: vi.fn().mockResolvedValue([]) },
   },
 }));
@@ -129,6 +129,51 @@ describe('GET /api/channels', () => {
     const res = await GET(makeRequest('GET'));
     const data = await res.json();
     expect(data.categories[0].channels).toHaveLength(1);
+  });
+
+  it('exposes landingChannelId and reports hasEnteredChat=true for a returning member', async () => {
+    mockGetAuth.mockResolvedValue('returning-pk');
+    mockPrisma.server.findFirst.mockResolvedValue({
+      id: 'srv1', name: 'S', icon: null, banner: null, ownerPubkey: 'other',
+      landingChannelId: 'landing-ch',
+      categories: [{ id: 'c', name: 'G', position: 0, channels: [
+        { id: 'landing-ch', name: 'start', position: 0, readPermission: null, readRoleIds: [] },
+      ] }],
+      channels: [],
+    });
+    mockPrisma.server.findUnique.mockResolvedValue({ ownerPubkey: 'other' });
+    mockPrisma.member.findUnique.mockResolvedValue({ id: 'm1', role: 'member' });
+    // updateMany returns count 0 → already entered
+    mockPrisma.member.updateMany.mockResolvedValue({ count: 0 });
+
+    const res = await GET(makeRequest('GET'));
+    const data = await res.json();
+    expect(data.server.landingChannelId).toBe('landing-ch');
+    expect(data.viewer.hasEnteredChat).toBe(true);
+    expect(mockPrisma.member.updateMany).toHaveBeenCalledWith({
+      where: { serverId: 'srv1', pubkey: 'returning-pk', hasEnteredChat: false },
+      data: { hasEnteredChat: true },
+    });
+  });
+
+  it('reports hasEnteredChat=false on the first visit and flips the flag', async () => {
+    mockGetAuth.mockResolvedValue('newbie-pk');
+    mockPrisma.server.findFirst.mockResolvedValue({
+      id: 'srv1', name: 'S', icon: null, banner: null, ownerPubkey: 'other',
+      landingChannelId: 'landing-ch',
+      categories: [],
+      channels: [
+        { id: 'landing-ch', name: 'start', position: 0, readPermission: null, readRoleIds: [] },
+      ],
+    });
+    mockPrisma.server.findUnique.mockResolvedValue({ ownerPubkey: 'other' });
+    mockPrisma.member.findUnique.mockResolvedValue({ id: 'm1', role: 'member' });
+    mockPrisma.member.updateMany.mockResolvedValue({ count: 1 });
+
+    const res = await GET(makeRequest('GET'));
+    const data = await res.json();
+    expect(data.viewer.hasEnteredChat).toBe(false);
+    expect(data.server.landingChannelId).toBe('landing-ch');
   });
 
   it('owner sees role-gated channels even without the custom role', async () => {

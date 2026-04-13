@@ -12,6 +12,7 @@ import ProfilePopover from '@/components/chat/ProfilePopover';
 import PinnedMessagesPanel from '@/components/chat/PinnedMessagesPanel';
 import MessageInput from '@/components/chat/MessageInput';
 import ForumView from '@/components/chat/ForumView';
+import PostChatHeader from '@/components/chat/PostChatHeader';
 import ChannelTopicModal from '@/components/chat/ChannelTopicModal';
 import ChannelEmoji from '@/components/chat/ChannelEmoji';
 import SearchBar from '@/components/chat/SearchBar';
@@ -74,6 +75,8 @@ export default function ChatPage() {
     servers,
     activeServerId,
     activeChannelId,
+    activePostId,
+    setActivePostId,
     pinnedChannels,
     categories,
     setServers,
@@ -123,13 +126,12 @@ export default function ChatPage() {
   const initialForumPostIdRef = useRef<string | null>(initialUrlRef.current?.p ?? null);
   const [initialForumPostId, setInitialForumPostId] = useState<string | null>(initialForumPostIdRef.current);
   useEffect(() => {
-    // Clear after first use so switching forums doesn't keep reopening the
-    // deep-linked post id.
     if (initialForumPostId) {
+      setActivePostId(initialForumPostId);
       const t = setTimeout(() => setInitialForumPostId(null), 0);
       return () => clearTimeout(t);
     }
-  }, [initialForumPostId]);
+  }, [initialForumPostId, setActivePostId]);
   // Slug share-links (e.g. /chat?c=plaza-publica&m=<id>) are resolved via
   // /api/channels/resolve-slug before the server/channel auto-select kicks
   // in, so the user lands on the right server + channel. If the incoming
@@ -350,6 +352,18 @@ export default function ChatPage() {
             chosenChannel = urlC;
           }
         }
+        // First-visit landing channel. Only applied when the viewer has never
+        // entered this server before (server atomically flips the flag on this
+        // same request, so the redirect runs at most once). Explicit URL ?c=
+        // still wins above so shared links are honored.
+        if (
+          !chosenChannel
+          && data.viewer?.hasEnteredChat === false
+          && data.server?.landingChannelId
+          && allChans.some((ch: any) => ch.id === data.server.landingChannelId)
+        ) {
+          chosenChannel = data.server.landingChannelId;
+        }
         if (!chosenChannel) {
           const firstChannel = data.pinnedChannels[0]
             || data.categories[0]?.channels[0];
@@ -451,11 +465,14 @@ export default function ChatPage() {
       }
       if (p) {
         setInitialForumPostId(p);
+        setActivePostId(p);
+      } else {
+        setActivePostId(null);
       }
     };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
-  }, [sessionChecked, setActiveServer, setActiveChannel]);
+  }, [sessionChecked, setActiveServer, setActiveChannel, setActivePostId]);
 
   // Fetch all member profiles for the profileCache. Any members with null
   // profile fields will be filled in automatically by the server's
@@ -796,7 +813,27 @@ export default function ChatPage() {
           }
         }
       }
-      addMessage(message);
+      {
+        const state = useChatStore.getState();
+        const inActiveChannel = message.channelId === state.activeChannelId;
+        if (inActiveChannel) {
+          const channel = state.categories
+            .flatMap((c) => c.channels)
+            .concat(state.pinnedChannels)
+            .find((c) => c.id === message.channelId);
+          const isForum = channel?.type === 'forum';
+          const ap = state.activePostId;
+          const anyMsg = message as unknown as { title?: string | null };
+          const accept = isForum
+            ? ap
+              ? message.replyToId === ap
+              : !!anyMsg.title && !message.replyToId
+            : true;
+          if (accept) addMessage(message);
+        } else {
+          addMessage(message);
+        }
+      }
 
       // Badge channels the user isn't actively watching — backgrounded tab,
       // blurred window, scrolled up, or a different channel open. The
@@ -944,6 +981,11 @@ export default function ChatPage() {
       }
     });
 
+    socket.on('post-unread', (data: { postId: string; messageId: string; authorPubkey: string }) => {
+      if (data.postId === useChatStore.getState().activePostId) return;
+      useNotificationStore.getState().incrementPostUnread(data.postId);
+    });
+
     socket.on('connect_error', (err) => {
       console.warn('Socket connection error:', err.message);
     });
@@ -976,10 +1018,12 @@ export default function ChatPage() {
       sp.delete('c');
       sp.delete('m');
     }
+    if (activePostId) sp.set('p', activePostId);
+    else sp.delete('p');
     const qs = sp.toString();
     const url = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
     window.history.replaceState(null, '', url);
-  }, [activeServerId, activeChannelId]);
+  }, [activeServerId, activeChannelId, activePostId]);
 
   // Join/leave channel rooms. Mark-as-read is deliberately NOT triggered here
   // anymore — useReadTracker below decides when the channel actually becomes
@@ -1021,6 +1065,20 @@ export default function ChatPage() {
   // Mirror unread total into favicon + document.title (Discord-style).
   useFaviconBadge();
 
+  // When the user enters a post chat, clear its unread counter locally and
+  // persist lastReadAt to the server.
+  useEffect(() => {
+    if (!activePostId) return;
+    useNotificationStore.getState().clearPostUnread(activePostId);
+    (async () => {
+      try {
+        await fetch(`/api/forum/posts/${encodeURIComponent(activePostId)}/read`, {
+          method: 'POST',
+        });
+      } catch { /* ignore */ }
+    })();
+  }, [activePostId]);
+
   // Fetch messages when channel changes
   useEffect(() => {
     if (!activeChannelId) return;
@@ -1031,7 +1089,8 @@ export default function ChatPage() {
         const hasPendingForThisChannel =
           !!pending && pending.channelId === activeChannelId;
 
-        const res = await fetch(`/api/channels/${activeChannelId}/messages`);
+        const postParam = activePostId ? `?postId=${encodeURIComponent(activePostId)}` : '';
+        const res = await fetch(`/api/channels/${activeChannelId}/messages${postParam}`);
         if (!res.ok) return;
         const data = await res.json();
 
@@ -1092,14 +1151,34 @@ export default function ChatPage() {
     };
 
     fetchMessages();
-  }, [activeChannelId, setMessages, setLoadingMessages, setMessageCursor]);
+  }, [activeChannelId, activePostId, setMessages, setLoadingMessages, setMessageCursor]);
 
   // Send message via socket (with optional replyToId)
   const handleSend = useCallback((content: string, replyToId?: string) => {
     const socket = socketRef.current;
     if (!socket || !activeChannelId) return;
-    socket.emit('send-message', { channelId: activeChannelId, content, replyToId });
-  }, [activeChannelId]);
+    const effectiveReplyToId = replyToId ?? activePostId ?? undefined;
+    socket.emit('send-message', { channelId: activeChannelId, content, replyToId: effectiveReplyToId });
+    // Auto-follow the post when sending a message in it, unless the user
+    // explicitly unfollowed it this session.
+    if (activePostId) {
+      const state = useChatStore.getState();
+      const alreadyFollowing = state.followedPostIds.includes(activePostId);
+      const suppressed = state.suppressedAutoFollowPostIds.includes(activePostId);
+      if (!alreadyFollowing && !suppressed) {
+        const ch = state.categories
+          .flatMap((c) => c.channels)
+          .concat(state.pinnedChannels)
+          .find((c) => c.id === activeChannelId);
+        void state.toggleFollowPost(activePostId, {
+          title: '',
+          channelId: activeChannelId,
+          channelName: ch?.name ?? '',
+          serverId: state.activeServerId ?? '',
+        });
+      }
+    }
+  }, [activeChannelId, activePostId]);
 
   // Edit message via socket
   const handleEdit = useCallback((messageId: string, content: string) => {
@@ -1456,8 +1535,21 @@ export default function ChatPage() {
                         {activeChannel.type === 'forum' ? '💬' : activeChannel.type === 'voice' ? '🎙' : '#'}
                       </span>
                       {activeChannel.emoji && <ChannelEmoji value={activeChannel.emoji} className="text-sm shrink-0" />}
-                      <h3 className="font-semibold text-lc-white text-sm truncate shrink-0">{activeChannel.name}</h3>
-                      {activeChannel.description && (
+                      {activeChannel.type === 'forum' && activePostId ? (
+                        <button
+                          onClick={() => setActivePostId(null)}
+                          className="font-semibold text-sm text-lc-muted hover:text-lc-white truncate shrink-0 transition-colors"
+                          data-testid="post-breadcrumb-parent"
+                        >
+                          {activeChannel.name}
+                        </button>
+                      ) : (
+                        <h3 className="font-semibold text-lc-white text-sm truncate shrink-0">{activeChannel.name}</h3>
+                      )}
+                      {activeChannel.type === 'forum' && activePostId && (
+                        <ActivePostCrumb />
+                      )}
+                      {!(activeChannel.type === 'forum' && activePostId) && activeChannel.description && (
                         <>
                           <span className="text-lc-border shrink-0">|</span>
                           <button
@@ -1500,7 +1592,27 @@ export default function ChatPage() {
               )}
 
               {/* Forum, Voice, or Chat */}
-              {activeChannel?.type === 'forum' ? (
+              {activeChannel?.type === 'forum' && activePostId ? (
+                <>
+                  <PostChatHeader
+                    postId={activePostId}
+                    parentChannelName={activeChannel.name}
+                    parentChannelEmoji={activeChannel.emoji}
+                    profileCache={profileCache}
+                    onClose={() => {
+                      setActivePostId(null);
+                    }}
+                  />
+                  <MessageArea profileCache={profileCache} onDelete={handleDelete} onToggleReaction={handleToggleReaction} />
+                  {messageError && (
+                    <div className="px-4 py-2 bg-red-600/20 border-t border-red-600/30">
+                      <p className="text-sm text-red-400">{messageError}</p>
+                    </div>
+                  )}
+                  <TypingIndicator profileCache={profileCache} />
+                  <MessageInput onSend={handleSend} onEditSave={handleEdit} onTyping={handleTyping} />
+                </>
+              ) : activeChannel?.type === 'forum' ? (
                 <ForumView
                   channelId={activeChannel.id}
                   channelName={activeChannel.name}
@@ -1545,6 +1657,35 @@ export default function ChatPage() {
       </div>
       <GlobalProfilePopover />
     </div>
+  );
+}
+
+function ActivePostCrumb() {
+  const activeChannelId = useChatStore((s) => s.activeChannelId);
+  const activePostId = useChatStore((s) => s.activePostId);
+  const [title, setTitle] = useState<string | null>(null);
+  useEffect(() => {
+    if (!activeChannelId || !activePostId) return;
+    let aborted = false;
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/channels/${activeChannelId}/posts/${encodeURIComponent(activePostId)}`,
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!aborted) setTitle(data.post?.title ?? null);
+      } catch { /* ignore */ }
+    })();
+    return () => { aborted = true; };
+  }, [activeChannelId, activePostId]);
+  return (
+    <>
+      <span className="text-lc-muted shrink-0">›</span>
+      <h3 className="font-semibold text-lc-white text-sm truncate min-w-0">
+        {title ?? '...'}
+      </h3>
+    </>
   );
 }
 

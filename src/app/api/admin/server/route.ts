@@ -121,6 +121,28 @@ export async function PATCH(req: NextRequest) {
     }
   }
 
+  // Landing channel: first-visit redirect target. Separate from welcomeChannelId
+  // (welcome-bot greeting). Same validation shape: must be a text channel in
+  // this server, or null/"" to clear.
+  if (body.landingChannelId !== undefined) {
+    if (body.landingChannelId === null || body.landingChannelId === '') {
+      data.landingChannelId = null;
+    } else {
+      const channelId = String(body.landingChannelId);
+      const channel = await prisma.channel.findFirst({
+        where: { id: channelId, serverId, type: 'text' },
+        select: { id: true },
+      });
+      if (!channel) {
+        return NextResponse.json(
+          { error: 'landingChannelId must reference a text channel in this server' },
+          { status: 400 }
+        );
+      }
+      data.landingChannelId = channel.id;
+    }
+  }
+
   if (body.welcomeLocale !== undefined) {
     if (body.welcomeLocale === null || body.welcomeLocale === '') {
       data.welcomeLocale = null;

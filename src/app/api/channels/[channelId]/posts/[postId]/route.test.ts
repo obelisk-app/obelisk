@@ -4,7 +4,7 @@ import { NextRequest } from 'next/server';
 vi.mock('@/lib/db', () => ({
   prisma: {
     channel: { findUnique: vi.fn() },
-    message: { findUnique: vi.fn(), create: vi.fn() },
+    message: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
     ban: { findUnique: vi.fn() },
     mute: { findFirst: vi.fn() },
     member: { findUnique: vi.fn() },
@@ -13,11 +13,20 @@ vi.mock('@/lib/db', () => ({
 }));
 vi.mock('@/lib/api-auth', () => ({ getAuthPubkey: vi.fn() }));
 vi.mock('@/lib/auth', () => ({ validateSession: vi.fn() }));
+vi.mock('@/lib/auth-roles', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/auth-roles')>('@/lib/auth-roles');
+  return {
+    ...actual,
+    getAuthMember: vi.fn(),
+  };
+});
 vi.mock('@/lib/profile-sync', () => ({
   getAuthorProfile: vi.fn().mockResolvedValue({ pubkey: 'x', displayName: null, picture: null }),
 }));
 
-import { POST } from './route';
+import { POST, PATCH } from './route';
+import { getAuthMember } from '@/lib/auth-roles';
+const mockMember = getAuthMember as ReturnType<typeof vi.fn>;
 import { prisma } from '@/lib/db';
 import { getAuthPubkey } from '@/lib/api-auth';
 
@@ -72,5 +81,97 @@ describe('POST /api/channels/[channelId]/posts/[postId] reply', () => {
 
     const res = await POST(makeRequest({ content: 'reply' }), ctx);
     expect(res.status).toBe(201);
+  });
+});
+
+describe('PATCH /api/channels/[channelId]/posts/[postId]', () => {
+  function patchReq(body: any) {
+    return new NextRequest('http://localhost/api/channels/ch1/posts/p1', {
+      method: 'PATCH',
+      headers: { cookie: 'session=tok', 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  }
+  async function callPatch(body: any) {
+    return PATCH(patchReq(body), {
+      params: Promise.resolve({ channelId: 'ch1', postId: 'p1' }),
+    });
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetAuth.mockResolvedValue('author-pk');
+    mockPrisma.channel.findUnique.mockResolvedValue({
+      id: 'ch1', serverId: 'srv1', type: 'forum',
+    });
+    mockPrisma.message.findUnique.mockResolvedValue({
+      id: 'p1', channelId: 'ch1', authorPubkey: 'author-pk',
+      title: 'Old', coverImage: null, deletedAt: null,
+    });
+    mockPrisma.message.update.mockImplementation(({ data }: any) => Promise.resolve({
+      id: 'p1', channelId: 'ch1', authorPubkey: 'author-pk',
+      title: data.title ?? 'Old',
+      coverImage: data.coverImage === undefined ? null : data.coverImage,
+      content: 'body', createdAt: new Date(), editedAt: data.editedAt,
+    }));
+    mockMember.mockResolvedValue({ role: 'member' });
+  });
+
+  it('401 without auth', async () => {
+    mockGetAuth.mockResolvedValue(null);
+    const res = await callPatch({ title: 'x' });
+    expect(res.status).toBe(401);
+  });
+
+  it('allows the author to edit title + coverImage', async () => {
+    const res = await callPatch({ title: 'New', coverImage: 'https://cdn/x.jpg' });
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.post.title).toBe('New');
+    expect(data.post.coverImage).toBe('https://cdn/x.jpg');
+  });
+
+  it('allows mods who are not the author', async () => {
+    mockGetAuth.mockResolvedValue('mod-pk');
+    mockMember.mockResolvedValue({ role: 'mod' });
+    const res = await callPatch({ title: 'Moderated' });
+    expect(res.status).toBe(200);
+  });
+
+  it('allows admins who are not the author', async () => {
+    mockGetAuth.mockResolvedValue('admin-pk');
+    mockMember.mockResolvedValue({ role: 'admin' });
+    const res = await callPatch({ title: 'Admin' });
+    expect(res.status).toBe(200);
+  });
+
+  it('403 for non-author non-staff', async () => {
+    mockGetAuth.mockResolvedValue('other-pk');
+    mockMember.mockResolvedValue({ role: 'member' });
+    const res = await callPatch({ title: 'Nope' });
+    expect(res.status).toBe(403);
+  });
+
+  it('400 when title blank', async () => {
+    const res = await callPatch({ title: '   ' });
+    expect(res.status).toBe(400);
+  });
+
+  it('400 when no changes', async () => {
+    const res = await callPatch({});
+    expect(res.status).toBe(400);
+  });
+
+  it('allows clearing coverImage with null', async () => {
+    const res = await callPatch({ coverImage: null });
+    expect(res.status).toBe(200);
+    const call = mockPrisma.message.update.mock.calls[0][0];
+    expect(call.data.coverImage).toBeNull();
+  });
+
+  it('404 when post not found', async () => {
+    mockPrisma.message.findUnique.mockResolvedValue(null);
+    const res = await callPatch({ title: 'x' });
+    expect(res.status).toBe(404);
   });
 });

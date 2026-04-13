@@ -17,6 +17,7 @@ interface WelcomeBotSettingsProps {
   currentLocale: string | null;
   /** Most recent member (for preview avatar/name); optional. */
   previewMember?: { displayName: string | null; picture: string | null } | null;
+  onSaved?: () => void | Promise<void>;
 }
 
 interface AdminChannel {
@@ -37,10 +38,45 @@ export default function WelcomeBotSettings({
   currentChannelId,
   currentLocale,
   previewMember,
+  onSaved,
 }: WelcomeBotSettingsProps) {
   const [channels, setChannels] = useState<TextChannelOption[]>([]);
   const [channelId, setChannelId] = useState<string>(currentChannelId ?? '');
   const [locale, setLocale] = useState<string>(currentLocale ?? 'es');
+  const [saving, setSaving] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const dirty =
+    channelId !== (currentChannelId ?? '') ||
+    (channelId !== '' && locale !== (currentLocale ?? 'es'));
+
+  const handleSave = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch(
+        `/api/admin/server?serverId=${encodeURIComponent(serverId)}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            welcomeChannelId: channelId === '' ? null : channelId,
+            welcomeLocale: channelId === '' ? null : locale || 'es',
+          }),
+        },
+      );
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || 'Failed to save');
+        return;
+      }
+      setJustSaved(true);
+      setTimeout(() => setJustSaved(false), 2500);
+      await onSaved?.();
+    } finally {
+      setSaving(false);
+    }
+  };
 
   // Fetch text channels for the dropdown. Reuses /api/admin/categories,
   // which is the same endpoint the ChannelManager uses.
@@ -229,10 +265,32 @@ export default function WelcomeBotSettings({
               </p>
             )}
 
-            <p className="text-[11px] text-lc-muted pt-1 border-t border-lc-border/60">
-              Click <span className="text-lc-green font-medium">Save Changes</span> below to apply.
-            </p>
           </div>
+        )}
+      </div>
+
+      <div className="flex items-center gap-3 pt-2 border-t border-lc-border/60">
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving || !dirty}
+          data-testid="welcome-bot-save"
+          className={`px-5 py-2 rounded-full font-semibold text-sm transition disabled:opacity-50 disabled:cursor-not-allowed ${
+            dirty
+              ? 'bg-lc-green text-lc-black hover:brightness-110'
+              : 'bg-lc-border text-lc-muted'
+          }`}
+        >
+          {saving ? 'Saving…' : 'Save welcome bot'}
+        </button>
+        {justSaved && <span className="text-xs text-lc-green">✓ Saved</span>}
+        {dirty && !saving && (
+          <span className="text-xs text-lc-muted">Unsaved changes</span>
+        )}
+        {error && (
+          <span className="text-xs text-red-400" data-testid="welcome-bot-error">
+            {error}
+          </span>
         )}
       </div>
     </div>

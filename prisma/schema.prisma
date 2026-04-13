@@ -35,6 +35,13 @@ model Server {
   welcomeLocale    String? // 'es' | 'en'
   welcomeChannel   Channel? @relation("ServerWelcomeChannel", fields: [welcomeChannelId], references: [id], onDelete: SetNull)
 
+  // Landing channel: where brand-new members land on their first `/chat` load
+  // for this server. Distinct from welcomeChannelId (which is the welcome-bot
+  // channel that auto-posts a greeting). A channel can serve both roles or
+  // neither. Nulled automatically if the channel is deleted.
+  landingChannelId String? @unique
+  landingChannel   Channel? @relation("ServerLandingChannel", fields: [landingChannelId], references: [id], onDelete: SetNull)
+
   // Per-server upload limits. Defaults match the global constants in
   // src/lib/attachments.ts. allowedMimeTypes is an optional JSON-encoded
   // string array; null means "use the global allowlist". Absolute ceiling
@@ -174,6 +181,7 @@ model Channel {
   forumTags    ForumTag[]
   readStates   ChannelReadState[]
   welcomeForServer Server? @relation("ServerWelcomeChannel")
+  landingForServer Server? @relation("ServerLandingChannel")
 
   @@index([serverId])
   @@index([categoryId])
@@ -198,6 +206,7 @@ model Message {
   channelId    String
   authorPubkey String
   title        String?   // null for chat messages, set for forum posts
+  coverImage   String?   // optional cover image URL for forum posts (null otherwise)
   content      String
   replyToId    String?
   createdAt    DateTime  @default(now())
@@ -262,6 +271,23 @@ model ForumTagOnMessage {
   @@index([tagId])
 }
 
+// Subscription (follow) of a pubkey to a forum post. Replaces the previous
+// localStorage-backed follow model. Enables cross-device follow + server-side
+// notification fan-out on replies.
+model PostSubscription {
+  id         String    @id @default(cuid())
+  postId     String
+  pubkey     String
+  createdAt  DateTime  @default(now())
+  // Last time the subscriber opened the post's chat view. Replies created
+  // after this timestamp count as unread for notification fan-out.
+  lastReadAt DateTime?
+
+  @@unique([postId, pubkey])
+  @@index([pubkey])
+  @@index([postId])
+}
+
 model Member {
   id       String   @id @default(cuid())
   serverId String
@@ -282,6 +308,11 @@ model Member {
 
   // Activity tracking for invite-credit eligibility (anti-sybil)
   lastActivityAt   DateTime?
+
+  // First-visit landing redirect marker. False until this member's first
+  // `/chat` load resolves an initial channel; then flipped to true so the
+  // landing-channel redirect runs at most once per member per server.
+  hasEnteredChat   Boolean  @default(false)
 
   // Source tracking — when set, this member joined via the given invite link.
   // Surfaced in the admin panel so owners can see who came from where.

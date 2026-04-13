@@ -63,32 +63,15 @@ describe('ForumView', () => {
     expect(screen.getByText('No posts yet')).toBeInTheDocument();
   });
 
-  it('clicking a post shows detail view with back button', async () => {
+  it('clicking a post sets activePostId in the chat store', async () => {
     const user = userEvent.setup();
+    const { useChatStore } = await import('@/store/chat');
+    useChatStore.setState({ activePostId: null });
     render(<ForumView channelId="ch1" channelName="forum-test" profileCache={profileCache} />);
 
     await waitFor(() => expect(screen.getByText('First Post')).toBeInTheDocument());
     await user.click(screen.getByTestId('forum-post-card'));
-
-    await waitFor(() => {
-      expect(screen.getByTestId('forum-detail')).toBeInTheDocument();
-    });
-    expect(screen.getByTestId('forum-back')).toBeInTheDocument();
-    expect(screen.getByText('Nice post!')).toBeInTheDocument();
-  });
-
-  it('back button returns to list view', async () => {
-    const user = userEvent.setup();
-    render(<ForumView channelId="ch1" channelName="forum-test" profileCache={profileCache} />);
-
-    await waitFor(() => expect(screen.getByText('First Post')).toBeInTheDocument());
-    await user.click(screen.getByTestId('forum-post-card'));
-    await waitFor(() => expect(screen.getByTestId('forum-detail')).toBeInTheDocument());
-
-    await user.click(screen.getByTestId('forum-back'));
-    await waitFor(() => {
-      expect(screen.getByTestId('forum-list')).toBeInTheDocument();
-    });
+    expect(useChatStore.getState().activePostId).toBe('p1');
   });
 
   it('New Post button shows creation form', async () => {
@@ -103,15 +86,4 @@ describe('ForumView', () => {
     expect(screen.getByTestId('new-post-content')).toBeInTheDocument();
   });
 
-  it('detail view has reply input', async () => {
-    const user = userEvent.setup();
-    render(<ForumView channelId="ch1" channelName="forum-test" profileCache={profileCache} />);
-
-    await waitFor(() => expect(screen.getByText('First Post')).toBeInTheDocument());
-    await user.click(screen.getByTestId('forum-post-card'));
-
-    await waitFor(() => {
-      expect(screen.getByTestId('forum-reply-input')).toBeInTheDocument();
-    });
-  });
 });

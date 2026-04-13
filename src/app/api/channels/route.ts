@@ -40,15 +40,31 @@ export async function GET(req: NextRequest) {
     channels: cat.channels.filter(visible),
   }));
 
+  // First-visit marker: atomically flip Member.hasEnteredChat from false → true
+  // and return the prior value so the client can route to landingChannelId on
+  // the very first load. updateMany with a `hasEnteredChat: false` filter
+  // guarantees we never redirect a returning member and tolerates the missing-
+  // Member case (server owner / instance owner without a Member row) by simply
+  // reporting the visit as "already entered".
+  const flip = await prisma.member.updateMany({
+    where: { serverId: server.id, pubkey, hasEnteredChat: false },
+    data: { hasEnteredChat: true },
+  });
+  const hasEnteredChat = flip.count === 0;
+
   return NextResponse.json({
     server: {
       id: server.id,
       name: server.name,
       icon: server.icon,
       banner: server.banner,
+      landingChannelId: server.landingChannelId,
     },
     pinnedChannels,
     categories,
+    viewer: {
+      hasEnteredChat,
+    },
   });
 }
 

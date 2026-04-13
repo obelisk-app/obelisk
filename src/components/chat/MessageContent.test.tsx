@@ -89,4 +89,11 @@ describe('MessageContent', () => {
     const items = screen.getByTestId('message-content').querySelectorAll('li');
     expect(items).toHaveLength(2);
   });
+
+  it('renders /chat?c=... same-origin link as ChannelLinkPill', () => {
+    // jsdom gives us window.location.origin === 'http://localhost:3000' by default
+    const url = `${window.location.origin}/chat?c=plaza-publica`;
+    render(<MessageContent content={`see ${url} here`} />);
+    expect(screen.getByTestId('channel-link-pill')).toBeInTheDocument();
+  });
 });

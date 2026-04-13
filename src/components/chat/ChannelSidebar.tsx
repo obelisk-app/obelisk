@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useChatStore, Category, Channel } from '@/store/chat';
 import { useAuthStore } from '@/store/auth';
@@ -9,6 +9,7 @@ import ProfilePanel from './ProfilePanel';
 import MemberInviteCard from '../invites/MemberInviteCard';
 import { canWriteInChannel } from '@/lib/roles';
 import ChannelEmoji from './ChannelEmoji';
+import { slugify } from '@/lib/slug';
 
 function ChannelTypeIcon({ type }: { type: string }) {
   if (type === 'forum') {
@@ -50,47 +51,407 @@ function LockIcon() {
   );
 }
 
-function ChannelItem({ channel, isActive, onClick }: { channel: Channel; isActive: boolean; onClick: () => void }) {
+function ChannelContextMenu({ anchor, onCopyLink, copyLabel, onClose }: {
+  anchor: { x: number; y: number };
+  onCopyLink: () => void;
+  copyLabel: string;
+  onClose: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    };
+    const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('mousedown', handler);
+    document.addEventListener('keydown', onEsc);
+    return () => {
+      document.removeEventListener('mousedown', handler);
+      document.removeEventListener('keydown', onEsc);
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      ref={ref}
+      style={{ top: anchor.y, left: anchor.x }}
+      className="fixed z-50 bg-lc-dark border border-lc-border rounded-xl shadow-lg py-1 min-w-[180px]"
+      data-testid="channel-context-menu"
+    >
+      <button
+        onClick={onCopyLink}
+        className="w-full text-left px-3 py-1.5 text-sm text-lc-white hover:bg-lc-border/40 transition-colors flex items-center gap-2"
+        data-testid="copy-channel-link-btn"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+        {copyLabel}
+      </button>
+    </div>
+  );
+}
+
+function ForumPostRow({
+  post,
+  isActive,
+  onClick,
+}: {
+  post: { id: string; title: string; channelName: string };
+  isActive: boolean;
+  onClick: () => void;
+}) {
+  const toggleFollowPost = useChatStore((s) => s.toggleFollowPost);
+  const unreadCount = useNotificationStore((s) => s.postUnreads[post.id] || 0);
+  const hasMention = useNotificationStore((s) => s.postMentions[post.id] || false);
+  const hasUnread = unreadCount > 0;
+  const [menuAnchor, setMenuAnchor] = useState<{ x: number; y: number } | null>(null);
+  const [copyLabel, setCopyLabel] = useState('Copiar enlace');
+
+  const openMenuAt = (x: number, y: number) => {
+    setCopyLabel('Copiar enlace');
+    setMenuAnchor({ x, y });
+  };
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    openMenuAt(e.clientX, e.clientY);
+  };
+
+  const handleDotsClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    openMenuAt(rect.right, rect.bottom);
+  };
+
+  const handleCopyLink = () => {
+    if (typeof window === 'undefined') return;
+    const slug = slugify(post.channelName);
+    const url = `${window.location.origin}/chat?c=${slug}&p=${post.id}`;
+    try {
+      navigator.clipboard.writeText(url);
+      setCopyLabel('Copiado ✓');
+    } catch {
+      setCopyLabel('Error');
+    }
+    setTimeout(() => setMenuAnchor(null), 600);
+  };
+
+  const handleUnfollow = () => {
+    void toggleFollowPost(post.id);
+    setMenuAnchor(null);
+  };
+
+  return (
+    <div className="group relative">
+      {/* Tree-connector: horizontal stub from the vertical rail to this row */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute left-3 top-1/2 w-2 h-px bg-lc-border"
+      />
+      <button
+        onClick={onClick}
+        onContextMenu={handleContextMenu}
+        className={`w-full flex items-center gap-1.5 pl-5 pr-8 py-1 rounded-md text-sm text-left transition-colors ${
+          isActive
+            ? 'bg-lc-border text-lc-white font-medium'
+            : hasUnread
+              ? 'text-lc-white font-semibold hover:bg-lc-border/50'
+              : 'text-lc-muted hover:text-lc-white hover:bg-lc-border/50'
+        }`}
+        data-testid={`sidebar-post-row-${post.id}`}
+      >
+        <span className="truncate flex-1 text-left">{post.title?.trim() || '…'}</span>
+        {hasUnread && !isActive && (
+          <span className={`shrink-0 text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1 ${
+            hasMention ? 'bg-red-500 text-white' : 'bg-lc-muted/30 text-lc-white'
+          }`}>
+            {hasMention ? '@' : unreadCount}
+          </span>
+        )}
+      </button>
+      <button
+        onClick={handleDotsClick}
+        onContextMenu={handleContextMenu}
+        title="Más opciones"
+        aria-label="Más opciones"
+        data-testid={`sidebar-post-dots-${post.id}`}
+        className="absolute right-1 top-1/2 -translate-y-1/2 p-1 rounded text-lc-muted hover:text-lc-white hover:bg-lc-border/60 opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <circle cx="5" cy="12" r="1.5" />
+          <circle cx="12" cy="12" r="1.5" />
+          <circle cx="19" cy="12" r="1.5" />
+        </svg>
+      </button>
+      {menuAnchor && (
+        <ForumPostContextMenu
+          anchor={menuAnchor}
+          copyLabel={copyLabel}
+          onCopyLink={handleCopyLink}
+          onUnfollow={handleUnfollow}
+          onClose={() => setMenuAnchor(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function ForumPostContextMenu({
+  anchor,
+  copyLabel,
+  onCopyLink,
+  onUnfollow,
+  onClose,
+}: {
+  anchor: { x: number; y: number };
+  copyLabel: string;
+  onCopyLink: () => void;
+  onUnfollow: () => void;
+  onClose: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    };
+    const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('mousedown', handler);
+    document.addEventListener('keydown', onEsc);
+    return () => {
+      document.removeEventListener('mousedown', handler);
+      document.removeEventListener('keydown', onEsc);
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      ref={ref}
+      style={{ top: anchor.y, left: anchor.x }}
+      className="fixed z-50 bg-lc-dark border border-lc-border rounded-xl shadow-lg py-1 min-w-[180px]"
+      data-testid="forum-post-context-menu"
+    >
+      <button
+        onClick={onCopyLink}
+        className="w-full text-left px-3 py-1.5 text-sm text-lc-white hover:bg-lc-border/40 transition-colors flex items-center gap-2"
+        data-testid="forum-post-row-copy-link"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+        {copyLabel}
+      </button>
+      <button
+        onClick={onUnfollow}
+        className="w-full text-left px-3 py-1.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors flex items-center gap-2"
+        data-testid="forum-post-row-unfollow"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        Dejar de seguir
+      </button>
+    </div>
+  );
+}
+
+function ChannelItem({ channel, isActive, onClick, followedPosts, activePostId, onSelectPost }: {
+  channel: Channel;
+  isActive: boolean;
+  onClick: () => void;
+  followedPosts?: Array<{ id: string; title: string; channelName: string }>;
+  activePostId?: string | null;
+  onSelectPost?: (postId: string, channelName: string) => void;
+}) {
+  const hasFollowedPosts = (followedPosts?.length ?? 0) > 0;
+  const [expanded, setExpanded] = useState(true);
+  const canExpand = channel.type === 'forum' && hasFollowedPosts;
   const unreadCount = useNotificationStore((s) => s.channelUnreads[channel.id] || 0);
   const hasMention = useNotificationStore((s) => s.channelMentions[channel.id] || false);
   const hasUnread = unreadCount > 0;
   const myRole = useChatStore((s) => s.myRole);
+  const activeServerId = useChatStore((s) => s.activeServerId);
   const isWriteLocked = !canWriteInChannel(myRole ?? 'member', {
     writePermission: channel.writePermission ?? null,
   });
+  const [menuAnchor, setMenuAnchor] = useState<{ x: number; y: number } | null>(null);
+  const [copyLabel, setCopyLabel] = useState('Copiar enlace');
+
+  const openMenuAt = (x: number, y: number) => {
+    setCopyLabel('Copiar enlace');
+    setMenuAnchor({ x, y });
+  };
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    openMenuAt(e.clientX, e.clientY);
+  };
+
+  const handleDotsClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    openMenuAt(rect.right, rect.bottom);
+  };
+
+  const handleCopyLink = () => {
+    if (typeof window === 'undefined') return;
+    // Short link: just the channel slug. The chat page resolves the slug
+    // across the viewer's accessible servers, so no server id is needed.
+    // Channel.name is already constrained to [a-z0-9_-], but slugify guards
+    // against any drift in the future.
+    const slug = slugify(channel.name);
+    const url = `${window.location.origin}/chat?c=${slug}`;
+    try {
+      navigator.clipboard.writeText(url);
+      setCopyLabel('Copiado ✓');
+    } catch {
+      setCopyLabel('Error');
+    }
+    setTimeout(() => {
+      setMenuAnchor(null);
+    }, 600);
+  };
 
   return (
-    <button
-      onClick={onClick}
-      className={`w-full flex items-center gap-1.5 px-2 py-1 rounded-md text-sm transition-colors ${
-        isActive
-          ? 'bg-lc-border text-lc-white font-medium'
-          : hasUnread
-            ? 'text-lc-white font-semibold hover:bg-lc-border/50'
-            : 'text-lc-muted hover:text-lc-white hover:bg-lc-border/50'
-      }`}
-    >
-      <ChannelTypeIcon type={channel.type} />
-      {channel.emoji && <ChannelEmoji value={channel.emoji} />}
-      <span className="truncate">{channel.name}</span>
-      {isWriteLocked && <LockIcon />}
-      {hasUnread && !isActive && (
-        <span className={`ml-auto shrink-0 text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1 ${
-          hasMention
-            ? 'bg-red-500 text-white'
-            : 'bg-lc-muted/30 text-lc-white'
-        }`}>
-          {hasMention ? '@' : unreadCount}
-        </span>
+    <div>
+    <div className="group relative">
+      {canExpand && (
+        <button
+          onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v); }}
+          aria-label={expanded ? 'Contraer publicaciones' : 'Expandir publicaciones'}
+          data-testid={`channel-expand-${channel.id}`}
+          className="absolute left-0 top-1/2 -translate-y-1/2 p-0.5 text-lc-muted hover:text-lc-white z-10"
+        >
+          <svg
+            width="10" height="10" viewBox="0 0 24 24" fill="currentColor"
+            className={`transition-transform ${expanded ? '' : '-rotate-90'}`}
+            aria-hidden="true"
+          >
+            <path d="M7 10l5 5 5-5z"/>
+          </svg>
+        </button>
       )}
-    </button>
+      <button
+        onClick={onClick}
+        onContextMenu={handleContextMenu}
+        className={`w-full flex items-center gap-1.5 py-1 pr-8 rounded-md text-sm transition-colors ${canExpand ? 'pl-5' : 'pl-2'} ${
+          isActive
+            ? 'bg-lc-border text-lc-white font-medium'
+            : hasUnread
+              ? 'text-lc-white font-semibold hover:bg-lc-border/50'
+              : 'text-lc-muted hover:text-lc-white hover:bg-lc-border/50'
+        }`}
+      >
+        <ChannelTypeIcon type={channel.type} />
+        {channel.emoji && <ChannelEmoji value={channel.emoji} />}
+        <span className="truncate">{channel.name}</span>
+        {isWriteLocked && <LockIcon />}
+        {hasUnread && !isActive && (
+          <span className={`ml-auto shrink-0 text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1 ${
+            hasMention
+              ? 'bg-red-500 text-white'
+              : 'bg-lc-muted/30 text-lc-white'
+          }`}>
+            {hasMention ? '@' : unreadCount}
+          </span>
+        )}
+      </button>
+      <button
+        onClick={handleDotsClick}
+        onContextMenu={handleContextMenu}
+        title="Más opciones"
+        aria-label="Más opciones"
+        data-testid={`channel-dots-${channel.id}`}
+        className="absolute right-1 top-1/2 -translate-y-1/2 p-1 rounded text-lc-muted hover:text-lc-white hover:bg-lc-border/60 opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <circle cx="5" cy="12" r="1.5"/>
+          <circle cx="12" cy="12" r="1.5"/>
+          <circle cx="19" cy="12" r="1.5"/>
+        </svg>
+      </button>
+      {menuAnchor && (
+        <ChannelContextMenu
+          anchor={menuAnchor}
+          copyLabel={copyLabel}
+          onCopyLink={handleCopyLink}
+          onClose={() => setMenuAnchor(null)}
+        />
+      )}
+    </div>
+    {canExpand && expanded && followedPosts && (
+      <FollowedPostsList
+        followedPosts={followedPosts}
+        activePostId={activePostId ?? null}
+        onSelectPost={onSelectPost}
+        channelId={channel.id}
+      />
+    )}
+    </div>
   );
 }
 
-function CategorySection({ category, activeChannelId, onSelectChannel }: {
+function FollowedPostsList({
+  followedPosts,
+  activePostId,
+  onSelectPost,
+  channelId,
+}: {
+  followedPosts: Array<{ id: string; title: string; channelName: string }>;
+  activePostId: string | null;
+  onSelectPost?: (postId: string, channelName: string) => void;
+  channelId: string;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const unreadMap = useNotificationStore((s) => s.postUnreads);
+  const LIMIT = 5;
+
+  // Sort: unread (desc by count) first, then the rest in original order.
+  const sorted = [...followedPosts].sort((a, b) => {
+    const ua = unreadMap[a.id] || 0;
+    const ub = unreadMap[b.id] || 0;
+    if (ua === ub) return 0;
+    return ub - ua;
+  });
+
+  const visible = expanded ? sorted : sorted.slice(0, LIMIT);
+  const hiddenCount = sorted.length - visible.length;
+
+  return (
+    <div
+      className="relative mt-0.5 space-y-0.5 before:content-[''] before:absolute before:left-3 before:top-0 before:bottom-2 before:w-px before:bg-lc-border"
+      data-testid={`channel-followed-posts-${channelId}`}
+    >
+      {visible.map((post) => (
+        <ForumPostRow
+          key={post.id}
+          post={post}
+          isActive={activePostId === post.id}
+          onClick={() => onSelectPost?.(post.id, post.channelName)}
+        />
+      ))}
+      {hiddenCount > 0 && !expanded && (
+        <button
+          onClick={() => setExpanded(true)}
+          className="w-full pl-5 pr-8 py-1 text-xs text-left text-lc-muted hover:text-lc-white transition-colors"
+          data-testid={`channel-followed-posts-more-${channelId}`}
+        >
+          + {hiddenCount} more
+        </button>
+      )}
+      {expanded && sorted.length > LIMIT && (
+        <button
+          onClick={() => setExpanded(false)}
+          className="w-full pl-5 pr-8 py-1 text-xs text-left text-lc-muted hover:text-lc-white transition-colors"
+        >
+          Show less
+        </button>
+      )}
+    </div>
+  );
+}
+
+function CategorySection({ category, activeChannelId, onSelectChannel, followedByChannel, activePostId, onSelectPost }: {
   category: Category;
   activeChannelId: string | null;
   onSelectChannel: (id: string) => void;
+  followedByChannel?: Record<string, Array<{ id: string; title: string; channelName: string }>>;
+  activePostId?: string | null;
+  onSelectPost?: (postId: string, channelName: string) => void;
 }) {
   const [collapsed, setCollapsed] = useState(false);
 
@@ -116,6 +477,9 @@ function CategorySection({ category, activeChannelId, onSelectChannel }: {
               channel={ch}
               isActive={ch.id === activeChannelId}
               onClick={() => onSelectChannel(ch.id)}
+              followedPosts={followedByChannel?.[ch.id]}
+              activePostId={activePostId}
+              onSelectPost={onSelectPost}
             />
           ))}
         </div>
@@ -227,9 +591,60 @@ function ResizeHandle({ onResize }: { onResize: (w: number) => void }) {
 
 export default function ChannelSidebar({ onChannelSelect }: { onChannelSelect?: () => void } = {}) {
   const { servers, activeServerId, pinnedChannels, categories, activeChannelId, setActiveChannel, isLoadingChannels } = useChatStore();
+  const setActivePostIdStore = useChatStore((s) => s.setActivePostId);
+  const followedPostIds = useChatStore((s) => s.followedPostIds);
+  const followedPostMeta = useChatStore((s) => s.followedPostMeta);
+  const loadFollowedPosts = useChatStore((s) => s.loadFollowedPosts);
   const [showInviteCard, setShowInviteCard] = useState(false);
+  const [activePostId, setActivePostId] = useState<string | null>(null);
   const asideRef = useRef<HTMLElement>(null);
   const [width, setWidth] = useSidebarWidth();
+
+  // Load followed post metadata once the session is available. Running
+  // before auth restore would hit the endpoint with no cookie and return
+  // an empty list, so the sidebar would look "unfollowed" until the user
+  // performed another action. Re-run whenever the active server changes.
+  const sessionPubkey = useAuthStore((s) => s.profile?.pubkey ?? null);
+  useEffect(() => {
+    if (!sessionPubkey) return;
+    void loadFollowedPosts();
+  }, [loadFollowedPosts, activeServerId, sessionPubkey]);
+
+  // Track ?p= in the URL so the active post row highlights.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const sync = () => {
+      const sp = new URLSearchParams(window.location.search);
+      setActivePostId(sp.get('p'));
+    };
+    sync();
+    window.addEventListener('popstate', sync);
+    return () => window.removeEventListener('popstate', sync);
+  }, []);
+
+  // Group followed posts by channelId, scoped to the active server.
+  const followedByChannel = useMemo(() => {
+    const out: Record<string, Array<{ id: string; title: string; channelName: string }>> = {};
+    for (const id of followedPostIds) {
+      const meta = followedPostMeta[id];
+      if (!meta) continue;
+      if (meta.serverId !== activeServerId) continue;
+      if (!out[meta.channelId]) out[meta.channelId] = [];
+      out[meta.channelId].push({ id: meta.id, title: meta.title, channelName: meta.channelName });
+    }
+    return out;
+  }, [followedPostIds, followedPostMeta, activeServerId]);
+
+  const handleSelectPost = useCallback((postId: string, channelName: string) => {
+    if (typeof window === 'undefined') return;
+    const slug = slugify(channelName);
+    const url = `/chat?c=${slug}&p=${postId}`;
+    window.history.pushState(null, '', url);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+    setActivePostId(postId);
+    setActivePostIdStore(postId);
+    onChannelSelect?.();
+  }, [onChannelSelect, setActivePostIdStore]);
 
   const handleResize = useCallback((clientX: number) => {
     const left = asideRef.current?.getBoundingClientRect().left ?? 0;
@@ -318,6 +733,9 @@ export default function ChannelSidebar({ onChannelSelect }: { onChannelSelect?: 
                   channel={ch}
                   isActive={ch.id === activeChannelId}
                   onClick={() => { setActiveChannel(ch.id); onChannelSelect?.(); }}
+                  followedPosts={followedByChannel[ch.id]}
+                  activePostId={activePostId}
+                  onSelectPost={handleSelectPost}
                 />
               ))}
             </div>
@@ -331,6 +749,9 @@ export default function ChannelSidebar({ onChannelSelect }: { onChannelSelect?: 
             category={cat}
             activeChannelId={activeChannelId}
             onSelectChannel={(id) => { setActiveChannel(id); onChannelSelect?.(); }}
+            followedByChannel={followedByChannel}
+            activePostId={activePostId}
+            onSelectPost={handleSelectPost}
           />
         ))}
       </nav>

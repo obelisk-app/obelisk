@@ -40,6 +40,9 @@ export async function GET(
       tags: {
         include: { tag: true },
       },
+      reactions: {
+        select: { id: true, messageId: true, authorPubkey: true, emoji: true },
+      },
     },
   });
 
@@ -51,11 +54,13 @@ export async function GET(
     channelId: p.channelId,
     authorPubkey: p.authorPubkey,
     title: p.title,
+    coverImage: p.coverImage,
     content: p.content,
     createdAt: p.createdAt,
     replyCount: p._count.replies,
     lastReplyAt: p.replies[0]?.createdAt ?? null,
     tags: p.tags.map((t) => ({ id: t.tag.id, name: t.tag.name, color: t.tag.color })),
+    reactions: p.reactions,
   }));
 
   return NextResponse.json({ posts: result, hasMore });
@@ -112,19 +117,23 @@ export async function POST(
     }
   }
 
-  const { title, content, tagIds } = await req.json();
+  const { title, content, tagIds, coverImage } = await req.json();
   if (!title || typeof title !== 'string' || !title.trim()) {
     return NextResponse.json({ error: 'Title required' }, { status: 400 });
   }
   if (!content || typeof content !== 'string' || !content.trim()) {
     return NextResponse.json({ error: 'Content required' }, { status: 400 });
   }
+  const coverImageClean = typeof coverImage === 'string' && coverImage.trim()
+    ? coverImage.trim()
+    : null;
 
   const post = await prisma.message.create({
     data: {
       channelId,
       authorPubkey: pubkey,
       title: title.trim(),
+      coverImage: coverImageClean,
       content: content.trim(),
       ...(Array.isArray(tagIds) && tagIds.length > 0
         ? { tags: { create: tagIds.map((tagId: string) => ({ tagId })) } }

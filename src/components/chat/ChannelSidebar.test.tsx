@@ -10,12 +10,17 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock auth store for UserPanel
-vi.mock('@/store/auth', () => ({
-  useAuthStore: vi.fn(() => ({
+vi.mock('@/store/auth', () => {
+  const state = {
     profile: { pubkey: 'test', npub: 'npub1test', name: 'Test User', displayName: 'Test User' },
-    logout: vi.fn(),
-  })),
-}));
+    logout: () => {},
+  };
+  return {
+    useAuthStore: vi.fn((selector?: (s: typeof state) => unknown) =>
+      selector ? selector(state) : state,
+    ),
+  };
+});
 
 describe('ChannelSidebar', () => {
   beforeEach(() => {
@@ -109,6 +114,55 @@ describe('ChannelSidebar', () => {
     expect(screen.queryByText('anuncios')).not.toBeInTheDocument();
   });
 
+  it('context menu "Copiar enlace" on a channel copies /chat?s=&c= URL', async () => {
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText },
+      writable: true,
+      configurable: true,
+    });
+    Object.defineProperty(window, 'location', {
+      value: { origin: 'https://obelisk.test', pathname: '/chat', search: '' },
+      writable: true,
+    });
+
+    useChatStore.setState({
+      isLoadingChannels: false,
+      servers: [{ id: 's1', name: 'Test', icon: null, banner: null }],
+      activeServerId: 's1',
+      pinnedChannels: [
+        { id: 'ch1', name: 'general', emoji: null, type: 'text', position: 0, categoryId: null },
+      ],
+      categories: [],
+    });
+
+    render(<ChannelSidebar />);
+    await user.click(screen.getByTestId('channel-dots-ch1'));
+    await user.click(screen.getByTestId('copy-channel-link-btn'));
+
+    expect(writeText).toHaveBeenCalledWith(
+      'https://obelisk.test/chat?c=general',
+    );
+  });
+
+  it('right-click on a channel row opens the context menu', async () => {
+    useChatStore.setState({
+      isLoadingChannels: false,
+      servers: [{ id: 's1', name: 'Test', icon: null, banner: null }],
+      activeServerId: 's1',
+      pinnedChannels: [
+        { id: 'ch1', name: 'general', emoji: null, type: 'text', position: 0, categoryId: null },
+      ],
+      categories: [],
+    });
+
+    render(<ChannelSidebar />);
+    const { fireEvent } = await import('@testing-library/react');
+    fireEvent.contextMenu(screen.getByText('general'));
+    expect(screen.getByTestId('channel-context-menu')).toBeInTheDocument();
+  });
+
   it('calls setActiveChannel when clicking a channel', async () => {
     const user = userEvent.setup();
     useChatStore.setState({
@@ -189,5 +243,114 @@ describe('ChannelSidebar', () => {
     render(<ChannelSidebar onChannelSelect={onChannelSelect} />);
     await user.click(screen.getByText('news'));
     expect(onChannelSelect).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders followed forum posts as expandable rows under their forum channel', () => {
+    localStorage.setItem('obelisk:followed-posts', JSON.stringify(['post-a']));
+    useChatStore.setState({
+      isLoadingChannels: false,
+      servers: [{ id: 's1', name: 'Test', icon: null, banner: null }],
+      activeServerId: 's1',
+      pinnedChannels: [],
+      categories: [
+        {
+          id: 'cat1', name: 'FORO', position: 0,
+          channels: [
+            { id: 'fch1', name: 'plaza-publica', emoji: null, type: 'forum', position: 0, categoryId: 'cat1' },
+          ],
+        },
+      ],
+      followedPostIds: ['post-a'],
+      followedPostMeta: {
+        'post-a': {
+          id: 'post-a',
+          title: 'Only Claws',
+          channelId: 'fch1',
+          channelName: 'plaza-publica',
+          serverId: 's1',
+        },
+      },
+    });
+
+    render(<ChannelSidebar />);
+    expect(screen.getByTestId('channel-followed-posts-fch1')).toBeInTheDocument();
+    expect(screen.getByText('Only Claws')).toBeInTheDocument();
+  });
+
+  it('does not render followed posts from other servers', () => {
+    localStorage.setItem('obelisk:followed-posts', JSON.stringify(['post-other']));
+    useChatStore.setState({
+      isLoadingChannels: false,
+      servers: [{ id: 's1', name: 'Test', icon: null, banner: null }],
+      activeServerId: 's1',
+      pinnedChannels: [],
+      categories: [
+        {
+          id: 'cat1', name: 'FORO', position: 0,
+          channels: [
+            { id: 'fch1', name: 'plaza-publica', emoji: null, type: 'forum', position: 0, categoryId: 'cat1' },
+          ],
+        },
+      ],
+      followedPostIds: ['post-other'],
+      followedPostMeta: {
+        'post-other': {
+          id: 'post-other',
+          title: 'From Other Server',
+          channelId: 'other-ch',
+          channelName: 'other-forum',
+          serverId: 's-other',
+        },
+      },
+    });
+
+    render(<ChannelSidebar />);
+    expect(screen.queryByText('From Other Server')).not.toBeInTheDocument();
+  });
+
+  it('clicking a followed post row pushes /chat?c=&p= and dispatches popstate', async () => {
+    const user = userEvent.setup();
+    localStorage.setItem('obelisk:followed-posts', JSON.stringify(['post-a']));
+    Object.defineProperty(window, 'location', {
+      value: { origin: 'https://obelisk.test', pathname: '/chat', search: '' },
+      writable: true,
+    });
+    const pushSpy = vi.spyOn(window.history, 'pushState').mockImplementation(() => {});
+    const popSpy = vi.fn();
+    window.addEventListener('popstate', popSpy);
+
+    useChatStore.setState({
+      isLoadingChannels: false,
+      servers: [{ id: 's1', name: 'Test', icon: null, banner: null }],
+      activeServerId: 's1',
+      pinnedChannels: [],
+      categories: [
+        {
+          id: 'cat1', name: 'FORO', position: 0,
+          channels: [
+            { id: 'fch1', name: 'plaza-publica', emoji: null, type: 'forum', position: 0, categoryId: 'cat1' },
+          ],
+        },
+      ],
+      followedPostIds: ['post-a'],
+      followedPostMeta: {
+        'post-a': {
+          id: 'post-a',
+          title: 'Only Claws',
+          channelId: 'fch1',
+          channelName: 'plaza-publica',
+          serverId: 's1',
+        },
+      },
+    });
+
+    render(<ChannelSidebar />);
+    await user.click(screen.getByTestId('sidebar-post-row-post-a'));
+
+    expect(pushSpy).toHaveBeenCalledWith(null, '', '/chat?c=plaza-publica&p=post-a');
+    expect(popSpy).toHaveBeenCalled();
+
+    window.removeEventListener('popstate', popSpy);
+    pushSpy.mockRestore();
   });
 });

@@ -13,6 +13,8 @@ export interface NotificationEvent {
 interface NotificationState {
   channelUnreads: Record<string, number>;
   channelMentions: Record<string, boolean>;
+  postUnreads: Record<string, number>;
+  postMentions: Record<string, boolean>;
   dmUnreads: Record<string, number>;
   /**
    * Server-authoritative per-thread read cursor (unix ms). Used client-side
@@ -27,6 +29,9 @@ interface NotificationState {
   setChannelUnread: (channelId: string, count: number, hasMention?: boolean) => void;
   incrementChannelUnread: (channelId: string, hasMention?: boolean) => void;
   clearChannelUnread: (channelId: string) => void;
+  incrementPostUnread: (postId: string, hasMention?: boolean) => void;
+  clearPostUnread: (postId: string) => void;
+  setPostUnreads: (counts: Record<string, number>, mentions?: Record<string, boolean>) => void;
   setDMUnread: (pubkey: string, count: number) => void;
   setDMUnreads: (counts: Record<string, number>) => void;
   clearDMUnread: (pubkey: string) => void;
@@ -44,6 +49,8 @@ interface NotificationState {
 export const useNotificationStore = create<NotificationState>()((set) => ({
   channelUnreads: {},
   channelMentions: {},
+  postUnreads: {},
+  postMentions: {},
   dmUnreads: {},
   dmLastReadAt: {},
   channelServerMap: {},
@@ -71,6 +78,27 @@ export const useNotificationStore = create<NotificationState>()((set) => ({
     const { [channelId]: __, ...restMentions } = state.channelMentions;
     return { channelUnreads: restUnreads, channelMentions: restMentions };
   }),
+
+  incrementPostUnread: (postId, hasMention) => set((state) => ({
+    postUnreads: {
+      ...state.postUnreads,
+      [postId]: (state.postUnreads[postId] || 0) + 1,
+    },
+    postMentions: hasMention
+      ? { ...state.postMentions, [postId]: true }
+      : state.postMentions,
+  })),
+
+  clearPostUnread: (postId) => set((state) => {
+    const { [postId]: _, ...restUnreads } = state.postUnreads;
+    const { [postId]: __, ...restMentions } = state.postMentions;
+    return { postUnreads: restUnreads, postMentions: restMentions };
+  }),
+
+  setPostUnreads: (counts, mentions) => set((state) => ({
+    postUnreads: counts,
+    postMentions: mentions ?? state.postMentions,
+  })),
 
   setDMUnread: (pubkey, count) => set((state) => ({
     dmUnreads: { ...state.dmUnreads, [pubkey]: count },

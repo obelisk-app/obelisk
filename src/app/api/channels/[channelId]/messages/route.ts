@@ -21,7 +21,7 @@ export async function GET(
   // Validate channel exists
   const channel = await prisma.channel.findUnique({
     where: { id: channelId },
-    select: { id: true, serverId: true, readPermission: true, readRoleIds: true },
+    select: { id: true, serverId: true, readPermission: true, readRoleIds: true, type: true },
   });
   if (!channel) {
     return NextResponse.json({ error: 'Channel not found' }, { status: 404 });
@@ -36,21 +36,70 @@ export async function GET(
 
   const { searchParams } = new URL(req.url);
   const cursor = searchParams.get('cursor');
+  const around = searchParams.get('around');
+  const postId = searchParams.get('postId');
   const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
 
+  const isForum = channel.type === 'forum';
+  const forumFilter = isForum
+    ? postId
+      ? { replyToId: postId }
+      : { title: { not: null } as const, replyToId: null }
+    : {};
+
+  const include = {
+    replyTo: {
+      select: { id: true, content: true, authorPubkey: true },
+    },
+    reactions: {
+      select: { id: true, messageId: true, authorPubkey: true, emoji: true },
+    },
+  } as const;
+
+  // ?around=<msgId>: return a page centered on the target message so deep-links
+  // to old messages (shared via "Copiar enlace") can land + highlight the target
+  // even if it's not in the most recent page. Half before, half after + target.
+  if (around) {
+    const target = await prisma.message.findUnique({
+      where: { id: around },
+      select: { id: true, createdAt: true, channelId: true, deletedAt: true },
+    });
+    if (!target || target.channelId !== channelId || target.deletedAt) {
+      return NextResponse.json({ error: 'Message not found' }, { status: 404 });
+    }
+    const half = Math.floor(limit / 2);
+    const [before, after] = await Promise.all([
+      prisma.message.findMany({
+        where: { channelId, deletedAt: null, ...forumFilter, createdAt: { lt: target.createdAt } },
+        orderBy: { createdAt: 'desc' },
+        take: half,
+        include,
+      }),
+      prisma.message.findMany({
+        where: { channelId, deletedAt: null, ...forumFilter, createdAt: { gt: target.createdAt } },
+        orderBy: { createdAt: 'asc' },
+        take: half,
+        include,
+      }),
+    ]);
+    const targetFull = await prisma.message.findUnique({
+      where: { id: around },
+      include,
+    });
+    const ordered = [...before.reverse(), ...(targetFull ? [targetFull] : []), ...after];
+    const oldest = ordered[0]?.id ?? null;
+    return NextResponse.json({
+      messages: ordered,
+      nextCursor: oldest,
+    });
+  }
+
   const messages = await prisma.message.findMany({
-    where: { channelId, deletedAt: null },
+    where: { channelId, deletedAt: null, ...forumFilter },
     orderBy: { createdAt: 'desc' },
     take: limit + 1,
     ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-    include: {
-      replyTo: {
-        select: { id: true, content: true, authorPubkey: true },
-      },
-      reactions: {
-        select: { id: true, messageId: true, authorPubkey: true, emoji: true },
-      },
-    },
+    include,
   });
 
   const hasMore = messages.length > limit;

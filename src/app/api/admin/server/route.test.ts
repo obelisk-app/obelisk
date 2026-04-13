@@ -221,6 +221,83 @@ describe('PATCH /api/admin/server', () => {
       });
     });
   });
+
+  describe('landing channel field', () => {
+    function mockOwnerAuth() {
+      mockGetAuth.mockResolvedValue('owner-pk');
+      mockPrisma.server.findUnique.mockResolvedValue({ ownerPubkey: 'owner-pk' });
+      mockPrisma.member.findUnique.mockResolvedValue({
+        id: 'm1',
+        serverId: 'srv1',
+        pubkey: 'owner-pk',
+        role: 'owner',
+      });
+    }
+
+    it('owner can set landingChannelId to a valid text channel', async () => {
+      mockOwnerAuth();
+      mockPrisma.channel.findFirst.mockResolvedValue({ id: 'ch2' });
+      mockPrisma.server.update.mockResolvedValue({ id: 'srv1', landingChannelId: 'ch2' });
+
+      const res = await PATCH(makeRequest('PATCH', { landingChannelId: 'ch2' }));
+      expect(res.status).toBe(200);
+      expect(mockPrisma.channel.findFirst).toHaveBeenCalledWith({
+        where: { id: 'ch2', serverId: 'srv1', type: 'text' },
+        select: { id: true },
+      });
+      expect(mockPrisma.server.update).toHaveBeenCalledWith({
+        where: { id: 'srv1' },
+        data: { landingChannelId: 'ch2' },
+      });
+    });
+
+    it('owner can clear landingChannelId with null', async () => {
+      mockOwnerAuth();
+      mockPrisma.server.update.mockResolvedValue({ id: 'srv1', landingChannelId: null });
+
+      const res = await PATCH(makeRequest('PATCH', { landingChannelId: null }));
+      expect(res.status).toBe(200);
+      expect(mockPrisma.channel.findFirst).not.toHaveBeenCalled();
+      expect(mockPrisma.server.update).toHaveBeenCalledWith({
+        where: { id: 'srv1' },
+        data: { landingChannelId: null },
+      });
+    });
+
+    it('rejects landingChannelId for a non-text or foreign channel', async () => {
+      mockOwnerAuth();
+      mockPrisma.channel.findFirst.mockResolvedValue(null);
+
+      const res = await PATCH(makeRequest('PATCH', { landingChannelId: 'voice-ch' }));
+      expect(res.status).toBe(400);
+      expect(mockPrisma.server.update).not.toHaveBeenCalled();
+    });
+
+    it('updates landing and welcome channels independently in one request', async () => {
+      mockOwnerAuth();
+      mockPrisma.channel.findFirst
+        .mockResolvedValueOnce({ id: 'welcome-ch' })
+        .mockResolvedValueOnce({ id: 'landing-ch' });
+      mockPrisma.server.update.mockResolvedValue({ id: 'srv1' });
+
+      const res = await PATCH(
+        makeRequest('PATCH', {
+          welcomeChannelId: 'welcome-ch',
+          welcomeLocale: 'en',
+          landingChannelId: 'landing-ch',
+        }),
+      );
+      expect(res.status).toBe(200);
+      expect(mockPrisma.server.update).toHaveBeenCalledWith({
+        where: { id: 'srv1' },
+        data: {
+          welcomeChannelId: 'welcome-ch',
+          welcomeLocale: 'en',
+          landingChannelId: 'landing-ch',
+        },
+      });
+    });
+  });
 });
 
 describe('DELETE /api/admin/server', () => {

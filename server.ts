@@ -95,6 +95,10 @@ app.prepare().then(async () => {
     if (!pubkeySockets.has(pubkey)) pubkeySockets.set(pubkey, new Set());
     pubkeySockets.get(pubkey)!.add(socket.id);
 
+    // Join a pubkey-scoped room so API routes can target notifications
+    // (e.g. `post-reply` to forum post subscribers) via `io.to('pubkey:<x>')`.
+    socket.join(`pubkey:${pubkey}`);
+
     // Presence: announce online on first socket for this pubkey
     if (pubkeySockets.get(pubkey)!.size === 1) {
       io.emit('presence-update', { pubkey, online: true });
@@ -215,6 +219,31 @@ app.prepare().then(async () => {
 
         io.to(`channel:${channelId}`).emit('new-message', enriched);
 
+        // Forum post thread fan-out: if the new message is a reply to a forum
+        // post (parent message has a title), notify every subscriber of that
+        // post (except the author) with a `post-unread` event so their
+        // sidebar shows the post in white + unread count — same pattern as
+        // channel unreads.
+        if (replyToId && message.replyTo) {
+          const parent = await prisma.message.findUnique({
+            where: { id: replyToId },
+            select: { title: true },
+          });
+          if (parent?.title) {
+            const subs = await prisma.postSubscription.findMany({
+              where: { postId: replyToId, pubkey: { not: pubkey } },
+              select: { pubkey: true },
+            });
+            for (const s of subs) {
+              io.to(`pubkey:${s.pubkey}`).emit('post-unread', {
+                postId: replyToId,
+                messageId: message.id,
+                authorPubkey: pubkey,
+              });
+            }
+          }
+        }
+
         // Extract mentions (hex + bech32) and create Mention records.
         // Also treat a reply to someone else's message as an implicit mention
         // of the original author — that's how Discord surfaces replies.
@@ -231,7 +260,7 @@ app.prepare().then(async () => {
           }
         }
 
-        // `@everyone` broadcast: mod+ fans out a Mention row to every
+        // `@everyone` broadcast: admin+ fans out a Mention row to every
         // member of the server who can read this channel. Below that role,
         // the token renders as a pill but triggers no notification — the
         // gate here is the spam protection.

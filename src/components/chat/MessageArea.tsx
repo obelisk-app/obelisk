@@ -431,7 +431,7 @@ export default function MessageArea({ profileCache, onDelete, onToggleReaction }
   onDelete: (messageId: string) => void;
   onToggleReaction: (messageId: string, emoji: string) => void;
 }) {
-  const { messages, isLoadingMessages, activeChannelId, pinnedChannels, categories, hasMoreMessages, messageCursor, prependMessages, setMessageCursor, highlightedMessageId, setIsNearBottom, myRole, updatePinState } = useChatStore();
+  const { messages, isLoadingMessages, activeChannelId, activePostId, pinnedChannels, categories, hasMoreMessages, messageCursor, prependMessages, setMessageCursor, highlightedMessageId, setIsNearBottom, myRole, updatePinState } = useChatStore();
   const canPin = myRole === 'owner' || myRole === 'admin';
   const canModerate = myRole === 'owner' || myRole === 'admin' || myRole === 'mod';
 
@@ -610,7 +610,8 @@ export default function MessageArea({ profileCache, onDelete, onToggleReaction }
     const container = scrollContainerRef.current;
     const prevHeight = container?.scrollHeight ?? 0;
     try {
-      const res = await fetch(`/api/channels/${activeChannelId}/messages?cursor=${messageCursor}`);
+      const postParam = activePostId ? `&postId=${encodeURIComponent(activePostId)}` : '';
+      const res = await fetch(`/api/channels/${activeChannelId}/messages?cursor=${messageCursor}${postParam}`);
       if (res.ok) {
         const data = await res.json();
         prependMessages(data.messages);
@@ -625,7 +626,7 @@ export default function MessageArea({ profileCache, onDelete, onToggleReaction }
     } finally {
       setLoadingOlder(false);
     }
-  }, [activeChannelId, messageCursor, loadingOlder, prependMessages, setMessageCursor]);
+  }, [activeChannelId, activePostId, messageCursor, loadingOlder, prependMessages, setMessageCursor]);
 
   const handleReport = useCallback((msg: Message) => {
     setReportTarget(msg);
@@ -753,7 +754,7 @@ export default function MessageArea({ profileCache, onDelete, onToggleReaction }
                   className={highlightedMessageId === msg.id ? 'bg-lc-green/10 transition-colors duration-1000' : ''}
                 >
                   <MessageBubble
-                    message={msg}
+                    message={activePostId && msg.replyTo?.id === activePostId ? { ...msg, replyTo: null } : msg}
                     profileCache={profileCache}
                     canPin={canPin}
                     canModerate={canModerate}

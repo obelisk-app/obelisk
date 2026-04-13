@@ -9,6 +9,7 @@ import ServerPicker, { type AdminServerOption } from '@/components/admin/ServerP
 import CreateServerModal from '@/components/admin/CreateServerModal';
 import MembershipsModal from '@/components/admin/MembershipsModal';
 import WelcomeBotSettings from '@/components/admin/WelcomeBotSettings';
+import LandingChannelSettings from '@/components/admin/LandingChannelSettings';
 import EmojiManager from '@/components/admin/EmojiManager';
 import GifManager from '@/components/admin/GifManager';
 import RoleManager from '@/components/admin/RoleManager';
@@ -39,6 +40,7 @@ interface ServerSettings {
   ownerPubkey: string;
   welcomeChannelId: string | null;
   welcomeLocale: string | null;
+  landingChannelId: string | null;
   maxImageBytes: number;
   maxVideoBytes: number;
   maxDocBytes: number;
@@ -91,6 +93,8 @@ export default function AdminServerPage({
   const [servers, setServers] = useState<AdminServerOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [settingsDirty, setSettingsDirty] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<string | null>(null);
   const [accessDenied, setAccessDenied] = useState(false);
@@ -260,17 +264,10 @@ export default function AdminServerPage({
     if (!server || !serverId) return;
     setSaving(true);
     const form = new FormData(e.currentTarget);
-    const rawWelcomeChannel = (form.get('welcomeChannelId') as string) ?? '';
-    const rawWelcomeLocale = (form.get('welcomeLocale') as string) ?? '';
     const body: Record<string, string | null> = {
       name: form.get('name') as string,
       icon: (form.get('icon') as string) || null,
       banner: (form.get('banner') as string) || null,
-      welcomeChannelId: rawWelcomeChannel === '' ? null : rawWelcomeChannel,
-      // When the bot is disabled (no channel), also clear the locale so the
-      // stored state stays consistent. Otherwise persist whatever the admin
-      // picked (defaults to 'es' in the component).
-      welcomeLocale: rawWelcomeChannel === '' ? null : rawWelcomeLocale || 'es',
     };
     // ownerPubkey transfer is instance-owner only
     if (instanceOwner) {
@@ -286,6 +283,9 @@ export default function AdminServerPage({
     });
     await fetchServer();
     setSaving(false);
+    setSettingsDirty(false);
+    setJustSaved(true);
+    setTimeout(() => setJustSaved(false), 2500);
   };
 
   if (accessDenied) {
@@ -498,7 +498,14 @@ export default function AdminServerPage({
         {/* Server Settings Tab */}
         {tab === 'settings' && server && (
           <div className="max-w-2xl space-y-8" data-testid="settings-tab">
-            <form onSubmit={handleSaveServer} className="space-y-5">
+            <form
+              onSubmit={handleSaveServer}
+              onChange={() => {
+                setSettingsDirty(true);
+                setJustSaved(false);
+              }}
+              className="space-y-5 pb-24"
+            >
               <div className="rounded-xl border border-lc-border bg-lc-dark/40 p-6 space-y-5">
                 <h3 className="text-sm font-semibold text-lc-white">Server Profile</h3>
                 <div>
@@ -527,21 +534,6 @@ export default function AdminServerPage({
                 </div>
               </div>
 
-              {/* Welcome bot */}
-              {serverId && (
-                <WelcomeBotSettings
-                  serverId={serverId}
-                  serverName={server.name}
-                  currentChannelId={server.welcomeChannelId}
-                  currentLocale={server.welcomeLocale}
-                  previewMember={
-                    members.length > 0
-                      ? { displayName: members[0].displayName, picture: members[0].picture }
-                      : null
-                  }
-                />
-              )}
-
               {/* Ownership — instance-owner only */}
               {instanceOwner && (
                 <div className="rounded-xl border border-purple-500/30 bg-purple-500/5 p-6 space-y-3" data-testid="ownership-section">
@@ -565,14 +557,53 @@ export default function AdminServerPage({
                 </div>
               )}
 
-              <button
-                type="submit"
-                disabled={saving || !isOwner}
-                className="px-6 py-2 rounded-full bg-lc-green text-lc-black font-semibold text-sm hover:brightness-110 transition disabled:opacity-50"
-              >
-                {saving ? 'Saving...' : 'Save Changes'}
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  type="submit"
+                  disabled={saving || !isOwner || !settingsDirty}
+                  className={`px-5 py-2 rounded-full font-semibold text-sm transition disabled:opacity-50 disabled:cursor-not-allowed ${
+                    settingsDirty
+                      ? 'bg-lc-green text-lc-black hover:brightness-110'
+                      : 'bg-lc-border text-lc-muted'
+                  }`}
+                  data-testid="server-profile-save"
+                >
+                  {saving ? 'Saving…' : 'Save server profile'}
+                </button>
+                {justSaved && (
+                  <span className="text-xs text-lc-green">✓ Saved</span>
+                )}
+                {settingsDirty && !saving && (
+                  <span className="text-xs text-lc-muted">Unsaved changes</span>
+                )}
+              </div>
             </form>
+
+            {/* Welcome bot — self-contained card with its own save button so
+                admins don't have to hunt for a global save. */}
+            {serverId && (
+              <WelcomeBotSettings
+                serverId={serverId}
+                serverName={server.name}
+                currentChannelId={server.welcomeChannelId}
+                currentLocale={server.welcomeLocale}
+                previewMember={
+                  members.length > 0
+                    ? { displayName: members[0].displayName, picture: members[0].picture }
+                    : null
+                }
+                onSaved={fetchServer}
+              />
+            )}
+
+            {/* Landing channel — independent card with its own save button. */}
+            {serverId && (
+              <LandingChannelSettings
+                serverId={serverId}
+                currentChannelId={server.landingChannelId}
+                onSaved={fetchServer}
+              />
+            )}
 
             {/* Upload limits — owner only, separate form to keep the main
                 profile save path untouched. Fields use MB in the UI and are
