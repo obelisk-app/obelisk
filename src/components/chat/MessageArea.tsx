@@ -54,9 +54,11 @@ function trackRecentEmoji(emoji: string) {
 }
 
 
-function ContextMenu({ isMe, canModerate, openBelow, onReply, onReport, onEdit, onDelete, onCopyText, onCopyLink, copyLinkLabel, onAddReaction, onClose }: {
+function ContextMenu({ isMe, canModerate, canPin, isPinned, openBelow, onReply, onReport, onEdit, onDelete, onCopyText, onCopyLink, copyLinkLabel, onAddReaction, onTogglePin, onClose }: {
   isMe: boolean;
   canModerate: boolean;
+  canPin: boolean;
+  isPinned: boolean;
   openBelow?: boolean;
   onReply: () => void;
   onReport: () => void;
@@ -66,6 +68,7 @@ function ContextMenu({ isMe, canModerate, openBelow, onReply, onReport, onEdit, 
   onCopyLink: () => void;
   copyLinkLabel: string;
   onAddReaction: () => void;
+  onTogglePin: () => void;
   onClose: () => void;
 }) {
   const menuRef = useRef<HTMLDivElement>(null);
@@ -114,6 +117,12 @@ function ContextMenu({ isMe, canModerate, openBelow, onReply, onReport, onEdit, 
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
         {copyLinkLabel}
       </button>
+      {canPin && (
+        <button onClick={() => { onTogglePin(); onClose(); }} className={`${itemClass} text-lc-white`} data-testid="pin-menu-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill={isPinned ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2l8 8-5 1-4 4-1 5-4-4-5 5v-3l5-5-4-4 5-1 4-4z"/></svg>
+          {isPinned ? 'Desfijar mensaje' : 'Fijar mensaje'}
+        </button>
+      )}
       {(isMe || canModerate) && (
         <button onClick={() => { onDelete(); onClose(); }} className={`${itemClass} text-red-400`} data-testid="delete-btn">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
@@ -272,7 +281,7 @@ function MessageBubble({ message, profileCache, canPin, canModerate, onReply, on
               <button
                 key={emoji}
                 onClick={() => handleReaction(message.id, emoji)}
-                className="p-1 rounded hover:bg-lc-border/60 text-sm transition-all"
+                className="p-1 rounded hover:bg-lc-border/60 text-sm transition-all [@media(hover:none)]:hidden"
                 title={`React ${emoji}`}
                 data-testid={`quick-react-${emoji}`}
               >
@@ -283,7 +292,7 @@ function MessageBubble({ message, profileCache, canPin, canModerate, onReply, on
             {isMe ? (
               <button
                 onClick={() => setEditingMessage(message)}
-                className="p-1 rounded hover:bg-lc-border/60 text-lc-muted hover:text-lc-green transition-all"
+                className="p-1 rounded hover:bg-lc-border/60 text-lc-muted hover:text-lc-green transition-all [@media(hover:none)]:hidden"
                 title="Editar"
                 data-testid="edit-btn"
               >
@@ -295,7 +304,7 @@ function MessageBubble({ message, profileCache, canPin, canModerate, onReply, on
             ) : (
               <button
                 onClick={() => onReply(message)}
-                className="p-1 rounded hover:bg-lc-border/60 text-lc-muted hover:text-lc-green transition-all"
+                className="p-1 rounded hover:bg-lc-border/60 text-lc-muted hover:text-lc-green transition-all [@media(hover:none)]:hidden"
                 title="Responder"
                 data-testid="reply-btn"
               >
@@ -309,7 +318,7 @@ function MessageBubble({ message, profileCache, canPin, canModerate, onReply, on
             {canPin && (
               <button
                 onClick={() => onTogglePin(message)}
-                className={`p-1 rounded hover:bg-lc-border/60 transition-all ${
+                className={`p-1 rounded hover:bg-lc-border/60 transition-all [@media(hover:none)]:hidden ${
                   message.pinnedAt ? 'text-lc-green' : 'text-lc-muted hover:text-lc-green'
                 }`}
                 title={message.pinnedAt ? 'Desfijar mensaje' : 'Fijar mensaje'}
@@ -340,6 +349,8 @@ function MessageBubble({ message, profileCache, canPin, canModerate, onReply, on
             <ContextMenu
               isMe={isMe}
               canModerate={canModerate}
+              canPin={canPin}
+              isPinned={!!message.pinnedAt}
               openBelow={popupBelow}
               onReply={() => onReply(message)}
               onReport={() => onReport(message)}
@@ -349,6 +360,7 @@ function MessageBubble({ message, profileCache, canPin, canModerate, onReply, on
               onCopyLink={handleCopyLink}
               copyLinkLabel={copyLinkLabel}
               onAddReaction={() => { setShowMenu(false); setShowEmojiPicker(true); }}
+              onTogglePin={() => onTogglePin(message)}
               onClose={() => setShowMenu(false)}
             />
           )}
@@ -417,30 +429,51 @@ export default function MessageArea({ profileCache, onDelete, onToggleReaction }
   const [reportReason, setReportReason] = useState('');
   const [reportSending, setReportSending] = useState(false);
 
-  // Snapshot the unread count at channel-open time so the "New messages"
-  // separator is anchored above the first unread message and doesn't jump
-  // when the read-tracker clears the badge.
+  // Anchor the "New messages" separator at the server-authored `lastReadAt`
+  // boundary, snapshotted when the channel is first opened so subsequent
+  // mark-read sweeps don't make it jump.
   //
-  // Important: `channelUnreads` is server-authored and excludes the viewer's
-  // own messages (see `/api/unread`). The local `messages` array does NOT —
-  // it includes messages the viewer authored from other tabs/devices. So we
-  // can't use `messages.length - count` directly, or the user's own recent
-  // messages get rendered under the red "New messages" line.
+  // Using the timestamp — instead of `messages.length - unreadCount` — is
+  // what prevents the viewer's own messages from rendering below the red
+  // line. `channelUnreads` excludes self on the server, but the local
+  // `messages` array doesn't, so an index derived from the count places the
+  // separator too far back and traps own messages beneath it.
   //
-  // Instead, walk from the end and skip `count` *other-authored* messages to
-  // find the anchor — that matches the server's counting semantics.
+  // Fallback: when we don't know `lastReadAt` yet (first load race, offline
+  // cache miss), fall back to walking back `count` *other-authored*
+  // messages, which still matches the server's counting semantics.
   const { profile: viewerProfile } = useAuthStore();
   const viewerPubkey = viewerProfile?.pubkey ?? null;
+  const separatorLastReadAtRef = useRef<number | null>(null);
   const separatorCountRef = useRef<number>(0);
   const separatorChannelRef = useRef<string | null>(null);
   if (activeChannelId && separatorChannelRef.current !== activeChannelId) {
     separatorChannelRef.current = activeChannelId;
     const notif = useNotificationStore.getState();
     separatorCountRef.current = notif.channelUnreads[activeChannelId] || 0;
+    const lastRead = notif.channelLastReadAt[activeChannelId];
+    separatorLastReadAtRef.current = typeof lastRead === 'number' ? lastRead : null;
   }
   const separatorIndex = (() => {
+    if (messages.length === 0) return -1;
     const count = separatorCountRef.current;
-    if (count <= 0 || messages.length === 0) return -1;
+    if (count <= 0) return -1;
+    const lastRead = separatorLastReadAtRef.current;
+    if (lastRead !== null) {
+      // First message strictly newer than the read cursor — if it's the
+      // viewer's own message we still anchor above it; that means an own
+      // message can render below the line, but only if the viewer sent it
+      // post-read (rare in practice; mark-read fires on send when the
+      // channel is in view).
+      for (let i = 0; i < messages.length; i++) {
+        const ts = new Date(messages[i].createdAt).getTime();
+        if (ts > lastRead && messages[i].authorPubkey !== viewerPubkey) {
+          return i;
+        }
+      }
+      return -1;
+    }
+    // Count-based fallback.
     let remaining = count;
     for (let i = messages.length - 1; i >= 0; i--) {
       if (messages[i].authorPubkey !== viewerPubkey) {
@@ -448,8 +481,6 @@ export default function MessageArea({ profileCache, onDelete, onToggleReaction }
         if (remaining === 0) return i;
       }
     }
-    // Fewer unread-other messages loaded than the snapshot claimed — hide
-    // the separator rather than place it incorrectly.
     return -1;
   })();
 
