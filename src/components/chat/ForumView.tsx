@@ -5,7 +5,7 @@ import { useAuthStore } from '@/store/auth';
 import { ForumTag, useChatStore } from '@/store/chat';
 import MessageContent from './MessageContent';
 import EmojiPicker from './EmojiPicker';
-import PostReactions from './PostReactions';
+import MessageReactions from './MessageReactions';
 import PostEditModal from './PostEditModal';
 import TagEditor, { type TagDraft, splitDrafts } from './TagEditor';
 import { createPortal } from 'react-dom';
@@ -44,6 +44,7 @@ function ReplyRow({
   getName,
   getPicture,
   onReactionsChanged,
+  onReply,
 }: {
   reply: {
     id: string;
@@ -52,6 +53,7 @@ function ReplyRow({
     createdAt: string;
     editedAt?: string | null;
     reactions?: Array<{ id: string; messageId: string; authorPubkey: string; emoji: string }>;
+    replyTo?: { id: string; content: string; authorPubkey: string } | null;
   };
   channelId: string;
   myPubkey: string | null;
@@ -59,6 +61,7 @@ function ReplyRow({
   getName: (pubkey: string) => string;
   getPicture: (pubkey: string) => string | undefined;
   onReactionsChanged: (id: string, reactions: Array<{ id: string; messageId: string; authorPubkey: string; emoji: string }>) => void;
+  onReply?: (reply: { id: string; content: string; authorPubkey: string }) => void;
 }) {
   const [showPicker, setShowPicker] = useState(false);
 
@@ -85,14 +88,6 @@ function ReplyRow({
     } catch { /* ignore — optimistic update stays */ }
   };
 
-  const grouped = new Map<string, { count: number; isMine: boolean }>();
-  for (const r of reply.reactions ?? []) {
-    const entry = grouped.get(r.emoji) || { count: 0, isMine: false };
-    entry.count++;
-    if (r.authorPubkey === myPubkey) entry.isMine = true;
-    grouped.set(r.emoji, entry);
-  }
-
   return (
     <div className="group flex items-start gap-3 px-3 py-2 hover:bg-lc-border/20 rounded-lg transition-colors relative">
       {getPicture(reply.authorPubkey) ? (
@@ -112,40 +107,57 @@ function ReplyRow({
           </span>
           {reply.editedAt && <span className="text-[10px] text-lc-muted">(edited)</span>}
         </div>
+        {reply.replyTo && (
+          <div
+            className="flex items-center gap-1.5 mb-1 text-xs"
+            data-testid="forum-reply-preview"
+          >
+            <div className="w-0.5 h-3 bg-lc-green/40 rounded-full" />
+            <span className="text-lc-green/70 font-medium">
+              {getName(reply.replyTo.authorPubkey)}
+            </span>
+            <span className="text-lc-muted truncate max-w-xs">
+              {reply.replyTo.content}
+            </span>
+          </div>
+        )}
         <div className="text-sm text-lc-white/90 whitespace-pre-wrap">
           <MessageContent content={reply.content} />
         </div>
-        {grouped.size > 0 && (
-          <div className="flex flex-wrap gap-1 mt-1">
-            {Array.from(grouped.entries()).map(([emoji, { count, isMine }]) => (
-              <button
-                key={emoji}
-                type="button"
-                onClick={() => toggle(emoji)}
-                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs border transition-all ${
-                  isMine
-                    ? 'bg-lc-green/20 border-lc-green/40 text-lc-green'
-                    : 'bg-lc-dark border-lc-border text-lc-muted hover:border-lc-green/30'
-                }`}
-                data-testid="forum-reply-reaction-chip"
-              >
-                <span>{emoji}</span>
-                <span>{count}</span>
-              </button>
-            ))}
-          </div>
-        )}
+        <div className="mt-1">
+          <MessageReactions
+            reactions={reply.reactions}
+            myPubkey={myPubkey}
+            serverEmojis={serverEmojis}
+            onToggle={(emoji) => toggle(emoji)}
+            chipTestId="forum-reply-reaction-chip"
+          />
+        </div>
       </div>
-      <button
-        type="button"
-        onClick={() => setShowPicker((v) => !v)}
-        aria-label="Añadir reacción"
-        title="Añadir reacción"
-        data-testid={`forum-reply-add-reaction-${reply.id}`}
-        className="absolute top-1 right-2 p-1 rounded text-lc-muted hover:text-lc-white hover:bg-lc-border/60 opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity"
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
-      </button>
+      <div className="absolute top-1 right-2 flex items-center gap-0.5 opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity">
+        {onReply && (
+          <button
+            type="button"
+            onClick={() => onReply({ id: reply.id, content: reply.content, authorPubkey: reply.authorPubkey })}
+            aria-label="Responder"
+            title="Responder"
+            data-testid={`forum-reply-reply-${reply.id}`}
+            className="p-1 rounded text-lc-muted hover:text-lc-white hover:bg-lc-border/60"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => setShowPicker((v) => !v)}
+          aria-label="Añadir reacción"
+          title="Añadir reacción"
+          data-testid={`forum-reply-add-reaction-${reply.id}`}
+          className="p-1 rounded text-lc-muted hover:text-lc-white hover:bg-lc-border/60"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+        </button>
+      </div>
       {showPicker && (
         <EmojiPicker
           className="absolute right-2 top-8 z-50"
@@ -189,73 +201,6 @@ function RepliesSentinel({ onLoadMore }: { onLoadMore: () => Promise<void> | voi
   );
 }
 
-// Inline reactions row — renders grouped reactions as toggleable chips plus
-// an emoji-picker trigger. Kept local to ForumView to avoid coupling the
-// bigger MessageArea refactor; when MessageBubble is extracted later this
-// should reuse ReactionsDisplay from there.
-function PostReactionsRow({
-  reactions,
-  myPubkey,
-  onToggle,
-  serverEmojis,
-}: {
-  reactions: Array<{ authorPubkey: string; emoji: string }> | undefined;
-  myPubkey: string | null;
-  onToggle: (emoji: string) => void;
-  serverEmojis: Record<string, string>;
-}) {
-  const [showPicker, setShowPicker] = useState(false);
-  const grouped = new Map<string, { count: number; isMine: boolean }>();
-  for (const r of reactions ?? []) {
-    const entry = grouped.get(r.emoji) || { count: 0, isMine: false };
-    entry.count++;
-    if (r.authorPubkey === myPubkey) entry.isMine = true;
-    grouped.set(r.emoji, entry);
-  }
-  const entries = Array.from(grouped.entries());
-  return (
-    <div className="flex items-center flex-wrap gap-1 relative" data-testid="forum-post-reactions">
-      {entries.map(([emoji, { count, isMine }]) => (
-        <button
-          key={emoji}
-          type="button"
-          onClick={() => onToggle(emoji)}
-          className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs border transition-all ${
-            isMine
-              ? 'bg-lc-green/20 border-lc-green/40 text-lc-green'
-              : 'bg-lc-dark border-lc-border text-lc-muted hover:border-lc-green/30'
-          }`}
-          data-testid="forum-reaction-chip"
-        >
-          <span>{emoji.startsWith(':') ? serverEmojis[emoji.slice(1, -1)] ? '' : emoji : emoji}</span>
-          {emoji.startsWith(':') && serverEmojis[emoji.slice(1, -1)] && (
-            <img src={serverEmojis[emoji.slice(1, -1)]} alt={emoji} className="w-4 h-4 object-contain" />
-          )}
-          <span>{count}</span>
-        </button>
-      ))}
-      <button
-        type="button"
-        onClick={() => setShowPicker((v) => !v)}
-        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs border border-lc-border text-lc-muted hover:text-lc-white hover:border-lc-green/30 transition-colors"
-        data-testid="forum-add-reaction-btn"
-        title="Añadir reacción"
-      >
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
-        +
-      </button>
-      {showPicker && (
-        <EmojiPicker
-          className="absolute right-0 top-full mt-1 z-50"
-          serverEmojis={serverEmojis}
-          onSelect={(emoji) => { onToggle(emoji); setShowPicker(false); }}
-          onClose={() => setShowPicker(false)}
-        />
-      )}
-    </div>
-  );
-}
-
 interface PostTag {
   id: string;
   name: string;
@@ -292,6 +237,8 @@ interface ForumReply {
   createdAt: string;
   editedAt?: string | null;
   reactions?: PostReaction[];
+  replyToId?: string | null;
+  replyTo?: { id: string; content: string; authorPubkey: string } | null;
 }
 
 interface ForumViewProps {
@@ -774,6 +721,34 @@ export default function ForumView({ channelId, channelName, profileCache, availa
     }
   };
 
+  const togglePostReaction = async (postId: string, emoji: string) => {
+    if (!myPubkey) return;
+    setPosts((cur) => cur.map((p) => {
+      if (p.id !== postId) return p;
+      const current = p.reactions ?? [];
+      const existing = current.find((r) => r.authorPubkey === myPubkey && r.emoji === emoji);
+      const next = existing
+        ? current.filter((r) => r.id !== existing.id)
+        : [...current, { id: `tmp-${Date.now()}`, messageId: postId, authorPubkey: myPubkey, emoji }];
+      return { ...p, reactions: next };
+    }));
+    try {
+      const res = await fetch(`/api/channels/${channelId}/messages/${postId}/reactions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emoji }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.reactions) {
+          setPosts((cur) => cur.map((p) => p.id === postId
+            ? { ...p, reactions: data.reactions.map((r: { id: string; authorPubkey: string; emoji: string }) => ({ ...r, messageId: postId })) }
+            : p));
+        }
+      }
+    } catch { /* optimistic stays */ }
+  };
+
   const handleReply = async () => {
     if (!replyContent.trim() || !selectedPostId) return;
     setReplying(true);
@@ -791,19 +766,32 @@ export default function ForumView({ channelId, channelName, profileCache, availa
   };
 
   // Bridge from MessageInput's (content, replyToId) callback to the forum
-  // reply endpoint. Ignores replyToId — nested reply-to-reply is out of
-  // scope for this iteration; replies always target the post itself.
-  const handleComposerSend = async (content: string) => {
+  // reply endpoint. When replyToId targets a specific reply inside the
+  // thread, it is forwarded so the new message anchors there; otherwise
+  // the server defaults to anchoring at the post itself.
+  const handleComposerSend = async (content: string, replyToId?: string) => {
     if (!selectedPostId || !content.trim()) return;
     const res = await fetch(`/api/channels/${channelId}/posts/${selectedPostId}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content }),
+      body: JSON.stringify({ content, replyToId }),
     });
     if (res.ok) {
       const reply = await res.json();
       setReplies((prev) => [...prev, reply]);
     }
+  };
+
+  const handleReplyToReply = (target: { id: string; content: string; authorPubkey: string }) => {
+    setReplyingTo({
+      id: target.id,
+      channelId,
+      authorPubkey: target.authorPubkey,
+      content: target.content,
+      replyToId: null,
+      createdAt: new Date().toISOString(),
+      editedAt: null,
+    });
   };
 
   const getName = (pubkey: string) => profileCache.get(pubkey)?.name || shortPubkey(pubkey);
@@ -1042,6 +1030,7 @@ export default function ForumView({ channelId, channelName, profileCache, availa
                   onReactionsChanged={(_id, reactions) => {
                     setSelectedPost((prev) => prev ? { ...prev, reactions } : prev);
                   }}
+                  onReply={handleReplyToReply}
                 />
                 {replies.length > 0 && (
                   <p className="text-xs text-lc-muted font-semibold uppercase tracking-wider px-1 pt-3">
@@ -1060,6 +1049,7 @@ export default function ForumView({ channelId, channelName, profileCache, availa
                     onReactionsChanged={(id, reactions) => {
                       setReplies((prev) => prev.map((x) => x.id === id ? { ...x, reactions } : x));
                     }}
+                    onReply={handleReplyToReply}
                   />
                 ))}
                 {repliesHasMore && (
@@ -1085,7 +1075,7 @@ export default function ForumView({ channelId, channelName, profileCache, availa
             reply endpoint instead of the socket chat channel. */}
         <div className="border-t border-lc-border" data-testid="forum-reply-input">
           <MessageInput
-            onSend={(content) => { void handleComposerSend(content); }}
+            onSend={(content, replyToId) => { void handleComposerSend(content, replyToId); }}
           />
         </div>
       </div>
@@ -1369,31 +1359,16 @@ export default function ForumView({ channelId, channelName, profileCache, availa
                   ) : null}
                 </div>
                 </button>
-                {(post.reactions && post.reactions.length > 0) && (
-                  <div className="px-4 pb-3 -mt-1">
-                    <PostReactions
-                      channelId={channelId}
-                      postId={post.id}
-                      reactions={post.reactions}
-                      size="sm"
-                      onChanged={(reactions) => {
-                        setPosts((cur) =>
-                          cur.map((p) =>
-                            p.id === post.id
-                              ? {
-                                  ...p,
-                                  reactions: reactions.map((r) => ({
-                                    ...r,
-                                    messageId: post.id,
-                                  })),
-                                }
-                              : p,
-                          ),
-                        );
-                      }}
-                    />
-                  </div>
-                )}
+                <div className="px-4 pb-3 -mt-1">
+                  <MessageReactions
+                    reactions={post.reactions}
+                    myPubkey={myPubkey}
+                    serverEmojis={serverEmojis}
+                    size="sm"
+                    showAddButton
+                    onToggle={(emoji) => void togglePostReaction(post.id, emoji)}
+                  />
+                </div>
               </div>
             ))}
             {hasMore && (

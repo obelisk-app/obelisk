@@ -4,8 +4,14 @@ import { useEffect, useRef, useState } from 'react';
 import { useChatStore } from '@/store/chat';
 import { useAuthStore } from '@/store/auth';
 import { slugify } from '@/lib/slug';
-import PostReactions, { type PostReactionEntry } from './PostReactions';
+import MessageReactions from './MessageReactions';
 import PostEditModal from './PostEditModal';
+
+interface PostReactionEntry {
+  id: string;
+  emoji: string;
+  authorPubkey: string;
+}
 
 interface PostMeta {
   id: string;
@@ -35,6 +41,7 @@ export default function PostChatHeader({ postId, parentChannelName, onClose }: P
   const followedPostIds = useChatStore((s) => s.followedPostIds);
   const toggleFollowPost = useChatStore((s) => s.toggleFollowPost);
   const myRole = useChatStore((s) => s.myRole);
+  const serverEmojis = useChatStore((s) => s.serverEmojis);
   const myPubkey = useAuthStore((s) => s.profile?.pubkey ?? null);
   const following = followedPostIds.includes(postId);
   const canManage =
@@ -125,13 +132,36 @@ export default function PostChatHeader({ postId, parentChannelName, onClose }: P
       data-testid="post-chat-header"
     >
       {activeChannelId && (
-        <PostReactions
-          channelId={activeChannelId}
-          postId={postId}
-          reactions={post?.reactions ?? []}
-          onChanged={(reactions) =>
-            setPost((p) => (p ? { ...p, reactions } : p))
-          }
+        <MessageReactions
+          reactions={post?.reactions}
+          myPubkey={myPubkey}
+          serverEmojis={serverEmojis}
+          showAddButton
+          onToggle={async (emoji) => {
+            if (!myPubkey) return;
+            const current = post?.reactions ?? [];
+            const existing = current.find((r) => r.authorPubkey === myPubkey && r.emoji === emoji);
+            const next = existing
+              ? current.filter((r) => r.id !== existing.id)
+              : [...current, { id: `tmp-${Date.now()}`, emoji, authorPubkey: myPubkey }];
+            setPost((p) => (p ? { ...p, reactions: next } : p));
+            try {
+              const res = await fetch(
+                `/api/channels/${activeChannelId}/messages/${postId}/reactions`,
+                {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ emoji }),
+                },
+              );
+              if (res.ok) {
+                const data = await res.json();
+                if (data?.reactions) {
+                  setPost((p) => (p ? { ...p, reactions: data.reactions } : p));
+                }
+              }
+            } catch { /* optimistic stays */ }
+          }}
         />
       )}
       <div className="flex items-center gap-2 shrink-0">
