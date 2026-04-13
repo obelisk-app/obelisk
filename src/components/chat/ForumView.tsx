@@ -1321,16 +1321,17 @@ export default function ForumView({ channelId, channelName, profileCache, availa
                         for (const [emoji, count] of counts) {
                           if (count > topCount) { top = emoji; topCount = count; }
                         }
-                        const custom = top.startsWith(':') && top.endsWith(':')
-                          ? serverEmojis.find((e) => `:${e.name}:` === top)
+                        const customName = top.startsWith(':') && top.endsWith(':')
+                          ? top.slice(1, -1)
                           : null;
+                        const customUrl = customName ? serverEmojis[customName] ?? null : null;
                         return (
                           <span
                             className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-lc-olive/60 border border-lc-border"
                             data-testid="forum-post-card-top-reaction"
                           >
-                            {custom ? (
-                              <img src={custom.url} alt={top} className="w-3 h-3 object-contain" />
+                            {customUrl ? (
+                              <img src={customUrl} alt={top} className="w-3 h-3 object-contain" />
                             ) : (
                               <span className="text-[11px] leading-none">{top}</span>
                             )}
