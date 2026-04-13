@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { Locale } from '@/i18n';
+import { emojiForOptionText } from '@/components/chat/ChannelEmoji';
 
 interface TextChannelOption {
   id: string;
@@ -129,7 +130,7 @@ export default function WelcomeBotSettings({
             <option value="">— Disabled —</option>
             {channels.map((c) => (
               <option key={c.id} value={c.id}>
-                #{c.emoji ? `${c.emoji} ` : ''}
+                #{emojiForOptionText(c.emoji) ? `${emojiForOptionText(c.emoji)} ` : ''}
                 {c.name}
               </option>
             ))}

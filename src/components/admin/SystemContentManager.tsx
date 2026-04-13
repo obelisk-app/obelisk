@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import ConfirmDialog from './ConfirmDialog';
+import { emojiForOptionText } from '@/components/chat/ChannelEmoji';
 
 /**
  * Admin UI for "post as the server" content — welcome messages at the top
@@ -305,7 +306,7 @@ export default function SystemContentManager({ serverId }: SystemContentManagerP
         >
           {channels.map((ch) => (
             <option key={ch.id} value={ch.id}>
-              {ch.emoji ? `${ch.emoji} ` : ''}
+              {emojiForOptionText(ch.emoji) ? `${emojiForOptionText(ch.emoji)} ` : ''}
               {ch.name}
               {ch.type === 'forum' ? ' (forum)' : ''}
             </option>
