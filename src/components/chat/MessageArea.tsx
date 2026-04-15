@@ -139,6 +139,17 @@ function ContextMenu({ isMe, canModerate, canPin, isPinned, openBelow, onReply, 
   );
 }
 
+// Utility to format day separators
+const getDaySeparator = (date: Date) => {
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+
+  if (date.toDateString() === today.toDateString()) return 'Hoy';
+  if (date.toDateString() === yesterday.toDateString()) return 'Ayer';
+  return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+};
+
 function MessageBubble({ message, profileCache, canPin, canModerate, onReply, onReport, onDelete, onToggleReaction, onTogglePin }: {
   message: Message & { replyTo?: { id: string; content: string; authorPubkey: string } | null };
   profileCache: Map<string, { name?: string; picture?: string }>;
@@ -740,39 +751,54 @@ export default function MessageArea({ profileCache, onDelete, onToggleReaction }
                 </button>
               </div>
             )}
-            {messages.map((msg, idx) => (
-              <div key={msg.id}>
-                {idx === separatorIndex && (
-                  <div
-                    className="flex items-center gap-2 px-4 py-1 my-1"
-                    data-testid="new-messages-separator"
-                  >
-                    <div className="flex-1 h-px bg-red-500/60" />
-                    <span className="text-[10px] uppercase tracking-wider text-red-400 font-semibold">
-                      New messages
-                    </span>
-                    <div className="flex-1 h-px bg-red-500/60" />
-                  </div>
-                )}
-                <div
-                  ref={(el) => { if (el) messageRefs.current.set(msg.id, el); else messageRefs.current.delete(msg.id); }}
-                  data-message-id={msg.id}
-                  className={highlightedMessageId === msg.id ? 'bg-lc-green/10 transition-colors duration-1000' : ''}
-                >
-                  <MessageBubble
-                    message={activePostId && msg.replyTo?.id === activePostId ? { ...msg, replyTo: null } : msg}
-                    profileCache={profileCache}
-                    canPin={canPin}
-                    canModerate={canModerate}
-                    onReply={handleReply}
-                    onReport={handleReport}
-                    onDelete={handleDeleteMessage}
-                    onToggleReaction={onToggleReaction}
-                    onTogglePin={handleTogglePin}
-                  />
-                </div>
-              </div>
-            ))}
+            {messages.map((msg, idx) => {
+                const currentDate = new Date(msg.createdAt);
+                const prevDate = idx > 0 ? new Date(messages[idx - 1].createdAt) : null;
+                const showDate = !prevDate || currentDate.toDateString() !== prevDate.toDateString();
+
+                return (
+                    <div key={msg.id}>
+                        {showDate && (
+                            <div className="flex items-center gap-2 px-4 py-3">
+                                <div className="flex-1 h-px bg-lc-border" />
+                                <span className="text-xs text-lc-muted uppercase tracking-wider font-semibold">
+                                    {getDaySeparator(currentDate)}
+                                </span>
+                                <div className="flex-1 h-px bg-lc-border" />
+                            </div>
+                        )}
+                        {idx === separatorIndex && (
+                            <div
+                                className="flex items-center gap-2 px-4 py-1 my-1"
+                                data-testid="new-messages-separator"
+                            >
+                                <div className="flex-1 h-px bg-red-500/60" />
+                                <span className="text-[10px] uppercase tracking-wider text-red-400 font-semibold">
+                                    New messages
+                                </span>
+                                <div className="flex-1 h-px bg-red-500/60" />
+                            </div>
+                        )}
+                        <div
+                            ref={(el) => { if (el) messageRefs.current.set(msg.id, el); else messageRefs.current.delete(msg.id); }}
+                            data-message-id={msg.id}
+                            className={highlightedMessageId === msg.id ? 'bg-lc-green/10 transition-colors duration-1000' : ''}
+                        >
+                            <MessageBubble
+                                message={activePostId && msg.replyTo?.id === activePostId ? { ...msg, replyTo: null } : msg}
+                                profileCache={profileCache}
+                                canPin={canPin}
+                                canModerate={canModerate}
+                                onReply={handleReply}
+                                onReport={handleReport}
+                                onDelete={handleDeleteMessage}
+                                onToggleReaction={onToggleReaction}
+                                onTogglePin={handleTogglePin}
+                            />
+                        </div>
+                    </div>
+                );
+            })}
             <div ref={messagesEndRef} />
           </>
         )}
