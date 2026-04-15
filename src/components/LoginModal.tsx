@@ -46,8 +46,6 @@ export default function LoginModal({ isOpen, onClose, onSuccess, transparentBack
   const [loadingMethod, setLoadingMethod] = useState<LoginMethod | null>(null);
   const [newAccountNsec, setNewAccountNsec] = useState<string | null>(null);
   const [nsecCopied, setNsecCopied] = useState(false);
-  const [showDebug, setShowDebug] = useState(false);
-  const [debugLogs, setDebugLogs] = useState<any[]>([]);
   const [creatingAccount, setCreatingAccount] = useState(false);
   const [backupConfirmed, setBackupConfirmed] = useState(false);
   const [showProfileSetup, setShowProfileSetup] = useState(false);
@@ -65,30 +63,6 @@ export default function LoginModal({ isOpen, onClose, onSuccess, transparentBack
     return () => clearTimeout(timer);
   }, [isOpen]);
 
-  // Poll for debug logs
-  useEffect(() => {
-    if (!isOpen) return;
-    
-    const updateLogs = () => {
-      if (typeof window !== 'undefined') {
-        const stored = localStorage.getItem('obelisk-auth-debug-logs');
-        if (stored) {
-          try {
-            setDebugLogs(JSON.parse(stored));
-          } catch (e) {
-            // ignore
-          }
-        } else if ((window as any)._obelisk_auth_logs) {
-          setDebugLogs([...(window as any)._obelisk_auth_logs]);
-        }
-      }
-    };
-
-    updateLogs();
-    const interval = setInterval(updateLogs, 1000);
-    return () => clearInterval(interval);
-  }, [isOpen]);
-
   // Auto-resume NostrConnect flow if it was in progress before a reload
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
@@ -100,14 +74,6 @@ export default function LoginModal({ isOpen, onClose, onSuccess, transparentBack
       }
     }
   }, [isOpen, method]);
-
-  const handleClearLogs = () => {
-    if (typeof window !== 'undefined') {
-      (window as any)._obelisk_auth_logs = [];
-      localStorage.removeItem('obelisk-auth-debug-logs');
-      setDebugLogs([]);
-    }
-  };
 
   // Generate nostrconnect URI when bunker tab is selected
   useEffect(() => {
@@ -853,68 +819,6 @@ ${newAccountNsec}
             )}
           </div>
         )}
-
-        {/* Debug Logs Viewer */}
-        <div className="mt-8 pt-6 border-t border-lc-border/30">
-          <button
-            onClick={() => setShowDebug(!showDebug)}
-            className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-lc-muted hover:text-lc-white transition-colors"
-          >
-            <svg
-              width="10"
-              height="10"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="3"
-              className={`transition-transform duration-200 ${showDebug ? 'rotate-90' : ''}`}
-            >
-              <polyline points="9 18 15 12 9 6" />
-            </svg>
-            {showDebug ? 'Hide' : 'View'} Debug Logs
-          </button>
-
-          {showDebug && debugLogs.length > 0 && (
-            <button
-              onClick={handleClearLogs}
-              className="ml-4 text-[10px] uppercase tracking-widest text-red-400/70 hover:text-red-400 transition-colors flex items-center gap-1.5 inline-flex"
-            >
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
-              </svg>
-              Clear
-            </button>
-          )}
-
-          {showDebug && (
-            <div className="mt-4 bg-lc-black rounded-xl border border-lc-border/50 p-4 max-h-[250px] overflow-y-auto font-mono text-[10px] leading-relaxed">
-              {debugLogs.length === 0 ? (
-                <div className="text-lc-muted italic">No logs captured yet.</div>
-              ) : (
-                <div className="space-y-3">
-                  {[...debugLogs].reverse().map((log, i) => (
-                    <div key={i} className="border-b border-lc-border/20 pb-3 last:border-0 last:pb-0">
-                      <div className="flex justify-between items-start gap-4 mb-1.5">
-                        <span className="text-lc-green font-bold px-1.5 py-0.5 bg-lc-green/10 rounded uppercase tracking-tighter">
-                          {log.stage}
-                        </span>
-                        <span className="text-lc-muted shrink-0 tabular-nums">
-                          {new Date(log.time).toLocaleTimeString()}
-                        </span>
-                      </div>
-                      <div className="text-lc-white break-words">{log.message}</div>
-                      {log.data && Object.keys(log.data).length > 0 && (
-                        <pre className="mt-2 text-[9px] text-lc-muted bg-lc-dark/40 p-2 rounded-lg overflow-x-auto whitespace-pre-wrap break-all border border-lc-border/20">
-                          {JSON.stringify(log.data, null, 2)}
-                        </pre>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );

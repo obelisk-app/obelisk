@@ -34,26 +34,6 @@ const CONNECT_RELAYS = [
 export const logStatus = (stage: string, message: string, data?: any) => {
   const msg = `[AUTH_STATUS] [${stage}] ${message}`;
   console.log(msg, data || '');
-  if (typeof window !== 'undefined') {
-    const entry = {
-      time: new Date().toISOString(),
-      stage,
-      message,
-      data: data ? JSON.parse(JSON.stringify(data)) : null
-    };
-    (window as any)._obelisk_auth_logs = (window as any)._obelisk_auth_logs || [];
-    (window as any)._obelisk_auth_logs.push(entry);
-
-    try {
-      const stored = localStorage.getItem('obelisk-auth-debug-logs');
-      const logs = stored ? JSON.parse(stored) : [];
-      logs.push(entry);
-      if (logs.length > 100) logs.shift();
-      localStorage.setItem('obelisk-auth-debug-logs', JSON.stringify(logs));
-    } catch (e) {
-      // ignore
-    }
-  }
 };
 
 // Global NDK instance
