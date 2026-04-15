@@ -47,7 +47,7 @@
   "roadmap.phase1_5.title": "Admin & Moderation",
   "roadmap.phase1_5.items": "Role hierarchy & permissions|Mod tools: mute, warn, ban|Forum channels & audit log",
   "roadmap.phase2.title": "Core Features",
-  "roadmap.phase2.items": "Voice channels (WebRTC/mediasoup)|Invite system & DMs|Multi-server support",
+  "roadmap.phase2.items": "Voice channels (WebRTC/mediasoup)|Direct Messages (DMs)|Multi-server support",
   "roadmap.phase3.title": "Advanced",
   "roadmap.phase3.items": "File uploads & search|Bot integrations|App profiles",
   "roadmap.phase4.title": "Polish & Launch",

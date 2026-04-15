@@ -47,7 +47,7 @@
   "roadmap.phase1_5.title": "Admin y Moderación",
   "roadmap.phase1_5.items": "Jerarquía de roles y permisos|Herramientas de mod: mute, warn, ban|Canales tipo foro y audit log",
   "roadmap.phase2.title": "Features Core",
-  "roadmap.phase2.items": "Canales de voz (WebRTC/mediasoup)|Sistema de invitaciones y DMs|Soporte multi-servidor",
+  "roadmap.phase2.items": "Canales de voz (WebRTC/mediasoup)|Mensajes Directos (DMs)|Multi-servidor",
   "roadmap.phase3.title": "Avanzado",
   "roadmap.phase3.items": "Subida de archivos y búsqueda|Integraciones con bots|Perfiles de app",
   "roadmap.phase4.title": "Pulido y Lanzamiento",

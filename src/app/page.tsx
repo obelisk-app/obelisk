@@ -107,10 +107,10 @@ const STEP_ICONS = [
 const ROADMAP_PHASES = [
   { key: 'phase0', phase: 'Phase 0', status: 'done' as const },
   { key: 'phase1', phase: 'Phase 1', status: 'done' as const },
-  { key: 'phase1_5', phase: 'Phase 1.5', status: 'in-progress' as const },
-  { key: 'phase2', phase: 'Phase 2', status: 'in-progress' as const },
-  { key: 'phase3', phase: 'Phase 3', status: 'upcoming' as const },
-  { key: 'phase4', phase: 'Phase 4', status: 'upcoming' as const },
+  { key: 'phase1_5', phase: 'Phase 1.5', status: 'done' as const },
+  { key: 'phase2', phase: 'Phase 2', status: 'done' as const },
+  { key: 'phase3', phase: 'Phase 3', status: 'done' as const },
+  { key: 'phase4', phase: 'Phase 4', status: 'in-progress' as const },
 ];
 
 const TECH_STACK: { name: string; desc: string; color: string; icon?: string; img?: string; href: string }[] = [
