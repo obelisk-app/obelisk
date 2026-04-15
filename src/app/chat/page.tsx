@@ -1025,11 +1025,13 @@ export default function ChatPage() {
     // its forum channel in the sidebar without a refetch.
     socket.on('post-subscribed', (data: { postId: string; title: string; channelId: string; channelName: string; serverId: string }) => {
       const state = useChatStore.getState();
-      if (state.followedPostIds.includes(data.postId)) return;
+      const followedPostIds = Array.isArray(state.followedPostIds) ? state.followedPostIds : [];
+      const followedPostMeta = state.followedPostMeta && typeof state.followedPostMeta === 'object' ? state.followedPostMeta : {};
+      if (followedPostIds.includes(data.postId)) return;
       useChatStore.setState({
-        followedPostIds: [...state.followedPostIds, data.postId],
+        followedPostIds: [...followedPostIds, data.postId],
         followedPostMeta: {
-          ...state.followedPostMeta,
+          ...followedPostMeta,
           [data.postId]: {
             id: data.postId,
             title: data.title,
@@ -1223,8 +1225,12 @@ export default function ChatPage() {
     // explicitly unfollowed it this session.
     if (activePostId) {
       const state = useChatStore.getState();
-      const alreadyFollowing = state.followedPostIds.includes(activePostId);
-      const suppressed = state.suppressedAutoFollowPostIds.includes(activePostId);
+      const followedPostIds = Array.isArray(state.followedPostIds) ? state.followedPostIds : [];
+      const suppressedPostIds = Array.isArray(state.suppressedAutoFollowPostIds)
+        ? state.suppressedAutoFollowPostIds
+        : [];
+      const alreadyFollowing = followedPostIds.includes(activePostId);
+      const suppressed = suppressedPostIds.includes(activePostId);
       if (!alreadyFollowing && !suppressed) {
         const ch = state.categories
           .flatMap((c) => c.channels)

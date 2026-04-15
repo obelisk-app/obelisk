@@ -30,6 +30,8 @@ interface Props {
   onClose: () => void;
 }
 
+const EMPTY_FOLLOWED_POST_IDS: string[] = [];
+
 export default function PostChatHeader({ postId, parentChannelName, onClose }: Props) {
   const [post, setPost] = useState<PostMeta | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -38,7 +40,8 @@ export default function PostChatHeader({ postId, parentChannelName, onClose }: P
   const [copied, setCopied] = useState(false);
   const activeChannelId = useChatStore((s) => s.activeChannelId);
   const activeServerId = useChatStore((s) => s.activeServerId);
-  const followedPostIds = useChatStore((s) => s.followedPostIds);
+  const followedPostIdsRaw = useChatStore((s) => s.followedPostIds);
+  const followedPostIds = Array.isArray(followedPostIdsRaw) ? followedPostIdsRaw : EMPTY_FOLLOWED_POST_IDS;
   const toggleFollowPost = useChatStore((s) => s.toggleFollowPost);
   const myRole = useChatStore((s) => s.myRole);
   const serverEmojis = useChatStore((s) => s.serverEmojis);

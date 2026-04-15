@@ -11,6 +11,9 @@ import { canWriteInChannel } from '@/lib/roles';
 import ChannelEmoji from './ChannelEmoji';
 import { slugify } from '@/lib/slug';
 
+const EMPTY_FOLLOWED_POST_IDS: string[] = [];
+const EMPTY_FOLLOWED_POST_META: Record<string, { id: string; title: string; channelId: string; channelName: string; serverId: string }> = {};
+
 function ChannelTypeIcon({ type }: { type: string }) {
   if (type === 'forum') {
     return (
@@ -619,8 +622,12 @@ function ResizeHandle({ onResize }: { onResize: (w: number) => void }) {
 export default function ChannelSidebar({ onChannelSelect }: { onChannelSelect?: () => void } = {}) {
   const { servers, activeServerId, pinnedChannels, categories, activeChannelId, setActiveChannel, isLoadingChannels } = useChatStore();
   const setActivePostIdStore = useChatStore((s) => s.setActivePostId);
-  const followedPostIds = useChatStore((s) => s.followedPostIds);
-  const followedPostMeta = useChatStore((s) => s.followedPostMeta);
+  const followedPostIdsRaw = useChatStore((s) => s.followedPostIds);
+  const followedPostMetaRaw = useChatStore((s) => s.followedPostMeta);
+  const followedPostIds = Array.isArray(followedPostIdsRaw) ? followedPostIdsRaw : EMPTY_FOLLOWED_POST_IDS;
+  const followedPostMeta = followedPostMetaRaw && typeof followedPostMetaRaw === 'object'
+    ? followedPostMetaRaw
+    : EMPTY_FOLLOWED_POST_META;
   const loadFollowedPosts = useChatStore((s) => s.loadFollowedPosts);
   const [showInviteCard, setShowInviteCard] = useState(false);
   const [activePostId, setActivePostId] = useState<string | null>(null);

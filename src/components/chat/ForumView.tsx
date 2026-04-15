@@ -16,6 +16,7 @@ import { slugify } from '@/lib/slug';
 // "Siguiendo" toggle sticks across reloads without requiring a DB migration.
 // Future: wire this to a PostSubscription table + notification fan-out.
 const FOLLOWED_POSTS_KEY = 'obelisk:followed-posts';
+const EMPTY_FOLLOWED_POST_IDS: string[] = [];
 function readFollowedPosts(): Set<string> {
   if (typeof window === 'undefined') return new Set();
   try {
@@ -276,7 +277,8 @@ function PostHeaderActions({
   serverId?: string | null;
   postTitle?: string | null;
 }) {
-  const followedPostIds = useChatStore((s) => s.followedPostIds);
+  const followedPostIdsRaw = useChatStore((s) => s.followedPostIds);
+  const followedPostIds = Array.isArray(followedPostIdsRaw) ? followedPostIdsRaw : EMPTY_FOLLOWED_POST_IDS;
   const toggleFollowPost = useChatStore((s) => s.toggleFollowPost);
   const following = followedPostIds.includes(postId);
   const [copyLabel, setCopyLabel] = useState<'idle' | 'ok'>('idle');

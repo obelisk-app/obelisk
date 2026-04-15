@@ -57,3 +57,6 @@ next-env.d.ts
 # Dev SSL certs
 cert.pem
 key.pem
+EXPLANATION.md
+cert.pem.bak
+key.pem.bak

@@ -498,13 +498,18 @@ export const useChatStore = create<ChatState>()((set) => ({
   toggleFollowPost: async (postId, meta) => {
     if (typeof window === 'undefined') return;
     const state = useChatStore.getState();
-    const wasFollowing = state.followedPostIds.includes(postId);
+    const currentIds = Array.isArray(state.followedPostIds) ? state.followedPostIds : [];
+    const currentMeta = state.followedPostMeta && typeof state.followedPostMeta === 'object' ? state.followedPostMeta : {};
+    const currentSuppressed = Array.isArray(state.suppressedAutoFollowPostIds)
+      ? state.suppressedAutoFollowPostIds
+      : [];
+    const wasFollowing = currentIds.includes(postId);
 
     // Optimistic update.
     const nextIds = wasFollowing
-      ? state.followedPostIds.filter((x) => x !== postId)
-      : [...state.followedPostIds, postId];
-    const nextMeta = { ...state.followedPostMeta };
+      ? currentIds.filter((x) => x !== postId)
+      : [...currentIds, postId];
+    const nextMeta = { ...currentMeta };
     if (wasFollowing) {
       delete nextMeta[postId];
     } else if (meta) {
@@ -514,8 +519,8 @@ export const useChatStore = create<ChatState>()((set) => ({
     // them automatically on their next send. When they explicitly follow,
     // clear the suppression.
     const nextSuppressed = wasFollowing
-      ? Array.from(new Set([...state.suppressedAutoFollowPostIds, postId]))
-      : state.suppressedAutoFollowPostIds.filter((x) => x !== postId);
+      ? Array.from(new Set([...currentSuppressed, postId]))
+      : currentSuppressed.filter((x) => x !== postId);
     set({ followedPostIds: nextIds, followedPostMeta: nextMeta, suppressedAutoFollowPostIds: nextSuppressed });
 
     try {
@@ -524,9 +529,9 @@ export const useChatStore = create<ChatState>()((set) => ({
         console.warn('[follow] server rejected', res.status, await res.text().catch(() => ''));
         // Roll back optimistic update so the UI matches the server.
         set({
-          followedPostIds: state.followedPostIds,
-          followedPostMeta: state.followedPostMeta,
-          suppressedAutoFollowPostIds: state.suppressedAutoFollowPostIds,
+          followedPostIds: currentIds,
+          followedPostMeta: currentMeta,
+          suppressedAutoFollowPostIds: currentSuppressed,
         });
         return;
       }

@@ -467,4 +467,26 @@ describe('ChannelSidebar', () => {
     expect(badgeText).toContain('@');
     expect(badgeText).toContain('2');
   });
+
+  it('does not crash when followedPostIds is malformed', () => {
+    useChatStore.setState({
+      isLoadingChannels: false,
+      servers: [{ id: 's1', name: 'Test', icon: null, banner: null }],
+      activeServerId: 's1',
+      pinnedChannels: [],
+      categories: [
+        {
+          id: 'cat1', name: 'FORO', position: 0,
+          channels: [
+            { id: 'fch1', name: 'plaza-publica', emoji: null, type: 'forum', position: 0, categoryId: 'cat1' },
+          ],
+        },
+      ],
+      followedPostIds: { broken: true } as any,
+      followedPostMeta: null as any,
+    });
+
+    expect(() => render(<ChannelSidebar />)).not.toThrow();
+    expect(screen.queryByTestId('channel-followed-posts-fch1')).not.toBeInTheDocument();
+  });
 });
