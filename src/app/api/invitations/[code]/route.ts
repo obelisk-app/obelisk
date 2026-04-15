@@ -106,7 +106,7 @@ export async function POST(
   }
 
   // Check target restriction
-  if (invitation.targetPubkey && invitation.targetPubkey !== pubkey) {
+  if (invitation.targetPubkey && invitation.targetPubkey.toLowerCase() !== pubkey.toLowerCase()) {
     return NextResponse.json({ error: 'This invitation is for a different user' }, { status: 403 });
   }
 

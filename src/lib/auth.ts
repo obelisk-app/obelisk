@@ -2,7 +2,7 @@ import { randomBytes, createHash } from 'crypto';
 import { prisma } from './db';
 
 // In-memory challenge store (short-lived, no need to persist)
-const challenges = new Map<string, { challenge: string; createdAt: number }>();
+let challenges = new Map<string, { challenge: string; createdAt: number }>();
 
 const CHALLENGE_TTL = 300_000; // 1 minute
 const SESSION_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -12,6 +12,11 @@ export function generateChallenge(): { challengeId: string; challenge: string } 
   const challenge = `obelisk-auth:${randomBytes(32).toString('hex')}:${Date.now()}`;
   challenges.set(challengeId, { challenge, createdAt: Date.now() });
   return { challengeId, challenge };
+}
+
+// For testing only
+export function __setChallenges(newChallenges: Map<string, { challenge: string; createdAt: number }>) {
+  (challenges as any) = newChallenges;
 }
 
 // Verify using a signed Nostr event (kind 27235 - NIP-98 style)
@@ -60,7 +65,7 @@ export async function verifySignedEvent(
   const expiresAt = new Date(Date.now() + SESSION_TTL);
 
   await prisma.session.create({
-    data: { pubkey: signedEvent.pubkey, token, expiresAt },
+    data: { pubkey: signedEvent.pubkey.toLowerCase(), token, expiresAt },
   });
 
   return token;
