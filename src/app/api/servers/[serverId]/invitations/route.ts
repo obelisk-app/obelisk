@@ -66,8 +66,30 @@ export async function POST(
   let targetPubkey: string | null;
 
   if (isAdmin) {
-    // Admin: full flexibility (unchanged behavior)
-    targetPubkey = body.targetPubkey?.trim() || null;
+    // Admin: full flexibility
+    const rawTarget = body.targetPubkey?.trim();
+    if (rawTarget) {
+      if (rawTarget.startsWith('npub1')) {
+        try {
+          const { nip19 } = await import('nostr-tools');
+          const decoded = nip19.decode(rawTarget) as any;
+          if (decoded.type === 'npub') {
+            targetPubkey = decoded.data as string;
+          } else {
+            return NextResponse.json({ error: 'Invalid npub format' }, { status: 400 });
+          }
+        } catch {
+          return NextResponse.json({ error: 'Invalid npub format' }, { status: 400 });
+        }
+      } else if (/^[0-9a-fA-F]{64}$/.test(rawTarget)) {
+        targetPubkey = rawTarget.toLowerCase();
+      } else {
+        return NextResponse.json({ error: 'targetPubkey must be a valid npub or 64-character hex string' }, { status: 400 });
+      }
+    } else {
+      targetPubkey = null;
+    }
+    
     maxUses = Number.isInteger(body.maxUses) && body.maxUses > 0 ? body.maxUses : 1;
     expiresAt = body.expiresInHours
       ? new Date(Date.now() + Number(body.expiresInHours) * 3600000)

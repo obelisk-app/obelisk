@@ -69,11 +69,15 @@ export default function InviteManager({ serverId }: InviteManagerProps) {
           targetPubkey: targetPubkey.trim() || undefined,
         }),
       });
+      const data = await res.json();
       if (res.ok) {
-        const data = await res.json();
         setInvitations((prev) => [data.invitation, ...prev]);
         setTargetPubkey('');
+      } else {
+        alert(data.error || 'Failed to create invite');
       }
+    } catch (e) {
+      alert('Network error while creating invite');
     } finally {
       setCreating(false);
     }
