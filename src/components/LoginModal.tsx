@@ -158,14 +158,17 @@ export default function LoginModal({ isOpen, onClose, onSuccess, transparentBack
 
         // Backend auth BEFORE showing as connected
         logStatus('LoginModal', 'Starting backend authentication...', { pubkey: user.pubkey });
+        const watchdog = setInterval(() => logStatus('LoginModal', 'STILL FINALIZING... checking relays and signer'), 2000);
         try {
           // Add 15s timeout to backend auth to prevent "Finalizing" hang
           await Promise.race([
             authenticateWithBackend(getNDK()),
             new Promise((_, reject) => setTimeout(() => reject(new Error('Backend auth timed out after 60s')), 60000))
           ]);
+          clearInterval(watchdog);
           logStatus('LoginModal', 'Finished backend authentication: SUCCESS');
         } catch (backendErr) {
+          clearInterval(watchdog);
           logStatus('LoginModal', 'Finished backend authentication: FAILED', { error: backendErr });
           throw new Error(`Finalizing login failed: ${backendErr instanceof Error ? backendErr.message : String(backendErr)}`);
         }
@@ -365,7 +368,13 @@ export default function LoginModal({ isOpen, onClose, onSuccess, transparentBack
 
   const handleDownloadNsec = () => {
     if (!newAccountNsec) return;
-    const content = `Obelisk — Nostr Private Key Backup\n\nKeep this file safe and secret. Anyone with this key controls your account. There is no recovery if you lose it.\n\nPrivate Key (nsec):\n${newAccountNsec}\n`;
+    const content = `Obelisk — Nostr Private Key Backup
+
+Keep this file safe and secret. Anyone with this key controls your account. There is no recovery if you lose it.
+
+Private Key (nsec):
+${newAccountNsec}
+`;
     const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

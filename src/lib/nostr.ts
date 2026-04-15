@@ -459,6 +459,7 @@ function setupManualInterception(ndk: NDK, signer: any, logPrefix: string) {
           try {
             if (isNip04) {
               const remoteUser = ndk.getUser({ pubkey: event.pubkey });
+              remoteUser.ndk = ndk; // CRITICAL
               return await localSigner.decrypt(remoteUser, event.content);
             } else {
               L('Content is NOT NIP-04, attempting NIP-44 decryption...');
@@ -505,13 +506,24 @@ function setupManualInterception(ndk: NDK, signer: any, logPrefix: string) {
               signer.emit('ready', userPubkey);
             }
           }
+
+          // Direct emission to wake up any pending sendRequest calls
+          if (parsed.id) {
+             L('Directly emitting response for req_id:', parsed.id);
+             signer.rpc.emit(`response-${parsed.id}`, parsed);
+             signer.rpc.emit('response', parsed);
+          }
         } catch (e) {
           L('Interception error', String(e));
         }
 
         // Always inject into handleEvent
         L('Injecting event into signer.rpc.handleEvent...');
-        signer.rpc.handleEvent(event);
+        try {
+          signer.rpc.handleEvent(event);
+        } catch (e) {
+          L('signer.rpc.handleEvent failed, but we decrypted already:', String(e));
+        }
       }
     }
   });
@@ -554,6 +566,7 @@ function makeRobustSigner(signer: any, ndk: NDK) {
         const fallback = primaryEncryption === 'nip44' ? 'nip04' : 'nip44';
         L(`Request ${method} timed out, retrying with fallback=${fallback}...`);
         signer.rpc.encryptionType = fallback;
+        (signer as any)._encryptionType = fallback;
         return originalSendRequest(remotePubkey, method, params, kind, cb);
       }
       throw err;
