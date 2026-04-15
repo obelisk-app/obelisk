@@ -263,19 +263,19 @@ export default function Home() {
 
           {/* 3D orbit container — scaleY creates the perspective ellipse */}
           <div className="relative w-full h-full" style={{ transform: 'scaleY(0.35)' }}>
-            {/* Public key (outline) */}
+            {/* Key 1 (Blue) */}
             <svg
               width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-lc-green animate-orbit drop-shadow-[0_0_8px_rgba(180,249,83,0.5)]"
-              style={{ '--orbit-radius': '110px', '--orbit-duration': '16s', transform: 'scaleY(2.85)' } as React.CSSProperties}
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-blue-500 animate-orbit drop-shadow-[0_0_8px_rgba(59,130,246,0.6)]"
+              style={{ '--orbit-radius': '90px', '--orbit-duration': '16s', transform: 'scaleY(2.85)' } as React.CSSProperties}
             >
               <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
             </svg>
-            {/* Private key (filled) — opposite side */}
+            {/* Key 2 (Red) — opposite side */}
             <svg
-              width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-lc-green animate-orbit drop-shadow-[0_0_8px_rgba(180,249,83,0.4)]"
-              style={{ '--orbit-radius': '110px', '--orbit-duration': '16s', animationDelay: '-8s', transform: 'scaleY(2.85)' } as React.CSSProperties}
+              width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-red-500 animate-orbit drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]"
+              style={{ '--orbit-radius': '90px', '--orbit-duration': '16s', animationDelay: '-8s', transform: 'scaleY(2.85)' } as React.CSSProperties}
             >
               <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
             </svg>
