@@ -125,10 +125,6 @@ export default function LoginModal({ isOpen, onClose, onSuccess, transparentBack
           onAuthUrl: (url) => {
             console.log('[LoginModal] Received authUrl:', url);
             setAuthChallengeUrl(url);
-          },
-          onRpcEvent: (event) => {
-            console.log('[LoginModal] RPC event detected:', event.id);
-            setRpcEventDetected(true);
           }
         });
         if (cancelled) {
@@ -273,10 +269,6 @@ export default function LoginModal({ isOpen, onClose, onSuccess, transparentBack
             onAuthUrl: (url) => {
               logStatus('BunkerLogin', 'Received authUrl', { url });
               setAuthChallengeUrl(url);
-            },
-            onRpcEvent: (event) => {
-              logStatus('BunkerLogin', 'RPC event detected', { id: event.id });
-              setRpcEventDetected(true);
             }
           });
           logStatus('BunkerLogin', 'Handshake SUCCESS', { pubkey: user?.pubkey });

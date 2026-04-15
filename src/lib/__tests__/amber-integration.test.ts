@@ -1,101 +1,95 @@
-
+/**
+ * @vitest-environment node
+ */
+import { describe, it, expect, vi } from 'vitest';
 import NDK, { NDKPrivateKeySigner, NDKUser, NDKEvent } from '@nostr-dev-kit/ndk';
-import { generateSecretKey, getPublicKey, nip19, nip44, nip04 } from 'nostr-tools';
+import { generateSecretKey, getPublicKey, nip04 } from 'nostr-tools';
+import { bytesToHex } from 'nostr-tools/utils';
 
-// Use a public relay for the integration test
 const TEST_RELAY = 'wss://relay.nsec.app';
 
 describe('Amber Simulation Integration Test', () => {
-  it('should successfully connect app to a simulated remote signer (Amber) using NIP-44', async () => {
-    console.log('--- Integration Test: Amber Simulation (Manual) ---');
-
+  it('should successfully connect app to a simulated remote signer (Amber)', async () => {
     // 1. Setup Amber (Remote Signer)
     const amberSecretKey = generateSecretKey();
-    const amberPrivkeyHex = Buffer.from(amberSecretKey).toString('hex');
+    const amberPrivkeyHex = bytesToHex(amberSecretKey);
     const amberPubkey = getPublicKey(amberSecretKey);
-    console.log('Amber Pubkey:', amberPubkey);
 
     const amberNDK = new NDK({ explicitRelayUrls: [TEST_RELAY] });
     await amberNDK.connect();
     
     // 2. Setup App (Client)
-    const appNDK = new NDK({ explicitRelayUrls: [TEST_RELAY] });
-    await appNDK.connect();
-    const appLocalSigner = NDKPrivateKeySigner.generate();
-    console.log('App Local Pubkey:', appLocalSigner.pubkey);
-
-    // 3. App side: Create session
-    // This generates the URI
     const { createNostrConnectSession } = await import('../nostr');
     const session = await createNostrConnectSession(TEST_RELAY);
-    console.log('Connect URI:', session.uri);
 
-    // 4. Amber side: Listen for requests
-    console.log('Amber is listening for requests...');
+    // 3. App side: Wait for connection (starts listening)
+    const waitForConnectionPromise = session.waitForConnection();
+
+    // Give it a moment to setup the subscription
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // 4. Amber side: "Scan" the URI and initiate connection
+    const uri = new URL(session.uri);
+    const clientPubkey = uri.hostname || uri.pathname.replace(/^\/\//, '');
+    const secret = uri.searchParams.get('secret');
+    
+    // Amber sends 'connect' response to client (simulating scanning the QR)
+    const connectRes = {
+      id: '1',
+      result: secret || ''
+    };
+    
+    const { nip44 } = await import('nostr-tools');
+    const convKey = nip44.getConversationKey(amberSecretKey, clientPubkey);
+    const encryptedRes = nip44.encrypt(JSON.stringify(connectRes), convKey);
+
+    const event = new NDKEvent(amberNDK);
+    event.kind = 24133;
+    event.pubkey = amberPubkey;
+    event.content = encryptedRes;
+    event.tags = [['p', clientPubkey]];
+    await event.sign(new NDKPrivateKeySigner(amberPrivkeyHex));
+    await event.publish();
+
+    // 5. Amber side: Listen for client's signature requests or get_public_key
     const sub = amberNDK.subscribe({
       kinds: [24133 as number],
       '#p': [amberPubkey]
-    });
+    }, { closeOnEose: false });
 
-    const amberResponsePromise = new Promise<void>((resolve) => {
-      sub.on('event', async (event: NDKEvent) => {
-        console.log('Amber received request event from App:', event.id);
-        
-        // Decrypt request (Apps usually send NIP-04)
-        try {
-          const decrypted = await nip04.decrypt(amberPrivkeyHex, event.pubkey, event.content);
-          const request = JSON.parse(decrypted);
-          console.log('Amber decrypted request:', request);
+    sub.on('event', async (ev: NDKEvent) => {
+      try {
+        const decrypted = nip44.decrypt(ev.content, convKey);
+        const req = JSON.parse(decrypted);
 
-          if (request.method === 'connect') {
-            console.log('Amber approving connect request...');
-            
-            // Send response using NIP-44 (simulating Amber's behavior)
-            const response = {
-              id: request.id,
-              result: amberPubkey
-            };
-            
-            const convKey = nip44.getConversationKey(amberPrivkeyHex, event.pubkey);
-            const encryptedResponse = nip44.encrypt(JSON.stringify(response), convKey);
-            
-            const responseEvent = new NDKEvent(amberNDK);
-            responseEvent.kind = 24133;
-            responseEvent.pubkey = amberPubkey;
-            responseEvent.content = encryptedResponse;
-            responseEvent.tags = [['p', event.pubkey]];
-            
-            await responseEvent.sign(new NDKPrivateKeySigner(amberPrivkeyHex));
-            await responseEvent.publish();
-            console.log('Amber published response event:', responseEvent.id);
-            resolve();
-          }
-        } catch (e) {
-          console.error('Amber failed to process request:', e);
+        if (req.method === 'get_public_key') {
+          const response = { id: req.id, result: amberPubkey };
+          const encryptedRes = nip44.encrypt(JSON.stringify(response), convKey);
+          const resEv = new NDKEvent(amberNDK);
+          resEv.kind = 24133;
+          resEv.pubkey = amberPubkey;
+          resEv.content = encryptedRes;
+          resEv.tags = [['p', ev.pubkey]];
+          await resEv.sign(new NDKPrivateKeySigner(amberPrivkeyHex));
+          await resEv.publish();
         }
-      });
+      } catch (e) {
+        // ignore decryption errors for non-related events
+      }
     });
-
-    // 5. App side: Wait for connection
-    console.log('App is waiting for connection...');
-    const waitForConnectionPromise = session.waitForConnection();
 
     // 6. Finalize
     try {
       const user = await Promise.race([
         waitForConnectionPromise,
-        new Promise<null>((_, reject) => setTimeout(() => reject(new Error('Integration test timed out')), 25000))
+        new Promise<null>((_, reject) => setTimeout(() => reject(new Error('Integration test timed out')), 20000))
       ]);
 
-      console.log('App successfully connected! User pubkey:', user?.pubkey);
       expect(user?.pubkey).toBe(amberPubkey);
     } catch (err) {
-      console.error('Integration test failed:', err);
       throw err;
     } finally {
       sub.stop();
-      await amberNDK.pool.close();
-      await appNDK.pool.close();
     }
-  }, 30000);
+  }, 25000);
 });
