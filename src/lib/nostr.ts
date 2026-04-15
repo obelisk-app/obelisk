@@ -295,7 +295,8 @@ export async function restoreRemoteSigner(): Promise<boolean> {
   const ndk = getNDK();
   try {
     const { ndkSignerFromPayload } = await import('@nostr-dev-kit/ndk');
-    const signer = await ndkSignerFromPayload(payload, ndk);
+    let signer = await ndkSignerFromPayload(payload, ndk);
+    signer = makeRobustSigner(signer, ndk);
     if (!signer) return false;
     ndk.signer = signer;
     // Block until the bunker handshake is ready so DM fetches can decrypt
@@ -518,6 +519,92 @@ function setupManualInterception(ndk: NDK, signer: any, logPrefix: string) {
   return manualSub;
 }
 
+
+/**
+ * Enhances an NDKNip46Signer with robustness features from nostrito-app:
+ * 1. Automatic encryption switching (NIP-44 <-> NIP-04) on timeouts.
+ * 2. Manual sign_event request construction (omitting id/pubkey) for picky signers.
+ * 3. Extended timeout and retry logic.
+ */
+function makeRobustSigner(signer: any, ndk: NDK) {
+  if (signer._robust) return signer;
+  signer._robust = true;
+
+  const L = (msg: string, ...args: any[]) => logStatus('RobustSigner', msg, args);
+
+  // Original methods
+  const originalSendRequest = signer.rpc.sendRequest.bind(signer.rpc);
+  const originalSign = signer.sign.bind(signer);
+
+  // 1. Wrap sendRequest to support encryption switching
+  signer.rpc.sendRequest = async (remotePubkey: string, method: string, params: any[] = [], kind = 24133, cb?: (res: any) => void) => {
+    const primaryEncryption = signer.rpc.encryptionType;
+    L(`Sending request: ${method} (primary=${primaryEncryption})`);
+
+    try {
+      // Try primary with a shorter timeout if it's a critical request
+      const res = await Promise.race([
+        new Promise((resolve) => originalSendRequest(remotePubkey, method, params, kind, resolve)),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 15000))
+      ]);
+      if (cb) cb(res);
+      return res;
+    } catch (err: any) {
+      if (err.message === 'TIMEOUT') {
+        const fallback = primaryEncryption === 'nip44' ? 'nip04' : 'nip44';
+        L(`Request ${method} timed out, retrying with fallback=${fallback}...`);
+        signer.rpc.encryptionType = fallback;
+        return originalSendRequest(remotePubkey, method, params, kind, cb);
+      }
+      throw err;
+    }
+  };
+
+  // 2. Wrap sign to use manual event construction
+  signer.sign = async (event: any) => {
+    L('Robust sign_event requested for kind:', event.kind);
+    
+    // Build manual event object per NIP-46 spec (no id/pubkey)
+    const unsignedEvent = {
+      kind: event.kind,
+      content: event.content,
+      tags: event.tags,
+      created_at: event.created_at
+    };
+
+    return new Promise((resolve, reject) => {
+      const signTimeout = setTimeout(() => {
+        L('sign_event initial attempt timed out, forcing encryption flip...');
+        signer.rpc.encryptionType = signer.rpc.encryptionType === 'nip44' ? 'nip04' : 'nip44';
+      }, 15000);
+
+      signer.rpc.sendRequest(signer.bunkerPubkey, 'sign_event', [JSON.stringify(unsignedEvent)], 24133, (response: any) => {
+        clearTimeout(signTimeout);
+        if (response.error) {
+          L('sign_event error:', response.error);
+          reject(response.error);
+        } else {
+          try {
+            const json = JSON.parse(response.result);
+            L('sign_event SUCCESS');
+            resolve(json.sig);
+          } catch (e) {
+            L('Failed to parse sign_event result:', response.result);
+            // Some signers return the signature directly as a string
+            if (typeof response.result === 'string' && response.result.length >= 128) {
+               resolve(response.result);
+            } else {
+               reject(new Error('Invalid signature format from bunker'));
+            }
+          }
+        }
+      });
+    });
+  };
+
+  return signer;
+}
+
 export async function loginWithBunker(bunkerUrl: string, options?: BunkerLoginOptions): Promise<NDKUser | null> {
   const L = (...args: unknown[]) => logStatus('Bunker', args[0] as string, args.slice(1));
   const t0 = performance.now();
@@ -601,7 +688,8 @@ export async function loginWithBunker(bunkerUrl: string, options?: BunkerLoginOp
   const cleanToken = `bunker://${bunkerPubkey}?${params.toString()}`;
   L('sanitized bunker token:', cleanToken);
 
-  const bunkerSigner = NDKNip46Signer.bunker(ndk, cleanToken, localSigner);
+  let bunkerSigner = NDKNip46Signer.bunker(ndk, cleanToken, localSigner);
+  bunkerSigner = makeRobustSigner(bunkerSigner, ndk);
   L('bunkerSigner constructed. state:', {
     bunkerPubkey: bunkerSigner.bunkerPubkey,
     userPubkey: bunkerSigner.userPubkey,
@@ -739,7 +827,7 @@ export async function createNostrConnectSession(relay?: string, options?: Bunker
   const secret = getConnectionSecret();
   L('localSigner obtained, local pubkey =', localSigner.pubkey);
 
-  const signer = NDKNip46Signer.nostrconnect(ndk, connectRelay, localSigner, {
+  let signer = NDKNip46Signer.nostrconnect(ndk, connectRelay, localSigner, {
     name: 'Obelisk',
     url: typeof window !== 'undefined' ? window.location.origin : 'https://obelisk.ar',
   });
