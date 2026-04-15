@@ -4,7 +4,7 @@ import { prisma } from './db';
 // In-memory challenge store (short-lived, no need to persist)
 const challenges = new Map<string, { challenge: string; createdAt: number }>();
 
-const CHALLENGE_TTL = 60_000; // 1 minute
+const CHALLENGE_TTL = 300_000; // 1 minute
 const SESSION_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 export function generateChallenge(): { challengeId: string; challenge: string } {
@@ -29,7 +29,10 @@ export async function verifySignedEvent(
   }
 ): Promise<string | null> {
   const entry = challenges.get(challengeId);
-  if (!entry) return null;
+  if (!entry) {
+    console.log('[auth] challenge not found or already deleted:', challengeId);
+    return null;
+  }
 
   if (Date.now() - entry.createdAt > CHALLENGE_TTL) {
     challenges.delete(challengeId);

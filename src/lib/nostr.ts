@@ -5,7 +5,7 @@ import NDK, {
   NDKPrivateKeySigner,
   NDKRelayAuthPolicies,
 } from '@nostr-dev-kit/ndk';
-import { nip19, generateSecretKey, getPublicKey } from 'nostr-tools';
+import { nip19, generateSecretKey, getPublicKey, nip04 } from 'nostr-tools';
 
 // Popular relays (high availability)
 const POPULAR_RELAYS = [
@@ -16,16 +16,44 @@ const POPULAR_RELAYS = [
   'wss://nostr.otxr.dev',
 ];
 
-/**
- * NIP-17 inbox relays — used as a fallback when a user has no kind 10050
- * advertised. Several of these require NIP-42 AUTH to read, which is why
- * `relayAuthDefaultPolicy` must be set below before adding them.
- */
-const NIP17_INBOX_FALLBACK_RELAYS = [
-  'wss://auth.nostr1.com',
-  'wss://relay.0xchat.com',
-  'wss://inbox.nostr.wine',
+const CONNECT_RELAYS = [
+  'wss://relay.nsec.app',
+  'wss://relay.damus.io',
+  'wss://relay.primal.net',
+  'wss://nostr.v0l.io',
+  'wss://relay.snort.social',
 ];
+
+/**
+ * STATUS Logging system for mobile debugging
+ */
+export const logStatus = (stage: string, message: string, data?: any) => {
+  const msg = `[AUTH_STATUS] [${stage}] ${message}`;
+  console.log(msg, data || '');
+  // Also store in window for easy console access on mobile
+  if (typeof window !== 'undefined') {
+    const entry = {
+      time: new Date().toISOString(),
+      stage,
+      message,
+      data: data ? JSON.parse(JSON.stringify(data)) : null
+    };
+    (window as any)._obelisk_auth_logs = (window as any)._obelisk_auth_logs || [];
+    (window as any)._obelisk_auth_logs.push(entry);
+
+    // Persist to localStorage
+    try {
+      const stored = localStorage.getItem('obelisk-auth-debug-logs');
+      const logs = stored ? JSON.parse(stored) : [];
+      logs.push(entry);
+      // Keep last 100 logs
+      if (logs.length > 100) logs.shift();
+      localStorage.setItem('obelisk-auth-debug-logs', JSON.stringify(logs));
+    } catch (e) {
+      // ignore
+    }
+  }
+};
 
 // Global NDK instance
 let ndkInstance: NDK | null = null;
@@ -36,13 +64,28 @@ export function getNDK(): NDK {
     ndkInstance = new NDK({
       explicitRelayUrls: [...POPULAR_RELAYS],
     });
-    // NIP-42: sign AUTH challenges whenever a relay demands them. Required
-    // for NIP-17 gift-wrap inbox relays (auth.nostr1.com, 0xchat, etc.),
-    // which reject DM reads otherwise. Uses whichever signer was set by
-    // the login flow — works identically for NIP-07, nsec, and NIP-46.
     ndkInstance.relayAuthDefaultPolicy = NDKRelayAuthPolicies.signIn({
       ndk: ndkInstance,
     });
+
+    // Global NIP-46 sniffing on the pool
+    if (typeof window !== 'undefined') {
+        const ndk = ndkInstance;
+        (ndk.pool as any).on('relay:event', async (relay: any, event: any) => {
+            if (event.kind === 24133 && ndk.signer && (ndk.signer as any).localSigner) {
+                const signer = ndk.signer as any;
+                const localSigner = signer.localSigner;
+                const pTags = (event.tags || []).filter((t: any) => t[0] === 'p');
+                if (pTags.some((t: any) => t[1] === localSigner.pubkey)) {
+                    // This event is for us. If it hasn't been handled, setupManualInterception
+                    // usually handles it via its own sub, but this pool listener is a backup
+                    // for when subscriptions are flaky.
+                    logStatus('PoolSniffer', 'Intercepted event for us', { id: event.id });
+                    signer.rpc.handleEvent(event);
+                }
+            }
+        });
+    }
   }
   return ndkInstance;
 }
@@ -100,6 +143,17 @@ export async function addDMInboxRelays(pubkey: string): Promise<void> {
     console.warn('[dm] ndk.connect after inbox-relay add failed:', err);
   }
 }
+
+/**
+ * NIP-17 inbox relays — used as a fallback when a user has no kind 10050
+ * advertised. Several of these require NIP-42 AUTH to read, which is why
+ * `relayAuthDefaultPolicy` must be set below before adding them.
+ */
+const NIP17_INBOX_FALLBACK_RELAYS = [
+  'wss://auth.nostr1.com',
+  'wss://relay.0xchat.com',
+  'wss://inbox.nostr.wine',
+];
 
 export async function connectNDK(): Promise<NDK> {
   const ndk = getNDK();
@@ -159,6 +213,48 @@ export type LoginMethod = 'extension' | 'nsec' | 'bunker';
 // nsec is intentionally NOT persisted (the key would end up in localStorage);
 // NIP-07 needs no persistence (the extension keeps the key).
 const SIGNER_PAYLOAD_KEY = 'obelisk-signer-payload';
+const SIGNER_LOCAL_KEY = 'obelisk-local-signer-key';
+const CONNECTION_SECRET_KEY = 'obelisk-connection-secret';
+
+function getLocalSigner(): NDKPrivateKeySigner {
+  const L = (msg: string, data?: any) => logStatus('LocalSigner', msg, data);
+  if (typeof localStorage === 'undefined') return NDKPrivateKeySigner.generate();
+  
+  try {
+    const saved = localStorage.getItem(SIGNER_LOCAL_KEY);
+    if (saved) {
+      const secret = localStorage.getItem(CONNECTION_SECRET_KEY);
+      if (secret) {
+        L(`Resuming session with secret: ${secret}`);
+      } else {
+        const newSecret = Math.random().toString(36).substring(2, 15);
+        localStorage.setItem(CONNECTION_SECRET_KEY, newSecret);
+        L('Restored signer but generated new secret');
+      }
+      L('Restoring local signer from localStorage');
+      return new NDKPrivateKeySigner(saved);
+    }
+  } catch (err) {
+    L('Failed to read local signer key:', err);
+  }
+
+  L('Generating and saving NEW local signer');
+  const signer = NDKPrivateKeySigner.generate();
+  try {
+    localStorage.setItem(SIGNER_LOCAL_KEY, signer.privateKey!);
+    const secret = Math.random().toString(36).substring(2, 15);
+    localStorage.setItem(CONNECTION_SECRET_KEY, secret);
+    L('Saved new local signer and secret');
+  } catch (err) {
+    L('Failed to save local signer key:', err);
+  }
+  return signer;
+}
+
+export function getConnectionSecret(): string | null {
+  if (typeof localStorage === 'undefined') return null;
+  return localStorage.getItem(CONNECTION_SECRET_KEY);
+}
 
 function saveSignerPayload(payload: string): void {
   if (typeof localStorage === 'undefined') return;
@@ -206,13 +302,29 @@ export async function restoreRemoteSigner(): Promise<boolean> {
     // immediately. If the bunker is offline this will throw after its own
     // timeout; caller decides whether to log out or wait.
     if (typeof (signer as unknown as { blockUntilReady?: () => Promise<unknown> }).blockUntilReady === 'function') {
-      await (signer as unknown as { blockUntilReady: () => Promise<unknown> }).blockUntilReady();
+      console.log('[nostr] restoreRemoteSigner: awaiting blockUntilReady (30s timeout)...');
+      
+      // Ensure NDK is connected - if the page was just reloaded, it might still be connecting
+      if (ndk.pool.connectedRelays().length === 0) {
+        console.log('[nostr] restoreRemoteSigner: no connected relays, triggering connect');
+        ndk.connect().catch(() => {});
+      }
+
+      // Start manual interception for restored session
+      setupManualInterception(ndk, signer, 'RestoreSession');
+
+      await withTimeout((signer as unknown as { blockUntilReady: () => Promise<unknown> }).blockUntilReady(), 30000);
+      console.log('[nostr] restoreRemoteSigner: blockUntilReady resolved');
     }
     return true;
   } catch (err) {
     console.warn('[nostr] restoreRemoteSigner failed:', err);
-    // Wipe broken payload so we don't keep retrying forever.
-    clearSignerPayload();
+    // Only wipe if it's NOT a timeout. We want to allow retries if the bunker is just slow.
+    const isTimeout = String(err).toLowerCase().includes('timeout');
+    if (!isTimeout) {
+      console.log('[nostr] Wiping signer payload due to non-timeout error');
+      clearSignerPayload();
+    }
     return false;
   }
 }
@@ -303,15 +415,117 @@ export interface BunkerLoginOptions {
   /** Invoked when signer emits auth_url. Use this to render a tap-to-open
    *  link in the UI (mobile-safe) instead of relying on window.open. */
   onAuthUrl?: (url: string) => void;
+  /** Invoked when a kind 24133 RPC event is intercepted manually. */
+  onRpcEvent?: (event: any) => void;
+}
+
+
+/**
+ * Sets up a manual subscription and interception loop for NIP-46 RPC events.
+ * This is critical on mobile where background subscriptions often fail or
+ * get suspended. It also adds robust decryption (NIP-04 fallback + NIP-44 support).
+ */
+function setupManualInterception(ndk: NDK, signer: any, logPrefix: string) {
+  const L = (msg: string, ...args: any[]) => logStatus(logPrefix, msg, args);
+  const localSigner = signer.localSigner;
+  if (!localSigner || !localSigner.pubkey) {
+    L('WARN: setupManualInterception called without localSigner');
+    return;
+  }
+
+  L('Setting up manual NIP-46 interception loop for pubkey:', localSigner.pubkey);
+  
+  // Use a 'since' filter to catch events that might have been sent while 
+  // the browser tab was suspended in the background.
+  const since = Math.floor(Date.now() / 1000) - 300; // 5 minutes ago
+  const manualSub = ndk.subscribe({
+    kinds: [24133 as number],
+    '#p': [localSigner.pubkey],
+    since
+  }, { closeOnEose: false });
+
+  manualSub.on('event', async (event: any) => {
+    if (event.kind === 24133) {
+      const pTags = event.getMatchingTags('p');
+      if (pTags.some((t: string[]) => t[1] === localSigner.pubkey)) {
+        L('MANUAL INTERCEPTION: Kind 24133 received!', { id: event.id, from: event.pubkey });
+        
+        const tryDecrypt = async () => {
+          L('Attempting decryption of content length:', event.content?.length);
+          if (!event.content) throw new Error('Empty event content');
+          
+          const isNip04 = event.content.includes('?iv=');
+          try {
+            if (isNip04) {
+              const remoteUser = ndk.getUser({ pubkey: event.pubkey });
+              return await localSigner.decrypt(remoteUser, event.content);
+            } else {
+              L('Content is NOT NIP-04, attempting NIP-44 decryption...');
+              const { nip44, utils } = await import('nostr-tools');
+              const privKeyBytes = typeof localSigner.privateKey === 'string' ? utils.hexToBytes(localSigner.privateKey) : localSigner.privateKey;
+              const convKey = nip44.getConversationKey(privKeyBytes, event.pubkey);
+              return nip44.decrypt(event.content, convKey);
+            }
+          } catch (err) {
+            L('Decryption failed, trying best-effort fallback...', err);
+            if (localSigner.privateKey) {
+              try {
+                const { nip04 } = await import('nostr-tools');
+                if (isNip04) return await nip04.decrypt(localSigner.privateKey, event.pubkey, event.content);
+              } catch (e2) { L('Final fallback failed', e2); }
+            }
+            throw err;
+          }
+        };
+
+        try {
+          const decrypted = await tryDecrypt();
+          L('DECRYPTED RPC CONTENT SUCCESS:', decrypted);
+          
+          const parsed = JSON.parse(decrypted);
+          const isConnect = parsed.method === 'connect';
+          const isPubkeyResult = typeof parsed.result === 'string' && parsed.result.length === 64;
+          const isAck = parsed.result === 'ack';
+
+          if (isConnect || isPubkeyResult || isAck) {
+            L('SUCCESSFUL RPC EVENT DETECTED', { method: parsed.method });
+            let userPubkey = event.pubkey;
+            if (isPubkeyResult) userPubkey = parsed.result;
+            else if (isConnect && parsed.params?.[0]?.length === 64) userPubkey = parsed.params[0];
+
+            if (userPubkey && userPubkey.length === 64) {
+              L('FORCE SUCCESS: Manually setting userPubkey and emitting ready', { userPubkey });
+              signer.userPubkey = userPubkey;
+              if (!signer.remoteUser) {
+                const { NDKUser } = await import('@nostr-dev-kit/ndk');
+                signer.remoteUser = new NDKUser({ pubkey: userPubkey });
+                signer.remoteUser.ndk = ndk;
+              }
+              signer.emit('ready', userPubkey);
+            }
+          }
+        } catch (e) {
+          L('Interception error', String(e));
+        }
+
+        // Always inject into handleEvent
+        L('Injecting event into signer.rpc.handleEvent...');
+        signer.rpc.handleEvent(event);
+      }
+    }
+  });
+
+  return manualSub;
 }
 
 export async function loginWithBunker(bunkerUrl: string, options?: BunkerLoginOptions): Promise<NDKUser | null> {
-  const L = (...args: unknown[]) => console.log('[bunker]', ...args);
+  const L = (...args: unknown[]) => logStatus('Bunker', args[0] as string, args.slice(1));
   const t0 = performance.now();
-  L('=== loginWithBunker START ===');
+  L('=== START V-FORCE-SUCCESS-2 ===');
   L('raw input:', bunkerUrl);
 
   const ndk = getNDK();
+  L('getNDK() called');
   const token = bunkerUrl.trim();
   L('trimmed token:', token);
 
@@ -360,6 +574,13 @@ export async function loginWithBunker(bunkerUrl: string, options?: BunkerLoginOp
   }
 
   L('kicking off ndk.connect() in background');
+  // Add redundancy relays for NIP-46 connection
+  CONNECT_RELAYS.forEach(url => {
+    try {
+      ndk.addExplicitRelay(url);
+    } catch {}
+  });
+  
   ndk.connect().then(
     () => L('ndk.connect() resolved'),
     (e) => L('ndk.connect() rejected:', e),
@@ -369,8 +590,8 @@ export async function loginWithBunker(bunkerUrl: string, options?: BunkerLoginOp
   const { NDKNip46Signer } = await import('@nostr-dev-kit/ndk');
   L('NDKNip46Signer imported');
 
-  const localSigner = NDKPrivateKeySigner.generate();
-  L('localSigner generated, local pubkey =', localSigner.pubkey);
+  const localSigner = getLocalSigner();
+  L('localSigner obtained, local pubkey =', localSigner.pubkey);
 
   // Rebuild bunker:// URL manually — URL() mangles non-special schemes on round-trip
   const params = new URLSearchParams();
@@ -391,29 +612,68 @@ export async function loginWithBunker(bunkerUrl: string, options?: BunkerLoginOp
   bunkerSigner.on('authUrl', (url: string) => {
     L('>>> authUrl event:', url);
     if (options?.onAuthUrl) {
+      L('Calling options.onAuthUrl');
       options.onAuthUrl(url);
       return;
     }
+    
+    // On mobile, window.open is often blocked. If it's a deep link (nostrconnect://),
+    // we should just redirect the current page or use a direct link.
+    const isDeepLink = url.startsWith('nostrconnect://') || url.startsWith('bunker://');
+    L('Opening authUrl', { url, isDeepLink });
+
     try {
-      const w = window.open(url, 'nostr-auth', 'width=600,height=700');
-      if (!w) L('WARN: window.open returned null (popup blocked?) — URL:', url);
+      if (isDeepLink && typeof window !== 'undefined') {
+        // For deep links on mobile, window.open is unreliable.
+        // We try window.open first but provide no fallback here as the UI
+        // should have a button if options.onAuthUrl was provided.
+        // If no options provided, we try window.open.
+        const w = window.open(url, '_blank');
+        if (!w) {
+          L('window.open failed, trying location.href');
+          window.location.href = url;
+        }
+      } else {
+        const w = window.open(url, 'nostr-auth', 'width=600,height=700');
+        if (!w) L('WARN: window.open returned null (popup blocked?) — URL:', url);
+      }
     } catch (e) {
-      L('ERROR opening authUrl popup:', e, 'URL:', url);
+      L('ERROR opening authUrl:', e, 'URL:', url);
     }
   });
   // Forward every RPC event for visibility
-  bunkerSigner.rpc.on('response', (r: unknown) => L('rpc response:', r));
-  bunkerSigner.rpc.on('request', (r: unknown) => L('rpc request:', r));
+  bunkerSigner.rpc.on('response', (r: unknown) => L('rpc response:', JSON.stringify(r)));
+  bunkerSigner.rpc.on('request', (r: unknown) => L('rpc request:', JSON.stringify(r)));
 
-  L('calling bunkerSigner.blockUntilReady() — awaiting signer handshake...');
+  setupManualInterception(ndk, bunkerSigner, 'Bunker');
+
+  L('calling bunkerSigner.blockUntilReady() (60s timeout)...');
+  
+  // Create a promise that resolves when signer.userPubkey is set
+  const forceSuccessPromise = new Promise<string>((resolve) => {
+    const check = () => {
+      if (bunkerSigner.userPubkey) resolve(bunkerSigner.userPubkey);
+      else if (!cancelled_internal_bunker) setTimeout(check, 1000);
+    };
+    check();
+  });
+  let cancelled_internal_bunker = false;
+
   let user: NDKUser;
   try {
-    user = await bunkerSigner.blockUntilReady();
-    L('blockUntilReady resolved. user.pubkey =', user.pubkey, 'elapsed ms =', Math.round(performance.now() - t0));
+    const resolvedPubkey = await Promise.race([
+      bunkerSigner.blockUntilReady().then(u => u.pubkey),
+      forceSuccessPromise,
+      new Promise<string>((_, reject) => setTimeout(() => reject(new Error('timeout')), 60000))
+    ]);
+    L('Connection established (manual or NDK)! pubkey:', resolvedPubkey);
+    user = ndk.getUser({ pubkey: resolvedPubkey });
   } catch (e) {
-    L('ERROR blockUntilReady failed:', e, 'elapsed ms =', Math.round(performance.now() - t0));
+    L('ERROR blockUntilReady failed or timed out:', e, 'elapsed ms =', Math.round(performance.now() - t0));
+    cancelled_internal_bunker = true;
     throw e;
   }
+
 
   ndk.signer = bunkerSigner;
   L('ndk.signer assigned');
@@ -436,7 +696,7 @@ export async function loginWithBunker(bunkerUrl: string, options?: BunkerLoginOp
     L('WARN profile fetch failed/timeout:', e);
   }
 
-  L('=== loginWithBunker DONE. total ms =', Math.round(performance.now() - t0));
+  L('=== DONE. total ms =', Math.round(performance.now() - t0));
   return user;
 }
 
@@ -448,12 +708,21 @@ export interface NostrConnectSession {
 }
 
 export async function createNostrConnectSession(relay?: string, options?: BunkerLoginOptions): Promise<NostrConnectSession> {
-  const L = (...args: unknown[]) => console.log('[nostrconnect]', ...args);
+  const L = (...args: unknown[]) => logStatus('NostrConnect', args[0] as string, args.slice(1));
   const t0 = performance.now();
-  L('=== createNostrConnectSession START ===');
+  L('=== START V-FORCE-SUCCESS-2 ===');
 
   const ndk = getNDK();
-  L('ndk obtained, kicking off ndk.connect()');
+  L('getNDK() called');
+  L('ndk obtained, adding redundancy relays');
+  CONNECT_RELAYS.forEach(r => {
+    try {
+      ndk.addExplicitRelay(r);
+    } catch {
+      // already added
+    }
+  });
+
   ndk.connect().then(
     () => L('ndk.connect() resolved'),
     (e) => L('ndk.connect() rejected:', e),
@@ -463,53 +732,171 @@ export async function createNostrConnectSession(relay?: string, options?: Bunker
   const { NDKNip46Signer } = await import('@nostr-dev-kit/ndk');
   L('NDKNip46Signer imported');
 
-  const connectRelay = relay || 'wss://relay.nsec.app';
-  L('using connect relay:', connectRelay);
+  const connectRelay = relay || CONNECT_RELAYS[0];
+  L('using primary connect relay:', connectRelay);
 
-  const signer = NDKNip46Signer.nostrconnect(ndk, connectRelay, undefined, {
+  const localSigner = getLocalSigner();
+  const secret = getConnectionSecret();
+  L('localSigner obtained, local pubkey =', localSigner.pubkey);
+
+  const signer = NDKNip46Signer.nostrconnect(ndk, connectRelay, localSigner, {
     name: 'Obelisk',
     url: typeof window !== 'undefined' ? window.location.origin : 'https://obelisk.ar',
   });
-  L('signer constructed. state:', {
-    localPubkey: signer.localSigner.pubkey,
-    relayUrls: signer.relayUrls,
-    hasUri: !!signer.nostrConnectUri,
+
+  if (secret) {
+    (signer as any).secret = secret;
+  }
+
+  // NDK built-in URI only has one relay. Let's add the others for redundancy
+  // Amber expects: nostrconnect://<pubkey>?relay=<url>&relay=<url>&metadata=...
+  const url = new URL(signer.nostrConnectUri!);
+  // Remove existing relay param to re-add in order
+  url.searchParams.delete('relay');
+  CONNECT_RELAYS.forEach(r => url.searchParams.append('relay', r));
+
+  if (secret) {
+    url.searchParams.set('secret', secret);
+  }
+
+  // Ensure metadata is present if the signer app expects it
+  const metadata = {
+    name: 'Obelisk',
+    url: typeof window !== 'undefined' ? window.location.origin : 'https://obelisk.ar',
+    description: 'Nostr chat for La Crypta',
+    icons: ['https://obelisk.ar/icon.png']
+  };
+  url.searchParams.set('metadata', JSON.stringify(metadata));
+
+  // Clean up empty params that might confuse some signers
+  url.searchParams.delete('image');
+  url.searchParams.delete('perms');
+  const keysToRemove: string[] = [];
+  url.searchParams.forEach((value, key) => {
+    if (!value || value === 'undefined' || value === 'null' || value === '') {
+      keysToRemove.push(key);
+    }
   });
-  L('nostrConnectUri:', signer.nostrConnectUri);
+  keysToRemove.forEach(k => url.searchParams.delete(k));
+
+  const uri = url.toString();
+  L('COMPLIANT URI generated:', uri);
 
   signer.on('authUrl', (url: string) => {
     L('>>> authUrl event:', url);
     if (options?.onAuthUrl) {
+      L('Calling options.onAuthUrl');
       options.onAuthUrl(url);
       return;
     }
+    
+    // On mobile, window.open is often blocked. If it's a deep link (nostrconnect://),
+    // we should just redirect the current page or use a direct link.
+    const isDeepLink = url.startsWith('nostrconnect://') || url.startsWith('bunker://');
+    L('Opening authUrl', { url, isDeepLink });
+
     try {
-      const w = window.open(url, 'nostr-auth', 'width=600,height=700');
-      if (!w) L('WARN: window.open returned null (popup blocked?) — URL:', url);
+      if (isDeepLink && typeof window !== 'undefined') {
+        // For deep links on mobile, window.open is unreliable.
+        // We try window.open first but provide no fallback here as the UI
+        // should have a button if options.onAuthUrl was provided.
+        // If no options provided, we try window.open.
+        const w = window.open(url, '_blank');
+        if (!w) {
+          L('window.open failed, trying location.href');
+          window.location.href = url;
+        }
+      } else {
+        const w = window.open(url, 'nostr-auth', 'width=600,height=700');
+        if (!w) L('WARN: window.open returned null (popup blocked?) — URL:', url);
+      }
     } catch (e) {
-      L('ERROR opening authUrl popup:', e, 'URL:', url);
+      L('ERROR opening authUrl:', e, 'URL:', url);
     }
   });
-  signer.rpc.on('response', (r: unknown) => L('rpc response:', r));
-  signer.rpc.on('request', (r: unknown) => L('rpc request:', r));
+  signer.rpc.on('response', (r: unknown) => L('rpc response:', JSON.stringify(r)));
+  signer.rpc.on('request', (r: unknown) => L('rpc request:', JSON.stringify(r)));
 
-  const uri = signer.nostrConnectUri || '';
   L('setup done. elapsed ms =', Math.round(performance.now() - t0));
 
   let cancelled = false;
 
   const waitForConnection = async (): Promise<NDKUser | null> => {
-    L('waitForConnection: awaiting blockUntilReady...');
+    L('waitForConnection: ensuring ndk.connect() is initiated...');
+    if (ndk.pool.connectedRelays().length === 0) {
+      L('No connected relays, triggering ndk.connect()');
+      ndk.connect().catch(e => L('ndk.connect() error:', e));
+      // Wait up to 5s for at least one relay to connect before proceeding to blockUntilReady
+      let attempts = 0;
+      while (ndk.pool.connectedRelays().length === 0 && attempts < 10) {
+        await new Promise(r => setTimeout(r, 500));
+        attempts++;
+      }
+    }
+    L('Relay check done, connected relays:', ndk.pool.connectedRelays().length);
+
+    let manualSub: any = null;
+    L('waitForConnection: awaiting blockUntilReady (60s timeout)...');
+    
+    // Add relay lifecycle logging during handshake
+    const onConnect = (r: any) => L(`Relay connected: ${r.url}`);
+    const onDisconnect = (r: any) => L(`Relay disconnected: ${r.url}`);
+    ndk.pool.on('relay:connect', onConnect);
+    ndk.pool.on('relay:disconnect', onDisconnect);
+
+    manualSub = setupManualInterception(ndk, signer, 'NostrConnect');
+
     const tw = performance.now();
     try {
-      const user = await signer.blockUntilReady();
-      L('blockUntilReady resolved. user.pubkey =', user.pubkey, 'wait ms =', Math.round(performance.now() - tw));
+      L("Signer local pubkey: " + localSigner.pubkey);
+      L("Connected relays: " + ndk.pool.connectedRelays().map(r => r.url).join(', '));
+
+      // Reconnection loop for mobile tab suspension
+      const reconnectInterval = setInterval(() => {
+        if (ndk.pool.connectedRelays().length === 0) {
+          L('No connected relays in loop, calling ndk.connect()...');
+          ndk.connect().catch(e => L('ndk.connect() error in loop:', e));
+        }
+      }, 5000);
+
+      // Pre-assign signer to NDK. Some NDK versions need this to handle 
+      // responding to the initial 'connect' request correctly.
+      ndk.signer = signer;
+
+      L('Calling signer.blockUntilReady()...');
+      let user: NDKUser | null = null;
+      
+      // Create a promise that resolves when signer.userPubkey is set
+      const forceSuccessPromise = new Promise<string>((resolve) => {
+        const check = () => {
+          if (signer.userPubkey) resolve(signer.userPubkey);
+          else if (!cancelled) setTimeout(check, 1000);
+        };
+        check();
+      });
+
+      try {
+        // Wait for either the official handshake or our manual injection
+        const resolvedPubkey = await Promise.race([
+          signer.blockUntilReady().then(u => u.pubkey),
+          forceSuccessPromise,
+          new Promise<string>((_, reject) => setTimeout(() => reject(new Error('timeout')), 60000))
+        ]);
+        
+        L('Connection established (manual or NDK)! pubkey:', resolvedPubkey);
+        user = ndk.getUser({ pubkey: resolvedPubkey });
+      } catch (e) {
+        L('ERROR connection failed or timed out:', e);
+        throw e;
+      }
+      clearInterval(reconnectInterval);
+      L('blockUntilReady resolved. user.pubkey =', user?.pubkey, 'wait ms =', Math.round(performance.now() - tw));
       if (cancelled) {
         L('waitForConnection: cancelled after resolve, bailing');
         return null;
       }
-      ndk.signer = signer;
-      L('ndk.signer assigned');
+      
+      L('ndk.signer remains assigned');
       try {
         saveSignerPayload(signer.toPayload());
         L('signer payload persisted');
@@ -528,9 +915,17 @@ export async function createNostrConnectSession(relay?: string, options?: Bunker
       }
       return user;
     } catch (err) {
-      L('ERROR blockUntilReady rejected:', err, 'wait ms =', Math.round(performance.now() - tw));
+      L('ERROR blockUntilReady rejected!', {
+        error: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
+        waitMs: Math.round(performance.now() - tw)
+      });
       if (cancelled) return null;
       throw err;
+    } finally {
+      ndk.pool.off('relay:connect', onConnect);
+      ndk.pool.off('relay:disconnect', onDisconnect);
+      manualSub.stop();
     }
   };
 

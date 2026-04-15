@@ -25,6 +25,17 @@ export default function InvitePage() {
   const [joining, setJoining] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
+
+  // Auto-open login modal if a NostrConnect session was in progress
+  useEffect(() => {
+    if (typeof localStorage !== 'undefined') {
+      const inProgress = localStorage.getItem('obelisk-auth-in-progress');
+      if (inProgress === 'true') {
+        setShowLogin(true);
+      }
+    }
+  }, []);
+
   const pendingJoinRef = useRef(false);
   const sessionCheckStarted = useRef(false);
 

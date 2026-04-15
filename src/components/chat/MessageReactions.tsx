@@ -79,7 +79,7 @@ export default function MessageReactions({
         className ?? 'flex flex-wrap items-center gap-1 relative'
       }
     >
-      {grouped.map(([emoji, { pubkeys, isMine }]) => {
+      {grouped.map(([emoji, { pubkeys, isMine }], index) => {
         const resolved = resolveReactionEmoji(emoji, serverEmojis);
         const count = pubkeys.length;
         const previewNames = profileCache ? pubkeys.slice(0, 3).map(nameFor) : [];
@@ -115,16 +115,18 @@ export default function MessageReactions({
               <div
                 role="tooltip"
                 data-testid="reaction-tooltip"
-                className="pointer-events-none absolute bottom-full left-0 mb-1 z-50 hidden group-hover/reaction:flex items-center gap-2 bg-lc-dark border border-lc-border rounded-lg shadow-lg px-3 py-2 max-w-xs"
+                className={`pointer-events-none absolute bottom-full mb-2 z-[100] hidden group-hover/reaction:flex items-center gap-2 bg-lc-dark border border-lc-border rounded-xl shadow-xl px-2.5 py-1.5 w-max max-w-[240px] ${
+                  index < 2 ? 'left-0 translate-x-0' : 'left-1/2 -translate-x-1/2'
+                }`}
               >
-                <div className="shrink-0 text-2xl leading-none">
+<div className="shrink-0 text-xl leading-none">
                   {resolved.kind === 'custom' ? (
-                    <img src={resolved.url} alt={emojiLabel} className="w-7 h-7 object-contain" />
+                    <img src={resolved.url} alt={emojiLabel} className="w-5 h-5 object-contain" />
                   ) : (
                     <span>{resolved.char}</span>
                   )}
                 </div>
-                <div className="text-xs text-lc-white whitespace-normal break-words">
+                <div className="text-xs text-lc-white whitespace-normal break-words leading-tight">
                   {previewNames.join(', ')}
                   {remaining > 0 && (
                     <> y <span className="text-lc-green">{remaining} {remaining === 1 ? 'persona más' : 'personas más'}</span></>

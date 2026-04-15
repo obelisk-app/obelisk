@@ -13,9 +13,12 @@ import {
   createNostrConnectSession,
   LoginMethod,
   NostrConnectSession,
+  logStatus,
 } from '@/lib/nostr';
 import { authenticateWithBackend } from '@/lib/backend-auth';
 import ProfileEditor from '@/components/ProfileEditor';
+
+const AUTH_IN_PROGRESS_KEY = 'obelisk-auth-in-progress';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -43,10 +46,14 @@ export default function LoginModal({ isOpen, onClose, onSuccess, transparentBack
   const [loadingMethod, setLoadingMethod] = useState<LoginMethod | null>(null);
   const [newAccountNsec, setNewAccountNsec] = useState<string | null>(null);
   const [nsecCopied, setNsecCopied] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
+  const [debugLogs, setDebugLogs] = useState<any[]>([]);
   const [creatingAccount, setCreatingAccount] = useState(false);
   const [backupConfirmed, setBackupConfirmed] = useState(false);
   const [showProfileSetup, setShowProfileSetup] = useState(false);
   const [authChallengeUrl, setAuthChallengeUrl] = useState<string | null>(null);
+  const [showSlowHint, setShowSlowHint] = useState(false);
+  const [rpcEventDetected, setRpcEventDetected] = useState(false);
   const sessionRef = useRef<NostrConnectSession | null>(null);
   const { setUser, setLoading, setError, isLoading, error, syncProfile } = useAuthStore();
 
@@ -58,6 +65,50 @@ export default function LoginModal({ isOpen, onClose, onSuccess, transparentBack
     return () => clearTimeout(timer);
   }, [isOpen]);
 
+  // Poll for debug logs
+  useEffect(() => {
+    if (!isOpen) return;
+    
+    const updateLogs = () => {
+      if (typeof window !== 'undefined') {
+        const stored = localStorage.getItem('obelisk-auth-debug-logs');
+        if (stored) {
+          try {
+            setDebugLogs(JSON.parse(stored));
+          } catch (e) {
+            // ignore
+          }
+        } else if ((window as any)._obelisk_auth_logs) {
+          setDebugLogs([...(window as any)._obelisk_auth_logs]);
+        }
+      }
+    };
+
+    updateLogs();
+    const interval = setInterval(updateLogs, 1000);
+    return () => clearInterval(interval);
+  }, [isOpen]);
+
+  // Auto-resume NostrConnect flow if it was in progress before a reload
+  useEffect(() => {
+    if (typeof localStorage !== 'undefined') {
+      const inProgress = localStorage.getItem(AUTH_IN_PROGRESS_KEY);
+      if (inProgress === 'true' && !method && isOpen) {
+        console.log('[LoginModal] Resuming auth flow');
+        setMethod('bunker');
+        setBunkerTab('qr');
+      }
+    }
+  }, [isOpen, method]);
+
+  const handleClearLogs = () => {
+    if (typeof window !== 'undefined') {
+      (window as any)._obelisk_auth_logs = [];
+      localStorage.removeItem('obelisk-auth-debug-logs');
+      setDebugLogs([]);
+    }
+  };
+
   // Generate nostrconnect URI when bunker tab is selected
   useEffect(() => {
     if (method !== 'bunker' || bunkerTab !== 'qr') return;
@@ -67,29 +118,70 @@ export default function LoginModal({ isOpen, onClose, onSuccess, transparentBack
 
     const generate = async () => {
       try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem(AUTH_IN_PROGRESS_KEY, 'true');
+        }
         const session = await createNostrConnectSession(undefined, {
-          onAuthUrl: (url) => setAuthChallengeUrl(url),
+          onAuthUrl: (url) => {
+            console.log('[LoginModal] Received authUrl:', url);
+            setAuthChallengeUrl(url);
+          },
+          onRpcEvent: (event) => {
+            console.log('[LoginModal] RPC event detected:', event.id);
+            setRpcEventDetected(true);
+          }
         });
         if (cancelled) {
+          console.log('[LoginModal] Generation cancelled');
           session.cancel();
           return;
         }
         sessionRef.current = session;
         setConnectUri(session.uri);
+        console.log('[LoginModal] connectUri set:', session.uri);
         setWaitingForScan(true);
+        setShowSlowHint(false);
+
+        const slowTimer = setTimeout(() => setShowSlowHint(true), 10000);
 
         // Wait for the remote signer to connect
+        console.log('[LoginModal] Awaiting session.waitForConnection()...');
+        logStatus('LoginModal', 'Awaiting QR scan/connection...');
         const user = await session.waitForConnection();
-        if (cancelled || !user) return;
+        clearTimeout(slowTimer);
+        setShowSlowHint(false);
+        console.log('[LoginModal] waitForConnection returned:', user?.pubkey);
+        if (cancelled || !user) {
+          logStatus('LoginModal', 'Connection cancelled or no user returned');
+          return;
+        }
 
         // Backend auth BEFORE showing as connected
-        await authenticateWithBackend(getNDK());
+        logStatus('LoginModal', 'Starting backend authentication...', { pubkey: user.pubkey });
+        try {
+          // Add 15s timeout to backend auth to prevent "Finalizing" hang
+          await Promise.race([
+            authenticateWithBackend(getNDK()),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Backend auth timed out after 60s')), 60000))
+          ]);
+          logStatus('LoginModal', 'Finished backend authentication: SUCCESS');
+        } catch (backendErr) {
+          logStatus('LoginModal', 'Finished backend authentication: FAILED', { error: backendErr });
+          throw new Error(`Finalizing login failed: ${backendErr instanceof Error ? backendErr.message : String(backendErr)}`);
+        }
 
+        if (typeof localStorage !== 'undefined') {
+          localStorage.removeItem(AUTH_IN_PROGRESS_KEY);
+        }
         setUser(user, 'bunker');
+        setRpcEventDetected(false);
         syncProfile();
         if (onSuccess) onSuccess();
         else onClose();
       } catch (err) {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.removeItem(AUTH_IN_PROGRESS_KEY);
+        }
         if (!cancelled) {
           console.error('NostrConnect error:', err);
           setError(err instanceof Error ? err.message : 'Connection failed');
@@ -120,6 +212,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, transparentBack
       sessionRef.current?.cancel();
       sessionRef.current = null;
       setAuthChallengeUrl(null);
+      setRpcEventDetected(false);
     }
   }, [isOpen]);
 
@@ -172,15 +265,35 @@ export default function LoginModal({ isOpen, onClose, onSuccess, transparentBack
           if (!bunkerInput.trim()) {
             throw new Error('Please enter your bunker URL');
           }
+          logStatus('BunkerLogin', 'Connecting to bunker URL...', { url: bunkerInput });
           user = await loginWithBunker(bunkerInput, {
-            onAuthUrl: (url) => setAuthChallengeUrl(url),
+            onAuthUrl: (url) => {
+              logStatus('BunkerLogin', 'Received authUrl', { url });
+              setAuthChallengeUrl(url);
+            },
+            onRpcEvent: (event) => {
+              logStatus('BunkerLogin', 'RPC event detected', { id: event.id });
+              setRpcEventDetected(true);
+            }
           });
+          logStatus('BunkerLogin', 'Handshake SUCCESS', { pubkey: user?.pubkey });
           break;
       }
 
       if (user) {
         // Backend challenge-response auth BEFORE showing connected
-        await authenticateWithBackend(getNDK());
+        logStatus('Login', 'Starting backend authentication...', { pubkey: user.pubkey });
+        try {
+          // Add 15s timeout to backend auth to prevent "Finalizing" hang
+          await Promise.race([
+            authenticateWithBackend(getNDK()),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Backend auth timed out after 60s')), 60000))
+          ]);
+          logStatus('Login', 'Finished backend authentication: SUCCESS');
+        } catch (backendErr) {
+          logStatus('Login', 'Finished backend authentication: FAILED', { error: backendErr });
+          throw new Error(`Finalizing login failed: ${backendErr instanceof Error ? backendErr.message : String(backendErr)}`);
+        }
 
         setUser(user, loginMethod);
         // Sync profile from Nostr relays to DB in background
@@ -198,6 +311,9 @@ export default function LoginModal({ isOpen, onClose, onSuccess, transparentBack
   };
 
   const handleBack = () => {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(AUTH_IN_PROGRESS_KEY);
+    }
     setMethod(null);
     setConnectUri('');
     setWaitingForScan(false);
@@ -205,6 +321,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, transparentBack
     sessionRef.current?.cancel();
     sessionRef.current = null;
     setAuthChallengeUrl(null);
+    setRpcEventDetected(false);
     setError(null);
   };
 
@@ -214,7 +331,11 @@ export default function LoginModal({ isOpen, onClose, onSuccess, transparentBack
     try {
       connectNDK().catch(() => {});
       const { user, nsec } = await createNewAccount();
-      await authenticateWithBackend(getNDK());
+      // Add 15s timeout to backend auth to prevent "Finalizing" hang
+      await Promise.race([
+        authenticateWithBackend(getNDK()),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Backend auth timed out after 60s')), 60000))
+      ]);
       setNewAccountNsec(nsec);
       setUser(user, 'nsec');
       // Skip syncProfile — a brand-new account has no Nostr profile on relays yet
@@ -422,7 +543,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, transparentBack
               >
                 <div className="w-11 h-11 bg-lc-green/20 rounded-xl flex items-center justify-center group-hover:bg-lc-green/30 transition">
                   {loadingMethod === 'extension' ? (
-                    <div className="lc-spinner" />
+                    <div className="lc-spinner" style={{ width: 22, height: 22, borderWidth: '2px' }} />
                   ) : (
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#b4f953" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
@@ -498,8 +619,8 @@ export default function LoginModal({ isOpen, onClose, onSuccess, transparentBack
               className="w-full flex items-center gap-4 p-4 bg-lc-card hover:bg-lc-border/50 border border-lc-border rounded-xl transition-all duration-200 disabled:opacity-50 group"
             >
               <div className="w-11 h-11 bg-lc-green/10 rounded-xl flex items-center justify-center group-hover:bg-lc-green/20 transition">
-                {creatingAccount ? (
-                  <div className="lc-spinner" />
+                {creatingAccount ? (<div className="lc-spinner" style={{ width: 22, height: 22, borderWidth: "2px" }}/>
+
                 ) : (
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#b4f953" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/>
@@ -574,12 +695,22 @@ export default function LoginModal({ isOpen, onClose, onSuccess, transparentBack
             {authChallengeUrl && (
               <a
                 href={authChallengeUrl}
-                target="_blank"
+                target={authChallengeUrl.startsWith('http') ? '_blank' : undefined}
                 rel="noopener noreferrer"
-                onClick={() => setAuthChallengeUrl(null)}
-                className="block p-3 rounded-xl border border-lc-green/60 bg-lc-green/10 text-lc-green text-sm font-medium text-center hover:bg-lc-green/20 transition"
+                onClick={() => {
+                  logStatus('LoginModal', 'User clicked auth challenge link', { url: authChallengeUrl });
+                  setAuthChallengeUrl(null);
+                }}
+                className="block p-4 rounded-xl border border-lc-green/60 bg-lc-green/15 text-lc-green text-sm font-bold text-center hover:bg-lc-green/25 transition-all animate-pulse shadow-[0_0_15px_rgba(180,249,83,0.3)]"
               >
-                Your signer wants you to approve this connection — tap here to open the authorization page
+                <div className="flex items-center justify-center gap-2">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                    <polyline points="15 3 21 3 21 9" />
+                    <line x1="10" y1="14" x2="21" y2="3" />
+                  </svg>
+                  ACTION REQUIRED: Approve in Signer App
+                </div>
               </a>
             )}
 
@@ -627,27 +758,66 @@ export default function LoginModal({ isOpen, onClose, onSuccess, transparentBack
                       </p>
 
                       {/* Copy URI button */}
-                      <button
-                        onClick={handleCopyUri}
-                        className="flex items-center gap-2 text-xs text-lc-muted hover:text-lc-green transition px-3 py-1.5 bg-lc-black rounded-lg border border-lc-border/50"
-                      >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-                          <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
-                        </svg>
-                        {copied ? 'Copied!' : 'Copy connection URI'}
-                      </button>
+                      <div className="flex flex-col gap-3 w-full max-w-[200px]">
+                        <button
+                          onClick={handleCopyUri}
+                          className="flex items-center justify-center gap-2 text-xs text-lc-muted hover:text-lc-green transition px-3 py-2 bg-lc-black rounded-xl border border-lc-border/50"
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                            <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                          </svg>
+                          {copied ? 'Copied!' : 'Copy URI'}
+                        </button>
+                        
+                        <a
+                          href={connectUri}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            window.location.href = connectUri;
+                          }}
+                          className="flex items-center justify-center gap-2 text-xs text-lc-white hover:bg-lc-green/20 transition px-3 py-2 bg-lc-green/10 rounded-xl border border-lc-green/30"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                            <polyline points="15 3 21 3 21 9" />
+                            <line x1="10" y1="14" x2="21" y2="3" />
+                          </svg>
+                          Open Signer App
+                        </a>
+                      </div>
 
                       {waitingForScan && (
-                        <div className="mt-4 flex items-center gap-2 text-lc-green text-sm">
-                          <div className="lc-spinner" />
-                          Waiting for connection...
+                        <div className="mt-4 flex flex-col items-center gap-2 text-lc-green text-sm">
+                          <div className="flex items-center gap-2">
+                            <div className={rpcEventDetected ? "" : "lc-spinner"} style={rpcEventDetected ? {} : { width: 14, height: 14, borderWidth: '2px' }} />
+                            {rpcEventDetected ? 'Signal received! Finalizing login...' : 'Waiting for connection...'}
+                          </div>
+                          {showSlowHint && (
+                            <div className="flex flex-col items-center gap-3 animate-in fade-in duration-500">
+                              <p className="text-xs text-lc-muted text-center">
+                                Still waiting? Try switching back to Amber to make sure you approved.
+                              </p>
+                              <button
+                                onClick={() => {
+                                  logStatus('LoginModal', 'User clicked Reconnect');
+                                  getNDK().connect().catch(e => logStatus('LoginModal', 'Reconnect error', e));
+                                }}
+                                className="text-xs font-bold text-lc-green hover:underline flex items-center gap-1.5"
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                                  <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
+                                </svg>
+                                Reconnect to Relays
+                              </button>
+                            </div>
+                          )}
                         </div>
                       )}
                     </>
                   ) : (
                     <div className="py-8 flex flex-col items-center gap-3">
-                      <div className="lc-spinner" />
+
                       <p className="text-sm text-lc-muted">Generating connection...</p>
                     </div>
                   )}
@@ -683,6 +853,67 @@ export default function LoginModal({ isOpen, onClose, onSuccess, transparentBack
           </div>
         )}
 
+        {/* Debug Logs Viewer */}
+        <div className="mt-8 pt-6 border-t border-lc-border/30">
+          <button
+            onClick={() => setShowDebug(!showDebug)}
+            className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-lc-muted hover:text-lc-white transition-colors"
+          >
+            <svg
+              width="10"
+              height="10"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="3"
+              className={`transition-transform duration-200 ${showDebug ? 'rotate-90' : ''}`}
+            >
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+            {showDebug ? 'Hide' : 'View'} Debug Logs
+          </button>
+
+          {showDebug && debugLogs.length > 0 && (
+            <button
+              onClick={handleClearLogs}
+              className="ml-4 text-[10px] uppercase tracking-widest text-red-400/70 hover:text-red-400 transition-colors flex items-center gap-1.5 inline-flex"
+            >
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+              </svg>
+              Clear
+            </button>
+          )}
+
+          {showDebug && (
+            <div className="mt-4 bg-lc-black rounded-xl border border-lc-border/50 p-4 max-h-[250px] overflow-y-auto font-mono text-[10px] leading-relaxed">
+              {debugLogs.length === 0 ? (
+                <div className="text-lc-muted italic">No logs captured yet.</div>
+              ) : (
+                <div className="space-y-3">
+                  {[...debugLogs].reverse().map((log, i) => (
+                    <div key={i} className="border-b border-lc-border/20 pb-3 last:border-0 last:pb-0">
+                      <div className="flex justify-between items-start gap-4 mb-1.5">
+                        <span className="text-lc-green font-bold px-1.5 py-0.5 bg-lc-green/10 rounded uppercase tracking-tighter">
+                          {log.stage}
+                        </span>
+                        <span className="text-lc-muted shrink-0 tabular-nums">
+                          {new Date(log.time).toLocaleTimeString()}
+                        </span>
+                      </div>
+                      <div className="text-lc-white break-words">{log.message}</div>
+                      {log.data && Object.keys(log.data).length > 0 && (
+                        <pre className="mt-2 text-[9px] text-lc-muted bg-lc-dark/40 p-2 rounded-lg overflow-x-auto whitespace-pre-wrap break-all border border-lc-border/20">
+                          {JSON.stringify(log.data, null, 2)}
+                        </pre>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
