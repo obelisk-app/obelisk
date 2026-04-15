@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useRef, useCallback, useState, Fragment } from 'react';
 import { useChatStore, Message } from '@/store/chat';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notification';
@@ -150,6 +150,17 @@ const getDaySeparator = (date: Date) => {
   return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
 };
 
+const formatMessageTimestamp = (date: Date) => {
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+  const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  if (date.toDateString() === today.toDateString()) return timeStr;
+  if (date.toDateString() === yesterday.toDateString()) return `ayer a las ${timeStr}`;
+  return `${date.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })} a las ${timeStr}`;
+};
+
 function MessageBubble({ message, profileCache, canPin, canModerate, onReply, onReport, onDelete, onToggleReaction, onTogglePin }: {
   message: Message & { replyTo?: { id: string; content: string; authorPubkey: string } | null };
   profileCache: Map<string, { name?: string; picture?: string }>;
@@ -164,7 +175,7 @@ function MessageBubble({ message, profileCache, canPin, canModerate, onReply, on
   const profile = profileCache.get(message.authorPubkey);
   const displayName = profile?.name || formatPubkey(message.authorPubkey);
   const time = new Date(message.createdAt);
-  const timeStr = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const timeStr = formatMessageTimestamp(time);
   const { profile: myProfile } = useAuthStore();
   const isMe = myProfile?.pubkey === message.authorPubkey;
   const [showMenu, setShowMenu] = useState(false);
@@ -754,12 +765,18 @@ export default function MessageArea({ profileCache, onDelete, onToggleReaction }
             {messages.map((msg, idx) => {
                 const currentDate = new Date(msg.createdAt);
                 const prevDate = idx > 0 ? new Date(messages[idx - 1].createdAt) : null;
+                // Force a separator if it's the first message or if the date changes
                 const showDate = !prevDate || currentDate.toDateString() !== prevDate.toDateString();
+                
+                // For debugging: log to console if separators are being triggered
+                if (showDate) {
+                  console.log(`Rendering date separator for date: ${currentDate.toDateString()}`);
+                }
 
                 return (
-                    <div key={msg.id}>
+                    <Fragment key={msg.id}>
                         {showDate && (
-                            <div className="flex items-center gap-2 px-4 py-3">
+                            <div className="sticky top-0 z-20 flex items-center gap-2 px-4 py-3 bg-lc-black/90 backdrop-blur-sm">
                                 <div className="flex-1 h-px bg-lc-border" />
                                 <span className="text-xs text-lc-muted uppercase tracking-wider font-semibold">
                                     {getDaySeparator(currentDate)}
@@ -796,7 +813,7 @@ export default function MessageArea({ profileCache, onDelete, onToggleReaction }
                                 onTogglePin={handleTogglePin}
                             />
                         </div>
-                    </div>
+                    </Fragment>
                 );
             })}
             <div ref={messagesEndRef} />

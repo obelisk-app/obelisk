@@ -205,6 +205,63 @@ describe('MessageArea', () => {
     expect(msgCPos).toBeGreaterThan(separatorPos);
   });
 
+  it('renders sticky date separators', () => {
+    const now = new Date();
+    const messages = [
+      { id: 'm1', channelId: 'ch1', authorPubkey: 'pk1', content: 'msg 1', replyToId: null, editedAt: null, createdAt: now.toISOString() },
+    ];
+    useChatStore.setState({
+      activeChannelId: 'ch1',
+      isLoadingMessages: false,
+      messages: messages as any,
+      pinnedChannels: [{ id: 'ch1', name: 'general', emoji: null, type: 'text', position: 0, categoryId: null }],
+      categories: [],
+    });
+
+    render(<MessageArea profileCache={profileCache} onDelete={vi.fn()} onToggleReaction={vi.fn()} />);
+    
+    // The separator for "Hoy" should be present and sticky
+    const separator = screen.getByText('Hoy');
+    expect(separator).toBeInTheDocument();
+    expect(separator.closest('.sticky')).toBeInTheDocument();
+    expect(separator.closest('.sticky')).toHaveClass('top-0');
+  });
+
+  it('formats older message timestamps as "ayer a las..." or "[date] a las..."', () => {
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+    yesterday.setHours(23, 1, 0); // 23:01
+
+    const lastWeek = new Date();
+    lastWeek.setDate(today.getDate() - 7);
+    lastWeek.setHours(10, 30, 0);
+
+    const messages = [
+      { id: 'm1', channelId: 'ch1', authorPubkey: 'pk1', content: 'yesterday msg', replyToId: null, editedAt: null, createdAt: yesterday.toISOString() },
+      { id: 'm2', channelId: 'ch1', authorPubkey: 'pk1', content: 'last week msg', replyToId: null, editedAt: null, createdAt: lastWeek.toISOString() },
+    ];
+    
+    useChatStore.setState({
+      activeChannelId: 'ch1',
+      isLoadingMessages: false,
+      messages: messages as any,
+      pinnedChannels: [{ id: 'ch1', name: 'general', emoji: null, type: 'text', position: 0, categoryId: null }],
+      categories: [],
+    });
+
+    render(<MessageArea profileCache={profileCache} onDelete={vi.fn()} onToggleReaction={vi.fn()} />);
+    
+    // Use the actual time format generated in the test environment (which may differ from locale)
+    const timeStr = yesterday.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    expect(screen.getByText(new RegExp(`ayer a las ${timeStr}`, 'i'))).toBeInTheDocument();
+    
+    // Test for older date (the format is dateString + " a las " + time)
+    const dateStr = lastWeek.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const lastWeekTimeStr = lastWeek.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    expect(screen.getByText(new RegExp(`${dateStr} a las ${lastWeekTimeStr}`, 'i'))).toBeInTheDocument();
+  });
+
   it('does not render the separator when there are no unread', () => {
     useChatStore.setState({
       activeChannelId: 'ch1',
