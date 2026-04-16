@@ -1514,6 +1514,56 @@ export default function ChatPage() {
     );
   }
 
+  // Standalone full-screen empty state when not in any servers and not in DM mode
+  if (serversLoaded && servers.length === 0 && (!DM_FEATURE_ENABLED || !isDMMode)) {
+    return (
+      <div className="h-dvh flex items-center justify-center bg-lc-black lc-grid-bg relative overflow-hidden">
+        <ShootingStars />
+        <div className="lc-card p-8 max-w-sm w-full mx-4 text-center relative z-10 flex flex-col items-center">
+          <div className="w-16 h-16 rounded-2xl bg-lc-black border border-lc-border flex items-center justify-center mb-4">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-lc-muted">
+              <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/>
+            </svg>
+          </div>
+          <h2 className="text-xl font-semibold text-lc-white mb-2">No servers yet</h2>
+          <p className="text-lc-muted text-sm leading-relaxed mb-6">
+            You&apos;re not a member of any server. Ask a server admin for an invite link to get started.
+          </p>
+          <div className="flex flex-col gap-3 w-full">
+            {hasDefaultServer && (
+              <button
+                onClick={async () => {
+                  try {
+                    const res = await fetch('/api/servers/join-default', { method: 'POST' });
+                    if (res.ok) {
+                      window.location.reload();
+                    } else {
+                      const data = await res.json();
+                      alert(data.error || 'Failed to join default server');
+                    }
+                  } catch {
+                    alert('Error joining default server');
+                  }
+                }}
+                className="lc-pill-primary text-sm px-5 py-2.5 w-full"
+              >
+                Join Default Server
+              </button>
+            )}
+            {DM_FEATURE_ENABLED && (
+              <button
+                onClick={() => useDMStore.getState().setDMMode(true)}
+                className="lc-pill-secondary text-sm px-5 py-2.5 w-full"
+              >
+                Open Direct Messages
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-dvh flex bg-lc-black relative overflow-hidden">
       {/* Mobile sidebar overlay backdrop */}
@@ -1567,50 +1617,6 @@ export default function ChatPage() {
               />
             )}
           </>
-        ) : serversLoaded && servers.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center bg-lc-black">
-            <div className="flex flex-col items-center gap-4 max-w-md text-center px-6">
-              <div className="w-16 h-16 rounded-2xl bg-lc-dark border border-lc-border flex items-center justify-center">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-lc-muted">
-                  <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/>
-                </svg>
-              </div>
-              <h2 className="text-xl font-semibold text-lc-white">No servers yet</h2>
-              <p className="text-lc-muted text-sm leading-relaxed mb-2">
-                You&apos;re not a member of any server. Ask a server admin for an invite link to get started.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3">
-                {hasDefaultServer && (
-                  <button
-                    onClick={async () => {
-                      try {
-                        const res = await fetch('/api/servers/join-default', { method: 'POST' });
-                        if (res.ok) {
-                          window.location.reload();
-                        } else {
-                          const data = await res.json();
-                          alert(data.error || 'Failed to join default server');
-                        }
-                      } catch {
-                        alert('Error joining default server');
-                      }
-                    }}
-                    className="lc-pill-primary text-sm px-5 py-2.5"
-                  >
-                    Join Default Server
-                  </button>
-                )}
-                {DM_FEATURE_ENABLED && (
-                  <button
-                    onClick={() => useDMStore.getState().setDMMode(true)}
-                    className="lc-pill-secondary text-sm px-5 py-2.5"
-                  >
-                    Open Direct Messages
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
         ) : (
           <div className="flex-1 flex min-h-0">
             <div className="flex-1 flex flex-col min-h-0 min-w-0">
