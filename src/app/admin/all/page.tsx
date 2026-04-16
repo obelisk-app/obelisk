@@ -64,12 +64,13 @@ export default function AdminAllUsersPage() {
 
   const handleRemove = async (u: UserRow) => {
     const label = u.displayName || shortNpub(u.pubkey);
+    const short = shortNpub(u.pubkey).replace('…', '');
     const confirmText = window.prompt(
-      `This will PERMANENTLY remove "${label}" from the database:\n\n- All memberships across every server\n- All sessions (force logout)\n\nBans and moderation logs are preserved. Type the pubkey to confirm:`
+      `This will PERMANENTLY remove "${label}" from the database:\n\n- All memberships across every server\n- All sessions (force logout)\n\nBans and moderation logs are preserved. Type "${short}" to confirm:`
     );
     if (confirmText === null) return;
-    if (confirmText.trim() !== u.pubkey) {
-      setActionError('Pubkey did not match. Removal cancelled.');
+    if (confirmText.trim() !== short) {
+      setActionError('Confirmation text did not match. Removal cancelled.');
       return;
     }
     setActionError(null);
