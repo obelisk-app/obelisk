@@ -1534,7 +1534,7 @@ export default function ChatPage() {
         <ServerBar />
         {DM_FEATURE_ENABLED && isDMMode ? (
           <DMList onNewDM={() => setShowNewDMModal(true)} />
-        ) : (
+        ) : serversLoaded && servers.length === 0 ? null : (
           <ChannelSidebar onChannelSelect={() => setSidebarOpen(false)} />
         )}
       </div>
