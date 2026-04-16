@@ -185,6 +185,17 @@ export default function ChatPage() {
   const { isDMMode } = useDMStore();
   const [showNewDMModal, setShowNewDMModal] = useState(false);
 
+  const [hasDefaultServer, setHasDefaultServer] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/servers/default')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.defaultServer) setHasDefaultServer(true);
+      })
+      .catch(() => {});
+  }, []);
+
   // On mount, validate session with backend. If no valid session, redirect to landing.
   useEffect(() => {
     if (sessionCheckStarted.current) return;
@@ -1565,17 +1576,39 @@ export default function ChatPage() {
                 </svg>
               </div>
               <h2 className="text-xl font-semibold text-lc-white">No servers yet</h2>
-              <p className="text-lc-muted text-sm leading-relaxed">
+              <p className="text-lc-muted text-sm leading-relaxed mb-2">
                 You&apos;re not a member of any server. Ask a server admin for an invite link to get started.
               </p>
-              {DM_FEATURE_ENABLED && (
-                <button
-                  onClick={() => useDMStore.getState().setDMMode(true)}
-                  className="lc-pill-secondary text-sm px-5 py-2"
-                >
-                  Open Direct Messages
-                </button>
-              )}
+              <div className="flex flex-col sm:flex-row gap-3">
+                {hasDefaultServer && (
+                  <button
+                    onClick={async () => {
+                      try {
+                        const res = await fetch('/api/servers/join-default', { method: 'POST' });
+                        if (res.ok) {
+                          window.location.reload();
+                        } else {
+                          const data = await res.json();
+                          alert(data.error || 'Failed to join default server');
+                        }
+                      } catch {
+                        alert('Error joining default server');
+                      }
+                    }}
+                    className="lc-pill-primary text-sm px-5 py-2.5"
+                  >
+                    Join Default Server
+                  </button>
+                )}
+                {DM_FEATURE_ENABLED && (
+                  <button
+                    onClick={() => useDMStore.getState().setDMMode(true)}
+                    className="lc-pill-secondary text-sm px-5 py-2.5"
+                  >
+                    Open Direct Messages
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         ) : (
