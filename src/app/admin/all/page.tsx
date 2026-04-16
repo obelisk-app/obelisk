@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import ServerPicker, { type AdminServerOption } from '@/components/admin/ServerPicker';
 import MembershipsModal from '@/components/admin/MembershipsModal';
 import { shortNpub } from '@/lib/mentions';
+import InstanceSettingsPanel from '@/components/admin/InstanceSettingsPanel';
 
 interface UserRow {
   pubkey: string;
@@ -205,7 +206,9 @@ export default function AdminAllUsersPage() {
       </div>
 
       <div className="max-w-5xl mx-auto px-6 py-6" data-testid="all-users-tab">
-        <div className="flex items-center justify-between mb-4 gap-4">
+        <InstanceSettingsPanel servers={servers} />
+
+        <div className="flex items-center justify-between mb-4 gap-4 mt-8">
           <div>
             <h2 className="text-base font-semibold text-lc-white">All users</h2>
             <p className="text-xs text-lc-muted mt-0.5">

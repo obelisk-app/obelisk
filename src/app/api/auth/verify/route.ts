@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifySignedEvent } from '@/lib/auth';
+import { prisma } from '@/lib/db';
 
 /**
  * POST /api/auth/verify — verify a signed Nostr challenge and issue a session.
@@ -11,9 +12,9 @@ import { verifySignedEvent } from '@/lib/auth';
  *   - WoT auto-add via `POST /api/servers/:id/join` (when WoT permits)
  *   - Invite redemption via `POST /api/invitations/:code`
  *
- * This means a brand-new user can authenticate and see the empty-state in
- * the chat UI even when no server would let them in. They have an identity;
- * they just don't have a place to chat yet.
+ * However, if an InstanceSettings.defaultServerId is configured, brand-new
+ * users (users with 0 server memberships) are automatically joined to that
+ * server so they have a place to land immediately.
  */
 export async function POST(req: NextRequest) {
   const { challengeId, signedEvent } = await req.json();
@@ -25,6 +26,36 @@ export async function POST(req: NextRequest) {
   const token = await verifySignedEvent(challengeId, signedEvent);
   if (!token) {
     return NextResponse.json({ error: 'Invalid signature or expired challenge' }, { status: 401 });
+  }
+
+  // Handle auto-join to Default Server for new users
+  try {
+    const pubkey = signedEvent.pubkey;
+    const serverCount = await prisma.member.count({ where: { pubkey } });
+    
+    if (serverCount === 0) {
+      const settings = await prisma.instanceSettings.findUnique({ where: { id: 'global' } });
+      if (settings?.defaultServerId) {
+        // Double check if they are already in the default server (safety net)
+        const alreadyIn = await prisma.member.findUnique({
+          where: { serverId_pubkey: { serverId: settings.defaultServerId, pubkey } }
+        });
+        
+        if (!alreadyIn) {
+          await prisma.member.create({
+            data: {
+              serverId: settings.defaultServerId,
+              pubkey,
+              role: 'member'
+            }
+          });
+          console.log(`[auth] auto-joined new user ${pubkey} to default server ${settings.defaultServerId}`);
+        }
+      }
+    }
+  } catch (err) {
+    console.error('[auth] error auto-joining default server:', err);
+    // don't block login if auto-join fails
   }
 
   const response = NextResponse.json({ ok: true });

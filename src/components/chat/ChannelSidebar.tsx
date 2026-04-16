@@ -727,19 +727,49 @@ export default function ChannelSidebar({ onChannelSelect }: { onChannelSelect?: 
             </div>
           )}
           <h2 className="font-semibold text-lc-white truncate text-sm">{activeServer?.name || 'Server'}</h2>
-          <button
-            onClick={() => setShowInviteCard(true)}
-            className="ml-auto shrink-0 p-1 rounded hover:bg-lc-border/50 text-lc-muted hover:text-lc-green transition-colors"
-            title="Invite friends"
-            data-testid="invite-friends-btn"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
-              <circle cx="8.5" cy="7" r="4"/>
-              <line x1="20" y1="8" x2="20" y2="14"/>
-              <line x1="23" y1="11" x2="17" y2="11"/>
-            </svg>
-          </button>
+          
+          <div className="ml-auto flex items-center gap-0.5 shrink-0">
+            <button
+              onClick={() => setShowInviteCard(true)}
+              className="p-1 rounded hover:bg-lc-border/50 text-lc-muted hover:text-lc-green transition-colors"
+              title="Invite friends"
+              data-testid="invite-friends-btn"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                <circle cx="8.5" cy="7" r="4"/>
+                <line x1="20" y1="8" x2="20" y2="14"/>
+                <line x1="23" y1="11" x2="17" y2="11"/>
+              </svg>
+            </button>
+            {activeServer && activeServer.ownerPubkey !== sessionPubkey && (
+              <button
+                onClick={async () => {
+                  if (!confirm(`Are you sure you want to leave ${activeServer.name}?`)) return;
+                  try {
+                    const res = await fetch(`/api/servers/${activeServer.id}/leave`, { method: 'POST' });
+                    if (res.ok) {
+                      window.location.reload();
+                    } else {
+                      const data = await res.json();
+                      alert(data.error || 'Failed to leave server');
+                    }
+                  } catch (e) {
+                    alert('Error leaving server');
+                  }
+                }}
+                className="p-1 rounded hover:bg-red-500/10 text-lc-muted hover:text-red-400 transition-colors"
+                title="Leave server"
+                data-testid="leave-server-btn"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

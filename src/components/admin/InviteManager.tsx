@@ -39,6 +39,7 @@ export default function InviteManager({ serverId }: InviteManagerProps) {
   const [maxUses, setMaxUses] = useState(1);
   const [expiresInHours, setExpiresInHours] = useState(24);
   const [targetPubkey, setTargetPubkey] = useState('');
+  const [customCode, setCustomCode] = useState('');
   const [copied, setCopied] = useState<string | null>(null);
 
   useEffect(() => {
@@ -67,12 +68,14 @@ export default function InviteManager({ serverId }: InviteManagerProps) {
           maxUses,
           expiresInHours,
           targetPubkey: targetPubkey.trim() || undefined,
+          customCode: customCode.trim() || undefined,
         }),
       });
       const data = await res.json();
       if (res.ok) {
         setInvitations((prev) => [data.invitation, ...prev]);
         setTargetPubkey('');
+        setCustomCode('');
       } else {
         alert(data.error || 'Failed to create invite');
       }
@@ -158,9 +161,21 @@ export default function InviteManager({ serverId }: InviteManagerProps) {
             value={targetPubkey}
             onChange={(e) => setTargetPubkey(e.target.value)}
             placeholder="Leave empty for anyone"
-            className="w-full px-2 py-1.5 rounded-lg bg-lc-black border border-lc-border text-lc-white text-sm focus:border-lc-green focus:outline-none"
+            className="w-full px-2 py-1.5 rounded-lg bg-lc-black border border-lc-border text-lc-white text-sm focus:border-lc-green focus:outline-none mb-3"
             data-testid="invite-target"
           />
+          <label className="text-xs text-lc-muted block mb-1">Custom Link Code (optional — e.g. "obelisk" for /invite/obelisk)</label>
+          <input
+            type="text"
+            value={customCode}
+            onChange={(e) => setCustomCode(e.target.value)}
+            placeholder="Leave empty for random code"
+            className="w-full px-2 py-1.5 rounded-lg bg-lc-black border border-lc-border text-lc-white text-sm focus:border-lc-green focus:outline-none"
+            data-testid="invite-custom-code"
+          />
+          <p className="text-[10px] text-amber-500/80 mt-1.5 leading-tight">
+            Note: Custom codes are easily guessed. Only use this if you want your server to be publicly accessible.
+          </p>
         </div>
         <button
           onClick={createInvite}

@@ -133,7 +133,45 @@ export async function POST(
     targetPubkey = null;
   }
 
-  const code = randomBytes(16).toString('hex');
+  const customCode = body.customCode?.trim();
+  if (customCode && isAdmin) {
+    if (!/^[a-zA-Z0-9_-]+$/.test(customCode)) {
+      return NextResponse.json({ error: 'Custom code can only contain letters, numbers, hyphens, and underscores' }, { status: 400 });
+    }
+    const customCodeLower = customCode.toLowerCase();
+    const existing = await prisma.invitation.findUnique({ where: { code: customCodeLower } });
+    
+    if (existing) {
+      const isExpired = existing.expiresAt && existing.expiresAt < new Date();
+      const isFullyUsed = existing.uses >= existing.maxUses;
+      const isInactive = existing.revokedAt || isExpired || isFullyUsed;
+
+      // If the code belongs to this server and is currently revoked/expired, we reactivate it!
+      if (existing.serverId === serverId && isInactive) {
+        const invitation = await prisma.invitation.update({
+          where: { id: existing.id },
+          data: {
+            revokedAt: null,
+            revokedBy: null,
+            uses: 0, // Reset uses so it can be used again
+            maxUses,
+            expiresAt,
+            createdBy: actor.pubkey,
+            targetPubkey,
+            createdAt: new Date(), // Bubble to the top of the admin list
+          },
+          include: {
+            members: { select: INVITE_MEMBER_SELECT },
+          },
+        });
+        return NextResponse.json({ invitation }, { status: 201 });
+      }
+
+      return NextResponse.json({ error: 'This custom code is already active or taken by another server' }, { status: 400 });
+    }
+  }
+
+  const code = customCode && isAdmin ? customCode.toLowerCase() : randomBytes(16).toString('hex');
   const invitation = await prisma.invitation.create({
     data: {
       serverId,

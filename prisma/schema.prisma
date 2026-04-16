@@ -8,13 +8,13 @@ datasource db {
 }
 
 model Server {
-  id         String    @id @default(cuid())
-  name       String
-  icon       String?
-  banner     String?
+  id          String   @id @default(cuid())
+  name        String
+  icon        String?
+  banner      String?
   ownerPubkey String
-  joinMode   String    @default("open") // open | invite-only
-  createdAt  DateTime  @default(now())
+  joinMode    String   @default("open") // open | invite-only
+  createdAt   DateTime @default(now())
 
   // Web of Trust (anti-spam): when wotEnabled, only users followed by referentePubkey
   // (or in WotOverride, or holding a valid invite) can join. joinMode is ignored.
@@ -31,7 +31,7 @@ model Server {
 
   // Welcome bot: admin-configurable channel + language for auto-welcome on join.
   // welcomeChannelId null OR welcomeLocale null => bot disabled.
-  welcomeChannelId String? @unique
+  welcomeChannelId String?  @unique
   welcomeLocale    String? // 'es' | 'en'
   welcomeChannel   Channel? @relation("ServerWelcomeChannel", fields: [welcomeChannelId], references: [id], onDelete: SetNull)
 
@@ -39,34 +39,35 @@ model Server {
   // for this server. Distinct from welcomeChannelId (which is the welcome-bot
   // channel that auto-posts a greeting). A channel can serve both roles or
   // neither. Nulled automatically if the channel is deleted.
-  landingChannelId String? @unique
+  landingChannelId String?  @unique
   landingChannel   Channel? @relation("ServerLandingChannel", fields: [landingChannelId], references: [id], onDelete: SetNull)
 
   // Per-server upload limits. Defaults match the global constants in
   // src/lib/attachments.ts. allowedMimeTypes is an optional JSON-encoded
   // string array; null means "use the global allowlist". Absolute ceiling
   // (500 MB) is enforced server-side independently.
-  maxImageBytes    Int     @default(10485760)  // 10 MB
-  maxVideoBytes    Int     @default(52428800)  // 50 MB
-  maxDocBytes      Int     @default(26214400)  // 25 MB
-  maxAudioBytes    Int     @default(26214400)  // 25 MB
+  maxImageBytes    Int     @default(10485760) // 10 MB
+  maxVideoBytes    Int     @default(52428800) // 50 MB
+  maxDocBytes      Int     @default(26214400) // 25 MB
+  maxAudioBytes    Int     @default(26214400) // 25 MB
   allowedMimeTypes String?
 
-  categories Category[]
-  channels   Channel[]
-  members    Member[]
-  bans       Ban[]
-  mutes      Mute[]
-  warnings   Warning[]
-  reports    Report[]
-  moderationActions ModerationAction[]
-  invitations      Invitation[]
-  wotEntries       WotEntry[]
-  wotOverrides     WotOverride[]
-  emojis           ServerEmoji[]
-  gifs             ServerGif[]
-  customRoles      CustomRole[]
-  bots             ServerBot[]
+  categories           Category[]
+  channels             Channel[]
+  members              Member[]
+  bans                 Ban[]
+  mutes                Mute[]
+  warnings             Warning[]
+  reports              Report[]
+  moderationActions    ModerationAction[]
+  invitations          Invitation[]
+  wotEntries           WotEntry[]
+  wotOverrides         WotOverride[]
+  emojis               ServerEmoji[]
+  gifs                 ServerGif[]
+  customRoles          CustomRole[]
+  bots                 ServerBot[]
+  isDefaultForInstance InstanceSettings?  @relation("InstanceDefaultServer")
 }
 
 // Prebuilt, per-server "bots" that surface as pseudo-members in the right
@@ -76,11 +77,11 @@ model Server {
 model ServerBot {
   id          String    @id @default(cuid())
   serverId    String
-  type        String    // "btc-usd" | "sats-ars" | "peronio-ars" | "dolar-ars"
+  type        String // "btc-usd" | "sats-ars" | "peronio-ars" | "dolar-ars"
   enabled     Boolean   @default(true)
-  displayName String?   // override, else registry default
-  avatarUrl   String?   // override, else registry default
-  lastValue   String?   // last rendered status, e.g. "$63,412"
+  displayName String? // override, else registry default
+  avatarUrl   String? // override, else registry default
+  lastValue   String? // last rendered status, e.g. "$63,412"
   lastFetchAt DateTime?
   createdAt   DateTime  @default(now())
 
@@ -98,7 +99,7 @@ model ServerBot {
 model ServerEmoji {
   id        String   @id @default(cuid())
   serverId  String
-  name      String   // [a-z0-9_-]{2,32}, no colons
+  name      String // [a-z0-9_-]{2,32}, no colons
   url       String
   createdBy String
   createdAt DateTime @default(now())
@@ -117,8 +118,8 @@ model ServerEmoji {
 model ServerGif {
   id         String   @id @default(cuid())
   serverId   String
-  name       String   // free-form label (2–64 chars), displayed in picker
-  url        String   // /uploads/<id>.gif — hosted by our own upload route
+  name       String // free-form label (2–64 chars), displayed in picker
+  url        String // /uploads/<id>.gif — hosted by our own upload route
   tags       String   @default("") // comma-separated, lowercased
   width      Int?
   height     Int?
@@ -134,7 +135,7 @@ model ServerGif {
 
 model DirectMessageThread {
   id           String   @id @default(cuid())
-  participant1 String   // pubkey (sorted: participant1 < participant2)
+  participant1 String // pubkey (sorted: participant1 < participant2)
   participant2 String
   updatedAt    DateTime @default(now()) @updatedAt
 
@@ -144,22 +145,22 @@ model DirectMessageThread {
 }
 
 model Invitation {
-  id           String    @id @default(cuid())
-  serverId     String
-  code         String    @unique
-  createdBy    String    // pubkey of inviter
-  targetPubkey String?   // null = anyone, set = specific npub
-  maxUses      Int       @default(1)
-  uses         Int       @default(0)
-  expiresAt    DateTime?
-  createdAt    DateTime  @default(now())
-  revokedAt    DateTime? // soft-revoke: null = active, set = no new joins but history preserved
-  revokedBy    String?   // pubkey of admin who revoked
+  id            String    @id @default(cuid())
+  serverId      String
+  code          String    @unique
+  createdBy     String // pubkey of inviter
+  targetPubkey  String? // null = anyone, set = specific npub
+  maxUses       Int       @default(1)
+  uses          Int       @default(0)
+  expiresAt     DateTime?
+  createdAt     DateTime  @default(now())
+  revokedAt     DateTime? // soft-revoke: null = active, set = no new joins but history preserved
+  revokedBy     String? // pubkey of admin who revoked
   // True when this invite was minted against the creator's member credit pool
   // (tenure-based). Admin-minted invites stay false regardless of who created
   // them, so an admin who also holds a member row doesn't see admin invites
   // bleeding into their "My Invites" card or eating member credits.
-  memberCreated Boolean  @default(false)
+  memberCreated Boolean   @default(false)
 
   server  Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
   members Member[] @relation("InvitationMembers")
@@ -170,10 +171,10 @@ model Invitation {
 }
 
 model Category {
-  id       String    @id @default(cuid())
+  id       String @id @default(cuid())
   serverId String
   name     String
-  position Int       @default(0)
+  position Int    @default(0)
 
   server   Server    @relation(fields: [serverId], references: [id], onDelete: Cascade)
   channels Channel[]
@@ -182,31 +183,39 @@ model Category {
 }
 
 model Channel {
-  id         String    @id @default(cuid())
-  serverId   String
-  categoryId String?
-  name       String
-  emoji      String?
-  description String?
-  type       String    @default("text") // text | voice | forum
-  position   Int       @default(0)
-  writePermission String?                // null = everyone; "mod" | "admin" | "roles"
-  writeRoleIds    String[] @default([])  // used when writePermission = "roles"
-  readPermission  String?                // null = everyone; "mod" | "admin" | "roles"
-  readRoleIds     String[] @default([])  // used when readPermission = "roles"
-  createdAt  DateTime  @default(now())
+  id              String   @id @default(cuid())
+  serverId        String
+  categoryId      String?
+  name            String
+  emoji           String?
+  description     String?
+  type            String   @default("text") // text | voice | forum
+  position        Int      @default(0)
+  writePermission String? // null = everyone; "mod" | "admin" | "roles"
+  writeRoleIds    String[] @default([]) // used when writePermission = "roles"
+  readPermission  String? // null = everyone; "mod" | "admin" | "roles"
+  readRoleIds     String[] @default([]) // used when readPermission = "roles"
+  createdAt       DateTime @default(now())
 
-  server   Server    @relation(fields: [serverId], references: [id], onDelete: Cascade)
-  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  messages     Message[]
-  voiceStates  VoiceState[]
-  forumTags    ForumTag[]
-  readStates   ChannelReadState[]
-  welcomeForServer Server? @relation("ServerWelcomeChannel")
-  landingForServer Server? @relation("ServerLandingChannel")
+  server           Server             @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  category         Category?          @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  messages         Message[]
+  voiceStates      VoiceState[]
+  forumTags        ForumTag[]
+  readStates       ChannelReadState[]
+  welcomeForServer Server?            @relation("ServerWelcomeChannel")
+  landingForServer Server?            @relation("ServerLandingChannel")
 
   @@index([serverId])
   @@index([categoryId])
+}
+
+// Global instance settings. There will only ever be one row with id="global".
+model InstanceSettings {
+  id              String  @id @default("global")
+  defaultServerId String? @unique
+
+  defaultServer Server? @relation("InstanceDefaultServer", fields: [defaultServerId], references: [id], onDelete: SetNull)
 }
 
 model VoiceState {
@@ -227,8 +236,8 @@ model Message {
   id           String    @id @default(cuid())
   channelId    String
   authorPubkey String
-  title        String?   // null for chat messages, set for forum posts
-  coverImage   String?   // optional cover image URL for forum posts (null otherwise)
+  title        String? // null for chat messages, set for forum posts
+  coverImage   String? // optional cover image URL for forum posts (null otherwise)
   content      String
   replyToId    String?
   createdAt    DateTime  @default(now())
@@ -240,9 +249,9 @@ model Message {
   pinnedAt       DateTime?
   pinnedByPubkey String?
 
-  channel   Channel    @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  replyTo   Message?   @relation("MessageReplies", fields: [replyToId], references: [id])
-  replies   Message[]  @relation("MessageReplies")
+  channel   Channel             @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  replyTo   Message?            @relation("MessageReplies", fields: [replyToId], references: [id])
+  replies   Message[]           @relation("MessageReplies")
   reports   Report[]
   reactions Reaction[]
   tags      ForumTagOnMessage[]
@@ -273,7 +282,7 @@ model ForumTag {
   color     String @default("#b4f953") // hex color for the tag pill
   position  Int    @default(0)
 
-  channel  Channel            @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  channel  Channel             @relation(fields: [channelId], references: [id], onDelete: Cascade)
   messages ForumTagOnMessage[]
 
   @@unique([channelId, name])
@@ -325,16 +334,16 @@ model Member {
   banner           String?
   lud16            String?
   website          String?
-  nickname         String?  // Obelisk-local server nickname override
+  nickname         String? // Obelisk-local server nickname override
   profileUpdatedAt DateTime?
 
   // Activity tracking for invite-credit eligibility (anti-sybil)
-  lastActivityAt   DateTime?
+  lastActivityAt DateTime?
 
   // First-visit landing redirect marker. False until this member's first
   // `/chat` load resolves an initial channel; then flipped to true so the
   // landing-channel redirect runs at most once per member per server.
-  hasEnteredChat   Boolean  @default(false)
+  hasEnteredChat Boolean @default(false)
 
   // Source tracking — when set, this member joined via the given invite link.
   // Surfaced in the admin panel so owners can see who came from where.
@@ -362,12 +371,12 @@ model Session {
 }
 
 model Ban {
-  id            String   @id @default(cuid())
-  serverId      String
-  pubkey        String
+  id             String   @id @default(cuid())
+  serverId       String
+  pubkey         String
   bannedByPubkey String
-  reason        String?
-  createdAt     DateTime @default(now())
+  reason         String?
+  createdAt      DateTime @default(now())
 
   server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
 
@@ -403,14 +412,14 @@ model Warning {
 }
 
 model Report {
-  id              String    @id @default(cuid())
-  serverId        String
-  messageId       String
-  reporterPubkey  String
-  reason          String
-  status          String    @default("pending") // pending | resolved | dismissed
-  createdAt       DateTime  @default(now())
-  resolvedAt      DateTime?
+  id               String    @id @default(cuid())
+  serverId         String
+  messageId        String
+  reporterPubkey   String
+  reason           String
+  status           String    @default("pending") // pending | resolved | dismissed
+  createdAt        DateTime  @default(now())
+  resolvedAt       DateTime?
   resolvedByPubkey String?
 
   server  Server  @relation(fields: [serverId], references: [id], onDelete: Cascade)
@@ -424,9 +433,9 @@ model ModerationAction {
   serverId     String
   actorPubkey  String
   targetPubkey String?
-  action       String   // ban | unban | kick | mute | unmute | warn | delete_message | role_change
+  action       String // ban | unban | kick | mute | unmute | warn | delete_message | role_change
   reason       String?
-  metadata     String?  // JSON string for extra data
+  metadata     String? // JSON string for extra data
   createdAt    DateTime @default(now())
 
   server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
@@ -472,10 +481,10 @@ model DMReadState {
 
 // Cached follow list of a server's referente. Refreshed lazily on login + by admin.
 model WotEntry {
-  id        String   @id @default(cuid())
-  serverId  String
-  pubkey    String
-  addedAt   DateTime @default(now())
+  id       String   @id @default(cuid())
+  serverId String
+  pubkey   String
+  addedAt  DateTime @default(now())
 
   server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
 
@@ -505,11 +514,11 @@ model WotOverride {
 model CustomRole {
   id          String   @id @default(cuid())
   serverId    String
-  name        String   // display name, e.g. "Gold"
+  name        String // display name, e.g. "Gold"
   color       String   @default("#99aab5") // hex color for badge + username tint
-  icon        String?  // emoji or image URL
-  priority    Int      @default(0)         // higher = shown first in member list
-  permissions BigInt   @default(0)         // bitfield, see src/lib/permissions.ts
+  icon        String? // emoji or image URL
+  priority    Int      @default(0) // higher = shown first in member list
+  permissions BigInt   @default(0) // bitfield, see src/lib/permissions.ts
   createdAt   DateTime @default(now())
 
   server  Server             @relation(fields: [serverId], references: [id], onDelete: Cascade)
