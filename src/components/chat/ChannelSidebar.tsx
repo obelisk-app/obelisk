@@ -53,11 +53,32 @@ function LockIcon() {
       strokeLinecap="round"
       strokeLinejoin="round"
       className="shrink-0 text-lc-muted"
-      aria-label="Write-locked channel"
+      aria-label="Private channel (write access)"
       data-testid="channel-write-lock-icon"
     >
       <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
       <path d="M7 11V7a5 5 0 0110 0v4"/>
+    </svg>
+  );
+}
+
+function ReadOnlyIcon() {
+  return (
+    <svg
+      width="14"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="shrink-0 text-lc-muted"
+      aria-label="Read-only channel"
+      data-testid="channel-read-only-icon"
+    >
+      <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/>
+      <circle cx="12" cy="12" r="3"/>
     </svg>
   );
 }
@@ -314,6 +335,8 @@ function ChannelItem({ channel, isActive, onClick, followedPosts, activePostId, 
   const isWriteLocked = !canWriteInChannel(myRole ?? 'member', {
     writePermission: channel.writePermission ?? null,
   });
+  const hasRestrictedWrite =
+    !!channel.writePermission && channel.writePermission !== 'everyone';
   const [menuAnchor, setMenuAnchor] = useState<{ x: number; y: number } | null>(null);
   const [copyLabel, setCopyLabel] = useState('Copiar enlace');
 
@@ -356,27 +379,10 @@ function ChannelItem({ channel, isActive, onClick, followedPosts, activePostId, 
   return (
     <div>
     <div className="group relative">
-      {canExpand && (
-        <span
-          onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v); }}
-          role="button"
-          aria-label={expanded ? 'Contraer publicaciones' : 'Expandir publicaciones'}
-          data-testid={`channel-expand-${channel.id}`}
-          className="absolute right-8 top-1/2 -translate-y-1/2 p-1 rounded text-lc-muted hover:text-lc-white hover:bg-lc-border/60 z-10 cursor-pointer flex items-center justify-center"
-        >
-          <svg
-            width="16" height="16" viewBox="0 0 24 24" fill="currentColor"
-            className={`transition-transform ${expanded ? '' : '-rotate-90'}`}
-            aria-hidden="true"
-          >
-            <path d="M7 10l5 5 5-5z"/>
-          </svg>
-        </span>
-      )}
       <button
         onClick={onClick}
         onContextMenu={handleContextMenu}
-        className={`w-full flex items-center gap-1.5 py-1 pl-2 ${canExpand ? 'pr-16' : 'pr-8'} rounded-md text-[15px] transition-colors ${
+        className={`w-full flex items-center gap-1.5 py-1 pl-2 pr-8 rounded-md text-[15px] transition-colors ${
           isActive
             ? 'bg-lc-border text-lc-white font-medium'
             : hasUnread
@@ -389,7 +395,24 @@ function ChannelItem({ channel, isActive, onClick, followedPosts, activePostId, 
           {channel.emoji ? <ChannelEmoji value={channel.emoji} /> : null}
         </span>
         <span className="truncate">{channel.name}</span>
-        {isWriteLocked && <LockIcon />}
+        {canExpand && (
+          <span
+            onClick={(e) => { e.stopPropagation(); e.preventDefault(); setExpanded((v) => !v); }}
+            role="button"
+            aria-label={expanded ? 'Contraer publicaciones' : 'Expandir publicaciones'}
+            data-testid={`channel-expand-${channel.id}`}
+            className="shrink-0 ml-1 p-1 rounded text-lc-muted hover:text-lc-white hover:bg-lc-border/60 cursor-pointer flex items-center justify-center"
+          >
+            <svg
+              width="16" height="16" viewBox="0 0 24 24" fill="currentColor"
+              className={`transition-transform ${expanded ? '' : '-rotate-90'}`}
+              aria-hidden="true"
+            >
+              <path d="M7 10l5 5 5-5z"/>
+            </svg>
+          </span>
+        )}
+        {isWriteLocked ? <ReadOnlyIcon /> : hasRestrictedWrite ? <LockIcon /> : null}
         {(hasUnread || hasMention) && !isActive && (
           <span className={`ml-auto shrink-0 text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5 gap-0.5 ${
             hasMention ? 'bg-red-500 text-white' : 'bg-lc-muted/30 text-lc-white'
@@ -511,9 +534,9 @@ function CategorySection({ category, activeChannelId, onSelectChannel, followedB
         className="w-full flex items-center gap-1 px-1 mb-1 text-[11px] font-semibold uppercase tracking-wider text-lc-muted hover:text-lc-white transition-colors"
       >
         <span className="flex-1 flex items-center gap-2 min-w-0">
-          <span className="flex-1 h-px bg-lc-muted/40" />
+          <span className="flex-1 h-px bg-lc-border" />
           <span className="shrink-0">[ {category.name} ]</span>
-          <span className="flex-1 h-px bg-lc-muted/40" />
+          <span className="flex-1 h-px bg-lc-border" />
         </span>
         <span className="shrink-0 p-1 rounded hover:bg-lc-border/60">
           <svg
