@@ -40,6 +40,10 @@ COPY --from=builder /app/src/lib ./src/lib
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/tsconfig.json ./tsconfig.json
 COPY --from=builder /app/next.config.ts ./next.config.ts
+# Guide MDX sources — read at request time by /guides/[locale]/[slug],
+# the opengraph-image generator, and the sitemap. Without this COPY the
+# runner returns 404 for every article and the sitemap has no guide URLs.
+COPY --from=builder /app/content ./content
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x ./docker-entrypoint.sh
 
