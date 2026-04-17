@@ -4,12 +4,14 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useChatStore, Category, Channel } from '@/store/chat';
 import { useAuthStore } from '@/store/auth';
+import { useVoiceStore } from '@/store/voice';
 import { useNotificationStore } from '@/store/notification';
 import ProfilePanel from './ProfilePanel';
 import MemberInviteCard from '../invites/MemberInviteCard';
 import { canWriteInChannel } from '@/lib/roles';
 import ChannelEmoji from './ChannelEmoji';
 import { slugify } from '@/lib/slug';
+import { getActiveVoiceClient } from '@/lib/voice-active-client';
 
 const EMPTY_FOLLOWED_POST_IDS: string[] = [];
 const EMPTY_FOLLOWED_POST_META: Record<string, { id: string; title: string; channelId: string; channelName: string; serverId: string }> = {};
@@ -518,6 +520,149 @@ function CategorySection({ category, activeChannelId, onSelectChannel, followedB
   );
 }
 
+/**
+ * Persistent voice status bar — renders whenever a voice call is active,
+ * regardless of which channel is open in the main panel. Lets users
+ * mic/deafen/leave without navigating back to the voice channel view.
+ */
+function VoiceStatusBar() {
+  const router = useRouter();
+  const currentVoiceChannelId = useVoiceStore((s) => s.currentVoiceChannelId);
+  const isMuted = useVoiceStore((s) => s.isMuted);
+  const isDeafened = useVoiceStore((s) => s.isDeafened);
+  const pinnedChannels = useChatStore((s) => s.pinnedChannels);
+  const categories = useChatStore((s) => s.categories);
+  const activeServerId = useChatStore((s) => s.activeServerId);
+  const setActiveChannel = useChatStore((s) => s.setActiveChannel);
+
+  if (!currentVoiceChannelId) return null;
+
+  const channel =
+    pinnedChannels.find((c) => c.id === currentVoiceChannelId) ??
+    categories.flatMap((c) => c.channels).find((c) => c.id === currentVoiceChannelId);
+
+  const handleMute = () => {
+    const client = getActiveVoiceClient();
+    if (!client) return;
+    const next = !isMuted;
+    if (next) client.mute();
+    else client.unmute().catch(() => {});
+    useVoiceStore.getState().setMuted(next);
+  };
+
+  const handleDeafen = () => {
+    const client = getActiveVoiceClient();
+    if (!client) return;
+    const next = !isDeafened;
+    client.setDeafened(next);
+    useVoiceStore.getState().setDeafened(next);
+    // Deafening implies muting (you can't meaningfully speak while not hearing).
+    if (next && !isMuted) {
+      client.mute();
+      useVoiceStore.getState().setMuted(true);
+    }
+  };
+
+  const handleLeave = () => {
+    const client = getActiveVoiceClient();
+    client?.leave();
+    useVoiceStore.getState().leaveVoice();
+  };
+
+  const handleJump = () => {
+    if (!channel || !activeServerId) return;
+    setActiveChannel(channel.id);
+    const sp = new URLSearchParams(window.location.search);
+    sp.set('c', channel.id);
+    router.replace(`${window.location.pathname}?${sp.toString()}`);
+  };
+
+  return (
+    <div
+      className="px-2 py-1.5 border-t border-lc-border bg-lc-black/60 shrink-0 flex items-center gap-1"
+      data-testid="voice-status-bar"
+    >
+      <button
+        onClick={handleJump}
+        className="flex-1 min-w-0 flex items-center gap-2 text-left hover:bg-lc-border/30 rounded-md px-1.5 py-1 transition"
+        title="Go to voice channel"
+      >
+        <span className="relative flex shrink-0 items-center justify-center">
+          <span className="absolute w-2 h-2 rounded-full bg-lc-green animate-ping opacity-60" />
+          <span className="w-2 h-2 rounded-full bg-lc-green" />
+        </span>
+        <span className="min-w-0 flex-1 leading-tight">
+          <span className="block text-[10px] text-lc-green font-semibold">Voice connected</span>
+          <span className="block text-xs text-lc-muted truncate">
+            {channel?.name ?? 'Voice channel'}
+          </span>
+        </span>
+      </button>
+      <button
+        onClick={handleMute}
+        className={`w-7 h-7 rounded-md flex items-center justify-center transition-colors ${
+          isMuted ? 'text-red-400 hover:bg-red-600/20' : 'text-lc-muted hover:text-lc-white hover:bg-lc-border/40'
+        }`}
+        title={isMuted ? 'Unmute' : 'Mute'}
+        data-testid="voice-bar-mute"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          {isMuted ? (
+            <>
+              <line x1="1" y1="1" x2="23" y2="23"/>
+              <path d="M9 9v3a3 3 0 0 0 5.12 2.12"/>
+              <path d="M15 9.34V4a3 3 0 0 0-5.94-.6"/>
+              <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2c0 .74-.11 1.46-.33 2.13"/>
+              <line x1="12" y1="19" x2="12" y2="23"/>
+            </>
+          ) : (
+            <>
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+              <line x1="12" y1="19" x2="12" y2="23"/>
+              <line x1="8" y1="23" x2="16" y2="23"/>
+            </>
+          )}
+        </svg>
+      </button>
+      <button
+        onClick={handleDeafen}
+        className={`w-7 h-7 rounded-md flex items-center justify-center transition-colors ${
+          isDeafened ? 'text-red-400 hover:bg-red-600/20' : 'text-lc-muted hover:text-lc-white hover:bg-lc-border/40'
+        }`}
+        title={isDeafened ? 'Undeafen' : 'Deafen'}
+        data-testid="voice-bar-deafen"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          {isDeafened ? (
+            <>
+              <line x1="1" y1="1" x2="23" y2="23"/>
+              <path d="M3 18v-6a9 9 0 0 1 9-9"/>
+              <path d="M21 12v6a2 2 0 0 1-2 2h-1"/>
+            </>
+          ) : (
+            <>
+              <path d="M3 18v-6a9 9 0 0 1 18 0v6"/>
+              <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>
+            </>
+          )}
+        </svg>
+      </button>
+      <button
+        onClick={handleLeave}
+        className="w-7 h-7 rounded-md flex items-center justify-center text-red-400 hover:bg-red-600/20 transition-colors"
+        title="Disconnect"
+        data-testid="voice-bar-leave"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-3.33-2.67"/>
+          <line x1="23" y1="1" x2="1" y2="23"/>
+        </svg>
+      </button>
+    </div>
+  );
+}
+
 function UserPanel() {
   const router = useRouter();
   const { profile, logout } = useAuthStore();
@@ -689,7 +834,7 @@ export default function ChannelSidebar({ onChannelSelect }: { onChannelSelect?: 
 
   if (isLoadingChannels) {
     return (
-      <aside ref={asideRef} style={{ width }} className="relative bg-lc-dark border-r border-lc-border flex flex-col shrink-0">
+      <aside ref={asideRef} style={{ width, borderTopLeftRadius: 12 }} className="relative bg-lc-dark border-t border-l border-r border-lc-border flex flex-col shrink-0 overflow-hidden">
         <div className="p-4 border-b border-lc-border">
           <div className="lc-skeleton h-6 w-32" />
         </div>
@@ -698,6 +843,7 @@ export default function ChannelSidebar({ onChannelSelect }: { onChannelSelect?: 
             <div key={i} className="lc-skeleton h-5 w-full" />
           ))}
         </div>
+        <VoiceStatusBar />
         <UserPanel />
         <ResizeHandle onResize={handleResize} />
       </aside>
@@ -705,11 +851,13 @@ export default function ChannelSidebar({ onChannelSelect }: { onChannelSelect?: 
   }
 
   return (
-    <aside ref={asideRef} style={{ width }} className="relative bg-lc-dark border-r border-lc-border flex flex-col shrink-0">
-      {/* Server header with banner */}
-      <div className="relative shrink-0">
+    <aside ref={asideRef} style={{ width, borderTopLeftRadius: 12 }} className="relative bg-lc-dark border-t border-l border-r border-lc-border flex flex-col shrink-0 overflow-hidden">
+      {/* Server header — compact h-12 strip that always stays at the top,
+          aligned with the channel header on the right. Banner (if any)
+          renders BELOW this strip so only the channel list shifts down. */}
+      <div className="shrink-0 relative">
         {activeServer?.banner && (
-          <div className="h-24 overflow-hidden">
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
             <img
               src={activeServer.banner}
               alt=""
@@ -718,7 +866,7 @@ export default function ChannelSidebar({ onChannelSelect }: { onChannelSelect?: 
             <div className="absolute inset-0 bg-gradient-to-b from-transparent to-lc-dark" />
           </div>
         )}
-        <div className={`${activeServer?.banner ? 'absolute bottom-0 left-0 right-0' : ''} p-3 flex items-center gap-2 border-b border-lc-border`}>
+        <div className={`relative h-12 px-3 flex items-center gap-2 ${activeServer?.banner ? '' : 'border-b border-lc-border'}`}>
           {activeServer?.icon ? (
             <img src={activeServer.icon} alt={activeServer.name} className="w-6 h-6 rounded-full" />
           ) : (
@@ -771,6 +919,9 @@ export default function ChannelSidebar({ onChannelSelect }: { onChannelSelect?: 
             )}
           </div>
         </div>
+        {activeServer?.banner && (
+          <div className="relative h-24 border-b border-lc-border" />
+        )}
       </div>
 
       {/* Invite friends modal */}
@@ -820,6 +971,8 @@ export default function ChannelSidebar({ onChannelSelect }: { onChannelSelect?: 
         ))}
       </nav>
 
+      {/* Persistent voice call controls — visible while connected, regardless of which channel the user is browsing. */}
+      <VoiceStatusBar />
       {/* User panel — always visible at bottom */}
       <UserPanel />
       <ResizeHandle onResize={handleResize} />

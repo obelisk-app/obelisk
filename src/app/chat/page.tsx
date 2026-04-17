@@ -25,6 +25,8 @@ import VoiceChannel from '@/components/chat/VoiceChannel';
 import { useDMStore } from '@/store/dm';
 import { useVoiceStore } from '@/store/voice';
 import { WebSocketVoiceClient } from '@/lib/voice';
+import { LiveKitVoiceClient, fetchVoiceToken } from '@/lib/livekit-voice';
+import { setActiveVoiceClient } from '@/lib/voice-active-client';
 import { discoverDMThreads, subscribeDMs, computeUnreadCounts } from '@/lib/dm';
 import type { DMMessage } from '@/lib/dm';
 import { publishInboxRelays } from '@/lib/dm-inbox';
@@ -101,7 +103,9 @@ export default function ChatPage() {
   } = useChatStore();
   const socketRef = useRef<Socket | null>(null);
   const [socketInstance, setSocketInstance] = useState<Socket | null>(null);
-  const voiceClientRef = useRef<WebSocketVoiceClient | null>(null);
+  // Union: mesh and SFU clients expose the same public surface so the rest
+  // of the voice handler code doesn't care which backend is running.
+  const voiceClientRef = useRef<WebSocketVoiceClient | LiveKitVoiceClient | null>(null);
   const prevChannelRef = useRef<string | null>(null);
   const activeChannelIdRef = useRef<string | null>(null);
   const profilePubkeyRef = useRef<string | null>(null);
@@ -1296,7 +1300,18 @@ export default function ChatPage() {
     voiceStore.setConnectionState('connecting');
     voiceStore.setError(null);
     try {
-      const client = new WebSocketVoiceClient(socket);
+      // Pick the backend based on how the admin configured this channel.
+      // Both clients expose the same public surface (methods + on* callbacks),
+      // so downstream wiring is identical.
+      const chatState = useChatStore.getState();
+      const ch = [
+        ...chatState.pinnedChannels,
+        ...chatState.categories.flatMap((c) => c.channels),
+      ].find((c) => c.id === channelId);
+      const useSfu = ch?.voiceMode === 'sfu';
+      const client: WebSocketVoiceClient | LiveKitVoiceClient = useSfu
+        ? new LiveKitVoiceClient({ tokenFetcher: fetchVoiceToken })
+        : new WebSocketVoiceClient(socket);
       client.onConnectionStateChange = (state) => {
         useVoiceStore.getState().setConnectionState(
           state === 'connected' ? 'connected' : state === 'failed' ? 'failed' : 'connecting',
@@ -1336,9 +1351,31 @@ export default function ChatPage() {
         vs.setScreenSharing(false);
         vs.setLimitNotice(reason);
       };
+      // Drive the real "green orb" from actual audio levels (mesh client uses
+      // SpeakingDetector; LiveKit client forwards its ActiveSpeakersChanged).
+      client.onSpeakingChange = (pubkey, speaking) => {
+        useVoiceStore.getState().setSpeaking(pubkey, speaking);
+      };
       voiceStore.setVoiceChannel(channelId);
-      await client.join(channelId);
+      const myPubkey = useAuthStore.getState().profile?.pubkey;
+      if (!myPubkey) throw new Error('Not authenticated');
+      await client.join(channelId, myPubkey);
       voiceClientRef.current = client;
+      // Expose to the persistent status bar in the sidebar so the user can
+      // toggle mic/deafen/leave from anywhere in the app while a call is live.
+      setActiveVoiceClient(client);
+      // Mirror store `localMutedPubkeys` into the client's per-peer silencer.
+      // Subscribed after join() so the initial state is pushed as diffs.
+      const unsubscribeLocalMute = useVoiceStore.subscribe((state, prev) => {
+        if (state.localMutedPubkeys === prev.localMutedPubkeys) return;
+        for (const pk of state.localMutedPubkeys) {
+          if (!prev.localMutedPubkeys.has(pk)) client.setPeerMuted(pk, true);
+        }
+        for (const pk of prev.localMutedPubkeys) {
+          if (!state.localMutedPubkeys.has(pk)) client.setPeerMuted(pk, false);
+        }
+      });
+      (client as unknown as { __unsubscribeLocalMute?: () => void }).__unsubscribeLocalMute = unsubscribeLocalMute;
       // Mic is deferred — reflect that in UI (muted until user unmutes).
       voiceStore.setMuted(true);
       if (socket) socket.emit('voice-mute', { channelId, muted: true });
@@ -1359,8 +1396,11 @@ export default function ChatPage() {
     const channelId = voiceStore.currentVoiceChannelId;
 
     if (voiceClientRef.current) {
-      voiceClientRef.current.leave();
+      const client = voiceClientRef.current;
+      (client as unknown as { __unsubscribeLocalMute?: () => void }).__unsubscribeLocalMute?.();
+      client.leave();
       voiceClientRef.current = null;
+      setActiveVoiceClient(null);
     }
     if (socket && channelId) {
       socket.emit('leave-voice', channelId);
@@ -1477,9 +1517,12 @@ export default function ChatPage() {
     ...categories.flatMap(c => c.channels),
   ];
   const activeChannel = allChannels.find(c => c.id === activeChannelId);
+  const isVoiceChatOpen = useVoiceStore((s) => s.isVoiceChatOpen);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showChannelTopic, setShowChannelTopic] = useState(false);
+  const [showMemberList, setShowMemberList] = useState(true);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   // No valid session — show login modal with matrix background
   if (sessionInvalid) {
@@ -1564,8 +1607,90 @@ export default function ChatPage() {
     );
   }
 
+  const activeServerForTopBar = servers.find((s) => s.id === activeServerId);
+
   return (
-    <div className="h-dvh flex bg-lc-black relative overflow-hidden">
+    <div className="h-dvh flex flex-col bg-black relative overflow-hidden">
+      {/* Top-top bar — app/server title on the left, inbox + help on the right */}
+      <div
+        className="h-10 px-3 bg-lc-black shrink-0"
+        style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      >
+        <div className="flex items-center gap-2 min-w-0 max-w-[60%]">
+          {activeServerForTopBar?.icon ? (
+            <img src={activeServerForTopBar.icon} alt="" className="w-5 h-5 rounded-full shrink-0" />
+          ) : (
+            <div className="w-5 h-5 rounded-full bg-lc-olive flex items-center justify-center text-lc-green text-[10px] font-bold shrink-0">
+              {activeServerForTopBar?.name?.[0]?.toUpperCase() || 'O'}
+            </div>
+          )}
+          <span className="text-xs font-semibold text-lc-white truncate">
+            {activeServerForTopBar?.name || 'Obelisk'}
+          </span>
+        </div>
+        <div
+          className="flex items-center gap-1 shrink-0 z-10"
+          style={{ position: 'absolute', right: 12, top: 0, bottom: 0 }}
+        >
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowNotifications((v) => !v)}
+              className="p-1.5 rounded-lg text-lc-muted hover:text-lc-white hover:bg-lc-border/40 transition-colors"
+              title="Notificaciones"
+              aria-label="Notificaciones"
+              aria-expanded={showNotifications}
+              data-testid="top-notifications-btn"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 12h-6l-2 3h-4l-2-3H2" />
+                <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
+              </svg>
+            </button>
+            {showNotifications && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
+                <div
+                  className="absolute right-0 top-full mt-2 w-80 bg-lc-dark border border-lc-border rounded-xl shadow-2xl overflow-hidden z-50"
+                  data-testid="top-notifications-panel"
+                >
+                  <div className="flex items-center gap-2 px-4 py-3 border-b border-lc-border">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-lc-green">
+                      <path d="M22 12h-6l-2 3h-4l-2-3H2" />
+                      <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
+                    </svg>
+                    <span className="text-sm font-semibold text-lc-white">Bandeja de entrada</span>
+                  </div>
+                  <div className="px-4 py-8 flex flex-col items-center gap-2 text-center">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-lc-green/10 border border-lc-green/30 text-lc-green text-xs font-semibold uppercase tracking-wide">
+                      <span className="w-1.5 h-1.5 rounded-full bg-lc-green animate-pulse" />
+                      Coming soon
+                    </span>
+                    <p className="text-sm text-lc-muted">
+                      Notificaciones y menciones llegarán pronto.
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+          <a
+            href="/"
+            className="p-1.5 rounded-lg text-lc-muted hover:text-lc-white hover:bg-lc-border/40 transition-colors inline-flex"
+            title="Ayuda"
+            aria-label="Ayuda"
+            data-testid="top-help-btn"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+          </a>
+        </div>
+      </div>
+
+      <div className="flex-1 flex min-h-0 relative">
       {/* Mobile sidebar overlay backdrop */}
       {sidebarOpen && (
         <div
@@ -1618,10 +1743,10 @@ export default function ChatPage() {
             )}
           </>
         ) : (
-          <div className="flex-1 flex min-h-0">
-            <div className="flex-1 flex flex-col min-h-0 min-w-0">
-              {/* Top bar — channel info with mobile hamburger */}
-              <div className="h-12 px-3 md:px-4 flex items-center justify-between border-b border-lc-border shrink-0 bg-lc-dark">
+          <div className="flex-1 flex flex-col min-h-0">
+            {/* Top bar — spans across chat + member list so toggling the
+                member list doesn't shift the search bar / action icons. */}
+            <div className="h-12 px-3 md:px-4 flex items-center justify-between border-t border-b border-lc-border shrink-0 bg-lc-dark">
                 <div className="flex items-center gap-2 min-w-0">
                   <button
                     onClick={() => setSidebarOpen(true)}
@@ -1682,10 +1807,26 @@ export default function ChatPage() {
                       }}
                     />
                   )}
+                  <button
+                    onClick={() => setShowMemberList((v) => !v)}
+                    className="p-1.5 rounded-lg hover:bg-lc-border/40 text-lc-muted hover:text-lc-white transition-colors inline-flex"
+                    title={showMemberList ? 'Ocultar lista de miembros' : 'Mostrar lista de miembros'}
+                    aria-label={showMemberList ? 'Ocultar lista de miembros' : 'Mostrar lista de miembros'}
+                    data-testid="member-list-toggle"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                      <circle cx="9" cy="7" r="4" />
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                    </svg>
+                  </button>
                   <SearchBar serverId={activeServerId} profileCache={profileCache} />
                 </div>
               </div>
 
+            <div className="flex-1 flex min-h-0">
+              <div className="flex-1 flex flex-col min-h-0 min-w-0">
               {showChannelTopic && activeChannel?.description && (
                 <ChannelTopicModal
                   channelName={activeChannel.name}
@@ -1746,6 +1887,18 @@ export default function ChatPage() {
                   onToggleScreenShare={handleToggleScreenShare}
                   canModerate={canModerateVoice}
                   onModAction={handleVoiceModAction}
+                  chatSlot={(
+                    <>
+                      <MessageArea profileCache={profileCache} onDelete={handleDelete} onToggleReaction={handleToggleReaction} />
+                      {messageError && (
+                        <div className="px-4 py-2 bg-red-600/20 border-t border-red-600/30">
+                          <p className="text-sm text-red-400">{messageError}</p>
+                        </div>
+                      )}
+                      <TypingIndicator profileCache={profileCache} />
+                      <MessageInput onSend={handleSend} onEditSave={handleEdit} onTyping={handleTyping} />
+                    </>
+                  )}
                 />
               ) : (
                 <>
@@ -1761,12 +1914,54 @@ export default function ChatPage() {
               )}
             </div>
 
+            {/* Voice channel chat rail — rendered as a sibling of the main
+                column so its h-12 header visually lines up with the outer
+                channel title bar. Only shown for voice channels where the
+                user has toggled it open via the speech-bubble button. */}
+            {activeChannel?.type === 'voice' && isVoiceChatOpen && (
+              <aside
+                className="hidden md:flex w-80 border-l border-lc-border flex-col min-h-0"
+                data-testid="voice-chat-rail"
+              >
+                <header className="h-12 px-3 md:px-4 flex items-center justify-between border-b border-lc-border bg-lc-dark shrink-0">
+                  <span className="flex items-center gap-2 min-w-0">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-lc-muted shrink-0">
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    <span className="text-sm font-semibold text-lc-white truncate">Channel chat</span>
+                  </span>
+                  <button
+                    onClick={() => useVoiceStore.getState().setVoiceChatOpen(false)}
+                    className="text-lc-muted hover:text-lc-white p-1 shrink-0"
+                    title="Hide chat"
+                    data-testid="voice-chat-close"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <line x1="18" y1="6" x2="6" y2="18"/>
+                      <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                  </button>
+                </header>
+                <MessageArea profileCache={profileCache} onDelete={handleDelete} onToggleReaction={handleToggleReaction} />
+                {messageError && (
+                  <div className="px-4 py-2 bg-red-600/20 border-t border-red-600/30">
+                    <p className="text-sm text-red-400">{messageError}</p>
+                  </div>
+                )}
+                <TypingIndicator profileCache={profileCache} />
+                <MessageInput onSend={handleSend} onEditSave={handleEdit} onTyping={handleTyping} />
+              </aside>
+            )}
             {/* Member list sidebar — hidden on mobile */}
-            <div className="hidden md:flex h-full">
-              <MemberList profileCache={profileCache} />
+            {showMemberList && (
+              <div className="hidden md:flex h-full">
+                <MemberList profileCache={profileCache} />
+              </div>
+            )}
             </div>
           </div>
         )}
+      </div>
       </div>
       <GlobalProfilePopover />
     </div>
