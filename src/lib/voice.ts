@@ -12,6 +12,7 @@
  */
 
 import type { Socket } from 'socket.io-client';
+import { SpeakingDetector } from './speaking-detector';
 
 export interface VoiceParticipant {
   pubkey: string;
@@ -39,18 +40,37 @@ interface PeerConn {
   screenAudioElement: HTMLAudioElement | null;
   cameraElement: HTMLVideoElement | null;
   screenElement: HTMLVideoElement | null;
-  // Reconnection state. The impolite side (polite === false) drives recovery;
-  // the polite side just waits for a new offer or a reset signal.
+  // Voice-activity detector for this peer's mic audio. Reads the track via
+  // AnalyserNode without connecting to destination — playback stays on the
+  // `<audio>` element so the OS keeps tagging the session as communication.
+  speakingDetector: SpeakingDetector | null;
+  // Locally silenced by the viewer only — independent from global deafen.
+  locallyMuted: boolean;
+  // Reconnection state. Both sides participate:
+  //   impolite — drives ICE restart ladder, then hard reset.
+  //   polite   — after a longer grace, emits { requestReset: true } so the
+  //              impolite side does the recreate (avoids offer glare).
   reconnectTimer: ReturnType<typeof setTimeout> | null;
   reconnectAttempts: number;
+  // Initial-connection watchdog — `scheduleReconnect` only fires on
+  // `failed`/`disconnected`, but a handshake that never reaches `connected`
+  // stays in `connecting`/`new` forever. This catches that gap.
+  connectWatchdogTimer: ReturnType<typeof setTimeout> | null;
   closed: boolean;
 }
 
 // Start small so transient ICE hiccups (WiFi roam, ~1–2s) self-heal without
 // a visible gap, then back off to avoid hammering dead peers.
 const RECONNECT_DELAYS_MS = [1500, 3000, 6000, 10000, 15000];
+// Polite side waits longer — it's asking the remote to do a full PC rebuild,
+// so we don't want to spam it.
+const POLITE_RESET_DELAYS_MS = [8000, 12000, 20000];
 // After this many ICE-restart attempts we escalate to a full PC recreate.
 const ICE_RESTART_LIMIT = 3;
+// Max time the initial handshake is allowed to sit before we treat it as
+// wedged and trigger a fresh PC. Covers the "both need to leave and rejoin"
+// case where the first offer/answer is lost or glare resolves badly.
+const INITIAL_CONNECT_TIMEOUT_MS = 15000;
 
 // User-tunable quality — read from localStorage so the Settings modal can change it.
 export interface VoiceQualitySettings {
@@ -60,14 +80,24 @@ export interface VoiceQualitySettings {
   cameraMaxBitrate: number;
   screenFps: number;
   screenMaxBitrate: number;
+  /**
+   * When true (default), we acquire the mic eagerly on join so the browser
+   * tags this as a "communication" audio session. That's what triggers the
+   * OS-level auto-ducking of music/video from other apps and tabs. Turn
+   * off if you'd rather keep background audio at full volume — at the cost
+   * of possibly having remote voices show up in the OS media mixer rather
+   * than the call/communication category.
+   */
+  duckOtherAudio: boolean;
 }
 const VOICE_QUALITY_DEFAULTS: VoiceQualitySettings = {
-  cameraWidth: 1280,
-  cameraHeight: 720,
+  cameraWidth: 1920,
+  cameraHeight: 1080,
   cameraFps: 60,
-  cameraMaxBitrate: 4_000_000,
+  cameraMaxBitrate: 8_000_000,
   screenFps: 60,
-  screenMaxBitrate: 10_000_000,
+  screenMaxBitrate: 25_000_000,
+  duckOtherAudio: true,
 };
 export function getVoiceQuality(): VoiceQualitySettings {
   if (typeof localStorage === 'undefined') return VOICE_QUALITY_DEFAULTS;
@@ -99,7 +129,7 @@ function enhanceOpusSdp(desc: RTCSessionDescription | null): RTCSessionDescripti
   }
   if (opusPts.size === 0) return desc;
   const wanted: Record<string, string> = {
-    maxaveragebitrate: '128000',
+    maxaveragebitrate: '256000',
     maxplaybackrate: '48000',
     useinbandfec: '1',
   };
@@ -150,6 +180,8 @@ export class WebSocketVoiceClient {
   private channelId: string | null = null;
   private isMuted = false;
   private isDeafened = false;
+  private localPubkey: string | null = null;
+  private localSpeakingDetector: SpeakingDetector | null = null;
 
   // Callbacks (preserved API)
   onConnectionStateChange?: (state: string) => void;
@@ -161,6 +193,10 @@ export class WebSocketVoiceClient {
   onRemoteScreenElement?: (pubkey: string, element: HTMLVideoElement | null) => void;
   onLocalCameraStream?: (stream: MediaStream | null) => void;
   onLocalScreenStream?: (stream: MediaStream | null) => void;
+  // Fires on real audio-level transitions (RMS + hangover via SpeakingDetector).
+  // Wire this to the voice store's `setSpeaking` so the green orb reflects
+  // actual speech, not just mute state.
+  onSpeakingChange?: (pubkey: string, speaking: boolean) => void;
 
   constructor(socket: Socket) {
     this.socket = socket;
@@ -168,16 +204,32 @@ export class WebSocketVoiceClient {
 
   // ── Join / Leave ─────────────────────────────────────────────
 
-  async join(channelId: string): Promise<void> {
+  async join(channelId: string, localPubkey: string): Promise<void> {
     this.channelId = channelId;
+    this.localPubkey = localPubkey;
     this.mySocketId = this.socket.id || null;
 
-    // Mic capture is deferred until the user unmutes. This lets participants
-    // join on insecure origins (no HTTPS ⇒ no mediaDevices) or with permission
-    // denied and still *hear* everyone. Without a local audio track the
-    // initial offer carries no audio m-line; adding one later triggers
-    // renegotiation via onnegotiationneeded, which peers handle normally.
+    // Start muted, but eagerly try to acquire the mic so the browser tags
+    // this session as "communication" instead of "media". Without a local
+    // mic track, Chrome/Firefox classify the remote audio elements as
+    // playback/media — which surfaces remote peers' voices in the OS media
+    // mixer, hijacks media keys, and makes the call sound like background
+    // music. The track stays disabled (enabled=false) while isMuted so no
+    // audio is actually sent until the user unmutes. If mic acquisition
+    // fails (insecure origin, permission denied, no device), we fall
+    // through silently — the user can still hear everyone else.
     this.isMuted = true;
+    // When the "Duck other audio" setting is ON (default) we acquire the mic
+    // eagerly so the browser tags this as a communication session; the OS
+    // then auto-ducks music/video from other apps. When the user opts out,
+    // we defer acquisition until unmute — other apps stay at full volume.
+    if (getVoiceQuality().duckOtherAudio) {
+      try {
+        await this.enableMic();
+      } catch (err) {
+        console.warn('[voice] mic unavailable at join; joining without local audio:', err);
+      }
+    }
 
     this.socket.on('voice-peer-joined', this.handlePeerJoined);
     this.socket.on('voice-peer-left', this.handlePeerLeft);
@@ -221,6 +273,13 @@ export class WebSocketVoiceClient {
     }
     this.peers.clear();
 
+    if (this.localSpeakingDetector) {
+      this.localSpeakingDetector.stop();
+      this.localSpeakingDetector = null;
+      // Clear the local user's orb on their own UI too.
+      if (this.localPubkey) this.onSpeakingChange?.(this.localPubkey, false);
+    }
+
     if (this.audioStream) {
       this.audioStream.getTracks().forEach(t => t.stop());
       this.audioStream = null;
@@ -231,6 +290,7 @@ export class WebSocketVoiceClient {
       this.socket.emit('leave-voice', this.channelId);
     }
     this.channelId = null;
+    this.localPubkey = null;
     this.onConnectionStateChange?.('disconnected');
   }
 
@@ -281,6 +341,20 @@ export class WebSocketVoiceClient {
     this.audioTrack.contentHint = 'speech';
     this.audioTrack.enabled = !this.isMuted;
 
+    // Local voice-activity detection — drives the viewer's own green orb
+    // without a round-trip through remote peers. Detector reads the mic via
+    // AnalyserNode only (never connects to destination), so playback stays
+    // purely on the outbound sender. A muted track produces silence → RMS 0
+    // → detector correctly reports not-speaking, so muted users don't blink.
+    if (this.localPubkey && !this.localSpeakingDetector) {
+      const pubkey = this.localPubkey;
+      this.localSpeakingDetector = new SpeakingDetector(
+        new MediaStream([this.audioTrack]),
+        (s) => this.onSpeakingChange?.(pubkey, s),
+      );
+      this.localSpeakingDetector.start();
+    }
+
     // Attach to every existing peer; renegotiation fires automatically.
     for (const peer of this.peers.values()) {
       if (peer.senders.audio) continue;
@@ -294,11 +368,31 @@ export class WebSocketVoiceClient {
   setDeafened(deafened: boolean): void {
     this.isDeafened = deafened;
     for (const peer of this.peers.values()) {
-      if (peer.audioElement) peer.audioElement.muted = deafened;
-      if (peer.screenAudioElement) peer.screenAudioElement.muted = deafened;
+      this.applyPeerVolume(peer);
+      // Video elements have no audio track of their own — we still clear
+      // the element-level `muted` for symmetry with the old behavior.
       if (peer.cameraElement) peer.cameraElement.muted = deafened;
       if (peer.screenElement) peer.screenElement.muted = deafened;
     }
+  }
+
+  /**
+   * Silence a specific remote peer for the local viewer only — does NOT
+   * affect other participants and never hits the server. Used by the
+   * per-tile "mute for me" button in the voice UI.
+   */
+  setPeerMuted(pubkey: string, muted: boolean): void {
+    for (const peer of this.peers.values()) {
+      if (peer.pubkey !== pubkey) continue;
+      peer.locallyMuted = muted;
+      this.applyPeerVolume(peer);
+    }
+  }
+
+  private applyPeerVolume(peer: PeerConn): void {
+    const silent = this.isDeafened || peer.locallyMuted;
+    if (peer.audioElement) peer.audioElement.muted = silent;
+    if (peer.screenAudioElement) peer.screenAudioElement.muted = silent;
   }
 
   // ── Camera ───────────────────────────────────────────────────
@@ -322,6 +416,11 @@ export class WebSocketVoiceClient {
       audio: false,
     });
     this.cameraTrack = this.cameraStream.getVideoTracks()[0] || null;
+    // Stamp what we asked for so `applyLiveQualitySettings` can detect a
+    // subsequent change and restart the track.
+    this.appliedCameraW = q.cameraWidth;
+    this.appliedCameraH = q.cameraHeight;
+    this.appliedCameraFps = q.cameraFps;
     this.onLocalCameraStream?.(this.cameraStream);
 
     if (this.cameraTrack) {
@@ -329,7 +428,8 @@ export class WebSocketVoiceClient {
         this.sendTrackInfo(peer, this.cameraTrack.id, 'camera');
         const sender = peer.pc.addTrack(this.cameraTrack, this.cameraStream);
         peer.senders.camera = sender;
-        this.tuneVideoSender(sender, q.cameraMaxBitrate, q.cameraFps);
+        this.tuneVideoSender(sender, q.cameraMaxBitrate, q.cameraFps, 'maintain-resolution',
+          { minBitrate: 2_000_000, priority: 'high' });
       }
     }
   }
@@ -399,13 +499,18 @@ export class WebSocketVoiceClient {
         this.sendTrackInfo(peer, this.screenTrack.id, 'screen');
         const sender = peer.pc.addTrack(this.screenTrack, this.screenStream);
         peer.senders.screen = sender;
-        this.tuneVideoSender(sender, q.screenMaxBitrate, q.screenFps, 'maintain-resolution');
+        this.tuneVideoSender(sender, q.screenMaxBitrate, q.screenFps, 'maintain-resolution',
+          { minBitrate: 5_000_000, priority: 'high' });
       }
     }
     if (this.screenAudioTrack) {
       for (const peer of this.peers.values()) {
         this.sendTrackInfo(peer, this.screenAudioTrack.id, 'screen-audio');
-        peer.senders['screen-audio'] = peer.pc.addTrack(this.screenAudioTrack, this.screenStream);
+        const sender = peer.pc.addTrack(this.screenAudioTrack, this.screenStream);
+        peer.senders['screen-audio'] = sender;
+        // Tab/system audio defaults to ~32 kbps mono — fine for voice, terrible
+        // for music or video soundtracks. Bump to 320 kbps.
+        this.tuneAudioSender(sender, 320_000);
       }
     }
   }
@@ -466,10 +571,34 @@ export class WebSocketVoiceClient {
       screenAudioElement: null,
       cameraElement: null,
       screenElement: null,
+      speakingDetector: null,
+      locallyMuted: false,
       reconnectTimer: null,
       reconnectAttempts: 0,
+      connectWatchdogTimer: null,
       closed: false,
     };
+
+    // Arm the initial-connection watchdog. If we never reach `connected`
+    // within the timeout the handshake is wedged (lost first offer, bad
+    // glare resolution, renegotiation triggered by a setting change that
+    // stalled). Trigger recovery proactively instead of waiting forever
+    // for the user to leave and rejoin.
+    peer.connectWatchdogTimer = setTimeout(() => {
+      peer.connectWatchdogTimer = null;
+      if (peer.closed) return;
+      if (peer.pc.connectionState === 'connected') return;
+      console.warn('[voice] initial connect timeout for', remotePubkey.slice(0, 8),
+        '— state:', peer.pc.connectionState);
+      if (peer.polite) {
+        this.socket.emit('voice-signal', {
+          toSocketId: peer.socketId,
+          payload: { requestReset: true },
+        });
+      } else {
+        this.performHardReset(peer);
+      }
+    }, INITIAL_CONNECT_TIMEOUT_MS);
 
     pc.onicecandidate = ({ candidate }) => {
       if (candidate) {
@@ -512,22 +641,31 @@ export class WebSocketVoiceClient {
       }
     };
 
+    const clearRecoveryTimers = () => {
+      peer.reconnectAttempts = 0;
+      if (peer.reconnectTimer) {
+        clearTimeout(peer.reconnectTimer);
+        peer.reconnectTimer = null;
+      }
+      if (peer.connectWatchdogTimer) {
+        clearTimeout(peer.connectWatchdogTimer);
+        peer.connectWatchdogTimer = null;
+      }
+    };
+
     pc.onconnectionstatechange = () => {
       console.log('[voice] peer', remotePubkey.slice(0, 8), 'connection:', pc.connectionState);
       if (pc.connectionState === 'connected') {
-        peer.reconnectAttempts = 0;
-        if (peer.reconnectTimer) {
-          clearTimeout(peer.reconnectTimer);
-          peer.reconnectTimer = null;
-        }
+        clearRecoveryTimers();
       } else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
         this.scheduleReconnect(peer);
       }
     };
     pc.oniceconnectionstatechange = () => {
       console.log('[voice] peer', remotePubkey.slice(0, 8), 'ice:', pc.iceConnectionState);
-      // Some browsers surface failure here before connectionState flips.
-      if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
+      if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+        clearRecoveryTimers();
+      } else if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
         this.scheduleReconnect(peer);
       }
     };
@@ -545,18 +683,22 @@ export class WebSocketVoiceClient {
       this.sendTrackInfo(peer, this.cameraTrack.id, 'camera');
       const s = pc.addTrack(this.cameraTrack, this.cameraStream);
       peer.senders.camera = s;
-      this.tuneVideoSender(s, q.cameraMaxBitrate, q.cameraFps);
+      this.tuneVideoSender(s, q.cameraMaxBitrate, q.cameraFps, 'maintain-resolution',
+        { minBitrate: 2_000_000, priority: 'high' });
     }
     if (this.screenTrack && this.screenStream) {
       const q = getVoiceQuality();
       this.sendTrackInfo(peer, this.screenTrack.id, 'screen');
       const s = pc.addTrack(this.screenTrack, this.screenStream);
       peer.senders.screen = s;
-      this.tuneVideoSender(s, q.screenMaxBitrate, q.screenFps, 'maintain-resolution');
+      this.tuneVideoSender(s, q.screenMaxBitrate, q.screenFps, 'maintain-resolution',
+        { minBitrate: 5_000_000, priority: 'high' });
     }
     if (this.screenAudioTrack && this.screenStream) {
       this.sendTrackInfo(peer, this.screenAudioTrack.id, 'screen-audio');
-      peer.senders['screen-audio'] = pc.addTrack(this.screenAudioTrack, this.screenStream);
+      const s = pc.addTrack(this.screenAudioTrack, this.screenStream);
+      peer.senders['screen-audio'] = s;
+      this.tuneAudioSender(s, 320_000);
     }
 
     this.peers.set(remoteSocketId, peer);
@@ -568,6 +710,17 @@ export class WebSocketVoiceClient {
     if (peer.reconnectTimer) {
       clearTimeout(peer.reconnectTimer);
       peer.reconnectTimer = null;
+    }
+    if (peer.connectWatchdogTimer) {
+      clearTimeout(peer.connectWatchdogTimer);
+      peer.connectWatchdogTimer = null;
+    }
+    if (peer.speakingDetector) {
+      peer.speakingDetector.stop();
+      peer.speakingDetector = null;
+      // Clear any lingering "speaking" state for this peer so the UI orb
+      // doesn't stay lit after they drop.
+      this.onSpeakingChange?.(peer.pubkey, false);
     }
     try { peer.pc.close(); } catch {}
     if (peer.audioElement) {
@@ -598,23 +751,26 @@ export class WebSocketVoiceClient {
 
   // ── Reconnection ─────────────────────────────────────────────
   //
-  // ICE can drop for all sorts of reasons (WiFi roam, NAT rebinding, brief
-  // uplink loss). The built-in RTCPeerConnection does not recover on its own,
-  // so we drive recovery here: ICE restart first (cheap, preserves tracks),
-  // then a coordinated full PC recreate as a last resort. Only the impolite
-  // side (polite === false) initiates; the polite side waits so the two
-  // don't fight each other with simultaneous restart offers.
+  // ICE drops for lots of reasons (WiFi roam, NAT rebinding, uplink loss,
+  // renegotiation stalling when a peer flips a setting that restarts tracks).
+  // RTCPeerConnection doesn't self-heal, so we drive recovery here.
+  //
+  // Impolite side leads: cheap ICE restart (preserves tracks) up to
+  // ICE_RESTART_LIMIT, then a full PC recreate.
+  //
+  // Polite side used to be passive and would sit in `failed`/`disconnected`
+  // forever. It now joins in after a longer grace, emitting
+  // `{ requestReset: true }` so the impolite peer does the recreate —
+  // handled in `handleSignal`. Only impolite ever drives offers, so no
+  // glare.
 
   private scheduleReconnect(peer: PeerConn): void {
     if (peer.closed) return;
     if (peer.reconnectTimer) return;
     if (peer.pc.connectionState === 'connected') return;
-    // Polite side is passive — it either receives a new offer or a reset.
-    if (peer.polite) return;
 
-    const delay = RECONNECT_DELAYS_MS[
-      Math.min(peer.reconnectAttempts, RECONNECT_DELAYS_MS.length - 1)
-    ];
+    const delays = peer.polite ? POLITE_RESET_DELAYS_MS : RECONNECT_DELAYS_MS;
+    const delay = delays[Math.min(peer.reconnectAttempts, delays.length - 1)];
     peer.reconnectTimer = setTimeout(() => {
       peer.reconnectTimer = null;
       if (peer.closed) return;
@@ -624,7 +780,9 @@ export class WebSocketVoiceClient {
         return;
       }
       peer.reconnectAttempts += 1;
-      if (peer.reconnectAttempts <= ICE_RESTART_LIMIT) {
+      if (peer.polite) {
+        this.requestRemoteReset(peer);
+      } else if (peer.reconnectAttempts <= ICE_RESTART_LIMIT) {
         this.performIceRestart(peer);
       } else {
         this.performHardReset(peer);
@@ -632,6 +790,15 @@ export class WebSocketVoiceClient {
       // Check again later — if this attempt doesn't land, try again.
       this.scheduleReconnect(peer);
     }, delay);
+  }
+
+  private requestRemoteReset(peer: PeerConn): void {
+    console.log('[voice] requesting remote reset from', peer.pubkey.slice(0, 8),
+      'attempt', peer.reconnectAttempts);
+    this.socket.emit('voice-signal', {
+      toSocketId: peer.socketId,
+      payload: { requestReset: true },
+    });
   }
 
   private performIceRestart(peer: PeerConn): void {
@@ -693,15 +860,30 @@ export class WebSocketVoiceClient {
       const el = document.createElement('audio');
       el.srcObject = stream;
       el.autoplay = true;
-      el.muted = this.isDeafened;
+      // Respect both global deafen and any per-peer local mute already set.
+      el.muted = this.isDeafened || peer.locallyMuted;
       (el as any).playsInline = true;
       el.style.display = 'none';
       document.body.appendChild(el);
       el.play().catch((err) => {
         console.warn('[voice] audio play() blocked — will retry on user gesture:', err);
       });
-      if (type === 'audio') peer.audioElement = el;
-      else peer.screenAudioElement = el;
+      if (type === 'audio') {
+        peer.audioElement = el;
+        // Start per-peer voice-activity detection on the mic track only.
+        // Using a fresh MediaStream wrapping the same track means the
+        // analyser consumes the track in a separate AudioContext node —
+        // the `<audio>` element's playback is untouched, so the OS still
+        // classifies this session as communication (not background media).
+        if (peer.speakingDetector) peer.speakingDetector.stop();
+        peer.speakingDetector = new SpeakingDetector(
+          new MediaStream([track]),
+          (s) => this.onSpeakingChange?.(peer.pubkey, s),
+        );
+        peer.speakingDetector.start();
+      } else {
+        peer.screenAudioElement = el;
+      }
       return;
     }
 
@@ -747,11 +929,67 @@ export class WebSocketVoiceClient {
     });
   }
 
+  /**
+   * Re-read the user's voice-quality settings and push them to every active
+   * sender. Bitrate + framerate + priority changes apply live via
+   * setParameters (no re-negotiation). If the camera resolution has changed,
+   * restart the camera track so the new `getUserMedia` constraints take
+   * effect — this briefly stops & starts the outbound video, but mic and
+   * remote tracks stay up and the call isn't dropped.
+   *
+   * Called from the Settings panel after the user flips any quality option,
+   * so changes are immediate instead of "takes effect next time."
+   */
+  async applyLiveQualitySettings(): Promise<void> {
+    const q = getVoiceQuality();
+
+    // 1. Bitrate / framerate / priority — cheap, no renegotiation.
+    for (const peer of this.peers.values()) {
+      if (peer.senders.camera) {
+        this.tuneVideoSender(peer.senders.camera, q.cameraMaxBitrate, q.cameraFps,
+          'maintain-resolution', { minBitrate: 2_000_000, priority: 'high' });
+      }
+      if (peer.senders.screen) {
+        this.tuneVideoSender(peer.senders.screen, q.screenMaxBitrate, q.screenFps,
+          'maintain-resolution', { minBitrate: 5_000_000, priority: 'high' });
+      }
+    }
+
+    // 2. Camera resolution / framerate change — requires a track restart
+    // because `getUserMedia` constraints aren't mutable on an existing
+    // track in all browsers. Track this.appliedCameraW/H/Fps explicitly
+    // rather than asking the track for its negotiated values, since those
+    // don't always match what was requested (e.g. camera returned 1280
+    // instead of our 1920 ask). Comparing against the LAST APPLIED target
+    // avoids restart loops.
+    if (this.cameraTrack && this.cameraStream) {
+      const stale =
+        this.appliedCameraW !== q.cameraWidth ||
+        this.appliedCameraH !== q.cameraHeight ||
+        this.appliedCameraFps !== q.cameraFps;
+      if (stale) {
+        try {
+          await this.stopCamera();
+          await this.startCamera();
+        } catch (err) {
+          console.warn('[voice] camera restart after settings change failed:', err);
+        }
+      }
+    }
+  }
+
+  // Last settings applied when the camera track was acquired — used by
+  // `applyLiveQualitySettings` to know whether a restart is actually needed.
+  private appliedCameraW: number | null = null;
+  private appliedCameraH: number | null = null;
+  private appliedCameraFps: number | null = null;
+
   private tuneVideoSender(
     sender: RTCRtpSender,
     maxBitrate: number,
     maxFramerate: number,
     degradationPreference: RTCDegradationPreference = 'maintain-framerate',
+    opts: { minBitrate?: number; priority?: RTCPriorityType } = {},
   ): void {
     try {
       const params = sender.getParameters() as RTCRtpSendParameters & {
@@ -760,8 +998,21 @@ export class WebSocketVoiceClient {
       params.encodings = params.encodings && params.encodings.length > 0
         ? params.encodings
         : [{}];
-      params.encodings[0].maxBitrate = maxBitrate;
-      (params.encodings[0] as any).maxFramerate = maxFramerate;
+      const enc = params.encodings[0] as RTCRtpEncodingParameters & {
+        maxFramerate?: number;
+        minBitrate?: number;
+        networkPriority?: RTCPriorityType;
+      };
+      enc.maxBitrate = maxBitrate;
+      enc.maxFramerate = maxFramerate;
+      // `minBitrate` is advisory — browsers may ignore under real congestion,
+      // but it prevents the bandwidth estimator from starving video down to a
+      // slideshow when there's no actual network pressure.
+      if (opts.minBitrate !== undefined) enc.minBitrate = opts.minBitrate;
+      if (opts.priority !== undefined) {
+        enc.priority = opts.priority;
+        enc.networkPriority = opts.priority;
+      }
       params.degradationPreference = degradationPreference;
       sender.setParameters(params).catch((err) => {
         console.warn('[voice] setParameters failed:', err);
@@ -771,13 +1022,18 @@ export class WebSocketVoiceClient {
     }
   }
 
-  private tuneAudioSender(sender: RTCRtpSender, maxBitrate = 128_000): void {
+  private tuneAudioSender(sender: RTCRtpSender, maxBitrate = 256_000): void {
     try {
       const params = sender.getParameters();
       params.encodings = params.encodings && params.encodings.length > 0
         ? params.encodings
         : [{}];
-      params.encodings[0].maxBitrate = maxBitrate;
+      const enc = params.encodings[0] as RTCRtpEncodingParameters & {
+        networkPriority?: RTCPriorityType;
+      };
+      enc.maxBitrate = maxBitrate;
+      enc.priority = 'high';
+      enc.networkPriority = 'high';
       sender.setParameters(params).catch(() => {});
     } catch {}
   }
@@ -832,6 +1088,14 @@ export class WebSocketVoiceClient {
         this.closePeer(peer);
         this.peers.delete(socketId);
         this.createPeer(socketId, pubkey);
+        return;
+      }
+
+      if (payload.requestReset) {
+        // A stuck polite peer is asking us to drive the recreate. Only the
+        // impolite side should honor this — otherwise two polite sides in an
+        // edge-case topology would recreate simultaneously.
+        if (!peer.polite) this.performHardReset(peer);
         return;
       }
 

@@ -190,6 +190,9 @@ model Channel {
   emoji           String?
   description     String?
   type            String   @default("text") // text | voice | forum
+  // Voice-only: "mesh" (P2P, ≤8 participants) or "sfu" (LiveKit, large rooms).
+  // Ignored for non-voice channels.
+  voiceMode       String?  @default("mesh")
   position        Int      @default(0)
   writePermission String? // null = everyone; "mod" | "admin" | "roles"
   writeRoleIds    String[] @default([]) // used when writePermission = "roles"

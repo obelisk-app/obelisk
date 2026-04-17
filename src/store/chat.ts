@@ -20,6 +20,8 @@ export interface Channel {
   forumTags?: ForumTag[];
   /** null/"everyone" = anyone, "mod" = mods+, "admin" = admins+. */
   writePermission?: string | null;
+  /** "mesh" (P2P) or "sfu" (LiveKit). Only meaningful for voice channels. */
+  voiceMode?: string | null;
 }
 
 export interface Category {

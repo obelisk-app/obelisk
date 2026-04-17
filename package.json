@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "prisma generate && tsx watch server.ts",
+    "dev:tunnel": "./scripts/dev-tunnel.sh",
     "build": "prisma generate && prisma migrate deploy && next build",
     "start": "next start",
     "postinstall": "prisma generate",
@@ -25,6 +26,8 @@
     "emoji-mart": "^5.6.0",
     "gray-matter": "^4.0.3",
     "jsonwebtoken": "^9.0.3",
+    "livekit-client": "^2.18.3",
+    "livekit-server-sdk": "^2.15.1",
     "next": "16.2.2",
     "next-mdx-remote": "^5.0.0",
     "nostr-tools": "^2.23.3",

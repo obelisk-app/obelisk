@@ -49,7 +49,11 @@ export default function ChannelManager({ serverId, isOwner }: ChannelManagerProp
 
   // New channel form
   const [showNewChannel, setShowNewChannel] = useState(false);
-  const [newChannel, setNewChannel] = useState({ name: '', type: 'text', categoryId: '', emoji: '' });
+  const [newChannel, setNewChannel] = useState({ name: '', type: 'text', categoryId: '', emoji: '', voiceMode: 'mesh' });
+  // Only surface the SFU option when the host has LiveKit configured — we
+  // expose the public URL at build time via NEXT_PUBLIC_LIVEKIT_URL so the
+  // client can detect availability without calling a probe endpoint.
+  const sfuAvailable = !!process.env.NEXT_PUBLIC_LIVEKIT_URL;
   const [savingChannel, setSavingChannel] = useState(false);
 
   // New category form
@@ -224,6 +228,7 @@ export default function ChannelManager({ serverId, isOwner }: ChannelManagerProp
         name: newChannel.name,
         type: newChannel.type,
         categoryId: newChannel.categoryId || null,
+        ...(newChannel.type === 'voice' ? { voiceMode: newChannel.voiceMode } : {}),
       }),
     });
     if (res.ok) {
@@ -236,7 +241,7 @@ export default function ChannelManager({ serverId, isOwner }: ChannelManagerProp
           body: JSON.stringify({ emoji: newChannel.emoji }),
         });
       }
-      setNewChannel({ name: '', type: 'text', categoryId: '', emoji: '' });
+      setNewChannel({ name: '', type: 'text', categoryId: '', emoji: '', voiceMode: 'mesh' });
       setShowNewChannel(false);
       await fetchData();
     }
@@ -731,6 +736,27 @@ export default function ChannelManager({ serverId, isOwner }: ChannelManagerProp
               ))}
             </select>
           </div>
+          {newChannel.type === 'voice' && (
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-lc-muted">Room size</label>
+              <select
+                value={newChannel.voiceMode}
+                onChange={(e) => setNewChannel({ ...newChannel, voiceMode: e.target.value })}
+                className="px-3 py-2 rounded-lg bg-lc-black border border-lc-border text-lc-white text-sm"
+                data-testid="new-channel-voice-mode"
+              >
+                <option value="mesh">Small room (P2P, up to 8 people, no server media)</option>
+                {sfuAvailable && (
+                  <option value="sfu">Large room (SFU — for community calls)</option>
+                )}
+              </select>
+              {!sfuAvailable && (
+                <p className="text-[10px] text-lc-muted">
+                  Large-room support requires a LiveKit server. Ask the host to configure <code>LIVEKIT_URL</code>.
+                </p>
+              )}
+            </div>
+          )}
           <div className="flex gap-2">
             <button
               onClick={handleCreateChannel}

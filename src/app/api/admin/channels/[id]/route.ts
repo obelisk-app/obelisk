@@ -53,6 +53,12 @@ export async function PATCH(
   if (body.categoryId !== undefined) {
     data.categoryId = body.categoryId || null;
   }
+  if (body.voiceMode !== undefined) {
+    if (body.voiceMode !== 'mesh' && body.voiceMode !== 'sfu') {
+      return NextResponse.json({ error: 'voiceMode must be "mesh" or "sfu"' }, { status: 400 });
+    }
+    data.voiceMode = body.voiceMode;
+  }
   if (body.position !== undefined) {
     data.position = Number(body.position);
   }

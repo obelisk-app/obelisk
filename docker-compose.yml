@@ -31,11 +31,34 @@ services:
       CORS_ORIGIN: https://${DOMAIN}
       MEDIASOUP_ANNOUNCED_IP: ${PUBLIC_IP}
       INSTANCE_OWNER_PUBKEY: ${INSTANCE_OWNER_PUBKEY}
+      # Optional: set these to enable the LiveKit SFU backend for large
+      # voice channels. Leave blank to keep only the P2P mesh backend.
+      LIVEKIT_URL: ${LIVEKIT_URL:-}
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-}
+      NEXT_PUBLIC_LIVEKIT_URL: ${LIVEKIT_URL:-}
     volumes:
       # Persist user uploads across container restarts. The path inside the
       # container matches getUploadDir() in src/app/api/upload/route.ts and the
       # GET handler at src/app/uploads/[name]/route.ts.
       - uploads:/app/uploads
+    networks:
+      - obelisk
+
+  # Optional: LiveKit SFU for large voice rooms. Comment out (or omit
+  # LIVEKIT_* env vars in .env) to stick with P2P mesh only.
+  livekit:
+    image: livekit/livekit-server:latest
+    restart: unless-stopped
+    profiles: ["livekit"]
+    command: >
+      --bind 0.0.0.0
+      --keys "${LIVEKIT_API_KEY:-devkey}: ${LIVEKIT_API_SECRET:-devsecret}"
+      --rtc.use-external-ip
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "50000-50100:50000-50100/udp"
     networks:
       - obelisk
 

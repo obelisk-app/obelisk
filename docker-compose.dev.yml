@@ -16,5 +16,20 @@ services:
       timeout: 5s
       retries: 5
 
+  # Local LiveKit SFU for testing large-room voice. Uses baked-in dev
+  # credentials (see .env). For production, credentials come from .env.production
+  # and the service lives in docker-compose.yml behind a `livekit` profile.
+  livekit:
+    image: livekit/livekit-server:latest
+    restart: unless-stopped
+    command: >
+      --bind 0.0.0.0
+      --keys "devkey: devsecret-must-be-at-least-32-chars"
+      --rtc.use-external-ip
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "50000-50100:50000-50100/udp"
+
 volumes:
   pgdata_dev:

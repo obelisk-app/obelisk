@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useVoiceStore } from '@/store/voice';
 import { getVoiceQuality, setVoiceQuality } from '@/lib/voice';
+import { getActiveVoiceClient } from '@/lib/voice-active-client';
 
 interface VoiceControlsProps {
   isMuted: boolean;
@@ -22,10 +23,29 @@ export default function VoiceControls({
   const { connectionState, error, isCameraOn, isScreenSharing } = useVoiceStore();
   const [showSettings, setShowSettings] = useState(false);
   const [quality, setQuality] = useState(() => getVoiceQuality());
+  // Brief visual confirmation — "nothing changed" feedback is a UX killer
+  // when the change is an encoder-param tweak with no visible effect.
+  const [savedFlash, setSavedFlash] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const updateQuality = (patch: Partial<ReturnType<typeof getVoiceQuality>>) => {
     setVoiceQuality(patch);
     setQuality(getVoiceQuality());
+    setSavedFlash('saving');
+    if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+    // Hot-apply to the live call so users don't have to leave & rejoin (or
+    // reload the page) to see their change take effect.
+    const apply = getActiveVoiceClient()?.applyLiveQualitySettings?.();
+    Promise.resolve(apply)
+      .then(() => {
+        setSavedFlash('saved');
+        savedTimerRef.current = setTimeout(() => setSavedFlash('idle'), 1500);
+      })
+      .catch((err) => {
+        console.warn('[voice] failed to apply live quality settings:', err);
+        setSavedFlash('saved');
+        savedTimerRef.current = setTimeout(() => setSavedFlash('idle'), 1500);
+      });
   };
 
   return (
@@ -154,7 +174,19 @@ export default function VoiceControls({
             <div className="absolute bottom-12 right-0 w-[min(18rem,calc(100vw-1rem))] p-4 rounded-xl bg-lc-dark border border-lc-border shadow-2xl z-50 text-xs text-lc-white space-y-3 lc-glow" data-testid="voice-settings-panel">
               <div className="flex items-center justify-between pb-2 border-b border-lc-border">
                 <h3 className="text-sm font-semibold text-lc-white">Voice settings</h3>
-                <span className="text-[10px] uppercase tracking-wider text-lc-green">Quality</span>
+                <span className="flex items-center gap-2">
+                  {savedFlash !== 'idle' && (
+                    <span
+                      className={`text-[10px] uppercase tracking-wider transition-opacity ${
+                        savedFlash === 'saved' ? 'text-lc-green' : 'text-lc-muted'
+                      }`}
+                      data-testid="voice-settings-saved"
+                    >
+                      {savedFlash === 'saved' ? 'Applied ✓' : 'Applying…'}
+                    </span>
+                  )}
+                  <span className="text-[10px] uppercase tracking-wider text-lc-green">Quality</span>
+                </span>
               </div>
               <LcSelect
                 label="Camera resolution"
@@ -167,6 +199,8 @@ export default function VoiceControls({
                   { value: '640x480', label: '480p (640×480)' },
                   { value: '1280x720', label: '720p (1280×720)' },
                   { value: '1920x1080', label: '1080p (1920×1080)' },
+                  { value: '2560x1440', label: '1440p (2560×1440)' },
+                  { value: '3840x2160', label: '4K (3840×2160)' },
                 ]}
               />
               <LcSelect
@@ -189,7 +223,22 @@ export default function VoiceControls({
                   { value: '60', label: '60 fps' },
                 ]}
               />
-              <p className="text-[10px] text-lc-muted pt-1 border-t border-lc-border/60">Applies the next time you start camera / screen share.</p>
+              <label className="flex items-start gap-2 pt-1 border-t border-lc-border/60 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={quality.duckOtherAudio}
+                  onChange={(e) => updateQuality({ duckOtherAudio: e.target.checked })}
+                  className="mt-0.5 accent-lc-green"
+                  data-testid="duck-other-audio-toggle"
+                />
+                <span className="flex-1">
+                  <span className="block text-xs text-lc-white">Lower other apps' audio during call</span>
+                  <span className="block text-[10px] text-lc-muted">
+                    Tags the browser session as a voice call (auto-ducks music/video from other apps). Turn off to keep background audio at full volume — takes effect next time you join.
+                  </span>
+                </span>
+              </label>
+              <p className="text-[10px] text-lc-muted pt-1 border-t border-lc-border/60">Changes apply to the live call instantly. Resolution changes briefly restart the camera.</p>
             </div>
           )}
         </div>

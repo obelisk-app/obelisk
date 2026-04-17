@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
 // POST /api/channels — create a new channel (admin+ only). Body must include serverId.
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { name, categoryId, type = 'text', serverId } = body;
+  const { name, categoryId, type = 'text', serverId, voiceMode } = body;
 
   if (!serverId || typeof serverId !== 'string') {
     return NextResponse.json({ error: 'serverId required' }, { status: 400 });
@@ -79,6 +79,10 @@ export async function POST(req: NextRequest) {
   if (!name) {
     return NextResponse.json({ error: 'Name required' }, { status: 400 });
   }
+  // Only validate voiceMode when creating a voice channel; for text/forum it's ignored.
+  const resolvedVoiceMode = type === 'voice'
+    ? (voiceMode === 'sfu' ? 'sfu' : 'mesh')
+    : null;
 
   const actor = await requireRole(req, serverId, 'admin');
   if (actor instanceof NextResponse) return actor;
@@ -89,6 +93,7 @@ export async function POST(req: NextRequest) {
       categoryId: categoryId || null,
       name: name.toLowerCase().replace(/\s+/g, '-'),
       type,
+      ...(resolvedVoiceMode ? { voiceMode: resolvedVoiceMode } : {}),
     },
   });
 

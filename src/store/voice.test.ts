@@ -124,6 +124,66 @@ describe('useVoiceStore', () => {
     expect(useVoiceStore.getState().focusedPubkey).toBeNull();
   });
 
+  describe('speakingPubkeys', () => {
+    it('starts empty', () => {
+      expect(useVoiceStore.getState().speakingPubkeys.size).toBe(0);
+    });
+
+    it('setSpeaking adds and removes pubkeys', () => {
+      const { setSpeaking } = useVoiceStore.getState();
+      setSpeaking('pk1', true);
+      expect(useVoiceStore.getState().speakingPubkeys.has('pk1')).toBe(true);
+      setSpeaking('pk1', false);
+      expect(useVoiceStore.getState().speakingPubkeys.has('pk1')).toBe(false);
+    });
+
+    it('setSpeaking is idempotent (same set ref when state unchanged)', () => {
+      const { setSpeaking } = useVoiceStore.getState();
+      setSpeaking('pk1', true);
+      const first = useVoiceStore.getState().speakingPubkeys;
+      setSpeaking('pk1', true);
+      expect(useVoiceStore.getState().speakingPubkeys).toBe(first);
+    });
+
+    it('removeParticipant clears the pubkey from speakingPubkeys', () => {
+      const { setSpeaking, addParticipant, removeParticipant } = useVoiceStore.getState();
+      addParticipant({ pubkey: 'pk1', muted: false, deafened: false, joinedAt: '' });
+      setSpeaking('pk1', true);
+      removeParticipant('pk1');
+      expect(useVoiceStore.getState().speakingPubkeys.has('pk1')).toBe(false);
+    });
+
+    it('leaveVoice resets speakingPubkeys', () => {
+      useVoiceStore.getState().setSpeaking('pk1', true);
+      useVoiceStore.getState().leaveVoice();
+      expect(useVoiceStore.getState().speakingPubkeys.size).toBe(0);
+    });
+  });
+
+  describe('localMutedPubkeys', () => {
+    it('toggleLocalMute flips and isLocalMuted reads', () => {
+      const { toggleLocalMute, isLocalMuted } = useVoiceStore.getState();
+      toggleLocalMute('pk1');
+      expect(isLocalMuted('pk1')).toBe(true);
+      toggleLocalMute('pk1');
+      expect(isLocalMuted('pk1')).toBe(false);
+    });
+
+    it('removeParticipant does NOT clear local mute (survives rejoin)', () => {
+      const { toggleLocalMute, addParticipant, removeParticipant } = useVoiceStore.getState();
+      addParticipant({ pubkey: 'pk1', muted: false, deafened: false, joinedAt: '' });
+      toggleLocalMute('pk1');
+      removeParticipant('pk1');
+      expect(useVoiceStore.getState().localMutedPubkeys.has('pk1')).toBe(true);
+    });
+
+    it('leaveVoice resets localMutedPubkeys', () => {
+      useVoiceStore.getState().toggleLocalMute('pk1');
+      useVoiceStore.getState().leaveVoice();
+      expect(useVoiceStore.getState().localMutedPubkeys.size).toBe(0);
+    });
+  });
+
   it('leaveVoice resets all state', () => {
     useVoiceStore.setState({
       currentVoiceChannelId: 'ch1',

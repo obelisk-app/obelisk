@@ -319,3 +319,98 @@ Everything works because the self-hosted setup runs the custom `server.ts` with 
 **Build fails on ARM64 (mediasoup compilation):** The Dockerfile already includes the necessary fixes (`py3-pip`, `CXXFLAGS`). If it still fails, ensure the base image has `python3`, `make`, `g++`, and `linux-headers` installed.
 
 **Out of memory:** The app needs ~512MB. Make sure your VPS has at least 2GB RAM (1GB for the app + 1GB for PostgreSQL + OS).
+
+---
+
+## Optional: LiveKit SFU (large voice rooms)
+
+Voice channels default to **P2P mesh** — no extra infra, works up to ~8 participants. For community-sized rooms (50+ participants with cameras and screen share), you need a **LiveKit SFU**. It runs as a sibling container on the same host, already wired into `docker-compose.yml` behind a compose profile.
+
+### Local dev (wired out-of-the-box)
+
+`.env` and `docker-compose.dev.yml` already have dev-friendly defaults. Just run:
+
+```bash
+docker compose -f docker-compose.dev.yml up -d   # postgres + livekit
+npm run dev
+```
+
+The admin panel's **Channels → New Channel → Voice** form will show the **"Large room (SFU)"** option immediately. No manual setup needed — dev credentials (`devkey` / `devsecret-...`) are baked into `docker-compose.dev.yml` and matched by the `LIVEKIT_*` entries in `.env`.
+
+If you're iterating on SFU features, you only need to restart the app, not the containers.
+
+### Production
+
+### 1. Generate API credentials
+
+```bash
+# Any two random strings work; the secret must be ≥32 chars.
+openssl rand -hex 16   # → LIVEKIT_API_KEY
+openssl rand -hex 32   # → LIVEKIT_API_SECRET
+```
+
+### 2. Add to `.env.production`
+
+```
+LIVEKIT_URL=wss://yourdomain.com/livekit
+LIVEKIT_API_KEY=...         # from step 1
+LIVEKIT_API_SECRET=...      # from step 1
+```
+
+The same `LIVEKIT_URL` is exposed to the browser as `NEXT_PUBLIC_LIVEKIT_URL` automatically (see `docker-compose.yml`). That's how the admin UI knows to offer the "Large room (SFU)" channel option.
+
+### 3. Open firewall ports
+
+- `7881/tcp` — WebRTC TCP fallback (for users behind UDP-blocking networks).
+- `50000-50100/udp` — WebRTC media.
+
+Signaling (`7880/tcp`) is proxied via Caddy, so it doesn't need to be publicly exposed. On Ubuntu: `ufw allow 7881/tcp && ufw allow 50000:50100/udp`.
+
+### 4. Add a Caddy reverse-proxy block
+
+In your `Caddyfile`, inside the main site block for `${DOMAIN}`, add:
+
+```
+@livekit path /livekit /livekit/*
+reverse_proxy @livekit livekit:7880
+```
+
+This terminates TLS at Caddy and forwards the WebSocket signaling to the LiveKit container. Reload Caddy after editing.
+
+### 5. Start the LiveKit container
+
+```bash
+docker compose --profile livekit up -d
+```
+
+The `livekit` profile is opt-in — without `--profile livekit`, it won't start and the app falls back to mesh-only. Check logs:
+
+```bash
+docker compose logs livekit | tail
+# expect: "starting LiveKit server ... version=..."
+```
+
+### 6. Rebuild the app container
+
+`NEXT_PUBLIC_LIVEKIT_URL` is baked into the client bundle at build time, so the admin UI only surfaces the SFU option after a rebuild:
+
+```bash
+docker compose build app && docker compose up -d app
+```
+
+### 7. Create a large-room voice channel
+
+In the admin panel → Channels → New Channel → Voice → Room size → "Large room (SFU)". Done. Smaller existing voice channels stay on mesh; no migration needed.
+
+### Capacity planning
+
+At 50 listeners + 5 cameras + 2 screens, LiveKit forwards roughly **~2.5 Gbps egress** sustained (simulcast + adaptive layers keep this down from the raw ~4.5 Gbps full-quality peak). CPU is never the bottleneck — bandwidth is.
+
+- **Flat-rate hosts** (Hetzner, OVH, Netcup, Scaleway): effectively free, a €30–60/month VPS with 1 Gbps uplink handles several concurrent 50-person rooms.
+- **Metered clouds** (AWS, GCP, Azure): 2.5 Gbps sustained ≈ 1.1 TB/hour ≈ $100/hour at AWS pricing. Watch the bill.
+
+### Rolling back
+
+Stop the container, unset the env vars, rebuild the app — the admin UI stops offering the SFU option and any channels already set to `sfu` simply fail to join until you flip them back to `mesh` in the admin panel. The data model isn't broken; `voiceMode` is just a string column with a default.
+
+**Voice channels architecture reference:** see [docs/voice-system.md](docs/voice-system.md) for the two-mode model and per-mode feature details.
