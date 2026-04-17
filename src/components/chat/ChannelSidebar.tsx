@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { useChatStore, Category, Channel } from '@/store/chat';
 import { useAuthStore } from '@/store/auth';
@@ -17,22 +18,27 @@ const EMPTY_FOLLOWED_POST_IDS: string[] = [];
 const EMPTY_FOLLOWED_POST_META: Record<string, { id: string; title: string; channelId: string; channelName: string; serverId: string }> = {};
 
 function ChannelTypeIcon({ type }: { type: string }) {
+  const wrapperClass = "shrink-0 w-4 h-4 flex items-center justify-center text-lc-muted/60";
   if (type === 'forum') {
     return (
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-lc-muted/60">
-        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
-      </svg>
+      <span className={wrapperClass}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+        </svg>
+      </span>
     );
   }
   if (type === 'voice') {
     return (
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-lc-muted/60">
-        <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/>
-        <path d="M19 10v2a7 7 0 01-14 0v-2"/>
-      </svg>
+      <span className={wrapperClass}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/>
+          <path d="M19 10v2a7 7 0 01-14 0v-2"/>
+        </svg>
+      </span>
     );
   }
-  return <span className="shrink-0 text-lc-muted/60 font-bold text-xs">#</span>;
+  return <span className={`${wrapperClass} font-bold text-xs`}>#</span>;
 }
 
 function LockIcon() {
@@ -76,7 +82,8 @@ function ChannelContextMenu({ anchor, onCopyLink, copyLabel, onClose }: {
     };
   }, [onClose]);
 
-  return (
+  if (typeof document === 'undefined') return null;
+  return createPortal(
     <div
       ref={ref}
       style={{ top: anchor.y, left: anchor.x }}
@@ -91,7 +98,8 @@ function ChannelContextMenu({ anchor, onCopyLink, copyLabel, onClose }: {
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
         {copyLabel}
       </button>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -231,7 +239,8 @@ function ForumPostContextMenu({
     };
   }, [onClose]);
 
-  return (
+  if (typeof document === 'undefined') return null;
+  return createPortal(
     <div
       ref={ref}
       style={{ top: anchor.y, left: anchor.x }}
@@ -254,7 +263,8 @@ function ForumPostContextMenu({
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         Dejar de seguir
       </button>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -347,25 +357,26 @@ function ChannelItem({ channel, isActive, onClick, followedPosts, activePostId, 
     <div>
     <div className="group relative">
       {canExpand && (
-        <button
+        <span
           onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v); }}
+          role="button"
           aria-label={expanded ? 'Contraer publicaciones' : 'Expandir publicaciones'}
           data-testid={`channel-expand-${channel.id}`}
-          className="absolute left-0 top-1/2 -translate-y-1/2 p-0.5 text-lc-muted hover:text-lc-white z-10"
+          className="absolute right-8 top-1/2 -translate-y-1/2 p-1 rounded text-lc-muted hover:text-lc-white hover:bg-lc-border/60 z-10 cursor-pointer flex items-center justify-center"
         >
           <svg
-            width="10" height="10" viewBox="0 0 24 24" fill="currentColor"
+            width="16" height="16" viewBox="0 0 24 24" fill="currentColor"
             className={`transition-transform ${expanded ? '' : '-rotate-90'}`}
             aria-hidden="true"
           >
             <path d="M7 10l5 5 5-5z"/>
           </svg>
-        </button>
+        </span>
       )}
       <button
         onClick={onClick}
         onContextMenu={handleContextMenu}
-        className={`w-full flex items-center gap-1.5 py-1 pr-8 rounded-md text-[15px] transition-colors ${canExpand ? 'pl-5' : 'pl-2'} ${
+        className={`w-full flex items-center gap-1.5 py-1 pl-2 ${canExpand ? 'pr-16' : 'pr-8'} rounded-md text-[15px] transition-colors ${
           isActive
             ? 'bg-lc-border text-lc-white font-medium'
             : hasUnread
@@ -374,7 +385,9 @@ function ChannelItem({ channel, isActive, onClick, followedPosts, activePostId, 
         }`}
       >
         <ChannelTypeIcon type={channel.type} />
-        {channel.emoji && <ChannelEmoji value={channel.emoji} />}
+        <span className="shrink-0 w-5 h-5 flex items-center justify-center text-base leading-none">
+          {channel.emoji ? <ChannelEmoji value={channel.emoji} /> : null}
+        </span>
         <span className="truncate">{channel.name}</span>
         {isWriteLocked && <LockIcon />}
         {(hasUnread || hasMention) && !isActive && (
@@ -497,13 +510,19 @@ function CategorySection({ category, activeChannelId, onSelectChannel, followedB
         onClick={() => setCollapsed(!collapsed)}
         className="w-full flex items-center gap-1 px-1 mb-1 text-[11px] font-semibold uppercase tracking-wider text-lc-muted hover:text-lc-white transition-colors"
       >
-        <svg
-          width="8" height="8" viewBox="0 0 24 24" fill="currentColor"
-          className={`transition-transform ${collapsed ? '-rotate-90' : ''}`}
-        >
-          <path d="M7 10l5 5 5-5z"/>
-        </svg>
-        ──── [ {category.name} ] ────
+        <span className="flex-1 flex items-center gap-2 min-w-0">
+          <span className="flex-1 h-px bg-lc-muted/40" />
+          <span className="shrink-0">[ {category.name} ]</span>
+          <span className="flex-1 h-px bg-lc-muted/40" />
+        </span>
+        <span className="shrink-0 p-1 rounded hover:bg-lc-border/60">
+          <svg
+            width="16" height="16" viewBox="0 0 24 24" fill="currentColor"
+            className={`transition-transform ${collapsed ? '-rotate-90' : ''}`}
+          >
+            <path d="M7 10l5 5 5-5z"/>
+          </svg>
+        </span>
       </button>
       {!collapsed && (
         <div className="space-y-0.5 pl-0.5">
