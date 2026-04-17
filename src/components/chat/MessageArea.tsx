@@ -11,19 +11,26 @@ import ProfilePopover from './ProfilePopover';
 import MessageReactions from './MessageReactions';
 import { slugify } from '@/lib/slug';
 
-function ReplyPreview({ replyTo, profileCache }: {
+function ReplyPreview({ replyTo, profileCache, onJump }: {
   replyTo: { id: string; content: string; authorPubkey: string };
   profileCache: Map<string, { name?: string; picture?: string }>;
+  onJump: (id: string) => void;
 }) {
   const profile = profileCache.get(replyTo.authorPubkey);
   const name = profile?.name || formatPubkey(replyTo.authorPubkey);
 
   return (
-    <div className="flex items-center gap-1.5 mb-1 pl-11 text-xs">
+    <button
+      type="button"
+      onClick={() => onJump(replyTo.id)}
+      className="flex items-center gap-1.5 mb-1 pl-11 text-xs w-full text-left hover:opacity-80 focus:outline-none focus:opacity-80"
+      data-testid="reply-preview-jump"
+      aria-label={`Ir al mensaje de ${name}`}
+    >
       <div className="w-0.5 h-4 bg-lc-green/40 rounded-full" />
       <span className="text-lc-green/70 font-medium">{name}</span>
       <span className="text-lc-muted truncate max-w-xs">{replyTo.content}</span>
-    </div>
+    </button>
   );
 }
 
@@ -161,7 +168,7 @@ const formatMessageTimestamp = (date: Date) => {
   return `${date.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })} a las ${timeStr}`;
 };
 
-function MessageBubble({ message, profileCache, canPin, canModerate, onReply, onReport, onDelete, onToggleReaction, onTogglePin }: {
+function MessageBubble({ message, profileCache, canPin, canModerate, onReply, onReport, onDelete, onToggleReaction, onTogglePin, onJumpToMessage }: {
   message: Message & { replyTo?: { id: string; content: string; authorPubkey: string } | null };
   profileCache: Map<string, { name?: string; picture?: string }>;
   canPin: boolean;
@@ -171,6 +178,7 @@ function MessageBubble({ message, profileCache, canPin, canModerate, onReply, on
   onDelete: (msg: Message) => void;
   onToggleReaction: (messageId: string, emoji: string) => void;
   onTogglePin: (msg: Message) => void;
+  onJumpToMessage: (id: string) => void;
 }) {
   const profile = profileCache.get(message.authorPubkey);
   const displayName = profile?.name || formatPubkey(message.authorPubkey);
@@ -235,7 +243,7 @@ function MessageBubble({ message, profileCache, canPin, canModerate, onReply, on
     <div className="group">
       {/* Reply context */}
       {message.replyTo && (
-        <ReplyPreview replyTo={message.replyTo} profileCache={profileCache} />
+        <ReplyPreview replyTo={message.replyTo} profileCache={profileCache} onJump={onJumpToMessage} />
       )}
 
       <div ref={rowRef} className="flex items-start gap-2 md:gap-3 px-2 md:px-4 py-1.5 hover:bg-lc-border/20 transition-colors relative">
@@ -420,6 +428,25 @@ export default function MessageArea({ profileCache, onDelete, onToggleReaction }
   onToggleReaction: (messageId: string, emoji: string) => void;
 }) {
   const { messages, isLoadingMessages, activeChannelId, activePostId, pinnedChannels, categories, hasMoreMessages, messageCursor, prependMessages, setMessageCursor, highlightedMessageId, setIsNearBottom, myRole, updatePinState } = useChatStore();
+
+  const handleJumpToMessage = useCallback(async (id: string) => {
+    if (!activeChannelId) return;
+    const loaded = useChatStore.getState().messages;
+    if (loaded.some((m) => m.id === id)) {
+      useChatStore.setState({ highlightedMessageId: id });
+      return;
+    }
+    try {
+      const r = await fetch(`/api/channels/${activeChannelId}/messages?around=${encodeURIComponent(id)}`);
+      if (!r.ok) return;
+      const d = await r.json();
+      useChatStore.getState().setMessages(d.messages);
+      useChatStore.getState().setMessageCursor(d.nextCursor ?? null, !!d.nextCursor);
+      if (d.messages.some((x: Message) => x.id === id)) {
+        useChatStore.setState({ highlightedMessageId: id });
+      }
+    } catch { /* ignore */ }
+  }, [activeChannelId]);
   const canPin = myRole === 'owner' || myRole === 'admin';
   const canModerate = myRole === 'owner' || myRole === 'admin' || myRole === 'mod';
 
@@ -838,6 +865,7 @@ export default function MessageArea({ profileCache, onDelete, onToggleReaction }
                                 onDelete={handleDeleteMessage}
                                 onToggleReaction={onToggleReaction}
                                 onTogglePin={handleTogglePin}
+                                onJumpToMessage={handleJumpToMessage}
                             />
                         </div>
                     </Fragment>
