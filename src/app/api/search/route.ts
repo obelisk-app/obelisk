@@ -3,7 +3,14 @@ import { prisma } from '@/lib/db';
 import { getAuthPubkey } from '@/lib/api-auth';
 import { parseSearchQuery, buildSearchWhere } from '@/lib/search';
 
-// GET /api/search?q=...&serverId=...&cursor=...&limit=25
+type SortMode = 'relevance' | 'newest' | 'oldest';
+
+function parseSort(raw: string | null): SortMode {
+  if (raw === 'relevance' || raw === 'oldest') return raw;
+  return 'newest';
+}
+
+// GET /api/search?q=...&serverId=...&cursor=...&limit=25&sort=newest|oldest|relevance
 export async function GET(req: NextRequest) {
   const pubkey = await getAuthPubkey(req);
   if (!pubkey) {
@@ -15,6 +22,7 @@ export async function GET(req: NextRequest) {
   const serverId = searchParams.get('serverId');
   const cursor = searchParams.get('cursor');
   const limit = Math.min(parseInt(searchParams.get('limit') || '25'), 50);
+  const sort = parseSort(searchParams.get('sort'));
 
   if (!q || !q.trim()) {
     return NextResponse.json({ error: 'Query required' }, { status: 400 });
@@ -24,7 +32,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'serverId required' }, { status: 400 });
   }
 
-  // Verify user is a member of this server
   const member = await prisma.member.findUnique({
     where: { serverId_pubkey: { serverId, pubkey } },
   });
@@ -32,7 +39,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Not a member of this server' }, { status: 403 });
   }
 
-  // Build lookup maps for from: and in: filters
   const [members, channels] = await Promise.all([
     prisma.member.findMany({
       where: { serverId },
@@ -49,7 +55,6 @@ export async function GET(req: NextRequest) {
     if (m.displayName) {
       memberLookup.set(m.displayName, m.pubkey);
     }
-    // Also allow searching by pubkey prefix
     memberLookup.set(m.pubkey.slice(0, 8), m.pubkey);
   }
 
@@ -58,7 +63,6 @@ export async function GET(req: NextRequest) {
     channelLookup.set(c.name, c.id);
   }
 
-  // Channel name lookup for results
   const channelNameMap = new Map<string, string>();
   for (const c of channels) {
     channelNameMap.set(c.id, c.name);
@@ -67,9 +71,14 @@ export async function GET(req: NextRequest) {
   const parsed = parseSearchQuery(q);
   const where = buildSearchWhere(parsed, serverId, memberLookup, channelLookup);
 
+  // 'relevance' still orders by createdAt desc at the SQL layer, then we
+  // rerank in-memory by term frequency over the returned page.
+  // TODO(relevance): move to tsvector for true relevance ranking.
+  const orderBy: 'asc' | 'desc' = sort === 'oldest' ? 'asc' : 'desc';
+
   const messages = await prisma.message.findMany({
     where: where as any,
-    orderBy: { createdAt: 'desc' },
+    orderBy: { createdAt: orderBy },
     take: limit + 1,
     ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
     include: {
@@ -85,10 +94,28 @@ export async function GET(req: NextRequest) {
   const hasMore = messages.length > limit;
   if (hasMore) messages.pop();
 
-  const results = messages.map((msg) => ({
+  let results = messages.map((msg) => ({
     ...msg,
     channelName: channelNameMap.get(msg.channelId) || 'unknown',
   }));
+
+  if (sort === 'relevance' && parsed.text.length > 0) {
+    const terms = parsed.text.map((t) => t.toLowerCase());
+    const score = (content: string) => {
+      const lower = content.toLowerCase();
+      let s = 0;
+      for (const term of terms) {
+        if (!term) continue;
+        let idx = 0;
+        while ((idx = lower.indexOf(term, idx)) !== -1) {
+          s++;
+          idx += term.length;
+        }
+      }
+      return s;
+    };
+    results = [...results].sort((a, b) => score(b.content) - score(a.content));
+  }
 
   return NextResponse.json({
     results,

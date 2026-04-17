@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { useSearchStore } from './search';
+import { useSearchStore, buildEffectiveQuery } from './search';
 
 describe('useSearchStore', () => {
   beforeEach(() => {
@@ -70,5 +70,60 @@ describe('useSearchStore', () => {
     expect(state.results).toEqual([]);
     expect(state.isSearching).toBe(false);
     expect(state.isOpen).toBe(false);
+  });
+
+  it('setFilter / removeFilter round trip', () => {
+    const { setFilter, removeFilter } = useSearchStore.getState();
+    setFilter('from', { pubkey: 'pk1', name: 'alice' });
+    expect(useSearchStore.getState().activeFilters.from?.name).toBe('alice');
+    removeFilter('from');
+    expect(useSearchStore.getState().activeFilters.from).toBeUndefined();
+  });
+
+  it('openPicker / closePicker toggles pickerMode', () => {
+    const { openPicker, closePicker } = useSearchStore.getState();
+    openPicker('has');
+    expect(useSearchStore.getState().pickerMode).toBe('has');
+    closePicker();
+    expect(useSearchStore.getState().pickerMode).toBeNull();
+  });
+
+  it('setSort updates sort mode', () => {
+    useSearchStore.getState().setSort('oldest');
+    expect(useSearchStore.getState().sort).toBe('oldest');
+  });
+
+  it('clearSearch also wipes filters and picker', () => {
+    useSearchStore.setState({
+      activeFilters: { has: 'image' },
+      pickerMode: 'has',
+    });
+    useSearchStore.getState().clearSearch();
+    const s = useSearchStore.getState();
+    expect(s.activeFilters).toEqual({});
+    expect(s.pickerMode).toBeNull();
+  });
+});
+
+describe('buildEffectiveQuery', () => {
+  it('serializes filters into tokens the API parser understands', () => {
+    const out = buildEffectiveQuery('hello', {
+      from: { pubkey: 'pk', name: 'alice' },
+      in: { id: 'c1', name: 'general' },
+      has: 'image',
+    });
+    expect(out).toContain('from:alice');
+    expect(out).toContain('in:general');
+    expect(out).toContain('has:image');
+    expect(out).toContain('hello');
+  });
+
+  it('works with no free text', () => {
+    const out = buildEffectiveQuery('', { has: 'link' });
+    expect(out).toBe('has:link');
+  });
+
+  it('empty filters + empty query returns empty', () => {
+    expect(buildEffectiveQuery('', {})).toBe('');
   });
 });

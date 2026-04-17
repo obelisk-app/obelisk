@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import SearchBar from './SearchBar';
 import { useSearchStore } from '@/store/search';
+import { useSearchHistoryStore } from '@/store/searchHistory';
 
-// Mock formatPubkey
 vi.mock('@/lib/nostr', () => ({
   formatPubkey: (pk: string) => pk.slice(0, 8) + '...',
 }));
@@ -20,66 +20,63 @@ describe('SearchBar', () => {
       isOpen: false,
       cursor: null,
       hasMore: false,
+      sort: 'newest',
+      activeFilters: {},
+      pickerMode: null,
     });
+    useSearchHistoryStore.setState({ entries: [] });
   });
 
-  it('renders search toggle button when closed', () => {
+  it('renders the search input', () => {
     render(<SearchBar serverId="s1" profileCache={profileCache} />);
-    expect(screen.getByTestId('search-toggle')).toBeDefined();
-  });
-
-  it('opens search input when toggle is clicked', () => {
-    render(<SearchBar serverId="s1" profileCache={profileCache} />);
-    fireEvent.click(screen.getByTestId('search-toggle'));
-    expect(screen.getByTestId('search-bar')).toBeDefined();
     expect(screen.getByTestId('search-input')).toBeDefined();
   });
 
-  it('shows filter hints when input is focused with no query', async () => {
-    useSearchStore.setState({ isOpen: true });
+  it('shows the filters + history dropdown when input is focused with no query', () => {
+    render(<SearchBar serverId="s1" profileCache={profileCache} />);
+    fireEvent.focus(screen.getByTestId('search-input'));
+    expect(screen.getByTestId('search-hints')).toBeDefined();
+    expect(screen.getByTestId('search-filter-row-from')).toBeDefined();
+    expect(screen.getByTestId('search-filter-row-in')).toBeDefined();
+    expect(screen.getByTestId('search-filter-row-more')).toBeDefined();
+  });
+
+  it('clicking a filter row opens the matching picker mode', () => {
+    render(<SearchBar serverId="s1" profileCache={profileCache} />);
+    fireEvent.focus(screen.getByTestId('search-input'));
+    fireEvent.mouseDown(screen.getByTestId('search-filter-row-has'));
+    expect(useSearchStore.getState().pickerMode).toBe('has');
+  });
+
+  it('shows persisted history rows for the active server', () => {
+    act(() => {
+      useSearchHistoryStore.getState().push('botardo', 's1');
+      useSearchHistoryStore.getState().push('graphene', 's1');
+      useSearchHistoryStore.getState().push('other-server', 's2');
+    });
+    render(<SearchBar serverId="s1" profileCache={profileCache} />);
+    fireEvent.focus(screen.getByTestId('search-input'));
+    const rows = screen.getAllByTestId('search-history-row');
+    expect(rows).toHaveLength(2);
+    expect(rows[0].textContent).toContain('graphene');
+  });
+
+  it('clear-history button empties the list for the server', () => {
+    act(() => {
+      useSearchHistoryStore.getState().push('botardo', 's1');
+    });
+    render(<SearchBar serverId="s1" profileCache={profileCache} />);
+    fireEvent.focus(screen.getByTestId('search-input'));
+    fireEvent.mouseDown(screen.getByTestId('search-history-clear'));
+    expect(useSearchHistoryStore.getState().entries.filter((e) => e.serverId === 's1')).toHaveLength(0);
+  });
+
+  it('Escape clears the query and the store', () => {
+    useSearchStore.setState({ query: 'test', isOpen: true });
     render(<SearchBar serverId="s1" profileCache={profileCache} />);
     const input = screen.getByTestId('search-input');
-    fireEvent.focus(input);
-    expect(screen.getByTestId('search-hints')).toBeDefined();
-  });
-
-  it('shows no results message when query has no matches', () => {
-    useSearchStore.setState({ isOpen: true, query: 'test' });
-    render(<SearchBar serverId="s1" profileCache={profileCache} />);
-    expect(screen.getByTestId('search-no-results')).toBeDefined();
-  });
-
-  it('shows search results', () => {
-    useSearchStore.setState({
-      isOpen: true,
-      query: 'hello',
-      results: [
-        { id: '1', channelId: 'ch1', channelName: 'general', authorPubkey: 'pk1', content: 'hello world', createdAt: '2026-01-01T00:00:00Z', editedAt: null },
-      ],
-    });
-    render(<SearchBar serverId="s1" profileCache={profileCache} />);
-    expect(screen.getByTestId('search-results')).toBeDefined();
-    expect(screen.getAllByTestId('search-result')).toHaveLength(1);
-  });
-
-  it('closes search on close button click', () => {
-    useSearchStore.setState({ isOpen: true, query: 'test' });
-    render(<SearchBar serverId="s1" profileCache={profileCache} />);
-    fireEvent.click(screen.getByTestId('search-close'));
+    fireEvent.keyDown(input, { key: 'Escape' });
+    expect(useSearchStore.getState().query).toBe('');
     expect(useSearchStore.getState().isOpen).toBe(false);
-  });
-
-  it('shows load more button when hasMore is true', () => {
-    useSearchStore.setState({
-      isOpen: true,
-      query: 'test',
-      results: [
-        { id: '1', channelId: 'ch1', channelName: 'general', authorPubkey: 'pk1', content: 'test', createdAt: '2026-01-01T00:00:00Z', editedAt: null },
-      ],
-      hasMore: true,
-      cursor: 'c1',
-    });
-    render(<SearchBar serverId="s1" profileCache={profileCache} />);
-    expect(screen.getByTestId('search-load-more')).toBeDefined();
   });
 });

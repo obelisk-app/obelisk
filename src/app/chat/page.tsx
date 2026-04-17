@@ -16,6 +16,7 @@ import PostChatHeader from '@/components/chat/PostChatHeader';
 import ChannelTopicModal from '@/components/chat/ChannelTopicModal';
 import ChannelEmoji from '@/components/chat/ChannelEmoji';
 import SearchBar from '@/components/chat/SearchBar';
+import SearchResultsPane from '@/components/chat/SearchResultsPane';
 import { useSearchStore } from '@/store/search';
 import DMList from '@/components/dm/DMList';
 import DMChat from '@/components/dm/DMChat';
@@ -75,6 +76,12 @@ export default function ChatPage() {
   const router = useRouter();
   const { isConnected, profile, logout, restoreSession } = useAuthStore();
   const isSearchOpen = useSearchStore((s) => s.isOpen);
+  const searchQuery = useSearchStore((s) => s.query);
+  const searchActiveFilters = useSearchStore((s) => s.activeFilters);
+  const showSearchPane = isSearchOpen && (
+    !!searchQuery.trim() ||
+    Object.keys(searchActiveFilters).length > 0
+  );
   const {
     servers,
     activeServerId,
@@ -1826,7 +1833,18 @@ export default function ChatPage() {
               </div>
 
             <div className="flex-1 flex min-h-0">
-              <div className="flex-1 flex flex-col min-h-0 min-w-0">
+              <div className="flex-1 flex flex-col min-h-0 min-w-0 relative">
+              {showSearchPane && (
+                <div className="absolute inset-0 z-30 flex flex-col bg-lc-black" data-testid="search-pane-overlay">
+                  <SearchResultsPane
+                    serverId={activeServerId}
+                    profileCache={profileCache}
+                    onRequery={(append) => {
+                      window.dispatchEvent(new CustomEvent('obelisk:search:requery', { detail: { append } }));
+                    }}
+                  />
+                </div>
+              )}
               {showChannelTopic && activeChannel?.description && (
                 <ChannelTopicModal
                   channelName={activeChannel.name}
