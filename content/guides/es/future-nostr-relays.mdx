@@ -1,0 +1,76 @@
+---
+title: El futuro son los grupos basados en relays
+description: Obelisk hoy es un servidor centralizado con login Nostr. El plan es jubilar el servidor centralizado y convertirse en un cliente Nostr puro sobre grupos administrados por relays (NIP-29), canales públicos NIP-28 y grupos privados encriptados NIP-59.
+heroComponent: future-relays
+publishedAt: '2026-04-16'
+updatedAt: '2026-04-16'
+tags: [nostr, nip-29, descentralización, futuro]
+---
+
+## Dónde estamos
+
+Hoy, Obelisk es **híbrido**: Nostr es dueño de tu identidad, un único servidor es dueño de los datos del chat. Es una decisión pragmática, nos permite ofrecer una UX al nivel de Discord (hilos, reacciones, moderación, voz, búsqueda) ahora mismo, porque hacer todo eso puramente sobre Nostr todavía es difícil en 2026.
+
+Pero la parte centralizada es una cicatriz. Significa:
+
+- Si la instancia donde estás se apaga, la historia de tu servidor se pierde.
+- Las decisiones de moderación son locales a un operador.
+- Las comunidades no pueden forkear, espejar o migrar con facilidad.
+
+Así que el plan a largo plazo es **ir pelando la parte centralizada** y empujar todo lo que se pueda hacia Nostr mismo.
+
+## Qué reemplaza al servidor
+
+Tres specs complementarias de Nostr cubren el terreno que necesitamos:
+
+<Diagram name="relay-groups" caption="En NIP-29, el relay mismo aloja el grupo: miembros, roles y mensajes son estado del relay. No hace falta una base de datos de Obelisk." />
+
+### NIP-29, grupos administrados por relay
+
+El camino más prometedor. En NIP-29, el **relay** es el grupo. El relay lleva la cuenta de miembros, roles y acciones de admin; los clientes publican eventos `kind 9` de chat y `kind 11` de hilos con un group id; el relay hace cumplir quién puede escribir. En la práctica, cada relay que habla NIP-29 es un pequeño servidor Discord, portable, self-hosteable, interoperable.
+
+Es el análogo más cercano a lo que hace Obelisk hoy, solo que con el relay jugando el rol del "servidor".
+
+### NIP-28, canales públicos de chat
+
+Más liviano. `kind 40` crea un canal, `kind 42` es un mensaje ahí dentro. Totalmente abierto, sin administración de membresía. Ideal para lobbies públicos y plazas públicas; no apropiado para comunidades curadas porque cualquiera puede postear y no hay moderación incorporada. Obelisk va a soportar NIP-28 para canales públicos, descubribles (pensalo como la puerta de entrada de un servidor) mientras que NIP-29 maneja las salas para miembros.
+
+### NIP-59, grupos privados encriptados (gift-wrap)
+
+Para grupos chicos, privados y end-to-end encriptados (tu familia, un grupo interno de trabajo de una DAO), los "gift wraps" de NIP-59 te permiten entregar mensajes grupales a través de relays públicos sin que los relays vean quiénes están en el grupo ni qué se dijeron. Más lento y más pesado, pero fuertemente privado.
+
+## Qué sigue haciendo Obelisk
+
+Incluso en el futuro totalmente descentralizado, Obelisk sigue existiendo como:
+
+- Un **cliente pulido**, UX al nivel de Discord, diseño La Crypta, reacciones, hilos, voz.
+- Una **capa de moderación**, los clientes aplican reglas locales por encima de lo que el relay permita: silenciar emisores ruidosos, ocultar posts de baja confianza ([WoT](/guides/es/web-of-trust)), destacar usuarios verificados por NIP-05.
+- Un **puente de identidad**, caché de perfiles, soporte de bunker NIP-46, flujos de extensión NIP-07.
+- Un **relay de voz** (por ahora), voz grupal por WebRTC a través de un servidor de señalización sigue siendo la opción menos mala hasta que madure una spec de voz nativa en Nostr.
+
+## La forma de la migración
+
+No vamos a apretar un botón. El plan es gradual:
+
+1. **Etapa 1, Perfil Nostr en todos lados** *(hecho).* Cada usuario en Obelisk tiene identidad Nostr real, perfil y lista de relays.
+2. **Etapa 2, Canales públicos NIP-28** *(pronto).* Lobbies abiertos y descubribles como feature de primera clase, guardados en Nostr.
+3. **Etapa 3, Servidores privados NIP-29** *(mediano plazo).* Los servidores nuevos usan por defecto un backend de relay NIP-29. El camino Postgres actual se mantiene para instancias legacy.
+4. **Etapa 4, Grupos encriptados NIP-59** *(mediano plazo).* Los MDs privados y grupos chicos se mueven a gift-wrap.
+5. **Etapa 5, retirar Postgres** *(largo plazo).* Una vez que haya paridad de features, la base de datos centralizada se vuelve opcional.
+
+<Callout type="info" title="¿Por qué no todo de una?">
+Ya existe un "chat Nostr puro" hecho desde cero, de hecho, varios. Luchan con las mismas brechas de UX: ordenamiento, escala, moderación, voz, búsqueda. La apuesta de Obelisk es que primero armás la comunidad con forma de Discord, y después le cambiás los cimientos. Los usuarios no tienen que elegir entre "usable" y "soberano".
+</Callout>
+
+## Qué significa para vos
+
+- **Tu identidad ya es portable.** El día que cambiemos un servidor a NIP-29, tu cuenta viene con vos automáticamente. Nada que exportar.
+- **La historia de la comunidad se puede espejar.** Los grupos NIP-29 se pueden espejar a través de múltiples relays, así perder un relay no pierde el grupo.
+- **Vos elegís tu relay.** Las comunidades pueden elegir un relay como hoy eligen un homeserver de Matrix o una instancia de Mastodon, pero más barato, más liviano, interoperable.
+- **La moderación sigue siendo local.** Aun en un relay compartido, cada comunidad (y cada cliente, como Obelisk) aplica sus propios filtros. WoT queda de nuestro lado; los malos actores se filtran antes de que los veas.
+
+## Lectura relacionada
+
+- [¿Qué es Obelisk?](/guides/es/what-is-obelisk)
+- [Cómo funciona Obelisk hoy](/guides/es/how-obelisk-works)
+- [web of trust, explicado](/guides/es/web-of-trust)

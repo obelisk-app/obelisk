@@ -1,0 +1,49 @@
+---
+title: ¿Qué es Obelisk?
+description: Obelisk es un chat grupal estilo Discord donde tu cuenta es un par de claves Nostr. Sin email, sin contraseña, sin número de teléfono, solo criptografía. Acá te contamos qué es y por qué importa.
+heroComponent: what-is-obelisk
+publishedAt: '2026-04-16'
+updatedAt: '2026-04-16'
+tags: [intro, nostr, identidad]
+---
+
+## La versión corta
+
+Obelisk es un chat grupal que se siente como Discord, servidores, canales, salas de voz, hilos, MDs, pero la cuenta con la que entrás es **un par de claves Nostr** en vez de un email y una contraseña. Vos sos dueño de la clave. La cuenta es tuya para siempre, portable entre todos los servidores Obelisk, y funciona sin tener que entregar tu número de teléfono a un formulario de registro.
+
+## ¿Para quién es esto?
+
+Comunidades cripto, nerds de la privacidad, equipos open source, hackathons, y en general cualquier persona cansada del baile de "verificá tu email / confirmá tu teléfono / resolvé un CAPTCHA" solo para entrar a un chat. Si ya usás Nostr, Obelisk se va a sentir como tu casa. Si todavía no, este es un buen punto de entrada, obtenés una identidad Nostr real que funciona en decenas de otras apps.
+
+## ¿Por qué una app de chat nueva?
+
+Tres cosas se rompieron al mismo tiempo en los titulares del rubro:
+
+- **La identidad es alquilada.** Tu cuenta de Discord es de Discord. Pueden suspenderla, y perdés cada servidor, cada historial de MDs, cada relación atada a esa cuenta.
+- **La defensa anti-spam es tosca.** Verificar email y pedir teléfonos no frena spammers, solo frena a la gente que se preocupa por su privacidad.
+- **Las comunidades quedan atrapadas.** Mover una comunidad fuera de una plataforma es casi imposible porque identidad, invitaciones e historial están encadenados a un solo proveedor.
+
+<Callout type="info" title="Lo que cambia Obelisk">
+Tu clave Nostr es la cuenta. Los servidores pueden aparecer y desaparecer. Tu identidad, tus seguidores y tu reputación viajan con vos.
+</Callout>
+
+## Los features principales
+
+- **Entrar con una clave Nostr** via extensión NIP-07, nsec, o un QR de bunker NIP-46.
+- **Servidores y canales** estilo Discord, texto, voz, hilos estilo foro, reacciones.
+- **Mensajes directos encriptados** entre usuarios, a través de relays de Nostr.
+- **Roles y moderación**, admin / moderador / miembro, con permisos por canal, bans, mutes, advertencias.
+- **Resistencia a spam por web of trust.** Las cuentas nuevas se filtran contra el grafo social Nostr del servidor. La gente real entra; los bots no. Sin CAPTCHAs.
+- **Self-hosted**, open source. Docker Compose, tu VPS, tus reglas.
+
+## Construido para un hackathon, apuntado al futuro
+
+Obelisk se construyó para el **IDENTITY Hackathon** de La Crypta (abril 2026). El objetivo a corto plazo es una alternativa a Discord pulida que funcione hoy. El objetivo a largo plazo es más grande: **retirar el servidor centralizado** y mover el chat grupal a grupos Nostr basados en relays (NIP-29), para que la única infraestructura que importe sea tu clave y algunos relays. Hay una guía dedicada a eso: [El futuro son los grupos basados en relays](/guides/es/future-nostr-relays).
+
+## Qué leer ahora
+
+Si recién llegás, lo mejor para seguir es:
+
+- [Cómo funciona Obelisk hoy](/guides/es/how-obelisk-works), el modelo híbrido: identidad Nostr más un servidor para canales y tiempo real.
+- [web of trust, explicado](/guides/es/web-of-trust), cómo frenamos el spam sin CAPTCHAs, emails ni KYC.
+- [El futuro son los grupos basados en relays](/guides/es/future-nostr-relays), el camino desde "servidor centralizado con login Nostr" hacia "cliente Nostr puro."

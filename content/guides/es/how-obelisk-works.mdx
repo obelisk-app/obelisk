@@ -1,0 +1,73 @@
+---
+title: Cómo funciona Obelisk hoy
+description: Obelisk es híbrido por diseño, Nostr se encarga de la identidad, un servidor se encarga de canales y tiempo real. Acá te contamos exactamente qué pasa cuando entrás, mandás un mensaje y te unís a un servidor.
+heroComponent: how-obelisk-works
+publishedAt: '2026-04-16'
+updatedAt: '2026-04-16'
+tags: [arquitectura, cómo-funciona]
+---
+
+## La división
+
+Obelisk se construye sobre una división deliberada:
+
+- **Nostr**, la parte descentralizada, maneja la **identidad**. Tu par de claves, tu perfil (kind 0), tu lista de relays (NIP-65), tus seguidores (kind 3). Nada de esto vive en nuestro servidor.
+- **Un servidor normal**, la parte centralizada, se encarga de **todo lo demás**: canales, mensajes, miembros, roles, bans, entrega en tiempo real, relay de voz.
+
+Esa división nos permite ofrecer una UX al nivel de Discord hoy (hilos, reacciones, búsqueda, moderación, voz, difícil de hacer puramente en Nostr por ahora) y darte una identidad real y portable. Con el tiempo el péndulo se inclina hacia el lado de Nostr; ver [la guía del futuro](/guides/es/future-nostr-relays).
+
+## Qué pasa cuando entrás
+
+La autenticación es un challenge-response clásico, hecho enteramente con tu clave Nostr.
+
+<Diagram name="auth-flow" caption="Entrar son cuatro ida-y-vuelta y una firma. No se guarda ninguna contraseña en ningún lado." />
+
+1. Tu navegador le pide un challenge al servidor.
+2. El servidor devuelve un string aleatorio + timestamp.
+3. Firmás el challenge con tu clave Nostr (extensión, nsec, o un bunker remoto).
+4. El servidor verifica la firma contra tu pubkey, crea una sesión y setea una cookie.
+
+El servidor nunca ve tu clave privada. No hay contraseña que olvidar, phishear o resetear.
+
+## Qué pasa cuando mandás un mensaje
+
+La UI de chat es una app Next.js a medida con una capa de tiempo real Socket.io. Cuando apretás enviar:
+
+- El cliente hace POST al endpoint de API autenticado.
+- El servidor escribe el mensaje en PostgreSQL (via Prisma).
+- El servidor emite un evento `message:new` por Socket.io a todos los suscriptos a ese canal.
+- Otros clientes lo reciben en decenas de milisegundos y lo renderizan.
+
+Hilos, reacciones, indicadores de tipeo, ediciones y borrados viajan por el mismo canal Socket.io. La voz es un relay de audio por WebSocket en el mismo servidor, funciona a través de cualquier túnel HTTPS porque no es WebRTC peer-to-peer.
+
+<Callout type="note" title="¿Por qué no Nostr puro para los mensajes?">
+Los relays Nostr de hoy no nos dan ordenamiento confiable, suscripciones eficientes a canales con miles de usuarios, primitivas fuertes de moderación, ni voz. NIP-29 es el camino prometedor, pero el ecosistema es temprano. Estamos mirándolo y vamos a migrar pieza por pieza.
+</Callout>
+
+## Dónde aparece Nostr en la UI
+
+- **Avatares y nombres**, traídos desde tu perfil kind-0 en tus relays.
+- **Badge de verificación NIP-05**, si tu perfil tiene una dirección NIP-05, la chequeamos y mostramos una tilde verde.
+- **Lista de relays**, usamos tu evento kind-10002 NIP-65, así las búsquedas de perfil no dependen de nuestra opinión sobre qué relays usar.
+- **web of trust**, la lista de "quién es confiable" del servidor se deriva de los grafos de follows en Nostr. Ver la [guía de WoT](/guides/es/web-of-trust).
+
+## Datos que viven en nuestro servidor
+
+Estos están en PostgreSQL, con alcance a una sola instancia Obelisk:
+
+- **Server** (nombre, icono, pubkey del dueño, modo de ingreso)
+- **Channel** (nombre, tipo, categoría, posición)
+- **Message** (canal, pubkey del autor, contenido, replyTo)
+- **Member** (server, pubkey, rol, nickname)
+- **Session**, **Ban**, **Mute**, **Warning**, **Report**, **ModerationAction**
+
+Tu **identidad**, pubkey, perfil, seguidores, nunca es una de esas filas. El servidor sabe tu pubkey y listo. Si el servidor desaparece, tu cuenta no.
+
+## Self-hosting
+
+Todo corre en Docker Compose: Next.js + Socket.io en un contenedor, PostgreSQL en otro, Caddy adelante para HTTPS. Una VPS de 2 GB sobra. Sos dueño de la base de datos, controlás la política de moderación, y elegís qué relays Nostr usa el servidor para buscar perfiles.
+
+## Seguir leyendo
+
+- [web of trust, explicado](/guides/es/web-of-trust)
+- [El futuro son los grupos basados en relays](/guides/es/future-nostr-relays)

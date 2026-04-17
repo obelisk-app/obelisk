@@ -49,14 +49,6 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-  alternates: {
-    canonical: '/',
-    languages: {
-      en: '/',
-      es: '/',
-      'x-default': '/',
-    },
-  },
   icons: {
     icon: '/obelisk-favicon.png',
     apple: '/obelisk-favicon.png',
@@ -151,7 +143,6 @@ export default async function RootLayout({
   return (
     <html lang={locale}>
       <head>
-        <link rel="canonical" href={SITE_URL} />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

@@ -1,0 +1,77 @@
+---
+title: web of trust, anti-spam sin CAPTCHAs
+description: Cómo Obelisk usa el grafo social Nostr del servidor para puntuar la confianza de cada recién llegado, frenar el spam, y eliminar para siempre el paso de "verificá tu email". Una guía al modelo nostr-wot-extension.
+heroComponent: wot
+publishedAt: '2026-04-16'
+updatedAt: '2026-04-16'
+tags: [wot, nostr, anti-spam]
+---
+
+## El problema con la defensa anti-spam tradicional
+
+Verificar email, pedir teléfonos, mostrar CAPTCHAs y exigir KYC no frenan el spam, frenan a la gente cuidadosa. Los spammers reales tienen cuentas de mail "calentadas", granjas de SIMs y APIs para resolver CAPTCHAs. Los que se van son los usuarios que les importa su privacidad. Es un filtro malísimo.
+
+Las comunidades cripto y de privacidad atraen exactamente a esa gente. Pedirles un número de teléfono para entrar a un chat es un mal trato, y no queremos hacerlo.
+
+## Un filtro distinto: el grafo social
+
+Nostr ya trae un grafo social incorporado. Cada cuenta puede publicar un evento **kind 3**, una lista de follows de pubkeys en las que confían lo suficiente como para seguirlas. Si apilás un montón de esas listas de follows, tenés un grafo. Y en un grafo podés hacer una pregunta útil:
+
+> ¿Qué tan cerca está esta cuenta nueva de las personas que ya manejan este servidor?
+
+Un humano real con seis meses de actividad en Nostr y cincuenta follows mutuos con tus moderadores es casi seguro gente de bien. Una pubkey creada hace dos minutos con cero follows es casi seguro un bot. El grafo te dice cuál es cuál, sin email.
+
+<Diagram name="wot-graph" caption="Un pipeline simple: listas de follows de Nostr → recorrida del grafo → puntaje de confianza → decisión de acceso." />
+
+## Cómo se calcula el puntaje
+
+Para cada cuenta que quiere postear en un canal público, Obelisk camina el grafo de follows partiendo de los **anclas de confianza** del servidor (por defecto el dueño y los moderadores) y asigna un puntaje:
+
+- **Follow directo** desde un ancla → puntaje alto.
+- **Amigo-de-amigo** (2 saltos) → puntaje medio, con descuento.
+- **Follow mutuo** (el ancla te sigue y vos lo seguís) → bonus.
+- **Seguido por varias anclas** → bonus más grande.
+- **Actividad reciente en Nostr** (publicó notas, perfil, reacciones) → bonus chico.
+- **Inalcanzable desde las anclas** dentro del presupuesto de saltos → cero.
+
+El corte es un umbral configurable. Por arriba del umbral, posteás libremente. Por debajo, tus posts quedan en cola de moderación o se filtran silenciosamente de la vista principal, según la configuración del canal. Los admins pueden whitelistear pubkeys específicas que simplemente todavía no usan mucho Nostr.
+
+## De dónde salen los datos
+
+Todos los inputs son eventos Nostr públicos, en relays normales:
+
+- **kind 3**, listas de follows.
+- **kind 0**, metadata de perfil (para mostrar + señales de cordura tipo "tiene avatar").
+- **kind 10002**, listas de relays, para poder efectivamente traer los eventos.
+
+Cacheamos de forma agresiva (refresco lazy cada seis horas en la configuración por defecto) y tratamos las caídas de relays con gracia, una cache vieja es siempre mejor que dejar a todo el mundo afuera porque un relay parpadeó.
+
+<Callout type="note" title="Nada de esto es un invento de Obelisk">
+WoT en Nostr es un patrón emergente, no una invención nuestra. Clientes como Amethyst, apps como Coracle, y herramientas como `nostr-wot-extension` usan todas ideas parecidas. El aporte de Obelisk es meterlo adentro de una UX estilo Discord para que las comunidades se beneficien sin que nadie tenga que entender qué es un evento kind-3.
+</Callout>
+
+## Qué significa para los admins
+
+- Vos elegís las **anclas de confianza** (por defecto: vos + moderadores). Todo el que ellos validan hereda algo de confianza.
+- Vos elegís el **umbral** por canal. ¿Canal de charla? Umbral bajo. ¿Canal de anuncios? Alto.
+- Podés **override** hacia ambos lados, whitelistear un recién llegado que simplemente no viene usando Nostr hace mucho, o blacklistear una pubkey sin importar el puntaje.
+- Tenés **logs de auditoría**, qué cuentas fueron filtradas, con qué puntaje, en qué canal.
+
+## Qué significa para los usuarios
+
+- Sin CAPTCHAs. Sin email. Sin teléfono.
+- Si tu cuenta Nostr tiene algo de actividad real, vas a pasar el umbral de la mayoría de los servidores al primer intento.
+- Si sos nuevo en Nostr, seguí a algunas personas, publicá un perfil, posteá una nota o dos. El grafo se llena rápido.
+- Que te filtren en un servidor no significa nada en otro, cada servidor tiene sus propias anclas y su propio umbral.
+
+## Limitaciones, con honestidad
+
+- **La resistencia a Sybil no es absoluta.** Un adversario paciente puede armar cuentas que se sigan entre sí. WoT lo vuelve difícil y caro, no imposible. Combinado con moderadores humanos, alcanza en la práctica.
+- **El arranque en frío de las anclas importa mucho.** Si tus anclas tienen listas de follows flacas, el grafo es chico y el filtro es duro. Elegí anclas que realmente usen Nostr.
+- **Tradeoffs de privacidad.** Tu lista de follows es pública en Nostr por diseño. WoT depende de eso. Si la curaste por razones personales, ese dato es visible.
+
+## Lectura relacionada
+
+- [¿Qué es Obelisk?](/guides/es/what-is-obelisk)
+- [Cómo funciona Obelisk hoy](/guides/es/how-obelisk-works)
+- [El futuro son los grupos basados en relays](/guides/es/future-nostr-relays)

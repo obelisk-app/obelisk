@@ -1,24 +1,33 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useAuthStore } from '@/store/auth';
 import { useTranslation } from '@/i18n/context';
 import LoginModal from './LoginModal';
 import ObeliskIcon from './ObeliskIcon';
 import LanguageToggle from './LanguageToggle';
 
-const NAV_LINKS = [
-  { href: '#features', key: 'nav.features' },
-  { href: '#how-it-works', key: 'nav.howItWorks' },
-  { href: '#roadmap', key: 'nav.roadmap' },
+const SIMPLE_LINKS = [
+  { href: '/#features', key: 'nav.features' },
+  { href: '/#how-it-works', key: 'nav.howItWorks' },
+  { href: '/#roadmap', key: 'nav.roadmap' },
 ];
+
+const GUIDE_ITEMS = [
+  { slug: 'what-is-obelisk', tKey: 'learn.card.whatIsObelisk.title' },
+  { slug: 'how-obelisk-works', tKey: 'learn.card.howObeliskWorks.title' },
+  { slug: 'web-of-trust', tKey: 'learn.card.webOfTrust.title' },
+  { slug: 'future-nostr-relays', tKey: 'learn.card.futureNostrRelays.title' },
+] as const;
 
 export default function Navbar({ onLoginSuccess }: { onLoginSuccess?: () => void } = {}) {
   const [showLogin, setShowLogin] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [guidesOpen, setGuidesOpen] = useState(false);
   const { isConnected, profile, logout, syncProfile, isSyncing, restoreSession, _hasHydrated } = useAuthStore();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -26,12 +35,6 @@ export default function Navbar({ onLoginSuccess }: { onLoginSuccess?: () => void
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Landing/Navbar renders outside /chat, so nothing else has rehydrated the
-  // session yet. Only `loginMethod` is persisted to localStorage — identity
-  // must come from the backend session cookie. Without this, a logged-in user
-  // who lands on (or refreshes) `/` sees the "Launch App" CTA instead of their
-  // avatar, which looks like a silent logout. Especially bad on mobile where
-  // Safari tends to dump users onto the landing URL after tab restore.
   useEffect(() => {
     if (!_hasHydrated) return;
     if (isConnected) return;
@@ -45,14 +48,14 @@ export default function Navbar({ onLoginSuccess }: { onLoginSuccess?: () => void
       }`}>
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           {/* Logo */}
-          <a href="#" className="flex items-center gap-3">
+          <Link href="/" className="flex items-center gap-3">
             <ObeliskIcon className="w-12 h-12 text-lc-green" />
             <span className="font-extrabold text-2xl text-lc-white tracking-tight">Obelisk</span>
-          </a>
+          </Link>
 
           {/* Nav links */}
           <div className="hidden md:flex items-center gap-1">
-            {NAV_LINKS.map(({ href, key }) => (
+            {SIMPLE_LINKS.map(({ href, key }) => (
               <a
                 key={href}
                 href={href}
@@ -61,6 +64,69 @@ export default function Navbar({ onLoginSuccess }: { onLoginSuccess?: () => void
                 {t(key)}
               </a>
             ))}
+
+            {/* Guides dropdown */}
+            <div
+              className="relative"
+              onMouseEnter={() => setGuidesOpen(true)}
+              onMouseLeave={() => setGuidesOpen(false)}
+              onFocus={() => setGuidesOpen(true)}
+              onBlur={(e) => {
+                if (!e.currentTarget.contains(e.relatedTarget as Node)) setGuidesOpen(false);
+              }}
+            >
+              <Link
+                href={`/guides/${locale}`}
+                className="px-3 py-1.5 rounded-lg text-sm font-medium text-lc-muted hover:text-lc-white transition-colors inline-flex items-center gap-1"
+                aria-haspopup="true"
+                aria-expanded={guidesOpen}
+                data-testid="nav-guides-link"
+              >
+                {t('nav.guides')}
+                <svg
+                  width="10"
+                  height="10"
+                  viewBox="0 0 10 10"
+                  fill="none"
+                  className={`transition-transform ${guidesOpen ? 'rotate-180' : ''}`}
+                  aria-hidden="true"
+                >
+                  <path d="M2 4l3 3 3-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </Link>
+
+              {guidesOpen && (
+                <div
+                  className="absolute left-0 top-full pt-2 w-72"
+                  data-testid="nav-guides-dropdown"
+                >
+                  <div className="bg-lc-dark border border-lc-border rounded-xl shadow-2xl overflow-hidden">
+                    {GUIDE_ITEMS.map((g) => (
+                      <Link
+                        key={g.slug}
+                        href={`/guides/${locale}/${g.slug}`}
+                        className="block px-4 py-3 text-sm text-lc-muted hover:bg-lc-border/50 hover:text-lc-white transition"
+                      >
+                        {t(g.tKey)}
+                      </Link>
+                    ))}
+                    <Link
+                      href={`/guides/${locale}`}
+                      className="block px-4 py-3 text-sm font-semibold text-lc-green hover:bg-lc-border/50 border-t border-lc-border/50"
+                    >
+                      {t('footer.allGuides')} →
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <a
+              href="/#faq"
+              className="px-3 py-1.5 rounded-lg text-sm font-medium text-lc-muted hover:text-lc-white transition-colors"
+            >
+              {t('nav.faq')}
+            </a>
           </div>
 
           {/* Right side */}

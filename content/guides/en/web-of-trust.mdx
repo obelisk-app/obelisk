@@ -1,0 +1,77 @@
+---
+title: Web of Trust — spam resistance without CAPTCHAs
+description: How Obelisk uses your server's Nostr social graph to score every newcomer's trust, stop spam, and skip the "verify your email" step forever. A guide to the nostr-wot-extension model.
+heroComponent: wot
+publishedAt: '2026-04-16'
+updatedAt: '2026-04-16'
+tags: [wot, nostr, anti-spam]
+---
+
+## The problem with traditional spam defense
+
+Email verification, phone numbers, CAPTCHAs, and KYC forms don't stop spam — they stop careful people. Real spammers have warmed-up mail accounts, SIM farms, and solve-CAPTCHA APIs. The users who bail are your privacy-minded ones. It's a terrible filter.
+
+Crypto and privacy communities tend to attract exactly those privacy-minded people. Asking them to hand over a phone number to join a chat is a bad trade, and we don't want to make it.
+
+## A different filter: the social graph
+
+Nostr already has a social graph baked in. Every account can publish a **kind 3** event — a follow list of pubkeys they trust enough to follow. If you stack a lot of those follow lists together, you get a graph. And in a graph you can ask a useful question:
+
+> How close is this new account to the people who already run this server?
+
+A real human with six months of Nostr activity and fifty mutual follows with your moderators is almost certainly fine. A pubkey created two minutes ago with zero follows is almost certainly a bot. The graph tells you which is which — no email needed.
+
+<Diagram name="wot-graph" caption="A simple pipeline: Nostr follow lists → graph walk → trust score → access decision." />
+
+## How the score is computed
+
+For every account that wants to post on a public channel, Obelisk walks the follow graph starting from your server's **trust anchors** (by default the owner and moderators) and assigns a score:
+
+- **Direct follow** from an anchor → high score.
+- **Friend-of-a-friend** (2 hops) → medium score, discounted.
+- **Mutual follow** (anchor follows you and you follow anchor) → bonus.
+- **Followed by many anchors** → bigger bonus.
+- **Recent activity on Nostr** (has published notes, profile, reactions) → small bonus.
+- **Unreachable from anchors** within the hop budget → zero.
+
+The cutoff is a configurable threshold. Above the threshold, you post freely. Below, your posts are held for moderation or quietly filtered from the main view, depending on the channel setting. Admins can whitelist specific pubkeys who simply aren't on Nostr much yet.
+
+## Where the data comes from
+
+All the inputs are public Nostr events on regular relays:
+
+- **kind 3** — follow lists.
+- **kind 0** — profile metadata (for display + sanity signals like "has an avatar").
+- **kind 10002** — relay lists, so we can actually fetch the events.
+
+We cache aggressively (six-hour lazy refresh in the default config) and treat relay outages gracefully — a stale cache is always better than locking everyone out because a relay blinked.
+
+<Callout type="note" title="Nothing about this is novel Nostr">
+WoT on Nostr is an emerging pattern, not an Obelisk invention. Clients like Amethyst, apps like Coracle, and tools like `nostr-wot-extension` all use similar ideas. Obelisk's contribution is putting it inside a Discord-like UX so communities get the benefit without anyone having to understand what a kind-3 event is.
+</Callout>
+
+## What it means for admins
+
+- You pick the **trust anchors** (default: you + moderators). Anyone those people vouch for inherits some trust.
+- You pick the **threshold** per channel. Casual lounge channel? Low threshold. Announcement channel? High.
+- You can **override** both ways — whitelist a new joiner who just hasn't been on Nostr long, or blacklist a pubkey regardless of score.
+- You get **audit logs** — which accounts were filtered, at what score, on which channel.
+
+## What it means for users
+
+- No CAPTCHAs. No email. No phone number.
+- If your Nostr account has any real activity, you'll pass most servers' thresholds on the first try.
+- If you're brand new to Nostr, follow a few people, publish a profile, post a note or two. The graph fills in fast.
+- Being filtered on one server doesn't mean anything on another — each server has its own anchors and threshold.
+
+## Limitations, honestly
+
+- **Sybil resistance is not absolute.** A patient adversary can farm accounts that follow each other. WoT makes this hard and expensive, not impossible. Combined with human moderators, it's enough in practice.
+- **Cold-start anchors matter a lot.** If your anchors have thin follow lists, the graph is small and the filter is harsh. Pick anchors who actually use Nostr.
+- **Privacy tradeoffs.** Your follow list is public on Nostr by design. WoT relies on that. If you've curated your follows for personal reasons, that data is visible.
+
+## Related reading
+
+- [What is Obelisk?](/guides/en/what-is-obelisk)
+- [How Obelisk works today](/guides/en/how-obelisk-works)
+- [The future is relay-based groups](/guides/en/future-nostr-relays)

@@ -1,0 +1,73 @@
+---
+title: How Obelisk works today
+description: Obelisk is hybrid by design — Nostr handles identity, a server handles channels and realtime. Here is exactly what happens when you log in, send a message, and join a server.
+heroComponent: how-obelisk-works
+publishedAt: '2026-04-16'
+updatedAt: '2026-04-16'
+tags: [architecture, how-it-works]
+---
+
+## The split
+
+Obelisk is built on a deliberate split:
+
+- **Nostr** — the decentralized part — handles **identity**. Your keypair, your profile (kind 0), your relay list (NIP-65), your followers (kind 3). None of this lives on our server.
+- **A normal server** — the centralized part — handles **everything else**: channels, messages, members, roles, bans, realtime delivery, voice relay.
+
+That split lets us ship Discord-grade UX today (threads, reactions, search, moderation — hard to do purely on Nostr right now) while giving you a real, portable identity. Over time the pendulum swings toward the Nostr side; see [the future guide](/guides/en/future-nostr-relays).
+
+## What happens when you sign in
+
+Auth is a classic challenge-response, done entirely with your Nostr key.
+
+<Diagram name="auth-flow" caption="Sign-in is four round-trips and one signature. No passwords stored anywhere." />
+
+1. Your browser asks the server for a challenge.
+2. The server returns a random string + timestamp.
+3. You sign the challenge with your Nostr key (extension, nsec, or a remote bunker).
+4. The server verifies the signature against your pubkey, creates a session, and sets a cookie.
+
+The server never sees your private key. There's no password to forget, phish, or reset.
+
+## What happens when you send a message
+
+The chat UI is a custom Next.js app with a Socket.io realtime layer. When you hit send:
+
+- The client POSTs the message to an authenticated API route.
+- The server writes it to PostgreSQL (via Prisma).
+- The server emits a `message:new` event over Socket.io to everyone subscribed to that channel.
+- Other clients receive it in ~tens of milliseconds and render.
+
+Threading, reactions, typing indicators, edits, and deletes all ride the same Socket.io channel. Voice is a WebSocket audio relay on the same server — it works through any HTTPS tunnel because it isn't WebRTC peer-to-peer.
+
+<Callout type="note" title="Why not pure Nostr for messages?">
+Nostr relays today don't give us reliable ordering, efficient channel subscriptions for thousands of users, strong moderation primitives, or voice. NIP-29 is the promising path, but the ecosystem is still early. We're watching and will migrate piece by piece.
+</Callout>
+
+## Where Nostr shows up in the UI
+
+- **Avatars and display names** — fetched from your kind-0 profile on your relays.
+- **NIP-05 verification badge** — if your profile sets a NIP-05 address, we check it and show a green check.
+- **Relay list** — we use your NIP-65 kind-10002 event so your profile lookups don't depend on our opinion about which relays to use.
+- **Web of Trust** — your server's "who is trustworthy" list is derived from Nostr follow-graphs. See the [WoT guide](/guides/en/web-of-trust).
+
+## Data that lives on our server
+
+These are in PostgreSQL, scoped to a single Obelisk instance:
+
+- **Server** (name, icon, owner pubkey, join mode)
+- **Channel** (name, type, category, position)
+- **Message** (channel, author pubkey, content, replyTo)
+- **Member** (server, pubkey, role, nickname)
+- **Session**, **Ban**, **Mute**, **Warning**, **Report**, **ModerationAction**
+
+Your **identity** — pubkey, profile, followers — is never one of those rows. The server knows your pubkey and that's it. If the server vanishes, your account doesn't.
+
+## Self-hosting
+
+Everything runs in Docker Compose: Next.js + Socket.io in one container, PostgreSQL in another, Caddy in front for HTTPS. A 2 GB VPS is plenty. You own the database, you control the moderation policy, and you pick which Nostr relays the server uses for profile lookups.
+
+## Further reading
+
+- [Web of Trust, explained](/guides/en/web-of-trust)
+- [The future is relay-based groups](/guides/en/future-nostr-relays)
