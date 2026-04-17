@@ -124,7 +124,10 @@ function ForumPostRow({
   const handleDotsClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    openMenuAt(rect.right, rect.bottom);
+    // Right-align the menu to the dots button so it stays inside the sidebar
+    // instead of overflowing into the message area.
+    const MENU_WIDTH = 200;
+    openMenuAt(Math.max(8, rect.right - MENU_WIDTH), rect.bottom);
   };
 
   const handleCopyLink = () => {
@@ -317,7 +320,8 @@ function ChannelItem({ channel, isActive, onClick, followedPosts, activePostId, 
   const handleDotsClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    openMenuAt(rect.right, rect.bottom);
+    const MENU_WIDTH = 200;
+    openMenuAt(Math.max(8, rect.right - MENU_WIDTH), rect.bottom);
   };
 
   const handleCopyLink = () => {
@@ -955,6 +959,7 @@ function ResizeHandle({ onResize }: { onResize: (w: number) => void }) {
 export default function ChannelSidebar({ onChannelSelect }: { onChannelSelect?: () => void } = {}) {
   const { servers, activeServerId, pinnedChannels, categories, activeChannelId, setActiveChannel, isLoadingChannels } = useChatStore();
   const setActivePostIdStore = useChatStore((s) => s.setActivePostId);
+  const activePostId = useChatStore((s) => s.activePostId);
   const followedPostIdsRaw = useChatStore((s) => s.followedPostIds);
   const followedPostMetaRaw = useChatStore((s) => s.followedPostMeta);
   const followedPostIds = Array.isArray(followedPostIdsRaw) ? followedPostIdsRaw : EMPTY_FOLLOWED_POST_IDS;
@@ -963,7 +968,6 @@ export default function ChannelSidebar({ onChannelSelect }: { onChannelSelect?: 
     : EMPTY_FOLLOWED_POST_META;
   const loadFollowedPosts = useChatStore((s) => s.loadFollowedPosts);
   const [showInviteCard, setShowInviteCard] = useState(false);
-  const [activePostId, setActivePostId] = useState<string | null>(null);
   const asideRef = useRef<HTMLElement>(null);
   const [width, setWidth] = useSidebarWidth();
 
@@ -977,19 +981,7 @@ export default function ChannelSidebar({ onChannelSelect }: { onChannelSelect?: 
     void loadFollowedPosts();
   }, [loadFollowedPosts, activeServerId, sessionPubkey]);
 
-  // Track ?p= in the URL so the active post row highlights.
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const sync = () => {
-      const sp = new URLSearchParams(window.location.search);
-      setActivePostId(sp.get('p'));
-    };
-    sync();
-    window.addEventListener('popstate', sync);
-    return () => window.removeEventListener('popstate', sync);
-  }, []);
-
-  // Group followed posts by channelId, scoped to the active server.
+// Group followed posts by channelId, scoped to the active server.
   const followedByChannel = useMemo(() => {
     const out: Record<string, Array<{ id: string; title: string; channelName: string }>> = {};
     for (const id of followedPostIds) {
@@ -1008,7 +1000,6 @@ export default function ChannelSidebar({ onChannelSelect }: { onChannelSelect?: 
     const url = `/chat?c=${slug}&p=${postId}`;
     window.history.pushState(null, '', url);
     window.dispatchEvent(new PopStateEvent('popstate'));
-    setActivePostId(postId);
     setActivePostIdStore(postId);
     onChannelSelect?.();
   }, [onChannelSelect, setActivePostIdStore]);
