@@ -261,6 +261,16 @@ export async function restoreRemoteSigner(): Promise<boolean> {
 
   try {
     const payload = JSON.parse(payloadStr);
+
+    if (payload.type === 'nsec') {
+      if (!payload.privkey) return false;
+      const ndk = getNDK();
+      const signer = new NDKPrivateKeySigner(payload.privkey);
+      ndk.signer = signer;
+      await signer.user();
+      return true;
+    }
+
     if (payload.type !== 'bunker') return false;
 
     const bp = await parseBunkerInput(payload.bunkerUrl);
@@ -324,6 +334,8 @@ export async function loginWithNsec(nsec: string): Promise<NDKUser | null> {
   const user = await signer.user();
   await user.fetchProfile();
 
+  saveSignerPayload(JSON.stringify({ type: 'nsec', privkey: privateKey }));
+
   return user;
 }
 
@@ -337,6 +349,7 @@ export async function createNewAccount(): Promise<{ user: NDKUser; nsec: string 
   ndk.signer = signer;
 
   const user = await signer.user();
+  saveSignerPayload(JSON.stringify({ type: 'nsec', privkey: privateKeyHex }));
   return { user, nsec };
 }
 
