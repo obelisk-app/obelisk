@@ -403,18 +403,51 @@ export class WebSocketVoiceClient {
       throw new Error('Camera is not supported on this device');
     }
     const q = getVoiceQuality();
+    let claimed = false;
     if (this.channelId) {
       const claim = await this.emitWithAck('voice-camera-claim', this.channelId);
       if (claim?.error) throw new Error(claim.error);
+      claimed = true;
     }
-    this.cameraStream = await navigator.mediaDevices.getUserMedia({
+    // Acquire the camera with a fallback. "Timeout starting video source" and
+    // similar transient failures (NotReadableError / AbortError) fire when
+    // another process is releasing the device or the OS-level camera pipeline
+    // hasn't settled. Retry once with a brief delay, then relax constraints.
+    const primary = {
       video: {
         width: { ideal: q.cameraWidth },
         height: { ideal: q.cameraHeight },
         frameRate: { ideal: q.cameraFps, max: q.cameraFps },
       },
       audio: false,
-    });
+    } as const;
+    const fallback = { video: true, audio: false } as const;
+    try {
+      try {
+        this.cameraStream = await navigator.mediaDevices.getUserMedia(primary);
+      } catch (err) {
+        const name = (err as Error)?.name;
+        const msg = (err as Error)?.message || '';
+        const transient = name === 'NotReadableError'
+          || name === 'AbortError'
+          || /Timeout starting video source/i.test(msg);
+        if (!transient) throw err;
+        await new Promise((r) => setTimeout(r, 600));
+        try {
+          this.cameraStream = await navigator.mediaDevices.getUserMedia(primary);
+        } catch {
+          // Last-ditch: let the browser pick any working camera config.
+          this.cameraStream = await navigator.mediaDevices.getUserMedia(fallback);
+        }
+      }
+    } catch (err) {
+      // Release the server-side seat we reserved, otherwise the user would
+      // appear to be "using the camera" until the whole voice session ends.
+      if (claimed && this.channelId) {
+        try { this.socket.emit('voice-camera-release', this.channelId); } catch {}
+      }
+      throw err;
+    }
     this.cameraTrack = this.cameraStream.getVideoTracks()[0] || null;
     // Stamp what we asked for so `applyLiveQualitySettings` can detect a
     // subsequent change and restart the track.
@@ -464,26 +497,38 @@ export class WebSocketVoiceClient {
       throw new Error('Screen sharing is not supported on this device');
     }
     // Ask the server for exclusive screen-share rights first.
+    let claimed = false;
     if (this.channelId) {
       const claim = await this.emitWithAck('voice-screen-claim', this.channelId);
       if (claim?.error) {
         throw new Error(claim.error);
       }
+      claimed = true;
     }
     const q = getVoiceQuality();
-    this.screenStream = await navigator.mediaDevices.getDisplayMedia({
-      video: {
-        frameRate: { ideal: q.screenFps, max: q.screenFps },
-        width: { ideal: 1920, max: 3840 },
-        height: { ideal: 1080, max: 2160 },
-      },
-      // Browsers that don't support share-audio will silently return no audio track.
-      audio: {
-        echoCancellation: false,
-        noiseSuppression: false,
-        autoGainControl: false,
-      },
-    });
+    try {
+      this.screenStream = await navigator.mediaDevices.getDisplayMedia({
+        video: {
+          frameRate: { ideal: q.screenFps, max: q.screenFps },
+          width: { ideal: 1920, max: 3840 },
+          height: { ideal: 1080, max: 2160 },
+        },
+        // Browsers that don't support share-audio will silently return no audio track.
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+        },
+      });
+    } catch (err) {
+      // User canceled the picker, or the OS failed to hand over a display
+      // source. Either way, release the server seat so another user (or we
+      // ourselves on the next attempt) can claim it.
+      if (claimed && this.channelId) {
+        try { this.socket.emit('voice-screen-release', this.channelId); } catch {}
+      }
+      throw err;
+    }
     this.screenTrack = this.screenStream.getVideoTracks()[0] || null;
     this.screenAudioTrack = this.screenStream.getAudioTracks()[0] || null;
     if (this.screenTrack) {
@@ -837,19 +882,54 @@ export class WebSocketVoiceClient {
     peer: PeerConn,
     kind: 'audio' | 'video',
   ): TrackType | undefined {
-    const candidates: TrackType[] = kind === 'video'
-      ? ['camera', 'screen']
-      : ['audio', 'screen-audio'];
+    const candidates: Set<TrackType> = kind === 'video'
+      ? new Set(['camera', 'screen'])
+      : new Set(['audio', 'screen-audio']);
     const attached = new Set<TrackType>();
     if (peer.audioElement) attached.add('audio');
     if (peer.screenAudioElement) attached.add('screen-audio');
     if (peer.cameraElement) attached.add('camera');
     if (peer.screenElement) attached.add('screen');
-    const expected = new Set(peer.remoteTrackTypes.values());
-    for (const c of candidates) {
-      if (expected.has(c) && !attached.has(c)) return c;
+    // Walk announced types newest-first: when a peer enables screenshare
+    // while camera is already live, the new `screen` trackInfo lands after
+    // the old `camera` entry. Matching oldest-first would route the incoming
+    // screen track as "camera already attached → no slot", leaving the
+    // screen video stuck in pendingTracks until a trackInfo resolves it by
+    // kind. Newest-first resolves screen immediately against its own slot.
+    const announced = [...peer.remoteTrackTypes.values()].reverse();
+    for (const type of announced) {
+      if (candidates.has(type) && !attached.has(type)) return type;
     }
     return undefined;
+  }
+
+  /**
+   * Sweep pendingTracks and attach anything we can now place. Safe to call
+   * repeatedly — it's a no-op when nothing is pending or no slot is free.
+   * Called after SDP is applied and after trackInfo arrives, so a track
+   * that raced ahead of its announcement gets picked up as soon as the
+   * other side of the race catches up.
+   */
+  private reconcilePendingTracks(peer: PeerConn): void {
+    if (peer.pendingTracks.size === 0) return;
+    for (const [pid, ptrack] of [...peer.pendingTracks]) {
+      const type = this.findUnattachedTrackType(peer, ptrack.kind as 'audio' | 'video');
+      if (!type) continue;
+      peer.pendingTracks.delete(pid);
+      this.attachRemoteTrack(peer, ptrack, type);
+    }
+  }
+
+  /**
+   * Drop stale `remoteTrackTypes` entries of a given type. Entries are keyed
+   * by the *sender-side* track id, so we can't evict a specific one from the
+   * receiver — but a peer can only publish one track of each TrackType at a
+   * time, so any leftover entry of the same type is necessarily stale.
+   */
+  private evictTrackTypeEntries(peer: PeerConn, type: TrackType): void {
+    for (const [tid, t] of [...peer.remoteTrackTypes]) {
+      if (t === type) peer.remoteTrackTypes.delete(tid);
+    }
   }
 
   private attachRemoteTrack(peer: PeerConn, track: MediaStreamTrack, type: TrackType): void {
@@ -869,6 +949,13 @@ export class WebSocketVoiceClient {
         console.warn('[voice] audio play() blocked — will retry on user gesture:', err);
       });
       if (type === 'audio') {
+        // Replace any prior audio element cleanly so it doesn't linger in
+        // the DOM with a live MediaStream (double-audio / memory leak).
+        if (peer.audioElement && peer.audioElement !== el) {
+          try { peer.audioElement.pause(); } catch {}
+          peer.audioElement.srcObject = null;
+          peer.audioElement.remove();
+        }
         peer.audioElement = el;
         // Start per-peer voice-activity detection on the mic track only.
         // Using a fresh MediaStream wrapping the same track means the
@@ -882,6 +969,11 @@ export class WebSocketVoiceClient {
         );
         peer.speakingDetector.start();
       } else {
+        if (peer.screenAudioElement && peer.screenAudioElement !== el) {
+          try { peer.screenAudioElement.pause(); } catch {}
+          peer.screenAudioElement.srcObject = null;
+          peer.screenAudioElement.remove();
+        }
         peer.screenAudioElement = el;
       }
       return;
@@ -893,30 +985,38 @@ export class WebSocketVoiceClient {
     videoEl.playsInline = true;
     videoEl.muted = true;
 
-    track.onended = () => {
+    const clearSlotForThisTrack = () => {
       if (type === 'camera' && peer.cameraElement === videoEl) {
         peer.cameraElement = null;
+        this.evictTrackTypeEntries(peer, 'camera');
         this.onRemoteVideoElement?.(peer.pubkey, null);
       } else if (type === 'screen' && peer.screenElement === videoEl) {
         peer.screenElement = null;
+        this.evictTrackTypeEntries(peer, 'screen');
         this.onRemoteScreenElement?.(peer.pubkey, null);
       }
     };
-    track.onmute = () => {
-      // sender removed the track — treat as ended
-      if (type === 'camera' && peer.cameraElement === videoEl) {
-        peer.cameraElement = null;
-        this.onRemoteVideoElement?.(peer.pubkey, null);
-      } else if (type === 'screen' && peer.screenElement === videoEl) {
-        peer.screenElement = null;
-        this.onRemoteScreenElement?.(peer.pubkey, null);
-      }
-    };
+    track.onended = clearSlotForThisTrack;
+    // Sender removed/replaced the track — browsers surface this as `mute`.
+    track.onmute = clearSlotForThisTrack;
 
     if (type === 'camera') {
+      if (peer.cameraElement && peer.cameraElement !== videoEl) {
+        try { peer.cameraElement.pause(); } catch {}
+        peer.cameraElement.srcObject = null;
+        // Force UI to unmount the stale <video> before mounting the new
+        // one — otherwise a component memoized on element identity may
+        // keep the old node.
+        this.onRemoteVideoElement?.(peer.pubkey, null);
+      }
       peer.cameraElement = videoEl;
       this.onRemoteVideoElement?.(peer.pubkey, videoEl);
     } else {
+      if (peer.screenElement && peer.screenElement !== videoEl) {
+        try { peer.screenElement.pause(); } catch {}
+        peer.screenElement.srcObject = null;
+        this.onRemoteScreenElement?.(peer.pubkey, null);
+      }
       peer.screenElement = videoEl;
       this.onRemoteScreenElement?.(peer.pubkey, videoEl);
     }
@@ -1117,6 +1217,9 @@ export class WebSocketVoiceClient {
           peer.pendingTracks.delete(trackId);
         }
         if (pending) this.attachRemoteTrack(peer, pending, type);
+        // Other tracks may have raced ahead of their own trackInfo — now
+        // that the announced-types set has grown, try to place them too.
+        this.reconcilePendingTracks(peer);
         return;
       }
 
@@ -1137,6 +1240,9 @@ export class WebSocketVoiceClient {
             payload: { sdp: enhanceOpusSdp(peer.pc.localDescription) },
           });
         }
+        // Renegotiation often delivers a fresh track plus its trackInfo in
+        // either order — sweep after SDP so anything that raced gets placed.
+        this.reconcilePendingTracks(peer);
         return;
       }
 
