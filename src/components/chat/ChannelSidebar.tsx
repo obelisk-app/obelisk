@@ -150,12 +150,12 @@ function ForumPostRow({
       {/* Tree-connector: horizontal stub from the vertical rail to this row */}
       <span
         aria-hidden
-        className="pointer-events-none absolute left-3 top-1/2 w-2 h-px bg-lc-border"
+        className="pointer-events-none absolute left-3 top-1/2 w-6 h-px bg-lc-border"
       />
       <button
         onClick={onClick}
         onContextMenu={handleContextMenu}
-        className={`w-full flex items-center gap-1.5 pl-5 pr-8 py-1 rounded-md text-sm text-left transition-colors ${
+        className={`w-full flex items-center gap-1.5 pl-12 pr-8 py-1 rounded-md text-[15px] text-left transition-colors ${
           isActive
             ? 'bg-lc-border text-lc-white font-medium'
             : hasUnread
@@ -361,7 +361,7 @@ function ChannelItem({ channel, isActive, onClick, followedPosts, activePostId, 
       <button
         onClick={onClick}
         onContextMenu={handleContextMenu}
-        className={`w-full flex items-center gap-1.5 py-1 pr-8 rounded-md text-sm transition-colors ${canExpand ? 'pl-5' : 'pl-2'} ${
+        className={`w-full flex items-center gap-1.5 py-1 pr-8 rounded-md text-[15px] transition-colors ${canExpand ? 'pl-5' : 'pl-2'} ${
           isActive
             ? 'bg-lc-border text-lc-white font-medium'
             : hasUnread
@@ -445,7 +445,7 @@ function FollowedPostsList({
 
   return (
     <div
-      className="relative mt-0.5 space-y-0.5 before:content-[''] before:absolute before:left-3 before:top-0 before:bottom-2 before:w-px before:bg-lc-border"
+      className="relative mt-1 mb-1 space-y-1 before:content-[''] before:absolute before:left-3 before:top-0 before:bottom-2 before:w-px before:bg-lc-border"
       data-testid={`channel-followed-posts-${channelId}`}
     >
       {visible.map((post) => (
@@ -459,7 +459,7 @@ function FollowedPostsList({
       {hiddenCount > 0 && !expanded && (
         <button
           onClick={() => setExpanded(true)}
-          className="w-full pl-5 pr-8 py-1 text-xs text-left text-lc-muted hover:text-lc-white transition-colors"
+          className="w-full pl-12 pr-8 py-1 text-xs text-left text-lc-muted hover:text-lc-white transition-colors"
           data-testid={`channel-followed-posts-more-${channelId}`}
         >
           + {hiddenCount} more
@@ -468,7 +468,7 @@ function FollowedPostsList({
       {expanded && sorted.length > LIMIT && (
         <button
           onClick={() => setExpanded(false)}
-          className="w-full pl-5 pr-8 py-1 text-xs text-left text-lc-muted hover:text-lc-white transition-colors"
+          className="w-full pl-12 pr-8 py-1 text-xs text-left text-lc-muted hover:text-lc-white transition-colors"
         >
           Show less
         </button>
@@ -530,6 +530,8 @@ function VoiceStatusBar() {
   const currentVoiceChannelId = useVoiceStore((s) => s.currentVoiceChannelId);
   const isMuted = useVoiceStore((s) => s.isMuted);
   const isDeafened = useVoiceStore((s) => s.isDeafened);
+  const isCameraOn = useVoiceStore((s) => s.isCameraOn);
+  const isScreenSharing = useVoiceStore((s) => s.isScreenSharing);
   const pinnedChannels = useChatStore((s) => s.pinnedChannels);
   const categories = useChatStore((s) => s.categories);
   const activeServerId = useChatStore((s) => s.activeServerId);
@@ -577,88 +579,150 @@ function VoiceStatusBar() {
     router.replace(`${window.location.pathname}?${sp.toString()}`);
   };
 
+  const activeServer = useChatStore.getState().servers.find((s) => s.id === (useChatStore.getState().activeServerId));
+
+  const handleToggleCamera = async () => {
+    const client = getActiveVoiceClient();
+    if (!client) return;
+    const store = useVoiceStore.getState();
+    try {
+      if (store.isCameraOn) {
+        await client.stopCamera();
+        store.setCameraOn(false);
+      } else {
+        await client.startCamera();
+        store.setCameraOn(true);
+      }
+    } catch (err: any) {
+      if (err?.name === 'NotAllowedError') return;
+      const msg = err?.message || 'Failed to toggle camera';
+      const s = useVoiceStore.getState();
+      if (/limit|already sharing/i.test(msg)) s.setLimitNotice(msg);
+      else s.setError(msg);
+    }
+  };
+
+  const handleToggleScreenShare = async () => {
+    const client = getActiveVoiceClient();
+    if (!client) return;
+    const store = useVoiceStore.getState();
+    try {
+      if (store.isScreenSharing) {
+        await client.stopScreenShare();
+        store.setScreenSharing(false);
+      } else {
+        await client.startScreenShare();
+        store.setScreenSharing(true);
+      }
+    } catch (err: any) {
+      if (err?.name === 'NotAllowedError') return;
+      const msg = err?.message || 'Failed to share screen';
+      const s = useVoiceStore.getState();
+      if (/limit|already sharing/i.test(msg)) s.setLimitNotice(msg);
+      else s.setError(msg);
+    }
+  };
+
   return (
-    <div
-      className="px-2 py-1.5 border-t border-lc-border bg-lc-black/60 shrink-0 flex items-center gap-1"
-      data-testid="voice-status-bar"
-    >
-      <button
-        onClick={handleJump}
-        className="flex-1 min-w-0 flex items-center gap-2 text-left hover:bg-lc-border/30 rounded-md px-1.5 py-1 transition"
-        title="Go to voice channel"
-      >
-        <span className="relative flex shrink-0 items-center justify-center">
-          <span className="absolute w-2 h-2 rounded-full bg-lc-green animate-ping opacity-60" />
-          <span className="w-2 h-2 rounded-full bg-lc-green" />
-        </span>
-        <span className="min-w-0 flex-1 leading-tight">
-          <span className="block text-[10px] text-lc-green font-semibold">Voice connected</span>
-          <span className="block text-xs text-lc-muted truncate">
-            {channel?.name ?? 'Voice channel'}
-          </span>
-        </span>
-      </button>
-      <button
-        onClick={handleMute}
-        className={`w-7 h-7 rounded-md flex items-center justify-center transition-colors ${
-          isMuted ? 'text-red-400 hover:bg-red-600/20' : 'text-lc-muted hover:text-lc-white hover:bg-lc-border/40'
-        }`}
-        title={isMuted ? 'Unmute' : 'Mute'}
-        data-testid="voice-bar-mute"
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          {isMuted ? (
-            <>
-              <line x1="1" y1="1" x2="23" y2="23"/>
-              <path d="M9 9v3a3 3 0 0 0 5.12 2.12"/>
-              <path d="M15 9.34V4a3 3 0 0 0-5.94-.6"/>
-              <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2c0 .74-.11 1.46-.33 2.13"/>
-              <line x1="12" y1="19" x2="12" y2="23"/>
-            </>
-          ) : (
-            <>
-              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-              <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-              <line x1="12" y1="19" x2="12" y2="23"/>
-              <line x1="8" y1="23" x2="16" y2="23"/>
-            </>
-          )}
-        </svg>
-      </button>
-      <button
-        onClick={handleDeafen}
-        className={`w-7 h-7 rounded-md flex items-center justify-center transition-colors ${
-          isDeafened ? 'text-red-400 hover:bg-red-600/20' : 'text-lc-muted hover:text-lc-white hover:bg-lc-border/40'
-        }`}
-        title={isDeafened ? 'Undeafen' : 'Deafen'}
-        data-testid="voice-bar-deafen"
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          {isDeafened ? (
-            <>
-              <line x1="1" y1="1" x2="23" y2="23"/>
-              <path d="M3 18v-6a9 9 0 0 1 9-9"/>
-              <path d="M21 12v6a2 2 0 0 1-2 2h-1"/>
-            </>
-          ) : (
-            <>
-              <path d="M3 18v-6a9 9 0 0 1 18 0v6"/>
-              <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>
-            </>
-          )}
-        </svg>
-      </button>
-      <button
-        onClick={handleLeave}
-        className="w-7 h-7 rounded-md flex items-center justify-center text-red-400 hover:bg-red-600/20 transition-colors"
-        title="Disconnect"
-        data-testid="voice-bar-leave"
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-3.33-2.67"/>
-          <line x1="23" y1="1" x2="1" y2="23"/>
-        </svg>
-      </button>
+    <div className="px-2 md:px-4 pt-2 shrink-0" data-testid="voice-status-bar">
+      <div className="bg-lc-black/60 border border-lc-border rounded-xl p-2 space-y-2">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleJump}
+            className="flex-1 min-w-0 flex items-center gap-2 text-left hover:bg-lc-border/30 rounded-md px-1.5 py-1 transition"
+            title="Go to voice channel"
+          >
+            <span className="shrink-0 w-8 h-8 rounded-md bg-lc-green/10 flex items-center justify-center">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-lc-green">
+                <path d="M2 12h2"/><path d="M6 8v8"/><path d="M10 4v16"/><path d="M14 8v8"/><path d="M18 10v4"/><path d="M22 12h-2"/>
+              </svg>
+            </span>
+            <span className="min-w-0 flex-1 leading-tight">
+              <span className="block text-sm text-lc-green font-semibold">Detalles de voz</span>
+              <span className="block text-xs text-lc-muted truncate">
+                {(channel?.name ?? 'Canal de voz') + (activeServer?.name ? ` / ${activeServer.name}` : '')}
+              </span>
+            </span>
+          </button>
+          <button
+            onClick={handleLeave}
+            className="w-7 h-7 rounded-md bg-red-600 hover:bg-red-700 flex items-center justify-center text-white transition-colors"
+            title="Desconectar"
+            data-testid="voice-bar-leave"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"/>
+            </svg>
+          </button>
+        </div>
+
+        <div className="flex items-center gap-1 w-full">
+          <button
+            onClick={handleToggleCamera}
+            className={`flex-1 h-8 rounded-md flex items-center justify-center transition-colors ${
+              isCameraOn
+                ? 'bg-lc-green/20 text-lc-green hover:bg-lc-green/30'
+                : 'bg-lc-border/40 hover:bg-lc-border/60 text-lc-muted hover:text-lc-white'
+            }`}
+            title={isCameraOn ? 'Apagar cámara' : 'Encender cámara'}
+            data-testid="voice-bar-camera"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              {isCameraOn ? (
+                <>
+                  <path d="M23 7l-7 5 7 5V7z"/>
+                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                </>
+              ) : (
+                <>
+                  <path d="M23 7l-7 5 7 5V7z"/>
+                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                  <line x1="2" y1="2" x2="22" y2="22"/>
+                </>
+              )}
+            </svg>
+          </button>
+          <button
+            onClick={handleToggleScreenShare}
+            className={`flex-1 h-8 rounded-md flex items-center justify-center transition-colors ${
+              isScreenSharing
+                ? 'bg-lc-green/20 text-lc-green hover:bg-lc-green/30'
+                : 'bg-lc-border/40 hover:bg-lc-border/60 text-lc-muted hover:text-lc-white'
+            }`}
+            title={isScreenSharing ? 'Dejar de compartir' : 'Compartir pantalla'}
+            data-testid="voice-bar-screenshare"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+              <path d="M12 7v6"/><path d="M9 10l3-3 3 3"/>
+            </svg>
+          </button>
+          <button
+            disabled
+            className="flex-1 h-8 rounded-md bg-lc-border/40 text-lc-muted/40 flex items-center justify-center cursor-not-allowed"
+            title="Actividades (próximamente)"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="6" width="20" height="12" rx="2"/>
+              <line x1="7" y1="10" x2="7" y2="14"/>
+              <line x1="5" y1="12" x2="9" y2="12"/>
+              <circle cx="16" cy="11" r="1"/>
+              <circle cx="18" cy="13" r="1"/>
+            </svg>
+          </button>
+          <button
+            disabled
+            className="flex-1 h-8 rounded-md bg-lc-border/40 text-lc-muted/40 flex items-center justify-center cursor-not-allowed"
+            title="Soundboard (próximamente)"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 18V5l12-2v13"/>
+              <circle cx="6" cy="18" r="3"/>
+              <circle cx="18" cy="16" r="3"/>
+            </svg>
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -667,6 +731,10 @@ function UserPanel() {
   const router = useRouter();
   const { profile, logout } = useAuthStore();
   const [showProfile, setShowProfile] = useState(false);
+  const currentVoiceChannelId = useVoiceStore((s) => s.currentVoiceChannelId);
+  const isMuted = useVoiceStore((s) => s.isMuted);
+  const isDeafened = useVoiceStore((s) => s.isDeafened);
+  const voiceActive = !!currentVoiceChannelId;
 
   const handleLogout = () => {
     logout();
@@ -674,31 +742,151 @@ function UserPanel() {
     router.push('/');
   };
 
+  const handleMute = () => {
+    const client = getActiveVoiceClient();
+    if (!client) return;
+    const next = !isMuted;
+    if (next) client.mute();
+    else client.unmute().catch(() => {});
+    useVoiceStore.getState().setMuted(next);
+  };
+
+  const handleDeafen = () => {
+    const client = getActiveVoiceClient();
+    if (!client) return;
+    const next = !isDeafened;
+    client.setDeafened(next);
+    useVoiceStore.getState().setDeafened(next);
+    if (next && !isMuted) {
+      client.mute();
+      useVoiceStore.getState().setMuted(true);
+    }
+  };
+
+  const handleLeave = () => {
+    const client = getActiveVoiceClient();
+    client?.leave();
+    useVoiceStore.getState().leaveVoice();
+  };
+
   return (
-    <div className="p-2 border-t border-lc-border bg-lc-black/50 shrink-0 relative">
-      <button
-        onClick={() => setShowProfile(!showProfile)}
-        className="w-full flex items-center gap-2 p-1.5 rounded-lg hover:bg-lc-border/30 transition"
-      >
-        {profile?.picture ? (
-          <img src={profile.picture} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" />
+    <div className="px-2 md:px-4 pb-3 md:pb-4 pt-2 shrink-0 relative">
+      <div className="w-full flex items-center gap-2 bg-lc-border/50 rounded-xl px-3 py-2">
+        <button
+          onClick={() => setShowProfile(!showProfile)}
+          className="flex items-center gap-2 flex-1 min-w-0 rounded-lg hover:bg-lc-border/40 transition -mx-1 px-1 py-0.5"
+        >
+          <div className="relative shrink-0">
+            {profile?.picture ? (
+              <img src={profile.picture} alt="" className="w-8 h-8 rounded-full object-cover" />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-lc-olive flex items-center justify-center text-lc-green text-xs font-semibold">
+                {(profile?.name || profile?.displayName || 'A')[0].toUpperCase()}
+              </div>
+            )}
+            {voiceActive && (
+              <span
+                className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-lc-green border-2 border-lc-dark"
+                aria-label="Voice connected"
+              />
+            )}
+          </div>
+          <div className="flex-1 min-w-0 text-left">
+            <div className="text-sm font-medium text-lc-white truncate">
+              {profile?.displayName || profile?.name || 'Anon'}
+            </div>
+            {voiceActive ? (
+              <div className="text-[10px] text-lc-green truncate flex items-center gap-1">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                  <path d="M15.54 8.46a5 5 0 010 7.07"/>
+                </svg>
+                En canal de voz
+              </div>
+            ) : (
+              <div className="text-[10px] text-lc-muted truncate font-mono">
+                {profile?.npub ? `${profile.npub.slice(0, 16)}...` : ''}
+              </div>
+            )}
+          </div>
+        </button>
+
+        {voiceActive ? (
+          <div className="flex items-center gap-0.5 shrink-0">
+            <button
+              onClick={handleMute}
+              className={`w-7 h-7 rounded-md flex items-center justify-center transition-colors ${
+                isMuted ? 'text-red-400 hover:bg-red-600/20' : 'text-lc-muted hover:text-lc-white hover:bg-lc-border/60'
+              }`}
+              title={isMuted ? 'Unmute' : 'Mute'}
+              data-testid="voice-bar-mute"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                {isMuted ? (
+                  <>
+                    <line x1="1" y1="1" x2="23" y2="23"/>
+                    <path d="M9 9v3a3 3 0 0 0 5.12 2.12"/>
+                    <path d="M15 9.34V4a3 3 0 0 0-5.94-.6"/>
+                    <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2c0 .74-.11 1.46-.33 2.13"/>
+                    <line x1="12" y1="19" x2="12" y2="23"/>
+                  </>
+                ) : (
+                  <>
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                    <line x1="12" y1="19" x2="12" y2="23"/>
+                    <line x1="8" y1="23" x2="16" y2="23"/>
+                  </>
+                )}
+              </svg>
+            </button>
+            <button
+              onClick={handleDeafen}
+              className={`w-7 h-7 rounded-md flex items-center justify-center transition-colors ${
+                isDeafened ? 'text-red-400 hover:bg-red-600/20' : 'text-lc-muted hover:text-lc-white hover:bg-lc-border/60'
+              }`}
+              title={isDeafened ? 'Undeafen' : 'Deafen'}
+              data-testid="voice-bar-deafen"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                {isDeafened ? (
+                  <>
+                    <line x1="1" y1="1" x2="23" y2="23"/>
+                    <path d="M3 18v-6a9 9 0 0 1 9-9"/>
+                    <path d="M21 12v6a2 2 0 0 1-2 2h-1"/>
+                  </>
+                ) : (
+                  <>
+                    <path d="M3 18v-6a9 9 0 0 1 18 0v6"/>
+                    <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>
+                  </>
+                )}
+              </svg>
+            </button>
+            <button
+              onClick={() => setShowProfile(!showProfile)}
+              className="w-7 h-7 rounded-md flex items-center justify-center text-lc-muted hover:text-lc-white hover:bg-lc-border/60 transition-colors"
+              title="Settings"
+              aria-label="Settings"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+              </svg>
+            </button>
+          </div>
         ) : (
-          <div className="w-8 h-8 rounded-full bg-lc-olive flex items-center justify-center text-lc-green text-xs font-semibold shrink-0">
-            {(profile?.name || profile?.displayName || 'A')[0].toUpperCase()}
-          </div>
+          <button
+            onClick={() => setShowProfile(!showProfile)}
+            className="p-1 rounded-md text-lc-muted hover:text-lc-white hover:bg-lc-border/60 transition-colors shrink-0"
+            title="Settings"
+            aria-label="Settings"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+            </svg>
+          </button>
         )}
-        <div className="flex-1 min-w-0 text-left">
-          <div className="text-sm font-medium text-lc-white truncate">
-            {profile?.displayName || profile?.name || 'Anon'}
-          </div>
-          <div className="text-[10px] text-lc-muted truncate font-mono">
-            {profile?.npub ? `${profile.npub.slice(0, 16)}...` : ''}
-          </div>
-        </div>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-lc-muted shrink-0">
-          <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
-        </svg>
-      </button>
+      </div>
 
       {showProfile && (
         <ProfilePanel onClose={() => setShowProfile(false)} onLogout={handleLogout} />
