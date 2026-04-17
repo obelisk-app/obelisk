@@ -1083,7 +1083,11 @@ export default function ChatPage() {
       setSocketInstance(null);
       useChatStore.getState().setOnlinePubkeys([]);
     };
-  }, [sessionChecked, addMessage, removeMessage, updateMessage, updateReactions, logout, router]);
+    // `profile?.pubkey` is in the deps so switching accounts in-tab
+    // disconnects the old socket and opens a fresh one that re-handshakes
+    // with the new session cookie. Without it the previous user's presence
+    // room + room subscriptions would leak into the new session.
+  }, [sessionChecked, profile?.pubkey, addMessage, removeMessage, updateMessage, updateReactions, logout, router]);
 
   // Keep URL query params (?s=, ?c=) in sync with active server/channel so
   // that a browser refresh lands the user back on the same spot. The ?m=

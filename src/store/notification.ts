@@ -50,18 +50,24 @@ interface NotificationState {
   }) => void;
   setChannelServerMap: (map: Record<string, string>) => void;
   setPermission: (granted: boolean) => void;
+  /** Reset all counts/mentions/cursors. Used on logout/account-switch. */
+  reset: () => void;
 }
 
-export const useNotificationStore = create<NotificationState>()((set) => ({
-  channelUnreads: {},
-  channelMentions: {},
-  channelLastReadAt: {},
-  postUnreads: {},
-  postMentions: {},
-  dmUnreads: {},
-  dmLastReadAt: {},
-  channelServerMap: {},
+export const NOTIFICATION_INITIAL_STATE = {
+  channelUnreads: {} as Record<string, number>,
+  channelMentions: {} as Record<string, boolean>,
+  channelLastReadAt: {} as Record<string, number>,
+  postUnreads: {} as Record<string, number>,
+  postMentions: {} as Record<string, boolean>,
+  dmUnreads: {} as Record<string, number>,
+  dmLastReadAt: {} as Record<string, number>,
+  channelServerMap: {} as Record<string, string>,
   permissionGranted: false,
+};
+
+export const useNotificationStore = create<NotificationState>()((set) => ({
+  ...NOTIFICATION_INITIAL_STATE,
 
   setChannelUnread: (channelId, count, hasMention) => set((state) => ({
     channelUnreads: { ...state.channelUnreads, [channelId]: count },
@@ -142,6 +148,14 @@ export const useNotificationStore = create<NotificationState>()((set) => ({
   setChannelServerMap: (map) => set({ channelServerMap: map }),
 
   setPermission: (granted) => set({ permissionGranted: granted }),
+
+  // Preserves `permissionGranted`: browser-level permission is tied to the
+  // device/origin, not the Nostr identity — resetting it would make the UI
+  // think the user hadn't granted notifications.
+  reset: () => set((state) => ({
+    ...NOTIFICATION_INITIAL_STATE,
+    permissionGranted: state.permissionGranted,
+  })),
 }));
 
 // Derived helpers (use outside React or in callbacks)

@@ -241,38 +241,53 @@ interface ChatState {
     pinnedAt: string | null,
     pinnedByPubkey: string | null,
   ) => void;
+
+  // Reset all data fields to their initial values. Used on logout /
+  // account-switch by `resetAllClientState()` in `@/lib/reset`.
+  reset: () => void;
 }
 
-export const useChatStore = create<ChatState>()((set) => ({
-  servers: [],
-  activeServerId: null,
-  pinnedChannels: [],
-  categories: [],
-  activeChannelId: null,
-  activePostId: null,
-  messages: [],
+// Exported so `@/lib/reset` and tests can assert drift-free restoration.
+// Includes only data fields — actions are preserved across resets.
+export const CHAT_INITIAL_STATE = {
+  servers: [] as ServerInfo[],
+  activeServerId: null as string | null,
+  pinnedChannels: [] as Channel[],
+  categories: [] as Category[],
+  activeChannelId: null as string | null,
+  activePostId: null as string | null,
+  messages: [] as Message[],
   isLoadingChannels: true,
   isLoadingMessages: false,
-  replyingTo: null,
-  editingMessage: null,
-  messageCursor: null,
+  replyingTo: null as Message | null,
+  editingMessage: null as Message | null,
+  messageCursor: null as string | null,
   hasMoreMessages: false,
-  typingUsers: {},
-  highlightedMessageId: null,
-  memberList: [],
-  profilePopupPubkey: null,
-  openProfilePopup: (pubkey) => set({ profilePopupPubkey: pubkey }),
-  closeProfilePopup: () => set({ profilePopupPubkey: null }),
+  typingUsers: {} as Record<string, number>,
+  highlightedMessageId: null as string | null,
+  memberList: [] as MemberInfo[],
+  profilePopupPubkey: null as string | null,
   onlinePubkeys: new Set<string>(),
   isNearBottom: true,
-  myRole: null,
-  serverEmojis: {},
-  serverGifs: [],
-  slugCache: {},
-  followedPostIds: [],
-  followedPostMeta: {},
+  myRole: null as MyServerRole,
+  serverEmojis: {} as Record<string, string>,
+  serverGifs: [] as ServerGif[],
+  slugCache: {} as Record<string, SlugCacheEntry>,
+  followedPostIds: [] as string[],
+  followedPostMeta: {} as Record<string, { id: string; title: string; channelId: string; channelName: string; serverId: string }>,
   followedPostsLoading: false,
-  suppressedAutoFollowPostIds: [],
+  suppressedAutoFollowPostIds: [] as string[],
+};
+
+export const useChatStore = create<ChatState>()((set) => ({
+  ...CHAT_INITIAL_STATE,
+  openProfilePopup: (pubkey) => set({ profilePopupPubkey: pubkey }),
+  closeProfilePopup: () => set({ profilePopupPubkey: null }),
+
+  reset: () => set(() => ({
+    ...CHAT_INITIAL_STATE,
+    onlinePubkeys: new Set<string>(),
+  })),
 
   setMemberList: (members) => set({ memberList: members }),
   applyBotUpdate: (update) => set((state) => {

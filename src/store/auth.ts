@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { NDKUser } from '@nostr-dev-kit/ndk';
 import { NostrProfile, parseProfile, LoginMethod, resetUserRelays, clearSignerPayload, getNDK } from '@/lib/nostr';
+import { resetAllClientState } from '@/lib/reset';
 
 interface AuthState {
   isConnected: boolean;
@@ -36,6 +37,13 @@ export const useAuthStore = create<AuthState>()(
 
       setUser: (user, method) => {
         if (user) {
+          const prevPubkey = get().user?.pubkey;
+          // If a different identity was previously set in this tab, wipe
+          // the prior user's client state before installing the new one —
+          // otherwise their servers/messages/unreads leak across accounts.
+          if (prevPubkey && prevPubkey !== user.pubkey) {
+            resetAllClientState();
+          }
           set({
             isConnected: true,
             user,
@@ -60,6 +68,7 @@ export const useAuthStore = create<AuthState>()(
         fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
         resetUserRelays();
         clearSignerPayload();
+        resetAllClientState();
         set({
           isConnected: false,
           user: null,
@@ -133,6 +142,13 @@ export const useAuthStore = create<AuthState>()(
             return false;
           }
           const data = await res.json();
+          const prevPubkey = get().user?.pubkey;
+          // Guard against tab-level identity switches where logout wasn't
+          // called cleanly (e.g. another tab logged us in as a different
+          // user and this tab is now restoring that session).
+          if (prevPubkey && prevPubkey !== data.pubkey) {
+            resetAllClientState();
+          }
           const ndk = getNDK();
           const user = ndk.getUser({ pubkey: data.pubkey });
           const npub = (() => { try { return user.npub; } catch { return ''; } })();

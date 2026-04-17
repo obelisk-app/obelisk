@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useAuthStore } from './auth';
+import { useChatStore } from './chat';
+import { useNotificationStore } from './notification';
+import { useVoiceStore } from './voice';
 
 // Mock nostr module
 vi.mock('@/lib/nostr', () => ({
@@ -154,5 +157,82 @@ describe('useAuthStore', () => {
     expect(useAuthStore.getState().isConnected).toBe(true);
     // syncProfile was called (second fetch)
     expect(mockFetch).toHaveBeenCalledWith('/api/members/me/sync-nostr', { method: 'POST' });
+  });
+
+  describe('account-switch client-state reset', () => {
+    function seedStores() {
+      useChatStore.setState({
+        servers: [{ id: 's1', name: 'A', icon: null, banner: null }],
+        activeServerId: 's1',
+        messages: [{ id: 'm1', channelId: 'c1', authorPubkey: 'x', content: 'hi', replyToId: null, createdAt: '', editedAt: null } as any],
+        memberList: [{ pubkey: 'x', displayName: 'x', picture: null } as any],
+      });
+      useNotificationStore.setState({
+        channelUnreads: { c1: 5 },
+        channelMentions: { c1: true },
+      });
+      useVoiceStore.setState({ currentVoiceChannelId: 'v1' });
+    }
+
+    it('logout clears chat, notification, and voice stores', () => {
+      vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({ ok: true })));
+      seedStores();
+      useAuthStore.getState().setUser({ pubkey: 'abc' } as any, 'extension');
+      useAuthStore.getState().logout();
+
+      expect(useChatStore.getState().servers).toEqual([]);
+      expect(useChatStore.getState().activeServerId).toBeNull();
+      expect(useChatStore.getState().messages).toEqual([]);
+      expect(useChatStore.getState().memberList).toEqual([]);
+      expect(useNotificationStore.getState().channelUnreads).toEqual({});
+      expect(useNotificationStore.getState().channelMentions).toEqual({});
+      expect(useVoiceStore.getState().currentVoiceChannelId).toBeNull();
+    });
+
+    it('setUser with a different pubkey resets client state', () => {
+      useAuthStore.getState().setUser({ pubkey: 'userA' } as any, 'extension');
+      seedStores();
+      useAuthStore.getState().setUser({ pubkey: 'userB' } as any, 'extension');
+
+      expect(useChatStore.getState().servers).toEqual([]);
+      expect(useNotificationStore.getState().channelUnreads).toEqual({});
+      expect(useAuthStore.getState().user?.pubkey).toBe('userB');
+    });
+
+    it('setUser with same pubkey does NOT wipe client state', () => {
+      useAuthStore.getState().setUser({ pubkey: 'userA' } as any, 'extension');
+      seedStores();
+      useAuthStore.getState().setUser({ pubkey: 'userA' } as any, 'extension');
+
+      expect(useChatStore.getState().servers.length).toBe(1);
+    });
+
+    it('restoreSession resets when the returned pubkey differs from the cached one', async () => {
+      useAuthStore.getState().setUser({ pubkey: 'userA' } as any, 'extension');
+      seedStores();
+
+      const mockFetch = vi.fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({
+            pubkey: 'userB',
+            displayName: 'B',
+            picture: null,
+            nip05: null,
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({
+            pubkey: 'userB', displayName: 'B',
+            picture: null, nip05: null, about: null, banner: null, lud16: null, website: null,
+          }),
+        });
+      vi.stubGlobal('fetch', mockFetch);
+
+      await useAuthStore.getState().restoreSession();
+      expect(useChatStore.getState().servers).toEqual([]);
+      expect(useAuthStore.getState().user?.pubkey).toBe('userB');
+    });
   });
 });
