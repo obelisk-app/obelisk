@@ -1531,6 +1531,48 @@ export default function ChatPage() {
   const [showMemberList, setShowMemberList] = useState(true);
   const [showNotifications, setShowNotifications] = useState(false);
 
+  const voiceMainRef = useRef<HTMLDivElement>(null);
+  const VOICE_CHAT_MIN = 280;
+  const VOICE_CHAT_MAX = 720;
+  const [voiceChatWidth, setVoiceChatWidth] = useState(400);
+  useEffect(() => {
+    const saved = Number(localStorage.getItem('obelisk:voice-chat-width'));
+    if (saved >= VOICE_CHAT_MIN && saved <= VOICE_CHAT_MAX) setVoiceChatWidth(saved);
+  }, []);
+  // On open transition (closed→open), default to half the current voice area width.
+  const prevVoiceChatOpenRef = useRef(isVoiceChatOpen);
+  useEffect(() => {
+    const prev = prevVoiceChatOpenRef.current;
+    prevVoiceChatOpenRef.current = isVoiceChatOpen;
+    if (!prev && isVoiceChatOpen && voiceMainRef.current) {
+      const w = voiceMainRef.current.getBoundingClientRect().width;
+      const half = Math.max(VOICE_CHAT_MIN, Math.min(VOICE_CHAT_MAX, Math.round(w / 2)));
+      setVoiceChatWidth(half);
+      localStorage.setItem('obelisk:voice-chat-width', String(half));
+    }
+  }, [isVoiceChatOpen]);
+  const onVoiceChatResize = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = voiceChatWidth;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    const onMove = (ev: MouseEvent) => {
+      const delta = startX - ev.clientX;
+      const next = Math.max(VOICE_CHAT_MIN, Math.min(VOICE_CHAT_MAX, startW + delta));
+      setVoiceChatWidth(next);
+    };
+    const onUp = () => {
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      localStorage.setItem('obelisk:voice-chat-width', String((document.getElementById('voice-chat-rail') as HTMLElement | null)?.offsetWidth || 0));
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }, [voiceChatWidth]);
+
   // No valid session — show login modal with matrix background
   if (sessionInvalid) {
     return (
@@ -1833,7 +1875,7 @@ export default function ChatPage() {
               </div>
 
             <div className="flex-1 flex min-h-0">
-              <div className="flex-1 flex flex-col min-h-0 min-w-0 relative">
+              <div ref={voiceMainRef} className="flex-1 flex flex-col min-h-0 min-w-0 relative">
               {showSearchPane && (
                 <div className="absolute inset-0 z-30 flex flex-col bg-lc-black" data-testid="search-pane-overlay">
                   <SearchResultsPane
@@ -1938,9 +1980,18 @@ export default function ChatPage() {
                 user has toggled it open via the speech-bubble button. */}
             {activeChannel?.type === 'voice' && isVoiceChatOpen && (
               <aside
-                className="hidden md:flex w-80 border-l border-lc-border flex-col min-h-0"
+                id="voice-chat-rail"
+                style={{ width: voiceChatWidth }}
+                className="hidden md:flex relative my-2 mr-2 rounded-xl overflow-hidden border border-lc-border bg-lc-dark shadow-xl flex-col min-h-0 shrink-0"
                 data-testid="voice-chat-rail"
               >
+                <div
+                  onMouseDown={onVoiceChatResize}
+                  role="separator"
+                  aria-orientation="vertical"
+                  data-testid="voice-chat-resize-handle"
+                  className="absolute top-0 left-0 w-1 h-full cursor-col-resize hover:bg-lc-green/40 active:bg-lc-green/60 transition-colors z-20"
+                />
                 <header className="h-12 px-3 md:px-4 flex items-center justify-between border-b border-lc-border bg-lc-dark shrink-0">
                   <span className="flex items-center gap-2 min-w-0">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-lc-muted shrink-0">
@@ -1970,8 +2021,8 @@ export default function ChatPage() {
                 <MessageInput onSend={handleSend} onEditSave={handleEdit} onTyping={handleTyping} />
               </aside>
             )}
-            {/* Member list sidebar — hidden on mobile */}
-            {showMemberList && (
+            {/* Member list sidebar — hidden on mobile and in voice channels */}
+            {showMemberList && activeChannel?.type !== 'voice' && (
               <div className="hidden md:flex h-full">
                 <MemberList profileCache={profileCache} />
               </div>

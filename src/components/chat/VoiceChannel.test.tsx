@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import VoiceChannel from './VoiceChannel';
@@ -31,7 +31,7 @@ describe('VoiceChannel', () => {
 
   it('renders empty state with join button', () => {
     render(<VoiceChannel {...defaultProps} />);
-    expect(screen.getByText('Voice Channel — #voice-chat')).toBeInTheDocument();
+    expect(screen.getByText('voice-chat')).toBeInTheDocument();
     expect(screen.getByTestId('join-voice-btn')).toBeInTheDocument();
   });
 
@@ -178,6 +178,94 @@ describe('VoiceChannel', () => {
 
     render(<VoiceChannel {...defaultProps} />);
     expect(screen.queryByTestId('voice-controls')).not.toBeInTheDocument();
+  });
+
+  describe('speaking orb', () => {
+    it('is off when the participant is silent', () => {
+      useVoiceStore.setState({
+        currentVoiceChannelId: 'vc1',
+        voiceParticipants: [{ pubkey: 'pk1', muted: false, deafened: false, joinedAt: '' }],
+        speakingPubkeys: new Set<string>(),
+      });
+      render(<VoiceChannel {...defaultProps} />);
+      const avatar = screen.getByRole('img', { name: 'Alice' });
+      expect(avatar.className).not.toContain('ring-lc-green');
+    });
+
+    it('is on when the participant is speaking and unmuted', () => {
+      useVoiceStore.setState({
+        currentVoiceChannelId: 'vc1',
+        voiceParticipants: [{ pubkey: 'pk1', muted: false, deafened: false, joinedAt: '' }],
+        speakingPubkeys: new Set(['pk1']),
+      });
+      render(<VoiceChannel {...defaultProps} />);
+      const tile = screen.getByTestId('voice-participant');
+      expect(tile.className).toContain('ring-lc-green');
+    });
+
+    it('is suppressed when the participant is muted even if detector reports speaking', () => {
+      useVoiceStore.setState({
+        currentVoiceChannelId: 'vc1',
+        voiceParticipants: [{ pubkey: 'pk1', muted: true, deafened: false, joinedAt: '' }],
+        speakingPubkeys: new Set(['pk1']),
+      });
+      render(<VoiceChannel {...defaultProps} />);
+      const avatar = screen.getByRole('img', { name: 'Alice' });
+      expect(avatar.className).not.toContain('ring-lc-green');
+    });
+  });
+
+  describe('local per-user mute', () => {
+    it('renders the local-mute toggle on remote participants', () => {
+      useVoiceStore.setState({
+        currentVoiceChannelId: 'vc1',
+        voiceParticipants: [{ pubkey: 'pk1', muted: false, deafened: false, joinedAt: '' }],
+      });
+      render(<VoiceChannel {...defaultProps} />);
+      expect(screen.getByTestId('local-mute-btn')).toBeInTheDocument();
+    });
+
+    it('toggleLocalMute updates the store set on click', () => {
+      useVoiceStore.setState({
+        currentVoiceChannelId: 'vc1',
+        voiceParticipants: [{ pubkey: 'pk1', muted: false, deafened: false, joinedAt: '' }],
+      });
+      render(<VoiceChannel {...defaultProps} />);
+      expect(useVoiceStore.getState().localMutedPubkeys.has('pk1')).toBe(false);
+      // Use native .click() — jsdom's userEvent hit-test misses absolutely
+      // positioned buttons layered over the avatar container.
+      const btn = screen.getByTestId('local-mute-btn') as HTMLButtonElement;
+      btn.click();
+      expect(useVoiceStore.getState().localMutedPubkeys.has('pk1')).toBe(true);
+      btn.click();
+      expect(useVoiceStore.getState().localMutedPubkeys.has('pk1')).toBe(false);
+    });
+  });
+
+  describe('companion text chat toggle', () => {
+    it('renders the top-right chat toggle when chatSlot is provided', () => {
+      render(
+        <VoiceChannel
+          {...defaultProps}
+          chatSlot={<div>chat</div>}
+        />,
+      );
+      expect(screen.getByTestId('voice-chat-toggle')).toBeInTheDocument();
+    });
+
+    it('does not render the toggle when no chatSlot is passed', () => {
+      render(<VoiceChannel {...defaultProps} />);
+      expect(screen.queryByTestId('voice-chat-toggle')).not.toBeInTheDocument();
+    });
+
+    it('toggle opens the chat via isVoiceChatOpen flag', () => {
+      render(<VoiceChannel {...defaultProps} chatSlot={<div>chat</div>} />);
+      expect(useVoiceStore.getState().isVoiceChatOpen).toBe(false);
+      fireEvent.click(screen.getByTestId('voice-chat-toggle'));
+      expect(useVoiceStore.getState().isVoiceChatOpen).toBe(true);
+      // When open, the open-button is hidden; closing is done via the rail's close button at the page level.
+      expect(screen.queryByTestId('voice-chat-toggle')).not.toBeInTheDocument();
+    });
   });
 
   it('separates audio-only participants below video grid', () => {

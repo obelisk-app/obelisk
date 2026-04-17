@@ -1,9 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState, type ReactNode } from 'react';
 import { useVoiceStore } from '@/store/voice';
 import VoiceControls from './VoiceControls';
 import { shortNpub } from '@/lib/mentions';
+import ShootingStars from '@/components/ShootingStars';
+
+type VoiceStoreState = ReturnType<typeof useVoiceStore.getState>;
+type VoiceParticipantView = VoiceStoreState['voiceParticipants'][number];
 
 interface VoiceChannelProps {
   channelId: string;
@@ -17,6 +21,32 @@ interface VoiceChannelProps {
   onToggleScreenShare: () => void;
   canModerate?: boolean;
   onModAction?: (targetPubkey: string, action: 'mute' | 'camera-off' | 'screen-off') => void;
+  /**
+   * Optional companion chat. Voice channels are regular text-capable channels
+   * in the data model, so callers can pass the same MessageArea + MessageInput
+   * they render for text channels here.
+   */
+  chatSlot?: ReactNode;
+}
+
+/** Speaker icon with a slash when muted — used for the per-peer local mute button. */
+function LocalMuteIcon({ muted }: { muted: boolean }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+      {muted ? (
+        <>
+          <line x1="23" y1="9" x2="17" y2="15" />
+          <line x1="17" y1="9" x2="23" y2="15" />
+        </>
+      ) : (
+        <>
+          <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+        </>
+      )}
+    </svg>
+  );
 }
 
 /** Mounts an HTMLVideoElement into a container div */
@@ -78,18 +108,21 @@ function NameOverlay({ name, muted, deafened }: { name: string; muted?: boolean;
 }
 
 /** Compact audio-only participant (small avatar + name) */
-function AudioParticipantBadge({ pubkey, profile, muted, deafened }: {
+function AudioParticipantBadge({ pubkey, profile, muted, deafened, speaking, locallyMuted, onToggleLocalMute }: {
   pubkey: string;
   profile?: { name?: string; picture?: string };
   muted: boolean;
   deafened: boolean;
+  speaking: boolean;
+  locallyMuted: boolean;
+  onToggleLocalMute?: () => void;
 }) {
   const name = profile?.name || shortNpub(pubkey);
   return (
     <div
       className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${
-        muted ? 'bg-lc-dark border-lc-border' : 'bg-lc-dark border-lc-green/30'
-      }`}
+        speaking ? 'bg-lc-dark border-lc-green' : 'bg-lc-dark border-lc-border'
+      } ${locallyMuted ? 'opacity-60' : ''}`}
       data-testid="voice-participant"
     >
       {profile?.picture ? (
@@ -100,9 +133,9 @@ function AudioParticipantBadge({ pubkey, profile, muted, deafened }: {
         </div>
       )}
       <span className="text-xs text-lc-white font-medium truncate">{name}</span>
-      {(muted || deafened) && (
-        <span className="flex-shrink-0 ml-auto">
-          {deafened ? (
+      <span className="flex items-center gap-1 ml-auto flex-shrink-0">
+        {(muted || deafened) && (
+          deafened ? (
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round">
               <line x1="1" y1="1" x2="23" y2="23"/>
               <path d="M9 9v3a3 3 0 0 0 5.12 2.12"/>
@@ -113,9 +146,21 @@ function AudioParticipantBadge({ pubkey, profile, muted, deafened }: {
               <line x1="1" y1="1" x2="23" y2="23"/>
               <path d="M9 9v3a3 3 0 0 0 5.12 2.12"/>
             </svg>
-          )}
-        </span>
-      )}
+          )
+        )}
+        {onToggleLocalMute && (
+          <button
+            onClick={onToggleLocalMute}
+            className={`p-0.5 rounded transition-colors ${
+              locallyMuted ? 'text-red-400 hover:text-red-300' : 'text-lc-muted hover:text-lc-white'
+            }`}
+            title={locallyMuted ? 'Unmute for me' : 'Mute for me only'}
+            data-testid="local-mute-btn"
+          >
+            <LocalMuteIcon muted={locallyMuted} />
+          </button>
+        )}
+      </span>
     </div>
   );
 }
@@ -132,6 +177,7 @@ export default function VoiceChannel({
   onToggleScreenShare,
   canModerate = false,
   onModAction,
+  chatSlot,
 }: VoiceChannelProps) {
   const {
     currentVoiceChannelId,
@@ -150,10 +196,15 @@ export default function VoiceChannel({
     localScreenStream,
     focusedPubkey,
     limitNotice,
+    speakingPubkeys,
+    localMutedPubkeys,
+    isVoiceChatOpen: chatOpen,
   } = useVoiceStore();
 
-  const setFocusedPubkey = useVoiceStore((s) => s.setFocusedPubkey);
-  const setLimitNotice = useVoiceStore((s) => s.setLimitNotice);
+  const setFocusedPubkey = useVoiceStore((s: VoiceStoreState) => s.setFocusedPubkey);
+  const setLimitNotice = useVoiceStore((s: VoiceStoreState) => s.setLimitNotice);
+  const toggleLocalMute = useVoiceStore((s: VoiceStoreState) => s.toggleLocalMute);
+  const setVoiceChatOpen = useVoiceStore((s: VoiceStoreState) => s.setVoiceChatOpen);
   const isInThisChannel = currentVoiceChannelId === channelId;
 
   // Fetch participants when viewing a voice channel
@@ -184,7 +235,7 @@ export default function VoiceChannel({
   // We need to figure out which participant is "us" — the local user is the one not in remoteVideos
   // but who has isCameraOn. Since we don't have our own pubkey here, we use a heuristic:
   // if isCameraOn and localCameraStream exists, the participant NOT in remoteVideos is local.
-  const videoParticipants = voiceParticipants.filter((p) => {
+  const videoParticipants = voiceParticipants.filter((p: VoiceParticipantView) => {
     if (remoteVideos.has(p.pubkey)) return true;
     // Local user with camera
     if (isCameraOn && isInThisChannel && localCameraStream && !remoteVideos.has(p.pubkey)) {
@@ -199,16 +250,16 @@ export default function VoiceChannel({
   // we need to be smarter. Actually the heuristic above would match ALL non-remote participants
   // when camera is on. Let's fix: only the first non-remote participant is local.
   const localPubkey = isCameraOn && isInThisChannel && localCameraStream
-    ? voiceParticipants.find((p) => !remoteVideos.has(p.pubkey))?.pubkey
+    ? voiceParticipants.find((p: VoiceParticipantView) => !remoteVideos.has(p.pubkey))?.pubkey
     : null;
 
-  const videoParticipantsFinal = voiceParticipants.filter((p) => {
+  const videoParticipantsFinal = voiceParticipants.filter((p: VoiceParticipantView) => {
     if (remoteVideos.has(p.pubkey)) return true;
     if (p.pubkey === localPubkey) return true;
     return false;
   });
 
-  const audioOnlyParticipants = voiceParticipants.filter((p) => {
+  const audioOnlyParticipants = voiceParticipants.filter((p: VoiceParticipantView) => {
     if (remoteVideos.has(p.pubkey)) return false;
     if (p.pubkey === localPubkey) return false;
     return true;
@@ -317,7 +368,7 @@ export default function VoiceChannel({
   const renderVideoTile = (pubkey: string, isFocused: boolean) => {
     const profile = profileCache.get(pubkey);
     const name = profile?.name || shortNpub(pubkey);
-    const participant = voiceParticipants.find((p) => p.pubkey === pubkey);
+    const participant = voiceParticipants.find((p: VoiceParticipantView) => p.pubkey === pubkey);
     const isRemote = remoteVideos.has(pubkey);
     const remoteVideoEl = isRemote ? videoElements.get(pubkey) || null : null;
     const isLocal = pubkey === localPubkey;
@@ -381,38 +432,65 @@ export default function VoiceChannel({
   };
 
   // Is the focused pubkey actually a video participant?
-  const focusedIsVideo = focusedPubkey && videoParticipantsFinal.some((p) => p.pubkey === focusedPubkey);
-  const focusedIsScreen = focusedPubkey && screenSharers.some((s) => s.pubkey === focusedPubkey);
+  const focusedIsVideo = focusedPubkey && videoParticipantsFinal.some((p: VoiceParticipantView) => p.pubkey === focusedPubkey);
+  const focusedIsScreen = focusedPubkey && screenSharers.some((s: { pubkey: string }) => s.pubkey === focusedPubkey);
 
   return (
-    <div className="flex-1 flex flex-col min-h-0" data-testid="voice-channel">
+    <div className="flex-1 flex min-h-0 p-2 relative" data-testid="voice-channel">
+    {chatSlot && !chatOpen && (
+      <button
+        onClick={() => setVoiceChatOpen(true)}
+        style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 50 }}
+        className="p-2 rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors backdrop-blur shadow-lg"
+        title="Show chat"
+        data-testid="voice-chat-toggle"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+      </button>
+    )}
+    <div className="flex-1 flex flex-col min-h-0 bg-gradient-to-br from-indigo-950 via-indigo-900 to-violet-800 relative overflow-hidden rounded-xl border border-lc-border shadow-xl">
+      <div
+        className="absolute inset-0 z-0 pointer-events-none"
+        style={{
+          backgroundImage:
+            'linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px)',
+          backgroundSize: '60px 60px',
+        }}
+      />
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        <ShootingStars contained count={8} />
+      </div>
       {/* Error display */}
       {error && !isInThisChannel && (
-        <div className="px-6 pt-4">
+        <div className="relative z-10 px-6 pt-4">
           <p className="text-xs text-red-400 bg-red-600/10 px-3 py-2 rounded-lg text-center" data-testid="voice-join-error">{error}</p>
         </div>
       )}
 
       {/* Main content area */}
-      <div className="flex-1 overflow-y-auto p-3 sm:p-6">
+      <div className="relative z-10 flex-1 overflow-y-auto p-3 sm:p-6">
         {voiceParticipants.length === 0 && !isInThisChannel && (
           <div className="flex items-center justify-center h-full">
-            <div className="text-center text-lc-muted">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="mx-auto mb-4 opacity-30">
-                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                <line x1="12" y1="19" x2="12" y2="23"/>
-                <line x1="8" y1="23" x2="16" y2="23"/>
-              </svg>
-              <p className="text-lg font-medium mb-2">Voice Channel — #{channelName}</p>
-              <p className="text-sm mb-4">No one is here yet</p>
+            <div className="text-center">
+              <p className="text-2xl sm:text-3xl font-semibold text-white mb-2 flex items-center justify-center gap-2">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="opacity-80">
+                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                  <line x1="12" y1="19" x2="12" y2="23"/>
+                  <line x1="8" y1="23" x2="16" y2="23"/>
+                </svg>
+                <span>{channelName}</span>
+              </p>
+              <p className="text-sm text-white/70 mb-6">No one is in voice chat</p>
               <button
                 onClick={() => onJoin(channelId)}
                 disabled={isConnecting}
-                className="lc-pill-primary px-6 py-2.5 text-sm font-medium disabled:opacity-50"
+                className="bg-white hover:bg-white/90 text-lc-black px-6 py-2.5 rounded-full text-sm font-semibold transition-colors disabled:opacity-50"
                 data-testid="join-voice-btn"
               >
-                {isConnecting ? 'Connecting...' : 'Join Voice'}
+                {isConnecting ? 'Connecting...' : 'Join voice channel'}
               </button>
             </div>
           </div>
@@ -529,14 +607,14 @@ export default function VoiceChannel({
                   <div className="flex-1 min-w-0">
                     {renderVideoTile(focusedPubkey, true)}
                   </div>
-                  {videoParticipantsFinal.filter((p) => p.pubkey !== focusedPubkey).length > 0 && (
+                  {videoParticipantsFinal.filter((p: VoiceParticipantView) => p.pubkey !== focusedPubkey).length > 0 && (
                     <div
                       className="flex md:flex-col gap-2 md:gap-3 md:w-48 lg:w-56 md:max-h-[70vh] overflow-x-auto md:overflow-y-auto md:overflow-x-hidden flex-shrink-0"
                       data-testid="focus-thumbnails"
                     >
                       {videoParticipantsFinal
-                        .filter((p) => p.pubkey !== focusedPubkey)
-                        .map((p) => (
+                        .filter((p: VoiceParticipantView) => p.pubkey !== focusedPubkey)
+                        .map((p: VoiceParticipantView) => (
                           <div key={p.pubkey} className="w-40 md:w-full flex-shrink-0">
                             {renderVideoTile(p.pubkey, false)}
                           </div>
@@ -557,7 +635,7 @@ export default function VoiceChannel({
                       ? 'grid-cols-1 sm:grid-cols-2 max-w-3xl'
                       : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
                 }`} data-testid="video-grid">
-                  {videoParticipantsFinal.map((p) => renderVideoTile(p.pubkey, false))}
+                  {videoParticipantsFinal.map((p: VoiceParticipantView) => renderVideoTile(p.pubkey, false))}
                 </div>
               </div>
             )}
@@ -570,11 +648,24 @@ export default function VoiceChannel({
                 )}
                 <div className={anyVideoActive
                   ? 'flex flex-wrap gap-2'
-                  : 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4'
+                  : (() => {
+                      const n = audioOnlyParticipants.length;
+                      if (n === 1) return 'grid grid-cols-1 max-w-2xl mx-auto gap-3';
+                      if (n === 2) return 'grid grid-cols-1 md:grid-cols-2 gap-3';
+                      if (n <= 4) return 'grid grid-cols-2 gap-3';
+                      if (n <= 6) return 'grid grid-cols-2 md:grid-cols-3 gap-3';
+                      return 'grid grid-cols-3 md:grid-cols-4 gap-3';
+                    })()
                 }>
-                  {audioOnlyParticipants.map((participant) => {
+                  {audioOnlyParticipants.map((participant: VoiceParticipantView) => {
                     const profile = profileCache.get(participant.pubkey);
                     const name = profile?.name || shortNpub(participant.pubkey);
+                    // A muted peer can't legitimately be speaking — belt-and-suspenders
+                    // against a detector tick racing the mute state change.
+                    const speaking = speakingPubkeys.has(participant.pubkey) && !participant.muted;
+                    const locallyMuted = localMutedPubkeys.has(participant.pubkey);
+                    const isLocal = participant.pubkey === localPubkey;
+                    const toggle = isLocal ? undefined : () => toggleLocalMute(participant.pubkey);
 
                     if (anyVideoActive) {
                       // Compact badge when videos are active
@@ -585,55 +676,62 @@ export default function VoiceChannel({
                           profile={profile}
                           muted={participant.muted}
                           deafened={participant.deafened}
+                          speaking={speaking}
+                          locallyMuted={locallyMuted}
+                          onToggleLocalMute={toggle}
                         />
                       );
                     }
 
-                    // Original card layout when no videos
+                    // Discord-style large tile layout (no active video) — flat plain bg, no matrix.
                     return (
                       <div
                         key={participant.pubkey}
-                        className={`flex flex-col items-center p-4 rounded-xl border transition-colors ${
-                          participant.muted
-                            ? 'bg-lc-dark border-lc-border'
-                            : 'bg-lc-dark border-lc-green/30'
-                        }`}
+                        className={`relative aspect-video rounded-xl overflow-hidden transition-all bg-lc-dark ${
+                          speaking ? 'ring-2 ring-lc-green' : 'ring-1 ring-lc-border'
+                        } ${locallyMuted ? 'opacity-60' : ''}`}
                         data-testid="voice-participant"
                       >
-                        <div className="relative mb-2">
+                        <div className="absolute inset-0 flex items-center justify-center">
                           {profile?.picture ? (
                             <img
                               src={profile.picture}
                               alt={name}
-                              className={`w-16 h-16 rounded-full object-cover ${
-                                !participant.muted ? 'ring-2 ring-lc-green/50' : ''
-                              }`}
+                              className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover"
                             />
                           ) : (
-                            <div className={`w-16 h-16 rounded-full bg-lc-olive flex items-center justify-center text-lc-green text-lg font-semibold ${
-                              !participant.muted ? 'ring-2 ring-lc-green/50' : ''
-                            }`}>
+                            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-black/30 flex items-center justify-center text-lc-white text-2xl font-semibold">
                               {name[0]?.toUpperCase() || '?'}
                             </div>
                           )}
-                          {(participant.muted || participant.deafened) && (
-                            <div className="absolute -bottom-1 -right-1 bg-lc-dark border border-lc-border rounded-full p-1">
-                              {participant.deafened ? (
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round">
-                                  <line x1="1" y1="1" x2="23" y2="23"/>
-                                  <path d="M9 9v3a3 3 0 0 0 5.12 2.12"/>
-                                  <path d="M15 9.34V4a3 3 0 0 0-5.94-.6"/>
-                                </svg>
-                              ) : (
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round">
-                                  <line x1="1" y1="1" x2="23" y2="23"/>
-                                  <path d="M9 9v3a3 3 0 0 0 5.12 2.12"/>
-                                </svg>
-                              )}
-                            </div>
-                          )}
                         </div>
-                        <span className="text-xs text-lc-white font-medium text-center truncate w-full">{name}</span>
+                        {toggle && (
+                          <button
+                            onClick={toggle}
+                            className={`absolute top-2 right-2 p-1.5 rounded-full bg-black/40 backdrop-blur transition-colors ${
+                              locallyMuted ? 'text-red-400 hover:text-red-300' : 'text-lc-white/80 hover:text-lc-white'
+                            }`}
+                            title={locallyMuted ? 'Unmute for me' : 'Mute for me only'}
+                            data-testid="local-mute-btn"
+                          >
+                            <LocalMuteIcon muted={locallyMuted} />
+                          </button>
+                        )}
+                        <div className="absolute bottom-2 left-2 flex items-center gap-1.5 bg-black/60 backdrop-blur px-2 py-0.5 rounded-md">
+                          <span className="text-xs text-lc-white font-medium truncate max-w-[12rem]">{name}</span>
+                          {participant.deafened ? (
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round">
+                              <line x1="1" y1="1" x2="23" y2="23"/>
+                              <path d="M9 9v3a3 3 0 0 0 5.12 2.12"/>
+                              <path d="M15 9.34V4a3 3 0 0 0-5.94-.6"/>
+                            </svg>
+                          ) : participant.muted ? (
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round">
+                              <line x1="1" y1="1" x2="23" y2="23"/>
+                              <path d="M9 9v3a3 3 0 0 0 5.12 2.12"/>
+                            </svg>
+                          ) : null}
+                        </div>
                       </div>
                     );
                   })}
@@ -660,6 +758,7 @@ export default function VoiceChannel({
 
       {/* Voice controls bar */}
       {isInThisChannel && (
+        <div className="relative z-10">
         <VoiceControls
           isMuted={isMuted}
           isDeafened={isDeafened}
@@ -669,7 +768,12 @@ export default function VoiceChannel({
           onToggleCamera={onToggleCamera}
           onToggleScreenShare={onToggleScreenShare}
         />
+        </div>
       )}
+    </div>
+    {/* The chat rail is rendered at the page level (chat/page.tsx) so its
+        header can align with the outer channel title bar. `chatSlot` here
+        just signals the toggle button should appear. */}
     </div>
   );
 }
