@@ -447,6 +447,7 @@ export default function MessageArea({ profileCache, onDelete, onToggleReaction }
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const isNearBottomRef = useRef(true);
+  const [floatingDateLabel, setFloatingDateLabel] = useState<string | null>(null);
   const [reportTarget, setReportTarget] = useState<Message | null>(null);
   const [reportReason, setReportReason] = useState('');
   const [reportSending, setReportSending] = useState(false);
@@ -523,6 +524,19 @@ export default function MessageArea({ profileCache, onDelete, onToggleReaction }
       isNearBottomRef.current = near;
       setIsNearBottom(near);
     }
+    // Track topmost visible date separator for the floating label
+    const seps = container.querySelectorAll<HTMLElement>('[data-date-separator]');
+    const containerTop = container.getBoundingClientRect().top;
+    let current: string | null = null;
+    for (const sep of seps) {
+      const rect = sep.getBoundingClientRect();
+      if (rect.bottom <= containerTop + 8) {
+        current = sep.dataset.dateLabel || null;
+      } else {
+        break;
+      }
+    }
+    setFloatingDateLabel((prev) => (prev === current ? prev : current));
   }, [setIsNearBottom]);
 
   // Only auto-scroll if user is near the bottom
@@ -723,6 +737,15 @@ export default function MessageArea({ profileCache, onDelete, onToggleReaction }
       )}
 
 
+      {/* Floating date indicator while scrolling */}
+      {floatingDateLabel && (
+        <div className="absolute top-2 left-0 right-0 z-20 flex justify-center pointer-events-none">
+          <span className="pointer-events-auto px-3 py-1 rounded-full bg-lc-dark/95 border border-lc-border backdrop-blur-sm text-[10px] text-lc-muted uppercase tracking-wider font-semibold shadow-md">
+            {floatingDateLabel}
+          </span>
+        </div>
+      )}
+
       {/* Messages — scrollable */}
       <div
         ref={scrollContainerRef}
@@ -776,7 +799,11 @@ export default function MessageArea({ profileCache, onDelete, onToggleReaction }
                 return (
                     <Fragment key={msg.id}>
                         {showDate && (
-                            <div className="sticky top-0 z-20 flex items-center gap-2 px-4 py-3 bg-lc-black/90 backdrop-blur-sm">
+                            <div
+                                className="flex items-center gap-2 px-4 py-3"
+                                data-date-separator
+                                data-date-label={getDaySeparator(currentDate)}
+                            >
                                 <div className="flex-1 h-px bg-lc-border" />
                                 <span className="text-xs text-lc-muted uppercase tracking-wider font-semibold">
                                     {getDaySeparator(currentDate)}
