@@ -352,9 +352,9 @@ export default function MessageContent({ content }: { content: string }) {
       );
     },
     // Headings (limited like Discord)
-    h1({ children }) { return <p className="text-lg font-bold text-lc-white">{children}</p>; },
-    h2({ children }) { return <p className="text-base font-bold text-lc-white">{children}</p>; },
-    h3({ children }) { return <p className="text-sm font-bold text-lc-white">{children}</p>; },
+    h1({ children }) { return <p className="text-lg font-bold text-lc-white">{processChildren(children, mentions, serverEmojis)}</p>; },
+    h2({ children }) { return <p className="text-base font-bold text-lc-white">{processChildren(children, mentions, serverEmojis)}</p>; },
+    h3({ children }) { return <p className="text-sm font-bold text-lc-white">{processChildren(children, mentions, serverEmojis)}</p>; },
     // Text formatting
     strong({ children }) { return <strong className="font-bold text-lc-white">{processChildren(children, mentions, serverEmojis)}</strong>; },
     em({ children }) { return <em className="italic text-lc-white/80">{processChildren(children, mentions, serverEmojis)}</em>; },
