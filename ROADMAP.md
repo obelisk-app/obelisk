@@ -569,7 +569,6 @@ Despues de completar la experiencia Discord-like (Fases 1-6), construir un clien
       so the emoji is typed as part of the single name input (e.g.
       `💬 chat-general`), store it inline in `name`, and drop the separate
       `emoji` column in a follow-up migration.
-- [ ] ... three dots bug with the rendering of the active threads/subchannels of a user in a forum
 - [ ] scroll to last message button for when where are a lot of messages
 - [ ] button to scroll between mentions for when there are multiple mentions to the user in a chat, marking just those mentiosn as read and not so if the user did not finish reading, it does not mark completely read.
 - [ ] replies don't allow clicking and navigating to the message that is being replied, also they are showing mentions as npub:kjasdlfj instead of rendering the name of the mentioned account, though not make it clickable

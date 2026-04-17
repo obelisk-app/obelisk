@@ -216,3 +216,4 @@ await user.fetchProfile();
 - [ROADMAP.md](ROADMAP.md) — Development roadmap
 - [docs/wot-and-invite-credits.md](docs/wot-and-invite-credits.md) — WoT auto-registration + activity-based invite credits (anti-spam core)
 - [docs/uploads.md](docs/uploads.md) — `/uploads/<name>` storage, URL format, and access model (NOT auth-gated — unlisted-not-private)
+- [docs/cloudflare-tunnel.md](docs/cloudflare-tunnel.md) — `npm run dev:tunnel` exposes localhost:3000 at https://obelisk.fabri.lat

@@ -8,7 +8,7 @@ const localIPs = Object.values(networkInterfaces())
   .map((iface) => iface!.address);
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: localIPs,
+  allowedDevOrigins: [...localIPs, 'obelisk.fabri.lat'],
 };
 
 export default nextConfig;
