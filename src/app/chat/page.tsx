@@ -215,6 +215,16 @@ export default function ChatPage() {
       .catch(() => {});
   }, []);
 
+  // If the user disconnects mid-session (Navbar → Disconnect clears the auth
+  // store), bounce them to the landing page instead of leaving them on /chat
+  // where unauthenticated calls (e.g. Join Default Server) would 401.
+  useEffect(() => {
+    if (!sessionChecked) return;
+    if (!profile?.pubkey) {
+      router.push('/');
+    }
+  }, [sessionChecked, profile?.pubkey, router]);
+
   // On mount, validate session with backend. If no valid session, redirect to landing.
   useEffect(() => {
     if (sessionCheckStarted.current) return;

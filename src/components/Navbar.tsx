@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth';
 import { useTranslation } from '@/i18n/context';
 import LoginModal from './LoginModal';
@@ -28,6 +29,7 @@ export default function Navbar({ onLoginSuccess }: { onLoginSuccess?: () => void
   const [guidesOpen, setGuidesOpen] = useState(false);
   const { isConnected, profile, logout, syncProfile, isSyncing, restoreSession, _hasHydrated } = useAuthStore();
   const { t, locale } = useTranslation();
+  const router = useRouter();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -194,7 +196,7 @@ export default function Navbar({ onLoginSuccess }: { onLoginSuccess?: () => void
                         {isSyncing ? 'Syncing...' : 'Sync Profile'}
                       </button>
                       <button
-                        onClick={() => { logout(); setShowMenu(false); }}
+                        onClick={() => { logout(); setShowMenu(false); router.push('/'); }}
                         className="w-full p-3 text-left text-sm text-red-400 hover:bg-lc-border/50 transition flex items-center gap-2"
                       >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
