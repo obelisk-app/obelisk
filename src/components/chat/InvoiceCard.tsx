@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { parseBolt11, type ParsedInvoice } from '@/lib/bolt11';
 import { useChatStore } from '@/store/chat';
+import { useAuthStore } from '@/store/auth';
 import { formatPubkey } from '@/lib/nostr';
 
 interface Props {
@@ -22,6 +23,7 @@ interface PaidState {
  * flips the card to "Paid" for everyone via the `invoice-paid` socket event.
  */
 export default function InvoiceCard({ invoice, messageId, channelId }: Props) {
+  const myPubkey = useAuthStore((s) => s.user?.pubkey);
   const memberList = useChatStore((s) => s.memberList);
   const pushEphemeral = useChatStore((s) => s.pushEphemeral);
   const invoicePayments = useChatStore((s) => s.invoicePayments);
@@ -76,7 +78,7 @@ export default function InvoiceCard({ invoice, messageId, channelId }: Props) {
       });
       const d = await r.json().catch(() => ({}));
       if (r.ok) {
-        setPaid({ payerPubkey: 'me', paidAt: d.paidAt || new Date().toISOString() });
+        setPaid({ payerPubkey: myPubkey || '?', paidAt: d.paidAt || new Date().toISOString() });
       } else if (channelId) {
         const code = d.error as string | undefined;
         const msg =
@@ -87,13 +89,16 @@ export default function InvoiceCard({ invoice, messageId, channelId }: Props) {
           : `⚠️ No se pudo pagar (${code || r.status}).`;
         pushEphemeral(channelId, msg);
       }
+    } catch {
+      if (channelId) pushEphemeral(channelId, '⚠️ Error de red al intentar pagar.');
     } finally {
       setBusy(false);
     }
   };
 
   const payerName = paid
-    ? (memberList.find((m) => m.pubkey === paid.payerPubkey)?.displayName ?? formatPubkey(paid.payerPubkey))
+    ? (memberList.find((m) => m.pubkey === paid.payerPubkey)?.displayName
+       ?? (paid.payerPubkey.length === 64 ? formatPubkey(paid.payerPubkey) : null))
     : null;
 
   return (
