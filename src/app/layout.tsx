@@ -4,6 +4,7 @@ import Script from 'next/script';
 import { cookies } from 'next/headers';
 import { LocaleProvider } from '@/i18n/context';
 import type { Locale } from '@/i18n/index';
+import ToastStack from '@/components/ToastStack';
 import './globals.css';
 
 const inter = Inter({
@@ -163,6 +164,7 @@ export default async function RootLayout({
       <body className={`${inter.className} bg-lc-black text-lc-white antialiased`}>
         <LocaleProvider initialLocale={locale}>
           {children}
+          <ToastStack />
         </LocaleProvider>
       </body>
     </html>

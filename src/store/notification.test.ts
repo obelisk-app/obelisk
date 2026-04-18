@@ -11,7 +11,6 @@ describe('useNotificationStore', () => {
     expect(state.channelUnreads).toEqual({});
     expect(state.channelMentions).toEqual({});
     expect(state.dmUnreads).toEqual({});
-    expect(state.permissionGranted).toBe(false);
   });
 
   it('setChannelUnread sets count and mention flag', () => {
@@ -106,8 +105,4 @@ describe('useNotificationStore', () => {
     expect(useNotificationStore.getState().channelServerMap).toEqual({ ch1: 's1', ch2: 's1' });
   });
 
-  it('setPermission updates permission state', () => {
-    useNotificationStore.getState().setPermission(true);
-    expect(useNotificationStore.getState().permissionGranted).toBe(true);
-  });
 });

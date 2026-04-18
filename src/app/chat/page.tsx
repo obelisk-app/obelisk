@@ -51,7 +51,7 @@ import MemberList from '@/components/chat/MemberList';
 import LoginModal from '@/components/LoginModal';
 import ShootingStars from '@/components/ShootingStars';
 import { useNotificationStore } from '@/store/notification';
-import { requestNotificationPermission, showBrowserNotification } from '@/lib/browser-notifications';
+import { useToastStore } from '@/store/toast';
 import { useReadTracker } from '@/hooks/useReadTracker';
 import { useFaviconBadge } from '@/hooks/useFaviconBadge';
 import { subscribeBroadcast } from '@/lib/notification-broadcast';
@@ -386,14 +386,6 @@ export default function ChatPage() {
       window.removeEventListener('focus', refreshUnreads);
       window.removeEventListener('obelisk:unread-refresh', refreshUnreads as EventListener);
     };
-  }, [sessionChecked]);
-
-  // Request browser notification permission after login
-  useEffect(() => {
-    if (!sessionChecked) return;
-    requestNotificationPermission().then((granted) => {
-      useNotificationStore.getState().setPermission(granted);
-    });
   }, [sessionChecked]);
 
   // Fetch channels for the active server
@@ -968,9 +960,9 @@ export default function ChatPage() {
         message,
         profilePubkeyRef.current,
       );
-      if (incremented && document.hidden) {
+      if (incremented) {
         const title = hasMention ? 'New mention' : 'New message';
-        showBrowserNotification(title, message.content.slice(0, 140));
+        useToastStore.getState().pushToast({ title, body: message.content.slice(0, 140) });
       }
     });
 
@@ -1078,18 +1070,14 @@ export default function ChatPage() {
         if (data.postId) {
           notifStore.setPostMention(data.postId, true);
         }
-        if (document.hidden) {
-          const title = data.type === 'reply' ? 'New reply' : 'New mention';
-          const fallback = data.type === 'reply'
-            ? 'Someone replied to your message'
-            : 'You were mentioned in a message';
-          showBrowserNotification(title, data.preview || fallback);
-        }
+        const title = data.type === 'reply' ? 'New reply' : 'New mention';
+        const fallback = data.type === 'reply'
+          ? 'Someone replied to your message'
+          : 'You were mentioned in a message';
+        useToastStore.getState().pushToast({ title, body: data.preview || fallback });
       } else if (data.type === 'dm') {
         notifStore.setDMUnread(data.senderPubkey, (notifStore.dmUnreads[data.senderPubkey] || 0) + 1);
-        if (document.hidden) {
-          showBrowserNotification('New DM', data.preview || 'You have a new direct message');
-        }
+        useToastStore.getState().pushToast({ title: 'New DM', body: data.preview || 'You have a new direct message' });
       }
     });
 
@@ -1128,8 +1116,8 @@ export default function ChatPage() {
       // Toast non-mention messages too (mentions are handled by the
       // `notification` event above with richer copy). Only when hidden so
       // the foreground tab isn't spammed.
-      if (document.hidden && !data.hasMention) {
-        showBrowserNotification('New message', data.preview || 'You have a new message');
+      if (!data.hasMention) {
+        useToastStore.getState().pushToast({ title: 'New message', body: data.preview || 'You have a new message' });
       }
     });
 
@@ -1184,7 +1172,7 @@ export default function ChatPage() {
       try {
         const title = '¡Tu turno!';
         const body = `Es tu turno en ${data.type === 'tic-tac-toe' ? 'Tic-Tac-Toe' : data.type}`;
-        if (document.hidden) showBrowserNotification(title, body);
+        useToastStore.getState().pushToast({ title, body });
       } catch {}
     });
 
