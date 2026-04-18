@@ -412,7 +412,7 @@ export default function ChainReactionBoard({ game, myPubkey, onAction }: Props) 
       </div>
       {myColor && (
         <div className="text-center text-[11px] text-lc-muted">
-          Jugás con <span className={`font-semibold ${myColor.text}`}>●</span>
+          Jugás con <span className="font-semibold" style={{ color: myColor.hex }}>●</span>
         </div>
       )}
     </div>
