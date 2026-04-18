@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifySignedEvent } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { postWelcomeMessage } from '@/lib/welcome';
 
 /**
  * POST /api/auth/verify — verify a signed Nostr challenge and issue a session.
@@ -49,7 +50,28 @@ export async function POST(req: NextRequest) {
               role: 'member'
             }
           });
+
+          const existingChannels = await prisma.channel.findMany({
+            where: { serverId: settings.defaultServerId, type: { in: ['text', 'forum'] } },
+            select: { id: true },
+          });
+          if (existingChannels.length > 0) {
+            const now = new Date();
+            await prisma.channelReadState.createMany({
+              data: existingChannels.map((c) => ({
+                channelId: c.id,
+                pubkey,
+                lastReadAt: now,
+              })),
+              skipDuplicates: true,
+            });
+          }
+
           console.log(`[auth] auto-joined new user ${pubkey} to default server ${settings.defaultServerId}`);
+
+          void postWelcomeMessage(settings.defaultServerId, pubkey).catch((err) => {
+            console.warn('[auth] postWelcomeMessage failed:', err);
+          });
         }
       }
     }

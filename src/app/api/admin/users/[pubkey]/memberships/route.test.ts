@@ -4,12 +4,13 @@ import { NextRequest } from 'next/server';
 vi.mock('@/lib/db', () => ({
   prisma: {
     server: { findMany: vi.fn(), findUnique: vi.fn() },
-    member: { findMany: vi.fn(), upsert: vi.fn(), deleteMany: vi.fn() },
+    member: { findMany: vi.fn(), findUnique: vi.fn(), upsert: vi.fn(), deleteMany: vi.fn() },
     moderationAction: { create: vi.fn() },
   },
 }));
 vi.mock('@/lib/api-auth', () => ({ getAuthPubkey: vi.fn() }));
 vi.mock('@/lib/auth', () => ({ validateSession: vi.fn() }));
+vi.mock('@/lib/welcome', () => ({ postWelcomeMessage: vi.fn().mockResolvedValue(null) }));
 
 import { GET, POST, DELETE } from './route';
 import { prisma } from '@/lib/db';
@@ -107,6 +108,7 @@ describe('cross-server memberships endpoint', () => {
     it('upserts the Member row for instance owner', async () => {
       mockGetAuth.mockResolvedValue('instance-pk');
       mockPrisma.server.findUnique.mockResolvedValue({ id: 's1', ownerPubkey: 'someone' });
+      mockPrisma.member.findUnique.mockResolvedValue(null);
       mockPrisma.member.upsert.mockResolvedValue({
         pubkey: VALID_PUBKEY, role: 'mod',
       });
@@ -116,6 +118,23 @@ describe('cross-server memberships endpoint', () => {
       expect(res.status).toBe(200);
       expect(mockPrisma.member.upsert).toHaveBeenCalled();
       expect(mockPrisma.moderationAction.create).toHaveBeenCalled();
+    });
+
+    it('fires welcome message only when the member is newly created', async () => {
+      mockGetAuth.mockResolvedValue('instance-pk');
+      mockPrisma.server.findUnique.mockResolvedValue({ id: 's1', ownerPubkey: 'someone' });
+      mockPrisma.member.upsert.mockResolvedValue({ pubkey: VALID_PUBKEY, role: 'mod' });
+      mockPrisma.moderationAction.create.mockResolvedValue({});
+      const { postWelcomeMessage } = await import('@/lib/welcome');
+
+      mockPrisma.member.findUnique.mockResolvedValueOnce(null);
+      await POST(makeRequest('POST', '', { serverId: 's1', role: 'mod' }), { params });
+      expect(postWelcomeMessage).toHaveBeenCalledWith('s1', VALID_PUBKEY.toLowerCase());
+
+      (postWelcomeMessage as any).mockClear();
+      mockPrisma.member.findUnique.mockResolvedValueOnce({ pubkey: VALID_PUBKEY.toLowerCase() });
+      await POST(makeRequest('POST', '', { serverId: 's1', role: 'admin' }), { params });
+      expect(postWelcomeMessage).not.toHaveBeenCalled();
     });
   });
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthPubkey } from '@/lib/api-auth';
 import { isInstanceOwner } from '@/lib/instance-owner';
+import { postWelcomeMessage } from '@/lib/welcome';
 
 /**
  * Cross-server membership management — instance owner only.
@@ -117,6 +118,11 @@ export async function POST(
     return NextResponse.json({ error: 'Server not found' }, { status: 404 });
   }
 
+  const existingBefore = await prisma.member.findUnique({
+    where: { serverId_pubkey: { serverId, pubkey: pubkey.toLowerCase() } },
+    select: { pubkey: true },
+  });
+
   const member = await prisma.member.upsert({
     where: { serverId_pubkey: { serverId, pubkey: pubkey.toLowerCase() } },
     update: { role: requestedRole },
@@ -126,6 +132,12 @@ export async function POST(
       role: requestedRole,
     },
   });
+
+  if (!existingBefore) {
+    void postWelcomeMessage(serverId, pubkey.toLowerCase()).catch((err) => {
+      console.warn('[admin/memberships] postWelcomeMessage failed:', err);
+    });
+  }
 
   await prisma.moderationAction.create({
     data: {
