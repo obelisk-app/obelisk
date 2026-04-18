@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/obelisk-md.gif" alt="Obelisk" width="100%" style="max-height: 320px; object-fit: cover;" />
+  <img src="public/obelisk-md.gif" alt="Obelisk" width="50%" style="max-height: 320px; object-fit: cover;" />
 </p>
 
 <h1 align="center">Obelisk</h1>
