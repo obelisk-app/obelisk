@@ -840,7 +840,7 @@ export function UserPanel() {
               />
             )}
           </div>
-          <div className="flex-1 min-w-0 text-left">
+          <div className="flex-1 min-w-0 text-left leading-tight">
             <div className="text-sm font-medium text-lc-white truncate">
               {profile?.displayName || profile?.name || 'Anon'}
             </div>
@@ -1198,8 +1198,7 @@ export default function ChannelSidebar({ onChannelSelect }: { onChannelSelect?: 
 
       {/* Persistent voice call controls — visible while connected, regardless of which channel the user is browsing. */}
       <VoiceStatusBar />
-      {/* UserPanel intentionally moved out of ChannelSidebar — now rendered
-          as a sibling row in `/chat` layout so the bar spans across ServerBar. */}
+      <UserPanel />
       <ResizeHandle onResize={handleResize} />
     </aside>
   );

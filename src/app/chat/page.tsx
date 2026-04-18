@@ -1916,8 +1916,6 @@ export default function ChatPage() {
             <ChannelSidebar onChannelSelect={() => setSidebarOpen(false)} />
           )}
         </div>
-        {/* Bottom user bar spans the full sidebar width (ServerBar + ChannelSidebar) */}
-        <UserPanel />
       </div>
 
       {/* Main content area */}
