@@ -165,6 +165,12 @@
 - [x] Canales de voz — audio (via mediasoup WebRTC SFU)
 - [x] Canales de voz — video y screen sharing
 - [ ] Canales de voz — chat dentro del canal de voz
+- [ ] **Canales de voz — E2EE sobre SFU (insertable streams)**
+  - [ ] En modo `sfu` (LiveKit) el media se re-encripta en el SFU — el server ve frames en claro. En modo `mesh` ya es efectivamente E2E (media P2P, server solo relay de signaling).
+  - [ ] Activar LiveKit E2EE via insertable streams (WebCrypto frame encryption) para que el SFU solo reenvie ciphertext
+  - [ ] Derivacion de clave por canal — opcion 1: passphrase compartida; opcion 2: key exchange por Nostr (NIP-44) entre participantes al unirse
+  - [ ] Toggle por canal: `Channel.voiceE2EE` (bool) — admin decide si el canal requiere E2EE (solo aplica a `voiceMode: 'sfu'`)
+  - [ ] UI: badge "E2EE" en el header del canal de voz cuando esta activo + indicador de key mismatch si un peer no puede desencriptar
 - [ ] **Canales de voz — modo "town hall" / llamadas masivas con raise hand**
   - [ ] Nuevo tipo de permiso por canal de voz: `voiceMode` = `open` (todos hablan, actual) | `moderated` (raise-hand)
   - [ ] En modo `moderated`: los participantes entran muteados a nivel de servidor y sin poder desmutearse por su cuenta
