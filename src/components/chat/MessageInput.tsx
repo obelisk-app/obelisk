@@ -14,6 +14,7 @@ import MentionAutocomplete from './MentionAutocomplete';
 import EmojiPicker from './EmojiPicker';
 import GifPicker from './GifPicker';
 import EmojiAutocomplete, { type ShortcodeSuggestion } from './EmojiAutocomplete';
+import SlashCommandAutocomplete, { SLASH_COMMANDS, type SlashCommand } from './SlashCommandAutocomplete';
 import {
   MAX_ATTACHMENTS_PER_MESSAGE,
   splitContentForEditing,
@@ -108,6 +109,15 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
     [shortcodeQuery, serverEmojis],
   );
 
+  // Slash-command autocomplete — triggered when the entire input (trimmed
+  // of trailing space) is `/…` with only word chars after the slash.
+  const [slashQuery, setSlashQuery] = useState<string | null>(null);
+  const [slashIndex, setSlashIndex] = useState(0);
+  const slashResults = useMemo<SlashCommand[]>(
+    () => slashQuery === null ? [] : SLASH_COMMANDS.filter((c) => c.name.startsWith(slashQuery.toLowerCase())),
+    [slashQuery],
+  );
+
   const allChannels = [
     ...pinnedChannels,
     ...categories.flatMap(c => c.channels),
@@ -190,6 +200,43 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
     if (uploading) return;
     const payload = buildPayload();
     if (!payload) return;
+
+    // `/jugar [tipo]` — intercepts the message and launches the games picker
+    // (or creates a game directly when a known type is provided).
+    const jugar = /^\/jugar(?:\s+([\w-]+))?\s*$/i.exec(payload.trim());
+    if (jugar) {
+      const type = jugar[1];
+      // Dynamic import keeps the Nostr/chat bundle light.
+      import('@/store/games').then(({ useGamesStore }) => {
+        if (type) {
+          fetch('/api/games', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type, channelId: activeChannelId }),
+          }).then(async (res) => {
+            if (!res.ok) {
+              const d = await res.json().catch(() => ({}));
+              alert(d.error || 'No se pudo crear el juego');
+              return;
+            }
+            const d = await res.json();
+            if (d.game) {
+              useGamesStore.getState().upsertGame(d.game);
+              useGamesStore.getState().setFullscreenGame(d.game.id);
+              useGamesStore.getState().setGameChatOpen(true);
+            }
+          });
+        } else {
+          useGamesStore.getState().setPickerOpen({ channelId: activeChannelId });
+        }
+      });
+      setContent('');
+      setAttachments([]);
+      setUploadError(null);
+      mentionMapRef.current = new Map();
+      if (textareaRef.current) textareaRef.current.style.height = 'auto';
+      return;
+    }
 
     if (editingMessage && onEditSave) {
       onEditSave(editingMessage.id, payload);
@@ -308,6 +355,31 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
       }
     }
 
+    // Slash-command autocomplete navigation
+    if (slashQuery !== null && slashResults.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSlashIndex((i) => (i + 1) % slashResults.length);
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSlashIndex((i) => (i - 1 + slashResults.length) % slashResults.length);
+        return;
+      }
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault();
+        const picked = slashResults[slashIndex];
+        if (picked) insertSlashCommand(picked);
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setSlashQuery(null);
+        return;
+      }
+    }
+
     // Mention autocomplete navigation
     if (mentionQuery !== null && mentionListLength > 0) {
       if (e.key === 'ArrowDown') {
@@ -383,6 +455,30 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
     } else {
       setShortcodeQuery(null);
     }
+
+    // Detect slash-command: the input begins with `/` followed by word chars,
+    // with no whitespace yet. Closes as soon as a space is typed (the command
+    // has been chosen) or the slash is removed.
+    const slashMatch = /^\/([a-zA-Z]*)$/.exec(val);
+    if (slashMatch) {
+      setSlashQuery(slashMatch[1]);
+      setSlashIndex(0);
+    } else {
+      setSlashQuery(null);
+    }
+  };
+
+  const insertSlashCommand = (cmd: SlashCommand) => {
+    const next = `/${cmd.name} `;
+    setContent(next);
+    setSlashQuery(null);
+    requestAnimationFrame(() => {
+      const ta = textareaRef.current;
+      if (ta) {
+        ta.focus();
+        ta.setSelectionRange(next.length, next.length);
+      }
+    });
   };
 
   const insertAtCursor = (text: string) => {
@@ -669,6 +765,16 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
           selectedIndex={mentionIndex}
           showEveryone={showEveryone}
           onSelectEveryone={insertEveryone}
+        />
+      )}
+
+      {/* Slash-command autocomplete */}
+      {slashQuery !== null && slashResults.length > 0 && (
+        <SlashCommandAutocomplete
+          commands={slashResults}
+          selectedIndex={slashIndex}
+          onSelect={insertSlashCommand}
+          onClose={() => setSlashQuery(null)}
         />
       )}
 

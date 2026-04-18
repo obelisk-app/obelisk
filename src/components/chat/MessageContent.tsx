@@ -171,6 +171,15 @@ function renderWithMentions(
 const WELCOME_BANNER_MD_REGEX = /!\[([^\]]*)\]\(([^)\s]*\/api\/welcome-banner[^)\s]*)\)/;
 
 export default function MessageContent({ content }: { content: string }) {
+  // Game embed: `[[game:<id>]]` markers render as a live card showing
+  // participant count, status, and final result.
+  const gameMatch = /^\[\[game:([a-z0-9]+)\]\]$/i.exec(content.trim());
+  if (gameMatch) {
+    // Lazy require to avoid a circular import at module load.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const GameEmbedCard = require('@/components/games/GameEmbedCard').default;
+    return <GameEmbedCard gameId={gameMatch[1]} />;
+  }
   const { memberList, serverEmojis } = useChatStore();
 
   // Hoist image + video + audio URLs out of the message body so we can
