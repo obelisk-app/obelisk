@@ -1,0 +1,116 @@
+---
+title: Un admin CLI que cualquier agente de coding puede driveaer
+description: Obelisk trae un CLI de admin headless que se autentica con su propia clave Nostr y habla con la misma API HTTP que usa el panel /admin. Dale una cuenta admin a tu agente de Claude Code, Codex o Cursor y puede correr tu servidor de punta a punta.
+heroComponent: admin-cli
+publishedAt: '2026-04-18'
+updatedAt: '2026-04-18'
+tags: [admin, cli, agentes, nostr, automation]
+---
+
+## Por qué un CLI, y por qué pensado para agentes
+
+Mantener una comunidad es trabajo. Crear canales, configurar permisos de roles, banear spammers, rotar config de bots, sincronizar descripciones de tópicos, exportar reportes — todas cosas que tiene todo el sentido clickear una vez en el panel, y ningún sentido clickear cien veces.
+
+El panel de admin de Obelisk, por debajo, es una API HTTP. Así que shipeamos un CLI que habla directo con esa API. Lo corrés desde tu shell, desde un script, desde cron — o desde un agente de coding de IA trabajando por un admin real.
+
+Eso último es lo interesante. Claude Code, Codex, Cursor, Aider, Devin — todo agente CLI serio ya puede invocar `npm run admin -- ...`. La pregunta es si lo que hay del otro lado es seguro de drivear. La respuesta de Obelisk es sí, por dos propiedades:
+
+1. **El CLI se loguea con su propia clave Nostr.** No la tuya. Un nsec separado (o un bunker NIP-46) que vos generás para el agente. Vos decidís qué rol tiene esa clave en qué servidor.
+2. **Los chequeos de rol son del lado del servidor.** El CLI no tiene privilegio propio. Habla la misma API que habla el browser, pasando por los mismos `requireRole()`. Si la clave del agente no es admin en un servidor, el CLI recibe un 403 limpio. No hay puertas traseras.
+
+<Callout type="note" title="El agente es un usuario, no un superusuario">
+Hay quien asume que "admin CLI" significa "una herramienta que saltea las reglas". Esta hace lo opuesto. Respeta cada regla que respeta el panel web, porque pasa por las mismas rutas. Lo que lo hace útil para agentes no es el privilegio elevado — es que sea *scripteable*.
+</Callout>
+
+## Cómo se autentica
+
+<Diagram name="auth-flow" caption="El mismo challenge-response que la web app: el servidor emite un nonce, el cliente lo firma con Nostr, el servidor setea una cookie de sesión." />
+
+El flujo de login es idéntico al del browser:
+
+1. `POST /api/auth/challenge` — el servidor devuelve un challenge aleatorio.
+2. El CLI firma un evento Nostr kind-27235 con ese challenge como content.
+3. `POST /api/auth/verify` — el servidor verifica la firma, setea una cookie `session`.
+4. La cookie se persiste en `~/.config/obelisk-cli/session.json` (modo 0600).
+
+Como es auth Nostr, el mismo CLI sirve contra cualquier deployment de Obelisk. Apuntalo a tu dev, a tu tunnel, a tu URL de producción — el protocolo es idéntico. Para producción, preferí un bunker NIP-46 para que la clave nunca viva en la máquina que corre el CLI.
+
+## Qué puede hacer una cuenta admin driveada por un agente
+
+El rol que tenga la clave del agente en el servidor determina todo. Un setup típico le da al agente **admin** en los servidores que querés que administre. Con admin puede:
+
+- Crear, editar, borrar canales y categorías
+- Crear y asignar roles custom
+- Kick, ban, unban de miembros
+- Manejar emojis, GIFs, config de bots, mensajes de sistema
+- Cambiar settings operativos del servidor: canal de bienvenida, locale de bienvenida, landing channel, banner
+
+Lo que no puede hacer — porque los *admins* no pueden — es tocar la identidad del servidor (nombre, icono, límites de upload, MIME allowlist), promover gente a admin, o borrar el servidor. Eso queda **solo para el owner**, y el owner es una decisión humana. Si el agente necesita algo por encima de su rango, recibe un 403 y puede preguntarte.
+
+## Un día típico
+
+```bash
+# El agente hereda un nsec scoped a esta comunidad
+export OBELISK_NSEC=$(cat ~/.config/obelisk-cli/agent.nsec)
+export OBELISK_URL=https://obelisk.example.com
+
+npm run admin -- login
+npm run admin -- whoami
+npm run admin -- servers list
+
+# Crear un tópico nuevo
+npm run admin -- channels create <serverId> \
+  --payload '{"name":"lightning-talk","type":"text","description":"⚡ discusión"}'
+
+# Archivar uno viejo
+npm run admin -- channels edit <channelId> --patch '{"archived":true}'
+
+# Rotar el mensaje de bienvenida
+npm run admin -- server edit <serverId> \
+  --patch '{"welcomeChannelId":"<newId>","welcomeLocale":"es"}'
+
+# Banear a un spammer
+npm run admin -- members ban <serverId> <pubkey> --reason "spam de bots"
+```
+
+Para cualquier cosa que todavía no esté wrapeada como subcomando, hay un escape:
+
+```bash
+npm run admin -- exec GET  /api/admin/emojis?serverId=abc
+npm run admin -- exec POST /api/admin/emojis?serverId=abc \
+  --body '{"name":"obelisk","url":"https://..."}'
+```
+
+Verbos HTTP planos, bodies JSON planos, status codes planos. Fácil para un humano, más fácil para un modelo.
+
+## Conectándolo a un agente de coding
+
+Apuntá al agente a `scripts/admin-cli/AGENT.md` — un cheat sheet corto escrito para agentes, no para humanos. Lista los verbos, los shapes canónicos de payload, y el rol que cada acción necesita. El loop típico del agente:
+
+1. Leer `AGENT.md`, cachear la superficie de comandos.
+2. Correr `whoami` para confirmar identidad y rol en el servidor objetivo.
+3. Llamar al subcomando (o `exec` para endpoints no wrapeados).
+4. Parsear el JSON de respuesta. Ante un 403, explicar el blocker al humano y parar — no escalar.
+
+Ese último punto importa. El agente no tiene forma de escalar; el servidor se lo rechazaría. El peor caso de un agente confundido manejando una clave admin es "intentó hacer algo que no podía y recibió un 403 amable". No se filtran secretos de prod, no hay escalada silenciosa.
+
+## Notas de seguridad
+
+- **Un nsec por agente por ambiente.** No reutilices tu nsec personal, y no reutilices el de prod en un dev box.
+- **Preferí bunkers NIP-46 en producción.** La clave vive en tu signer. El host del CLI puede ser comprometido sin filtrar la clave.
+- **Mínimo privilegio.** Empezá al agente en `member` o `mod`. Promovelo a `admin` sólo en los servidores que lo necesitan. `owner` casi nunca debería pertenecer a un agente.
+- **Audit log.** Cada acción privilegiada pasa por el mismo pipeline de moderación/auditoría que las del panel web, así que ves qué hizo el agente y cuándo.
+- **El archivo de sesión es sensible.** No lo commitees, no lo copies entre hosts. Es modo 0600 por algo.
+
+## Qué habilita esto
+
+La capacidad interesante no es "una IA ahora puede banear un usuario". Es que el mismo agente con el que ya hacés pair-programming puede manejar la infra de tu comunidad — crear el canal de la feature que está construyendo, postear los release notes, asignar el rol de beta-tester, revocarlo cuando termina el test — sin que vos tengas que salir del loop de código. El panel de admin pasa de "una pestaña a la que alt-tabeo" a "algo que mi dev loop puede hacer".
+
+Ese es el punto.
+
+## Referencias
+
+- `scripts/admin-cli/README.md` — referencia completa de comandos y matriz de roles
+- `scripts/admin-cli/AGENT.md` — cheat sheet terso para agentes de IA
+- `src/lib/auth-roles.ts` — jerarquía de roles autoritativa
+- `docs/admin-cli.md` — guía de deployment / ops

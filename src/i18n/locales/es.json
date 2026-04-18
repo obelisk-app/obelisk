@@ -18,6 +18,10 @@
   "learn.card.webOfTrust.desc": "Cómo frenamos el spam sin CAPTCHAs, emails ni números de teléfono.",
   "learn.card.futureNostrRelays.title": "El futuro son los relays",
   "learn.card.futureNostrRelays.desc": "Grupos NIP-29 y el camino para jubilar el servidor centralizado.",
+  "learn.card.bitcoinZaps.title": "Zaps de Bitcoin en el chat",
+  "learn.card.bitcoinZaps.desc": "Mandá sats desde cualquier mensaje vía Nostr Wallet Connect. Sin wallet custodial, sin fee de plataforma.",
+  "learn.card.adminCli.title": "Admin CLI para agentes de IA",
+  "learn.card.adminCli.desc": "Un admin client scripteable que se loguea con su propio nsec — así Claude Code, Codex o Cursor corren tu servidor.",
 
   "faq.heading": "Preguntas frecuentes",
   "faq.subtitle": "Respuestas cortas a lo que la gente pregunta antes de registrarse.",
@@ -62,6 +66,10 @@
   "features.selfHosted.desc": "Corré tu propio servidor con Docker. Tus datos, tus reglas. Sin intermediarios corporativos.",
   "features.spamResistant.title": "Web of Trust, no CAPTCHAs",
   "features.spamResistant.desc": "Filtro Anti-Kuka y Comedores de Empanada: las cuentas nuevas pasan por el grafo social Nostr de tu servidor. Entran personas reales, no bots. Sin CAPTCHAs, sin KYC, sin número de teléfono.",
+  "features.zaps.title": "Zaps de Bitcoin en el chat",
+  "features.zaps.desc": "Mandá sats a cualquiera, en cualquier canal, sin salir de la conversación. Conectá tu wallet Lightning via Nostr Wallet Connect (NIP-47): la cadena de conexión se cifra del lado del cliente, y vos definís el presupuesto por usuario.",
+  "features.adminCli.title": "Admin CLI para agentes de IA",
+  "features.adminCli.desc": "Todo lo que hace el panel /admin, pero scripteable. El CLI entra con su propio nsec (o bunker NIP-46) y habla contra la misma API HTTP — así Claude Code, Codex, Cursor o cualquier otro agente de CLI puede administrar servidores, roles, canales, bans y bots de punta a punta.",
 
   "steps.heading": "Tres pasos",
   "steps.subtitle": "Sin formularios. Sin verificación de email. Solo claves.",
@@ -88,7 +96,9 @@
   "roadmap.phase3.title": "Avanzado",
   "roadmap.phase3.items": "Subida de archivos y búsqueda|Integraciones con bots|Perfiles de app",
   "roadmap.phase4.title": "Pulido y Lanzamiento",
-  "roadmap.phase4.items": "PWA y notificaciones push|Temas personalizados|Deploy a producción",
+  "roadmap.phase4.items": "PWA y notificaciones push|Temas personalizados|Deploy a producción|Admin CLI (scripteable por agentes de IA)",
+  "roadmap.phase6.title": "Lightning Zaps",
+  "roadmap.phase6.items": "Conexión de wallet via NWC (NIP-47)|Zaps entre usuarios en el chat|Emoji zaps y leaderboards (próximo)",
   "roadmap.phase5.title": "Grupos nativos en Nostr",
   "roadmap.phase5.items": "Canales públicos NIP-28 sobre Nostr|Servidores gestionados por relay NIP-29 (sin DB de Obelisk)|Grupos privados gift-wrapped NIP-59|Retirar Postgres centralizado",
 

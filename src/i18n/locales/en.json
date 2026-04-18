@@ -18,6 +18,10 @@
   "learn.card.webOfTrust.desc": "How we stop spam without CAPTCHAs, emails, or phone numbers.",
   "learn.card.futureNostrRelays.title": "The future is relays",
   "learn.card.futureNostrRelays.desc": "NIP-29 groups and the path to sunset the centralized server.",
+  "learn.card.bitcoinZaps.title": "Bitcoin zaps in chat",
+  "learn.card.bitcoinZaps.desc": "Send sats from any message via Nostr Wallet Connect. No custodial wallet, no platform fee.",
+  "learn.card.adminCli.title": "Admin CLI for AI agents",
+  "learn.card.adminCli.desc": "A scriptable admin client that logs in with its own nsec — so Claude Code, Codex, or Cursor can run your server.",
 
   "faq.heading": "Frequently Asked Questions",
   "faq.subtitle": "Short answers to what people ask before signing up.",
@@ -62,6 +66,10 @@
   "features.selfHosted.desc": "Run your own server with Docker. Your data, your rules. No corporate middlemen.",
   "features.spamResistant.title": "Web of Trust, not CAPTCHAs",
   "features.spamResistant.desc": "New accounts are filtered through your server's Nostr social graph. Real people get in; spam bots don't. No CAPTCHAs, no KYC, no phone number.",
+  "features.zaps.title": "Bitcoin zaps in chat",
+  "features.zaps.desc": "Send sats to anyone, anywhere, without leaving the conversation. Connect your Lightning wallet via Nostr Wallet Connect (NIP-47) — the connection string is encrypted client-side, and you set per-user spend budgets.",
+  "features.adminCli.title": "Admin CLI for AI agents",
+  "features.adminCli.desc": "Every admin action the web UI can do, scriptable. The CLI logs in with its own nsec (or NIP-46 bunker) and hits the same HTTP API — so Claude Code, Codex, Cursor, or any other agent can run servers, roles, channels, bans, and bots end-to-end.",
 
   "steps.heading": "Three steps",
   "steps.subtitle": "No signup forms. No email verification. Just keys.",
@@ -88,7 +96,9 @@
   "roadmap.phase3.title": "Advanced",
   "roadmap.phase3.items": "File uploads & search|Bot integrations|App profiles",
   "roadmap.phase4.title": "Polish & Launch",
-  "roadmap.phase4.items": "PWA & push notifications|Custom themes|Production deploy",
+  "roadmap.phase4.items": "PWA & push notifications|Custom themes|Production deploy|Admin CLI (scriptable by AI coding agents)",
+  "roadmap.phase6.title": "Lightning Zaps",
+  "roadmap.phase6.items": "Wallet connect via NWC (NIP-47)|User-to-user zaps in chat|Emoji zaps & leaderboards (upcoming)",
   "roadmap.phase5.title": "Nostr-native groups",
   "roadmap.phase5.items": "NIP-28 public channels on Nostr|NIP-29 relay-managed servers (no Obelisk DB)|NIP-59 gift-wrapped private groups|Retire centralized Postgres",
 

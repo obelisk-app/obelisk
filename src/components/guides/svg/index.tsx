@@ -3,6 +3,8 @@ import WhatIsObeliskHero from './WhatIsObeliskHero';
 import HowObeliskWorksHero from './HowObeliskWorksHero';
 import WotHero from './WotHero';
 import FutureRelaysHero from './FutureRelaysHero';
+import BitcoinZapsHero from './BitcoinZapsHero';
+import AdminCliHero from './AdminCliHero';
 import AuthFlowDiagram from './diagrams/AuthFlowDiagram';
 import WotGraphDiagram from './diagrams/WotGraphDiagram';
 import RelayGroupsDiagram from './diagrams/RelayGroupsDiagram';
@@ -12,6 +14,8 @@ export const HERO_REGISTRY: Record<string, ComponentType> = {
   'how-obelisk-works': HowObeliskWorksHero,
   wot: WotHero,
   'future-relays': FutureRelaysHero,
+  'bitcoin-zaps': BitcoinZapsHero,
+  'admin-cli': AdminCliHero,
 };
 
 export const DIAGRAM_REGISTRY: Record<string, ComponentType> = {

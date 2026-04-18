@@ -16,6 +16,8 @@ Database          PostgreSQL (self-hosted via Docker)
 ORM               Prisma 7 + @prisma/adapter-pg
 Real-time         Socket.io (via server.ts)
 Voice             WebSocket audio relay (via server.ts + Socket.io)
+Payments          Nostr Wallet Connect (NIP-47) — src/lib/nwc.ts, src/lib/crypto.ts
+Admin CLI         scripts/admin-cli — nsec / NIP-46 bunker auth, AI-agent friendly
 ```
 
 ## Stack
@@ -91,7 +93,11 @@ npm run test:watch   # Run tests in watch mode
 npm run test:coverage # Run tests with coverage report
 npx prisma migrate dev  # Run database migrations (dev)
 npx prisma db seed      # Seed the database
+npm run admin -- help   # Admin CLI — scriptable driver for /admin (see docs/admin-cli.md)
 ```
+
+### Admin CLI (for AI coding agents)
+`scripts/admin-cli/` is a headless HTTP client that authenticates with its own nsec (or NIP-46 bunker) and speaks to the same `/api/*` endpoints the web UI uses. Any CLI coding agent (Claude Code, Codex, Cursor…) can drive it to manage servers, channels, roles, members, bans, bots, and emojis on any Obelisk instance. Role checks are enforced server-side via the same `requireRole()` guards — the CLI has no extra privileges. See `scripts/admin-cli/AGENT.md` for the agent-oriented cheat sheet and [docs/admin-cli.md](docs/admin-cli.md) for the full guide.
 
 ## Deployment (Self-Hosted Docker)
 

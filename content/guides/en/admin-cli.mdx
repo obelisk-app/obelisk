@@ -1,0 +1,116 @@
+---
+title: An admin CLI any coding agent can drive
+description: Obelisk ships a headless admin CLI that authenticates with its own Nostr key and drives the same HTTP API the web admin panel uses. Give your Claude Code, Codex, or Cursor agent an admin account and it can run your server end-to-end.
+heroComponent: admin-cli
+publishedAt: '2026-04-18'
+updatedAt: '2026-04-18'
+tags: [admin, cli, agents, nostr, automation]
+---
+
+## Why a CLI, and why one designed for agents
+
+Running a community takes work. Creating channels, setting role permissions, banning spammers, rotating bot config, syncing topic descriptions, exporting reports — all things that make perfect sense to click through the admin panel once, and zero sense to click through every time.
+
+Obelisk's admin panel is a plain HTTP API under the hood. So we shipped a CLI that speaks that API directly. You can run it from your shell, from a script, from a cron job — or from an AI coding agent working on behalf of a real admin.
+
+That last one is the interesting part. Claude Code, Codex, Cursor, Aider, Devin — every serious CLI coding agent can already shell out to `npm run admin -- ...`. The only question is whether the thing on the other end is safe to let them drive. Obelisk's answer is yes, with two properties that make it work:
+
+1. **The CLI logs in with its own Nostr key.** Not your key. A separate nsec (or NIP-46 bunker connection) that you generate for the agent. You decide what role that key has on which server.
+2. **Role checks are server-side.** The CLI has zero privilege of its own. It speaks the same API the browser speaks, hitting the same `requireRole()` guards. If the agent's key is not admin on a server, the CLI gets a plain 403. No side doors.
+
+<Callout type="note" title="The agent is a user, not a superuser">
+People sometimes assume an "admin CLI" means "a tool that bypasses the rules." This one does the opposite. It respects every rule the web UI respects, because it goes through the same routes. What makes it useful for agents is not elevated permissions — it is *scriptability*.
+</Callout>
+
+## How it authenticates
+
+<Diagram name="auth-flow" caption="Same challenge-response as the web app: server issues a nonce, client signs it with Nostr, server sets a session cookie." />
+
+The CLI's login flow is identical to the browser's:
+
+1. `POST /api/auth/challenge` — server returns a random challenge.
+2. CLI signs a kind-27235 Nostr event with that challenge as the content.
+3. `POST /api/auth/verify` — server checks the signature, sets a `session` cookie.
+4. Cookie is persisted at `~/.config/obelisk-cli/session.json` (mode 0600).
+
+Because it is Nostr auth, the same CLI works against any Obelisk deployment. Point it at your dev server, your tunnel, your prod URL — the protocol is identical. For production, prefer a NIP-46 bunker so the key never sits on the machine running the CLI.
+
+## What an agent-driven admin account can do
+
+The role the agent's key has on the server determines everything. A typical setup gives the agent **admin** on the servers you want it to manage. With admin it can:
+
+- Create, edit, delete channels and categories
+- Create and assign custom roles
+- Kick, ban, unban members
+- Manage emojis, GIFs, bot config, system messages
+- Flip operational server settings: welcome channel, welcome locale, landing channel, banner
+
+What it cannot do — because *admins* cannot — is touch the server's identity (name, icon, upload caps, MIME allowlist), promote other people to admin, or delete the server. Those stay **owner-only**, and owner is meant to be a human decision. If the agent needs to do something above its pay grade, it gets a 403 and can ask you.
+
+## A day in the life
+
+```bash
+# Agent inherits an nsec scoped to this community
+export OBELISK_NSEC=$(cat ~/.config/obelisk-cli/agent.nsec)
+export OBELISK_URL=https://obelisk.example.com
+
+npm run admin -- login
+npm run admin -- whoami
+npm run admin -- servers list
+
+# Spin up a new topic
+npm run admin -- channels create <serverId> \
+  --payload '{"name":"lightning-talk","type":"text","description":"⚡ discussion"}'
+
+# Archive a stale one
+npm run admin -- channels edit <channelId> --patch '{"archived":true}'
+
+# Rotate the welcome message
+npm run admin -- server edit <serverId> \
+  --patch '{"welcomeChannelId":"<newId>","welcomeLocale":"en"}'
+
+# Kick a spammer
+npm run admin -- members ban <serverId> <pubkey> --reason "bot spam"
+```
+
+For anything not yet wrapped as a first-class subcommand, there is an escape hatch:
+
+```bash
+npm run admin -- exec GET  /api/admin/emojis?serverId=abc
+npm run admin -- exec POST /api/admin/emojis?serverId=abc \
+  --body '{"name":"obelisk","url":"https://..."}'
+```
+
+Plain HTTP verbs, plain JSON bodies, plain status codes. Easy for a human, easier for a model.
+
+## Wiring it into a coding agent
+
+Point the agent at `scripts/admin-cli/AGENT.md` — a short cheat sheet written for agents, not humans. It lists the verbs, the canonical payload shapes, and the role a given action needs. A typical agent loop looks like:
+
+1. Read `AGENT.md`, cache the command surface.
+2. Run `whoami` to confirm identity and role on the target server.
+3. Call the needed subcommand (or `exec` for unwrapped endpoints).
+4. Parse the JSON response. On 403, explain the blocker to the human operator and stop — do not escalate.
+
+That last point matters. The agent has no way to escalate; the server would refuse. The worst-case outcome of a confused agent on an admin key is "it tried to do a thing it was not allowed to do and got a polite 403 back." No prod secrets leak, no silent privilege climb.
+
+## Security notes
+
+- **One nsec per agent per environment.** Don't reuse your personal nsec, and don't reuse a prod nsec on a dev box.
+- **Prefer NIP-46 bunkers in production.** The key stays in your signer app. The CLI host can be compromised without leaking the key.
+- **Least privilege.** Start the agent at `member` or `mod`. Promote to `admin` only for servers that need it. `owner` should almost never belong to an agent.
+- **Audit log.** Every privileged action goes through the same moderation/audit pipeline web-UI actions go through, so you can see what the agent did and when.
+- **The session file is sensitive.** Do not commit it, do not copy it across hosts. It is mode 0600 for a reason.
+
+## What this unlocks
+
+The interesting capability is not "an AI can now ban a user." It is that the same agent you already pair-program with can manage your community infrastructure — create the channel for the feature it is building, post the release notes, assign the beta-tester role, revoke it when testing ends — without you context-switching out of the code. The admin panel moves from "a tab I alt-tab to" to "a thing my dev loop can do."
+
+That is the point.
+
+## Pointers
+
+- `scripts/admin-cli/README.md` — full command reference and role matrix
+- `scripts/admin-cli/AGENT.md` — terse cheat sheet for AI agents
+- `src/lib/auth-roles.ts` — authoritative role hierarchy
+- `docs/admin-cli.md` — deployment / ops guide

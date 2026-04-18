@@ -1,0 +1,90 @@
+---
+title: Bitcoin zaps in chat
+description: Obelisk lets you send Bitcoin over Lightning directly from a chat message using Nostr Wallet Connect (NIP-47). Here is how it works, what it costs, what stays private, and why the wallet stays entirely in your control.
+heroComponent: bitcoin-zaps
+publishedAt: '2026-04-18'
+updatedAt: '2026-04-18'
+tags: [bitcoin, lightning, nwc, nip-47, zaps]
+---
+
+## What is a zap, really?
+
+A **zap** is a small Bitcoin payment — usually measured in sats, the smallest unit of Bitcoin — sent over the Lightning Network with a Nostr note attached. Think of it as a tip, a thank-you, or a reaction that happens to be worth something. In Obelisk, zaps live right next to reactions on any chat message.
+
+The pieces:
+
+- **Bitcoin** — the money.
+- **Lightning Network** — the rails that make the payment fast and cheap.
+- **Your Lightning wallet** — the thing that actually holds your sats and signs payments. Alby, Mutiny, Zeus, Coinos, Cashu.me, an LNbits instance, or your own node.
+- **Nostr Wallet Connect (NIP-47)** — the protocol Obelisk uses to ask your wallet to pay an invoice *without ever holding your keys*.
+
+## Why Nostr Wallet Connect
+
+Other chat apps that let you tip either (a) run their own custodial wallet — which means they hold your money and your keys — or (b) require a browser extension that only works on one device. Neither is great.
+
+NWC gives us a better deal: your wallet stays wherever it already lives (phone, laptop, node), and Obelisk only holds a scoped *remote-control string* it can use to request payments. You can revoke that string from your wallet any time, and the money is only ever accessed through your wallet's own budget and spend limits.
+
+<Callout type="note" title="Your wallet, your rules">
+Obelisk never sees your Lightning private keys. It sees a NWC connection string — the same kind of string you would paste into any Nostr client that supports zaps — and we encrypt it in your browser before sending it to our server. A database leak gives an attacker an opaque ciphertext, not a working wallet.
+</Callout>
+
+## How a zap flows through Obelisk
+
+<Diagram name="auth-flow" caption="The zap path mirrors the auth path: your client talks to your signer, the server just coordinates." />
+
+1. You click ⚡ on a message and pick an amount (or one of the presets: 21, 100, 500, 1000 sats).
+2. Obelisk asks the recipient's Lightning address for an invoice matching that amount.
+3. Obelisk asks *your* wallet (over the NIP-47 relay) to pay that invoice.
+4. Your wallet signs and broadcasts the payment on Lightning.
+5. A payment receipt comes back; the message gets a ⚡ badge and the sat count updates for everyone in the channel.
+
+The whole round trip is typically under two seconds. No account, no KYC, no "please add your card."
+
+## What Obelisk can and cannot do with your wallet
+
+**Can**: ask the wallet to pay a specific invoice, within the budget you configured.
+
+**Cannot**: see your balance history, move sats to its own wallet, or spend above the budget. Those are enforced by *your wallet*, not by Obelisk. If your wallet says "max 5000 sats per day," that is the hard ceiling no matter what Obelisk asks for.
+
+## Connecting a wallet
+
+1. Open your profile → **Wallet**.
+2. In your Lightning wallet, create a new NWC connection. Give it a memorable name ("obelisk"), set a daily budget you are comfortable with, and copy the `nostr+walletconnect://…` string.
+3. Paste it into Obelisk and press **Connect**. The string is encrypted in your browser before being sent to the server.
+4. Done — every server you join can now receive zaps from you, no extra setup.
+
+To disconnect, revoke the connection in your wallet. Obelisk's cached copy becomes useless instantly.
+
+## Privacy and what leaks
+
+A zap is a Lightning payment plus a Nostr note. That has specific privacy properties worth knowing:
+
+- The **payment amount** is visible to your wallet and the recipient's wallet. Lightning routing nodes see only onion-hopped fragments.
+- The **Nostr note** (the zap event, NIP-57) is public on Nostr relays. Anyone watching those relays sees that your pubkey zapped this message.
+- Your **NWC connection string** never leaves your browser in plaintext. Obelisk stores the ciphertext; only your logged-in session can decrypt it.
+- Obelisk has **no access to your balance**, transaction history, or wallet keys. If you want private tipping, use a privacy-preserving wallet (Mutiny, Phoenix, Breez) — the privacy story is the same as tipping anywhere else on Nostr.
+
+## Costs
+
+A zap has two possible fees: the routing fee your wallet pays to forward the sats across Lightning (typically 0–5 sats for small zaps) and whatever your Lightning provider charges. Obelisk takes no cut. There is no Obelisk account, no Obelisk wallet, no Obelisk fee.
+
+## What is shipped and what is coming
+
+**Live today**: wallet connect, message zaps, profile zaps, preset + custom amounts, client-side encryption of the NWC string, per-user budgets.
+
+**Coming**: emoji zaps (reaction + sats in one click), per-server configurable zap emojis and amounts, sat leaderboards per channel, zap splits across multiple recipients, NIP-57 receipt display next to the message.
+
+Track them in the [roadmap](/). If you want something sooner, open an issue.
+
+## Troubleshooting
+
+| Symptom | Likely cause |
+|---------|--------------|
+| "Connection failed" on paste | NWC relay unreachable. Try a wallet-provided relay or `wss://relay.getalby.com/v1`. |
+| Zap button missing | The recipient's profile has no Lightning address (NIP-57). Ask them to add one. |
+| Payment stuck pending | Wallet budget exhausted — check the spend cap in your wallet, not in Obelisk. |
+| "Invoice expired" | Your wallet took too long to sign. Try again; if it keeps happening, reconnect the wallet. |
+
+## One more thing
+
+Bitcoin in chat was the original Nostr-native feature. It is what makes a message board feel like a village: you can thank the person who wrote something good, with something that matters, without either of you needing a bank. Obelisk puts that next to a reaction button because that is where it belongs.

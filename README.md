@@ -33,6 +33,8 @@ Obelisk uses Nostr for what it does best — **identity, auth, and social graph*
 - 🎙️ **Voice channels** — WebSocket audio relay via Socket.io. Works through tunnels/proxies (no WebRTC P2P required).
 - 🔒 **Encrypted DMs** — private messages via Nostr (NIP-17 gift-wrapped).
 - 🛡️ **Web of Trust spam filter** — new accounts are scored against your server's Nostr follow graph. No CAPTCHAs, no KYC, no phone numbers.
+- ⚡ **Bitcoin zaps** — send sats in chat via Nostr Wallet Connect (NIP-47). The wallet connection string is encrypted client-side before it ever hits the server, and you set per-user spend budgets.
+- 🤖 **Admin CLI for coding agents** — `npm run admin` ships a scriptable admin client that logs in with its own nsec (or NIP-46 bunker) and drives the same HTTP API the web UI uses. Any CLI coding agent (Claude Code, Codex, Cursor, etc.) can manage servers, channels, roles, bans, and bots on any Obelisk instance, with role checks enforced server-side.
 - 👮 **Moderation** — roles & permissions, mutes, warnings, bans, reports, audit log, forum channels.
 - 🎮 **Games** — built-in chess, tic-tac-toe, chain reaction.
 - 🏠 **Self-hostable** — Docker Compose stack runs on a 2 GB VPS for hundreds of concurrent users.
@@ -49,6 +51,8 @@ Obelisk uses Nostr for what it does best — **identity, auth, and social graph*
 | Database | PostgreSQL |
 | ORM | Prisma 7 + `@prisma/adapter-pg` |
 | State | Zustand |
+| Payments | Nostr Wallet Connect (NIP-47) + Lightning |
+| Admin tooling | `scripts/admin-cli` — nsec / NIP-46 bunker CLI for humans & AI agents |
 | Testing | Vitest + React Testing Library |
 | Deploy | Docker Compose + Caddy (auto HTTPS) |
 
@@ -131,7 +135,9 @@ Session   → pubkey, token, expiresAt
 | NIP-05 | DNS verification | Display verification badge |
 | NIP-07 | Browser extension signer | Login |
 | NIP-17 | Private DMs (gift-wrapped) | Direct messages |
-| NIP-46 | Nostr Connect (bunker) | Login via QR |
+| NIP-46 | Nostr Connect (bunker) | Login via QR + admin CLI auth |
+| NIP-47 | Nostr Wallet Connect | In-chat Bitcoin zaps |
+| NIP-57 | Lightning zaps | Zap receipts |
 | NIP-65 | Relay list metadata | Auto-fetch user relays |
 
 ## Scripts
@@ -164,12 +170,12 @@ See [CLAUDE.md](CLAUDE.md) for detailed architecture & conventions.
 
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md). TL;DR: Phases 0–3 are done (foundation, auth, chat, admin/moderation, voice, DMs, multi-server, uploads, search, bots). Phase 4 (PWA, push, themes, launch polish) is in progress. Phase 5 sunsets the centralized DB for Nostr-native groups (NIP-28, NIP-29, NIP-59).
+See [ROADMAP.md](ROADMAP.md). TL;DR: Phases 0–3 are done (foundation, auth, chat, admin/moderation, voice, DMs, multi-server, uploads, search, bots). Phase 4 (PWA, push, themes, launch polish) is in progress — the admin CLI shipped as part of it. Phase 6 (Lightning zaps over NWC) is partially live: wallet connect + user-to-user zaps work today; emoji zaps and leaderboards are still pending. Phase 5 sunsets the centralized DB for Nostr-native groups (NIP-28, NIP-29, NIP-59).
 
 ## Resources
 
 - [NDK Docs](https://ndk.fyi) · [Nostr Protocol](https://nostr.com) · [NIPs](https://github.com/nostr-protocol/nips) · [La Crypta](https://lacrypta.ar)
-- Docs: [voice system](docs/voice-system.md) · [WoT & invite credits](docs/wot-and-invite-credits.md) · [uploads](docs/uploads.md) · [Cloudflare tunnel](docs/cloudflare-tunnel.md)
+- Docs: [voice system](docs/voice-system.md) · [WoT & invite credits](docs/wot-and-invite-credits.md) · [uploads](docs/uploads.md) · [Cloudflare tunnel](docs/cloudflare-tunnel.md) · [Bitcoin zaps (NWC)](docs/bitcoin-zaps-nwc.md) · [Admin CLI for agents](docs/admin-cli.md)
 
 ## License
 

@@ -1,0 +1,90 @@
+---
+title: Zaps de Bitcoin en el chat
+description: Obelisk te deja mandar Bitcoin por Lightning desde cualquier mensaje del chat usando Nostr Wallet Connect (NIP-47). Cómo funciona, qué cuesta, qué se mantiene privado, y por qué la wallet queda 100% bajo tu control.
+heroComponent: bitcoin-zaps
+publishedAt: '2026-04-18'
+updatedAt: '2026-04-18'
+tags: [bitcoin, lightning, nwc, nip-47, zaps]
+---
+
+## ¿Qué es un zap?
+
+Un **zap** es un pago chico de Bitcoin — generalmente en sats, la unidad más chica de Bitcoin — enviado por la red Lightning con una nota Nostr adjunta. Pensalo como una propina, un gracias, o una reacción que además tiene valor. En Obelisk, los zaps viven al lado de las reacciones en cualquier mensaje.
+
+Las piezas:
+
+- **Bitcoin** — la plata.
+- **Lightning Network** — los rieles que hacen que el pago sea rápido y barato.
+- **Tu wallet Lightning** — la que guarda tus sats y firma los pagos. Alby, Mutiny, Zeus, Coinos, Cashu.me, una instancia LNbits, o tu propio nodo.
+- **Nostr Wallet Connect (NIP-47)** — el protocolo que Obelisk usa para pedirle a tu wallet que pague una factura *sin tener nunca tus claves*.
+
+## Por qué Nostr Wallet Connect
+
+Otras apps de chat que permiten propinas o (a) corren su propia wallet custodial — tienen tu plata y tus claves — o (b) requieren una extensión de browser que sólo funciona en un dispositivo. Ninguna opción es buena.
+
+NWC ofrece un trato mejor: tu wallet se queda donde ya vive (teléfono, laptop, nodo), y Obelisk sólo guarda una *cadena de control remoto* con alcance limitado. Podés revocarla desde tu wallet en cualquier momento, y la plata sólo se mueve dentro de los límites que vos definiste en la wallet.
+
+<Callout type="note" title="Tu wallet, tus reglas">
+Obelisk nunca ve tus claves privadas de Lightning. Ve una cadena NWC — la misma que pegarías en cualquier cliente Nostr que soporte zaps — y la ciframos en tu browser antes de mandarla al servidor. Una fuga de base de datos le da al atacante un ciphertext opaco, no una wallet usable.
+</Callout>
+
+## Cómo fluye un zap por Obelisk
+
+<Diagram name="auth-flow" caption="El camino de un zap refleja al de auth: tu cliente habla con tu signer, el servidor sólo coordina." />
+
+1. Hacés click en ⚡ sobre un mensaje y elegís un monto (o uno de los presets: 21, 100, 500, 1000 sats).
+2. Obelisk le pide a la dirección Lightning del receptor una factura por ese monto.
+3. Obelisk le pide a *tu* wallet (vía el relay NIP-47) que pague esa factura.
+4. Tu wallet firma y envía el pago por Lightning.
+5. Vuelve el recibo; el mensaje gana una insignia ⚡ y el contador de sats se actualiza para todos en el canal.
+
+El round trip suele ser menos de dos segundos. Sin cuenta, sin KYC, sin "por favor agregá tu tarjeta".
+
+## Qué puede y no puede hacer Obelisk con tu wallet
+
+**Puede**: pedirle a la wallet que pague una factura específica, dentro del presupuesto que configuraste.
+
+**No puede**: ver tu historial de balance, mover sats a otra wallet, o gastar por encima del presupuesto. Eso lo fuerza *tu wallet*, no Obelisk. Si tu wallet dice "máximo 5000 sats por día", ese es el techo duro, pida lo que pida Obelisk.
+
+## Conectar una wallet
+
+1. Abrí tu perfil → **Wallet**.
+2. En tu wallet Lightning, creá una nueva conexión NWC. Poné un nombre ("obelisk"), un presupuesto diario cómodo, y copiá la cadena `nostr+walletconnect://…`.
+3. Pegala en Obelisk y apretá **Conectar**. La cadena se cifra en tu browser antes de salir.
+4. Listo — cada servidor en el que estés puede recibir zaps tuyos sin configuración extra.
+
+Para desconectar, revocá la conexión desde tu wallet. La copia en caché de Obelisk queda inservible al instante.
+
+## Privacidad: qué se filtra y qué no
+
+Un zap es un pago Lightning más una nota Nostr. Eso tiene propiedades de privacidad específicas:
+
+- El **monto del pago** lo ven tu wallet y la del receptor. Los nodos de ruteo ven sólo fragmentos con onion routing.
+- La **nota Nostr** (evento de zap, NIP-57) es pública en los relays. Cualquiera que los mire ve que tu pubkey zappeó este mensaje.
+- Tu **cadena NWC** nunca sale de tu browser en plaintext. Obelisk guarda el ciphertext; sólo tu sesión logueada lo puede descifrar.
+- Obelisk **no tiene acceso** a tu balance, historial ni claves. Si querés tipping privado, usá una wallet con buenas propiedades (Mutiny, Phoenix, Breez) — la historia de privacidad es la misma que dar propina en cualquier lado de Nostr.
+
+## Costos
+
+Un zap tiene dos fees posibles: el fee de ruteo que tu wallet paga para mover los sats (típicamente 0–5 sats en pagos chicos) y lo que cobre tu proveedor Lightning. Obelisk no cobra nada. No hay cuenta Obelisk, no hay wallet Obelisk, no hay fee Obelisk.
+
+## Lo que está shipped y lo que viene
+
+**Live hoy**: conexión de wallet, zaps a mensajes, zaps a perfiles, presets + montos custom, cifrado client-side de la cadena NWC, presupuesto por usuario.
+
+**Próximo**: emoji zaps (reacción + sats en un click), emojis y montos de zap configurables por servidor, leaderboards de sats por canal, zap splits entre varios receptores, recibos NIP-57 al lado del mensaje.
+
+Los tenés en el [roadmap](/). Si querés algo antes, abrí un issue.
+
+## Troubleshooting
+
+| Síntoma | Causa probable |
+|---------|----------------|
+| "Connection failed" al pegar | Relay NWC inalcanzable. Probá el relay que te dé la wallet o `wss://relay.getalby.com/v1`. |
+| El botón ⚡ no aparece | El perfil del receptor no tiene dirección Lightning (NIP-57). Pedile que la agregue. |
+| Pago pending | Presupuesto de la wallet agotado — revisá el cap de gasto en tu wallet, no en Obelisk. |
+| "Invoice expired" | Tu wallet tardó mucho en firmar. Reintentalo; si sigue pasando, reconectá la wallet. |
+
+## Una última cosa
+
+Bitcoin en el chat fue la feature original nativa de Nostr. Es lo que hace que una lista de mensajes se sienta como un pueblo: podés agradecerle a quien escribió algo bueno, con algo que vale, sin que ninguno de los dos necesite un banco. Obelisk lo pone al lado del botón de reacción porque ese es su lugar.

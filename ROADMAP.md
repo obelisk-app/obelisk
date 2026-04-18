@@ -384,6 +384,7 @@
   - [ ] Revisar todas las vistas: chat, admin, moderacion, voice, foros
 - [x] Deploy a produccion (Vercel + Neon Postgres)
 - [ ] Restaurar real-time (Socket.io en Railway/Fly.io, o migrar a Pusher/Ably)
+- [x] **Admin CLI** — `scripts/admin-cli/` autentica con su propio nsec / bunker NIP-46 y habla contra la misma API HTTP que el panel `/admin`. Pensado para ser driveado por agentes CLI de coding (Claude Code, Codex, Cursor, etc.), con los mismos `requireRole()` del lado del servidor. Ver [docs/admin-cli.md](docs/admin-cli.md).
 
 ## Fase 5 — Knowledge Base con LLM
 > Documentacion completa: [docs/llm-knowledge-base.md](docs/llm-knowledge-base.md)
@@ -421,18 +422,18 @@
 - [ ] Auto-tagging de threads por el LLM
 
 ## Fase 6 — Lightning Network Zaps
-> Pagos nativos entre usuarios via Lightning Network. Una wallet, todos los servidores.
+> Pagos nativos entre usuarios via Lightning Network. Una wallet, todos los servidores. **Parcialmente shipped**: conexión NWC + zaps a usuarios están vivos; emoji zaps y leaderboards quedan pendientes. Guía: [docs/bitcoin-zaps-nwc.md](docs/bitcoin-zaps-nwc.md).
 
 ### Wallet
-- [ ] Wallet Lightning integrada por usuario (una sola wallet para todos los servidores)
-- [ ] Conectar wallet existente (NWC — Nostr Wallet Connect, NIP-47)
+- [x] Wallet Lightning integrada por usuario (una sola wallet para todos los servidores)
+- [x] Conectar wallet existente (NWC — Nostr Wallet Connect, NIP-47) — cadena cifrada client-side antes de persistir
 - [ ] Balance visible en la UI (sidebar o navbar)
 - [ ] Historial de transacciones (zaps enviados/recibidos)
 
 ### Zaps entre usuarios
-- [ ] Zap rapido desde el perfil de un usuario (click en el avatar → zap)
-- [ ] Zap en mensajes (boton de zap junto a reacciones)
-- [ ] Monto personalizado o presets configurables (ej: 21, 100, 500, 1000 sats)
+- [x] Zap rapido desde el perfil de un usuario (click en el avatar → zap)
+- [x] Zap en mensajes (boton de zap junto a reacciones, `ZapPickerModal`)
+- [x] Monto personalizado o presets configurables (ej: 21, 100, 500, 1000 sats)
 - [ ] Animacion/efecto visual al recibir un zap (notificacion + efecto en el mensaje)
 - [ ] Zap con mensaje opcional (nota adjunta al pago)
 

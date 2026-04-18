@@ -91,6 +91,25 @@ const FEATURE_KEYS = [
     titleKey: 'features.spamResistant.title',
     descKey: 'features.spamResistant.desc',
   },
+  {
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+      </svg>
+    ),
+    titleKey: 'features.zaps.title',
+    descKey: 'features.zaps.desc',
+  },
+  {
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="4 17 10 11 4 5"/>
+        <line x1="12" y1="19" x2="20" y2="19"/>
+      </svg>
+    ),
+    titleKey: 'features.adminCli.title',
+    descKey: 'features.adminCli.desc',
+  },
 ];
 
 const STEP_ICONS = [
@@ -113,7 +132,8 @@ const ROADMAP_PHASES = [
   { key: 'phase1_5', phase: 'Phase 1.5', status: 'done' as const },
   { key: 'phase2', phase: 'Phase 2', status: 'done' as const },
   { key: 'phase3', phase: 'Phase 3', status: 'done' as const },
-  { key: 'phase4', phase: 'Phase 4', status: 'in-progress' as const },
+  { key: 'phase4', phase: 'Phase 4', status: 'done' as const },
+  { key: 'phase6', phase: 'Phase 6', status: 'done' as const },
   { key: 'phase5', phase: 'Phase 5', status: 'upcoming' as const },
 ];
 
@@ -123,6 +143,8 @@ const TECH_STACK: { name: string; desc: string; color: string; icon?: string; im
   { name: 'Nostr WoT', desc: 'Web of Trust spam filter', color: 'text-indigo-400', img: '/nostr-wot-logo.png', href: 'https://nostr-wot.com' },
   { name: 'Socket.io', desc: 'Real-time messaging & voice relay', color: 'text-yellow-400', icon: '⇌', href: 'https://socket.io' },
   { name: 'PostgreSQL', desc: 'Database', color: 'text-emerald-400', icon: '◆', href: 'https://www.postgresql.org' },
+  { name: 'NWC (NIP-47)', desc: 'Bitcoin zaps in chat', color: 'text-orange-400', icon: '⚡', href: 'https://github.com/nostr-protocol/nips/blob/master/47.md' },
+  { name: 'Admin CLI', desc: 'Scriptable admin for humans & AI agents', color: 'text-lc-green', icon: '›_', href: 'https://github.com/Fabricio333/obelisk/tree/master/scripts/admin-cli' },
 ];
 
 export default function LandingPage() {
@@ -511,6 +533,8 @@ export default function LandingPage() {
               { slug: 'what-is-obelisk', tKey: 'whatIsObelisk' },
               { slug: 'how-obelisk-works', tKey: 'howObeliskWorks' },
               { slug: 'web-of-trust', tKey: 'webOfTrust' },
+              { slug: 'bitcoin-zaps', tKey: 'bitcoinZaps' },
+              { slug: 'admin-cli', tKey: 'adminCli' },
               { slug: 'future-nostr-relays', tKey: 'futureNostrRelays' },
             ].map((g) => (
               <Link
