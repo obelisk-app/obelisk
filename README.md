@@ -181,6 +181,5 @@ See [ROADMAP.md](ROADMAP.md). TL;DR: Phases 0–3 are done (foundation, auth, ch
 
 MIT.
 
----
 
-<p align="center">Built with lightning by <a href="https://lacrypta.ar">La Crypta</a> ⚡</p>
+
