@@ -6,6 +6,7 @@ import { io, Socket } from 'socket.io-client';
 import { useAuthStore } from '@/store/auth';
 import { useChatStore, Message, MemberInfo } from '@/store/chat';
 import ServerBar from '@/components/chat/ServerBar';
+import { UserPanel } from '@/components/chat/ChannelSidebar';
 import ChannelSidebar from '@/components/chat/ChannelSidebar';
 import MessageArea from '@/components/chat/MessageArea';
 import ProfilePopover from '@/components/chat/ProfilePopover';
@@ -28,6 +29,8 @@ import { useVoiceStore } from '@/store/voice';
 import GameDock from '@/components/games/GameDock';
 import ActivitiesPanel from '@/components/games/ActivitiesPanel';
 import GamePickerModal from '@/components/games/GamePickerModal';
+import ZapPickerModal from '@/components/chat/ZapPickerModal';
+import SettingsModal from '@/components/settings/SettingsModal';
 import GameFullscreenView from '@/components/games/GameFullscreenView';
 import { useGamesStore } from '@/store/games';
 import { WebSocketVoiceClient } from '@/lib/voice';
@@ -879,7 +882,12 @@ export default function ChatPage() {
     });
 
     socket.on('new-message', (message: Message) => {
-      if (isStaleSession()) return;
+      const activeCh = useChatStore.getState().activeChannelId;
+      console.log(`[socket][new-message] recv ch=${message.channelId} active=${activeCh} id=${message.id}`);
+      if (isStaleSession()) {
+        console.log('[socket][new-message] drop: stale session');
+        return;
+      }
       // Seed profileCache from the embedded author so messages from
       // never-seen pubkeys render immediately with name + avatar.
       if (message.author && !profileCache.has(message.authorPubkey)) {
@@ -1158,6 +1166,12 @@ export default function ChatPage() {
 
     socket.on('connect_error', (err) => {
       console.warn('Socket connection error:', err.message);
+    });
+    socket.on('disconnect', (reason) => {
+      console.log('[socket] disconnect:', reason);
+    });
+    socket.io.on('reconnect_attempt', (n) => {
+      console.log('[socket] reconnect_attempt', n);
     });
 
     socketRef.current = socket;
@@ -1885,19 +1899,25 @@ export default function ChatPage() {
         />
       )}
 
-      {/* Sidebars — always visible on desktop, slide-out drawer on mobile */}
+      {/* Sidebars — always visible on desktop, slide-out drawer on mobile.
+          Flex-col so the UserPanel bar can span across ServerBar + ChannelSidebar
+          (Discord-style), instead of being nested inside ChannelSidebar. */}
       <div className={`
-        fixed inset-y-0 left-0 z-50 flex
+        fixed inset-y-0 left-0 z-50 flex flex-col
         transform transition-transform duration-200 ease-in-out
         md:relative md:translate-x-0
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
-        <ServerBar />
-        {DM_FEATURE_ENABLED && isDMMode ? (
-          <DMList onNewDM={() => setShowNewDMModal(true)} />
-        ) : serversLoaded && servers.length === 0 ? null : (
-          <ChannelSidebar onChannelSelect={() => setSidebarOpen(false)} />
-        )}
+        <div className="flex flex-1 min-h-0">
+          <ServerBar />
+          {DM_FEATURE_ENABLED && isDMMode ? (
+            <DMList onNewDM={() => setShowNewDMModal(true)} />
+          ) : serversLoaded && servers.length === 0 ? null : (
+            <ChannelSidebar onChannelSelect={() => setSidebarOpen(false)} />
+          )}
+        </div>
+        {/* Bottom user bar spans the full sidebar width (ServerBar + ChannelSidebar) */}
+        <UserPanel />
       </div>
 
       {/* Main content area */}
@@ -2251,6 +2271,8 @@ export default function ChatPage() {
       <GameDock />
       <ActivitiesPanel />
       <GamePickerModal />
+      <ZapPickerModal />
+      <SettingsModal />
     </div>
   );
 }

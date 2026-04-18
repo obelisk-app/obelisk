@@ -193,6 +193,35 @@ export default function ProfilePopover({ pubkey, onClose }: {
             </div>
           )}
 
+          {/* Contact / links */}
+          {(member?.website || member?.lud16) && (
+            <div className="space-y-1.5" data-testid="profile-links">
+              {member?.website && (
+                <a
+                  href={/^https?:\/\//i.test(member.website) ? member.website : `https://${member.website}`}
+                  target="_blank"
+                  rel="noopener noreferrer nofollow"
+                  className="flex items-center gap-2 text-xs text-lc-green hover:underline break-all"
+                  data-testid="profile-website"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+                  {member.website.replace(/^https?:\/\//i, '')}
+                </a>
+              )}
+              {member?.lud16 && (
+                <div
+                  className="flex items-center gap-2 text-xs text-lc-white/80 break-all"
+                  data-testid="profile-lud16"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="text-lc-green">
+                    <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" />
+                  </svg>
+                  {member.lud16}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Joined date */}
           <div>
             <div className="text-[10px] uppercase tracking-wider text-lc-muted font-semibold mb-1">
@@ -203,6 +232,29 @@ export default function ProfilePopover({ pubkey, onClose }: {
             </div>
           </div>
 
+          {/* Actions */}
+          <div className="flex gap-2 pt-2 border-t border-lc-border">
+            <button
+              onClick={async () => {
+                const { useZapStore } = await import('@/store/zap');
+                const channelId = useChatStore.getState().activeChannelId;
+                if (!channelId) return;
+                useZapStore.getState().setPickerOpen({ channelId, target: pubkey });
+                onClose();
+              }}
+              className="lc-pill-primary text-xs flex-1"
+              data-testid="profile-zap-btn"
+            >
+              ⚡ Zappar
+            </button>
+            <button
+              onClick={() => { navigator.clipboard?.writeText(nip19.npubEncode(pubkey)).catch(() => {}); }}
+              className="lc-pill-secondary text-xs"
+              title="Copiar npub"
+            >
+              Copiar npub
+            </button>
+          </div>
         </div>
       </div>
     </div>

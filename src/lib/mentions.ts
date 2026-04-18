@@ -17,6 +17,8 @@ export interface MemberInfo {
   banner?: string;
   nip05?: string;
   about?: string;
+  website?: string;
+  lud16?: string;
   joinedAt?: string;
   // Prebuilt server bots surface as pseudo-members with these two fields.
   // Regular Nostr members always have isBot=false/undefined.

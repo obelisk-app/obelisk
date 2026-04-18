@@ -580,6 +580,20 @@ model GameParticipant {
   @@index([pubkey])
 }
 
+// Nostr Wallet Connect endpoint stored per pubkey. The `nwcUrlEncrypted`
+// field holds an AES-256-GCM ciphertext of a `nostr+walletconnect://...`
+// URL; see `src/lib/crypto.ts`. One wallet per user across all servers.
+model Wallet {
+  id               String   @id @default(cuid())
+  pubkey           String   @unique
+  nwcUrlEncrypted  String
+  label            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([pubkey])
+}
+
 // Pivot table: which members hold which custom roles.
 model MemberCustomRole {
   id       String @id @default(cuid())

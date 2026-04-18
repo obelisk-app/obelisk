@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuthStore } from '@/store/auth';
 import { useChatStore } from '@/store/chat';
+import { useSettingsStore } from '@/store/settings';
 import { useTranslation } from '@/i18n/context';
-import ProfileEditor from '@/components/ProfileEditor';
 
 interface ProfilePanelProps {
   onClose: () => void;
@@ -15,126 +16,74 @@ export default function ProfilePanel({ onClose, onLogout }: ProfilePanelProps) {
   const { profile } = useAuthStore();
   const activeServerId = useChatStore((s) => s.activeServerId);
   const { t } = useTranslation();
-  const [nickname, setNickname] = useState('');
-  const [nicknameLoaded, setNicknameLoaded] = useState(false);
-  const [syncing, setSyncing] = useState(false);
-  const [syncStatus, setSyncStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [saving, setSaving] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saved'>('idle');
-  const [editingProfile, setEditingProfile] = useState(false);
+  const [nickname, setNickname] = useState<string | null>(null);
 
-  // Load current nickname from server on first render
-  if (!nicknameLoaded) {
-    setNicknameLoaded(true);
-    if (activeServerId) {
-      fetch(`/api/members/me?serverId=${activeServerId}`)
-        .then(r => r.ok ? r.json() : null)
-        .then(data => { if (data?.nickname) setNickname(data.nickname); })
-        .catch(() => {});
-    }
-  }
-
-  const handleSyncNostr = async () => {
-    setSyncing(true);
-    setSyncStatus('idle');
-    try {
-      const res = await fetch('/api/members/me/sync-nostr', { method: 'POST' });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      // Update auth store with fresh profile data
-      const store = useAuthStore.getState();
-      if (store.profile) {
-        useAuthStore.setState({
-          profile: {
-            ...store.profile,
-            displayName: data.displayName || store.profile.displayName,
-            picture: data.picture || store.profile.picture,
-            nip05: data.nip05 || store.profile.nip05,
-            about: data.about || store.profile.about,
-            banner: data.banner || store.profile.banner,
-          },
-        });
-      }
-      setSyncStatus('success');
-      setTimeout(() => setSyncStatus('idle'), 3000);
-    } catch {
-      setSyncStatus('error');
-      setTimeout(() => setSyncStatus('idle'), 3000);
-    } finally {
-      setSyncing(false);
-    }
-  };
-
-  const handleSaveNickname = async () => {
-    setSaving(true);
-    try {
-      await fetch('/api/members/me', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nickname: nickname || null, serverId: activeServerId }),
-      });
-      // Reflect the new alias in the local member list so the active user's
-      // own messages re-render with the alias without needing a page refresh.
-      const ownPubkey = profile?.pubkey;
-      if (ownPubkey) {
-        const chat = useChatStore.getState();
-        const fallback = profile?.displayName || profile?.name || '';
-        const nextName = (nickname || fallback).trim() || fallback;
-        const next = chat.memberList.map((m) =>
-          m.pubkey === ownPubkey ? { ...m, displayName: nextName } : m
-        );
-        chat.setMemberList(next);
-      }
-      setSaveStatus('saved');
-      setTimeout(() => setSaveStatus('idle'), 2000);
-    } catch {
-      // silently fail
-    } finally {
-      setSaving(false);
-    }
-  };
+  useEffect(() => {
+    if (!activeServerId) { setNickname(null); return; }
+    let cancelled = false;
+    fetch(`/api/members/me?serverId=${activeServerId}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (!cancelled) setNickname(d?.nickname || null); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [activeServerId]);
 
   if (!profile) return null;
+  if (typeof document === 'undefined') return null;
 
   const displayName = profile.displayName || profile.name || 'Anon';
 
-  return (
+  return createPortal(
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 z-40" onClick={onClose} />
+      <div className="fixed inset-0 z-[65]" onClick={onClose} />
 
-      {/* Panel — positioned above the UserPanel, bottom-left */}
-      <div className="absolute bottom-full left-0 mb-2 w-72 bg-lc-dark border border-lc-border rounded-xl shadow-2xl overflow-hidden z-50">
+      {/* Panel — fixed bottom-left of the viewport, covering the ServerBar,
+          Discord-style. Anchored by bottom so it always grows UPWARD and
+          never overflows below the user bar. Scrolls internally when tall. */}
+      <div
+        className="fixed left-2 bottom-[72px] w-[340px] max-w-[calc(100vw-1rem)] max-h-[calc(100vh-88px)] overflow-y-auto bg-lc-dark border border-lc-border rounded-xl shadow-2xl z-[70]"
+        style={{ top: 'auto' }}
+      >
         {/* Banner area */}
         {profile.banner ? (
-          <div className="h-20 overflow-hidden relative">
-            <img src={profile.banner} alt="" className="w-full h-full object-cover opacity-60" />
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent to-lc-dark" />
+          <div className="h-28 overflow-hidden relative">
+            <img src={profile.banner} alt="" className="w-full h-full object-cover" />
           </div>
         ) : (
-          <div className="h-12 bg-gradient-to-r from-lc-olive/30 to-lc-dark" />
+          <div className="h-20 bg-gradient-to-r from-lc-olive/30 to-lc-dark" />
         )}
 
         {/* Avatar + name */}
-        <div className="px-4 -mt-6 relative">
+        <div className="px-5 -mt-10 relative">
           {profile.picture ? (
             <img
               src={profile.picture}
               alt={displayName}
-              className="w-14 h-14 rounded-full object-cover ring-4 ring-lc-dark"
+              className="w-20 h-20 rounded-full object-cover ring-4 ring-lc-dark"
             />
           ) : (
-            <div className="w-14 h-14 rounded-full bg-lc-olive flex items-center justify-center text-lc-green text-lg font-semibold ring-4 ring-lc-dark">
+            <div className="w-20 h-20 rounded-full bg-lc-olive flex items-center justify-center text-lc-green text-2xl font-semibold ring-4 ring-lc-dark">
               {displayName[0].toUpperCase()}
             </div>
           )}
-          <div className="mt-2">
-            <div className="text-sm font-semibold text-lc-white">{displayName}</div>
+          <div className="mt-3">
+            <div className="flex items-baseline gap-2 flex-wrap">
+              <span className="text-lg font-semibold text-lc-white">{displayName}</span>
+              {nickname && (
+                <span
+                  className="text-xs text-lc-muted"
+                  title="Alias en este servidor"
+                >
+                  · alias aquí: <span className="text-lc-white/90">{nickname}</span>
+                </span>
+              )}
+            </div>
             {profile.nip05 && (
               <div className="text-xs text-lc-green truncate">{profile.nip05}</div>
             )}
             <div className="text-[10px] text-lc-muted font-mono mt-0.5 truncate">
-              {profile.npub ? `${profile.npub.slice(0, 20)}...` : ''}
+              {profile.npub ? `${profile.npub.slice(0, 24)}...` : ''}
             </div>
           </div>
         </div>
@@ -149,73 +98,18 @@ export default function ProfilePanel({ onClose, onLogout }: ProfilePanelProps) {
 
         <div className="border-t border-lc-border mt-3" />
 
-        {/* Nostr section — edit profile + sync */}
-        <div className="px-4 py-3">
-          <div className="text-[10px] uppercase tracking-wider text-lc-muted font-semibold mb-2">
-            {t('profile.nostrSection')}
-          </div>
-          <div className="space-y-2">
-            <button
-              onClick={() => setEditingProfile(true)}
-              className="w-full flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-lc-green/20 text-lc-green hover:bg-lc-green/30 transition"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
-                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
-              </svg>
-              {t('profile.editNostr')}
-            </button>
-            <button
-              onClick={handleSyncNostr}
-              disabled={syncing}
-              className="w-full flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-lc-border/50 text-lc-white hover:bg-lc-border transition disabled:opacity-50"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={syncing ? 'animate-spin' : ''}>
-                <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0118.8-4.3M22 12.5a10 10 0 01-18.8 4.3"/>
-              </svg>
-              {syncing ? t('profile.syncing') : t('profile.syncFromNostr')}
-            </button>
-            {syncStatus === 'success' && (
-              <div className="text-[10px] text-lc-green mt-1 text-center">{t('profile.syncSuccess')}</div>
-            )}
-            {syncStatus === 'error' && (
-              <div className="text-[10px] text-red-400 mt-1 text-center">{t('profile.syncError')}</div>
-            )}
-          </div>
-          {editingProfile && (
-            <ProfileEditor
-              mode="edit"
-              onComplete={() => setEditingProfile(false)}
-            />
-          )}
-        </div>
-
-        <div className="border-t border-lc-border" />
-
-        {/* Obelisk section — editable nickname */}
-        <div className="px-4 py-3">
-          <div className="text-[10px] uppercase tracking-wider text-lc-muted font-semibold mb-2">
-            {t('profile.obeliskSection')}
-          </div>
-          <label className="text-xs text-lc-muted">{t('profile.nickname')}</label>
-          <div className="flex gap-2 mt-1">
-            <input
-              type="text"
-              value={nickname}
-              onChange={(e) => setNickname(e.target.value)}
-              placeholder={t('profile.nicknamePlaceholder')}
-              maxLength={32}
-              className="flex-1 bg-lc-black border border-lc-border rounded-lg px-2 py-1 text-xs text-lc-white placeholder:text-lc-muted/50 focus:outline-none focus:border-lc-green/50"
-            />
-            <button
-              onClick={handleSaveNickname}
-              disabled={saving}
-              className="px-3 py-1 rounded-lg text-xs font-medium bg-lc-green/20 text-lc-green hover:bg-lc-green/30 transition disabled:opacity-50"
-            >
-              {saveStatus === 'saved' ? t('profile.saved') : t('profile.save')}
-            </button>
-          </div>
-        </div>
+        {/* Editar perfil — single action, opens settings modal on the Perfil tab */}
+        <button
+          onClick={() => { useSettingsStore.getState().open('perfil'); onClose(); }}
+          className="w-full p-3 text-left text-sm text-lc-white hover:bg-lc-border/50 transition flex items-center gap-2"
+          data-testid="open-settings-btn"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+          </svg>
+          Editar perfil
+        </button>
 
         <div className="border-t border-lc-border" />
 
@@ -232,6 +126,7 @@ export default function ProfilePanel({ onClose, onLogout }: ProfilePanelProps) {
           {t('profile.logout')}
         </button>
       </div>
-    </>
+    </>,
+    document.body,
   );
 }

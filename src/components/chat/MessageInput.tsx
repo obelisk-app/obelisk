@@ -238,6 +238,64 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
       return;
     }
 
+    // `/zap [target] [amount]` — opens the zap picker. Prefills target + amount
+    // when provided (target can be a hex pubkey or a `nostr:npub1…` mention).
+    const zap = /^\/zap(?:\s+(\S+))?(?:\s+(\d+))?\s*$/i.exec(payload.trim());
+    if (zap) {
+      (async () => {
+        const { useZapStore } = await import('@/store/zap');
+        const { nip19 } = await import('nostr-tools');
+        let target: string | undefined;
+        const rawTarget = zap[1];
+        if (rawTarget) {
+          try {
+            const clean = rawTarget.replace(/^nostr:/, '');
+            if (clean.startsWith('npub1')) {
+              const dec = nip19.decode(clean);
+              if (dec.type === 'npub') target = dec.data as string;
+            } else if (/^[0-9a-f]{64}$/i.test(clean)) {
+              target = clean.toLowerCase();
+            }
+          } catch { /* ignore */ }
+        }
+        const amount = zap[2] ? parseInt(zap[2], 10) : undefined;
+        useZapStore.getState().setPickerOpen({ channelId: activeChannelId, target, amountSats: amount });
+      })();
+      setContent('');
+      setAttachments([]);
+      setUploadError(null);
+      mentionMapRef.current = new Map();
+      if (textareaRef.current) textareaRef.current.style.height = 'auto';
+      return;
+    }
+
+    // `/balance` — fetches the caller's wallet balance and injects a
+    // self-only ephemeral message into the chat pane.
+    if (/^\/balance\s*$/i.exec(payload.trim())) {
+      (async () => {
+        const { useChatStore } = await import('@/store/chat');
+        try {
+          const r = await fetch('/api/wallet/balance');
+          const d = await r.json().catch(() => ({}));
+          if (r.ok) {
+            useChatStore.getState().pushEphemeral(activeChannelId, `⚡ Balance: ${Number(d.balanceSats || 0).toLocaleString()} sats`);
+          } else if (d.error === 'no_wallet') {
+            useChatStore.getState().pushEphemeral(activeChannelId, '⚠️ No tenés wallet NWC configurada. Abrí tu perfil para conectarla.');
+          } else {
+            useChatStore.getState().pushEphemeral(activeChannelId, `⚠️ No se pudo leer el balance (${d.error || r.status}).`);
+          }
+        } catch {
+          useChatStore.getState().pushEphemeral(activeChannelId, '⚠️ No se pudo contactar la wallet.');
+        }
+      })();
+      setContent('');
+      setAttachments([]);
+      setUploadError(null);
+      mentionMapRef.current = new Map();
+      if (textareaRef.current) textareaRef.current.style.height = 'auto';
+      return;
+    }
+
     if (editingMessage && onEditSave) {
       onEditSave(editingMessage.id, payload);
       setEditingMessage(null);

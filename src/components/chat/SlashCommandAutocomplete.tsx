@@ -63,4 +63,6 @@ export default function SlashCommandAutocomplete({ commands, selectedIndex, onSe
 
 export const SLASH_COMMANDS: SlashCommand[] = [
   { name: 'jugar', description: 'Abrir la lista de juegos disponibles' },
+  { name: 'zap', description: 'Enviar un zap Lightning a otro usuario' },
+  { name: 'balance', description: 'Ver tu balance de Lightning (solo vos)' },
 ];

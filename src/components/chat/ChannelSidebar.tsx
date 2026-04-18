@@ -8,6 +8,7 @@ import { useAuthStore } from '@/store/auth';
 import { useVoiceStore } from '@/store/voice';
 import { useNotificationStore } from '@/store/notification';
 import ProfilePanel from './ProfilePanel';
+import { useSettingsStore } from '@/store/settings';
 import MemberInviteCard from '../invites/MemberInviteCard';
 import { canWriteInChannel } from '@/lib/roles';
 import ChannelEmoji from './ChannelEmoji';
@@ -775,7 +776,7 @@ function VoiceStatusBar() {
   );
 }
 
-function UserPanel() {
+export function UserPanel() {
   const router = useRouter();
   const { profile, logout } = useAuthStore();
   const [showProfile, setShowProfile] = useState(false);
@@ -819,7 +820,7 @@ function UserPanel() {
 
   return (
     <div className="px-2 md:px-4 pb-3 md:pb-4 pt-2 shrink-0 relative">
-      <div className="w-full flex items-center gap-2 bg-lc-border/50 rounded-xl px-3 py-2">
+      <div className="w-full flex items-center gap-2 bg-lc-dark border border-lc-border rounded-xl px-3 py-2 shadow-lg">
         <button
           onClick={() => setShowProfile(!showProfile)}
           className="flex items-center gap-2 flex-1 min-w-0 rounded-lg hover:bg-lc-border/40 transition -mx-1 px-1 py-0.5"
@@ -912,10 +913,11 @@ function UserPanel() {
               </svg>
             </button>
             <button
-              onClick={() => setShowProfile(!showProfile)}
+              onClick={() => useSettingsStore.getState().open('perfil')}
               className="w-7 h-7 rounded-md flex items-center justify-center text-lc-muted hover:text-lc-white hover:bg-lc-border/60 transition-colors"
               title="Settings"
               aria-label="Settings"
+              data-testid="open-settings-gear"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
@@ -924,7 +926,7 @@ function UserPanel() {
           </div>
         ) : (
           <button
-            onClick={() => setShowProfile(!showProfile)}
+            onClick={() => useSettingsStore.getState().open('perfil')}
             className="p-1 rounded-md text-lc-muted hover:text-lc-white hover:bg-lc-border/60 transition-colors shrink-0"
             title="Settings"
             aria-label="Settings"
@@ -1196,8 +1198,8 @@ export default function ChannelSidebar({ onChannelSelect }: { onChannelSelect?: 
 
       {/* Persistent voice call controls — visible while connected, regardless of which channel the user is browsing. */}
       <VoiceStatusBar />
-      {/* User panel — always visible at bottom */}
-      <UserPanel />
+      {/* UserPanel intentionally moved out of ChannelSidebar — now rendered
+          as a sibling row in `/chat` layout so the bar spans across ServerBar. */}
       <ResizeHandle onResize={handleResize} />
     </aside>
   );

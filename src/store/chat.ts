@@ -250,9 +250,22 @@ interface ChatState {
     pinnedByPubkey: string | null,
   ) => void;
 
+  // Self-only "ephemeral" notices shown inline in the chat pane (e.g.
+  // `/balance` output, "@user hasn't set up NWC" hints). Keyed by channelId.
+  // Never hits the server; cleared on channel switch.
+  ephemeralMessages: Record<string, EphemeralMessage[]>;
+  pushEphemeral: (channelId: string, text: string) => void;
+  clearEphemeral: (channelId: string) => void;
+
   // Reset all data fields to their initial values. Used on logout /
   // account-switch by `resetAllClientState()` in `@/lib/reset`.
   reset: () => void;
+}
+
+export interface EphemeralMessage {
+  id: string;
+  text: string;
+  createdAt: string;
 }
 
 // Exported so `@/lib/reset` and tests can assert drift-free restoration.
@@ -286,6 +299,7 @@ export const CHAT_INITIAL_STATE = {
   followedPostMeta: {} as Record<string, { id: string; title: string; channelId: string; channelName: string; serverId: string }>,
   followedPostsLoading: false,
   suppressedAutoFollowPostIds: [] as string[],
+  ephemeralMessages: {} as Record<string, EphemeralMessage[]>,
 };
 
 export const useChatStore = create<ChatState>()((set) => ({
@@ -381,6 +395,22 @@ export const useChatStore = create<ChatState>()((set) => ({
   setIsNearBottom: (near) => set((state) => (state.isNearBottom === near ? state : { isNearBottom: near })),
 
   setMyRole: (role) => set({ myRole: role }),
+
+  pushEphemeral: (channelId, text) => set((state) => {
+    const list = state.ephemeralMessages[channelId] ?? [];
+    const next: EphemeralMessage = {
+      id: `eph-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      text,
+      createdAt: new Date().toISOString(),
+    };
+    return { ephemeralMessages: { ...state.ephemeralMessages, [channelId]: [...list, next] } };
+  }),
+  clearEphemeral: (channelId) => set((state) => {
+    if (!state.ephemeralMessages[channelId]) return state;
+    const next = { ...state.ephemeralMessages };
+    delete next[channelId];
+    return { ephemeralMessages: next };
+  }),
 
   updatePinState: (messageId, pinnedAt, pinnedByPubkey) => set((state) => ({
     messages: state.messages.map((m) =>

@@ -542,6 +542,10 @@ export async function publishProfile(fields: {
   display_name?: string;
   picture?: string;
   about?: string;
+  banner?: string;
+  website?: string;
+  lud16?: string;
+  nip05?: string;
 }): Promise<NDKEvent> {
   const ndk = getNDK();
   if (!ndk.signer) throw new Error('No signer available');
