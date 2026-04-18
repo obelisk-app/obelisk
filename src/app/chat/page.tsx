@@ -34,6 +34,7 @@ import { publishInboxRelays } from '@/lib/dm-inbox';
 import { formatPubkey, getNDK, connectNDK, addDMInboxRelays, restoreRemoteSigner } from '@/lib/nostr';
 import { DM_FEATURE_ENABLED } from '@/lib/feature-flags';
 import { shortNpub } from '@/lib/mentions';
+import { playMentionSound } from '@/lib/mentionSound';
 import {
   isUserWatchingChannel,
   handleIncomingChannelMessage,
@@ -972,6 +973,10 @@ export default function ChatPage() {
       const notifStore = useNotificationStore.getState();
       const isMentionLike = data.type === 'mention' || data.type === 'reply' || data.type === 'everyone';
       if (isMentionLike && data.channelId) {
+        // Audible cue for live mentions (mention/reply/@everyone). Fires on
+        // every real-time socket event — including when the user is already
+        // viewing the channel — so the user always hears when they're pinged.
+        playMentionSound();
         // Skip flag set if the user is actively watching this channel AND
         // (for forum posts) the specific post — otherwise the mention dot
         // would stick around until the next unread flush.
