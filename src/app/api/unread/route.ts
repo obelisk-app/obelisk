@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthPubkey } from '@/lib/api-auth';
+import { resolveMemberAccess } from '@/lib/channel-access';
+import { canReadChannel } from '@/lib/roles';
 
 // GET /api/unread — bulk fetch all unread counts for the authenticated user
 export async function GET(req: NextRequest) {
@@ -16,12 +18,28 @@ export async function GET(req: NextRequest) {
   });
   const serverIds = memberships.map(m => m.serverId);
 
-  // Get all channels in those servers
+  // Get all channels in those servers, including read-permission fields so
+  // we can drop channels the viewer can't see. Without this filter, hidden
+  // channels leak into the per-server badge — producing a "stuck" unread
+  // count with no readable messages behind it.
   const channels = await prisma.channel.findMany({
     where: { serverId: { in: serverIds }, type: { in: ['text', 'forum'] } },
-    select: { id: true },
+    select: { id: true, serverId: true, readPermission: true, readRoleIds: true },
   });
-  const channelIds = channels.map(c => c.id);
+
+  const accessByServer = new Map<string, { role: string; customRoleIds: string[] }>();
+  await Promise.all(
+    serverIds.map(async (sid) => {
+      accessByServer.set(sid, await resolveMemberAccess(pubkey, sid) as any);
+    })
+  );
+
+  const visibleChannels = channels.filter((c) => {
+    const access = accessByServer.get(c.serverId);
+    if (!access) return false;
+    return canReadChannel(access.role as any, c, access.customRoleIds);
+  });
+  const channelIds = visibleChannels.map(c => c.id);
 
   // Get user's read states
   const readStates = await prisma.channelReadState.findMany({
