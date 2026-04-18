@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/obelisk-md.gif" alt="Obelisk" width="140" />
+  <img src="public/obelisk-md.gif" alt="Obelisk" width="100%" style="max-height: 320px; object-fit: cover;" />
 </p>
 
 <h1 align="center">Obelisk</h1>
@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://obelisk.fabri.lat">Live demo</a> ·
+  <a href="https://obelisk.ar">Live app</a> ·
   <a href="ROADMAP.md">Roadmap</a> ·
   <a href="DEPLOY.md">Self-host</a> ·
   <a href="docs/">Docs</a>
