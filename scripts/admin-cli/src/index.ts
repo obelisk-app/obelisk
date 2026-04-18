@@ -13,6 +13,16 @@ import {
   mergeMessages, isChannelUpToDate,
 } from './memory';
 import { composeSuggestion, composeAlert, findServerForChannel, mentionToken } from './archon';
+import {
+  buildSnapshot, loadSnapshot, saveSnapshot, deleteSnapshot,
+  LockdownLevel,
+} from './lockdown';
+import fs from 'fs';
+import { decodeNsec, pubkeyFromNsec } from './auth/signer-nsec';
+import {
+  buildProfileEvent, buildProfileMetadata, fetchExistingProfile, publishProfile,
+  DEFAULT_PROFILE_RELAYS, ProfileMetadata,
+} from './profile';
 
 const HELP = `obelisk-admin — headless admin CLI
 
@@ -83,6 +93,19 @@ Members:
 
 Messages:
   messages delete <messageId> --serverId <serverId>
+
+Profile (publish kind-0 metadata to Nostr relays — merges with existing profile by default):
+  profile get --pubkey <hex> [--relay <url>]...
+  profile publish [--picture <url>] [--name <n>] [--display-name <n>] [--about <t>]
+                  [--banner <url>] [--nip05 <addr>] [--lud16 <addr>] [--website <url>]
+                  [--relay <url>]... [--replace] [--nsec <v> | --nsec-file <path>]
+                  (default relays: damus, nostr.band, nos.lol, primal, purplepag.es)
+
+Lockdown (flip all channels to admin/mod-only write, with snapshot-based restore):
+  lockdown on <serverId> [--admins-only] [--announce-channel <id>] [--reason "..."]
+                                        (default: mods still write; --admins-only makes it admin-only)
+  lockdown off <serverId> [--announce-channel <id>] [--reason "..."]
+  lockdown status <serverId>
 
 Instance:
   instance get
@@ -196,6 +219,169 @@ async function main(argv: string[]): Promise<number> {
     const body = parseJsonFlag(flagString(flags, 'body'), 'body');
     print(await Api.exec(method, pathname, body));
     return 0;
+  }
+
+  // Profile: publish a kind-0 metadata event to relays (Nostr profile).
+  // Needs the nsec again (not the session cookie) — nsec is only in memory for
+  // the duration of this call, never persisted.
+  if (group === 'profile') {
+    if (sub !== 'publish' && sub !== 'get') {
+      throw new Error('Usage: profile publish [--picture <url>] [--name <n>] [--about <t>] [--nip05 <a>] [--relay <url>]... [--replace]\n       profile get [--pubkey <hex>] [--relay <url>]...');
+    }
+
+    const relayFlag = flagString(flags, 'relay');
+    const relays = relayFlag
+      ? relayFlag.split(',').map((r) => r.trim()).filter(Boolean)
+      : DEFAULT_PROFILE_RELAYS;
+
+    if (sub === 'get') {
+      const pubkey = flagString(flags, 'pubkey');
+      if (!pubkey) throw new Error('profile get requires --pubkey <hex>');
+      const existing = await fetchExistingProfile(pubkey, relays);
+      print(existing ?? { pubkey, found: false });
+      return 0;
+    }
+
+    // profile publish
+    const nsecFile = flagString(flags, 'nsec-file') ?? process.env.OBELISK_NSEC_FILE;
+    let nsecValue = flagString(flags, 'nsec') ?? process.env.OBELISK_NSEC;
+    if (!nsecValue && nsecFile) nsecValue = fs.readFileSync(nsecFile, 'utf8').trim();
+    if (!nsecValue) nsecValue = await promptHidden('nsec (hidden): ');
+    if (!nsecValue) throw new Error('Provide --nsec, --nsec-file, $OBELISK_NSEC[_FILE]');
+
+    const secret = decodeNsec(nsecValue);
+    const pubkey = pubkeyFromNsec(secret);
+
+    const patch: ProfileMetadata = {};
+    const name = flagString(flags, 'name'); if (name !== undefined) patch.name = name;
+    const displayName = flagString(flags, 'display-name'); if (displayName !== undefined) patch.display_name = displayName;
+    const about = flagString(flags, 'about'); if (about !== undefined) patch.about = about;
+    const picture = flagString(flags, 'picture'); if (picture !== undefined) patch.picture = picture;
+    const banner = flagString(flags, 'banner'); if (banner !== undefined) patch.banner = banner;
+    const nip05 = flagString(flags, 'nip05'); if (nip05 !== undefined) patch.nip05 = nip05;
+    const lud16 = flagString(flags, 'lud16'); if (lud16 !== undefined) patch.lud16 = lud16;
+    const website = flagString(flags, 'website'); if (website !== undefined) patch.website = website;
+
+    if (Object.keys(patch).length === 0) {
+      throw new Error('profile publish needs at least one of: --name, --display-name, --about, --picture, --banner, --nip05, --lud16, --website');
+    }
+
+    const replace = flags.replace === true;
+    const existing = replace ? null : await fetchExistingProfile(pubkey, relays);
+    const merged = buildProfileMetadata(existing, patch);
+
+    const event = buildProfileEvent(secret, merged);
+    const publishResults = await publishProfile(event, relays);
+
+    print({
+      pubkey,
+      mode: replace ? 'replace' : 'merge',
+      previousFound: existing !== null,
+      metadata: merged,
+      eventId: event.id,
+      relays: publishResults,
+      ok: publishResults.filter((r) => r.ok).length,
+      failed: publishResults.filter((r) => !r.ok).length,
+    });
+    return 0;
+  }
+
+  // Lockdown: flip every channel to admin/mod-only write and back.
+  if (group === 'lockdown') {
+    const action = sub;
+    const serverId = positional[0];
+    if (!serverId || !['on', 'off', 'status'].includes(action ?? '')) {
+      throw new Error('Usage: lockdown <on|off|status> <serverId> [--admins-only] [--announce-channel <id>] [--reason "..."]');
+    }
+
+    if (action === 'status') {
+      const snap = loadSnapshot(serverId);
+      print(snap ?? { serverId, locked: false });
+      return 0;
+    }
+
+    const announceChannelId = flagString(flags, 'announce-channel');
+    const reason = flagString(flags, 'reason');
+
+    if (action === 'on') {
+      if (loadSnapshot(serverId)) {
+        throw new Error(`Lockdown already active for ${serverId}. Run: lockdown off ${serverId}`);
+      }
+      const level: LockdownLevel = flags['admins-only'] === true ? 'admin' : 'mod';
+      const view = await Api.getServerView(serverId);
+      const flat: any[] = [
+        ...(view.channels ?? []),
+        ...((view.categories ?? []).flatMap((c: any) => c.channels ?? [])),
+      ];
+      const snap = buildSnapshot(serverId, level, flat);
+      saveSnapshot(snap);
+
+      const results: any[] = [];
+      for (const ch of snap.channels) {
+        try {
+          await Api.editChannel(ch.channelId, { writePermission: level, writeRoleIds: [] });
+          results.push({ channelId: ch.channelId, name: ch.name, ok: true });
+        } catch (err: any) {
+          results.push({ channelId: ch.channelId, name: ch.name, error: err.message });
+        }
+      }
+
+      // Pick announce channel: explicit flag > 'anuncios' > first text channel.
+      let targetChannel = announceChannelId;
+      if (!targetChannel) {
+        const anuncios = flat.find((c: any) => c.type === 'text' && c.name === 'anuncios');
+        targetChannel = anuncios?.id ?? flat.find((c: any) => c.type === 'text')?.id;
+      }
+      let announced: any = { skipped: 'no text channel found' };
+      if (targetChannel) {
+        const who = level === 'admin' ? 'los administradores' : 'los administradores y moderadores';
+        const tail = reason ? ` Motivo: ${reason}` : '';
+        const msg = `🔒 **Servidor en modo solo-lectura.** Solo ${who} pueden publicar hasta nuevo aviso.${tail}`;
+        try {
+          announced = await Api.postMessage(targetChannel, msg);
+        } catch (err: any) {
+          announced = { channelId: targetChannel, error: err.message };
+        }
+      }
+      print({ action: 'on', level, locked: results.length, results, announced });
+      return 0;
+    }
+
+    if (action === 'off') {
+      const snap = loadSnapshot(serverId);
+      if (!snap) throw new Error(`No active lockdown for ${serverId}.`);
+      const results: any[] = [];
+      for (const ch of snap.channels) {
+        try {
+          await Api.editChannel(ch.channelId, {
+            writePermission: ch.writePermission,
+            writeRoleIds: ch.writeRoleIds,
+          });
+          results.push({ channelId: ch.channelId, name: ch.name, ok: true, restored: ch.writePermission });
+        } catch (err: any) {
+          results.push({ channelId: ch.channelId, name: ch.name, error: err.message });
+        }
+      }
+      deleteSnapshot(serverId);
+
+      let targetChannel = announceChannelId;
+      if (!targetChannel) {
+        const anuncios = snap.channels.find((c) => c.type === 'text' && c.name === 'anuncios');
+        targetChannel = anuncios?.channelId ?? snap.channels.find((c) => c.type === 'text')?.channelId;
+      }
+      let announced: any = { skipped: 'no text channel found' };
+      if (targetChannel) {
+        const tail = reason ? ` ${reason}` : '';
+        const msg = `🔓 **Servidor desbloqueado.** Todos los miembros pueden volver a publicar.${tail}`;
+        try {
+          announced = await Api.postMessage(targetChannel, msg);
+        } catch (err: any) {
+          announced = { channelId: targetChannel, error: err.message };
+        }
+      }
+      print({ action: 'off', restored: results.length, results, announced });
+      return 0;
+    }
   }
 
   // Admin commands

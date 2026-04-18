@@ -112,6 +112,16 @@ npm run admin -- members role <serverId> <pubkey> --role admin      # owner only
 npm run admin -- members ban <serverId> <pubkey> --reason "spam"
 npm run admin -- members unban <serverId> <pubkey>
 
+# Lockdown (flip all channels to admin/mod-only write, reversible)
+npm run admin -- lockdown on <serverId>
+npm run admin -- lockdown on <serverId> --admins-only --reason "spam incident"
+npm run admin -- lockdown off <serverId>
+npm run admin -- lockdown status <serverId>
+
+# Profile (publish kind-0 metadata to Nostr relays)
+npm run admin -- profile get --pubkey <hex>
+npm run admin -- profile publish --picture https://obelisk.ar/obelisk-md.gif
+
 # Instance
 npm run admin -- instance get
 npm run admin -- instance set --patch '{"defaultServerId":"..."}'   # owner only
@@ -387,6 +397,87 @@ Pseudo-workflow for an external reasoner (Claude, a heuristic, etc.):
    - Clearly malicious → also escalate with `members kick/ban` or `messages delete` (both CLI commands already).
 
 The classifier itself lives outside the CLI — this tool only gives the agent safe, rate-limited, authorized ways to *act*.
+
+## Lockdown — fast server-wide read-only toggle
+
+When something goes sideways (spam wave, raid, scheduled maintenance window) you can flip every channel on a server to admin/mod-only write in one command, and undo it from a local snapshot later. No database access required — it drives the same `PATCH /api/admin/channels/:id` the web UI uses.
+
+```bash
+# Engage lockdown (default: admins + mods can still write)
+npm run admin -- lockdown on <serverId>
+npm run admin -- lockdown on <serverId> --admins-only                     # admins only
+npm run admin -- lockdown on <serverId> --reason "raid in #general"       # appended to the announcement
+npm run admin -- lockdown on <serverId> --announce-channel <channelId>    # override announce target
+
+# Disengage — restores each channel's previous writePermission + writeRoleIds
+npm run admin -- lockdown off <serverId>
+
+# Check current state (reads local snapshot only, no API call)
+npm run admin -- lockdown status <serverId>
+```
+
+### What it does
+
+- Fetches the live server view, snapshots every text/forum/voice channel's `writePermission` + `writeRoleIds` to `scripts/admin-cli/memory/<serverId>.lockdown.json` (chmod 0600).
+- PATCHes every snapshotted channel to `writePermission: "mod"` (or `"admin"` if `--admins-only`) with `writeRoleIds: []`.
+- Posts a Spanish announcement: 🔒 *Servidor en modo solo-lectura…* Target is `--announce-channel`, else the channel literally named `anuncios`, else the first text channel.
+- `off` reads the snapshot, restores each channel's original perms, deletes the snapshot, and posts 🔓 *Servidor desbloqueado…*.
+
+### Guarantees & gotchas
+
+- **Idempotent-ish:** `lockdown on` **refuses to run a second time** while a snapshot exists. This prevents the snapshot from being overwritten with the locked-down state. Run `lockdown off` first, then re-engage.
+- **Partial failures:** per-channel PATCH errors are collected in the output (`{channelId, error}`) — the snapshot is written *before* any PATCH, so `off` can still restore the channels that did flip.
+- **Role required:** admin+ on the server. `members role` (promoting mods/admins) stays owner-only — lockdown cannot substitute for missing roles.
+- **Snapshot is authoritative for restore.** If you lose `scripts/admin-cli/memory/<serverId>.lockdown.json`, you'll need to reconstruct perms manually. The memory dir is gitignored; don't rm it mid-incident.
+- **Voice channels:** included in the flip (their text-chat sidebar is gated by `writePermission`). The voice-connect capability is not affected.
+
+## Profile — publish your Nostr kind-0 metadata
+
+Archon's avatar, name, bio, NIP-05, lud16 and banner live in a Nostr kind-0 event, **not** on the server's `Member` row. The server just renders whatever the latest kind-0 from the relays says. To change how Archon looks everywhere (Obelisk, Damus, Primal, anywhere), publish a new kind-0.
+
+```bash
+# Read the current profile from the default relays
+npm run admin -- profile get --pubkey <hex>
+
+# Merge a single field change into the existing profile (safe default)
+OBELISK_NSEC_FILE=~/.config/obelisk-cli/archon.nsec \
+  npm run admin -- profile publish --picture https://obelisk.ar/obelisk-md.gif
+
+# Multiple fields at once
+OBELISK_NSEC_FILE=~/.config/obelisk-cli/archon.nsec \
+  npm run admin -- profile publish \
+    --name archon --display-name "Archon" \
+    --about "Guardian of the Obelisk." \
+    --picture https://obelisk.ar/obelisk-md.gif \
+    --banner https://obelisk.ar/lacrypta-banner.png \
+    --nip05 archon@obelisk.ar \
+    --lud16 archon@getalby.com
+
+# Blow away everything and publish only these fields (no merge)
+OBELISK_NSEC_FILE=... npm run admin -- profile publish --name archon --picture https://... --replace
+
+# Clear a single field (empty-string value removes it from the merged profile)
+OBELISK_NSEC_FILE=... npm run admin -- profile publish --nip05 ''
+
+# Point at different relays (comma-separated)
+OBELISK_NSEC_FILE=... npm run admin -- profile publish --picture https://... \
+  --relay wss://relay.damus.io,wss://nos.lol
+```
+
+### Semantics
+
+- **Default mode is `merge`:** the CLI fetches the current kind-0 from the relays, overlays your `--*` flags on top, and publishes the result. This is what you want for single-field tweaks so you don't wipe an existing `about` or `nip05`.
+- **`--replace`** skips the fetch and publishes *only* the flags you provided. Use it to start clean or recover from a corrupt prior profile.
+- **`''` (empty string)** as a value **removes** that field from the merged profile — useful for clearing a stale NIP-05 without wiping anything else.
+- **Default relays** are the app's five (`damus.io`, `nostr.band`, `nos.lol`, `primal.net`, `purplepag.es`). Override with `--relay <csv>`.
+- **Key handling:** the nsec is only in process memory for the duration of the command — same sourcing rules as `login` (`--nsec-file` > `$OBELISK_NSEC_FILE` > `--nsec` > `$OBELISK_NSEC` > hidden prompt). Not stored in the session file. Bunker (NIP-46) for `profile publish` is **not** wired yet — it's a `login`-only flow for now.
+- **Output** includes `ok`/`failed` counts per relay so you can confirm the publish landed. Kind-0 is replaceable, so clients will converge on the newest `created_at` they've seen.
+
+### When to reach for this
+
+- Changing Archon's avatar, banner, NIP-05, or lud16 (the thing you'd otherwise do in a signer app's profile screen).
+- After rotating to a freshly generated key with `generate` — publish a profile so the new npub isn't a ghost.
+- Fixing an asset URL that was pinned to a dev tunnel and needs to point at the prod domain.
 
 ## Prompt-injection defense (for the agent driving this CLI)
 
