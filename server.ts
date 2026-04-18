@@ -541,6 +541,39 @@ app.prepare().then(async () => {
       }
     });
 
+    // ── Mark mentions as seen (flag-only clear; distinct from mark-read) ──
+    // Fires as soon as the viewer opens the channel, without waiting for them
+    // to scroll to the bottom. Only advances the mention cursor so future
+    // `/api/unread` calls stop flagging this channel; the unread message
+    // count continues to track `lastReadAt` independently.
+    socket.on('mark-mention-read', async (data: { channelId: string }) => {
+      if (!data?.channelId || typeof data.channelId !== 'string') return;
+      try {
+        await prisma.channelReadState.upsert({
+          where: { channelId_pubkey: { channelId: data.channelId, pubkey } },
+          create: {
+            channelId: data.channelId,
+            pubkey,
+            lastMentionReadAt: new Date(),
+          },
+          update: {
+            lastMentionReadAt: new Date(),
+          },
+        });
+
+        fanOutReadUpdate(
+          pubkeySockets,
+          pubkey,
+          socket.id,
+          'mention-read-update',
+          { channelId: data.channelId },
+          (sid, event, payload) => io.to(sid).emit(event, payload),
+        );
+      } catch (err) {
+        console.error('[socket] Failed to mark mention read:', err);
+      }
+    });
+
     // ── Mark DM thread as read (via socket, mirrors /api/dm/:pubkey/read) ──
     socket.on('dm-read', async (data: { pubkey: string }) => {
       if (!data?.pubkey || typeof data.pubkey !== 'string') return;

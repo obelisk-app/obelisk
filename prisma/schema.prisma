@@ -447,11 +447,17 @@ model ModerationAction {
 }
 
 model ChannelReadState {
-  id                String   @id @default(cuid())
-  channelId         String
-  pubkey            String
-  lastReadAt        DateTime @default(now())
-  lastReadMessageId String?
+  id                   String    @id @default(cuid())
+  channelId            String
+  pubkey               String
+  lastReadAt           DateTime  @default(now())
+  lastReadMessageId    String?
+  // Separate cursor for the mention badge — lets us clear the "you were
+  // mentioned" dot as soon as the user opens the channel (even when they're
+  // scrolled up / not near bottom), without pretending they've read every
+  // message in between. `/api/unread` filters `Mention.createdAt >
+  // (lastMentionReadAt ?? lastReadAt)`.
+  lastMentionReadAt    DateTime?
 
   channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
 

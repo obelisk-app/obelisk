@@ -34,7 +34,7 @@ export type MentionSegment =
 //  - nostr:npub1<bech32>  (real NIP-19 encoded, e.g. pasted from clients)
 //  - npub1<bech32>        (raw bech32 without scheme)
 // The hex variant is tried first so we don't decode unnecessarily.
-const MENTION_REGEX = /(?:nostr:)?npub1([a-z0-9]{58,})/gi;
+const MENTION_REGEX = /(?:nostr:)?npub1([a-z0-9]{58,90})/gi;
 
 /**
  * Build a short, user-friendly fallback label when we don't know the member.
@@ -150,7 +150,7 @@ export function hasEveryoneMention(content: string): boolean {
 export function extractMentionPubkeys(content: string): string[] {
   const found = new Set<string>();
   // Rebuild regex each call to avoid shared `lastIndex` state across callers.
-  const re = /(?:nostr:)?npub1([a-z0-9]{58,})/gi;
+  const re = /(?:nostr:)?npub1([a-z0-9]{58,90})/gi;
   let match: RegExpExecArray | null;
   while ((match = re.exec(content)) !== null) {
     const body = match[1];
@@ -192,7 +192,7 @@ export function contentToDisplayTokens(
 
   let display = '';
   let lastIndex = 0;
-  const regex = /(?:nostr:)?npub1([a-z0-9]{58,})/gi;
+  const regex = /(?:nostr:)?npub1([a-z0-9]{58,90})/gi;
   let match: RegExpExecArray | null;
 
   while ((match = regex.exec(content)) !== null) {

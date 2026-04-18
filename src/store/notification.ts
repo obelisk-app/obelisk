@@ -33,6 +33,11 @@ interface NotificationState {
   setChannelUnread: (channelId: string, count: number, hasMention?: boolean) => void;
   incrementChannelUnread: (channelId: string, hasMention?: boolean) => void;
   clearChannelUnread: (channelId: string) => void;
+  /** Flag-only mention toggle. Separate from the unread count so the mention
+   *  dot can be cleared independently (e.g. when opening a channel without
+   *  being scrolled to the bottom). */
+  setChannelMention: (channelId: string, hasMention: boolean) => void;
+  clearChannelMention: (channelId: string) => void;
   incrementPostUnread: (postId: string, hasMention?: boolean) => void;
   setPostMention: (postId: string, hasMention: boolean) => void;
   clearPostUnread: (postId: string) => void;
@@ -90,6 +95,19 @@ export const useNotificationStore = create<NotificationState>()((set) => ({
     const { [channelId]: _, ...restUnreads } = state.channelUnreads;
     const { [channelId]: __, ...restMentions } = state.channelMentions;
     return { channelUnreads: restUnreads, channelMentions: restMentions };
+  }),
+
+  setChannelMention: (channelId, hasMention) => set((state) => {
+    if (hasMention) {
+      return { channelMentions: { ...state.channelMentions, [channelId]: true } };
+    }
+    const { [channelId]: _, ...rest } = state.channelMentions;
+    return { channelMentions: rest };
+  }),
+
+  clearChannelMention: (channelId) => set((state) => {
+    const { [channelId]: _, ...rest } = state.channelMentions;
+    return { channelMentions: rest };
   }),
 
   incrementPostUnread: (postId, hasMention) => set((state) => ({

@@ -324,17 +324,51 @@ export default function ChatPage() {
     fetchServers();
   }, [sessionChecked, slugResolutionDone, setServers, setActiveServer]);
 
-  // Fetch initial unread counts
+  // Fetch unread counts on mount, tab focus, and socket reconnect.
+  //
+  // Single-mount fetch used to leave the badge stale forever if the client
+  // missed a socket event (disconnect, OS-suspended tab, account-switch
+  // race). Refetching on visibility/reconnect makes the server the source
+  // of truth for counts whenever the tab has been backgrounded. Debounced
+  // so tab-flap or reconnect storms don't hammer the DB.
   useEffect(() => {
     if (!sessionChecked) return;
-    fetch('/api/unread')
-      .then(res => res.ok ? res.json() : null)
-      .then(data => {
-        if (data) {
-          useNotificationStore.getState().setBulkUnreads(data);
-        }
-      })
-      .catch(() => {});
+
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let cancelled = false;
+
+    const fetchNow = () => {
+      fetch('/api/unread')
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (!cancelled && data) {
+            useNotificationStore.getState().setBulkUnreads(data);
+          }
+        })
+        .catch(() => {});
+    };
+
+    const refreshUnreads = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(fetchNow, 500);
+    };
+
+    fetchNow();
+
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') refreshUnreads();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('focus', refreshUnreads);
+    window.addEventListener('obelisk:unread-refresh', refreshUnreads as EventListener);
+
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('focus', refreshUnreads);
+      window.removeEventListener('obelisk:unread-refresh', refreshUnreads as EventListener);
+    };
   }, [sessionChecked]);
 
   // Request browser notification permission after login
@@ -808,12 +842,25 @@ export default function ChatPage() {
 
     const socket = io();
 
+    // Snapshot the pubkey this socket was opened for so notification /
+    // unread / read handlers can ignore events that land after an in-tab
+    // account switch (the effect tears down on pubkey change, but an
+    // event already in the queue could still fire on the old socket).
+    const expectedPubkey = useAuthStore.getState().profile?.pubkey ?? null;
+    const isStaleSession = () =>
+      !!expectedPubkey && useAuthStore.getState().profile?.pubkey !== expectedPubkey;
+
     socket.on('connect', () => {
       console.log('Socket connected');
       // Snapshot currently-online pubkeys
       socket.emit('presence-sync', (pubkeys: string[]) => {
         useChatStore.getState().setOnlinePubkeys(pubkeys);
       });
+      // Reconnect may have missed events; let the unread-fetch effect
+      // reconcile from `/api/unread` as the source of truth.
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('obelisk:unread-refresh'));
+      }
     });
 
     socket.on('presence-update', ({ pubkey: pk, online }: { pubkey: string; online: boolean }) => {
@@ -827,6 +874,7 @@ export default function ChatPage() {
     });
 
     socket.on('new-message', (message: Message) => {
+      if (isStaleSession()) return;
       // Seed profileCache from the embedded author so messages from
       // never-seen pubkeys render immediately with name + avatar.
       if (message.author && !profileCache.has(message.authorPubkey)) {
@@ -970,6 +1018,7 @@ export default function ChatPage() {
     // Doing it this way means a single server-side event becomes exactly one
     // client-side count bump, regardless of whether the user is mentioned.
     socket.on('notification', (data: { type: string; channelId?: string; postId?: string; serverId?: string; senderPubkey: string; preview?: string }) => {
+      if (isStaleSession()) return;
       const notifStore = useNotificationStore.getState();
       const isMentionLike = data.type === 'mention' || data.type === 'reply' || data.type === 'everyone';
       if (isMentionLike && data.channelId) {
@@ -986,11 +1035,7 @@ export default function ChatPage() {
           : false;
         if (watchingChannel && (!data.postId || watchingPost)) return;
         // Set mention flag on the channel without touching the count.
-        notifStore.setChannelUnread(
-          data.channelId,
-          notifStore.channelUnreads[data.channelId] || 0,
-          true,
-        );
+        notifStore.setChannelMention(data.channelId, true);
         // Also flag the thread row when this mention came from a forum post.
         // Flag-only: count is bumped by the paired `post-unread` event.
         if (data.postId) {
@@ -1015,15 +1060,25 @@ export default function ChatPage() {
     // persists a `mark-read` or `dm-read` from any of this user's other
     // sockets. Clears the local unread state without another DB round-trip.
     socket.on('read-update', ({ channelId }: { channelId: string }) => {
+      if (isStaleSession()) return;
       useNotificationStore.getState().clearChannelUnread(channelId);
     });
 
+    // Sibling tab / device opened the channel and cleared the mention dot.
+    // Only clears the mention flag — count stays until a full `read-update`.
+    socket.on('mention-read-update', ({ channelId }: { channelId: string }) => {
+      if (isStaleSession()) return;
+      useNotificationStore.getState().clearChannelMention(channelId);
+    });
+
     socket.on('dm-read-update', ({ pubkey: otherPubkey }: { pubkey: string }) => {
+      if (isStaleSession()) return;
       useNotificationStore.getState().clearDMUnread(otherPubkey);
       useDMStore.getState().updateThread(otherPubkey, { unreadCount: 0 });
     });
 
     socket.on('unread-update', (data: { channelId: string; serverId: string; hasMention: boolean; preview?: string }) => {
+      if (isStaleSession()) return;
       const notifStore = useNotificationStore.getState();
       notifStore.incrementChannelUnread(data.channelId, data.hasMention);
       // Update channel-server mapping
@@ -1042,6 +1097,7 @@ export default function ChatPage() {
     });
 
     socket.on('post-unread', (data: { postId: string; messageId: string; authorPubkey: string; hasMention?: boolean }) => {
+      if (isStaleSession()) return;
       if (data.postId === useChatStore.getState().activePostId) return;
       useNotificationStore.getState().incrementPostUnread(data.postId, data.hasMention);
     });

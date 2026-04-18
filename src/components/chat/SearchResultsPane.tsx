@@ -151,7 +151,7 @@ interface Props {
 export default function SearchResultsPane({ serverId, profileCache, onRequery }: Props) {
   const t = useT();
   const { query, results, isSearching, hasMore, sort, activeFilters, setSort, removeFilter, openPicker } = useSearchStore();
-  const { setActiveChannel } = useChatStore();
+  const { userSelectChannel: setActiveChannel } = useChatStore();
 
   const searchTerms = useMemo(() => {
     return query

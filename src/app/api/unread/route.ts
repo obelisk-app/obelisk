@@ -42,6 +42,10 @@ export async function GET(req: NextRequest) {
     channelIds.map(async (channelId) => {
       const readState = readStateMap.get(channelId);
       const lastReadAt = readState?.lastReadAt ?? new Date(0);
+      // Mention cursor falls back to the generic read cursor so existing
+      // users without a mention cursor don't suddenly see all historical
+      // mentions re-flagged after the schema change.
+      const lastMentionReadAt = readState?.lastMentionReadAt ?? lastReadAt;
 
       const [unreadCount, mentionCount] = await Promise.all([
         prisma.message.count({
@@ -56,7 +60,7 @@ export async function GET(req: NextRequest) {
           where: {
             channelId,
             pubkey,
-            createdAt: { gt: lastReadAt },
+            createdAt: { gt: lastMentionReadAt },
           },
         }),
       ]);

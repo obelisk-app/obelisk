@@ -581,7 +581,7 @@ function VoiceStatusBar() {
   const pinnedChannels = useChatStore((s) => s.pinnedChannels);
   const categories = useChatStore((s) => s.categories);
   const activeServerId = useChatStore((s) => s.activeServerId);
-  const setActiveChannel = useChatStore((s) => s.setActiveChannel);
+  const setActiveChannel = useChatStore((s) => s.userSelectChannel);
 
   if (!currentVoiceChannelId) return null;
 
@@ -999,7 +999,7 @@ function ResizeHandle({ onResize }: { onResize: (w: number) => void }) {
 }
 
 export default function ChannelSidebar({ onChannelSelect }: { onChannelSelect?: () => void } = {}) {
-  const { servers, activeServerId, pinnedChannels, categories, activeChannelId, setActiveChannel, isLoadingChannels } = useChatStore();
+  const { servers, activeServerId, pinnedChannels, categories, activeChannelId, userSelectChannel: setActiveChannel, isLoadingChannels } = useChatStore();
   const setActivePostIdStore = useChatStore((s) => s.setActivePostId);
   const activePostId = useChatStore((s) => s.activePostId);
   const followedPostIdsRaw = useChatStore((s) => s.followedPostIds);

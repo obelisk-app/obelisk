@@ -45,6 +45,27 @@ describe('useNotificationStore', () => {
     expect(state.channelMentions['ch1']).toBeUndefined();
   });
 
+  it('setChannelMention toggles flag without touching count', () => {
+    useNotificationStore.getState().setChannelUnread('ch1', 5, false);
+    useNotificationStore.getState().setChannelMention('ch1', true);
+    let state = useNotificationStore.getState();
+    expect(state.channelMentions['ch1']).toBe(true);
+    expect(state.channelUnreads['ch1']).toBe(5);
+
+    useNotificationStore.getState().setChannelMention('ch1', false);
+    state = useNotificationStore.getState();
+    expect(state.channelMentions['ch1']).toBeUndefined();
+    expect(state.channelUnreads['ch1']).toBe(5);
+  });
+
+  it('clearChannelMention removes only the mention flag', () => {
+    useNotificationStore.getState().setChannelUnread('ch1', 3, true);
+    useNotificationStore.getState().clearChannelMention('ch1');
+    const state = useNotificationStore.getState();
+    expect(state.channelMentions['ch1']).toBeUndefined();
+    expect(state.channelUnreads['ch1']).toBe(3);
+  });
+
   it('setDMUnread and clearDMUnread', () => {
     useNotificationStore.getState().setDMUnread('pk1', 3);
     expect(useNotificationStore.getState().dmUnreads['pk1']).toBe(3);
