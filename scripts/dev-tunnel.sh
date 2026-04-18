@@ -97,6 +97,30 @@ for i in $(seq 1 30); do
   fi
 done
 
+# ── Prisma migrations ────────────────────────────────────────────
+step "Prisma migrations"
+# Use the dev DB URL the compose file defines. Override with DATABASE_URL
+# in your shell/.env if your setup differs.
+export DATABASE_URL="${DATABASE_URL:-postgresql://obelisk:obelisk@127.0.0.1:5432/obelisk}"
+
+migrate_status=$(npx --no-install prisma migrate status 2>&1 || true)
+if printf "%s" "$migrate_status" | grep -qE "Database schema is up to date|No migration found in prisma/migrations"; then
+  green "Schema up to date."
+elif printf "%s" "$migrate_status" | grep -qE "have not yet been applied|following migrations? have not been applied|drift detected|Database schema is not in sync"; then
+  blue "Applying pending migrations…"
+  if ! npx --no-install prisma migrate deploy; then
+    red "prisma migrate deploy failed."
+    exit 1
+  fi
+  green "Migrations applied."
+else
+  # Unknown state (e.g. shadow DB issues) — surface it but don't block.
+  dim "prisma migrate status:"
+  printf "%s\n" "$migrate_status" | sed 's/^/  /'
+  blue "Attempting migrate deploy anyway…"
+  npx --no-install prisma migrate deploy || red "migrate deploy reported issues — continuing."
+fi
+
 # ── Tunnel lookup ────────────────────────────────────────────────
 TUNNEL_UUID=""
 CRED_FILE=""

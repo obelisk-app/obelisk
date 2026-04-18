@@ -130,18 +130,28 @@ app.prepare().then(async () => {
     });
 
     socket.on('join-channel', async (channelId: string) => {
-      if (typeof channelId !== 'string' || channelId.length === 0) return;
+      if (typeof channelId !== 'string' || channelId.length === 0) {
+        console.log(`[socket][join-channel] reject: bad channelId pk=${pubkey.slice(0, 8)}`);
+        return;
+      }
       try {
         const channel = await prisma.channel.findUnique({
           where: { id: channelId },
           select: { serverId: true, readPermission: true, readRoleIds: true },
         });
-        if (!channel) return;
+        if (!channel) {
+          console.log(`[socket][join-channel] reject: channel not found ch=${channelId} pk=${pubkey.slice(0, 8)}`);
+          return;
+        }
         if (channel.readPermission) {
           const access = await resolveMemberAccess(pubkey, channel.serverId);
-          if (!canReadChannel(access.role, channel, access.customRoleIds)) return;
+          if (!canReadChannel(access.role, channel, access.customRoleIds)) {
+            console.log(`[socket][join-channel] reject: readPermission ch=${channelId} pk=${pubkey.slice(0, 8)} role=${access.role} perm=${channel.readPermission}`);
+            return;
+          }
         }
         socket.join(`channel:${channelId}`);
+        console.log(`[socket][join-channel] ok ch=${channelId} pk=${pubkey.slice(0, 8)}`);
       } catch (err) {
         console.error('[socket] join-channel error:', err);
       }
@@ -235,6 +245,8 @@ app.prepare().then(async () => {
         const author = await getAuthorProfile(pubkey, serverId);
         const enriched = { ...message, author };
 
+        const roomSize = io.sockets.adapter.rooms.get(`channel:${channelId}`)?.size ?? 0;
+        console.log(`[socket][new-message] emit ch=${channelId} roomSize=${roomSize} msgId=${message.id}`);
         io.to(`channel:${channelId}`).emit('new-message', enriched);
 
         // Forum post thread fan-out: if the new message is a reply to a forum
