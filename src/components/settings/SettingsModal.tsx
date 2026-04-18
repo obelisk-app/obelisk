@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { type ReactNode, useEffect, useState, useCallback } from 'react';
 import { useSettingsStore, SettingsSection } from '@/store/settings';
 import InlineProfileEditor from './InlineProfileEditor';
 import AppearanceSection from './AppearanceSection';
@@ -12,7 +12,7 @@ import { useAuthStore } from '@/store/auth';
 interface SidebarItem {
   id: SettingsSection;
   label: string;
-  icon: JSX.Element;
+  icon: ReactNode;
 }
 
 const ICONS = {

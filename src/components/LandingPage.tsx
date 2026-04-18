@@ -477,9 +477,7 @@ export default function LandingPage() {
                     <div className={`absolute left-2.5 md:left-4.5 top-1.5 w-3 h-3 rounded-full border-2 ${
                       r.status === 'done'
                         ? 'bg-lc-green border-lc-green'
-                        : r.status === 'in-progress'
-                          ? 'bg-lc-green/50 border-lc-green animate-pulse'
-                          : 'bg-lc-dark border-lc-border'
+                        : 'bg-lc-dark border-lc-border'
                     }`} />
 
                     <div className="lc-card p-5">
@@ -488,11 +486,9 @@ export default function LandingPage() {
                         <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
                           r.status === 'done'
                             ? 'bg-lc-green/20 text-lc-green'
-                            : r.status === 'in-progress'
-                              ? 'bg-lc-green/10 text-lc-green animate-pulse'
-                              : 'bg-lc-border text-lc-muted'
+                            : 'bg-lc-border text-lc-muted'
                         }`}>
-                          {r.status === 'done' ? `✓ ${t('roadmap.done')}` : r.status === 'in-progress' ? t('roadmap.inProgress') : t('roadmap.upcoming')}
+                          {r.status === 'done' ? `✓ ${t('roadmap.done')}` : t('roadmap.upcoming')}
                         </span>
                       </div>
                       <h4 className="text-lg font-semibold text-lc-white mb-2">{t(`roadmap.${r.key}.title`)}</h4>

@@ -6,6 +6,7 @@ import { useAuthStore } from '@/store/auth';
 import { useChatStore } from '@/store/chat';
 import { resolvePlayerName } from '@/lib/games/player-name';
 import PlayerAvatar from './PlayerAvatar';
+import { GameTypePreview } from './GamePreviews';
 
 // Rendered inline in chat wherever `[[game:<id>]]` appears.
 // Shows live participant count, status, and final result.
@@ -69,27 +70,30 @@ export default function GameEmbedCard({ gameId }: { gameId: string }) {
 
   return (
     <div className="rounded-lg border border-lc-border bg-lc-dark/70 p-3 w-full max-w-sm">
-      <div className="flex items-center gap-2 mb-2">
-        <span>🎮</span>
-        <span className="font-semibold text-lc-white text-sm">{title}</span>
-        <span className={`ml-auto text-xs px-2 py-0.5 rounded-full ${
-          game.status === 'waiting' ? 'bg-lc-green/20 text-lc-green'
-          : game.status === 'in_progress' ? 'bg-lc-border/60 text-lc-white'
-          : 'bg-lc-border/30 text-lc-muted'
-        }`}>
-          {statusLabel}
-        </span>
-      </div>
-      <div className="flex items-center gap-2 mb-3">
-        {/* Participant avatar cluster */}
-        <div className="flex -space-x-2">
-          {game.participants.slice(0, 5).map((p) => (
-            <PlayerAvatar key={p.pubkey} pubkey={p.pubkey} myPubkey={me} size={22} className="ring-2 ring-lc-dark" />
-          ))}
+      <div className="flex items-start gap-3 mb-2">
+        <GameTypePreview type={game.type} size={44} />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-lc-white text-sm">{title}</span>
+            <span className={`ml-auto text-xs px-2 py-0.5 rounded-full ${
+              game.status === 'waiting' ? 'bg-lc-green/20 text-lc-green'
+              : game.status === 'in_progress' ? 'bg-lc-border/60 text-lc-white'
+              : 'bg-lc-border/30 text-lc-muted'
+            }`}>
+              {statusLabel}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 mt-1">
+            <div className="flex -space-x-2">
+              {game.participants.slice(0, 5).map((p) => (
+                <PlayerAvatar key={p.pubkey} pubkey={p.pubkey} myPubkey={me} size={22} className="ring-2 ring-lc-dark" />
+              ))}
+            </div>
+            <span className="text-xs text-lc-muted">
+              {game.participants.length}/{game.maxPlayers}
+            </span>
+          </div>
         </div>
-        <span className="text-xs text-lc-muted">
-          {game.participants.length}/{game.maxPlayers}
-        </span>
       </div>
       {game.status === 'finished' && game.winnerPubkey && (
         <div className="flex items-center gap-2 mb-3 px-2.5 py-1.5 rounded-lg bg-yellow-400/10 border border-yellow-400/30">
@@ -110,11 +114,9 @@ export default function GameEmbedCard({ gameId }: { gameId: string }) {
         {isOpen && !iAmIn && game.participants.length < game.maxPlayers && game.status === 'waiting' && (
           <button onClick={join} className="lc-pill-primary text-xs">Unirme</button>
         )}
-        {(iAmIn || isOpen) && (
-          <button onClick={openDock} className="lc-pill-secondary text-xs">
-            {iAmIn ? 'Abrir' : 'Ver'}
-          </button>
-        )}
+        <button onClick={openDock} className="lc-pill-secondary text-xs">
+          {iAmIn ? 'Abrir' : 'Ver'}
+        </button>
       </div>
     </div>
   );

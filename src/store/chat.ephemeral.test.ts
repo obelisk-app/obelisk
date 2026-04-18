@@ -24,6 +24,24 @@ describe('chat store — ephemeralMessages', () => {
     expect(useChatStore.getState().ephemeralMessages.c1).toBeUndefined();
   });
 
+  it('dismisses a single ephemeral by id', () => {
+    useChatStore.getState().pushEphemeral('c1', 'first');
+    useChatStore.getState().pushEphemeral('c1', 'second');
+    const msgs = useChatStore.getState().ephemeralMessages.c1;
+    expect(msgs).toHaveLength(2);
+    useChatStore.getState().dismissEphemeral('c1', msgs[0].id);
+    const after = useChatStore.getState().ephemeralMessages.c1;
+    expect(after).toHaveLength(1);
+    expect(after[0].text).toBe('second');
+  });
+
+  it('dismissing the last ephemeral cleans up the channel key', () => {
+    useChatStore.getState().pushEphemeral('c1', 'only');
+    const id = useChatStore.getState().ephemeralMessages.c1[0].id;
+    useChatStore.getState().dismissEphemeral('c1', id);
+    expect(useChatStore.getState().ephemeralMessages.c1).toBeUndefined();
+  });
+
   it('reset wipes ephemeral messages', () => {
     useChatStore.getState().pushEphemeral('c1', 'x');
     useChatStore.getState().reset();

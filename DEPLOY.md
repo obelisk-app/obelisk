@@ -56,6 +56,10 @@ PUBLIC_IP=YOUR_SERVER_IP          # Required for voice — your VPS public IPv4 
 # can transfer Server.ownerPubkey, create new servers from /admin, and edit
 # any user's cross-server memberships. See docs/multi-server-admin.md.
 INSTANCE_OWNER_PUBKEY=your-64-char-hex-pubkey
+
+# Required for the NWC wallet feature (NIP-47 zaps).
+# Generate with: openssl rand -base64 32
+NWC_ENCRYPTION_KEY=base64-encoded-32-byte-key
 ```
 
 Open UDP ports for voice/video (WebRTC media):

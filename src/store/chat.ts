@@ -255,6 +255,7 @@ interface ChatState {
   // Never hits the server; cleared on channel switch.
   ephemeralMessages: Record<string, EphemeralMessage[]>;
   pushEphemeral: (channelId: string, text: string) => void;
+  dismissEphemeral: (channelId: string, id: string) => void;
 
   // Paid-invoice state keyed by paymentHash. Populated by the Socket.io
   // `invoice-paid` handler; InvoiceCard components read this to flip into
@@ -411,6 +412,18 @@ export const useChatStore = create<ChatState>()((set) => ({
       createdAt: new Date().toISOString(),
     };
     return { ephemeralMessages: { ...state.ephemeralMessages, [channelId]: [...list, next] } };
+  }),
+  dismissEphemeral: (channelId, id) => set((state) => {
+    const list = state.ephemeralMessages[channelId];
+    if (!list) return state;
+    const filtered = list.filter((e) => e.id !== id);
+    if (filtered.length === list.length) return state;
+    if (filtered.length === 0) {
+      const next = { ...state.ephemeralMessages };
+      delete next[channelId];
+      return { ephemeralMessages: next };
+    }
+    return { ephemeralMessages: { ...state.ephemeralMessages, [channelId]: filtered } };
   }),
   clearEphemeral: (channelId) => set((state) => {
     if (!state.ephemeralMessages[channelId]) return state;

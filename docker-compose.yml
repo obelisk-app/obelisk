@@ -37,6 +37,7 @@ services:
       LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-}
       LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-}
       NEXT_PUBLIC_LIVEKIT_URL: ${LIVEKIT_URL:-}
+      NWC_ENCRYPTION_KEY: ${NWC_ENCRYPTION_KEY:-}
     volumes:
       # Persist user uploads across container restarts. The path inside the
       # container matches getUploadDir() in src/app/api/upload/route.ts and the

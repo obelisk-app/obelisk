@@ -132,6 +132,11 @@ export default function GameFullscreenView({ game }: Props) {
                 : game.status === 'finished' ? 'Terminado'
                 : 'Cancelado'}
             </span>
+            {!iAmIn && (game.status === 'in_progress' || game.status === 'waiting') && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/60">
+                Espectador
+              </span>
+            )}
             {game.status === 'in_progress' && <TurnClock deadline={game.turnDeadline} />}
           </div>
         </header>

@@ -34,30 +34,58 @@ function ReplyPreview({ replyTo, profileCache, onJump }: {
   );
 }
 
+function EphemeralMessage({ channelId, msg }: { channelId: string; msg: { id: string; text: string } }) {
+  const dismissEphemeral = useChatStore((s) => s.dismissEphemeral);
+
+  // Auto-dismiss after 8 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => dismissEphemeral(channelId, msg.id), 8000);
+    return () => clearTimeout(timer);
+  }, [channelId, msg.id, dismissEphemeral]);
+
+  // Detect wallet-related hints and make them actionable
+  const isWalletHint = /wallet|NWC|configurá.*perfil|Abrí tu perfil/i.test(msg.text);
+
+  return (
+    <div className="rounded-lg border border-lc-border bg-lc-dark/60 px-3 py-2 text-sm text-lc-white flex items-start gap-3 animate-in fade-in duration-200">
+      <div className="flex-1 whitespace-pre-wrap">
+        {msg.text}
+        {isWalletHint && (
+          <button
+            className="ml-2 text-lc-green underline underline-offset-2 hover:brightness-110"
+            onClick={() => {
+              // Lazy import to avoid circular deps
+              import('@/store/settings').then(({ useSettingsStore }) =>
+                useSettingsStore.getState().open('wallet'),
+              );
+            }}
+          >
+            Configurar wallet
+          </button>
+        )}
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="text-[10px] uppercase tracking-wider text-lc-muted">Solo vos</span>
+        <button
+          className="text-lc-muted hover:text-lc-white text-xs"
+          onClick={() => dismissEphemeral(channelId, msg.id)}
+          aria-label="Descartar"
+        >
+          ✕
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function EphemeralMessages() {
   const activeChannelId = useChatStore((s) => s.activeChannelId);
   const ephemerals = useChatStore((s) => (activeChannelId ? s.ephemeralMessages[activeChannelId] : undefined));
-  const clearEphemeral = useChatStore((s) => s.clearEphemeral);
   if (!activeChannelId || !ephemerals || ephemerals.length === 0) return null;
   return (
     <div className="px-4 py-2 space-y-2" data-testid="ephemeral-messages">
       {ephemerals.map((e) => (
-        <div
-          key={e.id}
-          className="rounded-lg border border-lc-border bg-lc-dark/60 px-3 py-2 text-sm text-lc-white flex items-start gap-3"
-        >
-          <div className="flex-1 whitespace-pre-wrap">{e.text}</div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] uppercase tracking-wider text-lc-muted">Solo vos</span>
-            <button
-              className="text-lc-muted hover:text-lc-white text-xs"
-              onClick={() => clearEphemeral(activeChannelId)}
-              aria-label="Descartar"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
+        <EphemeralMessage key={e.id} channelId={activeChannelId} msg={e} />
       ))}
     </div>
   );
