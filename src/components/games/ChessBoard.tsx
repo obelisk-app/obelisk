@@ -86,8 +86,77 @@ export default function ChessBoard({ game, myPubkey, onAction }: Props) {
 
   const lastMove = state?.lastMove;
 
+  const captured = useMemo(() => {
+    const initial: Record<string, number> = { P: 8, N: 2, B: 2, R: 2, Q: 1, K: 1 };
+    const remaining: Record<Color, Record<string, number>> = {
+      w: { P: 0, N: 0, B: 0, R: 0, Q: 0, K: 0 },
+      b: { P: 0, N: 0, B: 0, R: 0, Q: 0, K: 0 },
+    };
+    for (const p of board) {
+      if (!p) continue;
+      const c = p[0] as Color;
+      const t = p[1];
+      remaining[c][t] = (remaining[c][t] ?? 0) + 1;
+    }
+    const build = (c: Color) => {
+      const order: Array<'Q'|'R'|'B'|'N'|'P'> = ['Q','R','B','N','P'];
+      const out: string[] = [];
+      for (const t of order) {
+        const lost = (initial[t] ?? 0) - (remaining[c][t] ?? 0);
+        for (let i = 0; i < lost; i++) out.push(GLYPH[`${c}${t}`]);
+      }
+      return out;
+    };
+    const VALUES: Record<string, number> = { P: 1, N: 3, B: 3, R: 5, Q: 9 };
+    const score = (c: Color) => {
+      let s = 0;
+      for (const t of ['P','N','B','R','Q']) {
+        s += ((initial[t] ?? 0) - (remaining[c][t] ?? 0)) * (VALUES[t] ?? 0);
+      }
+      return s;
+    };
+    const whiteLost = build('w');
+    const blackLost = build('b');
+    const diff = score('b') - score('w'); // >0 means white is ahead in material
+    return { whiteLost, blackLost, diff };
+  }, [board]);
+
+  const CapturedRow = ({ pieces, color, advantage }: { pieces: string[]; color: Color; advantage: number }) => (
+    <div className="flex items-center gap-1 min-h-[20px] text-lg leading-none w-full max-w-[360px] px-1">
+      {pieces.length === 0 ? (
+        <span className="text-xs text-lc-muted/50">—</span>
+      ) : (
+        pieces.map((g, i) => (
+          <span
+            key={i}
+            className={color === 'w' ? 'text-[#fafafa]' : 'text-[#111]'}
+            style={{
+              textShadow: color === 'w'
+                ? '0 1px 2px rgba(0,0,0,0.75), 0 0 1px rgba(0,0,0,0.9)'
+                : '0 1px 1px rgba(255,255,255,0.25)',
+            }}
+          >{g}</span>
+        ))
+      )}
+      {advantage > 0 && (
+        <span className="text-xs text-lc-muted ml-1">+{advantage}</span>
+      )}
+    </div>
+  );
+
+  // Top row shows pieces captured by the opponent (i.e. pieces the player at top lost).
+  const topColor: Color = flip ? 'w' : 'b';
+  const bottomColor: Color = flip ? 'b' : 'w';
+  const topLost = topColor === 'w' ? captured.whiteLost : captured.blackLost;
+  const bottomLost = bottomColor === 'w' ? captured.whiteLost : captured.blackLost;
+  // Advantage for the side whose row this is = material they captured - material opponent captured
+  // captured.diff = score('b') - score('w'); white is ahead by diff if diff>0.
+  const topAdvantage = topColor === 'w' ? -captured.diff : captured.diff;
+  const bottomAdvantage = bottomColor === 'w' ? -captured.diff : captured.diff;
+
   return (
-    <div className="flex flex-col items-center gap-3">
+    <div className="flex flex-col items-center gap-2">
+      <CapturedRow pieces={topLost} color={topColor} advantage={topAdvantage} />
       <div
         className="grid grid-cols-8 gap-0 rounded-md overflow-hidden border border-lc-border select-none w-full max-w-[360px]"
         style={{ aspectRatio: '1 / 1' }}
@@ -100,8 +169,8 @@ export default function ChessBoard({ game, myPubkey, onAction }: Props) {
             const isSelected = selected === sq;
             const isTarget = legalFromSelected.has(sq);
             const isLast = lastMove && (lastMove.from === sq || lastMove.to === sq);
-            const fileLabel = f === (flip ? 7 : 0);
-            const rankLabel = r === (flip ? 7 : 0);
+            const rankLabel = f === (flip ? 7 : 0);
+            const fileLabel = r === (flip ? 7 : 0);
             return (
               <button
                 key={sq}
@@ -149,6 +218,7 @@ export default function ChessBoard({ game, myPubkey, onAction }: Props) {
           })
         )}
       </div>
+      <CapturedRow pieces={bottomLost} color={bottomColor} advantage={bottomAdvantage} />
 
       {myColor && (
         <div className="text-xs text-lc-muted">
