@@ -115,6 +115,12 @@ export default function SearchBar({
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [mobileExpanded, setMobileExpanded] = useState(false);
+
+  const collapseMobile = useCallback(() => {
+    setMobileExpanded(false);
+    setShowDropdown(false);
+  }, []);
 
   const doSearch = useCallback(async (append = false) => {
     if (!serverId) return;
@@ -171,6 +177,7 @@ export default function SearchBar({
     if (e.key === 'Escape') {
       clearSearch();
       setShowDropdown(false);
+      setMobileExpanded(false);
     }
   };
 
@@ -198,47 +205,83 @@ export default function SearchBar({
 
   return (
     <div ref={containerRef} className="relative" data-testid="search-bar">
-      <div
-        className="flex items-center gap-2 bg-lc-black border border-lc-border rounded-lg px-3 py-1.5"
+      {/* Mobile-only collapsed icon button. Hidden on md+ and when expanded. */}
+      <button
         onClick={() => {
+          setMobileExpanded(true);
           setShowDropdown(true);
           setTimeout(() => inputRef.current?.focus(), 50);
         }}
+        className={`${mobileExpanded ? 'hidden' : 'inline-flex'} md:hidden p-1.5 rounded-lg hover:bg-lc-border/40 text-lc-muted hover:text-lc-white transition-colors`}
+        aria-label={t('search.placeholder')}
+        data-testid="search-open-mobile"
       >
-        <input
-          ref={inputRef}
-          type="text"
-          value={query}
-          onChange={(e) => handleInputChange(e.target.value)}
-          onKeyDown={handleKeyDown}
-          onFocus={() => setShowDropdown(true)}
-          placeholder={t('search.placeholder')}
-          className="flex-1 bg-transparent text-sm text-lc-white placeholder:text-lc-muted focus:outline-none min-w-[200px]"
-          data-testid="search-input"
-        />
-        {isSearching && <div className="lc-spinner" style={{ width: 14, height: 14 }} />}
-        {query ? (
-          <button
-            onClick={(e) => { e.stopPropagation(); clearSearch(); setShowDropdown(false); }}
-            className="text-lc-muted hover:text-lc-white transition-colors"
-            data-testid="search-close"
-            aria-label="Clear search"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+      </button>
+
+      {/* Expanded input. On mobile, takes over the top bar via fixed positioning
+          to avoid overlapping the channel title and action icons. */}
+      <div
+        className={`${mobileExpanded ? 'fixed inset-x-0 top-0 h-12 z-50 px-3 bg-lc-dark border-b border-lc-border flex items-center' : 'hidden md:block'}`}
+      >
+        <div
+          className="flex items-center gap-2 bg-lc-black border border-lc-border rounded-lg px-3 py-1.5 w-full md:w-auto"
+          onClick={() => {
+            setShowDropdown(true);
+            setTimeout(() => inputRef.current?.focus(), 50);
+          }}
+        >
+          {mobileExpanded && (
+            <button
+              onClick={(e) => { e.stopPropagation(); clearSearch(); collapseMobile(); }}
+              className="text-lc-muted hover:text-lc-white transition-colors md:hidden shrink-0"
+              aria-label="Close search"
+              data-testid="search-close-mobile"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12" />
+                <polyline points="12 19 5 12 12 5" />
+              </svg>
+            </button>
+          )}
+          <input
+            ref={inputRef}
+            type="text"
+            value={query}
+            onChange={(e) => handleInputChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onFocus={() => setShowDropdown(true)}
+            placeholder={t('search.placeholder')}
+            className="flex-1 bg-transparent text-sm text-lc-white placeholder:text-lc-muted focus:outline-none min-w-0 md:min-w-[200px]"
+            data-testid="search-input"
+          />
+          {isSearching && <div className="lc-spinner" style={{ width: 14, height: 14 }} />}
+          {query ? (
+            <button
+              onClick={(e) => { e.stopPropagation(); clearSearch(); setShowDropdown(false); }}
+              className="text-lc-muted hover:text-lc-white transition-colors"
+              data-testid="search-close"
+              aria-label="Clear search"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          ) : (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-lc-muted shrink-0">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
-          </button>
-        ) : (
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-lc-muted shrink-0">
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-        )}
+          )}
+        </div>
       </div>
 
       {showFiltersDropdown && (
-        <div className="absolute top-full mt-1 right-0 w-[420px] bg-lc-dark border border-lc-border rounded-xl shadow-lg z-40 py-2" data-testid="search-hints">
+        <div className={`${mobileExpanded ? 'fixed left-2 right-2 top-14' : 'absolute top-full mt-1 right-0'} md:absolute md:top-full md:mt-1 md:right-0 md:left-auto md:w-[420px] bg-lc-dark border border-lc-border rounded-xl shadow-lg z-50 py-2 max-w-[calc(100vw-1rem)]`} data-testid="search-hints">
           <div className="px-3 py-1 text-xs text-lc-muted font-medium">{t('search.filters.title')}</div>
           {FILTER_ROWS.map((row) => (
             <button

@@ -29,7 +29,7 @@ function PanelShell({ title, children, onClose }: { title: string; children: Rea
   }, [onClose]);
 
   return (
-    <div ref={ref} className="absolute top-full right-0 mt-2 w-[320px] bg-lc-dark border border-lc-border rounded-xl shadow-lg z-50 overflow-hidden" data-testid="search-filter-picker">
+    <div ref={ref} className="absolute top-full right-0 mt-2 w-[320px] max-w-[calc(100vw-1rem)] bg-lc-dark border border-lc-border rounded-xl shadow-lg z-50 overflow-hidden" data-testid="search-filter-picker">
       <div className="px-3 py-2 border-b border-lc-border text-xs font-medium text-lc-muted">{title}</div>
       <div className="max-h-[360px] overflow-y-auto">{children}</div>
     </div>
