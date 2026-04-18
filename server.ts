@@ -111,6 +111,24 @@ app.prepare().then(async () => {
       }
     });
 
+    // Join a server-scoped room so game-* broadcasts (Actividades panel etc.)
+    // reach all members of a server even when they're not in a specific channel.
+    socket.on('join-server', async (serverId: string) => {
+      if (typeof serverId !== 'string' || !serverId) return;
+      try {
+        const member = await prisma.member.findUnique({
+          where: { serverId_pubkey: { serverId, pubkey } },
+          select: { id: true },
+        });
+        if (!member) return;
+        socket.join(`server:${serverId}`);
+      } catch {}
+    });
+
+    socket.on('leave-server', (serverId: string) => {
+      if (typeof serverId === 'string' && serverId) socket.leave(`server:${serverId}`);
+    });
+
     socket.on('join-channel', async (channelId: string) => {
       if (typeof channelId !== 'string' || channelId.length === 0) return;
       try {
@@ -920,5 +938,33 @@ app.prepare().then(async () => {
     // and broadcasts `bot-updated` so member lists update live.
     const { startBotPoller } = await import('./src/lib/bots/poller');
     startBotPoller(io);
+
+    // Re-arm turn timers for any in_progress games surviving a restart,
+    // and either expire-now or re-schedule expiry for waiting games so no
+    // stale "Unirme" cards linger across reboots.
+    try {
+      const { scheduleTurnTimer, scheduleWaitingExpiry, WAITING_EXPIRY_MINUTES } = await import('./src/lib/games/runtime');
+      const active = await prisma.game.findMany({
+        where: { status: 'in_progress' },
+        select: { id: true, turnDeadline: true },
+      });
+      for (const g of active) {
+        if (g.turnDeadline) scheduleTurnTimer(g.id, g.turnDeadline);
+      }
+      const waitingCutoff = new Date(Date.now() - WAITING_EXPIRY_MINUTES * 60 * 1000);
+      // Anything older than the cutoff: mark cancelled in bulk (no-broadcast
+      // bulk update is fine — nobody's subscribed yet at boot time).
+      await prisma.game.updateMany({
+        where: { status: 'waiting', createdAt: { lt: waitingCutoff } },
+        data: { status: 'cancelled', finishedAt: new Date() },
+      });
+      const waiting = await prisma.game.findMany({
+        where: { status: 'waiting' },
+        select: { id: true, createdAt: true },
+      });
+      for (const g of waiting) scheduleWaitingExpiry(g.id, g.createdAt);
+    } catch (err) {
+      console.error('[games] Failed to rehydrate game timers:', err);
+    }
   });
 });

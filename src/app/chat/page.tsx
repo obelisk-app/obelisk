@@ -25,6 +25,11 @@ import ProtocolPrompt from '@/components/dm/ProtocolPrompt';
 import VoiceChannel from '@/components/chat/VoiceChannel';
 import { useDMStore } from '@/store/dm';
 import { useVoiceStore } from '@/store/voice';
+import GameDock from '@/components/games/GameDock';
+import ActivitiesPanel from '@/components/games/ActivitiesPanel';
+import GamePickerModal from '@/components/games/GamePickerModal';
+import GameFullscreenView from '@/components/games/GameFullscreenView';
+import { useGamesStore } from '@/store/games';
 import { WebSocketVoiceClient } from '@/lib/voice';
 import { LiveKitVoiceClient, fetchVoiceToken } from '@/lib/livekit-voice';
 import { setActiveVoiceClient } from '@/lib/voice-active-client';
@@ -1131,6 +1136,26 @@ export default function ChatPage() {
       });
     });
 
+    // ── Games / Activities ──
+    const onGameEvent = (g: any) => {
+      if (!g?.id) return;
+      import('@/store/games').then(({ useGamesStore }) => {
+        useGamesStore.getState().upsertGame(g);
+      });
+    };
+    socket.on('game-created', onGameEvent);
+    socket.on('game-updated', onGameEvent);
+    socket.on('game-finished', onGameEvent);
+    socket.on('game-turn', (data: { gameId: string; currentTurn: string; turnDeadline: string; type: string }) => {
+      if (data.currentTurn !== profile?.pubkey) return;
+      // Notify the player regardless of which channel they're in.
+      try {
+        const title = '¡Tu turno!';
+        const body = `Es tu turno en ${data.type === 'tic-tac-toe' ? 'Tic-Tac-Toe' : data.type}`;
+        if (document.hidden) showBrowserNotification(title, body);
+      } catch {}
+    });
+
     socket.on('connect_error', (err) => {
       console.warn('Socket connection error:', err.message);
     });
@@ -1191,6 +1216,45 @@ export default function ChatPage() {
     prevChannelRef.current = activeChannelId;
     activeChannelIdRef.current = activeChannelId;
   }, [activeChannelId]);
+
+  // When the user enters fullscreen on a game, force the active channel to
+  // the game's host channel so the reused MessageArea/MessageInput renders
+  // the right chat. If the user later navigates to another channel, drop
+  // fullscreen and fall back to the floating dock so they can see normal
+  // channel content.
+  const fullscreenGameChannelId = useGamesStore((s) => {
+    const id = s.fullscreenGameId;
+    return id ? s.games[id]?.channelId ?? null : null;
+  });
+  useEffect(() => {
+    if (!fullscreenGameChannelId) return;
+    const current = useChatStore.getState().activeChannelId;
+    if (current !== fullscreenGameChannelId) {
+      useChatStore.getState().setActiveChannel(fullscreenGameChannelId);
+    }
+  }, [fullscreenGameChannelId]);
+  useEffect(() => {
+    const fsId = useGamesStore.getState().fullscreenGameId;
+    if (!fsId) return;
+    const g = useGamesStore.getState().games[fsId];
+    if (!g) return;
+    if (activeChannelId && activeChannelId !== g.channelId) {
+      useGamesStore.getState().setFullscreenGame(null);
+      useGamesStore.getState().setOpenGame(fsId);
+      useGamesStore.getState().setMinimized(true);
+    }
+  }, [activeChannelId]);
+
+  // Join the active server room so game-* broadcasts (Actividades panel
+  // live updates) reach this socket while this server is the active one.
+  const prevServerRef = useRef<string | null>(null);
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (!socket) return;
+    if (prevServerRef.current) socket.emit('leave-server', prevServerRef.current);
+    if (activeServerId) socket.emit('join-server', activeServerId);
+    prevServerRef.current = activeServerId;
+  }, [activeServerId]);
 
   // Same-browser multi-tab sync: mirror clear events posted by sibling
   // tabs into this tab's notification + DM store. (scenario 11, same
@@ -1590,10 +1654,18 @@ export default function ChatPage() {
   ];
   const activeChannel = allChannels.find(c => c.id === activeChannelId);
   const isVoiceChatOpen = useVoiceStore((s) => s.isVoiceChatOpen);
+  const fullscreenGameId = useGamesStore((s) => s.fullscreenGameId);
+  const fullscreenGame = useGamesStore((s) => (s.fullscreenGameId ? s.games[s.fullscreenGameId] : null));
+  const isGameChatOpen = useGamesStore((s) => s.isGameChatOpen);
+  const setGameChatOpen = useGamesStore((s) => s.setGameChatOpen);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showChannelTopic, setShowChannelTopic] = useState(false);
-  const [showMemberList, setShowMemberList] = useState(true);
+  const [showMemberList, setShowMemberList] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    // Default closed on mobile (<768px), open on desktop
+    return window.matchMedia('(min-width: 768px)').matches;
+  });
   const [showNotifications, setShowNotifications] = useState(false);
 
   const voiceMainRef = useRef<HTMLDivElement>(null);
@@ -1940,6 +2012,58 @@ export default function ChatPage() {
               </div>
 
             <div className="flex-1 flex min-h-0">
+              {fullscreenGameId && fullscreenGame ? (
+                <>
+                  <GameFullscreenView game={fullscreenGame} />
+                  {isGameChatOpen && (
+                    <aside
+                      className="
+                        flex flex-col min-h-0 overflow-hidden border border-lc-border bg-lc-dark shadow-xl
+                        fixed inset-0 z-50 rounded-none my-0 mr-0 w-auto
+                        md:relative md:inset-auto md:z-auto md:rounded-xl md:my-2 md:mr-2 md:shrink-0
+                        md:w-[var(--game-chat-w)]
+                      "
+                      // CSS variable consumed by the width utility below;
+                      // on <md the `w-auto` override wins so inset-0 stretches full-screen.
+                      style={{ ['--game-chat-w' as string]: `${voiceChatWidth}px` } as React.CSSProperties}
+                      data-testid="game-chat-rail"
+                    >
+                      <header className="h-12 px-3 md:px-4 flex items-center justify-between border-b border-lc-border bg-lc-dark shrink-0">
+                        <span className="flex items-center gap-2 min-w-0">
+                          <span className="text-lc-muted shrink-0">#</span>
+                          <span className="text-sm font-semibold text-lc-white truncate">
+                            {[...pinnedChannels, ...categories.flatMap((c) => c.channels)].find((c) => c.id === fullscreenGame.channelId)?.name || '…'}
+                          </span>
+                          <span className="text-lc-border shrink-0">·</span>
+                          <span className="text-xs text-lc-muted truncate">
+                            🎮 {fullscreenGame.type === 'tic-tac-toe' ? 'Tic-Tac-Toe' : fullscreenGame.type === 'chain-reaction' ? 'Chain Reaction' : fullscreenGame.type}
+                          </span>
+                        </span>
+                        <button
+                          onClick={() => setGameChatOpen(false)}
+                          className="text-lc-muted hover:text-lc-white p-1 shrink-0"
+                          title="Ocultar chat"
+                          data-testid="game-chat-close"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                          </svg>
+                        </button>
+                      </header>
+                      <MessageArea profileCache={profileCache} onDelete={handleDelete} onToggleReaction={handleToggleReaction} />
+                      {messageError && (
+                        <div className="px-4 py-2 bg-red-600/20 border-t border-red-600/30">
+                          <p className="text-sm text-red-400">{messageError}</p>
+                        </div>
+                      )}
+                      <TypingIndicator profileCache={profileCache} />
+                      <MessageInput onSend={handleSend} onEditSave={handleEdit} onTyping={handleTyping} />
+                    </aside>
+                  )}
+                </>
+              ) : (
+                <>
               <div ref={voiceMainRef} className="flex-1 flex flex-col min-h-0 min-w-0 relative">
               {showSearchPane && (
                 <div className="absolute inset-0 z-30 flex flex-col bg-lc-black" data-testid="search-pane-overlay">
@@ -2086,18 +2210,47 @@ export default function ChatPage() {
                 <MessageInput onSend={handleSend} onEditSave={handleEdit} onTyping={handleTyping} />
               </aside>
             )}
-            {/* Member list sidebar — hidden on mobile and in voice channels */}
+            {/* Member list — inline panel on md+. Mobile drawer rendered at
+                the top level below so it can't be clipped by flex ancestors. */}
             {showMemberList && activeChannel?.type !== 'voice' && (
               <div className="hidden md:flex h-full">
                 <MemberList profileCache={profileCache} />
               </div>
             )}
+                </>
+              )}
             </div>
           </div>
         )}
       </div>
       </div>
+      {/* Mobile member list drawer — slides in from the right, mirrors
+          ChannelSidebar animation. Rendered at top level so no ancestor
+          transform/overflow can clip it. Hidden on md+ (inline panel used). */}
+      {activeChannel?.type !== 'voice' && (
+        <>
+          {showMemberList && (
+            <div
+              className="fixed inset-0 z-40 bg-black/60 md:hidden"
+              onClick={() => setShowMemberList(false)}
+              aria-hidden
+            />
+          )}
+          <div
+            className={`
+              fixed inset-y-0 right-0 z-50 flex md:hidden
+              transform transition-transform duration-200 ease-in-out
+              ${showMemberList ? 'translate-x-0' : 'translate-x-full'}
+            `}
+          >
+            <MemberList profileCache={profileCache} />
+          </div>
+        </>
+      )}
       <GlobalProfilePopover />
+      <GameDock />
+      <ActivitiesPanel />
+      <GamePickerModal />
     </div>
   );
 }

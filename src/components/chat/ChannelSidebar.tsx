@@ -13,6 +13,7 @@ import { canWriteInChannel } from '@/lib/roles';
 import ChannelEmoji from './ChannelEmoji';
 import { slugify } from '@/lib/slug';
 import { getActiveVoiceClient } from '@/lib/voice-active-client';
+import { useGamesStore } from '@/store/games';
 
 const EMPTY_FOLLOWED_POST_IDS: string[] = [];
 const EMPTY_FOLLOWED_POST_META: Record<string, { id: string; title: string; channelId: string; channelName: string; serverId: string }> = {};
@@ -744,9 +745,10 @@ function VoiceStatusBar() {
             </svg>
           </button>
           <button
-            disabled
-            className="flex-1 h-8 rounded-md bg-lc-border/40 text-lc-muted/40 flex items-center justify-center cursor-not-allowed"
-            title="Actividades (próximamente)"
+            onClick={() => useGamesStore.getState().setActivitiesPanelOpen(true)}
+            className="flex-1 h-8 rounded-md bg-lc-border/40 hover:bg-lc-border/60 text-lc-muted hover:text-lc-white flex items-center justify-center transition-colors"
+            title="Actividades"
+            data-testid="voice-bar-activities"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="2" y="6" width="20" height="12" rx="2"/>

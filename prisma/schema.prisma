@@ -537,6 +537,49 @@ model CustomRole {
   @@index([serverId])
 }
 
+// ── Games / Activities ──────────────────────────────────────────────
+// Turn-based games scoped to a server. Created from the "Actividades"
+// button in a voice channel or from any text channel via `/jugar`.
+// State is JSON so new games can be added without schema churn.
+model Game {
+  id            String    @id @default(cuid())
+  serverId      String
+  channelId     String  // channel where the game was created
+  type          String  // "tic-tac-toe" | ...
+  status        String    @default("waiting") // waiting | in_progress | finished | cancelled
+  minPlayers    Int
+  maxPlayers    Int
+  turnTimeoutS  Int       @default(30)
+  currentTurn   String? // pubkey of active player, null when waiting/finished
+  turnDeadline  DateTime?
+  state         Json
+  winnerPubkey  String?
+  createdBy     String
+  createdAt     DateTime  @default(now())
+  startedAt     DateTime?
+  finishedAt    DateTime?
+
+  participants GameParticipant[]
+
+  @@index([serverId, status])
+  @@index([channelId])
+}
+
+model GameParticipant {
+  id       String   @id @default(cuid())
+  gameId   String
+  pubkey   String
+  seat     Int
+  status   String   @default("joined") // joined | disqualified | left
+  joinedAt DateTime @default(now())
+
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@unique([gameId, pubkey])
+  @@index([gameId])
+  @@index([pubkey])
+}
+
 // Pivot table: which members hold which custom roles.
 model MemberCustomRole {
   id       String @id @default(cuid())
