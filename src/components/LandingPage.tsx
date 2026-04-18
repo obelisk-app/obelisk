@@ -114,14 +114,14 @@ const ROADMAP_PHASES = [
   { key: 'phase2', phase: 'Phase 2', status: 'done' as const },
   { key: 'phase3', phase: 'Phase 3', status: 'done' as const },
   { key: 'phase4', phase: 'Phase 4', status: 'in-progress' as const },
+  { key: 'phase5', phase: 'Phase 5', status: 'upcoming' as const },
 ];
 
 const TECH_STACK: { name: string; desc: string; color: string; icon?: string; img?: string; href: string }[] = [
   { name: 'Next.js 16', desc: 'React framework', color: 'text-white', icon: '▲', href: 'https://nextjs.org' },
   { name: 'Nostr (NDK)', desc: 'Identity & auth', color: 'text-purple-400', icon: '⚡', href: 'https://github.com/nostr-dev-kit/ndk' },
   { name: 'Nostr WoT', desc: 'Web of Trust spam filter', color: 'text-indigo-400', img: '/nostr-wot-logo.png', href: 'https://nostr-wot.com' },
-  { name: 'WebRTC', desc: 'Voice channels', color: 'text-rose-400', icon: '🎙', href: 'https://webrtc.org' },
-  { name: 'Socket.io', desc: 'Real-time messaging', color: 'text-yellow-400', icon: '⇌', href: 'https://socket.io' },
+  { name: 'Socket.io', desc: 'Real-time messaging & voice relay', color: 'text-yellow-400', icon: '⇌', href: 'https://socket.io' },
   { name: 'PostgreSQL', desc: 'Database', color: 'text-emerald-400', icon: '◆', href: 'https://www.postgresql.org' },
 ];
 
