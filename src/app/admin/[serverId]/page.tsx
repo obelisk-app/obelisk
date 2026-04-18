@@ -104,6 +104,50 @@ export default function AdminServerPage({
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [serverCustomRoles, setServerCustomRoles] = useState<{ id: string; name: string; color: string }[]>([]);
+  const [iconUrlInput, setIconUrlInput] = useState('');
+  const [bannerUrlInput, setBannerUrlInput] = useState('');
+  const [uploadingIcon, setUploadingIcon] = useState(false);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setIconUrlInput(server?.icon || '');
+    setBannerUrlInput(server?.banner || '');
+  }, [server?.icon, server?.banner]);
+
+  const uploadImage = useCallback(
+    async (file: File, kind: 'icon' | 'banner') => {
+      if (!serverId) return;
+      if (!file.type.startsWith('image/')) {
+        setUploadError('Only image files are allowed');
+        return;
+      }
+      setUploadError(null);
+      const setBusy = kind === 'icon' ? setUploadingIcon : setUploadingBanner;
+      setBusy(true);
+      try {
+        const fd = new FormData();
+        fd.append('file', file);
+        const res = await fetch(
+          `/api/upload?serverId=${encodeURIComponent(serverId)}`,
+          { method: 'POST', body: fd },
+        );
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          setUploadError(body?.error || `Upload failed (${res.status})`);
+          return;
+        }
+        const { url } = await res.json();
+        if (kind === 'icon') setIconUrlInput(url);
+        else setBannerUrlInput(url);
+        setSettingsDirty(true);
+        setJustSaved(false);
+      } finally {
+        setBusy(false);
+      }
+    },
+    [serverId],
+  );
 
   // Auth + role check (server-scoped via query param)
   useEffect(() => {
@@ -518,21 +562,78 @@ export default function AdminServerPage({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-lc-muted mb-1.5 uppercase tracking-wider">Icon URL</label>
-                  <input
-                    name="icon"
-                    defaultValue={server.icon || ''}
-                    className="w-full px-3 py-2 rounded-lg bg-lc-black border border-lc-border text-lc-white text-sm focus:border-lc-green focus:outline-none transition-colors"
-                  />
+                  <label className="block text-xs text-lc-muted mb-1.5 uppercase tracking-wider">Icon</label>
+                  <div className="flex items-center gap-3">
+                    {iconUrlInput ? (
+                      <img
+                        src={iconUrlInput}
+                        alt="Icon preview"
+                        className="w-12 h-12 rounded-lg object-cover bg-lc-black border border-lc-border"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-lg bg-lc-black border border-lc-border" />
+                    )}
+                    <input
+                      name="icon"
+                      value={iconUrlInput}
+                      onChange={(e) => setIconUrlInput(e.target.value)}
+                      placeholder="https://… or upload"
+                      className="flex-1 px-3 py-2 rounded-lg bg-lc-black border border-lc-border text-lc-white text-sm focus:border-lc-green focus:outline-none transition-colors"
+                    />
+                    <label className="lc-pill lc-pill-secondary text-xs cursor-pointer whitespace-nowrap">
+                      {uploadingIcon ? 'Uploading…' : 'Upload'}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        disabled={uploadingIcon}
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) uploadImage(f, 'icon');
+                          e.target.value = '';
+                        }}
+                      />
+                    </label>
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-xs text-lc-muted mb-1.5 uppercase tracking-wider">Banner URL</label>
-                  <input
-                    name="banner"
-                    defaultValue={server.banner || ''}
-                    className="w-full px-3 py-2 rounded-lg bg-lc-black border border-lc-border text-lc-white text-sm focus:border-lc-green focus:outline-none transition-colors"
-                  />
+                  <label className="block text-xs text-lc-muted mb-1.5 uppercase tracking-wider">Banner</label>
+                  <div className="flex items-center gap-3">
+                    {bannerUrlInput ? (
+                      <img
+                        src={bannerUrlInput}
+                        alt="Banner preview"
+                        className="w-24 h-12 rounded-lg object-cover bg-lc-black border border-lc-border"
+                      />
+                    ) : (
+                      <div className="w-24 h-12 rounded-lg bg-lc-black border border-lc-border" />
+                    )}
+                    <input
+                      name="banner"
+                      value={bannerUrlInput}
+                      onChange={(e) => setBannerUrlInput(e.target.value)}
+                      placeholder="https://… or upload"
+                      className="flex-1 px-3 py-2 rounded-lg bg-lc-black border border-lc-border text-lc-white text-sm focus:border-lc-green focus:outline-none transition-colors"
+                    />
+                    <label className="lc-pill lc-pill-secondary text-xs cursor-pointer whitespace-nowrap">
+                      {uploadingBanner ? 'Uploading…' : 'Upload'}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        disabled={uploadingBanner}
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) uploadImage(f, 'banner');
+                          e.target.value = '';
+                        }}
+                      />
+                    </label>
+                  </div>
                 </div>
+                {uploadError && (
+                  <p className="text-xs text-red-400">{uploadError}</p>
+                )}
               </div>
 
               {/* Ownership — instance-owner only */}

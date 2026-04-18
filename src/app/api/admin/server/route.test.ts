@@ -222,6 +222,75 @@ describe('PATCH /api/admin/server', () => {
     });
   });
 
+  describe('admin (non-owner) access to bot/UX fields', () => {
+    function mockAdminAuth() {
+      mockGetAuth.mockResolvedValue('admin-pk');
+      mockPrisma.server.findUnique.mockResolvedValue({ ownerPubkey: 'owner-pk' });
+      mockPrisma.member.findUnique.mockResolvedValue({
+        id: 'm1', serverId: 'srv1', pubkey: 'admin-pk', role: 'admin',
+      });
+    }
+
+    it('admin can set welcomeChannelId + welcomeLocale', async () => {
+      mockAdminAuth();
+      mockPrisma.channel.findFirst.mockResolvedValue({ id: 'ch1' });
+      mockPrisma.server.update.mockResolvedValue({ id: 'srv1', welcomeChannelId: 'ch1' });
+
+      const res = await PATCH(makeRequest('PATCH', { welcomeChannelId: 'ch1', welcomeLocale: 'es' }));
+      expect(res.status).toBe(200);
+      expect(mockPrisma.server.update).toHaveBeenCalledWith({
+        where: { id: 'srv1' },
+        data: { welcomeChannelId: 'ch1', welcomeLocale: 'es' },
+      });
+    });
+
+    it('admin can update the banner', async () => {
+      mockAdminAuth();
+      mockPrisma.server.update.mockResolvedValue({ id: 'srv1', banner: 'https://example.com/b.png' });
+
+      const res = await PATCH(makeRequest('PATCH', { banner: 'https://example.com/b.png' }));
+      expect(res.status).toBe(200);
+      expect(mockPrisma.server.update).toHaveBeenCalledWith({
+        where: { id: 'srv1' },
+        data: { banner: 'https://example.com/b.png' },
+      });
+    });
+
+    it('admin can set landingChannelId', async () => {
+      mockAdminAuth();
+      mockPrisma.channel.findFirst.mockResolvedValue({ id: 'ch2' });
+      mockPrisma.server.update.mockResolvedValue({ id: 'srv1', landingChannelId: 'ch2' });
+
+      const res = await PATCH(makeRequest('PATCH', { landingChannelId: 'ch2' }));
+      expect(res.status).toBe(200);
+    });
+
+    it('admin gets 403 when trying to rename the server', async () => {
+      mockAdminAuth();
+      const res = await PATCH(makeRequest('PATCH', { name: 'Hijacked' }));
+      expect(res.status).toBe(403);
+      expect(mockPrisma.server.update).not.toHaveBeenCalled();
+    });
+
+    it('admin gets 403 when trying to change upload limits', async () => {
+      mockAdminAuth();
+      const res = await PATCH(makeRequest('PATCH', { maxImageBytes: 1024 }));
+      expect(res.status).toBe(403);
+      expect(mockPrisma.server.update).not.toHaveBeenCalled();
+    });
+
+    it('member (non-admin) still gets 403 on any PATCH', async () => {
+      mockGetAuth.mockResolvedValue('member-pk');
+      mockPrisma.server.findUnique.mockResolvedValue({ ownerPubkey: 'owner-pk' });
+      mockPrisma.member.findUnique.mockResolvedValue({
+        id: 'm1', serverId: 'srv1', pubkey: 'member-pk', role: 'member',
+      });
+
+      const res = await PATCH(makeRequest('PATCH', { welcomeChannelId: 'ch1' }));
+      expect(res.status).toBe(403);
+    });
+  });
+
   describe('landing channel field', () => {
     function mockOwnerAuth() {
       mockGetAuth.mockResolvedValue('owner-pk');

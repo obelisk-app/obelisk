@@ -22,16 +22,44 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(server);
 }
 
-// PATCH /api/admin/server?serverId=... — update server settings (owner only)
+// PATCH /api/admin/server?serverId=... — update server settings.
+//
+// Auth split:
+//   - Admin+ may update bot/UX wiring and the banner: welcomeChannelId,
+//     welcomeLocale, landingChannelId, banner. Operational settings an
+//     admin (or a bot acting as admin, e.g. via the headless CLI) flips
+//     routinely.
+//   - Owner only may update identity/storage: name, icon, upload byte
+//     limits, allowedMimeTypes. Ownership transfer (ownerPubkey) is
+//     instance-owner only (checked further down).
 export async function PATCH(req: NextRequest) {
   const serverIdOrError = requireServerIdFromQuery(req);
   if (serverIdOrError instanceof NextResponse) return serverIdOrError;
   const serverId = serverIdOrError;
 
-  const actor = await requireRole(req, serverId, 'owner');
+  const actor = await requireRole(req, serverId, 'admin');
   if (actor instanceof NextResponse) return actor;
 
+  const isOwner = actor.role === 'owner';
+  const ownerOnlyFields = [
+    'name', 'icon',
+    'maxImageBytes', 'maxVideoBytes', 'maxDocBytes', 'maxAudioBytes',
+    'allowedMimeTypes',
+  ] as const;
+
   const body = await req.json();
+
+  if (!isOwner) {
+    for (const f of ownerOnlyFields) {
+      if (body[f] !== undefined) {
+        return NextResponse.json(
+          { error: `Only the server owner can update ${f}` },
+          { status: 403 },
+        );
+      }
+    }
+  }
+
   const allowed = ['name', 'icon', 'banner'] as const;
   const data: Record<string, string | number | null> = {};
   for (const key of allowed) {
