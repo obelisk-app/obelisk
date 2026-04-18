@@ -238,6 +238,15 @@ export const SYSTEM_PUBKEY =
   '0000000000000000000000000000000000000000000000000000000000000000';
 
 /**
+ * The "zap bot" pubkey. Messages authored with this pubkey are rendered as
+ * coming from a dedicated "Zap Bot" with a ⚡ avatar, regardless of server.
+ * Used by `/api/wallet/zap` to post public zap notifications on behalf of
+ * the zapper so the sender's npub isn't shown as the message author.
+ */
+export const ZAP_BOT_PUBKEY =
+  '000000000000000000000000000000000000000000000000000000007a617000';
+
+/**
  * Look up a Member's cached profile to embed in a Socket.io `new-message`
  * event. Returns null if the author is not a Member of the server. If the
  * Member exists but has no cached profile, fires a background fetch
@@ -258,6 +267,16 @@ export async function getAuthorProfile(
 ): Promise<EmbeddedAuthorProfile | null> {
   try {
     const prisma = await getPrisma();
+
+    if (pubkey === ZAP_BOT_PUBKEY) {
+      return {
+        pubkey: ZAP_BOT_PUBKEY,
+        displayName: 'Zap Bot',
+        picture: '/bots/zap.svg',
+        nip05: null,
+        nickname: null,
+      };
+    }
 
     if (pubkey === SYSTEM_PUBKEY) {
       const server = await prisma.server.findUnique({

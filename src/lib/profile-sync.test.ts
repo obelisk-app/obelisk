@@ -48,6 +48,7 @@ import {
   fetchAndSyncProfileDeduped,
   triggerBackgroundRefreshIfStale,
   getAuthorProfile,
+  ZAP_BOT_PUBKEY,
   __resetProfileSyncState,
 } from './profile-sync';
 
@@ -274,6 +275,18 @@ describe('profile-sync', () => {
         nip05: 'alice@example.com',
         nickname: null,
       });
+    });
+
+    it('returns a synthetic Zap Bot profile for ZAP_BOT_PUBKEY without hitting the DB', async () => {
+      const result = await getAuthorProfile(ZAP_BOT_PUBKEY, 's1');
+      expect(result).toEqual({
+        pubkey: ZAP_BOT_PUBKEY,
+        displayName: 'Zap Bot',
+        picture: '/bots/zap.svg',
+        nip05: null,
+        nickname: null,
+      });
+      expect(mockPrisma.member.findUnique).not.toHaveBeenCalled();
     });
 
     it('still returns the stub when profile fields are null (profile not yet synced)', async () => {

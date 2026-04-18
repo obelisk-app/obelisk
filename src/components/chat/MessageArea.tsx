@@ -326,7 +326,7 @@ function MessageBubble({ message, profileCache, canPin, canModerate, onReply, on
             )}
           </div>
           <div className="text-sm text-lc-white/90 break-words whitespace-pre-wrap">
-            <MessageContent content={message.content} />
+            <MessageContent content={message.content} messageId={message.id} channelId={message.channelId} />
           </div>
         </div>
 

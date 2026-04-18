@@ -29,7 +29,6 @@ import { useVoiceStore } from '@/store/voice';
 import GameDock from '@/components/games/GameDock';
 import ActivitiesPanel from '@/components/games/ActivitiesPanel';
 import GamePickerModal from '@/components/games/GamePickerModal';
-import ZapPickerModal from '@/components/chat/ZapPickerModal';
 import SettingsModal from '@/components/settings/SettingsModal';
 import GameFullscreenView from '@/components/games/GameFullscreenView';
 import { useGamesStore } from '@/store/games';
@@ -669,6 +668,13 @@ export default function ChatPage() {
       name: active.name,
       picture: active.icon || undefined,
     });
+    // Zap Bot: dedicated pseudo-author for `/zap` announcements so the zapper's
+    // npub isn't shown as the message author. Rendered with a ⚡ avatar.
+    const ZAP_BOT_PUBKEY = '000000000000000000000000000000000000000000000000000000007a617000';
+    profileCache.set(ZAP_BOT_PUBKEY, {
+      name: 'Zap Bot',
+      picture: '/bots/zap.svg',
+    });
   }, [activeServerId, servers, profileCache]);
 
   // Discover DM threads lazily: we only hit relays (and publish our NIP-17
@@ -992,6 +998,14 @@ export default function ChatPage() {
       if (ch === activeChannelIdRef.current && typerPubkey !== profile?.pubkey) {
         setTyping(typerPubkey);
       }
+    });
+
+    socket.on('invoice-paid', (data: { paymentHash: string; payerPubkey: string; paidAt: string }) => {
+      useChatStore.getState().markInvoicePaid({
+        paymentHash: data.paymentHash,
+        payerPubkey: data.payerPubkey,
+        paidAt: typeof data.paidAt === 'string' ? data.paidAt : new Date(data.paidAt).toISOString(),
+      });
     });
 
     socket.on('message-error', ({ error }: { error: string }) => {
@@ -2269,7 +2283,6 @@ export default function ChatPage() {
       <GameDock />
       <ActivitiesPanel />
       <GamePickerModal />
-      <ZapPickerModal />
       <SettingsModal />
     </div>
   );

@@ -594,6 +594,23 @@ model Wallet {
   @@index([pubkey])
 }
 
+// Records a public BOLT11 invoice posted in chat that has been paid via NWC.
+// Keyed by paymentHash so races between concurrent payers resolve as a
+// unique-constraint violation on the second payer — preventing double-spend.
+model InvoicePayment {
+  id            String   @id @default(cuid())
+  paymentHash   String   @unique
+  messageId     String?
+  channelId     String?
+  payerPubkey   String
+  payeePubkey   String?
+  amountSats    Int
+  paidAt        DateTime @default(now())
+
+  @@index([messageId])
+  @@index([channelId])
+}
+
 // Pivot table: which members hold which custom roles.
 model MemberCustomRole {
   id       String @id @default(cuid())

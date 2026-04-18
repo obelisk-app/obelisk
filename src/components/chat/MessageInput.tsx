@@ -141,6 +141,32 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
     textareaRef.current?.focus();
   }, [activeChannelId]);
 
+  // Listen for `/zap` prefill events emitted by ProfilePopover's ⚡ Zappar
+  // button. Inserts a display-token `@Name` + a canonical mention map entry
+  // so buildPayload re-serializes to `nostr:npub1…` on submit.
+  useEffect(() => {
+    const onPrefill = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { pubkey: string; displayName: string } | undefined;
+      if (!detail) return;
+      const member = memberList.find((m) => m.pubkey === detail.pubkey);
+      const displayToken = nextDisplayToken(
+        member ?? { pubkey: detail.pubkey, displayName: detail.displayName } as MemberInfo,
+      );
+      mentionMapRef.current.set(displayToken, serializeMention(detail.pubkey));
+      const next = `/zap ${displayToken} `;
+      setContent(next);
+      requestAnimationFrame(() => {
+        const ta = textareaRef.current;
+        if (!ta) return;
+        ta.focus();
+        ta.setSelectionRange(next.length, next.length);
+      });
+    };
+    window.addEventListener('obelisk:zap-prefill', onPrefill);
+    return () => window.removeEventListener('obelisk:zap-prefill', onPrefill);
+    // memberList intentionally watched so a freshly-loaded member is resolvable.
+  }, [memberList]);
+
   // Focus input when reply is set
   useEffect(() => {
     if (replyingTo) {
@@ -238,12 +264,14 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
       return;
     }
 
-    // `/zap [target] [amount]` — opens the zap picker. Prefills target + amount
-    // when provided (target can be a hex pubkey or a `nostr:npub1…` mention).
+    // `/zap @mention <amount>` — sends a Lightning zap inline and posts the
+    // public notification as the Zap Bot (not the sender's npub). Mentions
+    // resolve to `nostr:npub1…` via buildPayload before this regex matches.
     const zap = /^\/zap(?:\s+(\S+))?(?:\s+(\d+))?\s*$/i.exec(payload.trim());
     if (zap) {
       (async () => {
-        const { useZapStore } = await import('@/store/zap');
+        const { useChatStore } = await import('@/store/chat');
+        const push = (msg: string) => useChatStore.getState().pushEphemeral(activeChannelId, msg);
         const { nip19 } = await import('nostr-tools');
         let target: string | undefined;
         const rawTarget = zap[1];
@@ -259,7 +287,67 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
           } catch { /* ignore */ }
         }
         const amount = zap[2] ? parseInt(zap[2], 10) : undefined;
-        useZapStore.getState().setPickerOpen({ channelId: activeChannelId, target, amountSats: amount });
+        if (!target) { push('⚠️ Uso: /zap @usuario <sats>'); return; }
+        if (!amount || amount <= 0) { push('⚠️ Indicá un monto en sats, ej: /zap @alice 21'); return; }
+        try {
+          const res = await fetch('/api/wallet/zap', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ channelId: activeChannelId, targetPubkey: target, amountSats: amount }),
+          });
+          if (!res.ok) {
+            const d = await res.json().catch(() => ({}));
+            const code = d.error as string | undefined;
+            const msg =
+              code === 'target_no_wallet' ? '⚠️ Ese usuario no tiene NWC configurado.'
+              : code === 'no_wallet' ? '⚠️ Configurá tu NWC en tu perfil para poder enviar zaps.'
+              : code === 'insufficient_funds' ? `⚠️ No tenés suficiente balance para zappar ${amount} sats.`
+              : code === 'cannot_zap_self' ? '⚠️ No podés zapearte a vos mismo.'
+              : `⚠️ Fallo el zap (${code || res.status}).`;
+            push(msg);
+          }
+        } catch {
+          push('⚠️ No se pudo contactar al servidor.');
+        }
+      })();
+      setContent('');
+      setAttachments([]);
+      setUploadError(null);
+      mentionMapRef.current = new Map();
+      if (textareaRef.current) textareaRef.current.style.height = 'auto';
+      return;
+    }
+
+    // `/invoice <amount>` — creates a BOLT11 invoice on the caller's NWC
+    // wallet and posts the raw `lnbc…` string in the channel. The message
+    // renderer picks it up and shows a payable card for everyone.
+    const inv = /^\/invoice(?:\s+(\d+))?\s*$/i.exec(payload.trim());
+    if (inv) {
+      (async () => {
+        const { useChatStore } = await import('@/store/chat');
+        const push = (msg: string) => useChatStore.getState().pushEphemeral(activeChannelId, msg);
+        const amount = inv[1] ? parseInt(inv[1], 10) : 0;
+        if (!amount || amount <= 0) { push('⚠️ Uso: /invoice <sats>'); return; }
+        try {
+          const r = await fetch('/api/wallet/invoice', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ amountSats: amount, description: `Invoice ${amount} sats` }),
+          });
+          const d = await r.json().catch(() => ({}));
+          if (!r.ok || !d.invoice) {
+            const msg = d.error === 'target_no_wallet'
+              ? '⚠️ Configurá tu NWC en tu perfil para crear facturas.'
+              : `⚠️ No se pudo crear la factura (${d.error || r.status}).`;
+            push(msg);
+            return;
+          }
+          await fetch(`/api/channels/${activeChannelId}/messages`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: d.invoice }),
+          });
+        } catch {
+          push('⚠️ No se pudo contactar al servidor.');
+        }
       })();
       setContent('');
       setAttachments([]);

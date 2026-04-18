@@ -255,6 +255,12 @@ interface ChatState {
   // Never hits the server; cleared on channel switch.
   ephemeralMessages: Record<string, EphemeralMessage[]>;
   pushEphemeral: (channelId: string, text: string) => void;
+
+  // Paid-invoice state keyed by paymentHash. Populated by the Socket.io
+  // `invoice-paid` handler; InvoiceCard components read this to flip into
+  // the "Paid" state in real-time.
+  invoicePayments: Record<string, { paymentHash: string; payerPubkey: string; paidAt: string }>;
+  markInvoicePaid: (entry: { paymentHash: string; payerPubkey: string; paidAt: string }) => void;
   clearEphemeral: (channelId: string) => void;
 
   // Reset all data fields to their initial values. Used on logout /
@@ -300,6 +306,7 @@ export const CHAT_INITIAL_STATE = {
   followedPostsLoading: false,
   suppressedAutoFollowPostIds: [] as string[],
   ephemeralMessages: {} as Record<string, EphemeralMessage[]>,
+  invoicePayments: {} as Record<string, { paymentHash: string; payerPubkey: string; paidAt: string }>,
 };
 
 export const useChatStore = create<ChatState>()((set) => ({
@@ -411,6 +418,10 @@ export const useChatStore = create<ChatState>()((set) => ({
     delete next[channelId];
     return { ephemeralMessages: next };
   }),
+
+  markInvoicePaid: (entry) => set((state) => ({
+    invoicePayments: { ...state.invoicePayments, [entry.paymentHash]: entry },
+  })),
 
   updatePinState: (messageId, pinnedAt, pinnedByPubkey) => set((state) => ({
     messages: state.messages.map((m) =>

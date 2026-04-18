@@ -19,6 +19,8 @@ import YouTubeEmbed from './YouTubeEmbed';
 import LinkPreview from './LinkPreview';
 import AttachmentCard from './AttachmentCard';
 import ImageGallery from './ImageGallery';
+import InvoiceCard from './InvoiceCard';
+import { INVOICE_REGEX } from '@/lib/bolt11';
 import ShootingStars from '../ShootingStars';
 import type { Components } from 'react-markdown';
 
@@ -170,7 +172,7 @@ function renderWithMentions(
 // by <WelcomeBanner> (with animated stars) instead of a generic <img>.
 const WELCOME_BANNER_MD_REGEX = /!\[([^\]]*)\]\(([^)\s]*\/api\/welcome-banner[^)\s]*)\)/;
 
-export default function MessageContent({ content }: { content: string }) {
+export default function MessageContent({ content, messageId, channelId }: { content: string; messageId?: string; channelId?: string }) {
   // Game embed: `[[game:<id>]]` markers render as a live card showing
   // participant count, status, and final result.
   const gameMatch = /^\[\[game:([a-z0-9]+)\]\]$/i.exec(content.trim());
@@ -203,6 +205,14 @@ export default function MessageContent({ content }: { content: string }) {
     return { alt: m[1], src: m[2], raw: m[0] };
   }, [content]);
 
+  // Hoist BOLT11 invoices out of the body so each renders as an InvoiceCard
+  // below the text instead of a raw lnbc… blob inline.
+  const invoices = useMemo(() => {
+    const matches = content.match(INVOICE_REGEX) || [];
+    const seen = new Set<string>();
+    return matches.filter((m) => { const k = m.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
+  }, [content]);
+
   const bodyContent = useMemo(() => {
     const toStrip = [...imageUrls, ...videoUrls, ...audioUrls];
     let stripped = content;
@@ -210,9 +220,12 @@ export default function MessageContent({ content }: { content: string }) {
     for (const url of toStrip) {
       stripped = stripped.split(url).join('');
     }
+    for (const inv of invoices) {
+      stripped = stripped.split(inv).join('');
+    }
     // collapse stray whitespace/newlines left behind
     return stripped.replace(/\n{3,}/g, '\n\n').trim();
-  }, [content, imageUrls, videoUrls, audioUrls, welcomeBanner]);
+  }, [content, imageUrls, videoUrls, audioUrls, welcomeBanner, invoices]);
 
   // Resolve `:name:` shortcodes before markdown parsing. Unicode shortcodes
   // are replaced inline (no placeholder — the char is just a char), while
@@ -423,6 +436,10 @@ export default function MessageContent({ content }: { content: string }) {
           className="mt-1 max-w-sm block"
           data-testid="audio-player"
         />
+      ))}
+      {/* Invoice cards hoisted out of the body text */}
+      {invoices.map((inv) => (
+        <InvoiceCard key={inv} invoice={inv} messageId={messageId} channelId={channelId} />
       ))}
       {/* Link previews for non-image, non-youtube URLs */}
       {previewUrls.map((url) => (

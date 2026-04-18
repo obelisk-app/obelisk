@@ -235,11 +235,15 @@ export default function ProfilePopover({ pubkey, onClose }: {
           {/* Actions */}
           <div className="flex gap-2 pt-2 border-t border-lc-border">
             <button
-              onClick={async () => {
-                const { useZapStore } = await import('@/store/zap');
+              onClick={() => {
                 const channelId = useChatStore.getState().activeChannelId;
                 if (!channelId) return;
-                useZapStore.getState().setPickerOpen({ channelId, target: pubkey });
+                // Prefill the composer with a /zap slash command targeting this
+                // user. MessageInput listens for this event, inserts the
+                // canonical nostr:npub mention, and focuses the textarea.
+                window.dispatchEvent(new CustomEvent('obelisk:zap-prefill', {
+                  detail: { pubkey, displayName },
+                }));
                 onClose();
               }}
               className="lc-pill-primary text-xs flex-1"
