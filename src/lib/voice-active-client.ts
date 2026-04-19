@@ -16,6 +16,10 @@ export interface ActiveVoiceClient {
   unmute(): Promise<void>;
   setDeafened(deafened: boolean): void;
   leave(): Promise<void> | void;
+  startCamera(): Promise<void>;
+  stopCamera(): Promise<void>;
+  startScreenShare(): Promise<void>;
+  stopScreenShare(): Promise<void>;
   /**
    * Optional: re-apply current `getVoiceQuality()` settings to the live call
    * so the Settings panel can hot-apply without requiring a reload or
