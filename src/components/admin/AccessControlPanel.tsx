@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import AccessPanel from './AccessPanel';
 import InviteManager from './InviteManager';
+import InviteAliasManager from './InviteAliasManager';
 import InviteCreditPolicy from './InviteCreditPolicy';
 
 type JoinMode = 'open' | 'invite-only' | 'wot';
@@ -220,6 +221,16 @@ export default function AccessControlPanel({ serverId, isOwner, onModeChanged }:
           out-of-band onboarding. Each link is single-use by default.
         </p>
         <InviteManager serverId={serverId} />
+      </section>
+
+      <section className="bg-lc-dark border border-lc-border rounded-xl p-5">
+        <h3 className="text-sm font-semibold text-lc-white mb-1">Invite Aliases</h3>
+        <p className="text-xs text-lc-muted mb-4">
+          Permanent, editable short links like <code>/invite/obelisk</code>. They
+          route anyone directly into this server&apos;s join flow when it&apos;s
+          open, and can be renamed, disabled, or deleted at any time.
+        </p>
+        <InviteAliasManager serverId={serverId} />
       </section>
     </div>
   );

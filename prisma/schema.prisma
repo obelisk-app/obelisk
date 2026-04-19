@@ -61,6 +61,7 @@ model Server {
   reports              Report[]
   moderationActions    ModerationAction[]
   invitations          Invitation[]
+  inviteAliases        InviteAlias[]
   wotEntries           WotEntry[]
   wotOverrides         WotOverride[]
   emojis               ServerEmoji[]
@@ -168,6 +169,27 @@ model Invitation {
   @@index([serverId])
   @@index([code])
   @@index([serverId, createdBy, memberCreated])
+}
+
+// Permanent, editable invite aliases. A stateless named redirect into a
+// server's open-join flow — e.g. obelisk.ar/invite/obelisk. Unlike Invitation
+// rows, aliases carry no usage counter, expiry, or target: they're just a
+// reusable slug pointing at a server. Aliases only work while the target
+// server is open (joinMode=open, WoT off); otherwise the public endpoint
+// returns a clear "not open" error. Slugs share a namespace with
+// Invitation.code via the shared validator in src/lib/invite-slug.ts.
+model InviteAlias {
+  id        String   @id @default(cuid())
+  slug      String   @unique // lowercased, matches [a-z0-9_-]+
+  serverId  String
+  enabled   Boolean  @default(true)
+  createdBy String // pubkey
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@index([serverId])
 }
 
 model Category {

@@ -2,14 +2,60 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthPubkey } from '@/lib/api-auth';
 import { postWelcomeMessage } from '@/lib/welcome';
+import { isInWot, maybeAutoRefreshWot } from '@/lib/wot';
 
-// GET /api/invitations/:code — validate an invitation (public info)
+const SERVER_PUBLIC_SELECT = {
+  id: true,
+  name: true,
+  icon: true,
+  banner: true,
+  joinMode: true,
+  wotEnabled: true,
+  _count: { select: { members: true } },
+} as const;
+
+// GET /api/invitations/:code — validate an invitation (public info).
+// Resolves invite aliases (permanent named slugs) first, then falls back
+// to the usage-counted Invitation table.
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ code: string }> }
 ) {
-  const { code } = await params;
+  const { code: rawCode } = await params;
+  const code = rawCode.toLowerCase();
 
+  // 1) Try as alias (stateless redirect into open-join flow).
+  const alias = await prisma.inviteAlias.findUnique({
+    where: { slug: code },
+    include: { server: { select: SERVER_PUBLIC_SELECT } },
+  });
+  if (alias) {
+    if (!alias.enabled) {
+      return NextResponse.json({ error: 'Invitation disabled' }, { status: 410 });
+    }
+    let alreadyMember = false;
+    try {
+      const pubkey = (await getAuthPubkey(req)) ?? null;
+      if (pubkey) {
+        const m = await prisma.member.findUnique({
+          where: { serverId_pubkey: { serverId: alias.serverId, pubkey } },
+          select: { id: true },
+        });
+        alreadyMember = !!m;
+      }
+    } catch {
+      // public endpoint — ignore auth errors
+    }
+    const { joinMode, wotEnabled, ...serverPublic } = alias.server;
+    return NextResponse.json({
+      kind: 'alias',
+      server: serverPublic,
+      targetPubkey: null,
+      alreadyMember,
+    });
+  }
+
+  // 2) Fall back to the Invitation table (usage-counted codes).
   const invitation = await prisma.invitation.findUnique({
     where: { code },
     include: {
@@ -80,7 +126,85 @@ export async function POST(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { code } = await params;
+  const { code: rawCode } = await params;
+  const code = rawCode.toLowerCase();
+
+  // Alias path: stateless join into an open server. Aliases carry no use
+  // counter, no target, and do NOT tag the Member with joinedViaInviteId.
+  const alias = await prisma.inviteAlias.findUnique({
+    where: { slug: code },
+    include: {
+      server: {
+        select: {
+          id: true, name: true, icon: true, banner: true,
+          joinMode: true, wotEnabled: true,
+        },
+      },
+    },
+  });
+  if (alias) {
+    if (!alias.enabled) {
+      return NextResponse.json({ error: 'Invitation disabled' }, { status: 410 });
+    }
+    const serverPublic = {
+      id: alias.server.id,
+      name: alias.server.name,
+      icon: alias.server.icon,
+      banner: alias.server.banner,
+    };
+
+    const ban = await prisma.ban.findUnique({
+      where: { serverId_pubkey: { serverId: alias.serverId, pubkey } },
+    });
+    if (ban) {
+      return NextResponse.json(
+        { error: 'You are banned from this server', banned: true, reason: ban.reason ?? null },
+        { status: 403 }
+      );
+    }
+
+    const existing = await prisma.member.findUnique({
+      where: { serverId_pubkey: { serverId: alias.serverId, pubkey } },
+    });
+    if (existing) {
+      return NextResponse.json({
+        server: serverPublic,
+        alreadyMember: true,
+        message: 'You are already a member of this server',
+      });
+    }
+
+    // Aliases respect the same access rules as POST /api/servers/:id/join:
+    // WoT takes precedence; otherwise require joinMode=open.
+    if (alias.server.wotEnabled) {
+      maybeAutoRefreshWot(alias.serverId).catch(() => {});
+      const check = await isInWot(alias.serverId, pubkey);
+      if (!check.allowed) {
+        return NextResponse.json(
+          {
+            error: 'This server requires being followed by the referente or holding an invite',
+            wotDenied: true,
+          },
+          { status: 403 }
+        );
+      }
+    } else if (alias.server.joinMode !== 'open') {
+      return NextResponse.json(
+        { error: 'This server is not open — an invite code is required' },
+        { status: 403 }
+      );
+    }
+
+    await prisma.member.create({
+      data: { serverId: alias.serverId, pubkey, role: 'member' },
+    });
+
+    void postWelcomeMessage(alias.serverId, pubkey).catch((err) => {
+      console.warn('[invitations] postWelcomeMessage failed:', err);
+    });
+
+    return NextResponse.json({ server: serverPublic });
+  }
 
   const invitation = await prisma.invitation.findUnique({
     where: { code },

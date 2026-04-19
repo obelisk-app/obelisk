@@ -4,6 +4,7 @@ import { NextRequest } from 'next/server';
 vi.mock('@/lib/db', () => ({
   prisma: {
     invitation: { findUnique: vi.fn(), update: vi.fn() },
+    inviteAlias: { findUnique: vi.fn() },
     member: { upsert: vi.fn(), findUnique: vi.fn(), create: vi.fn() },
     ban: { findUnique: vi.fn() },
     $transaction: vi.fn(),
@@ -12,6 +13,11 @@ vi.mock('@/lib/db', () => ({
 
 vi.mock('@/lib/welcome', () => ({
   postWelcomeMessage: vi.fn().mockResolvedValue(null),
+}));
+
+vi.mock('@/lib/wot', () => ({
+  isInWot: vi.fn().mockResolvedValue({ allowed: true }),
+  maybeAutoRefreshWot: vi.fn().mockResolvedValue(null),
 }));
 
 vi.mock('@/lib/api-auth', () => ({
@@ -194,5 +200,95 @@ describe('POST /api/invitations/:code', () => {
     expect(data.banned).toBe(true);
     expect(data.reason).toBe('spam');
     expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+  });
+});
+
+describe('invite aliases (GET)', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns kind=alias for enabled alias', async () => {
+    mockPrisma.inviteAlias.findUnique.mockResolvedValue({
+      id: 'a1', slug: 'obelisk', serverId: 's1', enabled: true,
+      server: {
+        id: 's1', name: 'Obelisk', icon: null, banner: null,
+        joinMode: 'open', wotEnabled: false, _count: { members: 10 },
+      },
+    });
+    const res = await GET(makeRequest('GET'), { params: makeParams('Obelisk') });
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.kind).toBe('alias');
+    expect(data.server.id).toBe('s1');
+    // joinMode/wotEnabled stripped from public response
+    expect(data.server.joinMode).toBeUndefined();
+  });
+
+  it('returns 410 for disabled alias', async () => {
+    mockPrisma.inviteAlias.findUnique.mockResolvedValue({
+      id: 'a1', slug: 'x', serverId: 's1', enabled: false,
+      server: { id: 's1', name: 'x', icon: null, banner: null, joinMode: 'open', wotEnabled: false, _count: { members: 0 } },
+    });
+    const res = await GET(makeRequest('GET'), { params: makeParams('x') });
+    expect(res.status).toBe(410);
+  });
+});
+
+describe('invite aliases (POST)', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('joins open server via alias', async () => {
+    mockGetAuth.mockResolvedValue('pk1');
+    mockPrisma.inviteAlias.findUnique.mockResolvedValue({
+      id: 'a1', slug: 'obelisk', serverId: 's1', enabled: true,
+      server: { id: 's1', name: 'Obelisk', icon: null, banner: null, joinMode: 'open', wotEnabled: false },
+    });
+    mockPrisma.ban.findUnique.mockResolvedValue(null);
+    mockPrisma.member.findUnique.mockResolvedValue(null);
+    mockPrisma.member.create.mockResolvedValue({});
+
+    const res = await POST(makeRequest('POST'), { params: makeParams('obelisk') });
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.server.id).toBe('s1');
+    expect(mockPrisma.member.create).toHaveBeenCalled();
+  });
+
+  it('403 when alias points to invite-only server', async () => {
+    mockGetAuth.mockResolvedValue('pk1');
+    mockPrisma.inviteAlias.findUnique.mockResolvedValue({
+      id: 'a1', slug: 'x', serverId: 's1', enabled: true,
+      server: { id: 's1', name: 'x', icon: null, banner: null, joinMode: 'invite-only', wotEnabled: false },
+    });
+    mockPrisma.ban.findUnique.mockResolvedValue(null);
+    mockPrisma.member.findUnique.mockResolvedValue(null);
+
+    const res = await POST(makeRequest('POST'), { params: makeParams('x') });
+    expect(res.status).toBe(403);
+    expect(mockPrisma.member.create).not.toHaveBeenCalled();
+  });
+
+  it('410 when alias is disabled', async () => {
+    mockGetAuth.mockResolvedValue('pk1');
+    mockPrisma.inviteAlias.findUnique.mockResolvedValue({
+      id: 'a1', slug: 'x', serverId: 's1', enabled: false,
+      server: { id: 's1', name: 'x', icon: null, banner: null, joinMode: 'open', wotEnabled: false },
+    });
+    const res = await POST(makeRequest('POST'), { params: makeParams('x') });
+    expect(res.status).toBe(410);
+  });
+
+  it('alreadyMember returns 200 without creating', async () => {
+    mockGetAuth.mockResolvedValue('pk1');
+    mockPrisma.inviteAlias.findUnique.mockResolvedValue({
+      id: 'a1', slug: 'x', serverId: 's1', enabled: true,
+      server: { id: 's1', name: 'x', icon: null, banner: null, joinMode: 'open', wotEnabled: false },
+    });
+    mockPrisma.ban.findUnique.mockResolvedValue(null);
+    mockPrisma.member.findUnique.mockResolvedValue({ id: 'm1' });
+    const res = await POST(makeRequest('POST'), { params: makeParams('x') });
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.alreadyMember).toBe(true);
+    expect(mockPrisma.member.create).not.toHaveBeenCalled();
   });
 });
