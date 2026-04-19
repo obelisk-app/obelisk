@@ -123,10 +123,6 @@
 
   "profile.title": "Perfil",
   "profile.nostrSection": "Perfil Nostr",
-  "profile.syncFromNostr": "Sincronizar desde Nostr",
-  "profile.syncing": "Sincronizando...",
-  "profile.syncSuccess": "Perfil actualizado desde Nostr",
-  "profile.syncError": "No se pudo obtener el perfil",
   "profile.obeliskSection": "Ajustes Obelisk",
   "profile.nickname": "Apodo en este servidor",
   "profile.nicknamePlaceholder": "Dejá vacío para usar tu nombre Nostr",

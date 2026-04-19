@@ -205,7 +205,7 @@ describe('MessageArea', () => {
     expect(msgCPos).toBeGreaterThan(separatorPos);
   });
 
-  it('renders sticky date separators', () => {
+  it('renders date separators with date label', () => {
     const now = new Date();
     const messages = [
       { id: 'm1', channelId: 'ch1', authorPubkey: 'pk1', content: 'msg 1', replyToId: null, editedAt: null, createdAt: now.toISOString() },
@@ -218,13 +218,17 @@ describe('MessageArea', () => {
       categories: [],
     });
 
-    render(<MessageArea profileCache={profileCache} onDelete={vi.fn()} onToggleReaction={vi.fn()} />);
-    
-    // The separator for "Hoy" should be present and sticky
+    const { container } = render(<MessageArea profileCache={profileCache} onDelete={vi.fn()} onToggleReaction={vi.fn()} />);
+
+    // Separator for "Hoy" is rendered as a marker element with the
+    // data-date-separator attribute; a separate floating-day indicator
+    // (tracked via these markers) handles the sticky-on-scroll behavior.
     const separator = screen.getByText('Hoy');
     expect(separator).toBeInTheDocument();
-    expect(separator.closest('.sticky')).toBeInTheDocument();
-    expect(separator.closest('.sticky')).toHaveClass('top-0');
+    const marker = container.querySelector('[data-date-separator]') as HTMLElement | null;
+    expect(marker).not.toBeNull();
+    expect(marker!.getAttribute('data-date-label')).toBe('Hoy');
+    expect(marker!.contains(separator)).toBe(true);
   });
 
   it('formats older message timestamps as "ayer a las..." or "[date] a las..."', () => {

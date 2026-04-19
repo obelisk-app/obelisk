@@ -123,10 +123,6 @@
 
   "profile.title": "Profile",
   "profile.nostrSection": "Nostr Profile",
-  "profile.syncFromNostr": "Sync from Nostr",
-  "profile.syncing": "Syncing...",
-  "profile.syncSuccess": "Profile updated from Nostr",
-  "profile.syncError": "Could not fetch profile",
   "profile.obeliskSection": "Obelisk Settings",
   "profile.nickname": "Server nickname",
   "profile.nicknamePlaceholder": "Leave empty to use your Nostr name",

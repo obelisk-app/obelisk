@@ -202,7 +202,7 @@ describe('ChannelSidebar', () => {
     expect(onChannelSelect).toHaveBeenCalledTimes(1);
   });
 
-  it('shows a lock icon on channels the current user cannot write to', () => {
+  it('shows a read-only (eye) icon on channels the current user cannot write to', () => {
     useChatStore.setState({
       isLoadingChannels: false,
       servers: [{ id: 's1', name: 'Test', icon: null, banner: null }],
@@ -216,11 +216,10 @@ describe('ChannelSidebar', () => {
     });
 
     render(<ChannelSidebar />);
-    const lockIcons = screen.getAllByTestId('channel-write-lock-icon');
-    expect(lockIcons).toHaveLength(1);
-    // The lock should be inside the "locked-chan" row
+    const readOnlyIcons = screen.getAllByTestId('channel-read-only-icon');
+    expect(readOnlyIcons).toHaveLength(1);
     const lockedBtn = screen.getByText('locked-chan').closest('button');
-    expect(lockedBtn?.contains(lockIcons[0])).toBe(true);
+    expect(lockedBtn?.contains(readOnlyIcons[0])).toBe(true);
   });
 
   it('calls onChannelSelect when clicking a category channel', async () => {

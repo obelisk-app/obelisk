@@ -54,16 +54,6 @@ describe('ProfilePanel', () => {
     expect(img).toHaveAttribute('src', 'https://example.com/avatar.jpg');
   });
 
-  it('renders Sync from Nostr button', () => {
-    renderPanel();
-    expect(screen.getByText('Sync from Nostr')).toBeInTheDocument();
-  });
-
-  it('renders nickname input', () => {
-    renderPanel();
-    expect(screen.getByPlaceholderText('Leave empty to use your Nostr name')).toBeInTheDocument();
-  });
-
   it('calls onLogout when disconnect button clicked', async () => {
     const onLogout = vi.fn();
     renderPanel(vi.fn(), onLogout);
@@ -75,69 +65,12 @@ describe('ProfilePanel', () => {
 
   it('calls onClose when backdrop clicked', async () => {
     const onClose = vi.fn();
-    const { container } = renderPanel(onClose);
+    renderPanel(onClose);
 
-    // The backdrop is the first child div with fixed inset-0
-    const backdrop = container.querySelector('.fixed.inset-0');
-    if (backdrop) await userEvent.click(backdrop);
+    const backdrop = document.body.querySelector('.fixed.inset-0') as HTMLElement | null;
+    expect(backdrop).not.toBeNull();
+    await userEvent.click(backdrop!);
     expect(onClose).toHaveBeenCalled();
-  });
-
-  it('shows syncing state when sync button clicked', async () => {
-    mockFetch.mockImplementation((url: string) => {
-      if (typeof url === 'string' && url.includes('sync-nostr')) {
-        return new Promise((resolve) => {
-          setTimeout(() => resolve({ ok: true, json: async () => ({ displayName: 'Updated' }) }), 100);
-        });
-      }
-      return Promise.resolve({ ok: true, json: async () => ({}) });
-    });
-
-    renderPanel();
-    const syncBtn = screen.getByText('Sync from Nostr');
-    await userEvent.click(syncBtn);
-    expect(screen.getByText('Syncing...')).toBeInTheDocument();
-  });
-
-  it('shows success message after successful sync', async () => {
-    mockFetch.mockImplementation((url: string) => {
-      if (typeof url === 'string' && url.includes('sync-nostr')) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({
-            displayName: 'Updated',
-            picture: 'pic.jpg',
-            nip05: null,
-            about: null,
-            banner: null,
-          }),
-        });
-      }
-      return Promise.resolve({ ok: true, json: async () => ({}) });
-    });
-
-    renderPanel();
-    await userEvent.click(screen.getByText('Sync from Nostr'));
-
-    await waitFor(() => {
-      expect(screen.getByText('Profile updated from Nostr')).toBeInTheDocument();
-    });
-  });
-
-  it('shows error message when sync fails', async () => {
-    mockFetch.mockImplementation((url: string) => {
-      if (typeof url === 'string' && url.includes('sync-nostr')) {
-        return Promise.resolve({ ok: false });
-      }
-      return Promise.resolve({ ok: true, json: async () => ({}) });
-    });
-
-    renderPanel();
-    await userEvent.click(screen.getByText('Sync from Nostr'));
-
-    await waitFor(() => {
-      expect(screen.getByText('Could not fetch profile')).toBeInTheDocument();
-    });
   });
 
   it('returns null when no profile', () => {

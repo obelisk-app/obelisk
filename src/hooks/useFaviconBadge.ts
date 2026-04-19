@@ -2,18 +2,33 @@
 
 import { useEffect, useRef } from 'react';
 import { useNotificationStore } from '@/store/notification';
+import { useChatStore } from '@/store/chat';
+import { isUserWatchingChannel } from '@/lib/read-gates';
 import { setBadgeCount, clearBadge } from '@/lib/favicon-badge';
 
 const BASE_TITLE = 'Obelisk';
 
 /**
  * Compute the unread total = every channel unread + every DM unread.
- * Surfaces all unread activity on the favicon + title, not just mentions.
+ *
+ * Excludes the currently-active channel when the user is actively watching
+ * it (visible + focused + scrolled-near-bottom). In that case the unread
+ * messages are rendered on-screen live — counting them in the favicon badge
+ * produces a phantom number with no corresponding sidebar dot (the sidebar
+ * suppresses the badge on the active row). This is distinct from the
+ * mark-read gate in `useReadTracker`, which is intentionally stricter to
+ * avoid silently marking server cursors on auto-land; the favicon just
+ * reflects what the user can actually see.
  */
 function computeTotal(): number {
   const state = useNotificationStore.getState();
+  const activeChannelId = useChatStore.getState().activeChannelId;
+  const skipChannel =
+    activeChannelId && isUserWatchingChannel(activeChannelId) ? activeChannelId : null;
+
   let total = 0;
-  for (const count of Object.values(state.channelUnreads)) {
+  for (const [id, count] of Object.entries(state.channelUnreads)) {
+    if (id === skipChannel) continue;
     total += count;
   }
   for (const count of Object.values(state.dmUnreads)) {
@@ -51,16 +66,28 @@ export function useFaviconBadge(): void {
       }
     };
 
-    // Apply current state immediately
-    apply(computeTotal());
+    const recompute = () => apply(computeTotal());
 
-    // Re-apply on every notification store change
-    const unsubscribe = useNotificationStore.subscribe(() => {
-      apply(computeTotal());
-    });
+    // Apply current state immediately
+    recompute();
+
+    // Re-apply on every notification store change AND on chat-store changes
+    // (activeChannelId / isNearBottom) since those feed into the watching
+    // check in computeTotal.
+    const unsubNotif = useNotificationStore.subscribe(recompute);
+    const unsubChat = useChatStore.subscribe(recompute);
+
+    // Visibility + focus also feed into isUserWatchingChannel.
+    document.addEventListener('visibilitychange', recompute);
+    window.addEventListener('focus', recompute);
+    window.addEventListener('blur', recompute);
 
     return () => {
-      unsubscribe();
+      unsubNotif();
+      unsubChat();
+      document.removeEventListener('visibilitychange', recompute);
+      window.removeEventListener('focus', recompute);
+      window.removeEventListener('blur', recompute);
       // Restore title + favicon on unmount (e.g. on logout)
       if (originalTitleRef.current) {
         document.title = originalTitleRef.current;
