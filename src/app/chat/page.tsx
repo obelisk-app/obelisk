@@ -1288,6 +1288,10 @@ export default function ChatPage() {
   // events above.
   useEffect(() => {
     const unsub = subscribeBroadcast((msg) => {
+      // Pubkey scope: drop any clear from a sibling tab logged in as a
+      // different user, so cross-account tab switches don't leak reads.
+      const myPk = profilePubkeyRef.current;
+      if (!myPk || msg.senderPubkey !== myPk) return;
       if (msg.kind === 'clear-channel') {
         useNotificationStore.getState().clearChannelUnread(msg.channelId);
       } else if (msg.kind === 'clear-dm') {
@@ -2018,8 +2022,22 @@ export default function ChatPage() {
                     <PinnedMessagesPanel
                       channelId={activeChannelId}
                       profileCache={profileCache}
-                      onJumpToMessage={(id) => {
-                        /* handled by MessageArea scroll */
+                      onJumpToMessage={async (id) => {
+                        const loaded = useChatStore.getState().messages;
+                        if (loaded.some((m) => m.id === id)) {
+                          useChatStore.setState({ highlightedMessageId: id });
+                          return;
+                        }
+                        try {
+                          const r = await fetch(`/api/channels/${activeChannelId}/messages?around=${encodeURIComponent(id)}`);
+                          if (!r.ok) return;
+                          const d = await r.json();
+                          useChatStore.getState().setMessages(d.messages);
+                          useChatStore.getState().setMessageCursor(d.nextCursor ?? null, !!d.nextCursor);
+                          if (d.messages.some((x: Message) => x.id === id)) {
+                            useChatStore.setState({ highlightedMessageId: id });
+                          }
+                        } catch { /* ignore */ }
                       }}
                     />
                   )}
