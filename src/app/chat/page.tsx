@@ -40,7 +40,7 @@ import type { DMMessage } from '@/lib/dm';
 import { publishInboxRelays } from '@/lib/dm-inbox';
 import { formatPubkey, getNDK, connectNDK, addDMInboxRelays, restoreRemoteSigner } from '@/lib/nostr';
 import { DM_FEATURE_ENABLED } from '@/lib/feature-flags';
-import { shortNpub } from '@/lib/mentions';
+import { shortNpub, parseMentions, type MemberInfo } from '@/lib/mentions';
 import { playMentionSound } from '@/lib/mentionSound';
 import {
   isUserWatchingChannel,
@@ -71,15 +71,29 @@ function formatInboxTime(createdAt: string): string {
   return `${d}d`;
 }
 
+function renderInboxPreview(preview: string, members: MemberInfo[]): string {
+  // Replace `nostr:npub1...` tokens with `@DisplayName` so inbox rows don't
+  // surface raw bech32 keys to users.
+  const segments = parseMentions(preview, members);
+  return segments
+    .map((s) => (s.type === 'mention' ? `@${s.displayName}` : s.text))
+    .join('');
+}
+
 function InboxRow({
   evt,
   onActivate,
   typeLabel,
+  senderName,
+  members,
 }: {
   evt: InboxEvent;
   onActivate: () => void;
   typeLabel: string;
+  senderName: string | null;
+  members: MemberInfo[];
 }) {
+  const cleanedPreview = evt.preview ? renderInboxPreview(evt.preview, members) : null;
   return (
     <button
       type="button"
@@ -88,12 +102,15 @@ function InboxRow({
       data-testid="top-notifications-row"
     >
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs font-semibold text-lc-green uppercase tracking-wide">{typeLabel}</span>
+          {senderName && (
+            <span className="text-xs font-medium text-lc-white truncate">{senderName}</span>
+          )}
           <span className="text-[11px] text-lc-muted">{formatInboxTime(evt.createdAt)}</span>
         </div>
-        {evt.preview && (
-          <p className="mt-1 text-xs text-lc-muted line-clamp-2 break-words">{evt.preview}</p>
+        {cleanedPreview && (
+          <p className="mt-1 text-xs text-lc-muted line-clamp-2 break-words">{cleanedPreview}</p>
         )}
       </div>
       {!evt.read && <span className="w-2 h-2 rounded-full bg-lc-green mt-1.5 shrink-0" aria-hidden="true" />}
@@ -1042,13 +1059,14 @@ export default function ChatPage() {
         message,
         profilePubkeyRef.current,
       );
-      if (incremented) {
-        // Route in-room-but-not-watching bumps to the inbox (no toast). The
-        // `notification` handler covers mention-specific inbox rows with
-        // richer copy; here we only need a generic message entry so the user
-        // has a clickable pointer back to the channel.
+      if (incremented && hasMention) {
+        // Only mentions belong in the inbox. The sidebar unread dot already
+        // signals "new messages in some channel"; mirroring every message
+        // into the inbox produces ghost notifications the user can't dismiss
+        // by reading individually. The `notification` handler still covers
+        // the rich mention-specific path with sender + preview.
         useNotificationStore.getState().pushInboxEvent({
-          type: hasMention ? 'mention' : 'message',
+          type: 'mention',
           channelId: message.channelId,
           messageId: message.id,
           senderPubkey: message.authorPubkey,
@@ -1203,18 +1221,10 @@ export default function ChatPage() {
           [data.channelId]: data.serverId,
         });
       }
-      // Non-mention new-message pings route to the inbox rather than toasting —
-      // mentions already pushed via the richer `notification` handler above.
-      if (!data.hasMention) {
-        notifStore.pushInboxEvent({
-          type: 'message',
-          channelId: data.channelId,
-          serverId: data.serverId,
-          senderPubkey: '',
-          preview: data.preview,
-          createdAt: new Date().toISOString(),
-        });
-      }
+      // Non-mention pings only bump the sidebar unread; they must NOT enter
+      // the inbox. Otherwise every message in every channel produces a ghost
+      // notification the user can't dismiss without opening the channel
+      // itself, defeating the inbox's purpose as a mention/DM-only feed.
     });
 
     socket.on('post-unread', (data: { recipientPubkey?: string; postId: string; messageId: string; authorPubkey: string; hasMention?: boolean }) => {
@@ -2006,17 +2016,28 @@ export default function ChatPage() {
                     </div>
                   ) : (
                     <div className="overflow-y-auto flex-1" data-testid="top-notifications-list">
-                      {inboxEvents.map((evt) => (
-                        <InboxRow
-                          key={evt.id}
-                          evt={evt}
-                          onActivate={() => {
-                            setShowNotifications(false);
-                            navigateToInboxEvent(evt);
-                          }}
-                          typeLabel={t(`inbox.type.${evt.type}`)}
-                        />
-                      ))}
+                      {inboxEvents.map((evt) => {
+                        const member = evt.senderPubkey
+                          ? memberList.find((m) => m.pubkey === evt.senderPubkey)
+                          : undefined;
+                        const cached = evt.senderPubkey ? profileCache.get(evt.senderPubkey) : undefined;
+                        const senderName = evt.senderPubkey
+                          ? (member?.displayName || cached?.name || shortNpub(evt.senderPubkey))
+                          : null;
+                        return (
+                          <InboxRow
+                            key={evt.id}
+                            evt={evt}
+                            onActivate={() => {
+                              setShowNotifications(false);
+                              navigateToInboxEvent(evt);
+                            }}
+                            typeLabel={t(`inbox.type.${evt.type}`)}
+                            senderName={senderName}
+                            members={memberList}
+                          />
+                        );
+                      })}
                     </div>
                   )}
                 </div>
