@@ -40,7 +40,7 @@ import type { DMMessage } from '@/lib/dm';
 import { publishInboxRelays } from '@/lib/dm-inbox';
 import { formatPubkey, getNDK, connectNDK, addDMInboxRelays, restoreRemoteSigner } from '@/lib/nostr';
 import { DM_FEATURE_ENABLED } from '@/lib/feature-flags';
-import { shortNpub, parseMentions, type MemberInfo } from '@/lib/mentions';
+import { shortNpub, parseMentions } from '@/lib/mentions';
 import { playMentionSound } from '@/lib/mentionSound';
 import {
   isUserWatchingChannel,
@@ -192,6 +192,7 @@ export default function ChatPage() {
     setEditingMessage,
     setMessageCursor,
     setTyping,
+    memberList,
     setMemberList,
     setMyRole,
     setServerEmojis,
