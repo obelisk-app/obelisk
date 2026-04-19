@@ -10,13 +10,18 @@
  * Cross-device sync is handled separately by the Socket.io `read-update` /
  * `dm-read-update` events emitted from `server.ts`.
  *
+ * **Pubkey scoping:** every payload carries the sender's `senderPubkey`.
+ * Subscribers MUST compare it to their own logged-in pubkey and drop
+ * mismatching messages — otherwise a second tab logged in as a DIFFERENT
+ * user on the same browser would see its unreads falsely cleared.
+ *
  * SSR-guarded: every export is a no-op when `BroadcastChannel` is missing
  * (e.g. during build-time rendering or very old browsers).
  */
 
 export type BroadcastMessage =
-  | { kind: 'clear-channel'; channelId: string }
-  | { kind: 'clear-dm'; pubkey: string };
+  | { kind: 'clear-channel'; senderPubkey: string; channelId: string }
+  | { kind: 'clear-dm'; senderPubkey: string; pubkey: string };
 
 const CHANNEL_NAME = 'obelisk:unreads';
 
@@ -34,16 +39,16 @@ function getChannel(): BroadcastChannel | null {
   return channelInstance;
 }
 
-export function postClearChannel(channelId: string): void {
+export function postClearChannel(senderPubkey: string, channelId: string): void {
   const ch = getChannel();
   if (!ch) return;
-  ch.postMessage({ kind: 'clear-channel', channelId } satisfies BroadcastMessage);
+  ch.postMessage({ kind: 'clear-channel', senderPubkey, channelId } satisfies BroadcastMessage);
 }
 
-export function postClearDM(pubkey: string): void {
+export function postClearDM(senderPubkey: string, pubkey: string): void {
   const ch = getChannel();
   if (!ch) return;
-  ch.postMessage({ kind: 'clear-dm', pubkey } satisfies BroadcastMessage);
+  ch.postMessage({ kind: 'clear-dm', senderPubkey, pubkey } satisfies BroadcastMessage);
 }
 
 export function subscribeBroadcast(cb: (msg: BroadcastMessage) => void): () => void {

@@ -66,15 +66,17 @@ describe('notification-broadcast', () => {
     __resetBroadcastChannelForTests();
   });
 
+  const ME = 'me'.padEnd(64, '0');
+  const OTHER = 'zz'.repeat(32);
+
   it('delivers clear-channel to a subscriber in another tab', () => {
-    // Simulate a sibling tab by creating its own channel instance directly.
     const sibling = new FakeBroadcastChannel('obelisk:unreads');
     const received: BroadcastMessage[] = [];
     sibling.addEventListener('message', (ev: any) => received.push(ev.data));
 
-    postClearChannel('ch1');
+    postClearChannel(ME, 'ch1');
 
-    expect(received).toEqual([{ kind: 'clear-channel', channelId: 'ch1' }]);
+    expect(received).toEqual([{ kind: 'clear-channel', senderPubkey: ME, channelId: 'ch1' }]);
   });
 
   it('delivers clear-dm to a subscriber in another tab', () => {
@@ -82,9 +84,9 @@ describe('notification-broadcast', () => {
     const received: BroadcastMessage[] = [];
     sibling.addEventListener('message', (ev: any) => received.push(ev.data));
 
-    postClearDM('aa'.repeat(32));
+    postClearDM(ME, 'aa'.repeat(32));
 
-    expect(received).toEqual([{ kind: 'clear-dm', pubkey: 'aa'.repeat(32) }]);
+    expect(received).toEqual([{ kind: 'clear-dm', senderPubkey: ME, pubkey: 'aa'.repeat(32) }]);
   });
 
   it('subscribeBroadcast receives messages posted by siblings', () => {
@@ -92,23 +94,38 @@ describe('notification-broadcast', () => {
     const received: BroadcastMessage[] = [];
     const unsubscribe = subscribeBroadcast((msg) => received.push(msg));
 
-    sibling.postMessage({ kind: 'clear-channel', channelId: 'ch9' });
+    sibling.postMessage({ kind: 'clear-channel', senderPubkey: ME, channelId: 'ch9' });
 
-    expect(received).toEqual([{ kind: 'clear-channel', channelId: 'ch9' }]);
+    expect(received).toEqual([{ kind: 'clear-channel', senderPubkey: ME, channelId: 'ch9' }]);
 
     unsubscribe();
-    sibling.postMessage({ kind: 'clear-channel', channelId: 'ch10' });
-    // After unsubscribe, no more deliveries.
+    sibling.postMessage({ kind: 'clear-channel', senderPubkey: ME, channelId: 'ch10' });
     expect(received).toHaveLength(1);
+  });
+
+  it('subscribers can filter out messages from a different user (pubkey-scoped)', () => {
+    // The library itself is transport-only; pubkey filtering happens at the
+    // subscribe callsite. This test documents the intended pattern.
+    const sibling = new FakeBroadcastChannel('obelisk:unreads');
+    const received: BroadcastMessage[] = [];
+    const unsub = subscribeBroadcast((msg) => {
+      if (msg.senderPubkey !== ME) return;
+      received.push(msg);
+    });
+
+    sibling.postMessage({ kind: 'clear-channel', senderPubkey: OTHER, channelId: 'leak' });
+    sibling.postMessage({ kind: 'clear-channel', senderPubkey: ME, channelId: 'mine' });
+
+    expect(received).toEqual([{ kind: 'clear-channel', senderPubkey: ME, channelId: 'mine' }]);
+    unsub();
   });
 
   it('is a no-op when BroadcastChannel is unavailable', () => {
     (globalThis as any).BroadcastChannel = undefined;
     __resetBroadcastChannelForTests();
 
-    // Should not throw.
-    expect(() => postClearChannel('ch1')).not.toThrow();
-    expect(() => postClearDM('aa'.repeat(32))).not.toThrow();
+    expect(() => postClearChannel(ME, 'ch1')).not.toThrow();
+    expect(() => postClearDM(ME, 'aa'.repeat(32))).not.toThrow();
 
     const unsub = subscribeBroadcast(() => {});
     expect(typeof unsub).toBe('function');

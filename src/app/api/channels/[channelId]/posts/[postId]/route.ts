@@ -358,6 +358,7 @@ export async function POST(
       for (const s of subs) {
         if (mentionedPubkeys.has(s.pubkey)) continue;
         io.to(`pubkey:${s.pubkey}`).emit('post-unread', {
+          recipientPubkey: s.pubkey,
           postId,
           messageId: reply.id,
           authorPubkey: pubkey,

@@ -4,6 +4,9 @@ import { useReadTracker } from './useReadTracker';
 import { useChatStore } from '@/store/chat';
 import { useDMStore } from '@/store/dm';
 import { useNotificationStore } from '@/store/notification';
+import { useAuthStore } from '@/store/auth';
+
+const TEST_PK = 'me'.padEnd(64, '0');
 
 // Spy on the broadcast module so we can assert sibling-tab sync is fired
 // on every successful flush without actually hitting a BroadcastChannel.
@@ -31,6 +34,7 @@ function resetStores() {
     threads: [],
   } as any);
   useNotificationStore.setState(useNotificationStore.getInitialState());
+  useAuthStore.setState({ profile: { pubkey: TEST_PK } } as any);
 }
 
 function setVisible(value: boolean) {
@@ -81,7 +85,7 @@ describe('useReadTracker — channel gating', () => {
       vi.advanceTimersByTime(300);
     });
 
-    expect(broadcast.postClearChannel).toHaveBeenCalledWith('ch1');
+    expect(broadcast.postClearChannel).toHaveBeenCalledWith(TEST_PK, 'ch1');
   });
 
   it('marks a channel read when visible + focused + scrolled to bottom + has unread', () => {
@@ -391,7 +395,7 @@ describe('useReadTracker — DM gating', () => {
     expect(useNotificationStore.getState().dmUnreads[other]).toBeUndefined();
     expect(useDMStore.getState().threads.find(t => t.pubkey === other)?.unreadCount).toBe(0);
     expect(useDMStore.getState().readCursors[other]).toBeGreaterThan(0);
-    expect(broadcast.postClearDM).toHaveBeenCalledWith(other);
+    expect(broadcast.postClearDM).toHaveBeenCalledWith(TEST_PK, other);
   });
 
   it('clears DM unread locally even when no socket is provided', () => {

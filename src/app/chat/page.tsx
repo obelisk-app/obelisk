@@ -56,6 +56,67 @@ import { useReadTracker } from '@/hooks/useReadTracker';
 import { useFaviconBadge } from '@/hooks/useFaviconBadge';
 import { subscribeBroadcast } from '@/lib/notification-broadcast';
 import { clearBadge } from '@/lib/favicon-badge';
+import { useTranslation } from '@/i18n/context';
+import type { InboxEvent } from '@/store/notification';
+
+function formatInboxTime(createdAt: string): string {
+  const ms = Date.now() - new Date(createdAt).getTime();
+  if (!Number.isFinite(ms) || ms < 0) return '';
+  const m = Math.floor(ms / 60_000);
+  if (m < 1) return 'now';
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h`;
+  const d = Math.floor(h / 24);
+  return `${d}d`;
+}
+
+function InboxRow({
+  evt,
+  onActivate,
+  typeLabel,
+}: {
+  evt: InboxEvent;
+  onActivate: () => void;
+  typeLabel: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onActivate}
+      className="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-lc-border/40 transition-colors border-b border-lc-border/40 last:border-b-0"
+      data-testid="top-notifications-row"
+    >
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold text-lc-green uppercase tracking-wide">{typeLabel}</span>
+          <span className="text-[11px] text-lc-muted">{formatInboxTime(evt.createdAt)}</span>
+        </div>
+        {evt.preview && (
+          <p className="mt-1 text-xs text-lc-muted line-clamp-2 break-words">{evt.preview}</p>
+        )}
+      </div>
+      {!evt.read && <span className="w-2 h-2 rounded-full bg-lc-green mt-1.5 shrink-0" aria-hidden="true" />}
+    </button>
+  );
+}
+
+function navigateToInboxEvent(evt: InboxEvent): void {
+  if (evt.type === 'dm' && evt.senderPubkey) {
+    const dm = useDMStore.getState();
+    dm.setDMMode(true);
+    dm.setActiveDM(evt.senderPubkey);
+    return;
+  }
+  if (evt.channelId) {
+    const chat = useChatStore.getState();
+    if (evt.serverId && chat.activeServerId !== evt.serverId) {
+      chat.setActiveServer(evt.serverId);
+    }
+    chat.setActiveChannel(evt.channelId);
+    if (evt.postId) chat.setActivePostId(evt.postId);
+  }
+}
 
 function TypingIndicator({ profileCache }: { profileCache: Map<string, { name?: string; picture?: string }> }) {
   const { typingUsers, memberList } = useChatStore();
@@ -82,7 +143,10 @@ function TypingIndicator({ profileCache }: { profileCache: Map<string, { name?: 
 
 export default function ChatPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { isConnected, profile, logout, restoreSession } = useAuthStore();
+  const inboxEvents = useNotificationStore((s) => s.inboxEvents);
+  const unreadInboxCount = useNotificationStore((s) => s.unreadInboxCount);
   const isSearchOpen = useSearchStore((s) => s.isOpen);
   const searchQuery = useSearchStore((s) => s.query);
   const searchActiveFilters = useSearchStore((s) => s.activeFilters);
@@ -856,6 +920,15 @@ export default function ChatPage() {
   useEffect(() => {
     if (!sessionChecked) return;
 
+    // If a stale socket from a prior account is still hanging on (e.g.
+    // rapid re-render before React cleanup ran), force-disconnect it first
+    // so its queued events can't land in the new session.
+    const prevSocket = socketRef.current;
+    if (prevSocket) {
+      try { prevSocket.disconnect(); } catch { /* ignore */ }
+      socketRef.current = null;
+    }
+
     const socket = io();
 
     // Snapshot the pubkey this socket was opened for so notification /
@@ -865,6 +938,15 @@ export default function ChatPage() {
     const expectedPubkey = useAuthStore.getState().profile?.pubkey ?? null;
     const isStaleSession = () =>
       !!expectedPubkey && useAuthStore.getState().profile?.pubkey !== expectedPubkey;
+
+    // Defense-in-depth: every user-targeted emit now carries `recipientPubkey`.
+    // If it's present and doesn't match the current session, drop the event —
+    // stops cross-user contamination from any socket that somehow received a
+    // payload meant for someone else.
+    const isForOtherUser = (data: { recipientPubkey?: string } | undefined) => {
+      const me = useAuthStore.getState().profile?.pubkey ?? null;
+      return !!data?.recipientPubkey && !!me && data.recipientPubkey !== me;
+    };
 
     socket.on('connect', () => {
       console.log('Socket connected');
@@ -961,8 +1043,18 @@ export default function ChatPage() {
         profilePubkeyRef.current,
       );
       if (incremented) {
-        const title = hasMention ? 'New mention' : 'New message';
-        useToastStore.getState().pushToast({ title, body: message.content.slice(0, 140) });
+        // Route in-room-but-not-watching bumps to the inbox (no toast). The
+        // `notification` handler covers mention-specific inbox rows with
+        // richer copy; here we only need a generic message entry so the user
+        // has a clickable pointer back to the channel.
+        useNotificationStore.getState().pushInboxEvent({
+          type: hasMention ? 'mention' : 'message',
+          channelId: message.channelId,
+          messageId: message.id,
+          senderPubkey: message.authorPubkey,
+          preview: message.content.slice(0, 140),
+          createdAt: typeof message.createdAt === 'string' ? message.createdAt : new Date(message.createdAt as any).toISOString(),
+        });
       }
     });
 
@@ -1046,83 +1138,87 @@ export default function ChatPage() {
     //   - `unread-update` (this client is NOT in the channel room) — below
     // Doing it this way means a single server-side event becomes exactly one
     // client-side count bump, regardless of whether the user is mentioned.
-    socket.on('notification', (data: { type: string; channelId?: string; postId?: string; serverId?: string; senderPubkey: string; preview?: string }) => {
+    socket.on('notification', (data: { recipientPubkey?: string; type: string; channelId?: string; postId?: string; serverId?: string; messageId?: string; senderPubkey: string; preview?: string; createdAt?: string }) => {
       if (isStaleSession()) return;
+      if (isForOtherUser(data)) return;
       const notifStore = useNotificationStore.getState();
       const isMentionLike = data.type === 'mention' || data.type === 'reply' || data.type === 'everyone';
+      const pushToInbox = () => notifStore.pushInboxEvent({
+        type: (data.type as any) ?? 'mention',
+        channelId: data.channelId,
+        serverId: data.serverId,
+        messageId: data.messageId,
+        postId: data.postId,
+        senderPubkey: data.senderPubkey,
+        preview: data.preview,
+        createdAt: data.createdAt ?? new Date().toISOString(),
+      });
       if (isMentionLike && data.channelId) {
-        // Audible cue for live mentions (mention/reply/@everyone). Fires on
-        // every real-time socket event — including when the user is already
-        // viewing the channel — so the user always hears when they're pinged.
         playMentionSound();
-        // Skip flag set if the user is actively watching this channel AND
-        // (for forum posts) the specific post — otherwise the mention dot
-        // would stick around until the next unread flush.
+        pushToInbox();
         const watchingChannel = isUserWatchingChannel(data.channelId);
         const watchingPost = data.postId
           ? useChatStore.getState().activePostId === data.postId
           : false;
         if (watchingChannel && (!data.postId || watchingPost)) return;
-        // Set mention flag on the channel without touching the count.
         notifStore.setChannelMention(data.channelId, true);
-        // Also flag the thread row when this mention came from a forum post.
-        // Flag-only: count is bumped by the paired `post-unread` event.
         if (data.postId) {
           notifStore.setPostMention(data.postId, true);
         }
-        const title = data.type === 'reply' ? 'New reply' : 'New mention';
-        const fallback = data.type === 'reply'
-          ? 'Someone replied to your message'
-          : 'You were mentioned in a message';
-        useToastStore.getState().pushToast({ title, body: data.preview || fallback });
       } else if (data.type === 'dm') {
         notifStore.setDMUnread(data.senderPubkey, (notifStore.dmUnreads[data.senderPubkey] || 0) + 1);
-        useToastStore.getState().pushToast({ title: 'New DM', body: data.preview || 'You have a new direct message' });
+        pushToInbox();
       }
     });
 
     // Cross-device / other-tab read sync. Fired by server.ts after it
     // persists a `mark-read` or `dm-read` from any of this user's other
     // sockets. Clears the local unread state without another DB round-trip.
-    socket.on('read-update', ({ channelId }: { channelId: string }) => {
-      if (isStaleSession()) return;
-      useNotificationStore.getState().clearChannelUnread(channelId);
+    socket.on('read-update', (data: { recipientPubkey?: string; channelId: string }) => {
+      if (isStaleSession() || isForOtherUser(data)) return;
+      useNotificationStore.getState().clearChannelUnread(data.channelId);
     });
 
     // Sibling tab / device opened the channel and cleared the mention dot.
     // Only clears the mention flag — count stays until a full `read-update`.
-    socket.on('mention-read-update', ({ channelId }: { channelId: string }) => {
-      if (isStaleSession()) return;
-      useNotificationStore.getState().clearChannelMention(channelId);
+    socket.on('mention-read-update', (data: { recipientPubkey?: string; channelId: string }) => {
+      if (isStaleSession() || isForOtherUser(data)) return;
+      useNotificationStore.getState().clearChannelMention(data.channelId);
     });
 
-    socket.on('dm-read-update', ({ pubkey: otherPubkey }: { pubkey: string }) => {
-      if (isStaleSession()) return;
+    socket.on('dm-read-update', (data: { recipientPubkey?: string; pubkey: string }) => {
+      if (isStaleSession() || isForOtherUser(data)) return;
+      const otherPubkey = data.pubkey;
       useNotificationStore.getState().clearDMUnread(otherPubkey);
       useDMStore.getState().updateThread(otherPubkey, { unreadCount: 0 });
     });
 
-    socket.on('unread-update', (data: { channelId: string; serverId: string; hasMention: boolean; preview?: string }) => {
-      if (isStaleSession()) return;
+    socket.on('unread-update', (data: { recipientPubkey?: string; channelId: string; serverId: string; hasMention: boolean; preview?: string }) => {
+      if (isStaleSession() || isForOtherUser(data)) return;
       const notifStore = useNotificationStore.getState();
       notifStore.incrementChannelUnread(data.channelId, data.hasMention);
-      // Update channel-server mapping
       if (data.serverId) {
         notifStore.setChannelServerMap({
           ...notifStore.channelServerMap,
           [data.channelId]: data.serverId,
         });
       }
-      // Toast non-mention messages too (mentions are handled by the
-      // `notification` event above with richer copy). Only when hidden so
-      // the foreground tab isn't spammed.
+      // Non-mention new-message pings route to the inbox rather than toasting —
+      // mentions already pushed via the richer `notification` handler above.
       if (!data.hasMention) {
-        useToastStore.getState().pushToast({ title: 'New message', body: data.preview || 'You have a new message' });
+        notifStore.pushInboxEvent({
+          type: 'message',
+          channelId: data.channelId,
+          serverId: data.serverId,
+          senderPubkey: '',
+          preview: data.preview,
+          createdAt: new Date().toISOString(),
+        });
       }
     });
 
-    socket.on('post-unread', (data: { postId: string; messageId: string; authorPubkey: string; hasMention?: boolean }) => {
-      if (isStaleSession()) return;
+    socket.on('post-unread', (data: { recipientPubkey?: string; postId: string; messageId: string; authorPubkey: string; hasMention?: boolean }) => {
+      if (isStaleSession() || isForOtherUser(data)) return;
       if (data.postId === useChatStore.getState().activePostId) return;
       useNotificationStore.getState().incrementPostUnread(data.postId, data.hasMention);
     });
@@ -1851,10 +1947,16 @@ export default function ChatPage() {
           <div className="relative">
             <button
               type="button"
-              onClick={() => setShowNotifications((v) => !v)}
-              className="p-1.5 rounded-lg text-lc-muted hover:text-lc-white hover:bg-lc-border/40 transition-colors"
-              title="Notificaciones"
-              aria-label="Notificaciones"
+              onClick={() => {
+                setShowNotifications((v) => {
+                  const next = !v;
+                  if (next) useNotificationStore.getState().markInboxRead();
+                  return next;
+                });
+              }}
+              className="relative p-1.5 rounded-lg text-lc-muted hover:text-lc-white hover:bg-lc-border/40 transition-colors"
+              title={t('inbox.title')}
+              aria-label={t('inbox.title')}
               aria-expanded={showNotifications}
               data-testid="top-notifications-btn"
             >
@@ -1862,30 +1964,61 @@ export default function ChatPage() {
                 <path d="M22 12h-6l-2 3h-4l-2-3H2" />
                 <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
               </svg>
+              {unreadInboxCount > 0 && (
+                <span
+                  className="absolute top-0.5 right-0.5 min-w-[14px] h-[14px] px-1 rounded-full bg-lc-green text-lc-black text-[9px] font-bold flex items-center justify-center"
+                  data-testid="top-notifications-badge"
+                >
+                  {unreadInboxCount > 99 ? '99+' : unreadInboxCount}
+                </span>
+              )}
             </button>
             {showNotifications && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
                 <div
-                  className="absolute right-0 top-full mt-2 w-80 bg-lc-dark border border-lc-border rounded-xl shadow-2xl overflow-hidden z-50"
+                  className="absolute right-0 top-full mt-2 w-80 max-h-[70vh] bg-lc-dark border border-lc-border rounded-xl shadow-2xl overflow-hidden z-50 flex flex-col"
                   data-testid="top-notifications-panel"
                 >
-                  <div className="flex items-center gap-2 px-4 py-3 border-b border-lc-border">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-lc-green">
-                      <path d="M22 12h-6l-2 3h-4l-2-3H2" />
-                      <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
-                    </svg>
-                    <span className="text-sm font-semibold text-lc-white">Bandeja de entrada</span>
+                  <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-lc-border">
+                    <div className="flex items-center gap-2">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-lc-green">
+                        <path d="M22 12h-6l-2 3h-4l-2-3H2" />
+                        <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
+                      </svg>
+                      <span className="text-sm font-semibold text-lc-white">{t('inbox.title')}</span>
+                    </div>
+                    {inboxEvents.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => useNotificationStore.getState().clearInboxEvents()}
+                        aria-label={t('inbox.markAllRead')}
+                        className="text-[11px] text-lc-muted hover:text-lc-white transition-colors"
+                        data-testid="top-notifications-clear"
+                      >
+                        {t('inbox.markAllRead')}
+                      </button>
+                    )}
                   </div>
-                  <div className="px-4 py-8 flex flex-col items-center gap-2 text-center">
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-lc-green/10 border border-lc-green/30 text-lc-green text-xs font-semibold uppercase tracking-wide">
-                      <span className="w-1.5 h-1.5 rounded-full bg-lc-green animate-pulse" />
-                      Coming soon
-                    </span>
-                    <p className="text-sm text-lc-muted">
-                      Notificaciones y menciones llegarán pronto.
-                    </p>
-                  </div>
+                  {inboxEvents.length === 0 ? (
+                    <div className="px-4 py-8 flex flex-col items-center gap-2 text-center">
+                      <p className="text-sm text-lc-muted">{t('inbox.empty')}</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-y-auto flex-1" data-testid="top-notifications-list">
+                      {inboxEvents.map((evt) => (
+                        <InboxRow
+                          key={evt.id}
+                          evt={evt}
+                          onActivate={() => {
+                            setShowNotifications(false);
+                            navigateToInboxEvent(evt);
+                          }}
+                          typeLabel={t(`inbox.type.${evt.type}`)}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
               </>
             )}

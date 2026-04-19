@@ -7,6 +7,7 @@ import { useDMStore, markThreadRead } from '@/store/dm';
 import { useNotificationStore } from '@/store/notification';
 import { isUserWatchingChannel, isUserWatchingDM } from '@/lib/read-gates';
 import { postClearChannel, postClearDM } from '@/lib/notification-broadcast';
+import { useAuthStore } from '@/store/auth';
 
 /**
  * Centralized mark-as-read gating.
@@ -133,7 +134,8 @@ export function useReadTracker(socket: Socket | null) {
         });
       }
       useNotificationStore.getState().clearChannelUnread(activeChannelId);
-      postClearChannel(activeChannelId);
+      const myPk = useAuthStore.getState().profile?.pubkey;
+      if (myPk) postClearChannel(myPk, activeChannelId);
     }, 250);
 
     return () => clearTimeout(timer);
@@ -155,7 +157,8 @@ export function useReadTracker(socket: Socket | null) {
 
       void markThreadRead(activeDMPubkey);
       useNotificationStore.getState().clearDMUnread(activeDMPubkey);
-      postClearDM(activeDMPubkey);
+      const myPk = useAuthStore.getState().profile?.pubkey;
+      if (myPk) postClearDM(myPk, activeDMPubkey);
     }, 250);
 
     return () => clearTimeout(timer);

@@ -15,6 +15,33 @@ import type { PrismaClient } from '@/generated/prisma/client';
 import { extractMentionPubkeys, hasEveryoneMention } from '@/lib/mentions';
 import { canReadChannel, hasRole } from '@/lib/roles';
 import { resolveMemberAccess } from '@/lib/channel-access';
+import { isInstanceOwner } from '@/lib/instance-owner';
+
+/**
+ * Is this pubkey a member of the given server? A notification must never
+ * reach someone who isn't — direct mentions from one server should never
+ * badge a user who hasn't joined it. Instance/server owners count as members
+ * for all-purposes, so they're always allowed.
+ */
+export async function isServerMember(
+  prisma: PrismaClient,
+  pubkey: string,
+  serverId: string,
+): Promise<boolean> {
+  if (isInstanceOwner(pubkey)) return true;
+  const [member, server] = await Promise.all([
+    prisma.member.findUnique({
+      where: { serverId_pubkey: { serverId, pubkey } },
+      select: { id: true },
+    }),
+    prisma.server.findUnique({
+      where: { id: serverId },
+      select: { ownerPubkey: true },
+    }),
+  ]);
+  if (server?.ownerPubkey === pubkey) return true;
+  return !!member;
+}
 
 export interface MentionFanoutInput {
   prisma: PrismaClient;
@@ -80,6 +107,24 @@ export async function fanOutMentions(input: MentionFanoutInput): Promise<Mention
     mentionedSet.add(replyToAuthorPubkey);
   }
 
+  // Server-membership + read-permission gate. Previously direct mentions
+  // bypassed both checks, which meant pasting an npub would notify a
+  // stranger who wasn't in the server at all. Always require:
+  //   1) the recipient is a member of `serverId`
+  //   2) the recipient can read `channel`
+  // Owners/instance-owners satisfy (1) trivially via isServerMember.
+  for (const pubkey of [...mentionedSet]) {
+    if (pubkey === authorPubkey) continue;
+    if (!(await isServerMember(prisma, pubkey, serverId))) {
+      mentionedSet.delete(pubkey);
+      continue;
+    }
+    const access = await resolveMemberAccess(pubkey, serverId);
+    if (!canReadChannel(access.role, channel as any, access.customRoleIds)) {
+      mentionedSet.delete(pubkey);
+    }
+  }
+
   // @everyone: only mods+ fan out; read-permission applied per-member.
   let everyoneBroadcast = false;
   if (hasEveryoneMention(content)) {
@@ -140,11 +185,10 @@ export async function fanOutMentions(input: MentionFanoutInput): Promise<Mention
   const directSet = new Set(directMentions);
 
   for (const pubkey of mentionedSet) {
-    // Per-member read-permission gate already applied above for @everyone.
-    // Direct mentions bypass read-permission: if a user is explicitly named,
-    // they get notified even if the channel is role-gated (the mention itself
-    // is the authorization signal). This matches the text-channel behavior in
-    // server.ts.
+    // Server-membership + read-permission already applied above for every
+    // pubkey — direct mentions are no longer allowed to bypass channel
+    // read-permission (that shortcut was notifying non-members across
+    // servers).
     const isDirect = directSet.has(pubkey);
     const isReplyTarget = pubkey === replyToAuthorPubkey;
     const notifType = isDirect
@@ -156,6 +200,7 @@ export async function fanOutMentions(input: MentionFanoutInput): Promise<Mention
           : 'mention';
 
     io.to(`pubkey:${pubkey}`).emit('notification', {
+      recipientPubkey: pubkey,
       type: notifType,
       channelId,
       serverId,
@@ -168,10 +213,9 @@ export async function fanOutMentions(input: MentionFanoutInput): Promise<Mention
 
     // For forum threads, also bump the thread-level unread + flag.
     if (postId) {
-      // Push the post meta so the client can add it to followed-posts
-      // state immediately (no round-trip to /api/forum/posts/followed).
       if (postMeta) {
         io.to(`pubkey:${pubkey}`).emit('post-subscribed', {
+          recipientPubkey: pubkey,
           postId,
           title: postMeta.title,
           channelId,
@@ -180,6 +224,7 @@ export async function fanOutMentions(input: MentionFanoutInput): Promise<Mention
         });
       }
       io.to(`pubkey:${pubkey}`).emit('post-unread', {
+        recipientPubkey: pubkey,
         postId,
         messageId,
         authorPubkey,
@@ -230,11 +275,16 @@ export async function fanOutChannelUnread(opts: {
   for (const pubkey of onlinePubkeys) {
     if (pubkey === authorPubkey) continue;
     if (inChannelPubkeys.has(pubkey)) continue;
+    // Hard membership gate: `onlinePubkeys` includes every connected socket
+    // across every server. Without this check we badge users in servers they
+    // never joined (user's core complaint).
+    if (!(await isServerMember(prisma, pubkey, serverId))) continue;
     if (channel.readPermission) {
       const access = await resolveMemberAccess(pubkey, serverId);
       if (!canReadChannel(access.role, channel as any, access.customRoleIds)) continue;
     }
     io.to(`pubkey:${pubkey}`).emit('unread-update', {
+      recipientPubkey: pubkey,
       channelId,
       serverId,
       hasMention: mentionedPubkeys.has(pubkey),

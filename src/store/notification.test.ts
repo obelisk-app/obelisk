@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { useNotificationStore } from './notification';
+import { useNotificationStore, INBOX_CAP } from './notification';
 
 describe('useNotificationStore', () => {
   beforeEach(() => {
@@ -103,6 +103,81 @@ describe('useNotificationStore', () => {
   it('setChannelServerMap updates mapping', () => {
     useNotificationStore.getState().setChannelServerMap({ ch1: 's1', ch2: 's1' });
     expect(useNotificationStore.getState().channelServerMap).toEqual({ ch1: 's1', ch2: 's1' });
+  });
+
+  describe('inbox', () => {
+    it('pushInboxEvent prepends and increments unread count', () => {
+      useNotificationStore.getState().pushInboxEvent({
+        type: 'mention',
+        channelId: 'ch1',
+        senderPubkey: 'alice',
+        preview: 'hi',
+        createdAt: '2026-01-01T00:00:00Z',
+        messageId: 'm1',
+      });
+      useNotificationStore.getState().pushInboxEvent({
+        type: 'dm',
+        senderPubkey: 'bob',
+        preview: 'yo',
+        createdAt: '2026-01-01T00:00:01Z',
+        messageId: 'm2',
+      });
+      const s = useNotificationStore.getState();
+      expect(s.inboxEvents).toHaveLength(2);
+      expect(s.inboxEvents[0].senderPubkey).toBe('bob');
+      expect(s.inboxEvents[0].read).toBe(false);
+      expect(s.unreadInboxCount).toBe(2);
+    });
+
+    it('pushInboxEvent caps at INBOX_CAP', () => {
+      for (let i = 0; i < INBOX_CAP + 10; i++) {
+        useNotificationStore.getState().pushInboxEvent({
+          type: 'mention',
+          channelId: 'ch1',
+          senderPubkey: 'a',
+          preview: String(i),
+          createdAt: `2026-01-01T00:00:${String(i).padStart(2, '0')}Z`,
+          messageId: `m${i}`,
+        });
+      }
+      expect(useNotificationStore.getState().inboxEvents).toHaveLength(INBOX_CAP);
+    });
+
+    it('pushInboxEvent dedupes by id', () => {
+      const evt = {
+        type: 'mention' as const,
+        channelId: 'ch1',
+        senderPubkey: 'alice',
+        preview: 'hi',
+        createdAt: '2026-01-01T00:00:00Z',
+        messageId: 'm1',
+      };
+      useNotificationStore.getState().pushInboxEvent(evt);
+      useNotificationStore.getState().pushInboxEvent(evt);
+      const s = useNotificationStore.getState();
+      expect(s.inboxEvents).toHaveLength(1);
+      expect(s.unreadInboxCount).toBe(1);
+    });
+
+    it('markInboxRead flips read and zeroes counter', () => {
+      useNotificationStore.getState().pushInboxEvent({
+        type: 'dm', senderPubkey: 'a', createdAt: 't', messageId: 'm1',
+      });
+      useNotificationStore.getState().markInboxRead();
+      const s = useNotificationStore.getState();
+      expect(s.inboxEvents[0].read).toBe(true);
+      expect(s.unreadInboxCount).toBe(0);
+    });
+
+    it('reset clears inbox events and unread count', () => {
+      useNotificationStore.getState().pushInboxEvent({
+        type: 'dm', senderPubkey: 'a', createdAt: 't', messageId: 'm1',
+      });
+      useNotificationStore.getState().reset();
+      const s = useNotificationStore.getState();
+      expect(s.inboxEvents).toEqual([]);
+      expect(s.unreadInboxCount).toBe(0);
+    });
   });
 
 });

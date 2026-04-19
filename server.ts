@@ -35,6 +35,7 @@ app.prepare().then(async () => {
   const { fanOutReadUpdate } = await import('./src/lib/read-fanout');
   const { resolveMemberAccess } = await import('./src/lib/channel-access');
   const { canReadChannel, hasRole } = await import('./src/lib/roles');
+  const { isServerMember } = await import('./src/lib/mention-fanout');
 
   const requestHandler = (req: any, res: any) => {
     const parsedUrl = parse(req.url!, true);
@@ -266,6 +267,7 @@ app.prepare().then(async () => {
             });
             for (const s of subs) {
               io.to(`pubkey:${s.pubkey}`).emit('post-unread', {
+                recipientPubkey: s.pubkey,
                 postId: replyToId,
                 messageId: message.id,
                 authorPubkey: pubkey,
@@ -332,6 +334,14 @@ app.prepare().then(async () => {
             if (mentionedPubkey === pubkey) continue; // don't notify self
             const targetSockets = pubkeySockets.get(mentionedPubkey);
             if (!targetSockets) continue;
+            // Hard server-membership + read-permission gate for every mention
+            // (direct, reply, @everyone). Stops mentions from leaking to
+            // non-members or users without channel read access.
+            if (!(await isServerMember(prisma as any, mentionedPubkey, serverId))) continue;
+            {
+              const access = await resolveMemberAccess(mentionedPubkey, serverId);
+              if (!canReadChannel(access.role, channel, access.customRoleIds)) continue;
+            }
             // 'reply' vs 'mention' vs 'everyone' gives the client room to
             // tailor copy/sound. Priority: a direct per-user mention wins
             // over a broadcast, and a reply-only notification only kicks in
@@ -347,6 +357,7 @@ app.prepare().then(async () => {
                     : 'mention';
             for (const sid of targetSockets) {
               io.to(sid).emit('notification', {
+                recipientPubkey: mentionedPubkey,
                 type: notifType,
                 channelId,
                 serverId,
@@ -375,12 +386,17 @@ app.prepare().then(async () => {
         for (const [memberPubkey, memberSocketIds] of pubkeySockets) {
           if (memberPubkey === pubkey) continue; // don't notify sender
           if (channelPubkeys.has(memberPubkey)) continue; // already in channel
+          // pubkeySockets spans every connected socket across every server —
+          // without this gate we unread-badge users in servers they never
+          // joined. Apply membership + read-permission filter.
+          if (!(await isServerMember(prisma as any, memberPubkey, serverId))) continue;
           if (channel.readPermission) {
             const access = await resolveMemberAccess(memberPubkey, serverId);
             if (!canReadChannel(access.role, channel, access.customRoleIds)) continue;
           }
           for (const sid of memberSocketIds) {
             io.to(sid).emit('unread-update', {
+              recipientPubkey: memberPubkey,
               channelId,
               serverId,
               hasMention: mentionedSet.has(memberPubkey),
@@ -563,7 +579,7 @@ app.prepare().then(async () => {
           pubkey,
           socket.id,
           'read-update',
-          { channelId: data.channelId },
+          { recipientPubkey: pubkey, channelId: data.channelId },
           (sid, event, payload) => io.to(sid).emit(event, payload),
         );
       } catch (err) {
@@ -596,7 +612,7 @@ app.prepare().then(async () => {
           pubkey,
           socket.id,
           'mention-read-update',
-          { channelId: data.channelId },
+          { recipientPubkey: pubkey, channelId: data.channelId },
           (sid, event, payload) => io.to(sid).emit(event, payload),
         );
       } catch (err) {
@@ -625,7 +641,7 @@ app.prepare().then(async () => {
           pubkey,
           socket.id,
           'dm-read-update',
-          { pubkey: data.pubkey },
+          { recipientPubkey: pubkey, pubkey: data.pubkey },
           (sid, event, payload) => io.to(sid).emit(event, payload),
         );
       } catch (err) {

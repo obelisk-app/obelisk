@@ -6,6 +6,10 @@ vi.mock('@/lib/channel-access', () => ({
   resolveMemberAccess: vi.fn(async () => ({ role: 'member', customRoleIds: [] })),
 }));
 
+vi.mock('@/lib/instance-owner', () => ({
+  isInstanceOwner: vi.fn(() => false),
+}));
+
 function makeIo() {
   const emitted: Array<{ room: string; event: string; payload: any }> = [];
   return {
@@ -23,7 +27,14 @@ function makeIo() {
 function makePrisma(overrides: Partial<any> = {}) {
   return {
     mention: { createMany: vi.fn(async () => ({ count: 0 })) },
-    member: { findMany: vi.fn(async () => []) },
+    member: {
+      findMany: vi.fn(async () => []),
+      // Default: every candidate is a member of the server. Individual tests
+      // override via the `member.findUnique` spy to simulate a non-member.
+      findUnique: vi.fn(async () => ({ id: 'm-fake' })),
+    },
+    server: { findUnique: vi.fn(async () => ({ ownerPubkey: 'zzz' })) },
+    postSubscription: { createMany: vi.fn(async () => ({ count: 0 })) },
     ...overrides,
   } as any;
 }
@@ -123,6 +134,51 @@ describe('fanOutMentions', () => {
     expect(notifs).toHaveLength(1);
     expect(notifs[0].payload.type).toBe('reply');
     expect(notifs[0].room).toBe(`pubkey:${other}`);
+  });
+
+  it('drops notification when recipient is not a server member', async () => {
+    const io = makeIo();
+    const prisma = makePrisma({
+      member: {
+        findMany: vi.fn(async () => []),
+        findUnique: vi.fn(async () => null), // not a member
+      },
+    });
+
+    await fanOutMentions({
+      prisma,
+      io: io as any,
+      messageId: 'msg1',
+      channelId: 'ch1',
+      serverId: 'srv1',
+      authorPubkey: author,
+      content: `${serializeMention(mentioned)} hi`,
+      channel: { readPermission: null },
+      createdAt: new Date(),
+    });
+
+    expect(io.emitted).toHaveLength(0);
+    expect(prisma.mention.createMany).not.toHaveBeenCalled();
+  });
+
+  it('includes recipientPubkey on every emitted notification', async () => {
+    const io = makeIo();
+    const prisma = makePrisma();
+
+    await fanOutMentions({
+      prisma,
+      io: io as any,
+      messageId: 'msg1',
+      channelId: 'ch1',
+      serverId: 'srv1',
+      authorPubkey: author,
+      content: `${serializeMention(mentioned)} hi`,
+      channel: { readPermission: null },
+      createdAt: new Date(),
+    });
+
+    const notifs = io.emitted.filter((e) => e.event === 'notification');
+    expect(notifs[0].payload.recipientPubkey).toBe(mentioned);
   });
 
   it('is unconditional — does not consult PostSubscription', async () => {

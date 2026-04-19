@@ -1,14 +1,24 @@
 import { create } from 'zustand';
 
+export type InboxEventType = 'mention' | 'reply' | 'everyone' | 'dm' | 'message';
+
 export interface NotificationEvent {
-  type: 'mention' | 'dm';
+  type: InboxEventType;
   channelId?: string;
   serverId?: string;
   messageId?: string;
+  postId?: string;
   senderPubkey: string;
   preview?: string;
   createdAt: string;
 }
+
+export interface InboxEvent extends NotificationEvent {
+  id: string;
+  read: boolean;
+}
+
+export const INBOX_CAP = 50;
 
 interface NotificationState {
   channelUnreads: Record<string, number>;
@@ -28,6 +38,11 @@ interface NotificationState {
   dmLastReadAt: Record<string, number>;
   // channelId -> serverId mapping for server-level aggregation
   channelServerMap: Record<string, string>;
+
+  /** Session-scoped inbox log (newest first, capped at INBOX_CAP). Cleared by
+   *  `reset()` on logout so history never leaks across accounts. */
+  inboxEvents: InboxEvent[];
+  unreadInboxCount: number;
 
   setChannelUnread: (channelId: string, count: number, hasMention?: boolean) => void;
   incrementChannelUnread: (channelId: string, hasMention?: boolean) => void;
@@ -53,6 +68,9 @@ interface NotificationState {
     mentionChannels: Record<string, boolean>;
   }) => void;
   setChannelServerMap: (map: Record<string, string>) => void;
+  pushInboxEvent: (evt: NotificationEvent) => void;
+  markInboxRead: () => void;
+  clearInboxEvents: () => void;
   /** Reset all counts/mentions/cursors. Used on logout/account-switch. */
   reset: () => void;
 }
@@ -66,6 +84,8 @@ export const NOTIFICATION_INITIAL_STATE = {
   dmUnreads: {} as Record<string, number>,
   dmLastReadAt: {} as Record<string, number>,
   channelServerMap: {} as Record<string, string>,
+  inboxEvents: [] as InboxEvent[],
+  unreadInboxCount: 0,
 };
 
 export const useNotificationStore = create<NotificationState>()((set) => ({
@@ -162,7 +182,23 @@ export const useNotificationStore = create<NotificationState>()((set) => ({
 
   setChannelServerMap: (map) => set({ channelServerMap: map }),
 
-  reset: () => set({ ...NOTIFICATION_INITIAL_STATE }),
+  pushInboxEvent: (evt) => set((state) => {
+    const id = `${evt.createdAt}-${evt.senderPubkey}-${evt.messageId ?? evt.channelId ?? evt.postId ?? Math.random().toString(36).slice(2, 8)}`;
+    // Dedupe: if an event with this id already exists, skip (socket replay).
+    if (state.inboxEvents.some((e) => e.id === id)) return {};
+    const next: InboxEvent = { ...evt, id, read: false };
+    const inboxEvents = [next, ...state.inboxEvents].slice(0, INBOX_CAP);
+    return { inboxEvents, unreadInboxCount: state.unreadInboxCount + 1 };
+  }),
+
+  markInboxRead: () => set((state) => ({
+    inboxEvents: state.inboxEvents.map((e) => (e.read ? e : { ...e, read: true })),
+    unreadInboxCount: 0,
+  })),
+
+  clearInboxEvents: () => set({ inboxEvents: [], unreadInboxCount: 0 }),
+
+  reset: () => set({ ...NOTIFICATION_INITIAL_STATE, inboxEvents: [], unreadInboxCount: 0 }),
 }));
 
 // Derived helpers (use outside React or in callbacks)
