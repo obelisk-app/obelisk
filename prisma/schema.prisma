@@ -199,6 +199,10 @@ model Channel {
   readPermission  String? // null = everyone; "mod" | "admin" | "roles"
   readRoleIds     String[] @default([]) // used when readPermission = "roles"
   createdAt       DateTime @default(now())
+  // Denormalized timestamp of the most recent message. Bumped on every
+  // message insert; used by unread-aggregation queries to avoid counting
+  // messages on every sidebar render.
+  lastMessageAt   DateTime?
 
   server           Server             @relation(fields: [serverId], references: [id], onDelete: Cascade)
   category         Category?          @relation(fields: [categoryId], references: [id], onDelete: SetNull)
@@ -211,6 +215,7 @@ model Channel {
 
   @@index([serverId])
   @@index([categoryId])
+  @@index([serverId, lastMessageAt])
 }
 
 // Global instance settings. There will only ever be one row with id="global".
@@ -486,6 +491,52 @@ model DMReadState {
   lastReadAt   DateTime @default(now())
 
   @@unique([pubkey, threadPubkey])
+}
+
+// Per-user per-scope notification settings (Discord/Slack model).
+// scopeType ∈ {server, category, channel, dm}. notifyLevel null means
+// "inherit from parent" (channel → category → server default). mutedUntil
+// is orthogonal: a null notifyLevel + non-null mutedUntil still suppresses
+// UI noise without changing delivery semantics.
+//
+// Mentions are ALWAYS written to Mention/InboxItem regardless of the level
+// here — this table only gates Socket.io push + toast + sidebar badges.
+model NotificationPreference {
+  id          String    @id @default(cuid())
+  pubkey      String
+  scopeType   String // "server" | "category" | "channel" | "dm"
+  scopeId     String // serverId | categoryId | channelId | counterparty pubkey
+  notifyLevel String? // "all" | "mentions" | "nothing" — null = inherit
+  mutedUntil  DateTime? // null = not muted
+  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime  @default(now())
+
+  @@unique([pubkey, scopeType, scopeId])
+  @@index([pubkey])
+  @@index([scopeType, scopeId])
+}
+
+// Persisted notification inbox. Replaces the session-only client store so
+// notifications survive reload / device switch. Populated by the mention
+// fan-out pipeline alongside the existing Mention row; the two are NOT
+// redundant — Mention drives channel-level mention badges (read via
+// ChannelReadState.lastMentionReadAt cursor), InboxItem drives the global
+// Inbox feed (read via per-row readAt).
+model InboxItem {
+  id              String    @id @default(cuid())
+  recipientPubkey String
+  type            String // "mention" | "reply" | "everyone" | "dm"
+  serverId        String?
+  channelId       String?
+  messageId       String?
+  postId          String?
+  senderPubkey    String
+  preview         String
+  readAt          DateTime?
+  createdAt       DateTime  @default(now())
+
+  @@index([recipientPubkey, createdAt])
+  @@index([recipientPubkey, readAt])
 }
 
 // Cached follow list of a server's referente. Refreshed lazily on login + by admin.
