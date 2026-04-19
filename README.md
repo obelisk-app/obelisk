@@ -16,6 +16,13 @@
   <a href="docs/">Docs</a>
 </p>
 
+<p align="center">
+  <a href="https://github.com/Fabricio333/obelisk/stargazers"><img src="https://img.shields.io/github/stars/Fabricio333/obelisk?style=flat&logo=github&color=b4f953&labelColor=0a0a0a" alt="GitHub stars" /></a>
+  <a href="https://obelisk.ar"><img src="https://img.shields.io/badge/chat-obelisk.ar-b4f953?style=flat&labelColor=0a0a0a" alt="Join the Obelisk server" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/Fabricio333/obelisk?style=flat&color=b4f953&labelColor=0a0a0a" alt="License" /></a>
+  <a href="https://lacrypta.ar"><img src="https://img.shields.io/badge/built%20for-La%20Crypta%20IDENTITY-b4f953?style=flat&labelColor=0a0a0a" alt="La Crypta IDENTITY Hackathon" /></a>
+</p>
+
 ---
 
 Obelisk feels like Discord — servers, channels, voice rooms, threads, reactions, forums, DMs — but your account is a **cryptographic key you own**, not an email on a corporate server. Built for La Crypta's **IDENTITY Hackathon** (April 2026).
@@ -180,6 +187,6 @@ See [ROADMAP.md](ROADMAP.md). TL;DR: Phases 0–3 are done (foundation, auth, ch
 ## License
 
 MIT.
-
+s
 
 
