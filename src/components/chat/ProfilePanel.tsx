@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { useAuthStore } from '@/store/auth';
 import { useChatStore } from '@/store/chat';
 import { useSettingsStore } from '@/store/settings';
+import { useToastStore } from '@/store/toast';
 import { useTranslation } from '@/i18n/context';
 
 interface ProfilePanelProps {
@@ -97,6 +98,47 @@ export default function ProfilePanel({ onClose, onLogout }: ProfilePanelProps) {
         )}
 
         <div className="border-t border-lc-border mt-3" />
+
+        {/* Copy npub */}
+        {profile.npub && (
+          <button
+            onClick={() => {
+              navigator.clipboard?.writeText(profile.npub!).catch(() => {});
+              useToastStore.getState().pushToast({
+                title: 'npub copiado',
+                body: `${profile.npub!.slice(0, 12)}…${profile.npub!.slice(-6)}`,
+              });
+            }}
+            className="w-full p-3 text-left text-sm text-lc-white hover:bg-lc-border/50 transition flex items-center gap-2"
+            data-testid="copy-own-npub-btn"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+              <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+            </svg>
+            Copiar npub
+          </button>
+        )}
+
+        {/* Open in another Nostr client */}
+        {profile.npub && (
+          <a
+            href={`https://njump.me/${profile.npub}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full p-3 text-left text-sm text-lc-white hover:bg-lc-border/50 transition flex items-center gap-2"
+            data-testid="open-own-nostr-btn"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+              <polyline points="15 3 21 3 21 9" />
+              <line x1="10" y1="14" x2="21" y2="3" />
+            </svg>
+            Abrir en otro cliente Nostr
+          </a>
+        )}
+
+        <div className="border-t border-lc-border" />
 
         {/* Editar perfil — single action, opens settings modal on the Perfil tab */}
         <button

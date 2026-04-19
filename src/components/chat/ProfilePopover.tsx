@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useRef, type ReactNode } from 'react';
 import { useChatStore } from '@/store/chat';
+import { useToastStore } from '@/store/toast';
 import { formatPubkey } from '@/lib/nostr';
 import { nip19 } from 'nostr-tools';
 import {
@@ -88,6 +89,8 @@ export default function ProfilePopover({ pubkey, onClose }: {
 
   const displayName = member?.displayName || formatPubkey(pubkey);
   const npubShort = shortNpub(pubkey);
+  let npub = '';
+  try { npub = nip19.npubEncode(pubkey); } catch {}
   const baseRole = member?.role ? BASE_ROLE_LABEL[member.role] : undefined;
   const customRoles = (member?.customRoles ?? []).slice().sort((a, b) => b.priority - a.priority);
 
@@ -251,13 +254,34 @@ export default function ProfilePopover({ pubkey, onClose }: {
             >
               ⚡ Zappar
             </button>
-            <button
-              onClick={() => { navigator.clipboard?.writeText(nip19.npubEncode(pubkey)).catch(() => {}); }}
-              className="lc-pill-secondary text-xs"
-              title="Copiar npub"
-            >
-              Copiar npub
-            </button>
+            {npub && (
+              <>
+                <button
+                  onClick={() => {
+                    navigator.clipboard?.writeText(npub).catch(() => {});
+                    useToastStore.getState().pushToast({
+                      title: 'npub copiado',
+                      body: `${npub.slice(0, 12)}…${npub.slice(-6)}`,
+                    });
+                  }}
+                  className="lc-pill-secondary text-xs"
+                  title="Copiar npub"
+                  data-testid="profile-copy-npub-btn"
+                >
+                  Copiar npub
+                </button>
+                <a
+                  href={`https://njump.me/${npub}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="lc-pill-secondary text-xs flex items-center justify-center"
+                  title="Abrir en otro cliente Nostr (njump.me)"
+                  data-testid="profile-open-nostr-btn"
+                >
+                  Abrir en Nostr ↗
+                </a>
+              </>
+            )}
           </div>
         </div>
       </div>
