@@ -20,6 +20,8 @@ export default function WalletPanel() {
   const [balanceLoading, setBalanceLoading] = useState(false);
   const [view, setView] = useState<View>('main');
   const [sendInvoice, setSendInvoice] = useState('');
+  const [sendAmount, setSendAmount] = useState('');
+  const [sendComment, setSendComment] = useState('');
   const [sending, setSending] = useState(false);
   const [receiveAmount, setReceiveAmount] = useState('');
   const [receiveDesc, setReceiveDesc] = useState('');
@@ -89,18 +91,27 @@ export default function WalletPanel() {
   };
 
   const send = async () => {
-    if (!sendInvoice.trim()) return;
+    const target = sendInvoice.trim();
+    if (!target) return;
+    const isAddress = /^[a-z0-9._-]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(target);
+    const payload: Record<string, unknown> = isAddress
+      ? { address: target, amountSats: parseInt(sendAmount, 10), comment: sendComment || undefined }
+      : { invoice: target };
+    if (isAddress && (!payload.amountSats || (payload.amountSats as number) <= 0)) {
+      setStatus('Indicá un monto en sats');
+      return;
+    }
     setSending(true);
     setStatus(null);
     try {
       const r = await fetch('/api/wallet/pay', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ invoice: sendInvoice.trim() }),
+        body: JSON.stringify(payload),
       });
       const d = await r.json().catch(() => ({}));
       if (r.ok) {
         setStatus('Pago enviado');
-        setSendInvoice('');
+        setSendInvoice(''); setSendAmount(''); setSendComment('');
         setView('main');
         fetchBalance();
       } else {
@@ -193,9 +204,26 @@ export default function WalletPanel() {
           <input
             value={sendInvoice}
             onChange={(e) => setSendInvoice(e.target.value)}
-            placeholder="lnbc..."
+            placeholder="lnbc... o user@dominio.com"
             className="w-full bg-lc-black border border-lc-border rounded-lg px-3 py-2 text-sm text-lc-white outline-none focus:border-lc-green"
           />
+          {/^[a-z0-9._-]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(sendInvoice.trim()) && (
+            <>
+              <input
+                type="number"
+                value={sendAmount}
+                onChange={(e) => setSendAmount(e.target.value)}
+                placeholder="Monto en sats"
+                className="w-full bg-lc-black border border-lc-border rounded-lg px-3 py-2 text-sm text-lc-white outline-none focus:border-lc-green"
+              />
+              <input
+                value={sendComment}
+                onChange={(e) => setSendComment(e.target.value)}
+                placeholder="Comentario (opcional)"
+                className="w-full bg-lc-black border border-lc-border rounded-lg px-3 py-2 text-sm text-lc-white outline-none focus:border-lc-green"
+              />
+            </>
+          )}
           <button onClick={send} disabled={sending || !sendInvoice.trim()} className="lc-pill-primary text-xs disabled:opacity-50">
             {sending ? 'Enviando...' : 'Pagar factura'}
           </button>
