@@ -20,6 +20,14 @@
 # production
 /build
 
+# deploy backups (DB dumps + uploads tarballs from npm run raise)
+/backups
+
+# local logs
+/dev.log
+/server.log
+/tunnel.log
+
 # user uploads (written by /api/upload, served by /uploads/[name])
 /uploads
 # legacy location from before the uploads-path refactor — keep ignored

@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
-# One-shot dev + Cloudflare tunnel launcher for Obelisk.
+# One-shot dev raise: Docker + db + dev server + Cloudflare tunnel.
 #
 # Idempotent: starts Docker (Colima/OrbStack/Desktop), Postgres + LiveKit,
 # Next.js dev server, and the named cloudflared tunnel only if each piece
 # isn't already running. Re-running is safe and cheap.
 #
-#   ./scripts/dev-tunnel.sh
+# Cloudflared output is redirected to ./tunnel.log (kept off stdout).
+#
+#   ./scripts/dev-raise.sh
 #
 # Env overrides:
 #   TUNNEL_NAME        default: obelisk
@@ -228,25 +230,34 @@ if [ "$SKIP_TUNNEL" = "1" ]; then
 fi
 
 step "Cloudflare tunnel"
-if pgrep -f "cloudflared .* $TUNNEL_UUID" >/dev/null 2>&1; then
-  green "Tunnel already running for $TUNNEL_NAME — reusing."
+# Detect any running cloudflared for this tunnel (by UUID or by name).
+if pgrep -f "cloudflared .* ${TUNNEL_UUID}" >/dev/null 2>&1 \
+   || pgrep -f "cloudflared .* ${TUNNEL_NAME}\b" >/dev/null 2>&1; then
+  green "Tunnel '$TUNNEL_NAME' already running — reusing (logs wherever it was started)."
   TUNNEL_REUSED=1
 else
-  blue "Starting cloudflared '$TUNNEL_NAME' → $ORIGIN_URL"
+  blue "Starting cloudflared '$TUNNEL_NAME' → $ORIGIN_URL (logs → ./tunnel.log)"
   cloudflared tunnel \
     --config /dev/null \
     --cred-file "$CRED_FILE" \
     run \
     --url "$ORIGIN_URL" \
     --no-tls-verify \
-    "$TUNNEL_UUID" &
+    "$TUNNEL_UUID" > tunnel.log 2>&1 &
   TUNNEL_PID=$!
+  # Give it a moment to either connect or die noisily.
+  sleep 2
+  if ! kill -0 "$TUNNEL_PID" 2>/dev/null; then
+    red "cloudflared died on startup. Last 20 log lines:"
+    tail -20 tunnel.log
+    exit 1
+  fi
 fi
 
 step "Ready"
 green "Local:  http://127.0.0.1:$PORT"
 green "Public: https://$TUNNEL_HOST"
-dim   "Logs:   ./dev.log"
+dim   "Logs:   ./dev.log  ./tunnel.log"
 echo
 
 # Block until something relevant exits.
