@@ -14,7 +14,7 @@ Obelisk is built on a deliberate split:
 - **Nostr** — the decentralized part — handles **identity**. Your keypair, your profile (kind 0), your relay list (NIP-65), your followers (kind 3). None of this lives on our server.
 - **A normal server** — the centralized part — handles **everything else**: channels, messages, members, roles, bans, realtime delivery, voice relay.
 
-That split lets us ship Discord-grade UX today (threads, reactions, search, moderation — hard to do purely on Nostr right now) while giving you a real, portable identity. Over time the pendulum swings toward the Nostr side; see [the future guide](/guides/en/future-nostr-relays).
+That split lets us ship Discord-grade UX today (threads, reactions, search, moderation — hard to do purely on Nostr right now) while giving you a real, portable identity. Over time the pendulum swings toward the Nostr side; see [the future guide](/guides/future-nostr-relays).
 
 ## What happens when you sign in
 
@@ -49,7 +49,7 @@ Nostr relays today don't give us reliable ordering, efficient channel subscripti
 - **Avatars and display names** — fetched from your kind-0 profile on your relays.
 - **NIP-05 verification badge** — if your profile sets a NIP-05 address, we check it and show a green check.
 - **Relay list** — we use your NIP-65 kind-10002 event so your profile lookups don't depend on our opinion about which relays to use.
-- **Web of Trust** — your server's "who is trustworthy" list is derived from Nostr follow-graphs. See the [WoT guide](/guides/en/web-of-trust).
+- **Web of Trust** — your server's "who is trustworthy" list is derived from Nostr follow-graphs. See the [WoT guide](/guides/web-of-trust).
 
 ## Data that lives on our server
 
@@ -69,5 +69,5 @@ Everything runs in Docker Compose: Next.js + Socket.io in one container, Postgre
 
 ## Further reading
 
-- [Web of Trust, explained](/guides/en/web-of-trust)
-- [The future is relay-based groups](/guides/en/future-nostr-relays)
+- [Web of Trust, explained](/guides/web-of-trust)
+- [The future is relay-based groups](/guides/future-nostr-relays)

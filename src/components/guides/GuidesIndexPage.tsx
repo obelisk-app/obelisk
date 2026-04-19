@@ -1,23 +1,14 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
 import type { Locale } from '@/i18n';
 import { listAllGuides } from '@/lib/guides';
+import { guidesHref } from '@/lib/guide-urls';
 import GuideCard from '@/components/guides/GuideCard';
 import GuideLocaleSync from '@/components/guides/GuideLocaleSync';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 
 const SITE_URL = process.env.CORS_ORIGIN || 'https://obelisk.ar';
-const LOCALES: Locale[] = ['en', 'es'];
-
-function isLocale(x: string): x is Locale {
-  return x === 'en' || x === 'es';
-}
-
-export async function generateStaticParams() {
-  return LOCALES.map((locale) => ({ locale }));
-}
 
 const COPY: Record<Locale, Record<string, string>> = {
   en: {
@@ -44,24 +35,18 @@ const COPY: Record<Locale, Record<string, string>> = {
   },
 };
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ locale: string }>;
-}): Promise<Metadata> {
-  const { locale } = await params;
-  if (!isLocale(locale)) return {};
+export function buildGuidesIndexMetadata(locale: Locale): Metadata {
   const c = COPY[locale];
-  const canonical = `/guides/${locale}`;
+  const canonical = guidesHref(locale);
   return {
     title: c.seoTitle,
     description: c.seoDescription,
     alternates: {
       canonical,
       languages: {
-        en: '/guides/en',
-        es: '/guides/es',
-        'x-default': '/guides/en',
+        en: guidesHref('en'),
+        es: guidesHref('es'),
+        'x-default': guidesHref('en'),
       },
     },
     openGraph: {
@@ -81,14 +66,7 @@ export async function generateMetadata({
   };
 }
 
-export default async function GuidesIndex({
-  params,
-}: {
-  params: Promise<{ locale: string }>;
-}) {
-  const { locale } = await params;
-  if (!isLocale(locale)) notFound();
-
+export default async function GuidesIndexPage({ locale }: { locale: Locale }) {
   const guides = await listAllGuides(locale);
   const copy = COPY[locale];
 
@@ -106,7 +84,7 @@ export default async function GuidesIndex({
         '@type': 'ListItem',
         position: 2,
         name: copy.title,
-        item: `${SITE_URL}/guides/${locale}`,
+        item: `${SITE_URL}${guidesHref(locale)}`,
       },
     ],
   };

@@ -60,19 +60,35 @@ describe('LanguageToggle', () => {
     expect(pushMock).not.toHaveBeenCalled();
   });
 
-  it('rewrites URL locale when toggling on /guides/<locale>', async () => {
+  it('rewrites /guides (English default) to /guides/es when switching to Spanish', async () => {
+    currentPathname = '/guides';
+    const user = userEvent.setup();
+    renderToggle('en');
+    await user.click(screen.getByRole('button'));
+    expect(pushMock).toHaveBeenCalledWith('/guides/es');
+  });
+
+  it('rewrites /guides/es to /guides when switching to English', async () => {
     currentPathname = '/guides/es';
     const user = userEvent.setup();
     renderToggle('es');
     await user.click(screen.getByRole('button'));
-    expect(pushMock).toHaveBeenCalledWith('/guides/en');
+    expect(pushMock).toHaveBeenCalledWith('/guides');
   });
 
-  it('rewrites URL locale when toggling on /guides/<locale>/<slug>', async () => {
-    currentPathname = '/guides/en/web-of-trust';
+  it('rewrites /guides/<slug> to /guides/es/<slug> when switching to Spanish', async () => {
+    currentPathname = '/guides/web-of-trust';
     const user = userEvent.setup();
     renderToggle('en');
     await user.click(screen.getByRole('button'));
     expect(pushMock).toHaveBeenCalledWith('/guides/es/web-of-trust');
+  });
+
+  it('rewrites /guides/es/<slug> to /guides/<slug> when switching to English', async () => {
+    currentPathname = '/guides/es/web-of-trust';
+    const user = userEvent.setup();
+    renderToggle('es');
+    await user.click(screen.getByRole('button'));
+    expect(pushMock).toHaveBeenCalledWith('/guides/web-of-trust');
   });
 });

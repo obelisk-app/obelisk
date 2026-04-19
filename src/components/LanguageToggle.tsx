@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import { useTranslation } from '@/i18n/context';
+import { guidesHref } from '@/lib/guide-urls';
 
 export default function LanguageToggle() {
   const { locale, setLocale } = useTranslation();
@@ -12,14 +13,20 @@ export default function LanguageToggle() {
     const next = locale === 'es' ? 'en' : 'es';
     setLocale(next);
 
-    // When we are on a URL-localized route like /guides/<locale>/..., also
-    // rewrite the URL so the rendered content matches the new language. On
-    // non-localized routes (landing page, /chat, etc.) the cookie flip alone
-    // is enough — the React tree re-renders via context.
-    const match = pathname?.match(/^\/guides\/(en|es)(\/.*)?$/);
-    if (match) {
-      const rest = match[2] || '';
-      router.push(`/guides/${next}${rest}`);
+    // When on a URL-localized guides route, rewrite the URL so the rendered
+    // content matches the new language. English is the default and has no
+    // locale prefix (/guides, /guides/<slug>); Spanish lives under /guides/es.
+    if (!pathname) return;
+    const esMatch = pathname.match(/^\/guides\/es(?:\/(.*))?$/);
+    if (esMatch) {
+      const slug = esMatch[1];
+      router.push(guidesHref(next, slug || undefined));
+      return;
+    }
+    const enMatch = pathname.match(/^\/guides(?:\/([^/]+))?$/);
+    if (enMatch) {
+      const slug = enMatch[1];
+      router.push(guidesHref(next, slug || undefined));
     }
   };
 

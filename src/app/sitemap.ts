@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { listAllGuides } from '@/lib/guides';
 import type { Locale } from '@/i18n';
+import { guidesHref } from '@/lib/guide-urls';
 
 const SITE_URL = process.env.CORS_ORIGIN || 'https://obelisk.ar';
 const LOCALES: Locale[] = ['en', 'es'];
@@ -24,14 +25,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   const guideIndexes: MetadataRoute.Sitemap = LOCALES.map((locale) => ({
-    url: `${SITE_URL}/guides/${locale}`,
+    url: `${SITE_URL}${guidesHref(locale)}`,
     lastModified: now,
     changeFrequency: 'weekly',
     priority: 0.7,
     alternates: {
       languages: {
-        en: `${SITE_URL}/guides/en`,
-        es: `${SITE_URL}/guides/es`,
+        en: `${SITE_URL}${guidesHref('en')}`,
+        es: `${SITE_URL}${guidesHref('es')}`,
       },
     },
   }));
@@ -44,14 +45,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         ? new Date(g.frontmatter.updatedAt)
         : now;
       guideArticles.push({
-        url: `${SITE_URL}/guides/${locale}/${g.slug}`,
+        url: `${SITE_URL}${guidesHref(locale, g.slug)}`,
         lastModified: last,
         changeFrequency: 'monthly',
         priority: 0.6,
         alternates: {
           languages: {
-            en: `${SITE_URL}/guides/en/${g.slug}`,
-            es: `${SITE_URL}/guides/es/${g.slug}`,
+            en: `${SITE_URL}${guidesHref('en', g.slug)}`,
+            es: `${SITE_URL}${guidesHref('es', g.slug)}`,
           },
         },
       });

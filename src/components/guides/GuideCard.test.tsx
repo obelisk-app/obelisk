@@ -26,7 +26,7 @@ describe('GuideCard', () => {
     expect(screen.getByText('Short description.')).toBeInTheDocument();
     expect(screen.getByText('#alpha')).toBeInTheDocument();
     const link = screen.getByTestId('guide-card-my-guide') as HTMLAnchorElement;
-    expect(link.getAttribute('href')).toBe('/guides/en/my-guide');
+    expect(link.getAttribute('href')).toBe('/guides/my-guide');
   });
 
   it('falls back to placeholder when heroComponent is unknown', () => {

@@ -2,25 +2,9 @@ import { ImageResponse } from 'next/og';
 import { readGuide } from '@/lib/guides';
 import type { Locale } from '@/i18n';
 
-export const runtime = 'nodejs';
-export const size = { width: 1200, height: 630 };
-export const contentType = 'image/png';
-export const alt = 'Obelisk guide';
+export const ogImageSize = { width: 1200, height: 630 };
 
-function isLocale(x: string): x is Locale {
-  return x === 'en' || x === 'es';
-}
-
-export default async function OgImage({
-  params,
-}: {
-  params: Promise<{ locale: string; slug: string }>;
-}) {
-  const { locale, slug } = await params;
-  if (!isLocale(locale)) {
-    return new ImageResponse(<div>Obelisk</div>, size);
-  }
-
+export async function renderGuideOgImage(locale: Locale, slug: string) {
   let title = 'Obelisk';
   let description = '';
   let tags: string[] = [];
@@ -49,7 +33,6 @@ export default async function OgImage({
           fontFamily: 'sans-serif',
         }}
       >
-        {/* header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <div
             style={{
@@ -82,7 +65,6 @@ export default async function OgImage({
           </div>
         </div>
 
-        {/* title */}
         <div
           style={{
             display: 'flex',
@@ -118,7 +100,6 @@ export default async function OgImage({
           )}
         </div>
 
-        {/* footer */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           {tags.slice(0, 4).map((tag) => (
             <div
@@ -141,6 +122,6 @@ export default async function OgImage({
         </div>
       </div>
     ),
-    size,
+    ogImageSize,
   );
 }

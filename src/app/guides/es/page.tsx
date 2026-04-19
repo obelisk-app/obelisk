@@ -1,7 +1,7 @@
 import GuidesIndexPage, { buildGuidesIndexMetadata } from '@/components/guides/GuidesIndexPage';
 
-export const metadata = buildGuidesIndexMetadata('en');
+export const metadata = buildGuidesIndexMetadata('es');
 
 export default function Page() {
-  return <GuidesIndexPage locale="en" />;
+  return <GuidesIndexPage locale="es" />;
 }

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Locale } from '@/i18n';
 import type { GuideFrontmatter } from '@/lib/guides';
+import { guidesHref } from '@/lib/guide-urls';
 import { HERO_REGISTRY } from './svg';
 
 interface Props {
@@ -14,7 +15,7 @@ export default function GuideCard({ slug, locale, frontmatter }: Props) {
 
   return (
     <Link
-      href={`/guides/${locale}/${slug}`}
+      href={guidesHref(locale, slug)}
       className="lc-card group block overflow-hidden"
       data-testid={`guide-card-${slug}`}
     >

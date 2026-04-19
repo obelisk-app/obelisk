@@ -8,6 +8,7 @@ import { useTranslation } from '@/i18n/context';
 import LoginModal from './LoginModal';
 import ObeliskIcon from './ObeliskIcon';
 import LanguageToggle from './LanguageToggle';
+import { guidesHref } from '@/lib/guide-urls';
 
 const SIMPLE_LINKS = [
   { href: '/#features', key: 'nav.features' },
@@ -78,7 +79,7 @@ export default function Navbar({ onLoginSuccess }: { onLoginSuccess?: () => void
               }}
             >
               <Link
-                href={`/guides/${locale}`}
+                href={guidesHref(locale)}
                 className="px-3 py-1.5 rounded-lg text-sm font-medium text-lc-muted hover:text-lc-white transition-colors inline-flex items-center gap-1"
                 aria-haspopup="true"
                 aria-expanded={guidesOpen}
@@ -106,14 +107,14 @@ export default function Navbar({ onLoginSuccess }: { onLoginSuccess?: () => void
                     {GUIDE_ITEMS.map((g) => (
                       <Link
                         key={g.slug}
-                        href={`/guides/${locale}/${g.slug}`}
+                        href={guidesHref(locale, g.slug)}
                         className="block px-4 py-3 text-sm text-lc-muted hover:bg-lc-border/50 hover:text-lc-white transition"
                       >
                         {t(g.tKey)}
                       </Link>
                     ))}
                     <Link
-                      href={`/guides/${locale}`}
+                      href={guidesHref(locale)}
                       className="block px-4 py-3 text-sm font-semibold text-lc-green hover:bg-lc-border/50 border-t border-lc-border/50"
                     >
                       {t('footer.allGuides')} →

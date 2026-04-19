@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import type { Locale } from '@/i18n';
 import { useTranslation } from '@/i18n/context';
+import { guidesHref } from '@/lib/guide-urls';
 import ObeliskIcon from './ObeliskIcon';
 
 export const GUIDE_SLUGS = [
@@ -55,7 +56,7 @@ export default function Footer({ localeOverride }: Props) {
               {GUIDE_SLUGS.map((g) => (
                 <li key={g.slug}>
                   <Link
-                    href={`/guides/${locale}/${g.slug}`}
+                    href={guidesHref(locale, g.slug)}
                     className="text-sm text-lc-muted hover:text-lc-green transition-colors"
                   >
                     {t(g.tKey)}
@@ -64,7 +65,7 @@ export default function Footer({ localeOverride }: Props) {
               ))}
               <li>
                 <Link
-                  href={`/guides/${locale}`}
+                  href={guidesHref(locale)}
                   className="text-sm text-lc-green hover:underline"
                 >
                   {t('footer.allGuides')} →

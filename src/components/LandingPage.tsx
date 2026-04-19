@@ -10,6 +10,7 @@ import ShootingStars from '@/components/ShootingStars';
 import FAQItem from '@/components/FAQItem';
 import Footer from '@/components/Footer';
 import { useTranslation } from '@/i18n/context';
+import { guidesHref } from '@/lib/guide-urls';
 
 function useScrollReveal<T extends HTMLElement>(): [RefObject<T | null>, boolean] {
   const ref = useRef<T | null>(null);
@@ -535,7 +536,7 @@ export default function LandingPage() {
             ].map((g) => (
               <Link
                 key={g.slug}
-                href={`/guides/${locale}/${g.slug}`}
+                href={guidesHref(locale, g.slug)}
                 className="lc-card p-6 group"
               >
                 <h3 className="text-lg font-bold text-lc-white group-hover:text-lc-green transition-colors">
@@ -552,7 +553,7 @@ export default function LandingPage() {
           </div>
           <div className="mt-10 text-center">
             <Link
-              href={`/guides/${locale}`}
+              href={guidesHref(locale)}
               className="lc-pill lc-pill-secondary text-sm inline-flex items-center gap-2"
             >
               {t('learn.cta')} <span aria-hidden="true">→</span>

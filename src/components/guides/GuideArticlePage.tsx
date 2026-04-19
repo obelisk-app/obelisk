@@ -4,11 +4,11 @@ import { MDXRemote } from 'next-mdx-remote/rsc';
 import remarkGfm from 'remark-gfm';
 import type { Locale } from '@/i18n';
 import {
-  listSlugs,
   readGuide,
   estimateReadMinutes,
   type GuideFrontmatter,
 } from '@/lib/guides';
+import { guidesHref } from '@/lib/guide-urls';
 import ArticleShell from '@/components/guides/ArticleShell';
 import GuideLocaleSync from '@/components/guides/GuideLocaleSync';
 import { mdxComponents } from '@/components/guides/mdx-components';
@@ -16,11 +16,6 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 
 const SITE_URL = process.env.CORS_ORIGIN || 'https://obelisk.ar';
-const LOCALES: Locale[] = ['en', 'es'];
-
-function isLocale(x: string): x is Locale {
-  return x === 'en' || x === 'es';
-}
 
 const CHROME: Record<Locale, Record<string, string>> = {
   en: {
@@ -35,15 +30,6 @@ const CHROME: Record<Locale, Record<string, string>> = {
   },
 };
 
-export async function generateStaticParams() {
-  const params: { locale: string; slug: string }[] = [];
-  for (const locale of LOCALES) {
-    const slugs = await listSlugs(locale);
-    for (const slug of slugs) params.push({ locale, slug });
-  }
-  return params;
-}
-
 async function safeRead(locale: Locale, slug: string) {
   try {
     return await readGuide(locale, slug);
@@ -52,18 +38,15 @@ async function safeRead(locale: Locale, slug: string) {
   }
 }
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ locale: string; slug: string }>;
-}): Promise<Metadata> {
-  const { locale, slug } = await params;
-  if (!isLocale(locale)) return {};
+export async function buildGuideArticleMetadata(
+  locale: Locale,
+  slug: string,
+): Promise<Metadata> {
   const guide = await safeRead(locale, slug);
   if (!guide) return {};
 
   const fm = guide.frontmatter as GuideFrontmatter;
-  const canonical = `/guides/${locale}/${slug}`;
+  const canonical = guidesHref(locale, slug);
 
   return {
     title: fm.title,
@@ -71,9 +54,9 @@ export async function generateMetadata({
     alternates: {
       canonical,
       languages: {
-        en: `/guides/en/${slug}`,
-        es: `/guides/es/${slug}`,
-        'x-default': `/guides/en/${slug}`,
+        en: guidesHref('en', slug),
+        es: guidesHref('es', slug),
+        'x-default': guidesHref('en', slug),
       },
     },
     openGraph: {
@@ -97,20 +80,20 @@ export async function generateMetadata({
   };
 }
 
-export default async function GuideArticle({
-  params,
+export default async function GuideArticlePage({
+  locale,
+  slug,
 }: {
-  params: Promise<{ locale: string; slug: string }>;
+  locale: Locale;
+  slug: string;
 }) {
-  const { locale, slug } = await params;
-  if (!isLocale(locale)) notFound();
-
   const guide = await safeRead(locale, slug);
   if (!guide) notFound();
 
   const fm = guide.frontmatter as GuideFrontmatter;
   const chrome = CHROME[locale];
   const readMinutes = fm.readMinutes ?? estimateReadMinutes(guide.content);
+  const canonical = guidesHref(locale, slug);
 
   const articleLd = {
     '@context': 'https://schema.org',
@@ -120,7 +103,7 @@ export default async function GuideArticle({
     datePublished: fm.publishedAt,
     dateModified: fm.updatedAt,
     inLanguage: locale === 'en' ? 'en' : 'es-AR',
-    image: `${SITE_URL}/guides/${locale}/${slug}/opengraph-image`,
+    image: `${SITE_URL}${canonical}/opengraph-image`,
     author: {
       '@type': 'Organization',
       name: 'La Crypta',
@@ -136,7 +119,7 @@ export default async function GuideArticle({
     },
     mainEntityOfPage: {
       '@type': 'WebPage',
-      '@id': `${SITE_URL}/guides/${locale}/${slug}`,
+      '@id': `${SITE_URL}${canonical}`,
     },
     keywords: fm.tags?.join(', '),
   };
@@ -154,7 +137,7 @@ export default async function GuideArticle({
         locale={locale}
         slug={slug}
         readMinutes={readMinutes}
-        backHref={`/guides/${locale}`}
+        backHref={guidesHref(locale)}
         backLabel={chrome.back}
         readTimeLabel={chrome.readTime}
         updatedLabel={chrome.updated}

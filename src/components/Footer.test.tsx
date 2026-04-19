@@ -19,11 +19,11 @@ describe('Footer', () => {
       </LocaleProvider>,
     );
     const links = screen.getAllByRole('link').map((a) => a.getAttribute('href'));
-    expect(links).toContain('/guides/en/what-is-obelisk');
-    expect(links).toContain('/guides/en/how-obelisk-works');
-    expect(links).toContain('/guides/en/web-of-trust');
-    expect(links).toContain('/guides/en/future-nostr-relays');
-    expect(links).toContain('/guides/en');
+    expect(links).toContain('/guides/what-is-obelisk');
+    expect(links).toContain('/guides/how-obelisk-works');
+    expect(links).toContain('/guides/web-of-trust');
+    expect(links).toContain('/guides/future-nostr-relays');
+    expect(links).toContain('/guides');
   });
 
   it('respects localeOverride prop for URL-localized pages', () => {
@@ -34,7 +34,8 @@ describe('Footer', () => {
     );
     const links = screen.getAllByRole('link').map((a) => a.getAttribute('href'));
     expect(links).toContain('/guides/es/what-is-obelisk');
-    expect(links).not.toContain('/guides/en/what-is-obelisk');
+    expect(links).not.toContain('/guides/what-is-obelisk');
+    expect(links).toContain('/guides/es');
   });
 
   it('includes product, community, and FAQ links', () => {
