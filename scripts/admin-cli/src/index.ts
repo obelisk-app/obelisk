@@ -145,6 +145,75 @@ function parseJsonFlag(value: string | undefined, flagName: string): any {
   catch (err: any) { throw new Error(`--${flagName} must be valid JSON: ${err.message}`); }
 }
 
+type Locale = 'en' | 'es';
+
+async function resolveServerLocale(serverId: string): Promise<Locale> {
+  try {
+    const s = await Api.getAdminServer(serverId);
+    const raw = String(s?.welcomeLocale ?? '').toLowerCase();
+    return raw.startsWith('en') ? 'en' : 'es';
+  } catch {
+    return 'es';
+  }
+}
+
+function lockdownStrings(locale: Locale, level: LockdownLevel, reason?: string): { title: string; body: string } {
+  if (locale === 'en') {
+    const who = level === 'admin' ? 'admins' : 'admins and moderators';
+    const tail = reason ? ` Reason: ${reason}` : '';
+    return {
+      title: 'Server locked — read-only mode',
+      body: `🔒 **Server in read-only mode.** Only ${who} can post until further notice.${tail}`,
+    };
+  }
+  const who = level === 'admin' ? 'los administradores' : 'los administradores y moderadores';
+  const tail = reason ? ` Motivo: ${reason}` : '';
+  return {
+    title: 'Servidor bloqueado — modo solo-lectura',
+    body: `🔒 **Servidor en modo solo-lectura.** Solo ${who} pueden publicar hasta nuevo aviso.${tail}`,
+  };
+}
+
+function unlockStrings(locale: Locale, reason?: string): { title: string; body: string } {
+  if (locale === 'en') {
+    const tail = reason ? ` ${reason}` : '';
+    return {
+      title: 'Server unlocked',
+      body: `🔓 **Server unlocked.** All members can post again.${tail}`,
+    };
+  }
+  const tail = reason ? ` ${reason}` : '';
+  return {
+    title: 'Servidor desbloqueado',
+    body: `🔓 **Servidor desbloqueado.** Todos los miembros pueden volver a publicar.${tail}`,
+  };
+}
+
+// Post announcement in every locked channel. Forums require a title + /posts endpoint;
+// text/voice accept plain content via /messages. If announceChannelId is given, only post there.
+async function announceToAllChannels(
+  channels: Array<{ channelId: string; name: string; type: string }>,
+  title: string,
+  body: string,
+  announceChannelId?: string,
+): Promise<Array<{ channelId: string; name: string; type: string; ok: boolean; id?: string; error?: string }>> {
+  const targets = announceChannelId
+    ? channels.filter((c) => c.channelId === announceChannelId)
+    : channels;
+  const out: Array<{ channelId: string; name: string; type: string; ok: boolean; id?: string; error?: string }> = [];
+  for (const ch of targets) {
+    try {
+      const res = ch.type === 'forum'
+        ? await Api.postForumPost(ch.channelId, title, body)
+        : await Api.postMessage(ch.channelId, body);
+      out.push({ channelId: ch.channelId, name: ch.name, type: ch.type, ok: true, id: res?.id });
+    } catch (err: any) {
+      out.push({ channelId: ch.channelId, name: ch.name, type: ch.type, ok: false, error: err.message });
+    }
+  }
+  return out;
+}
+
 function print(data: unknown) {
   if (data === undefined) return;
   if (typeof data === 'string') console.log(data);
@@ -326,24 +395,10 @@ async function main(argv: string[]): Promise<number> {
         }
       }
 
-      // Pick announce channel: explicit flag > 'anuncios' > first text channel.
-      let targetChannel = announceChannelId;
-      if (!targetChannel) {
-        const anuncios = flat.find((c: any) => c.type === 'text' && c.name === 'anuncios');
-        targetChannel = anuncios?.id ?? flat.find((c: any) => c.type === 'text')?.id;
-      }
-      let announced: any = { skipped: 'no text channel found' };
-      if (targetChannel) {
-        const who = level === 'admin' ? 'los administradores' : 'los administradores y moderadores';
-        const tail = reason ? ` Motivo: ${reason}` : '';
-        const msg = `🔒 **Servidor en modo solo-lectura.** Solo ${who} pueden publicar hasta nuevo aviso.${tail}`;
-        try {
-          announced = await Api.postMessage(targetChannel, msg);
-        } catch (err: any) {
-          announced = { channelId: targetChannel, error: err.message };
-        }
-      }
-      print({ action: 'on', level, locked: results.length, results, announced });
+      const locale = await resolveServerLocale(serverId);
+      const strings = lockdownStrings(locale, level, reason);
+      const announced = await announceToAllChannels(snap.channels, strings.title, strings.body, announceChannelId);
+      print({ action: 'on', level, locale, locked: results.length, results, announced });
       return 0;
     }
 
@@ -364,22 +419,10 @@ async function main(argv: string[]): Promise<number> {
       }
       deleteSnapshot(serverId);
 
-      let targetChannel = announceChannelId;
-      if (!targetChannel) {
-        const anuncios = snap.channels.find((c) => c.type === 'text' && c.name === 'anuncios');
-        targetChannel = anuncios?.channelId ?? snap.channels.find((c) => c.type === 'text')?.channelId;
-      }
-      let announced: any = { skipped: 'no text channel found' };
-      if (targetChannel) {
-        const tail = reason ? ` ${reason}` : '';
-        const msg = `🔓 **Servidor desbloqueado.** Todos los miembros pueden volver a publicar.${tail}`;
-        try {
-          announced = await Api.postMessage(targetChannel, msg);
-        } catch (err: any) {
-          announced = { channelId: targetChannel, error: err.message };
-        }
-      }
-      print({ action: 'off', restored: results.length, results, announced });
+      const locale = await resolveServerLocale(serverId);
+      const strings = unlockStrings(locale, reason);
+      const announced = await announceToAllChannels(snap.channels, strings.title, strings.body, announceChannelId);
+      print({ action: 'off', locale, restored: results.length, results, announced });
       return 0;
     }
   }

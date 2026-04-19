@@ -186,6 +186,21 @@ export const Api = {
     return data;
   },
 
+  // Create a forum post (top-level thread) — forum channels reject plain messages
+  // without a title, so lockdown announcements must go through this endpoint.
+  async postForumPost(channelId: string, title: string, content: string) {
+    const ctx = ctxFromSession();
+    const { data } = await request(ctx, 'POST', `/api/channels/${channelId}/posts`, { title, content, tags: [] });
+    return data;
+  },
+
+  // Admin server settings (includes welcomeLocale, gate/quota fields, etc.)
+  async getAdminServer(serverId: string) {
+    const ctx = ctxFromSession();
+    const { data } = await request(ctx, 'GET', `/api/admin/server${qs({ serverId })}`);
+    return data as Record<string, any>;
+  },
+
   // Messages
   async getMessages(channelId: string, limit = 50, cursor?: string) {
     const ctx = ctxFromSession();
