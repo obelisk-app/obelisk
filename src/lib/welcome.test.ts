@@ -119,11 +119,12 @@ describe('postWelcomeMessage', () => {
 
     await postWelcomeMessage('server1', pubkey);
 
-    // shortNpub(64 hex) encodes to bech32 and slices to `npub1` + 6 chars + "…".
+    // Mention is serialized canonically as `nostr:npub1<hex>`; the client
+    // resolves the displayName (shortNpub) when no member row exists.
     const createArg = mockMessageCreate.mock.calls[0][0];
-    expect(createArg.data.content).toContain('npub1');
-    expect(createArg.data.content).toContain('…');
-    expect(createArg.data.content).not.toContain('a'.repeat(20));
+    expect(createArg.data.content).toContain(`nostr:npub1${pubkey}`);
+    // Banner URL still carries the short npub as the display name param.
+    expect(createArg.data.content).toContain('name=npub1');
   });
 
   it('fetches the profile from relays when member has never been synced', async () => {

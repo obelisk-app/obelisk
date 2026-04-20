@@ -78,6 +78,7 @@ export async function postWelcomeMessage(serverId: string, memberPubkey: string)
     displayName,
     bannerUrl,
     serverName: server.name,
+    pubkey: memberPubkey,
   });
 
   const message = await prisma.message.create({
