@@ -66,7 +66,7 @@ export default function ZapPickerModal() {
         const msg = d.error === 'no_wallet'
           ? `⚠️ Configurá tu NWC en tu perfil para poder enviar zaps.`
           : d.error === 'insufficient_funds'
-          ? `⚠️ No tenés suficiente balance para zappar ${amount} sats.`
+          ? `⚠️ No tenés suficiente balance para zapear ${amount} sats.`
           : `⚠️ Fallo el pago (${d.error || payRes.status}).`;
         pushEphemeral(channelId, msg);
         close();
@@ -151,7 +151,7 @@ export default function ZapPickerModal() {
             <div className="flex justify-between">
               <button onClick={() => setTarget(null)} className="lc-pill-secondary text-xs">Atrás</button>
               <button onClick={send} disabled={busy || !amount} className="lc-pill-primary text-xs disabled:opacity-50">
-                {busy ? 'Enviando...' : `Zappar ${amount} sats`}
+                {busy ? 'Enviando...' : `Zapear ${amount} sats`}
               </button>
             </div>
           </>

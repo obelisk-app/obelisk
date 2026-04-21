@@ -15,6 +15,7 @@ import EmojiPicker from './EmojiPicker';
 import GifPicker from './GifPicker';
 import EmojiAutocomplete, { type ShortcodeSuggestion } from './EmojiAutocomplete';
 import SlashCommandAutocomplete, { SLASH_COMMANDS, type SlashCommand } from './SlashCommandAutocomplete';
+import SlashCommandScaffold from './SlashCommandScaffold';
 import {
   MAX_ATTACHMENTS_PER_MESSAGE,
   splitContentForEditing,
@@ -118,6 +119,16 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
     [slashQuery],
   );
 
+  // Caret position for the slash-command scaffold. Tracked on input/select
+  // so the active param highlight follows the cursor.
+  const [caret, setCaret] = useState(0);
+  const activeScaffoldCommand = useMemo<SlashCommand | null>(() => {
+    const m = /^\/([a-zA-Z]+)(?:\s|$)/.exec(content);
+    if (!m) return null;
+    const cmd = SLASH_COMMANDS.find((c) => c.name === m[1].toLowerCase());
+    return cmd && cmd.params && cmd.params.length > 0 ? cmd : null;
+  }, [content]);
+
   const allChannels = [
     ...pinnedChannels,
     ...categories.flatMap(c => c.channels),
@@ -141,7 +152,7 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
     textareaRef.current?.focus();
   }, [activeChannelId]);
 
-  // Listen for `/zap` prefill events emitted by ProfilePopover's ⚡ Zappar
+  // Listen for `/zap` prefill events emitted by ProfilePopover's ⚡ Zapear
   // button. Inserts a display-token `@Name` + a canonical mention map entry
   // so buildPayload re-serializes to `nostr:npub1…` on submit.
   useEffect(() => {
@@ -278,7 +289,13 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
         if (rawTarget) {
           try {
             const clean = rawTarget.replace(/^nostr:/, '');
-            if (clean.startsWith('npub1')) {
+            // `serializeMention` produces `nostr:npub1<64hex>` (raw hex, not
+            // bech32). Detect and strip that prefix before falling back to a
+            // real nip19 decode.
+            const pseudo = /^npub1([0-9a-f]{64})$/i.exec(clean);
+            if (pseudo) {
+              target = pseudo[1].toLowerCase();
+            } else if (clean.startsWith('npub1')) {
               const dec = nip19.decode(clean);
               if (dec.type === 'npub') target = dec.data as string;
             } else if (/^[0-9a-f]{64}$/i.test(clean)) {
@@ -301,7 +318,7 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
             const msg =
               code === 'target_no_wallet' ? '⚠️ Ese usuario no tiene NWC configurado.'
               : code === 'no_wallet' ? '⚠️ Configurá tu NWC en tu perfil para poder enviar zaps.'
-              : code === 'insufficient_funds' ? `⚠️ No tenés suficiente balance para zappar ${amount} sats.`
+              : code === 'insufficient_funds' ? `⚠️ No tenés suficiente balance para zapear ${amount} sats.`
               : code === 'cannot_zap_self' ? '⚠️ No podés zapearte a vos mismo.'
               : `⚠️ Fallo el zap (${code || res.status}).`;
             push(msg);
@@ -582,6 +599,7 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
 
     // Detect @ mention trigger
     const cursorPos = ta.selectionStart;
+    setCaret(cursorPos);
     const textBefore = val.slice(0, cursorPos);
     const atMatch = textBefore.match(/@(\w*)$/);
     if (atMatch) {
@@ -934,6 +952,15 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
         />
       )}
 
+      {/* Slash-command parameter scaffold (Discord-style pill hints) */}
+      {activeScaffoldCommand && (
+        <SlashCommandScaffold
+          command={activeScaffoldCommand}
+          content={content}
+          caret={caret}
+        />
+      )}
+
       {/* Edit preview bar */}
       {editingMessage && (
         <div className="flex items-center gap-2 px-4 py-2 mb-1 bg-lc-border/30 rounded-t-xl border-l-2 border-yellow-500/50">
@@ -1148,6 +1175,8 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
           value={content}
           onChange={handleInput}
           onKeyDown={handleKeyDown}
+          onKeyUp={(e) => setCaret((e.target as HTMLTextAreaElement).selectionStart)}
+          onClick={(e) => setCaret((e.target as HTMLTextAreaElement).selectionStart)}
           onPaste={handlePaste}
           disabled={!canWrite}
           placeholder={

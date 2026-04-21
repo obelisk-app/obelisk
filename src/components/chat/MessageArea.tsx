@@ -3,7 +3,7 @@
 import { useEffect, useRef, useCallback, useState, Fragment } from 'react';
 import { useChatStore, Message } from '@/store/chat';
 import { useAuthStore } from '@/store/auth';
-import { useNotificationStore } from '@/store/notification';
+import { useModerationStore } from '@/store/moderation';
 import { formatPubkey } from '@/lib/nostr';
 import MessageContent from './MessageContent';
 import EmojiPicker from './EmojiPicker';
@@ -485,6 +485,7 @@ export default function MessageArea({ profileCache, onDelete, onToggleReaction }
   onToggleReaction: (messageId: string, emoji: string) => void;
 }) {
   const { messages, isLoadingMessages, activeChannelId, activePostId, pinnedChannels, categories, hasMoreMessages, messageCursor, prependMessages, setMessageCursor, highlightedMessageId, setIsNearBottom, myRole, updatePinState } = useChatStore();
+  const blockedPubkeys = useModerationStore((s) => s.blockedPubkeys);
 
   const handleJumpToMessage = useCallback(async (id: string) => {
     if (!activeChannelId) return;
@@ -535,61 +536,6 @@ export default function MessageArea({ profileCache, onDelete, onToggleReaction }
   const [reportTarget, setReportTarget] = useState<Message | null>(null);
   const [reportReason, setReportReason] = useState('');
   const [reportSending, setReportSending] = useState(false);
-
-  // Anchor the "New messages" separator at the server-authored `lastReadAt`
-  // boundary, snapshotted when the channel is first opened so subsequent
-  // mark-read sweeps don't make it jump.
-  //
-  // Using the timestamp — instead of `messages.length - unreadCount` — is
-  // what prevents the viewer's own messages from rendering below the red
-  // line. `channelUnreads` excludes self on the server, but the local
-  // `messages` array doesn't, so an index derived from the count places the
-  // separator too far back and traps own messages beneath it.
-  //
-  // Fallback: when we don't know `lastReadAt` yet (first load race, offline
-  // cache miss), fall back to walking back `count` *other-authored*
-  // messages, which still matches the server's counting semantics.
-  const { profile: viewerProfile } = useAuthStore();
-  const viewerPubkey = viewerProfile?.pubkey ?? null;
-  const separatorLastReadAtRef = useRef<number | null>(null);
-  const separatorCountRef = useRef<number>(0);
-  const separatorChannelRef = useRef<string | null>(null);
-  if (activeChannelId && separatorChannelRef.current !== activeChannelId) {
-    separatorChannelRef.current = activeChannelId;
-    const notif = useNotificationStore.getState();
-    separatorCountRef.current = notif.channelUnreads[activeChannelId] || 0;
-    const lastRead = notif.channelLastReadAt[activeChannelId];
-    separatorLastReadAtRef.current = typeof lastRead === 'number' ? lastRead : null;
-  }
-  const separatorIndex = (() => {
-    if (messages.length === 0) return -1;
-    const count = separatorCountRef.current;
-    if (count <= 0) return -1;
-    const lastRead = separatorLastReadAtRef.current;
-    if (lastRead !== null) {
-      // First message strictly newer than the read cursor — if it's the
-      // viewer's own message we still anchor above it; that means an own
-      // message can render below the line, but only if the viewer sent it
-      // post-read (rare in practice; mark-read fires on send when the
-      // channel is in view).
-      for (let i = 0; i < messages.length; i++) {
-        const ts = new Date(messages[i].createdAt).getTime();
-        if (ts > lastRead && messages[i].authorPubkey !== viewerPubkey) {
-          return i;
-        }
-      }
-      return -1;
-    }
-    // Count-based fallback.
-    let remaining = count;
-    for (let i = messages.length - 1; i >= 0; i--) {
-      if (messages[i].authorPubkey !== viewerPubkey) {
-        remaining--;
-        if (remaining === 0) return i;
-      }
-    }
-    return -1;
-  })();
 
   const allChannels = [
     ...pinnedChannels,
@@ -870,6 +816,7 @@ export default function MessageArea({ profileCache, onDelete, onToggleReaction }
               </div>
             )}
             {messages.map((msg, idx) => {
+                if (blockedPubkeys.includes(msg.authorPubkey)) return null;
                 const currentDate = new Date(msg.createdAt);
                 const prevDate = idx > 0 ? new Date(messages[idx - 1].createdAt) : null;
                 // Force a separator if it's the first message or if the date changes
@@ -888,18 +835,6 @@ export default function MessageArea({ profileCache, onDelete, onToggleReaction }
                                     {getDaySeparator(currentDate)}
                                 </span>
                                 <div className="flex-1 h-px bg-lc-border" />
-                            </div>
-                        )}
-                        {idx === separatorIndex && (
-                            <div
-                                className="flex items-center gap-2 px-4 py-1 my-1"
-                                data-testid="new-messages-separator"
-                            >
-                                <div className="flex-1 h-px bg-red-500/60" />
-                                <span className="text-[10px] uppercase tracking-wider text-red-400 font-semibold">
-                                    New messages
-                                </span>
-                                <div className="flex-1 h-px bg-red-500/60" />
                             </div>
                         )}
                         <div
