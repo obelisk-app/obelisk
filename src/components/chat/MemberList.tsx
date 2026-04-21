@@ -209,6 +209,7 @@ function MemberItem({
   const cached = profileCache.get(member.pubkey);
   const name = member.displayName || cached?.name || shortNpub(member.pubkey);
   const picture = member.picture || cached?.picture;
+  const openProfilePopup = useChatStore((s) => s.openProfilePopup);
 
   // Color the name by highest-priority custom role
   const topCustom = member.customRoles?.length
@@ -219,8 +220,10 @@ function MemberItem({
   const isBot = !!member.isBot;
 
   return (
-    <div
-      className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors group"
+    <button
+      type="button"
+      onClick={() => openProfilePopup(member.pubkey)}
+      className="w-full text-left flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors group cursor-pointer"
       data-testid={isBot ? 'bot-item' : 'member-item'}
     >
       <div className={`relative shrink-0 ${isOnline ? '' : 'opacity-60'}`}>
@@ -271,6 +274,6 @@ function MemberItem({
           </span>
         )}
       </div>
-    </div>
+    </button>
   );
 }

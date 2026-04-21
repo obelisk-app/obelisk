@@ -3,6 +3,8 @@
 import { Fragment, useEffect, useRef, type ReactNode } from 'react';
 import { useChatStore } from '@/store/chat';
 import { useToastStore } from '@/store/toast';
+import { useModerationStore } from '@/store/moderation';
+import { useAuthStore } from '@/store/auth';
 import { formatPubkey } from '@/lib/nostr';
 import { nip19 } from 'nostr-tools';
 import {
@@ -78,6 +80,12 @@ export default function ProfilePopover({ pubkey, onClose }: {
   const { memberList, serverEmojis } = useChatStore();
   const member = memberList.find((m) => m.pubkey === pubkey);
   const panelRef = useRef<HTMLDivElement>(null);
+  const viewerPubkey = useAuthStore((s) => s.user?.pubkey);
+  const isSelf = viewerPubkey === pubkey;
+  const muted = useModerationStore((s) => s.mutedPubkeys.includes(pubkey));
+  const blocked = useModerationStore((s) => s.blockedPubkeys.includes(pubkey));
+  const toggleMute = useModerationStore((s) => s.toggleMute);
+  const toggleBlock = useModerationStore((s) => s.toggleBlock);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -87,10 +95,12 @@ export default function ProfilePopover({ pubkey, onClose }: {
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  const displayName = member?.displayName || formatPubkey(pubkey);
-  const npubShort = shortNpub(pubkey);
   let npub = '';
   try { npub = nip19.npubEncode(pubkey); } catch {}
+  const isBot = !!member?.isBot || !npub;
+  const safeFallback = npub ? formatPubkey(pubkey) : pubkey;
+  const displayName = member?.displayName || safeFallback;
+  const npubShort = npub ? shortNpub(pubkey) : pubkey;
   const baseRole = member?.role ? BASE_ROLE_LABEL[member.role] : undefined;
   const customRoles = (member?.customRoles ?? []).slice().sort((a, b) => b.priority - a.priority);
 
@@ -109,7 +119,7 @@ export default function ProfilePopover({ pubkey, onClose }: {
       >
         {/* Banner */}
         <div
-          className="h-24 w-full bg-gradient-to-br from-lc-olive to-lc-black"
+          className="h-20 w-full bg-gradient-to-br from-lc-olive to-lc-black rounded-t-xl"
           style={
             member?.banner
               ? { backgroundImage: `url(${member.banner})`, backgroundSize: 'cover', backgroundPosition: 'center' }
@@ -235,54 +245,120 @@ export default function ProfilePopover({ pubkey, onClose }: {
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex gap-2 pt-2 border-t border-lc-border">
-            <button
-              onClick={() => {
-                const channelId = useChatStore.getState().activeChannelId;
-                if (!channelId) return;
-                // Prefill the composer with a /zap slash command targeting this
-                // user. MessageInput listens for this event, inserts the
-                // canonical nostr:npub mention, and focuses the textarea.
-                window.dispatchEvent(new CustomEvent('obelisk:zap-prefill', {
-                  detail: { pubkey, displayName },
-                }));
-                onClose();
-              }}
-              className="lc-pill-primary text-xs flex-1"
-              data-testid="profile-zap-btn"
+          {/* Bot status text */}
+          {isBot && member?.statusText && (
+            <div
+              className="text-xs text-lc-green font-mono break-words"
+              data-testid="profile-bot-status"
             >
-              ⚡ Zappar
-            </button>
-            {npub && (
-              <>
+              {member.statusText}
+            </div>
+          )}
+
+          {/* Actions */}
+          {!isBot && (
+          <div className="pt-3 border-t border-lc-border space-y-2">
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  const channelId = useChatStore.getState().activeChannelId;
+                  if (!channelId) return;
+                  window.dispatchEvent(new CustomEvent('obelisk:zap-prefill', {
+                    detail: { pubkey, displayName },
+                  }));
+                  onClose();
+                }}
+                className="lc-pill-primary text-xs flex-1"
+                data-testid="profile-zap-btn"
+              >
+                ⚡ Zapear
+              </button>
+              {npub && (
+                <>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard?.writeText(npub).catch(() => {});
+                      useToastStore.getState().pushToast({
+                        title: 'npub copiado',
+                        body: `${npub.slice(0, 12)}…${npub.slice(-6)}`,
+                      });
+                    }}
+                    className="lc-pill-secondary text-xs"
+                    title="Copiar npub"
+                    data-testid="profile-copy-npub-btn"
+                  >
+                    Copiar npub
+                  </button>
+                  <a
+                    href={`https://njump.me/${npub}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="lc-pill-secondary text-xs flex items-center justify-center"
+                    title="Abrir en otro cliente Nostr (njump.me)"
+                    data-testid="profile-open-nostr-btn"
+                  >
+                    Nostr ↗
+                  </a>
+                </>
+              )}
+            </div>
+            {!isSelf && (
+              <div className="flex gap-2">
                 <button
                   onClick={() => {
-                    navigator.clipboard?.writeText(npub).catch(() => {});
+                    const nowMuted = toggleMute(pubkey);
                     useToastStore.getState().pushToast({
-                      title: 'npub copiado',
-                      body: `${npub.slice(0, 12)}…${npub.slice(-6)}`,
+                      title: nowMuted ? 'Usuario silenciado' : 'Silencio quitado',
+                      body: nowMuted
+                        ? `Ya no verás notificaciones de ${displayName}`
+                        : `Volverás a recibir notificaciones de ${displayName}`,
                     });
                   }}
-                  className="lc-pill-secondary text-xs"
-                  title="Copiar npub"
-                  data-testid="profile-copy-npub-btn"
+                  className={`text-xs flex-1 px-3 py-1.5 rounded-full border transition-colors ${
+                    muted
+                      ? 'border-lc-green/60 text-lc-green bg-lc-green/10 hover:bg-lc-green/20'
+                      : 'border-lc-border text-lc-muted hover:text-lc-white hover:border-lc-white/40'
+                  }`}
+                  data-testid="profile-mute-btn"
+                  title="Silenciar notificaciones de este usuario (solo en este dispositivo)"
                 >
-                  Copiar npub
+                  {muted ? '🔕 Silenciado' : '🔕 Silenciar'}
                 </button>
-                <a
-                  href={`https://njump.me/${npub}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="lc-pill-secondary text-xs flex items-center justify-center"
-                  title="Abrir en otro cliente Nostr (njump.me)"
-                  data-testid="profile-open-nostr-btn"
+                <button
+                  onClick={() => {
+                    if (!blocked && !window.confirm(`¿Bloquear a ${displayName}? Sus mensajes quedarán ocultos en este dispositivo.`)) {
+                      return;
+                    }
+                    const nowBlocked = toggleBlock(pubkey);
+                    useToastStore.getState().pushToast({
+                      title: nowBlocked ? 'Usuario bloqueado' : 'Bloqueo quitado',
+                      body: nowBlocked
+                        ? `Los mensajes de ${displayName} quedarán ocultos`
+                        : `Volverás a ver los mensajes de ${displayName}`,
+                    });
+                    if (nowBlocked) onClose();
+                  }}
+                  className={`text-xs flex-1 px-3 py-1.5 rounded-full border transition-colors ${
+                    blocked
+                      ? 'border-red-500/60 text-red-400 bg-red-500/10 hover:bg-red-500/20'
+                      : 'border-lc-border text-lc-muted hover:text-red-400 hover:border-red-500/40'
+                  }`}
+                  data-testid="profile-block-btn"
+                  title="Ocultar los mensajes de este usuario (solo en este dispositivo)"
                 >
-                  Abrir en Nostr ↗
-                </a>
-              </>
+                  {blocked ? '🚫 Bloqueado' : '🚫 Bloquear'}
+                </button>
+              </div>
+            )}
+            {!isSelf && (muted || blocked) && (
+              <p className="text-[10px] text-lc-muted leading-snug">
+                {blocked
+                  ? 'Bloqueo local: oculta los mensajes de este usuario solo en este dispositivo. El usuario no recibe notificación.'
+                  : 'Silencio local: suprime menciones y notificaciones solo en este dispositivo.'}
+              </p>
             )}
           </div>
+          )}
         </div>
       </div>
     </div>
