@@ -9,6 +9,7 @@ import MessageContent from './MessageContent';
 import EmojiPicker from './EmojiPicker';
 import ProfilePopover from './ProfilePopover';
 import MessageReactions from './MessageReactions';
+import RoleIcon from './RoleIcon';
 import { slugify } from '@/lib/slug';
 
 function ReplyPreview({ replyTo, profileCache, onJump }: {
@@ -249,6 +250,7 @@ function MessageBubble({ message, profileCache, canPin, canModerate, onReply, on
   const [quickEmojis, setQuickEmojis] = useState(DEFAULT_QUICK_EMOJIS);
   const rowRef = useRef<HTMLDivElement>(null);
   const openProfilePopup = useChatStore((s) => s.openProfilePopup);
+  const authorMember = useChatStore((s) => s.memberList.find((m) => m.pubkey === message.authorPubkey));
   const { setEditingMessage, serverEmojis } = useChatStore();
 
   useEffect(() => {
@@ -336,6 +338,7 @@ function MessageBubble({ message, profileCache, canPin, canModerate, onReply, on
             >
               {displayName}
             </button>
+            <RoleIcon member={authorMember} />
             <span className="text-xs text-lc-muted">{timeStr}</span>
             {message.editedAt && (
               <span className="text-xs text-lc-muted italic" data-testid="edited-indicator">(editado)</span>

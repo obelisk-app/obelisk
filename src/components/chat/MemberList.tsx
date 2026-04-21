@@ -4,10 +4,7 @@ import { useMemo, useState } from 'react';
 import { useChatStore } from '@/store/chat';
 import { shortNpub } from '@/lib/mentions';
 import type { MemberInfo } from '@/lib/mentions';
-
-function isIconUrl(icon: string): boolean {
-  return /^(https?:)?\/\//i.test(icon) || icon.startsWith('/');
-}
+import RoleIcon from './RoleIcon';
 
 interface MemberListProps {
   profileCache: Map<string, { name?: string; picture?: string }>;
@@ -249,13 +246,7 @@ function MemberItem({
           />
         )}
       </div>
-      {topCustom?.icon && (
-        isIconUrl(topCustom.icon) ? (
-          <img src={topCustom.icon} alt="" className="w-4 h-4 object-contain shrink-0" />
-        ) : (
-          <span className="text-sm shrink-0">{topCustom.icon}</span>
-        )
-      )}
+      <RoleIcon member={member} />
       <div className="flex flex-col min-w-0 flex-1">
         <span
           className={`text-sm truncate transition-colors ${
