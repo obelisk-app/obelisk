@@ -15,7 +15,7 @@ import EmojiPicker from './EmojiPicker';
 import GifPicker from './GifPicker';
 import EmojiAutocomplete, { type ShortcodeSuggestion } from './EmojiAutocomplete';
 import SlashCommandAutocomplete, { SLASH_COMMANDS, type SlashCommand } from './SlashCommandAutocomplete';
-import SlashCommandScaffold from './SlashCommandScaffold';
+import SlashCommandScaffold, { scaffoldMentionSlotQuery } from './SlashCommandScaffold';
 import {
   MAX_ATTACHMENTS_PER_MESSAGE,
   splitContentForEditing,
@@ -443,12 +443,20 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
     const ta = textareaRef.current;
     if (!ta) return;
     const cursorPos = ta.selectionStart;
-    // Find the @ that triggered this
+    // Find the @ that triggered this. When the mention picker was opened by
+    // the slash-command scaffold (no literal `@` typed), fall back to the
+    // word boundary so the current token is replaced in-place.
     const textBefore = content.slice(0, cursorPos);
-    const atIndex = textBefore.lastIndexOf('@');
-    if (atIndex === -1) return;
+    const atMatch = /@\w*$/.exec(textBefore);
+    let replaceFrom: number;
+    if (atMatch) {
+      replaceFrom = textBefore.length - atMatch[0].length;
+    } else {
+      const wsMatch = /(^|\s)(\S*)$/.exec(textBefore);
+      replaceFrom = wsMatch ? textBefore.length - wsMatch[2].length : textBefore.length;
+    }
 
-    const before = content.slice(0, atIndex);
+    const before = content.slice(0, replaceFrom);
     const after = content.slice(cursorPos);
     // Friendly display form for the textarea; canonical form stored in the
     // map and substituted back during `buildPayload`.
@@ -602,8 +610,14 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
     setCaret(cursorPos);
     const textBefore = val.slice(0, cursorPos);
     const atMatch = textBefore.match(/@(\w*)$/);
+    const scaffoldMentionQuery = scaffoldMentionSlotQuery(val, cursorPos);
     if (atMatch) {
       setMentionQuery(atMatch[1]);
+      setMentionIndex(0);
+    } else if (scaffoldMentionQuery !== null) {
+      // Slash-command parameter of `kind: 'mention'` — auto-open the picker
+      // even if the user hasn't typed an `@` yet.
+      setMentionQuery(scaffoldMentionQuery);
       setMentionIndex(0);
     } else {
       setMentionQuery(null);
@@ -633,14 +647,25 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
   };
 
   const insertSlashCommand = (cmd: SlashCommand) => {
-    const next = `/${cmd.name} `;
+    // If the first param is a mention slot, append `@` so the existing mention
+    // autocomplete kicks in automatically — mirrors Discord's behavior of
+    // popping the user picker the moment a slash command with a user argument
+    // is chosen.
+    const firstParam = cmd.params?.[0];
+    const trailing = firstParam?.kind === 'mention' ? ' @' : ' ';
+    const next = `/${cmd.name}${trailing}`;
     setContent(next);
     setSlashQuery(null);
+    if (firstParam?.kind === 'mention') {
+      setMentionQuery('');
+      setMentionIndex(0);
+    }
     requestAnimationFrame(() => {
       const ta = textareaRef.current;
       if (ta) {
         ta.focus();
         ta.setSelectionRange(next.length, next.length);
+        setCaret(next.length);
       }
     });
   };

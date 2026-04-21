@@ -10,9 +10,11 @@ import {
 import {
   getAuthorProfile,
   ZAP_BOT_PUBKEY,
+  fetchProfileFromRelay,
 } from '@/lib/profile-sync';
 import { canReadChannel } from '@/lib/roles';
 import { resolveMemberAccess } from '@/lib/channel-access';
+import { isLightningAddress, resolveLightningAddress } from '@/lib/lnurl';
 
 /**
  * POST /api/wallet/zap  { channelId, targetPubkey, amountSats }
@@ -63,20 +65,39 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  let invoice: string | null = null;
   const targetHasWallet = await getWalletForPubkey(targetPubkey);
-  if (!targetHasWallet) {
-    return NextResponse.json({ error: 'target_no_wallet' }, { status: 409 });
+  if (targetHasWallet) {
+    try {
+      const result = await withClient(targetPubkey, async (c) =>
+        c.makeInvoice({ amount: amountSats * 1000, description: 'Obelisk zap' }),
+      );
+      if (result) invoice = result.invoice;
+    } catch (err) {
+      return NextResponse.json({ error: classifyNwcError(err) }, { status: 502 });
+    }
   }
 
-  let invoice: string;
-  try {
-    const result = await withClient(targetPubkey, async (c) =>
-      c.makeInvoice({ amount: amountSats * 1000, description: 'Obelisk zap' }),
-    );
-    if (!result) return NextResponse.json({ error: 'target_no_wallet' }, { status: 409 });
-    invoice = result.invoice;
-  } catch (err) {
-    return NextResponse.json({ error: classifyNwcError(err) }, { status: 502 });
+  if (!invoice) {
+    // Fallback: target has no NWC — try LNURL-pay via lud16 on their Nostr profile.
+    const member = await prisma.member.findFirst({
+      where: { pubkey: targetPubkey, lud16: { not: null } },
+      select: { lud16: true },
+    });
+    let lud16 = member?.lud16 ?? null;
+    if (!lud16) {
+      const profile = await fetchProfileFromRelay(targetPubkey);
+      if (profile && typeof profile.lud16 === 'string') lud16 = profile.lud16;
+    }
+    if (!lud16 || !isLightningAddress(lud16)) {
+      return NextResponse.json({ error: 'target_no_wallet' }, { status: 409 });
+    }
+    try {
+      invoice = await resolveLightningAddress(lud16, amountSats, 'Obelisk zap');
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : 'lnurl_error';
+      return NextResponse.json({ error: `lnurl:${reason}` }, { status: 502 });
+    }
   }
 
   try {

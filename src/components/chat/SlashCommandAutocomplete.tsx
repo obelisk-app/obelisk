@@ -2,9 +2,18 @@
 
 import { useEffect, useRef } from 'react';
 
+export interface SlashCommandParam {
+  name: string;
+  description: string;
+  // `mention` slots are filled by picking a member; `number` by typing digits.
+  kind: 'mention' | 'number' | 'string';
+  optional?: boolean;
+}
+
 export interface SlashCommand {
   name: string;
   description: string;
+  params?: SlashCommandParam[];
 }
 
 interface Props {
@@ -63,7 +72,18 @@ export default function SlashCommandAutocomplete({ commands, selectedIndex, onSe
 
 export const SLASH_COMMANDS: SlashCommand[] = [
   { name: 'jugar', description: 'Abrir la lista de juegos disponibles' },
-  { name: 'zap', description: 'Enviar un zap Lightning a otro usuario' },
-  { name: 'invoice', description: 'Crear una factura Lightning pública en el canal' },
+  {
+    name: 'zap',
+    description: 'Enviar un zap Lightning a otro usuario',
+    params: [
+      { name: 'user', description: 'Usuario a zapear', kind: 'mention' },
+      { name: 'amount', description: 'Cantidad en sats', kind: 'number' },
+    ],
+  },
+  {
+    name: 'invoice',
+    description: 'Crear una factura Lightning pública en el canal',
+    params: [{ name: 'amount', description: 'Cantidad en sats', kind: 'number' }],
+  },
   { name: 'balance', description: 'Ver tu balance de Lightning (solo vos)' },
 ];
