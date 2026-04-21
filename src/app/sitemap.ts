@@ -31,8 +31,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
     alternates: {
       languages: {
-        en: `${SITE_URL}${guidesHref('en')}`,
-        es: `${SITE_URL}${guidesHref('es')}`,
+        'en-US': `${SITE_URL}${guidesHref('en')}`,
+        'es-AR': `${SITE_URL}${guidesHref('es')}`,
       },
     },
   }));
@@ -51,8 +51,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 0.6,
         alternates: {
           languages: {
-            en: `${SITE_URL}${guidesHref('en', g.slug)}`,
-            es: `${SITE_URL}${guidesHref('es', g.slug)}`,
+            'en-US': `${SITE_URL}${guidesHref('en', g.slug)}`,
+            'es-AR': `${SITE_URL}${guidesHref('es', g.slug)}`,
           },
         },
       });

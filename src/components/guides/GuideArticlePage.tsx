@@ -54,8 +54,8 @@ export async function buildGuideArticleMetadata(
     alternates: {
       canonical,
       languages: {
-        en: guidesHref('en', slug),
-        es: guidesHref('es', slug),
+        'en-US': guidesHref('en', slug),
+        'es-AR': guidesHref('es', slug),
         'x-default': guidesHref('en', slug),
       },
     },
@@ -103,7 +103,12 @@ export default async function GuideArticlePage({
     datePublished: fm.publishedAt,
     dateModified: fm.updatedAt,
     inLanguage: locale === 'en' ? 'en' : 'es-AR',
-    image: `${SITE_URL}${canonical}/opengraph-image`,
+    image: {
+      '@type': 'ImageObject',
+      url: `${SITE_URL}${canonical}/opengraph-image`,
+      width: 1200,
+      height: 630,
+    },
     author: {
       '@type': 'Organization',
       name: 'La Crypta',

@@ -44,8 +44,8 @@ export function buildGuidesIndexMetadata(locale: Locale): Metadata {
     alternates: {
       canonical,
       languages: {
-        en: guidesHref('en'),
-        es: guidesHref('es'),
+        'en-US': guidesHref('en'),
+        'es-AR': guidesHref('es'),
         'x-default': guidesHref('en'),
       },
     },
