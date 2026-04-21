@@ -287,6 +287,21 @@
   - [ ] API endpoint protegido (solo el propio usuario puede eliminar su cuenta)
 
 ## Fase 3 — Features Avanzados
+- [~] **Mute / Block de usuarios (client-side → Nostr-synced)**
+  - [x] Mute/Block local persistido en `localStorage` (`src/store/moderation.ts`), botones en `ProfilePopover` (🔕 Silenciar / 🚫 Bloquear), filtrado de mensajes de usuarios bloqueados en `MessageArea`
+  - [ ] Suprimir menciones/notificaciones de usuarios silenciados (wire en `useNotificationStore` + toast/favicon badge para respetar `mutedPubkeys`)
+  - [ ] Ocultar usuarios bloqueados del `MemberList`, `MentionAutocomplete`, DM inbox y `ReplyPreview`
+  - [ ] **Sincronizar con Nostr via NIP-51 (Mute List, kind `10000`)** para que el mute/block siga al usuario entre dispositivos/clientes
+    - [ ] Al togglear: leer el kind 10000 actual del usuario (como con kind 0 — nunca asumir lista vacía), mergear el tag `["p", <pubkey>]` agregado/removido, volver a publicar con `content` cifrado via NIP-04/NIP-44 (los tags privados van en el `content` cifrado al propio pubkey, los públicos en tags — por defecto usar cifrado: mute/block es información sensible)
+    - [ ] Al login: hydratar el store leyendo el kind 10000 más reciente del usuario (replaceable event) y cachearlo en `profileCache`
+    - [ ] Distinguir **mute** (silenciar notificaciones, mensajes visibles) vs **block** (ocultar contenido). NIP-51 sólo define "mute" — para "block" usar un tag custom (`["p", pk, "", "block"]`) o una lista separada kind `30000` con `d=obelisk:blocked`, documentar la convención en `docs/`
+    - [ ] Importar/respetar la mute list existente del usuario en otros clientes (Amethyst, Damus) para que no tenga que re-silenciar a nadie al llegar a Obelisk
+    - [ ] ⚠️ Misma precaución que con kind 0: nunca sobreescribir la lista sin leer la última versión; mostrar diff si hay cambios remotos desconocidos antes de re-publicar
+  - [ ] Opción global "Ignorar mute list de Nostr en este dispositivo" por si el usuario quiere ver un canal completo sin sus mutes
+- [ ] **Nostr relay-based groups (NIP-29 / relay-native)** — migrar (o sumar) un modo donde los servidores viven en relays Nostr en vez de (o además de) la DB del backend
+  - [ ] Lectura previa antes de implementar: https://habla.news/u/hodlbod@coracle.social/1741286140797 (hodlbod sobre el estado de los grupos en Nostr, trade-offs de NIP-29 vs alternativas)
+  - [ ] Definir si Obelisk corre su propio relay de grupos o habla con relays externos compatibles
+  - [ ] Mapear el modelo actual (Server/Channel/Message/Member/Role) contra los kinds de NIP-29 y documentar gaps
 - [ ] Perfiles de app (avatar, bio, display name — datos propios, no de Nostr)
 - [ ] Edicion de perfil Nostr desde Obelisk (publicar kind 0 a relays)
   > ⚠️ **CUIDADO:** Publicar un kind 0 (metadata) sobreescribe TODA la metadata del usuario en los relays. Antes de implementar: (1) siempre leer el kind 0 actual del usuario, (2) mergear solo los campos editados, (3) mostrar preview/diff antes de publicar, (4) pedir confirmacion explicita, (5) nunca enviar campos vacios que borren datos existentes. Un campo mal enviado puede destruir avatar, bio, NIP-05 del usuario en todo Nostr.
