@@ -13,17 +13,20 @@
 #   TUNNEL_NAME        default: obelisk
 #   TUNNEL_HOSTNAME    default: obelisk.fabri.lat
 #   PORT               default: 3000
+#   PORT_FALLBACK_MAX  default: 10  (how many ports to probe above $PORT)
 #   ORIGIN_URL         default: https://127.0.0.1:$PORT
 #   SKIP_LIVEKIT=1     don't bring up livekit container
 #   SKIP_TUNNEL=1      only start db + dev server, no cloudflared
 #   FORCE_KILL=1       non-interactive: kill unknown processes on $PORT
+#                      (otherwise we fall back to the next free port)
 
 set -u
 
 TUNNEL_NAME="${TUNNEL_NAME:-obelisk}"
 TUNNEL_HOST="${TUNNEL_HOSTNAME:-obelisk.fabri.lat}"
 PORT="${PORT:-3000}"
-ORIGIN_URL="${ORIGIN_URL:-https://127.0.0.1:${PORT}}"
+PORT_FALLBACK_MAX="${PORT_FALLBACK_MAX:-10}"
+ORIGIN_URL_OVERRIDE="${ORIGIN_URL:-}"
 SKIP_LIVEKIT="${SKIP_LIVEKIT:-0}"
 SKIP_TUNNEL="${SKIP_TUNNEL:-0}"
 FORCE_KILL="${FORCE_KILL:-0}"
@@ -144,40 +147,78 @@ fi
 # ── Port check ───────────────────────────────────────────────────
 step "Dev server on port $PORT"
 DEV_ALREADY_RUNNING=0
+
+port_holder_cmd() {
+  local p="$1"
+  local pid
+  pid=$(lsof -tiTCP:"$p" -sTCP:LISTEN 2>/dev/null | head -1 || true)
+  [ -z "$pid" ] && return 0
+  ps -p "$pid" -o command= 2>/dev/null || true
+}
+
+is_obelisk_dev() {
+  # Only reuse our custom HTTPS-capable server (tsx watch server.ts).
+  # A plain `next dev` / next-server listens on HTTP and breaks the
+  # https://127.0.0.1:$PORT origin that cloudflared expects.
+  case "$1" in
+    *"tsx watch server.ts"*|*"server.ts"*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 pids=$(lsof -tiTCP:"$PORT" -sTCP:LISTEN 2>/dev/null || true)
 
 if [ -n "$pids" ]; then
   cmd=$(ps -p "$(echo "$pids" | head -1)" -o command= 2>/dev/null || true)
-  case "$cmd" in
-    *"tsx watch server.ts"*|*"server.ts"*|*"next"*)
-      green "Dev server already listening — reusing (pid $(echo "$pids" | head -1))."
-      DEV_ALREADY_RUNNING=1
-      ;;
-    *)
-      blue "Port $PORT held by unrelated process(es): $pids"
-      for pid in $pids; do ps -p "$pid" -o pid=,command= 2>/dev/null || true; done
-      if [ -t 0 ] && [ "$FORCE_KILL" != "1" ]; then
-        printf "Kill them and continue? [y/N] "; read -r ans
-      else
-        blue "Non-interactive or FORCE_KILL=1 — auto-killing."
-        ans=y
+  if is_obelisk_dev "$cmd"; then
+    green "Dev server already listening on $PORT — reusing (pid $(echo "$pids" | head -1))."
+    DEV_ALREADY_RUNNING=1
+  else
+    blue "Port $PORT held by unrelated process(es): $pids"
+    for pid in $pids; do ps -p "$pid" -o pid=,command= 2>/dev/null || true; done
+
+    if [ "$FORCE_KILL" = "1" ]; then
+      blue "FORCE_KILL=1 — killing holders on $PORT."
+      kill $pids 2>/dev/null || true; sleep 1
+      still=$(lsof -tiTCP:"$PORT" -sTCP:LISTEN 2>/dev/null || true)
+      [ -n "$still" ] && { red "Force-killing: $still"; kill -9 $still 2>/dev/null || true; sleep 1; }
+      still=$(lsof -tiTCP:"$PORT" -sTCP:LISTEN 2>/dev/null || true)
+      [ -n "$still" ] && { red "Port $PORT still in use. Aborting."; exit 1; }
+      green "Port $PORT freed."
+    else
+      # Fallback: probe the next N ports for a free one (or an existing
+      # Obelisk dev server we can reuse).
+      blue "Probing fallback ports $((PORT+1))..$((PORT+PORT_FALLBACK_MAX))"
+      found=""
+      for off in $(seq 1 "$PORT_FALLBACK_MAX"); do
+        cand=$((PORT + off))
+        cpids=$(lsof -tiTCP:"$cand" -sTCP:LISTEN 2>/dev/null || true)
+        if [ -z "$cpids" ]; then
+          found="$cand"
+          green "Using free port $cand."
+          PORT="$cand"
+          break
+        fi
+        ccmd=$(ps -p "$(echo "$cpids" | head -1)" -o command= 2>/dev/null || true)
+        if is_obelisk_dev "$ccmd"; then
+          green "Obelisk dev already listening on $cand — reusing (pid $(echo "$cpids" | head -1))."
+          PORT="$cand"
+          DEV_ALREADY_RUNNING=1
+          found="$cand"
+          break
+        fi
+      done
+      if [ -z "$found" ]; then
+        red "No free port in $PORT..$((PORT+PORT_FALLBACK_MAX)). Free one up or set FORCE_KILL=1."
+        exit 1
       fi
-      case "$ans" in
-        y|Y|yes|YES)
-          kill $pids 2>/dev/null || true; sleep 1
-          still=$(lsof -tiTCP:"$PORT" -sTCP:LISTEN 2>/dev/null || true)
-          [ -n "$still" ] && { red "Force-killing: $still"; kill -9 $still 2>/dev/null || true; sleep 1; }
-          still=$(lsof -tiTCP:"$PORT" -sTCP:LISTEN 2>/dev/null || true)
-          [ -n "$still" ] && { red "Port $PORT still in use. Aborting."; exit 1; }
-          green "Port $PORT freed."
-          ;;
-        *)
-          red "Aborting — free port $PORT and retry."; exit 1
-          ;;
-      esac
-      ;;
-  esac
+    fi
+  fi
 fi
+
+# Recompute ORIGIN_URL now that PORT may have shifted.
+ORIGIN_URL="${ORIGIN_URL_OVERRIDE:-https://127.0.0.1:${PORT}}"
+export PORT
 
 # ── Launch / reuse dev + tunnel ──────────────────────────────────
 DEV_PID=""
