@@ -5,6 +5,13 @@
 
 export type BotType = 'btc-usd' | 'sats-ars' | 'peronio-ars' | 'dolar-ars';
 
+export interface BotProfile {
+  about: string;
+  website: string;
+  lud16: string;
+  nip05: string;
+}
+
 export interface BotDef {
   type: BotType;
   defaultName: string;
@@ -12,6 +19,8 @@ export interface BotDef {
   intervalMs: number;
   /** If false, the admin UI hides this bot type (not yet shipping in v1). */
   enabledInUi: boolean;
+  /** Mock profile metadata shown in the profile popover. */
+  profile: BotProfile;
   /** Returns the formatted status string, e.g. "$63,412". Throws on failure. */
   fetchValue: () => Promise<string>;
 }
@@ -43,6 +52,13 @@ export const BOTS: Record<BotType, BotDef> = {
     defaultAvatar: '/bots/btc.svg',
     intervalMs: 60_000,
     enabledInUi: true,
+    profile: {
+      about:
+        'Reporto el precio de Bitcoin en dólares en tiempo real. Datos cada minuto vía yadio.io.\n\n"Fix the money, fix the world."',
+      website: 'https://bitcoin.org',
+      lud16: 'btcbot@obelisk.ar',
+      nip05: 'btc-usd@obelisk.ar',
+    },
     async fetchValue() {
       // yadio returns { BTC: <price-in-usd>, USD: 1, ... }
       const data = await fetchJson('https://api.yadio.io/exrates/USD');
@@ -57,6 +73,13 @@ export const BOTS: Record<BotType, BotDef> = {
     defaultAvatar: '/bots/sats.svg',
     intervalMs: 60_000,
     enabledInUi: true,
+    profile: {
+      about:
+        'Cotización del satoshi en pesos argentinos. 1 BTC = 100.000.000 sats. Porque stackear empieza con saber cuánto vale un sat.',
+      website: 'https://yadio.io',
+      lud16: 'satsbot@obelisk.ar',
+      nip05: 'sats-ars@obelisk.ar',
+    },
     async fetchValue() {
       // yadio returns ARS.BTC = BTC price in ARS; 1 BTC = 100,000,000 sats
       const data = await fetchJson('https://api.yadio.io/exrates/ARS');
@@ -72,6 +95,12 @@ export const BOTS: Record<BotType, BotDef> = {
     defaultAvatar: '/bots/peronio.svg',
     intervalMs: 60_000,
     enabledInUi: false,
+    profile: {
+      about: 'Cotización del Peronio (PE) en pesos argentinos. Próximamente.',
+      website: 'https://peronio.ar',
+      lud16: 'peroniobot@obelisk.ar',
+      nip05: 'peronio-ars@obelisk.ar',
+    },
     async fetchValue() {
       throw new Error('peronio-ars not implemented');
     },
@@ -82,6 +111,13 @@ export const BOTS: Record<BotType, BotDef> = {
     defaultAvatar: '/bots/usd.svg',
     intervalMs: 60_000,
     enabledInUi: true,
+    profile: {
+      about:
+        'Cotización del dólar en pesos argentinos. Datos cada minuto vía yadio.io. El valor que todos miran.',
+      website: 'https://yadio.io',
+      lud16: 'usdbot@obelisk.ar',
+      nip05: 'dolar-ars@obelisk.ar',
+    },
     async fetchValue() {
       const data = await fetchJson('https://api.yadio.io/exrates/ARS');
       const usdArs = Number(data?.USD);
