@@ -300,6 +300,7 @@
   - [ ] Opción global "Ignorar mute list de Nostr en este dispositivo" por si el usuario quiere ver un canal completo sin sus mutes
 - [ ] **Nostr relay-based groups (NIP-29 / relay-native)** — migrar (o sumar) un modo donde los servidores viven en relays Nostr en vez de (o además de) la DB del backend
   - [ ] Lectura previa antes de implementar: https://habla.news/u/hodlbod@coracle.social/1741286140797 (hodlbod sobre el estado de los grupos en Nostr, trade-offs de NIP-29 vs alternativas)
+  - [ ] Lectura previa: https://www.whitenoise.chat/blog (White Noise — cliente de mensajería sobre Nostr, notas de diseño sobre grupos/DMs cifrados)
   - [ ] Definir si Obelisk corre su propio relay de grupos o habla con relays externos compatibles
   - [ ] Mapear el modelo actual (Server/Channel/Message/Member/Role) contra los kinds de NIP-29 y documentar gaps
 - [ ] Perfiles de app (avatar, bio, display name — datos propios, no de Nostr)
