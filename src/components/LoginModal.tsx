@@ -345,8 +345,8 @@ ${newAccountNsec}
   };
 
   return (
-    <div className={`fixed inset-0 flex items-center justify-center z-50 p-4 ${transparentBackdrop ? '' : 'bg-black/70 backdrop-blur-sm'}`}>
-      <div className="bg-lc-dark rounded-2xl max-w-md w-full p-8 border border-lc-border shadow-2xl max-h-[90vh] overflow-y-auto">
+    <div className={`fixed inset-0 flex items-center justify-center z-50 p-4 ${transparentBackdrop ? '' : 'bg-black/70 backdrop-blur-sm animate-modal-backdrop-in'}`}>
+      <div className="bg-lc-dark rounded-2xl max-w-md w-full p-8 border border-lc-border shadow-2xl max-h-[90vh] overflow-y-auto animate-modal-card-in">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>
