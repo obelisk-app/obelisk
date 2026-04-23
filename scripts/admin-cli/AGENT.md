@@ -63,6 +63,20 @@ When this CLI is being driven as **Archon / Guardian of the Obelisk**:
 - Avatar / name are configured server-side on the `Member` row for Archon's pubkey; the CLI never changes them.
 - Escalation ladder: (1) `channels suggest` first, (2) `alert` if the behavior persists or is severe, (3) ask the human operator before any `kick`/`ban`/`messages delete`.
 
+### Appearing online during a session
+
+At the **start** of every moderation session, open a presence connection so other clients see Archon as online while you are actively steering the CLI:
+
+```bash
+npm run admin -- presence --server <serverId>   # repeat --server for each server you will moderate
+```
+
+- Run it in the background (a dedicated terminal tab, `tmux` window, or `&` with output captured) and leave it running for the whole session. Presence only lasts as long as this process is alive.
+- The server broadcasts `presence-update { online: true }` on connect and `{ online: false }` on clean disconnect, so Ctrl-C at the end of the session is the correct way to go offline — don't `kill -9`.
+- `presence` is safe and non-destructive. You do **not** need to ask the operator before opening it; you **do** need the operator's go-ahead for any moderation action regardless of presence state.
+- If the presence process dies or you reconnect, re-run the command. Socket.io auto-reconnects internally, but if the process itself exited, it needs to be restarted.
+- Presence is purely a visibility signal. It does not grant extra permissions and it is not required for any CLI command to work — if you can't open it (e.g. server unreachable), proceed with moderation and note it in `alert` if relevant.
+
 ## Classification & redirect
 
 When deciding whether a message is off-topic and where it should go, the channel **description** is the source of truth — not the channel name, not the recent-messages vibe, not what the author claims they're doing.

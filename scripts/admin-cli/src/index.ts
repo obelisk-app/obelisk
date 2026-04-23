@@ -23,6 +23,8 @@ import {
   buildProfileEvent, buildProfileMetadata, fetchExistingProfile, publishProfile,
   DEFAULT_PROFILE_RELAYS, ProfileMetadata,
 } from './profile';
+import { openPresence } from './presence';
+import { loadSession } from './config';
 
 const HELP = `obelisk-admin — headless admin CLI
 
@@ -75,6 +77,11 @@ Channels:
 Alert:
   alert <serverId> --summary "..." [--channel <channelId>] [--link <url>]
                                                                    Post a rule-violation alert that @-mentions the server owner + all admins
+
+Presence:
+  presence [--server <serverId>]...                                Open a Socket.io connection as the current identity and hold it open so
+                                                                   other clients see this pubkey as online. Stays connected until SIGINT/SIGTERM;
+                                                                   disconnecting cleanly broadcasts presence-update { online: false }.
 
 Roles:
   roles list <serverId>
@@ -425,6 +432,57 @@ async function main(argv: string[]): Promise<number> {
       print({ action: 'off', locale, restored: results.length, results, announced });
       return 0;
     }
+  }
+
+  // Presence: hold a Socket.io connection open so other clients see this
+  // identity as online for the lifetime of the CLI session.
+  if (group === 'presence') {
+    const session = loadSession();
+    if (!session) throw new Error('Not logged in. Run: login --nsec-file <path>');
+
+    const serverIds: string[] = [];
+    const rawServer = flags.server;
+    if (typeof rawServer === 'string') serverIds.push(rawServer);
+    else if (Array.isArray(rawServer)) for (const v of rawServer) if (typeof v === 'string') serverIds.push(v);
+
+    console.error(`[presence] Connecting as ${session.pubkey.slice(0, 8)}… @ ${session.baseUrl}`);
+    const handle = await openPresence();
+    console.error(`[presence] Connected. socket=${handle.socket.id}`);
+    for (const id of serverIds) {
+      handle.socket.emit('join-server', id);
+      console.error(`[presence] join-server ${id}`);
+    }
+
+    handle.socket.on('disconnect', (reason) => {
+      console.error(`[presence] disconnect: ${reason}`);
+    });
+    handle.socket.on('reconnect', (n) => {
+      console.error(`[presence] reconnect #${n}`);
+      for (const id of serverIds) handle.socket.emit('join-server', id);
+    });
+
+    print({
+      ok: true,
+      pubkey: session.pubkey,
+      baseUrl: session.baseUrl,
+      socketId: handle.socket.id,
+      servers: serverIds,
+      hint: 'Leave this process running. Ctrl-C to go offline.',
+    });
+
+    await new Promise<void>((resolve) => {
+      let closing = false;
+      const shutdown = async (sig: string) => {
+        if (closing) return;
+        closing = true;
+        console.error(`[presence] ${sig} — disconnecting…`);
+        try { await handle.close(); } catch { /* ignore */ }
+        resolve();
+      };
+      process.once('SIGINT', () => shutdown('SIGINT'));
+      process.once('SIGTERM', () => shutdown('SIGTERM'));
+    });
+    return 0;
   }
 
   // Admin commands

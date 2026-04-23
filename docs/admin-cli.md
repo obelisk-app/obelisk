@@ -64,6 +64,10 @@ Instance-owner only:
 
 The full role matrix lives in `scripts/admin-cli/README.md` and `src/lib/auth-roles.ts`.
 
+### Appearing online
+
+`npm run admin -- presence [--server <id>]...` opens a Socket.io connection using the saved session cookie and holds it open until Ctrl-C. Other clients see the identity as online for the lifetime of the process (same presence channel the web UI uses). Agents should start this at the beginning of a moderation session and leave it running in a dedicated terminal. See `scripts/admin-cli/AGENT.md` → "Appearing online during a session".
+
 ## Using it from a coding agent
 
 `scripts/admin-cli/AGENT.md` is the terse cheat sheet designed to be pulled into an agent's context. Typical agent loop:
