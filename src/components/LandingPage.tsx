@@ -642,11 +642,7 @@ export default function LandingPage() {
               {t('faq.subtitle')}
             </p>
           </div>
-          <div
-            className="space-y-3"
-            itemScope
-            itemType="https://schema.org/FAQPage"
-          >
+          <div className="space-y-3">
             {faqItems.map((item) => (
               <FAQItem
                 key={item.id}

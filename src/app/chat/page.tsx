@@ -526,13 +526,23 @@ export default function ChatPage() {
           // last-viewed message once messages load for this channel. Prefer
           // the URL ?m= param; fall back to the per-channel last-seen stored
           // in localStorage by MessageArea's scroll observer.
+          //
+          // The localStorage fallback is pubkey-scoped (so a previous account
+          // on this browser can't leak its position) and is skipped entirely
+          // when the channel already has unread messages — in that case the
+          // user wants to see the latest, not their old position. The URL
+          // ?m= deep-link still wins regardless.
           if (!initialUrlAppliedRef.current.channel) {
             let restoreId: string | null = initialUrlRef.current?.m ?? null;
             if (!restoreId && typeof window !== 'undefined') {
-              try {
-                restoreId = localStorage.getItem(`chat:lastSeen:${chosenChannel}`);
-              } catch {
-                restoreId = null;
+              const myPk = useAuthStore.getState().profile?.pubkey ?? null;
+              const unread = useNotificationStore.getState().channelUnreads[chosenChannel] || 0;
+              if (myPk && unread === 0) {
+                try {
+                  restoreId = localStorage.getItem(`chat:lastSeen:${myPk}:${chosenChannel}`);
+                } catch {
+                  restoreId = null;
+                }
               }
             }
             if (restoreId) {
@@ -1389,6 +1399,32 @@ export default function ChatPage() {
     prevServerRef.current = activeServerId;
   }, [activeServerId]);
 
+  // Bridge for the jump-to-latest pill in MessageArea: when the user clicks
+  // it and reaches the bottom, the pill clears unread locally and dispatches
+  // this event so we can emit `mark-read` over the socket. We can't emit
+  // directly from MessageArea — the socket lives in a ref here.
+  useEffect(() => {
+    const onMarkRead = (e: Event) => {
+      const detail = (e as CustomEvent<{ channelId: string; lastMessageId?: string }>).detail;
+      if (!detail?.channelId) return;
+      const socket = socketRef.current;
+      if (!socket) return;
+      socket.emit('mark-read', {
+        channelId: detail.channelId,
+        lastMessageId: detail.lastMessageId,
+      });
+      const myPk = profilePubkeyRef.current;
+      if (myPk) {
+        // Mirror to sibling tabs so the same-browser broadcast clears them too.
+        import('@/lib/notification-broadcast').then(({ postClearChannel }) => {
+          postClearChannel(myPk, detail.channelId);
+        });
+      }
+    };
+    window.addEventListener('obelisk:mark-read', onMarkRead);
+    return () => window.removeEventListener('obelisk:mark-read', onMarkRead);
+  }, []);
+
   // Same-browser multi-tab sync: mirror clear events posted by sibling
   // tabs into this tab's notification + DM store. (scenario 11, same
   // browser.) Cross-device sync is handled by the Socket.io read-update
@@ -1880,7 +1916,21 @@ export default function ChatPage() {
     );
   }
 
-  // Standalone full-screen empty state when not in any servers and not in DM mode
+  // Logout wipes the auth store and schedules router.push('/') via the effect
+  // above — render nothing in the meantime so the chat UI (and especially the
+  // "No servers yet" empty state) doesn't flash on the way out.
+  if (!profile?.pubkey) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-lc-black">
+        <div className="flex flex-col items-center gap-3">
+          <div className="lc-spinner" style={{ width: 32, height: 32 }} />
+          <span className="text-sm text-lc-muted">Loading...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Standalone full-screen empty state when not in any servers and not in DM mode.
   if (serversLoaded && servers.length === 0 && (!DM_FEATURE_ENABLED || !isDMMode)) {
     return (
       <div className="h-dvh flex items-center justify-center bg-lc-black lc-grid-bg relative overflow-hidden">

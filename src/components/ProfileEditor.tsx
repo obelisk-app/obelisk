@@ -10,9 +10,31 @@ interface ProfileEditorProps {
   mode: 'setup' | 'edit';
   onComplete: () => void;
   onSkip?: () => void;
+  /**
+   * When true, render without the outer modal overlay and top-level header/close
+   * button — the parent container (e.g. LoginModal) supplies the chrome.
+   */
+  embedded?: boolean;
 }
 
-export default function ProfileEditor({ mode, onComplete, onSkip }: ProfileEditorProps) {
+const NAME_ADJECTIVES = [
+  'Brave', 'Silent', 'Cosmic', 'Swift', 'Lucky', 'Wild', 'Bright', 'Hidden',
+  'Ancient', 'Quantum', 'Neon', 'Electric', 'Mystic', 'Shadow', 'Crimson',
+  'Golden', 'Iron', 'Stellar', 'Velvet', 'Solar',
+];
+const NAME_NOUNS = [
+  'Fox', 'Wolf', 'Otter', 'Owl', 'Falcon', 'Panda', 'Tiger', 'Dragon',
+  'Phoenix', 'Whale', 'Raven', 'Hawk', 'Bear', 'Lynx', 'Viper', 'Comet',
+  'Nebula', 'Echo', 'Moth', 'Orca',
+];
+function randomName(): string {
+  const adj = NAME_ADJECTIVES[Math.floor(Math.random() * NAME_ADJECTIVES.length)];
+  const noun = NAME_NOUNS[Math.floor(Math.random() * NAME_NOUNS.length)];
+  const num = Math.floor(Math.random() * 1000);
+  return `${adj}${noun}${num}`;
+}
+
+export default function ProfileEditor({ mode, onComplete, onSkip, embedded = false }: ProfileEditorProps) {
   const { t } = useTranslation();
   const { profile, syncProfile } = useAuthStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -132,12 +154,12 @@ export default function ProfileEditor({ mode, onComplete, onSkip }: ProfileEdito
       ? t('profileEditor.publishing')
       : null;
 
-  // Full-screen modal overlay
-  return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-      <div className="bg-lc-dark rounded-2xl w-full max-w-lg border border-lc-border shadow-2xl max-h-[90vh] overflow-y-auto">
+  const bodyPad = embedded ? 'px-0' : 'px-6';
+  const formPad = embedded ? 'py-0' : 'p-6';
 
-        {/* Header */}
+  const body = (
+    <>
+      {!embedded && (
         <div className="flex justify-between items-center p-6 pb-0">
           <h2 className="text-xl font-bold text-lc-white">
             {mode === 'setup' ? t('profileEditor.setupTitle') : t('profileEditor.editTitle')}
@@ -152,20 +174,28 @@ export default function ProfileEditor({ mode, onComplete, onSkip }: ProfileEdito
             </svg>
           </button>
         </div>
+      )}
 
-        {mode === 'setup' && (
-          <p className="text-sm text-lc-muted px-6 mt-2">{t('profileEditor.setupDesc')}</p>
-        )}
+      {mode === 'setup' && !embedded && (
+        <p className={`text-sm text-lc-muted ${bodyPad} mt-2`}>{t('profileEditor.setupDesc')}</p>
+      )}
 
-        {loading ? (
-          <div className="p-6 space-y-4 animate-pulse">
+      {embedded && mode === 'setup' && (
+        <div className="mb-4">
+          <h3 className="text-base font-bold text-lc-white leading-tight">{t('profileEditor.setupTitle')}</h3>
+          <p className="text-xs text-lc-muted mt-1">{t('profileEditor.setupDesc')}</p>
+        </div>
+      )}
+
+      {loading ? (
+          <div className={`${formPad} space-y-4 animate-pulse`}>
             <div className="h-10 bg-lc-border/50 rounded-xl" />
             <div className="h-32 bg-lc-border/50 rounded-xl" />
             <div className="h-20 bg-lc-border/50 rounded-xl" />
           </div>
         ) : showConfirm ? (
           /* Confirmation screen */
-          <div className="p-6 space-y-4">
+          <div className={`${formPad} space-y-4`}>
             <p className="text-sm text-lc-muted">{t('profileEditor.confirmDesc')}</p>
 
             <div className="space-y-2 p-3 bg-lc-black rounded-xl border border-lc-border">
@@ -205,7 +235,7 @@ export default function ProfileEditor({ mode, onComplete, onSkip }: ProfileEdito
           </div>
         ) : (
           /* Main form */
-          <div className="p-6 space-y-5">
+          <div className={`${formPad} space-y-5`}>
             {/* Avatar upload area */}
             <div className="flex flex-col items-center gap-3">
               <div
@@ -249,19 +279,43 @@ export default function ProfileEditor({ mode, onComplete, onSkip }: ProfileEdito
 
             {/* Display Name (mandatory) */}
             <div>
-              <label className="block text-xs text-lc-muted font-medium uppercase tracking-wide mb-1">
-                {t('profileEditor.displayName')} <span className="text-red-400">*</span>
+              <label className="flex items-center gap-2 text-xs text-lc-muted font-medium uppercase tracking-wide mb-1">
+                <span>{t('profileEditor.displayName')}</span>
+                <span className="inline-block px-1.5 py-0.5 bg-red-500/15 text-red-400 rounded-md text-[10px] font-semibold normal-case tracking-normal">
+                  {t('profileEditor.nameRequired')}
+                </span>
               </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder={t('profileEditor.namePlaceholder')}
-                maxLength={50}
-                className={`w-full bg-lc-black border rounded-xl px-3 py-2.5 text-sm text-lc-white placeholder:text-lc-muted/50 focus:outline-none ${
-                  !nameValid && name !== '' ? 'border-red-400/50' : 'border-lc-border focus:border-lc-green/50'
-                }`}
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder={t('profileEditor.namePlaceholder')}
+                  maxLength={50}
+                  className={`w-full bg-lc-black border rounded-xl pl-3 pr-11 py-2.5 text-sm text-lc-white placeholder:text-lc-muted/50 focus:outline-none ${
+                    !nameValid && name !== '' ? 'border-red-400/50' : 'border-lc-border focus:border-lc-green/50'
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setName(randomName())}
+                  title={t('profileEditor.randomName')}
+                  aria-label={t('profileEditor.randomName')}
+                  className="absolute top-1/2 -translate-y-1/2 right-2 p-1.5 bg-lc-border/60 hover:bg-lc-green/20 text-lc-muted hover:text-lc-green rounded-lg transition"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="3" ry="3"/>
+                    <circle cx="8.5" cy="8.5" r="1.2" fill="currentColor"/>
+                    <circle cx="15.5" cy="8.5" r="1.2" fill="currentColor"/>
+                    <circle cx="12" cy="12" r="1.2" fill="currentColor"/>
+                    <circle cx="8.5" cy="15.5" r="1.2" fill="currentColor"/>
+                    <circle cx="15.5" cy="15.5" r="1.2" fill="currentColor"/>
+                  </svg>
+                </button>
+              </div>
+              {mode === 'setup' && !nameValid && (
+                <p className="mt-1.5 text-xs text-lc-muted">{t('profileEditor.nameRequiredHint')}</p>
+              )}
             </div>
 
             {/* About */}
@@ -285,11 +339,6 @@ export default function ProfileEditor({ mode, onComplete, onSkip }: ProfileEdito
 
             {/* Actions */}
             <div className="flex gap-3 pt-2">
-              {mode === 'setup' && onSkip && (
-                <button onClick={onSkip} className="flex-1 lc-pill lc-pill-secondary text-sm">
-                  {t('profileEditor.skip')}
-                </button>
-              )}
               {mode === 'edit' && (
                 <button onClick={onComplete} className="flex-1 lc-pill lc-pill-secondary text-sm">
                   {t('profileEditor.cancel')}
@@ -305,6 +354,15 @@ export default function ProfileEditor({ mode, onComplete, onSkip }: ProfileEdito
             </div>
           </div>
         )}
+    </>
+  );
+
+  if (embedded) return body;
+
+  return (
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+      <div className="bg-lc-dark rounded-2xl w-full max-w-lg border border-lc-border shadow-2xl max-h-[90vh] overflow-y-auto">
+        {body}
       </div>
     </div>
   );

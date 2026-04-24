@@ -48,6 +48,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, transparentBack
   const [nsecCopied, setNsecCopied] = useState(false);
   const [creatingAccount, setCreatingAccount] = useState(false);
   const [backupConfirmed, setBackupConfirmed] = useState(false);
+  const [showExtensionTip, setShowExtensionTip] = useState(false);
   const [showProfileSetup, setShowProfileSetup] = useState(false);
   const [authChallengeUrl, setAuthChallengeUrl] = useState<string | null>(null);
   const [showSlowHint, setShowSlowHint] = useState(false);
@@ -174,6 +175,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, transparentBack
       setNsecCopied(false);
       setCreatingAccount(false);
       setBackupConfirmed(false);
+      setShowExtensionTip(false);
       sessionRef.current?.cancel();
       sessionRef.current = null;
       setAuthChallengeUrl(null);
@@ -346,13 +348,15 @@ ${newAccountNsec}
 
   return (
     <div className={`fixed inset-0 flex items-center justify-center z-50 p-4 ${transparentBackdrop ? '' : 'bg-black/70 backdrop-blur-sm animate-modal-backdrop-in'}`}>
-      <div className="bg-lc-dark rounded-2xl max-w-md w-full p-8 border border-lc-border shadow-2xl max-h-[90vh] overflow-y-auto animate-modal-card-in">
+      <div className="bg-lc-dark rounded-2xl max-w-md w-full p-6 sm:p-8 border border-lc-border shadow-2xl max-h-[90vh] overflow-y-auto animate-modal-card-in">
         {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h2 className="text-xl font-bold text-lc-white">Connect to Nostr</h2>
-            <p className="text-sm text-lc-muted mt-1">Choose your login method</p>
-          </div>
+        <div className={`flex items-center mb-6 ${showProfileSetup || newAccountNsec ? 'justify-end' : 'justify-between'}`}>
+          {!showProfileSetup && !newAccountNsec && (
+            <div>
+              <h2 className="text-xl font-bold text-lc-white">Connect to Nostr</h2>
+              <p className="text-sm text-lc-muted mt-1">Choose your login method</p>
+            </div>
+          )}
           <button
             onClick={onClose}
             className="w-8 h-8 flex items-center justify-center rounded-full bg-lc-border/50 hover:bg-lc-border text-lc-muted hover:text-lc-white transition"
@@ -377,94 +381,120 @@ ${newAccountNsec}
         )}
 
         {/* Screens */}
-        {showProfileSetup ? (
+        {newAccountNsec && showExtensionTip ? (
+          <div className="space-y-5">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-lc-green/15 rounded-xl flex items-center justify-center flex-shrink-0">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#b4f953" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20.5 7.278a2.4 2.4 0 0 0-2.397-2.4H15.7V3.3a2.4 2.4 0 1 0-4.8 0v1.578H8.496a2.4 2.4 0 0 0-2.4 2.4V9.66H4.5a2.4 2.4 0 1 0 0 4.8h1.596v2.382a2.4 2.4 0 0 0 2.4 2.4h2.404v-1.582a2.4 2.4 0 1 1 4.8 0v1.582h2.403a2.4 2.4 0 0 0 2.4-2.4v-2.382h1.59a2.4 2.4 0 1 0 0-4.8H20.5z"/>
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-lc-white leading-tight">One more thing</h3>
+                <p className="text-xs text-lc-muted">Makes using the nostr ecosystem easier</p>
+              </div>
+            </div>
+
+            <p className="text-sm text-lc-muted leading-relaxed">
+              Nostr is a network of many apps — chats, social feeds, wallets — that all share the same identity. Instead of pasting your key into every app, install <span className="text-lc-white font-medium">nostr-wot</span> once, and it signs in for you securely wherever you go.
+            </p>
+
+            <div className="p-4 bg-lc-olive/20 border border-lc-green/10 rounded-xl flex flex-col gap-2">
+              <a
+                href="https://chromewebstore.google.com/detail/nostr-wot/gfmefgdkmjpjinecjchlangpamhclhdo"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-sm text-lc-green hover:text-lc-green/80 transition"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/>
+                  <polyline points="15 3 21 3 21 9"/>
+                  <line x1="10" y1="14" x2="21" y2="3"/>
+                </svg>
+                Chrome Web Store
+              </a>
+              <a
+                href="https://nostr-wot.com/downloads"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-sm text-lc-muted hover:text-lc-white transition"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/>
+                  <polyline points="15 3 21 3 21 9"/>
+                  <line x1="10" y1="14" x2="21" y2="3"/>
+                </svg>
+                nostr-wot.com/downloads
+              </a>
+            </div>
+
+            <button
+              onClick={() => { if (onSuccess) onSuccess(); else onClose(); }}
+              className="w-full lc-pill lc-pill-primary text-sm flex items-center justify-center gap-2"
+            >
+              Done
+            </button>
+          </div>
+
+        ) : showProfileSetup ? (
           <ProfileEditor
             mode="setup"
-            onComplete={() => { if (onSuccess) onSuccess(); else onClose(); }}
-            onSkip={() => { if (onSuccess) onSuccess(); else onClose(); }}
+            embedded
+            onComplete={() => {
+              if (newAccountNsec) {
+                setShowExtensionTip(true);
+              } else if (onSuccess) {
+                onSuccess();
+              } else {
+                onClose();
+              }
+            }}
           />
 
         ) : newAccountNsec ? (
-          <div className="space-y-5">
-            <div className="text-center">
-              <div className="w-14 h-14 bg-lc-green/15 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#b4f953" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-lc-green/15 rounded-xl flex items-center justify-center flex-shrink-0">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#b4f953" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
                   <polyline points="22 4 12 14.01 9 11.01"/>
                 </svg>
               </div>
-              <h3 className="text-lg font-bold text-lc-white mb-1">Account Created</h3>
-              <p className="text-sm text-lc-muted">
-                Save your private key below. This is the <span className="text-lc-white font-medium">only way</span> to access your account.
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-xs text-lc-muted font-medium uppercase tracking-wide">Your Private Key (nsec)</label>
-              <div className="relative">
-                <code className="block w-full p-3.5 bg-lc-black border border-lc-border rounded-xl text-lc-white font-mono text-xs break-all select-all leading-relaxed">
-                  {newAccountNsec}
-                </code>
-                <button
-                  onClick={handleCopyNsec}
-                  className="absolute top-2.5 right-2.5 p-1.5 bg-lc-border/80 hover:bg-lc-border rounded-lg transition"
-                  title="Copy to clipboard"
-                >
-                  {nsecCopied ? (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b4f953" strokeWidth="2.5">
-                      <polyline points="20 6 9 17 4 12"/>
-                    </svg>
-                  ) : (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a3a3a3" strokeWidth="2">
-                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-                      <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
-                    </svg>
-                  )}
-                </button>
-              </div>
-              <p className="text-xs text-red-400/80 flex items-center gap-1.5">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-                  <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-                </svg>
-                If you lose this key, you lose your account. There is no recovery.
-              </p>
-            </div>
-
-            {/* nostr-wot recommendation */}
-            <div className="p-4 bg-lc-olive/20 border border-lc-green/10 rounded-xl space-y-3">
-              <p className="text-sm text-lc-muted">
-                For the best experience using the nostr ecosystem, use the <span className="text-lc-white font-medium">nostr-wot</span> browser extension to manage your keys securely.
-              </p>
-              <div className="flex flex-col gap-2">
-                <a
-                  href="https://chromewebstore.google.com/detail/nostr-wot/gfmefgdkmjpjinecjchlangpamhclhdo"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-sm text-lc-green hover:text-lc-green/80 transition"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/>
-                    <polyline points="15 3 21 3 21 9"/>
-                    <line x1="10" y1="14" x2="21" y2="3"/>
-                  </svg>
-                  Chrome Web Store
-                </a>
-                <a
-                  href="https://nostr-wot.com/downloads"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-sm text-lc-muted hover:text-lc-white transition"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/>
-                    <polyline points="15 3 21 3 21 9"/>
-                    <line x1="10" y1="14" x2="21" y2="3"/>
-                  </svg>
-                  nostr-wot.com/downloads
-                </a>
+              <div>
+                <h3 className="text-base font-bold text-lc-white leading-tight">Account Created</h3>
+                <p className="text-xs text-lc-muted">Save your key — it&apos;s the <span className="text-lc-white font-medium">only way</span> back in.</p>
               </div>
             </div>
+
+            <div className="relative">
+              <code className="block w-full p-3 pr-11 bg-lc-black border border-lc-border rounded-xl text-lc-white font-mono text-xs break-all select-all leading-relaxed">
+                {newAccountNsec}
+              </code>
+              <button
+                onClick={handleCopyNsec}
+                className="absolute top-2 right-2 p-1.5 bg-lc-border/80 hover:bg-lc-border rounded-lg transition"
+                title="Copy to clipboard"
+              >
+                {nsecCopied ? (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b4f953" strokeWidth="2.5">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                ) : (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a3a3a3" strokeWidth="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                  </svg>
+                )}
+              </button>
+            </div>
+
+            <p className="text-xs text-red-400/80 flex items-start gap-1.5">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="mt-0.5 flex-shrink-0">
+                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+              Lose this key and your account is gone. No recovery.
+            </p>
 
             <button
               onClick={handleDownloadNsec}
@@ -486,7 +516,7 @@ ${newAccountNsec}
                 className="mt-0.5 w-4 h-4 accent-lc-green flex-shrink-0 cursor-pointer"
               />
               <span className="text-xs text-lc-muted leading-relaxed">
-                I have securely backed up my private key (nsec) and understand that if I lose it, I lose access to my account forever.
+                I&apos;ve backed up my key and understand losing it means losing my account.
               </span>
             </label>
 
@@ -495,7 +525,7 @@ ${newAccountNsec}
               disabled={!backupConfirmed}
               className="w-full lc-pill lc-pill-primary text-sm flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              I&apos;ve saved my key — Continue
+              Continue
             </button>
           </div>
 
@@ -590,10 +620,8 @@ ${newAccountNsec}
 
                 ) : (
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#b4f953" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/>
-                    <circle cx="8.5" cy="7" r="4"/>
-                    <line x1="20" y1="8" x2="20" y2="14"/>
-                    <line x1="23" y1="11" x2="17" y2="11"/>
+                    <path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9z"/>
+                    <path d="M19 15l.7 1.7L21.5 17.5l-1.8.8L19 20l-.7-1.7L16.5 17.5l1.8-.8z"/>
                   </svg>
                 )}
               </div>
@@ -614,7 +642,7 @@ ${newAccountNsec}
         // nsec screen
         ) : method === 'nsec' ? (
           <div className="space-y-5">
-            <button onClick={handleBack} className="text-lc-muted hover:text-lc-white text-sm flex items-center gap-1.5 transition">
+            <button onClick={handleBack} className="text-lc-white/80 hover:text-lc-white bg-lc-black/60 hover:bg-lc-black border border-lc-border rounded-lg px-3 py-1.5 text-sm flex items-center gap-1.5 transition">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <polyline points="15 18 9 12 15 6"/>
               </svg>
@@ -652,7 +680,7 @@ ${newAccountNsec}
         // Bunker screen with QR + URL tabs
         ) : (
           <div className="space-y-5">
-            <button onClick={handleBack} className="text-lc-muted hover:text-lc-white text-sm flex items-center gap-1.5 transition">
+            <button onClick={handleBack} className="text-lc-white/80 hover:text-lc-white bg-lc-black/60 hover:bg-lc-black border border-lc-border rounded-lg px-3 py-1.5 text-sm flex items-center gap-1.5 transition">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <polyline points="15 18 9 12 15 6"/>
               </svg>

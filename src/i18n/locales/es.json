@@ -134,7 +134,10 @@
   "profile.editNostr": "Editar Perfil Nostr",
 
   "profileEditor.setupTitle": "Configurar tu perfil",
-  "profileEditor.setupDesc": "Agregale un nombre y una foto para que los demas te reconozcan. Podés saltear esto y hacerlo despues.",
+  "profileEditor.setupDesc": "Agregale un nombre y una foto para que los demas te reconozcan.",
+  "profileEditor.randomName": "Generar un nombre al azar",
+  "profileEditor.nameRequired": "Obligatorio",
+  "profileEditor.nameRequiredHint": "Necesitás un nombre para continuar. Tocá el dado para generar uno.",
   "profileEditor.editTitle": "Editar Perfil Nostr",
   "profileEditor.displayName": "Nombre",
   "profileEditor.namePlaceholder": "Como te van a ver los demas",

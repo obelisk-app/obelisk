@@ -30,7 +30,7 @@ Obelisk nunca ve tus claves privadas de Lightning. Ve una cadena NWC — la mism
 
 ## Cómo fluye un zap por Obelisk
 
-<Diagram name="auth-flow" caption="El camino de un zap refleja al de auth: tu cliente habla con tu signer, el servidor sólo coordina." />
+<Diagram name="zap-flow" caption="Obelisk le pide a la wallet del receptor una factura por NWC (o LNURL si no tiene wallet conectada), y a la tuya que la pague. El servidor coordina las dos llamadas; la plata viaja por Lightning entre wallets." />
 
 1. Hacés click en ⚡ sobre un mensaje y elegís un monto (o uno de los presets: 21, 100, 500, 1000 sats).
 2. Obelisk le pide a la dirección Lightning del receptor una factura por ese monto.

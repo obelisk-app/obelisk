@@ -30,7 +30,7 @@ Obelisk never sees your Lightning private keys. It sees a NWC connection string 
 
 ## How a zap flows through Obelisk
 
-<Diagram name="auth-flow" caption="The zap path mirrors the auth path: your client talks to your signer, the server just coordinates." />
+<Diagram name="zap-flow" caption="Obelisk asks the receiver's wallet for an invoice over NWC (or LNURL if they have no connected wallet) and asks yours to pay it. The server coordinates the two calls; the sats travel over Lightning directly between wallets." />
 
 1. You click ⚡ on a message and pick an amount (or one of the presets: 21, 100, 500, 1000 sats).
 2. Obelisk asks the recipient's Lightning address for an invoice matching that amount.

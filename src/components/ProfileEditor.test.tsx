@@ -42,16 +42,22 @@ describe('ProfileEditor', () => {
   });
 
   describe('setup mode', () => {
-    it('renders setup title and skip button', () => {
+    it('renders setup title', () => {
       render(<ProfileEditor mode="setup" onComplete={mockOnComplete} onSkip={mockOnSkip} />);
       expect(screen.getByText('profileEditor.setupTitle')).toBeInTheDocument();
-      expect(screen.getByText('profileEditor.skip')).toBeInTheDocument();
     });
 
-    it('calls onSkip when skip is clicked', async () => {
+    it('does not render a skip button (name is mandatory)', () => {
       render(<ProfileEditor mode="setup" onComplete={mockOnComplete} onSkip={mockOnSkip} />);
-      await userEvent.click(screen.getByText('profileEditor.skip'));
-      expect(mockOnSkip).toHaveBeenCalled();
+      expect(screen.queryByText('profileEditor.skip')).not.toBeInTheDocument();
+    });
+
+    it('generates a random name when dice button is clicked', async () => {
+      render(<ProfileEditor mode="setup" onComplete={mockOnComplete} onSkip={mockOnSkip} />);
+      const input = screen.getByPlaceholderText('profileEditor.namePlaceholder') as HTMLInputElement;
+      expect(input.value).toBe('');
+      await userEvent.click(screen.getByLabelText('profileEditor.randomName'));
+      expect(input.value).toMatch(/^[A-Z][a-z]+[A-Z][a-z]+\d+$/);
     });
 
     it('disables publish when name is empty (mandatory)', () => {

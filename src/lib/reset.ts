@@ -19,6 +19,12 @@ export function resetAllClientState(): void {
     localStorage.removeItem('obelisk-auth-in-progress');
     localStorage.removeItem('obelisk:followed-migrated');
     localStorage.removeItem('obelisk:followed-posts');
+    // Wipe per-channel lastSeen anchors so the next account on this browser
+    // doesn't inherit the previous user's reading position. Includes both
+    // legacy unscoped keys and the pubkey-scoped variant.
+    for (const k of Object.keys(localStorage)) {
+      if (k.startsWith('chat:lastSeen:')) localStorage.removeItem(k);
+    }
   } catch {
     // localStorage can throw in private-browsing / quota edge cases —
     // ignore, the in-memory reset above is the real guarantee.

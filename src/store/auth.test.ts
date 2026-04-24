@@ -80,7 +80,7 @@ describe('useAuthStore', () => {
     expect(state.isConnected).toBe(false);
     expect(state.user).toBeNull();
     expect(state.profile).toBeNull();
-    expect(fetch).toHaveBeenCalledWith('/api/auth/logout', { method: 'POST' });
+    expect(fetch).toHaveBeenCalledWith('/api/auth/logout', { method: 'POST', keepalive: true });
   });
 
   it('setHasHydrated updates hydration flag', () => {

@@ -100,14 +100,10 @@ describe('LoginModal', () => {
     expect(screen.getByText('nsec1testkey123')).toBeInTheDocument();
 
     // Shows backup warning
-    expect(screen.getByText(/If you lose this key, you lose your account/)).toBeInTheDocument();
-
-    // Shows nostr-wot recommendation with download links
-    expect(screen.getByText('Chrome Web Store')).toBeInTheDocument();
-    expect(screen.getByText('nostr-wot.com/downloads')).toBeInTheDocument();
+    expect(screen.getByText(/Lose this key and your account is gone/)).toBeInTheDocument();
 
     // Shows continue button
-    expect(screen.getByText("I've saved my key — Continue")).toBeInTheDocument();
+    expect(screen.getByText('Continue')).toBeInTheDocument();
 
     // Shows download backup button
     expect(screen.getByText('Download backup (.txt)')).toBeInTheDocument();
@@ -130,7 +126,7 @@ describe('LoginModal', () => {
       expect(screen.getByText('Account Created')).toBeInTheDocument();
     });
 
-    const continueBtn = screen.getByText("I've saved my key — Continue");
+    const continueBtn = screen.getByText('Continue');
     expect(continueBtn).toBeDisabled();
 
     // Clicking while disabled should not advance
@@ -158,11 +154,17 @@ describe('LoginModal', () => {
     });
 
     await user.click(screen.getByRole('checkbox'));
-    await user.click(screen.getByText("I've saved my key — Continue"));
+    await user.click(screen.getByText('Continue'));
 
-    // Should now show profile setup instead of closing
+    // Continue advances straight to the profile setup step
     await waitFor(() => {
       expect(screen.getByText('profileEditor.setupTitle')).toBeInTheDocument();
+    });
+
+    // Completing the profile reveals the extension-tip screen as the last step
+    await user.click(screen.getByText('complete'));
+    await waitFor(() => {
+      expect(screen.getByText('Chrome Web Store')).toBeInTheDocument();
     });
   });
 

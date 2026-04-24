@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useCallback, useState, Fragment } from 'react';
+import { useEffect, useRef, useCallback, useMemo, useState, Fragment } from 'react';
 import { useChatStore, Message } from '@/store/chat';
 import { useAuthStore } from '@/store/auth';
 import { useModerationStore } from '@/store/moderation';
+import { useNotificationStore } from '@/store/notification';
+import { extractMentionPubkeys } from '@/lib/mentions';
 import { formatPubkey } from '@/lib/nostr';
 import MessageContent from './MessageContent';
 import EmojiPicker from './EmojiPicker';
@@ -487,8 +489,15 @@ export default function MessageArea({ profileCache, onDelete, onToggleReaction }
   onDelete: (messageId: string) => void;
   onToggleReaction: (messageId: string, emoji: string) => void;
 }) {
-  const { messages, isLoadingMessages, activeChannelId, activePostId, pinnedChannels, categories, hasMoreMessages, messageCursor, prependMessages, setMessageCursor, highlightedMessageId, setIsNearBottom, myRole, updatePinState } = useChatStore();
+  const { messages, isLoadingMessages, isNearBottom, activeChannelId, activePostId, pinnedChannels, categories, hasMoreMessages, messageCursor, prependMessages, setMessageCursor, highlightedMessageId, setIsNearBottom, myRole, updatePinState } = useChatStore();
   const blockedPubkeys = useModerationStore((s) => s.blockedPubkeys);
+  const { profile: viewerProfile } = useAuthStore();
+  const viewerPubkey = viewerProfile?.pubkey ?? null;
+  // Live unread count for the jump-to-latest badge. Cleared by useReadTracker
+  // once the user actually reaches the bottom (visible + focused + near bottom).
+  const liveUnreadCount = useNotificationStore(
+    (s) => (activeChannelId ? s.channelUnreads[activeChannelId] || 0 : 0),
+  );
 
   const handleJumpToMessage = useCallback(async (id: string) => {
     if (!activeChannelId) return;
@@ -535,10 +544,98 @@ export default function MessageArea({ profileCache, onDelete, onToggleReaction }
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const isNearBottomRef = useRef(true);
+  // Per-channel "first scroll done" gate so the very first auto-scroll on a
+  // newly-opened channel happens instantly (no smooth race with late-loading
+  // images). Subsequent auto-scrolls on the same channel use smooth behavior.
+  const firstScrollDoneRef = useRef<Set<string>>(new Set());
   const [floatingDateLabel, setFloatingDateLabel] = useState<string | null>(null);
   const [reportTarget, setReportTarget] = useState<Message | null>(null);
   const [reportReason, setReportReason] = useState('');
   const [reportSending, setReportSending] = useState(false);
+
+  // "New messages" separator snapshot. We freeze the count + lastReadAt at the
+  // moment the channel is opened so subsequent mark-read sweeps don't make the
+  // line jump while the user is reading. Only refreshes on activeChannelId
+  // change. `invalidateSeparator` zeros the count so the line disappears once
+  // the user reaches the bottom or explicitly jumps to latest.
+  const [separatorSnapshot, setSeparatorSnapshot] = useState<{
+    channelId: string;
+    count: number;
+    lastReadAt: number | null;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!activeChannelId) {
+      setSeparatorSnapshot(null);
+      return;
+    }
+    const notif = useNotificationStore.getState();
+    const lastRead = notif.channelLastReadAt[activeChannelId];
+    setSeparatorSnapshot({
+      channelId: activeChannelId,
+      count: notif.channelUnreads[activeChannelId] || 0,
+      lastReadAt: typeof lastRead === 'number' ? lastRead : null,
+    });
+  }, [activeChannelId]);
+
+  const invalidateSeparator = useCallback(() => {
+    setSeparatorSnapshot((s) => (s ? { ...s, count: 0 } : s));
+  }, []);
+
+  // Index of the message that the "New messages" separator should sit ABOVE.
+  // Anchored on the server-authored `lastReadAt` whenever available — that's
+  // what prevents the viewer's own messages from rendering below the line
+  // (`channelUnreads` excludes self on the server, but the local `messages`
+  // array doesn't). Falls back to a count-based walk-from-end when lastReadAt
+  // isn't known yet (first-load race).
+  const separatorIndex = useMemo(() => {
+    if (!separatorSnapshot || messages.length === 0) return -1;
+    const { count, lastReadAt } = separatorSnapshot;
+    if (count <= 0) return -1;
+    if (lastReadAt !== null) {
+      for (let i = 0; i < messages.length; i++) {
+        const ts = new Date(messages[i].createdAt).getTime();
+        if (ts > lastReadAt && messages[i].authorPubkey !== viewerPubkey) return i;
+      }
+      return -1;
+    }
+    let remaining = count;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].authorPubkey !== viewerPubkey) {
+        remaining--;
+        if (remaining === 0) return i;
+      }
+    }
+    return -1;
+  }, [separatorSnapshot, messages, viewerPubkey]);
+
+  // IDs of unread messages that mention the viewer, in chronological order.
+  // Anchored on the same lastReadAt snapshot as the separator so cycling stays
+  // stable while the user reads. Used by the jump-to-latest pill to step
+  // through mentions one at a time before falling through to "scroll to end".
+  const unreadMentionIds = useMemo(() => {
+    if (!viewerPubkey || !separatorSnapshot || messages.length === 0) return [] as string[];
+    const { lastReadAt } = separatorSnapshot;
+    const ids: string[] = [];
+    for (const m of messages) {
+      if (m.authorPubkey === viewerPubkey) continue;
+      const ts = new Date(m.createdAt).getTime();
+      if (lastReadAt !== null && ts <= lastReadAt) continue;
+      if (extractMentionPubkeys(m.content).includes(viewerPubkey)) {
+        ids.push(m.id);
+      }
+    }
+    return ids;
+  }, [messages, separatorSnapshot, viewerPubkey]);
+
+  // Cursor into `unreadMentionIds`. Reset on channel change. Click on the pill
+  // advances by one; once it reaches the end we fall through to the bottom.
+  const [mentionNavIndex, setMentionNavIndex] = useState(0);
+  useEffect(() => {
+    setMentionNavIndex(0);
+  }, [activeChannelId]);
+
+  const remainingMentions = Math.max(0, unreadMentionIds.length - mentionNavIndex);
 
   const allChannels = [
     ...pinnedChannels,
@@ -572,12 +669,24 @@ export default function MessageArea({ profileCache, onDelete, onToggleReaction }
     setFloatingDateLabel((prev) => (prev === current ? prev : current));
   }, [setIsNearBottom]);
 
-  // Only auto-scroll if user is near the bottom
+  // Only auto-scroll if user is near the bottom. The first scroll per channel
+  // uses 'auto' (instant) wrapped in a rAF so layout settles first — smooth
+  // scrolling races with late-loading images and lands the user partway up,
+  // which is the bug behind "channel opens at the top". Subsequent scrolls
+  // (e.g. new socket message arriving while reading) use smooth.
   useEffect(() => {
-    if (isNearBottomRef.current) {
+    if (!isNearBottomRef.current) return;
+    if (!activeChannelId) return;
+    const isFirstForChannel = !firstScrollDoneRef.current.has(activeChannelId);
+    if (isFirstForChannel) {
+      requestAnimationFrame(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+        firstScrollDoneRef.current.add(activeChannelId);
+      });
+    } else {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages]);
+  }, [messages, activeChannelId]);
 
   // Jump to highlighted message from search
   useEffect(() => {
@@ -620,7 +729,15 @@ export default function MessageArea({ profileCache, onDelete, onToggleReaction }
       if (saveTimeout !== null) clearTimeout(saveTimeout);
       saveTimeout = window.setTimeout(() => {
         try {
-          localStorage.setItem(`chat:lastSeen:${activeChannelId}`, id);
+          // Pubkey-scoped key prevents the next account on this browser from
+          // inheriting the previous user's reading position. Skip when there's
+          // no pubkey yet (mid-auth) — restoration is best-effort.
+          if (viewerPubkey) {
+            localStorage.setItem(
+              `chat:lastSeen:${viewerPubkey}:${activeChannelId}`,
+              id,
+            );
+          }
           const sp = new URLSearchParams(window.location.search);
           // Only rewrite the URL if we're still on this channel — guards
           // against a stale debounced write firing after a channel switch.
@@ -668,7 +785,7 @@ export default function MessageArea({ profileCache, onDelete, onToggleReaction }
       observer.disconnect();
       if (saveTimeout !== null) clearTimeout(saveTimeout);
     };
-  }, [activeChannelId, messages]);
+  }, [activeChannelId, messages, viewerPubkey]);
 
   const handleReply = useCallback((msg: Message) => {
     setReplyingTo(msg);
@@ -840,6 +957,18 @@ export default function MessageArea({ profileCache, onDelete, onToggleReaction }
                                 <div className="flex-1 h-px bg-lc-border" />
                             </div>
                         )}
+                        {idx === separatorIndex && (
+                            <div
+                                className="flex items-center gap-2 px-4 py-1 my-1"
+                                data-testid="new-messages-separator"
+                            >
+                                <div className="flex-1 h-px bg-red-500/60" />
+                                <span className="text-[10px] uppercase tracking-wider text-red-400 font-semibold">
+                                    New messages
+                                </span>
+                                <div className="flex-1 h-px bg-red-500/60" />
+                            </div>
+                        )}
                         <div
                             ref={(el) => { if (el) messageRefs.current.set(msg.id, el); else messageRefs.current.delete(msg.id); }}
                             data-message-id={msg.id}
@@ -866,6 +995,83 @@ export default function MessageArea({ profileCache, onDelete, onToggleReaction }
           </>
         )}
       </div>
+
+      {/* Jump-to-latest pill — visible when the user has scrolled away from
+          the bottom. Click cycles through unread @-mentions first; after the
+          last one (or when there are none) it snaps to the newest message,
+          clears the unread badge, and dismisses the "New messages" line. */}
+      {!isNearBottom && messages.length > 0 && (
+        <button
+          type="button"
+          onClick={() => {
+            if (!activeChannelId) return;
+            // Mention cycling — step through unread mentions before bottom.
+            if (remainingMentions > 0) {
+              const targetId = unreadMentionIds[mentionNavIndex];
+              const el = messageRefs.current.get(targetId);
+              if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                el.classList.add('search-highlight');
+                setTimeout(() => el.classList.remove('search-highlight'), 2000);
+              }
+              setMentionNavIndex((i) => i + 1);
+              return;
+            }
+            // Bottom-jump path: instant scroll, local clear, server mark-read.
+            messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+            isNearBottomRef.current = true;
+            setIsNearBottom(true);
+            // Mark as user-engaged so useReadTracker stops gating future clears
+            // for this channel (auto-landing leaves userSelectedChannelId null).
+            useChatStore.setState({ userSelectedChannelId: activeChannelId });
+            // Clear locally NOW so the badge disappears immediately — don't
+            // wait for useReadTracker's 250ms debounce to flush.
+            const lastMessageId = messages.length > 0 ? messages[messages.length - 1].id : undefined;
+            const notif = useNotificationStore.getState();
+            notif.clearChannelUnread(activeChannelId);
+            notif.clearChannelMention(activeChannelId);
+            invalidateSeparator();
+            setMentionNavIndex(0);
+            // Tell the chat page to emit `mark-read` over the socket so the
+            // server-side cursor advances and other devices/tabs sync.
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('obelisk:mark-read', {
+                detail: { channelId: activeChannelId, lastMessageId },
+              }));
+            }
+          }}
+          data-testid="jump-to-latest"
+          aria-label={remainingMentions > 0 ? 'Ir a la próxima mención' : 'Ir al último mensaje'}
+          className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-3 py-1.5 rounded-full bg-lc-dark/95 border border-lc-border backdrop-blur-sm shadow-md text-xs text-lc-white hover:border-lc-green/60 hover:text-lc-green transition-colors"
+        >
+          {remainingMentions > 0 ? (
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="4" />
+              <path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94" />
+            </svg>
+          ) : (
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          )}
+          <span>{remainingMentions > 0 ? 'Próxima mención' : 'Ir al último'}</span>
+          {remainingMentions > 0 ? (
+            <span
+              data-testid="jump-to-latest-badge"
+              className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold"
+            >
+              @{remainingMentions}
+            </span>
+          ) : liveUnreadCount > 0 ? (
+            <span
+              data-testid="jump-to-latest-badge"
+              className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold"
+            >
+              {liveUnreadCount}
+            </span>
+          ) : null}
+        </button>
+      )}
     </div>
   );
 }

@@ -4,10 +4,14 @@ import MessageArea from './MessageArea';
 import { useChatStore } from '@/store/chat';
 import { useNotificationStore } from '@/store/notification';
 
+// Use a real-looking 64-hex pubkey so `extractMentionPubkeys` (which validates
+// the body of the npub token via regex) can actually match self-mentions.
+const VIEWER_PUBKEY = 'a'.repeat(64);
+
 // Mock useAuthStore
 vi.mock('@/store/auth', () => ({
   useAuthStore: vi.fn(() => ({
-    profile: { pubkey: 'my-pubkey', name: 'Me' },
+    profile: { pubkey: 'a'.repeat(64), name: 'Me' },
   })),
 }));
 
@@ -170,7 +174,7 @@ describe('MessageArea', () => {
     const lastRead = now + 2500; // my own 'b' and the 'a' arrived before
     const messages = [
       { id: 'a', channelId: 'ch1', authorPubkey: 'other', content: 'msg a', replyToId: null, editedAt: null, createdAt: new Date(now + 1000).toISOString() },
-      { id: 'b', channelId: 'ch1', authorPubkey: 'my-pubkey', content: 'msg b (mine pre-read)', replyToId: null, editedAt: null, createdAt: new Date(now + 2000).toISOString() },
+      { id: 'b', channelId: 'ch1', authorPubkey: VIEWER_PUBKEY, content: 'msg b (mine pre-read)', replyToId: null, editedAt: null, createdAt: new Date(now + 2000).toISOString() },
       { id: 'c', channelId: 'ch1', authorPubkey: 'other', content: 'msg c', replyToId: null, editedAt: null, createdAt: new Date(now + 3000).toISOString() },
       { id: 'd', channelId: 'ch1', authorPubkey: 'other', content: 'msg d', replyToId: null, editedAt: null, createdAt: new Date(now + 4000).toISOString() },
     ];
@@ -322,6 +326,141 @@ describe('MessageArea', () => {
     expect(writeText).toHaveBeenCalledWith(
       'https://obelisk.test/chat?c=general&m=m1',
     );
+  });
+
+  it('hides the jump-to-latest pill when the user is near the bottom', () => {
+    useChatStore.setState({
+      activeChannelId: 'ch1',
+      isLoadingMessages: false,
+      isNearBottom: true,
+      messages: [
+        { id: 'm1', channelId: 'ch1', authorPubkey: 'pk1', content: 'msg', replyToId: null, editedAt: null, createdAt: new Date().toISOString() },
+      ] as any,
+      pinnedChannels: [{ id: 'ch1', name: 'general', emoji: null, type: 'text', position: 0, categoryId: null }],
+      categories: [],
+    });
+
+    render(<MessageArea profileCache={profileCache} onDelete={vi.fn()} onToggleReaction={vi.fn()} />);
+    expect(screen.queryByTestId('jump-to-latest')).not.toBeInTheDocument();
+  });
+
+  it('shows the jump-to-latest pill (with unread badge) when scrolled away', () => {
+    useNotificationStore.getState().setChannelUnread('ch1', 3, false);
+    useChatStore.setState({
+      activeChannelId: 'ch1',
+      isLoadingMessages: false,
+      isNearBottom: false,
+      messages: [
+        { id: 'm1', channelId: 'ch1', authorPubkey: 'pk1', content: 'msg', replyToId: null, editedAt: null, createdAt: new Date().toISOString() },
+      ] as any,
+      pinnedChannels: [{ id: 'ch1', name: 'general', emoji: null, type: 'text', position: 0, categoryId: null }],
+      categories: [],
+    });
+
+    render(<MessageArea profileCache={profileCache} onDelete={vi.fn()} onToggleReaction={vi.fn()} />);
+    const pill = screen.getByTestId('jump-to-latest');
+    expect(pill).toBeInTheDocument();
+    expect(screen.getByTestId('jump-to-latest-badge')).toHaveTextContent('3');
+  });
+
+  it('jump-to-latest click clears unread immediately, marks user-engaged, and dispatches mark-read', async () => {
+    const now = Date.now();
+    const messages = Array.from({ length: 8 }, (_, i) => ({
+      id: `m${i}`,
+      channelId: 'ch1',
+      authorPubkey: 'pk1',
+      content: `msg ${i}`,
+      replyToId: null,
+      editedAt: null,
+      createdAt: new Date(now + i * 1000).toISOString(),
+    }));
+    useNotificationStore.getState().setChannelUnread('ch1', 3, true);
+    useChatStore.setState({
+      activeChannelId: 'ch1',
+      userSelectedChannelId: null, // auto-landed
+      isLoadingMessages: false,
+      isNearBottom: false,
+      messages: messages as any,
+      pinnedChannels: [{ id: 'ch1', name: 'general', emoji: null, type: 'text', position: 0, categoryId: null }],
+      categories: [],
+    });
+
+    const markReadSpy = vi.fn();
+    window.addEventListener('obelisk:mark-read', markReadSpy as EventListener);
+
+    render(<MessageArea profileCache={profileCache} onDelete={vi.fn()} onToggleReaction={vi.fn()} />);
+    expect(screen.getByTestId('new-messages-separator')).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('jump-to-latest'));
+    });
+
+    // Local state: unread + mention + separator cleared synchronously, no debounce.
+    expect(useNotificationStore.getState().channelUnreads.ch1).toBeUndefined();
+    expect(useNotificationStore.getState().channelMentions.ch1).toBeUndefined();
+    expect(useChatStore.getState().isNearBottom).toBe(true);
+    expect(useChatStore.getState().userSelectedChannelId).toBe('ch1');
+    expect(screen.queryByTestId('new-messages-separator')).not.toBeInTheDocument();
+
+    // Server-side mark-read dispatched with the latest message id as cursor.
+    expect(markReadSpy).toHaveBeenCalledTimes(1);
+    const evt = markReadSpy.mock.calls[0][0] as CustomEvent;
+    expect(evt.detail).toEqual({ channelId: 'ch1', lastMessageId: 'm7' });
+
+    window.removeEventListener('obelisk:mark-read', markReadSpy as EventListener);
+  });
+
+  it('cycles through unread mentions before jumping to bottom', async () => {
+    const now = Date.now();
+    const lastRead = now + 500; // m0 is read; m1+ are unread
+    // Build a hex npub token the extractor can decode from message content.
+    const mentionToken = 'nostr:npub1' + VIEWER_PUBKEY;
+    const messages = [
+      { id: 'm0', channelId: 'ch1', authorPubkey: 'other', content: 'old read', replyToId: null, editedAt: null, createdAt: new Date(now).toISOString() },
+      { id: 'm1', channelId: 'ch1', authorPubkey: 'other', content: `hi ${mentionToken}`, replyToId: null, editedAt: null, createdAt: new Date(now + 1000).toISOString() },
+      { id: 'm2', channelId: 'ch1', authorPubkey: 'other', content: 'just chatter', replyToId: null, editedAt: null, createdAt: new Date(now + 2000).toISOString() },
+      { id: 'm3', channelId: 'ch1', authorPubkey: 'other', content: `again ${mentionToken}`, replyToId: null, editedAt: null, createdAt: new Date(now + 3000).toISOString() },
+      { id: 'm4', channelId: 'ch1', authorPubkey: 'other', content: 'tail', replyToId: null, editedAt: null, createdAt: new Date(now + 4000).toISOString() },
+    ];
+    useNotificationStore.getState().setChannelUnread('ch1', 4, true);
+    useNotificationStore.setState({ channelLastReadAt: { ch1: lastRead } } as any);
+    useChatStore.setState({
+      activeChannelId: 'ch1',
+      isLoadingMessages: false,
+      isNearBottom: false,
+      messages: messages as any,
+      pinnedChannels: [{ id: 'ch1', name: 'general', emoji: null, type: 'text', position: 0, categoryId: null }],
+      categories: [],
+    });
+
+    render(<MessageArea profileCache={profileCache} onDelete={vi.fn()} onToggleReaction={vi.fn()} />);
+
+    // Two unread mentions → badge reads "@2" and label switches.
+    expect(screen.getByTestId('jump-to-latest-badge')).toHaveTextContent('@2');
+    expect(screen.getByTestId('jump-to-latest')).toHaveTextContent('Próxima mención');
+
+    // First click cycles to the first mention; badge drops to @1.
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('jump-to-latest'));
+    });
+    expect(screen.getByTestId('jump-to-latest-badge')).toHaveTextContent('@1');
+    // Unread NOT cleared yet — we're still mid-cycle.
+    expect(useNotificationStore.getState().channelUnreads.ch1).toBe(4);
+
+    // Second click cycles to the last mention; pill flips to bottom-jump mode.
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('jump-to-latest'));
+    });
+    expect(screen.getByTestId('jump-to-latest')).toHaveTextContent('Ir al último');
+    expect(useNotificationStore.getState().channelUnreads.ch1).toBe(4);
+
+    // Third click — bottom-jump path — clears everything.
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('jump-to-latest'));
+    });
+    expect(useNotificationStore.getState().channelUnreads.ch1).toBeUndefined();
+    expect(useNotificationStore.getState().channelMentions.ch1).toBeUndefined();
+    expect(useChatStore.getState().isNearBottom).toBe(true);
   });
 
   it('hides Load earlier button when hasMoreMessages is false', () => {

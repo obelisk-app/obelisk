@@ -65,7 +65,10 @@ export const useAuthStore = create<AuthState>()(
       setError: (error) => set({ error, isLoading: false }),
 
       logout: () => {
-        fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+        // `keepalive` lets the session-destroy request survive the hard
+        // navigation below — otherwise unloading the page cancels the fetch
+        // and the server-side session record lingers until it expires.
+        fetch('/api/auth/logout', { method: 'POST', keepalive: true }).catch(() => {});
         resetUserRelays();
         clearSignerPayload();
         resetAllClientState();
@@ -76,6 +79,13 @@ export const useAuthStore = create<AuthState>()(
           loginMethod: null,
           error: null,
         });
+        // Hard navigation — a client-side `router.push('/')` was getting
+        // preempted by in-flight chat-page effects and leaving the user on
+        // `/chat`. A full reload also guarantees NDK/socket/WebRTC state is
+        // fully torn down and the cleared session cookie is re-read.
+        if (typeof window !== 'undefined') {
+          window.location.assign('/');
+        }
       },
 
       setHasHydrated: (hydrated) => set({ _hasHydrated: hydrated }),
