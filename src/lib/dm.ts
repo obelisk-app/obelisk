@@ -15,6 +15,7 @@ import {
   type CachedDMEvent,
   type CachedRumor,
 } from './dm-cache';
+import { KIND_ENCRYPTED_DM, KIND_DM_RUMOR, KIND_GIFT_WRAP } from './nip-kinds';
 
 export type DMProtocol = 'nip04' | 'nip17';
 
@@ -78,7 +79,7 @@ export async function sendNip04DM(
 
   const { NDKEvent: NDKEventClass } = await import('@nostr-dev-kit/ndk');
   const event = new NDKEventClass(ndk);
-  event.kind = 4;
+  event.kind = KIND_ENCRYPTED_DM;
   event.tags = [['p', recipientPubkey]];
   event.content = content;
 
@@ -117,7 +118,7 @@ export async function sendNip17DM(
 
   // Create the rumor (kind 14 - NIP-17 private direct message)
   const rumor = new NDKEventClass(ndk);
-  rumor.kind = 14;
+  rumor.kind = KIND_DM_RUMOR;
   rumor.content = content;
   rumor.tags = [['p', recipientPubkey]];
 
@@ -167,7 +168,7 @@ function cachedToMessage(
   cached: CachedDMEvent,
   rumor: CachedRumor | undefined,
 ): DMMessage | null {
-  if (cached.kind === 4) {
+  if (cached.kind === KIND_ENCRYPTED_DM) {
     const pTag = cached.tags.find((t) => t[0] === 'p');
     const recipientPubkey = pTag?.[1] ?? '';
     const plaintext = getPlaintext(myPubkey, cached.id);
@@ -181,7 +182,7 @@ function cachedToMessage(
       protocol: 'nip04',
     };
   }
-  if (cached.kind === 1059 && rumor) {
+  if (cached.kind === KIND_GIFT_WRAP && rumor) {
     return {
       id: rumor.rumorId || cached.id,
       senderPubkey: rumor.senderPubkey,
@@ -211,8 +212,8 @@ export function subscribeDMs(
 
   // NIP-04: kind 4 (both incoming and outgoing)
   const nip04Filters: NDKFilter[] = [
-    { kinds: [4], '#p': [myPubkey] },
-    { kinds: [4], authors: [myPubkey] },
+    { kinds: [KIND_ENCRYPTED_DM], '#p': [myPubkey] },
+    { kinds: [KIND_ENCRYPTED_DM], authors: [myPubkey] },
   ];
 
   const nip04Sub = ndk.subscribe(nip04Filters, { closeOnEose: false });
@@ -251,7 +252,7 @@ export function subscribeDMs(
 
   // NIP-17: kind 1059 gift wraps addressed to me
   const nip17Filter: NDKFilter = {
-    kinds: [1059],
+    kinds: [KIND_GIFT_WRAP],
     '#p': [myPubkey],
   };
 
@@ -267,7 +268,7 @@ export function subscribeDMs(
 
       const { giftUnwrap } = await import('@nostr-dev-kit/ndk');
       const rumor = await giftUnwrap(event, undefined, ndk.signer!);
-      if (rumor.kind !== 14) return;
+      if (rumor.kind !== KIND_DM_RUMOR) return;
 
       const recipientTag = rumor.tags.find((t) => t[0] === 'p');
       const recipientPubkey = recipientTag?.[1] || myPubkey;
@@ -336,7 +337,7 @@ export async function fetchDMHistory(
   // set (first page). For pagination we hit relays directly.
   if (!options.before && !options.skipCache) {
     for (const ev of getCachedEvents(myPubkey)) {
-      const rumor = ev.kind === 1059 ? getRumor(myPubkey, ev.id) : undefined;
+      const rumor = ev.kind === KIND_GIFT_WRAP ? getRumor(myPubkey, ev.id) : undefined;
       const msg = cachedToMessage(myPubkey, ev, rumor);
       if (!msg) continue;
       if (msg.senderPubkey !== otherPubkey && msg.recipientPubkey !== otherPubkey) continue;
@@ -351,8 +352,8 @@ export async function fetchDMHistory(
   const until = options.before;
 
   const nip04Filters: NDKFilter[] = [
-    { kinds: [4], authors: [myPubkey], '#p': [otherPubkey], limit, ...(until ? { until } : {}) },
-    { kinds: [4], authors: [otherPubkey], '#p': [myPubkey], limit, ...(until ? { until } : {}) },
+    { kinds: [KIND_ENCRYPTED_DM], authors: [myPubkey], '#p': [otherPubkey], limit, ...(until ? { until } : {}) },
+    { kinds: [KIND_ENCRYPTED_DM], authors: [otherPubkey], '#p': [myPubkey], limit, ...(until ? { until } : {}) },
   ];
 
   let relayReturned = 0;
@@ -392,7 +393,7 @@ export async function fetchDMHistory(
 
   // NIP-17: kind 1059 gift wraps addressed to me — only direction possible.
   const nip17Filter: NDKFilter = {
-    kinds: [1059],
+    kinds: [KIND_GIFT_WRAP],
     '#p': [myPubkey],
     limit: limit * 2,
     ...(until ? { until } : {}),
@@ -410,7 +411,7 @@ export async function fetchDMHistory(
       if (!rumor) {
         try {
           const unwrapped = await giftUnwrap(wrap, undefined, ndk.signer!);
-          if (unwrapped.kind !== 14) continue;
+          if (unwrapped.kind !== KIND_DM_RUMOR) continue;
           const recipientTag = unwrapped.tags.find((t) => t[0] === 'p');
           rumor = {
             rumorId: unwrapped.id || wrap.id,
@@ -492,11 +493,11 @@ export function computeUnreadCounts(
   };
 
   for (const ev of getCachedEvents(myPubkey)) {
-    if (ev.kind === 4) {
+    if (ev.kind === KIND_ENCRYPTED_DM) {
       const pTag = ev.tags.find((t) => t[0] === 'p');
       const partner = ev.pubkey === myPubkey ? pTag?.[1] ?? '' : ev.pubkey;
       consider(partner, ev.pubkey, ev.created_at);
-    } else if (ev.kind === 1059) {
+    } else if (ev.kind === KIND_GIFT_WRAP) {
       const rumor = getRumor(myPubkey, ev.id);
       if (!rumor) continue;
       const partner = rumor.senderPubkey === myPubkey ? rumor.recipientPubkey : rumor.senderPubkey;
@@ -560,7 +561,7 @@ function buildThreadsFromCache(myPubkey: string): Map<string, ThreadSummary> {
     const latest = getLatestForPartner(myPubkey, partner);
     let lastMessage = '';
     if (latest) {
-      if (latest.event.kind === 4) {
+      if (latest.event.kind === KIND_ENCRYPTED_DM) {
         lastMessage = getPlaintext(myPubkey, latest.event.id) ?? '';
       } else if (latest.rumor) {
         lastMessage = latest.rumor.content;
@@ -592,9 +593,9 @@ async function runRelaySync(
   const limit = fullScan ? 500 : 100;
 
   const filters: NDKFilter[] = [
-    { kinds: [4], '#p': [myPubkey], limit, ...(since ? { since } : {}) },
-    { kinds: [4], authors: [myPubkey], limit, ...(since ? { since } : {}) },
-    { kinds: [1059], '#p': [myPubkey], limit, ...(since ? { since } : {}) },
+    { kinds: [KIND_ENCRYPTED_DM], '#p': [myPubkey], limit, ...(since ? { since } : {}) },
+    { kinds: [KIND_ENCRYPTED_DM], authors: [myPubkey], limit, ...(since ? { since } : {}) },
+    { kinds: [KIND_GIFT_WRAP], '#p': [myPubkey], limit, ...(since ? { since } : {}) },
   ];
 
   let fetched = 0;
@@ -607,11 +608,11 @@ async function runRelaySync(
       fetched += events.size;
       for (const event of events) {
         putEvent(myPubkey, toCachedEvent(event));
-        if (event.kind === 1059 && !getRumor(myPubkey, event.id)) {
+        if (event.kind === KIND_GIFT_WRAP && !getRumor(myPubkey, event.id)) {
           try {
             const { giftUnwrap } = await import('@nostr-dev-kit/ndk');
             const rumor = await giftUnwrap(event, undefined, ndk.signer!);
-            if (rumor.kind !== 14) continue;
+            if (rumor.kind !== KIND_DM_RUMOR) continue;
             const recipientTag = rumor.tags.find((t) => t[0] === 'p');
             putRumor(myPubkey, {
               rumorId: rumor.id || event.id,
@@ -639,7 +640,7 @@ async function runRelaySync(
   const partners = enumeratePartners(myPubkey);
   for (const [partner] of partners) {
     const latest = getLatestForPartner(myPubkey, partner);
-    if (!latest || latest.event.kind !== 4) continue;
+    if (!latest || latest.event.kind !== KIND_ENCRYPTED_DM) continue;
     if (getPlaintext(myPubkey, latest.event.id) !== undefined) continue;
 
     try {
@@ -647,7 +648,7 @@ async function runRelaySync(
       const ev = new NDKEvent(ndk, {
         id: latest.event.id,
         pubkey: latest.event.pubkey,
-        kind: 4,
+        kind: KIND_ENCRYPTED_DM,
         content: latest.event.content,
         tags: latest.event.tags,
         created_at: latest.event.created_at,

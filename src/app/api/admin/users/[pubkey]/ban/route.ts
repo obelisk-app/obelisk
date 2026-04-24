@@ -1,3 +1,4 @@
+import { parseJsonBody } from '@/lib/api-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthPubkey } from '@/lib/api-auth';
@@ -29,7 +30,7 @@ export async function POST(
     return NextResponse.json({ error: 'Cannot ban yourself' }, { status: 400 });
   }
 
-  const body = await req.json().catch(() => ({}));
+  const body = await parseJsonBody(req);
   const reason: string | undefined = typeof body.reason === 'string' ? body.reason : undefined;
 
   const servers = await prisma.server.findMany({

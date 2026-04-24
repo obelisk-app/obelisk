@@ -4,6 +4,7 @@ import { getNDK } from '@/lib/nostr';
 import { NDKEvent } from '@nostr-dev-kit/ndk';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
+import { KIND_BLOSSOM_AUTH } from '@/lib/nip-kinds';
 
 const BLOSSOM_SERVERS = [
   'https://blossom.primal.net',
@@ -16,7 +17,7 @@ async function createAuthEvent(fileHash: string): Promise<string> {
   if (!ndk.signer) throw new Error('No signer available');
 
   const event = new NDKEvent(ndk);
-  event.kind = 24242;
+  event.kind = KIND_BLOSSOM_AUTH;
   event.content = '';
   event.tags = [
     ['t', 'upload'],

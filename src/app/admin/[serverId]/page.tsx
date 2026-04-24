@@ -16,6 +16,7 @@ import GifManager from '@/components/admin/GifManager';
 import RoleManager from '@/components/admin/RoleManager';
 import SystemContentManager from '@/components/admin/SystemContentManager';
 import type { Role } from '@/lib/auth-roles';
+import { extractApiError } from '@/lib/api-json';
 
 type Tab = 'members' | 'channels' | 'roles' | 'access' | 'settings' | 'bans' | 'emojis' | 'gifs' | 'content';
 
@@ -290,8 +291,7 @@ export default function AdminServerPage({
         { method: 'DELETE' }
       );
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        setDeleteError(data?.error || `Delete failed (HTTP ${res.status})`);
+        setDeleteError(await extractApiError(res, 'Delete'));
         setDeleting(false);
         return;
       }
@@ -917,8 +917,7 @@ function UploadLimitsForm({
         body: JSON.stringify(body),
       });
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        setStatus(data?.error || `Save failed (${res.status})`);
+        setStatus(await extractApiError(res, 'Save'));
         return;
       }
       setStatus('Saved');

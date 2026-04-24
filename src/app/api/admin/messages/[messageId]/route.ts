@@ -1,7 +1,9 @@
+import { parseJsonBody } from '@/lib/api-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireRole } from '@/lib/auth-roles';
 import { getAuthorProfile, SYSTEM_PUBKEY } from '@/lib/profile-sync';
+import { ServerToClient } from '@/lib/socket-events';
 
 // Admin edit/delete for system-authored content (welcome messages, forum
 // indices, announcements). Both handlers enforce a hard guardrail: the
@@ -55,7 +57,7 @@ export async function PATCH(
   const actor = await requireRole(req, target.channel.serverId, 'admin');
   if (actor instanceof NextResponse) return actor;
 
-  const body = await req.json().catch(() => ({}));
+  const body = await parseJsonBody(req);
   const hasContent = typeof body?.content === 'string';
   const hasTitle = typeof body?.title === 'string';
   const hasTagIds = Array.isArray(body?.tagIds);
@@ -140,7 +142,7 @@ export async function PATCH(
 
   const io = (globalThis as any).__io;
   if (io) {
-    io.to(`channel:${updated.channelId}`).emit('message-edited', enriched);
+    io.to(`channel:${updated.channelId}`).emit(ServerToClient.MessageEdited, enriched);
   }
 
   return NextResponse.json(enriched);

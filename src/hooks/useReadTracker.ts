@@ -8,6 +8,7 @@ import { useNotificationStore } from '@/store/notification';
 import { isUserWatchingChannel, isUserWatchingDM } from '@/lib/read-gates';
 import { postClearChannel, postClearDM } from '@/lib/notification-broadcast';
 import { useAuthStore } from '@/store/auth';
+import { ClientToServer } from '@/lib/socket-events';
 
 /**
  * Centralized mark-as-read gating.
@@ -100,7 +101,7 @@ export function useReadTracker(socket: Socket | null) {
       if (chat.activeChannelId !== channelId) return;
       if (chat.userSelectedChannelId !== channelId) return;
 
-      if (socket) socket.emit('mark-mention-read', { channelId });
+      if (socket) socket.emit(ClientToServer.MarkMentionRead, { channelId });
       useNotificationStore.getState().clearChannelMention(channelId);
     }, 250);
 
@@ -128,7 +129,7 @@ export function useReadTracker(socket: Socket | null) {
       if (useChatStore.getState().userSelectedChannelId !== activeChannelId) return;
 
       if (socket) {
-        socket.emit('mark-read', {
+        socket.emit(ClientToServer.MarkRead, {
           channelId: activeChannelId,
           lastMessageId: lastMessageId ?? undefined,
         });

@@ -3,8 +3,7 @@
 import { Fragment, useEffect, useRef, type ReactNode } from 'react';
 import { useChatStore } from '@/store/chat';
 import { useToastStore } from '@/store/toast';
-import { formatPubkey } from '@/lib/nostr';
-import { nip19 } from 'nostr-tools';
+import { formatPubkey, pubkeyToNpub } from '@/lib/nostr';
 import {
   replaceShortcodes,
   CUSTOM_EMOJI_PLACEHOLDER_REGEX,
@@ -47,7 +46,7 @@ function renderWithEmojis(text: string, serverEmojis: Record<string, string>): R
 
 function shortNpub(pubkey: string): string {
   try {
-    const npub = nip19.npubEncode(pubkey);
+    const npub = pubkeyToNpub(pubkey);
     return `${npub.slice(0, 12)}…${npub.slice(-6)}`;
   } catch {
     return formatPubkey(pubkey);
@@ -90,7 +89,7 @@ export default function ProfilePopover({ pubkey, onClose }: {
   const displayName = member?.displayName || formatPubkey(pubkey);
   const npubShort = shortNpub(pubkey);
   let npub = '';
-  try { npub = nip19.npubEncode(pubkey); } catch {}
+  try { npub = pubkeyToNpub(pubkey); } catch {}
   const baseRole = member?.role ? BASE_ROLE_LABEL[member.role] : undefined;
   const customRoles = (member?.customRoles ?? []).slice().sort((a, b) => b.priority - a.priority);
 

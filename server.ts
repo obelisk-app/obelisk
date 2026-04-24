@@ -4,6 +4,7 @@ import { createServer as createHttpsServer } from 'https';
 import { readFileSync, existsSync } from 'fs';
 import { Server as SocketServer } from 'socket.io';
 import { parse } from 'url';
+import { ServerToClient, ClientToServer } from './src/lib/socket-events';
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = process.env.HOST || '0.0.0.0';
 const port = parseInt(process.env.PORT || '3000', 10);
@@ -102,11 +103,11 @@ app.prepare().then(async () => {
 
     // Presence: announce online on first socket for this pubkey
     if (pubkeySockets.get(pubkey)!.size === 1) {
-      io.emit('presence-update', { pubkey, online: true });
+      io.emit(ServerToClient.PresenceUpdate, { pubkey, online: true });
     }
 
     // Presence: snapshot of currently-online pubkeys
-    socket.on('presence-sync', (cb?: (pubkeys: string[]) => void) => {
+    socket.on(ClientToServer.PresenceSync, (cb?: (pubkeys: string[]) => void) => {
       if (typeof cb === 'function') {
         cb([...pubkeySockets.keys()]);
       }
@@ -114,7 +115,7 @@ app.prepare().then(async () => {
 
     // Join a server-scoped room so game-* broadcasts (Actividades panel etc.)
     // reach all members of a server even when they're not in a specific channel.
-    socket.on('join-server', async (serverId: string) => {
+    socket.on(ClientToServer.JoinServer, async (serverId: string) => {
       if (typeof serverId !== 'string' || !serverId) return;
       try {
         const member = await prisma.member.findUnique({
@@ -126,11 +127,11 @@ app.prepare().then(async () => {
       } catch {}
     });
 
-    socket.on('leave-server', (serverId: string) => {
+    socket.on(ClientToServer.LeaveServer, (serverId: string) => {
       if (typeof serverId === 'string' && serverId) socket.leave(`server:${serverId}`);
     });
 
-    socket.on('join-channel', async (channelId: string) => {
+    socket.on(ClientToServer.JoinChannel, async (channelId: string) => {
       if (typeof channelId !== 'string' || channelId.length === 0) {
         console.log(`[socket][join-channel] reject: bad channelId pk=${pubkey.slice(0, 8)}`);
         return;
@@ -158,20 +159,20 @@ app.prepare().then(async () => {
       }
     });
 
-    socket.on('leave-channel', (channelId: string) => {
+    socket.on(ClientToServer.LeaveChannel, (channelId: string) => {
       if (typeof channelId === 'string' && channelId.length > 0) {
         socket.leave(`channel:${channelId}`);
       }
     });
 
-    socket.on('send-message', async (data: { channelId: string; content: string; replyToId?: string }) => {
+    socket.on(ClientToServer.SendMessage, async (data: { channelId: string; content: string; replyToId?: string }) => {
       const { channelId, content, replyToId } = data;
 
       // Validate input
       if (!channelId || typeof channelId !== 'string') return;
       if (!content || typeof content !== 'string' || !content.trim()) return;
       if (content.length > 4000) {
-        socket.emit('message-error', { error: 'Message too long (max 4000 chars)' });
+        socket.emit(ServerToClient.MessageError, { error: 'Message too long (max 4000 chars)' });
         return;
       }
 
@@ -182,7 +183,7 @@ app.prepare().then(async () => {
           select: { serverId: true, readPermission: true, readRoleIds: true },
         });
         if (!channel) {
-          socket.emit('message-error', { error: 'Channel not found' });
+          socket.emit(ServerToClient.MessageError, { error: 'Channel not found' });
           return;
         }
         const serverId = channel.serverId;
@@ -191,7 +192,7 @@ app.prepare().then(async () => {
         if (channel.readPermission) {
           const access = await resolveMemberAccess(pubkey, serverId);
           if (!canReadChannel(access.role, channel, access.customRoleIds)) {
-            socket.emit('message-error', { error: 'Channel not found' });
+            socket.emit(ServerToClient.MessageError, { error: 'Channel not found' });
             return;
           }
         }
@@ -201,7 +202,7 @@ app.prepare().then(async () => {
           where: { serverId_pubkey: { serverId, pubkey } },
         });
         if (ban) {
-          socket.emit('message-error', { error: 'You are banned from this server' });
+          socket.emit(ServerToClient.MessageError, { error: 'You are banned from this server' });
           return;
         }
 
@@ -209,7 +210,7 @@ app.prepare().then(async () => {
           where: { serverId, targetPubkey: pubkey, expiresAt: { gt: new Date() } },
         });
         if (activeMute) {
-          socket.emit('message-error', {
+          socket.emit(ServerToClient.MessageError, {
             error: 'You are muted',
             mutedUntil: activeMute.expiresAt,
           });
@@ -248,7 +249,7 @@ app.prepare().then(async () => {
 
         const roomSize = io.sockets.adapter.rooms.get(`channel:${channelId}`)?.size ?? 0;
         console.log(`[socket][new-message] emit ch=${channelId} roomSize=${roomSize} msgId=${message.id}`);
-        io.to(`channel:${channelId}`).emit('new-message', enriched);
+        io.to(`channel:${channelId}`).emit(ServerToClient.NewMessage, enriched);
 
         // Forum post thread fan-out: if the new message is a reply to a forum
         // post (parent message has a title), notify every subscriber of that
@@ -266,7 +267,7 @@ app.prepare().then(async () => {
               select: { pubkey: true },
             });
             for (const s of subs) {
-              io.to(`pubkey:${s.pubkey}`).emit('post-unread', {
+              io.to(`pubkey:${s.pubkey}`).emit(ServerToClient.PostUnread, {
                 recipientPubkey: s.pubkey,
                 postId: replyToId,
                 messageId: message.id,
@@ -356,7 +357,7 @@ app.prepare().then(async () => {
                     ? 'everyone'
                     : 'mention';
             for (const sid of targetSockets) {
-              io.to(sid).emit('notification', {
+              io.to(sid).emit(ServerToClient.Notification, {
                 recipientPubkey: mentionedPubkey,
                 type: notifType,
                 channelId,
@@ -395,7 +396,7 @@ app.prepare().then(async () => {
             if (!canReadChannel(access.role, channel, access.customRoleIds)) continue;
           }
           for (const sid of memberSocketIds) {
-            io.to(sid).emit('unread-update', {
+            io.to(sid).emit(ServerToClient.UnreadUpdate, {
               recipientPubkey: memberPubkey,
               channelId,
               serverId,
@@ -406,16 +407,16 @@ app.prepare().then(async () => {
         }
       } catch (err) {
         console.error('[socket] Failed to create message:', err);
-        socket.emit('message-error', { error: 'Failed to send message' });
+        socket.emit(ServerToClient.MessageError, { error: 'Failed to send message' });
       }
     });
 
-    socket.on('edit-message', async (data: { messageId: string; channelId: string; content: string }) => {
+    socket.on(ClientToServer.EditMessage, async (data: { messageId: string; channelId: string; content: string }) => {
       const { messageId, channelId, content } = data;
 
       if (!messageId || !channelId || !content?.trim()) return;
       if (content.length > 4000) {
-        socket.emit('message-error', { error: 'Message too long (max 4000 chars)' });
+        socket.emit(ServerToClient.MessageError, { error: 'Message too long (max 4000 chars)' });
         return;
       }
 
@@ -426,7 +427,7 @@ app.prepare().then(async () => {
         });
 
         if (!existing || existing.deletedAt || existing.channelId !== channelId || existing.authorPubkey !== pubkey) {
-          socket.emit('message-error', { error: 'Cannot edit this message' });
+          socket.emit(ServerToClient.MessageError, { error: 'Cannot edit this message' });
           return;
         }
 
@@ -439,14 +440,14 @@ app.prepare().then(async () => {
           },
         });
 
-        io.to(`channel:${channelId}`).emit('message-edited', updated);
+        io.to(`channel:${channelId}`).emit(ServerToClient.MessageEdited, updated);
       } catch (err) {
         console.error('[socket] Failed to edit message:', err);
-        socket.emit('message-error', { error: 'Failed to edit message' });
+        socket.emit(ServerToClient.MessageError, { error: 'Failed to edit message' });
       }
     });
 
-    socket.on('toggle-reaction', async (data: { messageId: string; channelId: string; emoji: string }) => {
+    socket.on(ClientToServer.ToggleReaction, async (data: { messageId: string; channelId: string; emoji: string }) => {
       const { messageId, channelId, emoji } = data;
 
       if (!messageId || !channelId || !emoji) return;
@@ -474,13 +475,13 @@ app.prepare().then(async () => {
           select: { id: true, messageId: true, authorPubkey: true, emoji: true },
         });
 
-        io.to(`channel:${channelId}`).emit('reaction-updated', { messageId, reactions });
+        io.to(`channel:${channelId}`).emit(ServerToClient.ReactionUpdated, { messageId, reactions });
       } catch (err) {
         console.error('[socket] Failed to toggle reaction:', err);
       }
     });
 
-    socket.on('delete-message', async (data: { messageId: string; channelId: string }) => {
+    socket.on(ClientToServer.DeleteMessage, async (data: { messageId: string; channelId: string }) => {
       const { messageId, channelId } = data;
       if (!messageId || !channelId) return;
 
@@ -496,7 +497,7 @@ app.prepare().then(async () => {
         });
 
         if (!existing || existing.deletedAt || existing.channelId !== channelId) {
-          socket.emit('message-error', { error: 'Cannot delete this message' });
+          socket.emit(ServerToClient.MessageError, { error: 'Cannot delete this message' });
           return;
         }
 
@@ -520,7 +521,7 @@ app.prepare().then(async () => {
         }
 
         if (!allowed) {
-          socket.emit('message-error', { error: 'Cannot delete this message' });
+          socket.emit(ServerToClient.MessageError, { error: 'Cannot delete this message' });
           return;
         }
 
@@ -529,33 +530,33 @@ app.prepare().then(async () => {
           data: { deletedAt: new Date() },
         });
 
-        io.to(`channel:${channelId}`).emit('message-deleted', { messageId });
+        io.to(`channel:${channelId}`).emit(ServerToClient.MessageDeleted, { messageId });
       } catch (err) {
         console.error('[socket] Failed to delete message:', err);
-        socket.emit('message-error', { error: 'Failed to delete message' });
+        socket.emit(ServerToClient.MessageError, { error: 'Failed to delete message' });
       }
     });
 
-    socket.on('typing', (channelId: string) => {
+    socket.on(ClientToServer.Typing, (channelId: string) => {
       if (typeof channelId === 'string' && channelId.length > 0) {
-        socket.to(`channel:${channelId}`).emit('user-typing', { pubkey, channelId });
+        socket.to(`channel:${channelId}`).emit(ServerToClient.UserTyping, { pubkey, channelId });
       }
     });
 
     // DM typing indicator
-    socket.on('dm-typing', (targetPubkey: string) => {
+    socket.on(ClientToServer.DMTyping, (targetPubkey: string) => {
       if (typeof targetPubkey === 'string') {
         const targetSockets = pubkeySockets.get(targetPubkey);
         if (targetSockets) {
           for (const sid of targetSockets) {
-            io.to(sid).emit('dm-user-typing', { pubkey });
+            io.to(sid).emit(ServerToClient.DMUserTyping, { pubkey });
           }
         }
       }
     });
 
     // ── Mark channel as read (via socket to avoid HTTP round-trip) ──
-    socket.on('mark-read', async (data: { channelId: string; lastMessageId?: string }) => {
+    socket.on(ClientToServer.MarkRead, async (data: { channelId: string; lastMessageId?: string }) => {
       if (!data?.channelId || typeof data.channelId !== 'string') return;
       try {
         await prisma.channelReadState.upsert({
@@ -592,7 +593,7 @@ app.prepare().then(async () => {
     // to scroll to the bottom. Only advances the mention cursor so future
     // `/api/unread` calls stop flagging this channel; the unread message
     // count continues to track `lastReadAt` independently.
-    socket.on('mark-mention-read', async (data: { channelId: string }) => {
+    socket.on(ClientToServer.MarkMentionRead, async (data: { channelId: string }) => {
       if (!data?.channelId || typeof data.channelId !== 'string') return;
       try {
         await prisma.channelReadState.upsert({
@@ -621,7 +622,7 @@ app.prepare().then(async () => {
     });
 
     // ── Mark DM thread as read (via socket, mirrors /api/dm/:pubkey/read) ──
-    socket.on('dm-read', async (data: { pubkey: string }) => {
+    socket.on(ClientToServer.DMRead, async (data: { pubkey: string }) => {
       if (!data?.pubkey || typeof data.pubkey !== 'string') return;
       try {
         await prisma.dMReadState.upsert({
@@ -664,7 +665,7 @@ app.prepare().then(async () => {
       return peers;
     };
 
-    socket.on('join-voice', async (channelId: string, cb?: (res: any) => void) => {
+    socket.on(ClientToServer.JoinVoice, async (channelId: string, cb?: (res: any) => void) => {
       if (!channelId || typeof channelId !== 'string') return;
       try {
         await prisma.voiceState.upsert({
@@ -678,7 +679,7 @@ app.prepare().then(async () => {
         voiceSocketPubkey.set(socket.id, pubkey);
 
         // Tell existing peers a newcomer arrived.
-        socket.to(`voice:${channelId}`).emit('voice-peer-joined', {
+        socket.to(`voice:${channelId}`).emit(ServerToClient.VoicePeerJoined, {
           socketId: socket.id,
           pubkey,
         });
@@ -687,7 +688,7 @@ app.prepare().then(async () => {
           where: { channelId },
           select: { pubkey: true, muted: true, deafened: true, joinedAt: true },
         });
-        io.to(`voice:${channelId}`).emit('voice-state-update', { channelId, participants });
+        io.to(`voice:${channelId}`).emit(ServerToClient.VoiceStateUpdate, { channelId, participants });
 
         cb?.({ selfSocketId: socket.id, peers });
       } catch (err) {
@@ -696,10 +697,10 @@ app.prepare().then(async () => {
       }
     });
 
-    socket.on('leave-voice', async (channelId: string) => {
+    socket.on(ClientToServer.LeaveVoice, async (channelId: string) => {
       if (!channelId || typeof channelId !== 'string') return;
       try {
-        socket.to(`voice:${channelId}`).emit('voice-peer-left', {
+        socket.to(`voice:${channelId}`).emit(ServerToClient.VoicePeerLeft, {
           socketId: socket.id,
           pubkey,
         });
@@ -715,7 +716,7 @@ app.prepare().then(async () => {
           where: { channelId },
           select: { pubkey: true, muted: true, deafened: true, joinedAt: true },
         });
-        io.to(`voice:${channelId}`).emit('voice-state-update', { channelId, participants });
+        io.to(`voice:${channelId}`).emit(ServerToClient.VoiceStateUpdate, { channelId, participants });
       } catch (err) {
         console.error('[socket] Failed to leave voice:', err);
       }
@@ -746,27 +747,27 @@ app.prepare().then(async () => {
       if (set.size === 0) map.delete(channelId);
     };
 
-    socket.on('voice-screen-claim', (channelId: string, cb?: (res: any) => void) => {
+    socket.on(ClientToServer.VoiceScreenClaim, (channelId: string, cb?: (res: any) => void) => {
       claimSlot(
         screenSharers, channelId, MAX_SCREENS_PER_CHANNEL,
         `Screen-share limit reached (${MAX_SCREENS_PER_CHANNEL}). Please wait until someone else stops sharing.`,
         cb,
       );
     });
-    socket.on('voice-screen-release', (channelId: string) => releaseSlot(screenSharers, channelId));
+    socket.on(ClientToServer.VoiceScreenRelease, (channelId: string) => releaseSlot(screenSharers, channelId));
 
-    socket.on('voice-camera-claim', (channelId: string, cb?: (res: any) => void) => {
+    socket.on(ClientToServer.VoiceCameraClaim, (channelId: string, cb?: (res: any) => void) => {
       claimSlot(
         cameraSharers, channelId, MAX_CAMERAS_PER_CHANNEL,
         `Camera limit reached (${MAX_CAMERAS_PER_CHANNEL}). Please wait until someone else turns off their camera.`,
         cb,
       );
     });
-    socket.on('voice-camera-release', (channelId: string) => releaseSlot(cameraSharers, channelId));
+    socket.on(ClientToServer.VoiceCameraRelease, (channelId: string) => releaseSlot(cameraSharers, channelId));
 
     // Moderator actions in voice: mute / turn off camera / stop screen share of a target.
     // Requires caller to be owner/admin/mod of the server that owns the channel.
-    socket.on('voice-mod-action', async (
+    socket.on(ClientToServer.VoiceModAction, async (
       data: { channelId: string; targetPubkey: string; action: 'mute' | 'camera-off' | 'screen-off' },
       cb?: (res: any) => void,
     ) => {
@@ -825,7 +826,7 @@ app.prepare().then(async () => {
               where: { channelId_pubkey: { channelId, pubkey: targetPubkey } },
               data: { muted: true },
             });
-            io.to(`voice:${channelId}`).emit('voice-state-update', {
+            io.to(`voice:${channelId}`).emit(ServerToClient.VoiceStateUpdate, {
               channelId,
               participants: await prisma.voiceState.findMany({
                 where: { channelId },
@@ -842,27 +843,27 @@ app.prepare().then(async () => {
     });
 
     // Signaling relay: forward SDP / ICE / track-info to a specific peer.
-    socket.on('voice-signal', ({ toSocketId, payload }: { toSocketId: string; payload: any }) => {
+    socket.on(ServerToClient.VoiceSignal, ({ toSocketId, payload }: { toSocketId: string; payload: any }) => {
       if (!toSocketId || typeof toSocketId !== 'string' || !payload) return;
       const fromChannel = voiceSockets.get(socket.id);
       const toChannel = voiceSockets.get(toSocketId);
       // Only allow signaling between peers in the same voice channel.
       if (!fromChannel || fromChannel !== toChannel) return;
-      io.to(toSocketId).emit('voice-signal', {
+      io.to(toSocketId).emit(ServerToClient.VoiceSignal, {
         fromSocketId: socket.id,
         fromPubkey: pubkey,
         payload,
       });
     });
 
-    socket.on('voice-mute', async ({ channelId, muted }: { channelId: string; muted: boolean }) => {
+    socket.on(ClientToServer.VoiceMute, async ({ channelId, muted }: { channelId: string; muted: boolean }) => {
       if (!channelId) return;
       try {
         await prisma.voiceState.update({
           where: { channelId_pubkey: { channelId, pubkey } },
           data: { muted },
         });
-        io.to(`voice:${channelId}`).emit('voice-state-update', {
+        io.to(`voice:${channelId}`).emit(ServerToClient.VoiceStateUpdate, {
           channelId,
           participants: await prisma.voiceState.findMany({
             where: { channelId },
@@ -872,14 +873,14 @@ app.prepare().then(async () => {
       } catch {}
     });
 
-    socket.on('voice-deafen', async ({ channelId, deafened }: { channelId: string; deafened: boolean }) => {
+    socket.on(ClientToServer.VoiceDeafen, async ({ channelId, deafened }: { channelId: string; deafened: boolean }) => {
       if (!channelId) return;
       try {
         await prisma.voiceState.update({
           where: { channelId_pubkey: { channelId, pubkey } },
           data: { deafened, muted: deafened ? true : undefined },
         });
-        io.to(`voice:${channelId}`).emit('voice-state-update', {
+        io.to(`voice:${channelId}`).emit(ServerToClient.VoiceStateUpdate, {
           channelId,
           participants: await prisma.voiceState.findMany({
             where: { channelId },
@@ -893,7 +894,7 @@ app.prepare().then(async () => {
       // Notify voice peers this socket is gone.
       const voiceChannelId = voiceSockets.get(socket.id);
       if (voiceChannelId) {
-        socket.to(`voice:${voiceChannelId}`).emit('voice-peer-left', {
+        socket.to(`voice:${voiceChannelId}`).emit(ServerToClient.VoicePeerLeft, {
           socketId: socket.id,
           pubkey,
         });
@@ -911,7 +912,7 @@ app.prepare().then(async () => {
       if (pubkeySockets.get(pubkey)?.size === 0) {
         pubkeySockets.delete(pubkey);
         // Presence: announce offline on last socket disconnect (before DB cleanup)
-        io.emit('presence-update', { pubkey, online: false });
+        io.emit(ServerToClient.PresenceUpdate, { pubkey, online: false });
         // Clean up voice states on disconnect
         try {
           const voiceStates = await prisma.voiceState.findMany({ where: { pubkey }, select: { channelId: true } });
@@ -922,7 +923,7 @@ app.prepare().then(async () => {
                 where: { channelId: vs.channelId },
                 select: { pubkey: true, muted: true, deafened: true, joinedAt: true },
               });
-              io.to(`voice:${vs.channelId}`).emit('voice-state-update', { channelId: vs.channelId, participants });
+              io.to(`voice:${vs.channelId}`).emit(ServerToClient.VoiceStateUpdate, { channelId: vs.channelId, participants });
             }
           }
         } catch {}
@@ -938,7 +939,7 @@ app.prepare().then(async () => {
       for (const sid of sockets) {
         const s = io.sockets.sockets.get(sid);
         if (s) {
-          s.emit('force-disconnect', { reason });
+          s.emit(ServerToClient.ForceDisconnect, { reason });
           s.disconnect(true);
         }
       }

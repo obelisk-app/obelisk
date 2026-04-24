@@ -1,6 +1,7 @@
 import type { Server as IOServer } from 'socket.io';
 import { prisma } from '@/lib/db';
 import { BOTS, botDef, type BotType } from './registry';
+import { ServerToClient } from '@/lib/socket-events';
 
 // Refreshes each enabled ServerBot when its per-type interval has elapsed,
 // persists the new value, and broadcasts `bot-updated` to all Socket.io
@@ -20,7 +21,7 @@ export async function refreshBot(botId: string, io: IOServer | null): Promise<vo
       data: { lastValue: value, lastFetchAt: new Date() },
     });
     if (io) {
-      io.emit('bot-updated', {
+      io.emit(ServerToClient.BotUpdated, {
         serverId: updated.serverId,
         id: updated.id,
         type: updated.type,

@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import type { ServerGif } from '@/store/chat';
+import { useClickOutside } from '@/hooks/useClickOutside';
 
 interface GifPickerProps {
   gifs: ServerGif[];
@@ -23,20 +24,7 @@ export default function GifPicker({ gifs, onSelect, onClose }: GifPickerProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState('');
 
-  useEffect(() => {
-    function onDocClick(e: MouseEvent) {
-      if (!ref.current?.contains(e.target as Node)) onClose();
-    }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
-    }
-    document.addEventListener('mousedown', onDocClick);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onDocClick);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [onClose]);
+  useClickOutside(ref, onClose, { escape: true });
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();

@@ -1,3 +1,4 @@
+import { parseJsonBody } from '@/lib/api-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthPubkey } from '@/lib/api-auth';
 import { withClient, classifyNwcError, getWalletForPubkey } from '@/lib/nwc';
@@ -14,7 +15,7 @@ export async function POST(req: NextRequest) {
   const pubkey = await getAuthPubkey(req);
   if (!pubkey) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const body = await req.json().catch(() => ({}));
+  const body = await parseJsonBody(req);
   const { targetPubkey, amountSats, description } = body as {
     targetPubkey?: string;
     amountSats?: number;

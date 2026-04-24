@@ -4,6 +4,7 @@ import { useEffect, useRef, type MutableRefObject } from 'react';
 import type { Socket } from 'socket.io-client';
 import { useChatStore } from '@/store/chat';
 import { useGamesStore } from '@/store/games';
+import { ClientToServer } from '@/lib/socket-events';
 
 type Args = {
   socketRef: MutableRefObject<Socket | null>;
@@ -63,10 +64,10 @@ export function useRoomAndUrlSync({
     if (!socket) return;
 
     if (prevChannelRef.current) {
-      socket.emit('leave-channel', prevChannelRef.current);
+      socket.emit(ClientToServer.LeaveChannel, prevChannelRef.current);
     }
     if (activeChannelId) {
-      socket.emit('join-channel', activeChannelId);
+      socket.emit(ClientToServer.JoinChannel, activeChannelId);
     }
     prevChannelRef.current = activeChannelId;
     activeChannelIdRef.current = activeChannelId;
@@ -106,8 +107,8 @@ export function useRoomAndUrlSync({
   useEffect(() => {
     const socket = socketRef.current;
     if (!socket) return;
-    if (prevServerRef.current) socket.emit('leave-server', prevServerRef.current);
-    if (activeServerId) socket.emit('join-server', activeServerId);
+    if (prevServerRef.current) socket.emit(ClientToServer.LeaveServer, prevServerRef.current);
+    if (activeServerId) socket.emit(ClientToServer.JoinServer, activeServerId);
     prevServerRef.current = activeServerId;
   }, [activeServerId]);
 }

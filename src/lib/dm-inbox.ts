@@ -12,6 +12,7 @@
 
 import { getNDK } from './nostr';
 import { getSyncState, setSyncState } from './dm-cache';
+import { KIND_DM_INBOX_RELAYS } from './nip-kinds';
 
 const REPUBLISH_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24h
 
@@ -32,7 +33,7 @@ export async function publishInboxRelays(myPubkey: string): Promise<boolean> {
   try {
     const { NDKEvent } = await import('@nostr-dev-kit/ndk');
     const event = new NDKEvent(ndk);
-    event.kind = 10050;
+    event.kind = KIND_DM_INBOX_RELAYS;
     event.content = '';
     const relayUrls = listConnectedRelayUrls(ndk);
     event.tags = relayUrls.map((url) => ['relay', url]);

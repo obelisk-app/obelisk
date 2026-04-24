@@ -16,6 +16,7 @@ import { extractMentionPubkeys, hasEveryoneMention } from '@/lib/mentions';
 import { canReadChannel, hasRole } from '@/lib/roles';
 import { resolveMemberAccess } from '@/lib/channel-access';
 import { isInstanceOwner } from '@/lib/instance-owner';
+import { ServerToClient } from '@/lib/socket-events';
 
 /**
  * Is this pubkey a member of the given server? A notification must never
@@ -199,7 +200,7 @@ export async function fanOutMentions(input: MentionFanoutInput): Promise<Mention
           ? 'everyone'
           : 'mention';
 
-    io.to(`pubkey:${pubkey}`).emit('notification', {
+    io.to(`pubkey:${pubkey}`).emit(ServerToClient.Notification, {
       recipientPubkey: pubkey,
       type: notifType,
       channelId,
@@ -214,7 +215,7 @@ export async function fanOutMentions(input: MentionFanoutInput): Promise<Mention
     // For forum threads, also bump the thread-level unread + flag.
     if (postId) {
       if (postMeta) {
-        io.to(`pubkey:${pubkey}`).emit('post-subscribed', {
+        io.to(`pubkey:${pubkey}`).emit(ServerToClient.PostSubscribed, {
           recipientPubkey: pubkey,
           postId,
           title: postMeta.title,
@@ -223,7 +224,7 @@ export async function fanOutMentions(input: MentionFanoutInput): Promise<Mention
           serverId,
         });
       }
-      io.to(`pubkey:${pubkey}`).emit('post-unread', {
+      io.to(`pubkey:${pubkey}`).emit(ServerToClient.PostUnread, {
         recipientPubkey: pubkey,
         postId,
         messageId,
@@ -283,7 +284,7 @@ export async function fanOutChannelUnread(opts: {
       const access = await resolveMemberAccess(pubkey, serverId);
       if (!canReadChannel(access.role, channel as any, access.customRoleIds)) continue;
     }
-    io.to(`pubkey:${pubkey}`).emit('unread-update', {
+    io.to(`pubkey:${pubkey}`).emit(ServerToClient.UnreadUpdate, {
       recipientPubkey: pubkey,
       channelId,
       serverId,

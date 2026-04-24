@@ -10,6 +10,8 @@ import EmojiPicker from './EmojiPicker';
 import ProfilePopover from './ProfilePopover';
 import MessageReactions from './MessageReactions';
 import { slugify } from '@/lib/slug';
+import { useClickOutside } from '@/hooks/useClickOutside';
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 
 function ReplyPreview({ replyTo, profileCache, onJump }: {
   replyTo: { id: string; content: string; authorPubkey: string };
@@ -137,15 +139,7 @@ function ContextMenu({ isMe, canModerate, canPin, isPinned, openBelow, onReply, 
 }) {
   const menuRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        onClose();
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [onClose]);
+  useClickOutside(menuRef, onClose);
 
   const itemClass = "w-full text-left px-3 py-1.5 text-sm hover:bg-lc-border/40 transition-colors flex items-center gap-2";
 
@@ -269,11 +263,11 @@ function MessageBubble({ message, profileCache, canPin, canModerate, onReply, on
   }, []);
 
   const { activeServerId } = useChatStore();
-  const [copyLinkLabel, setCopyLinkLabel] = useState('Copiar enlace');
+  const { copied: linkCopied, error: linkCopyError, copy: copyLink } = useCopyToClipboard(1200);
+  const copyLinkLabel = linkCopyError ? 'Error' : linkCopied ? 'Copiado ✓' : 'Copiar enlace';
+  const { copy: copyText } = useCopyToClipboard();
 
-  const handleCopyText = () => {
-    navigator.clipboard.writeText(message.content);
-  };
+  const handleCopyText = () => { void copyText(message.content); };
 
   const handleCopyLink = () => {
     if (typeof window === 'undefined') return;
@@ -286,14 +280,7 @@ function MessageBubble({ message, profileCache, canPin, canModerate, onReply, on
     if (!ch) return;
     const slug = slugify(ch.name);
     const url = `${window.location.origin}/chat?c=${slug}&m=${message.id}`;
-    try {
-      navigator.clipboard.writeText(url);
-      setCopyLinkLabel('Copiado ✓');
-      setTimeout(() => setCopyLinkLabel('Copiar enlace'), 1200);
-    } catch {
-      setCopyLinkLabel('Error');
-      setTimeout(() => setCopyLinkLabel('Copiar enlace'), 1200);
-    }
+    void copyLink(url);
   };
 
   return (

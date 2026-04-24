@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { shortNpub } from '@/lib/mentions';
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
+import { useToastStore } from '@/store/toast';
 
 interface InvitationMember {
   id: string;
@@ -39,7 +41,7 @@ export default function InviteManager({ serverId }: InviteManagerProps) {
   const [maxUses, setMaxUses] = useState(1);
   const [expiresInHours, setExpiresInHours] = useState(24);
   const [targetPubkey, setTargetPubkey] = useState('');
-  const [copied, setCopied] = useState<string | null>(null);
+  const { copied, copy } = useCopyToClipboard();
 
   useEffect(() => {
     fetchInvitations();
@@ -74,20 +76,23 @@ export default function InviteManager({ serverId }: InviteManagerProps) {
         setInvitations((prev) => [data.invitation, ...prev]);
         setTargetPubkey('');
       } else {
-        alert(data.error || 'Failed to create invite');
+        useToastStore.getState().pushToast({
+          title: 'Invite failed',
+          body: data.error || 'Failed to create invite',
+        });
       }
-    } catch (e) {
-      alert('Network error while creating invite');
+    } catch {
+      useToastStore.getState().pushToast({
+        title: 'Invite failed',
+        body: 'Network error while creating invite',
+      });
     } finally {
       setCreating(false);
     }
   };
 
   const copyInviteLink = (code: string) => {
-    const url = `${window.location.origin}/invite/${code}`;
-    navigator.clipboard.writeText(url);
-    setCopied(code);
-    setTimeout(() => setCopied(null), 2000);
+    void copy(`${window.location.origin}/invite/${code}`, code);
   };
 
   // Soft-revoke: the row stays in the list (grayed out) so admins can still

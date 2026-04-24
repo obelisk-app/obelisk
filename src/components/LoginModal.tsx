@@ -15,6 +15,7 @@ import {
   NostrConnectSession,
   logStatus,
 } from '@/lib/nostr';
+import { withTimeout } from '@/lib/promise';
 import { authenticateWithBackend } from '@/lib/backend-auth';
 import ProfileEditor from '@/components/ProfileEditor';
 
@@ -122,11 +123,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, transparentBack
         logStatus('LoginModal', 'Starting backend authentication...', { pubkey: user.pubkey });
         const watchdog = setInterval(() => logStatus('LoginModal', 'STILL FINALIZING... checking relays and signer'), 2000);
         try {
-          // Add 15s timeout to backend auth to prevent "Finalizing" hang
-          await Promise.race([
-            authenticateWithBackend(getNDK()),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Backend auth timed out after 60s')), 60000))
-          ]);
+          await withTimeout(authenticateWithBackend(getNDK()), 60000, 'Backend auth timed out after 60s');
           clearInterval(watchdog);
           logStatus('LoginModal', 'Finished backend authentication: SUCCESS');
         } catch (backendErr) {
@@ -245,11 +242,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, transparentBack
         // Backend challenge-response auth BEFORE showing connected
         logStatus('Login', 'Starting backend authentication...', { pubkey: user.pubkey });
         try {
-          // Add 15s timeout to backend auth to prevent "Finalizing" hang
-          await Promise.race([
-            authenticateWithBackend(getNDK()),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Backend auth timed out after 60s')), 60000))
-          ]);
+          await withTimeout(authenticateWithBackend(getNDK()), 60000, 'Backend auth timed out after 60s');
           logStatus('Login', 'Finished backend authentication: SUCCESS');
         } catch (backendErr) {
           logStatus('Login', 'Finished backend authentication: FAILED', { error: backendErr });
@@ -292,11 +285,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, transparentBack
     try {
       connectNDK().catch(() => {});
       const { user, nsec } = await createNewAccount();
-      // Add 15s timeout to backend auth to prevent "Finalizing" hang
-      await Promise.race([
-        authenticateWithBackend(getNDK()),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Backend auth timed out after 60s')), 60000))
-      ]);
+      await withTimeout(authenticateWithBackend(getNDK()), 60000, 'Backend auth timed out after 60s');
       setNewAccountNsec(nsec);
       setUser(user, 'nsec');
       // Skip syncProfile — a brand-new account has no Nostr profile on relays yet

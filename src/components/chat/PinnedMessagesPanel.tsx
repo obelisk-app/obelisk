@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useChatStore, type Message } from '@/store/chat';
 import { formatPubkey } from '@/lib/nostr';
+import { useClickOutside } from '@/hooks/useClickOutside';
 
 interface PinnedPanelProps {
   channelId: string;
@@ -61,17 +62,7 @@ export default function PinnedMessagesPanel({
     if (open) void fetchPins();
   }, [open, fetchPins, liveCount]);
 
-  // Close on outside click.
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
+  useClickOutside(rootRef, () => setOpen(false), { enabled: open });
 
   return (
     <div ref={rootRef} className="relative">

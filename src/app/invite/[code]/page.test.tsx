@@ -147,7 +147,7 @@ describe('InvitePage (auth flow)', () => {
 
   it('shows "already a member" state and routes to /chat without POSTing', async () => {
     isConnectedMock = true;
-    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+    const fetchMock = vi.fn((input: RequestInfo | URL, _init?: RequestInit) => {
       // GET returns alreadyMember:true — no POST should be issued.
       return Promise.resolve({
         ok: true,

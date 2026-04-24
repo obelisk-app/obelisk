@@ -10,6 +10,8 @@ import { nip19, generateSecretKey, getPublicKey, nip04 } from 'nostr-tools';
 import { hexToBytes, bytesToHex } from 'nostr-tools/utils';
 import { BunkerSigner, parseBunkerInput, createNostrConnectURI } from 'nostr-tools/nip46';
 import { EventEmitter } from 'events';
+import { withTimeout } from './promise';
+import { KIND_RELAY_LIST } from './nip-kinds';
 
 // Popular relays (high availability)
 const POPULAR_RELAYS = [
@@ -114,7 +116,7 @@ async function addUserRelays(pubkey: string): Promise<void> {
 
   try {
     const relayListEvents = await withTimeout(
-      ndk.fetchEvents({ kinds: [10002], authors: [pubkey], limit: 1 }),
+      ndk.fetchEvents({ kinds: [KIND_RELAY_LIST], authors: [pubkey], limit: 1 }),
       5000
     );
     const relayEvent = Array.from(relayListEvents)[0];
@@ -131,13 +133,6 @@ async function addUserRelays(pubkey: string): Promise<void> {
     }
     userRelaysAdded = true;
   } catch { /* ignore */ }
-}
-
-function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<T>((_, reject) => setTimeout(() => reject(new Error('timeout')), ms)),
-  ]);
 }
 
 export type LoginMethod = 'extension' | 'nsec' | 'bunker';
@@ -569,8 +564,28 @@ export async function publishProfile(fields: {
   return event;
 }
 
+export function pubkeyToNpub(pubkey: string): string {
+  return nip19.npubEncode(pubkey);
+}
+
+/**
+ * Accept a hex pubkey, an `npub1…` bech32, or an `nprofile1…` bech32 and
+ * return the 64-char hex pubkey. Returns `null` if the input isn't a
+ * recognized Nostr identity encoding.
+ */
+export function npubToHex(input: string): string | null {
+  const trimmed = input.trim();
+  if (/^[0-9a-f]{64}$/i.test(trimmed)) return trimmed.toLowerCase();
+  try {
+    const decoded = nip19.decode(trimmed);
+    if (decoded.type === 'npub') return decoded.data;
+    if (decoded.type === 'nprofile') return decoded.data.pubkey;
+  } catch { /* not a valid nip19 string */ }
+  return null;
+}
+
 export function formatPubkey(pubkey: string): string {
-  const npub = nip19.npubEncode(pubkey);
+  const npub = pubkeyToNpub(pubkey);
   return `${npub.slice(0, 8)}...${npub.slice(-4)}`;
 }
 

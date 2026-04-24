@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useDMStore } from '@/store/dm';
-import { nip19 } from 'nostr-tools';
+import { npubToHex } from '@/lib/nostr';
+import ModalShell from '@/components/ModalShell';
 
 interface NewDMModalProps {
   onClose: () => void;
@@ -10,14 +11,7 @@ interface NewDMModalProps {
 }
 
 function resolveToHex(input: string): string | null {
-  const trimmed = input.trim();
-  if (!trimmed) return null;
-  if (/^[0-9a-f]{64}$/i.test(trimmed)) return trimmed.toLowerCase();
-  try {
-    const decoded = nip19.decode(trimmed);
-    if (decoded.type === 'npub') return decoded.data as string;
-  } catch { /* not a valid nip19 string */ }
-  return null;
+  return input.trim() ? npubToHex(input) : null;
 }
 
 export default function NewDMModal({ onClose, profileCache }: NewDMModalProps) {
@@ -44,40 +38,38 @@ export default function NewDMModal({ onClose, profileCache }: NewDMModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
-      <div
-        className="bg-lc-dark border border-lc-border rounded-xl p-6 max-w-sm w-full mx-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 className="text-lc-white text-lg font-semibold mb-3">New Direct Message</h3>
-        <input
-          type="text"
-          value={pubkey}
-          onChange={(e) => { setPubkey(e.target.value); setError(''); }}
-          placeholder="Enter npub or hex pubkey"
-          className="w-full px-3 py-2 rounded-lg bg-lc-black border border-lc-border text-lc-white text-sm focus:border-lc-green focus:outline-none mb-3"
-          onKeyDown={(e) => e.key === 'Enter' && handleStart()}
-          autoFocus
-          data-testid="new-dm-pubkey-input"
-        />
-        {error && <p className="text-xs text-red-400 mb-2" data-testid="new-dm-error">{error}</p>}
-        <div className="flex gap-3 justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-full text-sm text-lc-muted border border-lc-border hover:border-lc-muted transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleStart}
-            disabled={!pubkey.trim()}
-            className="lc-pill-primary px-5 py-2 text-sm font-medium disabled:opacity-50"
-            data-testid="start-dm-btn"
-          >
-            Start Chat
-          </button>
-        </div>
+    <ModalShell
+      onClose={onClose}
+      panelClassName="bg-lc-dark border border-lc-border rounded-xl p-6 max-w-sm w-full mx-4"
+    >
+      <h3 className="text-lc-white text-lg font-semibold mb-3">New Direct Message</h3>
+      <input
+        type="text"
+        value={pubkey}
+        onChange={(e) => { setPubkey(e.target.value); setError(''); }}
+        placeholder="Enter npub or hex pubkey"
+        className="w-full px-3 py-2 rounded-lg bg-lc-black border border-lc-border text-lc-white text-sm focus:border-lc-green focus:outline-none mb-3"
+        onKeyDown={(e) => e.key === 'Enter' && handleStart()}
+        autoFocus
+        data-testid="new-dm-pubkey-input"
+      />
+      {error && <p className="text-xs text-red-400 mb-2" data-testid="new-dm-error">{error}</p>}
+      <div className="flex gap-3 justify-end">
+        <button
+          onClick={onClose}
+          className="px-4 py-2 rounded-full text-sm text-lc-muted border border-lc-border hover:border-lc-muted transition-colors"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleStart}
+          disabled={!pubkey.trim()}
+          className="lc-pill-primary px-5 py-2 text-sm font-medium disabled:opacity-50"
+          data-testid="start-dm-btn"
+        >
+          Start Chat
+        </button>
       </div>
-    </div>
+    </ModalShell>
   );
 }

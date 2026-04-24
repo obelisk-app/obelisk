@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useId, useRef, useState } from 'react';
+import { useId, useRef, useState } from 'react';
+import { useClickOutside } from '@/hooks/useClickOutside';
 
 interface ColorPickerProps {
   value: string;
@@ -43,21 +44,7 @@ export default function ColorPicker({ value, onChange, presets = DEFAULT_PRESETS
   const [invalid, setInvalid] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    const onDocClick = (e: MouseEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
-    };
-    document.addEventListener('mousedown', onDocClick);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onDocClick);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [open]);
+  useClickOutside(rootRef, () => setOpen(false), { escape: true, enabled: open });
 
   const commitCustom = () => {
     const trimmed = customInput.trim();

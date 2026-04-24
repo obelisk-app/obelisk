@@ -1,3 +1,4 @@
+import { parseJsonBody } from '@/lib/api-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthPubkey } from '@/lib/api-auth';
 import { withClient, classifyNwcError } from '@/lib/nwc';
@@ -11,7 +12,7 @@ import { isLightningAddress, resolveLightningAddress } from '@/lib/lnurl';
 export async function POST(req: NextRequest) {
   const pubkey = await getAuthPubkey(req);
   if (!pubkey) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const body = await req.json().catch(() => ({}));
+  const body = await parseJsonBody(req);
   const { invoice: rawInvoice, address, amountSats, comment } = body as {
     invoice?: string;
     address?: string;

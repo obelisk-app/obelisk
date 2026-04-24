@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useGamesStore, type GameState } from '@/store/games';
 import { useAuthStore } from '@/store/auth';
 import { useChatStore } from '@/store/chat';
+import { pushErrorToast } from '@/store/toast';
 import { resolvePlayerName } from '@/lib/games/player-name';
 import TicTacToeBoard from './TicTacToeBoard';
 import ChainReactionBoard from './ChainReactionBoard';
@@ -20,14 +21,14 @@ async function postAction(gameId: string, action: any) {
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
-    alert(data.error || 'Acción inválida');
+    pushErrorToast('Acción inválida', data.error);
   }
 }
 async function postStart(gameId: string) {
   const res = await fetch(`/api/games/${gameId}/start`, { method: 'POST' });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
-    alert(data.error || 'No se pudo empezar');
+    pushErrorToast('No se pudo empezar', data.error);
   }
 }
 async function postLeave(gameId: string) {

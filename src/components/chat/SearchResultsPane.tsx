@@ -1,25 +1,19 @@
 'use client';
 
-import { useMemo, useRef, useState, useEffect } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useSearchStore, SearchResult, SortMode, ActiveFilters } from '@/store/search';
 import { useChatStore } from '@/store/chat';
 import { useT } from '@/store/locale';
 import { formatPubkey } from '@/lib/nostr';
 import HighlightedText from './search/HighlightedText';
+import { useClickOutside } from '@/hooks/useClickOutside';
 
 function SortMenu({ value, onChange }: { value: SortMode; onChange: (v: SortMode) => void }) {
   const t = useT();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    const onClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', onClick);
-    return () => document.removeEventListener('mousedown', onClick);
-  }, [open]);
+  useClickOutside(ref, () => setOpen(false), { enabled: open });
 
   const options: { value: SortMode; label: string }[] = [
     { value: 'relevance', label: t('search.sort.relevance') },

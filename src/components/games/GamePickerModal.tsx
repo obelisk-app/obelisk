@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useGamesStore } from '@/store/games';
+import { pushErrorToast } from '@/store/toast';
 import { GameTypePreview } from './GamePreviews';
+import ModalShell from '@/components/ModalShell';
 
 interface AvailableGame {
   type: string;
@@ -54,7 +56,7 @@ export default function GamePickerModal() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        alert(data.error || 'No se pudo crear');
+        pushErrorToast('No se pudo crear', data.error);
         return;
       }
       const data = await res.json();
@@ -83,14 +85,10 @@ export default function GamePickerModal() {
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
-      onClick={close}
+    <ModalShell
+      onClose={close}
+      panelClassName="bg-lc-dark border border-lc-border rounded-xl w-full max-w-md p-5 mx-4"
     >
-      <div
-        className="bg-lc-dark border border-lc-border rounded-xl w-full max-w-md p-5"
-        onClick={(e) => e.stopPropagation()}
-      >
         {!selected && (
           <>
             <h3 className="text-lc-white font-semibold mb-3">Elegí un juego</h3>
@@ -204,7 +202,6 @@ export default function GamePickerModal() {
             </div>
           </>
         )}
-      </div>
-    </div>
+    </ModalShell>
   );
 }

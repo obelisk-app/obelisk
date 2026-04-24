@@ -5,6 +5,7 @@ import { getAuthorProfile } from '@/lib/profile-sync';
 import { canWriteInChannel, getAuthMember } from '@/lib/auth-roles';
 import { canReadChannel } from '@/lib/roles';
 import { resolveMemberAccess } from '@/lib/channel-access';
+import { ServerToClient } from '@/lib/socket-events';
 
 // GET /api/channels/:channelId/messages?cursor=&limit=
 export async function GET(
@@ -261,7 +262,7 @@ export async function POST(
   // Broadcast via Socket.io if available
   const io = (globalThis as any).__io;
   if (io) {
-    io.to(`channel:${channelId}`).emit('new-message', enriched);
+    io.to(`channel:${channelId}`).emit(ServerToClient.NewMessage, enriched);
   }
 
   return NextResponse.json(enriched, { status: 201 });
@@ -320,7 +321,7 @@ export async function PATCH(
 
   const io = (globalThis as any).__io;
   if (io) {
-    io.to(`channel:${channelId}`).emit('message-edited', updated);
+    io.to(`channel:${channelId}`).emit(ServerToClient.MessageEdited, updated);
   }
 
   return NextResponse.json(updated);

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 
 type View = 'main' | 'send' | 'receive';
 
@@ -26,7 +27,7 @@ export default function WalletPanel() {
   const [receiveAmount, setReceiveAmount] = useState('');
   const [receiveDesc, setReceiveDesc] = useState('');
   const [generatedInvoice, setGeneratedInvoice] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const { copied, copy: copyToClipboard } = useCopyToClipboard();
   const [status, setStatus] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -135,13 +136,8 @@ export default function WalletPanel() {
     else setStatus(d.error || 'No se pudo crear la factura');
   };
 
-  const copy = async () => {
-    if (!generatedInvoice) return;
-    try {
-      await navigator.clipboard.writeText(generatedInvoice);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch { /* ignore */ }
+  const copy = () => {
+    if (generatedInvoice) void copyToClipboard(generatedInvoice);
   };
 
   if (loading) return <div className="lc-card p-4"><div className="lc-spinner" /></div>;

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { MemberInfo } from '@/lib/mentions';
+import { useClickOutside } from '@/hooks/useClickOutside';
 
 interface MentionAutocompleteProps {
   members: MemberInfo[];
@@ -18,15 +19,7 @@ export default function MentionAutocomplete({ members, onSelect, onClose, select
   const ref = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        onClose();
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [onClose]);
+  useClickOutside(ref, onClose);
 
   // Scroll selected item into view
   useEffect(() => {

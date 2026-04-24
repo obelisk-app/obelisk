@@ -16,6 +16,7 @@ import {
   handleIncomingChannelMessage,
 } from '@/lib/read-gates';
 import { clearBadge } from '@/lib/favicon-badge';
+import { ServerToClient, ClientToServer } from '@/lib/socket-events';
 
 type Router = ReturnType<typeof useRouter>;
 
@@ -99,7 +100,7 @@ export function useSocketLifecycle({
     socket.on('connect', () => {
       console.log('Socket connected');
       // Snapshot currently-online pubkeys
-      socket.emit('presence-sync', (pubkeys: string[]) => {
+      socket.emit(ClientToServer.PresenceSync, (pubkeys: string[]) => {
         useChatStore.getState().setOnlinePubkeys(pubkeys);
       });
       // Reconnect may have missed events; let the unread-fetch effect
@@ -109,17 +110,17 @@ export function useSocketLifecycle({
       }
     });
 
-    socket.on('presence-update', ({ pubkey: pk, online }: { pubkey: string; online: boolean }) => {
+    socket.on(ServerToClient.PresenceUpdate, ({ pubkey: pk, online }: { pubkey: string; online: boolean }) => {
       useChatStore.getState().setPresence(pk, online);
     });
 
-    socket.on('bot-updated', (update: { serverId: string; id: string; type: string; displayName?: string; avatarUrl?: string; lastValue?: string }) => {
+    socket.on(ServerToClient.BotUpdated, (update: { serverId: string; id: string; type: string; displayName?: string; avatarUrl?: string; lastValue?: string }) => {
       const state = useChatStore.getState();
       if (state.activeServerId && update.serverId !== state.activeServerId) return;
       state.applyBotUpdate(update);
     });
 
-    socket.on('new-message', (message: Message) => {
+    socket.on(ServerToClient.NewMessage, (message: Message) => {
       const activeCh = useChatStore.getState().activeChannelId;
       console.log(`[socket][new-message] recv ch=${message.channelId} active=${activeCh} id=${message.id}`);
       if (isStaleSession()) {
@@ -207,19 +208,19 @@ export function useSocketLifecycle({
       }
     });
 
-    socket.on('message-deleted', ({ messageId }: { messageId: string }) => {
+    socket.on(ServerToClient.MessageDeleted, ({ messageId }: { messageId: string }) => {
       removeMessage(messageId);
     });
 
-    socket.on('message-edited', (message: Message) => {
+    socket.on(ServerToClient.MessageEdited, (message: Message) => {
       updateMessage(message.id, message.content, message.editedAt!);
     });
 
-    socket.on('reaction-updated', ({ messageId, reactions }: { messageId: string; reactions: any[] }) => {
+    socket.on(ServerToClient.ReactionUpdated, ({ messageId, reactions }: { messageId: string; reactions: any[] }) => {
       updateReactions(messageId, reactions);
     });
 
-    socket.on('message-pinned', (message: Message) => {
+    socket.on(ServerToClient.MessagePinned, (message: Message) => {
       useChatStore.getState().updatePinState(
         message.id,
         message.pinnedAt ?? null,
@@ -227,7 +228,7 @@ export function useSocketLifecycle({
       );
     });
 
-    socket.on('force-disconnect', ({ reason }: { reason: string }) => {
+    socket.on(ServerToClient.ForceDisconnect, ({ reason }: { reason: string }) => {
       alert(reason);
       // Reset title + favicon explicitly in case the layout switch tears
       // down `useFaviconBadge` before its cleanup can run.
@@ -237,13 +238,13 @@ export function useSocketLifecycle({
       router.push('/');
     });
 
-    socket.on('user-typing', ({ pubkey: typerPubkey, channelId: ch }: { pubkey: string; channelId: string }) => {
+    socket.on(ServerToClient.UserTyping, ({ pubkey: typerPubkey, channelId: ch }: { pubkey: string; channelId: string }) => {
       if (ch === activeChannelIdRef.current && typerPubkey !== profilePubkey) {
         useChatStore.getState().setTyping(typerPubkey);
       }
     });
 
-    socket.on('invoice-paid', (data: { paymentHash: string; payerPubkey: string; paidAt: string }) => {
+    socket.on(ServerToClient.InvoicePaid, (data: { paymentHash: string; payerPubkey: string; paidAt: string }) => {
       useChatStore.getState().markInvoicePaid({
         paymentHash: data.paymentHash,
         payerPubkey: data.payerPubkey,
@@ -251,12 +252,12 @@ export function useSocketLifecycle({
       });
     });
 
-    socket.on('message-error', ({ error }: { error: string }) => {
+    socket.on(ServerToClient.MessageError, ({ error }: { error: string }) => {
       setMessageError(error);
       setTimeout(() => setMessageError(null), 5000);
     });
 
-    socket.on('voice-state-update', ({ channelId, participants }: { channelId: string; participants: any[] }) => {
+    socket.on(ServerToClient.VoiceStateUpdate, ({ channelId, participants }: { channelId: string; participants: any[] }) => {
       const voiceStore = useVoiceStore.getState();
       // Update if we're in this voice channel OR currently viewing it
       if (voiceStore.currentVoiceChannelId === channelId || activeChannelIdRef.current === channelId) {
@@ -265,16 +266,16 @@ export function useSocketLifecycle({
     });
 
     // Track remote video/screen state in the store
-    socket.on('voice-video-start', ({ pubkey: pk }: { pubkey: string }) => {
+    socket.on(ServerToClient.VoiceVideoStart, ({ pubkey: pk }: { pubkey: string }) => {
       useVoiceStore.getState().addRemoteVideo(pk);
     });
-    socket.on('voice-video-stop', ({ pubkey: pk }: { pubkey: string }) => {
+    socket.on(ServerToClient.VoiceVideoStop, ({ pubkey: pk }: { pubkey: string }) => {
       useVoiceStore.getState().removeRemoteVideo(pk);
     });
-    socket.on('voice-screen-start', ({ pubkey: pk }: { pubkey: string }) => {
+    socket.on(ServerToClient.VoiceScreenStart, ({ pubkey: pk }: { pubkey: string }) => {
       useVoiceStore.getState().addRemoteScreen(pk);
     });
-    socket.on('voice-screen-stop', ({ pubkey: pk }: { pubkey: string }) => {
+    socket.on(ServerToClient.VoiceScreenStop, ({ pubkey: pk }: { pubkey: string }) => {
       useVoiceStore.getState().removeRemoteScreen(pk);
     });
 
@@ -287,7 +288,7 @@ export function useSocketLifecycle({
     //   - `unread-update` (this client is NOT in the channel room) — below
     // Doing it this way means a single server-side event becomes exactly one
     // client-side count bump, regardless of whether the user is mentioned.
-    socket.on('notification', (data: { recipientPubkey?: string; type: string; channelId?: string; postId?: string; serverId?: string; messageId?: string; senderPubkey: string; preview?: string; createdAt?: string }) => {
+    socket.on(ServerToClient.Notification, (data: { recipientPubkey?: string; type: string; channelId?: string; postId?: string; serverId?: string; messageId?: string; senderPubkey: string; preview?: string; createdAt?: string }) => {
       if (isStaleSession()) return;
       if (isForOtherUser(data)) return;
       const notifStore = useNotificationStore.getState();
@@ -323,26 +324,26 @@ export function useSocketLifecycle({
     // Cross-device / other-tab read sync. Fired by server.ts after it
     // persists a `mark-read` or `dm-read` from any of this user's other
     // sockets. Clears the local unread state without another DB round-trip.
-    socket.on('read-update', (data: { recipientPubkey?: string; channelId: string }) => {
+    socket.on(ServerToClient.ReadUpdate, (data: { recipientPubkey?: string; channelId: string }) => {
       if (isStaleSession() || isForOtherUser(data)) return;
       useNotificationStore.getState().clearChannelUnread(data.channelId);
     });
 
     // Sibling tab / device opened the channel and cleared the mention dot.
     // Only clears the mention flag — count stays until a full `read-update`.
-    socket.on('mention-read-update', (data: { recipientPubkey?: string; channelId: string }) => {
+    socket.on(ServerToClient.MentionReadUpdate, (data: { recipientPubkey?: string; channelId: string }) => {
       if (isStaleSession() || isForOtherUser(data)) return;
       useNotificationStore.getState().clearChannelMention(data.channelId);
     });
 
-    socket.on('dm-read-update', (data: { recipientPubkey?: string; pubkey: string }) => {
+    socket.on(ServerToClient.DMReadUpdate, (data: { recipientPubkey?: string; pubkey: string }) => {
       if (isStaleSession() || isForOtherUser(data)) return;
       const otherPubkey = data.pubkey;
       useNotificationStore.getState().clearDMUnread(otherPubkey);
       useDMStore.getState().updateThread(otherPubkey, { unreadCount: 0 });
     });
 
-    socket.on('unread-update', (data: { recipientPubkey?: string; channelId: string; serverId: string; hasMention: boolean; preview?: string }) => {
+    socket.on(ServerToClient.UnreadUpdate, (data: { recipientPubkey?: string; channelId: string; serverId: string; hasMention: boolean; preview?: string }) => {
       if (isStaleSession() || isForOtherUser(data)) return;
       const notifStore = useNotificationStore.getState();
       notifStore.incrementChannelUnread(data.channelId, data.hasMention);
@@ -358,7 +359,7 @@ export function useSocketLifecycle({
       // itself, defeating the inbox's purpose as a mention/DM-only feed.
     });
 
-    socket.on('post-unread', (data: { recipientPubkey?: string; postId: string; messageId: string; authorPubkey: string; hasMention?: boolean }) => {
+    socket.on(ServerToClient.PostUnread, (data: { recipientPubkey?: string; postId: string; messageId: string; authorPubkey: string; hasMention?: boolean }) => {
       if (isStaleSession() || isForOtherUser(data)) return;
       if (data.postId === useChatStore.getState().activePostId) return;
       useNotificationStore.getState().incrementPostUnread(data.postId, data.hasMention);
@@ -368,7 +369,7 @@ export function useSocketLifecycle({
     // (e.g. because they were @-mentioned in it). Thread the post meta
     // straight into followedPostIds/Meta so the thread row appears under
     // its forum channel in the sidebar without a refetch.
-    socket.on('post-subscribed', (data: { postId: string; title: string; channelId: string; channelName: string; serverId: string }) => {
+    socket.on(ServerToClient.PostSubscribed, (data: { postId: string; title: string; channelId: string; channelName: string; serverId: string }) => {
       const state = useChatStore.getState();
       const followedPostIds = Array.isArray(state.followedPostIds) ? state.followedPostIds : [];
       const followedPostMeta = state.followedPostMeta && typeof state.followedPostMeta === 'object' ? state.followedPostMeta : {};
@@ -400,10 +401,10 @@ export function useSocketLifecycle({
         useGamesStore.getState().upsertGame(g);
       });
     };
-    socket.on('game-created', onGameEvent);
-    socket.on('game-updated', onGameEvent);
-    socket.on('game-finished', onGameEvent);
-    socket.on('game-turn', (data: { gameId: string; currentTurn: string; turnDeadline: string; type: string }) => {
+    socket.on(ServerToClient.GameCreated, onGameEvent);
+    socket.on(ServerToClient.GameUpdated, onGameEvent);
+    socket.on(ServerToClient.GameFinished, onGameEvent);
+    socket.on(ServerToClient.GameTurn, (data: { gameId: string; currentTurn: string; turnDeadline: string; type: string }) => {
       if (data.currentTurn !== profilePubkey) return;
       // Notify the player regardless of which channel they're in.
       try {

@@ -4,6 +4,7 @@
 
 import { prisma } from '@/lib/db';
 import { getGameDef } from './registry';
+import { ServerToClient } from '@/lib/socket-events';
 
 type GameRow = Awaited<ReturnType<typeof prisma.game.findUnique>>;
 
@@ -80,7 +81,7 @@ export function broadcastGame(g: GameFull, extra?: { event?: 'game-created' | 'g
       turnDeadline: g.turnDeadline,
     };
     for (const p of g.participants) {
-      io.to(`pubkey:${p.pubkey}`).emit('game-turn', turnPayload);
+      io.to(`pubkey:${p.pubkey}`).emit(ServerToClient.GameTurn, turnPayload);
     }
   }
 }

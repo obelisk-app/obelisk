@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { shortNpub } from '@/lib/mentions';
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 
 interface InviteMember {
   id: string;
@@ -42,7 +43,7 @@ export default function MemberInviteCard({ serverId, onClose }: MemberInviteCard
   const [status, setStatus] = useState<CreditStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
-  const [copied, setCopied] = useState<string | null>(null);
+  const { copied, copy } = useCopyToClipboard();
 
   const load = useCallback(async () => {
     try {
@@ -72,10 +73,7 @@ export default function MemberInviteCard({ serverId, onClose }: MemberInviteCard
   };
 
   const copyLink = (code: string) => {
-    const url = `${window.location.origin}/invite/${code}`;
-    navigator.clipboard.writeText(url);
-    setCopied(code);
-    setTimeout(() => setCopied(null), 2000);
+    void copy(`${window.location.origin}/invite/${code}`, code);
   };
 
   if (loading) {

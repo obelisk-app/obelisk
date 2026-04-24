@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthPubkey } from '@/lib/api-auth';
+import { ServerToClient } from '@/lib/socket-events';
 
 // POST /api/channels/:channelId/messages/:messageId/reactions — toggle reaction
 export async function POST(
@@ -51,7 +52,7 @@ export async function POST(
   // Broadcast via Socket.io
   const io = (globalThis as any).__io;
   if (io) {
-    io.to(`channel:${channelId}`).emit('reaction-updated', { messageId, reactions });
+    io.to(`channel:${channelId}`).emit(ServerToClient.ReactionUpdated, { messageId, reactions });
   }
 
   return NextResponse.json({ reactions });

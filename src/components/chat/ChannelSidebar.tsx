@@ -13,6 +13,9 @@ import MemberInviteCard from '../invites/MemberInviteCard';
 import { canWriteInChannel } from '@/lib/roles';
 import ChannelEmoji from './ChannelEmoji';
 import { slugify } from '@/lib/slug';
+import { useClickOutside } from '@/hooks/useClickOutside';
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
+import { useToastStore } from '@/store/toast';
 import { getActiveVoiceClient } from '@/lib/voice-active-client';
 import { useGamesStore } from '@/store/games';
 
@@ -92,18 +95,7 @@ function ChannelContextMenu({ anchor, onCopyLink, copyLabel, onClose }: {
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
-    };
-    const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('mousedown', handler);
-    document.addEventListener('keydown', onEsc);
-    return () => {
-      document.removeEventListener('mousedown', handler);
-      document.removeEventListener('keydown', onEsc);
-    };
-  }, [onClose]);
+  useClickOutside(ref, onClose, { escape: true });
 
   if (typeof document === 'undefined') return null;
   return createPortal(
@@ -140,12 +132,13 @@ function ForumPostRow({
   const hasMention = useNotificationStore((s) => s.postMentions[post.id] || false);
   const hasUnread = unreadCount > 0;
   const [menuAnchor, setMenuAnchor] = useState<{ x: number; y: number } | null>(null);
-  const [copyLabel, setCopyLabel] = useState('Copiar enlace');
+  const { copied: linkCopied, error: linkCopyError, copy: copyLink } = useCopyToClipboard({
+    resetMs: 600,
+    onReset: () => setMenuAnchor(null),
+  });
+  const copyLabel = linkCopyError ? 'Error' : linkCopied ? 'Copiado ✓' : 'Copiar enlace';
 
-  const openMenuAt = (x: number, y: number) => {
-    setCopyLabel('Copiar enlace');
-    setMenuAnchor({ x, y });
-  };
+  const openMenuAt = (x: number, y: number) => setMenuAnchor({ x, y });
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -164,14 +157,7 @@ function ForumPostRow({
   const handleCopyLink = () => {
     if (typeof window === 'undefined') return;
     const slug = slugify(post.channelName);
-    const url = `${window.location.origin}/chat?c=${slug}&p=${post.id}`;
-    try {
-      navigator.clipboard.writeText(url);
-      setCopyLabel('Copiado ✓');
-    } catch {
-      setCopyLabel('Error');
-    }
-    setTimeout(() => setMenuAnchor(null), 600);
+    void copyLink(`${window.location.origin}/chat?c=${slug}&p=${post.id}`);
   };
 
   const handleUnfollow = () => {
@@ -249,18 +235,7 @@ function ForumPostContextMenu({
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
-    };
-    const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('mousedown', handler);
-    document.addEventListener('keydown', onEsc);
-    return () => {
-      document.removeEventListener('mousedown', handler);
-      document.removeEventListener('keydown', onEsc);
-    };
-  }, [onClose]);
+  useClickOutside(ref, onClose, { escape: true });
 
   if (typeof document === 'undefined') return null;
   return createPortal(
@@ -340,12 +315,13 @@ function ChannelItem({ channel, isActive, onClick, followedPosts, activePostId, 
   const hasRestrictedWrite =
     !!channel.writePermission && channel.writePermission !== 'everyone';
   const [menuAnchor, setMenuAnchor] = useState<{ x: number; y: number } | null>(null);
-  const [copyLabel, setCopyLabel] = useState('Copiar enlace');
+  const { copied: linkCopied, error: linkCopyError, copy: copyLink } = useCopyToClipboard({
+    resetMs: 600,
+    onReset: () => setMenuAnchor(null),
+  });
+  const copyLabel = linkCopyError ? 'Error' : linkCopied ? 'Copiado ✓' : 'Copiar enlace';
 
-  const openMenuAt = (x: number, y: number) => {
-    setCopyLabel('Copiar enlace');
-    setMenuAnchor({ x, y });
-  };
+  const openMenuAt = (x: number, y: number) => setMenuAnchor({ x, y });
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -366,16 +342,7 @@ function ChannelItem({ channel, isActive, onClick, followedPosts, activePostId, 
     // Channel.name is already constrained to [a-z0-9_-], but slugify guards
     // against any drift in the future.
     const slug = slugify(channel.name);
-    const url = `${window.location.origin}/chat?c=${slug}`;
-    try {
-      navigator.clipboard.writeText(url);
-      setCopyLabel('Copiado ✓');
-    } catch {
-      setCopyLabel('Error');
-    }
-    setTimeout(() => {
-      setMenuAnchor(null);
-    }, 600);
+    void copyLink(`${window.location.origin}/chat?c=${slug}`);
   };
 
   return (
@@ -1125,10 +1092,16 @@ export default function ChannelSidebar({ onChannelSelect }: { onChannelSelect?: 
                       window.location.reload();
                     } else {
                       const data = await res.json();
-                      alert(data.error || 'Failed to leave server');
+                      useToastStore.getState().pushToast({
+                        title: 'Leave failed',
+                        body: data.error || 'Failed to leave server',
+                      });
                     }
-                  } catch (e) {
-                    alert('Error leaving server');
+                  } catch {
+                    useToastStore.getState().pushToast({
+                      title: 'Leave failed',
+                      body: 'Error leaving server',
+                    });
                   }
                 }}
                 className="p-1 rounded hover:bg-red-500/10 text-lc-muted hover:text-red-400 transition-colors"

@@ -1,3 +1,4 @@
+import { parseJsonBody } from '@/lib/api-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthPubkey } from '@/lib/api-auth';
@@ -96,7 +97,7 @@ export async function POST(
     return NextResponse.json({ error: 'Invalid pubkey' }, { status: 400 });
   }
 
-  const body = await req.json().catch(() => ({}));
+  const body = await parseJsonBody(req);
   const serverId: string | undefined = body.serverId;
   const requestedRole: MembershipRole = body.role ?? 'member';
 

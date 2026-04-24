@@ -1,5 +1,6 @@
 import NDK, { NDKEvent } from '@nostr-dev-kit/ndk';
 import { logStatus } from './nostr';
+import { KIND_HTTP_AUTH } from './nip-kinds';
 
 /**
  * Performs the full backend challenge-response auth flow.
@@ -29,7 +30,7 @@ export async function authenticateWithBackend(ndk: NDK): Promise<boolean> {
   // 2. Sign as Nostr event
   logStatus('BackendAuth', 'Signing kind-27235 event...');
   const event = new NDKEvent(ndk);
-  event.kind = 27235;
+  event.kind = KIND_HTTP_AUTH;
   event.content = challenge;
   event.tags = [];
   try {

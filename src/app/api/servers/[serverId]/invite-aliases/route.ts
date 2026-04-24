@@ -1,3 +1,4 @@
+import { parseJsonBody } from '@/lib/api-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireRole } from '@/lib/auth-roles';
@@ -28,7 +29,7 @@ export async function POST(
   const actor = await requireRole(req, serverId, 'admin');
   if (actor instanceof NextResponse) return actor;
 
-  const body = await req.json().catch(() => ({}));
+  const body = await parseJsonBody(req);
   const check = validateSlug(body.slug ?? '');
   if (!check.ok) {
     return NextResponse.json({ error: check.error }, { status: 400 });

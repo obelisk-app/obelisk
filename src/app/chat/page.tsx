@@ -44,6 +44,7 @@ import { useReadTracker } from '@/hooks/useReadTracker';
 import { useFaviconBadge } from '@/hooks/useFaviconBadge';
 import { useTranslation } from '@/i18n/context';
 import type { InboxEvent } from '@/store/notification';
+import { pushErrorToast } from '@/store/toast';
 import { useSessionBootstrap } from '@/hooks/chat/useSessionBootstrap';
 import { useSlugResolution, type InitialUrl } from '@/hooks/chat/useSlugResolution';
 import { useServerAndChannelLoader } from '@/hooks/chat/useServerAndChannelLoader';
@@ -712,10 +713,10 @@ export default function ChatPage() {
                       window.location.reload();
                     } else {
                       const data = await res.json();
-                      alert(data.error || 'Failed to join default server');
+                      pushErrorToast('Failed to join default server', data.error, 'Join failed');
                     }
                   } catch {
-                    alert('Error joining default server');
+                    pushErrorToast('Error joining default server', null, 'Join failed');
                   }
                 }}
                 className="lc-pill-primary text-sm px-5 py-2.5 w-full"

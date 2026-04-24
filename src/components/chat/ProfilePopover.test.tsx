@@ -5,6 +5,9 @@ import { useChatStore } from '@/store/chat';
 
 vi.mock('@/lib/nostr', () => ({
   formatPubkey: vi.fn((pk: string) => `${pk.slice(0, 8)}…`),
+  // Faithful enough for the npub1-prefix assertion below; real encoding isn't
+  // needed since the test only checks the `npub1` prefix survives the format.
+  pubkeyToNpub: vi.fn((pk: string) => `npub1${pk}`),
 }));
 
 describe('ProfilePopover', () => {

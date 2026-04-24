@@ -1,8 +1,10 @@
+import { parseJsonBody } from '@/lib/api-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthPubkey } from '@/lib/api-auth';
 import { getGameDef } from '@/lib/games/registry';
 import { broadcastGame, getGameFull, scheduleWaitingExpiry, serializeGame } from '@/lib/games/runtime';
+import { ServerToClient } from '@/lib/socket-events';
 
 // GET /api/games?serverId=...&status=waiting,in_progress
 export async function GET(req: NextRequest) {
@@ -29,7 +31,7 @@ export async function POST(req: NextRequest) {
   const pubkey = await getAuthPubkey(req);
   if (!pubkey) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const body = await req.json().catch(() => ({}));
+  const body = await parseJsonBody(req);
   const { type, channelId, maxPlayers: reqMax, options, turnTimeoutS: reqTimeout } = body as { type?: string; channelId?: string; maxPlayers?: number; options?: Record<string, any>; turnTimeoutS?: number };
   if (!type || !channelId) return NextResponse.json({ error: 'type and channelId required' }, { status: 400 });
 
@@ -89,7 +91,7 @@ export async function POST(req: NextRequest) {
     },
   });
   const io = (globalThis as any).__io;
-  if (io) io.to(`channel:${channelId}`).emit('new-message', msg);
+  if (io) io.to(`channel:${channelId}`).emit(ServerToClient.NewMessage, msg);
 
   const full = await getGameFull(game.id);
   if (full) {

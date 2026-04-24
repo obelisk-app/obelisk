@@ -1,8 +1,10 @@
+import { parseJsonBody } from '@/lib/api-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthPubkey } from '@/lib/api-auth';
 import { withClient, classifyNwcError } from '@/lib/nwc';
 import { parseBolt11 } from '@/lib/bolt11';
+import { ServerToClient } from '@/lib/socket-events';
 
 /**
  * POST /api/invoices/pay  { invoice, messageId?, channelId? }
@@ -15,7 +17,7 @@ export async function POST(req: NextRequest) {
   const payer = await getAuthPubkey(req);
   if (!payer) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const body = await req.json().catch(() => ({}));
+  const body = await parseJsonBody(req);
   const { invoice, messageId, channelId } = body as {
     invoice?: string;
     messageId?: string;
@@ -72,7 +74,7 @@ export async function POST(req: NextRequest) {
 
   const io = (globalThis as any).__io;
   if (io && channelId) {
-    io.to(`channel:${channelId}`).emit('invoice-paid', {
+    io.to(`channel:${channelId}`).emit(ServerToClient.InvoicePaid, {
       paymentHash: parsed.paymentHash,
       payerPubkey: payer,
       paidAt: row.paidAt,

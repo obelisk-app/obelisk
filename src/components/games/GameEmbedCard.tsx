@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useGamesStore } from '@/store/games';
 import { useAuthStore } from '@/store/auth';
 import { useChatStore } from '@/store/chat';
+import { pushErrorToast } from '@/store/toast';
 import { resolvePlayerName } from '@/lib/games/player-name';
 import PlayerAvatar from './PlayerAvatar';
 import { GameTypePreview } from './GamePreviews';
@@ -47,7 +48,7 @@ export default function GameEmbedCard({ gameId }: { gameId: string }) {
     const res = await fetch(`/api/games/${game.id}/join`, { method: 'POST' });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      alert(data.error || 'No se pudo unir');
+      pushErrorToast('No se pudo unir', data.error);
       return;
     }
     useGamesStore.getState().setFullscreenGame(game.id);

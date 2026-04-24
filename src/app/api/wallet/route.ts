@@ -1,3 +1,4 @@
+import { parseJsonBody } from '@/lib/api-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthPubkey } from '@/lib/api-auth';
@@ -19,7 +20,7 @@ export async function GET(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   const pubkey = await getAuthPubkey(req);
   if (!pubkey) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const body = await req.json().catch(() => ({}));
+  const body = await parseJsonBody(req);
   const { nwcUrl, label } = body as { nwcUrl?: string; label?: string };
   if (!nwcUrl || !nwcUrl.startsWith('nostr+walletconnect://')) {
     return NextResponse.json({ error: 'Invalid NWC URL' }, { status: 400 });

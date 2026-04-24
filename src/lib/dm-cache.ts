@@ -12,11 +12,13 @@
  * per user and LRU-evict the oldest beyond the cap.
  */
 
+import { KIND_ENCRYPTED_DM, KIND_GIFT_WRAP } from './nip-kinds';
+
 export interface CachedDMEvent {
   id: string;
   pubkey: string; // event author
   created_at: number;
-  kind: 4 | 1059;
+  kind: typeof KIND_ENCRYPTED_DM | typeof KIND_GIFT_WRAP;
   content: string;
   tags: string[][];
   sig?: string;
@@ -196,13 +198,13 @@ export function getLatestForPartner(
   let best: { event: CachedDMEvent; rumor?: CachedRumor; ts: number } | undefined;
 
   for (const ev of Object.values(cache.events)) {
-    if (ev.kind === 4) {
+    if (ev.kind === KIND_ENCRYPTED_DM) {
       const pTag = ev.tags.find((t) => t[0] === 'p');
       const other = ev.pubkey === myPubkey ? pTag?.[1] : ev.pubkey;
       if (other !== partnerPubkey) continue;
       const ts = ev.created_at;
       if (!best || ts > best.ts) best = { event: ev, ts };
-    } else if (ev.kind === 1059) {
+    } else if (ev.kind === KIND_GIFT_WRAP) {
       const rumor = cache.rumors[ev.id];
       if (!rumor) continue;
       const other = rumor.senderPubkey === myPubkey ? rumor.recipientPubkey : rumor.senderPubkey;
@@ -235,11 +237,11 @@ export function enumeratePartners(
   };
 
   for (const ev of Object.values(cache.events)) {
-    if (ev.kind === 4) {
+    if (ev.kind === KIND_ENCRYPTED_DM) {
       const pTag = ev.tags.find((t) => t[0] === 'p');
       const other = ev.pubkey === myPubkey ? pTag?.[1] ?? '' : ev.pubkey;
       consider(other, ev.created_at, 'nip04', ev.id);
-    } else if (ev.kind === 1059) {
+    } else if (ev.kind === KIND_GIFT_WRAP) {
       const rumor = cache.rumors[ev.id];
       if (!rumor) continue;
       const other = rumor.senderPubkey === myPubkey ? rumor.recipientPubkey : rumor.senderPubkey;

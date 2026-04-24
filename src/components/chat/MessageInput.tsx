@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useChatStore } from '@/store/chat';
+import { useToastStore } from '@/store/toast';
 import {
   filterMembers,
   serializeMention,
@@ -242,7 +243,10 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
           }).then(async (res) => {
             if (!res.ok) {
               const d = await res.json().catch(() => ({}));
-              alert(d.error || 'No se pudo crear el juego');
+              useToastStore.getState().pushToast({
+                title: 'Error',
+                body: d.error || 'No se pudo crear el juego',
+              });
               return;
             }
             const d = await res.json();

@@ -42,6 +42,7 @@ vi.mock('@/components/ProfileEditor', () => ({
 
 import LoginModal from './LoginModal';
 import { createNewAccount } from '@/lib/nostr';
+import type { NDKUser } from '@nostr-dev-kit/ndk';
 import { useAuthStore } from '@/store/auth';
 
 describe('LoginModal', () => {
@@ -85,7 +86,7 @@ describe('LoginModal', () => {
   it('shows nsec backup screen after creating account', async () => {
     const user = userEvent.setup();
     vi.mocked(createNewAccount).mockResolvedValue({
-      user: { pubkey: 'abc123', fetchProfile: vi.fn() },
+      user: { pubkey: "abc123", fetchProfile: vi.fn() } as unknown as NDKUser,
       nsec: 'nsec1testkey123',
     });
 
@@ -119,7 +120,7 @@ describe('LoginModal', () => {
   it('disables continue until backup is confirmed via checkbox', async () => {
     const user = userEvent.setup();
     vi.mocked(createNewAccount).mockResolvedValue({
-      user: { pubkey: 'abc123', fetchProfile: vi.fn() },
+      user: { pubkey: "abc123", fetchProfile: vi.fn() } as unknown as NDKUser,
       nsec: 'nsec1testkey123',
     });
 
@@ -146,7 +147,7 @@ describe('LoginModal', () => {
   it('shows profile setup when continue clicked after confirming backup', async () => {
     const user = userEvent.setup();
     vi.mocked(createNewAccount).mockResolvedValue({
-      user: { pubkey: 'abc123', fetchProfile: vi.fn() },
+      user: { pubkey: "abc123", fetchProfile: vi.fn() } as unknown as NDKUser,
       nsec: 'nsec1testkey123',
     });
 
@@ -169,7 +170,7 @@ describe('LoginModal', () => {
   it('downloads nsec as a txt file when download backup clicked', async () => {
     const user = userEvent.setup();
     vi.mocked(createNewAccount).mockResolvedValue({
-      user: { pubkey: 'abc123', fetchProfile: vi.fn() },
+      user: { pubkey: "abc123", fetchProfile: vi.fn() } as unknown as NDKUser,
       nsec: 'nsec1testkey123',
     });
 

@@ -1,3 +1,4 @@
+import { parseJsonBody } from '@/lib/api-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthPubkey } from '@/lib/api-auth';
@@ -22,7 +23,7 @@ export async function POST(
     return NextResponse.json({ error: 'Channel not found' }, { status: 404 });
   }
 
-  const body = await req.json().catch(() => ({}));
+  const body = await parseJsonBody(req);
 
   await prisma.channelReadState.upsert({
     where: { channelId_pubkey: { channelId, pubkey } },

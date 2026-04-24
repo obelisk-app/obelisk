@@ -1,6 +1,7 @@
+import { parseJsonBody } from '@/lib/api-json';
 import { NextRequest, NextResponse } from 'next/server';
-import { nip19 } from 'nostr-tools';
 import { prisma } from '@/lib/db';
+import { pubkeyToNpub } from '@/lib/nostr';
 import { getAuthPubkey } from '@/lib/api-auth';
 import {
   withClient,
@@ -13,6 +14,7 @@ import {
 } from '@/lib/profile-sync';
 import { canReadChannel } from '@/lib/roles';
 import { resolveMemberAccess } from '@/lib/channel-access';
+import { ServerToClient } from '@/lib/socket-events';
 
 /**
  * POST /api/wallet/zap  { channelId, targetPubkey, amountSats }
@@ -26,7 +28,7 @@ export async function POST(req: NextRequest) {
   const sender = await getAuthPubkey(req);
   if (!sender) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const body = await req.json().catch(() => ({}));
+  const body = await parseJsonBody(req);
   const { channelId, targetPubkey, amountSats } = body as {
     channelId?: string;
     targetPubkey?: string;
@@ -88,8 +90,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: code }, { status });
   }
 
-  const senderRef = `nostr:${nip19.npubEncode(sender)}`;
-  const targetRef = `nostr:${nip19.npubEncode(targetPubkey)}`;
+  const senderRef = `nostr:${pubkeyToNpub(sender)}`;
+  const targetRef = `nostr:${pubkeyToNpub(targetPubkey)}`;
   const content = `⚡ ${senderRef} zapeó a ${targetRef} ${amountSats} sats`;
 
   const message = await prisma.message.create({
@@ -108,7 +110,7 @@ export async function POST(req: NextRequest) {
   const enriched = { ...message, author };
 
   const io = (globalThis as any).__io;
-  if (io) io.to(`channel:${channelId}`).emit('new-message', enriched);
+  if (io) io.to(`channel:${channelId}`).emit(ServerToClient.NewMessage, enriched);
 
   return NextResponse.json({ ok: true, message: enriched });
 }
