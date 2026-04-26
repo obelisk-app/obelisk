@@ -41,6 +41,8 @@ import MemberList from '@/components/chat/MemberList';
 import LoginModal from '@/components/LoginModal';
 import ShootingStars from '@/components/ShootingStars';
 import { useNotificationStore } from '@/store/notification';
+import { NotifyMenu } from '@/components/notifications/NotifyMenu';
+import { useNotificationPrefsStore } from '@/store/notificationPrefs';
 import { useReadTracker } from '@/hooks/useReadTracker';
 import { useFaviconBadge } from '@/hooks/useFaviconBadge';
 import { useTranslation } from '@/i18n/context';
@@ -653,6 +655,19 @@ export default function ChatPage() {
     return window.matchMedia('(min-width: 768px)').matches;
   });
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showChannelNotifyMenu, setShowChannelNotifyMenu] = useState(false);
+  const channelNotifPrefs = useNotificationPrefsStore((s) => s.prefs);
+
+  useEffect(() => {
+    if (!showChannelNotifyMenu) return;
+    const close = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('[role="dialog"]') || target.closest('[data-testid="channel-bell"]')) return;
+      setShowChannelNotifyMenu(false);
+    };
+    window.addEventListener('mousedown', close);
+    return () => window.removeEventListener('mousedown', close);
+  }, [showChannelNotifyMenu]);
 
   const voiceMainRef = useRef<HTMLDivElement>(null);
   const { voiceChatWidth, onVoiceChatResize } = useVoiceChatPane(isVoiceChatOpen, voiceMainRef);
@@ -962,6 +977,48 @@ export default function ChatPage() {
                       ) : (
                         <h3 className="font-semibold text-lc-white text-sm truncate shrink-0">{activeChannel.name}</h3>
                       )}
+                      {(() => {
+                        const channelPref = channelNotifPrefs.find(
+                          (p) => p.scopeType === 'channel' && p.scopeId === activeChannel.id,
+                        );
+                        const isMuted = !!(
+                          channelPref?.mutedUntil && new Date(channelPref.mutedUntil) > new Date()
+                        );
+                        const bellIcon = isMuted ? '🔕' : '🔔';
+                        const bellTitle = (() => {
+                          if (isMuted && channelPref?.mutedUntil) {
+                            const until = new Date(channelPref.mutedUntil);
+                            if (until.getFullYear() > 9000) return 'Muted';
+                            return `Muted until ${until.toLocaleString()}`;
+                          }
+                          if (channelPref?.notifyLevel === 'all') return 'Notify on all messages';
+                          if (channelPref?.notifyLevel === 'nothing') return 'Notifications off';
+                          return 'Notifications: mentions only (default)';
+                        })();
+                        return (
+                          <span className="relative shrink-0">
+                            <button
+                              type="button"
+                              className="text-lc-muted hover:text-lc-white text-sm leading-none"
+                              title={bellTitle}
+                              onClick={() => setShowChannelNotifyMenu((v) => !v)}
+                              aria-label="Channel notification settings"
+                              data-testid="channel-bell"
+                            >
+                              {bellIcon}
+                            </button>
+                            {showChannelNotifyMenu && (
+                              <span className="absolute right-0 top-6 z-50">
+                                <NotifyMenu
+                                  scope={{ type: 'channel', id: activeChannel.id }}
+                                  title={activeChannel.name}
+                                  onClose={() => setShowChannelNotifyMenu(false)}
+                                />
+                              </span>
+                            )}
+                          </span>
+                        );
+                      })()}
                       {activeChannel.type === 'forum' && activePostId && (
                         <ActivePostCrumb />
                       )}
