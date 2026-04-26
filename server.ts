@@ -34,6 +34,7 @@ app.prepare().then(async () => {
   const { authMiddleware } = await import('./server/auth-middleware');
   const { createServerContext } = await import('./server/context');
   const { bindContext } = await import('./server/api-bridge');
+  const { register: registerPresence } = await import('./server/handlers/presence');
 
   const requestHandler = (req: any, res: any) => {
     const parsedUrl = parse(req.url!, true);
@@ -65,27 +66,7 @@ app.prepare().then(async () => {
 
   io.on('connection', (socket) => {
     const pubkey: string = socket.data.pubkey;
-    console.log(`[socket] Connected: ${pubkey.slice(0, 8)}...`);
-
-    // Track socket
-    if (!ctx.state.pubkeySockets.has(pubkey)) ctx.state.pubkeySockets.set(pubkey, new Set());
-    ctx.state.pubkeySockets.get(pubkey)!.add(socket.id);
-
-    // Join a pubkey-scoped room so API routes can target notifications
-    // (e.g. `post-reply` to forum post subscribers) via `io.to('pubkey:<x>')`.
-    socket.join(`pubkey:${pubkey}`);
-
-    // Presence: announce online on first socket for this pubkey
-    if (ctx.state.pubkeySockets.get(pubkey)!.size === 1) {
-      io.emit(ServerToClient.PresenceUpdate, { pubkey, online: true });
-    }
-
-    // Presence: snapshot of currently-online pubkeys
-    socket.on(ClientToServer.PresenceSync, (cb?: (pubkeys: string[]) => void) => {
-      if (typeof cb === 'function') {
-        cb([...ctx.state.pubkeySockets.keys()]);
-      }
-    });
+    registerPresence(ctx, socket);
 
     // Join a server-scoped room so game-* broadcasts (Actividades panel etc.)
     // reach all members of a server even when they're not in a specific channel.
