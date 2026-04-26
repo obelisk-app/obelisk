@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { DMMessage, DMProtocol } from '@/lib/dm';
+import type { DMMessage, DMProtocol } from '@/lib/dm/dm';
 
 export interface DMThread {
   pubkey: string; // the other participant
@@ -164,4 +164,22 @@ export async function markThreadRead(pubkey: string): Promise<void> {
   const store = useDMStore.getState();
   store.clearUnread(pubkey);
   store.setReadCursor(pubkey, Date.now());
+}
+
+/**
+ * Multi-account isolation: swap the persist storage key to one namespaced
+ * by the active account's pubkey. Without this, protocolOverrides /
+ * readCursors leak across logins on the same device.
+ *
+ * Call once on login (or whenever the active pubkey changes). Idempotent —
+ * a no-op when the key is already pointing at this account.
+ */
+let activeStorageName = 'obelisk-dm-store';
+
+export function ensureDMStoreForAccount(myPubkey: string): void {
+  const next = `obelisk-dm-store:${myPubkey}`;
+  if (next === activeStorageName) return;
+  activeStorageName = next;
+  useDMStore.persist.setOptions({ name: next });
+  void useDMStore.persist.rehydrate();
 }

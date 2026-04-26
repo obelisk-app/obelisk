@@ -117,6 +117,16 @@ describe('verifyDMEvent', () => {
     const tampered = { ...ev, content: 'goodbye' };
     expect(verifyDMEvent(tampered)).toBe(false);
   });
+
+  it('rejects a tampered event even after the original was previously verified', () => {
+    const a = signed('hello');
+    const b = signed('world');
+    // First call populates verifiedSymbol on a.ev.
+    expect(verifyDMEvent(a.ev)).toBe(true);
+    // Spread copies the cached symbol; without the strip this would falsely return true.
+    const tampered = { ...a.ev, sig: b.ev.sig };
+    expect(verifyDMEvent(tampered)).toBe(false);
+  });
 });
 ```
 
@@ -127,10 +137,14 @@ Expected: FAIL — `Failed to resolve import "./pool"`.
 
 - [ ] **Step 3: Write minimal implementation**
 
+`nostr-tools/pure` caches verification results directly on the event object via a symbol-keyed property (`verifiedSymbol`). Because JavaScript object spread copies own symbol properties, an attacker (or buggy caller) can take a previously-verified event and produce `{ ...verifiedEv, sig: badSig }` — the spread carries the cached `true`, and `verifyEvent` will short-circuit and return `true` for the tampered copy. To stay sound on any input we strip the cached flag onto a shallow copy before delegating to `verifyEvent`. Working on a copy also means we never mutate the caller's event, which matters since the same event objects flow through the SimplePool subscription pipeline. There is a regression test for this exact path in `pool.test.ts` ("rejects a tampered event even after the original was previously verified").
+
 ```ts
 // src/lib/dm/pool.ts
+// Browser-only — uses the global WebSocket. Server-side relay reads live
+// in src/lib/profile-sync.ts which wires nostr-tools to `ws`.
 import { SimplePool } from 'nostr-tools/pool';
-import { verifyEvent, type Event as NostrEvent } from 'nostr-tools/pure';
+import { verifyEvent, verifiedSymbol, type Event as NostrEvent } from 'nostr-tools/pure';
 
 let pool: SimplePool | null = null;
 export function getDMPool(): SimplePool {
@@ -147,7 +161,14 @@ export function resetDMPool(): void {
 
 export function verifyDMEvent(event: NostrEvent): boolean {
   try {
-    return verifyEvent(event);
+    // nostr-tools/pure caches verification results on `event[verifiedSymbol]`.
+    // JS object spread copies own symbol properties, so a tampered event
+    // produced by `{ ...verifiedEv, sig: badSig }` would short-circuit to
+    // `true`. Strip the cached flag onto a shallow copy before delegating —
+    // this also avoids mutating the caller's event.
+    const { [verifiedSymbol]: _ignored, ...rest } =
+      event as NostrEvent & { [verifiedSymbol]?: boolean };
+    return verifyEvent(rest as NostrEvent);
   } catch {
     return false;
   }
@@ -157,7 +178,7 @@ export function verifyDMEvent(event: NostrEvent): boolean {
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `npm run test -- src/lib/dm/pool.test.ts`
-Expected: PASS, 4/4.
+Expected: PASS, 5/5.
 
 - [ ] **Step 5: Commit**
 
@@ -442,13 +463,27 @@ describe('dm-cache event store', () => {
 });
 
 describe('dm-cache follow-aware eviction', () => {
-  it('with no follow set, evicts strictly by LRU when cap is exceeded', () => {
-    setFollowSet(me, null);
+  it('with an empty follow set, evicts strictly by LRU when cap is exceeded', () => {
+    setFollowSet(me, new Set());
     for (let i = 0; i < 2010; i++) putEvent(me, fakeEvent(`id${i}`, 1_000_000 + i, partnerStranger));
     evictIfNeeded(me, 2000);
     expect(getCachedEvents(me).length).toBe(2000);
     expect(getEvent(me, 'id0')).toBeUndefined();
     expect(getEvent(me, 'id2009')).toBeDefined();
+  });
+
+  it('protects all events when follow set has never been set (cold start)', () => {
+    // No setFollowSet call at all.
+    for (let i = 0; i < 2010; i++) putEvent(me, fakeEvent(`id${i}`, 1_000_000 + i, partnerStranger));
+    evictIfNeeded(me, 2000);
+    expect(getCachedEvents(me)).toHaveLength(2010);
+  });
+
+  it('protects all events when follow set is explicitly null (also cold start)', () => {
+    setFollowSet(me, null);
+    for (let i = 0; i < 2010; i++) putEvent(me, fakeEvent(`id${i}`, 1_000_000 + i, partnerStranger));
+    evictIfNeeded(me, 2000);
+    expect(getCachedEvents(me)).toHaveLength(2010);
   });
 
   it('protects events from followed partners; cap applies only to non-followed', () => {
@@ -755,13 +790,13 @@ import { verifyDMEvent } from './pool';
 export interface CoalescerEnqueue {
   filters: Filter[];
   relays: string[];
-  onEvent: (event: NostrEvent, relay: string) => void;
+  onEvent: (event: NostrEvent) => void;
   onEose?: (relay: string) => void;
 }
 
 export interface CoalescerOptions {
   debounceMs?: number;
-  perRelayTimeoutMs?: number;
+  subscriptionTimeoutMs?: number;
 }
 
 interface PendingGroup {
@@ -772,13 +807,13 @@ interface PendingGroup {
 
 export class RequestCoalescer {
   private debounceMs: number;
-  private perRelayTimeoutMs: number;
+  private subscriptionTimeoutMs: number;
   private pending: Map<string, PendingGroup> = new Map();
   private timer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(opts: CoalescerOptions = {}) {
     this.debounceMs = opts.debounceMs ?? 50;
-    this.perRelayTimeoutMs = opts.perRelayTimeoutMs ?? 5000;
+    this.subscriptionTimeoutMs = opts.subscriptionTimeoutMs ?? 5000;
   }
 
   enqueue(req: CoalescerEnqueue): void {
@@ -810,17 +845,17 @@ export class RequestCoalescer {
         if (seen.has(event.id)) return;
         seen.add(event.id);
         if (!verifyDMEvent(event)) return;
-        for (const e of g.entries) e.onEvent(event, '');
+        for (const e of g.entries) e.onEvent(event);
       },
       oneose: (relay: string) => {
         for (const e of g.entries) e.onEose?.(relay);
       },
     });
 
-    if (this.perRelayTimeoutMs > 0) {
+    if (this.subscriptionTimeoutMs > 0) {
       setTimeout(() => {
         try { sub.close(); } catch { /* ignore */ }
-      }, this.perRelayTimeoutMs);
+      }, this.subscriptionTimeoutMs);
     }
   }
 }
@@ -870,7 +905,7 @@ beforeEach(() => {
 });
 
 describe('profile-cache', () => {
-  it('first fetch dispatches a REQ that includes purplepag.es', async () => {
+  it('first fetch dispatches a REQ that includes purplepag.es', () => {
     setProfileTestRelays(['wss://my.relay']);
     const p = getProfile(me, partner);
     expect(p.profile).toBeNull();
@@ -881,38 +916,44 @@ describe('profile-cache', () => {
     expect(call.filters[0]).toMatchObject({ kinds: [0], authors: [partner] });
   });
 
-  it('second call within 24h does not re-enqueue (cache hit)', async () => {
+  it('second call within 24h does not re-enqueue (cache hit)', () => {
     setProfileTestRelays([]);
     getProfile(me, partner);
+    // Force a stored entry: simulate the relay event arrival.
+    const onEvent = enqueueMock.mock.calls[0]?.[0]?.onEvent;
+    if (onEvent) {
+      onEvent({ id: 'e1', kind: 0, pubkey: partner, created_at: Math.floor(Date.now() / 1000), tags: [], content: '{"name":"alice"}', sig: 'x' } as any);
+    }
     enqueueMock.mockClear();
     getProfile(me, partner);
     expect(enqueueMock).not.toHaveBeenCalled();
   });
 
-  it('after TTL elapses, returns stale immediately and re-enqueues', async () => {
+  it('after TTL elapses, returns stale immediately and re-enqueues', () => {
     setProfileTestRelays([]);
     getProfile(me, partner);
+    const onEvent1 = enqueueMock.mock.calls[0][0].onEvent;
+    onEvent1({ id: 'e1', kind: 0, pubkey: partner, created_at: 1000, tags: [], content: '{"name":"alice"}', sig: 'x' } as any);
     // Tamper with persisted lastCheckedAt to be 25h ago
     const key = `obelisk:profiles:${me}`;
     const blob = JSON.parse(localStorage.getItem(key) ?? '{}');
     blob[partner].lastCheckedAt = Date.now() - 25 * 3600 * 1000;
     localStorage.setItem(key, JSON.stringify(blob));
     enqueueMock.mockClear();
-    getProfile(me, partner);
+    const r = getProfile(me, partner);
+    expect(r.profile).not.toBeNull();
     expect(enqueueMock).toHaveBeenCalledTimes(1);
   });
 
-  it('does not notify subscribers when refresh returns same created_at', async () => {
+  it('does not notify subscribers when refresh returns same created_at', () => {
     setProfileTestRelays([]);
     const sub = vi.fn();
-    const dispose = getProfile(me, partner, { onUpdate: sub }).subscribe;
-    // Simulate a kind-0 arriving twice with same created_at
-    const ev = { id: 'e1', pubkey: partner, kind: 0, created_at: 1000, tags: [], content: '{"name":"alice"}', sig: 'x' } as any;
+    getProfile(me, partner, { onUpdate: sub });
     const onEvent = enqueueMock.mock.calls[0][0].onEvent;
+    const ev = { id: 'e1', pubkey: partner, kind: 0, created_at: 1000, tags: [], content: '{"name":"alice"}', sig: 'x' } as any;
     onEvent(ev);
-    onEvent(ev);
+    onEvent(ev); // same created_at — should not re-notify
     expect(sub).toHaveBeenCalledTimes(1);
-    dispose?.();
   });
 });
 ```
@@ -1090,6 +1131,13 @@ describe('relay-list-cache', () => {
 
   it('second call within 6h does not re-enqueue', () => {
     getRelays(me, partner);
+    // Seed the cache by simulating a relay event arrival.
+    const onEvent = enqueueMock.mock.calls[0][0].onEvent;
+    onEvent({
+      id: 'e1', kind: 10002, pubkey: partner,
+      created_at: Math.floor(Date.now() / 1000),
+      content: '', tags: [['r', 'wss://x']], sig: 'x',
+    } as any);
     enqueueMock.mockClear();
     getRelays(me, partner);
     expect(enqueueMock).not.toHaveBeenCalled();
@@ -1139,6 +1187,8 @@ Run: `npm run test -- src/lib/dm/relay-list-cache.test.ts`
 Expected: FAIL — module not found.
 
 - [ ] **Step 3: Write the implementation**
+
+Staleness rule: an entry is stale when neither slot has been populated yet (forces an initial fetch), OR any *populated* slot is older than 6h. Unpopulated slots after the first populated one do not force re-fetch — partners legitimately may not publish kind-10050, and treating an absent slot's `lastCheckedAt` as `0` would make `now - 0 > TTL_MS` always true, causing endless re-fetches.
 
 ```ts
 // src/lib/dm/relay-list-cache.ts
@@ -1216,9 +1266,14 @@ function buildResult(entry: CacheEntry | undefined): RelayListResult {
 
 function isStale(entry: CacheEntry): boolean {
   const now = Date.now();
-  const ob = entry.outbox?.lastCheckedAt ?? 0;
-  const ib = entry.inbox?.lastCheckedAt ?? 0;
-  return now - ob > TTL_MS || now - ib > TTL_MS;
+  // If neither slot has been checked, treat as stale (forces an initial fetch).
+  if (!entry.outbox && !entry.inbox) return true;
+  // Otherwise, only consider populated slots: stale if any *checked* slot is older than TTL.
+  // This avoids endlessly re-fetching when a partner has never published one of the kinds
+  // (e.g. no kind-10050) — once we've heard back from at least one, we honor the TTL.
+  if (entry.outbox && now - entry.outbox.lastCheckedAt > TTL_MS) return true;
+  if (entry.inbox && now - entry.inbox.lastCheckedAt > TTL_MS) return true;
+  return false;
 }
 
 function notify(me: string, partner: string, r: RelayListResult): void {
@@ -2209,8 +2264,17 @@ describe('CSP', () => {
     const all = headers.flatMap((h: any) => h.headers);
     const csp = all.find((h: any) => h.key === 'Content-Security-Policy');
     expect(csp).toBeDefined();
-    expect(csp.value).toContain("script-src 'self'");
-    expect(csp.value).not.toContain("'unsafe-inline'");
+    // script-src must be strict (no unsafe-inline, no unsafe-eval).
+    const directives = (csp.value as string).split(';').map((d: string) => d.trim());
+    const scriptSrc = directives.find((d: string) => d.startsWith('script-src'));
+    expect(scriptSrc).toBeDefined();
+    expect(scriptSrc).toContain("'self'");
+    expect(scriptSrc).not.toContain("'unsafe-inline'");
+    expect(scriptSrc).not.toContain("'unsafe-eval'");
+    // style-src may include 'unsafe-inline' (required by Tailwind/Next hydration).
+    const styleSrc = directives.find((d: string) => d.startsWith('style-src'));
+    expect(styleSrc).toBeDefined();
+    expect(styleSrc).toContain("'self'");
   });
 });
 ```

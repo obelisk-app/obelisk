@@ -54,52 +54,6 @@ export function getNDK(): NDK {
   return ndkInstance;
 }
 
-export async function addDMInboxRelays(pubkey: string): Promise<void> {
-  const ndk = getNDK();
-  const added = new Set<string>();
-
-  try {
-    const events = await withTimeout(
-      ndk.fetchEvents({ kinds: [10050], authors: [pubkey], limit: 1 }),
-      5000,
-    );
-    const ev = Array.from(events)[0];
-    if (ev) {
-      for (const tag of ev.tags) {
-        if ((tag[0] === 'relay' || tag[0] === 'r') && typeof tag[1] === 'string' && tag[1].startsWith('wss://')) {
-          try {
-            ndk.addExplicitRelay(tag[1]);
-            added.add(tag[1]);
-          } catch { /* already added */ }
-        }
-      }
-    }
-  } catch (err) {
-    console.warn('[dm] kind-10050 lookup failed:', err);
-  }
-
-  if (added.size === 0) {
-    for (const url of NIP17_INBOX_FALLBACK_RELAYS) {
-      try {
-        ndk.addExplicitRelay(url);
-        added.add(url);
-      } catch { /* ignore */ }
-    }
-  }
-
-  try {
-    await ndk.connect();
-  } catch (err) {
-    console.warn('[dm] ndk.connect after inbox-relay add failed:', err);
-  }
-}
-
-const NIP17_INBOX_FALLBACK_RELAYS = [
-  'wss://auth.nostr1.com',
-  'wss://relay.0xchat.com',
-  'wss://inbox.nostr.wine',
-];
-
 export async function connectNDK(): Promise<NDK> {
   const ndk = getNDK();
   await ndk.connect();

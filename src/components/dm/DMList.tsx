@@ -2,6 +2,7 @@
 
 import { useDMStore } from '@/store/dm';
 import { useNotificationStore } from '@/store/notification';
+import { getNDK } from '@/lib/nostr';
 
 interface DMListProps {
   onNewDM: () => void;
@@ -11,6 +12,14 @@ export default function DMList({ onNewDM }: DMListProps) {
   const { threads, activeDMPubkey, setActiveDM, isLoadingThreads } = useDMStore();
   const dmUnreads = useNotificationStore((s) => s.dmUnreads);
 
+  // Read-only mode: disable New DM when no signer is attached. Computed at
+  // render-time; the NDK singleton is updated synchronously on login/logout
+  // and any state change that would flip this also re-renders this tree.
+  const hasSigner = Boolean(getNDK().signer);
+  const newDMTitle = hasSigner
+    ? 'New DM'
+    : 'Sign in with a signing-capable method to use DMs';
+
   return (
     <div className="w-60 bg-lc-dark border-r border-lc-border flex flex-col shrink-0" data-testid="dm-list">
       <div className="p-3 border-b border-lc-border flex items-center justify-between">
@@ -18,9 +27,13 @@ export default function DMList({ onNewDM }: DMListProps) {
         <div className="flex items-center gap-1">
           <button
             onClick={onNewDM}
-            className="text-lc-muted hover:text-lc-green transition-colors p-1"
-            title="New DM"
-            data-testid="new-dm-btn"
+            disabled={!hasSigner}
+            className={`text-lc-muted hover:text-lc-green transition-colors p-1 ${
+              hasSigner ? '' : 'opacity-50 cursor-not-allowed hover:text-lc-muted'
+            }`}
+            title={newDMTitle}
+            data-testid="new-dm-cta"
+            aria-label={newDMTitle}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <line x1="12" y1="5" x2="12" y2="19"/>
@@ -49,9 +62,14 @@ export default function DMList({ onNewDM }: DMListProps) {
             <p className="text-sm text-lc-muted">No conversations yet</p>
             <button
               onClick={onNewDM}
-              className="mt-2 text-xs text-lc-green hover:underline"
+              disabled={!hasSigner}
+              className={`mt-2 text-xs text-lc-green hover:underline ${
+                hasSigner ? '' : 'opacity-50 cursor-not-allowed hover:no-underline'
+              }`}
+              title={newDMTitle}
+              data-testid="new-dm-cta-empty"
             >
-              Start a conversation
+              {hasSigner ? 'Start a conversation' : 'Sign in to start a conversation'}
             </button>
           </div>
         ) : null}

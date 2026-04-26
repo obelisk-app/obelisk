@@ -3,15 +3,138 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDMStore } from '@/store/dm';
 import { useAuthStore } from '@/store/auth';
-import { sendDM, fetchDMHistory, detectNip04InRecent } from '@/lib/dm';
-import type { DMMessage, DMProtocol } from '@/lib/dm';
-import { formatPubkey } from '@/lib/nostr';
+import { sendDM as sendDMNew, detectNip04InRecent, type DMMessage, type DMProtocol } from '@/lib/dm/dm';
+import { getCachedEvents, getSecret, putSecret, type CachedDMEvent } from '@/lib/dm/dm-cache';
+import { useDMSession } from './DMSessionProvider';
+import { formatPubkey, getNDK } from '@/lib/nostr';
 
 interface DMChatProps {
   profileCache: Map<string, { name?: string; picture?: string }>;
 }
 
+/**
+ * Maximum number of cached events to decrypt and load into the Zustand store
+ * on thread-open. Older events stay encrypted-at-rest in `dm-cache` and are
+ * only decrypted if the user scrolls them into view (Task-14-or-later).
+ */
+const VIEWPORT_DECRYPT_LIMIT = 50;
+
+/**
+ * Wire format for the AES-GCM-wrapped plaintext blob in the secrets cache.
+ * Storing the full envelope (not just `content`) lets us answer NIP-17
+ * "who is this from?" questions without re-running giftUnwrap on every
+ * thread open — the partner is part of the cache hit.
+ */
+interface SecretEnvelope {
+  senderPubkey: string;
+  recipientPubkey: string;
+  content: string;
+  createdAt: number;
+  protocol: DMProtocol;
+}
+
+function partnerOfNip04(ev: CachedDMEvent, myPubkey: string): string {
+  if (ev.pubkey === myPubkey) {
+    const pTag = ev.tags.find((t) => t[0] === 'p');
+    return pTag?.[1] ?? '';
+  }
+  return ev.pubkey;
+}
+
+/**
+ * Try the secrets cache first (AES-GCM unwrap, no signer touch); on miss,
+ * signer-decrypt the wire event and write the plaintext envelope back to the
+ * secrets cache for next time.
+ */
+async function decryptToEnvelope(
+  myPubkey: string,
+  cacheKey: CryptoKey,
+  ev: CachedDMEvent,
+): Promise<SecretEnvelope | null> {
+  // Phase 1: secrets-cache hit. Costs zero signer prompts.
+  const cached = await getSecret(myPubkey, cacheKey, ev.id);
+  if (cached) {
+    try {
+      return JSON.parse(cached) as SecretEnvelope;
+    } catch {
+      // Corrupt blob — fall through to signer fallback.
+    }
+  }
+
+  // Phase 2: signer fallback. NIP-04 is the cheap path; NIP-17 unwraps a
+  // gift wrap which is more expensive but still one sig per event.
+  const ndk = getNDK();
+  if (!ndk.signer) return null;
+
+  if (ev.kind === 4) {
+    try {
+      const { NDKEvent: NDKEventClass, NDKUser } = await import('@nostr-dev-kit/ndk');
+      const counter = partnerOfNip04(ev, myPubkey);
+      if (!counter) return null;
+      const senderPk = ev.pubkey === myPubkey ? counter : ev.pubkey;
+      const otherUser = new NDKUser({ pubkey: senderPk });
+      otherUser.ndk = ndk;
+      const target = new NDKEventClass(ndk, {
+        id: ev.id,
+        pubkey: ev.pubkey,
+        kind: 4,
+        content: ev.content,
+        tags: ev.tags,
+        created_at: ev.created_at,
+        sig: ev.sig ?? '',
+      } as any);
+      await target.decrypt(otherUser, ndk.signer, 'nip04');
+      const pTag = ev.tags.find((t) => t[0] === 'p');
+      const env: SecretEnvelope = {
+        senderPubkey: ev.pubkey,
+        recipientPubkey: pTag?.[1] ?? '',
+        content: target.content,
+        createdAt: ev.created_at,
+        protocol: 'nip04',
+      };
+      await putSecret(myPubkey, cacheKey, ev.id, JSON.stringify(env));
+      return env;
+    } catch {
+      return null;
+    }
+  }
+
+  if (ev.kind === 1059) {
+    try {
+      const { NDKEvent: NDKEventClass, giftUnwrap } = await import('@nostr-dev-kit/ndk');
+      const wrap = new NDKEventClass(ndk, {
+        id: ev.id,
+        pubkey: ev.pubkey,
+        kind: 1059,
+        content: ev.content,
+        tags: ev.tags,
+        created_at: ev.created_at,
+        sig: ev.sig ?? '',
+      } as any);
+      const rumor: any = await giftUnwrap(wrap, undefined, ndk.signer);
+      if (rumor.kind !== 14) return null;
+      const recipientTag = (rumor.tags as string[][]).find((t) => t[0] === 'p');
+      const env: SecretEnvelope = {
+        senderPubkey: rumor.pubkey,
+        recipientPubkey: recipientTag?.[1] ?? '',
+        content: rumor.content,
+        createdAt: rumor.created_at ?? ev.created_at,
+        protocol: 'nip17',
+      };
+      await putSecret(myPubkey, cacheKey, ev.id, JSON.stringify(env));
+      return env;
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
+}
+
 export default function DMChat({ profileCache }: DMChatProps) {
+  const session = useDMSession();
+  const myPubkey = session.myPubkey;
+
   const {
     activeDMPubkey,
     messages,
@@ -19,18 +142,16 @@ export default function DMChat({ profileCache }: DMChatProps) {
     hasMoreHistory,
     setMessages,
     addMessage,
-    prependMessages,
     replaceMessage,
     markMessageFailed,
     protocolOverrides,
     setShowProtocolPrompt,
-    setHasMoreHistory,
+    setLoadingMessages,
     updateThread,
   } = useDMStore();
   const { profile } = useAuthStore();
   const [content, setContent] = useState('');
   const [sending, setSending] = useState(false);
-  const [loadingOlder, setLoadingOlder] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const topSentinelRef = useRef<HTMLDivElement>(null);
 
@@ -43,54 +164,71 @@ export default function DMChat({ profileCache }: DMChatProps) {
     ? protocolOverrides[activeDMPubkey] || 'nip17'
     : 'nip17';
 
-  // Fetch DM history when active DM changes (cache-first via lib/dm).
+  // Viewport decryption: when the active partner changes, hydrate the message
+  // window from the local DM cache. Only the last N events get their plaintext
+  // loaded into the Zustand store — older cached wire events stay encrypted at
+  // rest. This keeps RAM-resident plaintext bounded (audit row #9) and limits
+  // signer prompts to one cache-key unwrap per session (audit row #20).
   useEffect(() => {
-    if (!activeDMPubkey || !profile?.pubkey) return;
+    if (!activeDMPubkey || !myPubkey) return;
+    if (!session.cacheKey) return;
     let cancelled = false;
+    setLoadingMessages(true);
+    setMessages([]);
 
-    fetchDMHistory(profile.pubkey, activeDMPubkey).then((result) => {
+    (async () => {
+      // 1. Pull NIP-04 events whose partner is the active thread. NIP-17 wraps
+      //    don't expose their partner without unwrapping, so we include all
+      //    wraps in the candidate window and let the post-decrypt filter sort
+      //    them out.
+      const allCached = getCachedEvents(myPubkey);
+      const candidates = allCached.filter((ev) => {
+        if (ev.kind === 4) return partnerOfNip04(ev, myPubkey) === activeDMPubkey;
+        if (ev.kind === 1059) return true; // partner unknown until unwrap
+        return false;
+      });
+
+      // Newest first, then take the head N. Reverse at the end so the rendered
+      // message list is oldest-on-top, matching the existing UX.
+      candidates.sort((a, b) => b.created_at - a.created_at);
+      const window = candidates.slice(0, VIEWPORT_DECRYPT_LIMIT);
+
+      const decrypted: DMMessage[] = [];
+      for (const ev of window) {
+        if (cancelled) return;
+        const env = await decryptToEnvelope(myPubkey, session.cacheKey!, ev);
+        if (!env) continue;
+        // Drop NIP-17 messages that turn out to be for a different partner.
+        const partner = env.senderPubkey === myPubkey ? env.recipientPubkey : env.senderPubkey;
+        if (partner !== activeDMPubkey) continue;
+        decrypted.push({
+          id: ev.id,
+          senderPubkey: env.senderPubkey,
+          recipientPubkey: env.recipientPubkey,
+          content: env.content,
+          createdAt: env.createdAt,
+          protocol: env.protocol,
+        });
+      }
+
       if (cancelled) return;
-      setMessages(result.messages);
-      setHasMoreHistory(result.hasMore);
-    });
+      decrypted.sort((a, b) => a.createdAt - b.createdAt);
+      setMessages(decrypted);
+
+      // Kick the relay-side history fetch via the session — coalesced, so
+      // re-runs on partner-change are deduped at the request layer.
+      session.loadThread(activeDMPubkey);
+    })();
 
     return () => {
       cancelled = true;
     };
-  }, [activeDMPubkey, profile?.pubkey, setMessages, setHasMoreHistory]);
+  }, [activeDMPubkey, myPubkey, session, setMessages, setLoadingMessages]);
 
   // Auto-scroll on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages.length]);
-
-  // Infinite scroll: when the top sentinel becomes visible, fetch older history.
-  useEffect(() => {
-    if (!activeDMPubkey || !profile?.pubkey) return;
-    if (!hasMoreHistory) return;
-    const sentinel = topSentinelRef.current;
-    if (!sentinel) return;
-
-    const observer = new IntersectionObserver(
-      async (entries) => {
-        if (!entries[0].isIntersecting || loadingOlder) return;
-        setLoadingOlder(true);
-        const oldest = useDMStore.getState().messages[0]?.createdAt;
-        const result = await fetchDMHistory(profile.pubkey!, activeDMPubkey, {
-          before: oldest,
-          limit: 50,
-        });
-        if (result.messages.length > 0) {
-          prependMessages(result.messages);
-        }
-        setHasMoreHistory(result.hasMore);
-        setLoadingOlder(false);
-      },
-      { root: sentinel.parentElement, threshold: 0.1 },
-    );
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [activeDMPubkey, profile?.pubkey, hasMoreHistory, loadingOlder, prependMessages, setHasMoreHistory]);
 
   /**
    * Core optimistic send: inject a pending message, publish in the background,
@@ -98,11 +236,11 @@ export default function DMChat({ profileCache }: DMChatProps) {
    */
   const doSend = useCallback(
     async (text: string, protocol: DMProtocol) => {
-      if (!activeDMPubkey || !profile?.pubkey) return;
+      if (!activeDMPubkey || !myPubkey) return;
       const pendingId = `pending-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       const optimistic: DMMessage = {
         id: pendingId,
-        senderPubkey: profile.pubkey,
+        senderPubkey: myPubkey,
         recipientPubkey: activeDMPubkey,
         content: text,
         createdAt: Math.floor(Date.now() / 1000),
@@ -113,10 +251,15 @@ export default function DMChat({ profileCache }: DMChatProps) {
       updateThread(activeDMPubkey, { lastMessage: text, lastMessageAt: optimistic.createdAt });
 
       try {
-        const event = await sendDM(activeDMPubkey, text, protocol, profile.pubkey);
+        const event = await sendDMNew({
+          myPubkey,
+          recipientPubkey: activeDMPubkey,
+          content: text,
+          protocol,
+        });
         replaceMessage(pendingId, {
           id: event.id || pendingId,
-          senderPubkey: profile.pubkey,
+          senderPubkey: myPubkey,
           recipientPubkey: activeDMPubkey,
           content: text,
           createdAt: event.created_at ?? optimistic.createdAt,
@@ -127,7 +270,7 @@ export default function DMChat({ profileCache }: DMChatProps) {
         markMessageFailed(pendingId, message);
       }
     },
-    [activeDMPubkey, profile?.pubkey, addMessage, replaceMessage, markMessageFailed, updateThread],
+    [activeDMPubkey, myPubkey, addMessage, replaceMessage, markMessageFailed, updateThread],
   );
 
   const handleSend = async () => {
@@ -154,7 +297,7 @@ export default function DMChat({ profileCache }: DMChatProps) {
   };
 
   const handleRetry = async (msg: DMMessage) => {
-    if (!activeDMPubkey || !profile?.pubkey) return;
+    if (!activeDMPubkey || !myPubkey) return;
     // Remove the failed bubble by replacing its id — doSend will create a new
     // pending bubble with a fresh id.
     const { messages: current } = useDMStore.getState();
@@ -202,11 +345,11 @@ export default function DMChat({ profileCache }: DMChatProps) {
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto py-4">
-        {/* Top sentinel for infinite scroll — observed only when hasMoreHistory */}
+        {/* Top sentinel reserved for future load-older support — Task-14-or-later
+            will wire `until` cursors into loadHistory so this can decrypt the
+            next page on intersect. */}
         {hasMoreHistory && (
-          <div ref={topSentinelRef} className="h-8 flex items-center justify-center" data-testid="dm-top-sentinel">
-            {loadingOlder ? <span className="lc-spinner" /> : null}
-          </div>
+          <div ref={topSentinelRef} className="h-8 flex items-center justify-center" data-testid="dm-top-sentinel" />
         )}
 
         {isLoadingMessages ? (
@@ -227,7 +370,7 @@ export default function DMChat({ profileCache }: DMChatProps) {
           </div>
         ) : (
           messages.map((msg) => {
-            const isMe = msg.senderPubkey === profile?.pubkey;
+            const isMe = msg.senderPubkey === (profile?.pubkey ?? myPubkey);
             const senderProfile = profileCache.get(msg.senderPubkey);
             const senderName = senderProfile?.name || formatPubkey(msg.senderPubkey);
             const time = new Date(msg.createdAt * 1000);

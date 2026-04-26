@@ -1,10 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { clearCache, getSyncState, setSyncState } from './dm-cache';
 
 const mockPublish = vi.fn().mockResolvedValue(undefined);
 const relayMap = new Map<string, unknown>();
 
-vi.mock('./nostr', () => ({
+vi.mock('@/lib/nostr', () => ({
   getNDK: () => ({
     signer: { sign: vi.fn() },
     pool: { relays: relayMap },
@@ -23,9 +22,8 @@ vi.mock('@nostr-dev-kit/ndk', () => {
 
 const ME = 'a'.repeat(64);
 
-describe('dm-inbox', () => {
+describe('publishInboxRelays', () => {
   beforeEach(() => {
-    clearCache(ME);
     mockPublish.mockClear();
     relayMap.clear();
     relayMap.set('wss://relay.damus.io', {});
@@ -46,27 +44,39 @@ describe('dm-inbox', () => {
       ['relay', 'wss://relay.damus.io'],
       ['relay', 'wss://nos.lol'],
     ]);
-
-    const sync = getSyncState(ME);
-    expect(sync.inboxRelaysPublishedAt).toBeGreaterThan(0);
-  });
-
-  it('skips republishing if within freshness window', async () => {
-    setSyncState(ME, { inboxRelaysPublishedAt: Date.now() });
-    const { publishInboxRelays } = await import('./dm-inbox');
-    const result = await publishInboxRelays(ME);
-    expect(result).toBe(false);
-    expect(mockPublish).not.toHaveBeenCalled();
   });
 
   it('returns false if no signer', async () => {
     vi.resetModules();
-    vi.doMock('./nostr', () => ({
+    vi.doMock('@/lib/nostr', () => ({
       getNDK: () => ({ signer: null, pool: { relays: relayMap } }),
     }));
     const { publishInboxRelays } = await import('./dm-inbox');
     const result = await publishInboxRelays(ME);
     expect(result).toBe(false);
-    vi.doUnmock('./nostr');
+    vi.doUnmock('@/lib/nostr');
+  });
+});
+
+describe('listConnectedRelayUrls', () => {
+  it('extracts wss:// urls from the NDK pool relays map', async () => {
+    const { listConnectedRelayUrls } = await import('./dm-inbox');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ndk: any = {
+      pool: {
+        relays: new Map<string, unknown>([
+          ['wss://r1', {}],
+          ['wss://r2', {}],
+          ['http://nope', {}],
+        ]),
+      },
+    };
+    expect(listConnectedRelayUrls(ndk).sort()).toEqual(['wss://r1', 'wss://r2']);
+  });
+
+  it('returns [] when pool is missing', async () => {
+    const { listConnectedRelayUrls } = await import('./dm-inbox');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect(listConnectedRelayUrls({} as any)).toEqual([]);
   });
 });

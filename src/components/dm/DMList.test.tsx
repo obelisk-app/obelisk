@@ -4,6 +4,21 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import DMList from './DMList';
 import { useDMStore } from '@/store/dm';
 import { useNotificationStore } from '@/store/notification';
+import { getNDK } from '@/lib/nostr';
+
+vi.mock('@/lib/nostr', () => {
+  const state: { signer: unknown } = { signer: { pubkey: 'a'.repeat(64) } };
+  return {
+    __setSigner: (s: unknown) => { state.signer = s; },
+    getNDK: () => ({
+      get signer() { return state.signer; },
+      pool: { relays: new Map() },
+    }),
+  };
+});
+
+// Convenience handle to mutate the mocked signer between tests.
+const nostrMock = (await import('@/lib/nostr')) as unknown as { __setSigner: (s: unknown) => void };
 
 describe('DMList', () => {
   beforeEach(() => {
@@ -19,6 +34,8 @@ describe('DMList', () => {
       showProtocolPrompt: null,
     });
     useNotificationStore.setState(useNotificationStore.getInitialState());
+    // Default: signer present, so existing tests still see an enabled CTA.
+    nostrMock.__setSigner({ pubkey: 'a'.repeat(64) });
   });
 
   it('shows empty state', () => {
@@ -55,7 +72,7 @@ describe('DMList', () => {
     const onNewDM = vi.fn();
     const user = userEvent.setup();
     render(<DMList onNewDM={onNewDM} />);
-    await user.click(screen.getByTestId('new-dm-btn'));
+    await user.click(screen.getByTestId('new-dm-cta'));
     expect(onNewDM).toHaveBeenCalled();
   });
 
@@ -73,5 +90,50 @@ describe('DMList', () => {
     render(<DMList onNewDM={vi.fn()} />);
     await user.click(screen.getByText('Alice'));
     expect(useDMStore.getState().activeDMPubkey).toBe('pk1');
+  });
+});
+
+describe('DMList signer gate', () => {
+  beforeEach(() => {
+    useDMStore.setState({
+      isDMMode: false,
+      activeDMPubkey: null,
+      threads: [],
+      messages: [],
+      isLoadingMessages: false,
+      isLoadingThreads: false,
+      hasMoreHistory: false,
+      protocolOverrides: {},
+      showProtocolPrompt: null,
+    });
+    useNotificationStore.setState(useNotificationStore.getInitialState());
+  });
+
+  it('disables the New DM CTA when ndk.signer is null', () => {
+    nostrMock.__setSigner(null);
+    render(<DMList onNewDM={vi.fn()} />);
+    expect(screen.getByTestId('new-dm-cta')).toBeDisabled();
+    // Sanity: the empty-state CTA is also gated.
+    expect(screen.getByTestId('new-dm-cta-empty')).toBeDisabled();
+  });
+
+  it('enables the New DM CTA when ndk.signer is present', () => {
+    nostrMock.__setSigner({ pubkey: 'a'.repeat(64) });
+    render(<DMList onNewDM={vi.fn()} />);
+    expect(screen.getByTestId('new-dm-cta')).not.toBeDisabled();
+  });
+
+  it('does not call onNewDM when CTA is disabled (no signer)', async () => {
+    nostrMock.__setSigner(null);
+    const onNewDM = vi.fn();
+    const user = userEvent.setup();
+    render(<DMList onNewDM={onNewDM} />);
+    await user.click(screen.getByTestId('new-dm-cta'));
+    expect(onNewDM).not.toHaveBeenCalled();
+  });
+
+  it('confirms getNDK is the mocked impl', () => {
+    // Smoke test that the mock wired correctly.
+    expect(getNDK().pool.relays).toBeInstanceOf(Map);
   });
 });

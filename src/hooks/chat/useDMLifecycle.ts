@@ -3,12 +3,10 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useDMStore } from '@/store/dm';
 import { useNotificationStore } from '@/store/notification';
-import { discoverDMThreads, subscribeDMs, computeUnreadCounts } from '@/lib/dm';
-import type { DMMessage } from '@/lib/dm';
-import { publishInboxRelays } from '@/lib/dm-inbox';
-import { addDMInboxRelays, formatPubkey, getNDK } from '@/lib/nostr';
+import { publishInboxRelays } from '@/lib/dm/dm-inbox';
+import { getCachedEvents } from '@/lib/dm/dm-cache';
+import { formatPubkey, getNDK } from '@/lib/nostr';
 import { DM_FEATURE_ENABLED } from '@/lib/feature-flags';
-import { handleIncomingDM } from '@/lib/read-gates';
 
 type Args = {
   isDMMode: boolean;
@@ -17,185 +15,161 @@ type Args = {
   profileCache: Map<string, { name?: string; picture?: string }>;
 };
 
+const KIND_NIP04 = 4;
+
+interface PartnerInfo {
+  lastMessageAt: number;
+  /** Best-effort protocol marker: only NIP-04 events let us know the partner
+   *  without a signer-decrypt, so any partner derived here has at least one
+   *  NIP-04 event. NIP-17-only threads appear once DMChat decrypts a wrap. */
+  protocol: 'nip04';
+}
+
 /**
- * Everything DM-lifecycle: lazy NIP-17 discovery, polling loop, inbox-relay
- * publish, the DM subscription, and the guard-reset on account switch.
+ * Walk the encrypted-at-rest DM cache and project it down to
+ * partner → latest-event metadata. Only NIP-04 events expose the partner in
+ * cleartext (via the `p` tag / event author); NIP-17 wraps require a
+ * signer-decrypt to know who the partner is, so we leave those for DMChat
+ * to surface lazily through the secrets-cache path.
+ */
+function enumerateNip04Partners(myPubkey: string): Map<string, PartnerInfo> {
+  const partners = new Map<string, PartnerInfo>();
+  for (const ev of getCachedEvents(myPubkey)) {
+    if (ev.kind !== KIND_NIP04) continue;
+    let partner = '';
+    if (ev.pubkey === myPubkey) {
+      partner = ev.tags.find((t) => t[0] === 'p')?.[1] ?? '';
+    } else {
+      partner = ev.pubkey;
+    }
+    if (!partner || partner === myPubkey) continue;
+    const existing = partners.get(partner);
+    if (!existing || ev.created_at > existing.lastMessageAt) {
+      partners.set(partner, { lastMessageAt: ev.created_at, protocol: 'nip04' });
+    }
+  }
+  return partners;
+}
+
+/**
+ * Compute per-partner unread counts using local read cursors. Only NIP-04
+ * events count today (NIP-17 contributes once DMChat has decrypted them
+ * into the messages store, which it routes via handleIncomingDM separately).
+ */
+function computeUnreadCountsFromCache(
+  myPubkey: string,
+  readCursors: Record<string, number>,
+): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const ev of getCachedEvents(myPubkey)) {
+    if (ev.kind !== KIND_NIP04) continue;
+    if (ev.pubkey === myPubkey) continue; // outgoing
+    const partner = ev.pubkey;
+    const cutoffMs = readCursors[partner] ?? 0;
+    if (ev.created_at * 1000 <= cutoffMs) continue;
+    out[partner] = (out[partner] ?? 0) + 1;
+  }
+  return out;
+}
+
+/**
+ * DM lifecycle hook for the chat page. Coordinates the side-effects that
+ * the DMSessionProvider doesn't already handle:
+ *  - publishing the user's NIP-17 inbox relay list (kind 10050) on first
+ *    DM-mode entry (so other clients can route gift-wraps to us),
+ *  - polling the encrypted-at-rest cache to derive a thread list and unread
+ *    counts for the sidebar.
  *
- * Returns `runDMDiscovery` so the sidebar refresh button can force a re-sync.
+ * `DMSessionProvider` (mounted on the chat page's DM-tab subtree) drives the
+ * actual wire-level subscription via `subscribeLive`, which writes events
+ * into `dm-cache`. This hook just projects that cache state into the UI's
+ * Zustand store. Decryption (and NIP-17 partner discovery) lives in DMChat,
+ * which decrypts on viewport and stashes plaintext envelopes in the secrets
+ * cache; the threads list backfills as users open conversations.
  */
 export function useDMLifecycle({ isDMMode, ndkReady, profilePubkey, profileCache }: Args) {
-  // Discover DM threads lazily: we only hit relays (and publish our NIP-17
-  // inbox relay list) the first time the user enters DM mode, not on chat
-  // page mount. Fetching on every chat load would burn signer popups for
-  // users who never open DMs during a session. The ref makes repeated
-  // sidebar toggles a no-op; the refresh button in DMList calls the helper
-  // below directly to force a re-sync.
-  const dmDiscoveryRanRef = useRef(false);
+  // Guard rail: only publish the inbox relay list once per DM-mode entry per
+  // session. Cleared whenever the active pubkey changes (login switch).
+  const inboxPublishedRef = useRef(false);
 
-  const runDMDiscovery = useCallback(
-    async (force = false) => {
-      if (!profilePubkey) return;
-      const myPubkey = profilePubkey;
-
-      useDMStore.getState().setLoadingThreads(true);
-
-      const threadsFromMap = (threadMap: Map<string, { lastMessage: string; lastMessageAt: number; protocol: 'nip04' | 'nip17' }>) =>
-        Array.from(threadMap.entries())
-          .sort((a, b) => b[1].lastMessageAt - a[1].lastMessageAt)
-          .map(([pubkey, info]) => {
-            const cached = profileCache.get(pubkey);
-            const existing = useDMStore.getState().threads.find((t) => t.pubkey === pubkey);
-            return {
-              pubkey,
-              displayName: cached?.name || formatPubkey(pubkey),
-              picture: cached?.picture,
-              lastMessage: info.lastMessage,
-              lastMessageAt: info.lastMessageAt,
-              unreadCount: existing?.unreadCount ?? 0,
-              protocol: info.protocol,
-            };
-          });
-
-      const recomputeUnreads = () => {
-        const { readCursors } = useDMStore.getState();
-        const counts = computeUnreadCounts(myPubkey, readCursors);
-        useNotificationStore.getState().setDMUnreads(counts);
-        const currentThreads = useDMStore.getState().threads;
-        useDMStore.getState().setThreads(
-          currentThreads.map((t) => ({ ...t, unreadCount: counts[t.pubkey] ?? 0 })),
-        );
-      };
-
-      try {
-        // Phase A returns immediately from the localStorage cache.
-        const cachedMap = await discoverDMThreads(myPubkey, {
-          forceFullScan: force,
-          onUpdate: (updatedMap) => {
-            // Phase B (relay sync) finished — re-render with fresh data and
-            // flip the spinner off once we have real data.
-            useDMStore.getState().setThreads(threadsFromMap(updatedMap));
-            useDMStore.getState().setLoadingThreads(false);
-            recomputeUnreads();
-          },
-        });
-
-        const hasCache = cachedMap.size > 0;
-        useDMStore.getState().setThreads(threadsFromMap(cachedMap));
-        // If Phase A was empty, keep the spinner on — Phase B will clear it
-        // via onUpdate once relays respond. Otherwise show the cached view now.
-        if (hasCache) {
-          useDMStore.getState().setLoadingThreads(false);
-          recomputeUnreads();
-        }
-
-        // Publish inbox relays lazily, same gate as discovery.
-        void publishInboxRelays(myPubkey);
-      } catch {
-        useDMStore.getState().setLoadingThreads(false);
-      }
-    },
-    [profilePubkey, profileCache],
-  );
-
-  // Trigger the first discovery pass the moment the user enters DM mode,
-  // then keep re-polling every DM_POLL_INTERVAL_MS while the user stays in
-  // the DM view so new messages trickle in without a manual refresh.
-  // On toggle-off the interval is torn down — we don't want to hold a
-  // DM subscription open while the user is in a regular channel.
-  useEffect(() => {
-    if (!DM_FEATURE_ENABLED) return;
-    console.log('[dm] effect fired', {
-      isDMMode,
-      ndkReady,
-      pubkey: profilePubkey,
-      signer: !!getNDK().signer,
-      alreadyRan: dmDiscoveryRanRef.current,
-    });
-    if (!isDMMode || !ndkReady || !profilePubkey) return;
-
+  const refreshThreads = useCallback(() => {
+    if (!profilePubkey) return;
     const myPubkey = profilePubkey;
+    const partners = enumerateNip04Partners(myPubkey);
+    const dmStore = useDMStore.getState();
 
-    // First-time gate: on initial entry, also register NIP-17 inbox relays
-    // (and resolve user's kind 10050 list). This opens AUTH-required relays
-    // via the policy set in getNDK(). Subsequent entries skip this work.
-    if (!dmDiscoveryRanRef.current) {
-      dmDiscoveryRanRef.current = true;
-      void addDMInboxRelays(myPubkey).then(() => runDMDiscovery());
-    } else {
-      void runDMDiscovery();
+    // Merge with existing threads so NIP-17-only threads (added by DMChat
+    // via addThread / updateThread on decrypt) survive the projection.
+    const existingByPubkey = new Map(dmStore.threads.map((t) => [t.pubkey, t]));
+    for (const [partner, info] of partners) {
+      const existing = existingByPubkey.get(partner);
+      const cached = profileCache.get(partner);
+      existingByPubkey.set(partner, {
+        pubkey: partner,
+        displayName: existing?.displayName || cached?.name || formatPubkey(partner),
+        picture: existing?.picture || cached?.picture,
+        lastMessage: existing?.lastMessage ?? '',
+        // Take the newer of the two — the live store may have a fresher
+        // timestamp from the most recent decrypt.
+        lastMessageAt: Math.max(existing?.lastMessageAt ?? 0, info.lastMessageAt),
+        unreadCount: existing?.unreadCount ?? 0,
+        protocol: existing?.protocol ?? info.protocol,
+      });
     }
 
-    const DM_POLL_INTERVAL_MS = 60_000;
-    const interval = setInterval(() => {
-      // Incremental poll — the sync state inside discoverDMThreads already
-      // narrows the filter to `since = lastPollAt`, so this is cheap.
-      void runDMDiscovery();
-    }, DM_POLL_INTERVAL_MS);
+    const merged = Array.from(existingByPubkey.values()).sort(
+      (a, b) => (b.lastMessageAt ?? 0) - (a.lastMessageAt ?? 0),
+    );
 
-    return () => clearInterval(interval);
-  }, [isDMMode, ndkReady, profilePubkey, runDMDiscovery]);
+    // Recompute unread counts: NIP-04 from cache, NIP-17 preserved from the
+    // existing thread state (set by DMChat / handleIncomingDM).
+    const nip04Unreads = computeUnreadCountsFromCache(myPubkey, dmStore.readCursors);
+    const finalThreads = merged.map((t) => ({
+      ...t,
+      unreadCount: nip04Unreads[t.pubkey] ?? t.unreadCount ?? 0,
+    }));
 
-  // Reset the guard whenever the user logs out / switches accounts so the
-  // next login re-runs discovery for the new pubkey.
+    const totalUnreads: Record<string, number> = {};
+    for (const t of finalThreads) {
+      if (t.unreadCount > 0) totalUnreads[t.pubkey] = t.unreadCount;
+    }
+
+    dmStore.setThreads(finalThreads);
+    dmStore.setLoadingThreads(false);
+    useNotificationStore.getState().setDMUnreads(totalUnreads);
+  }, [profilePubkey, profileCache]);
+
+  // Publish the kind 10050 inbox relay list lazily, the first time the user
+  // enters DM mode with a signer attached. Other Nostr clients use this
+  // event to learn which relays to send gift-wrapped DMs to.
   useEffect(() => {
-    dmDiscoveryRanRef.current = false;
+    if (!DM_FEATURE_ENABLED) return;
+    if (!isDMMode || !ndkReady || !profilePubkey) return;
+    if (inboxPublishedRef.current) return;
+    if (!getNDK().signer) return;
+    inboxPublishedRef.current = true;
+    void publishInboxRelays(profilePubkey);
+  }, [isDMMode, ndkReady, profilePubkey]);
+
+  // Reset the inbox-publish guard whenever the active account changes.
+  useEffect(() => {
+    inboxPublishedRef.current = false;
   }, [profilePubkey]);
 
-  // Subscribe to incoming DMs (NIP-04 + NIP-17). Gated on isDMMode so we
-  // don't open a history-replaying subscription (NDK fetches until EOSE
-  // before streaming) on every chat page load — the user explicitly wants
-  // DM traffic to happen only when they're in the DM view. Notifications
-  // while browsing channels are intentionally deferred until they switch.
+  // Project the cache into the threads list. Run on entry, then poll every
+  // 5s while the user is in DM mode so freshly-cached events from the live
+  // subscription (in DMSessionProvider) surface in the sidebar. The poll is
+  // a cheap in-memory walk — no relay traffic — so a tight cadence is fine.
   useEffect(() => {
     if (!DM_FEATURE_ENABLED) return;
     if (!isDMMode || !ndkReady || !profilePubkey) return;
 
-    const cleanup = subscribeDMs(profilePubkey, (msg: DMMessage) => {
-      const dmStore = useDMStore.getState();
-      const otherPubkey = msg.senderPubkey === profilePubkey
-        ? msg.recipientPubkey
-        : msg.senderPubkey;
-      const isOwnMessage = msg.senderPubkey === profilePubkey;
+    useDMStore.getState().setLoadingThreads(true);
+    refreshThreads();
 
-      // Never increment unread for your own outgoing messages, and never
-      // auto-clear on incoming — useReadTracker decides that based on
-      // visibility + focus. `handleIncomingDM` also mirrors the count into
-      // the notification store so the favicon badge reflects DMs.
-      const existingThread = dmStore.threads.find(t => t.pubkey === otherPubkey);
-      const currentUnread = existingThread?.unreadCount ?? 0;
-      const { nextUnread } = handleIncomingDM(otherPubkey, isOwnMessage, currentUnread);
-      if (existingThread) {
-        dmStore.updateThread(otherPubkey, {
-          lastMessage: msg.content,
-          lastMessageAt: msg.createdAt,
-          unreadCount: nextUnread,
-        });
-      } else {
-        const cached = profileCache.get(otherPubkey);
-        dmStore.addThread({
-          pubkey: otherPubkey,
-          displayName: cached?.name || formatPubkey(otherPubkey),
-          picture: cached?.picture,
-          lastMessage: msg.content,
-          lastMessageAt: msg.createdAt,
-          unreadCount: nextUnread,
-        });
-      }
+    const interval = setInterval(refreshThreads, 5000);
+    return () => clearInterval(interval);
+  }, [isDMMode, ndkReady, profilePubkey, refreshThreads]);
 
-      // Add to active conversation if viewing this thread
-      if (dmStore.activeDMPubkey === otherPubkey) {
-        // Avoid duplicates
-        const exists = dmStore.messages.some(m => m.id === msg.id);
-        if (!exists) {
-          dmStore.addMessage(msg);
-        }
-      }
-    });
-
-    return () => {
-      if (cleanup) cleanup();
-    };
-  }, [isDMMode, ndkReady, profilePubkey, profileCache]);
-
-  return { runDMDiscovery };
+  return { runDMDiscovery: refreshThreads };
 }

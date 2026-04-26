@@ -1,7 +1,7 @@
 'use client';
 
 import { useDMStore } from '@/store/dm';
-import type { DMProtocol } from '@/lib/dm';
+import type { DMProtocol } from '@/lib/dm/dm';
 import ModalShell from '@/components/ModalShell';
 
 export default function ProtocolPrompt() {
