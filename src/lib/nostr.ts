@@ -12,6 +12,13 @@ import { BunkerSigner, parseBunkerInput, createNostrConnectURI } from 'nostr-too
 import { EventEmitter } from 'events';
 import { withTimeout } from './promise';
 import { KIND_RELAY_LIST } from './nip-kinds';
+import {
+  fetchKind0,
+  fetchFollowers as readFollowers,
+  fetchFollowing as readFollowing,
+  fetchUserNotes as readUserNotes,
+  fetchRelayList,
+} from './nostr-read';
 
 // Popular relays (high availability)
 const POPULAR_RELAYS = [
@@ -69,7 +76,6 @@ async function addUserRelays(pubkey: string): Promise<void> {
   const ndk = getNDK();
 
   try {
-    const { fetchRelayList } = await import('./nostr-read');
     const { read, write } = await fetchRelayList(pubkey, { timeoutMs: 5000 });
     for (const url of [...read, ...write]) {
       if (url.startsWith('wss://')) {
@@ -415,20 +421,17 @@ export function parseProfile(user: NDKUser): NostrProfile {
 
 export async function fetchFollowers(pubkey: string): Promise<string[]> {
   await addUserRelays(pubkey);
-  const { fetchFollowers: read } = await import('./nostr-read');
-  return read(pubkey, { timeoutMs: 10000 });
+  return readFollowers(pubkey, { timeoutMs: 10000 });
 }
 
 export async function fetchFollowing(pubkey: string): Promise<string[]> {
   await addUserRelays(pubkey);
-  const { fetchFollowing: read } = await import('./nostr-read');
-  return read(pubkey, { timeoutMs: 10000 });
+  return readFollowing(pubkey, { timeoutMs: 10000 });
 }
 
 export async function fetchUserNotes(pubkey: string, limit = 20): Promise<NDKEvent[]> {
   await addUserRelays(pubkey);
-  const { fetchUserNotes: read } = await import('./nostr-read');
-  const events = await read(pubkey, limit, { timeoutMs: 10000 });
+  const events = await readUserNotes(pubkey, limit, { timeoutMs: 10000 });
   // Wrap into NDKEvent for backward compatibility with callers that expect
   // NDK's event shape (e.g. profile-notes UI).
   const ndk = getNDK();
@@ -436,7 +439,6 @@ export async function fetchUserNotes(pubkey: string, limit = 20): Promise<NDKEve
 }
 
 export async function fetchCurrentKind0(pubkey: string): Promise<Record<string, unknown>> {
-  const { fetchKind0 } = await import('./nostr-read');
   return fetchKind0(pubkey, { timeoutMs: 10000 });
 }
 
