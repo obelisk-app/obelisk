@@ -5,6 +5,8 @@ import {
   getCursors, setCursor,
   setFollowSet, evictIfNeeded,
   clearAccount,
+  subscribeToCacheTick, getCacheTick,
+  _resetDMCacheState,
   type CachedDMEvent,
 } from './dm-cache';
 import { getOrCreateCacheKey, _resetCacheKeyState } from './cache-key';
@@ -115,5 +117,53 @@ describe('dm-cache clearAccount', () => {
     clearAccount(me);
     expect(getCachedEvents(me)).toHaveLength(0);
     expect(getCursors(me).nip04In).toBe(0);
+  });
+});
+
+describe('dm-cache mutation tick', () => {
+  beforeEach(() => {
+    // Reset tick state across the whole module so per-test counters
+    // start from zero regardless of prior test side effects.
+    _resetDMCacheState();
+  });
+
+  it('bumps the tick on every putEvent and notifies subscribers', () => {
+    const cb = vi.fn();
+    const unsub = subscribeToCacheTick(cb);
+    expect(getCacheTick(me)).toBe(0);
+    putEvent(me, fakeEvent('id1', 100, partnerStranger));
+    expect(getCacheTick(me)).toBe(1);
+    putEvent(me, fakeEvent('id2', 200, partnerStranger));
+    expect(getCacheTick(me)).toBe(2);
+    expect(cb).toHaveBeenCalledTimes(2);
+    expect(cb).toHaveBeenLastCalledWith(me, 2);
+    unsub();
+  });
+
+  it('isolates ticks per account', () => {
+    const otherMe = 'd'.repeat(64);
+    putEvent(me, fakeEvent('id1', 100, partnerStranger));
+    putEvent(otherMe, { ...fakeEvent('id2', 200, partnerStranger), pubkey: otherMe });
+    expect(getCacheTick(me)).toBe(1);
+    expect(getCacheTick(otherMe)).toBe(1);
+  });
+
+  it('unsubscribe stops further notifications', () => {
+    const cb = vi.fn();
+    const unsub = subscribeToCacheTick(cb);
+    putEvent(me, fakeEvent('id1', 100, partnerStranger));
+    expect(cb).toHaveBeenCalledTimes(1);
+    unsub();
+    putEvent(me, fakeEvent('id2', 200, partnerStranger));
+    expect(cb).toHaveBeenCalledTimes(1);
+  });
+
+  it('putSecret also bumps the tick', async () => {
+    const cb = vi.fn();
+    const unsub = subscribeToCacheTick(cb);
+    const key = await getOrCreateCacheKey(me, signer);
+    await putSecret(me, key, 'id1', 'plaintext');
+    expect(cb).toHaveBeenCalledTimes(1);
+    unsub();
   });
 });

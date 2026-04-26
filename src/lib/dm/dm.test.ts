@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { loadHistory, verifyAndIngest } from './dm';
+import { loadHistory, loadOlder, verifyAndIngest } from './dm';
 import { getCachedEvents, setCursor, clearAccount } from './dm-cache';
 
 const me = 'a'.repeat(64);
@@ -41,6 +41,33 @@ describe('loadHistory', () => {
     loadHistory(me, partner);
     const filters = enqueueMock.mock.calls[0][0].filters;
     for (const f of filters) expect(f.since).toBeUndefined();
+  });
+});
+
+describe('loadOlder', () => {
+  it('issues filters with `until` and `limit`, omitting `since`', () => {
+    loadOlder(me, partner, { before: 1500 });
+    const filters = enqueueMock.mock.calls[0][0].filters;
+    expect(filters).toHaveLength(3);
+    for (const f of filters) {
+      expect(f.until).toBe(1500);
+      expect(f.limit).toBe(50);
+      expect(f.since).toBeUndefined();
+    }
+  });
+
+  it('honors a custom limit', () => {
+    loadOlder(me, partner, { before: 1500, limit: 200 });
+    const filters = enqueueMock.mock.calls[0][0].filters;
+    for (const f of filters) expect(f.limit).toBe(200);
+  });
+
+  it('routes to the same relay set as loadHistory (partner outbox + inbox)', () => {
+    loadOlder(me, partner, { before: 1500 });
+    const relays = enqueueMock.mock.calls[0][0].relays;
+    expect(relays).toEqual(expect.arrayContaining([
+      'wss://inbox.partner', 'wss://read.partner', 'wss://write.partner',
+    ]));
   });
 });
 
