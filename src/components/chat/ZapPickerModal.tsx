@@ -9,6 +9,8 @@ import { getNDK } from '@/lib/nostr';
 import { useLocalWallet } from '@/lib/wallet/local-client';
 import { resolveLightningAddress, requestInvoice } from '@/lib/wallet/lnurl-pay';
 import { getLightningAddress } from '@/lib/wallet/provisioning';
+import { buildZapRequest } from '@/lib/wallet/zap-request';
+import { NDKEvent } from '@nostr-dev-kit/ndk';
 import type { KEKSigner } from '@/lib/dm/cache-key';
 
 const QUICK_AMOUNTS = [21, 100, 500, 1000, 5000, 21000];
@@ -93,29 +95,42 @@ export default function ZapPickerModal() {
         return;
       }
 
-      const { invoice } = await requestInvoice(params.callback, amountMsat, 'Zap en Obelisk');
+      // Build a signed NIP-57 zap-request so the recipient's LNURL provider
+      // publishes a kind 9735 receipt to the recipient's relays — proof of
+      // payment that doesn't need any Obelisk-server audit log.
+      let zapRequest: unknown = undefined;
+      try {
+        if (ndk.signer) {
+          const recipientRelays = Array.from((ndk.pool?.relays as Map<string, unknown> | undefined)?.keys?.() ?? []) as string[];
+          if (recipientRelays.length === 0) recipientRelays.push('wss://relay.damus.io', 'wss://nos.lol');
+          zapRequest = await buildZapRequest(
+            {
+              signEvent: async (template) => {
+                const e = new NDKEvent(ndk, {
+                  kind: template.kind,
+                  created_at: template.created_at,
+                  tags: template.tags,
+                  content: template.content,
+                } as any);
+                await e.sign(ndk.signer!);
+                return { ...template, pubkey: e.pubkey, id: e.id!, sig: e.sig! };
+              },
+            },
+            {
+              recipientPubkey: target,
+              amountMsat,
+              relays: recipientRelays,
+              comment: undefined,
+            },
+          );
+        }
+      } catch { /* signer unavailable — fall back to plain LNURL-pay */ }
+
+      const { invoice } = await requestInvoice(params.callback, amountMsat, 'Zap en Obelisk', zapRequest);
 
       // Pay via local NWC.
       await (walletClient as unknown as { payInvoice: (a: { invoice: string }) => Promise<unknown> })
         .payInvoice({ invoice });
-
-      // Best-effort audit log.
-      let paymentHash: string | undefined;
-      try {
-        const { parseBolt11 } = await import('@/lib/bolt11');
-        paymentHash = parseBolt11(invoice).paymentHash;
-      } catch { /* ignore */ }
-      try {
-        await fetch('/api/wallet/zap-receipt', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            targetPubkey: target,
-            amountMsat,
-            channelId,
-            paymentHash,
-          }),
-        });
-      } catch { /* non-fatal */ }
 
       // Visible chat message — same copy as before plus the powered-by tag.
       const name = member?.displayName || formatPubkey(target);

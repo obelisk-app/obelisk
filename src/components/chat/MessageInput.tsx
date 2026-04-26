@@ -28,6 +28,8 @@ import { useLocalWallet } from '@/lib/wallet/local-client';
 import { resolveLightningAddress, requestInvoice } from '@/lib/wallet/lnurl-pay';
 import { getLightningAddress } from '@/lib/wallet/provisioning';
 import { getNDK } from '@/lib/nostr';
+import { buildZapRequest } from '@/lib/wallet/zap-request';
+import { NDKEvent } from '@nostr-dev-kit/ndk';
 import type { KEKSigner } from '@/lib/dm/cache-key';
 
 interface MessageInputProps {
@@ -342,29 +344,41 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
             push(`⚠️ Monto fuera de rango (${Math.ceil(params.minSendable / 1000)}–${Math.floor(params.maxSendable / 1000)} sats).`);
             return;
           }
-          const { invoice } = await requestInvoice(params.callback, amountMsat);
-
-          // Derive paymentHash from the BOLT11 invoice for the audit log.
-          let paymentHash: string | undefined;
+          // Build a signed NIP-57 zap-request so the recipient's LNURL provider
+          // publishes a kind 9735 receipt to the recipient's relays — proof of
+          // payment that doesn't need any Obelisk-server audit log.
+          const ndk = getNDK();
+          let zapRequest: unknown = undefined;
           try {
-            const { parseBolt11 } = await import('@/lib/bolt11');
-            paymentHash = parseBolt11(invoice).paymentHash;
-          } catch { /* paymentHash is best-effort */ }
+            if (ndk.signer) {
+              const recipientRelays = Array.from((ndk.pool?.relays as Map<string, unknown> | undefined)?.keys?.() ?? []) as string[];
+              if (recipientRelays.length === 0) recipientRelays.push('wss://relay.damus.io', 'wss://nos.lol');
+              zapRequest = await buildZapRequest(
+                {
+                  signEvent: async (template) => {
+                    const e = new NDKEvent(ndk, {
+                      kind: template.kind,
+                      created_at: template.created_at,
+                      tags: template.tags,
+                      content: template.content,
+                    } as any);
+                    await e.sign(ndk.signer!);
+                    return { ...template, pubkey: e.pubkey, id: e.id!, sig: e.sig! };
+                  },
+                },
+                {
+                  recipientPubkey: target,
+                  amountMsat,
+                  relays: recipientRelays,
+                  comment: undefined,
+                },
+              );
+            }
+          } catch { /* signer unavailable — fall back to plain LNURL-pay */ }
+
+          const { invoice } = await requestInvoice(params.callback, amountMsat, undefined, zapRequest);
 
           await (walletClient as unknown as { payInvoice: (a: { invoice: string }) => Promise<unknown> }).payInvoice({ invoice });
-
-          // Best-effort audit log to server (sidebar/analytics).
-          try {
-            await fetch('/api/wallet/zap-receipt', {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                targetPubkey: target,
-                amountMsat,
-                channelId: activeChannelId,
-                paymentHash,
-              }),
-            });
-          } catch { /* non-fatal */ }
 
           push(`⚡ Zap enviado: ${amount} sats. Powered by nostr-wot.`);
         } catch (err) {
