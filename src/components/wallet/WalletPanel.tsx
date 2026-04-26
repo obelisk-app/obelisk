@@ -14,7 +14,7 @@ import {
 } from '@/lib/wallet/provisioning';
 import { lnbitsToNwc } from '@/lib/wallet/lnbits-to-nwc';
 import { PoweredByNostrWot } from './PoweredByNostrWot';
-import { toKEKSigner } from '@/lib/ndk-kek-signer';
+import { toKEKSigner, toNip98Signer } from '@/lib/signer-adapters';
 
 type Tab = 'quick' | 'nwc' | 'lnbits';
 type View = 'main' | 'send' | 'receive';
@@ -24,9 +24,13 @@ export default function WalletPanel() {
   const pubkey = profile?.pubkey ?? null;
   const signerReady = useAuthStore((s) => s.signerReady);
 
-  // Adapt the NDK signer to the KEKSigner interface (nip44Encrypt/Decrypt).
+  // Adapt the NDK signer to the narrow interfaces each consumer needs.
   const ndk = getNDK();
   const signer = signerReady && pubkey ? toKEKSigner(ndk, ndk.signer, pubkey) : null;
+  // Nip98Signer is used by the wallet provisioning flow (provisionWallet,
+  // claimLightningAddress, releaseLightningAddress). It requires getPublicKey +
+  // signEvent — not available on KEKSigner, so we derive it separately here.
+  const nip98Signer = signerReady ? toNip98Signer(ndk, ndk.signer) : null;
 
   const { client, reload, disconnect } = useLocalWallet(pubkey, signer);
 
@@ -112,16 +116,16 @@ export default function WalletPanel() {
   }, [pubkey, client]);
 
   const handleQuickSetup = useCallback(async () => {
-    if (!signer || !pubkey) return;
+    if (!nip98Signer || !signer || !pubkey) return;
     setBusy(true); setStatus(null); setError(null);
     try {
-      const { nwcUri } = await provisionWallet(signer as any);
+      const { nwcUri } = await provisionWallet(nip98Signer);
       await saveLocalWallet(pubkey, signer, { source: 'quick', nwcUri, label: 'nostr-wot' });
       await reload();
       setStatus('Wallet conectada');
     } catch (e) { setError((e as Error).message); }
     finally { setBusy(false); }
-  }, [pubkey, signer, reload]);
+  }, [pubkey, nip98Signer, signer, reload]);
 
   const handleNwcConnect = useCallback(async () => {
     if (!signer || !pubkey) return;
@@ -168,28 +172,28 @@ export default function WalletPanel() {
   }, [disconnect]);
 
   const handleClaimAddress = useCallback(async () => {
-    if (!signer || !claimUsername.trim()) return;
+    if (!nip98Signer || !claimUsername.trim()) return;
     setBusy(true); setError(null);
     try {
-      const { address } = await claimLightningAddress(signer as any, claimUsername.trim());
+      const { address } = await claimLightningAddress(nip98Signer, claimUsername.trim());
       setLnAddress(address);
       setClaimUsername('');
       setStatus(`Reclamaste ${address}`);
     } catch (e) { setError((e as Error).message); }
     finally { setBusy(false); }
-  }, [signer, claimUsername]);
+  }, [nip98Signer, claimUsername]);
 
   const handleReleaseAddress = useCallback(async () => {
-    if (!signer) return;
+    if (!nip98Signer) return;
     if (!confirm('¿Liberar tu Lightning Address?')) return;
     setBusy(true); setError(null);
     try {
-      await releaseLightningAddress(signer as any);
+      await releaseLightningAddress(nip98Signer);
       setLnAddress(null);
       setStatus('Dirección liberada');
     } catch (e) { setError((e as Error).message); }
     finally { setBusy(false); }
-  }, [signer]);
+  }, [nip98Signer]);
 
   const handleSend = useCallback(async () => {
     if (!client || !sendInvoice.trim()) return;

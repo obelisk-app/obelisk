@@ -6,7 +6,7 @@ import { useChatStore } from '@/store/chat';
 import { useAuthStore } from '@/store/auth';
 import { formatPubkey, getNDK } from '@/lib/nostr';
 import { useLocalWallet } from '@/lib/wallet/local-client';
-import { toKEKSigner } from '@/lib/ndk-kek-signer';
+import { toKEKSigner } from '@/lib/signer-adapters';
 
 interface Props {
   invoice: string;

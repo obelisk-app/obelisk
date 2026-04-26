@@ -29,8 +29,7 @@ import { resolveLightningAddress, requestInvoice } from '@/lib/wallet/lnurl-pay'
 import { getLightningAddress } from '@/lib/wallet/provisioning';
 import { getNDK } from '@/lib/nostr';
 import { buildZapRequest } from '@/lib/wallet/zap-request';
-import { NDKEvent } from '@nostr-dev-kit/ndk';
-import { toKEKSigner } from '@/lib/ndk-kek-signer';
+import { toKEKSigner, toZapRequestSigner } from '@/lib/signer-adapters';
 
 interface MessageInputProps {
   onSend: (content: string, replyToId?: string) => void;
@@ -351,29 +350,16 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
           const ndk = getNDK();
           let zapRequest: unknown = undefined;
           try {
-            if (ndk.signer) {
+            const zapSigner = toZapRequestSigner(ndk, ndk.signer);
+            if (zapSigner) {
               const recipientRelays = Array.from((ndk.pool?.relays as Map<string, unknown> | undefined)?.keys?.() ?? []) as string[];
               if (recipientRelays.length === 0) recipientRelays.push('wss://relay.damus.io', 'wss://nos.lol');
-              zapRequest = await buildZapRequest(
-                {
-                  signEvent: async (template) => {
-                    const e = new NDKEvent(ndk, {
-                      kind: template.kind,
-                      created_at: template.created_at,
-                      tags: template.tags,
-                      content: template.content,
-                    } as any);
-                    await e.sign(ndk.signer!);
-                    return { ...template, pubkey: e.pubkey, id: e.id!, sig: e.sig! };
-                  },
-                },
-                {
-                  recipientPubkey: target,
-                  amountMsat,
-                  relays: recipientRelays,
-                  comment: undefined,
-                },
-              );
+              zapRequest = await buildZapRequest(zapSigner, {
+                recipientPubkey: target,
+                amountMsat,
+                relays: recipientRelays,
+                comment: undefined,
+              });
             }
           } catch { /* signer unavailable — fall back to plain LNURL-pay */ }
 

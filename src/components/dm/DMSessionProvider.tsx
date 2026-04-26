@@ -5,7 +5,7 @@ import { subscribeLive, loadHistory, sendDM, type DMProtocol } from '@/lib/dm/dm
 import { hydrateFollows } from '@/lib/dm/follows';
 import { getOrCreateCacheKey } from '@/lib/dm/cache-key';
 import { getNDK } from '@/lib/nostr';
-import { toKEKSigner } from '@/lib/ndk-kek-signer';
+import { toKEKSigner } from '@/lib/signer-adapters';
 import { useAuthStore } from '@/store/auth';
 
 interface DMSessionContextValue {
