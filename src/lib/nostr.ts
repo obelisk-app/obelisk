@@ -61,6 +61,32 @@ export function getNDK(): NDK {
   return ndkInstance;
 }
 
+// Signer-change broadcast. The auth store subscribes here at module load
+// to mirror `ndk.signer != null` into a reactive `signerReady` flag.
+// Avoids a circular import: nostr.ts → auth.ts would cycle since auth.ts
+// already imports from nostr.ts. Subscribers register from the auth side.
+const signerSubscribers = new Set<(signer: NDKSigner | undefined) => void>();
+
+export function onSignerChange(cb: (signer: NDKSigner | undefined) => void): () => void {
+  signerSubscribers.add(cb);
+  return () => { signerSubscribers.delete(cb); };
+}
+
+/**
+ * Single sink for `ndk.signer` mutations. Replaces every direct
+ * `ndk.signer = X` in this file. Notifies subscribers (the auth store's
+ * `signerReady` flag) so React consumers can gate UI reactively.
+ *
+ * Exported so external setters (e.g. `useSessionBootstrap`'s NIP-07 fast
+ * path) can route through the bridge instead of mutating `ndk.signer`
+ * directly and silently breaking the reactive flag.
+ */
+export function setNDKSigner(signer: NDKSigner | undefined): void {
+  const ndk = getNDK();
+  ndk.signer = signer;
+  signerSubscribers.forEach((cb) => cb(signer));
+}
+
 export async function connectNDK(): Promise<NDK> {
   const ndk = getNDK();
   await ndk.connect();
@@ -210,9 +236,8 @@ export async function restoreRemoteSigner(): Promise<boolean> {
 
     if (payload.type === 'nsec') {
       if (!payload.privkey) return false;
-      const ndk = getNDK();
       const signer = new NDKPrivateKeySigner(payload.privkey);
-      ndk.signer = signer;
+      setNDKSigner(signer);
       await signer.user();
       return true;
     }
@@ -225,10 +250,8 @@ export async function restoreRemoteSigner(): Promise<boolean> {
     const localSecret = hexToBytes(payload.localPrivkey);
     const bunker = BunkerSigner.fromBunker(localSecret, bp);
     const signer = new NDKBunkerSigner(bunker, localSecret);
-    
-    const ndk = getNDK();
-    ndk.signer = signer;
-    
+    setNDKSigner(signer);
+
     await withTimeout(signer.blockUntilReady(), 30000);
     return true;
   } catch (err) {
@@ -245,7 +268,7 @@ export async function loginWithExtension(): Promise<NDKUser | null> {
 
   const ndk = getNDK();
   const signer = new NDKNip07Signer(4000, ndk);
-  ndk.signer = signer;
+  setNDKSigner(signer);
 
   try {
     const user = await signer.blockUntilReady();
@@ -272,10 +295,9 @@ export async function loginWithNsec(nsec: string): Promise<NDKUser | null> {
   } catch {
     throw new Error('Invalid nsec format');
   }
-  
-  const ndk = getNDK();
+
   const signer = new NDKPrivateKeySigner(privateKey);
-  ndk.signer = signer;
+  setNDKSigner(signer);
 
   const user = await signer.user();
   await user.fetchProfile();
@@ -290,9 +312,8 @@ export async function createNewAccount(): Promise<{ user: NDKUser; nsec: string 
   const nsec = nip19.nsecEncode(secretKey);
   const privateKeyHex = bytesToHex(secretKey);
 
-  const ndk = getNDK();
   const signer = new NDKPrivateKeySigner(privateKeyHex);
-  ndk.signer = signer;
+  setNDKSigner(signer);
 
   const user = await signer.user();
   saveSignerPayload(JSON.stringify({ type: 'nsec', privkey: privateKeyHex }));
@@ -321,9 +342,8 @@ export async function loginWithBunker(bunkerUrl: string, options?: BunkerLoginOp
 
   const signer = new NDKBunkerSigner(bunker, localSecret);
   const user = await withTimeout(signer.blockUntilReady(), 60000);
-  
-  const ndk = getNDK();
-  ndk.signer = signer;
+
+  setNDKSigner(signer);
   saveSignerPayload(signer.toPayload());
 
   await user.fetchProfile().catch(() => {});
@@ -370,8 +390,7 @@ export async function createNostrConnectSession(relay?: string, options?: Bunker
       }
 
       const signer = new NDKBunkerSigner(bunker, localSecret);
-      const ndk = getNDK();
-      ndk.signer = signer;
+      setNDKSigner(signer);
       saveSignerPayload(signer.toPayload());
 
       const user = await signer.user();

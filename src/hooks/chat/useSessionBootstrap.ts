@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth';
-import { getNDK, connectNDK, restoreRemoteSigner } from '@/lib/nostr';
+import { getNDK, connectNDK, restoreRemoteSigner, setNDKSigner } from '@/lib/nostr';
 
 type Router = ReturnType<typeof useRouter>;
 
@@ -58,7 +58,11 @@ export function useSessionBootstrap(router: Router) {
     connectNDK().then(async () => {
       if (!ndk.signer && loginMethod === 'extension' && typeof window !== 'undefined' && window.nostr) {
         const { NDKNip07Signer } = await import('@nostr-dev-kit/ndk');
-        ndk.signer = new NDKNip07Signer(4000, ndk);
+        // Route through `setNDKSigner` so the bridge fires and the auth
+        // store's reactive `signerReady` flag flips. Bypassing the bridge
+        // here was the root cause of "Sign in to start a conversation"
+        // showing in DMList even when the user was actually signed in.
+        setNDKSigner(new NDKNip07Signer(4000, ndk));
       }
       // nsec / bunker / NostrConnect: rebuild the signer from the payload
       // stashed in localStorage at login. Without this the signer dies on
