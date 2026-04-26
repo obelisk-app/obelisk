@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useChatStore } from '@/store/chat';
 import { useAuthStore } from '@/store/auth';
 import { useDMStore } from '@/store/dm';
 import { useNotificationStore } from '@/store/notification';
 import { DM_FEATURE_ENABLED } from '@/lib/feature-flags';
 import CreateServerModal from './CreateServerModal';
+import { NotifyMenu } from '@/components/notifications/NotifyMenu';
 
 export default function ServerBar() {
   const { servers, activeServerId, setActiveServer, addServer } = useChatStore();
@@ -14,6 +15,16 @@ export default function ServerBar() {
   const { isDMMode, setDMMode } = useDMStore();
   const { channelUnreads, channelMentions, channelServerMap, dmUnreads } = useNotificationStore();
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [serverContextMenu, setServerContextMenu] = useState<
+    { x: number; y: number; serverId: string; serverName: string } | null
+  >(null);
+
+  useEffect(() => {
+    if (!serverContextMenu) return;
+    const close = () => setServerContextMenu(null);
+    window.addEventListener('mousedown', close);
+    return () => window.removeEventListener('mousedown', close);
+  }, [serverContextMenu]);
 
   // Compute per-server unread state
   const serverUnreads = new Map<string, { count: number; hasMention: boolean }>();
@@ -73,6 +84,15 @@ export default function ServerBar() {
             )}
             <button
               onClick={() => { setDMMode(false); setActiveServer(server.id); }}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                setServerContextMenu({
+                  x: e.clientX,
+                  y: e.clientY,
+                  serverId: server.id,
+                  serverName: server.name,
+                });
+              }}
               className={`w-12 h-12 flex items-center justify-center transition-all ${
                 isActive
                   ? 'rounded-xl bg-lc-green/20'
@@ -124,6 +144,25 @@ export default function ServerBar() {
             setActiveServer(server.id);
           }}
         />
+      )}
+
+      {serverContextMenu && (
+        <div
+          style={{
+            position: 'fixed',
+            left: serverContextMenu.x,
+            top: serverContextMenu.y,
+            zIndex: 60,
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <NotifyMenu
+            scope={{ type: 'server', id: serverContextMenu.serverId }}
+            title={serverContextMenu.serverName}
+            onClose={() => setServerContextMenu(null)}
+          />
+        </div>
       )}
     </aside>
   );
