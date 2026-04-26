@@ -48,7 +48,10 @@ describe('profile-cache', () => {
     getProfile(me, partner);
     const onEvent1 = enqueueMock.mock.calls[0][0].onEvent;
     onEvent1({ id: 'e1', kind: 0, pubkey: partner, created_at: 1000, tags: [], content: '{"name":"alice"}', sig: 'x' } as any);
-    // Tamper with persisted lastCheckedAt to be 25h ago
+    // Simulate a reload: in-memory state cleared, only localStorage persists.
+    _resetProfileCache();
+    // Tamper with persisted lastCheckedAt to be 25h ago — older than the
+    // 24h TTL, so the cold-load hydration should mark it stale.
     const key = `obelisk:profiles:${me}`;
     const blob = JSON.parse(localStorage.getItem(key) ?? '{}');
     blob[partner].lastCheckedAt = Date.now() - 25 * 3600 * 1000;

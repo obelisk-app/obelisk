@@ -2,6 +2,7 @@
 import type { Event as NostrEvent } from 'nostr-tools/pure';
 import { sharedCoalescer } from '@/lib/nostr-coalescer';
 import { parseRelayListMeta, parseInboxRelays } from '@/lib/nostr-read';
+import { createKeyedObservable, type Slot } from '@/lib/nostr-store';
 
 export interface RelayListResult {
   inbox: string[];
@@ -23,19 +24,47 @@ const FALLBACK_RELAYS = [
   'wss://purplepag.es',
 ];
 
-const coalescer = sharedCoalescer;
-const subscribers = new Map<string, Set<(r: RelayListResult) => void>>();
+// In-memory authoritative state. localStorage is the cold-load seed below.
+const relayStore = createKeyedObservable<string, CacheEntry>();
 
-export function _resetRelayCache(): void { subscribers.clear(); }
-
-function key(me: string) { return `obelisk:relays:${me}`; }
-function read(me: string): Record<string, CacheEntry> {
-  if (typeof localStorage === 'undefined') return {};
-  try { return JSON.parse(localStorage.getItem(key(me)) ?? '{}'); } catch { return {}; }
+export function _resetRelayCache(): void {
+  relayStore._reset();
 }
-function write(me: string, blob: Record<string, CacheEntry>): void {
+
+/** Hook accessor — exposes the underlying observable so React hooks can
+ *  bind via useSyncExternalStore. */
+export function _relayStore() { return relayStore; }
+
+function slotKey(me: string, partner: string): string { return `${me}|${partner}`; }
+function storageKey(me: string): string { return `obelisk:relays:${me}`; }
+
+function readPersisted(me: string): Record<string, CacheEntry> {
+  if (typeof localStorage === 'undefined') return {};
+  try { return JSON.parse(localStorage.getItem(storageKey(me)) ?? '{}'); } catch { return {}; }
+}
+
+function writePersisted(me: string, blob: Record<string, CacheEntry>): void {
   if (typeof localStorage === 'undefined') return;
-  try { localStorage.setItem(key(me), JSON.stringify(blob)); } catch { /* ignore */ }
+  try { localStorage.setItem(storageKey(me), JSON.stringify(blob)); } catch { /* ignore */ }
+}
+
+function hydrateSlot(me: string, partner: string): Slot<CacheEntry> {
+  const k = slotKey(me, partner);
+  const slot = relayStore.get(k);
+  if (slot.value !== undefined) return slot;
+  const persisted = readPersisted(me)[partner];
+  if (persisted) {
+    relayStore.set(k, persisted);
+    return relayStore.get(k);
+  }
+  return slot;
+}
+
+/** Project a stored cache entry into the public `RelayListResult` shape.
+ *  Exposed for the `useRelayList` hook (which needs a stable snapshot
+ *  source + a `useMemo`-based derivation). */
+export function entryToRelayListResult(entry: CacheEntry | undefined): RelayListResult {
+  return buildResult(entry);
 }
 
 function buildResult(entry: CacheEntry | undefined): RelayListResult {
@@ -51,18 +80,14 @@ function buildResult(entry: CacheEntry | undefined): RelayListResult {
 
 function isStale(entry: CacheEntry): boolean {
   const now = Date.now();
-  // If neither slot has been checked, treat as stale (forces an initial fetch).
+  // Cold start (neither slot populated) → stale; forces an initial fetch.
   if (!entry.outbox && !entry.inbox) return true;
-  // Otherwise, only consider populated slots: stale if any *checked* slot is older than TTL.
-  // This avoids endlessly re-fetching when a partner has never published one of the kinds
-  // (e.g. no kind-10050) — once we've heard back from at least one, we honor the TTL.
+  // Only consider populated slots: stale if any *checked* slot is older than TTL.
+  // Avoids endless re-fetching when a partner never publishes one of the kinds
+  // (e.g. no kind-10050) — once at least one came back, honor the TTL.
   if (entry.outbox && now - entry.outbox.lastCheckedAt > TTL_MS) return true;
   if (entry.inbox && now - entry.inbox.lastCheckedAt > TTL_MS) return true;
   return false;
-}
-
-function notify(me: string, partner: string, r: RelayListResult): void {
-  subscribers.get(`${me}|${partner}`)?.forEach((cb) => cb(r));
 }
 
 export function getRelays(
@@ -70,18 +95,21 @@ export function getRelays(
   partner: string,
   opts: { onUpdate?: (r: RelayListResult) => void } = {},
 ): { result: RelayListResult; dispose?: () => void } {
-  const all = read(me);
-  const entry = all[partner];
+  const k = slotKey(me, partner);
+  const slot = hydrateSlot(me, partner);
+  const entry = slot.value;
   const result = buildResult(entry);
 
+  let unsubStore: (() => void) | undefined;
   if (opts.onUpdate) {
-    const subKey = `${me}|${partner}`;
-    if (!subscribers.has(subKey)) subscribers.set(subKey, new Set());
-    subscribers.get(subKey)!.add(opts.onUpdate);
+    const cb = opts.onUpdate;
+    unsubStore = relayStore.subscribe(k, (s) => {
+      if (s.value !== undefined) cb(buildResult(s.value));
+    });
   }
 
   if (!entry || isStale(entry)) {
-    coalescer.enqueue({
+    sharedCoalescer.enqueue({
       filters: [
         { kinds: [10002], authors: [partner], limit: 1 },
         { kinds: [10050], authors: [partner], limit: 1 },
@@ -89,31 +117,31 @@ export function getRelays(
       relays: FALLBACK_RELAYS,
       onEvent: (event: NostrEvent) => {
         if (event.pubkey !== partner) return;
-        const current = read(me);
-        const slot = current[partner] ?? {};
+        const current = relayStore.get(k).value ?? {};
         const which: 'outbox' | 'inbox' | null =
           event.kind === 10002 ? 'outbox' : event.kind === 10050 ? 'inbox' : null;
         if (!which) return;
-        const prev = slot[which]?.event;
+        const prev = current[which]?.event;
         const sameContent =
           prev && prev.created_at >= event.created_at && JSON.stringify(prev.tags) === JSON.stringify(event.tags);
+        const nextEntry: CacheEntry = { ...current };
         if (sameContent) {
-          slot[which] = { event: prev!, lastCheckedAt: Date.now() };
-          current[partner] = slot;
-          write(me, current);
+          // Refresh lastCheckedAt only — keep the existing event reference,
+          // and persist + skip the in-memory update (no notification).
+          nextEntry[which] = { event: prev!, lastCheckedAt: Date.now() };
+          const blob = readPersisted(me);
+          blob[partner] = nextEntry;
+          writePersisted(me, blob);
           return;
         }
-        slot[which] = { event, lastCheckedAt: Date.now() };
-        current[partner] = slot;
-        write(me, current);
-        notify(me, partner, buildResult(slot));
+        nextEntry[which] = { event, lastCheckedAt: Date.now() };
+        const blob = readPersisted(me);
+        blob[partner] = nextEntry;
+        writePersisted(me, blob);
+        relayStore.set(k, nextEntry);
       },
     });
   }
 
-  const dispose = opts.onUpdate
-    ? () => subscribers.get(`${me}|${partner}`)?.delete(opts.onUpdate!)
-    : undefined;
-
-  return { result, dispose };
+  return { result, dispose: unsubStore };
 }
