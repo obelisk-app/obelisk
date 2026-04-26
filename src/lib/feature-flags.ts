@@ -4,11 +4,7 @@
  */
 
 /**
- * DMs are temporarily disabled. NIP-17 inbox relays require a live signer
- * on every page load, and the browser-side signer-restore story still has
- * rough edges (bunker/NostrConnect reload, NIP-42 AUTH edge cases). We
- * keep the code paths in place so the commit history reflects the work
- * done, but the DM icon and all Nostr DM subscriptions are gated off
- * until the signer lifecycle is solid.
+ * DMs are now enabled. See `docs/superpowers/specs/2026-04-26-direct-messages-design.md`
+ * for the full design.
  */
-export const DM_FEATURE_ENABLED = false;
+export const DM_FEATURE_ENABLED = true;
