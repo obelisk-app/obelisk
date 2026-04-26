@@ -14,6 +14,7 @@ vi.mock('@/lib/nostr', () => ({
 
 vi.mock('@/lib/backend-auth', () => ({
   authenticateWithBackend: vi.fn().mockResolvedValue(undefined),
+  performBackendAuth: vi.fn().mockResolvedValue({ pubkey: 'abc123' }),
 }));
 
 vi.mock('@/store/auth', () => ({

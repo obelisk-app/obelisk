@@ -1,6 +1,7 @@
 import NDK, { NDKEvent } from '@nostr-dev-kit/ndk';
 import { logStatus } from './nostr';
 import { KIND_HTTP_AUTH } from './nip-kinds';
+import type { LoginMethod } from '@/lib/nostr';
 
 /**
  * Performs the full backend challenge-response auth flow.
@@ -75,4 +76,49 @@ export async function authenticateWithBackend(ndk: NDK): Promise<boolean> {
 
   logStatus('BackendAuth', 'Verification SUCCESS');
   return true;
+}
+
+export interface PerformBackendAuthOptions {
+  ndk: NDK;
+  loginMethod: LoginMethod;
+  /** Optional progress callback (called between phases). */
+  onProgress?: (phase: 'challenge' | 'signing' | 'verifying' | 'syncing') => void;
+}
+
+export interface PerformBackendAuthResult {
+  pubkey: string;
+}
+
+/**
+ * Run the full backend authentication flow: challenge → sign → verify →
+ * install user in the auth store → kick a profile sync. Throws on any
+ * failure (signer missing, signature rejected, network error, etc.).
+ *
+ * Used by every LoginModal entry point so the 4-step dance lives in one
+ * place — adding logging, tracing, or retry policy only needs to land
+ * here.
+ */
+export async function performBackendAuth(opts: PerformBackendAuthOptions): Promise<PerformBackendAuthResult> {
+  const { ndk, loginMethod, onProgress } = opts;
+  if (!ndk.signer) throw new Error('No signer attached');
+
+  onProgress?.('challenge');
+  const user = await ndk.signer.user();
+  const pubkey = user.pubkey;
+
+  onProgress?.('signing');
+  // authenticateWithBackend handles challenge fetch + event signing + verify POST
+  await authenticateWithBackend(ndk);
+
+  onProgress?.('verifying');
+  // The backend verify endpoint sets the session cookie. Now install the
+  // user into the auth store so React consumers see them as logged in.
+  const { useAuthStore } = await import('@/store/auth');
+  useAuthStore.getState().setUser(user, loginMethod);
+
+  onProgress?.('syncing');
+  // Best-effort profile sync — don't block the caller on slow relays.
+  void useAuthStore.getState().syncProfile();
+
+  return { pubkey };
 }

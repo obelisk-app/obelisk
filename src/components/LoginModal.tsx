@@ -16,7 +16,7 @@ import {
   logStatus,
 } from '@/lib/nostr';
 import { withTimeout } from '@/lib/promise';
-import { authenticateWithBackend } from '@/lib/backend-auth';
+import { performBackendAuth } from '@/lib/backend-auth';
 import ProfileEditor from '@/components/ProfileEditor';
 
 const AUTH_IN_PROGRESS_KEY = 'obelisk-auth-in-progress';
@@ -54,7 +54,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, transparentBack
   const [showSlowHint, setShowSlowHint] = useState(false);
   const [rpcEventDetected, setRpcEventDetected] = useState(false);
   const sessionRef = useRef<NostrConnectSession | null>(null);
-  const { setUser, setLoading, setError, isLoading, error, syncProfile } = useAuthStore();
+  const { setLoading, setError, isLoading, error } = useAuthStore();
 
   useEffect(() => {
     if (!isOpen) return;
@@ -120,24 +120,12 @@ export default function LoginModal({ isOpen, onClose, onSuccess, transparentBack
         }
 
         // Backend auth BEFORE showing as connected
-        logStatus('LoginModal', 'Starting backend authentication...', { pubkey: user.pubkey });
-        const watchdog = setInterval(() => logStatus('LoginModal', 'STILL FINALIZING... checking relays and signer'), 2000);
-        try {
-          await withTimeout(authenticateWithBackend(getNDK()), 60000, 'Backend auth timed out after 60s');
-          clearInterval(watchdog);
-          logStatus('LoginModal', 'Finished backend authentication: SUCCESS');
-        } catch (backendErr) {
-          clearInterval(watchdog);
-          logStatus('LoginModal', 'Finished backend authentication: FAILED', { error: backendErr });
-          throw new Error(`Finalizing login failed: ${backendErr instanceof Error ? backendErr.message : String(backendErr)}`);
-        }
+        await withTimeout(performBackendAuth({ ndk: getNDK(), loginMethod: 'bunker' }), 60000, 'Backend auth timed out after 60s');
 
         if (typeof localStorage !== 'undefined') {
           localStorage.removeItem(AUTH_IN_PROGRESS_KEY);
         }
-        setUser(user, 'bunker');
         setRpcEventDetected(false);
-        syncProfile();
         if (onSuccess) onSuccess();
         else onClose();
       } catch (err) {
@@ -240,18 +228,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, transparentBack
 
       if (user) {
         // Backend challenge-response auth BEFORE showing connected
-        logStatus('Login', 'Starting backend authentication...', { pubkey: user.pubkey });
-        try {
-          await withTimeout(authenticateWithBackend(getNDK()), 60000, 'Backend auth timed out after 60s');
-          logStatus('Login', 'Finished backend authentication: SUCCESS');
-        } catch (backendErr) {
-          logStatus('Login', 'Finished backend authentication: FAILED', { error: backendErr });
-          throw new Error(`Finalizing login failed: ${backendErr instanceof Error ? backendErr.message : String(backendErr)}`);
-        }
-
-        setUser(user, loginMethod);
-        // Sync profile from Nostr relays to DB in background
-        syncProfile();
+        await withTimeout(performBackendAuth({ ndk: getNDK(), loginMethod }), 60000, 'Backend auth timed out after 60s');
         if (onSuccess) onSuccess();
         else onClose();
       }
@@ -284,11 +261,10 @@ export default function LoginModal({ isOpen, onClose, onSuccess, transparentBack
     setError(null);
     try {
       connectNDK().catch(() => {});
-      const { user, nsec } = await createNewAccount();
-      await withTimeout(authenticateWithBackend(getNDK()), 60000, 'Backend auth timed out after 60s');
+      const { nsec } = await createNewAccount();
+      // performBackendAuth calls syncProfile in the background; harmless on a brand-new account
+      await withTimeout(performBackendAuth({ ndk: getNDK(), loginMethod: 'nsec' }), 60000, 'Backend auth timed out after 60s');
       setNewAccountNsec(nsec);
-      setUser(user, 'nsec');
-      // Skip syncProfile — a brand-new account has no Nostr profile on relays yet
     } catch (err) {
       console.error('Account creation error:', err);
       setError(err instanceof Error ? err.message : 'Failed to create account');
