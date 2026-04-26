@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { useDMStore, markThreadRead } from './dm';
-import type { DMMessage } from '@/lib/dm';
+import { useDMStore, markThreadRead, ensureDMStoreForAccount } from './dm';
+import type { DMMessage } from '@/lib/dm/dm';
 
 const makeMsg = (overrides: Partial<DMMessage> = {}): DMMessage => ({
   id: '1',
@@ -191,5 +191,32 @@ describe('readCursors', () => {
     expect(useDMStore.getState().readCursors['bob']).toBe(123456789);
     useDMStore.getState().setReadCursor('bob', 987654321);
     expect(useDMStore.getState().readCursors['bob']).toBe(987654321);
+  });
+});
+
+describe('per-account DM store', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('persist key includes the active pubkey', async () => {
+    ensureDMStoreForAccount('a'.repeat(64));
+    // After ensure + a state mutation, the persist middleware writes to the new key.
+    useDMStore.getState().setProtocolOverride('b'.repeat(64), 'nip04');
+    // Allow zustand persist to flush.
+    await new Promise((r) => setTimeout(r, 0));
+    expect(localStorage.getItem('obelisk-dm-store:' + 'a'.repeat(64))).not.toBeNull();
+  });
+
+  it('messages field is excluded from persisted state', async () => {
+    ensureDMStoreForAccount('a'.repeat(64));
+    useDMStore.getState().setMessages([{
+      id: 'x', senderPubkey: 'a'.repeat(64), recipientPubkey: 'b'.repeat(64),
+      content: 'plain-text-payload', createdAt: 1, protocol: 'nip04',
+    }]);
+    useDMStore.getState().setProtocolOverride('b'.repeat(64), 'nip04');
+    await new Promise((r) => setTimeout(r, 0));
+    const persisted = localStorage.getItem('obelisk-dm-store:' + 'a'.repeat(64)) ?? '';
+    expect(persisted).not.toContain('plain-text-payload');
   });
 });
