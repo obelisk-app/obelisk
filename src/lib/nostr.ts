@@ -12,6 +12,7 @@ import { BunkerSigner, parseBunkerInput, createNostrConnectURI } from 'nostr-too
 import { EventEmitter } from 'events';
 import { withTimeout } from './promise';
 import { KIND_RELAY_LIST } from './nip-kinds';
+import { encryptPayload, decryptPayload, clearWrapKey } from './signer-payload-crypto';
 import {
   fetchKind0,
   fetchFollowers as readFollowers,
@@ -136,27 +137,66 @@ function getLocalSecretKey(): Uint8Array {
   return key;
 }
 
-function saveSignerPayload(payload: string): void {
+async function saveSignerPayload(payload: string): Promise<void> {
   if (typeof localStorage === 'undefined') return;
   try {
-    localStorage.setItem(SIGNER_PAYLOAD_KEY, payload);
-  } catch { /* ignore */ }
+    const blob = await encryptPayload(payload);
+    localStorage.setItem(SIGNER_PAYLOAD_KEY, blob);
+  } catch (err) {
+    console.warn('[nostr] saveSignerPayload encryption failed:', err);
+  }
 }
 
-function readSignerPayload(): string | null {
+async function readSignerPayload(): Promise<string | null> {
   if (typeof localStorage === 'undefined') return null;
+  let blob: string | null;
   try {
-    return localStorage.getItem(SIGNER_PAYLOAD_KEY);
+    blob = localStorage.getItem(SIGNER_PAYLOAD_KEY);
   } catch {
+    return null;
+  }
+  if (!blob) return null;
+
+  // Migration: detect legacy plaintext JSON. If it parses, re-save it
+  // encrypted and return. After this code path runs once per user, all
+  // subsequent reads go through the encrypted path.
+  if (blob.startsWith('{')) {
+    try {
+      JSON.parse(blob); // sanity-check shape
+      await saveSignerPayload(blob);
+      return blob;
+    } catch {
+      try { localStorage.removeItem(SIGNER_PAYLOAD_KEY); } catch { /* ignore */ }
+      return null;
+    }
+  }
+
+  try {
+    return await decryptPayload(blob);
+  } catch {
+    // Corrupt ciphertext or IDB key was wiped (browser data clear).
+    // Remove the unreadable blob so the user can log in fresh.
+    try { localStorage.removeItem(SIGNER_PAYLOAD_KEY); } catch { /* ignore */ }
     return null;
   }
 }
 
-export function clearSignerPayload(): void {
-  if (typeof localStorage === 'undefined') return;
-  try {
-    localStorage.removeItem(SIGNER_PAYLOAD_KEY);
-  } catch { /* ignore */ }
+/**
+ * Clear the encrypted signer payload from localStorage AND destroy the
+ * IndexedDB-resident wrap key so leftover ciphertext is unreadable.
+ *
+ * Returns a Promise but is safe to fire-and-forget — callers (e.g. the
+ * sync `logout()` action in the auth store) don't need to await it.
+ * Order: wipe LS first, then IDB, so a partial failure leaves the safer
+ * state (no readable ciphertext referencing an existing key).
+ */
+export async function clearSignerPayload(): Promise<void> {
+  if (typeof localStorage !== 'undefined') {
+    try {
+      localStorage.removeItem(SIGNER_PAYLOAD_KEY);
+    } catch { /* ignore */ }
+  }
+  await clearWrapKey().catch(() => { /* best-effort */ });
 }
 
 /**
@@ -228,7 +268,7 @@ function toBunkerURL(bp: any): string {
 }
 
 export async function restoreRemoteSigner(): Promise<boolean> {
-  const payloadStr = readSignerPayload();
+  const payloadStr = await readSignerPayload();
   if (!payloadStr) return false;
 
   try {
@@ -256,7 +296,7 @@ export async function restoreRemoteSigner(): Promise<boolean> {
     return true;
   } catch (err) {
     console.warn('[nostr] restoreRemoteSigner failed:', err);
-    clearSignerPayload();
+    await clearSignerPayload();
     return false;
   }
 }
@@ -302,7 +342,7 @@ export async function loginWithNsec(nsec: string): Promise<NDKUser | null> {
   const user = await signer.user();
   await user.fetchProfile();
 
-  saveSignerPayload(JSON.stringify({ type: 'nsec', privkey: privateKey }));
+  await saveSignerPayload(JSON.stringify({ type: 'nsec', privkey: privateKey }));
 
   return user;
 }
@@ -316,7 +356,7 @@ export async function createNewAccount(): Promise<{ user: NDKUser; nsec: string 
   setNDKSigner(signer);
 
   const user = await signer.user();
-  saveSignerPayload(JSON.stringify({ type: 'nsec', privkey: privateKeyHex }));
+  await saveSignerPayload(JSON.stringify({ type: 'nsec', privkey: privateKeyHex }));
   return { user, nsec };
 }
 
@@ -344,7 +384,7 @@ export async function loginWithBunker(bunkerUrl: string, options?: BunkerLoginOp
   const user = await withTimeout(signer.blockUntilReady(), 60000);
 
   setNDKSigner(signer);
-  saveSignerPayload(signer.toPayload());
+  await saveSignerPayload(signer.toPayload());
 
   await user.fetchProfile().catch(() => {});
   return user;
@@ -391,7 +431,7 @@ export async function createNostrConnectSession(relay?: string, options?: Bunker
 
       const signer = new NDKBunkerSigner(bunker, localSecret);
       setNDKSigner(signer);
-      saveSignerPayload(signer.toPayload());
+      await saveSignerPayload(signer.toPayload());
 
       const user = await signer.user();
       await user.fetchProfile().catch(() => {});
