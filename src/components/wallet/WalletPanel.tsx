@@ -22,10 +22,11 @@ type View = 'main' | 'send' | 'receive';
 export default function WalletPanel() {
   const profile = useAuthStore((s) => s.profile);
   const pubkey = profile?.pubkey ?? null;
+  const signerReady = useAuthStore((s) => s.signerReady);
 
   // Adapt the NDK signer to the KEKSigner interface (nip44Encrypt/Decrypt).
   const ndk = getNDK();
-  const signer = pubkey ? toKEKSigner(ndk, ndk.signer, pubkey) : null;
+  const signer = signerReady && pubkey ? toKEKSigner(ndk, ndk.signer, pubkey) : null;
 
   const { client, reload, disconnect } = useLocalWallet(pubkey, signer);
 

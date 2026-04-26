@@ -61,8 +61,9 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
   // (/zap, /invoice, /balance). The wallet credentials are decrypted in the
   // browser using the user's Nostr signer (KEK) — server never sees them.
   const myPubkey = useAuthStore((s) => s.profile?.pubkey ?? null);
+  const signerReady = useAuthStore((s) => s.signerReady);
   const ndk = getNDK();
-  const kekSigner = myPubkey ? toKEKSigner(ndk, ndk.signer, myPubkey) : null;
+  const kekSigner = signerReady && myPubkey ? toKEKSigner(ndk, ndk.signer, myPubkey) : null;
   const { client: walletClient } = useLocalWallet(myPubkey, kekSigner);
 
   // Attach menu / upload / emoji / gif state

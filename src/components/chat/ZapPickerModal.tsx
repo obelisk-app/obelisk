@@ -28,8 +28,9 @@ export default function ZapPickerModal() {
   const [busy, setBusy] = useState(false);
 
   const myPubkey = useAuthStore((s) => s.profile?.pubkey ?? null);
+  const signerReady = useAuthStore((s) => s.signerReady);
   const ndk = getNDK();
-  const kekSigner = myPubkey ? toKEKSigner(ndk, ndk.signer, myPubkey) : null;
+  const kekSigner = signerReady && myPubkey ? toKEKSigner(ndk, ndk.signer, myPubkey) : null;
   const { client: walletClient } = useLocalWallet(myPubkey, kekSigner);
 
   useEffect(() => {

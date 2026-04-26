@@ -6,6 +6,7 @@ import { hydrateFollows } from '@/lib/dm/follows';
 import { getOrCreateCacheKey } from '@/lib/dm/cache-key';
 import { getNDK } from '@/lib/nostr';
 import { toKEKSigner } from '@/lib/ndk-kek-signer';
+import { useAuthStore } from '@/store/auth';
 
 interface DMSessionContextValue {
   ready: boolean;
@@ -26,6 +27,7 @@ export function useDMSession(): DMSessionContextValue {
 export function DMSessionProvider({ myPubkey, children }: { myPubkey: string; children: React.ReactNode }) {
   const [cacheKey, setCacheKey] = useState<CryptoKey | null>(null);
   const closeRef = useRef<(() => void) | null>(null);
+  const signerReady = useAuthStore((s) => s.signerReady);
 
   useEffect(() => {
     hydrateFollows(myPubkey);
@@ -46,7 +48,7 @@ export function DMSessionProvider({ myPubkey, children }: { myPubkey: string; ch
       }
     })();
     return () => { cancelled = true; };
-  }, [myPubkey]);
+  }, [myPubkey, signerReady]);
 
   useEffect(() => {
     const ndk = getNDK();

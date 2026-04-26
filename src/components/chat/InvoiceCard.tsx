@@ -25,13 +25,14 @@ interface PaidState {
  * flips the card to "Paid" for everyone via the `invoice-paid` socket event.
  */
 export default function InvoiceCard({ invoice, messageId, channelId }: Props) {
-  const myPubkey = useAuthStore((s) => s.user?.pubkey);
+  const myPubkey = useAuthStore((s) => s.profile?.pubkey ?? null);
+  const signerReady = useAuthStore((s) => s.signerReady);
   const memberList = useChatStore((s) => s.memberList);
   const pushEphemeral = useChatStore((s) => s.pushEphemeral);
   const invoicePayments = useChatStore((s) => s.invoicePayments);
 
   const _ndk = getNDK();
-  const _kekSigner = myPubkey ? toKEKSigner(_ndk, _ndk.signer, myPubkey) : null;
+  const _kekSigner = signerReady && myPubkey ? toKEKSigner(_ndk, _ndk.signer, myPubkey) : null;
   const { client: _walletClient } = useLocalWallet(myPubkey ?? null, _kekSigner);
 
   const parsed = useMemo<ParsedInvoice | null>(() => {
