@@ -18,15 +18,9 @@ const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
 
 // P2P mesh voice: the server only relays signaling. No media passes through.
-// Track which socket is in which voice channel.
-const voiceSockets = new Map<string, string>(); // socketId → channelId
-// Track pubkey for each socketId in a voice channel (for signaling targets).
-const voiceSocketPubkey = new Map<string, string>(); // socketId → pubkey
 // Per-voice-channel caps on concurrent camera / screen streams.
 const MAX_CAMERAS_PER_CHANNEL = 4;
 const MAX_SCREENS_PER_CHANNEL = 2;
-const cameraSharers = new Map<string, Set<string>>(); // channelId → pubkeys
-const screenSharers = new Map<string, Set<string>>(); // channelId → pubkeys
 
 app.prepare().then(async () => {
   // Dynamic import to let Next.js set up its module resolution first
@@ -37,6 +31,9 @@ app.prepare().then(async () => {
   const { resolveMemberAccess } = await import('./src/lib/channel-access');
   const { canReadChannel, hasRole } = await import('./src/lib/roles');
   const { isServerMember } = await import('./src/lib/mention-fanout');
+  const { authMiddleware } = await import('./server/auth-middleware');
+  const { createServerContext } = await import('./server/context');
+  const { bindContext } = await import('./server/api-bridge');
 
   const requestHandler = (req: any, res: any) => {
     const parsedUrl = parse(req.url!, true);
@@ -61,55 +58,32 @@ app.prepare().then(async () => {
   // Make io accessible from API routes
   (globalThis as any).__io = io;
 
-  // Socket.io auth middleware — parse session cookie
-  io.use(async (socket, next) => {
-    const cookie = socket.handshake.headers.cookie;
-    if (!cookie) return next(new Error('No cookie'));
+  const ctx = createServerContext(io, prisma);
+  bindContext(ctx);
 
-    const sessionToken = cookie
-      .split(';')
-      .map((c: string) => c.trim())
-      .find((c: string) => c.startsWith('session='))
-      ?.split('=')[1];
-
-    if (!sessionToken) return next(new Error('No session'));
-
-    try {
-      const session = await prisma.session.findUnique({ where: { token: sessionToken } });
-      if (!session || new Date() > session.expiresAt) {
-        return next(new Error('Invalid session'));
-      }
-      socket.data.pubkey = session.pubkey;
-      next();
-    } catch (err) {
-      next(new Error('Auth error'));
-    }
-  });
-
-  // Track pubkey → socket IDs for targeted disconnects
-  const pubkeySockets = new Map<string, Set<string>>();
+  io.use(authMiddleware(ctx));
 
   io.on('connection', (socket) => {
     const pubkey: string = socket.data.pubkey;
     console.log(`[socket] Connected: ${pubkey.slice(0, 8)}...`);
 
     // Track socket
-    if (!pubkeySockets.has(pubkey)) pubkeySockets.set(pubkey, new Set());
-    pubkeySockets.get(pubkey)!.add(socket.id);
+    if (!ctx.state.pubkeySockets.has(pubkey)) ctx.state.pubkeySockets.set(pubkey, new Set());
+    ctx.state.pubkeySockets.get(pubkey)!.add(socket.id);
 
     // Join a pubkey-scoped room so API routes can target notifications
     // (e.g. `post-reply` to forum post subscribers) via `io.to('pubkey:<x>')`.
     socket.join(`pubkey:${pubkey}`);
 
     // Presence: announce online on first socket for this pubkey
-    if (pubkeySockets.get(pubkey)!.size === 1) {
+    if (ctx.state.pubkeySockets.get(pubkey)!.size === 1) {
       io.emit(ServerToClient.PresenceUpdate, { pubkey, online: true });
     }
 
     // Presence: snapshot of currently-online pubkeys
     socket.on(ClientToServer.PresenceSync, (cb?: (pubkeys: string[]) => void) => {
       if (typeof cb === 'function') {
-        cb([...pubkeySockets.keys()]);
+        cb([...ctx.state.pubkeySockets.keys()]);
       }
     });
 
@@ -333,7 +307,7 @@ app.prepare().then(async () => {
           const preview = content.slice(0, 100);
           for (const mentionedPubkey of mentionedSet) {
             if (mentionedPubkey === pubkey) continue; // don't notify self
-            const targetSockets = pubkeySockets.get(mentionedPubkey);
+            const targetSockets = ctx.state.pubkeySockets.get(mentionedPubkey);
             if (!targetSockets) continue;
             // Hard server-membership + read-permission gate for every mention
             // (direct, reply, @everyone). Stops mentions from leaking to
@@ -384,10 +358,10 @@ app.prepare().then(async () => {
         // Find all server members who are online but NOT in this channel.
         // For read-gated channels, filter out users who can't see the channel
         // so hidden channels don't leak via unread badges.
-        for (const [memberPubkey, memberSocketIds] of pubkeySockets) {
+        for (const [memberPubkey, memberSocketIds] of ctx.state.pubkeySockets) {
           if (memberPubkey === pubkey) continue; // don't notify sender
           if (channelPubkeys.has(memberPubkey)) continue; // already in channel
-          // pubkeySockets spans every connected socket across every server —
+          // ctx.state.pubkeySockets spans every connected socket across every server —
           // without this gate we unread-badge users in servers they never
           // joined. Apply membership + read-permission filter.
           if (!(await isServerMember(prisma as any, memberPubkey, serverId))) continue;
@@ -546,7 +520,7 @@ app.prepare().then(async () => {
     // DM typing indicator
     socket.on(ClientToServer.DMTyping, (targetPubkey: string) => {
       if (typeof targetPubkey === 'string') {
-        const targetSockets = pubkeySockets.get(targetPubkey);
+        const targetSockets = ctx.state.pubkeySockets.get(targetPubkey);
         if (targetSockets) {
           for (const sid of targetSockets) {
             io.to(sid).emit(ServerToClient.DMUserTyping, { pubkey });
@@ -576,7 +550,7 @@ app.prepare().then(async () => {
         // Fan out to sibling sockets of the same user (scenario 11 — read
         // in one tab clears the badge on another tab / device).
         fanOutReadUpdate(
-          pubkeySockets,
+          ctx.state.pubkeySockets,
           pubkey,
           socket.id,
           'read-update',
@@ -609,7 +583,7 @@ app.prepare().then(async () => {
         });
 
         fanOutReadUpdate(
-          pubkeySockets,
+          ctx.state.pubkeySockets,
           pubkey,
           socket.id,
           'mention-read-update',
@@ -638,7 +612,7 @@ app.prepare().then(async () => {
         });
 
         fanOutReadUpdate(
-          pubkeySockets,
+          ctx.state.pubkeySockets,
           pubkey,
           socket.id,
           'dm-read-update',
@@ -659,7 +633,7 @@ app.prepare().then(async () => {
       const peers: Array<{ socketId: string; pubkey: string }> = [];
       for (const sid of room) {
         if (sid === excludeSocketId) continue;
-        const pk = voiceSocketPubkey.get(sid);
+        const pk = ctx.state.voiceSocketPubkey.get(sid);
         if (pk) peers.push({ socketId: sid, pubkey: pk });
       }
       return peers;
@@ -675,8 +649,8 @@ app.prepare().then(async () => {
         });
         const peers = getVoicePeers(channelId, socket.id);
         socket.join(`voice:${channelId}`);
-        voiceSockets.set(socket.id, channelId);
-        voiceSocketPubkey.set(socket.id, pubkey);
+        ctx.state.voiceSockets.set(socket.id, channelId);
+        ctx.state.voiceSocketPubkey.set(socket.id, pubkey);
 
         // Tell existing peers a newcomer arrived.
         socket.to(`voice:${channelId}`).emit(ServerToClient.VoicePeerJoined, {
@@ -704,12 +678,12 @@ app.prepare().then(async () => {
           socketId: socket.id,
           pubkey,
         });
-        screenSharers.get(channelId)?.delete(pubkey);
-        if (screenSharers.get(channelId)?.size === 0) screenSharers.delete(channelId);
-        cameraSharers.get(channelId)?.delete(pubkey);
-        if (cameraSharers.get(channelId)?.size === 0) cameraSharers.delete(channelId);
-        voiceSockets.delete(socket.id);
-        voiceSocketPubkey.delete(socket.id);
+        ctx.state.screenSharers.get(channelId)?.delete(pubkey);
+        if (ctx.state.screenSharers.get(channelId)?.size === 0) ctx.state.screenSharers.delete(channelId);
+        ctx.state.cameraSharers.get(channelId)?.delete(pubkey);
+        if (ctx.state.cameraSharers.get(channelId)?.size === 0) ctx.state.cameraSharers.delete(channelId);
+        ctx.state.voiceSockets.delete(socket.id);
+        ctx.state.voiceSocketPubkey.delete(socket.id);
         await prisma.voiceState.deleteMany({ where: { channelId, pubkey } });
         socket.leave(`voice:${channelId}`);
         const participants = await prisma.voiceState.findMany({
@@ -731,7 +705,7 @@ app.prepare().then(async () => {
       cb?: (res: any) => void,
     ) => {
       if (!channelId || typeof channelId !== 'string') return cb?.({ error: 'Bad channel' });
-      if (voiceSockets.get(socket.id) !== channelId) return cb?.({ error: 'Not in this voice channel' });
+      if (ctx.state.voiceSockets.get(socket.id) !== channelId) return cb?.({ error: 'Not in this voice channel' });
       let set = map.get(channelId);
       if (!set) { set = new Set(); map.set(channelId, set); }
       if (set.has(pubkey)) return cb?.({ ok: true });
@@ -749,21 +723,21 @@ app.prepare().then(async () => {
 
     socket.on(ClientToServer.VoiceScreenClaim, (channelId: string, cb?: (res: any) => void) => {
       claimSlot(
-        screenSharers, channelId, MAX_SCREENS_PER_CHANNEL,
+        ctx.state.screenSharers, channelId, MAX_SCREENS_PER_CHANNEL,
         `Screen-share limit reached (${MAX_SCREENS_PER_CHANNEL}). Please wait until someone else stops sharing.`,
         cb,
       );
     });
-    socket.on(ClientToServer.VoiceScreenRelease, (channelId: string) => releaseSlot(screenSharers, channelId));
+    socket.on(ClientToServer.VoiceScreenRelease, (channelId: string) => releaseSlot(ctx.state.screenSharers, channelId));
 
     socket.on(ClientToServer.VoiceCameraClaim, (channelId: string, cb?: (res: any) => void) => {
       claimSlot(
-        cameraSharers, channelId, MAX_CAMERAS_PER_CHANNEL,
+        ctx.state.cameraSharers, channelId, MAX_CAMERAS_PER_CHANNEL,
         `Camera limit reached (${MAX_CAMERAS_PER_CHANNEL}). Please wait until someone else turns off their camera.`,
         cb,
       );
     });
-    socket.on(ClientToServer.VoiceCameraRelease, (channelId: string) => releaseSlot(cameraSharers, channelId));
+    socket.on(ClientToServer.VoiceCameraRelease, (channelId: string) => releaseSlot(ctx.state.cameraSharers, channelId));
 
     // Moderator actions in voice: mute / turn off camera / stop screen share of a target.
     // Requires caller to be owner/admin/mod of the server that owns the channel.
@@ -795,7 +769,7 @@ app.prepare().then(async () => {
         }
         if (!allowed) return cb?.({ error: 'Not authorized' });
 
-        const targetSocketIds = pubkeySockets.get(targetPubkey);
+        const targetSocketIds = ctx.state.pubkeySockets.get(targetPubkey);
         if (!targetSocketIds || targetSocketIds.size === 0) {
           return cb?.({ error: 'Target is not connected' });
         }
@@ -807,17 +781,17 @@ app.prepare().then(async () => {
 
         // Only fire if the target is actually in this voice channel.
         for (const sid of targetSocketIds) {
-          if (voiceSockets.get(sid) !== channelId) continue;
+          if (ctx.state.voiceSockets.get(sid) !== channelId) continue;
           io.to(sid).emit(event, { reason: `A moderator ${action === 'mute' ? 'muted you' : action === 'camera-off' ? 'turned off your camera' : 'stopped your screen share'}` });
         }
         // If we forced camera/screen off, also release the slot so others can use it.
         if (action === 'camera-off') {
-          cameraSharers.get(channelId)?.delete(targetPubkey);
-          if (cameraSharers.get(channelId)?.size === 0) cameraSharers.delete(channelId);
+          ctx.state.cameraSharers.get(channelId)?.delete(targetPubkey);
+          if (ctx.state.cameraSharers.get(channelId)?.size === 0) ctx.state.cameraSharers.delete(channelId);
         }
         if (action === 'screen-off') {
-          screenSharers.get(channelId)?.delete(targetPubkey);
-          if (screenSharers.get(channelId)?.size === 0) screenSharers.delete(channelId);
+          ctx.state.screenSharers.get(channelId)?.delete(targetPubkey);
+          if (ctx.state.screenSharers.get(channelId)?.size === 0) ctx.state.screenSharers.delete(channelId);
         }
         // Mirror mute state in DB so the UI indicator updates.
         if (action === 'mute') {
@@ -845,8 +819,8 @@ app.prepare().then(async () => {
     // Signaling relay: forward SDP / ICE / track-info to a specific peer.
     socket.on(ServerToClient.VoiceSignal, ({ toSocketId, payload }: { toSocketId: string; payload: any }) => {
       if (!toSocketId || typeof toSocketId !== 'string' || !payload) return;
-      const fromChannel = voiceSockets.get(socket.id);
-      const toChannel = voiceSockets.get(toSocketId);
+      const fromChannel = ctx.state.voiceSockets.get(socket.id);
+      const toChannel = ctx.state.voiceSockets.get(toSocketId);
       // Only allow signaling between peers in the same voice channel.
       if (!fromChannel || fromChannel !== toChannel) return;
       io.to(toSocketId).emit(ServerToClient.VoiceSignal, {
@@ -892,7 +866,7 @@ app.prepare().then(async () => {
 
     socket.on('disconnect', async () => {
       // Notify voice peers this socket is gone.
-      const voiceChannelId = voiceSockets.get(socket.id);
+      const voiceChannelId = ctx.state.voiceSockets.get(socket.id);
       if (voiceChannelId) {
         socket.to(`voice:${voiceChannelId}`).emit(ServerToClient.VoicePeerLeft, {
           socketId: socket.id,
@@ -900,17 +874,17 @@ app.prepare().then(async () => {
         });
       }
       if (voiceChannelId) {
-        screenSharers.get(voiceChannelId)?.delete(pubkey);
-        if (screenSharers.get(voiceChannelId)?.size === 0) screenSharers.delete(voiceChannelId);
-        cameraSharers.get(voiceChannelId)?.delete(pubkey);
-        if (cameraSharers.get(voiceChannelId)?.size === 0) cameraSharers.delete(voiceChannelId);
+        ctx.state.screenSharers.get(voiceChannelId)?.delete(pubkey);
+        if (ctx.state.screenSharers.get(voiceChannelId)?.size === 0) ctx.state.screenSharers.delete(voiceChannelId);
+        ctx.state.cameraSharers.get(voiceChannelId)?.delete(pubkey);
+        if (ctx.state.cameraSharers.get(voiceChannelId)?.size === 0) ctx.state.cameraSharers.delete(voiceChannelId);
       }
-      voiceSockets.delete(socket.id);
-      voiceSocketPubkey.delete(socket.id);
+      ctx.state.voiceSockets.delete(socket.id);
+      ctx.state.voiceSocketPubkey.delete(socket.id);
 
-      pubkeySockets.get(pubkey)?.delete(socket.id);
-      if (pubkeySockets.get(pubkey)?.size === 0) {
-        pubkeySockets.delete(pubkey);
+      ctx.state.pubkeySockets.get(pubkey)?.delete(socket.id);
+      if (ctx.state.pubkeySockets.get(pubkey)?.size === 0) {
+        ctx.state.pubkeySockets.delete(pubkey);
         // Presence: announce offline on last socket disconnect (before DB cleanup)
         io.emit(ServerToClient.PresenceUpdate, { pubkey, online: false });
         // Clean up voice states on disconnect
@@ -934,7 +908,7 @@ app.prepare().then(async () => {
 
   // Helper: force disconnect a pubkey (called from API routes via globalThis)
   (globalThis as any).__disconnectPubkey = (targetPubkey: string, reason: string) => {
-    const sockets = pubkeySockets.get(targetPubkey);
+    const sockets = ctx.state.pubkeySockets.get(targetPubkey);
     if (sockets) {
       for (const sid of sockets) {
         const s = io.sockets.sockets.get(sid);
