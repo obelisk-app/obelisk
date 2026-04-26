@@ -1,14 +1,22 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { nip19 } from 'nostr-tools';
 import NewDMModal from './NewDMModal';
 import { useDMStore } from '@/store/dm';
 import { useAuthStore } from '@/store/auth';
+import { _profileStore, _resetProfileCache } from '@/lib/dm/profile-cache';
 
-const getProfileMock = vi.fn();
-vi.mock('@/lib/dm/profile-cache', () => ({
-  getProfile: (...args: unknown[]) => getProfileMock(...args),
+// Mock the coalescer so `useProfile`'s lazy `getProfile` call doesn't try
+// to talk to real relays. We only need to assert it was invoked with the
+// expected (me, partner) — the preview UI is driven by writing directly
+// into the real `_profileStore`, which is what the hook subscribes to.
+const enqueueMock = vi.fn();
+vi.mock('@/lib/nostr-coalescer', () => ({
+  sharedCoalescer: {
+    enqueue: (req: any) => { enqueueMock(req); return () => {}; },
+    querySync: vi.fn(),
+  },
 }));
 
 const profileCache = new Map<string, { name?: string; picture?: string }>();
@@ -80,7 +88,9 @@ describe('NewDMModal profile preview', () => {
 
   beforeEach(() => {
     useDMStore.setState(useDMStore.getInitialState());
-    getProfileMock.mockReset();
+    _resetProfileCache();
+    enqueueMock.mockClear();
+    localStorage.clear();
     // Provide a "me" pubkey so the modal knows whose cache to read.
     useAuthStore.setState({
       ...useAuthStore.getState(),
@@ -88,14 +98,13 @@ describe('NewDMModal profile preview', () => {
     });
   });
 
-  it('previews resolved profile after valid npub paste, via getProfile', async () => {
-    getProfileMock.mockReturnValue({
-      profile: {
-        event: {} as unknown,
-        parsed: { displayName: 'alice', picture: 'https://example.com/a.png' },
-        lastCheckedAt: Date.now(),
-      },
-      dispose: vi.fn(),
+  it('previews resolved profile after valid npub paste, via useProfile', async () => {
+    // Pre-seed the keyed observable so the hook's first render shows the
+    // entry without waiting for a relay round-trip.
+    _profileStore().set(`${myPubkey}|${partnerHex}`, {
+      event: {} as never,
+      parsed: { displayName: 'alice', picture: 'https://example.com/a.png' },
+      lastCheckedAt: Date.now(),
     });
 
     render(<NewDMModal onClose={vi.fn()} profileCache={profileCache} />);
@@ -103,39 +112,37 @@ describe('NewDMModal profile preview', () => {
     fireEvent.change(input, { target: { value: validNpub } });
 
     expect(await screen.findByText(/alice/i)).toBeInTheDocument();
-    expect(getProfileMock).toHaveBeenCalled();
-    const [calledMe, calledPartner] = getProfileMock.mock.calls[0];
-    expect(calledMe).toBe(myPubkey);
-    expect(calledPartner).toBe(partnerHex);
+    // Pre-seeding above makes the slot fresh, so the hook correctly skips
+    // the coalescer fetch. The fetch path is exercised in
+    // nostr-hooks.test.tsx; here we only care that the UI renders the slot.
   });
 
-  it('updates preview when getProfile fires onUpdate (live SWR refresh)', async () => {
-    let captured: ((p: unknown) => void) | undefined;
-    getProfileMock.mockImplementation((_me, _partner, opts: { onUpdate?: (p: unknown) => void }) => {
-      captured = opts?.onUpdate;
-      return { profile: null, dispose: vi.fn() };
-    });
-
+  it('re-renders preview when a newer profile lands in the store (live SWR)', async () => {
     render(<NewDMModal onClose={vi.fn()} profileCache={profileCache} />);
     const input = screen.getByTestId('new-dm-pubkey-input');
     fireEvent.change(input, { target: { value: validNpub } });
 
-    // First sync result: cache miss — no name yet.
-    expect(captured).toBeDefined();
-    captured!({
-      event: {},
-      parsed: { displayName: 'alice-from-relay' },
-      lastCheckedAt: Date.now(),
+    // Initially no preview content (slot empty); component still renders the
+    // preview row keyed off the resolved partner hex.
+    expect(screen.getByTestId('new-dm-preview')).toBeInTheDocument();
+
+    // Simulate the relay arrival.
+    act(() => {
+      _profileStore().set(`${myPubkey}|${partnerHex}`, {
+        event: {} as never,
+        parsed: { displayName: 'alice-from-relay' },
+        lastCheckedAt: Date.now(),
+      });
     });
 
     expect(await screen.findByText(/alice-from-relay/i)).toBeInTheDocument();
   });
 
-  it('disposes the profile subscription when the input changes', async () => {
-    const dispose = vi.fn();
-    getProfileMock.mockReturnValue({
-      profile: { event: {} as unknown, parsed: { displayName: 'alice' }, lastCheckedAt: Date.now() },
-      dispose,
+  it('drops the preview when the input is cleared', async () => {
+    _profileStore().set(`${myPubkey}|${partnerHex}`, {
+      event: {} as never,
+      parsed: { displayName: 'alice' },
+      lastCheckedAt: Date.now(),
     });
 
     render(<NewDMModal onClose={vi.fn()} profileCache={profileCache} />);
@@ -143,8 +150,9 @@ describe('NewDMModal profile preview', () => {
     fireEvent.change(input, { target: { value: validNpub } });
     await screen.findByText(/alice/i);
 
-    // Clearing the input should drop the subscription.
     fireEvent.change(input, { target: { value: '' } });
-    expect(dispose).toHaveBeenCalled();
+    // The preview block is keyed off `partnerHex`; clearing the input
+    // makes it null, so the row disappears.
+    expect(screen.queryByTestId('new-dm-preview')).not.toBeInTheDocument();
   });
 });
