@@ -690,22 +690,6 @@ model InvoicePayment {
   @@index([status, createdAt])
 }
 
-// Audit-only log of zaps. Recorded by the client after a successful local
-// NWC payment via /api/wallet/zap-receipt. The server holds no wallet
-// credentials and does not initiate the payment.
-model Zap {
-  id            String   @id @default(cuid())
-  payerPubkey   String
-  targetPubkey  String
-  amountMsat    BigInt
-  channelId     String?
-  messageId     String?
-  paymentHash   String   @unique
-  createdAt     DateTime @default(now())
-
-  @@index([targetPubkey, createdAt])
-  @@index([messageId])
-}
 
 // Pivot table: which members hold which custom roles.
 model MemberCustomRole {

@@ -56,6 +56,7 @@ import { useServerMetadata } from '@/hooks/chat/useServerMetadata';
 import { useUnreadRefresh } from '@/hooks/chat/useUnreadRefresh';
 import { useDMLifecycle } from '@/hooks/chat/useDMLifecycle';
 import { useSocketLifecycle } from '@/hooks/chat/useSocketLifecycle';
+import { useZapReceipts } from '@/hooks/chat/useZapReceipts';
 import { useRoomAndUrlSync } from '@/hooks/chat/useRoomAndUrlSync';
 import { useBroadcastSync } from '@/hooks/chat/useBroadcastSync';
 import { useMessageLoader } from '@/hooks/chat/useMessageLoader';
@@ -265,6 +266,9 @@ export default function ChatPage() {
 
   // Fetch unread counts on mount, tab focus, and socket reconnect.
   useUnreadRefresh(sessionChecked);
+
+  // Subscribe to NIP-57 kind 9735 zap receipts for the signed-in user.
+  useZapReceipts(profile?.pubkey ?? null);
 
   // Add own profile to cache. Prefer the per-server nickname (tracked in
   // memberList as `displayName`) over the Nostr displayName so that messages
