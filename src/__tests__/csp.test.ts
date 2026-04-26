@@ -1,4 +1,3 @@
-// src/__tests__/csp.test.ts
 import { describe, it, expect } from 'vitest';
 import nextConfig from '../../next.config';
 
@@ -10,7 +9,16 @@ describe('CSP', () => {
     const all = headers.flatMap((h: any) => h.headers);
     const csp = all.find((h: any) => h.key === 'Content-Security-Policy');
     expect(csp).toBeDefined();
-    expect(csp.value).toContain("script-src 'self'");
-    expect(csp.value).not.toContain("'unsafe-inline'");
+    // script-src must be strict (no unsafe-inline, no unsafe-eval).
+    const directives = (csp.value as string).split(';').map((d: string) => d.trim());
+    const scriptSrc = directives.find((d: string) => d.startsWith('script-src'));
+    expect(scriptSrc).toBeDefined();
+    expect(scriptSrc).toContain("'self'");
+    expect(scriptSrc).not.toContain("'unsafe-inline'");
+    expect(scriptSrc).not.toContain("'unsafe-eval'");
+    // style-src may include 'unsafe-inline' (required by Tailwind/Next hydration).
+    const styleSrc = directives.find((d: string) => d.startsWith('style-src'));
+    expect(styleSrc).toBeDefined();
+    expect(styleSrc).toContain("'self'");
   });
 });

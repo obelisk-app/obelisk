@@ -10,7 +10,7 @@ const localIPs = Object.values(networkInterfaces())
 const CSP = [
   "default-src 'self'",
   "script-src 'self' 'wasm-unsafe-eval'",
-  "style-src 'self'",
+  "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "connect-src 'self' wss: https:",
   "font-src 'self' data:",
