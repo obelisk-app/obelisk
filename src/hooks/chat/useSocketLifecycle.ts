@@ -325,8 +325,9 @@ export function useSocketLifecycle({
         viewerPubkey: profilePubkeyRef.current ?? '',
         prefs: useNotificationPrefsStore.getState().prefs,
         channelNameById: (id: string) => {
-          const ch = (useChatStore.getState().channels || []).find((c: any) => c.id === id);
-          return ch?.name ?? id;
+          const s = useChatStore.getState();
+          const all = [...s.pinnedChannels, ...s.categories.flatMap((c) => c.channels)];
+          return all.find((c) => c.id === id)?.name ?? id;
         },
         resolveSuppressionContext: (payload) => {
           return {
