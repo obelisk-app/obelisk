@@ -12,10 +12,6 @@ const KIND_FOLLOW = 3;
 
 const coalescer = new RequestCoalescer({ debounceMs: 50 });
 
-export function _resetDM(): void {
-  // Coalescer state is module-local; tests rely on enqueue mock.
-}
-
 function toCached(event: NostrEvent): CachedDMEvent {
   return {
     id: event.id,
@@ -129,8 +125,10 @@ export async function sendDM(args: SendDMArgs): Promise<NostrEvent> {
     ev.content = args.content;
     await ev.encrypt(recipient, ndk.signer, 'nip04');
     await publishToRelays(ndk, ev, targetRelays);
-    putEvent(args.myPubkey, toCached(ev.rawEvent() as NostrEvent));
-    return ev.rawEvent() as NostrEvent;
+    const raw = ev.rawEvent() as NostrEvent;
+    putEvent(args.myPubkey, toCached(raw));
+    setCursor(args.myPubkey, 'nip04Out', raw.created_at);
+    return raw;
   }
 
   const { giftWrap } = await import('@nostr-dev-kit/ndk');
@@ -140,8 +138,10 @@ export async function sendDM(args: SendDMArgs): Promise<NostrEvent> {
   rumor.tags = [['p', args.recipientPubkey]];
   const wrap = await giftWrap(rumor, recipient, ndk.signer);
   await publishToRelays(ndk, wrap, targetRelays);
-  putEvent(args.myPubkey, toCached(wrap.rawEvent() as NostrEvent));
-  return wrap.rawEvent() as NostrEvent;
+  const rawWrap = wrap.rawEvent() as NostrEvent;
+  putEvent(args.myPubkey, toCached(rawWrap));
+  setCursor(args.myPubkey, 'nip17Wrap', rawWrap.created_at);
+  return rawWrap;
 }
 
 async function publishToRelays(ndk: any, event: any, relays: string[]): Promise<void> {

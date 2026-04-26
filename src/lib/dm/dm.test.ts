@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { loadHistory, verifyAndIngest, _resetDM } from './dm';
+import { loadHistory, verifyAndIngest } from './dm';
 import { getCachedEvents, setCursor, clearAccount } from './dm-cache';
 
 const me = 'a'.repeat(64);
@@ -27,7 +27,6 @@ beforeEach(() => {
   localStorage.clear();
   clearAccount(me);
   enqueueMock.mockClear();
-  _resetDM();
 });
 
 describe('loadHistory', () => {
