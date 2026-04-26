@@ -11,7 +11,7 @@ import { resolveLightningAddress, requestInvoice } from '@/lib/wallet/lnurl-pay'
 import { getLightningAddress } from '@/lib/wallet/provisioning';
 import { buildZapRequest } from '@/lib/wallet/zap-request';
 import { NDKEvent } from '@nostr-dev-kit/ndk';
-import type { KEKSigner } from '@/lib/dm/cache-key';
+import { toKEKSigner } from '@/lib/ndk-kek-signer';
 
 const QUICK_AMOUNTS = [21, 100, 500, 1000, 5000, 21000];
 
@@ -29,7 +29,7 @@ export default function ZapPickerModal() {
 
   const myPubkey = useAuthStore((s) => s.profile?.pubkey ?? null);
   const ndk = getNDK();
-  const kekSigner = (ndk.signer as unknown as KEKSigner | null) ?? null;
+  const kekSigner = myPubkey ? toKEKSigner(ndk, ndk.signer, myPubkey) : null;
   const { client: walletClient } = useLocalWallet(myPubkey, kekSigner);
 
   useEffect(() => {

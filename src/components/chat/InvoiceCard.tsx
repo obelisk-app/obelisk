@@ -6,7 +6,7 @@ import { useChatStore } from '@/store/chat';
 import { useAuthStore } from '@/store/auth';
 import { formatPubkey, getNDK } from '@/lib/nostr';
 import { useLocalWallet } from '@/lib/wallet/local-client';
-import type { KEKSigner } from '@/lib/dm/cache-key';
+import { toKEKSigner } from '@/lib/ndk-kek-signer';
 
 interface Props {
   invoice: string;
@@ -31,7 +31,7 @@ export default function InvoiceCard({ invoice, messageId, channelId }: Props) {
   const invoicePayments = useChatStore((s) => s.invoicePayments);
 
   const _ndk = getNDK();
-  const _kekSigner = (_ndk.signer as unknown as KEKSigner | null) ?? null;
+  const _kekSigner = myPubkey ? toKEKSigner(_ndk, _ndk.signer, myPubkey) : null;
   const { client: _walletClient } = useLocalWallet(myPubkey ?? null, _kekSigner);
 
   const parsed = useMemo<ParsedInvoice | null>(() => {

@@ -25,6 +25,11 @@ const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
 
 app.prepare().then(async () => {
+  // Next.js HMR runs a WebSocket on /_next/webpack-hmr. Custom servers
+  // must forward the `upgrade` event because the default request handler
+  // only covers HTTP. getUpgradeHandler must be called AFTER prepare().
+  const upgradeHandler = app.getUpgradeHandler();
+
   // Dynamic imports keep Next.js module resolution intact.
   const { prisma } = await import('../src/lib/db-server');
   const { authMiddleware } = await import('./auth-middleware');
@@ -50,6 +55,16 @@ app.prepare().then(async () => {
   const httpServer = useHttps
     ? createHttpsServer({ cert: readFileSync(certPath), key: readFileSync(keyPath) }, requestHandler)
     : createServer(requestHandler);
+
+  // Forward Next's HMR WebSocket upgrades. Socket.io only listens for
+  // upgrades on its own path (default /socket.io/) so non-matching paths
+  // would be dropped without this. Registering BEFORE Socket.io attaches
+  // so this handler sees the event first; Socket.io still claims its own.
+  httpServer.on('upgrade', (req, socket, head) => {
+    if (req.url?.startsWith('/_next/')) {
+      void upgradeHandler(req, socket, head);
+    }
+  });
 
   const io = new SocketServer(httpServer, {
     cors: {

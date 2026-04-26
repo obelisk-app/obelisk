@@ -6,6 +6,7 @@ import { useAuthStore } from '@/store/auth';
 import { sendDM as sendDMNew, detectNip04InRecent, type DMMessage, type DMProtocol } from '@/lib/dm/dm';
 import { getCachedEvents, getSecret, putSecret, subscribeToCacheTick, type CachedDMEvent } from '@/lib/dm/dm-cache';
 import { loadOlder } from '@/lib/dm/dm';
+import { getProfile } from '@/lib/dm/profile-cache';
 import { useDMSession } from './DMSessionProvider';
 import { formatPubkey, getNDK } from '@/lib/nostr';
 
@@ -157,6 +158,31 @@ export default function DMChat({ profileCache }: DMChatProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const topSentinelRef = useRef<HTMLDivElement>(null);
 
+  // Fetch the DM partner's kind:0 profile on thread open. The shared
+  // profileCache only contains members of servers the viewer also joined,
+  // so partners we don't share a server with would otherwise show as
+  // npub1xxx… with no avatar. getProfile() hits the relay aggregators,
+  // caches in localStorage with TTL, and calls onUpdate when fresh data
+  // arrives — we mirror it into profileCache and bump local state to
+  // force a re-render (Map mutations don't trigger React on their own).
+  const [profileTick, setProfileTick] = useState(0);
+  useEffect(() => {
+    if (!myPubkey || !activeDMPubkey) return;
+    const { dispose } = getProfile(myPubkey, activeDMPubkey, {
+      onUpdate: (entry) => {
+        const name = entry.parsed.displayName || entry.parsed.name;
+        const picture = entry.parsed.picture;
+        if (name || picture) {
+          profileCache.set(activeDMPubkey, { name, picture });
+          setProfileTick((n) => n + 1);
+        }
+      },
+    });
+    return () => { dispose?.(); };
+  }, [myPubkey, activeDMPubkey, profileCache]);
+
+  // Read after the tick so the latest write is visible.
+  void profileTick;
   const otherProfile = activeDMPubkey ? profileCache.get(activeDMPubkey) : null;
   const otherName = otherProfile?.name || (activeDMPubkey ? formatPubkey(activeDMPubkey) : '');
 

@@ -14,7 +14,7 @@ import {
 } from '@/lib/wallet/provisioning';
 import { lnbitsToNwc } from '@/lib/wallet/lnbits-to-nwc';
 import { PoweredByNostrWot } from './PoweredByNostrWot';
-import type { KEKSigner } from '@/lib/dm/cache-key';
+import { toKEKSigner } from '@/lib/ndk-kek-signer';
 
 type Tab = 'quick' | 'nwc' | 'lnbits';
 type View = 'main' | 'send' | 'receive';
@@ -23,9 +23,9 @@ export default function WalletPanel() {
   const profile = useAuthStore((s) => s.profile);
   const pubkey = profile?.pubkey ?? null;
 
-  // KEKSigner = NDK signer cast — same pattern as DMSessionProvider.
+  // Adapt the NDK signer to the KEKSigner interface (nip44Encrypt/Decrypt).
   const ndk = getNDK();
-  const signer = (ndk.signer as unknown as KEKSigner | null) ?? null;
+  const signer = pubkey ? toKEKSigner(ndk, ndk.signer, pubkey) : null;
 
   const { client, reload, disconnect } = useLocalWallet(pubkey, signer);
 

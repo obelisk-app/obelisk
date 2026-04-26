@@ -56,12 +56,22 @@ function partnerRelaySet(myPubkey: string, partnerPubkey: string, extra: string[
   return relays.length ? relays : ['wss://relay.damus.io', 'wss://nos.lol'];
 }
 
+// Initial fetch window: don't pull the user's entire DM history on first
+// login — bound to the last 90 days. Older messages stream in via the top
+// sentinel in DMChat which calls `loadOlder()` on scroll-up.
+const INITIAL_HISTORY_WINDOW_SEC = 90 * 24 * 60 * 60;
+
+function sinceFor(cursorValue: number, nowSec: number): number {
+  return cursorValue > 0 ? cursorValue : nowSec - INITIAL_HISTORY_WINDOW_SEC;
+}
+
 export function loadHistory(myPubkey: string, partnerPubkey: string, opts: LoadHistoryOptions = {}): void {
   const cursors = getCursors(myPubkey);
+  const nowSec = Math.floor(Date.now() / 1000);
   const filters: Filter[] = [
-    { kinds: [KIND_NIP04], authors: [myPubkey], '#p': [partnerPubkey], ...(cursors.nip04Out > 0 ? { since: cursors.nip04Out } : {}) },
-    { kinds: [KIND_NIP04], authors: [partnerPubkey], '#p': [myPubkey], ...(cursors.nip04In > 0 ? { since: cursors.nip04In } : {}) },
-    { kinds: [KIND_GIFT_WRAP], '#p': [myPubkey], ...(cursors.nip17Wrap > 0 ? { since: cursors.nip17Wrap } : {}) },
+    { kinds: [KIND_NIP04], authors: [myPubkey], '#p': [partnerPubkey], since: sinceFor(cursors.nip04Out, nowSec) },
+    { kinds: [KIND_NIP04], authors: [partnerPubkey], '#p': [myPubkey], since: sinceFor(cursors.nip04In, nowSec) },
+    { kinds: [KIND_GIFT_WRAP], '#p': [myPubkey], since: sinceFor(cursors.nip17Wrap, nowSec) },
   ];
 
   coalescer.enqueue({
@@ -109,10 +119,13 @@ export interface SubscribeLiveOptions {
 
 export function subscribeLive(opts: SubscribeLiveOptions): () => void {
   const cursors = getCursors(opts.myPubkey);
+  const nowSec = Math.floor(Date.now() / 1000);
   const filters: Filter[] = [
-    { kinds: [KIND_NIP04], '#p': [opts.myPubkey], ...(cursors.nip04In > 0 ? { since: cursors.nip04In } : {}) },
-    { kinds: [KIND_NIP04], authors: [opts.myPubkey], ...(cursors.nip04Out > 0 ? { since: cursors.nip04Out } : {}) },
-    { kinds: [KIND_GIFT_WRAP], '#p': [opts.myPubkey], ...(cursors.nip17Wrap > 0 ? { since: cursors.nip17Wrap } : {}) },
+    { kinds: [KIND_NIP04], '#p': [opts.myPubkey], since: sinceFor(cursors.nip04In, nowSec) },
+    { kinds: [KIND_NIP04], authors: [opts.myPubkey], since: sinceFor(cursors.nip04Out, nowSec) },
+    { kinds: [KIND_GIFT_WRAP], '#p': [opts.myPubkey], since: sinceFor(cursors.nip17Wrap, nowSec) },
+    // Follow-list (kind 3): keep prior behavior (only since cursor if set;
+    // first load takes whatever the relay has — small payload, no bound).
     { kinds: [KIND_FOLLOW], authors: [opts.myPubkey], ...(cursors.kind3 > 0 ? { since: cursors.kind3 } : {}) },
   ];
   // The coalescer's enqueue returns a real teardown handle: it removes this

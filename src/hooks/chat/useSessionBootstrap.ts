@@ -56,13 +56,27 @@ export function useSessionBootstrap(router: Router) {
     const ndk = getNDK();
 
     connectNDK().then(async () => {
-      if (!ndk.signer && loginMethod === 'extension' && typeof window !== 'undefined' && window.nostr) {
-        const { NDKNip07Signer } = await import('@nostr-dev-kit/ndk');
-        // Route through `setNDKSigner` so the bridge fires and the auth
-        // store's reactive `signerReady` flag flips. Bypassing the bridge
-        // here was the root cause of "Sign in to start a conversation"
-        // showing in DMList even when the user was actually signed in.
-        setNDKSigner(new NDKNip07Signer(4000, ndk));
+      if (!ndk.signer && loginMethod === 'extension' && typeof window !== 'undefined') {
+        // NIP-07 extensions inject `window.nostr` asynchronously — Alby /
+        // nos2x can take 100–500ms after page load (longer on mobile).
+        // Poll for up to 3s; without this, reloading the chat page raced
+        // the extension and silently dropped the signer until the user
+        // clicked Logout / Login again.
+        let attempts = 0;
+        while (!window.nostr && attempts < 30) {
+          await new Promise((r) => setTimeout(r, 100));
+          attempts++;
+        }
+        if (window.nostr) {
+          const { NDKNip07Signer } = await import('@nostr-dev-kit/ndk');
+          // Route through `setNDKSigner` so the bridge fires and the auth
+          // store's reactive `signerReady` flag flips. Bypassing the bridge
+          // here was the root cause of "Sign in to start a conversation"
+          // showing in DMList even when the user was actually signed in.
+          setNDKSigner(new NDKNip07Signer(4000, ndk));
+        } else {
+          console.warn('[chat] NIP-07 extension never injected window.nostr after 3s');
+        }
       }
       // nsec / bunker / NostrConnect: rebuild the signer from the payload
       // stashed in localStorage at login. Without this the signer dies on

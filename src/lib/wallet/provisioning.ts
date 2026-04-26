@@ -2,10 +2,17 @@
 // Quick-Setup wallet provisioning against zaps.nostr-wot.com. Mirrors the
 // nostr-wot browser extension's flow: GET challenge → sign as NIP-98 →
 // POST. Returns an NWC URI ready to use.
+//
+// The instance URL defaults to https://zaps.nostr-wot.com but can be
+// overridden via NEXT_PUBLIC_NOSTR_WOT_PROVISION_URL — useful for local
+// development against an http://localhost provisioning proxy or a
+// self-hosted instance.
 
 import { buildNip98Event, type Nip98Signer } from '../nip98';
 
-export const PROVISION_URL = 'https://zaps.nostr-wot.com';
+export const PROVISION_URL =
+  process.env.NEXT_PUBLIC_NOSTR_WOT_PROVISION_URL?.replace(/\/+$/, '') ||
+  'https://zaps.nostr-wot.com';
 
 export interface ProvisionResult {
   nwcUri: string;

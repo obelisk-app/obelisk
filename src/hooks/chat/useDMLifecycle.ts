@@ -5,6 +5,7 @@ import { useDMStore } from '@/store/dm';
 import { useNotificationStore } from '@/store/notification';
 import { publishInboxRelays } from '@/lib/dm/dm-inbox';
 import { getCachedEvents } from '@/lib/dm/dm-cache';
+import { getProfile } from '@/lib/dm/profile-cache';
 import { formatPubkey, getNDK } from '@/lib/nostr';
 import { DM_FEATURE_ENABLED } from '@/lib/feature-flags';
 
@@ -91,6 +92,9 @@ export function useDMLifecycle({ isDMMode, ndkReady, profilePubkey, profileCache
   // Guard rail: only publish the inbox relay list once per DM-mode entry per
   // session. Cleared whenever the active pubkey changes (login switch).
   const inboxPublishedRef = useRef(false);
+  // Track which DM partners we've already kicked off a kind:0 profile fetch
+  // for, so refreshThreads doesn't spam getProfile() on every projection.
+  const profileFetchedRef = useRef<Set<string>>(new Set());
 
   const refreshThreads = useCallback(() => {
     if (!profilePubkey) return;
@@ -137,6 +141,27 @@ export function useDMLifecycle({ isDMMode, ndkReady, profilePubkey, profileCache
     dmStore.setThreads(finalThreads);
     dmStore.setLoadingThreads(false);
     useNotificationStore.getState().setDMUnreads(totalUnreads);
+
+    // For partners we don't share a server with, displayName is the npub
+    // fallback and picture is empty. Kick a relay-side kind:0 fetch and
+    // patch the thread when the profile arrives. Idempotent + TTL-cached
+    // so the second visit is free.
+    for (const t of finalThreads) {
+      if (profileFetchedRef.current.has(t.pubkey)) continue;
+      profileFetchedRef.current.add(t.pubkey);
+      getProfile(myPubkey, t.pubkey, {
+        onUpdate: (entry) => {
+          const name = entry.parsed.displayName || entry.parsed.name;
+          const picture = entry.parsed.picture;
+          if (!name && !picture) return;
+          if (name) profileCache.set(t.pubkey, { ...(profileCache.get(t.pubkey) ?? {}), name, picture });
+          useDMStore.getState().updateThread(t.pubkey, {
+            ...(name ? { displayName: name } : {}),
+            ...(picture ? { picture } : {}),
+          });
+        },
+      });
+    }
   }, [profilePubkey, profileCache]);
 
   // Publish the kind 10050 inbox relay list lazily, the first time the user

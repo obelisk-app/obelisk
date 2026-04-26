@@ -5,6 +5,7 @@ import { subscribeLive, loadHistory, sendDM, type DMProtocol } from '@/lib/dm/dm
 import { hydrateFollows } from '@/lib/dm/follows';
 import { getOrCreateCacheKey } from '@/lib/dm/cache-key';
 import { getNDK } from '@/lib/nostr';
+import { toKEKSigner } from '@/lib/ndk-kek-signer';
 
 interface DMSessionContextValue {
   ready: boolean;
@@ -36,7 +37,9 @@ export function DMSessionProvider({ myPubkey, children }: { myPubkey: string; ch
     let cancelled = false;
     (async () => {
       try {
-        const k = await getOrCreateCacheKey(myPubkey, ndk.signer as any);
+        const kekSigner = toKEKSigner(ndk, ndk.signer, myPubkey);
+        if (!kekSigner) return;
+        const k = await getOrCreateCacheKey(myPubkey, kekSigner);
         if (!cancelled) setCacheKey(k);
       } catch (err) {
         console.warn('[dm] cache key unavailable:', err);

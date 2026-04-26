@@ -30,7 +30,7 @@ import { getLightningAddress } from '@/lib/wallet/provisioning';
 import { getNDK } from '@/lib/nostr';
 import { buildZapRequest } from '@/lib/wallet/zap-request';
 import { NDKEvent } from '@nostr-dev-kit/ndk';
-import type { KEKSigner } from '@/lib/dm/cache-key';
+import { toKEKSigner } from '@/lib/ndk-kek-signer';
 
 interface MessageInputProps {
   onSend: (content: string, replyToId?: string) => void;
@@ -62,7 +62,7 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
   // browser using the user's Nostr signer (KEK) — server never sees them.
   const myPubkey = useAuthStore((s) => s.profile?.pubkey ?? null);
   const ndk = getNDK();
-  const kekSigner = (ndk.signer as unknown as KEKSigner | null) ?? null;
+  const kekSigner = myPubkey ? toKEKSigner(ndk, ndk.signer, myPubkey) : null;
   const { client: walletClient } = useLocalWallet(myPubkey, kekSigner);
 
   // Attach menu / upload / emoji / gif state

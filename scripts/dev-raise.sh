@@ -20,10 +20,29 @@
 
 set -u
 
+# Load project .env so TUNNEL_HOSTNAME / DATABASE_URL / etc. don't have
+# to be re-typed on every invocation. Existing shell vars take precedence.
+if [ -f "$(dirname "$0")/../.env" ]; then
+  set -a
+  # shellcheck disable=SC1091
+  . "$(dirname "$0")/../.env"
+  set +a
+fi
+
 TUNNEL_NAME="${TUNNEL_NAME:-obelisk}"
 TUNNEL_HOST="${TUNNEL_HOSTNAME:-obelisk.fabri.lat}"
 PORT="${PORT:-3000}"
-ORIGIN_URL="${ORIGIN_URL:-https://127.0.0.1:${PORT}}"
+# server.ts switches to HTTPS only when both cert.pem + key.pem exist in
+# the project root. Auto-pick the matching origin scheme so cloudflared
+# doesn't try to TLS-handshake an HTTP server (or vice-versa). Override
+# with ORIGIN_URL=... if you bind a different host:port.
+_PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+if [ -f "$_PROJECT_ROOT/cert.pem" ] && [ -f "$_PROJECT_ROOT/key.pem" ]; then
+  _DEFAULT_ORIGIN="https://127.0.0.1:${PORT}"
+else
+  _DEFAULT_ORIGIN="http://127.0.0.1:${PORT}"
+fi
+ORIGIN_URL="${ORIGIN_URL:-$_DEFAULT_ORIGIN}"
 SKIP_LIVEKIT="${SKIP_LIVEKIT:-0}"
 SKIP_TUNNEL="${SKIP_TUNNEL:-0}"
 FORCE_KILL="${FORCE_KILL:-0}"
