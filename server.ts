@@ -37,6 +37,8 @@ app.prepare().then(async () => {
   const { register: registerPresence } = await import('./server/handlers/presence');
   const { register: registerRooms } = await import('./server/handlers/rooms');
   const { register: registerTyping } = await import('./server/handlers/typing');
+  const { register: registerReactions } = await import('./server/handlers/reactions');
+  const { register: registerReadState } = await import('./server/handlers/read-state');
 
   const requestHandler = (req: any, res: any) => {
     const parsedUrl = parse(req.url!, true);
@@ -71,6 +73,8 @@ app.prepare().then(async () => {
     registerPresence(ctx, socket);
     registerRooms(ctx, socket);
     registerTyping(ctx, socket);
+    registerReactions(ctx, socket);
+    registerReadState(ctx, socket);
 
     socket.on(ClientToServer.SendMessage, async (data: { channelId: string; content: string; replyToId?: string }) => {
       const { channelId, content, replyToId } = data;
@@ -354,40 +358,6 @@ app.prepare().then(async () => {
       }
     });
 
-    socket.on(ClientToServer.ToggleReaction, async (data: { messageId: string; channelId: string; emoji: string }) => {
-      const { messageId, channelId, emoji } = data;
-
-      if (!messageId || !channelId || !emoji) return;
-
-      try {
-        const message = await prisma.message.findUnique({
-          where: { id: messageId },
-          select: { channelId: true, deletedAt: true },
-        });
-
-        if (!message || message.deletedAt || message.channelId !== channelId) return;
-
-        const existing = await prisma.reaction.findUnique({
-          where: { messageId_authorPubkey_emoji: { messageId, authorPubkey: pubkey, emoji } },
-        });
-
-        if (existing) {
-          await prisma.reaction.delete({ where: { id: existing.id } });
-        } else {
-          await prisma.reaction.create({ data: { messageId, authorPubkey: pubkey, emoji } });
-        }
-
-        const reactions = await prisma.reaction.findMany({
-          where: { messageId },
-          select: { id: true, messageId: true, authorPubkey: true, emoji: true },
-        });
-
-        io.to(`channel:${channelId}`).emit(ServerToClient.ReactionUpdated, { messageId, reactions });
-      } catch (err) {
-        console.error('[socket] Failed to toggle reaction:', err);
-      }
-    });
-
     socket.on(ClientToServer.DeleteMessage, async (data: { messageId: string; channelId: string }) => {
       const { messageId, channelId } = data;
       if (!messageId || !channelId) return;
@@ -441,101 +411,6 @@ app.prepare().then(async () => {
       } catch (err) {
         console.error('[socket] Failed to delete message:', err);
         socket.emit(ServerToClient.MessageError, { error: 'Failed to delete message' });
-      }
-    });
-
-    // ── Mark channel as read (via socket to avoid HTTP round-trip) ──
-    socket.on(ClientToServer.MarkRead, async (data: { channelId: string; lastMessageId?: string }) => {
-      if (!data?.channelId || typeof data.channelId !== 'string') return;
-      try {
-        await prisma.channelReadState.upsert({
-          where: { channelId_pubkey: { channelId: data.channelId, pubkey } },
-          create: {
-            channelId: data.channelId,
-            pubkey,
-            lastReadAt: new Date(),
-            lastReadMessageId: data.lastMessageId ?? null,
-          },
-          update: {
-            lastReadAt: new Date(),
-            lastReadMessageId: data.lastMessageId ?? null,
-          },
-        });
-
-        // Fan out to sibling sockets of the same user (scenario 11 — read
-        // in one tab clears the badge on another tab / device).
-        fanOutReadUpdate(
-          ctx.state.pubkeySockets,
-          pubkey,
-          socket.id,
-          'read-update',
-          { recipientPubkey: pubkey, channelId: data.channelId },
-          (sid, event, payload) => io.to(sid).emit(event, payload),
-        );
-      } catch (err) {
-        console.error('[socket] Failed to mark read:', err);
-      }
-    });
-
-    // ── Mark mentions as seen (flag-only clear; distinct from mark-read) ──
-    // Fires as soon as the viewer opens the channel, without waiting for them
-    // to scroll to the bottom. Only advances the mention cursor so future
-    // `/api/unread` calls stop flagging this channel; the unread message
-    // count continues to track `lastReadAt` independently.
-    socket.on(ClientToServer.MarkMentionRead, async (data: { channelId: string }) => {
-      if (!data?.channelId || typeof data.channelId !== 'string') return;
-      try {
-        await prisma.channelReadState.upsert({
-          where: { channelId_pubkey: { channelId: data.channelId, pubkey } },
-          create: {
-            channelId: data.channelId,
-            pubkey,
-            lastMentionReadAt: new Date(),
-          },
-          update: {
-            lastMentionReadAt: new Date(),
-          },
-        });
-
-        fanOutReadUpdate(
-          ctx.state.pubkeySockets,
-          pubkey,
-          socket.id,
-          'mention-read-update',
-          { recipientPubkey: pubkey, channelId: data.channelId },
-          (sid, event, payload) => io.to(sid).emit(event, payload),
-        );
-      } catch (err) {
-        console.error('[socket] Failed to mark mention read:', err);
-      }
-    });
-
-    // ── Mark DM thread as read (via socket, mirrors /api/dm/:pubkey/read) ──
-    socket.on(ClientToServer.DMRead, async (data: { pubkey: string }) => {
-      if (!data?.pubkey || typeof data.pubkey !== 'string') return;
-      try {
-        await prisma.dMReadState.upsert({
-          where: { pubkey_threadPubkey: { pubkey, threadPubkey: data.pubkey } },
-          create: {
-            pubkey,
-            threadPubkey: data.pubkey,
-            lastReadAt: new Date(),
-          },
-          update: {
-            lastReadAt: new Date(),
-          },
-        });
-
-        fanOutReadUpdate(
-          ctx.state.pubkeySockets,
-          pubkey,
-          socket.id,
-          'dm-read-update',
-          { recipientPubkey: pubkey, pubkey: data.pubkey },
-          (sid, event, payload) => io.to(sid).emit(event, payload),
-        );
-      } catch (err) {
-        console.error('[socket] Failed to mark DM read:', err);
       }
     });
 
