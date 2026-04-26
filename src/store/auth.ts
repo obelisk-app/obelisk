@@ -1,13 +1,22 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { NDKUser } from '@nostr-dev-kit/ndk';
-import { NostrProfile, parseProfile, LoginMethod, resetUserRelays, clearSignerPayload, getNDK } from '@/lib/nostr';
+import { NostrProfile, parseProfile, LoginMethod, resetUserRelays, clearSignerPayload, getNDK, onSignerChange } from '@/lib/nostr';
 import { resetAllClientState } from '@/lib/reset';
 
 interface AuthState {
   isConnected: boolean;
   isLoading: boolean;
   isSyncing: boolean;
+  /**
+   * Reactive shadow of `getNDK().signer != null`. The NDK singleton's
+   * `signer` is a plain JS module property — mutating it doesn't trigger
+   * React updates. Components that gate UI on signer presence (DMList's
+   * "New DM" button, anywhere we need to publish/encrypt) read this
+   * instead. Updated by the login flows in `nostr.ts`, by
+   * `IdentityProvider` after signer restore, and by `logout`.
+   */
+  signerReady: boolean;
   user: NDKUser | null;
   profile: NostrProfile | null;
   loginMethod: LoginMethod | null;
@@ -17,6 +26,7 @@ interface AuthState {
   setUser: (user: NDKUser | null, method: LoginMethod | null) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
+  setSignerReady: (ready: boolean) => void;
   logout: () => void;
   setHasHydrated: (hydrated: boolean) => void;
   restoreSession: () => Promise<boolean>;
@@ -29,6 +39,7 @@ export const useAuthStore = create<AuthState>()(
       isConnected: false,
       isLoading: false,
       isSyncing: false,
+      signerReady: false,
       user: null,
       profile: null,
       loginMethod: null,
@@ -63,14 +74,18 @@ export const useAuthStore = create<AuthState>()(
 
       setLoading: (loading) => set({ isLoading: loading }),
       setError: (error) => set({ error, isLoading: false }),
+      setSignerReady: (ready) => set({ signerReady: ready }),
 
       logout: () => {
         fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
         resetUserRelays();
         clearSignerPayload();
         resetAllClientState();
+        const ndk = getNDK();
+        ndk.signer = undefined;
         set({
           isConnected: false,
+          signerReady: false,
           user: null,
           profile: null,
           loginMethod: null,
@@ -203,3 +218,11 @@ export const useAuthStore = create<AuthState>()(
     }
   )
 );
+
+// Mirror `getNDK().signer != null` into the reactive `signerReady` flag
+// every time a login flow (or `restoreRemoteSigner`) installs / clears the
+// signer. The bridge avoids a circular import — `nostr.ts` doesn't know
+// about the auth store; it just emits to whoever subscribed.
+onSignerChange((signer) => {
+  useAuthStore.getState().setSignerReady(Boolean(signer));
+});

@@ -3,8 +3,7 @@
 import { useState } from 'react';
 import { useDMStore } from '@/store/dm';
 import { useNotificationStore } from '@/store/notification';
-import { useAuthStore } from '@/store/auth';
-import { getNDK } from '@/lib/nostr';
+import { useIdentity } from '@/hooks/useIdentity';
 import { clearAccount } from '@/lib/dm/dm-cache';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 
@@ -15,13 +14,13 @@ interface DMListProps {
 export default function DMList({ onNewDM }: DMListProps) {
   const { threads, activeDMPubkey, setActiveDM, isLoadingThreads, setThreads, setMessages } = useDMStore();
   const dmUnreads = useNotificationStore((s) => s.dmUnreads);
-  const myPubkey = useAuthStore((s) => s.profile?.pubkey ?? null);
+  const { pubkey: myPubkey, signerReady } = useIdentity();
   const [showWipeConfirm, setShowWipeConfirm] = useState(false);
 
-  // Read-only mode: disable New DM when no signer is attached. Computed at
-  // render-time; the NDK singleton is updated synchronously on login/logout
-  // and any state change that would flip this also re-renders this tree.
-  const hasSigner = Boolean(getNDK().signer);
+  // Read-only mode: disable New DM when no signer is attached. `signerReady`
+  // is the reactive flag mirrored from `getNDK().signer != null` — see
+  // `IdentityProvider` and `nostr.ts:onSignerChange` for the wiring.
+  const hasSigner = signerReady;
   const newDMTitle = hasSigner
     ? 'New DM'
     : 'Sign in with a signing-capable method to use DMs';

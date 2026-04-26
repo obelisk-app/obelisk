@@ -55,6 +55,8 @@ vi.mock('@/lib/nostr', () => ({
     pool: { relays: new Map([['wss://r1', {}]]) },
   }),
   connectNDK: vi.fn(),
+  // Auth store subscribes to signer changes; mock returns a no-op unsub.
+  onSignerChange: vi.fn(() => () => {}),
 }));
 
 vi.mock('@nostr-dev-kit/ndk', () => ({

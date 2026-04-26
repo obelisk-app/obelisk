@@ -16,7 +16,11 @@ vi.mock('@/lib/nostr', () => ({
   clearSignerPayload: vi.fn(),
   getNDK: vi.fn(() => ({
     getUser: ({ pubkey }: { pubkey: string }) => ({ pubkey, npub: 'npub1test' }),
+    signer: undefined,
   })),
+  // Auth store now subscribes to signer changes at module load to keep
+  // `signerReady` reactive. The mock returns a no-op unsubscribe.
+  onSignerChange: vi.fn(() => () => {}),
 }));
 
 // Mock fetch for logout

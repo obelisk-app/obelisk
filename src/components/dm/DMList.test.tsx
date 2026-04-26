@@ -1,30 +1,23 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import DMList from './DMList';
 import { useDMStore } from '@/store/dm';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notification';
-import { getNDK } from '@/lib/nostr';
-
-vi.mock('@/lib/nostr', () => {
-  const state: { signer: unknown } = { signer: { pubkey: 'a'.repeat(64) } };
-  return {
-    __setSigner: (s: unknown) => { state.signer = s; },
-    getNDK: () => ({
-      get signer() { return state.signer; },
-      pool: { relays: new Map() },
-    }),
-  };
-});
 
 const clearAccountMock = vi.fn();
 vi.mock('@/lib/dm/dm-cache', () => ({
   clearAccount: (pk: string) => clearAccountMock(pk),
 }));
 
-// Convenience handle to mutate the mocked signer between tests.
-const nostrMock = (await import('@/lib/nostr')) as unknown as { __setSigner: (s: unknown) => void };
+// Drive the reactive `signerReady` flag directly on the auth store —
+// DMList now reads via `useIdentity()` instead of polling `getNDK().signer`
+// at render time. Mocking the NDK singleton no longer matters for the
+// signer-gate; the auth store flag is what gates the UI.
+function setSignerReady(ready: boolean): void {
+  useAuthStore.setState({ signerReady: ready });
+}
 
 describe('DMList', () => {
   beforeEach(() => {
@@ -41,7 +34,7 @@ describe('DMList', () => {
     });
     useNotificationStore.setState(useNotificationStore.getInitialState());
     // Default: signer present, so existing tests still see an enabled CTA.
-    nostrMock.__setSigner({ pubkey: 'a'.repeat(64) });
+    setSignerReady(true);
   });
 
   it('shows empty state', () => {
@@ -115,22 +108,22 @@ describe('DMList signer gate', () => {
     useNotificationStore.setState(useNotificationStore.getInitialState());
   });
 
-  it('disables the New DM CTA when ndk.signer is null', () => {
-    nostrMock.__setSigner(null);
+  it('disables the New DM CTA when signerReady is false', () => {
+    setSignerReady(false);
     render(<DMList onNewDM={vi.fn()} />);
     expect(screen.getByTestId('new-dm-cta')).toBeDisabled();
     // Sanity: the empty-state CTA is also gated.
     expect(screen.getByTestId('new-dm-cta-empty')).toBeDisabled();
   });
 
-  it('enables the New DM CTA when ndk.signer is present', () => {
-    nostrMock.__setSigner({ pubkey: 'a'.repeat(64) });
+  it('enables the New DM CTA when signerReady is true', () => {
+    setSignerReady(true);
     render(<DMList onNewDM={vi.fn()} />);
     expect(screen.getByTestId('new-dm-cta')).not.toBeDisabled();
   });
 
   it('does not call onNewDM when CTA is disabled (no signer)', async () => {
-    nostrMock.__setSigner(null);
+    setSignerReady(false);
     const onNewDM = vi.fn();
     const user = userEvent.setup();
     render(<DMList onNewDM={onNewDM} />);
@@ -138,9 +131,14 @@ describe('DMList signer gate', () => {
     expect(onNewDM).not.toHaveBeenCalled();
   });
 
-  it('confirms getNDK is the mocked impl', () => {
-    // Smoke test that the mock wired correctly.
-    expect(getNDK().pool.relays).toBeInstanceOf(Map);
+  it('reactively re-enables the CTA when signerReady flips after mount', () => {
+    // Cold-start race that motivated this refactor: DMList mounts before
+    // the signer is restored; once the bridge fires, the CTA enables.
+    setSignerReady(false);
+    render(<DMList onNewDM={vi.fn()} />);
+    expect(screen.getByTestId('new-dm-cta')).toBeDisabled();
+    act(() => { setSignerReady(true); });
+    expect(screen.getByTestId('new-dm-cta')).not.toBeDisabled();
   });
 
   describe('clear DM cache', () => {
