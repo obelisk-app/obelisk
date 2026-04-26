@@ -1,4 +1,5 @@
-import type { Filter, Event as NostrEvent } from 'nostr-tools/pure';
+import type { Event as NostrEvent } from 'nostr-tools/pure';
+import type { Filter } from 'nostr-tools/filter';
 import { getDMPool, verifyDMEvent } from './pool';
 
 export interface CoalescerEnqueue {
@@ -54,16 +55,24 @@ export class RequestCoalescer {
     const seen = new Set<string>();
     const filters = g.entries.flatMap((e) => e.filters);
     const pool = getDMPool();
-    const sub = pool.subscribeMany(g.relays, filters, {
+    // nostr-tools' .d.ts types `subscribeMany`'s second arg as a single Filter,
+    // but the runtime accepts Filter[] (Nostr REQs are spec'd to allow multiple
+    // filters per subscription). Cast to satisfy the .d.ts.
+    const sub = pool.subscribeMany(g.relays, filters as unknown as Filter, {
       onevent: (event: NostrEvent) => {
         if (seen.has(event.id)) return;
         seen.add(event.id);
         if (!verifyDMEvent(event)) return;
         for (const e of g.entries) e.onEvent(event);
       },
-      oneose: (relay: string) => {
+      // nostr-tools' .d.ts types `oneose` as `() => void`, but at runtime
+      // it's invoked once per relay with the relay URL. We expose the URL to
+      // consumers since it's load-bearing for relay attribution; cast here
+      // to satisfy the .d.ts. If the upstream types are tightened later,
+      // consumers can drop the relay arg from their handler.
+      oneose: ((relay: string) => {
         for (const e of g.entries) e.onEose?.(relay);
-      },
+      }) as () => void,
     });
 
     if (this.subscriptionTimeoutMs > 0) {

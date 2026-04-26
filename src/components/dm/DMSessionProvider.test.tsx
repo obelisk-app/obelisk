@@ -3,7 +3,7 @@ import { render } from '@testing-library/react';
 import React from 'react';
 import { DMSessionProvider, useDMSession } from './DMSessionProvider';
 
-const subscribeLiveMock = vi.fn(() => () => {});
+const subscribeLiveMock = vi.fn((_opts?: unknown) => () => {});
 vi.mock('@/lib/dm/dm', () => ({
   subscribeLive: (opts: any) => subscribeLiveMock(opts),
   loadHistory: vi.fn(),

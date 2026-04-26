@@ -1,4 +1,5 @@
-import type { Event as NostrEvent, Filter } from 'nostr-tools/pure';
+import type { Event as NostrEvent } from 'nostr-tools/pure';
+import type { Filter } from 'nostr-tools/filter';
 import { RequestCoalescer } from './coalescer';
 import { verifyDMEvent } from './pool';
 import { getCursors, setCursor, putEvent, getEvent, type CachedDMEvent } from './dm-cache';

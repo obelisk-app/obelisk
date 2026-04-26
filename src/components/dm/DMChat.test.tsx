@@ -12,7 +12,7 @@ import { useAuthStore } from '@/store/auth';
 const hoisted = vi.hoisted(() => ({
   sendDMMock: vi.fn(),
   loadHistoryMock: vi.fn(),
-  subscribeLiveMock: vi.fn(() => () => {}),
+  subscribeLiveMock: vi.fn((_opts?: unknown) => () => {}),
   decryptMock: vi.fn(),
   giftUnwrapMock: vi.fn(),
   cachedEventsByAccount: new Map<string, any[]>(),

@@ -84,6 +84,7 @@ The DM event store applies a **follow-aware LRU**:
 - **No "load older" paging yet.** The chat view decrypts the most recent 50 cached events on thread-open. The infrastructure for paging (an `until` cursor on `loadHistory`, a top-of-list intersect sentinel) is in place but not wired to the UI.
 - **Per-tab cache.** `dm-cache` mirrors localStorage in RAM with microtask-batched flushes. Multiple Obelisk tabs in the same browser share localStorage but do not subscribe to each other's mutations — open in only one tab to avoid stale-read races.
 - **No per-account "wipe" button in the UI yet.** Clearing a single identity's DM data is a manual `localStorage.removeItem` step today.
+- **`subscribeLive` teardown is best-effort.** Unmounting the DM view (or switching accounts) flips a cancellation flag that suppresses the consumer callback, but the underlying `SimplePool` subscription remains open until its 5-second `subscriptionTimeoutMs` elapses. Events continue flowing on the wire and into the cache during that window. Tracked in the spec's post-merge follow-ups.
 
 ## Threat model summary
 

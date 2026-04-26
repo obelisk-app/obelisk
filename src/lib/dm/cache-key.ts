@@ -6,7 +6,7 @@
  * encrypt/decrypt helpers but cannot exfiltrate the raw bytes.
  */
 
-interface KEKSigner {
+export interface KEKSigner {
   pubkey: string;
   nip44Encrypt(recipientPubkey: string, plaintext: string): Promise<string>;
   nip44Decrypt(senderPubkey: string, ciphertext: string): Promise<string>;
@@ -54,7 +54,7 @@ export async function getOrCreateCacheKey(myPubkey: string, signer: KEKSigner): 
   const raw = base64ToBytes(rawB64);
   const key = await crypto.subtle.importKey(
     'raw',
-    raw,
+    raw as BufferSource,
     { name: 'AES-GCM' },
     /* extractable */ false,
     ['encrypt', 'decrypt'],
@@ -74,9 +74,9 @@ export async function encryptToCache(key: CryptoKey, plaintext: string): Promise
   crypto.getRandomValues(iv);
   const ct = new Uint8Array(
     await crypto.subtle.encrypt(
-      { name: 'AES-GCM', iv },
+      { name: 'AES-GCM', iv: iv as BufferSource },
       key,
-      new TextEncoder().encode(plaintext),
+      new TextEncoder().encode(plaintext) as BufferSource,
     ),
   );
   // Pack as base64(iv) + '.' + base64(ct)
@@ -87,6 +87,6 @@ export async function decryptFromCache(key: CryptoKey, blob: string): Promise<st
   const [ivB64, ctB64] = blob.split('.');
   const iv = base64ToBytes(ivB64);
   const ct = base64ToBytes(ctB64);
-  const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ct);
+  const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: iv as BufferSource }, key, ct as BufferSource);
   return new TextDecoder().decode(pt);
 }

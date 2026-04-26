@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { getOrCreateCacheKey, _resetCacheKeyState, encryptToCache, decryptFromCache } from './cache-key';
+import { getOrCreateCacheKey, _resetCacheKeyState, encryptToCache, decryptFromCache, type KEKSigner } from './cache-key';
 
 interface MockSigner {
   pubkey: string;
@@ -15,6 +15,10 @@ function mockSigner(pubkey = 'a'.repeat(64)): MockSigner {
   };
 }
 
+// Cast helper — vi.fn's structural type doesn't satisfy KEKSigner's strict
+// signatures, but at runtime they're identical.
+const asKEKSigner = (m: MockSigner): KEKSigner => m as unknown as KEKSigner;
+
 describe('cache-key', () => {
   beforeEach(() => {
     localStorage.clear();
@@ -23,7 +27,7 @@ describe('cache-key', () => {
 
   it('first call generates + wraps the key, persists wrapped form', async () => {
     const signer = mockSigner();
-    const key = await getOrCreateCacheKey(signer.pubkey, signer);
+    const key = await getOrCreateCacheKey(signer.pubkey, asKEKSigner(signer));
     expect(key).toBeDefined();
     expect(signer.nip44Encrypt).toHaveBeenCalledTimes(1);
     expect(localStorage.getItem(`obelisk:dm-cache-key:${signer.pubkey}`)).toMatch(/^WRAP\|/);
@@ -31,34 +35,34 @@ describe('cache-key', () => {
 
   it('second call within session returns RAM-cached key with zero signer calls', async () => {
     const signer = mockSigner();
-    await getOrCreateCacheKey(signer.pubkey, signer);
+    await getOrCreateCacheKey(signer.pubkey, asKEKSigner(signer));
     signer.nip44Encrypt.mockClear();
     signer.nip44Decrypt.mockClear();
-    await getOrCreateCacheKey(signer.pubkey, signer);
+    await getOrCreateCacheKey(signer.pubkey, asKEKSigner(signer));
     expect(signer.nip44Encrypt).not.toHaveBeenCalled();
     expect(signer.nip44Decrypt).not.toHaveBeenCalled();
   });
 
   it('after RAM reset, unwraps via signer exactly once', async () => {
     const signer = mockSigner();
-    await getOrCreateCacheKey(signer.pubkey, signer);
+    await getOrCreateCacheKey(signer.pubkey, asKEKSigner(signer));
     _resetCacheKeyState();
     signer.nip44Encrypt.mockClear();
     signer.nip44Decrypt.mockClear();
-    await getOrCreateCacheKey(signer.pubkey, signer);
+    await getOrCreateCacheKey(signer.pubkey, asKEKSigner(signer));
     expect(signer.nip44Decrypt).toHaveBeenCalledTimes(1);
     expect(signer.nip44Encrypt).not.toHaveBeenCalled();
   });
 
   it('imports the AES key as non-extractable', async () => {
     const signer = mockSigner();
-    const key = await getOrCreateCacheKey(signer.pubkey, signer);
+    const key = await getOrCreateCacheKey(signer.pubkey, asKEKSigner(signer));
     await expect(crypto.subtle.exportKey('raw', key)).rejects.toBeDefined();
   });
 
   it('encryptToCache + decryptFromCache round-trip a string', async () => {
     const signer = mockSigner();
-    const key = await getOrCreateCacheKey(signer.pubkey, signer);
+    const key = await getOrCreateCacheKey(signer.pubkey, asKEKSigner(signer));
     const blob = await encryptToCache(key, 'top secret');
     expect(blob).not.toContain('top secret');
     const back = await decryptFromCache(key, blob);
