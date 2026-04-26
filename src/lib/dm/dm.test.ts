@@ -6,8 +6,11 @@ const me = 'a'.repeat(64);
 const partner = 'b'.repeat(64);
 
 const enqueueMock = vi.fn();
-vi.mock('./coalescer', () => ({
-  RequestCoalescer: class { enqueue(req: any) { enqueueMock(req); } },
+vi.mock('@/lib/nostr-coalescer', () => ({
+  sharedCoalescer: {
+    enqueue: (req: any) => { enqueueMock(req); return () => {}; },
+    querySync: vi.fn(),
+  },
 }));
 
 vi.mock('./relay-list-cache', () => ({

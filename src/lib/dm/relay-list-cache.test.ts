@@ -3,8 +3,11 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { getRelays, _resetRelayCache } from './relay-list-cache';
 
 const enqueueMock = vi.fn();
-vi.mock('./coalescer', () => ({
-  RequestCoalescer: class { enqueue(req: any) { enqueueMock(req); } },
+vi.mock('@/lib/nostr-coalescer', () => ({
+  sharedCoalescer: {
+    enqueue: (req: any) => { enqueueMock(req); return () => {}; },
+    querySync: vi.fn(),
+  },
 }));
 
 const me = 'a'.repeat(64);

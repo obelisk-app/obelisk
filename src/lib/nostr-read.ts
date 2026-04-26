@@ -1,11 +1,12 @@
 /**
- * Browser-side Nostr read helpers built on `nostr-tools` SimplePool.
+ * Browser-side Nostr read helpers built on the shared request coalescer.
  *
  * Replaces the `ndk.fetchEvent` / `ndk.fetchEvents` paths in non-DM consumers
  * (profiles, follows, follower lists, user notes, debug tools). NDK is still
  * used for everything that needs a signer — login, signing, encrypting,
- * publishing — but read-path traffic now goes through the shared SimplePool
- * + sig verifier in `nostr-pool.ts`.
+ * publishing — but read-path traffic now flows through `sharedCoalescer`
+ * so calls from different modules within a 50ms window are merged into a
+ * single REQ per relay-set.
  *
  * All helpers verify signatures before surfacing events. Time-bounded so the
  * UI never blocks on a slow relay.
@@ -13,7 +14,7 @@
 
 import type { Event as NostrEvent } from 'nostr-tools/pure';
 import type { Filter } from 'nostr-tools/filter';
-import { getNostrPool, verifyNostrEvent } from './nostr-pool';
+import { sharedCoalescer } from './nostr-coalescer';
 
 const DEFAULT_RELAYS = [
   'wss://relay.damus.io',
@@ -31,16 +32,17 @@ interface QueryOptions {
 }
 
 /**
- * Run a `querySync` against a relay set, drop events with bad signatures.
- * Returns whatever the relays produced before the timeout — no exceptions.
+ * Promise-shaped query that flows through `sharedCoalescer.querySync`. The
+ * coalescer batches our filters with any other concurrent enqueues sharing
+ * the same relay-set within the debounce window, fires one `subscribeMany`,
+ * and resolves with the verified events. Sig verification is enforced by
+ * the coalescer itself.
  */
 async function querySigned(filters: Filter[], opts: QueryOptions = {}): Promise<NostrEvent[]> {
-  const pool = getNostrPool();
   const relays = opts.relays && opts.relays.length > 0 ? opts.relays : DEFAULT_RELAYS;
   const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   try {
-    const events = await pool.querySync(relays, filters as unknown as Filter, { maxWait: timeoutMs });
-    return events.filter(verifyNostrEvent);
+    return await sharedCoalescer.querySync(filters, { relays, timeoutMs });
   } catch (err) {
     console.warn('[nostr-read] querySync failed:', err);
     return [];

@@ -1,6 +1,6 @@
 // src/lib/dm/relay-list-cache.ts
 import type { Event as NostrEvent } from 'nostr-tools/pure';
-import { RequestCoalescer } from './coalescer';
+import { sharedCoalescer } from '@/lib/nostr-coalescer';
 import { parseRelayListMeta, parseInboxRelays } from '@/lib/nostr-read';
 
 export interface RelayListResult {
@@ -23,7 +23,7 @@ const FALLBACK_RELAYS = [
   'wss://purplepag.es',
 ];
 
-const coalescer = new RequestCoalescer({ debounceMs: 50 });
+const coalescer = sharedCoalescer;
 const subscribers = new Map<string, Set<(r: RelayListResult) => void>>();
 
 export function _resetRelayCache(): void { subscribers.clear(); }

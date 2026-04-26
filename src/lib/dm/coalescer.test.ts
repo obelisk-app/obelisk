@@ -7,9 +7,12 @@ const subscribeManyMock = vi.fn();
 const lastSubs: FakeSub[] = [];
 const lastHandlers: Array<{ onevent: (e: unknown) => void; oneose?: (relay: string) => void }> = [];
 
-vi.mock('./pool', () => ({
-  verifyDMEvent: () => true,
-  getDMPool: () => ({
+// The coalescer now imports `verifyNostrEvent`/`getNostrPool` from
+// `@/lib/nostr-pool`. Mock that path so the test can drive the underlying
+// SimplePool from `subscribeMany` callbacks.
+vi.mock('@/lib/nostr-pool', () => ({
+  verifyNostrEvent: () => true,
+  getNostrPool: () => ({
     subscribeMany: (relays: string[], filters: unknown[], handlers: { onevent: (e: unknown) => void; oneose?: (relay: string) => void }) => {
       subscribeManyMock(relays, filters);
       const sub: FakeSub = { close: vi.fn() };
@@ -103,6 +106,42 @@ describe('RequestCoalescer', () => {
       close();
       close();
       expect(sub.close).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('querySync (Promise-shaped)', () => {
+    it('coalesces with concurrent enqueues sharing the same relay-set', async () => {
+      const c = new RequestCoalescer({ debounceMs: 50 });
+      const onEvent = vi.fn();
+      // 1) Live consumer enqueues first.
+      c.enqueue({ filters: [{ kinds: [4] }], relays: ['wss://r1'], onEvent });
+      // 2) One-shot Promise consumer enqueues within the same window.
+      const promise = c.querySync([{ kinds: [0], authors: ['x'] }], { relays: ['wss://r1'], timeoutMs: 1000 });
+      // Window flush.
+      await vi.advanceTimersByTimeAsync(60);
+      // Exactly one subscribeMany — both filters merged into one REQ.
+      expect(subscribeManyMock).toHaveBeenCalledTimes(1);
+      const filters = subscribeManyMock.mock.calls[0][1] as unknown[];
+      expect(filters.length).toBe(2);
+      // Drive an event + EOSE-from-all-relays so the promise resolves.
+      lastHandlers[0].onevent({ id: 'e1', sig: 's', pubkey: 'p', kind: 0, content: '', tags: [], created_at: 1 });
+      lastHandlers[0].oneose?.('wss://r1');
+      const events = await promise;
+      expect(events.map((e) => e.id)).toEqual(['e1']);
+      // The live enqueue's onEvent ALSO received the same event — that's the
+      // observer fan-out we want.
+      expect(onEvent).toHaveBeenCalledTimes(1);
+    });
+
+    it('resolves with whatever events arrived by the timeout if EOSE never fires', async () => {
+      const c = new RequestCoalescer({ debounceMs: 50 });
+      const promise = c.querySync([{ kinds: [0] }], { relays: ['wss://r1'], timeoutMs: 200 });
+      await vi.advanceTimersByTimeAsync(60);
+      lastHandlers[0].onevent({ id: 'a', sig: 's', pubkey: 'p', kind: 0, content: '', tags: [], created_at: 1 });
+      // No EOSE — let the timeout fire.
+      await vi.advanceTimersByTimeAsync(250);
+      const events = await promise;
+      expect(events.map((e) => e.id)).toEqual(['a']);
     });
   });
 });

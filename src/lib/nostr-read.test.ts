@@ -1,13 +1,29 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { generateSecretKey, getPublicKey, finalizeEvent } from 'nostr-tools/pure';
 
+// Coalescer mock — `nostr-read.querySigned` now flows through
+// `sharedCoalescer.querySync`. Capture the args here so existing assertions
+// (relays, filters, maxWait) keep working with one shape change: the
+// coalescer pre-verifies signatures, so we filter the mock's returned events
+// here to match production semantics.
 const querySyncMock = vi.fn();
 
-vi.mock('./nostr-pool', async () => {
-  const actual = await vi.importActual<typeof import('./nostr-pool')>('./nostr-pool');
+vi.mock('./nostr-coalescer', async () => {
+  const { verifyEvent, verifiedSymbol } = await import('nostr-tools/pure');
+  const stripAndVerify = (ev: unknown) => {
+    try {
+      const { [verifiedSymbol]: _ignored, ...rest } = ev as { [verifiedSymbol]?: boolean };
+      return verifyEvent(rest as Parameters<typeof verifyEvent>[0]);
+    } catch { return false; }
+  };
   return {
-    ...actual,
-    getNostrPool: () => ({ querySync: querySyncMock }),
+    sharedCoalescer: {
+      querySync: async (filters: unknown[], opts: { relays: string[]; timeoutMs?: number }) => {
+        const events = await querySyncMock(opts.relays, filters, { maxWait: opts.timeoutMs ?? 8000 });
+        return (events ?? []).filter(stripAndVerify);
+      },
+      enqueue: vi.fn(),
+    },
   };
 });
 
