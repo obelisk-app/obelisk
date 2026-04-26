@@ -38,20 +38,20 @@ export async function getOrCreateCacheKey(myPubkey: string, signer: KEKSigner): 
   if (cached) return cached;
 
   const storageKey = KEY_PREFIX + myPubkey;
-  let rawHex: string;
+  let rawB64: string;
 
   const wrapped = typeof localStorage !== 'undefined' ? localStorage.getItem(storageKey) : null;
   if (wrapped) {
-    rawHex = await signer.nip44Decrypt(myPubkey, wrapped);
+    rawB64 = await signer.nip44Decrypt(myPubkey, wrapped);
   } else {
     const raw = new Uint8Array(32);
     crypto.getRandomValues(raw);
-    rawHex = bytesToBase64(raw);
-    const wrappedNew = await signer.nip44Encrypt(myPubkey, rawHex);
+    rawB64 = bytesToBase64(raw);
+    const wrappedNew = await signer.nip44Encrypt(myPubkey, rawB64);
     if (typeof localStorage !== 'undefined') localStorage.setItem(storageKey, wrappedNew);
   }
 
-  const raw = base64ToBytes(rawHex);
+  const raw = base64ToBytes(rawB64);
   const key = await crypto.subtle.importKey(
     'raw',
     raw,
@@ -60,7 +60,9 @@ export async function getOrCreateCacheKey(myPubkey: string, signer: KEKSigner): 
     ['encrypt', 'decrypt'],
   );
 
-  // Zero raw bytes after import (best effort).
+  // Defensive zero of the post-import buffer. Note: the raw key also lives in
+  // the immutable base64 string above until GC, so this is best-effort and
+  // closes only one of several windows.
   raw.fill(0);
 
   ramKeys.set(myPubkey, key);
