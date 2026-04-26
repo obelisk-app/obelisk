@@ -23,6 +23,12 @@ vi.mock('@/lib/nostr', () => ({
     signer: { pubkey: 'a'.repeat(64), nip44Encrypt: vi.fn(), nip44Decrypt: vi.fn() },
     pool: { relays: new Map([['wss://r1', {}]]) },
   }),
+  // The auth store subscribes to onSignerChange at module load to mirror
+  // ndk.signer into the reactive `signerReady` flag. Without a no-op stub
+  // here, importing useAuthStore (now a transitive dep of DMSessionProvider
+  // since it reads signerReady) crashes during test setup.
+  onSignerChange: vi.fn(() => () => {}),
+  setNDKSigner: vi.fn(),
 }));
 
 beforeEach(() => {

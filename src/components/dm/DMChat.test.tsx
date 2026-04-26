@@ -182,11 +182,15 @@ describe('DMChat', () => {
       );
     });
 
-    // After resolve the store contains exactly one message with the real id
+    // After resolve the store contains exactly one message. For NIP-17 the
+    // wrap event's id is ephemeral and doesn't match the rumor the recipient
+    // eventually sees, so we keep the optimistic id (just clear isPending);
+    // for NIP-04 the event IS the message and the real id replaces.
     await waitFor(() => {
       const msgs = useDMStore.getState().messages;
       expect(msgs).toHaveLength(1);
-      expect(msgs[0].id).toBe('sent-1');
+      expect(msgs[0].id).toMatch(/^pending-/);
+      expect(msgs[0].content).toBe('Hello world');
       expect(msgs[0].isPending).toBeUndefined();
     });
   });
