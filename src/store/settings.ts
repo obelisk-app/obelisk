@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type SettingsSection = 'perfil' | 'apariencia' | 'wallet' | 'invitaciones' | 'actividad';
+export type SettingsSection = 'perfil' | 'apariencia' | 'wallet' | 'invitaciones' | 'actividad' | 'notifications';
 
 interface SettingsState {
   isOpen: boolean;
