@@ -36,6 +36,7 @@ app.prepare().then(async () => {
   const { bindContext } = await import('./server/api-bridge');
   const { register: registerPresence } = await import('./server/handlers/presence');
   const { register: registerRooms } = await import('./server/handlers/rooms');
+  const { register: registerTyping } = await import('./server/handlers/typing');
 
   const requestHandler = (req: any, res: any) => {
     const parsedUrl = parse(req.url!, true);
@@ -69,6 +70,7 @@ app.prepare().then(async () => {
     const pubkey: string = socket.data.pubkey;
     registerPresence(ctx, socket);
     registerRooms(ctx, socket);
+    registerTyping(ctx, socket);
 
     socket.on(ClientToServer.SendMessage, async (data: { channelId: string; content: string; replyToId?: string }) => {
       const { channelId, content, replyToId } = data;
@@ -439,24 +441,6 @@ app.prepare().then(async () => {
       } catch (err) {
         console.error('[socket] Failed to delete message:', err);
         socket.emit(ServerToClient.MessageError, { error: 'Failed to delete message' });
-      }
-    });
-
-    socket.on(ClientToServer.Typing, (channelId: string) => {
-      if (typeof channelId === 'string' && channelId.length > 0) {
-        socket.to(`channel:${channelId}`).emit(ServerToClient.UserTyping, { pubkey, channelId });
-      }
-    });
-
-    // DM typing indicator
-    socket.on(ClientToServer.DMTyping, (targetPubkey: string) => {
-      if (typeof targetPubkey === 'string') {
-        const targetSockets = ctx.state.pubkeySockets.get(targetPubkey);
-        if (targetSockets) {
-          for (const sid of targetSockets) {
-            io.to(sid).emit(ServerToClient.DMUserTyping, { pubkey });
-          }
-        }
       }
     });
 
