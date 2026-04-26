@@ -1188,6 +1188,8 @@ Expected: FAIL — module not found.
 
 - [ ] **Step 3: Write the implementation**
 
+Staleness rule: an entry is stale when neither slot has been populated yet (forces an initial fetch), OR any *populated* slot is older than 6h. Unpopulated slots after the first populated one do not force re-fetch — partners legitimately may not publish kind-10050, and treating an absent slot's `lastCheckedAt` as `0` would make `now - 0 > TTL_MS` always true, causing endless re-fetches.
+
 ```ts
 // src/lib/dm/relay-list-cache.ts
 import type { Event as NostrEvent } from 'nostr-tools/pure';
@@ -1264,9 +1266,14 @@ function buildResult(entry: CacheEntry | undefined): RelayListResult {
 
 function isStale(entry: CacheEntry): boolean {
   const now = Date.now();
-  const ob = entry.outbox?.lastCheckedAt ?? 0;
-  const ib = entry.inbox?.lastCheckedAt ?? 0;
-  return now - ob > TTL_MS || now - ib > TTL_MS;
+  // If neither slot has been checked, treat as stale (forces an initial fetch).
+  if (!entry.outbox && !entry.inbox) return true;
+  // Otherwise, only consider populated slots: stale if any *checked* slot is older than TTL.
+  // This avoids endlessly re-fetching when a partner has never published one of the kinds
+  // (e.g. no kind-10050) — once we've heard back from at least one, we honor the TTL.
+  if (entry.outbox && now - entry.outbox.lastCheckedAt > TTL_MS) return true;
+  if (entry.inbox && now - entry.inbox.lastCheckedAt > TTL_MS) return true;
+  return false;
 }
 
 function notify(me: string, partner: string, r: RelayListResult): void {

@@ -36,7 +36,10 @@ export function hydrateFollows(me: string): void {
 
 export function ingestKind3(me: string, event: NostrEvent): void {
   if (event.kind !== 3 || event.pubkey !== me) return;
-  const current = inMemory.get(me) ?? null;
+  // Pre-hydrate safety: if inMemory has no entry yet, consult localStorage so
+  // a live event arriving before hydrateFollows can't overwrite a newer
+  // cached kind-3 with an older one.
+  const current = inMemory.has(me) ? inMemory.get(me) : read(me);
   if (current && current.event.created_at >= event.created_at) return;
   const pubkeys = event.tags.filter((t) => t[0] === 'p' && typeof t[1] === 'string').map((t) => t[1]);
   const shape: FollowsCacheShape = { event, pubkeys, lastCheckedAt: Date.now() };
