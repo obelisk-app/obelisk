@@ -76,23 +76,23 @@ export interface SubscribeLiveOptions {
 
 export function subscribeLive(opts: SubscribeLiveOptions): () => void {
   const cursors = getCursors(opts.myPubkey);
-  let cancelled = false;
   const filters: Filter[] = [
     { kinds: [KIND_NIP04], '#p': [opts.myPubkey], ...(cursors.nip04In > 0 ? { since: cursors.nip04In } : {}) },
     { kinds: [KIND_NIP04], authors: [opts.myPubkey], ...(cursors.nip04Out > 0 ? { since: cursors.nip04Out } : {}) },
     { kinds: [KIND_GIFT_WRAP], '#p': [opts.myPubkey], ...(cursors.nip17Wrap > 0 ? { since: cursors.nip17Wrap } : {}) },
     { kinds: [KIND_FOLLOW], authors: [opts.myPubkey], ...(cursors.kind3 > 0 ? { since: cursors.kind3 } : {}) },
   ];
-  coalescer.enqueue({
+  // The coalescer's enqueue returns a real teardown handle: it removes this
+  // entry from the active sub and, if it's the last entry, closes the
+  // underlying SimplePool subscription so events stop flowing on the wire.
+  return coalescer.enqueue({
     filters,
     relays: opts.myInboxRelays,
     onEvent: (event) => {
-      if (cancelled) return;
       const ok = verifyAndIngest(opts.myPubkey, event);
       if (ok) opts.onEvent?.(event);
     },
   });
-  return () => { cancelled = true; };
 }
 
 export type DMProtocol = 'nip04' | 'nip17';

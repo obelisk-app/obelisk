@@ -252,8 +252,22 @@ export function evictIfNeeded(myPubkey: string, cap = 2000): void {
 export function clearAccount(myPubkey: string): void {
   ramCache.delete(myPubkey);
   followSets.delete(myPubkey);
+  pendingFlush.delete(myPubkey);
   if (typeof localStorage === 'undefined') return;
   try {
     localStorage.removeItem(keyFor(myPubkey));
   } catch { /* ignore */ }
+}
+
+/**
+ * Drop all in-RAM dm-cache state for every account. Used by
+ * `resetAllClientState()` on logout/account-switch so module-level Maps don't
+ * leak across identities. Persistent localStorage entries are NOT touched —
+ * they're per-pubkey-keyed already and the next session's `read()` will
+ * rehydrate from disk (or rebuild empty if the user explicitly wiped them).
+ */
+export function _resetDMCacheState(): void {
+  ramCache.clear();
+  followSets.clear();
+  pendingFlush.clear();
 }

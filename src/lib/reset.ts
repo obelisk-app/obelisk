@@ -1,6 +1,11 @@
 import { useChatStore } from '@/store/chat';
 import { useNotificationStore } from '@/store/notification';
 import { useVoiceStore } from '@/store/voice';
+import { _resetCacheKeyState } from '@/lib/dm/cache-key';
+import { _resetDMCacheState } from '@/lib/dm/dm-cache';
+import { _resetFollows } from '@/lib/dm/follows';
+import { _resetProfileCache } from '@/lib/dm/profile-cache';
+import { _resetRelayCache } from '@/lib/dm/relay-list-cache';
 
 // Clears all per-identity client state. Called on logout and whenever
 // setUser/restoreSession observes the pubkey changing — so the next user
@@ -13,6 +18,16 @@ export function resetAllClientState(): void {
   useChatStore.getState().reset();
   useNotificationStore.getState().reset();
   useVoiceStore.getState().leaveVoice();
+
+  // DM module-level RAM state (KEK in-memory key map, dm-cache ramCache mirror
+  // and follow set, profile/relay-list subscribers). Persisted localStorage
+  // blobs are per-pubkey-keyed already and survive — the next session reads
+  // them back. We only zero out cross-identity in-memory leakage here.
+  _resetCacheKeyState();
+  _resetDMCacheState();
+  _resetFollows();
+  _resetProfileCache();
+  _resetRelayCache();
 
   if (typeof window === 'undefined') return;
   try {
