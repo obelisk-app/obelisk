@@ -1,6 +1,7 @@
 // src/lib/dm/relay-list-cache.ts
 import type { Event as NostrEvent } from 'nostr-tools/pure';
 import { RequestCoalescer } from './coalescer';
+import { parseRelayListMeta, parseInboxRelays } from '@/lib/nostr-read';
 
 export interface RelayListResult {
   inbox: string[];
@@ -37,32 +38,9 @@ function write(me: string, blob: Record<string, CacheEntry>): void {
   try { localStorage.setItem(key(me), JSON.stringify(blob)); } catch { /* ignore */ }
 }
 
-function parseOutbox(ev: NostrEvent): { read: string[]; write: string[] } {
-  const r: string[] = [];
-  const w: string[] = [];
-  for (const tag of ev.tags) {
-    if (tag[0] !== 'r' || typeof tag[1] !== 'string') continue;
-    const url = tag[1];
-    const marker = tag[2];
-    if (!marker || marker === 'read') r.push(url);
-    if (!marker || marker === 'write') w.push(url);
-  }
-  return { read: Array.from(new Set(r)), write: Array.from(new Set(w)) };
-}
-
-function parseInbox(ev: NostrEvent): string[] {
-  const out: string[] = [];
-  for (const tag of ev.tags) {
-    if ((tag[0] === 'relay' || tag[0] === 'r') && typeof tag[1] === 'string' && tag[1].startsWith('wss://')) {
-      out.push(tag[1]);
-    }
-  }
-  return Array.from(new Set(out));
-}
-
 function buildResult(entry: CacheEntry | undefined): RelayListResult {
-  const outbox = entry?.outbox ? parseOutbox(entry.outbox.event) : { read: [], write: [] };
-  const inbox = entry?.inbox ? parseInbox(entry.inbox.event) : [];
+  const outbox = entry?.outbox ? parseRelayListMeta(entry.outbox.event) : { read: [], write: [] };
+  const inbox = entry?.inbox ? parseInboxRelays(entry.inbox.event) : [];
   return {
     readRelays: outbox.read,
     writeRelays: outbox.write,

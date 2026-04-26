@@ -118,6 +118,39 @@ export async function fetchUserNotes(
 }
 
 /**
+ * Parse a kind 10002 (NIP-65 relay-list metadata) event into the read/write
+ * URL split. Markers: untagged `r` URLs are both read and write; explicit
+ * `read` / `write` markers narrow the membership.
+ */
+export function parseRelayListMeta(event: NostrEvent): { read: string[]; write: string[] } {
+  const read = new Set<string>();
+  const write = new Set<string>();
+  for (const tag of event.tags) {
+    if (tag[0] !== 'r' || typeof tag[1] !== 'string') continue;
+    const url = tag[1];
+    const marker = tag[2];
+    if (!marker || marker === 'read') read.add(url);
+    if (!marker || marker === 'write') write.add(url);
+  }
+  return { read: Array.from(read), write: Array.from(write) };
+}
+
+/**
+ * Parse a kind 10050 (NIP-17 DM inbox relays) event into the URL list.
+ * Accepts both `relay` and `r` tag names for compatibility with clients
+ * that publish either form.
+ */
+export function parseInboxRelays(event: NostrEvent): string[] {
+  const out = new Set<string>();
+  for (const tag of event.tags) {
+    if ((tag[0] === 'relay' || tag[0] === 'r') && typeof tag[1] === 'string' && tag[1].startsWith('wss://')) {
+      out.add(tag[1]);
+    }
+  }
+  return Array.from(out);
+}
+
+/**
  * Fetch the kind 10002 (NIP-65 relay list metadata) for `pubkey` and return
  * the relay URLs declared as readable / writeable. Used by the legacy
  * `addUserRelays` path; new code should prefer the per-account
@@ -132,16 +165,6 @@ export async function fetchRelayList(pubkey: string, opts: QueryOptions = {}): P
   for (const ev of events) {
     if (!newest || ev.created_at > newest.created_at) newest = ev;
   }
-  const read = new Set<string>();
-  const write = new Set<string>();
-  if (newest) {
-    for (const tag of newest.tags) {
-      if (tag[0] !== 'r' || typeof tag[1] !== 'string') continue;
-      const url = tag[1];
-      const marker = tag[2];
-      if (!marker || marker === 'read') read.add(url);
-      if (!marker || marker === 'write') write.add(url);
-    }
-  }
-  return { read: Array.from(read), write: Array.from(write) };
+  if (!newest) return { read: [], write: [] };
+  return parseRelayListMeta(newest);
 }
