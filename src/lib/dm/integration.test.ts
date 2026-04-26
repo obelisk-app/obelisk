@@ -4,19 +4,21 @@ const fastEvents: any[] = [];
 const slowEvents: any[] = [];
 let onevent: ((e: any) => void) | null = null;
 
-vi.mock('./pool', () => ({
-  verifyDMEvent: () => true,
-  getDMPool: () => ({
+// Mock at the shared-pool path because the coalescer (now in
+// `@/lib/nostr-coalescer`) imports SimplePool from there. The DM-flavored
+// `./pool` is a re-export of the same module, so mocking the underlying
+// path is the only place that intercepts cleanly.
+vi.mock('@/lib/nostr-pool', () => ({
+  verifyNostrEvent: () => true,
+  getNostrPool: () => ({
     subscribeMany: (_relays: string[], _filters: any, h: any) => {
       onevent = h.onevent;
-      // Fast relay — emit immediately on next microtask.
       queueMicrotask(() => fastEvents.forEach((e) => onevent!(e)));
-      // Slow relay — emit after a delay.
       setTimeout(() => slowEvents.forEach((e) => onevent!(e)), 200);
       return { close: () => {} };
     },
   }),
-  resetDMPool: () => {},
+  resetNostrPool: () => {},
 }));
 
 vi.mock('./relay-list-cache', () => ({

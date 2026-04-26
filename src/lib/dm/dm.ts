@@ -1,6 +1,6 @@
 import type { Event as NostrEvent } from 'nostr-tools/pure';
 import type { Filter } from 'nostr-tools/filter';
-import { RequestCoalescer } from './coalescer';
+import { sharedCoalescer } from '@/lib/nostr-coalescer';
 import { verifyDMEvent } from './pool';
 import { getCursors, setCursor, putEvent, getEvent, type CachedDMEvent } from './dm-cache';
 import { getRelays } from './relay-list-cache';
@@ -11,7 +11,7 @@ const KIND_RUMOR = 14;
 const KIND_GIFT_WRAP = 1059;
 const KIND_FOLLOW = 3;
 
-const coalescer = new RequestCoalescer({ debounceMs: 50 });
+const coalescer = sharedCoalescer;
 
 function toCached(event: NostrEvent): CachedDMEvent {
   return {

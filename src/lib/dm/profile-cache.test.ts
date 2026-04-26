@@ -2,9 +2,10 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { getProfile, setProfileTestRelays, _resetProfileCache } from './profile-cache';
 
 const enqueueMock = vi.fn();
-vi.mock('./coalescer', () => ({
-  RequestCoalescer: class {
-    enqueue(req: any) { enqueueMock(req); }
+vi.mock('@/lib/nostr-coalescer', () => ({
+  sharedCoalescer: {
+    enqueue: (req: any) => { enqueueMock(req); return () => {}; },
+    querySync: vi.fn(),
   },
 }));
 

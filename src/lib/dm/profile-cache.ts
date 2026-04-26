@@ -1,5 +1,5 @@
 import type { Event as NostrEvent } from 'nostr-tools/pure';
-import { RequestCoalescer } from './coalescer';
+import { sharedCoalescer } from '@/lib/nostr-coalescer';
 
 export interface ProfileEntry {
   event: NostrEvent;
@@ -19,7 +19,7 @@ const PROFILE_AGGREGATORS = ['wss://purplepag.es'];
 let extraRelays: string[] = [];
 export function setProfileTestRelays(relays: string[]): void { extraRelays = relays; }
 
-const coalescer = new RequestCoalescer({ debounceMs: 50 });
+const coalescer = sharedCoalescer;
 const subscribers = new Map<string, Set<(p: ProfileEntry) => void>>();
 
 export function _resetProfileCache(): void {
