@@ -60,6 +60,13 @@ function hydrateSlot(me: string, partner: string): Slot<CacheEntry> {
   return slot;
 }
 
+/** Project a stored cache entry into the public `RelayListResult` shape.
+ *  Exposed for the `useRelayList` hook (which needs a stable snapshot
+ *  source + a `useMemo`-based derivation). */
+export function entryToRelayListResult(entry: CacheEntry | undefined): RelayListResult {
+  return buildResult(entry);
+}
+
 function buildResult(entry: CacheEntry | undefined): RelayListResult {
   const outbox = entry?.outbox ? parseRelayListMeta(entry.outbox.event) : { read: [], write: [] };
   const inbox = entry?.inbox ? parseInboxRelays(entry.inbox.event) : [];
