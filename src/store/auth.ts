@@ -4,6 +4,25 @@ import { NDKUser } from '@nostr-dev-kit/ndk';
 import { NostrProfile, parseProfile, LoginMethod, resetUserRelays, clearSignerPayload, getNDK, onSignerChange } from '@/lib/nostr';
 import { resetAllClientState } from '@/lib/reset';
 
+// Cross-tab logout sync. When any tab calls logout(), every other tab
+// observing the channel mirrors the local-state clear immediately, so the
+// user doesn't see one tab still rendering as signed-in until that tab
+// next hits an API endpoint and 401s.
+//
+// We deliberately do NOT broadcast login — login establishes the session
+// cookie which all tabs share, but driving signer restore from a sibling
+// tab's broadcast risks racing tab-local NDK setup.
+const AUTH_CHANNEL = 'obelisk:auth';
+const BROADCAST_LOGOUT = { type: 'logout' as const };
+
+let authChannel: BroadcastChannel | null = null;
+
+function getAuthChannel(): BroadcastChannel | null {
+  if (typeof BroadcastChannel === 'undefined') return null;
+  if (!authChannel) authChannel = new BroadcastChannel(AUTH_CHANNEL);
+  return authChannel;
+}
+
 interface AuthState {
   isConnected: boolean;
   isLoading: boolean;
@@ -27,7 +46,7 @@ interface AuthState {
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   setSignerReady: (ready: boolean) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   setHasHydrated: (hydrated: boolean) => void;
   restoreSession: () => Promise<boolean>;
   syncProfile: () => Promise<void>;
@@ -76,8 +95,16 @@ export const useAuthStore = create<AuthState>()(
       setError: (error) => set({ error, isLoading: false }),
       setSignerReady: (ready) => set({ signerReady: ready }),
 
-      logout: () => {
-        fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+      logout: async () => {
+        const ac = new AbortController();
+        const timer = setTimeout(() => ac.abort(), 3000);
+        try {
+          await fetch('/api/auth/logout', { method: 'POST', signal: ac.signal });
+        } catch (err) {
+          console.warn('[auth] logout server destroy failed (clearing local state anyway):', err);
+        } finally {
+          clearTimeout(timer);
+        }
         resetUserRelays();
         clearSignerPayload();
         resetAllClientState();
@@ -91,6 +118,7 @@ export const useAuthStore = create<AuthState>()(
           loginMethod: null,
           error: null,
         });
+        try { getAuthChannel()?.postMessage(BROADCAST_LOGOUT); } catch { /* ignore */ }
       },
 
       setHasHydrated: (hydrated) => set({ _hasHydrated: hydrated }),
@@ -226,3 +254,29 @@ export const useAuthStore = create<AuthState>()(
 onSignerChange((signer) => {
   useAuthStore.getState().setSignerReady(Boolean(signer));
 });
+
+// Mirror logout from sibling tabs. Carefully calls the inner clear sequence
+// directly — calling logout() would re-broadcast and loop.
+if (typeof window !== 'undefined') {
+  const ch = getAuthChannel();
+  if (ch) {
+    ch.addEventListener('message', (ev) => {
+      if (ev.data?.type === 'logout') {
+        // Don't re-broadcast — call the inner clear sequence directly.
+        // Keep this in sync with logout()'s state-clear order.
+        const ndk = getNDK();
+        try { ndk.signer = undefined; } catch { /* ignore */ }
+        useAuthStore.setState({
+          isConnected: false,
+          user: null,
+          profile: null,
+          signerReady: false,
+          isLoading: false,
+          isSyncing: false,
+          loginMethod: null,
+        });
+        try { (resetAllClientState as () => void)(); } catch { /* best-effort */ }
+      }
+    });
+  }
+}
