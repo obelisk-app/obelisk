@@ -23,6 +23,7 @@ const hoisted = vi.hoisted(() => ({
 vi.mock('@/lib/dm/dm', () => ({
   sendDM: (args: any) => hoisted.sendDMMock(args),
   loadHistory: (...args: any[]) => hoisted.loadHistoryMock(...args),
+  loadOlder: vi.fn(),
   subscribeLive: (opts: any) => hoisted.subscribeLiveMock(opts),
   detectNip04InRecent: vi.fn().mockReturnValue(false),
 }));
@@ -44,6 +45,7 @@ vi.mock('@/lib/dm/dm-cache', () => ({
     hoisted.secretsByAccount.get(pk)!.set(eventId, plaintext);
     hoisted.putSecretCalls.push({ pubkey: pk, eventId, plaintext });
   },
+  subscribeToCacheTick: () => () => {},
 }));
 
 vi.mock('@/lib/nostr', () => ({

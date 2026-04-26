@@ -81,9 +81,15 @@ The DM event store applies a **follow-aware LRU**:
 ## Known limitations
 
 - **NIP-17 thread sidebar appearance is decrypt-gated.** Because a kind-1059 gift wrap exposes nothing about its sender or recipient until unwrapped, NIP-17 threads only appear in the DM list **after the user has decrypted at least one message** in that thread (typically by opening it once on the device). Once decrypted, the rumor metadata is cached in the secrets layer and the thread is durable across reloads. This is a privacy-preserving consequence of NIP-17, not a bug — but it does mean a brand-new device hydrating from relay-only state will only see NIP-04 thread previews until the user clicks into wraps.
-- **No "load older" paging yet.** The chat view decrypts the most recent 50 cached events on thread-open. The infrastructure for paging (an `until` cursor on `loadHistory`, a top-of-list intersect sentinel) is in place but not wired to the UI.
 - **Per-tab cache.** `dm-cache` mirrors localStorage in RAM with microtask-batched flushes. Multiple Obelisk tabs in the same browser share localStorage but do not subscribe to each other's mutations — open in only one tab to avoid stale-read races.
-- **No per-account "wipe" button in the UI yet.** Clearing a single identity's DM data is a manual `localStorage.removeItem` step today.
+
+## Loading older history
+
+The chat view decrypts the most recent 50 cached events on thread-open. Scrolling to the top of the message list triggers `loadOlder(myPubkey, partner, { before })` with the oldest visible message's timestamp; the relay query uses `until` + `limit: 50` and routes through the same coalescer / verify / cache pipeline as `loadHistory`. Newly-arrived events flow into the cache, fire a mutation tick, and the chat view re-decrypts a widened (by 50) viewport. Cache deduplication and the `since`/`until` cursor split mean the live subscription does not redeliver these older events.
+
+## Clearing a single identity's DM data
+
+The DM list header has a trash-can affordance (next to the "New DM" button). Clicking it pops a confirm dialog; on confirm, it calls `clearAccount(myPubkey)` which drops the events + secrets + cursors blob from `localStorage`, the in-RAM mirror, and the in-memory follow set for that pubkey. Other accounts on the same device are unaffected. Messages still on relays will reappear next time you open a thread.
 
 ## Threat model summary
 

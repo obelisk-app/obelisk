@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDMStore } from '@/store/dm';
 import { useAuthStore } from '@/store/auth';
 import { sendDM as sendDMNew, detectNip04InRecent, type DMMessage, type DMProtocol } from '@/lib/dm/dm';
-import { getCachedEvents, getSecret, putSecret, type CachedDMEvent } from '@/lib/dm/dm-cache';
+import { getCachedEvents, getSecret, putSecret, subscribeToCacheTick, type CachedDMEvent } from '@/lib/dm/dm-cache';
+import { loadOlder } from '@/lib/dm/dm';
 import { useDMSession } from './DMSessionProvider';
 import { formatPubkey, getNDK } from '@/lib/nostr';
 
@@ -18,6 +19,7 @@ interface DMChatProps {
  * only decrypted if the user scrolls them into view (Task-14-or-later).
  */
 const VIEWPORT_DECRYPT_LIMIT = 50;
+const PAGE_SIZE = 50;
 
 /**
  * Wire format for the AES-GCM-wrapped plaintext blob in the secrets cache.
@@ -158,6 +160,12 @@ export default function DMChat({ profileCache }: DMChatProps) {
   const otherProfile = activeDMPubkey ? profileCache.get(activeDMPubkey) : null;
   const otherName = otherProfile?.name || (activeDMPubkey ? formatPubkey(activeDMPubkey) : '');
 
+  // Local viewport size — grows when the user scrolls up. Resets when the
+  // active partner changes.
+  const [decryptCount, setDecryptCount] = useState(VIEWPORT_DECRYPT_LIMIT);
+  const [cachedCount, setCachedCount] = useState(0);
+  const [olderInFlight, setOlderInFlight] = useState(false);
+
   // Determine send protocol for active conversation. Default NIP-17; respect
   // a persisted override set via the ProtocolPrompt.
   const sendProtocol: DMProtocol = activeDMPubkey
@@ -169,6 +177,12 @@ export default function DMChat({ profileCache }: DMChatProps) {
   // loaded into the Zustand store — older cached wire events stay encrypted at
   // rest. This keeps RAM-resident plaintext bounded (audit row #9) and limits
   // signer prompts to one cache-key unwrap per session (audit row #20).
+  // Reset viewport when the active partner changes.
+  useEffect(() => {
+    setDecryptCount(VIEWPORT_DECRYPT_LIMIT);
+    setOlderInFlight(false);
+  }, [activeDMPubkey]);
+
   useEffect(() => {
     if (!activeDMPubkey || !myPubkey) return;
     if (!session.cacheKey) return;
@@ -176,7 +190,7 @@ export default function DMChat({ profileCache }: DMChatProps) {
     setLoadingMessages(true);
     setMessages([]);
 
-    (async () => {
+    const decryptViewport = async () => {
       // 1. Pull NIP-04 events whose partner is the active thread. NIP-17 wraps
       //    don't expose their partner without unwrapping, so we include all
       //    wraps in the candidate window and let the post-decrypt filter sort
@@ -191,7 +205,8 @@ export default function DMChat({ profileCache }: DMChatProps) {
       // Newest first, then take the head N. Reverse at the end so the rendered
       // message list is oldest-on-top, matching the existing UX.
       candidates.sort((a, b) => b.created_at - a.created_at);
-      const window = candidates.slice(0, VIEWPORT_DECRYPT_LIMIT);
+      setCachedCount(candidates.length);
+      const window = candidates.slice(0, decryptCount);
 
       const decrypted: DMMessage[] = [];
       for (const ev of window) {
@@ -214,16 +229,57 @@ export default function DMChat({ profileCache }: DMChatProps) {
       if (cancelled) return;
       decrypted.sort((a, b) => a.createdAt - b.createdAt);
       setMessages(decrypted);
+      setOlderInFlight(false);
+    };
 
-      // Kick the relay-side history fetch via the session — coalesced, so
-      // re-runs on partner-change are deduped at the request layer.
-      session.loadThread(activeDMPubkey);
-    })();
+    void decryptViewport();
+    // Kick the relay-side history fetch via the session — coalesced, so
+    // re-runs on partner-change are deduped at the request layer.
+    session.loadThread(activeDMPubkey);
+
+    // Re-decrypt on cache mutations targeting our account (e.g. `loadOlder`
+    // ingested new wire events). Filtered by pubkey to avoid noise from
+    // unrelated writes.
+    const unsubTick = subscribeToCacheTick((pk) => {
+      if (pk !== myPubkey || cancelled) return;
+      void decryptViewport();
+    });
 
     return () => {
       cancelled = true;
+      unsubTick();
     };
-  }, [activeDMPubkey, myPubkey, session, setMessages, setLoadingMessages]);
+  }, [activeDMPubkey, myPubkey, session, setMessages, setLoadingMessages, decryptCount]);
+
+  // Infinite-scroll: when the top sentinel is intersecting AND there are more
+  // cached events beyond the current decrypt window OR we haven't tried a
+  // server-side fetch for older events yet, kick `loadOlder` and grow the
+  // window. Throttled by `olderInFlight` so we don't fire repeatedly while the
+  // browser is still settling the scroll.
+  useEffect(() => {
+    const sentinel = topSentinelRef.current;
+    if (!sentinel || !activeDMPubkey || !myPubkey) return;
+    if (typeof IntersectionObserver === 'undefined') return; // jsdom / SSR
+    const observer = new IntersectionObserver((entries) => {
+      const entry = entries[0];
+      if (!entry?.isIntersecting) return;
+      if (olderInFlight) return;
+      // Find the oldest currently-rendered message; ask relays for events
+      // strictly older than that.
+      const oldest = messages[0];
+      if (!oldest) return;
+      setOlderInFlight(true);
+      loadOlder(myPubkey, activeDMPubkey, { before: Math.floor(oldest.createdAt) });
+      // Also widen the local viewport — even if relays return nothing, the
+      // user gets to see deeper into existing cached history.
+      setDecryptCount((c) => c + PAGE_SIZE);
+    }, { threshold: 0.1 });
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [activeDMPubkey, myPubkey, messages, olderInFlight]);
+
+  const hasMoreLocal = cachedCount > decryptCount;
+  const showTopSentinel = hasMoreLocal || hasMoreHistory;
 
   // Auto-scroll on new messages
   useEffect(() => {
@@ -345,11 +401,18 @@ export default function DMChat({ profileCache }: DMChatProps) {
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto py-4">
-        {/* Top sentinel reserved for future load-older support — Task-14-or-later
-            will wire `until` cursors into loadHistory so this can decrypt the
-            next page on intersect. */}
-        {hasMoreHistory && (
-          <div ref={topSentinelRef} className="h-8 flex items-center justify-center" data-testid="dm-top-sentinel" />
+        {/* Top sentinel: when intersecting, fires `loadOlder` and widens the
+            local decrypt window. Visible only when there's more to fetch
+            (either older cached events not yet decrypted, or the server may
+            have more beyond our current bottom-of-cache cursor). */}
+        {showTopSentinel && (
+          <div
+            ref={topSentinelRef}
+            className="h-8 flex items-center justify-center text-xs text-lc-muted"
+            data-testid="dm-top-sentinel"
+          >
+            {olderInFlight ? 'Loading older…' : ''}
+          </div>
         )}
 
         {isLoadingMessages ? (

@@ -123,6 +123,34 @@ function scheduleFlush(pk: string): void {
 function write(pk: string, shape: CacheShape): void {
   ramCache.set(pk, shape);
   scheduleFlush(pk);
+  bumpTick(pk);
+}
+
+// Per-account mutation tick + subscribers. Consumers (e.g. DMChat) subscribe
+// here to react to writes without polling the cache. The tick is a monotonic
+// counter; subscribers receive (pubkey, tick) whenever the cache for `pubkey`
+// has been mutated.
+const ticks = new Map<string, number>();
+const tickSubscribers = new Set<(pubkey: string, tick: number) => void>();
+
+function bumpTick(pk: string): void {
+  const next = (ticks.get(pk) ?? 0) + 1;
+  ticks.set(pk, next);
+  for (const cb of tickSubscribers) cb(pk, next);
+}
+
+/**
+ * Subscribe to cache mutations for ANY account (the consumer can filter by
+ * pubkey). Returns an unsubscribe function. Used by chat-view code to
+ * re-render without resorting to setInterval polls.
+ */
+export function subscribeToCacheTick(cb: (pubkey: string, tick: number) => void): () => void {
+  tickSubscribers.add(cb);
+  return () => { tickSubscribers.delete(cb); };
+}
+
+export function getCacheTick(myPubkey: string): number {
+  return ticks.get(myPubkey) ?? 0;
 }
 
 export function putEvent(myPubkey: string, ev: CachedDMEvent): void {
@@ -270,4 +298,6 @@ export function _resetDMCacheState(): void {
   ramCache.clear();
   followSets.clear();
   pendingFlush.clear();
+  ticks.clear();
+  tickSubscribers.clear();
 }

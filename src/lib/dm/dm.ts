@@ -45,16 +45,19 @@ export interface LoadHistoryOptions {
   relays?: string[];
 }
 
-export function loadHistory(myPubkey: string, partnerPubkey: string, opts: LoadHistoryOptions = {}): void {
-  const cursors = getCursors(myPubkey);
+function partnerRelaySet(myPubkey: string, partnerPubkey: string, extra: string[] = []): string[] {
   const partnerRelays = getRelays(myPubkey, partnerPubkey).result;
   const relays = Array.from(new Set([
-    ...(opts.relays ?? []),
+    ...extra,
     ...partnerRelays.readRelays,
     ...partnerRelays.writeRelays,
     ...partnerRelays.inbox,
   ]));
+  return relays.length ? relays : ['wss://relay.damus.io', 'wss://nos.lol'];
+}
 
+export function loadHistory(myPubkey: string, partnerPubkey: string, opts: LoadHistoryOptions = {}): void {
+  const cursors = getCursors(myPubkey);
   const filters: Filter[] = [
     { kinds: [KIND_NIP04], authors: [myPubkey], '#p': [partnerPubkey], ...(cursors.nip04Out > 0 ? { since: cursors.nip04Out } : {}) },
     { kinds: [KIND_NIP04], authors: [partnerPubkey], '#p': [myPubkey], ...(cursors.nip04In > 0 ? { since: cursors.nip04In } : {}) },
@@ -63,7 +66,37 @@ export function loadHistory(myPubkey: string, partnerPubkey: string, opts: LoadH
 
   coalescer.enqueue({
     filters,
-    relays: relays.length ? relays : ['wss://relay.damus.io', 'wss://nos.lol'],
+    relays: partnerRelaySet(myPubkey, partnerPubkey, opts.relays),
+    onEvent: (event) => verifyAndIngest(myPubkey, event),
+  });
+}
+
+export interface LoadOlderOptions {
+  /** Fetch events strictly older than this unix timestamp (seconds). */
+  before: number;
+  /** Per-filter limit on the relay REQ. Default 50. */
+  limit?: number;
+  /** Extra relays to query alongside the partner's outbox/inbox. */
+  relays?: string[];
+}
+
+/**
+ * One-shot fetch for older history. Uses `until` + `limit` against the same
+ * relay set as `loadHistory`. Events flow through `verifyAndIngest` and land
+ * in the cache; consumers observe them by re-reading the cache (the live sub
+ * uses `since` cursors, so it does NOT redeliver these). Returns a closer
+ * the caller can invoke to abort early.
+ */
+export function loadOlder(myPubkey: string, partnerPubkey: string, opts: LoadOlderOptions): () => void {
+  const limit = opts.limit ?? 50;
+  const filters: Filter[] = [
+    { kinds: [KIND_NIP04], authors: [myPubkey], '#p': [partnerPubkey], until: opts.before, limit },
+    { kinds: [KIND_NIP04], authors: [partnerPubkey], '#p': [myPubkey], until: opts.before, limit },
+    { kinds: [KIND_GIFT_WRAP], '#p': [myPubkey], until: opts.before, limit },
+  ];
+  return coalescer.enqueue({
+    filters,
+    relays: partnerRelaySet(myPubkey, partnerPubkey, opts.relays),
     onEvent: (event) => verifyAndIngest(myPubkey, event),
   });
 }

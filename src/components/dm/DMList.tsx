@@ -1,16 +1,22 @@
 'use client';
 
+import { useState } from 'react';
 import { useDMStore } from '@/store/dm';
 import { useNotificationStore } from '@/store/notification';
+import { useAuthStore } from '@/store/auth';
 import { getNDK } from '@/lib/nostr';
+import { clearAccount } from '@/lib/dm/dm-cache';
+import ConfirmDialog from '@/components/admin/ConfirmDialog';
 
 interface DMListProps {
   onNewDM: () => void;
 }
 
 export default function DMList({ onNewDM }: DMListProps) {
-  const { threads, activeDMPubkey, setActiveDM, isLoadingThreads } = useDMStore();
+  const { threads, activeDMPubkey, setActiveDM, isLoadingThreads, setThreads, setMessages } = useDMStore();
   const dmUnreads = useNotificationStore((s) => s.dmUnreads);
+  const myPubkey = useAuthStore((s) => s.profile?.pubkey ?? null);
+  const [showWipeConfirm, setShowWipeConfirm] = useState(false);
 
   // Read-only mode: disable New DM when no signer is attached. Computed at
   // render-time; the NDK singleton is updated synchronously on login/logout
@@ -20,11 +26,38 @@ export default function DMList({ onNewDM }: DMListProps) {
     ? 'New DM'
     : 'Sign in with a signing-capable method to use DMs';
 
+  const handleWipe = () => {
+    if (!myPubkey) return;
+    clearAccount(myPubkey);
+    setThreads([]);
+    setMessages([]);
+    setActiveDM(null);
+    setShowWipeConfirm(false);
+  };
+
   return (
     <div className="w-60 bg-lc-dark border-r border-lc-border flex flex-col shrink-0" data-testid="dm-list">
       <div className="p-3 border-b border-lc-border flex items-center justify-between">
         <h3 className="text-sm font-semibold text-lc-white">Direct Messages</h3>
         <div className="flex items-center gap-1">
+          <button
+            onClick={() => setShowWipeConfirm(true)}
+            disabled={!myPubkey}
+            className={`text-lc-muted hover:text-red-400 transition-colors p-1 ${
+              myPubkey ? '' : 'opacity-50 cursor-not-allowed'
+            }`}
+            title="Clear DM cache for this account"
+            data-testid="wipe-dm-cache"
+            aria-label="Clear DM cache for this account"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+              <path d="M10 11v6"/>
+              <path d="M14 11v6"/>
+              <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+            </svg>
+          </button>
           <button
             onClick={onNewDM}
             disabled={!hasSigner}
@@ -42,6 +75,16 @@ export default function DMList({ onNewDM }: DMListProps) {
           </button>
         </div>
       </div>
+
+      {showWipeConfirm && (
+        <ConfirmDialog
+          title="Clear DM cache?"
+          message="This wipes all locally-cached DM events, decrypted previews, and protocol overrides for this account. Messages still on relays will reappear next time you open a thread. Other accounts on this device are unaffected."
+          confirmLabel="Clear"
+          onConfirm={handleWipe}
+          onCancel={() => setShowWipeConfirm(false)}
+        />
+      )}
 
       <div className="flex-1 overflow-y-auto">
         {isLoadingThreads && threads.length === 0 ? (

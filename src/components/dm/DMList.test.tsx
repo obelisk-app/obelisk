@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import DMList from './DMList';
 import { useDMStore } from '@/store/dm';
+import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notification';
 import { getNDK } from '@/lib/nostr';
 
@@ -16,6 +17,11 @@ vi.mock('@/lib/nostr', () => {
     }),
   };
 });
+
+const clearAccountMock = vi.fn();
+vi.mock('@/lib/dm/dm-cache', () => ({
+  clearAccount: (pk: string) => clearAccountMock(pk),
+}));
 
 // Convenience handle to mutate the mocked signer between tests.
 const nostrMock = (await import('@/lib/nostr')) as unknown as { __setSigner: (s: unknown) => void };
@@ -135,5 +141,47 @@ describe('DMList signer gate', () => {
   it('confirms getNDK is the mocked impl', () => {
     // Smoke test that the mock wired correctly.
     expect(getNDK().pool.relays).toBeInstanceOf(Map);
+  });
+
+  describe('clear DM cache', () => {
+    beforeEach(() => {
+      clearAccountMock.mockClear();
+      useAuthStore.setState({ profile: { pubkey: 'a'.repeat(64), npub: '' } as any });
+      useDMStore.setState({
+        threads: [{ pubkey: 'pk1', displayName: 'Alice', unreadCount: 0 }],
+      });
+    });
+
+    it('opens a confirm dialog when the wipe button is clicked', async () => {
+      const user = userEvent.setup();
+      render(<DMList onNewDM={vi.fn()} />);
+      await user.click(screen.getByTestId('wipe-dm-cache'));
+      expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument();
+      expect(screen.getByText(/Clear DM cache/i)).toBeInTheDocument();
+    });
+
+    it('on confirm, calls clearAccount with the active pubkey and clears store state', async () => {
+      const user = userEvent.setup();
+      render(<DMList onNewDM={vi.fn()} />);
+      await user.click(screen.getByTestId('wipe-dm-cache'));
+      await user.click(screen.getByRole('button', { name: 'Clear' }));
+      expect(clearAccountMock).toHaveBeenCalledWith('a'.repeat(64));
+      expect(useDMStore.getState().threads).toEqual([]);
+    });
+
+    it('on cancel, does not call clearAccount', async () => {
+      const user = userEvent.setup();
+      render(<DMList onNewDM={vi.fn()} />);
+      await user.click(screen.getByTestId('wipe-dm-cache'));
+      await user.click(screen.getByRole('button', { name: /cancel/i }));
+      expect(clearAccountMock).not.toHaveBeenCalled();
+      expect(useDMStore.getState().threads.length).toBe(1);
+    });
+
+    it('disables the wipe button when no profile pubkey is available', () => {
+      useAuthStore.setState({ profile: null });
+      render(<DMList onNewDM={vi.fn()} />);
+      expect(screen.getByTestId('wipe-dm-cache')).toBeDisabled();
+    });
   });
 });
