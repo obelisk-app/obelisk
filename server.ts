@@ -35,6 +35,7 @@ app.prepare().then(async () => {
   const { createServerContext } = await import('./server/context');
   const { bindContext } = await import('./server/api-bridge');
   const { register: registerPresence } = await import('./server/handlers/presence');
+  const { register: registerRooms } = await import('./server/handlers/rooms');
 
   const requestHandler = (req: any, res: any) => {
     const parsedUrl = parse(req.url!, true);
@@ -67,58 +68,7 @@ app.prepare().then(async () => {
   io.on('connection', (socket) => {
     const pubkey: string = socket.data.pubkey;
     registerPresence(ctx, socket);
-
-    // Join a server-scoped room so game-* broadcasts (Actividades panel etc.)
-    // reach all members of a server even when they're not in a specific channel.
-    socket.on(ClientToServer.JoinServer, async (serverId: string) => {
-      if (typeof serverId !== 'string' || !serverId) return;
-      try {
-        const member = await prisma.member.findUnique({
-          where: { serverId_pubkey: { serverId, pubkey } },
-          select: { id: true },
-        });
-        if (!member) return;
-        socket.join(`server:${serverId}`);
-      } catch {}
-    });
-
-    socket.on(ClientToServer.LeaveServer, (serverId: string) => {
-      if (typeof serverId === 'string' && serverId) socket.leave(`server:${serverId}`);
-    });
-
-    socket.on(ClientToServer.JoinChannel, async (channelId: string) => {
-      if (typeof channelId !== 'string' || channelId.length === 0) {
-        console.log(`[socket][join-channel] reject: bad channelId pk=${pubkey.slice(0, 8)}`);
-        return;
-      }
-      try {
-        const channel = await prisma.channel.findUnique({
-          where: { id: channelId },
-          select: { serverId: true, readPermission: true, readRoleIds: true },
-        });
-        if (!channel) {
-          console.log(`[socket][join-channel] reject: channel not found ch=${channelId} pk=${pubkey.slice(0, 8)}`);
-          return;
-        }
-        if (channel.readPermission) {
-          const access = await resolveMemberAccess(pubkey, channel.serverId);
-          if (!canReadChannel(access.role, channel, access.customRoleIds)) {
-            console.log(`[socket][join-channel] reject: readPermission ch=${channelId} pk=${pubkey.slice(0, 8)} role=${access.role} perm=${channel.readPermission}`);
-            return;
-          }
-        }
-        socket.join(`channel:${channelId}`);
-        console.log(`[socket][join-channel] ok ch=${channelId} pk=${pubkey.slice(0, 8)}`);
-      } catch (err) {
-        console.error('[socket] join-channel error:', err);
-      }
-    });
-
-    socket.on(ClientToServer.LeaveChannel, (channelId: string) => {
-      if (typeof channelId === 'string' && channelId.length > 0) {
-        socket.leave(`channel:${channelId}`);
-      }
-    });
+    registerRooms(ctx, socket);
 
     socket.on(ClientToServer.SendMessage, async (data: { channelId: string; content: string; replyToId?: string }) => {
       const { channelId, content, replyToId } = data;
