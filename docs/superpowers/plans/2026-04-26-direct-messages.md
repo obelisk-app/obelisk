@@ -790,13 +790,13 @@ import { verifyDMEvent } from './pool';
 export interface CoalescerEnqueue {
   filters: Filter[];
   relays: string[];
-  onEvent: (event: NostrEvent, relay: string) => void;
+  onEvent: (event: NostrEvent) => void;
   onEose?: (relay: string) => void;
 }
 
 export interface CoalescerOptions {
   debounceMs?: number;
-  perRelayTimeoutMs?: number;
+  subscriptionTimeoutMs?: number;
 }
 
 interface PendingGroup {
@@ -807,13 +807,13 @@ interface PendingGroup {
 
 export class RequestCoalescer {
   private debounceMs: number;
-  private perRelayTimeoutMs: number;
+  private subscriptionTimeoutMs: number;
   private pending: Map<string, PendingGroup> = new Map();
   private timer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(opts: CoalescerOptions = {}) {
     this.debounceMs = opts.debounceMs ?? 50;
-    this.perRelayTimeoutMs = opts.perRelayTimeoutMs ?? 5000;
+    this.subscriptionTimeoutMs = opts.subscriptionTimeoutMs ?? 5000;
   }
 
   enqueue(req: CoalescerEnqueue): void {
@@ -845,17 +845,17 @@ export class RequestCoalescer {
         if (seen.has(event.id)) return;
         seen.add(event.id);
         if (!verifyDMEvent(event)) return;
-        for (const e of g.entries) e.onEvent(event, '');
+        for (const e of g.entries) e.onEvent(event);
       },
       oneose: (relay: string) => {
         for (const e of g.entries) e.onEose?.(relay);
       },
     });
 
-    if (this.perRelayTimeoutMs > 0) {
+    if (this.subscriptionTimeoutMs > 0) {
       setTimeout(() => {
         try { sub.close(); } catch { /* ignore */ }
-      }, this.perRelayTimeoutMs);
+      }, this.subscriptionTimeoutMs);
     }
   }
 }
