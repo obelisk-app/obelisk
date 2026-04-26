@@ -46,6 +46,7 @@ import { useFaviconBadge } from '@/hooks/useFaviconBadge';
 import { useTranslation } from '@/i18n/context';
 import type { InboxEvent } from '@/store/notification';
 import { pushErrorToast } from '@/store/toast';
+import { SoftPromptBanner } from '@/components/notifications/SoftPromptBanner';
 import { useSessionBootstrap } from '@/hooks/chat/useSessionBootstrap';
 import { useSlugResolution, type InitialUrl } from '@/hooks/chat/useSlugResolution';
 import { useServerAndChannelLoader } from '@/hooks/chat/useServerAndChannelLoader';
@@ -900,6 +901,7 @@ export default function ChatPage() {
 
       {/* Main content area */}
       <div className="flex-1 flex flex-col min-h-0 min-w-0">
+        <SoftPromptBanner />
         {DM_FEATURE_ENABLED && isDMMode && profile?.pubkey ? (
           <DMSessionProvider myPubkey={profile.pubkey}>
             {/* DM top bar with mobile hamburger */}
