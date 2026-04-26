@@ -8,13 +8,17 @@ import { getNDK, connectNDK, restoreRemoteSigner, setNDKSigner } from '@/lib/nos
 type Router = ReturnType<typeof useRouter>;
 
 /**
+ * Single source of truth for session bootstrap on the chat page.
+ *
  * Bundles the three mount-time auth effects:
  *   1. Validate the backend session (with a ref guard so it only runs once).
- *   2. Redirect to `/` if the user clears their auth store mid-session.
+ *   2. Surface a "session expired" state if the user disconnects mid-session.
  *   3. Restore the NDK connection + signer in the background.
  *
- * Keeps the original effect ordering so the socket effect (which depends on
- * `sessionChecked`) still sees the same ready-states at the same times.
+ * (A `<IdentityProvider>` component used to exist as an alternative
+ * orchestration layer but was never mounted in the app and has been
+ * removed. If you need to add session bootstrap to a non-chat route,
+ * extend or extract this hook rather than reintroducing a parallel path.)
  */
 export function useSessionBootstrap(router: Router) {
   const { profile, logout, restoreSession } = useAuthStore();
@@ -24,14 +28,16 @@ export function useSessionBootstrap(router: Router) {
   const [ndkReady, setNdkReady] = useState(false);
 
   // If the user disconnects mid-session (Navbar → Disconnect clears the auth
-  // store), bounce them to the landing page instead of leaving them on /chat
-  // where unauthenticated calls (e.g. Join Default Server) would 401.
+  // store), surface that as a "not signed in" state instead of leaving them
+  // on /chat where unauthenticated calls (e.g. Join Default Server) would
+  // 401. The page-level gate then renders the login modal — gentler than a
+  // sudden redirect and the user can sign back in without losing context.
   useEffect(() => {
     if (!sessionChecked) return;
     if (!profile?.pubkey) {
-      router.push('/');
+      setSessionInvalid(true);
     }
-  }, [sessionChecked, profile?.pubkey, router]);
+  }, [sessionChecked, profile?.pubkey]);
 
   // On mount, validate session with backend. If no valid session, redirect to landing.
   useEffect(() => {
