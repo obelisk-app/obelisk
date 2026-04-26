@@ -117,6 +117,16 @@ describe('verifyDMEvent', () => {
     const tampered = { ...ev, content: 'goodbye' };
     expect(verifyDMEvent(tampered)).toBe(false);
   });
+
+  it('rejects a tampered event even after the original was previously verified', () => {
+    const a = signed('hello');
+    const b = signed('world');
+    // First call populates verifiedSymbol on a.ev.
+    expect(verifyDMEvent(a.ev)).toBe(true);
+    // Spread copies the cached symbol; without the strip this would falsely return true.
+    const tampered = { ...a.ev, sig: b.ev.sig };
+    expect(verifyDMEvent(tampered)).toBe(false);
+  });
 });
 ```
 
@@ -127,10 +137,14 @@ Expected: FAIL — `Failed to resolve import "./pool"`.
 
 - [ ] **Step 3: Write minimal implementation**
 
+`nostr-tools/pure` caches verification results directly on the event object via a symbol-keyed property (`verifiedSymbol`). Because JavaScript object spread copies own symbol properties, an attacker (or buggy caller) can take a previously-verified event and produce `{ ...verifiedEv, sig: badSig }` — the spread carries the cached `true`, and `verifyEvent` will short-circuit and return `true` for the tampered copy. To stay sound on any input we strip the cached flag onto a shallow copy before delegating to `verifyEvent`. Working on a copy also means we never mutate the caller's event, which matters since the same event objects flow through the SimplePool subscription pipeline. There is a regression test for this exact path in `pool.test.ts` ("rejects a tampered event even after the original was previously verified").
+
 ```ts
 // src/lib/dm/pool.ts
+// Browser-only — uses the global WebSocket. Server-side relay reads live
+// in src/lib/profile-sync.ts which wires nostr-tools to `ws`.
 import { SimplePool } from 'nostr-tools/pool';
-import { verifyEvent, type Event as NostrEvent } from 'nostr-tools/pure';
+import { verifyEvent, verifiedSymbol, type Event as NostrEvent } from 'nostr-tools/pure';
 
 let pool: SimplePool | null = null;
 export function getDMPool(): SimplePool {
@@ -147,7 +161,14 @@ export function resetDMPool(): void {
 
 export function verifyDMEvent(event: NostrEvent): boolean {
   try {
-    return verifyEvent(event);
+    // nostr-tools/pure caches verification results on `event[verifiedSymbol]`.
+    // JS object spread copies own symbol properties, so a tampered event
+    // produced by `{ ...verifiedEv, sig: badSig }` would short-circuit to
+    // `true`. Strip the cached flag onto a shallow copy before delegating —
+    // this also avoids mutating the caller's event.
+    const { [verifiedSymbol]: _ignored, ...rest } =
+      event as NostrEvent & { [verifiedSymbol]?: boolean };
+    return verifyEvent(rest as NostrEvent);
   } catch {
     return false;
   }
@@ -157,7 +178,7 @@ export function verifyDMEvent(event: NostrEvent): boolean {
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `npm run test -- src/lib/dm/pool.test.ts`
-Expected: PASS, 4/4.
+Expected: PASS, 5/5.
 
 - [ ] **Step 5: Commit**
 

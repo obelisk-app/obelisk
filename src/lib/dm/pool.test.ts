@@ -35,4 +35,14 @@ describe('verifyDMEvent', () => {
     const tampered = { ...ev, content: 'goodbye' };
     expect(verifyDMEvent(tampered)).toBe(false);
   });
+
+  it('rejects a tampered event even after the original was previously verified', () => {
+    const a = signed('hello');
+    const b = signed('world');
+    // First call populates verifiedSymbol on a.ev.
+    expect(verifyDMEvent(a.ev)).toBe(true);
+    // Spread copies the cached symbol; without the strip this would falsely return true.
+    const tampered = { ...a.ev, sig: b.ev.sig };
+    expect(verifyDMEvent(tampered)).toBe(false);
+  });
 });

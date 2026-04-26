@@ -1,3 +1,5 @@
+// Browser-only — uses the global WebSocket. Server-side relay reads live
+// in src/lib/profile-sync.ts which wires nostr-tools to `ws`.
 import { SimplePool } from 'nostr-tools/pool';
 import { verifyEvent, verifiedSymbol, type Event as NostrEvent } from 'nostr-tools/pure';
 
@@ -26,11 +28,14 @@ export function resetDMPool(): void {
  */
 export function verifyDMEvent(event: NostrEvent): boolean {
   try {
-    const fresh = event as NostrEvent & { [verifiedSymbol]?: boolean };
-    if (verifiedSymbol in fresh) {
-      delete fresh[verifiedSymbol];
-    }
-    return verifyEvent(event);
+    // nostr-tools/pure caches verification results on `event[verifiedSymbol]`.
+    // JS object spread copies own symbol properties, so a tampered event
+    // produced by `{ ...verifiedEv, sig: badSig }` would short-circuit to
+    // `true`. Strip the cached flag onto a shallow copy before delegating —
+    // this also avoids mutating the caller's event.
+    const { [verifiedSymbol]: _ignored, ...rest } =
+      event as NostrEvent & { [verifiedSymbol]?: boolean };
+    return verifyEvent(rest as NostrEvent);
   } catch {
     return false;
   }
