@@ -23,6 +23,12 @@ import {
 } from '@/lib/attachments';
 import { searchShortcodes } from '@/lib/emoji-shortcodes';
 import { canWriteInChannel, hasRole } from '@/lib/roles';
+import { useAuthStore } from '@/store/auth';
+import { useLocalWallet } from '@/lib/wallet/local-client';
+import { resolveLightningAddress, requestInvoice } from '@/lib/wallet/lnurl-pay';
+import { getLightningAddress } from '@/lib/wallet/provisioning';
+import { getNDK } from '@/lib/nostr';
+import type { KEKSigner } from '@/lib/dm/cache-key';
 
 interface MessageInputProps {
   onSend: (content: string, replyToId?: string) => void;
@@ -48,6 +54,14 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
     serverGifs,
     myRole,
   } = useChatStore();
+
+  // Derive the local NWC client for client-side wallet operations
+  // (/zap, /invoice, /balance). The wallet credentials are decrypted in the
+  // browser using the user's Nostr signer (KEK) — server never sees them.
+  const myPubkey = useAuthStore((s) => s.profile?.pubkey ?? null);
+  const ndk = getNDK();
+  const kekSigner = (ndk.signer as unknown as KEKSigner | null) ?? null;
+  const { client: walletClient } = useLocalWallet(myPubkey, kekSigner);
 
   // Attach menu / upload / emoji / gif state
   const [attachMenuOpen, setAttachMenuOpen] = useState(false);
@@ -294,24 +308,67 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
         if (!target) { push('⚠️ Uso: /zap @usuario <sats>'); return; }
         if (!amount || amount <= 0) { push('⚠️ Indicá un monto en sats, ej: /zap @alice 21'); return; }
         try {
-          const res = await fetch('/api/wallet/zap', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ channelId: activeChannelId, targetPubkey: target, amountSats: amount }),
-          });
-          if (!res.ok) {
-            const d = await res.json().catch(() => ({}));
-            const code = d.error as string | undefined;
-            const msg =
-              code === 'target_no_wallet' ? '⚠️ Ese usuario no tiene NWC configurado.'
-              : code === 'no_wallet' ? '⚠️ Configurá tu NWC en tu perfil para poder enviar zaps.'
-              : code === 'insufficient_funds' ? `⚠️ No tenés suficiente balance para zappar ${amount} sats.`
-              : code === 'cannot_zap_self' ? '⚠️ No podés zapearte a vos mismo.'
-              : `⚠️ Fallo el zap (${code || res.status}).`;
-            push(msg);
+          if (!walletClient) { push('⚠️ Configurá tu wallet primero.'); return; }
+          if (target === myPubkey) { push('⚠️ No podés zapearte a vos mismo.'); return; }
+
+          // Resolve the recipient's Lightning Address. Priority:
+          //   1) member's lud16 (cached profile in chat store)
+          //   2) /api/profile/<pubkey> (currently absent — best-effort)
+          //   3) zaps.nostr-wot.com lookup via getLightningAddress()
+          let lnAddress: string | null = null;
+          try {
+            const memberList = useChatStore.getState().memberList ?? [];
+            const m = memberList.find((mm) => mm.pubkey === target);
+            lnAddress = m?.lud16 ?? null;
+          } catch { /* ignore */ }
+          if (!lnAddress) {
+            try {
+              const profileRes = await fetch(`/api/profile/${target}`);
+              if (profileRes.ok) {
+                const p = await profileRes.json();
+                lnAddress = (p?.lightningAddress ?? p?.lud16) ?? null;
+              }
+            } catch { /* ignore */ }
           }
-        } catch {
-          push('⚠️ No se pudo contactar al servidor.');
+          if (!lnAddress) {
+            lnAddress = await getLightningAddress(target).catch(() => null);
+          }
+          if (!lnAddress) { push('⚠️ Ese usuario no tiene una dirección Lightning.'); return; }
+
+          // LNURL-pay → invoice → pay client-side via local NWC.
+          const params = await resolveLightningAddress(lnAddress);
+          const amountMsat = amount * 1000;
+          if (amountMsat < params.minSendable || amountMsat > params.maxSendable) {
+            push(`⚠️ Monto fuera de rango (${Math.ceil(params.minSendable / 1000)}–${Math.floor(params.maxSendable / 1000)} sats).`);
+            return;
+          }
+          const { invoice } = await requestInvoice(params.callback, amountMsat);
+
+          // Derive paymentHash from the BOLT11 invoice for the audit log.
+          let paymentHash: string | undefined;
+          try {
+            const { parseBolt11 } = await import('@/lib/bolt11');
+            paymentHash = parseBolt11(invoice).paymentHash;
+          } catch { /* paymentHash is best-effort */ }
+
+          await (walletClient as unknown as { payInvoice: (a: { invoice: string }) => Promise<unknown> }).payInvoice({ invoice });
+
+          // Best-effort audit log to server (sidebar/analytics).
+          try {
+            await fetch('/api/wallet/zap-receipt', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                targetPubkey: target,
+                amountMsat,
+                channelId: activeChannelId,
+                paymentHash,
+              }),
+            });
+          } catch { /* non-fatal */ }
+
+          push(`⚡ Zap enviado: ${amount} sats. Powered by nostr-wot.`);
+        } catch (err) {
+          push(`⚠️ Fallo el zap (${(err as Error).message}).`);
         }
       })();
       setContent('');
@@ -333,24 +390,19 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
         const amount = inv[1] ? parseInt(inv[1], 10) : 0;
         if (!amount || amount <= 0) { push('⚠️ Uso: /invoice <sats>'); return; }
         try {
-          const r = await fetch('/api/wallet/invoice', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ amountSats: amount, description: `Invoice ${amount} sats` }),
+          if (!walletClient) { push('⚠️ Configurá tu wallet primero.'); return; }
+          const inv = await (walletClient as unknown as { makeInvoice: (a: { amount: number; description: string }) => Promise<unknown> }).makeInvoice({
+            amount: amount * 1000,
+            description: `Invoice ${amount} sats`,
           });
-          const d = await r.json().catch(() => ({}));
-          if (!r.ok || !d.invoice) {
-            const msg = d.error === 'target_no_wallet'
-              ? '⚠️ Configurá tu NWC en tu perfil para crear facturas.'
-              : `⚠️ No se pudo crear la factura (${d.error || r.status}).`;
-            push(msg);
-            return;
-          }
+          const invoice = (inv as { invoice?: string; pr?: string }).invoice ?? (inv as { pr?: string }).pr;
+          if (!invoice) { push('⚠️ No se pudo crear la factura.'); return; }
           await fetch(`/api/channels/${activeChannelId}/messages`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ content: d.invoice }),
+            body: JSON.stringify({ content: invoice }),
           });
-        } catch {
-          push('⚠️ No se pudo contactar al servidor.');
+        } catch (err) {
+          push(`⚠️ No se pudo crear la factura (${(err as Error).message}).`);
         }
       })();
       setContent('');
@@ -367,17 +419,15 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
       (async () => {
         const { useChatStore } = await import('@/store/chat');
         try {
-          const r = await fetch('/api/wallet/balance');
-          const d = await r.json().catch(() => ({}));
-          if (r.ok) {
-            useChatStore.getState().pushEphemeral(activeChannelId, `⚡ Balance: ${Number(d.balanceSats || 0).toLocaleString()} sats`);
-          } else if (d.error === 'no_wallet') {
-            useChatStore.getState().pushEphemeral(activeChannelId, '⚠️ No tenés wallet NWC configurada. Abrí tu perfil para conectarla.');
-          } else {
-            useChatStore.getState().pushEphemeral(activeChannelId, `⚠️ No se pudo leer el balance (${d.error || r.status}).`);
+          if (!walletClient) {
+            useChatStore.getState().pushEphemeral(activeChannelId, '⚠️ No tenés wallet conectada.');
+            return;
           }
-        } catch {
-          useChatStore.getState().pushEphemeral(activeChannelId, '⚠️ No se pudo contactar la wallet.');
+          const b = await (walletClient as unknown as { getBalance: () => Promise<unknown> }).getBalance();
+          const sats = Math.floor(((b as { balance?: number }).balance ?? 0) / 1000);
+          useChatStore.getState().pushEphemeral(activeChannelId, `⚡ Balance: ${sats.toLocaleString()} sats`);
+        } catch (err) {
+          useChatStore.getState().pushEphemeral(activeChannelId, `⚠️ No se pudo leer el balance (${(err as Error).message}).`);
         }
       })();
       setContent('');
