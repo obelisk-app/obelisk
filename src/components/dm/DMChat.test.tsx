@@ -24,6 +24,7 @@ vi.mock('@/lib/dm/dm', () => ({
   sendDM: (args: any) => hoisted.sendDMMock(args),
   loadHistory: (...args: any[]) => hoisted.loadHistoryMock(...args),
   subscribeLive: (opts: any) => hoisted.subscribeLiveMock(opts),
+  detectNip04InRecent: vi.fn().mockReturnValue(false),
 }));
 
 vi.mock('@/lib/dm/follows', () => ({
@@ -43,11 +44,6 @@ vi.mock('@/lib/dm/dm-cache', () => ({
     hoisted.secretsByAccount.get(pk)!.set(eventId, plaintext);
     hoisted.putSecretCalls.push({ pubkey: pk, eventId, plaintext });
   },
-}));
-
-// Old @/lib/dm module — DMChat keeps using detectNip04InRecent from there.
-vi.mock('@/lib/dm', () => ({
-  detectNip04InRecent: vi.fn().mockReturnValue(false),
 }));
 
 vi.mock('@/lib/nostr', () => ({
@@ -216,7 +212,7 @@ describe('DMChat', () => {
   });
 
   it('opens protocol prompt on send when thread has NIP-04 and no override', async () => {
-    const { detectNip04InRecent } = await import('@/lib/dm');
+    const { detectNip04InRecent } = await import('@/lib/dm/dm');
     (detectNip04InRecent as unknown as { mockReturnValueOnce: (v: boolean) => void }).mockReturnValueOnce(true);
     useDMStore.setState({
       activeDMPubkey: 'sender-pk',

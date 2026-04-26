@@ -161,6 +161,18 @@ export async function sendDM(args: SendDMArgs): Promise<NostrEvent> {
   return rawWrap;
 }
 
+/**
+ * Detect whether the recent slice of a thread is using NIP-04. Used by
+ * DMChat to surface a "this conversation is on legacy NIP-04 — switch to
+ * private NIP-17?" prompt to the user.
+ *
+ * Pure function over an in-memory list — no cache, no relays.
+ */
+export function detectNip04InRecent(messages: DMMessage[], count = 10): boolean {
+  const recent = messages.slice(-count);
+  return recent.some((m) => m.protocol === 'nip04');
+}
+
 async function publishToRelays(ndk: any, event: any, relays: string[]): Promise<void> {
   if (relays.length === 0) {
     await event.publish();

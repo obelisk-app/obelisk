@@ -22,6 +22,7 @@ import DMList from '@/components/dm/DMList';
 import DMChat from '@/components/dm/DMChat';
 import NewDMModal from '@/components/dm/NewDMModal';
 import ProtocolPrompt from '@/components/dm/ProtocolPrompt';
+import { DMSessionProvider } from '@/components/dm/DMSessionProvider';
 import VoiceChannel from '@/components/chat/VoiceChannel';
 import { useDMStore } from '@/store/dm';
 import { useVoiceStore } from '@/store/voice';
@@ -899,8 +900,8 @@ export default function ChatPage() {
 
       {/* Main content area */}
       <div className="flex-1 flex flex-col min-h-0 min-w-0">
-        {DM_FEATURE_ENABLED && isDMMode ? (
-          <>
+        {DM_FEATURE_ENABLED && isDMMode && profile?.pubkey ? (
+          <DMSessionProvider myPubkey={profile.pubkey}>
             {/* DM top bar with mobile hamburger */}
             <div className="h-12 px-3 flex items-center gap-3 border-b border-lc-border shrink-0 bg-lc-dark md:hidden">
               <button
@@ -924,7 +925,7 @@ export default function ChatPage() {
                 profileCache={profileCache}
               />
             )}
-          </>
+          </DMSessionProvider>
         ) : (
           <div className="flex-1 flex flex-col min-h-0">
             {/* Top bar — spans across chat + member list so toggling the

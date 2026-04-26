@@ -3,8 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDMStore } from '@/store/dm';
 import { useAuthStore } from '@/store/auth';
-import { detectNip04InRecent } from '@/lib/dm';
-import { sendDM as sendDMNew, type DMMessage, type DMProtocol } from '@/lib/dm/dm';
+import { sendDM as sendDMNew, detectNip04InRecent, type DMMessage, type DMProtocol } from '@/lib/dm/dm';
 import { getCachedEvents, getSecret, putSecret, type CachedDMEvent } from '@/lib/dm/dm-cache';
 import { useDMSession } from './DMSessionProvider';
 import { formatPubkey, getNDK } from '@/lib/nostr';
