@@ -69,20 +69,11 @@ async function addUserRelays(pubkey: string): Promise<void> {
   const ndk = getNDK();
 
   try {
-    const relayListEvents = await withTimeout(
-      ndk.fetchEvents({ kinds: [KIND_RELAY_LIST], authors: [pubkey], limit: 1 }),
-      5000
-    );
-    const relayEvent = Array.from(relayListEvents)[0];
-    if (relayEvent) {
-      const relayTags = relayEvent.tags.filter(t => t[0] === 'r');
-      for (const tag of relayTags) {
-        const url = tag[1];
-        if (url && url.startsWith('wss://')) {
-          try {
-            ndk.addExplicitRelay(url);
-          } catch { /* ignore */ }
-        }
+    const { fetchRelayList } = await import('./nostr-read');
+    const { read, write } = await fetchRelayList(pubkey, { timeoutMs: 5000 });
+    for (const url of [...read, ...write]) {
+      if (url.startsWith('wss://')) {
+        try { ndk.addExplicitRelay(url); } catch { /* already added */ }
       }
     }
     userRelaysAdded = true;
@@ -423,67 +414,30 @@ export function parseProfile(user: NDKUser): NostrProfile {
 }
 
 export async function fetchFollowers(pubkey: string): Promise<string[]> {
-  const ndk = getNDK();
   await addUserRelays(pubkey);
-
-  try {
-    const events = await withTimeout(
-      ndk.fetchEvents({ kinds: [3], '#p': [pubkey] }),
-      10000
-    );
-    const followers = new Set<string>();
-    events.forEach((event) => followers.add(event.pubkey));
-    return Array.from(followers);
-  } catch {
-    console.warn('fetchFollowers timed out');
-    return [];
-  }
+  const { fetchFollowers: read } = await import('./nostr-read');
+  return read(pubkey, { timeoutMs: 10000 });
 }
 
 export async function fetchFollowing(pubkey: string): Promise<string[]> {
-  const ndk = getNDK();
   await addUserRelays(pubkey);
-
-  try {
-    const user = ndk.getUser({ pubkey });
-    const followSet = await withTimeout(user.follows(), 10000);
-    return Array.from(followSet).map((u) => u.pubkey);
-  } catch {
-    console.warn('fetchFollowing timed out');
-    return [];
-  }
+  const { fetchFollowing: read } = await import('./nostr-read');
+  return read(pubkey, { timeoutMs: 10000 });
 }
 
 export async function fetchUserNotes(pubkey: string, limit = 20): Promise<NDKEvent[]> {
-  const ndk = getNDK();
   await addUserRelays(pubkey);
-
-  try {
-    const events = await withTimeout(
-      ndk.fetchEvents({ kinds: [1], authors: [pubkey], limit }),
-      10000
-    );
-    return Array.from(events).sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
-  } catch {
-    console.warn('fetchUserNotes timed out');
-    return [];
-  }
+  const { fetchUserNotes: read } = await import('./nostr-read');
+  const events = await read(pubkey, limit, { timeoutMs: 10000 });
+  // Wrap into NDKEvent for backward compatibility with callers that expect
+  // NDK's event shape (e.g. profile-notes UI).
+  const ndk = getNDK();
+  return events.map((e) => new NDKEvent(ndk, e as unknown as ConstructorParameters<typeof NDKEvent>[1]));
 }
 
 export async function fetchCurrentKind0(pubkey: string): Promise<Record<string, unknown>> {
-  const ndk = getNDK();
-  try {
-    const event = await withTimeout(
-      ndk.fetchEvent({ kinds: [0], authors: [pubkey] }),
-      10000
-    );
-    if (event?.content) {
-      return JSON.parse(event.content);
-    }
-  } catch {
-    console.warn('fetchCurrentKind0 failed or timed out');
-  }
-  return {};
+  const { fetchKind0 } = await import('./nostr-read');
+  return fetchKind0(pubkey, { timeoutMs: 10000 });
 }
 
 export async function publishProfile(fields: {
