@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
 
 const { enqueueMock, pushToastMock } = vi.hoisted(() => ({
-  enqueueMock: vi.fn(() => () => {}),
+  enqueueMock: vi.fn((_opts: { filters: unknown[]; relays: string[]; onEvent: (e: unknown) => void }) => () => {}),
   pushToastMock: vi.fn(),
 }));
 vi.mock('@/lib/nostr-coalescer', () => ({
@@ -36,14 +36,14 @@ describe('useZapReceipts', () => {
   it('subscribes for kind 9735 events with #p tag matching myPubkey', () => {
     renderHook(() => useZapReceipts('npub_me'));
     expect(enqueueMock).toHaveBeenCalledTimes(1);
-    const arg = enqueueMock.mock.calls[0][0] as { filters: any[]; relays: string[] };
+    const arg = (enqueueMock.mock.calls[0][0] as unknown) as { filters: any[]; relays: string[] };
     expect(arg.filters[0]).toMatchObject({ kinds: [9735], '#p': ['npub_me'] });
     expect(arg.relays).toEqual(['wss://relay.test', 'wss://r2.test']);
   });
 
   it('pushes a toast when a valid zap receipt arrives', () => {
     renderHook(() => useZapReceipts('npub_me'));
-    const onEvent = (enqueueMock.mock.calls[0][0] as { onEvent: (e: unknown) => void }).onEvent;
+    const onEvent = ((enqueueMock.mock.calls[0][0] as unknown) as { onEvent: (e: unknown) => void }).onEvent;
     const zapRequest = {
       kind: 9734,
       pubkey: 'sender_pub',
@@ -75,14 +75,14 @@ describe('useZapReceipts', () => {
 
   it('ignores invalid receipts', () => {
     renderHook(() => useZapReceipts('npub_me'));
-    const onEvent = (enqueueMock.mock.calls[0][0] as { onEvent: (e: unknown) => void }).onEvent;
+    const onEvent = ((enqueueMock.mock.calls[0][0] as unknown) as { onEvent: (e: unknown) => void }).onEvent;
     onEvent({ kind: 1, pubkey: 'x', tags: [], content: '', id: 'i', sig: 's', created_at: 1 });
     expect(pushToastMock).not.toHaveBeenCalled();
   });
 
   it('deduplicates by receipt id', () => {
     renderHook(() => useZapReceipts('npub_me'));
-    const onEvent = (enqueueMock.mock.calls[0][0] as { onEvent: (e: unknown) => void }).onEvent;
+    const onEvent = ((enqueueMock.mock.calls[0][0] as unknown) as { onEvent: (e: unknown) => void }).onEvent;
     const zapRequest = {
       kind: 9734, pubkey: 'sender_pub',
       tags: [['p', 'npub_me'], ['amount', '21000']],
