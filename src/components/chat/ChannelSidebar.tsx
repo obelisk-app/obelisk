@@ -745,7 +745,8 @@ function VoiceStatusBar() {
 
 export function UserPanel() {
   const router = useRouter();
-  const { profile, logout } = useAuthStore();
+  const profile = useAuthStore((s) => s.profile);
+  const { logout } = useAuthStore();
   const [showProfile, setShowProfile] = useState(false);
   const currentVoiceChannelId = useVoiceStore((s) => s.currentVoiceChannelId);
   const isMuted = useVoiceStore((s) => s.isMuted);

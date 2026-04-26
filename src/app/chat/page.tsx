@@ -164,7 +164,9 @@ function TypingIndicator({ profileCache }: { profileCache: Map<string, { name?: 
 export default function ChatPage() {
   const router = useRouter();
   const { t } = useTranslation();
-  const { isConnected, profile, logout, restoreSession } = useAuthStore();
+  const isConnected = useAuthStore((s) => s.isConnected);
+  const profile = useAuthStore((s) => s.profile);
+  const { logout, restoreSession } = useAuthStore();
   const inboxEvents = useNotificationStore((s) => s.inboxEvents);
   const unreadInboxCount = useNotificationStore((s) => s.unreadInboxCount);
   const isSearchOpen = useSearchStore((s) => s.isOpen);
@@ -676,8 +678,12 @@ export default function ChatPage() {
   const voiceMainRef = useRef<HTMLDivElement>(null);
   const { voiceChatWidth, onVoiceChatResize } = useVoiceChatPane(isVoiceChatOpen, voiceMainRef);
 
-  // No valid session — show login modal with matrix background
-  if (sessionInvalid) {
+  // No valid session — show login modal with matrix background.
+  // Also covers the case where session was checked but profile failed to
+  // hydrate (e.g. /api/auth/me returned a pubkey but the profile fetch
+  // didn't populate the store): treat that as "not signed in" rather than
+  // rendering chat with `profile === null`.
+  if (sessionInvalid || (sessionChecked && !profile?.pubkey)) {
     return (
       <div className="h-screen flex items-center justify-center bg-lc-black lc-grid-bg relative">
         <ShootingStars />
@@ -697,8 +703,12 @@ export default function ChatPage() {
     );
   }
 
-  // Loading state while checking session
-  if (!sessionChecked) {
+  // Loading: session check is in flight or the profile hasn't hydrated
+  // yet. NDK + signer reattachment runs in the background — components
+  // that need the signer (DMList, voice, etc.) render their own
+  // "connecting…" states off the reactive `signerReady` flag instead of
+  // blocking the entire chat shell here.
+  if (!sessionChecked || !profile?.pubkey) {
     return (
       <div className="h-screen flex items-center justify-center bg-lc-black">
         <div className="flex flex-col items-center gap-3">

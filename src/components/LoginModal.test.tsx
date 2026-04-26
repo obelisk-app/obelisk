@@ -18,13 +18,7 @@ vi.mock('@/lib/backend-auth', () => ({
 }));
 
 vi.mock('@/store/auth', () => ({
-  useAuthStore: vi.fn(() => ({
-    setUser: vi.fn(),
-    setLoading: vi.fn(),
-    setError: vi.fn(),
-    isLoading: false,
-    error: null,
-  })),
+  useAuthStore: vi.fn(),
 }));
 
 vi.mock('qrcode.react', () => ({
@@ -57,14 +51,17 @@ describe('LoginModal', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (useAuthStore as any).mockReturnValue({
+    const mockState = {
       setUser: mockSetUser,
       setLoading: mockSetLoading,
       setError: mockSetError,
       syncProfile: mockSyncProfile,
       isLoading: false,
       error: null,
-    });
+    };
+    (useAuthStore as any).mockImplementation((selector?: (s: typeof mockState) => unknown) =>
+      typeof selector === 'function' ? selector(mockState) : mockState
+    );
     Object.defineProperty(window, 'nostr', { value: undefined, writable: true, configurable: true });
   });
 

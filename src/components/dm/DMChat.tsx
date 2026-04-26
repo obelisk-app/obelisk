@@ -152,7 +152,7 @@ export default function DMChat({ profileCache }: DMChatProps) {
     setLoadingMessages,
     updateThread,
   } = useDMStore();
-  const { profile } = useAuthStore();
+  const profile = useAuthStore((s) => s.profile);
   const [content, setContent] = useState('');
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -339,16 +339,36 @@ export default function DMChat({ profileCache }: DMChatProps) {
           content: text,
           protocol,
         });
-        replaceMessage(pendingId, {
-          id: event.id || pendingId,
-          senderPubkey: myPubkey,
-          recipientPubkey: activeDMPubkey,
-          content: text,
-          createdAt: event.created_at ?? optimistic.createdAt,
-          protocol,
-        });
+        // For NIP-17, `event` is the kind 1059 gift wrap whose id and
+        // pubkey are ephemeral — they don't match the rumor (kind 14) the
+        // recipient eventually sees. Keep the optimistic message in place
+        // (just clear isPending) so the UI shows it correctly. For NIP-04,
+        // the event IS the message itself, so use the real id+timestamp.
+        if (protocol === 'nip04') {
+          replaceMessage(pendingId, {
+            id: event.id || pendingId,
+            senderPubkey: myPubkey,
+            recipientPubkey: activeDMPubkey,
+            content: text,
+            createdAt: event.created_at ?? optimistic.createdAt,
+            protocol,
+          });
+        } else {
+          replaceMessage(pendingId, {
+            id: pendingId,
+            senderPubkey: myPubkey,
+            recipientPubkey: activeDMPubkey,
+            content: text,
+            createdAt: optimistic.createdAt,
+            protocol,
+          });
+        }
       } catch (err) {
         const message = err instanceof Error ? err.message : 'failed to send';
+        // Log so the failure is debuggable in the browser console — the
+        // failed-pill UI shows only the short message, which can hide
+        // the root cause (signer missing, encryption failed, relay rejected).
+        console.error('[dm] sendDM failed:', err);
         markMessageFailed(pendingId, message);
       }
     },

@@ -54,7 +54,9 @@ export default function LoginModal({ isOpen, onClose, onSuccess, transparentBack
   const [showSlowHint, setShowSlowHint] = useState(false);
   const [rpcEventDetected, setRpcEventDetected] = useState(false);
   const sessionRef = useRef<NostrConnectSession | null>(null);
-  const { setLoading, setError, isLoading, error } = useAuthStore();
+  const isLoading = useAuthStore((s) => s.isLoading);
+  const error = useAuthStore((s) => s.error);
+  const { setLoading, setError } = useAuthStore();
 
   useEffect(() => {
     if (!isOpen) return;

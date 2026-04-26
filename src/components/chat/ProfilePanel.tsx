@@ -14,7 +14,7 @@ interface ProfilePanelProps {
 }
 
 export default function ProfilePanel({ onClose, onLogout }: ProfilePanelProps) {
-  const { profile } = useAuthStore();
+  const profile = useAuthStore((s) => s.profile);
   const activeServerId = useChatStore((s) => s.activeServerId);
   const { t } = useTranslation();
   const [nickname, setNickname] = useState<string | null>(null);

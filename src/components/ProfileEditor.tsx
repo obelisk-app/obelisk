@@ -14,7 +14,8 @@ interface ProfileEditorProps {
 
 export default function ProfileEditor({ mode, onComplete, onSkip }: ProfileEditorProps) {
   const { t } = useTranslation();
-  const { profile, syncProfile } = useAuthStore();
+  const profile = useAuthStore((s) => s.profile);
+  const { syncProfile } = useAuthStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState('');

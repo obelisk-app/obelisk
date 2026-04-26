@@ -235,7 +235,7 @@ function MessageBubble({ message, profileCache, canPin, canModerate, onReply, on
   const displayName = profile?.name || formatPubkey(message.authorPubkey);
   const time = new Date(message.createdAt);
   const timeStr = formatMessageTimestamp(time);
-  const { profile: myProfile } = useAuthStore();
+  const myProfile = useAuthStore((s) => s.profile);
   const isMe = myProfile?.pubkey === message.authorPubkey;
   const [showMenu, setShowMenu] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -536,7 +536,7 @@ export default function MessageArea({ profileCache, onDelete, onToggleReaction }
   // Fallback: when we don't know `lastReadAt` yet (first load race, offline
   // cache miss), fall back to walking back `count` *other-authored*
   // messages, which still matches the server's counting semantics.
-  const { profile: viewerProfile } = useAuthStore();
+  const viewerProfile = useAuthStore((s) => s.profile);
   const viewerPubkey = viewerProfile?.pubkey ?? null;
   const separatorLastReadAtRef = useRef<number | null>(null);
   const separatorCountRef = useRef<number>(0);
