@@ -905,7 +905,7 @@ beforeEach(() => {
 });
 
 describe('profile-cache', () => {
-  it('first fetch dispatches a REQ that includes purplepag.es', async () => {
+  it('first fetch dispatches a REQ that includes purplepag.es', () => {
     setProfileTestRelays(['wss://my.relay']);
     const p = getProfile(me, partner);
     expect(p.profile).toBeNull();
@@ -916,38 +916,44 @@ describe('profile-cache', () => {
     expect(call.filters[0]).toMatchObject({ kinds: [0], authors: [partner] });
   });
 
-  it('second call within 24h does not re-enqueue (cache hit)', async () => {
+  it('second call within 24h does not re-enqueue (cache hit)', () => {
     setProfileTestRelays([]);
     getProfile(me, partner);
+    // Force a stored entry: simulate the relay event arrival.
+    const onEvent = enqueueMock.mock.calls[0]?.[0]?.onEvent;
+    if (onEvent) {
+      onEvent({ id: 'e1', kind: 0, pubkey: partner, created_at: Math.floor(Date.now() / 1000), tags: [], content: '{"name":"alice"}', sig: 'x' } as any);
+    }
     enqueueMock.mockClear();
     getProfile(me, partner);
     expect(enqueueMock).not.toHaveBeenCalled();
   });
 
-  it('after TTL elapses, returns stale immediately and re-enqueues', async () => {
+  it('after TTL elapses, returns stale immediately and re-enqueues', () => {
     setProfileTestRelays([]);
     getProfile(me, partner);
+    const onEvent1 = enqueueMock.mock.calls[0][0].onEvent;
+    onEvent1({ id: 'e1', kind: 0, pubkey: partner, created_at: 1000, tags: [], content: '{"name":"alice"}', sig: 'x' } as any);
     // Tamper with persisted lastCheckedAt to be 25h ago
     const key = `obelisk:profiles:${me}`;
     const blob = JSON.parse(localStorage.getItem(key) ?? '{}');
     blob[partner].lastCheckedAt = Date.now() - 25 * 3600 * 1000;
     localStorage.setItem(key, JSON.stringify(blob));
     enqueueMock.mockClear();
-    getProfile(me, partner);
+    const r = getProfile(me, partner);
+    expect(r.profile).not.toBeNull();
     expect(enqueueMock).toHaveBeenCalledTimes(1);
   });
 
-  it('does not notify subscribers when refresh returns same created_at', async () => {
+  it('does not notify subscribers when refresh returns same created_at', () => {
     setProfileTestRelays([]);
     const sub = vi.fn();
-    const dispose = getProfile(me, partner, { onUpdate: sub }).subscribe;
-    // Simulate a kind-0 arriving twice with same created_at
-    const ev = { id: 'e1', pubkey: partner, kind: 0, created_at: 1000, tags: [], content: '{"name":"alice"}', sig: 'x' } as any;
+    getProfile(me, partner, { onUpdate: sub });
     const onEvent = enqueueMock.mock.calls[0][0].onEvent;
+    const ev = { id: 'e1', pubkey: partner, kind: 0, created_at: 1000, tags: [], content: '{"name":"alice"}', sig: 'x' } as any;
     onEvent(ev);
-    onEvent(ev);
+    onEvent(ev); // same created_at — should not re-notify
     expect(sub).toHaveBeenCalledTimes(1);
-    dispose?.();
   });
 });
 ```
@@ -1125,6 +1131,13 @@ describe('relay-list-cache', () => {
 
   it('second call within 6h does not re-enqueue', () => {
     getRelays(me, partner);
+    // Seed the cache by simulating a relay event arrival.
+    const onEvent = enqueueMock.mock.calls[0][0].onEvent;
+    onEvent({
+      id: 'e1', kind: 10002, pubkey: partner,
+      created_at: Math.floor(Date.now() / 1000),
+      content: '', tags: [['r', 'wss://x']], sig: 'x',
+    } as any);
     enqueueMock.mockClear();
     getRelays(me, partner);
     expect(enqueueMock).not.toHaveBeenCalled();
