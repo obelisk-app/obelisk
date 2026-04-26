@@ -37,10 +37,12 @@ interface CacheShape {
   cursors: DMCursors;
 }
 
-// In-memory follow sets; populated externally by Task 7. A `null` value means
-// "no follow protection in effect" — all events are evictable under the cap.
-// (Hydration of the follow list itself happens before the cache is asked to
-// evict in production paths.)
+// In-memory follow sets; populated externally by Task 7.
+// Cold-start safety: if `setFollowSet` was never called for a pubkey, OR was
+// called with `null`, treat the follow list as un-hydrated → `evictIfNeeded`
+// is a no-op (all events protected). Only an actual `Set<string>` (possibly
+// empty) means "follow list HAS been fetched and is the source of truth";
+// only then does eviction become eligible.
 const followSets = new Map<string, Set<string> | null>();
 
 // In-memory mirror of the persisted shape, keyed by account pubkey. We read
@@ -48,6 +50,7 @@ const followSets = new Map<string, Set<string> | null>();
 // in memory. Subsequent puts mutate this object and re-stringify into
 // localStorage. This avoids O(N) JSON.parse on every read and keeps inserts
 // closer to O(1) amortized for the in-memory path.
+// Single-tab cache. Does not detect cross-tab writes; if Obelisk grows multi-tab DM sessions, add a versioned mirror or storage-event listener.
 const ramCache = new Map<string, CacheShape>();
 
 const DEFAULT_CURSORS: DMCursors = { nip04In: 0, nip04Out: 0, nip17Wrap: 0, kind3: 0 };
@@ -122,12 +125,6 @@ function write(pk: string, shape: CacheShape): void {
   scheduleFlush(pk);
 }
 
-/** Force-flush any pending writes for tests / shutdown. */
-export function _flushDMCache(pk?: string): void {
-  if (pk) { flush(pk); return; }
-  for (const k of Array.from(pendingFlush)) flush(k);
-}
-
 export function putEvent(myPubkey: string, ev: CachedDMEvent): void {
   const c = read(myPubkey);
   c.events[ev.id] = ev;
@@ -179,6 +176,14 @@ export function setCursor(myPubkey: string, name: keyof DMCursors, value: number
   }
 }
 
+/**
+ * Register the follow set used by `evictIfNeeded` for `myPubkey`.
+ *
+ * - `null` (or never calling this function) → cold-start: `evictIfNeeded`
+ *   is a no-op (all events protected). Use this state until kind-3 is hydrated.
+ * - `new Set()` → empty follow list: nothing is protected, full LRU.
+ * - `new Set([...pubkeys])` → only events from/to those pubkeys are protected.
+ */
 export function setFollowSet(myPubkey: string, set: Set<string> | null): void {
   followSets.set(myPubkey, set);
 }
@@ -201,21 +206,31 @@ function partnerOf(ev: CachedDMEvent, myPubkey: string): string {
 /**
  * Apply LRU eviction. Events whose partner is in the current follow set are
  * protected and never evicted by `cap`. The cap applies only to evictable
- * events. If no follow set is registered (or it is `null`), no events are
- * protected and the cap is enforced strictly by oldest-first LRU.
+ * events.
+ *
+ * Cold-start safety: if `setFollowSet` has never been called for `myPubkey`
+ * (no entry in the map) OR was explicitly called with `null`, the follow list
+ * is treated as un-hydrated and this function is a no-op (all events
+ * protected). Only an actual `Set<string>` (possibly empty) makes events
+ * eligible for eviction; an empty Set means "no follows known but the follow
+ * list HAS been fetched" → no protection, full LRU.
  */
 export function evictIfNeeded(myPubkey: string, cap = 2000): void {
   const c = read(myPubkey);
   const ids = Object.keys(c.events);
   if (ids.length === 0) return;
 
-  const follows = followSets.get(myPubkey) ?? null;
+  const followsEntry = followSets.has(myPubkey) ? followSets.get(myPubkey) : undefined;
+  // Cold start: never set, or explicitly set to null → protect everything.
+  if (followsEntry === undefined || followsEntry === null) return;
+
+  const follows = followsEntry; // Set<string>
   const evictableIds: string[] = [];
 
   for (const id of ids) {
     const ev = c.events[id];
     const partner = partnerOf(ev, myPubkey);
-    if (follows && partner && follows.has(partner)) {
+    if (partner && follows.has(partner)) {
       // protected — never evicted
       continue;
     }

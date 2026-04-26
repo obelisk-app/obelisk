@@ -463,13 +463,27 @@ describe('dm-cache event store', () => {
 });
 
 describe('dm-cache follow-aware eviction', () => {
-  it('with no follow set, evicts strictly by LRU when cap is exceeded', () => {
-    setFollowSet(me, null);
+  it('with an empty follow set, evicts strictly by LRU when cap is exceeded', () => {
+    setFollowSet(me, new Set());
     for (let i = 0; i < 2010; i++) putEvent(me, fakeEvent(`id${i}`, 1_000_000 + i, partnerStranger));
     evictIfNeeded(me, 2000);
     expect(getCachedEvents(me).length).toBe(2000);
     expect(getEvent(me, 'id0')).toBeUndefined();
     expect(getEvent(me, 'id2009')).toBeDefined();
+  });
+
+  it('protects all events when follow set has never been set (cold start)', () => {
+    // No setFollowSet call at all.
+    for (let i = 0; i < 2010; i++) putEvent(me, fakeEvent(`id${i}`, 1_000_000 + i, partnerStranger));
+    evictIfNeeded(me, 2000);
+    expect(getCachedEvents(me)).toHaveLength(2010);
+  });
+
+  it('protects all events when follow set is explicitly null (also cold start)', () => {
+    setFollowSet(me, null);
+    for (let i = 0; i < 2010; i++) putEvent(me, fakeEvent(`id${i}`, 1_000_000 + i, partnerStranger));
+    evictIfNeeded(me, 2000);
+    expect(getCachedEvents(me)).toHaveLength(2010);
   });
 
   it('protects events from followed partners; cap applies only to non-followed', () => {
