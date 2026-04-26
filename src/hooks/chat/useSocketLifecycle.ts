@@ -8,8 +8,10 @@ import { useChatStore, type Message } from '@/store/chat';
 import { useDMStore } from '@/store/dm';
 import { useVoiceStore } from '@/store/voice';
 import { useNotificationStore } from '@/store/notification';
+import { useNotificationPrefsStore } from '@/store/notificationPrefs';
 import { useToastStore } from '@/store/toast';
 import { playMentionSound } from '@/lib/mentionSound';
+import { NotificationCenter } from '@/lib/notifications';
 import { shortNpub } from '@/lib/mentions';
 import {
   isUserWatchingChannel,
@@ -304,21 +306,48 @@ export function useSocketLifecycle({
         createdAt: data.createdAt ?? new Date().toISOString(),
       });
       if (isMentionLike && data.channelId) {
-        playMentionSound();
         pushToInbox();
         const watchingChannel = isUserWatchingChannel(data.channelId);
         const watchingPost = data.postId
           ? useChatStore.getState().activePostId === data.postId
           : false;
-        if (watchingChannel && (!data.postId || watchingPost)) return;
-        notifStore.setChannelMention(data.channelId, true);
-        if (data.postId) {
-          notifStore.setPostMention(data.postId, true);
+        if (!(watchingChannel && (!data.postId || watchingPost))) {
+          notifStore.setChannelMention(data.channelId, true);
+          if (data.postId) {
+            notifStore.setPostMention(data.postId, true);
+          }
         }
       } else if (data.type === 'dm') {
         notifStore.setDMUnread(data.senderPubkey, (notifStore.dmUnreads[data.senderPubkey] || 0) + 1);
         pushToInbox();
       }
+      NotificationCenter.notify(data as any, {
+        viewerPubkey: profilePubkeyRef.current ?? '',
+        prefs: useNotificationPrefsStore.getState().prefs,
+        channelNameById: (id: string) => {
+          const s = useChatStore.getState();
+          const all = [...s.pinnedChannels, ...s.categories.flatMap((c) => c.channels)];
+          return all.find((c) => c.id === id)?.name ?? id;
+        },
+        resolveSuppressionContext: (payload) => {
+          return {
+            viewerPubkey: profilePubkeyRef.current ?? '',
+            documentVisible: typeof document !== 'undefined' && document.visibilityState === 'visible',
+            windowFocused: typeof document !== 'undefined' && document.hasFocus(),
+            activeChannelId: activeChannelIdRef.current ?? null,
+            activePostId: useChatStore.getState().activePostId ?? null,
+            scrolledToBottom: false, // not tracked in store; mild over-notification accepted for v1
+            resolvedPref: useNotificationPrefsStore.getState().resolve(
+              Array.isArray(payload.scopeChain) && payload.scopeChain.length > 0
+                ? payload.scopeChain
+                : payload.channelId
+                  ? [{ type: 'channel' as const, id: payload.channelId }]
+                  : [],
+            ),
+          };
+        },
+        playSound: playMentionSound,
+      });
     });
 
     // Cross-device / other-tab read sync. Fired by server.ts after it

@@ -8,6 +8,7 @@ import WalletPanel from '@/components/wallet/WalletPanel';
 import ActivityCard from '@/components/profile/ActivityCard';
 import MyInvitationsList from '@/components/invites/MyInvitationsList';
 import { useAuthStore } from '@/store/auth';
+import NotificationsSection from './NotificationsSection';
 
 interface SidebarItem {
   id: SettingsSection;
@@ -31,6 +32,9 @@ const ICONS = {
   actividad: (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
   ),
+  notifications: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+  ),
 };
 
 const ITEMS: SidebarItem[] = [
@@ -39,6 +43,7 @@ const ITEMS: SidebarItem[] = [
   { id: 'wallet', label: 'Wallet', icon: ICONS.wallet },
   { id: 'invitaciones', label: 'Invitaciones', icon: ICONS.invitaciones },
   { id: 'actividad', label: 'Actividad', icon: ICONS.actividad },
+  { id: 'notifications', label: 'Notifications', icon: ICONS.notifications },
 ];
 
 interface ProfileData {
@@ -176,6 +181,7 @@ export default function SettingsModal() {
               ) : null}
             </div>
           )}
+          {section === 'notifications' && <NotificationsSection />}
           {section === 'actividad' && (
             <div className="space-y-4">
               <div>

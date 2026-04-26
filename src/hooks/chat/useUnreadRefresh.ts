@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { useNotificationStore } from '@/store/notification';
+import { useNotificationPrefsStore } from '@/store/notificationPrefs';
 
 /**
  * Fetch unread counts on mount, tab focus, and socket reconnect.
@@ -25,6 +26,7 @@ export function useUnreadRefresh(sessionChecked: boolean) {
         .then((data) => {
           if (!cancelled && data) {
             useNotificationStore.getState().setBulkUnreads(data);
+            void useNotificationPrefsStore.getState().hydrate().catch(() => {});
           }
         })
         .catch(() => {});
