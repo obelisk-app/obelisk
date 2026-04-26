@@ -4,6 +4,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { useZapStore } from '@/store/zap';
 import { useChatStore } from '@/store/chat';
 import { formatPubkey } from '@/lib/nostr';
+import { useAuthStore } from '@/store/auth';
+import { getNDK } from '@/lib/nostr';
+import { useLocalWallet } from '@/lib/wallet/local-client';
+import { resolveLightningAddress, requestInvoice } from '@/lib/wallet/lnurl-pay';
+import { getLightningAddress } from '@/lib/wallet/provisioning';
+import type { KEKSigner } from '@/lib/dm/cache-key';
 
 const QUICK_AMOUNTS = [21, 100, 500, 1000, 5000, 21000];
 
@@ -18,6 +24,11 @@ export default function ZapPickerModal() {
   const [amount, setAmount] = useState<number>(100);
   const [query, setQuery] = useState('');
   const [busy, setBusy] = useState(false);
+
+  const myPubkey = useAuthStore((s) => s.profile?.pubkey ?? null);
+  const ndk = getNDK();
+  const kekSigner = (ndk.signer as unknown as KEKSigner | null) ?? null;
+  const { client: walletClient } = useLocalWallet(myPubkey, kekSigner);
 
   useEffect(() => {
     if (!pickerOpen) return;
@@ -41,45 +52,81 @@ export default function ZapPickerModal() {
 
   const send = async () => {
     if (!target || !amount || amount <= 0) return;
+    if (!walletClient) {
+      pushEphemeral(channelId, '⚠️ Configurá tu wallet primero.');
+      close();
+      return;
+    }
+    if (target === myPubkey) {
+      pushEphemeral(channelId, '⚠️ No podés zapearte a vos mismo.');
+      return;
+    }
     setBusy(true);
     try {
-      const invRes = await fetch('/api/wallet/invoice', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ targetPubkey: target, amountSats: amount, description: `Zap en Obelisk` }),
-      });
-      if (!invRes.ok) {
-        const d = await invRes.json().catch(() => ({}));
-        const msg = d.error === 'target_no_wallet'
-          ? `⚠️ Ese usuario no tiene NWC configurado.`
-          : `⚠️ No se pudo crear la factura (${d.error || invRes.status}).`;
-        pushEphemeral(channelId, msg);
-        close();
-        return;
-      }
-      const { invoice } = await invRes.json();
-      const payRes = await fetch('/api/wallet/pay', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ invoice }),
-      });
-      if (!payRes.ok) {
-        const d = await payRes.json().catch(() => ({}));
-        const msg = d.error === 'no_wallet'
-          ? `⚠️ Configurá tu NWC en tu perfil para poder enviar zaps.`
-          : d.error === 'insufficient_funds'
-          ? `⚠️ No tenés suficiente balance para zappar ${amount} sats.`
-          : `⚠️ Fallo el pago (${d.error || payRes.status}).`;
-        pushEphemeral(channelId, msg);
-        close();
-        return;
-      }
-      // Post a visible channel message so everyone sees the zap.
+      // Resolve recipient's Lightning Address: cached member field → server profile → nostr-wot lookup.
+      let lnAddress: string | null = null;
       const member = memberList.find((m) => m.pubkey === target);
+      lnAddress = (member as { lightningAddress?: string } | undefined)?.lightningAddress ?? null;
+      if (!lnAddress) {
+        try {
+          const profileRes = await fetch(`/api/profile/${target}`);
+          if (profileRes.ok) {
+            const p = await profileRes.json();
+            lnAddress = (p?.lightningAddress ?? p?.lud16) ?? null;
+          }
+        } catch { /* ignore */ }
+      }
+      if (!lnAddress) {
+        lnAddress = await getLightningAddress(target).catch(() => null);
+      }
+      if (!lnAddress) {
+        pushEphemeral(channelId, '⚠️ Ese usuario no tiene una dirección Lightning.');
+        close();
+        return;
+      }
+
+      const params = await resolveLightningAddress(lnAddress);
+      const amountMsat = amount * 1000;
+      if (amountMsat < params.minSendable || amountMsat > params.maxSendable) {
+        pushEphemeral(channelId, `⚠️ Monto fuera de rango (${Math.ceil(params.minSendable / 1000)}–${Math.floor(params.maxSendable / 1000)} sats).`);
+        close();
+        return;
+      }
+
+      const { invoice } = await requestInvoice(params.callback, amountMsat, 'Zap en Obelisk');
+
+      // Pay via local NWC.
+      await (walletClient as unknown as { payInvoice: (a: { invoice: string }) => Promise<unknown> })
+        .payInvoice({ invoice });
+
+      // Best-effort audit log.
+      let paymentHash: string | undefined;
+      try {
+        const { parseBolt11 } = await import('@/lib/bolt11');
+        paymentHash = parseBolt11(invoice).paymentHash;
+      } catch { /* ignore */ }
+      try {
+        await fetch('/api/wallet/zap-receipt', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            targetPubkey: target,
+            amountMsat,
+            channelId,
+            paymentHash,
+          }),
+        });
+      } catch { /* non-fatal */ }
+
+      // Visible chat message — same copy as before plus the powered-by tag.
       const name = member?.displayName || formatPubkey(target);
-      const content = `⚡ zapeé a @${name} ${amount} sats`;
+      const content = `⚡ zapeé a @${name} ${amount} sats — Powered by nostr-wot`;
       await fetch(`/api/channels/${channelId}/messages`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content }),
       }).catch(() => {});
+      close();
+    } catch (err) {
+      pushEphemeral(channelId, `⚠️ Fallo el zap (${(err as Error).message}).`);
       close();
     } finally {
       setBusy(false);

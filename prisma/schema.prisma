@@ -679,9 +679,32 @@ model InvoicePayment {
   payeePubkey   String?
   amountSats    Int
   paidAt        DateTime @default(now())
+  // claim/confirm protocol: 'pending' on claim, 'paid' on confirm success.
+  // 'failed' rows are deleted (allowing retry); the 30s sweep clears stale 'pending'.
+  status        String   @default("paid")
+  preimage      String?
+  createdAt     DateTime @default(now())
 
   @@index([messageId])
   @@index([channelId])
+  @@index([status, createdAt])
+}
+
+// Audit-only log of zaps. Recorded by the client after a successful local
+// NWC payment via /api/wallet/zap-receipt. The server holds no wallet
+// credentials and does not initiate the payment.
+model Zap {
+  id            String   @id @default(cuid())
+  payerPubkey   String
+  targetPubkey  String
+  amountMsat    BigInt
+  channelId     String?
+  messageId     String?
+  paymentHash   String   @unique
+  createdAt     DateTime @default(now())
+
+  @@index([targetPubkey, createdAt])
+  @@index([messageId])
 }
 
 // Pivot table: which members hold which custom roles.
