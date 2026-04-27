@@ -11,4 +11,4 @@ echo "Running migrations..."
 npx prisma migrate deploy
 
 echo "Starting Obelisk..."
-exec npx tsx server.ts
+exec npx tsx server/index.ts
