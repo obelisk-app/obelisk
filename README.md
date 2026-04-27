@@ -29,9 +29,20 @@ Obelisk feels like Discord — servers, channels, voice rooms, threads, reaction
 
 ## Why
 
-Nostr DMs at scale are rough (NIP-04 leaks metadata, NIP-17 is spam-prone, group chat over relays doesn't scale yet). But Nostr **identity** is rock-solid: keys, profiles, NIP-05, Web of Trust.
+Discord-style chat without the Discord-style data trail.
 
-Obelisk uses Nostr for what it does best — **identity, auth, and social graph** — and a traditional server for what it needs — **channels, messages, roles, real-time delivery**. Over time (Phase 5), the centralized server retires in favor of NIP-28/NIP-29/NIP-59 relay-managed groups.
+- **No personal information.** Identity is a Nostr keypair — no email, phone, name, or device fingerprint required, ever. The server stores pubkeys and the messages users explicitly send; nothing else.
+- **Open source and self-hosted.** Every Obelisk instance is run by its operator on their own VPS. No vendor lock-in, no "platform" sitting between a community and its members.
+- **Built to evolve.** A small, opinionated stack (Next.js + Prisma + Socket.io + NDK) makes it cheap to ship new features fast — voice, zaps, WoT spam filtering, the AI-agent admin CLI all landed inside one hackathon cycle.
+
+Nostr provides the **identity layer** (keys, profiles, NIP-05, Web of Trust); Obelisk provides everything a community actually runs on (channels, roles, real-time delivery, moderation).
+
+## Adoption
+
+Obelisk is already in real-world use:
+
+- **75+ users** on the public global server at [obelisk.ar](https://obelisk.ar).
+- **20+ users** migrated from La Crypta's official Discord to the La Crypta server on Obelisk.
 
 ## Features
 
@@ -46,22 +57,6 @@ Obelisk uses Nostr for what it does best — **identity, auth, and social graph*
 - 🎮 **Games** — built-in chess, tic-tac-toe, chain reaction.
 - 🏠 **Self-hostable** — Docker Compose stack runs on a 2 GB VPS for hundreds of concurrent users.
 - 🌍 **i18n** — English and Spanish out of the box.
-
-## Stack
-
-| Layer | Tech |
-|-------|------|
-| Frontend | Next.js 16 + TypeScript + Tailwind CSS v4 |
-| Auth / Identity | Nostr (NDK v3 + nostr-tools) |
-| API | Next.js API Routes + custom `server.ts` |
-| Real-time | Socket.io (messages + voice audio relay) |
-| Database | PostgreSQL |
-| ORM | Prisma 7 + `@prisma/adapter-pg` |
-| State | Zustand |
-| Payments | Nostr Wallet Connect (NIP-47) + Lightning |
-| Admin tooling | `scripts/admin-cli` — nsec / NIP-46 bunker CLI for humans & AI agents |
-| Testing | Vitest + React Testing Library |
-| Deploy | Docker Compose + Caddy (auto HTTPS) |
 
 ## Screenshots
 
@@ -84,6 +79,22 @@ Obelisk uses Nostr for what it does best — **identity, auth, and social graph*
   </tr>
 </table>
 
+## Stack
+
+| Layer | Tech |
+|-------|------|
+| Frontend | Next.js 16 + TypeScript + Tailwind CSS v4 |
+| Auth / Identity | Nostr (NDK v3 + nostr-tools) |
+| API | Next.js API Routes + custom `server.ts` |
+| Real-time | Socket.io (messages + voice audio relay) |
+| Database | PostgreSQL |
+| ORM | Prisma 7 + `@prisma/adapter-pg` |
+| State | Zustand |
+| Payments | Nostr Wallet Connect (NIP-47) + Lightning |
+| Admin tooling | `scripts/admin-cli` — nsec / NIP-46 bunker CLI for humans & AI agents |
+| Testing | Vitest + React Testing Library |
+| Deploy | Docker Compose + Caddy (auto HTTPS) |
+
 ## Quick Start (dev)
 
 ```bash
@@ -100,8 +111,10 @@ Open [http://localhost:3000](http://localhost:3000).
 ### Expose dev server over HTTPS (for NIP-07 / mobile testing)
 
 ```bash
-npm run dev:tunnel              # Cloudflare tunnel → https://obelisk.fabri.lat
+npm run dev:raise               # dev server + Cloudflare tunnel
 ```
+
+Requires a Cloudflare tunnel of your own. Create one with `cloudflared tunnel create <name>` and `cloudflared tunnel route dns <name> <your.host>`, then set `TUNNEL_NAME` and `TUNNEL_HOSTNAME` in `.env` (see [docs/cloudflare-tunnel.md](docs/cloudflare-tunnel.md)).
 
 ## Self-Hosting
 
@@ -151,7 +164,8 @@ Session   → pubkey, token, expiresAt
 
 ```bash
 npm run dev               # dev server (Next.js + Socket.io)
-npm run dev:tunnel        # + Cloudflare tunnel
+npm run dev:raise         # dev server + Cloudflare tunnel
+npm run raise             # production deploy
 npm run build             # prisma generate + migrate deploy + next build
 npm run test              # vitest run
 npm run test:watch        # vitest watch
@@ -181,12 +195,5 @@ See [ROADMAP.md](ROADMAP.md). TL;DR: Phases 0–3 are done (foundation, auth, ch
 
 ## Resources
 
-- [NDK Docs](https://ndk.fyi) · [Nostr Protocol](https://nostr.com) · [NIPs](https://github.com/nostr-protocol/nips) · [La Crypta](https://lacrypta.ar)
+- [NDK Docs](https://ndk.fyi) · [Nostr Protocol](https://nostr.com) · [NIPs](https://github.com/nostr-protocol/nips) · [Nostr WoT](https://nostr-wot.com/docs) · [La Crypta](https://lacrypta.ar)
 - Docs: [voice system](docs/voice-system.md) · [WoT & invite credits](docs/wot-and-invite-credits.md) · [uploads](docs/uploads.md) · [Cloudflare tunnel](docs/cloudflare-tunnel.md) · [Bitcoin zaps (NWC)](docs/bitcoin-zaps-nwc.md) · [Admin CLI for agents](docs/admin-cli.md)
-
-## License
-
-MIT.
-s
-
-

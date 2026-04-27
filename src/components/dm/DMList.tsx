@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useDMStore } from '@/store/dm';
 import { useNotificationStore } from '@/store/notification';
 import { useIdentity } from '@/hooks/useIdentity';
@@ -10,6 +10,67 @@ import { useProfile } from '@/components/ProfileProvider';
 import { useLastDM } from '@/components/dm/DMSessionProvider';
 import { formatPubkey } from '@/lib/nostr';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
+import DMComposer from './DMComposer';
+
+const MIN_WIDTH = 200;
+const MAX_WIDTH = 360;
+const DEFAULT_WIDTH = 240;
+// Shared with ChannelSidebar so the DM list and the channel list always
+// resize in lockstep — switching between DM mode and a server keeps the
+// sidebar at the same width.
+const STORAGE_KEY = 'obelisk:channel-sidebar-width';
+
+function useSidebarWidth() {
+  const [width, setWidth] = useState(DEFAULT_WIDTH);
+
+  useEffect(() => {
+    const saved = Number(localStorage.getItem(STORAGE_KEY));
+    if (saved >= MIN_WIDTH && saved <= MAX_WIDTH) setWidth(saved);
+  }, []);
+
+  const setAndPersist = useCallback((w: number) => {
+    const clamped = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, w));
+    setWidth(clamped);
+    localStorage.setItem(STORAGE_KEY, String(clamped));
+  }, []);
+
+  return [width, setAndPersist] as const;
+}
+
+function ResizeHandle({ onResize }: { onResize: (w: number) => void }) {
+  const draggingRef = useRef(false);
+
+  const onMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    draggingRef.current = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const onMove = (ev: MouseEvent) => {
+      if (!draggingRef.current) return;
+      onResize(ev.clientX);
+    };
+    const onUp = () => {
+      draggingRef.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  };
+
+  return (
+    <div
+      onMouseDown={onMouseDown}
+      role="separator"
+      aria-orientation="vertical"
+      data-testid="dm-sidebar-resize-handle"
+      className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-lc-green/40 active:bg-lc-green/60 transition-colors z-10"
+    />
+  );
+}
 
 type Tab = 'follows' | 'others';
 
@@ -97,15 +158,24 @@ function useFollowSet(myPubkey: string | null | undefined): Set<string> | null {
 }
 
 interface DMListProps {
-  onNewDM: () => void;
+  /** Optional fallback name/picture map for direct-paste pubkeys, forwarded
+   *  to the inline composer. */
+  profileCache?: Map<string, { name?: string; picture?: string }>;
 }
 
-export default function DMList({ onNewDM }: DMListProps) {
+export default function DMList({ profileCache }: DMListProps = {}) {
   const { threads, activeDMPubkey, setActiveDM, isLoadingThreads, setThreads, setMessages } = useDMStore();
   const dmUnreads = useNotificationStore((s) => s.dmUnreads);
   const { pubkey: myPubkey, signerReady } = useIdentity();
   const [showWipeConfirm, setShowWipeConfirm] = useState(false);
+  const [isComposing, setIsComposing] = useState(false);
   const followSet = useFollowSet(myPubkey);
+  const asideRef = useRef<HTMLElement>(null);
+  const [width, setWidth] = useSidebarWidth();
+  const handleResize = useCallback((clientX: number) => {
+    const left = asideRef.current?.getBoundingClientRect().left ?? 0;
+    setWidth(clientX - left);
+  }, [setWidth]);
   // `null` means "user hasn't picked a tab yet" — we auto-route to whichever
   // bucket has threads on first paint so an empty Follows tab doesn't make
   // the user think they have no DMs. Once they click a tab, their choice
@@ -147,7 +217,12 @@ export default function DMList({ onNewDM }: DMListProps) {
   };
 
   return (
-    <div className="w-60 bg-lc-dark border-r border-lc-border flex flex-col shrink-0" data-testid="dm-list">
+    <aside
+      ref={asideRef}
+      style={{ width, borderTopLeftRadius: 12 }}
+      className="relative bg-lc-dark border-t border-l border-r border-lc-border flex flex-col shrink-0 overflow-hidden"
+      data-testid="dm-list"
+    >
       <div className="p-3 border-b border-lc-border flex items-center justify-between">
         <h3 className="text-sm font-semibold text-lc-white">Direct Messages</h3>
         <div className="flex items-center gap-1">
@@ -170,18 +245,19 @@ export default function DMList({ onNewDM }: DMListProps) {
             </svg>
           </button>
           <button
-            onClick={onNewDM}
+            onClick={() => setIsComposing((v) => !v)}
             disabled={!hasSigner}
-            className={`text-lc-muted hover:text-lc-green transition-colors p-1 ${
-              hasSigner ? '' : 'opacity-50 cursor-not-allowed hover:text-lc-muted'
-            }`}
+            className={`transition-colors p-1 ${
+              isComposing ? 'text-lc-green' : 'text-lc-muted hover:text-lc-green'
+            } ${hasSigner ? '' : 'opacity-50 cursor-not-allowed hover:text-lc-muted'}`}
             title={newDMTitle}
             data-testid="new-dm-cta"
             aria-label={newDMTitle}
+            aria-pressed={isComposing}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <line x1="12" y1="5" x2="12" y2="19"/>
-              <line x1="5" y1="12" x2="19" y2="12"/>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="7" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
           </button>
         </div>
@@ -197,6 +273,12 @@ export default function DMList({ onNewDM }: DMListProps) {
         />
       )}
 
+      {isComposing && (
+        <DMComposer
+          onClose={() => setIsComposing(false)}
+          profileCache={profileCache}
+        />
+      )}
       <div className="flex border-b border-lc-border shrink-0" role="tablist" data-testid="dm-tabs">
         {(['follows', 'others'] as const).map((t) => {
           const active = tab === t;
@@ -244,7 +326,7 @@ export default function DMList({ onNewDM }: DMListProps) {
           <div className="p-4 text-center">
             <p className="text-sm text-lc-muted">No conversations yet</p>
             <button
-              onClick={onNewDM}
+              onClick={() => setIsComposing(true)}
               disabled={!hasSigner}
               className={`mt-2 text-xs text-lc-green hover:underline ${
                 hasSigner ? '' : 'opacity-50 cursor-not-allowed hover:no-underline'
@@ -276,6 +358,7 @@ export default function DMList({ onNewDM }: DMListProps) {
           />
         ))}
       </div>
-    </div>
+      <ResizeHandle onResize={handleResize} />
+    </aside>
   );
 }

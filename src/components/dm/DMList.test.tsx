@@ -48,13 +48,13 @@ describe('DMList', () => {
   });
 
   it('shows empty state', () => {
-    render(<DMList onNewDM={vi.fn()} />);
+    render(<DMList />);
     expect(screen.getByText('No conversations yet')).toBeInTheDocument();
   });
 
   it('shows loading skeleton while isLoadingThreads and no threads cached', () => {
     useDMStore.setState({ isLoadingThreads: true, threads: [] });
-    const { container } = render(<DMList onNewDM={vi.fn()} />);
+    const { container } = render(<DMList />);
     expect(screen.getByText(/Loading DMs from relays/i)).toBeInTheDocument();
     expect(container.querySelectorAll('.lc-skeleton-circle').length).toBeGreaterThan(0);
     // empty-state text should NOT appear while loading
@@ -70,7 +70,7 @@ describe('DMList', () => {
     });
     useNotificationStore.setState({ dmUnreads: { pk2: 3 } });
 
-    render(<DMList onNewDM={vi.fn()} />);
+    render(<DMList />);
     expect(screen.getByText('Alice')).toBeInTheDocument();
     expect(screen.getByText('Bob')).toBeInTheDocument();
     expect(screen.getByText('Hey!')).toBeInTheDocument();
@@ -78,16 +78,26 @@ describe('DMList', () => {
     expect(screen.getAllByText('3').length).toBeGreaterThanOrEqual(1);
   });
 
-  it('calls onNewDM when clicking new DM button', async () => {
-    const onNewDM = vi.fn();
+  it('opens the inline composer above the thread list when + is clicked', async () => {
     const user = userEvent.setup();
-    render(<DMList onNewDM={onNewDM} />);
+    render(<DMList />);
     await user.click(screen.getByTestId('new-dm-cta'));
-    expect(onNewDM).toHaveBeenCalled();
+    expect(screen.getByTestId('dm-composer')).toBeInTheDocument();
+    // Tabs and thread list stay visible — composer coexists with them.
+    expect(screen.getByTestId('dm-tabs')).toBeInTheDocument();
+  });
+
+  it('closes the composer when its close button is clicked', async () => {
+    const user = userEvent.setup();
+    render(<DMList />);
+    await user.click(screen.getByTestId('new-dm-cta'));
+    await user.click(screen.getByTestId('dm-composer-cancel'));
+    expect(screen.queryByTestId('dm-composer')).not.toBeInTheDocument();
+    expect(screen.getByTestId('dm-tabs')).toBeInTheDocument();
   });
 
   it('does not render a refresh button (polling handles refresh)', () => {
-    render(<DMList onNewDM={vi.fn()} />);
+    render(<DMList />);
     expect(screen.queryByTestId('dm-refresh-btn')).not.toBeInTheDocument();
   });
 
@@ -97,7 +107,7 @@ describe('DMList', () => {
     });
 
     const user = userEvent.setup();
-    render(<DMList onNewDM={vi.fn()} />);
+    render(<DMList />);
     await user.click(screen.getByText('Alice'));
     expect(useDMStore.getState().activeDMPubkey).toBe('pk1');
   });
@@ -121,7 +131,7 @@ describe('DMList signer gate', () => {
 
   it('disables the New DM CTA when signerReady is false', () => {
     setSignerReady(false);
-    render(<DMList onNewDM={vi.fn()} />);
+    render(<DMList />);
     expect(screen.getByTestId('new-dm-cta')).toBeDisabled();
     // Sanity: the empty-state CTA is also gated.
     expect(screen.getByTestId('new-dm-cta-empty')).toBeDisabled();
@@ -129,24 +139,23 @@ describe('DMList signer gate', () => {
 
   it('enables the New DM CTA when signerReady is true', () => {
     setSignerReady(true);
-    render(<DMList onNewDM={vi.fn()} />);
+    render(<DMList />);
     expect(screen.getByTestId('new-dm-cta')).not.toBeDisabled();
   });
 
-  it('does not call onNewDM when CTA is disabled (no signer)', async () => {
+  it('does not open the composer when CTA is disabled (no signer)', async () => {
     setSignerReady(false);
-    const onNewDM = vi.fn();
     const user = userEvent.setup();
-    render(<DMList onNewDM={onNewDM} />);
+    render(<DMList />);
     await user.click(screen.getByTestId('new-dm-cta'));
-    expect(onNewDM).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('dm-composer')).not.toBeInTheDocument();
   });
 
   it('reactively re-enables the CTA when signerReady flips after mount', () => {
     // Cold-start race that motivated this refactor: DMList mounts before
     // the signer is restored; once the bridge fires, the CTA enables.
     setSignerReady(false);
-    render(<DMList onNewDM={vi.fn()} />);
+    render(<DMList />);
     expect(screen.getByTestId('new-dm-cta')).toBeDisabled();
     act(() => { setSignerReady(true); });
     expect(screen.getByTestId('new-dm-cta')).not.toBeDisabled();
@@ -163,7 +172,7 @@ describe('DMList signer gate', () => {
 
     it('opens a confirm dialog when the wipe button is clicked', async () => {
       const user = userEvent.setup();
-      render(<DMList onNewDM={vi.fn()} />);
+      render(<DMList />);
       await user.click(screen.getByTestId('wipe-dm-cache'));
       expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument();
       expect(screen.getByText(/Clear DM cache/i)).toBeInTheDocument();
@@ -171,7 +180,7 @@ describe('DMList signer gate', () => {
 
     it('on confirm, calls clearAccount with the active pubkey and clears store state', async () => {
       const user = userEvent.setup();
-      render(<DMList onNewDM={vi.fn()} />);
+      render(<DMList />);
       await user.click(screen.getByTestId('wipe-dm-cache'));
       await user.click(screen.getByRole('button', { name: 'Clear' }));
       expect(clearAccountMock).toHaveBeenCalledWith('a'.repeat(64));
@@ -180,7 +189,7 @@ describe('DMList signer gate', () => {
 
     it('on cancel, does not call clearAccount', async () => {
       const user = userEvent.setup();
-      render(<DMList onNewDM={vi.fn()} />);
+      render(<DMList />);
       await user.click(screen.getByTestId('wipe-dm-cache'));
       await user.click(screen.getByRole('button', { name: /cancel/i }));
       expect(clearAccountMock).not.toHaveBeenCalled();
@@ -189,7 +198,7 @@ describe('DMList signer gate', () => {
 
     it('disables the wipe button when no profile pubkey is available', () => {
       useAuthStore.setState({ profile: null });
-      render(<DMList onNewDM={vi.fn()} />);
+      render(<DMList />);
       expect(screen.getByTestId('wipe-dm-cache')).toBeDisabled();
     });
   });

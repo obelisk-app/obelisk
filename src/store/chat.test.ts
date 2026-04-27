@@ -38,6 +38,26 @@ describe('useChatStore', () => {
     expect(state.isLoadingChannels).toBe(true);
   });
 
+  it('setActiveServer is a no-op when re-selecting the already-active server', () => {
+    // Without this guard, clicking the same server icon twice re-arms
+    // isLoadingChannels=true while the activeServerId-keyed effect doesn't
+    // re-fire (no dep change), leaving the UI stuck on skeletons forever.
+    useChatStore.getState().setActiveServer('s1');
+    useChatStore.getState().setChannels(
+      [{ id: 'ch1', name: 'gen', emoji: null, type: 'text', position: 0, categoryId: null }],
+      []
+    );
+    useChatStore.getState().setActiveChannel('ch1');
+    expect(useChatStore.getState().isLoadingChannels).toBe(false);
+
+    useChatStore.getState().setActiveServer('s1');
+    const state = useChatStore.getState();
+    expect(state.activeServerId).toBe('s1');
+    expect(state.isLoadingChannels).toBe(false);
+    expect(state.pinnedChannels).toHaveLength(1);
+    expect(state.activeChannelId).toBe('ch1');
+  });
+
   it('setChannels updates pinned channels and categories', () => {
     const pinned = [{ id: 'ch1', name: 'general', emoji: '💬', type: 'text', position: 0, categoryId: null }];
     const categories = [{

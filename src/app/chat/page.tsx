@@ -20,7 +20,6 @@ import SearchResultsPane from '@/components/chat/SearchResultsPane';
 import { useSearchStore } from '@/store/search';
 import DMList from '@/components/dm/DMList';
 import DMChat from '@/components/dm/DMChat';
-import NewDMModal from '@/components/dm/NewDMModal';
 import ProtocolPrompt from '@/components/dm/ProtocolPrompt';
 import { DMSessionProvider } from '@/components/dm/DMSessionProvider';
 import { ProfileProvider } from '@/components/ProfileProvider';
@@ -251,7 +250,6 @@ export default function ChatPage() {
 
   const [messageError, setMessageError] = useState<string | null>(null);
   const { isDMMode } = useDMStore();
-  const [showNewDMModal, setShowNewDMModal] = useState(false);
 
   const { serversLoaded, hasDefaultServer } = useServerAndChannelLoader({
     sessionChecked,
@@ -923,7 +921,7 @@ export default function ChatPage() {
         <div className="flex flex-1 min-h-0">
           <ServerBar />
           {DM_FEATURE_ENABLED && isDMMode ? (
-            <DMList onNewDM={() => setShowNewDMModal(true)} />
+            <DMList profileCache={profileCache} />
           ) : serversLoaded && servers.length === 0 ? null : (
             <ChannelSidebar onChannelSelect={() => setSidebarOpen(false)} />
           )}
@@ -952,12 +950,6 @@ export default function ChatPage() {
             </div>
             <DMChat profileCache={profileCache} />
             <ProtocolPrompt />
-            {showNewDMModal && (
-              <NewDMModal
-                onClose={() => setShowNewDMModal(false)}
-                profileCache={profileCache}
-              />
-            )}
           </DMSessionProvider>
         ) : (
           <div className="flex-1 flex flex-col min-h-0">
