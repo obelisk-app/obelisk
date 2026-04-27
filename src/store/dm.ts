@@ -72,7 +72,14 @@ export const useDMStore = create<DMState>()(
 
       setDMMode: (active) => set({ isDMMode: active }),
       setActiveDM: (pubkey) =>
-        set({ activeDMPubkey: pubkey, messages: [], isLoadingMessages: !!pubkey, hasMoreHistory: false }),
+        set((state) => {
+          // Re-clicking the active thread is a no-op. Clearing `messages` +
+          // flipping `isLoadingMessages: true` for the same partner makes
+          // the chat blink to the loading skeleton even though we already
+          // have the right thread open.
+          if (state.activeDMPubkey === pubkey) return state;
+          return { activeDMPubkey: pubkey, messages: [], isLoadingMessages: !!pubkey, hasMoreHistory: false };
+        }),
       setThreads: (threads) => set({ threads }),
       addThread: (thread) =>
         set((state) => ({

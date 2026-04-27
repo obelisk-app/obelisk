@@ -11,6 +11,16 @@ vi.mock('@/lib/dm/dm-cache', () => ({
   clearAccount: (pk: string) => clearAccountMock(pk),
 }));
 
+// DMThreadRow now reads via `useProfile` / `useLastDM`. Stub both providers
+// so DMList tests don't need a wrapping <DMSessionProvider> tree (each
+// returns null/[], the row falls back to thread.displayName + thread.lastMessage).
+vi.mock('@/components/ProfileProvider', () => ({
+  useProfile: () => null,
+}));
+vi.mock('@/components/dm/DMSessionProvider', () => ({
+  useLastDM: () => null,
+}));
+
 // Drive the reactive `signerReady` flag directly on the auth store —
 // DMList now reads via `useIdentity()` instead of polling `getNDK().signer`
 // at render time. Mocking the NDK singleton no longer matters for the

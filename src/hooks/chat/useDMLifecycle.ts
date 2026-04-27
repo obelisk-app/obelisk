@@ -4,8 +4,8 @@ import { useCallback, useEffect, useRef } from 'react';
 import { useDMStore } from '@/store/dm';
 import { useNotificationStore } from '@/store/notification';
 import { publishInboxRelays } from '@/lib/dm/dm-inbox';
-import { getCachedEvents } from '@/lib/dm/dm-cache';
-import { getProfile, setProfileDynamicRelays } from '@/lib/dm/profile-cache';
+import { getCachedEvents, subscribeToCacheTick } from '@/lib/dm/dm-cache';
+import { setProfileDynamicRelays } from '@/lib/dm/profile-cache';
 import { loadInboxWindow, fetchMyInboxRelays, fetchMyDmRelays } from '@/lib/dm/dm';
 import { formatPubkey, getNDK } from '@/lib/nostr';
 import { DM_FEATURE_ENABLED } from '@/lib/feature-flags';
@@ -124,9 +124,6 @@ export function useDMLifecycle({ isDMMode, ndkReady, profilePubkey, profileCache
   // Guard rail: only publish the inbox relay list once per DM-mode entry per
   // session. Cleared whenever the active pubkey changes (login switch).
   const inboxPublishedRef = useRef(false);
-  // Track which DM partners we've already kicked off a kind:0 profile fetch
-  // for, so refreshThreads doesn't spam getProfile() on every projection.
-  const profileFetchedRef = useRef<Set<string>>(new Set());
   // Guard the historical inbox walker: run once per session per pubkey.
   const inboxWalkedRef = useRef<string | null>(null);
 
@@ -177,37 +174,11 @@ export function useDMLifecycle({ isDMMode, ndkReady, profilePubkey, profileCache
     useNotificationStore.getState().setDMUnreads(totalUnreads);
 
     // For partners we don't share a server with, displayName is the npub
-    // fallback and picture is empty. Kick a relay-side kind:0 fetch and
-    // patch the thread when the profile arrives. Idempotent + TTL-cached
-    // so the second visit is free.
-    const applyProfile = (pubkey: string, entry: { parsed: { name?: string; displayName?: string; picture?: string } }) => {
-      const name = entry.parsed.displayName || entry.parsed.name;
-      const picture = entry.parsed.picture;
-      if (!name && !picture) return;
-      profileCache.set(pubkey, {
-        ...(profileCache.get(pubkey) ?? {}),
-        ...(name ? { name } : {}),
-        ...(picture ? { picture } : {}),
-      });
-      useDMStore.getState().updateThread(pubkey, {
-        ...(name ? { displayName: name } : {}),
-        ...(picture ? { picture } : {}),
-      });
-    };
-
-    for (const t of finalThreads) {
-      if (profileFetchedRef.current.has(t.pubkey)) continue;
-      profileFetchedRef.current.add(t.pubkey);
-      // getProfile returns the localStorage-hydrated entry synchronously
-      // in `result.profile`; the `onUpdate` callback only fires for FUTURE
-      // changes (the keyed observable doesn't replay current state on
-      // subscribe). On a refresh that's the difference between an
-      // immediately-populated avatar/name and waiting for a relay response.
-      const result = getProfile(myPubkey, t.pubkey, {
-        onUpdate: (entry) => applyProfile(t.pubkey, entry),
-      });
-      if (result.profile) applyProfile(t.pubkey, result.profile);
-    }
+    // Profile fetches are now driven by `ProfileProvider` — the consumer
+    // hooks (`useProfile` in DMThreadRow / DMChat / DMMessageBubble) trigger
+    // a single subscription per pubkey across the whole tree. This hook no
+    // longer needs to walk threads and fan out kind-0 fetches; the provider
+    // does it lazily as components mount.
   }, [profilePubkey, profileCache]);
 
   // Publish the kind 10050 inbox relay list lazily, the first time the user
@@ -226,22 +197,36 @@ export function useDMLifecycle({ isDMMode, ndkReady, profilePubkey, profileCache
   useEffect(() => {
     inboxPublishedRef.current = false;
     inboxWalkedRef.current = null;
-    profileFetchedRef.current.clear();
   }, [profilePubkey]);
 
-  // Project the cache into the threads list. Run on entry, then poll every
-  // 5s while the user is in DM mode so freshly-cached events from the live
-  // subscription (in DMSessionProvider) surface in the sidebar. The poll is
-  // a cheap in-memory walk — no relay traffic — so a tight cadence is fine.
+  // Project the cache into the threads list. The first projection runs
+  // synchronously off the localStorage-hydrated cache so the sidebar shows
+  // the LAST KNOWN state instantly — no skeleton between visits. After
+  // that, every cache mutation (live tail, walker windows, loadOlder)
+  // fires `subscribeToCacheTick` and we re-project. A short debounce
+  // collapses bursts (the inbox walker can ingest hundreds of events in a
+  // window) into a single re-render.
   useEffect(() => {
     if (!DM_FEATURE_ENABLED) return;
     if (!isDMMode || !ndkReady || !profilePubkey) return;
 
-    useDMStore.getState().setLoadingThreads(true);
+    // Only show the spinner if there's truly nothing cached. With cache
+    // present we paint the cached threads first and update silently.
+    const hasCached = getCachedEvents(profilePubkey).length > 0;
+    if (!hasCached) useDMStore.getState().setLoadingThreads(true);
     refreshThreads();
 
-    const interval = setInterval(refreshThreads, 5000);
-    return () => clearInterval(interval);
+    let debounce: ReturnType<typeof setTimeout> | null = null;
+    const unsub = subscribeToCacheTick((pk) => {
+      if (pk !== profilePubkey) return;
+      if (debounce) clearTimeout(debounce);
+      debounce = setTimeout(refreshThreads, 200);
+    });
+
+    return () => {
+      if (debounce) clearTimeout(debounce);
+      unsub();
+    };
   }, [isDMMode, ndkReady, profilePubkey, refreshThreads]);
 
   // Historical inbox walker. On first DM-mode entry, fetch the last ~30

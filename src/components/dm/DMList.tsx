@@ -6,9 +6,74 @@ import { useNotificationStore } from '@/store/notification';
 import { useIdentity } from '@/hooks/useIdentity';
 import { clearAccount } from '@/lib/dm/dm-cache';
 import { _followsStore } from '@/lib/dm/follows';
+import { useProfile } from '@/components/ProfileProvider';
+import { useLastDM } from '@/components/dm/DMSessionProvider';
+import { formatPubkey } from '@/lib/nostr';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 
 type Tab = 'follows' | 'others';
+
+/**
+ * Thread row. Reads its partner's profile from `useProfile` so the live
+ * provider drives name/avatar updates — no propagation through the thread
+ * store needed. Falls back to whatever's in the thread record (which may
+ * carry a server-side member name from previous projection runs) before
+ * decaying to a formatted pubkey.
+ */
+function DMThreadRow({
+  thread,
+  active,
+  unread,
+  onSelect,
+}: {
+  thread: { pubkey: string; displayName: string; picture?: string; lastMessage?: string };
+  active: boolean;
+  unread: number;
+  onSelect: () => void;
+}) {
+  const profile = useProfile(thread.pubkey);
+  // Latest decrypted message from the DM provider. Falls back to whatever
+  // the thread store happens to carry (set by optimistic-send) — and
+  // finally to nothing, in which case the row just shows the partner name.
+  const lastMessage = useLastDM(thread.pubkey);
+  const name =
+    profile?.parsed.displayName
+    || profile?.parsed.name
+    || thread.displayName
+    || formatPubkey(thread.pubkey);
+  const picture = profile?.parsed.picture || thread.picture;
+  const preview = lastMessage?.content || thread.lastMessage || '';
+  return (
+    <button
+      onClick={onSelect}
+      className={`w-full text-left px-3 py-2.5 flex items-center gap-2.5 transition-colors ${
+        active ? 'bg-lc-border/40' : 'hover:bg-lc-border/20'
+      }`}
+      data-testid="dm-thread"
+    >
+      {picture ? (
+        <img src={picture} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" />
+      ) : (
+        <div className="w-8 h-8 rounded-full bg-lc-olive flex items-center justify-center text-lc-green text-xs font-semibold shrink-0">
+          {name[0]?.toUpperCase() || '?'}
+        </div>
+      )}
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium text-lc-white truncate">{name}</span>
+          {unread > 0 && (
+            <span className="bg-lc-green text-lc-black text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center shrink-0">
+              {unread}
+            </span>
+          )}
+        </div>
+        {preview && (
+          <p className="text-xs text-lc-muted truncate">{preview}</p>
+        )}
+      </div>
+    </button>
+  );
+}
 
 // Stable empty snapshot so useSyncExternalStore doesn't see a new object
 // on every render (which would trigger React's "infinite update loop"
@@ -202,37 +267,13 @@ export default function DMList({ onNewDM }: DMListProps) {
           </div>
         ) : null}
         {visibleThreads.map((thread) => (
-          <button
+          <DMThreadRow
             key={thread.pubkey}
-            onClick={() => setActiveDM(thread.pubkey)}
-            className={`w-full text-left px-3 py-2.5 flex items-center gap-2.5 transition-colors ${
-              activeDMPubkey === thread.pubkey
-                ? 'bg-lc-border/40'
-                : 'hover:bg-lc-border/20'
-            }`}
-            data-testid="dm-thread"
-          >
-            {thread.picture ? (
-              <img src={thread.picture} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" />
-            ) : (
-              <div className="w-8 h-8 rounded-full bg-lc-olive flex items-center justify-center text-lc-green text-xs font-semibold shrink-0">
-                {thread.displayName[0]?.toUpperCase() || '?'}
-              </div>
-            )}
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-lc-white truncate">{thread.displayName}</span>
-                {(dmUnreads[thread.pubkey] || 0) > 0 && (
-                  <span className="bg-lc-green text-lc-black text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center shrink-0">
-                    {dmUnreads[thread.pubkey]}
-                  </span>
-                )}
-              </div>
-              {thread.lastMessage && (
-                <p className="text-xs text-lc-muted truncate">{thread.lastMessage}</p>
-              )}
-            </div>
-          </button>
+            thread={thread}
+            active={activeDMPubkey === thread.pubkey}
+            unread={dmUnreads[thread.pubkey] || 0}
+            onSelect={() => setActiveDM(thread.pubkey)}
+          />
         ))}
       </div>
     </div>

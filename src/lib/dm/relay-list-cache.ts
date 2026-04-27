@@ -1,8 +1,8 @@
 // src/lib/dm/relay-list-cache.ts
 import type { Event as NostrEvent } from 'nostr-tools/pure';
-import { sharedCoalescer } from '@/lib/nostr-coalescer';
 import { parseRelayListMeta, parseInboxRelays } from '@/lib/nostr-read';
 import { createKeyedObservable, type Slot } from '@/lib/nostr-store';
+import { subscribeReplaceable, type ReplaceableEntry } from '@/lib/nostr-resource';
 
 export interface RelayListResult {
   inbox: string[];
@@ -90,16 +90,74 @@ function isStale(entry: CacheEntry): boolean {
   return false;
 }
 
-export function getRelays(
+// Per-kind replaceable wrapper: one ReplaceableEntry slot per (10002, 10050).
+// Composing two `subscribeReplaceable` instances keeps the dedup-by-
+// created_at contract consistent with profile-cache, follows, etc., at the
+// cost of issuing two filters per partner. The coalescer groups them into
+// one REQ when fired in the same window so wire-cost is unchanged.
+type SlotEntry = { event: NostrEvent };
+
+function persistKind(
   me: string,
   partner: string,
-  opts: { onUpdate?: (r: RelayListResult) => void } = {},
-): { result: RelayListResult; dispose?: () => void } {
+  which: 'outbox' | 'inbox',
+  entry: SlotEntry,
+): void {
   const k = slotKey(me, partner);
-  const slot = hydrateSlot(me, partner);
-  const entry = slot.value;
-  const result = buildResult(entry);
+  const current = relayStore.get(k).value ?? {};
+  const next: CacheEntry = {
+    ...current,
+    [which]: { event: entry.event, lastCheckedAt: Date.now() },
+  };
+  const blob = readPersisted(me);
+  blob[partner] = next;
+  writePersisted(me, blob);
+  relayStore.set(k, next);
+}
 
+export interface SubscribeRelaysOpts {
+  onCache?: (r: RelayListResult) => void;
+  onUpdate?: (r: RelayListResult) => void;
+}
+
+/**
+ * Subscribe to a partner's NIP-65 (kind 10002) outbox + NIP-17 (kind 10050)
+ * inbox relay lists. Built from two `subscribeReplaceable` instances so
+ * dedup-by-created_at and per-kind cache writes are inherited from the
+ * generic primitive.
+ *
+ * The composite `RelayListResult` is rebuilt from the keyed observable on
+ * every store change, so the consumer sees a single coherent value
+ * regardless of which kind landed first.
+ */
+export function subscribeRelays(
+  me: string,
+  partner: string,
+  opts: SubscribeRelaysOpts = {},
+): () => void {
+  const k = slotKey(me, partner);
+  hydrateSlot(me, partner); // seed in-memory slot from localStorage if cold
+  const initial = relayStore.get(k).value;
+  if (opts.onCache) opts.onCache(buildResult(initial));
+
+  const fire = (kind: 10002 | 10050): (() => void) => subscribeReplaceable<SlotEntry & ReplaceableEntry>({
+    filters: [{ kinds: [kind], authors: [partner], limit: 1 }],
+    relays: FALLBACK_RELAYS,
+    hydrate: () => {
+      const cur = relayStore.get(k).value;
+      const slot = kind === 10002 ? cur?.outbox : cur?.inbox;
+      return slot ? { event: slot.event } : null;
+    },
+    persist: (entry) => persistKind(me, partner, kind === 10002 ? 'outbox' : 'inbox', entry),
+    parse: (event) => ({ event }),
+    match: (event) => event.kind === kind && event.pubkey === partner,
+    // Notification fan-out: relayStore.subscribe will fire whenever either
+    // kind's persist runs. We forward to onUpdate via a single subscription
+    // on the composite slot below.
+  });
+
+  const close10002 = fire(10002);
+  const close10050 = fire(10050);
   let unsubStore: (() => void) | undefined;
   if (opts.onUpdate) {
     const cb = opts.onUpdate;
@@ -107,41 +165,23 @@ export function getRelays(
       if (s.value !== undefined) cb(buildResult(s.value));
     });
   }
+  return () => {
+    close10002();
+    close10050();
+    unsubStore?.();
+  };
+}
 
-  if (!entry || isStale(entry)) {
-    sharedCoalescer.enqueue({
-      filters: [
-        { kinds: [10002], authors: [partner], limit: 1 },
-        { kinds: [10050], authors: [partner], limit: 1 },
-      ],
-      relays: FALLBACK_RELAYS,
-      onEvent: (event: NostrEvent) => {
-        if (event.pubkey !== partner) return;
-        const current = relayStore.get(k).value ?? {};
-        const which: 'outbox' | 'inbox' | null =
-          event.kind === 10002 ? 'outbox' : event.kind === 10050 ? 'inbox' : null;
-        if (!which) return;
-        const prev = current[which]?.event;
-        const sameContent =
-          prev && prev.created_at >= event.created_at && JSON.stringify(prev.tags) === JSON.stringify(event.tags);
-        const nextEntry: CacheEntry = { ...current };
-        if (sameContent) {
-          // Refresh lastCheckedAt only — keep the existing event reference,
-          // and persist + skip the in-memory update (no notification).
-          nextEntry[which] = { event: prev!, lastCheckedAt: Date.now() };
-          const blob = readPersisted(me);
-          blob[partner] = nextEntry;
-          writePersisted(me, blob);
-          return;
-        }
-        nextEntry[which] = { event, lastCheckedAt: Date.now() };
-        const blob = readPersisted(me);
-        blob[partner] = nextEntry;
-        writePersisted(me, blob);
-        relayStore.set(k, nextEntry);
-      },
-    });
-  }
-
-  return { result, dispose: unsubStore };
+// Compat shim — older call sites use the result-shape API.
+export function getRelays(
+  me: string,
+  partner: string,
+  opts: { onUpdate?: (r: RelayListResult) => void } = {},
+): { result: RelayListResult; dispose?: () => void } {
+  let result: RelayListResult = buildResult(undefined);
+  const dispose = subscribeRelays(me, partner, {
+    onCache: (r) => { result = r; },
+    onUpdate: opts.onUpdate,
+  });
+  return { result, dispose };
 }

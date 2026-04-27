@@ -1,6 +1,6 @@
 import type { Event as NostrEvent } from 'nostr-tools/pure';
 import type { Filter } from 'nostr-tools/filter';
-import { sharedCoalescer } from '@/lib/nostr-coalescer';
+import { subscribeReplaceable, subscribeStream } from '@/lib/nostr-resource';
 import { verifyDMEvent } from './pool';
 import { getCursors, setCursor, putEvent, getEvent, type CachedDMEvent } from './dm-cache';
 import { getRelays } from './relay-list-cache';
@@ -10,8 +10,6 @@ const KIND_NIP04 = 4;
 const KIND_RUMOR = 14;
 const KIND_GIFT_WRAP = 1059;
 const KIND_FOLLOW = 3;
-
-const coalescer = sharedCoalescer;
 
 function toCached(event: NostrEvent): CachedDMEvent {
   return {
@@ -67,6 +65,26 @@ function partnerRelaySet(myPubkey: string, partnerPubkey: string, extra: string[
 // in 2 years. Limit-based pagination is the right primitive.
 const INITIAL_THREAD_LIMIT = 50;
 
+/** Open a fire-and-forget DM event stream into the local cache. All four
+ *  DM stream fetchers (history, older, inbox window, live tail) share this
+ *  exact contract: verify-then-ingest, no replay (consumers read the cache
+ *  directly via `getCachedEvents` + `subscribeToCacheTick`). Centralizing
+ *  the wiring through `subscribeStream` keeps the dedup / accept / persist
+ *  semantics consistent with the rest of the app. */
+function streamDMs(myPubkey: string, filters: Filter[], relays: string[]): () => void {
+  return subscribeStream({
+    filters,
+    relays,
+    hydrate: () => [], // ingestion-only: cache is read by consumers via dm-cache
+    accept: (event) => verifyDMEvent(event),
+    persist: (event) => {
+      // verifyAndIngest dedupes by id internally and updates cursors —
+      // delegating preserves the existing kind→cursor wiring.
+      verifyAndIngest(myPubkey, event);
+    },
+  });
+}
+
 export function loadHistory(myPubkey: string, partnerPubkey: string, opts: LoadHistoryOptions = {}): void {
   const cursors = getCursors(myPubkey);
   const nowSec = Math.floor(Date.now() / 1000);
@@ -80,12 +98,7 @@ export function loadHistory(myPubkey: string, partnerPubkey: string, opts: LoadH
     { kinds: [KIND_NIP04], authors: [partnerPubkey], '#p': [myPubkey], ...baseFilters(cursors.nip04In) },
     { kinds: [KIND_GIFT_WRAP], '#p': [myPubkey], ...baseFilters(cursors.nip17Wrap) },
   ];
-
-  coalescer.enqueue({
-    filters,
-    relays: partnerRelaySet(myPubkey, partnerPubkey, opts.relays),
-    onEvent: (event) => verifyAndIngest(myPubkey, event),
-  });
+  streamDMs(myPubkey, filters, partnerRelaySet(myPubkey, partnerPubkey, opts.relays));
 }
 
 /**
@@ -107,35 +120,57 @@ export function loadHistory(myPubkey: string, partnerPubkey: string, opts: LoadH
 // are cheap because the SimplePool reuses the warm sockets.
 const RELAY_LIST_FETCH_TIMEOUT_MS = 8000;
 
+type RelayListEntry = { event: NostrEvent; relays: string[] };
+
+/** Promise-shaped wrapper around `subscribeReplaceable` for one-shot relay-
+ *  list lookups: the user's own kind-10050 (NIP-17 inbox) or kind-10002
+ *  (NIP-65). Resolves with whatever the freshest event seen across the
+ *  search net contained — empty array if none arrived inside the
+ *  RELAY_LIST_FETCH_TIMEOUT_MS window. Built on the generic primitive so
+ *  dedup-by-created_at and the cache contract are uniform with the rest of
+ *  the resource layer; we just don't persist (caller already merges the
+ *  result into the live walker's relay set). */
+function fetchOwnRelayList(args: {
+  pubkey: string;
+  kind: 10050 | 10002;
+  searchRelays: string[];
+  parseTags: (tags: string[][]) => string[];
+}): Promise<string[]> {
+  let newest: RelayListEntry | null = null;
+  return new Promise((resolve) => {
+    const dispose = subscribeReplaceable<RelayListEntry>({
+      filters: [{ kinds: [args.kind], authors: [args.pubkey], limit: 1 }],
+      relays: args.searchRelays,
+      hydrate: () => null, // one-shot: no cache layer for own-relay lookups
+      persist: (entry) => { newest = entry; },
+      parse: (event) => ({
+        event,
+        relays: args.parseTags(event.tags as string[][]),
+      }),
+      match: (event) => event.kind === args.kind && event.pubkey === args.pubkey,
+    });
+    setTimeout(() => {
+      dispose();
+      resolve(newest ? Array.from(new Set((newest as RelayListEntry).relays)) : []);
+    }, RELAY_LIST_FETCH_TIMEOUT_MS);
+  });
+}
+
 export function fetchMyInboxRelays(opts: {
   myPubkey: string;
   /** Wide-net relays to look for the 10050 event. Pool relays + a couple
    *  well-known aggregators. */
   searchRelays: string[];
 }): Promise<string[]> {
-  const filters: Filter[] = [
-    { kinds: [10050], authors: [opts.myPubkey], limit: 1 },
-  ];
-  let newest: { created_at: number; relays: string[] } | null = null;
-  return new Promise((resolve) => {
-    const close = coalescer.enqueue({
-      filters,
-      relays: opts.searchRelays,
-      onEvent: (event) => {
-        if (event.kind !== 10050 || event.pubkey !== opts.myPubkey) return;
-        if (newest && event.created_at <= newest.created_at) return;
-        // Tag shape: ['relay', 'wss://...'] OR ['r', 'wss://...'] (some
-        // clients vary). Accept either and dedupe.
-        const relays = (event.tags as string[][])
-          .filter((t) => (t[0] === 'relay' || t[0] === 'r') && typeof t[1] === 'string' && t[1].startsWith('wss://'))
-          .map((t) => t[1]);
-        newest = { created_at: event.created_at, relays };
-      },
-    });
-    setTimeout(() => {
-      close();
-      resolve(newest ? Array.from(new Set(newest.relays)) : []);
-    }, RELAY_LIST_FETCH_TIMEOUT_MS);
+  return fetchOwnRelayList({
+    pubkey: opts.myPubkey,
+    kind: 10050,
+    searchRelays: opts.searchRelays,
+    // Tag shape: ['relay', 'wss://...'] OR ['r', 'wss://...'] (clients vary).
+    parseTags: (tags) =>
+      tags
+        .filter((t) => (t[0] === 'relay' || t[0] === 'r') && typeof t[1] === 'string' && t[1].startsWith('wss://'))
+        .map((t) => t[1]),
   });
 }
 
@@ -157,30 +192,16 @@ export function fetchMyDmRelays(opts: {
   myPubkey: string;
   searchRelays: string[];
 }): Promise<string[]> {
-  const filters: Filter[] = [
-    { kinds: [10002], authors: [opts.myPubkey], limit: 1 },
-  ];
-  let newest: { created_at: number; relays: string[] } | null = null;
-  return new Promise((resolve) => {
-    const close = coalescer.enqueue({
-      filters,
-      relays: opts.searchRelays,
-      onEvent: (event) => {
-        if (event.kind !== 10002 || event.pubkey !== opts.myPubkey) return;
-        if (newest && event.created_at <= newest.created_at) return;
-        // NIP-65 tag shape: ['r', '<url>', '<read'|'write'>?]. Missing
-        // marker means both. Take everything — for DM coverage we want
-        // the union of read + write.
-        const relays = (event.tags as string[][])
-          .filter((t) => t[0] === 'r' && typeof t[1] === 'string' && t[1].startsWith('wss://'))
-          .map((t) => t[1]);
-        newest = { created_at: event.created_at, relays };
-      },
-    });
-    setTimeout(() => {
-      close();
-      resolve(newest ? Array.from(new Set(newest.relays)) : []);
-    }, RELAY_LIST_FETCH_TIMEOUT_MS);
+  return fetchOwnRelayList({
+    pubkey: opts.myPubkey,
+    kind: 10002,
+    searchRelays: opts.searchRelays,
+    // NIP-65 tag shape: ['r', '<url>', '<read'|'write'>?]. Missing marker
+    // means both. Take everything — for DM coverage we want the union.
+    parseTags: (tags) =>
+      tags
+        .filter((t) => t[0] === 'r' && typeof t[1] === 'string' && t[1].startsWith('wss://'))
+        .map((t) => t[1]),
   });
 }
 
@@ -204,18 +225,7 @@ export function loadInboxWindow(opts: {
     { kinds: [KIND_GIFT_WRAP], '#p': [opts.myPubkey], until: opts.until, limit },
   ];
   return new Promise((resolve) => {
-    let eventCount = 0;
-    const close = coalescer.enqueue({
-      filters,
-      relays: opts.myInboxRelays,
-      onEvent: (event) => {
-        eventCount++;
-        verifyAndIngest(opts.myPubkey, event);
-      },
-    });
-    setTimeout(() => {
-      console.log('[dm-walker] window summary', { events: eventCount });
-    }, 3500);
+    const close = streamDMs(opts.myPubkey, filters, opts.myInboxRelays);
     // Best-effort close: relays usually settle within ~2s, but some are
     // slow. 4s is a generous upper bound that matches the dev console
     // observation. After this we resolve so the caller can decide whether
@@ -345,11 +355,7 @@ export function loadOlder(myPubkey: string, partnerPubkey: string, opts: LoadOld
     { kinds: [KIND_NIP04], authors: [partnerPubkey], '#p': [myPubkey], until: opts.before, limit },
     { kinds: [KIND_GIFT_WRAP], '#p': [myPubkey], until: opts.before, limit },
   ];
-  return coalescer.enqueue({
-    filters,
-    relays: partnerRelaySet(myPubkey, partnerPubkey, opts.relays),
-    onEvent: (event) => verifyAndIngest(myPubkey, event),
-  });
+  return streamDMs(myPubkey, filters, partnerRelaySet(myPubkey, partnerPubkey, opts.relays));
 }
 
 export interface SubscribeLiveOptions {
@@ -376,15 +382,18 @@ export function subscribeLive(opts: SubscribeLiveOptions): () => void {
     // whatever it has on first call.
     { kinds: [KIND_FOLLOW], authors: [opts.myPubkey], ...(cursors.kind3 > 0 ? { since: cursors.kind3 } : {}) },
   ];
-  // The coalescer's enqueue returns a real teardown handle: it removes this
-  // entry from the active sub and, if it's the last entry, closes the
-  // underlying SimplePool subscription so events stop flowing on the wire.
-  return coalescer.enqueue({
+  // Built on `subscribeStream` so the contract matches every other
+  // event-stream consumer in the app (zaps, DM history, inbox windows).
+  // The teardown returned closes the underlying SimplePool sub so events
+  // stop flowing on the wire when the caller disposes.
+  return subscribeStream({
     filters,
     relays: opts.myInboxRelays,
-    onEvent: (event) => {
-      const ok = verifyAndIngest(opts.myPubkey, event);
-      if (ok) opts.onEvent?.(event);
+    hydrate: () => [], // live tail: no replay (cursor-bounded `since` filter)
+    accept: (event) => verifyDMEvent(event),
+    persist: (event) => {
+      verifyAndIngest(opts.myPubkey, event);
+      opts.onEvent?.(event);
     },
   });
 }

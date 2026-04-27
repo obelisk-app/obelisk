@@ -23,6 +23,7 @@ import DMChat from '@/components/dm/DMChat';
 import NewDMModal from '@/components/dm/NewDMModal';
 import ProtocolPrompt from '@/components/dm/ProtocolPrompt';
 import { DMSessionProvider } from '@/components/dm/DMSessionProvider';
+import { ProfileProvider } from '@/components/ProfileProvider';
 import VoiceChannel from '@/components/chat/VoiceChannel';
 import { useDMStore } from '@/store/dm';
 import { useVoiceStore } from '@/store/voice';
@@ -772,6 +773,7 @@ export default function ChatPage() {
   const activeServerForTopBar = servers.find((s) => s.id === activeServerId);
 
   return (
+    <ProfileProvider me={profile?.pubkey ?? null}>
     <div className="h-dvh flex flex-col bg-black relative overflow-hidden">
       {/* Top-top bar — app/server title on the left, inbox + help on the right */}
       <div
@@ -1338,6 +1340,7 @@ export default function ChatPage() {
       <GamePickerModal />
       <SettingsModal />
     </div>
+    </ProfileProvider>
   );
 }
 

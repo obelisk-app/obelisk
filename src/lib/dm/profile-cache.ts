@@ -1,7 +1,7 @@
 import type { Event as NostrEvent } from 'nostr-tools/pure';
-import { sharedCoalescer } from '@/lib/nostr-coalescer';
 import { getNDK } from '@/lib/nostr';
 import { createKeyedObservable, type Slot } from '@/lib/nostr-store';
+import { subscribeReplaceable } from '@/lib/nostr-resource';
 
 /**
  * Pull whatever relays the NDK pool already knows about. NDK's outbox
@@ -33,6 +33,9 @@ export interface ProfileEntry {
   lastCheckedAt: number;
 }
 
+// 24h freshness window. Profiles change rarely enough that re-querying
+// within a day is wasteful and adds visible relay load. Beyond TTL we
+// always hit relays again.
 const TTL_MS = 24 * 3600 * 1000;
 
 // purplepag.es is the canonical kind-0 aggregator, but a single relay is
@@ -119,72 +122,80 @@ function hydrateSlot(me: string, partner: string): Slot<ProfileEntry> {
   return slot;
 }
 
+export interface SubscribeProfileOpts {
+  /** Fires synchronously with the localStorage-hydrated entry, if any. */
+  onCache?: (p: ProfileEntry) => void;
+  /** Fires when a strictly newer kind-0 lands from relays. */
+  onUpdate?: (p: ProfileEntry) => void;
+}
+
+/**
+ * Subscribe to the profile resource for `partner` (kind 0). Built on the
+ * generic `subscribeReplaceable` primitive — same loading contract as every
+ * other replaceable resource (relay lists, follows). Consumers don't need
+ * to remember to apply a synchronous cached value; `onCache` fires before
+ * this function returns if the localStorage seed has data.
+ *
+ * Dedup is by `created_at`: older / equal events are dropped silently.
+ * `lastCheckedAt` on the cached entry is NOT bumped on equal-or-older
+ * arrivals — keeps the persisted blob smaller.
+ */
+export function subscribeProfile(
+  me: string,
+  partner: string,
+  opts: SubscribeProfileOpts = {},
+): () => void {
+  const k = slotKey(me, partner);
+
+  const relays = Array.from(new Set([
+    ...PROFILE_AGGREGATORS,
+    ...ndkPoolRelays(),
+    ...dynamicRelays,
+    ...extraRelays,
+  ]));
+
+  return subscribeReplaceable<ProfileEntry>({
+    filters: [{ kinds: [0], authors: [partner], limit: 1 }],
+    relays,
+    hydrate: () => hydrateSlot(me, partner).value ?? null,
+    persist: (entry) => {
+      const blob = readPersisted(me);
+      blob[partner] = entry;
+      writePersisted(me, blob);
+      profileStore.set(k, entry);
+    },
+    parse: (event) => ({
+      event,
+      parsed: parseKind0(event.content),
+      lastCheckedAt: Date.now(),
+    }),
+    match: (event) => event.kind === 0 && event.pubkey === partner,
+    // Skip the relay round-trip when the cached entry was last refreshed
+    // within TTL — typical case after a recent visit to the same partner.
+    // Beyond TTL, always re-check (lets a partner's avatar/name update
+    // without forcing the user to wait for a manual refresh).
+    shouldFetch: (cached) => !cached || Date.now() - cached.lastCheckedAt > TTL_MS,
+    onCache: opts.onCache,
+    onUpdate: opts.onUpdate,
+  });
+}
+
+// Compat shim — a few legacy call sites still use the result-shape API. New
+// code should call `subscribeProfile` directly. The shim wires `onCache` so
+// the synchronous return value matches the previous semantics.
 export interface GetProfileResult {
   profile: ProfileEntry | null;
   dispose?: () => void;
 }
-
 export function getProfile(
   me: string,
   partner: string,
   opts: { onUpdate?: (p: ProfileEntry) => void } = {},
 ): GetProfileResult {
-  const k = slotKey(me, partner);
-  const slot = hydrateSlot(me, partner);
-  const cached = slot.value ?? null;
-  const stale = !cached || Date.now() - cached.lastCheckedAt > TTL_MS;
-
-  let unsubStore: (() => void) | undefined;
-  if (opts.onUpdate) {
-    const cb = opts.onUpdate;
-    unsubStore = profileStore.subscribe(k, (s) => {
-      if (s.value !== undefined) cb(s.value);
-    });
-  }
-
-  if (stale) {
-    const relays = Array.from(new Set([
-      ...PROFILE_AGGREGATORS,
-      ...ndkPoolRelays(),
-      ...dynamicRelays,
-      ...extraRelays,
-    ]));
-    if (typeof window !== 'undefined') {
-      console.log('[profile-cache] fetching kind 0', { partner: partner.slice(0, 8), relayCount: relays.length });
-    }
-    sharedCoalescer.enqueue({
-      filters: [{ kinds: [0], authors: [partner], limit: 1 }],
-      relays,
-      onEvent: (event: NostrEvent) => {
-        if (event.kind !== 0 || event.pubkey !== partner) return;
-        if (typeof window !== 'undefined') {
-          console.log('[profile-cache] got kind 0', { partner: partner.slice(0, 8), at: event.created_at });
-        }
-        const current = profileStore.get(k).value;
-        if (current && current.event.created_at >= event.created_at) {
-          // Same or older event — refresh `lastCheckedAt` only, no notify.
-          // Persist + write the slot with bumped timestamp; we use `set`
-          // here because we want to keep the in-memory slot in sync, and
-          // the equal() function isn't configured. Avoid the notify by
-          // only writing if the partner record exists in localStorage.
-          const refreshed: ProfileEntry = { ...current, lastCheckedAt: Date.now() };
-          const blob = readPersisted(me);
-          blob[partner] = refreshed;
-          writePersisted(me, blob);
-          return;
-        }
-        const entry: ProfileEntry = {
-          event,
-          parsed: parseKind0(event.content),
-          lastCheckedAt: Date.now(),
-        };
-        const blob = readPersisted(me);
-        blob[partner] = entry;
-        writePersisted(me, blob);
-        profileStore.set(k, entry);
-      },
-    });
-  }
-
-  return { profile: cached, dispose: unsubStore };
+  let cached: ProfileEntry | null = null;
+  const dispose = subscribeProfile(me, partner, {
+    onCache: (entry) => { cached = entry; },
+    onUpdate: opts.onUpdate,
+  });
+  return { profile: cached, dispose };
 }

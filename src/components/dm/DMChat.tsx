@@ -1,17 +1,24 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useDMStore } from '@/store/dm';
 import { useAuthStore } from '@/store/auth';
 import { sendDM as sendDMNew, detectNip04InRecent, type DMMessage, type DMProtocol } from '@/lib/dm/dm';
-import { getCachedEvents, getSecret, putSecret, subscribeToCacheTick, type CachedDMEvent } from '@/lib/dm/dm-cache';
+import { getCachedEvents } from '@/lib/dm/dm-cache';
+import { partnerOfNip04 } from '@/lib/dm/decrypt';
 import { loadOlder } from '@/lib/dm/dm';
-import { getProfile } from '@/lib/dm/profile-cache';
-import { useDMSession } from './DMSessionProvider';
+import { useProfile } from '@/components/ProfileProvider';
+import { useDMSession, useDMThread } from './DMSessionProvider';
 import { formatPubkey, getNDK } from '@/lib/nostr';
 
+// `profileCache` was the prop-drilled bridge between server-side member
+// profiles (chat) and relay-side kind 0 (DMs). It's no longer needed —
+// every DM-side consumer reads from the ProfileProvider via `useProfile`.
+// The prop is kept as an unused parameter so the chat page's existing
+// `<DMChat profileCache={...} />` mount keeps working without a chat-side
+// edit; remove it once the chat page's prop site migrates too.
 interface DMChatProps {
-  profileCache: Map<string, { name?: string; picture?: string }>;
+  profileCache?: Map<string, { name?: string; picture?: string }>;
 }
 
 /**
@@ -61,119 +68,7 @@ function linkify(text: string): ReactNode[] {
 const VIEWPORT_DECRYPT_LIMIT = 50;
 const PAGE_SIZE = 50;
 
-/**
- * Wire format for the AES-GCM-wrapped plaintext blob in the secrets cache.
- * Storing the full envelope (not just `content`) lets us answer NIP-17
- * "who is this from?" questions without re-running giftUnwrap on every
- * thread open — the partner is part of the cache hit.
- */
-interface SecretEnvelope {
-  senderPubkey: string;
-  recipientPubkey: string;
-  content: string;
-  createdAt: number;
-  protocol: DMProtocol;
-}
-
-function partnerOfNip04(ev: CachedDMEvent, myPubkey: string): string {
-  if (ev.pubkey === myPubkey) {
-    const pTag = ev.tags.find((t) => t[0] === 'p');
-    return pTag?.[1] ?? '';
-  }
-  return ev.pubkey;
-}
-
-/**
- * Try the secrets cache first (AES-GCM unwrap, no signer touch); on miss,
- * signer-decrypt the wire event and write the plaintext envelope back to the
- * secrets cache for next time.
- */
-async function decryptToEnvelope(
-  myPubkey: string,
-  cacheKey: CryptoKey,
-  ev: CachedDMEvent,
-): Promise<SecretEnvelope | null> {
-  // Phase 1: secrets-cache hit. Costs zero signer prompts.
-  const cached = await getSecret(myPubkey, cacheKey, ev.id);
-  if (cached) {
-    try {
-      return JSON.parse(cached) as SecretEnvelope;
-    } catch {
-      // Corrupt blob — fall through to signer fallback.
-    }
-  }
-
-  // Phase 2: signer fallback. NIP-04 is the cheap path; NIP-17 unwraps a
-  // gift wrap which is more expensive but still one sig per event.
-  const ndk = getNDK();
-  if (!ndk.signer) return null;
-
-  if (ev.kind === 4) {
-    try {
-      const { NDKEvent: NDKEventClass, NDKUser } = await import('@nostr-dev-kit/ndk');
-      const counter = partnerOfNip04(ev, myPubkey);
-      if (!counter) return null;
-      const senderPk = ev.pubkey === myPubkey ? counter : ev.pubkey;
-      const otherUser = new NDKUser({ pubkey: senderPk });
-      otherUser.ndk = ndk;
-      const target = new NDKEventClass(ndk, {
-        id: ev.id,
-        pubkey: ev.pubkey,
-        kind: 4,
-        content: ev.content,
-        tags: ev.tags,
-        created_at: ev.created_at,
-        sig: ev.sig ?? '',
-      } as any);
-      await target.decrypt(otherUser, ndk.signer, 'nip04');
-      const pTag = ev.tags.find((t) => t[0] === 'p');
-      const env: SecretEnvelope = {
-        senderPubkey: ev.pubkey,
-        recipientPubkey: pTag?.[1] ?? '',
-        content: target.content,
-        createdAt: ev.created_at,
-        protocol: 'nip04',
-      };
-      await putSecret(myPubkey, cacheKey, ev.id, JSON.stringify(env));
-      return env;
-    } catch {
-      return null;
-    }
-  }
-
-  if (ev.kind === 1059) {
-    try {
-      const { NDKEvent: NDKEventClass, giftUnwrap } = await import('@nostr-dev-kit/ndk');
-      const wrap = new NDKEventClass(ndk, {
-        id: ev.id,
-        pubkey: ev.pubkey,
-        kind: 1059,
-        content: ev.content,
-        tags: ev.tags,
-        created_at: ev.created_at,
-        sig: ev.sig ?? '',
-      } as any);
-      const rumor: any = await giftUnwrap(wrap, undefined, ndk.signer);
-      if (rumor.kind !== 14) return null;
-      const recipientTag = (rumor.tags as string[][]).find((t) => t[0] === 'p');
-      const env: SecretEnvelope = {
-        senderPubkey: rumor.pubkey,
-        recipientPubkey: recipientTag?.[1] ?? '',
-        content: rumor.content,
-        createdAt: rumor.created_at ?? ev.created_at,
-        protocol: 'nip17',
-      };
-      await putSecret(myPubkey, cacheKey, ev.id, JSON.stringify(env));
-      return env;
-    } catch {
-      return null;
-    }
-  }
-
-  return null;
-}
-
-export default function DMChat({ profileCache }: DMChatProps) {
+export default function DMChat(_props: DMChatProps) {
   const session = useDMSession();
   const myPubkey = session.myPubkey;
 
@@ -197,41 +92,17 @@ export default function DMChat({ profileCache }: DMChatProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const topSentinelRef = useRef<HTMLDivElement>(null);
 
-  // Fetch the DM partner's kind:0 profile on thread open. The shared
-  // profileCache only contains members of servers the viewer also joined,
-  // so partners we don't share a server with would otherwise show as
-  // npub1xxx… with no avatar. getProfile() hits the relay aggregators,
-  // caches in localStorage with TTL, and calls onUpdate when fresh data
-  // arrives — we mirror it into profileCache and bump local state to
-  // force a re-render (Map mutations don't trigger React on their own).
-  const [profileTick, setProfileTick] = useState(0);
-  useEffect(() => {
-    if (!myPubkey || !activeDMPubkey) return;
-    const apply = (entry: { parsed: { name?: string; displayName?: string; picture?: string } }) => {
-      const name = entry.parsed.displayName || entry.parsed.name;
-      const picture = entry.parsed.picture;
-      if (name || picture) {
-        profileCache.set(activeDMPubkey, {
-          ...(profileCache.get(activeDMPubkey) ?? {}),
-          ...(name ? { name } : {}),
-          ...(picture ? { picture } : {}),
-        });
-        setProfileTick((n) => n + 1);
-      }
-    };
-    // `result.profile` carries the localStorage-hydrated entry; without
-    // applying it synchronously, the header shows the npub fallback on
-    // every refresh until a fresh relay response arrives (which may
-    // never happen if the cache is non-stale).
-    const result = getProfile(myPubkey, activeDMPubkey, { onUpdate: apply });
-    if (result.profile) apply(result.profile);
-    return () => { result.dispose?.(); };
-  }, [myPubkey, activeDMPubkey, profileCache]);
-
-  // Read after the tick so the latest write is visible.
-  void profileTick;
-  const otherProfile = activeDMPubkey ? profileCache.get(activeDMPubkey) : null;
-  const otherName = otherProfile?.name || (activeDMPubkey ? formatPubkey(activeDMPubkey) : '');
+  // Single-source profile read via the ProfileProvider. The hook subscribes
+  // (idempotently across the tree), the provider drives the relay query and
+  // localStorage cache, and any newer kind 0 fires a re-render here AND in
+  // every other consumer (sidebar row, message bubble, NewDM modal).
+  // No local Map writes, no manual tick — the context state IS the source.
+  const otherProfile = useProfile(activeDMPubkey ?? null);
+  const otherName =
+    otherProfile?.parsed.displayName
+    || otherProfile?.parsed.name
+    || (activeDMPubkey ? formatPubkey(activeDMPubkey) : '');
+  const otherPicture = otherProfile?.parsed.picture;
 
   // Local viewport size — grows when the user scrolls up. Resets when the
   // active partner changes.
@@ -256,73 +127,42 @@ export default function DMChat({ profileCache }: DMChatProps) {
     setOlderInFlight(false);
   }, [activeDMPubkey]);
 
+  // Single-source decrypted messages from the DMSessionProvider. The
+  // provider runs the decrypt pipeline globally — switching threads is now
+  // a Map lookup, not a fresh decrypt loop. The local `messages` store is
+  // kept in sync by mirroring the per-partner slice into it (other code
+  // paths — optimistic-send, retry, mark-failed — still read/write that
+  // store via `addMessage`/`replaceMessage`/`markMessageFailed`, so we
+  // can't drop it yet).
+  const providerMessages = useDMThread(activeDMPubkey ?? null);
   useEffect(() => {
     if (!activeDMPubkey || !myPubkey) return;
     if (!session.cacheKey) return;
-    let cancelled = false;
-    setLoadingMessages(true);
-    setMessages([]);
-
-    const decryptViewport = async () => {
-      // 1. Pull NIP-04 events whose partner is the active thread. NIP-17 wraps
-      //    don't expose their partner without unwrapping, so we include all
-      //    wraps in the candidate window and let the post-decrypt filter sort
-      //    them out.
-      const allCached = getCachedEvents(myPubkey);
-      const candidates = allCached.filter((ev) => {
+    // Filter to events that belong to this thread. NIP-04: cheap (partner
+    // is in the wire envelope). NIP-17: provider already decrypted, so
+    // partner == activeDMPubkey was the bucket key we landed in.
+    const filtered = providerMessages;
+    setMessages(filtered);
+    // Loading spinner is true only when we have NEITHER cached events
+    // for this partner NOR provider-decrypted messages. The provider
+    // populates the slice incrementally, so a populated `providerMessages`
+    // means the cache already had something we could decrypt.
+    if (filtered.length > 0) {
+      setLoadingMessages(false);
+    } else {
+      const evs = getCachedEvents(myPubkey);
+      const cacheHasAny = evs.some((ev) => {
         if (ev.kind === 4) return partnerOfNip04(ev, myPubkey) === activeDMPubkey;
-        if (ev.kind === 1059) return true; // partner unknown until unwrap
-        return false;
+        return ev.kind === 1059; // partner unknown without decrypt; bias to "show spinner"
       });
-
-      // Newest first, then take the head N. Reverse at the end so the rendered
-      // message list is oldest-on-top, matching the existing UX.
-      candidates.sort((a, b) => b.created_at - a.created_at);
-      setCachedCount(candidates.length);
-      const window = candidates.slice(0, decryptCount);
-
-      const decrypted: DMMessage[] = [];
-      for (const ev of window) {
-        if (cancelled) return;
-        const env = await decryptToEnvelope(myPubkey, session.cacheKey!, ev);
-        if (!env) continue;
-        // Drop NIP-17 messages that turn out to be for a different partner.
-        const partner = env.senderPubkey === myPubkey ? env.recipientPubkey : env.senderPubkey;
-        if (partner !== activeDMPubkey) continue;
-        decrypted.push({
-          id: ev.id,
-          senderPubkey: env.senderPubkey,
-          recipientPubkey: env.recipientPubkey,
-          content: env.content,
-          createdAt: env.createdAt,
-          protocol: env.protocol,
-        });
-      }
-
-      if (cancelled) return;
-      decrypted.sort((a, b) => a.createdAt - b.createdAt);
-      setMessages(decrypted);
-      setOlderInFlight(false);
-    };
-
-    void decryptViewport();
+      setLoadingMessages(cacheHasAny); // wait on decrypt; no cache → empty state
+    }
+    setCachedCount(filtered.length);
+    setOlderInFlight(false);
     // Kick the relay-side history fetch via the session — coalesced, so
     // re-runs on partner-change are deduped at the request layer.
     session.loadThread(activeDMPubkey);
-
-    // Re-decrypt on cache mutations targeting our account (e.g. `loadOlder`
-    // ingested new wire events). Filtered by pubkey to avoid noise from
-    // unrelated writes.
-    const unsubTick = subscribeToCacheTick((pk) => {
-      if (pk !== myPubkey || cancelled) return;
-      void decryptViewport();
-    });
-
-    return () => {
-      cancelled = true;
-      unsubTick();
-    };
-  }, [activeDMPubkey, myPubkey, session, setMessages, setLoadingMessages, decryptCount]);
+  }, [activeDMPubkey, myPubkey, session, providerMessages, setMessages, setLoadingMessages]);
 
   // Infinite-scroll: when the top sentinel is intersecting AND there are more
   // cached events beyond the current decrypt window OR we haven't tried a
@@ -354,10 +194,60 @@ export default function DMChat({ profileCache }: DMChatProps) {
   const hasMoreLocal = cachedCount > decryptCount;
   const showTopSentinel = hasMoreLocal || hasMoreHistory;
 
-  // Auto-scroll on new messages
+  // ── Read cursor + unread separator ──────────────────────────────────
+  // Snapshot the per-thread read cursor at open time so the "New messages"
+  // line stays put as the user reads (markThreadRead bumps the live cursor
+  // in `useReadTracker`; the snap is what the separator renders against).
+  // Reset on thread change.
+  const readCursors = useDMStore((s) => s.readCursors);
+  const readSnapRef = useRef<number>(0);
   useEffect(() => {
+    if (!activeDMPubkey) return;
+    readSnapRef.current = readCursors[activeDMPubkey] ?? 0;
+    // We deliberately don't depend on `readCursors` here — only on
+    // `activeDMPubkey`. We want the value as it was on thread open, not
+    // whatever it becomes mid-session.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeDMPubkey]);
+
+  // Index of the first message that was unread when the thread was opened.
+  // -1 if none. The separator renders before this index; if the very first
+  // message is already unread (i.e., the whole batch is new), we skip the
+  // separator since there's nothing "above the line" to delineate.
+  const firstUnreadIndex = useMemo(() => {
+    if (!activeDMPubkey || messages.length === 0) return -1;
+    const cutoffMs = readSnapRef.current;
+    if (!cutoffMs) return -1;
+    for (let i = 0; i < messages.length; i++) {
+      if (messages[i].createdAt * 1000 > cutoffMs) return i;
+    }
+    return -1;
+  }, [messages, activeDMPubkey]);
+
+  // Auto-scroll behavior. On thread open:
+  //   - If there's an unread separator → scroll the separator into view at
+  //     the top of the viewport. The user lands on "this is what you missed"
+  //     instead of being yanked to the latest message past their cursor.
+  //   - Otherwise → jump to bottom.
+  // On subsequent message arrivals → animate to bottom (existing behavior).
+  const firstScrollRef = useRef(true);
+  const unreadSeparatorRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    firstScrollRef.current = true;
+  }, [activeDMPubkey]);
+  useEffect(() => {
+    if (messages.length === 0) return;
+    if (firstScrollRef.current) {
+      firstScrollRef.current = false;
+      if (firstUnreadIndex > 0 && unreadSeparatorRef.current) {
+        unreadSeparatorRef.current.scrollIntoView({ behavior: 'auto', block: 'start' });
+      } else {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+      }
+      return;
+    }
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages.length]);
+  }, [messages.length, activeDMPubkey, firstUnreadIndex]);
 
   /**
    * Core optimistic send: inject a pending message, publish in the background,
@@ -479,8 +369,8 @@ export default function DMChat({ profileCache }: DMChatProps) {
     <div className="flex-1 flex flex-col min-h-0 min-w-0" data-testid="dm-chat">
       {/* Header */}
       <div className="h-12 px-4 flex items-center gap-3 border-b border-lc-border shrink-0 bg-lc-dark">
-        {otherProfile?.picture ? (
-          <img src={otherProfile.picture} alt="" className="w-7 h-7 rounded-full object-cover" />
+        {otherPicture ? (
+          <img src={otherPicture} alt="" className="w-7 h-7 rounded-full object-cover" />
         ) : (
           <div className="w-7 h-7 rounded-full bg-lc-olive flex items-center justify-center text-lc-green text-xs font-semibold">
             {otherName[0]?.toUpperCase() || '?'}
@@ -492,8 +382,12 @@ export default function DMChat({ profileCache }: DMChatProps) {
         </span>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden py-4 min-w-0">
+      {/* Messages — outer scroller is a flex column; the inner block uses
+          `mt-auto` so 2-3 messages stick to the bottom (right above the
+          input) instead of floating at the top. When the message list
+          grows past the viewport, `mt-auto` is a no-op and the natural
+          scrolling takes over. */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col py-4 min-w-0">
         {/* Top sentinel: when intersecting, fires `loadOlder` and widens the
             local decrypt window. Visible only when there's more to fetch
             (either older cached events not yet decrypted, or the server may
@@ -508,99 +402,49 @@ export default function DMChat({ profileCache }: DMChatProps) {
           </div>
         )}
 
-        {isLoadingMessages ? (
-          <div className="px-4 space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="flex items-start gap-3">
-                <div className="lc-skeleton-circle w-8 h-8" />
-                <div className="space-y-1 flex-1">
-                  <div className="lc-skeleton h-4 w-24" />
-                  <div className="lc-skeleton h-4 w-48" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : messages.length === 0 ? (
-          <div className="flex items-center justify-center h-full">
-            <p className="text-sm text-lc-muted">No messages yet. Say hello!</p>
-          </div>
-        ) : (
-          messages.map((msg) => {
-            const isMe = msg.senderPubkey === (profile?.pubkey ?? myPubkey);
-            const senderProfile = profileCache.get(msg.senderPubkey);
-            const senderName = senderProfile?.name || formatPubkey(msg.senderPubkey);
-            const time = new Date(msg.createdAt * 1000);
-            const timeStr = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            const failed = !!msg.sendError;
-            const pending = !!msg.isPending;
-
-            // Chat-bubble layout: my messages right-aligned with the
-            // accent color, theirs left-aligned with the neutral border
-            // tone. Avatar only on the partner side (Discord/Telegram
-            // convention — saves horizontal space and removes the "why
-            // is my own face shown to me" oddity).
-            return (
-              <div
-                key={msg.id}
-                // `min-w-0` on the row matters for the bubble's max-width to
-                // actually clamp content — flex children default to
-                // min-width: auto, so an unbreakable URL keeps the row
-                // wider than the viewport.
-                className={`flex items-end gap-2 px-4 py-1.5 min-w-0 ${isMe ? 'justify-end' : 'justify-start'} ${pending ? 'opacity-60' : ''}`}
-                data-testid={failed ? 'dm-msg-failed' : pending ? 'dm-msg-pending' : 'dm-msg'}
-              >
-                {!isMe && (
-                  senderProfile?.picture ? (
-                    <img src={senderProfile.picture} alt="" className="w-7 h-7 rounded-full object-cover shrink-0" />
-                  ) : (
-                    <div className="w-7 h-7 rounded-full bg-lc-olive flex items-center justify-center text-lc-green text-xs font-semibold shrink-0">
-                      {senderName[0]?.toUpperCase() || '?'}
-                    </div>
-                  )
-                )}
-                <div
-                  // Hard width cap (70% / 32rem) plus inline style for
-                  // word-break: anywhere. `overflowWrap: 'anywhere'` breaks
-                  // long URLs / npubs / hex hashes, but only when there's
-                  // no soft-wrap point — normal text still wraps at spaces.
-                  // `min-w-0` on the bubble itself is the second guarantee
-                  // against the flex-child auto-min-width gotcha.
-                  className={`min-w-0 rounded-2xl px-4 py-2.5 ${
-                    failed
-                      ? 'bg-red-950/40 border border-red-900'
-                      : isMe
-                        ? 'bg-lc-border/60 text-lc-white rounded-br-md'
-                        : 'bg-lc-green text-lc-black rounded-bl-md'
-                  }`}
-                  style={{
-                    maxWidth: '500px',
-                    overflowWrap: 'anywhere',
-                    wordBreak: 'break-word',
-                  }}
-                >
-                  {!isMe && (
-                    <div className="text-xs font-semibold text-lc-black/80 mb-1">{senderName}</div>
-                  )}
-                  <p className="text-sm whitespace-pre-wrap leading-relaxed">{linkify(msg.content)}</p>
-                  <div className={`flex items-center gap-2 mt-1.5 text-[10px] justify-end ${isMe ? 'text-lc-muted' : 'text-lc-black/60'}`}>
-                    {pending && <span className="italic">sending…</span>}
-                    {failed && (
-                      <button
-                        onClick={() => handleRetry(msg)}
-                        className="text-red-300 hover:text-red-200 underline"
-                        data-testid="dm-retry"
-                      >
-                        failed — retry
-                      </button>
-                    )}
-                    <span title={time.toLocaleString()}>{timeStr}</span>
+        <div className="mt-auto">
+          {isLoadingMessages ? (
+            <div className="px-4 space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-start gap-3">
+                  <div className="lc-skeleton-circle w-8 h-8" />
+                  <div className="space-y-1 flex-1">
+                    <div className="lc-skeleton h-4 w-24" />
+                    <div className="lc-skeleton h-4 w-48" />
                   </div>
                 </div>
-              </div>
-            );
-          })
-        )}
-        <div ref={messagesEndRef} />
+              ))}
+            </div>
+          ) : messages.length === 0 ? (
+            <div className="flex items-center justify-center py-12">
+              <p className="text-sm text-lc-muted">No messages yet. Say hello!</p>
+            </div>
+          ) : (
+            messages.map((msg, i) => (
+              <Fragment key={msg.id}>
+                {i === firstUnreadIndex && i > 0 && (
+                  <div
+                    ref={unreadSeparatorRef}
+                    className="relative my-3 flex items-center px-4 select-none"
+                    data-testid="dm-unread-separator"
+                  >
+                    <div className="flex-1 h-px bg-lc-green/40" />
+                    <span className="px-3 text-[10px] text-lc-green font-semibold uppercase tracking-wider">
+                      New messages
+                    </span>
+                    <div className="flex-1 h-px bg-lc-green/40" />
+                  </div>
+                )}
+                <DMMessageBubble
+                  msg={msg}
+                  isMe={msg.senderPubkey === (profile?.pubkey ?? myPubkey)}
+                  onRetry={() => handleRetry(msg)}
+                />
+              </Fragment>
+            ))
+          )}
+          <div ref={messagesEndRef} />
+        </div>
       </div>
 
       {/* Input */}
@@ -629,3 +473,80 @@ export default function DMChat({ profileCache }: DMChatProps) {
     </div>
   );
 }
+
+/**
+ * Single message bubble. Pulls the sender's profile from `useProfile`, so
+ * partner avatar/name updates fire a re-render here without prop-drilling.
+ * Avatar only renders on the partner side; my own bubbles don't show me to
+ * me.
+ */
+function DMMessageBubble({
+  msg,
+  isMe,
+  onRetry,
+}: {
+  msg: DMMessage;
+  isMe: boolean;
+  onRetry: () => void;
+}) {
+  const senderProfile = useProfile(msg.senderPubkey);
+  const senderName =
+    senderProfile?.parsed.displayName
+    || senderProfile?.parsed.name
+    || formatPubkey(msg.senderPubkey);
+  const senderPicture = senderProfile?.parsed.picture;
+  const time = new Date(msg.createdAt * 1000);
+  const timeStr = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const failed = !!msg.sendError;
+  const pending = !!msg.isPending;
+
+  return (
+    <div
+      className={`flex items-end gap-2 px-4 py-1.5 min-w-0 ${isMe ? 'justify-end' : 'justify-start'} ${pending ? 'opacity-60' : ''}`}
+      data-testid={failed ? 'dm-msg-failed' : pending ? 'dm-msg-pending' : 'dm-msg'}
+    >
+      {!isMe && (
+        senderPicture ? (
+          <img src={senderPicture} alt="" className="w-7 h-7 rounded-full object-cover shrink-0" />
+        ) : (
+          <div className="w-7 h-7 rounded-full bg-lc-olive flex items-center justify-center text-lc-green text-xs font-semibold shrink-0">
+            {senderName[0]?.toUpperCase() || '?'}
+          </div>
+        )
+      )}
+      <div
+        className={`min-w-0 rounded-2xl px-4 py-2.5 ${
+          failed
+            ? 'bg-red-950/40 border border-red-900'
+            : isMe
+              ? 'bg-lc-border/60 text-lc-white rounded-br-md'
+              : 'bg-lc-green text-lc-black rounded-bl-md'
+        }`}
+        style={{
+          maxWidth: '500px',
+          overflowWrap: 'anywhere',
+          wordBreak: 'break-word',
+        }}
+      >
+        {!isMe && (
+          <div className="text-xs font-semibold text-lc-black/80 mb-1">{senderName}</div>
+        )}
+        <p className="text-sm whitespace-pre-wrap leading-relaxed">{linkify(msg.content)}</p>
+        <div className={`flex items-center gap-2 mt-1.5 text-[10px] justify-end ${isMe ? 'text-lc-muted' : 'text-lc-black/60'}`}>
+          {pending && <span className="italic">sending…</span>}
+          {failed && (
+            <button
+              onClick={onRetry}
+              className="text-red-300 hover:text-red-200 underline"
+              data-testid="dm-retry"
+            >
+              failed — retry
+            </button>
+          )}
+          <span title={time.toLocaleString()}>{timeStr}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+

@@ -37,6 +37,24 @@ vi.mock('@/lib/dm/follows', () => ({
   hydrateFollows: vi.fn(),
 }));
 
+// ProfileProvider is mounted by DMSessionProvider; in tests we don't want
+// the real provider opening relay subscriptions to purplepag.es. Stub it
+// to a passthrough and have `useProfile` always return null — header,
+// bubble, and sidebar will render with the npub fallback, which is what
+// existing tests assert.
+vi.mock('@/components/ProfileProvider', () => ({
+  ProfileProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useProfile: () => null,
+  useProfileMap: () => ({}),
+}));
+
+// `subscribeProfile` is also imported indirectly via ProfileProvider —
+// stub it just in case a code path lands there.
+vi.mock('@/lib/dm/profile-cache', () => ({
+  subscribeProfile: () => () => {},
+  setProfileDynamicRelays: vi.fn(),
+}));
+
 vi.mock('@/lib/dm/cache-key', () => ({
   getOrCreateCacheKey: vi.fn().mockResolvedValue({} as CryptoKey),
 }));
@@ -248,9 +266,12 @@ describe('DMChat', () => {
 });
 
 describe('DMChat viewport decryption', () => {
-  it('decrypts only the last N (=50) cached events on mount, not the full history', async () => {
+  it('decrypts only the last N (=10) cached events per pass, not the full history', async () => {
     // 100 NIP-04 events between us and the partner. Pre-populate the secrets
     // cache so no signer fallback is needed; we want to assert the loop bound.
+    // The provider's decryption pipeline batches at DECRYPT_BATCH=10 (small
+    // on purpose so first paint is fast on cold-signer accounts) and
+    // self-reschedules every 2s to backfill older events.
     const myPubkey = 'my-pubkey';
     const partner = 'sender-pk';
     const events: any[] = [];
@@ -287,13 +308,13 @@ describe('DMChat viewport decryption', () => {
     // Wait until the viewport decryption populates the store.
     await waitFor(() => {
       const msgs = useDMStore.getState().messages;
-      expect(msgs.length).toBe(50);
+      expect(msgs.length).toBe(10);
     });
 
     const msgs = useDMStore.getState().messages;
-    // Should be the NEWEST 50 — events 50..99, sorted ascending by createdAt.
-    expect(msgs[0].content).toBe('plain-50');
-    expect(msgs[49].content).toBe('plain-99');
+    // Should be the NEWEST 10 — events 90..99, sorted ascending by createdAt.
+    expect(msgs[0].content).toBe('plain-90');
+    expect(msgs[9].content).toBe('plain-99');
 
     // The signer-fallback decrypt must NOT have been called — every secret was
     // a cache hit.
