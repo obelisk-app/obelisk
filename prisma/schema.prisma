@@ -679,10 +679,17 @@ model InvoicePayment {
   payeePubkey   String?
   amountSats    Int
   paidAt        DateTime @default(now())
+  // claim/confirm protocol: 'pending' on claim, 'paid' on confirm success.
+  // 'failed' rows are deleted (allowing retry); the 30s sweep clears stale 'pending'.
+  status        String   @default("paid")
+  preimage      String?
+  createdAt     DateTime @default(now())
 
   @@index([messageId])
   @@index([channelId])
+  @@index([status, createdAt])
 }
+
 
 // Pivot table: which members hold which custom roles.
 model MemberCustomRole {

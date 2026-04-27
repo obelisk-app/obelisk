@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useSearchStore, ActiveFilters, HasFilter } from '@/store/search';
 import { useChatStore } from '@/store/chat';
 import { useT } from '@/store/locale';
 import { formatPubkey } from '@/lib/nostr';
+import { useClickOutside } from '@/hooks/useClickOutside';
 
 interface Props {
   profileCache: Map<string, { name?: string; picture?: string }>;
@@ -13,20 +14,7 @@ interface Props {
 
 function PanelShell({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
-    };
-    const key = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    document.addEventListener('mousedown', handler);
-    document.addEventListener('keydown', key);
-    return () => {
-      document.removeEventListener('mousedown', handler);
-      document.removeEventListener('keydown', key);
-    };
-  }, [onClose]);
+  useClickOutside(ref, onClose, { escape: true });
 
   return (
     <div ref={ref} className="absolute top-full right-0 mt-2 w-[320px] max-w-[calc(100vw-1rem)] bg-lc-dark border border-lc-border rounded-xl shadow-lg z-50 overflow-hidden" data-testid="search-filter-picker">

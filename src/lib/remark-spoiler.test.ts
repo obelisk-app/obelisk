@@ -3,9 +3,13 @@ import { unified } from 'unified';
 import remarkParse from 'remark-parse';
 import remarkSpoiler from './remark-spoiler';
 
-function parse(md: string) {
+// unified's `runSync` returns the generic `Node` type; spoiler output always
+// has a `children` array, so we narrow to it here to keep call sites terse.
+type Tree = { children: Array<{ children: Array<{ type: string; value?: string }> }> };
+
+function parse(md: string): Tree {
   const processor = unified().use(remarkParse).use(remarkSpoiler);
-  return processor.runSync(processor.parse(md));
+  return processor.runSync(processor.parse(md)) as unknown as Tree;
 }
 
 describe('remarkSpoiler', () => {

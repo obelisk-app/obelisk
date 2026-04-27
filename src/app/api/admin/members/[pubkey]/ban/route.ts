@@ -1,3 +1,4 @@
+import { parseJsonBody } from '@/lib/api-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireRole, requireServerIdFromQuery } from '@/lib/auth-roles';
@@ -24,7 +25,7 @@ export async function POST(
     return NextResponse.json({ error: 'Cannot ban the server owner' }, { status: 403 });
   }
 
-  const body = await req.json().catch(() => ({}));
+  const body = await parseJsonBody(req);
 
   await prisma.ban.upsert({
     where: { serverId_pubkey: { serverId, pubkey } },

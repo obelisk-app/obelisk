@@ -16,6 +16,7 @@ vi.mock('./db', () => ({
       create: vi.fn(),
       findUnique: vi.fn(),
       delete: vi.fn(),
+      update: vi.fn(),
     },
   },
 }));
@@ -117,6 +118,7 @@ describe('auth', () => {
       mockPrisma.session.findUnique.mockResolvedValue({
         id: 's1', pubkey: 'pk1', token: 't1', expiresAt: new Date(Date.now() + 100000),
       });
+      mockPrisma.session.update.mockResolvedValue({});
       const pubkey = await validateSession('t1');
       expect(pubkey).toBe('pk1');
     });
@@ -125,8 +127,37 @@ describe('auth', () => {
       mockPrisma.session.findUnique.mockResolvedValue({
         id: 's1', pubkey: 'mixecasepubkey', token: 't1', expiresAt: new Date(Date.now() + 100000),
       });
+      mockPrisma.session.update.mockResolvedValue({});
       const pubkey = await validateSession('t1');
       expect(pubkey).toBe('mixecasepubkey');
+    });
+
+    it('slides expiresAt when session is inside the renewal window', async () => {
+      // expiresAt is 5 days from now — inside the 6-day slide window
+      const fiveDaysMs = 5 * 24 * 60 * 60 * 1000;
+      mockPrisma.session.findUnique.mockResolvedValue({
+        id: 's1', pubkey: 'pk1', token: 't1', expiresAt: new Date(Date.now() + fiveDaysMs),
+      });
+      mockPrisma.session.update.mockResolvedValue({});
+      const pubkey = await validateSession('t1');
+      expect(pubkey).toBe('pk1');
+      // Give the fire-and-forget a tick to execute
+      await new Promise((r) => setImmediate(r));
+      expect(mockPrisma.session.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ expiresAt: expect.any(Date) }) })
+      );
+    });
+
+    it('does not slide expiresAt when session has more than 6 days remaining', async () => {
+      // expiresAt is exactly 7 days from now — outside the slide window
+      const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+      mockPrisma.session.findUnique.mockResolvedValue({
+        id: 's1', pubkey: 'pk1', token: 't1', expiresAt: new Date(Date.now() + sevenDaysMs),
+      });
+      const pubkey = await validateSession('t1');
+      expect(pubkey).toBe('pk1');
+      await new Promise((r) => setImmediate(r));
+      expect(mockPrisma.session.update).not.toHaveBeenCalled();
     });
   });
 

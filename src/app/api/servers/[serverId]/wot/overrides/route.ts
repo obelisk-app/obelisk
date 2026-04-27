@@ -1,3 +1,4 @@
+import { parseJsonBody } from '@/lib/api-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-roles';
 import { prisma } from '@/lib/db';
@@ -27,7 +28,7 @@ export async function POST(
   const actor = await requireRole(req, serverId, 'admin');
   if (actor instanceof NextResponse) return actor;
 
-  const body = await req.json().catch(() => ({}));
+  const body = await parseJsonBody(req);
   const { pubkey, reason } = body as { pubkey?: string; reason?: string };
 
   if (!pubkey || typeof pubkey !== 'string' || pubkey.length < 8) {

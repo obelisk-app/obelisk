@@ -1,3 +1,4 @@
+import { parseJsonBody } from '@/lib/api-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireRole } from '@/lib/auth-roles';
@@ -17,7 +18,7 @@ export async function PATCH(
     return NextResponse.json({ error: 'Alias not found' }, { status: 404 });
   }
 
-  const body = await req.json().catch(() => ({}));
+  const body = await parseJsonBody(req);
   const data: { slug?: string; enabled?: boolean } = {};
 
   if (typeof body.slug === 'string' && body.slug.trim() !== alias.slug) {

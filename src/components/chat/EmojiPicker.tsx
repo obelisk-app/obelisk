@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useRef } from 'react';
 import data from '@emoji-mart/data';
-import Picker from '@emoji-mart/react';
+import { Picker } from 'emoji-mart';
+import { useClickOutside } from '@/hooks/useClickOutside';
 
 interface EmojiPickerProps {
   onSelect: (emoji: string) => void;
@@ -21,16 +22,19 @@ interface EmojiPickerProps {
   className?: string;
 }
 
+// Thin local wrapper around the vanilla `emoji-mart` Picker web component.
+// Replaces `@emoji-mart/react` (unmaintained since Jan 2023, peer-capped at
+// React 18) so we can stay on React 19 without `legacy-peer-deps`.
 export default function EmojiPicker({ onSelect, onClose, serverEmojis, className }: EmojiPickerProps) {
   const ref = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    function onDocClick(e: MouseEvent) {
-      if (!ref.current?.contains(e.target as Node)) onClose();
-    }
-    document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
-  }, [onClose]);
+  // Ref-latched onSelect: consumers pass inline lambdas whose identity changes
+  // every render. Without this latch, the mount effect would tear down and
+  // rebuild the (expensive, shadow-DOM) Picker on every parent re-render.
+  const onSelectRef = useRef(onSelect);
+  useEffect(() => { onSelectRef.current = onSelect; });
+
+  useClickOutside(ref, onClose);
 
   const custom = useMemo(() => {
     if (!serverEmojis || Object.keys(serverEmojis).length === 0) return undefined;
@@ -48,24 +52,30 @@ export default function EmojiPicker({ onSelect, onClose, serverEmojis, className
     ];
   }, [serverEmojis]);
 
+  useEffect(() => {
+    const parent = ref.current;
+    if (!parent) return;
+    new Picker({
+      data,
+      custom,
+      onEmojiSelect: (e: { native?: string; id?: string; src?: string }) => {
+        if (e.native) onSelectRef.current(e.native);
+        else if (e.id) onSelectRef.current(`:${e.id}:`);
+      },
+      theme: 'dark',
+      previewPosition: 'none',
+      skinTonePosition: 'search',
+      autoFocus: true,
+      ref: { current: parent },
+    });
+    return () => { parent.replaceChildren(); };
+  }, [custom]);
+
   return (
     <div
       ref={ref}
       className={className ?? 'absolute bottom-full right-2 mb-2 z-50'}
       data-testid="emoji-picker"
-    >
-      <Picker
-        data={data}
-        custom={custom}
-        onEmojiSelect={(e: { native?: string; id?: string; src?: string }) => {
-          if (e.native) onSelect(e.native);
-          else if (e.id) onSelect(`:${e.id}:`);
-        }}
-        theme="dark"
-        previewPosition="none"
-        skinTonePosition="search"
-        autoFocus
-      />
-    </div>
+    />
   );
 }

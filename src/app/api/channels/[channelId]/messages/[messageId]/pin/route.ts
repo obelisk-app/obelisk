@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireRole } from '@/lib/auth-roles';
 import { getAuthorProfile } from '@/lib/profile-sync';
+import { ServerToClient } from '@/lib/socket-events';
 
 // POST /api/channels/:channelId/messages/:messageId/pin — toggle pin (admin+)
 //
@@ -57,7 +58,7 @@ export async function POST(
   // Broadcast so every connected client updates their pinned view live.
   const io = (globalThis as any).__io;
   if (io) {
-    io.to(`channel:${channelId}`).emit('message-pinned', enriched);
+    io.to(`channel:${channelId}`).emit(ServerToClient.MessagePinned, enriched);
   }
 
   return NextResponse.json({ message: enriched, pinned: nowPinning });

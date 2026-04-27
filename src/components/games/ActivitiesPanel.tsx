@@ -4,6 +4,8 @@ import { useEffect, useMemo } from 'react';
 import { useGamesStore, type GameState } from '@/store/games';
 import { useChatStore } from '@/store/chat';
 import { useAuthStore } from '@/store/auth';
+import { pushErrorToast } from '@/store/toast';
+import ModalShell from '@/components/ModalShell';
 
 export default function ActivitiesPanel() {
   const open = useGamesStore((s) => s.activitiesPanelOpen);
@@ -43,26 +45,22 @@ export default function ActivitiesPanel() {
     const res = await fetch(`/api/games/${g.id}/join`, { method: 'POST' });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      alert(data.error || 'No se pudo unir');
+      pushErrorToast('No se pudo unir', data.error);
       return;
     }
     useGamesStore.getState().setFullscreenGame(g.id); useGamesStore.getState().setGameChatOpen(true); setOpen(false);
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
-      onClick={() => setOpen(false)}
+    <ModalShell
+      onClose={() => setOpen(false)}
+      panelClassName="bg-lc-dark border border-lc-border rounded-xl w-full max-w-lg p-5 mx-4 max-h-[80vh] overflow-y-auto"
     >
-      <div
-        className="bg-lc-dark border border-lc-border rounded-xl w-full max-w-lg p-5 max-h-[80vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-lc-white font-semibold">Actividades</h3>
           <button
             onClick={() => {
-              if (!activeChannelId) { alert('Abrí un canal primero'); return; }
+              if (!activeChannelId) { pushErrorToast('Abrí un canal primero', null, 'Canal'); return; }
               setOpen(false);
               setPickerOpen({ channelId: activeChannelId });
             }}
@@ -95,10 +93,9 @@ export default function ActivitiesPanel() {
             ))}
           </div>
         )}
-        <div className="flex justify-end mt-4">
-          <button onClick={() => setOpen(false)} className="lc-pill-secondary text-xs">Cerrar</button>
-        </div>
+      <div className="flex justify-end mt-4">
+        <button onClick={() => setOpen(false)} className="lc-pill-secondary text-xs">Cerrar</button>
       </div>
-    </div>
+    </ModalShell>
   );
 }

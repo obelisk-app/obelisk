@@ -1,4 +1,14 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+// Stub BroadcastChannel before importing the store so the module-level
+// getAuthChannel() call does not throw in jsdom.
+(global as any).BroadcastChannel = class {
+  constructor(_name: string) {}
+  postMessage() {}
+  addEventListener() {}
+  close() {}
+};
+
 import { useAuthStore } from './auth';
 import { useChatStore } from './chat';
 import { useNotificationStore } from './notification';
@@ -16,7 +26,11 @@ vi.mock('@/lib/nostr', () => ({
   clearSignerPayload: vi.fn(),
   getNDK: vi.fn(() => ({
     getUser: ({ pubkey }: { pubkey: string }) => ({ pubkey, npub: 'npub1test' }),
+    signer: undefined,
   })),
+  // Auth store now subscribes to signer changes at module load to keep
+  // `signerReady` reactive. The mock returns a no-op unsubscribe.
+  onSignerChange: vi.fn(() => () => {}),
 }));
 
 // Mock fetch for logout
@@ -73,14 +87,14 @@ describe('useAuthStore', () => {
     expect(state.isLoading).toBe(false);
   });
 
-  it('logout resets all state and calls API', () => {
+  it('logout resets all state and calls API', async () => {
     useAuthStore.getState().setUser({ pubkey: 'abc' } as any, 'extension');
-    useAuthStore.getState().logout();
+    await useAuthStore.getState().logout();
     const state = useAuthStore.getState();
     expect(state.isConnected).toBe(false);
     expect(state.user).toBeNull();
     expect(state.profile).toBeNull();
-    expect(fetch).toHaveBeenCalledWith('/api/auth/logout', { method: 'POST', keepalive: true });
+    expect(fetch).toHaveBeenCalledWith('/api/auth/logout', expect.objectContaining({ method: 'POST' }));
   });
 
   it('setHasHydrated updates hydration flag', () => {
@@ -174,11 +188,11 @@ describe('useAuthStore', () => {
       useVoiceStore.setState({ currentVoiceChannelId: 'v1' });
     }
 
-    it('logout clears chat, notification, and voice stores', () => {
+    it('logout clears chat, notification, and voice stores', async () => {
       vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({ ok: true })));
       seedStores();
       useAuthStore.getState().setUser({ pubkey: 'abc' } as any, 'extension');
-      useAuthStore.getState().logout();
+      await useAuthStore.getState().logout();
 
       expect(useChatStore.getState().servers).toEqual([]);
       expect(useChatStore.getState().activeServerId).toBeNull();

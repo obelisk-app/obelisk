@@ -6,6 +6,8 @@ import { useAuthStore } from '@/store/auth';
 import { slugify } from '@/lib/slug';
 import MessageReactions from './MessageReactions';
 import PostEditModal from './PostEditModal';
+import { useClickOutside } from '@/hooks/useClickOutside';
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 
 interface PostReactionEntry {
   id: string;
@@ -37,7 +39,10 @@ export default function PostChatHeader({ postId, parentChannelName, onClose }: P
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const [editing, setEditing] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const { copied, copy: copyLink } = useCopyToClipboard({
+    resetMs: 700,
+    onReset: () => setMenuOpen(false),
+  });
   const activeChannelId = useChatStore((s) => s.activeChannelId);
   const activeServerId = useChatStore((s) => s.activeServerId);
   const followedPostIdsRaw = useChatStore((s) => s.followedPostIds);
@@ -69,20 +74,7 @@ export default function PostChatHeader({ postId, parentChannelName, onClose }: P
     return () => { aborted = true; };
   }, [activeChannelId, postId]);
 
-  useEffect(() => {
-    if (!menuOpen) return;
-    const close = (e: MouseEvent) => {
-      if (menuRef.current && menuRef.current.contains(e.target as Node)) return;
-      setMenuOpen(false);
-    };
-    const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuOpen(false); };
-    document.addEventListener('mousedown', close);
-    document.addEventListener('keydown', onEsc);
-    return () => {
-      document.removeEventListener('mousedown', close);
-      document.removeEventListener('keydown', onEsc);
-    };
-  }, [menuOpen]);
+  useClickOutside(menuRef, () => setMenuOpen(false), { escape: true, enabled: menuOpen });
 
   const handleFollow = () => {
     if (!post || !activeChannelId || !activeServerId) {
@@ -101,14 +93,7 @@ export default function PostChatHeader({ postId, parentChannelName, onClose }: P
     e.stopPropagation();
     if (typeof window === 'undefined') return;
     const slug = slugify(parentChannelName);
-    const url = `${window.location.origin}/chat?c=${slug}&p=${postId}`;
-    try {
-      navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => { setCopied(false); setMenuOpen(false); }, 700);
-    } catch {
-      setMenuOpen(false);
-    }
+    void copyLink(`${window.location.origin}/chat?c=${slug}&p=${postId}`);
   };
 
   const handleDelete = (e: React.MouseEvent) => {

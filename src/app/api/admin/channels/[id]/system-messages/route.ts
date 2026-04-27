@@ -1,7 +1,9 @@
+import { parseJsonBody } from '@/lib/api-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireRole } from '@/lib/auth-roles';
 import { getAuthorProfile, SYSTEM_PUBKEY } from '@/lib/profile-sync';
+import { ServerToClient } from '@/lib/socket-events';
 
 // Admin-only endpoints for "post as the server" content.
 //
@@ -109,7 +111,7 @@ export async function POST(
     );
   }
 
-  const body = await req.json().catch(() => ({}));
+  const body = await parseJsonBody(req);
   const content = typeof body?.content === 'string' ? body.content.trim() : '';
   const title = typeof body?.title === 'string' ? body.title.trim() : '';
   const tagIds: string[] = Array.isArray(body?.tagIds)
@@ -186,9 +188,9 @@ export async function POST(
 
   const io = (globalThis as any).__io;
   if (io) {
-    io.to(`channel:${channelId}`).emit('new-message', enriched);
+    io.to(`channel:${channelId}`).emit(ServerToClient.NewMessage, enriched);
     if (pin) {
-      io.to(`channel:${channelId}`).emit('message-pinned', enriched);
+      io.to(`channel:${channelId}`).emit(ServerToClient.MessagePinned, enriched);
     }
   }
 

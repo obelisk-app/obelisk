@@ -9,7 +9,10 @@ import { fetchProfileFromRelay } from '@/lib/profile-sync';
  *
  * UPDATE-only — never creates Member rows. Previously this called
  * `syncProfileToDb` which upserted, silently re-adding kicked/banned users.
- * Returns 404 if the caller is not a member of any server.
+ * Returns `{ updated: 0 }` (200) if the caller has no active memberships —
+ * common in the DM-only flow where users sign in for direct messages without
+ * joining a server. Treating it as 404 logged a noisy console error for
+ * what's a perfectly valid no-op.
  */
 export async function POST(req: NextRequest) {
   const pubkey = await getAuthPubkey(req);
@@ -32,10 +35,7 @@ export async function POST(req: NextRequest) {
   const updatable = memberships.filter((m) => !bannedSet.has(m.serverId));
 
   if (updatable.length === 0) {
-    return NextResponse.json(
-      { error: 'No active membership to sync' },
-      { status: 404 }
-    );
+    return NextResponse.json({ updated: 0 });
   }
 
   const profile = await fetchProfileFromRelay(pubkey);

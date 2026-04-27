@@ -5,6 +5,8 @@ import { useSearchStore, buildEffectiveQuery, type PickerMode } from '@/store/se
 import { useSearchHistoryStore } from '@/store/searchHistory';
 import { useT } from '@/store/locale';
 import FilterPicker from './search/FilterPicker';
+import { useClickOutside } from '@/hooks/useClickOutside';
+import { useDebouncedCallback } from '@/hooks/useDebouncedCallback';
 
 interface FilterRow {
   mode: Exclude<PickerMode, null>;
@@ -113,7 +115,6 @@ export default function SearchBar({
   const clearHistory = useSearchHistoryStore((s) => s.clear);
 
   const inputRef = useRef<HTMLInputElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
   const [mobileExpanded, setMobileExpanded] = useState(false);
 
@@ -162,16 +163,21 @@ export default function SearchBar({
     return () => window.removeEventListener('obelisk:search:requery', handler as EventListener);
   }, [doSearch]);
 
+  const { run: debouncedSearch, cancel: cancelPendingSearch } = useDebouncedCallback(
+    () => doSearch(false),
+    300,
+  );
+
   const handleInputChange = useCallback((value: string) => {
     setQuery(value);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
+    cancelPendingSearch();
     const effective = buildEffectiveQuery(value, activeFilters);
     if (!effective.trim()) {
       setResults([], null, false);
       return;
     }
-    debounceRef.current = setTimeout(() => doSearch(false), 300);
-  }, [setQuery, setResults, doSearch, activeFilters]);
+    debouncedSearch();
+  }, [setQuery, setResults, activeFilters, debouncedSearch, cancelPendingSearch]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
@@ -184,22 +190,13 @@ export default function SearchBar({
   const runHistory = useCallback((q: string) => {
     setQuery(q);
     setShowDropdown(false);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
+    cancelPendingSearch();
     // wait a tick for state flush
     setTimeout(() => doSearch(false), 0);
-  }, [setQuery, doSearch]);
+  }, [setQuery, doSearch, cancelPendingSearch]);
 
   const containerRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!showDropdown) return;
-    const handleClick = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setShowDropdown(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [showDropdown]);
+  useClickOutside(containerRef, () => setShowDropdown(false), { enabled: showDropdown });
 
   const showFiltersDropdown = showDropdown && !query.trim() && !pickerMode;
 
@@ -357,7 +354,7 @@ export default function SearchBar({
         <FilterPicker
           profileCache={profileCache}
           onChange={() => {
-            if (debounceRef.current) clearTimeout(debounceRef.current);
+            cancelPendingSearch();
             setTimeout(() => doSearch(false), 0);
           }}
         />

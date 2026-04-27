@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useClickOutside } from '@/hooks/useClickOutside';
 
 export interface AdminServerOption {
   id: string;
@@ -42,14 +43,7 @@ export default function ServerPicker({
 
   const current = servers.find((s) => s.id === currentServerId) ?? servers[0];
 
-  useEffect(() => {
-    if (!open) return;
-    const onClick = (e: MouseEvent) => {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', onClick);
-    return () => document.removeEventListener('mousedown', onClick);
-  }, [open]);
+  useClickOutside(ref, () => setOpen(false), { enabled: open });
 
   if (!current && !isAllUsersView) return null;
 

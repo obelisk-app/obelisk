@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import RoleBadge, { type CustomRoleBadgeData } from './RoleBadge';
 import ConfirmDialog from './ConfirmDialog';
 import BanReasonDialog from './BanReasonDialog';
 import type { Role } from '@/lib/auth-roles';
 import { shortNpub } from '@/lib/mentions';
+import { useClickOutside } from '@/hooks/useClickOutside';
 
 interface MemberData {
   id: string;
@@ -57,14 +58,7 @@ export default function MemberRow({
   const [rolesFilter, setRolesFilter] = useState('');
   const rolesMenuRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!rolesMenuOpen) return;
-    const onDocClick = (e: MouseEvent) => {
-      if (!rolesMenuRef.current?.contains(e.target as Node)) setRolesMenuOpen(false);
-    };
-    document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
-  }, [rolesMenuOpen]);
+  useClickOutside(rolesMenuRef, () => setRolesMenuOpen(false), { enabled: rolesMenuOpen });
 
   const assignedRoleIds = new Set((member.customRoles ?? []).map((cr) => cr.role.id));
   const filteredRoles = (serverCustomRoles ?? []).filter((r) =>

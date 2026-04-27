@@ -1,3 +1,4 @@
+import { parseJsonBody } from '@/lib/api-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-roles';
 import { prisma } from '@/lib/db';
@@ -37,7 +38,7 @@ export async function PATCH(
   const actor = await requireRole(req, serverId, 'owner');
   if (actor instanceof NextResponse) return actor;
 
-  const body = await req.json().catch(() => ({}));
+  const body = await parseJsonBody(req);
   const data: Record<string, unknown> = {};
 
   if ('referentePubkey' in body) {

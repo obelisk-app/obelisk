@@ -1,13 +1,41 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { NDKUser } from '@nostr-dev-kit/ndk';
-import { NostrProfile, parseProfile, LoginMethod, resetUserRelays, clearSignerPayload, getNDK } from '@/lib/nostr';
+import { NostrProfile, parseProfile, LoginMethod, resetUserRelays, clearSignerPayload, getNDK, onSignerChange } from '@/lib/nostr';
 import { resetAllClientState } from '@/lib/reset';
+
+// Cross-tab logout sync. When any tab calls logout(), every other tab
+// observing the channel mirrors the local-state clear immediately, so the
+// user doesn't see one tab still rendering as signed-in until that tab
+// next hits an API endpoint and 401s.
+//
+// We deliberately do NOT broadcast login — login establishes the session
+// cookie which all tabs share, but driving signer restore from a sibling
+// tab's broadcast risks racing tab-local NDK setup.
+const AUTH_CHANNEL = 'obelisk:auth';
+const BROADCAST_LOGOUT = { type: 'logout' as const };
+
+let authChannel: BroadcastChannel | null = null;
+
+function getAuthChannel(): BroadcastChannel | null {
+  if (typeof BroadcastChannel === 'undefined') return null;
+  if (!authChannel) authChannel = new BroadcastChannel(AUTH_CHANNEL);
+  return authChannel;
+}
 
 interface AuthState {
   isConnected: boolean;
   isLoading: boolean;
   isSyncing: boolean;
+  /**
+   * Reactive shadow of `getNDK().signer != null`. The NDK singleton's
+   * `signer` is a plain JS module property — mutating it doesn't trigger
+   * React updates. Components that gate UI on signer presence (DMList's
+   * "New DM" button, anywhere we need to publish/encrypt) read this
+   * instead. Updated by the login flows in `nostr.ts`, by
+   * `IdentityProvider` after signer restore, and by `logout`.
+   */
+  signerReady: boolean;
   user: NDKUser | null;
   profile: NostrProfile | null;
   loginMethod: LoginMethod | null;
@@ -17,7 +45,8 @@ interface AuthState {
   setUser: (user: NDKUser | null, method: LoginMethod | null) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
-  logout: () => void;
+  setSignerReady: (ready: boolean) => void;
+  logout: () => Promise<void>;
   setHasHydrated: (hydrated: boolean) => void;
   restoreSession: () => Promise<boolean>;
   syncProfile: () => Promise<void>;
@@ -29,6 +58,7 @@ export const useAuthStore = create<AuthState>()(
       isConnected: false,
       isLoading: false,
       isSyncing: false,
+      signerReady: false,
       user: null,
       profile: null,
       loginMethod: null,
@@ -63,26 +93,44 @@ export const useAuthStore = create<AuthState>()(
 
       setLoading: (loading) => set({ isLoading: loading }),
       setError: (error) => set({ error, isLoading: false }),
+      setSignerReady: (ready) => set({ signerReady: ready }),
 
-      logout: () => {
-        // `keepalive` lets the session-destroy request survive the hard
-        // navigation below — otherwise unloading the page cancels the fetch
-        // and the server-side session record lingers until it expires.
-        fetch('/api/auth/logout', { method: 'POST', keepalive: true }).catch(() => {});
+      logout: async () => {
+        // Bounded server-side destroy: `await` so we know the cookie is
+        // gone before we navigate, but cap at 3s so a hung relay can't
+        // strand the user on the chat page. The local state below is
+        // wiped regardless of the request's outcome.
+        const ac = new AbortController();
+        const timer = setTimeout(() => ac.abort(), 3000);
+        try {
+          await fetch('/api/auth/logout', { method: 'POST', signal: ac.signal });
+        } catch (err) {
+          console.warn('[auth] logout server destroy failed (clearing local state anyway):', err);
+        } finally {
+          clearTimeout(timer);
+        }
         resetUserRelays();
         clearSignerPayload();
         resetAllClientState();
+        const ndk = getNDK();
+        ndk.signer = undefined;
         set({
           isConnected: false,
+          signerReady: false,
           user: null,
           profile: null,
           loginMethod: null,
           error: null,
         });
-        // Hard navigation — a client-side `router.push('/')` was getting
-        // preempted by in-flight chat-page effects and leaving the user on
-        // `/chat`. A full reload also guarantees NDK/socket/WebRTC state is
-        // fully torn down and the cleared session cookie is re-read.
+        // Notify other tabs so they re-render the unauthenticated state
+        // synchronously — without this, a second tab keeps the previous
+        // identity until its next storage event.
+        try { getAuthChannel()?.postMessage(BROADCAST_LOGOUT); } catch { /* ignore */ }
+        // Hard navigation — a client-side router.push('/') was getting
+        // preempted by in-flight chat-page effects and leaving the user
+        // on /chat. A full reload also guarantees NDK/socket/WebRTC
+        // state is fully torn down and the cleared session cookie is
+        // re-read.
         if (typeof window !== 'undefined') {
           window.location.assign('/');
         }
@@ -213,3 +261,37 @@ export const useAuthStore = create<AuthState>()(
     }
   )
 );
+
+// Mirror `getNDK().signer != null` into the reactive `signerReady` flag
+// every time a login flow (or `restoreRemoteSigner`) installs / clears the
+// signer. The bridge avoids a circular import — `nostr.ts` doesn't know
+// about the auth store; it just emits to whoever subscribed.
+onSignerChange((signer) => {
+  useAuthStore.getState().setSignerReady(Boolean(signer));
+});
+
+// Mirror logout from sibling tabs. Carefully calls the inner clear sequence
+// directly — calling logout() would re-broadcast and loop.
+if (typeof window !== 'undefined') {
+  const ch = getAuthChannel();
+  if (ch) {
+    ch.addEventListener('message', (ev) => {
+      if (ev.data?.type === 'logout') {
+        // Don't re-broadcast — call the inner clear sequence directly.
+        // Keep this in sync with logout()'s state-clear order.
+        const ndk = getNDK();
+        try { ndk.signer = undefined; } catch { /* ignore */ }
+        useAuthStore.setState({
+          isConnected: false,
+          user: null,
+          profile: null,
+          signerReady: false,
+          isLoading: false,
+          isSyncing: false,
+          loginMethod: null,
+        });
+        try { (resetAllClientState as () => void)(); } catch { /* best-effort */ }
+      }
+    });
+  }
+}

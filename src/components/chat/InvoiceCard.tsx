@@ -4,7 +4,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { parseBolt11, type ParsedInvoice } from '@/lib/bolt11';
 import { useChatStore } from '@/store/chat';
 import { useAuthStore } from '@/store/auth';
-import { formatPubkey } from '@/lib/nostr';
+import { formatPubkey, getNDK } from '@/lib/nostr';
+import { useLocalWallet } from '@/lib/wallet/local-client';
+import { toKEKSigner } from '@/lib/signer-adapters';
 
 interface Props {
   invoice: string;
@@ -23,10 +25,15 @@ interface PaidState {
  * flips the card to "Paid" for everyone via the `invoice-paid` socket event.
  */
 export default function InvoiceCard({ invoice, messageId, channelId }: Props) {
-  const myPubkey = useAuthStore((s) => s.user?.pubkey);
+  const myPubkey = useAuthStore((s) => s.profile?.pubkey ?? null);
+  const signerReady = useAuthStore((s) => s.signerReady);
   const memberList = useChatStore((s) => s.memberList);
   const pushEphemeral = useChatStore((s) => s.pushEphemeral);
   const invoicePayments = useChatStore((s) => s.invoicePayments);
+
+  const _ndk = getNDK();
+  const _kekSigner = signerReady && myPubkey ? toKEKSigner(_ndk, _ndk.signer, myPubkey) : null;
+  const { client: _walletClient } = useLocalWallet(myPubkey ?? null, _kekSigner);
 
   const parsed = useMemo<ParsedInvoice | null>(() => {
     try { return parseBolt11(invoice); } catch { return null; }
@@ -70,24 +77,64 @@ export default function InvoiceCard({ invoice, messageId, channelId }: Props) {
 
   const pay = async () => {
     if (busy || paid || expired) return;
+    if (!_walletClient) {
+      if (channelId) pushEphemeral(channelId, '⚠️ Configurá tu wallet primero.');
+      return;
+    }
     setBusy(true);
     try {
-      const r = await fetch('/api/invoices/pay', {
+      // Step 1: claim the invoice on the server (race protection).
+      const claimRes = await fetch('/api/invoices/pay/claim', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ invoice, messageId, channelId }),
       });
-      const d = await r.json().catch(() => ({}));
-      if (r.ok) {
-        setPaid({ payerPubkey: myPubkey || '?', paidAt: d.paidAt || new Date().toISOString() });
-      } else if (channelId) {
+      if (!claimRes.ok) {
+        const d = await claimRes.json().catch(() => ({}));
         const code = d.error as string | undefined;
-        const msg =
-          code === 'already_paid' ? '✅ Esta factura ya fue pagada.'
-          : code === 'no_wallet' ? '⚠️ Configurá tu NWC en tu perfil para pagar.'
-          : code === 'insufficient_funds' ? `⚠️ No tenés suficiente balance.`
-          : code === 'expired' ? '⚠️ Esta factura ya expiró.'
-          : `⚠️ No se pudo pagar (${code || r.status}).`;
-        pushEphemeral(channelId, msg);
+        if (channelId) {
+          const msg =
+            code === 'already_paid' ? '✅ Esta factura ya fue pagada.'
+            : code === 'pending' ? '⏳ Otro usuario está pagando esta factura.'
+            : code === 'expired' ? '⚠️ Esta factura ya expiró.'
+            : `⚠️ No se pudo iniciar el pago (${code || claimRes.status}).`;
+          pushEphemeral(channelId, msg);
+        }
+        return;
+      }
+      const claimBody = await claimRes.json();
+      const paymentHash: string | undefined = claimBody?.paymentHash;
+
+      // Step 2: pay client-side via local NWC.
+      let preimage: string | undefined;
+      let paySucceeded = false;
+      try {
+        const result = await (_walletClient as unknown as { payInvoice: (a: { invoice: string }) => Promise<{ preimage?: string }> })
+          .payInvoice({ invoice });
+        preimage = result?.preimage;
+        paySucceeded = true;
+      } catch (e) {
+        if (channelId) pushEphemeral(channelId, `⚠️ El pago falló (${(e as Error).message}).`);
+      }
+
+      // Step 3: report outcome to server.
+      if (paymentHash) {
+        try {
+          await fetch('/api/invoices/pay/confirm', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              paymentHash,
+              status: paySucceeded ? 'paid' : 'failed',
+              preimage,
+            }),
+          });
+        } catch { /* server will sweep stale pending after 30s */ }
+      }
+
+      if (paySucceeded) {
+        setPaid({
+          payerPubkey: myPubkey || '?',
+          paidAt: new Date().toISOString(),
+        });
       }
     } catch {
       if (channelId) pushEphemeral(channelId, '⚠️ Error de red al intentar pagar.');

@@ -1,3 +1,4 @@
+import { parseJsonBody } from '@/lib/api-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthPubkey } from '@/lib/api-auth';
@@ -19,7 +20,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const body = await req.json().catch(() => ({}));
+  const body = await parseJsonBody(req);
   const { pubkey, serverId: bodyServerId } = body as { pubkey?: unknown; serverId?: unknown };
   if (!pubkey || typeof pubkey !== 'string') {
     return NextResponse.json({ error: 'Missing pubkey' }, { status: 400 });

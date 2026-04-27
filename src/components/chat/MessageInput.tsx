@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useChatStore } from '@/store/chat';
+import { useToastStore } from '@/store/toast';
 import {
   filterMembers,
   serializeMention,
@@ -15,7 +16,6 @@ import EmojiPicker from './EmojiPicker';
 import GifPicker from './GifPicker';
 import EmojiAutocomplete, { type ShortcodeSuggestion } from './EmojiAutocomplete';
 import SlashCommandAutocomplete, { SLASH_COMMANDS, type SlashCommand } from './SlashCommandAutocomplete';
-import SlashCommandScaffold, { scaffoldMentionSlotQuery } from './SlashCommandScaffold';
 import {
   MAX_ATTACHMENTS_PER_MESSAGE,
   splitContentForEditing,
@@ -23,6 +23,13 @@ import {
 } from '@/lib/attachments';
 import { searchShortcodes } from '@/lib/emoji-shortcodes';
 import { canWriteInChannel, hasRole } from '@/lib/roles';
+import { useAuthStore } from '@/store/auth';
+import { useLocalWallet } from '@/lib/wallet/local-client';
+import { resolveLightningAddress, requestInvoice } from '@/lib/wallet/lnurl-pay';
+import { getLightningAddress } from '@/lib/wallet/provisioning';
+import { getNDK } from '@/lib/nostr';
+import { buildZapRequest } from '@/lib/wallet/zap-request';
+import { toKEKSigner, toZapRequestSigner } from '@/lib/signer-adapters';
 
 interface MessageInputProps {
   onSend: (content: string, replyToId?: string) => void;
@@ -48,6 +55,15 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
     serverGifs,
     myRole,
   } = useChatStore();
+
+  // Derive the local NWC client for client-side wallet operations
+  // (/zap, /invoice, /balance). The wallet credentials are decrypted in the
+  // browser using the user's Nostr signer (KEK) — server never sees them.
+  const myPubkey = useAuthStore((s) => s.profile?.pubkey ?? null);
+  const signerReady = useAuthStore((s) => s.signerReady);
+  const ndk = getNDK();
+  const kekSigner = signerReady && myPubkey ? toKEKSigner(ndk, ndk.signer, myPubkey) : null;
+  const { client: walletClient } = useLocalWallet(myPubkey, kekSigner);
 
   // Attach menu / upload / emoji / gif state
   const [attachMenuOpen, setAttachMenuOpen] = useState(false);
@@ -119,16 +135,6 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
     [slashQuery],
   );
 
-  // Caret position for the slash-command scaffold. Tracked on input/select
-  // so the active param highlight follows the cursor.
-  const [caret, setCaret] = useState(0);
-  const activeScaffoldCommand = useMemo<SlashCommand | null>(() => {
-    const m = /^\/([a-zA-Z]+)(?:\s|$)/.exec(content);
-    if (!m) return null;
-    const cmd = SLASH_COMMANDS.find((c) => c.name === m[1].toLowerCase());
-    return cmd && cmd.params && cmd.params.length > 0 ? cmd : null;
-  }, [content]);
-
   const allChannels = [
     ...pinnedChannels,
     ...categories.flatMap(c => c.channels),
@@ -152,7 +158,7 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
     textareaRef.current?.focus();
   }, [activeChannelId]);
 
-  // Listen for `/zap` prefill events emitted by ProfilePopover's ⚡ Zapear
+  // Listen for `/zap` prefill events emitted by ProfilePopover's ⚡ Zappar
   // button. Inserts a display-token `@Name` + a canonical mention map entry
   // so buildPayload re-serializes to `nostr:npub1…` on submit.
   useEffect(() => {
@@ -253,7 +259,10 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
           }).then(async (res) => {
             if (!res.ok) {
               const d = await res.json().catch(() => ({}));
-              alert(d.error || 'No se pudo crear el juego');
+              useToastStore.getState().pushToast({
+                title: 'Error',
+                body: d.error || 'No se pudo crear el juego',
+              });
               return;
             }
             const d = await res.json();
@@ -289,13 +298,7 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
         if (rawTarget) {
           try {
             const clean = rawTarget.replace(/^nostr:/, '');
-            // `serializeMention` produces `nostr:npub1<64hex>` (raw hex, not
-            // bech32). Detect and strip that prefix before falling back to a
-            // real nip19 decode.
-            const pseudo = /^npub1([0-9a-f]{64})$/i.exec(clean);
-            if (pseudo) {
-              target = pseudo[1].toLowerCase();
-            } else if (clean.startsWith('npub1')) {
+            if (clean.startsWith('npub1')) {
               const dec = nip19.decode(clean);
               if (dec.type === 'npub') target = dec.data as string;
             } else if (/^[0-9a-f]{64}$/i.test(clean)) {
@@ -307,24 +310,66 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
         if (!target) { push('⚠️ Uso: /zap @usuario <sats>'); return; }
         if (!amount || amount <= 0) { push('⚠️ Indicá un monto en sats, ej: /zap @alice 21'); return; }
         try {
-          const res = await fetch('/api/wallet/zap', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ channelId: activeChannelId, targetPubkey: target, amountSats: amount }),
-          });
-          if (!res.ok) {
-            const d = await res.json().catch(() => ({}));
-            const code = d.error as string | undefined;
-            const msg =
-              code === 'target_no_wallet' ? '⚠️ Ese usuario no tiene NWC configurado.'
-              : code === 'no_wallet' ? '⚠️ Configurá tu NWC en tu perfil para poder enviar zaps.'
-              : code === 'insufficient_funds' ? `⚠️ No tenés suficiente balance para zapear ${amount} sats.`
-              : code === 'cannot_zap_self' ? '⚠️ No podés zapearte a vos mismo.'
-              : `⚠️ Fallo el zap (${code || res.status}).`;
-            push(msg);
+          if (!walletClient) { push('⚠️ Configurá tu wallet primero.'); return; }
+          if (target === myPubkey) { push('⚠️ No podés zapearte a vos mismo.'); return; }
+
+          // Resolve the recipient's Lightning Address. Priority:
+          //   1) member's lud16 (cached profile in chat store)
+          //   2) /api/profile/<pubkey> (currently absent — best-effort)
+          //   3) zaps.nostr-wot.com lookup via getLightningAddress()
+          let lnAddress: string | null = null;
+          try {
+            const memberList = useChatStore.getState().memberList ?? [];
+            const m = memberList.find((mm) => mm.pubkey === target);
+            lnAddress = m?.lud16 ?? null;
+          } catch { /* ignore */ }
+          if (!lnAddress) {
+            try {
+              const profileRes = await fetch(`/api/profile/${target}`);
+              if (profileRes.ok) {
+                const p = await profileRes.json();
+                lnAddress = (p?.lightningAddress ?? p?.lud16) ?? null;
+              }
+            } catch { /* ignore */ }
           }
-        } catch {
-          push('⚠️ No se pudo contactar al servidor.');
+          if (!lnAddress) {
+            lnAddress = await getLightningAddress(target).catch(() => null);
+          }
+          if (!lnAddress) { push('⚠️ Ese usuario no tiene una dirección Lightning.'); return; }
+
+          // LNURL-pay → invoice → pay client-side via local NWC.
+          const params = await resolveLightningAddress(lnAddress);
+          const amountMsat = amount * 1000;
+          if (amountMsat < params.minSendable || amountMsat > params.maxSendable) {
+            push(`⚠️ Monto fuera de rango (${Math.ceil(params.minSendable / 1000)}–${Math.floor(params.maxSendable / 1000)} sats).`);
+            return;
+          }
+          // Build a signed NIP-57 zap-request so the recipient's LNURL provider
+          // publishes a kind 9735 receipt to the recipient's relays — proof of
+          // payment that doesn't need any Obelisk-server audit log.
+          const ndk = getNDK();
+          let zapRequest: unknown = undefined;
+          try {
+            const zapSigner = toZapRequestSigner(ndk, ndk.signer);
+            if (zapSigner) {
+              const recipientRelays = Array.from((ndk.pool?.relays as Map<string, unknown> | undefined)?.keys?.() ?? []) as string[];
+              if (recipientRelays.length === 0) recipientRelays.push('wss://relay.damus.io', 'wss://nos.lol');
+              zapRequest = await buildZapRequest(zapSigner, {
+                recipientPubkey: target,
+                amountMsat,
+                relays: recipientRelays,
+                comment: undefined,
+              });
+            }
+          } catch { /* signer unavailable — fall back to plain LNURL-pay */ }
+
+          const { invoice } = await requestInvoice(params.callback, amountMsat, undefined, zapRequest);
+
+          await (walletClient as unknown as { payInvoice: (a: { invoice: string }) => Promise<unknown> }).payInvoice({ invoice });
+
+          push(`⚡ Zap enviado: ${amount} sats. Powered by nostr-wot.`);
+        } catch (err) {
+          push(`⚠️ Fallo el zap (${(err as Error).message}).`);
         }
       })();
       setContent('');
@@ -346,24 +391,19 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
         const amount = inv[1] ? parseInt(inv[1], 10) : 0;
         if (!amount || amount <= 0) { push('⚠️ Uso: /invoice <sats>'); return; }
         try {
-          const r = await fetch('/api/wallet/invoice', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ amountSats: amount, description: `Invoice ${amount} sats` }),
+          if (!walletClient) { push('⚠️ Configurá tu wallet primero.'); return; }
+          const inv = await (walletClient as unknown as { makeInvoice: (a: { amount: number; description: string }) => Promise<unknown> }).makeInvoice({
+            amount: amount * 1000,
+            description: `Invoice ${amount} sats`,
           });
-          const d = await r.json().catch(() => ({}));
-          if (!r.ok || !d.invoice) {
-            const msg = d.error === 'target_no_wallet'
-              ? '⚠️ Configurá tu NWC en tu perfil para crear facturas.'
-              : `⚠️ No se pudo crear la factura (${d.error || r.status}).`;
-            push(msg);
-            return;
-          }
+          const invoice = (inv as { invoice?: string; pr?: string }).invoice ?? (inv as { pr?: string }).pr;
+          if (!invoice) { push('⚠️ No se pudo crear la factura.'); return; }
           await fetch(`/api/channels/${activeChannelId}/messages`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ content: d.invoice }),
+            body: JSON.stringify({ content: invoice }),
           });
-        } catch {
-          push('⚠️ No se pudo contactar al servidor.');
+        } catch (err) {
+          push(`⚠️ No se pudo crear la factura (${(err as Error).message}).`);
         }
       })();
       setContent('');
@@ -380,17 +420,15 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
       (async () => {
         const { useChatStore } = await import('@/store/chat');
         try {
-          const r = await fetch('/api/wallet/balance');
-          const d = await r.json().catch(() => ({}));
-          if (r.ok) {
-            useChatStore.getState().pushEphemeral(activeChannelId, `⚡ Balance: ${Number(d.balanceSats || 0).toLocaleString()} sats`);
-          } else if (d.error === 'no_wallet') {
-            useChatStore.getState().pushEphemeral(activeChannelId, '⚠️ No tenés wallet NWC configurada. Abrí tu perfil para conectarla.');
-          } else {
-            useChatStore.getState().pushEphemeral(activeChannelId, `⚠️ No se pudo leer el balance (${d.error || r.status}).`);
+          if (!walletClient) {
+            useChatStore.getState().pushEphemeral(activeChannelId, '⚠️ No tenés wallet conectada.');
+            return;
           }
-        } catch {
-          useChatStore.getState().pushEphemeral(activeChannelId, '⚠️ No se pudo contactar la wallet.');
+          const b = await (walletClient as unknown as { getBalance: () => Promise<unknown> }).getBalance();
+          const sats = Math.floor(((b as { balance?: number }).balance ?? 0) / 1000);
+          useChatStore.getState().pushEphemeral(activeChannelId, `⚡ Balance: ${sats.toLocaleString()} sats`);
+        } catch (err) {
+          useChatStore.getState().pushEphemeral(activeChannelId, `⚠️ No se pudo leer el balance (${(err as Error).message}).`);
         }
       })();
       setContent('');
@@ -443,20 +481,12 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
     const ta = textareaRef.current;
     if (!ta) return;
     const cursorPos = ta.selectionStart;
-    // Find the @ that triggered this. When the mention picker was opened by
-    // the slash-command scaffold (no literal `@` typed), fall back to the
-    // word boundary so the current token is replaced in-place.
+    // Find the @ that triggered this
     const textBefore = content.slice(0, cursorPos);
-    const atMatch = /@\w*$/.exec(textBefore);
-    let replaceFrom: number;
-    if (atMatch) {
-      replaceFrom = textBefore.length - atMatch[0].length;
-    } else {
-      const wsMatch = /(^|\s)(\S*)$/.exec(textBefore);
-      replaceFrom = wsMatch ? textBefore.length - wsMatch[2].length : textBefore.length;
-    }
+    const atIndex = textBefore.lastIndexOf('@');
+    if (atIndex === -1) return;
 
-    const before = content.slice(0, replaceFrom);
+    const before = content.slice(0, atIndex);
     const after = content.slice(cursorPos);
     // Friendly display form for the textarea; canonical form stored in the
     // map and substituted back during `buildPayload`.
@@ -607,17 +637,10 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
 
     // Detect @ mention trigger
     const cursorPos = ta.selectionStart;
-    setCaret(cursorPos);
     const textBefore = val.slice(0, cursorPos);
     const atMatch = textBefore.match(/@(\w*)$/);
-    const scaffoldMentionQuery = scaffoldMentionSlotQuery(val, cursorPos);
     if (atMatch) {
       setMentionQuery(atMatch[1]);
-      setMentionIndex(0);
-    } else if (scaffoldMentionQuery !== null) {
-      // Slash-command parameter of `kind: 'mention'` — auto-open the picker
-      // even if the user hasn't typed an `@` yet.
-      setMentionQuery(scaffoldMentionQuery);
       setMentionIndex(0);
     } else {
       setMentionQuery(null);
@@ -647,25 +670,14 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
   };
 
   const insertSlashCommand = (cmd: SlashCommand) => {
-    // If the first param is a mention slot, append `@` so the existing mention
-    // autocomplete kicks in automatically — mirrors Discord's behavior of
-    // popping the user picker the moment a slash command with a user argument
-    // is chosen.
-    const firstParam = cmd.params?.[0];
-    const trailing = firstParam?.kind === 'mention' ? ' @' : ' ';
-    const next = `/${cmd.name}${trailing}`;
+    const next = `/${cmd.name} `;
     setContent(next);
     setSlashQuery(null);
-    if (firstParam?.kind === 'mention') {
-      setMentionQuery('');
-      setMentionIndex(0);
-    }
     requestAnimationFrame(() => {
       const ta = textareaRef.current;
       if (ta) {
         ta.focus();
         ta.setSelectionRange(next.length, next.length);
-        setCaret(next.length);
       }
     });
   };
@@ -977,15 +989,6 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
         />
       )}
 
-      {/* Slash-command parameter scaffold (Discord-style pill hints) */}
-      {activeScaffoldCommand && (
-        <SlashCommandScaffold
-          command={activeScaffoldCommand}
-          content={content}
-          caret={caret}
-        />
-      )}
-
       {/* Edit preview bar */}
       {editingMessage && (
         <div className="flex items-center gap-2 px-4 py-2 mb-1 bg-lc-border/30 rounded-t-xl border-l-2 border-yellow-500/50">
@@ -1200,8 +1203,6 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
           value={content}
           onChange={handleInput}
           onKeyDown={handleKeyDown}
-          onKeyUp={(e) => setCaret((e.target as HTMLTextAreaElement).selectionStart)}
-          onClick={(e) => setCaret((e.target as HTMLTextAreaElement).selectionStart)}
           onPaste={handlePaste}
           disabled={!canWrite}
           placeholder={

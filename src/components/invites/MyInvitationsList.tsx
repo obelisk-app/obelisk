@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 
 interface MyInvitation {
   id: string;
@@ -19,12 +19,9 @@ interface MyInvitationsListProps {
 }
 
 export default function MyInvitationsList({ invitations }: MyInvitationsListProps) {
-  const [copied, setCopied] = useState<string | null>(null);
-  const copy = (code: string) => {
-    const url = `${window.location.origin}/invite/${code}`;
-    navigator.clipboard.writeText(url);
-    setCopied(code);
-    setTimeout(() => setCopied(null), 1500);
+  const { copied, copy } = useCopyToClipboard(1500);
+  const copyLink = (code: string) => {
+    void copy(`${window.location.origin}/invite/${code}`, code);
   };
 
   if (invitations.length === 0) {
@@ -54,7 +51,7 @@ export default function MyInvitationsList({ invitations }: MyInvitationsListProp
             </div>
             {!expired && (
               <button
-                onClick={() => copy(inv.code)}
+                onClick={() => copyLink(inv.code)}
                 className="text-xs text-lc-muted hover:text-lc-green ml-2"
               >
                 {copied === inv.code ? 'Copied!' : 'Copy link'}

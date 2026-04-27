@@ -1,0 +1,77 @@
+import { NextResponse, type NextRequest } from 'next/server';
+import { countryToLocale } from './i18n/index';
+
+/**
+ * Per-request CSP nonce generator + locale-cookie initializer.
+ *
+ * Renamed from middleware → proxy per Next 16's deprecation. Two jobs:
+ *   1. Mint a fresh nonce on every HTML request and set the
+ *      Content-Security-Policy header with `'nonce-<n>'` in script-src.
+ *      The page reads the nonce via next/headers and stamps it onto every
+ *      inline <Script> we control. Anything else (Cloudflare Rocket
+ *      Loader, third-party script tags) gets blocked — the strict CSP
+ *      keeps the site safe even if some upstream injects markup.
+ *   2. On the root path only, set a long-lived locale cookie based on
+ *      Cloudflare/Vercel's geo headers so subsequent renders skip
+ *      detection.
+ */
+export function proxy(request: NextRequest) {
+  // 16 random bytes → ~22 base64 chars. Edge runtime exposes
+  // crypto.randomUUID; we strip dashes and base64-encode for compactness.
+  const nonce = btoa(crypto.randomUUID().replace(/-/g, ''));
+
+  // Google Analytics: src/app/layout.tsx loads gtag.js from googletagmanager.
+  // Allow that origin in script-src and connect-src (gtag posts beacons too).
+  //
+  // 'unsafe-eval' is dev-only — React's dev build uses eval() to reconstruct
+  // call stacks across module boundaries (production never does). Without
+  // it the React tree fails to hydrate over a tunneled origin.
+  const isDev = process.env.NODE_ENV !== 'production';
+  const evalSrc = isDev ? " 'unsafe-eval'" : '';
+  const csp = [
+    "default-src 'self'",
+    `script-src 'self' 'wasm-unsafe-eval'${evalSrc} 'nonce-${nonce}' https://www.googletagmanager.com`,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob: https:",
+    "connect-src 'self' wss: https: https://www.google-analytics.com https://www.googletagmanager.com",
+    "font-src 'self' data:",
+    "frame-ancestors 'none'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    'upgrade-insecure-requests',
+  ].join('; ');
+
+  // Forward the nonce to the rendered page so layout.tsx can read it via
+  // next/headers and apply it to every inline <Script>.
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-nonce', nonce);
+
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
+  response.headers.set('Content-Security-Policy', csp);
+
+  // Preserve original middleware behavior: set locale cookie on first hit
+  // to the root path. Skip when the cookie already exists.
+  if (request.nextUrl.pathname === '/' && !request.cookies.get('locale')) {
+    const country =
+      request.headers.get('x-vercel-ip-country') ||
+      request.headers.get('cf-ipcountry') ||
+      null;
+    const locale = countryToLocale(country);
+    response.cookies.set('locale', locale, {
+      path: '/',
+      maxAge: 60 * 60 * 24 * 365,
+      sameSite: 'lax',
+    });
+  }
+
+  return response;
+}
+
+export const config = {
+  // Skip API + static assets — they don't render HTML and don't need a
+  // per-request CSP. Match everything else (pages + dynamic routes).
+  matcher: [
+    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.[^/]+$).*)',
+  ],
+};

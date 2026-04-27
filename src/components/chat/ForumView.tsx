@@ -11,6 +11,7 @@ import TagEditor, { type TagDraft, splitDrafts } from './TagEditor';
 import { createPortal } from 'react-dom';
 import MessageInput from './MessageInput';
 import { slugify } from '@/lib/slug';
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 
 // Followed posts are persisted per-user in localStorage under this key so the
 // "Siguiendo" toggle sticks across reloads without requiring a DB migration.
@@ -281,7 +282,8 @@ function PostHeaderActions({
   const followedPostIds = Array.isArray(followedPostIdsRaw) ? followedPostIdsRaw : EMPTY_FOLLOWED_POST_IDS;
   const toggleFollowPost = useChatStore((s) => s.toggleFollowPost);
   const following = followedPostIds.includes(postId);
-  const [copyLabel, setCopyLabel] = useState<'idle' | 'ok'>('idle');
+  const { copied: linkCopied, copy: copyLink } = useCopyToClipboard(1200);
+  const copyLabel = linkCopied ? 'ok' : 'idle';
 
   const toggleFollow = () => {
     // Keep the legacy localStorage key in sync for any UI still reading it.
@@ -295,15 +297,10 @@ function PostHeaderActions({
     void toggleFollowPost(postId, meta);
   };
 
-  const copyLink = () => {
+  const handleCopyLink = () => {
     if (typeof window === 'undefined') return;
     const slug = slugify(channelName);
-    const url = `${window.location.origin}/chat?c=${slug}&p=${postId}`;
-    try {
-      navigator.clipboard.writeText(url);
-      setCopyLabel('ok');
-      setTimeout(() => setCopyLabel('idle'), 1200);
-    } catch { /* ignore */ }
+    void copyLink(`${window.location.origin}/chat?c=${slug}&p=${postId}`);
   };
 
   return (
@@ -330,7 +327,7 @@ function PostHeaderActions({
       </button>
       <button
         type="button"
-        onClick={copyLink}
+        onClick={handleCopyLink}
         title="Copiar enlace"
         aria-label="Copiar enlace"
         className="p-1.5 rounded-md text-lc-muted hover:text-lc-white hover:bg-lc-border/50 transition-colors"
@@ -348,9 +345,12 @@ function PostHeaderActions({
 
 function PostCardMenu({ postId, channelName, authorPubkey, title, coverImage, tags, availableTags, onDeleted, onEdited }: { postId: string; channelName: string; authorPubkey: string; title: string | null; coverImage: string | null; tags?: PostTag[]; availableTags?: ForumTag[]; onDeleted?: (id: string) => void; onEdited?: (id: string, update: { title: string; coverImage: string | null; tags: PostTag[] }) => void }) {
   const [open, setOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [editing, setEditing] = useState(false);
   const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
+  const { copied, copy: copyLinkToClipboard } = useCopyToClipboard({
+    resetMs: 900,
+    onReset: () => setOpen(false),
+  });
   const myRole = useChatStore((s) => s.myRole);
   const myPubkey = useAuthStore((s) => s.profile?.pubkey ?? null);
   const canManage =
@@ -373,18 +373,13 @@ function PostCardMenu({ postId, channelName, authorPubkey, title, coverImage, ta
     })();
   };
 
-  const copyLink = (e: React.MouseEvent) => {
+  const copyLink = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (typeof window === 'undefined') return;
     const slug = slugify(channelName);
     const url = `${window.location.origin}/chat?c=${slug}&p=${postId}`;
-    try {
-      navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => { setCopied(false); setOpen(false); }, 900);
-    } catch {
-      setOpen(false);
-    }
+    const ok = await copyLinkToClipboard(url);
+    if (!ok) setOpen(false);
   };
 
   return (

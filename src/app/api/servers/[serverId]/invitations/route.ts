@@ -1,3 +1,4 @@
+import { parseJsonBody } from '@/lib/api-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireRole, hasRole } from '@/lib/auth-roles';
@@ -55,7 +56,7 @@ export async function POST(
   const actor = await requireRole(req, serverId, 'member');
   if (actor instanceof NextResponse) return actor;
 
-  const body = await req.json().catch(() => ({}));
+  const body = await parseJsonBody(req);
   // `asMember: true` lets an admin explicitly request the member-credit flow
   // (used by the sidebar "Invite Friends" card so admins can test/use the
   // member path without their admin role bypassing credits).

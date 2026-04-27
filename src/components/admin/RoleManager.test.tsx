@@ -87,9 +87,8 @@ describe('RoleManager', () => {
       expect(screen.getByText('Founder')).toBeInTheDocument();
     });
 
-    const postCall = (global.fetch as ReturnType<typeof vi.fn>).mock.calls.find(
-      (c: [string, RequestInit?]) => c[1]?.method === 'POST',
-    );
+    const calls = (global.fetch as ReturnType<typeof vi.fn>).mock.calls as Array<[string, RequestInit?]>;
+    const postCall = calls.find((c) => c[1]?.method === 'POST');
     expect(postCall).toBeDefined();
     const body = JSON.parse(postCall![1]!.body as string);
     expect(body.name).toBe('Founder');

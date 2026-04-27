@@ -1,3 +1,4 @@
+import { parseJsonBody } from '@/lib/api-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthPubkey } from '@/lib/api-auth';
 import { applyPlayerAction, serializeGame } from '@/lib/games/runtime';
@@ -6,7 +7,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   const pubkey = await getAuthPubkey(req);
   if (!pubkey) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const { id } = await ctx.params;
-  const body = await req.json().catch(() => ({}));
+  const body = await parseJsonBody(req);
   const action = body?.action;
   if (!action) return NextResponse.json({ error: 'action required' }, { status: 400 });
   try {

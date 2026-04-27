@@ -201,7 +201,7 @@ describe('SystemContentManager', () => {
 
     await waitFor(() => {
       const postCall = fetchMock.mock.calls.find(
-        ([u, init]: [string, FetchInit]) =>
+        ([u, init]: [string, FetchInit?]) =>
           u === '/api/admin/channels/ch-empeza/system-messages' &&
           init?.method === 'POST',
       );
@@ -233,7 +233,7 @@ describe('SystemContentManager', () => {
 
     await waitFor(() => {
       const postCall = fetchMock.mock.calls.find(
-        ([u, init]: [string, FetchInit]) =>
+        ([u, init]: [string, FetchInit?]) =>
           u === '/api/admin/channels/ch-indice/system-messages' &&
           init?.method === 'POST',
       );
@@ -268,7 +268,7 @@ describe('SystemContentManager', () => {
 
     await waitFor(() => {
       const patchCall = fetchMock.mock.calls.find(
-        ([u, init]: [string, FetchInit]) =>
+        ([u, init]: [string, FetchInit?]) =>
           u === '/api/admin/messages/msg-welcome' && init?.method === 'PATCH',
       );
       expect(patchCall).toBeTruthy();
@@ -294,7 +294,7 @@ describe('SystemContentManager', () => {
 
     await waitFor(() => {
       const delCall = fetchMock.mock.calls.find(
-        ([u, init]: [string, FetchInit]) =>
+        ([u, init]: [string, FetchInit?]) =>
           u === '/api/admin/messages/msg-welcome' && init?.method === 'DELETE',
       );
       expect(delCall).toBeTruthy();

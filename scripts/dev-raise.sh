@@ -22,11 +22,33 @@
 
 set -u
 
+# Load project .env so TUNNEL_HOSTNAME / DATABASE_URL / etc. don't have
+# to be re-typed on every invocation. Existing shell vars take precedence.
+if [ -f "$(dirname "$0")/../.env" ]; then
+  set -a
+  # shellcheck disable=SC1091
+  . "$(dirname "$0")/../.env"
+  set +a
+fi
+
 TUNNEL_NAME="${TUNNEL_NAME:-obelisk}"
 TUNNEL_HOST="${TUNNEL_HOSTNAME:-obelisk.fabri.lat}"
 PORT="${PORT:-3000}"
 PORT_FALLBACK_MAX="${PORT_FALLBACK_MAX:-10}"
+# Stash an explicit override so a later port-shift fallback (see below)
+# can still honor it; if unset we'll auto-detect the scheme from cert.pem.
 ORIGIN_URL_OVERRIDE="${ORIGIN_URL:-}"
+# server.ts switches to HTTPS only when both cert.pem + key.pem exist in
+# the project root. Auto-pick the matching origin scheme so cloudflared
+# doesn't try to TLS-handshake an HTTP server (or vice-versa). Override
+# with ORIGIN_URL=... if you bind a different host:port.
+_PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+if [ -f "$_PROJECT_ROOT/cert.pem" ] && [ -f "$_PROJECT_ROOT/key.pem" ]; then
+  _DEFAULT_SCHEME="https"
+else
+  _DEFAULT_SCHEME="http"
+fi
+ORIGIN_URL="${ORIGIN_URL_OVERRIDE:-${_DEFAULT_SCHEME}://127.0.0.1:${PORT}}"
 SKIP_LIVEKIT="${SKIP_LIVEKIT:-0}"
 SKIP_TUNNEL="${SKIP_TUNNEL:-0}"
 FORCE_KILL="${FORCE_KILL:-0}"
@@ -216,8 +238,10 @@ if [ -n "$pids" ]; then
   fi
 fi
 
-# Recompute ORIGIN_URL now that PORT may have shifted.
-ORIGIN_URL="${ORIGIN_URL_OVERRIDE:-https://127.0.0.1:${PORT}}"
+# Recompute ORIGIN_URL now that PORT may have shifted. Honor an explicit
+# override if the user set ORIGIN_URL=...; otherwise reuse the cert.pem-
+# derived scheme detected at startup.
+ORIGIN_URL="${ORIGIN_URL_OVERRIDE:-${_DEFAULT_SCHEME}://127.0.0.1:${PORT}}"
 export PORT
 
 # ── Launch / reuse dev + tunnel ──────────────────────────────────

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { shortNpub } from '@/lib/mentions';
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 
 interface InviteAlias {
   id: string;
@@ -25,7 +26,7 @@ export default function InviteAliasManager({ serverId }: Props) {
   const [renameId, setRenameId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [copied, setCopied] = useState<string | null>(null);
+  const { copied, copy } = useCopyToClipboard();
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -127,10 +128,7 @@ export default function InviteAliasManager({ serverId }: Props) {
   };
 
   const copyLink = (slug: string) => {
-    const url = `${window.location.origin}/invite/${slug}`;
-    navigator.clipboard.writeText(url);
-    setCopied(slug);
-    setTimeout(() => setCopied(null), 2000);
+    void copy(`${window.location.origin}/invite/${slug}`, slug);
   };
 
   if (loading) {

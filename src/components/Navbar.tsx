@@ -28,7 +28,11 @@ export default function Navbar({ onLoginSuccess }: { onLoginSuccess?: () => void
   const [showMenu, setShowMenu] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [guidesOpen, setGuidesOpen] = useState(false);
-  const { isConnected, profile, logout, syncProfile, isSyncing, restoreSession, _hasHydrated } = useAuthStore();
+  const isConnected = useAuthStore((s) => s.isConnected);
+  const profile = useAuthStore((s) => s.profile);
+  const isSyncing = useAuthStore((s) => s.isSyncing);
+  const _hasHydrated = useAuthStore((s) => s._hasHydrated);
+  const { logout, syncProfile, restoreSession } = useAuthStore();
   const { t, locale } = useTranslation();
   const router = useRouter();
 

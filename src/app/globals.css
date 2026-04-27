@@ -55,6 +55,13 @@ body {
 }
 
 /* Pill button style */
+/* Tailwind v4 dropped the default `cursor: pointer` for <button>. Restore
+   it for any non-disabled, non-link button so hover targets feel right. */
+button:not(:disabled),
+[role='button']:not(:disabled) {
+  cursor: pointer;
+}
+
 .lc-pill,
 .lc-pill-primary,
 .lc-pill-secondary {

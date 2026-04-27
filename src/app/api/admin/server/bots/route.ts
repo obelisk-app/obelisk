@@ -1,3 +1,4 @@
+import { parseJsonBody } from '@/lib/api-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireRole, requireServerIdFromQuery } from '@/lib/auth-roles';
@@ -49,7 +50,7 @@ export async function PUT(req: NextRequest) {
   const actor = await requireRole(req, serverId, 'admin');
   if (actor instanceof NextResponse) return actor;
 
-  const body = await req.json().catch(() => ({}));
+  const body = await parseJsonBody(req);
   const type = String(body?.type ?? '');
   if (!isBotType(type) || !BOTS[type].enabledInUi) {
     return NextResponse.json({ error: 'Unknown bot type' }, { status: 400 });
@@ -88,7 +89,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
   }
 
-  const body = await req.json().catch(() => ({}));
+  const body = await parseJsonBody(req);
   const type = String(body?.type ?? '');
   if (!isBotType(type)) {
     return NextResponse.json({ error: 'Unknown bot type' }, { status: 400 });

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 
 interface ProfileHeaderProps {
   pubkey: string;
@@ -17,12 +17,7 @@ export default function ProfileHeader({
   nip05,
   about,
 }: ProfileHeaderProps) {
-  const [copied, setCopied] = useState(false);
-  const copy = () => {
-    navigator.clipboard.writeText(pubkey);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
+  const { copied, copy } = useCopyToClipboard(1500);
 
   return (
     <div className="lc-card p-6 flex gap-4 items-start" data-testid="profile-header">
@@ -42,7 +37,7 @@ export default function ProfileHeader({
         </h1>
         {nip05 && <p className="text-xs text-lc-green truncate">{nip05}</p>}
         <button
-          onClick={copy}
+          onClick={() => copy(pubkey)}
           className="text-xs font-mono text-lc-muted hover:text-lc-white mt-1 break-all text-left"
           data-testid="copy-pubkey-btn"
         >

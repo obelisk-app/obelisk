@@ -1,3 +1,4 @@
+import { parseJsonBody } from '@/lib/api-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthPubkey } from '@/lib/api-auth';
@@ -5,6 +6,7 @@ import { getAuthorProfile } from '@/lib/profile-sync';
 import { canWriteInChannel, getAuthMember } from '@/lib/auth-roles';
 import { resolveForumTagIds } from '@/lib/forum-tags';
 import { fanOutMentions, fanOutChannelUnread } from '@/lib/mention-fanout';
+import { ServerToClient } from '@/lib/socket-events';
 
 // GET /api/channels/[channelId]/posts/[postId] — get a forum post with replies
 export async function GET(
@@ -126,7 +128,7 @@ export async function PATCH(
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const body = await req.json().catch(() => ({}));
+  const body = await parseJsonBody(req);
   const updates: { title?: string; coverImage?: string | null; editedAt?: Date } = {};
 
   if (body.title !== undefined) {
@@ -296,7 +298,7 @@ export async function POST(
   // Broadcast via Socket.io if available
   const io = (globalThis as any).__io;
   if (io) {
-    io.to(`channel:${channelId}`).emit('new-message', enriched);
+    io.to(`channel:${channelId}`).emit(ServerToClient.NewMessage, enriched);
 
     // Mention fan-out (unconditional — not gated by subscription).
     let mentionedPubkeys = new Set<string>();
@@ -357,7 +359,7 @@ export async function POST(
       });
       for (const s of subs) {
         if (mentionedPubkeys.has(s.pubkey)) continue;
-        io.to(`pubkey:${s.pubkey}`).emit('post-unread', {
+        io.to(`pubkey:${s.pubkey}`).emit(ServerToClient.PostUnread, {
           recipientPubkey: s.pubkey,
           postId,
           messageId: reply.id,

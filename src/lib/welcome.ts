@@ -7,6 +7,7 @@ import {
 import { getWelcomeTemplate } from './welcome-templates';
 import { shortNpub } from './mentions';
 import type { Locale } from '@/i18n';
+import { ServerToClient } from '@/lib/socket-events';
 
 /**
  * Posts a welcome message in the server's configured welcome channel when a
@@ -101,7 +102,7 @@ export async function postWelcomeMessage(serverId: string, memberPubkey: string)
   // Broadcast via Socket.io if available
   const io = (globalThis as any).__io;
   if (io) {
-    io.to(`channel:${channel.id}`).emit('new-message', enriched);
+    io.to(`channel:${channel.id}`).emit(ServerToClient.NewMessage, enriched);
   }
 
   return { message: enriched, channelId: channel.id };

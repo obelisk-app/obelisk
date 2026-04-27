@@ -5,7 +5,7 @@ import { useChatStore } from '@/store/chat';
 import { useToastStore } from '@/store/toast';
 import { useModerationStore } from '@/store/moderation';
 import { useAuthStore } from '@/store/auth';
-import { formatPubkey } from '@/lib/nostr';
+import { formatPubkey, pubkeyToNpub } from '@/lib/nostr';
 import { nip19 } from 'nostr-tools';
 import {
   replaceShortcodes,
@@ -49,7 +49,7 @@ function renderWithEmojis(text: string, serverEmojis: Record<string, string>): R
 
 function shortNpub(pubkey: string): string {
   try {
-    const npub = nip19.npubEncode(pubkey);
+    const npub = pubkeyToNpub(pubkey);
     return `${npub.slice(0, 12)}…${npub.slice(-6)}`;
   } catch {
     return formatPubkey(pubkey);

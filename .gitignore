@@ -68,3 +68,7 @@ key.pem
 EXPLANATION.md
 cert.pem.bak
 key.pem.bak
+
+# Claude Code agent state (worktrees + scheduler locks)
+.claude/worktrees/
+.claude/scheduled_tasks.lock

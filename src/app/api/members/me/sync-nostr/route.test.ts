@@ -44,16 +44,17 @@ describe('POST /api/members/me/sync-nostr', () => {
     expect(res.status).toBe(401);
   });
 
-  it('returns 404 if user has no active memberships', async () => {
+  it('returns 200 with updated:0 if user has no active memberships', async () => {
     mockGetAuth.mockResolvedValue('pk1');
     mockPrisma.member.findMany.mockResolvedValue([]);
     mockPrisma.ban.findMany.mockResolvedValue([]);
     const res = await POST(makeRequest());
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ updated: 0 });
     expect(mockPrisma.member.updateMany).not.toHaveBeenCalled();
   });
 
-  it('returns 404 if every membership is on a banned server', async () => {
+  it('returns 200 with updated:0 if every membership is on a banned server', async () => {
     mockGetAuth.mockResolvedValue('pk1');
     mockPrisma.member.findMany.mockResolvedValue([
       { id: 'm1', serverId: 's1' },
@@ -61,7 +62,8 @@ describe('POST /api/members/me/sync-nostr', () => {
     mockPrisma.ban.findMany.mockResolvedValue([{ serverId: 's1' }]);
 
     const res = await POST(makeRequest());
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ updated: 0 });
     expect(mockPrisma.member.updateMany).not.toHaveBeenCalled();
   });
 

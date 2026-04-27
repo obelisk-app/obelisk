@@ -17,15 +17,27 @@ services:
       retries: 5
 
   # Local LiveKit SFU for testing large-room voice. Uses baked-in dev
-  # credentials (see .env). For production, credentials come from .env.production
-  # and the service lives in docker-compose.yml behind a `livekit` profile.
+  # credentials. For production, credentials come from .env.production and
+  # the service lives in docker-compose.yml behind a `livekit` profile.
+  #
+  # Config is passed via LIVEKIT_CONFIG (YAML) instead of CLI flags
+  # because newer livekit-server versions removed `--rtc.use-external-ip`
+  # in favor of nested config keys (rtc.use_external_ip).
   livekit:
     image: livekit/livekit-server:latest
     restart: unless-stopped
-    command: >
-      --bind 0.0.0.0
-      --keys "devkey: devsecret-must-be-at-least-32-chars"
-      --rtc.use-external-ip
+    environment:
+      LIVEKIT_CONFIG: |
+        port: 7880
+        bind_addresses:
+          - 0.0.0.0
+        rtc:
+          tcp_port: 7881
+          port_range_start: 50000
+          port_range_end: 50100
+          use_external_ip: true
+        keys:
+          devkey: devsecret-must-be-at-least-32-chars
     ports:
       - "7880:7880"
       - "7881:7881"

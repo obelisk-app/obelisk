@@ -14,16 +14,11 @@ vi.mock('@/lib/nostr', () => ({
 
 vi.mock('@/lib/backend-auth', () => ({
   authenticateWithBackend: vi.fn().mockResolvedValue(undefined),
+  performBackendAuth: vi.fn().mockResolvedValue({ pubkey: 'abc123' }),
 }));
 
 vi.mock('@/store/auth', () => ({
-  useAuthStore: vi.fn(() => ({
-    setUser: vi.fn(),
-    setLoading: vi.fn(),
-    setError: vi.fn(),
-    isLoading: false,
-    error: null,
-  })),
+  useAuthStore: vi.fn(),
 }));
 
 vi.mock('qrcode.react', () => ({
@@ -42,6 +37,7 @@ vi.mock('@/components/ProfileEditor', () => ({
 
 import LoginModal from './LoginModal';
 import { createNewAccount } from '@/lib/nostr';
+import type { NDKUser } from '@nostr-dev-kit/ndk';
 import { useAuthStore } from '@/store/auth';
 
 describe('LoginModal', () => {
@@ -55,14 +51,17 @@ describe('LoginModal', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (useAuthStore as any).mockReturnValue({
+    const mockState = {
       setUser: mockSetUser,
       setLoading: mockSetLoading,
       setError: mockSetError,
       syncProfile: mockSyncProfile,
       isLoading: false,
       error: null,
-    });
+    };
+    (useAuthStore as any).mockImplementation((selector?: (s: typeof mockState) => unknown) =>
+      typeof selector === 'function' ? selector(mockState) : mockState
+    );
     Object.defineProperty(window, 'nostr', { value: undefined, writable: true, configurable: true });
   });
 
@@ -85,7 +84,7 @@ describe('LoginModal', () => {
   it('shows nsec backup screen after creating account', async () => {
     const user = userEvent.setup();
     vi.mocked(createNewAccount).mockResolvedValue({
-      user: { pubkey: 'abc123', fetchProfile: vi.fn() },
+      user: { pubkey: "abc123", fetchProfile: vi.fn() } as unknown as NDKUser,
       nsec: 'nsec1testkey123',
     });
 
@@ -115,7 +114,7 @@ describe('LoginModal', () => {
   it('disables continue until backup is confirmed via checkbox', async () => {
     const user = userEvent.setup();
     vi.mocked(createNewAccount).mockResolvedValue({
-      user: { pubkey: 'abc123', fetchProfile: vi.fn() },
+      user: { pubkey: "abc123", fetchProfile: vi.fn() } as unknown as NDKUser,
       nsec: 'nsec1testkey123',
     });
 
@@ -142,7 +141,7 @@ describe('LoginModal', () => {
   it('shows profile setup when continue clicked after confirming backup', async () => {
     const user = userEvent.setup();
     vi.mocked(createNewAccount).mockResolvedValue({
-      user: { pubkey: 'abc123', fetchProfile: vi.fn() },
+      user: { pubkey: "abc123", fetchProfile: vi.fn() } as unknown as NDKUser,
       nsec: 'nsec1testkey123',
     });
 
@@ -171,7 +170,7 @@ describe('LoginModal', () => {
   it('downloads nsec as a txt file when download backup clicked', async () => {
     const user = userEvent.setup();
     vi.mocked(createNewAccount).mockResolvedValue({
-      user: { pubkey: 'abc123', fetchProfile: vi.fn() },
+      user: { pubkey: "abc123", fetchProfile: vi.fn() } as unknown as NDKUser,
       nsec: 'nsec1testkey123',
     });
 

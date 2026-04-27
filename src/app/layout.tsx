@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import Script from 'next/script';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { LocaleProvider } from '@/i18n/context';
 import type { Locale } from '@/i18n/index';
 import ToastStack from '@/components/ToastStack';
@@ -101,6 +101,11 @@ export default async function RootLayout({
 }) {
   const cookieStore = await cookies();
   const locale = (cookieStore.get('locale')?.value as Locale) || 'es';
+  // Per-request CSP nonce minted by src/proxy.ts. Stamping it on every
+  // inline <Script>/<script> we render keeps the strict CSP green; any
+  // injected upstream script (Cloudflare, browser extensions) without
+  // this nonce is correctly blocked.
+  const nonce = (await headers()).get('x-nonce') ?? undefined;
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -146,13 +151,21 @@ export default async function RootLayout({
       <head>
         <script
           type="application/ld+json"
+          nonce={nonce}
+          // React 19 strips the nonce attribute from DOM nodes after CSP
+          // evaluation (security: prevents JS from reading the nonce). The
+          // SSR HTML keeps it (browser uses it during initial parse) but
+          // hydration sees nonce="" on the live element. This is intended;
+          // suppress the otherwise-confusing warning.
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-BZ4NB66WY0"
           strategy="afterInteractive"
+          nonce={nonce}
         />
-        <Script id="google-analytics" strategy="afterInteractive">
+        <Script id="google-analytics" strategy="afterInteractive" nonce={nonce}>
           {`
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}

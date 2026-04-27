@@ -19,11 +19,15 @@ vi.mock('@/lib/blossom', () => ({
 
 const mockSyncProfile = vi.fn().mockResolvedValue(undefined);
 
+const mockAuthState = {
+  profile: { pubkey: 'abc123', npub: 'npub1abc', name: 'Test', displayName: 'Test', picture: null },
+  syncProfile: mockSyncProfile,
+};
+
 vi.mock('@/store/auth', () => ({
-  useAuthStore: vi.fn(() => ({
-    profile: { pubkey: 'abc123', npub: 'npub1abc', name: 'Test', displayName: 'Test', picture: null },
-    syncProfile: mockSyncProfile,
-  })),
+  useAuthStore: vi.fn((selector?: (s: typeof mockAuthState) => unknown) =>
+    typeof selector === 'function' ? selector(mockAuthState) : mockAuthState
+  ),
 }));
 
 vi.mock('@/i18n/context', () => ({

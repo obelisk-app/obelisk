@@ -10,14 +10,24 @@ import { nip19, generateSecretKey, getPublicKey, nip04 } from 'nostr-tools';
 import { hexToBytes, bytesToHex } from 'nostr-tools/utils';
 import { BunkerSigner, parseBunkerInput, createNostrConnectURI } from 'nostr-tools/nip46';
 import { EventEmitter } from 'events';
+import { withTimeout } from './promise';
+import { KIND_RELAY_LIST } from './nip-kinds';
+import { encryptPayload, decryptPayload, clearWrapKey } from './signer-payload-crypto';
+import {
+  fetchKind0,
+  fetchFollowers as readFollowers,
+  fetchFollowing as readFollowing,
+  fetchUserNotes as readUserNotes,
+  fetchRelayList,
+} from './nostr-read';
 
-// Popular relays (high availability)
+// Popular relays (high availability). Keep this list short and only include
+// relays we've observed to be reliably reachable — `ndk.connect()` awaits the
+// pool, and a single dead relay can stall the whole bootstrap.
 const POPULAR_RELAYS = [
   'wss://relay.primal.net',
   'wss://relay.damus.io',
   'wss://relay.nsec.app',
-  'wss://theforest.nostr1.com',
-  'wss://nostr.otxr.dev',
 ];
 
 const CONNECT_RELAYS = [
@@ -52,55 +62,43 @@ export function getNDK(): NDK {
   return ndkInstance;
 }
 
-export async function addDMInboxRelays(pubkey: string): Promise<void> {
-  const ndk = getNDK();
-  const added = new Set<string>();
+// Signer-change broadcast. The auth store subscribes here at module load
+// to mirror `ndk.signer != null` into a reactive `signerReady` flag.
+// Avoids a circular import: nostr.ts → auth.ts would cycle since auth.ts
+// already imports from nostr.ts. Subscribers register from the auth side.
+const signerSubscribers = new Set<(signer: NDKSigner | undefined) => void>();
 
-  try {
-    const events = await withTimeout(
-      ndk.fetchEvents({ kinds: [10050], authors: [pubkey], limit: 1 }),
-      5000,
-    );
-    const ev = Array.from(events)[0];
-    if (ev) {
-      for (const tag of ev.tags) {
-        if ((tag[0] === 'relay' || tag[0] === 'r') && typeof tag[1] === 'string' && tag[1].startsWith('wss://')) {
-          try {
-            ndk.addExplicitRelay(tag[1]);
-            added.add(tag[1]);
-          } catch { /* already added */ }
-        }
-      }
-    }
-  } catch (err) {
-    console.warn('[dm] kind-10050 lookup failed:', err);
-  }
-
-  if (added.size === 0) {
-    for (const url of NIP17_INBOX_FALLBACK_RELAYS) {
-      try {
-        ndk.addExplicitRelay(url);
-        added.add(url);
-      } catch { /* ignore */ }
-    }
-  }
-
-  try {
-    await ndk.connect();
-  } catch (err) {
-    console.warn('[dm] ndk.connect after inbox-relay add failed:', err);
-  }
+export function onSignerChange(cb: (signer: NDKSigner | undefined) => void): () => void {
+  signerSubscribers.add(cb);
+  return () => { signerSubscribers.delete(cb); };
 }
 
-const NIP17_INBOX_FALLBACK_RELAYS = [
-  'wss://auth.nostr1.com',
-  'wss://relay.0xchat.com',
-  'wss://inbox.nostr.wine',
-];
+/**
+ * Single sink for `ndk.signer` mutations. Replaces every direct
+ * `ndk.signer = X` in this file. Notifies subscribers (the auth store's
+ * `signerReady` flag) so React consumers can gate UI reactively.
+ *
+ * Exported so external setters (e.g. `useSessionBootstrap`'s NIP-07 fast
+ * path) can route through the bridge instead of mutating `ndk.signer`
+ * directly and silently breaking the reactive flag.
+ */
+export function setNDKSigner(signer: NDKSigner | undefined): void {
+  const ndk = getNDK();
+  ndk.signer = signer;
+  signerSubscribers.forEach((cb) => cb(signer));
+}
 
 export async function connectNDK(): Promise<NDK> {
   const ndk = getNDK();
-  await ndk.connect();
+  // NDK's `connect()` resolves after attempting to open every explicit relay.
+  // A dead/unreachable relay can keep the promise pending much longer than the
+  // bootstrap can tolerate, so race against a timeout. Once at least one relay
+  // has connected, callers can publish/subscribe regardless — the pool keeps
+  // retrying in the background.
+  await Promise.race([
+    ndk.connect(),
+    new Promise<void>((resolve) => setTimeout(resolve, 5000)),
+  ]);
   return ndk;
 }
 
@@ -113,31 +111,14 @@ async function addUserRelays(pubkey: string): Promise<void> {
   const ndk = getNDK();
 
   try {
-    const relayListEvents = await withTimeout(
-      ndk.fetchEvents({ kinds: [10002], authors: [pubkey], limit: 1 }),
-      5000
-    );
-    const relayEvent = Array.from(relayListEvents)[0];
-    if (relayEvent) {
-      const relayTags = relayEvent.tags.filter(t => t[0] === 'r');
-      for (const tag of relayTags) {
-        const url = tag[1];
-        if (url && url.startsWith('wss://')) {
-          try {
-            ndk.addExplicitRelay(url);
-          } catch { /* ignore */ }
-        }
+    const { read, write } = await fetchRelayList(pubkey, { timeoutMs: 5000 });
+    for (const url of [...read, ...write]) {
+      if (url.startsWith('wss://')) {
+        try { ndk.addExplicitRelay(url); } catch { /* already added */ }
       }
     }
     userRelaysAdded = true;
   } catch { /* ignore */ }
-}
-
-function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<T>((_, reject) => setTimeout(() => reject(new Error('timeout')), ms)),
-  ]);
 }
 
 export type LoginMethod = 'extension' | 'nsec' | 'bunker';
@@ -164,27 +145,66 @@ function getLocalSecretKey(): Uint8Array {
   return key;
 }
 
-function saveSignerPayload(payload: string): void {
+async function saveSignerPayload(payload: string): Promise<void> {
   if (typeof localStorage === 'undefined') return;
   try {
-    localStorage.setItem(SIGNER_PAYLOAD_KEY, payload);
-  } catch { /* ignore */ }
+    const blob = await encryptPayload(payload);
+    localStorage.setItem(SIGNER_PAYLOAD_KEY, blob);
+  } catch (err) {
+    console.warn('[nostr] saveSignerPayload encryption failed:', err);
+  }
 }
 
-function readSignerPayload(): string | null {
+async function readSignerPayload(): Promise<string | null> {
   if (typeof localStorage === 'undefined') return null;
+  let blob: string | null;
   try {
-    return localStorage.getItem(SIGNER_PAYLOAD_KEY);
+    blob = localStorage.getItem(SIGNER_PAYLOAD_KEY);
   } catch {
+    return null;
+  }
+  if (!blob) return null;
+
+  // Migration: detect legacy plaintext JSON. If it parses, re-save it
+  // encrypted and return. After this code path runs once per user, all
+  // subsequent reads go through the encrypted path.
+  if (blob.startsWith('{')) {
+    try {
+      JSON.parse(blob); // sanity-check shape
+      await saveSignerPayload(blob);
+      return blob;
+    } catch {
+      try { localStorage.removeItem(SIGNER_PAYLOAD_KEY); } catch { /* ignore */ }
+      return null;
+    }
+  }
+
+  try {
+    return await decryptPayload(blob);
+  } catch {
+    // Corrupt ciphertext or IDB key was wiped (browser data clear).
+    // Remove the unreadable blob so the user can log in fresh.
+    try { localStorage.removeItem(SIGNER_PAYLOAD_KEY); } catch { /* ignore */ }
     return null;
   }
 }
 
-export function clearSignerPayload(): void {
-  if (typeof localStorage === 'undefined') return;
-  try {
-    localStorage.removeItem(SIGNER_PAYLOAD_KEY);
-  } catch { /* ignore */ }
+/**
+ * Clear the encrypted signer payload from localStorage AND destroy the
+ * IndexedDB-resident wrap key so leftover ciphertext is unreadable.
+ *
+ * Returns a Promise but is safe to fire-and-forget — callers (e.g. the
+ * sync `logout()` action in the auth store) don't need to await it.
+ * Order: wipe LS first, then IDB, so a partial failure leaves the safer
+ * state (no readable ciphertext referencing an existing key).
+ */
+export async function clearSignerPayload(): Promise<void> {
+  if (typeof localStorage !== 'undefined') {
+    try {
+      localStorage.removeItem(SIGNER_PAYLOAD_KEY);
+    } catch { /* ignore */ }
+  }
+  await clearWrapKey().catch(() => { /* best-effort */ });
 }
 
 /**
@@ -256,7 +276,7 @@ function toBunkerURL(bp: any): string {
 }
 
 export async function restoreRemoteSigner(): Promise<boolean> {
-  const payloadStr = readSignerPayload();
+  const payloadStr = await readSignerPayload();
   if (!payloadStr) return false;
 
   try {
@@ -264,9 +284,8 @@ export async function restoreRemoteSigner(): Promise<boolean> {
 
     if (payload.type === 'nsec') {
       if (!payload.privkey) return false;
-      const ndk = getNDK();
       const signer = new NDKPrivateKeySigner(payload.privkey);
-      ndk.signer = signer;
+      setNDKSigner(signer);
       await signer.user();
       return true;
     }
@@ -279,15 +298,13 @@ export async function restoreRemoteSigner(): Promise<boolean> {
     const localSecret = hexToBytes(payload.localPrivkey);
     const bunker = BunkerSigner.fromBunker(localSecret, bp);
     const signer = new NDKBunkerSigner(bunker, localSecret);
-    
-    const ndk = getNDK();
-    ndk.signer = signer;
-    
+    setNDKSigner(signer);
+
     await withTimeout(signer.blockUntilReady(), 30000);
     return true;
   } catch (err) {
     console.warn('[nostr] restoreRemoteSigner failed:', err);
-    clearSignerPayload();
+    await clearSignerPayload();
     return false;
   }
 }
@@ -299,7 +316,7 @@ export async function loginWithExtension(): Promise<NDKUser | null> {
 
   const ndk = getNDK();
   const signer = new NDKNip07Signer(4000, ndk);
-  ndk.signer = signer;
+  setNDKSigner(signer);
 
   try {
     const user = await signer.blockUntilReady();
@@ -326,15 +343,14 @@ export async function loginWithNsec(nsec: string): Promise<NDKUser | null> {
   } catch {
     throw new Error('Invalid nsec format');
   }
-  
-  const ndk = getNDK();
+
   const signer = new NDKPrivateKeySigner(privateKey);
-  ndk.signer = signer;
+  setNDKSigner(signer);
 
   const user = await signer.user();
   await user.fetchProfile();
 
-  saveSignerPayload(JSON.stringify({ type: 'nsec', privkey: privateKey }));
+  await saveSignerPayload(JSON.stringify({ type: 'nsec', privkey: privateKey }));
 
   return user;
 }
@@ -344,12 +360,11 @@ export async function createNewAccount(): Promise<{ user: NDKUser; nsec: string 
   const nsec = nip19.nsecEncode(secretKey);
   const privateKeyHex = bytesToHex(secretKey);
 
-  const ndk = getNDK();
   const signer = new NDKPrivateKeySigner(privateKeyHex);
-  ndk.signer = signer;
+  setNDKSigner(signer);
 
   const user = await signer.user();
-  saveSignerPayload(JSON.stringify({ type: 'nsec', privkey: privateKeyHex }));
+  await saveSignerPayload(JSON.stringify({ type: 'nsec', privkey: privateKeyHex }));
   return { user, nsec };
 }
 
@@ -375,10 +390,9 @@ export async function loginWithBunker(bunkerUrl: string, options?: BunkerLoginOp
 
   const signer = new NDKBunkerSigner(bunker, localSecret);
   const user = await withTimeout(signer.blockUntilReady(), 60000);
-  
-  const ndk = getNDK();
-  ndk.signer = signer;
-  saveSignerPayload(signer.toPayload());
+
+  setNDKSigner(signer);
+  await saveSignerPayload(signer.toPayload());
 
   await user.fetchProfile().catch(() => {});
   return user;
@@ -424,9 +438,8 @@ export async function createNostrConnectSession(relay?: string, options?: Bunker
       }
 
       const signer = new NDKBunkerSigner(bunker, localSecret);
-      const ndk = getNDK();
-      ndk.signer = signer;
-      saveSignerPayload(signer.toPayload());
+      setNDKSigner(signer);
+      await saveSignerPayload(signer.toPayload());
 
       const user = await signer.user();
       await user.fetchProfile().catch(() => {});
@@ -474,67 +487,26 @@ export function parseProfile(user: NDKUser): NostrProfile {
 }
 
 export async function fetchFollowers(pubkey: string): Promise<string[]> {
-  const ndk = getNDK();
   await addUserRelays(pubkey);
-
-  try {
-    const events = await withTimeout(
-      ndk.fetchEvents({ kinds: [3], '#p': [pubkey] }),
-      10000
-    );
-    const followers = new Set<string>();
-    events.forEach((event) => followers.add(event.pubkey));
-    return Array.from(followers);
-  } catch {
-    console.warn('fetchFollowers timed out');
-    return [];
-  }
+  return readFollowers(pubkey, { timeoutMs: 10000 });
 }
 
 export async function fetchFollowing(pubkey: string): Promise<string[]> {
-  const ndk = getNDK();
   await addUserRelays(pubkey);
-
-  try {
-    const user = ndk.getUser({ pubkey });
-    const followSet = await withTimeout(user.follows(), 10000);
-    return Array.from(followSet).map((u) => u.pubkey);
-  } catch {
-    console.warn('fetchFollowing timed out');
-    return [];
-  }
+  return readFollowing(pubkey, { timeoutMs: 10000 });
 }
 
 export async function fetchUserNotes(pubkey: string, limit = 20): Promise<NDKEvent[]> {
-  const ndk = getNDK();
   await addUserRelays(pubkey);
-
-  try {
-    const events = await withTimeout(
-      ndk.fetchEvents({ kinds: [1], authors: [pubkey], limit }),
-      10000
-    );
-    return Array.from(events).sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
-  } catch {
-    console.warn('fetchUserNotes timed out');
-    return [];
-  }
+  const events = await readUserNotes(pubkey, limit, { timeoutMs: 10000 });
+  // Wrap into NDKEvent for backward compatibility with callers that expect
+  // NDK's event shape (e.g. profile-notes UI).
+  const ndk = getNDK();
+  return events.map((e) => new NDKEvent(ndk, e as unknown as ConstructorParameters<typeof NDKEvent>[1]));
 }
 
 export async function fetchCurrentKind0(pubkey: string): Promise<Record<string, unknown>> {
-  const ndk = getNDK();
-  try {
-    const event = await withTimeout(
-      ndk.fetchEvent({ kinds: [0], authors: [pubkey] }),
-      10000
-    );
-    if (event?.content) {
-      return JSON.parse(event.content);
-    }
-  } catch {
-    console.warn('fetchCurrentKind0 failed or timed out');
-  }
-  return {};
+  return fetchKind0(pubkey, { timeoutMs: 10000 });
 }
 
 export async function publishProfile(fields: {
@@ -569,8 +541,28 @@ export async function publishProfile(fields: {
   return event;
 }
 
+export function pubkeyToNpub(pubkey: string): string {
+  return nip19.npubEncode(pubkey);
+}
+
+/**
+ * Accept a hex pubkey, an `npub1…` bech32, or an `nprofile1…` bech32 and
+ * return the 64-char hex pubkey. Returns `null` if the input isn't a
+ * recognized Nostr identity encoding.
+ */
+export function npubToHex(input: string): string | null {
+  const trimmed = input.trim();
+  if (/^[0-9a-f]{64}$/i.test(trimmed)) return trimmed.toLowerCase();
+  try {
+    const decoded = nip19.decode(trimmed);
+    if (decoded.type === 'npub') return decoded.data;
+    if (decoded.type === 'nprofile') return decoded.data.pubkey;
+  } catch { /* not a valid nip19 string */ }
+  return null;
+}
+
 export function formatPubkey(pubkey: string): string {
-  const npub = nip19.npubEncode(pubkey);
+  const npub = pubkeyToNpub(pubkey);
   return `${npub.slice(0, 8)}...${npub.slice(-4)}`;
 }
 

@@ -30,3 +30,12 @@ export const useToastStore = create<ToastState>()((set) => ({
     set((state) => ({ toasts: state.toasts.filter((t) => t.id !== id) })),
   clearToasts: () => set({ toasts: [] }),
 }));
+
+/**
+ * Convenience for the common error-toast pattern:
+ *   `alert(data.error || 'fallback message')` → `pushErrorToast('fallback message', data.error)`
+ * Same resolution order; surfaces as a toast instead of a blocking alert.
+ */
+export function pushErrorToast(fallback: string, serverMessage?: string | null, title = 'Error') {
+  useToastStore.getState().pushToast({ title, body: serverMessage || fallback });
+}

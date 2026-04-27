@@ -6,6 +6,7 @@ import ServerPicker, { type AdminServerOption } from '@/components/admin/ServerP
 import MembershipsModal from '@/components/admin/MembershipsModal';
 import { shortNpub } from '@/lib/mentions';
 import InstanceSettingsPanel from '@/components/admin/InstanceSettingsPanel';
+import { extractApiError } from '@/lib/api-json';
 
 interface UserRow {
   pubkey: string;
@@ -78,8 +79,7 @@ export default function AdminAllUsersPage() {
     try {
       const res = await fetch(`/api/admin/users/${u.pubkey}`, { method: 'DELETE' });
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        setActionError(data?.error || `Remove failed (HTTP ${res.status})`);
+        setActionError(await extractApiError(res, 'Remove'));
       } else {
         await fetchUsers();
       }
@@ -103,8 +103,7 @@ export default function AdminAllUsersPage() {
         body: JSON.stringify({ reason: reason || undefined }),
       });
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        setActionError(data?.error || `Ban failed (HTTP ${res.status})`);
+        setActionError(await extractApiError(res, 'Ban'));
       } else {
         await fetchUsers();
       }
@@ -119,8 +118,7 @@ export default function AdminAllUsersPage() {
     try {
       const res = await fetch(`/api/admin/users/${u.pubkey}/ban`, { method: 'DELETE' });
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        setActionError(data?.error || `Unban failed (HTTP ${res.status})`);
+        setActionError(await extractApiError(res, 'Unban'));
       } else {
         await fetchUsers();
       }

@@ -13,6 +13,7 @@
 
 import type { Socket } from 'socket.io-client';
 import { SpeakingDetector } from './speaking-detector';
+import { ServerToClient, ClientToServer } from '@/lib/socket-events';
 
 export interface VoiceParticipant {
   pubkey: string;
@@ -231,9 +232,9 @@ export class WebSocketVoiceClient {
       }
     }
 
-    this.socket.on('voice-peer-joined', this.handlePeerJoined);
-    this.socket.on('voice-peer-left', this.handlePeerLeft);
-    this.socket.on('voice-signal', this.handleSignal);
+    this.socket.on(ServerToClient.VoicePeerJoined, this.handlePeerJoined);
+    this.socket.on(ServerToClient.VoicePeerLeft, this.handlePeerLeft);
+    this.socket.on(ServerToClient.VoiceSignal, this.handleSignal);
     this.socket.on('voice-force-mute', this.handleForceMute);
     this.socket.on('voice-force-camera-off', this.handleForceCameraOff);
     this.socket.on('voice-force-screen-off', this.handleForceScreenOff);
@@ -287,7 +288,7 @@ export class WebSocketVoiceClient {
     }
 
     if (this.channelId) {
-      this.socket.emit('leave-voice', this.channelId);
+      this.socket.emit(ClientToServer.LeaveVoice, this.channelId);
     }
     this.channelId = null;
     this.localPubkey = null;
@@ -444,7 +445,7 @@ export class WebSocketVoiceClient {
       // Release the server-side seat we reserved, otherwise the user would
       // appear to be "using the camera" until the whole voice session ends.
       if (claimed && this.channelId) {
-        try { this.socket.emit('voice-camera-release', this.channelId); } catch {}
+        try { this.socket.emit(ClientToServer.VoiceCameraRelease, this.channelId); } catch {}
       }
       throw err;
     }
@@ -485,7 +486,7 @@ export class WebSocketVoiceClient {
       this.onLocalCameraStream?.(null);
     }
     if (this.channelId) {
-      this.socket.emit('voice-camera-release', this.channelId);
+      this.socket.emit(ClientToServer.VoiceCameraRelease, this.channelId);
     }
   }
 
@@ -525,7 +526,7 @@ export class WebSocketVoiceClient {
       // source. Either way, release the server seat so another user (or we
       // ourselves on the next attempt) can claim it.
       if (claimed && this.channelId) {
-        try { this.socket.emit('voice-screen-release', this.channelId); } catch {}
+        try { this.socket.emit(ClientToServer.VoiceScreenRelease, this.channelId); } catch {}
       }
       throw err;
     }
@@ -589,7 +590,7 @@ export class WebSocketVoiceClient {
       this.onLocalScreenStream?.(null);
     }
     if (this.channelId) {
-      this.socket.emit('voice-screen-release', this.channelId);
+      this.socket.emit(ClientToServer.VoiceScreenRelease, this.channelId);
     }
   }
 
@@ -636,7 +637,7 @@ export class WebSocketVoiceClient {
       console.warn('[voice] initial connect timeout for', remotePubkey.slice(0, 8),
         '— state:', peer.pc.connectionState);
       if (peer.polite) {
-        this.socket.emit('voice-signal', {
+        this.socket.emit(ServerToClient.VoiceSignal, {
           toSocketId: peer.socketId,
           payload: { requestReset: true },
         });
@@ -647,7 +648,7 @@ export class WebSocketVoiceClient {
 
     pc.onicecandidate = ({ candidate }) => {
       if (candidate) {
-        this.socket.emit('voice-signal', {
+        this.socket.emit(ServerToClient.VoiceSignal, {
           toSocketId: remoteSocketId,
           payload: { ice: candidate.toJSON() },
         });
@@ -658,7 +659,7 @@ export class WebSocketVoiceClient {
       try {
         peer.makingOffer = true;
         await pc.setLocalDescription();
-        this.socket.emit('voice-signal', {
+        this.socket.emit(ServerToClient.VoiceSignal, {
           toSocketId: remoteSocketId,
           payload: { sdp: enhanceOpusSdp(pc.localDescription) },
         });
@@ -840,7 +841,7 @@ export class WebSocketVoiceClient {
   private requestRemoteReset(peer: PeerConn): void {
     console.log('[voice] requesting remote reset from', peer.pubkey.slice(0, 8),
       'attempt', peer.reconnectAttempts);
-    this.socket.emit('voice-signal', {
+    this.socket.emit(ServerToClient.VoiceSignal, {
       toSocketId: peer.socketId,
       payload: { requestReset: true },
     });
@@ -862,7 +863,7 @@ export class WebSocketVoiceClient {
     console.log('[voice] hard reset for', peer.pubkey.slice(0, 8));
     // Tell the remote side to tear down and rebuild too, otherwise they'd
     // keep feeding offers to our dead PC.
-    this.socket.emit('voice-signal', {
+    this.socket.emit(ServerToClient.VoiceSignal, {
       toSocketId: peer.socketId,
       payload: { reset: true },
     });
@@ -1023,7 +1024,7 @@ export class WebSocketVoiceClient {
   }
 
   private sendTrackInfo(peer: PeerConn, trackId: string, type: TrackType): void {
-    this.socket.emit('voice-signal', {
+    this.socket.emit(ServerToClient.VoiceSignal, {
       toSocketId: peer.socketId,
       payload: { trackInfo: { trackId, type } },
     });
@@ -1235,7 +1236,7 @@ export class WebSocketVoiceClient {
         await peer.pc.setRemoteDescription(desc);
         if (desc.type === 'offer') {
           await peer.pc.setLocalDescription();
-          this.socket.emit('voice-signal', {
+          this.socket.emit(ServerToClient.VoiceSignal, {
             toSocketId: fromSocketId,
             payload: { sdp: enhanceOpusSdp(peer.pc.localDescription) },
           });

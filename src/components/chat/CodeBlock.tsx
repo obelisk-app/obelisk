@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 
 let highlighterPromise: Promise<import('shiki').Highlighter> | null = null;
 
@@ -23,8 +24,7 @@ interface CodeBlockProps {
 
 export default function CodeBlock({ code, language }: CodeBlockProps) {
   const [html, setHtml] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const { copied, copy } = useCopyToClipboard();
 
   useEffect(() => {
     let cancelled = false;
@@ -42,12 +42,7 @@ export default function CodeBlock({ code, language }: CodeBlockProps) {
     return () => { cancelled = true; };
   }, [code, language]);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(code);
-    setCopied(true);
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => setCopied(false), 2000);
-  };
+  const handleCopy = () => { void copy(code); };
 
   return (
     <div className="relative group/code my-2 rounded-lg overflow-hidden border border-lc-border" data-testid="code-block">

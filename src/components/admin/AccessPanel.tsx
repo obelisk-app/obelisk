@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { nip19 } from 'nostr-tools';
+import { npubToHex } from '@/lib/nostr';
 
 interface AccessConfig {
   referentePubkey: string | null;
@@ -29,16 +29,7 @@ interface AccessPanelProps {
 }
 
 function normalizePubkey(input: string): string | null {
-  const trimmed = input.trim();
-  if (!trimmed) return null;
-  if (/^[0-9a-f]{64}$/i.test(trimmed)) return trimmed.toLowerCase();
-  try {
-    const decoded = nip19.decode(trimmed);
-    if (decoded.type === 'npub') return decoded.data as string;
-  } catch {
-    /* not a valid nip19 string */
-  }
-  return null;
+  return input.trim() ? npubToHex(input) : null;
 }
 
 export default function AccessPanel({ serverId, isOwner }: AccessPanelProps) {
