@@ -26,6 +26,11 @@ vi.mock('@/lib/dm/dm', () => ({
   loadOlder: vi.fn(),
   subscribeLive: (opts: any) => hoisted.subscribeLiveMock(opts),
   detectNip04InRecent: vi.fn().mockReturnValue(false),
+  // Pulled in transitively via DMSessionProvider — mock as resolved-empty
+  // so the await chains in the provider settle without network access.
+  fetchMyInboxRelays: vi.fn().mockResolvedValue([]),
+  fetchMyDmRelays: vi.fn().mockResolvedValue([]),
+  discoverNip17Partners: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock('@/lib/dm/follows', () => ({

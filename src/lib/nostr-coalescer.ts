@@ -64,7 +64,14 @@ export class RequestCoalescer {
 
   constructor(opts: CoalescerOptions = {}) {
     this.debounceMs = opts.debounceMs ?? 50;
-    this.subscriptionTimeoutMs = opts.subscriptionTimeoutMs ?? 5000;
+    // Bumped from 5000 → 20000ms. Cold WebSocket connect to a relay can
+    // take 1-3s on its own; a 5s window leaves almost no headroom for the
+    // REQ → EVENT → EOSE round-trip. Profile lookups (kind 0) on slow
+    // aggregators were timing out silently, leaving DM partners stuck on
+    // the npub fallback. 20s is generous for one-shots and fine for the
+    // live subs (they're recreated whenever the user switches threads or
+    // the page re-mounts the lifecycle hook).
+    this.subscriptionTimeoutMs = opts.subscriptionTimeoutMs ?? 20000;
   }
 
   /**
@@ -175,25 +182,38 @@ export class RequestCoalescer {
     if (handles.length === 0) return;
     const filters = handles.flatMap((h) => h.req.filters);
     const pool = getNostrPool();
-    const active: ActiveSub = { sub: null!, entries: handles, closed: false };
 
-    // nostr-tools' .d.ts types `subscribeMany`'s second arg as a single Filter,
-    // but the runtime accepts Filter[] (Nostr REQs are spec'd to allow multiple
-    // filters per subscription). Cast to satisfy the .d.ts.
-    active.sub = pool.subscribeMany(g.relays, filters as unknown as Filter, {
-      onevent: (event: NostrEvent) => {
-        if (seen.has(event.id)) return;
-        seen.add(event.id);
-        if (!verifyNostrEvent(event)) return;
-        for (const h of active.entries) h.req.onEvent(event);
-      },
-      // nostr-tools' .d.ts types `oneose` as `() => void`, but at runtime
-      // it's invoked once per relay with the relay URL. Cast here to satisfy
-      // the .d.ts.
-      oneose: ((relay: string) => {
-        for (const h of active.entries) h.req.onEose?.(relay);
-      }) as () => void,
-    });
+    // nostr-tools' `SimplePool.subscribeMany(relays, filter, params)` takes a
+    // SINGLE filter object, despite the misleading "Many" name (it refers to
+    // many *relays*, not many filters). Passing a Filter[] gets pushed as one
+    // element of the relay's filter list, which the relay then rejects with
+    // "provided filter is not an object". Confirmed against pool.js#subscribeMap
+    // (line 745: `grouped.get(url).push(filter)`). To run N filters per REQ,
+    // call subscribeMany N times — the pool internally groups all calls
+    // sharing a relay into one REQ with multiple filters before sending.
+    const subs: Array<{ close: () => void }> = [];
+    const active: ActiveSub = {
+      sub: { close: () => { for (const s of subs) { try { s.close(); } catch { /* ignore */ } } } } as ActiveSub['sub'],
+      entries: handles,
+      closed: false,
+    };
+
+    for (const filter of filters) {
+      const sub = pool.subscribeMany(g.relays, filter, {
+        onevent: (event: NostrEvent) => {
+          if (seen.has(event.id)) return;
+          seen.add(event.id);
+          if (!verifyNostrEvent(event)) return;
+          for (const h of active.entries) h.req.onEvent(event);
+        },
+        // nostr-tools' .d.ts types `oneose` as `() => void`, but at runtime
+        // it's invoked once per relay with the relay URL.
+        oneose: ((relay: string) => {
+          for (const h of active.entries) h.req.onEose?.(relay);
+        }) as () => void,
+      });
+      subs.push(sub);
+    }
 
     for (const h of handles) {
       h.group = null;

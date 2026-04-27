@@ -21,13 +21,13 @@ import {
   fetchRelayList,
 } from './nostr-read';
 
-// Popular relays (high availability)
+// Popular relays (high availability). Keep this list short and only include
+// relays we've observed to be reliably reachable — `ndk.connect()` awaits the
+// pool, and a single dead relay can stall the whole bootstrap.
 const POPULAR_RELAYS = [
   'wss://relay.primal.net',
   'wss://relay.damus.io',
   'wss://relay.nsec.app',
-  'wss://theforest.nostr1.com',
-  'wss://nostr.otxr.dev',
 ];
 
 const CONNECT_RELAYS = [
@@ -90,7 +90,15 @@ export function setNDKSigner(signer: NDKSigner | undefined): void {
 
 export async function connectNDK(): Promise<NDK> {
   const ndk = getNDK();
-  await ndk.connect();
+  // NDK's `connect()` resolves after attempting to open every explicit relay.
+  // A dead/unreachable relay can keep the promise pending much longer than the
+  // bootstrap can tolerate, so race against a timeout. Once at least one relay
+  // has connected, callers can publish/subscribe regardless — the pool keeps
+  // retrying in the background.
+  await Promise.race([
+    ndk.connect(),
+    new Promise<void>((resolve) => setTimeout(resolve, 5000)),
+  ]);
   return ndk;
 }
 

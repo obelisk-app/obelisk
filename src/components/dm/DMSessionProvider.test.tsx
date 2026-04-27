@@ -8,6 +8,34 @@ vi.mock('@/lib/dm/dm', () => ({
   subscribeLive: (opts: any) => subscribeLiveMock(opts),
   loadHistory: vi.fn(),
   sendDM: vi.fn(),
+  // The provider asks for the user's published relay lists before opening
+  // the live subscription. Mock both as resolved-empty so the await chain
+  // settles synchronously in tests.
+  fetchMyInboxRelays: vi.fn().mockResolvedValue([]),
+  fetchMyDmRelays: vi.fn().mockResolvedValue([]),
+  discoverNip17Partners: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock('@/lib/dm/dm-cache', () => ({
+  subscribeToCacheTick: vi.fn(() => () => {}),
+}));
+
+vi.mock('@/store/dm', () => ({
+  useDMStore: Object.assign(
+    () => ({ threads: [], setThreads: vi.fn() }),
+    { getState: () => ({ threads: [], setThreads: vi.fn() }) },
+  ),
+}));
+
+vi.mock('@/store/auth', () => ({
+  useAuthStore: Object.assign(
+    (selector: any) => (selector ? selector({ signerReady: true }) : { signerReady: true }),
+    { getState: () => ({ signerReady: true }) },
+  ),
+}));
+
+vi.mock('@/lib/signer-adapters', () => ({
+  toKEKSigner: vi.fn(() => ({ encrypt: vi.fn(), decrypt: vi.fn() })),
 }));
 
 vi.mock('@/lib/dm/follows', () => ({
@@ -29,6 +57,7 @@ vi.mock('@/lib/nostr', () => ({
   // since it reads signerReady) crashes during test setup.
   onSignerChange: vi.fn(() => () => {}),
   setNDKSigner: vi.fn(),
+  formatPubkey: (pk: string) => pk.slice(0, 8),
 }));
 
 beforeEach(() => {
@@ -36,16 +65,19 @@ beforeEach(() => {
 });
 
 describe('DMSessionProvider', () => {
-  it('opens a live subscription on mount with the current pubkey', () => {
+  it('opens a live subscription on mount with the current pubkey', async () => {
     render(
       <DMSessionProvider myPubkey={'a'.repeat(64)}>
         <div />
       </DMSessionProvider>
     );
+    // The provider awaits fetchMyInboxRelays + fetchMyDmRelays before
+    // calling subscribeLive — flush microtasks so the await chain settles.
+    await new Promise((r) => setTimeout(r, 0));
     expect(subscribeLiveMock).toHaveBeenCalledWith(expect.objectContaining({ myPubkey: 'a'.repeat(64) }));
   });
 
-  it('closes the subscription on unmount', () => {
+  it('closes the subscription on unmount', async () => {
     const close = vi.fn();
     subscribeLiveMock.mockImplementationOnce(() => close);
     const { unmount } = render(
@@ -53,6 +85,7 @@ describe('DMSessionProvider', () => {
         <div />
       </DMSessionProvider>
     );
+    await new Promise((r) => setTimeout(r, 0));
     unmount();
     expect(close).toHaveBeenCalled();
   });

@@ -26,8 +26,12 @@ function toCached(event: NostrEvent): CachedDMEvent {
 }
 
 export function verifyAndIngest(myPubkey: string, event: NostrEvent): boolean {
-  if (!verifyDMEvent(event)) return false;
+  if (!verifyDMEvent(event)) {
+    if (typeof window !== 'undefined') console.warn('[dm-ingest] rejected event', { id: event.id, kind: event.kind, pubkey: event.pubkey?.slice(0, 8) });
+    return false;
+  }
   if (getEvent(myPubkey, event.id)) return true; // dedup
+  if (typeof window !== 'undefined') console.log('[dm-ingest] cached event', { id: event.id.slice(0, 8), kind: event.kind, from: event.pubkey?.slice(0, 8), at: event.created_at });
   putEvent(myPubkey, toCached(event));
   if (event.kind === KIND_NIP04) {
     if (event.pubkey === myPubkey) setCursor(myPubkey, 'nip04Out', event.created_at);
@@ -56,22 +60,25 @@ function partnerRelaySet(myPubkey: string, partnerPubkey: string, extra: string[
   return relays.length ? relays : ['wss://relay.damus.io', 'wss://nos.lol'];
 }
 
-// Initial fetch window: don't pull the user's entire DM history on first
-// login — bound to the last 90 days. Older messages stream in via the top
-// sentinel in DMChat which calls `loadOlder()` on scroll-up.
-const INITIAL_HISTORY_WINDOW_SEC = 90 * 24 * 60 * 60;
-
-function sinceFor(cursorValue: number, nowSec: number): number {
-  return cursorValue > 0 ? cursorValue : nowSec - INITIAL_HISTORY_WINDOW_SEC;
-}
+// Per-thread initial open: fetch the latest 50 events. Older messages
+// stream in via the top sentinel in DMChat which calls `loadOlder()` on
+// scroll-up. We don't use a date `since` window because thread depth
+// varies wildly — a chatty thread has 50 messages in a day, a quiet one
+// in 2 years. Limit-based pagination is the right primitive.
+const INITIAL_THREAD_LIMIT = 50;
 
 export function loadHistory(myPubkey: string, partnerPubkey: string, opts: LoadHistoryOptions = {}): void {
   const cursors = getCursors(myPubkey);
   const nowSec = Math.floor(Date.now() / 1000);
+  const limit = INITIAL_THREAD_LIMIT;
+  // First open: fetch newest 50 by limit + until=now. Returning visits use
+  // the cursor (since: lastSeen) to grab only the gap.
+  const baseFilters = (cursorValue: number) =>
+    cursorValue > 0 ? { since: cursorValue } : { until: nowSec, limit };
   const filters: Filter[] = [
-    { kinds: [KIND_NIP04], authors: [myPubkey], '#p': [partnerPubkey], since: sinceFor(cursors.nip04Out, nowSec) },
-    { kinds: [KIND_NIP04], authors: [partnerPubkey], '#p': [myPubkey], since: sinceFor(cursors.nip04In, nowSec) },
-    { kinds: [KIND_GIFT_WRAP], '#p': [myPubkey], since: sinceFor(cursors.nip17Wrap, nowSec) },
+    { kinds: [KIND_NIP04], authors: [myPubkey], '#p': [partnerPubkey], ...baseFilters(cursors.nip04Out) },
+    { kinds: [KIND_NIP04], authors: [partnerPubkey], '#p': [myPubkey], ...baseFilters(cursors.nip04In) },
+    { kinds: [KIND_GIFT_WRAP], '#p': [myPubkey], ...baseFilters(cursors.nip17Wrap) },
   ];
 
   coalescer.enqueue({
@@ -79,6 +86,240 @@ export function loadHistory(myPubkey: string, partnerPubkey: string, opts: LoadH
     relays: partnerRelaySet(myPubkey, partnerPubkey, opts.relays),
     onEvent: (event) => verifyAndIngest(myPubkey, event),
   });
+}
+
+/**
+ * Fetch the user's published kind 10050 (NIP-17 inbox relays). Other Nostr
+ * clients sending us gift-wrapped DMs look up THIS event to know where to
+ * deliver our wraps. If we don't query the user's preferred inbox relays,
+ * historical wraps published by other clients (Amethyst, Primal, etc.)
+ * never reach us — the inbox stays empty regardless of how many wraps
+ * are in flight.
+ *
+ * Resolves with the deduplicated set of relay URLs from the latest
+ * 10050 event seen across the wide-net query. Falls back to an empty
+ * array if no 10050 exists (caller defaults to Obelisk's relay set).
+ */
+// Cold-connect time on a fresh page load can be 2-4s for relays the
+// SimplePool hasn't opened yet (TLS handshake + WebSocket upgrade + initial
+// REQ + EOSE). 3s leaves no headroom — bumped to 8s so the first refresh
+// after a deploy actually surfaces the relay-list events. Subsequent calls
+// are cheap because the SimplePool reuses the warm sockets.
+const RELAY_LIST_FETCH_TIMEOUT_MS = 8000;
+
+export function fetchMyInboxRelays(opts: {
+  myPubkey: string;
+  /** Wide-net relays to look for the 10050 event. Pool relays + a couple
+   *  well-known aggregators. */
+  searchRelays: string[];
+}): Promise<string[]> {
+  const filters: Filter[] = [
+    { kinds: [10050], authors: [opts.myPubkey], limit: 1 },
+  ];
+  let newest: { created_at: number; relays: string[] } | null = null;
+  return new Promise((resolve) => {
+    const close = coalescer.enqueue({
+      filters,
+      relays: opts.searchRelays,
+      onEvent: (event) => {
+        if (event.kind !== 10050 || event.pubkey !== opts.myPubkey) return;
+        if (newest && event.created_at <= newest.created_at) return;
+        // Tag shape: ['relay', 'wss://...'] OR ['r', 'wss://...'] (some
+        // clients vary). Accept either and dedupe.
+        const relays = (event.tags as string[][])
+          .filter((t) => (t[0] === 'relay' || t[0] === 'r') && typeof t[1] === 'string' && t[1].startsWith('wss://'))
+          .map((t) => t[1]);
+        newest = { created_at: event.created_at, relays };
+      },
+    });
+    setTimeout(() => {
+      close();
+      resolve(newest ? Array.from(new Set(newest.relays)) : []);
+    }, RELAY_LIST_FETCH_TIMEOUT_MS);
+  });
+}
+
+/**
+ * Fetch the user's NIP-65 (kind 10002) read + write relays.
+ *
+ * NIP-04 DMs predate NIP-17 and are NOT delivered to the kind 10050 inbox.
+ * Other clients (Damus, Amethyst, Coracle, Primal…) publish them to the
+ * sender's NIP-65 write relays, with the recipient's pubkey in a `p` tag.
+ * The recipient finds them by querying their own NIP-65 read relays.
+ *
+ * Without this, a user with NIP-65 relays on (say) `wss://relay.snort.social`
+ * and `wss://nos.lol` who signs in to Obelisk sees an empty DM history,
+ * because Obelisk's default pool doesn't intersect with where their messages
+ * actually live. Returns the union of read+write so the walker queries every
+ * relay that could plausibly hold a DM addressed to them.
+ */
+export function fetchMyDmRelays(opts: {
+  myPubkey: string;
+  searchRelays: string[];
+}): Promise<string[]> {
+  const filters: Filter[] = [
+    { kinds: [10002], authors: [opts.myPubkey], limit: 1 },
+  ];
+  let newest: { created_at: number; relays: string[] } | null = null;
+  return new Promise((resolve) => {
+    const close = coalescer.enqueue({
+      filters,
+      relays: opts.searchRelays,
+      onEvent: (event) => {
+        if (event.kind !== 10002 || event.pubkey !== opts.myPubkey) return;
+        if (newest && event.created_at <= newest.created_at) return;
+        // NIP-65 tag shape: ['r', '<url>', '<read'|'write'>?]. Missing
+        // marker means both. Take everything — for DM coverage we want
+        // the union of read + write.
+        const relays = (event.tags as string[][])
+          .filter((t) => t[0] === 'r' && typeof t[1] === 'string' && t[1].startsWith('wss://'))
+          .map((t) => t[1]);
+        newest = { created_at: event.created_at, relays };
+      },
+    });
+    setTimeout(() => {
+      close();
+      resolve(newest ? Array.from(new Set(newest.relays)) : []);
+    }, RELAY_LIST_FETCH_TIMEOUT_MS);
+  });
+}
+
+/**
+ * Inbox window walker. One-shot fetch for events in (until - windowSec, until].
+ * Used by useDMLifecycle to extend the partner-discovery window backwards
+ * until the user has seen N partners or the relay returns nothing more.
+ *
+ * Resolves once the relay's EOSE-equivalent fires (or 4s timeout).
+ */
+export function loadInboxWindow(opts: {
+  myPubkey: string;
+  myInboxRelays: string[];
+  until: number;     // unix seconds — fetch events strictly older than this
+  limit?: number;    // per-filter cap, default 200
+}): Promise<void> {
+  const limit = opts.limit ?? 200;
+  const filters: Filter[] = [
+    { kinds: [KIND_NIP04], '#p': [opts.myPubkey], until: opts.until, limit },
+    { kinds: [KIND_NIP04], authors: [opts.myPubkey], until: opts.until, limit },
+    { kinds: [KIND_GIFT_WRAP], '#p': [opts.myPubkey], until: opts.until, limit },
+  ];
+  return new Promise((resolve) => {
+    let eventCount = 0;
+    const close = coalescer.enqueue({
+      filters,
+      relays: opts.myInboxRelays,
+      onEvent: (event) => {
+        eventCount++;
+        verifyAndIngest(opts.myPubkey, event);
+      },
+    });
+    setTimeout(() => {
+      console.log('[dm-walker] window summary', { events: eventCount });
+    }, 3500);
+    // Best-effort close: relays usually settle within ~2s, but some are
+    // slow. 4s is a generous upper bound that matches the dev console
+    // observation. After this we resolve so the caller can decide whether
+    // to extend the window further.
+    setTimeout(() => { close(); resolve(); }, 4000);
+  });
+}
+
+export interface DiscoveredNip17Partner {
+  partner: string;
+  lastMessageAt: number;
+}
+
+/**
+ * Bounded NIP-17 partner discovery. Walks the gift-wrap kind:1059 events in
+ * the local cache (newest-first), decrypts up to `limit` wraps that don't
+ * already have a cached secret envelope, writes the secrets back so the
+ * thread view doesn't re-prompt the signer.
+ *
+ * Returns one entry per discovered partner with the timestamp of the most
+ * recent wrap that mentioned them. Bounded to keep first-login signer-prompt
+ * count manageable on extensions like Alby that prompt per-call (each unwrap
+ * = 2 NIP-44 decrypts).
+ */
+export async function discoverNip17Partners(opts: {
+  myPubkey: string;
+  ndk: unknown;            // NDK — kept loose to avoid circular imports
+  signer: unknown;         // NDKSigner
+  cacheKey: CryptoKey;
+  limit?: number;          // newest-N undecrypted wraps to crack open
+}): Promise<DiscoveredNip17Partner[]> {
+  const limit = opts.limit ?? 30;
+  const { getCachedEvents, getSecret, putSecret } = await import('./dm-cache');
+  const { NDKEvent: NDKEventClass, giftUnwrap } = await import('@nostr-dev-kit/ndk');
+
+  // Newest-first walk. We want the most recent N wraps so the inbox
+  // surfaces active conversations before exhausting the prompt budget.
+  const wraps = getCachedEvents(opts.myPubkey)
+    .filter((ev) => ev.kind === 1059)
+    .sort((a, b) => b.created_at - a.created_at);
+
+  const partnersMap = new Map<string, number>();
+  let prompts = 0;
+
+  for (const ev of wraps) {
+    // Fast path: secret already cached → read partner from envelope.
+    const cached = await getSecret(opts.myPubkey, opts.cacheKey, ev.id);
+    if (cached) {
+      try {
+        const env = JSON.parse(cached) as { senderPubkey: string; recipientPubkey: string; createdAt: number };
+        // Partner is whichever party isn't us.
+        const partner = env.senderPubkey === opts.myPubkey ? env.recipientPubkey : env.senderPubkey;
+        if (!partner) continue;
+        const prev = partnersMap.get(partner) ?? 0;
+        if (env.createdAt > prev) partnersMap.set(partner, env.createdAt);
+      } catch { /* corrupt envelope → re-decrypt below */ }
+      continue;
+    }
+
+    // Slow path: decrypt this wrap. Counts against the prompt budget.
+    if (prompts >= limit) continue;
+    prompts++;
+
+    try {
+      const wrap = new NDKEventClass(opts.ndk as never, {
+        id: ev.id,
+        pubkey: ev.pubkey,
+        kind: 1059,
+        content: ev.content,
+        tags: ev.tags,
+        created_at: ev.created_at,
+        sig: ev.sig ?? '',
+      } as never);
+      const rumor = (await giftUnwrap(wrap, undefined, opts.signer as never)) as {
+        kind: number;
+        pubkey: string;
+        content: string;
+        created_at?: number;
+        tags: string[][];
+      };
+      if (rumor.kind !== 14) continue;
+      const recipientTag = rumor.tags.find((t) => t[0] === 'p');
+      const recipientPubkey = recipientTag?.[1] ?? '';
+      const env = {
+        senderPubkey: rumor.pubkey,
+        recipientPubkey,
+        content: rumor.content,
+        createdAt: rumor.created_at ?? ev.created_at,
+        protocol: 'nip17' as const,
+      };
+      await putSecret(opts.myPubkey, opts.cacheKey, ev.id, JSON.stringify(env));
+      const partner = env.senderPubkey === opts.myPubkey ? env.recipientPubkey : env.senderPubkey;
+      if (!partner) continue;
+      const prev = partnersMap.get(partner) ?? 0;
+      if (env.createdAt > prev) partnersMap.set(partner, env.createdAt);
+    } catch {
+      // giftUnwrap throws on signer errors / bad payload; skip and continue.
+      continue;
+    }
+  }
+
+  return Array.from(partnersMap.entries())
+    .map(([partner, lastMessageAt]) => ({ partner, lastMessageAt }))
+    .sort((a, b) => b.lastMessageAt - a.lastMessageAt);
 }
 
 export interface LoadOlderOptions {
@@ -120,12 +361,19 @@ export interface SubscribeLiveOptions {
 export function subscribeLive(opts: SubscribeLiveOptions): () => void {
   const cursors = getCursors(opts.myPubkey);
   const nowSec = Math.floor(Date.now() / 1000);
+  // Live-tail only. Historical fetch is the caller's job:
+  //   - inbox: useDMLifecycle calls loadInboxWindow() in a loop until N
+  //     partners discovered (or no more events).
+  //   - per-thread: DMSessionProvider's loadThread() calls loadHistory()
+  //     for the latest 50 messages on first open.
+  // After the first historical hydrate the cursor is set, so subsequent
+  // logins resume from `cursors.X` (gap-fill).
   const filters: Filter[] = [
-    { kinds: [KIND_NIP04], '#p': [opts.myPubkey], since: sinceFor(cursors.nip04In, nowSec) },
-    { kinds: [KIND_NIP04], authors: [opts.myPubkey], since: sinceFor(cursors.nip04Out, nowSec) },
-    { kinds: [KIND_GIFT_WRAP], '#p': [opts.myPubkey], since: sinceFor(cursors.nip17Wrap, nowSec) },
-    // Follow-list (kind 3): keep prior behavior (only since cursor if set;
-    // first load takes whatever the relay has — small payload, no bound).
+    { kinds: [KIND_NIP04], '#p': [opts.myPubkey], since: cursors.nip04In > 0 ? cursors.nip04In : nowSec },
+    { kinds: [KIND_NIP04], authors: [opts.myPubkey], since: cursors.nip04Out > 0 ? cursors.nip04Out : nowSec },
+    { kinds: [KIND_GIFT_WRAP], '#p': [opts.myPubkey], since: cursors.nip17Wrap > 0 ? cursors.nip17Wrap : nowSec },
+    // Follow-list (kind 3): small payload, no bound — let the relay deliver
+    // whatever it has on first call.
     { kinds: [KIND_FOLLOW], authors: [opts.myPubkey], ...(cursors.kind3 > 0 ? { since: cursors.kind3 } : {}) },
   ];
   // The coalescer's enqueue returns a real teardown handle: it removes this
@@ -200,12 +448,46 @@ export async function sendDM(args: SendDMArgs): Promise<NostrEvent> {
   rumor.kind = KIND_RUMOR;
   rumor.content = args.content;
   rumor.tags = [['p', args.recipientPubkey]];
-  const wrap = await giftWrap(rumor, recipient, ndk.signer);
-  await publishToRelays(ndk, wrap, targetRelays);
-  const rawWrap = wrap.rawEvent() as NostrEvent;
-  putEvent(args.myPubkey, toCached(rawWrap));
-  setCursor(args.myPubkey, 'nip17Wrap', rawWrap.created_at);
-  return rawWrap;
+  // NDK's giftWrap hashes the rumor (kind 14) without signing it. The hash
+  // requires every field per NIP-01 — pubkey + created_at + kind + tags +
+  // content. Without these, serializeEvent throws "can't serialize event
+  // with wrong or missing properties".
+  rumor.pubkey = args.myPubkey;
+  rumor.created_at = Math.floor(Date.now() / 1000);
+
+  // NIP-17 requires TWO wraps per outbound message:
+  //   1. Wrap-for-recipient → encrypted with recipient's pubkey, published
+  //      to the recipient's kind-10050 inbox so they can decrypt.
+  //   2. Wrap-for-self → encrypted with the sender's own pubkey, published
+  //      to the sender's inbox AND cached locally so the SENDER can also
+  //      decrypt and see their own outbound. Without this, our own gift
+  //      wraps stay opaque locally (we wrapped them for the recipient, so
+  //      our signer can't unwrap them) and outgoing NIP-17 messages
+  //      vanish from our UI the moment the optimistic stub is replaced.
+  //
+  // The wraps share the same rumor (same `id`/`created_at`), so the
+  // recipient seeing the wrap and the sender seeing their self-wrap
+  // converge to the same logical message in any client.
+  const me = new NDKUser({ pubkey: args.myPubkey });
+  me.ndk = ndk;
+  const wrapForRecipient = await giftWrap(rumor, recipient, ndk.signer);
+  const wrapForSelf = await giftWrap(rumor, me, ndk.signer);
+
+  // Publish both. Recipient-wrap goes to the recipient's inbox (already
+  // computed in `targetRelays`); self-wrap goes to the user's own pool
+  // relays so it persists somewhere and replays on next session. Failures
+  // are non-fatal — the local cache write below guarantees the message
+  // shows up immediately even if the publish hasn't completed.
+  await publishToRelays(ndk, wrapForRecipient, targetRelays);
+  const myPoolRelays = Array.from(ndk.pool?.relays?.keys?.() ?? []) as string[];
+  await publishToRelays(ndk, wrapForSelf, myPoolRelays).catch((err) => {
+    console.warn('[dm-send] self-wrap publish failed (cache fallback in effect):', err);
+  });
+
+  const rawSelf = wrapForSelf.rawEvent() as NostrEvent;
+  putEvent(args.myPubkey, toCached(rawSelf));
+  setCursor(args.myPubkey, 'nip17Wrap', rawSelf.created_at);
+  return rawSelf;
 }
 
 /**

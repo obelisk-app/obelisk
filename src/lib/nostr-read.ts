@@ -21,7 +21,7 @@ const DEFAULT_RELAYS = [
   'wss://relay.primal.net',
   'wss://nos.lol',
   'wss://purplepag.es',
-  'wss://relay.nostr.band',
+  'wss://nostr.wine',
 ];
 
 const DEFAULT_TIMEOUT_MS = 8000;

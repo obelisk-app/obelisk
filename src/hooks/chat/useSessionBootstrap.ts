@@ -54,43 +54,75 @@ export function useSessionBootstrap(router: Router) {
     });
   }, [restoreSession, router]);
 
-  // Restore NDK connection + signer in background (non-blocking)
+  // Restore signer in the background. CRITICAL: don't gate signer attachment
+  // on `connectNDK()` resolving — `ndk.connect()` awaits the relay pool, and
+  // a single dead relay (e.g. nostr.otxr.dev) can leave that promise hanging
+  // for minutes. The signer doesn't need any relays to attach; treat them as
+  // independent concerns. We kick off `connectNDK()` in parallel and flip
+  // `ndkReady` based on the signer path so the DM UI unblocks even when the
+  // pool is still negotiating.
   useEffect(() => {
     if (!sessionChecked) return;
 
     const loginMethod = useAuthStore.getState().loginMethod;
     const ndk = getNDK();
 
-    connectNDK().then(async () => {
-      if (!ndk.signer && loginMethod === 'extension' && typeof window !== 'undefined') {
-        // NIP-07 extensions inject `window.nostr` asynchronously — Alby /
-        // nos2x can take 100–500ms after page load (longer on mobile).
-        // Poll for up to 3s; without this, reloading the chat page raced
-        // the extension and silently dropped the signer until the user
-        // clicked Logout / Login again.
-        let attempts = 0;
-        while (!window.nostr && attempts < 30) {
+    // Kick the relay pool off in the background. Failures are fine — the
+    // signer flow below doesn't depend on this resolving.
+    void connectNDK().catch((err) => {
+      console.warn('NDK pool connect failed (non-fatal):', err);
+    });
+
+    let cancelled = false;
+
+    void (async () => {
+      if (loginMethod === 'extension' && typeof window !== 'undefined') {
+        // NIP-07 extensions inject `window.nostr` asynchronously. Alby and
+        // nos2x usually inject within 100–500ms; Amber Bridge and mobile
+        // proxy wrappers can take >5s. Tight 100ms poll for the first 3s
+        // (fast happy path), then drop to 1s poll for up to 60s. Re-check
+        // on visibility change so a backgrounded tab catches up immediately.
+        const attachIfReady = (): boolean => {
+          if (ndk.signer) return true;
+          if (typeof window === 'undefined' || !window.nostr) return false;
+          void import('@nostr-dev-kit/ndk').then(({ NDKNip07Signer }) => {
+            if (!ndk.signer && window.nostr) {
+              setNDKSigner(new NDKNip07Signer(4000, ndk));
+            }
+          });
+          return true;
+        };
+
+        for (let i = 0; i < 30 && !ndk.signer && !cancelled; i++) {
+          if (attachIfReady()) break;
           await new Promise((r) => setTimeout(r, 100));
-          attempts++;
         }
-        if (window.nostr) {
-          const { NDKNip07Signer } = await import('@nostr-dev-kit/ndk');
-          // Route through `setNDKSigner` so the bridge fires and the auth
-          // store's reactive `signerReady` flag flips. Bypassing the bridge
-          // here was the root cause of "Sign in to start a conversation"
-          // showing in DMList even when the user was actually signed in.
-          setNDKSigner(new NDKNip07Signer(4000, ndk));
-        } else {
-          console.warn('[chat] NIP-07 extension never injected window.nostr after 3s');
+
+        if (!ndk.signer && !cancelled && typeof window !== 'undefined') {
+          let slowPollHandle: ReturnType<typeof setInterval> | null = null;
+          const stopSlowPoll = () => {
+            if (slowPollHandle) { clearInterval(slowPollHandle); slowPollHandle = null; }
+            window.removeEventListener('visibilitychange', onVisibility);
+          };
+          const onVisibility = () => {
+            if (document.visibilityState === 'visible') attachIfReady();
+          };
+          slowPollHandle = setInterval(() => {
+            if (ndk.signer) { stopSlowPoll(); return; }
+            attachIfReady();
+          }, 1000);
+          window.addEventListener('visibilitychange', onVisibility);
+          setTimeout(stopSlowPoll, 60_000);
         }
       }
+
       // nsec / bunker / NostrConnect: rebuild the signer from the payload
       // stashed in localStorage at login. Without this the signer dies on
       // every reload (or mobile background eviction) and the user gets
       // silently logged out.
       if (!ndk.signer && (loginMethod === 'nsec' || loginMethod === 'bunker')) {
         const ok = await restoreRemoteSigner();
-        if (!ok) {
+        if (!ok && !cancelled) {
           console.warn(`[chat] ${loginMethod} signer restore failed`);
           if (loginMethod === 'nsec') {
             logout();
@@ -100,11 +132,10 @@ export function useSessionBootstrap(router: Router) {
           }
         }
       }
-      setNdkReady(true);
-    }).catch((err) => {
-      console.warn('Failed to restore NDK connection:', err);
-      setNdkReady(true); // still mark ready so DM UI doesn't hang
-    });
+      if (!cancelled) setNdkReady(true);
+    })();
+
+    return () => { cancelled = true; };
   }, [sessionChecked, logout]);
 
   return {

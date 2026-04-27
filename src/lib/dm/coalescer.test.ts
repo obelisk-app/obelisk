@@ -34,19 +34,27 @@ describe('RequestCoalescer', () => {
     vi.useRealTimers();
   });
 
-  it('merges enqueues within the debounce window into a single REQ per relay set', () => {
+  it('merges enqueues within the debounce window — one subscribeMany per filter, all sharing the relay set', () => {
+    // SimplePool.subscribeMany takes a SINGLE filter object (the "Many" is
+    // about relays, not filters). To put multiple filters in one REQ per
+    // relay we issue N subscribeMany calls in the same flush; the pool
+    // groups same-relay calls into one REQ internally.
     const c = new RequestCoalescer({ debounceMs: 50 });
     c.enqueue({ filters: [{ kinds: [0], authors: ['a'] }], relays: ['wss://r1'], onEvent: () => {}, onEose: () => {} });
     c.enqueue({ filters: [{ kinds: [0], authors: ['b'] }], relays: ['wss://r1'], onEvent: () => {}, onEose: () => {} });
     c.enqueue({ filters: [{ kinds: [3], authors: ['a'] }], relays: ['wss://r1'], onEvent: () => {}, onEose: () => {} });
     expect(subscribeManyMock).not.toHaveBeenCalled();
     vi.advanceTimersByTime(60);
-    expect(subscribeManyMock).toHaveBeenCalledTimes(1);
-    const [, filters] = subscribeManyMock.mock.calls[0];
-    expect((filters as unknown[]).length).toBe(3);
+    expect(subscribeManyMock).toHaveBeenCalledTimes(3);
+    // Each call passes one filter object, not an array.
+    for (const call of subscribeManyMock.mock.calls) {
+      const [, filter] = call;
+      expect(Array.isArray(filter)).toBe(false);
+      expect(typeof filter).toBe('object');
+    }
   });
 
-  it('a separate enqueue after the window opens a new REQ', () => {
+  it('a separate enqueue after the window opens new subscribeMany calls', () => {
     const c = new RequestCoalescer({ debounceMs: 50 });
     c.enqueue({ filters: [{ kinds: [0] }], relays: ['wss://r1'], onEvent: () => {}, onEose: () => {} });
     vi.advanceTimersByTime(60);
@@ -119,13 +127,17 @@ describe('RequestCoalescer', () => {
       const promise = c.querySync([{ kinds: [0], authors: ['x'] }], { relays: ['wss://r1'], timeoutMs: 1000 });
       // Window flush.
       await vi.advanceTimersByTimeAsync(60);
-      // Exactly one subscribeMany — both filters merged into one REQ.
-      expect(subscribeManyMock).toHaveBeenCalledTimes(1);
-      const filters = subscribeManyMock.mock.calls[0][1] as unknown[];
-      expect(filters.length).toBe(2);
-      // Drive an event + EOSE-from-all-relays so the promise resolves.
+      // Two subscribeMany calls (one per filter) — same relay set, so the
+      // pool groups them into a single REQ at the wire level.
+      expect(subscribeManyMock).toHaveBeenCalledTimes(2);
+      for (const call of subscribeManyMock.mock.calls) {
+        expect(Array.isArray(call[1])).toBe(false);
+      }
+      // Drive an event + EOSE through one of the handlers — both share the
+      // same fan-out closure.
       lastHandlers[0].onevent({ id: 'e1', sig: 's', pubkey: 'p', kind: 0, content: '', tags: [], created_at: 1 });
       lastHandlers[0].oneose?.('wss://r1');
+      lastHandlers[1].oneose?.('wss://r1');
       const events = await promise;
       expect(events.map((e) => e.id)).toEqual(['e1']);
       // The live enqueue's onEvent ALSO received the same event — that's the

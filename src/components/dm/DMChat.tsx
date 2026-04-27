@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useDMStore } from '@/store/dm';
 import { useAuthStore } from '@/store/auth';
 import { sendDM as sendDMNew, detectNip04InRecent, type DMMessage, type DMProtocol } from '@/lib/dm/dm';
@@ -12,6 +12,45 @@ import { formatPubkey, getNDK } from '@/lib/nostr';
 
 interface DMChatProps {
   profileCache: Map<string, { name?: string; picture?: string }>;
+}
+
+/**
+ * Render plain text into React nodes, turning bare URLs into anchor tags.
+ * Conservative regex: matches http(s) and ws(s) schemes followed by at least
+ * one non-whitespace char. Trailing punctuation that's typically NOT part of
+ * a URL (`.,;:!?)`) is stripped back into the surrounding text — matches the
+ * Discord/Telegram convention so "see https://x.com." doesn't include the
+ * dot in the link.
+ */
+const URL_REGEX = /(https?:\/\/|wss?:\/\/)\S+/gi;
+function linkify(text: string): ReactNode[] {
+  const nodes: ReactNode[] = [];
+  let lastIndex = 0;
+  for (const match of text.matchAll(URL_REGEX)) {
+    const start = match.index ?? 0;
+    let end = start + match[0].length;
+    // Pull trailing punctuation back out of the URL.
+    let url = match[0];
+    while (url.length > 1 && /[.,;:!?)\]]$/.test(url)) {
+      url = url.slice(0, -1);
+      end -= 1;
+    }
+    if (start > lastIndex) nodes.push(text.slice(lastIndex, start));
+    nodes.push(
+      <a
+        key={`${start}-${url}`}
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="underline underline-offset-2 hover:opacity-80"
+      >
+        {url}
+      </a>
+    );
+    lastIndex = end;
+  }
+  if (lastIndex < text.length) nodes.push(text.slice(lastIndex));
+  return nodes;
 }
 
 /**
@@ -168,17 +207,25 @@ export default function DMChat({ profileCache }: DMChatProps) {
   const [profileTick, setProfileTick] = useState(0);
   useEffect(() => {
     if (!myPubkey || !activeDMPubkey) return;
-    const { dispose } = getProfile(myPubkey, activeDMPubkey, {
-      onUpdate: (entry) => {
-        const name = entry.parsed.displayName || entry.parsed.name;
-        const picture = entry.parsed.picture;
-        if (name || picture) {
-          profileCache.set(activeDMPubkey, { name, picture });
-          setProfileTick((n) => n + 1);
-        }
-      },
-    });
-    return () => { dispose?.(); };
+    const apply = (entry: { parsed: { name?: string; displayName?: string; picture?: string } }) => {
+      const name = entry.parsed.displayName || entry.parsed.name;
+      const picture = entry.parsed.picture;
+      if (name || picture) {
+        profileCache.set(activeDMPubkey, {
+          ...(profileCache.get(activeDMPubkey) ?? {}),
+          ...(name ? { name } : {}),
+          ...(picture ? { picture } : {}),
+        });
+        setProfileTick((n) => n + 1);
+      }
+    };
+    // `result.profile` carries the localStorage-hydrated entry; without
+    // applying it synchronously, the header shows the npub fallback on
+    // every refresh until a fresh relay response arrives (which may
+    // never happen if the cache is non-stale).
+    const result = getProfile(myPubkey, activeDMPubkey, { onUpdate: apply });
+    if (result.profile) apply(result.profile);
+    return () => { result.dispose?.(); };
   }, [myPubkey, activeDMPubkey, profileCache]);
 
   // Read after the tick so the latest write is visible.
@@ -429,7 +476,7 @@ export default function DMChat({ profileCache }: DMChatProps) {
   }
 
   return (
-    <div className="flex-1 flex flex-col min-h-0" data-testid="dm-chat">
+    <div className="flex-1 flex flex-col min-h-0 min-w-0" data-testid="dm-chat">
       {/* Header */}
       <div className="h-12 px-4 flex items-center gap-3 border-b border-lc-border shrink-0 bg-lc-dark">
         {otherProfile?.picture ? (
@@ -446,7 +493,7 @@ export default function DMChat({ profileCache }: DMChatProps) {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto py-4">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden py-4 min-w-0">
         {/* Top sentinel: when intersecting, fires `loadOlder` and widens the
             local decrypt window. Visible only when there's more to fetch
             (either older cached events not yet decrypted, or the server may
@@ -487,37 +534,67 @@ export default function DMChat({ profileCache }: DMChatProps) {
             const failed = !!msg.sendError;
             const pending = !!msg.isPending;
 
+            // Chat-bubble layout: my messages right-aligned with the
+            // accent color, theirs left-aligned with the neutral border
+            // tone. Avatar only on the partner side (Discord/Telegram
+            // convention — saves horizontal space and removes the "why
+            // is my own face shown to me" oddity).
             return (
               <div
                 key={msg.id}
-                className={`flex items-start gap-3 px-4 py-1.5 hover:bg-lc-border/20 transition-colors ${pending ? 'opacity-60' : ''} ${failed ? 'bg-red-950/20' : ''}`}
+                // `min-w-0` on the row matters for the bubble's max-width to
+                // actually clamp content — flex children default to
+                // min-width: auto, so an unbreakable URL keeps the row
+                // wider than the viewport.
+                className={`flex items-end gap-2 px-4 py-1.5 min-w-0 ${isMe ? 'justify-end' : 'justify-start'} ${pending ? 'opacity-60' : ''}`}
                 data-testid={failed ? 'dm-msg-failed' : pending ? 'dm-msg-pending' : 'dm-msg'}
               >
-                {senderProfile?.picture ? (
-                  <img src={senderProfile.picture} alt="" className="w-8 h-8 rounded-full object-cover shrink-0 mt-0.5" />
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-lc-olive flex items-center justify-center text-lc-green text-xs font-semibold shrink-0 mt-0.5">
-                    {senderName[0]?.toUpperCase() || '?'}
-                  </div>
+                {!isMe && (
+                  senderProfile?.picture ? (
+                    <img src={senderProfile.picture} alt="" className="w-7 h-7 rounded-full object-cover shrink-0" />
+                  ) : (
+                    <div className="w-7 h-7 rounded-full bg-lc-olive flex items-center justify-center text-lc-green text-xs font-semibold shrink-0">
+                      {senderName[0]?.toUpperCase() || '?'}
+                    </div>
+                  )
                 )}
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-baseline gap-2">
-                    <span className={`text-sm font-semibold ${isMe ? 'text-lc-green' : 'text-lc-white'}`}>
-                      {senderName}
-                    </span>
-                    <span className="text-xs text-lc-muted">{timeStr}</span>
-                    {pending && <span className="text-xs text-lc-muted italic">sending…</span>}
+                <div
+                  // Hard width cap (70% / 32rem) plus inline style for
+                  // word-break: anywhere. `overflowWrap: 'anywhere'` breaks
+                  // long URLs / npubs / hex hashes, but only when there's
+                  // no soft-wrap point — normal text still wraps at spaces.
+                  // `min-w-0` on the bubble itself is the second guarantee
+                  // against the flex-child auto-min-width gotcha.
+                  className={`min-w-0 rounded-2xl px-4 py-2.5 ${
+                    failed
+                      ? 'bg-red-950/40 border border-red-900'
+                      : isMe
+                        ? 'bg-lc-border/60 text-lc-white rounded-br-md'
+                        : 'bg-lc-green text-lc-black rounded-bl-md'
+                  }`}
+                  style={{
+                    maxWidth: '500px',
+                    overflowWrap: 'anywhere',
+                    wordBreak: 'break-word',
+                  }}
+                >
+                  {!isMe && (
+                    <div className="text-xs font-semibold text-lc-black/80 mb-1">{senderName}</div>
+                  )}
+                  <p className="text-sm whitespace-pre-wrap leading-relaxed">{linkify(msg.content)}</p>
+                  <div className={`flex items-center gap-2 mt-1.5 text-[10px] justify-end ${isMe ? 'text-lc-muted' : 'text-lc-black/60'}`}>
+                    {pending && <span className="italic">sending…</span>}
                     {failed && (
                       <button
                         onClick={() => handleRetry(msg)}
-                        className="text-xs text-red-400 hover:text-red-300 underline"
+                        className="text-red-300 hover:text-red-200 underline"
                         data-testid="dm-retry"
                       >
                         failed — retry
                       </button>
                     )}
+                    <span title={time.toLocaleString()}>{timeStr}</span>
                   </div>
-                  <p className="text-sm text-lc-white/90 break-words whitespace-pre-wrap">{msg.content}</p>
                 </div>
               </div>
             );

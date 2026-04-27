@@ -1,6 +1,25 @@
 import type { Event as NostrEvent } from 'nostr-tools/pure';
 import { sharedCoalescer } from '@/lib/nostr-coalescer';
+import { getNDK } from '@/lib/nostr';
 import { createKeyedObservable, type Slot } from '@/lib/nostr-store';
+
+/**
+ * Pull whatever relays the NDK pool already knows about. NDK's outbox
+ * model populates the pool from observed event signatures, so this set
+ * grows as the user uses the app — a profile fetch fired before the DM
+ * walker can run still gets coverage from the pool.
+ *
+ * Returns `[]` server-side (NDK is browser-only here).
+ */
+function ndkPoolRelays(): string[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const ndk = getNDK();
+    return Array.from(ndk.pool?.relays?.keys?.() ?? []) as string[];
+  } catch {
+    return [];
+  }
+}
 
 export interface ProfileEntry {
   event: NostrEvent;
@@ -15,10 +34,30 @@ export interface ProfileEntry {
 }
 
 const TTL_MS = 24 * 3600 * 1000;
-const PROFILE_AGGREGATORS = ['wss://purplepag.es'];
+
+// purplepag.es is the canonical kind-0 aggregator, but a single relay is
+// fragile — if it's slow or down, every avatar and display name in the DM
+// list shows the npub fallback. Add a couple of broad-coverage relays so
+// the lookup has more than one chance to land.
+const PROFILE_AGGREGATORS = [
+  'wss://purplepag.es',
+  'wss://relay.damus.io',
+  'wss://nos.lol',
+  'wss://relay.primal.net',
+];
 
 let extraRelays: string[] = [];
 export function setProfileTestRelays(relays: string[]): void { extraRelays = relays; }
+
+// Optional dynamic relay set — DM bootstrap calls this with the union of
+// the NDK pool, the user's NIP-65 outbox, and the extension's getRelays().
+// Profile-cache's queries then ride the same warm sockets the walker is
+// already using, so partner avatars resolve from whatever relays the user
+// (or their contacts) actually publish on, not just our hard-coded few.
+let dynamicRelays: string[] = [];
+export function setProfileDynamicRelays(relays: string[]): void {
+  dynamicRelays = Array.from(new Set(relays.filter((r) => r.startsWith('wss://'))));
+}
 
 // The keyed observable is the source of truth for in-memory state.
 // localStorage is the cold-load seed: we hydrate the slot lazily on first
@@ -104,11 +143,23 @@ export function getProfile(
   }
 
   if (stale) {
+    const relays = Array.from(new Set([
+      ...PROFILE_AGGREGATORS,
+      ...ndkPoolRelays(),
+      ...dynamicRelays,
+      ...extraRelays,
+    ]));
+    if (typeof window !== 'undefined') {
+      console.log('[profile-cache] fetching kind 0', { partner: partner.slice(0, 8), relayCount: relays.length });
+    }
     sharedCoalescer.enqueue({
       filters: [{ kinds: [0], authors: [partner], limit: 1 }],
-      relays: [...PROFILE_AGGREGATORS, ...extraRelays],
+      relays,
       onEvent: (event: NostrEvent) => {
         if (event.kind !== 0 || event.pubkey !== partner) return;
+        if (typeof window !== 'undefined') {
+          console.log('[profile-cache] got kind 0', { partner: partner.slice(0, 8), at: event.created_at });
+        }
         const current = profileStore.get(k).value;
         if (current && current.event.created_at >= event.created_at) {
           // Same or older event — refresh `lastCheckedAt` only, no notify.

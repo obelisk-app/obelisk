@@ -64,7 +64,8 @@ describe('DMList', () => {
     expect(screen.getByText('Alice')).toBeInTheDocument();
     expect(screen.getByText('Bob')).toBeInTheDocument();
     expect(screen.getByText('Hey!')).toBeInTheDocument();
-    expect(screen.getByText('3')).toBeInTheDocument();
+    // Two `3` badges now: per-thread (Bob) + the active-tab total.
+    expect(screen.getAllByText('3').length).toBeGreaterThanOrEqual(1);
   });
 
   it('calls onNewDM when clicking new DM button', async () => {
