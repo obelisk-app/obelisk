@@ -48,16 +48,19 @@ export const createServersSlice: StateCreator<ChatState, [], [], ServersSlice> =
   removeServer: (serverId) => set((state) => ({
     servers: state.servers.filter((s) => s.id !== serverId),
   })),
-  setActiveServer: (serverId) => set({
-    activeServerId: serverId,
-    pinnedChannels: [],
-    categories: [],
-    activeChannelId: null,
-    userSelectedChannelId: null,
-    messages: [],
-    isLoadingChannels: true,
-    serverEmojis: {},
-    serverGifs: [],
+  setActiveServer: (serverId) => set((state) => {
+    if (state.activeServerId === serverId) return {};
+    return {
+      activeServerId: serverId,
+      pinnedChannels: [],
+      categories: [],
+      activeChannelId: null,
+      userSelectedChannelId: null,
+      messages: [],
+      isLoadingChannels: true,
+      serverEmojis: {},
+      serverGifs: [],
+    };
   }),
   setMyRole: (role) => set({ myRole: role }),
   setServerEmojis: (emojis) => set({ serverEmojis: emojis }),
