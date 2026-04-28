@@ -1,0 +1,57 @@
+---
+title: What's on the roadmap
+description: Obelisk is already a pure Nostr client with no backend. Here's what's still being built — voice channels, NIP-46 bunker login, NIP-44 v2 encryption, and a static-export build that runs from any CDN.
+heroComponent: future-relays
+publishedAt: '2026-04-16'
+updatedAt: '2026-04-28'
+tags: [roadmap, nostr, nip-46, nip-44, voice]
+---
+
+## Where we are
+
+The big migration is **done**. Obelisk used to be a hybrid app — Postgres database, Socket.io server, custom auth — with Nostr only for login. Today the database is gone, the auth service is gone, and the app is a frontend talking directly to NIP-29 relays. NIP-29 groups, encrypted DMs (NIP-04 + NIP-17), and Lightning zaps (NIP-57 + NIP-47) all work without any Obelisk-run infrastructure.
+
+That said, there are real things still missing. Here's the roadmap.
+
+## NIP-46 bunker login
+
+Right now you log in with a NIP-07 extension or by pasting an nsec into the browser. Both are fine, but neither is great for mobile. **NIP-46** ("Nostr Connect" / bunker) lets you keep your private key in a separate signer app — your phone, a hardware device, or a remote service — and have Obelisk request signatures over a relay.
+
+Status: **planned next.** Adds a third login option without touching the rest of the app.
+
+## NIP-44 v2 encryption
+
+DMs today use NIP-04 (legacy encryption) and NIP-17 (gift-wrapped, hides metadata). Both work, but NIP-04 has known weaknesses. **NIP-44 v2** is the modern Nostr encryption standard — versioned, authenticated, with proper key derivation.
+
+Status: **planned.** The migration is straightforward; we're tracking adoption across signer apps so we don't break interop.
+
+## Voice channels
+
+Voice was previously implemented with a Socket.io signaling server. That doesn't fit a backend-free architecture, so we removed it. The replacement is **WebRTC peer-to-peer with relay-based signaling**: peers exchange ICE candidates as ephemeral Nostr events, then talk directly. No central audio relay, no Socket.io, no server to run.
+
+Status: **in design.** This is the largest single piece of work on the roadmap.
+
+## Static-export build
+
+Today the app is built with `next build` and served by Node. With no backend behind it, there's no real reason to need a Node process — the entire thing can be a folder of static files. Adding `output: 'export'` to `next.config.ts` and dropping a couple of Next-only assumptions gets us to a build you can drop on GitHub Pages, Cloudflare Pages, S3, IPFS, or any static host.
+
+Status: **planned.** Some routes need adjustment first.
+
+## Installable PWA
+
+Mobile-first communities want an icon on their home screen, not a browser tab. A **PWA build** with offline-first message cache and push notifications (via the Web Push API + a relay-side dispatcher) is on the list.
+
+Status: **planned, after voice.**
+
+## What's *not* on the roadmap anymore
+
+- **PostgreSQL.** Gone.
+- **Socket.io server.** Gone (will return only as a temporary signaling shim if WebRTC needs it).
+- **Centralized admin panel.** Group admins are NIP-29 events; there's nothing to centrally administer.
+- **Web of Trust scoring service.** Spam is now whatever the relay enforces.
+
+## See also
+
+- [What is Obelisk?](/guides/what-is-obelisk)
+- [How Obelisk works](/guides/how-obelisk-works) — current architecture
+- [Bring your own relay](/guides/web-of-trust) — multi-relay UX

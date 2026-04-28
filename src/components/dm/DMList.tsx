@@ -1,0 +1,323 @@
+'use client';
+
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useDMStore } from '@/store/dm';
+import { useNotificationStore } from '@/store/notification';
+import { useIdentity } from '@/hooks/useIdentity';
+import { clearAccount } from '@/lib/dm/dm-cache';
+import { _followsStore } from '@/lib/dm/follows';
+import ConfirmDialog from '@/components/admin/ConfirmDialog';
+import DMComposer from './DMComposer';
+
+const MIN_WIDTH = 200;
+const MAX_WIDTH = 360;
+const DEFAULT_WIDTH = 240;
+// Shared with ChannelSidebar so the DM list and the channel list always
+// resize in lockstep — switching between DM mode and a server keeps the
+// sidebar at the same width.
+const STORAGE_KEY = 'obelisk:channel-sidebar-width';
+
+function useSidebarWidth() {
+  const [width, setWidth] = useState(DEFAULT_WIDTH);
+
+  useEffect(() => {
+    const saved = Number(localStorage.getItem(STORAGE_KEY));
+    if (saved >= MIN_WIDTH && saved <= MAX_WIDTH) setWidth(saved);
+  }, []);
+
+  const setAndPersist = useCallback((w: number) => {
+    const clamped = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, w));
+    setWidth(clamped);
+    localStorage.setItem(STORAGE_KEY, String(clamped));
+  }, []);
+
+  return [width, setAndPersist] as const;
+}
+
+function ResizeHandle({ onResize }: { onResize: (w: number) => void }) {
+  const draggingRef = useRef(false);
+
+  const onMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    draggingRef.current = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const onMove = (ev: MouseEvent) => {
+      if (!draggingRef.current) return;
+      onResize(ev.clientX);
+    };
+    const onUp = () => {
+      draggingRef.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  };
+
+  return (
+    <div
+      onMouseDown={onMouseDown}
+      role="separator"
+      aria-orientation="vertical"
+      data-testid="dm-sidebar-resize-handle"
+      className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-lc-green/40 active:bg-lc-green/60 transition-colors z-10"
+    />
+  );
+}
+
+type Tab = 'follows' | 'others';
+
+// Stable empty snapshot so useSyncExternalStore doesn't see a new object
+// on every render (which would trigger React's "infinite update loop"
+// guard). The snapshot identity matters — only the value field is read.
+const EMPTY_SLOT = Object.freeze({ value: undefined as undefined });
+
+function useFollowSet(myPubkey: string | null | undefined): Set<string> | null {
+  // Bind to the keyed observable so the sidebar re-renders the moment
+  // ingestKind3 lands. Without subscribing, a new follow added on
+  // another client wouldn't move a thread between tabs until reload.
+  const store = _followsStore();
+  const slot = useSyncExternalStore(
+    (cb) => (myPubkey ? store.subscribe(myPubkey, cb) : () => {}),
+    () => (myPubkey ? store.get(myPubkey) : EMPTY_SLOT),
+    () => EMPTY_SLOT,
+  );
+  return useMemo(
+    () => (slot.value ? new Set(slot.value.pubkeys) : null),
+    [slot.value],
+  );
+}
+
+interface DMListProps {
+  /** Optional fallback name/picture map for direct-paste pubkeys, forwarded
+   *  to the inline composer. */
+  profileCache?: Map<string, { name?: string; picture?: string }>;
+}
+
+export default function DMList({ profileCache }: DMListProps = {}) {
+  const { threads, activeDMPubkey, setActiveDM, isLoadingThreads, setThreads, setMessages } = useDMStore();
+  const dmUnreads = useNotificationStore((s) => s.dmUnreads);
+  const { pubkey: myPubkey, signerReady } = useIdentity();
+  const [showWipeConfirm, setShowWipeConfirm] = useState(false);
+  const [isComposing, setIsComposing] = useState(false);
+  const followSet = useFollowSet(myPubkey);
+  const asideRef = useRef<HTMLElement>(null);
+  const [width, setWidth] = useSidebarWidth();
+  const handleResize = useCallback((clientX: number) => {
+    const left = asideRef.current?.getBoundingClientRect().left ?? 0;
+    setWidth(clientX - left);
+  }, [setWidth]);
+  // `null` means "user hasn't picked a tab yet" — we auto-route to whichever
+  // bucket has threads on first paint so an empty Follows tab doesn't make
+  // the user think they have no DMs. Once they click a tab, their choice
+  // sticks for the session.
+  const [explicitTab, setExplicitTab] = useState<Tab | null>(null);
+
+  const { followsThreads, othersThreads } = useMemo(() => {
+    const f: typeof threads = [];
+    const o: typeof threads = [];
+    for (const t of threads) {
+      if (followSet?.has(t.pubkey)) f.push(t);
+      else o.push(t);
+    }
+    return { followsThreads: f, othersThreads: o };
+  }, [threads, followSet]);
+
+  const tab: Tab = explicitTab
+    ?? (followsThreads.length > 0 || othersThreads.length === 0 ? 'follows' : 'others');
+  const setTab = setExplicitTab;
+  const visibleThreads = tab === 'follows' ? followsThreads : othersThreads;
+  const followsUnread = followsThreads.reduce((n, t) => n + (dmUnreads[t.pubkey] ?? 0), 0);
+  const othersUnread = othersThreads.reduce((n, t) => n + (dmUnreads[t.pubkey] ?? 0), 0);
+
+  // Read-only mode: disable New DM when no signer is attached. `signerReady`
+  // is the reactive flag mirrored from `getNDK().signer != null` — see
+  // `IdentityProvider` and `nostr.ts:onSignerChange` for the wiring.
+  const hasSigner = signerReady;
+  const newDMTitle = hasSigner
+    ? 'New DM'
+    : 'Sign in with a signing-capable method to use DMs';
+
+  const handleWipe = () => {
+    if (!myPubkey) return;
+    clearAccount(myPubkey);
+    setThreads([]);
+    setMessages([]);
+    setActiveDM(null);
+    setShowWipeConfirm(false);
+  };
+
+  return (
+    <aside
+      ref={asideRef}
+      style={{ width, borderTopLeftRadius: 12 }}
+      className="relative bg-lc-dark border-t border-l border-r border-lc-border flex flex-col shrink-0 overflow-hidden"
+      data-testid="dm-list"
+    >
+      <div className="p-3 border-b border-lc-border flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-lc-white">Direct Messages</h3>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setShowWipeConfirm(true)}
+            disabled={!myPubkey}
+            className={`text-lc-muted hover:text-red-400 transition-colors p-1 ${
+              myPubkey ? '' : 'opacity-50 cursor-not-allowed'
+            }`}
+            title="Clear DM cache for this account"
+            data-testid="wipe-dm-cache"
+            aria-label="Clear DM cache for this account"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+              <path d="M10 11v6"/>
+              <path d="M14 11v6"/>
+              <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+            </svg>
+          </button>
+          <button
+            onClick={() => setIsComposing((v) => !v)}
+            disabled={!hasSigner}
+            className={`transition-colors p-1 ${
+              isComposing ? 'text-lc-green' : 'text-lc-muted hover:text-lc-green'
+            } ${hasSigner ? '' : 'opacity-50 cursor-not-allowed hover:text-lc-muted'}`}
+            title={newDMTitle}
+            data-testid="new-dm-cta"
+            aria-label={newDMTitle}
+            aria-pressed={isComposing}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="7" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {showWipeConfirm && (
+        <ConfirmDialog
+          title="Clear DM cache?"
+          message="This wipes all locally-cached DM events, decrypted previews, and protocol overrides for this account. Messages still on relays will reappear next time you open a thread. Other accounts on this device are unaffected."
+          confirmLabel="Clear"
+          onConfirm={handleWipe}
+          onCancel={() => setShowWipeConfirm(false)}
+        />
+      )}
+
+      {isComposing && (
+        <DMComposer
+          onClose={() => setIsComposing(false)}
+          profileCache={profileCache}
+        />
+      )}
+      <div className="flex border-b border-lc-border shrink-0" role="tablist" data-testid="dm-tabs">
+        {(['follows', 'others'] as const).map((t) => {
+          const active = tab === t;
+          const unread = t === 'follows' ? followsUnread : othersUnread;
+          const count = t === 'follows' ? followsThreads.length : othersThreads.length;
+          return (
+            <button
+              key={t}
+              role="tab"
+              aria-selected={active}
+              onClick={() => setTab(t)}
+              className={`flex-1 text-xs font-medium py-2 transition-colors capitalize relative ${
+                active
+                  ? 'text-lc-green border-b-2 border-lc-green -mb-px'
+                  : 'text-lc-muted hover:text-lc-white'
+              }`}
+              data-testid={`dm-tab-${t}`}
+            >
+              {t} <span className="text-[10px] opacity-70">({count})</span>
+              {unread > 0 && (
+                <span className="ml-1 inline-flex items-center justify-center min-w-[16px] h-4 px-1 text-[10px] font-bold rounded-full bg-lc-green text-lc-black align-middle">
+                  {unread}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex-1 overflow-y-auto">
+        {isLoadingThreads && threads.length === 0 ? (
+          <div className="p-4 space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center gap-2.5">
+                <div className="lc-skeleton-circle w-8 h-8" />
+                <div className="space-y-1 flex-1">
+                  <div className="lc-skeleton h-3 w-20" />
+                  <div className="lc-skeleton h-3 w-32" />
+                </div>
+              </div>
+            ))}
+            <p className="text-xs text-lc-muted text-center pt-2">Loading DMs from relays…</p>
+          </div>
+        ) : threads.length === 0 ? (
+          <div className="p-4 text-center">
+            <p className="text-sm text-lc-muted">No conversations yet</p>
+            <button
+              onClick={() => setIsComposing(true)}
+              disabled={!hasSigner}
+              className={`mt-2 text-xs text-lc-green hover:underline ${
+                hasSigner ? '' : 'opacity-50 cursor-not-allowed hover:no-underline'
+              }`}
+              title={newDMTitle}
+              data-testid="new-dm-cta-empty"
+            >
+              {hasSigner ? 'Start a conversation' : 'Sign in to start a conversation'}
+            </button>
+          </div>
+        ) : visibleThreads.length === 0 ? (
+          <div className="p-4 text-center">
+            <p className="text-sm text-lc-muted">
+              {tab === 'follows'
+                ? followSet === null
+                  ? 'Loading your follow list…'
+                  : "None of your follows have messaged you yet"
+                : "Everyone you've messaged is in Follows"}
+            </p>
+          </div>
+        ) : null}
+        {visibleThreads.map((thread) => (
+          <button
+            key={thread.pubkey}
+            onClick={() => setActiveDM(thread.pubkey)}
+            className={`w-full text-left px-3 py-2.5 flex items-center gap-2.5 transition-colors ${
+              activeDMPubkey === thread.pubkey
+                ? 'bg-lc-border/40'
+                : 'hover:bg-lc-border/20'
+            }`}
+            data-testid="dm-thread"
+          >
+            {thread.picture ? (
+              <img src={thread.picture} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-lc-olive flex items-center justify-center text-lc-green text-xs font-semibold shrink-0">
+                {thread.displayName[0]?.toUpperCase() || '?'}
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-lc-white truncate">{thread.displayName}</span>
+                {(dmUnreads[thread.pubkey] || 0) > 0 && (
+                  <span className="bg-lc-green text-lc-black text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center shrink-0">
+                    {dmUnreads[thread.pubkey]}
+                  </span>
+                )}
+              </div>
+              {thread.lastMessage && (
+                <p className="text-xs text-lc-muted truncate">{thread.lastMessage}</p>
+              )}
+            </div>
+          </button>
+        ))}
+      </div>
+      <ResizeHandle onResize={handleResize} />
+    </aside>
+  );
+}

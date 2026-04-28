@@ -1,0 +1,298 @@
+'use client';
+
+import { useEffect, useMemo, useState } from 'react';
+import type { Locale } from '@/i18n';
+import { emojiForOptionText } from '@/components/chat/ChannelEmoji';
+
+interface TextChannelOption {
+  id: string;
+  name: string;
+  emoji: string | null;
+}
+
+interface WelcomeBotSettingsProps {
+  serverId: string;
+  serverName: string;
+  currentChannelId: string | null;
+  currentLocale: string | null;
+  /** Most recent member (for preview avatar/name); optional. */
+  previewMember?: { displayName: string | null; picture: string | null } | null;
+  onSaved?: () => void | Promise<void>;
+}
+
+interface AdminChannel {
+  id: string;
+  name: string;
+  emoji: string | null;
+  type: string;
+}
+
+interface CategoriesResponse {
+  categories: Array<{ id: string; name: string; channels: AdminChannel[] }>;
+  uncategorizedChannels: AdminChannel[];
+}
+
+export default function WelcomeBotSettings({
+  serverId,
+  serverName,
+  currentChannelId,
+  currentLocale,
+  previewMember,
+  onSaved,
+}: WelcomeBotSettingsProps) {
+  const [channels, setChannels] = useState<TextChannelOption[]>([]);
+  const [channelId, setChannelId] = useState<string>(currentChannelId ?? '');
+  const [locale, setLocale] = useState<string>(currentLocale ?? 'es');
+  const [saving, setSaving] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const dirty =
+    channelId !== (currentChannelId ?? '') ||
+    (channelId !== '' && locale !== (currentLocale ?? 'es'));
+
+  const handleSave = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch(
+        `/api/admin/server?serverId=${encodeURIComponent(serverId)}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            welcomeChannelId: channelId === '' ? null : channelId,
+            welcomeLocale: channelId === '' ? null : locale || 'es',
+          }),
+        },
+      );
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || 'Failed to save');
+        return;
+      }
+      setJustSaved(true);
+      setTimeout(() => setJustSaved(false), 2500);
+      await onSaved?.();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Fetch text channels for the dropdown. Reuses /api/admin/categories,
+  // which is the same endpoint the ChannelManager uses.
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/admin/categories?serverId=${encodeURIComponent(serverId)}`)
+      .then((r) => (r.ok ? (r.json() as Promise<CategoriesResponse>) : null))
+      .then((data) => {
+        if (cancelled || !data) return;
+        const fromCategories = data.categories.flatMap((c) => c.channels);
+        const all = [...fromCategories, ...data.uncategorizedChannels];
+        setChannels(
+          all
+            .filter((c) => c.type === 'text')
+            .map((c) => ({ id: c.id, name: c.name, emoji: c.emoji }))
+            .sort((a, b) => a.name.localeCompare(b.name))
+        );
+      })
+      .catch(() => {
+        /* non-fatal — dropdown will just be empty */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [serverId]);
+
+  // Re-sync local state when props change (e.g. after saving).
+  useEffect(() => {
+    setChannelId(currentChannelId ?? '');
+  }, [currentChannelId]);
+  useEffect(() => {
+    setLocale(currentLocale ?? 'es');
+  }, [currentLocale]);
+
+  const previewLocale: Locale = locale === 'en' ? 'en' : 'es';
+  const previewDisplayName =
+    previewMember?.displayName || (previewLocale === 'en' ? 'new_member' : 'nuevo_miembro');
+  const previewBannerUrl = useMemo(() => {
+    const params = new URLSearchParams();
+    params.set('name', previewDisplayName);
+    if (previewMember?.picture) params.set('picture', previewMember.picture);
+    return `/api/welcome-banner?${params.toString()}`;
+  }, [previewDisplayName, previewMember?.picture]);
+
+  const disabled = channelId === '';
+
+  return (
+    <div
+      className="rounded-xl border border-lc-green/30 bg-lc-green/[0.03] p-6 space-y-5"
+      data-testid="welcome-bot-settings"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-lc-white">Welcome Bot</h3>
+            <span
+              className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                disabled
+                  ? 'bg-lc-border/30 border-lc-border text-lc-muted'
+                  : 'bg-lc-green/15 border-lc-green/40 text-lc-green'
+              }`}
+              data-testid="welcome-bot-status"
+            >
+              {disabled ? 'Disabled' : 'Enabled'}
+            </span>
+          </div>
+          <p className="text-xs text-lc-muted mt-1.5 max-w-md">
+            Automatically greets every new member in the channel you pick, in
+            the language you choose. Set the channel to &ldquo;Disabled&rdquo;
+            to turn the bot off completely.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-xs text-lc-muted mb-1.5 uppercase tracking-wider">
+            Welcome channel
+          </label>
+          <select
+            name="welcomeChannelId"
+            value={channelId}
+            onChange={(e) => setChannelId(e.target.value)}
+            data-testid="welcome-channel-select"
+            className="w-full px-3 py-2 rounded-lg bg-lc-black border border-lc-border text-lc-white text-sm focus:border-lc-green focus:outline-none transition-colors"
+          >
+            <option value="">— Disabled —</option>
+            {channels.map((c) => (
+              <option key={c.id} value={c.id}>
+                #{emojiForOptionText(c.emoji) ? `${emojiForOptionText(c.emoji)} ` : ''}
+                {c.name}
+              </option>
+            ))}
+          </select>
+          <p className="text-[11px] text-lc-muted mt-1">
+            Only text channels from this server.
+          </p>
+        </div>
+
+        <div>
+          <label className="block text-xs text-lc-muted mb-1.5 uppercase tracking-wider">
+            Bot language
+          </label>
+          <select
+            name="welcomeLocale"
+            value={locale}
+            onChange={(e) => setLocale(e.target.value)}
+            disabled={disabled}
+            data-testid="welcome-locale-select"
+            className="w-full px-3 py-2 rounded-lg bg-lc-black border border-lc-border text-lc-white text-sm focus:border-lc-green focus:outline-none transition-colors disabled:opacity-50"
+          >
+            <option value="es">Español</option>
+            <option value="en">English</option>
+          </select>
+          <p className="text-[11px] text-lc-muted mt-1">
+            Determines the greeting copy.
+          </p>
+        </div>
+      </div>
+
+      <div>
+        <div className="text-xs text-lc-muted mb-1.5 uppercase tracking-wider">
+          Preview
+        </div>
+        {disabled ? (
+          <div
+            className="rounded-lg border border-dashed border-lc-border bg-lc-black/60 p-4 text-xs text-lc-muted"
+            data-testid="welcome-preview-disabled"
+          >
+            Welcome bot is disabled. Pick a channel above to enable it.
+          </div>
+        ) : (
+          <div
+            className="rounded-lg border border-lc-border bg-lc-black/60 p-4 space-y-3"
+            data-testid="welcome-preview"
+          >
+            {/* Rendered preview — mirrors how the bot actually posts */}
+            <div className="flex items-start gap-3">
+              {previewMember?.picture ? (
+                <img
+                  src={previewMember.picture}
+                  alt={previewDisplayName}
+                  className="w-8 h-8 rounded-full object-cover shrink-0"
+                  data-testid="welcome-preview-avatar"
+                />
+              ) : (
+                <div
+                  className="w-8 h-8 rounded-full bg-lc-olive flex items-center justify-center text-lc-green text-xs font-semibold shrink-0"
+                  data-testid="welcome-preview-avatar-fallback"
+                >
+                  {previewDisplayName[0]?.toUpperCase() || '?'}
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="text-sm text-lc-white">
+                  <span className="font-semibold">@{previewDisplayName}</span>
+                  {previewLocale === 'en'
+                    ? ' welcome to '
+                    : ' bienvenid@ a '}
+                  <span className="font-semibold">{serverName}</span>{' '}
+                  🥳
+                </div>
+              </div>
+            </div>
+
+            {/* The actual rendered welcome banner — this is what the bot
+                posts. It's a live request to /api/welcome-banner so the
+                admin sees the real image the joining user would see. */}
+            <img
+              src={previewBannerUrl}
+              alt={`Welcome banner for ${previewDisplayName}`}
+              className="w-full rounded-lg border border-lc-border/60"
+              data-testid="welcome-preview-banner"
+            />
+
+            {previewMember ? (
+              <p className="text-[11px] text-lc-muted">
+                Using{' '}
+                <span className="text-lc-white">{previewDisplayName}</span>
+                {previewMember.picture ? "'s profile picture" : ' (no picture set)'}
+                {' '}as the example.
+              </p>
+            ) : (
+              <p className="text-[11px] text-lc-muted">
+                No members yet — showing a generic placeholder.
+              </p>
+            )}
+
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center gap-3 pt-2 border-t border-lc-border/60">
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving || !dirty}
+          data-testid="welcome-bot-save"
+          className={`px-5 py-2 rounded-full font-semibold text-sm transition disabled:opacity-50 disabled:cursor-not-allowed ${
+            dirty
+              ? 'bg-lc-green text-lc-black hover:brightness-110'
+              : 'bg-lc-border text-lc-muted'
+          }`}
+        >
+          {saving ? 'Saving…' : 'Save welcome bot'}
+        </button>
+        {justSaved && <span className="text-xs text-lc-green">✓ Saved</span>}
+        {dirty && !saving && (
+          <span className="text-xs text-lc-muted">Unsaved changes</span>
+        )}
+        {error && (
+          <span className="text-xs text-red-400" data-testid="welcome-bot-error">
+            {error}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}

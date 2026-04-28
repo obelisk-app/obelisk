@@ -1,0 +1,82 @@
+---
+title: How Obelisk works
+description: Obelisk is a frontend. There is no backend, no database, no API server — the app signs Nostr events in your browser and publishes them straight to the relays you choose. Here's what happens when you log in, send a message, or join a group.
+heroComponent: how-obelisk-works
+publishedAt: '2026-04-16'
+updatedAt: '2026-04-28'
+tags: [architecture, how-it-works, nostr, nip-29]
+---
+
+## The shape of the app
+
+Obelisk is a single piece of code: the **client**.
+
+```
+┌──────────────────────┐         ┌──────────────────┐
+│  Obelisk frontend    │ ──────► │  Nostr relay(s)  │
+│  (your browser)      │ ◄────── │  (you pick them) │
+└──────────────────────┘         └──────────────────┘
+```
+
+That's the entire architecture. There is no Obelisk server, no database, no auth service, no API. The browser holds your key (or borrows it from a NIP-07 extension), signs Nostr events locally, and pushes them to whatever relays you've configured. To read messages, the same client subscribes to the relay's stream.
+
+## What happens when you log in
+
+1. The login screen offers three paths:
+   - **NIP-07** — call `window.nostr.signEvent()` from your installed signer (Alby, nos2x, etc.)
+   - **nsec** — paste a private key, kept in `localStorage` and used directly
+   - **Generate** — create a brand-new keypair right there
+
+2. The app derives your pubkey, fetches your kind 0 profile from the relays you have configured, and you're in. There is no session, no token, no cookie — the cryptographic key *is* the session.
+
+## What happens when you send a message
+
+1. You type a message in a NIP-29 group channel.
+2. The client builds a kind 9 event (NIP-29 group message), tagged with the group ID and (if relevant) a parent event ID for replies.
+3. The event is signed with your key (in the browser).
+4. It is published to the active relay via `SimplePool.publish()`.
+5. Everyone subscribed to that group on that relay sees it land.
+
+There is no "send to Obelisk's server" step. The relay is the message bus.
+
+## What happens when you join or create a group
+
+Groups are **NIP-29** groups. The relay holds them, not us.
+
+- **Create** — the client sends a `9007` (group create) event. The relay assigns you as the first admin via a `39001` event.
+- **Join / leave** — admins issue `9000` (put user) and `9001` (remove user) events; the relay enforces them.
+- **Channels, metadata, admins, members** — all standard NIP-29 events: `39000` (metadata), `39001` (admins), `39002` (members), and so on.
+
+Switching relays is just switching which server's NIP-29 groups you're seeing. The app doesn't care which relay it is, as long as it speaks NIP-29.
+
+## What about DMs?
+
+Direct messages don't use NIP-29. They use **encrypted Nostr DMs**:
+
+- **NIP-04** — older encrypted DM kind, still widely supported
+- **NIP-17** — newer "gift-wrapped" DM with metadata privacy; the client publishes wrapped events to the recipient's NIP-17 inbox relays
+
+Both are end-to-end encrypted — only sender and recipient hold the keys to decrypt.
+
+## What about Lightning zaps?
+
+Zaps are **NIP-57 + NIP-47**:
+
+- A zap request (kind 9734) is sent to the recipient's LNURL endpoint.
+- Your wallet (connected via Nostr Wallet Connect, NIP-47) pays the invoice.
+- A zap receipt (kind 9735) is published back to the relay so everyone sees the sats moved.
+
+No platform takes a fee. Your wallet, recipient's wallet, no middleman.
+
+## What we don't do
+
+- We don't host your messages.
+- We don't have a user database.
+- We don't issue tokens or cookies.
+- We can't deplatform you, and we can't lose your data — because we never had it.
+
+## See also
+
+- [What is Obelisk?](/guides/what-is-obelisk) — the elevator pitch
+- [Bring your own relay](/guides/web-of-trust) — multi-relay UX in detail
+- [Bitcoin zaps in chat](/guides/bitcoin-zaps) — NIP-57 + NWC walkthrough

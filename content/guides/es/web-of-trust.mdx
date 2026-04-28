@@ -1,0 +1,56 @@
+---
+title: Traé tu propio relay
+description: Obelisk no tiene servidor central — en su lugar, te conectás a cualquier relay Nostr NIP-29 en el que confíes. Cada relay aparece como su propio servidor en la barra. Así funciona la UX multi-relay y por qué importa.
+heroComponent: wot
+publishedAt: '2026-04-16'
+updatedAt: '2026-04-28'
+tags: [relays, nip-29, sovereignty]
+---
+
+## El relay es el servidor
+
+En Discord, el "servidor" al que te unís es el servidor de Discord. En Obelisk, el "servidor" es **un relay Nostr**. Específicamente, un relay que habla **NIP-29** (grupos administrados por el relay).
+
+Cuando abrís la app vas a ver una barra lateral izquierda con uno o más íconos. Cada ícono es un relay. Hacés click en uno y ves los grupos NIP-29 que existen en ese relay. Hacés click en `+` y agregás otro. Mantenés apretado para sacar uno. La app en sí es el mismo código — lo que cambia es *de quién es el relay* del otro lado del websocket.
+
+## Por qué importa esto
+
+- **Sin vendor lock-in.** Mové tu comunidad a un relay distinto si no te gustan las políticas del actual. Tu clave, tus membresías de grupo, tus follows — todo portable.
+- **Sin deplatforming de plataforma.** No corremos ningún relay. No hay un "equipo de Obelisk" que te pueda banear de la red.
+- **Sin plataforma decidiendo quién puede hablar.** El operador del relay pone las reglas para ese relay. Si no te gustan, corré el tuyo (`strfry`, `nostr-rs-relay`, y otros soportan NIP-29).
+
+## Cómo elegir un relay
+
+El default en la app es `wss://groups.fiatjaf.com` — un relay NIP-29 público corrido por el autor del protocolo. Funciona out of the box y está bien para probar.
+
+Para una comunidad real probablemente quieras una de estas opciones:
+
+1. **Tu propio relay.** Un VPS de 5 USD/mes corre fácil un relay NIP-29 para cientos de usuarios. Vos tenés los datos. Vos ponés la política.
+2. **Un relay público amistoso.** Existen muchos relays NIP-29 corridos por la comunidad; elegí uno cuyo operador te dé confianza.
+3. **Un relay privado.** Si solo querés un grupo chico de invitación, corré un relay que solo acepte eventos de un set fijo de pubkeys.
+
+## Cómo funcionan los permisos
+
+Dentro de un grupo NIP-29, el relay hace cumplir tres roles:
+
+- **Admins** — listados en un evento `39001`. Pueden agregar miembros, kickear y banear.
+- **Miembros** — listados en un evento `39002`. Pueden postear.
+- **Todos los demás** — dependiendo de la metadata del grupo, pueden o no leer.
+
+Kickear y banear también son eventos Nostr (`9001`, `9005`). El relay se niega a publicar mensajes de gente que no tiene permitido postear.
+
+Esto significa:
+
+- **La moderación es portable.** Si forkeás una comunidad a un relay nuevo, replicás los eventos de admin y miembros para configurar los mismos permisos allá.
+- **La moderación es auditable.** Cada kick es un evento firmado con timestamp y razón.
+- **La moderación es trabajo del relay, no de la app.** Obelisk no hace cumplir políticas — el relay sí.
+
+## ¿Y el spam?
+
+Por ahora, el anti-spam es lo que haga cumplir tu relay. La mayoría de los relays NIP-29 usan proof-of-work, allow-lists, o flujos de unión por invitación. Estamos siguiendo el trabajo de la comunidad sobre scoring de Web of Trust a nivel de relay — una vez que los relays expongan un estándar, el cliente puede mostrar scores de confianza inline. (Versiones anteriores de Obelisk computaban WoT en el backend; sin backend, el cliente ahora delega en lo que haga cumplir el relay.)
+
+## Ver también
+
+- [¿Qué es Obelisk?](/guides/what-is-obelisk) — el pitch corto
+- [Cómo funciona Obelisk](/guides/how-obelisk-works) — detalle de arquitectura
+- [Qué hay en el roadmap](/guides/future-nostr-relays) — voz, bunker, más

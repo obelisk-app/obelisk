@@ -1,0 +1,52 @@
+---
+title: What is Obelisk?
+description: Obelisk is a Discord-style group chat client with no backend. There's no database, no Obelisk server — your account is a Nostr keypair, your groups live on Nostr relays, and the app is just a frontend that signs and reads events.
+heroComponent: what-is-obelisk
+publishedAt: '2026-04-16'
+updatedAt: '2026-04-28'
+tags: [intro, nostr, identity, nip-29]
+---
+
+## The short version
+
+Obelisk is a chat client that looks and feels like Discord — servers in a left rail, channels, threads, reactions, DMs — but everything underneath is **Nostr**. There is no Obelisk backend, no database, no account system. Your identity is a Nostr keypair. Your groups are NIP-29 groups stored on Nostr relays. Every message you send is a signed Nostr event published straight to the relay.
+
+## What that actually means
+
+- **No signup.** You log in with a Nostr key (NIP-07 extension or nsec). There is no email, no password, no Obelisk account to create or recover.
+- **No central server.** We don't run anything. You point the app at any NIP-29 relay you like — `wss://groups.fiatjaf.com` is the default, but you can add or replace it.
+- **No database.** Channels, members, admins, kicks and bans aren't rows in our database — they're standard NIP-29 events the relay enforces.
+- **Your data is portable.** Switch relays, run your own, mirror your group across many. The app doesn't own anything.
+
+## Who is this for?
+
+Crypto communities, privacy nerds, open-source teams, hackathons, and anyone allergic to "verify your email / confirm your phone" forms. If you already use Nostr, Obelisk is a familiar Discord-style face for groups you may already be part of. If you don't, the login screen will make you a key in two clicks.
+
+<Callout type="info" title="No backend means">
+We can't ban you. We can't read your DMs. We can't lose your messages — because we never had them. The relay you choose is what holds the data, and you can always pick a different relay.
+</Callout>
+
+## What's working today
+
+- **Login** with NIP-07 or nsec
+- **NIP-29 groups** — create, join, channel hierarchy, replies, reactions, admins, members
+- **Multi-relay UX** — each relay you add appears as its own server in the rail
+- **Encrypted DMs** via NIP-04 and NIP-17 (gift-wrapped)
+- **Lightning zaps** from any message via NIP-57 + Nostr Wallet Connect (NIP-47)
+- **Profile editor** that publishes a kind 0 event
+
+## What's coming
+
+- **NIP-46 bunker** login (remote signer)
+- **NIP-44 v2** encryption migration
+- **Voice channels** rebuilt as P2P WebRTC over Nostr signaling
+- **Static-export build** so you can host it on GitHub Pages or any CDN
+- **Installable PWA** with push notifications
+
+## What comes next
+
+If you're new, the best next reads are:
+
+- [How Obelisk works](/guides/how-obelisk-works) — the architecture of a no-backend Nostr client
+- [Bring your own relay](/guides/web-of-trust) — how the relay rail works and why it matters
+- [What's on the roadmap](/guides/future-nostr-relays) — what's still being built

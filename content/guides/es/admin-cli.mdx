@@ -1,0 +1,66 @@
+---
+title: Admins, miembros y moderación NIP-29
+description: Ya no hay panel de admin de Obelisk — la moderación vive en el relay. Admins, miembros, kicks y bans son todos eventos NIP-29 estándar que cualquier cliente Nostr puede leer. Así funciona el modelo de roles, qué podés hacer, y qué queda auditable.
+heroComponent: admin-cli
+publishedAt: '2026-04-18'
+updatedAt: '2026-04-28'
+tags: [moderation, nip-29, admins, roles]
+---
+
+## Dónde vive la moderación
+
+En el viejo Obelisk híbrido, los admins vivían en una tabla de Postgres y un panel web de admin llamaba a una API HTTP para emitir bans. En el nuevo Obelisk, **todo eso está en el relay**. La moderación no es una feature de la app — es una feature de NIP-29.
+
+Eso significa:
+
+- Cualquier cliente NIP-29 puede mostrar la misma lista de admins, lista de miembros, kicks y bans.
+- Cambiar de cliente no cambia los permisos.
+- Cambiar de relay *sí* — la moderación es por-relay-por-grupo, porque el relay es el que hace cumplir.
+
+## Los eventos que importan
+
+NIP-29 define un set chico de kinds de evento. Los que afectan la moderación:
+
+| Kind  | Qué es                                          |
+|-------|-------------------------------------------------|
+| `9007`  | Crear grupo — el primer signer se vuelve admin |
+| `9000`  | Put user (agregar miembro)                     |
+| `9001`  | Remove user (kick)                             |
+| `9005`  | Borrar evento (eliminación de mensaje por mod) |
+| `9002`  | Editar metadata                                |
+| `39000` | Metadata del grupo (replaceable)               |
+| `39001` | Lista de admins (replaceable)                  |
+| `39002` | Lista de miembros (replaceable)                |
+
+Cada acción que toma un moderador es uno de estos eventos, firmado por ellos, con timestamp del relay. No hay log oculto de moderación — los eventos *son* el log.
+
+## Los roles
+
+- **Admin** — listado en el último evento `39001`. Puede editar metadata, agregar o remover miembros, promover o degradar otros admins, kickear, y borrar mensajes.
+- **Miembro** — listado en el último evento `39002`. Puede postear mensajes.
+- **Todos los demás** — read-only como mucho, dependiendo de las flags de metadata del grupo (`public` vs `private`).
+
+En la UI de Obelisk ves estos roles aparecer como badges al lado de los nombres, botones de "kick" y "ban" en el menú contextual, y una sección de admin en los settings del grupo. Bajo el capó, cada click publica uno de los eventos de arriba.
+
+## Qué hace un admin en realidad
+
+- **Promover un miembro a admin** — publicar un nuevo `39001` agregando su pubkey.
+- **Kickear a alguien** — publicar un evento `9001` con su pubkey. El relay después rechaza sus mensajes.
+- **Borrar un mensaje malo** — publicar un evento `9005` referenciando el ID del evento ofensor.
+- **Renombrar o rebrandear el grupo** — publicar un `9002` (editar metadata).
+
+Todo esto pasa por la UI de Obelisk hoy. No hay un panel de admin separado porque no hay nada para "panelizar" — los eventos van directo al relay.
+
+## ¿Y banear entre relays?
+
+Los bans NIP-29 son por-relay. Si alguien está baneado de tu grupo en el relay A, nada le impide crear el mismo group ID en el relay B y postear ahí. Esto es así por diseño — los relays son soberanos. Si te importan los bans portables, corré tu propio relay (o un set de relays que controlés) y replicá el estado del grupo entre ellos.
+
+## A dónde se fue el admin CLI
+
+Versiones anteriores de Obelisk traían un CLI de Node (`scripts/admin-cli`) que dejaba a los agentes manejar la API HTTP de admin con su propio nsec. Con la API afuera, el CLI también está afuera. El mismo resultado — agentes manejando grupos end-to-end — ahora es alcanzable directo con `nostr-tools` o cualquier SDK Nostr: cargás un nsec, armás los eventos NIP-29, publicás al relay. Quizás publiquemos un helper finito para esto; seguí el issue tracker.
+
+## Ver también
+
+- [Cómo funciona Obelisk](/guides/how-obelisk-works) — la arquitectura sin backend
+- [Traé tu propio relay](/guides/web-of-trust) — relays como comunidades soberanas
+- [Qué hay en el roadmap](/guides/future-nostr-relays)

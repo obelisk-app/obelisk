@@ -1,0 +1,56 @@
+---
+title: Bring your own relay
+description: Obelisk has no central server — instead, you connect to any NIP-29 Nostr relay you trust. Each relay shows up as its own server in the rail. Here's how the multi-relay UX works and why it matters.
+heroComponent: wot
+publishedAt: '2026-04-16'
+updatedAt: '2026-04-28'
+tags: [relays, nip-29, sovereignty]
+---
+
+## The relay is the server
+
+In Discord, the "server" you join is Discord's server. In Obelisk, the "server" is **a Nostr relay**. Specifically, a relay that speaks **NIP-29** (relay-managed groups).
+
+When you open the app you'll see a left-side rail with one or more icons. Each icon is a relay. Click one and you see the NIP-29 groups that exist on that relay. Click `+` and you add another. Click and hold to remove one. The app itself is the same code — what changes is *whose relay* is on the other end of the websocket.
+
+## Why this matters
+
+- **No vendor lock-in.** Move your community to a different relay if you don't like the policies of the current one. Your key, your group memberships, your follows — all portable.
+- **No platform deplatforming.** We don't run any relay. There is no "Obelisk team" who can ban you off the network.
+- **No platform deciding who can talk.** The relay's operator sets the rules for that relay. If you don't like them, run your own (`strfry`, `nostr-rs-relay`, and others all support NIP-29).
+
+## Picking a relay
+
+The default in the app is `wss://groups.fiatjaf.com` — a public NIP-29 relay run by the protocol's author. It works out of the box and is fine for trying things out.
+
+For a real community you probably want one of:
+
+1. **Your own relay.** A 5 USD/month VPS runs a NIP-29 relay easily for hundreds of users. You hold the data. You set the policy.
+2. **A friendly public relay.** Many community-run NIP-29 relays exist; pick one whose operator you trust.
+3. **A private relay.** If you only want a small invite-only group, run a relay that only accepts events from a fixed set of pubkeys.
+
+## How permissions work
+
+Inside a NIP-29 group, the relay enforces three roles:
+
+- **Admins** — listed in a `39001` event. Can add members, kick, and ban.
+- **Members** — listed in a `39002` event. Can post.
+- **Everyone else** — depending on the group's metadata, may or may not read.
+
+Kicking and banning are also Nostr events (`9001`, `9005`). The relay refuses to publish messages from people who aren't allowed to post.
+
+This means:
+
+- **Moderation is portable.** If you fork a community to a new relay, you replay the admin and member events to set up the same permissions there.
+- **Moderation is auditable.** Every kick is a signed event with a timestamp and a reason.
+- **Moderation is the relay's job, not the app's.** Obelisk doesn't enforce policies — the relay does.
+
+## What about spam?
+
+Right now, anti-spam is whatever your relay enforces. Most NIP-29 relays use proof-of-work, allow-lists, or invite-based join flows. We're tracking community work on Web of Trust scoring at the relay level — once relays expose a standard, the client can show trust scores in-line. (Earlier versions of Obelisk computed WoT in the backend; with no backend, the client now defers to whatever the relay enforces.)
+
+## See also
+
+- [What is Obelisk?](/guides/what-is-obelisk) — the elevator pitch
+- [How Obelisk works](/guides/how-obelisk-works) — architecture detail
+- [What's on the roadmap](/guides/future-nostr-relays) — voice, bunker, more

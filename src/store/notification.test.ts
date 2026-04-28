@@ -1,0 +1,183 @@
+import { describe, it, expect, beforeEach } from 'vitest';
+import { useNotificationStore, INBOX_CAP } from './notification';
+
+describe('useNotificationStore', () => {
+  beforeEach(() => {
+    useNotificationStore.setState(useNotificationStore.getInitialState());
+  });
+
+  it('starts with empty state', () => {
+    const state = useNotificationStore.getState();
+    expect(state.channelUnreads).toEqual({});
+    expect(state.channelMentions).toEqual({});
+    expect(state.dmUnreads).toEqual({});
+  });
+
+  it('setChannelUnread sets count and mention flag', () => {
+    useNotificationStore.getState().setChannelUnread('ch1', 5, true);
+    const state = useNotificationStore.getState();
+    expect(state.channelUnreads['ch1']).toBe(5);
+    expect(state.channelMentions['ch1']).toBe(true);
+  });
+
+  it('incrementChannelUnread increments from 0', () => {
+    useNotificationStore.getState().incrementChannelUnread('ch1');
+    expect(useNotificationStore.getState().channelUnreads['ch1']).toBe(1);
+  });
+
+  it('incrementChannelUnread increments existing count', () => {
+    useNotificationStore.getState().setChannelUnread('ch1', 3);
+    useNotificationStore.getState().incrementChannelUnread('ch1');
+    expect(useNotificationStore.getState().channelUnreads['ch1']).toBe(4);
+  });
+
+  it('incrementChannelUnread sets mention flag', () => {
+    useNotificationStore.getState().incrementChannelUnread('ch1', true);
+    expect(useNotificationStore.getState().channelMentions['ch1']).toBe(true);
+  });
+
+  it('clearChannelUnread removes channel from both maps', () => {
+    useNotificationStore.getState().setChannelUnread('ch1', 5, true);
+    useNotificationStore.getState().clearChannelUnread('ch1');
+    const state = useNotificationStore.getState();
+    expect(state.channelUnreads['ch1']).toBeUndefined();
+    expect(state.channelMentions['ch1']).toBeUndefined();
+  });
+
+  it('setChannelMention toggles flag without touching count', () => {
+    useNotificationStore.getState().setChannelUnread('ch1', 5, false);
+    useNotificationStore.getState().setChannelMention('ch1', true);
+    let state = useNotificationStore.getState();
+    expect(state.channelMentions['ch1']).toBe(true);
+    expect(state.channelUnreads['ch1']).toBe(5);
+
+    useNotificationStore.getState().setChannelMention('ch1', false);
+    state = useNotificationStore.getState();
+    expect(state.channelMentions['ch1']).toBeUndefined();
+    expect(state.channelUnreads['ch1']).toBe(5);
+  });
+
+  it('clearChannelMention removes only the mention flag', () => {
+    useNotificationStore.getState().setChannelUnread('ch1', 3, true);
+    useNotificationStore.getState().clearChannelMention('ch1');
+    const state = useNotificationStore.getState();
+    expect(state.channelMentions['ch1']).toBeUndefined();
+    expect(state.channelUnreads['ch1']).toBe(3);
+  });
+
+  it('setDMUnread and clearDMUnread', () => {
+    useNotificationStore.getState().setDMUnread('pk1', 3);
+    expect(useNotificationStore.getState().dmUnreads['pk1']).toBe(3);
+
+    useNotificationStore.getState().clearDMUnread('pk1');
+    expect(useNotificationStore.getState().dmUnreads['pk1']).toBeUndefined();
+  });
+
+  it('setBulkUnreads replaces all state', () => {
+    useNotificationStore.getState().setChannelUnread('old', 1);
+    useNotificationStore.getState().setBulkUnreads({
+      channels: { ch1: 2, ch2: 5 },
+      dms: { pk1: 1 },
+      dmLastReadAt: { pk1: 1000 },
+      mentionChannels: { ch2: true },
+    });
+
+    const state = useNotificationStore.getState();
+    expect(state.channelUnreads).toEqual({ ch1: 2, ch2: 5 });
+    expect(state.dmUnreads).toEqual({ pk1: 1 });
+    expect(state.dmLastReadAt).toEqual({ pk1: 1000 });
+    expect(state.channelMentions).toEqual({ ch2: true });
+    // old channel should be gone
+    expect(state.channelUnreads['old']).toBeUndefined();
+  });
+
+  it('setDMLastReadAt and setDMUnreads', () => {
+    useNotificationStore.getState().setDMLastReadAt('alice', 5000);
+    useNotificationStore.getState().setDMLastReadAt('bob', 6000);
+    expect(useNotificationStore.getState().dmLastReadAt).toEqual({ alice: 5000, bob: 6000 });
+
+    useNotificationStore.getState().setDMUnreads({ alice: 2, bob: 0 });
+    expect(useNotificationStore.getState().dmUnreads).toEqual({ alice: 2, bob: 0 });
+  });
+
+  it('setChannelServerMap updates mapping', () => {
+    useNotificationStore.getState().setChannelServerMap({ ch1: 's1', ch2: 's1' });
+    expect(useNotificationStore.getState().channelServerMap).toEqual({ ch1: 's1', ch2: 's1' });
+  });
+
+  describe('inbox', () => {
+    it('pushInboxEvent prepends and increments unread count', () => {
+      useNotificationStore.getState().pushInboxEvent({
+        type: 'mention',
+        channelId: 'ch1',
+        senderPubkey: 'alice',
+        preview: 'hi',
+        createdAt: '2026-01-01T00:00:00Z',
+        messageId: 'm1',
+      });
+      useNotificationStore.getState().pushInboxEvent({
+        type: 'dm',
+        senderPubkey: 'bob',
+        preview: 'yo',
+        createdAt: '2026-01-01T00:00:01Z',
+        messageId: 'm2',
+      });
+      const s = useNotificationStore.getState();
+      expect(s.inboxEvents).toHaveLength(2);
+      expect(s.inboxEvents[0].senderPubkey).toBe('bob');
+      expect(s.inboxEvents[0].read).toBe(false);
+      expect(s.unreadInboxCount).toBe(2);
+    });
+
+    it('pushInboxEvent caps at INBOX_CAP', () => {
+      for (let i = 0; i < INBOX_CAP + 10; i++) {
+        useNotificationStore.getState().pushInboxEvent({
+          type: 'mention',
+          channelId: 'ch1',
+          senderPubkey: 'a',
+          preview: String(i),
+          createdAt: `2026-01-01T00:00:${String(i).padStart(2, '0')}Z`,
+          messageId: `m${i}`,
+        });
+      }
+      expect(useNotificationStore.getState().inboxEvents).toHaveLength(INBOX_CAP);
+    });
+
+    it('pushInboxEvent dedupes by id', () => {
+      const evt = {
+        type: 'mention' as const,
+        channelId: 'ch1',
+        senderPubkey: 'alice',
+        preview: 'hi',
+        createdAt: '2026-01-01T00:00:00Z',
+        messageId: 'm1',
+      };
+      useNotificationStore.getState().pushInboxEvent(evt);
+      useNotificationStore.getState().pushInboxEvent(evt);
+      const s = useNotificationStore.getState();
+      expect(s.inboxEvents).toHaveLength(1);
+      expect(s.unreadInboxCount).toBe(1);
+    });
+
+    it('markInboxRead flips read and zeroes counter', () => {
+      useNotificationStore.getState().pushInboxEvent({
+        type: 'dm', senderPubkey: 'a', createdAt: 't', messageId: 'm1',
+      });
+      useNotificationStore.getState().markInboxRead();
+      const s = useNotificationStore.getState();
+      expect(s.inboxEvents[0].read).toBe(true);
+      expect(s.unreadInboxCount).toBe(0);
+    });
+
+    it('reset clears inbox events and unread count', () => {
+      useNotificationStore.getState().pushInboxEvent({
+        type: 'dm', senderPubkey: 'a', createdAt: 't', messageId: 'm1',
+      });
+      useNotificationStore.getState().reset();
+      const s = useNotificationStore.getState();
+      expect(s.inboxEvents).toEqual([]);
+      expect(s.unreadInboxCount).toBe(0);
+    });
+  });
+
+});

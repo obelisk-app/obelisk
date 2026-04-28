@@ -1,0 +1,82 @@
+---
+title: Cómo funciona Obelisk
+description: Obelisk es un frontend. No hay backend, no hay base de datos, no hay servidor de API — la app firma eventos Nostr en tu navegador y los publica directo a los relays que elegís. Esto es lo que pasa cuando iniciás sesión, mandás un mensaje o te unís a un grupo.
+heroComponent: how-obelisk-works
+publishedAt: '2026-04-16'
+updatedAt: '2026-04-28'
+tags: [architecture, how-it-works, nostr, nip-29]
+---
+
+## La forma de la app
+
+Obelisk es una sola pieza de código: el **cliente**.
+
+```
+┌──────────────────────┐         ┌──────────────────┐
+│  Frontend Obelisk    │ ──────► │  Relay(s) Nostr  │
+│  (tu navegador)      │ ◄────── │  (vos los elegís)│
+└──────────────────────┘         └──────────────────┘
+```
+
+Esa es toda la arquitectura. No hay servidor de Obelisk, no hay base de datos, no hay servicio de auth, no hay API. El navegador guarda tu clave (o se la pide a una extensión NIP-07), firma eventos Nostr localmente, y los empuja a los relays que tengas configurados. Para leer mensajes, el mismo cliente se suscribe al stream del relay.
+
+## Qué pasa cuando iniciás sesión
+
+1. La pantalla de login ofrece tres caminos:
+   - **NIP-07** — llama a `window.nostr.signEvent()` desde tu signer instalado (Alby, nos2x, etc.)
+   - **nsec** — pegás una clave privada, se guarda en `localStorage` y se usa directamente
+   - **Generar** — creás un par de claves nuevito ahí mismo
+
+2. La app deriva tu pubkey, busca tu perfil kind 0 desde los relays que tenés configurados, y ya estás adentro. No hay sesión, no hay token, no hay cookie — la clave criptográfica *es* la sesión.
+
+## Qué pasa cuando mandás un mensaje
+
+1. Escribís un mensaje en un canal de un grupo NIP-29.
+2. El cliente arma un evento kind 9 (mensaje de grupo NIP-29), etiquetado con el ID del grupo y (si corresponde) el ID del evento padre para respuestas.
+3. El evento se firma con tu clave (en el navegador).
+4. Se publica al relay activo vía `SimplePool.publish()`.
+5. Todos los que están suscritos a ese grupo en ese relay lo ven aparecer.
+
+No hay un paso de "mandar al servidor de Obelisk". El relay es el bus de mensajes.
+
+## Qué pasa cuando te unís o creás un grupo
+
+Los grupos son grupos **NIP-29**. El relay los guarda, no nosotros.
+
+- **Crear** — el cliente manda un evento `9007` (group create). El relay te asigna como primer admin vía un evento `39001`.
+- **Unirse / salir** — los admins emiten eventos `9000` (put user) y `9001` (remove user); el relay los hace cumplir.
+- **Canales, metadata, admins, miembros** — todos eventos NIP-29 estándar: `39000` (metadata), `39001` (admins), `39002` (miembros), y así.
+
+Cambiar de relay es simplemente cambiar qué grupos NIP-29 de qué servidor estás viendo. A la app no le importa qué relay sea, mientras hable NIP-29.
+
+## ¿Y los DMs?
+
+Los mensajes directos no usan NIP-29. Usan **DMs Nostr encriptados**:
+
+- **NIP-04** — kind de DM encriptado más viejo, todavía ampliamente soportado
+- **NIP-17** — DM "gift-wrapped" más nuevo, con privacidad de metadata; el cliente publica eventos envueltos a los relays inbox NIP-17 del receptor
+
+Ambos son end-to-end encriptados — solo el emisor y el receptor tienen las claves para desencriptar.
+
+## ¿Y los zaps Lightning?
+
+Los zaps son **NIP-57 + NIP-47**:
+
+- Se manda un zap request (kind 9734) al endpoint LNURL del receptor.
+- Tu wallet (conectada vía Nostr Wallet Connect, NIP-47) paga la factura.
+- Se publica un recibo de zap (kind 9735) al relay para que todos vean que los sats se movieron.
+
+Ninguna plataforma cobra fee. Tu wallet, la wallet del receptor, sin intermediarios.
+
+## Qué no hacemos
+
+- No hosteamos tus mensajes.
+- No tenemos base de datos de usuarios.
+- No emitimos tokens ni cookies.
+- No te podemos deplatformear, y no podemos perder tus datos — porque nunca los tuvimos.
+
+## Ver también
+
+- [¿Qué es Obelisk?](/guides/what-is-obelisk) — el pitch corto
+- [Traé tu propio relay](/guides/web-of-trust) — UX multi-relay en detalle
+- [Zaps de Bitcoin en el chat](/guides/bitcoin-zaps) — paso a paso de NIP-57 + NWC

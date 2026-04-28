@@ -1,0 +1,52 @@
+---
+title: ¿Qué es Obelisk?
+description: Obelisk es un cliente de chat grupal estilo Discord sin backend. No hay base de datos, no hay servidor de Obelisk — tu cuenta es un par de claves Nostr, tus grupos viven en relays de Nostr, y la app es solo un frontend que firma y lee eventos.
+heroComponent: what-is-obelisk
+publishedAt: '2026-04-16'
+updatedAt: '2026-04-28'
+tags: [intro, nostr, identity, nip-29]
+---
+
+## La versión corta
+
+Obelisk es un cliente de chat que se ve y se siente como Discord — servidores en una barra lateral izquierda, canales, hilos, reacciones, DMs — pero todo lo de abajo es **Nostr**. No hay backend de Obelisk, no hay base de datos, no hay sistema de cuentas. Tu identidad es un par de claves Nostr. Tus grupos son grupos NIP-29 guardados en relays de Nostr. Cada mensaje que mandás es un evento Nostr firmado y publicado directo al relay.
+
+## Qué significa esto en la práctica
+
+- **No hay registro.** Iniciás sesión con una clave Nostr (extensión NIP-07 o nsec). No hay email, no hay contraseña, no hay cuenta de Obelisk para crear o recuperar.
+- **No hay servidor central.** No corremos nada. Apuntás la app a cualquier relay NIP-29 que quieras — `wss://groups.fiatjaf.com` es el default, pero podés agregar o reemplazarlo.
+- **No hay base de datos.** Canales, miembros, admins, kicks y bans no son filas en nuestra base de datos — son eventos NIP-29 estándar que el relay hace cumplir.
+- **Tus datos son portables.** Cambiá de relay, corré el tuyo, espejá tu grupo en varios. La app no es dueña de nada.
+
+## ¿Para quién es esto?
+
+Comunidades cripto, nerds de la privacidad, equipos de open-source, hackathons, y cualquiera al que le den alergia los formularios de "verificá tu email / confirmá tu teléfono". Si ya usás Nostr, Obelisk es una cara familiar estilo Discord para grupos en los que quizás ya estás. Si no, la pantalla de login te genera una clave en dos clicks.
+
+<Callout type="info" title="No tener backend significa">
+No te podemos banear. No podemos leer tus DMs. No podemos perder tus mensajes — porque nunca los tuvimos. El relay que elegís es el que guarda los datos, y siempre podés elegir otro relay.
+</Callout>
+
+## Qué funciona hoy
+
+- **Login** con NIP-07 o nsec
+- **Grupos NIP-29** — crear, unirse, jerarquía de canales, respuestas, reacciones, admins, miembros
+- **UX multi-relay** — cada relay que agregás aparece como su propio servidor en la barra
+- **DMs encriptados** vía NIP-04 y NIP-17 (gift-wrapped)
+- **Zaps Lightning** desde cualquier mensaje vía NIP-57 + Nostr Wallet Connect (NIP-47)
+- **Editor de perfil** que publica un evento kind 0
+
+## Qué viene
+
+- **Login NIP-46 bunker** (signer remoto)
+- **Migración a encriptación NIP-44 v2**
+- **Canales de voz** rehechos como WebRTC P2P sobre señalización Nostr
+- **Build de export estático** así lo podés hostear en GitHub Pages o cualquier CDN
+- **PWA instalable** con notificaciones push
+
+## Qué leer después
+
+Si recién llegás, lo mejor es seguir con:
+
+- [Cómo funciona Obelisk](/guides/how-obelisk-works) — la arquitectura de un cliente Nostr sin backend
+- [Traé tu propio relay](/guides/web-of-trust) — cómo funciona la barra de relays y por qué importa
+- [Qué hay en el roadmap](/guides/future-nostr-relays) — qué falta construir

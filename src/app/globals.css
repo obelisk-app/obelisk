@@ -1,0 +1,492 @@
+@import "tailwindcss";
+
+@theme {
+  --color-lc-black: #0a0a0a;
+  --color-lc-dark: #171717;
+  --color-lc-card: #1a1a1a;
+  --color-lc-border: #262626;
+  --color-lc-muted: #a3a3a3;
+  --color-lc-green: #b4f953;
+  --color-lc-green-dark: #8bc34a;
+  --color-lc-white: #fafafa;
+  --color-lc-olive: #2d3a1a;
+  --color-lc-olive-dark: #1e2812;
+}
+
+:root {
+  --background: #0a0a0a;
+  --foreground: #fafafa;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+/* La Crypta perspective grid background */
+.lc-grid-bg {
+  background-image:
+    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+/* Glow effects */
+.lc-glow {
+  box-shadow: 0 0 60px rgba(180, 249, 83, 0.08), 0 0 120px rgba(180, 249, 83, 0.04);
+}
+
+.lc-glow-text {
+  text-shadow: 0 0 40px rgba(180, 249, 83, 0.3);
+}
+
+/* Card hover effect */
+.lc-card {
+  background: #171717;
+  border: 1px solid #262626;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.lc-card:hover {
+  border-color: #3a3a3a;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  transform: translateY(-1px);
+}
+
+/* Pill button style */
+/* Tailwind v4 dropped the default `cursor: pointer` for <button>. Restore
+   it for any non-disabled, non-link button so hover targets feel right. */
+button:not(:disabled),
+[role='button']:not(:disabled) {
+  cursor: pointer;
+}
+
+.lc-pill,
+.lc-pill-primary,
+.lc-pill-secondary {
+  border-radius: 9999px !important;
+  padding: 10px 24px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.lc-pill-primary {
+  background: #b4f953;
+  color: #0a0a0a;
+}
+
+.lc-pill-primary:hover {
+  background: #c5ff6e;
+  box-shadow: 0 0 20px rgba(180, 249, 83, 0.3);
+}
+
+.lc-pill-secondary {
+  background: #262626;
+  color: #fafafa;
+}
+
+.lc-pill-secondary:hover {
+  background: #333333;
+}
+
+/* Animated gradient for banner */
+@keyframes shimmer {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.lc-banner-gradient {
+  background: linear-gradient(135deg, #1e2812 0%, #2d3a1a 25%, #0a0a0a 50%, #171717 75%, #2d3a1a 100%);
+  background-size: 400% 400%;
+  animation: shimmer 15s ease infinite;
+}
+
+/* Smooth loading spinner */
+@keyframes lc-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.lc-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #262626;
+  border-top-color: #b4f953;
+  border-radius: 50%;
+  animation: lc-spin 0.8s linear infinite;
+}
+
+/* Skeleton loading */
+@keyframes lc-skeleton {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.lc-skeleton {
+  background: linear-gradient(90deg, #171717 25%, #262626 50%, #171717 75%);
+  background-size: 200% 100%;
+  animation: lc-skeleton 1.8s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+.lc-skeleton-circle {
+  background: linear-gradient(90deg, #171717 25%, #262626 50%, #171717 75%);
+  background-size: 200% 100%;
+  animation: lc-skeleton 1.8s ease-in-out infinite;
+  border-radius: 9999px;
+}
+
+.lc-skeleton-rounded {
+  background: linear-gradient(90deg, #171717 25%, #262626 50%, #171717 75%);
+  background-size: 200% 100%;
+  animation: lc-skeleton 1.8s ease-in-out infinite;
+  border-radius: 16px;
+}
+
+/* Image loading with skeleton */
+.lc-img-skeleton {
+  position: relative;
+  overflow: hidden;
+}
+
+.lc-img-skeleton img {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.lc-img-skeleton img.loaded {
+  opacity: 1;
+}
+
+.lc-img-skeleton::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, #171717 25%, #262626 50%, #171717 75%);
+  background-size: 200% 100%;
+  animation: lc-skeleton 1.8s ease-in-out infinite;
+}
+
+.lc-img-skeleton:has(img.loaded)::before {
+  display: none;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #262626;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3a3a3a;
+}
+
+/* Selection color */
+::selection {
+  background: rgba(180, 249, 83, 0.25);
+  color: #fafafa;
+}
+
+/* Markdown content in chat messages */
+[data-testid="message-content"] p {
+  margin: 0;
+}
+
+[data-testid="message-content"] p + p {
+  margin-top: 0.25em;
+}
+
+/* line-clamp utility for link preview descriptions */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* === Hero SVG Animations === */
+
+/* Floating chat bubbles */
+@keyframes float-up {
+  0% {
+    transform: translateY(0) translateX(0);
+    opacity: var(--bubble-opacity, 0.08);
+  }
+  50% {
+    opacity: var(--bubble-opacity, 0.08);
+  }
+  100% {
+    transform: translateY(-100vh) translateX(20px);
+    opacity: 0;
+  }
+}
+
+.animate-float-up {
+  animation: float-up var(--float-duration, 18s) linear infinite;
+  animation-delay: var(--float-delay, 0s);
+}
+
+/* Orbiting keys — uses CSS custom property for radius */
+@keyframes orbit {
+  from { transform: rotate(0deg) translateX(var(--orbit-radius, 110px)) rotate(0deg); }
+  to   { transform: rotate(360deg) translateX(var(--orbit-radius, 110px)) rotate(-360deg); }
+}
+
+.animate-orbit {
+  animation: orbit var(--orbit-duration, 18s) linear infinite;
+}
+
+/* Reverse orbit */
+@keyframes orbit-reverse {
+  from { transform: rotate(360deg) translateX(var(--orbit-radius, 80px)) rotate(-360deg); }
+  to   { transform: rotate(0deg) translateX(var(--orbit-radius, 80px)) rotate(0deg); }
+}
+
+.animate-orbit-reverse {
+  animation: orbit-reverse var(--orbit-duration, 24s) linear infinite;
+}
+
+/* Slow spin for glow rings */
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 30s linear infinite;
+}
+
+/* Pulsing glow behind obelisk */
+@keyframes glow-pulse {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.3; }
+  50%      { transform: translate(-50%, -50%) scale(1.4); opacity: 0.6; }
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 4s ease-in-out infinite;
+}
+
+/* Floating particles */
+@keyframes particle {
+  0%   { opacity: 0; transform: translateY(0) scale(0.5); }
+  20%  { opacity: 0.6; transform: translateY(-5px) scale(1); }
+  80%  { opacity: 0.4; transform: translateY(-15px) scale(0.8); }
+  100% { opacity: 0; transform: translateY(-25px) scale(0.3); }
+}
+
+.animate-particle {
+  animation: particle var(--particle-duration, 6s) ease-in-out infinite;
+  animation-delay: var(--particle-delay, 0s);
+}
+
+/* Vertical orbit (sun/moon rising and setting over the obelisk) */
+@keyframes orbit-vertical {
+  from { transform: rotate(0deg) translateY(var(--orbit-radius, 100px)) rotate(0deg); }
+  to   { transform: rotate(360deg) translateY(var(--orbit-radius, 100px)) rotate(-360deg); }
+}
+
+.animate-orbit-vertical {
+  animation: orbit-vertical var(--orbit-duration, 30s) linear infinite;
+}
+
+/* Scroll-triggered fade-in */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  opacity: 0;
+  animation: fade-in-up 0.6s ease-out forwards;
+  animation-delay: var(--fade-delay, 0s);
+}
+
+
+/* Relay dash flow */
+@keyframes dash-flow {
+  from { stroke-dashoffset: 0; }
+  to   { stroke-dashoffset: -40; }
+}
+
+.animate-dash-flow {
+  animation: dash-flow 2s linear infinite;
+}
+
+/* Relay dot pulse */
+@keyframes dot-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.4; }
+  50%      { transform: scale(1.6); opacity: 1; }
+}
+
+.animate-dot-pulse {
+  animation: dot-pulse 3s ease-in-out infinite;
+}
+
+/* Accessibility: disable all hero animations */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in-up,
+  .animate-float-up,
+  .animate-orbit,
+  .animate-orbit-reverse,
+  .animate-orbit-vertical,
+  .animate-spin-slow,
+  .animate-glow-pulse,
+  .animate-particle,
+  .animate-dash-flow,
+  .animate-dot-pulse {
+    animation: none;
+  }
+}
+
+/* Video tile fullscreen: drop aspect-ratio/borders so the video fills the whole screen. */
+[data-tile]:fullscreen,
+[data-tile]:-webkit-full-screen {
+  width: 100vw !important;
+  height: 100vh !important;
+  aspect-ratio: auto !important;
+  max-width: none !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+[data-tile]:fullscreen video,
+[data-tile]:-webkit-full-screen video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain;
+}
+
+/* Hide the "is sharing their screen" header bar when the tile is fullscreen. */
+[data-tile]:fullscreen [data-screen-header],
+[data-tile]:-webkit-full-screen [data-screen-header] {
+  display: none !important;
+}
+/* Let the inner video wrapper fill the whole fullscreen surface. */
+[data-tile]:fullscreen [data-screen-video],
+[data-tile]:-webkit-full-screen [data-screen-video] {
+  width: 100% !important;
+  height: 100% !important;
+  aspect-ratio: auto !important;
+}
+
+/* Chain Reaction orb animations */
+@keyframes cr-orbit {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes cr-pop-in {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.25); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes cr-burst-core {
+  0%   { transform: translate(-50%, -50%) scale(0.3); opacity: 0; }
+  25%  { transform: translate(-50%, -50%) scale(1.4); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(2.8); opacity: 0; }
+}
+@keyframes cr-burst-ring {
+  0%   { transform: translate(-50%, -50%) scale(0.2); opacity: 0.9; border-width: 2px; }
+  100% { transform: translate(-50%, -50%) scale(2.6); opacity: 0; border-width: 1px; }
+}
+@keyframes cr-shard-fly {
+  0%   { transform: translate(-50%, -50%) scale(0.6); opacity: 0; }
+  15%  { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  100% {
+    transform: translate(calc(-50% + var(--cr-shard-dx, 0px)), calc(-50% + var(--cr-shard-dy, 0px))) scale(0.4);
+    opacity: 0;
+  }
+}
+.cr-orb-group {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 50%;
+  animation: cr-orbit var(--cr-orbit-dur, 2.4s) linear infinite;
+}
+.cr-orb-group--still {
+  animation: none;
+}
+.cr-orb {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: 9999px;
+  box-shadow: 0 0 4px currentColor;
+  animation: cr-pop-in 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+/* Explosion overlay — sits on top of the exploding cell and overflows into
+   neighbours so shards visibly travel to adjacent tiles. */
+.cr-burst {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+  z-index: 5;
+}
+.cr-burst-core {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 70%;
+  height: 70%;
+  border-radius: 9999px;
+  filter: blur(0.4px);
+  animation: cr-burst-core 520ms cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+.cr-burst-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 70%;
+  height: 70%;
+  border-radius: 9999px;
+  border: 2px solid currentColor;
+  animation: cr-burst-ring 520ms cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+.cr-shard {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  border-radius: 9999px;
+  animation: cr-shard-fly 520ms cubic-bezier(0.25, 0.7, 0.35, 1) forwards;
+}
+/* Matrix: no gaps between cells — the grid lines come from cell borders so
+   adjacent borders collapse into a single hairline tinted with the active
+   player's color. */
+.cr-matrix {
+  background: color-mix(in srgb, var(--cr-turn, #3f3f46) 8%, #000 92%);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--cr-turn, #3f3f46) 50%, transparent),
+              0 0 18px -6px var(--cr-turn, #3f3f46);
+  transition: background 400ms ease, box-shadow 400ms ease;
+}
+.cr-cell {
+  background: color-mix(in srgb, var(--cr-turn, #3f3f46) 4%, #0a0a0a 96%);
+  border-right: 1px solid color-mix(in srgb, var(--cr-turn, #3f3f46) 40%, #262626);
+  border-bottom: 1px solid color-mix(in srgb, var(--cr-turn, #3f3f46) 40%, #262626);
+  transition: background 300ms ease, border-color 300ms ease;
+}
+.cr-cell:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--cr-turn, #3f3f46) 18%, #0a0a0a 82%);
+}

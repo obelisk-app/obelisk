@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "next-dev",
+      "runtimeExecutable": "/bin/bash",
+      "runtimeArgs": [".claude/start-dev.sh"],
+      "port": 3000
+    }
+  ]
+}

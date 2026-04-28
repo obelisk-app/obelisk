@@ -1,0 +1,159 @@
+import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
+import { MDXRemote } from 'next-mdx-remote/rsc';
+import remarkGfm from 'remark-gfm';
+import type { Locale } from '@/i18n';
+import {
+  readGuide,
+  estimateReadMinutes,
+  type GuideFrontmatter,
+} from '@/lib/guides';
+import { guidesHref } from '@/lib/guide-urls';
+import ArticleShell from '@/components/guides/ArticleShell';
+import GuideLocaleSync from '@/components/guides/GuideLocaleSync';
+import { mdxComponents } from '@/components/guides/mdx-components';
+import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
+
+const SITE_URL = process.env.CORS_ORIGIN || 'https://obelisk.ar';
+
+const CHROME: Record<Locale, Record<string, string>> = {
+  en: {
+    back: 'All guides',
+    readTime: 'min read',
+    updated: 'Updated',
+  },
+  es: {
+    back: 'Todas las guías',
+    readTime: 'min de lectura',
+    updated: 'Actualizado',
+  },
+};
+
+async function safeRead(locale: Locale, slug: string) {
+  try {
+    return await readGuide(locale, slug);
+  } catch {
+    return null;
+  }
+}
+
+export async function buildGuideArticleMetadata(
+  locale: Locale,
+  slug: string,
+): Promise<Metadata> {
+  const guide = await safeRead(locale, slug);
+  if (!guide) return {};
+
+  const fm = guide.frontmatter as GuideFrontmatter;
+  const canonical = guidesHref(locale, slug);
+
+  return {
+    title: fm.title,
+    description: fm.description,
+    alternates: {
+      canonical,
+      languages: {
+        'en-US': guidesHref('en', slug),
+        'es-AR': guidesHref('es', slug),
+        'x-default': guidesHref('en', slug),
+      },
+    },
+    openGraph: {
+      title: fm.title,
+      description: fm.description,
+      url: `${SITE_URL}${canonical}`,
+      siteName: 'Obelisk',
+      locale: locale === 'en' ? 'en_US' : 'es_AR',
+      alternateLocale: locale === 'en' ? ['es_AR'] : ['en_US'],
+      type: 'article',
+      publishedTime: fm.publishedAt,
+      modifiedTime: fm.updatedAt,
+      tags: fm.tags,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: fm.title,
+      description: fm.description,
+    },
+    keywords: fm.tags,
+  };
+}
+
+export default async function GuideArticlePage({
+  locale,
+  slug,
+}: {
+  locale: Locale;
+  slug: string;
+}) {
+  const guide = await safeRead(locale, slug);
+  if (!guide) notFound();
+
+  const fm = guide.frontmatter as GuideFrontmatter;
+  const chrome = CHROME[locale];
+  const readMinutes = fm.readMinutes ?? estimateReadMinutes(guide.content);
+  const canonical = guidesHref(locale, slug);
+
+  const articleLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: fm.title,
+    description: fm.description,
+    datePublished: fm.publishedAt,
+    dateModified: fm.updatedAt,
+    inLanguage: locale === 'en' ? 'en' : 'es-AR',
+    image: {
+      '@type': 'ImageObject',
+      url: `${SITE_URL}${canonical}/opengraph-image`,
+      width: 1200,
+      height: 630,
+    },
+    author: {
+      '@type': 'Organization',
+      name: 'La Crypta',
+      url: 'https://lacrypta.ar',
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: 'La Crypta',
+      logo: {
+        '@type': 'ImageObject',
+        url: `${SITE_URL}/obelisk.png`,
+      },
+    },
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': `${SITE_URL}${canonical}`,
+    },
+    keywords: fm.tags?.join(', '),
+  };
+
+  return (
+    <div className="min-h-screen bg-lc-black lc-grid-bg">
+      <GuideLocaleSync locale={locale} />
+      <Navbar />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleLd) }}
+      />
+      <ArticleShell
+        frontmatter={fm}
+        locale={locale}
+        slug={slug}
+        readMinutes={readMinutes}
+        backHref={guidesHref(locale)}
+        backLabel={chrome.back}
+        readTimeLabel={chrome.readTime}
+        updatedLabel={chrome.updated}
+      >
+        <MDXRemote
+          source={guide.content}
+          components={mdxComponents}
+          options={{ mdxOptions: { remarkPlugins: [remarkGfm] } }}
+        />
+      </ArticleShell>
+      <Footer localeOverride={locale} />
+    </div>
+  );
+}
