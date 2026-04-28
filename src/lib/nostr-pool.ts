@@ -79,6 +79,9 @@ export function getNostrPool(): SimplePool {
     pool = new SimplePool({
       websocketImplementation: TextCoercingWebSocket as unknown as typeof WebSocket,
     } as ConstructorParameters<typeof SimplePool>[0]);
+    // Share this same pool with the SDK so @nostr-wot/data fetchers and
+    // obelisk's local read paths reuse one set of relay connections.
+    void import('@nostr-wot/data').then(({ setPool }) => setPool(pool!));
   }
   return pool;
 }
