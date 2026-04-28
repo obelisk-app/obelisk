@@ -38,7 +38,7 @@ import { setActiveVoiceClient } from '@/lib/voice-active-client';
 import { DM_FEATURE_ENABLED } from '@/lib/feature-flags';
 import { shortNpub, parseMentions } from '@/lib/mentions';
 import MemberList from '@/components/chat/MemberList';
-import LoginModal from '@/components/LoginModal';
+import LoginModal from '@/components/auth/SdkLoginModal';
 import ShootingStars from '@/components/ShootingStars';
 import { useNotificationStore } from '@/store/notification';
 import { NotifyMenu } from '@/components/notifications/NotifyMenu';

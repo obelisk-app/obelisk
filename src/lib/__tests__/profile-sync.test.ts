@@ -12,19 +12,8 @@ vi.mock('../db-server', () => ({
   prisma: mockPrisma,
 }));
 
-// Mock NDK
-const mockFetchProfile = vi.fn();
-vi.mock('@nostr-dev-kit/ndk', () => {
-  return {
-    default: vi.fn().mockImplementation(() => ({
-      connect: vi.fn().mockResolvedValue(undefined),
-      getUser: vi.fn().mockReturnValue({
-        fetchProfile: mockFetchProfile,
-        profile: null,
-      }),
-    })),
-  };
-});
+// `profile-sync` itself uses nostr-tools' SimplePool directly (server-side
+// reader), not the SDK signers — no signer mock needed.
 
 import { syncProfileToDb, refreshStaleProfiles, backfillMissingProfiles } from '../profile-sync';
 

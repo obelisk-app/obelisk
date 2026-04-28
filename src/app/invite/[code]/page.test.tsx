@@ -8,7 +8,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Stub the LoginModal so we don't have to wire up NDK + Nostr internals.
-vi.mock('@/components/LoginModal', () => ({
+vi.mock('@/components/auth/SdkLoginModal', () => ({
   default: ({ isOpen, onSuccess }: { isOpen: boolean; onSuccess?: () => void }) =>
     isOpen ? (
       <div data-testid="login-modal">

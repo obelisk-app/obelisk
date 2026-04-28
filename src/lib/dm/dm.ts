@@ -7,7 +7,6 @@ import { getRelays } from './relay-list-cache';
 import { ingestKind3 } from './follows';
 
 const KIND_NIP04 = 4;
-const KIND_RUMOR = 14;
 const KIND_GIFT_WRAP = 1059;
 const KIND_FOLLOW = 3;
 
@@ -252,14 +251,15 @@ export interface DiscoveredNip17Partner {
  */
 export async function discoverNip17Partners(opts: {
   myPubkey: string;
-  ndk: unknown;            // NDK — kept loose to avoid circular imports
-  signer: unknown;         // NDKSigner
+  ndk: unknown;            // legacy shim — kept loose to avoid circular imports
+  signer: unknown;         // NostrSigner
   cacheKey: CryptoKey;
   limit?: number;          // newest-N undecrypted wraps to crack open
 }): Promise<DiscoveredNip17Partner[]> {
   const limit = opts.limit ?? 30;
   const { getCachedEvents, getSecret, putSecret } = await import('./dm-cache');
-  const { NDKEvent: NDKEventClass, giftUnwrap } = await import('@nostr-dev-kit/ndk');
+  const { unwrapGiftWrap } = await import('@nostr-wot/dm');
+  const signer = opts.signer as import('@nostr-wot/signers').NostrSigner;
 
   // Newest-first walk. We want the most recent N wraps so the inbox
   // surfaces active conversations before exhausting the prompt budget.
@@ -290,7 +290,7 @@ export async function discoverNip17Partners(opts: {
     prompts++;
 
     try {
-      const wrap = new NDKEventClass(opts.ndk as never, {
+      const wrap: NostrEvent = {
         id: ev.id,
         pubkey: ev.pubkey,
         kind: 1059,
@@ -298,19 +298,13 @@ export async function discoverNip17Partners(opts: {
         tags: ev.tags,
         created_at: ev.created_at,
         sig: ev.sig ?? '',
-      } as never);
-      const rumor = (await giftUnwrap(wrap, undefined, opts.signer as never)) as {
-        kind: number;
-        pubkey: string;
-        content: string;
-        created_at?: number;
-        tags: string[][];
       };
+      const { message: rumor, senderPubkey } = await unwrapGiftWrap(signer, wrap);
       if (rumor.kind !== 14) continue;
-      const recipientTag = rumor.tags.find((t) => t[0] === 'p');
+      const recipientTag = (rumor.tags as string[][]).find((t) => t[0] === 'p');
       const recipientPubkey = recipientTag?.[1] ?? '';
       const env = {
-        senderPubkey: rumor.pubkey,
+        senderPubkey,
         recipientPubkey,
         content: rumor.content,
         createdAt: rumor.created_at ?? ev.created_at,
@@ -322,7 +316,7 @@ export async function discoverNip17Partners(opts: {
       const prev = partnersMap.get(partner) ?? 0;
       if (env.createdAt > prev) partnersMap.set(partner, env.createdAt);
     } catch {
-      // giftUnwrap throws on signer errors / bad payload; skip and continue.
+      // unwrapGiftWrap throws on signer errors / bad payload; skip and continue.
       continue;
     }
   }
@@ -426,12 +420,10 @@ export interface SendDMArgs {
 
 export async function sendDM(args: SendDMArgs): Promise<NostrEvent> {
   const { getNDK } = await import('@/lib/nostr');
+  const { buildChatMessage, sealAndGiftWrap } = await import('@nostr-wot/dm');
   const ndk = getNDK();
   if (!ndk.signer) throw new Error('No signer');
-
-  const { NDKEvent: NDKEventClass, NDKUser } = await import('@nostr-dev-kit/ndk');
-  const recipient = new NDKUser({ pubkey: args.recipientPubkey });
-  recipient.ndk = ndk;
+  const signer = ndk.signer;
 
   const partnerRelays = getRelays(args.myPubkey, args.recipientPubkey).result;
   const targetRelays =
@@ -440,63 +432,43 @@ export async function sendDM(args: SendDMArgs): Promise<NostrEvent> {
       : partnerRelays.readRelays;
 
   if (args.protocol === 'nip04') {
-    const ev = new NDKEventClass(ndk);
-    ev.kind = KIND_NIP04;
-    ev.tags = [['p', args.recipientPubkey]];
-    ev.content = args.content;
-    await ev.encrypt(recipient, ndk.signer, 'nip04');
-    await publishToRelays(ndk, ev, targetRelays);
-    const raw = ev.rawEvent() as NostrEvent;
-    putEvent(args.myPubkey, toCached(raw));
-    setCursor(args.myPubkey, 'nip04Out', raw.created_at);
-    return raw;
+    if (!signer.nip04Encrypt) throw new Error('Signer does not support NIP-04');
+    const ciphertext = await signer.nip04Encrypt(args.recipientPubkey, args.content);
+    const template = {
+      kind: KIND_NIP04,
+      created_at: Math.floor(Date.now() / 1000),
+      tags: [['p', args.recipientPubkey]] as string[][],
+      content: ciphertext,
+    };
+    const event = await signer.signEvent(template);
+    await publishToRelays(event, targetRelays);
+    putEvent(args.myPubkey, toCached(event));
+    setCursor(args.myPubkey, 'nip04Out', event.created_at);
+    return event;
   }
 
-  const { giftWrap } = await import('@nostr-dev-kit/ndk');
-  const rumor = new NDKEventClass(ndk);
-  rumor.kind = KIND_RUMOR;
-  rumor.content = args.content;
-  rumor.tags = [['p', args.recipientPubkey]];
-  // NDK's giftWrap hashes the rumor (kind 14) without signing it. The hash
-  // requires every field per NIP-01 — pubkey + created_at + kind + tags +
-  // content. Without these, serializeEvent throws "can't serialize event
-  // with wrong or missing properties".
-  rumor.pubkey = args.myPubkey;
-  rumor.created_at = Math.floor(Date.now() / 1000);
-
-  // NIP-17 requires TWO wraps per outbound message:
-  //   1. Wrap-for-recipient → encrypted with recipient's pubkey, published
-  //      to the recipient's kind-10050 inbox so they can decrypt.
-  //   2. Wrap-for-self → encrypted with the sender's own pubkey, published
-  //      to the sender's inbox AND cached locally so the SENDER can also
-  //      decrypt and see their own outbound. Without this, our own gift
-  //      wraps stay opaque locally (we wrapped them for the recipient, so
-  //      our signer can't unwrap them) and outgoing NIP-17 messages
-  //      vanish from our UI the moment the optimistic stub is replaced.
-  //
-  // The wraps share the same rumor (same `id`/`created_at`), so the
-  // recipient seeing the wrap and the sender seeing their self-wrap
-  // converge to the same logical message in any client.
-  const me = new NDKUser({ pubkey: args.myPubkey });
-  me.ndk = ndk;
-  const wrapForRecipient = await giftWrap(rumor, recipient, ndk.signer);
-  const wrapForSelf = await giftWrap(rumor, me, ndk.signer);
+  // NIP-17: build inner kind-14 message (unsigned), then seal+gift-wrap
+  // twice — once for recipient, once for self. Both wraps share the same
+  // inner rumor id/created_at so the recipient and the sender's own
+  // self-wrap converge to the same logical message in any client.
+  const rumor = buildChatMessage(args.myPubkey, args.recipientPubkey, args.content);
+  const wrapForRecipient = await sealAndGiftWrap(signer, args.recipientPubkey, rumor);
+  const wrapForSelf = await sealAndGiftWrap(signer, args.myPubkey, rumor);
 
   // Publish both. Recipient-wrap goes to the recipient's inbox (already
   // computed in `targetRelays`); self-wrap goes to the user's own pool
   // relays so it persists somewhere and replays on next session. Failures
   // are non-fatal — the local cache write below guarantees the message
   // shows up immediately even if the publish hasn't completed.
-  await publishToRelays(ndk, wrapForRecipient, targetRelays);
+  await publishToRelays(wrapForRecipient, targetRelays);
   const myPoolRelays = Array.from(ndk.pool?.relays?.keys?.() ?? []) as string[];
-  await publishToRelays(ndk, wrapForSelf, myPoolRelays).catch((err) => {
+  await publishToRelays(wrapForSelf, myPoolRelays).catch((err) => {
     console.warn('[dm-send] self-wrap publish failed (cache fallback in effect):', err);
   });
 
-  const rawSelf = wrapForSelf.rawEvent() as NostrEvent;
-  putEvent(args.myPubkey, toCached(rawSelf));
-  setCursor(args.myPubkey, 'nip17Wrap', rawSelf.created_at);
-  return rawSelf;
+  putEvent(args.myPubkey, toCached(wrapForSelf));
+  setCursor(args.myPubkey, 'nip17Wrap', wrapForSelf.created_at);
+  return wrapForSelf;
 }
 
 /**
@@ -511,12 +483,12 @@ export function detectNip04InRecent(messages: DMMessage[], count = 10): boolean 
   return recent.some((m) => m.protocol === 'nip04');
 }
 
-async function publishToRelays(ndk: any, event: any, relays: string[]): Promise<void> {
-  if (relays.length === 0) {
-    await event.publish();
-    return;
-  }
-  const { NDKRelaySet } = await import('@nostr-dev-kit/ndk');
-  const set = NDKRelaySet.fromRelayUrls(relays, ndk);
-  await event.publish(set);
+async function publishToRelays(event: NostrEvent, relays: string[]): Promise<void> {
+  const { getPool } = await import('@nostr-wot/data');
+  const pool = getPool();
+  // Empty relay set is a no-op publish — caller relies on local cache.
+  // Otherwise fan out via the shared pool; allSettled keeps a single
+  // dead relay from torpedoing the whole publish.
+  if (relays.length === 0) return;
+  await Promise.allSettled(pool.publish(relays, event));
 }

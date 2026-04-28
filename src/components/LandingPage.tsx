@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, type RefObject } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
-import LoginModal from '@/components/LoginModal';
+import LoginModal from '@/components/auth/SdkLoginModal';
 import ObeliskIcon from '@/components/ObeliskIcon';
 import ShootingStars from '@/components/ShootingStars';
 import FAQItem from '@/components/FAQItem';

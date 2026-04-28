@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { NDKUser } from '@nostr-dev-kit/ndk';
-import { NostrProfile, parseProfile, LoginMethod, resetUserRelays, clearSignerPayload, getNDK, onSignerChange } from '@/lib/nostr';
+import { nip19 } from 'nostr-tools';
+import { NostrProfile, NostrUser, parseProfile, LoginMethod, resetUserRelays, clearSignerPayload, setNDKSigner, onSignerChange } from '@/lib/nostr';
 import { resetAllClientState } from '@/lib/reset';
 
 // Cross-tab logout sync. When any tab calls logout(), every other tab
@@ -36,13 +36,13 @@ interface AuthState {
    * `IdentityProvider` after signer restore, and by `logout`.
    */
   signerReady: boolean;
-  user: NDKUser | null;
+  user: NostrUser | null;
   profile: NostrProfile | null;
   loginMethod: LoginMethod | null;
   error: string | null;
   _hasHydrated: boolean;
 
-  setUser: (user: NDKUser | null, method: LoginMethod | null) => void;
+  setUser: (user: NostrUser | null, method: LoginMethod | null) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   setSignerReady: (ready: boolean) => void;
@@ -112,8 +112,7 @@ export const useAuthStore = create<AuthState>()(
         resetUserRelays();
         clearSignerPayload();
         resetAllClientState();
-        const ndk = getNDK();
-        ndk.signer = undefined;
+        setNDKSigner(null);
         set({
           isConnected: false,
           signerReady: false,
@@ -207,9 +206,8 @@ export const useAuthStore = create<AuthState>()(
           if (prevPubkey && prevPubkey !== data.pubkey) {
             resetAllClientState();
           }
-          const ndk = getNDK();
-          const user = ndk.getUser({ pubkey: data.pubkey });
-          const npub = (() => { try { return user.npub; } catch { return ''; } })();
+          const npub = (() => { try { return nip19.npubEncode(data.pubkey); } catch { return ''; } })();
+          const user: NostrUser = { pubkey: data.pubkey, npub };
           set({
             isConnected: true,
             user,
@@ -279,8 +277,7 @@ if (typeof window !== 'undefined') {
       if (ev.data?.type === 'logout') {
         // Don't re-broadcast — call the inner clear sequence directly.
         // Keep this in sync with logout()'s state-clear order.
-        const ndk = getNDK();
-        try { ndk.signer = undefined; } catch { /* ignore */ }
+        try { setNDKSigner(null); } catch { /* ignore */ }
         useAuthStore.setState({
           isConnected: false,
           user: null,

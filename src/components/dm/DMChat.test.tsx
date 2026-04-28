@@ -13,8 +13,9 @@ const hoisted = vi.hoisted(() => ({
   sendDMMock: vi.fn(),
   loadHistoryMock: vi.fn(),
   subscribeLiveMock: vi.fn((_opts?: unknown) => () => {}),
-  decryptMock: vi.fn(),
-  giftUnwrapMock: vi.fn(),
+  // signer.nip04Decrypt — the new code path on the cache miss.
+  nip04DecryptMock: vi.fn(),
+  unwrapGiftWrapMock: vi.fn(),
   cachedEventsByAccount: new Map<string, any[]>(),
   secretsByAccount: new Map<string, Map<string, string>>(),
   putSecretCalls: [] as Array<{ pubkey: string; eventId: string; plaintext: string }>,
@@ -74,7 +75,20 @@ vi.mock('@/lib/dm/dm-cache', () => ({
 vi.mock('@/lib/nostr', () => ({
   formatPubkey: (pk: string) => pk.slice(0, 8) + '...',
   getNDK: () => ({
-    signer: { user: async () => ({ pubkey: 'my-pubkey' }) },
+    signer: {
+      getPublicKey: async () => 'my-pubkey',
+      // The decrypt module now calls signer.nip04Decrypt directly on
+      // cache miss. Tests stub via the hoisted mock so they can assert
+      // exactly when the signer fallback fired (and didn't fire).
+      nip04Decrypt: (...args: unknown[]) => hoisted.nip04DecryptMock(...args),
+      // KEK adapter (signer-adapters.toKEKSigner) requires nip44 methods —
+      // unwrapped events arrive at the secrets cache via NIP-44, so the
+      // provider needs at least these stubs to consider the signer
+      // adapter-compatible. Test paths never actually call them (we
+      // pre-seed the secrets-cache directly).
+      nip44Encrypt: vi.fn(),
+      nip44Decrypt: vi.fn(),
+    },
     pool: { relays: new Map([['wss://r1', {}]]) },
   }),
   connectNDK: vi.fn(),
@@ -82,29 +96,16 @@ vi.mock('@/lib/nostr', () => ({
   onSignerChange: vi.fn(() => () => {}),
 }));
 
-vi.mock('@nostr-dev-kit/ndk', () => ({
-  NDKEvent: class FakeNDKEvent {
-    id: string; kind: number; pubkey: string; content: string; tags: string[][]; created_at: number; sig: string;
-    constructor(_ndk: unknown, raw?: any) {
-      this.id = raw?.id ?? '';
-      this.kind = raw?.kind ?? 0;
-      this.pubkey = raw?.pubkey ?? '';
-      this.content = raw?.content ?? '';
-      this.tags = raw?.tags ?? [];
-      this.created_at = raw?.created_at ?? 0;
-      this.sig = raw?.sig ?? '';
-    }
-    async decrypt(...args: unknown[]) { return hoisted.decryptMock(this, ...args); }
-  },
-  NDKUser: class FakeNDKUser { pubkey: string; ndk: unknown; constructor({ pubkey }: { pubkey: string }) { this.pubkey = pubkey; } },
-  giftWrap: vi.fn(),
-  giftUnwrap: (...args: unknown[]) => hoisted.giftUnwrapMock(...args),
+vi.mock('@nostr-wot/dm', () => ({
+  unwrapGiftWrap: (...args: unknown[]) => hoisted.unwrapGiftWrapMock(...args),
+  buildChatMessage: vi.fn(),
+  sealAndGiftWrap: vi.fn(),
 }));
 
 const sendDMMock = hoisted.sendDMMock;
 const loadHistoryMock = hoisted.loadHistoryMock;
-const decryptMock = hoisted.decryptMock;
-const giftUnwrapMock = hoisted.giftUnwrapMock;
+const nip04DecryptMock = hoisted.nip04DecryptMock;
+const unwrapGiftWrapMock = hoisted.unwrapGiftWrapMock;
 const cachedEventsByAccount = hoisted.cachedEventsByAccount;
 const secretsByAccount = hoisted.secretsByAccount;
 const putSecretCalls = hoisted.putSecretCalls;
@@ -138,8 +139,8 @@ beforeEach(() => {
   sendDMMock.mockReset();
   sendDMMock.mockResolvedValue({ id: 'sent-1', created_at: 1700000000 });
   loadHistoryMock.mockReset();
-  decryptMock.mockReset();
-  giftUnwrapMock.mockReset();
+  nip04DecryptMock.mockReset();
+  unwrapGiftWrapMock.mockReset();
 });
 
 describe('DMChat', () => {
@@ -318,8 +319,8 @@ describe('DMChat viewport decryption', () => {
 
     // The signer-fallback decrypt must NOT have been called — every secret was
     // a cache hit.
-    expect(decryptMock).not.toHaveBeenCalled();
-    expect(giftUnwrapMock).not.toHaveBeenCalled();
+    expect(nip04DecryptMock).not.toHaveBeenCalled();
+    expect(unwrapGiftWrapMock).not.toHaveBeenCalled();
   });
 
   it('falls back to signer decrypt on cache miss and writes the plaintext back', async () => {
@@ -335,10 +336,8 @@ describe('DMChat viewport decryption', () => {
       sig: 'sig',
     };
     cachedEventsByAccount.set(myPubkey, [ev]);
-    // No secret pre-seeded → cache miss → signer fallback.
-    decryptMock.mockImplementation(async (target: any) => {
-      target.content = 'fresh-plaintext';
-    });
+    // No secret pre-seeded → cache miss → signer.nip04Decrypt fallback.
+    nip04DecryptMock.mockImplementation(async () => 'fresh-plaintext');
 
     useDMStore.setState({ activeDMPubkey: partner, isLoadingMessages: false, messages: [] });
     renderWithSession(<DMChat profileCache={profileCache} />);

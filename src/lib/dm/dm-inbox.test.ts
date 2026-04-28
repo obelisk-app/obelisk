@@ -1,30 +1,37 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const mockPublish = vi.fn().mockResolvedValue(undefined);
+const mockPublish = vi.fn().mockReturnValue([Promise.resolve()]);
 const relayMap = new Map<string, unknown>();
+
+vi.mock('@nostr-wot/data', () => ({
+  getPool: () => ({ publish: mockPublish }),
+}));
+
+const mockSignEvent = vi.fn();
 
 vi.mock('@/lib/nostr', () => ({
   getNDK: () => ({
-    signer: { sign: vi.fn() },
+    signer: {
+      getPublicKey: async () => 'me',
+      signEvent: mockSignEvent,
+    },
     pool: { relays: relayMap },
   }),
 }));
-
-vi.mock('@nostr-dev-kit/ndk', () => {
-  const NDKEvent = vi.fn().mockImplementation(function (this: Record<string, unknown>) {
-    this.kind = 0;
-    this.tags = [] as string[][];
-    this.content = '';
-    this.publish = mockPublish;
-  });
-  return { NDKEvent };
-});
 
 const ME = 'a'.repeat(64);
 
 describe('publishInboxRelays', () => {
   beforeEach(() => {
     mockPublish.mockClear();
+    mockPublish.mockReturnValue([Promise.resolve()]);
+    mockSignEvent.mockReset();
+    mockSignEvent.mockImplementation(async (template) => ({
+      ...template,
+      pubkey: ME,
+      id: 'evid',
+      sig: 'sig',
+    }));
     relayMap.clear();
     relayMap.set('wss://relay.damus.io', {});
     relayMap.set('wss://nos.lol', {});
@@ -34,16 +41,16 @@ describe('publishInboxRelays', () => {
     const { publishInboxRelays } = await import('./dm-inbox');
     const result = await publishInboxRelays(ME);
     expect(result).toBe(true);
-    expect(mockPublish).toHaveBeenCalledOnce();
+    expect(mockSignEvent).toHaveBeenCalledOnce();
 
-    const { NDKEvent } = await import('@nostr-dev-kit/ndk');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const instance: any = (NDKEvent as unknown as { mock: any }).mock.instances.at(-1);
-    expect(instance.kind).toBe(10050);
-    expect(instance.tags).toEqual([
+    // The signed template should be kind 10050 with relay tags.
+    const template = mockSignEvent.mock.calls[0][0];
+    expect(template.kind).toBe(10050);
+    expect(template.tags).toEqual([
       ['relay', 'wss://relay.damus.io'],
       ['relay', 'wss://nos.lol'],
     ]);
+    expect(mockPublish).toHaveBeenCalledOnce();
   });
 
   it('returns false if no signer', async () => {
@@ -59,7 +66,7 @@ describe('publishInboxRelays', () => {
 });
 
 describe('listConnectedRelayUrls', () => {
-  it('extracts wss:// urls from the NDK pool relays map', async () => {
+  it('extracts wss:// urls from the pool relays map', async () => {
     const { listConnectedRelayUrls } = await import('./dm-inbox');
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const ndk: any = {

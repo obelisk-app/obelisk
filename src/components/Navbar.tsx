@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth';
 import { useTranslation } from '@/i18n/context';
-import LoginModal from './LoginModal';
+import LoginModal from './auth/SdkLoginModal';
 import ObeliskIcon from './ObeliskIcon';
 import LanguageToggle from './LanguageToggle';
 import { guidesHref } from '@/lib/guide-urls';

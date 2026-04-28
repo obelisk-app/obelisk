@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth';
-import LoginModal from '@/components/LoginModal';
+import LoginModal from '@/components/auth/SdkLoginModal';
 import ShootingStars from '@/components/ShootingStars';
 
 interface ServerInfo {

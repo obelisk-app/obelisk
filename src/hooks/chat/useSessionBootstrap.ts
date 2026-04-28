@@ -85,9 +85,9 @@ export function useSessionBootstrap(router: Router) {
         const attachIfReady = (): boolean => {
           if (ndk.signer) return true;
           if (typeof window === 'undefined' || !window.nostr) return false;
-          void import('@nostr-dev-kit/ndk').then(({ NDKNip07Signer }) => {
+          void import('@nostr-wot/signers').then(({ Nip07Signer }) => {
             if (!ndk.signer && window.nostr) {
-              setNDKSigner(new NDKNip07Signer(4000, ndk));
+              setNDKSigner(new Nip07Signer());
             }
           });
           return true;

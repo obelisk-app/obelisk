@@ -6,7 +6,8 @@ import { LocaleProvider } from '@/i18n/context';
 import type { Locale } from '@/i18n/index';
 import ToastStack from '@/components/ToastStack';
 import { NostrSessionProvider } from '@nostr-wot/ui';
-import { SdkSessionBridge } from '@/components/auth/SdkSessionBridge';
+import { obeliskSdkSignerStorage } from '@/lib/auth/sdk-signer-storage';
+import '@nostr-wot/ui/styles.css';
 import './globals.css';
 
 const inter = Inter({
@@ -178,8 +179,11 @@ export default async function RootLayout({
       </head>
       <body className={`${inter.className} bg-lc-black text-lc-white antialiased`}>
         <LocaleProvider initialLocale={locale}>
-          <NostrSessionProvider autoRestore={false}>
-            <SdkSessionBridge />
+          <NostrSessionProvider
+            autoRestore={false}
+            signerStorage={obeliskSdkSignerStorage}
+            theme="dark"
+          >
             {children}
             <ToastStack />
           </NostrSessionProvider>

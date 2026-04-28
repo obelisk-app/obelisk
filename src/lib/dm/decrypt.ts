@@ -55,27 +55,18 @@ export async function decryptToEnvelope(
 
   if (ev.kind === 4) {
     try {
-      const { NDKEvent: NDKEventClass, NDKUser } = await import('@nostr-dev-kit/ndk');
+      if (!ndk.signer.nip04Decrypt) return null;
       const counter = partnerOfNip04(ev, myPubkey);
       if (!counter) return null;
-      const senderPk = ev.pubkey === myPubkey ? counter : ev.pubkey;
-      const otherUser = new NDKUser({ pubkey: senderPk });
-      otherUser.ndk = ndk;
-      const target = new NDKEventClass(ndk, {
-        id: ev.id,
-        pubkey: ev.pubkey,
-        kind: 4,
-        content: ev.content,
-        tags: ev.tags,
-        created_at: ev.created_at,
-        sig: ev.sig ?? '',
-      } as never);
-      await target.decrypt(otherUser, ndk.signer, 'nip04');
+      // The other party is whichever side of the conversation isn't us —
+      // sender pubkey for inbound, the `p` tag for outbound.
+      const otherPk = ev.pubkey === myPubkey ? counter : ev.pubkey;
+      const plaintext = await ndk.signer.nip04Decrypt(otherPk, ev.content);
       const pTag = ev.tags.find((t) => t[0] === 'p');
       const env: SecretEnvelope = {
         senderPubkey: ev.pubkey,
         recipientPubkey: pTag?.[1] ?? '',
-        content: target.content,
+        content: plaintext,
         createdAt: ev.created_at,
         protocol: 'nip04',
       };
@@ -88,27 +79,21 @@ export async function decryptToEnvelope(
 
   if (ev.kind === 1059) {
     try {
-      const { NDKEvent: NDKEventClass, giftUnwrap } = await import('@nostr-dev-kit/ndk');
-      const wrap = new NDKEventClass(ndk, {
+      const { unwrapGiftWrap } = await import('@nostr-wot/dm');
+      const wrap = {
         id: ev.id,
         pubkey: ev.pubkey,
-        kind: 1059,
+        kind: 1059 as const,
         content: ev.content,
         tags: ev.tags,
         created_at: ev.created_at,
         sig: ev.sig ?? '',
-      } as never);
-      const rumor = await giftUnwrap(wrap, undefined, ndk.signer) as {
-        kind: number;
-        pubkey: string;
-        tags: string[][];
-        content: string;
-        created_at?: number;
       };
+      const { message: rumor, senderPubkey } = await unwrapGiftWrap(ndk.signer, wrap);
       if (rumor.kind !== 14) return null;
-      const recipientTag = rumor.tags.find((t) => t[0] === 'p');
+      const recipientTag = (rumor.tags as string[][]).find((t) => t[0] === 'p');
       const env: SecretEnvelope = {
-        senderPubkey: rumor.pubkey,
+        senderPubkey,
         recipientPubkey: recipientTag?.[1] ?? '',
         content: rumor.content,
         createdAt: rumor.created_at ?? ev.created_at,

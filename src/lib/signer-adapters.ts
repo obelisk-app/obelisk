@@ -1,116 +1,89 @@
 // src/lib/signer-adapters.ts
-// Single home for adapters that wrap an NDK signer in the smaller
+// Adapters that wrap a `@nostr-wot/signers` `NostrSigner` in the smaller
 // interfaces individual consumers care about. Centralising here:
 //   - removes duplicated inline adapters (e.g. zap-request signing was
 //     copy-pasted in MessageInput + ZapPickerModal),
-//   - replaces ad-hoc `as KEKSigner` casts that hid real type errors
-//     (WalletPanel was passing a KEKSigner where a Nip98Signer was
-//     expected — silently broken at runtime),
-//   - gives every consumer one place to look when wiring a new flow.
+//   - keeps each consumer's type narrow (KEKSigner vs Nip98Signer vs
+//     ZapRequestSigner) so accidental misuse surfaces at compile time.
+//
+// All three adapters delegate directly to the underlying NostrSigner —
+// the SDK signer already returns finalized `nostr-tools` events from
+// `signEvent`, so the wrappers are essentially just type narrowing
+// today. They remain as functions (rather than passing the raw signer
+// through) so we have a single hook for any future precondition or
+// telemetry layer.
 
-import type NDK from '@nostr-dev-kit/ndk';
-import { type NDKSigner, NDKUser, NDKEvent } from '@nostr-dev-kit/ndk';
+import type { NostrSigner } from '@nostr-wot/signers';
 import type { KEKSigner } from '@/lib/dm/cache-key';
 import type { Nip98Signer, Nip98EventTemplate, Nip98SignedEvent } from '@/lib/nip98';
 import type { ZapRequestSigner, ZapRequestTemplate, ZapRequestSignedEvent } from '@/lib/wallet/zap-request';
 
-interface MaybeNip44Methods {
-  nip44Encrypt?: (recipientPubkey: string, plaintext: string) => Promise<string>;
-  nip44Decrypt?: (senderPubkey: string, ciphertext: string) => Promise<string>;
-}
-
 /**
- * NDK signer → KEKSigner. Used by the DM cache key + the wallet
- * local-store. Browser extensions that already expose nip44Encrypt/Decrypt
- * directly bypass NDK's encrypt() wrapper.
+ * NostrSigner → KEKSigner. Used by the DM cache key + the wallet
+ * local-store. NIP-44 is required; signers without nip44Encrypt/Decrypt
+ * (e.g. NIP-46 bunkers that haven't negotiated NIP-44 perms) cannot be
+ * adapted — caller should detect and error out before reaching the
+ * wallet/DM flows.
  */
 export function toKEKSigner(
-  ndk: NDK,
-  ndkSigner: NDKSigner | null | undefined,
+  _ndkUnused: unknown,
+  signer: NostrSigner | null | undefined,
   pubkey: string,
 ): KEKSigner | null {
-  if (!ndkSigner) return null;
-  const direct = ndkSigner as unknown as MaybeNip44Methods;
-  const hasDirect =
-    typeof direct.nip44Encrypt === 'function' &&
-    typeof direct.nip44Decrypt === 'function';
-
+  if (!signer) return null;
+  if (typeof signer.nip44Encrypt !== 'function' || typeof signer.nip44Decrypt !== 'function') {
+    return null;
+  }
   return {
     pubkey,
-    nip44Encrypt: async (recipientPubkey, plaintext) => {
-      if (hasDirect) return direct.nip44Encrypt!(recipientPubkey, plaintext);
-      const user = new NDKUser({ pubkey: recipientPubkey });
-      user.ndk = ndk;
-      return ndkSigner.encrypt(user, plaintext, 'nip44');
-    },
-    nip44Decrypt: async (senderPubkey, ciphertext) => {
-      if (hasDirect) return direct.nip44Decrypt!(senderPubkey, ciphertext);
-      const user = new NDKUser({ pubkey: senderPubkey });
-      user.ndk = ndk;
-      return ndkSigner.decrypt(user, ciphertext, 'nip44');
-    },
+    nip44Encrypt: (recipientPubkey, plaintext) => signer.nip44Encrypt!(recipientPubkey, plaintext),
+    nip44Decrypt: (senderPubkey, ciphertext) => signer.nip44Decrypt!(senderPubkey, ciphertext),
   };
 }
 
 /**
- * NDK signer → Nip98Signer. Used by the wallet provisioning flow against
- * zaps.nostr-wot.com (NIP-98 kind 27235 HTTP auth). Wraps NDK's signEvent
- * because the underlying signer expects an NDKEvent, not a raw template.
+ * NostrSigner → Nip98Signer. Used by the wallet provisioning flow against
+ * zaps.nostr-wot.com (NIP-98 kind 27235 HTTP auth).
  */
 export function toNip98Signer(
-  ndk: NDK,
-  ndkSigner: NDKSigner | null | undefined,
+  _ndkUnused: unknown,
+  signer: NostrSigner | null | undefined,
 ): Nip98Signer | null {
-  if (!ndkSigner) return null;
+  if (!signer) return null;
   return {
-    getPublicKey: async () => {
-      const user = await ndkSigner.user();
-      return user.pubkey;
-    },
+    getPublicKey: () => signer.getPublicKey(),
     signEvent: async (template: Nip98EventTemplate): Promise<Nip98SignedEvent> => {
-      const e = new NDKEvent(ndk, {
-        kind: template.kind,
-        created_at: template.created_at,
-        tags: template.tags,
-        content: template.content,
-      } as never);
-      await e.sign(ndkSigner);
+      const event = await signer.signEvent(template);
       return {
         ...template,
-        pubkey: e.pubkey,
-        id: e.id!,
-        sig: e.sig!,
+        pubkey: event.pubkey,
+        id: event.id,
+        sig: event.sig,
       };
     },
   };
 }
 
 /**
- * NDK signer → ZapRequestSigner (NIP-57 kind 9734). Same shape as the
+ * NostrSigner → ZapRequestSigner (NIP-57 kind 9734). Same shape as the
  * Nip98 adapter — the difference is only the kind being signed; we keep
  * them as separate functions so callers' types stay narrow and a future
  * change (e.g. adding a "this looks like a zap request" precondition)
  * lands in one place.
  */
 export function toZapRequestSigner(
-  ndk: NDK,
-  ndkSigner: NDKSigner | null | undefined,
+  _ndkUnused: unknown,
+  signer: NostrSigner | null | undefined,
 ): ZapRequestSigner | null {
-  if (!ndkSigner) return null;
+  if (!signer) return null;
   return {
     signEvent: async (template: ZapRequestTemplate): Promise<ZapRequestSignedEvent> => {
-      const e = new NDKEvent(ndk, {
-        kind: template.kind,
-        created_at: template.created_at,
-        tags: template.tags,
-        content: template.content,
-      } as never);
-      await e.sign(ndkSigner);
+      const event = await signer.signEvent(template);
       return {
         ...template,
-        pubkey: e.pubkey,
-        id: e.id!,
-        sig: e.sig!,
+        pubkey: event.pubkey,
+        id: event.id,
+        sig: event.sig,
       };
     },
   };

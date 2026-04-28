@@ -9,6 +9,8 @@
  * (e.g. once per DM-session bootstrap, or on signer-attach).
  */
 
+import { getPool } from '@nostr-wot/data';
+import type { EventTemplate } from 'nostr-tools';
 import { getNDK } from '@/lib/nostr';
 import { KIND_DM_INBOX_RELAYS } from '@/lib/nip-kinds';
 
@@ -22,13 +24,16 @@ export async function publishInboxRelays(_myPubkey: string): Promise<boolean> {
   if (!ndk.signer) return false;
 
   try {
-    const { NDKEvent } = await import('@nostr-dev-kit/ndk');
-    const event = new NDKEvent(ndk);
-    event.kind = KIND_DM_INBOX_RELAYS;
-    event.content = '';
     const relayUrls = listConnectedRelayUrls(ndk);
-    event.tags = relayUrls.map((url) => ['relay', url]);
-    await event.publish();
+    const template: EventTemplate = {
+      kind: KIND_DM_INBOX_RELAYS,
+      created_at: Math.floor(Date.now() / 1000),
+      tags: relayUrls.map((url) => ['relay', url]),
+      content: '',
+    };
+    const event = await ndk.signer.signEvent(template);
+    const pool = getPool();
+    await Promise.allSettled(pool.publish(relayUrls, event));
     return true;
   } catch (err) {
     console.warn('[dm-inbox] publishInboxRelays failed:', err);
@@ -37,8 +42,8 @@ export async function publishInboxRelays(_myPubkey: string): Promise<boolean> {
 }
 
 /**
- * Read the relay URLs currently registered on the NDK pool. Isolated so
- * tests can stub it without mocking the whole NDK event machinery.
+ * Read the relay URLs currently registered on the pool. Isolated so
+ * tests can stub it without mocking the whole event machinery.
  */
 export function listConnectedRelayUrls(ndk: ReturnType<typeof getNDK>): string[] {
   const urls = new Set<string>();
