@@ -14,7 +14,7 @@ import type { NostrSigner } from '@nostr-wot/signers';
 
 type Args = {
   isDMMode: boolean;
-  ndkReady: boolean;
+  signerReady: boolean;
   profilePubkey: string | undefined;
   profileCache: Map<string, { name?: string; picture?: string }>;
 };
@@ -124,7 +124,7 @@ function computeUnreadCountsFromCache(
  * which decrypts on viewport and stashes plaintext envelopes in the secrets
  * cache; the threads list backfills as users open conversations.
  */
-export function useDMLifecycle({ isDMMode, ndkReady, profilePubkey, profileCache }: Args) {
+export function useDMLifecycle({ isDMMode, signerReady, profilePubkey, profileCache }: Args) {
   // Guard rail: only publish the inbox relay list once per DM-mode entry per
   // session. Cleared whenever the active pubkey changes (login switch).
   const inboxPublishedRef = useRef(false);
@@ -191,12 +191,12 @@ export function useDMLifecycle({ isDMMode, ndkReady, profilePubkey, profileCache
   // event to learn which relays to send gift-wrapped DMs to.
   useEffect(() => {
     if (!DM_FEATURE_ENABLED) return;
-    if (!isDMMode || !ndkReady || !profilePubkey) return;
+    if (!isDMMode || !signerReady || !profilePubkey) return;
     if (inboxPublishedRef.current) return;
     if (!signer) return;
     inboxPublishedRef.current = true;
     void publishInboxRelays(signer, getExplicitRelays());
-  }, [isDMMode, ndkReady, profilePubkey, signer]);
+  }, [isDMMode, signerReady, profilePubkey, signer]);
 
   // Reset session guards whenever the active account changes.
   useEffect(() => {
@@ -213,7 +213,7 @@ export function useDMLifecycle({ isDMMode, ndkReady, profilePubkey, profileCache
   // window) into a single re-render.
   useEffect(() => {
     if (!DM_FEATURE_ENABLED) return;
-    if (!isDMMode || !ndkReady || !profilePubkey) return;
+    if (!isDMMode || !signerReady || !profilePubkey) return;
 
     // Only show the spinner if there's truly nothing cached. With cache
     // present we paint the cached threads first and update silently.
@@ -232,7 +232,7 @@ export function useDMLifecycle({ isDMMode, ndkReady, profilePubkey, profileCache
       if (debounce) clearTimeout(debounce);
       unsub();
     };
-  }, [isDMMode, ndkReady, profilePubkey, refreshThreads]);
+  }, [isDMMode, signerReady, profilePubkey, refreshThreads]);
 
   // Historical inbox walker. On first DM-mode entry, fetch the last ~30
   // days. If we still don't have ENOUGH_PARTNERS in the inbox, extend the
@@ -241,7 +241,7 @@ export function useDMLifecycle({ isDMMode, ndkReady, profilePubkey, profileCache
   // Runs ONCE per pubkey per session (subsequent entries just live-tail).
   useEffect(() => {
     if (!DM_FEATURE_ENABLED) return;
-    if (!isDMMode || !ndkReady || !profilePubkey) return;
+    if (!isDMMode || !signerReady || !profilePubkey) return;
     if (inboxWalkedRef.current === profilePubkey) return;
     inboxWalkedRef.current = profilePubkey;
 
@@ -331,7 +331,7 @@ export function useDMLifecycle({ isDMMode, ndkReady, profilePubkey, profileCache
         until -= WINDOW_SEC;
       }
     })();
-  }, [isDMMode, ndkReady, profilePubkey, refreshThreads]);
+  }, [isDMMode, signerReady, profilePubkey, refreshThreads]);
 
   return { runDMDiscovery: refreshThreads };
 }

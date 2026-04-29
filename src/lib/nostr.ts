@@ -207,7 +207,7 @@ export function parseProfile(user: NostrUser | { pubkey: string; profile?: Recor
  *
  * The caller is responsible for activating the signer via the SDK's
  * `login()` hook (from `@nostr-wot/data/react`). This function intentionally
- * does NOT call `setNDKSigner` — signer lifecycle is now owned by
+ * signer lifecycle is owned by
  * `NostrSessionProvider`.
  */
 export async function restoreRemoteSigner(): Promise<NostrSigner | null> {

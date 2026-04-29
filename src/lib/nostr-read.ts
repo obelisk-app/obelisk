@@ -1,12 +1,10 @@
 /**
  * Browser-side Nostr read helpers built on the shared request coalescer.
  *
- * Replaces the `ndk.fetchEvent` / `ndk.fetchEvents` paths in non-DM consumers
- * (profiles, follows, follower lists, user notes, debug tools). NDK is still
- * used for everything that needs a signer — login, signing, encrypting,
- * publishing — but read-path traffic now flows through `sharedCoalescer`
- * so calls from different modules within a 50ms window are merged into a
- * single REQ per relay-set.
+ * Used by non-DM consumers (profiles, follows, follower lists, user notes,
+ * debug tools). Read-path traffic flows through `sharedCoalescer` so calls
+ * from different modules within a 50ms window are merged into a single REQ
+ * per relay-set.
  *
  * All helpers verify signatures before surfacing events. Time-bounded so the
  * UI never blocks on a slow relay.

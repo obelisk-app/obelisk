@@ -14,7 +14,7 @@ type Router = ReturnType<typeof useRouter>;
  * Bundles the three mount-time auth effects:
  *   1. Validate the backend session (with a ref guard so it only runs once).
  *   2. Surface a "session expired" state if the user disconnects mid-session.
- *   3. Restore the NDK connection + signer in the background.
+ *   3. Restore the signer from storage in the background.
  *
  * (A `<IdentityProvider>` component used to exist as an alternative
  * orchestration layer but was never mounted in the app and has been
@@ -26,7 +26,7 @@ export function useSessionBootstrap(router: Router) {
   const [sessionChecked, setSessionChecked] = useState(false);
   const [sessionInvalid, setSessionInvalid] = useState(false);
   const sessionCheckStarted = useRef(false);
-  const [ndkReady, setNdkReady] = useState(false);
+  const [signerReady, setSignerReady] = useState(false);
   const signer = useSigner();
   const signerRef = useRef(signer);
   signerRef.current = signer;
@@ -54,14 +54,13 @@ export function useSessionBootstrap(router: Router) {
         setSessionInvalid(true);
         return;
       }
-      // Let the page render immediately — NDK connects in background
       setSessionChecked(true);
     });
   }, [restoreSession, router]);
 
   // Restore signer in the background. CRITICAL: the signer doesn't need any
   // relays to attach; treat signer attachment as independent from relay pool
-  // setup. We flip `ndkReady` based on the signer path so the DM UI unblocks
+  // setup. We flip `signerReady` based on the signer path so the DM UI unblocks
   // as soon as the signer is ready.
   useEffect(() => {
     if (!sessionChecked) return;
@@ -129,7 +128,7 @@ export function useSessionBootstrap(router: Router) {
           }
         }
       }
-      if (!cancelled) setNdkReady(true);
+      if (!cancelled) setSignerReady(true);
     })();
 
     return () => { cancelled = true; };
@@ -138,7 +137,7 @@ export function useSessionBootstrap(router: Router) {
   return {
     sessionChecked,
     sessionInvalid,
-    ndkReady,
+    signerReady,
     setSessionChecked,
     setSessionInvalid,
     sessionCheckStartedRef: sessionCheckStarted,

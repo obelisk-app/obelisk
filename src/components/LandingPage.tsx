@@ -140,7 +140,7 @@ const ROADMAP_PHASES = [
 
 const TECH_STACK: { name: string; desc: string; color: string; icon?: string; img?: string; href: string }[] = [
   { name: 'Next.js 16', desc: 'React framework', color: 'text-white', icon: '▲', href: 'https://nextjs.org' },
-  { name: 'Nostr (NDK)', desc: 'Identity & auth', color: 'text-purple-400', icon: '⚡', href: 'https://github.com/nostr-dev-kit/ndk' },
+  { name: 'Nostr', desc: 'Identity & auth', color: 'text-purple-400', icon: '⚡', href: 'https://nostr.com' },
   { name: 'Nostr WoT', desc: 'Web of Trust spam filter', color: 'text-indigo-400', img: '/nostr-wot-logo.png', href: 'https://nostr-wot.com' },
   { name: 'Socket.io', desc: 'Real-time messaging & voice relay', color: 'text-yellow-400', icon: '⇌', href: 'https://socket.io' },
   { name: 'PostgreSQL', desc: 'Database', color: 'text-emerald-400', icon: '◆', href: 'https://www.postgresql.org' },

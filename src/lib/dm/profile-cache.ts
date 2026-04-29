@@ -3,20 +3,6 @@ import { getExplicitRelays } from '@/lib/nostr';
 import { createKeyedObservable, type Slot } from '@/lib/nostr-store';
 import { subscribeReplaceable } from '@/lib/nostr-resource';
 
-/**
- * Pull whatever relays the pool currently tracks.
- *
- * Returns `[]` server-side.
- */
-function ndkPoolRelays(): string[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    return getExplicitRelays();
-  } catch {
-    return [];
-  }
-}
-
 export interface ProfileEntry {
   event: NostrEvent;
   parsed: {
@@ -145,7 +131,7 @@ export function subscribeProfile(
 
   const relays = Array.from(new Set([
     ...PROFILE_AGGREGATORS,
-    ...ndkPoolRelays(),
+    ...getExplicitRelays(),
     ...dynamicRelays,
     ...extraRelays,
   ]));

@@ -42,7 +42,7 @@ export function isUserWatchingDM(targetPubkey: string): boolean {
 }
 
 /**
- * Handle an incoming DM from the NDK subscription.
+ * Handle an incoming DM event.
  *
  * Bridges the DM store increment into the notification store so the favicon
  * + title unread total (`useFaviconBadge`) reflects DMs. Without this, DMs

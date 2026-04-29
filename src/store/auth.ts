@@ -11,7 +11,7 @@ import { resetAllClientState } from '@/lib/reset';
 //
 // We deliberately do NOT broadcast login — login establishes the session
 // cookie which all tabs share, but driving signer restore from a sibling
-// tab's broadcast risks racing tab-local NDK setup.
+// tab's broadcast risks racing tab-local signer setup.
 const AUTH_CHANNEL = 'obelisk:auth';
 const BROADCAST_LOGOUT = { type: 'logout' as const };
 
@@ -28,7 +28,7 @@ interface AuthState {
   isLoading: boolean;
   isSyncing: boolean;
   /**
-   * Reactive shadow of `getNDK().signer != null`. The NDK singleton's
+   * Reactive: true when a signer is attached to the session.
    * `signer` is a plain JS module property — mutating it doesn't trigger
    * React updates. Components that gate UI on signer presence (DMList's
    * "New DM" button, anywhere we need to publish/encrypt) read this

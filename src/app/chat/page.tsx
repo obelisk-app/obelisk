@@ -242,7 +242,7 @@ export default function ChatPage() {
   const {
     sessionChecked,
     sessionInvalid,
-    ndkReady,
+    signerReady,
     setSessionChecked,
     setSessionInvalid,
     sessionCheckStartedRef,
@@ -312,7 +312,7 @@ export default function ChatPage() {
 
   useDMLifecycle({
     isDMMode,
-    ndkReady,
+    signerReady,
     profilePubkey: profile?.pubkey,
     profileCache,
   });

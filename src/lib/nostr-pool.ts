@@ -1,5 +1,5 @@
 /**
- * Browser-side Nostr read primitives. Foundation for the migration off NDK
+ * Browser-side Nostr read pool
  * for read-path traffic — DM modules and non-DM consumers (profile reads,
  * follows, follower lists, user notes) all share this pool + verifier.
  *

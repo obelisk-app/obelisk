@@ -67,9 +67,7 @@ function parseKind0Content(content: string): Partial<NostrProfile> | null {
 /**
  * Fetch a profile from Nostr relays via a direct kind:0 query.
  *
- * Uses nostr-tools `SimplePool.querySync` rather than NDK because NDK's
- * server-side relay path is broken (its `connect()` promise never resolves
- * and `fetchEvents` hangs in Node).
+ * Uses nostr-tools `SimplePool.querySync` for the server-side relay query.
  *
  * Return values:
  *   - `null`             — transport failure (timeout, no relays connected). Caller should retry later.
