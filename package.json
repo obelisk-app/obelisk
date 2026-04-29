@@ -25,7 +25,7 @@
     "@nostr-wot/data": "^0.4.1",
     "@nostr-wot/dm": "^0.4.1",
     "@nostr-wot/signers": "^0.4.0",
-    "@nostr-wot/ui": "^0.5.0",
+    "@nostr-wot/ui": "^0.5.2",
     "@nostr-wot/wallet": "^0.1.1",
     "@prisma/adapter-pg": "^7.7.0",
     "@prisma/client": "^7.7.0",
