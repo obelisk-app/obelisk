@@ -29,6 +29,7 @@ import {
 } from 'nostr-tools';
 import { hexToBytes, bytesToHex } from 'nostr-tools/utils';
 import { encryptPayload, decryptPayload, clearWrapKey } from './signer-payload-crypto';
+import { getNostrPool } from './nostr-pool';
 import {
   fetchKind0,
   fetchFollowers as readFollowers,
@@ -229,6 +230,7 @@ export async function restoreRemoteSigner(): Promise<NostrSigner | null> {
     const localSecret = hexToBytes(payload.localPrivkey);
     return await Nip46Signer.fromBunkerUri(payload.bunkerUrl, {
       clientSecretKey: localSecret,
+      pool: getNostrPool() as never,
     });
   } catch (err) {
     console.warn('[nostr] restoreRemoteSigner failed:', err);

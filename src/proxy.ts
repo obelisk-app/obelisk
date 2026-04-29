@@ -33,7 +33,7 @@ export function proxy(request: NextRequest) {
     `script-src 'self' 'wasm-unsafe-eval'${evalSrc} 'nonce-${nonce}' https://www.googletagmanager.com`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https:",
-    "connect-src 'self' wss: https: https://www.google-analytics.com https://www.googletagmanager.com",
+    `connect-src 'self' wss:${isDev ? ' ws:' : ''} https: https://www.google-analytics.com https://www.googletagmanager.com`,
     "font-src 'self' data:",
     "frame-ancestors 'none'",
     "object-src 'none'",

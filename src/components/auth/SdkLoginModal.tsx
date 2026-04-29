@@ -13,6 +13,7 @@ import { useLogin } from '@nostr-wot/data/react';
 import { useAuthStore } from '@/store/auth';
 import { authenticateWithBackend } from '@/lib/backend-auth';
 import { getExplicitRelays, type LoginMethod } from '@/lib/nostr';
+import { getNostrPool } from '@/lib/nostr-pool';
 import ProfileEditor from '@/components/ProfileEditor';
 
 const AUTH_IN_PROGRESS_KEY = 'obelisk-auth-in-progress';
@@ -90,6 +91,7 @@ export default function LoginModal({
           relays,
           metadata: { name: 'Obelisk', url: 'https://obelisk.ar' },
           onAuthChallenge: (url) => setAuthChallengeUrl(url),
+          pool: getNostrPool() as never,
         });
 
         handleRef.current = { cancel: handle.cancel };
@@ -209,6 +211,7 @@ export default function LoginModal({
           signer = await Nip46Signer.fromBunkerUri(bunkerInput.trim(), {
             relays,
             onAuthChallenge: (url) => setAuthChallengeUrl(url),
+            pool: getNostrPool() as never,
           });
           break;
         }
