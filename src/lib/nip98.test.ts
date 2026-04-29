@@ -1,7 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { buildNip98Event, type Nip98Signer } from './nip98';
+import type { NostrSigner } from '@nostr-wot/signers';
+import { buildNip98Event } from './nip98';
 
-const fakeSigner: Nip98Signer = {
+const fakeSigner: NostrSigner = {
   getPublicKey: vi.fn().mockResolvedValue('npub_pub'),
   signEvent: vi.fn().mockImplementation(async (template) => ({
     ...template,

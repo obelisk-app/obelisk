@@ -5,22 +5,8 @@
 // is the proof of payment used by the recipient's client to validate
 // incoming zaps without trusting any server.
 
-export interface ZapRequestTemplate {
-  kind: 9734;
-  created_at: number;
-  tags: string[][];
-  content: string;
-}
-
-export interface ZapRequestSignedEvent extends ZapRequestTemplate {
-  pubkey: string;
-  id: string;
-  sig: string;
-}
-
-export interface ZapRequestSigner {
-  signEvent(template: ZapRequestTemplate): Promise<ZapRequestSignedEvent>;
-}
+import type { NostrSigner } from '@nostr-wot/signers';
+import type { Event as NostrEvent } from 'nostr-tools';
 
 export interface ZapRequestParams {
   recipientPubkey: string;
@@ -33,9 +19,9 @@ export interface ZapRequestParams {
 }
 
 export async function buildZapRequest(
-  signer: ZapRequestSigner,
+  signer: NostrSigner,
   params: ZapRequestParams,
-): Promise<ZapRequestSignedEvent> {
+): Promise<NostrEvent> {
   if (params.amountMsat <= 0) throw new Error('amountMsat must be positive');
   if (!params.relays || params.relays.length === 0) throw new Error('relays must not be empty (NIP-57 requires at least one relay)');
 
@@ -46,11 +32,10 @@ export async function buildZapRequest(
   ];
   if (params.messageId) tags.push(['e', params.messageId]);
 
-  const template: ZapRequestTemplate = {
+  return signer.signEvent({
     kind: 9734,
     created_at: Math.floor(Date.now() / 1000),
     tags,
     content: params.comment ?? '',
-  };
-  return signer.signEvent(template);
+  });
 }

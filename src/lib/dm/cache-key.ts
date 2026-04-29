@@ -6,11 +6,8 @@
  * encrypt/decrypt helpers but cannot exfiltrate the raw bytes.
  */
 
-export interface KEKSigner {
-  pubkey: string;
-  nip44Encrypt(recipientPubkey: string, plaintext: string): Promise<string>;
-  nip44Decrypt(senderPubkey: string, ciphertext: string): Promise<string>;
-}
+import type { KEKSigner } from '@nostr-wot/data/react';
+export type { KEKSigner };
 
 const KEY_PREFIX = 'obelisk:dm-cache-key:';
 

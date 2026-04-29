@@ -8,7 +8,8 @@
 // development against an http://localhost provisioning proxy or a
 // self-hosted instance.
 
-import { buildNip98Event, type Nip98Signer } from '../nip98';
+import { buildNip98Event } from '../nip98';
+import type { NostrSigner } from '@nostr-wot/signers';
 
 export const PROVISION_URL =
   process.env.NEXT_PUBLIC_NOSTR_WOT_PROVISION_URL?.replace(/\/+$/, '') ||
@@ -28,7 +29,7 @@ async function getChallenge(): Promise<string> {
 }
 
 async function authedPost(
-  signer: Nip98Signer,
+  signer: NostrSigner,
   endpoint: string,
   extraBody: Record<string, unknown> = {},
 ): Promise<unknown> {
@@ -48,7 +49,7 @@ async function authedPost(
   return res.json();
 }
 
-export async function provisionWallet(signer: Nip98Signer): Promise<ProvisionResult> {
+export async function provisionWallet(signer: NostrSigner): Promise<ProvisionResult> {
   const npub = await signer.getPublicKey();
   const walletName = `WoT:${npub.slice(0, 16)}`;
   const data = (await authedPost(signer, '/api/provision', { name: walletName })) as {
@@ -63,7 +64,7 @@ export async function provisionWallet(signer: Nip98Signer): Promise<ProvisionRes
 }
 
 export async function claimLightningAddress(
-  signer: Nip98Signer,
+  signer: NostrSigner,
   username: string,
 ): Promise<{ address: string }> {
   return authedPost(signer, '/api/claim-username', { username }) as Promise<{ address: string }>;
@@ -76,6 +77,6 @@ export async function getLightningAddress(pubkey: string): Promise<string | null
   return body.address;
 }
 
-export async function releaseLightningAddress(signer: Nip98Signer): Promise<void> {
+export async function releaseLightningAddress(signer: NostrSigner): Promise<void> {
   await authedPost(signer, '/api/release-username');
 }

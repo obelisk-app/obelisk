@@ -3,6 +3,8 @@
 // provisioning flow against zaps.nostr-wot.com — the server-side proxy
 // verifies the signature before creating wallets / claiming addresses.
 
+import type { NostrSigner } from '@nostr-wot/signers';
+
 export interface Nip98EventTemplate {
   kind: 27235;
   created_at: number;
@@ -16,13 +18,8 @@ export interface Nip98SignedEvent extends Nip98EventTemplate {
   sig: string;
 }
 
-export interface Nip98Signer {
-  getPublicKey(): Promise<string>;
-  signEvent(template: Nip98EventTemplate): Promise<Nip98SignedEvent>;
-}
-
 export async function buildNip98Event(
-  signer: Nip98Signer,
+  signer: NostrSigner,
   url: string,
   method: 'GET' | 'POST' | 'PUT' | 'DELETE',
   challenge: string,
@@ -36,5 +33,6 @@ export async function buildNip98Event(
     ],
     content: challenge,
   };
-  return signer.signEvent(template);
+  const event = await signer.signEvent(template);
+  return event as unknown as Nip98SignedEvent;
 }

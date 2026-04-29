@@ -6,9 +6,9 @@ import {
   getLightningAddress,
   releaseLightningAddress,
 } from './provisioning';
-import type { Nip98Signer } from '../nip98';
+import type { NostrSigner } from '@nostr-wot/signers';
 
-const fakeSigner: Nip98Signer = {
+const fakeSigner: NostrSigner = {
   getPublicKey: vi.fn().mockResolvedValue('e9b14b3c...'),
   signEvent: vi.fn().mockImplementation(async (t) => ({
     ...t,

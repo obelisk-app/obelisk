@@ -1,7 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
-import { buildZapRequest, type ZapRequestSigner } from './zap-request';
+import type { NostrSigner } from '@nostr-wot/signers';
+import { buildZapRequest } from './zap-request';
 
-const fakeSigner: ZapRequestSigner = {
+const fakeSigner: NostrSigner = {
+  getPublicKey: vi.fn().mockResolvedValue('sender_pub'),
   signEvent: vi.fn(async (template) => ({
     ...template,
     pubkey: 'sender_pub',
