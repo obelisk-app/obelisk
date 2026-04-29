@@ -1,13 +1,10 @@
 /**
- * Obelisk's Nostr signer + pool hub. Built on `@nostr-wot/*` SDK
- * primitives — NDK is no longer a dependency.
+ * Obelisk's Nostr signer + pool hub. Built on `@nostr-wot/*` SDK primitives.
  *
- * Public API kept stable for legacy call sites:
- *   - `getNDK()` returns a shim `{ signer, pool, …helpers }` whose shape
- *     matches just enough of NDK that existing consumers compile and run.
- *   - `setNDKSigner` / `onSignerChange` work as before.
- *   - Login flows return a flat `NostrUser` instead of NDKUser; consumers
- *     read `.pubkey` / `.profile` like before.
+ * Key exports:
+ *   - `getSigner()` / `getExplicitRelays()` — imperative reads for non-React callers
+ *   - `setNDKSigner` / `onSignerChange` — signer lifecycle (used by layout bridge)
+ *   - Login flows: `loginWithExtension`, `loginWithPrivkey`, `restoreRemoteSigner`
  */
 
 import {
@@ -69,48 +66,6 @@ const signerSubscribers = new Set<(signer: NostrSigner | null) => void>();
 const explicitRelays = new Set<string>(POPULAR_RELAYS);
 let userRelaysAdded = false;
 
-/**
- * Compatibility shim that mimics the slice of NDK obelisk uses.
- * `getNDK().signer` is now a `NostrSigner | null`; `getNDK().pool` exposes
- * the SDK's shared `SimplePool` plus a Map-shaped `relays` for the
- * (rare) call sites that enumerate connected URLs.
- */
-export interface NdkShim {
-  signer: NostrSigner | null;
-  pool: {
-    relays: Map<string, unknown>;
-    publish(relays: string[], event: NostrEvent): Promise<unknown>[];
-    subscribeMany(
-      relays: string[],
-      filters: unknown,
-      handlers: unknown,
-    ): { close: () => void };
-  };
-  /** Raw access to the nostr-tools pool when finer control is needed. */
-  rawPool: ReturnType<typeof getPool>;
-  explicitRelayUrls: string[];
-  addExplicitRelay(url: string): void;
-}
-
-export function getNDK(): NdkShim {
-  const pool = getPool();
-  const relayMap = new Map<string, unknown>();
-  for (const url of explicitRelays) relayMap.set(url, {});
-  return {
-    signer: currentSigner,
-    pool: {
-      relays: relayMap,
-      publish: (relays, event) => pool.publish(relays, event),
-      subscribeMany: (relays, filters, handlers) =>
-        pool.subscribeMany(relays as string[], filters as never, handlers as never),
-    },
-    rawPool: pool,
-    explicitRelayUrls: Array.from(explicitRelays),
-    addExplicitRelay(url: string): void {
-      explicitRelays.add(url);
-    },
-  };
-}
 
 export function onSignerChange(cb: (signer: NostrSigner | null) => void): () => void {
   signerSubscribers.add(cb);
@@ -134,11 +89,6 @@ export function getExplicitRelays(): string[] {
   return Array.from(explicitRelays);
 }
 
-export async function connectNDK(): Promise<NdkShim> {
-  // SDK pool is lazy — connections open on first subscribe/publish.
-  // Keep this for call-site compatibility.
-  return getNDK();
-}
 
 export function resetUserRelays(): void {
   userRelaysAdded = false;
