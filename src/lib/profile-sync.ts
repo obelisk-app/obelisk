@@ -14,11 +14,8 @@ const RELAYS = [
   'wss://purplepag.es',
 ];
 
-// Server-side relay pool. We deliberately use nostr-tools instead of NDK
-// here because NDK's `connect()` promise never resolves in Node and its
-// `fetchEvents` hangs even after the underlying WebSockets are open. NDK is
-// still used everywhere else (browser, signing, NIP-46) — this module is the
-// only server-side relay reader.
+// Server-side relay pool. We deliberately use nostr-tools directly here
+// because its SimplePool is synchronous to open and works cleanly in Node.
 let serverPool: SimplePool | null = null;
 function getServerPool(): SimplePool {
   if (!serverPool) {

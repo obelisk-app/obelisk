@@ -703,7 +703,7 @@ export default function ChatPage() {
   }
 
   // Loading: session check is in flight or the profile hasn't hydrated
-  // yet. NDK + signer reattachment runs in the background — components
+  // yet. Signer reattachment runs in the background — components
   // that need the signer (DMList, voice, etc.) render their own
   // "connecting…" states off the reactive `signerReady` flag instead of
   // blocking the entire chat shell here.

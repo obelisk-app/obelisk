@@ -253,7 +253,7 @@ export function useDMLifecycle({ isDMMode, signerReady, profilePubkey, profileCa
       const poolRelays = getExplicitRelays();
 
       // Build the relay search set from four sources:
-      //   1. The NDK pool (relays we're already connected to, including any
+      //   1. The relay pool (relays we're already connected to, including any
       //      auto-discovered via the outbox model).
       //   2. The NIP-07 extension's `getRelays()` if available — this is the
       //      most reliable source because the extension always knows the

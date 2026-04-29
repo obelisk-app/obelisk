@@ -2,7 +2,7 @@
 // Pure validator for NIP-57 kind 9735 zap-receipt events. Returns the
 // canonical sender + amount when the receipt is well-formed and
 // recipient-matched, else null. Caller is responsible for verifying the
-// signature (NDK does this on event ingestion); this validator focuses
+// signature (callers are responsible for verification); this validator focuses
 // on payload-shape and recipient checks.
 
 export interface RawNostrEvent {

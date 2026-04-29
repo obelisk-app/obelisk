@@ -161,7 +161,7 @@ export interface NostrProfile {
 }
 
 /**
- * Flat user shape — replaces NDKUser. `profile` is populated lazily.
+ * Flat user shape. `profile` is populated lazily.
  * Most call sites read `.pubkey` only, which is always present.
  */
 export interface NostrUser {

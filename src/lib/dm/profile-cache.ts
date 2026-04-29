@@ -35,7 +35,7 @@ let extraRelays: string[] = [];
 export function setProfileTestRelays(relays: string[]): void { extraRelays = relays; }
 
 // Optional dynamic relay set — DM bootstrap calls this with the union of
-// the NDK pool, the user's NIP-65 outbox, and the extension's getRelays().
+// the relay pool, the user's NIP-65 outbox, and the extension's getRelays().
 // Profile-cache's queries then ride the same warm sockets the walker is
 // already using, so partner avatars resolve from whatever relays the user
 // (or their contacts) actually publish on, not just our hard-coded few.

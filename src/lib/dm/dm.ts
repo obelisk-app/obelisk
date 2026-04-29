@@ -252,7 +252,6 @@ export interface DiscoveredNip17Partner {
  */
 export async function discoverNip17Partners(opts: {
   myPubkey: string;
-  ndk: unknown;            // legacy shim — kept loose to avoid circular imports
   signer: unknown;         // NostrSigner
   cacheKey: CryptoKey;
   limit?: number;          // newest-N undecrypted wraps to crack open

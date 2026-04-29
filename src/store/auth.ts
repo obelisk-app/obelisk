@@ -126,7 +126,7 @@ export const useAuthStore = create<AuthState>()(
         try { getAuthChannel()?.postMessage(BROADCAST_LOGOUT); } catch { /* ignore */ }
         // Hard navigation — a client-side router.push('/') was getting
         // preempted by in-flight chat-page effects and leaving the user
-        // on /chat. A full reload also guarantees NDK/socket/WebRTC
+        // on /chat. A full reload also guarantees signer/socket/WebRTC
         // state is fully torn down and the cleared session cookie is
         // re-read.
         if (typeof window !== 'undefined') {

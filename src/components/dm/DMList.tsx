@@ -199,9 +199,7 @@ export default function DMList({ profileCache }: DMListProps = {}) {
   const followsUnread = followsThreads.reduce((n, t) => n + (dmUnreads[t.pubkey] ?? 0), 0);
   const othersUnread = othersThreads.reduce((n, t) => n + (dmUnreads[t.pubkey] ?? 0), 0);
 
-  // Read-only mode: disable New DM when no signer is attached. `signerReady`
-  // is the reactive flag mirrored from `getNDK().signer != null` — see
-  // `IdentityProvider` and `nostr.ts:onSignerChange` for the wiring.
+  // Read-only mode: disable New DM when no signer is attached.
   const hasSigner = signerReady;
   const newDMTitle = hasSigner
     ? 'New DM'

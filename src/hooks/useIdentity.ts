@@ -24,7 +24,7 @@ export interface IdentitySnapshot {
   loginMethod: LoginMethod | null;
   /** Backend session is valid. */
   isConnected: boolean;
-  /** NDK signer is live and can encrypt/sign/publish. Reactive. */
+  /** Signer is live and can encrypt/sign/publish. Reactive. */
   signerReady: boolean;
   /** Auth store has finished its persist-rehydration cycle. */
   hydrated: boolean;

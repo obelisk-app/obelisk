@@ -193,7 +193,7 @@ export default function LandingPage() {
 
   const handleLoginSuccess = () => {
     setIsNavigating(true);
-    // Client-side nav preserves NDK's in-memory signer (nsec private key
+    // Client-side nav preserves the in-memory signer (nsec private key
     // lives only in memory — a full reload would kill it and /chat would
     // force-logout). The cookie-commit race is handled by a retry inside
     // restoreSession() in the auth store.

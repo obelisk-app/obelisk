@@ -36,8 +36,7 @@ export function useServerMetadata({
 }: Args) {
   // Fetch all member profiles for the profileCache. Any members with null
   // profile fields will be filled in automatically by the server's
-  // `triggerBackgroundRefreshIfStale` on GET /api/members — no client-side
-  // NDK fallback needed.
+  // `triggerBackgroundRefreshIfStale` on GET /api/members.
   useEffect(() => {
     if (!profileSynced || !activeServerId) return;
 

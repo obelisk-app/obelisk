@@ -171,7 +171,6 @@ export function DMSessionProvider({ myPubkey, children }: { myPubkey: string; ch
       try {
         const found = await discoverNip17Partners({
           myPubkey,
-          ndk: null,
           signer,
           cacheKey,
           limit: 30,

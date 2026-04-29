@@ -19,12 +19,6 @@ vi.mock('./relay-list-cache', () => ({
   }),
 }));
 
-vi.mock('@/lib/nostr', () => ({
-  getNDK: () => ({
-    signer: { user: async () => ({ pubkey: me }) },
-    pool: { relays: new Map() },
-  }),
-}));
 
 beforeEach(() => {
   localStorage.clear();
