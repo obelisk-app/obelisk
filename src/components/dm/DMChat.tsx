@@ -9,7 +9,7 @@ import { partnerOfNip04 } from '@/lib/dm/decrypt';
 import { loadOlder } from '@/lib/dm/dm';
 import { useProfile } from '@/components/ProfileProvider';
 import { useDMSession, useDMThread } from './DMSessionProvider';
-import { formatPubkey, getNDK } from '@/lib/nostr';
+import { formatPubkey } from '@/lib/nostr';
 
 // `profileCache` was the prop-drilled bridge between server-side member
 // profiles (chat) and relay-side kind 0 (DMs). It's no longer needed —

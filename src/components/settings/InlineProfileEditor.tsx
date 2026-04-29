@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useAuthStore } from '@/store/auth';
-import { fetchCurrentKind0, publishProfile, getNDK } from '@/lib/nostr';
+import { fetchCurrentKind0, publishProfile, getSigner } from '@/lib/nostr';
 import { uploadToBlossom } from '@/lib/blossom';
 
 /**
@@ -77,8 +77,7 @@ export default function InlineProfileEditor() {
     setError(null);
     setSaved(false);
     try {
-      const ndk = getNDK();
-      if (!ndk.signer) throw new Error('No hay signer activo');
+      if (!getSigner()) throw new Error('No hay signer activo');
 
       let finalPicture = pictureUrl;
       let finalBanner = bannerUrl;
