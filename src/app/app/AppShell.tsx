@@ -22,6 +22,8 @@ import { faviconFor, fetchRelayInfo } from '@/lib/relay-info';
 import ServerRail from './ServerRail';
 import DMList from './DMList';
 import LoginModal from './LoginModal';
+import UserPanel from './UserPanel';
+import SearchBar from './SearchBar';
 
 type View =
   | { kind: 'group'; groupId: string }
@@ -80,7 +82,7 @@ export default function AppShell() {
             <Sidebar relay={relay} conn={conn} view={view} setView={setView} />
           )}
         </ResizablePane>
-        <main className="flex flex-1 flex-col overflow-hidden">
+        <main className="flex flex-1 flex-col overflow-hidden border border-lc-border bg-lc-dark my-2 mr-2 ml-1 rounded-xl shadow-xl">
           {view.kind === 'group' ? (
             <ChatLayout
               groupId={view.groupId}
@@ -215,7 +217,10 @@ function ResizablePane({
   return (
     <>
       {side === 'left' && handle}
-      <div style={{ width }} className="flex shrink-0 flex-col overflow-hidden bg-lc-dark">
+      <div
+        style={{ width }}
+        className="flex shrink-0 flex-col overflow-hidden border border-lc-border bg-lc-dark my-2 mx-1 rounded-xl shadow-xl"
+      >
         {children}
       </div>
       {side === 'right' && handle}
@@ -421,46 +426,49 @@ function SidebarMe() {
   const myPubkey = useMyPubkey();
   const meta = useUserMetadata(myPubkey);
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
   if (!myPubkey) return null;
   return (
     <div className="relative flex items-center gap-2 px-1">
-      <Avatar pubkey={myPubkey} size={9} picture={meta?.picture ?? null} />
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-semibold text-lc-white">
-          {meta?.displayName || meta?.name || 'You'}
-        </div>
-        <div className="truncate font-mono text-[10px] text-lc-muted">{myPubkey.slice(0, 16)}…</div>
-      </div>
       <button
-        onClick={() => setOpen(!open)}
-        className="rounded p-1.5 text-lc-muted hover:bg-lc-card hover:text-lc-white"
+        onClick={() => setOpen((v) => !v)}
+        className="flex min-w-0 flex-1 items-center gap-2 rounded p-1 text-left hover:bg-lc-card"
         title="Account"
-        aria-label="Account"
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <circle cx="12" cy="12" r="1" />
-          <circle cx="19" cy="12" r="1" />
-          <circle cx="5" cy="12" r="1" />
+        <Avatar pubkey={myPubkey} size={9} picture={meta?.picture ?? null} />
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-sm font-semibold text-lc-white">
+            {meta?.displayName || meta?.name || 'You'}
+          </div>
+          <div className="truncate font-mono text-[10px] text-lc-muted">{myPubkey.slice(0, 16)}…</div>
+        </div>
+      </button>
+      <button
+        onClick={() => setEditing(true)}
+        className="shrink-0 rounded p-1.5 text-lc-muted hover:bg-lc-card hover:text-lc-white transition-colors"
+        title="Settings"
+        aria-label="Settings"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
         </svg>
       </button>
       {open && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute bottom-full right-0 z-50 mb-2 w-56 rounded-lg border border-lc-border bg-lc-dark p-1 shadow-2xl">
-            <button
-              onClick={() => { navigator.clipboard.writeText(myPubkey); setOpen(false); }}
-              className="block w-full rounded px-3 py-2 text-left text-sm text-lc-muted hover:bg-lc-card hover:text-lc-white"
-            >
-              Copy pubkey
-            </button>
-            <button
-              onClick={() => { nostrActions.logout(); setOpen(false); }}
-              className="block w-full rounded px-3 py-2 text-left text-sm text-red-400 hover:bg-lc-card"
-            >
-              Log out
-            </button>
-          </div>
-        </>
+        <UserPanel
+          pubkey={myPubkey}
+          isMe
+          onClose={() => setOpen(false)}
+          onLogout={() => { nostrActions.logout(); setOpen(false); }}
+        />
+      )}
+      {editing && (
+        <UserPanel
+          pubkey={myPubkey}
+          isMe
+          initialEditing
+          onClose={() => setEditing(false)}
+        />
       )}
     </div>
   );
@@ -596,8 +604,21 @@ function ChatPanel({
               <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
             </svg>
           </button>
+          <SearchBar
+            serverName={group?.name ?? 'channel'}
+            activeGroupId={groupId}
+          />
         </div>
       </header>
+      {group?.banner && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={group.banner}
+          alt=""
+          className="h-32 w-full shrink-0 border-b border-lc-border object-cover"
+          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+        />
+      )}
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-4">
         {messages.length === 0 ? (
@@ -679,17 +700,27 @@ function MessageRow({
     return Array.from(m.entries()).sort((a, b) => b[1] - a[1]);
   }, [reactions]);
   const [showPicker, setShowPicker] = useState(false);
+  const myPubkey = useMyPubkey();
+  const [anchor, setAnchor] = useState<{ x: number; y: number; placement?: 'top' | 'bottom' } | null>(null);
   const displayName = meta?.displayName || meta?.name || msg.pubkey.slice(0, 8);
+  const openProfile = (e: React.MouseEvent) => {
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setAnchor({ x: r.right + 8, y: r.top, placement: r.top > window.innerHeight / 2 ? 'top' : 'bottom' });
+  };
 
   return (
     <div className={'group relative flex gap-3 rounded px-2 py-0.5 hover:bg-lc-card/40 ' + (grouped ? 'mt-0' : 'mt-3')}>
       <div className="w-10 shrink-0">
-        {!grouped && <Avatar pubkey={msg.pubkey} size={10} picture={meta?.picture ?? null} />}
+        {!grouped && (
+          <button onClick={openProfile} className="rounded-full transition hover:opacity-80">
+            <Avatar pubkey={msg.pubkey} size={10} picture={meta?.picture ?? null} />
+          </button>
+        )}
       </div>
       <div className="min-w-0 flex-1">
         {!grouped && (
           <div className="flex items-baseline gap-2">
-            <span className="text-sm font-bold text-lc-white">{displayName}</span>
+            <button onClick={openProfile} className="text-sm font-bold text-lc-white hover:underline">{displayName}</button>
             <span className="text-[10px] text-lc-muted">
               {new Date(msg.createdAt * 1000).toLocaleString(undefined, {
                 hour: '2-digit',
@@ -754,6 +785,15 @@ function MessageRow({
           ))}
         </div>
       )}
+      {anchor && (
+        <UserPanel
+          pubkey={msg.pubkey}
+          isMe={msg.pubkey === myPubkey}
+          onClose={() => setAnchor(null)}
+          onLogout={msg.pubkey === myPubkey ? () => { nostrActions.logout(); setAnchor(null); } : undefined}
+          anchor={anchor}
+        />
+      )}
     </div>
   );
 }
@@ -808,33 +848,37 @@ function MembersPanel({ groupId }: { groupId: string }) {
 
 function MemberRow({ pubkey, isAdmin }: { pubkey: string; isAdmin: boolean }) {
   const meta = useUserMetadata(pubkey);
-  const [hover, setHover] = useState(false);
+  const myPubkey = useMyPubkey();
+  const [anchor, setAnchor] = useState<{ x: number; y: number; placement?: 'top' | 'bottom' } | null>(null);
   return (
-    <div
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-lc-card"
-      title={pubkey}
-    >
-      <Avatar pubkey={pubkey} size={7} picture={meta?.picture ?? null} />
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1 truncate text-sm text-lc-white">
-          <span className="truncate">{meta?.displayName || meta?.name || pubkey.slice(0, 10)}</span>
-          {isAdmin && <span title="Admin" className="text-xs">👑</span>}
+    <>
+      <button
+        onClick={(e) => {
+          const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+          setAnchor({ x: r.right - 340, y: r.top, placement: r.top > window.innerHeight / 2 ? 'top' : 'bottom' });
+        }}
+        className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-lc-card"
+        title={pubkey}
+      >
+        <Avatar pubkey={pubkey} size={7} picture={meta?.picture ?? null} />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1 truncate text-sm text-lc-white">
+            <span className="truncate">{meta?.displayName || meta?.name || pubkey.slice(0, 10)}</span>
+            {isAdmin && <span title="Admin" className="text-xs">👑</span>}
+          </div>
+          {meta?.nip05 && <div className="truncate text-[10px] text-lc-muted">{meta.nip05}</div>}
         </div>
-        {meta?.nip05 && <div className="truncate text-[10px] text-lc-muted">{meta.nip05}</div>}
-      </div>
-      {hover && (
-        <button
-          onClick={() => navigator.clipboard.writeText(pubkey)}
-          className="rounded p-1 text-[10px] text-lc-muted hover:bg-lc-dark hover:text-lc-white"
-          title="Copy pubkey"
-          aria-label="Copy pubkey"
-        >
-          ⧉
-        </button>
+      </button>
+      {anchor && (
+        <UserPanel
+          pubkey={pubkey}
+          isMe={pubkey === myPubkey}
+          onClose={() => setAnchor(null)}
+          onLogout={pubkey === myPubkey ? () => { nostrActions.logout(); setAnchor(null); } : undefined}
+          anchor={anchor}
+        />
       )}
-    </div>
+    </>
   );
 }
 
@@ -844,6 +888,7 @@ function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClose: () 
   const [name, setName] = useState(group.name ?? '');
   const [about, setAbout] = useState(group.about ?? '');
   const [picture, setPicture] = useState(group.picture ?? '');
+  const [banner, setBanner] = useState(group.banner ?? '');
   const [isPublic, setIsPublic] = useState(group.isPublic);
   const [isOpen, setIsOpen] = useState(group.isOpen);
   const [savingMeta, setSavingMeta] = useState(false);
@@ -867,6 +912,7 @@ function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClose: () 
         name,
         about,
         picture: picture || undefined,
+        banner: banner || undefined,
         isPublic,
         isOpen,
       });
@@ -933,6 +979,9 @@ function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClose: () 
             </Field>
             <Field label="Picture URL">
               <input value={picture} onChange={(e) => setPicture(e.target.value)} className={inputClasses} />
+            </Field>
+            <Field label="Banner URL (image / gif — see docs/server-banner.md)">
+              <input value={banner} onChange={(e) => setBanner(e.target.value)} placeholder="https://… .gif or .png" className={inputClasses} />
             </Field>
             <div className="flex gap-4">
               <label className="flex items-center gap-2 text-sm text-lc-white">

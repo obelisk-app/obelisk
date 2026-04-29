@@ -12,6 +12,12 @@ export interface JsGroup {
   readonly name: string | null;
   readonly about: string | null;
   readonly picture: string | null;
+  /**
+   * Server banner (image or animated gif URL). Non-standard NIP-29 extension —
+   * carried as a `["banner", <url>]` tag on kind 39000/9002. See
+   * docs/server-banner.md.
+   */
+  readonly banner: string | null;
   readonly isPublic: boolean;
   readonly isOpen: boolean;
   readonly parent: string | null;
@@ -122,6 +128,7 @@ export interface NostrBridge {
     name: string;
     about?: string;
     picture?: string;
+    banner?: string;
     isPublic?: boolean;
     isOpen?: boolean;
   }): Promise<string>;
@@ -130,8 +137,45 @@ export interface NostrBridge {
     name?: string;
     about?: string;
     picture?: string;
+    /** Banner image/gif url (custom NIP-29 extension — see docs/server-banner.md). */
+    banner?: string;
     isPublic?: boolean;
     isOpen?: boolean;
+  }): Promise<void>;
+  /**
+   * NIP-50 search against the active relay(s). Builds a single `REQ` filter
+   * combining the supplied tokens. The relay must advertise NIP-50 support
+   * for the `search` field to be honoured; without it most relays will
+   * silently ignore the term and return recent matches by tags only.
+   */
+  searchMessages(opts: {
+    query?: string;
+    /** Restrict to specific groups (NIP-29 `#h`). */
+    groupIds?: ReadonlyArray<string>;
+    /** Restrict by author pubkey hex. */
+    authors?: ReadonlyArray<string>;
+    /** Restrict to messages mentioning these pubkeys (`#p`). */
+    mentions?: ReadonlyArray<string>;
+    /** Local content filter — keeps messages that contain a url / image url / file-ish url. */
+    has?: ReadonlyArray<'link' | 'image' | 'file'>;
+    since?: number;
+    until?: number;
+    limit?: number;
+  }): Promise<ReadonlyArray<JsMessage & { groupId: string | null }>>;
+  /**
+   * Publish a kind:0 metadata event for the logged-in user. Fetches the
+   * latest kind:0 first and merges the supplied fields, so unknown keys set
+   * by other clients are preserved.
+   */
+  editUserMetadata(opts: {
+    name?: string;
+    displayName?: string;
+    about?: string;
+    picture?: string;
+    banner?: string;
+    nip05?: string;
+    website?: string;
+    lud16?: string;
   }): Promise<void>;
   loadMoreMessages(groupId: string): Promise<boolean>;
   markGroupAsRead(groupId: string): void;

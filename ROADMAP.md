@@ -88,7 +88,7 @@ This file is the high-level roadmap — one line per initiative, grouped by phas
 
 ### Fase 3 — Advanced features
 - [ ] **Mute / Block sync via NIP-51 (kind 10000)** — today mute / block is client-side in `localStorage` (`src/store/moderation.ts`); sync via relays with NIP-44 encryption, import existing mute lists from other clients.
-- [ ] **Nostr relay-based groups (NIP-29 exploration)** — map current model against NIP-29 kinds, decide own-relay vs external. See [docs/future-decentralization.md](docs/future-decentralization.md).
+- [ ] **Nostr relay-based groups (NIP-29)** — promoted to its own phase, see **Fase 9** below. Working prototype already exists (fiatjaf-style relay groups).
 - [ ] **App profiles + Nostr kind-0 editor** — overlay over Nostr, plus a safe kind-0 editor with read → merge → diff preview → confirm → publish.
 - [ ] **Export conversations** (JSON / plain text).
 - [ ] **Discord-compatible bot API** — subset of REST v10 + Gateway WebSocket + `BotAccount` + snowflake-style ID translation.
@@ -126,6 +126,47 @@ Pre-hackathon hardening. Expand into `docs/security-audit-plan.md` when the work
 - [ ] **Code quality** — shared UI primitives (Button / Modal / Dialog / Input / Dropdown / Avatar / Tooltip / Badge / Tabs), unified confirm-dialog, reusable hooks (`useSocket`, `usePermission`, `useServerRole`, `usePagination`, `useDebounce`), unified fetch helper, strict TypeScript (`noUncheckedIndexedAccess`), ESLint + Prettier + husky + lint-staged, a11y (ARIA, keyboard nav, contrast, screen readers).
 - [ ] **Performance** — lazy routes via `next/dynamic`, virtualization for messages / members / channels, bundle analysis, image optim, DB indexes + N+1 review, cursor-based pagination, debounce / throttle, `React.memo` / `useMemo`, `perMessageDeflate`, profile prefetch, service worker.
 - [ ] **Documentation** — `docs/security.md`, `docs/components.md`, `docs/architecture.md`, `CONTRIBUTING.md`, TSDoc on public APIs.
+
+### Fase 9 — Self-hostable Relay + Admin
+
+Pivot/parallel track: Obelisk gains a **bundled NIP-29 relay** that any user can self-host, with an admin panel that ships *with the relay* (not the chat app). The relay becomes a source of truth for groups; Obelisk-the-app becomes one client among many. Hybrid model — Postgres stays for uploads, role matrix, audit, search indexes; relay handles federated group events.
+
+**Open architecture decisions** (resolve before writing tickets):
+- Monorepo (`/relay` package alongside `/src`) vs separate repo. Leaning monorepo — shared types, single `docker-compose.yml`.
+- Implementation: **khatru** (Go, fiatjaf reference, single binary) vs pure TS (`nostr-relay`). Leaning khatru.
+- Hackathon scope: full Fase 9 is post-hackathon; for April 2026 submission, ship 9.1 core + 9.2 minimum (auth, allow/blocklist, event browser, audit log).
+
+#### 9.1 Relay core
+- [ ] **Bundled relay binary** (`obelisk-relay`) — single Docker image, single config file, swappable storage adapter (SQLite for solo hosters, Postgres for larger instances).
+- [ ] **NIP-29 group support** — kinds 9 (chat), 11 (thread), 12 (reply), 9000–9020 (mod actions), 39000–39003 (group metadata / admins / members / roles).
+- [ ] **NIP-42 AUTH** — required for posting; pubkey-gated reads for private groups.
+- [ ] **NIP-70 protected events** — relay-only retention, no rebroadcast.
+- [ ] **Retention policies** — per-kind TTL, max-events-per-pubkey, max-event-size, max-tags, configurable from admin UI.
+
+#### 9.2 `/admin` panel (ships *with* the relay)
+- [ ] **Auth** — challenge → sign with NIP-07 / nsec / NIP-46 bunker, gated by `RELAY_ADMIN_PUBKEYS` env. First-pubkey-claims-ownership wizard if env unset (mirrors the instance-owner story in Fase 1.5).
+- [ ] **Dashboard** — events/sec, connected sockets, storage size, top pubkeys by event count, top kinds, AUTH failure rate.
+- [ ] **User management** — search by pubkey / npub / NIP-05; per-user ban / mute / read-only / quota override; bulk import allowlist from a "referente" pubkey's kind-3 (reuse the WoT pattern).
+- [ ] **Access modes** — open, allowlist-only, blocklist, WoT-gated, paid (NIP-05 verified or LN payment to write).
+- [ ] **Group management** — list NIP-29 groups, edit metadata, add/remove admins, force-delete, transfer ownership.
+- [ ] **Event browser & moderation** — filter by kind / author / group / time, inspect raw JSON, soft-delete (publish kind 5) or hard-delete from DB, bulk delete by author or group.
+- [ ] **Content rules engine** — regex/keyword filters on `content`, max-tag-count, kind allowlist, denylisted-domain detector for embedded URLs.
+- [ ] **Rate limits** — events/min per pubkey, connection caps per IP, per-user overrides.
+- [ ] **Reports inbox** — relay accepts kind 1984; queue for admin review with action: ignore / mute / ban / delete event.
+- [ ] **Audit log** — every admin action signed and stored as a kind-30XXXX replaceable event so it's portable + verifiable across hosts.
+- [ ] **Backup / restore** — export all events + admin state to a tarball; import on a new host.
+- [ ] **Federation controls** — outgoing publish to mirror relays, blocked-relay list, optional follow-other-relay subscription.
+
+#### 9.3 Obelisk-the-app integration
+- [ ] **Per-server backend toggle** — `Server.backend = 'postgres' | 'relay'`; relay-mode servers store `Server.relayUrl` + `Server.groupId` (NIP-29 `h` tag).
+- [ ] **`MessageSource` adapter layer** — `MessageArea` / `MessageInput` consume an interface so they don't care whether events come from Socket.io or an NDK relay subscription.
+- [ ] **Optional sync bridge** — pump messages between Postgres and relay so existing servers can mirror to a relay without losing the local UX (uploads, reactions, threads).
+- [ ] **Self-host wizard update** — `docker-compose.yml` gains a `relay` service; wizard asks "App-only / Relay-only / Both."
+
+#### 9.4 Docs
+- [ ] `docs/relay.md` — architecture, config, NIP support matrix.
+- [ ] `docs/relay-admin.md` — every admin panel feature with screenshots.
+- [ ] `docs/migration-postgres-to-relay.md` — for existing instances opting in.
 
 ## 🐛 Known bugs & tech debt
 

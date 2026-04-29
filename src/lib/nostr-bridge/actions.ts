@@ -34,6 +34,9 @@ export const nostrActions = {
   editGroupMetadata: async (
     opts: Parameters<Awaited<ReturnType<typeof getBridge>>['editGroupMetadata']>[0],
   ) => (await getBridge()).editGroupMetadata(opts),
+  editUserMetadata: async (
+    opts: Parameters<Awaited<ReturnType<typeof getBridge>>['editUserMetadata']>[0],
+  ) => (await getBridge()).editUserMetadata(opts),
   putUser: async (groupId: string, pubkey: string, roles?: ReadonlyArray<string>) =>
     (await getBridge()).putUser(groupId, pubkey, roles),
   removeUser: async (groupId: string, pubkey: string) =>
@@ -49,4 +52,7 @@ export const nostrActions = {
     (await getBridge()).setActiveGroup(groupId),
   ensureUserMetadata: async (pubkey: string) =>
     (await getBridge()).ensureUserMetadata(pubkey),
+  searchMessages: async (
+    opts: Parameters<Awaited<ReturnType<typeof getBridge>>['searchMessages']>[0],
+  ) => (await getBridge()).searchMessages(opts),
 };

@@ -446,6 +446,7 @@ class BridgeImpl implements NostrBridge {
     name: string;
     about?: string;
     picture?: string;
+    banner?: string;
     isPublic?: boolean;
     isOpen?: boolean;
   }): Promise<string> {
@@ -494,6 +495,7 @@ class BridgeImpl implements NostrBridge {
     name?: string;
     about?: string;
     picture?: string;
+    banner?: string;
     isPublic?: boolean;
     isOpen?: boolean;
   }): Promise<void> {
@@ -501,12 +503,99 @@ class BridgeImpl implements NostrBridge {
     if (opts.name !== undefined) tags.push(['name', opts.name]);
     if (opts.about !== undefined) tags.push(['about', opts.about]);
     if (opts.picture !== undefined) tags.push(['picture', opts.picture]);
+    if (opts.banner !== undefined) tags.push(['banner', opts.banner]);
     if (opts.isPublic !== undefined) tags.push([opts.isPublic ? 'public' : 'private']);
     if (opts.isOpen !== undefined) tags.push([opts.isOpen ? 'open' : 'closed']);
     await this.signAndPublish({
       kind: KIND_GROUP_EDIT_METADATA,
       content: '',
       tags,
+      created_at: Math.floor(Date.now() / 1000),
+    });
+  }
+
+  async searchMessages(opts: {
+    query?: string;
+    groupIds?: ReadonlyArray<string>;
+    authors?: ReadonlyArray<string>;
+    mentions?: ReadonlyArray<string>;
+    has?: ReadonlyArray<'link' | 'image' | 'file'>;
+    since?: number;
+    until?: number;
+    limit?: number;
+  }): Promise<ReadonlyArray<JsMessage & { groupId: string | null }>> {
+    const filter: Filter & { search?: string } = {
+      kinds: [KIND_GROUP_MESSAGE],
+      limit: opts.limit ?? 50,
+    };
+    if (opts.query && opts.query.trim()) filter.search = opts.query.trim();
+    if (opts.authors && opts.authors.length > 0) filter.authors = [...opts.authors];
+    if (opts.mentions && opts.mentions.length > 0) (filter as Record<string, unknown>)['#p'] = [...opts.mentions];
+    if (opts.groupIds && opts.groupIds.length > 0) (filter as Record<string, unknown>)['#h'] = [...opts.groupIds];
+    if (opts.since) filter.since = opts.since;
+    if (opts.until) filter.until = opts.until;
+    const events = await this.pool.querySync(this.relays, filter, { maxWait: 4000 });
+    const has = new Set(opts.has ?? []);
+    const URL_RE = /https?:\/\/\S+/i;
+    const IMG_RE = /https?:\/\/\S+\.(?:png|jpe?g|gif|webp|avif|svg)(?:\?\S*)?/i;
+    const FILE_RE = /https?:\/\/\S+\.(?:pdf|zip|tar|gz|mp3|mp4|mov|webm|wav|csv|json|txt|md)(?:\?\S*)?/i;
+    const matches = (content: string) => {
+      if (has.size === 0) return true;
+      if (has.has('image') && !IMG_RE.test(content)) return false;
+      if (has.has('file') && !FILE_RE.test(content)) return false;
+      if (has.has('link') && !URL_RE.test(content)) return false;
+      return true;
+    };
+    return events
+      .filter((e) => matches(e.content))
+      .map((e) => ({
+        id: e.id,
+        pubkey: e.pubkey,
+        content: e.content,
+        createdAt: e.created_at,
+        kind: e.kind,
+        replyToId: e.tags.find((t) => t[0] === 'e')?.[1] ?? null,
+        groupId: e.tags.find((t) => t[0] === 'h')?.[1] ?? null,
+      }))
+      .sort((a, b) => b.createdAt - a.createdAt);
+  }
+
+  async editUserMetadata(opts: {
+    name?: string;
+    displayName?: string;
+    about?: string;
+    picture?: string;
+    banner?: string;
+    nip05?: string;
+    website?: string;
+    lud16?: string;
+  }): Promise<void> {
+    if (!this.session) throw new Error('Not logged in');
+    const me = this.session.pubKeyHex;
+    const profileRelays = Array.from(new Set([...this.relays, ...PROFILE_RELAYS]));
+
+    let existing: Record<string, unknown> = {};
+    try {
+      const ev = await this.pool.get(profileRelays, { kinds: [KIND_USER_METADATA], authors: [me] });
+      if (ev) existing = JSON.parse(ev.content) as Record<string, unknown>;
+    } catch {
+      // ignore — start from empty
+    }
+
+    const merged: Record<string, unknown> = { ...existing };
+    if (opts.name !== undefined) merged.name = opts.name;
+    if (opts.displayName !== undefined) merged.display_name = opts.displayName;
+    if (opts.about !== undefined) merged.about = opts.about;
+    if (opts.picture !== undefined) merged.picture = opts.picture;
+    if (opts.banner !== undefined) merged.banner = opts.banner;
+    if (opts.nip05 !== undefined) merged.nip05 = opts.nip05;
+    if (opts.website !== undefined) merged.website = opts.website;
+    if (opts.lud16 !== undefined) merged.lud16 = opts.lud16;
+
+    await this.signAndPublish({
+      kind: KIND_USER_METADATA,
+      content: JSON.stringify(merged),
+      tags: [],
       created_at: Math.floor(Date.now() / 1000),
     });
   }
@@ -630,6 +719,7 @@ class BridgeImpl implements NostrBridge {
       name: tag('name') ?? null,
       about: tag('about') ?? null,
       picture: tag('picture') ?? null,
+      banner: tag('banner') ?? null,
       isPublic,
       isOpen,
       parent,

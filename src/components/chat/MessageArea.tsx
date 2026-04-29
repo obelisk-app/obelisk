@@ -46,26 +46,10 @@ function EphemeralMessage({ channelId, msg }: { channelId: string; msg: { id: st
     return () => clearTimeout(timer);
   }, [channelId, msg.id, dismissEphemeral]);
 
-  // Detect wallet-related hints and make them actionable
-  const isWalletHint = /wallet|NWC|configurá.*perfil|Abrí tu perfil/i.test(msg.text);
-
   return (
     <div className="rounded-lg border border-lc-border bg-lc-dark/60 px-3 py-2 text-sm text-lc-white flex items-start gap-3 animate-in fade-in duration-200">
       <div className="flex-1 whitespace-pre-wrap">
         {msg.text}
-        {isWalletHint && (
-          <button
-            className="ml-2 text-lc-green underline underline-offset-2 hover:brightness-110"
-            onClick={() => {
-              // Lazy import to avoid circular deps
-              import('@/store/settings').then(({ useSettingsStore }) =>
-                useSettingsStore.getState().open('wallet'),
-              );
-            }}
-          >
-            Configurar wallet
-          </button>
-        )}
       </div>
       <div className="flex items-center gap-2">
         <span className="text-[10px] uppercase tracking-wider text-lc-muted">Solo vos</span>
