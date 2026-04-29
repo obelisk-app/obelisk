@@ -24,16 +24,20 @@ vi.mock('@/store/auth', () => ({
     return selector ? selector(state) : state;
   }),
 }));
+const { mockSigner } = vi.hoisted(() => ({
+  mockSigner: {
+    pubkey: 'npub_me',
+    nip44Encrypt: async () => 'enc',
+    nip44Decrypt: async () => 'dec',
+    getPublicKey: async () => 'npub_me',
+    signEvent: async (t: any) => ({ ...t, id: 'i', sig: 's', pubkey: 'npub_me' }),
+  },
+}));
 vi.mock('@/lib/nostr', () => ({
-  getNDK: vi.fn(() => ({
-    signer: {
-      pubkey: 'npub_me',
-      nip44Encrypt: async () => 'enc',
-      nip44Decrypt: async () => 'dec',
-      getPublicKey: async () => 'npub_me',
-      signEvent: async (t: any) => ({ ...t, id: 'i', sig: 's', pubkey: 'npub_me' }),
-    },
-  })),
+  getSigner: vi.fn(() => mockSigner),
+}));
+vi.mock('@nostr-wot/data/react', () => ({
+  useKEKSigner: vi.fn(() => mockSigner),
 }));
 
 beforeEach(() => {

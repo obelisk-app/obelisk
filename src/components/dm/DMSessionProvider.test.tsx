@@ -34,10 +34,6 @@ vi.mock('@/store/auth', () => ({
   ),
 }));
 
-vi.mock('@/lib/signer-adapters', () => ({
-  toKEKSigner: vi.fn(() => ({ encrypt: vi.fn(), decrypt: vi.fn() })),
-}));
-
 vi.mock('@/lib/dm/follows', () => ({
   hydrateFollows: vi.fn(),
 }));
@@ -47,17 +43,22 @@ vi.mock('@/lib/dm/cache-key', () => ({
 }));
 
 vi.mock('@/lib/nostr', () => ({
-  getNDK: () => ({
-    signer: { pubkey: 'a'.repeat(64), nip44Encrypt: vi.fn(), nip44Decrypt: vi.fn() },
-    pool: { relays: new Map([['wss://r1', {}]]) },
-  }),
+  getSigner: () => ({ pubkey: 'a'.repeat(64), signEvent: vi.fn(), getPublicKey: async () => 'a'.repeat(64) }),
+  getExplicitRelays: () => ['wss://r1'],
   // The auth store subscribes to onSignerChange at module load to mirror
-  // ndk.signer into the reactive `signerReady` flag. Without a no-op stub
-  // here, importing useAuthStore (now a transitive dep of DMSessionProvider
-  // since it reads signerReady) crashes during test setup.
+  // the signer into the reactive `signerReady` flag. Without a no-op stub
+  // here, importing useAuthStore crashes during test setup.
   onSignerChange: vi.fn(() => () => {}),
   setNDKSigner: vi.fn(),
   formatPubkey: (pk: string) => pk.slice(0, 8),
+}));
+
+vi.mock('@nostr-wot/data/react', () => ({
+  useKEKSigner: vi.fn(() => ({
+    pubkey: 'a'.repeat(64),
+    nip44Encrypt: vi.fn(),
+    nip44Decrypt: vi.fn(),
+  })),
 }));
 
 beforeEach(() => {

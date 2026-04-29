@@ -4,13 +4,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockPublishProfile = vi.fn().mockResolvedValue({ id: 'evt-1' });
 const mockFetchCurrentKind0 = vi.fn().mockResolvedValue({});
-const mockGetNDK = vi.fn(() => ({ signer: { user: vi.fn().mockResolvedValue({ pubkey: 'abc123' }) } }));
 const mockUploadToBlossom = vi.fn().mockResolvedValue('https://blossom.primal.net/abc123.jpg');
+
+const mockSigner = { pubkey: 'abc123', signEvent: vi.fn(), getPublicKey: vi.fn().mockResolvedValue('abc123') };
 
 vi.mock('@/lib/nostr', () => ({
   publishProfile: (...args: unknown[]) => mockPublishProfile(...args),
   fetchCurrentKind0: (...args: unknown[]) => mockFetchCurrentKind0(...args),
-  getNDK: () => mockGetNDK(),
+  getSigner: () => mockSigner,
 }));
 
 vi.mock('@/lib/blossom', () => ({

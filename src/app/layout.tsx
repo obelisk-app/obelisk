@@ -5,11 +5,7 @@ import { cookies, headers } from 'next/headers';
 import { LocaleProvider } from '@/i18n/context';
 import type { Locale } from '@/i18n/index';
 import ToastStack from '@/components/ToastStack';
-import { NostrSessionProvider } from '@nostr-wot/ui';
-import type { NostrSigner } from '@nostr-wot/signers';
-import { setNDKSigner } from '@/lib/nostr';
-import { obeliskSdkSignerStorage } from '@/lib/auth/sdk-signer-storage';
-import '@nostr-wot/ui/styles.css';
+import { ObeliskNostrProvider } from '@/components/NostrProviders';
 import './globals.css';
 
 const inter = Inter({
@@ -181,15 +177,10 @@ export default async function RootLayout({
       </head>
       <body className={`${inter.className} bg-lc-black text-lc-white antialiased`}>
         <LocaleProvider initialLocale={locale}>
-          <NostrSessionProvider
-            autoRestore={false}
-            signerStorage={obeliskSdkSignerStorage}
-            theme="dark"
-            onChange={({ signer }) => setNDKSigner(signer as NostrSigner | null)}
-          >
+          <ObeliskNostrProvider>
             {children}
             <ToastStack />
-          </NostrSessionProvider>
+          </ObeliskNostrProvider>
         </LocaleProvider>
       </body>
     </html>

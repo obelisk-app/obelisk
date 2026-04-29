@@ -9,9 +9,7 @@ vi.mock('@/lib/nostr-coalescer', () => ({
   sharedCoalescer: { enqueue: enqueueMock },
 }));
 vi.mock('@/lib/nostr', () => ({
-  getNDK: vi.fn(() => ({
-    pool: { relays: new Map([['wss://relay.test', {}], ['wss://r2.test', {}]]) },
-  })),
+  getExplicitRelays: vi.fn(() => ['wss://relay.test', 'wss://r2.test']),
   formatPubkey: (pk: string) => `${pk.slice(0, 8)}...`,
 }));
 vi.mock('@/store/toast', () => ({

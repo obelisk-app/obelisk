@@ -74,26 +74,25 @@ vi.mock('@/lib/dm/dm-cache', () => ({
 
 vi.mock('@/lib/nostr', () => ({
   formatPubkey: (pk: string) => pk.slice(0, 8) + '...',
-  getNDK: () => ({
-    signer: {
-      getPublicKey: async () => 'my-pubkey',
-      // The decrypt module now calls signer.nip04Decrypt directly on
-      // cache miss. Tests stub via the hoisted mock so they can assert
-      // exactly when the signer fallback fired (and didn't fire).
-      nip04Decrypt: (...args: unknown[]) => hoisted.nip04DecryptMock(...args),
-      // KEK adapter (signer-adapters.toKEKSigner) requires nip44 methods —
-      // unwrapped events arrive at the secrets cache via NIP-44, so the
-      // provider needs at least these stubs to consider the signer
-      // adapter-compatible. Test paths never actually call them (we
-      // pre-seed the secrets-cache directly).
-      nip44Encrypt: vi.fn(),
-      nip44Decrypt: vi.fn(),
-    },
-    pool: { relays: new Map([['wss://r1', {}]]) },
+  getSigner: () => ({
+    getPublicKey: async () => 'my-pubkey',
+    // The decrypt module calls signer.nip04Decrypt on cache miss.
+    nip04Decrypt: (...args: unknown[]) => hoisted.nip04DecryptMock(...args),
+    nip44Encrypt: vi.fn(),
+    nip44Decrypt: vi.fn(),
   }),
-  connectNDK: vi.fn(),
+  getExplicitRelays: () => ['wss://r1'],
   // Auth store subscribes to signer changes; mock returns a no-op unsub.
   onSignerChange: vi.fn(() => () => {}),
+  setNDKSigner: vi.fn(),
+}));
+
+vi.mock('@nostr-wot/data/react', () => ({
+  useKEKSigner: vi.fn(() => ({
+    pubkey: 'my-pubkey',
+    nip44Encrypt: vi.fn(),
+    nip44Decrypt: vi.fn(),
+  })),
 }));
 
 vi.mock('@nostr-wot/dm', () => ({

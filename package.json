@@ -22,7 +22,7 @@
     "@noble/hashes": "^2.0.1",
     "@noble/secp256k1": "^3.0.0",
     "@nostr-wot/blossom": "^0.1.1",
-    "@nostr-wot/data": "^0.4.0",
+    "@nostr-wot/data": "^0.4.1",
     "@nostr-wot/dm": "^0.4.1",
     "@nostr-wot/signers": "^0.4.0",
     "@nostr-wot/ui": "^0.5.0",
