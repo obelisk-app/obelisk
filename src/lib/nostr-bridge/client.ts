@@ -20,7 +20,7 @@
  *   when the broken first-draft was reverted) and obeliskord/HANDOFF.md
  *   for the WASM swap recipe.
  */
-import { SimplePool, type Filter, type Event as NostrEvent, finalizeEvent, getPublicKey, nip19, nip04 } from 'nostr-tools';
+import { SimplePool, type Filter, type Event as NostrEvent, type EventTemplate, type VerifiedEvent, finalizeEvent, getPublicKey, nip19, nip04 } from 'nostr-tools';
 import type {
   NostrBridge,
   JsGroup,
@@ -103,11 +103,40 @@ class StateStore<T> {
 }
 
 class BridgeImpl implements NostrBridge {
-  private pool = new SimplePool();
+  private pool: SimplePool;
   private relays: string[] = [DEFAULT_RELAY];
   private session: PersistedSession | null = null;
   private subs: Array<{ close: () => void }> = [];
   private activeGroupId: string | null = null;
+
+  constructor() {
+    this.pool = this.createPool();
+  }
+
+  /**
+   * Create a SimplePool with NIP-42 automatic authentication.
+   * When the relay sends an AUTH challenge, the pool signs a kind-22242
+   * event with the current session key and sends it back automatically.
+   */
+  private createPool(): SimplePool {
+    return new SimplePool({
+      automaticallyAuth: (_relayUrl: string) => {
+        if (!this.session) return null;
+        return async (evt: EventTemplate): Promise<VerifiedEvent> => {
+          if (this.session?.loginMethod === 'nsec' && this.session.privKeyHex) {
+            const sk = hexToBytes(this.session.privKeyHex);
+            return finalizeEvent(evt, sk) as VerifiedEvent;
+          }
+          if (this.session?.loginMethod === 'nip07') {
+            const win = (window as any).nostr;
+            if (!win) throw new Error('NIP-07 extension unavailable');
+            return (await win.signEvent(evt)) as VerifiedEvent;
+          }
+          throw new Error('Cannot sign auth event with current login method');
+        };
+      },
+    } as ConstructorParameters<typeof SimplePool>[0]);
+  }
 
   // Reactive state
   isLoggedIn = new StateStore(false);
@@ -215,7 +244,7 @@ class BridgeImpl implements NostrBridge {
     this.session = null;
     if (typeof window !== 'undefined') window.localStorage.removeItem(STORAGE_KEY);
     this.dispose();
-    this.pool = new SimplePool();
+    this.pool = this.createPool();
     this.isLoggedIn.set(false);
     this.connectionState.set('Disconnected');
     this.groups.set([]);
@@ -264,7 +293,7 @@ class BridgeImpl implements NostrBridge {
     this.subs.forEach((s) => s.close());
     this.subs = [];
     this.pool.close(this.relays);
-    this.pool = new SimplePool();
+    this.pool = this.createPool();
     this.relays = [url];
     this.currentRelayUrl.set(url);
     this.ensureRelayInList(url);
