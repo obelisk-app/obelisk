@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth';
-import { getNDK, connectNDK, restoreRemoteSigner, setNDKSigner } from '@/lib/nostr';
+import { getSigner, restoreRemoteSigner, setNDKSigner } from '@/lib/nostr';
 
 type Router = ReturnType<typeof useRouter>;
 
@@ -54,24 +54,14 @@ export function useSessionBootstrap(router: Router) {
     });
   }, [restoreSession, router]);
 
-  // Restore signer in the background. CRITICAL: don't gate signer attachment
-  // on `connectNDK()` resolving — `ndk.connect()` awaits the relay pool, and
-  // a single dead relay (e.g. nostr.otxr.dev) can leave that promise hanging
-  // for minutes. The signer doesn't need any relays to attach; treat them as
-  // independent concerns. We kick off `connectNDK()` in parallel and flip
-  // `ndkReady` based on the signer path so the DM UI unblocks even when the
-  // pool is still negotiating.
+  // Restore signer in the background. CRITICAL: the signer doesn't need any
+  // relays to attach; treat signer attachment as independent from relay pool
+  // setup. We flip `ndkReady` based on the signer path so the DM UI unblocks
+  // as soon as the signer is ready.
   useEffect(() => {
     if (!sessionChecked) return;
 
     const loginMethod = useAuthStore.getState().loginMethod;
-    const ndk = getNDK();
-
-    // Kick the relay pool off in the background. Failures are fine — the
-    // signer flow below doesn't depend on this resolving.
-    void connectNDK().catch((err) => {
-      console.warn('NDK pool connect failed (non-fatal):', err);
-    });
 
     let cancelled = false;
 
@@ -83,22 +73,22 @@ export function useSessionBootstrap(router: Router) {
         // (fast happy path), then drop to 1s poll for up to 60s. Re-check
         // on visibility change so a backgrounded tab catches up immediately.
         const attachIfReady = (): boolean => {
-          if (ndk.signer) return true;
+          if (getSigner()) return true;
           if (typeof window === 'undefined' || !window.nostr) return false;
           void import('@nostr-wot/signers').then(({ Nip07Signer }) => {
-            if (!ndk.signer && window.nostr) {
+            if (!getSigner() && window.nostr) {
               setNDKSigner(new Nip07Signer());
             }
           });
           return true;
         };
 
-        for (let i = 0; i < 30 && !ndk.signer && !cancelled; i++) {
+        for (let i = 0; i < 30 && !getSigner() && !cancelled; i++) {
           if (attachIfReady()) break;
           await new Promise((r) => setTimeout(r, 100));
         }
 
-        if (!ndk.signer && !cancelled && typeof window !== 'undefined') {
+        if (!getSigner() && !cancelled && typeof window !== 'undefined') {
           let slowPollHandle: ReturnType<typeof setInterval> | null = null;
           const stopSlowPoll = () => {
             if (slowPollHandle) { clearInterval(slowPollHandle); slowPollHandle = null; }
@@ -108,7 +98,7 @@ export function useSessionBootstrap(router: Router) {
             if (document.visibilityState === 'visible') attachIfReady();
           };
           slowPollHandle = setInterval(() => {
-            if (ndk.signer) { stopSlowPoll(); return; }
+            if (getSigner()) { stopSlowPoll(); return; }
             attachIfReady();
           }, 1000);
           window.addEventListener('visibilitychange', onVisibility);
@@ -120,7 +110,7 @@ export function useSessionBootstrap(router: Router) {
       // stashed in localStorage at login. Without this the signer dies on
       // every reload (or mobile background eviction) and the user gets
       // silently logged out.
-      if (!ndk.signer && (loginMethod === 'nsec' || loginMethod === 'bunker')) {
+      if (!getSigner() && (loginMethod === 'nsec' || loginMethod === 'bunker')) {
         const ok = await restoreRemoteSigner();
         if (!ok && !cancelled) {
           console.warn(`[chat] ${loginMethod} signer restore failed`);

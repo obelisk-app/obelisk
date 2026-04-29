@@ -7,7 +7,7 @@ import { publishInboxRelays } from '@/lib/dm/dm-inbox';
 import { getCachedEvents, subscribeToCacheTick } from '@/lib/dm/dm-cache';
 import { setProfileDynamicRelays } from '@/lib/dm/profile-cache';
 import { loadInboxWindow, fetchMyInboxRelays, fetchMyDmRelays } from '@/lib/dm/dm';
-import { formatPubkey, getNDK } from '@/lib/nostr';
+import { formatPubkey, getSigner, getExplicitRelays } from '@/lib/nostr';
 import { DM_FEATURE_ENABLED } from '@/lib/feature-flags';
 
 type Args = {
@@ -188,7 +188,7 @@ export function useDMLifecycle({ isDMMode, ndkReady, profilePubkey, profileCache
     if (!DM_FEATURE_ENABLED) return;
     if (!isDMMode || !ndkReady || !profilePubkey) return;
     if (inboxPublishedRef.current) return;
-    if (!getNDK().signer) return;
+    if (!getSigner()) return;
     inboxPublishedRef.current = true;
     void publishInboxRelays(profilePubkey);
   }, [isDMMode, ndkReady, profilePubkey]);
@@ -245,8 +245,7 @@ export function useDMLifecycle({ isDMMode, ndkReady, profilePubkey, profileCache
     const MAX_WINDOWS = 12; // ~1 year safety cap
 
     void (async () => {
-      const ndk = getNDK();
-      const poolRelays = Array.from(ndk.pool?.relays?.keys?.() ?? []) as string[];
+      const poolRelays = getExplicitRelays();
 
       // Build the relay search set from four sources:
       //   1. The NDK pool (relays we're already connected to, including any

@@ -9,7 +9,7 @@
 import { useEffect } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools/pure';
 import { subscribeStream } from '@/lib/nostr-resource';
-import { getNDK, formatPubkey } from '@/lib/nostr';
+import { getExplicitRelays, formatPubkey } from '@/lib/nostr';
 import { useToastStore } from '@/store/toast';
 import { useChatStore } from '@/store/chat';
 import { validateZapReceipt, type RawNostrEvent } from '@/lib/wallet/zap-receipt';
@@ -17,8 +17,7 @@ import { validateZapReceipt, type RawNostrEvent } from '@/lib/wallet/zap-receipt
 export function useZapReceipts(myPubkey: string | null): void {
   useEffect(() => {
     if (!myPubkey) return;
-    const ndk = getNDK();
-    const relays = Array.from((ndk.pool?.relays as Map<string, unknown> | undefined)?.keys?.() ?? []) as string[];
+    const relays = getExplicitRelays();
 
     return subscribeStream({
       filters: [{ kinds: [9735], '#p': [myPubkey] }],
