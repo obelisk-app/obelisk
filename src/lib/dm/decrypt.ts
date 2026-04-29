@@ -16,7 +16,7 @@
  * until unwrap, so callers walk all wraps and discover partners on decrypt.
  */
 
-import { getNDK } from '@/lib/nostr';
+import { getSigner } from '@/lib/nostr';
 import { getSecret, putSecret, type CachedDMEvent } from './dm-cache';
 import type { DMProtocol } from './dm';
 
@@ -50,18 +50,18 @@ export async function decryptToEnvelope(
     }
   }
 
-  const ndk = getNDK();
-  if (!ndk.signer) return null;
+  const signer = getSigner();
+  if (!signer) return null;
 
   if (ev.kind === 4) {
     try {
-      if (!ndk.signer.nip04Decrypt) return null;
+      if (!signer.nip04Decrypt) return null;
       const counter = partnerOfNip04(ev, myPubkey);
       if (!counter) return null;
       // The other party is whichever side of the conversation isn't us —
       // sender pubkey for inbound, the `p` tag for outbound.
       const otherPk = ev.pubkey === myPubkey ? counter : ev.pubkey;
-      const plaintext = await ndk.signer.nip04Decrypt(otherPk, ev.content);
+      const plaintext = await signer.nip04Decrypt(otherPk, ev.content);
       const pTag = ev.tags.find((t) => t[0] === 'p');
       const env: SecretEnvelope = {
         senderPubkey: ev.pubkey,
@@ -89,7 +89,7 @@ export async function decryptToEnvelope(
         created_at: ev.created_at,
         sig: ev.sig ?? '',
       };
-      const { message: rumor, senderPubkey } = await unwrapGiftWrap(ndk.signer, wrap);
+      const { message: rumor, senderPubkey } = await unwrapGiftWrap(signer, wrap);
       if (rumor.kind !== 14) return null;
       const recipientTag = (rumor.tags as string[][]).find((t) => t[0] === 'p');
       const env: SecretEnvelope = {

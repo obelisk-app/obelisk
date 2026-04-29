@@ -1,21 +1,17 @@
 import type { Event as NostrEvent } from 'nostr-tools/pure';
-import { getNDK } from '@/lib/nostr';
+import { getExplicitRelays } from '@/lib/nostr';
 import { createKeyedObservable, type Slot } from '@/lib/nostr-store';
 import { subscribeReplaceable } from '@/lib/nostr-resource';
 
 /**
- * Pull whatever relays the NDK pool already knows about. NDK's outbox
- * model populates the pool from observed event signatures, so this set
- * grows as the user uses the app — a profile fetch fired before the DM
- * walker can run still gets coverage from the pool.
+ * Pull whatever relays the pool currently tracks.
  *
- * Returns `[]` server-side (NDK is browser-only here).
+ * Returns `[]` server-side.
  */
 function ndkPoolRelays(): string[] {
   if (typeof window === 'undefined') return [];
   try {
-    const ndk = getNDK();
-    return Array.from(ndk.pool?.relays?.keys?.() ?? []) as string[];
+    return getExplicitRelays();
   } catch {
     return [];
   }

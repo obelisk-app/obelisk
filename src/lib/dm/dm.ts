@@ -419,11 +419,10 @@ export interface SendDMArgs {
 }
 
 export async function sendDM(args: SendDMArgs): Promise<NostrEvent> {
-  const { getNDK } = await import('@/lib/nostr');
+  const { getSigner, getExplicitRelays } = await import('@/lib/nostr');
   const { buildChatMessage, sealAndGiftWrap } = await import('@nostr-wot/dm');
-  const ndk = getNDK();
-  if (!ndk.signer) throw new Error('No signer');
-  const signer = ndk.signer;
+  const signer = getSigner();
+  if (!signer) throw new Error('No signer');
 
   const partnerRelays = getRelays(args.myPubkey, args.recipientPubkey).result;
   const targetRelays =
@@ -461,7 +460,7 @@ export async function sendDM(args: SendDMArgs): Promise<NostrEvent> {
   // are non-fatal — the local cache write below guarantees the message
   // shows up immediately even if the publish hasn't completed.
   await publishToRelays(wrapForRecipient, targetRelays);
-  const myPoolRelays = Array.from(ndk.pool?.relays?.keys?.() ?? []) as string[];
+  const myPoolRelays = getExplicitRelays();
   await publishToRelays(wrapForSelf, myPoolRelays).catch((err) => {
     console.warn('[dm-send] self-wrap publish failed (cache fallback in effect):', err);
   });

@@ -6,12 +6,12 @@
  */
 
 import { uploadToBlossom as sdkUpload, type BlossomBlob } from '@nostr-wot/blossom';
-import { getNDK } from '@/lib/nostr';
+import { getSigner } from '@/lib/nostr';
 
 export async function uploadToBlossom(file: File): Promise<string> {
-  const ndk = getNDK();
-  if (!ndk.signer) throw new Error('No signer available');
-  const blob: BlossomBlob = await sdkUpload(file, { signer: ndk.signer });
+  const signer = getSigner();
+  if (!signer) throw new Error('No signer available');
+  const blob: BlossomBlob = await sdkUpload(file, { signer });
   return blob.url;
 }
 
