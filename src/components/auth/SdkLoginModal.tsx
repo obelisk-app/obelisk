@@ -17,7 +17,7 @@
 
 import { LoginModal as SdkLoginModal } from '@nostr-wot/ui';
 import { nip19 } from 'nostr-tools';
-import { setNDKSigner, type LoginMethod } from '@/lib/nostr';
+import { type LoginMethod } from '@/lib/nostr';
 import { useAuthStore } from '@/store/auth';
 
 const SDK_METHOD_TO_OBELISK: Record<string, LoginMethod> = {
@@ -56,14 +56,9 @@ export default function LoginModal({
           ? { overlay: { background: 'rgba(0, 0, 0, 0.85)' } }
           : undefined
       }
-      onLogin={async ({ signer, pubkey, method }) => {
-        // Mirror the SDK signer into obelisk's hub so all of its existing
-        // sign/encrypt/decrypt call sites (DMs, posts, profile updates)
-        // pick it up. The hub stores the NostrSigner directly — no NDK
-        // adapter required.
-        setNDKSigner(signer);
-
-        // Mirror into obelisk's auth store. SDK has already run the
+      onLogin={async ({ pubkey, method }) => {
+        // The onChange bridge in layout.tsx mirrors the signer to currentSigner.
+        // We just need to update obelisk's auth store. SDK has already run the
         // backend handshake (via `authBaseUrl`), so the cookie is set;
         // we just need the React state.
         const obeliskMethod: LoginMethod = SDK_METHOD_TO_OBELISK[method] ?? 'extension';
