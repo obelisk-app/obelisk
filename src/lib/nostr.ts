@@ -124,6 +124,16 @@ export function setNDKSigner(signer: NostrSigner | null | undefined): void {
   signerSubscribers.forEach((cb) => cb(currentSigner));
 }
 
+/** Imperative read of the active signer. For non-React callers. React components should use `useSigner()` from `@nostr-wot/data/react`. */
+export function getSigner(): NostrSigner | null {
+  return currentSigner;
+}
+
+/** Returns all relay URLs currently tracked by the session (popular defaults + user's kind-10002 relays). */
+export function getExplicitRelays(): string[] {
+  return Array.from(explicitRelays);
+}
+
 export async function connectNDK(): Promise<NdkShim> {
   // SDK pool is lazy — connections open on first subscribe/publish.
   // Keep this for call-site compatibility.
