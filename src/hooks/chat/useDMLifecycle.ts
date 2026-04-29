@@ -44,7 +44,9 @@ async function getRelaysFromExtension(): Promise<string[]> {
     const map = await nostr.getRelays();
     if (!map || typeof map !== 'object') return [];
     return Array.from(new Set(
-      Object.keys(map).filter((url) => typeof url === 'string' && url.startsWith('wss://')),
+      Object.keys(map).filter(
+        (url) => typeof url === 'string' && url.startsWith('wss://') && !url.includes('localhost') && !url.includes('127.0.0.1'),
+      ),
     ));
   } catch (err) {
     console.warn('[dm-walker] getRelaysFromExtension failed:', err);
