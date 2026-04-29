@@ -33,11 +33,10 @@ const { mockSigner } = vi.hoisted(() => ({
     signEvent: async (t: any) => ({ ...t, id: 'i', sig: 's', pubkey: 'npub_me' }),
   },
 }));
-vi.mock('@/lib/nostr', () => ({
-  getSigner: vi.fn(() => mockSigner),
-}));
+vi.mock('@/lib/nostr', () => ({}));
 vi.mock('@nostr-wot/data/react', () => ({
   useKEKSigner: vi.fn(() => mockSigner),
+  useSigner: vi.fn(() => mockSigner),
 }));
 
 beforeEach(() => {

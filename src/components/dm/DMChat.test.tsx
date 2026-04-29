@@ -74,22 +74,19 @@ vi.mock('@/lib/dm/dm-cache', () => ({
 
 vi.mock('@/lib/nostr', () => ({
   formatPubkey: (pk: string) => pk.slice(0, 8) + '...',
-  getSigner: () => ({
-    getPublicKey: async () => 'my-pubkey',
-    // The decrypt module calls signer.nip04Decrypt on cache miss.
-    nip04Decrypt: (...args: unknown[]) => hoisted.nip04DecryptMock(...args),
-    nip44Encrypt: vi.fn(),
-    nip44Decrypt: vi.fn(),
-  }),
   getExplicitRelays: () => ['wss://r1'],
-  // Auth store subscribes to signer changes; mock returns a no-op unsub.
-  onSignerChange: vi.fn(() => () => {}),
-  setNDKSigner: vi.fn(),
 }));
 
 vi.mock('@nostr-wot/data/react', () => ({
   useKEKSigner: vi.fn(() => ({
     pubkey: 'my-pubkey',
+    nip44Encrypt: vi.fn(),
+    nip44Decrypt: vi.fn(),
+  })),
+  useSigner: vi.fn(() => ({
+    getPublicKey: async () => 'my-pubkey',
+    // The decrypt module calls signer.nip04Decrypt on cache miss.
+    nip04Decrypt: (...args: unknown[]) => hoisted.nip04DecryptMock(...args),
     nip44Encrypt: vi.fn(),
     nip44Decrypt: vi.fn(),
   })),

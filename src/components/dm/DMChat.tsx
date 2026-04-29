@@ -9,7 +9,9 @@ import { partnerOfNip04 } from '@/lib/dm/decrypt';
 import { loadOlder } from '@/lib/dm/dm';
 import { useProfile } from '@/components/ProfileProvider';
 import { useDMSession, useDMThread } from './DMSessionProvider';
-import { formatPubkey } from '@/lib/nostr';
+import { formatPubkey, getExplicitRelays } from '@/lib/nostr';
+import { useSigner } from '@nostr-wot/data/react';
+import type { NostrSigner } from '@nostr-wot/signers';
 
 // `profileCache` was the prop-drilled bridge between server-side member
 // profiles (chat) and relay-side kind 0 (DMs). It's no longer needed —
@@ -71,6 +73,7 @@ const PAGE_SIZE = 50;
 export default function DMChat(_props: DMChatProps) {
   const session = useDMSession();
   const myPubkey = session.myPubkey;
+  const signer = useSigner() as unknown as NostrSigner | null;
 
   const {
     activeDMPubkey,
@@ -270,11 +273,14 @@ export default function DMChat(_props: DMChatProps) {
       updateThread(activeDMPubkey, { lastMessage: text, lastMessageAt: optimistic.createdAt });
 
       try {
+        if (!signer) throw new Error('No signer');
         const event = await sendDMNew({
           myPubkey,
           recipientPubkey: activeDMPubkey,
           content: text,
           protocol,
+          signer,
+          myRelays: getExplicitRelays(),
         });
         // For NIP-17, `event` is the kind 1059 gift wrap whose id and
         // pubkey are ephemeral — they don't match the rumor (kind 14) the

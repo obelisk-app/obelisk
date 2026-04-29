@@ -13,8 +13,8 @@ import {
 } from '@/lib/wallet/provisioning';
 import { lnbitsToNwc } from '@/lib/wallet/lnbits-to-nwc';
 import { PoweredByNostrWot } from './PoweredByNostrWot';
-import { getSigner } from '@/lib/nostr';
-import { useKEKSigner } from '@nostr-wot/data/react';
+import { useKEKSigner, useSigner } from '@nostr-wot/data/react';
+import type { NostrSigner } from '@nostr-wot/signers';
 
 type Tab = 'quick' | 'nwc' | 'lnbits';
 type View = 'main' | 'send' | 'receive';
@@ -24,6 +24,7 @@ export default function WalletPanel() {
   const pubkey = profile?.pubkey ?? null;
 
   const signer = useKEKSigner();
+  const nip98Signer = useSigner() as unknown as NostrSigner | null;
 
   const { client, reload, disconnect } = useLocalWallet(pubkey, signer);
 
@@ -109,7 +110,6 @@ export default function WalletPanel() {
   }, [pubkey, client]);
 
   const handleQuickSetup = useCallback(async () => {
-    const nip98Signer = getSigner();
     if (!nip98Signer || !signer || !pubkey) return;
     setBusy(true); setStatus(null); setError(null);
     try {
@@ -119,7 +119,7 @@ export default function WalletPanel() {
       setStatus('Wallet conectada');
     } catch (e) { setError((e as Error).message); }
     finally { setBusy(false); }
-  }, [pubkey, signer, reload]);
+  }, [pubkey, signer, nip98Signer, reload]);
 
   const handleNwcConnect = useCallback(async () => {
     if (!signer || !pubkey) return;
@@ -166,7 +166,6 @@ export default function WalletPanel() {
   }, [disconnect]);
 
   const handleClaimAddress = useCallback(async () => {
-    const nip98Signer = getSigner();
     if (!nip98Signer || !claimUsername.trim()) return;
     setBusy(true); setError(null);
     try {
@@ -176,10 +175,9 @@ export default function WalletPanel() {
       setStatus(`Reclamaste ${address}`);
     } catch (e) { setError((e as Error).message); }
     finally { setBusy(false); }
-  }, [claimUsername]);
+  }, [claimUsername, nip98Signer]);
 
   const handleReleaseAddress = useCallback(async () => {
-    const nip98Signer = getSigner();
     if (!nip98Signer) return;
     if (!confirm('¿Liberar tu Lightning Address?')) return;
     setBusy(true); setError(null);
@@ -189,7 +187,7 @@ export default function WalletPanel() {
       setStatus('Dirección liberada');
     } catch (e) { setError((e as Error).message); }
     finally { setBusy(false); }
-  }, []);
+  }, [nip98Signer]);
 
   const handleSend = useCallback(async () => {
     if (!client || !sendInvoice.trim()) return;

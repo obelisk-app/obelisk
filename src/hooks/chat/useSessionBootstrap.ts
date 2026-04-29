@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth';
-import { getSigner, restoreRemoteSigner, setNDKSigner } from '@/lib/nostr';
+import { restoreRemoteSigner } from '@/lib/nostr';
+import { useSigner, useLogin } from '@nostr-wot/data/react';
 
 type Router = ReturnType<typeof useRouter>;
 
@@ -26,6 +27,10 @@ export function useSessionBootstrap(router: Router) {
   const [sessionInvalid, setSessionInvalid] = useState(false);
   const sessionCheckStarted = useRef(false);
   const [ndkReady, setNdkReady] = useState(false);
+  const signer = useSigner();
+  const signerRef = useRef(signer);
+  signerRef.current = signer;
+  const login = useLogin();
 
   // If the user disconnects mid-session (Navbar → Disconnect clears the auth
   // store), surface that as a "not signed in" state instead of leaving them
@@ -73,22 +78,22 @@ export function useSessionBootstrap(router: Router) {
         // (fast happy path), then drop to 1s poll for up to 60s. Re-check
         // on visibility change so a backgrounded tab catches up immediately.
         const attachIfReady = (): boolean => {
-          if (getSigner()) return true;
+          if (signerRef.current) return true;
           if (typeof window === 'undefined' || !window.nostr) return false;
           void import('@nostr-wot/signers').then(({ Nip07Signer }) => {
-            if (!getSigner() && window.nostr) {
-              setNDKSigner(new Nip07Signer());
+            if (!signerRef.current && window.nostr) {
+              login(new Nip07Signer());
             }
           });
           return true;
         };
 
-        for (let i = 0; i < 30 && !getSigner() && !cancelled; i++) {
+        for (let i = 0; i < 30 && !signerRef.current && !cancelled; i++) {
           if (attachIfReady()) break;
           await new Promise((r) => setTimeout(r, 100));
         }
 
-        if (!getSigner() && !cancelled && typeof window !== 'undefined') {
+        if (!signerRef.current && !cancelled && typeof window !== 'undefined') {
           let slowPollHandle: ReturnType<typeof setInterval> | null = null;
           const stopSlowPoll = () => {
             if (slowPollHandle) { clearInterval(slowPollHandle); slowPollHandle = null; }
@@ -98,7 +103,7 @@ export function useSessionBootstrap(router: Router) {
             if (document.visibilityState === 'visible') attachIfReady();
           };
           slowPollHandle = setInterval(() => {
-            if (getSigner()) { stopSlowPoll(); return; }
+            if (signerRef.current) { stopSlowPoll(); return; }
             attachIfReady();
           }, 1000);
           window.addEventListener('visibilitychange', onVisibility);
@@ -110,9 +115,11 @@ export function useSessionBootstrap(router: Router) {
       // stashed in localStorage at login. Without this the signer dies on
       // every reload (or mobile background eviction) and the user gets
       // silently logged out.
-      if (!getSigner() && (loginMethod === 'nsec' || loginMethod === 'bunker')) {
-        const ok = await restoreRemoteSigner();
-        if (!ok && !cancelled) {
+      if (!signerRef.current && (loginMethod === 'nsec' || loginMethod === 'bunker')) {
+        const restoredSigner = await restoreRemoteSigner();
+        if (restoredSigner) {
+          login(restoredSigner);
+        } else if (!cancelled) {
           console.warn(`[chat] ${loginMethod} signer restore failed`);
           if (loginMethod === 'nsec') {
             logout();

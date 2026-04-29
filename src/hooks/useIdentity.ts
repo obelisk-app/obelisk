@@ -12,6 +12,7 @@
 'use client';
 
 import { useAuthStore } from '@/store/auth';
+import { useSigner } from '@nostr-wot/data/react';
 import type { LoginMethod, NostrProfile } from '@/lib/nostr';
 
 export interface IdentitySnapshot {
@@ -35,8 +36,12 @@ export function useIdentity(): IdentitySnapshot {
   const profile = useAuthStore((s) => s.profile);
   const loginMethod = useAuthStore((s) => s.loginMethod);
   const isConnected = useAuthStore((s) => s.isConnected);
-  const signerReady = useAuthStore((s) => s.signerReady);
   const hydrated = useAuthStore((s) => s._hasHydrated);
+  // Derive signerReady reactively from the SDK provider rather than the
+  // Zustand store — the SDK's useSigner() updates synchronously whenever
+  // NostrSessionProvider installs/clears the signer.
+  const sdkSigner = useSigner();
+  const signerReady = sdkSigner !== null;
 
   return {
     pubkey: profile?.pubkey ?? null,

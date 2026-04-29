@@ -16,7 +16,7 @@
  * until unwrap, so callers walk all wraps and discover partners on decrypt.
  */
 
-import { getSigner } from '@/lib/nostr';
+import type { NostrSigner } from '@nostr-wot/signers';
 import { getSecret, putSecret, type CachedDMEvent } from './dm-cache';
 import type { DMProtocol } from './dm';
 
@@ -40,6 +40,7 @@ export async function decryptToEnvelope(
   myPubkey: string,
   cacheKey: CryptoKey,
   ev: CachedDMEvent,
+  signer: NostrSigner | null,
 ): Promise<SecretEnvelope | null> {
   const cached = await getSecret(myPubkey, cacheKey, ev.id);
   if (cached) {
@@ -50,7 +51,6 @@ export async function decryptToEnvelope(
     }
   }
 
-  const signer = getSigner();
   if (!signer) return null;
 
   if (ev.kind === 4) {

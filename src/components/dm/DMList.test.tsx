@@ -21,12 +21,30 @@ vi.mock('@/components/dm/DMSessionProvider', () => ({
   useLastDM: () => null,
 }));
 
-// Drive the reactive `signerReady` flag directly on the auth store —
-// DMList now reads via `useIdentity()` instead of polling `getNDK().signer`
-// at render time. Mocking the NDK singleton no longer matters for the
-// signer-gate; the auth store flag is what gates the UI.
+// `useIdentity` now derives `signerReady` from the SDK's `useSigner()`.
+// Mock `@nostr-wot/data/react` so `useSigner` is controlled by a ref that
+// `setSignerReady` can flip. The component re-renders when the auth store
+// changes (any field), picking up the updated ref value.
+const sdkState = vi.hoisted(() => ({
+  signerValue: { getPublicKey: async () => 'test-pk' } as any | null,
+}));
+sdkState.signerValue = { getPublicKey: async () => 'test-pk' } as any;
+
+vi.mock('@nostr-wot/data/react', () => ({
+  useSigner: () => sdkState.signerValue,
+}));
+
+// Drive the reactive `signerReady` flag. We update the SDK mock ref and
+// trigger a re-render of the component by updating a subscribed field in
+// the auth store. `_hasHydrated` is toggled back-and-forth in a single
+// microtask so the component sees the change without any semantic side
+// effect from other tests.
+let _hydratedFlip = true;
 function setSignerReady(ready: boolean): void {
-  useAuthStore.setState({ signerReady: ready });
+  sdkState.signerValue = ready ? ({ getPublicKey: async () => 'test-pk' } as any) : null;
+  // Flip _hasHydrated to force a re-render (useIdentity subscribes to it).
+  _hydratedFlip = !_hydratedFlip;
+  useAuthStore.setState({ signerReady: ready, _hasHydrated: _hydratedFlip });
 }
 
 describe('DMList', () => {

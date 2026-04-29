@@ -2,9 +2,11 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from '@/i18n/context';
-import { fetchCurrentKind0, publishProfile, getSigner } from '@/lib/nostr';
+import { fetchCurrentKind0, publishProfile } from '@/lib/nostr';
 import { uploadToBlossom } from '@/lib/blossom';
 import { useAuthStore } from '@/store/auth';
+import { useSigner } from '@nostr-wot/data/react';
+import type { NostrSigner } from '@nostr-wot/signers';
 
 interface ProfileEditorProps {
   mode: 'setup' | 'edit';
@@ -39,6 +41,7 @@ export default function ProfileEditor({ mode, onComplete, onSkip, embedded = fal
   const profile = useAuthStore((s) => s.profile);
   const { syncProfile } = useAuthStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const signer = useSigner() as unknown as NostrSigner | null;
 
   const [name, setName] = useState('');
   const [pictureUrl, setPictureUrl] = useState('');
@@ -115,14 +118,14 @@ export default function ProfileEditor({ mode, onComplete, onSkip, embedded = fal
     setPublishing(true);
     setError(null);
     try {
-      if (!getSigner()) throw new Error('No signer');
+      if (!signer) throw new Error('No signer');
 
       // Upload picture to Blossom if a file was selected
       let finalPictureUrl = pictureUrl;
       if (pictureFile) {
         setUploading(true);
         try {
-          finalPictureUrl = await uploadToBlossom(pictureFile);
+          finalPictureUrl = await uploadToBlossom(pictureFile, signer);
         } finally {
           setUploading(false);
         }
@@ -135,7 +138,7 @@ export default function ProfileEditor({ mode, onComplete, onSkip, embedded = fal
       if (finalPictureUrl) publishFields.picture = finalPictureUrl;
       if (about.trim()) publishFields.about = about.trim();
 
-      await publishProfile(publishFields);
+      await publishProfile(signer, publishFields);
       await syncProfile();
 
       onComplete();

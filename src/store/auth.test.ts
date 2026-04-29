@@ -24,12 +24,6 @@ vi.mock('@/lib/nostr', () => ({
   })),
   resetUserRelays: vi.fn(),
   clearSignerPayload: vi.fn(),
-  // Auth store now drives the SDK hub via setNDKSigner(null) on logout
-  // (used to mutate `getNDK().signer` directly). Stubbed as a no-op.
-  setNDKSigner: vi.fn(),
-  // Auth store now subscribes to signer changes at module load to keep
-  // `signerReady` reactive. The mock returns a no-op unsubscribe.
-  onSignerChange: vi.fn(() => () => {}),
 }));
 
 // Mock fetch for logout

@@ -7,9 +7,10 @@ import { getOrCreateCacheKey } from '@/lib/dm/cache-key';
 import { getCachedEvents, subscribeToCacheTick } from '@/lib/dm/dm-cache';
 import { decryptToEnvelope, partnerOfEnvelope } from '@/lib/dm/decrypt';
 import { useDMStore } from '@/store/dm';
-import { formatPubkey, getSigner, getExplicitRelays } from '@/lib/nostr';
+import { formatPubkey, getExplicitRelays } from '@/lib/nostr';
 import { useAuthStore } from '@/store/auth';
-import { useKEKSigner } from '@nostr-wot/data/react';
+import { useKEKSigner, useSigner } from '@nostr-wot/data/react';
+import type { NostrSigner } from '@nostr-wot/signers';
 
 interface DMSessionContextValue {
   ready: boolean;
@@ -75,6 +76,7 @@ export function DMSessionProvider({ myPubkey, children }: { myPubkey: string; ch
   const [cacheKey, setCacheKey] = useState<CryptoKey | null>(null);
   const closeRef = useRef<(() => void) | null>(null);
   const kekSigner = useKEKSigner();
+  const signer = useSigner() as unknown as NostrSigner | null;
 
   useEffect(() => {
     hydrateFollows(myPubkey);
@@ -156,7 +158,7 @@ export function DMSessionProvider({ myPubkey, children }: { myPubkey: string; ch
   // budget only burns on truly-new wraps.
   useEffect(() => {
     if (!cacheKey) return;
-    if (!getSigner()) return;
+    if (!signer) return;
 
     let cancelled = false;
     let inFlight = false;
@@ -168,7 +170,7 @@ export function DMSessionProvider({ myPubkey, children }: { myPubkey: string; ch
         const found = await discoverNip17Partners({
           myPubkey,
           ndk: null,
-          signer: getSigner(),
+          signer,
           cacheKey,
           limit: 30,
         });
@@ -258,7 +260,7 @@ export function DMSessionProvider({ myPubkey, children }: { myPubkey: string; ch
       const updates: Record<string, DMMessage[]> = {};
       for (const ev of candidates) {
         processedRef.current.add(ev.id); // mark before decrypt to avoid retry loops
-        const env = await decryptToEnvelope(myPubkey, cacheKey, ev);
+        const env = await decryptToEnvelope(myPubkey, cacheKey, ev, signer);
         if (!env) continue;
         const partner = partnerOfEnvelope(env, myPubkey);
         if (!partner) continue;
@@ -343,9 +345,10 @@ export function DMSessionProvider({ myPubkey, children }: { myPubkey: string; ch
     threads,
     loadThread: (partner) => loadHistory(myPubkey, partner),
     send: async (partner, content, protocol = 'nip17') => {
-      await sendDM({ myPubkey, recipientPubkey: partner, content, protocol });
+      if (!signer) throw new Error('No signer');
+      await sendDM({ myPubkey, recipientPubkey: partner, content, protocol, signer, myRelays: getExplicitRelays() });
     },
-  }), [cacheKey, myPubkey, threads]);
+  }), [cacheKey, myPubkey, threads, signer]);
 
   // NOTE: ProfileProvider used to live inside this component, but DMList
   // is mounted in the sidebar SIBLING of <DMSessionProvider>, so wrapping

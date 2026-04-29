@@ -7,21 +7,17 @@
  */
 
 import { getPool } from '@nostr-wot/data';
+import type { NostrSigner } from '@nostr-wot/signers';
 import type { EventTemplate } from 'nostr-tools';
-import { getSigner, getExplicitRelays } from '@/lib/nostr';
 import { KIND_DM_INBOX_RELAYS } from '@/lib/nip-kinds';
 
 /**
  * Publish a kind 10050 event listing the relays the current user wants to
- * receive NIP-17 DMs on. Returns true on success, false if no signer or
- * publish fails.
+ * receive NIP-17 DMs on. Returns true on success, false if publish fails.
  */
-export async function publishInboxRelays(_myPubkey: string): Promise<boolean> {
-  const signer = getSigner();
-  if (!signer) return false;
-
+export async function publishInboxRelays(signer: NostrSigner, relays: string[]): Promise<boolean> {
   try {
-    const relayUrls = getExplicitRelays().filter((u) => u.startsWith('wss://'));
+    const relayUrls = relays.filter((u) => u.startsWith('wss://'));
     const template: EventTemplate = {
       kind: KIND_DM_INBOX_RELAYS,
       created_at: Math.floor(Date.now() / 1000),

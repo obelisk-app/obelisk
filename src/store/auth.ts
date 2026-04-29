@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { nip19 } from 'nostr-tools';
-import { NostrProfile, NostrUser, parseProfile, LoginMethod, resetUserRelays, clearSignerPayload, setNDKSigner, onSignerChange } from '@/lib/nostr';
+import { NostrProfile, NostrUser, parseProfile, LoginMethod, resetUserRelays, clearSignerPayload } from '@/lib/nostr';
 import { resetAllClientState } from '@/lib/reset';
 
 // Cross-tab logout sync. When any tab calls logout(), every other tab
@@ -112,7 +112,6 @@ export const useAuthStore = create<AuthState>()(
         resetUserRelays();
         clearSignerPayload();
         resetAllClientState();
-        setNDKSigner(null);
         set({
           isConnected: false,
           signerReady: false,
@@ -260,14 +259,6 @@ export const useAuthStore = create<AuthState>()(
   )
 );
 
-// Mirror `getNDK().signer != null` into the reactive `signerReady` flag
-// every time a login flow (or `restoreRemoteSigner`) installs / clears the
-// signer. The bridge avoids a circular import — `nostr.ts` doesn't know
-// about the auth store; it just emits to whoever subscribed.
-onSignerChange((signer) => {
-  useAuthStore.getState().setSignerReady(Boolean(signer));
-});
-
 // Mirror logout from sibling tabs. Carefully calls the inner clear sequence
 // directly — calling logout() would re-broadcast and loop.
 if (typeof window !== 'undefined') {
@@ -277,7 +268,6 @@ if (typeof window !== 'undefined') {
       if (ev.data?.type === 'logout') {
         // Don't re-broadcast — call the inner clear sequence directly.
         // Keep this in sync with logout()'s state-clear order.
-        try { setNDKSigner(null); } catch { /* ignore */ }
         useAuthStore.setState({
           isConnected: false,
           user: null,

@@ -2,8 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useAuthStore } from '@/store/auth';
-import { fetchCurrentKind0, publishProfile, getSigner } from '@/lib/nostr';
+import { fetchCurrentKind0, publishProfile } from '@/lib/nostr';
 import { uploadToBlossom } from '@/lib/blossom';
+import { useSigner } from '@nostr-wot/data/react';
+import type { NostrSigner } from '@nostr-wot/signers';
 
 /**
  * Inline (non-modal) editor for the caller's Nostr profile (kind 0).
@@ -16,6 +18,7 @@ export default function InlineProfileEditor() {
   const { profile, syncProfile } = useAuthStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
+  const signer = useSigner() as unknown as NostrSigner | null;
 
   const [meta, setMeta] = useState<Record<string, unknown>>({});
   const [loading, setLoading] = useState(true);
@@ -77,15 +80,15 @@ export default function InlineProfileEditor() {
     setError(null);
     setSaved(false);
     try {
-      if (!getSigner()) throw new Error('No hay signer activo');
+      if (!signer) throw new Error('No hay signer activo');
 
       let finalPicture = pictureUrl;
       let finalBanner = bannerUrl;
-      if (pictureFile) { setUploading('picture'); finalPicture = await uploadToBlossom(pictureFile); }
-      if (bannerFile)  { setUploading('banner');  finalBanner  = await uploadToBlossom(bannerFile); }
+      if (pictureFile) { setUploading('picture'); finalPicture = await uploadToBlossom(pictureFile, signer); }
+      if (bannerFile)  { setUploading('banner');  finalBanner  = await uploadToBlossom(bannerFile, signer); }
       setUploading(null);
 
-      await publishProfile({
+      await publishProfile(signer, {
         name: name.trim(),
         display_name: name.trim(),
         about: about.trim() || undefined,

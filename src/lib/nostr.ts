@@ -1,17 +1,18 @@
 /**
- * Obelisk's Nostr signer + pool hub. Built on `@nostr-wot/*` SDK primitives.
+ * Obelisk's Nostr pool hub. Built on `@nostr-wot/*` SDK primitives.
  *
  * Key exports:
- *   - `getSigner()` / `getExplicitRelays()` — imperative reads for non-React callers
- *   - `setNDKSigner` / `onSignerChange` — signer lifecycle (used by layout bridge)
- *   - Login flows: `loginWithExtension`, `loginWithPrivkey`, `restoreRemoteSigner`
+ *   - `getExplicitRelays()` — imperative relay read for non-React callers
+ *   - `restoreRemoteSigner` — restores signer from localStorage payload (returns signer, does NOT set it)
+ *   - Profile utilities: `publishProfile`, `fetchFollowers`, `fetchUserNotes`, `fetchCurrentKind0`
+ *
+ * Signer lifecycle is managed by `@nostr-wot/ui`'s `NostrSessionProvider`.
+ * React components should use `useSigner()` from `@nostr-wot/data/react`.
  */
 
 import {
-  Nip07Signer,
   Nip46Signer,
   PrivateKeySigner,
-  isNip07Available,
   type NostrSigner,
 } from '@nostr-wot/signers';
 import {
@@ -20,7 +21,6 @@ import {
 } from '@nostr-wot/data';
 import {
   finalizeEvent,
-  generateSecretKey,
   getEventHash,
   getPublicKey,
   nip19,
@@ -28,7 +28,6 @@ import {
   type EventTemplate,
 } from 'nostr-tools';
 import { hexToBytes, bytesToHex } from 'nostr-tools/utils';
-import { withTimeout } from './promise';
 import { encryptPayload, decryptPayload, clearWrapKey } from './signer-payload-crypto';
 import {
   fetchKind0,
@@ -44,14 +43,6 @@ const POPULAR_RELAYS = [
   'wss://relay.nsec.app',
 ];
 
-const CONNECT_RELAYS = [
-  'wss://relay.nsec.app',
-  'wss://relay.damus.io',
-  'wss://relay.primal.net',
-  'wss://nostr.v0l.io',
-  'wss://relay.snort.social',
-];
-
 setDefaultRelays(POPULAR_RELAYS);
 
 export const logStatus = (stage: string, message: string, data?: any) => {
@@ -59,30 +50,10 @@ export const logStatus = (stage: string, message: string, data?: any) => {
   console.log(msg, data || '');
 };
 
-// ─── Active signer + pool shim ─────────────────────────────────────
+// ─── Relay pool ────────────────────────────────────────────────────
 
-let currentSigner: NostrSigner | null = null;
-const signerSubscribers = new Set<(signer: NostrSigner | null) => void>();
 const explicitRelays = new Set<string>(POPULAR_RELAYS);
 let userRelaysAdded = false;
-
-
-export function onSignerChange(cb: (signer: NostrSigner | null) => void): () => void {
-  signerSubscribers.add(cb);
-  return () => {
-    signerSubscribers.delete(cb);
-  };
-}
-
-export function setNDKSigner(signer: NostrSigner | null | undefined): void {
-  currentSigner = signer ?? null;
-  signerSubscribers.forEach((cb) => cb(currentSigner));
-}
-
-/** Imperative read of the active signer. For non-React callers. React components should use `useSigner()` from `@nostr-wot/data/react`. */
-export function getSigner(): NostrSigner | null {
-  return currentSigner;
-}
 
 /** Returns all relay URLs currently tracked by the session (popular defaults + user's kind-10002 relays). */
 export function getExplicitRelays(): string[] {
@@ -112,24 +83,6 @@ async function addUserRelays(pubkey: string): Promise<void> {
 export type LoginMethod = 'extension' | 'nsec' | 'bunker';
 
 const SIGNER_PAYLOAD_KEY = 'obelisk-signer-payload';
-const SIGNER_LOCAL_KEY = 'obelisk-local-signer-key';
-
-function getLocalSecretKey(): Uint8Array {
-  if (typeof localStorage === 'undefined') return generateSecretKey();
-  try {
-    const saved = localStorage.getItem(SIGNER_LOCAL_KEY);
-    if (saved) return hexToBytes(saved);
-  } catch (err) {
-    console.warn('Failed to read local signer key:', err);
-  }
-  const key = generateSecretKey();
-  try {
-    localStorage.setItem(SIGNER_LOCAL_KEY, bytesToHex(key));
-  } catch (err) {
-    console.warn('Failed to save local signer key:', err);
-  }
-  return key;
-}
 
 async function saveSignerPayload(payload: string): Promise<void> {
   if (typeof localStorage === 'undefined') return;
@@ -245,173 +198,20 @@ export function parseProfile(user: NostrUser | { pubkey: string; profile?: Recor
   };
 }
 
-// ─── Login flows ───────────────────────────────────────────────────
+// ─── Signer restore ────────────────────────────────────────────────
 
-export async function loginWithExtension(): Promise<NostrUser | null> {
-  if (typeof window === 'undefined') {
-    throw new Error('NIP-07 login only works in the browser');
-  }
-  if (!isNip07Available()) {
-    throw new Error('No NIP-07 extension found. Install Alby or another Nostr extension.');
-  }
-  const signer = new Nip07Signer();
-  const pubkey = await signer.getPublicKey();
-  setNDKSigner(signer);
-  const user = makeUser(pubkey);
-  void fetchAndAttachProfile(user);
-  return user;
-}
-
-export async function loginWithNsec(nsec: string): Promise<NostrUser | null> {
-  let secretKey: Uint8Array;
-  try {
-    if (nsec.startsWith('nsec')) {
-      const decoded = nip19.decode(nsec);
-      if (decoded.type !== 'nsec') throw new Error('Invalid nsec');
-      secretKey = decoded.data;
-    } else if (/^[0-9a-f]{64}$/i.test(nsec)) {
-      secretKey = hexToBytes(nsec);
-    } else {
-      throw new Error('Invalid nsec format');
-    }
-  } catch {
-    throw new Error('Invalid nsec format');
-  }
-
-  const signer = new PrivateKeySigner(secretKey);
-  const pubkey = await signer.getPublicKey();
-  setNDKSigner(signer);
-
-  await saveSignerPayload(JSON.stringify({ type: 'nsec', privkey: bytesToHex(secretKey) }));
-
-  const user = makeUser(pubkey);
-  await fetchAndAttachProfile(user);
-  return user;
-}
-
-export async function createNewAccount(): Promise<{ user: NostrUser; nsec: string }> {
-  const secretKey = generateSecretKey();
-  const nsec = nip19.nsecEncode(secretKey);
-  const signer = new PrivateKeySigner(secretKey);
-  const pubkey = await signer.getPublicKey();
-  setNDKSigner(signer);
-  await saveSignerPayload(JSON.stringify({ type: 'nsec', privkey: bytesToHex(secretKey) }));
-  return { user: makeUser(pubkey), nsec };
-}
-
-export interface BunkerLoginOptions {
-  onAuthUrl?: (url: string) => void;
-}
-
-export async function loginWithBunker(
-  bunkerUrl: string,
-  options?: BunkerLoginOptions,
-): Promise<NostrUser | null> {
-  const L = (...args: unknown[]) => logStatus('Bunker', args[0] as string, args.slice(1));
-  L('Starting Bunker login:', bunkerUrl);
-
-  const localSecret = getLocalSecretKey();
-  const signer = await Nip46Signer.fromBunkerUri(bunkerUrl, {
-    clientSecretKey: localSecret,
-    onAuthChallenge: options?.onAuthUrl
-      ? (url) => options.onAuthUrl!(url)
-      : (url) => {
-          L('authUrl received:', url);
-          if (typeof window !== 'undefined') {
-            window.open(url, '_blank', 'width=600,height=700');
-          }
-        },
-  });
-  const pubkey = await withTimeout(signer.getPublicKey(), 60000);
-  setNDKSigner(signer);
-
-  await saveSignerPayload(
-    JSON.stringify({
-      type: 'bunker',
-      bunkerUrl,
-      localPrivkey: bytesToHex(localSecret),
-    }),
-  );
-
-  const user = makeUser(pubkey);
-  void fetchAndAttachProfile(user);
-  return user;
-}
-
-export interface NostrConnectSession {
-  uri: string;
-  waitForConnection: () => Promise<NostrUser | null>;
-  cancel: () => void;
-}
-
-export async function createNostrConnectSession(
-  relay?: string,
-  options?: BunkerLoginOptions,
-): Promise<NostrConnectSession> {
-  const L = (...args: unknown[]) => logStatus('NostrConnect', args[0] as string, args.slice(1));
-  const connectRelay = relay || CONNECT_RELAYS[0]!;
-
-  const localSecret = getLocalSecretKey();
-
-  const handle = Nip46Signer.startNostrConnect({
-    relays: [connectRelay, ...CONNECT_RELAYS],
-    clientSecretKey: localSecret,
-    metadata: {
-      name: 'Obelisk',
-      url: typeof window !== 'undefined' ? window.location.origin : 'https://obelisk.ar',
-    },
-    pairTimeoutMs: 60000,
-    onAuthChallenge: (url) => {
-      L('authUrl received:', url);
-      options?.onAuthUrl?.(url);
-    },
-  });
-
-  L('Generated URI:', handle.uri);
-
-  let cancelled = false;
-
-  const waitForConnection = async (): Promise<NostrUser | null> => {
-    L('Waiting for connection...');
-    try {
-      const signer = await handle.ready;
-      if (cancelled) {
-        await signer.close?.();
-        return null;
-      }
-      const pubkey = await signer.getPublicKey();
-      setNDKSigner(signer);
-      await saveSignerPayload(
-        JSON.stringify({
-          type: 'bunker',
-          bunkerUrl: signer.bunkerPubkey
-            ? `bunker://${signer.bunkerPubkey}?${signer.relays.map((r) => `relay=${encodeURIComponent(r)}`).join('&')}`
-            : '',
-          localPrivkey: bytesToHex(localSecret),
-        }),
-      );
-      const user = makeUser(pubkey);
-      void fetchAndAttachProfile(user);
-      return user;
-    } catch (e) {
-      L('Connection error:', e);
-      throw e;
-    }
-  };
-
-  return {
-    uri: handle.uri,
-    waitForConnection,
-    cancel: () => {
-      cancelled = true;
-      handle.cancel();
-    },
-  };
-}
-
-export async function restoreRemoteSigner(): Promise<boolean> {
+/**
+ * Read the persisted signer payload from localStorage and reconstruct the
+ * signer object. Returns the signer on success, `null` on failure/absence.
+ *
+ * The caller is responsible for activating the signer via the SDK's
+ * `login()` hook (from `@nostr-wot/data/react`). This function intentionally
+ * does NOT call `setNDKSigner` — signer lifecycle is now owned by
+ * `NostrSessionProvider`.
+ */
+export async function restoreRemoteSigner(): Promise<NostrSigner | null> {
   const payloadStr = await readSignerPayload();
-  if (!payloadStr) return false;
+  if (!payloadStr) return null;
 
   try {
     const payload = JSON.parse(payloadStr) as
@@ -419,25 +219,21 @@ export async function restoreRemoteSigner(): Promise<boolean> {
       | { type: 'bunker'; bunkerUrl: string; localPrivkey: string };
 
     if (payload.type === 'nsec') {
-      if (!payload.privkey) return false;
-      const signer = new PrivateKeySigner(hexToBytes(payload.privkey));
-      setNDKSigner(signer);
-      return true;
+      if (!payload.privkey) return null;
+      return new PrivateKeySigner(hexToBytes(payload.privkey));
     }
 
-    if (payload.type !== 'bunker') return false;
-    if (!payload.bunkerUrl) return false;
+    if (payload.type !== 'bunker') return null;
+    if (!payload.bunkerUrl) return null;
 
     const localSecret = hexToBytes(payload.localPrivkey);
-    const signer = await Nip46Signer.fromBunkerUri(payload.bunkerUrl, {
+    return await Nip46Signer.fromBunkerUri(payload.bunkerUrl, {
       clientSecretKey: localSecret,
     });
-    setNDKSigner(signer);
-    return true;
   } catch (err) {
     console.warn('[nostr] restoreRemoteSigner failed:', err);
     await clearSignerPayload();
-    return false;
+    return null;
   }
 }
 
@@ -469,18 +265,20 @@ export async function fetchCurrentKind0(pubkey: string): Promise<Record<string, 
  * fields into the existing kind-0 to preserve any keys the UI doesn't
  * surface.
  */
-export async function publishProfile(fields: {
-  name?: string;
-  display_name?: string;
-  picture?: string;
-  about?: string;
-  banner?: string;
-  website?: string;
-  lud16?: string;
-  nip05?: string;
-}): Promise<NostrEvent> {
-  if (!currentSigner) throw new Error('No signer available');
-  const pubkey = await currentSigner.getPublicKey();
+export async function publishProfile(
+  signer: NostrSigner,
+  fields: {
+    name?: string;
+    display_name?: string;
+    picture?: string;
+    about?: string;
+    banner?: string;
+    website?: string;
+    lud16?: string;
+    nip05?: string;
+  },
+): Promise<NostrEvent> {
+  const pubkey = await signer.getPublicKey();
   const existing = await fetchCurrentKind0(pubkey);
 
   const merged = { ...existing };
@@ -496,7 +294,7 @@ export async function publishProfile(fields: {
     tags: [],
     content: JSON.stringify(merged),
   };
-  const event = await currentSigner.signEvent(template);
+  const event = await signer.signEvent(template);
 
   const pool = getPool();
   await Promise.allSettled(pool.publish(Array.from(explicitRelays), event));

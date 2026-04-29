@@ -7,17 +7,13 @@ vi.mock('@nostr-wot/data', () => ({
 }));
 
 const mockSignEvent = vi.fn();
-const mockGetExplicitRelays = vi.fn();
-
-vi.mock('@/lib/nostr', () => ({
-  getSigner: () => ({
-    getPublicKey: async () => 'me',
-    signEvent: mockSignEvent,
-  }),
-  getExplicitRelays: mockGetExplicitRelays,
-}));
 
 const ME = 'a'.repeat(64);
+
+const mockSigner = {
+  getPublicKey: async () => ME,
+  signEvent: mockSignEvent,
+};
 
 describe('publishInboxRelays', () => {
   beforeEach(() => {
@@ -30,12 +26,12 @@ describe('publishInboxRelays', () => {
       id: 'evid',
       sig: 'sig',
     }));
-    mockGetExplicitRelays.mockReturnValue(['wss://relay.damus.io', 'wss://nos.lol']);
   });
 
-  it('publishes a kind 10050 event with current relay set', async () => {
+  it('publishes a kind 10050 event with the provided relay set', async () => {
     const { publishInboxRelays } = await import('./dm-inbox');
-    const result = await publishInboxRelays(ME);
+    const relays = ['wss://relay.damus.io', 'wss://nos.lol'];
+    const result = await publishInboxRelays(mockSigner as any, relays);
     expect(result).toBe(true);
     expect(mockSignEvent).toHaveBeenCalledOnce();
 
@@ -48,15 +44,10 @@ describe('publishInboxRelays', () => {
     expect(mockPublish).toHaveBeenCalledOnce();
   });
 
-  it('returns false if no signer', async () => {
-    vi.resetModules();
-    vi.doMock('@/lib/nostr', () => ({
-      getSigner: () => null,
-      getExplicitRelays: () => ['wss://relay.damus.io'],
-    }));
+  it('returns false if signing throws', async () => {
+    mockSignEvent.mockRejectedValueOnce(new Error('signing failed'));
     const { publishInboxRelays } = await import('./dm-inbox');
-    const result = await publishInboxRelays(ME);
+    const result = await publishInboxRelays(mockSigner as any, ['wss://relay.damus.io']);
     expect(result).toBe(false);
-    vi.doUnmock('@/lib/nostr');
   });
 });

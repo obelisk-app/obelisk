@@ -43,13 +43,7 @@ vi.mock('@/lib/dm/cache-key', () => ({
 }));
 
 vi.mock('@/lib/nostr', () => ({
-  getSigner: () => ({ pubkey: 'a'.repeat(64), signEvent: vi.fn(), getPublicKey: async () => 'a'.repeat(64) }),
   getExplicitRelays: () => ['wss://r1'],
-  // The auth store subscribes to onSignerChange at module load to mirror
-  // the signer into the reactive `signerReady` flag. Without a no-op stub
-  // here, importing useAuthStore crashes during test setup.
-  onSignerChange: vi.fn(() => () => {}),
-  setNDKSigner: vi.fn(),
   formatPubkey: (pk: string) => pk.slice(0, 8),
 }));
 
@@ -58,6 +52,11 @@ vi.mock('@nostr-wot/data/react', () => ({
     pubkey: 'a'.repeat(64),
     nip44Encrypt: vi.fn(),
     nip44Decrypt: vi.fn(),
+  })),
+  useSigner: vi.fn(() => ({
+    pubkey: 'a'.repeat(64),
+    signEvent: vi.fn(),
+    getPublicKey: async () => 'a'.repeat(64),
   })),
 }));
 

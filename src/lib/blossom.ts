@@ -2,15 +2,13 @@
 
 /**
  * Thin wrapper around `@nostr-wot/blossom`. The SDK does the upload +
- * signing; obelisk just supplies the active NostrSigner from the hub.
+ * signing; obelisk just supplies the active NostrSigner from the caller.
  */
 
 import { uploadToBlossom as sdkUpload, type BlossomBlob } from '@nostr-wot/blossom';
-import { getSigner } from '@/lib/nostr';
+import type { NostrSigner } from '@nostr-wot/signers';
 
-export async function uploadToBlossom(file: File): Promise<string> {
-  const signer = getSigner();
-  if (!signer) throw new Error('No signer available');
+export async function uploadToBlossom(file: File, signer: NostrSigner): Promise<string> {
   const blob: BlossomBlob = await sdkUpload(file, { signer });
   return blob.url;
 }

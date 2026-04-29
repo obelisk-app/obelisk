@@ -7,8 +7,10 @@ import { publishInboxRelays } from '@/lib/dm/dm-inbox';
 import { getCachedEvents, subscribeToCacheTick } from '@/lib/dm/dm-cache';
 import { setProfileDynamicRelays } from '@/lib/dm/profile-cache';
 import { loadInboxWindow, fetchMyInboxRelays, fetchMyDmRelays } from '@/lib/dm/dm';
-import { formatPubkey, getSigner, getExplicitRelays } from '@/lib/nostr';
+import { formatPubkey, getExplicitRelays } from '@/lib/nostr';
 import { DM_FEATURE_ENABLED } from '@/lib/feature-flags';
+import { useSigner } from '@nostr-wot/data/react';
+import type { NostrSigner } from '@nostr-wot/signers';
 
 type Args = {
   isDMMode: boolean;
@@ -126,6 +128,7 @@ export function useDMLifecycle({ isDMMode, ndkReady, profilePubkey, profileCache
   const inboxPublishedRef = useRef(false);
   // Guard the historical inbox walker: run once per session per pubkey.
   const inboxWalkedRef = useRef<string | null>(null);
+  const signer = useSigner() as unknown as NostrSigner | null;
 
   const refreshThreads = useCallback(() => {
     if (!profilePubkey) return;
@@ -188,10 +191,10 @@ export function useDMLifecycle({ isDMMode, ndkReady, profilePubkey, profileCache
     if (!DM_FEATURE_ENABLED) return;
     if (!isDMMode || !ndkReady || !profilePubkey) return;
     if (inboxPublishedRef.current) return;
-    if (!getSigner()) return;
+    if (!signer) return;
     inboxPublishedRef.current = true;
-    void publishInboxRelays(profilePubkey);
-  }, [isDMMode, ndkReady, profilePubkey]);
+    void publishInboxRelays(signer, getExplicitRelays());
+  }, [isDMMode, ndkReady, profilePubkey, signer]);
 
   // Reset session guards whenever the active account changes.
   useEffect(() => {

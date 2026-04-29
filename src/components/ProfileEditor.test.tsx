@@ -11,7 +11,10 @@ const mockSigner = { pubkey: 'abc123', signEvent: vi.fn(), getPublicKey: vi.fn()
 vi.mock('@/lib/nostr', () => ({
   publishProfile: (...args: unknown[]) => mockPublishProfile(...args),
   fetchCurrentKind0: (...args: unknown[]) => mockFetchCurrentKind0(...args),
-  getSigner: () => mockSigner,
+}));
+
+vi.mock('@nostr-wot/data/react', () => ({
+  useSigner: () => mockSigner,
 }));
 
 vi.mock('@/lib/blossom', () => ({
@@ -78,7 +81,7 @@ describe('ProfileEditor', () => {
       await userEvent.click(screen.getByText('profileEditor.publish'));
 
       await waitFor(() => {
-        expect(mockPublishProfile).toHaveBeenCalledWith({
+        expect(mockPublishProfile).toHaveBeenCalledWith(mockSigner, {
           name: 'Alice',
           display_name: 'Alice',
         });
@@ -104,11 +107,11 @@ describe('ProfileEditor', () => {
       await userEvent.click(screen.getByText('profileEditor.publish'));
 
       await waitFor(() => {
-        expect(mockUploadToBlossom).toHaveBeenCalledWith(file);
+        expect(mockUploadToBlossom).toHaveBeenCalledWith(file, mockSigner);
       });
 
       await waitFor(() => {
-        expect(mockPublishProfile).toHaveBeenCalledWith({
+        expect(mockPublishProfile).toHaveBeenCalledWith(mockSigner, {
           name: 'Alice',
           display_name: 'Alice',
           picture: 'https://blossom.primal.net/abc123.jpg',
