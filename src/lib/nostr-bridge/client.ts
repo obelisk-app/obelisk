@@ -647,10 +647,32 @@ class BridgeImpl implements NostrBridge {
 
   // -- Internals ---------------------------------------------------------
 
+  /**
+   * Return a signing function suitable for `onauth` params in pool.subscribe
+   * and pool.publish. When the relay sends CLOSED "auth-required:…" the pool
+   * uses this to authenticate and retry the operation automatically.
+   */
+  private getAuthSigner(): ((evt: EventTemplate) => Promise<VerifiedEvent>) | undefined {
+    if (!this.session) return undefined;
+    return async (evt: EventTemplate): Promise<VerifiedEvent> => {
+      if (this.session?.loginMethod === 'nsec' && this.session.privKeyHex) {
+        const sk = hexToBytes(this.session.privKeyHex);
+        return finalizeEvent(evt, sk) as VerifiedEvent;
+      }
+      if (this.session?.loginMethod === 'nip07') {
+        const win = (window as any).nostr;
+        if (!win) throw new Error('NIP-07 extension unavailable');
+        return (await win.signEvent(evt)) as VerifiedEvent;
+      }
+      throw new Error('Cannot sign auth event with current login method');
+    };
+  }
+
   private subscribeGroupMetadata(): void {
     const filter: Filter = { kinds: [KIND_GROUP_METADATA] };
     const sub = this.pool.subscribe(this.relays, filter, {
       onevent: (ev) => this.ingestGroupMetadata(ev),
+      onauth: this.getAuthSigner(),
     });
     this.subs.push(sub);
   }
@@ -663,6 +685,7 @@ class BridgeImpl implements NostrBridge {
     };
     const sub = this.pool.subscribe(this.relays, filter, {
       onevent: (ev) => this.ingestMessage(groupId, ev),
+      onauth: this.getAuthSigner(),
     });
     this.subs.push(sub);
   }
@@ -672,6 +695,7 @@ class BridgeImpl implements NostrBridge {
     const relays = Array.from(new Set([...this.relays, ...PROFILE_RELAYS]));
     const sub = this.pool.subscribe(relays, filter, {
       onevent: (ev) => this.ingestUserMetadata(ev),
+      onauth: this.getAuthSigner(),
     });
     this.subs.push(sub);
   }
@@ -682,6 +706,7 @@ class BridgeImpl implements NostrBridge {
     const filter: Filter = { kinds: [KIND_REACTION], '#h': [groupId], limit: 500 };
     const sub = this.pool.subscribe(this.relays, filter, {
       onevent: (ev) => this.ingestReaction(groupId, ev),
+      onauth: this.getAuthSigner(),
     });
     this.subs.push(sub);
   }
@@ -695,6 +720,7 @@ class BridgeImpl implements NostrBridge {
     };
     const sub = this.pool.subscribe(this.relays, filter, {
       onevent: (ev) => this.ingestAdminMember(ev),
+      onauth: this.getAuthSigner(),
     });
     this.subs.push(sub);
   }
@@ -717,6 +743,7 @@ class BridgeImpl implements NostrBridge {
         this.myFollows.set(pubkeys);
         pubkeys.forEach((pk) => this.ensureUserMetadata(pk));
       },
+      onauth: this.getAuthSigner(),
     });
     this.subs.push(sub);
   }
@@ -731,6 +758,7 @@ class BridgeImpl implements NostrBridge {
     for (const f of [filterIn, filterOut]) {
       const sub = this.pool.subscribe(this.relays, f, {
         onevent: (ev) => this.ingestIncomingDM(ev),
+        onauth: this.getAuthSigner(),
       });
       this.subs.push(sub);
     }
@@ -909,7 +937,9 @@ class BridgeImpl implements NostrBridge {
       throw new Error(`Login method ${this.session.loginMethod} cannot sign events in this build`);
     }
 
-    const results = await Promise.allSettled(this.pool.publish(this.relays, event));
+    const results = await Promise.allSettled(
+      this.pool.publish(this.relays, event, { onauth: this.getAuthSigner() }),
+    );
     const accepted = results.filter((r) => r.status === 'fulfilled');
     if (accepted.length === 0) {
       const reasons = results
