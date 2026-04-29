@@ -27,9 +27,9 @@ import { useAuthStore } from '@/store/auth';
 import { useLocalWallet } from '@/lib/wallet/local-client';
 import { resolveLightningAddress, requestInvoice } from '@/lib/wallet/lnurl-pay';
 import { getLightningAddress } from '@/lib/wallet/provisioning';
-import { getNDK } from '@/lib/nostr';
+import { getSigner, getExplicitRelays } from '@/lib/nostr';
 import { buildZapRequest } from '@/lib/wallet/zap-request';
-import { toKEKSigner, toZapRequestSigner } from '@/lib/signer-adapters';
+import { useKEKSigner } from '@nostr-wot/data/react';
 
 interface MessageInputProps {
   onSend: (content: string, replyToId?: string) => void;
@@ -60,9 +60,7 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
   // (/zap, /invoice, /balance). The wallet credentials are decrypted in the
   // browser using the user's Nostr signer (KEK) — server never sees them.
   const myPubkey = useAuthStore((s) => s.profile?.pubkey ?? null);
-  const signerReady = useAuthStore((s) => s.signerReady);
-  const ndk = getNDK();
-  const kekSigner = signerReady && myPubkey ? toKEKSigner(ndk, ndk.signer, myPubkey) : null;
+  const kekSigner = useKEKSigner();
   const { client: walletClient } = useLocalWallet(myPubkey, kekSigner);
 
   // Attach menu / upload / emoji / gif state
@@ -347,12 +345,11 @@ export default function MessageInput({ onSend, onEditSave, onTyping }: MessageIn
           // Build a signed NIP-57 zap-request so the recipient's LNURL provider
           // publishes a kind 9735 receipt to the recipient's relays — proof of
           // payment that doesn't need any Obelisk-server audit log.
-          const ndk = getNDK();
           let zapRequest: unknown = undefined;
           try {
-            const zapSigner = toZapRequestSigner(ndk, ndk.signer);
+            const zapSigner = getSigner();
             if (zapSigner) {
-              const recipientRelays = Array.from((ndk.pool?.relays as Map<string, unknown> | undefined)?.keys?.() ?? []) as string[];
+              const recipientRelays = getExplicitRelays();
               if (recipientRelays.length === 0) recipientRelays.push('wss://relay.damus.io', 'wss://nos.lol');
               zapRequest = await buildZapRequest(zapSigner, {
                 recipientPubkey: target,

@@ -7,9 +7,9 @@ import { getOrCreateCacheKey } from '@/lib/dm/cache-key';
 import { getCachedEvents, subscribeToCacheTick } from '@/lib/dm/dm-cache';
 import { decryptToEnvelope, partnerOfEnvelope } from '@/lib/dm/decrypt';
 import { useDMStore } from '@/store/dm';
-import { formatPubkey, getNDK } from '@/lib/nostr';
-import { toKEKSigner } from '@/lib/signer-adapters';
+import { formatPubkey, getSigner, getExplicitRelays } from '@/lib/nostr';
 import { useAuthStore } from '@/store/auth';
+import { useKEKSigner } from '@nostr-wot/data/react';
 
 interface DMSessionContextValue {
   ready: boolean;
@@ -74,20 +74,17 @@ export function useLastDM(partner: string | null | undefined): DMMessage | null 
 export function DMSessionProvider({ myPubkey, children }: { myPubkey: string; children: React.ReactNode }) {
   const [cacheKey, setCacheKey] = useState<CryptoKey | null>(null);
   const closeRef = useRef<(() => void) | null>(null);
-  const signerReady = useAuthStore((s) => s.signerReady);
+  const kekSigner = useKEKSigner();
 
   useEffect(() => {
     hydrateFollows(myPubkey);
   }, [myPubkey]);
 
   useEffect(() => {
-    const ndk = getNDK();
-    if (!ndk.signer) return;
+    if (!kekSigner) return;
     let cancelled = false;
     (async () => {
       try {
-        const kekSigner = toKEKSigner(ndk, ndk.signer, myPubkey);
-        if (!kekSigner) return;
         const k = await getOrCreateCacheKey(myPubkey, kekSigner);
         if (!cancelled) setCacheKey(k);
       } catch (err) {
@@ -95,15 +92,14 @@ export function DMSessionProvider({ myPubkey, children }: { myPubkey: string; ch
       }
     })();
     return () => { cancelled = true; };
-  }, [myPubkey, signerReady]);
+  }, [myPubkey, kekSigner]);
 
   useEffect(() => {
-    const ndk = getNDK();
     let cancelled = false;
     let activeClose: (() => void) | null = null;
 
     void (async () => {
-      const poolRelays = Array.from(ndk.pool?.relays?.keys?.() ?? []) as string[];
+      const poolRelays = getExplicitRelays();
       // Same merge strategy as useDMLifecycle's walker: pool + extension's
       // canonical relay list + kind 10050 inbox + NIP-65 read/write. The
       // extension is the single most reliable source — it always knows the
@@ -160,8 +156,7 @@ export function DMSessionProvider({ myPubkey, children }: { myPubkey: string; ch
   // budget only burns on truly-new wraps.
   useEffect(() => {
     if (!cacheKey) return;
-    const ndk = getNDK();
-    if (!ndk.signer) return;
+    if (!getSigner()) return;
 
     let cancelled = false;
     let inFlight = false;
@@ -172,8 +167,8 @@ export function DMSessionProvider({ myPubkey, children }: { myPubkey: string; ch
       try {
         const found = await discoverNip17Partners({
           myPubkey,
-          ndk,
-          signer: ndk.signer,
+          ndk: null,
+          signer: getSigner(),
           cacheKey,
           limit: 30,
         });

@@ -3,14 +3,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useZapStore } from '@/store/zap';
 import { useChatStore } from '@/store/chat';
-import { formatPubkey } from '@/lib/nostr';
+import { formatPubkey, getSigner, getExplicitRelays } from '@/lib/nostr';
 import { useAuthStore } from '@/store/auth';
-import { getNDK } from '@/lib/nostr';
 import { useLocalWallet } from '@/lib/wallet/local-client';
 import { resolveLightningAddress, requestInvoice } from '@/lib/wallet/lnurl-pay';
 import { getLightningAddress } from '@/lib/wallet/provisioning';
 import { buildZapRequest } from '@/lib/wallet/zap-request';
-import { toKEKSigner, toZapRequestSigner } from '@/lib/signer-adapters';
+import { useKEKSigner } from '@nostr-wot/data/react';
 
 const QUICK_AMOUNTS = [21, 100, 500, 1000, 5000, 21000];
 
@@ -27,9 +26,7 @@ export default function ZapPickerModal() {
   const [busy, setBusy] = useState(false);
 
   const myPubkey = useAuthStore((s) => s.profile?.pubkey ?? null);
-  const signerReady = useAuthStore((s) => s.signerReady);
-  const ndk = getNDK();
-  const kekSigner = signerReady && myPubkey ? toKEKSigner(ndk, ndk.signer, myPubkey) : null;
+  const kekSigner = useKEKSigner();
   const { client: walletClient } = useLocalWallet(myPubkey, kekSigner);
 
   useEffect(() => {
@@ -100,9 +97,9 @@ export default function ZapPickerModal() {
       // payment that doesn't need any Obelisk-server audit log.
       let zapRequest: unknown = undefined;
       try {
-        const zapSigner = toZapRequestSigner(ndk, ndk.signer);
+        const zapSigner = getSigner();
         if (zapSigner) {
-          const recipientRelays = Array.from((ndk.pool?.relays as Map<string, unknown> | undefined)?.keys?.() ?? []) as string[];
+          const recipientRelays = getExplicitRelays();
           if (recipientRelays.length === 0) recipientRelays.push('wss://relay.damus.io', 'wss://nos.lol');
           zapRequest = await buildZapRequest(zapSigner, {
             recipientPubkey: target,

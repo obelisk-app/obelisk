@@ -4,9 +4,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { parseBolt11, type ParsedInvoice } from '@/lib/bolt11';
 import { useChatStore } from '@/store/chat';
 import { useAuthStore } from '@/store/auth';
-import { formatPubkey, getNDK } from '@/lib/nostr';
+import { formatPubkey } from '@/lib/nostr';
 import { useLocalWallet } from '@/lib/wallet/local-client';
-import { toKEKSigner } from '@/lib/signer-adapters';
+import { useKEKSigner } from '@nostr-wot/data/react';
 
 interface Props {
   invoice: string;
@@ -26,13 +26,11 @@ interface PaidState {
  */
 export default function InvoiceCard({ invoice, messageId, channelId }: Props) {
   const myPubkey = useAuthStore((s) => s.profile?.pubkey ?? null);
-  const signerReady = useAuthStore((s) => s.signerReady);
   const memberList = useChatStore((s) => s.memberList);
   const pushEphemeral = useChatStore((s) => s.pushEphemeral);
   const invoicePayments = useChatStore((s) => s.invoicePayments);
 
-  const _ndk = getNDK();
-  const _kekSigner = signerReady && myPubkey ? toKEKSigner(_ndk, _ndk.signer, myPubkey) : null;
+  const _kekSigner = useKEKSigner();
   const { client: _walletClient } = useLocalWallet(myPubkey ?? null, _kekSigner);
 
   const parsed = useMemo<ParsedInvoice | null>(() => {

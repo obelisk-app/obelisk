@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useAuthStore } from '@/store/auth';
-import { getNDK } from '@/lib/nostr';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 import { useLocalWallet } from '@/lib/wallet/local-client';
 import { hasLocalWallet, saveLocalWallet } from '@/lib/wallet/local-store';
@@ -14,7 +13,8 @@ import {
 } from '@/lib/wallet/provisioning';
 import { lnbitsToNwc } from '@/lib/wallet/lnbits-to-nwc';
 import { PoweredByNostrWot } from './PoweredByNostrWot';
-import { toKEKSigner, toNip98Signer } from '@/lib/signer-adapters';
+import { getSigner } from '@/lib/nostr';
+import { useKEKSigner } from '@nostr-wot/data/react';
 
 type Tab = 'quick' | 'nwc' | 'lnbits';
 type View = 'main' | 'send' | 'receive';
@@ -22,15 +22,8 @@ type View = 'main' | 'send' | 'receive';
 export default function WalletPanel() {
   const profile = useAuthStore((s) => s.profile);
   const pubkey = profile?.pubkey ?? null;
-  const signerReady = useAuthStore((s) => s.signerReady);
 
-  // Adapt the NDK signer to the narrow interfaces each consumer needs.
-  const ndk = getNDK();
-  const signer = signerReady && pubkey ? toKEKSigner(ndk, ndk.signer, pubkey) : null;
-  // Nip98Signer is used by the wallet provisioning flow (provisionWallet,
-  // claimLightningAddress, releaseLightningAddress). It requires getPublicKey +
-  // signEvent — not available on KEKSigner, so we derive it separately here.
-  const nip98Signer = signerReady ? toNip98Signer(ndk, ndk.signer) : null;
+  const signer = useKEKSigner();
 
   const { client, reload, disconnect } = useLocalWallet(pubkey, signer);
 
@@ -116,6 +109,7 @@ export default function WalletPanel() {
   }, [pubkey, client]);
 
   const handleQuickSetup = useCallback(async () => {
+    const nip98Signer = getSigner();
     if (!nip98Signer || !signer || !pubkey) return;
     setBusy(true); setStatus(null); setError(null);
     try {
@@ -125,7 +119,7 @@ export default function WalletPanel() {
       setStatus('Wallet conectada');
     } catch (e) { setError((e as Error).message); }
     finally { setBusy(false); }
-  }, [pubkey, nip98Signer, signer, reload]);
+  }, [pubkey, signer, reload]);
 
   const handleNwcConnect = useCallback(async () => {
     if (!signer || !pubkey) return;
@@ -172,6 +166,7 @@ export default function WalletPanel() {
   }, [disconnect]);
 
   const handleClaimAddress = useCallback(async () => {
+    const nip98Signer = getSigner();
     if (!nip98Signer || !claimUsername.trim()) return;
     setBusy(true); setError(null);
     try {
@@ -181,9 +176,10 @@ export default function WalletPanel() {
       setStatus(`Reclamaste ${address}`);
     } catch (e) { setError((e as Error).message); }
     finally { setBusy(false); }
-  }, [nip98Signer, claimUsername]);
+  }, [claimUsername]);
 
   const handleReleaseAddress = useCallback(async () => {
+    const nip98Signer = getSigner();
     if (!nip98Signer) return;
     if (!confirm('¿Liberar tu Lightning Address?')) return;
     setBusy(true); setError(null);
@@ -193,7 +189,7 @@ export default function WalletPanel() {
       setStatus('Dirección liberada');
     } catch (e) { setError((e as Error).message); }
     finally { setBusy(false); }
-  }, [nip98Signer]);
+  }, []);
 
   const handleSend = useCallback(async () => {
     if (!client || !sendInvoice.trim()) return;
