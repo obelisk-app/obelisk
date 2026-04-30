@@ -5,15 +5,14 @@ import { QRCodeSVG } from 'qrcode.react';
 import { nip19, generateSecretKey } from 'nostr-tools';
 import {
   Nip07Signer,
-  Nip46Signer,
   PrivateKeySigner,
   isNip07Available,
 } from '@nostr-wot/signers';
+import { startNostrConnect, fromBunkerUri } from '@/lib/bunker-signer-adapter';
 import { useLogin } from '@nostr-wot/data/react';
 import { useAuthStore } from '@/store/auth';
 import { authenticateWithBackend } from '@/lib/backend-auth';
 import { getExplicitRelays, type LoginMethod } from '@/lib/nostr';
-import { getNostrPool } from '@/lib/nostr-pool';
 import ProfileEditor from '@/components/ProfileEditor';
 
 const AUTH_IN_PROGRESS_KEY = 'obelisk-auth-in-progress';
@@ -87,11 +86,10 @@ export default function LoginModal({
         }
 
         const relays = [...NOSTRCONNECT_RELAYS, ...getExplicitRelays().slice(0, 2)];
-        const handle = Nip46Signer.startNostrConnect({
+        const handle = startNostrConnect({
           relays,
           metadata: { name: 'Obelisk', url: 'https://obelisk.ar' },
           onAuthChallenge: (url) => setAuthChallengeUrl(url),
-          pool: getNostrPool() as never,
         });
 
         handleRef.current = { cancel: handle.cancel };
@@ -207,11 +205,8 @@ export default function LoginModal({
         }
         case 'bunker': {
           if (!bunkerInput.trim()) throw new Error('Please enter your bunker URL');
-          const relays = getExplicitRelays();
-          signer = await Nip46Signer.fromBunkerUri(bunkerInput.trim(), {
-            relays,
+          signer = await fromBunkerUri(bunkerInput.trim(), {
             onAuthChallenge: (url) => setAuthChallengeUrl(url),
-            pool: getNostrPool() as never,
           });
           break;
         }
