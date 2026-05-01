@@ -17,6 +17,7 @@
 import { useEffect, useState } from 'react';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import { getBridge, getBridgeImpl } from '@/lib/nostr-bridge/client';
+import { cacheGet, cacheSet } from '@/lib/nostr-bridge/cache';
 import { fetchRelayInfo } from '@/lib/relay-info';
 
 const KIND_LAYOUT = 30078;
@@ -106,14 +107,23 @@ export function subscribeLayout(
 
   if (authors.length === 0) return () => {};
   let latest: ChannelLayout = EMPTY_LAYOUT;
+  // Stale-while-revalidate: paint the cached layout immediately, then let
+  // newest-wins overwrite once the relay confirms. Keyed by dTag so layout
+  // and branding (both kind 30078) don't collide.
+  const cached = cacheGet<ChannelLayout>(relayUrl, KIND_LAYOUT, dTag(relayUrl));
+  if (cached) {
+    latest = cached.value;
+    onChange(latest);
+  }
   const filter: Filter = {
     kinds: [KIND_LAYOUT],
     authors: [...authors],
     '#d': [dTag(relayUrl)],
   };
-  return impl.subscribeFilter(filter, (ev) => {
+  return impl.subscribeFilterWatched(filter, (ev) => {
     if (ev.created_at <= latest.updatedAt) return;
     latest = parseLayout(ev);
+    cacheSet(relayUrl, KIND_LAYOUT, dTag(relayUrl), latest);
     onChange(latest);
   });
 }
@@ -135,8 +145,13 @@ export function useChannelLayout(
 ): ChannelLayout {
   const [layout, setLayout] = useState<ChannelLayout>(EMPTY_LAYOUT);
   const authorsKey = [...authors].sort().join(',');
+  // Reset only when the relay changes — authors growing as admin events
+  // stream in would otherwise flash categories/order to empty mid-load.
+  // The newest-wins guard inside subscribeLayout already drops stale events.
   useEffect(() => {
     setLayout(EMPTY_LAYOUT);
+  }, [relayUrl]);
+  useEffect(() => {
     if (!relayUrl || authors.length === 0) return;
     return subscribeLayout(relayUrl, authors, setLayout);
     // eslint-disable-next-line react-hooks/exhaustive-deps

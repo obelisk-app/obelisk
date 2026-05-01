@@ -35,8 +35,42 @@ import type {
   JsUserMetadata,
   JsReaction,
   JsDirectMessage,
+  RelayAccessState,
   Unsubscribe,
 } from './types';
+
+/**
+ * Normalize a relay URL for equality comparison: lowercase host/scheme and
+ * strip trailing slashes. nostr-tools occasionally passes a URL with the
+ * slash and occasionally without, so direct string compare is unreliable.
+ */
+function normalizeRelayUrl(u: string): string {
+  return u.replace(/\/+$/, '').toLowerCase();
+}
+
+/**
+ * Map a CLOSED reason or publish-rejection message to a RelayAccessState.
+ * Returns `null` if the reason is benign (e.g. local close) so callers leave
+ * the existing state untouched. Pattern bank derives from common relay
+ * implementations: strfry, nostream, nostrudel, gnost-relay.
+ */
+function parseRelayRejection(reason: string): RelayAccessState | null {
+  const r = reason.toLowerCase();
+  if (r.includes('auth-required') || r.includes('auth_required') || r.includes('auth required')) {
+    return 'auth-required';
+  }
+  if (
+    r.includes('restricted') ||
+    r.includes('blocked') ||
+    r.includes('not allowed') ||
+    r.includes('not whitelisted') ||
+    r.includes('whitelist') ||
+    r.includes('forbidden')
+  ) {
+    return 'restricted';
+  }
+  return null;
+}
 
 // -- NIP-29 kinds --------------------------------------------------------
 const KIND_GROUP_MESSAGE = 9;
@@ -59,6 +93,7 @@ export const RELAYS_KEY = 'obelisk-dex/relays';
 const LEGACY_STORAGE_KEY = 'obeliskord/session';
 const LEGACY_RELAYS_KEY = 'obeliskord/relays';
 const DEFAULT_RELAY = 'wss://relay.obelisk.ar';
+const DEFAULT_RELAYS = ['wss://relay.obelisk.ar', 'wss://public.obelisk.ar'];
 
 /**
  * Read a localStorage value under the current key, falling back to the legacy
@@ -138,6 +173,39 @@ class StateStore<T> {
 class BridgeImpl implements NostrBridge {
   private pool: SimplePool;
   private relays: string[] = [DEFAULT_RELAY];
+
+  /**
+   * True if `url` is the relay the user is currently viewing — the only
+   * relay we should answer NIP-42 AUTH challenges for. nostr-tools may pass
+   * URLs with or without a trailing slash, so compare normalized.
+   */
+  private isActiveRelay(url: string): boolean {
+    const target = normalizeRelayUrl(url);
+    return this.relays.some((r) => normalizeRelayUrl(r) === target);
+  }
+
+  /**
+   * Update the relay-access store for the active relay. No-op for any URL
+   * that isn't the currently-opened relay — we only surface auth/whitelist
+   * state for the relay the user is actually looking at.
+   *
+   * Sticky upgrade to 'ok': once the relay has confirmed it reads us
+   * (any EVENT/EOSE on any sub), we never downgrade back to 'auth-required'
+   * or 'restricted'. Those states normally come from per-sub or per-publish
+   * rejections — a private channel the user isn't in, a NIP-29 membership
+   * race during publish, an AUTH challenge that resolves seconds later —
+   * none of which mean the relay is rejecting the user wholesale. Without
+   * this guard the banner gets stuck on "Not whitelisted" even though the
+   * relay is happily delivering everything else.
+   */
+  private setRelayAccess(url: string, state: RelayAccessState): void {
+    if (!this.isActiveRelay(url)) return;
+    const key = normalizeRelayUrl(url);
+    const cur = this.relayAccess.get();
+    if (cur[key] === state) return;
+    if (cur[key] === 'ok' && state !== 'ok') return;
+    this.relayAccess.set({ ...cur, [key]: state });
+  }
   private session: PersistedSession | null = null;
   private subs: Array<{ close: () => void }> = [];
   private activeGroupId: string | null = null;
@@ -163,8 +231,14 @@ class BridgeImpl implements NostrBridge {
       // dropping events. TextCoercingWebSocket UTF-8-decodes binary frames
       // before the parser sees them. Same fix as `getNostrPool()`.
       websocketImplementation: TextCoercingWebSocket as unknown as typeof WebSocket,
-      automaticallyAuth: (_relayUrl: string) => {
+      automaticallyAuth: (relayUrl: string) => {
         if (!this.session) return null;
+        // Only sign NIP-42 AUTH challenges for the relay the user has
+        // currently opened. Auxiliary relays (profile lookup, NostrConnect
+        // rendezvous, NIP-65 DM relays) may issue AUTH too, but we don't
+        // want to leak the user's pubkey to relays they're not browsing —
+        // and a slow/unresponsive auxiliary signer should not block reads.
+        if (!this.isActiveRelay(relayUrl)) return null;
         return async (evt: EventTemplate): Promise<VerifiedEvent> => {
           if (this.session?.loginMethod === 'nsec' && this.session.privKeyHex) {
             const sk = hexToBytes(this.session.privKeyHex);
@@ -187,9 +261,16 @@ class BridgeImpl implements NostrBridge {
 
   // Reactive state
   isLoggedIn = new StateStore(false);
+  /**
+   * Per-relay access state (NIP-42 / whitelist) for the active relay only.
+   * Keyed by `normalizeRelayUrl(url)`. Updated from CLOSED reasons in
+   * `subscribeWatched` and from rejected publishes in `signAndPublish`.
+   * Reset on `switchRelay` / `resetPoolForSessionChange`.
+   */
+  relayAccess = new StateStore<Record<string, RelayAccessState>>({});
   connectionState = new StateStore<string>('Disconnected');
   currentRelayUrl = new StateStore<string>(DEFAULT_RELAY);
-  configuredRelays = new StateStore<string[]>([DEFAULT_RELAY]);
+  configuredRelays = new StateStore<string[]>([...DEFAULT_RELAYS]);
   groups = new StateStore<JsGroup[]>([]);
   messagesByGroup = new StateStore<Record<string, JsMessage[]>>({});
   userMetadata = new StateStore<Record<string, JsUserMetadata>>({});
@@ -245,6 +326,10 @@ class BridgeImpl implements NostrBridge {
   // list — the symptom of that race is the admin badge / settings gear /
   // members rail flickering on/off until the user refreshes.
   private adminMemberLatestAt = new Map<string, number>();
+  // Same newest-wins guard for kind 39000 (group metadata) so an older
+  // revision from a slow relay can't overwrite a fresher one. Also lets
+  // the cached seed survive against stale events still in flight.
+  private groupMetadataLatestAt = new Map<string, number>();
   /**
    * After {@link resetPoolForSessionChange} rebuilds the pool, the global
    * subscriptions get re-issued by {@link connect}, but per-group REQs
@@ -277,7 +362,18 @@ class BridgeImpl implements NostrBridge {
         try {
           const list = JSON.parse(rawRelays) as string[];
           if (Array.isArray(list) && list.length > 0) {
-            this.configuredRelays.set(list);
+            const merged = [...list];
+            let mutated = false;
+            for (const def of DEFAULT_RELAYS) {
+              if (!merged.includes(def)) {
+                merged.push(def);
+                mutated = true;
+              }
+            }
+            this.configuredRelays.set(merged);
+            if (mutated) {
+              window.localStorage.setItem(RELAYS_KEY, JSON.stringify(merged));
+            }
           }
         } catch {
           // ignore
@@ -394,6 +490,29 @@ class BridgeImpl implements NostrBridge {
    * (they re-paint instantly if the user switches back).
    */
   private seedCacheForRelay(relay: string): void {
+    // Group metadata first so the sidebar lights up with channel rows even
+    // before the per-group admin/member seeds populate badges.
+    for (const groupId of cacheListIds(relay, KIND_GROUP_METADATA)) {
+      const entry = cacheGet<{ group: JsGroup; createdAt: number }>(
+        relay,
+        KIND_GROUP_METADATA,
+        groupId,
+      );
+      if (!entry) continue;
+      const { group, createdAt } = entry.value;
+      this.groupMetadataLatestAt.set(groupId, createdAt);
+      this.groups.update((prev) => {
+        if (prev.some((g) => g.id === groupId)) return prev;
+        return [...prev, group].sort((a, b) => (a.name ?? a.id).localeCompare(b.name ?? b.id));
+      });
+      if (group.parent) {
+        this.childrenByParent.update((prev) => {
+          const arr = prev[group.parent!] ?? [];
+          if (arr.includes(groupId)) return prev;
+          return { ...prev, [group.parent!]: [...arr, groupId].sort() };
+        });
+      }
+    }
     for (const groupId of cacheListIds(relay, KIND_GROUP_ADMINS)) {
       const entry = cacheGet<string[]>(relay, KIND_GROUP_ADMINS, groupId);
       if (entry) {
@@ -482,6 +601,9 @@ class BridgeImpl implements NostrBridge {
     // deciding "not a member".
     this.membershipReadyByGroup.set({});
     this.dmSubscribed = false;
+    // Forget any auth/whitelist signal we'd captured against the previous
+    // pool — the next REQ on the fresh sockets must re-prove access.
+    this.relayAccess.set({});
   }
 
   /**
@@ -750,6 +872,8 @@ class BridgeImpl implements NostrBridge {
     // "loaded" from the previous relay's data.
     this.membershipReadyByGroup.set({});
     this.dmSubscribed = false;
+    // Auth/whitelist state is per-relay; the new one hasn't been probed yet.
+    this.relayAccess.set({});
     // Re-paint instantly from disk for the new relay; live events will
     // overwrite as they arrive. See {@link seedCacheForRelay}.
     this.seedCacheForRelay(url);
@@ -794,6 +918,9 @@ class BridgeImpl implements NostrBridge {
 
   subscribeIsLoggedIn(cb: (v: boolean) => void): Unsubscribe {
     return this.isLoggedIn.subscribe(cb);
+  }
+  subscribeRelayAccess(cb: (byRelay: Readonly<Record<string, RelayAccessState>>) => void): Unsubscribe {
+    return this.relayAccess.subscribe(cb);
   }
   subscribeConnectionState(cb: (label: string) => void): Unsubscribe {
     return this.connectionState.subscribe(cb);
@@ -1210,6 +1337,22 @@ class BridgeImpl implements NostrBridge {
     return () => sub.close();
   }
 
+  /**
+   * Watched variant of {@link subscribeFilter}. Use this for any non-message
+   * data that paints the chrome of the app — relay branding, channel layout,
+   * group metadata fan-out — so a NIP-42 AUTH race or transient blip doesn't
+   * silently drop the REQ and force the user to refresh. Wraps the sub with
+   * the same watchdog the per-group subscriptions use.
+   */
+  subscribeFilterWatched(
+    filter: Filter,
+    onEvent: (ev: NostrEvent) => void,
+    options?: { watchdogMs?: number; maxAttempts?: number },
+  ): () => void {
+    const sub = this.subscribeWatched(this.relays, filter, onEvent, undefined, options);
+    return () => sub.close();
+  }
+
   // -- Internals ---------------------------------------------------------
 
   /**
@@ -1309,12 +1452,29 @@ class BridgeImpl implements NostrBridge {
         onevent: (ev) => {
           alive = true;
           clearTimer();
+          // Any event delivered means the relay is reading us — auth (if
+          // required) succeeded and we're not whitelist-blocked. Mark the
+          // active relay 'ok' (helper no-ops for non-active relays).
+          for (const url of relays) this.setRelayAccess(url, 'ok');
           onevent(ev);
         },
         oneose: () => {
           alive = true;
           clearTimer();
+          for (const url of relays) this.setRelayAccess(url, 'ok');
           oneose?.();
+        },
+        onclose: (reasons: string[]) => {
+          // nostr-tools fires onclose with one reason string per relay,
+          // index-aligned with the `relays` array. Local closes look like
+          // 'closed by caller' and yield no rejection match — we leave the
+          // existing state alone in that case.
+          reasons.forEach((reason, i) => {
+            if (!reason) return;
+            const url = relays[i];
+            const state = parseRelayRejection(reason);
+            if (state) this.setRelayAccess(url, state);
+          });
         },
         onauth: wrappedSigner,
       });
@@ -1386,14 +1546,27 @@ class BridgeImpl implements NostrBridge {
         const sk = hexToBytes(this.session.privKeyHex);
         return finalizeEvent(evt, sk) as VerifiedEvent;
       }
+      // Surface NIP-42 AUTH prompts in the activity log so the
+      // "Waiting for signature" toast persists for the entire round-trip
+      // — without this, the only visible toast was "Publishing to relays"
+      // even though the user was being asked to approve a sign in their
+      // extension or bunker.
       if (this.session?.loginMethod === 'nip07') {
         const win = (window as any).nostr;
         if (!win) throw new Error('NIP-07 extension unavailable');
-        return (await win.signEvent(evt)) as VerifiedEvent;
+        return await trackActivity(
+          'Waiting for extension signature',
+          () => win.signEvent(evt) as Promise<VerifiedEvent>,
+          'NIP-42 relay auth',
+        );
       }
       if (this.session?.loginMethod === 'bunker') {
         const b = await this.ensureBunkerSigner();
-        return (await b.signEvent(evt as unknown as EventTemplate & { pubkey: string })) as VerifiedEvent;
+        return await trackActivity(
+          'Waiting for bunker signature',
+          () => b.signEvent(evt as unknown as EventTemplate & { pubkey: string }) as Promise<VerifiedEvent>,
+          'NIP-42 relay auth',
+        );
       }
       throw new Error('Cannot sign auth event with current login method');
     };
@@ -1536,6 +1709,12 @@ class BridgeImpl implements NostrBridge {
     const tag = (name: string) => ev.tags.find((t) => t[0] === name)?.[1];
     const groupId = tag('d');
     if (!groupId) return;
+    // Drop older revisions arriving out-of-order from slower relays so the
+    // sidebar doesn't oscillate. The cached seed (with its own created_at)
+    // also participates in this guard.
+    const prevAt = this.groupMetadataLatestAt.get(groupId) ?? 0;
+    if (ev.created_at <= prevAt) return;
+    this.groupMetadataLatestAt.set(groupId, ev.created_at);
     const isPublic = ev.tags.some((t) => t[0] === 'public');
     const isOpen = ev.tags.some((t) => t[0] === 'open');
     const parent = tag('parent') ?? null;
@@ -1557,6 +1736,13 @@ class BridgeImpl implements NostrBridge {
       const filtered = prev.filter((g) => g.id !== groupId);
       return [...filtered, next].sort((a, b) => (a.name ?? a.id).localeCompare(b.name ?? b.id));
     });
+    // Persist for next reload — the sidebar paints channels instantly before
+    // the live REQ round-trip completes. Store the snapshot together with
+    // its created_at so the seed can re-establish the newest-wins guard.
+    cacheSet(this.currentRelayUrl.get(), KIND_GROUP_METADATA, groupId, {
+      group: next,
+      createdAt: ev.created_at,
+    });
     // Start streaming messages immediately so opening the channel doesn't
     // wait on a fresh REQ round-trip — the store already has them.
     this.subscribeGroupMessages(groupId);
@@ -1566,8 +1752,6 @@ class BridgeImpl implements NostrBridge {
     // and called useAdmins/useMembers). Eager subscription means admin status
     // resolves on first paint for every visible group. subscribeAdminMember
     // is idempotent — a later useAdmins call from a chat panel is a no-op.
-    // TODO(bridgeCache): also write the relay's reply through cacheSet so a
-    // reload paints from cache instantly.
     this.subscribeAdminMember(groupId);
     // Maintain parent → children index so the sidebar can render nesting.
     this.childrenByParent.update((prev) => {
@@ -1824,6 +2008,15 @@ class BridgeImpl implements NostrBridge {
     }
 
     const results = await Promise.allSettled(publishes);
+    // Surface NIP-42 / whitelist signals from the active relay. We only flip
+    // state on rejections — successful publishes already get marked 'ok' via
+    // the read path's onevent/oneose, so no need to overwrite here.
+    results.forEach((r, i) => {
+      if (r.status !== 'rejected') return;
+      const reason = r.reason instanceof Error ? r.reason.message : String(r.reason);
+      const state = parseRelayRejection(reason);
+      if (state) this.setRelayAccess(targetRelays[i], state);
+    });
     const accepted = results.filter((r) => r.status === 'fulfilled');
     if (accepted.length === 0) {
       const reasons = results

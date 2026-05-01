@@ -15,6 +15,8 @@ import {
   useDirectMessages,
   useAdmins,
   useMembers,
+  useRelayAccess,
+  useMyLoginMethod,
   type JsGroup,
   type JsMessage,
   type JsUserMetadata,
@@ -180,7 +182,7 @@ export default function AppShell() {
             )}
           </ResizablePane>
         </div>
-        <main className="flex flex-1 flex-col overflow-hidden bg-lc-dark min-w-0 border-l border-t border-r border-lc-border">
+        <main className="flex flex-1 flex-col overflow-hidden bg-lc-black min-w-0 border-l border-t border-r border-lc-border">
           {view.kind === 'group' ? (
             <ChatLayout
               groupId={view.groupId}
@@ -1610,6 +1612,7 @@ function ChatPanel({
       {(() => {
         const textBody = (
       <>
+      <RelayAccessBanner />
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-4">
         {messages.length === 0 ? (
           <div className="flex h-full items-center justify-center text-sm text-lc-muted">
@@ -2946,6 +2949,47 @@ function Avatar({ pubkey, size, picture }: { pubkey: string; size: number; pictu
       className="flex items-center justify-center rounded-full font-mono text-[10px] font-bold text-lc-white"
     >
       {pubkey.slice(0, 2).toUpperCase()}
+    </div>
+  );
+}
+
+function RelayAccessBanner() {
+  const relay = useCurrentRelayUrl();
+  const access = useRelayAccess();
+  const loginMethod = useMyLoginMethod();
+  const isLoggedIn = useIsLoggedIn();
+  if (!relay) return null;
+  if (access === 'ok' || access === 'unknown') return null;
+
+  const host = shortHost(relay);
+  if (access === 'auth-required') {
+    const reason = !isLoggedIn
+      ? 'Log in with a Nostr key — this relay only serves authenticated readers.'
+      : loginMethod === 'bunker'
+        ? 'Approve the signing request in your bunker app to complete NIP-42 AUTH.'
+        : loginMethod === 'nip07'
+          ? 'Approve the signing request in your Nostr extension to complete NIP-42 AUTH.'
+          : 'NIP-42 AUTH did not complete. Try reloading or switching login methods.';
+    return (
+      <div className="mx-5 mt-4 rounded-xl border border-yellow-500/40 bg-yellow-500/10 p-5">
+        <div className="text-lg font-semibold text-yellow-200">
+          Not authenticated to {host}
+        </div>
+        <div className="mt-1 text-sm text-yellow-100/80">{reason}</div>
+      </div>
+    );
+  }
+  // 'restricted' | 'error'
+  return (
+    <div className="mx-5 mt-4 rounded-xl border border-red-500/40 bg-red-500/10 p-5">
+      <div className="text-lg font-semibold text-red-200">
+        {access === 'restricted' ? `Not whitelisted on ${host}` : `Relay error on ${host}`}
+      </div>
+      <div className="mt-1 text-sm text-red-100/80">
+        {access === 'restricted'
+          ? 'This relay accepted your signature but won’t serve or accept events from your pubkey. Ask the operator to add you to its allowlist, or switch relays.'
+          : 'The relay rejected the request. Try reloading or switching relays.'}
+      </div>
     </div>
   );
 }

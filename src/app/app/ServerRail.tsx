@@ -13,9 +13,42 @@
  * Tiles morph from rounded-square to circle on hover.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { nostrActions, useConfiguredRelays, useCurrentRelayUrl } from '@/lib/nostr-bridge';
-import { faviconFor, fetchRelayInfo } from '@/lib/relay-info';
+import { faviconFor, fetchRelayInfo, type RelayInfo } from '@/lib/relay-info';
+
+const SUGGESTED_RELAYS: { url: string; fallbackName?: string; fallbackDescription?: string }[] = [
+  {
+    url: 'wss://relay.obelisk.ar',
+    fallbackName: 'Obelisk relay',
+    fallbackDescription: 'Default NIP-29 relay for Obelisk groups.',
+  },
+  {
+    url: 'wss://public.obelisk.ar',
+    fallbackName: 'Obelisk public',
+    fallbackDescription: 'Open NIP-29 relay run by Obelisk.',
+  },
+  {
+    url: 'wss://groups.0xchat.com',
+    fallbackName: '0xchat Groups relay',
+    fallbackDescription: 'NIP-29 relay powering 0xchat group messaging.',
+  },
+  {
+    url: 'wss://relay.groups.nip29.com',
+    fallbackName: 'relay.groups.nip29.com',
+    fallbackDescription: 'Public NIP-29 groups relay.',
+  },
+  {
+    url: 'wss://groups.hzrd149.com',
+    fallbackName: "hzrd149's groups",
+    fallbackDescription: 'A NIP-29 groups relay for hzrd149.',
+  },
+  {
+    url: 'wss://pyramid.fiatjaf.com',
+    fallbackName: 'the fiatjaf pyramid',
+    fallbackDescription: 'Invite-only NIP-29 relay run by fiatjaf.',
+  },
+];
 
 type RailMode = { kind: 'dm' } | { kind: 'relay'; url: string };
 
@@ -219,6 +252,192 @@ function RelayTile({
 }
 
 function AddRelayModal({ onClose }: { onClose: () => void }) {
+  const [tab, setTab] = useState<'suggested' | 'custom'>('suggested');
+  const configured = useConfiguredRelays();
+  const configuredSet = useMemo(() => new Set(configured), [configured]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="lc-card flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-lc-border bg-lc-dark shadow-2xl"
+      >
+        <div className="flex items-start justify-between gap-4 px-6 pt-6">
+          <div>
+            <h2 className="text-lg font-bold text-lc-white">Add a Relay</h2>
+            <p className="mt-1 text-sm text-lc-muted">
+              Pick a popular relay or enter a custom URL to connect.
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="rounded p-1 text-lc-muted hover:bg-lc-card hover:text-lc-white"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="mt-4 flex border-b border-lc-border px-6">
+          <TabButton active={tab === 'suggested'} onClick={() => setTab('suggested')}>
+            Suggested
+          </TabButton>
+          <TabButton active={tab === 'custom'} onClick={() => setTab('custom')}>
+            Custom URL
+          </TabButton>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          {tab === 'suggested' ? (
+            <SuggestedRelayList configuredSet={configuredSet} onAdded={onClose} />
+          ) : (
+            <CustomRelayForm onAdded={onClose} />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TabButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={
+        'relative -mb-px flex-1 px-4 py-3 text-sm font-semibold transition-colors ' +
+        (active ? 'text-lc-white' : 'text-lc-muted hover:text-lc-white')
+      }
+    >
+      {children}
+      <span
+        className={
+          'absolute bottom-0 left-0 right-0 h-0.5 rounded-full transition-opacity ' +
+          (active ? 'bg-lc-green opacity-100' : 'opacity-0')
+        }
+      />
+    </button>
+  );
+}
+
+function SuggestedRelayList({
+  configuredSet,
+  onAdded,
+}: {
+  configuredSet: Set<string>;
+  onAdded: () => void;
+}) {
+  return (
+    <ul className="flex flex-col gap-2">
+      {SUGGESTED_RELAYS.map((r) => (
+        <SuggestedRelayItem
+          key={r.url}
+          url={r.url}
+          fallbackName={r.fallbackName}
+          fallbackDescription={r.fallbackDescription}
+          alreadyAdded={configuredSet.has(r.url)}
+          onAdded={onAdded}
+        />
+      ))}
+    </ul>
+  );
+}
+
+function SuggestedRelayItem({
+  url,
+  fallbackName,
+  fallbackDescription,
+  alreadyAdded,
+  onAdded,
+}: {
+  url: string;
+  fallbackName?: string;
+  fallbackDescription?: string;
+  alreadyAdded: boolean;
+  onAdded: () => void;
+}) {
+  const [info, setInfo] = useState<RelayInfo | null>(null);
+  const [iconFailed, setIconFailed] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    fetchRelayInfo(url).then((i) => {
+      if (alive) setInfo(i);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [url]);
+
+  const name = info?.name || fallbackName || shortHost(url);
+  const description = info?.description || fallbackDescription || '<an undescribed relay>';
+  const icon = info?.icon || faviconFor(url);
+  const initials = letterFor(shortHost(url));
+  const accent = colorFor(shortHost(url));
+
+  async function add() {
+    setErr(null);
+    setBusy(true);
+    try {
+      await nostrActions.addRelay(url);
+      onAdded();
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <li className="flex items-center gap-3 rounded-xl border border-lc-border bg-lc-card/60 p-3">
+      <div
+        className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl text-base font-bold text-white"
+        style={{ background: icon && !iconFailed ? '#000' : accent }}
+      >
+        {icon && !iconFailed ? (
+          <img
+            src={icon}
+            alt=""
+            onError={() => setIconFailed(true)}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <span>{initials}</span>
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-sm font-semibold text-lc-white">{name}</div>
+        <div className="truncate font-mono text-xs text-lc-muted">{url}</div>
+        <div className="mt-0.5 truncate text-xs text-lc-muted">{description}</div>
+        {err && <div className="mt-1 text-xs text-red-400">{err}</div>}
+      </div>
+      <button
+        onClick={add}
+        disabled={alreadyAdded || busy}
+        className="shrink-0 rounded-lg bg-lc-green px-4 py-1.5 text-sm font-semibold text-lc-black transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {alreadyAdded ? 'Added' : busy ? 'Adding…' : 'Add'}
+      </button>
+    </li>
+  );
+}
+
+function CustomRelayForm({ onAdded }: { onAdded: () => void }) {
   const [url, setUrl] = useState('wss://');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -230,7 +449,6 @@ function AddRelayModal({ onClose }: { onClose: () => void }) {
     if (!v) return;
     if (!v.startsWith('ws://') && !v.startsWith('wss://')) v = 'wss://' + v.replace(/^\/*/, '');
     try {
-      // Validate URL
       new URL(v);
     } catch {
       setErr('Invalid URL');
@@ -240,7 +458,7 @@ function AddRelayModal({ onClose }: { onClose: () => void }) {
     try {
       await nostrActions.addRelay(v);
       await nostrActions.switchRelay(v);
-      onClose();
+      onAdded();
     } catch (e) {
       setErr((e as Error).message);
     } finally {
@@ -249,38 +467,29 @@ function AddRelayModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
-      <form
-        onSubmit={submit}
-        onClick={(e) => e.stopPropagation()}
-        className="lc-card w-full max-w-md rounded-2xl border border-lc-border bg-lc-dark p-6 shadow-2xl"
-      >
-        <h2 className="text-lg font-bold text-lc-white">Add a relay</h2>
-        <p className="mt-1 text-sm text-lc-muted">
-          Paste a NIP-29 group relay URL. Each relay is a separate &ldquo;server&rdquo; in the rail.
-        </p>
-        <input
-          autoFocus
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          spellCheck={false}
-          className="mt-4 w-full rounded border border-lc-border bg-lc-black px-3 py-2 font-mono text-sm text-lc-white outline-none focus:border-lc-green"
-        />
-        {err && <p className="mt-2 text-sm text-red-400">{err}</p>}
-        <div className="mt-4 flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="text-sm text-lc-muted hover:text-lc-white">
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={busy || !url.trim()}
-            className="rounded-full bg-lc-green px-4 py-1.5 text-sm font-semibold text-lc-black disabled:opacity-50"
-          >
-            {busy ? 'Adding…' : 'Add relay'}
-          </button>
-        </div>
-      </form>
-    </div>
+    <form onSubmit={submit}>
+      <label className="block text-sm font-semibold text-lc-white">Relay URL</label>
+      <p className="mt-1 text-xs text-lc-muted">
+        Paste a NIP-29 group relay URL. Each relay is a separate &ldquo;server&rdquo; in the rail.
+      </p>
+      <input
+        autoFocus
+        value={url}
+        onChange={(e) => setUrl(e.target.value)}
+        spellCheck={false}
+        className="mt-3 w-full rounded border border-lc-border bg-lc-black px-3 py-2 font-mono text-sm text-lc-white outline-none focus:border-lc-green"
+      />
+      {err && <p className="mt-2 text-sm text-red-400">{err}</p>}
+      <div className="mt-4 flex justify-end">
+        <button
+          type="submit"
+          disabled={busy || !url.trim()}
+          className="rounded-lg bg-lc-green px-4 py-1.5 text-sm font-semibold text-lc-black disabled:opacity-50"
+        >
+          {busy ? 'Adding…' : 'Add relay'}
+        </button>
+      </div>
+    </form>
   );
 }
 

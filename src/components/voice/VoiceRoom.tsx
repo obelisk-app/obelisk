@@ -37,7 +37,7 @@ type AuthGate =
   | { phase: 'init' }
   | { phase: 'loading-roles' }
   | { phase: 'not-a-member' }
-  | { phase: 'ready'; members: readonly string[]; admins: readonly string[] };
+  | { phase: 'ready'; members: readonly string[]; admins: readonly string[]; open: boolean };
 
 export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen, onToggleChat }: Props) {
   const router = useRouter();
@@ -68,6 +68,8 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
     let latestMembers: readonly string[] = [];
     let latestAdmins: readonly string[] = [];
     let membershipReady = false;
+    let isOpen = false;
+    let unsubGroups: (() => void) | null = null;
     let resolveTimer: ReturnType<typeof setTimeout> | null = null;
 
     setGate({ phase: 'loading-roles' });
@@ -86,29 +88,46 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
 
         const decide = () => {
           if (cancelled) return;
+          // Push live state into the running client. setOpen is critical:
+          // if the channel's `["open"]` flag arrives after the client was
+          // constructed, without this the local user sees nobody but
+          // themselves because subscribeRoster's filter drops every remote
+          // pubkey that isn't in the (still-empty) member set.
+          clientRef.current?.setOpen(isOpen);
           clientRef.current?.updateRoles(latestMembers, latestAdmins);
-          if (latestMembers.includes(pk) || latestAdmins.includes(pk)) {
-            setGate({ phase: 'ready', members: latestMembers, admins: latestAdmins });
+          // Open channels (NIP-29 `["open"]` tag on kind 39000) admit
+          // anyone — gating those on member/admin presence forces the
+          // "not a member" screen for users who joined via the open flow
+          // without an explicit kind 9000 ever landing on this relay.
+          if (isOpen || latestMembers.includes(pk) || latestAdmins.includes(pk)) {
+            setGate({ phase: 'ready', members: latestMembers, admins: latestAdmins, open: isOpen });
           } else {
             setGate({ phase: 'not-a-member' });
           }
         };
 
-        // Resolve immediately on a positive match. Otherwise wait for the
-        // bridge's "membership ready" signal — flipped to true the first time
-        // the relay delivers a 39001 or 39002 event for this group. Without
-        // that signal, an empty list could mean "not loaded yet" (slow NIP-42
-        // round-trip) just as easily as "user is not a member", and falsely
-        // flipping to "not-a-member" is what forces the refresh-loop UX.
+        // Resolve immediately on a positive match (or open channel).
+        // Otherwise wait for the bridge's "membership ready" signal —
+        // flipped to true the first time the relay delivers a 39001 or
+        // 39002 event for this group. Without that signal, an empty list
+        // could mean "not loaded yet" (slow NIP-42 round-trip) just as
+        // easily as "user is not a member", and falsely flipping to
+        // "not-a-member" is what forces the refresh-loop UX.
         const tryResolve = () => {
           if (cancelled) return;
-          if (latestMembers.includes(pk) || latestAdmins.includes(pk)) {
+          if (isOpen || latestMembers.includes(pk) || latestAdmins.includes(pk)) {
             decide();
             return;
           }
           if (membershipReady) decide();
         };
 
+        unsubGroups = bridge.subscribeGroups((groups) => {
+          const next = groups.find((g) => g.id === channelId)?.isOpen ?? false;
+          if (next === isOpen) return;
+          isOpen = next;
+          tryResolve();
+        });
         unsubMembers = bridge.subscribeMembers(channelId, (members) => {
           latestMembers = members;
           tryResolve();
@@ -139,6 +158,7 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
     return () => {
       cancelled = true;
       if (resolveTimer) clearTimeout(resolveTimer);
+      unsubGroups?.();
       unsubMembers?.();
       unsubAdmins?.();
       unsubReady?.();
@@ -206,7 +226,7 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
 
     (async () => {
       try {
-        client = new VoiceClient(channelId, { members: gate.members, admins: gate.admins, events });
+        client = new VoiceClient(channelId, { members: gate.members, admins: gate.admins, open: gate.open, events });
         clientRef.current = client;
         setActiveVoiceClient(client);
         await client.join();

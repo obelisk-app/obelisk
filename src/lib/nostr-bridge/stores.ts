@@ -6,7 +6,11 @@
  */
 import { useEffect, useState } from 'react';
 import { getBridge } from './client';
-import type { JsGroup, JsMessage, JsUserMetadata, JsReaction, JsDirectMessage } from './types';
+import type { JsGroup, JsMessage, JsUserMetadata, JsReaction, JsDirectMessage, RelayAccessState } from './types';
+
+function normalizeRelayUrl(u: string): string {
+  return u.replace(/\/+$/, '').toLowerCase();
+}
 
 function useSubscription<T>(
   subscribe: (
@@ -43,6 +47,22 @@ export function useConnectionState(): string {
 
 export function useCurrentRelayUrl(): string {
   return useSubscription((b, cb) => b.subscribeCurrentRelayUrl(cb), '');
+}
+
+/**
+ * NIP-42 / whitelist access state for a specific relay (defaults to the
+ * currently-active one). `'unknown'` until the relay either delivers an
+ * event/EOSE (→ `'ok'`) or sends a CLOSED reason we can classify.
+ */
+export function useRelayAccess(url?: string | null): RelayAccessState {
+  const current = useCurrentRelayUrl();
+  const target = (url ?? current) || '';
+  const map = useSubscription<Readonly<Record<string, RelayAccessState>>>(
+    (b, cb) => b.subscribeRelayAccess(cb),
+    {},
+  );
+  if (!target) return 'unknown';
+  return map[normalizeRelayUrl(target)] ?? 'unknown';
 }
 
 /**

@@ -15,7 +15,12 @@ type Sink = (ev: NostrEvent) => void;
 const fake = vi.hoisted(() => {
   const state = {
     published: [] as Array<{ kind: number; pubkey: string; tags: string[][]; content: string; id: string }>,
-    subscriptions: [] as Array<{ filter: Record<string, unknown>; sink: (ev: any) => void }>,
+    subscriptions: [] as Array<{
+      filter: Record<string, unknown>;
+      sink: (ev: any) => void;
+      relays?: string[];
+      onclose?: (reasons: string[]) => void;
+    }>,
   };
 
   function matchesInternal(f: Record<string, unknown>, ev: { kind: number; pubkey: string; tags: string[][] }): boolean {
@@ -32,8 +37,8 @@ const fake = vi.hoisted(() => {
   }
 
   class FakePool {
-    subscribe(_relays: string[], filter: Record<string, unknown>, opts: { onevent: (ev: any) => void; oneose?: () => void; onauth?: unknown }) {
-      const sub = { filter, sink: opts.onevent };
+    subscribe(relays: string[], filter: Record<string, unknown>, opts: { onevent: (ev: any) => void; oneose?: () => void; onclose?: (reasons: string[]) => void; onauth?: unknown }) {
+      const sub = { filter, sink: opts.onevent, relays, onclose: opts.onclose };
       state.subscriptions.push(sub);
       for (const ev of state.published) if (matchesInternal(filter, ev as any)) opts.onevent(ev);
       // Fire EOSE so subscribeWatched's watchdog marks the sub as alive and
@@ -280,6 +285,45 @@ describe('nostr-bridge', () => {
 
     const last = observed.at(-1) as Record<string, ReadonlyArray<string>>;
     expect(last.parent1).toContain('child1');
+  });
+
+  it('relayAccess flips to ok on event/EOSE and stays ok across per-sub CLOSED reasons', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const observed: Array<Record<string, string>> = [];
+    bridge.subscribeRelayAccess((m) => observed.push({ ...(m as Record<string, string>) }));
+
+    // EOSE fires from FakePool's subscribe via queueMicrotask — that should
+    // flip the active relay to 'ok'.
+    await flush();
+    const activeRelay = (await import('./client')).getBridgeImpl()!['relays'][0];
+    const norm = activeRelay.replace(/\/+$/, '').toLowerCase();
+    expect(observed.at(-1)?.[norm]).toBe('ok');
+
+    // Once 'ok' has been confirmed (relay is reading us), per-sub CLOSED
+    // rejections must NOT downgrade the access state. They normally come
+    // from a private channel the user isn't in, a NIP-29 membership race,
+    // or an AUTH challenge that resolves a moment later — none of which
+    // mean the relay has stopped serving us. Without this guard the
+    // "Not whitelisted" banner gets stuck on for users who actually are
+    // whitelisted.
+    for (const sub of fake.state.subscriptions) {
+      const reasons = (sub.relays ?? [activeRelay]).map(() => 'auth-required: please AUTH');
+      sub.onclose?.(reasons);
+    }
+    await flush();
+    expect(observed.at(-1)?.[norm]).toBe('ok');
+
+    for (const sub of fake.state.subscriptions) {
+      const reasons = (sub.relays ?? [activeRelay]).map(() => 'restricted: pubkey not whitelisted');
+      sub.onclose?.(reasons);
+    }
+    await flush();
+    expect(observed.at(-1)?.[norm]).toBe('ok');
   });
 });
 

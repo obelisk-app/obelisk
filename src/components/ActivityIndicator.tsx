@@ -8,8 +8,15 @@ export default function ActivityIndicator() {
   const { showActivityIndicator } = usePreferences();
   if (!showActivityIndicator) return null;
   if (items.length === 0) return null;
-  // Only show the most recent activity row to avoid a stack of notifications.
-  const visible = items.slice(0, 1);
+  // Only show one row to avoid a stack of notifications. A pending
+  // "Waiting for ... signature" always wins over anything else — the user
+  // is staring at an extension/bunker prompt and needs to know the app is
+  // blocked on their action, even if a later activity (e.g. "Publishing to
+  // relays") was pushed after the sign waiter.
+  const pendingSign = items.find(
+    (e) => e.status === 'pending' && /waiting for .* signature/i.test(e.label),
+  );
+  const visible = pendingSign ? [pendingSign] : items.slice(0, 1);
   return (
     <div
       className="pointer-events-none fixed bottom-3 right-3 z-[60] flex max-w-[min(22rem,calc(100vw-1.5rem))] flex-col gap-2"

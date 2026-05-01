@@ -51,6 +51,13 @@ export interface VoiceClientOptions {
    * pubkeys are honored as moderator force-actions.
    */
   admins?: readonly string[];
+  /**
+   * NIP-29 `["open"]` flag from the channel's kind 39000 metadata. When
+   * true, anyone may join regardless of `members`/`admins` — passing the
+   * member list is still useful so admin badges render correctly, but the
+   * gate on join/canJoin becomes unconditional.
+   */
+  open?: boolean;
   events?: VoiceClientEvents;
 }
 
@@ -62,7 +69,10 @@ export class VoiceClient {
 
   private members: ReadonlySet<string>;
   private admins: ReadonlySet<string>;
-  private readonly openRoom: boolean;
+  // Mutable so the live client can pick up a channel flipping open ↔ closed
+  // without being torn down. NIP-29 admins occasionally republish kind 39000
+  // with a different `["open"]` state and any in-call peers should follow.
+  private openRoom: boolean;
 
   private peers = new Map<string, Peer>();
   private remoteTracks = new Map<string, RemoteTrack>(); // key: trackId
@@ -84,7 +94,14 @@ export class VoiceClient {
     this.events = options.events ?? {};
     this.members = new Set(options.members ?? []);
     this.admins = new Set(options.admins ?? []);
-    this.openRoom = !options.members || options.members.length === 0;
+    // Honor the explicit `open` flag from kind 39000 first. Falling back
+    // to "no members provided" preserves the dev / ad-hoc-room behavior
+    // but is no longer the only path — production callers wire the
+    // group's `isOpen` through so an open public channel doesn't reject
+    // non-members just because their kind 9000 hasn't landed locally.
+    this.openRoom = options.open === true
+      || !options.members
+      || options.members.length === 0;
     const pk = getSelfPubkey();
     if (!pk) throw new Error('Not logged in to nostr');
     this.selfPubkey = pk;
@@ -106,6 +123,29 @@ export class VoiceClient {
   }
   isJoined(): boolean {
     return this.joined;
+  }
+
+  /**
+   * Toggle the open-room flag at runtime. Used when the channel's kind
+   * 39000 metadata arrives (or is republished) after the client was
+   * constructed — without this, an early gate decision permanently freezes
+   * the openness state and either over-restricts (drops every remote peer
+   * because the member list hadn't propagated yet) or under-restricts.
+   */
+  setOpen(open: boolean): void {
+    if (this.openRoom === open) return;
+    this.openRoom = open;
+    // Re-run the membership trim if we just locked the room down so any
+    // already-connected non-members are dropped immediately.
+    if (!open) {
+      for (const pk of Array.from(this.peers.keys())) {
+        if (!this.isMember(pk)) {
+          this.peers.get(pk)?.close();
+          this.peers.delete(pk);
+          this.removeRemoteTracksFor(pk);
+        }
+      }
+    }
   }
 
   /**

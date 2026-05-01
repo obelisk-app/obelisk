@@ -19,6 +19,7 @@ export {
   useMyLoginMethod,
   useBunkerSignerReady,
   useSignerReady,
+  useRelayAccess,
 } from './stores';
 export type {
   JsGroup,
@@ -27,5 +28,6 @@ export type {
   JsReaction,
   JsDirectMessage,
   NostrBridge,
+  RelayAccessState,
   Unsubscribe,
 } from './types';

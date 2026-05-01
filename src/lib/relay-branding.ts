@@ -15,6 +15,7 @@
 import { useEffect, useState } from 'react';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import { getBridge, getBridgeImpl } from '@/lib/nostr-bridge/client';
+import { cacheGet, cacheSet } from '@/lib/nostr-bridge/cache';
 
 const KIND_BRANDING = 30078;
 
@@ -83,14 +84,23 @@ export function subscribeBranding(
 
   if (authors.length === 0) return () => {};
   let latest: RelayBranding = EMPTY_BRANDING;
+  // Stale-while-revalidate: paint cached branding so the banner/name don't
+  // flash empty on reload. Keyed by dTag (`obelisk:branding:<relay>`) which
+  // is distinct from layout's dTag, so they share kind 30078 cleanly.
+  const cached = cacheGet<RelayBranding>(relayUrl, KIND_BRANDING, dTag(relayUrl));
+  if (cached) {
+    latest = cached.value;
+    onChange(latest);
+  }
   const filter: Filter = {
     kinds: [KIND_BRANDING],
     authors: [...authors],
     '#d': [dTag(relayUrl)],
   };
-  return impl.subscribeFilter(filter, (ev) => {
+  return impl.subscribeFilterWatched(filter, (ev) => {
     if (ev.created_at <= latest.updatedAt) return;
     latest = parseBranding(ev);
+    cacheSet(relayUrl, KIND_BRANDING, dTag(relayUrl), latest);
     onChange(latest);
   });
 }
@@ -112,8 +122,12 @@ export function useRelayBranding(
 ): RelayBranding {
   const [b, setB] = useState<RelayBranding>(EMPTY_BRANDING);
   const authorsKey = [...authors].sort().join(',');
+  // Reset only on relay change — authors arriving after the first paint
+  // would otherwise blank the banner/name briefly mid-load.
   useEffect(() => {
     setB(EMPTY_BRANDING);
+  }, [relayUrl]);
+  useEffect(() => {
     if (!relayUrl || authors.length === 0) return;
     return subscribeBranding(relayUrl, authors, setB);
     // eslint-disable-next-line react-hooks/exhaustive-deps

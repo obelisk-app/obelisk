@@ -71,6 +71,22 @@ export interface JsDirectMessage {
 
 export type Unsubscribe = () => void;
 
+/**
+ * Per-relay access state, surfaced from CLOSED reasons and publish rejections.
+ * - `'unknown'` — no signal yet (still subscribing, or relay hasn't responded)
+ * - `'ok'`      — relay delivered an event/EOSE; reads are flowing
+ * - `'auth-required'` — relay requires NIP-42 AUTH and our signer didn't satisfy it
+ *   (signer never ran, was rejected by user, or relay still refused after sign)
+ * - `'restricted'` — relay accepted AUTH but refused us (e.g. pubkey not whitelisted)
+ * - `'error'` — connection error / unknown rejection
+ */
+export type RelayAccessState =
+  | 'unknown'
+  | 'ok'
+  | 'auth-required'
+  | 'restricted'
+  | 'error';
+
 export interface NostrBridge {
   initialize(): Promise<void>;
   dispose(): void;
@@ -100,6 +116,14 @@ export interface NostrBridge {
   removeRelay(url: string): Promise<void>;
   /** All relays the user has configured (the server-rail list). */
   subscribeConfiguredRelays(cb: (urls: ReadonlyArray<string>) => void): Unsubscribe;
+
+  /**
+   * Per-relay access state (NIP-42 auth + whitelist signal). Keyed by
+   * normalized relay URL (lowercase, trailing slash stripped). The bridge
+   * only updates this for the currently-active relay — auxiliary relays
+   * (profile lookup, NostrConnect, NIP-65 DM) don't surface here.
+   */
+  subscribeRelayAccess(cb: (byRelay: Readonly<Record<string, RelayAccessState>>) => void): Unsubscribe;
 
   subscribeIsLoggedIn(cb: (v: boolean) => void): Unsubscribe;
   subscribeConnectionState(cb: (label: string) => void): Unsubscribe;
