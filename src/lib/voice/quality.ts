@@ -22,10 +22,12 @@ export interface QualityPreset {
 
 const PRESETS: Record<VideoQuality, QualityPreset> = {
   auto: {
+    // Loose hints only — matches pre-quality-controls behavior. Some mobile
+    // cams reject combined width+height+frameRate "ideal" constraints and
+    // fall back to a track that never produces frames.
     constraints: {
       width: { ideal: 1280 },
       height: { ideal: 720 },
-      frameRate: { ideal: 30 },
     },
     maxBitrate: null,
     maxFramerate: 30,
@@ -76,8 +78,10 @@ export const MIC_CONSTRAINTS: MediaTrackConstraints = {
   echoCancellation: true,
   noiseSuppression: true,
   autoGainControl: true,
-  sampleRate: 48_000,
-  channelCount: 2,
+  // sampleRate/channelCount hints used to be here but real devices (iOS
+  // Safari, some Android) silently failed getUserMedia when channelCount:2
+  // hit a mono mic, killing the call. Encoder bitrate is still capped via
+  // setParameters(AUDIO_MAX_BITRATE) on the sender.
 };
 
 /** Encoder cap for outbound mic — Opus tops out at ~128 kbps for stereo music. */

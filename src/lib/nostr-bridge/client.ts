@@ -1805,9 +1805,25 @@ class BridgeImpl implements NostrBridge {
 
     const targetRelays = Array.from(new Set([...this.relays, ...extraRelays]));
     const pubId = pushActivity('Publishing to relays', `kind ${template.kind} → ${targetRelays.length} relay(s)`);
-    const results = await Promise.allSettled(
-      this.pool.publish(targetRelays, event, { onauth: this.getAuthSigner() }),
-    );
+    const publishes = this.pool.publish(targetRelays, event, { onauth: this.getAuthSigner() });
+
+    // Ephemeral events (NIP-01: kinds 20000-29999) are not stored and some
+    // relays don't even send OK for them — strfry/relay.obelisk.ar in
+    // particular times out the publish promise instead of acknowledging.
+    // The bytes are already on the wire by the time pool.publish returns;
+    // waiting for OK just produces "publish time out" errors that mislead
+    // users into thinking voice is broken. Treat these as fire-and-forget
+    // and let any per-relay rejection surface as a console swallow.
+    const isEphemeral = event.kind >= 20000 && event.kind < 30000;
+    if (isEphemeral) {
+      for (const p of publishes) {
+        p.catch((e) => console.debug('[bridge] ephemeral publish skip', event.kind, e instanceof Error ? e.message : e));
+      }
+      resolveActivity(pubId, `ephemeral → ${targetRelays.length} relay(s)`);
+      return event;
+    }
+
+    const results = await Promise.allSettled(publishes);
     const accepted = results.filter((r) => r.status === 'fulfilled');
     if (accepted.length === 0) {
       const reasons = results

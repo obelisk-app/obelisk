@@ -18,12 +18,14 @@ describe('quality presets', () => {
     expect((p.constraints.height as { ideal: number }).ideal).toBe(720);
   });
 
-  it('mic constraints request stereo + 48k + AEC/NS/AGC', () => {
+  it('mic constraints enable AEC/NS/AGC without forcing sample rate or channel count', () => {
     expect(MIC_CONSTRAINTS.echoCancellation).toBe(true);
     expect(MIC_CONSTRAINTS.noiseSuppression).toBe(true);
     expect(MIC_CONSTRAINTS.autoGainControl).toBe(true);
-    expect(MIC_CONSTRAINTS.sampleRate).toBe(48000);
-    expect(MIC_CONSTRAINTS.channelCount).toBe(2);
+    // sampleRate / channelCount intentionally NOT set — even as advisory
+    // hints they broke getUserMedia on real iOS/Android devices.
+    expect(MIC_CONSTRAINTS.sampleRate).toBeUndefined();
+    expect(MIC_CONSTRAINTS.channelCount).toBeUndefined();
   });
 
   it('audio bitrate cap is 128 kbps', () => {

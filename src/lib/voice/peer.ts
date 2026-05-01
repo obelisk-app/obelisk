@@ -370,26 +370,27 @@ export class Peer {
   private async applyVideoSenderParams(): Promise<void> {
     const sender = this.localSenders.get('camera') ?? this.localSenders.get('screen');
     if (!sender) return;
+    const localBitrate = this.localVideoCap?.maxBitrate ?? null;
+    const remoteBitrate = this.inboundCap?.maxBitrate ?? null;
+    const bitrate = pickMin(localBitrate, remoteBitrate);
+    const localFps = this.localVideoCap?.maxFramerate ?? null;
+    const remoteFps = this.inboundCap?.maxFramerate ?? null;
+    const fps = pickMin(localFps, remoteFps);
+    // No caps to apply (pure 'auto' on both ends) — skip setParameters
+    // entirely so we don't poke browser-quirky paths for a no-op.
+    if (bitrate == null && fps == null) return;
     try {
       const params = sender.getParameters();
       if (!params.encodings || params.encodings.length === 0) {
         params.encodings = [{}];
       }
-      const localBitrate = this.localVideoCap?.maxBitrate ?? null;
-      const remoteBitrate = this.inboundCap?.maxBitrate ?? null;
-      const bitrate = pickMin(localBitrate, remoteBitrate);
-      const localFps = this.localVideoCap?.maxFramerate ?? null;
-      const remoteFps = this.inboundCap?.maxFramerate ?? null;
-      const fps = pickMin(localFps, remoteFps);
       const enc = params.encodings[0];
       if (bitrate != null) enc.maxBitrate = bitrate;
       else delete enc.maxBitrate;
       if (fps != null) enc.maxFramerate = fps;
       else delete enc.maxFramerate;
-      // Try to honor remote's maxHeight via scaleResolutionDownBy; we don't
-      // know our actual capture height here, so just use the cap as a hint.
-      delete enc.scaleResolutionDownBy;
-      params.degradationPreference = 'balanced';
+      // Don't touch scaleResolutionDownBy or degradationPreference — both
+      // have caused InvalidModificationError on Safari/Android in the wild.
       await sender.setParameters(params);
     } catch (e) {
       console.warn('[voice] setParameters failed', e);
@@ -406,9 +407,8 @@ export class Peer {
       const params = sender.getParameters();
       if (!params.encodings || params.encodings.length === 0) params.encodings = [{}];
       params.encodings[0].maxBitrate = AUDIO_MAX_BITRATE;
-      // priority/networkPriority help on bandwidth-constrained links.
-      (params.encodings[0] as RTCRtpEncodingParameters & { priority?: string; networkPriority?: string }).priority = 'high';
-      (params.encodings[0] as RTCRtpEncodingParameters & { priority?: string; networkPriority?: string }).networkPriority = 'high';
+      // priority/networkPriority hints removed — Safari rejects unknown
+      // encoding fields with InvalidAccessError on some builds.
       await sender.setParameters(params);
     } catch (e) {
       console.warn('[voice] audio setParameters failed', e);
