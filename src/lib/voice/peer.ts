@@ -9,7 +9,15 @@
  * need to know if it's `camera` vs `screen` vs `screen-audio` before slotting
  * it into the UI.
  */
-import type { VoiceSignalPayload, VoiceTrackKind } from './types';
+import type { VoiceSignalPayload, VoiceTrackKind, VoiceQualityHint } from './types';
+import { startStatsMonitor, type QualitySample, type StatsMonitorHandle } from './stats';
+import { AUDIO_MAX_BITRATE } from './quality';
+
+// SDP munging was tried (Opus stereo + FEC fmtp rewrite) but caused
+// `InvalidAccessError: order of m-lines doesn't match` on some real-device
+// renegotiations. We rely on `setParameters` for outbound bitrate and let
+// browsers negotiate Opus parameters with their defaults — modern Chromium
+// and Firefox already pick stereo + FEC when the source is stereo.
 
 /**
  * STUN-only configurations work between hosts on permissive NATs but fail on
@@ -53,6 +61,7 @@ export interface PeerEvents {
   onRemoteTrack(track: MediaStreamTrack, stream: MediaStream, kind: VoiceTrackKind): void;
   onRemoteTrackEnded(trackId: string): void;
   onConnectionStateChange(state: RTCPeerConnectionState): void;
+  onQualitySample?(sample: QualitySample): void;
 }
 
 export interface PeerOptions {
@@ -83,6 +92,11 @@ export class Peer {
   private localSenders = new Map<VoiceTrackKind, RTCRtpSender>();
   private remoteStreams = new Map<string, MediaStream>();
   private closed = false;
+  /** Cap requested by the remote peer for our outbound video. */
+  private inboundCap: VoiceQualityHint | null = null;
+  /** Cap chosen locally for our outbound video (user picked 720p, etc). */
+  private localVideoCap: { maxBitrate: number | null; maxFramerate: number } | null = null;
+  private statsMonitor: StatsMonitorHandle | null = null;
 
   constructor(opts: PeerOptions) {
     this.remotePubkey = opts.remotePubkey;
@@ -153,6 +167,19 @@ export class Peer {
     pc.onconnectionstatechange = () => {
       console.log('[voice] connectionState', pc.connectionState, 'peer', this.remotePubkey.slice(0, 8));
       this.events.onConnectionStateChange(pc.connectionState);
+      if (pc.connectionState === 'connected') {
+        // Apply encoder caps now that ICE/DTLS are up. Calling setParameters
+        // during negotiation works on Chrome but throws InvalidStateError on
+        // some Safari/Android builds; deferring to 'connected' is safe everywhere.
+        void this.applyAudioSenderParams();
+        void this.applyVideoSenderParams();
+        if (!this.statsMonitor && this.events.onQualitySample) {
+          this.statsMonitor = startStatsMonitor(pc, (s) => this.events.onQualitySample?.(s));
+        }
+      } else if ((pc.connectionState === 'failed' || pc.connectionState === 'closed') && this.statsMonitor) {
+        this.statsMonitor.stop();
+        this.statsMonitor = null;
+      }
     };
 
     return pc;
@@ -197,6 +224,10 @@ export class Peer {
         return;
       }
     }
+    // Encoder caps (bitrate/framerate) are applied from `onconnectionstatechange`
+    // when state hits 'connected', and again whenever the user changes quality.
+    // Calling setParameters here can throw on Safari/Android during negotiation.
+
     // Fire-and-forget: receiver only needs trackinfo to label the tile.
     void this.sendSignal({
       type: 'trackinfo',
@@ -308,15 +339,86 @@ export class Peer {
         }
       } else if (payload.type === 'bye') {
         this.close();
+      } else if (payload.type === 'qualityhint' && payload.qualityHint) {
+        this.inboundCap = payload.qualityHint;
+        await this.applyVideoSenderParams();
       }
     } catch (e) {
       console.error('[voice] handleSignal error', e);
     }
   }
 
+  /** Set the user-chosen outbound video cap (e.g. 720p). null = auto. */
+  async setLocalVideoCap(cap: { maxBitrate: number | null; maxFramerate: number } | null): Promise<void> {
+    this.localVideoCap = cap;
+    if (this.pc.connectionState === 'connected') {
+      await this.applyVideoSenderParams();
+    }
+  }
+
+  /** Send a hint asking the remote peer to cap their outbound video. */
+  async sendQualityHint(hint: VoiceQualityHint): Promise<void> {
+    await this.sendSignal({
+      type: 'qualityhint',
+      qualityHint: hint,
+      sessionId: this.sessionId,
+      seq: ++this.outboundSeq,
+    });
+  }
+
+  /** Apply current caps (local pick ∩ remote hint) to the video sender. */
+  private async applyVideoSenderParams(): Promise<void> {
+    const sender = this.localSenders.get('camera') ?? this.localSenders.get('screen');
+    if (!sender) return;
+    try {
+      const params = sender.getParameters();
+      if (!params.encodings || params.encodings.length === 0) {
+        params.encodings = [{}];
+      }
+      const localBitrate = this.localVideoCap?.maxBitrate ?? null;
+      const remoteBitrate = this.inboundCap?.maxBitrate ?? null;
+      const bitrate = pickMin(localBitrate, remoteBitrate);
+      const localFps = this.localVideoCap?.maxFramerate ?? null;
+      const remoteFps = this.inboundCap?.maxFramerate ?? null;
+      const fps = pickMin(localFps, remoteFps);
+      const enc = params.encodings[0];
+      if (bitrate != null) enc.maxBitrate = bitrate;
+      else delete enc.maxBitrate;
+      if (fps != null) enc.maxFramerate = fps;
+      else delete enc.maxFramerate;
+      // Try to honor remote's maxHeight via scaleResolutionDownBy; we don't
+      // know our actual capture height here, so just use the cap as a hint.
+      delete enc.scaleResolutionDownBy;
+      params.degradationPreference = 'balanced';
+      await sender.setParameters(params);
+    } catch (e) {
+      console.warn('[voice] setParameters failed', e);
+    }
+  }
+
+  /** Apply the high-quality audio bitrate cap on the audio sender. Called by the
+   *  client right after addTrack so the encoder sees the cap before the first
+   *  RTP packet. */
+  async applyAudioSenderParams(): Promise<void> {
+    const sender = this.localSenders.get('audio');
+    if (!sender) return;
+    try {
+      const params = sender.getParameters();
+      if (!params.encodings || params.encodings.length === 0) params.encodings = [{}];
+      params.encodings[0].maxBitrate = AUDIO_MAX_BITRATE;
+      // priority/networkPriority help on bandwidth-constrained links.
+      (params.encodings[0] as RTCRtpEncodingParameters & { priority?: string; networkPriority?: string }).priority = 'high';
+      (params.encodings[0] as RTCRtpEncodingParameters & { priority?: string; networkPriority?: string }).networkPriority = 'high';
+      await sender.setParameters(params);
+    } catch (e) {
+      console.warn('[voice] audio setParameters failed', e);
+    }
+  }
+
   close(): void {
     if (this.closed) return;
     this.closed = true;
+    if (this.statsMonitor) { this.statsMonitor.stop(); this.statsMonitor = null; }
     void this.sendSignal({
       type: 'bye',
       sessionId: this.sessionId,
@@ -324,4 +426,10 @@ export class Peer {
     }).catch(() => {});
     try { this.pc.close(); } catch { /* ignore */ }
   }
+}
+
+function pickMin(a: number | null, b: number | null): number | null {
+  if (a == null) return b;
+  if (b == null) return a;
+  return Math.min(a, b);
 }

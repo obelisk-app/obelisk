@@ -8,7 +8,7 @@
  * Pure-Nostr; no `server.ts` dependency. v1 cap: 4 participants.
  */
 import { Peer } from './peer';
-import type { VoiceSignalPayload, VoiceTrackKind } from './types';
+import type { VoiceSignalPayload, VoiceTrackKind, VoiceQualityHint } from './types';
 import {
   publishPresenceBeacon,
   subscribeRoster,
@@ -16,6 +16,8 @@ import {
   subscribeSignals,
   getSelfPubkey,
 } from './transport';
+import { getPreset, MIC_CONSTRAINTS, type VideoQuality } from './quality';
+import { useVoiceStore } from '@/store/voice';
 
 const BEACON_INTERVAL_MS = 15_000;
 const MAX_PARTICIPANTS = 4;
@@ -273,6 +275,9 @@ export class VoiceClient {
           this.remoteTracks.delete(trackId);
           this.emitRemoteTracks();
         },
+        onQualitySample: (sample) => {
+          useVoiceStore.getState().setPeerQuality(remotePubkey, sample);
+        },
         onConnectionStateChange: (state) => {
           if (state === 'failed' || state === 'closed') {
             console.warn(`[voice] peer ${remotePubkey.slice(0, 8)} → ${state}`);
@@ -284,6 +289,7 @@ export class VoiceClient {
               this.peers.delete(remotePubkey);
               this.removeRemoteTracksFor(remotePubkey);
               this.events.onParticipantsChange?.([...this.rosterPubkeys.filter((pk) => pk !== remotePubkey)]);
+              useVoiceStore.getState().clearPeerQuality(remotePubkey);
             }
           }
         },
@@ -301,6 +307,42 @@ export class VoiceClient {
     if (this.camTrack) await peer.setLocalTrack('camera', this.camTrack);
     if (this.screenTrack) await peer.setLocalTrack('screen', this.screenTrack);
     if (this.screenAudioTrack) await peer.setLocalTrack('screen-audio', this.screenAudioTrack);
+    // Push the user-chosen outbound cap and our receive hint so a peer who
+    // joins mid-call inherits the same quality contract as existing peers.
+    const { videoQuality, receivedVideoQuality } = useVoiceStore.getState();
+    const localPreset = getPreset(videoQuality);
+    await peer.setLocalVideoCap({ maxBitrate: localPreset.maxBitrate, maxFramerate: localPreset.maxFramerate });
+    if (receivedVideoQuality !== 'auto') {
+      const inbound = getPreset(receivedVideoQuality);
+      await peer.sendQualityHint(qualityHintFromPreset(inbound));
+    }
+  }
+
+  /** User changed their outbound camera quality. Re-acquire the track at the
+   *  new resolution and update encoder caps on every peer. */
+  async applyVideoQuality(q: VideoQuality): Promise<void> {
+    const preset = getPreset(q);
+    const cap = { maxBitrate: preset.maxBitrate, maxFramerate: preset.maxFramerate };
+    if (this.camTrack) {
+      try {
+        await this.camTrack.applyConstraints(preset.constraints);
+      } catch (e) {
+        console.warn('[voice] applyConstraints failed, will re-acquire', e);
+      }
+    }
+    for (const peer of this.peers.values()) {
+      await peer.setLocalVideoCap(cap);
+    }
+  }
+
+  /** User changed their incoming-quality preference. Broadcast a qualityhint
+   *  to every peer so they cap their outbound video to us. */
+  async broadcastReceivedQuality(q: VideoQuality): Promise<void> {
+    const preset = getPreset(q);
+    const hint = qualityHintFromPreset(preset);
+    for (const peer of this.peers.values()) {
+      await peer.sendQualityHint(hint);
+    }
   }
 
   private removeRemoteTracksFor(pubkey: string) {
@@ -327,7 +369,7 @@ export class VoiceClient {
   async setMicEnabled(on: boolean): Promise<void> {
     if (on && !this.micTrack) {
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        audio: MIC_CONSTRAINTS,
       });
       this.micTrack = stream.getAudioTracks()[0] ?? null;
       if (this.micTrack) {
@@ -344,13 +386,19 @@ export class VoiceClient {
   async setCameraEnabled(on: boolean): Promise<void> {
     console.log('[voice] setCameraEnabled', on, 'peers=', this.peers.size);
     if (on && !this.camTrack) {
+      const quality = useVoiceStore.getState().videoQuality;
+      const preset = getPreset(quality);
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+        video: preset.constraints,
       });
       this.camTrack = stream.getVideoTracks()[0] ?? null;
-      console.log('[voice] camera acquired, track=', this.camTrack?.id);
+      console.log('[voice] camera acquired, track=', this.camTrack?.id, 'quality=', quality);
       if (this.camTrack) {
-        for (const peer of this.peers.values()) await peer.setLocalTrack('camera', this.camTrack);
+        const cap = { maxBitrate: preset.maxBitrate, maxFramerate: preset.maxFramerate };
+        for (const peer of this.peers.values()) {
+          await peer.setLocalTrack('camera', this.camTrack);
+          await peer.setLocalVideoCap(cap);
+        }
       }
     } else if (!on && this.camTrack) {
       for (const peer of this.peers.values()) await peer.setLocalTrack('camera', null);
@@ -433,6 +481,14 @@ export class VoiceClient {
     if (!t) return;
     try { t.stop(); } catch { /* ignore */ }
   }
+}
+
+function qualityHintFromPreset(preset: { maxBitrate: number | null; maxFramerate: number; maxHeight: number | null }): VoiceQualityHint {
+  return {
+    maxHeight: preset.maxHeight,
+    maxFramerate: preset.maxFramerate,
+    maxBitrate: preset.maxBitrate,
+  };
 }
 
 function randomId(): string {

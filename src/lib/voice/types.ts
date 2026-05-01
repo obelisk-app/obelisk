@@ -6,7 +6,15 @@
 
 export type VoiceTrackKind = 'audio' | 'camera' | 'screen' | 'screen-audio';
 
-export type VoiceSignalType = 'offer' | 'answer' | 'ice' | 'bye' | 'trackinfo';
+export type VoiceSignalType = 'offer' | 'answer' | 'ice' | 'bye' | 'trackinfo' | 'qualityhint';
+
+export interface VoiceQualityHint {
+  /** Max vertical resolution requested for the sender's outbound video.
+   *  Null means "no cap" (auto). */
+  maxHeight: number | null;
+  maxFramerate: number | null;
+  maxBitrate: number | null;
+}
 
 export interface VoiceSignalPayload {
   type: VoiceSignalType;
@@ -17,6 +25,8 @@ export interface VoiceSignalPayload {
   /** Out-of-band track-kind announcement so the receiver knows which slot a
    *  track maps to before the actual `ontrack` fires. */
   trackInfo?: { trackId: string; kind: VoiceTrackKind };
+  /** Receiver-driven cap: "please don't send me more than this". */
+  qualityHint?: VoiceQualityHint;
   /** Random per-session id so a peer who left and rejoined isn't confused
    *  with their previous incarnation. */
   sessionId: string;

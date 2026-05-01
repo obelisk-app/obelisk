@@ -23,6 +23,7 @@ import { useVoiceStore } from '@/store/voice';
 import { useUserMetadata } from '@/lib/nostr-bridge';
 import VoiceControls from './VoiceControls';
 import ShootingStars from '@/components/ShootingStars';
+import { qualityColor, type QualitySample } from '@/lib/voice/stats';
 
 interface Props {
   channelId: string;
@@ -729,9 +730,31 @@ function VideoTile({ pubkey, isLocal, videoStream, audioStream, onPin, fit = 'co
       )}
       {!isLocal && <audio ref={audioRef} autoPlay />}
       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-2.5 py-1.5 flex items-center gap-1.5">
+        {!isLocal && <QualityDot pubkey={pubkey} />}
         <span className="text-xs text-white font-medium truncate">{isLocal ? `You · ${name}` : name}</span>
       </div>
     </button>
+  );
+}
+
+function QualityDot({ pubkey }: { pubkey: string }) {
+  const sample = useVoiceStore((s) => s.peerQuality[pubkey]) as QualitySample | undefined;
+  const color = qualityColor(sample?.level ?? 'unknown');
+  const tooltip = sample
+    ? [
+        sample.outboundVideoBps != null ? `${Math.round(sample.outboundVideoBps / 1000)} kbps↑` : null,
+        sample.rttMs != null ? `${Math.round(sample.rttMs)} ms RTT` : null,
+        sample.loss != null ? `${(sample.loss * 100).toFixed(1)}% loss` : null,
+      ].filter(Boolean).join(' · ')
+    : 'Connecting…';
+  return (
+    <span
+      className="inline-block w-2 h-2 rounded-full shrink-0"
+      style={{ background: color, boxShadow: `0 0 6px ${color}` }}
+      title={`${sample?.level ?? 'unknown'} — ${tooltip}`}
+      data-testid="peer-quality-dot"
+      data-quality={sample?.level ?? 'unknown'}
+    />
   );
 }
 
@@ -779,7 +802,10 @@ function AudioTile({ pubkey, isLocal, audioStream }: {
       <div className={'rounded-full p-1 ' + (isLocal ? 'ring-2 ring-lc-green' : 'ring-1 ring-white/10')}>
         <Avatar pubkey={pubkey} picture={meta?.picture} name={name} size={16} />
       </div>
-      <div className="mt-2 text-xs text-white font-medium truncate max-w-full">{isLocal ? `You · ${name}` : name}</div>
+      <div className="mt-2 text-xs text-white font-medium truncate max-w-full flex items-center gap-1.5">
+        {!isLocal && <QualityDot pubkey={pubkey} />}
+        <span className="truncate">{isLocal ? `You · ${name}` : name}</span>
+      </div>
       {!isLocal && <audio ref={audioRef} autoPlay />}
     </div>
   );

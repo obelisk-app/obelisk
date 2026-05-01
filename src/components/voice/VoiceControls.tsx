@@ -5,8 +5,10 @@
  * Renders as a centered pill with backdrop blur — caller places it
  * absolutely or in a flex column footer.
  */
+import { useState } from 'react';
 import { useVoiceStore } from '@/store/voice';
 import { getActiveVoiceClient } from '@/lib/voice/active-client';
+import { VIDEO_QUALITIES, type VideoQuality } from '@/lib/voice/quality';
 
 interface VoiceControlsProps {
   onLeave: () => void;
@@ -21,6 +23,29 @@ export default function VoiceControls({ onLeave, isChatOpen, onToggleChat }: Voi
   const isScreenSharing = useVoiceStore((s) => s.isScreenSharing);
   const error = useVoiceStore((s) => s.error);
   const setError = useVoiceStore((s) => s.setError);
+  const videoQuality = useVoiceStore((s) => s.videoQuality);
+  const receivedVideoQuality = useVoiceStore((s) => s.receivedVideoQuality);
+  const setVideoQuality = useVoiceStore((s) => s.setVideoQuality);
+  const setReceivedVideoQuality = useVoiceStore((s) => s.setReceivedVideoQuality);
+  const [qualityOpen, setQualityOpen] = useState(false);
+
+  const handleSetVideoQuality = async (q: VideoQuality) => {
+    setVideoQuality(q);
+    const client = getActiveVoiceClient();
+    if (client) {
+      try { await client.applyVideoQuality(q); }
+      catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+    }
+  };
+
+  const handleSetReceivedQuality = async (q: VideoQuality) => {
+    setReceivedVideoQuality(q);
+    const client = getActiveVoiceClient();
+    if (client) {
+      try { await client.broadcastReceivedQuality(q); }
+      catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+    }
+  };
 
   const handleToggleMute = async () => {
     const client = getActiveVoiceClient();
@@ -132,6 +157,38 @@ export default function VoiceControls({ onLeave, isChatOpen, onToggleChat }: Voi
           </CircleBtn>
         )}
 
+        <div className="relative">
+          <CircleBtn
+            active={qualityOpen}
+            onClick={() => setQualityOpen((v) => !v)}
+            title="Video quality"
+            data-testid="quality-btn"
+          >
+            <GearIcon />
+          </CircleBtn>
+          {qualityOpen && (
+            <div
+              className="absolute bottom-full mb-3 right-0 w-64 rounded-2xl bg-black/90 backdrop-blur-xl border border-white/10 shadow-2xl p-3 text-white/90"
+              data-testid="quality-popover"
+            >
+              <QualitySection
+                label="My camera"
+                value={videoQuality}
+                onChange={(q) => { void handleSetVideoQuality(q); }}
+                testid="quality-out"
+              />
+              <div className="h-px bg-white/10 my-3" />
+              <QualitySection
+                label="Incoming"
+                value={receivedVideoQuality}
+                onChange={(q) => { void handleSetReceivedQuality(q); }}
+                testid="quality-in"
+              />
+              <p className="text-[10px] text-white/40 mt-2">Audio is always sent at high quality.</p>
+            </div>
+          )}
+        </div>
+
         <div className="w-px h-6 bg-white/10 mx-1" aria-hidden />
 
         <button
@@ -181,6 +238,50 @@ function CircleBtn({
     >
       {children}
     </button>
+  );
+}
+
+function QualitySection({
+  label,
+  value,
+  onChange,
+  testid,
+}: {
+  label: string;
+  value: VideoQuality;
+  onChange: (q: VideoQuality) => void;
+  testid: string;
+}) {
+  return (
+    <div data-testid={testid}>
+      <div className="text-xs uppercase tracking-wider text-white/50 mb-1.5">{label}</div>
+      <div className="flex gap-1">
+        {VIDEO_QUALITIES.map((q) => (
+          <button
+            key={q}
+            onClick={() => onChange(q)}
+            data-testid={`${testid}-${q}`}
+            className={
+              'flex-1 px-2 py-1.5 rounded-lg text-xs font-medium transition ' +
+              (value === q
+                ? 'bg-lc-green/25 text-lc-green ring-1 ring-lc-green/40'
+                : 'bg-white/5 text-white/75 hover:bg-white/10')
+            }
+          >
+            {q}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function GearIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    </svg>
   );
 }
 
