@@ -11,6 +11,7 @@ import {
   useUserMetadata,
   useReactions,
   useChildrenByParent,
+  useAdminsByGroup,
   useDirectMessages,
   useAdmins,
   useMembers,
@@ -46,6 +47,8 @@ import { useMessageZapStore } from '@/store/messageZap';
 import MessageZapModal from '@/components/chat/MessageZapModal';
 import { parseZapCommand } from '@/lib/wallet/parse-zap-command';
 import MentionAutocomplete from '@/components/chat/MentionAutocomplete';
+import SlashCommandAutocomplete, { SLASH_COMMANDS, type SlashCommand } from '@/components/chat/SlashCommandAutocomplete';
+import SlashCommandScaffold, { scaffoldMentionSlotQuery } from '@/components/chat/SlashCommandScaffold';
 import { filterMembers } from '@/lib/mentions';
 import { nip19 } from 'nostr-tools';
 import {
@@ -107,6 +110,12 @@ export default function AppShell() {
   }, [view]);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
+    if (typeof window === 'undefined') return 264;
+    const v = window.localStorage.getItem(SIDEBAR_KEY);
+    const n = v ? parseInt(v, 10) : 264;
+    return Number.isFinite(n) ? Math.max(200, Math.min(500, n)) : 264;
+  });
   const [showMembers, setShowMembers] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true;
     const v = window.localStorage.getItem(SHOW_MEMBERS_KEY);
@@ -154,7 +163,7 @@ export default function AppShell() {
               closeDrawer();
             }}
           />
-          <ResizablePane storageKey={SIDEBAR_KEY} defaultWidth={264} min={200} max={500}>
+          <ResizablePane storageKey={SIDEBAR_KEY} defaultWidth={264} min={200} max={500} onWidthChange={setSidebarWidth}>
             {view.kind === 'dm' ? (
               <DMList
                 activePeer={view.peer}
@@ -185,18 +194,24 @@ export default function AppShell() {
             <EmptyState />
           )}
         </main>
-        <FloatingUserPanel />
+        <FloatingUserPanel sidebarWidth={sidebarWidth} />
       </div>
     </div>
   );
 }
 
-function FloatingUserPanel() {
+function FloatingUserPanel({ sidebarWidth }: { sidebarWidth: number }) {
+  // Server rail is 72px wide; panel sits 8px from left with 8px right gap to
+  // the sidebar's right edge, so it spans the full sidebar+rail width.
+  const width = 72 + sidebarWidth - 16;
   return (
     <div
-      className="pointer-events-none absolute bottom-3 left-2 z-30 hidden md:block"
-      style={{ width: 'min(320px, calc(100vw - 16px))' }}
+      className="pointer-events-none absolute bottom-3 left-2 z-30 hidden md:flex flex-col gap-2"
+      style={{ width: `${width}px` }}
     >
+      <div className="pointer-events-auto empty:hidden [&>[data-testid=voice-status-bar]]:!p-0 [&_[data-testid=voice-status-bar]>div]:bg-lc-card/95 [&_[data-testid=voice-status-bar]>div]:shadow-2xl [&_[data-testid=voice-status-bar]>div]:backdrop-blur">
+        <VoiceStatusBar />
+      </div>
       <div className="pointer-events-auto flex min-h-[3.5rem] items-center rounded-xl border border-lc-border bg-lc-card/95 px-4 shadow-2xl backdrop-blur">
         <SidebarMe />
       </div>
@@ -291,6 +306,7 @@ function ResizablePane({
   max,
   side = 'right',
   children,
+  onWidthChange,
 }: {
   storageKey: string;
   defaultWidth: number;
@@ -298,6 +314,7 @@ function ResizablePane({
   max: number;
   side?: 'right' | 'left';
   children: React.ReactNode;
+  onWidthChange?: (w: number) => void;
 }) {
   const [width, setWidth] = useState<number>(() => {
     if (typeof window === 'undefined') return defaultWidth;
@@ -331,7 +348,8 @@ function ResizablePane({
 
   useEffect(() => {
     window.localStorage.setItem(storageKey, String(width));
-  }, [storageKey, width]);
+    onWidthChange?.(width);
+  }, [storageKey, width, onWidthChange]);
 
   const handle = (
     <div
@@ -381,13 +399,25 @@ function Sidebar({
   );
   const myPubkey = useMyPubkey();
   const operatorPubkey = useRelayOperatorPubkey(relay || null);
-  const layout = useChannelLayout(relay || null, operatorPubkey);
-  const isOperator = !!myPubkey && !!operatorPubkey && myPubkey === operatorPubkey;
+  const adminsByGroup = useAdminsByGroup();
+  // Union of all admins across visible groups on this relay, plus the
+  // NIP-11 operator pubkey if the relay advertises one. This is the set of
+  // pubkeys allowed to author the relay-wide layout/branding events.
+  const relayAuthors = useMemo(() => {
+    const set = new Set<string>();
+    for (const g of groups) {
+      for (const pk of adminsByGroup[g.id] ?? []) set.add(pk);
+    }
+    if (operatorPubkey) set.add(operatorPubkey);
+    return Array.from(set);
+  }, [groups, adminsByGroup, operatorPubkey]);
+  const layout = useChannelLayout(relay || null, relayAuthors);
+  const isOperator = !!myPubkey && relayAuthors.includes(myPubkey);
   const laidOut = useMemo(
     () => applyLayout(layout, roots.map((g) => g.id)),
     [layout, roots],
   );
-  const branding = useRelayBranding(relay || null, operatorPubkey);
+  const branding = useRelayBranding(relay || null, relayAuthors);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [layoutOpen, setLayoutOpen] = useState(false);
   const [brandingOpen, setBrandingOpen] = useState(false);
@@ -417,16 +447,23 @@ function Sidebar({
 
   return (
     <>
-      <div className="shrink-0 border-b border-lc-border shadow-sm">
+      <div className="group relative shrink-0 border-b border-transparent shadow-sm transition-colors hover:border-lc-border">
         {branding.banner && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={branding.banner}
             alt=""
-            className="h-20 w-full object-cover"
+            aria-hidden
+            className="absolute inset-0 h-full w-full object-cover"
           />
         )}
-        <div className="flex h-14 items-center gap-3 overflow-hidden px-4">
+        {branding.banner && (
+          <div
+            aria-hidden
+            className="absolute inset-0 bg-gradient-to-b from-lc-black/85 via-lc-black/40 to-transparent"
+          />
+        )}
+        <div className="relative flex h-14 items-center gap-3 overflow-hidden px-4">
           {branding.icon && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -435,7 +472,7 @@ function Sidebar({
               className="h-9 w-9 shrink-0 rounded-lg border border-lc-border bg-lc-black object-cover"
             />
           )}
-          <div className="min-w-0 flex-1 truncate text-base font-bold text-lc-white">
+          <div className="min-w-0 flex-1 truncate text-base font-bold text-lc-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
             {branding.name || shortHost(relay)}
           </div>
           <span
@@ -449,7 +486,7 @@ function Sidebar({
           {isOperator && (
             <button
               onClick={() => setBrandingOpen(true)}
-              title="Edit relay branding (operator only)"
+              title="Edit relay branding (group admins only)"
               aria-label="Edit relay branding"
               className="shrink-0 rounded p-1 text-lc-muted hover:bg-lc-card hover:text-lc-white"
             >
@@ -463,7 +500,7 @@ function Sidebar({
           {isOperator && (
             <button
               onClick={() => setLayoutOpen(true)}
-              title="Manage categories & order (relay operator only)"
+              title="Manage categories & order (group admins only)"
               aria-label="Manage categories"
               className="shrink-0 rounded p-1 text-lc-muted hover:bg-lc-card hover:text-lc-white"
             >
@@ -475,6 +512,7 @@ function Sidebar({
             </button>
           )}
         </div>
+        {branding.banner && <div aria-hidden className="relative h-24" />}
       </div>
 
       <CreateGroupSection
@@ -570,9 +608,9 @@ function Sidebar({
         />
       )}
 
-      <div className="shrink-0 border-t border-lc-border bg-lc-card/50">
+      <div className="shrink-0 border-t border-lc-border bg-lc-card/50 md:hidden">
         <VoiceStatusBar />
-        <div className="p-2 md:hidden">
+        <div className="p-2">
           <SidebarMe />
         </div>
       </div>
@@ -958,7 +996,7 @@ function ManageLayoutModal({
         <header className="flex shrink-0 items-center justify-between border-b border-lc-border px-5 py-3">
           <div>
             <div className="text-base font-bold text-lc-white">Categories &amp; order</div>
-            <div className="text-[11px] text-lc-muted">Personal layout for {shortHost(relayUrl)} · NIP-78 kind 30078</div>
+            <div className="text-[11px] text-lc-muted">Shared layout for {shortHost(relayUrl)} · any group admin can edit · NIP-78 kind 30078</div>
           </div>
           <button onClick={onClose} className="rounded p-1 text-lc-muted hover:bg-lc-card hover:text-lc-white" aria-label="Close">
             ✕
@@ -1352,11 +1390,42 @@ function ChatPanel({
   }, [memberPubkeys, metaMap]);
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [mentionIndex, setMentionIndex] = useState(0);
+  const [slashQuery, setSlashQuery] = useState<string | null>(null);
+  const [slashIndex, setSlashIndex] = useState(0);
+  const [caret, setCaret] = useState(0);
   const filteredMembers = useMemo(
     () => (mentionQuery === null ? [] : filterMembers(memberInfos, mentionQuery).slice(0, 8)),
     [memberInfos, mentionQuery],
   );
+  const slashResults = useMemo<SlashCommand[]>(
+    () => slashQuery === null ? [] : SLASH_COMMANDS.filter((c) => c.name.startsWith(slashQuery.toLowerCase())),
+    [slashQuery],
+  );
+  const activeSlashCommand = useMemo<SlashCommand | null>(() => {
+    const m = /^\/([a-zA-Z]+)(?:\s|$)/.exec(draft);
+    if (!m) return null;
+    return SLASH_COMMANDS.find((c) => c.name === m[1].toLowerCase()) ?? null;
+  }, [draft]);
   function detectMention(value: string, cursor: number) {
+    setCaret(cursor);
+    const sm = /^\/([a-zA-Z]*)$/.exec(value);
+    if (sm) {
+      setSlashQuery(sm[1]);
+      setSlashIndex(0);
+      setMentionQuery(null);
+      return;
+    }
+    setSlashQuery(null);
+    const m0 = /^\/([a-zA-Z]+)(?:\s|$)/.exec(value);
+    const cmd = m0 ? SLASH_COMMANDS.find((c) => c.name === m0[1].toLowerCase()) : null;
+    if (cmd) {
+      const slot = scaffoldMentionSlotQuery(value, cursor);
+      if (slot !== null) {
+        setMentionQuery(slot);
+        setMentionIndex(0);
+        return;
+      }
+    }
     const before = value.slice(0, cursor);
     const m = before.match(/(?:^|\s)@(\w*)$/);
     if (m) {
@@ -1366,13 +1435,34 @@ function ChatPanel({
       setMentionQuery(null);
     }
   }
+  function insertSlashCommand(cmd: SlashCommand) {
+    const next = `/${cmd.name} `;
+    setDraft(next);
+    setSlashQuery(null);
+    requestAnimationFrame(() => {
+      const ta = inputRef.current;
+      if (!ta) return;
+      ta.focus();
+      ta.setSelectionRange(next.length, next.length);
+      setCaret(next.length);
+    });
+  }
   function applyMention(member: MemberInfo) {
     const ta = inputRef.current;
     if (!ta) return;
     const cursor = ta.selectionStart ?? draft.length;
     const before = draft.slice(0, cursor);
     const after = draft.slice(cursor);
-    const replaced = before.replace(/@(\w*)$/, () => `nostr:${nip19.npubEncode(member.pubkey)} `);
+    const token = `nostr:${nip19.npubEncode(member.pubkey)} `;
+    let replaced: string;
+    if (/@(\w*)$/.test(before)) {
+      replaced = before.replace(/@(\w*)$/, () => token);
+    } else {
+      // Slash-command slot picker can open without an `@` typed (e.g. `/zap `).
+      // Insert at the cursor with a leading space if needed.
+      const sep = before.length > 0 && !/\s$/.test(before) ? ' ' : '';
+      replaced = before + sep + token;
+    }
     const next = replaced + after;
     setDraft(next);
     setMentionQuery(null);
@@ -1380,9 +1470,16 @@ function ChatPanel({
       const pos = replaced.length;
       ta.focus();
       ta.setSelectionRange(pos, pos);
+      setCaret(pos);
     });
   }
   function onMentionKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (slashQuery !== null && slashResults.length > 0) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); setSlashIndex((i) => (i + 1) % slashResults.length); return; }
+      if (e.key === 'ArrowUp') { e.preventDefault(); setSlashIndex((i) => (i - 1 + slashResults.length) % slashResults.length); return; }
+      if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); insertSlashCommand(slashResults[slashIndex]); return; }
+      if (e.key === 'Escape') { e.preventDefault(); setSlashQuery(null); return; }
+    }
     if (mentionQuery === null || filteredMembers.length === 0) return;
     if (e.key === 'ArrowDown') { e.preventDefault(); setMentionIndex((i) => (i + 1) % filteredMembers.length); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); setMentionIndex((i) => (i - 1 + filteredMembers.length) % filteredMembers.length); }
@@ -1577,6 +1674,9 @@ function ChatPanel({
         {sendError && (
           <p className="mb-2 break-words text-xs text-red-400">{sendError}</p>
         )}
+        {activeSlashCommand && (
+          <SlashCommandScaffold command={activeSlashCommand} content={draft} caret={caret} />
+        )}
         <div className="flex min-h-[3.5rem] items-center gap-2 rounded-xl border border-lc-border bg-lc-card px-4 focus-within:border-lc-green">
           <label
             className="cursor-pointer text-lc-muted hover:text-lc-white"
@@ -1603,6 +1703,14 @@ function ChatPanel({
             />
           </label>
           <div className="relative flex-1">
+            {slashQuery !== null && slashResults.length > 0 && (
+              <SlashCommandAutocomplete
+                commands={slashResults}
+                selectedIndex={slashIndex}
+                onSelect={insertSlashCommand}
+                onClose={() => setSlashQuery(null)}
+              />
+            )}
             {mentionQuery !== null && filteredMembers.length > 0 && (
               <MentionAutocomplete
                 members={filteredMembers}

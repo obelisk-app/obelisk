@@ -11,10 +11,43 @@
  */
 import type { VoiceSignalPayload, VoiceTrackKind } from './types';
 
-const ICE_SERVERS: RTCIceServer[] = [
-  { urls: 'stun:stun.l.google.com:19302' },
-  { urls: 'stun:stun.cloudflare.com:3478' },
-];
+/**
+ * STUN-only configurations work between hosts on permissive NATs but fail on
+ * symmetric / carrier-grade NATs (the common cross-network real-device case:
+ * cellular ↔ home Wi-Fi, two different routers, corporate networks). A TURN
+ * relay is the only reliable fallback. Set `NEXT_PUBLIC_TURN_URLS` to a
+ * comma-separated list of `turn:` / `turns:` URLs; if credentials are needed
+ * provide `NEXT_PUBLIC_TURN_USERNAME` and `NEXT_PUBLIC_TURN_CREDENTIAL`.
+ *
+ * If you have multiple TURN URLs sharing the same credentials (e.g. UDP +
+ * TCP + TLS variants), include them all in `NEXT_PUBLIC_TURN_URLS` — they'll
+ * be merged into one `RTCIceServer` entry as the spec recommends.
+ *
+ * Use `NEXT_PUBLIC_FORCE_RELAY=1` while debugging connectivity to force
+ * `iceTransportPolicy: 'relay'`, which makes the call go through TURN even
+ * if a host candidate could have worked. Useful for proving "TURN works,
+ * the bug is elsewhere" or vice versa.
+ */
+function buildIceServers(): RTCIceServer[] {
+  const servers: RTCIceServer[] = [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun.cloudflare.com:3478' },
+  ];
+  const turnUrls = (process.env.NEXT_PUBLIC_TURN_URLS ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (turnUrls.length > 0) {
+    const username = process.env.NEXT_PUBLIC_TURN_USERNAME;
+    const credential = process.env.NEXT_PUBLIC_TURN_CREDENTIAL;
+    servers.push({ urls: turnUrls, ...(username ? { username } : {}), ...(credential ? { credential } : {}) });
+  }
+  return servers;
+}
+
+const ICE_SERVERS: RTCIceServer[] = buildIceServers();
+const ICE_TRANSPORT_POLICY: RTCIceTransportPolicy =
+  process.env.NEXT_PUBLIC_FORCE_RELAY === '1' ? 'relay' : 'all';
 
 export interface PeerEvents {
   onRemoteTrack(track: MediaStreamTrack, stream: MediaStream, kind: VoiceTrackKind): void;
@@ -61,7 +94,10 @@ export class Peer {
   }
 
   private createPc(): RTCPeerConnection {
-    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS, iceTransportPolicy: ICE_TRANSPORT_POLICY });
+    if (typeof console !== 'undefined') {
+      console.log('[voice] new PC for', this.remotePubkey.slice(0, 8), 'iceServers=', ICE_SERVERS.map(s => s.urls), 'policy=', ICE_TRANSPORT_POLICY);
+    }
 
     pc.onnegotiationneeded = async () => {
       // kickNegotiation + onnegotiationneeded can race when we add a track
@@ -144,18 +180,12 @@ export class Peer {
       }
       return;
     }
-    // Announce kind out-of-band so the receiver's `ontrack` knows the slot.
-    // Sent as a dedicated `trackinfo` event so receivers don't confuse it
-    // with a real SDP offer.
-    await this.sendSignal({
-      type: 'trackinfo',
-      trackInfo: { trackId: track.id, kind },
-      sessionId: this.sessionId,
-      seq: ++this.outboundSeq,
-    });
-    // Re-check after the await — sendSignal can take a relay round-trip and
-    // the peer may have been closed in the meantime (roster churn, leave).
-    if (this.closed || this.pc.signalingState === 'closed') return;
+    // Attach the track to the PC FIRST. The trackinfo announcement is
+    // best-effort metadata for the UI; previously we awaited the relay
+    // round-trip before addTrack, which let a racing remote offer trigger
+    // an answer with no outgoing audio (causing "I see them but they can't
+    // hear me" on the second joiner). The sender is what carries media —
+    // get it onto the PC immediately, label it asynchronously.
     if (existing) {
       try { await existing.replaceTrack(track); } catch (e) { console.warn('[voice] replaceTrack failed', e); }
     } else {
@@ -167,6 +197,13 @@ export class Peer {
         return;
       }
     }
+    // Fire-and-forget: receiver only needs trackinfo to label the tile.
+    void this.sendSignal({
+      type: 'trackinfo',
+      trackInfo: { trackId: track.id, kind },
+      sessionId: this.sessionId,
+      seq: ++this.outboundSeq,
+    });
     // `addTrack` should fire `onnegotiationneeded` automatically, but the
     // event is best-effort: some browsers debounce or skip it when called
     // immediately after PC creation. Kick negotiation explicitly so the

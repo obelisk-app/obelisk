@@ -12,6 +12,7 @@ export {
   useChildrenByParent,
   useDirectMessages,
   useAdmins,
+  useAdminsByGroup,
   useMembers,
   useMyFollows,
   useMyPubkey,

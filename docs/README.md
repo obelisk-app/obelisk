@@ -16,6 +16,7 @@ Each document here is scoped: either an architectural reference, a feature guide
 
 - [admin-cli.md](admin-cli.md) — `scripts/admin-cli` headless client, nsec / NIP-46 auth, scriptable by AI coding agents.
 - [multi-server-admin.md](multi-server-admin.md) — admin panel UX and multi-server scoping.
+- [relay-layout-and-branding.md](relay-layout-and-branding.md) — operator-controlled categories, channel order, and relay branding (NIP-78 kind 30078, multi-author latest-wins).
 - [wot-and-invite-credits.md](wot-and-invite-credits.md) — WoT auto-registration (shipped), invite credits (deprecated — admin-only invites now).
 - [bitcoin-zaps-nwc.md](bitcoin-zaps-nwc.md) — NWC wallet connection + zap flow.
 - [search.md](search.md) — Discord-style query syntax and indexing.

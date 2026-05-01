@@ -64,7 +64,7 @@ export function toTags(b: RelayBranding, relayUrl: string): string[][] {
 
 export function subscribeBranding(
   relayUrl: string,
-  operatorPubkey: string,
+  authors: ReadonlyArray<string>,
   onChange: (b: RelayBranding) => void,
 ): () => void {
   const impl = getBridgeImpl();
@@ -73,7 +73,7 @@ export function subscribeBranding(
     let unsub: (() => void) | null = null;
     void getBridge().then(() => {
       if (cancelled) return;
-      unsub = subscribeBranding(relayUrl, operatorPubkey, onChange);
+      unsub = subscribeBranding(relayUrl, authors, onChange);
     });
     return () => {
       cancelled = true;
@@ -81,10 +81,11 @@ export function subscribeBranding(
     };
   }
 
+  if (authors.length === 0) return () => {};
   let latest: RelayBranding = EMPTY_BRANDING;
   const filter: Filter = {
     kinds: [KIND_BRANDING],
-    authors: [operatorPubkey],
+    authors: [...authors],
     '#d': [dTag(relayUrl)],
   };
   return impl.subscribeFilter(filter, (ev) => {
@@ -105,12 +106,17 @@ export async function publishBranding(relayUrl: string, branding: RelayBranding)
   });
 }
 
-export function useRelayBranding(relayUrl: string | null, operatorPubkey: string | null): RelayBranding {
+export function useRelayBranding(
+  relayUrl: string | null,
+  authors: ReadonlyArray<string>,
+): RelayBranding {
   const [b, setB] = useState<RelayBranding>(EMPTY_BRANDING);
+  const authorsKey = [...authors].sort().join(',');
   useEffect(() => {
     setB(EMPTY_BRANDING);
-    if (!relayUrl || !operatorPubkey) return;
-    return subscribeBranding(relayUrl, operatorPubkey, setB);
-  }, [relayUrl, operatorPubkey]);
+    if (!relayUrl || authors.length === 0) return;
+    return subscribeBranding(relayUrl, authors, setB);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [relayUrl, authorsKey]);
   return b;
 }

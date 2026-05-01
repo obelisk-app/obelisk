@@ -81,13 +81,13 @@ function toTags(layout: ChannelLayout, relayUrl: string): string[][] {
 }
 
 /**
- * Subscribe to layout events authored by `operatorPubkey` for the given
+ * Subscribe to layout events authored by any of `authors` for the given
  * relay. Calls `onChange` with the freshest layout seen so far; older
- * events are dropped.
+ * events are dropped. With multiple authors, latest `created_at` wins.
  */
 export function subscribeLayout(
   relayUrl: string,
-  operatorPubkey: string,
+  authors: ReadonlyArray<string>,
   onChange: (layout: ChannelLayout) => void,
 ): () => void {
   const impl = getBridgeImpl();
@@ -96,7 +96,7 @@ export function subscribeLayout(
     let unsub: (() => void) | null = null;
     void getBridge().then(() => {
       if (cancelled) return;
-      unsub = subscribeLayout(relayUrl, operatorPubkey, onChange);
+      unsub = subscribeLayout(relayUrl, authors, onChange);
     });
     return () => {
       cancelled = true;
@@ -104,10 +104,11 @@ export function subscribeLayout(
     };
   }
 
+  if (authors.length === 0) return () => {};
   let latest: ChannelLayout = EMPTY_LAYOUT;
   const filter: Filter = {
     kinds: [KIND_LAYOUT],
-    authors: [operatorPubkey],
+    authors: [...authors],
     '#d': [dTag(relayUrl)],
   };
   return impl.subscribeFilter(filter, (ev) => {
@@ -128,13 +129,18 @@ export async function publishLayout(relayUrl: string, layout: ChannelLayout): Pr
   });
 }
 
-export function useChannelLayout(relayUrl: string | null, operatorPubkey: string | null): ChannelLayout {
+export function useChannelLayout(
+  relayUrl: string | null,
+  authors: ReadonlyArray<string>,
+): ChannelLayout {
   const [layout, setLayout] = useState<ChannelLayout>(EMPTY_LAYOUT);
+  const authorsKey = [...authors].sort().join(',');
   useEffect(() => {
     setLayout(EMPTY_LAYOUT);
-    if (!relayUrl || !operatorPubkey) return;
-    return subscribeLayout(relayUrl, operatorPubkey, setLayout);
-  }, [relayUrl, operatorPubkey]);
+    if (!relayUrl || authors.length === 0) return;
+    return subscribeLayout(relayUrl, authors, setLayout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [relayUrl, authorsKey]);
   return layout;
 }
 

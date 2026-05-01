@@ -137,6 +137,10 @@ export function useAdmins(groupId: string | null): ReadonlyArray<string> {
   );
 }
 
+export function useAdminsByGroup(): Readonly<Record<string, ReadonlyArray<string>>> {
+  return useSubscription((b, cb) => b.subscribeAdminsByGroup(cb), {});
+}
+
 export function useMembers(groupId: string | null): ReadonlyArray<string> {
   return useSubscription<ReadonlyArray<string>>(
     (b, cb) => (groupId ? b.subscribeMembers(groupId, cb) : () => {}),

@@ -838,6 +838,12 @@ class BridgeImpl implements NostrBridge {
     return this.adminsByGroup.subscribe(adapter);
   }
 
+  subscribeAdminsByGroup(
+    cb: (byGroup: Readonly<Record<string, ReadonlyArray<string>>>) => void,
+  ): Unsubscribe {
+    return this.adminsByGroup.subscribe(cb);
+  }
+
   subscribeMembers(groupId: string, cb: (members: ReadonlyArray<string>) => void): Unsubscribe {
     this.subscribeAdminMember(groupId);
     const adapter: Listener<Record<string, string[]>> = (byGroup) => cb(byGroup[groupId] ?? []);
@@ -1232,6 +1238,47 @@ class BridgeImpl implements NostrBridge {
       if (timer) { clearTimeout(timer); timer = null; }
     };
 
+    let authPending = false;
+    const baseSigner = this.getAuthSigner();
+    // Wrap the onauth signer so the watchdog can pause while the user is
+    // approving a NIP-42 AUTH challenge in their extension / bunker. Without
+    // this, a slow human approval (>watchdogMs) closes the sub before
+    // nostr-tools can re-fire the REQ on the now-authed socket — and each
+    // watchdog retry triggers a fresh extension prompt instead of riding
+    // the existing AUTH. Symptom: user approves the signature, then has to
+    // refresh the page for channels/messages to populate.
+    const wrappedSigner = baseSigner
+      ? async (evt: EventTemplate): Promise<VerifiedEvent> => {
+          authPending = true;
+          clearTimer();
+          try {
+            return await baseSigner(evt);
+          } finally {
+            authPending = false;
+            // Give the relay a moment to deliver EVENT/EOSE on the retried
+            // REQ before the watchdog can decide the sub is dead.
+            if (!closed && !alive) {
+              timer = setTimeout(onWatchdog, WATCHDOG_MS);
+            }
+          }
+        }
+      : undefined;
+
+    const onWatchdog = () => {
+      if (closed || alive) return;
+      if (authPending) {
+        // Don't kill the sub while a human is staring at an approval popup.
+        timer = setTimeout(onWatchdog, WATCHDOG_MS);
+        return;
+      }
+      try { activeSub?.close(); } catch { /* ignore */ }
+      activeSub = null;
+      if (attempt < MAX_ATTEMPTS) {
+        const delay = Math.min(1000 * 2 ** (attempt - 1), 8000);
+        timer = setTimeout(start, delay);
+      }
+    };
+
     const start = () => {
       if (closed) return;
       attempt++;
@@ -1247,18 +1294,10 @@ class BridgeImpl implements NostrBridge {
           clearTimer();
           oneose?.();
         },
-        onauth: this.getAuthSigner(),
+        onauth: wrappedSigner,
       });
       activeSub = sub;
-      timer = setTimeout(() => {
-        if (closed || alive) return;
-        try { sub.close(); } catch { /* ignore */ }
-        activeSub = null;
-        if (attempt < MAX_ATTEMPTS) {
-          const delay = Math.min(1000 * 2 ** (attempt - 1), 8000);
-          timer = setTimeout(start, delay);
-        }
-      }, WATCHDOG_MS);
+      timer = setTimeout(onWatchdog, WATCHDOG_MS);
     };
 
     start();

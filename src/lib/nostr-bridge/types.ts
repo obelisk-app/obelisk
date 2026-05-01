@@ -140,6 +140,10 @@ export interface NostrBridge {
   ): Unsubscribe;
   /** NIP-29 39001 admins (relay-published). Keyed by pubkey hex. */
   subscribeAdmins(groupId: string, cb: (admins: ReadonlyArray<string>) => void): Unsubscribe;
+  /** Full admin map for every group the bridge has seen on the active relay. */
+  subscribeAdminsByGroup(
+    cb: (byGroup: Readonly<Record<string, ReadonlyArray<string>>>) => void,
+  ): Unsubscribe;
   /** NIP-29 39002 members (relay-published). */
   subscribeMembers(groupId: string, cb: (members: ReadonlyArray<string>) => void): Unsubscribe;
   /**

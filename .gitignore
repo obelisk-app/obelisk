@@ -46,6 +46,8 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 !.env.production.example
+# voice probe identities (real nsecs — never commit)
+/scripts/test-peers.env
 
 # vercel
 .vercel
