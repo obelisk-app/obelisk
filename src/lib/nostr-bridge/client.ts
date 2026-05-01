@@ -1709,7 +1709,7 @@ class BridgeImpl implements NostrBridge {
     let event: NostrEvent;
     if (this.session.loginMethod === 'nsec' && this.session.privKeyHex) {
       const sk = hexToBytes(this.session.privKeyHex);
-      event = finalizeEvent({ ...template, pubkey: this.session.pubKeyHex }, sk);
+      event = finalizeEvent(template, sk);
     } else if (this.session.loginMethod === 'nip07') {
       const win = (window as any).nostr;
       if (!win) throw new Error('NIP-07 extension unavailable');

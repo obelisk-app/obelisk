@@ -6,6 +6,7 @@
     "dev": "next dev",
     "dev:raise": "./scripts/dev-raise.sh",
     "raise": "./scripts/raise.sh",
+    "deploy": "./scripts/deploy.sh",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

@@ -88,15 +88,15 @@ export function useSignerReady(): boolean {
 }
 
 export function useConfiguredRelays(): ReadonlyArray<string> {
-  return useSubscription((b, cb) => b.subscribeConfiguredRelays(cb), []);
+  return useSubscription<ReadonlyArray<string>>((b, cb) => b.subscribeConfiguredRelays(cb), []);
 }
 
 export function useGroups(): ReadonlyArray<JsGroup> {
-  return useSubscription((b, cb) => b.subscribeGroups(cb), []);
+  return useSubscription<ReadonlyArray<JsGroup>>((b, cb) => b.subscribeGroups(cb), []);
 }
 
 export function useMessages(groupId: string | null): ReadonlyArray<JsMessage> {
-  return useSubscription(
+  return useSubscription<ReadonlyArray<JsMessage>>(
     (b, cb) => (groupId ? b.subscribeMessages(groupId, cb) : () => {}),
     [],
     [groupId],
@@ -104,7 +104,7 @@ export function useMessages(groupId: string | null): ReadonlyArray<JsMessage> {
 }
 
 export function useUserMetadata(pubkey: string | null): JsUserMetadata | null {
-  return useSubscription(
+  return useSubscription<JsUserMetadata | null>(
     (b, cb) => (pubkey ? b.subscribeUserMetadata(pubkey, cb) : () => {}),
     null,
     [pubkey],
@@ -114,7 +114,7 @@ export function useUserMetadata(pubkey: string | null): JsUserMetadata | null {
 export function useReactions(
   groupId: string | null,
 ): Readonly<Record<string, ReadonlyArray<JsReaction>>> {
-  return useSubscription(
+  return useSubscription<Readonly<Record<string, ReadonlyArray<JsReaction>>>>(
     (b, cb) => (groupId ? b.subscribeReactions(groupId, cb) : () => {}),
     {},
     [groupId],
@@ -122,15 +122,15 @@ export function useReactions(
 }
 
 export function useChildrenByParent(): Readonly<Record<string, ReadonlyArray<string>>> {
-  return useSubscription((b, cb) => b.subscribeChildrenByParent(cb), {});
+  return useSubscription<Readonly<Record<string, ReadonlyArray<string>>>>((b, cb) => b.subscribeChildrenByParent(cb), {});
 }
 
 export function useDirectMessages(): Readonly<Record<string, ReadonlyArray<JsDirectMessage>>> {
-  return useSubscription((b, cb) => b.subscribeDirectMessages(cb), {});
+  return useSubscription<Readonly<Record<string, ReadonlyArray<JsDirectMessage>>>>((b, cb) => b.subscribeDirectMessages(cb), {});
 }
 
 export function useAdmins(groupId: string | null): ReadonlyArray<string> {
-  return useSubscription(
+  return useSubscription<ReadonlyArray<string>>(
     (b, cb) => (groupId ? b.subscribeAdmins(groupId, cb) : () => {}),
     [],
     [groupId],
@@ -138,7 +138,7 @@ export function useAdmins(groupId: string | null): ReadonlyArray<string> {
 }
 
 export function useMembers(groupId: string | null): ReadonlyArray<string> {
-  return useSubscription(
+  return useSubscription<ReadonlyArray<string>>(
     (b, cb) => (groupId ? b.subscribeMembers(groupId, cb) : () => {}),
     [],
     [groupId],
@@ -146,5 +146,5 @@ export function useMembers(groupId: string | null): ReadonlyArray<string> {
 }
 
 export function useMyFollows(): ReadonlyArray<string> {
-  return useSubscription((b, cb) => b.subscribeMyFollows(cb), []);
+  return useSubscription<ReadonlyArray<string>>((b, cb) => b.subscribeMyFollows(cb), []);
 }
