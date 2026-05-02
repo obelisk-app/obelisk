@@ -79,6 +79,8 @@ for v in DOMAIN POSTGRES_PASSWORD; do
   grep -qE "^${v}=" "$ENV_FILE" || fail "$ENV_FILE missing required var: $v"
 done
 ok "required env vars present"
+RESOLVED_DOMAIN=$(grep -E "^DOMAIN=" "$ENV_FILE" | head -1 | cut -d= -f2-)
+dim "DOMAIN=$RESOLVED_DOMAIN"
 
 current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
 [ "$current_branch" = "$BRANCH" ] || dim "⚠ on branch '$current_branch' (expected '$BRANCH') — continuing"
@@ -166,6 +168,10 @@ if ! $DC --env-file "$ENV_FILE" up -d --build "$APP_SERVICE"; then
   fail "build/restart failed — db is untouched, uploads safe, backups at $BACKUP_DIR"
 fi
 ok "$APP_SERVICE up"
+
+# Re-apply caddy with current env so DOMAIN changes take effect (no-op if unchanged).
+blue "docker compose --env-file $ENV_FILE up -d caddy"
+$DC --env-file "$ENV_FILE" up -d caddy >/dev/null 2>&1 && ok "caddy reconciled (DOMAIN=$RESOLVED_DOMAIN)" || dim "⚠ caddy reconcile failed — check: $DC --env-file $ENV_FILE logs caddy"
 
 # ── Postflight ───────────────────────────────────────────────────
 step "Health check"

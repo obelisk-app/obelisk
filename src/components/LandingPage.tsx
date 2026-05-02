@@ -217,8 +217,21 @@ export default function LandingPage() {
       <div className="relative z-10">
       <Navbar onLoginSuccess={handleLoginSuccess} />
 
+      {/* Sister-project cross-link banner */}
+      <section className="pt-24 pb-0 px-6 relative z-20">
+        <div className="max-w-4xl mx-auto">
+          <a
+            href="https://obelisk.ar"
+            className="block text-center bg-lc-green/10 hover:bg-lc-green/20 border border-lc-green/30 rounded-xl px-4 py-3 text-sm text-lc-white transition-colors"
+          >
+            Looking for the relay-only, fully decentralized version of Obelisk? Visit{' '}
+            <span className="text-lc-green font-semibold">obelisk.ar</span> →
+          </a>
+        </div>
+      </section>
+
       {/* Hero */}
-      <section className="relative pt-32 pb-24 px-6 overflow-hidden">
+      <section className="relative pt-12 pb-24 px-6 overflow-hidden">
         {/* Glow behind obelisk */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-lc-green/5 rounded-full blur-[120px] pointer-events-none" />
 
@@ -505,6 +518,14 @@ export default function LandingPage() {
                           </li>
                         ))}
                       </ul>
+                      {r.key === 'phase5' && (
+                        <a
+                          href="https://obelisk.ar"
+                          className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-lc-green hover:underline"
+                        >
+                          {t('roadmap.phase5.cta')} →
+                        </a>
+                      )}
                     </div>
                   </div>
                 );

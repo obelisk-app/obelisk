@@ -101,6 +101,7 @@
   "roadmap.phase6.items": "Conexión de wallet via NWC (NIP-47)|Zaps entre usuarios en el chat|Emoji zaps y leaderboards (próximo)",
   "roadmap.phase5.title": "Grupos nativos en Nostr",
   "roadmap.phase5.items": "Canales públicos NIP-28 sobre Nostr|Servidores gestionados por relay NIP-29 (sin DB de Obelisk)|Grupos privados gift-wrapped NIP-59|Retirar Postgres centralizado",
+  "roadmap.phase5.cta": "Ya está disponible — probalo en obelisk.ar",
 
   "stack.heading": "Tech stack",
   "stack.subtitle": "Herramientas modernas y open-source, sin vendor lock-in.",
