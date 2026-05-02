@@ -34,7 +34,17 @@ export default function LoginModal({ onSuccess }: { onSuccess?: () => void } = {
   const [waitingForScan, setWaitingForScan] = useState(false);
   const [authChallengeUrl, setAuthChallengeUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [hasNip07, setHasNip07] = useState(false);
   const qrSessionRef = useRef<{ cancel: () => void } | null>(null);
+
+  useEffect(() => {
+    const check = () => setHasNip07(typeof window !== 'undefined' && !!(window as any).nostr);
+    check();
+    // Extensions may inject window.nostr after page load.
+    const id = window.setInterval(check, 500);
+    const stop = window.setTimeout(() => window.clearInterval(id), 5000);
+    return () => { window.clearInterval(id); window.clearTimeout(stop); };
+  }, []);
 
   const isLoading = loadingMethod !== null || creatingAccount;
 
@@ -302,7 +312,7 @@ ${newAccountNsec}
 
         ) : !method ? (
           <div className="space-y-3">
-            {(
+            {hasNip07 && (
               <button
                 onClick={() => handleLogin('extension')}
                 disabled={isLoading}
