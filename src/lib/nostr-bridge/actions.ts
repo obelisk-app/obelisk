@@ -44,6 +44,13 @@ export const nostrActions = {
     (await getBridge()).putUser(groupId, pubkey, roles),
   removeUser: async (groupId: string, pubkey: string) =>
     (await getBridge()).removeUser(groupId, pubkey),
+  removePermission: async (
+    groupId: string,
+    pubkey: string,
+    permissions: ReadonlyArray<string>,
+  ) => (await getBridge()).removePermission(groupId, pubkey, permissions),
+  claimCreatorAdmin: async (groupId: string) =>
+    (await getBridge()).claimCreatorAdmin(groupId),
   deleteGroupEvent: async (groupId: string, eventId: string) =>
     (await getBridge()).deleteGroupEvent(groupId, eventId),
   loadMoreMessages: async (groupId: string) =>
@@ -58,6 +65,9 @@ export const nostrActions = {
   searchMessages: async (
     opts: Parameters<Awaited<ReturnType<typeof getBridge>>['searchMessages']>[0],
   ) => (await getBridge()).searchMessages(opts),
+
+  setMuted: async (pubkey: string, muted: boolean) =>
+    (await getBridge()).setMuted(pubkey, muted),
 
   signEventTemplate: async (
     template: Parameters<Awaited<ReturnType<typeof getBridge>>['signEventTemplate']>[0],

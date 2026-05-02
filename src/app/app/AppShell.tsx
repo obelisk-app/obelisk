@@ -15,6 +15,8 @@ import {
   useDirectMessages,
   useAdmins,
   useMembers,
+  useGroupCreator,
+  useMyMutes,
   useRelayAccess,
   useMyLoginMethod,
   type JsGroup,
@@ -30,14 +32,15 @@ import UserPanel from './UserPanel';
 import SearchBar from './SearchBar';
 import MessageContent from '@/components/chat/MessageContent';
 import MemberList from '@/components/chat/MemberList';
+import RelayAdminPanel from '@/components/admin/RelayAdminPanel';
 import VoiceRoom from '@/components/voice/VoiceRoom';
+import ForumView from '@/components/chat/ForumView';
 import VoiceStatusBar from '@/components/voice/VoiceStatusBar';
 import { useVoiceStore } from '@/store/voice';
 import { useVoiceChatPane } from '@/hooks/chat/useVoiceChatPane';
 import { useChatStore } from '@/store/chat';
 import type { MemberInfo } from '@/lib/mentions';
 import { useToastStore } from '@/store/toast';
-import { useModerationStore } from '@/store/moderation';
 import {
   EMOJI_CATEGORIES,
   EMOJI_CATEGORY_NAMES,
@@ -190,6 +193,7 @@ export default function AppShell() {
               onToggleMembers={() => setShowMembers((v) => !v)}
               pendingMessageId={pendingMessageId}
               onConsumePendingMessageId={() => setPendingMessageId(null)}
+              onSelectGroup={(gid) => setView({ kind: 'group', groupId: gid })}
             />
           ) : view.kind === 'dm' ? (
             <DMPanel peer={view.peer} onPickPeer={(p) => setView({ kind: 'dm', peer: p })} />
@@ -425,26 +429,16 @@ function Sidebar({
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [layoutOpen, setLayoutOpen] = useState(false);
   const [brandingOpen, setBrandingOpen] = useState(false);
+  const [adminPanelOpen, setAdminPanelOpen] = useState(false);
 
-  // Background admin self-claim across every visible group.
-  // NIP-29 relays SHOULD auto-promote the creator, but many don't until they
-  // see an explicit kind 9000. Without this the gear icon never appears for
-  // channels the user created. Idempotent on relays that already promoted us;
-  // rejected (and silently ignored) on channels the user doesn't own.
-  useEffect(() => {
-    if (!myPubkey || groups.length === 0) return;
-    let cancelled = false;
-    (async () => {
-      for (const g of groups) {
-        if (cancelled) return;
-        const key = `obelisk:auto-claim-admin:${relay}:${g.id}:${myPubkey}`;
-        if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(key)) continue;
-        try { sessionStorage?.setItem(key, '1'); } catch {}
-        try { await nostrActions.putUser(g.id, myPubkey, ['admin']); } catch {}
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [groups, myPubkey, relay]);
+  // Creator-admin claim used to live here as a blanket loop that published a
+  // kind 9000 ['admin'] for every visible group on every login (gated only by
+  // sessionStorage). With 1000 channels that meant 1000 events per device per
+  // session, polluting the relay-wide moderation log that other NIP-29 clients
+  // render as an activity feed. The claim is now lazy: see the settings-open
+  // path further down which calls `nostrActions.claimCreatorAdmin(groupId)`
+  // exactly once, only when the local user is the kind 9007 creator and isn't
+  // already in 39001.
 
   const toggleCollapsed = (id: string) =>
     setCollapsed((c) => ({ ...c, [id]: !c[id] }));
@@ -512,6 +506,21 @@ function Sidebar({
                 <line x1="3" y1="6" x2="21" y2="6" />
                 <line x1="3" y1="12" x2="21" y2="12" />
                 <line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            </button>
+          )}
+          {isOperator && (
+            <button
+              onClick={() => setAdminPanelOpen(true)}
+              title="Manage admins & members across every channel (group admins only)"
+              aria-label="Manage admins and members"
+              className="shrink-0 rounded p-1 text-lc-muted hover:bg-lc-card hover:text-lc-white"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
               </svg>
             </button>
           )}
@@ -610,6 +619,9 @@ function Sidebar({
           branding={branding}
           onClose={() => setBrandingOpen(false)}
         />
+      )}
+      {adminPanelOpen && (
+        <RelayAdminPanel onClose={() => setAdminPanelOpen(false)} />
       )}
 
       <div className="shrink-0 border-t border-lc-border bg-lc-card/50 md:hidden">
@@ -747,27 +759,76 @@ function GroupNode({
 }) {
   const childIds = childrenByParent[group.id] ?? [];
   const active = view.kind === 'group' && view.groupId === group.id;
+  // Forum containers default to expanded so newly-created threads are
+  // immediately visible. Persisted per-group in localStorage so the user's
+  // choice survives reloads. Non-forum groups stay always-expanded (no
+  // toggle rendered) — collapsing arbitrary nesting isn't part of this UX.
+  const isCollapsible = group.kind === 'forum' && childIds.length > 0;
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem(`obelisk-dex/forum-collapsed/${group.id}`) === '1';
+  });
+  const toggleCollapsed = () => {
+    const next = !collapsed;
+    setCollapsed(next);
+    if (typeof window !== 'undefined') {
+      const key = `obelisk-dex/forum-collapsed/${group.id}`;
+      if (next) window.localStorage.setItem(key, '1');
+      else window.localStorage.removeItem(key);
+    }
+  };
   return (
     <>
-      <button
-        onClick={() => onSelect(group.id)}
+      <div
         style={{ paddingLeft: `${0.5 + depth * 0.85}rem` }}
         className={
-          'flex w-full items-center gap-2 truncate rounded px-2 py-1.5 text-left text-sm transition ' +
+          'flex w-full items-center gap-1 rounded text-left text-sm transition ' +
           (active
             ? 'bg-lc-olive text-lc-white'
             : 'text-lc-muted hover:bg-lc-card hover:text-lc-white')
         }
       >
-        {depth > 0 && <span className="text-lc-muted">↳</span>}
-        <span className="text-lc-muted">#</span>
-        <span className="flex-1 truncate">{group.name ?? group.id.slice(0, 12)}</span>
-        {!group.isPublic && <span title="Private" className="text-[10px]">🔒</span>}
-        {!group.isOpen && <span title="Closed (invite only)" className="text-[10px]">⊝</span>}
-      </button>
-      {childIds.map((cid) => {
+        {isCollapsible ? (
+          <button
+            onClick={toggleCollapsed}
+            className="shrink-0 px-1 py-1.5 text-[10px] text-lc-muted hover:text-lc-white"
+            aria-label={collapsed ? 'Expand threads' : 'Collapse threads'}
+            title={collapsed ? 'Expand threads' : 'Collapse threads'}
+          >
+            {collapsed ? '▸' : '▾'}
+          </button>
+        ) : (
+          depth > 0 && <span className="pl-1 text-lc-muted">↳</span>
+        )}
+        <button
+          onClick={() => onSelect(group.id)}
+          className="flex flex-1 items-center gap-2 truncate px-1 py-1.5 text-left"
+        >
+          <span className="text-lc-muted">#</span>
+          <span className="flex-1 truncate">{group.name ?? group.id.slice(0, 12)}</span>
+          {!group.isPublic && <span title="Private" className="text-[10px]">🔒</span>}
+          {!group.isOpen && <span title="Closed (invite only)" className="text-[10px]">⊝</span>}
+        </button>
+      </div>
+      {!collapsed && childIds.map((cid) => {
         const child = groupsById[cid];
         if (!child) return null;
+        // For forum-container children (threads), only render in the sidebar
+        // once the thread has ≥ 1 message — empty/aborted threads stay hidden
+        // so the sidebar doesn't accumulate noise from accidental creates.
+        if (group.kind === 'forum') {
+          return (
+            <ForumChildGroupNode
+              key={cid}
+              group={child}
+              depth={depth + 1}
+              childrenByParent={childrenByParent}
+              groupsById={groupsById}
+              view={view}
+              onSelect={onSelect}
+            />
+          );
+        }
         return (
           <GroupNode
             key={cid}
@@ -782,6 +843,19 @@ function GroupNode({
       })}
     </>
   );
+}
+
+function ForumChildGroupNode(props: {
+  group: JsGroup;
+  depth: number;
+  childrenByParent: Readonly<Record<string, ReadonlyArray<string>>>;
+  groupsById: Record<string, JsGroup>;
+  view: View;
+  onSelect: (id: string) => void;
+}) {
+  const messages = useMessages(props.group.id);
+  if (messages.length === 0) return null;
+  return <GroupNode {...props} />;
 }
 
 function CategorySection({
@@ -1335,12 +1409,14 @@ function ChatLayout({
   onToggleMembers,
   pendingMessageId,
   onConsumePendingMessageId,
+  onSelectGroup,
 }: {
   groupId: string;
   showMembers: boolean;
   onToggleMembers: () => void;
   pendingMessageId: string | null;
   onConsumePendingMessageId: () => void;
+  onSelectGroup: (groupId: string) => void;
 }) {
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
@@ -1350,6 +1426,7 @@ function ChatLayout({
         onToggleMembers={onToggleMembers}
         pendingMessageId={pendingMessageId}
         onConsumePendingMessageId={onConsumePendingMessageId}
+        onSelectGroup={onSelectGroup}
       />
     </div>
   );
@@ -1361,12 +1438,14 @@ function ChatPanel({
   onToggleMembers,
   pendingMessageId,
   onConsumePendingMessageId,
+  onSelectGroup,
 }: {
   groupId: string;
   showMembers: boolean;
   onToggleMembers: () => void;
   pendingMessageId: string | null;
   onConsumePendingMessageId: () => void;
+  onSelectGroup: (groupId: string) => void;
 }) {
   const messages = useMessages(groupId);
   const reactions = useReactions(groupId);
@@ -1377,13 +1456,33 @@ function ChatPanel({
   const admins = useAdmins(groupId);
   const myPubkey = useMyPubkey();
   const isAdmin = !!myPubkey && admins.includes(myPubkey);
+  const groupCreator = useGroupCreator(groupId);
+  const relay = useCurrentRelayUrl();
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [replyingTo, setReplyingTo] = useState<JsMessage | null>(null);
   useEffect(() => { setReplyingTo(null); }, [groupId]);
 
-  // Background admin self-claim is now done across all groups in RelayPanel.
+  // Lazy creator-admin claim. The blanket login-time loop that used to
+  // publish a kind 9000 ['admin'] for every visible group has been removed.
+  // Instead, when the active session opens a channel they themselves
+  // created (kind 9007 author == myPubkey) and the relay hasn't already
+  // listed them in 39001, fire exactly one kind 9000 ['admin']. The
+  // localStorage key persists across sessions so this never re-fires.
+  useEffect(() => {
+    if (!myPubkey || !groupCreator) return;
+    if (groupCreator !== myPubkey) return;
+    if (admins.includes(myPubkey)) return;
+    const key = `obelisk:claimed-admin:${relay}:${groupId}:${myPubkey}`;
+    try {
+      if (typeof localStorage !== 'undefined' && localStorage.getItem(key)) return;
+      localStorage?.setItem(key, '1');
+    } catch {}
+    void nostrActions.claimCreatorAdmin(groupId).catch((err) => {
+      console.warn('[appshell] claimCreatorAdmin failed', err);
+    });
+  }, [groupId, myPubkey, groupCreator, admins, relay]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const voiceMainRef = useRef<HTMLDivElement>(null);
   const [showSettings, setShowSettings] = useState(false);
@@ -1580,6 +1679,30 @@ function ChatPanel({
     setSending(true);
     setSendError(null);
     try {
+      // Lazy member self-add for open groups. Without this, a user who has
+      // never been explicitly added by an admin can read but their first
+      // kind 9 send is rejected with "user is not a member". Gated by a
+      // localStorage key so we publish exactly one kind 9000 ever per
+      // (relay, group, user) triple. Closed groups (`isOpen === false`)
+      // skip this — those require an admin invite by design.
+      if (
+        myPubkey
+        && group?.isOpen
+        && !memberPubkeys.includes(myPubkey)
+        && !admins.includes(myPubkey)
+      ) {
+        const key = `obelisk:claimed-member:${relay}:${groupId}:${myPubkey}`;
+        let alreadyTried = false;
+        try {
+          alreadyTried = typeof localStorage !== 'undefined' && !!localStorage.getItem(key);
+        } catch {}
+        if (!alreadyTried) {
+          try { localStorage?.setItem(key, '1'); } catch {}
+          try { await nostrActions.putUser(groupId, myPubkey, []); } catch (err) {
+            console.warn('[appshell] lazy member putUser failed', err);
+          }
+        }
+      }
       await nostrActions.sendMessage(
         groupId,
         content,
@@ -1800,6 +1923,15 @@ function ChatPanel({
       </form>
       </>
         );
+        if (group?.kind === 'forum') {
+          return (
+            <ForumView
+              groupId={groupId}
+              channelName={group?.name ?? undefined}
+              onSelectThread={onSelectGroup}
+            />
+          );
+        }
         if (group?.kind === 'voice') {
           return (
             <VoiceRoom
@@ -1840,7 +1972,7 @@ function ChatPanel({
         return textBody;
       })()}
         </div>
-        {showMembers && group?.kind !== 'voice' && <MembersPanel groupId={groupId} />}
+        {showMembers && group?.kind === 'text' && <MembersPanel groupId={groupId} />}
       </div>
 
       {showSettings && group && (
@@ -1954,8 +2086,18 @@ function MessageRow({
   const [pickerOpen, setPickerOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const myPubkey = useMyPubkey();
-  const isMuted = useModerationStore((s) => s.mutedPubkeys.includes(msg.pubkey));
-  const toggleMute = useModerationStore((s) => s.toggleMute);
+  const myMutes = useMyMutes();
+  const isMuted = myMutes.includes(msg.pubkey);
+  const toggleMute = async () => {
+    try {
+      await nostrActions.setMuted(msg.pubkey, !isMuted);
+    } catch (e) {
+      useToastStore.getState().pushToast({
+        title: 'No se pudo silenciar',
+        body: e instanceof Error ? e.message : String(e),
+      });
+    }
+  };
   const closeAll = () => { setMenuOpen(false); setPanelPinned(false); setPickerOpen(false); };
   useEffect(() => {
     if (!menuOpen && !panelPinned && !pickerOpen) return;
@@ -2192,7 +2334,7 @@ function MessageRow({
             </button>
             <button
               role="menuitem"
-              onClick={() => { toggleMute(msg.pubkey); setMenuOpen(false); }}
+              onClick={() => { void toggleMute(); setMenuOpen(false); }}
               disabled={msg.pubkey === myPubkey}
               className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-red-400 hover:bg-lc-card disabled:opacity-40 disabled:hover:bg-transparent"
             >
@@ -2452,7 +2594,7 @@ function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClose: () 
   const [banner, setBanner] = useState(group.banner ?? '');
   const [isPublic, setIsPublic] = useState(group.isPublic);
   const [isOpen, setIsOpen] = useState(group.isOpen);
-  const [channelKind, setChannelKind] = useState<'text' | 'voice'>(group.kind);
+  const [channelKind, setChannelKind] = useState<'text' | 'voice' | 'forum'>(group.kind);
   const [savingMeta, setSavingMeta] = useState(false);
   const [metaErr, setMetaErr] = useState<string | null>(null);
   const [uploading, setUploading] = useState<null | 'icon' | 'banner'>(null);
@@ -2631,7 +2773,7 @@ function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClose: () 
             {/* Channel type --------------------------------------------- */}
             <section className="space-y-3">
               <SectionHeader title="Channel type" />
-              <div className="grid gap-2 sm:grid-cols-2">
+              <div className="grid gap-2 sm:grid-cols-3">
                 <ToggleCard
                   active={channelKind === 'text'}
                   onClick={() => setChannelKind('text')}
@@ -2646,11 +2788,25 @@ function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClose: () 
                   title="Voice / Video"
                   subtitle="P2P call, up to 4 people"
                 />
+                <ToggleCard
+                  active={channelKind === 'forum'}
+                  onClick={() => setChannelKind('forum')}
+                  icon="📋"
+                  title="Forum"
+                  subtitle="Threaded posts with replies"
+                />
               </div>
               {channelKind === 'voice' && (
                 <p className="text-[11px] text-lc-muted">
                   Adds a <code className="text-lc-white/80">[&quot;t&quot;,&quot;voice&quot;]</code> tag. Members open{' '}
                   <code className="text-lc-white/80">/voice/{group.id.slice(0, 8)}…</code> to join.
+                </p>
+              )}
+              {channelKind === 'forum' && (
+                <p className="text-[11px] text-lc-muted">
+                  Adds a <code className="text-lc-white/80">[&quot;t&quot;,&quot;forum&quot;]</code> tag. The
+                  channel renders as a list of threaded posts (NIP-29 kind 11) with replies (kind 12)
+                  instead of a chat stream.
                 </p>
               )}
             </section>
@@ -2845,6 +3001,19 @@ function ManageMemberRow({ groupId, pubkey, isAdmin }: { groupId: string; pubkey
         </div>
         <div className="truncate font-mono text-[10px] text-lc-muted">{pubkey.slice(0, 32)}…</div>
       </div>
+      {isAdmin && (
+        <button
+          onClick={() => {
+            if (confirm(`Demote ${meta?.name || pubkey.slice(0, 12)} to plain member?`)) {
+              nostrActions.removePermission(groupId, pubkey, ['admin']);
+            }
+          }}
+          className="rounded px-2 py-0.5 text-xs text-lc-muted hover:bg-lc-dark hover:text-lc-white"
+          title="Strip admin role; keep them in the channel as a regular member."
+        >
+          Demote
+        </button>
+      )}
       <button
         onClick={() => {
           if (confirm(`Remove ${meta?.name || pubkey.slice(0, 12)} from channel?`)) {

@@ -17,7 +17,7 @@ What's **not** in v1, but planned:
 - Reconnection ladder, speaking detector, deafen, local per-peer mute.
 - Encryption of signaling (see §9 — gift-wrap upgrade).
 - A "Voice channels" section in the chat sidebar with a join button (today you reach a voice channel only by visiting `/voice/<groupId>` directly or being deeplinked).
-- Admin-CLI integration. The `scripts/admin-cli/` tree is from the legacy obeliskord build and is not part of obelisk-dex; once obelisk-dex grows its own CLI, a `voice-channel` create/edit subcommand should be added there.
+- Admin-CLI integration. There is no admin CLI in obelisk-dex yet; once one exists, a `voice-channel` create/edit subcommand should be added.
 
 ## 2. Files
 

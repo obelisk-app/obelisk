@@ -84,9 +84,11 @@ const KIND_GROUP_CREATE = 9007;
 const KIND_GROUP_EDIT_METADATA = 9002;
 const KIND_GROUP_PUT_USER = 9000;
 const KIND_GROUP_REMOVE_USER = 9001;
+const KIND_GROUP_REMOVE_PERMISSION = 9003;
 const KIND_GROUP_DELETE_EVENT = 9005;
 const KIND_GROUP_ADMINS = 39001;
 const KIND_GROUP_MEMBERS = 39002;
+const KIND_MUTE_LIST = 10000;
 
 export const STORAGE_KEY = 'obelisk-dex/session';
 export const RELAYS_KEY = 'obelisk-dex/relays';
@@ -94,6 +96,13 @@ const LEGACY_STORAGE_KEY = 'obeliskord/session';
 const LEGACY_RELAYS_KEY = 'obeliskord/relays';
 const DEFAULT_RELAY = 'wss://public.obelisk.ar';
 const DEFAULT_RELAYS = ['wss://public.obelisk.ar'];
+
+// How long to wait before flipping the relay-access banner from 'unknown' to
+// a non-ok state on retryable rejections (auth-required/restricted). The
+// `subscribeWatched` retry path heals most NIP-42 AUTH races in <1s; a 4s
+// soak hides the banner for those, while still surfacing genuinely persistent
+// auth/whitelist problems within a few seconds.
+const RELAY_ACCESS_SOAK_MS = 4000;
 
 /**
  * Read a localStorage value under the current key, falling back to the legacy
@@ -175,6 +184,12 @@ class BridgeImpl implements NostrBridge {
   private relays: string[] = [DEFAULT_RELAY];
 
   /**
+   * Per-relay timers for deferred relay-access downgrades. See
+   * {@link setRelayAccessDeferred}. Cleared on session change.
+   */
+  private deferredAccessDowngrades = new Map<string, ReturnType<typeof setTimeout>>();
+
+  /**
    * True if `url` is the relay the user is currently viewing — the only
    * relay we should answer NIP-42 AUTH challenges for. nostr-tools may pass
    * URLs with or without a trailing slash, so compare normalized.
@@ -204,7 +219,50 @@ class BridgeImpl implements NostrBridge {
     const cur = this.relayAccess.get();
     if (cur[key] === state) return;
     if (cur[key] === 'ok' && state !== 'ok') return;
+    // Any state transition supersedes a pending deferred downgrade — most
+    // importantly, a flip to 'ok' must cancel a pending 'auth-required' so
+    // the banner never appears for transient AUTH races that healed via
+    // retry within the soak window.
+    const pending = this.deferredAccessDowngrades.get(key);
+    if (pending) {
+      clearTimeout(pending);
+      this.deferredAccessDowngrades.delete(key);
+    }
     this.relayAccess.set({ ...cur, [key]: state });
+  }
+
+  /**
+   * Schedule a downgrade to a non-'ok' relay-access state after a soak
+   * window. Used when CLOSED carries `auth-required` / `restricted` reasons
+   * but `subscribeWatched` is about to retry: most of those rejections are
+   * transient (the relay sent CLOSED before NIP-42 AUTH fully completed) and
+   * heal in milliseconds. Calling `setRelayAccess` immediately would flash
+   * the "Not authenticated" / "Not whitelisted" banner during the AUTH race.
+   *
+   * - First failure starts the timer; subsequent failures while the timer is
+   *   pending do NOT reset it (we want a fixed bound on how long the banner
+   *   stays hidden, not "indefinite as long as failures keep arriving").
+   * - A successful read (`setRelayAccess(url, 'ok')`) cancels the pending
+   *   downgrade — that's the happy path: retry succeeded, banner never shown.
+   * - On session change, `resetPoolForSessionChange` clears all timers.
+   */
+  private setRelayAccessDeferred(url: string, state: RelayAccessState): void {
+    if (!this.isActiveRelay(url)) return;
+    const key = normalizeRelayUrl(url);
+    const cur = this.relayAccess.get();
+    if (cur[key] === 'ok') return;     // sticky-OK
+    if (cur[key] === state) return;
+    if (this.deferredAccessDowngrades.has(key)) return; // don't extend window
+    const t = setTimeout(() => {
+      this.deferredAccessDowngrades.delete(key);
+      // Re-check state — it may have flipped to 'ok' between scheduling and
+      // firing, in which case we honor the sticky-OK guard.
+      const now = this.relayAccess.get();
+      if (now[key] === 'ok') return;
+      if (now[key] === state) return;
+      this.relayAccess.set({ ...now, [key]: state });
+    }, RELAY_ACCESS_SOAK_MS);
+    this.deferredAccessDowngrades.set(key, t);
   }
   private session: PersistedSession | null = null;
   private subs: Array<{ close: () => void }> = [];
@@ -280,6 +338,14 @@ class BridgeImpl implements NostrBridge {
   adminsByGroup = new StateStore<Record<string, string[]>>({});
   membersByGroup = new StateStore<Record<string, string[]>>({});
   /**
+   * Map of `groupId -> creator pubkey hex`, derived from the kind 9007 event
+   * that created each group. Used by {@link claimCreatorAdmin} to know whether
+   * the local user is the creator of a group (so we should publish a kind 9000
+   * with `['admin']` if the relay didn't auto-promote them) without spamming
+   * kind 9000 publishes for every group on every login.
+   */
+  groupCreators = new StateStore<Record<string, string>>({});
+  /**
    * Per-group flag flipped to `true` once the relay has delivered at least
    * one kind 39001 (admins) or 39002 (members) event for that group. The
    * voice-channel membership gate uses this as positive evidence the relay
@@ -289,6 +355,13 @@ class BridgeImpl implements NostrBridge {
    */
   membershipReadyByGroup = new StateStore<Record<string, boolean>>({});
   myFollows = new StateStore<string[]>([]);
+  /**
+   * NIP-51 kind 10000 mute list — pubkeys the local user has muted (public
+   * `p` tags only; encrypted entries in `content` are not yet decrypted).
+   * Consumers filter messages and DMs against this set so muted authors'
+   * content disappears from the UI without affecting relay storage.
+   */
+  myMutes = new StateStore<string[]>([]);
   /**
    * `true` once the active NIP-46 bunker signer has completed its handshake
    * with the bunker relay (or the user logged in via nsec/NIP-07 — those
@@ -320,6 +393,7 @@ class BridgeImpl implements NostrBridge {
   private reactionSubscribedGroups = new Set<string>();
   private dmSubscribed = false;
   private adminMemberSubscribedGroups = new Set<string>();
+  private creatorSubscribedGroups = new Set<string>();
   // Newest `created_at` we've seen for kind-39001 (admins) / kind-39002
   // (members) per group id. Used to drop out-of-order ingests so an older
   // revision arriving second from a slower relay can't clobber the newer
@@ -543,6 +617,12 @@ class BridgeImpl implements NostrBridge {
         );
       }
     }
+    for (const groupId of cacheListIds(relay, KIND_GROUP_CREATE)) {
+      const entry = cacheGet<string>(relay, KIND_GROUP_CREATE, groupId);
+      if (entry) {
+        this.groupCreators.update((prev) => ({ ...prev, [groupId]: entry.value }));
+      }
+    }
   }
 
   /**
@@ -616,6 +696,10 @@ class BridgeImpl implements NostrBridge {
     // Forget any auth/whitelist signal we'd captured against the previous
     // pool — the next REQ on the fresh sockets must re-prove access.
     this.relayAccess.set({});
+    // Drop any pending deferred banner downgrades from the old pool — the
+    // new socket starts at 'unknown' and must earn its own state.
+    for (const t of this.deferredAccessDowngrades.values()) clearTimeout(t);
+    this.deferredAccessDowngrades.clear();
   }
 
   /**
@@ -838,6 +922,7 @@ class BridgeImpl implements NostrBridge {
       this.subscribeGroupMetadata();
       this.subscribeIncomingDMs();
       this.subscribeMyContactList();
+      this.subscribeMyMuteList();
       // Resolve the user's own profile so the UI has it immediately.
       if (this.session) this.ensureUserMetadata(this.session.pubKeyHex);
       // Reopen any per-group REQs that were live on the previous pool.
@@ -1032,6 +1117,10 @@ class BridgeImpl implements NostrBridge {
     return this.myFollows.subscribe(cb);
   }
 
+  subscribeMyMutes(cb: (pubkeys: ReadonlyArray<string>) => void): Unsubscribe {
+    return this.myMutes.subscribe(cb);
+  }
+
   subscribeAdmins(groupId: string, cb: (admins: ReadonlyArray<string>) => void): Unsubscribe {
     this.subscribeAdminMember(groupId);
     const adapter: Listener<Record<string, string[]>> = (byGroup) => cb(byGroup[groupId] ?? []);
@@ -1146,7 +1235,8 @@ class BridgeImpl implements NostrBridge {
     banner?: string;
     isPublic?: boolean;
     isOpen?: boolean;
-    kind?: 'text' | 'voice';
+    kind?: 'text' | 'voice' | 'forum';
+    parent?: string;
   }): Promise<string> {
     const groupId = opts.groupId ?? generateGroupId();
     await this.signAndPublish({
@@ -1155,20 +1245,16 @@ class BridgeImpl implements NostrBridge {
       tags: [['h', groupId]],
       created_at: Math.floor(Date.now() / 1000),
     });
-    // NIP-29 says the relay SHOULD make the creator the first admin, but in
-    // practice some relays only emit kind 39001 once an explicit kind 9000
-    // ['p', creator, 'admin'] is published. Without this the creator opens
-    // their own freshly-made channel and the gear icon doesn't show up.
-    // Belt-and-braces: explicitly claim admin for the creator. Idempotent on
-    // relays that already did the right thing.
+    // Optimistically record the creator locally so claimCreatorAdmin works
+    // without waiting for the relay to round-trip our own kind 9007 back. The
+    // explicit creator-admin claim used to live here as an unconditional
+    // putUser; that fired a kind 9000 even on relays that already auto-promoted
+    // the creator, polluting the moderation log. The claim is now lazy —
+    // ManageGroup / settings-open paths call `claimCreatorAdmin` only if 39001
+    // doesn't already include the local user.
     if (this.session) {
-      try {
-        await this.putUser(groupId, this.session.pubKeyHex, ['admin']);
-      } catch (err) {
-        // Some relays reject self-elevation when they already auto-elevated
-        // the creator — that's fine, swallow.
-        console.warn('[bridge] createGroup: claim-admin putUser failed', err);
-      }
+      this.groupCreators.update((m) => ({ ...m, [groupId]: this.session!.pubKeyHex }));
+      cacheSet(this.currentRelayUrl.get(), KIND_GROUP_CREATE, groupId, this.session.pubKeyHex);
     }
     await this.editGroupMetadata({ ...opts, groupId });
     return groupId;
@@ -1194,6 +1280,55 @@ class BridgeImpl implements NostrBridge {
     });
   }
 
+  /**
+   * NIP-29 9003 remove-permission. Strips one or more roles from a user's
+   * `p` entry on the next 39001/39002 broadcast without removing them from
+   * the group. The most common use is demoting an admin to a plain member
+   * (`permissions = ['admin']`).
+   */
+  async removePermission(
+    groupId: string,
+    pubkey: string,
+    permissions: ReadonlyArray<string>,
+  ): Promise<void> {
+    if (permissions.length === 0) return;
+    const pTag: string[] = ['p', pubkey, ...permissions];
+    await this.signAndPublish({
+      kind: KIND_GROUP_REMOVE_PERMISSION,
+      content: '',
+      tags: [['h', groupId], pTag],
+      created_at: Math.floor(Date.now() / 1000),
+    });
+  }
+
+  /**
+   * One-shot kind 9000 admin claim, only fired when:
+   *   - we know the kind 9007 author of `groupId` (from {@link groupCreators}),
+   *     and it equals the active session pubkey, AND
+   *   - the local user is not already in the relay-published 39001 admin list.
+   *
+   * Replaces the previous blanket login-time auto-claim loop in AppShell which
+   * published a kind 9000 admin for every visible group on every login. This
+   * helper is meant to be called from settings-open / create-group flows where
+   * the user's intent to administer the channel is explicit. Returns `true`
+   * when an event was published, `false` when the call was a no-op (not the
+   * creator, already an admin, or no session).
+   */
+  async claimCreatorAdmin(groupId: string): Promise<boolean> {
+    if (!this.session) return false;
+    const me = this.session.pubKeyHex;
+    if (this.groupCreators.get()[groupId] !== me) return false;
+    const admins = this.adminsByGroup.get()[groupId] ?? [];
+    if (admins.includes(me)) return false;
+    await this.putUser(groupId, me, ['admin']);
+    return true;
+  }
+
+  /** Reactive subscription over the kind 9007 creator map (groupId -> pubkey). */
+  subscribeGroupCreators(cb: (byGroup: Readonly<Record<string, string>>) => void): Unsubscribe {
+    return this.groupCreators.subscribe(cb);
+  }
+
   async deleteGroupEvent(groupId: string, eventId: string): Promise<void> {
     await this.signAndPublish({
       kind: KIND_GROUP_DELETE_EVENT,
@@ -1211,7 +1346,8 @@ class BridgeImpl implements NostrBridge {
     banner?: string;
     isPublic?: boolean;
     isOpen?: boolean;
-    kind?: 'text' | 'voice';
+    kind?: 'text' | 'voice' | 'forum';
+    parent?: string;
   }): Promise<void> {
     const tags: string[][] = [['h', opts.groupId]];
     if (opts.name !== undefined) tags.push(['name', opts.name]);
@@ -1220,10 +1356,13 @@ class BridgeImpl implements NostrBridge {
     if (opts.banner !== undefined) tags.push(['banner', opts.banner]);
     if (opts.isPublic !== undefined) tags.push([opts.isPublic ? 'public' : 'private']);
     if (opts.isOpen !== undefined) tags.push([opts.isOpen ? 'open' : 'closed']);
-    // The voice marker is "just another tag" on kind 9002; the relay reflects
-    // it on kind 39000 like name/about. Omitting the tag (kind: 'text') makes
-    // a previously-voice channel revert to a regular text channel.
+    if (opts.parent !== undefined && opts.parent) tags.push(['parent', opts.parent]);
+    // The variant marker is "just another tag" on kind 9002; the relay
+    // reflects it on kind 39000 like name/about. Omitting the tag
+    // (kind: 'text') makes a previously-voice/forum channel revert to a
+    // regular text channel.
     if (opts.kind === 'voice') tags.push(['t', 'voice']);
+    else if (opts.kind === 'forum') tags.push(['t', 'forum']);
     await this.signAndPublish({
       kind: KIND_GROUP_EDIT_METADATA,
       content: '',
@@ -1316,6 +1455,55 @@ class BridgeImpl implements NostrBridge {
       tags: [],
       created_at: Math.floor(Date.now() / 1000),
     });
+  }
+
+  /**
+   * Add or remove a pubkey from the local user's NIP-51 kind 10000 mute list.
+   * Fetches the latest kind 10000 first so unrelated entries (events,
+   * hashtags, encrypted content) are preserved, then republishes with the
+   * adjusted `p` tags. Updates `myMutes` optimistically so the UI reflects
+   * the change without waiting for the relay echo.
+   */
+  async setMuted(pubkey: string, muted: boolean): Promise<void> {
+    if (!this.session) throw new Error('Not logged in');
+    const me = this.session.pubKeyHex;
+    const muteRelays = Array.from(new Set([...this.relays, ...PROFILE_RELAYS]));
+
+    // Pull the latest kind 10000 so we don't drop encrypted content or
+    // non-`p` tags published by other clients.
+    let existingTags: string[][] = [];
+    let existingContent = '';
+    try {
+      const ev = await this.pool.get(muteRelays, { kinds: [KIND_MUTE_LIST], authors: [me] });
+      if (ev) {
+        existingTags = ev.tags;
+        existingContent = ev.content;
+      }
+    } catch {
+      // ignore — start from empty
+    }
+
+    const otherTags = existingTags.filter((t) => !(t[0] === 'p' && t[1] === pubkey));
+    const nextTags = muted ? [...otherTags, ['p', pubkey]] : otherTags;
+
+    // Optimistic update so consumers (useMessages / useDirectMessages) hide
+    // the user immediately; the relay echo will overwrite this with the
+    // canonical list via subscribeMyMuteList.
+    const current = this.myMutes.get();
+    const optimistic = muted
+      ? current.includes(pubkey) ? current : [...current, pubkey]
+      : current.filter((p) => p !== pubkey);
+    this.myMutes.set(optimistic);
+
+    await this.signAndPublish(
+      {
+        kind: KIND_MUTE_LIST,
+        content: existingContent,
+        tags: nextTags,
+        created_at: Math.floor(Date.now() / 1000),
+      },
+      PROFILE_RELAYS,
+    );
   }
 
   async loadMoreMessages(_groupId: string): Promise<boolean> {
@@ -1449,9 +1637,31 @@ class BridgeImpl implements NostrBridge {
     let timer: ReturnType<typeof setTimeout> | null = null;
     let closed = false;
     let alive = false;
+    // Single retry token shared by the watchdog and the onclose-driven retry.
+    // Whichever path acts first flips it to false so the same failure event
+    // can never schedule two retries. Disarmed by `onevent` (a delivered event
+    // proves success) but NOT by `oneose` — empty EOSE before NIP-42 AUTH
+    // completes is exactly the bug we're guarding against here.
+    let armed = false;
 
     const clearTimer = () => {
       if (timer) { clearTimeout(timer); timer = null; }
+    };
+
+    // Common funnel for "this attempt is dead, schedule the next start()".
+    // `immediate` skips backoff for the first onclose-driven retry: the relay
+    // has already issued AUTH, so re-firing the REQ in the next tick lets
+    // nostr-tools attach AUTH and deliver. Subsequent failures still hit the
+    // backoff because `attempt` keeps incrementing in start().
+    const scheduleRetry = (immediate: boolean) => {
+      if (closed || !armed) return;
+      armed = false;
+      clearTimer();
+      try { activeSub?.close(); } catch { /* ignore */ }
+      activeSub = null;
+      if (attempt >= MAX_ATTEMPTS) return;
+      const delay = immediate ? 0 : Math.min(1000 * 2 ** (attempt - 1), MAX_BACKOFF_MS);
+      timer = setTimeout(start, delay);
     };
 
     let authPending = false;
@@ -1481,27 +1691,24 @@ class BridgeImpl implements NostrBridge {
       : undefined;
 
     const onWatchdog = () => {
-      if (closed || alive) return;
+      if (closed || alive || !armed) return;
       if (authPending) {
         // Don't kill the sub while a human is staring at an approval popup.
         timer = setTimeout(onWatchdog, WATCHDOG_MS);
         return;
       }
-      try { activeSub?.close(); } catch { /* ignore */ }
-      activeSub = null;
-      if (attempt < MAX_ATTEMPTS) {
-        const delay = Math.min(1000 * 2 ** (attempt - 1), MAX_BACKOFF_MS);
-        timer = setTimeout(start, delay);
-      }
+      scheduleRetry(false);
     };
 
     const start = () => {
       if (closed) return;
       attempt++;
       alive = false;
+      armed = true;
       const sub = this.pool.subscribe(relays, filter, {
         onevent: (ev) => {
           alive = true;
+          armed = false;
           clearTimer();
           // Any event delivered means the relay is reading us — auth (if
           // required) succeeded and we're not whitelist-blocked. Mark the
@@ -1511,6 +1718,10 @@ class BridgeImpl implements NostrBridge {
         },
         oneose: () => {
           alive = true;
+          // Intentionally do NOT disarm here. EOSE alone is not proof of
+          // success on auth-gated relays — they routinely send EOSE (empty
+          // result) before CLOSED auth-required. Leaving `armed` true lets
+          // the onclose handler below schedule a retry.
           clearTimer();
           for (const url of relays) this.setRelayAccess(url, 'ok');
           oneose?.();
@@ -1520,12 +1731,28 @@ class BridgeImpl implements NostrBridge {
           // index-aligned with the `relays` array. Local closes look like
           // 'closed by caller' and yield no rejection match — we leave the
           // existing state alone in that case.
+          let shouldRetry = false;
           reasons.forEach((reason, i) => {
             if (!reason) return;
             const url = relays[i];
             const state = parseRelayRejection(reason);
-            if (state) this.setRelayAccess(url, state);
+            if (state) {
+              if (state === 'auth-required' || state === 'restricted') {
+                // Defer the banner flip — most of these heal via the
+                // immediate retry below well before the soak window expires.
+                this.setRelayAccessDeferred(url, state);
+                shouldRetry = true;
+              } else {
+                this.setRelayAccess(url, state);
+              }
+            }
           });
+          // Retry on auth-required/restricted regardless of `alive`. This is
+          // the EOSE-then-CLOSED race: EOSE marked the sub alive and disabled
+          // the watchdog, but the relay then closed the REQ for AUTH reasons.
+          // `scheduleRetry` short-circuits via `armed` if onevent already
+          // succeeded or the watchdog already fired.
+          if (shouldRetry) scheduleRetry(true);
         },
         onauth: wrappedSigner,
       });
@@ -1645,13 +1872,17 @@ class BridgeImpl implements NostrBridge {
     const filter: Filter = { kinds: [KIND_USER_METADATA], authors: [pubkey] };
     const relays = Array.from(new Set([...this.relays, ...PROFILE_RELAYS]));
     // Non-critical path: a missing kind:0 just shows the npub instead of a
-    // display name. Tighter watchdog/retry to fail fast and free socket budget.
+    // display name. Tighter watchdog so we fail fast on cold profile relays.
+    // Retries are unbounded — `metadataRequested` (ensureUserMetadata) memoizes
+    // per-pubkey so fanout is one REQ per pubkey ever, and the 30s backoff cap
+    // bounds socket pressure. A bounded cap was the source of the
+    // "metadata never appears until N refreshes" bug under NIP-42 AUTH races.
     const sub = this.subscribeWatched(
       relays,
       filter,
       (ev) => this.ingestUserMetadata(ev),
       undefined,
-      { watchdogMs: 3000, maxAttempts: 2 },
+      { watchdogMs: 3000 },
     );
     this.subs.push(sub);
   }
@@ -1661,12 +1892,15 @@ class BridgeImpl implements NostrBridge {
     this.reactionSubscribedGroups.add(groupId);
     const filter: Filter = { kinds: [KIND_REACTION], '#h': [groupId], limit: 500 };
     // Non-critical path: a missing reaction event just delays an emoji badge.
+    // `reactionSubscribedGroups` memoizes per-groupId, and the watchdog backoff
+    // caps at 30s/attempt — unbounded retries are safe and avoid the "reactions
+    // gone until reload" symptom under NIP-42 AUTH races.
     const sub = this.subscribeWatched(
       this.relays,
       filter,
       (ev) => this.ingestReaction(groupId, ev),
       undefined,
-      { watchdogMs: 3000, maxAttempts: 2 },
+      { watchdogMs: 3000 },
     );
     this.subs.push(sub);
   }
@@ -1680,6 +1914,35 @@ class BridgeImpl implements NostrBridge {
     };
     const sub = this.subscribeWatched(this.relays, filter, (ev) => this.ingestAdminMember(ev));
     this.subs.push(sub);
+  }
+
+  /**
+   * Subscribe to the kind 9007 (create-group) event for `groupId` so we know
+   * who originally created the channel. The author of that event is the
+   * canonical creator and is used by {@link claimCreatorAdmin} to decide
+   * whether to publish a one-shot kind 9000 admin claim — without this, we
+   * would have to either trust the relay to auto-promote (many don't) or
+   * blindly publish a kind 9000 admin for every group on every login (the
+   * exact spam this refactor exists to eliminate).
+   */
+  private subscribeGroupCreator(groupId: string): void {
+    if (this.creatorSubscribedGroups.has(groupId)) return;
+    this.creatorSubscribedGroups.add(groupId);
+    const filter: Filter = { kinds: [KIND_GROUP_CREATE], '#h': [groupId], limit: 1 };
+    const sub = this.subscribeWatched(this.relays, filter, (ev) => this.ingestGroupCreator(ev));
+    this.subs.push(sub);
+  }
+
+  private ingestGroupCreator(ev: NostrEvent): void {
+    const groupId = ev.tags.find((t) => t[0] === 'h')?.[1];
+    if (!groupId) return;
+    // Newest-wins isn't meaningful for kind 9007 (a group is created exactly
+    // once), but we still guard against mid-flight duplicates so we don't
+    // thrash the store.
+    const prev = this.groupCreators.get()[groupId];
+    if (prev === ev.pubkey) return;
+    this.groupCreators.update((m) => ({ ...m, [groupId]: ev.pubkey }));
+    cacheSet(this.currentRelayUrl.get(), KIND_GROUP_CREATE, groupId, ev.pubkey);
   }
 
   private ingestAdminMember(ev: NostrEvent): void {
@@ -1731,6 +1994,23 @@ class BridgeImpl implements NostrBridge {
     this.subs.push(sub);
   }
 
+  private subscribeMyMuteList(): void {
+    if (!this.session) return;
+    const filter: Filter = { kinds: [KIND_MUTE_LIST], authors: [this.session.pubKeyHex], limit: 1 };
+    // Like kind 3, the mute list is typically published to general-purpose
+    // relays rather than the dex's NIP-29 relay — widen the search so we
+    // don't miss it.
+    const relays = Array.from(new Set([...this.relays, ...PROFILE_RELAYS]));
+    let latestCreatedAt = 0;
+    const sub = this.subscribeWatched(relays, filter, (ev) => {
+      if (ev.created_at <= latestCreatedAt) return;
+      latestCreatedAt = ev.created_at;
+      const pubkeys = ev.tags.filter((t) => t[0] === 'p' && typeof t[1] === 'string').map((t) => t[1]);
+      this.myMutes.set(pubkeys);
+    });
+    this.subs.push(sub);
+  }
+
   private subscribeIncomingDMs(): void {
     if (!this.session || this.dmSubscribed) return;
     this.dmSubscribed = true;
@@ -1769,9 +2049,11 @@ class BridgeImpl implements NostrBridge {
     const isPublic = ev.tags.some((t) => t[0] === 'public');
     const isOpen = ev.tags.some((t) => t[0] === 'open');
     const parent = tag('parent') ?? null;
-    // `["t","voice"]` is the Obelisk voice-channel marker. Everything else
-    // defaults to `text` so existing groups keep working unchanged.
+    // `["t","voice"]` / `["t","forum"]` are the Obelisk channel-variant
+    // markers. Everything else defaults to `text` so existing groups keep
+    // working unchanged.
     const isVoice = ev.tags.some((t) => t[0] === 't' && t[1] === 'voice');
+    const isForum = !isVoice && ev.tags.some((t) => t[0] === 't' && t[1] === 'forum');
     const next: JsGroup = {
       id: groupId,
       name: tag('name') ?? null,
@@ -1781,7 +2063,7 @@ class BridgeImpl implements NostrBridge {
       isPublic,
       isOpen,
       parent,
-      kind: isVoice ? 'voice' : 'text',
+      kind: isVoice ? 'voice' : isForum ? 'forum' : 'text',
     };
     this.groups.update((prev) => {
       const filtered = prev.filter((g) => g.id !== groupId);
@@ -1804,6 +2086,9 @@ class BridgeImpl implements NostrBridge {
     // resolves on first paint for every visible group. subscribeAdminMember
     // is idempotent — a later useAdmins call from a chat panel is a no-op.
     this.subscribeAdminMember(groupId);
+    // Resolve the kind 9007 author so claimCreatorAdmin knows whether the
+    // local user is the creator without having to assume it on every login.
+    this.subscribeGroupCreator(groupId);
     // Maintain parent → children index so the sidebar can render nesting.
     this.childrenByParent.update((prev) => {
       const next: Record<string, string[]> = { ...prev };
@@ -2069,7 +2354,16 @@ class BridgeImpl implements NostrBridge {
       if (r.status !== 'rejected') return;
       const reason = r.reason instanceof Error ? r.reason.message : String(r.reason);
       const state = parseRelayRejection(reason);
-      if (state) this.setRelayAccess(targetRelays[i], state);
+      if (!state) return;
+      // Same logic as the read-path onclose: auth/whitelist rejections during
+      // a publish are usually transient (NIP-42 AUTH not yet completed for
+      // the session, NIP-29 membership write race). Defer the banner flip so
+      // the soak window can absorb the transient failure.
+      if (state === 'auth-required' || state === 'restricted') {
+        this.setRelayAccessDeferred(targetRelays[i], state);
+      } else {
+        this.setRelayAccess(targetRelays[i], state);
+      }
     });
     let accepted = results.filter((r) => r.status === 'fulfilled');
     let finalResults = results;

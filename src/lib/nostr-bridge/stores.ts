@@ -4,7 +4,7 @@
  * Each hook subscribes on mount, replays the latest value, and
  * unsubscribes on unmount.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { getBridge } from './client';
 import type { JsGroup, JsMessage, JsUserMetadata, JsReaction, JsDirectMessage, RelayAccessState } from './types';
 
@@ -116,11 +116,17 @@ export function useGroups(): ReadonlyArray<JsGroup> {
 }
 
 export function useMessages(groupId: string | null): ReadonlyArray<JsMessage> {
-  return useSubscription<ReadonlyArray<JsMessage>>(
+  const all = useSubscription<ReadonlyArray<JsMessage>>(
     (b, cb) => (groupId ? b.subscribeMessages(groupId, cb) : () => {}),
     [],
     [groupId],
   );
+  const mutes = useMyMutes();
+  return useMemo(() => {
+    if (mutes.length === 0) return all;
+    const muted = new Set(mutes);
+    return all.filter((m) => !muted.has(m.pubkey));
+  }, [all, mutes]);
 }
 
 export function useUserMetadata(pubkey: string | null): JsUserMetadata | null {
@@ -146,7 +152,21 @@ export function useChildrenByParent(): Readonly<Record<string, ReadonlyArray<str
 }
 
 export function useDirectMessages(): Readonly<Record<string, ReadonlyArray<JsDirectMessage>>> {
-  return useSubscription<Readonly<Record<string, ReadonlyArray<JsDirectMessage>>>>((b, cb) => b.subscribeDirectMessages(cb), {});
+  const all = useSubscription<Readonly<Record<string, ReadonlyArray<JsDirectMessage>>>>(
+    (b, cb) => b.subscribeDirectMessages(cb),
+    {},
+  );
+  const mutes = useMyMutes();
+  return useMemo(() => {
+    if (mutes.length === 0) return all;
+    const muted = new Set(mutes);
+    const filtered: Record<string, ReadonlyArray<JsDirectMessage>> = {};
+    for (const [peer, thread] of Object.entries(all)) {
+      if (muted.has(peer)) continue;
+      filtered[peer] = thread;
+    }
+    return filtered;
+  }, [all, mutes]);
 }
 
 export function useAdmins(groupId: string | null): ReadonlyArray<string> {
@@ -169,6 +189,31 @@ export function useMembers(groupId: string | null): ReadonlyArray<string> {
   );
 }
 
+/**
+ * Pubkey hex of the kind 9007 author for `groupId`, or `null` until the relay
+ * has delivered the create-group event. Used by settings/admin paths to
+ * decide whether the local user is the creator and should one-shot claim
+ * admin via {@link nostrActions.claimCreatorAdmin}.
+ */
+export function useGroupCreator(groupId: string | null): string | null {
+  const all = useSubscription<Readonly<Record<string, string>>>(
+    (b, cb) => b.subscribeGroupCreators(cb),
+    {},
+  );
+  if (!groupId) return null;
+  return all[groupId] ?? null;
+}
+
 export function useMyFollows(): ReadonlyArray<string> {
   return useSubscription<ReadonlyArray<string>>((b, cb) => b.subscribeMyFollows(cb), []);
+}
+
+/**
+ * NIP-51 kind 10000 mute list for the local user. `useMessages` and
+ * `useDirectMessages` already apply this filter; use this hook directly when
+ * rendering UI that needs to know whether a specific pubkey is muted (e.g.
+ * the profile popover's mute/unmute toggle).
+ */
+export function useMyMutes(): ReadonlyArray<string> {
+  return useSubscription<ReadonlyArray<string>>((b, cb) => b.subscribeMyMutes(cb), []);
 }

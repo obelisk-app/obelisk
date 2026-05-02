@@ -1,54 +1,72 @@
 # Voice System
 
-Two backends, selected per channel by the admin via `Channel.voiceMode`:
+Obelisk voice/video/screenshare is **P2P WebRTC with Nostr-relay signaling**. There is no SFU, no LiveKit, no Socket.io — the same relay that carries chat carries the SDP/ICE/track-info exchange, and media flows directly between participants' browsers.
 
-- **`mesh`** (default) — P2P WebRTC mesh. The server relays **signaling only** (SDP, ICE, track-type hints). Media never transits the server. Great for ≤8 participants, zero bandwidth cost on the host.
-- **`sfu`** — LiveKit SFU. Each publisher sends one stream up, the server fans it out. Required for 50-person community calls with cameras + screen share. Media does transit the self-hosted LiveKit container.
+Wire-level detail (event kinds, presence beacons, gift-wrap upgrade plan, relay-operator notes) lives in [webrtc-p2p-nostr-signaling.md](webrtc-p2p-nostr-signaling.md). This doc covers the client-side architecture and what's currently shipped.
 
 ## Architecture
 
 ```
-mesh channel                         sfu channel
-─────────────                        ───────────
-Browser ──RTC──▶ Browser             Browser ──WebRTC──▶ LiveKit server
-   ▲                │                   ▲                     │
-   └─ Socket.io ────┘                   └─ token via Next ─────┘
-   relay only                          media transits SFU
+Browser A ─── WebRTC (DTLS-SRTP) ───▶ Browser B
+   │                                     │
+   └──── kind 25050 / 20078 ─────────────┘
+              via Obelisk relay
+            (signaling only — no media)
 ```
 
-Each participant in mesh opens one `RTCPeerConnection` per remote peer; uplink scales as O(N−1), which caps mesh around 8 publishers. SFU keeps publisher uplink flat regardless of room size.
+- **Mesh only**, capped at 4 participants. Each peer holds one `RTCPeerConnection` per remote peer; uplink is O(N−1).
+- **Media is end-to-end** in the WebRTC sense — every track is wrapped in DTLS-SRTP between the two browsers. The relay never sees media. There is no third party in the media path to decrypt it.
+- **Signaling is plaintext signed events** today (kinds 20078 + 25050). A NIP-59 gift-wrap upgrade is planned — see [webrtc-p2p-nostr-signaling.md §9](webrtc-p2p-nostr-signaling.md). Until then, the relay can see who is in which voice channel and the SDP/ICE payloads of session setup. Media is unaffected.
+- **No TURN configured**. Public STUN only (Google + Cloudflare). Symmetric-NAT peers will fail to connect.
 
 ## Files
 
-- `src/lib/voice.ts` — `WebSocketVoiceClient` class for **mesh** channels. Peer management, track routing, quality tuning, reconnection.
-- `src/lib/livekit-voice.ts` — `LiveKitVoiceClient` for **sfu** channels. Same public surface as the mesh client; LiveKit handles speaking detection, reconnect, simulcast, and track lifecycle natively.
-- `src/app/api/voice/token/route.ts` — mints LiveKit access tokens. Enforces channel read permission (stricter than the historical mesh `join-voice` path). Returns 503 when `LIVEKIT_URL` is unset.
-- `src/lib/speaking-detector.ts` — `SpeakingDetector` + shared `AudioContext`. Used on the mesh path only; SFU emits `ActiveSpeakersChanged` directly.
-- `src/store/voice.ts` — Zustand store. Holds participants, `speakingPubkeys`, `localMutedPubkeys`, remote video/screen element refs, focus state.
-- `src/components/chat/VoiceChannel.tsx` — voice UI: video grid, audio-only tiles, screen share area, companion chat rail.
-- `src/components/chat/VoiceControls.tsx` — the bottom control bar (mute, deafen, camera, screen share, settings, leave).
-- `server.ts` — Socket.io relay for `join-voice`, `leave-voice`, `voice-signal`, capacity claims, and moderator force actions.
+```
+src/lib/voice/
+  types.ts          VoiceSignalPayload, VoicePresence, VoiceTrackKind
+  transport.ts      publishPresenceBeacon, subscribeRoster, sendSignal,
+                    subscribeSignals — all over the bridge
+  peer.ts           Peer — RTCPeerConnection wrapper, perfect negotiation,
+                    track-slot routing, quality hints
+  client.ts         VoiceClient — peer mesh + local media + roster +
+                    deafen state for one channel
+  active-client.ts  Cross-route singleton so navigating away from /voice
+                    doesn't tear down the call
+  quality.ts        Encoder presets (mic Opus 256 kbps, screen-audio
+                    320 kbps, camera/screen bitrate caps)
+  stats.ts          getStats() polling for the in-call HUD
 
-## Perfect negotiation
+src/components/voice/
+  VoiceRoom.tsx     Room UI: gating, tile grid, controls, error states
+  VoiceControls.tsx Mute / camera / screen / deafen / leave bar
+  VoiceStatusBar.tsx Persistent "you're in voice" bar across the app
 
-On connection, each peer computes `polite = (my socketId > remote socketId)`. The polite side rolls back on offer glare; the impolite side holds ground. Implementation in `handleSignal` follows [the MDN perfect-negotiation pattern](https://developer.mozilla.org/en-US/docs/Web/API/WebRTC_API/Perfect_negotiation_pattern).
+src/hooks/chat/useVoiceChatPane.ts   Companion text-chat slot in voice rooms
+src/lib/nip-kinds.ts                  KIND_VOICE_PRESENCE / KIND_VOICE_SIGNAL / KIND_VOICE_MOD_ACTION
+```
+
+`server.ts`, `src/lib/livekit-voice.ts`, `src/app/api/voice/token/route.ts`, and the Socket.io `join-voice` / `voice-signal` / capacity-claim handlers from the legacy stack no longer exist in this repo.
+
+## Channel = NIP-29 group with a `t=voice` marker
+
+A voice channel is just a NIP-29 group whose kind 39000 metadata carries `["t", "voice"]`. Set this from channel settings → **Channel type → Voice / Video**, or programmatically via `bridge.editGroupMetadata({ kind: 'voice' })`. `JsGroup.kind` flips to `'voice'` on every subscribed client and the chat surface offers a "Join voice" entry instead of a text channel.
+
+Membership and admin enforcement reuse NIP-29 kinds 39001 / 39002 — the voice client subscribes to both, drops presence beacons / signaling from non-members, and only honors moderator force-actions (kind 25051, reserved) signed by an admin.
 
 ## Track types
 
-Tracks are announced out-of-band before `ontrack` fires so the remote side knows which slot each is for:
+| Type           | Source                                    | Notes                                            |
+|----------------|-------------------------------------------|--------------------------------------------------|
+| `audio`        | `getUserMedia({ audio })` — the mic       | Drives deafen / per-peer mute via shared GainNode |
+| `camera`       | `getUserMedia({ video })` — webcam        | `maintain-resolution`, bitrate cap from `quality.ts` |
+| `screen`       | `getDisplayMedia({ video })`              | `maintain-resolution` + framerate hint            |
+| `screen-audio` | `getDisplayMedia({ audio })` — tab audio  | Tuned to 320 kbps separately (music-grade)        |
 
-| Type           | Source                                    | Transceiver semantics                           |
-|----------------|-------------------------------------------|-------------------------------------------------|
-| `audio`        | `getUserMedia({ audio })` — the mic       | Drives the speaking detector + user gain node    |
-| `camera`       | `getUserMedia({ video })` — webcam        | `maintain-resolution` degradation preference     |
-| `screen`       | `getDisplayMedia({ video })`              | `maintain-resolution` + `minBitrate` floor       |
-| `screen-audio` | `getDisplayMedia({ audio })` — tab audio  | Tuned to 320 kbps (music-grade) separately       |
-
-`sendTrackInfo` emits `{ trackInfo: { trackId, type } }` on the signaling channel. Track-id mismatch is handled by draining pending tracks by `kind` in `findUnattachedTrackType`.
+Track kind is announced **out-of-band** as a `trackInfo` signal before the corresponding `RTCRtpSender` is added, so the receiver's `ontrack` knows which UI slot the track maps to before media starts. Kind-id mismatch falls back to draining unattached tracks by `kind`.
 
 ## Remote audio routing
 
-Every remote audio track (mic or screen-audio) connects to a per-peer `GainNode` in a shared `AudioContext`:
+Every remote audio track (mic + screen-audio) is connected to a per-peer `GainNode` in a shared `AudioContext` on the receiver:
 
 ```
 MediaStreamAudioSourceNode (new MediaStream([track]))
@@ -56,63 +74,36 @@ MediaStreamAudioSourceNode (new MediaStream([track]))
          └─▶ AudioContext.destination
 ```
 
-Why not `<audio>` elements? Browser autoplay policy fires per-element. When the mic track's `<audio>` element was already playing, a second `<audio>` for `screen-audio` would silently hit the policy and stay muted — that was the "screen audio silent when mic is on" bug. Using one AudioContext means one unlock (the Join Voice click calls `resumeSharedAudioContext()`) covers every remote source for the session.
+Why not `<audio>` elements? Browser autoplay policy fires per-element. With one shared `AudioContext`, the single Join-Voice click unlocks audio for every remote source for the rest of the session, and we get two features cheaply:
 
-Gain also gives us two features cheaply:
+- **Deafen** — set every gain to 0; never sends server traffic.
+- **Local per-user mute** — silence one peer in your own ear via `setPeerMuted(pk, true)`.
 
-- **Deafen** — iterate peers, set every gain to 0.
-- **Local per-user mute** — viewer-only silence of a specific peer via `toggleLocalMute(pubkey)` in the store; client calls `setPeerMuted(pk, muted)` which flips that peer's gain.
+## Perfect negotiation
 
-Neither sends any server traffic.
+Polite/impolite is decided per peer pair: `polite = self.pubkey > remote.pubkey`. The polite side rolls back on offer glare; the impolite side ignores conflicting remote offers. Sequence numbers on the signaling payload let receivers drop out-of-order ICE without affecting offer/answer flow. Implementation: `Peer.handleSignal` in `peer.ts`.
 
-## Speaking detection
+## What's not yet shipped
 
-`SpeakingDetector` attaches an `AnalyserNode` (`fftSize: 512`) to the incoming stream, samples `getByteTimeDomainData` at 20 Hz, and computes normalized RMS. A peer is reported "speaking" when RMS crosses `threshold` (default 0.02), and stays speaking for `hangoverMs` (default 400) after silence — this absorbs normal speech pauses so the UI orb doesn't strobe.
+These are tracked in [webrtc-p2p-nostr-signaling.md](webrtc-p2p-nostr-signaling.md) §1 and `docs/known-bugs.md`:
 
-One detector per peer for `audio` tracks only (not `screen-audio`). The client also runs a detector on the local mic so the viewer's own orb reacts to their voice without round-tripping through a remote. Each transition is pushed to the store via `onSpeakingChange → setSpeaking(pubkey, speaking)`.
+- **Reconnection ladder.** The peer doesn't currently drive ICE-restart / hard-reset on `'failed'`; a dropped connection requires leave/rejoin.
+- **Speaking detector.** No per-peer RMS analyser → speaking orbs in the UI don't react to voice activity. Mute button reflects local state only.
+- **Moderator force actions.** Receiver-side admin check exists; sender side (mute / camera-off / screen-off / kick from the UI) is not wired.
+- **Capacity beyond 4.** Hard cap. The 5th joiner by lexicographic pubkey is rejected client-side; there is no SFU fallback.
+- **TURN.** Public STUN only.
+- **Encrypted signaling.** Plaintext ephemeral events; gift-wrap upgrade planned.
 
-## Reconnection
+## Reaching a voice channel
 
-`RTCPeerConnection` doesn't heal itself; we drive recovery explicitly. Two independent mechanisms:
-
-1. **Connection-state recovery.** On `'disconnected'` or `'failed'`, `scheduleReconnect` runs:
-   - **Impolite side** — ICE restart (preserves tracks, cheap) up to 3 attempts, then a hard reset (close + recreate + re-offer). Delays: `[1.5, 3, 6, 10, 15]` s.
-   - **Polite side** — used to be passive, which stranded it in `'failed'` forever. Now, after a longer grace (`[8, 12, 20]` s), it emits `{ requestReset: true }`. The impolite side handles that in `handleSignal` by running a hard reset — this avoids glare because only one side ever drives the recreate.
-
-2. **Initial-handshake watchdog.** `scheduleReconnect` never fires during the first handshake because `connectionState` sits in `'new'`/`'connecting'`, neither `'failed'` nor `'disconnected'`. Without a dedicated timer, a lost first offer would wedge the session and only leave/rejoin would recover it. A 15 s `connectWatchdogTimer` catches that gap: impolite side hard-resets, polite side emits `requestReset`. Cleared on the first transition to `'connected'`.
-
-## Quality tuning
-
-User-tunable defaults live in `getVoiceQuality()` / `setVoiceQuality()` (backed by `localStorage`). Encoder parameters are applied via `tuneVideoSender` / `tuneAudioSender`:
-
-- Camera: `maintain-resolution`, `maxBitrate 8 Mbps`, `minBitrate 2 Mbps`, `priority: 'high'`.
-- Screen: `maintain-resolution`, `maxBitrate 25 Mbps`, `minBitrate 5 Mbps`, `priority: 'high'`, framerate hint per settings.
-- Mic audio: Opus `maxBitrate 256 kbps`, `priority: 'high'`, `networkPriority: 'high'`. `enhanceOpusSdp` also merges `maxaveragebitrate=256000` + `useinbandfec` into the SDP fmtp line without touching stereo/DTX (Safari drops the whole audio m-section otherwise).
-- Screen-audio: 320 kbps — high enough that shared music/video soundtracks don't sound strangled.
-
-`minBitrate` is advisory; browsers may still downshift under real congestion, but it prevents the bandwidth estimator from starving video when nothing's wrong.
-
-## Companion text chat
-
-Voice channels are just `Channel` rows with `type: 'voice'`. The text-messages API and `new-message` Socket.io broadcast already accept messages for them with no extra work. `VoiceChannel.tsx` accepts an optional `chatSlot` prop; the chat page passes in the same `<MessageArea/>` + `<MessageInput/>` pipeline text channels use. A right-rail renders the slot with a toggle, so users can reclaim space on small viewports.
-
-## Moderator force actions
-
-Owners / admins / mods can force-mute, force-camera-off, and force-screen-off another participant via `voice-mod-action` on the server. The target receives `voice-force-mute` / `voice-force-camera-off` / `voice-force-screen-off` and the client stops the corresponding local track. This is separate from local per-user mute, which never leaves the viewer's browser.
-
-## Capacity limits
-
-Server enforces per-channel capacity locks:
-
-- Camera: 4 simultaneous broadcasters (`voice-camera-claim` / `voice-camera-release`).
-- Screen share: 2 simultaneous (`voice-screen-claim` / `voice-screen-release`).
-
-Exceeding capacity rejects the claim with an error the client surfaces via `limitNotice`.
+Today the entry point is the URL `/voice/<groupId>`, plus deeplinks from chat-channel surfaces that detect `JsGroup.kind === 'voice'`. A dedicated "Voice channels" section in the sidebar with a Join button is follow-up work.
 
 ## Testing
 
-- `src/lib/speaking-detector.test.ts` — mocked `AudioContext` + `AnalyserNode`, deterministic `now()`. Verifies threshold, hangover, idempotency, flicker suppression.
-- `src/store/voice.test.ts` — speaking set idempotence, local-mute toggle, leaveVoice clears both sets, removeParticipant preserves local-mute preference.
-- `src/components/chat/VoiceChannel.test.tsx` — orb reflects `speakingPubkeys`, orb is suppressed while muted, local-mute toggle wiring, chat rail mount/hide.
+- `src/lib/voice/peer.test.ts` — perfect-negotiation glare, ICE batching, track-info routing.
+- `src/lib/voice/peer-pair.integration.test.ts` — end-to-end two-peer offer/answer over a fake transport.
+- `src/lib/voice/client.test.ts` — roster/membership filtering, leave teardown, deafen state.
+- `src/lib/voice/transport.test.ts` — beacon expiration parsing, drop-non-member.
+- `src/lib/voice/quality.test.ts` / `stats.test.ts` — encoder presets and stats polling.
 
-No unit tests hit `src/lib/voice.ts` directly (no `RTCPeerConnection` mock in the repo). Behavior there is verified by the manual steps in the plan file and in-browser validation.
+A two-device manual matrix is in [webrtc-p2p-nostr-signaling.md §7](webrtc-p2p-nostr-signaling.md).

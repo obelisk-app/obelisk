@@ -22,12 +22,14 @@ export interface JsGroup {
   readonly isOpen: boolean;
   readonly parent: string | null;
   /**
-   * `'voice'` when the group's kind 39000 metadata carries a `["t","voice"]`
-   * tag — see `src/lib/voice/`. Otherwise `'text'`. We piggyback on the
-   * existing NIP-29 metadata flow so a voice channel is "just a group with
-   * a voice marker"; the relay needs no special handling.
+   * Channel variant marker carried as a `["t",<kind>]` tag on kind 39000
+   * metadata. `'voice'` → see `src/lib/voice/`; `'forum'` → container channel
+   * whose "posts" are themselves child NIP-29 groups (each rendered as a
+   * normal text channel) — see `ForumView.tsx`. `'text'` is the default for
+   * channels with no `t` marker, so existing groups keep rendering as regular
+   * chat. The relay needs no special handling — the marker is just another tag.
    */
-  readonly kind: 'text' | 'voice';
+  readonly kind: 'text' | 'voice' | 'forum';
 }
 
 export interface JsMessage {
@@ -180,6 +182,17 @@ export interface NostrBridge {
   subscribeMembershipReady(groupId: string, cb: (ready: boolean) => void): Unsubscribe;
   /** NIP-02 kind 3 follows for the local user. */
   subscribeMyFollows(cb: (pubkeys: ReadonlyArray<string>) => void): Unsubscribe;
+  /**
+   * NIP-51 kind 10000 mute list (public `p` tags) for the local user. UI
+   * consumers should hide messages and DMs from these pubkeys.
+   */
+  subscribeMyMutes(cb: (pubkeys: ReadonlyArray<string>) => void): Unsubscribe;
+  /**
+   * Add or remove a pubkey from the local user's NIP-51 mute list. Fetches
+   * the latest kind 10000 to preserve unrelated entries, then republishes
+   * with the adjusted `p` tags.
+   */
+  setMuted(pubkey: string, muted: boolean): Promise<void>;
 
   /**
    * Sign an event template with the active session's signer without
@@ -211,6 +224,27 @@ export interface NostrBridge {
   putUser(groupId: string, pubkey: string, roles?: ReadonlyArray<string>): Promise<void>;
   /** NIP-29 9001 remove-user. */
   removeUser(groupId: string, pubkey: string): Promise<void>;
+  /**
+   * NIP-29 9003 remove-permission. Strips one or more roles (e.g. `['admin']`)
+   * from a member without removing them from the group. Use to demote.
+   */
+  removePermission(
+    groupId: string,
+    pubkey: string,
+    permissions: ReadonlyArray<string>,
+  ): Promise<void>;
+  /**
+   * One-shot kind 9000 `['admin']` claim, idempotent. No-ops if the local
+   * user is not the kind 9007 creator of the group or is already in the
+   * relay-published 39001 admin list. Returns `true` if a publish occurred.
+   */
+  claimCreatorAdmin(groupId: string): Promise<boolean>;
+  /**
+   * Map of `groupId -> creator pubkey hex` derived from kind 9007 events.
+   * Reactive so consumers can detect "I created this channel" without an
+   * extra round-trip.
+   */
+  subscribeGroupCreators(cb: (byGroup: Readonly<Record<string, string>>) => void): Unsubscribe;
   /** NIP-29 9005 delete-event (admin moderation). */
   deleteGroupEvent(groupId: string, eventId: string): Promise<void>;
   /**
@@ -226,8 +260,15 @@ export interface NostrBridge {
     banner?: string;
     isPublic?: boolean;
     isOpen?: boolean;
-    /** When `'voice'`, includes a `["t","voice"]` marker on the kind 9002 metadata so the channel renders as a voice/video room. See `src/lib/voice/`. */
-    kind?: 'text' | 'voice';
+    /** When `'voice'` / `'forum'`, includes a `["t",<kind>]` marker on the kind 9002 metadata. See `src/lib/voice/` and ForumView. */
+    kind?: 'text' | 'voice' | 'forum';
+    /**
+     * NIP-29 nesting: parent group id. When set, the relay records this
+     * group as a child of `parent` and the bridge surfaces it via
+     * `subscribeChildrenByParent`. Used for forum threads (each thread is a
+     * child group of its forum container).
+     */
+    parent?: string;
   }): Promise<string>;
   editGroupMetadata(opts: {
     groupId: string;
@@ -238,8 +279,10 @@ export interface NostrBridge {
     banner?: string;
     isPublic?: boolean;
     isOpen?: boolean;
-    /** Toggle a channel between text and voice. Adds or omits the `["t","voice"]` marker on the kind 9002 metadata; the relay reflects it on kind 39000 like any other tag. */
-    kind?: 'text' | 'voice';
+    /** Toggle a channel's variant. Adds or omits the `["t",<kind>]` marker on the kind 9002 metadata; the relay reflects it on kind 39000 like any other tag. */
+    kind?: 'text' | 'voice' | 'forum';
+    /** NIP-29 parent group id (for nesting / forum threads). */
+    parent?: string;
   }): Promise<void>;
   /**
    * NIP-50 search against the active relay(s). Builds a single `REQ` filter
