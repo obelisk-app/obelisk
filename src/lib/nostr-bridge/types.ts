@@ -187,6 +187,12 @@ export interface NostrBridge {
    * consumers should hide messages and DMs from these pubkeys.
    */
   subscribeMyMutes(cb: (pubkeys: ReadonlyArray<string>) => void): Unsubscribe;
+  /**
+   * Add or remove a pubkey from the local user's NIP-51 mute list. Fetches
+   * the latest kind 10000 to preserve unrelated entries, then republishes
+   * with the adjusted `p` tags.
+   */
+  setMuted(pubkey: string, muted: boolean): Promise<void>;
 
   /**
    * Sign an event template with the active session's signer without

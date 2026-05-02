@@ -16,6 +16,7 @@ import {
   useAdmins,
   useMembers,
   useGroupCreator,
+  useMyMutes,
   useRelayAccess,
   useMyLoginMethod,
   type JsGroup,
@@ -40,7 +41,6 @@ import { useVoiceChatPane } from '@/hooks/chat/useVoiceChatPane';
 import { useChatStore } from '@/store/chat';
 import type { MemberInfo } from '@/lib/mentions';
 import { useToastStore } from '@/store/toast';
-import { useModerationStore } from '@/store/moderation';
 import {
   EMOJI_CATEGORIES,
   EMOJI_CATEGORY_NAMES,
@@ -2039,8 +2039,18 @@ function MessageRow({
   const [pickerOpen, setPickerOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const myPubkey = useMyPubkey();
-  const isMuted = useModerationStore((s) => s.mutedPubkeys.includes(msg.pubkey));
-  const toggleMute = useModerationStore((s) => s.toggleMute);
+  const myMutes = useMyMutes();
+  const isMuted = myMutes.includes(msg.pubkey);
+  const toggleMute = async () => {
+    try {
+      await nostrActions.setMuted(msg.pubkey, !isMuted);
+    } catch (e) {
+      useToastStore.getState().pushToast({
+        title: 'No se pudo silenciar',
+        body: e instanceof Error ? e.message : String(e),
+      });
+    }
+  };
   const closeAll = () => { setMenuOpen(false); setPanelPinned(false); setPickerOpen(false); };
   useEffect(() => {
     if (!menuOpen && !panelPinned && !pickerOpen) return;
@@ -2277,7 +2287,7 @@ function MessageRow({
             </button>
             <button
               role="menuitem"
-              onClick={() => { toggleMute(msg.pubkey); setMenuOpen(false); }}
+              onClick={() => { void toggleMute(); setMenuOpen(false); }}
               disabled={msg.pubkey === myPubkey}
               className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-red-400 hover:bg-lc-card disabled:opacity-40 disabled:hover:bg-transparent"
             >

@@ -66,6 +66,9 @@ export const nostrActions = {
     opts: Parameters<Awaited<ReturnType<typeof getBridge>>['searchMessages']>[0],
   ) => (await getBridge()).searchMessages(opts),
 
+  setMuted: async (pubkey: string, muted: boolean) =>
+    (await getBridge()).setMuted(pubkey, muted),
+
   signEventTemplate: async (
     template: Parameters<Awaited<ReturnType<typeof getBridge>>['signEventTemplate']>[0],
   ) => (await getBridge()).signEventTemplate(template),

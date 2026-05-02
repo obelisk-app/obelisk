@@ -1452,6 +1452,55 @@ class BridgeImpl implements NostrBridge {
     });
   }
 
+  /**
+   * Add or remove a pubkey from the local user's NIP-51 kind 10000 mute list.
+   * Fetches the latest kind 10000 first so unrelated entries (events,
+   * hashtags, encrypted content) are preserved, then republishes with the
+   * adjusted `p` tags. Updates `myMutes` optimistically so the UI reflects
+   * the change without waiting for the relay echo.
+   */
+  async setMuted(pubkey: string, muted: boolean): Promise<void> {
+    if (!this.session) throw new Error('Not logged in');
+    const me = this.session.pubKeyHex;
+    const muteRelays = Array.from(new Set([...this.relays, ...PROFILE_RELAYS]));
+
+    // Pull the latest kind 10000 so we don't drop encrypted content or
+    // non-`p` tags published by other clients.
+    let existingTags: string[][] = [];
+    let existingContent = '';
+    try {
+      const ev = await this.pool.get(muteRelays, { kinds: [KIND_MUTE_LIST], authors: [me] });
+      if (ev) {
+        existingTags = ev.tags;
+        existingContent = ev.content;
+      }
+    } catch {
+      // ignore — start from empty
+    }
+
+    const otherTags = existingTags.filter((t) => !(t[0] === 'p' && t[1] === pubkey));
+    const nextTags = muted ? [...otherTags, ['p', pubkey]] : otherTags;
+
+    // Optimistic update so consumers (useMessages / useDirectMessages) hide
+    // the user immediately; the relay echo will overwrite this with the
+    // canonical list via subscribeMyMuteList.
+    const current = this.myMutes.get();
+    const optimistic = muted
+      ? current.includes(pubkey) ? current : [...current, pubkey]
+      : current.filter((p) => p !== pubkey);
+    this.myMutes.set(optimistic);
+
+    await this.signAndPublish(
+      {
+        kind: KIND_MUTE_LIST,
+        content: existingContent,
+        tags: nextTags,
+        created_at: Math.floor(Date.now() / 1000),
+      },
+      PROFILE_RELAYS,
+    );
+  }
+
   async loadMoreMessages(_groupId: string): Promise<boolean> {
     // Pagination not yet implemented — relays return all current messages
     // on initial subscribe via this minimal client. A full implementation
