@@ -12,7 +12,17 @@ const localIPs = Object.values(networkInterfaces())
 // site-wide (proxy.ts is HTML-only via its matcher).
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: [...localIPs, 'obelisk.fabri.lat', 'obelisk.wearebitcoin.org', 'obelisk.nostr-wtf.com', 'dex-test.obelisk.ar'],
+  allowedDevOrigins: [...localIPs, 'obelisk.fabri.lat', 'obelisk.wearebitcoin.org', 'obelisk.nostr-wtf.com', 'dex-test.obelisk.ar', 'obelisk.ar'],
+  async redirects() {
+    return [
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'dex.obelisk.ar' }],
+        destination: 'https://obelisk.ar/:path*',
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {

@@ -65,14 +65,14 @@ const FEATURE_KEYS = [
   {
     icon: (
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
-        <circle cx="9" cy="7" r="4"/>
-        <path d="M23 21v-2a4 4 0 00-3-3.87"/>
-        <path d="M16 3.13a4 4 0 010 7.75"/>
+        <rect x="9" y="2" width="6" height="12" rx="3"/>
+        <path d="M5 10v2a7 7 0 0014 0v-2"/>
+        <line x1="12" y1="19" x2="12" y2="22"/>
+        <line x1="8" y1="22" x2="16" y2="22"/>
       </svg>
     ),
-    titleKey: 'features.roles.title',
-    descKey: 'features.roles.desc',
+    titleKey: 'features.voice.title',
+    descKey: 'features.voice.desc',
   },
   {
     icon: (
@@ -88,31 +88,11 @@ const FEATURE_KEYS = [
   {
     icon: (
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-        <path d="M9 12l2 2 4-4"/>
-      </svg>
-    ),
-    titleKey: 'features.spamResistant.title',
-    descKey: 'features.spamResistant.desc',
-  },
-  {
-    icon: (
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
       </svg>
     ),
     titleKey: 'features.zaps.title',
     descKey: 'features.zaps.desc',
-  },
-  {
-    icon: (
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <polyline points="4 17 10 11 4 5"/>
-        <line x1="12" y1="19" x2="20" y2="19"/>
-      </svg>
-    ),
-    titleKey: 'features.adminCli.title',
-    descKey: 'features.adminCli.desc',
   },
 ];
 
@@ -137,8 +117,8 @@ const ROADMAP_PHASES = [
   { key: 'phase2', phase: 'Phase 2', status: 'done' as const },
   { key: 'phase3', phase: 'Phase 3', status: 'done' as const },
   { key: 'phase6', phase: 'Phase 6', status: 'done' as const },
-  { key: 'phase4', phase: 'Phase 4', status: 'upcoming' as const },
-  { key: 'phase5', phase: 'Phase 5', status: 'upcoming' as const },
+  { key: 'phase4', phase: 'Phase 4', status: 'done' as const },
+  { key: 'phase5', phase: 'Phase 5', status: 'done' as const },
 ];
 
 const TECH_STACK: { name: string; desc: string; color: string; icon?: string; img?: string; href: string }[] = [
@@ -206,8 +186,21 @@ export default function LandingPage() {
       <div className="relative z-10">
       <Navbar onLoginSuccess={handleLoginSuccess} />
 
+      {/* Sister-project cross-link banner */}
+      <section className="pt-24 pb-0 px-6 relative z-20">
+        <div className="max-w-4xl mx-auto">
+          <a
+            href="https://classic.obelisk.ar"
+            className="block text-center bg-lc-green/10 hover:bg-lc-green/20 border border-lc-green/30 rounded-xl px-4 py-3 text-sm text-lc-white transition-colors"
+          >
+            Want server-backed channels with custom roles, moderation and a hosted database? Visit{' '}
+            <span className="text-lc-green font-semibold">classic.obelisk.ar</span> →
+          </a>
+        </div>
+      </section>
+
       {/* Hero */}
-      <section className="relative pt-32 pb-24 px-6 overflow-hidden">
+      <section className="relative pt-12 pb-24 px-6 overflow-hidden">
         {/* Glow behind obelisk */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-lc-green/5 rounded-full blur-[120px] pointer-events-none" />
 

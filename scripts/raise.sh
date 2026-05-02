@@ -7,8 +7,8 @@
 #
 # Env overrides:
 #   TUNNEL_NAME       default: obelisk-dex
-#   TUNNEL_HOSTNAME   default: dex.obelisk.ar
-#   PORT              default: 3001  (3000 is reserved for obelisk.ar)
+#   TUNNEL_HOSTNAME   default: obelisk.ar  (apex; dex.obelisk.ar must also route to this tunnel for the in-app 308 redirect to fire)
+#   PORT              default: 3001  (3000 is reserved for classic.obelisk.ar)
 #   ORIGIN_URL        default: http://127.0.0.1:$PORT
 #   SKIP_BUILD=1      reuse existing .next/
 #   SKIP_TUNNEL=1     skip cloudflared
@@ -24,7 +24,8 @@ if [ -f "$(dirname "$0")/../.env" ]; then
 fi
 
 TUNNEL_NAME="${TUNNEL_NAME:-obelisk-dex}"
-TUNNEL_HOST="${TUNNEL_HOSTNAME:-dex.obelisk.ar}"
+TUNNEL_HOST="${TUNNEL_HOSTNAME:-obelisk.ar}"
+TUNNEL_HOST_LEGACY="${TUNNEL_HOST_LEGACY:-dex.obelisk.ar}"
 PORT="${PORT:-3001}"
 ORIGIN_URL="${ORIGIN_URL:-http://127.0.0.1:${PORT}}"
 SKIP_BUILD="${SKIP_BUILD:-0}"
@@ -59,11 +60,12 @@ if [ "$SKIP_TUNNEL" != "1" ]; then
     red "Tunnel '$TUNNEL_NAME' not found."
     echo "  cloudflared tunnel create $TUNNEL_NAME"
     echo "  cloudflared tunnel route dns --overwrite-dns $TUNNEL_NAME $TUNNEL_HOST"
+    echo "  cloudflared tunnel route dns --overwrite-dns $TUNNEL_NAME $TUNNEL_HOST_LEGACY"
     exit 1
   fi
   CRED_FILE="$HOME/.cloudflared/${TUNNEL_UUID}.json"
   [ -f "$CRED_FILE" ] || { red "Missing credentials: $CRED_FILE"; exit 1; }
-  dim "UUID: $TUNNEL_UUID  →  $TUNNEL_HOST"
+  dim "UUID: $TUNNEL_UUID  →  $TUNNEL_HOST  (legacy: $TUNNEL_HOST_LEGACY → 308 → $TUNNEL_HOST)"
 fi
 
 # ── Build ────────────────────────────────────────────────────────
@@ -147,8 +149,9 @@ else
 fi
 
 step "Raised"
-green "Local:  http://127.0.0.1:$PORT"
-green "Public: https://$TUNNEL_HOST"
+green "Local:    http://127.0.0.1:$PORT"
+green "Public:   https://$TUNNEL_HOST"
+green "Legacy:   https://$TUNNEL_HOST_LEGACY  (308 → https://$TUNNEL_HOST)"
 dim   "Logs:   ./app.log  ./tunnel.log"
 echo
 
