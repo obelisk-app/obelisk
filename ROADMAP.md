@@ -8,7 +8,7 @@ This file is the high-level roadmap — one line per initiative, grouped by phas
 
 - [ ] **App-wide i18n + per-user language** — extend landing i18n infra to chat/admin/moderation/forum/settings/errors, IP-based default on first login, `User.language` persisted, hot-swap from /settings. See [docs/i18n-plan.md](docs/i18n-plan.md).
 - [ ] **Pinned messages + DB-editable channel content (seed paridad)** — migrate `prisma/seed.ts` hardcoded content (welcome, foro índice, méritos posts, channel info) to pinned messages and forum posts editable from /admin. See [docs/content-migration-plan.md](docs/content-migration-plan.md).
-- [ ] **Forum post parity with chat** — refactor forum replies to reuse `MessageArea` + `MessageInput` + Socket.io so reactions, edits, typing, pagination and mentions work inside posts. See [docs/forum-parity-plan.md](docs/forum-parity-plan.md).
+- [ ] **Forum post parity with chat** — once forums are reintroduced on the relay-only stack, replies should reuse the same NIP-29 message pipeline as chat so reactions, edits, pagination and mentions work inside posts.
 - [ ] **WoT admin UI** — data layer is shipped; finish the /admin tab with referente preview, "Refrescar WoT" action, auto-authorized list and manual whitelist overrides. See [docs/wot-and-invite-credits.md](docs/wot-and-invite-credits.md).
 - [ ] **Wizard de setup inicial / instance owner desde UI** — remove the `INSTANCE_OWNER_PUBKEY` env hardcode; first authenticated NIP-07 user claims instance ownership, persisted in DB. Improves self-hosting UX.
 - [ ] **Fix notifications** — the read-state foundation is built (server-side `lastReadAt`, `ToastStack`, favicon badge, title counter, bech32 + reply mention detection via `extractMentionPubkeys`) but **the feature is buggy in practice**. Audit + fix before layering the Phase 4 improvements on top. Open issues in [docs/known-bugs.md](docs/known-bugs.md).
@@ -41,7 +41,7 @@ This file is the high-level roadmap — one line per initiative, grouped by phas
 - See [docs/uploads.md](docs/uploads.md).
 
 ### Admin & moderation
-- Multi-server admin panel with server picker + CRUD of channels / categories / members / invitations. See [docs/multi-server-admin.md](docs/multi-server-admin.md).
+- Multi-server admin panel with server picker + CRUD of channels / categories / members / invitations.
 - Instance owner (global access via `INSTANCE_OWNER_PUBKEY`, can transfer `Server.ownerPubkey`).
 - Roles: owner / admin / mod / member — **plus custom roles per server** (`CustomRole` + `MemberCustomRole`, colors / icons / priority, badges).
 - **Role-gated channels** (`readRoleIds` / `writeRoleIds`) and **write-locked channels** (`writePermission`: everyone / mod / admin / roles).
@@ -49,7 +49,6 @@ This file is the high-level roadmap — one line per initiative, grouped by phas
 - WoT auto-registration data layer: `referentePubkey` + `wotEnabled` per server, kind-3 fetch, `isInWot()` gate, `WotEntry` + `WotOverride` models.
 - Bans (with required reason), mutes, warnings, reports, audit log with pagination.
 - Access Control tab unifying join-mode + WoT + invitations.
-- Admin CLI for AI-agent scripting — see [docs/admin-cli.md](docs/admin-cli.md).
 
 ### Lightning
 - NWC wallet connection, encrypted client-side before persistence.
@@ -103,7 +102,6 @@ This file is the high-level roadmap — one line per initiative, grouped by phas
 - [ ] **Mobile responsive audit** — chat / admin / moderation / voice / forum views.
 
 ### Fase 5 — Knowledge base with LLM
-Full design: [docs/llm-knowledge-base.md](docs/llm-knowledge-base.md).
 - [ ] Conversation detector + topic-routing suggestion card (inline, dismissible, cooldown per channel).
 - [ ] Thread index — LLM-generated descriptions via Ollama `llama3.2:1b`, mod approval gate.
 - [ ] Semantic search over the indexed knowledge base + auto-tagging.

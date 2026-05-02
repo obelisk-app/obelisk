@@ -1,34 +1,30 @@
 # Obelisk Documentation
 
-Detailed specs, plans and references for Obelisk subsystems. High-level roadmap lives in [../ROADMAP.md](../ROADMAP.md); architecture overview in [../CLAUDE.md](../CLAUDE.md); deploy runbook in [../DEPLOY.md](../DEPLOY.md).
-
-Each document here is scoped: either an architectural reference, a feature guide for something already shipped, or an implementation plan for something not yet built.
+Detailed specs, plans and references for Obelisk subsystems. High-level roadmap lives in [../ROADMAP.md](../ROADMAP.md); architecture overview in [../CLAUDE.md](../CLAUDE.md).
 
 ## Architecture & platform
 
-- [voice-system.md](voice-system.md) — Socket.io audio relay, `mesh` vs `sfu` modes, perfect negotiation, track types.
-- [uploads.md](uploads.md) — `/uploads/<name>` storage, URL format, access model (unlisted-not-private).
-- [auth-session-persistence.md](auth-session-persistence.md) — session model, token storage, expiration.
-- [cloudflare-tunnel.md](cloudflare-tunnel.md) — `npm run dev:tunnel` — expose localhost:3000 via `obelisk.fabri.lat` for external testing.
-- [future-decentralization.md](future-decentralization.md) — NIP-29 relay-based groups: trade-offs and migration surface.
-
-## Features (shipped)
-
-- [admin-cli.md](admin-cli.md) — `scripts/admin-cli` headless client, nsec / NIP-46 auth, scriptable by AI coding agents.
-- [multi-server-admin.md](multi-server-admin.md) — admin panel UX and multi-server scoping.
+- [auth-and-data-loading.md](auth-and-data-loading.md) — login flow, NIP-42 AUTH, watchdog, bridgeCache.
+- [voice-system.md](voice-system.md) — P2P WebRTC mesh, Nostr-relay signaling, perfect negotiation, track types. Wire-level detail in [webrtc-p2p-nostr-signaling.md](webrtc-p2p-nostr-signaling.md).
+- [webrtc-p2p-nostr-signaling.md](webrtc-p2p-nostr-signaling.md) — voice wire format: kind 20078 presence, kind 25050 signaling, gift-wrap upgrade plan, relay-operator notes.
+- [direct-messages.md](direct-messages.md) — NIP-04 DMs.
 - [relay-layout-and-branding.md](relay-layout-and-branding.md) — operator-controlled categories, channel order, and relay branding (NIP-78 kind 30078, multi-author latest-wins).
-- [wot-and-invite-credits.md](wot-and-invite-credits.md) — WoT auto-registration (shipped), invite credits (deprecated — admin-only invites now).
+- [server-banner.md](server-banner.md) — relay-level banner image.
+- [uploads.md](uploads.md) — Blossom storage + URL format.
+- [search.md](search.md) — NIP-50 search (`bridge.searchMessages`) and query syntax.
 - [bitcoin-zaps-nwc.md](bitcoin-zaps-nwc.md) — NWC wallet connection + zap flow.
-- [search.md](search.md) — Discord-style query syntax and indexing.
 
-## Plans & proposals (not yet shipped)
+## Operations
+
+- [cloudflare-tunnel.md](cloudflare-tunnel.md) — `npm run dev:raise` exposes localhost via a named Cloudflare tunnel for phone testing of NIP-07 / NIP-46.
+
+## Plans & proposals
 
 - [known-bugs.md](known-bugs.md) — open bugs and tech debt.
-- [i18n-plan.md](i18n-plan.md) — app-wide per-user translation (active priority).
-- [content-migration-plan.md](content-migration-plan.md) — `seed.ts` → DB-editable pinned messages and forum posts (active priority).
-- [forum-parity-plan.md](forum-parity-plan.md) — reuse `MessageArea` / `MessageInput` + Socket.io inside forum posts (active priority).
-- [llm-knowledge-base.md](llm-knowledge-base.md) — conversation detection + thread index + Ollama topic router.
+- [i18n-plan.md](i18n-plan.md) — app-wide per-user translation.
+- [content-migration-plan.md](content-migration-plan.md) — pinned messages and editable channel content.
+- [wot-and-invite-credits.md](wot-and-invite-credits.md) — Web-of-Trust auto-registration design.
 
 ## References
 
-- [discord-emoji-export.md](discord-emoji-export.md) — procedure for exporting a Discord emoji set into Obelisk's server emoji format.
+- [discord-emoji-export.md](discord-emoji-export.md) — procedure for exporting a Discord emoji set into Obelisk's emoji format.
