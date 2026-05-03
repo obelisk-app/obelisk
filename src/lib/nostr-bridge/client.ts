@@ -133,6 +133,8 @@ function readMigrated(key: string, legacyKey: string): string | null {
 // generally don't carry user profile events, so we query well-known public
 // relays in addition to the active group relay.
 const PROFILE_RELAYS = [
+  'wss://relay.obelisk.ar',
+  'wss://public.obelisk.ar',
   'wss://relay.damus.io',
   'wss://relay.nostr.band',
   'wss://nos.lol',

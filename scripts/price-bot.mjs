@@ -30,8 +30,21 @@
 import { SimplePool, finalizeEvent, getPublicKey, nip19 } from 'nostr-tools';
 import { useWebSocketImplementation } from 'nostr-tools/pool';
 import WebSocket from 'ws';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
 useWebSocketImplementation(WebSocket);
+
+const STATE_PATH = path.join(os.homedir(), '.obelisk-price-bot-state.json');
+function loadState() {
+  try { return JSON.parse(fs.readFileSync(STATE_PATH, 'utf8')); } catch { return {}; }
+}
+function saveState(s) {
+  try { fs.writeFileSync(STATE_PATH, JSON.stringify(s, null, 2)); } catch (err) {
+    console.warn('[price-bot] state save failed:', err.message);
+  }
+}
 
 const INTERVAL = Number(process.env.BOT_INTERVAL_MS) || 120_000;
 const TEMPLATE = process.env.BOT_DISPLAY || 'BTC ${price}';
@@ -96,12 +109,8 @@ const fmt = (n) => n.toLocaleString('en-US');
 const pct = (n) => `${n >= 0 ? '+' : ''}${n.toFixed(2)}%`;
 
 function summary(s) {
-  return [
-    `BTC/USD: $${fmt(s.price)} (${pct(s.change24Pct)} 24h)`,
-    `24h range: $${fmt(s.low24)} – $${fmt(s.high24)}`,
-    `ATH: $${fmt(s.ath)} (${pct(s.athChangePct)} from ATH)`,
-    `Updated: ${new Date().toISOString().slice(0, 16).replace('T', ' ')}Z`,
-  ].join('\n');
+  // Two short lines — renders cleanly in member-list popovers and chat alike.
+  return `BTC $${fmt(s.price)} · 24h ${pct(s.change24Pct)} · range $${fmt(s.low24)}–$${fmt(s.high24)} · ATH $${fmt(s.ath)} (${pct(s.athChangePct)})`;
 }
 
 function commandReply(cmd, s) {
@@ -153,12 +162,21 @@ async function main() {
   // to known commands. Uses an in-memory `seen` set so re-deliveries on
   // reconnect don't re-trigger.
   const seen = new Set();
+  const startedAt = Math.floor(Date.now() / 1000);
   for (const { relay, groupId } of GROUPS) {
     pool.subscribe(
       [relay],
-      { kinds: [9], '#h': [groupId], since: Math.floor(Date.now() / 1000) - 60 },
+      { kinds: [9], '#h': [groupId], since: startedAt - 5 },
       {
+        // SimplePool's automaticallyAuth (set on the pool) covers AUTH for both
+        // EVENT publishes and REQ subscribes — we don't need a per-sub onauth.
+        // If the listener ever stops receiving messages, flip BOT_DEBUG=1 to log
+        // every kind 9 event arriving on the wire.
+        oneose: () => console.log(`[price-bot] sub EOSE ${relay} ${groupId.slice(0,8)} (listener ready)`),
         onevent: async (ev) => {
+          if (process.env.BOT_DEBUG === '1') {
+            console.log(`[price-bot] saw kind:9 from ${ev.pubkey.slice(0,8)} on ${groupId.slice(0,8)}: ${ev.content.slice(0,60)}`);
+          }
           if (ev.pubkey === pk) return;
           if (seen.has(ev.id)) return;
           seen.add(ev.id);
@@ -187,38 +205,54 @@ async function main() {
     );
   }
 
-  // ── Group hello + join-request, once per group at startup ───────────
+  // ── Group hello + join-request, once per (relay, groupId) ever ──────
+  // State persisted to ~/.obelisk-price-bot-state.json so PM2 restarts and
+  // crashloops don't repeatedly spam the channel with announcements.
+  const state = loadState();
+  state.joined ||= {};
+  state.greeted ||= {};
   for (const { relay, groupId } of GROUPS) {
-    const join = finalizeEvent(
-      {
-        kind: 9021,
-        created_at: Math.floor(Date.now() / 1000),
-        tags: [['h', groupId]],
-        content: 'price bot join',
-      },
-      sk,
-    );
-    try {
-      await Promise.any(pool.publish([relay], join));
-      console.log(`[price-bot] join-request sent: ${relay} ${groupId.slice(0, 8)}`);
-    } catch (err) {
-      console.warn(`[price-bot] join-request failed on ${relay}:`, err?.message || err);
+    const key = `${relay}|${groupId}`;
+    if (!state.joined[key]) {
+      const join = finalizeEvent(
+        {
+          kind: 9021,
+          created_at: Math.floor(Date.now() / 1000),
+          tags: [['h', groupId]],
+          content: 'price bot join',
+        },
+        sk,
+      );
+      try {
+        await Promise.any(pool.publish([relay], join));
+        console.log(`[price-bot] join-request sent: ${relay} ${groupId.slice(0, 8)}`);
+        state.joined[key] = Math.floor(Date.now() / 1000);
+        saveState(state);
+      } catch (err) {
+        console.warn(`[price-bot] join-request failed on ${relay}:`, err?.message || err);
+      }
     }
-    const hello = finalizeEvent(
-      {
-        kind: 9,
-        created_at: Math.floor(Date.now() / 1000),
-        tags: [['h', groupId]],
-        content:
-          '⚡ price bot online — try !btc, !price, !ath, !stats, !help. Add me with kind 9000 to surface me in the member list.',
-      },
-      sk,
-    );
-    try {
-      await Promise.any(pool.publish([relay], hello));
-      console.log(`[price-bot] hello sent: ${relay} ${groupId.slice(0, 8)}`);
-    } catch (err) {
-      console.warn(`[price-bot] hello failed on ${relay} (likely not admitted yet):`, err?.message || err);
+    if (!state.greeted[key]) {
+      const hello = finalizeEvent(
+        {
+          kind: 9,
+          created_at: Math.floor(Date.now() / 1000),
+          tags: [['h', groupId]],
+          content:
+            '⚡ price bot online — try !btc, !price, !ath, !stats, !help.',
+        },
+        sk,
+      );
+      try {
+        await Promise.any(pool.publish([relay], hello));
+        console.log(`[price-bot] hello sent: ${relay} ${groupId.slice(0, 8)}`);
+        state.greeted[key] = Math.floor(Date.now() / 1000);
+        saveState(state);
+      } catch (err) {
+        console.warn(`[price-bot] hello failed on ${relay} (likely not admitted yet):`, err?.message || err);
+      }
+    } else {
+      console.log(`[price-bot] hello already sent for ${relay} ${groupId.slice(0, 8)} — skipping`);
     }
   }
 
