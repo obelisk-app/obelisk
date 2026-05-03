@@ -27,7 +27,7 @@ import { parseRelayListMeta, parseInboxRelays } from '@/lib/nostr-read';
 import { TextCoercingWebSocket } from '@/lib/nostr-pool';
 import { cacheGet, cacheSet, cacheClearAll, cacheListIds } from './cache';
 import { resetAllClientState } from '@/lib/reset';
-import { pushActivity, resolveActivity, failActivity, trackActivity } from '@/lib/activity-log';
+import { pushActivity, resolveActivity, failActivity, trackActivity, dismissActivity } from '@/lib/activity-log';
 import type {
   NostrBridge,
   JsGroup,
@@ -197,6 +197,17 @@ class BridgeImpl implements NostrBridge {
   private deferredAccessDowngrades = new Map<string, ReturnType<typeof setTimeout>>();
 
   /**
+   * Activity-log id of the persistent "Authenticating with {host}" entry
+   * tied to a relay's `'authenticating'` access state. Created when the
+   * relay first sends a NIP-42 AUTH challenge (in `automaticallyAuth`),
+   * resolved when access flips to `'ok'`, failed when it flips to
+   * `'auth-required'` / `'restricted'` / `'error'`. Driven entirely from
+   * inside {@link setRelayAccess} so any code path that mutates access state
+   * keeps the bottom-right indicator in sync.
+   */
+  private authActivityIds = new Map<string, number>();
+
+  /**
    * True if `url` is the relay the user is currently viewing — the only
    * relay we should answer NIP-42 AUTH challenges for. nostr-tools may pass
    * URLs with or without a trailing slash, so compare normalized.
@@ -235,6 +246,36 @@ class BridgeImpl implements NostrBridge {
       clearTimeout(pending);
       this.deferredAccessDowngrades.delete(key);
     }
+    // Manage the persistent "Authenticating with {host}" activity entry
+    // that backs the bottom-right indicator. Entering 'authenticating'
+    // pushes a pending entry; leaving it resolves (→ ok) or fails
+    // (→ auth-required / restricted / error). This keeps the indicator
+    // visible across the entire NIP-42 round-trip — from the moment the
+    // relay challenges us to the moment it accepts/rejects — so the user
+    // always knows their signer approval is still load-bearing.
+    if (state === 'authenticating' && cur[key] !== 'authenticating') {
+      const host = (() => {
+        try { return new URL(url).host; } catch { return url; }
+      })();
+      const id = pushActivity(`Authenticating with ${host}`, 'NIP-42 relay AUTH — approve in your signer');
+      this.authActivityIds.set(key, id);
+    } else if (cur[key] === 'authenticating' && state !== 'authenticating') {
+      const id = this.authActivityIds.get(key);
+      if (id != null) {
+        if (state === 'ok') {
+          resolveActivity(id);
+        } else if (state === 'auth-required') {
+          failActivity(id, 'AUTH was not accepted by the relay');
+        } else if (state === 'restricted') {
+          failActivity(id, 'pubkey is not whitelisted on this relay');
+        } else if (state === 'error') {
+          failActivity(id, 'relay rejected the request');
+        } else {
+          dismissActivity(id);
+        }
+        this.authActivityIds.delete(key);
+      }
+    }
     this.relayAccess.set({ ...cur, [key]: state });
   }
 
@@ -267,7 +308,10 @@ class BridgeImpl implements NostrBridge {
       const now = this.relayAccess.get();
       if (now[key] === 'ok') return;
       if (now[key] === state) return;
-      this.relayAccess.set({ ...now, [key]: state });
+      // Route through setRelayAccess so the activity-log lifecycle
+      // (`'authenticating'` → fail) and other invariants stay consistent
+      // with non-deferred transitions.
+      this.setRelayAccess(url, state);
     }, RELAY_ACCESS_SOAK_MS);
     this.deferredAccessDowngrades.set(key, t);
   }
@@ -304,6 +348,12 @@ class BridgeImpl implements NostrBridge {
         // want to leak the user's pubkey to relays they're not browsing —
         // and a slow/unresponsive auxiliary signer should not block reads.
         if (!this.isActiveRelay(relayUrl)) return null;
+        // Flip the relay into 'authenticating' synchronously so the UI can
+        // gate cached groups/messages on a positive AUTH signal before any
+        // signer round-trip. The activity-log entry tied to this state
+        // (managed by setRelayAccess) keeps the bottom-right indicator
+        // visible until the relay accepts/rejects us.
+        this.setRelayAccess(relayUrl, 'authenticating');
         return async (evt: EventTemplate): Promise<VerifiedEvent> => {
           if (this.session?.loginMethod === 'nsec' && this.session.privKeyHex) {
             const sk = hexToBytes(this.session.privKeyHex);
@@ -707,6 +757,12 @@ class BridgeImpl implements NostrBridge {
     // new socket starts at 'unknown' and must earn its own state.
     for (const t of this.deferredAccessDowngrades.values()) clearTimeout(t);
     this.deferredAccessDowngrades.clear();
+    // Stale "Authenticating with {host}" entries from the old pool are no
+    // longer load-bearing — the new pool will push its own entries on first
+    // AUTH challenge. Dismiss rather than fail so we don't flash an error
+    // toast on legitimate reconnects.
+    for (const id of this.authActivityIds.values()) dismissActivity(id);
+    this.authActivityIds.clear();
   }
 
   /**
@@ -876,6 +932,14 @@ class BridgeImpl implements NostrBridge {
     this.adminsByGroup.set({});
     this.membersByGroup.set({});
     this.membershipReadyByGroup.set({});
+    // Forget any in-flight relay-access state and tear down dangling
+    // "Authenticating with {host}" entries — the next session must
+    // re-prove access from scratch.
+    this.relayAccess.set({});
+    for (const t of this.deferredAccessDowngrades.values()) clearTimeout(t);
+    this.deferredAccessDowngrades.clear();
+    for (const id of this.authActivityIds.values()) dismissActivity(id);
+    this.authActivityIds.clear();
     // Clear chat / notification / voice / DM stores so the next user logging
     // in on this browser doesn't inherit the previous account's data. See
     // src/lib/reset.ts for the full enumeration.
@@ -1017,6 +1081,13 @@ class BridgeImpl implements NostrBridge {
     this.dmSubscribed = false;
     // Auth/whitelist state is per-relay; the new one hasn't been probed yet.
     this.relayAccess.set({});
+    // Drop any pending downgrade timers + auth-activity entries scoped to
+    // the previous relay so a stale "Authenticating with old-host" toast
+    // doesn't linger after the user has already moved on.
+    for (const t of this.deferredAccessDowngrades.values()) clearTimeout(t);
+    this.deferredAccessDowngrades.clear();
+    for (const id of this.authActivityIds.values()) dismissActivity(id);
+    this.authActivityIds.clear();
     // Re-paint instantly from disk for the new relay; live events will
     // overwrite as they arrive. See {@link seedCacheForRelay}.
     this.seedCacheForRelay(url);

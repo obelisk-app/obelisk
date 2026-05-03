@@ -74,16 +74,22 @@ export interface JsDirectMessage {
 export type Unsubscribe = () => void;
 
 /**
- * Per-relay access state, surfaced from CLOSED reasons and publish rejections.
- * - `'unknown'` — no signal yet (still subscribing, or relay hasn't responded)
- * - `'ok'`      — relay delivered an event/EOSE; reads are flowing
- * - `'auth-required'` — relay requires NIP-42 AUTH and our signer didn't satisfy it
+ * Per-relay access state, surfaced from NIP-42 AUTH callbacks, CLOSED reasons,
+ * and publish rejections.
+ * - `'unknown'`        — no signal yet (still connecting, or relay hasn't responded)
+ * - `'authenticating'` — relay sent a NIP-42 AUTH challenge; signer is being asked
+ *   to sign a kind 22242 event. UI must NOT render cached relay-scoped state
+ *   (groups, members, messages) while in this state — the relay has not yet
+ *   confirmed read access.
+ * - `'ok'`             — relay delivered an event/EOSE; reads are flowing
+ * - `'auth-required'`  — relay requires NIP-42 AUTH and our signer didn't satisfy it
  *   (signer never ran, was rejected by user, or relay still refused after sign)
- * - `'restricted'` — relay accepted AUTH but refused us (e.g. pubkey not whitelisted)
- * - `'error'` — connection error / unknown rejection
+ * - `'restricted'`     — relay accepted AUTH but refused us (e.g. pubkey not whitelisted)
+ * - `'error'`          — connection error / unknown rejection
  */
 export type RelayAccessState =
   | 'unknown'
+  | 'authenticating'
   | 'ok'
   | 'auth-required'
   | 'restricted'

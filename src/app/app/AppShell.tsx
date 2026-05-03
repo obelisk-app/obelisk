@@ -409,6 +409,14 @@ function Sidebar({
   const myPubkey = useMyPubkey();
   const operatorPubkey = useRelayOperatorPubkey(relay || null);
   const adminsByGroup = useAdminsByGroup();
+  // Channel list is gated on positive AUTH evidence: cached groups (loaded
+  // by seedCacheForRelay before the relay handshake) must not paint until
+  // the relay has either accepted us (→ 'ok') or proven AUTH is not
+  // required by serving an event/EOSE. Otherwise users see channels they
+  // can't actually read or post to, type a message, hit a silent CLOSED,
+  // and only realize on the next refresh.
+  const relayAccess = useRelayAccess(relay || null);
+  const channelsVisible = relayAccess === 'ok';
   // Union of all admins across visible groups on this relay, plus the
   // NIP-11 operator pubkey if the relay advertises one. This is the set of
   // pubkeys allowed to author the relay-wide layout/branding events.
@@ -529,16 +537,23 @@ function Sidebar({
         {branding.banner && <div aria-hidden className="relative h-24" />}
       </div>
 
-      <CreateGroupSection
-        count={groups.length}
-        onCreated={(id) => setView({ kind: 'group', groupId: id })}
-      />
+      {channelsVisible && (
+        <CreateGroupSection
+          count={groups.length}
+          onCreated={(id) => setView({ kind: 'group', groupId: id })}
+        />
+      )}
 
       <div className="flex-1 overflow-y-auto px-2 pb-2">
-        {groups.length === 0 && (
+        {!channelsVisible && (
+          <div className="px-2 py-3">
+            <RelayAccessBanner compact />
+          </div>
+        )}
+        {channelsVisible && groups.length === 0 && (
           <div className="px-2 py-3 text-xs text-lc-muted">Discovering channels… (kind 39000)</div>
         )}
-        {laidOut.categories.map((cat) => (
+        {channelsVisible && laidOut.categories.map((cat) => (
           <CategorySection
             key={cat.id}
             name={cat.name}
@@ -563,7 +578,7 @@ function Sidebar({
             })}
           </CategorySection>
         ))}
-        {laidOut.uncategorized.length > 0 && (
+        {channelsVisible && laidOut.uncategorized.length > 0 && (
           laidOut.categories.length > 0 ? (
             <CategorySection
               name="Uncategorized"
@@ -1412,6 +1427,13 @@ function ChatPanel({
   const isAdmin = !!myPubkey && admins.includes(myPubkey);
   const groupCreator = useGroupCreator(groupId);
   const relay = useCurrentRelayUrl();
+  // Messages and the compose form are gated on positive AUTH evidence so
+  // an empty cached message list (or worse, half-loaded older messages)
+  // doesn't trick the user into typing into a channel the relay hasn't
+  // yet authorized them to read or post to. See RelayAccessBanner for
+  // the surfaced state.
+  const relayAccess = useRelayAccess(relay || null);
+  const messagesVisible = relayAccess === 'ok';
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
@@ -1737,6 +1759,10 @@ function ChatPanel({
         const textBody = (
       <>
       <RelayAccessBanner />
+      {!messagesVisible ? (
+        <div className="flex-1 overflow-y-auto px-5 py-4" data-testid="messages-gated-by-auth" />
+      ) : (
+      <>
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-4">
         {messages.length === 0 ? (
           <div className="flex h-full items-center justify-center text-sm text-lc-muted">
@@ -1875,6 +1901,8 @@ function ChatPanel({
           </button>
         </div>
       </form>
+      </>
+      )}
       </>
         );
         if (group?.kind === 'forum') {
@@ -3179,15 +3207,70 @@ function RelayAccessModal() {
   );
 }
 
-function RelayAccessBanner() {
+function RelayAccessBanner({ compact = false }: { compact?: boolean } = {}) {
   const relay = useCurrentRelayUrl();
   const access = useRelayAccess();
   const loginMethod = useMyLoginMethod();
   const isLoggedIn = useIsLoggedIn();
   if (!relay) return null;
-  if (access === 'ok' || access === 'unknown') return null;
+  if (access === 'ok') return null;
 
   const host = shortHost(relay);
+  const wrapperBase = compact
+    ? 'rounded-xl border p-4'
+    : 'mx-5 mt-4 rounded-xl border p-5';
+  const titleSize = compact ? 'text-base' : 'text-lg';
+
+  if (access === 'unknown') {
+    // Pre-AUTH "no signal yet" state. Hidden when logged out — LoginModal
+    // owns that surface and a duplicate "Connecting" message would just
+    // crowd it.
+    if (!isLoggedIn) return null;
+    return (
+      <div
+        className={`${wrapperBase} border-lc-border bg-lc-card/60`}
+        data-testid="relay-access-banner"
+        data-state="unknown"
+      >
+        <div className={`${titleSize} font-semibold flex items-center gap-2 text-lc-white`}>
+          <span
+            className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-lc-green/30 border-t-lc-green"
+            aria-hidden
+          />
+          Connecting to {host}…
+        </div>
+        <div className="mt-1 text-sm text-lc-muted">
+          Waiting for the relay to respond. Channels stay hidden until the relay confirms read access.
+        </div>
+      </div>
+    );
+  }
+
+  if (access === 'authenticating') {
+    const reason =
+      loginMethod === 'bunker'
+        ? 'Approve the signing request in your bunker app to complete NIP-42 AUTH.'
+        : loginMethod === 'nip07'
+          ? 'Approve the signing request in your Nostr extension to complete NIP-42 AUTH.'
+          : 'Signing the relay AUTH challenge…';
+    return (
+      <div
+        className={`${wrapperBase} border-yellow-500/40 bg-yellow-500/10`}
+        data-testid="relay-access-banner"
+        data-state="authenticating"
+      >
+        <div className={`${titleSize} font-semibold flex items-center gap-2 text-yellow-200`}>
+          <span
+            className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-yellow-300/30 border-t-yellow-200"
+            aria-hidden
+          />
+          Authenticating with {host}…
+        </div>
+        <div className="mt-1 text-sm text-yellow-100/80">{reason}</div>
+      </div>
+    );
+  }
+
   if (access === 'auth-required') {
     const reason = !isLoggedIn
       ? 'Log in with a Nostr key — this relay only serves authenticated readers.'
@@ -3197,8 +3280,12 @@ function RelayAccessBanner() {
           ? 'Approve the signing request in your Nostr extension to complete NIP-42 AUTH.'
           : 'NIP-42 AUTH did not complete. Try reloading or switching login methods.';
     return (
-      <div className="mx-5 mt-4 rounded-xl border border-yellow-500/40 bg-yellow-500/10 p-5">
-        <div className="text-lg font-semibold text-yellow-200">
+      <div
+        className={`${wrapperBase} border-yellow-500/40 bg-yellow-500/10`}
+        data-testid="relay-access-banner"
+        data-state="auth-required"
+      >
+        <div className={`${titleSize} font-semibold text-yellow-200`}>
           Not authenticated to {host}
         </div>
         <div className="mt-1 text-sm text-yellow-100/80">{reason}</div>
@@ -3207,8 +3294,12 @@ function RelayAccessBanner() {
   }
   // 'restricted' | 'error'
   return (
-    <div className="mx-5 mt-4 rounded-xl border border-red-500/40 bg-red-500/10 p-5">
-      <div className="text-lg font-semibold text-red-200">
+    <div
+      className={`${wrapperBase} border-red-500/40 bg-red-500/10`}
+      data-testid="relay-access-banner"
+      data-state={access}
+    >
+      <div className={`${titleSize} font-semibold text-red-200`}>
         {access === 'restricted' ? `Not whitelisted on ${host}` : `Relay error on ${host}`}
       </div>
       <div className="mt-1 text-sm text-red-100/80">
@@ -3221,6 +3312,20 @@ function RelayAccessBanner() {
 }
 
 function EmptyState() {
+  const relay = useCurrentRelayUrl();
+  const access = useRelayAccess(relay || null);
+  // If the relay hasn't confirmed access we surface the same banner the
+  // sidebar shows, instead of "Pick a channel or DM" — the sidebar has no
+  // channels to pick yet, so that prompt would just confuse.
+  if (access !== 'ok') {
+    return (
+      <div className="flex h-full items-center justify-center px-5">
+        <div className="w-full max-w-md">
+          <RelayAccessBanner compact />
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="flex h-full items-center justify-center text-lc-muted">
       <div className="text-center">
