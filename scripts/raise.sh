@@ -125,24 +125,15 @@ if [ -n "$pids" ]; then
   fi
 fi
 
-# ── Launch ───────────────────────────────────────────────────────
+# ── Launch (detached — script exits while children keep running) ─
 APP_PID=""
 TUNNEL_PID=""
 BOT_PID=""
 
-cleanup() {
-  echo
-  blue "Shutting down…"
-  [ -n "$TUNNEL_PID" ] && kill "$TUNNEL_PID" 2>/dev/null || true
-  [ -n "$BOT_PID" ]    && kill "$BOT_PID"    2>/dev/null || true
-  [ -n "$APP_PID" ]    && kill "$APP_PID"    2>/dev/null || true
-  wait 2>/dev/null || true
-}
-trap cleanup INT TERM EXIT
-
 blue "Starting next start on :$PORT (logs → ./app.log)…"
-PORT="$PORT" npx next start -p "$PORT" > app.log 2>&1 &
+PORT="$PORT" nohup npx next start -p "$PORT" > app.log 2>&1 &
 APP_PID=$!
+disown "$APP_PID" 2>/dev/null || true
 for i in $(seq 1 60); do
   lsof -iTCP:"$PORT" -sTCP:LISTEN -n -P >/dev/null 2>&1 && { green "App up."; break; }
   if ! kill -0 "$APP_PID" 2>/dev/null; then
@@ -160,8 +151,9 @@ if [ -n "${BOT_NSEC:-}" ]; then
   BOT_GROUP_ID="${BOT_GROUP_ID:-}" \
   BOT_INTERVAL_MS="${BOT_INTERVAL_MS:-}" \
   BOT_DISPLAY="${BOT_DISPLAY:-}" \
-    node scripts/price-bot.mjs > bot.log 2>&1 &
+    nohup node scripts/price-bot.mjs > bot.log 2>&1 &
   BOT_PID=$!
+  disown "$BOT_PID" 2>/dev/null || true
   sleep 1
   if ! kill -0 "$BOT_PID" 2>/dev/null; then
     red "price-bot died. Last 20 log lines:"; tail -20 bot.log
@@ -176,7 +168,7 @@ fi
 if [ "$SKIP_TUNNEL" = "1" ]; then
   step "Ready"
   green "App: http://127.0.0.1:$PORT  (SKIP_TUNNEL=1)"
-  while kill -0 "$APP_PID" 2>/dev/null; do sleep 5; done
+  dim "App PID $APP_PID — running in background. Stop: kill $APP_PID"
   exit 0
 fi
 
@@ -187,7 +179,7 @@ if pgrep -f "cloudflared .* ${TUNNEL_UUID}" >/dev/null 2>&1 \
   TUNNEL_REUSED=1
 else
   blue "Starting cloudflared '$TUNNEL_NAME' → $ORIGIN_URL (logs → ./tunnel.log)"
-  cloudflared tunnel \
+  nohup cloudflared tunnel \
     --config /dev/null \
     --cred-file "$CRED_FILE" \
     run \
@@ -195,6 +187,7 @@ else
     --no-tls-verify \
     "$TUNNEL_UUID" > tunnel.log 2>&1 &
   TUNNEL_PID=$!
+  disown "$TUNNEL_PID" 2>/dev/null || true
   sleep 2
   if ! kill -0 "$TUNNEL_PID" 2>/dev/null; then
     red "cloudflared died. Last 20 log lines:"; tail -20 tunnel.log; exit 1
@@ -206,14 +199,7 @@ green "Local:    http://127.0.0.1:$PORT"
 green "Public:   https://$TUNNEL_HOST"
 green "Legacy:   https://$TUNNEL_HOST_LEGACY  (308 → https://$TUNNEL_HOST)"
 dim   "Logs:   ./app.log  ./tunnel.log"
+dim   "PIDs:   app=$APP_PID${TUNNEL_PID:+  tunnel=$TUNNEL_PID}${BOT_PID:+  bot=$BOT_PID}"
+dim   "Stop:   kill $APP_PID${TUNNEL_PID:+ $TUNNEL_PID}${BOT_PID:+ $BOT_PID}"
 echo
-
-while :; do
-  [ -n "$TUNNEL_PID" ] && ! kill -0 "$TUNNEL_PID" 2>/dev/null && { red "Tunnel exited."; break; }
-  ! kill -0 "$APP_PID" 2>/dev/null && { red "App exited."; break; }
-  if [ -n "$BOT_PID" ] && ! kill -0 "$BOT_PID" 2>/dev/null; then
-    red "Price bot exited. Last 20 log lines:"; tail -20 bot.log
-    BOT_PID=""
-  fi
-  sleep 2
-done
+exit 0

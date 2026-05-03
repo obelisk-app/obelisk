@@ -209,38 +209,9 @@ DEV_PID=""
 TUNNEL_PID=""
 TUNNEL_REUSED=0
 
-CLEANED_UP=0
-cleanup() {
-  [ "$CLEANED_UP" = "1" ] && return
-  CLEANED_UP=1
-  echo
-  blue "Shutting down…"
-  if [ "$TUNNEL_REUSED" = "0" ] && [ -n "$TUNNEL_PID" ]; then
-    kill -TERM "$TUNNEL_PID" 2>/dev/null
-    # cloudflared spawns child quic workers — kill the whole tree
-    pkill -TERM -P "$TUNNEL_PID" 2>/dev/null
-  fi
-  if [ "$DEV_ALREADY_RUNNING" = "0" ] && [ -n "$DEV_PID" ]; then
-    kill -TERM "$DEV_PID" 2>/dev/null
-    pkill -TERM -P "$DEV_PID" 2>/dev/null
-  fi
-  # Give them up to 2s to exit cleanly, then SIGKILL anything still alive.
-  for _ in 1 2 3 4; do
-    alive=0
-    [ -n "$TUNNEL_PID" ] && kill -0 "$TUNNEL_PID" 2>/dev/null && alive=1
-    [ -n "$DEV_PID" ] && kill -0 "$DEV_PID" 2>/dev/null && alive=1
-    [ "$alive" = "0" ] && break
-    sleep 0.5
-  done
-  [ -n "$TUNNEL_PID" ] && kill -KILL "$TUNNEL_PID" 2>/dev/null
-  [ -n "$DEV_PID" ] && kill -KILL "$DEV_PID" 2>/dev/null
-  # Catch any orphaned grandchildren (next-server, cloudflared workers).
-  pkill -KILL -P $$ 2>/dev/null
-  return 0
-}
-on_signal() { cleanup; exit 130; }
-trap on_signal INT TERM
-trap cleanup EXIT
+# No EXIT trap — we launch children detached with nohup+disown so the
+# script can return and the dev server / tunnel keep running. Use the
+# `stop` subcommand (above) to take them down.
 
 if [ "$DEV_ALREADY_RUNNING" = "0" ]; then
   if [ "$CLEAN_NEXT_CACHE" = "1" ] && [ -d .next ]; then
@@ -255,8 +226,9 @@ if [ "$DEV_ALREADY_RUNNING" = "0" ]; then
     blue "Starting next dev on :$PORT (turbopack) (logs → ./dev.log)…"
   fi
   # shellcheck disable=SC2086
-  PORT="$PORT" npx next dev $DEV_FLAGS > dev.log 2>&1 &
+  PORT="$PORT" nohup npx next dev $DEV_FLAGS > dev.log 2>&1 &
   DEV_PID=$!
+  disown "$DEV_PID" 2>/dev/null || true
   for i in $(seq 1 60); do
     lsof -iTCP:"$PORT" -sTCP:LISTEN -n -P >/dev/null 2>&1 && { green "Dev server up."; break; }
     if ! kill -0 "$DEV_PID" 2>/dev/null; then
@@ -270,7 +242,7 @@ fi
 if [ "$SKIP_TUNNEL" = "1" ]; then
   step "Ready"
   green "Dev: http://127.0.0.1:$PORT  (SKIP_TUNNEL=1)"
-  [ "$DEV_ALREADY_RUNNING" = "0" ] && { blue "Tailing — Ctrl-C to stop."; while kill -0 "$DEV_PID" 2>/dev/null; do sleep 5; done; }
+  [ -n "$DEV_PID" ] && dim "Dev PID $DEV_PID — running in background. Stop: ./scripts/dev-raise.sh stop"
   exit 0
 fi
 
@@ -281,7 +253,7 @@ if pgrep -f "cloudflared .* ${TUNNEL_UUID}" >/dev/null 2>&1 \
   TUNNEL_REUSED=1
 else
   blue "Starting cloudflared '$TUNNEL_NAME' → $ORIGIN_URL (logs → ./tunnel.log)"
-  cloudflared --origincert "$ORIGIN_CERT" tunnel \
+  nohup cloudflared --origincert "$ORIGIN_CERT" tunnel \
     --config /dev/null \
     --cred-file "$CRED_FILE" \
     run \
@@ -289,6 +261,7 @@ else
     --no-tls-verify \
     "$TUNNEL_UUID" > tunnel.log 2>&1 &
   TUNNEL_PID=$!
+  disown "$TUNNEL_PID" 2>/dev/null || true
   sleep 2
   if ! kill -0 "$TUNNEL_PID" 2>/dev/null; then
     red "cloudflared died. Last 20 log lines:"; tail -20 tunnel.log; exit 1
@@ -385,29 +358,7 @@ step "Ready"
 green "Local:  http://127.0.0.1:$PORT"
 green "Public: https://$TUNNEL_HOST"
 dim   "Logs:   ./dev.log  ./tunnel.log"
+dim   "PIDs:   ${DEV_PID:+dev=$DEV_PID  }${TUNNEL_PID:+tunnel=$TUNNEL_PID}"
+dim   "Stop:   ./scripts/dev-raise.sh stop"
 echo
-
-PANIC_WARNED=0
-while :; do
-  if [ "$TUNNEL_REUSED" = "0" ] && [ -n "$TUNNEL_PID" ] && ! kill -0 "$TUNNEL_PID" 2>/dev/null; then
-    red "Tunnel exited."; break
-  fi
-  if [ "$TUNNEL_REUSED" = "1" ] && ! pgrep -f "cloudflared .* $TUNNEL_UUID" >/dev/null 2>&1; then
-    red "Tunnel exited."; break
-  fi
-  if [ "$DEV_ALREADY_RUNNING" = "0" ] && [ -n "$DEV_PID" ] && ! kill -0 "$DEV_PID" 2>/dev/null; then
-    red "Dev server exited."; break
-  fi
-  # Surface bundler panics once — they cause the browser to full-reload
-  # in a loop. The user has to take action (wipe cache / switch bundler).
-  if [ "$PANIC_WARNED" = "0" ] && grep -qE "FATAL|Turbopack error|panic log has been written" dev.log 2>/dev/null; then
-    red "⚠ Bundler panic detected in dev.log — browser will reload-loop."
-    if [ "$USE_TURBOPACK" = "1" ]; then
-      red "  Re-run without USE_TURBOPACK=1 to fall back to webpack."
-    else
-      red "  Try: rm -rf .next node_modules/.cache && npm run dev:raise"
-    fi
-    PANIC_WARNED=1
-  fi
-  sleep 2
-done
+exit 0
