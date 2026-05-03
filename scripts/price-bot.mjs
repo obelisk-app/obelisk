@@ -80,6 +80,20 @@ async function main() {
     } catch (err) {
       console.warn('[price-bot] join-request failed:', err?.message || err);
     }
+
+    // Kind 9 hello — relays drop this until an admin issues 9000 add-user for the bot.
+    const hello = finalizeEvent({
+      kind: 9,
+      created_at: Math.floor(Date.now() / 1000),
+      tags: [['h', GROUP_ID]],
+      content: '⚡ price bot online — posting BTC stats as kind:0 metadata. Add me with kind 9000 to make me show up in the member list.',
+    }, sk);
+    try {
+      await Promise.any(pool.publish([RELAY], hello));
+      console.log(`[price-bot] sent hello message to group ${GROUP_ID}`);
+    } catch (err) {
+      console.warn('[price-bot] hello message failed (likely not yet admitted):', err?.message || err);
+    }
   }
 
   let lastPrice = null;
