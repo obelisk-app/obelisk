@@ -24,6 +24,7 @@ import { useUserMetadata } from '@/lib/nostr-bridge';
 import VoiceControls from './VoiceControls';
 import ShootingStars from '@/components/ShootingStars';
 import { qualityColor, type QualitySample } from '@/lib/voice/stats';
+import { toggleFullscreen, useFullscreenState } from './fullscreen';
 
 interface Props {
   channelId: string;
@@ -402,7 +403,7 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
 
   if (!joined) {
     return (
-      <div className="flex-1 flex min-h-0 p-2 sm:p-3 gap-2" data-testid="voice-channel">
+      <div className="relative flex-1 flex min-h-0 p-2 sm:p-3 gap-2" data-testid="voice-channel">
         <div className="flex-1 flex flex-col min-h-0 relative overflow-hidden rounded-2xl border border-lc-border bg-gradient-to-br from-indigo-950 via-indigo-900 to-violet-800 shadow-2xl">
           <StageBackdrop />
           <RoomHeader name={displayName} count={0} />
@@ -429,7 +430,11 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
             </div>
           </div>
         </div>
-        {chatSlot && isChatOpen && chatSlot}
+        {chatSlot && isChatOpen && (
+          <div className="contents max-md:!block max-md:absolute max-md:inset-0 max-md:z-30 max-md:bg-lc-black/80 max-md:backdrop-blur-sm">
+            {chatSlot}
+          </div>
+        )}
       </div>
     );
   }
@@ -437,7 +442,7 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
   const hasStage = !!activeStage;
 
   return (
-    <div className="flex-1 flex min-h-0 p-2 sm:p-3 gap-2" data-testid="voice-channel">
+    <div className="relative flex-1 flex min-h-0 p-2 sm:p-3 gap-2" data-testid="voice-channel">
       <div className="flex-1 flex flex-col min-h-0 relative overflow-hidden rounded-2xl border border-lc-border bg-gradient-to-br from-indigo-950 via-indigo-900 to-violet-800 shadow-2xl">
         <StageBackdrop />
         <RoomHeader name={displayName} count={totalCount} />
@@ -649,6 +654,13 @@ function Stage({ pubkey, isLocal, kind, videoStream, audioStream, pinned, onTogg
   const name = meta?.displayName || meta?.name || pubkey.slice(0, 8);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  // The fullscreen target wraps both the <video> and the <audio>: making
+  // just the <video> fullscreen detaches its sibling audio from the focus
+  // surface and Safari has been observed to mute it. Wrapping both keeps
+  // audio playing through the transition.
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const isMutedForMe = useTileAudioMuted(pubkey);
+  const speaking = useTileSpeaking(pubkey);
   useEffect(() => {
     const el = videoRef.current;
     if (!el) return;
@@ -667,7 +679,11 @@ function Stage({ pubkey, isLocal, kind, videoStream, audioStream, pinned, onTogg
       : isLocal ? `You · ${name}` : name;
   return (
     <div
-      className="relative flex-1 min-h-0 rounded-xl overflow-hidden bg-black ring-1 ring-white/10"
+      ref={containerRef}
+      className={
+        'relative flex-1 min-h-0 rounded-xl overflow-hidden bg-black ring-1 ring-white/10 transition-shadow ' +
+        (speaking ? 'ring-2 ring-lc-green shadow-[0_0_24px_rgba(180,249,83,0.4)]' : '')
+      }
       data-testid={kind === 'screen' ? 'screen-share-area' : 'video-stage'}
     >
       <video
@@ -677,27 +693,31 @@ function Stage({ pubkey, isLocal, kind, videoStream, audioStream, pinned, onTogg
         muted={isLocal}
         className={'w-full h-full object-contain ' + (kind === 'camera' && isLocal ? 'scale-x-[-1]' : '')}
       />
-      {!isLocal && <audio ref={audioRef} autoPlay />}
+      {!isLocal && <audio ref={audioRef} autoPlay muted={isMutedForMe} />}
       <div className="absolute top-2 left-2 flex items-center gap-1.5 px-2 py-1 rounded-md bg-black/60 backdrop-blur text-[11px] text-lc-green border border-lc-green/30">
         <span className="font-medium">{label}</span>
       </div>
-      <button
-        type="button"
-        onClick={onTogglePin}
-        title={pinned ? 'Unpin' : 'Pin to stage'}
-        className={
-          'absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded-md text-[11px] backdrop-blur transition-colors ' +
-          (pinned
-            ? 'bg-lc-green/20 text-lc-green border border-lc-green/40'
-            : 'bg-black/60 text-white/80 border border-white/15 hover:bg-black/80')
-        }
-      >
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 17v5" />
-          <path d="M9 10.76V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v4.76a2 2 0 0 0 .55 1.39l1.65 1.7A1 1 0 0 1 16.5 15.5h-9A1 1 0 0 1 6.8 13.85l1.65-1.7A2 2 0 0 0 9 10.76z" />
-        </svg>
-        {pinned ? 'Pinned' : 'Pin'}
-      </button>
+      <div className="absolute top-2 right-2 flex items-center gap-1.5">
+        {!isLocal && <MuteForMeButton pubkey={pubkey} />}
+        <FullscreenButton targetRef={containerRef} />
+        <button
+          type="button"
+          onClick={onTogglePin}
+          title={pinned ? 'Unpin' : 'Pin to stage'}
+          className={
+            'flex items-center gap-1 px-2 py-1 rounded-md text-[11px] backdrop-blur transition-colors ' +
+            (pinned
+              ? 'bg-lc-green/20 text-lc-green border border-lc-green/40'
+              : 'bg-black/60 text-white/80 border border-white/15 hover:bg-black/80')
+          }
+        >
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 17v5" />
+            <path d="M9 10.76V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v4.76a2 2 0 0 0 .55 1.39l1.65 1.7A1 1 0 0 1 16.5 15.5h-9A1 1 0 0 1 6.8 13.85l1.65-1.7A2 2 0 0 0 9 10.76z" />
+          </svg>
+          {pinned ? 'Pinned' : 'Pin'}
+        </button>
+      </div>
     </div>
   );
 }
@@ -715,6 +735,9 @@ function VideoTile({ pubkey, isLocal, videoStream, audioStream, onPin, fit = 'co
   const name = meta?.displayName || meta?.name || pubkey.slice(0, 8);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const isMutedForMe = useTileAudioMuted(pubkey);
+  const speaking = useTileSpeaking(pubkey);
 
   useEffect(() => {
     const el = videoRef.current;
@@ -730,12 +753,22 @@ function VideoTile({ pubkey, isLocal, videoStream, audioStream, onPin, fit = 'co
   }, [audioStream]);
 
   const fitClass = fit === 'contain' ? 'object-contain bg-black' : 'object-cover';
+  // Use a div with role=button so we can host nested controls (mute,
+  // fullscreen) — nested <button>s are invalid HTML.
   return (
-    <button
-      type="button"
+    <div
+      ref={containerRef}
+      role={onPin ? 'button' : undefined}
+      tabIndex={onPin ? 0 : undefined}
       onClick={onPin}
+      onKeyDown={(e) => {
+        if (!onPin) return;
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPin(); }
+      }}
       className={
-        'relative rounded-xl overflow-hidden ring-1 ring-white/10 bg-neutral-950 group text-left cursor-pointer hover:ring-lc-green/40 transition ' +
+        'relative rounded-xl overflow-hidden ring-1 ring-white/10 bg-neutral-950 group text-left transition ' +
+        (onPin ? 'cursor-pointer hover:ring-lc-green/40 ' : '') +
+        (speaking ? 'ring-2 ring-lc-green ' : '') +
         (fillParent ? 'w-full h-full' : 'w-full aspect-video')
       }
       data-testid="video-tile"
@@ -745,15 +778,19 @@ function VideoTile({ pubkey, isLocal, videoStream, audioStream, onPin, fit = 'co
         <video ref={videoRef} autoPlay playsInline muted={isLocal} className={`w-full h-full ${fitClass} ${isLocal ? 'scale-x-[-1]' : ''}`} />
       ) : (
         <div className="w-full h-full flex items-center justify-center">
-          <Avatar pubkey={pubkey} picture={meta?.picture} name={name} size={20} />
+          <Avatar pubkey={pubkey} picture={meta?.picture} name={name} size={20} speaking={speaking} />
         </div>
       )}
-      {!isLocal && <audio ref={audioRef} autoPlay />}
+      {!isLocal && <audio ref={audioRef} autoPlay muted={isMutedForMe} />}
+      <div className="absolute top-2 right-2 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+        {!isLocal && <MuteForMeButton pubkey={pubkey} />}
+        {videoStream && <FullscreenButton targetRef={containerRef} />}
+      </div>
       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-2.5 py-1.5 flex items-center gap-1.5">
         {!isLocal && <QualityDot pubkey={pubkey} />}
         <span className="text-xs text-white font-medium truncate">{isLocal ? `You · ${name}` : name}</span>
       </div>
-    </button>
+    </div>
   );
 }
 
@@ -808,6 +845,8 @@ function AudioTile({ pubkey, isLocal, audioStream }: {
   const meta = useUserMetadata(pubkey);
   const name = meta?.displayName || meta?.name || pubkey.slice(0, 8);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const isMutedForMe = useTileAudioMuted(pubkey);
+  const speaking = useTileSpeaking(pubkey);
   useEffect(() => {
     const el = audioRef.current;
     if (!el) return;
@@ -816,17 +855,25 @@ function AudioTile({ pubkey, isLocal, audioStream }: {
   }, [audioStream, pubkey]);
   return (
     <div
-      className="relative aspect-video sm:aspect-square w-44 sm:w-48 rounded-2xl overflow-hidden bg-gradient-to-br from-neutral-900 to-neutral-950 ring-1 ring-white/10 flex flex-col items-center justify-center p-3"
+      className={
+        'relative aspect-video sm:aspect-square w-44 sm:w-48 rounded-2xl overflow-hidden bg-gradient-to-br from-neutral-900 to-neutral-950 flex flex-col items-center justify-center p-3 transition-shadow group ' +
+        (speaking ? 'ring-2 ring-lc-green shadow-[0_0_18px_rgba(180,249,83,0.35)]' : 'ring-1 ring-white/10')
+      }
       data-testid="voice-participant"
     >
       <div className={'rounded-full p-1 ' + (isLocal ? 'ring-2 ring-lc-green' : 'ring-1 ring-white/10')}>
-        <Avatar pubkey={pubkey} picture={meta?.picture} name={name} size={16} />
+        <Avatar pubkey={pubkey} picture={meta?.picture} name={name} size={16} speaking={speaking} />
       </div>
       <div className="mt-2 text-xs text-white font-medium truncate max-w-full flex items-center gap-1.5">
         {!isLocal && <QualityDot pubkey={pubkey} />}
         <span className="truncate">{isLocal ? `You · ${name}` : name}</span>
       </div>
-      {!isLocal && <audio ref={audioRef} autoPlay />}
+      {!isLocal && (
+        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+          <MuteForMeButton pubkey={pubkey} />
+        </div>
+      )}
+      {!isLocal && <audio ref={audioRef} autoPlay muted={isMutedForMe} />}
     </div>
   );
 }
@@ -839,6 +886,8 @@ function RailAudioTile({ pubkey, isLocal, audioStream }: {
   const meta = useUserMetadata(pubkey);
   const name = meta?.displayName || meta?.name || pubkey.slice(0, 8);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const isMutedForMe = useTileAudioMuted(pubkey);
+  const speaking = useTileSpeaking(pubkey);
   useEffect(() => {
     const el = audioRef.current;
     if (!el) return;
@@ -847,12 +896,20 @@ function RailAudioTile({ pubkey, isLocal, audioStream }: {
   }, [audioStream, pubkey]);
   return (
     <div
-      className="shrink-0 w-40 md:w-full aspect-video rounded-xl bg-neutral-900 ring-1 ring-white/10 flex flex-col items-center justify-center gap-1.5 p-2"
+      className={
+        'relative shrink-0 w-40 md:w-full aspect-video rounded-xl bg-neutral-900 flex flex-col items-center justify-center gap-1.5 p-2 group transition-shadow ' +
+        (speaking ? 'ring-2 ring-lc-green' : 'ring-1 ring-white/10')
+      }
       data-testid="voice-participant"
     >
-      <Avatar pubkey={pubkey} picture={meta?.picture} name={name} size={10} />
+      <Avatar pubkey={pubkey} picture={meta?.picture} name={name} size={10} speaking={speaking} />
       <span className="text-[11px] text-white/85 truncate max-w-full px-1">{isLocal ? `You · ${name}` : name}</span>
-      {!isLocal && <audio ref={audioRef} autoPlay />}
+      {!isLocal && (
+        <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+          <MuteForMeButton pubkey={pubkey} compact />
+        </div>
+      )}
+      {!isLocal && <audio ref={audioRef} autoPlay muted={isMutedForMe} />}
     </div>
   );
 }
@@ -865,6 +922,8 @@ function AudioChip({ pubkey, isLocal, audioStream }: {
   const meta = useUserMetadata(pubkey);
   const name = meta?.displayName || meta?.name || pubkey.slice(0, 8);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const isMutedForMe = useTileAudioMuted(pubkey);
+  const speaking = useTileSpeaking(pubkey);
   useEffect(() => {
     const el = audioRef.current;
     if (!el) return;
@@ -872,27 +931,134 @@ function AudioChip({ pubkey, isLocal, audioStream }: {
     if (audioStream) el.play().catch(() => {});
   }, [audioStream, pubkey]);
   return (
-    <div className="shrink-0 flex items-center gap-2 pl-1 pr-3 py-1 rounded-full bg-white/5 ring-1 ring-white/10" data-testid="voice-participant">
-      <Avatar pubkey={pubkey} picture={meta?.picture} name={name} size={6} />
+    <div
+      className={
+        'shrink-0 flex items-center gap-2 pl-1 pr-3 py-1 rounded-full bg-white/5 transition-shadow ' +
+        (speaking ? 'ring-2 ring-lc-green' : 'ring-1 ring-white/10')
+      }
+      data-testid="voice-participant"
+    >
+      <Avatar pubkey={pubkey} picture={meta?.picture} name={name} size={6} speaking={speaking} />
       <span className="text-xs text-white/85 truncate max-w-[10rem]">{isLocal ? `You · ${name}` : name}</span>
-      {!isLocal && <audio ref={audioRef} autoPlay />}
+      {!isLocal && <MuteForMeButton pubkey={pubkey} compact />}
+      {!isLocal && <audio ref={audioRef} autoPlay muted={isMutedForMe} />}
     </div>
   );
 }
 
-function Avatar({ pubkey, picture, name, size }: { pubkey: string; picture?: string | null; name: string; size: number }) {
+function Avatar({ pubkey, picture, name, size, speaking = false }: { pubkey: string; picture?: string | null; name: string; size: number; speaking?: boolean }) {
   const px = `${size * 4}px`;
+  const speakingClass = speaking ? ' shadow-[0_0_12px_rgba(180,249,83,0.55)]' : '';
   if (picture) {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={picture} alt={name} className="rounded-full object-cover" style={{ width: px, height: px }} />;
+    return <img src={picture} alt={name} className={'rounded-full object-cover' + speakingClass} style={{ width: px, height: px }} />;
   }
   return (
     <div
-      className="rounded-full bg-gradient-to-br from-lc-olive to-neutral-800 flex items-center justify-center text-lc-green font-semibold ring-1 ring-white/10"
+      className={'rounded-full bg-gradient-to-br from-lc-olive to-neutral-800 flex items-center justify-center text-lc-green font-semibold ring-1 ring-white/10' + speakingClass}
       style={{ width: px, height: px, fontSize: `${Math.max(12, size * 1.4)}px` }}
     >
       {(name[0] ?? pubkey[0])?.toUpperCase()}
     </div>
+  );
+}
+
+// ── Hooks: speaking, per-peer mute ─────────────────────────────────────
+
+function useTileSpeaking(pubkey: string): boolean {
+  return useVoiceStore((s) => !!s.speakingPubkeys[pubkey]);
+}
+
+/** Combined "this tile's audio should be muted right now" — true when the
+ *  user has deafened OR has muted-for-me'd this specific peer. */
+function useTileAudioMuted(pubkey: string): boolean {
+  return useVoiceStore((s) => s.isDeafened || !!s.localMutedPubkeys[pubkey]);
+}
+
+// ── UI atoms: mute-for-me, fullscreen ──────────────────────────────────
+
+function MuteForMeButton({ pubkey, compact = false }: { pubkey: string; compact?: boolean }) {
+  const muted = useVoiceStore((s) => !!s.localMutedPubkeys[pubkey]);
+  const muteLocally = useVoiceStore((s) => s.muteLocally);
+  const unmuteLocally = useVoiceStore((s) => s.unmuteLocally);
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        // Stops the click bubbling to the tile's pin handler.
+        e.stopPropagation();
+        if (muted) unmuteLocally(pubkey);
+        else muteLocally(pubkey);
+      }}
+      title={muted ? 'Unmute (just for you)' : 'Mute for me only'}
+      data-testid="mute-for-me"
+      data-muted={muted}
+      className={
+        'flex items-center justify-center rounded-md backdrop-blur transition-colors ' +
+        (compact ? 'w-6 h-6 ' : 'px-2 py-1 ') +
+        (muted
+          ? 'bg-red-500/20 text-red-300 border border-red-400/40'
+          : 'bg-black/60 text-white/80 border border-white/15 hover:bg-black/80')
+      }
+    >
+      <svg width={compact ? 12 : 11} height={compact ? 12 : 11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        {muted ? (
+          <>
+            <line x1="1" y1="1" x2="23" y2="23" />
+            <path d="M9 9v3a3 3 0 0 0 5.12 2.12" />
+            <path d="M15 9.34V4a3 3 0 0 0-5.94-.6" />
+            <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23" />
+            <line x1="12" y1="19" x2="12" y2="23" />
+          </>
+        ) : (
+          <>
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+            <line x1="12" y1="19" x2="12" y2="23" />
+          </>
+        )}
+      </svg>
+    </button>
+  );
+}
+
+function FullscreenButton({ targetRef }: { targetRef: { current: HTMLElement | null } }) {
+  const isFullscreen = useFullscreenState(targetRef);
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        void toggleFullscreen(targetRef.current);
+      }}
+      title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+      data-testid="fullscreen-toggle"
+      data-fullscreen={isFullscreen}
+      className={
+        'flex items-center justify-center w-7 h-7 rounded-md backdrop-blur transition-colors ' +
+        (isFullscreen
+          ? 'bg-lc-green/20 text-lc-green border border-lc-green/40'
+          : 'bg-black/60 text-white/80 border border-white/15 hover:bg-black/80')
+      }
+    >
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        {isFullscreen ? (
+          <>
+            <path d="M8 3v3a2 2 0 0 1-2 2H3" />
+            <path d="M21 8h-3a2 2 0 0 1-2-2V3" />
+            <path d="M3 16h3a2 2 0 0 1 2 2v3" />
+            <path d="M16 21v-3a2 2 0 0 1 2-2h3" />
+          </>
+        ) : (
+          <>
+            <path d="M8 3H5a2 2 0 0 0-2 2v3" />
+            <path d="M21 8V5a2 2 0 0 0-2-2h-3" />
+            <path d="M3 16v3a2 2 0 0 0 2 2h3" />
+            <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
+          </>
+        )}
+      </svg>
+    </button>
   );
 }
 

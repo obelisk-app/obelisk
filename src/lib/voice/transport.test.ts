@@ -58,6 +58,13 @@ const bridgeFake = vi.hoisted(() => {
       subs.push(sub);
       return () => { const i = subs.indexOf(sub); if (i >= 0) subs.splice(i, 1); };
     }),
+    // Same signature; in production this version wraps the sub with a
+    // 5-second EVENT/EOSE watchdog and exponential-backoff retry.
+    subscribeFilterWatched: vi.fn((filter: SubFilter, sink: (ev: FakeEvent) => void) => {
+      const sub = { filter, sink };
+      subs.push(sub);
+      return () => { const i = subs.indexOf(sub); if (i >= 0) subs.splice(i, 1); };
+    }),
   };
 
   return {
@@ -74,6 +81,7 @@ const bridgeFake = vi.hoisted(() => {
       selfPubkey = 'self-pk';
       impl.publishEvent.mockClear();
       impl.subscribeFilter.mockClear();
+      impl.subscribeFilterWatched.mockClear();
     },
   };
 });
@@ -117,6 +125,28 @@ describe('publishPresenceBeacon', () => {
     const exp = call.tags.find((t) => t[0] === 'expiration');
     expect(exp).toBeDefined();
     expect(parseInt(exp![1], 10)).toBeGreaterThan(0);
+  });
+});
+
+describe('voice subs use the watched variant for relay-drop recovery', () => {
+  it('subscribeRoster goes through subscribeFilterWatched, not the raw subscribeFilter', async () => {
+    // The raw `subscribeFilter` runs once and dies silently when the relay's
+    // WebSocket drops mid-call (network blip, server restart). The watched
+    // variant has a 5s no-EVENT/EOSE watchdog with exponential-backoff retry,
+    // so beacons resume flowing after the WS comes back. Regression guard
+    // against the bug where one browser logs "WebSocket already in
+    // CLOSING/CLOSED" while another never sees a new joiner.
+    const unsub = await subscribeRoster('ch1', () => {});
+    expect(bridgeFake.impl.subscribeFilterWatched).toHaveBeenCalled();
+    expect(bridgeFake.impl.subscribeFilter).not.toHaveBeenCalled();
+    unsub();
+  });
+
+  it('subscribeSignals goes through subscribeFilterWatched', async () => {
+    const unsub = await subscribeSignals('ch1', 'me', () => {});
+    expect(bridgeFake.impl.subscribeFilterWatched).toHaveBeenCalled();
+    expect(bridgeFake.impl.subscribeFilter).not.toHaveBeenCalled();
+    unsub();
   });
 });
 

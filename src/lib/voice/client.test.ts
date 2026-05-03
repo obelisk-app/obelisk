@@ -49,6 +49,17 @@ vi.mock('./transport', () => ({
   sendSignal: transportFake.sendSignal,
   subscribeSignals: transportFake.subscribeSignals,
   getSelfPubkey: transportFake.getSelfPubkey,
+  // Pure function — pass through unchanged for tests. Roster types now
+  // carry `videoTracks` too; the transitive computation only unions
+  // pubkeys, so the body stays the same.
+  transitiveParticipants: (roster: VoicePresence[]) => {
+    const set = new Set<string>();
+    for (const p of roster) {
+      set.add(p.pubkey);
+      for (const pk of p.connectedTo) set.add(pk);
+    }
+    return Array.from(set);
+  },
 }));
 
 // Import VoiceClient after mocks.
@@ -74,8 +85,12 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-function presence(pubkey: string): VoicePresence {
-  return { pubkey, channelId: 'ch1', createdAt: 1, expiresAt: 9999999999 };
+function presence(
+  pubkey: string,
+  connectedTo: string[] = [],
+  videoTracks: ('camera' | 'screen')[] = [],
+): VoicePresence {
+  return { pubkey, channelId: 'ch1', createdAt: 1, expiresAt: 9999999999, connectedTo, videoTracks };
 }
 
 describe('VoiceClient.join', () => {
@@ -87,7 +102,10 @@ describe('VoiceClient.join', () => {
   it('joins, publishes a beacon, and subscribes to roster + signals', async () => {
     const client = new VoiceClient('ch1', { members: [SELF] });
     await client.join();
-    expect(transportFake.publishPresenceBeacon).toHaveBeenCalledWith('ch1');
+    // Beacon now carries the publisher's connected-peer list AND the
+    // active video tracks (both empty on first beacon — no peers yet, no
+    // video).
+    expect(transportFake.publishPresenceBeacon).toHaveBeenCalledWith('ch1', [], []);
     expect(transportFake.subscribeRoster).toHaveBeenCalled();
     expect(transportFake.subscribeSignals).toHaveBeenCalled();
     await client.leave();
@@ -182,8 +200,8 @@ describe('VoiceClient mic/cam/screen toggles', () => {
     // After connect, the encoder cap is applied.
     pc.forceState('connected');
     await flushMicrotasks(8);
-    // Cap reflects 480p preset (1 Mbps).
-    expect(videoSender?.inspect().encodings[0].maxBitrate).toBe(1_000_000);
+    // Cap reflects 480p preset (1.5 Mbps post-bump).
+    expect(videoSender?.inspect().encodings[0].maxBitrate).toBe(1_500_000);
 
     await client.leave();
     useVoiceStore.getState().setVideoQuality('auto');
@@ -254,14 +272,20 @@ describe('VoiceClient quality propagation', () => {
 });
 
 describe('VoiceClient capacity cap', () => {
-  it('caps participants at 4 (v1 hard cap)', async () => {
-    const members = [SELF, PEER1, PEER2, 'd'.repeat(64), 'e'.repeat(64), 'f'.repeat(64)];
+  it('caps audio mesh participants at 8', async () => {
+    // 10 candidates; 8-person audio cap + self trims to <= 7 others.
+    const members = [
+      SELF, PEER1, PEER2,
+      'd'.repeat(64), 'e'.repeat(64), 'f'.repeat(64),
+      '1'.repeat(64), '2'.repeat(64),
+      '3'.repeat(64), '4'.repeat(64),
+    ];
     const client = new VoiceClient('ch1', { members });
     await client.join();
-    transportFake.fireRoster(members.map(presence));
+    transportFake.fireRoster(members.map((m) => presence(m)));
     await flushMicrotasks(20);
-    // Self + at most 3 others = 4 total.
-    expect(client.getParticipants().length).toBeLessThanOrEqual(3);
+    // Self + at most 7 others = 8 total.
+    expect(client.getParticipants().length).toBeLessThanOrEqual(7);
     await client.leave();
   });
 });

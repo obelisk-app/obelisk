@@ -2,6 +2,7 @@ export { getBridge, getBridgeSync, getBridgeImpl, decodeNsec } from './client';
 export { nostrActions } from './actions';
 export {
   useIsLoggedIn,
+  useIsRehydrating,
   useConnectionState,
   useCurrentRelayUrl,
   useConfiguredRelays,

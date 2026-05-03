@@ -121,6 +121,16 @@ export class FakeRtpSender {
   }
 }
 
+/** Subset of the standard `FakeCodecCapability` we need — local
+ *  declaration so the mock works on TS configurations that ship an older
+ *  lib.dom without the named global. */
+export interface FakeCodecCapability {
+  mimeType: string;
+  clockRate?: number;
+  channels?: number;
+  sdpFmtpLine?: string;
+}
+
 interface FakeTransceiver {
   mid: string;
   kind: 'audio' | 'video';
@@ -130,6 +140,9 @@ interface FakeTransceiver {
   /** Whether the remote is currently sending media on this m-line — set
    *  from setRemoteDescription. Drives whether ontrack should fire. */
   remoteSending: boolean;
+  /** Codec preferences set via setCodecPreferences. Tests can inspect. */
+  codecPreferences: FakeCodecCapability[];
+  setCodecPreferences(codecs: FakeCodecCapability[]): void;
 }
 
 interface FakeSdpPayload {
@@ -202,7 +215,16 @@ export class FakeRTCPeerConnection extends TinyEventTarget {
     const sender = new FakeRtpSender(track);
     const mid = String(this.midSeq++);
     sender.mid = mid;
-    this.transceivers.push({ mid, kind: track.kind, sender, direction: 'sendrecv', remoteSending: false });
+    const tx: FakeTransceiver = {
+      mid,
+      kind: track.kind,
+      sender,
+      direction: 'sendrecv',
+      remoteSending: false,
+      codecPreferences: [],
+      setCodecPreferences(codecs: FakeCodecCapability[]) { this.codecPreferences = [...codecs]; },
+    };
+    this.transceivers.push(tx);
     queueMicrotask(() => { this.onnegotiationneeded?.(); });
     return sender;
   }
@@ -310,7 +332,15 @@ export class FakeRTCPeerConnection extends TinyEventTarget {
       if (!tx) {
         const sender = new FakeRtpSender(null);
         sender.mid = ml.mid;
-        tx = { mid: ml.mid, kind: ml.kind, sender, direction: 'recvonly', remoteSending: false };
+        tx = {
+          mid: ml.mid,
+          kind: ml.kind,
+          sender,
+          direction: 'recvonly',
+          remoteSending: false,
+          codecPreferences: [],
+          setCodecPreferences(codecs: FakeCodecCapability[]) { this.codecPreferences = [...codecs]; },
+        };
         this.transceivers.push(tx);
         const remoteMidNum = parseInt(ml.mid, 10);
         if (Number.isFinite(remoteMidNum) && remoteMidNum >= this.midSeq) {
@@ -356,6 +386,17 @@ export class FakeRTCPeerConnection extends TinyEventTarget {
   forceState(state: RTCPeerConnectionState): void {
     this.connectionState = state;
     this.onconnectionstatechange?.();
+  }
+
+  /** Counts test-visible restartIce calls; the production code calls this
+   *  to drive an ICE restart on a stuck connection. */
+  restartIceCalls = 0;
+  restartIce(): void {
+    this.restartIceCalls++;
+    // Real WebRTC fires onnegotiationneeded with new ICE creds. Tests just
+    // need to know it was called — the production code's ICE restart path
+    // is observable via the produced offer count.
+    queueMicrotask(() => { this.onnegotiationneeded?.(); });
   }
 
   // -- internals -------------------------------------------------------
@@ -405,17 +446,43 @@ export function installWebRtcMocks(): InstallHandle {
     MediaStream: g.MediaStream,
   };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  g.RTCPeerConnection = function (config?: RTCConfiguration) {
+  const PcCtor = function (config?: RTCConfiguration) {
     const pc = new FakeRTCPeerConnection(config);
     created.push(pc);
     return pc;
-  } as unknown as typeof RTCPeerConnection;
+  } as unknown as typeof RTCPeerConnection & {
+    getCapabilities?: (kind: 'audio' | 'video') => { codecs: FakeCodecCapability[] } | null;
+  };
+  // Static `getCapabilities` mock — returns enough codec entries that
+  // peer.ts's setCodecPreferences path exercises every branch (VP9,
+  // H.264, VP8, plus an "everything else" entry to verify they get
+  // appended at the bottom).
+  PcCtor.getCapabilities = (kind: 'audio' | 'video') => {
+    if (kind !== 'video') return { codecs: [] };
+    return {
+      codecs: [
+        { mimeType: 'video/VP8', clockRate: 90000 } as FakeCodecCapability,
+        { mimeType: 'video/VP9', clockRate: 90000 } as FakeCodecCapability,
+        { mimeType: 'video/H264', clockRate: 90000 } as FakeCodecCapability,
+        { mimeType: 'video/AV1', clockRate: 90000 } as FakeCodecCapability,
+        { mimeType: 'video/rtx', clockRate: 90000 } as FakeCodecCapability,
+      ],
+    };
+  };
+  g.RTCPeerConnection = PcCtor;
+  // RTCRtpSender.getCapabilities is the API peer.ts actually calls. Mirror
+  // the same data through a sibling object so both paths work.
+  const SenderCtor = (g.RTCRtpSender as { getCapabilities?: typeof PcCtor.getCapabilities } | undefined) ?? {};
+  const prevSenderGetCaps = SenderCtor.getCapabilities;
+  SenderCtor.getCapabilities = PcCtor.getCapabilities;
+  g.RTCRtpSender = SenderCtor;
   g.MediaStream = FakeMediaStream as unknown as typeof MediaStream;
 
   return {
     uninstall() {
       g.RTCPeerConnection = prev.RTCPeerConnection;
       g.MediaStream = prev.MediaStream;
+      SenderCtor.getCapabilities = prevSenderGetCaps;
     },
     pcs: () => [...created],
     last: () => created[created.length - 1],

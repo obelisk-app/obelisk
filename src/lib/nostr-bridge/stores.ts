@@ -41,6 +41,53 @@ export function useIsLoggedIn(): boolean {
   return useSubscription((b, cb) => b.subscribeIsLoggedIn(cb), false);
 }
 
+const SESSION_STORAGE_KEY = 'obelisk-dex/session';
+const LEGACY_SESSION_STORAGE_KEY = 'obeliskord/session';
+
+function hasStoredSession(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return !!(
+      window.localStorage.getItem(SESSION_STORAGE_KEY) ??
+      window.localStorage.getItem(LEGACY_SESSION_STORAGE_KEY)
+    );
+  } catch {
+    return false;
+  }
+}
+
+function useMounted(): boolean {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  return mounted;
+}
+
+/**
+ * `true` while a stored session is being rehydrated on cold load. The bridge
+ * has parsed credentials out of localStorage and is awaiting `connect()`'s
+ * relay handshake, but {@link useIsLoggedIn} stays `false` until that
+ * resolves (see `docs/auth-and-data-loading.md` §3 for the contract).
+ *
+ * UI consumers use this to suppress the login modal during that window —
+ * without it, users navigating from the landing page back to `/app` see a
+ * login modal even though their NIP-07 / nsec / bunker session is reconnecting
+ * silently in the background.
+ *
+ * Returns `false` during SSR and the first client render to avoid a hydration
+ * mismatch; on every subsequent render we read localStorage synchronously so
+ * logout (which clears the entry before flipping `isLoggedIn`) doesn't briefly
+ * latch into a stale "still rehydrating" state.
+ */
+export function useIsRehydrating(): boolean {
+  const isLoggedIn = useIsLoggedIn();
+  const mounted = useMounted();
+  if (!mounted) return false;
+  if (isLoggedIn) return false;
+  return hasStoredSession();
+}
+
 export function useConnectionState(): string {
   return useSubscription((b, cb) => b.subscribeConnectionState(cb), 'Disconnected');
 }

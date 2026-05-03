@@ -42,3 +42,48 @@ describe('voice store quality slice', () => {
     expect(useVoiceStore.getState().peerQuality).toEqual({});
   });
 });
+
+describe('voice store speaking + per-peer mute', () => {
+  beforeEach(() => {
+    useVoiceStore.setState({ speakingPubkeys: {}, localMutedPubkeys: {} });
+  });
+
+  it('flips speakingPubkeys idempotently', () => {
+    const s = useVoiceStore.getState();
+    s.setSpeaking('alice', true);
+    expect(useVoiceStore.getState().speakingPubkeys.alice).toBe(true);
+    // Re-asserting true returns the same object reference (no churn).
+    const before = useVoiceStore.getState().speakingPubkeys;
+    s.setSpeaking('alice', true);
+    expect(useVoiceStore.getState().speakingPubkeys).toBe(before);
+    s.setSpeaking('alice', false);
+    expect(useVoiceStore.getState().speakingPubkeys.alice).toBeUndefined();
+  });
+
+  it('mutes and unmutes individual peers', () => {
+    const s = useVoiceStore.getState();
+    s.muteLocally('alice');
+    s.muteLocally('bob');
+    expect(Object.keys(useVoiceStore.getState().localMutedPubkeys).sort()).toEqual(['alice', 'bob']);
+    s.unmuteLocally('alice');
+    expect(useVoiceStore.getState().localMutedPubkeys.alice).toBeUndefined();
+    expect(useVoiceStore.getState().localMutedPubkeys.bob).toBe(true);
+  });
+
+  it('clearLocalMutes empties the set in one call', () => {
+    const s = useVoiceStore.getState();
+    s.muteLocally('a');
+    s.muteLocally('b');
+    s.clearLocalMutes();
+    expect(useVoiceStore.getState().localMutedPubkeys).toEqual({});
+  });
+
+  it('leaveVoice wipes both transient sets', () => {
+    const s = useVoiceStore.getState();
+    s.setSpeaking('alice', true);
+    s.muteLocally('alice');
+    s.leaveVoice();
+    expect(useVoiceStore.getState().speakingPubkeys).toEqual({});
+    expect(useVoiceStore.getState().localMutedPubkeys).toEqual({});
+  });
+});

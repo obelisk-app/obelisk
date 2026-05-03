@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   nostrActions,
   useIsLoggedIn,
+  useIsRehydrating,
   useConnectionState,
   useCurrentRelayUrl,
   useGroups,
@@ -84,6 +85,7 @@ const SHOW_MEMBERS_KEY = 'obelisk-dex/show-members';
 
 export default function AppShell() {
   const isLoggedIn = useIsLoggedIn();
+  const isRehydrating = useIsRehydrating();
   const conn = useConnectionState();
   const relay = useCurrentRelayUrl();
   const [view, setView] = useState<View>({ kind: 'empty' });
@@ -133,7 +135,14 @@ export default function AppShell() {
     window.localStorage.setItem(SHOW_MEMBERS_KEY, showMembers ? '1' : '0');
   }, [showMembers]);
 
-  if (!isLoggedIn) return (<><LoginModal /><ActivityIndicator /></>);
+  if (!isLoggedIn) {
+    // A stored session is being reconnected (cold load → relay handshake +
+    // optional NIP-46 bunker pre-warm). Show a connecting screen instead of
+    // the LoginModal so the user isn't told they're logged out when they're
+    // not. See `useIsRehydrating` and docs/auth-and-data-loading.md §3.
+    if (isRehydrating) return (<><RehydratingScreen /><ActivityIndicator /></>);
+    return (<><LoginModal /><ActivityIndicator /></>);
+  }
 
   const railMode: { kind: 'dm' } | { kind: 'relay'; url: string } =
     view.kind === 'dm' ? { kind: 'dm' } : { kind: 'relay', url: relay };
@@ -141,11 +150,33 @@ export default function AppShell() {
   const closeDrawer = () => setSidebarOpen(false);
 
   return (
-    <div className="flex h-screen w-screen flex-col overflow-hidden bg-lc-black text-lc-white">
+    <div
+      className="flex w-screen flex-col overflow-hidden bg-lc-black text-lc-white"
+      style={{ height: '100dvh' }}
+      onTouchStart={(e) => {
+        const t = e.touches[0];
+        if (!t) return;
+        if (t.clientX <= 24 && !sidebarOpen) {
+          (e.currentTarget as HTMLElement).dataset.swipeStart = String(t.clientX);
+        }
+      }}
+      onTouchMove={(e) => {
+        const start = (e.currentTarget as HTMLElement).dataset.swipeStart;
+        if (start === undefined) return;
+        const t = e.touches[0];
+        if (!t) return;
+        if (t.clientX - parseFloat(start) > 50) {
+          setSidebarOpen(true);
+          delete (e.currentTarget as HTMLElement).dataset.swipeStart;
+        }
+      }}
+      onTouchEnd={(e) => { delete (e.currentTarget as HTMLElement).dataset.swipeStart; }}
+    >
       <MessageZapModal />
       <RelayAccessModal />
       <RelayTopBar relay={relay} onOpenSidebar={() => setSidebarOpen(true)} />
-      <div className="flex flex-1 overflow-hidden relative">
+      <div className="md:hidden"><VoiceStatusBar /></div>
+      <div className="flex flex-1 overflow-hidden relative min-h-0">
         {/* Mobile backdrop */}
         {sidebarOpen && (
           <div
@@ -210,6 +241,22 @@ export default function AppShell() {
   );
 }
 
+function RehydratingScreen() {
+  return (
+    <div
+      className="lc-grid-bg fixed inset-0 z-50 flex items-center justify-center bg-lc-black p-4"
+      data-testid="rehydrating-screen"
+      role="status"
+      aria-live="polite"
+    >
+      <div className="flex flex-col items-center gap-4">
+        <div className="lc-spinner" />
+        <div className="text-sm text-lc-muted">Reconnecting…</div>
+      </div>
+    </div>
+  );
+}
+
 function FloatingUserPanel({ sidebarWidth }: { sidebarWidth: number }) {
   // Server rail is 72px wide; panel sits 8px from left with 8px right gap to
   // the sidebar's right edge, so it spans the full sidebar+rail width.
@@ -247,16 +294,16 @@ function RelayTopBar({ relay, onOpenSidebar }: { relay: string; onOpenSidebar?: 
   const iconUrl = info?.icon;
   return (
     <div
-      className="h-10 shrink-0 bg-lc-black px-3"
+      className="h-14 md:h-10 shrink-0 bg-lc-black px-3"
       style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
     >
       {onOpenSidebar && (
         <button
           onClick={onOpenSidebar}
           aria-label="Open menu"
-          className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-lc-muted hover:text-lc-white hover:bg-lc-border/50 transition-colors md:hidden"
+          className="absolute left-2 top-1/2 -translate-y-1/2 p-3 md:p-1.5 rounded-lg text-lc-muted hover:text-lc-white hover:bg-lc-border/50 transition-colors md:hidden"
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg className="w-7 h-7 md:w-5 md:h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="3" y1="6" x2="21" y2="6" />
             <line x1="3" y1="12" x2="21" y2="12" />
             <line x1="3" y1="18" x2="21" y2="18" />

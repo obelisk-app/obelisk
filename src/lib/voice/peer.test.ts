@@ -94,6 +94,65 @@ describe('Peer.setLocalTrack', () => {
     expect(sent.find((s) => s.type === 'offer')).toBeDefined();
     expect(sent.find((s) => s.type === 'trackinfo')).toBeDefined();
   });
+
+  it('biases video transceiver toward VP9 → H.264 → VP8', async () => {
+    const { peer } = makePeer();
+    const track = new FakeMediaStreamTrack('video') as unknown as MediaStreamTrack;
+    await peer.setLocalTrack('camera', track);
+    await flushMicrotasks(8);
+
+    const pc = peer.pc as unknown as FakeRTCPeerConnection;
+    const tx = pc.getTransceivers().find((t) => t.kind === 'video');
+    expect(tx).toBeDefined();
+    const order = tx!.codecPreferences.map((c) => c.mimeType.toLowerCase());
+    // First three slots must be VP9, H.264, VP8 in that exact order.
+    expect(order.slice(0, 3)).toEqual(['video/vp9', 'video/h264', 'video/vp8']);
+    // AV1 / RTX still appear at the bottom — we don't drop unknown codecs.
+    expect(order).toContain('video/av1');
+    expect(order).toContain('video/rtx');
+  });
+
+  it('does not call setCodecPreferences for audio tracks', async () => {
+    const { peer } = makePeer();
+    const track = new FakeMediaStreamTrack('audio') as unknown as MediaStreamTrack;
+    await peer.setLocalTrack('audio', track);
+    await flushMicrotasks(8);
+
+    const pc = peer.pc as unknown as FakeRTCPeerConnection;
+    const tx = pc.getTransceivers().find((t) => t.kind === 'audio');
+    expect(tx).toBeDefined();
+    expect(tx!.codecPreferences).toEqual([]);
+  });
+});
+
+describe('Peer degradationPreference (video)', () => {
+  it('camera sender is configured for maintain-framerate', async () => {
+    const { peer } = makePeer();
+    const track = new FakeMediaStreamTrack('video') as unknown as MediaStreamTrack;
+    await peer.setLocalTrack('camera', track);
+    await peer.setLocalVideoCap({ maxBitrate: 3_500_000, maxFramerate: 30 });
+    const pc = peer.pc as unknown as FakeRTCPeerConnection;
+    pc.forceState('connected');
+    await flushMicrotasks(8);
+
+    const sender = pc.getSenders().find((s) => s.track?.kind === 'video');
+    const params = sender!.inspect() as unknown as { degradationPreference?: string };
+    expect(params.degradationPreference).toBe('maintain-framerate');
+  });
+
+  it('screen sender is configured for maintain-resolution', async () => {
+    const { peer } = makePeer();
+    const track = new FakeMediaStreamTrack('video') as unknown as MediaStreamTrack;
+    await peer.setLocalTrack('screen', track);
+    await peer.setLocalVideoCap({ maxBitrate: 5_000_000, maxFramerate: 30 });
+    const pc = peer.pc as unknown as FakeRTCPeerConnection;
+    pc.forceState('connected');
+    await flushMicrotasks(8);
+
+    const sender = pc.getSenders().find((s) => s.track?.kind === 'video');
+    const params = sender!.inspect() as unknown as { degradationPreference?: string };
+    expect(params.degradationPreference).toBe('maintain-resolution');
+  });
 });
 
 describe('Peer perfect-negotiation glare', () => {
@@ -166,7 +225,7 @@ describe('Peer encoder-cap timing', () => {
     await flushMicrotasks(8);
 
     const audioSender = pc.getSenders()[0];
-    expect(audioSender.inspect().encodings[0].maxBitrate).toBe(128_000);
+    expect(audioSender.inspect().encodings[0].maxBitrate).toBe(256_000);
   });
 
   it('applies a video bitrate cap when setLocalVideoCap is called after connected', async () => {

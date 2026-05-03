@@ -4,11 +4,19 @@
  * `auto` lets the encoder + adaptive loop in `stats.ts` pick the bitrate;
  * the explicit tiers cap both the resolution requested via `getUserMedia`
  * and the encoder's `maxBitrate`/`maxFramerate` via `setParameters`.
+ *
+ * Bitrate caps are tuned for a mesh where each peer sends N-1 outbound
+ * streams. At the 8-participant cap with `MAX_VIDEO_SLOTS = 4`, a peer
+ * sending 1080p60 at 8 Mbps ships ~24 Mbps worst-case to the other three
+ * video viewers — fits gigabit fiber comfortably and most modern home
+ * upstream. The 60 fps tier is opt-in for users with the bandwidth budget.
  */
 
-export type VideoQuality = 'auto' | '1080p' | '720p' | '480p';
+export type VideoQuality = 'auto' | '1080p60' | '1080p' | '720p60' | '720p' | '480p';
 
-export const VIDEO_QUALITIES: readonly VideoQuality[] = ['auto', '1080p', '720p', '480p'];
+export const VIDEO_QUALITIES: readonly VideoQuality[] = [
+  'auto', '1080p60', '1080p', '720p60', '720p', '480p',
+];
 
 export interface QualityPreset {
   /** `MediaTrackConstraints` overlay for `getUserMedia({ video: ... })`. */
@@ -33,15 +41,43 @@ const PRESETS: Record<VideoQuality, QualityPreset> = {
     maxFramerate: 30,
     maxHeight: null,
   },
+  '1080p60': {
+    constraints: {
+      width: { ideal: 1920 },
+      height: { ideal: 1080 },
+      frameRate: { ideal: 60, min: 30 },
+    },
+    // Smooth-motion tier — 8 Mbps matches what Twitch/YouTube use as the
+    // upper bound for 1080p60 H.264. With VP9 codec preference active
+    // (see `peer.ts`), the same bitrate yields visibly sharper detail.
+    maxBitrate: 8_000_000,
+    maxFramerate: 60,
+    maxHeight: 1080,
+  },
   '1080p': {
     constraints: {
       width: { ideal: 1920 },
       height: { ideal: 1080 },
       frameRate: { ideal: 30 },
     },
-    maxBitrate: 4_000_000,
+    // Bumped from 4 → 6 Mbps. The legacy 4 Mbps cap left visible blocking
+    // on hair / textured backgrounds even on still video; 6 Mbps is the
+    // floor where 1080p stays clean under typical motion.
+    maxBitrate: 6_000_000,
     maxFramerate: 30,
     maxHeight: 1080,
+  },
+  '720p60': {
+    constraints: {
+      width: { ideal: 1280 },
+      height: { ideal: 720 },
+      frameRate: { ideal: 60, min: 30 },
+    },
+    // Smooth motion for users on tighter upstream — half the bitrate of
+    // 1080p60 but the framerate is what makes a call feel responsive.
+    maxBitrate: 5_000_000,
+    maxFramerate: 60,
+    maxHeight: 720,
   },
   '720p': {
     constraints: {
@@ -49,7 +85,9 @@ const PRESETS: Record<VideoQuality, QualityPreset> = {
       height: { ideal: 720 },
       frameRate: { ideal: 30 },
     },
-    maxBitrate: 2_500_000,
+    // Bumped from 2.5 → 3.5 Mbps. The default tier most calls land on; the
+    // extra megabit keeps faces sharp through head movement.
+    maxBitrate: 3_500_000,
     maxFramerate: 30,
     maxHeight: 720,
   },
@@ -59,7 +97,10 @@ const PRESETS: Record<VideoQuality, QualityPreset> = {
       height: { ideal: 480 },
       frameRate: { ideal: 30 },
     },
-    maxBitrate: 1_000_000,
+    // Bumped from 1 → 1.5 Mbps. At 1 Mbps motion artifacts were aggressive;
+    // 1.5 Mbps brings clean 480p in line with what mobile carriers push for
+    // their own 480p video calls.
+    maxBitrate: 1_500_000,
     maxFramerate: 30,
     maxHeight: 480,
   },
@@ -84,5 +125,10 @@ export const MIC_CONSTRAINTS: MediaTrackConstraints = {
   // setParameters(AUDIO_MAX_BITRATE) on the sender.
 };
 
-/** Encoder cap for outbound mic — Opus tops out at ~128 kbps for stereo music. */
-export const AUDIO_MAX_BITRATE = 128_000;
+/**
+ * Encoder cap for outbound mic. Bumped from 128 kbps → 256 kbps so voice
+ * stays crisp even when there's incidental music or ambient detail in the
+ * background; Opus tops out at ~256 kbps for stereo material and the
+ * extra bandwidth is negligible vs the video budget.
+ */
+export const AUDIO_MAX_BITRATE = 256_000;

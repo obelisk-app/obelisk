@@ -574,7 +574,14 @@ class BridgeImpl implements NostrBridge {
       this.myLoginMethod.set(parsed.loginMethod);
       this.isLoggedIn.set(true);
     } catch {
-      // bad storage, ignore
+      // Corrupt storage: drop both the current and legacy session entries so
+      // `useIsRehydrating` doesn't latch true forever on the next paint
+      // (the LoginModal would never appear and the user would be locked out
+      // looking at a permanent "Reconnecting…" screen).
+      if (typeof window !== 'undefined') {
+        window.localStorage.removeItem(STORAGE_KEY);
+        window.localStorage.removeItem(LEGACY_STORAGE_KEY);
+      }
     }
   }
 

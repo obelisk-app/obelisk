@@ -23,6 +23,21 @@ interface VoiceState {
   receivedVideoQuality: VideoQuality;
   /** Per-peer connection-quality samples, keyed by remote pubkey. */
   peerQuality: Record<string, QualitySample>;
+  /**
+   * Pubkeys currently producing audio above the speaking threshold. Driven
+   * by the per-peer SpeakingDetector instances inside the VoiceClient and
+   * read by the UI to pulse the speaking orb on each tile. Stored as a
+   * frozen object keyed by pubkey because Zustand reference-equality on
+   * `Set` doesn't trigger re-renders cleanly.
+   */
+  speakingPubkeys: Readonly<Record<string, true>>;
+  /**
+   * Pubkeys this client has muted "for me only" — they're still publishing
+   * audio to the channel, but our `<audio>` elements bind their `.muted`
+   * attribute to membership in this set so we don't hear them. No Nostr
+   * traffic; never affects other participants.
+   */
+  localMutedPubkeys: Readonly<Record<string, true>>;
 
   setVoiceChannel: (channelId: string | null) => void;
   setMuted: (muted: boolean) => void;
@@ -36,6 +51,14 @@ interface VoiceState {
   setReceivedVideoQuality: (q: VideoQuality) => void;
   setPeerQuality: (pubkey: string, sample: QualitySample) => void;
   clearPeerQuality: (pubkey: string) => void;
+  /** Mark `pubkey` as actively speaking or silent. Idempotent. */
+  setSpeaking: (pubkey: string, speaking: boolean) => void;
+  /** Mute a single peer for the local listener. */
+  muteLocally: (pubkey: string) => void;
+  /** Restore audio for a single peer. */
+  unmuteLocally: (pubkey: string) => void;
+  /** Drop every per-peer mute — used when leaving the call. */
+  clearLocalMutes: () => void;
   /** Reset to defaults — called when the call ends. */
   leaveVoice: () => void;
 }
@@ -76,6 +99,8 @@ export const useVoiceStore = create<VoiceState>()((set, get) => ({
   videoQuality: persisted.videoQuality,
   receivedVideoQuality: persisted.receivedVideoQuality,
   peerQuality: {},
+  speakingPubkeys: {},
+  localMutedPubkeys: {},
 
   setVoiceChannel: (currentVoiceChannelId) => set({ currentVoiceChannelId }),
   setMuted: (isMuted) => set({ isMuted }),
@@ -102,6 +127,30 @@ export const useVoiceStore = create<VoiceState>()((set, get) => ({
       delete next[pubkey];
       return { peerQuality: next };
     }),
+  setSpeaking: (pubkey, speaking) =>
+    set((s) => {
+      const has = pubkey in s.speakingPubkeys;
+      if (speaking && has) return s;
+      if (!speaking && !has) return s;
+      const next = { ...s.speakingPubkeys };
+      if (speaking) next[pubkey] = true as const;
+      else delete next[pubkey];
+      return { speakingPubkeys: next };
+    }),
+  muteLocally: (pubkey) =>
+    set((s) => {
+      if (pubkey in s.localMutedPubkeys) return s;
+      return { localMutedPubkeys: { ...s.localMutedPubkeys, [pubkey]: true as const } };
+    }),
+  unmuteLocally: (pubkey) =>
+    set((s) => {
+      if (!(pubkey in s.localMutedPubkeys)) return s;
+      const next = { ...s.localMutedPubkeys };
+      delete next[pubkey];
+      return { localMutedPubkeys: next };
+    }),
+  clearLocalMutes: () =>
+    set((s) => (Object.keys(s.localMutedPubkeys).length === 0 ? s : { localMutedPubkeys: {} })),
   leaveVoice: () =>
     set({
       currentVoiceChannelId: null,
@@ -112,5 +161,7 @@ export const useVoiceStore = create<VoiceState>()((set, get) => ({
       isConnecting: false,
       error: null,
       peerQuality: {},
+      speakingPubkeys: {},
+      localMutedPubkeys: {},
     }),
 }));

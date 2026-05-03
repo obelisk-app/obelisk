@@ -6,7 +6,23 @@
 
 export type VoiceTrackKind = 'audio' | 'camera' | 'screen' | 'screen-audio';
 
-export type VoiceSignalType = 'offer' | 'answer' | 'ice' | 'bye' | 'trackinfo' | 'qualityhint';
+/**
+ * Signaling-event payload types.
+ *
+ * `requestReset` is the polite-side recovery escalation: when a polite peer
+ * has been waiting too long for a stuck handshake to recover on its own,
+ * it asks the impolite peer to tear down the RTCPeerConnection and rebuild
+ * it. The impolite side is the only one who can drive the rebuild without
+ * causing offer glare, so the polite side defers to it.
+ */
+export type VoiceSignalType =
+  | 'offer'
+  | 'answer'
+  | 'ice'
+  | 'bye'
+  | 'trackinfo'
+  | 'qualityhint'
+  | 'requestReset';
 
 export interface VoiceQualityHint {
   /** Max vertical resolution requested for the sender's outbound video.
@@ -35,6 +51,9 @@ export interface VoiceSignalPayload {
   seq: number;
 }
 
+/** Outbound video track kinds that count against the room's video-slot cap. */
+export type VideoSlotKind = 'camera' | 'screen';
+
 export interface VoicePresence {
   pubkey: string;
   channelId: string;
@@ -42,4 +61,30 @@ export interface VoicePresence {
   createdAt: number;
   /** Wall-clock seconds when the beacon should be considered gone. */
   expiresAt: number;
+  /**
+   * Pubkeys this beacon's publisher currently has live RTCPeerConnections
+   * with (state === 'connected'). Lets a fresh joiner discover the rest of
+   * the room transitively when their relay drops some publishers' beacons:
+   * if A is connected to B and only A's beacon reaches us, we still know
+   * to dial B. Empty when the publisher has no successful connections yet.
+   */
+  connectedTo: readonly string[];
+  /**
+   * Outbound video tracks the publisher is currently sending (camera and/or
+   * screen-share). Drives the room-wide video-slot cap: every participant
+   * counts the union of these across all live beacons and refuses to start
+   * a new video track when the count would exceed `MAX_VIDEO_SLOTS`.
+   *
+   * Race-overflow is resolved deterministically by `(createdAt asc, pubkey
+   * asc)` sort across the flattened (publisher, kind, createdAt) list — the
+   * tracks beyond the leading slice get auto-evicted by their owners.
+   */
+  videoTracks: readonly VideoSlotKind[];
+}
+
+/** Snapshot of which local media slots the VoiceClient currently has open. */
+export interface LocalTracks {
+  mic: boolean;
+  camera: boolean;
+  screen: boolean;
 }
