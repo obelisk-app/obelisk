@@ -2532,14 +2532,22 @@ function ChatStoreMembersAdapter({ groupId }: { groupId: string }) {
 
   const adminSet = useMemo(() => new Set(admins), [admins]);
 
-  // Seed the list with prefix-only display names; per-pubkey rows below
-  // refresh entries as metadata streams in.
+  // Seed/refresh the list when admin or member sets change. Preserve any
+  // metadata (displayName/picture/nip05/customRoles) already attached to a
+  // row — without this, every relay-driven update to admins/members (e.g.
+  // a fresh 39001/39002 after NIP-42 AUTH) wipes every row back to
+  // `pubkey.slice(0,10)` with no picture, and `MemberMetaSync` only re-runs
+  // when `meta` itself changes, so the cached metadata never re-applies and
+  // names/pictures vanish until a manual refresh.
   useEffect(() => {
-    const list: MemberInfo[] = allPubkeys.map((pubkey) => ({
-      pubkey,
-      displayName: pubkey.slice(0, 10),
-      role: adminSet.has(pubkey) ? 'admin' : 'member',
-    }));
+    const prev = useChatStore.getState().memberList;
+    const prevByPk = new Map(prev.map((m) => [m.pubkey, m]));
+    const list: MemberInfo[] = allPubkeys.map((pubkey) => {
+      const role = adminSet.has(pubkey) ? 'admin' : 'member';
+      const existing = prevByPk.get(pubkey);
+      if (existing) return { ...existing, role };
+      return { pubkey, displayName: pubkey.slice(0, 10), role };
+    });
     setMemberList(list);
     setOnlinePubkeys(allPubkeys);
   }, [allPubkeys, adminSet, setMemberList, setOnlinePubkeys]);
