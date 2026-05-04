@@ -6,6 +6,7 @@ import { LocaleProvider } from '@/i18n/context';
 import type { Locale } from '@/i18n/index';
 import ToastStack from '@/components/ToastStack';
 import './globals.css';
+import '@nostr-wot/ui/styles.css';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -174,7 +175,11 @@ export default async function RootLayout({
           `}
         </Script>
       </head>
-      <body className={`${inter.className} bg-lc-black text-lc-white antialiased`}>
+      <body
+        className={`${inter.className} bg-lc-black text-lc-white antialiased`}
+        data-nui-root
+        data-nui-theme="la-crypta"
+      >
         <LocaleProvider initialLocale={locale}>
           {children}
           <ToastStack />

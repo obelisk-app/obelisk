@@ -22,7 +22,6 @@ import {
   readPersistedNip46,
   type LoginMethodId,
 } from '@nostr-wot/ui';
-import '@nostr-wot/ui/styles.css';
 import { nip19, getPublicKey } from 'nostr-tools';
 import { nostrActions } from '@/lib/nostr-bridge';
 

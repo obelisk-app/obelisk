@@ -13,7 +13,6 @@
 
 import { useState } from 'react';
 import { LoginWidget, NostrSessionProvider } from '@nostr-wot/ui';
-import '@nostr-wot/ui/styles.css';
 import { nostrActions } from '@/lib/nostr-bridge';
 import { useIsLoggedIn, useMyPubkey } from '@/lib/nostr-bridge';
 
