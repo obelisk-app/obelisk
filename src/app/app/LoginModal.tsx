@@ -16,7 +16,7 @@
  */
 
 import {
-  LoginWidget,
+  LoginModal as SdkLoginModal,
   NostrSessionProvider,
   SIGNER_STORAGE_KEY_NSEC,
   readPersistedNip46,
@@ -62,18 +62,16 @@ async function routeToBridge(method: LoginMethodId, pubkey: string): Promise<voi
 export default function LoginModal({ onSuccess }: { onSuccess?: () => void } = {}) {
   return (
     <NostrSessionProvider autoRestore={false} theme="la-crypta">
-      <div className="lc-grid-bg fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-        <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-lc-border bg-lc-dark p-6 shadow-2xl sm:p-8">
-          <LoginWidget
-            title="Connect to Nostr"
-            subtitle="Choose your login method"
-            onLogin={async ({ pubkey, method }) => {
-              await routeToBridge(method, pubkey);
-              onSuccess?.();
-            }}
-          />
-        </div>
-      </div>
+      <SdkLoginModal
+        open
+        onClose={() => { /* AppShell only mounts this when logged out — no dismiss */ }}
+        title="Connect to Nostr"
+        subtitle="Choose your login method"
+        onLogin={async ({ pubkey, method }) => {
+          await routeToBridge(method, pubkey);
+          onSuccess?.();
+        }}
+      />
     </NostrSessionProvider>
   );
 }
