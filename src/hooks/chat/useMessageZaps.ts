@@ -16,6 +16,7 @@ export interface MessageZapTotal {
   totalSats: number;
   count: number;
   zappers: Set<string>;
+  zapperAmounts: Map<string, number>;
 }
 
 interface ReceiptEntry {
@@ -77,12 +78,14 @@ export function useMessageZaps(messageIds: ReadonlyArray<string>): Map<string, M
     for (const r of receipts.values()) {
       let entry = out.get(r.messageId);
       if (!entry) {
-        entry = { totalSats: 0, count: 0, zappers: new Set() };
+        entry = { totalSats: 0, count: 0, zappers: new Set(), zapperAmounts: new Map() };
         out.set(r.messageId, entry);
       }
-      entry.totalSats += Math.floor(r.amountMsat / 1000);
+      const sats = Math.floor(r.amountMsat / 1000);
+      entry.totalSats += sats;
       entry.count += 1;
       entry.zappers.add(r.senderPubkey);
+      entry.zapperAmounts.set(r.senderPubkey, (entry.zapperAmounts.get(r.senderPubkey) ?? 0) + sats);
     }
     return out;
   }, [receipts]);

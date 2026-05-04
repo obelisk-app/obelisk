@@ -42,12 +42,7 @@ import { useVoiceChatPane } from '@/hooks/chat/useVoiceChatPane';
 import { useChatStore } from '@/store/chat';
 import type { MemberInfo } from '@/lib/mentions';
 import { useToastStore } from '@/store/toast';
-import {
-  EMOJI_CATEGORIES,
-  EMOJI_CATEGORY_NAMES,
-  SEARCHABLE_EMOJI,
-  normalizeEmojiKeyword,
-} from '@/components/chat/emoji-data';
+import EmojiPicker from '@/components/chat/EmojiPicker';
 import { useMessageZaps, type MessageZapTotal } from '@/hooks/chat/useMessageZaps';
 import { useMessageZapStore } from '@/store/messageZap';
 import MessageZapModal from '@/components/chat/MessageZapModal';
@@ -175,7 +170,7 @@ export default function AppShell() {
       <MessageZapModal />
       <RelayAccessModal />
       <RelayTopBar relay={relay} onOpenSidebar={() => setSidebarOpen(true)} />
-      <div className="md:hidden"><VoiceStatusBar /></div>
+      <MobileVoiceStatusBar currentView={view} />
       <div className="flex flex-1 overflow-hidden relative min-h-0">
         {/* Mobile backdrop */}
         {sidebarOpen && (
@@ -310,45 +305,45 @@ function RelayTopBar({ relay, onOpenSidebar }: { relay: string; onOpenSidebar?: 
           </svg>
         </button>
       )}
-      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+      <div className="absolute right-2 md:right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
         <button
-          className="p-1.5 rounded-lg text-lc-muted hover:text-lc-white hover:bg-lc-border/40 transition-colors"
+          className="p-2.5 md:p-1.5 rounded-lg text-lc-muted hover:text-lc-white hover:bg-lc-border/40 transition-colors"
           title="Inbox"
           aria-label="Inbox"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg className="w-6 h-6 md:w-4 md:h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M22 12h-6l-2 3h-4l-2-3H2" />
             <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
           </svg>
         </button>
         <a
           href="/"
-          className="p-1.5 rounded-lg text-lc-muted hover:text-lc-white hover:bg-lc-border/40 transition-colors inline-flex"
+          className="p-2.5 md:p-1.5 rounded-lg text-lc-muted hover:text-lc-white hover:bg-lc-border/40 transition-colors inline-flex"
           title="Help"
           aria-label="Help"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg className="w-6 h-6 md:w-4 md:h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10" />
             <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
             <line x1="12" y1="17" x2="12.01" y2="17" />
           </svg>
         </a>
       </div>
-      <div className="flex items-center gap-2 min-w-0 max-w-[60%]">
+      <div className="flex items-center gap-2 min-w-0 max-w-[55%]">
         {iconUrl && !iconFailed ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={iconUrl}
             alt=""
             onError={() => setIconFailed(true)}
-            className="w-5 h-5 rounded-full shrink-0 object-cover"
+            className="w-7 h-7 md:w-5 md:h-5 rounded-full shrink-0 object-cover"
           />
         ) : (
-          <div className="w-5 h-5 rounded-full bg-lc-olive flex items-center justify-center text-lc-green text-[10px] font-bold shrink-0">
+          <div className="w-7 h-7 md:w-5 md:h-5 rounded-full bg-lc-olive flex items-center justify-center text-lc-green text-xs md:text-[10px] font-bold shrink-0">
             {displayName[0]?.toUpperCase() || 'R'}
           </div>
         )}
-        <span className="text-xs font-semibold text-lc-white truncate">{displayName}</span>
+        <span className="text-sm md:text-xs font-semibold text-lc-white truncate">{displayName}</span>
       </div>
     </div>
   );
@@ -2111,6 +2106,73 @@ function ReplyAuthorName({ pubkey }: { pubkey: string }) {
   return <span className="font-semibold text-lc-white">{name}</span>;
 }
 
+function PubkeyName({ pubkey }: { pubkey: string }) {
+  const meta = useUserMetadata(pubkey);
+  return <>{meta?.displayName || meta?.name || pubkey.slice(0, 10)}</>;
+}
+
+function HoverCardShell({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div
+      role="tooltip"
+      className="pointer-events-none invisible absolute bottom-full left-0 z-30 mb-1 w-56 rounded-md border border-lc-border bg-lc-dark p-2 text-xs text-lc-white opacity-0 shadow-2xl transition-opacity group-hover/pill:visible group-hover/pill:opacity-100"
+    >
+      <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-lc-muted">
+        {title}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function ReactorHoverCard({
+  emoji,
+  pubkeys,
+}: {
+  emoji: string;
+  pubkeys: ReadonlySet<string>;
+}) {
+  const list = useMemo(() => Array.from(pubkeys), [pubkeys]);
+  const shown = list.slice(0, 20);
+  const extra = list.length - shown.length;
+  return (
+    <HoverCardShell title={`${emoji} ${list.length} ${list.length === 1 ? 'reaction' : 'reactions'}`}>
+      <ul className="space-y-0.5">
+        {shown.map((pk) => (
+          <li key={pk} className="truncate">
+            <PubkeyName pubkey={pk} />
+          </li>
+        ))}
+        {extra > 0 && <li className="text-lc-muted">…and {extra} more</li>}
+      </ul>
+    </HoverCardShell>
+  );
+}
+
+function ZapperHoverCard({ zapTotal }: { zapTotal: MessageZapTotal }) {
+  const entries = useMemo(
+    () => Array.from(zapTotal.zapperAmounts.entries()).sort((a, b) => b[1] - a[1]),
+    [zapTotal],
+  );
+  const shown = entries.slice(0, 20);
+  const extra = entries.length - shown.length;
+  return (
+    <HoverCardShell
+      title={`⚡ ${zapTotal.totalSats.toLocaleString()} sats · ${zapTotal.count} zap${zapTotal.count === 1 ? '' : 's'}`}
+    >
+      <ul className="space-y-0.5">
+        {shown.map(([pk, sats]) => (
+          <li key={pk} className="flex items-center justify-between gap-2 truncate">
+            <span className="truncate"><PubkeyName pubkey={pk} /></span>
+            <span className="shrink-0 text-yellow-300">{sats.toLocaleString()}</span>
+          </li>
+        ))}
+        {extra > 0 && <li className="text-lc-muted">…and {extra} more</li>}
+      </ul>
+    </HoverCardShell>
+  );
+}
+
 function ReplyPreviewRow({
   parent,
   onJump,
@@ -2288,35 +2350,41 @@ function MessageRow({
         {(counts.length > 0 || (zapTotal && zapTotal.totalSats > 0)) && (
           <div className="mt-1 flex flex-wrap gap-1">
             {zapTotal && zapTotal.totalSats > 0 && (
-              <button
-                onClick={onZapClick}
-                disabled={msg.pubkey === myPubkey}
-                title={`${zapTotal.count} zap${zapTotal.count === 1 ? '' : 's'} from ${zapTotal.zappers.size} ${zapTotal.zappers.size === 1 ? 'person' : 'people'}`}
-                className="inline-flex items-center gap-1 rounded-full border border-yellow-500/40 bg-yellow-500/10 px-2 py-0.5 text-xs text-yellow-200 hover:border-yellow-500 disabled:opacity-50"
-              >
-                <svg viewBox="0 0 24 24" fill="currentColor" width="11" height="11" aria-hidden="true">
-                  <path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z" />
-                </svg>
-                {zapTotal.totalSats.toLocaleString()}
-              </button>
+              <div className="group/pill relative">
+                <button
+                  onClick={onZapClick}
+                  disabled={msg.pubkey === myPubkey}
+                  className="inline-flex items-center gap-1 rounded-full border border-yellow-500/40 bg-yellow-500/10 px-2 py-0.5 text-xs text-yellow-200 hover:border-yellow-500 disabled:opacity-50"
+                >
+                  <svg viewBox="0 0 24 24" fill="currentColor" width="11" height="11" aria-hidden="true">
+                    <path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z" />
+                  </svg>
+                  {zapTotal.totalSats.toLocaleString()}
+                </button>
+                <ZapperHoverCard zapTotal={zapTotal} />
+              </div>
             )}
             {counts.map(([emoji, n]) => {
               const mine = myReactedEmojis.has(emoji);
+              const reactors = reactionsByEmoji.get(emoji);
               return (
-                <button
-                  key={emoji}
-                  onClick={() => onReactionClick(emoji)}
-                  disabled={mine}
-                  title={mine ? 'Ya reaccionaste con este emoji' : undefined}
-                  className={
-                    'rounded-full border px-2 py-0.5 text-xs text-lc-white ' +
-                    (mine
-                      ? 'border-lc-green/60 bg-lc-green/10 cursor-default'
-                      : 'border-lc-border bg-lc-card hover:border-lc-green')
-                  }
-                >
-                  {emoji} {n}
-                </button>
+                <div key={emoji} className="group/pill relative">
+                  <button
+                    onClick={() => onReactionClick(emoji)}
+                    disabled={mine}
+                    className={
+                      'rounded-full border px-2 py-0.5 text-xs text-lc-white ' +
+                      (mine
+                        ? 'border-lc-green/60 bg-lc-green/10 cursor-default'
+                        : 'border-lc-border bg-lc-card hover:border-lc-green')
+                    }
+                  >
+                    {emoji} {n}
+                  </button>
+                  {reactors && reactors.size > 0 && (
+                    <ReactorHoverCard emoji={emoji} pubkeys={reactors} />
+                  )}
+                </div>
               );
             })}
           </div>
@@ -2458,96 +2526,6 @@ function MessageRow({
           anchor={anchor}
         />
       )}
-    </div>
-  );
-}
-
-// -- Emoji picker -------------------------------------------------------
-
-function EmojiPicker({
-  onPick,
-  onClose,
-  disabledEmojis,
-}: {
-  onPick: (emoji: string) => void;
-  onClose: () => void;
-  disabledEmojis: Set<string>;
-}) {
-  const [query, setQuery] = useState('');
-  const q = normalizeEmojiKeyword(query.trim());
-  const filtered = useMemo(() => {
-    if (!q) return null;
-    return SEARCHABLE_EMOJI.filter((e) => e.haystack.includes(q)).slice(0, 64);
-  }, [q]);
-  return (
-    <div
-      role="dialog"
-      aria-label="Emoji picker"
-      className="absolute right-0 top-7 z-30 w-72 rounded-md border border-lc-border bg-lc-dark p-2 shadow-2xl"
-      onClick={(e) => e.stopPropagation()}
-    >
-      <div className="mb-2 flex items-center gap-2">
-        <input
-          autoFocus
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search emoji…"
-          className="flex-1 rounded border border-lc-border bg-lc-black px-2 py-1 text-xs text-lc-white placeholder:text-lc-muted focus:border-lc-green focus:outline-none"
-        />
-        <button
-          onClick={onClose}
-          className="rounded p-1 text-lc-muted hover:bg-lc-card hover:text-lc-white"
-          aria-label="Close emoji picker"
-          title="Close"
-        >
-          ✕
-        </button>
-      </div>
-      <div className="max-h-64 overflow-y-auto">
-        {filtered ? (
-          <div className="grid grid-cols-8 gap-0.5">
-            {filtered.length === 0 && (
-              <div className="col-span-8 py-4 text-center text-xs text-lc-muted">No matches</div>
-            )}
-            {filtered.map((e) => {
-              const mine = disabledEmojis.has(e.char);
-              return (
-                <button
-                  key={e.char}
-                  onClick={() => onPick(e.char)}
-                  disabled={mine}
-                  className="rounded p-1 text-lg hover:bg-lc-card disabled:opacity-40 disabled:cursor-default"
-                  title={mine ? 'Already reacted' : e.keywords[0]}
-                >
-                  {e.char}
-                </button>
-              );
-            })}
-          </div>
-        ) : (
-          EMOJI_CATEGORY_NAMES.map((cat) => (
-            <div key={cat} className="mb-2">
-              <div className="mb-1 px-1 text-[10px] font-bold uppercase tracking-wider text-lc-muted">{cat}</div>
-              <div className="grid grid-cols-8 gap-0.5">
-                {EMOJI_CATEGORIES[cat].map((e) => {
-                  const mine = disabledEmojis.has(e.char);
-                  return (
-                    <button
-                      key={e.char}
-                      onClick={() => onPick(e.char)}
-                      disabled={mine}
-                      className="rounded p-1 text-lg hover:bg-lc-card disabled:opacity-40 disabled:cursor-default"
-                      title={mine ? 'Already reacted' : e.keywords[0]}
-                    >
-                      {e.char}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))
-        )}
-      </div>
     </div>
   );
 }
@@ -3454,6 +3432,16 @@ function shortHost(url: string): string {
   } catch {
     return url;
   }
+}
+
+function MobileVoiceStatusBar({ currentView }: { currentView: View }) {
+  const currentVoiceChannelId = useVoiceStore((s) => s.currentVoiceChannelId);
+  const viewingActiveCall =
+    currentView.kind === 'group' &&
+    !!currentVoiceChannelId &&
+    currentView.groupId === currentVoiceChannelId;
+  if (viewingActiveCall) return null;
+  return <div className="md:hidden"><VoiceStatusBar /></div>;
 }
 
 // silence unused-import warning when JsUserMetadata is referenced indirectly
