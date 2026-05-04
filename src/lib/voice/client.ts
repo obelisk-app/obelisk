@@ -115,6 +115,21 @@ export interface VoiceClientOptions {
    */
   members?: readonly string[];
   /**
+   * Whether to honor `["sfu","1"]` beacons in this channel and flip
+   * topology to SFU mode when one appears.
+   *
+   * `true` — default; auto-discover. Used for `voice-sfu` channels.
+   * `false` — ignore SFU beacons; the call stays mesh even if an SFU is
+   *          present in the roster. Used when the channel kind is plain
+   *          `voice` so a stale SFU beacon (left over from a prior call,
+   *          or from a malicious peer) can't hijack the topology.
+   *
+   * Mutable post-construction via {@link VoiceClient.setExpectSfu} so a
+   * channel-kind reclassification flips the live call without requiring
+   * a teardown/rejoin.
+   */
+  expectSfu?: boolean;
+  /**
    * Channel admins (NIP-29 kind 39001 pubkeys). Only events signed by these
    * pubkeys are honored as moderator force-actions.
    */
@@ -141,6 +156,12 @@ export class VoiceClient {
   // without being torn down. NIP-29 admins occasionally republish kind 39000
   // with a different `["open"]` state and any in-call peers should follow.
   private openRoom: boolean;
+  /**
+   * Mirrors `VoiceClientOptions.expectSfu`. Mutable so a channel that
+   * gets reclassified between `voice` and `voice-sfu` mid-call flips the
+   * topology without forcing the user to rejoin.
+   */
+  private expectSfu: boolean;
 
   private peers = new Map<string, Peer>();
   private remoteTracks = new Map<string, RemoteTrack>(); // key: trackId
@@ -236,6 +257,10 @@ export class VoiceClient {
     this.openRoom = options.open === true
       || !options.members
       || options.members.length === 0;
+    // Default `true` preserves the original behavior — any beacon with
+    // `["sfu","1"]` flipped topology. Channel-kind-aware callers should
+    // pass `false` for plain voice channels.
+    this.expectSfu = options.expectSfu !== false;
     const pk = getSelfPubkey();
     if (!pk) throw new Error('Not logged in to nostr');
     this.selfPubkey = pk;
@@ -287,6 +312,34 @@ export class VoiceClient {
         }
       }
     }
+  }
+
+  /**
+   * Live-flip whether SFU beacons are honored. Used when the channel
+   * kind reclassifies between `voice` and `voice-sfu` while a call is
+   * already running — we want the topology to follow the new kind
+   * without forcing every participant to leave/rejoin.
+   *
+   * Going `true → false` (voice-sfu → voice): if we were on the SFU,
+   * `setSfuMode(null)` runs immediately, the SFU peer is torn down,
+   * and the next roster sweep dials each mesh participant.
+   *
+   * Going `false → true` (voice → voice-sfu): we re-evaluate the
+   * current roster; any beacon with `["sfu","1"]` now flips topology
+   * to that SFU.
+   */
+  setExpectSfu(expect: boolean): void {
+    if (this.expectSfu === expect) return;
+    this.expectSfu = expect;
+    if (!expect && this.sfuPubkey) {
+      this.setSfuMode(null);
+    } else if (expect) {
+      const sfu = this.currentRoster.find((r) => r.isSfu)?.pubkey ?? null;
+      if (sfu !== this.sfuPubkey) this.setSfuMode(sfu);
+    }
+    // Force a roster pass so the wanted/peers diff reconciles even if
+    // the roster snapshot itself didn't change.
+    this.handleRoster(this.rosterPubkeys);
   }
 
   /**
@@ -474,8 +527,12 @@ export class VoiceClient {
   private handleRoster(pubkeys: string[]) {
     // Topology check first — if any beacon carries `["sfu","1"]`, switch
     // to SFU mode (or out of it). The mode informs the rest of this
-    // function's wanted/visible logic.
-    const sfuFromRoster = this.currentRoster.find((r) => r.isSfu)?.pubkey ?? null;
+    // function's wanted/visible logic. `expectSfu === false` (a plain
+    // voice channel) ignores SFU beacons entirely so a stale or hostile
+    // one can't hijack mesh topology.
+    const sfuFromRoster = this.expectSfu
+      ? this.currentRoster.find((r) => r.isSfu)?.pubkey ?? null
+      : null;
     if (sfuFromRoster !== this.sfuPubkey) {
       this.setSfuMode(sfuFromRoster);
     }

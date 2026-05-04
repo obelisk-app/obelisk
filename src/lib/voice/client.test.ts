@@ -343,6 +343,74 @@ describe('VoiceClient first-sighting beacon refresh', () => {
   });
 });
 
+describe('VoiceClient setExpectSfu', () => {
+  const SFU = 'f'.repeat(64);
+
+  it('ignores SFU beacons when constructed with expectSfu=false', async () => {
+    const onTopologyChange = vi.fn();
+    const client = new VoiceClient('ch1', {
+      members: [SELF, PEER1],
+      expectSfu: false,
+      events: { onTopologyChange },
+    });
+    await client.join();
+    const sfuPresence: VoicePresence = {
+      pubkey: SFU, channelId: 'ch1', createdAt: 1, expiresAt: 9999999999,
+      connectedTo: [], videoTracks: [], isSfu: true,
+    };
+    transportFake.fireRoster([presence(PEER1), sfuPresence]);
+    await flushMicrotasks(5);
+    expect(onTopologyChange).not.toHaveBeenCalled();
+    await client.leave();
+  });
+
+  it('flips topology to mesh on setExpectSfu(false) while SFU is active', async () => {
+    const onTopologyChange = vi.fn();
+    const client = new VoiceClient('ch1', {
+      members: [SELF, PEER1],
+      events: { onTopologyChange },
+    });
+    await client.join();
+    const sfuPresence: VoicePresence = {
+      pubkey: SFU, channelId: 'ch1', createdAt: 1, expiresAt: 9999999999,
+      connectedTo: [], videoTracks: [], isSfu: true,
+    };
+    transportFake.fireRoster([presence(PEER1), sfuPresence]);
+    await flushMicrotasks(5);
+    expect(onTopologyChange).toHaveBeenCalledWith(SFU);
+    onTopologyChange.mockClear();
+
+    // Channel reclassified — voice-sfu → voice. Topology must drop
+    // back to mesh even though the SFU's beacon is still in the roster.
+    client.setExpectSfu(false);
+    await flushMicrotasks(5);
+    expect(onTopologyChange).toHaveBeenCalledWith(null);
+    await client.leave();
+  });
+
+  it('re-enters SFU mode on setExpectSfu(true) when SFU is in the roster', async () => {
+    const onTopologyChange = vi.fn();
+    const client = new VoiceClient('ch1', {
+      members: [SELF, PEER1],
+      expectSfu: false,
+      events: { onTopologyChange },
+    });
+    await client.join();
+    const sfuPresence: VoicePresence = {
+      pubkey: SFU, channelId: 'ch1', createdAt: 1, expiresAt: 9999999999,
+      connectedTo: [], videoTracks: [], isSfu: true,
+    };
+    transportFake.fireRoster([presence(PEER1), sfuPresence]);
+    await flushMicrotasks(5);
+    expect(onTopologyChange).not.toHaveBeenCalled();
+
+    client.setExpectSfu(true);
+    await flushMicrotasks(5);
+    expect(onTopologyChange).toHaveBeenCalledWith(SFU);
+    await client.leave();
+  });
+});
+
 describe('VoiceClient onTopologyChange', () => {
   const SFU = 'f'.repeat(64);
 

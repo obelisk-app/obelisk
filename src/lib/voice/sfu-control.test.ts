@@ -302,4 +302,25 @@ describe('ensureSfuRoomStarted', () => {
     expect(b).toBeNull();
     expect(bridgeFake.publishCalls).toHaveLength(1);
   });
+
+  it('forces a publish past the rate-limit when {force:true} is passed', async () => {
+    __testing.ingest(makeAdvertisement());
+    const a = await ensureSfuRoomStarted(CHANNEL_ID);
+    const b = await ensureSfuRoomStarted(CHANNEL_ID, undefined, { force: true });
+    expect(a).toBe(SFU_PUBKEY);
+    expect(b).toBe(SFU_PUBKEY);
+    expect(bridgeFake.publishCalls).toHaveLength(2);
+  });
+});
+
+describe('publishSfuStart force', () => {
+  it('bypasses the rate-limit when force=true', async () => {
+    const a = await publishSfuStart(CHANNEL_ID, SFU_PUBKEY);
+    const b = await publishSfuStart(CHANNEL_ID, SFU_PUBKEY); // rate-limited
+    const c = await publishSfuStart(CHANNEL_ID, SFU_PUBKEY, { force: true });
+    expect(a).toBe(true);
+    expect(b).toBe(false);
+    expect(c).toBe(true);
+    expect(bridgeFake.publishCalls).toHaveLength(2);
+  });
 });

@@ -49,6 +49,69 @@ function makePeer(opts: MakePeerOpts = {}) {
   return { peer, sent };
 }
 
+describe('Peer offer-ack watchdog', () => {
+  it('resends the same SDP if signalingState stays have-local-offer past OFFER_ACK_TIMEOUT_MS', async () => {
+    vi.useFakeTimers();
+    try {
+      const { peer, sent } = makePeer({ polite: false });
+      const track = new FakeMediaStreamTrack('audio') as unknown as MediaStreamTrack;
+      await peer.setLocalTrack('audio', track);
+      await flushMicrotasks(8);
+
+      const pc = peer.pc as unknown as FakeRTCPeerConnection;
+      // PC has applied the local offer and emitted it.
+      expect(pc.signalingState).toBe('have-local-offer');
+      const initialOffers = sent.filter((s) => s.type === 'offer').length;
+      expect(initialOffers).toBeGreaterThanOrEqual(1);
+
+      // Advance past the offer-ack timeout — no answer arrived.
+      await vi.advanceTimersByTimeAsync(4500);
+      await flushMicrotasks(8);
+
+      const finalOffers = sent.filter((s) => s.type === 'offer').length;
+      expect(finalOffers).toBe(initialOffers + 1);
+      // Same SDP body re-sent.
+      const offers = sent.filter((s) => s.type === 'offer');
+      expect(offers[offers.length - 1].sdp).toBe(offers[offers.length - 2].sdp);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not resend if the answer applies before the watchdog fires', async () => {
+    vi.useFakeTimers();
+    try {
+      const { peer, sent } = makePeer({ polite: false });
+      const track = new FakeMediaStreamTrack('audio') as unknown as MediaStreamTrack;
+      await peer.setLocalTrack('audio', track);
+      await flushMicrotasks(8);
+
+      const pc = peer.pc as unknown as FakeRTCPeerConnection;
+      const initialOffers = sent.filter((s) => s.type === 'offer').length;
+
+      // Build a real answer SDP via a sibling FakePc fed our offer.
+      const remotePc = new FakeRTCPeerConnection();
+      remotePc.addTrack(new FakeMediaStreamTrack('audio'));
+      await remotePc.setRemoteDescription({ type: 'offer', sdp: pc.localDescription!.sdp });
+      await remotePc.setLocalDescription();
+      const answerSdp = remotePc.localDescription!.sdp;
+
+      await peer.handleSignal({ type: 'answer', sdp: answerSdp, sessionId: 's', seq: 1 });
+      await flushMicrotasks(8);
+      // After applying the answer the local PC must be back to stable.
+      expect(pc.signalingState).toBe('stable');
+
+      await vi.advanceTimersByTimeAsync(5000);
+      await flushMicrotasks(8);
+
+      const finalOffers = sent.filter((s) => s.type === 'offer').length;
+      expect(finalOffers).toBe(initialOffers);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
 describe('Peer.setLocalTrack', () => {
   it('addTrack on the underlying PC and remembers the sender', async () => {
     const { peer } = makePeer();

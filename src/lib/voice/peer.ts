@@ -46,6 +46,20 @@ export const ICE_RESTART_LIMIT = 3;
 // polite/impolite request-reset path picks up immediately at this mark.
 export const INITIAL_CONNECT_TIMEOUT_MS = 8000;
 
+// After we send an offer we expect an answer back fast — the round-trip
+// is one relay-mediated kind 25050 in each direction. If signalingState
+// is still 'have-local-offer' after this window, the answer either
+// never arrived or the relay dropped one of the legs. Resend the same
+// SDP up to OFFER_RETRY_LIMIT times before escalating. This is the
+// "I had to refresh to get my video to appear" bug class — turning on
+// the camera triggers a renegotiation that gets silently dropped, the
+// PC is still 'connected' so the connect watchdog never fires, and the
+// remote never sees the new transceiver. Tuning the resend at 4 s is
+// short enough to recover within the user's "wait, did it work?"
+// window but long enough to avoid spurious resends on a slow network.
+export const OFFER_ACK_TIMEOUT_MS = 4000;
+export const OFFER_RETRY_LIMIT = 2;
+
 /**
  * STUN-only configurations work on permissive NATs but fail on symmetric /
  * carrier-grade NATs. Set `NEXT_PUBLIC_TURN_URLS` (comma-separated) for a
@@ -144,6 +158,13 @@ export class Peer {
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private reconnectAttempts = 0;
   private connectWatchdogTimer: ReturnType<typeof setTimeout> | null = null;
+  /**
+   * Outstanding offer-ack watchdog. Armed each time we send an offer.
+   * Cleared when signalingState returns to 'stable' (answer applied).
+   * If it fires we resend the same SDP — see OFFER_ACK_TIMEOUT_MS.
+   */
+  private offerAckTimer: ReturnType<typeof setTimeout> | null = null;
+  private offerRetryAttempts = 0;
 
   constructor(opts: PeerOptions) {
     this.remotePubkey = opts.remotePubkey;
@@ -180,6 +201,7 @@ export class Peer {
             sessionId: this.sessionId,
             seq: ++this.outboundSeq,
           });
+          this.armOfferAckWatchdog();
         }
       } catch (e) {
         console.error('[voice] negotiationneeded failed', e);
@@ -196,6 +218,16 @@ export class Peer {
         sessionId: this.sessionId,
         seq: ++this.outboundSeq,
       });
+    };
+
+    // Once an answer is applied (or the PC otherwise leaves
+    // 'have-local-offer'), our offer reached the remote. Clear the
+    // watchdog so a subsequent renegotiation starts with a fresh
+    // retry counter.
+    pc.onsignalingstatechange = () => {
+      if (pc.signalingState === 'stable') {
+        this.clearOfferAckWatchdog(true);
+      }
     };
 
     pc.ontrack = (ev) => {
@@ -503,11 +535,84 @@ export class Peer {
           sessionId: this.sessionId,
           seq: ++this.outboundSeq,
         });
+        this.armOfferAckWatchdog();
       }
     } catch (e) {
       console.error('[voice] kickNegotiation failed', e);
     } finally {
       this.makingOffer = false;
+    }
+  }
+
+  /**
+   * Arm the offer-ack watchdog. Called after every successful offer
+   * publish. The watchdog fires after `OFFER_ACK_TIMEOUT_MS`; if the
+   * answer hasn't been applied by then (signalingState still
+   * 'have-local-offer'), we resend the same SDP. After
+   * `OFFER_RETRY_LIMIT` resends with no answer, escalate to
+   * performHardReset — the most likely cause is a wedged transceiver
+   * state that only a fresh PC will untangle.
+   */
+  private armOfferAckWatchdog(): void {
+    if (this.closed) return;
+    if (this.offerAckTimer) clearTimeout(this.offerAckTimer);
+    this.offerAckTimer = setTimeout(() => {
+      this.offerAckTimer = null;
+      if (this.closed) return;
+      if (this.pc.signalingState !== 'have-local-offer') {
+        // Either we got an answer (back to 'stable') or the PC moved
+        // to a different state (rollback, closed). Either way, no
+        // resend needed.
+        this.offerRetryAttempts = 0;
+        return;
+      }
+      this.offerRetryAttempts += 1;
+      if (this.offerRetryAttempts > OFFER_RETRY_LIMIT) {
+        console.warn('[voice] offer never acked after', OFFER_RETRY_LIMIT,
+          'retries — hard reset for', this.remotePubkey.slice(0, 8));
+        this.offerRetryAttempts = 0;
+        this.performHardReset();
+        return;
+      }
+      console.warn('[voice] offer not acked, resending — peer',
+        this.remotePubkey.slice(0, 8), 'attempt', this.offerRetryAttempts);
+      void this.resendCurrentOffer();
+    }, OFFER_ACK_TIMEOUT_MS);
+  }
+
+  /**
+   * Clear the offer-ack watchdog. Pass `success=true` when the answer
+   * was applied (resets the retry counter); pass `success=false` from
+   * teardown paths so the next offer starts with a fresh counter as
+   * well — the previous offer is no longer "in flight".
+   */
+  private clearOfferAckWatchdog(success: boolean): void {
+    if (this.offerAckTimer) {
+      clearTimeout(this.offerAckTimer);
+      this.offerAckTimer = null;
+    }
+    if (success) this.offerRetryAttempts = 0;
+  }
+
+  /**
+   * Re-send the SDP currently stored in `pc.localDescription`. Idempotent
+   * on the receiver — applying the same offer again is fine; the perfect-
+   * negotiation path on the remote will roll back its own pending state
+   * if any and reapply ours.
+   */
+  private async resendCurrentOffer(): Promise<void> {
+    if (this.closed) return;
+    const desc = this.pc.localDescription;
+    if (!desc || desc.type !== 'offer') return;
+    try {
+      await this.sendSignal({
+        type: 'offer',
+        sdp: desc.sdp,
+        sessionId: this.sessionId,
+        seq: ++this.outboundSeq,
+      });
+    } finally {
+      this.armOfferAckWatchdog();
     }
   }
 

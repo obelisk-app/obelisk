@@ -80,6 +80,14 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
   const [sfuStatus, setSfuStatus] = useState<
     'na' | 'starting' | 'connected' | 'unavailable' | 'unauthorized'
   >('na');
+  /**
+   * Republish trigger — incremented by `onTopologyChange` when an SFU
+   * peer drops out of the roster after we'd been connected to it. The
+   * supervisor effect watches this and re-publishes kind 25052 (with
+   * force=true so the rate-limit doesn't swallow the recovery), so a
+   * brief SFU restart is recovered without the user having to rejoin.
+   */
+  const [sfuRepublishCounter, setSfuRepublishCounter] = useState(0);
 
   // Phase 1 — bridge + role subscriptions, gate decision.
   useEffect(() => {
@@ -218,11 +226,13 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
         if (sfu) {
           setSfuStatus('connected');
         } else {
-          // Topology dropped back to mesh after being on the SFU. The
-          // start trigger effect re-runs the watchdog if the user is still
-          // in the call, so flip to 'starting' so the UI says "trying
-          // again" instead of declaring the call mesh.
-          setSfuStatus('starting');
+          // Topology dropped back to mesh — most likely the SFU restarted
+          // or its beacon expired. Trigger a republish so a transient
+          // outage doesn't strand the channel on mesh until everyone
+          // rejoins. The supervisor handles the actual publish (with
+          // force=true to bypass the rate-limit).
+          setSfuStatus((prev) => (prev === 'connected' ? 'starting' : prev));
+          setSfuRepublishCounter((n) => n + 1);
         }
       },
       onError: (m: string) => {
@@ -235,6 +245,10 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
     const existing = getActiveVoiceClient();
     if (existing && existing.channelId === channelId && existing.isJoined()) {
       existing.setEvents(events);
+      // Reapply expected-topology so a channel-kind reclassification
+      // mid-call (admin republished kind 39000 with/without
+      // ["t","voice-sfu"]) flips the live client immediately.
+      existing.setExpectSfu(channelKind === 'voice-sfu');
       clientRef.current = existing;
       setParticipants(existing.getParticipants());
       setRemoteTracks(existing.getRemoteTracks());
@@ -266,7 +280,13 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
 
     (async () => {
       try {
-        client = new VoiceClient(channelId, { members: gate.members, admins: gate.admins, open: gate.open, events });
+        client = new VoiceClient(channelId, {
+          members: gate.members,
+          admins: gate.admins,
+          open: gate.open,
+          expectSfu: channelKind === 'voice-sfu',
+          events,
+        });
         clientRef.current = client;
         setActiveVoiceClient(client);
         await client.join();
@@ -294,20 +314,40 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gate.phase, channelId, joined]);
 
-  // Big-room channels (`voice-sfu`) need the SFU to have an active room
-  // before any beacon flips topology to SFU mode. We publish kind 25052
-  // `start` once the user is gated+joined AND we know the channel kind,
-  // then wait for the SFU's `["sfu","1"]` beacon to land — the
-  // `onTopologyChange` event flips status to 'connected'. If nothing
-  // arrives within `SFU_JOIN_WATCHDOG_MS` the publish was either silently
-  // rejected (publisher not whitelisted on the trusted-author relay) or
-  // the SFU is offline; status flips to 'unauthorized' so the UI tells
-  // the user instead of pretending the call is on the SFU.
+  // Mirror channel-kind reclassifications into the running voice client.
+  // If the admin republishes kind 39000 toggling ["t","voice-sfu"] while
+  // a call is live, this flips the client's topology gate without forcing
+  // anyone to leave the call. Kept thin (just clientRef.current?.set…)
+  // because the actual peer reconciliation lives in setExpectSfu →
+  // setSfuMode → handleRoster's wanted/peers diff.
+  useEffect(() => {
+    const c = clientRef.current ?? getActiveVoiceClient();
+    if (!c || c.channelId !== channelId) return;
+    c.setExpectSfu(channelKind === 'voice-sfu');
+  }, [channelKind, channelId]);
+
+  // SFU supervisor — owns the publish/retry/republish lifecycle for
+  // `voice-sfu` channels. Re-runs whenever the user joins, the channel
+  // kind flips to voice-sfu, or the topology drops back to mesh
+  // (signaled by `sfuRepublishCounter`).
   //
-  // Kept in its own effect so a late-arriving kind metadata flip from
-  // null → 'voice-sfu' still triggers a start without tearing down the
-  // running VoiceClient. The publish itself is rate-limited inside
-  // `ensureSfuRoomStarted` so re-runs don't spam.
+  // Lifecycle for one supervisor invocation:
+  //   1. Publish kind 25052 `start` (rate-limited on first attempt;
+  //      forced on retries / republishes so a brief SFU outage isn't
+  //      stranded by the cooldown).
+  //   2. Arm an 8 s watchdog. The SFU's `["sfu","1"]` beacon flips
+  //      `onTopologyChange` to 'connected', which clears state via
+  //      a separate path. If the watchdog fires while still 'starting'
+  //      we retry up to MAX_ATTEMPTS times with linear backoff before
+  //      giving up with 'unauthorized'.
+  //   3. If discovery returns no SFU we set 'unavailable' and try
+  //      again every UNAVAILABLE_RETRY_MS — an SFU coming online later
+  //      should heal the channel without a rejoin.
+  //
+  // The `onTopologyChange` handler is the inbound signal:
+  //   - sfu === <pubkey>  → setSfuStatus('connected') (no work here)
+  //   - sfu === null after being connected → bumps republish counter,
+  //     this effect re-runs with `force` semantics already baked in.
   useEffect(() => {
     if (gate.phase !== 'ready') return;
     if (!joined) return;
@@ -316,29 +356,67 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
       return;
     }
     let cancelled = false;
-    setSfuStatus('starting');
+    let attempt = 0;
+    const MAX_ATTEMPTS = 3;
     const SFU_JOIN_WATCHDOG_MS = 8000;
+    const RETRY_BACKOFF_MS = [5000, 10000];
+    const UNAVAILABLE_RETRY_MS = 15000;
     let watchdog: ReturnType<typeof setTimeout> | null = null;
-    void ensureSfuRoomStarted(channelId).then((sfuPubkey) => {
+    let retryDelay: ReturnType<typeof setTimeout> | null = null;
+
+    const clearTimers = () => {
+      if (watchdog) { clearTimeout(watchdog); watchdog = null; }
+      if (retryDelay) { clearTimeout(retryDelay); retryDelay = null; }
+    };
+
+    const tryStart = async (force: boolean) => {
       if (cancelled) return;
-      if (sfuPubkey) {
-        console.log('[voice] sfu start published target=', sfuPubkey.slice(0, 8));
-        // Watchdog: SFU peer must show up in our roster within this
-        // window for us to consider the call truly upgraded.
-        watchdog = setTimeout(() => {
-          if (cancelled) return;
-          setSfuStatus((prev) => (prev === 'starting' ? 'unauthorized' : prev));
-        }, SFU_JOIN_WATCHDOG_MS);
-      } else {
-        console.warn('[voice] no sfu available — falling back to mesh');
-        setSfuStatus('unavailable');
+      clearTimers();
+      // Don't drop a 'connected' label back to 'starting' while we
+      // republish in the background — the topology event will flip it
+      // if the SFU actually disappeared.
+      setSfuStatus((prev) => (prev === 'connected' ? prev : 'starting'));
+      let sfuPubkey: string | null = null;
+      try {
+        sfuPubkey = await ensureSfuRoomStarted(channelId, undefined, { force });
+      } catch (err) {
+        console.warn('[voice] ensureSfuRoomStarted threw', err);
       }
-    });
+      if (cancelled) return;
+      if (!sfuPubkey) {
+        console.warn('[voice] no sfu available — mesh fallback; retrying in',
+          UNAVAILABLE_RETRY_MS / 1000, 's');
+        setSfuStatus((prev) => (prev === 'connected' ? prev : 'unavailable'));
+        retryDelay = setTimeout(() => { void tryStart(true); }, UNAVAILABLE_RETRY_MS);
+        return;
+      }
+      console.log('[voice] sfu start published target=', sfuPubkey.slice(0, 8),
+        'attempt=', attempt + 1);
+      watchdog = setTimeout(() => {
+        if (cancelled) return;
+        // If the topology callback already flipped us to 'connected'
+        // we leave the retry counter alone.
+        attempt += 1;
+        if (attempt < MAX_ATTEMPTS) {
+          const delay = RETRY_BACKOFF_MS[Math.min(attempt - 1, RETRY_BACKOFF_MS.length - 1)];
+          console.warn('[voice] sfu beacon never arrived; retrying in', delay / 1000,
+            's — attempt', attempt + 1, '/', MAX_ATTEMPTS);
+          retryDelay = setTimeout(() => { void tryStart(true); }, delay);
+        } else {
+          console.warn('[voice] sfu start gave up after', MAX_ATTEMPTS, 'attempts');
+          setSfuStatus((prev) => (prev === 'connected' ? prev : 'unauthorized'));
+        }
+      }, SFU_JOIN_WATCHDOG_MS);
+    };
+
+    // First entry uses force=false (cheap rate-limit); republish
+    // counter changes always force (they're recovery signals).
+    void tryStart(sfuRepublishCounter > 0);
     return () => {
       cancelled = true;
-      if (watchdog) clearTimeout(watchdog);
+      clearTimers();
     };
-  }, [gate.phase, joined, channelKind, channelId]);
+  }, [gate.phase, joined, channelKind, channelId, sfuRepublishCounter]);
 
   const leave = useCallback(async () => {
     const c = clientRef.current ?? getActiveVoiceClient();
@@ -530,8 +608,7 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
     <div className="relative flex-1 flex min-h-0 p-2 sm:p-3 gap-2" data-testid="voice-channel">
       <div className="flex-1 flex flex-col min-h-0 relative overflow-hidden rounded-2xl border border-lc-border bg-gradient-to-br from-indigo-950 via-indigo-900 to-violet-800 shadow-2xl">
         <StageBackdrop />
-        <RoomHeader name={displayName} count={totalCount} />
-        <SfuStatusBanner status={sfuStatus} />
+        <RoomHeader name={displayName} count={totalCount} sfuStatus={sfuStatus} />
 
         {/* Stage area */}
         <div className="relative z-10 flex-1 min-h-0 flex flex-col md:flex-row gap-2 sm:gap-3 p-2 sm:p-3 pb-24 sm:pb-28 overflow-hidden">
@@ -709,50 +786,45 @@ function StageBackdrop() {
 }
 
 /**
- * Inline banner that surfaces the SFU upgrade state for `voice-sfu`
- * channels. The intent is that a user creating a Big-room voice call
+ * Compact SFU-status pill rendered between the room name and the
+ * participant count inside RoomHeader. Tooltip carries the long-form
+ * detail. The intent is that a user creating a Big-room voice call
  * never has to wonder whether they're actually getting SFU forwarding
- * or silently dropped to the 8-peer mesh.
+ * or silently dropped to the 8-peer mesh — without occupying its own
+ * row of chrome.
  *
- *   starting     — neutral; we just published kind 25052 and are waiting
- *   connected    — green badge; SFU's `["sfu","1"]` beacon is in our roster
- *   unavailable  — amber; nobody has published a kind 31313 ad yet
- *   unauthorized — red; start published but SFU never joined within 8 s
- *                  (publisher likely not whitelisted on the trusted-author
- *                  relay; mesh fallback is active)
- *
- * Plain voice / non-sfu channels render no banner ('na').
+ * Plain voice / non-sfu channels render nothing ('na').
  */
-function SfuStatusBanner({ status }: {
+function SfuStatusPill({ status }: {
   status: 'na' | 'starting' | 'connected' | 'unavailable' | 'unauthorized';
 }) {
   if (status === 'na') return null;
   const variants = {
     starting: {
-      label: 'Connecting to SFU…',
+      label: 'SFU connecting',
       detail: 'Asking the SFU to open this big-room call.',
-      tone: 'bg-amber-500/10 border-amber-400/30 text-amber-100',
+      tone: 'bg-amber-500/15 border-amber-400/40 text-amber-100',
       dot: 'bg-amber-300',
       pulse: true,
     },
     connected: {
       label: 'SFU connected',
       detail: 'Big-room mode active — media is routed through the SFU.',
-      tone: 'bg-emerald-500/10 border-emerald-400/30 text-emerald-100',
+      tone: 'bg-emerald-500/15 border-emerald-400/40 text-emerald-100',
       dot: 'bg-emerald-300',
       pulse: false,
     },
     unavailable: {
-      label: 'No SFU available',
-      detail: 'No big-room SFU is currently advertising on the relay. Falling back to peer-to-peer mesh (max 8 participants).',
-      tone: 'bg-amber-500/10 border-amber-400/30 text-amber-100',
+      label: 'SFU unavailable',
+      detail: 'No big-room SFU is advertising. Falling back to peer-to-peer mesh (max 8 participants).',
+      tone: 'bg-amber-500/15 border-amber-400/40 text-amber-100',
       dot: 'bg-amber-300',
       pulse: false,
     },
     unauthorized: {
-      label: 'SFU did not authorize this call',
-      detail: 'The big-room start was rejected. Your account may not be whitelisted on the SFU’s trusted relay. Call is on peer-to-peer mesh (max 8 participants).',
-      tone: 'bg-rose-500/10 border-rose-400/30 text-rose-100',
+      label: 'SFU rejected',
+      detail: 'Big-room start was rejected. Your account may not be whitelisted on the SFU’s trusted relay. Call is on peer-to-peer mesh (max 8 participants).',
+      tone: 'bg-rose-500/15 border-rose-400/40 text-rose-100',
       dot: 'bg-rose-300',
       pulse: false,
     },
@@ -764,26 +836,28 @@ function SfuStatusBanner({ status }: {
       aria-live="polite"
       data-testid="sfu-status"
       data-sfu-status={status}
-      className={`relative z-10 mx-3 sm:mx-5 mt-2 px-3 py-2 flex items-start gap-2 rounded-lg border text-xs ${v.tone}`}
+      title={v.detail}
+      className={`hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-medium leading-none ${v.tone}`}
     >
-      <span className="relative inline-flex h-2 w-2 mt-1 shrink-0">
+      <span className="relative inline-flex h-1.5 w-1.5">
         {v.pulse && (
-          <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-60 ${v.dot}`} />
+          <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-70 ${v.dot}`} />
         )}
-        <span className={`relative inline-flex rounded-full h-2 w-2 ${v.dot}`} />
+        <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${v.dot}`} />
       </span>
-      <div className="min-w-0">
-        <div className="font-medium leading-tight">{v.label}</div>
-        <div className="opacity-80 mt-0.5">{v.detail}</div>
-      </div>
+      <span>{v.label}</span>
     </div>
   );
 }
 
-function RoomHeader({ name, count }: { name: string; count: number }) {
+function RoomHeader({ name, count, sfuStatus }: {
+  name: string;
+  count: number;
+  sfuStatus?: 'na' | 'starting' | 'connected' | 'unavailable' | 'unauthorized';
+}) {
   return (
-    <div className="relative z-10 px-3 sm:px-5 py-3 flex items-center justify-between border-b border-white/5">
-      <div className="min-w-0 flex items-center gap-2.5">
+    <div className="relative z-10 px-3 sm:px-5 py-3 flex items-center gap-3 border-b border-white/5">
+      <div className="min-w-0 flex items-center gap-2.5 flex-1 min-w-0">
         <span className="relative flex h-2 w-2 shrink-0">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-lc-green opacity-50" />
           <span className="relative inline-flex rounded-full h-2 w-2 bg-lc-green" />
@@ -793,7 +867,12 @@ function RoomHeader({ name, count }: { name: string; count: number }) {
           <div className="font-semibold text-lc-white truncate text-sm sm:text-base leading-tight">{name}</div>
         </div>
       </div>
-      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-white/80">
+      {/* Centered SFU status — only renders for voice-sfu calls. Tooltip
+          carries the long-form detail so the pill stays compact. */}
+      <div className="flex justify-center shrink-0">
+        <SfuStatusPill status={sfuStatus ?? 'na'} />
+      </div>
+      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-white/80 shrink-0">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
           <circle cx="9" cy="7" r="4" />

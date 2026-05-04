@@ -162,16 +162,27 @@ export async function pickSfu(): Promise<SfuAdvertisement | null> {
  *
  * Returns `true` on a successful sign+publish, `false` on rate-limit or
  * any sign/publish failure (caller falls back to mesh silently).
+ *
+ * `options.force` bypasses the 30 s rate-limit. The supervisor uses
+ * this when retrying after the SFU's beacon never arrived and when
+ * republishing because the SFU dropped out mid-call — both scenarios
+ * where a fresh publish is exactly what we want.
  */
 export async function publishSfuStart(
   channelId: string,
   sfuPubkey: string,
-  options: { trustedRelays?: readonly string[]; params?: SfuStartParams } = {},
+  options: {
+    trustedRelays?: readonly string[];
+    params?: SfuStartParams;
+    force?: boolean;
+  } = {},
 ): Promise<boolean> {
   const key = `${channelId}:${sfuPubkey}`;
   const now = Date.now();
-  const last = recentStarts.get(key);
-  if (last && now - last < START_RATELIMIT_MS) return false;
+  if (!options.force) {
+    const last = recentStarts.get(key);
+    if (last && now - last < START_RATELIMIT_MS) return false;
+  }
   recentStarts.set(key, now);
 
   const trustedRelays = options.trustedRelays && options.trustedRelays.length > 0
@@ -217,16 +228,20 @@ export async function publishSfuStart(
  *
  * Used by the voice-sfu join path — the caller doesn't need to know
  * anything about advertisements or relay routing.
+ *
+ * `force` is forwarded to `publishSfuStart` to bypass the rate-limit.
  */
 export async function ensureSfuRoomStarted(
   channelId: string,
   params: SfuStartParams = {},
+  options: { force?: boolean } = {},
 ): Promise<string | null> {
   const sfu = await pickSfu();
   if (!sfu) return null;
   const ok = await publishSfuStart(channelId, sfu.pubkey, {
     trustedRelays: sfu.trustedRelays,
     params,
+    force: options.force === true,
   });
   return ok ? sfu.pubkey : null;
 }
