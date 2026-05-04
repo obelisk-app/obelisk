@@ -90,6 +90,38 @@ export class RelayPool {
     return () => sub.close();
   }
 
+  /**
+   * Subscribe to a filter on each given relay separately, with the source
+   * relay url passed through to the handler. Used by the call-listener so
+   * it can distinguish events seen on a trusted relay (whose write-whitelist
+   * authorizes the publisher) from events seen on an open relay (which need
+   * the local allow.json check).
+   *
+   * Each relay gets its own `subscribeMany([url], …)`; an event published
+   * to multiple relays will fire `onEvent` once per delivery. Callers MUST
+   * dedupe by event id if they need each event handled exactly once.
+   */
+  subscribePerRelay(
+    relays: string[],
+    filter: Filter,
+    onEvent: (ev: Event, sourceRelay: string) => void,
+  ): () => void {
+    if (this.closed) {
+      log.warn('subscribePerRelay after close — no-op');
+      return () => undefined;
+    }
+    const closers: Array<() => void> = [];
+    for (const r of relays) {
+      const sub = this.pool.subscribeMany([r], filter, {
+        onevent: (ev: Event) => onEvent(ev, r),
+      });
+      closers.push(() => sub.close());
+    }
+    return () => {
+      for (const c of closers) c();
+    };
+  }
+
   close(): void {
     if (this.closed) return;
     this.closed = true;

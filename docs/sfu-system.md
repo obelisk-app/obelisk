@@ -65,7 +65,7 @@ That second point matters: **the SFU host needs a routable public IP for media.*
 
 | Kind  | Type                      | Purpose                                                                | Author    |
 |-------|---------------------------|------------------------------------------------------------------------|-----------|
-| 31313 | parameterized replaceable | SFU advertisement — capabilities, allow-list, public URL               | SFU       |
+| 31313 | parameterized replaceable | SFU advertisement — capabilities, allow-list, trusted-relay endpoints, public URL | SFU |
 | 31314 | parameterized replaceable | Active-call state — which channel is in SFU mode, room rules, status   | SFU       |
 | 25052 | ephemeral                 | Call control — start, end, kick, update rules                          | Authorized user → SFU |
 | 20078 | ephemeral (reused)        | Presence beacon — SFU publishes one too, with `["sfu","1"]` marker     | Both      |
@@ -102,7 +102,8 @@ Published by the SFU's own keypair. Replaceable on the `d="obelisk-sfu"` coordin
 **Tag semantics:**
 
 - `url` — public HTTP endpoint for `/healthz` and `/`. Clients use this for the operator badge in the UI ("hosted by sfu.example.com").
-- `relay` — relays this SFU subscribes to for kind 25052 control events. Multiple `relay` tags allowed; control events on any of them count.
+- `relay` — relays this SFU subscribes to and publishes on for general traffic (advertisement, beacon, signaling). Multiple `relay` tags allowed.
+- `trusted_relay` — relays whose write-whitelist authorizes the publisher of kind 25052 events. Clients should send their `start` events here; the relay's gating IS the SFU's allow-list. Multiple allowed.
 - `cap` — max participants per single room.
 - `max_rooms` — concurrent active rooms.
 - `codec` — codecs the SFU forwards. Order is preference. Audio always includes `opus`; video typically `vp9` then `h264`.
@@ -202,7 +203,12 @@ There's one small client-side extension: when the SFU forwards a track from memb
 
 ## 4. Authorization model
 
-Three concentric trust boundaries:
+There are two authorization paths a `start` event can take:
+
+1. **Trusted-author relay path (production default):** the event was delivered to the SFU on a relay listed in `SFU_TRUSTED_AUTHOR_RELAYS`. That relay's own write-whitelist already gated who could publish; the SFU treats every event from that relay as authorized. This is how the canonical Obelisk deployment works — the operators of `wss://relay.obelisk.ar` curate who can host big-room calls, and the SFU just listens.
+2. **Local allow-list path:** the event was delivered on an open relay (e.g. `wss://public.obelisk.ar`). The SFU falls back to checking `allow.json` (or `SFU_ALLOWED_PUBKEYS`) for the publisher's hex pubkey. Useful for solo deployments or testing.
+
+Either path is sufficient. Combined with the four concentric trust boundaries below:
 
 ```
                         ┌──────────────────────────────────────┐

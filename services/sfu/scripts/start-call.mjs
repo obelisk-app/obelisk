@@ -55,10 +55,16 @@ if (!/^[0-9a-f]{64}$/i.test(nsecHex)) {
 const sk = hexToBytes(nsecHex);
 const sfuPubkey = getPublicKey(sk);
 
-const relays = (process.env.SFU_RELAYS ?? 'wss://relay.obelisk.ar')
-  .split(',')
-  .map((s) => s.trim())
-  .filter(Boolean);
+// Publish to BOTH general + trusted-author relays so the SFU's per-relay
+// subscription sees the event on whichever path it has open. In a normal
+// trusted-relay deploy, only the trusted relay matters for authorization,
+// but publishing to the general relay too keeps things working when the
+// user's account isn't whitelisted on the trusted relay (they fall back
+// to the local allow.json check).
+const relays = Array.from(new Set([
+  ...(process.env.SFU_RELAYS ?? 'wss://public.obelisk.ar').split(','),
+  ...(process.env.SFU_TRUSTED_AUTHOR_RELAYS ?? '').split(','),
+]).values()).map((s) => s.trim()).filter(Boolean);
 
 const now = Math.floor(Date.now() / 1000);
 const template = {

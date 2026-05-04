@@ -2,9 +2,11 @@
 
 Standalone Node service that acts as an opt-in SFU (selective forwarding unit) for Obelisk voice channels. It speaks the same Nostr signaling wire as mesh calls (kinds 20078 + 25050), advertises itself on Nostr (kind 31313), and accepts call-control events (kind 25052) from a hand-picked allow-list of pubkeys.
 
-**Read first:** [docs/sfu-system.md](../../docs/sfu-system.md) — full architecture and event spec.
+**Read first:**
+- [docs/sfu-system.md](../../docs/sfu-system.md) — full architecture and event spec.
+- [DEPLOY.md](DEPLOY.md) — **production deploy procedure** (firewall, systemd, Cloudflare tunnel, verification, rollback). Use this if you're shipping the service to a real host.
 
-This README is the operator's runbook: how to set it up, run it, and live with it.
+This README is the day-to-day operator runbook: dev setup, log greps, nak recipes.
 
 > **v0 / hackathon.** Audio forwarding works at small scale. Production hardening punch-list is in [docs/sfu-system.md §10](../../docs/sfu-system.md#10-whats-not-in-v0-production-hardening-punch-list).
 

@@ -23,6 +23,14 @@ export interface Config {
   allowedPubkeys: Set<Hex>;
   /** Relays the SFU subscribes/publishes to. */
   relays: string[];
+  /**
+   * Relays subscribed to ONLY for kind 25052 control events. Events seen
+   * on these relays are treated as authorized — the relay's own write-
+   * whitelist replaces the local allow.json for `start` events. The SFU
+   * does NOT need to be whitelisted on these relays itself; only read
+   * access is required.
+   */
+  trustedAuthorRelays: string[];
   /** Per-room participant ceiling. */
   maxParticipantsPerRoom: number;
   /** Concurrent room ceiling. */
@@ -143,6 +151,13 @@ export function loadConfig(): Config {
     }
   }
 
+  const trustedAuthorRelays = envCsv('SFU_TRUSTED_AUTHOR_RELAYS');
+  for (const url of trustedAuthorRelays) {
+    if (!url.startsWith('wss://') && !url.startsWith('ws://')) {
+      throw new Error(`SFU_TRUSTED_AUTHOR_RELAYS contains non-ws URL: ${url}`);
+    }
+  }
+
   const rtpPortMin = envInt('SFU_RTP_PORT_MIN', 40000);
   const rtpPortMax = envInt('SFU_RTP_PORT_MAX', 40099);
   if (rtpPortMax <= rtpPortMin) {
@@ -154,6 +169,7 @@ export function loadConfig(): Config {
     operatorPubkey: envHex('SFU_OPERATOR_PUBKEY'),
     allowedPubkeys,
     relays,
+    trustedAuthorRelays,
     maxParticipantsPerRoom: envInt('SFU_MAX_PARTICIPANTS_PER_ROOM', 50),
     maxRooms: envInt('SFU_MAX_ROOMS', 10),
     emptyGraceSeconds: envInt('SFU_EMPTY_GRACE_SECONDS', 300),
@@ -172,6 +188,7 @@ export function loadConfig(): Config {
 
   log.info('config loaded', {
     relays: cfg.relays.length,
+    trustedRelays: cfg.trustedAuthorRelays.length,
     allowed: cfg.allowedPubkeys.size,
     maxRooms: cfg.maxRooms,
     cap: cfg.maxParticipantsPerRoom,

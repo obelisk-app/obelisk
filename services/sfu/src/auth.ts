@@ -23,6 +23,16 @@ export function isAllowedToStart(cfg: Config, sfuPubkey: Hex, sender: Hex): bool
 }
 
 /**
+ * Layer 2-bis: was this control event delivered on a trusted-author
+ * relay? If yes, the relay's own write-whitelist already proved the
+ * publisher is authorized. The SFU does not double-check `allow.json`
+ * for these — that's the entire point of the trusted-relay idiom.
+ */
+export function isTrustedAuthorRelay(cfg: Config, sourceRelay: string): boolean {
+  return cfg.trustedAuthorRelays.includes(sourceRelay);
+}
+
+/**
  * Layers 3 + 4: combined per-room dial check.
  *
  * Used at signaling intake: every incoming kind 25050 offer addressed to

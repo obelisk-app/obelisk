@@ -64,6 +64,10 @@ export class Advertiser {
 
     if (this.cfg.publicUrl) tags.push(['url', this.cfg.publicUrl]);
     for (const r of this.cfg.relays) tags.push(['relay', r]);
+    // Trusted-author relays — clients should send their kind 25052
+    // `start` events here. The relay's write-whitelist authorizes
+    // them automatically; no per-user allow-list maintenance.
+    for (const r of this.cfg.trustedAuthorRelays) tags.push(['trusted_relay', r]);
 
     // Codecs the SFU forwards. v0 ships audio (opus) reliably; video is
     // best-effort. Order is preference for clients that pick.

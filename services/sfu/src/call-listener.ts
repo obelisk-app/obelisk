@@ -16,7 +16,7 @@ import type { Event } from 'nostr-tools';
 
 import { KIND_SFU_CONTROL } from './nip-kinds.js';
 import { createLogger } from './log.js';
-import { isAllowedToStart, canManageRoom } from './auth.js';
+import { isAllowedToStart, canManageRoom, isTrustedAuthorRelay } from './auth.js';
 import type { Config } from './config.js';
 import type { RelayPool } from './relay.js';
 import type { RoomManager } from './room-manager.js';
@@ -35,6 +35,13 @@ const STARTING_RULES: RoomRules = {
 
 export class CallListener {
   private unsub: (() => void) | null = null;
+  /**
+   * Event-id → expiry timestamp (unix seconds). We subscribe per relay
+   * (so we can distinguish trusted vs untrusted sources), so an event
+   * published to multiple relays will be delivered multiple times.
+   * Dedupe so the action runs at most once per event id.
+   */
+  private seenEventIds = new Map<string, number>();
 
   constructor(
     private readonly cfg: Config,
@@ -45,18 +52,28 @@ export class CallListener {
   start(): void {
     if (this.unsub) return;
     const since = Math.floor(Date.now() / 1000) - 60;
-    // Some relays don't index `#p` for ephemeral kinds (same caveat as
-    // mesh kind 25050 — see src/lib/voice/transport.ts). Subscribe to
-    // every kind 25052 and gate by p-tag in `handle()`. Volume is low
-    // (only operator-issued control events ever land in this kind).
-    this.unsub = this.relay.subscribe(
+    // Subscribe per-relay so we know which relay delivered each event.
+    // Events seen on a trusted-author relay bypass the allow.json check
+    // (the relay's own write-whitelist authorized the publisher).
+    //
+    // We also drop the `#p` filter — some relays don't index `#p` on
+    // ephemeral kinds — and gate by p-tag in `handle()`.
+    const allRelays = Array.from(
+      new Set([...this.cfg.relays, ...this.cfg.trustedAuthorRelays]),
+    );
+    this.unsub = this.relay.subscribePerRelay(
+      allRelays,
       {
         kinds: [KIND_SFU_CONTROL],
         since,
       },
-      (ev) => this.handle(ev),
+      (ev, source) => this.handle(ev, source),
     );
-    log.info('listening for control events', { pubkey: this.relay.pubkey.slice(0, 12) + '…' });
+    log.info('listening for control events', {
+      pubkey: this.relay.pubkey.slice(0, 12) + '…',
+      relays: allRelays.length,
+      trusted: this.cfg.trustedAuthorRelays.length,
+    });
   }
 
   stop(): void {
@@ -64,13 +81,34 @@ export class CallListener {
     this.unsub = null;
   }
 
-  private handle(ev: Event): void {
+  /** Returns true if this is the first time we see the event id. */
+  private rememberEvent(id: string): boolean {
+    this.gcSeen();
+    if (this.seenEventIds.has(id)) return false;
+    // 5-minute TTL — control events are ephemeral and short-lived.
+    this.seenEventIds.set(id, Math.floor(Date.now() / 1000) + 300);
+    return true;
+  }
+
+  private gcSeen(): void {
+    if (this.seenEventIds.size < 256) return;
+    const now = Math.floor(Date.now() / 1000);
+    for (const [id, exp] of this.seenEventIds) {
+      if (exp < now) this.seenEventIds.delete(id);
+    }
+  }
+
+  private handle(ev: Event, sourceRelay: string): void {
     // Gate by p-tag — we subscribe broadly to work around relays that
     // don't index `#p` on ephemeral kinds.
     const targetedAtUs = ev.tags.some(
       (t) => t[0] === 'p' && t[1] === this.relay.pubkey,
     );
     if (!targetedAtUs) return;
+
+    // Per-relay subscriptions can deliver the same event multiple times.
+    // First-write wins; subsequent deliveries are dropped at this gate.
+    if (!this.rememberEvent(ev.id)) return;
 
     // Defensive: SimplePool already verifies sigs but we check the tag set.
     const channelTag = ev.tags.find((t) => t[0] === 'e')?.[1];
@@ -93,15 +131,18 @@ export class CallListener {
     }
 
     const action = payload.action as SfuControlAction;
+    const fromTrustedRelay = isTrustedAuthorRelay(this.cfg, sourceRelay);
     log.info('control received', {
       action,
       from: ev.pubkey.slice(0, 8),
       channel: channelTag.slice(0, 8),
+      via: sourceRelay,
+      trusted: fromTrustedRelay,
     });
 
     switch (action) {
       case 'start':
-        return void this.handleStart(ev.pubkey, channelTag, payload);
+        return void this.handleStart(ev.pubkey, channelTag, payload, fromTrustedRelay);
       case 'end':
         return void this.handleEnd(ev.pubkey, channelTag);
       case 'kick':
@@ -117,9 +158,17 @@ export class CallListener {
     sender: Hex,
     channelId: string,
     payload: SfuControlPayload,
+    fromTrustedRelay: boolean,
   ): Promise<void> {
-    if (!isAllowedToStart(this.cfg, this.relay.pubkey, sender)) {
-      log.warn('start rejected: sender not in allow-list', {
+    // The trusted-relay path is the production-grade gate: anyone whose
+    // event made it to a trusted-author relay's subscription is by
+    // construction authorized (the relay's whitelist gated the publish).
+    // The local allow.json + operator key remain as the manual override.
+    const authorized =
+      fromTrustedRelay
+      || isAllowedToStart(this.cfg, this.relay.pubkey, sender);
+    if (!authorized) {
+      log.warn('start rejected: sender not authorized (no allow-list / not on trusted relay)', {
         sender: sender.slice(0, 8),
       });
       return;
