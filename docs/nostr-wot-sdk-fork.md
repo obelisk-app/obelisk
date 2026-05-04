@@ -160,6 +160,45 @@ not React context. Three reasonable cutover strategies:
 3. **No migration yet.** Iterate in the playground, open the upstream
    PR when ready, come back to obelisk later.
 
+## Migration tracking — obelisk-dex login modal
+
+**Decision (2026-05-04):** migrate `src/app/app/LoginModal.tsx` to consume
+the fork's `@nostr-wot/ui` `<LoginButton>` / `<LoginWidget>` so updates
+to `Fabricio333/nostr-wot-sdk` flow into obelisk-dex automatically.
+
+**Distribution model while pre-release:** `file:../nostr-wot-sdk/packages/*`
+deps (npm 9 symlinks). Rebuild SDK → consumer picks it up on next request.
+No `npm install` between iterations. Switch to `@nostr-wot/*` from npm
+once changes land in `nostr-wot/nostr-wot-sdk` and a version is published.
+
+### Pre-conditions before cutover (do these first)
+
+- [ ] Clone fork at `../nostr-wot-sdk` (sibling to `obelisk-dex/`)
+- [ ] Add `file:` deps for `@nostr-wot/{data,signers,ui}` to `package.json`
+- [ ] Add `transpilePackages: ['@nostr-wot/ui', '@nostr-wot/signers', '@nostr-wot/data']` to `next.config.ts` if the fork ships TS sources rather than built `dist/`
+- [ ] Confirm the fork's `LoginWidget` `onLogin` callback gives us `(pubkey, signer)` shaped to feed `bridge.loginWith*`
+- [ ] Add `bridge.loginWithSigner(signer)` adapter so any `NostrSigner` from the SDK can drive `finalizeLogin()` (persist → resetPool → connect → flip `isLoggedIn`)
+
+### Cutover plan
+
+1. Replace `src/app/app/LoginModal.tsx` body with a thin wrapper around `<LoginWidget>` (keep La Crypta classes via the SDK's `classNames` prop if available, else fork the styling under `lc-*`)
+2. Forward `onLogin` → `bridge.loginWithSigner(signer)`
+3. Delete the per-method state in the legacy modal — the SDK owns it
+4. Update tests: `src/app/app/LoginModal.test.tsx` and any login-race tests to drive the SDK widget
+5. Verify all three paths (NIP-07, nsec, bunker QR + paste) end with `isLoggedIn=true` and global REQs open
+
+### Out of scope for now
+
+- Publishing to npm — wait for upstream merge in `nostr-wot/nostr-wot-sdk`
+- Replacing the bridge with `<NostrSessionProvider>` — bridge stays authoritative; SDK only owns the login UI + signer construction
+
+### Sibling project (`../obelisk`)
+
+Already on the published `@nostr-wot/{ui,signers,data}` from npm via
+`SdkLoginModal.tsx`. To iterate on unreleased fork changes from there,
+swap its npm deps to the same `file:../nostr-wot-sdk/packages/*` paths
+temporarily — see `obelisk/docs/nostr-wot-sdk-fork.md`.
+
 ## Cleanup if you're done with the fork
 
 ```bash
