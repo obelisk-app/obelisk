@@ -75,3 +75,6 @@ key.pem.bak
 .claude/worktrees/
 .claude/scheduled_tasks.lock
 *.log
+
+# SFU test peer state (generated keypairs)
+services/sfu/.test-peer/
