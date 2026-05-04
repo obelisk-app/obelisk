@@ -81,6 +81,15 @@ export class Peer {
   private makingOffer = false;
   private outboundSeq = 0;
 
+  /**
+   * Outstanding offer-ack watchdog. Armed each time we send an offer
+   * (forwarding a new track to this peer). The kind 25050 answer can
+   * drop on the relay or never get answered if the recipient is
+   * temporarily wedged; resending the same SDP is the cheapest recovery.
+   */
+  private offerAckTimer: ReturnType<typeof setTimeout> | null = null;
+  private offerRetryAttempts = 0;
+
   /** trackId → kind, populated by inbound trackinfo events. */
   private remoteTrackKinds = new Map<string, VoiceTrackKind>();
   /** trackId → ForwardedSender, the senders we added to forward another peer's track. */
@@ -255,6 +264,7 @@ export class Peer {
   close(): void {
     if (this.closed) return;
     this.closed = true;
+    this.clearOfferAckWatchdog();
     try {
       void this.pc.close();
     } catch (err) {
@@ -396,8 +406,81 @@ export class Peer {
         sessionId: this.sessionId,
         seq: this.outboundSeq++,
       });
+      this.armOfferAckWatchdog();
     } finally {
       this.makingOffer = false;
+    }
+  }
+
+  /**
+   * Arm a watchdog so a forwarded-track offer that gets dropped on the
+   * relay (or whose answer is dropped on the way back) is resent
+   * automatically. Without this, an unlucky relay drop means the
+   * recipient never sees the new track and the room looks "broken"
+   * (audio works, video doesn't). The dex client's symmetric watchdog
+   * lives in src/lib/voice/peer.ts.
+   *
+   * Only arms post-connect — initial-handshake stuck cases are
+   * handled by the connection-state recovery path (failed/disconnected
+   * → ICE restart → close-for-redial).
+   *
+   * 8 s gives the recipient enough time to receive offer + apply +
+   * craft answer + publish + relay-deliver. We resend the same SDP up
+   * to OFFER_RETRY_LIMIT_SFU times before giving up; the connection
+   * itself stays healthy and other tracks continue to flow, so a hard
+   * reset would be net-negative.
+   */
+  private armOfferAckWatchdog(): void {
+    if (this.closed) return;
+    if (!this.wasConnected) return;
+    if (this.offerAckTimer) clearTimeout(this.offerAckTimer);
+    const OFFER_ACK_TIMEOUT_MS = 8000;
+    const OFFER_RETRY_LIMIT_SFU = 2;
+    this.offerAckTimer = setTimeout(() => {
+      this.offerAckTimer = null;
+      if (this.closed) return;
+      if (this.pc.signalingState !== 'have-local-offer') {
+        this.offerRetryAttempts = 0;
+        return;
+      }
+      this.offerRetryAttempts += 1;
+      if (this.offerRetryAttempts > OFFER_RETRY_LIMIT_SFU) {
+        log.warn('forward offer never acked; giving up resends', {
+          remote: this.remotePubkey.slice(0, 8),
+          attempts: this.offerRetryAttempts,
+        });
+        this.offerRetryAttempts = 0;
+        return;
+      }
+      log.warn('forward offer not acked, resending', {
+        remote: this.remotePubkey.slice(0, 8),
+        attempt: this.offerRetryAttempts,
+      });
+      void this.resendCurrentOffer();
+    }, OFFER_ACK_TIMEOUT_MS);
+  }
+
+  private clearOfferAckWatchdog(): void {
+    if (this.offerAckTimer) {
+      clearTimeout(this.offerAckTimer);
+      this.offerAckTimer = null;
+    }
+    this.offerRetryAttempts = 0;
+  }
+
+  private async resendCurrentOffer(): Promise<void> {
+    if (this.closed) return;
+    const desc = this.pc.localDescription;
+    if (!desc || desc.type !== 'offer') return;
+    try {
+      await this.send({
+        type: 'offer',
+        sdp: desc.sdp,
+        sessionId: this.sessionId,
+        seq: this.outboundSeq++,
+      });
+    } finally {
+      this.armOfferAckWatchdog();
     }
   }
 
@@ -489,6 +572,9 @@ export class Peer {
       return;
     }
     await this.pc.setRemoteDescription({ type: 'answer', sdp: payload.sdp });
+    // Successful application clears the offer-ack watchdog — werift
+    // doesn't expose `onsignalingstatechange`, so we wire it here.
+    this.clearOfferAckWatchdog();
   }
 
   private async handleIce(payload: VoiceSignalPayload): Promise<void> {

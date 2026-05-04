@@ -49,28 +49,52 @@ function makePeer(opts: MakePeerOpts = {}) {
   return { peer, sent };
 }
 
+/**
+ * Drive a peer through one full negotiation round-trip so subsequent
+ * offers count as "renegotiations on a connected PC". The offer-ack
+ * watchdog only arms post-connect (the initial handshake is covered
+ * by the connect watchdog).
+ */
+async function bringPeerToConnected(peer: Peer, sent: VoiceSignalPayload[]) {
+  const pc = peer.pc as unknown as FakeRTCPeerConnection;
+  const initialTrack = new FakeMediaStreamTrack('audio') as unknown as MediaStreamTrack;
+  await peer.setLocalTrack('audio', initialTrack);
+  await flushMicrotasks(8);
+  // Apply a real answer so signalingState returns to 'stable' and the
+  // PC transitions to 'connected'.
+  const remotePc = new FakeRTCPeerConnection();
+  remotePc.addTrack(new FakeMediaStreamTrack('audio'));
+  await remotePc.setRemoteDescription({ type: 'offer', sdp: pc.localDescription!.sdp });
+  await remotePc.setLocalDescription();
+  const answerSdp = remotePc.localDescription!.sdp;
+  await peer.handleSignal({ type: 'answer', sdp: answerSdp, sessionId: 's', seq: 0 });
+  await flushMicrotasks(8);
+  // FakePc's setRemoteDescription({answer}) triggers markConnected
+  // when signalingState returns to stable; verify and clear sent log.
+  return { pc, initialOfferCount: sent.filter((s) => s.type === 'offer').length };
+}
+
 describe('Peer offer-ack watchdog', () => {
-  it('resends the same SDP if signalingState stays have-local-offer past OFFER_ACK_TIMEOUT_MS', async () => {
+  it('resends the SDP if a renegotiation offer goes unacked past OFFER_ACK_TIMEOUT_MS', async () => {
     vi.useFakeTimers();
     try {
       const { peer, sent } = makePeer({ polite: false });
-      const track = new FakeMediaStreamTrack('audio') as unknown as MediaStreamTrack;
-      await peer.setLocalTrack('audio', track);
-      await flushMicrotasks(8);
+      const { pc, initialOfferCount } = await bringPeerToConnected(peer, sent);
+      expect(peer.pc.connectionState).toBe('connected');
 
-      const pc = peer.pc as unknown as FakeRTCPeerConnection;
-      // PC has applied the local offer and emitted it.
+      // Mid-call: add a video track. This triggers a fresh offer.
+      const cam = new FakeMediaStreamTrack('video') as unknown as MediaStreamTrack;
+      await peer.setLocalTrack('camera', cam);
+      await flushMicrotasks(8);
+      const offersAfterAdd = sent.filter((s) => s.type === 'offer').length;
+      expect(offersAfterAdd).toBe(initialOfferCount + 1);
       expect(pc.signalingState).toBe('have-local-offer');
-      const initialOffers = sent.filter((s) => s.type === 'offer').length;
-      expect(initialOffers).toBeGreaterThanOrEqual(1);
 
-      // Advance past the offer-ack timeout — no answer arrived.
-      await vi.advanceTimersByTimeAsync(4500);
+      await vi.advanceTimersByTimeAsync(8500);
       await flushMicrotasks(8);
 
-      const finalOffers = sent.filter((s) => s.type === 'offer').length;
-      expect(finalOffers).toBe(initialOffers + 1);
-      // Same SDP body re-sent.
+      const offersAfterWatchdog = sent.filter((s) => s.type === 'offer').length;
+      expect(offersAfterWatchdog).toBe(offersAfterAdd + 1);
       const offers = sent.filter((s) => s.type === 'offer');
       expect(offers[offers.length - 1].sdp).toBe(offers[offers.length - 2].sdp);
     } finally {
@@ -78,34 +102,56 @@ describe('Peer offer-ack watchdog', () => {
     }
   });
 
-  it('does not resend if the answer applies before the watchdog fires', async () => {
+  it('does not resend a renegotiation offer if the answer applies first', async () => {
+    vi.useFakeTimers();
+    try {
+      const { peer, sent } = makePeer({ polite: false });
+      const { pc, initialOfferCount } = await bringPeerToConnected(peer, sent);
+
+      const cam = new FakeMediaStreamTrack('video') as unknown as MediaStreamTrack;
+      await peer.setLocalTrack('camera', cam);
+      await flushMicrotasks(8);
+      const offersAfterAdd = sent.filter((s) => s.type === 'offer').length;
+      expect(offersAfterAdd).toBe(initialOfferCount + 1);
+
+      // Apply the corresponding answer.
+      const remotePc = new FakeRTCPeerConnection();
+      remotePc.addTrack(new FakeMediaStreamTrack('audio'));
+      remotePc.addTrack(new FakeMediaStreamTrack('video'));
+      await remotePc.setRemoteDescription({ type: 'offer', sdp: pc.localDescription!.sdp });
+      await remotePc.setLocalDescription();
+      await peer.handleSignal({ type: 'answer', sdp: remotePc.localDescription!.sdp, sessionId: 's', seq: 2 });
+      await flushMicrotasks(8);
+      expect(pc.signalingState).toBe('stable');
+
+      await vi.advanceTimersByTimeAsync(9000);
+      await flushMicrotasks(8);
+
+      const finalOfferCount = sent.filter((s) => s.type === 'offer').length;
+      expect(finalOfferCount).toBe(offersAfterAdd);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not arm the watchdog on the initial (pre-connect) handshake', async () => {
     vi.useFakeTimers();
     try {
       const { peer, sent } = makePeer({ polite: false });
       const track = new FakeMediaStreamTrack('audio') as unknown as MediaStreamTrack;
       await peer.setLocalTrack('audio', track);
       await flushMicrotasks(8);
-
-      const pc = peer.pc as unknown as FakeRTCPeerConnection;
-      const initialOffers = sent.filter((s) => s.type === 'offer').length;
-
-      // Build a real answer SDP via a sibling FakePc fed our offer.
-      const remotePc = new FakeRTCPeerConnection();
-      remotePc.addTrack(new FakeMediaStreamTrack('audio'));
-      await remotePc.setRemoteDescription({ type: 'offer', sdp: pc.localDescription!.sdp });
-      await remotePc.setLocalDescription();
-      const answerSdp = remotePc.localDescription!.sdp;
-
-      await peer.handleSignal({ type: 'answer', sdp: answerSdp, sessionId: 's', seq: 1 });
+      const initial = sent.filter((s) => s.type === 'offer').length;
+      // PC has not been driven to connected — no answer applied.
+      expect(peer.pc.connectionState).not.toBe('connected');
+      // Advance past the offer-ack timeout but BEFORE the connect
+      // watchdog (both happen to be 8 s; we stop early to isolate the
+      // offer-ack path). The watchdog must NOT have fired — initial
+      // handshake recovery is owned by the connect watchdog instead.
+      await vi.advanceTimersByTimeAsync(7000);
       await flushMicrotasks(8);
-      // After applying the answer the local PC must be back to stable.
-      expect(pc.signalingState).toBe('stable');
-
-      await vi.advanceTimersByTimeAsync(5000);
-      await flushMicrotasks(8);
-
-      const finalOffers = sent.filter((s) => s.type === 'offer').length;
-      expect(finalOffers).toBe(initialOffers);
+      const after = sent.filter((s) => s.type === 'offer').length;
+      expect(after).toBe(initial);
     } finally {
       vi.useRealTimers();
     }

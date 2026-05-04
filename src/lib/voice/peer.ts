@@ -50,14 +50,28 @@ export const INITIAL_CONNECT_TIMEOUT_MS = 8000;
 // is one relay-mediated kind 25050 in each direction. If signalingState
 // is still 'have-local-offer' after this window, the answer either
 // never arrived or the relay dropped one of the legs. Resend the same
-// SDP up to OFFER_RETRY_LIMIT times before escalating. This is the
-// "I had to refresh to get my video to appear" bug class — turning on
-// the camera triggers a renegotiation that gets silently dropped, the
-// PC is still 'connected' so the connect watchdog never fires, and the
-// remote never sees the new transceiver. Tuning the resend at 4 s is
-// short enough to recover within the user's "wait, did it work?"
-// window but long enough to avoid spurious resends on a slow network.
-export const OFFER_ACK_TIMEOUT_MS = 4000;
+// SDP up to OFFER_RETRY_LIMIT times before logging and giving up. This
+// is the "I had to refresh to get my video to appear" bug class —
+// turning on the camera triggers a renegotiation that gets silently
+// dropped, the PC is still 'connected' so the connect watchdog never
+// fires, and the remote never sees the new transceiver.
+//
+// The watchdog only arms AFTER the initial PC has reached 'connected'
+// (i.e. for mid-call renegotiations). The initial handshake is covered
+// by `armConnectWatchdog`, which has its own escalation path; running
+// both on the same first offer would double up resets.
+//
+// 8 s gives the relay + SFU forwarding path generous time before
+// declaring the leg dropped — the SFU's own offer-to-other-peers
+// renegotiation can take a few seconds before the answer to ours lands.
+//
+// We intentionally do NOT escalate to performHardReset here. A wedged
+// renegotiation on a connected PC is recoverable via more SDP resends;
+// blowing away the PC also loses every live media track and forces
+// fresh getUserMedia trackIds, which the SFU treats as new ingest
+// (and "ended via renegotiation" for the old IDs). The connect
+// watchdog still owns the hard-reset path for genuinely stuck PCs.
+export const OFFER_ACK_TIMEOUT_MS = 8000;
 export const OFFER_RETRY_LIMIT = 2;
 
 /**
@@ -545,16 +559,22 @@ export class Peer {
   }
 
   /**
-   * Arm the offer-ack watchdog. Called after every successful offer
-   * publish. The watchdog fires after `OFFER_ACK_TIMEOUT_MS`; if the
-   * answer hasn't been applied by then (signalingState still
-   * 'have-local-offer'), we resend the same SDP. After
-   * `OFFER_RETRY_LIMIT` resends with no answer, escalate to
-   * performHardReset — the most likely cause is a wedged transceiver
-   * state that only a fresh PC will untangle.
+   * Arm the offer-ack watchdog. Only meaningful for renegotiations on a
+   * connected PC — the initial handshake is covered by the connect
+   * watchdog, and arming here on the first offer would race with that
+   * timer's hard-reset path.
+   *
+   * The watchdog fires after `OFFER_ACK_TIMEOUT_MS`; if the answer
+   * hasn't applied by then (signalingState still 'have-local-offer')
+   * we resend the same SDP. After `OFFER_RETRY_LIMIT` resends we stop
+   * resending — the connection itself is still healthy (audio still
+   * flowing), and a hard reset would lose every live track. If the
+   * underlying PC is genuinely wedged, the connection-state recovery
+   * path (failed/disconnected → scheduleReconnect) will catch it.
    */
   private armOfferAckWatchdog(): void {
     if (this.closed) return;
+    if (!this.wasConnected) return;
     if (this.offerAckTimer) clearTimeout(this.offerAckTimer);
     this.offerAckTimer = setTimeout(() => {
       this.offerAckTimer = null;
@@ -569,9 +589,9 @@ export class Peer {
       this.offerRetryAttempts += 1;
       if (this.offerRetryAttempts > OFFER_RETRY_LIMIT) {
         console.warn('[voice] offer never acked after', OFFER_RETRY_LIMIT,
-          'retries — hard reset for', this.remotePubkey.slice(0, 8));
+          'retries — giving up resends for', this.remotePubkey.slice(0, 8),
+          '(connection-state recovery path will pick up if the PC is wedged)');
         this.offerRetryAttempts = 0;
-        this.performHardReset();
         return;
       }
       console.warn('[voice] offer not acked, resending — peer',
