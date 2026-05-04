@@ -465,7 +465,7 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
               </div>
 
               {/* Side rail (desktop) / bottom strip (mobile) — everyone, click to pin */}
-              <aside className="md:w-56 lg:w-64 shrink-0 flex md:flex-col gap-2 overflow-x-auto md:overflow-x-visible md:overflow-y-auto pb-1 md:pb-0">
+              <ScrollableRail>
                 {videoPubkeys.map((pk) => (
                   <RailVideoTile
                     key={pk}
@@ -486,7 +486,7 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
                     audioStream={pk === selfPubkey ? null : (tracksByPubkey.get(pk)?.audio?.stream ?? null)}
                   />
                 ))}
-              </aside>
+              </ScrollableRail>
             </>
           ) : (
             /* No screen-share: tiled video grid + audio strip */
@@ -508,12 +508,14 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
                   ) : (
                     <div
                       className={
-                        'grid gap-2 sm:gap-3 w-full h-full content-center ' +
+                        'grid gap-2 sm:gap-3 w-full h-full auto-rows-fr min-h-0 ' +
                         (videoPubkeys.length === 2
                           ? 'grid-cols-1 sm:grid-cols-2'
-                          : videoPubkeys.length <= 4
-                            ? 'grid-cols-2'
-                            : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4')
+                          : videoPubkeys.length === 3
+                            ? 'grid-cols-1 sm:grid-cols-3'
+                            : videoPubkeys.length === 4
+                              ? 'grid-cols-2'
+                              : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4')
                       }
                     >
                       {videoPubkeys.map((pk) => (
@@ -525,6 +527,7 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
                           audioStream={pk === selfPubkey ? null : (tracksByPubkey.get(pk)?.audio?.stream ?? null)}
                           onPin={() => setPinned(pk)}
                           fit="cover"
+                          fillParent
                         />
                       ))}
                     </div>
@@ -580,7 +583,11 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
         </div>
       </div>
 
-      {chatSlot && isChatOpen && chatSlot}
+      {chatSlot && isChatOpen && (
+        <div className="contents max-md:!block max-md:absolute max-md:inset-0 max-md:z-30 max-md:bg-lc-black/80 max-md:backdrop-blur-sm">
+          {chatSlot}
+        </div>
+      )}
     </div>
   );
 }
@@ -812,6 +819,84 @@ function QualityDot({ pubkey }: { pubkey: string }) {
       data-testid="peer-quality-dot"
       data-quality={sample?.level ?? 'unknown'}
     />
+  );
+}
+
+function ScrollableRail({ children }: { children: React.ReactNode }) {
+  const ref = useRef<HTMLElement | null>(null);
+  const [canPrev, setCanPrev] = useState(false);
+  const [canNext, setCanNext] = useState(false);
+
+  const update = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    // On mobile (<md) the rail scrolls horizontally; on md+ it scrolls vertically.
+    const horizontal = window.matchMedia('(max-width: 767px)').matches;
+    if (horizontal) {
+      setCanPrev(el.scrollLeft > 4);
+      setCanNext(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+    } else {
+      setCanPrev(el.scrollTop > 4);
+      setCanNext(el.scrollTop + el.clientHeight < el.scrollHeight - 4);
+    }
+  }, []);
+
+  useEffect(() => {
+    update();
+    const el = ref.current;
+    if (!el) return;
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    Array.from(el.children).forEach((c) => ro.observe(c));
+    window.addEventListener('resize', update);
+    return () => { ro.disconnect(); window.removeEventListener('resize', update); };
+  }, [update, children]);
+
+  const scroll = (dir: 1 | -1) => {
+    const el = ref.current;
+    if (!el) return;
+    const horizontal = window.matchMedia('(max-width: 767px)').matches;
+    const amount = (horizontal ? el.clientWidth : el.clientHeight) * 0.8 * dir;
+    if (horizontal) el.scrollBy({ left: amount, behavior: 'smooth' });
+    else el.scrollBy({ top: amount, behavior: 'smooth' });
+  };
+
+  return (
+    <div className="relative md:w-56 lg:w-64 shrink-0 min-h-0">
+      <aside
+        ref={ref as React.RefObject<HTMLElement>}
+        onScroll={update}
+        className="h-full flex md:flex-col gap-2 overflow-x-auto md:overflow-x-visible md:overflow-y-auto pb-1 md:pb-0 scroll-smooth"
+      >
+        {children}
+      </aside>
+      {canPrev && (
+        <button
+          type="button"
+          onClick={() => scroll(-1)}
+          aria-label="Scroll previous"
+          className="absolute z-10 left-1 md:left-1/2 md:-translate-x-1/2 top-1 md:top-1 w-7 h-7 rounded-full bg-black/70 backdrop-blur text-white flex items-center justify-center shadow-lg ring-1 ring-white/15 hover:bg-black/85"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline className="md:hidden" points="15 18 9 12 15 6" />
+            <polyline className="hidden md:block" points="18 15 12 9 6 15" />
+          </svg>
+        </button>
+      )}
+      {canNext && (
+        <button
+          type="button"
+          onClick={() => scroll(1)}
+          aria-label="Scroll next"
+          className="absolute z-10 right-1 md:right-auto md:left-1/2 md:-translate-x-1/2 bottom-auto top-1/2 -translate-y-1/2 md:translate-y-0 md:top-auto md:bottom-1 w-7 h-7 rounded-full bg-black/70 backdrop-blur text-white flex items-center justify-center shadow-lg ring-1 ring-white/15 hover:bg-black/85"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline className="md:hidden" points="9 18 15 12 9 6" />
+            <polyline className="hidden md:block" points="6 9 12 15 18 9" />
+          </svg>
+        </button>
+      )}
+    </div>
   );
 }
 

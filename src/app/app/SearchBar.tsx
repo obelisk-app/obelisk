@@ -110,6 +110,8 @@ export default function SearchBar({
 }) {
   const [raw, setRaw] = useState('');
   const [open, setOpen] = useState(false);
+  const [mobileExpanded, setMobileExpanded] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [results, setResults] = useState<ReadonlyArray<JsMessage & { groupId: string | null }>>([]);
   const [error, setError] = useState<string | null>(null);
@@ -167,21 +169,56 @@ export default function SearchBar({
 
   return (
     <div ref={rootRef} className="relative">
+      <button
+        type="button"
+        onClick={() => {
+          setMobileExpanded(true);
+          setOpen(true);
+          requestAnimationFrame(() => inputRef.current?.focus());
+        }}
+        className={
+          'sm:hidden rounded-md p-2 text-lc-muted hover:text-lc-white hover:bg-lc-card ' +
+          (mobileExpanded ? 'hidden' : '')
+        }
+        aria-label="Open search"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="11" cy="11" r="7" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+      </button>
       <form
         onSubmit={(e) => { e.preventDefault(); runSearch(raw); }}
-        className="flex items-center gap-2 rounded-md border border-lc-border bg-lc-black/40 px-3 py-2 w-56 md:w-80 focus-within:border-lc-green/60"
+        className={
+          'items-center gap-2 rounded-md border border-lc-border bg-lc-dark sm:bg-lc-black/40 focus-within:border-lc-green/60 ' +
+          'max-sm:fixed max-sm:inset-x-2 max-sm:top-2 max-sm:z-50 max-sm:px-3 max-sm:py-2.5 max-sm:shadow-2xl ' +
+          'sm:px-3 sm:py-2 sm:w-56 md:w-80 ' +
+          (mobileExpanded ? 'flex' : 'hidden sm:flex')
+        }
       >
         <input
+          ref={inputRef}
           value={raw}
           onChange={(e) => setRaw(e.target.value)}
           onFocus={() => setOpen(true)}
           placeholder={`Buscar ${serverName}`}
-          className="flex-1 bg-transparent text-xs text-lc-white outline-none placeholder:text-lc-muted"
+          className="flex-1 min-w-0 bg-transparent text-sm sm:text-xs text-lc-white outline-none placeholder:text-lc-muted"
         />
-        <button type="submit" className="text-lc-muted hover:text-lc-white" aria-label="Search">
+        <button type="submit" className="text-lc-muted hover:text-lc-white shrink-0" aria-label="Search">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="11" cy="11" r="7" />
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          onClick={() => { setMobileExpanded(false); setOpen(false); setRaw(''); }}
+          className="sm:hidden text-lc-muted hover:text-lc-white shrink-0"
+          aria-label="Close search"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
           </svg>
         </button>
       </form>

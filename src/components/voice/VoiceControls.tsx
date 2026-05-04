@@ -122,7 +122,6 @@ export default function VoiceControls({ onLeave, isChatOpen, onToggleChat }: Voi
           onClick={handleToggleDeafen}
           title={isDeafened ? 'Undeafen' : 'Deafen'}
           data-testid="deafen-btn"
-          className="hidden sm:flex"
         >
           {isDeafened ? <DeafenOffIcon /> : <DeafenOnIcon />}
         </CircleBtn>
