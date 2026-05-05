@@ -77,4 +77,5 @@ key.pem.bak
 *.log
 
 # SFU test peer state (generated keypairs)
-services/sfu/.test-peer/
+scripts/.test-peer/
+scripts/.test-peer-ms/
