@@ -671,10 +671,21 @@ export class VoiceClient {
     // default relays (relay.obelisk.ar only, not public.obelisk.ar). Pass
     // them through so kind 25050 RPC envelopes land where the SFU is
     // actually subscribed.
-    const trustedRelays = (process.env.NEXT_PUBLIC_SFU_TRUSTED_RELAYS ?? '')
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
+    //
+    // Resolution order matches `pickSfu(channelId)`:
+    //   1. per-channel pin (kind 30078)        — preferred
+    //   2. NEXT_PUBLIC_SFU_TRUSTED_RELAYS env  — fallback for unconfigured channels
+    const { pickSfu } = await import('./sfu-control');
+    const picked = await pickSfu(this.channelId);
+    let trustedRelays: string[] = [];
+    if (picked && picked.pubkey === sfuPubkey && picked.trustedRelays.length > 0) {
+      trustedRelays = [...picked.trustedRelays];
+    } else {
+      trustedRelays = (process.env.NEXT_PUBLIC_SFU_TRUSTED_RELAYS ?? '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
     const client = new SfuClient({
       channelId: this.channelId,
       sfuPubkey,
