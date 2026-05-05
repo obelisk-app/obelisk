@@ -667,10 +667,19 @@ export class VoiceClient {
    * caller (`setSfuMode`) guarantees the previous client was torn down.
    */
   private async startSfuClient(sfuPubkey: string): Promise<void> {
+    // SFU's listening relays may be a strict subset of the dex's bridge
+    // default relays (relay.obelisk.ar only, not public.obelisk.ar). Pass
+    // them through so kind 25050 RPC envelopes land where the SFU is
+    // actually subscribed.
+    const trustedRelays = (process.env.NEXT_PUBLIC_SFU_TRUSTED_RELAYS ?? '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
     const client = new SfuClient({
       channelId: this.channelId,
       sfuPubkey,
       selfPubkey: this.selfPubkey,
+      ...(trustedRelays.length > 0 ? { trustedRelays } : {}),
       events: {
         onRemoteTrack: (t: SfuRemoteTrack) => {
           if (this.deafened && (t.kind === 'audio' || t.kind === 'screen-audio')) {

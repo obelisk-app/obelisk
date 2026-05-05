@@ -105,6 +105,9 @@ export class SfuClient {
     sfuPubkey: string;
     selfPubkey: string;
     events: SfuClientEvents;
+    /** Trusted-author relays the SFU listens on. Outbound RPC envelopes
+     *  must publish here, not the dex's default relays. */
+    trustedRelays?: readonly string[];
   }) {
     this.events = opts.events;
     this.rpc = new SfuRpc({
@@ -112,6 +115,9 @@ export class SfuClient {
       sfuPubkey: opts.sfuPubkey,
       selfPubkey: opts.selfPubkey,
       onNotification: (n) => this.handleNotification(n),
+      ...(opts.trustedRelays && opts.trustedRelays.length > 0
+        ? { publishRelays: opts.trustedRelays }
+        : {}),
     });
   }
 

@@ -73,6 +73,15 @@ export class SfuRpc {
   private readonly sfuPubkey: string;
   private readonly selfPubkey: string;
   private readonly onNotification: (n: RpcNotification) => void;
+  /**
+   * Relays the RPC envelopes are published to. Defaults to whatever the
+   * bridge has, but for SFUs that only listen on a permissioned trusted
+   * relay (e.g. relay.obelisk.ar), the caller must pass that relay here
+   * — otherwise envelopes go to the bridge default (public.obelisk.ar)
+   * and the SFU never sees them. Browser stays on its bridge relays for
+   * receiving; this only scopes outbound publishes.
+   */
+  private readonly publishRelays: readonly string[];
 
   private pending = new Map<string, PendingCall>();
   private signalUnsub: (() => void) | null = null;
@@ -84,11 +93,13 @@ export class SfuRpc {
     sfuPubkey: string;
     selfPubkey: string;
     onNotification: (n: RpcNotification) => void;
+    publishRelays?: readonly string[];
   }) {
     this.channelId = opts.channelId;
     this.sfuPubkey = opts.sfuPubkey;
     this.selfPubkey = opts.selfPubkey;
     this.onNotification = opts.onNotification;
+    this.publishRelays = opts.publishRelays ?? [];
   }
 
   async start(): Promise<void> {
@@ -164,7 +175,7 @@ export class SfuRpc {
         ['e', this.channelId],
         ['t', 'obelisk-voice-signal'],
       ],
-    });
+    }, this.publishRelays.length > 0 ? [...this.publishRelays] : undefined);
     return result;
   }
 
