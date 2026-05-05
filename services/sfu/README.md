@@ -8,7 +8,7 @@ Standalone Node service that acts as an opt-in SFU (selective forwarding unit) f
 
 This README is the day-to-day operator runbook: dev setup, log greps, nak recipes.
 
-> **v0 / hackathon.** Audio forwarding works at small scale. Production hardening punch-list is in [docs/sfu-system.md §10](../../docs/sfu-system.md#10-whats-not-in-v0-production-hardening-punch-list).
+> **v0.** Audio forwarding works at small scale. Production hardening punch-list is in [docs/sfu-system.md §10](../../docs/sfu-system.md#10-whats-not-in-v0-production-hardening-punch-list).
 
 ---
 

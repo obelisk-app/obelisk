@@ -4,7 +4,7 @@ This is the spec for **Obelisk's Bring-Your-Own-SFU**: a standalone service that
 
 The SFU is **never required**. Mesh calls (`docs/voice-system.md`) keep working unchanged. When an authorized user opts into SFU mode, their client routes to the SFU instead of dialing every other peer — but the wire format the SFU speaks is **the same kind 20078 + 25050 signaling browsers already use**. The SFU is "just another peer that happens to have infinite uplink and forwards everyone's tracks to everyone else."
 
-> **Status:** v0 / hackathon. Core Nostr signaling and room state are implemented. Media forwarding is implemented for audio at small scale; see §10 for the production hardening list.
+> **Status:** v0. Core Nostr signaling and room state are implemented. Media forwarding is implemented for audio at small scale; see §10 for the production hardening list.
 
 ---
 
@@ -474,7 +474,7 @@ Or just `pkill -TERM -f obelisk-sfu` — the process traps SIGTERM and publishes
 
 These are deliberate cuts. Everything is well-defined enough to follow up on.
 
-- **Mediasoup migration.** v0 uses werift, which transcodes when forwarding. Mediasoup forwards encoded RTP packets natively (5–10× CPU reduction, simulcast support). Migrating means writing a thin Nostr-to-mediasoup-protocol adapter on the SFU; the wire seen by browsers stays kind 25050 SDP/ICE. ETA: post-hackathon.
+- **Mediasoup migration.** v0 uses werift, which transcodes when forwarding. Mediasoup forwards encoded RTP packets natively (5–10× CPU reduction, simulcast support). Migrating means writing a thin Nostr-to-mediasoup-protocol adapter on the SFU; the wire seen by browsers stays kind 25050 SDP/ICE. ETA: future work.
 - **Encrypted signaling.** Kind 25050 + 25052 are plaintext-signed today. Same posture as mesh (`docs/voice-system.md` §9). Gift-wrap upgrade lands when both client and SFU have NIP-44.
 - **SVC + simulcast.** v0 forwards a single video layer. Real SFUs adapt per receiver — send 720p to focus, 180p to gallery thumbnails. Requires mediasoup or Insertable Streams.
 - **Recording.** Out of scope. If you want it, add it as a separate "ghost peer" that subscribes to the SFU like any other client.

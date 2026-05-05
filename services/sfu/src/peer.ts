@@ -95,6 +95,12 @@ export class Peer {
   /** trackId → ForwardedSender, the senders we added to forward another peer's track. */
   private forwardedSenders = new Map<string, ForwardedSender>();
 
+  /**
+   * Debounce timer for `onnegotiationneeded` — see attachListeners. Multiple
+   * synchronous addTransceiver calls collapse into a single offer.
+   */
+  private negotiationTimer: ReturnType<typeof setTimeout> | null = null;
+
   private wasConnected = false;
   private closed = false;
   /**
@@ -132,10 +138,14 @@ export class Peer {
       // werift port range — pin RTP to the configured range so a host
       // firewall / cloud security group can pinhole exactly these ports.
       icePortRange: [opts.rtpPortMin, opts.rtpPortMax],
+      // Disable IPv6: our coturn listens on IPv4 only, so any v6 host
+      // candidate the browser tries to permission gets a 403 Forbidden IP
+      // back from coturn (it can't relay to v6 peers when listening on v4).
+      iceUseIpv6: false,
       // Advertise this as a candidate when set — needed for 1:1 NAT
       // hosts (AWS, GCP) where the host can't see its own public IP.
       ...(opts.publicIp && !forceRelay ? { iceAdditionalHostAddresses: [opts.publicIp] } : {}),
-    });
+    } as ConstructorParameters<typeof RTCPeerConnection>[0]);
 
     this.attachListeners();
     log.info('peer constructed', {
@@ -154,11 +164,26 @@ export class Peer {
     if (this.closed) return;
     if (originPubkey === this.remotePubkey) return; // never echo back
 
-    const trackId = trackIdOf(track);
+    const inboundTrackId = trackIdOf(track);
 
-    // Out-of-band trackinfo BEFORE the negotiation so the browser's
-    // ontrack handler has the kind+origin lookup ready when the inbound
-    // track materializes. Same posture as browser peer.ts.
+    // Use addTransceiver (well-tested werift idiom) instead of addTrack
+    // (which is marked TODO in werift's source). `kind` here is the
+    // VOICE-LEVEL kind ('audio' / 'camera' / 'screen' / 'screen-audio');
+    // werift's transceiver wants the RAW media kind ('audio' / 'video').
+    const rawKind: 'audio' | 'video' =
+      kind === 'audio' || kind === 'screen-audio' ? 'audio' : 'video';
+    const transceiver = this.pc.addTransceiver(rawKind, { direction: 'sendonly' });
+    await transceiver.sender.replaceTrack(track);
+
+    // werift's addTransceiver mints a fresh sender-side track id (visible to
+    // the browser via SDP MSID) that does NOT equal the inbound track's id.
+    // The browser's ontrack receives the sender id, so trackinfo MUST use
+    // that id — otherwise the dex can't map the forwarded track back to its
+    // origin pubkey and the tile stays empty / mis-attributed.
+    const trackId = transceiver.sender.track?.id ?? inboundTrackId;
+
+    // Out-of-band trackinfo so the browser's ontrack handler has the
+    // kind+origin lookup ready when the inbound track materializes.
     await this.send({
       type: 'trackinfo',
       trackInfo: {
@@ -170,14 +195,6 @@ export class Peer {
       seq: this.outboundSeq++,
     });
 
-    // Use addTransceiver (well-tested werift idiom) instead of addTrack
-    // (which is marked TODO in werift's source). `kind` here is the
-    // VOICE-LEVEL kind ('audio' / 'camera' / 'screen' / 'screen-audio');
-    // werift's transceiver wants the RAW media kind ('audio' / 'video').
-    const rawKind: 'audio' | 'video' =
-      kind === 'audio' || kind === 'screen-audio' ? 'audio' : 'video';
-    const transceiver = this.pc.addTransceiver(rawKind, { direction: 'sendonly' });
-    await transceiver.sender.replaceTrack(track);
     this.forwardedSenders.set(trackId, {
       originPubkey,
       trackId,
@@ -185,9 +202,12 @@ export class Peer {
       sender: transceiver.sender,
       transceiver,
     });
-    log.debug('forwarded track added', {
+    log.info('forwarded track added', {
       to: this.remotePubkey.slice(0, 8),
       from: originPubkey.slice(0, 8),
+      trackInfoId: trackId,
+      senderTrackId: transceiver.sender.track?.id,
+      senderTrackUuid: (transceiver.sender.track as { uuid?: string } | null | undefined)?.uuid,
       kind,
     });
 
@@ -272,6 +292,7 @@ export class Peer {
     if (this.closed) return;
     this.closed = true;
     this.clearOfferAckWatchdog();
+    if (this.negotiationTimer) { clearTimeout(this.negotiationTimer); this.negotiationTimer = null; }
     try {
       void this.pc.close();
     } catch (err) {
@@ -295,11 +316,20 @@ export class Peer {
     // shape each one publishes — mixing styles isn't a typo.
 
     this.pc.onnegotiationneeded = () => {
-      void this.makeOffer().catch((err) =>
-        log.warn('makeOffer threw', { err: (err as Error).message }),
-      );
+      // Coalesce: a peer joining with N forwarded tracks fires
+      // onnegotiationneeded N times in quick succession (one per
+      // addTransceiver). Without debounce werift sends N separate offers,
+      // each with a different m-line count, and the browser rejects the
+      // later ones with "order of m-lines doesn't match". One offer with
+      // all transceivers fixes that.
+      if (this.negotiationTimer) clearTimeout(this.negotiationTimer);
+      this.negotiationTimer = setTimeout(() => {
+        this.negotiationTimer = null;
+        void this.makeOffer().catch((err) =>
+          log.warn('makeOffer threw', { err: (err as Error).message }),
+        );
+      }, 50);
     };
-
     this.pc.onIceCandidate.subscribe((candidate) => {
       if (!candidate) return; // null = end-of-candidates
       // `send` may be sync (returns void) or async (returns Promise);
@@ -407,6 +437,14 @@ export class Peer {
         log.warn('makeOffer: no localDescription after setLocalDescription');
         return;
       }
+      const lines = sdp.split('\n');
+      const codecs = lines
+        .filter((l) => l.startsWith('a=rtpmap:'))
+        .map((l) => l.trim());
+      log.info('offer rtpmap', {
+        remote: this.remotePubkey.slice(0, 8),
+        codecs,
+      });
       await this.send({
         type: 'offer',
         sdp,

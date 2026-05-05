@@ -372,6 +372,11 @@ const videoArgs = [
   '-loglevel', 'warning', '-re',
   '-f', 'lavfi', '-i', 'testsrc2=size=640x480:rate=15',
   '-c:v', 'libvpx', '-b:v', '500k', '-deadline', 'realtime', '-cpu-used', '4',
+  // 1s GOP — without this libvpx defaults to ~8s, so a viewer joining mid-stream
+  // sees a black tile until the next keyframe lands. SFU forwards delta-only
+  // until then because we don't (yet) issue PLI on receiver-join. Tight GOP
+  // hides that flaw at the cost of ~10% extra bitrate.
+  '-g', '15', '-keyint_min', '15',
   '-payload_type', '96',
   '-ssrc', '1',
   '-f', 'rtp', `rtp://127.0.0.1:${VIDEO_RTP_PORT}?pkt_size=1200`,

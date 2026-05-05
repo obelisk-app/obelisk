@@ -21,6 +21,15 @@ export interface Config {
   operatorPubkey: Hex | null;
   /** Pubkeys authorized to publish `start` events. Hot-swappable via SIGHUP. */
   allowedPubkeys: Set<Hex>;
+  /** Bypass allow-list entirely (SFU_ALLOW_ALL=1). For open testing/dev use. */
+  allowAll: boolean;
+  /**
+   * Media engine: legacy `werift` (single-process JS, ≤10 receivers per
+   * room) or `mediasoup` (C++ worker per CPU core, simulcast, hundreds
+   * of receivers). Default `werift` until mediasoup parity ships and we
+   * remove the werift code paths entirely. See docs/sfu-mediasoup-migration.md.
+   */
+  engine: 'werift' | 'mediasoup';
   /** Relays the SFU subscribes/publishes to. */
   relays: string[];
   /**
@@ -168,6 +177,8 @@ export function loadConfig(): Config {
     nsecHex,
     operatorPubkey: envHex('SFU_OPERATOR_PUBKEY'),
     allowedPubkeys,
+    allowAll: (process.env.SFU_ALLOW_ALL ?? '').trim() === '1',
+    engine: (process.env.SFU_ENGINE ?? '').trim() === 'mediasoup' ? 'mediasoup' : 'werift',
     relays,
     trustedAuthorRelays,
     maxParticipantsPerRoom: envInt('SFU_MAX_PARTICIPANTS_PER_ROOM', 50),
@@ -190,6 +201,8 @@ export function loadConfig(): Config {
     relays: cfg.relays.length,
     trustedRelays: cfg.trustedAuthorRelays.length,
     allowed: cfg.allowedPubkeys.size,
+    allowAll: cfg.allowAll,
+    engine: cfg.engine,
     maxRooms: cfg.maxRooms,
     cap: cfg.maxParticipantsPerRoom,
     httpPort: cfg.httpPort,

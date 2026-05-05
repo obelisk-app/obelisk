@@ -24,6 +24,7 @@ import { HttpServer } from './http-server.js';
 import { MembershipTracker } from './membership.js';
 import { RelayPool } from './relay.js';
 import { RoomManager } from './room-manager.js';
+import { createMediasoupEngine, type MediasoupEngine } from './mediasoup-server.js';
 import { loadConfig, reloadAllowList, type Config } from './config.js';
 
 const log = createLogger('main');
@@ -42,7 +43,15 @@ async function main(): Promise<void> {
 
   const relay = new RelayPool(cfg.relays, identity);
   const membership = new MembershipTracker(relay);
-  const rooms = new RoomManager(cfg, relay, membership);
+
+  // mediasoup engine: only spun up when SFU_ENGINE=mediasoup. The werift
+  // path keeps zero native dependencies for backward compat.
+  let mediasoupEngine: MediasoupEngine | null = null;
+  if (cfg.engine === 'mediasoup') {
+    mediasoupEngine = await createMediasoupEngine(cfg);
+  }
+
+  const rooms = new RoomManager(cfg, relay, membership, mediasoupEngine);
   const advertiser = new Advertiser(cfg, relay);
   const listener = new CallListener(cfg, relay, rooms);
   const http = new HttpServer({
@@ -86,6 +95,11 @@ async function main(): Promise<void> {
     }
 
     relay.close();
+    if (mediasoupEngine) {
+      try { await mediasoupEngine.close(); } catch (err) {
+        log.warn('mediasoup engine close threw', { err: (err as Error).message });
+      }
+    }
     log.info('shutdown complete');
     // Give the event loop a tick to flush logs.
     setTimeout(() => process.exit(exitCode), 50);

@@ -23,6 +23,7 @@
   "dependencies": {
     "@noble/hashes": "^2.0.1",
     "dotenv": "^16.4.5",
+    "mediasoup": "^3.19.22",
     "nostr-tools": "^2.23.3",
     "werift": "^0.22.4"
   },

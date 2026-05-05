@@ -109,7 +109,7 @@
   "cta.subtitle": "Abrí la app, entrá con tus claves Nostr, elegí un relay. Eso es todo.",
   "cta.button": "Entrar a Obelisk",
 
-  "footer.tagline": "Obelisk — Un cliente puro de Nostr. Hecho para el Hackathon IDENTITY de La Crypta 2026.",
+  "footer.tagline": "Obelisk — Un cliente puro de Nostr. ",
   "footer.brandBlurb": "Chat grupal estilo Discord sin backend. Tus claves, tus relays, eventos Nostr firmados.",
   "footer.col.guides": "Guías",
   "footer.col.product": "Producto",

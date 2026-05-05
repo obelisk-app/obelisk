@@ -5,27 +5,49 @@
  */
 import { createLogger } from './log.js';
 import { Room } from './room.js';
+import { MediasoupRoom } from './room-mediasoup.js';
 import type { Config } from './config.js';
+import type { MediasoupEngine } from './mediasoup-server.js';
 import type { MembershipTracker } from './membership.js';
 import type { RelayPool } from './relay.js';
 import type { Hex, RoomRules, RoomSnapshot } from './types.js';
 
 const log = createLogger('rooms');
 
+/** Engine-agnostic room handle — lets RoomManager dispatch by `cfg.engine`. */
+export interface RoomLike {
+  start(): Promise<void>;
+  close(): Promise<void>;
+  snapshot(): RoomSnapshot;
+  /** Host pubkey — call-listener checks this for end/kick/update authorization. */
+  readonly hostPubkey: Hex;
+  /** Current room rules — read-only snapshot fed back into mergeRules. */
+  readonly rules: RoomRules;
+  /** Force-disconnect a participant. `reason` flows into the leave notification. */
+  kick(targetPubkey: Hex, reason?: string): Promise<void>;
+  /** Replace room rules in-place. Re-sends to active peers if their consent changed. */
+  updateRules(rules: RoomRules): void;
+}
+
 export class RoomManager {
-  private readonly rooms = new Map<string, Room>();
+  private readonly rooms = new Map<string, RoomLike>();
 
   constructor(
     private readonly cfg: Config,
     private readonly relay: RelayPool,
     private readonly membership: MembershipTracker,
-  ) {}
+    private readonly engine: MediasoupEngine | null,
+  ) {
+    if (cfg.engine === 'mediasoup' && !engine) {
+      throw new Error('RoomManager: SFU_ENGINE=mediasoup requires the mediasoup engine to be passed in');
+    }
+  }
 
   size(): number {
     return this.rooms.size;
   }
 
-  get(channelId: string): Room | undefined {
+  get(channelId: string): RoomLike | undefined {
     return this.rooms.get(channelId);
   }
 
@@ -33,19 +55,30 @@ export class RoomManager {
     return Array.from(this.rooms.values()).map((r) => r.snapshot());
   }
 
-  async start(channelId: string, hostPubkey: Hex, rules: RoomRules): Promise<Room> {
+  async start(channelId: string, hostPubkey: Hex, rules: RoomRules): Promise<RoomLike> {
     if (this.rooms.has(channelId)) {
       throw new Error(`room already active for channel ${channelId}`);
     }
-    const room = new Room({
-      channelId,
-      hostPubkey,
-      rules,
-      cfg: this.cfg,
-      relay: this.relay,
-      membership: this.membership,
-      onClosed: (id) => this.rooms.delete(id),
-    });
+    const room: RoomLike = this.cfg.engine === 'mediasoup'
+      ? new MediasoupRoom({
+          channelId,
+          hostPubkey,
+          rules,
+          cfg: this.cfg,
+          engine: this.engine!,
+          relay: this.relay,
+          membership: this.membership,
+          onClosed: (id) => this.rooms.delete(id),
+        })
+      : new Room({
+          channelId,
+          hostPubkey,
+          rules,
+          cfg: this.cfg,
+          relay: this.relay,
+          membership: this.membership,
+          onClosed: (id) => this.rooms.delete(id),
+        });
     this.rooms.set(channelId, room);
     try {
       await room.start();

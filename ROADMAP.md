@@ -1,6 +1,6 @@
 # Obelisk — Roadmap
 
-Discord-like group chat where identity comes from Nostr keypairs. Built for La Crypta's **IDENTITY Hackathon** (April 2026). Architecture overview lives in [CLAUDE.md](CLAUDE.md); deploy runbook in [DEPLOY.md](DEPLOY.md); detailed specs and open bugs under [docs/](docs/README.md).
+Discord-like group chat where identity comes from Nostr keypairs. Architecture overview lives in [CLAUDE.md](CLAUDE.md); deploy runbook in [DEPLOY.md](DEPLOY.md); detailed specs and open bugs under [docs/](docs/README.md).
 
 This file is the high-level roadmap — one line per initiative, grouped by phase. Implementation details, schemas, acceptance criteria and prior-art reading live in the docs. Completed work beyond the high-level bullets below lives in git history.
 
@@ -119,7 +119,7 @@ A zero-learning-curve mobile / web client, intercompatible with Obelisk full (sa
 - [ ] Channels rendered as "grupos", threads inline, push notifications, QR / link invites.
 
 ### Fase 8 — Security audit & code quality
-Pre-hackathon hardening. Expand into `docs/security-audit-plan.md` when the work starts.
+Production hardening. Expand into `docs/security-audit-plan.md` when the work starts.
 - [ ] **Frontend security** — XSS audit (markdown, bios, channel names), content sanitization, CSRF / session hijacking review, upload validation (type / size / path / SVG), auth bypass, WebSocket spoofing, rate limiting, `npm audit` + deps review, CSP + HSTS + security headers, manual pentest against staging (OWASP Top 10 for chat apps).
 - [ ] **Code quality** — shared UI primitives (Button / Modal / Dialog / Input / Dropdown / Avatar / Tooltip / Badge / Tabs), unified confirm-dialog, reusable hooks (`useSocket`, `usePermission`, `useServerRole`, `usePagination`, `useDebounce`), unified fetch helper, strict TypeScript (`noUncheckedIndexedAccess`), ESLint + Prettier + husky + lint-staged, a11y (ARIA, keyboard nav, contrast, screen readers).
 - [ ] **Performance** — lazy routes via `next/dynamic`, virtualization for messages / members / channels, bundle analysis, image optim, DB indexes + N+1 review, cursor-based pagination, debounce / throttle, `React.memo` / `useMemo`, `perMessageDeflate`, profile prefetch, service worker.
@@ -132,7 +132,7 @@ Pivot/parallel track: Obelisk gains a **bundled NIP-29 relay** that any user can
 **Open architecture decisions** (resolve before writing tickets):
 - Monorepo (`/relay` package alongside `/src`) vs separate repo. Leaning monorepo — shared types, single `docker-compose.yml`.
 - Implementation: **khatru** (Go, fiatjaf reference, single binary) vs pure TS (`nostr-relay`). Leaning khatru.
-- Hackathon scope: full Fase 9 is post-hackathon; for April 2026 submission, ship 9.1 core + 9.2 minimum (auth, allow/blocklist, event browser, audit log).
+- Initial scope: ship 9.1 core + 9.2 minimum (auth, allow/blocklist, event browser, audit log) before tackling the rest of Fase 9.
 
 #### 9.1 Relay core
 - [ ] **Bundled relay binary** (`obelisk-relay`) — single Docker image, single config file, swappable storage adapter (SQLite for solo hosters, Postgres for larger instances).

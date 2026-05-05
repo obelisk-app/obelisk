@@ -14,6 +14,8 @@
  * in the 6-participant cap with one slot of headroom.
  */
 import { Peer } from './peer';
+import { SfuClient } from './sfu-client';
+import type { SfuRemoteTrack } from './sfu-client';
 import type {
   VoicePresence,
   VoiceSignalPayload,
@@ -173,6 +175,13 @@ export class VoiceClient {
    * every other participant. See `setSfuMode` and docs/sfu-system.md §5.
    */
   private sfuPubkey: string | null = null;
+  /**
+   * Mediasoup-client driver for the active SFU. Replaces the werift-era
+   * `Peer` class for the SFU peer slot. Mesh peers continue to use `Peer`.
+   * Lifecycle: created in `setSfuMode(pubkey)`, torn down on `setSfuMode(null)`
+   * or when the channel is left.
+   */
+  private sfuClient: SfuClient | null = null;
   /**
    * Pubkeys that have published a beacon with `["sfu","1"]` for this
    * channel. SFUs are infrastructure, not participants — they should be
@@ -465,6 +474,10 @@ export class VoiceClient {
 
     for (const peer of this.peers.values()) peer.close();
     this.peers.clear();
+    if (this.sfuClient) {
+      try { this.sfuClient.close(); } catch { /* ignore */ }
+      this.sfuClient = null;
+    }
     this.connectedPubkeys.clear();
     this.localVideoClaimedAt.clear();
     this.currentRoster = [];
@@ -619,6 +632,28 @@ export class VoiceClient {
     const to = sfu ? `sfu:${sfu.slice(0, 8)}` : 'mesh';
     console.log('[voice] topology', from, '→', to);
     this.sfuPubkey = sfu;
+
+    // Tear down the old SfuClient (if any) before standing up the new one
+    // so we don't leak a Device/transports across topology flips.
+    if (this.sfuClient) {
+      try { this.sfuClient.close(); } catch { /* ignore */ }
+      this.sfuClient = null;
+      // Drop SFU-attributed remote tracks; the new SFU (or mesh) will
+      // re-emit fresh ones.
+      for (const [trackId, t] of Array.from(this.remoteTracks.entries())) {
+        if (t.viaPubkey === from && from.startsWith('sfu:')) {
+          this.remoteTracks.delete(trackId);
+        }
+      }
+      this.emitRemoteTracks();
+    }
+
+    if (sfu) {
+      this.startSfuClient(sfu).catch((err) => {
+        console.warn('[voice] SfuClient start failed', err);
+      });
+    }
+
     try {
       this.events.onTopologyChange?.(sfu);
     } catch (err) {
@@ -626,14 +661,87 @@ export class VoiceClient {
     }
   }
 
+  /**
+   * Stand up the mediasoup-client driver: open RPC, load Device, build
+   * send/recv transports, then push every local track. Idempotent — the
+   * caller (`setSfuMode`) guarantees the previous client was torn down.
+   */
+  private async startSfuClient(sfuPubkey: string): Promise<void> {
+    const client = new SfuClient({
+      channelId: this.channelId,
+      sfuPubkey,
+      selfPubkey: this.selfPubkey,
+      events: {
+        onRemoteTrack: (t: SfuRemoteTrack) => {
+          if (this.deafened && (t.kind === 'audio' || t.kind === 'screen-audio')) {
+            t.consumer.track.enabled = false;
+          }
+          const logicalPubkey = t.pubkey || sfuPubkey;
+          this.remoteTracks.set(t.trackId, {
+            pubkey: logicalPubkey,
+            viaPubkey: sfuPubkey,
+            trackId: t.trackId,
+            kind: t.kind,
+            stream: t.stream,
+          });
+          if (t.kind === 'audio') {
+            this.attachSpeakingDetector(logicalPubkey, t.stream);
+          }
+          this.emitRemoteTracks();
+        },
+        onRemoteTrackEnded: (trackId) => {
+          const removed = this.remoteTracks.get(trackId);
+          this.remoteTracks.delete(trackId);
+          if (removed?.kind === 'audio') {
+            this.detachSpeakingDetector(removed.pubkey);
+          }
+          this.emitRemoteTracks();
+        },
+        onConnectionStateChange: (state) => {
+          if (state === 'connected') {
+            this.connectedPubkeys.add(sfuPubkey);
+          } else if (state === 'disconnected' || state === 'failed' || state === 'closed') {
+            this.connectedPubkeys.delete(sfuPubkey);
+          }
+          this.scheduleBeaconRefresh();
+        },
+      },
+    });
+    this.sfuClient = client;
+    try {
+      await client.start();
+    } catch (err) {
+      console.warn('[voice] SfuClient.start threw', err);
+      try { client.close(); } catch { /* ignore */ }
+      if (this.sfuClient === client) this.sfuClient = null;
+      return;
+    }
+    // Push existing local tracks to the new client.
+    if (this.micTrack) await client.publishTrack('audio', this.micTrack).catch((e) => console.warn('[voice] publish mic threw', e));
+    if (this.camTrack) await client.publishTrack('camera', this.camTrack).catch((e) => console.warn('[voice] publish cam threw', e));
+    if (this.screenTrack) await client.publishTrack('screen', this.screenTrack).catch((e) => console.warn('[voice] publish screen threw', e));
+    if (this.screenAudioTrack) await client.publishTrack('screen-audio', this.screenAudioTrack).catch((e) => console.warn('[voice] publish screen-audio threw', e));
+  }
+
   private openPeer(remotePubkey: string) {
     // Defensive: after leave() the client should never spin up new peers.
     // Late-arriving rosters can otherwise trigger openPeer post-teardown
     // and the resulting RTCPeerConnection would never be cleaned up.
     if (!this.joined) return;
+    // SFU peer is handled by `SfuClient`/mediasoup-client, not by the mesh
+    // perfect-negotiation path. Don't construct a `Peer` for it.
+    if (this.sfuPubkey && remotePubkey === this.sfuPubkey) return;
     // Lexicographically-greater pubkey is polite (rolls back on glare).
-    const polite = this.selfPubkey > remotePubkey;
-    console.log('[voice] openPeer', remotePubkey.slice(0, 8), 'polite=', polite);
+    // EXCEPTION — peers that are an SFU are ALWAYS treated as remote-impolite
+    // (so we are polite). werift's SFU implementation cannot roll back its
+    // own offer; if pubkey ordering happened to put the SFU on the polite
+    // side, every renegotiation deadlocks with both sides dropping the
+    // other's offer. Forcing the browser to be polite for SFU peers keeps
+    // the perfect-negotiation invariants while accommodating werift.
+    const isSfuPeer = this.knownSfuPubkeys.has(remotePubkey);
+    const polite = isSfuPeer ? true : this.selfPubkey > remotePubkey;
+    console.log('[voice] openPeer', remotePubkey.slice(0, 8),
+      'polite=', polite, isSfuPeer ? '(sfu)' : '');
     const peer = new Peer({
       remotePubkey,
       polite,
@@ -706,7 +814,17 @@ export class VoiceClient {
     });
 
     // Push existing local tracks to the new peer.
-    void this.attachAllLocalTracks(peer);
+    void this.attachAllLocalTracks(peer).then(() => {
+      // For SFU peers we MUST initiate the offer ourselves — werift's SFU
+      // never sends the first offer, it only answers. If the user joined
+      // with no mic/cam, attachAllLocalTracks adds zero tracks and no
+      // negotiation kicks; both sides then deadlock waiting. kickInitialOffer
+      // is a no-op when senders already exist (setLocalTrack already kicked),
+      // and otherwise adds recvonly transceivers so the offer has m-sections.
+      if (isSfuPeer) {
+        void peer.kickInitialOffer();
+      }
+    });
 
     this.peers.set(remotePubkey, peer);
   }
@@ -807,12 +925,29 @@ export class VoiceClient {
   }
 
   private async routeSignal(fromPubkey: string, payload: VoiceSignalPayload): Promise<void> {
+    // SFU traffic flows through `SfuClient` (mediasoup-client + RPC), not
+    // the mesh perfect-negotiation `Peer`. The legacy subscribeSignals
+    // delivers everything on kind 25050 — including RPC responses /
+    // notifications that have no `type` we recognize — so we drop those
+    // here. Without this guard `peer.handleSignal(undefined!.handleSignal)`
+    // throws TypeError on every RPC reply from the SFU.
+    if (this.sfuPubkey && fromPubkey === this.sfuPubkey) return;
+    // Defensively ignore unknown payload shapes (e.g. RPC envelopes from
+    // a different peer that mistakenly addressed us).
+    if (!payload || typeof payload.type !== 'string') return;
+    if (payload.type !== 'offer' && payload.type !== 'answer'
+      && payload.type !== 'ice' && payload.type !== 'bye'
+      && payload.type !== 'trackinfo' && payload.type !== 'qualityhint'
+      && payload.type !== 'requestReset') {
+      return;
+    }
     let peer = this.peers.get(fromPubkey);
     if (!peer) {
       // Roster may not have caught up yet; create the peer eagerly so the
       // initial offer doesn't get dropped on join.
       this.openPeer(fromPubkey);
-      peer = this.peers.get(fromPubkey)!;
+      peer = this.peers.get(fromPubkey);
+      if (!peer) return; // openPeer skipped (e.g. !this.joined)
     }
     await peer.handleSignal(payload);
   }
@@ -860,11 +995,13 @@ export class VoiceClient {
         // on the outbound sender.
         this.attachSpeakingDetector(this.selfPubkey, new MediaStream([this.micTrack]));
         for (const peer of this.peers.values()) await peer.setLocalTrack('audio', this.micTrack);
+        if (this.sfuClient) await this.sfuClient.publishTrack('audio', this.micTrack).catch((e) => console.warn('[voice] sfu publish mic threw', e));
       }
     } else if (!on && this.micTrack) {
       // Stop the local detector so the orb goes dark immediately.
       this.detachSpeakingDetector(this.selfPubkey);
       for (const peer of this.peers.values()) await peer.setLocalTrack('audio', null);
+      if (this.sfuClient) await this.sfuClient.unpublishTrack('audio').catch(() => undefined);
       this.stopTrack(this.micTrack);
       this.micTrack = null;
     }
@@ -903,12 +1040,14 @@ export class VoiceClient {
           await peer.setLocalTrack('camera', this.camTrack);
           await peer.setLocalVideoCap(cap);
         }
+        if (this.sfuClient) await this.sfuClient.publishTrack('camera', this.camTrack).catch((e) => console.warn('[voice] sfu publish camera threw', e));
         // Republish beacon ASAP so other peers see our claim and don't
         // race past us.
         this.scheduleBeaconRefresh();
       }
     } else if (!on && this.camTrack) {
       for (const peer of this.peers.values()) await peer.setLocalTrack('camera', null);
+      if (this.sfuClient) await this.sfuClient.unpublishTrack('camera').catch(() => undefined);
       this.stopTrack(this.camTrack);
       this.camTrack = null;
       if (this.localVideoClaimedAt.delete('camera')) {
@@ -940,11 +1079,13 @@ export class VoiceClient {
         try { (this.screenTrack as MediaStreamTrack).contentHint = 'detail'; } catch { /* older browsers */ }
         this.localVideoClaimedAt.set('screen', Math.floor(Date.now() / 1000));
         for (const peer of this.peers.values()) await peer.setLocalTrack('screen', this.screenTrack);
+        if (this.sfuClient) await this.sfuClient.publishTrack('screen', this.screenTrack).catch((e) => console.warn('[voice] sfu publish screen threw', e));
       }
       if (this.screenAudioTrack) {
         // Music / system audio — let Opus encode at full quality, no AGC.
         try { (this.screenAudioTrack as MediaStreamTrack).contentHint = 'music'; } catch { /* older browsers */ }
         for (const peer of this.peers.values()) await peer.setLocalTrack('screen-audio', this.screenAudioTrack);
+        if (this.sfuClient) await this.sfuClient.publishTrack('screen-audio', this.screenAudioTrack).catch((e) => console.warn('[voice] sfu publish screen-audio threw', e));
       }
       // Browser-driven stop ("Stop sharing" toolbar button) — clean up.
       if (this.screenTrack) {
@@ -954,11 +1095,13 @@ export class VoiceClient {
     } else if (!on) {
       if (this.screenTrack) {
         for (const peer of this.peers.values()) await peer.setLocalTrack('screen', null);
+        if (this.sfuClient) await this.sfuClient.unpublishTrack('screen').catch(() => undefined);
         this.stopTrack(this.screenTrack);
         this.screenTrack = null;
       }
       if (this.screenAudioTrack) {
         for (const peer of this.peers.values()) await peer.setLocalTrack('screen-audio', null);
+        if (this.sfuClient) await this.sfuClient.unpublishTrack('screen-audio').catch(() => undefined);
         this.stopTrack(this.screenAudioTrack);
         this.screenAudioTrack = null;
       }

@@ -358,7 +358,7 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
     let cancelled = false;
     let attempt = 0;
     const MAX_ATTEMPTS = 3;
-    const SFU_JOIN_WATCHDOG_MS = 8000;
+    const SFU_JOIN_WATCHDOG_MS = 25000;
     const RETRY_BACKOFF_MS = [5000, 10000];
     const UNAVAILABLE_RETRY_MS = 15000;
     let watchdog: ReturnType<typeof setTimeout> | null = null;
@@ -394,18 +394,22 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
         'attempt=', attempt + 1);
       watchdog = setTimeout(() => {
         if (cancelled) return;
-        // If the topology callback already flipped us to 'connected'
-        // we leave the retry counter alone.
-        attempt += 1;
-        if (attempt < MAX_ATTEMPTS) {
-          const delay = RETRY_BACKOFF_MS[Math.min(attempt - 1, RETRY_BACKOFF_MS.length - 1)];
-          console.warn('[voice] sfu beacon never arrived; retrying in', delay / 1000,
-            's — attempt', attempt + 1, '/', MAX_ATTEMPTS);
-          retryDelay = setTimeout(() => { void tryStart(true); }, delay);
-        } else {
+        // If the topology callback already flipped us to 'connected', abort
+        // the retry loop entirely. Republishing kind 25052 while a session
+        // is up makes the SFU reset peer state and kicks the live call.
+        setSfuStatus((prev) => {
+          if (prev === 'connected') return prev;
+          attempt += 1;
+          if (attempt < MAX_ATTEMPTS) {
+            const delay = RETRY_BACKOFF_MS[Math.min(attempt - 1, RETRY_BACKOFF_MS.length - 1)];
+            console.warn('[voice] sfu beacon never arrived; retrying in', delay / 1000,
+              's — attempt', attempt + 1, '/', MAX_ATTEMPTS);
+            retryDelay = setTimeout(() => { void tryStart(true); }, delay);
+            return prev;
+          }
           console.warn('[voice] sfu start gave up after', MAX_ATTEMPTS, 'attempts');
-          setSfuStatus((prev) => (prev === 'connected' ? prev : 'unauthorized'));
-        }
+          return 'unauthorized';
+        });
       }, SFU_JOIN_WATCHDOG_MS);
     };
 

@@ -143,6 +143,26 @@ async function ensureAdvertisementSub(): Promise<void> {
  * post-v0 concern.
  */
 export async function pickSfu(): Promise<SfuAdvertisement | null> {
+  // Build-time override: when the operator pins a single SFU there's no
+  // need to round-trip kind 31313 discovery through a relay. Skips a
+  // failure mode where the chosen relay (e.g. NIP-29-only) refuses to
+  // store kind 31313 — the SFU's publish acks but no subscriber ever
+  // sees it, so `pickSfu` returns null and the UI shows "SFU unavailable".
+  const pinnedPubkey = process.env.NEXT_PUBLIC_SFU_PUBKEY;
+  const pinnedUrl = process.env.NEXT_PUBLIC_SFU_URL;
+  if (pinnedPubkey && /^[0-9a-f]{64}$/i.test(pinnedPubkey)) {
+    const pinnedRelays = (process.env.NEXT_PUBLIC_SFU_TRUSTED_RELAYS ?? '')
+      .split(',').map((s) => s.trim()).filter(Boolean);
+    return {
+      pubkey: pinnedPubkey.toLowerCase(),
+      url: pinnedUrl ?? null,
+      region: null,
+      cap: null,
+      trustedRelays: pinnedRelays,
+      generalRelays: pinnedRelays,
+      createdAt: Math.floor(Date.now() / 1000),
+    };
+  }
   await ensureAdvertisementSub();
   if (advertisements.size === 0) {
     await new Promise((resolve) => setTimeout(resolve, DISCOVERY_COLD_WAIT_MS));

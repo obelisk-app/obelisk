@@ -112,7 +112,7 @@ Today: a peer turning their camera off doesn't propagate — the SFU keeps forwa
 - Watch `pc.onnegotiationneeded` from the remote (browser sends a renegotiation when toggling)
 - After `setRemoteDescription` of an `offer`, diff transceivers — any with `direction: 'inactive'` or removed → emit `onTrackEnded` for that track id.
 
-### 6. Mediasoup migration (~2 days, post-hackathon)
+### 6. Mediasoup migration (~2 days, future work)
 
 Production hardening. werift transcodes when forwarding (each forwarded track decodes + re-encodes per receiver — kills CPU at video scale). Mediasoup forwards encoded RTP packets natively.
 

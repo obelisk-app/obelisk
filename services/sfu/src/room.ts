@@ -257,6 +257,15 @@ export class Room {
 
     let peer = this.peers.get(from);
     if (!peer) {
+      // No existing peer for this pubkey — `requestReset`/`bye` are no-ops.
+      // Without this guard, a stray requestReset would construct a peer,
+      // attach all forwarded tracks, then immediately close it (since the
+      // signal it just received is "close yourself"). The browser would
+      // then redial expecting fresh forwards, but the closed peer has
+      // already burned the tracks. Skip the round-trip entirely.
+      if (payload.type === 'requestReset' || payload.type === 'bye') {
+        return;
+      }
       // First contact from this pubkey. Run the dial-time gate.
       const decision = canDialRoom({
         rules: this._rules,

@@ -44,7 +44,7 @@ export const ICE_RESTART_LIMIT = 3;
 // the user perceives the channel as "stuck" and reflexively refreshes,
 // which is exactly what the reconnect ladder is meant to prevent. The
 // polite/impolite request-reset path picks up immediately at this mark.
-export const INITIAL_CONNECT_TIMEOUT_MS = 8000;
+export const INITIAL_CONNECT_TIMEOUT_MS = 25000;
 
 // After we send an offer we expect an answer back fast — the round-trip
 // is one relay-mediated kind 25050 in each direction. If signalingState
@@ -180,6 +180,17 @@ export class Peer {
   private offerAckTimer: ReturnType<typeof setTimeout> | null = null;
   private offerRetryAttempts = 0;
 
+  /**
+   * Last `sessionId` we observed in any signal from the remote peer.
+   * If a fresh signal arrives with a different sessionId we know the
+   * remote side rebuilt their PeerConnection (e.g. werift SFU restart,
+   * crash, or requestReset response) and our local PC's m-line order /
+   * negotiated codecs no longer match — applying the new offer would fail
+   * with "order of m-lines doesn't match". A session change therefore
+   * triggers a local hard reset so we negotiate fresh.
+   */
+  private remoteSessionId: string | null = null;
+
   constructor(opts: PeerOptions) {
     this.remotePubkey = opts.remotePubkey;
     this.polite = opts.polite;
@@ -279,7 +290,7 @@ export class Peer {
           this.events.onRemoteTrack(ev.track, stream, kind, origin);
         };
       }
-      this.events.onRemoteTrack(ev.track, stream, kind);
+      this.events.onRemoteTrack(ev.track, stream, kind, origin);
     };
 
     pc.onconnectionstatechange = () => {
@@ -339,11 +350,14 @@ export class Peer {
       if (this.pc.connectionState === 'connected') return;
       console.warn('[voice] initial connect timeout for', this.remotePubkey.slice(0, 8),
         '— state:', this.pc.connectionState, 'polite:', this.polite);
+      // Send requestReset so the remote can clear stale state, then ALWAYS
+      // hard-reset locally so we drive a fresh offer. Without the local
+      // hard reset, polite peers would just sit waiting for a remote redial
+      // that the SFU never initiates.
       if (this.polite) {
         this.requestRemoteReset();
-      } else {
-        this.performHardReset();
       }
+      this.performHardReset();
     }, INITIAL_CONNECT_TIMEOUT_MS);
   }
 
@@ -434,6 +448,18 @@ export class Peer {
     this.makingOffer = false;
     this.ignoreOffer = false;
     this.pc = this.createPc();
+    // If we have no local tracks (e.g. SFU peer with mic/cam off), add
+    // recvonly transceivers so the offer SDP has m-sections and the SFU
+    // can attach its forwarded tracks. Without this the kickNegotiation
+    // below produces an empty offer the SFU has nothing to answer.
+    if (this.localTracks.size === 0) {
+      try {
+        this.pc.addTransceiver('audio', { direction: 'recvonly' });
+        this.pc.addTransceiver('video', { direction: 'recvonly' });
+      } catch (e) {
+        console.warn('[voice] hardReset addTransceiver recvonly failed', e);
+      }
+    }
     // Re-attach saved local tracks. addTrack fires onnegotiationneeded, but
     // we also kickNegotiation explicitly so the first offer reliably ships.
     for (const [kind, track] of this.localTracks.entries()) {
@@ -522,6 +548,28 @@ export class Peer {
     // immediately after PC creation. Kick negotiation explicitly so the
     // first offer reliably reaches the remote.
     queueMicrotask(() => { void this.kickNegotiation(); });
+  }
+
+  /**
+   * Send an initial offer even when no local tracks are attached. Used for
+   * SFU peers where the SFU never initiates — without this, a user who joins
+   * with mic/cam off would wait forever for the SFU to offer.
+   */
+  async kickInitialOffer(): Promise<void> {
+    if (this.closed) return;
+    // Only useful when no senders have been added (otherwise setLocalTrack
+    // already kicked). Add recvonly transceivers so the SDP has m-sections.
+    if (this.localSenders.size === 0) {
+      try {
+        const hasAudio = this.pc.getTransceivers().some((t) => t.receiver?.track?.kind === 'audio');
+        const hasVideo = this.pc.getTransceivers().some((t) => t.receiver?.track?.kind === 'video');
+        if (!hasAudio) this.pc.addTransceiver('audio', { direction: 'recvonly' });
+        if (!hasVideo) this.pc.addTransceiver('video', { direction: 'recvonly' });
+      } catch (e) {
+        console.warn('[voice] addTransceiver recvonly failed', e);
+      }
+    }
+    await this.kickNegotiation();
   }
 
   /**
@@ -644,6 +692,23 @@ export class Peer {
    */
   async handleSignal(payload: VoiceSignalPayload): Promise<void> {
     if (this.closed) return;
+
+    if (payload.sessionId) {
+      if (this.remoteSessionId === null) {
+        this.remoteSessionId = payload.sessionId;
+      } else if (this.remoteSessionId !== payload.sessionId) {
+        // Remote rebuilt — their m-line ordering / codec PTs may differ.
+        // Wipe trackinfo state (origin/kind maps were keyed by the old
+        // session's track ids) and hard-reset our PC before processing.
+        console.log('[voice] remote sessionId changed for', this.remotePubkey.slice(0, 8),
+          'old=', this.remoteSessionId.slice(0, 6), 'new=', payload.sessionId.slice(0, 6),
+          '— hard reset');
+        this.remoteSessionId = payload.sessionId;
+        this.remoteTrackKinds.clear();
+        this.remoteTrackOrigins.clear();
+        this.performHardReset();
+      }
+    }
 
     if (payload.trackInfo) {
       this.remoteTrackKinds.set(payload.trackInfo.trackId, payload.trackInfo.kind);

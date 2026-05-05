@@ -109,7 +109,7 @@
   "cta.subtitle": "Open the app, log in with your Nostr keys, pick a relay. That's it.",
   "cta.button": "Launch Obelisk",
 
-  "footer.tagline": "Obelisk — A pure Nostr client. Built for La Crypta Identity Hackathon 2026.",
+  "footer.tagline": "Obelisk — A pure Nostr client. ",
   "footer.brandBlurb": "Discord-style group chat with no backend. Your keys, your relays, signed Nostr events.",
   "footer.col.guides": "Guides",
   "footer.col.product": "Product",
