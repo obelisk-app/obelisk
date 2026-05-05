@@ -5,13 +5,13 @@
  *   node scripts/start-call.mjs <channelId>
  *   node scripts/start-call.mjs <channelId> --video=false --screen=true --max=20
  *
- * Reads `SFU_NSEC` from `services/sfu/.env` and signs with it. Because the
+ * Reads `SFU_NSEC` from `services/sfu/.env (in obelisk-sfu repo)` and signs with it. Because the
  * SFU's own pubkey acts as the operator when `SFU_OPERATOR_PUBKEY` is unset
  * (the default solo deploy), this bypasses the per-user allow-list — handy
  * for local testing without needing to add yourself to allow.json first.
  *
  * For a real-user test where the host should be another person, sign with
- * THEIR nsec via `nak event ...` instead. See services/sfu/README.md.
+ * THEIR nsec via `nak event ...` instead. See the obelisk-sfu repo README.
  */
 import 'dotenv/config';
 import { getPublicKey, finalizeEvent, SimplePool } from 'nostr-tools';

@@ -9,7 +9,7 @@
  * watching the test pattern + hearing the tone in your dex tab.
  *
  * Usage:
- *   node services/sfu/scripts/test-peer.mjs <channel-id> [...]
+ *   node scripts/sfu-test-peers/test-peer.mjs <channel-id> [...]
  *
  * Channel-id is the NIP-29 group id (16 hex). The script discovers the
  * SFU via kind 31313 advertisement on the configured relays.

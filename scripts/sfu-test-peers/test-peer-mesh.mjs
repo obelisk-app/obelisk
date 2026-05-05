@@ -10,7 +10,7 @@
  *
  *   node test-peer-mesh.mjs <channel-id-hex>
  *
- * Reuses the persistent keypair under services/sfu/.test-peer/.
+ * Reuses the persistent keypair under scripts/.test-peer/.
  */
 
 import { spawn } from 'node:child_process';

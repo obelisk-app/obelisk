@@ -16,7 +16,7 @@ Group protocol    NIP-29 (kinds 9, 9000-9007, 39000-39002)
 DMs               NIP-04 (kind 4) — see src/lib/dm/
 Cache             localStorage stale-while-revalidate (src/lib/nostr-bridge/cache.ts)
 Voice (mesh)      P2P WebRTC, Nostr-signaled (kinds 20078 / 25050) — src/lib/voice/peer.ts
-Voice (SFU)      mediasoup engine, Nostr-RPC signaling (kind 25050 envelopes) — services/sfu/, src/lib/voice/sfu-client.ts
+Voice (SFU)      mediasoup engine, Nostr-RPC signaling (kind 25050 envelopes) — src/lib/voice/sfu-client.ts (server: obelisk-app/obelisk-sfu)
 Payments          Nostr Wallet Connect (NIP-47) — src/lib/wallet/
 ```
 
@@ -132,19 +132,11 @@ Two engines, one client surface:
 | Mode  | Topology      | Code path                     | When                                     |
 |-------|---------------|-------------------------------|------------------------------------------|
 | mesh  | P2P full mesh | `src/lib/voice/peer.ts` (`Peer`) | small rooms, no SFU advertised on the channel |
-| sfu   | mediasoup SFU | `src/lib/voice/sfu-client.ts` (`SfuClient`) + `services/sfu/` | a kind 31313 advertisement is reachable + the channel is `voice-sfu` kind |
+| sfu   | mediasoup SFU | `src/lib/voice/sfu-client.ts` (`SfuClient`) — server lives in [obelisk-app/obelisk-sfu](https://github.com/obelisk-app/obelisk-sfu) | a kind 31313 advertisement is reachable (or pinned via `NEXT_PUBLIC_SFU_PUBKEY`) + the channel is `voice-sfu` kind |
 
 `VoiceClient` (`src/lib/voice/client.ts`) owns the topology decision (`setSfuMode`) and exposes a single API to the rest of the app — UI components never see the engine. Mesh peers use perfect-negotiation over kind 25050 SDP/ICE blobs; the SFU peer uses mediasoup-client speaking RPC envelopes (`src/lib/voice/sfu-rpc.ts`) on the same kind 25050.
 
-The SFU service is in `services/sfu/`:
-- `mediasoup-server.ts` — boots one mediasoup `Worker` per CPU core, allocates a `Router` per channel.
-- `room-mediasoup.ts` — Nostr-aware room: subscribes to kind 25050, dispatches `getRouterRtpCapabilities` / `createWebRtcTransport` / `connectWebRtcTransport` / `produce` / `consume` / `resumeConsumer` / `closeProducer`, broadcasts `newProducer` / `producerClosed` / `kicked` notifications.
-- `nostr-rpc.ts` — request/response/notification envelope schema, dispatch helper.
-- `call-listener.ts` — listens for kind 25052 `start` / `end` / `kick` / `update` and instantiates rooms via `RoomManager`.
-- `auth.ts` — operator / allow-list / trusted-relay / per-room rules; `SFU_ALLOW_ALL=1` opens the door for testing.
-- `http-server.ts` — `GET /healthz`, `GET /rooms`, `POST /test/inject` (mediasoup-only — creates a `PlainTransport` for ffmpeg-driven test producers).
-
-Engine is selected by env: `SFU_ENGINE=mediasoup` (default for new deploys) or `SFU_ENGINE=werift` (legacy fallback, scheduled for removal — see [docs/sfu-mediasoup-migration.md](docs/sfu-mediasoup-migration.md) Phase 4). Operator runbook in [services/sfu/README.md](services/sfu/README.md).
+The SFU server is a separate repo: **[obelisk-app/obelisk-sfu](https://github.com/obelisk-app/obelisk-sfu)** (mediasoup, Nostr-RPC signaling, allow-list, deploy). Synthetic test peers used to drive it from a Node process live in `scripts/sfu-test-peers/`.
 
 ## Design System (La Crypta)
 - **Background:** `lc-black` (#0a0a0a) with subtle grid pattern
@@ -236,8 +228,8 @@ await bridge.editUserMetadata({ name: 'Alice', displayName: 'Alice' });
 - [docs/auth-and-data-loading.md](docs/auth-and-data-loading.md) — login flow, NIP-42 AUTH, watchdog, bridgeCache
 - [docs/voice-system.md](docs/voice-system.md) — mesh voice (P2P over Nostr signaling)
 - [docs/sfu-system.md](docs/sfu-system.md) — SFU architecture (mediasoup engine, Nostr-RPC signaling)
-- [docs/sfu-mediasoup-migration.md](docs/sfu-mediasoup-migration.md) — wire protocol, server topology, migration phases
-- [services/sfu/README.md](services/sfu/README.md) — SFU operator guide (env, deploy, test inject)
+- [obelisk-app/obelisk-sfu](https://github.com/obelisk-app/obelisk-sfu) — SFU server repo (protocol spec, operator guide, deploy)
+- [scripts/sfu-test-peers/README.md](scripts/sfu-test-peers/README.md) — synthetic test peers
 - [docs/relay-layout-and-branding.md](docs/relay-layout-and-branding.md) — shared NIP-78 layout & branding; multi-author latest-wins, gated on group-admin union
 - [docs/uploads.md](docs/uploads.md) — Blossom storage + URL format
 - [docs/cloudflare-tunnel.md](docs/cloudflare-tunnel.md) — `npm run dev:tunnel` exposes localhost:3000 at https://obelisk.fabri.lat

@@ -21,7 +21,7 @@
  * `newProducer` notifications and consume them as normal tracks.
  *
  * Usage:
- *   node services/sfu/scripts/test-peer-ms.mjs <channel-id-hex>
+ *   node scripts/sfu-test-peers/test-peer-ms.mjs <channel-id-hex>
  */
 
 import { spawn } from 'node:child_process';
