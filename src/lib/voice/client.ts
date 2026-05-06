@@ -34,6 +34,8 @@ import {
 } from './transport';
 import { getPreset, MIC_CONSTRAINTS, type VideoQuality } from './quality';
 import { useVoiceStore } from '@/store/voice';
+import { wotEngine } from '@/lib/wot/engine';
+import { KIND_VOICE_SIGNAL } from '@/lib/nip-kinds';
 import { SpeakingDetector, resumeSharedAudioContext } from './speaking-detector';
 
 const BEACON_INTERVAL_MS = 15_000;
@@ -355,7 +357,14 @@ export class VoiceClient {
     } else if (expect && !this.sfuPubkey) {
       void (async () => {
         const picked = await pickSfu(this.channelId).catch(() => null);
-        if (!picked) return;
+        if (!picked) {
+          // Channel just reclassified to voice-sfu but the pinned SFU is
+          // unreachable. Surface to the UI; do not silently keep meshing —
+          // the channel admin's intent is "use the SFU", not "best effort".
+          try { this.events.onError?.('Channel switched to SFU mode but no SFU is reachable.'); }
+          catch { /* ignore */ }
+          return;
+        }
         this.exitMeshMode();
         await this.enterSfuMode(picked.pubkey);
       })();
@@ -420,16 +429,27 @@ export class VoiceClient {
     // mode immediately. The SFU itself becomes the source of truth for
     // the participant list via `peerJoined`/`peerLeft`/`participantList`
     // notifications, so we skip beacons + roster entirely while in SFU
-    // mode. Falls back to mesh if no SFU is reachable.
+    // mode.
+    //
+    // SFU-only contract: a `voice-sfu` channel ONLY uses its pinned SFU.
+    // No mesh fallback — operators of a big-room channel choose an SFU
+    // intentionally; silently dropping to a 6-peer mesh on transient SFU
+    // outage gives a worse experience (people fail to hear each other,
+    // 9th joiner gets evicted, audio quality drops) than surfacing the
+    // outage clearly and letting the user retry.
     if (this.expectSfu) {
       const picked = await pickSfu(this.channelId).catch((err) => {
         console.warn('[voice] pickSfu threw at join', err);
         return null;
       });
-      if (picked) {
-        await this.enterSfuMode(picked.pubkey);
-        return;
+      if (!picked) {
+        this.joined = false;
+        throw new Error(
+          'No SFU is currently reachable for this channel. Ask the channel admin to verify the pinned SFU is online.',
+        );
       }
+      await this.enterSfuMode(picked.pubkey);
+      return;
     }
 
     await this.enterMeshMode();
@@ -451,8 +471,11 @@ export class VoiceClient {
       this.selfPubkey,
       (from, payload) => {
         // Drop signals from non-members up-front. The relay can't enforce
-        // this on its own, so the receiver is the gatekeeper.
+        // this on its own, so the receiver is the gatekeeper. Also gate
+        // on the WoT predicate so untrusted authors can't establish
+        // signaling channels even if they're nominally members.
         if (!this.isMember(from)) return;
+        if (!wotEngine.isAllowed(from, KIND_VOICE_SIGNAL)) return;
         void this.routeSignal(from, payload);
       },
     );
@@ -782,18 +805,20 @@ export class VoiceClient {
     try {
       await client.start();
     } catch (err) {
-      console.warn('[voice] SfuClient.start failed, falling back to mesh', err);
+      console.warn('[voice] SfuClient.start failed', err);
       try { client.close(); } catch { /* ignore */ }
       if (this.sfuClient === client) this.sfuClient = null;
-      // Surface the failure and switch to mesh so users still get a working
-      // call instead of an empty SFU room.
-      try { this.events.onError?.('SFU connection failed; using mesh.'); } catch { /* ignore */ }
       if (this.sfuPubkey === sfuPubkey) {
         this.sfuPubkey = null;
         try { this.events.onTopologyChange?.(null); } catch { /* ignore */ }
-        await this.enterMeshMode();
       }
-      return;
+      // SFU-pinned channels stay on SFU. Surface a clear error and stop —
+      // mesh fallback would silently change the call's semantics (peer cap,
+      // forwarding, recording capability) and the channel admin's pin is
+      // an explicit choice we shouldn't override on a transient outage.
+      const msg = err instanceof Error ? err.message : String(err);
+      try { this.events.onError?.(`Could not connect to the SFU: ${msg}`); } catch { /* ignore */ }
+      throw err;
     }
     // Push existing local tracks to the new client.
     if (this.micTrack) await client.publishTrack('audio', this.micTrack).catch((e) => console.warn('[voice] publish mic threw', e));
@@ -1329,11 +1354,23 @@ export class VoiceClient {
   }
 
   private emitLocal() {
-    this.events.onLocalTracksChange?.({
+    const local = {
       mic: !!this.micTrack,
       camera: !!this.camTrack,
       screen: !!this.screenTrack,
-    });
+    };
+    // Mirror to the global voice store so VoiceStatusBar (and any other
+    // surface that reads from the store) stays accurate even when the
+    // room component is unmounted — e.g. while the user is viewing a
+    // text channel during an active call. The room's events handler is
+    // a UI-only superset; it gets the same payload via the call below.
+    try {
+      const s = useVoiceStore.getState();
+      s.setMuted(!local.mic);
+      s.setCameraOn(local.camera);
+      s.setScreenSharing(local.screen);
+    } catch { /* test envs without zustand provider */ }
+    this.events.onLocalTracksChange?.(local);
   }
 
   private stopTrack(t: MediaStreamTrack | null) {

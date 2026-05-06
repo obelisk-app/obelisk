@@ -186,6 +186,22 @@ export class SfuClient {
   close(): void {
     if (this.closed) return;
     this.closed = true;
+    // Tell the SFU we're leaving BEFORE we tear down our side. Without this
+    // the server only learns about the departure through DTLS close-notify
+    // on the transports — which is unreliable when the tab closes abruptly
+    // or the network drops, leaving the peer's pubkey "in the room" until
+    // the server's own ICE/DTLS timeout fires (often 30 s+). During that
+    // window, attempts to rejoin (same channel OR a different SFU channel)
+    // can be rejected as "already in room".
+    //
+    // Fire-and-forget — we don't await because:
+    //   1. The RPC publish is a websocket round-trip; on a closing tab the
+    //      socket may already be in CLOSING and the await would hang.
+    //   2. The mediasoup transport.close() below sends DTLS close-notify
+    //      anyway; this is just a faster, explicit signal.
+    try {
+      void this.rpc.request('leave', undefined, 1500).catch(() => undefined);
+    } catch { /* ignore — rpc may already be closed */ }
     for (const consumer of this.remoteByProducerId.values()) {
       try { consumer.consumer.close(); } catch { /* ignore */ }
     }
@@ -296,11 +312,16 @@ export class SfuClient {
     } else if (n.method === 'participantList') {
       // Authoritative snapshot the SFU pushes when our recv transport opens.
       // Replaces — not merges — so the dex's roster always matches the
-      // server's truth even after a reconnect.
+      // server's truth even after a reconnect. Anyone we were tracking who
+      // isn't in the fresh list has left; drop their forwarded tracks too,
+      // otherwise their tile stays black after a server restart.
       const data = n.data as { pubkeys?: string[] };
       const next = new Set<string>();
       for (const pk of data?.pubkeys ?? []) {
         if (typeof pk === 'string' && pk.length > 0) next.add(pk);
+      }
+      for (const prev of this.peers) {
+        if (!next.has(prev)) this.dropTracksFor(prev);
       }
       this.peers = next;
       this.emitPeersChange();
@@ -313,8 +334,28 @@ export class SfuClient {
     } else if (n.method === 'peerLeft') {
       const data = n.data as { pubkey?: string };
       if (!data?.pubkey) return;
-      if (!this.peers.delete(data.pubkey)) return;
-      this.emitPeersChange();
+      const removed = this.peers.delete(data.pubkey);
+      // Prune any tracks the SFU was forwarding from this peer. The server
+      // SHOULD also fire `producerClosed` for each producer, but in practice
+      // an abrupt disconnect (tab close, network loss, kicked) lands `peerLeft`
+      // without the per-producer follow-ups — and without this pruning the
+      // peer's video tile stays as the last frame (a black rectangle once
+      // the WebRTC timeout drains the jitter buffer).
+      this.dropTracksFor(data.pubkey);
+      if (removed) this.emitPeersChange();
+    }
+  }
+
+  /** Close every consumer whose producer originated from `pubkey`, dropping
+   *  the corresponding remote-track entry and notifying the dex. */
+  private dropTracksFor(pubkey: string): void {
+    for (const [producerId, remote] of Array.from(this.remoteByProducerId.entries())) {
+      if (remote.pubkey !== pubkey) continue;
+      this.remoteByProducerId.delete(producerId);
+      try { remote.consumer.close(); } catch { /* ignore */ }
+      try { this.events.onRemoteTrackEnded(remote.trackId); } catch (err) {
+        console.warn('[sfu] onRemoteTrackEnded handler threw', err);
+      }
     }
   }
 

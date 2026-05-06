@@ -5,6 +5,15 @@ import type { QualitySample } from '@/lib/voice/stats';
 interface VoiceState {
   /** Channel id of the call we're currently in, or null if not in any call. */
   currentVoiceChannelId: string | null;
+  /**
+   * Relay URL where the active call's channel was hosted at join time.
+   * Captured so the sidebar status-bar's "jump to call" button can switch
+   * relays first when the user navigates to it from a different relay —
+   * `useGroups()` only returns groups for the currently-active relay, so
+   * without this, jumping back from another relay would land on a chat
+   * surface that doesn't know the channel exists.
+   */
+  currentVoiceRelayUrl: string | null;
   /** Mic enabled? Mirror of VoiceClient.getLocalTracks().mic, kept in store so
    *  the sidebar status bar can re-render without owning the client. */
   isMuted: boolean;
@@ -39,7 +48,7 @@ interface VoiceState {
    */
   localMutedPubkeys: Readonly<Record<string, true>>;
 
-  setVoiceChannel: (channelId: string | null) => void;
+  setVoiceChannel: (channelId: string | null, relayUrl?: string | null) => void;
   setMuted: (muted: boolean) => void;
   setDeafened: (deafened: boolean) => void;
   setCameraOn: (on: boolean) => void;
@@ -89,6 +98,7 @@ const persisted = loadPersisted();
 
 export const useVoiceStore = create<VoiceState>()((set, get) => ({
   currentVoiceChannelId: null,
+  currentVoiceRelayUrl: null,
   isMuted: false,
   isDeafened: false,
   isCameraOn: false,
@@ -102,7 +112,13 @@ export const useVoiceStore = create<VoiceState>()((set, get) => ({
   speakingPubkeys: {},
   localMutedPubkeys: {},
 
-  setVoiceChannel: (currentVoiceChannelId) => set({ currentVoiceChannelId }),
+  setVoiceChannel: (currentVoiceChannelId, relayUrl) =>
+    set((s) => ({
+      currentVoiceChannelId,
+      // Only overwrite the relay if the caller passed one. Pass `null` to
+      // explicitly clear (e.g. the parallel `leaveVoice()` reset path).
+      currentVoiceRelayUrl: relayUrl === undefined ? s.currentVoiceRelayUrl : relayUrl,
+    })),
   setMuted: (isMuted) => set({ isMuted }),
   setDeafened: (isDeafened) => set({ isDeafened }),
   setCameraOn: (isCameraOn) => set({ isCameraOn }),
@@ -154,6 +170,7 @@ export const useVoiceStore = create<VoiceState>()((set, get) => ({
   leaveVoice: () =>
     set({
       currentVoiceChannelId: null,
+      currentVoiceRelayUrl: null,
       isMuted: false,
       isDeafened: false,
       isCameraOn: false,

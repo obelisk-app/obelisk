@@ -498,12 +498,13 @@ describe('VoiceClient setExpectSfu', () => {
     await client.leave();
   });
 
-  it('stays on mesh when setExpectSfu(true) but pickSfu returns null', async () => {
+  it('stays on mesh and surfaces an error when setExpectSfu(true) but pickSfu returns null', async () => {
     const onTopologyChange = vi.fn();
+    const onError = vi.fn();
     const client = new VoiceClient('ch1', {
       members: [SELF, PEER1],
       expectSfu: false,
-      events: { onTopologyChange },
+      events: { onTopologyChange, onError },
     });
     await client.join();
     sfuControlFake.setPick(null);
@@ -511,6 +512,10 @@ describe('VoiceClient setExpectSfu', () => {
     await flushMicrotasks(10);
     expect(onTopologyChange).not.toHaveBeenCalled();
     expect(sfuClientFake.instances.length).toBe(0);
+    // SFU-only contract: when the channel reclassifies to voice-sfu and no
+    // SFU is reachable, surface the failure so the user knows the channel
+    // isn't operating as configured. Do NOT silently keep meshing.
+    expect(onError).toHaveBeenCalled();
     await client.leave();
   });
 });
@@ -536,7 +541,7 @@ describe('VoiceClient onTopologyChange', () => {
     await client.leave();
   });
 
-  it('falls back to mesh and fires onTopologyChange(null) when SfuClient.start fails', async () => {
+  it('rejects join and surfaces an error when SfuClient.start fails (no mesh fallback)', async () => {
     sfuControlFake.setPick({ pubkey: SFU });
     sfuClientFake.setNextStartShouldFail();
     const onTopologyChange = vi.fn();
@@ -546,16 +551,18 @@ describe('VoiceClient onTopologyChange', () => {
       expectSfu: true,
       events: { onTopologyChange, onError },
     });
-    await client.join();
+    await expect(client.join()).rejects.toThrow();
     await flushMicrotasks(10);
+    // Pre-flight `enterSfuMode` fires onTopologyChange(SFU); the failure
+    // path then fires onTopologyChange(null) when it tears the SFU down.
+    // No mesh subscriptions are taken.
     expect(onTopologyChange.mock.calls.map((c) => c[0])).toEqual([SFU, null]);
     expect(onError).toHaveBeenCalled();
-    expect(transportFake.subscribeRoster).toHaveBeenCalled();
-    expect(transportFake.publishPresenceBeacon).toHaveBeenCalled();
-    await client.leave();
+    expect(transportFake.subscribeRoster).not.toHaveBeenCalled();
+    expect(transportFake.publishPresenceBeacon).not.toHaveBeenCalled();
   });
 
-  it('falls back to mesh when no SFU is reachable at join', async () => {
+  it('rejects join when no SFU is reachable on a voice-sfu channel (no mesh fallback)', async () => {
     sfuControlFake.setPick(null);
     const onTopologyChange = vi.fn();
     const client = new VoiceClient('ch1', {
@@ -563,12 +570,11 @@ describe('VoiceClient onTopologyChange', () => {
       expectSfu: true,
       events: { onTopologyChange },
     });
-    await client.join();
+    await expect(client.join()).rejects.toThrow(/no sfu/i);
     await flushMicrotasks(5);
     expect(onTopologyChange).not.toHaveBeenCalled();
-    expect(transportFake.subscribeRoster).toHaveBeenCalled();
-    expect(transportFake.publishPresenceBeacon).toHaveBeenCalled();
-    await client.leave();
+    expect(transportFake.subscribeRoster).not.toHaveBeenCalled();
+    expect(transportFake.publishPresenceBeacon).not.toHaveBeenCalled();
   });
 });
 

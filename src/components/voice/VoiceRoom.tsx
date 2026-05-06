@@ -20,7 +20,7 @@ import { setActiveVoiceClient, getActiveVoiceClient } from '@/lib/voice/active-c
 import { getBridge } from '@/lib/nostr-bridge/client';
 import type { NostrBridge } from '@/lib/nostr-bridge/types';
 import { useVoiceStore } from '@/store/voice';
-import { useGroups, useUserMetadata } from '@/lib/nostr-bridge';
+import { useGroups, useUserMetadata, useCurrentRelayUrl } from '@/lib/nostr-bridge';
 import { ensureSfuRoomStarted } from '@/lib/voice/sfu-control';
 import VoiceControls from './VoiceControls';
 import ShootingStars from '@/components/ShootingStars';
@@ -44,6 +44,7 @@ type AuthGate =
 export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen, onToggleChat }: Props) {
   const router = useRouter();
   const groups = useGroups();
+  const currentRelayUrl = useCurrentRelayUrl();
   const channelKind = useMemo(
     () => groups.find((g) => g.id === channelId)?.kind ?? null,
     [groups, channelId],
@@ -259,7 +260,7 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
       s.setMuted(!localState.mic);
       s.setCameraOn(localState.camera);
       s.setScreenSharing(localState.screen);
-      s.setVoiceChannel(channelId);
+      s.setVoiceChannel(channelId, currentRelayUrl);
       s.setConnecting(false);
       return () => {
         cancelled = true;
@@ -292,7 +293,7 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
         await client.join();
         if (cancelled) return;
         const s = useVoiceStore.getState();
-        s.setVoiceChannel(channelId);
+        s.setVoiceChannel(channelId, currentRelayUrl);
         s.setConnecting(false);
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);

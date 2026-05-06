@@ -9,15 +9,14 @@
  * VoiceClient. Clicking the channel pill jumps the AppShell view back to
  * the voice channel.
  */
-import { useRouter, useSearchParams } from 'next/navigation';
 import { useGroups } from '@/lib/nostr-bridge';
 import { useVoiceStore } from '@/store/voice';
 import { getActiveVoiceClient, setActiveVoiceClient } from '@/lib/voice/active-client';
+import { requestVoiceJump } from '@/lib/voice/jump-to-voice';
 
 export default function VoiceStatusBar() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
   const channelId = useVoiceStore((s) => s.currentVoiceChannelId);
+  const relayUrl = useVoiceStore((s) => s.currentVoiceRelayUrl);
   const isMuted = useVoiceStore((s) => s.isMuted);
   const isDeafened = useVoiceStore((s) => s.isDeafened);
   const isCameraOn = useVoiceStore((s) => s.isCameraOn);
@@ -80,10 +79,11 @@ export default function VoiceStatusBar() {
   };
 
   const handleJump = () => {
-    if (typeof window === 'undefined') return;
-    const sp = new URLSearchParams(searchParams?.toString() ?? '');
-    sp.set('c', channelId);
-    router.replace(`/app?${sp.toString()}`);
+    if (!channelId) return;
+    // Hand off to the AppShell-level subscriber. If the call's home relay
+    // differs from the active bridge relay, the subscriber switches first
+    // so `useGroups()` resolves the channel before we set the view.
+    requestVoiceJump({ channelId, relayUrl: relayUrl ?? null });
   };
 
   return (
