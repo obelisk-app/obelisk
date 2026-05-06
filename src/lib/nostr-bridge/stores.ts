@@ -6,6 +6,8 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { getBridge } from './client';
+import { wotEngine } from '@/lib/wot/engine';
+import { useWotEnabled } from '@/lib/wot';
 import type { JsGroup, JsMessage, JsUserMetadata, JsReaction, JsDirectMessage, RelayAccessState } from './types';
 
 function normalizeRelayUrl(u: string): string {
@@ -159,21 +161,69 @@ export function useConfiguredRelays(): ReadonlyArray<string> {
 }
 
 export function useGroups(): ReadonlyArray<JsGroup> {
-  return useSubscription<ReadonlyArray<JsGroup>>((b, cb) => b.subscribeGroups(cb), []);
+  const all = useSubscription<ReadonlyArray<JsGroup>>((b, cb) => b.subscribeGroups(cb), []);
+  const creators = useSubscription<Readonly<Record<string, string>>>(
+    (b, cb) => b.subscribeGroupCreators(cb),
+    {},
+  );
+  const adminsByGroup = useSubscription<Readonly<Record<string, ReadonlyArray<string>>>>(
+    (b, cb) => b.subscribeAdminsByGroup(cb),
+    {},
+  );
+  const membersByGroup = useSubscription<Readonly<Record<string, ReadonlyArray<string>>>>(
+    (b, cb) => b.subscribeMembersByGroup(cb),
+    {},
+  );
+  const myPubkey = useMyPubkey();
+  const wotEnabled = useWotEnabled();
+  // Re-render whenever a verdict resolves so groups whose admins just got a
+  // verdict appear/disappear from the rail.
+  const [, force] = useState(0);
+  useEffect(() => {
+    if (!wotEnabled) return;
+    return wotEngine.on('verdicts-changed', () => force((n) => n + 1));
+  }, [wotEnabled]);
+  return useMemo(() => {
+    if (!wotEnabled) return all;
+    // Strict policy: a group is shown iff one of these holds:
+    //   - I created / am admin of / am member of the group (always-mine)
+    //   - any of {creator, admins, members} has a resolved-allow verdict
+    // Otherwise hidden — including groups where no principal is known yet,
+    // since on relay-default group lists those are the spam channels the
+    // user is trying to remove. The bridge's authors-scoped 9007 sub plus
+    // per-group admin/member subs converge fast for legitimate groups.
+    return all.filter((g) => {
+      const creator = creators[g.id];
+      const admins = adminsByGroup[g.id] ?? [];
+      const members = membersByGroup[g.id] ?? [];
+      if (myPubkey) {
+        if (creator === myPubkey) return true;
+        if (admins.includes(myPubkey)) return true;
+        if (members.includes(myPubkey)) return true;
+      }
+      const principals = creator ? [creator, ...admins, ...members] : [...admins, ...members];
+      let anyAllow = false;
+      for (const pk of principals) {
+        if (wotEngine.getDistance(pk) !== null) { anyAllow = true; break; }
+      }
+      if (anyAllow) return true;
+      // Warm verdicts so unknowns get resolved; the rail re-renders on
+      // verdicts-changed if any principal eventually resolves to allow.
+      for (const pk of principals) wotEngine.markUnknown(pk);
+      return false;
+    });
+  }, [all, creators, adminsByGroup, membersByGroup, myPubkey, wotEnabled]);
 }
 
 export function useMessages(groupId: string | null): ReadonlyArray<JsMessage> {
-  const all = useSubscription<ReadonlyArray<JsMessage>>(
+  // Mute / WoT filtering happens at ingest now (see wotEngine.isAllowed in
+  // client.ts subscribeWatched.onevent + the verdict-deny pruner). If a
+  // message is in the store, it's allowed.
+  return useSubscription<ReadonlyArray<JsMessage>>(
     (b, cb) => (groupId ? b.subscribeMessages(groupId, cb) : () => {}),
     [],
     [groupId],
   );
-  const mutes = useMyMutes();
-  return useMemo(() => {
-    if (mutes.length === 0) return all;
-    const muted = new Set(mutes);
-    return all.filter((m) => !muted.has(m.pubkey));
-  }, [all, mutes]);
 }
 
 export function useUserMetadata(pubkey: string | null): JsUserMetadata | null {
@@ -199,21 +249,12 @@ export function useChildrenByParent(): Readonly<Record<string, ReadonlyArray<str
 }
 
 export function useDirectMessages(): Readonly<Record<string, ReadonlyArray<JsDirectMessage>>> {
-  const all = useSubscription<Readonly<Record<string, ReadonlyArray<JsDirectMessage>>>>(
+  // Mute / WoT filtering happens at ingest; muted peers are already pruned
+  // from the bridge store via the WoT engine's verdict-deny pruner.
+  return useSubscription<Readonly<Record<string, ReadonlyArray<JsDirectMessage>>>>(
     (b, cb) => b.subscribeDirectMessages(cb),
     {},
   );
-  const mutes = useMyMutes();
-  return useMemo(() => {
-    if (mutes.length === 0) return all;
-    const muted = new Set(mutes);
-    const filtered: Record<string, ReadonlyArray<JsDirectMessage>> = {};
-    for (const [peer, thread] of Object.entries(all)) {
-      if (muted.has(peer)) continue;
-      filtered[peer] = thread;
-    }
-    return filtered;
-  }, [all, mutes]);
 }
 
 export function useAdmins(groupId: string | null): ReadonlyArray<string> {
@@ -234,6 +275,14 @@ export function useMembers(groupId: string | null): ReadonlyArray<string> {
     [],
     [groupId],
   );
+}
+
+export function useMembersByGroup(): Readonly<Record<string, ReadonlyArray<string>>> {
+  return useSubscription((b, cb) => b.subscribeMembersByGroup(cb), {});
+}
+
+export function useGroupCreators(): Readonly<Record<string, string>> {
+  return useSubscription((b, cb) => b.subscribeGroupCreators(cb), {});
 }
 
 /**

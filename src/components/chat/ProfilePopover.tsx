@@ -13,6 +13,7 @@ import {
   CUSTOM_EMOJI_PLACEHOLDER_REGEX,
 } from '@/lib/emoji-shortcodes';
 import ChannelEmoji from './ChannelEmoji';
+import WotBadge from './WotBadge';
 
 function renderWithEmojis(text: string, serverEmojis: Record<string, string>): ReactNode {
   if (!text) return text;
@@ -172,8 +173,9 @@ export default function ProfilePopover({ pubkey, onClose }: {
         <div className="pt-12 pb-4 px-4 space-y-3">
           {/* Name + handle */}
           <div>
-            <h3 className="text-lg font-semibold text-lc-white break-words" data-testid="profile-name">
-              {renderWithEmojis(displayName, serverEmojis)}
+            <h3 className="text-lg font-semibold text-lc-white break-words flex items-center gap-2" data-testid="profile-name">
+              <span>{renderWithEmojis(displayName, serverEmojis)}</span>
+              <WotBadge pubkey={pubkey} />
             </h3>
             <div className="text-xs text-lc-muted break-all" data-testid="profile-handle">
               {member?.nip05 || npubShort}

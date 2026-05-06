@@ -2,9 +2,10 @@ import type { Event as NostrEvent } from 'nostr-tools/pure';
 import type { Filter } from 'nostr-tools/filter';
 import { sharedCoalescer } from '@/lib/nostr-coalescer';
 import { verifyDMEvent } from './pool';
-import { getCursors, setCursor, putEvent, getEvent, type CachedDMEvent } from './dm-cache';
+import { getCursors, setCursor, putEvent, getEvent, getCachedEvents, type CachedDMEvent } from './dm-cache';
 import { getRelays } from './relay-list-cache';
 import { ingestKind3 } from './follows';
+import { wotEngine } from '@/lib/wot/engine';
 
 const KIND_NIP04 = 4;
 const KIND_RUMOR = 14;
@@ -12,6 +13,14 @@ const KIND_GIFT_WRAP = 1059;
 const KIND_FOLLOW = 3;
 
 const coalescer = sharedCoalescer;
+
+function hasOutgoingTo(myPubkey: string, target: string): boolean {
+  for (const ev of getCachedEvents(myPubkey)) {
+    if (ev.pubkey !== myPubkey) continue;
+    if (ev.tags.some((t) => t[0] === 'p' && t[1] === target)) return true;
+  }
+  return false;
+}
 
 function toCached(event: NostrEvent): CachedDMEvent {
   return {
@@ -31,6 +40,17 @@ export function verifyAndIngest(myPubkey: string, event: NostrEvent): boolean {
     return false;
   }
   if (getEvent(myPubkey, event.id)) return true; // dedup
+  // WoT / mute / block gate. Consensual-DM exemption: if we already have an
+  // outgoing DM cached to this counterparty, accept their replies. Outgoing
+  // events themselves (event.pubkey === myPubkey) are always own-events and
+  // pass via the engine's own-event short-circuit.
+  if (!wotEngine.isAllowed(event.pubkey, event.kind)) {
+    const target = event.pubkey === myPubkey
+      ? (event.tags as string[][]).find((t) => t[0] === 'p')?.[1]
+      : event.pubkey;
+    const consensual = !!target && hasOutgoingTo(myPubkey, target);
+    if (!consensual) return false;
+  }
   if (typeof window !== 'undefined') console.log('[dm-ingest] cached event', { id: event.id.slice(0, 8), kind: event.kind, from: event.pubkey?.slice(0, 8), at: event.created_at });
   putEvent(myPubkey, toCached(event));
   if (event.kind === KIND_NIP04) {

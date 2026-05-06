@@ -6,6 +6,7 @@ import { nip19 } from 'nostr-tools';
 import { nostrActions, useUserMetadata } from '@/lib/nostr-bridge';
 import BlossomImageInput from '@/components/BlossomImageInput';
 import { usePreferences, setPreference } from '@/lib/preferences';
+import WotSettings from '@/components/settings/WotSettings';
 
 interface UserPanelProps {
   pubkey: string;
@@ -395,6 +396,7 @@ function PreferencesPanel() {
         checked={prefs.showActivityIndicator}
         onChange={(v) => setPreference('showActivityIndicator', v)}
       />
+      <WotSettings />
     </div>
   );
 }

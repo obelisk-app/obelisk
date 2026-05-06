@@ -26,6 +26,8 @@ import { generateSecretKey } from 'nostr-tools/pure';
 import { parseRelayListMeta, parseInboxRelays } from '@/lib/nostr-read';
 import { TextCoercingWebSocket } from '@/lib/nostr-pool';
 import { cacheGet, cacheSet, cacheClearAll, cacheListIds } from './cache';
+import { wotEngine } from '@/lib/wot/engine';
+import { useModerationStore } from '@/store/moderation';
 import { resetAllClientState } from '@/lib/reset';
 import { pushActivity, resolveActivity, failActivity, trackActivity, dismissActivity } from '@/lib/activity-log';
 import type {
@@ -327,6 +329,96 @@ class BridgeImpl implements NostrBridge {
 
   constructor() {
     this.pool = this.createPool();
+    this.wireWotEngine();
+  }
+
+  /**
+   * Connect the WoT engine to the bridge:
+   *   - Consensual-DM exemption: any peer we have a cached DM thread with
+   *     bypasses the gate (you opted in by talking to them).
+   *   - Synced mute list (NIP-51 kind 10000) + local zustand mute list →
+   *     engine's union via {@link syncMutesToEngine}.
+   *   - Local zustand block list → engine's hard denylist.
+   *   - `verdict-deny` listener prunes any data we admitted while a verdict
+   *     was still resolving so the "no untrusted state persists" invariant
+   *     holds eventually.
+   */
+  private wireWotEngine(): void {
+    this.myPubkey.subscribe((pk) => wotEngine.setOwnPubkey(pk));
+    wotEngine.setConsensualDmPredicate((pubkey) => {
+      const peers = this.dmsByPeer.get();
+      return Object.prototype.hasOwnProperty.call(peers, pubkey);
+    });
+    this.myMutes.subscribe(() => this.syncMutesToEngine());
+    if (typeof window !== 'undefined') {
+      useModerationStore.subscribe(() => this.syncMutesToEngine());
+      this.syncMutesToEngine();
+    }
+    wotEngine.on('verdict-deny', (pubkey) => this.pruneAuthor(pubkey));
+    wotEngine.onEnabledChanged((enabled) => {
+      if (enabled) this.reevaluateKnownAuthors();
+    });
+  }
+
+  /**
+   * Walk every author currently present in the stores and enqueue them for
+   * a fresh WoT verdict. Deny verdicts fire `verdict-deny` → pruneAuthor()
+   * wipes their entries, so toggling WoT on retroactively cleans up data
+   * that came in fail-open while the engine was disabled. No-op when WoT
+   * is off (`markUnknown` short-circuits).
+   */
+  private reevaluateKnownAuthors(): void {
+    const authors = new Set<string>();
+    for (const msgs of Object.values(this.messagesByGroup.get())) {
+      for (const m of msgs) authors.add(m.pubkey);
+    }
+    for (const peer of Object.keys(this.dmsByPeer.get())) authors.add(peer);
+    for (const pk of Object.keys(this.userMetadata.get())) authors.add(pk);
+    for (const list of Object.values(this.adminsByGroup.get())) for (const pk of list) authors.add(pk);
+    for (const list of Object.values(this.membersByGroup.get())) for (const pk of list) authors.add(pk);
+    if (this.session) authors.delete(this.session.pubKeyHex);
+    for (const pk of authors) wotEngine.markUnknown(pk);
+  }
+
+  private syncMutesToEngine(): void {
+    const local = (typeof window !== 'undefined') ? useModerationStore.getState() : null;
+    const synced = this.myMutes.get();
+    const muteUnion = new Set<string>([...(synced ?? []), ...(local?.mutedPubkeys ?? [])]);
+    wotEngine.setMutedPubkeys(Array.from(muteUnion));
+    wotEngine.setBlockedPubkeys(local?.blockedPubkeys ?? []);
+  }
+
+  /**
+   * Wipe in-memory + cache entries authored by `pubkey`. Called when the WoT
+   * engine resolves a deny verdict (or when the user just muted/blocked the
+   * author) — ensures untrusted state doesn't linger after the verdict
+   * arrives, even if it slipped through fail-open earlier.
+   */
+  private pruneAuthor(pubkey: string): void {
+    this.messagesByGroup.update((prev) => {
+      let touched = false;
+      const next: Record<string, JsMessage[]> = {};
+      for (const [gid, msgs] of Object.entries(prev)) {
+        const filtered = msgs.filter((m) => m.pubkey !== pubkey);
+        if (filtered.length !== msgs.length) touched = true;
+        next[gid] = filtered;
+      }
+      return touched ? next : prev;
+    });
+    this.dmsByPeer.update((prev) => {
+      if (!Object.prototype.hasOwnProperty.call(prev, pubkey)) return prev;
+      const { [pubkey]: _drop, ...rest } = prev;
+      void _drop;
+      return rest;
+    });
+    this.userMetadata.update((prev) => {
+      if (!Object.prototype.hasOwnProperty.call(prev, pubkey)) return prev;
+      const { [pubkey]: _drop, ...rest } = prev;
+      void _drop;
+      return rest;
+    });
+    this.userMetadataLatestAt.delete(pubkey);
+    this.metadataRequested.delete(pubkey);
   }
 
   /**
@@ -1003,6 +1095,7 @@ class BridgeImpl implements NostrBridge {
       this.subscribeIncomingDMs();
       this.subscribeMyContactList();
       this.subscribeMyMuteList();
+      this.subscribeMyAuthoredGroups();
       // Resolve the user's own profile so the UI has it immediately.
       if (this.session) this.ensureUserMetadata(this.session.pubKeyHex);
       // Reopen any per-group REQs that were live on the previous pool.
@@ -1226,6 +1319,12 @@ class BridgeImpl implements NostrBridge {
     return this.membersByGroup.subscribe(adapter);
   }
 
+  subscribeMembersByGroup(
+    cb: (byGroup: Readonly<Record<string, ReadonlyArray<string>>>) => void,
+  ): Unsubscribe {
+    return this.membersByGroup.subscribe(cb);
+  }
+
   /**
    * Subscribe to the "relay has delivered at least one 39001/39002 for this
    * group" signal. Fires `false` immediately on subscribe (or `true` if a
@@ -1241,6 +1340,10 @@ class BridgeImpl implements NostrBridge {
 
   ensureUserMetadata(pubkey: string): void {
     if (this.metadataRequested.has(pubkey)) return;
+    // Skip the kind:0 REQ for resolved-deny pubkeys to avoid amplifying
+    // unwanted authors into our outbound subscription set. Unknown verdicts
+    // still get a REQ — they may resolve to allow later.
+    if (wotEngine.isResolvedDeny(pubkey)) return;
     this.metadataRequested.add(pubkey);
     this.subscribeKind0(pubkey);
   }
@@ -1802,6 +1905,12 @@ class BridgeImpl implements NostrBridge {
           // required) succeeded and we're not whitelist-blocked. Mark the
           // active relay 'ok' (helper no-ops for non-active relays).
           for (const url of relays) this.setRelayAccess(url, 'ok');
+          // WoT / mute / block gate. The engine fails-open until a verdict
+          // resolves; resolved-deny events are dropped here so they never
+          // reach ingest, the cache, or `messagesByGroup`. When the engine
+          // is disabled the predicate is a constant `true` and this is a
+          // no-op. See docs/wot-integration-plan.md.
+          if (!wotEngine.isAllowed(ev.pubkey, ev.kind)) return;
           onevent(ev);
         },
         oneose: () => {
@@ -2017,6 +2126,23 @@ class BridgeImpl implements NostrBridge {
     if (this.creatorSubscribedGroups.has(groupId)) return;
     this.creatorSubscribedGroups.add(groupId);
     const filter: Filter = { kinds: [KIND_GROUP_CREATE], '#h': [groupId], limit: 1 };
+    const sub = this.subscribeWatched(this.relays, filter, (ev) => this.ingestGroupCreator(ev));
+    this.subs.push(sub);
+  }
+
+  /**
+   * Single-REQ pull of every kind 9007 the local user has signed on this
+   * relay. Per-group subs cover the general case but rate-limit-shaped
+   * relays sometimes drop the burst of 1k+ per-group filters at once,
+   * leaving the user's own channels without a known creator. This
+   * authors-scoped filter is one REQ regardless of group count and
+   * populates `groupCreators` for every group the user actually created
+   * — the load-bearing input for the WoT rail's "show my own channels"
+   * exemption.
+   */
+  private subscribeMyAuthoredGroups(): void {
+    if (!this.session) return;
+    const filter: Filter = { kinds: [KIND_GROUP_CREATE], authors: [this.session.pubKeyHex] };
     const sub = this.subscribeWatched(this.relays, filter, (ev) => this.ingestGroupCreator(ev));
     this.subs.push(sub);
   }

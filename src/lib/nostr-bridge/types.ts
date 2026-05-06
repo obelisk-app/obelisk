@@ -181,6 +181,10 @@ export interface NostrBridge {
   ): Unsubscribe;
   /** NIP-29 39002 members (relay-published). */
   subscribeMembers(groupId: string, cb: (members: ReadonlyArray<string>) => void): Unsubscribe;
+  /** Full members map for every group the bridge has seen on the active relay. */
+  subscribeMembersByGroup(
+    cb: (byGroup: Readonly<Record<string, ReadonlyArray<string>>>) => void,
+  ): Unsubscribe;
   /**
    * Fires `true` once the relay has delivered at least one 39001 or 39002
    * event for the group, otherwise `false`. Use as positive evidence the

@@ -13,6 +13,8 @@ import {
   useReactions,
   useChildrenByParent,
   useAdminsByGroup,
+  useMembersByGroup,
+  useGroupCreators,
   useDirectMessages,
   useAdmins,
   useMembers,
@@ -25,6 +27,8 @@ import {
   type JsUserMetadata,
 } from '@/lib/nostr-bridge';
 import { getBridge, getBridgeImpl } from '@/lib/nostr-bridge';
+import { initializeWot, useWotEnabled, wotEngine } from '@/lib/wot';
+import { wotColorClass } from '@/lib/wot/colors';
 import { faviconFor, fetchRelayInfo } from '@/lib/relay-info';
 import ServerRail from './ServerRail';
 import DMList from './DMList';
@@ -38,6 +42,7 @@ import VoiceRoom from '@/components/voice/VoiceRoom';
 import ForumView from '@/components/chat/ForumView';
 import VoiceStatusBar from '@/components/voice/VoiceStatusBar';
 import { useVoiceStore } from '@/store/voice';
+import { subscribeVoiceJump } from '@/lib/voice/jump-to-voice';
 import { useVoiceChatPane } from '@/hooks/chat/useVoiceChatPane';
 import { useChatStore } from '@/store/chat';
 import type { MemberInfo } from '@/lib/mentions';
@@ -84,11 +89,20 @@ export default function AppShell() {
   const conn = useConnectionState();
   const relay = useCurrentRelayUrl();
   const [view, setView] = useState<View>({ kind: 'empty' });
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     if (view.kind === 'group') nostrActions.setActiveGroup(view.groupId);
     else nostrActions.setActiveGroup(null);
   }, [view]);
+
+  // Probe the nostr-wot extension on mount (and on visibility change). Without
+  // this the engine stays disabled until the user opens the Preferences tab,
+  // so a persisted "WoT on" toggle wouldn't take effect on cold load.
+  useEffect(() => {
+    initializeWot();
+  }, []);
 
   const [pendingMessageId, setPendingMessageId] = useState<string | null>(null);
 
@@ -130,12 +144,33 @@ export default function AppShell() {
     window.localStorage.setItem(SHOW_MEMBERS_KEY, showMembers ? '1' : '0');
   }, [showMembers]);
 
+  // Voice status bar "jump back to call" → switch relay if the call lives
+  // on a different one (so `useGroups()` resolves the channel before we set
+  // the view), then set the view to the call's channel. Cross-relay jumps
+  // currently tear down voice signaling because the bridge pool resets on
+  // switchRelay — tracked in docs/sfu-known-bugs.md.
+  useEffect(() => {
+    return subscribeVoiceJump(async ({ channelId, relayUrl }) => {
+      if (relayUrl && relayUrl !== relay) {
+        try { await nostrActions.switchRelay(relayUrl); }
+        catch (err) { console.warn('[appshell] switchRelay for voice jump failed', err); }
+      }
+      setView({ kind: 'group', groupId: channelId });
+      setSidebarOpen(false);
+    });
+  }, [relay]);
+
   if (!isLoggedIn) {
     // A stored session is being reconnected (cold load → relay handshake +
     // optional NIP-46 bunker pre-warm). Show a connecting screen instead of
     // the LoginModal so the user isn't told they're logged out when they're
     // not. See `useIsRehydrating` and docs/auth-and-data-loading.md §3.
     if (isRehydrating) return (<><RehydratingScreen /><ActivityIndicator /></>);
+    // Defer LoginModal until after mount: the underlying nui Modal portal +
+    // a NIP-07 extension that injects DOM before React hydrates produce a
+    // server/client mismatch on the modal-overlay div. Rendering a no-op
+    // placeholder for the first paint sidesteps the hydration warning.
+    if (!mounted) return <ActivityIndicator />;
     return (<><LoginModal /><ActivityIndicator /></>);
   }
 
@@ -451,7 +486,40 @@ function Sidebar({
   );
   const myPubkey = useMyPubkey();
   const operatorPubkey = useRelayOperatorPubkey(relay || null);
+  // Push the relay operator into the WoT engine so useGroups exempts the
+  // operator from filtering on their own relay. Updated whenever the active
+  // relay or its NIP-11 advertisement changes.
+  useEffect(() => {
+    wotEngine.setOperatorPubkeys(operatorPubkey ? [operatorPubkey] : []);
+  }, [operatorPubkey]);
   const adminsByGroup = useAdminsByGroup();
+  const membersByGroup = useMembersByGroup();
+  const creatorsByGroup = useGroupCreators();
+  const wotEnabled = useWotEnabled();
+  // Re-render the rail when verdicts resolve so channel-name colors update.
+  const [, forceWotRerender] = useState(0);
+  useEffect(() => {
+    if (!wotEnabled) return;
+    return wotEngine.on('verdicts-changed', () => forceWotRerender((n) => n + 1));
+  }, [wotEnabled]);
+  const groupDistanceById = useMemo(() => {
+    const out: Record<string, number | null> = {};
+    if (!wotEnabled) return out;
+    for (const g of groups) {
+      const creator = creatorsByGroup[g.id];
+      const principals = creator
+        ? [creator, ...(adminsByGroup[g.id] ?? []), ...(membersByGroup[g.id] ?? [])]
+        : [...(adminsByGroup[g.id] ?? []), ...(membersByGroup[g.id] ?? [])];
+      let best: number | null = null;
+      for (const pk of principals) {
+        const d = wotEngine.getDistance(pk);
+        if (d === null) continue;
+        if (best === null || d < best) best = d;
+      }
+      out[g.id] = best;
+    }
+    return out;
+  }, [wotEnabled, groups, creatorsByGroup, adminsByGroup, membersByGroup]);
   // Channel list is gated on positive AUTH evidence: cached groups (loaded
   // by seedCacheForRelay before the relay handshake) must not paint until
   // the relay has either accepted us (→ 'ok') or proven AUTH is not
@@ -482,6 +550,10 @@ function Sidebar({
   const [layoutOpen, setLayoutOpen] = useState(false);
   const [brandingOpen, setBrandingOpen] = useState(false);
   const [adminPanelOpen, setAdminPanelOpen] = useState(false);
+  // The desktop FloatingUserPanel (SidebarMe pill, plus VoiceStatusBar when a
+  // call is active) sits absolutely over the bottom of the channel list. Pad
+  // the scroll container so the last channels can be scrolled clear of it.
+  const inVoice = useVoiceStore((s) => !!s.currentVoiceChannelId);
 
   // Creator-admin claim used to live here as a blanket loop that published a
   // kind 9000 ['admin'] for every visible group on every login (gated only by
@@ -587,7 +659,7 @@ function Sidebar({
         />
       )}
 
-      <div className="flex-1 overflow-y-auto px-2 pb-2">
+      <div className={`flex-1 overflow-y-auto px-2 pb-2 ${inVoice ? 'md:pb-52' : 'md:pb-20'}`}>
         {!channelsVisible && (
           <div className="px-2 py-3">
             <RelayAccessBanner compact />
@@ -616,6 +688,7 @@ function Sidebar({
                   groupsById={groupsById}
                   view={view}
                   onSelect={(gid) => setView({ kind: 'group', groupId: gid })}
+                  distanceById={groupDistanceById}
                 />
               );
             })}
@@ -641,6 +714,7 @@ function Sidebar({
                     groupsById={groupsById}
                     view={view}
                     onSelect={(gid) => setView({ kind: 'group', groupId: gid })}
+                    distanceById={groupDistanceById}
                   />
                 );
               })}
@@ -658,6 +732,7 @@ function Sidebar({
                   groupsById={groupsById}
                   view={view}
                   onSelect={(gid) => setView({ kind: 'group', groupId: gid })}
+                  distanceById={groupDistanceById}
                 />
               );
             })
@@ -754,6 +829,7 @@ function CreateGroupSection({ count, onCreated }: { count: number; onCreated: (g
   );
 }
 
+
 function GroupNode({
   group,
   depth,
@@ -761,6 +837,7 @@ function GroupNode({
   groupsById,
   view,
   onSelect,
+  distanceById,
 }: {
   group: JsGroup;
   depth: number;
@@ -768,6 +845,7 @@ function GroupNode({
   groupsById: Record<string, JsGroup>;
   view: View;
   onSelect: (id: string) => void;
+  distanceById?: Readonly<Record<string, number | null>>;
 }) {
   const childIds = childrenByParent[group.id] ?? [];
   const active = view.kind === 'group' && view.groupId === group.id;
@@ -806,7 +884,12 @@ function GroupNode({
           className="flex flex-1 items-center gap-2 truncate px-1 py-1.5 text-left"
         >
           <span className="text-lc-muted">#</span>
-          <span className="flex-1 truncate">{group.name ?? group.id.slice(0, 12)}</span>
+          <span
+            className={`flex-1 truncate ${distanceById ? wotColorClass(distanceById[group.id] ?? null) : ''}`}
+            title={distanceById && distanceById[group.id] != null ? `WoT ${distanceById[group.id]}°` : undefined}
+          >
+            {group.name ?? group.id.slice(0, 12)}
+          </span>
           {!group.isPublic && <span title="Private" className="text-[10px]">🔒</span>}
           {!group.isOpen && <span title="Closed (invite only)" className="text-[10px]">⊝</span>}
         </button>
@@ -837,6 +920,7 @@ function GroupNode({
               groupsById={groupsById}
               view={view}
               onSelect={onSelect}
+              distanceById={distanceById}
             />
           );
         }
@@ -849,6 +933,7 @@ function GroupNode({
             groupsById={groupsById}
             view={view}
             onSelect={onSelect}
+            distanceById={distanceById}
           />
         );
       })}
@@ -863,6 +948,7 @@ function ForumChildGroupNode(props: {
   groupsById: Record<string, JsGroup>;
   view: View;
   onSelect: (id: string) => void;
+  distanceById?: Readonly<Record<string, number | null>>;
 }) {
   const messages = useMessages(props.group.id);
   if (messages.length === 0) return null;
