@@ -16,6 +16,7 @@
 import { Peer } from './peer';
 import { SfuClient } from './sfu-client';
 import type { SfuRemoteTrack } from './sfu-client';
+import { pickSfu } from './sfu-control';
 import type {
   VoicePresence,
   VoiceSignalPayload,
@@ -117,14 +118,14 @@ export interface VoiceClientOptions {
    */
   members?: readonly string[];
   /**
-   * Whether to honor `["sfu","1"]` beacons in this channel and flip
-   * topology to SFU mode when one appears.
+   * Whether the call should run on an SFU.
    *
-   * `true` — default; auto-discover. Used for `voice-sfu` channels.
-   * `false` — ignore SFU beacons; the call stays mesh even if an SFU is
-   *          present in the roster. Used when the channel kind is plain
-   *          `voice` so a stale SFU beacon (left over from a prior call,
-   *          or from a malicious peer) can't hijack the topology.
+   * `true` — at `join()`, ask `pickSfu(channelId)` for the active SFU
+   *          (per-channel pin → env override → kind 31313 advertisement)
+   *          and switch to SFU mode if found. Used for `voice-sfu`
+   *          channels.
+   * `false` (default) — stay in mesh. `pickSfu` is never consulted, so
+   *          stray SFU advertisements can't hijack the topology.
    *
    * Mutable post-construction via {@link VoiceClient.setExpectSfu} so a
    * channel-kind reclassification flips the live call without requiring
@@ -266,10 +267,11 @@ export class VoiceClient {
     this.openRoom = options.open === true
       || !options.members
       || options.members.length === 0;
-    // Default `true` preserves the original behavior — any beacon with
-    // `["sfu","1"]` flipped topology. Channel-kind-aware callers should
-    // pass `false` for plain voice channels.
-    this.expectSfu = options.expectSfu !== false;
+    // Default `false` — mesh-only unless the caller explicitly opts in
+    // via channel kind. Production callers (VoiceRoom) pass
+    // `expectSfu: channelKind === 'voice-sfu'`, so the default only
+    // affects ad-hoc / test constructions which should be mesh.
+    this.expectSfu = options.expectSfu === true;
     const pk = getSelfPubkey();
     if (!pk) throw new Error('Not logged in to nostr');
     this.selfPubkey = pk;
@@ -324,31 +326,40 @@ export class VoiceClient {
   }
 
   /**
-   * Live-flip whether SFU beacons are honored. Used when the channel
-   * kind reclassifies between `voice` and `voice-sfu` while a call is
-   * already running — we want the topology to follow the new kind
-   * without forcing every participant to leave/rejoin.
+   * Live-flip whether the call should run on an SFU. Used when the
+   * channel kind reclassifies between `voice` and `voice-sfu` while a
+   * call is already running — we want the topology to follow the new
+   * kind without forcing every participant to leave/rejoin.
    *
-   * Going `true → false` (voice-sfu → voice): if we were on the SFU,
-   * `setSfuMode(null)` runs immediately, the SFU peer is torn down,
-   * and the next roster sweep dials each mesh participant.
+   * Going `true → false` (voice-sfu → voice): tear down the SFU client,
+   * fire `onTopologyChange(null)`, start mesh subscriptions.
    *
-   * Going `false → true` (voice → voice-sfu): we re-evaluate the
-   * current roster; any beacon with `["sfu","1"]` now flips topology
-   * to that SFU.
+   * Going `false → true` (voice → voice-sfu): ask `pickSfu` for the
+   * channel's current SFU; if found, tear down mesh + flip to SFU. If
+   * no SFU is reachable, stay in mesh.
    */
   setExpectSfu(expect: boolean): void {
     if (this.expectSfu === expect) return;
     this.expectSfu = expect;
+    if (!this.joined) return;
     if (!expect && this.sfuPubkey) {
-      this.setSfuMode(null);
-    } else if (expect) {
-      const sfu = this.currentRoster.find((r) => r.isSfu)?.pubkey ?? null;
-      if (sfu !== this.sfuPubkey) this.setSfuMode(sfu);
+      const sfuPubkey = this.sfuPubkey;
+      this.exitSfuMode();
+      try { this.events.onTopologyChange?.(null); } catch (err) {
+        console.warn('[voice] onTopologyChange handler threw', err);
+      }
+      void this.enterMeshMode().catch((err) =>
+        console.warn('[voice] enterMeshMode after SFU exit failed', err),
+      );
+      console.log('[voice] topology sfu:', sfuPubkey.slice(0, 8), '→ mesh');
+    } else if (expect && !this.sfuPubkey) {
+      void (async () => {
+        const picked = await pickSfu(this.channelId).catch(() => null);
+        if (!picked) return;
+        this.exitMeshMode();
+        await this.enterSfuMode(picked.pubkey);
+      })();
     }
-    // Force a roster pass so the wanted/peers diff reconciles even if
-    // the roster snapshot itself didn't change.
-    this.handleRoster(this.rosterPubkeys);
   }
 
   /**
@@ -403,6 +414,36 @@ export class VoiceClient {
     // OS auto-duck background media.
     await this.setMicEnabled(true);
 
+    // Topology decision is made up-front, not driven by the beacon roster
+    // arriving late: for `voice-sfu` channels, ask `pickSfu` (per-channel
+    // pin → env override → kind 31313 advertisement) and switch to SFU
+    // mode immediately. The SFU itself becomes the source of truth for
+    // the participant list via `peerJoined`/`peerLeft`/`participantList`
+    // notifications, so we skip beacons + roster entirely while in SFU
+    // mode. Falls back to mesh if no SFU is reachable.
+    if (this.expectSfu) {
+      const picked = await pickSfu(this.channelId).catch((err) => {
+        console.warn('[voice] pickSfu threw at join', err);
+        return null;
+      });
+      if (picked) {
+        await this.enterSfuMode(picked.pubkey);
+        return;
+      }
+    }
+
+    await this.enterMeshMode();
+  }
+
+  /**
+   * Subscribe to roster + signaling, publish the first beacon, and start
+   * the periodic beacon timer. Idempotent — re-running is a no-op when
+   * mesh subs are already up. Used both at fresh join and as the SFU
+   * fallback when `pickSfu` returns null or `SfuClient.start` throws.
+   */
+  private async enterMeshMode(): Promise<void> {
+    if (this.signalsUnsub || this.rosterUnsub) return;
+
     // Subscribe to incoming signaling first so we don't miss offers from
     // peers who learn about us via the beacon we're about to send.
     this.signalsUnsub = await subscribeSignals(
@@ -453,6 +494,45 @@ export class VoiceClient {
     }, BEACON_INTERVAL_MS);
   }
 
+  /**
+   * Tear down the mesh-mode subscriptions, timers, and any open `Peer`
+   * instances. Safe to call when mesh isn't running. Used by the
+   * mid-call mesh→SFU transition (`setExpectSfu(true)`).
+   */
+  private exitMeshMode(): void {
+    if (this.beaconTimer) { clearInterval(this.beaconTimer); this.beaconTimer = null; }
+    if (this.beaconRefreshTimer) { clearTimeout(this.beaconRefreshTimer); this.beaconRefreshTimer = null; }
+    for (const t of this.bringupTimers) clearTimeout(t);
+    this.bringupTimers.length = 0;
+    this.signalsUnsub?.(); this.signalsUnsub = null;
+    this.rosterUnsub?.(); this.rosterUnsub = null;
+    this.currentRoster = [];
+    this.seenRosterPubkeys.clear();
+    for (const peer of this.peers.values()) peer.close();
+    this.peers.clear();
+  }
+
+  /**
+   * Flip topology to SFU mode. Sets `sfuPubkey`, fires `onTopologyChange`,
+   * and stands up the `SfuClient`. On `SfuClient.start()` failure, clears
+   * SFU state and falls back to mesh — UI gets back-to-back
+   * `onTopologyChange(sfu)` then `onTopologyChange(null)` so the badge
+   * reflects the live state.
+   */
+  private async enterSfuMode(sfuPubkey: string): Promise<void> {
+    if (this.sfuPubkey === sfuPubkey && this.sfuClient) return;
+
+    if (this.sfuClient) {
+      try { this.sfuClient.close(); } catch { /* ignore */ }
+      this.sfuClient = null;
+    }
+    this.sfuPubkey = sfuPubkey;
+    try { this.events.onTopologyChange?.(sfuPubkey); } catch (err) {
+      console.warn('[voice] onTopologyChange handler threw', err);
+    }
+    await this.startSfuClient(sfuPubkey);
+  }
+
   async leave(): Promise<void> {
     if (!this.joined) return;
     this.joined = false;
@@ -478,6 +558,8 @@ export class VoiceClient {
       try { this.sfuClient.close(); } catch { /* ignore */ }
       this.sfuClient = null;
     }
+    this.sfuPubkey = null;
+    this.rosterPubkeys = [];
     this.connectedPubkeys.clear();
     this.localVideoClaimedAt.clear();
     this.currentRoster = [];
@@ -537,19 +619,14 @@ export class VoiceClient {
 
   // ── Roster + peer management ───────────────────────────────────────────
 
+  /**
+   * Mesh-only roster handler. The SFU path bypasses this entirely — it
+   * mirrors the SFU's pushed `participantList`/`peerJoined`/`peerLeft`
+   * directly into `rosterPubkeys` from the `SfuClient.onPeersChange`
+   * callback. Roster subscription is gated by `enterMeshMode`, so this
+   * function can assume mesh mode.
+   */
   private handleRoster(pubkeys: string[]) {
-    // Topology check first — if any beacon carries `["sfu","1"]`, switch
-    // to SFU mode (or out of it). The mode informs the rest of this
-    // function's wanted/visible logic. `expectSfu === false` (a plain
-    // voice channel) ignores SFU beacons entirely so a stale or hostile
-    // one can't hijack mesh topology.
-    const sfuFromRoster = this.expectSfu
-      ? this.currentRoster.find((r) => r.isSfu)?.pubkey ?? null
-      : null;
-    if (sfuFromRoster !== this.sfuPubkey) {
-      this.setSfuMode(sfuFromRoster);
-    }
-
     const others = pubkeys.filter((p) => p !== this.selfPubkey);
 
     // First-sighting rebroadcast: if any pubkey in this snapshot is new to
@@ -567,17 +644,11 @@ export class VoiceClient {
     }
     if (sawNew) this.scheduleBeaconRefresh();
 
-    // The SFU is infrastructure, not a participant — don't render its tile,
-    // don't count it against MAX_PARTICIPANTS.
-    const visible = this.sfuPubkey
-      ? others.filter((p) => p !== this.sfuPubkey)
-      : others;
-
-    // Hard cap (mesh only): if more than MAX_PARTICIPANTS would be present
-    // and we're not in the leading slice, deterministically (lex) trim the
-    // tail so every client agrees on the same set of cap-violators. SFU
-    // mode is exempt — that's the whole point of SFU.
-    if (!this.sfuPubkey && visible.length + 1 > MAX_PARTICIPANTS) {
+    // Hard cap: if more than MAX_PARTICIPANTS would be present and we're
+    // not in the leading slice, deterministically (lex) trim the tail so
+    // every client agrees on the same set of cap-violators.
+    const visible = others.slice();
+    if (visible.length + 1 > MAX_PARTICIPANTS) {
       visible.sort();
       visible.splice(MAX_PARTICIPANTS - 1);
     }
@@ -585,33 +656,17 @@ export class VoiceClient {
     // Union of roster pubkeys + already-open peers. Some peers are
     // discovered via incoming signaling when relays don't deliver beacons
     // symmetrically — keeping them in the UI list prevents them from
-    // disappearing mid-call. The SFU is excluded from the UI list.
+    // disappearing mid-call.
     const union = new Set(visible);
-    for (const pk of this.peers.keys()) {
-      if (pk !== this.sfuPubkey) union.add(pk);
-    }
+    for (const pk of this.peers.keys()) union.add(pk);
     this.rosterPubkeys = Array.from(union);
     this.events.onParticipantsChange?.([...this.rosterPubkeys]);
 
-    // Wanted RTC connections.
-    //  - SFU mode: only the SFU. Existing mesh peers are torn down.
-    //  - Mesh:     every visible participant. Best-effort; we do NOT close
-    //              peers just because they're missing from this snapshot.
-    const wanted = new Set<string>();
-    if (this.sfuPubkey) {
-      wanted.add(this.sfuPubkey);
-      for (const pk of Array.from(this.peers.keys())) {
-        if (!wanted.has(pk)) this.tearDownPeer(pk);
-      }
-    } else {
-      for (const p of visible) wanted.add(p);
+    for (const p of visible) {
+      if (!this.peers.has(p)) this.openPeer(p);
     }
-
-    for (const pk of wanted) {
-      if (!this.peers.has(pk)) this.openPeer(pk);
-    }
-    // Cap-overflow eviction (mesh only).
-    if (!this.sfuPubkey && this.peers.size + 1 > MAX_PARTICIPANTS) {
+    // Cap-overflow eviction.
+    if (this.peers.size + 1 > MAX_PARTICIPANTS) {
       const keep = new Set(Array.from(this.peers.keys()).sort().slice(0, MAX_PARTICIPANTS - 1));
       for (const pk of Array.from(this.peers.keys())) {
         if (!keep.has(pk)) this.tearDownPeer(pk);
@@ -620,51 +675,38 @@ export class VoiceClient {
   }
 
   /**
-   * Switch between mesh and SFU mode, or between SFUs. Idempotent — a
-   * no-op if already in the requested state. The actual peer reconciliation
-   * (open the new peer, tear down the old) is done by `handleRoster`'s
-   * wanted/peers diff loop, since `handleRoster` always runs immediately
-   * after this method via the same roster callback.
+   * Tear down the active SFU client and drop SFU-attributed state. Used
+   * by the SFU→mesh transition (`setExpectSfu(false)` mid-call, or fallback
+   * after a failed `SfuClient.start`). Does NOT start mesh subscriptions
+   * — caller decides whether to re-enter mesh.
    */
-  private setSfuMode(sfu: string | null): void {
-    if (this.sfuPubkey === sfu) return;
-    const from = this.sfuPubkey ? `sfu:${this.sfuPubkey.slice(0, 8)}` : 'mesh';
-    const to = sfu ? `sfu:${sfu.slice(0, 8)}` : 'mesh';
-    console.log('[voice] topology', from, '→', to);
-    this.sfuPubkey = sfu;
-
-    // Tear down the old SfuClient (if any) before standing up the new one
-    // so we don't leak a Device/transports across topology flips.
+  private exitSfuMode(): void {
+    const from = this.sfuPubkey;
     if (this.sfuClient) {
       try { this.sfuClient.close(); } catch { /* ignore */ }
       this.sfuClient = null;
-      // Drop SFU-attributed remote tracks; the new SFU (or mesh) will
-      // re-emit fresh ones.
+    }
+    if (from) {
+      // Drop SFU-attributed remote tracks so the next topology re-emits
+      // fresh ones rather than orphaning them on a closed peer.
       for (const [trackId, t] of Array.from(this.remoteTracks.entries())) {
-        if (t.viaPubkey === from && from.startsWith('sfu:')) {
-          this.remoteTracks.delete(trackId);
-        }
+        if (t.viaPubkey === from) this.remoteTracks.delete(trackId);
       }
       this.emitRemoteTracks();
+      this.connectedPubkeys.delete(from);
     }
-
-    if (sfu) {
-      this.startSfuClient(sfu).catch((err) => {
-        console.warn('[voice] SfuClient start failed', err);
-      });
-    }
-
-    try {
-      this.events.onTopologyChange?.(sfu);
-    } catch (err) {
-      console.warn('[voice] onTopologyChange handler threw', err);
-    }
+    this.sfuPubkey = null;
+    this.rosterPubkeys = [];
+    this.events.onParticipantsChange?.([]);
   }
 
   /**
    * Stand up the mediasoup-client driver: open RPC, load Device, build
-   * send/recv transports, then push every local track. Idempotent — the
-   * caller (`setSfuMode`) guarantees the previous client was torn down.
+   * send/recv transports, then push every local track. On `start()`
+   * failure, fall back to mesh — clearing SFU state, firing
+   * `onTopologyChange(null)`, and entering mesh subscriptions.
+   *
+   * Caller (`enterSfuMode`) guarantees the previous client was torn down.
    */
   private async startSfuClient(sfuPubkey: string): Promise<void> {
     // SFU's listening relays may be a strict subset of the dex's bridge
@@ -675,7 +717,6 @@ export class VoiceClient {
     // Resolution order matches `pickSfu(channelId)`:
     //   1. per-channel pin (kind 30078)        — preferred
     //   2. NEXT_PUBLIC_SFU_TRUSTED_RELAYS env  — fallback for unconfigured channels
-    const { pickSfu } = await import('./sfu-control');
     const picked = await pickSfu(this.channelId);
     let trustedRelays: string[] = [];
     if (picked && picked.pubkey === sfuPubkey && picked.trustedRelays.length > 0) {
@@ -723,7 +764,17 @@ export class VoiceClient {
           } else if (state === 'disconnected' || state === 'failed' || state === 'closed') {
             this.connectedPubkeys.delete(sfuPubkey);
           }
-          this.scheduleBeaconRefresh();
+        },
+        onPeersChange: (pubkeys) => {
+          // SFU is the source of truth for the participant list in SFU
+          // mode. Mirror it directly into the renderable roster — no
+          // beacon discovery, no transitive merging.
+          this.rosterPubkeys = [...pubkeys];
+          try {
+            this.events.onParticipantsChange?.([...pubkeys]);
+          } catch (err) {
+            console.warn('[voice] onParticipantsChange handler threw', err);
+          }
         },
       },
     });
@@ -731,9 +782,17 @@ export class VoiceClient {
     try {
       await client.start();
     } catch (err) {
-      console.warn('[voice] SfuClient.start threw', err);
+      console.warn('[voice] SfuClient.start failed, falling back to mesh', err);
       try { client.close(); } catch { /* ignore */ }
       if (this.sfuClient === client) this.sfuClient = null;
+      // Surface the failure and switch to mesh so users still get a working
+      // call instead of an empty SFU room.
+      try { this.events.onError?.('SFU connection failed; using mesh.'); } catch { /* ignore */ }
+      if (this.sfuPubkey === sfuPubkey) {
+        this.sfuPubkey = null;
+        try { this.events.onTopologyChange?.(null); } catch { /* ignore */ }
+        await this.enterMeshMode();
+      }
       return;
     }
     // Push existing local tracks to the new client.

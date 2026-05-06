@@ -62,6 +62,97 @@ vi.mock('./transport', () => ({
   },
 }));
 
+// ── sfu-control mock ────────────────────────────────────────────────────
+// `pickSfu` is the new SFU-discovery entry point — `VoiceClient.join()`
+// calls it directly when `expectSfu === true` instead of waiting for an
+// SFU beacon to appear in the roster. Tests configure the return value
+// per-case via `sfuControlFake.setPick(...)`.
+const sfuControlFake = vi.hoisted(() => {
+  let next: { pubkey: string; trustedRelays: readonly string[]; url: string | null } | null = null;
+  return {
+    pickSfu: vi.fn(async () => next),
+    setPick: (
+      pick: { pubkey: string; trustedRelays?: readonly string[]; url?: string | null } | null,
+    ) => {
+      next = pick
+        ? {
+            pubkey: pick.pubkey,
+            trustedRelays: pick.trustedRelays ?? [],
+            url: pick.url ?? null,
+          }
+        : null;
+    },
+    reset: () => { next = null; },
+  };
+});
+vi.mock('./sfu-control', () => ({
+  pickSfu: sfuControlFake.pickSfu,
+}));
+
+// ── sfu-client mock ─────────────────────────────────────────────────────
+// Substitute the real mediasoup-driven `SfuClient` with a thin stub: it
+// captures constructor opts so tests can fire `onPeersChange` etc., and
+// its `start()` resolves immediately (or rejects when configured for
+// the fallback-to-mesh path).
+const sfuClientFake = vi.hoisted(() => {
+  type Events = {
+    onRemoteTrack?: (t: unknown) => void;
+    onRemoteTrackEnded?: (id: string) => void;
+    onConnectionStateChange?: (s: string) => void;
+    onPeersChange?: (pubkeys: string[]) => void;
+  };
+  const instances: Array<{
+    channelId: string;
+    sfuPubkey: string;
+    selfPubkey: string;
+    events: Events;
+    started: boolean;
+    closed: boolean;
+    publishedKinds: string[];
+    fail: boolean;
+  }> = [];
+  let nextStartShouldFail = false;
+  class StubSfuClient {
+    private readonly state: typeof instances[number];
+    constructor(opts: { channelId: string; sfuPubkey: string; selfPubkey: string; events: Events }) {
+      this.state = {
+        channelId: opts.channelId,
+        sfuPubkey: opts.sfuPubkey,
+        selfPubkey: opts.selfPubkey,
+        events: opts.events,
+        started: false,
+        closed: false,
+        publishedKinds: [],
+        fail: nextStartShouldFail,
+      };
+      nextStartShouldFail = false;
+      instances.push(this.state);
+    }
+    async start(): Promise<void> {
+      if (this.state.fail) throw new Error('start failed (mock)');
+      this.state.started = true;
+    }
+    async publishTrack(kind: string, _track: unknown): Promise<void> {
+      this.state.publishedKinds.push(kind);
+    }
+    async unpublishTrack(_kind: string): Promise<void> {}
+    close(): void { this.state.closed = true; }
+  }
+  return {
+    SfuClient: StubSfuClient,
+    instances,
+    last: () => instances[instances.length - 1],
+    setNextStartShouldFail: () => { nextStartShouldFail = true; },
+    reset: () => {
+      instances.length = 0;
+      nextStartShouldFail = false;
+    },
+  };
+});
+vi.mock('./sfu-client', () => ({
+  SfuClient: sfuClientFake.SfuClient,
+}));
+
 // Import VoiceClient after mocks.
 import { VoiceClient } from './client';
 
@@ -77,6 +168,8 @@ beforeEach(() => {
   media = installMediaDevicesMocks();
   transportFake.reset();
   transportFake.setSelfPubkey(SELF);
+  sfuControlFake.reset();
+  sfuClientFake.reset();
 });
 
 afterEach(() => {
@@ -346,49 +439,46 @@ describe('VoiceClient first-sighting beacon refresh', () => {
 describe('VoiceClient setExpectSfu', () => {
   const SFU = 'f'.repeat(64);
 
-  it('ignores SFU beacons when constructed with expectSfu=false', async () => {
+  it('does not consult pickSfu when constructed with expectSfu=false', async () => {
     const onTopologyChange = vi.fn();
+    sfuControlFake.setPick({ pubkey: SFU });
     const client = new VoiceClient('ch1', {
       members: [SELF, PEER1],
       expectSfu: false,
       events: { onTopologyChange },
     });
     await client.join();
-    const sfuPresence: VoicePresence = {
-      pubkey: SFU, channelId: 'ch1', createdAt: 1, expiresAt: 9999999999,
-      connectedTo: [], videoTracks: [], isSfu: true,
-    };
-    transportFake.fireRoster([presence(PEER1), sfuPresence]);
     await flushMicrotasks(5);
+    expect(sfuControlFake.pickSfu).not.toHaveBeenCalled();
     expect(onTopologyChange).not.toHaveBeenCalled();
     await client.leave();
   });
 
   it('flips topology to mesh on setExpectSfu(false) while SFU is active', async () => {
     const onTopologyChange = vi.fn();
+    sfuControlFake.setPick({ pubkey: SFU });
     const client = new VoiceClient('ch1', {
       members: [SELF, PEER1],
+      expectSfu: true,
       events: { onTopologyChange },
     });
     await client.join();
-    const sfuPresence: VoicePresence = {
-      pubkey: SFU, channelId: 'ch1', createdAt: 1, expiresAt: 9999999999,
-      connectedTo: [], videoTracks: [], isSfu: true,
-    };
-    transportFake.fireRoster([presence(PEER1), sfuPresence]);
     await flushMicrotasks(5);
     expect(onTopologyChange).toHaveBeenCalledWith(SFU);
+    expect(sfuClientFake.last()?.started).toBe(true);
     onTopologyChange.mockClear();
 
     // Channel reclassified — voice-sfu → voice. Topology must drop
-    // back to mesh even though the SFU's beacon is still in the roster.
+    // back to mesh and the SFU client must be torn down.
     client.setExpectSfu(false);
     await flushMicrotasks(5);
     expect(onTopologyChange).toHaveBeenCalledWith(null);
+    expect(sfuClientFake.last()?.closed).toBe(true);
+    expect(transportFake.subscribeRoster).toHaveBeenCalled();
     await client.leave();
   });
 
-  it('re-enters SFU mode on setExpectSfu(true) when SFU is in the roster', async () => {
+  it('re-enters SFU mode on setExpectSfu(true) using pickSfu', async () => {
     const onTopologyChange = vi.fn();
     const client = new VoiceClient('ch1', {
       members: [SELF, PEER1],
@@ -396,17 +486,31 @@ describe('VoiceClient setExpectSfu', () => {
       events: { onTopologyChange },
     });
     await client.join();
-    const sfuPresence: VoicePresence = {
-      pubkey: SFU, channelId: 'ch1', createdAt: 1, expiresAt: 9999999999,
-      connectedTo: [], videoTracks: [], isSfu: true,
-    };
-    transportFake.fireRoster([presence(PEER1), sfuPresence]);
     await flushMicrotasks(5);
     expect(onTopologyChange).not.toHaveBeenCalled();
 
+    // Make pickSfu hand back the SFU pubkey so the transition succeeds.
+    sfuControlFake.setPick({ pubkey: SFU });
     client.setExpectSfu(true);
-    await flushMicrotasks(5);
+    await flushMicrotasks(10);
     expect(onTopologyChange).toHaveBeenCalledWith(SFU);
+    expect(sfuClientFake.last()?.sfuPubkey).toBe(SFU);
+    await client.leave();
+  });
+
+  it('stays on mesh when setExpectSfu(true) but pickSfu returns null', async () => {
+    const onTopologyChange = vi.fn();
+    const client = new VoiceClient('ch1', {
+      members: [SELF, PEER1],
+      expectSfu: false,
+      events: { onTopologyChange },
+    });
+    await client.join();
+    sfuControlFake.setPick(null);
+    client.setExpectSfu(true);
+    await flushMicrotasks(10);
+    expect(onTopologyChange).not.toHaveBeenCalled();
+    expect(sfuClientFake.instances.length).toBe(0);
     await client.leave();
   });
 });
@@ -414,49 +518,117 @@ describe('VoiceClient setExpectSfu', () => {
 describe('VoiceClient onTopologyChange', () => {
   const SFU = 'f'.repeat(64);
 
-  it('fires with the SFU pubkey when an SFU beacon enters the roster', async () => {
+  it('fires with the SFU pubkey when pickSfu resolves at join', async () => {
+    sfuControlFake.setPick({ pubkey: SFU });
     const onTopologyChange = vi.fn();
     const client = new VoiceClient('ch1', {
       members: [SELF, PEER1],
+      expectSfu: true,
       events: { onTopologyChange },
     });
     await client.join();
-
-    // Roster with a regular peer — no topology change.
-    transportFake.fireRoster([presence(PEER1)]);
-    await flushMicrotasks(5);
-    expect(onTopologyChange).not.toHaveBeenCalled();
-
-    // Roster now includes an SFU beacon → topology flips to sfu:<pubkey>.
-    const sfuPresence: VoicePresence = {
-      pubkey: SFU, channelId: 'ch1', createdAt: 2, expiresAt: 9999999999,
-      connectedTo: [], videoTracks: [], isSfu: true,
-    };
-    transportFake.fireRoster([presence(PEER1), sfuPresence]);
     await flushMicrotasks(5);
     expect(onTopologyChange).toHaveBeenCalledWith(SFU);
+    // Roster subscriptions are NOT taken in SFU mode — beacon discovery is
+    // bypassed entirely; the SFU pushes the participant list over RPC.
+    expect(transportFake.subscribeRoster).not.toHaveBeenCalled();
+    expect(transportFake.publishPresenceBeacon).not.toHaveBeenCalled();
     await client.leave();
   });
 
-  it('fires null when the SFU beacon leaves the roster (back to mesh)', async () => {
+  it('falls back to mesh and fires onTopologyChange(null) when SfuClient.start fails', async () => {
+    sfuControlFake.setPick({ pubkey: SFU });
+    sfuClientFake.setNextStartShouldFail();
+    const onTopologyChange = vi.fn();
+    const onError = vi.fn();
+    const client = new VoiceClient('ch1', {
+      members: [SELF, PEER1],
+      expectSfu: true,
+      events: { onTopologyChange, onError },
+    });
+    await client.join();
+    await flushMicrotasks(10);
+    expect(onTopologyChange.mock.calls.map((c) => c[0])).toEqual([SFU, null]);
+    expect(onError).toHaveBeenCalled();
+    expect(transportFake.subscribeRoster).toHaveBeenCalled();
+    expect(transportFake.publishPresenceBeacon).toHaveBeenCalled();
+    await client.leave();
+  });
+
+  it('falls back to mesh when no SFU is reachable at join', async () => {
+    sfuControlFake.setPick(null);
     const onTopologyChange = vi.fn();
     const client = new VoiceClient('ch1', {
       members: [SELF, PEER1],
+      expectSfu: true,
       events: { onTopologyChange },
     });
     await client.join();
-    const sfuPresence: VoicePresence = {
-      pubkey: SFU, channelId: 'ch1', createdAt: 1, expiresAt: 9999999999,
-      connectedTo: [], videoTracks: [], isSfu: true,
-    };
-    transportFake.fireRoster([presence(PEER1), sfuPresence]);
     await flushMicrotasks(5);
-    onTopologyChange.mockClear();
+    expect(onTopologyChange).not.toHaveBeenCalled();
+    expect(transportFake.subscribeRoster).toHaveBeenCalled();
+    expect(transportFake.publishPresenceBeacon).toHaveBeenCalled();
+    await client.leave();
+  });
+});
 
-    // SFU beacon expires / disappears → topology flips back to mesh.
-    transportFake.fireRoster([presence(PEER1)]);
+describe('VoiceClient SFU push-roster', () => {
+  const SFU = 'f'.repeat(64);
+
+  it('mirrors SfuClient.onPeersChange into rosterPubkeys + onParticipantsChange', async () => {
+    sfuControlFake.setPick({ pubkey: SFU });
+    const onParticipantsChange = vi.fn();
+    const client = new VoiceClient('ch1', {
+      members: [SELF, PEER1, PEER2],
+      expectSfu: true,
+      events: { onParticipantsChange },
+    });
+    await client.join();
     await flushMicrotasks(5);
-    expect(onTopologyChange).toHaveBeenCalledWith(null);
+    const stub = sfuClientFake.last();
+    if (!stub) throw new Error('SfuClient not constructed');
+
+    // Initial participantList — two peers already in the room.
+    stub.events.onPeersChange?.([PEER1, PEER2]);
+    expect(client.getParticipants().sort()).toEqual([PEER1, PEER2].sort());
+    expect(onParticipantsChange).toHaveBeenLastCalledWith(
+      expect.arrayContaining([PEER1, PEER2]),
+    );
+
+    // peerJoined adds.
+    stub.events.onPeersChange?.([PEER1, PEER2, 'd'.repeat(64)]);
+    expect(client.getParticipants()).toContain('d'.repeat(64));
+
+    // peerLeft removes.
+    stub.events.onPeersChange?.([PEER1]);
+    expect(client.getParticipants()).toEqual([PEER1]);
+    await client.leave();
+  });
+
+  it('does not publish beacons or subscribe to roster while in SFU mode', async () => {
+    sfuControlFake.setPick({ pubkey: SFU });
+    const client = new VoiceClient('ch1', {
+      members: [SELF, PEER1],
+      expectSfu: true,
+    });
+    await client.join();
+    await flushMicrotasks(5);
+    expect(transportFake.publishPresenceBeacon).not.toHaveBeenCalled();
+    expect(transportFake.subscribeRoster).not.toHaveBeenCalled();
+    expect(transportFake.subscribeSignals).not.toHaveBeenCalled();
+    await client.leave();
+  });
+
+  it('forwards trustedRelays from pickSfu to the SfuClient', async () => {
+    const relays = ['wss://relay.obelisk.ar'];
+    sfuControlFake.setPick({ pubkey: SFU, trustedRelays: relays });
+    const client = new VoiceClient('ch1', {
+      members: [SELF],
+      expectSfu: true,
+    });
+    await client.join();
+    await flushMicrotasks(5);
+    expect(sfuClientFake.last()?.sfuPubkey).toBe(SFU);
     await client.leave();
   });
 });

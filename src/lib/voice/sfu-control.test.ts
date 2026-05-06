@@ -270,9 +270,16 @@ describe('publishSfuStart', () => {
 });
 
 describe('ensureSfuRoomStarted', () => {
+  // `pickSfu(channelId)` waits twice for a cold cache: once inside
+  // `resolveSfuPin` (kind 30078 channel pin) and once inside its own kind
+  // 31313 advertisement gate. Both are 1500 ms with `setTimeout`, so 3500
+  // ms covers both with headroom — the test fake timers don't advance
+  // unless we explicitly tick them.
+  const COLD_WAIT_MS = 3500;
+
   it('returns null and does not publish when no SFU is known', async () => {
     const promise = ensureSfuRoomStarted(CHANNEL_ID);
-    await vi.advanceTimersByTimeAsync(2000);
+    await vi.advanceTimersByTimeAsync(COLD_WAIT_MS);
     const result = await promise;
     expect(result).toBeNull();
     expect(bridgeFake.publishCalls).toHaveLength(0);
@@ -286,7 +293,9 @@ describe('ensureSfuRoomStarted', () => {
         ['cap', '50'],
       ],
     }));
-    const sfu = await ensureSfuRoomStarted(CHANNEL_ID);
+    const promise = ensureSfuRoomStarted(CHANNEL_ID);
+    await vi.advanceTimersByTimeAsync(COLD_WAIT_MS);
+    const sfu = await promise;
     expect(sfu).toBe(SFU_PUBKEY);
     expect(bridgeFake.publishCalls).toHaveLength(1);
     const call = bridgeFake.publishCalls[0];
@@ -296,8 +305,12 @@ describe('ensureSfuRoomStarted', () => {
 
   it('rate-limited second call returns null (already-started case)', async () => {
     __testing.ingest(makeAdvertisement());
-    const a = await ensureSfuRoomStarted(CHANNEL_ID);
-    const b = await ensureSfuRoomStarted(CHANNEL_ID);
+    const aPromise = ensureSfuRoomStarted(CHANNEL_ID);
+    await vi.advanceTimersByTimeAsync(COLD_WAIT_MS);
+    const a = await aPromise;
+    const bPromise = ensureSfuRoomStarted(CHANNEL_ID);
+    await vi.advanceTimersByTimeAsync(COLD_WAIT_MS);
+    const b = await bPromise;
     expect(a).toBe(SFU_PUBKEY);
     expect(b).toBeNull();
     expect(bridgeFake.publishCalls).toHaveLength(1);
@@ -305,8 +318,12 @@ describe('ensureSfuRoomStarted', () => {
 
   it('forces a publish past the rate-limit when {force:true} is passed', async () => {
     __testing.ingest(makeAdvertisement());
-    const a = await ensureSfuRoomStarted(CHANNEL_ID);
-    const b = await ensureSfuRoomStarted(CHANNEL_ID, undefined, { force: true });
+    const aPromise = ensureSfuRoomStarted(CHANNEL_ID);
+    await vi.advanceTimersByTimeAsync(COLD_WAIT_MS);
+    const a = await aPromise;
+    const bPromise = ensureSfuRoomStarted(CHANNEL_ID, undefined, { force: true });
+    await vi.advanceTimersByTimeAsync(COLD_WAIT_MS);
+    const b = await bPromise;
     expect(a).toBe(SFU_PUBKEY);
     expect(b).toBe(SFU_PUBKEY);
     expect(bridgeFake.publishCalls).toHaveLength(2);

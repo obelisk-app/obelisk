@@ -71,6 +71,16 @@ export interface SfuClientEvents {
   onRemoteTrack(track: SfuRemoteTrack): void;
   onRemoteTrackEnded(trackId: string): void;
   onConnectionStateChange?(state: string): void;
+  /**
+   * Fires whenever the SFU-tracked participant set changes. The SFU pushes
+   * `peerJoined`, `peerLeft`, and an initial `participantList` snapshot
+   * over kind 25050 RPC notifications; this client maintains the union and
+   * emits the deduped pubkey list. The local user is NOT included.
+   *
+   * Replaces the kind 20078 beacon-driven roster in SFU mode — the SFU is
+   * the authoritative source for who's actually wired up to the room.
+   */
+  onPeersChange?(pubkeys: string[]): void;
 }
 
 interface ProducerAppData {
@@ -97,6 +107,13 @@ export class SfuClient {
    * isn't ready. Once `createTransports()` finishes we drain this queue.
    */
   private pendingProducers: Array<{ producerId: string; appData: ProducerAppData | null; kind: 'audio' | 'video' }> = [];
+
+  /**
+   * SFU-pushed roster of OTHER participants (self excluded). Maintained by
+   * `participantList` (replaces wholesale), `peerJoined` (adds), `peerLeft`
+   * (removes). Surfaced via `events.onPeersChange` on every mutation.
+   */
+  private peers = new Set<string>();
 
   private closed = false;
 
@@ -177,6 +194,7 @@ export class SfuClient {
       try { producer.close(); } catch { /* ignore */ }
     }
     this.producers.clear();
+    this.peers.clear();
     try { this.sendTransport?.close(); } catch { /* ignore */ }
     try { this.recvTransport?.close(); } catch { /* ignore */ }
     this.sendTransport = null;
@@ -275,7 +293,46 @@ export class SfuClient {
       const data = n.data as { reason?: string };
       console.warn('[sfu] kicked from room', data?.reason ?? '');
       this.close();
+    } else if (n.method === 'participantList') {
+      // Authoritative snapshot the SFU pushes when our recv transport opens.
+      // Replaces — not merges — so the dex's roster always matches the
+      // server's truth even after a reconnect.
+      const data = n.data as { pubkeys?: string[] };
+      const next = new Set<string>();
+      for (const pk of data?.pubkeys ?? []) {
+        if (typeof pk === 'string' && pk.length > 0) next.add(pk);
+      }
+      this.peers = next;
+      this.emitPeersChange();
+    } else if (n.method === 'peerJoined') {
+      const data = n.data as { pubkey?: string };
+      if (!data?.pubkey) return;
+      if (this.peers.has(data.pubkey)) return;
+      this.peers.add(data.pubkey);
+      this.emitPeersChange();
+    } else if (n.method === 'peerLeft') {
+      const data = n.data as { pubkey?: string };
+      if (!data?.pubkey) return;
+      if (!this.peers.delete(data.pubkey)) return;
+      this.emitPeersChange();
     }
+  }
+
+  private emitPeersChange(): void {
+    try {
+      this.events.onPeersChange?.([...this.peers]);
+    } catch (err) {
+      console.warn('[sfu] onPeersChange handler threw', err);
+    }
+  }
+
+  /**
+   * Snapshot of the SFU-pushed peer list (excluding self). The dex
+   * mirrors this into `VoiceClient.rosterPubkeys` so React UI re-renders
+   * without waiting for the next event tick.
+   */
+  getPeers(): string[] {
+    return [...this.peers];
   }
 
   private async consumeProducer(producerId: string, appData: ProducerAppData | null): Promise<void> {
