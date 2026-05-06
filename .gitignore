@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+node_modules/
 /.pnp
 .pnp.*
 .yarn/*
@@ -79,3 +80,6 @@ key.pem.bak
 # SFU test peer state (generated keypairs)
 scripts/.test-peer/
 scripts/.test-peer-ms/
+
+# Local SFU server runtime (server source lives in obelisk-app/obelisk-sfu)
+/services/
