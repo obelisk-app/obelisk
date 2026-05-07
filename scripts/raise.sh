@@ -143,27 +143,8 @@ for i in $(seq 1 60); do
 done
 lsof -iTCP:"$PORT" -sTCP:LISTEN -n -P >/dev/null 2>&1 || { red "App didn't start within 60s. See app.log"; exit 1; }
 
-# ── Price bot (optional) ─────────────────────────────────────────
-if [ -n "${BOT_NSEC:-}" ]; then
-  step "Price bot"
-  blue "Starting price-bot (logs → ./bot.log)…"
-  BOT_NSEC="$BOT_NSEC" \
-  BOT_GROUP_ID="${BOT_GROUP_ID:-}" \
-  BOT_INTERVAL_MS="${BOT_INTERVAL_MS:-}" \
-  BOT_DISPLAY="${BOT_DISPLAY:-}" \
-    nohup node scripts/price-bot.mjs > bot.log 2>&1 &
-  BOT_PID=$!
-  disown "$BOT_PID" 2>/dev/null || true
-  sleep 1
-  if ! kill -0 "$BOT_PID" 2>/dev/null; then
-    red "price-bot died. Last 20 log lines:"; tail -20 bot.log
-    BOT_PID=""
-  else
-    green "Bot up (PID $BOT_PID)."
-  fi
-else
-  dim "BOT_NSEC not set — skipping price bot."
-fi
+# Bots are no longer started from this script — they live in
+# obelisk-app/obelisk-bots and are supervised by PM2 from there.
 
 if [ "$SKIP_TUNNEL" = "1" ]; then
   step "Ready"

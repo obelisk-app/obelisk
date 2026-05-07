@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// Dev launcher: starts `next dev` and, if BOT_NSEC is set, the price bot.
+// Dev launcher: starts `next dev`.
+// Bots live in obelisk-app/obelisk-bots — run them from that repo.
 import { spawn } from 'node:child_process';
 
 const children = [];
@@ -16,12 +17,6 @@ function start(cmd, args, label) {
 }
 
 start('npx', ['next', 'dev'], 'next');
-
-if (process.env.BOT_NSEC) {
-  start('node', ['scripts/price-bot.mjs'], 'price-bot');
-} else {
-  console.log('[dev] BOT_NSEC not set — skipping price bot. Set it in .env.local to enable.');
-}
 
 for (const sig of ['SIGINT', 'SIGTERM']) {
   process.on(sig, () => {
