@@ -377,11 +377,41 @@ dim   "        Reused processes (if any) survive; use ./scripts/dev-raise.sh sto
 echo
 
 # Stay attached so SIGHUP / Ctrl-C tears down what we started.
+# For reused processes we don't own, fall back to a poll loop — `wait`
+# only works on direct children of this shell. Reused PIDs are NOT added
+# to the cleanup trap, so Ctrl-C leaves them running (matches the
+# "Reused processes survive" contract above).
+REUSED_DEV_PID=""
+REUSED_TUNNEL_PID=""
+if [ -z "$DEV_PID" ]; then
+  REUSED_DEV_PID=$(lsof -tiTCP:"$PORT" -sTCP:LISTEN 2>/dev/null | head -1 || true)
+fi
+if [ -z "$TUNNEL_PID" ] && [ "$SKIP_TUNNEL" != "1" ]; then
+  REUSED_TUNNEL_PID=$(pgrep -f "cloudflared .* ${TUNNEL_UUID}" 2>/dev/null | head -1 || true)
+  [ -z "$REUSED_TUNNEL_PID" ] && REUSED_TUNNEL_PID=$(pgrep -f "cloudflared .* ${TUNNEL_NAME}\b" 2>/dev/null | head -1 || true)
+fi
+
 wait_pids=""
 [ -n "$DEV_PID" ] && wait_pids="$wait_pids $DEV_PID"
 [ -n "$TUNNEL_PID" ] && wait_pids="$wait_pids $TUNNEL_PID"
-if [ -n "$wait_pids" ]; then
+
+if [ -n "$wait_pids" ] && [ -z "$REUSED_DEV_PID" ] && [ -z "$REUSED_TUNNEL_PID" ]; then
+  # Pure spawned case — `wait` blocks until a child exits and is
+  # interruptible by signals, so the cleanup trap fires on Ctrl-C.
   # shellcheck disable=SC2086
   wait $wait_pids
+else
+  dim "Watching:${DEV_PID:+ dev=$DEV_PID(spawned)}${REUSED_DEV_PID:+ dev=$REUSED_DEV_PID(reused)}${TUNNEL_PID:+ tunnel=$TUNNEL_PID(spawned)}${REUSED_TUNNEL_PID:+ tunnel=$REUSED_TUNNEL_PID(reused)}"
+  # Poll loop: exit when every tracked pid is gone. `sleep` is
+  # interruptible by signals, so the cleanup trap still fires for
+  # spawned children on Ctrl-C.
+  while :; do
+    alive=0
+    for pid in $DEV_PID $TUNNEL_PID $REUSED_DEV_PID $REUSED_TUNNEL_PID; do
+      [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null && { alive=1; break; }
+    done
+    [ "$alive" = "0" ] && break
+    sleep 2
+  done
 fi
 exit 0

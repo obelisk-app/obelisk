@@ -65,13 +65,22 @@ const nextConfig: NextConfig = {
         ],
       },
       // Belt + suspenders: keep hashed Next.js static assets immutable
-      // forever. Next sets this by default but pinning it here means a
-      // future operator change to the headers block can't accidentally
-      // weaken caching of the heavy assets.
+      // forever in production. In dev the chunk filenames are derived from
+      // the source path (not content-hashed), so the same URL serves new
+      // bytes after every rebuild. Marking those `immutable` poisons the
+      // dev tunnel's CDN cache (Cloudflare keeps the stale chunk for a
+      // year). Use no-store in dev so dev-raise tunnels always get fresh
+      // bundles after edits.
       {
         source: '/_next/static/:path*',
         headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+          {
+            key: 'Cache-Control',
+            value:
+              process.env.NODE_ENV === 'production'
+                ? 'public, max-age=31536000, immutable'
+                : 'no-store, must-revalidate',
+          },
         ],
       },
     ];

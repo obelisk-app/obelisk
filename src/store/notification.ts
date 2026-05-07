@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type InboxEventType = 'mention' | 'reply' | 'everyone' | 'dm' | 'message';
+export type InboxEventType = 'mention' | 'reply' | 'everyone' | 'dm' | 'message' | 'zap';
 
 export interface NotificationEvent {
   type: InboxEventType;

@@ -43,6 +43,7 @@ import VoiceRoom from '@/components/voice/VoiceRoom';
 import ForumView from '@/components/chat/ForumView';
 import VoiceStatusBar from '@/components/voice/VoiceStatusBar';
 import { useVoiceStore } from '@/store/voice';
+import { useNotificationStore, type InboxEvent } from '@/store/notification';
 import { subscribeVoiceJump } from '@/lib/voice/jump-to-voice';
 import { useVoiceChatPane } from '@/hooks/chat/useVoiceChatPane';
 import { useChatStore } from '@/store/chat';
@@ -221,7 +222,12 @@ export default function AppShell() {
     >
       <MessageZapModal />
       <RelayAccessModal />
-      <RelayTopBar relay={relay} onOpenSidebar={() => setSidebarOpen(true)} />
+      <RelayTopBar
+        relay={relay}
+        onOpenSidebar={() => setSidebarOpen(true)}
+        onJumpToChannel={(channelId) => setView({ kind: 'group', groupId: channelId })}
+        onJumpToDm={(peer) => setView({ kind: 'dm', peer })}
+      />
       <MobileVoiceStatusBar currentView={view} />
       <div className="flex flex-1 overflow-hidden relative min-h-0">
         {/* Mobile backdrop */}
@@ -323,9 +329,24 @@ function FloatingUserPanel({ sidebarWidth }: { sidebarWidth: number }) {
   );
 }
 
-function RelayTopBar({ relay, onOpenSidebar }: { relay: string; onOpenSidebar?: () => void }) {
+function RelayTopBar({
+  relay,
+  onOpenSidebar,
+  onJumpToChannel,
+  onJumpToDm,
+}: {
+  relay: string;
+  onOpenSidebar?: () => void;
+  onJumpToChannel?: (channelId: string) => void;
+  onJumpToDm?: (peer: string) => void;
+}) {
   const [info, setInfo] = useState<{ name?: string; icon?: string } | null>(null);
   const [iconFailed, setIconFailed] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const inboxEvents = useNotificationStore((s) => s.inboxEvents);
+  const unreadInboxCount = useNotificationStore((s) => s.unreadInboxCount);
+  const markInboxRead = useNotificationStore((s) => s.markInboxRead);
+  const clearInboxEvents = useNotificationStore((s) => s.clearInboxEvents);
   useEffect(() => {
     let alive = true;
     setIconFailed(false);
@@ -337,6 +358,31 @@ function RelayTopBar({ relay, onOpenSidebar }: { relay: string; onOpenSidebar?: 
       alive = false;
     };
   }, [relay]);
+
+  // Close popover on outside click / Escape.
+  useEffect(() => {
+    if (!notifOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      const t = e.target as HTMLElement;
+      if (t.closest('[data-notif-popover]') || t.closest('[data-notif-trigger]')) return;
+      setNotifOpen(false);
+    };
+    const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') setNotifOpen(false); };
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onEsc);
+    return () => {
+      document.removeEventListener('mousedown', onDoc);
+      document.removeEventListener('keydown', onEsc);
+    };
+  }, [notifOpen]);
+
+  const handleEventClick = (e: InboxEvent) => {
+    if (e.type === 'dm' && onJumpToDm) onJumpToDm(e.senderPubkey);
+    else if (e.channelId && onJumpToChannel) onJumpToChannel(e.channelId);
+    setNotifOpen(false);
+    markInboxRead();
+  };
+
   const displayName = info?.name || shortHost(relay);
   const iconUrl = info?.icon;
   return (
@@ -359,14 +405,20 @@ function RelayTopBar({ relay, onOpenSidebar }: { relay: string; onOpenSidebar?: 
       )}
       <div className="absolute right-2 md:right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
         <button
-          className="p-2.5 md:p-1.5 rounded-lg text-lc-muted hover:text-lc-white hover:bg-lc-border/40 transition-colors"
-          title="Inbox"
-          aria-label="Inbox"
+          data-notif-trigger
+          onClick={() => setNotifOpen((v) => !v)}
+          className="relative p-2.5 md:p-1.5 rounded-lg text-lc-muted hover:text-lc-white hover:bg-lc-border/40 transition-colors"
+          title="Notifications"
+          aria-label="Notifications"
         >
-          <svg className="w-6 h-6 md:w-4 md:h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M22 12h-6l-2 3h-4l-2-3H2" />
-            <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
+          <svg className="w-6 h-6 md:w-4 md:h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
           </svg>
+          {unreadInboxCount > 0 && (
+            <span className="absolute top-0.5 right-0.5 md:top-0 md:right-0 min-w-[16px] h-[16px] md:min-w-[14px] md:h-[14px] px-1 rounded-full bg-lc-green text-lc-black text-[10px] md:text-[9px] font-bold flex items-center justify-center leading-none">
+              {unreadInboxCount > 99 ? '99+' : unreadInboxCount}
+            </span>
+          )}
         </button>
         <a
           href="/"
@@ -381,6 +433,65 @@ function RelayTopBar({ relay, onOpenSidebar }: { relay: string; onOpenSidebar?: 
           </svg>
         </a>
       </div>
+      {notifOpen && (
+        <div
+          data-notif-popover
+          className="absolute right-2 md:right-3 top-full mt-1 z-50 w-[min(380px,calc(100vw-1rem))] max-h-[70vh] overflow-hidden rounded-xl border border-lc-border bg-lc-dark shadow-2xl flex flex-col"
+        >
+          <div className="flex items-center justify-between px-4 py-3 border-b border-lc-border">
+            <span className="text-sm font-semibold text-lc-white">Notifications</span>
+            <div className="flex gap-2">
+              {inboxEvents.length > 0 && unreadInboxCount > 0 && (
+                <button
+                  onClick={markInboxRead}
+                  className="text-xs text-lc-green hover:underline"
+                  title="Mark all read"
+                >
+                  Mark read
+                </button>
+              )}
+              {inboxEvents.length > 0 && (
+                <button
+                  onClick={clearInboxEvents}
+                  className="text-xs text-lc-muted hover:text-lc-white"
+                  title="Clear"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="overflow-y-auto flex-1">
+            {inboxEvents.length === 0 ? (
+              <div className="px-4 py-8 text-center text-sm text-lc-muted">
+                You&apos;re all caught up.
+              </div>
+            ) : (
+              <ul className="flex flex-col">
+                {inboxEvents.map((e) => (
+                  <li key={e.id}>
+                    <button
+                      onClick={() => handleEventClick(e)}
+                      className={`w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-lc-card/60 transition-colors ${e.read ? '' : 'bg-lc-olive/30'}`}
+                    >
+                      <span className={`mt-1 inline-block w-2 h-2 rounded-full shrink-0 ${e.read ? 'bg-transparent' : 'bg-lc-green'}`} />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs uppercase tracking-wider text-lc-muted font-mono mb-0.5">
+                          {e.type === 'dm' ? 'Direct message' : e.type === 'mention' ? '@ Mention' : e.type === 'reply' ? 'Reply' : e.type === 'everyone' ? '@ Everyone' : 'Message'}
+                          <span className="ml-2 text-lc-muted/70 normal-case tracking-normal">{new Date(e.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                        {e.preview && (
+                          <div className="text-sm text-lc-white truncate">{e.preview}</div>
+                        )}
+                      </div>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
       <div className="flex items-center gap-2 min-w-0 max-w-[55%]">
         {iconUrl && !iconFailed ? (
           // eslint-disable-next-line @next/next/no-img-element

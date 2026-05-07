@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import AppShell from './AppShell';
+import AppGate from './AppGate';
 
 export const metadata: Metadata = {
   title: 'App',
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function AppPage() {
-  return <AppShell />;
+  return <AppGate />;
 }

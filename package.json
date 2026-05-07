@@ -8,7 +8,7 @@
     "dev:raise": "./scripts/dev-raise.sh",
     "raise": "./scripts/raise.sh",
     "deploy": "./scripts/deploy.sh",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
