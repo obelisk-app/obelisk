@@ -136,7 +136,7 @@ Two engines, one client surface:
 
 `VoiceClient` (`src/lib/voice/client.ts`) owns the topology decision (`setSfuMode`) and exposes a single API to the rest of the app — UI components never see the engine. Mesh peers use perfect-negotiation over kind 25050 SDP/ICE blobs; the SFU peer uses mediasoup-client speaking RPC envelopes (`src/lib/voice/sfu-rpc.ts`) on the same kind 25050.
 
-The SFU server is a separate repo: **[obelisk-app/obelisk-sfu](https://github.com/obelisk-app/obelisk-sfu)** (mediasoup, Nostr-RPC signaling, allow-list, deploy). Synthetic test peers used to drive it from a Node process live in `scripts/sfu-test-peers/`.
+The SFU server is a separate repo: **[obelisk-app/obelisk-sfu](https://github.com/obelisk-app/obelisk-sfu)** (mediasoup, Nostr-RPC signaling, allow-list, deploy). Synthetic test peers used to drive the SFU now live in that repo under `scripts/test-peers/` and can be spawned manually OR via the SFU's admin UI (`/admin` → "Spawn test peer").
 
 ## Design System (La Crypta)
 - **Background:** `lc-black` (#0a0a0a) with subtle grid pattern
@@ -229,7 +229,7 @@ await bridge.editUserMetadata({ name: 'Alice', displayName: 'Alice' });
 - [docs/voice-system.md](docs/voice-system.md) — mesh voice (P2P over Nostr signaling)
 - [docs/sfu-system.md](docs/sfu-system.md) — SFU architecture (mediasoup engine, Nostr-RPC signaling)
 - [obelisk-app/obelisk-sfu](https://github.com/obelisk-app/obelisk-sfu) — SFU server repo (protocol spec, operator guide, deploy)
-- [scripts/sfu-test-peers/README.md](scripts/sfu-test-peers/README.md) — synthetic test peers
+- SFU test peers — moved to obelisk-sfu repo (`scripts/test-peers/` there); spawn from the SFU admin UI
 - [docs/relay-layout-and-branding.md](docs/relay-layout-and-branding.md) — shared NIP-78 layout & branding; multi-author latest-wins, gated on group-admin union
 - [docs/uploads.md](docs/uploads.md) — Blossom storage + URL format
 - [docs/cloudflare-tunnel.md](docs/cloudflare-tunnel.md) — `npm run dev:tunnel` exposes localhost:3000 at https://obelisk.fabri.lat

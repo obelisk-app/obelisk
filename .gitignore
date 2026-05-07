@@ -77,9 +77,15 @@ key.pem.bak
 .claude/scheduled_tasks.lock
 *.log
 
-# SFU test peer state (generated keypairs)
+# SFU test peer state — scripts moved to obelisk-sfu repo, but tolerate
+# stale state dirs from older checkouts.
 scripts/.test-peer/
 scripts/.test-peer-ms/
 
 # Local SFU server runtime (server source lives in obelisk-app/obelisk-sfu)
 /services/
+
+# Playwright e2e harness artifacts (scripts/e2e/)
+/scripts/e2e/test-results/
+/scripts/e2e/playwright-report/
+/scripts/e2e/.auth/

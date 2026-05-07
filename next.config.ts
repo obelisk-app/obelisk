@@ -43,6 +43,37 @@ const nextConfig: NextConfig = {
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
         ],
       },
+      // Force the browser to revalidate HTML documents on every navigation.
+      // Without this, a deploy can leave a stale Next.js shell pinned in
+      // disk cache for hours, even though the JS chunks themselves are
+      // content-hashed (handled by /_next/static/* below). The 304 round-
+      // trip costs ~one extra request per navigation; soft client-side
+      // navigations skip it entirely.
+      //
+      // Scoped to "no extension" + the explicit "/" path so we don't
+      // touch JSON/RSC/file-tree responses.
+      {
+        source: '/',
+        headers: [
+          { key: 'Cache-Control', value: 'no-cache, must-revalidate' },
+        ],
+      },
+      {
+        source: '/:path((?!_next/|api/|.*\\.).*)',
+        headers: [
+          { key: 'Cache-Control', value: 'no-cache, must-revalidate' },
+        ],
+      },
+      // Belt + suspenders: keep hashed Next.js static assets immutable
+      // forever. Next sets this by default but pinning it here means a
+      // future operator change to the headers block can't accidentally
+      // weaken caching of the heavy assets.
+      {
+        source: '/_next/static/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
     ];
   },
 };

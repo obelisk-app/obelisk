@@ -313,3 +313,50 @@ export function useMyFollows(): ReadonlyArray<string> {
 export function useMyMutes(): ReadonlyArray<string> {
   return useSubscription<ReadonlyArray<string>>((b, cb) => b.subscribeMyMutes(cb), []);
 }
+
+export interface ActiveCallInfo {
+  hostPubkey: string;
+  status: string;
+  expiresAt: number;
+  createdAt: number;
+}
+
+/**
+ * Live-call state for every voice channel the relay knows about, derived
+ * from kind 31314 announcements published by the SFU. Use the per-channel
+ * variant {@link useActiveCall} for single-channel "LIVE" badges; use this
+ * map directly when the consumer iterates many channels (sidebar GroupNode
+ * renders).
+ *
+ * Entries auto-fade once `expiresAt` passes — the SFU republishes every
+ * 60s, so a missing refresh after the TTL means "no call here".
+ */
+export function useActiveCallByChannel(): Readonly<Record<string, ActiveCallInfo>> {
+  return useSubscription<Readonly<Record<string, ActiveCallInfo>>>(
+    (b, cb) => b.subscribeActiveCallByChannel(cb),
+    {},
+  );
+}
+
+/**
+ * `true` when a kind 31314 active-call advertisement is current for this
+ * channel — i.e. the SFU has a live room there. Auto-expires off the
+ * advertisement's `expiration` tag. UI: render a "LIVE" pill on the
+ * channel row when this is true.
+ */
+export function useActiveCall(channelId: string | null): ActiveCallInfo | null {
+  const map = useActiveCallByChannel();
+  const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
+  useEffect(() => {
+    // Re-evaluate every 15s so a stale entry fades without needing the
+    // SFU to publish a `status=closed` update (which won't fire if the
+    // SFU crashed).
+    const t = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 15_000);
+    return () => clearInterval(t);
+  }, []);
+  if (!channelId) return null;
+  const entry = map[channelId];
+  if (!entry) return null;
+  if (entry.expiresAt && entry.expiresAt <= now) return null;
+  return entry;
+}

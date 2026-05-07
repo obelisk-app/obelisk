@@ -19,6 +19,14 @@
 import { KIND_VOICE_SIGNAL } from '@/lib/nip-kinds';
 import { getBridge, getBridgeImpl } from '@/lib/nostr-bridge/client';
 
+// Build identity — bumped per-deploy. Same purpose as the marker in
+// voice/client.ts: forces turbopack to mint a fresh chunk filename so
+// sticky local caches can't pin a stale SfuRpc on the same URL.
+if (typeof globalThis !== 'undefined') {
+  (globalThis as { __obeliskSfuRpcBuild?: string }).__obeliskSfuRpcBuild =
+    '2026-05-07T18:30:00Z-clientId-relays-override';
+}
+
 async function bridge() {
   await getBridge();
   const impl = getBridgeImpl();
@@ -26,11 +34,36 @@ async function bridge() {
   return impl;
 }
 
+/**
+ * 8-byte random hex — used as the per-connection identifier the SFU
+ * disambiguates devices on. Collisions inside a single user's session
+ * are infeasible. Falls back to a Date-based id in environments without
+ * `crypto.getRandomValues` (older test runners), which is fine — the
+ * SFU treats the value as opaque.
+ */
+function mintClientId(): string {
+  try {
+    const buf = new Uint8Array(8);
+    crypto.getRandomValues(buf);
+    return Array.from(buf, (b) => b.toString(16).padStart(2, '0')).join('');
+  } catch {
+    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+}
+
 export interface RpcRequestEnvelope<T = unknown> {
   type: 'request';
   requestId: string;
   method: string;
   data?: T;
+  /**
+   * Per-connection id minted once per SfuRpc instance. The SFU keys its
+   * peer table by `pubkey + clientId` so two devices signing with the
+   * same Nostr pubkey don't collide on the same mediasoup transport
+   * slot (the second device used to close + recreate the first device's
+   * transports, kicking it).
+   */
+  clientId?: string;
 }
 
 export interface RpcResponseOk<T = unknown> {
@@ -87,6 +120,13 @@ export class SfuRpc {
   private signalUnsub: (() => void) | null = null;
   private closed = false;
   private nextId = 0;
+  /**
+   * Stable per-connection id, minted once per SfuRpc construction. Sent
+   * in every request envelope so the SFU can distinguish two devices
+   * sharing one Nostr pubkey. 8 random bytes hex is plenty — collisions
+   * are infeasible within a single user's device fleet.
+   */
+  private readonly clientId: string;
 
   constructor(opts: {
     channelId: string;
@@ -100,12 +140,19 @@ export class SfuRpc {
     this.selfPubkey = opts.selfPubkey;
     this.onNotification = opts.onNotification;
     this.publishRelays = opts.publishRelays ?? [];
+    this.clientId = mintClientId();
   }
 
   async start(): Promise<void> {
     if (this.closed) throw new Error('SfuRpc already closed');
     const b = await bridge();
     const since = Math.floor(Date.now() / 1000) - 30;
+    // Subscribe on the SFU's trusted relays in addition to the dex's
+    // bridge defaults — the SFU only publishes responses where it itself
+    // is connected (typically relay.obelisk.ar), and a dex tab opened on
+    // public.obelisk.ar would otherwise time out every RPC. The bridge
+    // merges with its own relay list so we don't drop events from
+    // peers that publish to the default relays either.
     this.signalUnsub = b.subscribeFilterWatched(
       {
         kinds: [KIND_VOICE_SIGNAL],
@@ -129,6 +176,7 @@ export class SfuRpc {
         }
         // requests from SFU don't exist in v1 — server is response-only.
       },
+      this.publishRelays.length > 0 ? { relays: this.publishRelays } : undefined,
     );
   }
 
@@ -153,8 +201,8 @@ export class SfuRpc {
     if (this.closed) throw new Error('rpc closed');
     const requestId = `${Date.now().toString(36)}-${(this.nextId++).toString(36)}`;
     const envelope: RpcRequestEnvelope = data === undefined
-      ? { type: 'request', requestId, method }
-      : { type: 'request', requestId, method, data };
+      ? { type: 'request', requestId, method, clientId: this.clientId }
+      : { type: 'request', requestId, method, data, clientId: this.clientId };
     const result = new Promise<T>((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(requestId);

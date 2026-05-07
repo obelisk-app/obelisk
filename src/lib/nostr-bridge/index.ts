@@ -25,7 +25,10 @@ export {
   useBunkerSignerReady,
   useSignerReady,
   useRelayAccess,
+  useActiveCall,
+  useActiveCallByChannel,
 } from './stores';
+export type { ActiveCallInfo } from './stores';
 export type {
   JsGroup,
   JsMessage,

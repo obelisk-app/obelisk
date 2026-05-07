@@ -4,6 +4,55 @@ Discord-like group chat where identity comes from Nostr keypairs. Architecture o
 
 This file is the high-level roadmap — one line per initiative, grouped by phase. Implementation details, schemas, acceptance criteria and prior-art reading live in the docs. Completed work beyond the high-level bullets below lives in git history.
 
+## 🛡️ Reliability — cross-cutting
+
+End-to-end stability work that spans the dex + relay + SFU. Tracking it
+here in obelisk-dex because the dex is where most of the symptoms surface
+(channels not loading, voice freezing, "rpc timeout"). The companion
+roadmaps in `obelisk-app/obelisk-relay` and `obelisk-app/obelisk-sfu`
+mirror the pieces each repo owns.
+
+- [ ] **Single source of truth for relay-import filtering.** Done at the
+  parser layer (`isImportableNostrRelayUrl` in `src/lib/nostr-read.ts`)
+  but should be promoted to a shared helper used everywhere a URL crosses
+  from a Nostr event into `new WebSocket()` — covers any future client
+  feature that pulls a relay list (NIP-50 search relays, NIP-78 channel
+  layout fallbacks, recipient outbox lookups).
+- [ ] **Deploy-stable chunk filenames.** Add a `generateBuildId` based on
+  CI commit SHA so every deploy invalidates ALL chunk URLs. Current
+  workaround is bumping `__obeliskVoiceBuild` / `__obeliskSfuRpcBuild`
+  markers in `src/lib/voice/{client,sfu-rpc}.ts` whenever a sticky local
+  cache (Brave shields, content-script extensions, HTTPS-inspecting
+  proxies) pins old code at the same URL. Permanent fix: per-deploy
+  build-id prefix on every asset URL.
+- [ ] **E2E coverage for SFU + multi-device flows.** `scripts/e2e/` has
+  a Playwright harness for login + send. Extend it to: (a) join a
+  voice-sfu channel via two synthetic browsers, (b) verify both stay
+  connected when using the same nsec across both, (c) verify a
+  whitelisted relay rejecting a non-whitelisted pubkey shows the
+  banner and not a stuck "Connecting…" spinner.
+- [ ] **Bridge connection-state observability.** Surface a debug
+  /connection-state pane (admin-gated) listing every active socket, its
+  AUTH state, watchdog attempt count, and the queue depth. Lets us
+  diagnose stuck pools without asking users to paste console output.
+- [ ] **Offline-safe relay-list cache invalidation.** When NIP-65 / NIP-17
+  relay lists are updated server-side (other clients republish), the dex
+  should refresh. Today the cache TTL is 6h. Lower it for the user's own
+  lists and add a manual "refresh" button in profile settings.
+- [ ] **Auto-purge stale per-channel watchdog state on quota errors.**
+  Quota / "concurrent REQs" CLOSEDs now back off via the parser
+  (`parseRelayRejection` returns null for those), but the per-sub
+  watchdog still consumes a slot until backoff expires. Add a short
+  cool-down where same-relay subs that got quota-rejected don't re-fire
+  for 30s instead of immediately retrying with backoff.
+- [ ] **Production CSP hardening.** Drop GTM (currently in `src/proxy.ts`
+  CSP) so we don't need `'unsafe-eval'` or the `googletagmanager.com`
+  exception. Replace with self-hosted plausible / nostr-native analytics.
+- [ ] **NIP-65 self-republish UX.** Detect when the user's own NIP-65
+  contains a CSP-unsafe relay (`ws://`, localhost) and offer a one-click
+  "fix and republish" button in profile settings. Many users carry these
+  from earlier dev setups and never know.
+
 ## 🔥 Active priorities
 
 - [ ] **App-wide i18n + per-user language** — extend landing i18n infra to chat/admin/moderation/forum/settings/errors, IP-based default on first login, `User.language` persisted, hot-swap from /settings. See [docs/i18n-plan.md](docs/i18n-plan.md).

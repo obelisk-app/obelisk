@@ -1,3 +1,15 @@
+// Build identity — bumped per-deploy to force turbopack to mint a fresh
+// chunk filename for this module. Without it, sticky local caches
+// (extension content scripts, HTTPS-inspecting proxies, aggressive disk
+// caches) can pin the previous build's voice client at the same URL
+// indefinitely. Side-effect (window assignment) so the constant
+// survives tree-shaking — turbopack would otherwise drop a `void`'d
+// constant and produce the same chunk hash as before.
+if (typeof globalThis !== 'undefined') {
+  (globalThis as { __obeliskVoiceBuild?: string }).__obeliskVoiceBuild =
+    '2026-05-07T18:30:00Z-multi-device-keyframe-heartbeat';
+}
+
 /**
  * VoiceClient orchestrates a peer mesh inside a single channel:
  *  - publishes presence beacons on a 15s cadence + opportunistically when
@@ -549,11 +561,19 @@ export class VoiceClient {
       try { this.sfuClient.close(); } catch { /* ignore */ }
       this.sfuClient = null;
     }
+    // Track the *intended* SFU pubkey so other paths (peer mute, echo
+    // suppression) can reason about the topology — but do NOT fire
+    // onTopologyChange yet. The UI badge interprets a non-null sfuPubkey
+    // as "SFU connected"; firing here would lie for the entire RPC
+    // handshake window and stay stuck on "connected" if the handshake
+    // times out. startSfuClient handles its own failure cleanup
+    // (clears sfuPubkey, fires onTopologyChange(null), surfaces onError,
+    // re-throws). We only fire onTopologyChange(sfuPubkey) on success.
     this.sfuPubkey = sfuPubkey;
+    await this.startSfuClient(sfuPubkey);
     try { this.events.onTopologyChange?.(sfuPubkey); } catch (err) {
       console.warn('[voice] onTopologyChange handler threw', err);
     }
-    await this.startSfuClient(sfuPubkey);
   }
 
   async leave(): Promise<void> {

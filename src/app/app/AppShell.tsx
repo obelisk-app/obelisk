@@ -15,6 +15,7 @@ import {
   useAdminsByGroup,
   useMembersByGroup,
   useGroupCreators,
+  useActiveCall,
   useDirectMessages,
   useAdmins,
   useMembers,
@@ -106,26 +107,42 @@ export default function AppShell() {
 
   const [pendingMessageId, setPendingMessageId] = useState<string | null>(null);
 
-  // Deep-link: ?c=<groupId>[&m=<messageId>] auto-selects a channel on first
-  // render and (when m is present) scrolls/flashes the target message.
+  // Deep-link: ?c=<groupId>[&m=<messageId>][&relay=<host>] auto-selects a
+  // channel on first render, switches to the requested relay, and (when m is
+  // present) scrolls/flashes the target message. We also accept ';' as a
+  // separator so URLs typed casually as `?c=X;relay=Y` still parse.
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const params = new URLSearchParams(window.location.search);
+    const search = window.location.search.replace(/;/g, '&');
+    const params = new URLSearchParams(search);
     const c = params.get('c');
     const m = params.get('m');
+    const r = params.get('relay');
+    if (r) {
+      const wss = /^wss?:\/\//.test(r) ? r : `wss://${r}`;
+      const cur = (relay || '').replace(/\/+$/, '').toLowerCase();
+      const next = wss.replace(/\/+$/, '').toLowerCase();
+      if (next !== cur) {
+        void nostrActions.switchRelay(wss).catch((err) => {
+          console.warn('[appshell] switchRelay from deep-link failed', err);
+        });
+      }
+    }
     if (c) setView({ kind: 'group', groupId: c });
     if (m) setPendingMessageId(m);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Keep the URL in sync with the active group so refresh / share works.
+  // Keep the URL in sync with the active group + relay so refresh / share works.
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const url = new URL(window.location.href);
     if (view.kind === 'group') url.searchParams.set('c', view.groupId);
     else url.searchParams.delete('c');
+    if (relay) url.searchParams.set('relay', shortHost(relay));
+    else url.searchParams.delete('relay');
     window.history.replaceState(null, '', url.pathname + url.search);
-  }, [view]);
+  }, [view, relay]);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
@@ -520,12 +537,12 @@ function Sidebar({
     }
     return out;
   }, [wotEnabled, groups, creatorsByGroup, adminsByGroup, membersByGroup]);
-  // Channel list is gated on positive AUTH evidence: cached groups (loaded
-  // by seedCacheForRelay before the relay handshake) must not paint until
-  // the relay has either accepted us (→ 'ok') or proven AUTH is not
-  // required by serving an event/EOSE. Otherwise users see channels they
-  // can't actually read or post to, type a message, hit a silent CLOSED,
-  // and only realize on the next refresh.
+  // Read-side surface (cached channels from seedCacheForRelay) renders
+  // unconditionally — hiding it on AUTH failure made the site feel broken
+  // (empty sidebar with no explanation). The RelayAccessBanner above the
+  // list explains the situation when access != 'ok'. Write-side actions
+  // (CreateGroupSection) and any UI that would let the user act on a
+  // channel they can't actually read still gate on `channelsVisible`.
   const relayAccess = useRelayAccess(relay || null);
   const channelsVisible = relayAccess === 'ok';
   // Union of all admins across visible groups on this relay, plus the
@@ -665,10 +682,10 @@ function Sidebar({
             <RelayAccessBanner compact />
           </div>
         )}
-        {channelsVisible && groups.length === 0 && (
+        {groups.length === 0 && channelsVisible && (
           <div className="px-2 py-3 text-xs text-lc-muted">Discovering channels… (kind 39000)</div>
         )}
-        {channelsVisible && laidOut.categories.map((cat) => (
+        {laidOut.categories.map((cat) => (
           <CategorySection
             key={cat.id}
             name={cat.name}
@@ -694,7 +711,7 @@ function Sidebar({
             })}
           </CategorySection>
         ))}
-        {channelsVisible && laidOut.uncategorized.length > 0 && (
+        {laidOut.uncategorized.length > 0 && (
           laidOut.categories.length > 0 ? (
             <CategorySection
               name="Uncategorized"
@@ -892,6 +909,7 @@ function GroupNode({
           </span>
           {!group.isPublic && <span title="Private" className="text-[10px]">🔒</span>}
           {!group.isOpen && <span title="Closed (invite only)" className="text-[10px]">⊝</span>}
+          <ActiveCallBadge groupId={group.id} kind={group.kind} />
         </button>
         {isCollapsible && (
           <button
@@ -1555,11 +1573,11 @@ function ChatPanel({
   const isAdmin = !!myPubkey && admins.includes(myPubkey);
   const groupCreator = useGroupCreator(groupId);
   const relay = useCurrentRelayUrl();
-  // Messages and the compose form are gated on positive AUTH evidence so
-  // an empty cached message list (or worse, half-loaded older messages)
-  // doesn't trick the user into typing into a channel the relay hasn't
-  // yet authorized them to read or post to. See RelayAccessBanner for
-  // the surfaced state.
+  // The compose form is gated on positive AUTH evidence so the user
+  // doesn't type into a channel the relay won't accept events from. The
+  // message list itself renders unconditionally — a cached or partial
+  // history is more useful than an empty pane, and RelayAccessBanner
+  // explains the situation in-place.
   const relayAccess = useRelayAccess(relay || null);
   const messagesVisible = relayAccess === 'ok';
   const [draft, setDraft] = useState('');
@@ -1578,15 +1596,21 @@ function ChatPanel({
     if (!myPubkey || !groupCreator) return;
     if (groupCreator !== myPubkey) return;
     if (admins.includes(myPubkey)) return;
+    // Same gate as the lazy member putUser: don't fire kind 9000 against
+    // a relay that's already telling us we can't write. Otherwise the
+    // user sees a "Publishing to relays / restricted: not whitelisted"
+    // toast every time they open a channel they happen to have created
+    // on a different relay.
+    if (relayAccess !== 'ok') return;
     const key = `obelisk:claimed-admin:${relay}:${groupId}:${myPubkey}`;
     try {
       if (typeof localStorage !== 'undefined' && localStorage.getItem(key)) return;
       localStorage?.setItem(key, '1');
     } catch {}
     void nostrActions.claimCreatorAdmin(groupId).catch((err) => {
-      console.warn('[appshell] claimCreatorAdmin failed', err);
+      console.debug('[appshell] claimCreatorAdmin skipped (relay declined)', err);
     });
-  }, [groupId, myPubkey, groupCreator, admins, relay]);
+  }, [groupId, myPubkey, groupCreator, admins, relay, relayAccess]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const voiceMainRef = useRef<HTMLDivElement>(null);
   const [showSettings, setShowSettings] = useState(false);
@@ -1594,11 +1618,40 @@ function ChatPanel({
   const setVoiceChatOpen = useVoiceStore((s) => s.setVoiceChatOpen);
   const { voiceChatWidth, onVoiceChatResize: onResize } = useVoiceChatPane(voiceChatOpen, voiceMainRef);
 
+  // "Stick to bottom" — auto-scroll on new messages only when the user is
+  // already near the bottom. Reading mid-history without being yanked down
+  // by every incoming message is a basic chat-UX expectation; the previous
+  // unconditional `scrollTop = scrollHeight` broke that, and combined with
+  // the now-removed messagesVisible unmount it also re-rendered users to
+  // the top of the channel on AUTH flicker.
+  const stickToBottomRef = useRef(true);
   useEffect(() => {
-    if (pendingMessageId) return; // wait for the deep-link scroll instead
+    const el = scrollRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const dist = el.scrollHeight - el.scrollTop - el.clientHeight;
+      stickToBottomRef.current = dist < 100;
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, []);
+  // Entering a new channel: jump to bottom and reset stickiness so the
+  // first batch of incoming messages keeps following the tail until the
+  // user scrolls up themselves.
+  useEffect(() => {
+    if (pendingMessageId) return;
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+    stickToBottomRef.current = true;
+  }, [groupId, pendingMessageId]);
+  // New messages: stick to bottom only if the user was already there.
+  useEffect(() => {
+    if (pendingMessageId) return;
+    if (!stickToBottomRef.current) return;
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [messages.length, groupId, pendingMessageId]);
+  }, [messages.length, pendingMessageId]);
 
   useEffect(() => {
     if (!pendingMessageId) return;
@@ -1794,8 +1847,17 @@ function ChatPanel({
       // localStorage key so we publish exactly one kind 9000 ever per
       // (relay, group, user) triple. Closed groups (`isOpen === false`)
       // skip this — those require an admin invite by design.
+      //
+      // Also gated on relayAccess === 'ok': if the relay is rejecting our
+      // writes wholesale (auth-required / restricted / unreachable), the
+      // putUser will fail with a noisy "Publishing to relays / restricted:
+      // your pubkey is not whitelisted" activity entry. The user's actual
+      // sendMessage will surface the real error in-place — there's no
+      // reason to also blast an unrelated 9000 publish at a relay we know
+      // won't accept it.
       if (
         myPubkey
+        && relayAccess === 'ok'
         && group?.isOpen
         && !memberPubkeys.includes(myPubkey)
         && !admins.includes(myPubkey)
@@ -1807,8 +1869,16 @@ function ChatPanel({
         } catch {}
         if (!alreadyTried) {
           try { localStorage?.setItem(key, '1'); } catch {}
-          try { await nostrActions.putUser(groupId, myPubkey, []); } catch (err) {
-            console.warn('[appshell] lazy member putUser failed', err);
+          // Most NIP-29 open-group relays accept the kind 9 directly and the
+          // 9000 self-add is unnecessary; some (strfry) accept reads but
+          // silently time out the 9000 publish because non-admins can't
+          // promote anyone, including themselves. Either way the user's
+          // actual sendMessage below carries the real signal — we don't
+          // want a noisy console warning + Publishing toast for an
+          // optimistic membership write that the spec says shouldn't be
+          // required.
+          try { await nostrActions.putUser(groupId, myPubkey, [], { quiet: true }); } catch (err) {
+            console.debug('[appshell] lazy member putUser skipped (relay declined)', err);
           }
         }
       }
@@ -1892,11 +1962,7 @@ function ChatPanel({
         const textBody = (
       <>
       <RelayAccessBanner />
-      {!messagesVisible ? (
-        <div className="flex-1 overflow-y-auto px-5 py-4" data-testid="messages-gated-by-auth" />
-      ) : (
-      <>
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-4">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-4" data-testid={messagesVisible ? undefined : 'messages-gated-by-auth'}>
         {messages.length === 0 ? (
           <div className="flex h-full items-center justify-center text-sm text-lc-muted">
             <div className="max-w-md text-center">
@@ -1942,6 +2008,7 @@ function ChatPanel({
         )}
       </div>
 
+      {messagesVisible && (
       <form onSubmit={onSend} className="shrink-0 px-5 pt-3 pb-3">
         {replyingTo && (
           <div className="mb-2 flex items-center justify-between gap-2 rounded-t-md border border-b-0 border-lc-border bg-lc-card/60 px-3 py-1.5 text-xs text-lc-muted">
@@ -2086,7 +2153,6 @@ function ChatPanel({
           </button>
         </div>
       </form>
-      </>
       )}
       </>
         );
@@ -2153,11 +2219,13 @@ const QUICK_REACTIONS = ['🔥', '⚡', '😂', '🤔'];
 
 function CopyInviteLinkButton({ groupId }: { groupId: string }) {
   const [copied, setCopied] = useState(false);
+  const relay = useCurrentRelayUrl();
   const onCopy = async () => {
     if (typeof window === 'undefined') return;
     const url = new URL(window.location.href);
     url.search = '';
     url.searchParams.set('c', groupId);
+    if (relay) url.searchParams.set('relay', shortHost(relay));
     await navigator.clipboard.writeText(url.toString());
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
@@ -2315,6 +2383,7 @@ function MessageRow({
     }
   };
   const meta = useUserMetadata(msg.pubkey);
+  const relay = useCurrentRelayUrl();
   const [menuOpen, setMenuOpen] = useState(false);
   const [panelPinned, setPanelPinned] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -2563,6 +2632,7 @@ function MessageRow({
                   url.search = '';
                   url.searchParams.set('c', groupId);
                   url.searchParams.set('m', msg.id);
+                  if (relay) url.searchParams.set('relay', shortHost(relay));
                   navigator.clipboard.writeText(url.toString());
                   useToastStore.getState().pushToast({ title: '🔗 Link copied', body: '' });
                 }
@@ -3318,11 +3388,28 @@ function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string) => voi
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-
+  const stickToBottomRef = useRef(true);
   useEffect(() => {
     const el = scrollRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const dist = el.scrollHeight - el.scrollTop - el.clientHeight;
+      stickToBottomRef.current = dist < 100;
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, []);
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+    stickToBottomRef.current = true;
+  }, [peer]);
+  useEffect(() => {
+    if (!stickToBottomRef.current) return;
+    const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [thread.length, peer]);
+  }, [thread.length]);
 
   async function onSend(e: React.FormEvent) {
     e.preventDefault();
@@ -3446,23 +3533,32 @@ function RelayAccessModal() {
   // doesn't keep popping back. A real state change (e.g. ok -> restricted
   // again on a new relay, or auth-required after restricted) re-arms it.
   const [dismissed, setDismissed] = useState<string | null>(null);
-  const key = relay && (access === 'restricted' || access === 'auth-required')
-    ? `${relay}|${access}`
-    : null;
+  const surfaceable =
+    access === 'restricted' || access === 'auth-required' || access === 'unreachable';
+  const key = relay && surfaceable ? `${relay}|${access}` : null;
   if (!isLoggedIn) return null;
   if (!key) return null;
   if (dismissed === key) return null;
 
   const host = shortHost(relay);
   const isAuth = access === 'auth-required';
-  const title = isAuth ? `Not authenticated to ${host}` : `Not whitelisted on ${host}`;
+  const isUnreachable = access === 'unreachable';
+  const title = isAuth
+    ? `Not authenticated to ${host}`
+    : isUnreachable
+      ? `Cannot reach ${host}`
+      : `Not whitelisted on ${host}`;
   const body = isAuth
     ? loginMethod === 'bunker'
       ? 'Approve the signing request in your bunker app to complete NIP-42 AUTH.'
       : loginMethod === 'nip07'
         ? 'Approve the signing request in your Nostr extension to complete NIP-42 AUTH.'
         : 'NIP-42 AUTH did not complete. Try reloading or switching login methods.'
-    : 'This relay accepted your signature but won’t serve or accept events from your pubkey. Ask the operator to add you to its allowlist, or switch relays.';
+    : isUnreachable
+      ? 'The relay isn’t responding. It may be offline, blocked by your network, or briefly unavailable. We’ll keep trying in the background — switch relays if you need to keep working.'
+      : 'This relay accepted your signature but won’t serve or accept events from your pubkey. Ask the operator to add you to its allowlist, or switch relays.';
+
+  const tone = isAuth ? 'yellow' : 'red';
 
   return (
     <div
@@ -3472,11 +3568,11 @@ function RelayAccessModal() {
       <div
         className={
           'max-w-md rounded-xl border bg-lc-card p-6 shadow-2xl ' +
-          (isAuth ? 'border-yellow-500/50' : 'border-red-500/50')
+          (tone === 'yellow' ? 'border-yellow-500/50' : 'border-red-500/50')
         }
         onClick={(e) => e.stopPropagation()}
       >
-        <div className={'text-xl font-bold ' + (isAuth ? 'text-yellow-200' : 'text-red-300')}>
+        <div className={'text-xl font-bold ' + (tone === 'yellow' ? 'text-yellow-200' : 'text-red-300')}>
           {title}
         </div>
         <div className="mt-3 text-sm text-lc-white/90">{body}</div>
@@ -3578,7 +3674,7 @@ function RelayAccessBanner({ compact = false }: { compact?: boolean } = {}) {
       </div>
     );
   }
-  // 'restricted' | 'error'
+  // 'restricted' | 'unreachable' | 'error'
   return (
     <div
       className={`${wrapperBase} border-red-500/40 bg-red-500/10`}
@@ -3586,12 +3682,18 @@ function RelayAccessBanner({ compact = false }: { compact?: boolean } = {}) {
       data-state={access}
     >
       <div className={`${titleSize} font-semibold text-red-200`}>
-        {access === 'restricted' ? `Not whitelisted on ${host}` : `Relay error on ${host}`}
+        {access === 'restricted'
+          ? `Not whitelisted on ${host}`
+          : access === 'unreachable'
+            ? `Cannot reach ${host}`
+            : `Relay error on ${host}`}
       </div>
       <div className="mt-1 text-sm text-red-100/80">
         {access === 'restricted'
           ? 'This relay accepted your signature but won’t serve or accept events from your pubkey. Ask the operator to add you to its allowlist, or switch relays.'
-          : 'The relay rejected the request. Try reloading or switching relays.'}
+          : access === 'unreachable'
+            ? 'The relay isn’t responding. It may be offline, blocked by your network, or briefly unavailable. We’ll keep retrying in the background.'
+            : 'The relay rejected the request. Try reloading or switching relays.'}
       </div>
     </div>
   );
@@ -3628,6 +3730,28 @@ function shortHost(url: string): string {
   } catch {
     return url;
   }
+}
+
+/**
+ * "LIVE" pill rendered next to a voice channel's name when the SFU has
+ * published a current kind 31314 active-call announcement for it. Only
+ * shown for voice / voice-sfu channels — text and forum channels can't
+ * have an SFU room. Re-evaluates every 15s via {@link useActiveCall} so
+ * a stale (expired) announcement fades without needing a manual refresh.
+ */
+function ActiveCallBadge({ groupId, kind }: { groupId: string; kind: JsGroup['kind'] }) {
+  const active = useActiveCall(groupId);
+  if (kind !== 'voice' && kind !== 'voice-sfu') return null;
+  if (!active) return null;
+  return (
+    <span
+      title="Live call in progress"
+      className="ml-1 inline-flex items-center gap-1 rounded-full bg-red-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-red-300"
+    >
+      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-400" />
+      Live
+    </span>
+  );
 }
 
 function MobileVoiceStatusBar({ currentView }: { currentView: View }) {

@@ -553,10 +553,11 @@ describe('VoiceClient onTopologyChange', () => {
     });
     await expect(client.join()).rejects.toThrow();
     await flushMicrotasks(10);
-    // Pre-flight `enterSfuMode` fires onTopologyChange(SFU); the failure
-    // path then fires onTopologyChange(null) when it tears the SFU down.
-    // No mesh subscriptions are taken.
-    expect(onTopologyChange.mock.calls.map((c) => c[0])).toEqual([SFU, null]);
+    // enterSfuMode no longer fires onTopologyChange(SFU) eagerly — it
+    // waits for SfuClient.start() to actually complete the RPC
+    // handshake. On failure, startSfuClient's own catch fires
+    // onTopologyChange(null) once. No mesh subscriptions are taken.
+    expect(onTopologyChange.mock.calls.map((c) => c[0])).toEqual([null]);
     expect(onError).toHaveBeenCalled();
     expect(transportFake.subscribeRoster).not.toHaveBeenCalled();
     expect(transportFake.publishPresenceBeacon).not.toHaveBeenCalled();

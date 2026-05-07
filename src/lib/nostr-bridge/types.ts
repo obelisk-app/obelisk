@@ -81,14 +81,16 @@ export type Unsubscribe = () => void;
  * and publish rejections.
  * - `'unknown'`        — no signal yet (still connecting, or relay hasn't responded)
  * - `'authenticating'` — relay sent a NIP-42 AUTH challenge; signer is being asked
- *   to sign a kind 22242 event. UI must NOT render cached relay-scoped state
- *   (groups, members, messages) while in this state — the relay has not yet
- *   confirmed read access.
+ *   to sign a kind 22242 event.
  * - `'ok'`             — relay delivered an event/EOSE; reads are flowing
  * - `'auth-required'`  — relay requires NIP-42 AUTH and our signer didn't satisfy it
  *   (signer never ran, was rejected by user, or relay still refused after sign)
  * - `'restricted'`     — relay accepted AUTH but refused us (e.g. pubkey not whitelisted)
- * - `'error'`          — connection error / unknown rejection
+ * - `'unreachable'`    — WebSocket handshake failed (DNS, refused, timeout, TLS) or
+ *   the socket dropped after connecting and the reconnect attempts are still failing.
+ *   Distinct from `'error'` so the UI can say "Cannot reach {host}" instead of
+ *   "Relay rejected the request".
+ * - `'error'`          — relay sent an unrecognized rejection (publish or subscribe)
  */
 export type RelayAccessState =
   | 'unknown'
@@ -96,6 +98,7 @@ export type RelayAccessState =
   | 'ok'
   | 'auth-required'
   | 'restricted'
+  | 'unreachable'
   | 'error';
 
 export interface NostrBridge {
@@ -201,6 +204,16 @@ export interface NostrBridge {
    */
   subscribeMyMutes(cb: (pubkeys: ReadonlyArray<string>) => void): Unsubscribe;
   /**
+   * Obelisk SFU active-call announcements (kind 31314). Map of
+   * `channelId → { hostPubkey, status, expiresAt, createdAt }`. Populated
+   * from the SFU's periodic publishes; the relay channel sidebar reads
+   * this to render "LIVE" badges on voice channels with a call in
+   * progress, even for users who aren't joined.
+   */
+  subscribeActiveCallByChannel(
+    cb: (byChannel: Readonly<Record<string, { hostPubkey: string; status: string; expiresAt: number; createdAt: number }>>) => void,
+  ): Unsubscribe;
+  /**
    * Add or remove a pubkey from the local user's NIP-51 mute list. Fetches
    * the latest kind 10000 to preserve unrelated entries, then republishes
    * with the adjusted `p` tags.
@@ -233,8 +246,17 @@ export interface NostrBridge {
   sendDirectMessage(recipientPubkey: string, content: string): Promise<void>;
   joinGroup(groupId: string): Promise<void>;
   leaveGroup(groupId: string): Promise<void>;
-  /** NIP-29 9000 put-user: add a member with optional roles (e.g. ['admin']). */
-  putUser(groupId: string, pubkey: string, roles?: ReadonlyArray<string>): Promise<void>;
+  /**
+   * NIP-29 9000 put-user: add a member with optional roles (e.g. ['admin']).
+   * Pass `{ quiet: true }` for best-effort background writes (lazy member
+   * self-add, etc.) so the activity-bar lifecycle is suppressed.
+   */
+  putUser(
+    groupId: string,
+    pubkey: string,
+    roles?: ReadonlyArray<string>,
+    opts?: { quiet?: boolean },
+  ): Promise<void>;
   /** NIP-29 9001 remove-user. */
   removeUser(groupId: string, pubkey: string): Promise<void>;
   /**

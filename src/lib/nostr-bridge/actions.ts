@@ -40,8 +40,12 @@ export const nostrActions = {
   editUserMetadata: async (
     opts: Parameters<Awaited<ReturnType<typeof getBridge>>['editUserMetadata']>[0],
   ) => (await getBridge()).editUserMetadata(opts),
-  putUser: async (groupId: string, pubkey: string, roles?: ReadonlyArray<string>) =>
-    (await getBridge()).putUser(groupId, pubkey, roles),
+  putUser: async (
+    groupId: string,
+    pubkey: string,
+    roles?: ReadonlyArray<string>,
+    opts?: { quiet?: boolean },
+  ) => (await getBridge()).putUser(groupId, pubkey, roles, opts),
   removeUser: async (groupId: string, pubkey: string) =>
     (await getBridge()).removeUser(groupId, pubkey),
   removePermission: async (

@@ -58,11 +58,22 @@ function normalizeRelayUrl(u: string): string {
  */
 function parseRelayRejection(reason: string): RelayAccessState | null {
   const r = reason.toLowerCase();
-  // Rate-limit messages sometimes ship with the "restricted:" prefix
-  // (e.g. "restricted: connection rate limit exceeded"). They are transient,
-  // not a pubkey-allowlist signal — classifying them as 'restricted' would
-  // wrongly flash "Not whitelisted" to legitimate users.
-  if (r.includes('rate limit') || r.includes('rate-limit') || r.includes('too many') || r.includes('slow down')) {
+  // Rate-limit / quota messages often ship with the "restricted:" prefix
+  // (e.g. "restricted: connection rate limit exceeded", "restricted:
+  // Subscription quota exceeded: 50/50", "ERROR: too many concurrent REQs").
+  // They are transient — not a pubkey-allowlist signal — and classifying
+  // them as 'restricted' would wrongly flash "Not whitelisted" to legitimate
+  // users. Returning null here also keeps the onclose handler from setting
+  // `shouldRetry`, which is what stops the sub-flood that exhausts the very
+  // quota the relay was complaining about.
+  if (
+    r.includes('rate limit') ||
+    r.includes('rate-limit') ||
+    r.includes('too many') ||
+    r.includes('slow down') ||
+    r.includes('quota') ||
+    r.includes('concurrent')
+  ) {
     return null;
   }
   if (r.includes('auth-required') || r.includes('auth_required') || r.includes('auth required')) {
@@ -98,6 +109,14 @@ const KIND_GROUP_DELETE_EVENT = 9005;
 const KIND_GROUP_ADMINS = 39001;
 const KIND_GROUP_MEMBERS = 39002;
 const KIND_MUTE_LIST = 10000;
+/**
+ * Obelisk SFU active-call announcement (kind 31314, parameterized
+ * replaceable). Emitted by an SFU when a room is live, with `d=<channelId>`,
+ * `host=<hostPubkey>`, `status=<active|closed>`, and `expiration=<unix>`.
+ * Sidebar and channel headers subscribe to this so a "LIVE" badge appears
+ * even for users who aren't currently in the call.
+ */
+const KIND_SFU_ACTIVE_CALL = 31314;
 
 export const STORAGE_KEY = 'obelisk-dex/session';
 export const RELAYS_KEY = 'obelisk-dex/relays';
@@ -218,28 +237,50 @@ class BridgeImpl implements NostrBridge {
    */
   private isActiveRelay(url: string): boolean {
     const target = normalizeRelayUrl(url);
-    return this.relays.some((r) => normalizeRelayUrl(r) === target);
+    if (this.relays.some((r) => normalizeRelayUrl(r) === target)) return true;
+    // Relays the bridge has been explicitly told to subscribe on via
+    // {@link subscribeFilterWatched}'s `relays` override count as
+    // "active enough" to sign NIP-42 AUTH for. The SFU RPC path needs
+    // this — without it, a tab whose primary relay is public.obelisk.ar
+    // can publish requests to the SFU's trusted relay (relay.obelisk.ar)
+    // but never receive the responses, because the relay's AUTH
+    // challenge gets declined by the auto-auth callback.
+    return this.authAllowedRelays.has(target);
   }
+
+  /**
+   * Extra relays that the auto-auth NIP-42 callback should sign for —
+   * populated by subscribeFilterWatched when callers pass an explicit
+   * `relays` override. Lives next to `this.relays` (the user-active list)
+   * but is purely additive for AUTH purposes; readers/publishers still
+   * resolve relays explicitly per call.
+   */
+  private authAllowedRelays = new Set<string>();
 
   /**
    * Update the relay-access store for the active relay. No-op for any URL
    * that isn't the currently-opened relay — we only surface auth/whitelist
    * state for the relay the user is actually looking at.
    *
-   * Sticky upgrade to 'ok': once the relay has confirmed it reads us
-   * (any EVENT/EOSE on any sub), we never downgrade back to 'auth-required'
-   * or 'restricted'. Those states normally come from per-sub or per-publish
-   * rejections — a private channel the user isn't in, a NIP-29 membership
-   * race during publish, an AUTH challenge that resolves seconds later —
-   * none of which mean the relay is rejecting the user wholesale. Without
-   * this guard the banner gets stuck on "Not whitelisted" even though the
-   * relay is happily delivering everything else.
+   * Sticky upgrade to 'ok' guards against transient AUTH refreshes (some
+   * relays re-challenge mid-session): once the relay has confirmed it reads
+   * us, we don't flip back to 'authenticating' for a refresh round-trip.
+   *
+   * Pass `{ override: true }` for explicit relay rejections — CLOSED with
+   * `auth-required:` / `restricted:` reason, ensureRelay handshake failure,
+   * or a socket drop. Those are authoritative about loss of access and must
+   * be allowed to downgrade from 'ok'; otherwise the banner never surfaces
+   * a non-whitelisted user who first saw an EOSE on an empty filter.
    */
-  private setRelayAccess(url: string, state: RelayAccessState): void {
+  private setRelayAccess(url: string, state: RelayAccessState, _opts?: { override?: boolean }): void {
     if (!this.isActiveRelay(url)) return;
     const key = normalizeRelayUrl(url);
     const cur = this.relayAccess.get();
     if (cur[key] === state) return;
+    // Sticky-OK: once the relay has confirmed it reads us, never downgrade
+    // back to a non-'ok' state. Per-channel CLOSED rejections (private
+    // channels the user isn't a member of, NIP-29 publish races) are normal
+    // mid-session noise — letting them flip the banner causes flashing.
     if (cur[key] === 'ok' && state !== 'ok') return;
     // Any state transition supersedes a pending deferred downgrade — most
     // importantly, a flip to 'ok' must cancel a pending 'auth-required' so
@@ -253,10 +294,7 @@ class BridgeImpl implements NostrBridge {
     // Manage the persistent "Authenticating with {host}" activity entry
     // that backs the bottom-right indicator. Entering 'authenticating'
     // pushes a pending entry; leaving it resolves (→ ok) or fails
-    // (→ auth-required / restricted / error). This keeps the indicator
-    // visible across the entire NIP-42 round-trip — from the moment the
-    // relay challenges us to the moment it accepts/rejects — so the user
-    // always knows their signer approval is still load-bearing.
+    // (→ auth-required / restricted / unreachable / error).
     if (state === 'authenticating' && cur[key] !== 'authenticating') {
       const host = (() => {
         try { return new URL(url).host; } catch { return url; }
@@ -272,6 +310,12 @@ class BridgeImpl implements NostrBridge {
           failActivity(id, 'AUTH was not accepted by the relay');
         } else if (state === 'restricted') {
           failActivity(id, 'pubkey is not whitelisted on this relay');
+        } else if (state === 'unreachable') {
+          // Transient: the socket dropped mid-AUTH. The reconnect path
+          // will fire a fresh AUTH activity if it actually re-authenticates.
+          // Marking this one as failed surfaces a misleading "relay is
+          // unreachable" toast even when the next round-trip succeeds.
+          dismissActivity(id);
         } else if (state === 'error') {
           failActivity(id, 'relay rejected the request');
         } else {
@@ -289,7 +333,13 @@ class BridgeImpl implements NostrBridge {
    * but `subscribeWatched` is about to retry: most of those rejections are
    * transient (the relay sent CLOSED before NIP-42 AUTH fully completed) and
    * heal in milliseconds. Calling `setRelayAccess` immediately would flash
-   * the "Not authenticated" / "Not whitelisted" banner during the AUTH race.
+   * the banner during the AUTH race.
+   *
+   * The deferred call bypasses sticky-OK because by the time the timer fires
+   * (after RELAY_ACCESS_SOAK_MS), the relay has had multiple opportunities to
+   * deliver an event/EOSE that would have cancelled the downgrade. A
+   * persistent CLOSED auth-required/restricted is the relay's authoritative
+   * answer, even if an earlier EOSE on a different filter said 'ok'.
    *
    * - First failure starts the timer; subsequent failures while the timer is
    *   pending do NOT reset it (we want a fixed bound on how long the banner
@@ -302,25 +352,20 @@ class BridgeImpl implements NostrBridge {
     if (!this.isActiveRelay(url)) return;
     const key = normalizeRelayUrl(url);
     const cur = this.relayAccess.get();
-    if (cur[key] === 'ok') return;     // sticky-OK
+    if (cur[key] === 'ok') return; // sticky-OK
     if (cur[key] === state) return;
     if (this.deferredAccessDowngrades.has(key)) return; // don't extend window
     const t = setTimeout(() => {
       this.deferredAccessDowngrades.delete(key);
-      // Re-check state — it may have flipped to 'ok' between scheduling and
-      // firing, in which case we honor the sticky-OK guard.
       const now = this.relayAccess.get();
       if (now[key] === 'ok') return;
       if (now[key] === state) return;
-      // Route through setRelayAccess so the activity-log lifecycle
-      // (`'authenticating'` → fail) and other invariants stay consistent
-      // with non-deferred transitions.
       this.setRelayAccess(url, state);
     }, RELAY_ACCESS_SOAK_MS);
     this.deferredAccessDowngrades.set(key, t);
   }
   private session: PersistedSession | null = null;
-  private subs: Array<{ close: () => void }> = [];
+  private subs: Array<{ close: () => void; markClosed?: () => void }> = [];
   private activeGroupId: string | null = null;
   /** Active NIP-46 signer (when loginMethod === 'bunker'). Reconstructed lazily. */
   private bunkerSigner: BunkerSigner | null = null;
@@ -468,6 +513,17 @@ class BridgeImpl implements NostrBridge {
     } as ConstructorParameters<typeof SimplePool>[0]);
   }
 
+  /**
+   * `true` when the active relay's WebSocket is currently in OPEN state.
+   * Set in `connect()` after `ensureRelay` reports `connected`, cleared in
+   * the `relay.onclose` handler. Used to short-circuit `pool.close()` and
+   * per-sub `activeSub.close()` calls when the socket has already dropped —
+   * sending a CLOSE frame on a non-OPEN WebSocket is a noisy browser
+   * warning ("WebSocket is already in CLOSING or CLOSED state") logged
+   * once per sub and once per pool.close, which spams the console during
+   * a normal reconnect cycle.
+   */
+  private poolSocketAlive = false;
   // Reactive state
   isLoggedIn = new StateStore(false);
   /**
@@ -505,6 +561,16 @@ class BridgeImpl implements NostrBridge {
    * users have to refresh to recover.
    */
   membershipReadyByGroup = new StateStore<Record<string, boolean>>({});
+  /**
+   * SFU active-call state per channel id. Populated from kind 31314 events
+   * the SFU publishes when a room is live. The UI reads this to show a
+   * "LIVE" indicator on voice channels in the sidebar — even for users
+   * who aren't currently joined. `null` (or missing entry) means no active
+   * call known. Entries auto-expire client-side once `expiresAt` passes
+   * so a stale advertisement doesn't pin "LIVE" forever after an SFU
+   * crash that never published `status=closed`.
+   */
+  activeCallByChannel = new StateStore<Record<string, { hostPubkey: string; status: string; expiresAt: number; createdAt: number }>>({});
   myFollows = new StateStore<string[]>([]);
   /**
    * NIP-51 kind 10000 mute list — pubkeys the local user has muted (public
@@ -691,9 +757,18 @@ class BridgeImpl implements NostrBridge {
   }
 
   dispose(): void {
-    this.subs.forEach((s) => s.close());
+    // pool.close() handles the network teardown atomically; calling each
+    // sub's close beforehand is redundant and races with the pool's own
+    // closeAllSubscriptions sweep, producing CLOSING/CLOSED warnings.
+    this.subs.forEach((s) => (s.markClosed ?? s.close)());
     this.subs = [];
-    this.pool.close(this.relays);
+    if (this.poolSocketAlive) {
+      try { this.pool.close(this.relays); } catch { /* ignore */ }
+    }
+    this.poolSocketAlive = false;
+    // Clear auto-auth allow-list so the next session doesn't sign AUTH
+    // for relays the previous user happened to subscribe to.
+    this.authAllowedRelays.clear();
   }
 
   // -- Auth --------------------------------------------------------------
@@ -837,9 +912,20 @@ class BridgeImpl implements NostrBridge {
       adminMember: Array.from(this.adminMemberSubscribedGroups),
       metadata: Array.from(this.metadataRequested),
     };
-    this.subs.forEach((s) => s.close());
+    // markClosed: stop each subscribeWatched closure's watchdog/retry loop
+    // without sending per-sub CLOSE frames on the old pool's sockets.
+    this.subs.forEach((s) => (s.markClosed ?? s.close)());
     this.subs = [];
-    try { this.pool.close(this.relays); } catch { /* ignore */ }
+    // Don't call pool.close() — its internal closeAllSubscriptions sweep
+    // sends a CLOSE frame per subscription, and the relay-side socket
+    // routinely transitions to CLOSING between our last message and this
+    // teardown (idle timeout, quota disconnect, network blip). Each
+    // attempted send on a non-OPEN socket triggers
+    // "WebSocket is already in CLOSING or CLOSED state" — one warning per
+    // sub, which on a 50-sub session floods the console. We let the old
+    // pool's WebSockets drop via server-side idle timeout or browser GC;
+    // the new pool replacement is what actually carries traffic forward.
+    this.poolSocketAlive = false;
     this.pool = this.createPool();
     this.messageSubscribedGroups.clear();
     this.reactionSubscribedGroups.clear();
@@ -1074,18 +1160,33 @@ class BridgeImpl implements NostrBridge {
           validateRelayUrl(url);
           const relay = await this.pool.ensureRelay(url, { connectionTimeout: 5000 });
           if (!relay.connected) throw new Error(`relay ${url} did not complete handshake`);
+          // Mark the pool's socket alive so subsequent close() calls
+          // attempt the network CLOSE; cleared in the onclose handler.
+          this.poolSocketAlive = true;
           // Flip status back if the socket drops later, and trigger a
           // silent background reconnect so the user doesn't have to
           // refresh when the relay or network blips.
           relay.onclose = () => {
+            this.poolSocketAlive = false;
             if (this.relays.includes(url) && this.session) {
               this.connectionState.set('Disconnected');
+              // Don't override sticky-OK on transient drops — a brief socket
+              // bounce shouldn't flash "Cannot reach". connectionState
+              // already surfaces the reconnect attempt.
+              this.setRelayAccess(url, 'unreachable');
               this.reconnectInBackground();
             }
           };
           return url;
         }),
       );
+      // Mark every relay whose handshake failed as unreachable so the banner
+      // says "Cannot reach {host}" instead of stalling on "Connecting…".
+      results.forEach((r, i) => {
+        if (r.status === 'rejected') {
+          this.setRelayAccess(this.relays[i], 'unreachable');
+        }
+      });
       const connectedCount = results.filter((r) => r.status === 'fulfilled').length;
       if (connectedCount === 0) {
         const firstError = results.find((r) => r.status === 'rejected') as PromiseRejectedResult | undefined;
@@ -1096,6 +1197,7 @@ class BridgeImpl implements NostrBridge {
       this.subscribeMyContactList();
       this.subscribeMyMuteList();
       this.subscribeMyAuthoredGroups();
+      this.subscribeActiveCalls();
       // Resolve the user's own profile so the UI has it immediately.
       if (this.session) this.ensureUserMetadata(this.session.pubKeyHex);
       // Reopen any per-group REQs that were live on the previous pool.
@@ -1157,9 +1259,12 @@ class BridgeImpl implements NostrBridge {
   }
 
   async switchRelay(url: string): Promise<void> {
-    this.subs.forEach((s) => s.close());
+    // Same teardown semantics as resetPoolForSessionChange: skip the
+    // pool.close() sweep to avoid CLOSING/CLOSED spam, just stop each
+    // watched-sub's retry loop and replace the pool reference.
+    this.subs.forEach((s) => (s.markClosed ?? s.close)());
     this.subs = [];
-    this.pool.close(this.relays);
+    this.poolSocketAlive = false;
     this.pool = this.createPool();
     this.relays = [url];
     this.currentRelayUrl.set(url);
@@ -1450,15 +1555,24 @@ class BridgeImpl implements NostrBridge {
     return groupId;
   }
 
-  async putUser(groupId: string, pubkey: string, roles?: ReadonlyArray<string>): Promise<void> {
+  async putUser(
+    groupId: string,
+    pubkey: string,
+    roles?: ReadonlyArray<string>,
+    opts?: { quiet?: boolean },
+  ): Promise<void> {
     const pTag: string[] = ['p', pubkey];
     if (roles && roles.length > 0) pTag.push(...roles);
-    await this.signAndPublish({
-      kind: KIND_GROUP_PUT_USER,
-      content: '',
-      tags: [['h', groupId], pTag],
-      created_at: Math.floor(Date.now() / 1000),
-    });
+    await this.signAndPublish(
+      {
+        kind: KIND_GROUP_PUT_USER,
+        content: '',
+        tags: [['h', groupId], pTag],
+        created_at: Math.floor(Date.now() / 1000),
+      },
+      [],
+      opts,
+    );
   }
 
   async removeUser(groupId: string, pubkey: string): Promise<void> {
@@ -1510,7 +1624,12 @@ class BridgeImpl implements NostrBridge {
     if (this.groupCreators.get()[groupId] !== me) return false;
     const admins = this.adminsByGroup.get()[groupId] ?? [];
     if (admins.includes(me)) return false;
-    await this.putUser(groupId, me, ['admin']);
+    // Best-effort background write: if the relay accepts it the local
+    // creator becomes a relay-confirmed admin on the next 39001 broadcast;
+    // if the relay declines (whitelist, "not authorized to add users"),
+    // the user's actual settings/ManageGroup actions will surface the
+    // real error. Don't toast for this background attempt.
+    await this.putUser(groupId, me, ['admin'], { quiet: true });
     return true;
   }
 
@@ -1777,9 +1896,29 @@ class BridgeImpl implements NostrBridge {
   subscribeFilterWatched(
     filter: Filter,
     onEvent: (ev: NostrEvent) => void,
-    options?: { watchdogMs?: number; maxAttempts?: number },
+    options?: { watchdogMs?: number; maxAttempts?: number; relays?: readonly string[] },
   ): () => void {
-    const sub = this.subscribeWatched(this.relays, filter, onEvent, undefined, options);
+    // Optional `relays` override merges with the bridge's default relay
+    // list. Used by callers that need to listen on relays the bridge
+    // hasn't been switched to — e.g. the SFU RPC client, where the SFU
+    // only publishes responses to its trusted relays (relay.obelisk.ar)
+    // while the dex tab might be on public.obelisk.ar. Without the
+    // override, getRouterRtpCapabilities responses never reach the
+    // browser and `start()` times out at 8s.
+    const targetRelays = options?.relays && options.relays.length > 0
+      ? Array.from(new Set([...this.relays, ...options.relays]))
+      : this.relays;
+    if (options?.relays) {
+      // Tell auto-auth to sign for these too — without this the relay
+      // can challenge us, our auto-auth declines because they aren't
+      // in `this.relays`, and the sub never delivers events. The set
+      // is leaky on purpose: removing on close would race with future
+      // overlapping subs to the same relay (e.g. a second voice channel
+      // on the same SFU). The cost is signing AUTH on a relay we no
+      // longer subscribe to, which is harmless.
+      for (const r of options.relays) this.authAllowedRelays.add(normalizeRelayUrl(r));
+    }
+    const sub = this.subscribeWatched(targetRelays, filter, onEvent, undefined, options);
     return () => sub.close();
   }
 
@@ -1818,10 +1957,17 @@ class BridgeImpl implements NostrBridge {
     filter: Filter,
     onevent: (ev: NostrEvent) => void,
     oneose?: () => void,
-    options?: { watchdogMs?: number; maxAttempts?: number },
-  ): { close: () => void } {
+    options?: { watchdogMs?: number; maxAttempts?: number; affectsRelayAccess?: boolean },
+  ): { close: () => void; markClosed: () => void } {
     const WATCHDOG_MS = options?.watchdogMs ?? 5000;
     const MAX_ATTEMPTS = options?.maxAttempts ?? Infinity;
+    // Per-channel / per-pubkey subs (group messages, admin/member, single
+    // user metadata) get CLOSED for normal "you can't see this one" reasons
+    // — private channels you aren't a member of, profile relays that don't
+    // serve the queried pubkey, etc. Those CLOSEDs must NOT flip the
+    // relay-wide access banner; otherwise the user sees "Not whitelisted"
+    // even when their global metadata sub is delivering everything fine.
+    const AFFECTS_ACCESS = options?.affectsRelayAccess ?? true;
     const MAX_BACKOFF_MS = 30_000;
     let attempt = 0;
     let activeSub: { close: () => void } | null = null;
@@ -1904,7 +2050,9 @@ class BridgeImpl implements NostrBridge {
           // Any event delivered means the relay is reading us — auth (if
           // required) succeeded and we're not whitelist-blocked. Mark the
           // active relay 'ok' (helper no-ops for non-active relays).
-          for (const url of relays) this.setRelayAccess(url, 'ok');
+          if (AFFECTS_ACCESS) {
+            for (const url of relays) this.setRelayAccess(url, 'ok');
+          }
           // WoT / mute / block gate. The engine fails-open until a verdict
           // resolves; resolved-deny events are dropped here so they never
           // reach ingest, the cache, or `messagesByGroup`. When the engine
@@ -1920,7 +2068,9 @@ class BridgeImpl implements NostrBridge {
           // result) before CLOSED auth-required. Leaving `armed` true lets
           // the onclose handler below schedule a retry.
           clearTimer();
-          for (const url of relays) this.setRelayAccess(url, 'ok');
+          if (AFFECTS_ACCESS) {
+            for (const url of relays) this.setRelayAccess(url, 'ok');
+          }
           oneose?.();
         },
         onclose: (reasons: string[]) => {
@@ -1929,27 +2079,35 @@ class BridgeImpl implements NostrBridge {
           // 'closed by caller' and yield no rejection match — we leave the
           // existing state alone in that case.
           let shouldRetry = false;
+          let unknownClose = false;
           reasons.forEach((reason, i) => {
             if (!reason) return;
             const url = relays[i];
             const state = parseRelayRejection(reason);
             if (state) {
               if (state === 'auth-required' || state === 'restricted') {
-                // Defer the banner flip — most of these heal via the
-                // immediate retry below well before the soak window expires.
-                this.setRelayAccessDeferred(url, state);
+                // A per-channel CLOSED ("you can't read this one") still
+                // schedules a retry, but it does NOT update the relay-wide
+                // banner — see AFFECTS_ACCESS comment above.
+                if (AFFECTS_ACCESS) this.setRelayAccessDeferred(url, state);
                 shouldRetry = true;
-              } else {
+              } else if (AFFECTS_ACCESS) {
                 this.setRelayAccess(url, state);
               }
+            } else {
+              // Reason carried but didn't classify — typically a transient
+              // quota / rate-limit ("Subscription quota exceeded: 50/50",
+              // "too many concurrent REQs"). Backoff-retry rather than
+              // immediate-retry so we don't blast the relay at the exact
+              // moment its quota is full and trigger a sub-flood.
+              unknownClose = true;
             }
           });
-          // Retry on auth-required/restricted regardless of `alive`. This is
-          // the EOSE-then-CLOSED race: EOSE marked the sub alive and disabled
-          // the watchdog, but the relay then closed the REQ for AUTH reasons.
-          // `scheduleRetry` short-circuits via `armed` if onevent already
-          // succeeded or the watchdog already fired.
+          // Retry on auth-required/restricted immediately — EOSE-then-CLOSED
+          // race. `scheduleRetry` short-circuits via `armed` if onevent
+          // already succeeded or the watchdog already fired.
           if (shouldRetry) scheduleRetry(true);
+          else if (unknownClose) scheduleRetry(false);
         },
         onauth: wrappedSigner,
       });
@@ -1963,7 +2121,28 @@ class BridgeImpl implements NostrBridge {
       close: () => {
         closed = true;
         clearTimer();
+        // Only attempt the network CLOSE frame if the pool's socket is
+        // still alive — calling close() on a dead WebSocket throws a
+        // browser warning per sub ("WebSocket is already in CLOSING or
+        // CLOSED state") that the try/catch can't suppress because it's
+        // logged at the WebSocket layer, not raised as an exception.
+        if (!this.poolSocketAlive) {
+          activeSub = null;
+          return;
+        }
         try { activeSub?.close(); } catch { /* ignore */ }
+      },
+      // For pool-replacement paths (resetPoolForSessionChange / switchRelay /
+      // dispose). Marks the closure dead so its retry/watchdog logic stops,
+      // but does NOT send a CLOSE frame on the WebSocket — the caller will
+      // call pool.close() once for the whole pool right after, and the
+      // duplicate per-sub CLOSE racing with the pool teardown is what
+      // produces the "WebSocket is already in CLOSING or CLOSED state"
+      // warnings users were seeing on re-login.
+      markClosed: () => {
+        closed = true;
+        clearTimer();
+        activeSub = null;
       },
     };
   }
@@ -2061,7 +2240,13 @@ class BridgeImpl implements NostrBridge {
       '#h': [groupId],
       limit: 200,
     };
-    const sub = this.subscribeWatched(this.relays, filter, (ev) => this.ingestMessage(groupId, ev));
+    const sub = this.subscribeWatched(
+      this.relays,
+      filter,
+      (ev) => this.ingestMessage(groupId, ev),
+      undefined,
+      { affectsRelayAccess: false },
+    );
     this.subs.push(sub);
   }
 
@@ -2070,16 +2255,12 @@ class BridgeImpl implements NostrBridge {
     const relays = Array.from(new Set([...this.relays, ...PROFILE_RELAYS]));
     // Non-critical path: a missing kind:0 just shows the npub instead of a
     // display name. Tighter watchdog so we fail fast on cold profile relays.
-    // Retries are unbounded — `metadataRequested` (ensureUserMetadata) memoizes
-    // per-pubkey so fanout is one REQ per pubkey ever, and the 30s backoff cap
-    // bounds socket pressure. A bounded cap was the source of the
-    // "metadata never appears until N refreshes" bug under NIP-42 AUTH races.
     const sub = this.subscribeWatched(
       relays,
       filter,
       (ev) => this.ingestUserMetadata(ev),
       undefined,
-      { watchdogMs: 3000 },
+      { watchdogMs: 3000, affectsRelayAccess: false },
     );
     this.subs.push(sub);
   }
@@ -2088,16 +2269,12 @@ class BridgeImpl implements NostrBridge {
     if (this.reactionSubscribedGroups.has(groupId)) return;
     this.reactionSubscribedGroups.add(groupId);
     const filter: Filter = { kinds: [KIND_REACTION], '#h': [groupId], limit: 500 };
-    // Non-critical path: a missing reaction event just delays an emoji badge.
-    // `reactionSubscribedGroups` memoizes per-groupId, and the watchdog backoff
-    // caps at 30s/attempt — unbounded retries are safe and avoid the "reactions
-    // gone until reload" symptom under NIP-42 AUTH races.
     const sub = this.subscribeWatched(
       this.relays,
       filter,
       (ev) => this.ingestReaction(groupId, ev),
       undefined,
-      { watchdogMs: 3000 },
+      { watchdogMs: 3000, affectsRelayAccess: false },
     );
     this.subs.push(sub);
   }
@@ -2109,7 +2286,13 @@ class BridgeImpl implements NostrBridge {
       kinds: [KIND_GROUP_ADMINS, KIND_GROUP_MEMBERS],
       '#d': [groupId],
     };
-    const sub = this.subscribeWatched(this.relays, filter, (ev) => this.ingestAdminMember(ev));
+    const sub = this.subscribeWatched(
+      this.relays,
+      filter,
+      (ev) => this.ingestAdminMember(ev),
+      undefined,
+      { affectsRelayAccess: false },
+    );
     this.subs.push(sub);
   }
 
@@ -2126,7 +2309,13 @@ class BridgeImpl implements NostrBridge {
     if (this.creatorSubscribedGroups.has(groupId)) return;
     this.creatorSubscribedGroups.add(groupId);
     const filter: Filter = { kinds: [KIND_GROUP_CREATE], '#h': [groupId], limit: 1 };
-    const sub = this.subscribeWatched(this.relays, filter, (ev) => this.ingestGroupCreator(ev));
+    const sub = this.subscribeWatched(
+      this.relays,
+      filter,
+      (ev) => this.ingestGroupCreator(ev),
+      undefined,
+      { affectsRelayAccess: false },
+    );
     this.subs.push(sub);
   }
 
@@ -2223,6 +2412,61 @@ class BridgeImpl implements NostrBridge {
       this.myMutes.set(pubkeys);
     });
     this.subs.push(sub);
+  }
+
+  /**
+   * Global subscription to kind 31314 (Obelisk SFU active-call announcement).
+   * The SFU emits one per live room, replaceable on `d=<channelId>`. We track
+   * them in `activeCallByChannel` so the sidebar can flag voice channels
+   * that have a call in progress without anyone needing to be in it.
+   *
+   * `affectsRelayAccess: false` because absence of 31314 events is normal
+   * (a relay might serve groups but not host any active SFU calls) and a
+   * CLOSED for this filter shouldn't flip the relay-wide banner.
+   */
+  private subscribeActiveCalls(): void {
+    const filter: Filter = { kinds: [KIND_SFU_ACTIVE_CALL] };
+    const sub = this.subscribeWatched(
+      this.relays,
+      filter,
+      (ev) => this.ingestActiveCall(ev),
+      undefined,
+      { affectsRelayAccess: false },
+    );
+    this.subs.push(sub);
+  }
+
+  private ingestActiveCall(ev: NostrEvent): void {
+    const tag = (name: string) => ev.tags.find((t) => t[0] === name)?.[1];
+    const channelId = tag('d');
+    if (!channelId) return;
+    const status = tag('status') ?? 'active';
+    const hostPubkey = tag('host') ?? ev.pubkey;
+    const expirationStr = tag('expiration');
+    const expiresAt = expirationStr ? parseInt(expirationStr, 10) || 0 : 0;
+    const cur = this.activeCallByChannel.get();
+    const prev = cur[channelId];
+    // Newest-wins: replaceable kind, stale duplicates from slow relays
+    // shouldn't overwrite a fresher announcement.
+    if (prev && prev.createdAt >= ev.created_at) return;
+    if (status === 'closed') {
+      if (!prev) return;
+      const next = { ...cur };
+      delete next[channelId];
+      this.activeCallByChannel.set(next);
+      return;
+    }
+    this.activeCallByChannel.set({
+      ...cur,
+      [channelId]: { hostPubkey, status, expiresAt, createdAt: ev.created_at },
+    });
+  }
+
+  /** Subscribe to the active-call state for any channel. */
+  subscribeActiveCallByChannel(
+    cb: (byChannel: Readonly<Record<string, { hostPubkey: string; status: string; expiresAt: number; createdAt: number }>>) => void,
+  ): Unsubscribe {
+    return this.activeCallByChannel.subscribe(cb);
   }
 
   private subscribeIncomingDMs(): void {
@@ -2470,7 +2714,7 @@ class BridgeImpl implements NostrBridge {
     } catch {
       event = null;
     }
-    const read = event ? parseRelayListMeta(event).read : [];
+    const read = event ? parseRelayListMeta(event).read.filter(isImportableRelayUrl) : [];
     this.recipientReadRelaysCache.set(pubkey, { relays: read, fetchedAt: Date.now() });
     return read;
   }
@@ -2501,18 +2745,22 @@ class BridgeImpl implements NostrBridge {
       const meta = newest.get(10002);
       if (meta) {
         const { read, write } = parseRelayListMeta(meta);
-        read.forEach((u) => out.add(u));
-        write.forEach((u) => out.add(u));
+        read.forEach((u) => { if (isImportableRelayUrl(u)) out.add(u); });
+        write.forEach((u) => { if (isImportableRelayUrl(u)) out.add(u); });
       }
       const inbox = newest.get(10050);
-      if (inbox) parseInboxRelays(inbox).forEach((u) => out.add(u));
+      if (inbox) parseInboxRelays(inbox).forEach((u) => { if (isImportableRelayUrl(u)) out.add(u); });
     } catch {
       // best-effort — fall through to whatever we have
     }
     return Array.from(out);
   }
 
-  private async signAndPublish(template: { kind: number; content: string; tags: string[][]; created_at: number }, extraRelays: string[] = []): Promise<NostrEvent> {
+  private async signAndPublish(
+    template: { kind: number; content: string; tags: string[][]; created_at: number },
+    extraRelays: string[] = [],
+    opts?: { quiet?: boolean },
+  ): Promise<NostrEvent> {
     if (!this.session) throw new Error('Not logged in');
 
     const signLabel =
@@ -2521,7 +2769,10 @@ class BridgeImpl implements NostrBridge {
         : this.session.loginMethod === 'bunker'
           ? 'Waiting for bunker signature'
           : 'Signing event';
-    const signId = pushActivity(signLabel, `kind ${template.kind}`);
+    // `quiet`: best-effort background publish (e.g. lazy member self-add).
+    // Suppress the activity-bar lifecycle so the user doesn't see a
+    // Publishing/Failed toast for a write the relay routinely declines.
+    const signId = opts?.quiet ? null : pushActivity(signLabel, `kind ${template.kind}`);
     let event: NostrEvent;
     try {
       if (this.session.loginMethod === 'nsec' && this.session.privKeyHex) {
@@ -2537,14 +2788,14 @@ class BridgeImpl implements NostrBridge {
       } else {
         throw new Error(`Login method ${this.session.loginMethod} cannot sign events in this build`);
       }
-      resolveActivity(signId);
+      if (signId != null) resolveActivity(signId);
     } catch (e) {
-      failActivity(signId, e instanceof Error ? e.message : String(e));
+      if (signId != null) failActivity(signId, e instanceof Error ? e.message : String(e));
       throw e;
     }
 
     const targetRelays = Array.from(new Set([...this.relays, ...extraRelays]));
-    const pubId = pushActivity('Publishing to relays', `kind ${template.kind} → ${targetRelays.length} relay(s)`);
+    const pubId = opts?.quiet ? null : pushActivity('Publishing to relays', `kind ${template.kind} → ${targetRelays.length} relay(s)`);
     const publishes = this.pool.publish(targetRelays, event, { onauth: this.getAuthSigner() });
 
     // Ephemeral events (NIP-01: kinds 20000-29999) are not stored and some
@@ -2559,7 +2810,7 @@ class BridgeImpl implements NostrBridge {
       for (const p of publishes) {
         p.catch((e) => console.debug('[bridge] ephemeral publish skip', event.kind, e instanceof Error ? e.message : e));
       }
-      resolveActivity(pubId, `ephemeral → ${targetRelays.length} relay(s)`);
+      if (pubId != null) resolveActivity(pubId, `ephemeral → ${targetRelays.length} relay(s)`);
       return event;
     }
 
@@ -2617,10 +2868,10 @@ class BridgeImpl implements NostrBridge {
         .filter(Boolean)
         .join('; ');
       const msg = `Relay rejected event (kind ${event.kind}). ${reasons || 'no relay accepted'}`;
-      failActivity(pubId, msg);
+      if (pubId != null) failActivity(pubId, msg);
       throw new Error(msg);
     }
-    resolveActivity(pubId, `accepted by ${accepted.length}/${targetRelays.length}`);
+    if (pubId != null) resolveActivity(pubId, `accepted by ${accepted.length}/${targetRelays.length}`);
     return event;
   }
 
@@ -2638,6 +2889,44 @@ class BridgeImpl implements NostrBridge {
  * for typos. Require: ws/wss scheme + a hostname containing at least one
  * dot (or a literal IP / localhost).
  */
+/**
+ * Strict client-side filter for relay URLs imported from remote events
+ * (NIP-65 kind 10002, NIP-17 kind 10050, etc.). The browser's CSP only
+ * allows `wss:` in `connect-src`, and localhost/loopback URLs published
+ * by some clients (Coracle / dev setups) trigger a noisy CSP violation
+ * AND a `WebSocket connection failed` per page-load. Drop them at
+ * ingestion so they never reach `new WebSocket()`.
+ *
+ * Rules:
+ *   - Must parse as a URL.
+ *   - Must use `wss:` scheme. Plain `ws:` is rejected — browsers refuse
+ *     mixed-content WebSockets from an https origin anyway, and any
+ *     `ws://` entry in a published relay list is almost certainly a
+ *     leftover from a local-dev relay an upstream client forgot to
+ *     scrub before broadcasting.
+ *   - Hostname can't be `localhost`, `*.localhost`, `*.local`, or an
+ *     IPv4 literal in the loopback / RFC-1918 / link-local ranges.
+ */
+function isImportableRelayUrl(url: string): boolean {
+  let p: URL;
+  try { p = new URL(url); } catch { return false; }
+  if (p.protocol !== 'wss:') return false;
+  const host = p.hostname.toLowerCase();
+  if (!host) return false;
+  if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local')) return false;
+  // IPv4 ranges that have no business in a relay list.
+  if (/^127\./.test(host)) return false;
+  if (/^10\./.test(host)) return false;
+  if (/^192\.168\./.test(host)) return false;
+  if (/^169\.254\./.test(host)) return false;
+  if (/^172\.(1[6-9]|2[0-9]|3[01])\./.test(host)) return false;
+  if (host === '0.0.0.0') return false;
+  // IPv6 loopback / link-local literals.
+  if (host === '::1' || host === '[::1]') return false;
+  if (host.startsWith('fe80:')) return false;
+  return true;
+}
+
 function validateRelayUrl(url: string): void {
   let parsed: URL;
   try {
