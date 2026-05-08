@@ -69,7 +69,14 @@ import {
 import BlossomImageInput from '@/components/BlossomImageInput';
 import RelayAdminPanel from '@/components/admin/RelayAdminPanel';
 import { nip19 } from 'nostr-tools';
-import { useNotificationStore, type InboxEvent } from '@/store/notification';
+import { useReadStateStore, type InboxEvent } from '@/store/read-state';
+import {
+  useChannelUnreadCount,
+  useChannelHasMention,
+  useDMUnreadCount,
+  useTotalDMUnread,
+  useInboxUnreadCount,
+} from '@/lib/read-state/selectors';
 import { useChatStore } from '@/store/chat';
 import { useDMStore } from '@/store/dm';
 import { useNostrPresence, PRESENCE_WINDOW_MS } from '@/hooks/chat/useNostrPresence';
@@ -1925,14 +1932,12 @@ export function RelayTile({
 }
 
 // Single row in the channel list — picks the right icon for text/voice/forum
-// and surfaces the live-call indicator on voice channels. The `unread` /
-// `mentioned` / `active` variants come from the notification store so the
-// list matches what the inbox bell shows.
+// and surfaces the live-call indicator on voice channels. The `unread` and
+// `mentioned` variants are derived from the read-state cursor (per-channel
+// unix-ms read marker) compared against bridge-supplied `messages.createdAt`.
 function ChannelRow({
   group,
   live,
-  unread,
-  mentioned,
   active,
   onClick,
   expandable,
@@ -1942,8 +1947,6 @@ function ChannelRow({
 }: {
   group: JsGroup;
   live: boolean;
-  unread?: number;
-  mentioned?: boolean;
   active?: boolean;
   onClick: () => void;
   expandable?: boolean;
@@ -1951,6 +1954,9 @@ function ChannelRow({
   onToggleExpand?: () => void;
   indent?: boolean;
 }) {
+  const myPubkey = useMyPubkey();
+  const unread = useChannelUnreadCount(group.id, myPubkey);
+  const mentioned = useChannelHasMention(group.id, myPubkey);
   const name = group.name ?? group.id.slice(0, 8);
   if (group.kind === 'voice' || group.kind === 'voice-sfu') {
     return (
@@ -2141,8 +2147,6 @@ function ServerScreen({
   const calls = useActiveCallByChannel();
   const adminsByGroup = useAdminsByGroup();
   const operatorPubkey = useRelayOperatorPubkey(relay || null);
-  const channelUnreads = useNotificationStore((s) => s.channelUnreads);
-  const channelMentions = useNotificationStore((s) => s.channelMentions);
   const [addRelayOpen, setAddRelayOpen] = useState(false);
   const [relayMenuFor, setRelayMenuFor] = useState<{ url: string; label: string; iconUrl: string | null } | null>(null);
   const [createChannelOpen, setCreateChannelOpen] = useState(false);
@@ -2257,8 +2261,6 @@ function ServerScreen({
           <ChannelRow
             group={g}
             live={!!calls[g.id]}
-            unread={channelUnreads[g.id]}
-            mentioned={!!channelMentions[g.id]}
             onClick={() => selectGroup(g.id, g.kind)}
             expandable={expandable}
             expanded={isExpanded}
@@ -2288,8 +2290,6 @@ function ServerScreen({
         key={g.id}
         group={g}
         live={!!calls[g.id]}
-        unread={channelUnreads[g.id]}
-        mentioned={!!channelMentions[g.id]}
         onClick={() => selectGroup(g.id, g.kind)}
       />
     );
@@ -2843,26 +2843,22 @@ function DmsListScreen({
   myFollows: ReadonlyArray<string>;
 }) {
   const dms = useDirectMessages();
-  const dmUnreadsMap = useNotificationStore((s) => s.dmUnreads);
   const [tab, setTab] = useState<'follows' | 'others'>('follows');
 
+  // Each row computes its own unread via `useDMUnreadCount` against the
+  // persisted read-state cursor. The 24h heuristic that used to live here
+  // is gone — `useReadStateStore.dmCursors` is the single source of truth
+  // (with a 24h bootstrap fallback baked into the selector for first-paint).
   const peers = useMemo(() => {
-    const list: Array<{ peer: string; latest: JsDirectMessage; unread: boolean }> = [];
+    const list: Array<{ peer: string; latest: JsDirectMessage }> = [];
     for (const [peer, msgs] of Object.entries(dms)) {
       if (msgs.length === 0) continue;
       const sorted = [...msgs].sort((a, b) => b.createdAt - a.createdAt);
-      const latest = sorted[0];
-      // Prefer the notification-store count (set by the bridge for live DMs);
-      // fall back to the 24h heuristic only when the store hasn't seen this
-      // peer yet (e.g. first paint before any live DM has arrived).
-      const storedUnread = dmUnreadsMap[peer] ?? 0;
-      const unread = storedUnread > 0 ||
-        (!latest.outgoing && (Date.now() / 1000 - latest.createdAt) < 86400 && storedUnread === 0 && Object.keys(dmUnreadsMap).length === 0);
-      list.push({ peer, latest, unread });
+      list.push({ peer, latest: sorted[0] });
     }
     list.sort((a, b) => b.latest.createdAt - a.latest.createdAt);
     return list;
-  }, [dms, dmUnreadsMap]);
+  }, [dms]);
 
   const followsSet = useMemo(() => new Set(myFollows), [myFollows]);
   const filtered = peers.filter((p) =>
@@ -2904,7 +2900,7 @@ function DmsListScreen({
           </div>
         )}
         {filtered.map((p) => (
-          <DmRow key={p.peer} peer={p.peer} latest={p.latest} unread={p.unread} onClick={() => selectPeer(p.peer)} />
+          <DmRow key={p.peer} peer={p.peer} latest={p.latest} onClick={() => selectPeer(p.peer)} />
         ))}
       </div>
     </div>
@@ -2914,18 +2910,17 @@ function DmsListScreen({
 function DmRow({
   peer,
   latest,
-  unread,
   onClick,
 }: {
   peer: string;
   latest: JsDirectMessage;
-  unread: boolean;
   onClick: () => void;
 }) {
   const meta = useUserMetadata(peer);
+  const unreadCount = useDMUnreadCount(peer);
   const name = meta?.displayName || meta?.name || shortNpub(peer);
   return (
-    <button className={`dm-row ${unread ? 'unread' : ''}`} onClick={onClick}>
+    <button className={`dm-row ${unreadCount > 0 ? 'unread' : ''}`} onClick={onClick}>
       <div className="dm-ava-list" style={avatarStyle(peer)}>
         {meta?.picture ? <img src={meta.picture} alt="" /> : initialsFor(name, shortNpub(peer))}
       </div>
@@ -2939,7 +2934,7 @@ function DmRow({
           {latest.outgoing ? 'You: ' : ''}{latest.content}
         </div>
       </div>
-      {unread && <span className="unread-dot" />}
+      {unreadCount > 0 && <span className="unread-dot" />}
     </button>
   );
 }
@@ -3090,8 +3085,8 @@ function InboxScreen({
   selectGroup: (groupId: string, kind: JsGroup['kind']) => void;
   selectPeer: (peer: string) => void;
 }) {
-  const events = useNotificationStore((s) => s.inboxEvents);
-  const markInboxRead = useNotificationStore((s) => s.markInboxRead);
+  const events = useReadStateStore((s) => s.inboxEvents);
+  const markInboxRead = useReadStateStore((s) => s.advanceInboxRead);
   const groups = useGroups();
 
   const [tab, setTab] = useState<InboxFilter>('all');
@@ -3142,8 +3137,10 @@ function InboxScreen({
 
 function InboxCard({ event, onJump }: { event: InboxEvent; onJump: () => void }) {
   const meta = useUserMetadata(event.senderPubkey);
+  const inboxLastReadAt = useReadStateStore((s) => s.inboxLastReadAt);
   const name = meta?.displayName || meta?.name || shortNpub(event.senderPubkey);
   const tsSec = Math.floor(new Date(event.createdAt).getTime() / 1000);
+  const isRead = Date.parse(event.createdAt) <= inboxLastReadAt;
   const typeLabel: Record<InboxEvent['type'], string> = {
     mention: '@ Mentioned you',
     reply: '↩ Replied to you',
@@ -3155,7 +3152,7 @@ function InboxCard({ event, onJump }: { event: InboxEvent; onJump: () => void })
   return (
     <button
       className={`mention-card ${event.type === 'mention' ? 'urgent' : ''}`}
-      style={!event.read ? undefined : { opacity: 0.65 }}
+      style={isRead ? { opacity: 0.65 } : undefined}
       onClick={onJump}
     >
       <div className="mc-context">
@@ -4188,7 +4185,6 @@ export default function MobileShell() {
   const myPubkey = useMyPubkey();
   const meta = useUserMetadata(myPubkey);
   const groups = useGroups();
-  const dms = useDirectMessages();
   const myFollows = useMyFollows();
 
   const [nav, setNav] = useState<NavState>(initialNav);
@@ -4567,16 +4563,16 @@ export default function MobileShell() {
       useChatStore.setState({ activeChannelId: null });
       pushNav((n) => ({ ...n, screen: 'forum', groupId, forumGroupId: groupId }));
     } else {
+      // Pure navigation. The cursor is advanced by `useAutoMarkRead` once the
+      // user is actually watching the channel (visible + focused + active).
       useChatStore.setState({ activeChannelId: groupId, isNearBottom: true });
-      const ns = useNotificationStore.getState();
-      ns.clearChannelUnread(groupId);
-      ns.clearChannelMention(groupId);
       pushNav((n) => ({ ...n, screen: 'channel', groupId }));
     }
   }, [pushNav]);
   const selectPeer = useCallback((peer: string) => {
+    // Pure navigation. The cursor is advanced by `useAutoMarkRead` once the
+    // DM thread is open, focused, and visible.
     useDMStore.setState({ activeDMPubkey: peer });
-    useNotificationStore.getState().clearDMUnread(peer);
     pushNav((n) => ({ ...n, screen: 'dm-thread', dmPeer: peer }));
   }, [pushNav]);
   const openProfile = useCallback((pubkey: string) => {
@@ -4638,22 +4634,11 @@ export default function MobileShell() {
   }, [nav.groupId]);
 
   // ── DM and inbox badges ─────────────────────────────────────────────
-  // Live unread DM total comes from the notification store, fed by the
-  // bridge's DM ingestion path. Falls back to the 24h heuristic only when
-  // the store is empty (e.g. before the first live DM arrives this session).
-  const storeDmUnreads = useNotificationStore((s) => s.dmUnreads);
-  const inboxBadge = useNotificationStore((s) => s.unreadInboxCount);
-  const dmBadge = useMemo(() => {
-    const fromStore = Object.values(storeDmUnreads).reduce((sum, n) => sum + n, 0);
-    if (fromStore > 0) return fromStore;
-    let n = 0;
-    for (const msgs of Object.values(dms)) {
-      const sorted = [...msgs].sort((a, b) => b.createdAt - a.createdAt);
-      const latest = sorted[0];
-      if (latest && !latest.outgoing && Date.now() / 1000 - latest.createdAt < 86400) n++;
-    }
-    return n;
-  }, [dms, storeDmUnreads]);
+  // Both totals are derived from the persisted read-state cursor; they
+  // survive reloads and converge across tabs via Zustand persist's
+  // `storage`-event sync.
+  const dmBadge = useTotalDMUnread();
+  const inboxBadge = useInboxUnreadCount();
 
   // ── render ──────────────────────────────────────────────────────────
 

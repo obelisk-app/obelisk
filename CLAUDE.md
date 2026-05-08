@@ -194,6 +194,24 @@ await bridge.sendMessage(groupId, 'hello');
 await bridge.editUserMetadata({ name: 'Alice', displayName: 'Alice' });
 ```
 
+### LocalStorage conventions
+
+| Data type | Key pattern | Mechanism |
+|---|---|---|
+| Per-user state (cursors, prefs, follows) | `obelisk-{store}:{myPubkey}` | Zustand `persist` + `ensureXxxForAccount()` helper |
+| Relay-derived metadata (lists, layouts, branding) | `obelisk-cache-v3/{relay}/{kind}/{id}` | `bridgeCache` (`src/lib/nostr-bridge/cache.ts`) |
+| UI-only state, non-personal | `obelisk-dex/{namespace}/{id}` | direct `localStorage` |
+| Per-user UI flags | `obelisk-dex/{flag}/{myPubkey}` | direct `localStorage` |
+
+When adding new persisted per-user state, follow the read-state store as the
+canonical example: define a Zustand `persist` store keyed by
+`obelisk-{name}` with an `ensureXxxForAccount(pubkey)` helper that swaps the
+key on login. Wire the helper into the `useEffect` in `AppGate.tsx`'s
+`ReadStateRoot` alongside the existing ones. See
+[docs/read-state.md](docs/read-state.md) for the full pattern, and
+[docs/auth-and-data-loading.md §8](docs/auth-and-data-loading.md) for where
+this sits relative to the bridgeCache.
+
 ## Testing
 
 ### Stack
@@ -226,6 +244,7 @@ await bridge.editUserMetadata({ name: 'Alice', displayName: 'Alice' });
 
 ## Resources
 - [docs/auth-and-data-loading.md](docs/auth-and-data-loading.md) — login flow, NIP-42 AUTH, watchdog, bridgeCache
+- [docs/read-state.md](docs/read-state.md) — unified unread/notifications system, cursor model, localStorage conventions, multi-device sync future
 - [docs/voice-system.md](docs/voice-system.md) — mesh voice (P2P over Nostr signaling)
 - [docs/sfu-system.md](docs/sfu-system.md) — SFU architecture (mediasoup engine, Nostr-RPC signaling)
 - [obelisk-app/obelisk-sfu](https://github.com/obelisk-app/obelisk-sfu) — SFU server repo (protocol spec, operator guide, deploy)

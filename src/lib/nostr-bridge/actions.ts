@@ -62,8 +62,6 @@ export const nostrActions = {
   loadMoreMessages: async (groupId: string) =>
     (await getBridge()).loadMoreMessages(groupId),
 
-  markGroupAsRead: async (groupId: string) =>
-    (await getBridge()).markGroupAsRead(groupId),
   setActiveGroup: async (groupId: string | null) =>
     (await getBridge()).setActiveGroup(groupId),
   ensureUserMetadata: async (pubkey: string) =>

@@ -166,6 +166,11 @@ export interface NostrBridge {
   subscribeGroups(cb: (groups: ReadonlyArray<JsGroup>) => void): Unsubscribe;
   subscribeGroupMetadataEose(cb: (eose: boolean) => void): Unsubscribe;
   subscribeMessages(groupId: string, cb: (msgs: ReadonlyArray<JsMessage>) => void): Unsubscribe;
+  /** Whole `messagesByGroup` map. Used by total-unread selectors that need to
+   *  iterate every channel without calling `subscribeMessages` per group. */
+  subscribeMessagesByGroup(
+    cb: (byGroup: Readonly<Record<string, ReadonlyArray<JsMessage>>>) => void,
+  ): Unsubscribe;
   subscribeUserMetadata(pubkey: string, cb: (meta: JsUserMetadata | null) => void): Unsubscribe;
   /** Reactions targeting any event in [groupId]. Keyed by target event id. */
   subscribeReactions(
@@ -359,7 +364,6 @@ export interface NostrBridge {
     lud16?: string;
   }): Promise<void>;
   loadMoreMessages(groupId: string): Promise<boolean>;
-  markGroupAsRead(groupId: string): void;
   setActiveGroup(groupId: string | null): void;
   /** Fetch kind:0 metadata for a pubkey on demand (used by chat to resolve names lazily). */
   ensureUserMetadata(pubkey: string): void;

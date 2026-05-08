@@ -30,8 +30,8 @@ import { wotEngine } from '@/lib/wot/engine';
 import { useModerationStore } from '@/store/moderation';
 import { resetAllClientState } from '@/lib/reset';
 import { pushActivity, resolveActivity, failActivity, trackActivity, dismissActivity } from '@/lib/activity-log';
-import { useNotificationStore } from '@/store/notification';
-import { handleIncomingDM, handleIncomingChannelMessage, isUserWatchingDM, isUserWatchingChannel } from '@/lib/read-gates';
+import { useReadStateStore } from '@/store/read-state';
+import { isUserWatchingDM, isUserWatchingChannel } from '@/lib/read-gates';
 import { extractMentionPubkeys } from '@/lib/mentions';
 import type {
   NostrBridge,
@@ -627,13 +627,6 @@ class BridgeImpl implements NostrBridge {
   // Group ids we already have a reaction subscription for.
   private reactionSubscribedGroups = new Set<string>();
   private dmSubscribed = false;
-  // Unix-seconds timestamp captured when the bridge first connects after
-  // login. Notification side-effects (inbox push, unread bumps) only fire
-  // for events with `created_at >= notificationsStartedAt` so historical
-  // backfill from `limit:200` REQs doesn't flood the bell with hundreds
-  // of "new" mentions on every reload. `null` until the first successful
-  // connect; preserved across silent reconnects.
-  private notificationsStartedAt: number | null = null;
   private adminMemberSubscribedGroups = new Set<string>();
   private creatorSubscribedGroups = new Set<string>();
   // Newest `created_at` we've seen for kind-39001 (admins) / kind-39002
@@ -1171,10 +1164,6 @@ class BridgeImpl implements NostrBridge {
       this.bunkerSigner = null;
     }
     this.session = null;
-    // Reset the notification cutoff so the next session re-anchors at its
-    // own login time — otherwise relogging-in would leak the previous
-    // account's "live" window to the new identity.
-    this.notificationsStartedAt = null;
     if (typeof window !== 'undefined') {
       window.localStorage.removeItem(STORAGE_KEY);
       window.localStorage.removeItem(LEGACY_STORAGE_KEY);
@@ -1300,12 +1289,6 @@ class BridgeImpl implements NostrBridge {
       }
       this.connectionState.set('Connected');
       this.reconnectAttempt = 0;
-      // Anchor the notification "live cutoff" on the first successful
-      // connect of this session. Anything older than this is treated as
-      // historical backfill and skips inbox/badge side-effects.
-      if (this.notificationsStartedAt === null) {
-        this.notificationsStartedAt = Math.floor(Date.now() / 1000);
-      }
       resolveActivity(activityId, `${connectedCount}/${this.relays.length} relays`);
     } catch (e: unknown) {
       this.connectionState.set(`Error:${(e as Error).message}`);
@@ -1484,6 +1467,11 @@ class BridgeImpl implements NostrBridge {
     this.subscribeGroupMessages(groupId);
     const adapter: Listener<Record<string, JsMessage[]>> = (byGroup) => cb(byGroup[groupId] ?? []);
     return this.messagesByGroup.subscribe(adapter);
+  }
+  subscribeMessagesByGroup(
+    cb: (byGroup: Readonly<Record<string, ReadonlyArray<JsMessage>>>) => void,
+  ): Unsubscribe {
+    return this.messagesByGroup.subscribe(cb);
   }
   subscribeUserMetadata(pubkey: string, cb: (meta: JsUserMetadata | null) => void): Unsubscribe {
     this.ensureUserMetadata(pubkey);
@@ -1961,11 +1949,6 @@ class BridgeImpl implements NostrBridge {
       if (after > before) added++;
     }
     return added > 0;
-  }
-
-  markGroupAsRead(_groupId: string): void {
-    // No-op in this minimal client. Real impl would persist a per-group
-    // last-read timestamp and recompute unread counts.
   }
 
   setActiveGroup(groupId: string | null): void {
@@ -2777,34 +2760,28 @@ class BridgeImpl implements NostrBridge {
     });
     // Lazy metadata fetch for any author we haven't seen yet.
     this.ensureUserMetadata(ev.pubkey);
-    // Notification side-effects — only after the bridge has anchored its
-    // live cutoff and only for genuinely new live events. Skip own messages
-    // and historical backfill (events older than the cutoff). The desktop
-    // bell + mobile inbox both consume `useNotificationStore.inboxEvents`,
-    // so this single producer feeds both surfaces.
+    // Inbox card for @-mentions. Unread badges are derived in the UI from
+    // `useReadStateStore.groupCursors[groupId]` vs `messages[].createdAt`,
+    // so this path only needs to surface the mention as an inbox event
+    // (the bell / mobile inbox UI). Historical backfill is filtered by the
+    // user's existing inbox cursor — a cached event older than
+    // `inboxLastReadAt` is read by definition.
     if (!isNew) return;
     const me = this.session?.pubKeyHex ?? null;
     if (!me || ev.pubkey === me) return;
-    const startedAt = this.notificationsStartedAt;
-    if (startedAt === null || ev.created_at < startedAt) return;
+    if (isUserWatchingChannel(groupId)) return;
     const mentioned = extractMentionPubkeys(ev.content).includes(me);
-    // Future: resolve replyTo's author to detect "replied to me". For now
-    // we surface a mention as both a mention card and a counter bump; a
-    // reply that happens to mention falls under "mention" too.
-    handleIncomingChannelMessage(
-      { channelId: groupId, authorPubkey: ev.pubkey, content: ev.content },
-      me,
-    );
-    if (mentioned && !isUserWatchingChannel(groupId)) {
-      useNotificationStore.getState().pushInboxEvent({
-        type: 'mention',
-        channelId: groupId,
-        messageId: ev.id,
-        senderPubkey: ev.pubkey,
-        preview: ev.content.slice(0, 280),
-        createdAt: new Date(ev.created_at * 1000).toISOString(),
-      });
-    }
+    if (!mentioned) return;
+    const evMs = ev.created_at * 1000;
+    if (evMs <= useReadStateStore.getState().inboxLastReadAt) return;
+    useReadStateStore.getState().pushInboxEvent({
+      type: 'mention',
+      channelId: groupId,
+      messageId: ev.id,
+      senderPubkey: ev.pubkey,
+      preview: ev.content.slice(0, 280),
+      createdAt: new Date(evMs).toISOString(),
+    });
   }
 
   private ingestReaction(groupId: string, ev: NostrEvent): void {
@@ -2861,22 +2838,19 @@ class BridgeImpl implements NostrBridge {
       };
     });
     this.ensureUserMetadata(counterparty);
-    // Notification side-effects for incoming DMs. Skip own (outgoing) and
-    // historical backfill — see ingestMessage for the same gating rationale.
+    // Inbox card for incoming DMs the user isn't actively watching. Unread
+    // badges are derived from the read-state cursor + bridge `dmsByPeer`, so
+    // we don't bump any counter here — only push a card for the bell/inbox.
     if (!isNew || outgoing) return;
-    const startedAt = this.notificationsStartedAt;
-    if (startedAt === null || ev.created_at < startedAt) return;
-    const watching = isUserWatchingDM(counterparty);
-    const cur = useNotificationStore.getState().dmUnreads[counterparty] ?? 0;
-    handleIncomingDM(counterparty, false, cur);
-    if (!watching) {
-      useNotificationStore.getState().pushInboxEvent({
-        type: 'dm',
-        senderPubkey: counterparty,
-        preview: plaintext.slice(0, 280),
-        createdAt: new Date(ev.created_at * 1000).toISOString(),
-      });
-    }
+    if (isUserWatchingDM(counterparty)) return;
+    const evMs = ev.created_at * 1000;
+    if (evMs <= useReadStateStore.getState().inboxLastReadAt) return;
+    useReadStateStore.getState().pushInboxEvent({
+      type: 'dm',
+      senderPubkey: counterparty,
+      preview: plaintext.slice(0, 280),
+      createdAt: new Date(evMs).toISOString(),
+    });
   }
 
   private async encryptNip04(recipientPubkey: string, content: string): Promise<string> {

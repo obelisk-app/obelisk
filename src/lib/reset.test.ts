@@ -4,8 +4,8 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 vi.mock('@/store/chat', () => ({
   useChatStore: { getState: () => ({ reset: vi.fn() }) },
 }));
-vi.mock('@/store/notification', () => ({
-  useNotificationStore: { getState: () => ({ reset: vi.fn() }) },
+vi.mock('@/store/read-state', () => ({
+  useReadStateStore: { getState: () => ({ reset: vi.fn() }) },
 }));
 vi.mock('@/store/voice', () => ({
   useVoiceStore: { getState: () => ({ leaveVoice: vi.fn() }) },

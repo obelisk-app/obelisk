@@ -14,6 +14,7 @@ import {
   useMyFollows,
   type JsDirectMessage,
 } from '@/lib/nostr-bridge';
+import { useDMUnreadCount } from '@/lib/read-state/selectors';
 import DMComposer from './DMComposer';
 
 type Tab = 'follows' | 'others';
@@ -156,6 +157,7 @@ function DMRow({
   onClick: () => void;
 }) {
   const meta = useUserMetadata(pubkey);
+  const unread = useDMUnreadCount(pubkey);
   const display = meta?.displayName || meta?.name || npubLike(pubkey);
   const preview = last
     ? (last.outgoing ? 'You: ' : '') + last.content.replace(/\s+/g, ' ').slice(0, 60)
@@ -170,10 +172,30 @@ function DMRow({
     >
       <Avatar pubkey={pubkey} size={8} picture={meta?.picture ?? null} />
       <div className="min-w-0 flex-1">
-        <div className="flex items-center justify-between">
-          <span className="truncate text-sm font-medium text-lc-white">{display}</span>
+        <div className="flex items-center justify-between gap-2">
+          <span
+            className={
+              'truncate text-sm ' +
+              (unread > 0 ? 'font-bold text-lc-white' : 'font-medium text-lc-white')
+            }
+          >
+            {display}
+          </span>
+          {unread > 0 && (
+            <span className="shrink-0 rounded-full bg-lc-green px-1.5 py-px text-[10px] font-bold text-lc-black">
+              {unread > 99 ? '99+' : unread}
+            </span>
+          )}
         </div>
-        {preview && <p className="truncate text-xs text-lc-muted">{preview}</p>}
+        {preview && (
+          <p
+            className={
+              'truncate text-xs ' + (unread > 0 ? 'text-lc-white' : 'text-lc-muted')
+            }
+          >
+            {preview}
+          </p>
+        )}
       </div>
     </button>
   );

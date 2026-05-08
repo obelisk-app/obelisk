@@ -1,5 +1,5 @@
 import { useChatStore } from '@/store/chat';
-import { useNotificationStore } from '@/store/notification';
+import { useReadStateStore } from '@/store/read-state';
 import { useVoiceStore } from '@/store/voice';
 import { _resetCacheKeyState } from '@/lib/dm/cache-key';
 import { _resetDMCacheState } from '@/lib/dm/dm-cache';
@@ -9,13 +9,13 @@ import { _resetRelayCache } from '@/lib/dm/relay-list-cache';
 
 // Clears all per-identity client state. Called from `BridgeImpl.logout()`
 // so the next user never sees the previous account's servers, channels,
-// messages, notification counters, or an already-joined voice channel.
+// messages, read cursors, or an already-joined voice channel.
 //
 // Browser-level things that are *not* identity-scoped (e.g. the Notification
 // permission flag) are preserved by the individual store resets.
 export function resetAllClientState(): void {
   useChatStore.getState().reset();
-  useNotificationStore.getState().reset();
+  useReadStateStore.getState().reset();
   useVoiceStore.getState().leaveVoice();
 
   // DM module-level RAM state (KEK in-memory key map, dm-cache ramCache mirror

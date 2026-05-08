@@ -44,10 +44,12 @@ import VoiceRoom from '@/components/voice/VoiceRoom';
 import ForumView from '@/components/chat/ForumView';
 import VoiceStatusBar from '@/components/voice/VoiceStatusBar';
 import { useVoiceStore } from '@/store/voice';
-import { useNotificationStore, type InboxEvent } from '@/store/notification';
+import { useReadStateStore, type InboxEvent } from '@/store/read-state';
+import { useInboxUnreadCount } from '@/lib/read-state/selectors';
 import { subscribeVoiceJump } from '@/lib/voice/jump-to-voice';
 import { useVoiceChatPane } from '@/hooks/chat/useVoiceChatPane';
 import { useChatStore } from '@/store/chat';
+import { useDMStore } from '@/store/dm';
 import type { MemberInfo } from '@/lib/mentions';
 import { useToastStore } from '@/store/toast';
 import EmojiPicker from '@/components/chat/EmojiPicker';
@@ -96,8 +98,18 @@ export default function AppShell() {
   useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
-    if (view.kind === 'group') nostrActions.setActiveGroup(view.groupId);
-    else nostrActions.setActiveGroup(null);
+    if (view.kind === 'group') {
+      nostrActions.setActiveGroup(view.groupId);
+      // Mirror into the chat store so `isUserWatchingChannel` returns true
+      // here too. Without this, desktop's read-state machinery is silently
+      // disabled (the gate stays false → cursor never advances → unread
+      // counts never clear). Mobile sets these in `selectGroup`; desktop
+      // routes through `setView` instead, so we mirror in the same effect.
+      useChatStore.setState({ activeChannelId: view.groupId, isNearBottom: true });
+    } else {
+      nostrActions.setActiveGroup(null);
+      useChatStore.setState({ activeChannelId: null });
+    }
   }, [view]);
 
   // Probe the nostr-wot extension on mount (and on visibility change). Without
@@ -344,10 +356,11 @@ function RelayTopBar({
   const [info, setInfo] = useState<{ name?: string; icon?: string } | null>(null);
   const [iconFailed, setIconFailed] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
-  const inboxEvents = useNotificationStore((s) => s.inboxEvents);
-  const unreadInboxCount = useNotificationStore((s) => s.unreadInboxCount);
-  const markInboxRead = useNotificationStore((s) => s.markInboxRead);
-  const clearInboxEvents = useNotificationStore((s) => s.clearInboxEvents);
+  const inboxEvents = useReadStateStore((s) => s.inboxEvents);
+  const inboxLastReadAt = useReadStateStore((s) => s.inboxLastReadAt);
+  const unreadInboxCount = useInboxUnreadCount();
+  const markInboxRead = useReadStateStore((s) => s.advanceInboxRead);
+  const clearInboxEvents = useReadStateStore((s) => s.clearInboxEvents);
   useEffect(() => {
     let alive = true;
     setIconFailed(false);
@@ -469,13 +482,15 @@ function RelayTopBar({
               </div>
             ) : (
               <ul className="flex flex-col">
-                {inboxEvents.map((e) => (
+                {inboxEvents.map((e) => {
+                  const isRead = Date.parse(e.createdAt) <= inboxLastReadAt;
+                  return (
                   <li key={e.id}>
                     <button
                       onClick={() => handleEventClick(e)}
-                      className={`w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-lc-card/60 transition-colors ${e.read ? '' : 'bg-lc-olive/30'}`}
+                      className={`w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-lc-card/60 transition-colors ${isRead ? '' : 'bg-lc-olive/30'}`}
                     >
-                      <span className={`mt-1 inline-block w-2 h-2 rounded-full shrink-0 ${e.read ? 'bg-transparent' : 'bg-lc-green'}`} />
+                      <span className={`mt-1 inline-block w-2 h-2 rounded-full shrink-0 ${isRead ? 'bg-transparent' : 'bg-lc-green'}`} />
                       <div className="flex-1 min-w-0">
                         <div className="text-xs uppercase tracking-wider text-lc-muted font-mono mb-0.5">
                           {e.type === 'dm' ? 'Direct message' : e.type === 'mention' ? '@ Mention' : e.type === 'reply' ? 'Reply' : e.type === 'everyone' ? '@ Everyone' : 'Message'}
@@ -487,7 +502,8 @@ function RelayTopBar({
                       </div>
                     </button>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             )}
           </div>
@@ -1779,7 +1795,14 @@ function ChatPanel({
     if (!el) return;
     const onScroll = () => {
       const dist = el.scrollHeight - el.scrollTop - el.clientHeight;
-      stickToBottomRef.current = dist < 100;
+      const near = dist < 100;
+      stickToBottomRef.current = near;
+      // Mirror near-bottom into the chat store so `isUserWatchingChannel`
+      // (in `read-gates.ts`) reflects scroll position. Without this, desktop
+      // would always think the user is at the bottom and silently advance
+      // the read cursor while they're scrolled up reading history.
+      const cur = useChatStore.getState().isNearBottom;
+      if (cur !== near) useChatStore.setState({ isNearBottom: near });
       // Top-of-list pagination. Anchor by pre-load scrollHeight so the
       // viewport stays on the same message after the older page is
       // prepended instead of snapping to the new top.
@@ -3551,6 +3574,18 @@ function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string) => voi
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const stickToBottomRef = useRef(true);
+  // Mirror the open peer into the DM store so `isUserWatchingDM` reflects
+  // desktop's "I'm reading this conversation" state. Without this, the
+  // read-state cursor never advances on desktop and unread badges leak in.
+  useEffect(() => {
+    useDMStore.setState({ activeDMPubkey: peer });
+    return () => {
+      // Clear when the panel unmounts (user navigated away from DMs).
+      if (useDMStore.getState().activeDMPubkey === peer) {
+        useDMStore.setState({ activeDMPubkey: null });
+      }
+    };
+  }, [peer]);
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;

@@ -9,6 +9,7 @@ export {
   useGroups,
   useGroupMetadataEose,
   useMessages,
+  useMessagesByGroup,
   useLoadEarlier,
   useUserMetadata,
   useReactions,
