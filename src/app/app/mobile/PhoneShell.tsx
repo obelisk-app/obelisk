@@ -8,6 +8,7 @@
  */
 
 import {
+  Fragment,
   useCallback,
   useEffect,
   useMemo,
@@ -22,6 +23,7 @@ import {
   useIsRehydrating,
   useMyPubkey,
   useGroups,
+  useChildrenByParent,
   useMessages,
   useLoadEarlier,
   useDirectMessages,
@@ -691,6 +693,10 @@ function ChannelRow({
   mentioned,
   active,
   onClick,
+  expandable,
+  expanded,
+  onToggleExpand,
+  indent,
 }: {
   group: JsGroup;
   live: boolean;
@@ -698,6 +704,10 @@ function ChannelRow({
   mentioned?: boolean;
   active?: boolean;
   onClick: () => void;
+  expandable?: boolean;
+  expanded?: boolean;
+  onToggleExpand?: () => void;
+  indent?: boolean;
 }) {
   const name = group.name ?? group.id.slice(0, 8);
   if (group.kind === 'voice' || group.kind === 'voice-sfu') {
@@ -724,7 +734,38 @@ function ChannelRow({
   const cls = ['ch-row'];
   if (active) cls.push('active');
   if (unread && unread > 0) cls.push('unread');
+  if (indent) cls.push('ch-thread');
   if (group.kind === 'forum') {
+    // When the forum has thread children, split into two click zones: the row
+    // body navigates into the forum view (matches desktop), and the chevron
+    // button toggles inline thread expansion (matches the user expectation
+    // that an arrow icon means "expand"). Without children there's nothing
+    // to expand, so we keep the old single-button behaviour.
+    if (expandable && onToggleExpand) {
+      cls.push('ch-row-split');
+      return (
+        <div className={cls.join(' ')}>
+          <button className="ch-row-body" onClick={onClick}>
+            <span className="ch-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M3 5h18M3 12h18M3 19h18" /></svg>
+            </span>
+            <span className="ch-name">{name}</span>
+            {mentioned && <span className="mention-pill">@you</span>}
+            {!mentioned && unread && unread > 0 && <span className="ch-meta">{unread > 99 ? '99+' : unread}</span>}
+          </button>
+          <button
+            className="ch-chevron-btn"
+            onClick={onToggleExpand}
+            aria-label={expanded ? 'Collapse threads' : 'Expand threads'}
+            aria-expanded={!!expanded}
+          >
+            <span className={`ch-chevron ${expanded ? 'expanded' : ''}`} aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 6 15 12 9 18" /></svg>
+            </span>
+          </button>
+        </div>
+      );
+    }
     return (
       <button className={cls.join(' ')} onClick={onClick}>
         <span className="ch-icon">
@@ -746,6 +787,31 @@ function ChannelRow({
       {mentioned && <span className="mention-pill">@you</span>}
       {!mentioned && unread && unread > 0 && <span className="ch-meta">{unread > 99 ? '99+' : unread}</span>}
     </button>
+  );
+}
+
+// Renders a forum's thread children only after they have at least one message
+// (mirrors desktop's ForumChildGroupNode — empty/aborted threads stay hidden
+// so the inline expansion doesn't accumulate noise).
+function ForumThreadChildRow({
+  group,
+  active,
+  onClick,
+}: {
+  group: JsGroup;
+  active: boolean;
+  onClick: () => void;
+}) {
+  const messages = useMessages(group.id);
+  if (messages.length === 0) return null;
+  return (
+    <ChannelRow
+      group={group}
+      live={false}
+      active={active}
+      onClick={onClick}
+      indent
+    />
   );
 }
 
@@ -842,6 +908,33 @@ function ServerScreen({
   const channelMentions = useNotificationStore((s) => s.channelMentions);
   const [addRelayOpen, setAddRelayOpen] = useState(false);
   const [collapsedCats, setCollapsedCats] = useState<Record<string, boolean>>({});
+  // Mirror desktop's per-forum collapsed flag from localStorage so toggles
+  // survive reloads and stay in sync across surfaces (key:
+  // `obelisk-dex/forum-collapsed/<id>` = '1' means collapsed; missing = expanded).
+  const [forumCollapsed, setForumCollapsed] = useState<Record<string, boolean>>(() => {
+    if (typeof window === 'undefined') return {};
+    const out: Record<string, boolean> = {};
+    try {
+      const prefix = 'obelisk-dex/forum-collapsed/';
+      for (let i = 0; i < window.localStorage.length; i++) {
+        const key = window.localStorage.key(i);
+        if (!key || !key.startsWith(prefix)) continue;
+        if (window.localStorage.getItem(key) === '1') out[key.slice(prefix.length)] = true;
+      }
+    } catch {}
+    return out;
+  });
+  const toggleForumCollapsed = useCallback((id: string) => {
+    setForumCollapsed((prev) => {
+      const next = { ...prev, [id]: !prev[id] };
+      if (typeof window !== 'undefined') {
+        const key = `obelisk-dex/forum-collapsed/${id}`;
+        if (next[id]) window.localStorage.setItem(key, '1');
+        else window.localStorage.removeItem(key);
+      }
+      return next;
+    });
+  }, []);
   const channelListRef = useRef<HTMLDivElement>(null);
 
   // NIP-11 name + icon for the active relay header. Mirrors RelayTopBar on
@@ -869,6 +962,7 @@ function ServerScreen({
     () => groups.filter((g) => !g.parent || !groupsById[g.parent]),
     [groups, groupsById],
   );
+  const childrenByParent = useChildrenByParent();
 
   // Build the same author-set the desktop uses to scope shared layout (admins
   // of any visible group + the relay operator from NIP-11).
@@ -886,6 +980,53 @@ function ServerScreen({
     [layout, roots],
   );
   const branding = useRelayBranding(relay || null, relayAuthors);
+
+  // Renders a single channel row, plus — for forum containers with thread
+  // children — the inline thread list when the user has expanded it. Used by
+  // both the categorised and uncategorised lists below.
+  const renderChannel = (g: JsGroup) => {
+    if (g.kind === 'forum') {
+      const childIds = childrenByParent[g.id] ?? [];
+      const expandable = childIds.length > 0;
+      const isExpanded = expandable && !forumCollapsed[g.id];
+      return (
+        <Fragment key={g.id}>
+          <ChannelRow
+            group={g}
+            live={!!calls[g.id]}
+            unread={channelUnreads[g.id]}
+            mentioned={!!channelMentions[g.id]}
+            onClick={() => selectGroup(g.id, g.kind)}
+            expandable={expandable}
+            expanded={isExpanded}
+            onToggleExpand={expandable ? () => toggleForumCollapsed(g.id) : undefined}
+          />
+          {isExpanded && childIds.map((cid) => {
+            const child = groupsById[cid];
+            if (!child) return null;
+            return (
+              <ForumThreadChildRow
+                key={cid}
+                group={child}
+                active={false}
+                onClick={() => selectGroup(child.id, child.kind)}
+              />
+            );
+          })}
+        </Fragment>
+      );
+    }
+    return (
+      <ChannelRow
+        key={g.id}
+        group={g}
+        live={!!calls[g.id]}
+        unread={channelUnreads[g.id]}
+        mentioned={!!channelMentions[g.id]}
+        onClick={() => selectGroup(g.id, g.kind)}
+      />
+    );
+  };
 
   // Active "space" label — prefer the operator-published kind-30078 branding
   // name (matches desktop banner), fall back to NIP-11 doc, then to the URL
@@ -944,9 +1085,7 @@ function ServerScreen({
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 6 15 12 9 18" /></svg>
                 </span>
               </button>
-              {!collapsed && list.map((g) => (
-                <ChannelRow key={g.id} group={g} live={!!calls[g.id]} unread={channelUnreads[g.id]} mentioned={!!channelMentions[g.id]} onClick={() => selectGroup(g.id, g.kind)} />
-              ))}
+              {!collapsed && list.map(renderChannel)}
               {!collapsed && list.length === 0 && (
                 <div className="cat-empty">No channels here yet.</div>
               )}
@@ -969,9 +1108,7 @@ function ServerScreen({
             {!collapsedCats.__other && laidOut.uncategorized
               .map((id) => groupsById[id])
               .filter((g): g is JsGroup => !!g)
-              .map((g) => (
-                <ChannelRow key={g.id} group={g} live={!!calls[g.id]} unread={channelUnreads[g.id]} mentioned={!!channelMentions[g.id]} onClick={() => selectGroup(g.id, g.kind)} />
-              ))}
+              .map(renderChannel)}
           </div>
         )}
         {roots.length === 0 && (

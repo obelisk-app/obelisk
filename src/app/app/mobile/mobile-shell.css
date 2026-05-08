@@ -523,14 +523,69 @@
   margin-left: auto;
   padding: 8px;
   margin-right: -8px;
+  transition: transform 160ms ease;
 }
 .obelisk-mobile .ch-row .ch-chevron svg {
   width: 18px;
   height: 18px;
   display: block;
+  transition: transform 160ms ease;
+}
+.obelisk-mobile .ch-row .ch-chevron.expanded svg {
+  transform: rotate(90deg);
 }
 .obelisk-mobile .ch-row:active .ch-chevron {
   color: var(--accent);
+}
+/* Forum row split into two click zones: body navigates into the forum, the
+   chevron toggles inline thread expansion. The body button is a flex child
+   so the existing .ch-row > .ch-icon / .ch-name / .ch-meta selectors still
+   apply via descendant matching. */
+.obelisk-mobile .ch-row.ch-row-split .ch-row-body {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.obelisk-mobile .ch-row.ch-row-split .ch-chevron-btn {
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  margin-left: auto;
+  padding: 8px;
+  margin-top: -8px;
+  margin-bottom: -8px;
+  margin-right: -8px;
+}
+.obelisk-mobile .ch-row.ch-row-split .ch-chevron-btn .ch-chevron {
+  padding: 0;
+  margin: 0;
+}
+.obelisk-mobile .ch-row.ch-row-split .ch-chevron-btn:active .ch-chevron {
+  color: var(--accent);
+}
+.obelisk-mobile .ch-row.ch-thread {
+  padding-left: 28px;
+}
+.obelisk-mobile .ch-row.ch-thread .ch-icon {
+  color: var(--app-text-mute);
+  font-size: 14px;
+}
+.obelisk-mobile .ch-row.ch-thread .ch-name {
+  font-size: 15px;
 }
 .obelisk-mobile .channel-section-label .add-btn {
   color: var(--app-text-dim);

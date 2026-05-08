@@ -1026,11 +1026,21 @@ function GroupNode({
         {isCollapsible && (
           <button
             onClick={toggleCollapsed}
-            className="shrink-0 px-2 py-1.5 text-base leading-none text-lc-white/70 hover:text-lc-green"
+            className="flex shrink-0 items-center justify-center px-2 py-1.5 text-lc-white/70 hover:text-lc-green"
             aria-label={collapsed ? 'Expand threads' : 'Collapse threads'}
             title={collapsed ? 'Expand threads' : 'Collapse threads'}
           >
-            {collapsed ? '▸' : '▾'}
+            <svg
+              className={`h-3.5 w-3.5 transition-transform duration-150 ${collapsed ? '' : 'rotate-90'}`}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="9 6 15 12 9 18" />
+            </svg>
           </button>
         )}
       </div>
@@ -1104,7 +1114,19 @@ function CategorySection({
         onClick={onToggle}
         className="flex w-full items-center gap-1.5 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-lc-muted hover:text-lc-white"
       >
-        <span className="inline-flex w-4 items-center justify-center text-[12px] leading-none">{collapsed ? '▶' : '▼'}</span>
+        <span className="inline-flex w-4 items-center justify-center">
+          <svg
+            className={`h-3 w-3 transition-transform duration-150 ${collapsed ? '' : 'rotate-90'}`}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="9 6 15 12 9 18" />
+          </svg>
+        </span>
         <span className="truncate">{name}</span>
         <span className="ml-auto text-[10px] font-normal opacity-60">{channelCount}</span>
       </button>
