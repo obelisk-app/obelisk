@@ -119,17 +119,21 @@
   box-sizing: border-box;
 }
 
-/* Button reset wrapped in :where() so its specificity is 0,0,0,1 (just `button`).
- * That way Tailwind utilities (e.g. `bg-lc-green`, `text-lc-black`) on embedded
- * desktop components like <VoiceRoom> still win and the buttons render with
- * their intended colors instead of being reset to transparent. */
-:where(.obelisk-mobile) button {
-  font: inherit;
-  color: inherit;
-  background: transparent;
-  border: none;
-  padding: 0;
-  cursor: pointer;
+/* Button reset for the mobile shell. Wrapped in `@layer base` so Tailwind v4's
+ * `@layer utilities` (where `bg-lc-green`, `text-red-400`, `bg-red-600/20`,
+ * etc. live) wins on embedded desktop components like <VoiceRoom> and
+ * <VoiceStatusBar>. Layer order beats specificity: an unlayered reset would
+ * override every Tailwind utility regardless of how specific the selector is,
+ * which left embedded buttons rendering as transparent + inherit-color. */
+@layer base {
+  :where(.obelisk-mobile) button {
+    font: inherit;
+    color: inherit;
+    background: transparent;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+  }
 }
 
 .obelisk-mobile [role='button'],
@@ -1017,8 +1021,10 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 14px 8px;
-  padding-top: max(12px, env(safe-area-inset-top));
+  /* Match `.chat-header` padding so the voice room aligns with normal channel
+   * headers and doesn't read as a heavier app-bar. */
+  padding: 10px 14px 12px;
+  padding-top: max(10px, env(safe-area-inset-top));
   flex-shrink: 0;
   position: relative;
   z-index: 5;
@@ -1038,22 +1044,41 @@
   gap: 2px;
 }
 .obelisk-mobile .voice-room-title {
+  /* Same scale as `.chat-channel` so the two screens feel like siblings. */
   font-weight: 700;
-  font-size: 16px;
+  font-size: 19px;
   color: var(--app-text);
   letter-spacing: -0.02em;
   display: flex;
   align-items: center;
-  gap: 6px;
-  white-space: nowrap;
+  gap: 8px;
+  min-width: 0;
+}
+.obelisk-mobile .voice-room-name {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .obelisk-mobile .voice-room-mic-glyph {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   color: var(--accent);
   flex-shrink: 0;
+}
+.obelisk-mobile .voice-sfu-pill {
+  flex-shrink: 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: rgba(180, 249, 83, 0.14);
+  color: var(--accent);
+  border: 1px solid rgba(180, 249, 83, 0.28);
+  line-height: 1.2;
 }
 .obelisk-mobile .voice-room-sub {
   font-family: 'JetBrains Mono', monospace;

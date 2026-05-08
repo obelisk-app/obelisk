@@ -40,6 +40,7 @@ import {
 import LoginModal from '../LoginModal';
 import VoiceRoom from '@/components/voice/VoiceRoom';
 import VoiceStatusBar from '@/components/voice/VoiceStatusBar';
+import { subscribeVoiceJump } from '@/lib/voice/jump-to-voice';
 import MessageContent from '@/components/chat/MessageContent';
 import EmojiPicker from '@/components/chat/EmojiPicker';
 import { uploadToBlossom } from '@/lib/blossom';
@@ -1210,11 +1211,15 @@ function VoiceRoomScreen({ groupId, back, openChat }: { groupId: string; back: (
   const group = groups.find((g) => g.id === groupId) ?? null;
   const activeCallByChannel = useActiveCallByChannel();
   const call = activeCallByChannel[groupId] ?? null;
+  const isSfu = group?.kind === 'voice-sfu';
+  // Status only shows once a call exists; the topology (SFU vs P2P) is now
+  // expressed by the inline tag next to the title, so the subtitle stays
+  // empty on the idle "no one's here" view instead of repeating "SFU room".
   const sub =
     call?.status === 'connected' ? 'Live · connected' :
     call?.status === 'starting' ? 'Starting…' :
     call?.status ? call.status :
-    group?.kind === 'voice-sfu' ? 'SFU room' : 'P2P room';
+    null;
 
   return (
     <div className="screen voice-room-screen active" data-screen="voice-room">
@@ -1228,13 +1233,20 @@ function VoiceRoomScreen({ groupId, back, openChat }: { groupId: string; back: (
               <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
               <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
             </svg>
-            {group?.name ?? 'Voice channel'}
+            <span className="voice-room-name">{group?.name ?? 'Voice channel'}</span>
+            {isSfu && <span className="voice-sfu-pill" title="Routed through an SFU">SFU</span>}
           </div>
-          <div className="voice-room-sub">{sub}</div>
+          {sub && <div className="voice-room-sub">{sub}</div>}
         </div>
       </div>
       <div className="voice-room-stage">
-        <VoiceRoom channelId={groupId} chatSlot={null} isChatOpen={false} onToggleChat={openChat} />
+        <VoiceRoom
+          channelId={groupId}
+          channelName={group?.name ?? undefined}
+          chatSlot={null}
+          isChatOpen={false}
+          onToggleChat={openChat}
+        />
       </div>
     </div>
   );
@@ -2269,6 +2281,22 @@ export default function MobileShell() {
     if (screen !== 'dm-thread') useDMStore.setState({ activeDMPubkey: null });
     pushNav((n) => ({ ...n, screen, baseScreen: null, msgContext: null }), dir);
   }, [pushNav]);
+
+  // VoiceStatusBar "jump back to call": the bar lives outside the screens host
+  // and can't reach `pushNav` directly, so it dispatches through the
+  // jump-to-voice pub/sub. Mirror the DesktopShell handler — switch relay
+  // first if the call's home relay differs, then push the voice-room screen.
+  useEffect(() => {
+    return subscribeVoiceJump(async ({ channelId, relayUrl }) => {
+      if (relayUrl && currentRelayUrl && relayUrl !== currentRelayUrl) {
+        try { await nostrActions.switchRelay(relayUrl); }
+        catch (err) { console.warn('[mobile] switchRelay for voice jump failed', err); }
+      }
+      useChatStore.setState({ activeChannelId: null });
+      useDMStore.setState({ activeDMPubkey: null });
+      pushNav((n) => ({ ...n, screen: 'voice-room', groupId: channelId, baseScreen: null, msgContext: null }));
+    });
+  }, [currentRelayUrl, pushNav]);
 
   // ── initial URL parse + history seeding ─────────────────────────────
   useEffect(() => {
