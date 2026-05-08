@@ -9,6 +9,9 @@ import {
   displayTokensToContent,
   shortNpub,
   hasEveryoneMention,
+  relayMentionCandidates,
+  detectMentionQuery,
+  applyMentionToDraft,
   MemberInfo,
 } from './mentions';
 
@@ -275,5 +278,134 @@ describe('filterMembers', () => {
 
   it('is case insensitive', () => {
     expect(filterMembers(members, 'ALICE')).toEqual([members[0]]);
+  });
+});
+
+describe('relayMentionCandidates', () => {
+  it('returns empty when no groups are supplied', () => {
+    expect(relayMentionCandidates([], {}, {}, {})).toEqual([]);
+  });
+
+  it('unions members, admins, and creator of a single group', () => {
+    const result = relayMentionCandidates(
+      ['g1'],
+      { g1: ['a', 'b'] },
+      { g1: ['c'] },
+      { g1: 'd' },
+    );
+    expect(result.sort()).toEqual(['a', 'b', 'c', 'd']);
+  });
+
+  it('dedupes pubkeys that appear in multiple roles', () => {
+    const result = relayMentionCandidates(
+      ['g1'],
+      { g1: ['a', 'b'] },
+      { g1: ['a'] },
+      { g1: 'a' },
+    );
+    expect(result.sort()).toEqual(['a', 'b']);
+  });
+
+  it('unions members across multiple groups, deduped', () => {
+    const result = relayMentionCandidates(
+      ['g1', 'g2'],
+      { g1: ['a', 'b'], g2: ['b', 'c'] },
+      {},
+      {},
+    );
+    expect(result.sort()).toEqual(['a', 'b', 'c']);
+  });
+
+  it('skips groups with no entries in any map', () => {
+    const result = relayMentionCandidates(
+      ['g1', 'gNoData'],
+      { g1: ['a'] },
+      {},
+      {},
+    );
+    expect(result).toEqual(['a']);
+  });
+
+  it('only includes pubkeys from the supplied groupIds', () => {
+    // WoT-hidden groups are filtered out of useGroups() upstream; this
+    // helper must not pull their member rolls back in via the maps.
+    const result = relayMentionCandidates(
+      ['g1'],
+      { g1: ['a'], gHidden: ['x'] },
+      { gHidden: ['y'] },
+      { gHidden: 'z' },
+    );
+    expect(result).toEqual(['a']);
+  });
+});
+
+describe('detectMentionQuery', () => {
+  it('returns null on plain text', () => {
+    expect(detectMentionQuery('hello there', 11)).toBe(null);
+  });
+
+  it('returns the empty string immediately after a bare `@`', () => {
+    expect(detectMentionQuery('hi @', 4)).toBe('');
+  });
+
+  it('captures the partial username being typed', () => {
+    expect(detectMentionQuery('hi @ali', 7)).toBe('ali');
+  });
+
+  it('triggers when @ is the very first character', () => {
+    expect(detectMentionQuery('@bob', 4)).toBe('bob');
+  });
+
+  it('does not trigger inside an email-like token', () => {
+    // `@` here is preceded by a word char (`o`), not whitespace.
+    expect(detectMentionQuery('foo@bar', 7)).toBe(null);
+  });
+
+  it('closes the slot once a non-word character is typed', () => {
+    expect(detectMentionQuery('hi @ali ', 8)).toBe(null);
+    expect(detectMentionQuery('hi @ali!', 8)).toBe(null);
+  });
+
+  it('uses the cursor, not the end of the string', () => {
+    // Cursor is at position 7 ("hi @ali|x"), the trailing `x` is to the
+    // right of the cursor and should not affect the slot detection.
+    expect(detectMentionQuery('hi @alix', 7)).toBe('ali');
+  });
+});
+
+describe('applyMentionToDraft', () => {
+  const pk = 'a'.repeat(64);
+
+  it('replaces an open `@query` slot with a nostr:npub token', () => {
+    const { next, cursor } = applyMentionToDraft('hi @ali', 7, pk);
+    const npub = `nostr:${nip19.npubEncode(pk)} `;
+    expect(next).toBe(`hi ${npub}`);
+    expect(cursor).toBe(`hi ${npub}`.length);
+  });
+
+  it('inserts a token at the cursor when no slot is open, with a leading space', () => {
+    const { next } = applyMentionToDraft('hello', 5, pk);
+    expect(next.startsWith('hello nostr:')).toBe(true);
+  });
+
+  it('does not add a leading space at the start of an empty draft', () => {
+    const { next } = applyMentionToDraft('', 0, pk);
+    expect(next.startsWith('nostr:')).toBe(true);
+  });
+
+  it('does not add a leading space when cursor is right after whitespace', () => {
+    const { next } = applyMentionToDraft('hi ', 3, pk);
+    expect(next).toBe(`hi nostr:${nip19.npubEncode(pk)} `);
+  });
+
+  it('preserves text after the cursor', () => {
+    const { next } = applyMentionToDraft('hi @ali tail', 7, pk);
+    const npub = `nostr:${nip19.npubEncode(pk)} `;
+    expect(next).toBe(`hi ${npub} tail`);
+  });
+
+  it('returned cursor lands right after the inserted token', () => {
+    const { next, cursor } = applyMentionToDraft('hi @ali', 7, pk);
+    expect(next.slice(0, cursor)).toBe(`hi nostr:${nip19.npubEncode(pk)} `);
   });
 });

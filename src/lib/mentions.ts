@@ -265,3 +265,70 @@ export function filterMembers(members: MemberInfo[], query: string): MemberInfo[
     m.pubkey.toLowerCase().startsWith(q)
   );
 }
+
+/**
+ * Build the deduped set of mentionable pubkeys for a relay by unioning the
+ * members, admins, and creator of every supplied group. The mention
+ * autocomplete uses this so `@`-mentions reach anyone on the relay, not just
+ * the current channel's roster — typing `@alice` finds Alice even if she's
+ * only in a sister channel.
+ *
+ * `groupIds` is intentionally explicit (not derived from the maps) so the
+ * caller can pass the WoT-filtered visible groups from `useGroups()`. That
+ * keeps spam-channel rolls out of the autocomplete when WoT is enabled.
+ */
+export function relayMentionCandidates(
+  groupIds: ReadonlyArray<string>,
+  membersByGroup: Readonly<Record<string, ReadonlyArray<string>>>,
+  adminsByGroup: Readonly<Record<string, ReadonlyArray<string>>>,
+  creatorsByGroup: Readonly<Record<string, string>>,
+): string[] {
+  const set = new Set<string>();
+  for (const id of groupIds) {
+    for (const pk of membersByGroup[id] ?? []) set.add(pk);
+    for (const pk of adminsByGroup[id] ?? []) set.add(pk);
+    const creator = creatorsByGroup[id];
+    if (creator) set.add(creator);
+  }
+  return Array.from(set);
+}
+
+/**
+ * Detect an in-progress `@`-mention query at the cursor. Returns the partial
+ * username typed after the most recent `@` (possibly empty), or `null` when
+ * the cursor is not currently sitting in a mention slot.
+ *
+ * Matches `@` at start-of-input or after whitespace so emails/handles inside
+ * words don't trigger the popup. Word characters only — once the user types
+ * anything else, the slot closes.
+ */
+export function detectMentionQuery(value: string, cursor: number): string | null {
+  const before = value.slice(0, cursor);
+  const m = before.match(/(?:^|\s)@(\w*)$/);
+  return m ? m[1] : null;
+}
+
+/**
+ * Replace the in-progress `@query` slot at `cursor` with a `nostr:npub…`
+ * mention token (NIP-19 bech32 form, trailing space) for `pubkey`. If no
+ * slot is open, the token is inserted at the cursor with a leading space
+ * when needed. Returns the new draft text and the cursor position
+ * immediately after the inserted token.
+ */
+export function applyMentionToDraft(
+  draft: string,
+  cursor: number,
+  pubkey: string,
+): { next: string; cursor: number } {
+  const before = draft.slice(0, cursor);
+  const after = draft.slice(cursor);
+  const token = `nostr:${nip19.npubEncode(pubkey)} `;
+  let replaced: string;
+  if (/@(\w*)$/.test(before)) {
+    replaced = before.replace(/@(\w*)$/, () => token);
+  } else {
+    const sep = before.length > 0 && !/\s$/.test(before) ? ' ' : '';
+    replaced = before + sep + token;
+  }
+  return { next: replaced + after, cursor: replaced.length };
+}

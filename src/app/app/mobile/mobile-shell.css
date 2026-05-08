@@ -1177,8 +1177,70 @@
 
 .obelisk-mobile .composer {
   /* Bottom-nav owns the safe-area inset, so the composer sits flush above
-     it with just enough breathing room. */
+     it with just enough breathing room. position:relative anchors the
+     mention popup, which sits absolutely above the composer-inner. */
   padding: 8px 12px;
+  flex-shrink: 0;
+  position: relative;
+}
+.obelisk-mobile .composer-mention-popup {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: calc(100% - 4px);
+  max-height: 220px;
+  overflow-y: auto;
+  background: var(--app-surface);
+  border: 1px solid var(--app-line);
+  border-radius: 12px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  z-index: 30;
+  padding: 4px;
+}
+.obelisk-mobile .composer-mention-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: var(--app-text);
+}
+.obelisk-mobile .composer-mention-row.active,
+.obelisk-mobile .composer-mention-row:active {
+  background: var(--app-bg);
+}
+.obelisk-mobile .composer-mention-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.obelisk-mobile .composer-mention-avatar.fallback {
+  background: var(--app-line);
+  color: var(--app-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 12px;
+}
+.obelisk-mobile .composer-mention-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.obelisk-mobile .composer-mention-key {
+  font-size: 11px;
+  color: var(--app-text-mute);
   flex-shrink: 0;
 }
 .obelisk-mobile .composer-reply {

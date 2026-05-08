@@ -60,7 +60,7 @@ import { parseZapCommand } from '@/lib/wallet/parse-zap-command';
 import MentionAutocomplete from '@/components/chat/MentionAutocomplete';
 import SlashCommandAutocomplete, { SLASH_COMMANDS, type SlashCommand } from '@/components/chat/SlashCommandAutocomplete';
 import SlashCommandScaffold, { scaffoldMentionSlotQuery } from '@/components/chat/SlashCommandScaffold';
-import { filterMembers } from '@/lib/mentions';
+import { filterMembers, relayMentionCandidates } from '@/lib/mentions';
 import { nip19 } from 'nostr-tools';
 import {
   useChannelLayout,
@@ -1857,8 +1857,21 @@ function ChatPanel({
   }, [pendingMessageId, messages, onConsumePendingMessageId]);
 
   // ── @-mention autocomplete ────────────────────────────────────────────
+  // Mentions span the whole relay (every visible group's members + admins +
+  // creator), not just the current channel — typing `@alice` should find
+  // Alice even if she's only in a sister channel. WoT-hidden groups are
+  // already excluded by `useGroups` above, so spam-channel rolls don't
+  // pollute the autocomplete when WoT is on.
   const inputRef = useRef<HTMLInputElement>(null);
   const memberPubkeys = useMembers(groupId);
+  const membersByGroup = useMembersByGroup();
+  const adminsByGroup = useAdminsByGroup();
+  const creatorsByGroup = useGroupCreators();
+  const visibleGroupIds = useMemo(() => groups.map((g) => g.id), [groups]);
+  const mentionCandidatePubkeys = useMemo(
+    () => relayMentionCandidates(visibleGroupIds, membersByGroup, adminsByGroup, creatorsByGroup),
+    [visibleGroupIds, membersByGroup, adminsByGroup, creatorsByGroup],
+  );
   const [metaMap, setMetaMap] = useState<Record<string, JsUserMetadata>>({});
   useEffect(() => {
     let unsub: (() => void) | undefined;
@@ -1869,8 +1882,18 @@ function ChatPanel({
     });
     return () => { unsub?.(); };
   }, []);
-  const memberInfos = useMemo<MemberInfo[]>(() => {
-    return memberPubkeys.map((pk) => {
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionIndex, setMentionIndex] = useState(0);
+  const [slashQuery, setSlashQuery] = useState<string | null>(null);
+  const [slashIndex, setSlashIndex] = useState(0);
+  const [caret, setCaret] = useState(0);
+  const filteredMembers = useMemo(() => {
+    if (mentionQuery === null) return [];
+    // Materialize MemberInfo[] only when the autocomplete is open. On a
+    // busy relay the candidate set can be hundreds of pubkeys, and metaMap
+    // updates on every kind:0 ingest — rebuilding eagerly would churn even
+    // when no mention is in progress.
+    const candidates: MemberInfo[] = mentionCandidatePubkeys.map((pk) => {
       const m = metaMap[pk];
       return {
         pubkey: pk,
@@ -1879,16 +1902,8 @@ function ChatPanel({
         lud16: m?.lud16 ?? undefined,
       };
     });
-  }, [memberPubkeys, metaMap]);
-  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
-  const [mentionIndex, setMentionIndex] = useState(0);
-  const [slashQuery, setSlashQuery] = useState<string | null>(null);
-  const [slashIndex, setSlashIndex] = useState(0);
-  const [caret, setCaret] = useState(0);
-  const filteredMembers = useMemo(
-    () => (mentionQuery === null ? [] : filterMembers(memberInfos, mentionQuery).slice(0, 8)),
-    [memberInfos, mentionQuery],
-  );
+    return filterMembers(candidates, mentionQuery).slice(0, 8);
+  }, [mentionCandidatePubkeys, metaMap, mentionQuery]);
   const slashResults = useMemo<SlashCommand[]>(
     () => slashQuery === null ? [] : SLASH_COMMANDS.filter((c) => c.name.startsWith(slashQuery.toLowerCase())),
     [slashQuery],

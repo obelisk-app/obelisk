@@ -32,6 +32,8 @@ import {
   useAdmins,
   useAdminsByGroup,
   useMembers,
+  useMembersByGroup,
+  useGroupCreators,
   useMyFollows,
   useReactions,
   useConfiguredRelays,
@@ -40,9 +42,12 @@ import {
   useConnectionState,
   useGroupMetadataEose,
   useActiveCallByChannel,
+  getBridge,
+  getBridgeImpl,
   type JsGroup,
   type JsMessage,
   type JsDirectMessage,
+  type JsUserMetadata,
 } from '@/lib/nostr-bridge';
 import LoginModal from '../LoginModal';
 import VoiceRoom from '@/components/voice/VoiceRoom';
@@ -69,6 +74,13 @@ import {
 import BlossomImageInput from '@/components/BlossomImageInput';
 import RelayAdminPanel from '@/components/admin/RelayAdminPanel';
 import { nip19 } from 'nostr-tools';
+import {
+  applyMentionToDraft,
+  detectMentionQuery,
+  filterMembers,
+  relayMentionCandidates,
+  type MemberInfo,
+} from '@/lib/mentions';
 import { useReadStateStore, type InboxEvent } from '@/store/read-state';
 import {
   useChannelUnreadCount,
@@ -2451,6 +2463,51 @@ function ReplyAuthorName({ pubkey }: { pubkey: string }) {
   return <span className="composer-reply-author">{name}</span>;
 }
 
+/**
+ * Mention popover anchored above the mobile composer. Mirrors the desktop
+ * `MentionAutocomplete` shape but uses mobile CSS variables and tap-friendly
+ * row sizing. Keeps focus on the input across tap (preventDefault on
+ * mousedown) so the soft keyboard doesn't dismiss mid-selection.
+ */
+export function MobileMentionAutocomplete({
+  members,
+  selectedIndex,
+  onSelect,
+  onHover,
+}: {
+  members: MemberInfo[];
+  selectedIndex: number;
+  onSelect: (m: MemberInfo) => void;
+  onHover: (i: number) => void;
+}) {
+  if (members.length === 0) return null;
+  return (
+    <div className="composer-mention-popup" data-testid="mobile-mention-autocomplete">
+      {members.map((m, i) => (
+        <button
+          key={m.pubkey}
+          type="button"
+          className={`composer-mention-row ${i === selectedIndex ? 'active' : ''}`}
+          onMouseDown={(e) => { e.preventDefault(); onSelect(m); }}
+          onMouseEnter={() => onHover(i)}
+          data-testid="mobile-mention-option"
+        >
+          {m.picture ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={m.picture} alt="" className="composer-mention-avatar" />
+          ) : (
+            <div className="composer-mention-avatar fallback">
+              {m.displayName[0]?.toUpperCase() || '?'}
+            </div>
+          )}
+          <span className="composer-mention-name">{m.displayName}</span>
+          <span className="composer-mention-key">{m.pubkey.slice(0, 8)}…</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function ChannelScreen({
   groupId,
   go,
@@ -2488,6 +2545,74 @@ function ChannelScreen({
   const [replyingTo, setReplyingTo] = useState<JsMessage | null>(null);
   const messagesRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const composerInputRef = useRef<HTMLInputElement>(null);
+
+  // ── @-mention autocomplete ───────────────────────────────────────────
+  // Mentions span the whole relay (every visible group's members + admins
+  // + creator), not just the current channel — typing `@alice` should find
+  // Alice even if she's only in a sister channel. Visible groups already
+  // exclude WoT-hidden ones via useGroups() above.
+  const membersByGroup = useMembersByGroup();
+  const adminsByGroup = useAdminsByGroup();
+  const creatorsByGroup = useGroupCreators();
+  const visibleGroupIds = useMemo(() => groups.map((g) => g.id), [groups]);
+  const mentionCandidatePubkeys = useMemo(
+    () => relayMentionCandidates(visibleGroupIds, membersByGroup, adminsByGroup, creatorsByGroup),
+    [visibleGroupIds, membersByGroup, adminsByGroup, creatorsByGroup],
+  );
+  const [metaMap, setMetaMap] = useState<Record<string, JsUserMetadata>>({});
+  useEffect(() => {
+    let unsub: (() => void) | undefined;
+    void getBridge().then(() => {
+      const impl = getBridgeImpl();
+      if (!impl) return;
+      unsub = impl.userMetadata.subscribe((m) => setMetaMap(m));
+    });
+    return () => { unsub?.(); };
+  }, []);
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionIndex, setMentionIndex] = useState(0);
+  const filteredMentionMembers = useMemo<MemberInfo[]>(() => {
+    if (mentionQuery === null) return [];
+    // Materialize MemberInfo[] only when the popup is open. metaMap can
+    // tick on every kind:0 ingest; eager rebuilds would churn for nothing
+    // when no mention is in progress.
+    const candidates: MemberInfo[] = mentionCandidatePubkeys.map((pk) => {
+      const m = metaMap[pk];
+      return {
+        pubkey: pk,
+        displayName: m?.displayName || m?.name || `${pk.slice(0, 8)}…`,
+        picture: m?.picture ?? undefined,
+        lud16: m?.lud16 ?? undefined,
+      };
+    });
+    return filterMembers(candidates, mentionQuery).slice(0, 6);
+  }, [mentionCandidatePubkeys, metaMap, mentionQuery]);
+  // Close the popup whenever we change channels — stale @-state from a
+  // previous channel shouldn't bleed into a fresh composer.
+  useEffect(() => { setMentionQuery(null); }, [groupId]);
+
+  function handleDraftInput(value: string, cursor: number) {
+    setDraft(value);
+    const q = detectMentionQuery(value, cursor);
+    if (q !== mentionQuery) {
+      setMentionQuery(q);
+      if (q !== null) setMentionIndex(0);
+    }
+  }
+  function pickMention(member: MemberInfo) {
+    const ta = composerInputRef.current;
+    const cursor = ta?.selectionStart ?? draft.length;
+    const { next, cursor: nextCursor } = applyMentionToDraft(draft, cursor, member.pubkey);
+    setDraft(next);
+    setMentionQuery(null);
+    requestAnimationFrame(() => {
+      const el = composerInputRef.current;
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(nextCursor, nextCursor);
+    });
+  }
 
   // Reset reply target whenever the user navigates to a different channel.
   useEffect(() => { setReplyingTo(null); }, [groupId]);
@@ -2667,6 +2792,14 @@ function ChannelScreen({
             </button>
           </div>
         )}
+        {mentionQuery !== null && filteredMentionMembers.length > 0 && (
+          <MobileMentionAutocomplete
+            members={filteredMentionMembers}
+            selectedIndex={mentionIndex}
+            onSelect={pickMention}
+            onHover={setMentionIndex}
+          />
+        )}
         <div className="composer-inner">
           <input
             ref={fileInputRef}
@@ -2689,11 +2822,38 @@ function ChannelScreen({
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
           </button>
           <input
+            ref={composerInputRef}
             className="composer-input"
             value={draft}
-            onChange={(e) => setDraft(e.target.value)}
+            onChange={(e) => handleDraftInput(e.target.value, e.target.selectionStart ?? e.target.value.length)}
+            onSelect={(e) => {
+              const t = e.currentTarget;
+              handleDraftInput(t.value, t.selectionStart ?? t.value.length);
+            }}
             placeholder={`Message #${group?.name ?? 'channel'}`}
             onKeyDown={(e) => {
+              if (mentionQuery !== null && filteredMentionMembers.length > 0) {
+                if (e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  setMentionIndex((i) => (i + 1) % filteredMentionMembers.length);
+                  return;
+                }
+                if (e.key === 'ArrowUp') {
+                  e.preventDefault();
+                  setMentionIndex((i) => (i - 1 + filteredMentionMembers.length) % filteredMentionMembers.length);
+                  return;
+                }
+                if (e.key === 'Enter' || e.key === 'Tab') {
+                  e.preventDefault();
+                  pickMention(filteredMentionMembers[mentionIndex]);
+                  return;
+                }
+                if (e.key === 'Escape') {
+                  e.preventDefault();
+                  setMentionQuery(null);
+                  return;
+                }
+              }
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 void send();
