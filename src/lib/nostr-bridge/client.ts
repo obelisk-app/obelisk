@@ -912,6 +912,22 @@ class BridgeImpl implements NostrBridge {
   private async finalizeLogin(): Promise<void> {
     this.persist();
     this.resetPoolForSessionChange();
+    // Pin `this.relays` to the session's relay before connect(). Without this,
+    // any drift between `currentRelayUrl` (what the UI shows as active) and
+    // `this.relays` (what subs subscribe against) would silently put kind
+    // 39000 on the wrong relay — symptom is "I logged in, the rail shows
+    // public.obelisk.ar selected, but no channels arrive until I switch and
+    // come back" because switchRelay is the only path that hard-resets
+    // `this.relays = [url]`.
+    const sessionRelay = this.currentRelayUrl.get();
+    this.relays = [sessionRelay];
+    // Paint cached groups/admins/members for `sessionRelay` instantly. On a
+    // first login (cache empty after cacheClearAll on the prior logout, or
+    // on a fresh device) this is a no-op and the live REQ fills the sidebar.
+    // On re-login within the same browser session it gives the same instant
+    // first paint that switchRelay does, so "fresh login" and "switch to
+    // this relay" produce identical UX.
+    this.seedCacheForRelay(sessionRelay);
     await this.connect();
     this.myPubkey.set(this.session?.pubKeyHex ?? null);
     this.myLoginMethod.set(this.session?.loginMethod ?? null);
@@ -961,6 +977,13 @@ class BridgeImpl implements NostrBridge {
     // 39001/39002 yet, so consumers must wait for fresh evidence before
     // deciding "not a member".
     this.membershipReadyByGroup.set({});
+    // Reset the kind 39000 EOSE flag so the empty-state UI shows
+    // "Channels loading…" while the new pool's REQ is in flight, not the
+    // stale "No channels found" / "Whitelisting required" text computed off
+    // a previous session's EOSE. switchRelay already does this; without it
+    // here, fresh login or background reconnect could paint the wrong
+    // empty-state copy in the gap before the new EOSE arrives.
+    this.groupMetadataEose.set(false);
     this.dmSubscribed = false;
     // Forget any auth/whitelist signal we'd captured against the previous
     // pool — the next REQ on the fresh sockets must re-prove access.
