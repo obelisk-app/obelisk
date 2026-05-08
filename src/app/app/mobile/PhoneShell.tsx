@@ -11,6 +11,7 @@ import {
   Fragment,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -60,6 +61,7 @@ import { useChatStore } from '@/store/chat';
 import { useDMStore } from '@/store/dm';
 import { useNostrPresence, PRESENCE_WINDOW_MS } from '@/hooks/chat/useNostrPresence';
 import { type ScreenName, type NavState, initialNav, urlFor, parseUrl } from './url-state';
+import { decideSnap, decideSwipeNav, neighborsFor } from './swipe-nav';
 // CSS is hoisted to AppGate.tsx so it lands in the route's eagerly-loaded
 // stylesheet, not in this dynamic chunk's late-arriving sidecar.
 
@@ -441,6 +443,162 @@ const SUGGESTED_RELAYS: ReadonlyArray<{ url: string; fallbackName?: string; fall
   { url: 'wss://pyramid.fiatjaf.com', fallbackName: 'the fiatjaf pyramid', fallbackDescription: 'Invite-only NIP-29 relay run by fiatjaf.' },
 ];
 
+function RelayMenuSheet({
+  close,
+  relayUrl,
+  label,
+  iconUrl,
+}: {
+  close: () => void;
+  relayUrl: string;
+  label: string;
+  iconUrl?: string | null;
+}) {
+  const relays = useConfiguredRelays();
+  const [busy, setBusy] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  const flash = (msg: string) => {
+    setToast(msg);
+    window.setTimeout(() => setToast((t) => (t === msg ? null : t)), 1600);
+  };
+
+  const inviteText = `Join ${label} on Obelisk — ${relayUrl}`;
+
+  const invite = async () => {
+    setBusy('invite');
+    try {
+      await navigator.clipboard?.writeText(inviteText);
+      flash('Invite copied');
+    } catch { /* ignore */ }
+    finally { setBusy(null); }
+  };
+
+  const share = async () => {
+    setBusy('share');
+    try {
+      const nav = navigator as Navigator & { share?: (data: ShareData) => Promise<void> };
+      if (typeof nav.share === 'function') {
+        await nav.share({ title: label, text: inviteText, url: relayUrl });
+      } else {
+        await navigator.clipboard?.writeText(inviteText);
+        flash('Copied to clipboard');
+      }
+    } catch { /* user cancelled or unsupported */ }
+    finally { setBusy(null); }
+  };
+
+  const copyUrl = async () => {
+    try {
+      await navigator.clipboard?.writeText(relayUrl);
+      flash('Relay URL copied');
+    } catch { /* ignore */ }
+  };
+
+  const leave = async () => {
+    if (!window.confirm(`Leave ${label}? You can re-add it later.`)) return;
+    setBusy('leave');
+    try {
+      const others = relays.filter((u) => u !== relayUrl);
+      await nostrActions.removeRelay(relayUrl);
+      if (others.length > 0) await nostrActions.switchRelay(others[0]);
+      close();
+    } catch (err) {
+      console.warn('[mobile] leave relay failed', err);
+    } finally { setBusy(null); }
+  };
+
+  const rowStyle: React.CSSProperties = {
+    width: '100%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    padding: '14px 12px',
+    background: 'var(--app-surface)',
+    border: '1px solid var(--app-line)',
+    borderRadius: 12,
+    color: 'var(--app-text)',
+    textAlign: 'left',
+    cursor: 'pointer',
+  };
+
+  const Row = ({
+    icon,
+    rowLabel,
+    hint,
+    onClick,
+    danger,
+  }: {
+    icon: React.ReactNode;
+    rowLabel: string;
+    hint?: string;
+    onClick: () => void;
+    danger?: boolean;
+  }) => (
+    <button
+      onClick={onClick}
+      style={{ ...rowStyle, color: danger ? 'var(--presence-dnd, #ef4444)' : rowStyle.color }}
+    >
+      <span style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <span style={{ display: 'inline-flex' }}>{icon}</span>
+        <span style={{ fontSize: 14, fontWeight: 600 }}>{rowLabel}</span>
+      </span>
+      {hint && (
+        <span style={{ fontSize: 11, color: 'var(--app-text-mute)' }}>{hint}</span>
+      )}
+    </button>
+  );
+
+  return (
+    <div className="sheet-host" data-screen="relay-menu">
+      <div className="sheet-backdrop" onClick={close} />
+      <div className="sheet" style={{ maxHeight: '88%' }}>
+        <div className="sheet-handle" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '4px 4px 14px' }}>
+          <div className="space-icon" style={{ width: 44, height: 44, ...(iconUrl ? {} : avatarStyle(relayUrl)) }}>
+            {iconUrl ? <img src={iconUrl} alt="" /> : shortHost(relayUrl).slice(0, 1).toUpperCase()}
+          </div>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--app-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</div>
+            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: 'var(--app-text-mute)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{shortHost(relayUrl)}</div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <Row
+            icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M19 8v6M22 11h-6" /></svg>}
+            rowLabel="Invite people…"
+            hint={busy === 'invite' ? '…' : 'copy link'}
+            onClick={() => void invite()}
+          />
+          <Row
+            icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4" /></svg>}
+            rowLabel="Share this space"
+            hint={busy === 'share' ? '…' : undefined}
+            onClick={() => void share()}
+          />
+          <Row
+            icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h10" /></svg>}
+            rowLabel="Copy relay URL"
+            onClick={() => void copyUrl()}
+          />
+          <Row
+            icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="m16 17 5-5-5-5" /><path d="M21 12H9" /></svg>}
+            rowLabel="Leave this space"
+            hint={busy === 'leave' ? '…' : undefined}
+            danger
+            onClick={() => void leave()}
+          />
+        </div>
+        {toast && (
+          <div style={{ marginTop: 10, fontSize: 12, color: 'var(--accent, #b4f953)', textAlign: 'center' }}>{toast}</div>
+        )}
+        <button className="btn-cancel" onClick={close}>Close</button>
+      </div>
+    </div>
+  );
+}
+
 function AddRelaySheet({ close }: { close: () => void }) {
   const [tab, setTab] = useState<'suggested' | 'custom'>('suggested');
   const configured = useConfiguredRelays();
@@ -635,14 +793,16 @@ function CustomRelayForm({ onAdded }: { onAdded: () => void }) {
 
 // Relay tile in the spaces strip — fetches NIP-11 icon, falls back to favicon,
 // then to a letter on a gradient. Same pattern the desktop ServerRail uses.
-function RelayTile({
+export function RelayTile({
   url,
   active,
   onClick,
+  onLongPress,
 }: {
   url: string;
   active: boolean;
   onClick: () => void;
+  onLongPress?: (info: { url: string; label: string; iconUrl: string | null }) => void;
 }) {
   const [iconFailed, setIconFailed] = useState(false);
   const [nip11Name, setNip11Name] = useState<string>('');
@@ -669,8 +829,37 @@ function RelayTile({
   const label = branding.name || nip11Name || shortHost(url);
   const showImage = iconUrl && !iconFailed;
 
+  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pressFired = useRef(false);
+  const fireLongPress = () => {
+    pressFired.current = true;
+    onLongPress?.({ url, label, iconUrl: showImage ? iconUrl : null });
+  };
+  const startPress = () => {
+    if (!onLongPress) return;
+    pressFired.current = false;
+    pressTimer.current = setTimeout(fireLongPress, 500);
+  };
+  const cancelPress = () => {
+    if (pressTimer.current) {
+      clearTimeout(pressTimer.current);
+      pressTimer.current = null;
+    }
+  };
+
   return (
-    <button className={`space ${active ? 'active' : ''}`} onClick={onClick}>
+    <button
+      className={`space ${active ? 'active' : ''}`}
+      onClick={() => {
+        if (pressFired.current) { pressFired.current = false; return; }
+        onClick();
+      }}
+      onTouchStart={startPress}
+      onTouchEnd={cancelPress}
+      onTouchMove={cancelPress}
+      onTouchCancel={cancelPress}
+      onContextMenu={onLongPress ? (e) => { e.preventDefault(); fireLongPress(); } : undefined}
+    >
       <div className="space-icon" style={!showImage ? avatarStyle(url) : undefined}>
         {showImage ? (
           <img src={iconUrl} alt="" onError={() => setIconFailed(true)} />
@@ -723,11 +912,6 @@ function ChannelRow({
             {live && <span className="voice-live-dot" />}
             {live && <span className="ch-meta" style={{ marginLeft: 'auto', color: 'var(--accent)' }}>live</span>}
           </div>
-          {live && (
-            <div className="voice-presence">
-              <span className="vp-count">live · {group.kind === 'voice-sfu' ? 'SFU' : 'P2P'}</span>
-            </div>
-          )}
         </div>
       </button>
     );
@@ -908,6 +1092,7 @@ function ServerScreen({
   const channelUnreads = useNotificationStore((s) => s.channelUnreads);
   const channelMentions = useNotificationStore((s) => s.channelMentions);
   const [addRelayOpen, setAddRelayOpen] = useState(false);
+  const [relayMenuFor, setRelayMenuFor] = useState<{ url: string; label: string; iconUrl: string | null } | null>(null);
   const [collapsedCats, setCollapsedCats] = useState<Record<string, boolean>>({});
   // Mirror desktop's per-forum collapsed flag from localStorage so toggles
   // survive reloads and stay in sync across surfaces (key:
@@ -937,6 +1122,30 @@ function ServerScreen({
     });
   }, []);
   const channelListRef = useRef<HTMLDivElement>(null);
+  const stripRef = useRef<HTMLDivElement>(null);
+  const stripHostRef = useRef<HTMLDivElement>(null);
+
+  // Toggle edge-fade affordances on the spaces strip when there's more content
+  // to scroll. The fades are pure CSS pseudo-elements; we only flip the state
+  // classes on the host wrapper.
+  useEffect(() => {
+    const el = stripRef.current;
+    const host = stripHostRef.current;
+    if (!el || !host) return;
+    const update = () => {
+      const max = el.scrollWidth - el.clientWidth;
+      const left = el.scrollLeft;
+      host.classList.toggle('can-scroll-left', left > 1);
+      host.classList.toggle('can-scroll-right', left < max - 1);
+    };
+    update();
+    el.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    return () => {
+      el.removeEventListener('scroll', update);
+      window.removeEventListener('resize', update);
+    };
+  }, [relays.length]);
 
   // NIP-11 name + icon for the active relay header. Mirrors RelayTopBar on
   // desktop — both surfaces show the operator-set name (e.g. "Obelisk Public
@@ -1042,32 +1251,51 @@ function ServerScreen({
           <button className="icon-btn" aria-label="Search this server" onClick={() => go('search')}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
           </button>
-          <button className="icon-btn" aria-label="Server menu" onClick={() => go('settings-profile')}>
+          <button
+            className="icon-btn"
+            aria-label="Space menu"
+            onClick={() => {
+              if (!relay) return;
+              setRelayMenuFor({ url: relay, label: activeSpaceLabel, iconUrl: activeRelayInfo?.icon ?? null });
+            }}
+          >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="5" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="19" r="1.5" /></svg>
           </button>
         </div>
       </div>
 
-      {/* Spaces strip — one tile per configured relay */}
-      <div className="spaces-strip">
-        {relays.map((url) => {
-          const isActive = url.replace(/\/+$/, '').toLowerCase() === relay.replace(/\/+$/, '').toLowerCase();
-          return (
-            <RelayTile
-              key={url}
-              url={url}
-              active={isActive}
-              onClick={() => { if (!isActive) void nostrActions.switchRelay(url); }}
-            />
-          );
-        })}
-        <button className="space" onClick={() => setAddRelayOpen(true)} aria-label="Add relay">
-          <div className="space-icon s-add">+</div>
-          <span className="space-name">&nbsp;</span>
-        </button>
+      {/* Spaces strip — one tile per configured relay. Wrapped in a host div
+       * so edge-fade pseudo-elements can hint at scrollability. */}
+      <div className="spaces-strip-host" ref={stripHostRef}>
+        <div className="spaces-strip" ref={stripRef}>
+          {relays.map((url) => {
+            const isActive = url.replace(/\/+$/, '').toLowerCase() === relay.replace(/\/+$/, '').toLowerCase();
+            return (
+              <RelayTile
+                key={url}
+                url={url}
+                active={isActive}
+                onClick={() => { if (!isActive) void nostrActions.switchRelay(url); }}
+                onLongPress={(info) => setRelayMenuFor(info)}
+              />
+            );
+          })}
+          <button className="space" onClick={() => setAddRelayOpen(true)} aria-label="Add relay">
+            <div className="space-icon s-add">+</div>
+            <span className="space-name">&nbsp;</span>
+          </button>
+        </div>
       </div>
 
       {addRelayOpen && <AddRelaySheet close={() => setAddRelayOpen(false)} />}
+      {relayMenuFor && (
+        <RelayMenuSheet
+          close={() => setRelayMenuFor(null)}
+          relayUrl={relayMenuFor.url}
+          label={relayMenuFor.label}
+          iconUrl={relayMenuFor.iconUrl}
+        />
+      )}
 
       <div className="channel-list" ref={channelListRef}>
         {laidOut.categories.map((cat) => {
@@ -2487,6 +2715,18 @@ export default function MobileShell() {
   // after each animation so a same-screen rerender doesn't replay.
   const [slideDir, setSlideDir] = useState<'forward' | 'back' | null>(null);
 
+  // Drag-carousel state — when the user pans horizontally, mount neighbors
+  // on either side and translate the layer with the finger. `isDragging`
+  // gates neighbor rendering; the layer's transform is set imperatively via
+  // `dragLayerRef` to avoid re-rendering on every touchmove.
+  const [isDragging, setIsDragging] = useState(false);
+  const dragLayerRef = useRef<HTMLDivElement>(null);
+  const screensHostRef = useRef<HTMLDivElement>(null);
+  // After a drag-commit we suppress the next slide-from-x animation so the
+  // newly-mounted screen doesn't double-animate (the drag layer already
+  // animated it into place).
+  const suppressSlideRef = useRef(false);
+
   // First-time-after-login profile setup gate
   useEffect(() => {
     if (!isLoggedIn || !myPubkey) return;
@@ -2651,60 +2891,163 @@ export default function MobileShell() {
     return () => window.removeEventListener('popstate', handler);
   }, [router]);
 
-  // ── horizontal swipe navigation ─────────────────────────────────────
-  // Swipe between bottom-nav tabs (server ↔ dms-list ↔ inbox ↔ settings)
-  // and swipe-right on a sub-screen returns to its parent tab. Touches that
-  // start inside a horizontal scroller (relay strip, filter tabs, message
-  // list, voice stage) are ignored so those keep their own scroll behavior.
-  const NAV_ORDER: ScreenName[] = ['server', 'dms-list', 'inbox', 'settings-profile'];
-  const SUB_TO_NAV: Partial<Record<ScreenName, ScreenName>> = {
-    channel: 'server',
-    'voice-room': 'server',
-    forum: 'server',
-    'member-list': 'server',
-    search: 'server',
-    'dm-thread': 'dms-list',
-    'compose-dm': 'dms-list',
-    'profile-view': 'server',
-    'settings-prefs': 'settings-profile',
+  // ── horizontal swipe navigation (drag-tracking carousel) ────────────
+  // The user pans horizontally; the active screen translates with the finger
+  // and the neighboring screen reveals from the side. On release we either
+  // commit (if dragged ≥ ⅓ viewport, or flicked with enough velocity) or
+  // snap back. Touches that start inside another horizontal scroller (relay
+  // strip, tab strips) are ignored so those keep their own scroll behavior.
+  // Vertical scrollers (`.messages`, voice stage) are NOT excluded — the
+  // direction-detection below commits to 'horizontal' only when |dx| > 1.2×|dy|
+  // so a clean vertical scroll is left alone.
+  type DragInfo = {
+    startX: number;
+    startY: number;
+    startT: number;
+    width: number;
+    ignored: boolean;
+    decided: 'horizontal' | 'vertical' | null;
+    dx: number;
+    velocity: number; // px/ms at last move
+    lastX: number;
+    lastT: number;
   };
-  const swipeStart = useRef<{ x: number; y: number; t: number; ignore: boolean } | null>(null);
+  const dragRef = useRef<DragInfo | null>(null);
+
   const onTouchStart = useCallback((e: React.TouchEvent) => {
-    if (e.touches.length !== 1) { swipeStart.current = null; return; }
+    if (e.touches.length !== 1) { dragRef.current = null; return; }
     const t = e.touches[0];
     const target = e.target as HTMLElement | null;
-    const ignore = !!target?.closest(
-      '.spaces-strip, .dms-tabs, .filter-tabs, .messages, .composer, .emoji-sheet-host, .sheet-host, .voice-room-screen, [data-no-swipe]'
+    const ignored = !!target?.closest(
+      '.spaces-strip, .dms-tabs, .filter-tabs, .cats-strip, .emoji-sheet-host, .sheet-host, [data-no-swipe]'
     );
-    swipeStart.current = { x: t.clientX, y: t.clientY, t: Date.now(), ignore };
+    const width = screensHostRef.current?.clientWidth ?? (typeof window !== 'undefined' ? window.innerWidth : 0);
+    const now = Date.now();
+    dragRef.current = {
+      startX: t.clientX,
+      startY: t.clientY,
+      startT: now,
+      width,
+      ignored,
+      decided: null,
+      dx: 0,
+      velocity: 0,
+      lastX: t.clientX,
+      lastT: now,
+    };
   }, []);
-  const onTouchEnd = useCallback((e: React.TouchEvent) => {
-    const start = swipeStart.current;
-    swipeStart.current = null;
-    if (!start || start.ignore) return;
-    const t = e.changedTouches[0];
-    const dx = t.clientX - start.x;
-    const dy = t.clientY - start.y;
-    const dt = Date.now() - start.t;
-    if (Math.abs(dx) < 70) return;
-    if (Math.abs(dx) < Math.abs(dy) * 1.5) return;
-    if (dt > 600) return;
-    const goingRight = dx > 0;
-    const cur = navRef.current;
-    const navIndex = NAV_ORDER.indexOf(cur.screen);
-    if (navIndex >= 0) {
-      const nextIdx = goingRight ? navIndex - 1 : navIndex + 1;
-      if (nextIdx >= 0 && nextIdx < NAV_ORDER.length) {
-        useChatStore.setState({ activeChannelId: null });
-        useDMStore.setState({ activeDMPubkey: null });
-        pushNav((n) => ({ ...n, screen: NAV_ORDER[nextIdx], baseScreen: null, msgContext: null }), goingRight ? 'back' : 'forward');
+
+  const onTouchMove = useCallback((e: React.TouchEvent) => {
+    const drag = dragRef.current;
+    if (!drag || drag.ignored) return;
+    const t = e.touches[0];
+    const dx = t.clientX - drag.startX;
+    const dy = t.clientY - drag.startY;
+    const now = Date.now();
+    const dtSinceLast = Math.max(1, now - drag.lastT);
+    drag.velocity = (t.clientX - drag.lastX) / dtSinceLast;
+    drag.lastX = t.clientX;
+    drag.lastT = now;
+    drag.dx = dx;
+    if (drag.decided === null) {
+      // Wait for enough movement to disambiguate intent. Then commit to one
+      // axis: horizontal (drag the carousel) or vertical (let the scroller
+      // inside the screen own the gesture).
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      if (Math.abs(dx) > Math.abs(dy) * 1.2) {
+        drag.decided = 'horizontal';
+        setIsDragging(true);
+      } else {
+        drag.decided = 'vertical';
       }
-      return;
     }
-    if (goingRight && SUB_TO_NAV[cur.screen]) {
-      window.history.back();
+    if (drag.decided !== 'horizontal') return;
+    // Rubber-band when there's no neighbor on the side we're pulling from.
+    const neighbors = neighborsFor(navRef.current.screen);
+    let displayDx = dx;
+    if (dx > 0 && !neighbors.left) displayDx = dx * 0.3;
+    else if (dx < 0 && !neighbors.right) displayDx = dx * 0.3;
+    const layer = dragLayerRef.current;
+    if (layer) {
+      layer.style.transition = 'none';
+      layer.style.transform = `translateX(${displayDx}px)`;
+    }
+  }, []);
+
+  const finishDrag = useCallback((dx: number, velocity: number, width: number) => {
+    const goingRight = dx > 0;
+    const action = decideSwipeNav(navRef.current.screen, goingRight);
+    const hasTarget = action.kind === 'top-level' || action.kind === 'history-back';
+    const snap = hasTarget ? decideSnap(dx, velocity, width) : 'revert';
+    const layer = dragLayerRef.current;
+    const TRANSITION = 'transform 240ms cubic-bezier(0.2, 0.85, 0.25, 1)';
+    if (snap === 'commit' && hasTarget) {
+      const targetTx = goingRight ? width : -width;
+      if (layer) {
+        layer.style.transition = TRANSITION;
+        layer.style.transform = `translateX(${targetTx}px)`;
+      }
+      window.setTimeout(() => {
+        suppressSlideRef.current = true;
+        if (action.kind === 'top-level') {
+          useChatStore.setState({ activeChannelId: null });
+          useDMStore.setState({ activeDMPubkey: null });
+          pushNav(
+            (n) => ({ ...n, screen: action.target, baseScreen: null, msgContext: null }),
+            action.dir,
+          );
+        } else if (action.kind === 'history-back') {
+          window.history.back();
+        }
+        setIsDragging(false);
+      }, 240);
+    } else {
+      if (layer) {
+        layer.style.transition = TRANSITION;
+        layer.style.transform = 'translateX(0)';
+      }
+      window.setTimeout(() => {
+        setIsDragging(false);
+      }, 240);
     }
   }, [pushNav]);
+
+  const onTouchEnd = useCallback((_e: React.TouchEvent) => {
+    const drag = dragRef.current;
+    dragRef.current = null;
+    if (!drag || drag.ignored) return;
+    if (drag.decided !== 'horizontal') return;
+    finishDrag(drag.dx, drag.velocity, drag.width);
+  }, [finishDrag]);
+
+  const onTouchCancel = useCallback(() => {
+    const drag = dragRef.current;
+    dragRef.current = null;
+    if (!drag || drag.ignored || drag.decided !== 'horizontal') return;
+    // Treat cancel as revert.
+    finishDrag(0, 0, drag.width);
+  }, [finishDrag]);
+
+  // After isDragging flips back to false, reset the drag-layer transform so
+  // the next render starts at translateX(0). Done in a layout effect so the
+  // browser never paints the transient "screen swapped but layer still
+  // translated" state.
+  useLayoutEffect(() => {
+    if (isDragging) return;
+    const layer = dragLayerRef.current;
+    if (layer) {
+      layer.style.transition = 'none';
+      layer.style.transform = '';
+    }
+    if (suppressSlideRef.current) {
+      // Clear after the post-commit render commits, so a subsequent tap-nav
+      // can still play its slide animation.
+      const id = requestAnimationFrame(() => {
+        suppressSlideRef.current = false;
+      });
+      return () => cancelAnimationFrame(id);
+    }
+  }, [isDragging, nav.screen]);
   const selectGroup = useCallback((groupId: string, kind: JsGroup['kind']) => {
     if (kind === 'voice' || kind === 'voice-sfu') {
       useChatStore.setState({ activeChannelId: null });
@@ -2746,6 +3089,28 @@ export default function MobileShell() {
   const backFromProfile = useCallback(() => {
     if (typeof window !== 'undefined') window.history.back();
   }, []);
+
+  // Renders one of the four top-level tab screens — used to mount the
+  // neighbor screens in the drag carousel slots without duplicating the
+  // big switch in the main body builder. Sub-screen neighbors fall back
+  // to their NAV_ORDER parent (which is always one of these four).
+  const renderTopLevelScreen = useCallback((screen: ScreenName): ReactNode => {
+    switch (screen) {
+      case 'server':
+        return <ServerScreen go={go} selectGroup={selectGroup} />;
+      case 'dms-list':
+        return <DmsListScreen go={go} selectPeer={selectPeer} myFollows={myFollows} />;
+      case 'inbox':
+        return <InboxScreen go={go} selectGroup={selectGroup} selectPeer={selectPeer} />;
+      case 'settings-profile':
+        return <SettingsProfileScreen go={go} />;
+      default:
+        return null;
+    }
+  }, [go, selectGroup, selectPeer, myFollows]);
+
+  const dragNeighbors = useMemo(() => neighborsFor(nav.screen), [nav.screen]);
+
 
   // Listen for reaction emit from msg-actions sheet
   useEffect(() => {
