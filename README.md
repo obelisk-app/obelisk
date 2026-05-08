@@ -34,6 +34,44 @@ A static Next.js app that talks **directly to Nostr relays**. Channels, members,
 - 🛰️ **No backend to trust.** Group state lives on relays you choose. Anyone can run one.
 - 🌐 **Trivially self-hostable.** Static export — deploys to any CDN.
 
+## Screenshots
+
+Full guided tours: [obelisk.ar/desktop](https://obelisk.ar/desktop) · [obelisk.ar/mobile](https://obelisk.ar/mobile).
+
+### Desktop
+
+<p align="center">
+  <img src="public/pictures-for-posts/dekstop-public-general-chat-view-with-member-list.png" alt="Obelisk desktop — public General Chat with server rail, channel list, message stream and live NIP-29 member list" width="90%" />
+</p>
+
+<p align="center"><sub>Public General Chat — server rail, channel list, message stream with reactions, and the live NIP-29 member list. Every message is a signed Nostr event.</sub></p>
+
+<p align="center">
+  <img src="public/pictures-for-posts/desktop-forums-view.png" alt="Obelisk desktop — threaded forum view of plaza-publica with OP, message count and last reply time" width="90%" />
+</p>
+
+<p align="center"><sub>Forum-kind channels become Discord-style threaded boards — topic list, OP and last-reply metadata, same NIP-29 moderation as every other channel.</sub></p>
+
+<p align="center">
+  <img src="public/pictures-for-posts/desktop-large-voice-channel-with-sfu-peer-trasmission-test.png" alt="Obelisk desktop — voice channel in SFU mode with a test peer streaming an SMPTE color-bar pattern" width="90%" />
+</p>
+
+<p align="center"><sub>Voice scales from a P2P mesh to a mediasoup SFU when the relay advertises one. Same UI, same kind-25050 signaling on Nostr — just more peers and screen-share.</sub></p>
+
+### Mobile
+
+<p align="center">
+  <img src="public/pictures-for-posts/mobile-login-modal.png" alt="Obelisk mobile login modal — NIP-46 remote signer, Generate a new key, Import an nsec" width="22%" />
+  &nbsp;
+  <img src="public/pictures-for-posts/mobile-own-profile-view.png" alt="Obelisk mobile profile — banner, avatar, npub, hex pubkey, Edit Nostr Profile and Disconnect" width="22%" />
+  &nbsp;
+  <img src="public/pictures-for-posts/mobile-server-and-channels-view.png" alt="Obelisk mobile — server icons, categorized channels, nested forum threads, live voice indicator" width="22%" />
+  &nbsp;
+  <img src="public/pictures-for-posts/mobile-channel-view-with-sfu-test-peer-trasmission.png" alt="Obelisk mobile — voice channel in SFU mode with a test peer streaming a video pattern" width="22%" />
+</p>
+
+<p align="center"><sub>The three-way Nostr login (NIP-46 / generate / import) · your portable kind-0 Nostr profile · mobile-first server list · voice with SFU.</sub></p>
+
 ## Try it
 
 | | |

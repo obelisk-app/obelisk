@@ -5,9 +5,11 @@ import WotHero from './WotHero';
 import FutureRelaysHero from './FutureRelaysHero';
 import BitcoinZapsHero from './BitcoinZapsHero';
 import AdminCliHero from './AdminCliHero';
+import SwapAnythingHero from './SwapAnythingHero';
 import WotGraphDiagram from './diagrams/WotGraphDiagram';
 import RelayGroupsDiagram from './diagrams/RelayGroupsDiagram';
 import ZapFlowDiagram from './diagrams/ZapFlowDiagram';
+import SwapMatrixDiagram from './diagrams/SwapMatrixDiagram';
 
 export const HERO_REGISTRY: Record<string, ComponentType> = {
   'what-is-obelisk': WhatIsObeliskHero,
@@ -16,12 +18,14 @@ export const HERO_REGISTRY: Record<string, ComponentType> = {
   'future-relays': FutureRelaysHero,
   'bitcoin-zaps': BitcoinZapsHero,
   'admin-cli': AdminCliHero,
+  'swap-anything': SwapAnythingHero,
 };
 
 export const DIAGRAM_REGISTRY: Record<string, ComponentType> = {
   'wot-graph': WotGraphDiagram,
   'relay-groups': RelayGroupsDiagram,
   'zap-flow': ZapFlowDiagram,
+  'swap-matrix': SwapMatrixDiagram,
 };
 
 export function SvgHero({ name }: { name: string }) {
