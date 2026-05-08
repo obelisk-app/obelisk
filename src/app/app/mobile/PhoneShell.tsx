@@ -74,7 +74,7 @@ import { useChatStore } from '@/store/chat';
 import { useDMStore } from '@/store/dm';
 import { useNostrPresence, PRESENCE_WINDOW_MS } from '@/hooks/chat/useNostrPresence';
 import { type ScreenName, type NavState, initialNav, urlFor, parseUrl } from './url-state';
-import { decideSnap, decideSwipeNav, neighborsFor } from './swipe-nav';
+import { decideSnap, decideSwipeNav, neighborsFor, NAV_ORDER } from './swipe-nav';
 import { useKeyboardInset } from './use-keyboard';
 // CSS is hoisted to AppGate.tsx so it lands in the route's eagerly-loaded
 // stylesheet, not in this dynamic chunk's late-arriving sidecar.
@@ -4151,9 +4151,9 @@ export default function MobileShell() {
     if (suppressSlideRef.current) {
       // Clear after the post-commit render commits, so a subsequent tap-nav
       // can still play its slide animation. ALSO null out slideDir so that
-      // any later unrelated re-render (data arriving, store update, etc.)
-      // doesn't re-add the slide-forward/back class to the screen-anim wrapper
-      // and replay the slide as a ghostly reverse motion.
+      // any later unrelated re-render doesn't re-add the slide-forward/back
+      // class to the screen-anim wrapper and replay the slide as a ghostly
+      // reverse motion.
       const id = requestAnimationFrame(() => {
         suppressSlideRef.current = false;
         setSlideDir(null);
@@ -4432,23 +4432,36 @@ export default function MobileShell() {
       <div className="screens-host" ref={screensHostRef}>
         {baseBody}
         <div ref={dragLayerRef} className={`drag-layer ${isDragging ? 'is-dragging' : ''}`}>
-          {/* Neighbors are mounted unconditionally (not gated on `isDragging`)
-           * so their hooks subscribe and skeleton-states resolve before the
-           * user swipes. Without this, every drag-start mounted a fresh
-           * neighbor tree and the user saw a visible "refresh" flash as the
-           * subscriptions hydrated. The slots are positioned offscreen via CSS
-           * (translateX ±100%) so they're invisible until the layer pans. */}
-          {dragNeighbors.left && (
-            <div className="drag-slot drag-prev" key={`prev-${dragNeighbors.left}`} aria-hidden="true">
-              {renderTopLevelScreen(dragNeighbors.left)}
-            </div>
-          )}
-          <div className="drag-slot drag-curr">
-            <div key={nav.screen} className={`screen-anim ${slideClass}`}>{body}</div>
-          </div>
-          {dragNeighbors.right && (
-            <div className="drag-slot drag-next" key={`next-${dragNeighbors.right}`} aria-hidden="true">
-              {renderTopLevelScreen(dragNeighbors.right)}
+          {/* All four top-level screens are persistently mounted with stable
+           * keys per screen name. Their on-screen position is controlled by a
+           * role class (drag-prev / drag-curr / drag-next / drag-hidden), so a
+           * swipe-commit only flips classes — it does NOT remount any screen.
+           * Without this, every commit unmounted the neighbor (key changed)
+           * and remounted the new active screen, which caused titles +
+           * skeleton states to flash on every horizontal nav. */}
+          {NAV_ORDER.map((s) => {
+            const role =
+              s === nav.screen
+                ? 'drag-curr'
+                : s === dragNeighbors.left
+                ? 'drag-prev'
+                : s === dragNeighbors.right
+                ? 'drag-next'
+                : 'drag-hidden';
+            return (
+              <div key={s} className={`drag-slot ${role}`} aria-hidden={role !== 'drag-curr'}>
+                {renderTopLevelScreen(s)}
+              </div>
+            );
+          })}
+          {/* Sub-screens (channel, forum, voice-room, dm-thread, profile-view,
+           * search, settings-prefs, ...) ride on top of the persistent slots
+           * as a single overlay. Different sub-screens use different keys so
+           * navigating between them does remount — that's correct: a forum is
+           * not a channel. */}
+          {!NAV_ORDER.includes(nav.screen) && body && (
+            <div className="drag-slot drag-overlay" key={`sub-${nav.screen}`}>
+              <div className={`screen-anim ${slideClass}`}>{body}</div>
             </div>
           )}
         </div>
