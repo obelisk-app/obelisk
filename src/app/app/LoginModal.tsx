@@ -5,21 +5,21 @@
  * `<LoginWidget>`. Updates to the fork's UI flow into obelisk-dex via
  * the `file:../nostr-wot-sdk/packages/ui` dep.
  *
- * The SDK builds + persists its own `NostrSigner`. Until the bridge has
- * a polymorphic `loginWithSigner()` adapter, we route each method back
- * to the existing bridge entrypoints by pulling the persisted material:
- *   - nip07            → bridge.loginWithNip07(pubkey)
- *   - import / generate → read nsec from `@nostr-wot/ui:nsec` → bridge.loginWithNsec
- *   - nip46            → read pairing from `@nostr-wot/ui:nip46` → bridge.loginWithBunker
+ * The SDK builds its own `NostrSigner` and now hands the bridging
+ * material directly through `onLogin` (`nsec` for generate/import,
+ * `bunkerUri` for nip46). We route each method to the existing bridge
+ * entrypoint without touching the SDK's localStorage:
+ *   - nip07              → bridge.loginWithNip07(pubkey)
+ *   - import / generate  → bridge.loginWithNsec(skHex, pkHex) using args.nsec
+ *   - nip46              → bridge.loginWithBunker(args.bunkerUri)
  *
- * See docs/nostr-wot-sdk-fork.md for the cleaner future migration.
+ * The bridge keeps its own session, so we suppress the SDK's
+ * "Stay signed in" toggle to avoid two competing persistence layers.
  */
 
 import {
   LoginModal as SdkLoginModal,
   NostrSessionProvider,
-  SIGNER_STORAGE_KEY_NSEC,
-  readPersistedNip46,
   type LoginMethodId,
 } from '@nostr-wot/ui';
 import { nip19, getPublicKey } from 'nostr-tools';
@@ -68,7 +68,21 @@ function nsecToHex(nsec: string): { skHex: string; pkHex: string } {
   return { skHex, pkHex };
 }
 
-async function routeToBridge(method: LoginMethodId, pubkey: string): Promise<void> {
+function nsecToSkHex(nsec: string): string {
+  const decoded = nip19.decode(nsec);
+  if (decoded.type !== 'nsec') throw new Error('Invalid nsec');
+  const sk = decoded.data as Uint8Array;
+  return Array.from(sk).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function routeToBridge(args: {
+  method: LoginMethodId;
+  pubkey: string;
+  nsec?: string;
+  bunkerUri?: string;
+  clientNsec?: string;
+}): Promise<void> {
+  const { method, pubkey, nsec, bunkerUri, clientNsec } = args;
   switch (method) {
     case 'nip07':
       await nostrActions.loginWithNip07(pubkey);
@@ -76,17 +90,20 @@ async function routeToBridge(method: LoginMethodId, pubkey: string): Promise<voi
 
     case 'import':
     case 'generate': {
-      const nsec = window.localStorage.getItem(SIGNER_STORAGE_KEY_NSEC);
-      if (!nsec) throw new Error('SDK did not persist an nsec to storage');
+      if (!nsec) throw new Error('SDK did not provide an nsec for the bridge');
       const { skHex, pkHex } = nsecToHex(nsec);
       await nostrActions.loginWithNsec(skHex, pkHex);
       return;
     }
 
     case 'nip46': {
-      const record = await readPersistedNip46();
-      if (!record?.uri) throw new Error('SDK did not persist a NIP-46 URI');
-      await nostrActions.loginWithBunker(record.uri);
+      if (!bunkerUri) throw new Error('SDK did not provide a bunker URI');
+      // The SDK has already paired the remote signer with `clientNsec`.
+      // We must reuse that client identity — a fresh key would be
+      // rejected by the signer ("no secret") since it never authorized it.
+      await nostrActions.loginWithBunker(bunkerUri, {
+        ...(clientNsec ? { clientSecretHex: nsecToSkHex(clientNsec) } : {}),
+      });
       return;
     }
   }
@@ -119,6 +136,7 @@ export default function LoginModal({
         title={title}
         subtitle={subtitle}
         flatLayout
+        showRememberToggle={false}
         methods={methods}
         methodIcons={{
           nip07: <LockIcon />,
@@ -126,8 +144,14 @@ export default function LoginModal({
           generate: <SparkleIcon />,
           import: <KeyIcon />,
         }}
-        onLogin={async ({ pubkey, method }) => {
-          await routeToBridge(method, pubkey);
+        onLogin={async ({ pubkey, method, nsec, bunkerUri, clientNsec }) => {
+          await routeToBridge({
+            method,
+            pubkey,
+            ...(nsec ? { nsec } : {}),
+            ...(bunkerUri ? { bunkerUri } : {}),
+            ...(clientNsec ? { clientNsec } : {}),
+          });
           onSuccess?.();
         }}
       />

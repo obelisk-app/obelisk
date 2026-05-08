@@ -120,10 +120,12 @@ npm run build -w @nostr-wot/ui      # rebuild only what changed
 For tight inner-loop work, do iteration in the playground (instant HMR,
 no rebuild), then rebuild only when ready to wire into the chat shell.
 
-> **Status:** obelisk-dex's existing login (`src/app/app/LoginModal.tsx`)
-> has **not** been migrated to `@nostr-wot/ui` yet. The deps are wired so
-> the SDK is *available*; the cutover is its own task — see
-> [Migration paths](#migration-paths) below.
+> **Status (2026-05-07):** the cutover has shipped.
+> `src/app/app/LoginModal.tsx` is a thin wrapper around the SDK's
+> `<LoginModal>`. The bridge (`src/lib/nostr-bridge/client.ts`) still
+> owns the session — the SDK constructs the signer, hands the bridging
+> material to the host via `onLogin`, and the host adapts each method
+> to the existing bridge entrypoints.
 
 ## Consuming the fork from obelisk-classic (or any sibling)
 
@@ -146,6 +148,72 @@ locally, the alternatives are:
 2. **Publish under your own scope** (e.g. `@fabricio333/ui`) — most
    portable, requires npm publish access.
 
+## Fork-only API the cutover depends on
+
+The published `@nostr-wot/ui` on npm passes `{ signer, pubkey, method }`
+to `onLogin`. Hosts that bridge to a separate session layer (like
+obelisk's `NostrBridge`) need *more* than that — `PrivateKeySigner` keeps
+its secret key private (`#sk`), so we cannot pull the nsec back out for
+`bridge.loginWithNsec(skHex, pkHex)`, and reconstructing a usable
+NIP-46 connection requires the same client identity the SDK paired
+with.
+
+This fork extends `onLogin` with three optional fields, set per-method:
+
+```ts
+onLogin?: (args: {
+  signer: NostrSigner;
+  pubkey: string;
+  method: LoginMethodId;
+  // Fork-only additions:
+  nsec?: string;        // generate / import — the freshly minted / pasted nsec
+  bunkerUri?: string;   // nip46 — `bunker://<pk>?relay=…`, reconstructed for QR flow
+  clientNsec?: string;  // nip46 — the SDK's local client identity. MUST be reused
+                        //         by hosts that re-attach via their own
+                        //         BunkerSigner — a fresh client key is rejected
+                        //         by the remote signer with "no secret".
+}) => Promise<void> | void;
+```
+
+The fork also auto-skips the picker view when `methods.length === 1`
+(no point re-rendering a one-button picker the host already drove) and
+exposes `showRememberToggle` so hosts with their own session layer can
+suppress the SDK's localStorage-based toggle.
+
+These additions live in:
+
+- `packages/ui/src/login/LoginWidget.tsx` — `onLogin` typing, picker auto-skip, `showRememberToggle` plumbing
+- `packages/ui/src/login/methods/Nip46Method.tsx` — emits `bunkerUri` + `clientNsec` (both paste and QR)
+- `packages/ui/src/login/methods/GenerateMethod.tsx` — emits `nsec`, supports hidden back button + toggle
+- `packages/ui/src/login/methods/ImportMethod.tsx` — same as Generate
+
+Branch where this lives: `examples/login-playground` on
+`Fabricio333/nostr-wot-sdk`. When this lands upstream, drop
+`file:../nostr-wot-sdk/packages/*` for the published versions and
+delete this section.
+
+## Bridge-side adaptation (`src/lib/nostr-bridge/client.ts`)
+
+`bridge.loginWithBunker(bunkerUrl, options)` accepts an optional
+`clientSecretHex` so the host can hand it the SDK's pre-paired
+identity:
+
+```ts
+await nostrActions.loginWithBunker(bunkerUri, {
+  clientSecretHex: nsecToSkHex(clientNsec),
+});
+```
+
+Without that, the bridge's fresh `generateSecretKey()` produces a
+client pubkey the remote signer never authorized → `connect` request
+rejected ("no secret"). The bridge persists `bunkerLocalSecretHex`
+either way, so silent rehydrate on reload still works.
+
+`src/app/app/LoginModal.tsx` wires this together: it pulls
+`{ nsec, bunkerUri, clientNsec }` out of `onLogin`, decodes
+nsec → hex via `nostr-tools/nip19`, and routes to the corresponding
+bridge entrypoint.
+
 ## Migration paths (for obelisk-dex / obelisk-classic)
 
 The bridge (`src/lib/nostr-bridge/client.ts`) owns auth in obelisk-dex —
@@ -160,37 +228,18 @@ not React context. Three reasonable cutover strategies:
 3. **No migration yet.** Iterate in the playground, open the upstream
    PR when ready, come back to obelisk later.
 
-## Migration tracking — obelisk-dex login modal
+## Migration history — obelisk-dex login modal
 
-**Decision (2026-05-04):** migrate `src/app/app/LoginModal.tsx` to consume
-the fork's `@nostr-wot/ui` `<LoginButton>` / `<LoginWidget>` so updates
-to `Fabricio333/nostr-wot-sdk` flow into obelisk-dex automatically.
+**Decided 2026-05-04, shipped 2026-05-07.** `src/app/app/LoginModal.tsx`
+now wraps the SDK's `<LoginModal>` and forwards `onLogin` extras to the
+bridge (see "Fork-only API" above). The bridge stays authoritative for
+session state — the SDK only owns the login UI and signer construction.
 
 **Distribution model while pre-release:** `file:../nostr-wot-sdk/packages/*`
-deps (npm 9 symlinks). Rebuild SDK → consumer picks it up on next request.
-No `npm install` between iterations. Switch to `@nostr-wot/*` from npm
-once changes land in `nostr-wot/nostr-wot-sdk` and a version is published.
-
-### Pre-conditions before cutover (do these first)
-
-- [ ] Clone fork at `../nostr-wot-sdk` (sibling to `obelisk-dex/`)
-- [ ] Add `file:` deps for `@nostr-wot/{data,signers,ui}` to `package.json`
-- [ ] Add `transpilePackages: ['@nostr-wot/ui', '@nostr-wot/signers', '@nostr-wot/data']` to `next.config.ts` if the fork ships TS sources rather than built `dist/`
-- [ ] Confirm the fork's `LoginWidget` `onLogin` callback gives us `(pubkey, signer)` shaped to feed `bridge.loginWith*`
-- [ ] Add `bridge.loginWithSigner(signer)` adapter so any `NostrSigner` from the SDK can drive `finalizeLogin()` (persist → resetPool → connect → flip `isLoggedIn`)
-
-### Cutover plan
-
-1. Replace `src/app/app/LoginModal.tsx` body with a thin wrapper around `<LoginWidget>` (keep La Crypta classes via the SDK's `classNames` prop if available, else fork the styling under `lc-*`)
-2. Forward `onLogin` → `bridge.loginWithSigner(signer)`
-3. Delete the per-method state in the legacy modal — the SDK owns it
-4. Update tests: `src/app/app/LoginModal.test.tsx` and any login-race tests to drive the SDK widget
-5. Verify all three paths (NIP-07, nsec, bunker QR + paste) end with `isLoggedIn=true` and global REQs open
-
-### Out of scope for now
-
-- Publishing to npm — wait for upstream merge in `nostr-wot/nostr-wot-sdk`
-- Replacing the bridge with `<NostrSessionProvider>` — bridge stays authoritative; SDK only owns the login UI + signer construction
+deps (npm 9 symlinks). Rebuild SDK → consumer picks it up on next
+request. No `npm install` between iterations. Switch to `@nostr-wot/*`
+from npm once the changes on `Fabricio333/nostr-wot-sdk` land upstream
+and a version is published.
 
 ### Sibling project (`../obelisk`)
 

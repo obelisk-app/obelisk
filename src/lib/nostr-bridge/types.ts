@@ -107,7 +107,10 @@ export interface NostrBridge {
 
   loginWithNsec(privKeyHex: string, pubKeyHex: string): Promise<void>;
   loginWithNip07(pubkeyHex: string): Promise<void>;
-  loginWithBunker(bunkerUrl: string, options?: { onAuthUrl?: (url: string) => void }): Promise<string>;
+  loginWithBunker(
+    bunkerUrl: string,
+    options?: { onAuthUrl?: (url: string) => void; clientSecretHex?: string },
+  ): Promise<string>;
   /**
    * NIP-46 NostrConnect (QR) flow. Returns a `nostrconnect://` URI to render
    * as a QR code; `waitForConnection()` resolves with the user's pubkey hex

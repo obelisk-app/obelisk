@@ -967,10 +967,20 @@ class BridgeImpl implements NostrBridge {
    * The local client secret is generated fresh per login and persisted in
    * localStorage so the signer can be rehydrated on page reload.
    */
-  async loginWithBunker(bunkerUrl: string, options?: { onAuthUrl?: (url: string) => void }): Promise<string> {
+  async loginWithBunker(
+    bunkerUrl: string,
+    options?: { onAuthUrl?: (url: string) => void; clientSecretHex?: string },
+  ): Promise<string> {
     const bp = await parseBunkerInput(bunkerUrl);
     if (!bp) throw new Error('Invalid bunker URL');
-    const localSecret = generateSecretKey();
+    // When a host pre-paired the remote signer (e.g. the @nostr-wot/ui
+    // QR / paste flow), it must hand us the SAME client secret it paired
+    // with — otherwise the bunker rejects our connect request because
+    // this client pubkey was never authorized. Falling back to a fresh
+    // key is correct when we *are* the pairing party.
+    const localSecret = options?.clientSecretHex
+      ? hexToBytes(options.clientSecretHex)
+      : generateSecretKey();
     this.bunkerOnAuth = options?.onAuthUrl ?? null;
     const signer = BunkerSigner.fromBunker(localSecret, bp, {
       onauth: (url) => {

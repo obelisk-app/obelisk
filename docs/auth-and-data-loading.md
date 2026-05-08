@@ -61,9 +61,13 @@ page-reload rehydration path in `initialize()` route through the private
 Order matters. Step 4 is last so `useIsLoggedIn() === true` always implies
 "the relay handshake completed and the global REQs (group metadata,
 incoming DMs, contact list, own kind:0) are open." If `connect()` throws
-(no relays reachable) the gate stays closed and the LoginModal's
-`Connecting…` spinner remains visible — the existing try/catch in
-`LoginModal.handleLogin` surfaces the error to the user.
+(no relays reachable) the gate stays closed and the SDK's `<LoginWidget>`
+keeps its spinner + inline error visible — the throw propagates up out
+of the host's `onLogin → routeToBridge → bridge.login*`, the widget's
+`handleAttached` catches it and renders the message in the `nui-error`
+slot. See [docs/nostr-wot-sdk-fork.md](nostr-wot-sdk-fork.md) for how
+the fork's `onLogin` extras (`nsec`, `bunkerUri`, `clientNsec`) feed
+each bridge entrypoint.
 
 For NIP-46 specifically, the bunker signer's own handshake
 (`BunkerSigner.connect()`) runs **before** `finalizeLogin()` — so by the
@@ -215,8 +219,8 @@ For each login method, **clear localStorage** then:
 4. **NostrConnect QR** — scan with Amber/nsec.app → connect → first
    publish (e.g. send a message) succeeds without retry.
 5. **Slow relay** — DevTools → Network → "Slow 3G" — repeat (1)–(3). The
-   LoginModal `Connecting…` spinner should remain visible until the relay
-   handshake completes; no empty-sidebar flash.
+   SDK's `<LoginWidget>` "Signing in…" spinner should remain visible until
+   the relay handshake completes; no empty-sidebar flash.
 6. **Network tab during page load** — zero requests to `/api/auth/*`,
    `/api/members/*`, `/api/forum/*`, `/api/invoices/*`. Confirms the
    legacy backend purge.
