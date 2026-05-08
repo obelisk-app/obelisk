@@ -405,10 +405,15 @@
   box-shadow: 0 0 0 3px rgba(180, 249, 83, 0.12), 0 0 24px rgba(180, 249, 83, 0.18);
 }
 .obelisk-mobile .space-icon.s-add {
-  background: transparent;
-  border: 1px dashed var(--app-line);
-  color: var(--app-text-mute);
-  font-size: 24px;
+  background: var(--app-surface);
+  border: 1.5px dashed var(--accent);
+  color: var(--accent);
+  font-size: 28px;
+  font-weight: 500;
+  line-height: 1;
+}
+.obelisk-mobile .space:active .space-icon.s-add {
+  background: var(--app-accent-bg);
 }
 .obelisk-mobile .space-name {
   font-size: 12.5px;
@@ -485,8 +490,43 @@
   color: var(--app-text-dim);
 }
 .obelisk-mobile .cat-caret {
-  font-size: 14px;
-  color: var(--app-text-mute);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--app-text);
+  padding: 8px;
+  margin: -8px;
+  transition: transform 160ms ease;
+}
+.obelisk-mobile .cat-caret svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+  transition: transform 160ms ease;
+}
+.obelisk-mobile .cat-caret.expanded svg {
+  transform: rotate(90deg);
+}
+.obelisk-mobile .channel-section-label.collapsible:active .cat-caret {
+  color: var(--accent);
+}
+.obelisk-mobile .ch-row .ch-chevron {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--app-text-dim);
+  margin-left: auto;
+  padding: 8px;
+  margin-right: -8px;
+}
+.obelisk-mobile .ch-row .ch-chevron svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+.obelisk-mobile .ch-row:active .ch-chevron {
+  color: var(--accent);
 }
 .obelisk-mobile .channel-section-label .add-btn {
   color: var(--app-text-dim);
@@ -3062,3 +3102,131 @@
 /* hide bottom-nav scroll bleed */
 .obelisk-mobile *::-webkit-scrollbar { width: 0; height: 0; }
 .obelisk-mobile { scrollbar-width: none; }
+
+/* ─────────────────────────────────────────────────────────────────────
+ * @nostr-wot/ui modal overrides — mobile only.
+ *
+ * The SDK modal portals to <body>, so it sits *outside* `.obelisk-mobile`.
+ * These rules use a viewport media query to scope the overrides to phones
+ * (matches AppGate's MOBILE_QUERY). On mobile we want the modal to feel
+ * like a native screen continuation of the login picker rather than a
+ * card-on-card overlay — full-bleed, no border, generous tap targets.
+ * ───────────────────────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  .nui-modal-overlay {
+    padding: 0;
+    background: #0a0a0a;
+  }
+  .nui-modal {
+    max-width: none;
+    width: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 28px 22px calc(env(safe-area-inset-bottom, 0px) + 28px);
+    background:
+      radial-gradient(900px 520px at 90% -8%, rgba(180, 249, 83, 0.12), transparent 62%),
+      radial-gradient(720px 460px at -5% 100%, rgba(180, 249, 83, 0.08), transparent 60%),
+      #0a0a0a;
+  }
+  .nui-modal-close {
+    width: 44px;
+    height: 44px;
+    right: 12px;
+    top: max(env(safe-area-inset-top, 0px), 12px);
+    font-size: 26px;
+  }
+
+  /* Back buttons — both rectangular `.nui-back` and pill `.nui-back-pill`
+   * default to small inline buttons. Mobile needs them to be obvious,
+   * fingertip-sized, and aligned with the screen edge. */
+  .nui-back,
+  .nui-back-pill {
+    align-self: flex-start;
+    min-height: 40px;
+    padding: 8px 14px;
+    margin: -4px 0 4px;
+    border-radius: 999px;
+    background: rgba(180, 249, 83, 0.08);
+    border: 1px solid rgba(180, 249, 83, 0.18);
+    color: #d4f7a8;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.2;
+    transition: background 150ms ease, border-color 150ms ease, transform 120ms ease;
+  }
+  .nui-back:hover,
+  .nui-back-pill:hover {
+    background: rgba(180, 249, 83, 0.14);
+    border-color: rgba(180, 249, 83, 0.32);
+    color: #e6ffc5;
+  }
+  .nui-back:active,
+  .nui-back-pill:active {
+    transform: scale(0.96);
+  }
+
+  /* Form chrome — bigger headings, more breathing room. */
+  .nui-form {
+    gap: 16px;
+  }
+  .nui-form-title {
+    font-size: 22px;
+    line-height: 1.2;
+  }
+  .nui-form-sub {
+    font-size: 14px;
+    line-height: 1.45;
+  }
+  .nui-widget-title {
+    font-size: 22px;
+  }
+
+  /* Inputs and primary CTAs need tappable height. */
+  .nui-input {
+    min-height: 48px;
+    font-size: 16px; /* prevents iOS zoom on focus */
+  }
+  .nui-pill,
+  .nui-login-button {
+    min-height: 48px;
+    font-size: 15px;
+  }
+
+  /* Remove the la-crypta keycard's soft elevation — looks heavy on a
+   * full-bleed background. */
+  .nui-keycard {
+    border-radius: 14px;
+  }
+
+  /* The auth-challenge banner shouldn't feel like a separate floating
+   * panel on a mobile screen. */
+  .nui-auth-banner {
+    border-radius: 12px;
+  }
+}
+
+/* Transient toast shown when the user presses back from a root tab —
+ * a second back press within ~2s confirms exit to the landing page. */
+.obelisk-mobile .mobile-exit-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  background: #171717;
+  color: #fafafa;
+  border: 1px solid #262626;
+  border-radius: 9999px;
+  padding: 10px 18px;
+  font-size: 13px;
+  z-index: 60;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  animation: mobile-exit-toast-in 160ms ease-out;
+}
+@keyframes mobile-exit-toast-in {
+  from { opacity: 0; transform: translate(-50%, 6px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}

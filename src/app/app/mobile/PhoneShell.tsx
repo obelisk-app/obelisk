@@ -51,53 +51,10 @@ import { nip19 } from 'nostr-tools';
 import { useNotificationStore, type InboxEvent } from '@/store/notification';
 import { useChatStore } from '@/store/chat';
 import { useDMStore } from '@/store/dm';
+import { type ScreenName, type NavState, initialNav, urlFor, parseUrl } from './url-state';
 // CSS is hoisted to AppGate.tsx so it lands in the route's eagerly-loaded
 // stylesheet, not in this dynamic chunk's late-arriving sidecar.
 
-type ScreenName =
-  | 'login'
-  | 'profile-setup'
-  | 'server'
-  | 'channel'
-  | 'voice-room'
-  | 'dms-list'
-  | 'dm-thread'
-  | 'inbox'
-  | 'profile-view'
-  | 'member-list'
-  | 'compose-dm'
-  | 'search'
-  | 'forum'
-  | 'msg-actions'
-  | 'zap-modal'
-  | 'settings-profile'
-  | 'settings-prefs';
-
-interface NavState {
-  screen: ScreenName;
-  /** Active group id (for channel/voice-room/member-list/forum). */
-  groupId: string | null;
-  /** Active DM peer pubkey hex. */
-  dmPeer: string | null;
-  /** Profile to view. */
-  profilePubkey: string | null;
-  /** Forum-thread context — clicking back from inside a thread returns here. */
-  forumGroupId: string | null;
-  /** When a sheet opens, the screen underneath stays mounted. */
-  baseScreen: ScreenName | null;
-  /** Message context for msg-actions/zap-modal sheets. */
-  msgContext: { id: string; pubkey: string; content: string } | null;
-}
-
-const initialNav: NavState = {
-  screen: 'server',
-  groupId: null,
-  dmPeer: null,
-  profilePubkey: null,
-  forumGroupId: null,
-  baseScreen: null,
-  msgContext: null,
-};
 
 // ───────────────────────────────────────────────────────────────────────────
 // helpers
@@ -288,7 +245,10 @@ function BottomNav({
 // ───────────────────────────────────────────────────────────────────────────
 // 01 — login
 
-type LoginMethod = 'nip07' | 'nip46' | 'generate' | 'import';
+// nip07 is intentionally omitted on mobile — browser extensions don't run on
+// phones, and showing the option just leads to "no extension" errors. The
+// desktop shell still offers all four.
+type LoginMethod = 'nip46' | 'generate' | 'import';
 
 const LoginObeliskMark = () => (
   <svg className="login-mark" viewBox="0 0 512 512" fill="currentColor" aria-hidden="true">
@@ -303,17 +263,6 @@ const LOGIN_METHODS: ReadonlyArray<{
   desc: string;
   icon: ReactNode;
 }> = [
-  {
-    id: 'nip07',
-    title: 'NIP-07',
-    desc: 'Browser extension · Alby, nos2x',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <rect x="3" y="11" width="18" height="9" rx="1.5" />
-        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-      </svg>
-    ),
-  },
   {
     id: 'nip46',
     title: 'NIP-46',
@@ -758,13 +707,11 @@ function ChannelRow({
             {live && <span className="voice-live-dot" />}
             {live && <span className="ch-meta" style={{ marginLeft: 'auto', color: 'var(--accent)' }}>live</span>}
           </div>
-          <div className="voice-presence">
-            {live ? (
+          {live && (
+            <div className="voice-presence">
               <span className="vp-count">live · {group.kind === 'voice-sfu' ? 'SFU' : 'P2P'}</span>
-            ) : (
-              <span className="vp-empty">empty · tap to join</span>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </button>
     );
@@ -781,6 +728,9 @@ function ChannelRow({
         <span className="ch-name">{name}</span>
         {mentioned && <span className="mention-pill">@you</span>}
         {!mentioned && unread && unread > 0 && <span className="ch-meta">{unread > 99 ? '99+' : unread}</span>}
+        <span className="ch-chevron" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 6 15 12 9 18" /></svg>
+        </span>
       </button>
     );
   }
@@ -914,7 +864,9 @@ function ServerScreen({
                 onClick={() => setCollapsedCats((c) => ({ ...c, [cat.id]: !c[cat.id] }))}
               >
                 <span>{cat.name} · {list.length}</span>
-                <span className="cat-caret">{collapsed ? '▸' : '▾'}</span>
+                <span className={`cat-caret ${collapsed ? '' : 'expanded'}`} aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 6 15 12 9 18" /></svg>
+                </span>
               </button>
               {!collapsed && list.map((g) => (
                 <ChannelRow key={g.id} group={g} live={!!calls[g.id]} unread={channelUnreads[g.id]} mentioned={!!channelMentions[g.id]} onClick={() => selectGroup(g.id, g.kind)} />
@@ -933,7 +885,9 @@ function ServerScreen({
                 onClick={() => setCollapsedCats((c) => ({ ...c, __other: !c.__other }))}
               >
                 <span>Uncategorized · {laidOut.uncategorized.length}</span>
-                <span className="cat-caret">{collapsedCats.__other ? '▸' : '▾'}</span>
+                <span className={`cat-caret ${collapsedCats.__other ? '' : 'expanded'}`} aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 6 15 12 9 18" /></svg>
+                </span>
               </button>
             )}
             {!collapsedCats.__other && laidOut.uncategorized
@@ -2241,6 +2195,13 @@ export default function MobileShell() {
   const myFollows = useMyFollows();
 
   const [nav, setNav] = useState<NavState>(initialNav);
+  const navRef = useRef<NavState>(initialNav);
+  const currentRelayUrl = useCurrentRelayUrl();
+  const relayRef = useRef<string | null>(currentRelayUrl ?? null);
+  const didInitRef = useRef(false);
+  const exitArmedRef = useRef<number>(0);
+  const [exitToast, setExitToast] = useState(false);
+  const router = useRouter();
   const [showSetup, setShowSetup] = useState(false);
   // Slide direction for the screen-mount animation. 'forward' slides in
   // from the right (push), 'back' slides in from the left (pop). Cleared
@@ -2282,12 +2243,110 @@ export default function MobileShell() {
   // panel (its source of truth) but would be redundant churn on mobile,
   // where messages come from the bridge hook instead. We only need the
   // active id so `read-gates.isUserWatching*` knows the user is here.
+  // Push a new nav state into the browser history. The popstate handler is
+  // the single mechanism for "back" — every back-button (device, browser,
+  // swipe-back) pops one entry, and the listener replays the previous nav.
+  const pushNav = useCallback((updater: (n: NavState) => NavState, dir: 'forward' | 'back' = 'forward') => {
+    setSlideDir(dir);
+    setNav((n) => {
+      const next = updater(n);
+      navRef.current = next;
+      if (typeof window !== 'undefined') {
+        try {
+          window.history.pushState({ nav: next }, '', urlFor(next, relayRef.current));
+        } catch { /* ignore */ }
+      }
+      return next;
+    });
+  }, []);
+
   const go = useCallback((screen: ScreenName, dir: 'forward' | 'back' = 'forward') => {
+    if (dir === 'back' && typeof window !== 'undefined') {
+      window.history.back();
+      return;
+    }
     if (screen !== 'channel') useChatStore.setState({ activeChannelId: null });
     if (screen !== 'dm-thread') useDMStore.setState({ activeDMPubkey: null });
-    setSlideDir(dir);
-    setNav((n) => ({ ...n, screen, baseScreen: null, msgContext: null }));
-  }, []);
+    pushNav((n) => ({ ...n, screen, baseScreen: null, msgContext: null }), dir);
+  }, [pushNav]);
+
+  // ── initial URL parse + history seeding ─────────────────────────────
+  useEffect(() => {
+    if (didInitRef.current) return;
+    if (!isLoggedIn) return;
+    if (typeof window === 'undefined') return;
+    didInitRef.current = true;
+    const { nav: parsed, relay } = parseUrl(window.location.search);
+    if (relay) {
+      const cur = (currentRelayUrl ?? '').replace(/\/+$/, '').toLowerCase();
+      const next = relay.replace(/\/+$/, '').toLowerCase();
+      if (next !== cur) {
+        void nostrActions.switchRelay(relay).catch((err) => {
+          console.warn('[mobile] switchRelay from deep-link failed', err);
+        });
+      }
+    }
+    setNav(parsed);
+    navRef.current = parsed;
+    if (parsed.screen === 'channel' && parsed.groupId) {
+      useChatStore.setState({ activeChannelId: parsed.groupId, isNearBottom: true });
+    } else if (parsed.screen === 'dm-thread' && parsed.dmPeer) {
+      useDMStore.setState({ activeDMPubkey: parsed.dmPeer });
+    }
+    // Guard entry: a sentinel sits BEHIND the current nav so the first
+    // press of back lands on the guard (we re-push and arm the toast),
+    // and a second press within 2 s confirms exit to the landing page.
+    const seedUrl = urlFor(parsed, relay ?? currentRelayUrl ?? null);
+    try {
+      window.history.replaceState({ guard: true }, '', seedUrl);
+      window.history.pushState({ nav: parsed }, '', seedUrl);
+    } catch { /* ignore */ }
+  }, [isLoggedIn, currentRelayUrl]);
+
+  // Keep relayRef + URL relay param in sync without pushing history entries.
+  useEffect(() => {
+    relayRef.current = currentRelayUrl ?? null;
+    if (typeof window === 'undefined') return;
+    if (!didInitRef.current) return;
+    const url = urlFor(navRef.current, currentRelayUrl ?? null);
+    try {
+      window.history.replaceState(window.history.state, '', url);
+    } catch { /* ignore */ }
+  }, [currentRelayUrl]);
+
+  // ── popstate: drives all "back" navigation ──────────────────────────
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handler = (e: PopStateEvent) => {
+      const s = (e.state ?? null) as { nav?: NavState; guard?: boolean } | null;
+      if (s?.guard) {
+        const now = Date.now();
+        if (now - exitArmedRef.current < 2000) {
+          exitArmedRef.current = 0;
+          router.push('/');
+          return;
+        }
+        exitArmedRef.current = now;
+        setExitToast(true);
+        window.setTimeout(() => setExitToast(false), 2000);
+        // Re-push current nav so the user stays on their screen.
+        try {
+          window.history.pushState({ nav: navRef.current }, '', urlFor(navRef.current, relayRef.current));
+        } catch { /* ignore */ }
+        return;
+      }
+      if (s?.nav) {
+        const next = s.nav;
+        setSlideDir('back');
+        setNav(next);
+        navRef.current = next;
+        useChatStore.setState({ activeChannelId: next.screen === 'channel' ? next.groupId : null });
+        useDMStore.setState({ activeDMPubkey: next.screen === 'dm-thread' ? next.dmPeer : null });
+      }
+    };
+    window.addEventListener('popstate', handler);
+    return () => window.removeEventListener('popstate', handler);
+  }, [router]);
 
   // ── horizontal swipe navigation ─────────────────────────────────────
   // Swipe between bottom-nav tabs (server ↔ dms-list ↔ inbox ↔ settings)
@@ -2328,85 +2387,61 @@ export default function MobileShell() {
     if (Math.abs(dx) < Math.abs(dy) * 1.5) return;
     if (dt > 600) return;
     const goingRight = dx > 0;
-    setNav((n) => {
-      const navIndex = NAV_ORDER.indexOf(n.screen);
-      if (navIndex >= 0) {
-        const nextIdx = goingRight ? navIndex - 1 : navIndex + 1;
-        if (nextIdx >= 0 && nextIdx < NAV_ORDER.length) {
-          setSlideDir(goingRight ? 'back' : 'forward');
-          useChatStore.setState({ activeChannelId: null });
-          useDMStore.setState({ activeDMPubkey: null });
-          return { ...n, screen: NAV_ORDER[nextIdx], baseScreen: null, msgContext: null };
-        }
-        return n;
+    const cur = navRef.current;
+    const navIndex = NAV_ORDER.indexOf(cur.screen);
+    if (navIndex >= 0) {
+      const nextIdx = goingRight ? navIndex - 1 : navIndex + 1;
+      if (nextIdx >= 0 && nextIdx < NAV_ORDER.length) {
+        useChatStore.setState({ activeChannelId: null });
+        useDMStore.setState({ activeDMPubkey: null });
+        pushNav((n) => ({ ...n, screen: NAV_ORDER[nextIdx], baseScreen: null, msgContext: null }), goingRight ? 'back' : 'forward');
       }
-      if (goingRight) {
-        const tabRoot = SUB_TO_NAV[n.screen];
-        if (tabRoot) {
-          setSlideDir('back');
-          useChatStore.setState({ activeChannelId: null });
-          useDMStore.setState({ activeDMPubkey: null });
-          return { ...n, screen: tabRoot, baseScreen: null, msgContext: null };
-        }
-      }
-      return n;
-    });
-  }, []);
+      return;
+    }
+    if (goingRight && SUB_TO_NAV[cur.screen]) {
+      window.history.back();
+    }
+  }, [pushNav]);
   const selectGroup = useCallback((groupId: string, kind: JsGroup['kind']) => {
-    setSlideDir('forward');
     if (kind === 'voice' || kind === 'voice-sfu') {
       useChatStore.setState({ activeChannelId: null });
-      setNav((n) => ({ ...n, screen: 'voice-room', groupId }));
+      pushNav((n) => ({ ...n, screen: 'voice-room', groupId }));
     } else if (kind === 'forum') {
       useChatStore.setState({ activeChannelId: null });
-      setNav((n) => ({ ...n, screen: 'forum', groupId, forumGroupId: groupId }));
+      pushNav((n) => ({ ...n, screen: 'forum', groupId, forumGroupId: groupId }));
     } else {
       useChatStore.setState({ activeChannelId: groupId, isNearBottom: true });
       const ns = useNotificationStore.getState();
       ns.clearChannelUnread(groupId);
       ns.clearChannelMention(groupId);
-      setNav((n) => ({ ...n, screen: 'channel', groupId }));
+      pushNav((n) => ({ ...n, screen: 'channel', groupId }));
     }
-  }, []);
+  }, [pushNav]);
   const selectPeer = useCallback((peer: string) => {
     useDMStore.setState({ activeDMPubkey: peer });
     useNotificationStore.getState().clearDMUnread(peer);
-    setSlideDir('forward');
-    setNav((n) => ({ ...n, screen: 'dm-thread', dmPeer: peer }));
-  }, []);
+    pushNav((n) => ({ ...n, screen: 'dm-thread', dmPeer: peer }));
+  }, [pushNav]);
   const openProfile = useCallback((pubkey: string) => {
-    setSlideDir('forward');
-    setNav((n) => ({ ...n, screen: 'profile-view', profilePubkey: pubkey }));
-  }, []);
+    pushNav((n) => ({ ...n, screen: 'profile-view', profilePubkey: pubkey }));
+  }, [pushNav]);
   const openMembers = useCallback(() => {
-    setSlideDir('forward');
-    setNav((n) => ({ ...n, screen: 'member-list' }));
-  }, []);
+    pushNav((n) => ({ ...n, screen: 'member-list' }));
+  }, [pushNav]);
   const openMsgActions = useCallback((msg: { id: string; pubkey: string; content: string }) => {
-    setNav((n) => ({ ...n, baseScreen: n.screen, screen: 'msg-actions', msgContext: msg }));
-  }, []);
+    pushNav((n) => ({ ...n, baseScreen: n.screen, screen: 'msg-actions', msgContext: msg }));
+  }, [pushNav]);
   const openZap = useCallback((msg: { id: string; pubkey: string; content: string }) => {
-    setNav((n) => ({ ...n, baseScreen: n.screen === 'msg-actions' ? n.baseScreen : n.screen, screen: 'zap-modal', msgContext: msg }));
-  }, []);
+    pushNav((n) => ({ ...n, baseScreen: n.screen === 'msg-actions' ? n.baseScreen : n.screen, screen: 'zap-modal', msgContext: msg }));
+  }, [pushNav]);
   const closeSheet = useCallback(() => {
-    setNav((n) => ({
-      ...n,
-      screen: n.baseScreen ?? 'channel',
-      baseScreen: null,
-      msgContext: null,
-    }));
+    if (typeof window !== 'undefined') window.history.back();
   }, []);
   const backFromChannel = useCallback(() => {
-    setSlideDir('back');
-    if (nav.forumGroupId && groups.find((g) => g.id === nav.groupId)?.parent === nav.forumGroupId) {
-      setNav((n) => ({ ...n, screen: 'forum', groupId: n.forumGroupId }));
-    } else {
-      go('server', 'back');
-    }
-  }, [nav.forumGroupId, nav.groupId, groups, go]);
+    if (typeof window !== 'undefined') window.history.back();
+  }, []);
   const backFromProfile = useCallback(() => {
-    setSlideDir('back');
-    setNav((n) => ({ ...n, screen: n.dmPeer && n.profilePubkey === n.dmPeer ? 'dm-thread' : 'channel' }));
+    if (typeof window !== 'undefined') window.history.back();
   }, []);
 
   // Listen for reaction emit from msg-actions sheet
@@ -2498,7 +2533,7 @@ export default function MobileShell() {
         <VoiceRoomScreen
           groupId={nav.groupId}
           back={() => go('server', 'back')}
-          openChat={() => { setSlideDir('forward'); setNav((n) => ({ ...n, screen: 'channel' })); }}
+          openChat={() => { pushNav((n) => ({ ...n, screen: 'channel' })); }}
         />
       ) : <EmptyScreen go={go} title="No voice channel" />;
       break;
@@ -2520,7 +2555,7 @@ export default function MobileShell() {
       break;
     case 'member-list':
       body = nav.groupId ? (
-        <MemberListScreen groupId={nav.groupId} back={() => { setSlideDir('back'); setNav((n) => ({ ...n, screen: 'channel' })); }} openProfile={openProfile} />
+        <MemberListScreen groupId={nav.groupId} back={() => { if (typeof window !== 'undefined') window.history.back(); }} openProfile={openProfile} />
       ) : <EmptyScreen go={go} title="No channel" />;
       break;
     case 'compose-dm':
@@ -2598,6 +2633,11 @@ export default function MobileShell() {
         <div className="mobile-voice-status-slot"><VoiceStatusBar /></div>
       )}
       {!hideNav && <BottomNav active={nav.screen} go={go} dmBadge={dmBadge} inboxBadge={inboxBadge} />}
+      {exitToast && (
+        <div className="mobile-exit-toast" role="status" aria-live="polite">
+          Press back again to exit
+        </div>
+      )}
     </div>
   );
 }
