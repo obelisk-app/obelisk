@@ -164,6 +164,7 @@ export interface NostrBridge {
    */
   subscribeBunkerSignerReady(cb: (ready: boolean) => void): Unsubscribe;
   subscribeGroups(cb: (groups: ReadonlyArray<JsGroup>) => void): Unsubscribe;
+  subscribeGroupMetadataEose(cb: (eose: boolean) => void): Unsubscribe;
   subscribeMessages(groupId: string, cb: (msgs: ReadonlyArray<JsMessage>) => void): Unsubscribe;
   subscribeUserMetadata(pubkey: string, cb: (meta: JsUserMetadata | null) => void): Unsubscribe;
   /** Reactions targeting any event in [groupId]. Keyed by target event id. */

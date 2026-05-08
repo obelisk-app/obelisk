@@ -164,16 +164,20 @@ describe('Fix A — login → render race', () => {
   });
 });
 
-describe('Fix B — eager admin/member subscription on group discovery', () => {
-  it('subscribes to kinds 39001+39002 for a group as soon as kind 39000 is ingested', async () => {
+describe('Fix B (revised) — admin/member subscription is lazy', () => {
+  // Original Fix B fanned out kind 39001+39002 REQs on every kind 39000
+  // ingest. That made the sidebar "I'm an admin" badge paint without
+  // opening the channel, but slowed login on accounts in many channels
+  // and slowed setup of recently created groups. The new contract:
+  // ingest does NOT fan out admin/member; per-group REQs open lazily on
+  // first useAdmins / useMembers / subscribeAdmins / subscribeMembers
+  // call from the chat panel. See docs/progressive-loading.md.
+  it('does NOT subscribe to kinds 39001+39002 on kind 39000 ingest', async () => {
     const { getBridge } = await import('./client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
 
-    // Inject a kind 39000 (group metadata) directly. The bridge's metadata
-    // subscription matches `{kinds:[39000]}` with no `#d`, so this delivers
-    // the event to the ingestGroupMetadata path.
     const metaEvent: NostrEvent = {
       id: 'meta-1', pubkey: 'relay-pk', created_at: 1, kind: 39000, sig: '',
       content: '',
@@ -187,20 +191,17 @@ describe('Fix B — eager admin/member subscription on group discovery', () => {
       if (fake.matches(sub.filter, metaEvent)) sub.sink(metaEvent);
     }
 
-    // Look at every active subscription for one filtered by `#d=[test-group]`
-    // covering BOTH admin (39001) and member (39002) kinds.
     const adminMemberSubs = fake.state.subscriptions.filter((s) => {
       const kinds = s.filter.kinds as number[] | undefined;
       const dTag = (s.filter['#d'] as string[] | undefined) ?? [];
       return Array.isArray(kinds)
         && kinds.includes(39001)
-        && kinds.includes(39002)
         && dTag.includes('test-group');
     });
-    expect(adminMemberSubs.length).toBeGreaterThanOrEqual(1);
+    expect(adminMemberSubs.length).toBe(0);
   });
 
-  it('does not double-subscribe if the group is rediscovered', async () => {
+  it('opens the per-group admin/member REQ on first subscribeAdmins call', async () => {
     const { getBridge } = await import('./client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
@@ -214,23 +215,23 @@ describe('Fix B — eager admin/member subscription on group discovery', () => {
     for (const sub of fake.state.subscriptions) {
       if (fake.matches(sub.filter, metaEvent)) sub.sink(metaEvent);
     }
-    const after1 = fake.state.subscriptions.filter((s) => {
+    bridge.subscribeAdmins('test-group', () => {});
+
+    const after = fake.state.subscriptions.filter((s) => {
       const kinds = s.filter.kinds as number[] | undefined;
       const dTag = (s.filter['#d'] as string[] | undefined) ?? [];
       return Array.isArray(kinds) && kinds.includes(39001) && dTag.includes('test-group');
     }).length;
+    expect(after).toBeGreaterThanOrEqual(1);
 
-    // Re-deliver the same metadata; subscribeAdminMember is idempotent.
-    for (const sub of fake.state.subscriptions) {
-      if (fake.matches(sub.filter, metaEvent)) sub.sink(metaEvent);
-    }
+    // Idempotent — a second call doesn't open a duplicate sub.
+    bridge.subscribeAdmins('test-group', () => {});
     const after2 = fake.state.subscriptions.filter((s) => {
       const kinds = s.filter.kinds as number[] | undefined;
       const dTag = (s.filter['#d'] as string[] | undefined) ?? [];
       return Array.isArray(kinds) && kinds.includes(39001) && dTag.includes('test-group');
     }).length;
-
-    expect(after2).toBe(after1);
+    expect(after2).toBe(after);
   });
 });
 
@@ -292,6 +293,8 @@ describe('Fix D — bridgeCache integration: admin/member persistence', () => {
     for (const sub of fake.state.subscriptions) {
       if (fake.matches(sub.filter, metaEvent)) sub.sink(metaEvent);
     }
+    // Admin/member is now lazy — trigger it the way the chat panel does.
+    bridge.subscribeAdmins('group-x', () => {});
 
     // Now deliver an admin list (kind 39001) for that group.
     const adminEvent: NostrEvent = {

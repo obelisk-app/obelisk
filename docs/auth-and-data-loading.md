@@ -97,20 +97,23 @@ finalizeLogin()
     ├── subscribeGroupMetadata()                      [global, kind 39000]
     │     └── ingestGroupMetadata(ev)                 [for each kind 39000 ev]
     │         ├── this.groups.update(...)
-    │         ├── subscribeGroupMessages(groupId)     [per group, kind 9]
-    │         └── subscribeAdminMember(groupId)       [per group, kinds 39001+39002, #d=groupId]
+    │         └── subscribeGroupMessages(groupId)     [per group, kind 9, limit: BACKGROUND_MESSAGE_LIMIT]
     ├── subscribeIncomingDMs()                        [global, kind 4 with #p=me / authors=me]
     ├── subscribeMyContactList()                      [global, kind 3 authors=me]
     └── ensureUserMetadata(my pubkey)                 [kind 0 authors=me]
 ```
 
-The eager `subscribeAdminMember(groupId)` inside `ingestGroupMetadata`
-(Fix B) is what makes "groups where I am admin" resolve on first paint —
-otherwise admin/member events only stream when a `ChatPanel` mounts and a
-component calls `useAdmins(groupId)`.
+Admin/member (39001/39002) and reactions (kind 7) are intentionally NOT
+fanned out at discovery time — they're lazy on first
+`useAdmins` / `useMembers` / `useReactions` call from a chat panel.
+Fanning out per-group REQs to every joined group on login was expensive
+on accounts in many channels and slowed setup of recently-created
+groups. See [progressive-loading.md](./progressive-loading.md) for the
+full ordering, message-backfill cap (`BACKGROUND_MESSAGE_LIMIT`), and
+"Load earlier" pagination.
 
 `subscribeAdminMember` is idempotent: a later `useAdmins` call from a chat
-panel is a no-op because the per-group sub is already open.
+panel is a no-op if the per-group sub is already open.
 
 ## 6. NIP-42 AUTH
 

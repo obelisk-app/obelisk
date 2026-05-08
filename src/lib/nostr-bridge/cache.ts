@@ -34,7 +34,11 @@
  *   - relay branding events
  */
 
-const KEY_PREFIX = 'obelisk-cache/';
+// v2 — bumped to drop pre-normalization cache entries that could mix
+// channels across relays (case- or trailing-slash-variant keys). Old
+// `obelisk-cache/` keys are orphaned and cleaned on next cacheClearAll.
+const KEY_PREFIX = 'obelisk-cache-v2/';
+const LEGACY_KEY_PREFIX = 'obelisk-cache/';
 
 export interface CachedEntry<T> {
   readonly value: T;
@@ -50,11 +54,22 @@ interface Storable<T> {
   t: number;
 }
 
+/**
+ * Normalize a relay URL so cache pools don't fragment when the same relay is
+ * referenced with different casing or trailing slashes. Without this, a relay
+ * cached as `wss://relay.foo.com` and later read as `wss://relay.foo.com/`
+ * would seed from an empty pool and the user would see channels "missing" or
+ * mixed across what looked like duplicate relays.
+ */
+function normalizeRelay(u: string): string {
+  return u.replace(/\/+$/, '').toLowerCase();
+}
+
 function buildKey(relay: string, kind: number, id: string): string {
   // The relay URL can contain `:` and `/` which are fine in localStorage keys.
   // We don't encode them — collisions across relays already require identical
   // protocol+host+path which would be the same relay anyway.
-  return `${KEY_PREFIX}${relay}/${kind}/${id}`;
+  return `${KEY_PREFIX}${normalizeRelay(relay)}/${kind}/${id}`;
 }
 
 function isAvailable(): boolean {
@@ -117,8 +132,8 @@ export function cacheDelete(relay: string, kind?: number, id?: string): void {
   }
   // Prefix wipe: enumerate keys and remove matches.
   const prefix = kind !== undefined
-    ? `${KEY_PREFIX}${relay}/${kind}/`
-    : `${KEY_PREFIX}${relay}/`;
+    ? `${KEY_PREFIX}${normalizeRelay(relay)}/${kind}/`
+    : `${KEY_PREFIX}${normalizeRelay(relay)}/`;
   try {
     const toRemove: string[] = [];
     for (let i = 0; i < window.localStorage.length; i++) {
@@ -142,13 +157,37 @@ export function cacheClearAll(): void {
     const toRemove: string[] = [];
     for (let i = 0; i < window.localStorage.length; i++) {
       const key = window.localStorage.key(i);
-      if (key && key.startsWith(KEY_PREFIX)) toRemove.push(key);
+      if (!key) continue;
+      if (key.startsWith(KEY_PREFIX) || key.startsWith(LEGACY_KEY_PREFIX)) {
+        toRemove.push(key);
+      }
     }
     toRemove.forEach((k) => window.localStorage.removeItem(k));
   } catch {
     // ignore
   }
 }
+
+// One-shot eviction of pre-v2 cache entries on module load. Without this,
+// stale keys with case- or trailing-slash-variant relay URLs can persist
+// indefinitely (no read path consumes them but they take up the localStorage
+// quota). Idempotent — once the legacy prefix returns nothing, the loop
+// exits immediately.
+(function evictLegacyCache() {
+  if (!isAvailable()) return;
+  try {
+    const toRemove: string[] = [];
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const key = window.localStorage.key(i);
+      if (key && key.startsWith(LEGACY_KEY_PREFIX) && !key.startsWith(KEY_PREFIX)) {
+        toRemove.push(key);
+      }
+    }
+    toRemove.forEach((k) => window.localStorage.removeItem(k));
+  } catch {
+    // ignore
+  }
+})();
 
 /**
  * Enumerate cached ids for a relay+kind. Used during bridge construction to
@@ -160,7 +199,7 @@ export function cacheClearAll(): void {
  */
 export function cacheListIds(relay: string, kind: number): string[] {
   if (!isAvailable()) return [];
-  const prefix = `${KEY_PREFIX}${relay}/${kind}/`;
+  const prefix = `${KEY_PREFIX}${normalizeRelay(relay)}/${kind}/`;
   const ids: string[] = [];
   try {
     for (let i = 0; i < window.localStorage.length; i++) {

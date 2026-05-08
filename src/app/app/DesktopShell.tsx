@@ -9,6 +9,7 @@ import {
   useCurrentRelayUrl,
   useGroups,
   useMessages,
+  useLoadEarlier,
   useUserMetadata,
   useReactions,
   useChildrenByParent,
@@ -1736,16 +1737,30 @@ function ChatPanel({
   // the now-removed messagesVisible unmount it also re-rendered users to
   // the top of the channel on AUTH flicker.
   const stickToBottomRef = useRef(true);
+  const { loadEarlier, loading: loadingEarlier, reachedStart } = useLoadEarlier(groupId);
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
     const onScroll = () => {
       const dist = el.scrollHeight - el.scrollTop - el.clientHeight;
       stickToBottomRef.current = dist < 100;
+      // Top-of-list pagination. Anchor by pre-load scrollHeight so the
+      // viewport stays on the same message after the older page is
+      // prepended instead of snapping to the new top.
+      if (el.scrollTop < 80 && !loadingEarlier && !reachedStart) {
+        const prevHeight = el.scrollHeight;
+        void loadEarlier().then(() => {
+          requestAnimationFrame(() => {
+            const e = scrollRef.current;
+            if (!e) return;
+            e.scrollTop = e.scrollHeight - prevHeight;
+          });
+        });
+      }
     };
     el.addEventListener('scroll', onScroll, { passive: true });
     return () => el.removeEventListener('scroll', onScroll);
-  }, []);
+  }, [loadEarlier, loadingEarlier, reachedStart]);
   // Entering a new channel: jump to bottom and reset stickiness so the
   // first batch of incoming messages keeps following the tail until the
   // user scrolls up themselves.

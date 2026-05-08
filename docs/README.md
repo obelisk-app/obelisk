@@ -5,6 +5,7 @@ Detailed specs, plans and references for Obelisk subsystems. High-level roadmap 
 ## Architecture & platform
 
 - [auth-and-data-loading.md](auth-and-data-loading.md) — login flow, NIP-42 AUTH, watchdog, bridgeCache.
+- [progressive-loading.md](progressive-loading.md) — sidebar-first load order, lazy admin/member, bounded message backfill, "Load earlier" pagination.
 - [voice-system.md](voice-system.md) — P2P WebRTC mesh, Nostr-relay signaling, perfect negotiation, track types. Wire-level detail in [webrtc-p2p-nostr-signaling.md](webrtc-p2p-nostr-signaling.md).
 - [webrtc-p2p-nostr-signaling.md](webrtc-p2p-nostr-signaling.md) — voice wire format: kind 20078 presence, kind 25050 signaling, gift-wrap upgrade plan, relay-operator notes.
 - [direct-messages.md](direct-messages.md) — NIP-04 DMs.

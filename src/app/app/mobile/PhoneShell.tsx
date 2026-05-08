@@ -23,6 +23,7 @@ import {
   useMyPubkey,
   useGroups,
   useMessages,
+  useLoadEarlier,
   useDirectMessages,
   useUserMetadata,
   useAdmins,
@@ -32,6 +33,9 @@ import {
   useReactions,
   useConfiguredRelays,
   useCurrentRelayUrl,
+  useRelayAccess,
+  useConnectionState,
+  useGroupMetadataEose,
   useActiveCallByChannel,
   type JsGroup,
   type JsMessage,
@@ -748,6 +752,74 @@ function ChannelRow({
 // ───────────────────────────────────────────────────────────────────────────
 // 03 — server (groups + channels)
 
+/**
+ * Differentiated empty state for the channel list. Without this the user
+ * can't tell whether the relay is still loading, blocked them, or genuinely
+ * has no channels — all three previously rendered as "No channels yet".
+ *
+ * Precedence (highest first):
+ *   - Whitelisting required — relay is rejecting reads with auth-required
+ *     or restricted. Even if we're "connected", the user won't see channels
+ *     until they're whitelisted.
+ *   - Network issue       — connection failed / dropped, or relay is
+ *     unreachable.
+ *   - Channels loading    — connecting, authenticating, or connected but
+ *     the kind 39000 EOSE hasn't had time to land. We give it ~4s before
+ *     declaring "No channels found".
+ *   - No channels found   — we've waited long enough and the relay
+ *     genuinely returned zero groups.
+ */
+function ChannelListEmptyState({
+  relayAccess,
+  connectionState,
+  metadataEose,
+}: {
+  relayAccess: import('@/lib/nostr-bridge').RelayAccessState;
+  connectionState: string;
+  metadataEose: boolean;
+}) {
+  const [waited, setWaited] = useState(false);
+  useEffect(() => {
+    setWaited(false);
+    const t = setTimeout(() => setWaited(true), 6000);
+    return () => clearTimeout(t);
+  }, [connectionState, relayAccess]);
+
+  let label = 'Channels loading…';
+  if (relayAccess === 'auth-required' || relayAccess === 'restricted') {
+    label = 'Whitelisting required';
+  } else if (
+    relayAccess === 'unreachable'
+    || relayAccess === 'error'
+    || connectionState === 'Disconnected'
+    || connectionState.startsWith('Error')
+  ) {
+    label = 'Network issue';
+  } else if (
+    connectionState !== 'Connected'
+    || relayAccess === 'unknown'
+    || relayAccess === 'authenticating'
+    || (!metadataEose && !waited)
+  ) {
+    label = 'Channels loading…';
+  } else if (metadataEose) {
+    // Relay finished its kind 39000 stream and returned zero events.
+    label = 'No channels found';
+  } else {
+    // Connected for >6s, ok access, but no EOSE for kind 39000. Most
+    // relays that silently filter unauthorized reads behave this way —
+    // they accept the REQ but never close it. Treat as a whitelist
+    // symptom rather than mislabeling as "No channels found".
+    label = 'Whitelisting required';
+  }
+
+  return (
+    <div style={{ padding: '10px 12px', color: 'var(--app-text-mute)', fontSize: 13 }}>
+      {label}
+    </div>
+  );
+}
+
 function ServerScreen({
   go,
   selectGroup,
@@ -757,6 +829,9 @@ function ServerScreen({
 }) {
   const groups = useGroups();
   const relay = useCurrentRelayUrl();
+  const relayAccess = useRelayAccess(relay || null);
+  const connectionState = useConnectionState();
+  const metadataEose = useGroupMetadataEose();
   const relays = useConfiguredRelays();
   const myPubkey = useMyPubkey();
   const meta = useUserMetadata(myPubkey);
@@ -900,7 +975,11 @@ function ServerScreen({
           </div>
         )}
         {roots.length === 0 && (
-          <div style={{ padding: '10px 12px', color: 'var(--app-text-mute)', fontSize: 13 }}>No channels yet.</div>
+          <ChannelListEmptyState
+            relayAccess={relayAccess}
+            connectionState={connectionState}
+            metadataEose={metadataEose}
+          />
         )}
       </div>
     </div>
@@ -929,6 +1008,10 @@ function ChannelScreen({
 }) {
   const groups = useGroups();
   const group = groups.find((g) => g.id === groupId) ?? null;
+  const parentGroup = group?.parent ? groups.find((g) => g.id === group.parent) ?? null : null;
+  const headerLabel = parentGroup
+    ? `${parentGroup.name ?? parentGroup.id.slice(0, 8)}/${group?.name ?? groupId.slice(0, 8)}`
+    : (group?.name ?? groupId.slice(0, 8));
   const messages = useMessages(groupId);
   const reactions = useReactions(groupId);
   const myPubkey = useMyPubkey();
@@ -965,6 +1048,29 @@ function ChannelScreen({
     }
   }, [messages.length]);
 
+  // Top-of-list pagination. Live REQ caps at the background limit; older
+  // history is paged in here when the user scrolls near the top. Anchor
+  // by pre-load scrollHeight to keep the viewport on the same message.
+  const { loadEarlier, loading: loadingEarlier, reachedStart } = useLoadEarlier(groupId);
+  useEffect(() => {
+    const el = messagesRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      if (el.scrollTop < 80 && !loadingEarlier && !reachedStart) {
+        const prevHeight = el.scrollHeight;
+        void loadEarlier().then(() => {
+          requestAnimationFrame(() => {
+            const e = messagesRef.current;
+            if (!e) return;
+            e.scrollTop = e.scrollHeight - prevHeight;
+          });
+        });
+      }
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, [loadEarlier, loadingEarlier, reachedStart]);
+
   const send = async () => {
     const text = draft.trim();
     if (!text || sending) return;
@@ -999,18 +1105,13 @@ function ChannelScreen({
 
   return (
     <div className="screen active" data-screen="channel">
-      <div className="chat-header">
-        <div className="chat-breadcrumb">
-          <button className="back-btn" onClick={back} style={{ marginLeft: -6 }} aria-label="Back">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
-          </button>
-          <span className="space-name-bc">{shortHost(relay)}</span>
-          <span className="sep">/</span>
-          <span>{group?.name ?? groupId.slice(0, 8)}</span>
-        </div>
+      <div className="chat-header chat-header-compact">
         <div className="chat-row">
           <div className="chat-title-block">
-            <div className="chat-channel"><span className="hash">#</span>{group?.name ?? groupId.slice(0, 8)}</div>
+            <button className="back-btn" onClick={back} aria-label="Back">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+            </button>
+            <div className="chat-channel"><span className="hash">#</span>{headerLabel}</div>
           </div>
           <div className="chat-actions">
             <button className="icon-btn" onClick={() => go('search')} aria-label="Search">

@@ -128,6 +128,14 @@ const LEGACY_RELAYS_KEY = 'obeliskord/relays';
 const DEFAULT_RELAY = 'wss://public.obelisk.ar';
 const DEFAULT_RELAYS = ['wss://public.obelisk.ar'];
 
+// Per-channel message backfill cap. Only this many of the most recent kind 9
+// events are pulled into `messagesByGroup` on the live REQ; older messages
+// are paged in on demand via `loadMoreMessages`. Keeps the initial fan-out
+// cheap when the user belongs to many channels and trims memory growth on
+// long-lived sessions. See docs/progressive-loading.md.
+const BACKGROUND_MESSAGE_LIMIT = 50;
+const LOAD_MORE_PAGE_SIZE = 50;
+
 // How long to wait before flipping the relay-access banner from 'unknown' to
 // a non-ok state on retryable rejections (auth-required/restricted). The
 // `subscribeWatched` retry path heals most NIP-42 AUTH races in <1s; a 4s
@@ -540,6 +548,13 @@ class BridgeImpl implements NostrBridge {
   currentRelayUrl = new StateStore<string>(DEFAULT_RELAY);
   configuredRelays = new StateStore<string[]>([...DEFAULT_RELAYS]);
   groups = new StateStore<JsGroup[]>([]);
+  /**
+   * `true` once the relay has emitted EOSE for the global kind 39000 sub on
+   * the active relay. Lets the empty-state UI distinguish "still loading"
+   * from "relay confirmed zero groups visible to me" — the latter is the
+   * classic whitelist symptom on relays that don't send a CLOSED reason.
+   */
+  groupMetadataEose = new StateStore<boolean>(false);
   messagesByGroup = new StateStore<Record<string, JsMessage[]>>({});
   userMetadata = new StateStore<Record<string, JsUserMetadata>>({});
   reactionsByGroup = new StateStore<Record<string, Record<string, JsReaction[]>>>({});
@@ -1139,6 +1154,7 @@ class BridgeImpl implements NostrBridge {
     this.myLoginMethod.set(null);
     this.connectionState.set('Disconnected');
     this.groups.set([]);
+    this.groupMetadataEose.set(false);
     this.messagesByGroup.set({});
     this.adminsByGroup.set({});
     this.membersByGroup.set({});
@@ -1217,6 +1233,15 @@ class BridgeImpl implements NostrBridge {
         throw new Error(firstError ? String(firstError.reason?.message ?? firstError.reason) : 'no relays connected');
       }
       this.subscribeGroupMetadata();
+      // Single relay-wide REQ for admin/member (kinds 39001+39002, no `#d`).
+      // Restores the "category authors" set used by NIP-78 channel-layout
+      // queries without re-introducing per-group fan-out. Categories
+      // depend on knowing which pubkeys the operator/admins are; without
+      // this, on a fresh relay visit (no admin cache yet) the layout REQ
+      // has only the operator pubkey and categories silently fail to load
+      // when the layout is admin-authored. One REQ regardless of how
+      // many groups exist on the relay.
+      this.subscribeAllAdminMember();
       this.subscribeIncomingDMs();
       this.subscribeMyContactList();
       this.subscribeMyMuteList();
@@ -1315,6 +1340,21 @@ class BridgeImpl implements NostrBridge {
     // Without this, voice gates and member rails would still be marked
     // "loaded" from the previous relay's data.
     this.membershipReadyByGroup.set({});
+    // Per-relay state that previously bled across switches: parent→children
+    // index, group-creator map, reactions, the newest-wins guard cursor for
+    // group metadata, and the per-group creator-sub set. Without clearing
+    // these, switching from relay A → B kept A's category nesting visible,
+    // dropped legitimate B-side metadata events whose `created_at` happened
+    // to be older than A's (the same NIP-29 `d`-tag can exist on two relays
+    // independently), and left A's reactions painted on B's messages. The
+    // user-visible symptom was channels and structure from different relays
+    // appearing mixed. See docs/progressive-loading.md.
+    this.childrenByParent.set({});
+    this.groupCreators.set({});
+    this.reactionsByGroup.set({});
+    this.groupMetadataLatestAt.clear();
+    this.creatorSubscribedGroups.clear();
+    this.groupMetadataEose.set(false);
     this.dmSubscribed = false;
     // Auth/whitelist state is per-relay; the new one hasn't been probed yet.
     this.relayAccess.set({});
@@ -1390,6 +1430,9 @@ class BridgeImpl implements NostrBridge {
   }
   subscribeGroups(cb: (groups: ReadonlyArray<JsGroup>) => void): Unsubscribe {
     return this.groups.subscribe(cb);
+  }
+  subscribeGroupMetadataEose(cb: (eose: boolean) => void): Unsubscribe {
+    return this.groupMetadataEose.subscribe(cb);
   }
   subscribeMessages(groupId: string, cb: (msgs: ReadonlyArray<JsMessage>) => void): Unsubscribe {
     // Belt-and-braces: messages start streaming as soon as group metadata
@@ -1846,11 +1889,35 @@ class BridgeImpl implements NostrBridge {
     );
   }
 
-  async loadMoreMessages(_groupId: string): Promise<boolean> {
-    // Pagination not yet implemented — relays return all current messages
-    // on initial subscribe via this minimal client. A full implementation
-    // tracks the oldest seen `created_at` and re-subscribes with `until`.
-    return false;
+  async loadMoreMessages(groupId: string): Promise<boolean> {
+    // Page older messages on demand. Live REQ stays capped at
+    // BACKGROUND_MESSAGE_LIMIT; "Load earlier" calls this with the oldest
+    // currently-rendered message as the upper bound. Returns true when at
+    // least one previously-unseen event was ingested, so the caller can
+    // distinguish "more available" from "reached the start of history".
+    const existing = this.messagesByGroup.get()[groupId] ?? [];
+    if (existing.length === 0) return false;
+    const oldest = existing.reduce((a, m) => (m.createdAt < a ? m.createdAt : a), existing[0].createdAt);
+    const filter: Filter = {
+      kinds: [KIND_GROUP_MESSAGE],
+      '#h': [groupId],
+      until: oldest - 1,
+      limit: LOAD_MORE_PAGE_SIZE,
+    };
+    let events: NostrEvent[];
+    try {
+      events = await this.pool.querySync(this.relays, filter, { maxWait: 5000 });
+    } catch {
+      return false;
+    }
+    let added = 0;
+    for (const ev of events) {
+      const before = this.messagesByGroup.get()[groupId]?.length ?? 0;
+      this.ingestMessage(groupId, ev);
+      const after = this.messagesByGroup.get()[groupId]?.length ?? 0;
+      if (after > before) added++;
+    }
+    return added > 0;
   }
 
   markGroupAsRead(_groupId: string): void {
@@ -2258,7 +2325,33 @@ class BridgeImpl implements NostrBridge {
 
   private subscribeGroupMetadata(): void {
     const filter: Filter = { kinds: [KIND_GROUP_METADATA] };
-    const sub = this.subscribeWatched(this.relays, filter, (ev) => this.ingestGroupMetadata(ev));
+    const sub = this.subscribeWatched(
+      this.relays,
+      filter,
+      (ev) => this.ingestGroupMetadata(ev),
+      () => this.groupMetadataEose.set(true),
+    );
+    this.subs.push(sub);
+  }
+
+  /**
+   * Single relay-wide subscription for kinds 39001 (admins) and 39002
+   * (members) with no `#d` filter. Replaces the per-group fan-out that
+   * `ingestGroupMetadata` used to do on every kind 39000 — one REQ
+   * instead of N. Used to bootstrap the channel-layout author set so
+   * operator-or-admin-authored layouts paint without waiting for the
+   * user to open every channel. The lazy per-group REQ on
+   * useAdmins/useMembers still runs, and is idempotent.
+   */
+  private subscribeAllAdminMember(): void {
+    const filter: Filter = { kinds: [KIND_GROUP_ADMINS, KIND_GROUP_MEMBERS] };
+    const sub = this.subscribeWatched(
+      this.relays,
+      filter,
+      (ev) => this.ingestAdminMember(ev),
+      undefined,
+      { affectsRelayAccess: false },
+    );
     this.subs.push(sub);
   }
 
@@ -2268,7 +2361,7 @@ class BridgeImpl implements NostrBridge {
     const filter: Filter = {
       kinds: [KIND_GROUP_MESSAGE],
       '#h': [groupId],
-      limit: 200,
+      limit: BACKGROUND_MESSAGE_LIMIT,
     };
     const sub = this.subscribeWatched(
       this.relays,
@@ -2568,15 +2661,18 @@ class BridgeImpl implements NostrBridge {
       createdAt: ev.created_at,
     });
     // Start streaming messages immediately so opening the channel doesn't
-    // wait on a fresh REQ round-trip — the store already has them.
+    // wait on a fresh REQ round-trip — the store already has them. The
+    // per-group REQ caps at BACKGROUND_MESSAGE_LIMIT; older history is
+    // paged via loadMoreMessages.
     this.subscribeGroupMessages(groupId);
-    // Same logic for admins/members (kinds 39001/39002): without this, the
-    // sidebar's "I'm an admin of X" badge can't paint until the user opens
-    // each group (because the per-group REQ only fired when ChatPanel mounted
-    // and called useAdmins/useMembers). Eager subscription means admin status
-    // resolves on first paint for every visible group. subscribeAdminMember
-    // is idempotent — a later useAdmins call from a chat panel is a no-op.
-    this.subscribeAdminMember(groupId);
+    // Admin/member (39001/39002) is intentionally NOT fanned out here.
+    // Subscribing to every discovered group on login was expensive on
+    // accounts that belong to many channels and slowed setup of recently
+    // created groups (the user wants those to feel instant). Per-group
+    // admin/member REQs now open lazily on first useAdmins / useMembers
+    // call from the chat panel. Tradeoff: the sidebar's "I'm an admin of
+    // X" badge no longer paints before opening each channel — acceptable
+    // given the load-time win. See docs/progressive-loading.md.
     // Resolve the kind 9007 author so claimCreatorAdmin knows whether the
     // local user is the creator without having to assume it on every login.
     this.subscribeGroupCreator(groupId);

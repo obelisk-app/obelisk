@@ -4,7 +4,7 @@
  * Each hook subscribes on mount, replays the latest value, and
  * unsubscribes on unmount.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getBridge } from './client';
 import { wotEngine } from '@/lib/wot/engine';
 import { useWotEnabled } from '@/lib/wot';
@@ -223,6 +223,56 @@ export function useMessages(groupId: string | null): ReadonlyArray<JsMessage> {
     (b, cb) => (groupId ? b.subscribeMessages(groupId, cb) : () => {}),
     [],
     [groupId],
+  );
+}
+
+/**
+ * Pagination control for a channel. The live REQ caps at the background
+ * limit (see docs/progressive-loading.md); this hook exposes a `loadEarlier`
+ * action that pulls the next page of older messages on demand and a
+ * `reachedStart` flag so the UI can stop offering "Load earlier" once the
+ * relay returns no further history.
+ */
+export function useLoadEarlier(groupId: string | null): {
+  loadEarlier: () => Promise<void>;
+  loading: boolean;
+  reachedStart: boolean;
+} {
+  const [loading, setLoading] = useState(false);
+  const [reachedStart, setReachedStart] = useState(false);
+  const inFlightRef = useRef(false);
+
+  useEffect(() => {
+    setReachedStart(false);
+  }, [groupId]);
+
+  const loadEarlier = useCallback(async () => {
+    if (!groupId || inFlightRef.current || reachedStart) return;
+    inFlightRef.current = true;
+    setLoading(true);
+    try {
+      const bridge = await getBridge();
+      const got = await bridge.loadMoreMessages(groupId);
+      if (!got) setReachedStart(true);
+    } finally {
+      inFlightRef.current = false;
+      setLoading(false);
+    }
+  }, [groupId, reachedStart]);
+
+  return { loadEarlier, loading, reachedStart };
+}
+
+/**
+ * `true` once the relay has emitted EOSE for the global kind 39000 sub.
+ * Lets the empty-state UI distinguish "still loading" from "relay
+ * confirmed zero groups visible to me" (typical whitelist symptom on
+ * relays that don't send a CLOSED reason).
+ */
+export function useGroupMetadataEose(): boolean {
+  return useSubscription<boolean>(
+    (b, cb) => b.subscribeGroupMetadataEose(cb),
+    false,
   );
 }
 
