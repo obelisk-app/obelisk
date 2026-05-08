@@ -4861,15 +4861,39 @@ export default function MobileShell() {
           <ZapModalSheet msg={nav.msgContext} close={closeSheet} />
         )}
       </div>
-      {nav.screen !== 'voice-room' && kbInset === 0 && (
-        <div className="mobile-voice-status-slot"><VoiceStatusBar /></div>
-      )}
+      <MobileVoiceStatusSlot screen={nav.screen} kbInset={kbInset} />
       {!hideNav && <BottomNav active={nav.screen} go={go} dmBadge={dmBadge} inboxBadge={inboxBadge} />}
       {exitToast && (
         <div className="mobile-exit-toast" role="status" aria-live="polite">
           Press back again to exit
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Persistent host for the in-call control bar. The bar stays mounted for the
+ * lifetime of the call so navigating out of voice-room reveals it via CSS
+ * instead of a fresh mount — the previous conditional remount had a
+ * perceptible lag (useGroups + useVoiceStore selectors set up subscriptions
+ * async, so the bar would flash in ~1s after the user left the room and the
+ * call looked ended in the meantime).
+ */
+export function MobileVoiceStatusSlot({
+  screen,
+  kbInset,
+}: {
+  screen: ScreenName;
+  kbInset: number;
+}) {
+  const hidden = screen === 'voice-room' || kbInset > 0;
+  return (
+    <div
+      className={'mobile-voice-status-slot' + (hidden ? ' is-hidden' : '')}
+      data-testid="mobile-voice-status-slot"
+    >
+      <VoiceStatusBar />
     </div>
   );
 }

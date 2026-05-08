@@ -313,7 +313,8 @@
   flex-shrink: 0;
   border-top: 1px solid var(--app-line-soft);
 }
-.obelisk-mobile .mobile-voice-status-slot:empty {
+.obelisk-mobile .mobile-voice-status-slot:empty,
+.obelisk-mobile .mobile-voice-status-slot.is-hidden {
   display: none;
   border-top: none;
 }
