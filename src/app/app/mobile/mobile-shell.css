@@ -425,6 +425,48 @@
   -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 28px, #000 calc(100% - 28px), transparent 100%);
           mask-image: linear-gradient(to right, transparent 0%, #000 28px, #000 calc(100% - 28px), transparent 100%);
 }
+
+/* Carousel chevron affordances — only visible when JS toggles the matching
+ * can-scroll-* class on the host. Sit over the edge fade so the user sees
+ * a clear "more this way" cue rather than just a soft fade. */
+.obelisk-mobile .spaces-arrow {
+  position: absolute;
+  top: 28px;
+  width: 22px;
+  height: 22px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  color: var(--app-text-mute);
+  pointer-events: none;
+  opacity: 0.85;
+}
+.obelisk-mobile .spaces-arrow svg { width: 18px; height: 18px; }
+.obelisk-mobile .spaces-arrow-left { left: 4px; }
+.obelisk-mobile .spaces-arrow-right { right: 4px; }
+.obelisk-mobile .spaces-strip-host.can-scroll-left .spaces-arrow-left { display: flex; }
+.obelisk-mobile .spaces-strip-host.can-scroll-right .spaces-arrow-right { display: flex; }
+
+/* Page-dot indicator beneath the strip — one dot per configured relay,
+ * the active relay's dot is filled. Gives the user an at-a-glance "this is
+ * a swipeable list with N items" cue. */
+.obelisk-mobile .spaces-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin: -8px 0 8px;
+}
+.obelisk-mobile .spaces-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--app-line);
+  transition: background 0.15s, transform 0.15s;
+}
+.obelisk-mobile .spaces-dot.active {
+  background: var(--accent);
+  transform: scale(1.3);
+}
 .obelisk-mobile .space {
   flex-shrink: 0;
   width: 86px;

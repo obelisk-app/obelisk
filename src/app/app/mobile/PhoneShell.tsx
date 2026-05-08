@@ -2350,7 +2350,21 @@ function ServerScreen({
             <span className="space-name">&nbsp;</span>
           </button>
         </div>
+        <span className="spaces-arrow spaces-arrow-left" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 6 9 12 15 18" /></svg>
+        </span>
+        <span className="spaces-arrow spaces-arrow-right" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 6 15 12 9 18" /></svg>
+        </span>
       </div>
+      {relays.length > 1 && (
+        <div className="spaces-dots" aria-hidden="true">
+          {relays.map((url) => {
+            const isActive = url.replace(/\/+$/, '').toLowerCase() === relay.replace(/\/+$/, '').toLowerCase();
+            return <span key={url} className={`spaces-dot ${isActive ? 'active' : ''}`} />;
+          })}
+        </div>
+      )}
 
       {addRelayOpen && <AddRelaySheet close={() => setAddRelayOpen(false)} />}
       {createChannelOpen && relay && (
