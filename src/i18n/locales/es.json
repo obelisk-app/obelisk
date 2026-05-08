@@ -186,6 +186,11 @@
   "landing.preview.mobile.alt": "Captura mobile de Obelisk — íconos de servidores, General Chat, foros anidados, canal de voz y lista sin categoría.",
   "landing.preview.mobile.cta": "Ver el tour de mobile",
 
+  "landing.showcase.heading": "Un solo cliente, todas las pantallas",
+  "landing.showcase.subtitle": "Salas de voz con video en tiempo real, canales en el bolsillo — el mismo cliente puro Nostr, sin app nativa, sin backend.",
+  "landing.showcase.desktop.alt": "Captura desktop de Obelisk — canal de voz con un peer SFU transmitiendo un patrón de prueba de color.",
+  "landing.showcase.mobile.alt": "Captura mobile de Obelisk — lista de servidores con canales categorizados y una sala de voz en vivo.",
+
   "mobile.hero.badge": "Tour mobile",
   "mobile.hero.title": "Chat grupal que entra en tu",
   "mobile.hero.titleHighlight": "bolsillo",

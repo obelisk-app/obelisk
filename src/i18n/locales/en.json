@@ -186,6 +186,11 @@
   "landing.preview.mobile.alt": "Obelisk mobile screenshot — server icons, General Chat, nested forum channels, voice channel and uncategorized list.",
   "landing.preview.mobile.cta": "Tour the mobile UI",
 
+  "landing.showcase.heading": "One client, every screen",
+  "landing.showcase.subtitle": "Real-time voice rooms with video, channels in your pocket — same Nostr-only client, no native app, no backend.",
+  "landing.showcase.desktop.alt": "Obelisk desktop screenshot — voice channel with an SFU peer transmitting a colour test pattern.",
+  "landing.showcase.mobile.alt": "Obelisk mobile screenshot — server list with categorised channels and a live voice room.",
+
   "mobile.hero.badge": "Mobile tour",
   "mobile.hero.title": "Group chat that fits in your",
   "mobile.hero.titleHighlight": "pocket",

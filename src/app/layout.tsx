@@ -174,24 +174,19 @@ export default async function RootLayout({
         {/* PWA route guard. When the app is opened in standalone mode
             (Add-to-home-screen / installed PWA) and lands on the public
             landing page, jump straight to /app so the marketing hero
-            doesn't flash before the chat shell mounts. We use
-            `beforeInteractive` + `location.replace` so the redirect runs
-            before the landing page paints — without it, already-installed
-            clients (whose cached manifest still has the old start_url
-            of '/') see the H1 hero flash on every launch. */}
-        <Script id="obelisk-pwa-route-guard" strategy="beforeInteractive" nonce={nonce}>
-          {`
-            (function () {
-              try {
-                var standalone = (typeof matchMedia === 'function' && matchMedia('(display-mode: standalone)').matches)
-                  || window.navigator.standalone === true;
-                if (standalone && location.pathname === '/') {
-                  location.replace('/app' + location.search + location.hash);
-                }
-              } catch (e) { /* ignore */ }
-            })();
-          `}
-        </Script>
+            doesn't flash before the chat shell mounts. Rendered as a
+            native <script> in <head> (not next/script) so it runs as the
+            HTML is parsed — earlier than `beforeInteractive` — and
+            sidesteps React 19's nonce-stripping hydration warning, same
+            pattern as the JSON-LD block above. */}
+        <script
+          id="obelisk-pwa-route-guard"
+          nonce={nonce}
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var s=(typeof matchMedia==='function'&&matchMedia('(display-mode: standalone)').matches)||window.navigator.standalone===true;if(s&&location.pathname==='/'){location.replace('/app'+location.search+location.hash);}}catch(e){}})();`,
+          }}
+        />
         <Script id="google-analytics" strategy="afterInteractive" nonce={nonce}>
           {`
             window.dataLayer = window.dataLayer || [];

@@ -337,6 +337,58 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Hero showcase — desktop voice channel + floating mobile preview, so
+          visitors immediately see what Obelisk looks like on every screen
+          before they scroll into the per-device tour cards below. */}
+      <section className="relative pt-2 pb-20 md:pt-4 md:pb-28 px-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-10 md:mb-12">
+            <h2 className="text-2xl md:text-3xl font-bold text-lc-white">
+              {t('landing.showcase.heading')}<span className="text-lc-green">.</span>
+            </h2>
+            <p className="mt-3 text-sm md:text-base text-lc-muted max-w-xl mx-auto">
+              {t('landing.showcase.subtitle')}
+            </p>
+          </div>
+
+          <div className="relative mx-auto max-w-5xl">
+            {/* Soft green glow behind the screens */}
+            <div
+              aria-hidden="true"
+              className="absolute inset-x-12 inset-y-4 bg-lc-green/10 rounded-[2rem] blur-[80px] -z-10 pointer-events-none"
+            />
+
+            {/* Desktop screenshot in a monitor-style frame */}
+            <figure className="rounded-2xl border border-lc-border bg-lc-dark overflow-hidden shadow-2xl shadow-black/40 lg:mr-20">
+              <Image
+                src="/pictures-for-posts/desktop-large-voice-channel-with-sfu-peer-trasmission-test.png"
+                alt={t('landing.showcase.desktop.alt')}
+                width={1470}
+                height={799}
+                priority
+                className="w-full h-auto block"
+                sizes="(max-width: 1024px) 95vw, 960px"
+              />
+            </figure>
+
+            {/* Mobile screenshot — stacked centered on small screens, floating
+                bottom-right overlay on lg+ for a device-mockup composition. */}
+            <div className="mt-6 mx-auto w-[150px] sm:w-[180px] lg:mt-0 lg:mx-0 lg:w-[210px] lg:absolute lg:right-0 lg:-bottom-10">
+              <figure className="rounded-[1.75rem] border-2 border-lc-border bg-lc-dark overflow-hidden shadow-2xl shadow-black/70">
+                <Image
+                  src="/pictures-for-posts/mobile-server-and-channels-view.png"
+                  alt={t('landing.showcase.mobile.alt')}
+                  width={720}
+                  height={1600}
+                  className="w-full h-auto block"
+                  sizes="(max-width: 1024px) 180px, 210px"
+                />
+              </figure>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Relay connection pulse */}
       <div className="relative py-4 pointer-events-none" aria-hidden="true">
         <svg viewBox="0 0 500 20" className="w-full max-w-2xl mx-auto block" preserveAspectRatio="xMidYMid meet">
