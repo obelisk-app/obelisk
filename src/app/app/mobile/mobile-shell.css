@@ -645,24 +645,27 @@
 }
 
 /* Discord-style vertical rail + L-branches for expanded forum threads.
- * The wrapper draws one continuous rail down the left; each thread row
- * draws its own L-corner that overlaps the rail at its vertical centre.
- * The rail's bottom equals roughly half a row so it terminates inside
- * the last branch's corner rather than trailing past it. */
+ * Each thread row owns its own rail segment (::before, full row height) and
+ * its own L-corner (::after, top half + curve). The last row's rail segment
+ * stops at 50% height so it terminates exactly inside the L-corner instead
+ * of trailing past it as a stub. */
 .obelisk-mobile .forum-threads {
   position: relative;
 }
-.obelisk-mobile .forum-threads::before {
+.obelisk-mobile .forum-threads .ch-row.ch-thread {
+  position: relative;
+}
+.obelisk-mobile .forum-threads .ch-row.ch-thread::before {
   content: '';
   position: absolute;
   left: 14px;
   top: 0;
-  bottom: 19px;
+  bottom: 0;
   border-left: 1.5px solid var(--app-line);
   pointer-events: none;
 }
-.obelisk-mobile .forum-threads .ch-row.ch-thread {
-  position: relative;
+.obelisk-mobile .forum-threads .ch-row.ch-thread:last-child::before {
+  bottom: 50%;
 }
 .obelisk-mobile .forum-threads .ch-row.ch-thread::after {
   content: '';

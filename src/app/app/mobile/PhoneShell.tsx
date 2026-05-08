@@ -676,18 +676,6 @@ export function RelayMenuSheet({
   );
 }
 
-// Build-stub placeholder so the call site at line ~1305 compiles. The real
-// implementation is in-flight on another device; this no-op renderer keeps
-// production buildable in the meantime and will be overwritten by the
-// incoming feature commit.
-function CreateChannelSheet(_props: {
-  relayLabel: string;
-  close: () => void;
-  onCreated: (id: string) => void;
-}): React.ReactNode {
-  return null;
-}
-
 function AddRelaySheet({ close }: { close: () => void }) {
   const [tab, setTab] = useState<'suggested' | 'custom'>('suggested');
   const configured = useConfiguredRelays();
@@ -4148,13 +4136,34 @@ export default function MobileShell() {
     }
     if (suppressSlideRef.current) {
       // Clear after the post-commit render commits, so a subsequent tap-nav
-      // can still play its slide animation.
+      // can still play its slide animation. ALSO null out slideDir so that
+      // any later unrelated re-render (data arriving, store update, etc.)
+      // doesn't re-add the slide-forward/back class to the screen-anim wrapper
+      // and replay the slide as a ghostly reverse motion.
       const id = requestAnimationFrame(() => {
         suppressSlideRef.current = false;
+        setSlideDir(null);
       });
       return () => cancelAnimationFrame(id);
     }
   }, [isDragging, nav.screen]);
+
+  // After a tap-nav slide animation completes, clear slideDir. Without this,
+  // the screen-anim wrapper keeps the slide-forward/back class indefinitely,
+  // and any subsequent className flip (e.g., after a drag-commit's brief ''
+  // suppression) re-triggers the animation as a ghost slide.
+  useEffect(() => {
+    if (slideDir === null) return;
+    const id = setTimeout(() => setSlideDir(null), 320);
+    return () => clearTimeout(id);
+  }, [slideDir, nav.screen]);
+
+  // Must be called unconditionally — there's an early return for the guest
+  // (logged-out) branch further down, and React requires the same hook order
+  // on every render. Without hoisting this, logging in/out flips the hook
+  // count and trips React error #310.
+  const kbInset = useKeyboardInset();
+
   const selectGroup = useCallback((groupId: string, kind: JsGroup['kind']) => {
     if (kind === 'voice' || kind === 'voice-sfu') {
       useChatStore.setState({ activeChannelId: null });
@@ -4366,7 +4375,8 @@ export default function MobileShell() {
   // the previous screen so the nav under them stays meaningful but covered
   // by the sheet backdrop). Also hide when the on-screen keyboard is open
   // so the nav doesn't wedge between the composer and the keyboard.
-  const kbInset = useKeyboardInset();
+  // (kbInset is already declared above the guest-branch early return so the
+  // hook count stays stable across login state transitions.)
   const hideNav =
     nav.screen === 'profile-view' ||
     nav.screen === 'search' ||
@@ -4408,7 +4418,13 @@ export default function MobileShell() {
       <div className="screens-host" ref={screensHostRef}>
         {baseBody}
         <div ref={dragLayerRef} className={`drag-layer ${isDragging ? 'is-dragging' : ''}`}>
-          {isDragging && dragNeighbors.left && (
+          {/* Neighbors are mounted unconditionally (not gated on `isDragging`)
+           * so their hooks subscribe and skeleton-states resolve before the
+           * user swipes. Without this, every drag-start mounted a fresh
+           * neighbor tree and the user saw a visible "refresh" flash as the
+           * subscriptions hydrated. The slots are positioned offscreen via CSS
+           * (translateX ±100%) so they're invisible until the layer pans. */}
+          {dragNeighbors.left && (
             <div className="drag-slot drag-prev" key={`prev-${dragNeighbors.left}`} aria-hidden="true">
               {renderTopLevelScreen(dragNeighbors.left)}
             </div>
@@ -4416,7 +4432,7 @@ export default function MobileShell() {
           <div className="drag-slot drag-curr">
             <div key={nav.screen} className={`screen-anim ${slideClass}`}>{body}</div>
           </div>
-          {isDragging && dragNeighbors.right && (
+          {dragNeighbors.right && (
             <div className="drag-slot drag-next" key={`next-${dragNeighbors.right}`} aria-hidden="true">
               {renderTopLevelScreen(dragNeighbors.right)}
             </div>
