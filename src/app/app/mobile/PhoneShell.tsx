@@ -1302,13 +1302,13 @@ function ChannelScreen({
             }}
           />
           <button
-            className="icon-btn"
-            style={{ width: 30, height: 30, opacity: uploading ? 0.4 : 1 }}
+            className="composer-attach"
+            style={{ opacity: uploading ? 0.4 : 1 }}
             aria-label="Attach"
             disabled={uploading}
             onClick={() => fileInputRef.current?.click()}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
           </button>
           <input
             className="composer-input"
@@ -1328,8 +1328,8 @@ function ChannelScreen({
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 14-7-7 14-2-5-5-2z" /></svg>
               </button>
             ) : (
-              <button className="icon-btn" aria-label="Emoji" onClick={() => setEmojiOpen(true)}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01" /></svg>
+              <button className="composer-emoji" aria-label="Emoji" onClick={() => setEmojiOpen(true)}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01" /></svg>
               </button>
             )}
           </div>
@@ -1337,7 +1337,9 @@ function ChannelScreen({
         {emojiOpen && (
           <div className="emoji-sheet-host" onClick={() => setEmojiOpen(false)}>
             <div className="emoji-sheet" onClick={(e) => e.stopPropagation()}>
+              <div className="sheet-handle" />
               <EmojiPicker
+                variant="sheet"
                 onPick={(emoji) => {
                   setDraft((d) => d + emoji);
                   setEmojiOpen(false);
@@ -1705,8 +1707,8 @@ function DmThreadScreen({
 
       <div className="composer">
         <div className="composer-inner">
-          <button className="icon-btn" style={{ width: 30, height: 30 }} aria-label="Attach">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+          <button className="composer-attach" aria-label="Attach">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
           </button>
           <input
             className="composer-input"
@@ -1726,8 +1728,8 @@ function DmThreadScreen({
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 14-7-7 14-2-5-5-2z" /></svg>
               </button>
             ) : (
-              <button className="icon-btn" aria-label="Emoji">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01" /></svg>
+              <button className="composer-emoji" aria-label="Emoji">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01" /></svg>
               </button>
             )}
           </div>
@@ -2467,6 +2469,14 @@ export default function MobileShell() {
     if (seen) return;
     if (meta && (meta.name || meta.displayName)) {
       window.localStorage.setItem(key, '1');
+      return;
+    }
+    // Freshly generated key (set by LoginModal) — no kind:0 will ever arrive,
+    // so skip the grace period and show setup immediately.
+    const justGenKey = `obelisk-dex/just-generated/${myPubkey}`;
+    if (window.localStorage.getItem(justGenKey)) {
+      try { window.localStorage.removeItem(justGenKey); } catch { /* ignore */ }
+      setShowSetup(true);
       return;
     }
     // Show setup after a brief grace period (let kind:0 arrive)
