@@ -61,13 +61,7 @@ Full guided tours: [obelisk.ar/desktop](https://obelisk.ar/desktop) · [obelisk.
 ### Mobile
 
 <p align="center">
-  <img src="public/pictures-for-posts/mobile-login-modal.png" alt="Obelisk mobile login modal — NIP-46 remote signer, Generate a new key, Import an nsec" width="22%" />
-  &nbsp;
-  <img src="public/pictures-for-posts/mobile-own-profile-view.png" alt="Obelisk mobile profile — banner, avatar, npub, hex pubkey, Edit Nostr Profile and Disconnect" width="22%" />
-  &nbsp;
-  <img src="public/pictures-for-posts/mobile-server-and-channels-view.png" alt="Obelisk mobile — server icons, categorized channels, nested forum threads, live voice indicator" width="22%" />
-  &nbsp;
-  <img src="public/pictures-for-posts/mobile-channel-view-with-sfu-test-peer-trasmission.png" alt="Obelisk mobile — voice channel in SFU mode with a test peer streaming a video pattern" width="22%" />
+  <img src="public/pictures-for-posts/mobile-showcase-readme.png" alt="Obelisk mobile — server and channel list, voice channel with SFU test peer, three-way Nostr login modal, and own kind-0 profile view, each rendered as a phone-framed screen" width="95%" />
 </p>
 
 <p align="center"><sub>The three-way Nostr login (NIP-46 / generate / import) · your portable kind-0 Nostr profile · mobile-first server list · voice with SFU.</sub></p>
