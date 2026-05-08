@@ -973,6 +973,19 @@ class BridgeImpl implements NostrBridge {
     this.adminMemberSubscribedGroups.clear();
     this.adminMemberLatestAt.clear();
     this.metadataRequested.clear();
+    // Re-login on the same browser keeps the in-memory bridge instance, so
+    // the kind 39000 newest-wins guard retains every `groupId → created_at`
+    // pair from the previous session. Kind 39000 is replaceable: the new
+    // session's REQ delivers the SAME events with the SAME created_at the
+    // guard just memorized, and `if (ev.created_at <= prevAt) return;` drops
+    // every one of them — the sidebar stays empty until the user toggles
+    // relays (switchRelay clears the Map) or refreshes (fresh bridge
+    // instance). Same reason `creatorSubscribedGroups` must reset: its
+    // entries are tied to the dead pool's per-group kind 9007 subs, so the
+    // guard short-circuits `subscribeGroupCreator` and the new pool never
+    // re-opens them.
+    this.groupMetadataLatestAt.clear();
+    this.creatorSubscribedGroups.clear();
     // Clear the per-group readiness flags too — the new pool has not seen
     // 39001/39002 yet, so consumers must wait for fresh evidence before
     // deciding "not a member".

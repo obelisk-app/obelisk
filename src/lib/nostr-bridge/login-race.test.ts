@@ -276,6 +276,47 @@ describe('Fix C — bunker pre-warm on initialize', () => {
   });
 });
 
+describe('Fix E — re-login does not strand kind 39000 behind newest-wins guard', () => {
+  // The bridge instance survives logout (only `getBridge()` resets it, which
+  // happens on a hard page reload). `groupMetadataLatestAt` is an in-memory
+  // Map on that instance. Without the fix, logging out and back in on the
+  // same browser leaves the Map populated with `groupId → created_at` from
+  // the prior session — and because kind 39000 is replaceable, the new
+  // session's REQ delivers events with the SAME `created_at` the guard just
+  // memorized, so `if (ev.created_at <= prevAt) return;` drops every one and
+  // the sidebar reads "No channels found" until the user toggles relays.
+  // resetPoolForSessionChange now clears the Map.
+  it('re-ingests kind 39000 with the same created_at after logout + login', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+
+    const metaEvent: NostrEvent = {
+      id: 'meta-1', pubkey: 'relay-pk', created_at: 1234, kind: 39000, sig: '',
+      content: '', tags: [['d', 'persistent-group'], ['name', 'Persistent']],
+    };
+
+    let groups: ReadonlyArray<{ id: string }> = [];
+    bridge.subscribeGroups((g) => { groups = g; });
+
+    await bridge.loginWithNsec(skHex, pkHex);
+    fake.state.published.push(metaEvent);
+    for (const sub of fake.state.subscriptions) {
+      if (fake.matches(sub.filter, metaEvent)) sub.sink(metaEvent);
+    }
+    expect(groups.find((g) => g.id === 'persistent-group')).toBeDefined();
+
+    await bridge.logout();
+    expect(groups.find((g) => g.id === 'persistent-group')).toBeUndefined();
+
+    // metaEvent is still in fake.state.published. FakePool replays it to any
+    // matching new subscription, so we don't need to fan out manually — the
+    // post-login subscribeGroupMetadata sub picks it up synchronously.
+    await bridge.loginWithNsec(skHex, pkHex);
+    expect(groups.find((g) => g.id === 'persistent-group')).toBeDefined();
+  });
+});
+
 describe('Fix D — bridgeCache integration: admin/member persistence', () => {
   it('persists admin list to cache when the relay delivers kind 39001', async () => {
     const clientMod = await import('./client');
