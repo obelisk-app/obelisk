@@ -15,7 +15,8 @@ export type ScreenName =
   | 'msg-actions'
   | 'zap-modal'
   | 'settings-profile'
-  | 'settings-prefs';
+  | 'settings-prefs'
+  | 'profile-edit';
 
 export interface NavState {
   screen: ScreenName;
@@ -51,6 +52,7 @@ const KNOWN_SCREENS: ReadonlySet<ScreenName> = new Set<ScreenName>([
   'forum',
   'settings-profile',
   'settings-prefs',
+  'profile-edit',
 ]);
 
 function shortHost(url: string): string {

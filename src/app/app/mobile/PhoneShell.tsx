@@ -3672,14 +3672,97 @@ function ZapModalSheet({
 // ───────────────────────────────────────────────────────────────────────────
 // 16 — settings · profile
 
-function SettingsProfileScreen({ go }: { go: (s: ScreenName) => void }) {
+function CopyIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="9" y="9" width="13" height="13" rx="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </svg>
+  );
+}
+
+function CopiedIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+
+function CopyRow({
+  tag,
+  value,
+  copyText,
+  testId,
+}: {
+  tag: string;
+  value: string;
+  copyText: string;
+  testId?: string;
+}) {
+  const [copied, setCopied] = useState(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); }, []);
+
+  const onCopy = () => {
+    try { navigator.clipboard?.writeText(copyText); } catch { /* ignore */ }
+    setCopied(true);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => setCopied(false), 1600);
+  };
+
+  return (
+    <button
+      type="button"
+      className={`copy-row ${copied ? 'copied' : ''}`}
+      onClick={onCopy}
+      data-testid={testId}
+      aria-label={`Copy ${tag}`}
+    >
+      <span className="copy-row-tag">{tag}</span>
+      <span className="copy-row-value">{copied ? 'Copied!' : value}</span>
+      <span className="copy-row-icon">{copied ? <CopiedIcon /> : <CopyIcon />}</span>
+    </button>
+  );
+}
+
+function DisconnectConfirmSheet({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
+  return (
+    <div className="sheet-host" data-screen="disconnect-confirm">
+      <div className="sheet-backdrop" onClick={onCancel} />
+      <div className="sheet">
+        <div className="sheet-handle" />
+        <div className="confirm-sheet-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+        </div>
+        <div className="confirm-sheet-title">Disconnect from Nostr?</div>
+        <div className="confirm-sheet-desc">
+          Your session will end on this device. You'll need your nsec, signer extension, or bunker to log back in.
+        </div>
+        <button className="settings-btn-danger" onClick={onConfirm} data-testid="disconnect-confirm">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+          Yes, disconnect
+        </button>
+        <button className="btn-cancel" onClick={onCancel}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
+export function SettingsProfileScreen({ go }: { go: (s: ScreenName) => void }) {
   const myPubkey = useMyPubkey();
   const meta = useUserMetadata(myPubkey);
   const name = meta?.displayName || meta?.name || shortNpub(myPubkey ?? '');
-
-  const copy = (text: string) => {
-    try { navigator.clipboard?.writeText(text); } catch { /* ignore */ }
-  };
+  const npub = myPubkey ? pubkeyToNpub(myPubkey) : '';
+  const [confirmingLogout, setConfirmingLogout] = useState(false);
 
   return (
     <div className="screen active" data-screen="settings-profile">
@@ -3692,27 +3775,29 @@ function SettingsProfileScreen({ go }: { go: (s: ScreenName) => void }) {
       </div>
       <div className="settings-body">
         <div className="settings-card profile-card">
-          <NameAvatar pubkey={myPubkey ?? ''} name={name} picture={meta?.picture} size={60} className="me-avatar large" />
-          <div className="profile-card-meta">
-            <div className="profile-name">{name}</div>
-            {meta?.nip05 && <div className="profile-nip05">{meta.nip05}</div>}
-            <div className="profile-npub">{shortNpub(myPubkey ?? '')}</div>
+          <div className="profile-banner" data-testid="profile-banner">
+            {meta?.banner && <img src={meta.banner} alt="" />}
           </div>
+          <div className="profile-row">
+            <NameAvatar pubkey={myPubkey ?? ''} name={name} picture={meta?.picture} size={60} className="me-avatar large" />
+            <div className="profile-card-meta">
+              <div className="profile-name">{name}</div>
+              {meta?.nip05 && <div className="profile-nip05">{meta.nip05}</div>}
+              <div className="profile-npub">{shortNpub(myPubkey ?? '')}</div>
+            </div>
+          </div>
+          {meta?.about && (
+            <div className="profile-about" data-testid="profile-about">{meta.about}</div>
+          )}
         </div>
         <div className="settings-section">
           <div className="settings-section-title">Identity</div>
-          <button className="settings-row action" onClick={() => myPubkey && copy(pubkeyToNpub(myPubkey))}>
-            <span>Copy npub</span>
-            <span className="settings-row-meta">{shortNpub(myPubkey ?? '')}</span>
-          </button>
-          <button className="settings-row action" onClick={() => myPubkey && copy(myPubkey)}>
-            <span>Copy hex pubkey</span>
-            <span className="settings-row-meta muted">tap to copy</span>
-          </button>
+          {myPubkey && <CopyRow tag="npub" value={shortNpub(myPubkey)} copyText={npub} testId="copy-npub" />}
+          {myPubkey && <CopyRow tag="hex" value={`${myPubkey.slice(0, 10)}…${myPubkey.slice(-6)}`} copyText={myPubkey} testId="copy-hex" />}
           {myPubkey && (
             <a
               className="settings-row action"
-              href={`https://njump.me/${pubkeyToNpub(myPubkey)}`}
+              href={`https://njump.me/${npub}`}
               target="_blank"
               rel="noopener noreferrer"
               style={{ textDecoration: 'none' }}
@@ -3722,11 +3807,307 @@ function SettingsProfileScreen({ go }: { go: (s: ScreenName) => void }) {
             </a>
           )}
         </div>
-        <button className="settings-btn-primary" onClick={() => { /* future: edit profile sheet */ }}>
+        <button className="settings-btn-primary" onClick={() => go('profile-edit')} data-testid="edit-profile-btn">
           Edit Nostr Profile
         </button>
-        <button className="settings-btn-danger" onClick={() => { void nostrActions.logout(); }}>
+        <button
+          className="settings-btn-danger"
+          onClick={() => setConfirmingLogout(true)}
+          data-testid="disconnect-btn"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
           Disconnect
+        </button>
+      </div>
+      {confirmingLogout && (
+        <DisconnectConfirmSheet
+          onConfirm={() => { setConfirmingLogout(false); void nostrActions.logout(); }}
+          onCancel={() => setConfirmingLogout(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// 16b — settings · profile · edit
+
+export function EditProfileScreen({ go }: { go: (s: ScreenName, dir?: 'forward' | 'back') => void }) {
+  const myPubkey = useMyPubkey();
+  const meta = useUserMetadata(myPubkey);
+
+  const [name, setName] = useState('');
+  const [about, setAbout] = useState('');
+  const [picture, setPicture] = useState('');
+  const [banner, setBanner] = useState('');
+  const [nip05, setNip05] = useState('');
+  const [lud16, setLud16] = useState('');
+  const [website, setWebsite] = useState('');
+  const [picturePreview, setPicturePreview] = useState<string | null>(null);
+  const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+  const [pictureFile, setPictureFile] = useState<File | null>(null);
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const dirtyRef = useRef(false);
+  const markDirty = () => { dirtyRef.current = true; };
+
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
+
+  // Hydrate from kind:0 once it lands. Don't clobber user edits.
+  useEffect(() => {
+    if (!meta || dirtyRef.current) return;
+    setName(meta.displayName || meta.name || '');
+    setAbout(meta.about || '');
+    setPicture(meta.picture || '');
+    setBanner(meta.banner || '');
+    setNip05(meta.nip05 || '');
+    setLud16(meta.lud16 || '');
+    setWebsite(meta.website || '');
+  }, [meta]);
+
+  // Clean up object URLs on unmount.
+  useEffect(() => {
+    return () => {
+      if (picturePreview) URL.revokeObjectURL(picturePreview);
+      if (bannerPreview) URL.revokeObjectURL(bannerPreview);
+    };
+  }, [picturePreview, bannerPreview]);
+
+  const pickAvatar = (file: File) => {
+    if (!file.type.startsWith('image/')) { setError('Please select an image file'); return; }
+    if (file.size > 10 * 1024 * 1024) { setError('Image is too large (max 10MB)'); return; }
+    setError(null);
+    markDirty();
+    setPictureFile(file);
+    if (picturePreview) URL.revokeObjectURL(picturePreview);
+    setPicturePreview(URL.createObjectURL(file));
+  };
+
+  const pickBanner = (file: File) => {
+    if (!file.type.startsWith('image/')) { setError('Please select an image file'); return; }
+    if (file.size > 10 * 1024 * 1024) { setError('Image is too large (max 10MB)'); return; }
+    setError(null);
+    markDirty();
+    setBannerFile(file);
+    if (bannerPreview) URL.revokeObjectURL(bannerPreview);
+    setBannerPreview(URL.createObjectURL(file));
+  };
+
+  const nameTrimmed = name.trim();
+  const nameValid = nameTrimmed.length > 0;
+  const busy = saving || uploadingAvatar || uploadingBanner;
+
+  const save = async () => {
+    if (!nameValid || busy) return;
+    setSaving(true);
+    setError(null);
+    try {
+      let finalPicture = picture;
+      let finalBanner = banner;
+      if (pictureFile) {
+        setUploadingAvatar(true);
+        try { finalPicture = await uploadToBlossom(pictureFile); }
+        finally { setUploadingAvatar(false); }
+      }
+      if (bannerFile) {
+        setUploadingBanner(true);
+        try { finalBanner = await uploadToBlossom(bannerFile); }
+        finally { setUploadingBanner(false); }
+      }
+      await nostrActions.editUserMetadata({
+        name: nameTrimmed,
+        displayName: nameTrimmed,
+        about: about.trim(),
+        picture: finalPicture.trim(),
+        banner: finalBanner.trim(),
+        nip05: nip05.trim(),
+        lud16: lud16.trim(),
+        website: website.trim(),
+      });
+      go('settings-profile', 'back');
+    } catch (err) {
+      console.warn('[mobile] editUserMetadata failed', err);
+      setError(err instanceof Error ? err.message : 'Failed to publish profile');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const currentBanner = bannerPreview || banner;
+  const currentPicture = picturePreview || picture;
+
+  return (
+    <div className="screen active" data-screen="profile-edit">
+      <div className="setup-header">
+        <button
+          className="back-btn"
+          onClick={() => go('settings-profile', 'back')}
+          aria-label="Back"
+          disabled={busy}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+        </button>
+        <h2>Edit profile</h2>
+        <button
+          className="setup-skip save-action"
+          onClick={save}
+          disabled={!nameValid || busy}
+          data-testid="save-profile"
+        >
+          {saving ? 'Saving…' : uploadingAvatar || uploadingBanner ? 'Uploading…' : 'Save'}
+        </button>
+      </div>
+      <div className="setup-body edit-profile-body">
+        {error && <div className="edit-error" role="alert">{error}</div>}
+
+        <button
+          type="button"
+          className={`edit-banner-tap ${currentBanner ? '' : 'empty'} ${uploadingBanner ? 'uploading' : ''}`}
+          onClick={() => bannerInputRef.current?.click()}
+          aria-label="Change banner image"
+          data-testid="edit-banner-tap"
+        >
+          {currentBanner && <img src={currentBanner} alt="" />}
+          <div className="edit-banner-overlay">
+            {uploadingBanner ? (
+              <span className="edit-uploading-spinner" aria-hidden="true" />
+            ) : (
+              <>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+                <span>{currentBanner ? 'Change banner' : 'Tap to add banner'}</span>
+              </>
+            )}
+          </div>
+          <input
+            ref={bannerInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) pickBanner(f); e.target.value = ''; }}
+          />
+        </button>
+
+        <div className="edit-avatar-row">
+          <button
+            type="button"
+            className={`edit-avatar-tap ${currentPicture ? '' : 'empty'} ${uploadingAvatar ? 'uploading' : ''}`}
+            onClick={() => avatarInputRef.current?.click()}
+            aria-label="Change profile picture"
+            data-testid="edit-avatar-tap"
+          >
+            <NameAvatar pubkey={myPubkey ?? ''} name={name} picture={currentPicture} size={88} className="me-avatar" />
+            <div className="edit-avatar-overlay">
+              {uploadingAvatar ? (
+                <span className="edit-uploading-spinner" aria-hidden="true" />
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                  <circle cx="12" cy="13" r="4" />
+                </svg>
+              )}
+            </div>
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) pickAvatar(f); e.target.value = ''; }}
+            />
+          </button>
+          <div className="edit-avatar-tip">
+            Tap your avatar or banner to upload a new image. Your changes are published as kind:0 metadata.
+          </div>
+        </div>
+
+        <div className="edit-fields">
+          <div className="setup-field">
+            <label>Display name</label>
+            <div className="setup-input-wrap">
+              <input
+                className="setup-input"
+                value={name}
+                onChange={(e) => { markDirty(); setName(e.target.value); }}
+                placeholder="Your name"
+                maxLength={50}
+                data-testid="edit-name"
+              />
+            </div>
+          </div>
+          <div className="setup-field">
+            <label>About</label>
+            <textarea
+              className="setup-textarea"
+              value={about}
+              onChange={(e) => { markDirty(); setAbout(e.target.value); }}
+              placeholder="A short bio…"
+              maxLength={500}
+              rows={3}
+              data-testid="edit-about"
+            />
+          </div>
+          <div className="setup-field">
+            <label>NIP-05</label>
+            <div className="setup-input-wrap">
+              <input
+                className="setup-input"
+                value={nip05}
+                onChange={(e) => { markDirty(); setNip05(e.target.value); }}
+                placeholder="you@domain.com"
+                inputMode="email"
+                autoCapitalize="off"
+                autoCorrect="off"
+              />
+            </div>
+          </div>
+          <div className="setup-field">
+            <label>Lightning address</label>
+            <div className="setup-input-wrap">
+              <input
+                className="setup-input"
+                value={lud16}
+                onChange={(e) => { markDirty(); setLud16(e.target.value); }}
+                placeholder="you@walletofsatoshi.com"
+                inputMode="email"
+                autoCapitalize="off"
+                autoCorrect="off"
+              />
+            </div>
+          </div>
+          <div className="setup-field">
+            <label>Website</label>
+            <div className="setup-input-wrap">
+              <input
+                className="setup-input"
+                value={website}
+                onChange={(e) => { markDirty(); setWebsite(e.target.value); }}
+                placeholder="https://…"
+                inputMode="url"
+                autoCapitalize="off"
+                autoCorrect="off"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="setup-actions">
+        <button
+          className="btn-primary"
+          onClick={save}
+          disabled={!nameValid || busy}
+        >
+          {saving ? 'Saving…' : uploadingAvatar || uploadingBanner ? 'Uploading…' : 'Save changes'}
         </button>
       </div>
     </div>
@@ -4373,6 +4754,9 @@ export default function MobileShell() {
     case 'settings-prefs':
       body = <SettingsPrefsScreen go={go} />;
       break;
+    case 'profile-edit':
+      body = <EditProfileScreen go={go} />;
+      break;
     case 'msg-actions':
     case 'zap-modal':
       // sheets — handled below
@@ -4395,6 +4779,7 @@ export default function MobileShell() {
     nav.screen === 'profile-view' ||
     nav.screen === 'search' ||
     nav.screen === 'compose-dm' ||
+    nav.screen === 'profile-edit' ||
     kbInset > 0;
 
   // For sheets, render the underlying screen + the sheet

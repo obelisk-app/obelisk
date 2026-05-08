@@ -110,6 +110,20 @@ describe('mobile swipe-nav', () => {
     });
   });
 
+  describe('profile-edit is a sub of settings-profile', () => {
+    it('swipe-right pops back to settings-profile', () => {
+      expect(decideSwipeNav('profile-edit', true)).toEqual({ kind: 'history-back' });
+    });
+
+    it('swipe-left is a no-op (no tab past settings-profile)', () => {
+      expect(decideSwipeNav('profile-edit', false)).toEqual({ kind: 'noop' });
+    });
+
+    it('neighbors: left = settings-profile, right = null', () => {
+      expect(neighborsFor('profile-edit')).toEqual({ left: 'settings-profile', right: null });
+    });
+  });
+
   describe('untyped / standalone screens', () => {
     it('login screen is a no-op in either direction', () => {
       expect(decideSwipeNav('login', true)).toEqual({ kind: 'noop' });

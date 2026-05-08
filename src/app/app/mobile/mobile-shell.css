@@ -701,9 +701,10 @@
 
 /* Discord-style vertical rail + L-branches for expanded forum threads.
  * Each thread row owns its own rail segment (::before, full row height) and
- * its own L-corner (::after, top half + curve). The last row's rail segment
- * stops at 50% so it terminates exactly inside the L-corner instead of
- * trailing past it as a stub. Lines are thickened for mobile visibility. */
+ * its own L-corner (::after, top half + curve). On the last row we drop the
+ * ::before entirely — the L-corner already provides the full vertical
+ * segment for that row, and keeping ::before would protrude past the corner
+ * radius as a visible stub. Lines are thickened for mobile visibility. */
 .obelisk-mobile .forum-threads {
   position: relative;
 }
@@ -720,7 +721,7 @@
   pointer-events: none;
 }
 .obelisk-mobile .forum-threads .ch-row.ch-thread:last-child::before {
-  bottom: 50%;
+  display: none;
 }
 .obelisk-mobile .forum-threads .ch-row.ch-thread::after {
   content: '';
@@ -3049,9 +3050,59 @@
   border-radius: 14px;
 }
 .obelisk-mobile .profile-card {
+  display: block;
+  padding: 0;
+  overflow: hidden;
+}
+.obelisk-mobile .profile-banner {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 96px;
+  background:
+    linear-gradient(135deg, rgba(180, 249, 83, 0.22), rgba(139, 195, 74, 0.04) 60%, rgba(180, 249, 83, 0));
+  overflow: hidden;
+}
+.obelisk-mobile .profile-banner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.obelisk-mobile .profile-banner::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 36px;
+  background: linear-gradient(to bottom, rgba(23, 23, 23, 0), var(--app-surface));
+  pointer-events: none;
+}
+.obelisk-mobile .profile-row {
   display: flex;
-  align-items: center;
-  gap: 14px;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 0 14px 12px;
+  margin-top: -32px;
+  position: relative;
+  z-index: 1;
+}
+.obelisk-mobile .profile-row .me-avatar.large {
+  border: 3px solid var(--app-surface);
+  box-sizing: content-box;
+}
+.obelisk-mobile .profile-card .profile-card-meta {
+  flex: 1;
+  min-width: 0;
+  padding-bottom: 2px;
+}
+.obelisk-mobile .profile-about {
+  padding: 2px 14px 14px;
+  font-size: 13px;
+  color: var(--app-text);
+  line-height: 1.55;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
 }
 .obelisk-mobile .me-avatar {
   width: 30px;
@@ -3216,13 +3267,276 @@
 .obelisk-mobile .settings-btn-danger {
   width: 100%;
   padding: 13px;
-  background: transparent;
-  color: var(--presence-dnd);
-  border: 1px solid rgba(255, 138, 138, 0.3);
+  background: #d94545;
+  color: #ffffff;
+  border: 1px solid #d94545;
   border-radius: 10px;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 13.5px;
+  letter-spacing: 0.02em;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 0 18px rgba(217, 69, 69, 0.18);
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.obelisk-mobile .settings-btn-danger:active {
+  background: #b53838;
+  border-color: #b53838;
+  box-shadow: 0 0 8px rgba(217, 69, 69, 0.28);
+}
+.obelisk-mobile .settings-btn-danger svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+/* ===== identity copy rows ===== */
+.obelisk-mobile .copy-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  background: var(--app-surface);
+  border: 1px solid var(--app-line);
+  border-radius: 10px;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: var(--app-text);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.obelisk-mobile .copy-row:active {
+  background: var(--app-surface-2);
+}
+.obelisk-mobile .copy-row.copied {
+  border-color: var(--accent);
+  background: rgba(180, 249, 83, 0.08);
+}
+.obelisk-mobile .copy-row-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--app-text-dim);
+  padding: 3px 7px;
+  border: 1px solid var(--app-line);
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+.obelisk-mobile .copy-row.copied .copy-row-tag {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.obelisk-mobile .copy-row-value {
+  flex: 1;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12.5px;
+  color: var(--app-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.obelisk-mobile .copy-row.copied .copy-row-value {
+  color: var(--accent);
+}
+.obelisk-mobile .copy-row-icon {
+  flex-shrink: 0;
+  color: var(--app-text-mute);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  transition: color 0.15s ease;
+}
+.obelisk-mobile .copy-row.copied .copy-row-icon {
+  color: var(--accent);
+}
+.obelisk-mobile .copy-row-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ===== profile-edit screen ===== */
+.obelisk-mobile .edit-profile-body {
+  padding: 0 0 16px;
+  gap: 14px;
+}
+.obelisk-mobile .edit-banner-tap {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 132px;
+  border: none;
+  cursor: pointer;
+  background:
+    linear-gradient(135deg, rgba(180, 249, 83, 0.18), rgba(139, 195, 74, 0.04));
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.obelisk-mobile .edit-banner-tap.empty {
+  border-bottom: 1px dashed rgba(180, 249, 83, 0.4);
+}
+.obelisk-mobile .edit-banner-tap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.obelisk-mobile .edit-banner-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--app-text);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  background: rgba(0, 0, 0, 0.32);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.obelisk-mobile .edit-banner-tap.empty .edit-banner-overlay,
+.obelisk-mobile .edit-banner-tap:active .edit-banner-overlay,
+.obelisk-mobile .edit-banner-tap.uploading .edit-banner-overlay {
+  opacity: 1;
+}
+.obelisk-mobile .edit-banner-tap.empty .edit-banner-overlay {
+  background: transparent;
+  color: var(--accent);
+}
+.obelisk-mobile .edit-banner-overlay svg {
+  width: 16px;
+  height: 16px;
+}
+.obelisk-mobile .edit-avatar-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 0 18px;
+  margin-top: -56px;
+  position: relative;
+  z-index: 1;
+}
+.obelisk-mobile .edit-avatar-tap {
+  position: relative;
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  cursor: pointer;
+  background: var(--app-surface);
+  border: 4px solid var(--app-bg);
+  overflow: visible;
+  flex-shrink: 0;
+}
+.obelisk-mobile .edit-avatar-tap .me-avatar {
+  width: 100%;
+  height: 100%;
+  font-size: 28px;
+}
+.obelisk-mobile .edit-avatar-tap .me-avatar::after {
+  display: none;
+}
+.obelisk-mobile .edit-avatar-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.obelisk-mobile .edit-avatar-tap:active .edit-avatar-overlay,
+.obelisk-mobile .edit-avatar-tap.empty .edit-avatar-overlay,
+.obelisk-mobile .edit-avatar-tap.uploading .edit-avatar-overlay {
+  opacity: 1;
+}
+.obelisk-mobile .edit-avatar-overlay svg {
+  width: 22px;
+  height: 22px;
+}
+.obelisk-mobile .edit-uploading-spinner {
+  width: 22px;
+  height: 22px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: obelisk-spin 0.8s linear infinite;
+}
+.obelisk-mobile .edit-avatar-row .edit-avatar-tip {
+  flex: 1;
+  font-size: 12px;
+  color: var(--app-text-dim);
+  line-height: 1.4;
+  padding-bottom: 6px;
+}
+.obelisk-mobile .edit-fields {
+  padding: 0 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.obelisk-mobile .edit-error {
+  margin: 0 18px;
+  padding: 10px 12px;
+  background: rgba(217, 69, 69, 0.15);
+  border: 1px solid rgba(217, 69, 69, 0.35);
+  color: #ff8a8a;
+  border-radius: 10px;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+.obelisk-mobile .setup-skip.save-action {
+  color: var(--accent);
+  font-weight: 700;
+}
+.obelisk-mobile .setup-skip:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ===== logout confirmation sheet ===== */
+.obelisk-mobile .confirm-sheet-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(217, 69, 69, 0.15);
+  color: #ff8a8a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 4px auto 8px;
+  flex-shrink: 0;
+}
+.obelisk-mobile .confirm-sheet-icon svg {
+  width: 22px;
+  height: 22px;
+}
+.obelisk-mobile .confirm-sheet-title {
+  text-align: center;
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--app-text);
+  letter-spacing: -0.01em;
+  margin-bottom: 6px;
+}
+.obelisk-mobile .confirm-sheet-desc {
+  text-align: center;
+  color: var(--app-text-dim);
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 0 8px;
+  margin-bottom: 16px;
 }
 
 /* ===== reply / quote ===== */

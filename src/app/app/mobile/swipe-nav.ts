@@ -18,6 +18,7 @@ export const SUB_TO_NAV: Partial<Record<ScreenName, ScreenName>> = {
   'compose-dm': 'dms-list',
   'profile-view': 'server',
   'settings-prefs': 'settings-profile',
+  'profile-edit': 'settings-profile',
 };
 
 export type SwipeNavAction =
