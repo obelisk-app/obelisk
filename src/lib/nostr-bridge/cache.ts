@@ -34,11 +34,19 @@
  *   - relay branding events
  */
 
-// v2 — bumped to drop pre-normalization cache entries that could mix
-// channels across relays (case- or trailing-slash-variant keys). Old
-// `obelisk-cache/` keys are orphaned and cleaned on next cacheClearAll.
-const KEY_PREFIX = 'obelisk-cache-v2/';
-const LEGACY_KEY_PREFIX = 'obelisk-cache/';
+// v3 — bumped to evict cache entries written by the pre-bleed-fix bridge,
+// where in-flight events from a markClosed sub on the previous relay's
+// still-open WebSocket were ingested under the new relay's cache key (via
+// `cacheSet(currentRelayUrl, ...)`). Those entries persist forever because
+// no fresh event from the actual relay ever overwrites them — symptom is
+// channels from another relay sticking in "Uncategorized" across page
+// reloads. Wiping the namespace is the cheapest correctness-restoring
+// migration; relays repopulate within seconds on next paint.
+//
+// Older `obelisk-cache/` (v1) and `obelisk-cache-v2/` keys are now
+// orphaned. Both prefixes are evicted on module load.
+const KEY_PREFIX = 'obelisk-cache-v3/';
+const LEGACY_KEY_PREFIXES = ['obelisk-cache/', 'obelisk-cache-v2/'] as const;
 
 export interface CachedEntry<T> {
   readonly value: T;
@@ -158,7 +166,7 @@ export function cacheClearAll(): void {
     for (let i = 0; i < window.localStorage.length; i++) {
       const key = window.localStorage.key(i);
       if (!key) continue;
-      if (key.startsWith(KEY_PREFIX) || key.startsWith(LEGACY_KEY_PREFIX)) {
+      if (key.startsWith(KEY_PREFIX) || LEGACY_KEY_PREFIXES.some((p) => key.startsWith(p))) {
         toRemove.push(key);
       }
     }
@@ -168,18 +176,20 @@ export function cacheClearAll(): void {
   }
 }
 
-// One-shot eviction of pre-v2 cache entries on module load. Without this,
-// stale keys with case- or trailing-slash-variant relay URLs can persist
-// indefinitely (no read path consumes them but they take up the localStorage
-// quota). Idempotent — once the legacy prefix returns nothing, the loop
-// exits immediately.
+// One-shot eviction of legacy cache entries on module load. Each version
+// bump leaves the previous prefix orphaned; this clears it (and any older
+// generations) so stale data — including entries written by the pre-bleed-fix
+// bridge under the wrong relay's key — can't keep painting after the upgrade.
+// Idempotent: once nothing matches a legacy prefix, the loop exits cheaply.
 (function evictLegacyCache() {
   if (!isAvailable()) return;
   try {
     const toRemove: string[] = [];
     for (let i = 0; i < window.localStorage.length; i++) {
       const key = window.localStorage.key(i);
-      if (key && key.startsWith(LEGACY_KEY_PREFIX) && !key.startsWith(KEY_PREFIX)) {
+      if (!key) continue;
+      if (key.startsWith(KEY_PREFIX)) continue;
+      if (LEGACY_KEY_PREFIXES.some((p) => key.startsWith(p))) {
         toRemove.push(key);
       }
     }
