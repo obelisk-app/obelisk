@@ -53,8 +53,21 @@ import EmojiPicker from '@/components/chat/EmojiPicker';
 import { uploadToBlossom } from '@/lib/blossom';
 import { formatPubkey, pubkeyToNpub, formatTimestamp } from '@/lib/nostr';
 import { faviconFor, fetchRelayInfo } from '@/lib/relay-info';
-import { useChannelLayout, useRelayOperatorPubkey, applyLayout } from '@/lib/channel-layout';
-import { useRelayBranding } from '@/lib/relay-branding';
+import {
+  useChannelLayout,
+  useRelayOperatorPubkey,
+  applyLayout,
+  publishLayout,
+  newCategoryId,
+  type ChannelLayout,
+} from '@/lib/channel-layout';
+import {
+  useRelayBranding,
+  publishBranding,
+  type RelayBranding,
+} from '@/lib/relay-branding';
+import BlossomImageInput from '@/components/BlossomImageInput';
+import RelayAdminPanel from '@/components/admin/RelayAdminPanel';
 import { nip19 } from 'nostr-tools';
 import { useNotificationStore, type InboxEvent } from '@/store/notification';
 import { useChatStore } from '@/store/chat';
@@ -443,28 +456,29 @@ const SUGGESTED_RELAYS: ReadonlyArray<{ url: string; fallbackName?: string; fall
   { url: 'wss://pyramid.fiatjaf.com', fallbackName: 'the fiatjaf pyramid', fallbackDescription: 'Invite-only NIP-29 relay run by fiatjaf.' },
 ];
 
-function RelayMenuSheet({
+export function RelayMenuSheet({
   close,
   relayUrl,
   label,
   iconUrl,
+  isAdmin = false,
+  branding,
+  layout,
+  rootChannels,
 }: {
   close: () => void;
   relayUrl: string;
   label: string;
   iconUrl?: string | null;
-  // Forward-declare WIP props (isAdmin / branding / layout / rootChannels)
-  // so the call site at line ~1324 type-checks while the in-flight feature
-  // commit lands. The current body ignores them; the incoming commit will
-  // wire them up.
   isAdmin?: boolean;
-  branding?: unknown;
-  layout?: unknown;
-  rootChannels?: unknown;
+  branding?: RelayBranding;
+  layout?: ChannelLayout;
+  rootChannels?: ReadonlyArray<JsGroup>;
 }) {
   const relays = useConfiguredRelays();
   const [busy, setBusy] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [adminPanel, setAdminPanel] = useState<null | 'branding' | 'categories' | 'members'>(null);
 
   const flash = (msg: string) => {
     setToast(msg);
@@ -590,6 +604,42 @@ function RelayMenuSheet({
             rowLabel="Copy relay URL"
             onClick={() => void copyUrl()}
           />
+          {isAdmin && (
+            <>
+              <div
+                data-testid="mobile-relay-admin-section"
+                style={{
+                  marginTop: 6,
+                  padding: '0 4px',
+                  fontSize: 10,
+                  fontWeight: 600,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.12em',
+                  color: 'var(--app-text-mute)',
+                }}
+              >
+                Admin
+              </div>
+              <Row
+                icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" /></svg>}
+                rowLabel="Edit branding"
+                hint="name · icon · banner"
+                onClick={() => setAdminPanel('branding')}
+              />
+              <Row
+                icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>}
+                rowLabel="Categories & order"
+                hint="layout"
+                onClick={() => setAdminPanel('categories')}
+              />
+              <Row
+                icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>}
+                rowLabel="Admins & members"
+                hint="bulk cleanup"
+                onClick={() => setAdminPanel('members')}
+              />
+            </>
+          )}
           <Row
             icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="m16 17 5-5-5-5" /><path d="M21 12H9" /></svg>}
             rowLabel="Leave this space"
@@ -603,6 +653,24 @@ function RelayMenuSheet({
         )}
         <button className="btn-cancel" onClick={close}>Close</button>
       </div>
+      {adminPanel === 'branding' && branding && (
+        <EditBrandingSheet
+          relayUrl={relayUrl}
+          branding={branding}
+          close={() => setAdminPanel(null)}
+        />
+      )}
+      {adminPanel === 'categories' && layout && (
+        <ManageCategoriesSheet
+          relayUrl={relayUrl}
+          layout={layout}
+          channels={rootChannels ?? []}
+          close={() => setAdminPanel(null)}
+        />
+      )}
+      {adminPanel === 'members' && (
+        <RelayAdminPanel onClose={() => setAdminPanel(null)} />
+      )}
     </div>
   );
 }
@@ -808,6 +876,981 @@ function CustomRelayForm({ onAdded }: { onAdded: () => void }) {
         {busy ? 'Adding…' : 'Add relay'}
       </button>
     </form>
+  );
+}
+
+// Bottom-sheet for creating a new channel on the active relay. Mirrors the
+// desktop CreateGroupSection's minimal form (just the name) — the relay
+// decides who is allowed to publish kind 9007, so we don't gate the UI by
+// admin role and let the publish error surface inline if it's rejected.
+export function CreateChannelSheet({
+  relayLabel,
+  close,
+  onCreated,
+}: {
+  relayLabel: string;
+  close: () => void;
+  onCreated: (groupId: string) => void;
+}) {
+  const [name, setName] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || busy) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      const id = await nostrActions.createGroup({
+        name: name.trim(),
+        isPublic: true,
+        isOpen: true,
+      });
+      onCreated(id);
+      close();
+    } catch (ex) {
+      setErr((ex as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="sheet-host" data-screen="create-channel">
+      <div className="sheet-backdrop" onClick={close} />
+      <div className="sheet" style={{ maxHeight: '88%' }}>
+        <div className="sheet-handle" />
+        <div className="zap-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
+          New channel
+        </div>
+        <p style={{ fontSize: 12, color: 'var(--app-text-dim)', margin: 0, lineHeight: 1.5 }}>
+          Channels are public and open by default — anyone the relay accepts can
+          read and post. You can lock it down later in <strong>Channel settings</strong>.
+        </p>
+        <form
+          onSubmit={submit}
+          style={{ display: 'flex', flexDirection: 'column', gap: 10 }}
+        >
+          <label
+            style={{
+              fontSize: 10,
+              color: 'var(--app-text-dim)',
+              fontWeight: 500,
+              textTransform: 'uppercase',
+              letterSpacing: '0.12em',
+              fontFamily: "'JetBrains Mono', monospace",
+            }}
+          >
+            Channel name · on {relayLabel}
+          </label>
+          <div className="setup-input-wrap">
+            <input
+              autoFocus
+              className="setup-input"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="general"
+              spellCheck={false}
+              data-testid="mobile-create-channel-input"
+            />
+          </div>
+          {err && <div style={{ fontSize: 12, color: 'var(--presence-dnd)' }}>{err}</div>}
+          <button
+            type="submit"
+            disabled={busy || !name.trim()}
+            className="btn-primary"
+            style={{ marginTop: 4 }}
+            data-testid="mobile-create-channel-submit"
+          >
+            {busy ? 'Creating…' : 'Create channel'}
+          </button>
+        </form>
+        <button className="btn-cancel" type="button" onClick={close}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
+// Bottom-sheet for editing kind 30078 relay branding (name, description,
+// icon, banner). Mobile-native counterpart of the desktop RelayBrandingModal,
+// reusing publishBranding so a write here is indistinguishable from desktop.
+function EditBrandingSheet({
+  relayUrl,
+  branding,
+  close,
+}: {
+  relayUrl: string;
+  branding: RelayBranding;
+  close: () => void;
+}) {
+  const [icon, setIcon] = useState(branding.icon);
+  const [banner, setBanner] = useState(branding.banner);
+  const [name, setName] = useState(branding.name);
+  const [description, setDescription] = useState(branding.description);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const save = async () => {
+    setSaving(true);
+    setErr(null);
+    try {
+      await publishBranding(relayUrl, {
+        icon: icon.trim(),
+        banner: banner.trim(),
+        name: name.trim(),
+        description: description.trim(),
+        updatedAt: Math.floor(Date.now() / 1000),
+      });
+      close();
+    } catch (ex) {
+      setErr((ex as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="sheet-host" data-screen="edit-branding" style={{ zIndex: 20 }}>
+      <div className="sheet-backdrop" onClick={close} />
+      <div className="sheet" style={{ maxHeight: '94%' }}>
+        <div className="sheet-handle" />
+        <div className="zap-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" /></svg>
+          Edit branding
+        </div>
+        <p style={{ fontSize: 11, color: 'var(--app-text-dim)', margin: 0, lineHeight: 1.5 }}>
+          Shown to everyone on this relay · NIP-78 kind 30078.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <BlossomImageInput
+            label="Icon"
+            value={icon}
+            onChange={setIcon}
+            shape="square"
+            hint="Square logo shown next to the relay name."
+          />
+          <BlossomImageInput
+            label="Banner"
+            value={banner}
+            onChange={setBanner}
+            shape="wide"
+            hint="Wide image shown above the relay name."
+          />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.12em', fontFamily: "'JetBrains Mono', monospace" }}>
+              Display name
+            </label>
+            <div className="setup-input-wrap">
+              <input
+                className="setup-input"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={shortHost(relayUrl)}
+              />
+            </div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.12em', fontFamily: "'JetBrains Mono', monospace" }}>
+              Description
+            </label>
+            <div className="setup-input-wrap">
+              <textarea
+                className="setup-textarea"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={2}
+                placeholder="What's this space about?"
+              />
+            </div>
+          </div>
+        </div>
+        {err && <div style={{ fontSize: 12, color: 'var(--presence-dnd)' }}>{err}</div>}
+        <button
+          type="button"
+          onClick={() => void save()}
+          disabled={saving}
+          className="btn-primary"
+          data-testid="mobile-branding-save"
+        >
+          {saving ? 'Saving…' : 'Save branding'}
+        </button>
+        <button className="btn-cancel" type="button" onClick={close}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
+// Bottom-sheet for the kind 30078 channel-layout doc — categories + their
+// position, plus per-channel category assignment. Mirrors the desktop
+// ManageLayoutModal but uses up/down buttons instead of drag handles since
+// touch reordering on mobile is fiddly without a dedicated drag library.
+function ManageCategoriesSheet({
+  relayUrl,
+  layout,
+  channels,
+  close,
+}: {
+  relayUrl: string;
+  layout: ChannelLayout;
+  channels: ReadonlyArray<JsGroup>;
+  close: () => void;
+}) {
+  const [draft, setDraft] = useState<ChannelLayout>(layout);
+  const [newCatName, setNewCatName] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    setDraft((d) => (d.updatedAt === 0 ? layout : d));
+  }, [layout]);
+
+  const channelsById = useMemo(
+    () => Object.fromEntries(channels.map((g) => [g.id, g])),
+    [channels],
+  );
+  const laidOut = useMemo(
+    () => applyLayout(draft, channels.map((g) => g.id)),
+    [draft, channels],
+  );
+
+  const addCategory = () => {
+    const trimmed = newCatName.trim();
+    if (!trimmed) return;
+    setDraft((d) => ({
+      ...d,
+      categories: [
+        ...d.categories,
+        { id: newCategoryId(), name: trimmed, position: d.categories.length },
+      ],
+    }));
+    setNewCatName('');
+  };
+
+  const renameCategory = (id: string, name: string) => {
+    setDraft((d) => ({
+      ...d,
+      categories: d.categories.map((c) => (c.id === id ? { ...c, name } : c)),
+    }));
+  };
+
+  const deleteCategory = (id: string) => {
+    setDraft((d) => ({
+      categories: d.categories.filter((c) => c.id !== id),
+      channels: d.channels.map((ch) => (ch.categoryId === id ? { ...ch, categoryId: null } : ch)),
+      updatedAt: d.updatedAt,
+    }));
+  };
+
+  const moveCategory = (id: string, delta: number) => {
+    setDraft((d) => {
+      const arr = [...d.categories];
+      const i = arr.findIndex((c) => c.id === id);
+      const j = i + delta;
+      if (i < 0 || j < 0 || j >= arr.length) return d;
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+      return { ...d, categories: arr.map((c, k) => ({ ...c, position: k })) };
+    });
+  };
+
+  const setChannelCategory = (channelId: string, categoryId: string | null) => {
+    setDraft((d) => {
+      const others = d.channels.filter((c) => c.id !== channelId);
+      const sameBucket = others.filter((c) => c.categoryId === categoryId);
+      return {
+        ...d,
+        channels: [...others, { id: channelId, categoryId, position: sameBucket.length }],
+      };
+    });
+  };
+
+  const moveChannel = (channelId: string, delta: number) => {
+    setDraft((d) => {
+      const ch = d.channels.find((c) => c.id === channelId);
+      const catId = ch ? ch.categoryId : null;
+      const bucket = laidOut.categories.find((c) => c.id === catId)?.channelIds
+        ?? (catId === null ? laidOut.uncategorized : []);
+      const i = bucket.indexOf(channelId);
+      const j = i + delta;
+      if (i < 0 || j < 0 || j >= bucket.length) return d;
+      const newOrder = [...bucket];
+      [newOrder[i], newOrder[j]] = [newOrder[j], newOrder[i]];
+      const others = d.channels.filter((c) => c.categoryId !== catId);
+      return {
+        ...d,
+        channels: [...others, ...newOrder.map((id, k) => ({ id, categoryId: catId, position: k }))],
+      };
+    });
+  };
+
+  const save = async () => {
+    setSaving(true);
+    setErr(null);
+    try {
+      const normalized: ChannelLayout = {
+        categories: draft.categories.map((c, i) => ({ ...c, position: i })),
+        channels: draft.channels.map((c, i) => ({ ...c, position: i })),
+        updatedAt: Math.floor(Date.now() / 1000),
+      };
+      await publishLayout(relayUrl, normalized);
+      close();
+    } catch (ex) {
+      setErr((ex as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const arrowBtnStyle: React.CSSProperties = {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    border: '1px solid var(--app-line)',
+    background: 'var(--app-surface)',
+    color: 'var(--app-text-dim)',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  };
+
+  const catOptions = [
+    { id: '__none__', name: 'Uncategorized' },
+    ...draft.categories.map((c) => ({ id: c.id, name: c.name })),
+  ];
+
+  return (
+    <div className="sheet-host" data-screen="manage-categories" style={{ zIndex: 20 }}>
+      <div className="sheet-backdrop" onClick={close} />
+      <div className="sheet" style={{ maxHeight: '94%' }}>
+        <div className="sheet-handle" />
+        <div className="zap-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
+          Categories &amp; order
+        </div>
+        <p style={{ fontSize: 11, color: 'var(--app-text-dim)', margin: 0, lineHeight: 1.5 }}>
+          Shared layout for everyone on this relay · any group admin can edit · NIP-78 kind 30078.
+        </p>
+
+        <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+            New category
+          </label>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <div className="setup-input-wrap" style={{ flex: 1 }}>
+              <input
+                className="setup-input"
+                value={newCatName}
+                onChange={(e) => setNewCatName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addCategory();
+                  }
+                }}
+                placeholder="e.g. General, Trading, Voice"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={addCategory}
+              disabled={!newCatName.trim()}
+              className="btn-primary"
+              style={{ width: 'auto', padding: '0 18px', boxShadow: 'none' }}
+            >
+              Add
+            </button>
+          </div>
+        </section>
+
+        <section style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+            Categories
+          </label>
+          {draft.categories.length === 0 ? (
+            <div style={{ fontSize: 12, color: 'var(--app-text-mute)', padding: '6px 4px' }}>
+              No categories yet. Channels render under &ldquo;Uncategorized&rdquo; until you add one.
+            </div>
+          ) : (
+            draft.categories.map((c, i) => (
+              <div
+                key={c.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '8px 10px',
+                  background: 'var(--app-surface)',
+                  border: '1px solid var(--app-line)',
+                  borderRadius: 12,
+                }}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <button type="button" style={arrowBtnStyle} onClick={() => moveCategory(c.id, -1)} disabled={i === 0} aria-label="Move category up">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15" /></svg>
+                  </button>
+                  <button type="button" style={arrowBtnStyle} onClick={() => moveCategory(c.id, 1)} disabled={i === draft.categories.length - 1} aria-label="Move category down">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+                  </button>
+                </div>
+                <input
+                  className="setup-input"
+                  style={{ flex: 1 }}
+                  value={c.name}
+                  onChange={(e) => renameCategory(c.id, e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={() => deleteCategory(c.id)}
+                  style={{
+                    border: '1px solid var(--app-line)',
+                    borderRadius: 8,
+                    padding: '6px 10px',
+                    background: 'transparent',
+                    color: 'var(--presence-dnd, #ef4444)',
+                    fontSize: 11,
+                  }}
+                  aria-label="Delete category"
+                >
+                  Delete
+                </button>
+              </div>
+            ))
+          )}
+        </section>
+
+        <section style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+            Channels · {channels.length}
+          </label>
+          {channels.length === 0 ? (
+            <div style={{ fontSize: 12, color: 'var(--app-text-mute)', padding: '6px 4px' }}>
+              No channels on this relay yet.
+            </div>
+          ) : (
+            <>
+              {laidOut.categories.map((cat) => (
+                <CategoryChannelsBlock
+                  key={cat.id}
+                  catName={cat.name}
+                  channelIds={cat.channelIds}
+                  channelsById={channelsById}
+                  catOptions={catOptions}
+                  currentCatId={cat.id}
+                  onAssign={setChannelCategory}
+                  onMove={moveChannel}
+                />
+              ))}
+              {laidOut.uncategorized.length > 0 && (
+                <CategoryChannelsBlock
+                  catName="Uncategorized"
+                  channelIds={laidOut.uncategorized}
+                  channelsById={channelsById}
+                  catOptions={catOptions}
+                  currentCatId="__none__"
+                  onAssign={setChannelCategory}
+                  onMove={moveChannel}
+                />
+              )}
+            </>
+          )}
+        </section>
+
+        {err && <div style={{ fontSize: 12, color: 'var(--presence-dnd)' }}>{err}</div>}
+        <button
+          type="button"
+          onClick={() => void save()}
+          disabled={saving}
+          className="btn-primary"
+          data-testid="mobile-categories-save"
+        >
+          {saving ? 'Saving…' : 'Publish layout'}
+        </button>
+        <button className="btn-cancel" type="button" onClick={close}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
+function CategoryChannelsBlock({
+  catName,
+  channelIds,
+  channelsById,
+  catOptions,
+  currentCatId,
+  onAssign,
+  onMove,
+}: {
+  catName: string;
+  channelIds: ReadonlyArray<string>;
+  channelsById: Record<string, JsGroup>;
+  catOptions: ReadonlyArray<{ id: string; name: string }>;
+  currentCatId: string;
+  onAssign: (channelId: string, categoryId: string | null) => void;
+  onMove: (channelId: string, delta: number) => void;
+}) {
+  if (channelIds.length === 0) return null;
+  return (
+    <div
+      style={{
+        background: 'var(--app-surface)',
+        border: '1px solid var(--app-line)',
+        borderRadius: 12,
+        overflow: 'hidden',
+      }}
+    >
+      <div
+        style={{
+          padding: '6px 10px',
+          fontSize: 10,
+          fontWeight: 600,
+          color: 'var(--app-text-dim)',
+          textTransform: 'uppercase',
+          letterSpacing: '0.12em',
+          borderBottom: '1px solid var(--app-line)',
+        }}
+      >
+        {catName} · {channelIds.length}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        {channelIds.map((id, i) => {
+          const g = channelsById[id];
+          if (!g) return null;
+          return (
+            <div
+              key={id}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '8px 10px',
+                borderTop: i === 0 ? 'none' : '1px solid var(--app-line)',
+              }}
+            >
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, color: 'var(--app-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  #{g.name ?? g.id.slice(0, 8)}
+                </div>
+              </div>
+              <select
+                value={currentCatId}
+                onChange={(e) => onAssign(id, e.target.value === '__none__' ? null : e.target.value)}
+                style={{
+                  background: 'var(--app-surface-2)',
+                  color: 'var(--app-text)',
+                  border: '1px solid var(--app-line)',
+                  borderRadius: 8,
+                  padding: '4px 6px',
+                  fontSize: 11,
+                  maxWidth: 110,
+                }}
+                aria-label={`Category for ${g.name ?? g.id.slice(0, 8)}`}
+              >
+                {catOptions.map((opt) => (
+                  <option key={opt.id} value={opt.id}>{opt.name}</option>
+                ))}
+              </select>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <button
+                  type="button"
+                  onClick={() => onMove(id, -1)}
+                  disabled={i === 0}
+                  style={{
+                    width: 26,
+                    height: 22,
+                    borderRadius: 6,
+                    border: '1px solid var(--app-line)',
+                    background: 'var(--app-surface-2)',
+                    color: 'var(--app-text-dim)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                  aria-label={`Move ${g.name ?? g.id.slice(0, 8)} up`}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15" /></svg>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onMove(id, 1)}
+                  disabled={i === channelIds.length - 1}
+                  style={{
+                    width: 26,
+                    height: 22,
+                    borderRadius: 6,
+                    border: '1px solid var(--app-line)',
+                    background: 'var(--app-surface-2)',
+                    color: 'var(--app-text-dim)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                  aria-label={`Move ${g.name ?? g.id.slice(0, 8)} down`}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// Bottom-sheet for per-channel admin settings (kind 9002 metadata edits +
+// kind 9000/9001/9003 member management). Mirrors the desktop
+// ChannelSettingsModal but trimmed to fit a phone — SFU pin + advanced fields
+// stay desktop-only for now; admins can still toggle the channel kind to
+// voice-sfu which falls through to the env-var defaults.
+function ChannelSettingsSheet({
+  group,
+  close,
+}: {
+  group: JsGroup;
+  close: () => void;
+}) {
+  const [name, setName] = useState(group.name ?? '');
+  const [about, setAbout] = useState(group.about ?? '');
+  const [picture, setPicture] = useState(group.picture ?? '');
+  const [banner, setBanner] = useState(group.banner ?? '');
+  const [isPublic, setIsPublic] = useState(group.isPublic);
+  const [isOpen, setIsOpen] = useState(group.isOpen);
+  const [channelKind, setChannelKind] = useState<JsGroup['kind']>(group.kind);
+  const [savingMeta, setSavingMeta] = useState(false);
+  const [metaErr, setMetaErr] = useState<string | null>(null);
+
+  const [newMember, setNewMember] = useState('');
+  const [makeAdmin, setMakeAdmin] = useState(false);
+  const [memberBusy, setMemberBusy] = useState(false);
+  const [memberErr, setMemberErr] = useState<string | null>(null);
+
+  const members = useMembers(group.id);
+  const admins = useAdmins(group.id);
+  const adminSet = useMemo(() => new Set(admins), [admins]);
+  const allPubkeys = useMemo(() => {
+    const set = new Set<string>([...admins, ...members]);
+    return Array.from(set);
+  }, [admins, members]);
+
+  const saveMeta = async () => {
+    setSavingMeta(true);
+    setMetaErr(null);
+    try {
+      await nostrActions.editGroupMetadata({
+        groupId: group.id,
+        name,
+        about,
+        picture: picture || undefined,
+        banner: banner || undefined,
+        isPublic,
+        isOpen,
+        kind: channelKind,
+      });
+      close();
+    } catch (ex) {
+      setMetaErr((ex as Error).message);
+    } finally {
+      setSavingMeta(false);
+    }
+  };
+
+  const addMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setMemberErr(null);
+    let hex = newMember.trim();
+    if (!hex) return;
+    if (hex.startsWith('npub1')) {
+      try {
+        const decoded = nip19.decode(hex);
+        if (decoded.type !== 'npub') throw new Error('Not an npub');
+        hex = decoded.data as string;
+      } catch (ex) {
+        setMemberErr((ex as Error).message);
+        return;
+      }
+    }
+    if (!/^[0-9a-f]{64}$/i.test(hex)) {
+      setMemberErr('Provide an npub or 64-char hex pubkey');
+      return;
+    }
+    setMemberBusy(true);
+    try {
+      await nostrActions.putUser(group.id, hex.toLowerCase(), makeAdmin ? ['admin'] : []);
+      setNewMember('');
+      setMakeAdmin(false);
+    } catch (ex) {
+      setMemberErr((ex as Error).message);
+    } finally {
+      setMemberBusy(false);
+    }
+  };
+
+  const togglePillStyle = (active: boolean): React.CSSProperties => ({
+    flex: 1,
+    padding: '10px 12px',
+    borderRadius: 12,
+    border: `1px solid ${active ? 'var(--accent)' : 'var(--app-line)'}`,
+    background: active ? 'rgba(180, 249, 83, 0.08)' : 'var(--app-surface)',
+    color: active ? 'var(--accent)' : 'var(--app-text-dim)',
+    fontWeight: 600,
+    fontSize: 12,
+    textAlign: 'center',
+    cursor: 'pointer',
+  });
+
+  return (
+    <div className="sheet-host" data-screen="channel-settings">
+      <div className="sheet-backdrop" onClick={close} />
+      <div className="sheet" style={{ maxHeight: '94%' }}>
+        <div className="sheet-handle" />
+        <div className="zap-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>
+          Channel settings · #{group.name ?? group.id.slice(0, 8)}
+        </div>
+
+        {/* Basics */}
+        <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>Name</label>
+          <div className="setup-input-wrap">
+            <input
+              className="setup-input"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              data-testid="mobile-channel-settings-name"
+            />
+          </div>
+          <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>About</label>
+          <div className="setup-input-wrap">
+            <textarea
+              className="setup-textarea"
+              value={about}
+              onChange={(e) => setAbout(e.target.value)}
+              rows={2}
+              placeholder="What's this channel about?"
+            />
+          </div>
+        </section>
+
+        {/* Appearance */}
+        <section style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <BlossomImageInput
+            label="Icon"
+            value={picture}
+            onChange={setPicture}
+            shape="square"
+          />
+          <BlossomImageInput
+            label="Banner"
+            value={banner}
+            onChange={setBanner}
+            shape="wide"
+          />
+        </section>
+
+        {/* Access */}
+        <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>Access</label>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="button" style={togglePillStyle(isPublic)} onClick={() => setIsPublic(!isPublic)}>
+              <div style={{ fontSize: 16 }}>{isPublic ? '🌐' : '🔒'}</div>
+              <div>Public</div>
+              <div style={{ fontSize: 10, opacity: 0.7, fontWeight: 400 }}>{isPublic ? 'readable without joining' : 'members only'}</div>
+            </button>
+            <button type="button" style={togglePillStyle(isOpen)} onClick={() => setIsOpen(!isOpen)}>
+              <div style={{ fontSize: 16 }}>{isOpen ? '🟢' : '⊝'}</div>
+              <div>Open</div>
+              <div style={{ fontSize: 10, opacity: 0.7, fontWeight: 400 }}>{isOpen ? 'anyone can join' : 'invite only'}</div>
+            </button>
+          </div>
+        </section>
+
+        {/* Channel kind */}
+        <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>Channel type</label>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {(['text', 'voice', 'voice-sfu', 'forum'] as const).map((k) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setChannelKind(k)}
+                style={{
+                  flex: '1 1 calc(50% - 6px)',
+                  padding: '8px 10px',
+                  borderRadius: 10,
+                  border: `1px solid ${channelKind === k ? 'var(--accent)' : 'var(--app-line)'}`,
+                  background: channelKind === k ? 'rgba(180, 249, 83, 0.08)' : 'var(--app-surface)',
+                  color: channelKind === k ? 'var(--accent)' : 'var(--app-text-dim)',
+                  fontSize: 12,
+                  fontWeight: 600,
+                }}
+              >
+                {k === 'voice-sfu' ? 'Voice (SFU)' : k.charAt(0).toUpperCase() + k.slice(1)}
+              </button>
+            ))}
+          </div>
+          {channelKind === 'voice-sfu' && (
+            <p style={{ fontSize: 11, color: 'var(--app-text-dim)', margin: 0 }}>
+              SFU pin (pubkey/url) is desktop-only for now. Falls back to the
+              relay&apos;s advertisement or env-var defaults.
+            </p>
+          )}
+        </section>
+
+        {metaErr && <div style={{ fontSize: 12, color: 'var(--presence-dnd)' }}>{metaErr}</div>}
+        <button
+          type="button"
+          onClick={() => void saveMeta()}
+          disabled={savingMeta}
+          className="btn-primary"
+          data-testid="mobile-channel-settings-save"
+        >
+          {savingMeta ? 'Saving…' : 'Save channel'}
+        </button>
+
+        {/* Members */}
+        <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+            Add member · NIP-29 kind 9000
+          </label>
+          <form onSubmit={addMember} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div className="setup-input-wrap">
+              <input
+                className="setup-input"
+                value={newMember}
+                onChange={(e) => setNewMember(e.target.value)}
+                placeholder="npub1… or 64-char hex"
+                spellCheck={false}
+                style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}
+              />
+            </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--app-text-dim)' }}>
+              <input
+                type="checkbox"
+                checked={makeAdmin}
+                onChange={(e) => setMakeAdmin(e.target.checked)}
+              />
+              Make admin
+            </label>
+            {memberErr && <div style={{ fontSize: 12, color: 'var(--presence-dnd)' }}>{memberErr}</div>}
+            <button
+              type="submit"
+              disabled={memberBusy || !newMember.trim()}
+              className="btn-primary"
+              style={{ width: 'auto', alignSelf: 'flex-start', padding: '0 18px', boxShadow: 'none' }}
+            >
+              {memberBusy ? 'Adding…' : 'Add'}
+            </button>
+          </form>
+        </section>
+
+        <section style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+            Members · {allPubkeys.length}
+          </label>
+          {allPubkeys.length === 0 ? (
+            <div style={{ fontSize: 12, color: 'var(--app-text-mute)', padding: '6px 4px' }}>
+              No members listed yet. With <b>Public + Open</b> the relay&apos;s
+              whitelist gates everything anyway.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: '40vh', overflowY: 'auto' }}>
+              {allPubkeys.map((pk) => (
+                <ManageMemberRowMobile
+                  key={pk}
+                  groupId={group.id}
+                  pubkey={pk}
+                  isAdmin={adminSet.has(pk)}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+
+        <button className="btn-cancel" type="button" onClick={close}>Close</button>
+      </div>
+    </div>
+  );
+}
+
+function ManageMemberRowMobile({
+  groupId,
+  pubkey,
+  isAdmin,
+}: {
+  groupId: string;
+  pubkey: string;
+  isAdmin: boolean;
+}) {
+  const meta = useUserMetadata(pubkey);
+  const name = meta?.displayName || meta?.name || shortNpub(pubkey);
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        padding: '8px 10px',
+        background: 'var(--app-surface)',
+        border: '1px solid var(--app-line)',
+        borderRadius: 12,
+      }}
+    >
+      <div className="msg-ava" style={{ ...avatarStyle(pubkey), width: 32, height: 32 }}>
+        {meta?.picture ? <img src={meta.picture} alt="" /> : initialsFor(name, shortNpub(pubkey))}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--app-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {name}
+          {isAdmin && <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>admin</span>}
+        </div>
+        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: 'var(--app-text-mute)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {shortNpub(pubkey)}
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: 6 }}>
+        {isAdmin && (
+          <button
+            type="button"
+            onClick={() => {
+              if (window.confirm(`Demote ${name}? They keep channel access but lose admin rights.`)) {
+                void nostrActions.removePermission(groupId, pubkey, ['admin']);
+              }
+            }}
+            style={{
+              border: '1px solid var(--app-line)',
+              borderRadius: 8,
+              padding: '4px 8px',
+              background: 'transparent',
+              color: 'var(--app-text-dim)',
+              fontSize: 11,
+            }}
+            aria-label={`Demote ${name}`}
+          >
+            Demote
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => {
+            if (window.confirm(`Kick ${name} from this channel?`)) {
+              void nostrActions.removeUser(groupId, pubkey);
+            }
+          }}
+          style={{
+            border: '1px solid var(--app-line)',
+            borderRadius: 8,
+            padding: '4px 8px',
+            background: 'transparent',
+            color: 'var(--presence-dnd, #ef4444)',
+            fontSize: 11,
+          }}
+          aria-label={`Kick ${name}`}
+        >
+          Kick
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -1426,10 +2469,13 @@ function ChannelScreen({
   const reactions = useReactions(groupId);
   const myPubkey = useMyPubkey();
   const relay = useCurrentRelayUrl();
+  const channelAdmins = useAdmins(groupId);
+  const isChannelAdmin = !!myPubkey && channelAdmins.includes(myPubkey);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const messagesRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -1527,6 +2573,16 @@ function ChannelScreen({
             <button className="icon-btn" onClick={() => go('search')} aria-label="Search">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
             </button>
+            {isChannelAdmin && (
+              <button
+                className="icon-btn"
+                onClick={() => setSettingsOpen(true)}
+                aria-label="Channel settings"
+                data-testid="mobile-channel-settings-btn"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>
+              </button>
+            )}
             <button className="icon-btn" onClick={openMembers} aria-label="Members">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="7" r="4" /><path d="M3 21a6 6 0 0 1 12 0" /><circle cx="17" cy="9" r="3" /><path d="M23 19a4 4 0 0 0-7-2.65" /></svg>
             </button>
@@ -1623,6 +2679,12 @@ function ChannelScreen({
           </div>
         )}
       </div>
+      {settingsOpen && group && (
+        <ChannelSettingsSheet
+          group={group}
+          close={() => setSettingsOpen(false)}
+        />
+      )}
     </div>
   );
 }
