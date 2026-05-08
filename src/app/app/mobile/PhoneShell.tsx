@@ -453,6 +453,14 @@ function RelayMenuSheet({
   relayUrl: string;
   label: string;
   iconUrl?: string | null;
+  // Forward-declare WIP props (isAdmin / branding / layout / rootChannels)
+  // so the call site at line ~1324 type-checks while the in-flight feature
+  // commit lands. The current body ignores them; the incoming commit will
+  // wire them up.
+  isAdmin?: boolean;
+  branding?: unknown;
+  layout?: unknown;
+  rootChannels?: unknown;
 }) {
   const relays = useConfiguredRelays();
   const [busy, setBusy] = useState<string | null>(null);
@@ -597,6 +605,18 @@ function RelayMenuSheet({
       </div>
     </div>
   );
+}
+
+// Build-stub placeholder so the call site at line ~1305 compiles. The real
+// implementation is in-flight on another device; this no-op renderer keeps
+// production buildable in the meantime and will be overwritten by the
+// incoming feature commit.
+function CreateChannelSheet(_props: {
+  relayLabel: string;
+  close: () => void;
+  onCreated: (id: string) => void;
+}): React.ReactNode {
+  return null;
 }
 
 function AddRelaySheet({ close }: { close: () => void }) {
