@@ -1025,7 +1025,7 @@ function GroupNode({
         {isCollapsible && (
           <button
             onClick={toggleCollapsed}
-            className="shrink-0 px-2 py-1.5 text-sm text-lc-white/70 hover:text-lc-green"
+            className="shrink-0 px-2 py-1.5 text-base leading-none text-lc-white/70 hover:text-lc-green"
             aria-label={collapsed ? 'Expand threads' : 'Collapse threads'}
             title={collapsed ? 'Expand threads' : 'Collapse threads'}
           >
@@ -1101,9 +1101,9 @@ function CategorySection({
     <div className="mt-2">
       <button
         onClick={onToggle}
-        className="flex w-full items-center gap-1 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-lc-muted hover:text-lc-white"
+        className="flex w-full items-center gap-1.5 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-lc-muted hover:text-lc-white"
       >
-        <span className="inline-block w-3 text-[8px]">{collapsed ? '▶' : '▼'}</span>
+        <span className="inline-flex w-4 items-center justify-center text-[12px] leading-none">{collapsed ? '▶' : '▼'}</span>
         <span className="truncate">{name}</span>
         <span className="ml-auto text-[10px] font-normal opacity-60">{channelCount}</span>
       </button>
