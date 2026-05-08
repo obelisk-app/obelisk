@@ -1387,7 +1387,14 @@ class BridgeImpl implements NostrBridge {
     } finally {
       try { probe.close([trimmed]); } catch { /* ignore */ }
     }
-    if (!this.relays.includes(trimmed)) this.relays.push(trimmed);
+    // Register in the rail only — do NOT push into `this.relays` (the active
+    // subscription set). NIP-29 channels are per-relay, so subscribing to
+    // multiple relays simultaneously mixes channels from different servers
+    // into the same `this.groups` store and the "Uncategorized" bucket.
+    // `switchRelay(url)` is the single path that activates a relay; the rail
+    // tile click-handler calls it explicitly. Without this scoping, a
+    // background reconnect (`reconnectInBackground` → `connect()`) would
+    // subscribe kind 39000 against every relay the user had ever added.
     this.ensureRelayInList(trimmed);
   }
 
@@ -2141,6 +2148,18 @@ class BridgeImpl implements NostrBridge {
       armed = true;
       const sub = this.pool.subscribe(relays, filter, {
         onevent: (ev) => {
+          // switchRelay / resetPoolForSessionChange / dispose call markClosed
+          // on every active sub but deliberately skip pool.close() to avoid
+          // per-sub CLOSING/CLOSED console spam (see resetPoolForSessionChange
+          // comment). The old pool's WebSockets stay open until GC, so events
+          // can still be delivered here after `closed = true`. Without this
+          // guard, an in-flight kind 39000 from relay A would be ingested
+          // into the post-switch state for relay B — both polluting
+          // `this.groups` and writing A's group under B's cache key via
+          // `cacheSet(this.currentRelayUrl.get(), ...)` in the ingest
+          // functions. That's the "channels from another relay leaking into
+          // Uncategorized" bug.
+          if (closed) return;
           alive = true;
           armed = false;
           clearTimer();
@@ -2159,6 +2178,10 @@ class BridgeImpl implements NostrBridge {
           onevent(ev);
         },
         oneose: () => {
+          // Same staleness guard as onevent — a late EOSE on a markClosed sub
+          // would otherwise flip flags like `groupMetadataEose` for the new
+          // relay based on the old relay's response.
+          if (closed) return;
           alive = true;
           // Intentionally do NOT disarm here. EOSE alone is not proof of
           // success on auth-gated relays — they routinely send EOSE (empty
@@ -2171,6 +2194,11 @@ class BridgeImpl implements NostrBridge {
           oneose?.();
         },
         onclose: (reasons: string[]) => {
+          // Stale onclose from the old pool's WebSocket finally tearing down
+          // shouldn't update relay-access state or trigger retries against
+          // the new pool. `scheduleRetry` already short-circuits via
+          // `closed`, but bail early so we don't even classify reasons.
+          if (closed) return;
           // nostr-tools fires onclose with one reason string per relay,
           // index-aligned with the `relays` array. Local closes look like
           // 'closed by caller' and yield no rejection match — we leave the

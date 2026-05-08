@@ -666,6 +666,100 @@ describe('nostr-bridge', () => {
     expect(subsAfter).toHaveLength(1);
     expect(subsAfter[0]).not.toBe(firstSub);
   });
+
+  it('drops events delivered to a markClosed sub after switchRelay (no cross-relay bleed)', async () => {
+    // Reproduces the user-reported "channels from another relay leaking into
+    // Uncategorized" bug. switchRelay markCloses the previous relay's subs
+    // but deliberately does NOT call pool.close() on the old WebSockets
+    // (avoids per-sub CLOSING/CLOSED console spam — see
+    // resetPoolForSessionChange comment). The old sockets stay alive until
+    // GC and can still deliver events. Without the closed-guard in
+    // subscribeWatched.onevent, those late events would be ingested into the
+    // post-switch state — both polluting `this.groups` and writing the old
+    // relay's group under the new relay's cache key (since
+    // `cacheSet(this.currentRelayUrl.get(), ...)` uses whichever relay is
+    // currently active).
+    const { getBridge, getBridgeImpl } = await import('./client');
+    const { cacheGet } = await import('./cache');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    // Capture the kind 39000 sub created by `subscribeGroupMetadata` on the
+    // default relay. After switchRelay this is the closure that must drop
+    // late events.
+    const findMetaSubs = () =>
+      fake.state.subscriptions.filter((s) => {
+        const f = s.filter as { kinds?: number[] };
+        return Array.isArray(f.kinds) && f.kinds.includes(39000) && !('#d' in (s.filter as object));
+      });
+    const subsBefore = findMetaSubs();
+    expect(subsBefore.length).toBeGreaterThanOrEqual(1);
+    const oldRelaySub = subsBefore[0];
+
+    // Switch to a different relay. switchRelay clears `this.groups`, replaces
+    // the pool, opens fresh subs, and seeds the cache for the new relay
+    // (which is empty here).
+    const NEW_RELAY = 'wss://relay-bleed-test.example';
+    await bridge.switchRelay(NEW_RELAY);
+    await flush();
+
+    const impl = getBridgeImpl()!;
+    expect(impl.groups.get()).toEqual([]);
+    expect(impl.currentRelayUrl.get()).toBe(NEW_RELAY);
+
+    // The old kind-39000 sub object is still in the fake's state.subscriptions
+    // array because markClosed nullifies the local activeSub reference but
+    // doesn't call its close() (the comment explains why). Simulate an
+    // in-flight kind 39000 from the OLD relay arriving on its zombie socket
+    // by invoking the old sub's sink directly.
+    const staleEvent = await fakeRelayMetadata({
+      groupId: 'leaked-from-old-relay',
+      name: 'Leaked Channel',
+      isPublic: true,
+      isOpen: true,
+    });
+    oldRelaySub.sink(staleEvent);
+    await flush();
+
+    // The post-switch groups store must NOT contain the leaked group.
+    expect(impl.groups.get().some((g) => g.id === 'leaked-from-old-relay')).toBe(false);
+    // And the new relay's cache must NOT have an entry for it (the bug
+    // wrote `cacheSet(NEW_RELAY, 39000, 'leaked-from-old-relay', ...)`).
+    expect(cacheGet(NEW_RELAY, 39000, 'leaked-from-old-relay')).toBeNull();
+  });
+
+  it('addRelay registers a relay in the rail without subscribing to it (no multi-relay bleed)', async () => {
+    // Reproduces the second leak path: addRelay used to push the new URL
+    // into `this.relays`, the bridge's active subscription set. A subsequent
+    // background reconnect (`reconnectInBackground` → `connect()`) would
+    // then issue kind 39000 against every relay the user had ever added,
+    // mixing channels from multiple servers into one `this.groups` store.
+    // The rail UX has only one active relay at a time (the green pill), so
+    // `addRelay` should only register in `configuredRelays` — `switchRelay`
+    // is the single path that activates a relay.
+    const { getBridge, getBridgeImpl } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const impl = getBridgeImpl()!;
+    const activeBefore = (impl as unknown as { relays: string[] }).relays.slice();
+    expect(activeBefore).toEqual(['wss://public.obelisk.ar']);
+
+    const NEW_RELAY = 'wss://added-but-not-active.example';
+    await bridge.addRelay(NEW_RELAY);
+
+    // Active subscription set unchanged — only `switchRelay` should mutate it.
+    const activeAfter = (impl as unknown as { relays: string[] }).relays.slice();
+    expect(activeAfter).toEqual(activeBefore);
+    expect(activeAfter).not.toContain(NEW_RELAY);
+
+    // But the rail (configuredRelays) does include the new relay.
+    expect(impl.configuredRelays.get()).toContain(NEW_RELAY);
+  });
 });
 
 // -- helpers ------------------------------------------------------------
