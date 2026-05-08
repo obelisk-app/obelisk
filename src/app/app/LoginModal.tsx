@@ -92,15 +92,34 @@ async function routeToBridge(method: LoginMethodId, pubkey: string): Promise<voi
   }
 }
 
-export default function LoginModal({ onSuccess }: { onSuccess?: () => void } = {}) {
+interface LoginModalProps {
+  onSuccess?: () => void;
+  /** When provided, restrict the SDK modal to these methods (forwarded as-is). */
+  methods?: LoginMethodId[];
+  /** Lets the host dismiss the modal. Defaults to a no-op when the modal is the
+   * only visible UI (desktop AppShell). */
+  onClose?: () => void;
+  /** Passed through so a host can override the SDK's default copy. */
+  title?: string;
+  subtitle?: string;
+}
+
+export default function LoginModal({
+  onSuccess,
+  methods,
+  onClose,
+  title = 'Connect to Nostr',
+  subtitle = 'Choose your login method',
+}: LoginModalProps = {}) {
   return (
     <NostrSessionProvider autoRestore={false} theme="la-crypta">
       <SdkLoginModal
         open
-        onClose={() => { /* AppShell only mounts this when logged out — no dismiss */ }}
-        title="Connect to Nostr"
-        subtitle="Choose your login method"
+        onClose={onClose ?? (() => { /* AppShell only mounts this when logged out — no dismiss */ })}
+        title={title}
+        subtitle={subtitle}
         flatLayout
+        methods={methods}
         methodIcons={{
           nip07: <LockIcon />,
           nip46: <ShieldIcon />,

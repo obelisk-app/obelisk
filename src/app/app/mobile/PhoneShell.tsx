@@ -288,13 +288,104 @@ function BottomNav({
 // ───────────────────────────────────────────────────────────────────────────
 // 01 — login
 
+type LoginMethod = 'nip07' | 'nip46' | 'generate' | 'import';
+
+const LoginObeliskMark = () => (
+  <svg className="login-mark" viewBox="0 0 512 512" fill="currentColor" aria-hidden="true">
+    <path d="M256,16 L220,72 L196,460 L200,464 L256,464 L256,72 Z" opacity="0.7" />
+    <path d="M256,16 L292,72 L316,460 L312,464 L256,464 L256,72 Z" />
+  </svg>
+);
+
+const LOGIN_METHODS: ReadonlyArray<{
+  id: LoginMethod;
+  title: string;
+  desc: string;
+  icon: ReactNode;
+}> = [
+  {
+    id: 'nip07',
+    title: 'NIP-07',
+    desc: 'Browser extension · Alby, nos2x',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <rect x="3" y="11" width="18" height="9" rx="1.5" />
+        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+      </svg>
+    ),
+  },
+  {
+    id: 'nip46',
+    title: 'NIP-46',
+    desc: 'Remote signer · Bunker',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      </svg>
+    ),
+  },
+  {
+    id: 'generate',
+    title: 'Generate',
+    desc: 'Create a new key',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5z" />
+        <path d="M19 16l.7 2.1L22 19l-2.3.9L19 22l-.7-2.1L16 19l2.3-.9z" />
+      </svg>
+    ),
+  },
+  {
+    id: 'import',
+    title: 'Import',
+    desc: 'Paste your nsec',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="m21 2-9.6 9.6" />
+        <circle cx="7.5" cy="15.5" r="5.5" />
+        <path d="m21 2-3 3 2 2 3-3" />
+      </svg>
+    ),
+  },
+];
+
 function LoginScreen() {
-  // Reuse the production LoginModal — the SDK's modal already handles all
-  // four methods. The mobile theme is consistent enough not to need a custom
-  // skin.
+  // The mobile login is the mockup's hero + four method cards. Tapping a
+  // method opens the production LoginModal pre-scoped to that single method,
+  // reusing the existing SDK auth flow without touching the bridge logic.
+  const [pickedMethod, setPickedMethod] = useState<LoginMethod | null>(null);
+
   return (
     <div className="screen login-screen active" data-screen="login">
-      <LoginModal />
+      <div className="login-hero">
+        <LoginObeliskMark />
+        <h1>Connect to Nostr</h1>
+        <p>Choose your login method.</p>
+      </div>
+      <div className="login-methods">
+        {LOGIN_METHODS.map((m) => (
+          <button
+            key={m.id}
+            type="button"
+            className="login-method"
+            onClick={() => setPickedMethod(m.id)}
+          >
+            <span className="login-method-icon">{m.icon}</span>
+            <span className="login-method-meta">
+              <strong>{m.title}</strong>
+              <span>{m.desc}</span>
+            </span>
+            <span className="login-method-arrow" aria-hidden="true">→</span>
+          </button>
+        ))}
+      </div>
+      <div className="login-footer">Powered by @nostr-wot/ui · MIT</div>
+      {pickedMethod && (
+        <LoginModal
+          methods={[pickedMethod]}
+          onClose={() => setPickedMethod(null)}
+        />
+      )}
     </div>
   );
 }
@@ -1163,15 +1254,32 @@ function ChannelMessage({
 function VoiceRoomScreen({ groupId, back, openChat }: { groupId: string; back: () => void; openChat: () => void }) {
   const groups = useGroups();
   const group = groups.find((g) => g.id === groupId) ?? null;
+  const activeCallByChannel = useActiveCallByChannel();
+  const call = activeCallByChannel[groupId] ?? null;
+  const sub =
+    call?.status === 'connected' ? 'Live · connected' :
+    call?.status === 'starting' ? 'Starting…' :
+    call?.status ? call.status :
+    group?.kind === 'voice-sfu' ? 'SFU room' : 'P2P room';
+
   return (
     <div className="screen voice-room-screen active" data-screen="voice-room">
       <div className="voice-room-topbar">
         <button className="back-btn" onClick={back} aria-label="Back">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
         </button>
-        <div className="voice-room-title">{group?.name ?? 'Voice channel'}</div>
+        <div className="voice-room-meta">
+          <div className="voice-room-title">
+            <svg className="voice-room-mic-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+            </svg>
+            {group?.name ?? 'Voice channel'}
+          </div>
+          <div className="voice-room-sub">{sub}</div>
+        </div>
       </div>
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+      <div className="voice-room-stage">
         <VoiceRoom channelId={groupId} chatSlot={null} isChatOpen={false} onToggleChat={openChat} />
       </div>
     </div>

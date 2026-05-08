@@ -861,7 +861,7 @@ function RoomHeader({ name, count, sfuStatus }: {
   sfuStatus?: 'na' | 'starting' | 'connected' | 'unavailable' | 'unauthorized';
 }) {
   return (
-    <div className="relative z-10 px-3 sm:px-5 py-3 flex items-center gap-3 border-b border-white/5">
+    <div className="relative z-10 px-3 sm:px-5 py-3 flex items-center gap-3 border-b border-white/5" data-testid="voice-room-header">
       <div className="min-w-0 flex items-center gap-2.5 flex-1 min-w-0">
         <span className="relative flex h-2 w-2 shrink-0">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-lc-green opacity-50" />
