@@ -4880,11 +4880,17 @@ export default function MobileShell() {
            * and remounted the new active screen, which caused titles +
            * skeleton states to flash on every horizontal nav. */}
           {NAV_ORDER.map((s) => {
+            // When the active screen is a sub-screen overlay, its parent
+            // top-level tab should sit at translateX(0) behind the overlay
+            // so the user sees the overlay slide in over it. Only push the
+            // parent into the drag-prev slot during an actual drag, so the
+            // swipe-right gesture can reveal it from the left edge.
+            const isSubScreen = !NAV_ORDER.includes(nav.screen);
             const role =
               s === nav.screen
                 ? 'drag-curr'
                 : s === dragNeighbors.left
-                ? 'drag-prev'
+                ? (isSubScreen && !isDragging ? 'drag-curr' : 'drag-prev')
                 : s === dragNeighbors.right
                 ? 'drag-next'
                 : 'drag-hidden';
