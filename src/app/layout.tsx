@@ -166,12 +166,48 @@ export default async function RootLayout({
           strategy="afterInteractive"
           nonce={nonce}
         />
+        {/* PWA route guard. When the app is opened in standalone mode
+            (Add-to-home-screen / installed PWA) and lands on the public
+            landing page, jump straight to /app so the marketing hero
+            doesn't flash before the chat shell mounts. We use
+            `beforeInteractive` + `location.replace` so the redirect runs
+            before the landing page paints — without it, already-installed
+            clients (whose cached manifest still has the old start_url
+            of '/') see the H1 hero flash on every launch. */}
+        <Script id="obelisk-pwa-route-guard" strategy="beforeInteractive" nonce={nonce}>
+          {`
+            (function () {
+              try {
+                var standalone = (typeof matchMedia === 'function' && matchMedia('(display-mode: standalone)').matches)
+                  || window.navigator.standalone === true;
+                if (standalone && location.pathname === '/') {
+                  location.replace('/app' + location.search + location.hash);
+                }
+              } catch (e) { /* ignore */ }
+            })();
+          `}
+        </Script>
         <Script id="google-analytics" strategy="afterInteractive" nonce={nonce}>
           {`
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
             gtag('config', 'G-BZ4NB66WY0');
+          `}
+        </Script>
+        {/* Register the minimal service worker so Chrome / Edge / Brave
+            offer the "Install app" prompt. The worker itself is
+            pass-through (see /public/sw.js) — registering it is the
+            installability gate, not a behavior change. */}
+        <Script id="obelisk-pwa-register" strategy="afterInteractive" nonce={nonce}>
+          {`
+            if ('serviceWorker' in navigator) {
+              window.addEventListener('load', function () {
+                navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function () {
+                  /* swallow — installability is a UX bonus, not a hard requirement */
+                });
+              });
+            }
           `}
         </Script>
       </head>
