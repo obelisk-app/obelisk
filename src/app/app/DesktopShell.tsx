@@ -1007,7 +1007,7 @@ function GroupNode({
             : 'text-lc-muted hover:bg-lc-card hover:text-lc-white')
         }
       >
-        {depth > 0 && !isCollapsible && <span className="pl-1 text-lc-muted">↳</span>}
+        {depth > 0 && !isCollapsible && <span className="pl-1 text-lc-muted lc-tree-marker">↳</span>}
         <button
           onClick={() => onSelect(group.id)}
           className="flex flex-1 items-center gap-2 truncate px-1 py-1.5 text-left"
@@ -1044,15 +1044,37 @@ function GroupNode({
           </button>
         )}
       </div>
-      {!collapsed && childIds.map((cid) => {
-        const child = groupsById[cid];
-        if (!child) return null;
-        // For forum-container children (threads), only render in the sidebar
-        // once the thread has ≥ 1 message — empty/aborted threads stay hidden
-        // so the sidebar doesn't accumulate noise from accidental creates.
-        if (group.kind === 'forum') {
+      {!collapsed && (group.kind === 'forum' ? (
+        // Forum threads get the Discord-style L-rail treatment: wrap them in
+        // .lc-forum-threads so each row's ::before/::after can paint a
+        // continuous vertical rail terminating in an L-corner at the last row.
+        <div className="lc-forum-threads">
+          {childIds.map((cid) => {
+            const child = groupsById[cid];
+            if (!child) return null;
+            // For forum-container children (threads), only render in the
+            // sidebar once the thread has ≥ 1 message — empty/aborted threads
+            // stay hidden so the sidebar doesn't accumulate noise.
+            return (
+              <ForumChildGroupNode
+                key={cid}
+                group={child}
+                depth={depth + 1}
+                childrenByParent={childrenByParent}
+                groupsById={groupsById}
+                view={view}
+                onSelect={onSelect}
+                distanceById={distanceById}
+              />
+            );
+          })}
+        </div>
+      ) : (
+        childIds.map((cid) => {
+          const child = groupsById[cid];
+          if (!child) return null;
           return (
-            <ForumChildGroupNode
+            <GroupNode
               key={cid}
               group={child}
               depth={depth + 1}
@@ -1063,20 +1085,8 @@ function GroupNode({
               distanceById={distanceById}
             />
           );
-        }
-        return (
-          <GroupNode
-            key={cid}
-            group={child}
-            depth={depth + 1}
-            childrenByParent={childrenByParent}
-            groupsById={groupsById}
-            view={view}
-            onSelect={onSelect}
-            distanceById={distanceById}
-          />
-        );
-      })}
+        })
+      ))}
     </>
   );
 }
@@ -1092,7 +1102,11 @@ function ForumChildGroupNode(props: {
 }) {
   const messages = useMessages(props.group.id);
   if (messages.length === 0) return null;
-  return <GroupNode {...props} />;
+  return (
+    <div className="lc-thread-row">
+      <GroupNode {...props} />
+    </div>
+  );
 }
 
 function CategorySection({

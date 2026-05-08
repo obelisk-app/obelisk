@@ -490,3 +490,44 @@ button:not(:disabled),
 .cr-cell:hover:not(:disabled) {
   background: color-mix(in srgb, var(--cr-turn, #3f3f46) 18%, #0a0a0a 82%);
 }
+
+/* Discord-style L-rail for expanded forum threads (desktop sidebar).
+ * Mirrors the mobile treatment: each thread row paints its own vertical
+ * rail (::before, full row height) and L-corner (::after, top half + curve).
+ * The last row drops its ::before so the rail terminates inside the corner
+ * instead of trailing past it as a stub. The legacy `↳` marker is hidden
+ * in-place (visibility: hidden) so it keeps reserving its column width —
+ * leaving room for the rail without shifting the channel name. */
+.lc-forum-threads {
+  position: relative;
+}
+.lc-thread-row {
+  position: relative;
+}
+.lc-thread-row .lc-tree-marker {
+  visibility: hidden;
+}
+.lc-thread-row::before {
+  content: '';
+  position: absolute;
+  left: 0.85rem;
+  top: 0;
+  bottom: 0;
+  border-left: 1.5px solid #2f2f2f;
+  pointer-events: none;
+}
+.lc-thread-row:last-child::before {
+  display: none;
+}
+.lc-thread-row::after {
+  content: '';
+  position: absolute;
+  left: 0.85rem;
+  top: 0;
+  width: 0.6rem;
+  height: 50%;
+  border-left: 1.5px solid #2f2f2f;
+  border-bottom: 1.5px solid #2f2f2f;
+  border-bottom-left-radius: 6px;
+  pointer-events: none;
+}
