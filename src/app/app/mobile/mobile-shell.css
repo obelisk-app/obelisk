@@ -369,6 +369,24 @@
   overscroll-behavior-x: contain;
 }
 .obelisk-mobile .spaces-strip::-webkit-scrollbar { display: none; }
+
+/* Edge-fade scroll affordance. The strip is wrapped in .spaces-strip-host;
+ * JS toggles can-scroll-left / can-scroll-right based on scroll position.
+ * We use mask-image (rather than a colored overlay) so the fade is correct
+ * against the transparent screen + ambient gradient. */
+.obelisk-mobile .spaces-strip-host { position: relative; }
+.obelisk-mobile .spaces-strip-host.can-scroll-right .spaces-strip {
+  -webkit-mask-image: linear-gradient(to right, #000 0%, #000 calc(100% - 28px), transparent 100%);
+          mask-image: linear-gradient(to right, #000 0%, #000 calc(100% - 28px), transparent 100%);
+}
+.obelisk-mobile .spaces-strip-host.can-scroll-left .spaces-strip {
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 28px, #000 100%);
+          mask-image: linear-gradient(to right, transparent 0%, #000 28px, #000 100%);
+}
+.obelisk-mobile .spaces-strip-host.can-scroll-left.can-scroll-right .spaces-strip {
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 28px, #000 calc(100% - 28px), transparent 100%);
+          mask-image: linear-gradient(to right, transparent 0%, #000 28px, #000 calc(100% - 28px), transparent 100%);
+}
 .obelisk-mobile .space {
   flex-shrink: 0;
   width: 86px;
