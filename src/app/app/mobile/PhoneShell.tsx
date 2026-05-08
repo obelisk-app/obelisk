@@ -58,6 +58,7 @@ import { nip19 } from 'nostr-tools';
 import { useNotificationStore, type InboxEvent } from '@/store/notification';
 import { useChatStore } from '@/store/chat';
 import { useDMStore } from '@/store/dm';
+import { useNostrPresence, PRESENCE_WINDOW_MS } from '@/hooks/chat/useNostrPresence';
 import { type ScreenName, type NavState, initialNav, urlFor, parseUrl } from './url-state';
 // CSS is hoisted to AppGate.tsx so it lands in the route's eagerly-loaded
 // stylesheet, not in this dynamic chunk's late-arriving sidecar.
@@ -1676,7 +1677,7 @@ function DmThreadScreen({
         <button className="back-btn" onClick={back} aria-label="Back">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
         </button>
-        <div className="dm-ava-list" style={{ ...avatarStyle(peer), width: 36, height: 36, fontSize: 13 }} onClick={() => openProfile(peer)}>
+        <div className="dm-ava-list" style={avatarStyle(peer)} onClick={() => openProfile(peer)}>
           {meta?.picture ? <img src={meta.picture} alt="" /> : initialsFor(peerName, shortNpub(peer))}
         </div>
         <div className="dm-header-meta" onClick={() => openProfile(peer)}>
@@ -1912,40 +1913,66 @@ function ProfileViewScreen({
 
 function MemberListScreen({ groupId, back, openProfile }: { groupId: string; back: () => void; openProfile: (p: string) => void }) {
   const groups = useGroups();
-  const group = groups.find((g) => g.id === groupId);
+  const group = groups.find((g) => g.id === groupId) ?? null;
+  const parentGroup = group?.parent ? groups.find((g) => g.id === group.parent) ?? null : null;
+  const headerLabel = parentGroup
+    ? `${parentGroup.name ?? parentGroup.id.slice(0, 8)}/${group?.name ?? groupId.slice(0, 8)}`
+    : (group?.name ?? groupId.slice(0, 8));
   const admins = useAdmins(groupId);
   const members = useMembers(groupId);
 
   const adminSet = useMemo(() => new Set(admins), [admins]);
   const nonAdminMembers = useMemo(() => members.filter((m) => !adminSet.has(m)), [members, adminSet]);
 
+  const allPubkeys = useMemo(() => {
+    const set = new Set<string>([...admins, ...members]);
+    return [...set];
+  }, [admins, members]);
+  useNostrPresence(allPubkeys);
+  // presenceTick re-renders the list on the offline-fade timer.
+  useChatStore((s) => s.presenceTick);
+  const lastActivityAt = useChatStore((s) => s.lastActivityAt);
+
+  const isOnline = useCallback(
+    (pubkey: string) => {
+      const at = lastActivityAt[pubkey];
+      return !!at && at >= Date.now() - PRESENCE_WINDOW_MS;
+    },
+    [lastActivityAt],
+  );
+
+  const onlineCount = useMemo(
+    () => allPubkeys.reduce((n, pk) => (isOnline(pk) ? n + 1 : n), 0),
+    [allPubkeys, isOnline],
+  );
+
   return (
     <div className="screen member-list-screen active" data-screen="member-list">
-      <div className="dm-header">
-        <button className="back-btn" onClick={back} aria-label="Back">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
-        </button>
-        <div className="dm-header-meta">
-          <div className="dm-header-name">#{group?.name ?? 'channel'} · members</div>
-          <div className="dm-header-pubkey">
-            {members.length} connected
+      <div className="chat-header chat-header-compact">
+        <div className="chat-row">
+          <div className="chat-title-block">
+            <button className="back-btn" onClick={back} aria-label="Back">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+            </button>
+            <div className="chat-channel"><span className="hash">#</span>{headerLabel} · members</div>
           </div>
+          <div className="member-presence-count">{onlineCount}/{allPubkeys.length}</div>
         </div>
       </div>
       <div className="search-body">
         {admins.length > 0 && (
           <>
             <div className="member-section-label">Admins · {admins.length}</div>
-            {admins.map((p) => <MemberRow key={p} pubkey={p} role="admin" onClick={() => openProfile(p)} />)}
+            {admins.map((p) => <MemberRow key={p} pubkey={p} role="admin" online={isOnline(p)} onClick={() => openProfile(p)} />)}
           </>
         )}
         {nonAdminMembers.length > 0 && (
           <>
             <div className="member-section-label">Members · {nonAdminMembers.length}</div>
-            {nonAdminMembers.map((p) => <MemberRow key={p} pubkey={p} onClick={() => openProfile(p)} />)}
+            {nonAdminMembers.map((p) => <MemberRow key={p} pubkey={p} online={isOnline(p)} onClick={() => openProfile(p)} />)}
           </>
         )}
-        {members.length === 0 && (
+        {members.length === 0 && admins.length === 0 && (
           <div className="empty-state">
             <div className="empty-state-title">No members</div>
             <div className="empty-state-desc">No relay-published 39002 members yet.</div>
@@ -1956,12 +1983,12 @@ function MemberListScreen({ groupId, back, openProfile }: { groupId: string; bac
   );
 }
 
-function MemberRow({ pubkey, role, onClick }: { pubkey: string; role?: 'admin'; onClick: () => void }) {
+function MemberRow({ pubkey, role, online, onClick }: { pubkey: string; role?: 'admin'; online: boolean; onClick: () => void }) {
   const meta = useUserMetadata(pubkey);
   const name = meta?.displayName || meta?.name || shortNpub(pubkey);
   return (
     <button className="member-row" onClick={onClick}>
-      <div className="dm-ava-list" style={{ ...avatarStyle(pubkey), width: 36, height: 36, fontSize: 12 }}>
+      <div className={`dm-ava-list ${online ? '' : 'offline'}`} style={{ ...avatarStyle(pubkey), width: 36, height: 36, fontSize: 12 }}>
         {meta?.picture ? <img src={meta.picture} alt="" /> : initialsFor(name, shortNpub(pubkey))}
       </div>
       <div className="member-row-meta">
@@ -1969,7 +1996,7 @@ function MemberRow({ pubkey, role, onClick }: { pubkey: string; role?: 'admin'; 
         <span className="member-row-nip">{meta?.nip05 ?? shortNpub(pubkey)}</span>
       </div>
       {role === 'admin' && <span className="role-badge b-core">admin</span>}
-      <span className="member-row-presence on" />
+      <span className={`member-row-presence ${online ? 'on' : 'off'}`} />
     </button>
   );
 }
