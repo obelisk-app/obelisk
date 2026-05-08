@@ -207,6 +207,39 @@
   overflow: hidden;
 }
 
+/* ===== drag-tracking carousel ===== */
+/* During a horizontal pan, the active screen's slot translates with the
+ * finger and the predicted neighbor reveals from the side. Three slots are
+ * stacked at -100% / 0 / +100% relative to the layer; transforming the layer
+ * shifts all three together so it looks like a carousel. The transform is
+ * set imperatively via inline style during the drag so React does not
+ * re-render on every touchmove; once the drag commits/reverts the layer
+ * resets to translateX(0). */
+.obelisk-mobile .drag-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.obelisk-mobile .drag-layer.is-dragging {
+  will-change: transform;
+}
+.obelisk-mobile .drag-slot {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.obelisk-mobile .drag-slot.drag-prev {
+  transform: translateX(-100%);
+}
+.obelisk-mobile .drag-slot.drag-curr {
+  transform: translateX(0);
+}
+.obelisk-mobile .drag-slot.drag-next {
+  transform: translateX(100%);
+}
+
 /* ===== header / icon button ===== */
 .obelisk-mobile .app-header {
   display: flex;
@@ -605,6 +638,40 @@
 .obelisk-mobile .ch-row.ch-thread .ch-name {
   font-size: 15px;
 }
+
+/* Discord-style vertical rail + L-branches for expanded forum threads.
+ * The wrapper draws one continuous rail down the left; each thread row
+ * draws its own L-corner that overlaps the rail at its vertical centre.
+ * The rail's bottom equals roughly half a row so it terminates inside
+ * the last branch's corner rather than trailing past it. */
+.obelisk-mobile .forum-threads {
+  position: relative;
+}
+.obelisk-mobile .forum-threads::before {
+  content: '';
+  position: absolute;
+  left: 14px;
+  top: 0;
+  bottom: 19px;
+  border-left: 1.5px solid var(--app-line);
+  pointer-events: none;
+}
+.obelisk-mobile .forum-threads .ch-row.ch-thread {
+  position: relative;
+}
+.obelisk-mobile .forum-threads .ch-row.ch-thread::after {
+  content: '';
+  position: absolute;
+  left: 14px;
+  top: 0;
+  width: 12px;
+  height: 50%;
+  border-left: 1.5px solid var(--app-line);
+  border-bottom: 1.5px solid var(--app-line);
+  border-bottom-left-radius: 8px;
+  pointer-events: none;
+}
+
 .obelisk-mobile .channel-section-label .add-btn {
   color: var(--app-text-dim);
   font-size: 20px;

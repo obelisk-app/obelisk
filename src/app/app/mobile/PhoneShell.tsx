@@ -1093,6 +1093,7 @@ function ServerScreen({
   const channelMentions = useNotificationStore((s) => s.channelMentions);
   const [addRelayOpen, setAddRelayOpen] = useState(false);
   const [relayMenuFor, setRelayMenuFor] = useState<{ url: string; label: string; iconUrl: string | null } | null>(null);
+  const [createChannelOpen, setCreateChannelOpen] = useState(false);
   const [collapsedCats, setCollapsedCats] = useState<Record<string, boolean>>({});
   // Mirror desktop's per-forum collapsed flag from localStorage so toggles
   // survive reloads and stay in sync across surfaces (key:
@@ -1211,18 +1212,22 @@ function ServerScreen({
             expanded={isExpanded}
             onToggleExpand={expandable ? () => toggleForumCollapsed(g.id) : undefined}
           />
-          {isExpanded && childIds.map((cid) => {
-            const child = groupsById[cid];
-            if (!child) return null;
-            return (
-              <ForumThreadChildRow
-                key={cid}
-                group={child}
-                active={false}
-                onClick={() => selectGroup(child.id, child.kind)}
-              />
-            );
-          })}
+          {isExpanded && (
+            <div className="forum-threads">
+              {childIds.map((cid) => {
+                const child = groupsById[cid];
+                if (!child) return null;
+                return (
+                  <ForumThreadChildRow
+                    key={cid}
+                    group={child}
+                    active={false}
+                    onClick={() => selectGroup(child.id, child.kind)}
+                  />
+                );
+              })}
+            </div>
+          )}
         </Fragment>
       );
     }
@@ -1250,6 +1255,14 @@ function ServerScreen({
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           <button className="icon-btn" aria-label="Search this server" onClick={() => go('search')}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+          </button>
+          <button
+            className="icon-btn"
+            aria-label="Create channel"
+            data-testid="mobile-create-channel-btn"
+            onClick={() => { if (relay) setCreateChannelOpen(true); }}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
           </button>
           <button
             className="icon-btn"
@@ -1288,12 +1301,23 @@ function ServerScreen({
       </div>
 
       {addRelayOpen && <AddRelaySheet close={() => setAddRelayOpen(false)} />}
+      {createChannelOpen && relay && (
+        <CreateChannelSheet
+          relayLabel={activeSpaceLabel}
+          close={() => setCreateChannelOpen(false)}
+          onCreated={(id) => selectGroup(id, 'text')}
+        />
+      )}
       {relayMenuFor && (
         <RelayMenuSheet
           close={() => setRelayMenuFor(null)}
           relayUrl={relayMenuFor.url}
           label={relayMenuFor.label}
           iconUrl={relayMenuFor.iconUrl}
+          isAdmin={!!myPubkey && relayAuthors.includes(myPubkey)}
+          branding={branding}
+          layout={layout}
+          rootChannels={roots}
         />
       )}
 
@@ -3280,12 +3304,34 @@ export default function MobileShell() {
     }
   }
 
-  const slideClass = slideDir === 'forward' ? 'slide-forward' : slideDir === 'back' ? 'slide-back' : '';
+  const slideClass = suppressSlideRef.current
+    ? ''
+    : slideDir === 'forward' ? 'slide-forward' : slideDir === 'back' ? 'slide-back' : '';
   return (
-    <div className="obelisk-mobile" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-      <div className="screens-host">
+    <div
+      className="obelisk-mobile"
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+      onTouchCancel={onTouchCancel}
+    >
+      <div className="screens-host" ref={screensHostRef}>
         {baseBody}
-        <div key={nav.screen} className={`screen-anim ${slideClass}`}>{body}</div>
+        <div ref={dragLayerRef} className={`drag-layer ${isDragging ? 'is-dragging' : ''}`}>
+          {isDragging && dragNeighbors.left && (
+            <div className="drag-slot drag-prev" key={`prev-${dragNeighbors.left}`} aria-hidden="true">
+              {renderTopLevelScreen(dragNeighbors.left)}
+            </div>
+          )}
+          <div className="drag-slot drag-curr">
+            <div key={nav.screen} className={`screen-anim ${slideClass}`}>{body}</div>
+          </div>
+          {isDragging && dragNeighbors.right && (
+            <div className="drag-slot drag-next" key={`next-${dragNeighbors.right}`} aria-hidden="true">
+              {renderTopLevelScreen(dragNeighbors.right)}
+            </div>
+          )}
+        </div>
         {nav.screen === 'msg-actions' && nav.msgContext && (
           <MessageActionsSheet
             msg={nav.msgContext}
