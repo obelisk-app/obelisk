@@ -49,7 +49,7 @@
   background: var(--app-bg);
   color: var(--app-text);
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1.5;
   letter-spacing: -0.005em;
   -webkit-font-smoothing: antialiased;
@@ -65,7 +65,11 @@
   box-sizing: border-box;
 }
 
-.obelisk-mobile button {
+/* Button reset wrapped in :where() so its specificity is 0,0,0,1 (just `button`).
+ * That way Tailwind utilities (e.g. `bg-lc-green`, `text-lc-black`) on embedded
+ * desktop components like <VoiceRoom> still win and the buttons render with
+ * their intended colors instead of being reset to transparent. */
+:where(.obelisk-mobile) button {
   font: inherit;
   color: inherit;
   background: transparent;
@@ -106,6 +110,35 @@
   display: flex;
 }
 
+/* Screen-mount slide animations. The slide is on the wrapper (.screen-anim)
+ * so the inner .screen — which has its own absolute layout — can stay
+ * unchanged. transform is intentionally only present during the brief
+ * animation window so it doesn't create a persistent stacking context. */
+.obelisk-mobile .screen-anim {
+  position: absolute;
+  inset: 0;
+}
+.obelisk-mobile .screen-anim.slide-forward {
+  animation: obelisk-slide-from-right 260ms cubic-bezier(0.2, 0.85, 0.25, 1);
+}
+.obelisk-mobile .screen-anim.slide-back {
+  animation: obelisk-slide-from-left 260ms cubic-bezier(0.2, 0.85, 0.25, 1);
+}
+@keyframes obelisk-slide-from-right {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+@keyframes obelisk-slide-from-left {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .obelisk-mobile .screen-anim.slide-forward,
+  .obelisk-mobile .screen-anim.slide-back {
+    animation: none;
+  }
+}
+
 .obelisk-mobile .screens-host {
   position: relative;
   flex: 1 1 0;
@@ -126,13 +159,13 @@
 .obelisk-mobile .app-header h2 {
   margin: 0;
   font-weight: 700;
-  font-size: 20px;
+  font-size: 24px;
   letter-spacing: -0.02em;
   color: var(--app-text);
 }
 .obelisk-mobile .icon-btn {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 10px;
   display: flex;
   align-items: center;
@@ -144,8 +177,8 @@
   color: var(--app-text);
 }
 .obelisk-mobile .back-btn {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 9px;
   display: flex;
   align-items: center;
@@ -158,8 +191,20 @@
   color: var(--app-text);
 }
 .obelisk-mobile .back-btn svg {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
+}
+
+/* Voice status slot — hosts the desktop VoiceStatusBar above the bottom nav
+ * whenever a call is active, so users can mute / leave / jump back to the
+ * voice channel from anywhere in the mobile shell. */
+.obelisk-mobile .mobile-voice-status-slot {
+  flex-shrink: 0;
+  border-top: 1px solid var(--app-line-soft);
+}
+.obelisk-mobile .mobile-voice-status-slot:empty {
+  display: none;
+  border-top: none;
 }
 
 /* ===== bottom nav ===== */
@@ -181,7 +226,7 @@
   gap: 4px;
   padding: 6px 0 4px;
   color: var(--app-text-mute);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 500;
   position: relative;
   cursor: pointer;
@@ -203,8 +248,8 @@
   border-radius: 2px;
 }
 .obelisk-mobile .nav-item svg {
-  width: 22px;
-  height: 22px;
+  width: 26px;
+  height: 26px;
   stroke-width: 1.6;
 }
 .obelisk-mobile .nav-badge {
@@ -310,7 +355,7 @@
   font-size: 24px;
 }
 .obelisk-mobile .space-name {
-  font-size: 11px;
+  font-size: 12.5px;
   color: var(--app-text-dim);
   text-align: center;
   line-height: 1.2;
@@ -325,10 +370,51 @@
   font-weight: 600;
 }
 
-.obelisk-mobile .channel-section-label {
-  padding: 14px 16px 6px;
+/* Horizontal category pills — strip above the channel list. Tapping a pill
+ * scrolls the channel-list to that section so users can jump between
+ * categories without scrolling through the full list. */
+.obelisk-mobile .cats-strip {
+  display: flex;
+  gap: 8px;
+  padding: 4px 16px 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex-shrink: 0;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+  overscroll-behavior-x: contain;
+}
+.obelisk-mobile .cats-strip::-webkit-scrollbar { display: none; }
+.obelisk-mobile .cat-pill {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: var(--app-surface);
+  border: 1px solid var(--app-line);
+  color: var(--app-text-dim);
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.obelisk-mobile .cat-pill:active {
+  background: var(--app-surface-2);
+}
+.obelisk-mobile .cat-pill-count {
   font-family: 'JetBrains Mono', monospace;
   font-size: 10.5px;
+  color: var(--app-text-mute);
+}
+
+.obelisk-mobile .channel-section-label {
+  width: 100%;
+  padding: 14px 16px 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
   text-transform: uppercase;
   letter-spacing: 0.2em;
   color: var(--app-text-mute);
@@ -336,10 +422,26 @@
   justify-content: space-between;
   align-items: center;
 }
+.obelisk-mobile .channel-section-label.collapsible {
+  cursor: pointer;
+}
+.obelisk-mobile .channel-section-label.collapsible:active {
+  color: var(--app-text-dim);
+}
+.obelisk-mobile .cat-caret {
+  font-size: 14px;
+  color: var(--app-text-mute);
+}
 .obelisk-mobile .channel-section-label .add-btn {
   color: var(--app-text-dim);
-  font-size: 18px;
+  font-size: 20px;
   line-height: 1;
+}
+.obelisk-mobile .cat-empty {
+  padding: 6px 12px 10px;
+  color: var(--app-text-mute);
+  font-size: 12px;
+  font-style: italic;
 }
 
 .obelisk-mobile .channel-list {
@@ -369,21 +471,21 @@
   background: var(--app-surface);
 }
 .obelisk-mobile .ch-row .ch-icon {
-  width: 18px;
+  width: 20px;
   color: var(--app-text-mute);
   flex-shrink: 0;
   text-align: center;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 400;
 }
 .obelisk-mobile .ch-row .ch-icon svg {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   display: inline-block;
   vertical-align: -3px;
 }
 .obelisk-mobile .ch-row .ch-name {
-  font-size: 15px;
+  font-size: 17px;
   color: var(--app-text-dim);
   flex: 1;
   overflow: hidden;
@@ -815,6 +917,23 @@
   position: relative;
   z-index: 1;
 }
+.obelisk-mobile .voice-room-topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px 6px;
+  padding-top: max(10px, env(safe-area-inset-top));
+  flex-shrink: 0;
+}
+.obelisk-mobile .voice-room-topbar .back-btn {
+  color: var(--app-text);
+}
+.obelisk-mobile .voice-room-title {
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--app-text);
+  letter-spacing: -0.01em;
+}
 .obelisk-mobile .voice-header {
   display: flex;
   align-items: center;
@@ -1028,9 +1147,10 @@
   cursor: pointer;
 }
 .obelisk-mobile .filter-tab.active {
-  background: var(--app-text);
-  color: var(--app-bg);
-  border-color: var(--app-text);
+  background: var(--app-accent);
+  color: var(--accent-ink);
+  border-color: var(--app-accent);
+  font-weight: 600;
 }
 
 .obelisk-mobile .dms-list-rows {
@@ -1394,14 +1514,23 @@
   font-weight: 700;
 }
 .obelisk-mobile .mark-all-read {
-  font-size: 12px;
-  color: var(--accent);
+  font-size: 12.5px;
+  color: var(--accent-ink);
   font-weight: 600;
-  padding: 6px 10px;
-  border-radius: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
   cursor: pointer;
-  background: transparent;
-  border: none;
+  background: var(--app-accent);
+  border: 1px solid var(--app-accent);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  letter-spacing: 0.005em;
+}
+.obelisk-mobile .mark-all-read:active {
+  background: var(--accent-deep);
+  border-color: var(--accent-deep);
 }
 
 .obelisk-mobile .voice-pill {
@@ -1999,6 +2128,42 @@
 @keyframes obelisk-sheet-up {
   from { transform: translateY(100%); }
   to { transform: translateY(0); }
+}
+
+/* Emoji picker bottom sheet — uses the EmojiPicker desktop component
+ * inside a phone-friendly sheet host. Picker has its own search field;
+ * we just give it a height-bounded container that animates up. */
+.obelisk-mobile .emoji-sheet-host {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(0, 0, 0, 0.5);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: flex-end;
+  animation: obelisk-fade-in 180ms ease;
+}
+.obelisk-mobile .emoji-sheet {
+  width: 100%;
+  background: var(--app-surface-2);
+  border-top-left-radius: 22px;
+  border-top-right-radius: 22px;
+  padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+  max-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.6);
+  animation: obelisk-sheet-up 240ms cubic-bezier(0.2, 0.9, 0.3, 1);
+  overflow: hidden;
+}
+.obelisk-mobile .emoji-sheet > * {
+  min-height: 0;
+  flex: 1 1 0;
+}
+@keyframes obelisk-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 .obelisk-mobile .sheet-handle {
   width: 38px;
@@ -2712,6 +2877,63 @@
 .obelisk-mobile .nav-item svg,
 .obelisk-mobile .back-btn svg {
   display: block;
+}
+.obelisk-mobile .app-header .icon-btn {
+  width: 44px;
+  height: 44px;
+}
+.obelisk-mobile .app-header .icon-btn svg {
+  width: 26px;
+  height: 26px;
+}
+
+/* Tap-press feedback — subtle scale-down on common interactive elements
+ * so taps feel responsive and native instead of bone-dry pixel changes.
+ * Pairs with the existing background:active rules. */
+.obelisk-mobile .ch-row,
+.obelisk-mobile .nav-item,
+.obelisk-mobile .icon-btn,
+.obelisk-mobile .back-btn,
+.obelisk-mobile .space,
+.obelisk-mobile .relay-tile,
+.obelisk-mobile .dm-row,
+.obelisk-mobile .forum-card,
+.obelisk-mobile .member-row,
+.obelisk-mobile .pill,
+.obelisk-mobile .primary-btn,
+.obelisk-mobile .secondary-btn {
+  transition: transform 120ms cubic-bezier(0.2, 0.8, 0.2, 1), background-color 140ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.obelisk-mobile .ch-row:active,
+.obelisk-mobile .nav-item:active,
+.obelisk-mobile .icon-btn:active,
+.obelisk-mobile .back-btn:active,
+.obelisk-mobile .space:active,
+.obelisk-mobile .relay-tile:active,
+.obelisk-mobile .dm-row:active,
+.obelisk-mobile .forum-card:active,
+.obelisk-mobile .member-row:active,
+.obelisk-mobile .pill:active,
+.obelisk-mobile .primary-btn:active,
+.obelisk-mobile .secondary-btn:active {
+  transform: scale(0.97);
+}
+@media (prefers-reduced-motion: reduce) {
+  .obelisk-mobile .ch-row:active,
+  .obelisk-mobile .nav-item:active,
+  .obelisk-mobile .icon-btn:active,
+  .obelisk-mobile .back-btn:active,
+  .obelisk-mobile .space:active,
+  .obelisk-mobile .relay-tile:active,
+  .obelisk-mobile .dm-row:active,
+  .obelisk-mobile .forum-card:active,
+  .obelisk-mobile .member-row:active,
+  .obelisk-mobile .pill:active,
+  .obelisk-mobile .primary-btn:active,
+  .obelisk-mobile .secondary-btn:active {
+    transform: none;
+  }
 }
 
 /* hide bottom-nav scroll bleed */

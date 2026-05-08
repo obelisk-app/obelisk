@@ -1000,7 +1000,7 @@ function GroupNode({
       <div
         style={{ paddingLeft: `${0.5 + Math.max(0, depth - 1) * 0.85}rem` }}
         className={
-          'flex w-full items-center gap-1 rounded text-left text-sm transition ' +
+          'flex w-full items-center gap-1 rounded text-left text-base transition ' +
           (active
             ? 'bg-lc-olive text-lc-white'
             : 'text-lc-muted hover:bg-lc-card hover:text-lc-white')

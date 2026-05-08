@@ -39,9 +39,14 @@ import {
 } from '@/lib/nostr-bridge';
 import LoginModal from '../LoginModal';
 import VoiceRoom from '@/components/voice/VoiceRoom';
+import VoiceStatusBar from '@/components/voice/VoiceStatusBar';
+import MessageContent from '@/components/chat/MessageContent';
+import EmojiPicker from '@/components/chat/EmojiPicker';
+import { uploadToBlossom } from '@/lib/blossom';
 import { formatPubkey, pubkeyToNpub, formatTimestamp } from '@/lib/nostr';
 import { faviconFor, fetchRelayInfo } from '@/lib/relay-info';
 import { useChannelLayout, useRelayOperatorPubkey, applyLayout } from '@/lib/channel-layout';
+import { useRelayBranding } from '@/lib/relay-branding';
 import { nip19 } from 'nostr-tools';
 import { useNotificationStore, type InboxEvent } from '@/store/notification';
 import { useChatStore } from '@/store/chat';
@@ -591,21 +596,29 @@ function RelayTile({
   active: boolean;
   onClick: () => void;
 }) {
-  const [iconUrl, setIconUrl] = useState<string | null>(null);
   const [iconFailed, setIconFailed] = useState(false);
-  const [name, setName] = useState<string>('');
+  const [nip11Name, setNip11Name] = useState<string>('');
+  const [operator, setOperator] = useState<string | null>(null);
+
+  // Tile icon is the domain favicon — not NIP-11 metadata, not kind-30078
+  // branding. The relay's metadata is used only for the name + operator pubkey.
+  const iconUrl = faviconFor(url);
 
   useEffect(() => {
     let alive = true;
     fetchRelayInfo(url).then((info) => {
       if (!alive) return;
-      setIconUrl(info?.icon || faviconFor(url));
-      if (info?.name) setName(info.name);
+      if (info?.name) setNip11Name(info.name);
+      if (info?.pubkey) setOperator(info.pubkey);
     });
     return () => { alive = false; };
   }, [url]);
 
-  const label = name || shortHost(url);
+  // Operator-published kind-30078 branding only contributes the NAME — the
+  // tile icon stays as the relay's own NIP-11 `icon` (favicon fallback). The
+  // branding image is the desktop banner, not a circular space-icon.
+  const branding = useRelayBranding(url, operator ? [operator] : []);
+  const label = branding.name || nip11Name || shortHost(url);
   const showImage = iconUrl && !iconFailed;
 
   return (
@@ -711,6 +724,8 @@ function ServerScreen({
   const channelUnreads = useNotificationStore((s) => s.channelUnreads);
   const channelMentions = useNotificationStore((s) => s.channelMentions);
   const [addRelayOpen, setAddRelayOpen] = useState(false);
+  const [collapsedCats, setCollapsedCats] = useState<Record<string, boolean>>({});
+  const channelListRef = useRef<HTMLDivElement>(null);
 
   // NIP-11 name + icon for the active relay header. Mirrors RelayTopBar on
   // desktop — both surfaces show the operator-set name (e.g. "Obelisk Public
@@ -753,10 +768,12 @@ function ServerScreen({
     () => applyLayout(layout, roots.map((g) => g.id)),
     [layout, roots],
   );
+  const branding = useRelayBranding(relay || null, relayAuthors);
 
-  // Active "space" tile — current relay. Prefer the NIP-11 `name` (set by
-  // the operator) and fall back to the URL host while the doc loads.
-  const activeSpaceLabel = activeRelayInfo?.name || (relay ? shortHost(relay) : 'Obelisk');
+  // Active "space" label — prefer the operator-published kind-30078 branding
+  // name (matches desktop banner), fall back to NIP-11 doc, then to the URL
+  // host while everything resolves.
+  const activeSpaceLabel = branding.name || activeRelayInfo?.name || (relay ? shortHost(relay) : 'Obelisk');
 
   return (
     <div className="screen active" data-screen="server">
@@ -793,31 +810,42 @@ function ServerScreen({
 
       {addRelayOpen && <AddRelaySheet close={() => setAddRelayOpen(false)} />}
 
-      <div className="channel-list">
+      <div className="channel-list" ref={channelListRef}>
         {laidOut.categories.map((cat) => {
           const list = cat.channelIds
             .map((id) => groupsById[id])
             .filter((g): g is JsGroup => !!g);
-          if (list.length === 0) return null;
+          const collapsed = !!collapsedCats[cat.id];
           return (
-            <div key={cat.id}>
-              <div className="channel-section-label">
+            <div key={cat.id} data-cat-id={cat.id}>
+              <button
+                className="channel-section-label collapsible"
+                onClick={() => setCollapsedCats((c) => ({ ...c, [cat.id]: !c[cat.id] }))}
+              >
                 <span>{cat.name} · {list.length}</span>
-              </div>
-              {list.map((g) => (
+                <span className="cat-caret">{collapsed ? '▸' : '▾'}</span>
+              </button>
+              {!collapsed && list.map((g) => (
                 <ChannelRow key={g.id} group={g} live={!!calls[g.id]} unread={channelUnreads[g.id]} mentioned={!!channelMentions[g.id]} onClick={() => selectGroup(g.id, g.kind)} />
               ))}
+              {!collapsed && list.length === 0 && (
+                <div className="cat-empty">No channels here yet.</div>
+              )}
             </div>
           );
         })}
         {laidOut.uncategorized.length > 0 && (
-          <div>
+          <div data-cat-id="__other">
             {laidOut.categories.length > 0 && (
-              <div className="channel-section-label">
-                <span>Other · {laidOut.uncategorized.length}</span>
-              </div>
+              <button
+                className="channel-section-label collapsible"
+                onClick={() => setCollapsedCats((c) => ({ ...c, __other: !c.__other }))}
+              >
+                <span>Uncategorized · {laidOut.uncategorized.length}</span>
+                <span className="cat-caret">{collapsedCats.__other ? '▸' : '▾'}</span>
+              </button>
             )}
-            {laidOut.uncategorized
+            {!collapsedCats.__other && laidOut.uncategorized
               .map((id) => groupsById[id])
               .filter((g): g is JsGroup => !!g)
               .map((g) => (
@@ -861,7 +889,23 @@ function ChannelScreen({
   const relay = useCurrentRelayUrl();
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
+  const [emojiOpen, setEmojiOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const messagesRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAttach = async (file: File) => {
+    if (!file || uploading) return;
+    setUploading(true);
+    try {
+      const url = await uploadToBlossom(file);
+      setDraft((d) => d.length ? `${d} ${url}` : url);
+    } catch (err) {
+      console.warn('[mobile] blossom upload failed', err);
+    } finally {
+      setUploading(false);
+    }
+  };
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -962,7 +1006,24 @@ function ChannelScreen({
 
       <div className="composer">
         <div className="composer-inner">
-          <button className="icon-btn" style={{ width: 30, height: 30 }} aria-label="Attach">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*,video/*,audio/*"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) void handleAttach(f);
+              e.target.value = '';
+            }}
+          />
+          <button
+            className="icon-btn"
+            style={{ width: 30, height: 30, opacity: uploading ? 0.4 : 1 }}
+            aria-label="Attach"
+            disabled={uploading}
+            onClick={() => fileInputRef.current?.click()}
+          >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
           </button>
           <input
@@ -983,12 +1044,25 @@ function ChannelScreen({
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 14-7-7 14-2-5-5-2z" /></svg>
               </button>
             ) : (
-              <button className="icon-btn" aria-label="Emoji">
+              <button className="icon-btn" aria-label="Emoji" onClick={() => setEmojiOpen(true)}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01" /></svg>
               </button>
             )}
           </div>
         </div>
+        {emojiOpen && (
+          <div className="emoji-sheet-host" onClick={() => setEmojiOpen(false)}>
+            <div className="emoji-sheet" onClick={(e) => e.stopPropagation()}>
+              <EmojiPicker
+                onPick={(emoji) => {
+                  setDraft((d) => d + emoji);
+                  setEmojiOpen(false);
+                }}
+                onClose={() => setEmojiOpen(false)}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1061,7 +1135,7 @@ function ChannelMessage({
           onTouchCancel={cancelPress}
           onContextMenu={(e) => { e.preventDefault(); onLongPress(); }}
         >
-          {msg.content}
+          <MessageContent content={msg.content} messageId={msg.id} channelId={groupId} />
         </div>
         {grouped.length > 0 && (
           <div className="reactions">
@@ -1087,12 +1161,16 @@ function ChannelMessage({
 // 05 — voice room
 
 function VoiceRoomScreen({ groupId, back, openChat }: { groupId: string; back: () => void; openChat: () => void }) {
+  const groups = useGroups();
+  const group = groups.find((g) => g.id === groupId) ?? null;
   return (
     <div className="screen voice-room-screen active" data-screen="voice-room">
-      {/* The existing VoiceRoom component owns the whole topology + UI. We
-          wrap it in our voice-room-screen background to keep the indigo→
-          violet stage from the design. The component's own controls render
-          inside, so we just give it a flexible parent. */}
+      <div className="voice-room-topbar">
+        <button className="back-btn" onClick={back} aria-label="Back">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+        </button>
+        <div className="voice-room-title">{group?.name ?? 'Voice channel'}</div>
+      </div>
       <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
         <VoiceRoom channelId={groupId} chatSlot={null} isChatOpen={false} onToggleChat={openChat} />
       </div>
@@ -2056,6 +2134,10 @@ export default function MobileShell() {
 
   const [nav, setNav] = useState<NavState>(initialNav);
   const [showSetup, setShowSetup] = useState(false);
+  // Slide direction for the screen-mount animation. 'forward' slides in
+  // from the right (push), 'back' slides in from the left (pop). Cleared
+  // after each animation so a same-screen rerender doesn't replay.
+  const [slideDir, setSlideDir] = useState<'forward' | 'back' | null>(null);
 
   // First-time-after-login profile setup gate
   useEffect(() => {
@@ -2092,12 +2174,78 @@ export default function MobileShell() {
   // panel (its source of truth) but would be redundant churn on mobile,
   // where messages come from the bridge hook instead. We only need the
   // active id so `read-gates.isUserWatching*` knows the user is here.
-  const go = useCallback((screen: ScreenName) => {
+  const go = useCallback((screen: ScreenName, dir: 'forward' | 'back' = 'forward') => {
     if (screen !== 'channel') useChatStore.setState({ activeChannelId: null });
     if (screen !== 'dm-thread') useDMStore.setState({ activeDMPubkey: null });
+    setSlideDir(dir);
     setNav((n) => ({ ...n, screen, baseScreen: null, msgContext: null }));
   }, []);
+
+  // ── horizontal swipe navigation ─────────────────────────────────────
+  // Swipe between bottom-nav tabs (server ↔ dms-list ↔ inbox ↔ settings)
+  // and swipe-right on a sub-screen returns to its parent tab. Touches that
+  // start inside a horizontal scroller (relay strip, filter tabs, message
+  // list, voice stage) are ignored so those keep their own scroll behavior.
+  const NAV_ORDER: ScreenName[] = ['server', 'dms-list', 'inbox', 'settings-profile'];
+  const SUB_TO_NAV: Partial<Record<ScreenName, ScreenName>> = {
+    channel: 'server',
+    'voice-room': 'server',
+    forum: 'server',
+    'member-list': 'server',
+    search: 'server',
+    'dm-thread': 'dms-list',
+    'compose-dm': 'dms-list',
+    'profile-view': 'server',
+    'settings-prefs': 'settings-profile',
+  };
+  const swipeStart = useRef<{ x: number; y: number; t: number; ignore: boolean } | null>(null);
+  const onTouchStart = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length !== 1) { swipeStart.current = null; return; }
+    const t = e.touches[0];
+    const target = e.target as HTMLElement | null;
+    const ignore = !!target?.closest(
+      '.spaces-strip, .dms-tabs, .filter-tabs, .messages, .composer, .emoji-sheet-host, .sheet-host, .voice-room-screen, [data-no-swipe]'
+    );
+    swipeStart.current = { x: t.clientX, y: t.clientY, t: Date.now(), ignore };
+  }, []);
+  const onTouchEnd = useCallback((e: React.TouchEvent) => {
+    const start = swipeStart.current;
+    swipeStart.current = null;
+    if (!start || start.ignore) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    const dt = Date.now() - start.t;
+    if (Math.abs(dx) < 70) return;
+    if (Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    if (dt > 600) return;
+    const goingRight = dx > 0;
+    setNav((n) => {
+      const navIndex = NAV_ORDER.indexOf(n.screen);
+      if (navIndex >= 0) {
+        const nextIdx = goingRight ? navIndex - 1 : navIndex + 1;
+        if (nextIdx >= 0 && nextIdx < NAV_ORDER.length) {
+          setSlideDir(goingRight ? 'back' : 'forward');
+          useChatStore.setState({ activeChannelId: null });
+          useDMStore.setState({ activeDMPubkey: null });
+          return { ...n, screen: NAV_ORDER[nextIdx], baseScreen: null, msgContext: null };
+        }
+        return n;
+      }
+      if (goingRight) {
+        const tabRoot = SUB_TO_NAV[n.screen];
+        if (tabRoot) {
+          setSlideDir('back');
+          useChatStore.setState({ activeChannelId: null });
+          useDMStore.setState({ activeDMPubkey: null });
+          return { ...n, screen: tabRoot, baseScreen: null, msgContext: null };
+        }
+      }
+      return n;
+    });
+  }, []);
   const selectGroup = useCallback((groupId: string, kind: JsGroup['kind']) => {
+    setSlideDir('forward');
     if (kind === 'voice' || kind === 'voice-sfu') {
       useChatStore.setState({ activeChannelId: null });
       setNav((n) => ({ ...n, screen: 'voice-room', groupId }));
@@ -2115,12 +2263,15 @@ export default function MobileShell() {
   const selectPeer = useCallback((peer: string) => {
     useDMStore.setState({ activeDMPubkey: peer });
     useNotificationStore.getState().clearDMUnread(peer);
+    setSlideDir('forward');
     setNav((n) => ({ ...n, screen: 'dm-thread', dmPeer: peer }));
   }, []);
   const openProfile = useCallback((pubkey: string) => {
+    setSlideDir('forward');
     setNav((n) => ({ ...n, screen: 'profile-view', profilePubkey: pubkey }));
   }, []);
   const openMembers = useCallback(() => {
+    setSlideDir('forward');
     setNav((n) => ({ ...n, screen: 'member-list' }));
   }, []);
   const openMsgActions = useCallback((msg: { id: string; pubkey: string; content: string }) => {
@@ -2138,13 +2289,15 @@ export default function MobileShell() {
     }));
   }, []);
   const backFromChannel = useCallback(() => {
+    setSlideDir('back');
     if (nav.forumGroupId && groups.find((g) => g.id === nav.groupId)?.parent === nav.forumGroupId) {
       setNav((n) => ({ ...n, screen: 'forum', groupId: n.forumGroupId }));
     } else {
-      go('server');
+      go('server', 'back');
     }
   }, [nav.forumGroupId, nav.groupId, groups, go]);
   const backFromProfile = useCallback(() => {
+    setSlideDir('back');
     setNav((n) => ({ ...n, screen: n.dmPeer && n.profilePubkey === n.dmPeer ? 'dm-thread' : 'channel' }));
   }, []);
 
@@ -2236,8 +2389,8 @@ export default function MobileShell() {
       body = nav.groupId ? (
         <VoiceRoomScreen
           groupId={nav.groupId}
-          back={() => go('server')}
-          openChat={() => setNav((n) => ({ ...n, screen: 'channel' }))}
+          back={() => go('server', 'back')}
+          openChat={() => { setSlideDir('forward'); setNav((n) => ({ ...n, screen: 'channel' })); }}
         />
       ) : <EmptyScreen go={go} title="No voice channel" />;
       break;
@@ -2246,7 +2399,7 @@ export default function MobileShell() {
       break;
     case 'dm-thread':
       body = nav.dmPeer ? (
-        <DmThreadScreen peer={nav.dmPeer} back={() => go('dms-list')} openProfile={openProfile} />
+        <DmThreadScreen peer={nav.dmPeer} back={() => go('dms-list', 'back')} openProfile={openProfile} />
       ) : <EmptyScreen go={go} title="No conversation" />;
       break;
     case 'inbox':
@@ -2259,18 +2412,18 @@ export default function MobileShell() {
       break;
     case 'member-list':
       body = nav.groupId ? (
-        <MemberListScreen groupId={nav.groupId} back={() => setNav((n) => ({ ...n, screen: 'channel' }))} openProfile={openProfile} />
+        <MemberListScreen groupId={nav.groupId} back={() => { setSlideDir('back'); setNav((n) => ({ ...n, screen: 'channel' })); }} openProfile={openProfile} />
       ) : <EmptyScreen go={go} title="No channel" />;
       break;
     case 'compose-dm':
-      body = <ComposeDmScreen back={() => go('dms-list')} selectPeer={selectPeer} />;
+      body = <ComposeDmScreen back={() => go('dms-list', 'back')} selectPeer={selectPeer} />;
       break;
     case 'search':
-      body = <SearchScreen back={() => go('server')} />;
+      body = <SearchScreen back={() => go('server', 'back')} />;
       break;
     case 'forum':
       body = nav.groupId ? (
-        <ForumScreen groupId={nav.groupId} back={() => go('server')} selectChild={(childId) => selectGroup(childId, 'text')} />
+        <ForumScreen groupId={nav.groupId} back={() => go('server', 'back')} selectChild={(childId) => selectGroup(childId, 'text')} />
       ) : <EmptyScreen go={go} title="No forum" />;
       break;
     case 'settings-profile':
@@ -2294,7 +2447,7 @@ export default function MobileShell() {
   // Hide nav only when the screen owns the full viewport (voice-room takes
   // the whole stage; sheets float over the previous screen so the nav under
   // them stays meaningful but covered by the sheet backdrop).
-  const hideNav = nav.screen === 'voice-room' || nav.screen === 'profile-view' || nav.screen === 'search' || nav.screen === 'compose-dm';
+  const hideNav = nav.screen === 'profile-view' || nav.screen === 'search' || nav.screen === 'compose-dm';
 
   // For sheets, render the underlying screen + the sheet
   let baseBody: ReactNode = null;
@@ -2316,11 +2469,12 @@ export default function MobileShell() {
     }
   }
 
+  const slideClass = slideDir === 'forward' ? 'slide-forward' : slideDir === 'back' ? 'slide-back' : '';
   return (
-    <div className="obelisk-mobile">
+    <div className="obelisk-mobile" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
       <div className="screens-host">
         {baseBody}
-        {body}
+        <div key={nav.screen} className={`screen-anim ${slideClass}`}>{body}</div>
         {nav.screen === 'msg-actions' && nav.msgContext && (
           <MessageActionsSheet
             msg={nav.msgContext}
@@ -2332,6 +2486,9 @@ export default function MobileShell() {
           <ZapModalSheet msg={nav.msgContext} close={closeSheet} />
         )}
       </div>
+      {nav.screen !== 'voice-room' && (
+        <div className="mobile-voice-status-slot"><VoiceStatusBar /></div>
+      )}
       {!hideNav && <BottomNav active={nav.screen} go={go} dmBadge={dmBadge} inboxBadge={inboxBadge} />}
     </div>
   );
