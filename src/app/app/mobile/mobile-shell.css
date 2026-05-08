@@ -647,8 +647,8 @@
 /* Discord-style vertical rail + L-branches for expanded forum threads.
  * Each thread row owns its own rail segment (::before, full row height) and
  * its own L-corner (::after, top half + curve). The last row's rail segment
- * stops at 50% height so it terminates exactly inside the L-corner instead
- * of trailing past it as a stub. */
+ * stops at 50% so it terminates exactly inside the L-corner instead of
+ * trailing past it as a stub. Lines are thickened for mobile visibility. */
 .obelisk-mobile .forum-threads {
   position: relative;
 }
@@ -661,7 +661,7 @@
   left: 14px;
   top: 0;
   bottom: 0;
-  border-left: 1.5px solid var(--app-line);
+  border-left: 2px solid #3a3a3a;
   pointer-events: none;
 }
 .obelisk-mobile .forum-threads .ch-row.ch-thread:last-child::before {
@@ -672,11 +672,11 @@
   position: absolute;
   left: 14px;
   top: 0;
-  width: 12px;
+  width: 14px;
   height: 50%;
-  border-left: 1.5px solid var(--app-line);
-  border-bottom: 1.5px solid var(--app-line);
-  border-bottom-left-radius: 8px;
+  border-left: 2px solid #3a3a3a;
+  border-bottom: 2px solid #3a3a3a;
+  border-bottom-left-radius: 10px;
   pointer-events: none;
 }
 
