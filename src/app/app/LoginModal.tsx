@@ -92,6 +92,12 @@ async function routeToBridge(args: {
     case 'generate': {
       if (!nsec) throw new Error('SDK did not provide an nsec for the bridge');
       const { skHex, pkHex } = nsecToHex(nsec);
+      if (method === 'generate' && typeof window !== 'undefined') {
+        // Hint for the mobile setup gate: a freshly generated key has no
+        // kind:0 to wait for, so PhoneShell can skip its grace period and
+        // show the profile setup screen immediately.
+        try { window.localStorage.setItem(`obelisk-dex/just-generated/${pkHex}`, '1'); } catch { /* ignore */ }
+      }
       await nostrActions.loginWithNsec(skHex, pkHex);
       return;
     }
