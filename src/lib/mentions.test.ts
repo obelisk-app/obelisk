@@ -5,6 +5,7 @@ import {
   serializeMention,
   filterMembers,
   extractMentionPubkeys,
+  extractMentionPubkeysFromMessage,
   contentToDisplayTokens,
   displayTokensToContent,
   shortNpub,
@@ -140,6 +141,47 @@ describe('extractMentionPubkeys (server-safe)', () => {
   it('ignores malformed npub bodies', () => {
     // not 64 hex, not valid bech32
     expect(extractMentionPubkeys('nostr:npub1zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz')).toEqual([]);
+  });
+});
+
+describe('extractMentionPubkeysFromMessage', () => {
+  const pkA = 'a'.repeat(64);
+  const pkB = 'b'.repeat(64);
+  const pkC = 'c'.repeat(64);
+
+  it('returns content mentions only when tags are empty', () => {
+    expect(extractMentionPubkeysFromMessage(`hi nostr:npub1${pkA}`, [])).toEqual([pkA]);
+  });
+
+  it('returns tag-only mentions when content has none', () => {
+    expect(
+      extractMentionPubkeysFromMessage('hello world', [['p', pkB]]),
+    ).toEqual([pkB]);
+  });
+
+  it('unions content + tag mentions, deduped', () => {
+    const result = extractMentionPubkeysFromMessage(
+      `hi nostr:npub1${pkA} and friend`,
+      [['p', pkA], ['p', pkB], ['e', pkC]], // pkA dedup; pkC is e-tag, ignored
+    );
+    expect(result).toHaveLength(2);
+    expect(result).toContain(pkA);
+    expect(result).toContain(pkB);
+  });
+
+  it('lowercases hex tag values for consistent comparison', () => {
+    const upper = pkA.toUpperCase();
+    const result = extractMentionPubkeysFromMessage('', [['p', upper]]);
+    expect(result).toEqual([pkA]);
+  });
+
+  it('ignores p-tags whose value is not 64-hex (npub strings, garbage)', () => {
+    const result = extractMentionPubkeysFromMessage('', [
+      ['p', `npub1${pkA}`],
+      ['p', 'not-a-pubkey'],
+      ['p', pkB],
+    ]);
+    expect(result).toEqual([pkB]);
   });
 });
 

@@ -14,9 +14,10 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { nostrActions, useConfiguredRelays, useCurrentRelayUrl } from '@/lib/nostr-bridge';
+import { nostrActions, useConfiguredRelays, useCurrentRelayUrl, useMyPubkey } from '@/lib/nostr-bridge';
 import { faviconFor, fetchRelayInfo, type RelayInfo } from '@/lib/relay-info';
 import { encodeRelayShareCode } from '@/lib/relay-share-link';
+import { useHasAnyHighlights } from '@/lib/read-state/selectors';
 
 const SUGGESTED_RELAYS: { url: string; fallbackName?: string; fallbackDescription?: string }[] = [
   {
@@ -176,6 +177,12 @@ function RelayTile({
   const [iconUrl, setIconUrl] = useState<string | null>(null);
   const [iconFailed, setIconFailed] = useState(false);
   const [copied, setCopied] = useState(false);
+  const myPubkey = useMyPubkey();
+  // The bridge only has message data for the currently-active relay, so the
+  // highlights signal is meaningful on the active tile only. Cross-relay
+  // mention surveillance ships in a follow-up — see docs/notifications.md.
+  const hasHighlights = useHasAnyHighlights(myPubkey);
+  const showHighlight = active && hasHighlights;
 
   async function copyShareLink() {
     const origin = typeof window !== 'undefined' ? window.location.origin : 'https://obelisk.ar';
@@ -241,6 +248,15 @@ function RelayTile({
           <span className="relative">{initials}</span>
         )}
       </button>
+      {showHighlight && (
+        <span
+          aria-label="Unread mentions or replies on this relay"
+          title="Unread mentions or replies"
+          className="pointer-events-none absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-lc-green px-1 text-[9px] font-bold text-lc-black ring-2 ring-lc-black"
+        >
+          @
+        </span>
+      )}
       {menu && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setMenu(false)} />

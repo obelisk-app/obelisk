@@ -23,6 +23,8 @@
 import { SimplePool, type Filter, type Event as NostrEvent, type EventTemplate, type VerifiedEvent, finalizeEvent, getPublicKey, nip19, nip04 } from 'nostr-tools';
 import { BunkerSigner, parseBunkerInput, createNostrConnectURI } from 'nostr-tools/nip46';
 import { generateSecretKey } from 'nostr-tools/pure';
+import { v2 as nip44 } from 'nostr-tools/nip44';
+import type { NipSigner } from '@/lib/nip-59';
 import { parseRelayListMeta, parseInboxRelays } from '@/lib/nostr-read';
 import { TextCoercingWebSocket } from '@/lib/nostr-pool';
 import { cacheGet, cacheSet, cacheClearAll, cacheListIds } from './cache';
@@ -32,7 +34,7 @@ import { resetAllClientState } from '@/lib/reset';
 import { pushActivity, resolveActivity, failActivity, trackActivity, dismissActivity } from '@/lib/activity-log';
 import { useReadStateStore } from '@/store/read-state';
 import { isUserWatchingDM, isUserWatchingChannel } from '@/lib/read-gates';
-import { extractMentionPubkeys } from '@/lib/mentions';
+import { extractMentionPubkeysFromMessage } from '@/lib/mentions';
 import type {
   NostrBridge,
   JsGroup,
@@ -93,6 +95,17 @@ function parseRelayRejection(reason: string): RelayAccessState | null {
     return 'restricted';
   }
   return null;
+}
+
+/**
+ * Options for {@link BridgeImpl.publishEvent}. `mode: 'merge'` (default)
+ * publishes to the union of `this.relays` and `extraRelays`; `mode: 'replace'`
+ * publishes ONLY to `extraRelays`. Used by per-relay state events that must
+ * not leak to the user's other relays.
+ */
+export interface PublishOpts {
+  readonly extraRelays?: readonly string[];
+  readonly mode?: 'merge' | 'replace';
 }
 
 // -- NIP-29 kinds --------------------------------------------------------
@@ -164,7 +177,7 @@ function readMigrated(key: string, legacyKey: string): string | null {
 // Outbox/profile relays for fetching kind:0 metadata. NIP-29 group relays
 // generally don't carry user profile events, so we query well-known public
 // relays in addition to the active group relay.
-const PROFILE_RELAYS = [
+export const PROFILE_RELAYS = [
   'wss://relay.obelisk.ar',
   'wss://public.obelisk.ar',
   'wss://relay.damus.io',
@@ -1826,6 +1839,7 @@ class BridgeImpl implements NostrBridge {
         createdAt: e.created_at,
         kind: e.kind,
         replyToId: e.tags.find((t) => t[0] === 'e')?.[1] ?? null,
+        mentions: extractMentionPubkeysFromMessage(e.content, e.tags),
         groupId: e.tags.find((t) => t[0] === 'h')?.[1] ?? null,
       }))
       .sort((a, b) => b.createdAt - a.createdAt);
@@ -1983,7 +1997,7 @@ class BridgeImpl implements NostrBridge {
     content: string;
     tags: string[][];
     created_at?: number;
-  }, extraRelays: string[] = []): Promise<NostrEvent> {
+  }, opts: PublishOpts = {}): Promise<NostrEvent> {
     return this.signAndPublish(
       {
         kind: template.kind,
@@ -1991,7 +2005,7 @@ class BridgeImpl implements NostrBridge {
         tags: template.tags,
         created_at: template.created_at ?? Math.floor(Date.now() / 1000),
       },
-      extraRelays,
+      opts,
     );
   }
 
@@ -2742,6 +2756,7 @@ class BridgeImpl implements NostrBridge {
 
   private ingestMessage(groupId: string, ev: NostrEvent): void {
     const replyTo = ev.tags.find((t) => t[0] === 'e' && t[3] === 'reply')?.[1] ?? null;
+    const mentions = extractMentionPubkeysFromMessage(ev.content, ev.tags);
     const msg: JsMessage = {
       id: ev.id,
       pubkey: ev.pubkey,
@@ -2749,6 +2764,7 @@ class BridgeImpl implements NostrBridge {
       createdAt: ev.created_at,
       kind: ev.kind,
       replyToId: replyTo,
+      mentions,
     };
     let isNew = false;
     this.messagesByGroup.update((prev) => {
@@ -2770,12 +2786,25 @@ class BridgeImpl implements NostrBridge {
     const me = this.session?.pubKeyHex ?? null;
     if (!me || ev.pubkey === me) return;
     if (isUserWatchingChannel(groupId)) return;
-    const mentioned = extractMentionPubkeys(ev.content).includes(me);
-    if (!mentioned) return;
+    const mentioned = mentions.includes(me);
+    // Reply-to-me detection: NIP-10 strict — `["e", id, "", "reply"]` whose
+    // parent is one of MY messages in this channel. Resolved against the
+    // already-ingested message list so we only fire when we can prove
+    // authorship; backfill that arrives before the parent gets dropped.
+    const replyToMe = (() => {
+      if (!replyTo) return false;
+      const list = this.messagesByGroup.get()[groupId] ?? [];
+      const parent = list.find((m) => m.id === replyTo);
+      return !!parent && parent.pubkey === me;
+    })();
+    if (!mentioned && !replyToMe) return;
     const evMs = ev.created_at * 1000;
     if (evMs <= useReadStateStore.getState().inboxLastReadAt) return;
     useReadStateStore.getState().pushInboxEvent({
-      type: 'mention',
+      // Mentions take precedence over replies in the inbox card type — if
+      // a message is both, surfacing it as a "mention" matches user
+      // intent (the @ was the explicit ping).
+      type: mentioned ? 'mention' : 'reply',
       channelId: groupId,
       messageId: ev.id,
       senderPubkey: ev.pubkey,
@@ -2851,6 +2880,78 @@ class BridgeImpl implements NostrBridge {
       preview: plaintext.slice(0, 280),
       createdAt: new Date(evMs).toISOString(),
     });
+  }
+
+  /**
+   * Build a {@link NipSigner} backed by the active session — sign + NIP-44
+   * encrypt/decrypt routed through whichever login method the user picked.
+   * Used by the read-state relay-sync engine to NIP-59 gift-wrap state
+   * events. Returns `null` when there is no active session.
+   *
+   * Bunker NIP-44 round-trips can be slow (the remote signer signs and
+   * encrypts on every call); callers should debounce publish bursts.
+   */
+  getNipSigner(): NipSigner | null {
+    if (!this.session) return null;
+    const session = this.session;
+    const pubkey = session.pubKeyHex;
+    return {
+      pubkey,
+      signEvent: async (template) => {
+        if (session.loginMethod === 'nsec' && session.privKeyHex) {
+          const sk = hexToBytes(session.privKeyHex);
+          return finalizeEvent({ ...template }, sk);
+        }
+        if (session.loginMethod === 'nip07') {
+          const w = (window as unknown as { nostr?: { signEvent: (e: unknown) => Promise<NostrEvent> } }).nostr;
+          if (!w) throw new Error('NIP-07 extension unavailable');
+          return w.signEvent({ ...template, pubkey });
+        }
+        if (session.loginMethod === 'bunker') {
+          const b = await this.ensureBunkerSigner();
+          return b.signEvent(template) as Promise<NostrEvent>;
+        }
+        throw new Error(`Cannot sign with login method ${session.loginMethod}`);
+      },
+      nip44Encrypt: async (recipientPubkey, plaintext) => {
+        if (session.loginMethod === 'nsec' && session.privKeyHex) {
+          const sk = hexToBytes(session.privKeyHex);
+          const key = nip44.utils.getConversationKey(sk, recipientPubkey);
+          return nip44.encrypt(plaintext, key);
+        }
+        if (session.loginMethod === 'nip07') {
+          const w = (window as unknown as {
+            nostr?: { nip44?: { encrypt: (p: string, t: string) => Promise<string> } };
+          }).nostr;
+          if (!w?.nip44?.encrypt) throw new Error('Extension does not support NIP-44 encryption');
+          return w.nip44.encrypt(recipientPubkey, plaintext);
+        }
+        if (session.loginMethod === 'bunker') {
+          const b = await this.ensureBunkerSigner();
+          return b.nip44Encrypt(recipientPubkey, plaintext);
+        }
+        throw new Error(`Cannot NIP-44 encrypt with login method ${session.loginMethod}`);
+      },
+      nip44Decrypt: async (senderPubkey, ciphertext) => {
+        if (session.loginMethod === 'nsec' && session.privKeyHex) {
+          const sk = hexToBytes(session.privKeyHex);
+          const key = nip44.utils.getConversationKey(sk, senderPubkey);
+          return nip44.decrypt(ciphertext, key);
+        }
+        if (session.loginMethod === 'nip07') {
+          const w = (window as unknown as {
+            nostr?: { nip44?: { decrypt: (p: string, c: string) => Promise<string> } };
+          }).nostr;
+          if (!w?.nip44?.decrypt) throw new Error('Extension does not support NIP-44 decryption');
+          return w.nip44.decrypt(senderPubkey, ciphertext);
+        }
+        if (session.loginMethod === 'bunker') {
+          const b = await this.ensureBunkerSigner();
+          return b.nip44Decrypt(senderPubkey, ciphertext);
+        }
+        throw new Error(`Cannot NIP-44 decrypt with login method ${session.loginMethod}`);
+      },
+    };
   }
 
   private async encryptNip04(recipientPubkey: string, content: string): Promise<string> {
@@ -2970,9 +3071,17 @@ class BridgeImpl implements NostrBridge {
 
   private async signAndPublish(
     template: { kind: number; content: string; tags: string[][]; created_at: number },
-    extraRelays: string[] = [],
+    relayOpts: PublishOpts | readonly string[] = {},
     opts?: { quiet?: boolean },
   ): Promise<NostrEvent> {
+    // Two call shapes: legacy `string[]` (merge with this.relays) and the new
+    // `{ extraRelays, mode }` opts. Internal callers in this file still pass
+    // arrays — translate here so the publish path below has one shape.
+    const normalized: PublishOpts = Array.isArray(relayOpts)
+      ? { extraRelays: relayOpts }
+      : (relayOpts as PublishOpts);
+    const extraRelays = normalized.extraRelays ?? [];
+    const mode = normalized.mode ?? 'merge';
     if (!this.session) throw new Error('Not logged in');
 
     const signLabel =
@@ -3006,7 +3115,9 @@ class BridgeImpl implements NostrBridge {
       throw e;
     }
 
-    const targetRelays = Array.from(new Set([...this.relays, ...extraRelays]));
+    const targetRelays = mode === 'replace'
+      ? Array.from(new Set(extraRelays))
+      : Array.from(new Set([...this.relays, ...extraRelays]));
     const pubId = opts?.quiet ? null : pushActivity('Publishing to relays', `kind ${template.kind} → ${targetRelays.length} relay(s)`);
     const publishes = this.pool.publish(targetRelays, event, { onauth: this.getAuthSigner() });
 

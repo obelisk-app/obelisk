@@ -171,6 +171,32 @@ export function extractMentionPubkeys(content: string): string[] {
 }
 
 /**
+ * Extract the unique set of mentioned pubkeys (hex) for a full message —
+ * combines `extractMentionPubkeys(content)` with any `["p", <hex>]` tags.
+ *
+ * NIP-29 group messages routinely carry `#p` tags for their mention targets
+ * (some clients tag without inlining a token in content; others do both).
+ * Using only the content regex misses the tag-only case, so the read-state
+ * "channel has mention" selector and the inbox push at ingest both feed
+ * through this helper.
+ *
+ * Hex tag values are lowercased; values that aren't 64-char hex are
+ * silently dropped.
+ */
+export function extractMentionPubkeysFromMessage(
+  content: string,
+  tags: ReadonlyArray<ReadonlyArray<string>>,
+): string[] {
+  const found = new Set<string>(extractMentionPubkeys(content));
+  for (const t of tags) {
+    if (t[0] === 'p' && typeof t[1] === 'string' && /^[a-f0-9]{64}$/i.test(t[1])) {
+      found.add(t[1].toLowerCase());
+    }
+  }
+  return [...found];
+}
+
+/**
  * Transform canonical message content (containing `nostr:npub1<hex>` or
  * bech32 mention tokens) into a human-friendly form suitable for a textarea:
  * each mention becomes `@DisplayName` (or `@npub1abc…` for unknown members).

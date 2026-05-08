@@ -112,6 +112,68 @@ describe('useReadStateStore', () => {
     });
   });
 
+  describe('applyRemoteState', () => {
+    it('merges new dm cursors and advances existing ones monotonically', () => {
+      useReadStateStore.getState().setDmCursor('alice', 100);
+      useReadStateStore.getState().setDmCursor('bob', 500);
+      useReadStateStore.getState().applyRemoteState({
+        dmCursors: { alice: 200, bob: 300, carol: 1000 },
+      });
+      const s = useReadStateStore.getState();
+      expect(s.dmCursors['alice']).toBe(200);  // advanced
+      expect(s.dmCursors['bob']).toBe(500);    // remote was older — unchanged
+      expect(s.dmCursors['carol']).toBe(1000); // new peer
+    });
+
+    it('merges group cursors monotonically', () => {
+      useReadStateStore.getState().setGroupCursor('g1', 100);
+      useReadStateStore.getState().applyRemoteState({
+        groupCursors: { g1: 50, g2: 999 },
+      });
+      const s = useReadStateStore.getState();
+      expect(s.groupCursors['g1']).toBe(100);  // older — kept local
+      expect(s.groupCursors['g2']).toBe(999);  // new
+    });
+
+    it('advances inboxLastReadAt only when remote is newer', () => {
+      useReadStateStore.setState({ inboxLastReadAt: 500 });
+      useReadStateStore.getState().applyRemoteState({ inboxLastReadAt: 200 });
+      expect(useReadStateStore.getState().inboxLastReadAt).toBe(500);
+      useReadStateStore.getState().applyRemoteState({ inboxLastReadAt: 1000 });
+      expect(useReadStateStore.getState().inboxLastReadAt).toBe(1000);
+    });
+
+    it('is a no-op when nothing is newer (object identity preserved)', () => {
+      useReadStateStore.getState().setGroupCursor('g1', 500);
+      const before = useReadStateStore.getState();
+      useReadStateStore.getState().applyRemoteState({
+        groupCursors: { g1: 100 },
+      });
+      const after = useReadStateStore.getState();
+      // Same object reference signals "no setState" for downstream subscribers.
+      expect(after.groupCursors).toBe(before.groupCursors);
+    });
+
+    it('handles a fully empty snapshot', () => {
+      useReadStateStore.getState().setGroupCursor('g1', 500);
+      useReadStateStore.getState().applyRemoteState({});
+      expect(useReadStateStore.getState().groupCursors['g1']).toBe(500);
+    });
+
+    it('atomically merges all three categories in one update', () => {
+      let renderCount = 0;
+      const unsub = useReadStateStore.subscribe(() => { renderCount++; });
+      useReadStateStore.getState().applyRemoteState({
+        dmCursors: { alice: 100 },
+        groupCursors: { g1: 200 },
+        inboxLastReadAt: 300,
+      });
+      unsub();
+      // Single set() call; downstream subscribers re-render exactly once.
+      expect(renderCount).toBe(1);
+    });
+  });
+
   describe('reset', () => {
     it('wipes all cursors and inbox', () => {
       useReadStateStore.getState().setDmCursor('alice', 1000);

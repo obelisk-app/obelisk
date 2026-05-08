@@ -4,6 +4,7 @@ import {
   countDMUnread,
   countChannelUnread,
   channelHasMention,
+  computeChannelHighlights,
 } from './selectors';
 
 const dm = (overrides: Partial<JsDirectMessage>): JsDirectMessage => ({
@@ -22,6 +23,7 @@ const msg = (overrides: Partial<JsMessage>): JsMessage => ({
   createdAt: 0,
   kind: 9,
   replyToId: null,
+  mentions: [],
   ...overrides,
 });
 
@@ -88,36 +90,121 @@ describe('countChannelUnread', () => {
 });
 
 describe('channelHasMention', () => {
-  // Legacy hex mention form is `nostr:npub1<64 hex>`. The extractor matches
-  // it directly without bech32 decoding. We use it here so the test stays
-  // independent of the nip19 codec.
+  // Reads the precomputed `mentions` field that bridge ingest stamps from
+  // `extractMentionPubkeysFromMessage(content, tags)`. Tests provide it
+  // directly here to stay independent of the bridge.
   const ME = 'a'.repeat(64);
-  const npubMe = 'nostr:npub1' + ME;
 
   it('returns false when ownPubkey is null', () => {
-    const list = [msg({ content: `hey ${npubMe}`, createdAt: 100 })];
+    const list = [msg({ mentions: [ME], createdAt: 100 })];
     expect(channelHasMention(list, 0, null)).toBe(false);
   });
 
   it('finds a mention in an unread message', () => {
     const list = [
-      msg({ id: 'a', createdAt: 100, pubkey: 'someone', content: 'no mention here' }),
-      msg({ id: 'b', createdAt: 200, pubkey: 'someone', content: `cc ${npubMe}` }),
+      msg({ id: 'a', createdAt: 100, pubkey: 'someone', mentions: [] }),
+      msg({ id: 'b', createdAt: 200, pubkey: 'someone', mentions: [ME] }),
     ];
     expect(channelHasMention(list, 0, ME)).toBe(true);
   });
 
   it('ignores mentions older than the cursor', () => {
     const list = [
-      msg({ id: 'a', createdAt: 100, pubkey: 'someone', content: `old mention ${npubMe}` }),
+      msg({ id: 'a', createdAt: 100, pubkey: 'someone', mentions: [ME] }),
     ];
     expect(channelHasMention(list, 200_000, ME)).toBe(false);
   });
 
   it('skips own messages even if they "mention" me', () => {
     const list = [
-      msg({ id: 'a', createdAt: 100, pubkey: ME, content: `self mention ${npubMe}` }),
+      msg({ id: 'a', createdAt: 100, pubkey: ME, mentions: [ME] }),
     ];
     expect(channelHasMention(list, 0, ME)).toBe(false);
+  });
+});
+
+describe('computeChannelHighlights', () => {
+  const ME = 'a'.repeat(64);
+  const SOMEONE = 'b'.repeat(64);
+
+  it('returns zeros for an empty list', () => {
+    expect(computeChannelHighlights([], 0, ME)).toEqual({
+      unread: 0,
+      mentions: 0,
+      replies: 0,
+      eventIds: [],
+    });
+  });
+
+  it('counts unread messages excluding own', () => {
+    const list = [
+      msg({ id: 'a', createdAt: 100, pubkey: SOMEONE }),
+      msg({ id: 'b', createdAt: 200, pubkey: ME }),       // own → skip
+      msg({ id: 'c', createdAt: 300, pubkey: SOMEONE }),
+    ];
+    const h = computeChannelHighlights(list, 0, ME);
+    expect(h.unread).toBe(2);
+    expect(h.mentions).toBe(0);
+    expect(h.replies).toBe(0);
+    expect(h.eventIds).toEqual([]);
+  });
+
+  it('counts mentions and includes them in eventIds (oldest first)', () => {
+    const list = [
+      msg({ id: 'm1', createdAt: 100, pubkey: SOMEONE, mentions: [ME] }),
+      msg({ id: 'normal', createdAt: 150, pubkey: SOMEONE }),
+      msg({ id: 'm2', createdAt: 200, pubkey: SOMEONE, mentions: [ME] }),
+    ];
+    const h = computeChannelHighlights(list, 0, ME);
+    expect(h.unread).toBe(3);
+    expect(h.mentions).toBe(2);
+    expect(h.replies).toBe(0);
+    expect(h.eventIds).toEqual(['m1', 'm2']);
+  });
+
+  it('counts replies-to-me only when parent author matches', () => {
+    const list = [
+      msg({ id: 'mine', createdAt: 50, pubkey: ME }),
+      msg({ id: 'theirs', createdAt: 100, pubkey: SOMEONE }),
+      msg({ id: 'r1', createdAt: 200, pubkey: SOMEONE, replyToId: 'mine' }),
+      msg({ id: 'r2', createdAt: 300, pubkey: SOMEONE, replyToId: 'theirs' }),
+    ];
+    const h = computeChannelHighlights(list, 99_000, ME);
+    // 'mine' is own (skip); 'theirs' just predates the cursor or counts as
+    // unread depending on cursor; cursor 99_000 ms == 99 s, so 'theirs' (100) is unread.
+    // r1 is reply-to-me, r2 is reply-to-someone.
+    expect(h.replies).toBe(1);
+    expect(h.eventIds).toEqual(['r1']);
+  });
+
+  it('mention + reply on same message counts both flags but appears once in eventIds', () => {
+    const list = [
+      msg({ id: 'mine', createdAt: 50, pubkey: ME }),
+      msg({ id: 'r', createdAt: 200, pubkey: SOMEONE, replyToId: 'mine', mentions: [ME] }),
+    ];
+    const h = computeChannelHighlights(list, 0, ME);
+    expect(h.mentions).toBe(1);
+    expect(h.replies).toBe(1);
+    expect(h.eventIds).toEqual(['r']);
+  });
+
+  it('messages older than cursor do not contribute', () => {
+    const list = [
+      msg({ id: 'old', createdAt: 100, pubkey: SOMEONE, mentions: [ME] }),
+      msg({ id: 'new', createdAt: 300, pubkey: SOMEONE, mentions: [ME] }),
+    ];
+    const h = computeChannelHighlights(list, 200_000, ME);
+    expect(h.eventIds).toEqual(['new']);
+    expect(h.mentions).toBe(1);
+  });
+
+  it('returns zero highlights when ownPubkey is null but still counts unread', () => {
+    const list = [
+      msg({ id: 'a', createdAt: 100, pubkey: SOMEONE, mentions: ['x'] }),
+    ];
+    const h = computeChannelHighlights(list, 0, null);
+    expect(h.unread).toBe(1);
+    expect(h.mentions).toBe(0);
+    expect(h.replies).toBe(0);
   });
 });

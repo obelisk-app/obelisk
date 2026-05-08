@@ -23,7 +23,7 @@ import {
   useMessagesByGroup,
 } from '@/lib/nostr-bridge';
 import { useReadStateStore } from '@/store/read-state';
-import { extractMentionPubkeys } from '@/lib/mentions';
+import { buildAuthorIndex, isReplyToMe } from './replies';
 
 const FALLBACK_WINDOW_MS = 24 * 60 * 60 * 1000;
 
@@ -129,9 +129,10 @@ export function useTotalChannelUnread(ownPubkey: string | null): number {
 }
 
 /**
- * `true` if any unread message in the channel mentions `ownPubkey`. Uses the
- * same mention extractor as the legacy `read-gates.handleIncomingChannelMessage`
- * path, evaluated lazily on render rather than mutated into a side store.
+ * `true` if any unread message in the channel mentions `ownPubkey`. Reads
+ * the precomputed `mentions` field that the bridge stamps at ingest from
+ * `extractMentionPubkeysFromMessage(content, tags)` — content tokens AND
+ * `#p` tags both count.
  */
 export function channelHasMention(
   messages: ReadonlyArray<JsMessage>,
@@ -143,7 +144,7 @@ export function channelHasMention(
     const m = messages[i];
     if (m.createdAt * 1000 <= cursor) break;
     if (m.pubkey === ownPubkey) continue;
-    if (extractMentionPubkeys(m.content).includes(ownPubkey)) return true;
+    if (m.mentions.includes(ownPubkey)) return true;
   }
   return false;
 }
@@ -160,6 +161,91 @@ export function useChannelHasMention(
     if (!groupId || !messages || messages.length === 0) return false;
     return channelHasMention(messages, effectiveCursor(stored), ownPubkey);
   }, [groupId, messages, stored, ownPubkey]);
+}
+
+/**
+ * Highlights for a single channel: total unread, plus the subsets that are
+ * mentions or replies-to-me, plus the ordered event ids the
+ * `MentionNavigator` walks with `↑↓`. All four values are pure functions
+ * of the messages list and the cursor — recomputed on render.
+ *
+ * `eventIds` is oldest→newest and contains only mention OR reply events
+ * (deduped). Replies are detected via NIP-10 strict reply marker resolved
+ * against the channel's local message list (parent must be known).
+ */
+export interface ChannelHighlights {
+  readonly unread: number;
+  readonly mentions: number;
+  readonly replies: number;
+  readonly eventIds: ReadonlyArray<string>;
+}
+
+export const EMPTY_HIGHLIGHTS: ChannelHighlights = {
+  unread: 0,
+  mentions: 0,
+  replies: 0,
+  eventIds: [],
+};
+
+export function computeChannelHighlights(
+  messages: ReadonlyArray<JsMessage>,
+  cursor: number,
+  ownPubkey: string | null,
+): ChannelHighlights {
+  if (messages.length === 0) return EMPTY_HIGHLIGHTS;
+  const authorById = buildAuthorIndex(messages);
+  const eventIds: string[] = [];
+  let unread = 0;
+  let mentions = 0;
+  let replies = 0;
+  for (let i = 0; i < messages.length; i++) {
+    const m = messages[i];
+    if (m.createdAt * 1000 <= cursor) continue;
+    if (ownPubkey && m.pubkey === ownPubkey) continue;
+    unread++;
+    const mentioned = !!ownPubkey && m.mentions.includes(ownPubkey);
+    const replied = isReplyToMe(m, authorById, ownPubkey);
+    if (mentioned) mentions++;
+    if (replied) replies++;
+    if (mentioned || replied) eventIds.push(m.id);
+  }
+  return { unread, mentions, replies, eventIds };
+}
+
+export function useChannelHighlights(
+  groupId: string | null | undefined,
+  ownPubkey: string | null,
+): ChannelHighlights {
+  const messages = useMessages(groupId ?? null);
+  const stored = useReadStateStore((s) =>
+    groupId ? s.groupCursors[groupId] : undefined,
+  );
+  return useMemo(() => {
+    if (!groupId || !messages || messages.length === 0) return EMPTY_HIGHLIGHTS;
+    return computeChannelHighlights(messages, effectiveCursor(stored), ownPubkey);
+  }, [groupId, messages, stored, ownPubkey]);
+}
+
+/**
+ * `true` when ANY currently-loaded channel has unread mentions or replies.
+ * Used by the ServerRail to overlay an `@`-icon on the active relay tile.
+ *
+ * Limitation: only reflects channels the bridge has messages for — i.e.
+ * the active relay. Inactive relays don't get a badge until cross-relay
+ * mention-watch ships in a follow-up PR.
+ */
+export function useHasAnyHighlights(ownPubkey: string | null): boolean {
+  const byGroup = useMessagesByGroup();
+  const cursors = useReadStateStore((s) => s.groupCursors);
+  return useMemo(() => {
+    for (const groupId of Object.keys(byGroup)) {
+      const list = byGroup[groupId];
+      if (!list || list.length === 0) continue;
+      const h = computeChannelHighlights(list, effectiveCursor(cursors[groupId]), ownPubkey);
+      if (h.mentions > 0 || h.replies > 0) return true;
+    }
+    return false;
+  }, [byGroup, cursors, ownPubkey]);
 }
 
 export function useInboxUnreadCount(): number {

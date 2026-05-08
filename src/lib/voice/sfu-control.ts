@@ -254,7 +254,7 @@ export async function publishSfuStart(
       recentStarts.delete(key);
       return false;
     }
-    await impl.publishEvent({ kind: KIND_SFU_CONTROL, content, tags }, [...trustedRelays]);
+    await impl.publishEvent({ kind: KIND_SFU_CONTROL, content, tags }, { extraRelays: [...trustedRelays] });
     return true;
   } catch (err) {
     recentStarts.delete(key);

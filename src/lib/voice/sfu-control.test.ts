@@ -35,8 +35,11 @@ const bridgeFake = vi.hoisted(() => {
     getPublicKey: () => 'self-pk',
     publishEvent: vi.fn(async (
       template: { kind: number; content: string; tags: string[][] },
-      extraRelays: string[] = [],
+      opts: { extraRelays?: string[]; mode?: string } | string[] = {},
     ) => {
+      // Bridge contract evolved from positional `string[]` → opts object.
+      // Unwrap so existing assertions keep reading `extraRelays` as an array.
+      const extraRelays = Array.isArray(opts) ? opts : (opts.extraRelays ?? []);
       publishCalls.push({ template, extraRelays });
       if (publishImpl) await publishImpl();
     }),

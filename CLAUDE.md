@@ -159,8 +159,9 @@ The SFU server is a separate repo: **[obelisk-app/obelisk-sfu](https://github.co
 | NIP-05 | DNS-based verification | Display verification status |
 | NIP-46 | Nostr Connect (bunker) | Remote signer login |
 | NIP-50 | Search | `bridge.searchMessages` |
-| NIP-65 | Relay list metadata | Auto-fetch user relays |
-| NIP-78 | Application-specific data | Channel layout (kind 30078) |
+| NIP-59 | Gift wrap (kind 1059) | Encrypted multi-device read-state sync (`src/lib/nip-59.ts`, `src/lib/read-state/relay-sync.ts`) |
+| NIP-65 | Relay list metadata | Auto-fetch user relays; DM-state sync targets the NIP-65 read+write union |
+| NIP-78 | Application-specific data | Channel layout (kind 30078); also the inner rumor kind for NIP-59-wrapped read state |
 | NIP-98 | HTTP authentication | Blossom upload-auth |
 
 ## Development Guidelines
@@ -208,9 +209,10 @@ canonical example: define a Zustand `persist` store keyed by
 `obelisk-{name}` with an `ensureXxxForAccount(pubkey)` helper that swaps the
 key on login. Wire the helper into the `useEffect` in `AppGate.tsx`'s
 `ReadStateRoot` alongside the existing ones. See
-[docs/read-state.md](docs/read-state.md) for the full pattern, and
-[docs/auth-and-data-loading.md §8](docs/auth-and-data-loading.md) for where
-this sits relative to the bridgeCache.
+[docs/notifications.md](docs/notifications.md) for the full pattern (cursor
+model, mention/reply detection, encrypted multi-device sync via NIP-59),
+and [docs/auth-and-data-loading.md §8](docs/auth-and-data-loading.md) for
+where this sits relative to the bridgeCache.
 
 ## Testing
 
@@ -244,7 +246,7 @@ this sits relative to the bridgeCache.
 
 ## Resources
 - [docs/auth-and-data-loading.md](docs/auth-and-data-loading.md) — login flow, NIP-42 AUTH, watchdog, bridgeCache
-- [docs/read-state.md](docs/read-state.md) — unified unread/notifications system, cursor model, localStorage conventions, multi-device sync future
+- [docs/notifications.md](docs/notifications.md) — unified read-state + notifications: per-channel cursors, mention/reply detection, MentionNavigator, encrypted multi-device sync via NIP-59 gift wrap (groups state per relay; DM state on NIP-65 relays)
 - [docs/voice-system.md](docs/voice-system.md) — mesh voice (P2P over Nostr signaling)
 - [docs/sfu-system.md](docs/sfu-system.md) — SFU architecture (mediasoup engine, Nostr-RPC signaling)
 - [obelisk-app/obelisk-sfu](https://github.com/obelisk-app/obelisk-sfu) — SFU server repo (protocol spec, operator guide, deploy)

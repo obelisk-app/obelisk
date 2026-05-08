@@ -38,6 +38,7 @@ import LoginModal from './LoginModal';
 import UserPanel from './UserPanel';
 import SearchBar from './SearchBar';
 import MessageContent from '@/components/chat/MessageContent';
+import MentionNavigator from '@/components/chat/MentionNavigator';
 import MemberList from '@/components/chat/MemberList';
 import RelayAdminPanel from '@/components/admin/RelayAdminPanel';
 import VoiceRoom from '@/components/voice/VoiceRoom';
@@ -45,7 +46,7 @@ import ForumView from '@/components/chat/ForumView';
 import VoiceStatusBar from '@/components/voice/VoiceStatusBar';
 import { useVoiceStore } from '@/store/voice';
 import { useReadStateStore, type InboxEvent } from '@/store/read-state';
-import { useInboxUnreadCount } from '@/lib/read-state/selectors';
+import { useInboxUnreadCount, useChannelHighlights } from '@/lib/read-state/selectors';
 import { subscribeVoiceJump } from '@/lib/voice/jump-to-voice';
 import { useVoiceChatPane } from '@/hooks/chat/useVoiceChatPane';
 import { useChatStore } from '@/store/chat';
@@ -994,6 +995,15 @@ function GroupNode({
 }) {
   const childIds = childrenByParent[group.id] ?? [];
   const active = view.kind === 'group' && view.groupId === group.id;
+  const myPubkey = useMyPubkey();
+  const highlights = useChannelHighlights(group.id, myPubkey);
+  // When the user is actively viewing the channel, the auto-mark hook is
+  // about to advance the cursor — suppress the badge to avoid a brief
+  // count flash. Matches the existing favicon-badge subtraction at
+  // useFaviconBadge.ts.
+  const showBadges = !active;
+  const unread = showBadges ? highlights.unread : 0;
+  const mentionsOrReplies = showBadges ? (highlights.mentions + highlights.replies) : 0;
   // Forum containers default to expanded so newly-created threads are
   // immediately visible. Persisted per-group in localStorage so the user's
   // choice survives reloads. Non-forum groups stay always-expanded (no
@@ -1030,7 +1040,7 @@ function GroupNode({
         >
           <span className="text-lc-muted">#</span>
           <span
-            className={`flex-1 truncate ${distanceById ? wotColorClass(distanceById[group.id] ?? null) : ''}`}
+            className={`flex-1 truncate ${unread > 0 ? 'font-semibold text-lc-white' : ''} ${distanceById ? wotColorClass(distanceById[group.id] ?? null) : ''}`}
             title={distanceById && distanceById[group.id] != null ? `WoT ${distanceById[group.id]}°` : undefined}
           >
             {group.name ?? group.id.slice(0, 12)}
@@ -1038,6 +1048,22 @@ function GroupNode({
           {!group.isPublic && <span title="Private" className="text-[10px]">🔒</span>}
           {!group.isOpen && <span title="Closed (invite only)" className="text-[10px]">⊝</span>}
           <ActiveCallBadge groupId={group.id} kind={group.kind} />
+          {unread > 0 && (
+            <span
+              aria-label={`${unread} unread message${unread === 1 ? '' : 's'}`}
+              className="text-xs tabular-nums text-lc-muted"
+            >
+              {unread > 99 ? '99+' : unread}
+            </span>
+          )}
+          {mentionsOrReplies > 0 && (
+            <span
+              aria-label={`${mentionsOrReplies} mention${mentionsOrReplies === 1 ? '' : 's'} or reply`}
+              className="rounded-full bg-lc-green px-1.5 py-px text-[10px] font-bold text-lc-black"
+            >
+              {mentionsOrReplies > 99 ? '99+' : mentionsOrReplies}
+            </span>
+          )}
         </button>
         {isCollapsible && (
           <button
@@ -1777,6 +1803,9 @@ function ChatPanel({
   }, [groupId, myPubkey, groupCreator, admins, relay, relayAccess]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const voiceMainRef = useRef<HTMLDivElement>(null);
+  // Highlights drive the floating mention/reply navigator at the bottom-right
+  // of the message viewport — same data the channel-row badges read.
+  const channelHighlights = useChannelHighlights(groupId, myPubkey);
   const [showSettings, setShowSettings] = useState(false);
   const voiceChatOpen = useVoiceStore((s) => s.isVoiceChatOpen);
   const setVoiceChatOpen = useVoiceStore((s) => s.setVoiceChatOpen);
@@ -2162,6 +2191,7 @@ function ChatPanel({
         const textBody = (
       <>
       <RelayAccessBanner />
+      <div className="relative flex min-h-0 flex-1 flex-col">
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-4" data-testid={messagesVisible ? undefined : 'messages-gated-by-auth'}>
         {messages.length === 0 ? (
           <div className="flex h-full items-center justify-center text-sm text-lc-muted">
@@ -2206,6 +2236,8 @@ function ChatPanel({
             );
           })
         )}
+      </div>
+      <MentionNavigator scrollRef={scrollRef} eventIds={channelHighlights.eventIds} />
       </div>
 
       {messagesVisible && (

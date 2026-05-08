@@ -32,6 +32,23 @@ interface ReadStatePersisted {
   inboxEvents: InboxEvent[];
 }
 
+/**
+ * Snapshot delivered by the relay-sync engine after unwrapping a
+ * NIP-59 gift-wrapped state event. All fields are optional so a single
+ * remote state event can carry just the parts that scope demands —
+ * per-relay events carry only `groupCursors`; DM events carry
+ * `dmCursors` + `inboxLastReadAt`.
+ *
+ * The merge is monotonic: each cursor takes `max(local, remote)`,
+ * making the entire state a CRDT under cursor-wise max — devices
+ * converge regardless of arrival order.
+ */
+export interface RemoteReadState {
+  readonly dmCursors?: Readonly<Record<string, number>>;
+  readonly groupCursors?: Readonly<Record<string, number>>;
+  readonly inboxLastReadAt?: number;
+}
+
 interface ReadStateActions {
   /** Advance the DM cursor for `peer` to `tsMs`. No-op if `tsMs` <= existing. */
   setDmCursor: (peer: string, tsMs: number) => void;
@@ -43,6 +60,13 @@ interface ReadStateActions {
   pushInboxEvent: (evt: InboxEventInput) => void;
   /** Wipe the inbox log entirely (button in the bell menu). */
   clearInboxEvents: () => void;
+  /**
+   * Merge a remote state snapshot (from a NIP-59 state event) into the
+   * local store. Each cursor advances to `max(local, remote)`; smaller
+   * values are dropped. Atomic — a single Zustand state update so
+   * subscribers re-render once.
+   */
+  applyRemoteState: (remote: RemoteReadState) => void;
   /** Wipe everything. Called from the logout chain. */
   reset: () => void;
 }
@@ -92,6 +116,41 @@ export const useReadStateStore = create<ReadStateStore>()(
       }),
 
       clearInboxEvents: () => set({ inboxEvents: [], inboxLastReadAt: Date.now() }),
+
+      applyRemoteState: (remote) => set((state) => {
+        const next: Partial<ReadStatePersisted> = {};
+        if (remote.dmCursors) {
+          let touched = false;
+          const merged: Record<string, number> = { ...state.dmCursors };
+          for (const [peer, ts] of Object.entries(remote.dmCursors)) {
+            const prev = merged[peer] ?? 0;
+            if (ts > prev) {
+              merged[peer] = ts;
+              touched = true;
+            }
+          }
+          if (touched) next.dmCursors = merged;
+        }
+        if (remote.groupCursors) {
+          let touched = false;
+          const merged: Record<string, number> = { ...state.groupCursors };
+          for (const [gid, ts] of Object.entries(remote.groupCursors)) {
+            const prev = merged[gid] ?? 0;
+            if (ts > prev) {
+              merged[gid] = ts;
+              touched = true;
+            }
+          }
+          if (touched) next.groupCursors = merged;
+        }
+        if (
+          typeof remote.inboxLastReadAt === 'number' &&
+          remote.inboxLastReadAt > state.inboxLastReadAt
+        ) {
+          next.inboxLastReadAt = remote.inboxLastReadAt;
+        }
+        return Object.keys(next).length > 0 ? next : state;
+      }),
 
       reset: () => set({ ...READ_STATE_INITIAL }),
     }),

@@ -54,6 +54,7 @@ import VoiceRoom from '@/components/voice/VoiceRoom';
 import VoiceStatusBar from '@/components/voice/VoiceStatusBar';
 import { subscribeVoiceJump } from '@/lib/voice/jump-to-voice';
 import MessageContent from '@/components/chat/MessageContent';
+import MentionNavigator from '@/components/chat/MentionNavigator';
 import EmojiPicker from '@/components/chat/EmojiPicker';
 import { uploadToBlossom } from '@/lib/blossom';
 import { formatPubkey, pubkeyToNpub, formatTimestamp } from '@/lib/nostr';
@@ -83,8 +84,7 @@ import {
 } from '@/lib/mentions';
 import { useReadStateStore, type InboxEvent } from '@/store/read-state';
 import {
-  useChannelUnreadCount,
-  useChannelHasMention,
+  useChannelHighlights,
   useDMUnreadCount,
   useTotalDMUnread,
   useInboxUnreadCount,
@@ -1967,8 +1967,9 @@ function ChannelRow({
   indent?: boolean;
 }) {
   const myPubkey = useMyPubkey();
-  const unread = useChannelUnreadCount(group.id, myPubkey);
-  const mentioned = useChannelHasMention(group.id, myPubkey);
+  const highlights = useChannelHighlights(group.id, myPubkey);
+  const unread = highlights.unread;
+  const mentionsOrReplies = highlights.mentions + highlights.replies;
   const name = group.name ?? group.id.slice(0, 8);
   if (group.kind === 'voice' || group.kind === 'voice-sfu') {
     return (
@@ -2005,8 +2006,12 @@ function ChannelRow({
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M3 5h18M3 12h18M3 19h18" /></svg>
             </span>
             <span className="ch-name">{name}</span>
-            {mentioned && <span className="mention-pill">@you</span>}
-            {!mentioned && unread && unread > 0 && <span className="ch-meta">{unread > 99 ? '99+' : unread}</span>}
+            {unread > 0 && <span className="ch-meta">{unread > 99 ? '99+' : unread}</span>}
+            {mentionsOrReplies > 0 && (
+              <span className="mention-pill" aria-label={`${mentionsOrReplies} mentions or replies`}>
+                {mentionsOrReplies > 99 ? '99+' : mentionsOrReplies}
+              </span>
+            )}
           </button>
           <button
             className="ch-chevron-btn"
@@ -2027,8 +2032,12 @@ function ChannelRow({
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M3 5h18M3 12h18M3 19h18" /></svg>
         </span>
         <span className="ch-name">{name}</span>
-        {mentioned && <span className="mention-pill">@you</span>}
-        {!mentioned && unread && unread > 0 && <span className="ch-meta">{unread > 99 ? '99+' : unread}</span>}
+        {unread > 0 && <span className="ch-meta">{unread > 99 ? '99+' : unread}</span>}
+        {mentionsOrReplies > 0 && (
+          <span className="mention-pill" aria-label={`${mentionsOrReplies} mentions or replies`}>
+            {mentionsOrReplies > 99 ? '99+' : mentionsOrReplies}
+          </span>
+        )}
         <span className="ch-chevron" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 6 15 12 9 18" /></svg>
         </span>
@@ -2039,8 +2048,12 @@ function ChannelRow({
     <button className={cls.join(' ')} onClick={onClick}>
       <span className="ch-icon">#</span>
       <span className="ch-name">{name}</span>
-      {mentioned && <span className="mention-pill">@you</span>}
-      {!mentioned && unread && unread > 0 && <span className="ch-meta">{unread > 99 ? '99+' : unread}</span>}
+      {unread > 0 && <span className="ch-meta">{unread > 99 ? '99+' : unread}</span>}
+      {mentionsOrReplies > 0 && (
+        <span className="mention-pill" aria-label={`${mentionsOrReplies} mentions or replies`}>
+          {mentionsOrReplies > 99 ? '99+' : mentionsOrReplies}
+        </span>
+      )}
     </button>
   );
 }
@@ -2546,6 +2559,7 @@ function ChannelScreen({
   const messagesRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const composerInputRef = useRef<HTMLInputElement>(null);
+  const channelHighlights = useChannelHighlights(groupId, myPubkey);
 
   // ── @-mention autocomplete ───────────────────────────────────────────
   // Mentions span the whole relay (every visible group's members + admins
@@ -2746,6 +2760,7 @@ function ChannelScreen({
         </div>
       </div>
 
+      <div className="messages-wrap relative flex min-h-0 flex-1 flex-col">
       <div className="messages" ref={messagesRef}>
         {renderable.length === 0 ? (
           <div className="empty-state">
@@ -2771,6 +2786,8 @@ function ChannelScreen({
             ),
           )
         )}
+      </div>
+      <MentionNavigator scrollRef={messagesRef} eventIds={channelHighlights.eventIds} />
       </div>
 
       <div className="composer">

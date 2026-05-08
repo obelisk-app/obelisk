@@ -42,6 +42,13 @@ export interface JsMessage {
   readonly createdAt: number;
   readonly kind: number;
   readonly replyToId: string | null;
+  /**
+   * Pubkeys (hex) explicitly tagged or referenced by this message. Computed
+   * once at ingest from `extractMentionPubkeysFromMessage(content, tags)` —
+   * the union of `nostr:npub…` tokens in content and `["p", <hex>]` tags.
+   * Empty array when there are none.
+   */
+  readonly mentions: ReadonlyArray<string>;
 }
 
 export interface JsUserMetadata {

@@ -76,6 +76,7 @@ const sampleMsg = {
   createdAt: Math.floor(Date.now() / 1000),
   kind: 9,
   replyToId: null,
+  mentions: [] as string[],
 };
 
 afterEach(() => {
