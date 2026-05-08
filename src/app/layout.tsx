@@ -52,9 +52,14 @@ export const metadata: Metadata = {
     telephone: false,
   },
   icons: {
+    // Browser tab + legacy shortcut keep the small detail-rich favicon
+    // (dark circle with green obelisk) — works well at 16/32px.
     icon: '/obelisk-favicon.png',
-    apple: '/obelisk-favicon.png',
     shortcut: '/obelisk-favicon.png',
+    // iOS home screen ("Add to Home Screen") uses the same vibrant icon
+    // as the Android PWA so the installed-app look matches across
+    // platforms. iOS rounds the corners automatically.
+    apple: '/icon-512.png',
   },
   manifest: '/manifest.webmanifest',
   openGraph: {

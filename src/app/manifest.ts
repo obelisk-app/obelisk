@@ -2,7 +2,10 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Obelisk — Chat grupal con identidad Nostr',
+    // Keep `name` short — Android Chrome renders it under the icon on the
+    // PWA splash and clips anything that doesn't fit on one line. The longer
+    // marketing string lives in `description` and the page metadata.
+    name: 'Obelisk',
     short_name: 'Obelisk',
     description:
       'Chat grupal estilo Discord con identidad criptográfica Nostr. Sin emails, sin contraseñas.',
