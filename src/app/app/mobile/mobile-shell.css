@@ -42,10 +42,15 @@
   right: 0;
   /* `100dvh` tracks iOS Safari's collapsing toolbar; `100vh` is the legacy
      fallback for browsers without dvh. Setting both height + bottom: 0 makes
-     sure the host has a real height even before dvh resolves. */
+     sure the host has a real height even before dvh resolves.
+     `--kb-inset` is set inline by `useKeyboardInset` when the on-screen
+     keyboard opens, so the root collapses on iOS Safari (which doesn't
+     resize the layout viewport for the keyboard); on Android the
+     `interactive-widget` viewport hint already shrinks `100dvh`, so the
+     calc is a no-op there. */
   bottom: 0;
   height: 100vh;
-  height: 100dvh;
+  height: calc(100dvh - var(--kb-inset, 0px));
   /* Ambient corner radials + drifting accent (::before) + grain (::after).
    * Lifted and amped from the design study's body background so non-login
    * screens get the same glow the login modal had. Voice room overrides

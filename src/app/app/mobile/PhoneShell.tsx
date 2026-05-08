@@ -75,6 +75,7 @@ import { useDMStore } from '@/store/dm';
 import { useNostrPresence, PRESENCE_WINDOW_MS } from '@/hooks/chat/useNostrPresence';
 import { type ScreenName, type NavState, initialNav, urlFor, parseUrl } from './url-state';
 import { decideSnap, decideSwipeNav, neighborsFor } from './swipe-nav';
+import { useKeyboardInset } from './use-keyboard';
 // CSS is hoisted to AppGate.tsx so it lands in the route's eagerly-loaded
 // stylesheet, not in this dynamic chunk's late-arriving sidecar.
 
@@ -4358,13 +4359,19 @@ export default function MobileShell() {
       body = <EmptyScreen go={go} title="Unknown screen" />;
   }
 
-  // Bottom nav visibility — hide on: channel composer focus (we don't track),
-  // voice-room (full-bleed), profile-view, dm-thread (composer takes the bar
-  // role), search/compose-dm/member-list (modal-ish flows), forum (back-nav).
-  // Hide nav only when the screen owns the full viewport (voice-room takes
-  // the whole stage; sheets float over the previous screen so the nav under
-  // them stays meaningful but covered by the sheet backdrop).
-  const hideNav = nav.screen === 'profile-view' || nav.screen === 'search' || nav.screen === 'compose-dm';
+  // Bottom nav visibility — hide on: voice-room (full-bleed), profile-view,
+  // dm-thread (composer takes the bar role), search/compose-dm/member-list
+  // (modal-ish flows), forum (back-nav). Hide nav only when the screen owns
+  // the full viewport (voice-room takes the whole stage; sheets float over
+  // the previous screen so the nav under them stays meaningful but covered
+  // by the sheet backdrop). Also hide when the on-screen keyboard is open
+  // so the nav doesn't wedge between the composer and the keyboard.
+  const kbInset = useKeyboardInset();
+  const hideNav =
+    nav.screen === 'profile-view' ||
+    nav.screen === 'search' ||
+    nav.screen === 'compose-dm' ||
+    kbInset > 0;
 
   // For sheets, render the underlying screen + the sheet
   let baseBody: ReactNode = null;
@@ -4392,6 +4399,7 @@ export default function MobileShell() {
   return (
     <div
       className="obelisk-mobile"
+      style={kbInset > 0 ? ({ ['--kb-inset' as string]: `${kbInset}px` } as React.CSSProperties) : undefined}
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
@@ -4425,7 +4433,7 @@ export default function MobileShell() {
           <ZapModalSheet msg={nav.msgContext} close={closeSheet} />
         )}
       </div>
-      {nav.screen !== 'voice-room' && (
+      {nav.screen !== 'voice-room' && kbInset === 0 && (
         <div className="mobile-voice-status-slot"><VoiceStatusBar /></div>
       )}
       {!hideNav && <BottomNav active={nav.screen} go={go} dmBadge={dmBadge} inboxBadge={inboxBadge} />}
