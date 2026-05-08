@@ -2445,6 +2445,12 @@ function ServerScreen({
 // ───────────────────────────────────────────────────────────────────────────
 // 04 — channel (chat)
 
+function ReplyAuthorName({ pubkey }: { pubkey: string }) {
+  const meta = useUserMetadata(pubkey);
+  const name = meta?.displayName || meta?.name || shortNpub(pubkey);
+  return <span className="composer-reply-author">{name}</span>;
+}
+
 function ChannelScreen({
   groupId,
   go,
@@ -2479,8 +2485,25 @@ function ChannelScreen({
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<JsMessage | null>(null);
   const messagesRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Reset reply target whenever the user navigates to a different channel.
+  useEffect(() => { setReplyingTo(null); }, [groupId]);
+
+  // Listen for "Reply" taps from the message-actions sheet. The sheet is
+  // mounted at the PhoneShell level so it can't call setState here directly
+  // — same indirection the quick-react buttons use.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const ev = e as CustomEvent<{ msgId: string }>;
+      const target = messages.find((m) => m.id === ev.detail.msgId);
+      if (target) setReplyingTo(target);
+    };
+    window.addEventListener('obelisk-mobile:reply', handler);
+    return () => window.removeEventListener('obelisk-mobile:reply', handler);
+  }, [messages]);
 
   const handleAttach = async (file: File) => {
     if (!file || uploading) return;
@@ -2535,8 +2558,13 @@ function ChannelScreen({
     if (!text || sending) return;
     setSending(true);
     try {
-      await nostrActions.sendMessage(groupId, text);
+      await nostrActions.sendMessage(
+        groupId,
+        text,
+        replyingTo ? { id: replyingTo.id, pubkey: replyingTo.pubkey } : null,
+      );
       setDraft('');
+      setReplyingTo(null);
     } catch (err) {
       console.warn('[mobile] sendMessage failed', err);
     } finally {
@@ -2621,6 +2649,24 @@ function ChannelScreen({
       </div>
 
       <div className="composer">
+        {replyingTo && (
+          <div className="composer-reply" data-testid="mobile-reply-preview">
+            <div className="composer-reply-info">
+              <span className="composer-reply-label">
+                Replying to <ReplyAuthorName pubkey={replyingTo.pubkey} />
+              </span>
+              <span className="composer-reply-text">{replyingTo.content.slice(0, 80)}</span>
+            </div>
+            <button
+              type="button"
+              className="composer-reply-close"
+              onClick={() => setReplyingTo(null)}
+              aria-label="Cancel reply"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+            </button>
+          </div>
+        )}
         <div className="composer-inner">
           <input
             ref={fileInputRef}
@@ -2692,7 +2738,7 @@ function ChannelScreen({
   );
 }
 
-function ChannelMessage({
+export function ChannelMessage({
   msg,
   myPubkey,
   groupId,
@@ -2750,6 +2796,19 @@ function ChannelMessage({
         <div className="msg-head">
           <span className="msg-name" onClick={onAvatar} role="button">{name}</span>
           <span className="msg-time">{timeOfDay(msg.createdAt)}</span>
+          <button
+            type="button"
+            className="msg-more"
+            aria-label="Message actions"
+            data-testid="mobile-msg-more"
+            onClick={onLongPress}
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <circle cx="5" cy="12" r="1.7" />
+              <circle cx="12" cy="12" r="1.7" />
+              <circle cx="19" cy="12" r="1.7" />
+            </svg>
+          </button>
         </div>
         <div
           className="msg-text"
@@ -3544,7 +3603,7 @@ function ForumCard({ group, onClick }: { group: JsGroup; onClick: () => void }) 
 // ───────────────────────────────────────────────────────────────────────────
 // 14 — message actions sheet (over channel)
 
-function MessageActionsSheet({
+export function MessageActionsSheet({
   msg,
   close,
   onZap,
@@ -3582,7 +3641,18 @@ function MessageActionsSheet({
           ))}
         </div>
         <div className="ma-action-list">
-          <button className="ma-action" onClick={close}>
+          <button
+            className="ma-action"
+            data-testid="mobile-msg-actions-reply"
+            onClick={() => {
+              try {
+                window.dispatchEvent(
+                  new CustomEvent('obelisk-mobile:reply', { detail: { msgId: msg.id } }),
+                );
+              } catch { /* ignore */ }
+              close();
+            }}
+          >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7" /><path d="M20 18v-2a4 4 0 0 0-4-4H4" /></svg>
             Reply
           </button>

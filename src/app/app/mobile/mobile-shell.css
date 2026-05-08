@@ -1096,6 +1096,27 @@
   margin-left: auto;
   font-family: 'JetBrains Mono', monospace;
 }
+.obelisk-mobile .msg-more {
+  width: 28px;
+  height: 28px;
+  margin-right: -6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: var(--app-text-mute);
+  background: transparent;
+  border: none;
+  flex-shrink: 0;
+}
+.obelisk-mobile .msg-more svg {
+  width: 18px;
+  height: 18px;
+}
+.obelisk-mobile .msg-more:active {
+  background: var(--app-surface);
+  color: var(--app-text);
+}
 .obelisk-mobile .msg-text {
   font-size: 15px;
   line-height: 1.5;
@@ -1159,6 +1180,62 @@
      it with just enough breathing room. */
   padding: 8px 12px;
   flex-shrink: 0;
+}
+.obelisk-mobile .composer-reply {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--app-surface);
+  border: 1px solid var(--app-line);
+  border-radius: 12px;
+  padding: 6px 8px 6px 12px;
+  margin-bottom: 6px;
+  border-left: 2px solid var(--app-accent);
+}
+.obelisk-mobile .composer-reply-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.obelisk-mobile .composer-reply-label {
+  font-size: 11px;
+  color: var(--app-text-mute);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.obelisk-mobile .composer-reply-author {
+  color: var(--app-accent);
+  font-weight: 600;
+}
+.obelisk-mobile .composer-reply-text {
+  font-size: 12px;
+  color: var(--app-text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.obelisk-mobile .composer-reply-close {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--app-text-mute);
+  background: transparent;
+  border: none;
+  flex-shrink: 0;
+}
+.obelisk-mobile .composer-reply-close svg {
+  width: 14px;
+  height: 14px;
+}
+.obelisk-mobile .composer-reply-close:active {
+  background: var(--app-bg);
+  color: var(--app-text);
 }
 .obelisk-mobile .composer-inner {
   background: var(--app-surface);
