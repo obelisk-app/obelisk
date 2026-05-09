@@ -42,7 +42,7 @@ export const KIND_HTTP_AUTH = 27235;
  * Obelisk voice — ephemeral presence beacon for voice-channel rosters.
  * Re-published every ~15s while a peer is in a voice channel; tagged with
  * `["e", channelId]` and `["expiration", now+30]` so any compliant relay
- * drops it shortly after the peer leaves. See docs/webrtc-p2p-nostr-signaling.md.
+ * drops it shortly after the peer leaves. See docs/voice/mesh-protocol.md.
  */
 export const KIND_VOICE_PRESENCE = 20078;
 

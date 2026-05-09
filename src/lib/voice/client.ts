@@ -49,6 +49,17 @@ import { useVoiceStore } from '@/store/voice';
 import { wotEngine } from '@/lib/wot/engine';
 import { KIND_VOICE_SIGNAL } from '@/lib/nip-kinds';
 import { SpeakingDetector, resumeSharedAudioContext } from './speaking-detector';
+import { emptyVoiceMetrics, type VoiceMetrics } from './metrics';
+import { pushVoiceDebug, setVoiceMetricsRef } from './debug';
+import { getBridge } from '@/lib/nostr-bridge/client';
+import { DiscoveryEngine } from './discovery';
+import {
+  withRateLimitBackoff,
+  installBeforeUnloadHandler,
+  type UnloadHandlerHandle,
+} from './failure-handlers';
+
+const SELF_BUILD_TAG = '2026-05-09T-control-channel';
 
 const BEACON_INTERVAL_MS = 15_000;
 /**
@@ -71,7 +82,20 @@ const BEACON_BRINGUP_DELAYS_MS = [500, 1500, 3500, 7000, 12_000];
  * worst-case room-wide; that's still inside what a typical home upstream
  * can carry at Opus 64–128 kbps per stream.
  */
-const MAX_PARTICIPANTS = 8;
+/**
+ * Mesh participant cap. Each peer maintains N-1 outbound audio streams
+ * (so an N-person room is N(N-1) PCs total — quadratic). 5 means
+ * 5×4 = 20 PCs room-wide, comfortable on a typical home upstream at
+ * Opus 64-128 kbps per stream.
+ *
+ * **Active rejection** — when this cap is reached the existing peers
+ * send a `bye { byeReason: 'room-full' }` to any over-cap arrival, so
+ * the joiner stops the reconnect ladder immediately and surfaces a
+ * clean error in their UI. Lex-deterministic ordering means every
+ * existing peer agrees on who's "in" and who's "rejected" without
+ * a coordinator. See `isWithinRoomCap`.
+ */
+const MAX_PARTICIPANTS = 5;
 /**
  * Room-wide cap on simultaneous outbound video tracks across all peers
  * (camera + screen-share counted together — e.g. 2 cameras + 2 screens, or
@@ -87,6 +111,20 @@ const MAX_VIDEO_SLOTS = 4;
  * into a single beacon publish so we don't spam the relay.
  */
 const BEACON_REFRESH_DEBOUNCE_MS = 250;
+/**
+ * Window during which we hold an inbound signal from a peer who isn't yet
+ * known to be a member. 5 s comfortably covers the expected race between
+ * the peer's first kind 25050 and the bridge's kind 39002 snapshot
+ * delivery on a healthy relay; longer windows just delay the failure
+ * mode where the peer never appears at all.
+ */
+const DEFERRED_SIGNAL_TTL_MS = 5_000;
+/** Per-peer cap — offer + answer + ~6 ICE batches is the normal worst case. */
+const DEFERRED_SIGNAL_PER_PEER_CAP = 8;
+/** Total cap across all unknown peers, to bound memory under a flood. */
+const DEFERRED_SIGNAL_TOTAL_CAP = 64;
+/** How often the deferred queue self-sweeps for expired entries. */
+const DEFERRED_SIGNAL_SWEEP_MS = 1_000;
 
 export interface RemoteTrack {
   /**
@@ -256,6 +294,19 @@ export class VoiceClient {
    * `BEACON_INTERVAL_MS` for our next periodic publish.
    */
   private seenRosterPubkeys = new Set<string>();
+  /**
+   * Two-source mesh peer discovery (relay beacons + control-channel
+   * propagation). On every roster snapshot we replace the relay set; the
+   * control set accumulates as peers' data channels report `hello` /
+   * `peerAdded` / `peerRemoved`. The dial loop uses `effectivePeers()` so
+   * the dex stays workable when the relay drops a participant's beacons
+   * but their PC to a third party is healthy.
+   */
+  private readonly discovery = new DiscoveryEngine();
+  /** Coalesce dial-loop runs triggered by control-channel propagation
+   *  arriving in microtask order during a single hello. */
+  private dialDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private unloadHandler: UnloadHandlerHandle | null = null;
   private rosterUnsub: (() => void) | null = null;
   private signalsUnsub: (() => void) | null = null;
   private joined = false;
@@ -267,6 +318,37 @@ export class VoiceClient {
    * teardown, and remote-track-end can all stop the right one.
    */
   private speakingDetectors = new Map<string, SpeakingDetector>();
+
+  /**
+   * Observable counters for the mesh voice layer. Exposed via
+   * `window.__obeliskVoiceMetrics` so the Playwright harness and the
+   * `?debug=voice` overlay can assert on previously-silent failure modes.
+   * Mutated in place — never reassigned — so subscribers see updates
+   * without needing change events.
+   */
+  readonly metrics: VoiceMetrics = emptyVoiceMetrics();
+
+  /**
+   * Inbound signals from peers we haven't yet seen as members. Queued for
+   * up to `DEFERRED_SIGNAL_TTL_MS` waiting for `updateRoles()` to admit
+   * the sender. On admission the queue drains through the same
+   * `routeSignal` path the live signal takes. Bounded by
+   * `DEFERRED_SIGNAL_PER_PEER_CAP` and `DEFERRED_SIGNAL_TOTAL_CAP` so a
+   * malicious flood can't blow memory.
+   *
+   * Without this queue, the receiver-side membership filter at line 489
+   * silently drops the very first kind 25050 from any peer whose 39002
+   * snapshot lands a few hundred ms after their first SDP offer — a
+   * common timing on cold-start where membership and voice signals
+   * race through the bridge in an unpredictable order. Phase-1
+   * diagnosis flagged this as the dominant production-side regression
+   * risk.
+   */
+  private deferredSignals = new Map<
+    string,
+    { payload: VoiceSignalPayload; arrivedAt: number }[]
+  >();
+  private deferredSweepTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor(channelId: string, options: VoiceClientOptions = {}) {
     this.channelId = channelId;
@@ -289,6 +371,7 @@ export class VoiceClient {
     const pk = getSelfPubkey();
     if (!pk) throw new Error('Not logged in to nostr');
     this.selfPubkey = pk;
+    setVoiceMetricsRef(this.metrics);
   }
 
   /** Swap the event listeners — used when a fresh React owner picks up an
@@ -307,6 +390,17 @@ export class VoiceClient {
   }
   isJoined(): boolean {
     return this.joined;
+  }
+  /**
+   * Test/diagnostic accessor — returns the underlying RTCPeerConnection's
+   * `connectionState` for a remote pubkey, or `null` when there is no live
+   * mesh peer for that pubkey (peer not opened yet, already torn down, or
+   * SFU mode where the peer is the SFU). The Playwright two-peer mesh
+   * spec calls this through `active-client.ts:getPeerConnectionState`.
+   */
+  getPeerConnectionState(pubkey: string): RTCPeerConnectionState | null {
+    const peer = this.peers.get(pubkey);
+    return peer?.pc?.connectionState ?? null;
   }
   /**
    * Currently-active SFU pubkey for this channel, or null in mesh mode.
@@ -390,6 +484,12 @@ export class VoiceClient {
   updateRoles(members: readonly string[], admins: readonly string[]): void {
     this.members = new Set(members);
     this.admins = new Set(admins);
+    // Drain any deferred signals from peers we've now admitted. Runs
+    // BEFORE the eviction loop so a peer who was newly admitted then
+    // immediately demoted (rare but possible if 39002 oscillates)
+    // still gets their queued offer applied — `tearDownPeer` will
+    // clean up afterwards.
+    this.drainDeferredSignals();
     if (this.openRoom) return;
     for (const pk of Array.from(this.peers.keys())) {
       // Admins are full members for connectivity purposes — kind 39001
@@ -398,6 +498,94 @@ export class VoiceClient {
       if (!this.isMember(pk)) {
         this.tearDownPeer(pk);
       }
+    }
+  }
+
+  /**
+   * Queue an inbound signal from a peer who isn't yet known to be a
+   * member. Drained by `drainDeferredSignals` on every `updateRoles`
+   * tick OR expired by the periodic sweep.
+   */
+  private deferSignal(from: string, payload: VoiceSignalPayload): void {
+    let total = 0;
+    for (const arr of this.deferredSignals.values()) total += arr.length;
+    if (total >= DEFERRED_SIGNAL_TOTAL_CAP) {
+      // Total cap exceeded — drop the OLDEST entry across all peers
+      // before queueing this one. Bounds memory under a flood of
+      // unknown-peer signaling without losing the most recent state.
+      let oldestPeer: string | null = null;
+      let oldestAt = Number.MAX_SAFE_INTEGER;
+      for (const [pk, arr] of this.deferredSignals) {
+        if (arr.length === 0) continue;
+        if (arr[0].arrivedAt < oldestAt) {
+          oldestAt = arr[0].arrivedAt;
+          oldestPeer = pk;
+        }
+      }
+      if (oldestPeer) {
+        this.deferredSignals.get(oldestPeer)!.shift();
+        this.metrics.signalsDropped.deferredOverflow++;
+      }
+    }
+    let arr = this.deferredSignals.get(from);
+    if (!arr) {
+      arr = [];
+      this.deferredSignals.set(from, arr);
+    }
+    if (arr.length >= DEFERRED_SIGNAL_PER_PEER_CAP) {
+      arr.shift(); // drop oldest for this peer
+      this.metrics.signalsDropped.deferredOverflow++;
+    }
+    arr.push({ payload, arrivedAt: Date.now() });
+    this.metrics.signalsDropped.membershipDeferred++;
+    pushVoiceDebug({ kind: 'signal-dropped', reason: 'membership-deferred', peer: from, payload });
+    if (!this.deferredSweepTimer) {
+      this.deferredSweepTimer = setInterval(() => this.sweepDeferredSignals(), DEFERRED_SIGNAL_SWEEP_MS);
+    }
+  }
+
+  /** Replay queued signals for any peer who is now a member. */
+  private drainDeferredSignals(): void {
+    if (this.deferredSignals.size === 0) return;
+    for (const [from, arr] of Array.from(this.deferredSignals.entries())) {
+      if (!this.isMember(from)) continue;
+      this.deferredSignals.delete(from);
+      for (const { payload } of arr) {
+        // WoT is now defense-in-depth (voice kinds in ALWAYS_ALLOW_KINDS),
+        // but keep the check so a regression surfaces observably.
+        if (!wotEngine.isAllowed(from, KIND_VOICE_SIGNAL)) {
+          this.metrics.signalsDropped.wot++;
+          pushVoiceDebug({ kind: 'signal-dropped', reason: 'wot', peer: from, payload });
+          continue;
+        }
+        void this.routeSignal(from, payload);
+      }
+    }
+    if (this.deferredSignals.size === 0 && this.deferredSweepTimer) {
+      clearInterval(this.deferredSweepTimer);
+      this.deferredSweepTimer = null;
+    }
+  }
+
+  /** Drop entries past the TTL; bump `membershipFinal` for each. */
+  private sweepDeferredSignals(): void {
+    const cutoff = Date.now() - DEFERRED_SIGNAL_TTL_MS;
+    for (const [from, arr] of Array.from(this.deferredSignals.entries())) {
+      let removed = 0;
+      while (arr.length > 0 && arr[0].arrivedAt < cutoff) {
+        arr.shift();
+        removed++;
+      }
+      if (removed > 0) {
+        this.metrics.signalsDropped.membershipFinal += removed;
+        pushVoiceDebug({ kind: 'signal-dropped', reason: 'membership-final', peer: from, payload: { dropped: removed } });
+        console.warn('[voice-drop] membership-final', from.slice(0, 8), 'dropped=', removed);
+      }
+      if (arr.length === 0) this.deferredSignals.delete(from);
+    }
+    if (this.deferredSignals.size === 0 && this.deferredSweepTimer) {
+      clearInterval(this.deferredSweepTimer);
+      this.deferredSweepTimer = null;
     }
   }
 
@@ -465,6 +653,22 @@ export class VoiceClient {
     }
 
     await this.enterMeshMode();
+
+    // Tab close / refresh: synchronous best-effort goodbye so the other
+    // side learns within ~10 ms instead of waiting for the data-channel
+    // heartbeat (7 s) or the relay-side beacon expiry (~30 s). Each
+    // peer.close() inside leave() sends a control-channel bye
+    // synchronously through the open data channel before pc.close() — the
+    // bye reaches the remote even if the relay refuses our final kind 25050.
+    this.unloadHandler = installBeforeUnloadHandler({
+      onUnload: () => {
+        this.metrics.peers.tornDownByUnload += this.peers.size;
+        // leave() returns a Promise we can't await during unload; fire it
+        // and let the synchronous portion (peer.close → control bye) run
+        // before the page goes away.
+        void this.leave().catch(() => {});
+      },
+    });
   }
 
   /**
@@ -482,12 +686,27 @@ export class VoiceClient {
       this.channelId,
       this.selfPubkey,
       (from, payload) => {
-        // Drop signals from non-members up-front. The relay can't enforce
-        // this on its own, so the receiver is the gatekeeper. Also gate
-        // on the WoT predicate so untrusted authors can't establish
-        // signaling channels even if they're nominally members.
-        if (!this.isMember(from)) return;
-        if (!wotEngine.isAllowed(from, KIND_VOICE_SIGNAL)) return;
+        this.metrics.signals.rcvd++;
+        // Membership race — defer rather than silently drop. If `from`
+        // becomes a member within DEFERRED_SIGNAL_TTL_MS (drained by
+        // updateRoles), the queued payloads replay through routeSignal
+        // and the call still forms. After the TTL expires the
+        // membershipFinal counter increments and the signal is gone for
+        // good. See Phase-1 diagnosis H2.
+        if (!this.isMember(from)) {
+          this.deferSignal(from, payload);
+          return;
+        }
+        // WoT branch is now defense-in-depth: voice kinds are in
+        // ALWAYS_ALLOW_KINDS so isAllowed() returns true unconditionally.
+        // Counter remains so a regression in the allow-list surfaces
+        // observably instead of silently breaking voice.
+        if (!wotEngine.isAllowed(from, KIND_VOICE_SIGNAL)) {
+          this.metrics.signalsDropped.wot++;
+          pushVoiceDebug({ kind: 'signal-dropped', reason: 'wot', peer: from, payload });
+          console.warn('[voice-drop] wot', from.slice(0, 8), payload?.type);
+          return;
+        }
         void this.routeSignal(from, payload);
       },
     );
@@ -513,6 +732,34 @@ export class VoiceClient {
       // outside the leading slice and require local eviction.
       this.enforceVideoSlotCap();
     });
+
+    // Wait for NIP-42 AUTH to complete on the active relay before the
+    // first beacon publish. Without this, on slower relays the
+    // bringup beacon at t=0 fires before the relay has finished
+    // accepting our AUTH challenge — the publish gets rejected
+    // (typically "auth-required") and is silently lost. The bridge
+    // resolves immediately when AUTH was already complete, so this
+    // is a no-op on the fast path. Always resolves; we record both
+    // the wait and the timeout into observable counters.
+    // Fire-and-forget AUTH wait: record into metrics if/when it resolves,
+    // but never block the first beacon. The bring-up burst
+    // (BEACON_BRINGUP_DELAYS_MS) covers the AUTH race even on slow relays,
+    // and blocking here causes test environments without a real bridge
+    // (or with fake timers) to hang.
+    void (async () => {
+      try {
+        const bridge = await getBridge();
+        if (bridge && typeof bridge.waitForRelayAuth === 'function') {
+          const result = await bridge.waitForRelayAuth(5_000);
+          this.metrics.relay.authWaited++;
+          if (result !== 'ok') {
+            this.metrics.relay.authTimedOut++;
+          }
+        }
+      } catch {
+        // best-effort
+      }
+    })();
 
     await this.publishBeacon();
     // Front-loaded burst — beacons are ephemeral so a peer whose relay
@@ -543,6 +790,8 @@ export class VoiceClient {
     this.rosterUnsub?.(); this.rosterUnsub = null;
     this.currentRoster = [];
     this.seenRosterPubkeys.clear();
+    this.discovery.reset();
+    if (this.dialDebounceTimer) { clearTimeout(this.dialDebounceTimer); this.dialDebounceTimer = null; }
     for (const peer of this.peers.values()) peer.close();
     this.peers.clear();
   }
@@ -589,7 +838,15 @@ export class VoiceClient {
     }
     for (const t of this.bringupTimers) clearTimeout(t);
     this.bringupTimers.length = 0;
+    if (this.deferredSweepTimer) {
+      clearInterval(this.deferredSweepTimer);
+      this.deferredSweepTimer = null;
+    }
+    this.deferredSignals.clear();
     this.seenRosterPubkeys.clear();
+    this.discovery.reset();
+    if (this.dialDebounceTimer) { clearTimeout(this.dialDebounceTimer); this.dialDebounceTimer = null; }
+    if (this.unloadHandler) { this.unloadHandler.uninstall(); this.unloadHandler = null; }
     this.signalsUnsub?.();
     this.signalsUnsub = null;
     this.rosterUnsub?.();
@@ -642,7 +899,19 @@ export class VoiceClient {
     const videoTracks: VideoSlotKind[] = [];
     if (this.camTrack) videoTracks.push('camera');
     if (this.screenTrack) videoTracks.push('screen');
-    await publishPresenceBeacon(this.channelId, [...this.connectedPubkeys], videoTracks);
+    try {
+      await withRateLimitBackoff(
+        () => publishPresenceBeacon(this.channelId, [...this.connectedPubkeys], videoTracks),
+        { metrics: this.metrics },
+      );
+      this.metrics.beacons.sent++;
+      pushVoiceDebug({ kind: 'beacon-sent' });
+    } catch (err) {
+      this.metrics.relay.publishFail++;
+      this.metrics.relay.lastError = err instanceof Error ? err.message : String(err);
+      pushVoiceDebug({ kind: 'relay-error', payload: this.metrics.relay.lastError });
+      throw err;
+    }
   }
 
   /**
@@ -672,6 +941,18 @@ export class VoiceClient {
   private handleRoster(pubkeys: string[]) {
     const others = pubkeys.filter((p) => p !== this.selfPubkey);
 
+    // Track relay-discovered set in the discovery engine so the dial-loop
+    // sees the union of relay + control-channel sources. Increment the
+    // attribution counter for any peer the relay just told us about that
+    // we hadn't seen on the relay before.
+    const previouslyRelay = new Set(others.filter((p) => this.discovery.source(p).relay));
+    this.discovery.setRelayDiscovered(others);
+    let relayNew = 0;
+    for (const p of others) {
+      if (!previouslyRelay.has(p)) relayNew++;
+    }
+    this.metrics.transitive.discoveredViaRelay += relayNew;
+
     // First-sighting rebroadcast: if any pubkey in this snapshot is new to
     // us, schedule a beacon refresh so that peer learns about us within
     // ~250 ms instead of waiting up to a full BEACON_INTERVAL_MS for our
@@ -687,6 +968,32 @@ export class VoiceClient {
     }
     if (sawNew) this.scheduleBeaconRefresh();
 
+    this.runDialLoop();
+  }
+
+  /**
+   * Coalesce dial loops triggered by control-channel propagation arriving
+   * in microtask order during a single hello / peerAdded burst. Without
+   * the debounce a hello carrying N peers would spawn N PCs in microtask
+   * order while we're still applying the previous offer. 100 ms is small
+   * enough to feel instant, large enough to absorb the typical hello.
+   */
+  private scheduleDialFromDiscovery(): void {
+    if (this.dialDebounceTimer) return;
+    this.dialDebounceTimer = setTimeout(() => {
+      this.dialDebounceTimer = null;
+      this.runDialLoop();
+    }, 100);
+  }
+
+  /**
+   * Apply the current discovery set: cap, dial new peers, evict cap
+   * violators. Called from `handleRoster` (relay-driven) and from
+   * `scheduleDialFromDiscovery` (control-channel-driven). Idempotent.
+   */
+  private runDialLoop(): void {
+    const others = this.discovery.effectivePeers().filter((p) => p !== this.selfPubkey);
+
     // Hard cap: if more than MAX_PARTICIPANTS would be present and we're
     // not in the leading slice, deterministically (lex) trim the tail so
     // every client agrees on the same set of cap-violators.
@@ -696,7 +1003,7 @@ export class VoiceClient {
       visible.splice(MAX_PARTICIPANTS - 1);
     }
 
-    // Union of roster pubkeys + already-open peers. Some peers are
+    // Union of discovered pubkeys + already-open peers. Some peers are
     // discovered via incoming signaling when relays don't deliver beacons
     // symmetrically — keeping them in the UI list prevents them from
     // disappearing mid-call.
@@ -870,8 +1177,79 @@ export class VoiceClient {
       remotePubkey,
       polite,
       sessionId: this.sessionId,
-      send: (payload) => sendSignal(this.channelId, remotePubkey, payload),
+      send: (payload) => withRateLimitBackoff(
+        () => sendSignal(this.channelId, remotePubkey, payload),
+        { metrics: this.metrics },
+      ),
+      // SFU peers don't speak our control-channel protocol — only mesh
+      // peers get the obelisk-control data channel. The flag is the same
+      // one we use to force polite negotiation for SFUs.
+      control: isSfuPeer ? undefined : {
+        selfBuild: SELF_BUILD_TAG,
+        metrics: this.metrics,
+        getCurrentPeers: () => Array.from(this.connectedPubkeys),
+      },
       events: {
+        onTransitivePeers: (peers, _build) => {
+          // Hello carries the remote peer's full connected set. Add each
+          // entry to discovery via this peer; dial loop kicks debounced.
+          let added = 0;
+          for (const pk of peers) {
+            if (pk === this.selfPubkey) continue;
+            if (this.discovery.addControlDiscovered(pk, remotePubkey)) added++;
+          }
+          if (added > 0) {
+            this.metrics.transitive.discoveredViaControl += added;
+            this.scheduleDialFromDiscovery();
+          }
+        },
+        onControlPeerAdded: (pubkey) => {
+          if (pubkey === this.selfPubkey) return;
+          if (this.discovery.addControlDiscovered(pubkey, remotePubkey)) {
+            this.metrics.transitive.discoveredViaControl++;
+            this.scheduleDialFromDiscovery();
+          }
+        },
+        onControlPeerRemoved: (pubkey) => {
+          this.discovery.removeControlDiscovered(pubkey, remotePubkey);
+        },
+        onPeerDead: (reason) => {
+          // Active capacity rejection — the remote is telling us the room
+          // is full. Surface a clean error and leave; without this, our
+          // reconnect ladder would loop trying to re-dial them.
+          if (reason === 'bye:room-full') {
+            pushVoiceDebug({
+              kind: 'pc-state',
+              peer: remotePubkey,
+              payload: { event: 'rejected-room-full' },
+            });
+            this.metrics.peers.tornDown++;
+            try { this.events.onError?.('Room is full — try again when someone leaves.'); }
+            catch (e) { console.warn('[voice] onError threw on room-full', e); }
+            // Use a microtask so the current signal-routing call returns
+            // before we dismantle our own state.
+            queueMicrotask(() => { void this.leave().catch(() => {}); });
+            return;
+          }
+          // FAST hangup — control channel detected the peer is gone. Route
+          // through tearDownPeer (idempotent) so the rest of the cleanup
+          // happens identically to the relay-bye / connectionState='closed'
+          // paths. The bye-via-control split counter helps the diagnostic
+          // overlay distinguish the source.
+          if (reason.startsWith('bye:')) {
+            this.metrics.signals.byeViaControl++;
+          }
+          this.metrics.peers.tornDown++;
+          pushVoiceDebug({
+            kind: 'pc-state',
+            peer: remotePubkey,
+            payload: { event: 'fast-hangup', reason },
+          });
+          // Remove anything this peer claimed transitively so we don't
+          // keep re-dialing through them.
+          this.discovery.dropClaimsFromPeer(remotePubkey);
+          this.tearDownPeer(remotePubkey);
+        },
         onRemoteTrack: (track, stream, kind, originPubkey) => {
           // Apply current deafen state to brand-new audio arrivals so a peer
           // who joins after we deafened doesn't suddenly become audible.
@@ -909,12 +1287,29 @@ export class VoiceClient {
           this.emitRemoteTracks();
         },
         onConnectionEstablished: () => {
+          if (!this.connectedPubkeys.has(remotePubkey)) {
+            this.metrics.peers.connected = this.connectedPubkeys.size + 1;
+          }
           this.connectedPubkeys.add(remotePubkey);
+          this.metrics.peers.ever++;
+          pushVoiceDebug({ kind: 'pc-state', peer: remotePubkey, payload: 'connected' });
           this.scheduleBeaconRefresh();
+          // Tell every OTHER mesh peer about this new connection so they
+          // can transitively discover us through this one. The control
+          // channel may not be open yet on this peer; that's fine — its
+          // own `hello` will carry the up-to-date list when it opens.
+          for (const [otherPk, otherPeer] of this.peers.entries()) {
+            if (otherPk === remotePubkey) continue;
+            otherPeer.broadcastControl({ type: 'peerAdded', pubkey: remotePubkey });
+          }
         },
         onConnectionLost: () => {
           if (this.connectedPubkeys.delete(remotePubkey)) {
             this.scheduleBeaconRefresh();
+          }
+          for (const [otherPk, otherPeer] of this.peers.entries()) {
+            if (otherPk === remotePubkey) continue;
+            otherPeer.broadcastControl({ type: 'peerRemoved', pubkey: remotePubkey });
           }
         },
         onQualitySample: (sample) => {
@@ -969,10 +1364,13 @@ export class VoiceClient {
     if (peer) {
       this.peers.delete(pubkey);
       peer.close();
+      this.metrics.peers.tornDown++;
+      pushVoiceDebug({ kind: 'peer-torn-down', peer: pubkey });
     }
     this.removeRemoteTracksFor(pubkey);
     this.detachSpeakingDetector(pubkey);
     if (this.connectedPubkeys.delete(pubkey)) {
+      this.metrics.peers.connected = this.connectedPubkeys.size;
       this.scheduleBeaconRefresh();
     }
     try { useVoiceStore.getState().clearPeerQuality(pubkey); } catch { /* test envs */ }
@@ -1055,14 +1453,47 @@ export class VoiceClient {
     // notifications that have no `type` we recognize — so we drop those
     // here. Without this guard `peer.handleSignal(undefined!.handleSignal)`
     // throws TypeError on every RPC reply from the SFU.
-    if (this.sfuPubkey && fromPubkey === this.sfuPubkey) return;
+    if (this.sfuPubkey && fromPubkey === this.sfuPubkey) {
+      this.metrics.signalsDropped.sfuRouted++;
+      pushVoiceDebug({ kind: 'signal-dropped', reason: 'sfu-routed', peer: fromPubkey });
+      return;
+    }
     // Defensively ignore unknown payload shapes (e.g. RPC envelopes from
     // a different peer that mistakenly addressed us).
-    if (!payload || typeof payload.type !== 'string') return;
+    if (!payload || typeof payload.type !== 'string') {
+      this.metrics.signalsDropped.unknownPayload++;
+      pushVoiceDebug({ kind: 'signal-dropped', reason: 'unknown-payload', peer: fromPubkey });
+      return;
+    }
     if (payload.type !== 'offer' && payload.type !== 'answer'
       && payload.type !== 'ice' && payload.type !== 'bye'
       && payload.type !== 'trackinfo' && payload.type !== 'qualityhint'
       && payload.type !== 'requestReset') {
+      this.metrics.signalsDropped.unknownPayload++;
+      pushVoiceDebug({ kind: 'signal-dropped', reason: 'unknown-payload', peer: fromPubkey, payload });
+      return;
+    }
+    // Active capacity rejection. If this signal is from a peer who's
+    // outside the lex-leading MAX_PARTICIPANTS slice, refuse to open
+    // a peer and send a `bye` with `byeReason: 'room-full'`. Every
+    // existing peer makes the same lex calculation, so the rejected
+    // joiner gets up to MAX_PARTICIPANTS independent byes and learns
+    // immediately. Already-open peers (in this.peers) bypass this
+    // check — they're members of the in-set by definition.
+    if (!this.peers.has(fromPubkey) && !this.isWithinRoomCap(fromPubkey)) {
+      void sendSignal(this.channelId, fromPubkey, {
+        type: 'bye',
+        sessionId: this.sessionId,
+        seq: 0,
+        byeReason: 'room-full',
+      }).catch(() => {});
+      this.metrics.signalsDropped.unknownPayload++; // reuse counter — bumped only as "dropped at receiver"
+      pushVoiceDebug({
+        kind: 'signal-dropped',
+        reason: 'unknown-payload',
+        peer: fromPubkey,
+        payload: { event: 'rejected-room-full' },
+      });
       return;
     }
     let peer = this.peers.get(fromPubkey);
@@ -1074,6 +1505,25 @@ export class VoiceClient {
       if (!peer) return; // openPeer skipped (e.g. !this.joined)
     }
     await peer.handleSignal(payload);
+  }
+
+  /**
+   * True iff `pubkey` is in the lex-leading MAX_PARTICIPANTS slice of
+   * (self + currently-known peers). Symmetric across the room — every
+   * peer agrees on the same in/out partition without a coordinator.
+   *
+   * "Currently-known" = effective discovery set ∪ already-open peers ∪
+   * self ∪ the candidate pubkey. Including the candidate matters: a
+   * 6th joiner who happens to be the lex-leading peer should be
+   * accepted, displacing the lex-trailing existing peer.
+   */
+  private isWithinRoomCap(pubkey: string): boolean {
+    const candidates = new Set<string>(this.discovery.effectivePeers());
+    for (const pk of this.peers.keys()) candidates.add(pk);
+    candidates.add(this.selfPubkey);
+    candidates.add(pubkey);
+    const sorted = Array.from(candidates).sort();
+    return sorted.indexOf(pubkey) < MAX_PARTICIPANTS;
   }
 
   // ── Speaking detection ─────────────────────────────────────────────────
@@ -1412,4 +1862,14 @@ function randomId(): string {
   if (typeof crypto !== 'undefined' && crypto.getRandomValues) crypto.getRandomValues(bytes);
   else for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
   return Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Test/diagnostic surface — exposes the VoiceClient constructor on window
+// so the Playwright voice harness can drive a real mesh peer without
+// instantiating the VoiceRoom UI (which has its own membership-gate UX
+// that depends on real NIP-29 group metadata being present on the relay).
+// Production code never reads from this; UI components import VoiceClient
+// directly via the module graph.
+if (typeof window !== 'undefined') {
+  (window as unknown as { __obeliskVoiceClient?: typeof VoiceClient }).__obeliskVoiceClient = VoiceClient;
 }

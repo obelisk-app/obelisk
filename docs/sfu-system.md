@@ -57,4 +57,4 @@ two browsers.
 ## See also
 
 - [obelisk-app/obelisk-sfu](https://github.com/obelisk-app/obelisk-sfu) — server, protocol, deployment
-- [docs/voice-system.md](voice-system.md) — mesh voice (P2P over Nostr signaling)
+- [docs/voice/](voice/README.md) — mesh voice (P2P over Nostr signaling + per-peer control-channel data plane)

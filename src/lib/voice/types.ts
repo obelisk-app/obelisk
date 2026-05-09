@@ -1,7 +1,7 @@
 /**
  * Voice channel wire types. v1 ships plaintext signed ephemeral events.
  * See `src/lib/nip-kinds.ts` (KIND_VOICE_PRESENCE, KIND_VOICE_SIGNAL) and
- * docs/webrtc-p2p-nostr-signaling.md.
+ * docs/voice/mesh-protocol.md.
  */
 
 export type VoiceTrackKind = 'audio' | 'camera' | 'screen' | 'screen-audio';
@@ -56,6 +56,11 @@ export interface VoiceSignalPayload {
   /** Monotonic per-(from,to) sequence; receivers drop out-of-order ICE only,
    *  not offers/answers (perfect negotiation handles glare separately). */
   seq: number;
+  /** Optional bye reason. `'room-full'` is sent by every existing peer in a
+   *  capacity-saturated room so a late joiner learns immediately and can
+   *  surface a clean "room is full" error to the user instead of looping
+   *  through the reconnect ladder. */
+  byeReason?: 'local-leave' | 'room-full' | string;
 }
 
 /** Outbound video track kinds that count against the room's video-slot cap. */

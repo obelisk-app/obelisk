@@ -26,6 +26,8 @@
 import type { VoiceSignalPayload, VoiceTrackKind, VoiceQualityHint } from './types';
 import { startStatsMonitor, type QualitySample, type StatsMonitorHandle } from './stats';
 import { AUDIO_MAX_BITRATE } from './quality';
+import { ControlChannel, type ControlMessage } from './control-channel';
+import type { VoiceMetrics } from './metrics';
 
 // ── Reconnect schedule ───────────────────────────────────────────────────
 //
@@ -121,6 +123,15 @@ export interface PeerEvents {
    *  this pubkey from the `connectedTo` beacon list. */
   onConnectionLost?(): void;
   onQualitySample?(sample: QualitySample): void;
+  /** Control-channel: remote sent a `hello` with their current peer list. */
+  onTransitivePeers?(remotePeers: string[], remoteBuild: string): void;
+  /** Control-channel: remote announces a peer they just connected to. */
+  onControlPeerAdded?(pubkey: string): void;
+  /** Control-channel: remote announces a peer they just lost. */
+  onControlPeerRemoved?(pubkey: string): void;
+  /** Control-channel detected the peer is gone (heartbeat lost / bye / channel closed).
+   *  This is the FAST hangup path — owner should tear the peer down. */
+  onPeerDead?(reason: string): void;
 }
 
 export interface PeerOptions {
@@ -131,6 +142,15 @@ export interface PeerOptions {
   sessionId: string;
   send: (payload: VoiceSignalPayload) => Promise<void> | void;
   events: PeerEvents;
+  /** Optional control-channel hookup. When provided, an `obelisk-control`
+   *  RTCDataChannel is opened over the PC for fast hangup detection and
+   *  transitive peer discovery. Tests may omit to keep the Peer minimal. */
+  control?: {
+    selfBuild: string;
+    metrics: VoiceMetrics;
+    /** Snapshot of pubkeys we're currently connected to. Sent in `hello`. */
+    getCurrentPeers: () => string[];
+  };
 }
 
 export class Peer {
@@ -139,6 +159,8 @@ export class Peer {
   private readonly send: PeerOptions['send'];
   private readonly events: PeerEvents;
   private readonly sessionId: string;
+  private readonly controlOpts: PeerOptions['control'];
+  private controlChannel: ControlChannel | null = null;
 
   pc: RTCPeerConnection;
 
@@ -191,14 +213,78 @@ export class Peer {
    */
   private remoteSessionId: string | null = null;
 
+  /**
+   * ICE candidates received before `setRemoteDescription` was applied
+   * have nowhere to go — `addIceCandidate` rejects with
+   * "The remote description was null". Buffer them here until the
+   * offer/answer lands, then drain in order.
+   */
+  private pendingIce: RTCIceCandidateInit[] = [];
+
   constructor(opts: PeerOptions) {
     this.remotePubkey = opts.remotePubkey;
     this.polite = opts.polite;
     this.send = opts.send;
     this.events = opts.events;
     this.sessionId = opts.sessionId;
+    this.controlOpts = opts.control;
     this.pc = this.createPc();
+    this.attachControlChannel();
     this.armConnectWatchdog();
+  }
+
+  /** Lazily build the control channel for the current `pc`. Called from
+   *  the constructor and from `performHardReset` when `pc` is replaced. */
+  private attachControlChannel(): void {
+    if (!this.controlOpts) return;
+    if (this.closed) return;
+    // Polite/impolite for the data channel mirrors the SDP polite/impolite
+    // — only one side may call `createDataChannel` to avoid two parallel
+    // channels per peer pair. Our SDP `polite` means "I roll back on
+    // glare"; that side is therefore the one that does NOT create.
+    const impolite = !this.polite;
+    this.controlChannel = new ControlChannel({
+      pc: this.pc,
+      impolite,
+      sessionId: this.sessionId,
+      selfBuild: this.controlOpts.selfBuild,
+      remotePubkey: this.remotePubkey,
+      initialPeers: this.controlOpts.getCurrentPeers,
+      metrics: this.controlOpts.metrics,
+      events: {
+        onHello: (peers, build) => {
+          try { this.events.onTransitivePeers?.(peers, build); }
+          catch (e) { console.warn('[voice] onTransitivePeers threw', e); }
+        },
+        onPeerAdded: (pubkey) => {
+          try { this.events.onControlPeerAdded?.(pubkey); }
+          catch (e) { console.warn('[voice] onControlPeerAdded threw', e); }
+        },
+        onPeerRemoved: (pubkey) => {
+          try { this.events.onControlPeerRemoved?.(pubkey); }
+          catch (e) { console.warn('[voice] onControlPeerRemoved threw', e); }
+        },
+        onBye: (reason) => {
+          try { this.events.onPeerDead?.(`bye:${reason}`); }
+          catch (e) { console.warn('[voice] onPeerDead threw', e); }
+        },
+        onDead: (reason) => {
+          try { this.events.onPeerDead?.(reason); }
+          catch (e) { console.warn('[voice] onPeerDead threw', e); }
+        },
+        onRtt: () => { /* metrics updated inside ControlChannel */ },
+      },
+    });
+  }
+
+  /** Owner broadcasts: tell the remote we just connected to / lost a peer. */
+  broadcastControl(msg: ControlMessage): void {
+    this.controlChannel?.send(msg);
+  }
+
+  /** True iff the control channel is open and ready. Tests + dial loop. */
+  isControlOpen(): boolean {
+    return this.controlChannel?.isOpen() ?? false;
   }
 
   private createPc(): RTCPeerConnection {
@@ -443,11 +529,19 @@ export class Peer {
       this.pc.onnegotiationneeded = null;
     } catch { /* ignore — old browsers may not allow null assignment */ }
     try { this.pc.close(); } catch { /* already closed */ }
+    // Tear down the control channel attached to the old PC; the new
+    // attachControlChannel() below will install a fresh one on the new pc.
+    if (this.controlChannel) {
+      try { this.controlChannel.close('hard-reset'); } catch { /* ignore */ }
+      this.controlChannel = null;
+    }
     // localSenders refer to the old PC; clear them so re-add creates new ones.
     this.localSenders.clear();
     this.makingOffer = false;
     this.ignoreOffer = false;
+    this.pendingIce.length = 0;
     this.pc = this.createPc();
+    this.attachControlChannel();
     // If we have no local tracks (e.g. SFU peer with mic/cam off), add
     // recvonly transceivers so the offer SDP has m-sections and the SFU
     // can attach its forwarded tracks. Without this the kickNegotiation
@@ -482,6 +576,20 @@ export class Peer {
   }
 
   // ── Signaling ───────────────────────────────────────────────────────────
+
+  /** Drain any ICE candidates that arrived before remoteDescription was set. */
+  private async flushPendingIce(): Promise<void> {
+    if (this.pendingIce.length === 0) return;
+    const drained = this.pendingIce.slice();
+    this.pendingIce.length = 0;
+    for (const cand of drained) {
+      try {
+        await this.pc.addIceCandidate(cand);
+      } catch (err) {
+        if (!this.ignoreOffer) console.warn('[voice] flushPendingIce add failed', err);
+      }
+    }
+  }
 
   private async sendSignal(payload: VoiceSignalPayload): Promise<void> {
     try {
@@ -743,6 +851,7 @@ export class Peer {
           catch (e) { console.warn('[voice] explicit rollback failed', e); }
         }
         await this.pc.setRemoteDescription({ type: 'offer', sdp: payload.sdp });
+        await this.flushPendingIce();
         await this.pc.setLocalDescription();
         if (this.pc.localDescription) {
           await this.sendSignal({
@@ -756,6 +865,7 @@ export class Peer {
         if (this.pc.signalingState === 'have-local-offer') {
           try {
             await this.pc.setRemoteDescription({ type: 'answer', sdp: payload.sdp });
+            await this.flushPendingIce();
             console.log('[voice] applied answer from', this.remotePubkey.slice(0, 8));
           } catch (e) {
             // Most common cause: race where our own offer was sent late so
@@ -771,6 +881,14 @@ export class Peer {
         }
       } else if (payload.type === 'ice' && payload.candidates?.length) {
         for (const cand of payload.candidates) {
+          // ICE that arrives before the offer/answer is applied has
+          // nowhere to go — Chrome rejects with "The remote description
+          // was null". Buffer it; flushPendingIce drains the queue right
+          // after setRemoteDescription succeeds.
+          if (!this.pc.remoteDescription) {
+            this.pendingIce.push(cand);
+            continue;
+          }
           try {
             await this.pc.addIceCandidate(cand);
           } catch (err) {
@@ -778,6 +896,14 @@ export class Peer {
           }
         }
       } else if (payload.type === 'bye') {
+        // Surface the bye reason so the owner can distinguish a graceful
+        // remote leave from an active capacity rejection. The owner
+        // (VoiceClient) maps `room-full` to a user-facing error +
+        // automatic leave so the joiner doesn't loop the reconnect ladder.
+        if (payload.byeReason) {
+          try { this.events.onPeerDead?.(`bye:${payload.byeReason}`); }
+          catch (e) { console.warn('[voice] onPeerDead threw on bye reason', e); }
+        }
         this.close();
       } else if (payload.type === 'qualityhint' && payload.qualityHint) {
         this.inboundCap = payload.qualityHint;
@@ -877,6 +1003,13 @@ export class Peer {
     if (this.reconnectTimer) { clearTimeout(this.reconnectTimer); this.reconnectTimer = null; }
     if (this.connectWatchdogTimer) { clearTimeout(this.connectWatchdogTimer); this.connectWatchdogTimer = null; }
     if (this.statsMonitor) { this.statsMonitor.stop(); this.statsMonitor = null; }
+    // Send the control-channel bye BEFORE the relay bye and BEFORE
+    // pc.close() so the remote learns instantly even if the relay drops
+    // the kind 25050. close() is idempotent on the control channel side.
+    if (this.controlChannel) {
+      try { this.controlChannel.close('local-leave'); } catch { /* ignore */ }
+      this.controlChannel = null;
+    }
     void this.sendSignal({
       type: 'bye',
       sessionId: this.sessionId,

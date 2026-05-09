@@ -15,7 +15,7 @@ Bridge            src/lib/nostr-bridge/ — SimplePool + nostr-tools singleton
 Group protocol    NIP-29 (kinds 9, 9000-9007, 39000-39002)
 DMs               NIP-04 (kind 4) — see src/lib/dm/
 Cache             localStorage stale-while-revalidate (src/lib/nostr-bridge/cache.ts)
-Voice (mesh)      P2P WebRTC, Nostr-signaled (kinds 20078 / 25050) — src/lib/voice/peer.ts
+Voice (mesh)      P2P WebRTC, Nostr-signaled (kinds 20078 / 25050) + per-pair `obelisk-control` data channel (heartbeat, fast hangup, transitive discovery) — see docs/voice/
 Voice (SFU)      mediasoup engine, Nostr-RPC signaling (kind 25050 envelopes) — src/lib/voice/sfu-client.ts (server: obelisk-app/obelisk-sfu)
 Payments          Nostr Wallet Connect (NIP-47) — src/lib/wallet/
 ```
@@ -247,7 +247,7 @@ where this sits relative to the bridgeCache.
 ## Resources
 - [docs/auth-and-data-loading.md](docs/auth-and-data-loading.md) — login flow, NIP-42 AUTH, watchdog, bridgeCache
 - [docs/notifications.md](docs/notifications.md) — unified read-state + notifications: per-channel cursors, mention/reply detection, MentionNavigator, encrypted multi-device sync via NIP-59 gift wrap (groups state per relay; DM state on NIP-65 relays)
-- [docs/voice-system.md](docs/voice-system.md) — mesh voice (P2P over Nostr signaling)
+- [docs/voice/](docs/voice/README.md) — mesh voice: protocol, modules, failure modes, testing (P2P WebRTC over Nostr signaling + `obelisk-control` data channel)
 - [docs/sfu-system.md](docs/sfu-system.md) — SFU architecture (mediasoup engine, Nostr-RPC signaling)
 - [obelisk-app/obelisk-sfu](https://github.com/obelisk-app/obelisk-sfu) — SFU server repo (protocol spec, operator guide, deploy)
 - SFU test peers — moved to obelisk-sfu repo (`scripts/test-peers/` there); spawn from the SFU admin UI

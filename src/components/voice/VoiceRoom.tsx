@@ -23,6 +23,7 @@ import { useVoiceStore } from '@/store/voice';
 import { useGroups, useUserMetadata, useCurrentRelayUrl } from '@/lib/nostr-bridge';
 import { ensureSfuRoomStarted } from '@/lib/voice/sfu-control';
 import VoiceControls from './VoiceControls';
+import { DebugOverlay } from './DebugOverlay';
 import ShootingStars from '@/components/ShootingStars';
 import { qualityColor, type QualitySample } from '@/lib/voice/stats';
 import { toggleFullscreen, useFullscreenState } from './fullscreen';
@@ -608,9 +609,12 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
   }
 
   const hasStage = !!activeStage;
+  const debugOverlay = typeof window !== 'undefined'
+    && new URLSearchParams(window.location.search).get('debug') === 'voice';
 
   return (
     <div className="relative flex-1 flex min-h-0 p-2 sm:p-3 gap-2" data-testid="voice-channel">
+      {debugOverlay && <DebugOverlay />}
       <div className="flex-1 flex flex-col min-h-0 relative overflow-hidden rounded-2xl border border-lc-border bg-gradient-to-br from-indigo-950 via-indigo-900 to-violet-800 shadow-2xl">
         <StageBackdrop />
         <RoomHeader name={displayName} count={totalCount} sfuStatus={sfuStatus} />

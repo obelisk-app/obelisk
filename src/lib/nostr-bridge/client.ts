@@ -1477,6 +1477,42 @@ class BridgeImpl implements NostrBridge {
   subscribeRelayAccess(cb: (byRelay: Readonly<Record<string, RelayAccessState>>) => void): Unsubscribe {
     return this.relayAccess.subscribe(cb);
   }
+
+  /**
+   * Resolve once the **current** relay reports `'ok'` (NIP-42 AUTH
+   * completed and the first read succeeded), or after `timeoutMs`
+   * elapses. The mesh voice transport awaits this before publishing
+   * the first beacon so the bringup burst doesn't fire into a
+   * still-handshaking socket. Always resolves — never rejects — so
+   * callers can `.catch(() => null)` without special-casing the
+   * timeout path.
+   *
+   * Returns `'ok'` on success, `'timeout'` on deadline, or whatever
+   * non-ok state the relay landed on if the deadline elapses while
+   * the relay is in a terminal state like `'auth-required'` or
+   * `'restricted'`.
+   */
+  waitForRelayAuth(timeoutMs: number): Promise<'ok' | 'timeout' | RelayAccessState> {
+    return new Promise((resolve) => {
+      const url = this.currentRelayUrl.get();
+      const initial = this.relayAccess.get()[url];
+      if (initial === 'ok') return resolve('ok');
+      let unsub: Unsubscribe | null = null;
+      const timer = setTimeout(() => {
+        if (unsub) unsub();
+        const cur = this.relayAccess.get()[this.currentRelayUrl.get()];
+        resolve(cur === 'ok' ? 'ok' : (cur ?? 'timeout'));
+      }, timeoutMs);
+      unsub = this.relayAccess.subscribe((byRelay) => {
+        const state = byRelay[this.currentRelayUrl.get()];
+        if (state === 'ok') {
+          clearTimeout(timer);
+          if (unsub) unsub();
+          resolve('ok');
+        }
+      });
+    });
+  }
   subscribeConnectionState(cb: (label: string) => void): Unsubscribe {
     return this.connectionState.subscribe(cb);
   }

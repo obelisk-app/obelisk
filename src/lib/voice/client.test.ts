@@ -640,9 +640,67 @@ describe('VoiceClient SFU push-roster', () => {
   });
 });
 
+describe('VoiceClient room-full rejection', () => {
+  it('sends bye{room-full} and refuses to open a peer when receiving a signal from over-cap pubkey', async () => {
+    // Self is lex-first ('a'×64). 5 peers (b-f) fill the room. A 6th, 'g'×64,
+    // sends an offer — must be rejected.
+    const aPub = 'a'.repeat(64);
+    const bPub = 'b'.repeat(64);
+    const cPub = 'c'.repeat(64);
+    const dPub = 'd'.repeat(64);
+    const ePub = 'e'.repeat(64);
+    const fPub = 'f'.repeat(64);
+    const gPub = 'g'.repeat(64);
+    transportFake.setSelfPubkey(aPub);
+    const members = [aPub, bPub, cPub, dPub, ePub, fPub, gPub];
+    const client = new VoiceClient('ch1', { members });
+    await client.join();
+    // Roster announces the leading 5 (excluding the over-cap peer).
+    transportFake.fireRoster([aPub, bPub, cPub, dPub, ePub].map((m) => presence(m)));
+    await flushMicrotasks(20);
+    // Now g sends an offer — must be rejected with byeReason 'room-full'.
+    transportFake.sentSignals.length = 0;
+    transportFake.fireSignal(gPub, {
+      type: 'offer', sdp: 'v=0', sessionId: 'g-sid', seq: 1,
+    });
+    await flushMicrotasks(10);
+    const byeToG = transportFake.sentSignals.find(
+      (s) => s.to === gPub && s.payload.type === 'bye',
+    );
+    expect(byeToG, 'sent bye to over-cap peer').toBeDefined();
+    expect(byeToG!.payload.byeReason).toBe('room-full');
+    // No peer was opened for g.
+    expect(client.getParticipants()).not.toContain(gPub);
+    await client.leave();
+  });
+
+  it('does NOT reject signaling from a peer that is within the cap', async () => {
+    const aPub = 'a'.repeat(64);
+    const bPub = 'b'.repeat(64);
+    const cPub = 'c'.repeat(64);
+    transportFake.setSelfPubkey(aPub);
+    const members = [aPub, bPub, cPub];
+    const client = new VoiceClient('ch1', { members });
+    await client.join();
+    transportFake.fireRoster([aPub, bPub, cPub].map((m) => presence(m)));
+    await flushMicrotasks(20);
+    transportFake.sentSignals.length = 0;
+    transportFake.fireSignal(bPub, {
+      type: 'offer', sdp: 'v=0', sessionId: 'b-sid', seq: 1,
+    });
+    await flushMicrotasks(10);
+    // No bye should have been sent to b.
+    const byeToB = transportFake.sentSignals.find(
+      (s) => s.to === bPub && s.payload.type === 'bye' && s.payload.byeReason === 'room-full',
+    );
+    expect(byeToB, 'no room-full bye to in-cap peer').toBeUndefined();
+    await client.leave();
+  });
+});
+
 describe('VoiceClient capacity cap', () => {
-  it('caps audio mesh participants at 8', async () => {
-    // 10 candidates; 8-person audio cap + self trims to <= 7 others.
+  it('caps audio mesh participants at 5', async () => {
+    // 10 candidates; 5-person audio cap + self trims to <= 4 others.
     const members = [
       SELF, PEER1, PEER2,
       'd'.repeat(64), 'e'.repeat(64), 'f'.repeat(64),
@@ -653,8 +711,8 @@ describe('VoiceClient capacity cap', () => {
     await client.join();
     transportFake.fireRoster(members.map((m) => presence(m)));
     await flushMicrotasks(20);
-    // Self + at most 7 others = 8 total.
-    expect(client.getParticipants().length).toBeLessThanOrEqual(7);
+    // Self + at most 4 others = 5 total.
+    expect(client.getParticipants().length).toBeLessThanOrEqual(4);
     await client.leave();
   });
 });

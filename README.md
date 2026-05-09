@@ -89,14 +89,11 @@ For HTTPS dev (needed for NIP-07 / mobile testing): `npm run dev:raise` (require
 
 ## Architecture
 
-```
-Browser  ──►  nostr-tools SimplePool  ──►  wss://relay.obelisk.ar
-                       │
-              ┌────────┴────────┐
-              │                 │
-         src/lib/nostr-bridge   src/lib/voice
-         (singleton + hooks)    (mesh + SFU)
-```
+<p align="center">
+  <img src="public/og/guides/relay-groups.png" alt="NIP-29 relay-based group: the relay holds the membership list (kind 39002), admin list (kind 39001), and message events (kind 9), and the client subscribes by group id. No central Obelisk server needed." width="85%" />
+</p>
+
+<p align="center"><sub>The relay hosts the group. Members, admins, and messages are signed Nostr events — the client just subscribes.</sub></p>
 
 - **Frontend:** Next.js 16 + Tailwind v4, purely client-rendered. No `/api/*` routes.
 - **Bridge** (`src/lib/nostr-bridge/`): the canonical pool, identity, subscriptions, and React hooks. Read this first if you're contributing.
@@ -107,6 +104,12 @@ Browser  ──►  nostr-tools SimplePool  ──►  wss://relay.obelisk.ar
 See [CLAUDE.md](CLAUDE.md) for the full architecture and conventions.
 
 ## The Obelisk family
+
+<p align="center">
+  <img src="public/og/guides/swap-anything.png" alt="The Obelisk ecosystem: one self-hostable Nostr relay connected to a chat client, a voice SFU, and a bot runtime — every component independently replaceable, nothing locked together." width="85%" />
+</p>
+
+<p align="center"><sub>Four small projects, one open protocol. Swap any of them out — the rest keep working.</sub></p>
 
 | Repo | What |
 |------|------|
@@ -164,5 +167,5 @@ See [CLAUDE.md](CLAUDE.md) for the full guide.
 
 ## Resources
 
-- Docs: [auth & data loading](docs/auth-and-data-loading.md) · [voice system](docs/voice-system.md) · [SFU](docs/sfu-system.md) · [layout & branding](docs/relay-layout-and-branding.md) · [uploads](docs/uploads.md) · [Cloudflare tunnel](docs/cloudflare-tunnel.md) · [known bugs](docs/known-bugs.md)
+- Docs: [auth & data loading](docs/auth-and-data-loading.md) · [voice (mesh)](docs/voice/README.md) · [SFU](docs/sfu-system.md) · [layout & branding](docs/relay-layout-and-branding.md) · [uploads](docs/uploads.md) · [Cloudflare tunnel](docs/cloudflare-tunnel.md) · [known bugs](docs/known-bugs.md)
 - External: [Nostr](https://nostr.com) · [NIPs](https://github.com/nostr-protocol/nips) · [La Crypta](https://lacrypta.ar)

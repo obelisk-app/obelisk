@@ -1,0 +1,62 @@
+# Voice — Overview
+
+Obelisk has two voice engines that share one client surface
+(`src/lib/voice/client.ts` → `VoiceClient`). UI components never see
+which engine is active; they consume `VoiceClient` events.
+
+| Engine | Topology | When | Code |
+|---|---|---|---|
+| **mesh** | P2P full mesh over WebRTC; signaling on Nostr (kinds 20078 + 25050) | small rooms (≤ 8), no SFU advertised on the channel | `src/lib/voice/{client,peer,transport,control-channel,discovery,failure-handlers}.ts` |
+| **SFU** | mediasoup, Nostr-RPC signaling on kind 25050 envelopes | a kind 31313 advertisement is reachable (or pinned via `NEXT_PUBLIC_SFU_PUBKEY`) AND the channel is the `voice-sfu` kind | `src/lib/voice/{sfu-client,sfu-control,sfu-rpc,sfu-pin}.ts` (server lives in [obelisk-app/obelisk-sfu](https://github.com/obelisk-app/obelisk-sfu)) |
+
+This directory documents the **mesh** engine in depth. SFU docs are at
+[`../sfu-system.md`](../sfu-system.md).
+
+## When to read what
+
+- **[mesh-protocol.md](mesh-protocol.md)** — the wire protocol: presence
+  beacons (kind 20078), signaling envelopes (kind 25050), perfect
+  negotiation, transitive discovery, control-channel messages, hangup
+  paths. Read this first if you're touching anything that produces or
+  consumes Nostr events for voice.
+- **[mesh-modules.md](mesh-modules.md)** — code map of
+  `src/lib/voice/`. Read this before adding a new file or moving an
+  existing one.
+- **[failure-modes.md](failure-modes.md)** — every known failure mode
+  and the handler it routes through, with the metric you'd watch in
+  the `?debug=voice` overlay. Read this before opening a "voice
+  doesn't work" issue.
+- **[testing.md](testing.md)** — Playwright harness usage; how the
+  two-peer / three-peer / glare specs run; how to add a new failure
+  injection.
+- **[diagnosis-2026-05-09.md](diagnosis-2026-05-09.md)** — Phase 1
+  diagnostic findings. Useful as a pattern for future diagnostics.
+
+## What "mesh" buys you
+
+- **No central server**. The dex stays workable as long as one Nostr
+  relay is reachable. There is no obelisk-owned voice server in the
+  mesh path.
+- **End-to-end encryption** of media via DTLS-SRTP — Nostr only carries
+  signaling; the relay never sees audio.
+- **Sub-10s hangup detection** as of Phase 3 (control-channel
+  heartbeat). Pre-Phase-3 the only signal was ICE failure ~30 s+ after
+  the peer vanished.
+- **Transitive WebRTC discovery**: when A↔B and B↔C are connected,
+  A and C learn about each other through B's data channel without
+  needing the relay to deliver every beacon symmetrically. The mesh
+  forms even on a flaky relay link.
+
+## What mesh does NOT do
+
+- Rooms larger than 5 participants. The mesh degrades quadratically
+  (each peer maintains 4 outbound audio streams in a 5-person room
+  → 20 PCs total). The 6th joiner is **actively rejected**: every
+  in-cap peer sends a `bye { byeReason: 'room-full' }` so the joiner
+  surfaces a clean "Room is full" error and leaves on its own
+  without looping the reconnect ladder. Anything past 5 needs the
+  SFU engine.
+- Recording. There's no central party to record. If recording is a
+  product requirement, route the room through the SFU.
+- Ad-hoc "anyone can speak". Voice is gated by the channel's NIP-29
+  member list — same trust gate as text chat.

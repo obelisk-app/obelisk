@@ -173,6 +173,16 @@ export interface NostrBridge {
    */
   subscribeRelayAccess(cb: (byRelay: Readonly<Record<string, RelayAccessState>>) => void): Unsubscribe;
 
+  /**
+   * Resolve once the **current** relay reports `'ok'` (NIP-42 AUTH
+   * completed and the first read succeeded), or after `timeoutMs`
+   * elapses. Always resolves — never rejects. Returns `'ok'` on
+   * success, the relay's terminal access state on timeout, or
+   * `'timeout'` if no state was recorded yet. Used by mesh voice to
+   * delay the first beacon until AUTH is complete.
+   */
+  waitForRelayAuth(timeoutMs: number): Promise<'ok' | 'timeout' | RelayAccessState>;
+
   subscribeIsLoggedIn(cb: (v: boolean) => void): Unsubscribe;
   subscribeConnectionState(cb: (label: string) => void): Unsubscribe;
   subscribeCurrentRelayUrl(cb: (url: string) => void): Unsubscribe;
