@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { parseBolt11, type ParsedInvoice } from '@/lib/bolt11';
 import { useChatStore } from '@/store/chat';
-import { useMyPubkey, useSignerReady } from '@/lib/nostr-bridge';
+import { useSignerReady } from '@/lib/nostr-bridge';
+import { usePubkey } from '@nostr-wot/data/react';
 import { formatPubkey, getNDK } from '@/lib/nostr';
 import { useLocalWallet } from '@/lib/wallet/local-client';
 import { toKEKSigner } from '@/lib/signer-adapters';
@@ -34,7 +35,7 @@ interface PaidState {
  * device will not show "Paid" for invoices another user paid.
  */
 export default function InvoiceCard({ invoice, messageId: _messageId, channelId }: Props) {
-  const myPubkey = useMyPubkey();
+  const myPubkey = usePubkey();
   const signerReady = useSignerReady();
   const memberList = useChatStore((s) => s.memberList);
   const pushEphemeral = useChatStore((s) => s.pushEphemeral);

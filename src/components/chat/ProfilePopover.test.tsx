@@ -3,6 +3,11 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import ProfilePopover from './ProfilePopover';
 import { useChatStore } from '@/store/chat';
 
+vi.mock('@nostr-wot/data/react', () => ({
+  useProfile: () => null,
+  usePubkey: () => null,
+}));
+
 vi.mock('@/lib/nostr', () => ({
   formatPubkey: vi.fn((pk: string) => `${pk.slice(0, 8)}…`),
   // Faithful enough for the npub1-prefix assertion below; real encoding isn't

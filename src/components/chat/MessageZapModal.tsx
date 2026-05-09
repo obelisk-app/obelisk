@@ -6,7 +6,7 @@ import { useToastStore } from '@/store/toast';
 import { isWebLNAvailable, zapMessageViaWebLN } from '@/lib/wallet/webln-zap';
 import { bridgeZapRequestSigner } from '@/lib/wallet/bridge-zap-signer';
 import { getNDK } from '@/lib/nostr';
-import { useUserMetadata } from '@/lib/nostr-bridge';
+import { useProfile } from '@nostr-wot/data/react';
 
 const QUICK_AMOUNTS = [21, 100, 500, 1000, 5000, 21000];
 
@@ -27,7 +27,7 @@ export default function MessageZapModal() {
   }, [target]);
 
   // Hook order is fixed; call before any early return.
-  const meta = useUserMetadata(target?.recipientPubkey ?? '');
+  const meta = useProfile(target?.recipientPubkey ?? null);
   const lud16 = meta?.lud16 ?? target?.recipientLud16 ?? null;
   const displayName = target ? (meta?.displayName || meta?.name || target.displayName) : '';
 

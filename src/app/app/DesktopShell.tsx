@@ -10,7 +10,6 @@ import {
   useGroups,
   useMessages,
   useLoadEarlier,
-  useUserMetadata,
   useReactions,
   useChildrenByParent,
   useAdminsByGroup,
@@ -29,6 +28,7 @@ import {
   type JsUserMetadata,
 } from '@/lib/nostr-bridge';
 import { getBridge, getBridgeImpl } from '@/lib/nostr-bridge';
+import { useProfile, usePubkey } from '@nostr-wot/data/react';
 import { initializeWot, useWotEnabled, wotEngine } from '@/lib/wot';
 import { wotColorClass } from '@/lib/wot/colors';
 import { faviconFor, fetchRelayInfo } from '@/lib/relay-info';
@@ -1599,22 +1599,15 @@ function ChannelOrderRow({
   );
 }
 
-function useMyPubkey(): string | null {
-  return useMemo(() => {
-    if (typeof window === 'undefined') return null;
-    try {
-      const raw = window.localStorage.getItem('obelisk-dex/session')
-        ?? window.localStorage.getItem('obeliskord/session');
-      return raw ? (JSON.parse(raw) as { pubKeyHex: string }).pubKeyHex : null;
-    } catch {
-      return null;
-    }
-  }, []);
-}
+// Use the SDK's usePubkey via re-alias so call sites keep their existing
+// `useMyPubkey()` name. The local localStorage-reading shim was replaced
+// during the SDK migration — the SDK session context (synced from the
+// bridge in <SdkSessionBridge>) is now the source of truth.
+const useMyPubkey = usePubkey;
 
 function SidebarMe() {
   const myPubkey = useMyPubkey();
-  const meta = useUserMetadata(myPubkey);
+  const meta = useProfile(myPubkey);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   if (!myPubkey) return null;
@@ -2417,13 +2410,13 @@ function CopyInviteLinkButton({ groupId }: { groupId: string }) {
 }
 
 function ReplyAuthorName({ pubkey }: { pubkey: string }) {
-  const meta = useUserMetadata(pubkey);
+  const meta = useProfile(pubkey);
   const name = meta?.displayName || meta?.name || pubkey.slice(0, 8);
   return <span className="font-semibold text-lc-white">{name}</span>;
 }
 
 function PubkeyName({ pubkey }: { pubkey: string }) {
-  const meta = useUserMetadata(pubkey);
+  const meta = useProfile(pubkey);
   return <>{meta?.displayName || meta?.name || pubkey.slice(0, 10)}</>;
 }
 
@@ -2496,7 +2489,7 @@ function ReplyPreviewRow({
   parent: JsMessage;
   onJump: () => void;
 }) {
-  const meta = useUserMetadata(parent.pubkey);
+  const meta = useProfile(parent.pubkey);
   const name = meta?.displayName || meta?.name || parent.pubkey.slice(0, 8);
   const preview = parent.content.replace(/\s+/g, ' ').slice(0, 120);
   return (
@@ -2544,7 +2537,7 @@ function MessageRow({
       setTimeout(() => el.classList.remove('ring-1', 'ring-lc-green'), 1200);
     }
   };
-  const meta = useUserMetadata(msg.pubkey);
+  const meta = useProfile(msg.pubkey);
   const relay = useCurrentRelayUrl();
   const [menuOpen, setMenuOpen] = useState(false);
   const [panelPinned, setPanelPinned] = useState(false);
@@ -2905,7 +2898,7 @@ function ChatStoreMembersAdapter({ groupId }: { groupId: string }) {
 }
 
 function MemberMetaSync({ pubkey }: { pubkey: string }) {
-  const meta = useUserMetadata(pubkey);
+  const meta = useProfile(pubkey);
   useEffect(() => {
     if (!meta) return;
     useChatStore.setState((state) => {
@@ -2940,7 +2933,7 @@ function ProfilePopupBridge() {
 }
 
 function MemberRow({ pubkey, isAdmin }: { pubkey: string; isAdmin: boolean }) {
-  const meta = useUserMetadata(pubkey);
+  const meta = useProfile(pubkey);
   const myPubkey = useMyPubkey();
   const [anchor, setAnchor] = useState<{ x: number; y: number; placement?: 'top' | 'bottom' } | null>(null);
   return (
@@ -3490,7 +3483,7 @@ function ImageUploadRow({
 }
 
 function ManageMemberRow({ groupId, pubkey, isAdmin }: { groupId: string; pubkey: string; isAdmin: boolean }) {
-  const meta = useUserMetadata(pubkey);
+  const meta = useProfile(pubkey);
   return (
     <div className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-lc-card">
       <Avatar pubkey={pubkey} size={7} picture={meta?.picture ?? null} />
@@ -3544,7 +3537,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string) => void }) {
   const dms = useDirectMessages();
-  const meta = useUserMetadata(peer);
+  const meta = useProfile(peer);
   const thread = peer ? dms[peer] ?? [] : [];
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);

@@ -22,17 +22,14 @@ import {
   nostrActions,
   useIsLoggedIn,
   useIsRehydrating,
-  useMyPubkey,
   useGroups,
   useChildrenByParent,
   useMessages,
   useLoadEarlier,
   useDirectMessages,
-  useUserMetadata,
   useAdmins,
   useAdminsByGroup,
   useMembers,
-  useMyFollows,
   useReactions,
   useConfiguredRelays,
   useCurrentRelayUrl,
@@ -44,6 +41,9 @@ import {
   type JsMessage,
   type JsDirectMessage,
 } from '@/lib/nostr-bridge';
+import { useFollows, useProfile, usePubkey, usePublishProfile } from '@nostr-wot/data/react';
+const useMyPubkey = usePubkey;
+const useUserMetadata = useProfile;
 import LoginModal from '../LoginModal';
 import VoiceRoom from '@/components/voice/VoiceRoom';
 import VoiceStatusBar from '@/components/voice/VoiceStatusBar';
@@ -369,6 +369,7 @@ function LoginScreen() {
 function ProfileSetupScreen({ onDone, onSkip }: { onDone: () => void; onSkip: () => void }) {
   const myPubkey = useMyPubkey();
   const meta = useUserMetadata(myPubkey);
+  const publishProfile = usePublishProfile();
   const [name, setName] = useState(meta?.displayName ?? meta?.name ?? '');
   const [about, setAbout] = useState(meta?.about ?? '');
   const [picture, setPicture] = useState(meta?.picture ?? '');
@@ -388,15 +389,16 @@ function ProfileSetupScreen({ onDone, onSkip }: { onDone: () => void; onSkip: ()
     if (busy) return;
     setBusy(true);
     try {
-      const opts: Parameters<typeof nostrActions.editUserMetadata>[0] = {};
-      if (name) { opts.name = name; opts.displayName = name; }
+      if (!publishProfile) throw new Error('Not signed in');
+      const opts: Parameters<typeof publishProfile>[0] = {};
+      if (name) { opts.name = name; opts.display_name = name; }
       if (about) opts.about = about;
       if (picture) opts.picture = picture;
       if (nip05) opts.nip05 = nip05;
-      await nostrActions.editUserMetadata(opts);
+      await publishProfile(opts);
       onDone();
     } catch (err) {
-      console.warn('[mobile] editUserMetadata failed', err);
+      console.warn('[mobile] publishProfile failed', err);
       onDone(); // proceed anyway — the user can edit later
     } finally {
       setBusy(false);
@@ -3839,6 +3841,7 @@ export function SettingsProfileScreen({ go }: { go: (s: ScreenName) => void }) {
 export function EditProfileScreen({ go }: { go: (s: ScreenName, dir?: 'forward' | 'back') => void }) {
   const myPubkey = useMyPubkey();
   const meta = useUserMetadata(myPubkey);
+  const publishProfile = usePublishProfile();
 
   const [name, setName] = useState('');
   const [about, setAbout] = useState('');
@@ -3922,9 +3925,10 @@ export function EditProfileScreen({ go }: { go: (s: ScreenName, dir?: 'forward' 
         try { finalBanner = await uploadToBlossom(bannerFile); }
         finally { setUploadingBanner(false); }
       }
-      await nostrActions.editUserMetadata({
+      if (!publishProfile) throw new Error('Not signed in');
+      await publishProfile({
         name: nameTrimmed,
-        displayName: nameTrimmed,
+        display_name: nameTrimmed,
         about: about.trim(),
         picture: finalPicture.trim(),
         banner: finalBanner.trim(),
@@ -3934,7 +3938,7 @@ export function EditProfileScreen({ go }: { go: (s: ScreenName, dir?: 'forward' 
       });
       go('settings-profile', 'back');
     } catch (err) {
-      console.warn('[mobile] editUserMetadata failed', err);
+      console.warn('[mobile] publishProfile failed', err);
       setError(err instanceof Error ? err.message : 'Failed to publish profile');
     } finally {
       setSaving(false);
@@ -4189,7 +4193,8 @@ export default function MobileShell() {
   const meta = useUserMetadata(myPubkey);
   const groups = useGroups();
   const dms = useDirectMessages();
-  const myFollows = useMyFollows();
+  const myFollowsEntry = useFollows(myPubkey);
+  const myFollows = useMemo(() => myFollowsEntry?.follows ?? [], [myFollowsEntry]);
 
   const [nav, setNav] = useState<NavState>(initialNav);
   const navRef = useRef<NavState>(initialNav);

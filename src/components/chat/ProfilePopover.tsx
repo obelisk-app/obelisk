@@ -6,7 +6,9 @@ import { useToastStore } from '@/store/toast';
 import { useModerationStore } from '@/store/moderation';
 import { formatPubkey, pubkeyToNpub } from '@/lib/nostr';
 import { nip19 } from 'nostr-tools';
-import { useMyPubkey, useUserMetadata } from '@/lib/nostr-bridge';
+import { useProfile, usePubkey } from '@nostr-wot/data/react';
+const useUserMetadata = useProfile;
+const useMyPubkey = usePubkey;
 import type { MemberInfo } from '@/lib/mentions';
 import {
   replaceShortcodes,

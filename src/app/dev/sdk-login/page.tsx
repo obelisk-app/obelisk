@@ -14,11 +14,11 @@
 import { useState } from 'react';
 import { LoginWidget, NostrSessionProvider } from '@nostr-wot/ui';
 import { nostrActions } from '@/lib/nostr-bridge';
-import { useIsLoggedIn, useMyPubkey } from '@/lib/nostr-bridge';
+import { usePubkey, useSession } from '@nostr-wot/data/react';
 
 export default function SdkLoginDevPage() {
-  const isLoggedIn = useIsLoggedIn();
-  const myPubkey = useMyPubkey();
+  const myPubkey = usePubkey();
+  const isLoggedIn = useSession().pubkey !== null;
   const [error, setError] = useState<string | null>(null);
   const [lastMethod, setLastMethod] = useState<string | null>(null);
 

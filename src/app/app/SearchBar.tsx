@@ -16,10 +16,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   nostrActions,
   useGroups,
-  useUserMetadata,
   type JsGroup,
   type JsMessage,
 } from '@/lib/nostr-bridge';
+import { useProfile } from '@nostr-wot/data/react';
 import { useNostrUserSearch, type UserHit } from '@/lib/hooks/useNostrUserSearch';
 import { searchGroups } from '@/lib/group-search';
 import { formatPubkey } from '@/lib/nostr';
@@ -461,7 +461,7 @@ function ResultRow({ msg, onJump, onAuthor }: {
   onJump: () => void;
   onAuthor: (pk: string) => void;
 }) {
-  const meta = useUserMetadata(msg.pubkey);
+  const meta = useProfile(msg.pubkey);
   const groups = useGroups();
   const groupName = useMemo(
     () => groups.find((g) => g.id === msg.groupId)?.name ?? msg.groupId?.slice(0, 8) ?? '?',

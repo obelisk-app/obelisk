@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { nip19 } from 'nostr-tools';
-import { nostrActions, useUserMetadata } from '@/lib/nostr-bridge';
+import { nostrActions } from '@/lib/nostr-bridge';
+import { useProfile, usePublishProfile } from '@nostr-wot/data/react';
 import BlossomImageInput from '@/components/BlossomImageInput';
 import { usePreferences, setPreference } from '@/lib/preferences';
 import WotSettings from '@/components/settings/WotSettings';
@@ -20,7 +21,7 @@ interface UserPanelProps {
 }
 
 export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, initialEditing = false }: UserPanelProps) {
-  const meta = useUserMetadata(pubkey);
+  const meta = useProfile(pubkey);
   const [editing, setEditing] = useState(initialEditing);
   const [settingsTab, setSettingsTab] = useState<'profile' | 'preferences'>('profile');
 
@@ -283,6 +284,7 @@ function EditProfileForm({
   onCancel: () => void;
   onSaved: () => void;
 }) {
+  const publishProfile = usePublishProfile();
   const [name, setName] = useState(initial?.displayName || initial?.name || '');
   const [about, setAbout] = useState(initial?.about || '');
   const [picture, setPicture] = useState(initial?.picture || '');
@@ -319,9 +321,10 @@ function EditProfileForm({
     setSaving(true);
     setError(null);
     try {
-      await nostrActions.editUserMetadata({
+      if (!publishProfile) throw new Error('Not signed in');
+      await publishProfile({
         name: name.trim(),
-        displayName: name.trim(),
+        display_name: name.trim(),
         about: about.trim(),
         picture: picture.trim(),
         banner: banner.trim(),

@@ -16,12 +16,13 @@ import { useMemo, useState } from 'react';
 import {
   useChildrenByParent,
   useGroups,
-  useUserMetadata,
-  useMyPubkey,
   useSignerReady,
   useMessages,
   nostrActions,
 } from '@/lib/nostr-bridge';
+import { useProfile, usePubkey } from '@nostr-wot/data/react';
+const useUserMetadata = useProfile;
+const useMyPubkey = usePubkey;
 import type { JsGroup } from '@/lib/nostr-bridge';
 
 interface Props {

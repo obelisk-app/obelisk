@@ -2,10 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const mockEditUserMetadata = vi.fn().mockResolvedValue(undefined);
-const mockGetBridge = vi.fn().mockResolvedValue({
-  editUserMetadata: (...args: unknown[]) => mockEditUserMetadata(...args),
-});
+const mockPublishProfile = vi.fn().mockResolvedValue(undefined);
 const mockUploadToBlossom = vi.fn().mockResolvedValue('https://blossom.primal.net/abc123.jpg');
 
 let mockProfile: {
@@ -20,10 +17,10 @@ let mockProfile: {
   website: string | null;
 } | null = null;
 
-vi.mock('@/lib/nostr-bridge', () => ({
-  getBridge: () => mockGetBridge(),
-  useMyPubkey: () => 'abc123',
-  useUserMetadata: () => mockProfile,
+vi.mock('@nostr-wot/data/react', () => ({
+  usePubkey: () => 'abc123',
+  useProfile: () => mockProfile,
+  usePublishProfile: () => mockPublishProfile,
 }));
 
 vi.mock('@/lib/blossom', () => ({
@@ -77,9 +74,9 @@ describe('ProfileEditor', () => {
       await userEvent.click(screen.getByText('profileEditor.publish'));
 
       await waitFor(() => {
-        expect(mockEditUserMetadata).toHaveBeenCalledWith({
+        expect(mockPublishProfile).toHaveBeenCalledWith({
           name: 'Alice',
-          displayName: 'Alice',
+          display_name: 'Alice',
         });
       });
 
@@ -106,9 +103,9 @@ describe('ProfileEditor', () => {
       });
 
       await waitFor(() => {
-        expect(mockEditUserMetadata).toHaveBeenCalledWith({
+        expect(mockPublishProfile).toHaveBeenCalledWith({
           name: 'Alice',
-          displayName: 'Alice',
+          display_name: 'Alice',
           picture: 'https://blossom.primal.net/abc123.jpg',
         });
       });
@@ -210,7 +207,7 @@ describe('ProfileEditor', () => {
 
   describe('error handling', () => {
     it('shows error when publish fails', async () => {
-      mockEditUserMetadata.mockRejectedValueOnce(new Error('Network error'));
+      mockPublishProfile.mockRejectedValueOnce(new Error('Network error'));
 
       render(<ProfileEditor mode="setup" onComplete={mockOnComplete} onSkip={mockOnSkip} />);
 

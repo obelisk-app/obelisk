@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from '@/i18n/context';
 import { uploadToBlossom } from '@/lib/blossom';
-import { getBridge, useMyPubkey, useUserMetadata } from '@/lib/nostr-bridge';
+import { useProfile, usePubkey, usePublishProfile } from '@nostr-wot/data/react';
 
 interface ProfileEditorProps {
   mode: 'setup' | 'edit';
@@ -35,12 +35,13 @@ function randomName(): string {
 
 export default function ProfileEditor({ mode, onComplete, onSkip, embedded = false }: ProfileEditorProps) {
   const { t } = useTranslation();
-  const myPubkey = useMyPubkey();
-  // The bridge auto-resolves kind:0 for the active user on login, so this
-  // populates the form prefill in edit mode without an extra fetch round-trip.
-  // The bridge also re-merges unknown kind:0 fields internally during
-  // editUserMetadata, so we don't need a separate fetchCurrentKind0 here.
-  const profile = useUserMetadata(myPubkey);
+  const myPubkey = usePubkey();
+  // The SDK's useProfile auto-resolves kind:0 for the active user on login,
+  // so this populates the form prefill in edit mode without an extra fetch
+  // round-trip. usePublishProfile re-merges unknown kind:0 fields
+  // internally, so we don't need a separate fetchCurrentKind0 here.
+  const profile = useProfile(myPubkey);
+  const publishProfile = usePublishProfile();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const initialName = profile?.displayName || profile?.name || '';
@@ -132,10 +133,10 @@ export default function ProfileEditor({ mode, onComplete, onSkip, embedded = fal
         }
       }
 
-      const bridge = await getBridge();
-      await bridge.editUserMetadata({
+      if (!publishProfile) throw new Error('Not signed in');
+      await publishProfile({
         name: name.trim(),
-        displayName: name.trim(),
+        display_name: name.trim(),
         ...(finalPictureUrl ? { picture: finalPictureUrl } : {}),
         ...(about.trim() ? { about: about.trim() } : {}),
       });

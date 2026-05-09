@@ -4,7 +4,7 @@ import { fireEvent, render, screen, act } from '@testing-library/react';
 // Bridge identity hooks back the profile screen — mock them so the test can
 // drive the rendered values without a real relay connection.
 const mockLogout = vi.fn();
-const mockEditUserMetadata = vi.fn().mockResolvedValue(undefined);
+const mockPublishProfile = vi.fn().mockResolvedValue(undefined);
 
 let mockMeta: {
   pubkey: string;
@@ -22,7 +22,6 @@ let mockPubkey: string | null = null;
 vi.mock('@/lib/nostr-bridge', () => ({
   nostrActions: {
     logout: (...a: unknown[]) => mockLogout(...a),
-    editUserMetadata: (...a: unknown[]) => mockEditUserMetadata(...a),
     switchRelay: vi.fn(),
     removeRelay: vi.fn(),
     createGroup: vi.fn(),
@@ -31,8 +30,6 @@ vi.mock('@/lib/nostr-bridge', () => ({
   },
   useIsLoggedIn: () => true,
   useIsRehydrating: () => false,
-  useMyPubkey: () => mockPubkey,
-  useUserMetadata: () => mockMeta,
   useGroups: () => [],
   useChildrenByParent: () => ({}),
   useMessages: () => [],
@@ -41,7 +38,6 @@ vi.mock('@/lib/nostr-bridge', () => ({
   useAdmins: () => [],
   useAdminsByGroup: () => ({}),
   useMembers: () => [],
-  useMyFollows: () => [],
   useReactions: () => ({}),
   useConfiguredRelays: () => ['wss://relay.obelisk.ar'],
   useCurrentRelayUrl: () => 'wss://relay.obelisk.ar',
@@ -49,6 +45,13 @@ vi.mock('@/lib/nostr-bridge', () => ({
   useConnectionState: () => 'connected',
   useGroupMetadataEose: () => true,
   useActiveCallByChannel: () => ({}),
+}));
+
+vi.mock('@nostr-wot/data/react', () => ({
+  usePubkey: () => mockPubkey,
+  useProfile: () => mockMeta,
+  useFollows: () => null,
+  usePublishProfile: () => mockPublishProfile,
 }));
 
 vi.mock('@/lib/relay-info', () => ({
@@ -102,7 +105,7 @@ beforeEach(() => {
 
 afterEach(() => {
   mockLogout.mockReset();
-  mockEditUserMetadata.mockReset().mockResolvedValue(undefined);
+  mockPublishProfile.mockReset().mockResolvedValue(undefined);
   vi.useRealTimers();
 });
 
@@ -191,7 +194,7 @@ describe('EditProfileScreen', () => {
     expect((screen.getByTestId('edit-about') as HTMLTextAreaElement).value).toBe('Building Obelisk on Nostr.');
   });
 
-  it('publishes via editUserMetadata and pops back on save', async () => {
+  it('publishes via publishProfile and pops back on save', async () => {
     const go = vi.fn();
     render(<EditProfileScreen go={go} />);
     fireEvent.change(screen.getByTestId('edit-name'), { target: { value: 'Fabricio v2' } });
@@ -199,10 +202,10 @@ describe('EditProfileScreen', () => {
     await act(async () => {
       fireEvent.click(screen.getByTestId('save-profile'));
     });
-    expect(mockEditUserMetadata).toHaveBeenCalledTimes(1);
-    const opts = mockEditUserMetadata.mock.calls[0][0];
+    expect(mockPublishProfile).toHaveBeenCalledTimes(1);
+    const opts = mockPublishProfile.mock.calls[0][0];
     expect(opts.name).toBe('Fabricio v2');
-    expect(opts.displayName).toBe('Fabricio v2');
+    expect(opts.display_name).toBe('Fabricio v2');
     expect(opts.about).toBe('New bio');
     expect(go).toHaveBeenCalledWith('settings-profile', 'back');
   });

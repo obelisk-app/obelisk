@@ -10,10 +10,9 @@ import { useMemo, useState } from 'react';
 import {
   nostrActions,
   useDirectMessages,
-  useUserMetadata,
-  useMyFollows,
   type JsDirectMessage,
 } from '@/lib/nostr-bridge';
+import { useFollows, useProfile, usePubkey } from '@nostr-wot/data/react';
 import DMComposer from './DMComposer';
 
 type Tab = 'follows' | 'others';
@@ -26,8 +25,9 @@ export default function DMList({
   onPick: (peer: string) => void;
 }) {
   const dms = useDirectMessages();
-  const follows = useMyFollows();
-  const followSet = useMemo(() => new Set(follows), [follows]);
+  const myPk = usePubkey();
+  const followsEntry = useFollows(myPk);
+  const followSet = useMemo(() => new Set(followsEntry?.follows ?? []), [followsEntry]);
   const [composing, setComposing] = useState(false);
   const [tab, setTab] = useState<Tab | null>(null);
 
@@ -155,7 +155,7 @@ function DMRow({
   active: boolean;
   onClick: () => void;
 }) {
-  const meta = useUserMetadata(pubkey);
+  const meta = useProfile(pubkey);
   const display = meta?.displayName || meta?.name || npubLike(pubkey);
   const preview = last
     ? (last.outgoing ? 'You: ' : '') + last.content.replace(/\s+/g, ' ').slice(0, 60)

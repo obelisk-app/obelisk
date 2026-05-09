@@ -6,8 +6,8 @@ import {
   nostrActions,
   useAdminsByGroup,
   useGroups,
-  useUserMetadata,
 } from '@/lib/nostr-bridge';
+import { useProfile } from '@nostr-wot/data/react';
 import { getBridgeImpl } from '@/lib/nostr-bridge';
 
 interface Row {
@@ -213,7 +213,7 @@ function RowItem({
   selected: boolean;
   onToggle: () => void;
 }) {
-  const meta = useUserMetadata(row.pubkey);
+  const meta = useProfile(row.pubkey);
   return (
     <tr className="border-t border-lc-border/40 hover:bg-lc-card">
       <td className="px-3 py-2">

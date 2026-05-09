@@ -20,7 +20,8 @@ import { setActiveVoiceClient, getActiveVoiceClient } from '@/lib/voice/active-c
 import { getBridge } from '@/lib/nostr-bridge/client';
 import type { NostrBridge } from '@/lib/nostr-bridge/types';
 import { useVoiceStore } from '@/store/voice';
-import { useGroups, useUserMetadata, useCurrentRelayUrl } from '@/lib/nostr-bridge';
+import { useGroups, useCurrentRelayUrl } from '@/lib/nostr-bridge';
+import { useProfile } from '@nostr-wot/data/react';
 import { ensureSfuRoomStarted } from '@/lib/voice/sfu-control';
 import VoiceControls from './VoiceControls';
 import ShootingStars from '@/components/ShootingStars';
@@ -899,7 +900,7 @@ function Stage({ pubkey, isLocal, kind, videoStream, audioStream, pinned, onTogg
   pinned: boolean;
   onTogglePin: () => void;
 }) {
-  const meta = useUserMetadata(pubkey);
+  const meta = useProfile(pubkey);
   const name = meta?.displayName || meta?.name || pubkey.slice(0, 8);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -980,7 +981,7 @@ function VideoTile({ pubkey, isLocal, videoStream, audioStream, onPin, fit = 'co
   fit?: 'cover' | 'contain';
   fillParent?: boolean;
 }) {
-  const meta = useUserMetadata(pubkey);
+  const meta = useProfile(pubkey);
   const name = meta?.displayName || meta?.name || pubkey.slice(0, 8);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -1169,7 +1170,7 @@ function AudioTile({ pubkey, isLocal, audioStream }: {
   isLocal: boolean;
   audioStream: MediaStream | null;
 }) {
-  const meta = useUserMetadata(pubkey);
+  const meta = useProfile(pubkey);
   const name = meta?.displayName || meta?.name || pubkey.slice(0, 8);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const isMutedForMe = useTileAudioMuted(pubkey);
@@ -1210,7 +1211,7 @@ function RailAudioTile({ pubkey, isLocal, audioStream }: {
   isLocal: boolean;
   audioStream: MediaStream | null;
 }) {
-  const meta = useUserMetadata(pubkey);
+  const meta = useProfile(pubkey);
   const name = meta?.displayName || meta?.name || pubkey.slice(0, 8);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const isMutedForMe = useTileAudioMuted(pubkey);
@@ -1246,7 +1247,7 @@ function AudioChip({ pubkey, isLocal, audioStream }: {
   isLocal: boolean;
   audioStream: MediaStream | null;
 }) {
-  const meta = useUserMetadata(pubkey);
+  const meta = useProfile(pubkey);
   const name = meta?.displayName || meta?.name || pubkey.slice(0, 8);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const isMutedForMe = useTileAudioMuted(pubkey);

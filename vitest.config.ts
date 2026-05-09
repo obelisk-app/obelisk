@@ -14,6 +14,12 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      // Dedupe React across the symlinked SDK packages — without these,
+      // `@nostr-wot/data/react` (loaded as raw TS via file: deps) imports
+      // its own copy of React from nostr-wot-sdk/node_modules, breaking
+      // hooks because the contexts/dispatchers are different instances.
+      react: path.resolve(__dirname, './node_modules/react'),
+      'react-dom': path.resolve(__dirname, './node_modules/react-dom'),
     },
   },
 });
