@@ -8,7 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getBridge } from './client';
 import { wotEngine } from '@/lib/wot/engine';
 import { useWotEnabled } from '@/lib/wot';
-import type { JsGroup, JsMessage, JsUserMetadata, JsReaction, JsDirectMessage, RelayAccessState } from './types';
+import type { JsGroup, JsMessage, JsReaction, JsDirectMessage, RelayAccessState } from './types';
 
 function normalizeRelayUrl(u: string): string {
   return u.replace(/\/+$/, '').toLowerCase();
@@ -115,10 +115,13 @@ export function useRelayAccess(url?: string | null): RelayAccessState {
 }
 
 /**
- * The local user's pubkey hex, or `null` when logged out. Single source of
- * truth for "who am I" — replaces the legacy `useAuthStore(s => s.profile.pubkey)`.
+ * Internal helper — kept private (no longer exported). External consumers
+ * should read pubkey from the SDK's `usePubkey()` (synced from this bridge
+ * via `<SdkSessionBridge>`). Bridge-internal hooks (e.g. `useGroups` for
+ * the WoT-aware rail) still need a synchronous bridge subscription, so the
+ * function stays here as a private utility.
  */
-export function useMyPubkey(): string | null {
+function useMyPubkey(): string | null {
   return useSubscription<string | null>((b, cb) => b.subscribeMyPubkey(cb), null);
 }
 
@@ -276,14 +279,6 @@ export function useGroupMetadataEose(): boolean {
   );
 }
 
-export function useUserMetadata(pubkey: string | null): JsUserMetadata | null {
-  return useSubscription<JsUserMetadata | null>(
-    (b, cb) => (pubkey ? b.subscribeUserMetadata(pubkey, cb) : () => {}),
-    null,
-    [pubkey],
-  );
-}
-
 export function useReactions(
   groupId: string | null,
 ): Readonly<Record<string, ReadonlyArray<JsReaction>>> {
@@ -348,10 +343,6 @@ export function useGroupCreator(groupId: string | null): string | null {
   );
   if (!groupId) return null;
   return all[groupId] ?? null;
-}
-
-export function useMyFollows(): ReadonlyArray<string> {
-  return useSubscription<ReadonlyArray<string>>((b, cb) => b.subscribeMyFollows(cb), []);
 }
 
 /**
