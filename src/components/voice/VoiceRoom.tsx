@@ -227,6 +227,14 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
         if (channelKind !== 'voice-sfu') return;
         if (sfu) {
           setSfuStatus('connected');
+          // Clear any stale connection error from a prior failed attempt.
+          // If we got here, SfuClient.start resolved — the "rpc timeout"
+          // / "Could not connect to the SFU" toast it produced is no
+          // longer accurate, but nothing else clears it (the supervisor
+          // retries silently and the user is left staring at a red
+          // banner during a working call).
+          setError(null);
+          useVoiceStore.getState().setError(null);
         } else {
           // Topology dropped back to mesh — most likely the SFU restarted
           // or its beacon expired. Trigger a republish so a transient
