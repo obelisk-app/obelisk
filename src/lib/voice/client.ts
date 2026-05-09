@@ -279,6 +279,12 @@ export class VoiceClient {
   private camTrack: MediaStreamTrack | null = null;
   private screenTrack: MediaStreamTrack | null = null;
   private screenAudioTrack: MediaStreamTrack | null = null;
+  /**
+   * Last requested camera facing — flipped by `switchCamera()` and used
+   * as the `facingMode` hint when (re-)acquiring the camera. Desktops
+   * typically ignore the hint and just hand back the default device.
+   */
+  private cameraFacing: 'user' | 'environment' = 'user';
 
   private beaconTimer: ReturnType<typeof setInterval> | null = null;
   /**
@@ -1614,7 +1620,7 @@ export class VoiceClient {
       try { quality = useVoiceStore.getState().videoQuality; } catch { /* test envs */ }
       const preset = getPreset(quality);
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: preset.constraints,
+        video: { ...preset.constraints, facingMode: this.cameraFacing },
       });
       this.camTrack = stream.getVideoTracks()[0] ?? null;
       console.log('[voice] camera acquired, track=', this.camTrack?.id, 'quality=', quality);
@@ -1646,6 +1652,49 @@ export class VoiceClient {
       }
     }
     this.emitLocal();
+  }
+
+  /**
+   * Flip between front ('user') and back ('environment') cameras on devices
+   * that have both. No-op when the camera isn't currently on. Replaces the
+   * local track in place on every mesh peer and on the SFU producer, so
+   * remote viewers see the swap without renegotiation churn beyond the
+   * `replaceTrack` call.
+   */
+  async switchCamera(): Promise<void> {
+    if (!this.camTrack) return;
+    const next: 'user' | 'environment' = this.cameraFacing === 'user' ? 'environment' : 'user';
+    let quality: VideoQuality = 'auto';
+    try { quality = useVoiceStore.getState().videoQuality; } catch { /* test envs */ }
+    const preset = getPreset(quality);
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { ...preset.constraints, facingMode: { exact: next } },
+      });
+    } catch {
+      // Some devices reject `exact` even when both cameras exist — retry
+      // with a soft `ideal` hint before giving up.
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { ...preset.constraints, facingMode: next },
+      });
+    }
+    const newTrack = stream.getVideoTracks()[0] ?? null;
+    if (!newTrack) return;
+    try { (newTrack as MediaStreamTrack).contentHint = 'motion'; } catch { /* older browsers */ }
+    const oldTrack = this.camTrack;
+    this.camTrack = newTrack;
+    this.cameraFacing = next;
+    for (const peer of this.peers.values()) await peer.setLocalTrack('camera', newTrack);
+    if (this.sfuClient) {
+      await this.sfuClient.publishTrack('camera', newTrack).catch((e) => console.warn('[voice] sfu replace camera threw', e));
+    }
+    this.stopTrack(oldTrack);
+    this.emitLocal();
+  }
+
+  getCameraFacing(): 'user' | 'environment' {
+    return this.cameraFacing;
   }
 
   async setScreenShareEnabled(on: boolean): Promise<void> {

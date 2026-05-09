@@ -9,6 +9,7 @@
  * VoiceClient. Clicking the channel pill jumps the AppShell view back to
  * the voice channel.
  */
+import { useEffect, useState } from 'react';
 import { useGroups } from '@/lib/nostr-bridge';
 import { useVoiceStore } from '@/store/voice';
 import { getActiveVoiceClient, setActiveVoiceClient } from '@/lib/voice/active-client';
@@ -23,6 +24,26 @@ export default function VoiceStatusBar() {
   const isScreenSharing = useVoiceStore((s) => s.isScreenSharing);
   const groups = useGroups();
   const group = channelId ? groups.find((g) => g.id === channelId) : null;
+  const [hasMultipleCameras, setHasMultipleCameras] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const check = async () => {
+      try {
+        const devices = await navigator.mediaDevices?.enumerateDevices?.();
+        if (cancelled) return;
+        const cams = (devices ?? []).filter((d) => d.kind === 'videoinput');
+        setHasMultipleCameras(cams.length > 1);
+      } catch { /* ignore */ }
+    };
+    void check();
+    const onChange = () => { void check(); };
+    navigator.mediaDevices?.addEventListener?.('devicechange', onChange);
+    return () => {
+      cancelled = true;
+      navigator.mediaDevices?.removeEventListener?.('devicechange', onChange);
+    };
+  }, []);
 
   if (!channelId) return null;
 
@@ -45,6 +66,18 @@ export default function VoiceStatusBar() {
     const c = getActiveVoiceClient();
     if (!c) return;
     try { await c.setCameraEnabled(!isCameraOn); }
+    catch (err) {
+      const e = err as { name?: string };
+      if (e?.name !== 'NotAllowedError') {
+        useVoiceStore.getState().setError((err as Error).message);
+      }
+    }
+  };
+
+  const handleSwitchCamera = async () => {
+    const c = getActiveVoiceClient();
+    if (!c) return;
+    try { await c.switchCamera(); }
     catch (err) {
       const e = err as { name?: string };
       if (e?.name !== 'NotAllowedError') {
@@ -125,6 +158,11 @@ export default function VoiceStatusBar() {
           <SmallBtn active={isCameraOn} onClick={handleToggleCamera} title={isCameraOn ? 'Camera off' : 'Camera on'} data-testid="voice-bar-camera">
             {isCameraOn ? <CameraOn /> : <CameraOff />}
           </SmallBtn>
+          {isCameraOn && hasMultipleCameras && (
+            <SmallBtn active={false} onClick={handleSwitchCamera} title="Switch camera" data-testid="voice-bar-switch-camera">
+              <SwitchCamera />
+            </SmallBtn>
+          )}
           <SmallBtn active={isScreenSharing} onClick={handleToggleScreen} title={isScreenSharing ? 'Stop sharing' : 'Share screen'} data-testid="voice-bar-screenshare">
             <Screen sharing={isScreenSharing} />
           </SmallBtn>
@@ -199,6 +237,9 @@ function CameraOn() {
 }
 function CameraOff() {
   return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M21 21H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3m3-3h6l2 3h4a2 2 0 0 1 2 2v9.34"/></svg>;
+}
+function SwitchCamera() {
+  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 4h-3.17L15 2H9L7.17 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/><path d="M9 13a3 3 0 0 0 5.5 1.66"/><path d="M15 11a3 3 0 0 0-5.5-1.66"/><polyline points="14.5 8.5 15 11 12.5 11.5"/><polyline points="9.5 15.5 9 13 11.5 12.5"/></svg>;
 }
 function Screen({ sharing }: { sharing: boolean }) {
   return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>{sharing && <path d="M8 10l3 3 5-6"/>}</svg>;
