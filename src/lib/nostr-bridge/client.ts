@@ -573,6 +573,25 @@ class BridgeImpl implements NostrBridge {
   reactionsByGroup = new StateStore<Record<string, Record<string, JsReaction[]>>>({});
   childrenByParent = new StateStore<Record<string, string[]>>({});
   dmsByPeer = new StateStore<Record<string, JsDirectMessage[]>>({});
+  /**
+   * Original send arguments for in-flight or just-failed group-message
+   * publishes, keyed by `clientTag`. Survives the publish itself so a retry
+   * can replay the exact same content / replyTo / created_at — replaying
+   * with a fresh `created_at` would let two NIP-29 events with different ids
+   * both reach the relay, leaving a duplicate behind.
+   */
+  private pendingGroupSends = new Map<string, {
+    groupId: string;
+    content: string;
+    replyTo: { id: string; pubkey: string } | null;
+    createdAt: number;
+  }>();
+  /** Same as {@link pendingGroupSends} for NIP-04 DMs. */
+  private pendingDMSends = new Map<string, {
+    recipientPubkey: string;
+    content: string;
+    createdAt: number;
+  }>();
   adminsByGroup = new StateStore<Record<string, string[]>>({});
   membersByGroup = new StateStore<Record<string, string[]>>({});
   /**
@@ -1194,6 +1213,8 @@ class BridgeImpl implements NostrBridge {
     this.groups.set([]);
     this.groupMetadataEose.set(false);
     this.messagesByGroup.set({});
+    this.pendingGroupSends.clear();
+    this.pendingDMSends.clear();
     this.adminsByGroup.set({});
     this.membersByGroup.set({});
     this.membershipReadyByGroup.set({});
@@ -1360,6 +1381,10 @@ class BridgeImpl implements NostrBridge {
     this.persist();
     this.groups.set([]);
     this.messagesByGroup.set({});
+    this.pendingGroupSends.clear();
+    // `dmsByPeer` is not reset on a relay switch (DMs follow the user across
+    // relays via NIP-65), so `pendingDMSends` is left intact too — a DM in
+    // flight when the user pivots to a new relay can still finish there.
     // Reset per-group caches: they're scoped to one relay.
     this.messageSubscribedGroups.clear();
     this.reactionSubscribedGroups.clear();
@@ -1573,18 +1598,24 @@ class BridgeImpl implements NostrBridge {
   // -- Group operations --------------------------------------------------
 
   async sendMessage(groupId: string, content: string, replyTo?: { id: string; pubkey: string } | null): Promise<void> {
-    const tags: string[][] = [['h', groupId]];
-    if (replyTo) {
-      tags.push(['e', replyTo.id, '', 'reply']);
-      tags.push(['p', replyTo.pubkey]);
-    }
-    const event = await this.signAndPublish({
-      kind: KIND_GROUP_MESSAGE,
+    if (!this.session) throw new Error('Not logged in');
+    const clientTag = generateClientTag();
+    const createdAt = Math.floor(Date.now() / 1000);
+    const replyToCopy = replyTo ? { id: replyTo.id, pubkey: replyTo.pubkey } : null;
+    const pendingMsg: JsMessage = {
+      id: `pending:${clientTag}`,
+      pubkey: this.session.pubKeyHex,
       content,
-      tags,
-      created_at: Math.floor(Date.now() / 1000),
-    });
-    this.ingestMessage(groupId, event);
+      createdAt,
+      kind: KIND_GROUP_MESSAGE,
+      replyToId: replyToCopy?.id ?? null,
+      mentions: [],
+      pending: true,
+      clientTag,
+    };
+    this.pendingGroupSends.set(clientTag, { groupId, content, replyTo: replyToCopy, createdAt });
+    this.upsertPendingGroupMessage(groupId, pendingMsg);
+    void this.publishGroupMessage(groupId, content, replyToCopy, clientTag, createdAt);
   }
 
   async sendReaction(targetEventId: string, targetPubkey: string, emoji: string, groupId: string): Promise<void> {
@@ -1603,22 +1634,276 @@ class BridgeImpl implements NostrBridge {
 
   async sendDirectMessage(recipientPubkey: string, content: string): Promise<void> {
     if (!this.session) throw new Error('Not logged in');
-    const cipher = await this.encryptNip04(recipientPubkey, content);
-    // NIP-04 DMs are delivered to the recipient's NIP-65 read relays; without
-    // this, sends to anyone whose read set doesn't include `this.relays` will
-    // never reach them. Failure to look up just falls back to `this.relays`.
-    const extraRelays = await this.fetchRecipientReadRelays(recipientPubkey).catch(() => [] as string[]);
-    const event = await this.signAndPublish(
-      {
-        kind: KIND_DIRECT_MESSAGE,
-        content: cipher,
-        tags: [['p', recipientPubkey]],
-        created_at: Math.floor(Date.now() / 1000),
-      },
-      extraRelays,
-    );
-    // Optimistic local ingest — also avoids depending on relay echo of own DMs.
-    this.ingestDM(event, content, /*outgoing*/ true, recipientPubkey);
+    const clientTag = generateClientTag();
+    const createdAt = Math.floor(Date.now() / 1000);
+    const pendingMsg: JsDirectMessage = {
+      id: `pending:${clientTag}`,
+      counterparty: recipientPubkey,
+      outgoing: true,
+      content,
+      createdAt,
+      pending: true,
+      clientTag,
+    };
+    this.pendingDMSends.set(clientTag, { recipientPubkey, content, createdAt });
+    this.upsertPendingDM(recipientPubkey, pendingMsg);
+    void this.publishDirectMessage(recipientPubkey, content, clientTag, createdAt);
+  }
+
+  private async publishDirectMessage(
+    recipientPubkey: string,
+    content: string,
+    clientTag: string,
+    createdAt: number,
+  ): Promise<void> {
+    try {
+      const cipher = await this.encryptNip04(recipientPubkey, content);
+      // NIP-04 DMs are delivered to the recipient's NIP-65 read relays; without
+      // this, sends to anyone whose read set doesn't include `this.relays` will
+      // never reach them. Failure to look up just falls back to `this.relays`.
+      const extraRelays = await this.fetchRecipientReadRelays(recipientPubkey).catch(() => [] as string[]);
+      const event = await this.signAndPublish(
+        {
+          kind: KIND_DIRECT_MESSAGE,
+          content: cipher,
+          tags: [['p', recipientPubkey]],
+          created_at: createdAt,
+        },
+        extraRelays,
+      );
+      this.replacePendingDM(recipientPubkey, clientTag, event, content);
+    } catch (err) {
+      this.markDMFailed(recipientPubkey, clientTag, err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  private async publishGroupMessage(
+    groupId: string,
+    content: string,
+    replyTo: { id: string; pubkey: string } | null,
+    clientTag: string,
+    createdAt: number,
+  ): Promise<void> {
+    const tags: string[][] = [['h', groupId]];
+    if (replyTo) {
+      tags.push(['e', replyTo.id, '', 'reply']);
+      tags.push(['p', replyTo.pubkey]);
+    }
+    try {
+      const event = await this.signAndPublish({
+        kind: KIND_GROUP_MESSAGE,
+        content,
+        tags,
+        created_at: createdAt,
+      });
+      this.replacePendingGroupMessage(groupId, clientTag, event);
+    } catch (err) {
+      this.markGroupMessageFailed(groupId, clientTag, err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  async retryMessage(groupId: string, clientTag: string): Promise<void> {
+    const args = this.pendingGroupSends.get(clientTag);
+    if (!args) return;
+    // Only retry from a failed state — prevents double-publishing if the
+    // user double-taps Retry while a previous attempt is still in flight.
+    const list = this.messagesByGroup.get()[groupId] ?? [];
+    const msg = list.find((m) => m.clientTag === clientTag);
+    if (!msg || !msg.failed) return;
+    this.flipPendingGroupMessageToPending(groupId, clientTag);
+    void this.publishGroupMessage(args.groupId, args.content, args.replyTo, clientTag, args.createdAt);
+  }
+
+  async retryDirectMessage(counterparty: string, clientTag: string): Promise<void> {
+    const args = this.pendingDMSends.get(clientTag);
+    if (!args) return;
+    const list = this.dmsByPeer.get()[counterparty] ?? [];
+    const msg = list.find((m) => m.clientTag === clientTag);
+    if (!msg || !msg.failed) return;
+    this.flipPendingDMToPending(counterparty, clientTag);
+    void this.publishDirectMessage(args.recipientPubkey, args.content, clientTag, args.createdAt);
+  }
+
+  cancelPendingMessage(groupId: string, clientTag: string): void {
+    this.pendingGroupSends.delete(clientTag);
+    this.messagesByGroup.update((prev) => {
+      const existing = prev[groupId];
+      if (!existing) return prev;
+      const next = existing.filter((m) => m.clientTag !== clientTag);
+      if (next.length === existing.length) return prev;
+      return { ...prev, [groupId]: next };
+    });
+  }
+
+  cancelPendingDirectMessage(counterparty: string, clientTag: string): void {
+    this.pendingDMSends.delete(clientTag);
+    this.dmsByPeer.update((prev) => {
+      const existing = prev[counterparty];
+      if (!existing) return prev;
+      const next = existing.filter((m) => m.clientTag !== clientTag);
+      if (next.length === existing.length) return prev;
+      return { ...prev, [counterparty]: next };
+    });
+  }
+
+  private upsertPendingGroupMessage(groupId: string, msg: JsMessage): void {
+    this.messagesByGroup.update((prev) => {
+      const existing = prev[groupId] ?? [];
+      const next = [...existing, msg].sort((a, b) => a.createdAt - b.createdAt);
+      return { ...prev, [groupId]: next };
+    });
+  }
+
+  private replacePendingGroupMessage(groupId: string, clientTag: string, ev: NostrEvent): void {
+    // Once the relay returns the real event, drop the args — a retry from
+    // here would re-publish a finalized message.
+    this.pendingGroupSends.delete(clientTag);
+    const replyTo = ev.tags.find((t) => t[0] === 'e' && t[3] === 'reply')?.[1] ?? null;
+    const mentions = extractMentionPubkeysFromMessage(ev.content, ev.tags);
+    const realMsg: JsMessage = {
+      id: ev.id,
+      pubkey: ev.pubkey,
+      content: ev.content,
+      createdAt: ev.created_at,
+      kind: ev.kind,
+      replyToId: replyTo,
+      mentions,
+    };
+    this.messagesByGroup.update((prev) => {
+      const existing = prev[groupId] ?? [];
+      const realPresent = existing.some((m) => m.id === realMsg.id);
+      // The relay echo may have raced through ingestMessage first — in that
+      // case the placeholder is already gone (ingestMessage replaces it by
+      // tuple match) so this update is a no-op.
+      if (realPresent) {
+        const filtered = existing.filter((m) => m.clientTag !== clientTag);
+        if (filtered.length === existing.length) return prev;
+        return { ...prev, [groupId]: filtered };
+      }
+      let replaced = false;
+      const swapped = existing.map((m) => {
+        if (m.clientTag === clientTag) {
+          replaced = true;
+          return realMsg;
+        }
+        return m;
+      });
+      if (!replaced) {
+        // Placeholder was canceled before the publish ack landed — append
+        // the real event so the user sees the message they sent.
+        return { ...prev, [groupId]: [...existing, realMsg].sort((a, b) => a.createdAt - b.createdAt) };
+      }
+      swapped.sort((a, b) => a.createdAt - b.createdAt);
+      return { ...prev, [groupId]: swapped };
+    });
+    this.ensureUserMetadata(ev.pubkey);
+  }
+
+  private markGroupMessageFailed(groupId: string, clientTag: string, _err: string): void {
+    this.messagesByGroup.update((prev) => {
+      const existing = prev[groupId];
+      if (!existing) return prev;
+      let touched = false;
+      const next = existing.map((m) => {
+        if (m.clientTag !== clientTag) return m;
+        touched = true;
+        return { ...m, pending: false, failed: true };
+      });
+      if (!touched) return prev;
+      return { ...prev, [groupId]: next };
+    });
+  }
+
+  private flipPendingGroupMessageToPending(groupId: string, clientTag: string): void {
+    this.messagesByGroup.update((prev) => {
+      const existing = prev[groupId];
+      if (!existing) return prev;
+      let touched = false;
+      const next = existing.map((m) => {
+        if (m.clientTag !== clientTag) return m;
+        touched = true;
+        return { ...m, pending: true, failed: false };
+      });
+      if (!touched) return prev;
+      return { ...prev, [groupId]: next };
+    });
+  }
+
+  private upsertPendingDM(counterparty: string, msg: JsDirectMessage): void {
+    this.dmsByPeer.update((prev) => {
+      const existing = prev[counterparty] ?? [];
+      const next = [...existing, msg].sort((a, b) => a.createdAt - b.createdAt);
+      return { ...prev, [counterparty]: next };
+    });
+  }
+
+  private replacePendingDM(
+    counterparty: string,
+    clientTag: string,
+    ev: NostrEvent,
+    plaintext: string,
+  ): void {
+    this.pendingDMSends.delete(clientTag);
+    const realMsg: JsDirectMessage = {
+      id: ev.id,
+      counterparty,
+      outgoing: true,
+      content: plaintext,
+      createdAt: ev.created_at,
+    };
+    this.dmsByPeer.update((prev) => {
+      const existing = prev[counterparty] ?? [];
+      const realPresent = existing.some((m) => m.id === realMsg.id);
+      if (realPresent) {
+        const filtered = existing.filter((m) => m.clientTag !== clientTag);
+        if (filtered.length === existing.length) return prev;
+        return { ...prev, [counterparty]: filtered };
+      }
+      let replaced = false;
+      const swapped = existing.map((m) => {
+        if (m.clientTag === clientTag) {
+          replaced = true;
+          return realMsg;
+        }
+        return m;
+      });
+      if (!replaced) {
+        return { ...prev, [counterparty]: [...existing, realMsg].sort((a, b) => a.createdAt - b.createdAt) };
+      }
+      swapped.sort((a, b) => a.createdAt - b.createdAt);
+      return { ...prev, [counterparty]: swapped };
+    });
+    this.ensureUserMetadata(counterparty);
+  }
+
+  private markDMFailed(counterparty: string, clientTag: string, _err: string): void {
+    this.dmsByPeer.update((prev) => {
+      const existing = prev[counterparty];
+      if (!existing) return prev;
+      let touched = false;
+      const next = existing.map((m) => {
+        if (m.clientTag !== clientTag) return m;
+        touched = true;
+        return { ...m, pending: false, failed: true };
+      });
+      if (!touched) return prev;
+      return { ...prev, [counterparty]: next };
+    });
+  }
+
+  private flipPendingDMToPending(counterparty: string, clientTag: string): void {
+    this.dmsByPeer.update((prev) => {
+      const existing = prev[counterparty];
+      if (!existing) return prev;
+      let touched = false;
+      const next = existing.map((m) => {
+        if (m.clientTag !== clientTag) return m;
+        touched = true;
+        return { ...m, pending: true, failed: false };
+      });
+      if (!touched) return prev;
+      return { ...prev, [counterparty]: next };
+    });
   }
 
   async joinGroup(groupId: string): Promise<void> {
@@ -2767,13 +3052,34 @@ class BridgeImpl implements NostrBridge {
       mentions,
     };
     let isNew = false;
+    let replacedClientTag: string | null = null;
     this.messagesByGroup.update((prev) => {
       const existing = prev[groupId] ?? [];
       if (existing.some((m) => m.id === msg.id)) return prev;
+      // Relay echo of an optimistic placeholder we sent — replace in place
+      // so the bubble's React key (msg.id) only changes once. Match on the
+      // tuple we control end-to-end (pubkey, content, created_at) since the
+      // pre-sign placeholder doesn't have an id yet.
+      const pendingIdx = existing.findIndex(
+        (m) =>
+          m.pending === true
+          && m.pubkey === msg.pubkey
+          && m.content === msg.content
+          && m.createdAt === msg.createdAt,
+      );
+      if (pendingIdx >= 0) {
+        replacedClientTag = existing[pendingIdx].clientTag ?? null;
+        const next = [...existing];
+        next[pendingIdx] = msg;
+        next.sort((a, b) => a.createdAt - b.createdAt);
+        isNew = true;
+        return { ...prev, [groupId]: next };
+      }
       isNew = true;
       const next = [...existing, msg].sort((a, b) => a.createdAt - b.createdAt);
       return { ...prev, [groupId]: next };
     });
+    if (replacedClientTag) this.pendingGroupSends.delete(replacedClientTag);
     // Lazy metadata fetch for any author we haven't seen yet.
     this.ensureUserMetadata(ev.pubkey);
     // Inbox card for @-mentions. Unread badges are derived in the UI from
@@ -2857,15 +3163,37 @@ class BridgeImpl implements NostrBridge {
       createdAt: ev.created_at,
     };
     let isNew = false;
+    let replacedClientTag: string | null = null;
     this.dmsByPeer.update((all) => {
       const existing = all[counterparty] ?? [];
       if (existing.some((m) => m.id === dm.id)) return all;
+      if (outgoing) {
+        // See `ingestMessage` for the rationale — replace our own optimistic
+        // placeholder in place rather than appending the relay-echoed copy
+        // alongside it.
+        const pendingIdx = existing.findIndex(
+          (m) =>
+            m.pending === true
+            && m.outgoing === true
+            && m.content === plaintext
+            && m.createdAt === dm.createdAt,
+        );
+        if (pendingIdx >= 0) {
+          replacedClientTag = existing[pendingIdx].clientTag ?? null;
+          const next = [...existing];
+          next[pendingIdx] = dm;
+          next.sort((a, b) => a.createdAt - b.createdAt);
+          isNew = true;
+          return { ...all, [counterparty]: next };
+        }
+      }
       isNew = true;
       return {
         ...all,
         [counterparty]: [...existing, dm].sort((a, b) => a.createdAt - b.createdAt),
       };
     });
+    if (replacedClientTag) this.pendingDMSends.delete(replacedClientTag);
     this.ensureUserMetadata(counterparty);
     // Inbox card for incoming DMs the user isn't actively watching. Unread
     // badges are derived from the read-state cursor + bridge `dmsByPeer`, so
@@ -3270,6 +3598,23 @@ function validateRelayUrl(url: string): void {
 }
 
 function generateGroupId(): string {
+  const bytes = new Uint8Array(8);
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    crypto.getRandomValues(bytes);
+  } else {
+    for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
+  }
+  return Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * Opaque client-side tag for an optimistic message placeholder. Lives in
+ * the message's `clientTag` field and is mirrored as `pending:<tag>` in the
+ * `id` field while the publish is in flight. 16 hex chars = 64 bits of
+ * entropy — more than enough to avoid collisions across the few hundred
+ * placeholders a session might accumulate.
+ */
+function generateClientTag(): string {
   const bytes = new Uint8Array(8);
   if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
     crypto.getRandomValues(bytes);

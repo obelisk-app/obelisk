@@ -49,6 +49,22 @@ export interface JsMessage {
    * Empty array when there are none.
    */
   readonly mentions: ReadonlyArray<string>;
+  /**
+   * Optimistic-send fields. Present only on placeholders the bridge inserted
+   * for an in-flight or just-failed publish from this client. Once the relay
+   * echo ingest replaces the placeholder, all three are absent.
+   *
+   * - `pending: true` while {@link NostrBridge.sendMessage} is awaiting the
+   *   relay ack — render the bubble grayed out with a spinner.
+   * - `failed: true` after the publish rejected — keep the bubble visible and
+   *   surface a retry button bound to {@link NostrBridge.retryMessage}.
+   * - `clientTag` is the opaque id used by the bridge to correlate retries
+   *   and cancellations (also embedded as the message `id` in the form
+   *   `pending:<tag>` so React key props stay stable across the lifecycle).
+   */
+  readonly pending?: boolean;
+  readonly failed?: boolean;
+  readonly clientTag?: string;
 }
 
 export interface JsUserMetadata {
@@ -79,6 +95,14 @@ export interface JsDirectMessage {
   readonly outgoing: boolean;
   readonly content: string;
   readonly createdAt: number;
+  /**
+   * Optimistic-send fields, set only on outgoing placeholders the bridge
+   * inserted for an in-flight or failed publish. See {@link JsMessage} for
+   * the full contract; same semantics here.
+   */
+  readonly pending?: boolean;
+  readonly failed?: boolean;
+  readonly clientTag?: string;
 }
 
 export type Unsubscribe = () => void;
@@ -257,9 +281,40 @@ export interface NostrBridge {
     sig: string;
   }>;
 
+  /**
+   * Insert an optimistic kind 9 placeholder into `messagesByGroup` and kick
+   * off the relay publish in the background. Resolves as soon as the
+   * placeholder is in the store — the publish completes (success or failure)
+   * asynchronously and updates the placeholder via `pending`/`failed` flags
+   * (see {@link JsMessage}). Throws synchronously only when there is no
+   * active session.
+   */
   sendMessage(groupId: string, content: string, replyTo?: { id: string; pubkey: string } | null): Promise<void>;
   sendReaction(targetEventId: string, targetPubkey: string, emoji: string, groupId: string): Promise<void>;
+  /**
+   * Same optimistic contract as {@link sendMessage}, for NIP-04 DMs. The
+   * placeholder is added under the recipient pubkey in `dmsByPeer`; the
+   * NIP-04 encrypt + NIP-65 read-relay lookup happen in the background
+   * publish task.
+   */
   sendDirectMessage(recipientPubkey: string, content: string): Promise<void>;
+  /**
+   * Re-publish a previously-failed group message. `clientTag` is the same
+   * opaque tag exposed on the failed {@link JsMessage}. Flips the
+   * placeholder back to `pending` and resolves once the new publish task is
+   * scheduled.
+   */
+  retryMessage(groupId: string, clientTag: string): Promise<void>;
+  /** Same as {@link retryMessage} for failed DM placeholders. */
+  retryDirectMessage(counterparty: string, clientTag: string): Promise<void>;
+  /**
+   * Drop a pending or failed group message placeholder from the store.
+   * Use this for the user-initiated dismiss action on a failed bubble.
+   * No-op if the tag is unknown.
+   */
+  cancelPendingMessage(groupId: string, clientTag: string): void;
+  /** Same as {@link cancelPendingMessage} for DM placeholders. */
+  cancelPendingDirectMessage(counterparty: string, clientTag: string): void;
   joinGroup(groupId: string): Promise<void>;
   leaveGroup(groupId: string): Promise<void>;
   /**

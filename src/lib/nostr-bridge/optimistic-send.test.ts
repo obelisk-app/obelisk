@@ -1,0 +1,349 @@
+/**
+ * Optimistic-send contract tests for the bridge.
+ *
+ * The bridge is supposed to insert a `pending: true` placeholder in
+ * `messagesByGroup` / `dmsByPeer` synchronously, then either replace it with
+ * the real event on publish-ack or flip it to `failed: true` on rejection.
+ * Retries should re-publish the same payload and round-trip through the same
+ * placeholder slot.
+ *
+ * Mirrors the FakePool pattern from `bridge.test.ts` so a publish round-trip
+ * is observable without touching the network. One difference: we hand a
+ * `publish` function that can either resolve OK or reject, controlled per
+ * test, so the failure / retry paths can be exercised deterministically.
+ */
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { generateSecretKey, getPublicKey, nip19, type Event as NostrEvent } from 'nostr-tools';
+
+type PublishOutcome = 'ok' | { reject: string };
+
+const fake = vi.hoisted(() => {
+  const state = {
+    published: [] as NostrEvent[],
+    subscriptions: [] as Array<{
+      filter: Record<string, unknown>;
+      sink: (ev: NostrEvent) => void;
+    }>,
+    /**
+     * Queue of outcomes for the next N publishes, oldest first. When the
+     * queue empties, defaults to 'ok'. Tests `enqueue('reject')` before
+     * triggering `sendMessage` to deterministically fail the publish.
+     */
+    nextOutcomes: [] as PublishOutcome[],
+  };
+
+  function matches(f: Record<string, unknown>, ev: NostrEvent): boolean {
+    if (Array.isArray(f.kinds) && !(f.kinds as number[]).includes(ev.kind)) return false;
+    if (Array.isArray(f.authors) && !(f.authors as string[]).includes(ev.pubkey)) return false;
+    for (const k of Object.keys(f)) {
+      if (!k.startsWith('#')) continue;
+      const tag = k.slice(1);
+      const wanted = f[k] as string[];
+      const present = ev.tags.some((t) => t[0] === tag && wanted.includes(t[1]));
+      if (!present) return false;
+    }
+    return true;
+  }
+
+  class FakePool {
+    subscribe(
+      _relays: string[],
+      filter: Record<string, unknown>,
+      opts: {
+        onevent: (ev: NostrEvent) => void;
+        oneose?: () => void;
+        onclose?: (reasons: string[]) => void;
+      },
+    ) {
+      const sub = { filter, sink: opts.onevent };
+      state.subscriptions.push(sub);
+      for (const ev of state.published) if (matches(filter, ev)) opts.onevent(ev);
+      queueMicrotask(() => opts.oneose?.());
+      return {
+        close: () => { state.subscriptions = state.subscriptions.filter((s) => s !== sub); },
+      };
+    }
+    publish(_relays: string[], event: NostrEvent): Promise<string>[] {
+      const outcome = state.nextOutcomes.shift() ?? 'ok';
+      if (outcome === 'ok') {
+        state.published.push(event);
+        queueMicrotask(() => {
+          for (const sub of state.subscriptions) if (matches(sub.filter, event)) sub.sink(event);
+        });
+        return [Promise.resolve('ok')];
+      }
+      return [Promise.reject(new Error(outcome.reject))];
+    }
+    close(_relays: string[]): void {
+      state.subscriptions = [];
+    }
+    async ensureRelay(_url: string): Promise<{ connected: boolean }> {
+      return { connected: true };
+    }
+  }
+
+  return { state, FakePool };
+});
+
+vi.mock('nostr-tools', async (orig) => {
+  const actual = (await orig()) as object;
+  return { ...actual, SimplePool: fake.FakePool };
+});
+
+function bytesToHex(b: Uint8Array): string {
+  return Array.from(b).map((x) => x.toString(16).padStart(2, '0')).join('');
+}
+
+function makeKeypair() {
+  const sk = generateSecretKey();
+  const pk = getPublicKey(sk);
+  const nsec = nip19.nsecEncode(sk);
+  return { skHex: bytesToHex(sk), pkHex: pk, nsec };
+}
+
+async function flush(times = 6) {
+  for (let i = 0; i < times; i++) await Promise.resolve();
+}
+
+beforeEach(() => {
+  fake.state.published = [];
+  fake.state.subscriptions = [];
+  fake.state.nextOutcomes = [];
+  vi.resetModules();
+  if (typeof window !== 'undefined') window.localStorage.clear();
+});
+
+afterEach(() => {
+  fake.state.published = [];
+  fake.state.subscriptions = [];
+  fake.state.nextOutcomes = [];
+});
+
+describe('optimistic group messages', () => {
+  it('inserts a pending placeholder synchronously, then replaces it with the real event on publish-ack', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+
+    const groupId = 'optimistic-group-1';
+    const snapshots: { id: string; content: string; pending?: boolean; failed?: boolean; clientTag?: string }[][] = [];
+    bridge.subscribeMessages(groupId, (msgs) =>
+      snapshots.push(msgs.map((m) => ({
+        id: m.id,
+        content: m.content,
+        pending: m.pending,
+        failed: m.failed,
+        clientTag: m.clientTag,
+      }))),
+    );
+
+    // Resolves immediately after the placeholder lands in the store; the
+    // publish itself runs in the background.
+    await bridge.sendMessage(groupId, 'hello world');
+
+    // First non-empty snapshot must show the pending placeholder.
+    const pendingSnap = snapshots.find((s) => s.length > 0);
+    expect(pendingSnap).toBeDefined();
+    expect(pendingSnap![0].pending).toBe(true);
+    expect(pendingSnap![0].content).toBe('hello world');
+    expect(pendingSnap![0].id.startsWith('pending:')).toBe(true);
+    expect(pendingSnap![0].clientTag).toBeDefined();
+
+    // After the publish round-trips, the placeholder is replaced in place.
+    await flush();
+    const lastSnap = snapshots.at(-1)!;
+    expect(lastSnap).toHaveLength(1);
+    expect(lastSnap[0].pending).toBeFalsy();
+    expect(lastSnap[0].failed).toBeFalsy();
+    expect(lastSnap[0].id.startsWith('pending:')).toBe(false);
+    expect(lastSnap[0].content).toBe('hello world');
+    // Exactly one publish (no duplicate from the placeholder + relay echo).
+    expect(fake.state.published.filter((e) => e.kind === 9)).toHaveLength(1);
+  });
+
+  it('flips the placeholder to failed when the publish rejects, then retry republishes the same content', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+
+    const groupId = 'optimistic-group-2';
+    type Snap = { id: string; content: string; pending?: boolean; failed?: boolean; clientTag?: string };
+    const snaps: Snap[][] = [];
+    let last: Snap[] = [];
+    bridge.subscribeMessages(groupId, (msgs) => {
+      const next = msgs.map((m) => ({
+        id: m.id,
+        content: m.content,
+        pending: m.pending,
+        failed: m.failed,
+        clientTag: m.clientTag,
+      }));
+      snaps.push(next);
+      last = next;
+    });
+
+    fake.state.nextOutcomes.push({ reject: 'restricted: not whitelisted' });
+    await bridge.sendMessage(groupId, 'will fail');
+    await flush();
+
+    expect(last).toHaveLength(1);
+    expect(last[0].failed).toBe(true);
+    expect(last[0].pending).toBeFalsy();
+    expect(last[0].content).toBe('will fail');
+    const tag = last[0].clientTag;
+    expect(tag).toBeDefined();
+    // Failed publish is NOT in the published list (FakePool rejects without
+    // pushing).
+    expect(fake.state.published.filter((e) => e.kind === 9)).toHaveLength(0);
+
+    // Retry — this time let it succeed. The "back to pending" state is
+    // observable in the snapshot history (not necessarily the final
+    // `last`), because the publish ack microtask fires before the test's
+    // own `await` continuation runs.
+    const snapsBefore = snaps.length;
+    await bridge.retryMessage(groupId, tag!);
+    await flush();
+
+    const snapsAfter = snaps.slice(snapsBefore);
+    expect(snapsAfter[0]?.[0]?.pending).toBe(true);
+    expect(snapsAfter[0]?.[0]?.failed).toBeFalsy();
+
+    expect(last).toHaveLength(1);
+    expect(last[0].pending).toBeFalsy();
+    expect(last[0].failed).toBeFalsy();
+    expect(last[0].id.startsWith('pending:')).toBe(false);
+    expect(last[0].content).toBe('will fail');
+    expect(fake.state.published.filter((e) => e.kind === 9)).toHaveLength(1);
+  });
+
+  it('cancelPendingMessage drops a failed placeholder from the store', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+
+    const groupId = 'optimistic-group-3';
+    let last: ReadonlyArray<{ failed?: boolean; clientTag?: string }> = [];
+    bridge.subscribeMessages(groupId, (msgs) => {
+      last = msgs.map((m) => ({ failed: m.failed, clientTag: m.clientTag }));
+    });
+
+    fake.state.nextOutcomes.push({ reject: 'nope' });
+    await bridge.sendMessage(groupId, 'goodbye');
+    await flush();
+
+    expect(last).toHaveLength(1);
+    expect(last[0].failed).toBe(true);
+    const tag = last[0].clientTag!;
+
+    bridge.cancelPendingMessage(groupId, tag);
+    expect(last).toHaveLength(0);
+  });
+
+  it('does not duplicate the message when the relay echo arrives between insert and publish-ack', async () => {
+    // The race we worry about: signAndPublish queues a microtask that
+    // delivers the event to subscribers (ingestMessage) BEFORE the
+    // signAndPublish promise resolves and replacePendingGroupMessage runs.
+    // The fake reproduces this exactly — it queues sub.sink(event) before
+    // resolving the publish promise. The test asserts no duplicate and the
+    // bubble's id transitions cleanly from `pending:<tag>` to the real id.
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+
+    const groupId = 'optimistic-group-4';
+    let last: ReadonlyArray<{ id: string; pending?: boolean }> = [];
+    bridge.subscribeMessages(groupId, (msgs) => {
+      last = msgs.map((m) => ({ id: m.id, pending: m.pending }));
+    });
+
+    await bridge.sendMessage(groupId, 'race me');
+    await flush();
+    expect(last).toHaveLength(1);
+    expect(last[0].pending).toBeFalsy();
+    expect(last[0].id.startsWith('pending:')).toBe(false);
+  });
+});
+
+describe('optimistic direct messages', () => {
+  it('inserts a pending DM placeholder, then replaces it on publish-ack', async () => {
+    const { getBridge } = await import('./client');
+    const me = makeKeypair();
+    const peer = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(me.skHex, me.pkHex);
+
+    let last: Readonly<Record<string, ReadonlyArray<{ id: string; outgoing: boolean; pending?: boolean; failed?: boolean; content: string; clientTag?: string }>>> = {};
+    bridge.subscribeDirectMessages((byPeer) => {
+      const out: Record<string, ReadonlyArray<{ id: string; outgoing: boolean; pending?: boolean; failed?: boolean; content: string; clientTag?: string }>> = {};
+      for (const [k, v] of Object.entries(byPeer)) {
+        out[k] = v.map((m) => ({
+          id: m.id,
+          outgoing: m.outgoing,
+          pending: m.pending,
+          failed: m.failed,
+          content: m.content,
+          clientTag: m.clientTag,
+        }));
+      }
+      last = out;
+    });
+
+    await bridge.sendDirectMessage(peer.pkHex, 'hi peer');
+
+    // Pending placeholder shows up immediately under the peer's bucket.
+    expect(last[peer.pkHex]?.[0]?.pending).toBe(true);
+    expect(last[peer.pkHex]?.[0]?.content).toBe('hi peer');
+    expect(last[peer.pkHex]?.[0]?.id.startsWith('pending:')).toBe(true);
+
+    await flush();
+    const final = last[peer.pkHex] ?? [];
+    expect(final).toHaveLength(1);
+    expect(final[0].pending).toBeFalsy();
+    expect(final[0].failed).toBeFalsy();
+    expect(final[0].content).toBe('hi peer');
+    expect(final[0].id.startsWith('pending:')).toBe(false);
+    // One DM event published, encrypted (not plaintext on the wire).
+    const dms = fake.state.published.filter((e) => e.kind === 4);
+    expect(dms).toHaveLength(1);
+    expect(dms[0].content).not.toContain('hi peer');
+  });
+
+  it('marks a DM as failed on publish reject and retryDirectMessage republishes', async () => {
+    const { getBridge } = await import('./client');
+    const me = makeKeypair();
+    const peer = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(me.skHex, me.pkHex);
+
+    let last: Readonly<Record<string, ReadonlyArray<{ pending?: boolean; failed?: boolean; clientTag?: string }>>> = {};
+    bridge.subscribeDirectMessages((byPeer) => {
+      const out: Record<string, ReadonlyArray<{ pending?: boolean; failed?: boolean; clientTag?: string }>> = {};
+      for (const [k, v] of Object.entries(byPeer)) {
+        out[k] = v.map((m) => ({ pending: m.pending, failed: m.failed, clientTag: m.clientTag }));
+      }
+      last = out;
+    });
+
+    fake.state.nextOutcomes.push({ reject: 'auth-required' });
+    await bridge.sendDirectMessage(peer.pkHex, 'will fail');
+    await flush();
+
+    const failedList = last[peer.pkHex] ?? [];
+    expect(failedList).toHaveLength(1);
+    expect(failedList[0].failed).toBe(true);
+    const tag = failedList[0].clientTag!;
+    expect(fake.state.published.filter((e) => e.kind === 4)).toHaveLength(0);
+
+    await bridge.retryDirectMessage(peer.pkHex, tag);
+    await flush();
+    const retriedList = last[peer.pkHex] ?? [];
+    expect(retriedList).toHaveLength(1);
+    expect(retriedList[0].pending).toBeFalsy();
+    expect(retriedList[0].failed).toBeFalsy();
+    expect(fake.state.published.filter((e) => e.kind === 4)).toHaveLength(1);
+  });
+});

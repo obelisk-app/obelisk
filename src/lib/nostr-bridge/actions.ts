@@ -32,6 +32,14 @@ export const nostrActions = {
     (await getBridge()).sendReaction(targetEventId, targetPubkey, emoji, groupId),
   sendDirectMessage: async (recipientPubkey: string, content: string) =>
     (await getBridge()).sendDirectMessage(recipientPubkey, content),
+  retryMessage: async (groupId: string, clientTag: string) =>
+    (await getBridge()).retryMessage(groupId, clientTag),
+  retryDirectMessage: async (counterparty: string, clientTag: string) =>
+    (await getBridge()).retryDirectMessage(counterparty, clientTag),
+  cancelPendingMessage: async (groupId: string, clientTag: string) =>
+    (await getBridge()).cancelPendingMessage(groupId, clientTag),
+  cancelPendingDirectMessage: async (counterparty: string, clientTag: string) =>
+    (await getBridge()).cancelPendingDirectMessage(counterparty, clientTag),
   joinGroup: async (groupId: string) => (await getBridge()).joinGroup(groupId),
   leaveGroup: async (groupId: string) => (await getBridge()).leaveGroup(groupId),
   createGroup: async (opts: Parameters<Awaited<ReturnType<typeof getBridge>>['createGroup']>[0]) =>

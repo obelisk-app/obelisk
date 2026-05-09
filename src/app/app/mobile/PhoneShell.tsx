@@ -2551,7 +2551,6 @@ function ChannelScreen({
   const channelAdmins = useAdmins(groupId);
   const isChannelAdmin = !!myPubkey && channelAdmins.includes(myPubkey);
   const [draft, setDraft] = useState('');
-  const [sending, setSending] = useState(false);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -2692,23 +2691,17 @@ function ChannelScreen({
     return () => el.removeEventListener('scroll', onScroll);
   }, [loadEarlier, loadingEarlier, reachedStart]);
 
-  const send = async () => {
+  const send = () => {
     const text = draft.trim();
-    if (!text || sending) return;
-    setSending(true);
-    try {
-      await nostrActions.sendMessage(
-        groupId,
-        text,
-        replyingTo ? { id: replyingTo.id, pubkey: replyingTo.pubkey } : null,
-      );
-      setDraft('');
-      setReplyingTo(null);
-    } catch (err) {
-      console.warn('[mobile] sendMessage failed', err);
-    } finally {
-      setSending(false);
-    }
+    if (!text) return;
+    const replyToCopy = replyingTo ? { id: replyingTo.id, pubkey: replyingTo.pubkey } : null;
+    // Optimistic — placeholder appears in-list with a spinner; failures
+    // surface a retry button on the bubble itself, not in the composer.
+    setDraft('');
+    setReplyingTo(null);
+    nostrActions.sendMessage(groupId, text, replyToCopy).catch((err) => {
+      console.warn('[mobile] sendMessage scheduling failed', err);
+    });
   };
 
   // Group consecutive messages and pre-compute day dividers
@@ -2873,13 +2866,13 @@ function ChannelScreen({
               }
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                void send();
+                send();
               }
             }}
           />
           <div className="composer-btns">
             {draft.trim() ? (
-              <button className="composer-send" onClick={() => void send()} disabled={sending} aria-label="Send">
+              <button className="composer-send" onClick={() => send()} aria-label="Send">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 14-7-7 14-2-5-5-2z" /></svg>
               </button>
             ) : (
@@ -2964,8 +2957,17 @@ export function ChannelMessage({
     pressTimer.current = null;
   };
 
+  const onRetry = () => {
+    if (!msg.clientTag) return;
+    void nostrActions.retryMessage(groupId, msg.clientTag);
+  };
+  const onDismissFailed = () => {
+    if (!msg.clientTag) return;
+    void nostrActions.cancelPendingMessage(groupId, msg.clientTag);
+  };
+
   return (
-    <div className="msg">
+    <div className={'msg' + (msg.pending ? ' pending' : '') + (msg.failed ? ' failed' : '')}>
       <div className="msg-ava" style={avatarStyle(msg.pubkey)} onClick={onAvatar} role="button">
         {meta?.picture ? <img src={meta.picture} alt="" /> : initialsFor(name, shortNpub(msg.pubkey))}
       </div>
@@ -2973,6 +2975,7 @@ export function ChannelMessage({
         <div className="msg-head">
           <span className="msg-name" onClick={onAvatar} role="button">{name}</span>
           <span className="msg-time">{timeOfDay(msg.createdAt)}</span>
+          {msg.pending && <span className="msg-spinner" aria-label="Sending" role="status" />}
           <button
             type="button"
             className="msg-more"
@@ -2997,6 +3000,27 @@ export function ChannelMessage({
         >
           <MessageContent content={msg.content} messageId={msg.id} channelId={groupId} />
         </div>
+        {msg.failed && (
+          <div className="msg-failed" data-testid="mobile-msg-failed">
+            <span className="msg-failed-label">Couldn’t send</span>
+            <button
+              type="button"
+              className="msg-retry"
+              onClick={onRetry}
+              data-testid="mobile-msg-retry"
+            >
+              Retry
+            </button>
+            <button
+              type="button"
+              className="msg-dismiss"
+              onClick={onDismissFailed}
+              aria-label="Dismiss failed message"
+            >
+              ✕
+            </button>
+          </div>
+        )}
         {grouped.length > 0 && (
           <div className="reactions">
             {grouped.map((r) => (
@@ -3191,7 +3215,6 @@ function DmThreadScreen({
   const meta = useUserMetadata(peer);
   const myPubkey = useMyPubkey();
   const [draft, setDraft] = useState('');
-  const [sending, setSending] = useState(false);
   const msgsRef = useRef<HTMLDivElement>(null);
 
   const messages = useMemo(() => {
@@ -3205,18 +3228,22 @@ function DmThreadScreen({
     requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
   }, [messages.length]);
 
-  const send = async () => {
+  const send = () => {
     const text = draft.trim();
-    if (!text || sending) return;
-    setSending(true);
-    try {
-      await nostrActions.sendDirectMessage(peer, text);
-      setDraft('');
-    } catch (err) {
-      console.warn('[mobile] sendDirectMessage failed', err);
-    } finally {
-      setSending(false);
-    }
+    if (!text) return;
+    // Optimistic — placeholder appears with a spinner; the bubble surfaces a
+    // retry button on failure so we don't gate the composer on send state.
+    setDraft('');
+    nostrActions.sendDirectMessage(peer, text).catch((err) => {
+      console.warn('[mobile] sendDirectMessage scheduling failed', err);
+    });
+  };
+
+  const onRetry = (clientTag: string) => {
+    void nostrActions.retryDirectMessage(peer, clientTag);
+  };
+  const onDismiss = (clientTag: string) => {
+    void nostrActions.cancelPendingDirectMessage(peer, clientTag);
   };
 
   const peerName = meta?.displayName || meta?.name || shortNpub(peer);
@@ -3266,9 +3293,41 @@ function DmThreadScreen({
           it.type === 'divider' ? (
             <div key={it.key} className="day-divider">{it.label}</div>
           ) : (
-            <div key={it.key} className={`dm-bubble ${it.msg.outgoing ? 'outgoing delivered' : 'incoming'}`}>
-              {it.msg.content}
-              <span className="dm-bubble-time">{timeOfDay(it.msg.createdAt)}</span>
+            <div
+              key={it.key}
+              className={
+                'dm-bubble '
+                + (it.msg.outgoing ? 'outgoing delivered' : 'incoming')
+                + (it.msg.pending ? ' pending' : '')
+                + (it.msg.failed ? ' failed' : '')
+              }
+            >
+              <div className="dm-bubble-text">{it.msg.content}</div>
+              <div className="dm-bubble-meta">
+                {it.msg.pending && <span className="dm-bubble-spinner" aria-label="Sending" role="status" />}
+                <span className="dm-bubble-time">{timeOfDay(it.msg.createdAt)}</span>
+              </div>
+              {it.msg.failed && it.msg.clientTag && (
+                <div className="dm-bubble-failed" data-testid="mobile-dm-failed">
+                  <span className="dm-bubble-failed-label">Couldn’t send</span>
+                  <button
+                    type="button"
+                    className="dm-bubble-retry"
+                    onClick={() => onRetry(it.msg.clientTag!)}
+                    data-testid="mobile-dm-retry"
+                  >
+                    Retry
+                  </button>
+                  <button
+                    type="button"
+                    className="dm-bubble-dismiss"
+                    onClick={() => onDismiss(it.msg.clientTag!)}
+                    aria-label="Dismiss failed message"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
             </div>
           ),
         )}
@@ -3287,13 +3346,13 @@ function DmThreadScreen({
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                void send();
+                send();
               }
             }}
           />
           <div className="composer-btns">
             {draft.trim() ? (
-              <button className="composer-send" onClick={() => void send()} disabled={sending} aria-label="Send">
+              <button className="composer-send" onClick={() => send()} aria-label="Send">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 14-7-7 14-2-5-5-2z" /></svg>
               </button>
             ) : (

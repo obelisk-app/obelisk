@@ -1153,6 +1153,55 @@
   color: var(--app-accent);
   border: 1px solid var(--app-line);
 }
+.obelisk-mobile .msg.pending {
+  opacity: 0.6;
+}
+.obelisk-mobile .msg.failed .msg-text {
+  color: rgba(248, 113, 113, 0.9);
+}
+.obelisk-mobile .msg-spinner {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1.5px solid var(--app-text-mute);
+  border-top-color: transparent;
+  opacity: 0.7;
+  animation: obelisk-mobile-spin 0.8s linear infinite;
+}
+.obelisk-mobile .msg-failed {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 11px;
+  color: rgb(248, 113, 113);
+}
+.obelisk-mobile .msg-failed-label {
+  opacity: 0.85;
+}
+.obelisk-mobile .msg-retry {
+  background: rgba(248, 113, 113, 0.18);
+  color: rgb(248, 113, 113);
+  border: none;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+.obelisk-mobile .msg-retry:active {
+  background: rgba(248, 113, 113, 0.32);
+}
+.obelisk-mobile .msg-dismiss {
+  background: transparent;
+  color: rgba(248, 113, 113, 0.7);
+  border: none;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0 4px;
+}
 
 .obelisk-mobile .reactions {
   display: flex;
@@ -1891,11 +1940,15 @@
 }
 .obelisk-mobile .dm-bubble {
   max-width: 78%;
-  padding: 9px 13px 24px;
+  /* min-width fits "16:29" + a status spinner with padding; without it,
+     short messages let the timestamp row collide with text. */
+  min-width: 88px;
+  padding: 8px 12px 8px;
   border-radius: 16px;
   font-size: 15px;
   line-height: 1.45;
-  position: relative;
+  display: flex;
+  flex-direction: column;
   word-wrap: break-word;
   overflow-wrap: anywhere;
 }
@@ -1912,17 +1965,77 @@
   border-bottom-right-radius: 4px;
   box-shadow: 0 0 18px rgba(180, 249, 83, 0.18);
 }
-.obelisk-mobile .dm-bubble-time {
-  position: absolute;
-  bottom: 5px;
-  right: 11px;
+.obelisk-mobile .dm-bubble-text {
+  /* Free-flow text; the bubble (flex column) grows to fit it up to
+     `max-width`. Empty rule kept for documentation. */
+}
+.obelisk-mobile .dm-bubble-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+  align-self: flex-end;
   font-size: 10.5px;
   font-family: 'JetBrains Mono', monospace;
   opacity: 0.6;
 }
-.obelisk-mobile .dm-bubble.incoming .dm-bubble-time {
+.obelisk-mobile .dm-bubble.incoming .dm-bubble-meta {
   color: var(--app-text-mute);
   opacity: 1;
+}
+.obelisk-mobile .dm-bubble.pending {
+  opacity: 0.55;
+}
+.obelisk-mobile .dm-bubble.failed {
+  opacity: 0.9;
+  border: 1px solid rgba(248, 113, 113, 0.55);
+}
+.obelisk-mobile .dm-bubble-spinner {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  border-top-color: transparent;
+  opacity: 0.7;
+  animation: obelisk-mobile-spin 0.8s linear infinite;
+}
+@keyframes obelisk-mobile-spin {
+  to { transform: rotate(360deg); }
+}
+.obelisk-mobile .dm-bubble-failed {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  align-self: flex-end;
+  font-size: 11px;
+  color: rgb(248, 113, 113);
+}
+.obelisk-mobile .dm-bubble-failed-label {
+  opacity: 0.85;
+}
+.obelisk-mobile .dm-bubble-retry {
+  background: rgba(248, 113, 113, 0.18);
+  color: rgb(248, 113, 113);
+  border: none;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+.obelisk-mobile .dm-bubble-retry:active {
+  background: rgba(248, 113, 113, 0.32);
+}
+.obelisk-mobile .dm-bubble-dismiss {
+  background: transparent;
+  color: rgba(248, 113, 113, 0.7);
+  border: none;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0 4px;
 }
 .obelisk-mobile .dm-encryption-pill {
   align-self: center;

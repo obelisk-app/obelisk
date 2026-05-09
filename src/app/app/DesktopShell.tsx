@@ -1783,7 +1783,6 @@ function ChatPanel({
   const relayAccess = useRelayAccess(relay || null);
   const messagesVisible = relayAccess === 'ok';
   const [draft, setDraft] = useState('');
-  const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [replyingTo, setReplyingTo] = useState<JsMessage | null>(null);
   useEffect(() => { setReplyingTo(null); }, [groupId]);
@@ -2058,7 +2057,7 @@ function ChatPanel({
     }
   }
 
-  async function onSend(e: React.FormEvent) {
+  function onSend(e: React.FormEvent) {
     e.preventDefault();
     const content = draft.trim();
     if (!content) return;
@@ -2079,63 +2078,54 @@ function ChatPanel({
       return;
     }
 
-    setSending(true);
     setSendError(null);
-    try {
-      // Lazy member self-add for open groups. Without this, a user who has
-      // never been explicitly added by an admin can read but their first
-      // kind 9 send is rejected with "user is not a member". Gated by a
-      // localStorage key so we publish exactly one kind 9000 ever per
-      // (relay, group, user) triple. Closed groups (`isOpen === false`)
-      // skip this — those require an admin invite by design.
-      //
-      // Also gated on relayAccess === 'ok': if the relay is rejecting our
-      // writes wholesale (auth-required / restricted / unreachable), the
-      // putUser will fail with a noisy "Publishing to relays / restricted:
-      // your pubkey is not whitelisted" activity entry. The user's actual
-      // sendMessage will surface the real error in-place — there's no
-      // reason to also blast an unrelated 9000 publish at a relay we know
-      // won't accept it.
-      if (
-        myPubkey
-        && relayAccess === 'ok'
-        && group?.isOpen
-        && !memberPubkeys.includes(myPubkey)
-        && !admins.includes(myPubkey)
-      ) {
-        const key = `obelisk:claimed-member:${relay}:${groupId}:${myPubkey}`;
-        let alreadyTried = false;
-        try {
-          alreadyTried = typeof localStorage !== 'undefined' && !!localStorage.getItem(key);
-        } catch {}
-        if (!alreadyTried) {
-          try { localStorage?.setItem(key, '1'); } catch {}
-          // Most NIP-29 open-group relays accept the kind 9 directly and the
-          // 9000 self-add is unnecessary; some (strfry) accept reads but
-          // silently time out the 9000 publish because non-admins can't
-          // promote anyone, including themselves. Either way the user's
-          // actual sendMessage below carries the real signal — we don't
-          // want a noisy console warning + Publishing toast for an
-          // optimistic membership write that the spec says shouldn't be
-          // required.
-          try { await nostrActions.putUser(groupId, myPubkey, [], { quiet: true }); } catch (err) {
-            console.debug('[appshell] lazy member putUser skipped (relay declined)', err);
-          }
-        }
+    const replyToCopy = replyingTo ? { id: replyingTo.id, pubkey: replyingTo.pubkey } : null;
+    // Clear the composer immediately — the optimistic placeholder appears
+    // inline in the message list with a spinner, so the user can keep
+    // typing the next message without waiting for the publish to ack.
+    setDraft('');
+    setReplyingTo(null);
+
+    // Lazy member self-add for open groups. Without this, a user who has
+    // never been explicitly added by an admin can read but their first
+    // kind 9 send is rejected with "user is not a member". Gated by a
+    // localStorage key so we publish exactly one kind 9000 ever per
+    // (relay, group, user) triple. Closed groups (`isOpen === false`)
+    // skip this — those require an admin invite by design.
+    //
+    // Also gated on relayAccess === 'ok': if the relay is rejecting our
+    // writes wholesale (auth-required / restricted / unreachable), the
+    // putUser will fail with a noisy "Publishing to relays / restricted:
+    // your pubkey is not whitelisted" activity entry. The user's actual
+    // sendMessage will surface the real error on the message bubble — we
+    // don't want a noisy console warning + Publishing toast for an
+    // optimistic membership write that the spec says shouldn't be
+    // required.
+    if (
+      myPubkey
+      && relayAccess === 'ok'
+      && group?.isOpen
+      && !memberPubkeys.includes(myPubkey)
+      && !admins.includes(myPubkey)
+    ) {
+      const key = `obelisk:claimed-member:${relay}:${groupId}:${myPubkey}`;
+      let alreadyTried = false;
+      try {
+        alreadyTried = typeof localStorage !== 'undefined' && !!localStorage.getItem(key);
+      } catch {}
+      if (!alreadyTried) {
+        try { localStorage?.setItem(key, '1'); } catch {}
+        nostrActions.putUser(groupId, myPubkey, [], { quiet: true }).catch((err) => {
+          console.debug('[appshell] lazy member putUser skipped (relay declined)', err);
+        });
       }
-      await nostrActions.sendMessage(
-        groupId,
-        content,
-        replyingTo ? { id: replyingTo.id, pubkey: replyingTo.pubkey } : null,
-      );
-      setDraft('');
-      setReplyingTo(null);
-    } catch (err) {
-      console.error('send failed', err);
-      setSendError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setSending(false);
     }
+
+    // Fire-and-forget — bridge inserts the pending placeholder synchronously
+    // and surfaces send failures via the bubble's `failed` flag (with retry).
+    nostrActions.sendMessage(groupId, content, replyToCopy).catch((err) => {
+      console.error('send failed', err);
+    });
   }
 
   return (
@@ -2329,7 +2319,7 @@ function ChatPanel({
               accept="image/*,video/*"
               multiple
               className="hidden"
-              disabled={uploadingMedia || sending}
+              disabled={uploadingMedia}
               onChange={(e) => {
                 const files = Array.from(e.target.files ?? []);
                 if (files.length > 0) void onPickFiles(files);
@@ -2384,13 +2374,12 @@ function ChatPanel({
                 }
               }}
               placeholder={`Message #${group?.name ?? groupId.slice(0, 8)}`}
-              disabled={sending}
               className="w-full bg-transparent text-sm text-lc-white outline-none placeholder:text-lc-muted disabled:opacity-50"
             />
           </div>
           <button
             type="submit"
-            disabled={sending || !draft.trim() || uploadingMedia}
+            disabled={!draft.trim() || uploadingMedia}
             className="text-xs font-semibold text-lc-green hover:text-lc-green/80 disabled:opacity-30"
           >
             Send
@@ -2708,8 +2697,17 @@ function MessageRow({
     setAnchor({ x: r.right + 8, y: r.top, placement: r.top > window.innerHeight / 2 ? 'top' : 'bottom' });
   };
 
+  const onRetry = () => {
+    if (!msg.clientTag) return;
+    void nostrActions.retryMessage(groupId, msg.clientTag);
+  };
+  const onDismissFailed = () => {
+    if (!msg.clientTag) return;
+    void nostrActions.cancelPendingMessage(groupId, msg.clientTag);
+  };
+
   return (
-    <div data-msg-id={msg.id} className={'group relative flex gap-3 rounded px-2 py-0.5 hover:bg-lc-card/40 ' + (grouped ? 'mt-0' : 'mt-3')}>
+    <div data-msg-id={msg.id} className={'group relative flex gap-3 rounded px-2 py-0.5 hover:bg-lc-card/40 ' + (grouped ? 'mt-0' : 'mt-3') + (msg.pending ? ' opacity-60' : '')}>
       <div className="w-10 shrink-0">
         {!grouped && (
           <button onClick={openProfile} className="rounded-full transition hover:opacity-80">
@@ -2729,6 +2727,13 @@ function MessageRow({
                 day: 'numeric',
               })}
             </span>
+            {msg.pending && (
+              <span
+                className="inline-block h-2.5 w-2.5 animate-spin rounded-full border border-lc-muted/40 border-t-lc-muted"
+                aria-label="Sending"
+                role="status"
+              />
+            )}
           </div>
         )}
         {parent && <ReplyPreviewRow parent={parent} onJump={onJumpToParent} />}
@@ -2746,6 +2751,35 @@ function MessageRow({
         >
           <MessageContent content={msg.content} messageId={msg.id} channelId={groupId} />
         </div>
+        {msg.failed && (
+          <div className="mt-1 flex items-center gap-2 text-[11px] text-red-400" data-testid="message-failed">
+            <span aria-hidden="true">!</span>
+            <span>Couldn’t send</span>
+            <button
+              type="button"
+              onClick={onRetry}
+              className="rounded bg-red-500/10 px-2 py-0.5 font-semibold text-red-300 hover:bg-red-500/20"
+              data-testid="message-retry"
+            >
+              Retry
+            </button>
+            <button
+              type="button"
+              onClick={onDismissFailed}
+              className="text-red-400/70 hover:text-red-300"
+              aria-label="Dismiss failed message"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+        {grouped && msg.pending && (
+          <span
+            className="ml-2 inline-block h-2.5 w-2.5 animate-spin rounded-full border border-lc-muted/40 border-t-lc-muted align-middle"
+            aria-label="Sending"
+            role="status"
+          />
+        )}
         {(counts.length > 0 || (zapTotal && zapTotal.totalSats > 0)) && (
           <div className="mt-1 flex flex-wrap gap-1">
             {zapTotal && zapTotal.totalSats > 0 && (
@@ -3629,8 +3663,6 @@ function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string) => voi
   const meta = useUserMetadata(peer);
   const thread = peer ? dms[peer] ?? [] : [];
   const [draft, setDraft] = useState('');
-  const [sending, setSending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const stickToBottomRef = useRef(true);
   // Mirror the open peer into the DM store so `isUserWatchingDM` reflects
@@ -3667,21 +3699,17 @@ function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string) => voi
     if (el) el.scrollTop = el.scrollHeight;
   }, [thread.length]);
 
-  async function onSend(e: React.FormEvent) {
+  function onSend(e: React.FormEvent) {
     e.preventDefault();
     if (!peer) return;
     const content = draft.trim();
     if (!content) return;
-    setSending(true);
-    setError(null);
-    try {
-      await nostrActions.sendDirectMessage(peer, content);
-      setDraft('');
-    } catch (err: unknown) {
-      setError((err as Error).message);
-    } finally {
-      setSending(false);
-    }
+    // Optimistic — bridge inserts a pending placeholder; the bubble surfaces
+    // its own retry button on failure, so we don't need a form-level error.
+    setDraft('');
+    nostrActions.sendDirectMessage(peer, content).catch((err) => {
+      console.warn('[desktop] sendDirectMessage scheduling failed', err);
+    });
   }
 
   if (!peer) {
@@ -3707,40 +3735,80 @@ function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string) => voi
         {thread.length === 0 ? (
           <div className="text-sm text-lc-muted">No messages yet. Send the first one (NIP-04 encrypted).</div>
         ) : (
-          thread.map((m) => (
-            <div
-              key={m.id}
-              className={
-                'mb-2 max-w-md rounded-2xl px-4 py-2 text-sm shadow-sm ' +
-                (m.outgoing
-                  ? 'ml-auto bg-lc-green text-lc-black'
-                  : 'bg-lc-card text-lc-white')
-              }
-            >
-              <div className="whitespace-pre-wrap break-words">{m.content}</div>
-              <div className={'mt-1 text-[10px] ' + (m.outgoing ? 'text-black/60' : 'text-lc-muted')}>
-                {new Date(m.createdAt * 1000).toLocaleTimeString(undefined, {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
+          thread.map((m) => {
+            const onRetryDM = () => {
+              if (!m.clientTag || !peer) return;
+              void nostrActions.retryDirectMessage(peer, m.clientTag);
+            };
+            const onDismissDM = () => {
+              if (!m.clientTag || !peer) return;
+              void nostrActions.cancelPendingDirectMessage(peer, m.clientTag);
+            };
+            return (
+              <div
+                key={m.id}
+                className={
+                  'mb-2 max-w-md rounded-2xl px-4 py-2 text-sm shadow-sm ' +
+                  (m.outgoing
+                    ? 'ml-auto bg-lc-green text-lc-black'
+                    : 'bg-lc-card text-lc-white') +
+                  (m.pending ? ' opacity-60' : '') +
+                  (m.failed ? ' ring-1 ring-red-500/60' : '')
+                }
+              >
+                <div className="whitespace-pre-wrap break-words">{m.content}</div>
+                <div className={'mt-1 flex items-center justify-end gap-1.5 text-[10px] ' + (m.outgoing ? 'text-black/60' : 'text-lc-muted')}>
+                  {m.pending && (
+                    <span
+                      className={'inline-block h-2.5 w-2.5 animate-spin rounded-full border ' + (m.outgoing ? 'border-black/30 border-t-black/70' : 'border-lc-muted/40 border-t-lc-muted')}
+                      aria-label="Sending"
+                      role="status"
+                    />
+                  )}
+                  <span>
+                    {new Date(m.createdAt * 1000).toLocaleTimeString(undefined, {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </span>
+                </div>
+                {m.failed && (
+                  <div className="mt-1.5 flex items-center justify-end gap-2 text-[11px] text-red-500" data-testid="dm-failed">
+                    <span>Couldn’t send</span>
+                    <button
+                      type="button"
+                      onClick={onRetryDM}
+                      className="rounded bg-red-500/15 px-2 py-0.5 font-semibold text-red-500 hover:bg-red-500/25"
+                      data-testid="dm-retry"
+                    >
+                      Retry
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onDismissDM}
+                      className="text-red-500/70 hover:text-red-500"
+                      aria-label="Dismiss failed message"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
       <form onSubmit={onSend} className="shrink-0 px-5 pt-3 pb-3">
-        {error && <p className="mb-2 text-xs text-red-400">{error}</p>}
         <div className="flex min-h-[3.5rem] items-center gap-2 rounded-xl border border-lc-border bg-lc-card px-4 focus-within:border-lc-green">
           <input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             placeholder="Encrypted message (NIP-04)"
-            disabled={sending}
             className="flex-1 bg-transparent text-sm text-lc-white outline-none placeholder:text-lc-muted disabled:opacity-50"
           />
           <button
             type="submit"
-            disabled={sending || !draft.trim()}
+            disabled={!draft.trim()}
             className="text-xs font-semibold text-lc-green disabled:opacity-30"
           >
             Send
