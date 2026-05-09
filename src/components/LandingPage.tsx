@@ -434,54 +434,47 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="grid lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] gap-6 items-stretch">
-            {/* Desktop card */}
+          <div className="space-y-6 max-w-5xl mx-auto">
+            {/* Desktop card — image left, content right on lg+ (image on top, content below on small) */}
             <Link
               href="/desktop"
-              className="lc-card group p-6 lg:p-8 flex flex-col"
+              className="lc-card group p-6 lg:p-8 flex flex-col lg:grid lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:gap-10 lg:items-center"
               data-testid="landing-preview-desktop"
             >
-              <span className="self-start inline-flex items-center gap-2 px-3 py-1 rounded-full bg-lc-olive/40 border border-lc-green/20 text-xs font-semibold text-lc-green tracking-wide uppercase">
-                {t('landing.preview.desktop.badge')}
-              </span>
-              <h3 className="mt-4 text-xl md:text-2xl font-bold text-lc-white">
-                {t('landing.preview.desktop.title')}
-              </h3>
-              <p className="mt-2 text-sm md:text-base text-lc-muted leading-relaxed">
-                {t('landing.preview.desktop.desc')}
-              </p>
-              <figure className="mt-6 rounded-xl border border-lc-border overflow-hidden bg-lc-dark">
+              <figure className="rounded-xl border border-lc-border overflow-hidden bg-lc-dark">
                 <Image
                   src="/pictures-for-posts/dekstop-public-general-chat-view-with-member-list.png"
                   alt={t('landing.preview.desktop.alt')}
                   width={1470}
                   height={799}
                   className="w-full h-auto block transition-transform duration-500 group-hover:scale-[1.015]"
-                  sizes="(max-width: 1024px) 90vw, 720px"
+                  sizes="(max-width: 1024px) 90vw, 600px"
                 />
               </figure>
-              <span className="mt-6 text-sm font-semibold text-lc-green inline-flex items-center gap-2 group-hover:underline">
-                {t('landing.preview.desktop.cta')}
-                <span aria-hidden="true">→</span>
-              </span>
+              <div className="mt-6 lg:mt-0 flex flex-col">
+                <span className="self-start inline-flex items-center gap-2 px-3 py-1 rounded-full bg-lc-olive/40 border border-lc-green/20 text-xs font-semibold text-lc-green tracking-wide uppercase">
+                  {t('landing.preview.desktop.badge')}
+                </span>
+                <h3 className="mt-4 text-xl md:text-2xl font-bold text-lc-white">
+                  {t('landing.preview.desktop.title')}
+                </h3>
+                <p className="mt-2 text-sm md:text-base text-lc-muted leading-relaxed">
+                  {t('landing.preview.desktop.desc')}
+                </p>
+                <span className="mt-6 text-sm font-semibold text-lc-green inline-flex items-center gap-2 group-hover:underline">
+                  {t('landing.preview.desktop.cta')}
+                  <span aria-hidden="true">→</span>
+                </span>
+              </div>
             </Link>
 
-            {/* Mobile card */}
+            {/* Mobile card — content left, phone right on lg+ (phone on top, content below on small) */}
             <Link
               href="/mobile"
-              className="lc-card group p-6 lg:p-8 flex flex-col"
+              className="lc-card group p-6 lg:p-8 flex flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_220px] lg:gap-10 lg:items-center"
               data-testid="landing-preview-mobile"
             >
-              <span className="self-start inline-flex items-center gap-2 px-3 py-1 rounded-full bg-lc-olive/40 border border-lc-green/20 text-xs font-semibold text-lc-green tracking-wide uppercase">
-                {t('landing.preview.mobile.badge')}
-              </span>
-              <h3 className="mt-4 text-xl md:text-2xl font-bold text-lc-white">
-                {t('landing.preview.mobile.title')}
-              </h3>
-              <p className="mt-2 text-sm md:text-base text-lc-muted leading-relaxed">
-                {t('landing.preview.mobile.desc')}
-              </p>
-              <figure className="mt-6 mx-auto w-full max-w-[220px] rounded-[2rem] border border-lc-border overflow-hidden bg-lc-dark">
+              <figure className="lg:order-2 mx-auto w-full max-w-[200px] lg:mx-0 lg:max-w-none lg:w-full rounded-[2rem] border border-lc-border overflow-hidden bg-lc-dark">
                 <Image
                   src="/pictures-for-posts/mobile-server-and-channels-view.png"
                   alt={t('landing.preview.mobile.alt')}
@@ -491,10 +484,21 @@ export default function LandingPage() {
                   sizes="(max-width: 1024px) 60vw, 220px"
                 />
               </figure>
-              <span className="mt-6 text-sm font-semibold text-lc-green inline-flex items-center gap-2 group-hover:underline">
-                {t('landing.preview.mobile.cta')}
-                <span aria-hidden="true">→</span>
-              </span>
+              <div className="lg:order-1 mt-6 lg:mt-0 flex flex-col">
+                <span className="self-start inline-flex items-center gap-2 px-3 py-1 rounded-full bg-lc-olive/40 border border-lc-green/20 text-xs font-semibold text-lc-green tracking-wide uppercase">
+                  {t('landing.preview.mobile.badge')}
+                </span>
+                <h3 className="mt-4 text-xl md:text-2xl font-bold text-lc-white">
+                  {t('landing.preview.mobile.title')}
+                </h3>
+                <p className="mt-2 text-sm md:text-base text-lc-muted leading-relaxed">
+                  {t('landing.preview.mobile.desc')}
+                </p>
+                <span className="mt-6 text-sm font-semibold text-lc-green inline-flex items-center gap-2 group-hover:underline">
+                  {t('landing.preview.mobile.cta')}
+                  <span aria-hidden="true">→</span>
+                </span>
+              </div>
             </Link>
           </div>
 
