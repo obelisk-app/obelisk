@@ -620,7 +620,7 @@ class BridgeImpl implements NostrBridge {
    * so a stale advertisement doesn't pin "LIVE" forever after an SFU
    * crash that never published `status=closed`.
    */
-  activeCallByChannel = new StateStore<Record<string, { hostPubkey: string; status: string; expiresAt: number; createdAt: number }>>({});
+  activeCallByChannel = new StateStore<Record<string, { hostPubkey: string; status: string; participantCount: number; expiresAt: number; createdAt: number }>>({});
   myFollows = new StateStore<string[]>([]);
   /**
    * NIP-51 kind 10000 mute list — pubkeys the local user has muted (public
@@ -2949,6 +2949,13 @@ class BridgeImpl implements NostrBridge {
     const hostPubkey = tag('host') ?? ev.pubkey;
     const expirationStr = tag('expiration');
     const expiresAt = expirationStr ? parseInt(expirationStr, 10) || 0 : 0;
+    // Participant count: SFU started tagging this so consumers can
+    // distinguish "live call with people" from "room still open during
+    // empty-grace." Older SFU builds don't tag — treat absent as -1
+    // (unknown, render badge to preserve back-compat) so we don't go
+    // silent on a partial deploy.
+    const countStr = tag('count');
+    const participantCount = countStr === undefined ? -1 : (parseInt(countStr, 10) || 0);
     const cur = this.activeCallByChannel.get();
     const prev = cur[channelId];
     // Newest-wins: replaceable kind, stale duplicates from slow relays
@@ -2963,13 +2970,13 @@ class BridgeImpl implements NostrBridge {
     }
     this.activeCallByChannel.set({
       ...cur,
-      [channelId]: { hostPubkey, status, expiresAt, createdAt: ev.created_at },
+      [channelId]: { hostPubkey, status, participantCount, expiresAt, createdAt: ev.created_at },
     });
   }
 
   /** Subscribe to the active-call state for any channel. */
   subscribeActiveCallByChannel(
-    cb: (byChannel: Readonly<Record<string, { hostPubkey: string; status: string; expiresAt: number; createdAt: number }>>) => void,
+    cb: (byChannel: Readonly<Record<string, { hostPubkey: string; status: string; participantCount: number; expiresAt: number; createdAt: number }>>) => void,
   ): Unsubscribe {
     return this.activeCallByChannel.subscribe(cb);
   }

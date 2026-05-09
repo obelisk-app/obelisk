@@ -261,7 +261,7 @@ export interface NostrBridge {
    * progress, even for users who aren't joined.
    */
   subscribeActiveCallByChannel(
-    cb: (byChannel: Readonly<Record<string, { hostPubkey: string; status: string; expiresAt: number; createdAt: number }>>) => void,
+    cb: (byChannel: Readonly<Record<string, { hostPubkey: string; status: string; participantCount: number; expiresAt: number; createdAt: number }>>) => void,
   ): Unsubscribe;
   /**
    * Add or remove a pubkey from the local user's NIP-51 mute list. Fetches
