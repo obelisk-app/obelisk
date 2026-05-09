@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { toPng } from 'html-to-image';
 
 type Color = { name: string; token: string; hex: string; usage: string };
 
@@ -594,35 +595,118 @@ function SquareBanner() {
   );
 }
 
+// Rasterize a DOM node to PNG and trigger a download. `pixelWidth` lets us
+// upscale to the banner's intended export size regardless of how wide the
+// preview is rendered on screen.
+function DownloadPngButton({
+  targetRef,
+  filename,
+  pixelWidth,
+  label = 'Download PNG',
+}: {
+  targetRef: React.RefObject<HTMLElement | null>;
+  filename: string;
+  pixelWidth?: number;
+  label?: string;
+}) {
+  const [busy, setBusy] = useState(false);
+  return (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={async () => {
+        const node = targetRef.current;
+        if (!node) return;
+        setBusy(true);
+        try {
+          const rect = node.getBoundingClientRect();
+          const pixelRatio = pixelWidth
+            ? Math.max(1, pixelWidth / rect.width)
+            : 2;
+          const dataUrl = await toPng(node, {
+            pixelRatio,
+            cacheBust: true,
+            backgroundColor: '#0a0a0a',
+          });
+          const a = document.createElement('a');
+          a.href = dataUrl;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+        } finally {
+          setBusy(false);
+        }
+      }}
+      className="lc-pill-primary text-xs px-3 py-1 disabled:opacity-60"
+    >
+      {busy ? 'Rendering…' : label}
+    </button>
+  );
+}
+
 function BannerCard({
   title,
   spec,
   children,
-  download,
+  filename,
+  pixelWidth,
+  extra,
 }: {
   title: string;
   spec: string;
-  download?: { href: string; label: string };
+  filename: string;
+  pixelWidth?: number;
+  extra?: React.ReactNode;
   children: React.ReactNode;
 }) {
+  const ref = useRef<HTMLDivElement>(null);
   return (
     <div className="lc-card overflow-hidden">
-      {children}
+      <div ref={ref}>{children}</div>
       <div className="border-t border-lc-border p-3 flex flex-wrap items-center justify-between gap-3 text-xs text-lc-muted">
         <span>
           <span className="text-lc-white font-semibold">{title}</span> · {spec}
         </span>
-        {download && (
-          <a
-            href={download.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="lc-pill-secondary px-3 py-1"
-          >
-            {download.label}
-          </a>
-        )}
+        <div className="flex items-center gap-2">
+          {extra}
+          <DownloadPngButton
+            targetRef={ref}
+            filename={filename}
+            pixelWidth={pixelWidth}
+          />
+        </div>
       </div>
+    </div>
+  );
+}
+
+function EmbedPreview({
+  title,
+  html,
+  filename,
+  pixelWidth,
+}: {
+  title: string;
+  html: string;
+  filename: string;
+  pixelWidth?: number;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3 gap-3">
+        <h3 className="text-lg font-semibold">{title}</h3>
+        <DownloadPngButton
+          targetRef={ref}
+          filename={filename}
+          pixelWidth={pixelWidth}
+        />
+      </div>
+      <div className="lc-card p-6 mb-3 flex justify-center">
+        <div ref={ref} dangerouslySetInnerHTML={{ __html: html }} />
+      </div>
+      <CodeBlock code={html} />
     </div>
   );
 }
@@ -770,7 +854,18 @@ export default function MediaKit() {
             <BannerCard
               title="Hero / Open Graph"
               spec="1200 × 630 — share preview"
-              download={{ href: OG_IMAGE_URL, label: 'Open PNG' }}
+              filename="obelisk-hero-1200x630.png"
+              pixelWidth={1200}
+              extra={
+                <a
+                  href={OG_IMAGE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="lc-pill-secondary px-3 py-1"
+                >
+                  Open OG PNG
+                </a>
+              }
             >
               <HeroBanner />
             </BannerCard>
@@ -778,6 +873,8 @@ export default function MediaKit() {
             <BannerCard
               title="X (Twitter) header"
               spec="1500 × 500 — profile cover (3:1)"
+              filename="obelisk-x-header-1500x500.png"
+              pixelWidth={1500}
             >
               <XHeaderBanner />
             </BannerCard>
@@ -785,6 +882,8 @@ export default function MediaKit() {
             <BannerCard
               title="LinkedIn cover"
               spec="1584 × 396 — profile background (4:1)"
+              filename="obelisk-linkedin-1584x396.png"
+              pixelWidth={1584}
             >
               <LinkedInBanner />
             </BannerCard>
@@ -792,6 +891,8 @@ export default function MediaKit() {
             <BannerCard
               title="GitHub social preview"
               spec="1280 × 640 — repository preview"
+              filename="obelisk-github-1280x640.png"
+              pixelWidth={1280}
             >
               <GitHubSocialBanner />
             </BannerCard>
@@ -799,6 +900,8 @@ export default function MediaKit() {
             <BannerCard
               title="Square / Instagram"
               spec="1080 × 1080 — post or avatar"
+              filename="obelisk-square-1080x1080.png"
+              pixelWidth={1080}
             >
               <SquareBanner />
             </BannerCard>
@@ -807,6 +910,8 @@ export default function MediaKit() {
             <BannerCard
               title="Wide pill"
               spec="footer / sponsor row"
+              filename="obelisk-wide-pill.png"
+              pixelWidth={1600}
             >
               <div className="flex items-center gap-4 p-6 sm:p-8 bg-lc-black">
                 <div className="shrink-0 w-12 h-12 rounded-full bg-lc-green flex items-center justify-center text-lc-black font-extrabold">
@@ -833,6 +938,8 @@ export default function MediaKit() {
             <BannerCard
               title="Minimal mono"
               spec="for print / merch"
+              filename="obelisk-minimal-mono.png"
+              pixelWidth={1600}
             >
               <div className="p-10 sm:p-14 bg-lc-white text-lc-black text-center">
                 <div className="text-3xl sm:text-5xl font-extrabold tracking-tight">
@@ -939,23 +1046,18 @@ export default function MediaKit() {
           description="Paste these snippets anywhere to link to Obelisk with style."
         >
           <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-semibold mb-3">Banner pill</h3>
-              <div className="lc-card p-6 mb-3 flex justify-center">
-                <div dangerouslySetInnerHTML={{ __html: EMBED_HTML_BANNER }} />
-              </div>
-              <CodeBlock code={EMBED_HTML_BANNER} />
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-3">
-                &quot;Powered by Obelisk&quot; badge
-              </h3>
-              <div className="lc-card p-6 mb-3 flex justify-center">
-                <div dangerouslySetInnerHTML={{ __html: EMBED_BADGE }} />
-              </div>
-              <CodeBlock code={EMBED_BADGE} />
-            </div>
+            <EmbedPreview
+              title="Banner pill"
+              html={EMBED_HTML_BANNER}
+              filename="obelisk-banner-pill.png"
+              pixelWidth={1200}
+            />
+            <EmbedPreview
+              title='"Powered by Obelisk" badge'
+              html={EMBED_BADGE}
+              filename="obelisk-powered-by-badge.png"
+              pixelWidth={600}
+            />
           </div>
         </Section>
 

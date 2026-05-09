@@ -16,6 +16,8 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test --config=scripts/e2e/playwright.config.ts",
     "test:e2e:headed": "HEADED=1 playwright test --config=scripts/e2e/playwright.config.ts",
+    "test:e2e:voice": "playwright test --config=scripts/e2e/playwright.config.ts scripts/e2e/voice/",
+    "test:e2e:voice:headed": "HEADED=1 playwright test --config=scripts/e2e/playwright.config.ts scripts/e2e/voice/",
     "snap-guides": "tsx scripts/snap-guide-svgs.ts"
   },
   "dependencies": {
@@ -29,6 +31,7 @@
     "@nostr-wot/ui": "file:../nostr-wot-sdk/packages/ui",
     "emoji-mart": "^5.6.0",
     "gray-matter": "^4.0.3",
+    "html-to-image": "^1.11.13",
     "light-bolt11-decoder": "^3.2.0",
     "mediasoup-client": "^3.20.0",
     "next": "16.2.2",
