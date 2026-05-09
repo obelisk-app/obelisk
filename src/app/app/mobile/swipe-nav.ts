@@ -21,6 +21,8 @@ export const SUB_TO_NAV: Partial<Record<ScreenName, ScreenName>> = {
   'profile-view': 'server',
   'settings-prefs': 'settings-profile',
   'profile-edit': 'settings-profile',
+  'msg-actions': 'server',
+  'zap-modal': 'server',
 };
 
 export type SwipeNavAction =

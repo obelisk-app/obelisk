@@ -4960,8 +4960,27 @@ export default function MobileShell() {
       break;
     case 'msg-actions':
     case 'zap-modal':
-      // sheets — handled below
-      body = null;
+      // Sheets float over the underlying screen (typically `channel`). Render
+      // that base screen as the body here so it stays mounted in the same
+      // sub-overlay slot — otherwise opening the actions sheet remounts
+      // ChannelScreen and wipes local state like `replyingTo`.
+      if ((nav.baseScreen === 'channel' || !nav.baseScreen) && nav.groupId) {
+        body = (
+          <ChannelScreen
+            groupId={nav.groupId}
+            go={go}
+            back={backFromChannel}
+            openMsgActions={openMsgActions}
+            openZap={openZap}
+            openProfile={openProfile}
+            openMembers={openMembers}
+          />
+        );
+      } else if (nav.baseScreen === 'dm-thread' && nav.dmPeer) {
+        body = <DmThreadScreen peer={nav.dmPeer} back={() => go('dms-list', 'back')} openProfile={openProfile} />;
+      } else {
+        body = null;
+      }
       break;
     default:
       body = <EmptyScreen go={go} title="Unknown screen" />;
@@ -4983,25 +5002,14 @@ export default function MobileShell() {
     nav.screen === 'profile-edit' ||
     kbInset > 0;
 
-  // For sheets, render the underlying screen + the sheet
-  let baseBody: ReactNode = null;
-  if (nav.screen === 'msg-actions' || nav.screen === 'zap-modal') {
-    if (nav.groupId) {
-      baseBody = (
-        <ChannelScreen
-          groupId={nav.groupId}
-          go={go}
-          back={backFromChannel}
-          openMsgActions={openMsgActions}
-          openZap={openZap}
-          openProfile={openProfile}
-          openMembers={openMembers}
-        />
-      );
-    } else {
-      baseBody = <EmptyScreen go={go} title="Channel" />;
-    }
-  }
+  // Sheet screens (msg-actions / zap-modal) render the underlying screen as
+  // `body` (see switch above) so the sub-overlay slot stays mounted. The key
+  // for that slot is derived from `baseScreen` so opening/closing a sheet
+  // doesn't remount the underlying screen and lose its local state.
+  const overlayScreenKey =
+    nav.screen === 'msg-actions' || nav.screen === 'zap-modal'
+      ? (nav.baseScreen ?? 'channel')
+      : nav.screen;
 
   const slideClass = suppressSlideRef.current
     ? ''
@@ -5016,7 +5024,6 @@ export default function MobileShell() {
       onTouchCancel={onTouchCancel}
     >
       <div className="screens-host" ref={screensHostRef}>
-        {baseBody}
         <div ref={dragLayerRef} className={`drag-layer ${isDragging ? 'is-dragging' : ''}`}>
           {/* All four top-level screens are persistently mounted with stable
            * keys per screen name. Their on-screen position is controlled by a
@@ -5056,8 +5063,8 @@ export default function MobileShell() {
            * as a single overlay. Different sub-screens use different keys so
            * navigating between them does remount — that's correct: a forum is
            * not a channel. */}
-          {!NAV_ORDER.includes(nav.screen) && body && (
-            <div className="drag-slot drag-overlay" key={`sub-${nav.screen}`}>
+          {!NAV_ORDER.includes(overlayScreenKey as ScreenName) && body && (
+            <div className="drag-slot drag-overlay" key={`sub-${overlayScreenKey}`}>
               <div className={`screen-anim ${slideClass}`}>{body}</div>
             </div>
           )}

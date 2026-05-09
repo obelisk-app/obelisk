@@ -55,7 +55,7 @@ export default function EmojiPicker({
   const isSheet = variant === 'sheet';
   const containerClass = isSheet
     ? 'flex h-full w-full flex-col bg-lc-dark p-3 '
-    : 'absolute right-0 top-7 z-30 w-72 rounded-md border border-lc-border bg-lc-dark p-2 shadow-2xl ';
+    : 'absolute right-0 bottom-full mb-1 z-30 w-72 rounded-md border border-lc-border bg-lc-dark p-2 shadow-2xl ';
   const gridClass = isSheet
     ? 'grid grid-cols-8 gap-1'
     : 'grid grid-cols-8 gap-0.5';

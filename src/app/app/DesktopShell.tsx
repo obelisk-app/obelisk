@@ -2828,7 +2828,7 @@ function MessageRow({
         <div
           className={
             'rounded-md border border-lc-border bg-lc-dark p-0.5 shadow-md ' +
-            (panelPinned || pickerOpen ? 'flex' : 'hidden group-hover:flex')
+            (menuOpen ? 'hidden' : (panelPinned || pickerOpen ? 'flex' : 'hidden group-hover:flex'))
           }
         >
           {QUICK_REACTIONS.map((e) => {
