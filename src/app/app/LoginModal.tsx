@@ -19,7 +19,6 @@
 
 import {
   LoginModal as SdkLoginModal,
-  NostrSessionProvider,
   type LoginMethodId,
 } from '@nostr-wot/ui';
 import { nip19, getPublicKey } from 'nostr-tools';
@@ -135,32 +134,30 @@ export default function LoginModal({
   subtitle = 'Choose your login method',
 }: LoginModalProps = {}) {
   return (
-    <NostrSessionProvider autoRestore={false} theme="la-crypta">
-      <SdkLoginModal
-        open
-        onClose={onClose ?? (() => { /* AppShell only mounts this when logged out — no dismiss */ })}
-        title={title}
-        subtitle={subtitle}
-        flatLayout
-        showRememberToggle={false}
-        methods={methods}
-        methodIcons={{
-          nip07: <LockIcon />,
-          nip46: <ShieldIcon />,
-          generate: <SparkleIcon />,
-          import: <KeyIcon />,
-        }}
-        onLogin={async ({ pubkey, method, nsec, bunkerUri, clientNsec }) => {
-          await routeToBridge({
-            method,
-            pubkey,
-            ...(nsec ? { nsec } : {}),
-            ...(bunkerUri ? { bunkerUri } : {}),
-            ...(clientNsec ? { clientNsec } : {}),
-          });
-          onSuccess?.();
-        }}
-      />
-    </NostrSessionProvider>
+    <SdkLoginModal
+      open
+      onClose={onClose ?? (() => { /* AppShell only mounts this when logged out — no dismiss */ })}
+      title={title}
+      subtitle={subtitle}
+      flatLayout
+      showRememberToggle={false}
+      methods={methods}
+      methodIcons={{
+        nip07: <LockIcon />,
+        nip46: <ShieldIcon />,
+        generate: <SparkleIcon />,
+        import: <KeyIcon />,
+      }}
+      onLogin={async ({ pubkey, method, nsec, bunkerUri, clientNsec }) => {
+        await routeToBridge({
+          method,
+          pubkey,
+          ...(nsec ? { nsec } : {}),
+          ...(bunkerUri ? { bunkerUri } : {}),
+          ...(clientNsec ? { clientNsec } : {}),
+        });
+        onSuccess?.();
+      }}
+    />
   );
 }

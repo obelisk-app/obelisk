@@ -5,6 +5,7 @@ import { cookies, headers } from 'next/headers';
 import { LocaleProvider } from '@/i18n/context';
 import type { Locale } from '@/i18n/index';
 import ToastStack from '@/components/ToastStack';
+import SdkSessionBridge from '@/components/SdkSessionBridge';
 import './globals.css';
 import '@nostr-wot/ui/styles.css';
 
@@ -217,7 +218,7 @@ export default async function RootLayout({
         data-nui-theme="la-crypta"
       >
         <LocaleProvider initialLocale={locale}>
-          {children}
+          <SdkSessionBridge>{children}</SdkSessionBridge>
           <ToastStack />
         </LocaleProvider>
       </body>
