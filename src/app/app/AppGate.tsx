@@ -11,7 +11,7 @@
  * the user-agent and viewport disagree.
  */
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 // Hoist the mobile shell's stylesheet up to the eagerly-loaded route bundle
 // so it's in place before the dynamic PhoneShell chunk hydrates. Without
@@ -19,7 +19,8 @@ import dynamic from 'next/dynamic';
 // in practice means the first paint of the mobile UI is unstyled (SVG
 // icons render at default browser size, etc.).
 import './mobile/mobile-shell.css';
-import { useIsLoggedIn, useMyPubkey, useConfiguredRelays, useGroups } from '@/lib/nostr-bridge';
+import { useIsLoggedIn, useMyPubkey, useConfiguredRelays, useGroups, useUserMetadata } from '@/lib/nostr-bridge';
+import ProfileEditor from '@/components/ProfileEditor';
 import { useFaviconBadge } from '@/hooks/useFaviconBadge';
 import { useAutoMarkRead } from '@/hooks/useAutoMarkRead';
 import { ensureReadStateStoreForAccount } from '@/store/read-state';
@@ -114,6 +115,53 @@ function ReadStateRoot() {
   return null;
 }
 
+/**
+ * First-time-after-login profile setup gate. Shown for fresh accounts that
+ * haven't published a kind:0 yet (or whose published name/displayName is
+ * empty). Mounted in both shells via AppGate so the prompt fires on desktop
+ * and mobile alike. Uses ProfileEditor in setup mode, which uploads avatars
+ * to Blossom rather than asking for a pasted URL.
+ */
+function ProfileSetupGate() {
+  const myPubkey = useMyPubkey();
+  const meta = useUserMetadata(myPubkey);
+  const [showSetup, setShowSetup] = useState(false);
+
+  useEffect(() => {
+    if (!myPubkey) return;
+    if (typeof window === 'undefined') return;
+    const key = `obelisk-dex/mobile-setup-seen/${myPubkey}`;
+    if (window.localStorage.getItem(key)) return;
+    if (meta && (meta.name || meta.displayName)) {
+      window.localStorage.setItem(key, '1');
+      return;
+    }
+    // Freshly generated key (set by LoginModal) — no kind:0 will arrive,
+    // so skip the grace period.
+    const justGenKey = `obelisk-dex/just-generated/${myPubkey}`;
+    if (window.localStorage.getItem(justGenKey)) {
+      try { window.localStorage.removeItem(justGenKey); } catch { /* ignore */ }
+      setShowSetup(true);
+      return;
+    }
+    const t = setTimeout(() => {
+      if (window.localStorage.getItem(key)) return;
+      setShowSetup(true);
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [myPubkey, meta]);
+
+  const dismiss = useCallback(() => {
+    if (myPubkey) {
+      try { window.localStorage.setItem(`obelisk-dex/mobile-setup-seen/${myPubkey}`, '1'); } catch { /* ignore */ }
+    }
+    setShowSetup(false);
+  }, [myPubkey]);
+
+  if (!showSetup) return null;
+  return <ProfileEditor mode="setup" onComplete={dismiss} onSkip={dismiss} />;
+}
+
 export default function AppGate() {
   const isMobile = useIsMobile();
   const loggedIn = useIsLoggedIn();
@@ -122,6 +170,7 @@ export default function AppGate() {
     <>
       {loggedIn ? <ReadStateRoot /> : null}
       {isMobile ? <MobileShell /> : <AppShell />}
+      {loggedIn ? <ProfileSetupGate /> : null}
     </>
   );
 }

@@ -382,89 +382,6 @@ function LoginScreen() {
   );
 }
 
-// ───────────────────────────────────────────────────────────────────────────
-// 02 — profile setup (after first login)
-
-function ProfileSetupScreen({ onDone, onSkip }: { onDone: () => void; onSkip: () => void }) {
-  const myPubkey = useMyPubkey();
-  const meta = useUserMetadata(myPubkey);
-  const [name, setName] = useState(meta?.displayName ?? meta?.name ?? '');
-  const [about, setAbout] = useState(meta?.about ?? '');
-  const [picture, setPicture] = useState(meta?.picture ?? '');
-  const [nip05, setNip05] = useState(meta?.nip05 ?? '');
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    if (meta) {
-      setName((n) => n || meta.displayName || meta.name || '');
-      setAbout((a) => a || meta.about || '');
-      setPicture((p) => p || meta.picture || '');
-      setNip05((n) => n || meta.nip05 || '');
-    }
-  }, [meta]);
-
-  const submit = async () => {
-    if (busy) return;
-    setBusy(true);
-    try {
-      const opts: Parameters<typeof nostrActions.editUserMetadata>[0] = {};
-      if (name) { opts.name = name; opts.displayName = name; }
-      if (about) opts.about = about;
-      if (picture) opts.picture = picture;
-      if (nip05) opts.nip05 = nip05;
-      await nostrActions.editUserMetadata(opts);
-      onDone();
-    } catch (err) {
-      console.warn('[mobile] editUserMetadata failed', err);
-      onDone(); // proceed anyway — the user can edit later
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <div className="screen active" data-screen="profile-setup">
-      <div className="setup-header">
-        <button className="back-btn" onClick={() => nostrActions.logout()} aria-label="Back">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
-        </button>
-        <h2>Set up your profile</h2>
-        <button className="setup-skip" onClick={onSkip}>Skip</button>
-      </div>
-      <div className="setup-body">
-        <p className="setup-intro">Add a name and picture so others can recognize you on Nostr. You can always update them later.</p>
-        <div className="setup-field">
-          <label>Display Name</label>
-          <div className="setup-input-wrap">
-            <input className="setup-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
-          </div>
-        </div>
-        <div className="setup-field">
-          <label>Profile Picture URL</label>
-          <div className="setup-input-wrap">
-            <input className="setup-input" value={picture} onChange={(e) => setPicture(e.target.value)} placeholder="https://…" />
-          </div>
-        </div>
-        <div className="setup-field">
-          <label>About</label>
-          <textarea className="setup-textarea" value={about} onChange={(e) => setAbout(e.target.value)} placeholder="A short bio…" />
-        </div>
-        <div className="setup-field">
-          <label>NIP-05 (optional)</label>
-          <div className="setup-input-wrap">
-            <input className="setup-input" value={nip05} onChange={(e) => setNip05(e.target.value)} placeholder="you@domain.com" />
-          </div>
-        </div>
-      </div>
-      <div className="setup-actions">
-        <button className="btn-primary" onClick={submit} disabled={busy}>
-          {busy ? 'Publishing…' : 'Publish to Nostr'}
-        </button>
-      </div>
-    </div>
-  );
-}
-
 // Mirrors the desktop ServerRail's suggested-relays list so users get the
 // same starting set of NIP-29 relays from the mobile + tile.
 const SUGGESTED_RELAYS: ReadonlyArray<{ url: string; fallbackName?: string; fallbackDescription?: string }> = [
@@ -4500,7 +4417,6 @@ export default function MobileShell() {
   const isLoggedIn = useIsLoggedIn();
   const isRehydrating = useIsRehydrating();
   const myPubkey = useMyPubkey();
-  const meta = useUserMetadata(myPubkey);
   const groups = useGroups();
   const myFollows = useMyFollows();
 
@@ -4512,7 +4428,6 @@ export default function MobileShell() {
   const exitArmedRef = useRef<number>(0);
   const [exitToast, setExitToast] = useState(false);
   const router = useRouter();
-  const [showSetup, setShowSetup] = useState(false);
   // Slide direction for the screen-mount animation. 'forward' slides in
   // from the right (push), 'back' slides in from the left (pop). Cleared
   // after each animation so a same-screen rerender doesn't replay.
@@ -4529,41 +4444,6 @@ export default function MobileShell() {
   // newly-mounted screen doesn't double-animate (the drag layer already
   // animated it into place).
   const suppressSlideRef = useRef(false);
-
-  // First-time-after-login profile setup gate
-  useEffect(() => {
-    if (!isLoggedIn || !myPubkey) return;
-    if (typeof window === 'undefined') return;
-    const key = `obelisk-dex/mobile-setup-seen/${myPubkey}`;
-    const seen = window.localStorage.getItem(key);
-    if (seen) return;
-    if (meta && (meta.name || meta.displayName)) {
-      window.localStorage.setItem(key, '1');
-      return;
-    }
-    // Freshly generated key (set by LoginModal) — no kind:0 will ever arrive,
-    // so skip the grace period and show setup immediately.
-    const justGenKey = `obelisk-dex/just-generated/${myPubkey}`;
-    if (window.localStorage.getItem(justGenKey)) {
-      try { window.localStorage.removeItem(justGenKey); } catch { /* ignore */ }
-      setShowSetup(true);
-      return;
-    }
-    // Show setup after a brief grace period (let kind:0 arrive)
-    const t = setTimeout(() => {
-      const fresh = window.localStorage.getItem(key);
-      if (fresh) return;
-      setShowSetup(true);
-    }, 1500);
-    return () => clearTimeout(t);
-  }, [isLoggedIn, myPubkey, meta]);
-
-  const dismissSetup = useCallback(() => {
-    if (myPubkey) {
-      try { window.localStorage.setItem(`obelisk-dex/mobile-setup-seen/${myPubkey}`, '1'); } catch { /* ignore */ }
-    }
-    setShowSetup(false);
-  }, [myPubkey]);
 
   // ── navigation helpers ───────────────────────────────────────────────
   // We update `useChatStore.activeChannelId` / `useDMStore.activeDMPubkey`
@@ -5004,17 +4884,6 @@ export default function MobileShell() {
       <div className="obelisk-mobile">
         <div className="screens-host">
           <LoginScreen />
-        </div>
-      </div>
-    );
-  }
-
-  // Profile setup overlay
-  if (showSetup) {
-    return (
-      <div className="obelisk-mobile">
-        <div className="screens-host">
-          <ProfileSetupScreen onDone={dismissSetup} onSkip={dismissSetup} />
         </div>
       </div>
     );
