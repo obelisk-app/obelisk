@@ -76,6 +76,10 @@ const bridgeFake = vi.hoisted(() => {
 vi.mock('@/lib/nostr-bridge/client', () => ({
   getBridge: vi.fn(async () => bridgeFake.impl),
   getBridgeImpl: vi.fn(() => bridgeFake.impl),
+  // Test mock — accept anything that looks like a wss URL. The real
+  // helper rejects localhost/loopback/RFC-1918; the test fixtures
+  // already use public wss:// hosts so any reasonable filter passes.
+  isImportableRelayUrl: vi.fn((u: string) => typeof u === 'string' && u.startsWith('wss://')),
 }));
 
 import {

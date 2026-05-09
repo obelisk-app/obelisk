@@ -3594,7 +3594,7 @@ class BridgeImpl implements NostrBridge {
  *   - Hostname can't be `localhost`, `*.localhost`, `*.local`, or an
  *     IPv4 literal in the loopback / RFC-1918 / link-local ranges.
  */
-function isImportableRelayUrl(url: string): boolean {
+export function isImportableRelayUrl(url: string): boolean {
   let p: URL;
   try { p = new URL(url); } catch { return false; }
   if (p.protocol !== 'wss:') return false;

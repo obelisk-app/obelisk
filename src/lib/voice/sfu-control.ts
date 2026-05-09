@@ -35,7 +35,7 @@
  */
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 
-import { getBridge, getBridgeImpl } from '@/lib/nostr-bridge/client';
+import { getBridge, getBridgeImpl, isImportableRelayUrl } from '@/lib/nostr-bridge/client';
 import { KIND_SFU_ADVERTISE, KIND_SFU_CONTROL } from '@/lib/nip-kinds';
 import { resolveSfuPin } from './sfu-pin';
 
@@ -97,13 +97,19 @@ function firstTag(ev: NostrEvent, name: string): string | null {
 export function parseAdvertisement(ev: NostrEvent): SfuAdvertisement {
   const capStr = firstTag(ev, 'cap');
   const capNum = capStr ? Number(capStr) : NaN;
+  // Drop any `relay` / `trusted_relay` entries pointing at localhost,
+  // loopback, RFC-1918, or non-wss schemes. SfuRpc subscribes to whatever
+  // we hand it, and a never-resolving WebSocket to a private host stalls
+  // every voice-sfu join until the rpc timeout fires. A dev box that
+  // happens to publish kind 31313 with its lan IP — or an old pinned SFU
+  // entry from a local test rig — shouldn't take down production browsers.
   return {
     pubkey: ev.pubkey,
     url: firstTag(ev, 'url'),
     region: firstTag(ev, 'region'),
     cap: Number.isFinite(capNum) ? capNum : null,
-    trustedRelays: tagValues(ev, 'trusted_relay'),
-    generalRelays: tagValues(ev, 'relay'),
+    trustedRelays: tagValues(ev, 'trusted_relay').filter(isImportableRelayUrl),
+    generalRelays: tagValues(ev, 'relay').filter(isImportableRelayUrl),
     createdAt: ev.created_at,
   };
 }
