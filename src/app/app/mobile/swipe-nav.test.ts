@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { decideSnap, decideSwipeNav, NAV_ORDER, neighborsFor } from './swipe-nav';
+import { buildSeedHistory, decideSnap, decideSwipeNav, NAV_ORDER, neighborsFor } from './swipe-nav';
+import { initialNav, type NavState } from './url-state';
 
 describe('mobile swipe-nav', () => {
   describe('top-level screens cycle through NAV_ORDER', () => {
@@ -196,6 +197,63 @@ describe('mobile swipe-nav', () => {
     it('untyped screens have no neighbors', () => {
       expect(neighborsFor('login')).toEqual({ left: null, right: null });
       expect(neighborsFor('profile-setup')).toEqual({ left: null, right: null });
+    });
+  });
+
+  describe('buildSeedHistory — initial popstate seeding', () => {
+    it('top-level tab seeds [guard, parsed] only', () => {
+      const parsed: NavState = { ...initialNav, screen: 'server' };
+      const entries = buildSeedHistory(parsed, null);
+      expect(entries).toHaveLength(2);
+      expect(entries[0]).toEqual({ state: { guard: true }, url: '/app' });
+      expect(entries[1]).toEqual({ state: { nav: parsed }, url: '/app' });
+    });
+
+    it('top-level inbox: guard sits behind, no parent in between', () => {
+      const parsed: NavState = { ...initialNav, screen: 'inbox' };
+      const entries = buildSeedHistory(parsed, null);
+      expect(entries).toHaveLength(2);
+      expect(entries[0]).toEqual({ state: { guard: true }, url: '/app?s=inbox' });
+      expect(entries[1].state.nav?.screen).toBe('inbox');
+    });
+
+    it('deep-linked channel seeds [guard, server, channel] so back climbs to the channel list', () => {
+      const parsed: NavState = { ...initialNav, screen: 'channel', groupId: 'gid' };
+      const entries = buildSeedHistory(parsed, null);
+      expect(entries).toHaveLength(3);
+      expect(entries[0].state).toEqual({ guard: true });
+      expect(entries[1].state.nav?.screen).toBe('server');
+      expect(entries[1].state.nav?.groupId).toBe(null);
+      expect(entries[2].state.nav).toEqual(parsed);
+      // Guard URL matches the parent's URL so the popstate re-push doesn't
+      // flicker the address bar.
+      expect(entries[0].url).toBe(entries[1].url);
+      expect(entries[2].url).toBe('/app?c=gid&s=channel');
+    });
+
+    it('deep-linked dm-thread seeds dms-list as the parent', () => {
+      const parsed: NavState = { ...initialNav, screen: 'dm-thread', dmPeer: 'pk' };
+      const entries = buildSeedHistory(parsed, null);
+      expect(entries).toHaveLength(3);
+      expect(entries[1].state.nav?.screen).toBe('dms-list');
+      expect(entries[1].state.nav?.dmPeer).toBe(null);
+      expect(entries[2].state.nav).toEqual(parsed);
+    });
+
+    it('deep-linked settings-prefs seeds settings-profile as the parent', () => {
+      const parsed: NavState = { ...initialNav, screen: 'settings-prefs' };
+      const entries = buildSeedHistory(parsed, null);
+      expect(entries).toHaveLength(3);
+      expect(entries[1].state.nav?.screen).toBe('settings-profile');
+      expect(entries[2].state.nav?.screen).toBe('settings-prefs');
+    });
+
+    it('relay query param is preserved on every seeded URL', () => {
+      const parsed: NavState = { ...initialNav, screen: 'channel', groupId: 'gid' };
+      const entries = buildSeedHistory(parsed, 'wss://relay.obelisk.ar');
+      for (const e of entries) {
+        expect(e.url).toContain('relay=relay.obelisk.ar');
+      }
     });
   });
 

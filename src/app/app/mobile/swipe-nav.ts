@@ -1,4 +1,4 @@
-import type { ScreenName } from './url-state';
+import { initialNav, urlFor, type NavState, type ScreenName } from './url-state';
 
 // Top-level bottom-nav screens, left-to-right. Swipe-left advances; swipe-right
 // retreats.
@@ -82,6 +82,38 @@ export function neighborsFor(screen: ScreenName): { left: ScreenName | null; rig
 // parentIdx - 1, no-op at the ends. So a horizontal gesture is always a
 // tab switch — popping back inside a tab (channel → channels list, prefs →
 // you) goes through the header back-button, not a swipe.
+// Initial history seed entries: the first one is replaced over the current
+// browser entry, the rest are pushed in order. The guard sentinel sits behind
+// everything so that a back-press past the user's screen stack arms the
+// "press again to exit" toast. When a deep link drops the user straight onto
+// a sub-screen (e.g. /app?c=…) we also seed the parent tab between the guard
+// and the sub-screen — otherwise the very first back-press would land on the
+// guard and show the exit toast, which reads as broken.
+export interface SeedHistoryEntry {
+  state: { nav?: NavState; guard?: boolean };
+  url: string;
+}
+
+export function buildSeedHistory(parsed: NavState, relay: string | null): SeedHistoryEntry[] {
+  const seedUrl = urlFor(parsed, relay);
+  const parentScreen = SUB_TO_NAV[parsed.screen] ?? null;
+  const parentNav: NavState | null = parentScreen
+    ? { ...initialNav, screen: parentScreen }
+    : null;
+  const parentUrl = parentNav ? urlFor(parentNav, relay) : null;
+
+  const entries: SeedHistoryEntry[] = [];
+  // Guard URL matches the parent (or the parsed screen if no parent) so the
+  // address bar doesn't flicker when the popstate handler re-pushes after
+  // arming the toast.
+  entries.push({ state: { guard: true }, url: parentUrl ?? seedUrl });
+  if (parentNav && parentUrl) {
+    entries.push({ state: { nav: parentNav }, url: parentUrl });
+  }
+  entries.push({ state: { nav: parsed }, url: seedUrl });
+  return entries;
+}
+
 export function decideSwipeNav(screen: ScreenName, goingRight: boolean): SwipeNavAction {
   const navIndex = NAV_ORDER.indexOf(screen);
   if (navIndex >= 0) {

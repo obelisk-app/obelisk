@@ -93,7 +93,7 @@ import { useChatStore } from '@/store/chat';
 import { useDMStore } from '@/store/dm';
 import { useNostrPresence, PRESENCE_WINDOW_MS } from '@/hooks/chat/useNostrPresence';
 import { type ScreenName, type NavState, initialNav, urlFor, parseUrl } from './url-state';
-import { decideSnap, decideSwipeNav, neighborsFor, NAV_ORDER, SUB_TO_NAV } from './swipe-nav';
+import { buildSeedHistory, decideSnap, decideSwipeNav, neighborsFor, NAV_ORDER, SUB_TO_NAV } from './swipe-nav';
 import { useKeyboardInset } from './use-keyboard';
 // CSS is hoisted to AppGate.tsx so it lands in the route's eagerly-loaded
 // stylesheet, not in this dynamic chunk's late-arriving sidecar.
@@ -4592,10 +4592,16 @@ export default function MobileShell() {
     // Guard entry: a sentinel sits BEHIND the current nav so the first
     // press of back lands on the guard (we re-push and arm the toast),
     // and a second press within 2 s confirms exit to the landing page.
-    const seedUrl = urlFor(parsed, relay ?? currentRelayUrl ?? null);
+    // For sub-screens (e.g. deep-linked into a channel) `buildSeedHistory`
+    // also seeds the parent tab between the guard and the sub-screen, so
+    // the channel header's back arrow climbs up to the channel list rather
+    // than dropping straight onto the guard and showing the exit toast.
+    const entries = buildSeedHistory(parsed, relay ?? currentRelayUrl ?? null);
     try {
-      window.history.replaceState({ guard: true }, '', seedUrl);
-      window.history.pushState({ nav: parsed }, '', seedUrl);
+      window.history.replaceState(entries[0].state, '', entries[0].url);
+      for (let i = 1; i < entries.length; i++) {
+        window.history.pushState(entries[i].state, '', entries[i].url);
+      }
     } catch { /* ignore */ }
   }, [isLoggedIn, currentRelayUrl]);
 
