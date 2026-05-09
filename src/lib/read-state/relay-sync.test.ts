@@ -70,8 +70,8 @@ describe('relay-sync internals', () => {
     })).toBeNull();
   });
 
-  it('debounce is 60s', () => {
-    expect(__INTERNAL.DEBOUNCE_MS).toBe(60_000);
+  it('debounce is 8s — short enough to feel responsive while still coalescing reading bursts', () => {
+    expect(__INTERNAL.DEBOUNCE_MS).toBe(8_000);
   });
 });
 
@@ -186,20 +186,20 @@ describe('startGroupsRelaySync publish (debounced)', () => {
     vi.useRealTimers();
   });
 
-  it('does not publish before the 60s window elapses', async () => {
+  it('does not publish before the 8s window elapses', async () => {
     activeCleanups.push(startGroupsRelaySync('wss://relay.test', ['g1']));
     useReadStateStore.getState().setGroupCursor('g1', 100);
     useReadStateStore.getState().setGroupCursor('g1', 200);
-    await vi.advanceTimersByTimeAsync(30_000);
+    await vi.advanceTimersByTimeAsync(4_000);
     expect(publishMock).not.toHaveBeenCalled();
   });
 
-  it('publishes once after 60s of changes, with mode=replace targeting the relay', async () => {
+  it('publishes once after 8s of changes, with mode=replace targeting the relay', async () => {
     activeCleanups.push(startGroupsRelaySync('wss://relay.test', ['g1', 'g2']));
     useReadStateStore.getState().setGroupCursor('g1', 100);
     useReadStateStore.getState().setGroupCursor('g2', 200);
     useReadStateStore.getState().setGroupCursor('g1', 150);
-    await vi.advanceTimersByTimeAsync(60_000);
+    await vi.advanceTimersByTimeAsync(8_000);
     await Promise.resolve();
     await Promise.resolve();
     await Promise.resolve();
@@ -213,8 +213,65 @@ describe('startGroupsRelaySync publish (debounced)', () => {
     activeCleanups.push(startGroupsRelaySync('wss://relay.test', ['g1']));
     // Out-of-scope group — should not trigger
     useReadStateStore.getState().setGroupCursor('g999', 100);
-    await vi.advanceTimersByTimeAsync(60_000);
+    await vi.advanceTimersByTimeAsync(8_000);
     expect(publishMock).not.toHaveBeenCalled();
+  });
+
+  it('cleanup eagerly flushes a pending publish so the wrap reaches the relay before unmount', async () => {
+    const cleanup = startGroupsRelaySync('wss://relay.test', ['g1']);
+    useReadStateStore.getState().setGroupCursor('g1', 100);
+    // Half a debounce window — flush would normally still be pending.
+    await vi.advanceTimersByTimeAsync(4_000);
+    expect(publishMock).not.toHaveBeenCalled();
+    cleanup();
+    // Cleanup fires flushNow synchronously; let the async wrap+publish
+    // resolve.
+    for (let i = 0; i < 8; i++) await Promise.resolve();
+    expect(publishMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('cleanup is a no-op when nothing has changed since the last publish', async () => {
+    const cleanup = startGroupsRelaySync('wss://relay.test', ['g1']);
+    useReadStateStore.getState().setGroupCursor('g1', 100);
+    await vi.advanceTimersByTimeAsync(8_000);
+    for (let i = 0; i < 8; i++) await Promise.resolve();
+    expect(publishMock).toHaveBeenCalledTimes(1);
+    publishMock.mockClear();
+    cleanup();
+    for (let i = 0; i < 8; i++) await Promise.resolve();
+    // No new cursor advance since the publish — cleanup must not republish.
+    expect(publishMock).not.toHaveBeenCalled();
+  });
+
+  it('visibilitychange to hidden flushes a pending publish', async () => {
+    activeCleanups.push(startGroupsRelaySync('wss://relay.test', ['g1']));
+    useReadStateStore.getState().setGroupCursor('g1', 100);
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(publishMock).not.toHaveBeenCalled();
+
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => 'hidden',
+    });
+    document.dispatchEvent(new Event('visibilitychange'));
+    for (let i = 0; i < 8; i++) await Promise.resolve();
+    expect(publishMock).toHaveBeenCalledTimes(1);
+
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => 'visible',
+    });
+  });
+
+  it('pagehide flushes a pending publish', async () => {
+    activeCleanups.push(startGroupsRelaySync('wss://relay.test', ['g1']));
+    useReadStateStore.getState().setGroupCursor('g1', 100);
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(publishMock).not.toHaveBeenCalled();
+
+    window.dispatchEvent(new Event('pagehide'));
+    for (let i = 0; i < 8; i++) await Promise.resolve();
+    expect(publishMock).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -255,7 +312,7 @@ describe('startDMRelaySync', () => {
   it('publishes a DM-scope wrap to all NIP-65 relays after debounce', async () => {
     activeCleanups.push(startDMRelaySync(['wss://a.test', 'wss://b.test']));
     useReadStateStore.getState().setDmCursor('alice', 1000);
-    await vi.advanceTimersByTimeAsync(60_000);
+    await vi.advanceTimersByTimeAsync(8_000);
     await Promise.resolve();
     await Promise.resolve();
     await Promise.resolve();

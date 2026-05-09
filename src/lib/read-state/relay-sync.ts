@@ -35,7 +35,14 @@ export const D_TAG_GROUPS = 'obelisk:readstate:v1';
 /** Inner rumor d-tag for DM-scope state events (also carries inboxLastReadAt). */
 export const D_TAG_DMS = 'obelisk:dm-readstate:v1';
 
-const DEBOUNCE_MS = 60_000;
+// 8s coalesces a burst of cursor advances during active reading without making
+// the publish feel deferred. The previous 60s window collapsed against
+// real-world usage: users read for less than a minute, then close the tab or
+// navigate, and the cleanup cleared the pending timer before flush — so the
+// gift wrap was never published and devices never converged. We now also
+// flush eagerly on cleanup, visibilitychange→hidden, and pagehide so a partial
+// debounce window doesn't lose the publish.
+const DEBOUNCE_MS = 8_000;
 
 /** Schema version for the JSON payload inside the rumor. */
 const SCHEMA_VERSION = 1;
@@ -153,6 +160,10 @@ function watchAndPublish(
 
   let timer: ReturnType<typeof setTimeout> | null = null;
   let lastFingerprint = selectFingerprint();
+  // Tracks the fingerprint that was last *published*. On flush we bump it
+  // forward; if cleanup/page-hide fires while the fingerprint matches the
+  // last publish, there's nothing new to push.
+  let lastPublishedFingerprint = lastFingerprint;
 
   const flush = async () => {
     timer = null;
@@ -160,6 +171,7 @@ function watchAndPublish(
     if (!signer) return;
     const payload = buildPayload();
     if (!payload) return;
+    const fpAtFlush = lastFingerprint;
     const wrap = await wrapForSelf(
       {
         kind: KIND_INNER,
@@ -174,6 +186,7 @@ function watchAndPublish(
         extraRelays: [...opts.relays],
         mode: 'replace',
       });
+      lastPublishedFingerprint = fpAtFlush;
       // Update cache so a reload paints the freshly-published state
       // even before the relay ACKs it back.
       for (const relay of opts.relays) {
@@ -188,6 +201,18 @@ function watchAndPublish(
     }
   };
 
+  // Eager flush — fires immediately if there's a pending publish that hasn't
+  // been sent yet. Used by cleanup, visibilitychange→hidden, and pagehide
+  // so closing the tab or switching devices doesn't drop the publish.
+  const flushNow = () => {
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
+    if (lastFingerprint === lastPublishedFingerprint) return;
+    void flush();
+  };
+
   const unsub = useReadStateStore.subscribe(() => {
     const fp = selectFingerprint();
     if (fp === lastFingerprint) return;
@@ -196,9 +221,33 @@ function watchAndPublish(
     timer = setTimeout(() => void flush(), DEBOUNCE_MS);
   });
 
+  // Browser lifecycle hooks — flush before the page goes away so the
+  // multi-device sync converges even when the user just closes the tab.
+  // `pagehide` is the most reliable on mobile Safari (which often skips
+  // `beforeunload`); `visibilitychange→hidden` covers tab switches and
+  // app-switch on iOS PWA. Both are no-ops in non-browser environments
+  // (tests, SSR).
+  const onVisibility = () => {
+    if (typeof document === 'undefined') return;
+    if (document.visibilityState === 'hidden') flushNow();
+  };
+  const onPageHide = () => flushNow();
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', onVisibility);
+  }
+  if (typeof window !== 'undefined') {
+    window.addEventListener('pagehide', onPageHide);
+  }
+
   return () => {
     unsub();
-    if (timer) clearTimeout(timer);
+    if (typeof document !== 'undefined') {
+      document.removeEventListener('visibilitychange', onVisibility);
+    }
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('pagehide', onPageHide);
+    }
+    flushNow();
   };
 }
 
