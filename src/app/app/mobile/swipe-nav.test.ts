@@ -36,9 +36,9 @@ describe('mobile swipe-nav', () => {
     });
   });
 
-  describe('sub-screens of server allow tab switching', () => {
-    it('swipe-right from channel pops back via history', () => {
-      expect(decideSwipeNav('channel', true)).toEqual({ kind: 'history-back' });
+  describe('sub-screens of server: horizontal swipe always switches tabs (skips parent)', () => {
+    it('swipe-right from channel is a no-op (server parent is first tab)', () => {
+      expect(decideSwipeNav('channel', true)).toEqual({ kind: 'noop' });
     });
 
     it('swipe-left from channel jumps to dms-list (past server parent)', () => {
@@ -57,12 +57,20 @@ describe('mobile swipe-nav', () => {
       });
     });
 
+    it('swipe-right from voice-room is a no-op', () => {
+      expect(decideSwipeNav('voice-room', true)).toEqual({ kind: 'noop' });
+    });
+
     it('swipe-left from forum jumps to dms-list', () => {
       expect(decideSwipeNav('forum', false)).toEqual({
         kind: 'top-level',
         target: 'dms-list',
         dir: 'forward',
       });
+    });
+
+    it('swipe-right from forum is a no-op', () => {
+      expect(decideSwipeNav('forum', true)).toEqual({ kind: 'noop' });
     });
 
     it('swipe-left from member-list jumps to dms-list', () => {
@@ -73,14 +81,18 @@ describe('mobile swipe-nav', () => {
       });
     });
 
-    it('swipe-right from voice-room pops back to server', () => {
-      expect(decideSwipeNav('voice-room', true)).toEqual({ kind: 'history-back' });
+    it('swipe-right from member-list is a no-op', () => {
+      expect(decideSwipeNav('member-list', true)).toEqual({ kind: 'noop' });
     });
   });
 
   describe('sub-screens of dms-list', () => {
-    it('swipe-right from dm-thread pops back', () => {
-      expect(decideSwipeNav('dm-thread', true)).toEqual({ kind: 'history-back' });
+    it('swipe-right from dm-thread jumps to server (before dms-list parent)', () => {
+      expect(decideSwipeNav('dm-thread', true)).toEqual({
+        kind: 'top-level',
+        target: 'server',
+        dir: 'back',
+      });
     });
 
     it('swipe-left from dm-thread jumps to inbox (past dms-list parent)', () => {
@@ -88,6 +100,14 @@ describe('mobile swipe-nav', () => {
         kind: 'top-level',
         target: 'inbox',
         dir: 'forward',
+      });
+    });
+
+    it('swipe-right from compose-dm jumps to server', () => {
+      expect(decideSwipeNav('compose-dm', true)).toEqual({
+        kind: 'top-level',
+        target: 'server',
+        dir: 'back',
       });
     });
 
@@ -101,8 +121,12 @@ describe('mobile swipe-nav', () => {
   });
 
   describe('settings-prefs is a sub of settings-profile (last tab)', () => {
-    it('swipe-right pops back to settings-profile', () => {
-      expect(decideSwipeNav('settings-prefs', true)).toEqual({ kind: 'history-back' });
+    it('swipe-right jumps to inbox (before settings-profile parent)', () => {
+      expect(decideSwipeNav('settings-prefs', true)).toEqual({
+        kind: 'top-level',
+        target: 'inbox',
+        dir: 'back',
+      });
     });
 
     it('swipe-left is a no-op (no tab past settings-profile)', () => {
@@ -111,16 +135,20 @@ describe('mobile swipe-nav', () => {
   });
 
   describe('profile-edit is a sub of settings-profile', () => {
-    it('swipe-right pops back to settings-profile', () => {
-      expect(decideSwipeNav('profile-edit', true)).toEqual({ kind: 'history-back' });
+    it('swipe-right jumps to inbox', () => {
+      expect(decideSwipeNav('profile-edit', true)).toEqual({
+        kind: 'top-level',
+        target: 'inbox',
+        dir: 'back',
+      });
     });
 
     it('swipe-left is a no-op (no tab past settings-profile)', () => {
       expect(decideSwipeNav('profile-edit', false)).toEqual({ kind: 'noop' });
     });
 
-    it('neighbors: left = settings-profile, right = null', () => {
-      expect(neighborsFor('profile-edit')).toEqual({ left: 'settings-profile', right: null });
+    it('neighbors: left = inbox, right = null', () => {
+      expect(neighborsFor('profile-edit')).toEqual({ left: 'inbox', right: null });
     });
   });
 
@@ -149,20 +177,20 @@ describe('mobile swipe-nav', () => {
       expect(neighborsFor('settings-profile')).toEqual({ left: 'inbox', right: null });
     });
 
-    it('sub-screen of server: left = parent, right = next top-level', () => {
-      expect(neighborsFor('channel')).toEqual({ left: 'server', right: 'dms-list' });
-      expect(neighborsFor('voice-room')).toEqual({ left: 'server', right: 'dms-list' });
-      expect(neighborsFor('member-list')).toEqual({ left: 'server', right: 'dms-list' });
-      expect(neighborsFor('forum')).toEqual({ left: 'server', right: 'dms-list' });
+    it('sub-screen of server: no left (parent is first tab), right = next top-level', () => {
+      expect(neighborsFor('channel')).toEqual({ left: null, right: 'dms-list' });
+      expect(neighborsFor('voice-room')).toEqual({ left: null, right: 'dms-list' });
+      expect(neighborsFor('member-list')).toEqual({ left: null, right: 'dms-list' });
+      expect(neighborsFor('forum')).toEqual({ left: null, right: 'dms-list' });
     });
 
-    it('sub-screen of dms-list: left = dms-list, right = inbox', () => {
-      expect(neighborsFor('dm-thread')).toEqual({ left: 'dms-list', right: 'inbox' });
-      expect(neighborsFor('compose-dm')).toEqual({ left: 'dms-list', right: 'inbox' });
+    it('sub-screen of dms-list: left = server, right = inbox', () => {
+      expect(neighborsFor('dm-thread')).toEqual({ left: 'server', right: 'inbox' });
+      expect(neighborsFor('compose-dm')).toEqual({ left: 'server', right: 'inbox' });
     });
 
-    it('settings-prefs: left = settings-profile, right = null (last tab)', () => {
-      expect(neighborsFor('settings-prefs')).toEqual({ left: 'settings-profile', right: null });
+    it('settings-prefs: left = inbox, right = null (last tab)', () => {
+      expect(neighborsFor('settings-prefs')).toEqual({ left: 'inbox', right: null });
     });
 
     it('untyped screens have no neighbors', () => {

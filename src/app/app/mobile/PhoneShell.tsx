@@ -93,7 +93,7 @@ import { useChatStore } from '@/store/chat';
 import { useDMStore } from '@/store/dm';
 import { useNostrPresence, PRESENCE_WINDOW_MS } from '@/hooks/chat/useNostrPresence';
 import { type ScreenName, type NavState, initialNav, urlFor, parseUrl } from './url-state';
-import { decideSnap, decideSwipeNav, neighborsFor, NAV_ORDER } from './swipe-nav';
+import { decideSnap, decideSwipeNav, neighborsFor, NAV_ORDER, SUB_TO_NAV } from './swipe-nav';
 import { useKeyboardInset } from './use-keyboard';
 // CSS is hoisted to AppGate.tsx so it lands in the route's eagerly-loaded
 // stylesheet, not in this dynamic chunk's late-arriving sidecar.
@@ -4739,11 +4739,11 @@ export default function MobileShell() {
   const finishDrag = useCallback((dx: number, velocity: number, width: number) => {
     const goingRight = dx > 0;
     const action = decideSwipeNav(navRef.current.screen, goingRight);
-    const hasTarget = action.kind === 'top-level' || action.kind === 'history-back';
+    const hasTarget = action.kind === 'top-level';
     const snap = hasTarget ? decideSnap(dx, velocity, width) : 'revert';
     const layer = dragLayerRef.current;
     const TRANSITION = 'transform 240ms cubic-bezier(0.2, 0.85, 0.25, 1)';
-    if (snap === 'commit' && hasTarget) {
+    if (snap === 'commit' && action.kind === 'top-level') {
       const targetTx = goingRight ? width : -width;
       if (layer) {
         layer.style.transition = TRANSITION;
@@ -4751,26 +4751,22 @@ export default function MobileShell() {
       }
       window.setTimeout(() => {
         suppressSlideRef.current = true;
-        if (action.kind === 'top-level') {
-          // Land on the bare top-level. A previous version restored the
-          // target tab's last-visited sub-screen here (so server>channelA →
-          // DMs → swipe-right would re-enter channelA), but that re-entry
-          // happened AFTER the visual swipe had already settled on the bare
-          // tab — the channel popped on top, which read as a glitchy
-          // refresh. The drag-prev slot only ever shows `renderTopLevelScreen`,
-          // not the remembered sub-screen, so previewing it during the
-          // swipe wasn't possible without re-architecting the carousel.
-          // Lands-on-bare is the consistent option: what you see during
-          // the swipe is what you get on commit.
-          useChatStore.setState({ activeChannelId: null });
-          useDMStore.setState({ activeDMPubkey: null });
-          pushNav(
-            (n) => ({ ...n, screen: action.target, baseScreen: null, msgContext: null }),
-            action.dir,
-          );
-        } else if (action.kind === 'history-back') {
-          window.history.back();
-        }
+        // Land on the bare top-level. A previous version restored the target
+        // tab's last-visited sub-screen here (so server>channelA → DMs →
+        // swipe-right would re-enter channelA), but that re-entry happened
+        // AFTER the visual swipe had already settled on the bare tab — the
+        // channel popped on top, which read as a glitchy refresh. The
+        // drag-prev/drag-next slots only ever show `renderTopLevelScreen`,
+        // not the remembered sub-screen, so previewing it during the swipe
+        // wasn't possible without re-architecting the carousel. Lands-on-bare
+        // is the consistent option: what you see during the swipe is what you
+        // get on commit.
+        useChatStore.setState({ activeChannelId: null });
+        useDMStore.setState({ activeDMPubkey: null });
+        pushNav(
+          (n) => ({ ...n, screen: action.target, baseScreen: null, msgContext: null }),
+          action.dir,
+        );
         setIsDragging(false);
       }, 240);
     } else {
@@ -5097,16 +5093,21 @@ export default function MobileShell() {
            * skeleton states to flash on every horizontal nav. */}
           {NAV_ORDER.map((s) => {
             // When the active screen is a sub-screen overlay, its parent
-            // top-level tab should sit at translateX(0) behind the overlay
-            // so the user sees the overlay slide in over it. Only push the
-            // parent into the drag-prev slot during an actual drag, so the
-            // swipe-right gesture can reveal it from the left edge.
-            const isSubScreen = !NAV_ORDER.includes(nav.screen);
+            // top-level tab sits at translateX(0) behind the overlay so the
+            // user sees the overlay slide in over it. The parent is *not* a
+            // drag neighbor anymore — horizontal swipes skip past the parent
+            // in both directions to switch tabs (see swipe-nav.ts) — so it
+            // stays at drag-curr regardless of drag state. The actual
+            // neighbors revealed by a drag are the previous/next top-level
+            // tabs around the parent.
+            const subScreenParent = NAV_ORDER.includes(nav.screen) ? null : SUB_TO_NAV[nav.screen] ?? null;
             const role =
               s === nav.screen
                 ? 'drag-curr'
+                : s === subScreenParent
+                ? 'drag-curr'
                 : s === dragNeighbors.left
-                ? (isSubScreen && !isDragging ? 'drag-curr' : 'drag-prev')
+                ? 'drag-prev'
                 : s === dragNeighbors.right
                 ? 'drag-next'
                 : 'drag-hidden';

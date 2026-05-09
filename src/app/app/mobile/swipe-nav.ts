@@ -5,9 +5,11 @@ import type { ScreenName } from './url-state';
 export const NAV_ORDER: ScreenName[] = ['server', 'dms-list', 'inbox', 'settings-profile'];
 
 // Sub-screens map back to the top-level tab they belong to. This lets us treat
-// a horizontal swipe on a sub-screen as if the user were on its parent — so
-// swipe-left from a channel jumps to DMs (the tab past Servers), instead of
-// being a no-op the way it used to be.
+// a horizontal swipe on a sub-screen as if the user were on its parent — both
+// directions skip the parent and switch tabs (swipe-left → next top-level,
+// swipe-right → previous top-level), so a horizontal gesture is always a tab
+// switch and never a within-tab pop. To go back inside a tab the user uses the
+// header back-button or re-taps the active bottom-nav item.
 export const SUB_TO_NAV: Partial<Record<ScreenName, ScreenName>> = {
   channel: 'server',
   'voice-room': 'server',
@@ -23,7 +25,6 @@ export const SUB_TO_NAV: Partial<Record<ScreenName, ScreenName>> = {
 
 export type SwipeNavAction =
   | { kind: 'top-level'; target: ScreenName; dir: 'forward' | 'back' }
-  | { kind: 'history-back' }
   | { kind: 'noop' };
 
 // Snap decision after a drag ends. Either commit (slide to the neighbor we
@@ -50,9 +51,12 @@ export function decideSnap(
 // behind the active one while the user pans.
 //
 // On a top-level tab, neighbors are the previous/next entries in NAV_ORDER.
-// On a sub-screen the left neighbor is the SUB_TO_NAV parent (matches the
-// history-back gesture in the common case) and the right neighbor is the
-// top-level tab past the parent (matches the swipe-left jump).
+// On a sub-screen the parent tab is treated as the screen's anchor in
+// NAV_ORDER, so the neighbors are the tabs immediately before and after the
+// parent — matching the swipe behavior, which skips the parent in both
+// directions. The parent itself sits at the active position behind the
+// sub-screen overlay; the renderer in PhoneShell handles that placement
+// directly rather than going through this function.
 export function neighborsFor(screen: ScreenName): { left: ScreenName | null; right: ScreenName | null } {
   const navIndex = NAV_ORDER.indexOf(screen);
   if (navIndex >= 0) {
@@ -65,7 +69,7 @@ export function neighborsFor(screen: ScreenName): { left: ScreenName | null; rig
   if (!parent) return { left: null, right: null };
   const parentIdx = NAV_ORDER.indexOf(parent);
   return {
-    left: parent,
+    left: parentIdx > 0 ? NAV_ORDER[parentIdx - 1] : null,
     right: parentIdx < NAV_ORDER.length - 1 ? NAV_ORDER[parentIdx + 1] : null,
   };
 }
@@ -73,10 +77,11 @@ export function neighborsFor(screen: ScreenName): { left: ScreenName | null; rig
 // Decide what a horizontal swipe means for the current screen.
 //
 // On a top-level tab (server / dms-list / inbox / settings-profile) swipe
-// cycles through NAV_ORDER. On a sub-screen, swipe-right pops back to the
-// parent (via window.history.back so push-state stays consistent), and
-// swipe-left jumps to the top-level tab immediately after the parent so the
-// user can switch tabs without tapping the bottom nav.
+// cycles through NAV_ORDER. On a sub-screen we anchor at the parent's index
+// in NAV_ORDER and step past it: swipe-left → parentIdx + 1, swipe-right →
+// parentIdx - 1, no-op at the ends. So a horizontal gesture is always a
+// tab switch — popping back inside a tab (channel → channels list, prefs →
+// you) goes through the header back-button, not a swipe.
 export function decideSwipeNav(screen: ScreenName, goingRight: boolean): SwipeNavAction {
   const navIndex = NAV_ORDER.indexOf(screen);
   if (navIndex >= 0) {
@@ -90,9 +95,12 @@ export function decideSwipeNav(screen: ScreenName, goingRight: boolean): SwipeNa
   }
   const parent = SUB_TO_NAV[screen];
   if (!parent) return { kind: 'noop' };
-  if (goingRight) return { kind: 'history-back' };
   const parentIdx = NAV_ORDER.indexOf(parent);
-  const nextIdx = parentIdx + 1;
-  if (nextIdx >= NAV_ORDER.length) return { kind: 'noop' };
-  return { kind: 'top-level', target: NAV_ORDER[nextIdx], dir: 'forward' };
+  const nextIdx = goingRight ? parentIdx - 1 : parentIdx + 1;
+  if (nextIdx < 0 || nextIdx >= NAV_ORDER.length) return { kind: 'noop' };
+  return {
+    kind: 'top-level',
+    target: NAV_ORDER[nextIdx],
+    dir: goingRight ? 'back' : 'forward',
+  };
 }
