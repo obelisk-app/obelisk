@@ -807,7 +807,12 @@ export class VoiceClient {
     if (this.sfuPubkey === sfuPubkey && this.sfuClient) return;
 
     if (this.sfuClient) {
-      try { this.sfuClient.close(); } catch { /* ignore */ }
+      // Await close so the prior client's `leave` RPC actually transmits
+      // before we open a new connection; otherwise the SFU may still hold
+      // our prior peer entry when our new SfuClient.start() races in,
+      // double-fanning peerJoined notifications and producing roster
+      // flicker.
+      try { await this.sfuClient.close(); } catch { /* ignore */ }
       this.sfuClient = null;
     }
     // Track the *intended* SFU pubkey so other paths (peer mute, echo
@@ -855,7 +860,12 @@ export class VoiceClient {
     for (const peer of this.peers.values()) peer.close();
     this.peers.clear();
     if (this.sfuClient) {
-      try { this.sfuClient.close(); } catch { /* ignore */ }
+      // Bounded await so the SFU sees our `leave` RPC before its
+      // empty-grace timer / RTP reaper has to discover us via timeout.
+      // Capped at ~500 ms so a slow relay can't deadlock channel
+      // switches; DTLS close-notify on transport.close() is the
+      // deterministic fallback past that budget.
+      try { await this.sfuClient.close(); } catch { /* ignore */ }
       this.sfuClient = null;
     }
     this.sfuPubkey = null;
@@ -1033,7 +1043,11 @@ export class VoiceClient {
   private exitSfuMode(): void {
     const from = this.sfuPubkey;
     if (this.sfuClient) {
-      try { this.sfuClient.close(); } catch { /* ignore */ }
+      // Topology pivot to mesh — fire-and-forget the close. We don't
+      // need to await the leave RPC here because we're not opening a
+      // new SFU connection; mesh peers are about to provide media via
+      // a different path.
+      void this.sfuClient.close().catch(() => undefined);
       this.sfuClient = null;
     }
     if (from) {
@@ -1133,7 +1147,10 @@ export class VoiceClient {
       await client.start();
     } catch (err) {
       console.warn('[voice] SfuClient.start failed', err);
-      try { client.close(); } catch { /* ignore */ }
+      // start() failed — no live RPC subscription to gracefully close.
+      // Use 0-budget close (skip the bounded await for the leave RPC),
+      // since the SFU never registered a peer for us.
+      try { await client.close(0); } catch { /* ignore */ }
       if (this.sfuClient === client) this.sfuClient = null;
       if (this.sfuPubkey === sfuPubkey) {
         this.sfuPubkey = null;

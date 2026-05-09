@@ -183,25 +183,42 @@ export class SfuClient {
     try { producer.close(); } catch { /* ignore */ }
   }
 
-  close(): void {
+  /**
+   * Close transports and tell the SFU we're leaving.
+   *
+   * `awaitLeaveMs` bounds how long we'll wait for the `leave` RPC's
+   * underlying Nostr publish to actually transmit before tearing down.
+   * Set to 0 (the page-unload path passes 0) to keep the old fire-and-
+   * forget behavior — the synchronous DTLS close-notify on transport.close
+   * is enough on a closing tab. For graceful cases like channel switch we
+   * want a short bounded wait so the leave really lands; otherwise the
+   * SFU only finds out via the empty-grace timer / RTP inactivity reaper,
+   * which is the long road and was at the heart of the "calls remain
+   * active with 0 people" symptom.
+   */
+  async close(awaitLeaveMs = 500): Promise<void> {
     if (this.closed) return;
     this.closed = true;
-    // Tell the SFU we're leaving BEFORE we tear down our side. Without this
-    // the server only learns about the departure through DTLS close-notify
-    // on the transports — which is unreliable when the tab closes abruptly
-    // or the network drops, leaving the peer's pubkey "in the room" until
-    // the server's own ICE/DTLS timeout fires (often 30 s+). During that
-    // window, attempts to rejoin (same channel OR a different SFU channel)
-    // can be rejected as "already in room".
-    //
-    // Fire-and-forget — we don't await because:
-    //   1. The RPC publish is a websocket round-trip; on a closing tab the
-    //      socket may already be in CLOSING and the await would hang.
-    //   2. The mediasoup transport.close() below sends DTLS close-notify
-    //      anyway; this is just a faster, explicit signal.
-    try {
-      void this.rpc.request('leave', undefined, 1500).catch(() => undefined);
-    } catch { /* ignore — rpc may already be closed */ }
+    // Try to land the `leave` RPC publish before we tear down. Bound the
+    // wait so a hung relay can't deadlock a channel switch — past the
+    // budget the SFU still cleans us up via DTLS close-notify, just on a
+    // longer leash.
+    if (awaitLeaveMs > 0) {
+      try {
+        await Promise.race([
+          this.rpc.request('leave', undefined, 1500).catch(() => undefined),
+          new Promise<void>((r) => setTimeout(r, awaitLeaveMs)),
+        ]);
+      } catch { /* ignore */ }
+    } else {
+      // Fire-and-forget path for unload — the page is going away, we
+      // can't await anything reliably. The publish microtask still runs
+      // before the page unloads in practice, and DTLS close-notify on
+      // the transport.close() below is the deterministic fallback.
+      try {
+        void this.rpc.request('leave', undefined, 1500).catch(() => undefined);
+      } catch { /* ignore */ }
+    }
     for (const consumer of this.remoteByProducerId.values()) {
       try { consumer.consumer.close(); } catch { /* ignore */ }
     }
@@ -412,10 +429,28 @@ export class SfuClient {
         consumer,
       };
       this.remoteByProducerId.set(producerId, remote);
-      consumer.on('transportclose', () => {
+      // Two distinct close events from mediasoup-client v3.20:
+      //   `transportclose` — recv transport closed (page unload, full
+      //                      SFU reconnect). Fires once per recv transport
+      //                      teardown across all consumers.
+      //   `trackended` — the underlying MediaStreamTrack ended (RTP stops
+      //                  flowing for long enough that the browser marks
+      //                  the track ended). Belt-and-suspenders backup for
+      //                  the explicit `producerClosed` notification the
+      //                  SFU sends — if the notification is delayed or
+      //                  dropped, this still fires within a few seconds
+      //                  of the upstream camera/screen-share toggling off.
+      // Pre-fix neither was wired and the SFU's `closeProducer` handler
+      // didn't fan out `producerClosed`, so a remote camera-off left a
+      // frozen tile in everyone's grid until they left the channel.
+      const onClose = () => {
+        if (!this.remoteByProducerId.has(producerId)) return;
         this.remoteByProducerId.delete(producerId);
+        try { consumer.close(); } catch { /* ignore */ }
         this.events.onRemoteTrackEnded(remote.trackId);
-      });
+      };
+      consumer.on('transportclose', onClose);
+      consumer.on('trackended', onClose);
       this.events.onRemoteTrack(remote);
     } catch (err) {
       console.warn('[sfu] consume failed', producerId, err);

@@ -136,7 +136,7 @@ const sfuClientFake = vi.hoisted(() => {
       this.state.publishedKinds.push(kind);
     }
     async unpublishTrack(_kind: string): Promise<void> {}
-    close(): void { this.state.closed = true; }
+    async close(_awaitLeaveMs?: number): Promise<void> { this.state.closed = true; }
   }
   return {
     SfuClient: StubSfuClient,

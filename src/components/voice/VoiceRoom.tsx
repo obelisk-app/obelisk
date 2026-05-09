@@ -272,16 +272,35 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
       };
     }
 
-    if (existing && existing.channelId !== channelId) {
-      void existing.leave();
-      setActiveVoiceClient(null);
-    }
+    // Hand off the prior client's leave promise into the async IIFE so we
+    // can await it BEFORE constructing the next VoiceClient — pre-fix the
+    // void-leave fired and we immediately raced into the new join while
+    // the old client's transports + leave RPC were still settling. Net
+    // effect: the SFU saw a new peerJoined for the new room while still
+    // holding the old peer entry for the prior room, doubling everyone's
+    // beacon-discovery roster work and (in the worst case) leaving stale
+    // peer entries until the empty-grace / RTP reaper caught up.
+    const priorLeave = (existing && existing.channelId !== channelId)
+      ? existing.leave()
+      : null;
+    if (priorLeave) setActiveVoiceClient(null);
 
     store.setConnecting(true);
     let client: VoiceClient | null = null;
 
     (async () => {
       try {
+        if (priorLeave) {
+          // Bound the wait so a hung leave (dead relay, slow signer)
+          // can't deadlock the UI. Past the budget the new join goes
+          // ahead and the SFU's RTP-inactivity reaper or empty-grace
+          // timer cleans up the prior room.
+          await Promise.race([
+            priorLeave.catch(() => undefined),
+            new Promise<void>((r) => setTimeout(r, 800)),
+          ]);
+          if (cancelled) return;
+        }
         client = new VoiceClient(channelId, {
           members: gate.members,
           admins: gate.admins,
