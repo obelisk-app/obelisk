@@ -49,10 +49,10 @@ export const metadata: Metadata = {
     type: 'website',
     images: [
       {
-        url: '/pictures-for-posts/dekstop-public-general-chat-view-with-member-list.png',
+        url: '/pictures-for-posts/desktop-large-voice-channel-with-sfu-peer-trasmission-test.png',
         width: 1470,
         height: 799,
-        alt: 'Obelisk desktop — General Chat with server rail, channel list, message stream and member list',
+        alt: 'Obelisk desktop — large voice channel with SFU test peer transmission',
       },
     ],
   },

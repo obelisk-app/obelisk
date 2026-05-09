@@ -56,10 +56,10 @@ export const metadata: Metadata = {
     type: 'website',
     images: [
       {
-        url: '/pictures-for-posts/mobile-server-and-channels-view.png',
-        width: 720,
-        height: 1600,
-        alt: 'Obelisk mobile — servers, categorized channels, forum threads and voice indicator',
+        url: '/pictures-for-posts/mobile-showcase-readme.png',
+        width: 3320,
+        height: 1840,
+        alt: 'Obelisk mobile — login, channels, voice with SFU, and profile screens',
       },
     ],
   },
@@ -68,7 +68,7 @@ export const metadata: Metadata = {
     title: 'Obelisk Mobile — Nostr group chat on your phone',
     description:
       'A mobile tour of Obelisk: NIP-29 channels, voice, encrypted DMs and Lightning zaps. No email, no password.',
-    images: ['/pictures-for-posts/mobile-server-and-channels-view.png'],
+    images: ['/pictures-for-posts/mobile-showcase-readme.png'],
   },
 };
 
