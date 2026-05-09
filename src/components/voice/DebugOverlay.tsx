@@ -113,6 +113,23 @@ export function DebugOverlay() {
             <Row k="hit" v={metrics.rateLimit.hit} highlight={metrics.rateLimit.hit > 0} />
             <Row k="backoff" v={`${metrics.rateLimit.backoffMs}ms`} />
           </Section>
+          <Section title="sfu reliability">
+            <Row
+              k="retries"
+              v={metrics.sfuReliability.consumeRetries}
+              highlight={metrics.sfuReliability.consumeRetries > 0}
+            />
+            <Row
+              k="stale"
+              v={metrics.sfuReliability.staleConsumer}
+              highlight={metrics.sfuReliability.staleConsumer > 0}
+            />
+            <Row
+              k="failed"
+              v={metrics.sfuReliability.consumeFailed}
+              highlight={metrics.sfuReliability.consumeFailed > 0}
+            />
+          </Section>
         </>
       )}
       <div style={{ fontWeight: 600, marginTop: 8, marginBottom: 4 }}>events</div>

@@ -17,7 +17,10 @@ export type VoiceDebugReason =
   | 'not-for-me'
   | 'unknown-payload'
   | 'sfu-routed'
-  | 'deferred-overflow';
+  | 'deferred-overflow'
+  | 'consume-retry'
+  | 'consume-failed'
+  | 'stale-consumer';
 
 export interface VoiceDebugEvent {
   ts: number;
@@ -27,7 +30,8 @@ export interface VoiceDebugEvent {
     | 'pc-state'
     | 'control-open' | 'control-msg' | 'control-dead'
     | 'peer-discovered' | 'peer-torn-down'
-    | 'relay-error';
+    | 'relay-error'
+    | 'sfu-reliability';
   reason?: VoiceDebugReason;
   peer?: string;
   payload?: unknown;

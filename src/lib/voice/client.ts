@@ -1146,6 +1146,30 @@ export class VoiceClient {
             console.warn('[voice] onParticipantsChange handler threw', err);
           }
         },
+        onReliabilityEvent: (ev) => {
+          // SFU consume-path reliability telemetry — see SfuClient for
+          // when each kind fires. Mirrored into VoiceMetrics so the
+          // ?debug=voice overlay shows a running tally and so the
+          // playwright harness can assert on regressions.
+          if (ev.kind === 'consume-retry') {
+            this.metrics.sfuReliability.consumeRetries += 1;
+          } else if (ev.kind === 'consume-failed') {
+            this.metrics.sfuReliability.consumeFailed += 1;
+          } else if (ev.kind === 'stale-consumer') {
+            this.metrics.sfuReliability.staleConsumer += 1;
+          }
+          pushVoiceDebug({
+            kind: 'sfu-reliability',
+            reason: ev.kind,
+            peer: ev.peerPubkey,
+            payload: {
+              producerId: ev.producerId,
+              attempt: ev.attempt,
+              code: ev.errorCode,
+              msg: ev.errorMessage,
+            },
+          });
+        },
       },
     });
     this.sfuClient = client;

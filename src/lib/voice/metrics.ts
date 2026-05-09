@@ -46,6 +46,19 @@ export interface VoiceMetrics {
     lastRttMs: number | null;
   };
   transitive: { discoveredViaRelay: number; discoveredViaControl: number };
+  /**
+   * SFU-mode reliability layer counters. `consume-retry` increments per
+   * scheduled retry (so `consume.retries == 3` means 3 backoff steps
+   * fired before either success or give-up). `consume-failed` only
+   * fires on terminal give-up — every increment here is one stuck
+   * remote track that the user would otherwise have to leave/rejoin
+   * to recover. `stale-consumer` counts watchdog-driven rebuilds.
+   */
+  sfuReliability: {
+    consumeRetries: number;
+    consumeFailed: number;
+    staleConsumer: number;
+  };
 }
 
 export function emptyVoiceMetrics(): VoiceMetrics {
@@ -74,5 +87,6 @@ export function emptyVoiceMetrics(): VoiceMetrics {
     rateLimit: { hit: 0, backoffMs: 0 },
     controlChannel: { opened: 0, pingSent: 0, pongRcvd: 0, lastRttMs: null },
     transitive: { discoveredViaRelay: 0, discoveredViaControl: 0 },
+    sfuReliability: { consumeRetries: 0, consumeFailed: 0, staleConsumer: 0 },
   };
 }
