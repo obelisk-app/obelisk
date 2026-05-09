@@ -258,13 +258,24 @@
  * gets covered as the screen-anim arrives at translateX(0). Without this,
  * sub-screens like channel/dm-thread/settings-prefs that use the bare
  * `.screen` class (transparent by design over the shell's ambient gradient)
- * let the parent tab bleed through. */
+ * let the parent tab bleed through.
+ *
+ * The bg replicates the shell's corner radials + base color so a channel /
+ * dm-thread / settings-prefs screen looks visually continuous with the
+ * top-level tabs (which use transparent .screen and let the shell gradient
+ * show through). The drift blob (.obelisk-mobile::before) and grain
+ * (.obelisk-mobile::after) live behind the screens-host at z-0, so the
+ * opaque overlay would cover them anyway — replicating only the radials
+ * lands close enough that the seam disappears. */
 .obelisk-mobile .drag-slot.drag-overlay {
   transform: translateX(0);
   z-index: 1;
 }
 .obelisk-mobile .drag-slot.drag-overlay > .screen-anim {
-  background: var(--app-bg);
+  background:
+    radial-gradient(1100px 620px at 85% -8%, rgba(180, 249, 83, 0.14) 0%, transparent 62%),
+    radial-gradient(900px 540px at -5% 105%, rgba(180, 249, 83, 0.10) 0%, transparent 58%),
+    var(--app-bg);
 }
 
 /* ===== header / icon button ===== */

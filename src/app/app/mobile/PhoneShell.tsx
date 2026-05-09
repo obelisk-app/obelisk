@@ -93,7 +93,7 @@ import { useChatStore } from '@/store/chat';
 import { useDMStore } from '@/store/dm';
 import { useNostrPresence, PRESENCE_WINDOW_MS } from '@/hooks/chat/useNostrPresence';
 import { type ScreenName, type NavState, initialNav, urlFor, parseUrl } from './url-state';
-import { decideSnap, decideSwipeNav, neighborsFor, NAV_ORDER, SUB_TO_NAV } from './swipe-nav';
+import { decideSnap, decideSwipeNav, neighborsFor, NAV_ORDER } from './swipe-nav';
 import { useKeyboardInset } from './use-keyboard';
 // CSS is hoisted to AppGate.tsx so it lands in the route's eagerly-loaded
 // stylesheet, not in this dynamic chunk's late-arriving sidecar.
@@ -4447,16 +4447,6 @@ export default function MobileShell() {
 
   const [nav, setNav] = useState<NavState>(initialNav);
   const navRef = useRef<NavState>(initialNav);
-  // Per top-level tab "last visited state". A horizontal swipe between tabs
-  // restores this so the user lands back on the channel / DM thread / forum
-  // they had open in that tab, not its bare home. Tap on the bottom-nav still
-  // goes to the bare home (matches Discord) — only swipe-nav restores.
-  const tabStateRef = useRef<Record<string, NavState>>({
-    server: { ...initialNav, screen: 'server' },
-    'dms-list': { ...initialNav, screen: 'dms-list' },
-    inbox: { ...initialNav, screen: 'inbox' },
-    'settings-profile': { ...initialNav, screen: 'settings-profile' },
-  });
   const currentRelayUrl = useCurrentRelayUrl();
   const relayRef = useRef<string | null>(currentRelayUrl ?? null);
   const didInitRef = useRef(false);
@@ -4620,21 +4610,6 @@ export default function MobileShell() {
     } catch { /* ignore */ }
   }, [currentRelayUrl]);
 
-  // Track each top-level tab's most recent state. We store the full nav
-  // (screen + groupId/dmPeer/etc) keyed by the parent tab so a swipe-nav
-  // restore lands on the exact sub-screen the user left. Sheets and the
-  // overlay-only screens (msg-actions / zap-modal) don't update memory —
-  // they're transient and shouldn't override the underlying tab state.
-  useEffect(() => {
-    if (nav.screen === 'msg-actions' || nav.screen === 'zap-modal') return;
-    const parent = (NAV_ORDER as ReadonlyArray<ScreenName>).includes(nav.screen)
-      ? nav.screen
-      : SUB_TO_NAV[nav.screen] ?? null;
-    if (parent && (NAV_ORDER as ReadonlyArray<ScreenName>).includes(parent)) {
-      tabStateRef.current[parent] = nav;
-    }
-  }, [nav]);
-
   // ── popstate: drives all "back" navigation ──────────────────────────
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -4777,24 +4752,20 @@ export default function MobileShell() {
       window.setTimeout(() => {
         suppressSlideRef.current = true;
         if (action.kind === 'top-level') {
-          // Restore the target tab's last-visited state — channel, DM thread,
-          // forum, profile-edit, etc. — so a horizontal swipe round-trip
-          // (channel → DMs → channel) lands the user back where they left.
-          // Falls back to the bare top-level if the tab has never been
-          // visited yet on this session.
-          const restored = tabStateRef.current[action.target] ?? {
-            ...initialNav,
-            screen: action.target,
-          };
-          useChatStore.setState({
-            activeChannelId: restored.screen === 'channel' ? restored.groupId : null,
-            isNearBottom: restored.screen === 'channel' ? true : useChatStore.getState().isNearBottom,
-          });
-          useDMStore.setState({
-            activeDMPubkey: restored.screen === 'dm-thread' ? restored.dmPeer : null,
-          });
+          // Land on the bare top-level. A previous version restored the
+          // target tab's last-visited sub-screen here (so server>channelA →
+          // DMs → swipe-right would re-enter channelA), but that re-entry
+          // happened AFTER the visual swipe had already settled on the bare
+          // tab — the channel popped on top, which read as a glitchy
+          // refresh. The drag-prev slot only ever shows `renderTopLevelScreen`,
+          // not the remembered sub-screen, so previewing it during the
+          // swipe wasn't possible without re-architecting the carousel.
+          // Lands-on-bare is the consistent option: what you see during
+          // the swipe is what you get on commit.
+          useChatStore.setState({ activeChannelId: null });
+          useDMStore.setState({ activeDMPubkey: null });
           pushNav(
-            () => ({ ...restored, baseScreen: null, msgContext: null }),
+            (n) => ({ ...n, screen: action.target, baseScreen: null, msgContext: null }),
             action.dir,
           );
         } else if (action.kind === 'history-back') {
