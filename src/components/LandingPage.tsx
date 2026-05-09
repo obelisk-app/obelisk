@@ -443,7 +443,7 @@ export default function LandingPage() {
             >
               <figure className="rounded-xl border border-lc-border overflow-hidden bg-lc-dark">
                 <Image
-                  src="/pictures-for-posts/dekstop-public-general-chat-view-with-member-list.png"
+                  src="/pictures-for-posts/desktop-large-voice-channel-with-sfu-peer-trasmission-test.png"
                   alt={t('landing.preview.desktop.alt')}
                   width={1470}
                   height={799}

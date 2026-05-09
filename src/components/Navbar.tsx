@@ -139,7 +139,15 @@ export default function Navbar(_props: { onLoginSuccess?: () => void } = {}) {
           <div className="flex items-center gap-3">
             <LanguageToggle />
             {isConnected && profile ? (
-              <div className="relative">
+              <>
+                <Link
+                  href="/app"
+                  className="lc-pill lc-pill-secondary text-sm"
+                  data-testid="nav-app-pill"
+                >
+                  {t('nav.app')}
+                </Link>
+                <div className="relative">
                 <button
                   onClick={() => setShowMenu(!showMenu)}
                   className="flex items-center gap-2.5 py-1.5 pl-1.5 pr-4 bg-lc-dark hover:bg-lc-border rounded-full transition-all duration-200 border border-lc-border/50"
@@ -197,7 +205,8 @@ export default function Navbar(_props: { onLoginSuccess?: () => void } = {}) {
                     </div>
                   </>
                 )}
-              </div>
+                </div>
+              </>
             ) : (
               <button
                 onClick={() => router.push('/app')}
