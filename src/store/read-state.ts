@@ -56,6 +56,15 @@ interface ReadStateActions {
   setGroupCursor: (groupId: string, tsMs: number) => void;
   /** Mark the entire inbox as read at `Date.now()`. */
   advanceInboxRead: () => void;
+  /**
+   * Mark everything as read at `Date.now()` — inbox cursor + every DM peer
+   * cursor + every channel cursor in the supplied lists. The lists come from
+   * the bridge (currently-loaded `dmsByPeer` keys + `messagesByGroup` keys)
+   * so the store stays bridge-agnostic. Used by the "Mark all read" buttons
+   * in the inbox / bell drawer; users expect it to clear the tab-title
+   * `(N)` badge, which sums DM+channel unreads.
+   */
+  markAllAsRead: (peers: ReadonlyArray<string>, groupIds: ReadonlyArray<string>) => void;
   /** Push an event to the inbox (dedupes by id, caps at INBOX_CAP). */
   pushInboxEvent: (evt: InboxEventInput) => void;
   /** Wipe the inbox log entirely (button in the bell menu). */
@@ -107,6 +116,31 @@ export const useReadStateStore = create<ReadStateStore>()(
       }),
 
       advanceInboxRead: () => set({ inboxLastReadAt: Date.now() }),
+
+      markAllAsRead: (peers, groupIds) => set((state) => {
+        const now = Date.now();
+        const dmCursors = { ...state.dmCursors };
+        let dmTouched = false;
+        for (const peer of peers) {
+          if ((dmCursors[peer] ?? 0) < now) {
+            dmCursors[peer] = now;
+            dmTouched = true;
+          }
+        }
+        const groupCursors = { ...state.groupCursors };
+        let gTouched = false;
+        for (const gid of groupIds) {
+          if ((groupCursors[gid] ?? 0) < now) {
+            groupCursors[gid] = now;
+            gTouched = true;
+          }
+        }
+        return {
+          ...(dmTouched ? { dmCursors } : {}),
+          ...(gTouched ? { groupCursors } : {}),
+          inboxLastReadAt: now,
+        };
+      }),
 
       pushInboxEvent: (evt) => set((state) => {
         const id = buildInboxId(evt);

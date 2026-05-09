@@ -93,7 +93,7 @@ import { useChatStore } from '@/store/chat';
 import { useDMStore } from '@/store/dm';
 import { useNostrPresence, PRESENCE_WINDOW_MS } from '@/hooks/chat/useNostrPresence';
 import { type ScreenName, type NavState, initialNav, urlFor, parseUrl } from './url-state';
-import { decideSnap, decideSwipeNav, neighborsFor, NAV_ORDER } from './swipe-nav';
+import { decideSnap, decideSwipeNav, neighborsFor, NAV_ORDER, SUB_TO_NAV } from './swipe-nav';
 import { useKeyboardInset } from './use-keyboard';
 // CSS is hoisted to AppGate.tsx so it lands in the route's eagerly-loaded
 // stylesheet, not in this dynamic chunk's late-arriving sidecar.
@@ -3323,7 +3323,18 @@ function InboxScreen({
 }) {
   const events = useReadStateStore((s) => s.inboxEvents);
   const markInboxRead = useReadStateStore((s) => s.advanceInboxRead);
+  const markAllAsRead = useReadStateStore((s) => s.markAllAsRead);
   const groups = useGroups();
+  // Read the bridge's loaded peers + groups imperatively at click time so
+  // the inbox screen doesn't re-render on every message arrival just to
+  // keep these snapshots in sync. The "Mark all read" button needs them to
+  // advance the cursors that feed the browser-tab `(N)` badge.
+  const handleMarkAll = () => {
+    const impl = getBridgeImpl();
+    const peers = impl ? Object.keys(impl.dmsByPeer.get()) : [];
+    const groupIds = impl ? Object.keys(impl.messagesByGroup.get()) : [];
+    markAllAsRead(peers, groupIds);
+  };
 
   const [tab, setTab] = useState<InboxFilter>('all');
   const filtered = useMemo(() => {
@@ -3346,7 +3357,7 @@ function InboxScreen({
     <div className="screen active" data-screen="inbox">
       <div className="app-header">
         <h2>Inbox</h2>
-        <button className="mark-all-read" onClick={markInboxRead}>Mark all read</button>
+        <button className="mark-all-read" onClick={handleMarkAll}>Mark all read</button>
       </div>
       <div className="filter-tabs">
         <button className={`filter-tab ${tab === 'all' ? 'active' : ''}`} onClick={() => setTab('all')}>All · {events.length}</button>
@@ -4436,6 +4447,16 @@ export default function MobileShell() {
 
   const [nav, setNav] = useState<NavState>(initialNav);
   const navRef = useRef<NavState>(initialNav);
+  // Per top-level tab "last visited state". A horizontal swipe between tabs
+  // restores this so the user lands back on the channel / DM thread / forum
+  // they had open in that tab, not its bare home. Tap on the bottom-nav still
+  // goes to the bare home (matches Discord) — only swipe-nav restores.
+  const tabStateRef = useRef<Record<string, NavState>>({
+    server: { ...initialNav, screen: 'server' },
+    'dms-list': { ...initialNav, screen: 'dms-list' },
+    inbox: { ...initialNav, screen: 'inbox' },
+    'settings-profile': { ...initialNav, screen: 'settings-profile' },
+  });
   const currentRelayUrl = useCurrentRelayUrl();
   const relayRef = useRef<string | null>(currentRelayUrl ?? null);
   const didInitRef = useRef(false);
@@ -4525,6 +4546,15 @@ export default function MobileShell() {
       window.history.back();
       return;
     }
+    // Sibling tabs in the settings group (Profile ↔ Preferences) toggle
+    // in-place. They visually share the `.settings-tabs` strip, so a slide
+    // animation reads as broken — the user tapped a tab, not navigated to
+    // a new screen. Suppress the slide for that one pair.
+    const prev = navRef.current.screen;
+    const isSettingsTabSwitch =
+      (prev === 'settings-profile' && screen === 'settings-prefs') ||
+      (prev === 'settings-prefs' && screen === 'settings-profile');
+    if (isSettingsTabSwitch) suppressSlideRef.current = true;
     if (screen !== 'channel') useChatStore.setState({ activeChannelId: null });
     if (screen !== 'dm-thread') useDMStore.setState({ activeDMPubkey: null });
     pushNav((n) => ({ ...n, screen, baseScreen: null, msgContext: null }), dir);
@@ -4590,6 +4620,21 @@ export default function MobileShell() {
     } catch { /* ignore */ }
   }, [currentRelayUrl]);
 
+  // Track each top-level tab's most recent state. We store the full nav
+  // (screen + groupId/dmPeer/etc) keyed by the parent tab so a swipe-nav
+  // restore lands on the exact sub-screen the user left. Sheets and the
+  // overlay-only screens (msg-actions / zap-modal) don't update memory —
+  // they're transient and shouldn't override the underlying tab state.
+  useEffect(() => {
+    if (nav.screen === 'msg-actions' || nav.screen === 'zap-modal') return;
+    const parent = (NAV_ORDER as ReadonlyArray<ScreenName>).includes(nav.screen)
+      ? nav.screen
+      : SUB_TO_NAV[nav.screen] ?? null;
+    if (parent && (NAV_ORDER as ReadonlyArray<ScreenName>).includes(parent)) {
+      tabStateRef.current[parent] = nav;
+    }
+  }, [nav]);
+
   // ── popstate: drives all "back" navigation ──────────────────────────
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -4613,7 +4658,16 @@ export default function MobileShell() {
       }
       if (s?.nav) {
         const next = s.nav;
-        setSlideDir('back');
+        const prev = navRef.current.screen;
+        const isSettingsTabSwitch =
+          (prev === 'settings-profile' && next.screen === 'settings-prefs') ||
+          (prev === 'settings-prefs' && next.screen === 'settings-profile');
+        if (isSettingsTabSwitch) {
+          suppressSlideRef.current = true;
+          setSlideDir(null);
+        } else {
+          setSlideDir('back');
+        }
         setNav(next);
         navRef.current = next;
         useChatStore.setState({ activeChannelId: next.screen === 'channel' ? next.groupId : null });
@@ -4723,10 +4777,24 @@ export default function MobileShell() {
       window.setTimeout(() => {
         suppressSlideRef.current = true;
         if (action.kind === 'top-level') {
-          useChatStore.setState({ activeChannelId: null });
-          useDMStore.setState({ activeDMPubkey: null });
+          // Restore the target tab's last-visited state — channel, DM thread,
+          // forum, profile-edit, etc. — so a horizontal swipe round-trip
+          // (channel → DMs → channel) lands the user back where they left.
+          // Falls back to the bare top-level if the tab has never been
+          // visited yet on this session.
+          const restored = tabStateRef.current[action.target] ?? {
+            ...initialNav,
+            screen: action.target,
+          };
+          useChatStore.setState({
+            activeChannelId: restored.screen === 'channel' ? restored.groupId : null,
+            isNearBottom: restored.screen === 'channel' ? true : useChatStore.getState().isNearBottom,
+          });
+          useDMStore.setState({
+            activeDMPubkey: restored.screen === 'dm-thread' ? restored.dmPeer : null,
+          });
           pushNav(
-            (n) => ({ ...n, screen: action.target, baseScreen: null, msgContext: null }),
+            () => ({ ...restored, baseScreen: null, msgContext: null }),
             action.dir,
           );
         } else if (action.kind === 'history-back') {

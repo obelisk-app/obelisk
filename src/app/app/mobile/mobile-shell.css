@@ -252,10 +252,19 @@
   visibility: hidden;
   pointer-events: none;
 }
-/* Sub-screens overlay the carousel at the active position. */
+/* Sub-screens overlay the carousel at the active position. The opaque
+ * background sits on the inner .screen-anim wrapper (not the slot) so the
+ * parent tab still peeks through during the slide-in animation — it only
+ * gets covered as the screen-anim arrives at translateX(0). Without this,
+ * sub-screens like channel/dm-thread/settings-prefs that use the bare
+ * `.screen` class (transparent by design over the shell's ambient gradient)
+ * let the parent tab bleed through. */
 .obelisk-mobile .drag-slot.drag-overlay {
   transform: translateX(0);
   z-index: 1;
+}
+.obelisk-mobile .drag-slot.drag-overlay > .screen-anim {
+  background: var(--app-bg);
 }
 
 /* ===== header / icon button ===== */

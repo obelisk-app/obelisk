@@ -85,6 +85,38 @@ describe('useReadStateStore', () => {
       expect(ts).toBeLessThanOrEqual(after);
     });
 
+    it('markAllAsRead advances inbox + every supplied DM peer + every supplied channel', () => {
+      const before = Date.now();
+      useReadStateStore.getState().markAllAsRead(['alice', 'bob'], ['g1', 'g2']);
+      const after = Date.now();
+      const s = useReadStateStore.getState();
+      expect(s.inboxLastReadAt).toBeGreaterThanOrEqual(before);
+      expect(s.inboxLastReadAt).toBeLessThanOrEqual(after);
+      expect(s.dmCursors['alice']).toBeGreaterThanOrEqual(before);
+      expect(s.dmCursors['bob']).toBeGreaterThanOrEqual(before);
+      expect(s.groupCursors['g1']).toBeGreaterThanOrEqual(before);
+      expect(s.groupCursors['g2']).toBeGreaterThanOrEqual(before);
+    });
+
+    it('markAllAsRead is a single set() — subscribers re-render once', () => {
+      let renders = 0;
+      const unsub = useReadStateStore.subscribe(() => { renders++; });
+      useReadStateStore.getState().markAllAsRead(['alice'], ['g1']);
+      unsub();
+      expect(renders).toBe(1);
+    });
+
+    it('markAllAsRead never moves any cursor backwards', () => {
+      const future = Date.now() + 60_000;
+      useReadStateStore.getState().setDmCursor('alice', future);
+      useReadStateStore.getState().setGroupCursor('g1', future);
+      useReadStateStore.getState().markAllAsRead(['alice'], ['g1']);
+      const s = useReadStateStore.getState();
+      // cursors were already past now — markAllAsRead must not regress them
+      expect(s.dmCursors['alice']).toBe(future);
+      expect(s.groupCursors['g1']).toBe(future);
+    });
+
     it('clearInboxEvents wipes the log', () => {
       useReadStateStore.getState().pushInboxEvent({
         type: 'mention', senderPubkey: 'pk', channelId: 'ch1', messageId: 'm1',

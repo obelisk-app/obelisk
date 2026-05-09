@@ -361,7 +361,19 @@ function RelayTopBar({
   const inboxLastReadAt = useReadStateStore((s) => s.inboxLastReadAt);
   const unreadInboxCount = useInboxUnreadCount();
   const markInboxRead = useReadStateStore((s) => s.advanceInboxRead);
+  const markAllAsRead = useReadStateStore((s) => s.markAllAsRead);
   const clearInboxEvents = useReadStateStore((s) => s.clearInboxEvents);
+  // Snapshot the bridge's loaded peers + groups at click time so "Mark all
+  // read" advances the cursors that drive the tab-title `(N)` badge —
+  // otherwise the badge stays stuck on unread chat traffic the user has
+  // acknowledged by emptying the inbox. Read imperatively to avoid
+  // re-rendering the top bar on every message arrival.
+  const handleMarkAllAsRead = () => {
+    const impl = getBridgeImpl();
+    const peers = impl ? Object.keys(impl.dmsByPeer.get()) : [];
+    const groupIds = impl ? Object.keys(impl.messagesByGroup.get()) : [];
+    markAllAsRead(peers, groupIds);
+  };
   useEffect(() => {
     let alive = true;
     setIconFailed(false);
@@ -458,9 +470,9 @@ function RelayTopBar({
             <div className="flex gap-2">
               {inboxEvents.length > 0 && unreadInboxCount > 0 && (
                 <button
-                  onClick={markInboxRead}
+                  onClick={handleMarkAllAsRead}
                   className="text-xs text-lc-green hover:underline"
-                  title="Mark all read"
+                  title="Mark all messages, DMs, and notifications as read"
                 >
                   Mark read
                 </button>
