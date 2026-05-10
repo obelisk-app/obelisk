@@ -54,6 +54,7 @@ import VoiceRoom from '@/components/voice/VoiceRoom';
 import VoiceStatusBar from '@/components/voice/VoiceStatusBar';
 import { subscribeVoiceJump } from '@/lib/voice/jump-to-voice';
 import MessageContent from '@/components/chat/MessageContent';
+import { MentionText } from '@/components/chat/MentionText';
 import MentionNavigator from '@/components/chat/MentionNavigator';
 import EmojiPicker from '@/components/chat/EmojiPicker';
 import { uploadToBlossom } from '@/lib/blossom';
@@ -2071,6 +2072,22 @@ function ChannelListEmptyState({
   );
 }
 
+// Preserve vertical scroll position across remounts when the user navigates
+// between top-level tabs (e.g., server ↔ dms-list). Each screen unmounts on
+// tab switch, so without this the scroll resets to 0 on every return.
+const screenScrollMemo = new Map<string, number>();
+function useScreenScrollMemo(key: string, ref: React.RefObject<HTMLElement | null>) {
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const saved = screenScrollMemo.get(key);
+    if (saved != null) el.scrollTop = saved;
+    const onScroll = () => { screenScrollMemo.set(key, el.scrollTop); };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => { el.removeEventListener('scroll', onScroll); };
+  }, [key, ref]);
+}
+
 function ServerScreen({
   go,
   selectGroup,
@@ -2123,6 +2140,7 @@ function ServerScreen({
   const channelListRef = useRef<HTMLDivElement>(null);
   const stripRef = useRef<HTMLDivElement>(null);
   const stripHostRef = useRef<HTMLDivElement>(null);
+  useScreenScrollMemo(`server:${relay ?? ''}`, channelListRef);
 
   // Toggle edge-fade affordances on the spaces strip when there's more content
   // to scroll. The fades are pure CSS pseudo-elements; we only flip the state
@@ -2686,6 +2704,11 @@ function ChannelScreen({
               <ChannelMessage
                 key={it.key}
                 msg={it.msg}
+                parent={
+                  it.msg.replyToId
+                    ? messages.find((x) => x.id === it.msg.replyToId) ?? null
+                    : null
+                }
                 myPubkey={myPubkey}
                 groupId={groupId}
                 reactions={reactions[it.msg.id] ?? []}
@@ -2707,7 +2730,7 @@ function ChannelScreen({
               <span className="composer-reply-label">
                 Replying to <ReplyAuthorName pubkey={replyingTo.pubkey} />
               </span>
-              <span className="composer-reply-text">{replyingTo.content.slice(0, 80)}</span>
+              <span className="composer-reply-text"><MentionText content={replyingTo.content.slice(0, 80)} /></span>
             </div>
             <button
               type="button"
@@ -2825,8 +2848,32 @@ function ChannelScreen({
   );
 }
 
+function MobileReplyPreviewRow({
+  parent,
+  onJump,
+}: {
+  parent: JsMessage;
+  onJump: () => void;
+}) {
+  const meta = useUserMetadata(parent.pubkey);
+  const name = meta?.displayName || meta?.name || shortNpub(parent.pubkey);
+  const preview = parent.content.replace(/\s+/g, ' ').slice(0, 120);
+  return (
+    <button
+      type="button"
+      className="msg-reply-row"
+      onClick={(e) => { e.stopPropagation(); onJump(); }}
+    >
+      <span className="msg-reply-arrow">↩</span>
+      <span className="msg-reply-name">{name}</span>
+      <span className="msg-reply-text"><MentionText content={preview} /></span>
+    </button>
+  );
+}
+
 export function ChannelMessage({
   msg,
+  parent,
   myPubkey,
   groupId,
   reactions,
@@ -2835,6 +2882,7 @@ export function ChannelMessage({
   onAvatar,
 }: {
   msg: JsMessage;
+  parent?: JsMessage | null;
   myPubkey: string | null;
   groupId: string;
   reactions: ReadonlyArray<{ id: string; pubkey: string; emoji: string }>;
@@ -2883,12 +2931,29 @@ export function ChannelMessage({
     void nostrActions.cancelPendingMessage(groupId, msg.clientTag);
   };
 
+  const onJumpToParent = () => {
+    if (!parent) return;
+    const el = document.querySelector(`[data-msg-id="${parent.id}"]`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('msg-flash');
+      setTimeout(() => el.classList.remove('msg-flash'), 1200);
+    }
+  };
+
   return (
-    <div className={'msg' + (msg.pending ? ' pending' : '') + (msg.failed ? ' failed' : '')}>
+    <div
+      data-msg-id={msg.id}
+      className={'msg' + (msg.pending ? ' pending' : '') + (msg.failed ? ' failed' : '')}
+    >
       <div className="msg-ava" style={avatarStyle(msg.pubkey)} onClick={onAvatar} role="button">
         {meta?.picture ? <img src={meta.picture} alt="" /> : initialsFor(name, shortNpub(msg.pubkey))}
       </div>
       <div className="msg-body">
+        {parent && <MobileReplyPreviewRow parent={parent} onJump={onJumpToParent} />}
+        {msg.replyToId && !parent && (
+          <div className="msg-reply-row msg-reply-row-missing">↩ replying to a message</div>
+        )}
         <div className="msg-head">
           <span className="msg-name" onClick={onAvatar} role="button">{name}</span>
           <span className="msg-time">{timeOfDay(msg.createdAt)}</span>
@@ -3045,6 +3110,9 @@ function DmsListScreen({
   const followsCount = peers.filter((p) => followsSet.has(p.peer)).length;
   const othersCount = peers.length - followsCount;
 
+  const listRef = useRef<HTMLDivElement>(null);
+  useScreenScrollMemo(`dms-list:${tab}`, listRef);
+
   return (
     <div className="screen active" data-screen="dms-list">
       <div className="app-header">
@@ -3068,7 +3136,7 @@ function DmsListScreen({
         </button>
       </div>
 
-      <div className="dms-list-rows">
+      <div className="dms-list-rows" ref={listRef}>
         {filtered.length === 0 && (
           <div className="empty-state">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><rect x="3" y="11" width="18" height="9" rx="1.5" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
@@ -3393,7 +3461,7 @@ function InboxCard({ event, onJump }: { event: InboxEvent; onJump: () => void })
         </div>
         <div className="mc-body">
           <div className="mc-name" style={{ color: 'var(--app-text)' }}>{name}</div>
-          <div className="mc-text" style={{ color: 'var(--app-text-dim)' }}>{event.preview}</div>
+          <div className="mc-text" style={{ color: 'var(--app-text-dim)' }}><MentionText content={event.preview ?? ''} /></div>
         </div>
       </div>
     </button>

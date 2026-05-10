@@ -38,6 +38,7 @@ import LoginModal from './LoginModal';
 import UserPanel from './UserPanel';
 import SearchBar from './SearchBar';
 import MessageContent from '@/components/chat/MessageContent';
+import { MentionText } from '@/components/chat/MentionText';
 import MentionNavigator from '@/components/chat/MentionNavigator';
 import MemberList from '@/components/chat/MemberList';
 import RelayAdminPanel from '@/components/admin/RelayAdminPanel';
@@ -510,7 +511,7 @@ function RelayTopBar({
                           <span className="ml-2 text-lc-muted/70 normal-case tracking-normal">{new Date(e.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                         </div>
                         {e.preview && (
-                          <div className="text-sm text-lc-white truncate">{e.preview}</div>
+                          <div className="text-sm text-lc-white truncate"><MentionText content={e.preview} /></div>
                         )}
                       </div>
                     </button>
@@ -2248,7 +2249,7 @@ function ChatPanel({
           <div className="mb-2 flex items-center justify-between gap-2 rounded-t-md border border-b-0 border-lc-border bg-lc-card/60 px-3 py-1.5 text-xs text-lc-muted">
             <span className="truncate">
               Replying to <ReplyAuthorName pubkey={replyingTo.pubkey} />
-              <span className="ml-2 truncate text-lc-muted">{replyingTo.content.slice(0, 80)}</span>
+              <span className="ml-2 truncate text-lc-muted"><MentionText content={replyingTo.content.slice(0, 80)} /></span>
             </span>
             <button
               type="button"
@@ -2579,7 +2580,7 @@ function ReplyPreviewRow({
     >
       <span className="text-lc-green">↩</span>
       <span className="font-semibold text-lc-white/80">{name}</span>
-      <span className="truncate text-lc-muted">{preview}</span>
+      <span className="truncate text-lc-muted"><MentionText content={preview} /></span>
     </button>
   );
 }
