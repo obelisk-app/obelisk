@@ -20,9 +20,8 @@ import dynamic from 'next/dynamic';
 // icons render at default browser size, etc.).
 import './mobile/mobile-shell.css';
 import { useIsLoggedIn, useConfiguredRelays, useGroups } from '@/lib/nostr-bridge';
-import { useProfile, usePubkey } from '@nostr-wot/data/react';
+import { usePubkey } from '@nostr-wot/data/react';
 const useMyPubkey = usePubkey;
-const useUserMetadata = useProfile;
 import ProfileEditor from '@/components/ProfileEditor';
 import { useFaviconBadge } from '@/hooks/useFaviconBadge';
 import { useAutoMarkRead } from '@/hooks/useAutoMarkRead';
@@ -30,7 +29,7 @@ import { ensureReadStateStoreForAccount } from '@/store/read-state';
 import { ensureDMStoreForAccount } from '@/store/dm';
 import { ensureForumFollowForAccount } from '@/store/chat/forum-follow-slice';
 import { startGroupsRelaySync, startDMRelaySync } from '@/lib/read-state/relay-sync';
-import { fetchRelayList } from '@nostr-wot/data';
+import { fetchProfile, fetchRelayList } from '@nostr-wot/data';
 import { PROFILE_RELAYS } from '@/lib/nostr-bridge/client';
 
 const AppShell = dynamic(() => import('./DesktopShell'), { ssr: false });
@@ -124,35 +123,63 @@ function ReadStateRoot() {
  * empty). Mounted in both shells via AppGate so the prompt fires on desktop
  * and mobile alike. Uses ProfileEditor in setup mode, which uploads avatars
  * to Blossom rather than asking for a pasted URL.
+ *
+ * Decision tree (per pubkey, once per browser):
+ *   - "seen" flag in localStorage → never prompt again.
+ *   - "just-generated" flag (set by LoginModal on `generate`) → no kind:0
+ *     can possibly exist on relays; show setup immediately.
+ *   - otherwise → actually fetch the kind:0 from the user's outbox + the
+ *     fallback profile aggregators and decide based on the result. If a
+ *     name/displayName is found, mark seen and skip. Otherwise (cold key
+ *     with no published profile, or fetch failed) show setup.
+ *
+ * The previous implementation watched the SDK's `useProfile` slot via a
+ * 1500ms grace timer, which fired *before* a slow cold-start kind:0 could
+ * land — existing users with a profile then briefly saw a setup screen.
+ * Awaiting `fetchProfile` directly removes the race.
  */
 function ProfileSetupGate() {
   const myPubkey = useMyPubkey();
-  const meta = useUserMetadata(myPubkey);
+  const configuredRelays = useConfiguredRelays();
   const [showSetup, setShowSetup] = useState(false);
 
   useEffect(() => {
     if (!myPubkey) return;
     if (typeof window === 'undefined') return;
-    const key = `obelisk-dex/mobile-setup-seen/${myPubkey}`;
-    if (window.localStorage.getItem(key)) return;
-    if (meta && (meta.name || meta.displayName)) {
-      window.localStorage.setItem(key, '1');
-      return;
-    }
+    const seenKey = `obelisk-dex/mobile-setup-seen/${myPubkey}`;
+    if (window.localStorage.getItem(seenKey)) return;
+
     // Freshly generated key (set by LoginModal) — no kind:0 will arrive,
-    // so skip the grace period.
+    // so skip the relay round-trip and show setup immediately.
     const justGenKey = `obelisk-dex/just-generated/${myPubkey}`;
     if (window.localStorage.getItem(justGenKey)) {
       try { window.localStorage.removeItem(justGenKey); } catch { /* ignore */ }
       setShowSetup(true);
       return;
     }
-    const t = setTimeout(() => {
-      if (window.localStorage.getItem(key)) return;
-      setShowSetup(true);
-    }, 1500);
-    return () => clearTimeout(t);
-  }, [myPubkey, meta]);
+
+    // Existing user: actually fetch their kind:0 from the user's configured
+    // relays + the fallback profile aggregators, and decide on the result.
+    let cancelled = false;
+    const lookupRelays = Array.from(new Set([...configuredRelays, ...PROFILE_RELAYS]));
+    fetchProfile(myPubkey, lookupRelays.length > 0 ? lookupRelays : undefined)
+      .then((entry) => {
+        if (cancelled) return;
+        if (entry && (entry.name || entry.displayName)) {
+          // User already has a profile — mark seen and stay silent.
+          try { window.localStorage.setItem(seenKey, '1'); } catch { /* ignore */ }
+          return;
+        }
+        // Either no kind:0 published, or the published one is empty.
+        setShowSetup(true);
+      })
+      .catch(() => {
+        // Network error — don't show setup on a flaky relay round; the next
+        // mount will retry. Better to omit the prompt than to false-positive
+        // an existing user into a setup flow that overwrites their profile.
+      });
+    return () => { cancelled = true; };
+  }, [myPubkey, configuredRelays]);
 
   const dismiss = useCallback(() => {
     if (myPubkey) {
