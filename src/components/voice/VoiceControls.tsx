@@ -5,7 +5,7 @@
  * Renders as a centered pill with backdrop blur — caller places it
  * absolutely or in a flex column footer.
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useVoiceStore } from '@/store/voice';
 import { getActiveVoiceClient } from '@/lib/voice/active-client';
 import { VIDEO_QUALITIES, type VideoQuality } from '@/lib/voice/quality';
@@ -28,6 +28,37 @@ export default function VoiceControls({ onLeave, isChatOpen, onToggleChat }: Voi
   const setVideoQuality = useVoiceStore((s) => s.setVideoQuality);
   const setReceivedVideoQuality = useVoiceStore((s) => s.setReceivedVideoQuality);
   const [qualityOpen, setQualityOpen] = useState(false);
+  const [hasMultipleCameras, setHasMultipleCameras] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const check = async () => {
+      try {
+        const devices = await navigator.mediaDevices?.enumerateDevices?.();
+        if (cancelled) return;
+        const cams = (devices ?? []).filter((d) => d.kind === 'videoinput');
+        setHasMultipleCameras(cams.length > 1);
+      } catch { /* ignore */ }
+    };
+    void check();
+    const onChange = () => { void check(); };
+    navigator.mediaDevices?.addEventListener?.('devicechange', onChange);
+    return () => {
+      cancelled = true;
+      navigator.mediaDevices?.removeEventListener?.('devicechange', onChange);
+    };
+  }, []);
+
+  const handleSwitchCamera = async () => {
+    const client = getActiveVoiceClient();
+    if (!client) return;
+    try { await client.switchCamera(); }
+    catch (e) {
+      const err = e as { name?: string; message?: string };
+      if (err?.name === 'NotAllowedError') return;
+      setError(err?.message || 'Failed to switch camera');
+    }
+  };
 
   const handleSetVideoQuality = async (q: VideoQuality) => {
     setVideoQuality(q);
@@ -135,6 +166,17 @@ export default function VoiceControls({ onLeave, isChatOpen, onToggleChat }: Voi
           {isCameraOn ? <CameraOnIcon /> : <CameraOffIcon />}
         </CircleBtn>
 
+        {isCameraOn && hasMultipleCameras && (
+          <CircleBtn
+            active={false}
+            onClick={handleSwitchCamera}
+            title="Switch camera"
+            data-testid="switch-camera-btn"
+          >
+            <SwitchCameraIcon />
+          </CircleBtn>
+        )}
+
         <CircleBtn
           active={isScreenSharing}
           onClick={handleToggleScreenShare}
@@ -167,7 +209,7 @@ export default function VoiceControls({ onLeave, isChatOpen, onToggleChat }: Voi
           </CircleBtn>
           {qualityOpen && (
             <div
-              className="absolute bottom-full mb-3 right-0 w-64 rounded-2xl bg-black/90 backdrop-blur-xl border border-white/10 shadow-2xl p-3 text-white/90"
+              className="absolute bottom-full mb-3 right-0 w-64 max-w-[calc(100vw-1rem)] rounded-2xl bg-black/90 backdrop-blur-xl border border-white/10 shadow-2xl p-3 text-white/90"
               data-testid="quality-popover"
             >
               <QualitySection
@@ -254,14 +296,14 @@ function QualitySection({
   return (
     <div data-testid={testid}>
       <div className="text-xs uppercase tracking-wider text-white/50 mb-1.5">{label}</div>
-      <div className="flex gap-1">
+      <div className="grid grid-cols-3 gap-1">
         {VIDEO_QUALITIES.map((q) => (
           <button
             key={q}
             onClick={() => onChange(q)}
             data-testid={`${testid}-${q}`}
             className={
-              'flex-1 px-2 py-1.5 rounded-lg text-xs font-medium transition ' +
+              'min-w-0 px-2 py-1.5 rounded-lg text-xs font-medium transition ' +
               (value === q
                 ? 'bg-lc-green/25 text-lc-green ring-1 ring-lc-green/40'
                 : 'bg-white/5 text-white/75 hover:bg-white/10')
@@ -334,6 +376,17 @@ function CameraOffIcon() {
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <line x1="1" y1="1" x2="23" y2="23" />
       <path d="M21 21H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3m3-3h6l2 3h4a2 2 0 0 1 2 2v9.34" />
+    </svg>
+  );
+}
+function SwitchCameraIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 4h-3.17L15 2H9L7.17 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z" />
+      <path d="M9 13a3 3 0 0 0 5.5 1.66" />
+      <path d="M15 11a3 3 0 0 0-5.5-1.66" />
+      <polyline points="14.5 8.5 15 11 12.5 11.5" />
+      <polyline points="9.5 15.5 9 13 11.5 12.5" />
     </svg>
   );
 }

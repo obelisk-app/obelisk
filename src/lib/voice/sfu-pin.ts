@@ -21,7 +21,7 @@
  */
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 
-import { getBridge, getBridgeImpl } from '@/lib/nostr-bridge/client';
+import { getBridge, getBridgeImpl, isImportableRelayUrl } from '@/lib/nostr-bridge/client';
 
 const KIND_NIP78 = 30078;
 
@@ -47,8 +47,20 @@ function ingest(channelId: string, ev: NostrEvent): void {
     const parsed = JSON.parse(ev.content) as Partial<SfuPin>;
     if (typeof parsed.pubkey !== 'string' || !/^[0-9a-f]{64}$/i.test(parsed.pubkey)) return;
     if (typeof parsed.url !== 'string' || !parsed.url.startsWith('http')) return;
+    // Strict filter — pins authored on a dev box can carry
+    // wss://localhost:* / RFC-1918 entries that hang every browser
+    // visiting the channel: SfuRpc subscribes to the listed relays for
+    // its kind 25050 responses, and a never-resolving WebSocket to a
+    // private host stalls `getRouterRtpCapabilities` until the rpc
+    // timeout fires (the symptom we tracked back from
+    // "[voice] SfuClient.start failed Error: rpc timeout: getRouterRtpCapabilities"
+    // with `wss://localhost:4869` in the browser console). Dropping
+    // them at ingestion is cheaper than filtering everywhere downstream.
     const trustedRelays = Array.isArray(parsed.trustedRelays)
-      ? parsed.trustedRelays.filter((r): r is string => typeof r === 'string' && r.startsWith('ws'))
+      ? parsed.trustedRelays.filter(
+          (r): r is string =>
+            typeof r === 'string' && isImportableRelayUrl(r),
+        )
       : [];
     const pin: SfuPin = {
       pubkey: parsed.pubkey.toLowerCase(),

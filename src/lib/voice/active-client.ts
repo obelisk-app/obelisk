@@ -9,10 +9,30 @@ let active: VoiceClient | null = null;
 
 export function setActiveVoiceClient(client: VoiceClient | null): void {
   active = client;
+  if (typeof window !== 'undefined') {
+    (window as unknown as { __obeliskActiveVoiceClient?: VoiceClient | null }).__obeliskActiveVoiceClient = client;
+  }
 }
 
 export function getActiveVoiceClient(): VoiceClient | null {
   return active;
+}
+
+/**
+ * Test/diagnostic accessor — returns the live `RTCPeerConnection.connectionState`
+ * for a given remote pubkey, or `null` when there is no live mesh peer for
+ * that pubkey. Walks `VoiceClient`'s private `peers` map via the existing
+ * `getPeerConnectionState(pubkey)` shim added on the client.
+ *
+ * Used by the Playwright two-peer mesh spec to assert WebRTC reaches
+ * `connected` without instrumenting individual `Peer` instances.
+ */
+export function getPeerConnectionState(pubkey: string): RTCPeerConnectionState | null {
+  const c = active;
+  if (!c) return null;
+  const fn = (c as unknown as { getPeerConnectionState?: (pk: string) => RTCPeerConnectionState | null }).getPeerConnectionState;
+  if (typeof fn !== 'function') return null;
+  return fn.call(c, pubkey);
 }
 
 // Best-effort: tell the server we're leaving when the tab is being torn

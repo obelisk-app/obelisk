@@ -230,6 +230,18 @@ export function useMessages(groupId: string | null): ReadonlyArray<JsMessage> {
 }
 
 /**
+ * Whole `messagesByGroup` map. Used by total-unread selectors that need to
+ * iterate every channel without calling `useMessages` per group (which
+ * would violate the rules of hooks under a list).
+ */
+export function useMessagesByGroup(): Readonly<Record<string, ReadonlyArray<JsMessage>>> {
+  return useSubscription<Readonly<Record<string, ReadonlyArray<JsMessage>>>>(
+    (b, cb) => b.subscribeMessagesByGroup(cb),
+    {},
+  );
+}
+
+/**
  * Pagination control for a channel. The live REQ caps at the background
  * limit (see docs/progressive-loading.md); this hook exposes a `loadEarlier`
  * action that pulls the next page of older messages on demand and a
@@ -358,6 +370,13 @@ export function useMyMutes(): ReadonlyArray<string> {
 export interface ActiveCallInfo {
   hostPubkey: string;
   status: string;
+  /**
+   * Distinct-pubkey count published by the SFU. -1 means the SFU doesn't
+   * tag count yet (older build, partial deploy) — render the badge in
+   * that case to preserve back-compat. 0 means the room is open during
+   * empty-grace but nobody's actually in it; consumers should hide LIVE.
+   */
+  participantCount: number;
   expiresAt: number;
   createdAt: number;
 }
@@ -399,5 +418,10 @@ export function useActiveCall(channelId: string | null): ActiveCallInfo | null {
   const entry = map[channelId];
   if (!entry) return null;
   if (entry.expiresAt && entry.expiresAt <= now) return null;
+  // Hide LIVE when the SFU explicitly reports 0 participants — the room
+  // is in empty-grace, technically open server-side but nobody's there
+  // to talk to. -1 = older SFU not tagging count, render to preserve
+  // back-compat during a partial deploy.
+  if (entry.participantCount === 0) return null;
   return entry;
 }

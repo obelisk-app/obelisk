@@ -21,6 +21,7 @@ import {
   KIND_VOICE_SIGNAL,
 } from '@/lib/nip-kinds';
 import type { VoicePresence, VoiceSignalPayload, VideoSlotKind } from './types';
+import { pushVoiceDebug } from './debug';
 
 const PRESENCE_TTL_SECONDS = 30;
 
@@ -131,6 +132,13 @@ export async function subscribeRoster(
         ? parseInt(expirationTag, 10)
         : ev.created_at + PRESENCE_TTL_SECONDS;
       if (!Number.isFinite(expiresAt)) return;
+      // Bump the receive counter even for staler beacons — it measures
+      // raw delivery, not de-duplicated deliveries.
+      const w = (typeof window !== 'undefined' ? window : globalThis) as unknown as {
+        __obeliskVoiceMetrics?: { beacons: { rcvd: number } };
+      };
+      if (w.__obeliskVoiceMetrics) w.__obeliskVoiceMetrics.beacons.rcvd++;
+      pushVoiceDebug({ kind: 'beacon-rcvd', peer: ev.pubkey });
       const prev = latest.get(ev.pubkey);
       if (prev && prev.createdAt >= ev.created_at) return;
       const connectedTo = ev.tags
@@ -188,6 +196,13 @@ export async function sendSignal(
     ],
   });
   console.log('[voice] →', payload.type, 'to', toPubkey.slice(0, 8), 'seq', payload.seq);
+  pushVoiceDebug({ kind: 'signal-sent', peer: toPubkey, payload: { type: payload.type, seq: payload.seq } });
+  // Also bump the global metrics counter (mirrored to window.__obeliskVoiceMetrics)
+  // so the Playwright spec doesn't have to walk the debug ring buffer for sends.
+  const w = (typeof window !== 'undefined' ? window : globalThis) as unknown as {
+    __obeliskVoiceMetrics?: { signals: { sent: number } };
+  };
+  if (w.__obeliskVoiceMetrics) w.__obeliskVoiceMetrics.signals.sent++;
 }
 
 /**
@@ -213,12 +228,19 @@ export async function subscribeSignals(
       since,
     },
     (ev) => {
-      if (ev.pubkey === selfPubkey) return;
+      if (ev.pubkey === selfPubkey) {
+        pushVoiceDebug({ kind: 'signal-dropped', reason: 'self' });
+        return;
+      }
       const targets = ev.tags.filter((t) => t[0] === 'p').map((t) => t[1]);
-      if (targets.length > 0 && !targets.includes(selfPubkey)) return;
+      if (targets.length > 0 && !targets.includes(selfPubkey)) {
+        pushVoiceDebug({ kind: 'signal-dropped', reason: 'not-for-me', peer: ev.pubkey });
+        return;
+      }
       try {
         const payload = JSON.parse(ev.content) as VoiceSignalPayload;
         console.log('[voice] ←', payload.type, 'from', ev.pubkey.slice(0, 8), 'seq', payload.seq);
+        pushVoiceDebug({ kind: 'signal-rcvd', peer: ev.pubkey, payload: { type: payload.type, seq: payload.seq } });
         onSignal(ev.pubkey, payload);
       } catch (e) {
         console.warn('[voice] malformed signal', e);

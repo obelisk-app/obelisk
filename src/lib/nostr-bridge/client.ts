@@ -23,6 +23,8 @@
 import { SimplePool, type Filter, type Event as NostrEvent, type EventTemplate, type VerifiedEvent, finalizeEvent, getPublicKey, nip19, nip04 } from 'nostr-tools';
 import { BunkerSigner, parseBunkerInput, createNostrConnectURI } from 'nostr-tools/nip46';
 import { generateSecretKey } from 'nostr-tools/pure';
+import { v2 as nip44 } from 'nostr-tools/nip44';
+import type { NipSigner } from '@/lib/nip-59';
 import { parseRelayListMeta, parseInboxRelays } from '@/lib/nostr-read';
 import { TextCoercingWebSocket } from '@/lib/nostr-pool';
 import { cacheGet, cacheSet, cacheClearAll, cacheListIds } from './cache';
@@ -30,9 +32,9 @@ import { wotEngine } from '@/lib/wot/engine';
 import { useModerationStore } from '@/store/moderation';
 import { resetAllClientState } from '@/lib/reset';
 import { pushActivity, resolveActivity, failActivity, trackActivity, dismissActivity } from '@/lib/activity-log';
-import { useNotificationStore } from '@/store/notification';
-import { handleIncomingDM, handleIncomingChannelMessage, isUserWatchingDM, isUserWatchingChannel } from '@/lib/read-gates';
-import { extractMentionPubkeys } from '@/lib/mentions';
+import { useReadStateStore } from '@/store/read-state';
+import { isUserWatchingDM, isUserWatchingChannel } from '@/lib/read-gates';
+import { extractMentionPubkeysFromMessage } from '@/lib/mentions';
 import type {
   NostrBridge,
   JsGroup,
@@ -93,6 +95,17 @@ function parseRelayRejection(reason: string): RelayAccessState | null {
     return 'restricted';
   }
   return null;
+}
+
+/**
+ * Options for {@link BridgeImpl.publishEvent}. `mode: 'merge'` (default)
+ * publishes to the union of `this.relays` and `extraRelays`; `mode: 'replace'`
+ * publishes ONLY to `extraRelays`. Used by per-relay state events that must
+ * not leak to the user's other relays.
+ */
+export interface PublishOpts {
+  readonly extraRelays?: readonly string[];
+  readonly mode?: 'merge' | 'replace';
 }
 
 // -- NIP-29 kinds --------------------------------------------------------
@@ -164,7 +177,7 @@ function readMigrated(key: string, legacyKey: string): string | null {
 // Outbox/profile relays for fetching kind:0 metadata. NIP-29 group relays
 // generally don't carry user profile events, so we query well-known public
 // relays in addition to the active group relay.
-const PROFILE_RELAYS = [
+export const PROFILE_RELAYS = [
   'wss://relay.obelisk.ar',
   'wss://public.obelisk.ar',
   'wss://relay.damus.io',
@@ -560,6 +573,25 @@ class BridgeImpl implements NostrBridge {
   reactionsByGroup = new StateStore<Record<string, Record<string, JsReaction[]>>>({});
   childrenByParent = new StateStore<Record<string, string[]>>({});
   dmsByPeer = new StateStore<Record<string, JsDirectMessage[]>>({});
+  /**
+   * Original send arguments for in-flight or just-failed group-message
+   * publishes, keyed by `clientTag`. Survives the publish itself so a retry
+   * can replay the exact same content / replyTo / created_at — replaying
+   * with a fresh `created_at` would let two NIP-29 events with different ids
+   * both reach the relay, leaving a duplicate behind.
+   */
+  private pendingGroupSends = new Map<string, {
+    groupId: string;
+    content: string;
+    replyTo: { id: string; pubkey: string } | null;
+    createdAt: number;
+  }>();
+  /** Same as {@link pendingGroupSends} for NIP-04 DMs. */
+  private pendingDMSends = new Map<string, {
+    recipientPubkey: string;
+    content: string;
+    createdAt: number;
+  }>();
   adminsByGroup = new StateStore<Record<string, string[]>>({});
   membersByGroup = new StateStore<Record<string, string[]>>({});
   /**
@@ -588,7 +620,7 @@ class BridgeImpl implements NostrBridge {
    * so a stale advertisement doesn't pin "LIVE" forever after an SFU
    * crash that never published `status=closed`.
    */
-  activeCallByChannel = new StateStore<Record<string, { hostPubkey: string; status: string; expiresAt: number; createdAt: number }>>({});
+  activeCallByChannel = new StateStore<Record<string, { hostPubkey: string; status: string; participantCount: number; expiresAt: number; createdAt: number }>>({});
   myFollows = new StateStore<string[]>([]);
   /**
    * NIP-51 kind 10000 mute list — pubkeys the local user has muted (public
@@ -627,13 +659,6 @@ class BridgeImpl implements NostrBridge {
   // Group ids we already have a reaction subscription for.
   private reactionSubscribedGroups = new Set<string>();
   private dmSubscribed = false;
-  // Unix-seconds timestamp captured when the bridge first connects after
-  // login. Notification side-effects (inbox push, unread bumps) only fire
-  // for events with `created_at >= notificationsStartedAt` so historical
-  // backfill from `limit:200` REQs doesn't flood the bell with hundreds
-  // of "new" mentions on every reload. `null` until the first successful
-  // connect; preserved across silent reconnects.
-  private notificationsStartedAt: number | null = null;
   private adminMemberSubscribedGroups = new Set<string>();
   private creatorSubscribedGroups = new Set<string>();
   // Newest `created_at` we've seen for kind-39001 (admins) / kind-39002
@@ -1171,10 +1196,6 @@ class BridgeImpl implements NostrBridge {
       this.bunkerSigner = null;
     }
     this.session = null;
-    // Reset the notification cutoff so the next session re-anchors at its
-    // own login time — otherwise relogging-in would leak the previous
-    // account's "live" window to the new identity.
-    this.notificationsStartedAt = null;
     if (typeof window !== 'undefined') {
       window.localStorage.removeItem(STORAGE_KEY);
       window.localStorage.removeItem(LEGACY_STORAGE_KEY);
@@ -1192,6 +1213,8 @@ class BridgeImpl implements NostrBridge {
     this.groups.set([]);
     this.groupMetadataEose.set(false);
     this.messagesByGroup.set({});
+    this.pendingGroupSends.clear();
+    this.pendingDMSends.clear();
     this.adminsByGroup.set({});
     this.membersByGroup.set({});
     this.membershipReadyByGroup.set({});
@@ -1300,12 +1323,6 @@ class BridgeImpl implements NostrBridge {
       }
       this.connectionState.set('Connected');
       this.reconnectAttempt = 0;
-      // Anchor the notification "live cutoff" on the first successful
-      // connect of this session. Anything older than this is treated as
-      // historical backfill and skips inbox/badge side-effects.
-      if (this.notificationsStartedAt === null) {
-        this.notificationsStartedAt = Math.floor(Date.now() / 1000);
-      }
       resolveActivity(activityId, `${connectedCount}/${this.relays.length} relays`);
     } catch (e: unknown) {
       this.connectionState.set(`Error:${(e as Error).message}`);
@@ -1364,6 +1381,10 @@ class BridgeImpl implements NostrBridge {
     this.persist();
     this.groups.set([]);
     this.messagesByGroup.set({});
+    this.pendingGroupSends.clear();
+    // `dmsByPeer` is not reset on a relay switch (DMs follow the user across
+    // relays via NIP-65), so `pendingDMSends` is left intact too — a DM in
+    // flight when the user pivots to a new relay can still finish there.
     // Reset per-group caches: they're scoped to one relay.
     this.messageSubscribedGroups.clear();
     this.reactionSubscribedGroups.clear();
@@ -1456,6 +1477,42 @@ class BridgeImpl implements NostrBridge {
   subscribeRelayAccess(cb: (byRelay: Readonly<Record<string, RelayAccessState>>) => void): Unsubscribe {
     return this.relayAccess.subscribe(cb);
   }
+
+  /**
+   * Resolve once the **current** relay reports `'ok'` (NIP-42 AUTH
+   * completed and the first read succeeded), or after `timeoutMs`
+   * elapses. The mesh voice transport awaits this before publishing
+   * the first beacon so the bringup burst doesn't fire into a
+   * still-handshaking socket. Always resolves — never rejects — so
+   * callers can `.catch(() => null)` without special-casing the
+   * timeout path.
+   *
+   * Returns `'ok'` on success, `'timeout'` on deadline, or whatever
+   * non-ok state the relay landed on if the deadline elapses while
+   * the relay is in a terminal state like `'auth-required'` or
+   * `'restricted'`.
+   */
+  waitForRelayAuth(timeoutMs: number): Promise<'ok' | 'timeout' | RelayAccessState> {
+    return new Promise((resolve) => {
+      const url = this.currentRelayUrl.get();
+      const initial = this.relayAccess.get()[url];
+      if (initial === 'ok') return resolve('ok');
+      let unsub: Unsubscribe | null = null;
+      const timer = setTimeout(() => {
+        if (unsub) unsub();
+        const cur = this.relayAccess.get()[this.currentRelayUrl.get()];
+        resolve(cur === 'ok' ? 'ok' : (cur ?? 'timeout'));
+      }, timeoutMs);
+      unsub = this.relayAccess.subscribe((byRelay) => {
+        const state = byRelay[this.currentRelayUrl.get()];
+        if (state === 'ok') {
+          clearTimeout(timer);
+          if (unsub) unsub();
+          resolve('ok');
+        }
+      });
+    });
+  }
   subscribeConnectionState(cb: (label: string) => void): Unsubscribe {
     return this.connectionState.subscribe(cb);
   }
@@ -1484,6 +1541,11 @@ class BridgeImpl implements NostrBridge {
     this.subscribeGroupMessages(groupId);
     const adapter: Listener<Record<string, JsMessage[]>> = (byGroup) => cb(byGroup[groupId] ?? []);
     return this.messagesByGroup.subscribe(adapter);
+  }
+  subscribeMessagesByGroup(
+    cb: (byGroup: Readonly<Record<string, ReadonlyArray<JsMessage>>>) => void,
+  ): Unsubscribe {
+    return this.messagesByGroup.subscribe(cb);
   }
   subscribeUserMetadata(pubkey: string, cb: (meta: JsUserMetadata | null) => void): Unsubscribe {
     this.ensureUserMetadata(pubkey);
@@ -1572,18 +1634,24 @@ class BridgeImpl implements NostrBridge {
   // -- Group operations --------------------------------------------------
 
   async sendMessage(groupId: string, content: string, replyTo?: { id: string; pubkey: string } | null): Promise<void> {
-    const tags: string[][] = [['h', groupId]];
-    if (replyTo) {
-      tags.push(['e', replyTo.id, '', 'reply']);
-      tags.push(['p', replyTo.pubkey]);
-    }
-    const event = await this.signAndPublish({
-      kind: KIND_GROUP_MESSAGE,
+    if (!this.session) throw new Error('Not logged in');
+    const clientTag = generateClientTag();
+    const createdAt = Math.floor(Date.now() / 1000);
+    const replyToCopy = replyTo ? { id: replyTo.id, pubkey: replyTo.pubkey } : null;
+    const pendingMsg: JsMessage = {
+      id: `pending:${clientTag}`,
+      pubkey: this.session.pubKeyHex,
       content,
-      tags,
-      created_at: Math.floor(Date.now() / 1000),
-    });
-    this.ingestMessage(groupId, event);
+      createdAt,
+      kind: KIND_GROUP_MESSAGE,
+      replyToId: replyToCopy?.id ?? null,
+      mentions: [],
+      pending: true,
+      clientTag,
+    };
+    this.pendingGroupSends.set(clientTag, { groupId, content, replyTo: replyToCopy, createdAt });
+    this.upsertPendingGroupMessage(groupId, pendingMsg);
+    void this.publishGroupMessage(groupId, content, replyToCopy, clientTag, createdAt);
   }
 
   async sendReaction(targetEventId: string, targetPubkey: string, emoji: string, groupId: string): Promise<void> {
@@ -1602,22 +1670,276 @@ class BridgeImpl implements NostrBridge {
 
   async sendDirectMessage(recipientPubkey: string, content: string): Promise<void> {
     if (!this.session) throw new Error('Not logged in');
-    const cipher = await this.encryptNip04(recipientPubkey, content);
-    // NIP-04 DMs are delivered to the recipient's NIP-65 read relays; without
-    // this, sends to anyone whose read set doesn't include `this.relays` will
-    // never reach them. Failure to look up just falls back to `this.relays`.
-    const extraRelays = await this.fetchRecipientReadRelays(recipientPubkey).catch(() => [] as string[]);
-    const event = await this.signAndPublish(
-      {
-        kind: KIND_DIRECT_MESSAGE,
-        content: cipher,
-        tags: [['p', recipientPubkey]],
-        created_at: Math.floor(Date.now() / 1000),
-      },
-      extraRelays,
-    );
-    // Optimistic local ingest — also avoids depending on relay echo of own DMs.
-    this.ingestDM(event, content, /*outgoing*/ true, recipientPubkey);
+    const clientTag = generateClientTag();
+    const createdAt = Math.floor(Date.now() / 1000);
+    const pendingMsg: JsDirectMessage = {
+      id: `pending:${clientTag}`,
+      counterparty: recipientPubkey,
+      outgoing: true,
+      content,
+      createdAt,
+      pending: true,
+      clientTag,
+    };
+    this.pendingDMSends.set(clientTag, { recipientPubkey, content, createdAt });
+    this.upsertPendingDM(recipientPubkey, pendingMsg);
+    void this.publishDirectMessage(recipientPubkey, content, clientTag, createdAt);
+  }
+
+  private async publishDirectMessage(
+    recipientPubkey: string,
+    content: string,
+    clientTag: string,
+    createdAt: number,
+  ): Promise<void> {
+    try {
+      const cipher = await this.encryptNip04(recipientPubkey, content);
+      // NIP-04 DMs are delivered to the recipient's NIP-65 read relays; without
+      // this, sends to anyone whose read set doesn't include `this.relays` will
+      // never reach them. Failure to look up just falls back to `this.relays`.
+      const extraRelays = await this.fetchRecipientReadRelays(recipientPubkey).catch(() => [] as string[]);
+      const event = await this.signAndPublish(
+        {
+          kind: KIND_DIRECT_MESSAGE,
+          content: cipher,
+          tags: [['p', recipientPubkey]],
+          created_at: createdAt,
+        },
+        extraRelays,
+      );
+      this.replacePendingDM(recipientPubkey, clientTag, event, content);
+    } catch (err) {
+      this.markDMFailed(recipientPubkey, clientTag, err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  private async publishGroupMessage(
+    groupId: string,
+    content: string,
+    replyTo: { id: string; pubkey: string } | null,
+    clientTag: string,
+    createdAt: number,
+  ): Promise<void> {
+    const tags: string[][] = [['h', groupId]];
+    if (replyTo) {
+      tags.push(['e', replyTo.id, '', 'reply']);
+      tags.push(['p', replyTo.pubkey]);
+    }
+    try {
+      const event = await this.signAndPublish({
+        kind: KIND_GROUP_MESSAGE,
+        content,
+        tags,
+        created_at: createdAt,
+      });
+      this.replacePendingGroupMessage(groupId, clientTag, event);
+    } catch (err) {
+      this.markGroupMessageFailed(groupId, clientTag, err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  async retryMessage(groupId: string, clientTag: string): Promise<void> {
+    const args = this.pendingGroupSends.get(clientTag);
+    if (!args) return;
+    // Only retry from a failed state — prevents double-publishing if the
+    // user double-taps Retry while a previous attempt is still in flight.
+    const list = this.messagesByGroup.get()[groupId] ?? [];
+    const msg = list.find((m) => m.clientTag === clientTag);
+    if (!msg || !msg.failed) return;
+    this.flipPendingGroupMessageToPending(groupId, clientTag);
+    void this.publishGroupMessage(args.groupId, args.content, args.replyTo, clientTag, args.createdAt);
+  }
+
+  async retryDirectMessage(counterparty: string, clientTag: string): Promise<void> {
+    const args = this.pendingDMSends.get(clientTag);
+    if (!args) return;
+    const list = this.dmsByPeer.get()[counterparty] ?? [];
+    const msg = list.find((m) => m.clientTag === clientTag);
+    if (!msg || !msg.failed) return;
+    this.flipPendingDMToPending(counterparty, clientTag);
+    void this.publishDirectMessage(args.recipientPubkey, args.content, clientTag, args.createdAt);
+  }
+
+  cancelPendingMessage(groupId: string, clientTag: string): void {
+    this.pendingGroupSends.delete(clientTag);
+    this.messagesByGroup.update((prev) => {
+      const existing = prev[groupId];
+      if (!existing) return prev;
+      const next = existing.filter((m) => m.clientTag !== clientTag);
+      if (next.length === existing.length) return prev;
+      return { ...prev, [groupId]: next };
+    });
+  }
+
+  cancelPendingDirectMessage(counterparty: string, clientTag: string): void {
+    this.pendingDMSends.delete(clientTag);
+    this.dmsByPeer.update((prev) => {
+      const existing = prev[counterparty];
+      if (!existing) return prev;
+      const next = existing.filter((m) => m.clientTag !== clientTag);
+      if (next.length === existing.length) return prev;
+      return { ...prev, [counterparty]: next };
+    });
+  }
+
+  private upsertPendingGroupMessage(groupId: string, msg: JsMessage): void {
+    this.messagesByGroup.update((prev) => {
+      const existing = prev[groupId] ?? [];
+      const next = [...existing, msg].sort((a, b) => a.createdAt - b.createdAt);
+      return { ...prev, [groupId]: next };
+    });
+  }
+
+  private replacePendingGroupMessage(groupId: string, clientTag: string, ev: NostrEvent): void {
+    // Once the relay returns the real event, drop the args — a retry from
+    // here would re-publish a finalized message.
+    this.pendingGroupSends.delete(clientTag);
+    const replyTo = ev.tags.find((t) => t[0] === 'e' && t[3] === 'reply')?.[1] ?? null;
+    const mentions = extractMentionPubkeysFromMessage(ev.content, ev.tags);
+    const realMsg: JsMessage = {
+      id: ev.id,
+      pubkey: ev.pubkey,
+      content: ev.content,
+      createdAt: ev.created_at,
+      kind: ev.kind,
+      replyToId: replyTo,
+      mentions,
+    };
+    this.messagesByGroup.update((prev) => {
+      const existing = prev[groupId] ?? [];
+      const realPresent = existing.some((m) => m.id === realMsg.id);
+      // The relay echo may have raced through ingestMessage first — in that
+      // case the placeholder is already gone (ingestMessage replaces it by
+      // tuple match) so this update is a no-op.
+      if (realPresent) {
+        const filtered = existing.filter((m) => m.clientTag !== clientTag);
+        if (filtered.length === existing.length) return prev;
+        return { ...prev, [groupId]: filtered };
+      }
+      let replaced = false;
+      const swapped = existing.map((m) => {
+        if (m.clientTag === clientTag) {
+          replaced = true;
+          return realMsg;
+        }
+        return m;
+      });
+      if (!replaced) {
+        // Placeholder was canceled before the publish ack landed — append
+        // the real event so the user sees the message they sent.
+        return { ...prev, [groupId]: [...existing, realMsg].sort((a, b) => a.createdAt - b.createdAt) };
+      }
+      swapped.sort((a, b) => a.createdAt - b.createdAt);
+      return { ...prev, [groupId]: swapped };
+    });
+    this.ensureUserMetadata(ev.pubkey);
+  }
+
+  private markGroupMessageFailed(groupId: string, clientTag: string, _err: string): void {
+    this.messagesByGroup.update((prev) => {
+      const existing = prev[groupId];
+      if (!existing) return prev;
+      let touched = false;
+      const next = existing.map((m) => {
+        if (m.clientTag !== clientTag) return m;
+        touched = true;
+        return { ...m, pending: false, failed: true };
+      });
+      if (!touched) return prev;
+      return { ...prev, [groupId]: next };
+    });
+  }
+
+  private flipPendingGroupMessageToPending(groupId: string, clientTag: string): void {
+    this.messagesByGroup.update((prev) => {
+      const existing = prev[groupId];
+      if (!existing) return prev;
+      let touched = false;
+      const next = existing.map((m) => {
+        if (m.clientTag !== clientTag) return m;
+        touched = true;
+        return { ...m, pending: true, failed: false };
+      });
+      if (!touched) return prev;
+      return { ...prev, [groupId]: next };
+    });
+  }
+
+  private upsertPendingDM(counterparty: string, msg: JsDirectMessage): void {
+    this.dmsByPeer.update((prev) => {
+      const existing = prev[counterparty] ?? [];
+      const next = [...existing, msg].sort((a, b) => a.createdAt - b.createdAt);
+      return { ...prev, [counterparty]: next };
+    });
+  }
+
+  private replacePendingDM(
+    counterparty: string,
+    clientTag: string,
+    ev: NostrEvent,
+    plaintext: string,
+  ): void {
+    this.pendingDMSends.delete(clientTag);
+    const realMsg: JsDirectMessage = {
+      id: ev.id,
+      counterparty,
+      outgoing: true,
+      content: plaintext,
+      createdAt: ev.created_at,
+    };
+    this.dmsByPeer.update((prev) => {
+      const existing = prev[counterparty] ?? [];
+      const realPresent = existing.some((m) => m.id === realMsg.id);
+      if (realPresent) {
+        const filtered = existing.filter((m) => m.clientTag !== clientTag);
+        if (filtered.length === existing.length) return prev;
+        return { ...prev, [counterparty]: filtered };
+      }
+      let replaced = false;
+      const swapped = existing.map((m) => {
+        if (m.clientTag === clientTag) {
+          replaced = true;
+          return realMsg;
+        }
+        return m;
+      });
+      if (!replaced) {
+        return { ...prev, [counterparty]: [...existing, realMsg].sort((a, b) => a.createdAt - b.createdAt) };
+      }
+      swapped.sort((a, b) => a.createdAt - b.createdAt);
+      return { ...prev, [counterparty]: swapped };
+    });
+    this.ensureUserMetadata(counterparty);
+  }
+
+  private markDMFailed(counterparty: string, clientTag: string, _err: string): void {
+    this.dmsByPeer.update((prev) => {
+      const existing = prev[counterparty];
+      if (!existing) return prev;
+      let touched = false;
+      const next = existing.map((m) => {
+        if (m.clientTag !== clientTag) return m;
+        touched = true;
+        return { ...m, pending: false, failed: true };
+      });
+      if (!touched) return prev;
+      return { ...prev, [counterparty]: next };
+    });
+  }
+
+  private flipPendingDMToPending(counterparty: string, clientTag: string): void {
+    this.dmsByPeer.update((prev) => {
+      const existing = prev[counterparty];
+      if (!existing) return prev;
+      let touched = false;
+      const next = existing.map((m) => {
+        if (m.clientTag !== clientTag) return m;
+        touched = true;
+        return { ...m, pending: true, failed: false };
+      });
+      if (!touched) return prev;
+      return { ...prev, [counterparty]: next };
+    });
   }
 
   async joinGroup(groupId: string): Promise<void> {
@@ -1838,6 +2160,7 @@ class BridgeImpl implements NostrBridge {
         createdAt: e.created_at,
         kind: e.kind,
         replyToId: e.tags.find((t) => t[0] === 'e')?.[1] ?? null,
+        mentions: extractMentionPubkeysFromMessage(e.content, e.tags),
         groupId: e.tags.find((t) => t[0] === 'h')?.[1] ?? null,
       }))
       .sort((a, b) => b.createdAt - a.createdAt);
@@ -1963,11 +2286,6 @@ class BridgeImpl implements NostrBridge {
     return added > 0;
   }
 
-  markGroupAsRead(_groupId: string): void {
-    // No-op in this minimal client. Real impl would persist a per-group
-    // last-read timestamp and recompute unread counts.
-  }
-
   setActiveGroup(groupId: string | null): void {
     this.activeGroupId = groupId;
   }
@@ -2000,7 +2318,7 @@ class BridgeImpl implements NostrBridge {
     content: string;
     tags: string[][];
     created_at?: number;
-  }, extraRelays: string[] = []): Promise<NostrEvent> {
+  }, opts: PublishOpts = {}): Promise<NostrEvent> {
     return this.signAndPublish(
       {
         kind: template.kind,
@@ -2008,7 +2326,7 @@ class BridgeImpl implements NostrBridge {
         tags: template.tags,
         created_at: template.created_at ?? Math.floor(Date.now() / 1000),
       },
-      extraRelays,
+      opts,
     );
   }
 
@@ -2631,6 +2949,13 @@ class BridgeImpl implements NostrBridge {
     const hostPubkey = tag('host') ?? ev.pubkey;
     const expirationStr = tag('expiration');
     const expiresAt = expirationStr ? parseInt(expirationStr, 10) || 0 : 0;
+    // Participant count: SFU started tagging this so consumers can
+    // distinguish "live call with people" from "room still open during
+    // empty-grace." Older SFU builds don't tag — treat absent as -1
+    // (unknown, render badge to preserve back-compat) so we don't go
+    // silent on a partial deploy.
+    const countStr = tag('count');
+    const participantCount = countStr === undefined ? -1 : (parseInt(countStr, 10) || 0);
     const cur = this.activeCallByChannel.get();
     const prev = cur[channelId];
     // Newest-wins: replaceable kind, stale duplicates from slow relays
@@ -2645,13 +2970,13 @@ class BridgeImpl implements NostrBridge {
     }
     this.activeCallByChannel.set({
       ...cur,
-      [channelId]: { hostPubkey, status, expiresAt, createdAt: ev.created_at },
+      [channelId]: { hostPubkey, status, participantCount, expiresAt, createdAt: ev.created_at },
     });
   }
 
   /** Subscribe to the active-call state for any channel. */
   subscribeActiveCallByChannel(
-    cb: (byChannel: Readonly<Record<string, { hostPubkey: string; status: string; expiresAt: number; createdAt: number }>>) => void,
+    cb: (byChannel: Readonly<Record<string, { hostPubkey: string; status: string; participantCount: number; expiresAt: number; createdAt: number }>>) => void,
   ): Unsubscribe {
     return this.activeCallByChannel.subscribe(cb);
   }
@@ -2759,6 +3084,7 @@ class BridgeImpl implements NostrBridge {
 
   private ingestMessage(groupId: string, ev: NostrEvent): void {
     const replyTo = ev.tags.find((t) => t[0] === 'e' && t[3] === 'reply')?.[1] ?? null;
+    const mentions = extractMentionPubkeysFromMessage(ev.content, ev.tags);
     const msg: JsMessage = {
       id: ev.id,
       pubkey: ev.pubkey,
@@ -2766,45 +3092,74 @@ class BridgeImpl implements NostrBridge {
       createdAt: ev.created_at,
       kind: ev.kind,
       replyToId: replyTo,
+      mentions,
     };
     let isNew = false;
+    let replacedClientTag: string | null = null;
     this.messagesByGroup.update((prev) => {
       const existing = prev[groupId] ?? [];
       if (existing.some((m) => m.id === msg.id)) return prev;
+      // Relay echo of an optimistic placeholder we sent — replace in place
+      // so the bubble's React key (msg.id) only changes once. Match on the
+      // tuple we control end-to-end (pubkey, content, created_at) since the
+      // pre-sign placeholder doesn't have an id yet.
+      const pendingIdx = existing.findIndex(
+        (m) =>
+          m.pending === true
+          && m.pubkey === msg.pubkey
+          && m.content === msg.content
+          && m.createdAt === msg.createdAt,
+      );
+      if (pendingIdx >= 0) {
+        replacedClientTag = existing[pendingIdx].clientTag ?? null;
+        const next = [...existing];
+        next[pendingIdx] = msg;
+        next.sort((a, b) => a.createdAt - b.createdAt);
+        isNew = true;
+        return { ...prev, [groupId]: next };
+      }
       isNew = true;
       const next = [...existing, msg].sort((a, b) => a.createdAt - b.createdAt);
       return { ...prev, [groupId]: next };
     });
+    if (replacedClientTag) this.pendingGroupSends.delete(replacedClientTag);
     // Lazy metadata fetch for any author we haven't seen yet.
     this.ensureUserMetadata(ev.pubkey);
-    // Notification side-effects — only after the bridge has anchored its
-    // live cutoff and only for genuinely new live events. Skip own messages
-    // and historical backfill (events older than the cutoff). The desktop
-    // bell + mobile inbox both consume `useNotificationStore.inboxEvents`,
-    // so this single producer feeds both surfaces.
+    // Inbox card for @-mentions. Unread badges are derived in the UI from
+    // `useReadStateStore.groupCursors[groupId]` vs `messages[].createdAt`,
+    // so this path only needs to surface the mention as an inbox event
+    // (the bell / mobile inbox UI). Historical backfill is filtered by the
+    // user's existing inbox cursor — a cached event older than
+    // `inboxLastReadAt` is read by definition.
     if (!isNew) return;
     const me = this.session?.pubKeyHex ?? null;
     if (!me || ev.pubkey === me) return;
-    const startedAt = this.notificationsStartedAt;
-    if (startedAt === null || ev.created_at < startedAt) return;
-    const mentioned = extractMentionPubkeys(ev.content).includes(me);
-    // Future: resolve replyTo's author to detect "replied to me". For now
-    // we surface a mention as both a mention card and a counter bump; a
-    // reply that happens to mention falls under "mention" too.
-    handleIncomingChannelMessage(
-      { channelId: groupId, authorPubkey: ev.pubkey, content: ev.content },
-      me,
-    );
-    if (mentioned && !isUserWatchingChannel(groupId)) {
-      useNotificationStore.getState().pushInboxEvent({
-        type: 'mention',
-        channelId: groupId,
-        messageId: ev.id,
-        senderPubkey: ev.pubkey,
-        preview: ev.content.slice(0, 280),
-        createdAt: new Date(ev.created_at * 1000).toISOString(),
-      });
-    }
+    if (isUserWatchingChannel(groupId)) return;
+    const mentioned = mentions.includes(me);
+    // Reply-to-me detection: NIP-10 strict — `["e", id, "", "reply"]` whose
+    // parent is one of MY messages in this channel. Resolved against the
+    // already-ingested message list so we only fire when we can prove
+    // authorship; backfill that arrives before the parent gets dropped.
+    const replyToMe = (() => {
+      if (!replyTo) return false;
+      const list = this.messagesByGroup.get()[groupId] ?? [];
+      const parent = list.find((m) => m.id === replyTo);
+      return !!parent && parent.pubkey === me;
+    })();
+    if (!mentioned && !replyToMe) return;
+    const evMs = ev.created_at * 1000;
+    if (evMs <= useReadStateStore.getState().inboxLastReadAt) return;
+    useReadStateStore.getState().pushInboxEvent({
+      // Mentions take precedence over replies in the inbox card type — if
+      // a message is both, surfacing it as a "mention" matches user
+      // intent (the @ was the explicit ping).
+      type: mentioned ? 'mention' : 'reply',
+      channelId: groupId,
+      messageId: ev.id,
+      senderPubkey: ev.pubkey,
+      preview: ev.content.slice(0, 280),
+      createdAt: new Date(evMs).toISOString(),
+    });
   }
 
   private ingestReaction(groupId: string, ev: NostrEvent): void {
@@ -2851,32 +3206,123 @@ class BridgeImpl implements NostrBridge {
       createdAt: ev.created_at,
     };
     let isNew = false;
+    let replacedClientTag: string | null = null;
     this.dmsByPeer.update((all) => {
       const existing = all[counterparty] ?? [];
       if (existing.some((m) => m.id === dm.id)) return all;
+      if (outgoing) {
+        // See `ingestMessage` for the rationale — replace our own optimistic
+        // placeholder in place rather than appending the relay-echoed copy
+        // alongside it.
+        const pendingIdx = existing.findIndex(
+          (m) =>
+            m.pending === true
+            && m.outgoing === true
+            && m.content === plaintext
+            && m.createdAt === dm.createdAt,
+        );
+        if (pendingIdx >= 0) {
+          replacedClientTag = existing[pendingIdx].clientTag ?? null;
+          const next = [...existing];
+          next[pendingIdx] = dm;
+          next.sort((a, b) => a.createdAt - b.createdAt);
+          isNew = true;
+          return { ...all, [counterparty]: next };
+        }
+      }
       isNew = true;
       return {
         ...all,
         [counterparty]: [...existing, dm].sort((a, b) => a.createdAt - b.createdAt),
       };
     });
+    if (replacedClientTag) this.pendingDMSends.delete(replacedClientTag);
     this.ensureUserMetadata(counterparty);
-    // Notification side-effects for incoming DMs. Skip own (outgoing) and
-    // historical backfill — see ingestMessage for the same gating rationale.
+    // Inbox card for incoming DMs the user isn't actively watching. Unread
+    // badges are derived from the read-state cursor + bridge `dmsByPeer`, so
+    // we don't bump any counter here — only push a card for the bell/inbox.
     if (!isNew || outgoing) return;
-    const startedAt = this.notificationsStartedAt;
-    if (startedAt === null || ev.created_at < startedAt) return;
-    const watching = isUserWatchingDM(counterparty);
-    const cur = useNotificationStore.getState().dmUnreads[counterparty] ?? 0;
-    handleIncomingDM(counterparty, false, cur);
-    if (!watching) {
-      useNotificationStore.getState().pushInboxEvent({
-        type: 'dm',
-        senderPubkey: counterparty,
-        preview: plaintext.slice(0, 280),
-        createdAt: new Date(ev.created_at * 1000).toISOString(),
-      });
-    }
+    if (isUserWatchingDM(counterparty)) return;
+    const evMs = ev.created_at * 1000;
+    if (evMs <= useReadStateStore.getState().inboxLastReadAt) return;
+    useReadStateStore.getState().pushInboxEvent({
+      type: 'dm',
+      senderPubkey: counterparty,
+      preview: plaintext.slice(0, 280),
+      createdAt: new Date(evMs).toISOString(),
+    });
+  }
+
+  /**
+   * Build a {@link NipSigner} backed by the active session — sign + NIP-44
+   * encrypt/decrypt routed through whichever login method the user picked.
+   * Used by the read-state relay-sync engine to NIP-59 gift-wrap state
+   * events. Returns `null` when there is no active session.
+   *
+   * Bunker NIP-44 round-trips can be slow (the remote signer signs and
+   * encrypts on every call); callers should debounce publish bursts.
+   */
+  getNipSigner(): NipSigner | null {
+    if (!this.session) return null;
+    const session = this.session;
+    const pubkey = session.pubKeyHex;
+    return {
+      pubkey,
+      signEvent: async (template) => {
+        if (session.loginMethod === 'nsec' && session.privKeyHex) {
+          const sk = hexToBytes(session.privKeyHex);
+          return finalizeEvent({ ...template }, sk);
+        }
+        if (session.loginMethod === 'nip07') {
+          const w = (window as unknown as { nostr?: { signEvent: (e: unknown) => Promise<NostrEvent> } }).nostr;
+          if (!w) throw new Error('NIP-07 extension unavailable');
+          return w.signEvent({ ...template, pubkey });
+        }
+        if (session.loginMethod === 'bunker') {
+          const b = await this.ensureBunkerSigner();
+          return b.signEvent(template) as Promise<NostrEvent>;
+        }
+        throw new Error(`Cannot sign with login method ${session.loginMethod}`);
+      },
+      nip44Encrypt: async (recipientPubkey, plaintext) => {
+        if (session.loginMethod === 'nsec' && session.privKeyHex) {
+          const sk = hexToBytes(session.privKeyHex);
+          const key = nip44.utils.getConversationKey(sk, recipientPubkey);
+          return nip44.encrypt(plaintext, key);
+        }
+        if (session.loginMethod === 'nip07') {
+          const w = (window as unknown as {
+            nostr?: { nip44?: { encrypt: (p: string, t: string) => Promise<string> } };
+          }).nostr;
+          if (!w?.nip44?.encrypt) throw new Error('Extension does not support NIP-44 encryption');
+          return w.nip44.encrypt(recipientPubkey, plaintext);
+        }
+        if (session.loginMethod === 'bunker') {
+          const b = await this.ensureBunkerSigner();
+          return b.nip44Encrypt(recipientPubkey, plaintext);
+        }
+        throw new Error(`Cannot NIP-44 encrypt with login method ${session.loginMethod}`);
+      },
+      nip44Decrypt: async (senderPubkey, ciphertext) => {
+        if (session.loginMethod === 'nsec' && session.privKeyHex) {
+          const sk = hexToBytes(session.privKeyHex);
+          const key = nip44.utils.getConversationKey(sk, senderPubkey);
+          return nip44.decrypt(ciphertext, key);
+        }
+        if (session.loginMethod === 'nip07') {
+          const w = (window as unknown as {
+            nostr?: { nip44?: { decrypt: (p: string, c: string) => Promise<string> } };
+          }).nostr;
+          if (!w?.nip44?.decrypt) throw new Error('Extension does not support NIP-44 decryption');
+          return w.nip44.decrypt(senderPubkey, ciphertext);
+        }
+        if (session.loginMethod === 'bunker') {
+          const b = await this.ensureBunkerSigner();
+          return b.nip44Decrypt(senderPubkey, ciphertext);
+        }
+        throw new Error(`Cannot NIP-44 decrypt with login method ${session.loginMethod}`);
+      },
+    };
   }
 
   private async encryptNip04(recipientPubkey: string, content: string): Promise<string> {
@@ -2996,9 +3442,17 @@ class BridgeImpl implements NostrBridge {
 
   private async signAndPublish(
     template: { kind: number; content: string; tags: string[][]; created_at: number },
-    extraRelays: string[] = [],
+    relayOpts: PublishOpts | readonly string[] = {},
     opts?: { quiet?: boolean },
   ): Promise<NostrEvent> {
+    // Two call shapes: legacy `string[]` (merge with this.relays) and the new
+    // `{ extraRelays, mode }` opts. Internal callers in this file still pass
+    // arrays — translate here so the publish path below has one shape.
+    const normalized: PublishOpts = Array.isArray(relayOpts)
+      ? { extraRelays: relayOpts }
+      : (relayOpts as PublishOpts);
+    const extraRelays = normalized.extraRelays ?? [];
+    const mode = normalized.mode ?? 'merge';
     if (!this.session) throw new Error('Not logged in');
 
     const signLabel =
@@ -3032,7 +3486,9 @@ class BridgeImpl implements NostrBridge {
       throw e;
     }
 
-    const targetRelays = Array.from(new Set([...this.relays, ...extraRelays]));
+    const targetRelays = mode === 'replace'
+      ? Array.from(new Set(extraRelays))
+      : Array.from(new Set([...this.relays, ...extraRelays]));
     const pubId = opts?.quiet ? null : pushActivity('Publishing to relays', `kind ${template.kind} → ${targetRelays.length} relay(s)`);
     const publishes = this.pool.publish(targetRelays, event, { onauth: this.getAuthSigner() });
 
@@ -3145,7 +3601,7 @@ class BridgeImpl implements NostrBridge {
  *   - Hostname can't be `localhost`, `*.localhost`, `*.local`, or an
  *     IPv4 literal in the loopback / RFC-1918 / link-local ranges.
  */
-function isImportableRelayUrl(url: string): boolean {
+export function isImportableRelayUrl(url: string): boolean {
   let p: URL;
   try { p = new URL(url); } catch { return false; }
   if (p.protocol !== 'wss:') return false;
@@ -3185,6 +3641,23 @@ function validateRelayUrl(url: string): void {
 }
 
 function generateGroupId(): string {
+  const bytes = new Uint8Array(8);
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    crypto.getRandomValues(bytes);
+  } else {
+    for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
+  }
+  return Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * Opaque client-side tag for an optimistic message placeholder. Lives in
+ * the message's `clientTag` field and is mirrored as `pending:<tag>` in the
+ * `id` field while the publish is in flight. 16 hex chars = 64 bits of
+ * entropy — more than enough to avoid collisions across the few hundred
+ * placeholders a session might accumulate.
+ */
+function generateClientTag(): string {
   const bytes = new Uint8Array(8);
   if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
     crypto.getRandomValues(bytes);

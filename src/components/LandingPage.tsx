@@ -6,6 +6,7 @@ import { useState, useEffect, useRef, type RefObject } from 'react';
 // even when a session exists in localStorage.
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import Navbar from '@/components/Navbar';
 import LoginModal from '@/app/app/LoginModal';
 import ObeliskIcon from '@/components/ObeliskIcon';
@@ -137,6 +138,7 @@ export default function LandingPage() {
   const [isNavigating, setIsNavigating] = useState(false);
   const { t, locale } = useTranslation();
 
+  const [previewRef, previewVisible] = useScrollReveal<HTMLElement>();
   const [featuresRef, featuresVisible] = useScrollReveal<HTMLElement>();
   const [stepsRef, stepsVisible] = useScrollReveal<HTMLElement>();
   const [roadmapRef, roadmapVisible] = useScrollReveal<HTMLElement>();
@@ -335,6 +337,58 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Hero showcase — desktop voice channel + floating mobile preview, so
+          visitors immediately see what Obelisk looks like on every screen
+          before they scroll into the per-device tour cards below. */}
+      <section className="relative pt-2 pb-20 md:pt-4 md:pb-28 px-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-10 md:mb-12">
+            <h2 className="text-2xl md:text-3xl font-bold text-lc-white">
+              {t('landing.showcase.heading')}<span className="text-lc-green">.</span>
+            </h2>
+            <p className="mt-3 text-sm md:text-base text-lc-muted max-w-xl mx-auto">
+              {t('landing.showcase.subtitle')}
+            </p>
+          </div>
+
+          <div className="relative mx-auto max-w-5xl">
+            {/* Soft green glow behind the screens */}
+            <div
+              aria-hidden="true"
+              className="absolute inset-x-12 inset-y-4 bg-lc-green/10 rounded-[2rem] blur-[80px] -z-10 pointer-events-none"
+            />
+
+            {/* Desktop screenshot in a monitor-style frame */}
+            <figure className="rounded-2xl border border-lc-border bg-lc-dark overflow-hidden shadow-2xl shadow-black/40 lg:mr-20">
+              <Image
+                src="/pictures-for-posts/desktop-large-voice-channel-with-sfu-peer-trasmission-test.png"
+                alt={t('landing.showcase.desktop.alt')}
+                width={1470}
+                height={799}
+                priority
+                className="w-full h-auto block"
+                sizes="(max-width: 1024px) 95vw, 960px"
+              />
+            </figure>
+
+            {/* Mobile screenshot — stacked centered on small screens, floating
+                bottom-right overlay on lg+ for a device-mockup composition. */}
+            <div className="mt-6 mx-auto w-[150px] sm:w-[180px] lg:mt-0 lg:mx-0 lg:w-[210px] lg:absolute lg:right-0 lg:-bottom-10">
+              <figure className="rounded-[1.75rem] border-2 border-lc-border bg-lc-dark overflow-hidden shadow-2xl shadow-black/70">
+                <Image
+                  src="/pictures-for-posts/mobile-server-and-channels-view.png"
+                  alt={t('landing.showcase.mobile.alt')}
+                  width={720}
+                  height={1600}
+                  className="w-full h-auto block"
+                  sizes="(max-width: 1024px) 180px, 210px"
+                />
+              </figure>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Relay connection pulse */}
       <div className="relative py-4 pointer-events-none" aria-hidden="true">
         <svg viewBox="0 0 500 20" className="w-full max-w-2xl mx-auto block" preserveAspectRatio="xMidYMid meet">
@@ -360,6 +414,119 @@ export default function LandingPage() {
           ))}
         </svg>
       </div>
+
+      {/* Product preview — desktop + mobile screenshots that link out to the
+          per-device tour pages (/desktop and /mobile). Each card shows a real
+          product screenshot with descriptive alt text for SEO; the CTAs below
+          bounce visitors straight into /app. */}
+      <section
+        id="preview"
+        ref={previewRef}
+        className={`pt-12 pb-16 px-6 ${previewVisible ? 'animate-fade-in-up' : 'opacity-0'}`}
+      >
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              {t('landing.preview.heading')}<span className="text-lc-green">.</span>
+            </h2>
+            <p className="text-lc-muted text-lg max-w-2xl mx-auto">
+              {t('landing.preview.subtitle')}
+            </p>
+          </div>
+
+          <div className="space-y-6 max-w-5xl mx-auto">
+            {/* Desktop card — image left, content right on lg+ (image on top, content below on small) */}
+            <Link
+              href="/desktop"
+              className="lc-card group p-6 lg:p-8 flex flex-col lg:grid lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:gap-10 lg:items-center"
+              data-testid="landing-preview-desktop"
+            >
+              <figure className="rounded-xl border border-lc-border overflow-hidden bg-lc-dark">
+                <Image
+                  src="/pictures-for-posts/desktop-large-voice-channel-with-sfu-peer-trasmission-test.png"
+                  alt={t('landing.preview.desktop.alt')}
+                  width={1470}
+                  height={799}
+                  className="w-full h-auto block transition-transform duration-500 group-hover:scale-[1.015]"
+                  sizes="(max-width: 1024px) 90vw, 600px"
+                />
+              </figure>
+              <div className="mt-6 lg:mt-0 flex flex-col">
+                <span className="self-start inline-flex items-center gap-2 px-3 py-1 rounded-full bg-lc-olive/40 border border-lc-green/20 text-xs font-semibold text-lc-green tracking-wide uppercase">
+                  {t('landing.preview.desktop.badge')}
+                </span>
+                <h3 className="mt-4 text-xl md:text-2xl font-bold text-lc-white">
+                  {t('landing.preview.desktop.title')}
+                </h3>
+                <p className="mt-2 text-sm md:text-base text-lc-muted leading-relaxed">
+                  {t('landing.preview.desktop.desc')}
+                </p>
+                <span className="mt-6 text-sm font-semibold text-lc-green inline-flex items-center gap-2 group-hover:underline">
+                  {t('landing.preview.desktop.cta')}
+                  <span aria-hidden="true">→</span>
+                </span>
+              </div>
+            </Link>
+
+            {/* Mobile card — content left, phone right on lg+ (phone on top, content below on small) */}
+            <Link
+              href="/mobile"
+              className="lc-card group p-6 lg:p-8 flex flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_220px] lg:gap-10 lg:items-center"
+              data-testid="landing-preview-mobile"
+            >
+              <figure className="lg:order-2 mx-auto w-full max-w-[200px] lg:mx-0 lg:max-w-none lg:w-full rounded-[2rem] border border-lc-border overflow-hidden bg-lc-dark">
+                <Image
+                  src="/pictures-for-posts/mobile-server-and-channels-view.png"
+                  alt={t('landing.preview.mobile.alt')}
+                  width={720}
+                  height={1600}
+                  className="w-full h-auto block transition-transform duration-500 group-hover:scale-[1.015]"
+                  sizes="(max-width: 1024px) 60vw, 220px"
+                />
+              </figure>
+              <div className="lg:order-1 mt-6 lg:mt-0 flex flex-col">
+                <span className="self-start inline-flex items-center gap-2 px-3 py-1 rounded-full bg-lc-olive/40 border border-lc-green/20 text-xs font-semibold text-lc-green tracking-wide uppercase">
+                  {t('landing.preview.mobile.badge')}
+                </span>
+                <h3 className="mt-4 text-xl md:text-2xl font-bold text-lc-white">
+                  {t('landing.preview.mobile.title')}
+                </h3>
+                <p className="mt-2 text-sm md:text-base text-lc-muted leading-relaxed">
+                  {t('landing.preview.mobile.desc')}
+                </p>
+                <span className="mt-6 text-sm font-semibold text-lc-green inline-flex items-center gap-2 group-hover:underline">
+                  {t('landing.preview.mobile.cta')}
+                  <span aria-hidden="true">→</span>
+                </span>
+              </div>
+            </Link>
+          </div>
+
+          <div className="mt-10 flex justify-center">
+            <button
+              onClick={() => router.push('/app')}
+              className="lc-pill lc-pill-primary text-base px-8 py-3 inline-flex items-center gap-2"
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4" />
+                <polyline points="10 17 15 12 10 7" />
+                <line x1="15" y1="12" x2="3" y2="12" />
+              </svg>
+              {t('hero.launchApp')}
+            </button>
+          </div>
+        </div>
+      </section>
 
       {/* Features */}
       <section id="features" ref={featuresRef} className={`py-24 px-6 ${featuresVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>

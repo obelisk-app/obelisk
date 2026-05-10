@@ -1,10 +1,20 @@
 import type { MetadataRoute } from 'next';
-import { listAllGuides } from '@/lib/guides';
+import { listAllGuides, type Guide } from '@/lib/guides';
 import type { Locale } from '@/i18n';
 import { guidesHref } from '@/lib/guide-urls';
+import { snapshotPaths } from '@/components/guides/svg/asset-meta';
 
 const SITE_URL = process.env.CORS_ORIGIN || 'https://obelisk.ar';
 const LOCALES: Locale[] = ['en', 'es'];
+
+const ASSET_REF_RE = /<(?:Diagram|SvgHero)\s+[^>]*name=["']([^"']+)["']/g;
+
+function guideImageUrls(g: Guide): string[] {
+  const names = new Set<string>();
+  if (g.frontmatter.heroComponent) names.add(g.frontmatter.heroComponent);
+  for (const m of g.content.matchAll(ASSET_REF_RE)) names.add(m[1]);
+  return Array.from(names).map((n) => `${SITE_URL}${snapshotPaths(n).png}`);
+}
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
@@ -21,6 +31,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: now,
       changeFrequency: 'weekly',
       priority: 0.8,
+    },
+    {
+      url: `${SITE_URL}/mobile`,
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.7,
+    },
+    {
+      url: `${SITE_URL}/desktop`,
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.7,
     },
   ];
 
@@ -49,6 +71,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         lastModified: last,
         changeFrequency: 'monthly',
         priority: 0.6,
+        images: guideImageUrls(g),
         alternates: {
           languages: {
             'en-US': `${SITE_URL}${guidesHref('en', g.slug)}`,

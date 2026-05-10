@@ -2,15 +2,27 @@ import type { StateCreator } from 'zustand';
 import type { ChatState } from './index';
 import type { FollowedPostMetaEntry } from './types';
 
-const STORAGE_KEY = 'obelisk:followed-posts';
-const META_STORAGE_KEY = 'obelisk:followed-posts-meta';
+// Legacy unscoped keys, written by builds before account-scoping landed.
+// Migrated into the per-account keys on first `ensureForumFollowForAccount`
+// then removed; preserved here only so the migration can read them.
+const LEGACY_LIST_KEY = 'obelisk:followed-posts';
+const LEGACY_META_KEY = 'obelisk:followed-posts-meta';
+
+let activePubkey: string | null = null;
+
+function listKey(pubkey: string): string {
+  return `obelisk-forum-follow:${pubkey}`;
+}
+function metaKey(pubkey: string): string {
+  return `obelisk-forum-follow-meta:${pubkey}`;
+}
 
 export interface ForumFollowSlice {
   /**
-   * Followed forum post ids. Persisted in localStorage only.
+   * Followed forum post ids. Persisted in localStorage under
+   * `obelisk-forum-follow:{myPubkey}` so different accounts on the same
+   * browser don't share follow lists.
    *
-   * The previous server-backed flow (`POST /api/forum/posts/:id/follow`,
-   * `GET /api/forum/posts/followed`) is gone — Obelisk is fully Nostr now.
    * TODO(decentralized-forum-follows): replace localStorage with a Nostr
    * event (e.g. NIP-51 list) so follows sync across the user's devices.
    */
@@ -36,8 +48,9 @@ export const FORUM_FOLLOW_INITIAL_STATE = {
 
 function readStorageList(): string[] {
   if (typeof window === 'undefined') return [];
+  if (!activePubkey) return [];
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(listKey(activePubkey));
     if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown;
     return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string') : [];
@@ -48,8 +61,9 @@ function readStorageList(): string[] {
 
 function readStorageMeta(): Record<string, FollowedPostMetaEntry> {
   if (typeof window === 'undefined') return {};
+  if (!activePubkey) return {};
   try {
-    const raw = localStorage.getItem(META_STORAGE_KEY);
+    const raw = localStorage.getItem(metaKey(activePubkey));
     if (!raw) return {};
     const parsed = JSON.parse(raw) as unknown;
     return parsed && typeof parsed === 'object' ? (parsed as Record<string, FollowedPostMetaEntry>) : {};
@@ -60,10 +74,39 @@ function readStorageMeta(): Record<string, FollowedPostMetaEntry> {
 
 function writeStorage(ids: string[], meta: Record<string, FollowedPostMetaEntry>): void {
   if (typeof window === 'undefined') return;
+  if (!activePubkey) return;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
-    localStorage.setItem(META_STORAGE_KEY, JSON.stringify(meta));
+    localStorage.setItem(listKey(activePubkey), JSON.stringify(ids));
+    localStorage.setItem(metaKey(activePubkey), JSON.stringify(meta));
   } catch { /* quota etc. — ignore */ }
+}
+
+/**
+ * Multi-account isolation for forum follows. Mirrors `ensureDMStoreForAccount`:
+ * call once on login (or whenever the active pubkey changes). Idempotent.
+ *
+ * On the first call after the legacy build, migrates the unscoped
+ * `obelisk:followed-posts[-meta]` key into the per-account variant, then
+ * removes the legacy entry so it can't reseed on the next login as a
+ * different user.
+ */
+export function ensureForumFollowForAccount(myPubkey: string): void {
+  if (activePubkey === myPubkey) return;
+  activePubkey = myPubkey;
+  if (typeof window === 'undefined') return;
+  try {
+    const newList = listKey(myPubkey);
+    if (localStorage.getItem(newList) === null) {
+      const legacyList = localStorage.getItem(LEGACY_LIST_KEY);
+      const legacyMeta = localStorage.getItem(LEGACY_META_KEY);
+      if (legacyList) localStorage.setItem(newList, legacyList);
+      if (legacyMeta) localStorage.setItem(metaKey(myPubkey), legacyMeta);
+    }
+    // Always remove the legacy keys after the first per-account write —
+    // they're a cross-account leak.
+    localStorage.removeItem(LEGACY_LIST_KEY);
+    localStorage.removeItem(LEGACY_META_KEY);
+  } catch { /* ignore */ }
 }
 
 export const createForumFollowSlice: StateCreator<ChatState, [], [], ForumFollowSlice> = (set, get) => ({

@@ -21,6 +21,14 @@
 body {
   background: var(--background);
   color: var(--foreground);
+  /* Block accidental horizontal scroll on mobile. Decorative absolutely-
+     positioned elements (orbiting keys, glows, blurred backdrops) can
+     poke a few pixels past the viewport on narrow widths, which makes
+     the document scroll sideways while the fixed navbar stays put — the
+     navbar then visually drifts away from the content as you swipe.
+     `clip` prevents the scroll without creating a new scroll container,
+     so `position: sticky` on descendants keeps working. */
+  overflow-x: clip;
 }
 
 /* La Crypta perspective grid background */

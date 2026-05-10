@@ -25,12 +25,23 @@ const KIND_GROUP_CREATE = 9007;
 const KIND_GROUP_METADATA = 39000;
 const KIND_GROUP_ADMINS = 39001;
 const KIND_GROUP_MEMBERS = 39002;
+// Voice signaling. Mesh voice is gated by NIP-29 membership inside the
+// channel; layering WoT on top means a participant whose follow graph
+// is sparse can fail to talk to half the room. The room is small (cap
+// 8), the participants are already vetted by the channel admin's
+// member list, and the events are short-lived ephemeral kinds — the
+// trust shape is fundamentally different from broadcast surfaces like
+// chat or profiles.
+const KIND_VOICE_PRESENCE = 20078;
+const KIND_VOICE_SIGNAL = 25050;
 
 const ALWAYS_ALLOW_KINDS = new Set<number>([
   KIND_GROUP_METADATA,
   KIND_GROUP_ADMINS,
   KIND_GROUP_MEMBERS,
   KIND_GROUP_CREATE,
+  KIND_VOICE_PRESENCE,
+  KIND_VOICE_SIGNAL,
 ]);
 
 type Verdict = 'allow' | 'deny';

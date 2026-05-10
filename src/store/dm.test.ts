@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { useDMStore, markThreadRead, ensureDMStoreForAccount } from './dm';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { useDMStore, ensureDMStoreForAccount } from './dm';
 import type { DMMessage } from '@/lib/dm/dm';
 
 const makeMsg = (overrides: Partial<DMMessage> = {}): DMMessage => ({
@@ -23,7 +23,6 @@ describe('useDMStore', () => {
       isLoadingThreads: false,
       hasMoreHistory: false,
       protocolOverrides: {},
-      readCursors: {},
       showProtocolPrompt: null,
     });
   });
@@ -57,8 +56,8 @@ describe('useDMStore', () => {
   });
 
   it('adds and updates threads', () => {
-    useDMStore.getState().addThread({ pubkey: 'pk1', displayName: 'Alice', unreadCount: 0 });
-    useDMStore.getState().addThread({ pubkey: 'pk2', displayName: 'Bob', unreadCount: 1 });
+    useDMStore.getState().addThread({ pubkey: 'pk1', displayName: 'Alice' });
+    useDMStore.getState().addThread({ pubkey: 'pk2', displayName: 'Bob' });
     expect(useDMStore.getState().threads).toHaveLength(2);
 
     useDMStore.getState().updateThread('pk1', { lastMessage: 'Hello' });
@@ -66,8 +65,8 @@ describe('useDMStore', () => {
   });
 
   it('deduplicates threads on addThread', () => {
-    useDMStore.getState().addThread({ pubkey: 'pk1', displayName: 'Alice', unreadCount: 0 });
-    useDMStore.getState().addThread({ pubkey: 'pk1', displayName: 'Alice Updated', unreadCount: 2 });
+    useDMStore.getState().addThread({ pubkey: 'pk1', displayName: 'Alice' });
+    useDMStore.getState().addThread({ pubkey: 'pk1', displayName: 'Alice Updated' });
     expect(useDMStore.getState().threads).toHaveLength(1);
     expect(useDMStore.getState().threads[0].displayName).toBe('Alice Updated');
   });
@@ -144,54 +143,6 @@ describe('useDMStore', () => {
     expect(useDMStore.getState().protocolOverrides['pk1']).toBe('nip04');
     expect(useDMStore.getState().showProtocolPrompt).toBeNull();
   });
-
-  it('incrementUnread + clearUnread + totalUnread', () => {
-    useDMStore.getState().setThreads([
-      { pubkey: 'a', displayName: 'A', unreadCount: 0 },
-      { pubkey: 'b', displayName: 'B', unreadCount: 2 },
-    ]);
-    useDMStore.getState().incrementUnread('a');
-    useDMStore.getState().incrementUnread('a');
-    expect(useDMStore.getState().totalUnread()).toBe(4);
-    useDMStore.getState().clearUnread('b');
-    expect(useDMStore.getState().totalUnread()).toBe(2);
-  });
-});
-
-describe('markThreadRead', () => {
-  const originalFetch = globalThis.fetch;
-  const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
-
-  beforeEach(() => {
-    globalThis.fetch = fetchMock as unknown as typeof fetch;
-    fetchMock.mockClear();
-    useDMStore.setState({
-      threads: [{ pubkey: 'alice', displayName: 'Alice', unreadCount: 5 }],
-      readCursors: {},
-    });
-  });
-
-  afterEach(() => {
-    globalThis.fetch = originalFetch;
-  });
-
-  it('clears unread locally and sets a read cursor, without hitting the server', async () => {
-    const before = Date.now();
-    await markThreadRead('alice');
-    expect(useDMStore.getState().threads[0].unreadCount).toBe(0);
-    const cursor = useDMStore.getState().readCursors['alice'];
-    expect(cursor).toBeGreaterThanOrEqual(before);
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
-});
-
-describe('readCursors', () => {
-  it('setReadCursor updates the cursor map', () => {
-    useDMStore.getState().setReadCursor('bob', 123456789);
-    expect(useDMStore.getState().readCursors['bob']).toBe(123456789);
-    useDMStore.getState().setReadCursor('bob', 987654321);
-    expect(useDMStore.getState().readCursors['bob']).toBe(987654321);
-  });
 });
 
 describe('per-account DM store', () => {
@@ -201,9 +152,7 @@ describe('per-account DM store', () => {
 
   it('persist key includes the active pubkey', async () => {
     ensureDMStoreForAccount('a'.repeat(64));
-    // After ensure + a state mutation, the persist middleware writes to the new key.
     useDMStore.getState().setProtocolOverride('b'.repeat(64), 'nip04');
-    // Allow zustand persist to flush.
     await new Promise((r) => setTimeout(r, 0));
     expect(localStorage.getItem('obelisk-dm-store:' + 'a'.repeat(64))).not.toBeNull();
   });

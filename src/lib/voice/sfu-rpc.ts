@@ -223,7 +223,7 @@ export class SfuRpc {
         ['e', this.channelId],
         ['t', 'obelisk-voice-signal'],
       ],
-    }, this.publishRelays.length > 0 ? [...this.publishRelays] : undefined);
+    }, this.publishRelays.length > 0 ? { extraRelays: [...this.publishRelays] } : undefined);
     return result;
   }
 

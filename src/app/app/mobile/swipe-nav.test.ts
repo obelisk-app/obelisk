@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { decideSnap, decideSwipeNav, NAV_ORDER, neighborsFor } from './swipe-nav';
+import { buildSeedHistory, decideSnap, decideSwipeNav, NAV_ORDER, neighborsFor } from './swipe-nav';
+import { initialNav, type NavState } from './url-state';
 
 describe('mobile swipe-nav', () => {
   describe('top-level screens cycle through NAV_ORDER', () => {
@@ -36,9 +37,9 @@ describe('mobile swipe-nav', () => {
     });
   });
 
-  describe('sub-screens of server allow tab switching', () => {
-    it('swipe-right from channel pops back via history', () => {
-      expect(decideSwipeNav('channel', true)).toEqual({ kind: 'history-back' });
+  describe('sub-screens of server: horizontal swipe always switches tabs (skips parent)', () => {
+    it('swipe-right from channel is a no-op (server parent is first tab)', () => {
+      expect(decideSwipeNav('channel', true)).toEqual({ kind: 'noop' });
     });
 
     it('swipe-left from channel jumps to dms-list (past server parent)', () => {
@@ -57,12 +58,20 @@ describe('mobile swipe-nav', () => {
       });
     });
 
+    it('swipe-right from voice-room is a no-op', () => {
+      expect(decideSwipeNav('voice-room', true)).toEqual({ kind: 'noop' });
+    });
+
     it('swipe-left from forum jumps to dms-list', () => {
       expect(decideSwipeNav('forum', false)).toEqual({
         kind: 'top-level',
         target: 'dms-list',
         dir: 'forward',
       });
+    });
+
+    it('swipe-right from forum is a no-op', () => {
+      expect(decideSwipeNav('forum', true)).toEqual({ kind: 'noop' });
     });
 
     it('swipe-left from member-list jumps to dms-list', () => {
@@ -73,14 +82,18 @@ describe('mobile swipe-nav', () => {
       });
     });
 
-    it('swipe-right from voice-room pops back to server', () => {
-      expect(decideSwipeNav('voice-room', true)).toEqual({ kind: 'history-back' });
+    it('swipe-right from member-list is a no-op', () => {
+      expect(decideSwipeNav('member-list', true)).toEqual({ kind: 'noop' });
     });
   });
 
   describe('sub-screens of dms-list', () => {
-    it('swipe-right from dm-thread pops back', () => {
-      expect(decideSwipeNav('dm-thread', true)).toEqual({ kind: 'history-back' });
+    it('swipe-right from dm-thread jumps to server (before dms-list parent)', () => {
+      expect(decideSwipeNav('dm-thread', true)).toEqual({
+        kind: 'top-level',
+        target: 'server',
+        dir: 'back',
+      });
     });
 
     it('swipe-left from dm-thread jumps to inbox (past dms-list parent)', () => {
@@ -88,6 +101,14 @@ describe('mobile swipe-nav', () => {
         kind: 'top-level',
         target: 'inbox',
         dir: 'forward',
+      });
+    });
+
+    it('swipe-right from compose-dm jumps to server', () => {
+      expect(decideSwipeNav('compose-dm', true)).toEqual({
+        kind: 'top-level',
+        target: 'server',
+        dir: 'back',
       });
     });
 
@@ -101,8 +122,12 @@ describe('mobile swipe-nav', () => {
   });
 
   describe('settings-prefs is a sub of settings-profile (last tab)', () => {
-    it('swipe-right pops back to settings-profile', () => {
-      expect(decideSwipeNav('settings-prefs', true)).toEqual({ kind: 'history-back' });
+    it('swipe-right jumps to inbox (before settings-profile parent)', () => {
+      expect(decideSwipeNav('settings-prefs', true)).toEqual({
+        kind: 'top-level',
+        target: 'inbox',
+        dir: 'back',
+      });
     });
 
     it('swipe-left is a no-op (no tab past settings-profile)', () => {
@@ -111,16 +136,20 @@ describe('mobile swipe-nav', () => {
   });
 
   describe('profile-edit is a sub of settings-profile', () => {
-    it('swipe-right pops back to settings-profile', () => {
-      expect(decideSwipeNav('profile-edit', true)).toEqual({ kind: 'history-back' });
+    it('swipe-right jumps to inbox', () => {
+      expect(decideSwipeNav('profile-edit', true)).toEqual({
+        kind: 'top-level',
+        target: 'inbox',
+        dir: 'back',
+      });
     });
 
     it('swipe-left is a no-op (no tab past settings-profile)', () => {
       expect(decideSwipeNav('profile-edit', false)).toEqual({ kind: 'noop' });
     });
 
-    it('neighbors: left = settings-profile, right = null', () => {
-      expect(neighborsFor('profile-edit')).toEqual({ left: 'settings-profile', right: null });
+    it('neighbors: left = inbox, right = null', () => {
+      expect(neighborsFor('profile-edit')).toEqual({ left: 'inbox', right: null });
     });
   });
 
@@ -149,25 +178,82 @@ describe('mobile swipe-nav', () => {
       expect(neighborsFor('settings-profile')).toEqual({ left: 'inbox', right: null });
     });
 
-    it('sub-screen of server: left = parent, right = next top-level', () => {
-      expect(neighborsFor('channel')).toEqual({ left: 'server', right: 'dms-list' });
-      expect(neighborsFor('voice-room')).toEqual({ left: 'server', right: 'dms-list' });
-      expect(neighborsFor('member-list')).toEqual({ left: 'server', right: 'dms-list' });
-      expect(neighborsFor('forum')).toEqual({ left: 'server', right: 'dms-list' });
+    it('sub-screen of server: no left (parent is first tab), right = next top-level', () => {
+      expect(neighborsFor('channel')).toEqual({ left: null, right: 'dms-list' });
+      expect(neighborsFor('voice-room')).toEqual({ left: null, right: 'dms-list' });
+      expect(neighborsFor('member-list')).toEqual({ left: null, right: 'dms-list' });
+      expect(neighborsFor('forum')).toEqual({ left: null, right: 'dms-list' });
     });
 
-    it('sub-screen of dms-list: left = dms-list, right = inbox', () => {
-      expect(neighborsFor('dm-thread')).toEqual({ left: 'dms-list', right: 'inbox' });
-      expect(neighborsFor('compose-dm')).toEqual({ left: 'dms-list', right: 'inbox' });
+    it('sub-screen of dms-list: left = server, right = inbox', () => {
+      expect(neighborsFor('dm-thread')).toEqual({ left: 'server', right: 'inbox' });
+      expect(neighborsFor('compose-dm')).toEqual({ left: 'server', right: 'inbox' });
     });
 
-    it('settings-prefs: left = settings-profile, right = null (last tab)', () => {
-      expect(neighborsFor('settings-prefs')).toEqual({ left: 'settings-profile', right: null });
+    it('settings-prefs: left = inbox, right = null (last tab)', () => {
+      expect(neighborsFor('settings-prefs')).toEqual({ left: 'inbox', right: null });
     });
 
     it('untyped screens have no neighbors', () => {
       expect(neighborsFor('login')).toEqual({ left: null, right: null });
       expect(neighborsFor('profile-setup')).toEqual({ left: null, right: null });
+    });
+  });
+
+  describe('buildSeedHistory — initial popstate seeding', () => {
+    it('top-level tab seeds [guard, parsed] only', () => {
+      const parsed: NavState = { ...initialNav, screen: 'server' };
+      const entries = buildSeedHistory(parsed, null);
+      expect(entries).toHaveLength(2);
+      expect(entries[0]).toEqual({ state: { guard: true }, url: '/app' });
+      expect(entries[1]).toEqual({ state: { nav: parsed }, url: '/app' });
+    });
+
+    it('top-level inbox: guard sits behind, no parent in between', () => {
+      const parsed: NavState = { ...initialNav, screen: 'inbox' };
+      const entries = buildSeedHistory(parsed, null);
+      expect(entries).toHaveLength(2);
+      expect(entries[0]).toEqual({ state: { guard: true }, url: '/app?s=inbox' });
+      expect(entries[1].state.nav?.screen).toBe('inbox');
+    });
+
+    it('deep-linked channel seeds [guard, server, channel] so back climbs to the channel list', () => {
+      const parsed: NavState = { ...initialNav, screen: 'channel', groupId: 'gid' };
+      const entries = buildSeedHistory(parsed, null);
+      expect(entries).toHaveLength(3);
+      expect(entries[0].state).toEqual({ guard: true });
+      expect(entries[1].state.nav?.screen).toBe('server');
+      expect(entries[1].state.nav?.groupId).toBe(null);
+      expect(entries[2].state.nav).toEqual(parsed);
+      // Guard URL matches the parent's URL so the popstate re-push doesn't
+      // flicker the address bar.
+      expect(entries[0].url).toBe(entries[1].url);
+      expect(entries[2].url).toBe('/app?c=gid&s=channel');
+    });
+
+    it('deep-linked dm-thread seeds dms-list as the parent', () => {
+      const parsed: NavState = { ...initialNav, screen: 'dm-thread', dmPeer: 'pk' };
+      const entries = buildSeedHistory(parsed, null);
+      expect(entries).toHaveLength(3);
+      expect(entries[1].state.nav?.screen).toBe('dms-list');
+      expect(entries[1].state.nav?.dmPeer).toBe(null);
+      expect(entries[2].state.nav).toEqual(parsed);
+    });
+
+    it('deep-linked settings-prefs seeds settings-profile as the parent', () => {
+      const parsed: NavState = { ...initialNav, screen: 'settings-prefs' };
+      const entries = buildSeedHistory(parsed, null);
+      expect(entries).toHaveLength(3);
+      expect(entries[1].state.nav?.screen).toBe('settings-profile');
+      expect(entries[2].state.nav?.screen).toBe('settings-prefs');
+    });
+
+    it('relay query param is preserved on every seeded URL', () => {
+      const parsed: NavState = { ...initialNav, screen: 'channel', groupId: 'gid' };
+      const entries = buildSeedHistory(parsed, 'wss://relay.obelisk.ar');
+      for (const e of entries) {
+        expect(e.url).toContain('relay=relay.obelisk.ar');
+      }
     });
   });
 

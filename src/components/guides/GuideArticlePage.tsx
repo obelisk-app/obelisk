@@ -12,8 +12,33 @@ import { guidesHref } from '@/lib/guide-urls';
 import ArticleShell from '@/components/guides/ArticleShell';
 import GuideLocaleSync from '@/components/guides/GuideLocaleSync';
 import { mdxComponents } from '@/components/guides/mdx-components';
+import {
+  HERO_ASSET_META,
+  DIAGRAM_ASSET_META,
+  snapshotPaths,
+  type GuideAssetMeta,
+} from '@/components/guides/svg/asset-meta';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+
+const ASSET_REF_RE = /<(?:Diagram|SvgHero)\s+[^>]*name=["']([^"']+)["']/g;
+
+function collectGuideImages(
+  heroName: string | undefined,
+  content: string,
+  siteUrl: string,
+): Array<{ url: string; meta: GuideAssetMeta }> {
+  const names = new Set<string>();
+  if (heroName) names.add(heroName);
+  for (const m of content.matchAll(ASSET_REF_RE)) names.add(m[1]);
+  const out: Array<{ url: string; meta: GuideAssetMeta }> = [];
+  for (const n of names) {
+    const meta = HERO_ASSET_META[n] ?? DIAGRAM_ASSET_META[n];
+    if (!meta) continue;
+    out.push({ url: `${siteUrl}${snapshotPaths(n).png}`, meta });
+  }
+  return out;
+}
 
 const SITE_URL = process.env.CORS_ORIGIN || 'https://obelisk.ar';
 
@@ -95,6 +120,8 @@ export default async function GuideArticlePage({
   const readMinutes = fm.readMinutes ?? estimateReadMinutes(guide.content);
   const canonical = guidesHref(locale, slug);
 
+  const guideImages = collectGuideImages(fm.heroComponent, guide.content, SITE_URL);
+
   const articleLd = {
     '@context': 'https://schema.org',
     '@type': 'Article',
@@ -103,12 +130,21 @@ export default async function GuideArticlePage({
     datePublished: fm.publishedAt,
     dateModified: fm.updatedAt,
     inLanguage: locale === 'en' ? 'en' : 'es-AR',
-    image: {
-      '@type': 'ImageObject',
-      url: `${SITE_URL}${canonical}/opengraph-image`,
-      width: 1200,
-      height: 630,
-    },
+    image: [
+      {
+        '@type': 'ImageObject',
+        url: `${SITE_URL}${canonical}/opengraph-image`,
+        width: 1200,
+        height: 630,
+      },
+      ...guideImages.map((img) => ({
+        '@type': 'ImageObject',
+        url: img.url,
+        width: img.meta.width * 2,
+        height: img.meta.height * 2,
+        caption: img.meta.alt,
+      })),
+    ],
     author: {
       '@type': 'Organization',
       name: 'La Crypta',

@@ -38,16 +38,19 @@ import LoginModal from './LoginModal';
 import UserPanel from './UserPanel';
 import SearchBar from './SearchBar';
 import MessageContent from '@/components/chat/MessageContent';
+import MentionNavigator from '@/components/chat/MentionNavigator';
 import MemberList from '@/components/chat/MemberList';
 import RelayAdminPanel from '@/components/admin/RelayAdminPanel';
 import VoiceRoom from '@/components/voice/VoiceRoom';
 import ForumView from '@/components/chat/ForumView';
 import VoiceStatusBar from '@/components/voice/VoiceStatusBar';
 import { useVoiceStore } from '@/store/voice';
-import { useNotificationStore, type InboxEvent } from '@/store/notification';
+import { useReadStateStore, type InboxEvent } from '@/store/read-state';
+import { useInboxUnreadCount, useChannelHighlights } from '@/lib/read-state/selectors';
 import { subscribeVoiceJump } from '@/lib/voice/jump-to-voice';
 import { useVoiceChatPane } from '@/hooks/chat/useVoiceChatPane';
 import { useChatStore } from '@/store/chat';
+import { useDMStore } from '@/store/dm';
 import type { MemberInfo } from '@/lib/mentions';
 import { useToastStore } from '@/store/toast';
 import EmojiPicker from '@/components/chat/EmojiPicker';
@@ -58,7 +61,7 @@ import { parseZapCommand } from '@/lib/wallet/parse-zap-command';
 import MentionAutocomplete from '@/components/chat/MentionAutocomplete';
 import SlashCommandAutocomplete, { SLASH_COMMANDS, type SlashCommand } from '@/components/chat/SlashCommandAutocomplete';
 import SlashCommandScaffold, { scaffoldMentionSlotQuery } from '@/components/chat/SlashCommandScaffold';
-import { filterMembers } from '@/lib/mentions';
+import { filterMembers, relayMentionCandidates } from '@/lib/mentions';
 import { hexToNpub, npubToHex } from '@nostr-wot/data';
 import {
   useChannelLayout,
@@ -96,8 +99,18 @@ export default function AppShell() {
   useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
-    if (view.kind === 'group') nostrActions.setActiveGroup(view.groupId);
-    else nostrActions.setActiveGroup(null);
+    if (view.kind === 'group') {
+      nostrActions.setActiveGroup(view.groupId);
+      // Mirror into the chat store so `isUserWatchingChannel` returns true
+      // here too. Without this, desktop's read-state machinery is silently
+      // disabled (the gate stays false → cursor never advances → unread
+      // counts never clear). Mobile sets these in `selectGroup`; desktop
+      // routes through `setView` instead, so we mirror in the same effect.
+      useChatStore.setState({ activeChannelId: view.groupId, isNearBottom: true });
+    } else {
+      nostrActions.setActiveGroup(null);
+      useChatStore.setState({ activeChannelId: null });
+    }
   }, [view]);
 
   // Probe the nostr-wot extension on mount (and on visibility change). Without
@@ -344,10 +357,23 @@ function RelayTopBar({
   const [info, setInfo] = useState<{ name?: string; icon?: string } | null>(null);
   const [iconFailed, setIconFailed] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
-  const inboxEvents = useNotificationStore((s) => s.inboxEvents);
-  const unreadInboxCount = useNotificationStore((s) => s.unreadInboxCount);
-  const markInboxRead = useNotificationStore((s) => s.markInboxRead);
-  const clearInboxEvents = useNotificationStore((s) => s.clearInboxEvents);
+  const inboxEvents = useReadStateStore((s) => s.inboxEvents);
+  const inboxLastReadAt = useReadStateStore((s) => s.inboxLastReadAt);
+  const unreadInboxCount = useInboxUnreadCount();
+  const markInboxRead = useReadStateStore((s) => s.advanceInboxRead);
+  const markAllAsRead = useReadStateStore((s) => s.markAllAsRead);
+  const clearInboxEvents = useReadStateStore((s) => s.clearInboxEvents);
+  // Snapshot the bridge's loaded peers + groups at click time so "Mark all
+  // read" advances the cursors that drive the tab-title `(N)` badge —
+  // otherwise the badge stays stuck on unread chat traffic the user has
+  // acknowledged by emptying the inbox. Read imperatively to avoid
+  // re-rendering the top bar on every message arrival.
+  const handleMarkAllAsRead = () => {
+    const impl = getBridgeImpl();
+    const peers = impl ? Object.keys(impl.dmsByPeer.get()) : [];
+    const groupIds = impl ? Object.keys(impl.messagesByGroup.get()) : [];
+    markAllAsRead(peers, groupIds);
+  };
   useEffect(() => {
     let alive = true;
     setIconFailed(false);
@@ -444,9 +470,9 @@ function RelayTopBar({
             <div className="flex gap-2">
               {inboxEvents.length > 0 && unreadInboxCount > 0 && (
                 <button
-                  onClick={markInboxRead}
+                  onClick={handleMarkAllAsRead}
                   className="text-xs text-lc-green hover:underline"
-                  title="Mark all read"
+                  title="Mark all messages, DMs, and notifications as read"
                 >
                   Mark read
                 </button>
@@ -469,13 +495,15 @@ function RelayTopBar({
               </div>
             ) : (
               <ul className="flex flex-col">
-                {inboxEvents.map((e) => (
+                {inboxEvents.map((e) => {
+                  const isRead = Date.parse(e.createdAt) <= inboxLastReadAt;
+                  return (
                   <li key={e.id}>
                     <button
                       onClick={() => handleEventClick(e)}
-                      className={`w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-lc-card/60 transition-colors ${e.read ? '' : 'bg-lc-olive/30'}`}
+                      className={`w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-lc-card/60 transition-colors ${isRead ? '' : 'bg-lc-olive/30'}`}
                     >
-                      <span className={`mt-1 inline-block w-2 h-2 rounded-full shrink-0 ${e.read ? 'bg-transparent' : 'bg-lc-green'}`} />
+                      <span className={`mt-1 inline-block w-2 h-2 rounded-full shrink-0 ${isRead ? 'bg-transparent' : 'bg-lc-green'}`} />
                       <div className="flex-1 min-w-0">
                         <div className="text-xs uppercase tracking-wider text-lc-muted font-mono mb-0.5">
                           {e.type === 'dm' ? 'Direct message' : e.type === 'mention' ? '@ Mention' : e.type === 'reply' ? 'Reply' : e.type === 'everyone' ? '@ Everyone' : 'Message'}
@@ -487,7 +515,8 @@ function RelayTopBar({
                       </div>
                     </button>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             )}
           </div>
@@ -978,6 +1007,15 @@ function GroupNode({
 }) {
   const childIds = childrenByParent[group.id] ?? [];
   const active = view.kind === 'group' && view.groupId === group.id;
+  const myPubkey = useMyPubkey();
+  const highlights = useChannelHighlights(group.id, myPubkey);
+  // When the user is actively viewing the channel, the auto-mark hook is
+  // about to advance the cursor — suppress the badge to avoid a brief
+  // count flash. Matches the existing favicon-badge subtraction at
+  // useFaviconBadge.ts.
+  const showBadges = !active;
+  const unread = showBadges ? highlights.unread : 0;
+  const mentionsOrReplies = showBadges ? (highlights.mentions + highlights.replies) : 0;
   // Forum containers default to expanded so newly-created threads are
   // immediately visible. Persisted per-group in localStorage so the user's
   // choice survives reloads. Non-forum groups stay always-expanded (no
@@ -1014,7 +1052,7 @@ function GroupNode({
         >
           <span className="text-lc-muted">#</span>
           <span
-            className={`flex-1 truncate ${distanceById ? wotColorClass(distanceById[group.id] ?? null) : ''}`}
+            className={`flex-1 truncate ${unread > 0 ? 'font-semibold text-lc-white' : ''} ${distanceById ? wotColorClass(distanceById[group.id] ?? null) : ''}`}
             title={distanceById && distanceById[group.id] != null ? `WoT ${distanceById[group.id]}°` : undefined}
           >
             {group.name ?? group.id.slice(0, 12)}
@@ -1022,6 +1060,22 @@ function GroupNode({
           {!group.isPublic && <span title="Private" className="text-[10px]">🔒</span>}
           {!group.isOpen && <span title="Closed (invite only)" className="text-[10px]">⊝</span>}
           <ActiveCallBadge groupId={group.id} kind={group.kind} />
+          {unread > 0 && (
+            <span
+              aria-label={`${unread} unread message${unread === 1 ? '' : 's'}`}
+              className="text-xs tabular-nums text-lc-muted"
+            >
+              {unread > 99 ? '99+' : unread}
+            </span>
+          )}
+          {mentionsOrReplies > 0 && (
+            <span
+              aria-label={`${mentionsOrReplies} mention${mentionsOrReplies === 1 ? '' : 's'} or reply`}
+              className="rounded-full bg-lc-green px-1.5 py-px text-[10px] font-bold text-lc-black"
+            >
+              {mentionsOrReplies > 99 ? '99+' : mentionsOrReplies}
+            </span>
+          )}
         </button>
         {isCollapsible && (
           <button
@@ -1722,7 +1776,6 @@ function ChatPanel({
   const relayAccess = useRelayAccess(relay || null);
   const messagesVisible = relayAccess === 'ok';
   const [draft, setDraft] = useState('');
-  const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [replyingTo, setReplyingTo] = useState<JsMessage | null>(null);
   useEffect(() => { setReplyingTo(null); }, [groupId]);
@@ -1754,6 +1807,9 @@ function ChatPanel({
   }, [groupId, myPubkey, groupCreator, admins, relay, relayAccess]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const voiceMainRef = useRef<HTMLDivElement>(null);
+  // Highlights drive the floating mention/reply navigator at the bottom-right
+  // of the message viewport — same data the channel-row badges read.
+  const channelHighlights = useChannelHighlights(groupId, myPubkey);
   const [showSettings, setShowSettings] = useState(false);
   const voiceChatOpen = useVoiceStore((s) => s.isVoiceChatOpen);
   const setVoiceChatOpen = useVoiceStore((s) => s.setVoiceChatOpen);
@@ -1772,7 +1828,14 @@ function ChatPanel({
     if (!el) return;
     const onScroll = () => {
       const dist = el.scrollHeight - el.scrollTop - el.clientHeight;
-      stickToBottomRef.current = dist < 100;
+      const near = dist < 100;
+      stickToBottomRef.current = near;
+      // Mirror near-bottom into the chat store so `isUserWatchingChannel`
+      // (in `read-gates.ts`) reflects scroll position. Without this, desktop
+      // would always think the user is at the bottom and silently advance
+      // the read cursor while they're scrolled up reading history.
+      const cur = useChatStore.getState().isNearBottom;
+      if (cur !== near) useChatStore.setState({ isNearBottom: near });
       // Top-of-list pagination. Anchor by pre-load scrollHeight so the
       // viewport stays on the same message after the older page is
       // prepended instead of snapping to the new top.
@@ -1827,8 +1890,21 @@ function ChatPanel({
   }, [pendingMessageId, messages, onConsumePendingMessageId]);
 
   // ── @-mention autocomplete ────────────────────────────────────────────
+  // Mentions span the whole relay (every visible group's members + admins +
+  // creator), not just the current channel — typing `@alice` should find
+  // Alice even if she's only in a sister channel. WoT-hidden groups are
+  // already excluded by `useGroups` above, so spam-channel rolls don't
+  // pollute the autocomplete when WoT is on.
   const inputRef = useRef<HTMLInputElement>(null);
   const memberPubkeys = useMembers(groupId);
+  const membersByGroup = useMembersByGroup();
+  const adminsByGroup = useAdminsByGroup();
+  const creatorsByGroup = useGroupCreators();
+  const visibleGroupIds = useMemo(() => groups.map((g) => g.id), [groups]);
+  const mentionCandidatePubkeys = useMemo(
+    () => relayMentionCandidates(visibleGroupIds, membersByGroup, adminsByGroup, creatorsByGroup),
+    [visibleGroupIds, membersByGroup, adminsByGroup, creatorsByGroup],
+  );
   const [metaMap, setMetaMap] = useState<Record<string, JsUserMetadata>>({});
   useEffect(() => {
     let unsub: (() => void) | undefined;
@@ -1839,8 +1915,18 @@ function ChatPanel({
     });
     return () => { unsub?.(); };
   }, []);
-  const memberInfos = useMemo<MemberInfo[]>(() => {
-    return memberPubkeys.map((pk) => {
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionIndex, setMentionIndex] = useState(0);
+  const [slashQuery, setSlashQuery] = useState<string | null>(null);
+  const [slashIndex, setSlashIndex] = useState(0);
+  const [caret, setCaret] = useState(0);
+  const filteredMembers = useMemo(() => {
+    if (mentionQuery === null) return [];
+    // Materialize MemberInfo[] only when the autocomplete is open. On a
+    // busy relay the candidate set can be hundreds of pubkeys, and metaMap
+    // updates on every kind:0 ingest — rebuilding eagerly would churn even
+    // when no mention is in progress.
+    const candidates: MemberInfo[] = mentionCandidatePubkeys.map((pk) => {
       const m = metaMap[pk];
       return {
         pubkey: pk,
@@ -1849,16 +1935,8 @@ function ChatPanel({
         lud16: m?.lud16 ?? undefined,
       };
     });
-  }, [memberPubkeys, metaMap]);
-  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
-  const [mentionIndex, setMentionIndex] = useState(0);
-  const [slashQuery, setSlashQuery] = useState<string | null>(null);
-  const [slashIndex, setSlashIndex] = useState(0);
-  const [caret, setCaret] = useState(0);
-  const filteredMembers = useMemo(
-    () => (mentionQuery === null ? [] : filterMembers(memberInfos, mentionQuery).slice(0, 8)),
-    [memberInfos, mentionQuery],
-  );
+    return filterMembers(candidates, mentionQuery).slice(0, 8);
+  }, [mentionCandidatePubkeys, metaMap, mentionQuery]);
   const slashResults = useMemo<SlashCommand[]>(
     () => slashQuery === null ? [] : SLASH_COMMANDS.filter((c) => c.name.startsWith(slashQuery.toLowerCase())),
     [slashQuery],
@@ -1972,7 +2050,7 @@ function ChatPanel({
     }
   }
 
-  async function onSend(e: React.FormEvent) {
+  function onSend(e: React.FormEvent) {
     e.preventDefault();
     const content = draft.trim();
     if (!content) return;
@@ -1993,63 +2071,54 @@ function ChatPanel({
       return;
     }
 
-    setSending(true);
     setSendError(null);
-    try {
-      // Lazy member self-add for open groups. Without this, a user who has
-      // never been explicitly added by an admin can read but their first
-      // kind 9 send is rejected with "user is not a member". Gated by a
-      // localStorage key so we publish exactly one kind 9000 ever per
-      // (relay, group, user) triple. Closed groups (`isOpen === false`)
-      // skip this — those require an admin invite by design.
-      //
-      // Also gated on relayAccess === 'ok': if the relay is rejecting our
-      // writes wholesale (auth-required / restricted / unreachable), the
-      // putUser will fail with a noisy "Publishing to relays / restricted:
-      // your pubkey is not whitelisted" activity entry. The user's actual
-      // sendMessage will surface the real error in-place — there's no
-      // reason to also blast an unrelated 9000 publish at a relay we know
-      // won't accept it.
-      if (
-        myPubkey
-        && relayAccess === 'ok'
-        && group?.isOpen
-        && !memberPubkeys.includes(myPubkey)
-        && !admins.includes(myPubkey)
-      ) {
-        const key = `obelisk:claimed-member:${relay}:${groupId}:${myPubkey}`;
-        let alreadyTried = false;
-        try {
-          alreadyTried = typeof localStorage !== 'undefined' && !!localStorage.getItem(key);
-        } catch {}
-        if (!alreadyTried) {
-          try { localStorage?.setItem(key, '1'); } catch {}
-          // Most NIP-29 open-group relays accept the kind 9 directly and the
-          // 9000 self-add is unnecessary; some (strfry) accept reads but
-          // silently time out the 9000 publish because non-admins can't
-          // promote anyone, including themselves. Either way the user's
-          // actual sendMessage below carries the real signal — we don't
-          // want a noisy console warning + Publishing toast for an
-          // optimistic membership write that the spec says shouldn't be
-          // required.
-          try { await nostrActions.putUser(groupId, myPubkey, [], { quiet: true }); } catch (err) {
-            console.debug('[appshell] lazy member putUser skipped (relay declined)', err);
-          }
-        }
+    const replyToCopy = replyingTo ? { id: replyingTo.id, pubkey: replyingTo.pubkey } : null;
+    // Clear the composer immediately — the optimistic placeholder appears
+    // inline in the message list with a spinner, so the user can keep
+    // typing the next message without waiting for the publish to ack.
+    setDraft('');
+    setReplyingTo(null);
+
+    // Lazy member self-add for open groups. Without this, a user who has
+    // never been explicitly added by an admin can read but their first
+    // kind 9 send is rejected with "user is not a member". Gated by a
+    // localStorage key so we publish exactly one kind 9000 ever per
+    // (relay, group, user) triple. Closed groups (`isOpen === false`)
+    // skip this — those require an admin invite by design.
+    //
+    // Also gated on relayAccess === 'ok': if the relay is rejecting our
+    // writes wholesale (auth-required / restricted / unreachable), the
+    // putUser will fail with a noisy "Publishing to relays / restricted:
+    // your pubkey is not whitelisted" activity entry. The user's actual
+    // sendMessage will surface the real error on the message bubble — we
+    // don't want a noisy console warning + Publishing toast for an
+    // optimistic membership write that the spec says shouldn't be
+    // required.
+    if (
+      myPubkey
+      && relayAccess === 'ok'
+      && group?.isOpen
+      && !memberPubkeys.includes(myPubkey)
+      && !admins.includes(myPubkey)
+    ) {
+      const key = `obelisk:claimed-member:${relay}:${groupId}:${myPubkey}`;
+      let alreadyTried = false;
+      try {
+        alreadyTried = typeof localStorage !== 'undefined' && !!localStorage.getItem(key);
+      } catch {}
+      if (!alreadyTried) {
+        try { localStorage?.setItem(key, '1'); } catch {}
+        nostrActions.putUser(groupId, myPubkey, [], { quiet: true }).catch((err) => {
+          console.debug('[appshell] lazy member putUser skipped (relay declined)', err);
+        });
       }
-      await nostrActions.sendMessage(
-        groupId,
-        content,
-        replyingTo ? { id: replyingTo.id, pubkey: replyingTo.pubkey } : null,
-      );
-      setDraft('');
-      setReplyingTo(null);
-    } catch (err) {
-      console.error('send failed', err);
-      setSendError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setSending(false);
     }
+
+    // Fire-and-forget — bridge inserts the pending placeholder synchronously
+    // and surfaces send failures via the bubble's `failed` flag (with retry).
+    nostrActions.sendMessage(groupId, content, replyToCopy).catch((err) => {
+      console.error('send failed', err);
+    });
   }
 
   return (
@@ -2117,6 +2186,7 @@ function ChatPanel({
         const textBody = (
       <>
       <RelayAccessBanner />
+      <div className="relative flex min-h-0 flex-1 flex-col">
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-4" data-testid={messagesVisible ? undefined : 'messages-gated-by-auth'}>
         {messages.length === 0 ? (
           <div className="flex h-full items-center justify-center text-sm text-lc-muted">
@@ -2161,6 +2231,8 @@ function ChatPanel({
             );
           })
         )}
+      </div>
+      <MentionNavigator scrollRef={scrollRef} eventIds={channelHighlights.eventIds} />
       </div>
 
       {messagesVisible && (
@@ -2240,7 +2312,7 @@ function ChatPanel({
               accept="image/*,video/*"
               multiple
               className="hidden"
-              disabled={uploadingMedia || sending}
+              disabled={uploadingMedia}
               onChange={(e) => {
                 const files = Array.from(e.target.files ?? []);
                 if (files.length > 0) void onPickFiles(files);
@@ -2295,13 +2367,12 @@ function ChatPanel({
                 }
               }}
               placeholder={`Message #${group?.name ?? groupId.slice(0, 8)}`}
-              disabled={sending}
               className="w-full bg-transparent text-sm text-lc-white outline-none placeholder:text-lc-muted disabled:opacity-50"
             />
           </div>
           <button
             type="submit"
-            disabled={sending || !draft.trim() || uploadingMedia}
+            disabled={!draft.trim() || uploadingMedia}
             className="text-xs font-semibold text-lc-green hover:text-lc-green/80 disabled:opacity-30"
           >
             Send
@@ -2619,8 +2690,17 @@ function MessageRow({
     setAnchor({ x: r.right + 8, y: r.top, placement: r.top > window.innerHeight / 2 ? 'top' : 'bottom' });
   };
 
+  const onRetry = () => {
+    if (!msg.clientTag) return;
+    void nostrActions.retryMessage(groupId, msg.clientTag);
+  };
+  const onDismissFailed = () => {
+    if (!msg.clientTag) return;
+    void nostrActions.cancelPendingMessage(groupId, msg.clientTag);
+  };
+
   return (
-    <div data-msg-id={msg.id} className={'group relative flex gap-3 rounded px-2 py-0.5 hover:bg-lc-card/40 ' + (grouped ? 'mt-0' : 'mt-3')}>
+    <div data-msg-id={msg.id} className={'group relative flex gap-3 rounded px-2 py-0.5 hover:bg-lc-card/40 ' + (grouped ? 'mt-0' : 'mt-3') + (msg.pending ? ' opacity-60' : '')}>
       <div className="w-10 shrink-0">
         {!grouped && (
           <button onClick={openProfile} className="rounded-full transition hover:opacity-80">
@@ -2640,6 +2720,13 @@ function MessageRow({
                 day: 'numeric',
               })}
             </span>
+            {msg.pending && (
+              <span
+                className="inline-block h-2.5 w-2.5 animate-spin rounded-full border border-lc-muted/40 border-t-lc-muted"
+                aria-label="Sending"
+                role="status"
+              />
+            )}
           </div>
         )}
         {parent && <ReplyPreviewRow parent={parent} onJump={onJumpToParent} />}
@@ -2657,6 +2744,35 @@ function MessageRow({
         >
           <MessageContent content={msg.content} messageId={msg.id} channelId={groupId} />
         </div>
+        {msg.failed && (
+          <div className="mt-1 flex items-center gap-2 text-[11px] text-red-400" data-testid="message-failed">
+            <span aria-hidden="true">!</span>
+            <span>Couldn’t send</span>
+            <button
+              type="button"
+              onClick={onRetry}
+              className="rounded bg-red-500/10 px-2 py-0.5 font-semibold text-red-300 hover:bg-red-500/20"
+              data-testid="message-retry"
+            >
+              Retry
+            </button>
+            <button
+              type="button"
+              onClick={onDismissFailed}
+              className="text-red-400/70 hover:text-red-300"
+              aria-label="Dismiss failed message"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+        {grouped && msg.pending && (
+          <span
+            className="ml-2 inline-block h-2.5 w-2.5 animate-spin rounded-full border border-lc-muted/40 border-t-lc-muted align-middle"
+            aria-label="Sending"
+            role="status"
+          />
+        )}
         {(counts.length > 0 || (zapTotal && zapTotal.totalSats > 0)) && (
           <div className="mt-1 flex flex-wrap gap-1">
             {zapTotal && zapTotal.totalSats > 0 && (
@@ -2705,7 +2821,7 @@ function MessageRow({
         <div
           className={
             'rounded-md border border-lc-border bg-lc-dark p-0.5 shadow-md ' +
-            (panelPinned || pickerOpen ? 'flex' : 'hidden group-hover:flex')
+            (menuOpen ? 'hidden' : (panelPinned || pickerOpen ? 'flex' : 'hidden group-hover:flex'))
           }
         >
           {QUICK_REACTIONS.map((e) => {
@@ -3537,10 +3653,20 @@ function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string) => voi
   const meta = useProfile(peer);
   const thread = peer ? dms[peer] ?? [] : [];
   const [draft, setDraft] = useState('');
-  const [sending, setSending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const stickToBottomRef = useRef(true);
+  // Mirror the open peer into the DM store so `isUserWatchingDM` reflects
+  // desktop's "I'm reading this conversation" state. Without this, the
+  // read-state cursor never advances on desktop and unread badges leak in.
+  useEffect(() => {
+    useDMStore.setState({ activeDMPubkey: peer });
+    return () => {
+      // Clear when the panel unmounts (user navigated away from DMs).
+      if (useDMStore.getState().activeDMPubkey === peer) {
+        useDMStore.setState({ activeDMPubkey: null });
+      }
+    };
+  }, [peer]);
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -3563,21 +3689,17 @@ function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string) => voi
     if (el) el.scrollTop = el.scrollHeight;
   }, [thread.length]);
 
-  async function onSend(e: React.FormEvent) {
+  function onSend(e: React.FormEvent) {
     e.preventDefault();
     if (!peer) return;
     const content = draft.trim();
     if (!content) return;
-    setSending(true);
-    setError(null);
-    try {
-      await nostrActions.sendDirectMessage(peer, content);
-      setDraft('');
-    } catch (err: unknown) {
-      setError((err as Error).message);
-    } finally {
-      setSending(false);
-    }
+    // Optimistic — bridge inserts a pending placeholder; the bubble surfaces
+    // its own retry button on failure, so we don't need a form-level error.
+    setDraft('');
+    nostrActions.sendDirectMessage(peer, content).catch((err) => {
+      console.warn('[desktop] sendDirectMessage scheduling failed', err);
+    });
   }
 
   if (!peer) {
@@ -3603,40 +3725,80 @@ function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string) => voi
         {thread.length === 0 ? (
           <div className="text-sm text-lc-muted">No messages yet. Send the first one (NIP-04 encrypted).</div>
         ) : (
-          thread.map((m) => (
-            <div
-              key={m.id}
-              className={
-                'mb-2 max-w-md rounded-2xl px-4 py-2 text-sm shadow-sm ' +
-                (m.outgoing
-                  ? 'ml-auto bg-lc-green text-lc-black'
-                  : 'bg-lc-card text-lc-white')
-              }
-            >
-              <div className="whitespace-pre-wrap break-words">{m.content}</div>
-              <div className={'mt-1 text-[10px] ' + (m.outgoing ? 'text-black/60' : 'text-lc-muted')}>
-                {new Date(m.createdAt * 1000).toLocaleTimeString(undefined, {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
+          thread.map((m) => {
+            const onRetryDM = () => {
+              if (!m.clientTag || !peer) return;
+              void nostrActions.retryDirectMessage(peer, m.clientTag);
+            };
+            const onDismissDM = () => {
+              if (!m.clientTag || !peer) return;
+              void nostrActions.cancelPendingDirectMessage(peer, m.clientTag);
+            };
+            return (
+              <div
+                key={m.id}
+                className={
+                  'mb-2 max-w-md rounded-2xl px-4 py-2 text-sm shadow-sm ' +
+                  (m.outgoing
+                    ? 'ml-auto bg-lc-green text-lc-black'
+                    : 'bg-lc-card text-lc-white') +
+                  (m.pending ? ' opacity-60' : '') +
+                  (m.failed ? ' ring-1 ring-red-500/60' : '')
+                }
+              >
+                <div className="whitespace-pre-wrap break-words">{m.content}</div>
+                <div className={'mt-1 flex items-center justify-end gap-1.5 text-[10px] ' + (m.outgoing ? 'text-black/60' : 'text-lc-muted')}>
+                  {m.pending && (
+                    <span
+                      className={'inline-block h-2.5 w-2.5 animate-spin rounded-full border ' + (m.outgoing ? 'border-black/30 border-t-black/70' : 'border-lc-muted/40 border-t-lc-muted')}
+                      aria-label="Sending"
+                      role="status"
+                    />
+                  )}
+                  <span>
+                    {new Date(m.createdAt * 1000).toLocaleTimeString(undefined, {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </span>
+                </div>
+                {m.failed && (
+                  <div className="mt-1.5 flex items-center justify-end gap-2 text-[11px] text-red-500" data-testid="dm-failed">
+                    <span>Couldn’t send</span>
+                    <button
+                      type="button"
+                      onClick={onRetryDM}
+                      className="rounded bg-red-500/15 px-2 py-0.5 font-semibold text-red-500 hover:bg-red-500/25"
+                      data-testid="dm-retry"
+                    >
+                      Retry
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onDismissDM}
+                      className="text-red-500/70 hover:text-red-500"
+                      aria-label="Dismiss failed message"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
       <form onSubmit={onSend} className="shrink-0 px-5 pt-3 pb-3">
-        {error && <p className="mb-2 text-xs text-red-400">{error}</p>}
         <div className="flex min-h-[3.5rem] items-center gap-2 rounded-xl border border-lc-border bg-lc-card px-4 focus-within:border-lc-green">
           <input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             placeholder="Encrypted message (NIP-04)"
-            disabled={sending}
             className="flex-1 bg-transparent text-sm text-lc-white outline-none placeholder:text-lc-muted disabled:opacity-50"
           />
           <button
             type="submit"
-            disabled={sending || !draft.trim()}
+            disabled={!draft.trim()}
             className="text-xs font-semibold text-lc-green disabled:opacity-30"
           >
             Send

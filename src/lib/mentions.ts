@@ -2,6 +2,7 @@ import {
   shortNpub,
   extractMentionPubkeys,
   findNpubMentions,
+  hexToNpub,
 } from '@nostr-wot/data';
 
 // Re-export so existing call sites keep working.
@@ -100,6 +101,32 @@ export function hasEveryoneMention(content: string): boolean {
 }
 
 /**
+ * Extract the unique set of mentioned pubkeys (hex) for a full message —
+ * combines `extractMentionPubkeys(content)` with any `["p", <hex>]` tags.
+ *
+ * NIP-29 group messages routinely carry `#p` tags for their mention targets
+ * (some clients tag without inlining a token in content; others do both).
+ * Using only the content regex misses the tag-only case, so the read-state
+ * "channel has mention" selector and the inbox push at ingest both feed
+ * through this helper.
+ *
+ * Hex tag values are lowercased; values that aren't 64-char hex are
+ * silently dropped.
+ */
+export function extractMentionPubkeysFromMessage(
+  content: string,
+  tags: ReadonlyArray<ReadonlyArray<string>>,
+): string[] {
+  const found = new Set<string>(extractMentionPubkeys(content));
+  for (const t of tags) {
+    if (t[0] === 'p' && typeof t[1] === 'string' && /^[a-f0-9]{64}$/i.test(t[1])) {
+      found.add(t[1].toLowerCase());
+    }
+  }
+  return [...found];
+}
+
+/**
  * Transform canonical message content (containing `nostr:npub1<hex>` or
  * bech32 mention tokens) into a human-friendly form suitable for a textarea:
  * each mention becomes `@DisplayName` (or `@npub1abc…` for unknown members).
@@ -169,4 +196,71 @@ export function filterMembers(members: MemberInfo[], query: string): MemberInfo[
     m.displayName.toLowerCase().includes(q) ||
     m.pubkey.toLowerCase().startsWith(q)
   );
+}
+
+/**
+ * Build the deduped set of mentionable pubkeys for a relay by unioning the
+ * members, admins, and creator of every supplied group. The mention
+ * autocomplete uses this so `@`-mentions reach anyone on the relay, not just
+ * the current channel's roster — typing `@alice` finds Alice even if she's
+ * only in a sister channel.
+ *
+ * `groupIds` is intentionally explicit (not derived from the maps) so the
+ * caller can pass the WoT-filtered visible groups from `useGroups()`. That
+ * keeps spam-channel rolls out of the autocomplete when WoT is enabled.
+ */
+export function relayMentionCandidates(
+  groupIds: ReadonlyArray<string>,
+  membersByGroup: Readonly<Record<string, ReadonlyArray<string>>>,
+  adminsByGroup: Readonly<Record<string, ReadonlyArray<string>>>,
+  creatorsByGroup: Readonly<Record<string, string>>,
+): string[] {
+  const set = new Set<string>();
+  for (const id of groupIds) {
+    for (const pk of membersByGroup[id] ?? []) set.add(pk);
+    for (const pk of adminsByGroup[id] ?? []) set.add(pk);
+    const creator = creatorsByGroup[id];
+    if (creator) set.add(creator);
+  }
+  return Array.from(set);
+}
+
+/**
+ * Detect an in-progress `@`-mention query at the cursor. Returns the partial
+ * username typed after the most recent `@` (possibly empty), or `null` when
+ * the cursor is not currently sitting in a mention slot.
+ *
+ * Matches `@` at start-of-input or after whitespace so emails/handles inside
+ * words don't trigger the popup. Word characters only — once the user types
+ * anything else, the slot closes.
+ */
+export function detectMentionQuery(value: string, cursor: number): string | null {
+  const before = value.slice(0, cursor);
+  const m = before.match(/(?:^|\s)@(\w*)$/);
+  return m ? m[1] : null;
+}
+
+/**
+ * Replace the in-progress `@query` slot at `cursor` with a `nostr:npub…`
+ * mention token (NIP-19 bech32 form, trailing space) for `pubkey`. If no
+ * slot is open, the token is inserted at the cursor with a leading space
+ * when needed. Returns the new draft text and the cursor position
+ * immediately after the inserted token.
+ */
+export function applyMentionToDraft(
+  draft: string,
+  cursor: number,
+  pubkey: string,
+): { next: string; cursor: number } {
+  const before = draft.slice(0, cursor);
+  const after = draft.slice(cursor);
+  const token = `nostr:${hexToNpub(pubkey)} `;
+  let replaced: string;
+  if (/@(\w*)$/.test(before)) {
+    replaced = before.replace(/@(\w*)$/, () => token);
+  } else {
+    const sep = before.length > 0 && !/\s$/.test(before) ? ' ' : '';
+    replaced = before + sep + token;
+  }
+  return { next: replaced + after, cursor: replaced.length };
 }

@@ -30,6 +30,8 @@ import {
   useAdmins,
   useAdminsByGroup,
   useMembers,
+  useMembersByGroup,
+  useGroupCreators,
   useReactions,
   useConfiguredRelays,
   useCurrentRelayUrl,
@@ -37,9 +39,12 @@ import {
   useConnectionState,
   useGroupMetadataEose,
   useActiveCallByChannel,
+  getBridge,
+  getBridgeImpl,
   type JsGroup,
   type JsMessage,
   type JsDirectMessage,
+  type JsUserMetadata,
 } from '@/lib/nostr-bridge';
 import { useFollows, useProfile, usePubkey, usePublishProfile } from '@nostr-wot/data/react';
 const useMyPubkey = usePubkey;
@@ -49,6 +54,7 @@ import VoiceRoom from '@/components/voice/VoiceRoom';
 import VoiceStatusBar from '@/components/voice/VoiceStatusBar';
 import { subscribeVoiceJump } from '@/lib/voice/jump-to-voice';
 import MessageContent from '@/components/chat/MessageContent';
+import MentionNavigator from '@/components/chat/MentionNavigator';
 import EmojiPicker from '@/components/chat/EmojiPicker';
 import { uploadToBlossom } from '@/lib/blossom';
 import { formatPubkey, hexToNpub as pubkeyToNpub } from '@nostr-wot/data';
@@ -69,12 +75,25 @@ import {
 import BlossomImageInput from '@/components/BlossomImageInput';
 import RelayAdminPanel from '@/components/admin/RelayAdminPanel';
 import { npubToHex } from '@nostr-wot/data';
-import { useNotificationStore, type InboxEvent } from '@/store/notification';
+import {
+  applyMentionToDraft,
+  detectMentionQuery,
+  filterMembers,
+  relayMentionCandidates,
+  type MemberInfo,
+} from '@/lib/mentions';
+import { useReadStateStore, type InboxEvent } from '@/store/read-state';
+import {
+  useChannelHighlights,
+  useDMUnreadCount,
+  useTotalDMUnread,
+  useInboxUnreadCount,
+} from '@/lib/read-state/selectors';
 import { useChatStore } from '@/store/chat';
 import { useDMStore } from '@/store/dm';
 import { useNostrPresence, PRESENCE_WINDOW_MS } from '@/hooks/chat/useNostrPresence';
 import { type ScreenName, type NavState, initialNav, urlFor, parseUrl } from './url-state';
-import { decideSnap, decideSwipeNav, neighborsFor, NAV_ORDER } from './swipe-nav';
+import { buildSeedHistory, decideSnap, decideSwipeNav, neighborsFor, NAV_ORDER, SUB_TO_NAV } from './swipe-nav';
 import { useKeyboardInset } from './use-keyboard';
 // CSS is hoisted to AppGate.tsx so it lands in the route's eagerly-loaded
 // stylesheet, not in this dynamic chunk's late-arriving sidecar.
@@ -368,91 +387,6 @@ function LoginScreen() {
           onClose={() => setPickedMethod(null)}
         />
       )}
-    </div>
-  );
-}
-
-// ───────────────────────────────────────────────────────────────────────────
-// 02 — profile setup (after first login)
-
-function ProfileSetupScreen({ onDone, onSkip }: { onDone: () => void; onSkip: () => void }) {
-  const myPubkey = useMyPubkey();
-  const meta = useUserMetadata(myPubkey);
-  const publishProfile = usePublishProfile();
-  const [name, setName] = useState(meta?.displayName ?? meta?.name ?? '');
-  const [about, setAbout] = useState(meta?.about ?? '');
-  const [picture, setPicture] = useState(meta?.picture ?? '');
-  const [nip05, setNip05] = useState(meta?.nip05 ?? '');
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    if (meta) {
-      setName((n) => n || meta.displayName || meta.name || '');
-      setAbout((a) => a || meta.about || '');
-      setPicture((p) => p || meta.picture || '');
-      setNip05((n) => n || meta.nip05 || '');
-    }
-  }, [meta]);
-
-  const submit = async () => {
-    if (busy) return;
-    setBusy(true);
-    try {
-      if (!publishProfile) throw new Error('Not signed in');
-      const opts: Parameters<typeof publishProfile>[0] = {};
-      if (name) { opts.name = name; opts.display_name = name; }
-      if (about) opts.about = about;
-      if (picture) opts.picture = picture;
-      if (nip05) opts.nip05 = nip05;
-      await publishProfile(opts);
-      onDone();
-    } catch (err) {
-      console.warn('[mobile] publishProfile failed', err);
-      onDone(); // proceed anyway — the user can edit later
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <div className="screen active" data-screen="profile-setup">
-      <div className="setup-header">
-        <button className="back-btn" onClick={() => nostrActions.logout()} aria-label="Back">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
-        </button>
-        <h2>Set up your profile</h2>
-        <button className="setup-skip" onClick={onSkip}>Skip</button>
-      </div>
-      <div className="setup-body">
-        <p className="setup-intro">Add a name and picture so others can recognize you on Nostr. You can always update them later.</p>
-        <div className="setup-field">
-          <label>Display Name</label>
-          <div className="setup-input-wrap">
-            <input className="setup-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
-          </div>
-        </div>
-        <div className="setup-field">
-          <label>Profile Picture URL</label>
-          <div className="setup-input-wrap">
-            <input className="setup-input" value={picture} onChange={(e) => setPicture(e.target.value)} placeholder="https://…" />
-          </div>
-        </div>
-        <div className="setup-field">
-          <label>About</label>
-          <textarea className="setup-textarea" value={about} onChange={(e) => setAbout(e.target.value)} placeholder="A short bio…" />
-        </div>
-        <div className="setup-field">
-          <label>NIP-05 (optional)</label>
-          <div className="setup-input-wrap">
-            <input className="setup-input" value={nip05} onChange={(e) => setNip05(e.target.value)} placeholder="you@domain.com" />
-          </div>
-        </div>
-      </div>
-      <div className="setup-actions">
-        <button className="btn-primary" onClick={submit} disabled={busy}>
-          {busy ? 'Publishing…' : 'Publish to Nostr'}
-        </button>
-      </div>
     </div>
   );
 }
@@ -1934,14 +1868,12 @@ export function RelayTile({
 }
 
 // Single row in the channel list — picks the right icon for text/voice/forum
-// and surfaces the live-call indicator on voice channels. The `unread` /
-// `mentioned` / `active` variants come from the notification store so the
-// list matches what the inbox bell shows.
+// and surfaces the live-call indicator on voice channels. The `unread` and
+// `mentioned` variants are derived from the read-state cursor (per-channel
+// unix-ms read marker) compared against bridge-supplied `messages.createdAt`.
 function ChannelRow({
   group,
   live,
-  unread,
-  mentioned,
   active,
   onClick,
   expandable,
@@ -1951,8 +1883,6 @@ function ChannelRow({
 }: {
   group: JsGroup;
   live: boolean;
-  unread?: number;
-  mentioned?: boolean;
   active?: boolean;
   onClick: () => void;
   expandable?: boolean;
@@ -1960,6 +1890,10 @@ function ChannelRow({
   onToggleExpand?: () => void;
   indent?: boolean;
 }) {
+  const myPubkey = useMyPubkey();
+  const highlights = useChannelHighlights(group.id, myPubkey);
+  const unread = highlights.unread;
+  const mentionsOrReplies = highlights.mentions + highlights.replies;
   const name = group.name ?? group.id.slice(0, 8);
   if (group.kind === 'voice' || group.kind === 'voice-sfu') {
     return (
@@ -1996,8 +1930,12 @@ function ChannelRow({
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M3 5h18M3 12h18M3 19h18" /></svg>
             </span>
             <span className="ch-name">{name}</span>
-            {mentioned && <span className="mention-pill">@you</span>}
-            {!mentioned && unread && unread > 0 && <span className="ch-meta">{unread > 99 ? '99+' : unread}</span>}
+            {unread > 0 && <span className="ch-meta">{unread > 99 ? '99+' : unread}</span>}
+            {mentionsOrReplies > 0 && (
+              <span className="mention-pill" aria-label={`${mentionsOrReplies} mentions or replies`}>
+                {mentionsOrReplies > 99 ? '99+' : mentionsOrReplies}
+              </span>
+            )}
           </button>
           <button
             className="ch-chevron-btn"
@@ -2018,8 +1956,12 @@ function ChannelRow({
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M3 5h18M3 12h18M3 19h18" /></svg>
         </span>
         <span className="ch-name">{name}</span>
-        {mentioned && <span className="mention-pill">@you</span>}
-        {!mentioned && unread && unread > 0 && <span className="ch-meta">{unread > 99 ? '99+' : unread}</span>}
+        {unread > 0 && <span className="ch-meta">{unread > 99 ? '99+' : unread}</span>}
+        {mentionsOrReplies > 0 && (
+          <span className="mention-pill" aria-label={`${mentionsOrReplies} mentions or replies`}>
+            {mentionsOrReplies > 99 ? '99+' : mentionsOrReplies}
+          </span>
+        )}
         <span className="ch-chevron" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 6 15 12 9 18" /></svg>
         </span>
@@ -2030,8 +1972,12 @@ function ChannelRow({
     <button className={cls.join(' ')} onClick={onClick}>
       <span className="ch-icon">#</span>
       <span className="ch-name">{name}</span>
-      {mentioned && <span className="mention-pill">@you</span>}
-      {!mentioned && unread && unread > 0 && <span className="ch-meta">{unread > 99 ? '99+' : unread}</span>}
+      {unread > 0 && <span className="ch-meta">{unread > 99 ? '99+' : unread}</span>}
+      {mentionsOrReplies > 0 && (
+        <span className="mention-pill" aria-label={`${mentionsOrReplies} mentions or replies`}>
+          {mentionsOrReplies > 99 ? '99+' : mentionsOrReplies}
+        </span>
+      )}
     </button>
   );
 }
@@ -2150,8 +2096,6 @@ function ServerScreen({
   const calls = useActiveCallByChannel();
   const adminsByGroup = useAdminsByGroup();
   const operatorPubkey = useRelayOperatorPubkey(relay || null);
-  const channelUnreads = useNotificationStore((s) => s.channelUnreads);
-  const channelMentions = useNotificationStore((s) => s.channelMentions);
   const [addRelayOpen, setAddRelayOpen] = useState(false);
   const [relayMenuFor, setRelayMenuFor] = useState<{ url: string; label: string; iconUrl: string | null } | null>(null);
   const [createChannelOpen, setCreateChannelOpen] = useState(false);
@@ -2266,8 +2210,6 @@ function ServerScreen({
           <ChannelRow
             group={g}
             live={!!calls[g.id]}
-            unread={channelUnreads[g.id]}
-            mentioned={!!channelMentions[g.id]}
             onClick={() => selectGroup(g.id, g.kind)}
             expandable={expandable}
             expanded={isExpanded}
@@ -2297,8 +2239,6 @@ function ServerScreen({
         key={g.id}
         group={g}
         live={!!calls[g.id]}
-        unread={channelUnreads[g.id]}
-        mentioned={!!channelMentions[g.id]}
         onClick={() => selectGroup(g.id, g.kind)}
       />
     );
@@ -2454,6 +2394,57 @@ function ServerScreen({
 // ───────────────────────────────────────────────────────────────────────────
 // 04 — channel (chat)
 
+function ReplyAuthorName({ pubkey }: { pubkey: string }) {
+  const meta = useUserMetadata(pubkey);
+  const name = meta?.displayName || meta?.name || shortNpub(pubkey);
+  return <span className="composer-reply-author">{name}</span>;
+}
+
+/**
+ * Mention popover anchored above the mobile composer. Mirrors the desktop
+ * `MentionAutocomplete` shape but uses mobile CSS variables and tap-friendly
+ * row sizing. Keeps focus on the input across tap (preventDefault on
+ * mousedown) so the soft keyboard doesn't dismiss mid-selection.
+ */
+export function MobileMentionAutocomplete({
+  members,
+  selectedIndex,
+  onSelect,
+  onHover,
+}: {
+  members: MemberInfo[];
+  selectedIndex: number;
+  onSelect: (m: MemberInfo) => void;
+  onHover: (i: number) => void;
+}) {
+  if (members.length === 0) return null;
+  return (
+    <div className="composer-mention-popup" data-testid="mobile-mention-autocomplete">
+      {members.map((m, i) => (
+        <button
+          key={m.pubkey}
+          type="button"
+          className={`composer-mention-row ${i === selectedIndex ? 'active' : ''}`}
+          onMouseDown={(e) => { e.preventDefault(); onSelect(m); }}
+          onMouseEnter={() => onHover(i)}
+          data-testid="mobile-mention-option"
+        >
+          {m.picture ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={m.picture} alt="" className="composer-mention-avatar" />
+          ) : (
+            <div className="composer-mention-avatar fallback">
+              {m.displayName[0]?.toUpperCase() || '?'}
+            </div>
+          )}
+          <span className="composer-mention-name">{m.displayName}</span>
+          <span className="composer-mention-key">{m.pubkey.slice(0, 8)}…</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function ChannelScreen({
   groupId,
   go,
@@ -2484,12 +2475,97 @@ function ChannelScreen({
   const channelAdmins = useAdmins(groupId);
   const isChannelAdmin = !!myPubkey && channelAdmins.includes(myPubkey);
   const [draft, setDraft] = useState('');
-  const [sending, setSending] = useState(false);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<JsMessage | null>(null);
   const messagesRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const composerInputRef = useRef<HTMLInputElement>(null);
+  const channelHighlights = useChannelHighlights(groupId, myPubkey);
+
+  // ── @-mention autocomplete ───────────────────────────────────────────
+  // Mentions span the whole relay (every visible group's members + admins
+  // + creator), not just the current channel — typing `@alice` should find
+  // Alice even if she's only in a sister channel. Visible groups already
+  // exclude WoT-hidden ones via useGroups() above.
+  const membersByGroup = useMembersByGroup();
+  const adminsByGroup = useAdminsByGroup();
+  const creatorsByGroup = useGroupCreators();
+  const visibleGroupIds = useMemo(() => groups.map((g) => g.id), [groups]);
+  const mentionCandidatePubkeys = useMemo(
+    () => relayMentionCandidates(visibleGroupIds, membersByGroup, adminsByGroup, creatorsByGroup),
+    [visibleGroupIds, membersByGroup, adminsByGroup, creatorsByGroup],
+  );
+  const [metaMap, setMetaMap] = useState<Record<string, JsUserMetadata>>({});
+  useEffect(() => {
+    let unsub: (() => void) | undefined;
+    void getBridge().then(() => {
+      const impl = getBridgeImpl();
+      if (!impl) return;
+      unsub = impl.userMetadata.subscribe((m) => setMetaMap(m));
+    });
+    return () => { unsub?.(); };
+  }, []);
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionIndex, setMentionIndex] = useState(0);
+  const filteredMentionMembers = useMemo<MemberInfo[]>(() => {
+    if (mentionQuery === null) return [];
+    // Materialize MemberInfo[] only when the popup is open. metaMap can
+    // tick on every kind:0 ingest; eager rebuilds would churn for nothing
+    // when no mention is in progress.
+    const candidates: MemberInfo[] = mentionCandidatePubkeys.map((pk) => {
+      const m = metaMap[pk];
+      return {
+        pubkey: pk,
+        displayName: m?.displayName || m?.name || `${pk.slice(0, 8)}…`,
+        picture: m?.picture ?? undefined,
+        lud16: m?.lud16 ?? undefined,
+      };
+    });
+    return filterMembers(candidates, mentionQuery).slice(0, 6);
+  }, [mentionCandidatePubkeys, metaMap, mentionQuery]);
+  // Close the popup whenever we change channels — stale @-state from a
+  // previous channel shouldn't bleed into a fresh composer.
+  useEffect(() => { setMentionQuery(null); }, [groupId]);
+
+  function handleDraftInput(value: string, cursor: number) {
+    setDraft(value);
+    const q = detectMentionQuery(value, cursor);
+    if (q !== mentionQuery) {
+      setMentionQuery(q);
+      if (q !== null) setMentionIndex(0);
+    }
+  }
+  function pickMention(member: MemberInfo) {
+    const ta = composerInputRef.current;
+    const cursor = ta?.selectionStart ?? draft.length;
+    const { next, cursor: nextCursor } = applyMentionToDraft(draft, cursor, member.pubkey);
+    setDraft(next);
+    setMentionQuery(null);
+    requestAnimationFrame(() => {
+      const el = composerInputRef.current;
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(nextCursor, nextCursor);
+    });
+  }
+
+  // Reset reply target whenever the user navigates to a different channel.
+  useEffect(() => { setReplyingTo(null); }, [groupId]);
+
+  // Listen for "Reply" taps from the message-actions sheet. The sheet is
+  // mounted at the PhoneShell level so it can't call setState here directly
+  // — same indirection the quick-react buttons use.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const ev = e as CustomEvent<{ msgId: string }>;
+      const target = messages.find((m) => m.id === ev.detail.msgId);
+      if (target) setReplyingTo(target);
+    };
+    window.addEventListener('obelisk-mobile:reply', handler);
+    return () => window.removeEventListener('obelisk-mobile:reply', handler);
+  }, [messages]);
 
   const handleAttach = async (file: File) => {
     if (!file || uploading) return;
@@ -2539,18 +2615,17 @@ function ChannelScreen({
     return () => el.removeEventListener('scroll', onScroll);
   }, [loadEarlier, loadingEarlier, reachedStart]);
 
-  const send = async () => {
+  const send = () => {
     const text = draft.trim();
-    if (!text || sending) return;
-    setSending(true);
-    try {
-      await nostrActions.sendMessage(groupId, text);
-      setDraft('');
-    } catch (err) {
-      console.warn('[mobile] sendMessage failed', err);
-    } finally {
-      setSending(false);
-    }
+    if (!text) return;
+    const replyToCopy = replyingTo ? { id: replyingTo.id, pubkey: replyingTo.pubkey } : null;
+    // Optimistic — placeholder appears in-list with a spinner; failures
+    // surface a retry button on the bubble itself, not in the composer.
+    setDraft('');
+    setReplyingTo(null);
+    nostrActions.sendMessage(groupId, text, replyToCopy).catch((err) => {
+      console.warn('[mobile] sendMessage scheduling failed', err);
+    });
   };
 
   // Group consecutive messages and pre-compute day dividers
@@ -2602,6 +2677,7 @@ function ChannelScreen({
         </div>
       </div>
 
+      <div className="messages-wrap relative flex min-h-0 flex-1 flex-col">
       <div className="messages" ref={messagesRef}>
         {renderable.length === 0 ? (
           <div className="empty-state">
@@ -2628,8 +2704,36 @@ function ChannelScreen({
           )
         )}
       </div>
+      <MentionNavigator scrollRef={messagesRef} eventIds={channelHighlights.eventIds} />
+      </div>
 
       <div className="composer">
+        {replyingTo && (
+          <div className="composer-reply" data-testid="mobile-reply-preview">
+            <div className="composer-reply-info">
+              <span className="composer-reply-label">
+                Replying to <ReplyAuthorName pubkey={replyingTo.pubkey} />
+              </span>
+              <span className="composer-reply-text">{replyingTo.content.slice(0, 80)}</span>
+            </div>
+            <button
+              type="button"
+              className="composer-reply-close"
+              onClick={() => setReplyingTo(null)}
+              aria-label="Cancel reply"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+            </button>
+          </div>
+        )}
+        {mentionQuery !== null && filteredMentionMembers.length > 0 && (
+          <MobileMentionAutocomplete
+            members={filteredMentionMembers}
+            selectedIndex={mentionIndex}
+            onSelect={pickMention}
+            onHover={setMentionIndex}
+          />
+        )}
         <div className="composer-inner">
           <input
             ref={fileInputRef}
@@ -2652,20 +2756,47 @@ function ChannelScreen({
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
           </button>
           <input
+            ref={composerInputRef}
             className="composer-input"
             value={draft}
-            onChange={(e) => setDraft(e.target.value)}
+            onChange={(e) => handleDraftInput(e.target.value, e.target.selectionStart ?? e.target.value.length)}
+            onSelect={(e) => {
+              const t = e.currentTarget;
+              handleDraftInput(t.value, t.selectionStart ?? t.value.length);
+            }}
             placeholder={`Message #${group?.name ?? 'channel'}`}
             onKeyDown={(e) => {
+              if (mentionQuery !== null && filteredMentionMembers.length > 0) {
+                if (e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  setMentionIndex((i) => (i + 1) % filteredMentionMembers.length);
+                  return;
+                }
+                if (e.key === 'ArrowUp') {
+                  e.preventDefault();
+                  setMentionIndex((i) => (i - 1 + filteredMentionMembers.length) % filteredMentionMembers.length);
+                  return;
+                }
+                if (e.key === 'Enter' || e.key === 'Tab') {
+                  e.preventDefault();
+                  pickMention(filteredMentionMembers[mentionIndex]);
+                  return;
+                }
+                if (e.key === 'Escape') {
+                  e.preventDefault();
+                  setMentionQuery(null);
+                  return;
+                }
+              }
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                void send();
+                send();
               }
             }}
           />
           <div className="composer-btns">
             {draft.trim() ? (
-              <button className="composer-send" onClick={() => void send()} disabled={sending} aria-label="Send">
+              <button className="composer-send" onClick={() => send()} aria-label="Send">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 14-7-7 14-2-5-5-2z" /></svg>
               </button>
             ) : (
@@ -2701,7 +2832,7 @@ function ChannelScreen({
   );
 }
 
-function ChannelMessage({
+export function ChannelMessage({
   msg,
   myPubkey,
   groupId,
@@ -2750,8 +2881,17 @@ function ChannelMessage({
     pressTimer.current = null;
   };
 
+  const onRetry = () => {
+    if (!msg.clientTag) return;
+    void nostrActions.retryMessage(groupId, msg.clientTag);
+  };
+  const onDismissFailed = () => {
+    if (!msg.clientTag) return;
+    void nostrActions.cancelPendingMessage(groupId, msg.clientTag);
+  };
+
   return (
-    <div className="msg">
+    <div className={'msg' + (msg.pending ? ' pending' : '') + (msg.failed ? ' failed' : '')}>
       <div className="msg-ava" style={avatarStyle(msg.pubkey)} onClick={onAvatar} role="button">
         {meta?.picture ? <img src={meta.picture} alt="" /> : initialsFor(name, shortNpub(msg.pubkey))}
       </div>
@@ -2759,6 +2899,20 @@ function ChannelMessage({
         <div className="msg-head">
           <span className="msg-name" onClick={onAvatar} role="button">{name}</span>
           <span className="msg-time">{timeOfDay(msg.createdAt)}</span>
+          {msg.pending && <span className="msg-spinner" aria-label="Sending" role="status" />}
+          <button
+            type="button"
+            className="msg-more"
+            aria-label="Message actions"
+            data-testid="mobile-msg-more"
+            onClick={onLongPress}
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <circle cx="5" cy="12" r="1.7" />
+              <circle cx="12" cy="12" r="1.7" />
+              <circle cx="19" cy="12" r="1.7" />
+            </svg>
+          </button>
         </div>
         <div
           className="msg-text"
@@ -2770,6 +2924,27 @@ function ChannelMessage({
         >
           <MessageContent content={msg.content} messageId={msg.id} channelId={groupId} />
         </div>
+        {msg.failed && (
+          <div className="msg-failed" data-testid="mobile-msg-failed">
+            <span className="msg-failed-label">Couldn’t send</span>
+            <button
+              type="button"
+              className="msg-retry"
+              onClick={onRetry}
+              data-testid="mobile-msg-retry"
+            >
+              Retry
+            </button>
+            <button
+              type="button"
+              className="msg-dismiss"
+              onClick={onDismissFailed}
+              aria-label="Dismiss failed message"
+            >
+              ✕
+            </button>
+          </div>
+        )}
         {grouped.length > 0 && (
           <div className="reactions">
             {grouped.map((r) => (
@@ -2852,26 +3027,22 @@ function DmsListScreen({
   myFollows: ReadonlyArray<string>;
 }) {
   const dms = useDirectMessages();
-  const dmUnreadsMap = useNotificationStore((s) => s.dmUnreads);
   const [tab, setTab] = useState<'follows' | 'others'>('follows');
 
+  // Each row computes its own unread via `useDMUnreadCount` against the
+  // persisted read-state cursor. The 24h heuristic that used to live here
+  // is gone — `useReadStateStore.dmCursors` is the single source of truth
+  // (with a 24h bootstrap fallback baked into the selector for first-paint).
   const peers = useMemo(() => {
-    const list: Array<{ peer: string; latest: JsDirectMessage; unread: boolean }> = [];
+    const list: Array<{ peer: string; latest: JsDirectMessage }> = [];
     for (const [peer, msgs] of Object.entries(dms)) {
       if (msgs.length === 0) continue;
       const sorted = [...msgs].sort((a, b) => b.createdAt - a.createdAt);
-      const latest = sorted[0];
-      // Prefer the notification-store count (set by the bridge for live DMs);
-      // fall back to the 24h heuristic only when the store hasn't seen this
-      // peer yet (e.g. first paint before any live DM has arrived).
-      const storedUnread = dmUnreadsMap[peer] ?? 0;
-      const unread = storedUnread > 0 ||
-        (!latest.outgoing && (Date.now() / 1000 - latest.createdAt) < 86400 && storedUnread === 0 && Object.keys(dmUnreadsMap).length === 0);
-      list.push({ peer, latest, unread });
+      list.push({ peer, latest: sorted[0] });
     }
     list.sort((a, b) => b.latest.createdAt - a.latest.createdAt);
     return list;
-  }, [dms, dmUnreadsMap]);
+  }, [dms]);
 
   const followsSet = useMemo(() => new Set(myFollows), [myFollows]);
   const filtered = peers.filter((p) =>
@@ -2913,7 +3084,7 @@ function DmsListScreen({
           </div>
         )}
         {filtered.map((p) => (
-          <DmRow key={p.peer} peer={p.peer} latest={p.latest} unread={p.unread} onClick={() => selectPeer(p.peer)} />
+          <DmRow key={p.peer} peer={p.peer} latest={p.latest} onClick={() => selectPeer(p.peer)} />
         ))}
       </div>
     </div>
@@ -2923,18 +3094,17 @@ function DmsListScreen({
 function DmRow({
   peer,
   latest,
-  unread,
   onClick,
 }: {
   peer: string;
   latest: JsDirectMessage;
-  unread: boolean;
   onClick: () => void;
 }) {
   const meta = useUserMetadata(peer);
+  const unreadCount = useDMUnreadCount(peer);
   const name = meta?.displayName || meta?.name || shortNpub(peer);
   return (
-    <button className={`dm-row ${unread ? 'unread' : ''}`} onClick={onClick}>
+    <button className={`dm-row ${unreadCount > 0 ? 'unread' : ''}`} onClick={onClick}>
       <div className="dm-ava-list" style={avatarStyle(peer)}>
         {meta?.picture ? <img src={meta.picture} alt="" /> : initialsFor(name, shortNpub(peer))}
       </div>
@@ -2948,7 +3118,7 @@ function DmRow({
           {latest.outgoing ? 'You: ' : ''}{latest.content}
         </div>
       </div>
-      {unread && <span className="unread-dot" />}
+      {unreadCount > 0 && <span className="unread-dot" />}
     </button>
   );
 }
@@ -2969,7 +3139,6 @@ function DmThreadScreen({
   const meta = useUserMetadata(peer);
   const myPubkey = useMyPubkey();
   const [draft, setDraft] = useState('');
-  const [sending, setSending] = useState(false);
   const msgsRef = useRef<HTMLDivElement>(null);
 
   const messages = useMemo(() => {
@@ -2983,18 +3152,22 @@ function DmThreadScreen({
     requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
   }, [messages.length]);
 
-  const send = async () => {
+  const send = () => {
     const text = draft.trim();
-    if (!text || sending) return;
-    setSending(true);
-    try {
-      await nostrActions.sendDirectMessage(peer, text);
-      setDraft('');
-    } catch (err) {
-      console.warn('[mobile] sendDirectMessage failed', err);
-    } finally {
-      setSending(false);
-    }
+    if (!text) return;
+    // Optimistic — placeholder appears with a spinner; the bubble surfaces a
+    // retry button on failure so we don't gate the composer on send state.
+    setDraft('');
+    nostrActions.sendDirectMessage(peer, text).catch((err) => {
+      console.warn('[mobile] sendDirectMessage scheduling failed', err);
+    });
+  };
+
+  const onRetry = (clientTag: string) => {
+    void nostrActions.retryDirectMessage(peer, clientTag);
+  };
+  const onDismiss = (clientTag: string) => {
+    void nostrActions.cancelPendingDirectMessage(peer, clientTag);
   };
 
   const peerName = meta?.displayName || meta?.name || shortNpub(peer);
@@ -3044,9 +3217,41 @@ function DmThreadScreen({
           it.type === 'divider' ? (
             <div key={it.key} className="day-divider">{it.label}</div>
           ) : (
-            <div key={it.key} className={`dm-bubble ${it.msg.outgoing ? 'outgoing delivered' : 'incoming'}`}>
-              {it.msg.content}
-              <span className="dm-bubble-time">{timeOfDay(it.msg.createdAt)}</span>
+            <div
+              key={it.key}
+              className={
+                'dm-bubble '
+                + (it.msg.outgoing ? 'outgoing delivered' : 'incoming')
+                + (it.msg.pending ? ' pending' : '')
+                + (it.msg.failed ? ' failed' : '')
+              }
+            >
+              <div className="dm-bubble-text">{it.msg.content}</div>
+              <div className="dm-bubble-meta">
+                {it.msg.pending && <span className="dm-bubble-spinner" aria-label="Sending" role="status" />}
+                <span className="dm-bubble-time">{timeOfDay(it.msg.createdAt)}</span>
+              </div>
+              {it.msg.failed && it.msg.clientTag && (
+                <div className="dm-bubble-failed" data-testid="mobile-dm-failed">
+                  <span className="dm-bubble-failed-label">Couldn’t send</span>
+                  <button
+                    type="button"
+                    className="dm-bubble-retry"
+                    onClick={() => onRetry(it.msg.clientTag!)}
+                    data-testid="mobile-dm-retry"
+                  >
+                    Retry
+                  </button>
+                  <button
+                    type="button"
+                    className="dm-bubble-dismiss"
+                    onClick={() => onDismiss(it.msg.clientTag!)}
+                    aria-label="Dismiss failed message"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
             </div>
           ),
         )}
@@ -3065,13 +3270,13 @@ function DmThreadScreen({
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                void send();
+                send();
               }
             }}
           />
           <div className="composer-btns">
             {draft.trim() ? (
-              <button className="composer-send" onClick={() => void send()} disabled={sending} aria-label="Send">
+              <button className="composer-send" onClick={() => send()} aria-label="Send">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 14-7-7 14-2-5-5-2z" /></svg>
               </button>
             ) : (
@@ -3099,9 +3304,20 @@ function InboxScreen({
   selectGroup: (groupId: string, kind: JsGroup['kind']) => void;
   selectPeer: (peer: string) => void;
 }) {
-  const events = useNotificationStore((s) => s.inboxEvents);
-  const markInboxRead = useNotificationStore((s) => s.markInboxRead);
+  const events = useReadStateStore((s) => s.inboxEvents);
+  const markInboxRead = useReadStateStore((s) => s.advanceInboxRead);
+  const markAllAsRead = useReadStateStore((s) => s.markAllAsRead);
   const groups = useGroups();
+  // Read the bridge's loaded peers + groups imperatively at click time so
+  // the inbox screen doesn't re-render on every message arrival just to
+  // keep these snapshots in sync. The "Mark all read" button needs them to
+  // advance the cursors that feed the browser-tab `(N)` badge.
+  const handleMarkAll = () => {
+    const impl = getBridgeImpl();
+    const peers = impl ? Object.keys(impl.dmsByPeer.get()) : [];
+    const groupIds = impl ? Object.keys(impl.messagesByGroup.get()) : [];
+    markAllAsRead(peers, groupIds);
+  };
 
   const [tab, setTab] = useState<InboxFilter>('all');
   const filtered = useMemo(() => {
@@ -3124,7 +3340,7 @@ function InboxScreen({
     <div className="screen active" data-screen="inbox">
       <div className="app-header">
         <h2>Inbox</h2>
-        <button className="mark-all-read" onClick={markInboxRead}>Mark all read</button>
+        <button className="mark-all-read" onClick={handleMarkAll}>Mark all read</button>
       </div>
       <div className="filter-tabs">
         <button className={`filter-tab ${tab === 'all' ? 'active' : ''}`} onClick={() => setTab('all')}>All · {events.length}</button>
@@ -3151,8 +3367,10 @@ function InboxScreen({
 
 function InboxCard({ event, onJump }: { event: InboxEvent; onJump: () => void }) {
   const meta = useUserMetadata(event.senderPubkey);
+  const inboxLastReadAt = useReadStateStore((s) => s.inboxLastReadAt);
   const name = meta?.displayName || meta?.name || shortNpub(event.senderPubkey);
   const tsSec = Math.floor(new Date(event.createdAt).getTime() / 1000);
+  const isRead = Date.parse(event.createdAt) <= inboxLastReadAt;
   const typeLabel: Record<InboxEvent['type'], string> = {
     mention: '@ Mentioned you',
     reply: '↩ Replied to you',
@@ -3164,7 +3382,7 @@ function InboxCard({ event, onJump }: { event: InboxEvent; onJump: () => void })
   return (
     <button
       className={`mention-card ${event.type === 'mention' ? 'urgent' : ''}`}
-      style={!event.read ? undefined : { opacity: 0.65 }}
+      style={isRead ? { opacity: 0.65 } : undefined}
       onClick={onJump}
     >
       <div className="mc-context">
@@ -3545,7 +3763,7 @@ function ForumCard({ group, onClick }: { group: JsGroup; onClick: () => void }) 
 // ───────────────────────────────────────────────────────────────────────────
 // 14 — message actions sheet (over channel)
 
-function MessageActionsSheet({
+export function MessageActionsSheet({
   msg,
   close,
   onZap,
@@ -3583,7 +3801,18 @@ function MessageActionsSheet({
           ))}
         </div>
         <div className="ma-action-list">
-          <button className="ma-action" onClick={close}>
+          <button
+            className="ma-action"
+            data-testid="mobile-msg-actions-reply"
+            onClick={() => {
+              try {
+                window.dispatchEvent(
+                  new CustomEvent('obelisk-mobile:reply', { detail: { msgId: msg.id } }),
+                );
+              } catch { /* ignore */ }
+              close();
+            }}
+          >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7" /><path d="M20 18v-2a4 4 0 0 0-4-4H4" /></svg>
             Reply
           </button>
@@ -4186,7 +4415,6 @@ export default function MobileShell() {
   const isLoggedIn = useIsLoggedIn();
   const isRehydrating = useIsRehydrating();
   const myPubkey = useMyPubkey();
-  const meta = useUserMetadata(myPubkey);
   const groups = useGroups();
   const dms = useDirectMessages();
   const myFollowsEntry = useFollows(myPubkey);
@@ -4200,7 +4428,6 @@ export default function MobileShell() {
   const exitArmedRef = useRef<number>(0);
   const [exitToast, setExitToast] = useState(false);
   const router = useRouter();
-  const [showSetup, setShowSetup] = useState(false);
   // Slide direction for the screen-mount animation. 'forward' slides in
   // from the right (push), 'back' slides in from the left (pop). Cleared
   // after each animation so a same-screen rerender doesn't replay.
@@ -4217,41 +4444,6 @@ export default function MobileShell() {
   // newly-mounted screen doesn't double-animate (the drag layer already
   // animated it into place).
   const suppressSlideRef = useRef(false);
-
-  // First-time-after-login profile setup gate
-  useEffect(() => {
-    if (!isLoggedIn || !myPubkey) return;
-    if (typeof window === 'undefined') return;
-    const key = `obelisk-dex/mobile-setup-seen/${myPubkey}`;
-    const seen = window.localStorage.getItem(key);
-    if (seen) return;
-    if (meta && (meta.name || meta.displayName)) {
-      window.localStorage.setItem(key, '1');
-      return;
-    }
-    // Freshly generated key (set by LoginModal) — no kind:0 will ever arrive,
-    // so skip the grace period and show setup immediately.
-    const justGenKey = `obelisk-dex/just-generated/${myPubkey}`;
-    if (window.localStorage.getItem(justGenKey)) {
-      try { window.localStorage.removeItem(justGenKey); } catch { /* ignore */ }
-      setShowSetup(true);
-      return;
-    }
-    // Show setup after a brief grace period (let kind:0 arrive)
-    const t = setTimeout(() => {
-      const fresh = window.localStorage.getItem(key);
-      if (fresh) return;
-      setShowSetup(true);
-    }, 1500);
-    return () => clearTimeout(t);
-  }, [isLoggedIn, myPubkey, meta]);
-
-  const dismissSetup = useCallback(() => {
-    if (myPubkey) {
-      try { window.localStorage.setItem(`obelisk-dex/mobile-setup-seen/${myPubkey}`, '1'); } catch { /* ignore */ }
-    }
-    setShowSetup(false);
-  }, [myPubkey]);
 
   // ── navigation helpers ───────────────────────────────────────────────
   // We update `useChatStore.activeChannelId` / `useDMStore.activeDMPubkey`
@@ -4283,6 +4475,15 @@ export default function MobileShell() {
       window.history.back();
       return;
     }
+    // Sibling tabs in the settings group (Profile ↔ Preferences) toggle
+    // in-place. They visually share the `.settings-tabs` strip, so a slide
+    // animation reads as broken — the user tapped a tab, not navigated to
+    // a new screen. Suppress the slide for that one pair.
+    const prev = navRef.current.screen;
+    const isSettingsTabSwitch =
+      (prev === 'settings-profile' && screen === 'settings-prefs') ||
+      (prev === 'settings-prefs' && screen === 'settings-profile');
+    if (isSettingsTabSwitch) suppressSlideRef.current = true;
     if (screen !== 'channel') useChatStore.setState({ activeChannelId: null });
     if (screen !== 'dm-thread') useDMStore.setState({ activeDMPubkey: null });
     pushNav((n) => ({ ...n, screen, baseScreen: null, msgContext: null }), dir);
@@ -4330,10 +4531,16 @@ export default function MobileShell() {
     // Guard entry: a sentinel sits BEHIND the current nav so the first
     // press of back lands on the guard (we re-push and arm the toast),
     // and a second press within 2 s confirms exit to the landing page.
-    const seedUrl = urlFor(parsed, relay ?? currentRelayUrl ?? null);
+    // For sub-screens (e.g. deep-linked into a channel) `buildSeedHistory`
+    // also seeds the parent tab between the guard and the sub-screen, so
+    // the channel header's back arrow climbs up to the channel list rather
+    // than dropping straight onto the guard and showing the exit toast.
+    const entries = buildSeedHistory(parsed, relay ?? currentRelayUrl ?? null);
     try {
-      window.history.replaceState({ guard: true }, '', seedUrl);
-      window.history.pushState({ nav: parsed }, '', seedUrl);
+      window.history.replaceState(entries[0].state, '', entries[0].url);
+      for (let i = 1; i < entries.length; i++) {
+        window.history.pushState(entries[i].state, '', entries[i].url);
+      }
     } catch { /* ignore */ }
   }, [isLoggedIn, currentRelayUrl]);
 
@@ -4371,7 +4578,16 @@ export default function MobileShell() {
       }
       if (s?.nav) {
         const next = s.nav;
-        setSlideDir('back');
+        const prev = navRef.current.screen;
+        const isSettingsTabSwitch =
+          (prev === 'settings-profile' && next.screen === 'settings-prefs') ||
+          (prev === 'settings-prefs' && next.screen === 'settings-profile');
+        if (isSettingsTabSwitch) {
+          suppressSlideRef.current = true;
+          setSlideDir(null);
+        } else {
+          setSlideDir('back');
+        }
         setNav(next);
         navRef.current = next;
         useChatStore.setState({ activeChannelId: next.screen === 'channel' ? next.groupId : null });
@@ -4468,11 +4684,11 @@ export default function MobileShell() {
   const finishDrag = useCallback((dx: number, velocity: number, width: number) => {
     const goingRight = dx > 0;
     const action = decideSwipeNav(navRef.current.screen, goingRight);
-    const hasTarget = action.kind === 'top-level' || action.kind === 'history-back';
+    const hasTarget = action.kind === 'top-level';
     const snap = hasTarget ? decideSnap(dx, velocity, width) : 'revert';
     const layer = dragLayerRef.current;
     const TRANSITION = 'transform 240ms cubic-bezier(0.2, 0.85, 0.25, 1)';
-    if (snap === 'commit' && hasTarget) {
+    if (snap === 'commit' && action.kind === 'top-level') {
       const targetTx = goingRight ? width : -width;
       if (layer) {
         layer.style.transition = TRANSITION;
@@ -4480,16 +4696,22 @@ export default function MobileShell() {
       }
       window.setTimeout(() => {
         suppressSlideRef.current = true;
-        if (action.kind === 'top-level') {
-          useChatStore.setState({ activeChannelId: null });
-          useDMStore.setState({ activeDMPubkey: null });
-          pushNav(
-            (n) => ({ ...n, screen: action.target, baseScreen: null, msgContext: null }),
-            action.dir,
-          );
-        } else if (action.kind === 'history-back') {
-          window.history.back();
-        }
+        // Land on the bare top-level. A previous version restored the target
+        // tab's last-visited sub-screen here (so server>channelA → DMs →
+        // swipe-right would re-enter channelA), but that re-entry happened
+        // AFTER the visual swipe had already settled on the bare tab — the
+        // channel popped on top, which read as a glitchy refresh. The
+        // drag-prev/drag-next slots only ever show `renderTopLevelScreen`,
+        // not the remembered sub-screen, so previewing it during the swipe
+        // wasn't possible without re-architecting the carousel. Lands-on-bare
+        // is the consistent option: what you see during the swipe is what you
+        // get on commit.
+        useChatStore.setState({ activeChannelId: null });
+        useDMStore.setState({ activeDMPubkey: null });
+        pushNav(
+          (n) => ({ ...n, screen: action.target, baseScreen: null, msgContext: null }),
+          action.dir,
+        );
         setIsDragging(false);
       }, 240);
     } else {
@@ -4568,16 +4790,16 @@ export default function MobileShell() {
       useChatStore.setState({ activeChannelId: null });
       pushNav((n) => ({ ...n, screen: 'forum', groupId, forumGroupId: groupId }));
     } else {
+      // Pure navigation. The cursor is advanced by `useAutoMarkRead` once the
+      // user is actually watching the channel (visible + focused + active).
       useChatStore.setState({ activeChannelId: groupId, isNearBottom: true });
-      const ns = useNotificationStore.getState();
-      ns.clearChannelUnread(groupId);
-      ns.clearChannelMention(groupId);
       pushNav((n) => ({ ...n, screen: 'channel', groupId }));
     }
   }, [pushNav]);
   const selectPeer = useCallback((peer: string) => {
+    // Pure navigation. The cursor is advanced by `useAutoMarkRead` once the
+    // DM thread is open, focused, and visible.
     useDMStore.setState({ activeDMPubkey: peer });
-    useNotificationStore.getState().clearDMUnread(peer);
     pushNav((n) => ({ ...n, screen: 'dm-thread', dmPeer: peer }));
   }, [pushNav]);
   const openProfile = useCallback((pubkey: string) => {
@@ -4639,22 +4861,11 @@ export default function MobileShell() {
   }, [nav.groupId]);
 
   // ── DM and inbox badges ─────────────────────────────────────────────
-  // Live unread DM total comes from the notification store, fed by the
-  // bridge's DM ingestion path. Falls back to the 24h heuristic only when
-  // the store is empty (e.g. before the first live DM arrives this session).
-  const storeDmUnreads = useNotificationStore((s) => s.dmUnreads);
-  const inboxBadge = useNotificationStore((s) => s.unreadInboxCount);
-  const dmBadge = useMemo(() => {
-    const fromStore = Object.values(storeDmUnreads).reduce((sum, n) => sum + n, 0);
-    if (fromStore > 0) return fromStore;
-    let n = 0;
-    for (const msgs of Object.values(dms)) {
-      const sorted = [...msgs].sort((a, b) => b.createdAt - a.createdAt);
-      const latest = sorted[0];
-      if (latest && !latest.outgoing && Date.now() / 1000 - latest.createdAt < 86400) n++;
-    }
-    return n;
-  }, [dms, storeDmUnreads]);
+  // Both totals are derived from the persisted read-state cursor; they
+  // survive reloads and converge across tabs via Zustand persist's
+  // `storage`-event sync.
+  const dmBadge = useTotalDMUnread();
+  const inboxBadge = useInboxUnreadCount();
 
   // ── render ──────────────────────────────────────────────────────────
 
@@ -4673,17 +4884,6 @@ export default function MobileShell() {
       <div className="obelisk-mobile">
         <div className="screens-host">
           <LoginScreen />
-        </div>
-      </div>
-    );
-  }
-
-  // Profile setup overlay
-  if (showSetup) {
-    return (
-      <div className="obelisk-mobile">
-        <div className="screens-host">
-          <ProfileSetupScreen onDone={dismissSetup} onSkip={dismissSetup} />
         </div>
       </div>
     );
@@ -4760,8 +4960,27 @@ export default function MobileShell() {
       break;
     case 'msg-actions':
     case 'zap-modal':
-      // sheets — handled below
-      body = null;
+      // Sheets float over the underlying screen (typically `channel`). Render
+      // that base screen as the body here so it stays mounted in the same
+      // sub-overlay slot — otherwise opening the actions sheet remounts
+      // ChannelScreen and wipes local state like `replyingTo`.
+      if ((nav.baseScreen === 'channel' || !nav.baseScreen) && nav.groupId) {
+        body = (
+          <ChannelScreen
+            groupId={nav.groupId}
+            go={go}
+            back={backFromChannel}
+            openMsgActions={openMsgActions}
+            openZap={openZap}
+            openProfile={openProfile}
+            openMembers={openMembers}
+          />
+        );
+      } else if (nav.baseScreen === 'dm-thread' && nav.dmPeer) {
+        body = <DmThreadScreen peer={nav.dmPeer} back={() => go('dms-list', 'back')} openProfile={openProfile} />;
+      } else {
+        body = null;
+      }
       break;
     default:
       body = <EmptyScreen go={go} title="Unknown screen" />;
@@ -4783,25 +5002,14 @@ export default function MobileShell() {
     nav.screen === 'profile-edit' ||
     kbInset > 0;
 
-  // For sheets, render the underlying screen + the sheet
-  let baseBody: ReactNode = null;
-  if (nav.screen === 'msg-actions' || nav.screen === 'zap-modal') {
-    if (nav.groupId) {
-      baseBody = (
-        <ChannelScreen
-          groupId={nav.groupId}
-          go={go}
-          back={backFromChannel}
-          openMsgActions={openMsgActions}
-          openZap={openZap}
-          openProfile={openProfile}
-          openMembers={openMembers}
-        />
-      );
-    } else {
-      baseBody = <EmptyScreen go={go} title="Channel" />;
-    }
-  }
+  // Sheet screens (msg-actions / zap-modal) render the underlying screen as
+  // `body` (see switch above) so the sub-overlay slot stays mounted. The key
+  // for that slot is derived from `baseScreen` so opening/closing a sheet
+  // doesn't remount the underlying screen and lose its local state.
+  const overlayScreenKey =
+    nav.screen === 'msg-actions' || nav.screen === 'zap-modal'
+      ? (nav.baseScreen ?? 'channel')
+      : nav.screen;
 
   const slideClass = suppressSlideRef.current
     ? ''
@@ -4816,7 +5024,6 @@ export default function MobileShell() {
       onTouchCancel={onTouchCancel}
     >
       <div className="screens-host" ref={screensHostRef}>
-        {baseBody}
         <div ref={dragLayerRef} className={`drag-layer ${isDragging ? 'is-dragging' : ''}`}>
           {/* All four top-level screens are persistently mounted with stable
            * keys per screen name. Their on-screen position is controlled by a
@@ -4826,8 +5033,19 @@ export default function MobileShell() {
            * and remounted the new active screen, which caused titles +
            * skeleton states to flash on every horizontal nav. */}
           {NAV_ORDER.map((s) => {
+            // When the active screen is a sub-screen overlay, its parent
+            // top-level tab sits at translateX(0) behind the overlay so the
+            // user sees the overlay slide in over it. The parent is *not* a
+            // drag neighbor anymore — horizontal swipes skip past the parent
+            // in both directions to switch tabs (see swipe-nav.ts) — so it
+            // stays at drag-curr regardless of drag state. The actual
+            // neighbors revealed by a drag are the previous/next top-level
+            // tabs around the parent.
+            const subScreenParent = NAV_ORDER.includes(nav.screen) ? null : SUB_TO_NAV[nav.screen] ?? null;
             const role =
               s === nav.screen
+                ? 'drag-curr'
+                : s === subScreenParent
                 ? 'drag-curr'
                 : s === dragNeighbors.left
                 ? 'drag-prev'
@@ -4845,8 +5063,8 @@ export default function MobileShell() {
            * as a single overlay. Different sub-screens use different keys so
            * navigating between them does remount — that's correct: a forum is
            * not a channel. */}
-          {!NAV_ORDER.includes(nav.screen) && body && (
-            <div className="drag-slot drag-overlay" key={`sub-${nav.screen}`}>
+          {!NAV_ORDER.includes(overlayScreenKey as ScreenName) && body && (
+            <div className="drag-slot drag-overlay" key={`sub-${overlayScreenKey}`}>
               <div className={`screen-anim ${slideClass}`}>{body}</div>
             </div>
           )}
@@ -4862,15 +5080,39 @@ export default function MobileShell() {
           <ZapModalSheet msg={nav.msgContext} close={closeSheet} />
         )}
       </div>
-      {nav.screen !== 'voice-room' && kbInset === 0 && (
-        <div className="mobile-voice-status-slot"><VoiceStatusBar /></div>
-      )}
+      <MobileVoiceStatusSlot screen={nav.screen} kbInset={kbInset} />
       {!hideNav && <BottomNav active={nav.screen} go={go} dmBadge={dmBadge} inboxBadge={inboxBadge} />}
       {exitToast && (
         <div className="mobile-exit-toast" role="status" aria-live="polite">
           Press back again to exit
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Persistent host for the in-call control bar. The bar stays mounted for the
+ * lifetime of the call so navigating out of voice-room reveals it via CSS
+ * instead of a fresh mount — the previous conditional remount had a
+ * perceptible lag (useGroups + useVoiceStore selectors set up subscriptions
+ * async, so the bar would flash in ~1s after the user left the room and the
+ * call looked ended in the meantime).
+ */
+export function MobileVoiceStatusSlot({
+  screen,
+  kbInset,
+}: {
+  screen: ScreenName;
+  kbInset: number;
+}) {
+  const hidden = screen === 'voice-room' || kbInset > 0;
+  return (
+    <div
+      className={'mobile-voice-status-slot' + (hidden ? ' is-hidden' : '')}
+      data-testid="mobile-voice-status-slot"
+    >
+      <VoiceStatusBar />
     </div>
   );
 }

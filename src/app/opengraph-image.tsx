@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og';
 
 export const runtime = 'nodejs';
-export const alt = 'Obelisk — Chat grupal con identidad Nostr';
+export const alt = 'Obelisk — Group chat powered by Nostr identity';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
@@ -109,7 +109,7 @@ export default function OGImage() {
               marginTop: 4,
             }}
           >
-            Chat grupal con identidad Nostr
+            Group chat powered by Nostr identity
           </span>
         </div>
 
@@ -130,7 +130,7 @@ export default function OGImage() {
               fontWeight: 600,
             }}
           >
-            Sin emails. Sin contraseñas. Identidad criptográfica.
+            No emails. No passwords. Cryptographic identity.
           </span>
         </div>
       </div>

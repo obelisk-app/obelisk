@@ -115,6 +115,20 @@ full ordering, message-backfill cap (`BACKGROUND_MESSAGE_LIMIT`), and
 `subscribeAdminMember` is idempotent: a later `useAdmins` call from a chat
 panel is a no-op if the per-group sub is already open.
 
+**Read-state relay sync** opens additional global REQs at login, mounted
+from `AppGate.tsx`'s `ReadStateRoot`:
+
+- One `{kinds:[1059], "#p":[me]}` sub per configured relay → groups-scope
+  read state (gift-wrapped). Relay-targeted via the `relays` override on
+  `subscribeFilterWatched`.
+- One `{kinds:[1059], "#p":[me]}` sub per NIP-65 read+write relay (from
+  `fetchMyDmRelays`) → DM-scope read state.
+
+Each unwrapped rumor is filtered by inner kind 30078 and the scope's
+d-tag; matching cursors merge into `useReadStateStore` via
+`applyRemoteState`. See [docs/notifications.md](./notifications.md) for
+the encryption/wrap protocol and the 60-second debounced publish.
+
 ## 6. NIP-42 AUTH
 
 `BridgeImpl.createPool()` registers `automaticallyAuth(_relayUrl)` with

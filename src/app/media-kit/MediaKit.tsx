@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { toPng } from 'html-to-image';
 
 type Color = { name: string; token: string; hex: string; usage: string };
 
@@ -17,18 +18,24 @@ const COLORS: Color[] = [
 
 const COPY = {
   name: 'Obelisk',
-  tagline: 'Chat grupal con identidad Nostr',
-  taglineEn: 'Group chat powered by Nostr identity',
+  tagline: 'Group chat powered by Nostr identity',
+  taglineEs: 'Chat grupal con identidad Nostr',
   shortPitch:
-    'Obelisk es un chat grupal estilo Discord donde la identidad viene de tu llave Nostr. Sin emails, sin contraseñas — solo identidad criptográfica.',
-  shortPitchEn:
     'Obelisk is a Discord-style group chat where identity comes from your Nostr keypair. No emails, no passwords — cryptographic identity only.',
-  oneLiner: 'Sin emails. Sin contraseñas. Identidad criptográfica.',
-  oneLinerEn: 'No emails. No passwords. Cryptographic identity.',
+  shortPitchEs:
+    'Obelisk es un chat grupal estilo Discord donde la identidad viene de tu llave Nostr. Sin emails, sin contraseñas — solo identidad criptográfica.',
+  oneLiner: 'No emails. No passwords. Cryptographic identity.',
+  oneLinerEs: 'Sin emails. Sin contraseñas. Identidad criptográfica.',
   longPitch:
-    'Obelisk es una aplicación de chat grupal completamente sobre relays Nostr. Implementa NIP-29 para grupos, NIP-04/NIP-17 para mensajes directos, voz P2P y SFU vía WebRTC señalizado por Nostr, y pagos Lightning vía NIP-47 (Nostr Wallet Connect). Sin backend, sin base de datos: el cliente habla directamente con los relays.',
-  longPitchEn:
     'Obelisk is a fully relay-only group chat application built on Nostr. It implements NIP-29 for groups, NIP-04/NIP-17 for direct messages, P2P and SFU voice via WebRTC signaled over Nostr, and Lightning payments via NIP-47 (Nostr Wallet Connect). No backend, no database: the client talks directly to relays.',
+  longPitchEs:
+    'Obelisk es una aplicación de chat grupal completamente sobre relays Nostr. Implementa NIP-29 para grupos, NIP-04/NIP-17 para mensajes directos, voz P2P y SFU vía WebRTC señalizado por Nostr, y pagos Lightning vía NIP-47 (Nostr Wallet Connect). Sin backend, sin base de datos: el cliente habla directamente con los relays.',
+};
+
+const LINKS = {
+  site: 'https://obelisk.ar',
+  github: 'https://github.com/Fabricio333/obelisk',
+  defaultRelay: 'wss://relay.obelisk.ar',
 };
 
 const ASSETS = [
@@ -45,26 +52,38 @@ const ASSETS = [
     download: 'obelisk-favicon.png',
   },
   {
+    src: '/icon-192.png',
+    label: 'App Icon — 192px (PNG)',
+    bg: 'bg-lc-black',
+    download: 'icon-192.png',
+  },
+  {
+    src: '/icon-512.png',
+    label: 'App Icon — 512px (PNG)',
+    bg: 'bg-lc-black',
+    download: 'icon-512.png',
+  },
+  {
     src: '/obelisk.gif',
-    label: 'Obelisk Animado (GIF)',
+    label: 'Animated Obelisk (GIF)',
     bg: 'bg-lc-black',
     download: 'obelisk.gif',
   },
   {
     src: '/obelisk-lg.gif',
-    label: 'Obelisk Animado — Large',
+    label: 'Animated Obelisk — Large',
     bg: 'bg-lc-black',
     download: 'obelisk-lg.gif',
   },
   {
     src: '/obelisk-md.gif',
-    label: 'Obelisk Animado — Medium',
+    label: 'Animated Obelisk — Medium',
     bg: 'bg-lc-black',
     download: 'obelisk-md.gif',
   },
   {
     src: '/obelisk-sm.gif',
-    label: 'Obelisk Animado — Small',
+    label: 'Animated Obelisk — Small',
     bg: 'bg-lc-black',
     download: 'obelisk-sm.gif',
   },
@@ -94,7 +113,7 @@ const ASSETS = [
   },
   {
     src: '/nostr-wot-logo-clean.png',
-    label: 'Nostr WoT Logo (Clean PNG)',
+    label: 'Nostr WoT Logo — Clean (PNG)',
     bg: 'bg-lc-black',
     download: 'nostr-wot-logo-clean.png',
   },
@@ -106,7 +125,7 @@ const EMBED_HTML_BANNER = `<a href="https://obelisk.ar" target="_blank" rel="noo
   <span style="display:flex;align-items:center;gap:12px;">
     <span style="display:inline-block;width:10px;height:10px;border-radius:9999px;background:#b4f953;box-shadow:0 0 12px #b4f953;"></span>
     <span style="font-weight:700;letter-spacing:-0.01em;">Obelisk</span>
-    <span style="color:#a3a3a3;">— Chat grupal con identidad Nostr</span>
+    <span style="color:#a3a3a3;">— Group chat powered by Nostr identity</span>
   </span>
 </a>`;
 
@@ -116,8 +135,8 @@ const EMBED_BADGE = `<a href="https://obelisk.ar" target="_blank" rel="noopener"
 </a>`;
 
 const EMBED_OG = `<!-- Add to <head> for sharing previews -->
-<meta property="og:title" content="Obelisk — Chat grupal con identidad Nostr" />
-<meta property="og:description" content="Sin emails. Sin contraseñas. Identidad criptográfica." />
+<meta property="og:title" content="Obelisk — Group chat powered by Nostr identity" />
+<meta property="og:description" content="No emails. No passwords. Cryptographic identity." />
 <meta property="og:image" content="https://obelisk.ar/opengraph-image" />
 <meta property="og:url" content="https://obelisk.ar" />
 <meta name="twitter:card" content="summary_large_image" />`;
@@ -134,7 +153,7 @@ function CopyButton({ text }: { text: string }) {
       }}
       className="lc-pill-secondary text-xs px-3 py-1"
     >
-      {copied ? 'Copiado ✓' : 'Copiar'}
+      {copied ? 'Copied ✓' : 'Copy'}
     </button>
   );
 }
@@ -180,6 +199,518 @@ function CodeBlock({ code }: { code: string }) {
   );
 }
 
+// Obelisk silhouette — same artwork as /opengraph-image so banners stay
+// visually identical to the share preview.
+function ObeliskMark({
+  width = '100%',
+  height = '100%',
+  style,
+}: {
+  width?: number | string;
+  height?: number | string;
+  style?: React.CSSProperties;
+}) {
+  return (
+    <svg
+      viewBox="0 0 512 512"
+      width={width}
+      height={height}
+      preserveAspectRatio="xMidYMid meet"
+      style={style}
+      aria-hidden
+    >
+      <path
+        d="M 256,16 L 220,72 L 196,460 L 200,464 L 256,464 L 256,72 Z"
+        fill="#a3a3a3"
+        opacity={0.7}
+      />
+      <path
+        d="M 256,16 L 292,72 L 316,460 L 312,464 L 256,464 L 256,72 Z"
+        fill="#fafafa"
+      />
+    </svg>
+  );
+}
+
+const GRID_OVERLAY: React.CSSProperties = {
+  backgroundImage:
+    'linear-gradient(rgba(180,249,83,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(180,249,83,0.04) 1px, transparent 1px)',
+  backgroundSize: '40px 40px',
+};
+
+const GLOW_GRADIENT =
+  'radial-gradient(circle, rgba(180,249,83,0.35) 0%, rgba(180,249,83,0.1) 40%, transparent 70%)';
+
+// --- Banner compositions ---------------------------------------------------
+
+function HeroBanner() {
+  return (
+    <div
+      className="relative w-full overflow-hidden"
+      style={{
+        aspectRatio: '1200 / 630',
+        background:
+          'radial-gradient(circle at 50% 30%, #1a2a10 0%, #0a0a0a 60%)',
+      }}
+    >
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={GRID_OVERLAY}
+      />
+      {/* Glow halo */}
+      <div
+        className="absolute rounded-full"
+        style={{
+          width: '28%',
+          aspectRatio: '1',
+          top: '12.7%',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: GLOW_GRADIENT,
+        }}
+      />
+      {/* Green orb */}
+      <div
+        className="absolute rounded-full"
+        style={{
+          width: '10.8%',
+          aspectRatio: '1',
+          top: '22.2%',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          backgroundColor: '#b4f953',
+          boxShadow: '0 0 60px rgba(180,249,83,0.5)',
+        }}
+      />
+      {/* Obelisk piercing the orb (apex sits inside the orb) */}
+      <div
+        className="absolute"
+        style={{
+          width: '23.3%',
+          aspectRatio: '1',
+          top: '23%',
+          left: '50%',
+          transform: 'translateX(-50%)',
+        }}
+      >
+        <ObeliskMark />
+      </div>
+      {/* Title */}
+      <div
+        className="absolute flex flex-col items-center w-full"
+        style={{ top: '69%' }}
+      >
+        <span className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight">
+          Obelisk
+        </span>
+        <span className="mt-1 text-lc-muted text-xs sm:text-sm md:text-base lg:text-lg">
+          {COPY.tagline}
+        </span>
+      </div>
+      <p
+        className="absolute text-center text-lc-green font-semibold text-[10px] sm:text-xs md:text-sm w-full"
+        style={{ bottom: '5.7%' }}
+      >
+        {COPY.oneLiner}
+      </p>
+    </div>
+  );
+}
+
+// Reusable horizontal "obelisk inside green orb" composition for short-height
+// banners — column on the left, text on the right.
+function HorizontalBanner({
+  aspect,
+  columnLeft,
+  columnWidth,
+  textLeft,
+  bgGradient,
+  titleClass,
+  taglineClass,
+  oneLinerClass,
+  showOneLiner = true,
+}: {
+  aspect: string;
+  columnLeft: string;
+  columnWidth: string;
+  textLeft: string;
+  bgGradient: string;
+  titleClass: string;
+  taglineClass: string;
+  oneLinerClass: string;
+  showOneLiner?: boolean;
+}) {
+  return (
+    <div
+      className="relative w-full overflow-hidden"
+      style={{ aspectRatio: aspect, background: bgGradient }}
+    >
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={GRID_OVERLAY}
+      />
+      {/* Composition column */}
+      <div
+        className="absolute"
+        style={{
+          left: columnLeft,
+          top: 0,
+          height: '100%',
+          width: columnWidth,
+        }}
+      >
+        {/* Glow */}
+        <div
+          className="absolute rounded-full"
+          style={{
+            height: '120%',
+            aspectRatio: '1',
+            top: '-10%',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: GLOW_GRADIENT,
+          }}
+        />
+        {/* Orb */}
+        <div
+          className="absolute rounded-full"
+          style={{
+            height: '36%',
+            aspectRatio: '1',
+            top: '20%',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            backgroundColor: '#b4f953',
+            boxShadow: '0 0 50px rgba(180,249,83,0.5)',
+          }}
+        />
+        {/* Obelisk piercing the orb */}
+        <div
+          className="absolute"
+          style={{
+            height: '84%',
+            aspectRatio: '1',
+            top: '8%',
+            left: '50%',
+            transform: 'translateX(-50%)',
+          }}
+        >
+          <ObeliskMark />
+        </div>
+      </div>
+      {/* Text */}
+      <div
+        className="absolute"
+        style={{ left: textLeft, top: '50%', transform: 'translateY(-50%)' }}
+      >
+        <div className={`font-extrabold tracking-tight ${titleClass}`}>
+          Obelisk
+        </div>
+        <div className={`mt-1 text-lc-muted ${taglineClass}`}>
+          {COPY.tagline}
+        </div>
+        {showOneLiner && (
+          <div
+            className={`mt-3 text-lc-green font-semibold ${oneLinerClass}`}
+          >
+            {COPY.oneLiner}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function XHeaderBanner() {
+  return (
+    <HorizontalBanner
+      aspect="1500 / 500"
+      columnLeft="6%"
+      columnWidth="22%"
+      textLeft="34%"
+      bgGradient="radial-gradient(ellipse at 18% 50%, #1a2a10 0%, #0a0a0a 60%)"
+      titleClass="text-3xl sm:text-5xl md:text-6xl lg:text-7xl"
+      taglineClass="text-xs sm:text-base md:text-xl lg:text-2xl"
+      oneLinerClass="text-[10px] sm:text-xs md:text-sm lg:text-base"
+    />
+  );
+}
+
+function LinkedInBanner() {
+  return (
+    <HorizontalBanner
+      aspect="1584 / 396"
+      columnLeft="6%"
+      columnWidth="18%"
+      textLeft="29%"
+      bgGradient="radial-gradient(ellipse at 16% 50%, #1a2a10 0%, #0a0a0a 60%)"
+      titleClass="text-2xl sm:text-4xl md:text-5xl lg:text-6xl"
+      taglineClass="text-[10px] sm:text-sm md:text-lg lg:text-xl"
+      oneLinerClass="text-[9px] sm:text-xs md:text-sm"
+      showOneLiner={false}
+    />
+  );
+}
+
+// GitHub social preview is 1280 × 640 — basically the OG composition with
+// slightly different aspect, so we reuse the hero composition.
+function GitHubSocialBanner() {
+  return (
+    <div
+      className="relative w-full overflow-hidden"
+      style={{
+        aspectRatio: '1280 / 640',
+        background:
+          'radial-gradient(circle at 50% 30%, #1a2a10 0%, #0a0a0a 60%)',
+      }}
+    >
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={GRID_OVERLAY}
+      />
+      <div
+        className="absolute rounded-full"
+        style={{
+          width: '28%',
+          aspectRatio: '1',
+          top: '10%',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: GLOW_GRADIENT,
+        }}
+      />
+      <div
+        className="absolute rounded-full"
+        style={{
+          width: '10.5%',
+          aspectRatio: '1',
+          top: '20%',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          backgroundColor: '#b4f953',
+          boxShadow: '0 0 60px rgba(180,249,83,0.5)',
+        }}
+      />
+      <div
+        className="absolute"
+        style={{
+          width: '22%',
+          aspectRatio: '1',
+          top: '21%',
+          left: '50%',
+          transform: 'translateX(-50%)',
+        }}
+      >
+        <ObeliskMark />
+      </div>
+      <div
+        className="absolute flex flex-col items-center w-full"
+        style={{ top: '67%' }}
+      >
+        <span className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight">
+          Obelisk
+        </span>
+        <span className="mt-1 text-lc-muted text-xs sm:text-sm md:text-base lg:text-lg">
+          {COPY.tagline}
+        </span>
+      </div>
+      <p
+        className="absolute text-center text-lc-green font-semibold text-[10px] sm:text-xs md:text-sm w-full"
+        style={{ bottom: '6%' }}
+      >
+        {COPY.oneLiner}
+      </p>
+    </div>
+  );
+}
+
+// Square 1080×1080 for Instagram / Mastodon avatars or post thumbnails.
+function SquareBanner() {
+  return (
+    <div
+      className="relative w-full overflow-hidden"
+      style={{
+        aspectRatio: '1 / 1',
+        background:
+          'radial-gradient(circle at 50% 35%, #1a2a10 0%, #0a0a0a 60%)',
+      }}
+    >
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={GRID_OVERLAY}
+      />
+      <div
+        className="absolute rounded-full"
+        style={{
+          width: '54%',
+          aspectRatio: '1',
+          top: '12%',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: GLOW_GRADIENT,
+        }}
+      />
+      <div
+        className="absolute rounded-full"
+        style={{
+          width: '20%',
+          aspectRatio: '1',
+          top: '22%',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          backgroundColor: '#b4f953',
+          boxShadow: '0 0 60px rgba(180,249,83,0.5)',
+        }}
+      />
+      <div
+        className="absolute"
+        style={{
+          width: '42%',
+          aspectRatio: '1',
+          top: '23%',
+          left: '50%',
+          transform: 'translateX(-50%)',
+        }}
+      >
+        <ObeliskMark />
+      </div>
+      <div
+        className="absolute flex flex-col items-center w-full"
+        style={{ top: '70%' }}
+      >
+        <span className="text-3xl sm:text-5xl md:text-6xl font-extrabold tracking-tight">
+          Obelisk
+        </span>
+        <span className="mt-1 text-lc-muted text-xs sm:text-sm md:text-base">
+          {COPY.tagline}
+        </span>
+      </div>
+      <p
+        className="absolute text-center text-lc-green font-semibold text-[10px] sm:text-xs md:text-sm w-full"
+        style={{ bottom: '6%' }}
+      >
+        {COPY.oneLiner}
+      </p>
+    </div>
+  );
+}
+
+// Rasterize a DOM node to PNG and trigger a download. `pixelWidth` lets us
+// upscale to the banner's intended export size regardless of how wide the
+// preview is rendered on screen.
+function DownloadPngButton({
+  targetRef,
+  filename,
+  pixelWidth,
+  label = 'Download PNG',
+}: {
+  targetRef: React.RefObject<HTMLElement | null>;
+  filename: string;
+  pixelWidth?: number;
+  label?: string;
+}) {
+  const [busy, setBusy] = useState(false);
+  return (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={async () => {
+        const node = targetRef.current;
+        if (!node) return;
+        setBusy(true);
+        try {
+          const rect = node.getBoundingClientRect();
+          const pixelRatio = pixelWidth
+            ? Math.max(1, pixelWidth / rect.width)
+            : 2;
+          const dataUrl = await toPng(node, {
+            pixelRatio,
+            cacheBust: true,
+            backgroundColor: '#0a0a0a',
+          });
+          const a = document.createElement('a');
+          a.href = dataUrl;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+        } finally {
+          setBusy(false);
+        }
+      }}
+      className="lc-pill-primary text-xs px-3 py-1 disabled:opacity-60"
+    >
+      {busy ? 'Rendering…' : label}
+    </button>
+  );
+}
+
+function BannerCard({
+  title,
+  spec,
+  children,
+  filename,
+  pixelWidth,
+  extra,
+}: {
+  title: string;
+  spec: string;
+  filename: string;
+  pixelWidth?: number;
+  extra?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  return (
+    <div className="lc-card overflow-hidden">
+      <div ref={ref}>{children}</div>
+      <div className="border-t border-lc-border p-3 flex flex-wrap items-center justify-between gap-3 text-xs text-lc-muted">
+        <span>
+          <span className="text-lc-white font-semibold">{title}</span> · {spec}
+        </span>
+        <div className="flex items-center gap-2">
+          {extra}
+          <DownloadPngButton
+            targetRef={ref}
+            filename={filename}
+            pixelWidth={pixelWidth}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EmbedPreview({
+  title,
+  html,
+  filename,
+  pixelWidth,
+}: {
+  title: string;
+  html: string;
+  filename: string;
+  pixelWidth?: number;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3 gap-3">
+        <h3 className="text-lg font-semibold">{title}</h3>
+        <DownloadPngButton
+          targetRef={ref}
+          filename={filename}
+          pixelWidth={pixelWidth}
+        />
+      </div>
+      <div className="lc-card p-6 mb-3 flex justify-center">
+        <div ref={ref} dangerouslySetInnerHTML={{ __html: html }} />
+      </div>
+      <CodeBlock code={html} />
+    </div>
+  );
+}
+
 export default function MediaKit() {
   return (
     <main className="min-h-screen bg-lc-black text-lc-white">
@@ -188,27 +719,28 @@ export default function MediaKit() {
         <div className="mx-auto max-w-6xl px-4 sm:px-6 py-12 sm:py-20">
           <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-lc-green">
             <span className="inline-block w-2 h-2 rounded-full bg-lc-green lc-glow" />
-            Press & Media
+            Press &amp; Media
           </div>
           <h1 className="mt-4 text-4xl sm:text-6xl font-extrabold tracking-tight">
             Obelisk Media Kit
           </h1>
           <p className="mt-4 max-w-2xl text-base sm:text-lg text-lc-muted">
-            Logos, banners, iconos, paleta y copys listos para usar. Todo lo
-            necesario para escribir, embeber o compartir Obelisk.
+            Logos, banners, icons, palette and copy ready to use. Everything
+            you need to write about, embed or share Obelisk.
           </p>
 
           <nav className="mt-8 flex flex-wrap gap-2 text-sm">
             {[
-              ['#about', 'Sobre Obelisk'],
-              ['#logos', 'Logos & íconos'],
+              ['#about', 'About Obelisk'],
+              ['#logos', 'Logos & icons'],
               ['#banners', 'Banners'],
-              ['#colors', 'Colores'],
-              ['#typography', 'Tipografía'],
-              ['#copy', 'Copys'],
-              ['#embeds', 'HTML embebibles'],
+              ['#colors', 'Colors'],
+              ['#typography', 'Typography'],
+              ['#copy', 'Copy'],
+              ['#embeds', 'HTML embeds'],
               ['#og', 'Open Graph'],
-              ['#guidelines', 'Guías de uso'],
+              ['#contact', 'Contact'],
+              ['#guidelines', 'Guidelines'],
             ].map(([href, label]) => (
               <a
                 key={href}
@@ -226,14 +758,14 @@ export default function MediaKit() {
         {/* About */}
         <Section
           id="about"
-          title="Sobre Obelisk"
-          description="Pitch corto y largo, en inglés y español. Listo para copiar."
+          title="About Obelisk"
+          description="Short and long pitch — English and Spanish, ready to copy."
         >
           <div className="grid gap-4 md:grid-cols-2">
             <div className="lc-card p-5 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs uppercase tracking-widest text-lc-green">
-                  ES — Pitch corto
+                  EN — Short pitch
                 </span>
                 <CopyButton text={COPY.shortPitch} />
               </div>
@@ -242,16 +774,16 @@ export default function MediaKit() {
             <div className="lc-card p-5 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs uppercase tracking-widest text-lc-green">
-                  EN — Short pitch
+                  ES — Pitch corto
                 </span>
-                <CopyButton text={COPY.shortPitchEn} />
+                <CopyButton text={COPY.shortPitchEs} />
               </div>
-              <p className="text-sm text-lc-white">{COPY.shortPitchEn}</p>
+              <p className="text-sm text-lc-white">{COPY.shortPitchEs}</p>
             </div>
             <div className="lc-card p-5 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs uppercase tracking-widest text-lc-green">
-                  ES — Pitch largo
+                  EN — Long pitch
                 </span>
                 <CopyButton text={COPY.longPitch} />
               </div>
@@ -260,11 +792,11 @@ export default function MediaKit() {
             <div className="lc-card p-5 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs uppercase tracking-widest text-lc-green">
-                  EN — Long pitch
+                  ES — Pitch largo
                 </span>
-                <CopyButton text={COPY.longPitchEn} />
+                <CopyButton text={COPY.longPitchEs} />
               </div>
-              <p className="text-sm text-lc-white">{COPY.longPitchEn}</p>
+              <p className="text-sm text-lc-white">{COPY.longPitchEs}</p>
             </div>
           </div>
         </Section>
@@ -272,8 +804,8 @@ export default function MediaKit() {
         {/* Logos */}
         <Section
           id="logos"
-          title="Logos & íconos"
-          description="Click derecho → Guardar imagen como… o usá el botón Descargar."
+          title="Logos & icons"
+          description="Right-click → Save image as… or use the Download button."
         >
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {ASSETS.map((a) => (
@@ -304,7 +836,7 @@ export default function MediaKit() {
                     download={a.download}
                     className="lc-pill-primary text-xs px-3 py-1 shrink-0"
                   >
-                    Descargar
+                    Download
                   </a>
                 </div>
               </div>
@@ -316,67 +848,71 @@ export default function MediaKit() {
         <Section
           id="banners"
           title="Banners"
-          description="Banners renderizados en HTML/CSS — copialos como código o capturalos como imagen."
+          description="Banners rendered in HTML/CSS — copy the snippets, screenshot them, or use the linked PNGs."
         >
           <div className="space-y-6">
-            {/* Banner 1 — hero */}
-            <div className="lc-card overflow-hidden">
-              <div
-                className="relative flex flex-col items-center justify-center text-center p-10 sm:p-16"
-                style={{
-                  background:
-                    'radial-gradient(circle at 50% 30%, #1a2a10 0%, #0a0a0a 60%)',
-                }}
-              >
-                <div
-                  className="pointer-events-none absolute inset-0"
-                  style={{
-                    backgroundImage:
-                      'linear-gradient(rgba(180,249,83,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(180,249,83,0.04) 1px, transparent 1px)',
-                    backgroundSize: '40px 40px',
-                  }}
-                />
-                <div
-                  className="absolute w-40 h-40 rounded-full"
-                  style={{
-                    top: '14%',
-                    background:
-                      'radial-gradient(circle, rgba(180,249,83,0.35) 0%, rgba(180,249,83,0.1) 40%, transparent 70%)',
-                  }}
-                />
-                <div
-                  className="absolute w-16 h-16 rounded-full"
-                  style={{
-                    top: '22%',
-                    backgroundColor: '#b4f953',
-                    boxShadow: '0 0 60px rgba(180,249,83,0.5)',
-                  }}
-                />
-                <h3 className="relative mt-12 text-5xl sm:text-7xl font-extrabold tracking-tight">
-                  Obelisk
-                </h3>
-                <p className="relative mt-2 text-lc-muted text-sm sm:text-lg">
-                  {COPY.tagline}
-                </p>
-                <p className="relative mt-6 text-lc-green font-semibold text-xs sm:text-sm">
-                  {COPY.oneLiner}
-                </p>
-              </div>
-              <div className="border-t border-lc-border p-3 flex items-center justify-between text-xs text-lc-muted">
-                <span>Hero banner — 1200×630 estilo OG</span>
+            <BannerCard
+              title="Hero / Open Graph"
+              spec="1200 × 630 — share preview"
+              filename="obelisk-hero-1200x630.png"
+              pixelWidth={1200}
+              extra={
                 <a
                   href={OG_IMAGE_URL}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="lc-pill-secondary px-3 py-1"
                 >
-                  Ver PNG (Open Graph)
+                  Open OG PNG
                 </a>
-              </div>
-            </div>
+              }
+            >
+              <HeroBanner />
+            </BannerCard>
 
-            {/* Banner 2 — wide pill */}
-            <div className="lc-card overflow-hidden">
+            <BannerCard
+              title="X (Twitter) header"
+              spec="1500 × 500 — profile cover (3:1)"
+              filename="obelisk-x-header-1500x500.png"
+              pixelWidth={1500}
+            >
+              <XHeaderBanner />
+            </BannerCard>
+
+            <BannerCard
+              title="LinkedIn cover"
+              spec="1584 × 396 — profile background (4:1)"
+              filename="obelisk-linkedin-1584x396.png"
+              pixelWidth={1584}
+            >
+              <LinkedInBanner />
+            </BannerCard>
+
+            <BannerCard
+              title="GitHub social preview"
+              spec="1280 × 640 — repository preview"
+              filename="obelisk-github-1280x640.png"
+              pixelWidth={1280}
+            >
+              <GitHubSocialBanner />
+            </BannerCard>
+
+            <BannerCard
+              title="Square / Instagram"
+              spec="1080 × 1080 — post or avatar"
+              filename="obelisk-square-1080x1080.png"
+              pixelWidth={1080}
+            >
+              <SquareBanner />
+            </BannerCard>
+
+            {/* Wide pill — footer / sponsor row */}
+            <BannerCard
+              title="Wide pill"
+              spec="footer / sponsor row"
+              filename="obelisk-wide-pill.png"
+              pixelWidth={1600}
+            >
               <div className="flex items-center gap-4 p-6 sm:p-8 bg-lc-black">
                 <div className="shrink-0 w-12 h-12 rounded-full bg-lc-green flex items-center justify-center text-lc-black font-extrabold">
                   ◊
@@ -390,19 +926,21 @@ export default function MediaKit() {
                   </div>
                 </div>
                 <a
-                  href="https://obelisk.ar"
+                  href={LINKS.site}
                   className="lc-pill-primary px-4 py-2 text-sm hidden sm:inline-block"
                 >
-                  Abrir app →
+                  Open app →
                 </a>
               </div>
-              <div className="border-t border-lc-border p-3 text-xs text-lc-muted">
-                Wide banner — perfecto para footer / sponsor row
-              </div>
-            </div>
+            </BannerCard>
 
-            {/* Banner 3 — minimal mono */}
-            <div className="lc-card overflow-hidden">
+            {/* Minimal mono — for print / merch */}
+            <BannerCard
+              title="Minimal mono"
+              spec="for print / merch"
+              filename="obelisk-minimal-mono.png"
+              pixelWidth={1600}
+            >
               <div className="p-10 sm:p-14 bg-lc-white text-lc-black text-center">
                 <div className="text-3xl sm:text-5xl font-extrabold tracking-tight">
                   OBELISK
@@ -411,18 +949,15 @@ export default function MediaKit() {
                   Nostr-native group chat
                 </div>
               </div>
-              <div className="border-t border-lc-border p-3 text-xs text-lc-muted">
-                Minimal mono — para impresos / merch
-              </div>
-            </div>
+            </BannerCard>
           </div>
         </Section>
 
         {/* Colors */}
         <Section
           id="colors"
-          title="Paleta — La Crypta"
-          description="Tokens del design system. Click en el HEX para copiarlo."
+          title="Palette — La Crypta"
+          description="Design-system tokens. Tap the HEX to copy it."
         >
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {COLORS.map((c) => (
@@ -451,8 +986,8 @@ export default function MediaKit() {
         {/* Typography */}
         <Section
           id="typography"
-          title="Tipografía"
-          description="System UI / Inter para todo. Pesos: 400, 600, 700, 800."
+          title="Typography"
+          description="System UI / Inter for everything. Weights: 400, 600, 700, 800."
         >
           <div className="lc-card p-6 space-y-4">
             <div className="text-5xl font-extrabold tracking-tight">
@@ -463,7 +998,7 @@ export default function MediaKit() {
             </div>
             <div className="text-base">Body · 400 · text-lc-white</div>
             <div className="text-sm text-lc-muted">
-              Muted · 400 · text-lc-muted — usado en descripciones secundarias
+              Muted · 400 · text-lc-muted — used for secondary descriptions
             </div>
             <div className="text-xs uppercase tracking-widest text-lc-green">
               Eyebrow · uppercase · tracking-widest · lc-green
@@ -472,15 +1007,21 @@ export default function MediaKit() {
         </Section>
 
         {/* Copy */}
-        <Section id="copy" title="Copys cortos" description="Frases de uso rápido.">
+        <Section
+          id="copy"
+          title="Short copy"
+          description="Quick-use phrases."
+        >
           <div className="grid gap-3 sm:grid-cols-2">
             {[
-              ['Nombre', COPY.name],
-              ['Tagline (ES)', COPY.tagline],
-              ['Tagline (EN)', COPY.taglineEn],
-              ['One-liner (ES)', COPY.oneLiner],
-              ['One-liner (EN)', COPY.oneLinerEn],
-              ['URL', 'https://obelisk.ar'],
+              ['Name', COPY.name],
+              ['Tagline (EN)', COPY.tagline],
+              ['Tagline (ES)', COPY.taglineEs],
+              ['One-liner (EN)', COPY.oneLiner],
+              ['One-liner (ES)', COPY.oneLinerEs],
+              ['URL', LINKS.site],
+              ['Default relay', LINKS.defaultRelay],
+              ['GitHub', LINKS.github],
             ].map(([label, value]) => (
               <div
                 key={label}
@@ -501,27 +1042,22 @@ export default function MediaKit() {
         {/* Embeds */}
         <Section
           id="embeds"
-          title="HTML embebible"
-          description="Pegá estos snippets en cualquier sitio para enlazar Obelisk con estilo."
+          title="HTML embeds"
+          description="Paste these snippets anywhere to link to Obelisk with style."
         >
           <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-semibold mb-3">Banner pill</h3>
-              <div className="lc-card p-6 mb-3 flex justify-center">
-                <div dangerouslySetInnerHTML={{ __html: EMBED_HTML_BANNER }} />
-              </div>
-              <CodeBlock code={EMBED_HTML_BANNER} />
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-3">
-                Badge &quot;Powered by Obelisk&quot;
-              </h3>
-              <div className="lc-card p-6 mb-3 flex justify-center">
-                <div dangerouslySetInnerHTML={{ __html: EMBED_BADGE }} />
-              </div>
-              <CodeBlock code={EMBED_BADGE} />
-            </div>
+            <EmbedPreview
+              title="Banner pill"
+              html={EMBED_HTML_BANNER}
+              filename="obelisk-banner-pill.png"
+              pixelWidth={1200}
+            />
+            <EmbedPreview
+              title='"Powered by Obelisk" badge'
+              html={EMBED_BADGE}
+              filename="obelisk-powered-by-badge.png"
+              pixelWidth={600}
+            />
           </div>
         </Section>
 
@@ -529,7 +1065,7 @@ export default function MediaKit() {
         <Section
           id="og"
           title="Open Graph"
-          description="Imagen de previsualización generada en runtime y meta tags listos."
+          description="Runtime-generated share preview and ready-to-paste meta tags."
         >
           <div className="lc-card overflow-hidden mb-4">
             <div className="aspect-[1200/630] relative bg-lc-black">
@@ -548,41 +1084,96 @@ export default function MediaKit() {
                 rel="noopener noreferrer"
                 className="lc-pill-secondary px-3 py-1"
               >
-                Abrir en pestaña
+                Open in new tab
               </a>
             </div>
           </div>
           <CodeBlock code={EMBED_OG} />
         </Section>
 
+        {/* Contact */}
+        <Section
+          id="contact"
+          title="Contact &amp; links"
+          description="Where to find us if you need anything else for a story or integration."
+        >
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <a
+              href={LINKS.site}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="lc-card p-5 hover:border-lc-green transition-colors"
+            >
+              <div className="text-xs uppercase tracking-widest text-lc-green mb-1">
+                Website
+              </div>
+              <div className="text-sm text-lc-white truncate">
+                {LINKS.site}
+              </div>
+            </a>
+            <a
+              href={LINKS.github}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="lc-card p-5 hover:border-lc-green transition-colors"
+            >
+              <div className="text-xs uppercase tracking-widest text-lc-green mb-1">
+                GitHub
+              </div>
+              <div className="text-sm text-lc-white truncate">
+                {LINKS.github}
+              </div>
+            </a>
+            <div className="lc-card p-5">
+              <div className="text-xs uppercase tracking-widest text-lc-green mb-1">
+                Default relay
+              </div>
+              <div className="text-sm text-lc-white truncate font-mono">
+                {LINKS.defaultRelay}
+              </div>
+            </div>
+          </div>
+        </Section>
+
         {/* Guidelines */}
         <Section
           id="guidelines"
-          title="Guías de uso"
-          description="Reglas simples para mantener la marca consistente."
+          title="Brand guidelines"
+          description="Simple rules to keep the brand consistent."
         >
           <div className="grid gap-4 md:grid-cols-2">
             <div className="lc-card p-5">
-              <div className="text-lc-green font-semibold mb-2">✓ Sí</div>
+              <div className="text-lc-green font-semibold mb-2">✓ Do</div>
               <ul className="space-y-1 text-sm text-lc-white list-disc list-inside">
-                <li>Usá el logo sobre fondos oscuros (#0a0a0a) idealmente.</li>
                 <li>
-                  Respetá el área de espacio: al menos la altura del símbolo
-                  alrededor.
+                  Use the logo on dark backgrounds (#0a0a0a) whenever possible.
                 </li>
-                <li>Usá el verde lima (#b4f953) solo para acentos / CTAs.</li>
-                <li>Mencioná &quot;Obelisk&quot; con O mayúscula.</li>
+                <li>
+                  Respect the clear-space area: at least the symbol&apos;s
+                  height around it.
+                </li>
+                <li>
+                  Use lime green (#b4f953) only for accents and CTAs.
+                </li>
+                <li>
+                  Write &quot;Obelisk&quot; with a capital O.
+                </li>
               </ul>
             </div>
             <div className="lc-card p-5">
-              <div className="text-red-400 font-semibold mb-2">✕ No</div>
+              <div className="text-red-400 font-semibold mb-2">✕ Don&apos;t</div>
               <ul className="space-y-1 text-sm text-lc-white list-disc list-inside">
-                <li>No deformes ni rotes el logo.</li>
-                <li>No reemplaces el verde por otros colores brillantes.</li>
+                <li>Don&apos;t skew or rotate the logo.</li>
                 <li>
-                  No uses el logo sobre fondos con poco contraste (gris medio).
+                  Don&apos;t replace the green with other bright colors.
                 </li>
-                <li>No agregues sombras, contornos ni gradientes propios.</li>
+                <li>
+                  Don&apos;t place the logo on low-contrast backgrounds
+                  (mid-grays).
+                </li>
+                <li>
+                  Don&apos;t add your own shadows, outlines, or gradients.
+                </li>
               </ul>
             </div>
           </div>
@@ -590,10 +1181,10 @@ export default function MediaKit() {
 
         <footer className="pt-8 border-t border-lc-border text-sm text-lc-muted flex flex-wrap items-center justify-between gap-3">
           <span>
-            ¿Necesitás algo más? Abrí un issue o escribinos vía Nostr.
+            Need anything else? Open an issue or reach out via Nostr.
           </span>
           <Link href="/" className="lc-pill-secondary px-4 py-1">
-            ← Volver al inicio
+            ← Back to home
           </Link>
         </footer>
       </div>

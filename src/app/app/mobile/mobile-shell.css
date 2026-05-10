@@ -252,10 +252,30 @@
   visibility: hidden;
   pointer-events: none;
 }
-/* Sub-screens overlay the carousel at the active position. */
+/* Sub-screens overlay the carousel at the active position. The opaque
+ * background sits on the inner .screen-anim wrapper (not the slot) so the
+ * parent tab still peeks through during the slide-in animation — it only
+ * gets covered as the screen-anim arrives at translateX(0). Without this,
+ * sub-screens like channel/dm-thread/settings-prefs that use the bare
+ * `.screen` class (transparent by design over the shell's ambient gradient)
+ * let the parent tab bleed through.
+ *
+ * The bg replicates the shell's corner radials + base color so a channel /
+ * dm-thread / settings-prefs screen looks visually continuous with the
+ * top-level tabs (which use transparent .screen and let the shell gradient
+ * show through). The drift blob (.obelisk-mobile::before) and grain
+ * (.obelisk-mobile::after) live behind the screens-host at z-0, so the
+ * opaque overlay would cover them anyway — replicating only the radials
+ * lands close enough that the seam disappears. */
 .obelisk-mobile .drag-slot.drag-overlay {
   transform: translateX(0);
   z-index: 1;
+}
+.obelisk-mobile .drag-slot.drag-overlay > .screen-anim {
+  background:
+    radial-gradient(1100px 620px at 85% -8%, rgba(180, 249, 83, 0.14) 0%, transparent 62%),
+    radial-gradient(900px 540px at -5% 105%, rgba(180, 249, 83, 0.10) 0%, transparent 58%),
+    var(--app-bg);
 }
 
 /* ===== header / icon button ===== */
@@ -313,7 +333,8 @@
   flex-shrink: 0;
   border-top: 1px solid var(--app-line-soft);
 }
-.obelisk-mobile .mobile-voice-status-slot:empty {
+.obelisk-mobile .mobile-voice-status-slot:empty,
+.obelisk-mobile .mobile-voice-status-slot.is-hidden {
   display: none;
   border-top: none;
 }
@@ -1095,6 +1116,27 @@
   margin-left: auto;
   font-family: 'JetBrains Mono', monospace;
 }
+.obelisk-mobile .msg-more {
+  width: 28px;
+  height: 28px;
+  margin-right: -6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: var(--app-text-mute);
+  background: transparent;
+  border: none;
+  flex-shrink: 0;
+}
+.obelisk-mobile .msg-more svg {
+  width: 18px;
+  height: 18px;
+}
+.obelisk-mobile .msg-more:active {
+  background: var(--app-surface);
+  color: var(--app-text);
+}
 .obelisk-mobile .msg-text {
   font-size: 15px;
   line-height: 1.5;
@@ -1110,6 +1152,55 @@
   border-radius: 4px;
   color: var(--app-accent);
   border: 1px solid var(--app-line);
+}
+.obelisk-mobile .msg.pending {
+  opacity: 0.6;
+}
+.obelisk-mobile .msg.failed .msg-text {
+  color: rgba(248, 113, 113, 0.9);
+}
+.obelisk-mobile .msg-spinner {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1.5px solid var(--app-text-mute);
+  border-top-color: transparent;
+  opacity: 0.7;
+  animation: obelisk-mobile-spin 0.8s linear infinite;
+}
+.obelisk-mobile .msg-failed {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 11px;
+  color: rgb(248, 113, 113);
+}
+.obelisk-mobile .msg-failed-label {
+  opacity: 0.85;
+}
+.obelisk-mobile .msg-retry {
+  background: rgba(248, 113, 113, 0.18);
+  color: rgb(248, 113, 113);
+  border: none;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+.obelisk-mobile .msg-retry:active {
+  background: rgba(248, 113, 113, 0.32);
+}
+.obelisk-mobile .msg-dismiss {
+  background: transparent;
+  color: rgba(248, 113, 113, 0.7);
+  border: none;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0 4px;
 }
 
 .obelisk-mobile .reactions {
@@ -1155,9 +1246,127 @@
 
 .obelisk-mobile .composer {
   /* Bottom-nav owns the safe-area inset, so the composer sits flush above
-     it with just enough breathing room. */
+     it with just enough breathing room. position:relative anchors the
+     mention popup, which sits absolutely above the composer-inner. */
   padding: 8px 12px;
   flex-shrink: 0;
+  position: relative;
+}
+.obelisk-mobile .composer-mention-popup {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: calc(100% - 4px);
+  max-height: 220px;
+  overflow-y: auto;
+  background: var(--app-surface);
+  border: 1px solid var(--app-line);
+  border-radius: 12px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  z-index: 30;
+  padding: 4px;
+}
+.obelisk-mobile .composer-mention-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: var(--app-text);
+}
+.obelisk-mobile .composer-mention-row.active,
+.obelisk-mobile .composer-mention-row:active {
+  background: var(--app-bg);
+}
+.obelisk-mobile .composer-mention-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.obelisk-mobile .composer-mention-avatar.fallback {
+  background: var(--app-line);
+  color: var(--app-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 12px;
+}
+.obelisk-mobile .composer-mention-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.obelisk-mobile .composer-mention-key {
+  font-size: 11px;
+  color: var(--app-text-mute);
+  flex-shrink: 0;
+}
+.obelisk-mobile .composer-reply {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--app-surface);
+  border: 1px solid var(--app-line);
+  border-radius: 12px;
+  padding: 6px 8px 6px 12px;
+  margin-bottom: 6px;
+  border-left: 2px solid var(--app-accent);
+}
+.obelisk-mobile .composer-reply-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.obelisk-mobile .composer-reply-label {
+  font-size: 11px;
+  color: var(--app-text-mute);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.obelisk-mobile .composer-reply-author {
+  color: var(--app-accent);
+  font-weight: 600;
+}
+.obelisk-mobile .composer-reply-text {
+  font-size: 12px;
+  color: var(--app-text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.obelisk-mobile .composer-reply-close {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--app-text-mute);
+  background: transparent;
+  border: none;
+  flex-shrink: 0;
+}
+.obelisk-mobile .composer-reply-close svg {
+  width: 14px;
+  height: 14px;
+}
+.obelisk-mobile .composer-reply-close:active {
+  background: var(--app-bg);
+  color: var(--app-text);
 }
 .obelisk-mobile .composer-inner {
   background: var(--app-surface);
@@ -1731,11 +1940,15 @@
 }
 .obelisk-mobile .dm-bubble {
   max-width: 78%;
-  padding: 9px 13px 24px;
+  /* min-width fits "16:29" + a status spinner with padding; without it,
+     short messages let the timestamp row collide with text. */
+  min-width: 88px;
+  padding: 8px 12px 8px;
   border-radius: 16px;
   font-size: 15px;
   line-height: 1.45;
-  position: relative;
+  display: flex;
+  flex-direction: column;
   word-wrap: break-word;
   overflow-wrap: anywhere;
 }
@@ -1752,17 +1965,77 @@
   border-bottom-right-radius: 4px;
   box-shadow: 0 0 18px rgba(180, 249, 83, 0.18);
 }
-.obelisk-mobile .dm-bubble-time {
-  position: absolute;
-  bottom: 5px;
-  right: 11px;
+.obelisk-mobile .dm-bubble-text {
+  /* Free-flow text; the bubble (flex column) grows to fit it up to
+     `max-width`. Empty rule kept for documentation. */
+}
+.obelisk-mobile .dm-bubble-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+  align-self: flex-end;
   font-size: 10.5px;
   font-family: 'JetBrains Mono', monospace;
   opacity: 0.6;
 }
-.obelisk-mobile .dm-bubble.incoming .dm-bubble-time {
+.obelisk-mobile .dm-bubble.incoming .dm-bubble-meta {
   color: var(--app-text-mute);
   opacity: 1;
+}
+.obelisk-mobile .dm-bubble.pending {
+  opacity: 0.55;
+}
+.obelisk-mobile .dm-bubble.failed {
+  opacity: 0.9;
+  border: 1px solid rgba(248, 113, 113, 0.55);
+}
+.obelisk-mobile .dm-bubble-spinner {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  border-top-color: transparent;
+  opacity: 0.7;
+  animation: obelisk-mobile-spin 0.8s linear infinite;
+}
+@keyframes obelisk-mobile-spin {
+  to { transform: rotate(360deg); }
+}
+.obelisk-mobile .dm-bubble-failed {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  align-self: flex-end;
+  font-size: 11px;
+  color: rgb(248, 113, 113);
+}
+.obelisk-mobile .dm-bubble-failed-label {
+  opacity: 0.85;
+}
+.obelisk-mobile .dm-bubble-retry {
+  background: rgba(248, 113, 113, 0.18);
+  color: rgb(248, 113, 113);
+  border: none;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+.obelisk-mobile .dm-bubble-retry:active {
+  background: rgba(248, 113, 113, 0.32);
+}
+.obelisk-mobile .dm-bubble-dismiss {
+  background: transparent;
+  color: rgba(248, 113, 113, 0.7);
+  border: none;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0 4px;
 }
 .obelisk-mobile .dm-encryption-pill {
   align-self: center;
