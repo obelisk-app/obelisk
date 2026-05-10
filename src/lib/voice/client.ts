@@ -386,6 +386,21 @@ export class VoiceClient {
     this.events = events;
   }
 
+  /**
+   * Multicast subscribers for remote-track changes. `events.onRemoteTracksChange`
+   * is single-callback (owned by the React room component while it's
+   * mounted); listeners registered here run alongside it so surfaces
+   * outside the room — e.g. the always-mounted `BackgroundVoiceAudio`
+   * sink that keeps audio playing while the user views another channel —
+   * can react to the same updates without fighting for `events`.
+   */
+  private remoteTracksListeners = new Set<(t: RemoteTrack[]) => void>();
+  subscribeRemoteTracks(cb: (t: RemoteTrack[]) => void): () => void {
+    this.remoteTracksListeners.add(cb);
+    try { cb(Array.from(this.remoteTracks.values())); } catch { /* swallow */ }
+    return () => { this.remoteTracksListeners.delete(cb); };
+  }
+
   /** Snapshot helpers so a freshly-bound owner can hydrate UI state without
    *  waiting for the next event tick. */
   getParticipants(): string[] {
@@ -880,7 +895,7 @@ export class VoiceClient {
     this.localVideoClaimedAt.clear();
     this.currentRoster = [];
     this.remoteTracks.clear();
-    this.events.onRemoteTracksChange?.([]);
+    this.emitRemoteTracks();
 
     // Stop every speaking detector and clear the store entry so orbs go dark.
     for (const [pk, det] of this.speakingDetectors) {
@@ -1910,7 +1925,11 @@ export class VoiceClient {
   // ── helpers ────────────────────────────────────────────────────────────
 
   private emitRemoteTracks() {
-    this.events.onRemoteTracksChange?.(Array.from(this.remoteTracks.values()));
+    const arr = Array.from(this.remoteTracks.values());
+    this.events.onRemoteTracksChange?.(arr);
+    for (const cb of this.remoteTracksListeners) {
+      try { cb(arr); } catch { /* swallow */ }
+    }
   }
 
   private emitLocal() {

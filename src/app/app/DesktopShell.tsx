@@ -47,6 +47,7 @@ import RelayAdminPanel from '@/components/admin/RelayAdminPanel';
 import VoiceRoom from '@/components/voice/VoiceRoom';
 import ForumView from '@/components/chat/ForumView';
 import VoiceStatusBar from '@/components/voice/VoiceStatusBar';
+import BackgroundVoiceAudio from '@/components/voice/BackgroundVoiceAudio';
 import { useVoiceStore } from '@/store/voice';
 import { useReadStateStore, type InboxEvent } from '@/store/read-state';
 import { useInboxUnreadCount, useChannelHighlights } from '@/lib/read-state/selectors';
@@ -239,6 +240,7 @@ export default function AppShell() {
     >
       <MessageZapModal />
       <RelayAccessModal />
+      <BackgroundVoiceAudio />
       <RelayTopBar
         relay={relay}
         onOpenSidebar={() => setSidebarOpen(true)}

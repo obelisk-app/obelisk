@@ -53,6 +53,7 @@ import {
 import LoginModal from '../LoginModal';
 import VoiceRoom from '@/components/voice/VoiceRoom';
 import VoiceStatusBar from '@/components/voice/VoiceStatusBar';
+import BackgroundVoiceAudio from '@/components/voice/BackgroundVoiceAudio';
 import { subscribeVoiceJump } from '@/lib/voice/jump-to-voice';
 import MessageContent from '@/components/chat/MessageContent';
 import { MentionText } from '@/components/chat/MentionText';
@@ -5103,6 +5104,7 @@ export default function MobileShell() {
       onTouchEnd={onTouchEnd}
       onTouchCancel={onTouchCancel}
     >
+      <BackgroundVoiceAudio />
       <div className="screens-host" ref={screensHostRef}>
         <div ref={dragLayerRef} className={`drag-layer ${isDragging ? 'is-dragging' : ''}`}>
           {/* All four top-level screens are persistently mounted with stable
