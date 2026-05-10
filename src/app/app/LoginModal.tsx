@@ -21,7 +21,8 @@ import {
   LoginModal as SdkLoginModal,
   type LoginMethodId,
 } from '@nostr-wot/ui';
-import { nip19, getPublicKey } from 'nostr-tools';
+import { getPublicKey } from 'nostr-tools/pure';
+import { nsecToBytes, nsecToHex as sdkNsecToHex } from '@nostr-wot/data';
 import type { SVGProps } from 'react';
 import { nostrActions } from '@/lib/nostr-bridge';
 
@@ -59,19 +60,18 @@ const KeyIcon = (p: SVGProps<SVGSVGElement>) => (
 );
 
 function nsecToHex(nsec: string): { skHex: string; pkHex: string } {
-  const decoded = nip19.decode(nsec);
-  if (decoded.type !== 'nsec') throw new Error('Invalid nsec');
-  const sk = decoded.data as Uint8Array;
-  const skHex = Array.from(sk).map((b) => b.toString(16).padStart(2, '0')).join('');
+  const sk = nsecToBytes(nsec);
+  if (!sk) throw new Error('Invalid nsec');
+  const skHex = sdkNsecToHex(nsec);
+  if (!skHex) throw new Error('Invalid nsec');
   const pkHex = getPublicKey(sk);
   return { skHex, pkHex };
 }
 
 function nsecToSkHex(nsec: string): string {
-  const decoded = nip19.decode(nsec);
-  if (decoded.type !== 'nsec') throw new Error('Invalid nsec');
-  const sk = decoded.data as Uint8Array;
-  return Array.from(sk).map((b) => b.toString(16).padStart(2, '0')).join('');
+  const skHex = sdkNsecToHex(nsec);
+  if (!skHex) throw new Error('Invalid nsec');
+  return skHex;
 }
 
 async function routeToBridge(args: {

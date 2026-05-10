@@ -1,78 +1,29 @@
 /**
- * Browser-side Nostr read primitives. Foundation for the migration off NDK
- * for read-path traffic — DM modules and non-DM consumers (profile reads,
- * follows, follower lists, user notes) all share this pool + verifier.
+ * Browser-side Nostr read primitives. Foundation for read-path traffic —
+ * DM modules and non-DM consumers (profile reads, follows, follower lists,
+ * user notes) all share this pool + verifier.
  *
  * Browser-only: uses the global WebSocket. Server-side relay reads live in
  * src/lib/profile-sync.ts, which wires nostr-tools to `ws`.
+ *
+ * The pool itself, and the WebSocket subclass that coerces binary frames
+ * to UTF-8, now live in `@nostr-wot/data`. This module is a thin Obelisk
+ * adapter that:
+ *   1. Constructs a SimplePool with the SDK's TextCoercingWebSocket.
+ *   2. Re-exports `verifyNostrEvent` (a verify wrapper that strips the
+ *      nostr-tools verification cache before re-checking — needed so a
+ *      tampered `{ ...signedEvent, sig: other }` can't pass the cached
+ *      verified flag).
  */
 
 import { SimplePool } from 'nostr-tools/pool';
 import { verifyEvent, verifiedSymbol, type Event as NostrEvent } from 'nostr-tools/pure';
+import { TextCoercingWebSocket } from '@nostr-wot/data';
+
+// Re-export so existing call sites (`@/lib/nostr-pool`) keep compiling.
+export { TextCoercingWebSocket };
 
 let pool: SimplePool | null = null;
-
-/**
- * Some Nostr relays push EVENT/EOSE/NOTICE messages as binary WebSocket
- * frames (Blob or ArrayBuffer) — usually because they're behind a
- * compressing proxy or because they send NIP-42 AUTH challenges in
- * binary mode. nostr-tools v2 (`pool.js#getSubscriptionId`) does
- * `json.slice(0, 22).indexOf('"EVENT"')` without first checking that
- * `json` is a string, and crashes with `TypeError: ...indexOf is not a
- * function` for every binary message. The exception bubbles out of the
- * native `onmessage` handler, which means *every* event from such a
- * relay is silently dropped — the user sees an empty inbox even though
- * messages are arriving.
- *
- * The fix: subclass WebSocket and intercept `onmessage` so we coerce
- * `Blob`/`ArrayBuffer` payloads into UTF-8 strings before nostr-tools
- * touches them. SimplePool's constructor accepts a `websocketImpl`
- * option for exactly this kind of injection.
- */
-export class TextCoercingWebSocket extends WebSocket {
-  constructor(url: string | URL, protocols?: string | string[]) {
-    super(url, protocols);
-    this.binaryType = 'arraybuffer';
-  }
-  set onmessage(handler: ((ev: MessageEvent) => void) | null) {
-    if (!handler) {
-      super.onmessage = null;
-      return;
-    }
-    super.onmessage = (ev: MessageEvent) => {
-      const data = ev.data;
-      if (typeof data === 'string') {
-        handler(ev);
-        return;
-      }
-      // Coerce binary → text. ArrayBuffer is the common case (binaryType
-      // = 'arraybuffer' above guarantees we never get a Blob from frames
-      // we initiate), but we keep the Blob branch for safety in case a
-      // proxy somewhere downgrades the binaryType.
-      try {
-        if (data instanceof ArrayBuffer) {
-          const text = new TextDecoder('utf-8').decode(data);
-          handler(new MessageEvent(ev.type, { data: text, origin: ev.origin, lastEventId: ev.lastEventId, source: ev.source }));
-          return;
-        }
-        if (typeof Blob !== 'undefined' && data instanceof Blob) {
-          void data.text().then((text) => {
-            handler(new MessageEvent(ev.type, { data: text, origin: ev.origin, lastEventId: ev.lastEventId, source: ev.source }));
-          });
-          return;
-        }
-      } catch (err) {
-        console.warn('[nostr-pool] failed to coerce binary frame:', err);
-      }
-      // Unknown payload type — let the original handler decide what to
-      // do. Safer than dropping a message we don't understand.
-      handler(ev);
-    };
-  }
-  get onmessage(): ((ev: MessageEvent) => void) | null {
-    return super.onmessage;
-  }
-}
 
 export function getNostrPool(): SimplePool {
   if (!pool) {

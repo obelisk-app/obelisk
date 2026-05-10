@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { nip19 } from 'nostr-tools';
+import { hexToNpub } from '@nostr-wot/data';
 import { usePubkey, useProfile, useSession } from '@nostr-wot/data/react';
 import { getBridge } from '@/lib/nostr-bridge';
 import { useTranslation } from '@/i18n/context';
@@ -217,5 +217,5 @@ export default function Navbar(_props: { onLoginSuccess?: () => void } = {}) {
 }
 
 function safeNpub(pubkeyHex: string): string {
-  try { return nip19.npubEncode(pubkeyHex); } catch { return ''; }
+  try { return hexToNpub(pubkeyHex); } catch { return ''; }
 }

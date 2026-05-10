@@ -4,8 +4,7 @@ import { Fragment, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { useChatStore } from '@/store/chat';
 import { useToastStore } from '@/store/toast';
 import { useModerationStore } from '@/store/moderation';
-import { formatPubkey, hexToNpub as pubkeyToNpub } from '@nostr-wot/data';
-import { nip19 } from 'nostr-tools';
+import { formatPubkey, hexToNpub, hexToNpub as pubkeyToNpub } from '@nostr-wot/data';
 import { useProfile, usePubkey } from '@nostr-wot/data/react';
 const useUserMetadata = useProfile;
 const useMyPubkey = usePubkey;
@@ -118,7 +117,7 @@ export default function ProfilePopover({ pubkey, onClose }: {
   }, [onClose]);
 
   let npub = '';
-  try { npub = nip19.npubEncode(pubkey); } catch {}
+  try { npub = hexToNpub(pubkey); } catch {}
   const isBot = !!member?.isBot || !npub;
   const safeFallback = npub ? formatPubkey(pubkey) : pubkey;
   const displayName = member?.displayName || safeFallback;

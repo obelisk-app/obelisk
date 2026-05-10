@@ -59,7 +59,7 @@ import MentionAutocomplete from '@/components/chat/MentionAutocomplete';
 import SlashCommandAutocomplete, { SLASH_COMMANDS, type SlashCommand } from '@/components/chat/SlashCommandAutocomplete';
 import SlashCommandScaffold, { scaffoldMentionSlotQuery } from '@/components/chat/SlashCommandScaffold';
 import { filterMembers } from '@/lib/mentions';
-import { nip19 } from 'nostr-tools';
+import { hexToNpub, npubToHex } from '@nostr-wot/data';
 import {
   useChannelLayout,
   useRelayOperatorPubkey,
@@ -1915,7 +1915,7 @@ function ChatPanel({
     const cursor = ta.selectionStart ?? draft.length;
     const before = draft.slice(0, cursor);
     const after = draft.slice(cursor);
-    const token = `nostr:${nip19.npubEncode(member.pubkey)} `;
+    const token = `nostr:${hexToNpub(member.pubkey)} `;
     let replaced: string;
     if (/@(\w*)$/.test(before)) {
       replaced = before.replace(/@(\w*)$/, () => token);
@@ -3089,15 +3089,12 @@ function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClose: () 
     let hex = newMember.trim();
     if (!hex) return;
     if (hex.startsWith('npub1')) {
-      try {
-        const { nip19 } = await import('nostr-tools');
-        const decoded = nip19.decode(hex);
-        if (decoded.type !== 'npub') throw new Error('Not an npub');
-        hex = decoded.data as string;
-      } catch (err) {
-        setMemberErr((err as Error).message);
+      const decoded = npubToHex(hex);
+      if (!decoded) {
+        setMemberErr('Not an npub');
         return;
       }
+      hex = decoded;
     }
     if (!/^[0-9a-f]{64}$/i.test(hex)) {
       setMemberErr('Provide an npub or 64-char hex pubkey');

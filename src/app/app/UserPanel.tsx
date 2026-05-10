@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { nip19 } from 'nostr-tools';
+import { hexToNpub } from '@nostr-wot/data';
 import { nostrActions } from '@/lib/nostr-bridge';
 import { useProfile, usePublishProfile } from '@nostr-wot/data/react';
 import BlossomImageInput from '@/components/BlossomImageInput';
@@ -42,7 +42,7 @@ export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, ini
   }, [editing]);
 
   const npub = (() => {
-    try { return nip19.npubEncode(pubkey); } catch { return null; }
+    try { return hexToNpub(pubkey); } catch { return null; }
   })();
   const displayName = meta?.displayName || meta?.name || pubkey.slice(0, 10);
 

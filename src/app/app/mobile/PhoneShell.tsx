@@ -68,7 +68,7 @@ import {
 } from '@/lib/relay-branding';
 import BlossomImageInput from '@/components/BlossomImageInput';
 import RelayAdminPanel from '@/components/admin/RelayAdminPanel';
-import { nip19 } from 'nostr-tools';
+import { npubToHex } from '@nostr-wot/data';
 import { useNotificationStore, type InboxEvent } from '@/store/notification';
 import { useChatStore } from '@/store/chat';
 import { useDMStore } from '@/store/dm';
@@ -1561,14 +1561,12 @@ function ChannelSettingsSheet({
     let hex = newMember.trim();
     if (!hex) return;
     if (hex.startsWith('npub1')) {
-      try {
-        const decoded = nip19.decode(hex);
-        if (decoded.type !== 'npub') throw new Error('Not an npub');
-        hex = decoded.data as string;
-      } catch (ex) {
-        setMemberErr((ex as Error).message);
+      const decoded = npubToHex(hex);
+      if (!decoded) {
+        setMemberErr('Not an npub');
         return;
       }
+      hex = decoded;
     }
     if (!/^[0-9a-f]{64}$/i.test(hex)) {
       setMemberErr('Provide an npub or 64-char hex pubkey');
@@ -3358,18 +3356,7 @@ function ComposeDmScreen({ back, selectPeer }: { back: () => void; selectPeer: (
 
   const recent = useMemo(() => Object.keys(dms).slice(0, 20), [dms]);
 
-  const tryNpub = (input: string): string | null => {
-    const t = input.trim();
-    if (/^[0-9a-f]{64}$/i.test(t)) return t.toLowerCase();
-    try {
-      const decoded = nip19.decode(t);
-      if (decoded.type === 'npub') return decoded.data as string;
-      if (decoded.type === 'nprofile') return (decoded.data as { pubkey: string }).pubkey;
-    } catch { /* fallthrough */ }
-    return null;
-  };
-
-  const decoded = tryNpub(query);
+  const decoded = npubToHex(query);
 
   return (
     <div className="screen compose-dm-screen active" data-screen="compose-dm">

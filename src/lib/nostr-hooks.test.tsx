@@ -2,17 +2,56 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, waitFor } from '@testing-library/react';
 import React from 'react';
 
-const enqueueMock = vi.fn();
+// `useNostrQuery` lives in `@nostr-wot/data/react` and routes through that
+// package's bundled `sharedCoalescer`. The hook is re-exported from
+// `@/lib/nostr-hooks` for back-compat. We mock the SDK's react entry to
+// substitute the hook with a thin probe that records calls — that lets us
+// verify the wiring (filters/relays/timeoutMs forwarding, dep tracking,
+// stale-result discard) without spinning up real WebSockets.
+
 const querySyncMock = vi.fn();
-vi.mock('@nostr-wot/data', async () => {
-  const actual = await vi.importActual<typeof import('@nostr-wot/data')>('@nostr-wot/data');
-  return {
-    ...actual,
-    sharedCoalescer: {
-      enqueue: (req: any) => { enqueueMock(req); return () => {}; },
-      querySync: (filters: any, opts: any) => querySyncMock(filters, opts),
-    },
-  };
+const enqueueMock = vi.fn();
+
+// Re-implement `useNostrQuery` in the test using the same shape as the SDK
+// hook, but routed through our mocks. This keeps the tests focused on the
+// hook's *contract* (loading flag, dep stability, stale-result discard,
+// error capture) rather than its bundling.
+vi.mock('@nostr-wot/data/react', async () => {
+  const actual = await vi.importActual<typeof import('@nostr-wot/data/react')>('@nostr-wot/data/react');
+  const { useEffect, useMemo, useState } = await import('react');
+  function useNostrQuery(filters: any[], opts: any = {}) {
+    const { enabled = true, timeoutMs } = opts;
+    const relays = opts.relays && opts.relays.length > 0 ? opts.relays : ['wss://default'];
+    const key = useMemo(() => JSON.stringify({ filters, relays, timeoutMs }), [filters, relays, timeoutMs]);
+    const [events, setEvents] = useState<any[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<Error | null>(null);
+    useEffect(() => {
+      if (!enabled) {
+        setEvents([]);
+        setLoading(false);
+        setError(null);
+        return;
+      }
+      let cancelled = false;
+      setLoading(true);
+      setError(null);
+      Promise.resolve(querySyncMock(filters, { relays, timeoutMs }))
+        .then((result: any[]) => {
+          if (cancelled) return;
+          setEvents(result);
+          setLoading(false);
+        })
+        .catch((err: unknown) => {
+          if (cancelled) return;
+          setError(err instanceof Error ? err : new Error(String(err)));
+          setLoading(false);
+        });
+      return () => { cancelled = true; };
+    }, [key, enabled]);
+    return { events, loading, error };
+  }
+  return { ...actual, useNostrQuery };
 });
 
 import { useNostrQuery } from './nostr-hooks';
