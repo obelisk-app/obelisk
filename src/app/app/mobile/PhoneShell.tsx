@@ -4525,6 +4525,12 @@ export default function MobileShell() {
   // newly-mounted screen doesn't double-animate (the drag layer already
   // animated it into place).
   const suppressSlideRef = useRef(false);
+  // Remembers the last sub-screen the user was on for each top-level tab so
+  // that tapping that tab's bottom-nav item from a different tab restores the
+  // user to where they left off (e.g. server>channelA → DMs → tap Servers
+  // returns to channelA, not the bare server list). Tapping the same tab's
+  // button while already inside it still pops to the bare top-level.
+  const lastSubScreenByTabRef = useRef<Partial<Record<ScreenName, NavState>>>({});
 
   // ── navigation helpers ───────────────────────────────────────────────
   // We update `useChatStore.activeChannelId` / `useDMStore.activeDMPubkey`
@@ -4565,6 +4571,51 @@ export default function MobileShell() {
       (prev === 'settings-profile' && screen === 'settings-prefs') ||
       (prev === 'settings-prefs' && screen === 'settings-profile');
     if (isSettingsTabSwitch) suppressSlideRef.current = true;
+
+    // Tab-aware "remember where I was" logic. If the user is leaving one
+    // top-level tab (or any of its sub-screens) for a *different* top-level
+    // tab, snapshot the current nav so a return tap can restore it. Sheets
+    // are transient overlays — collapse them to their underlying base screen
+    // before remembering.
+    const prevParent = NAV_ORDER.includes(prev) ? prev : (SUB_TO_NAV[prev] ?? null);
+    const targetIsTopLevel = NAV_ORDER.includes(screen);
+    if (prevParent && targetIsTopLevel && prevParent !== screen) {
+      if (NAV_ORDER.includes(prev)) {
+        // Leaving from the bare tab → no sub-screen to remember; clear any
+        // stale memory so the next return doesn't restore an old position.
+        delete lastSubScreenByTabRef.current[prevParent];
+      } else if (prev === 'msg-actions' || prev === 'zap-modal') {
+        const base = navRef.current.baseScreen;
+        if (base) {
+          lastSubScreenByTabRef.current[prevParent] = {
+            ...navRef.current,
+            screen: base,
+            baseScreen: null,
+            msgContext: null,
+          };
+        }
+      } else {
+        lastSubScreenByTabRef.current[prevParent] = navRef.current;
+      }
+    }
+
+    // When tapping a *different* tab's bottom-nav item, restore that tab's
+    // remembered sub-screen if any. Tapping the active tab's button while
+    // already inside one of its sub-screens still pops to the bare tab.
+    if (targetIsTopLevel && prevParent !== screen) {
+      const remembered = lastSubScreenByTabRef.current[screen];
+      if (remembered) {
+        useChatStore.setState({
+          activeChannelId: remembered.screen === 'channel' ? remembered.groupId : null,
+        });
+        useDMStore.setState({
+          activeDMPubkey: remembered.screen === 'dm-thread' ? remembered.dmPeer : null,
+        });
+        pushNav(() => remembered, dir);
+        return;
+      }
+    }
+
     if (screen !== 'channel') useChatStore.setState({ activeChannelId: null });
     if (screen !== 'dm-thread') useDMStore.setState({ activeDMPubkey: null });
     pushNav((n) => ({ ...n, screen, baseScreen: null, msgContext: null }), dir);
@@ -4663,7 +4714,15 @@ export default function MobileShell() {
         const isSettingsTabSwitch =
           (prev === 'settings-profile' && next.screen === 'settings-prefs') ||
           (prev === 'settings-prefs' && next.screen === 'settings-profile');
-        if (isSettingsTabSwitch) {
+        // Sheets (msg-actions / zap-modal) float over a base screen with their
+        // own vertical slide-up animation. Any popstate that opens or closes a
+        // sheet (or hops between two sheets) must NOT also animate the base
+        // layer — otherwise the channel underneath slides laterally while the
+        // sheet appears/disappears, which reads as a glitchy refresh.
+        const isSheetTransition =
+          prev === 'msg-actions' || prev === 'zap-modal' ||
+          next.screen === 'msg-actions' || next.screen === 'zap-modal';
+        if (isSettingsTabSwitch || isSheetTransition) {
           suppressSlideRef.current = true;
           setSlideDir(null);
         } else {
@@ -4775,24 +4834,46 @@ export default function MobileShell() {
         layer.style.transition = TRANSITION;
         layer.style.transform = `translateX(${targetTx}px)`;
       }
+      // Snapshot where the user is leaving from so a return swipe/tap to this
+      // tab can restore the same sub-screen. Done before the timeout so the
+      // ref is updated synchronously with the user's commit gesture.
+      const leavingFrom = navRef.current.screen;
+      const leavingParent = NAV_ORDER.includes(leavingFrom)
+        ? leavingFrom
+        : (SUB_TO_NAV[leavingFrom] ?? null);
+      if (leavingParent && leavingParent !== action.target) {
+        if (NAV_ORDER.includes(leavingFrom)) {
+          delete lastSubScreenByTabRef.current[leavingParent];
+        } else if (leavingFrom !== 'msg-actions' && leavingFrom !== 'zap-modal') {
+          lastSubScreenByTabRef.current[leavingParent] = navRef.current;
+        }
+      }
       window.setTimeout(() => {
         suppressSlideRef.current = true;
-        // Land on the bare top-level. A previous version restored the target
-        // tab's last-visited sub-screen here (so server>channelA → DMs →
-        // swipe-right would re-enter channelA), but that re-entry happened
-        // AFTER the visual swipe had already settled on the bare tab — the
-        // channel popped on top, which read as a glitchy refresh. The
-        // drag-prev/drag-next slots only ever show `renderTopLevelScreen`,
-        // not the remembered sub-screen, so previewing it during the swipe
-        // wasn't possible without re-architecting the carousel. Lands-on-bare
-        // is the consistent option: what you see during the swipe is what you
-        // get on commit.
-        useChatStore.setState({ activeChannelId: null });
-        useDMStore.setState({ activeDMPubkey: null });
-        pushNav(
-          (n) => ({ ...n, screen: action.target, baseScreen: null, msgContext: null }),
-          action.dir,
-        );
+        // Restore the target tab's last sub-screen if we have one. The drag
+        // slots only render the bare top-level (renderTopLevelScreen), so
+        // during the swipe the user sees the bare tab sliding in — then the
+        // sub-screen overlay appears on top once we push it. There's still a
+        // brief visual seam there, but the destination matches the user's
+        // expectation ("take me back to the channel I was reading"), which
+        // is the more important property.
+        const remembered = lastSubScreenByTabRef.current[action.target];
+        if (remembered) {
+          useChatStore.setState({
+            activeChannelId: remembered.screen === 'channel' ? remembered.groupId : null,
+          });
+          useDMStore.setState({
+            activeDMPubkey: remembered.screen === 'dm-thread' ? remembered.dmPeer : null,
+          });
+          pushNav(() => remembered, action.dir);
+        } else {
+          useChatStore.setState({ activeChannelId: null });
+          useDMStore.setState({ activeDMPubkey: null });
+          pushNav(
+            (n) => ({ ...n, screen: action.target, baseScreen: null, msgContext: null }),
+            action.dir,
+          );
+        }
         setIsDragging(false);
       }, 240);
     } else {
@@ -4890,9 +4971,13 @@ export default function MobileShell() {
     pushNav((n) => ({ ...n, screen: 'member-list' }));
   }, [pushNav]);
   const openMsgActions = useCallback((msg: { id: string; pubkey: string; content: string }) => {
+    // The sheet animates in vertically on top of the base screen — suppress the
+    // default forward slide so the underlying channel doesn't lateral-slide too.
+    suppressSlideRef.current = true;
     pushNav((n) => ({ ...n, baseScreen: n.screen, screen: 'msg-actions', msgContext: msg }));
   }, [pushNav]);
   const openZap = useCallback((msg: { id: string; pubkey: string; content: string }) => {
+    suppressSlideRef.current = true;
     pushNav((n) => ({ ...n, baseScreen: n.screen === 'msg-actions' ? n.baseScreen : n.screen, screen: 'zap-modal', msgContext: msg }));
   }, [pushNav]);
   const closeSheet = useCallback(() => {
