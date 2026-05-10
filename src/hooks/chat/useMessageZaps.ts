@@ -9,7 +9,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools/pure';
 import { sharedCoalescer, getDefaultRelays } from '@nostr-wot/data';
-import { validateZapReceipt, type RawNostrEvent } from '@/lib/wallet/zap-receipt';
+import { validateZapReceipt, type RawNostrEvent } from '@nostr-wot/wallet';
 
 export interface MessageZapTotal {
   totalSats: number;

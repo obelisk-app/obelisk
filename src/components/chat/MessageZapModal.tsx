@@ -3,10 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useMessageZapStore } from '@/store/messageZap';
 import { useToastStore } from '@/store/toast';
-import { isWebLNAvailable, zapMessageViaWebLN } from '@/lib/wallet/webln-zap';
-import { bridgeZapRequestSigner } from '@/lib/wallet/bridge-zap-signer';
+import { isWebLNAvailable, zapViaWebLN } from '@nostr-wot/wallet';
+import type { NostrSigner } from '@nostr-wot/signers';
 import { getDefaultRelays } from '@nostr-wot/data';
-import { useProfile } from '@nostr-wot/data/react';
+import { useProfile, useSigner } from '@nostr-wot/data/react';
 
 const QUICK_AMOUNTS = [21, 100, 500, 1000, 5000, 21000];
 
@@ -28,6 +28,7 @@ export default function MessageZapModal() {
 
   // Hook order is fixed; call before any early return.
   const meta = useProfile(target?.recipientPubkey ?? null);
+  const signer = useSigner();
   const lud16 = meta?.lud16 ?? target?.recipientLud16 ?? null;
   const displayName = target ? (meta?.displayName || meta?.name || target.displayName) : '';
 
@@ -46,15 +47,22 @@ export default function MessageZapModal() {
       setErr('Enter a valid amount.');
       return;
     }
+    if (!signer) {
+      setErr('No active signer — log in first.');
+      return;
+    }
     setBusy(true);
     setErr(null);
     try {
       const relays = getDefaultRelays();
-      await zapMessageViaWebLN({
-        signer: bridgeZapRequestSigner(),
+      // SessionSigner is structurally a NostrSigner — the SDK keeps it loosely
+      // typed (signEvent returns `unknown`) so @nostr-wot/data has no hard
+      // dependency on @nostr-wot/signers. The cast is safe at runtime.
+      await zapViaWebLN({
+        signer: signer as unknown as NostrSigner,
         recipientPubkey: target.recipientPubkey,
         recipientLud16: lud16,
-        messageId: target.messageId ?? undefined,
+        eventId: target.messageId ?? undefined,
         amountSats: amount,
         relays,
         comment: comment.trim() || undefined,

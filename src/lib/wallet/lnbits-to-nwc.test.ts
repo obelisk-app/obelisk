@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { lnbitsToNwc } from './lnbits-to-nwc';
+import { lnbitsToNwc } from '@nostr-wot/wallet';
 
 beforeEach(() => {
   globalThis.fetch = vi.fn();

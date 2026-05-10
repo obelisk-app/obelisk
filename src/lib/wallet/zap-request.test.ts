@@ -1,7 +1,13 @@
-import { describe, it, expect, vi } from 'vitest';
-import { buildZapRequest, type ZapRequestSigner } from './zap-request';
+// Regression tests for the SDK's NIP-57 buildZapRequest. Lives in obelisk
+// because the SDK package has no test suite yet, and obelisk is the primary
+// consumer of these zap helpers.
 
-const fakeSigner: ZapRequestSigner = {
+import { describe, it, expect, vi } from 'vitest';
+import { buildZapRequest } from '@nostr-wot/wallet';
+import type { NostrSigner } from '@nostr-wot/signers';
+
+const fakeSigner: NostrSigner = {
+  getPublicKey: vi.fn(async () => 'sender_pub'),
   signEvent: vi.fn(async (template) => ({
     ...template,
     pubkey: 'sender_pub',
@@ -12,68 +18,77 @@ const fakeSigner: ZapRequestSigner = {
 
 describe('buildZapRequest', () => {
   it('produces a signed kind 9734 with amount, p, relays tags', async () => {
-    const ev = await buildZapRequest(fakeSigner, {
+    const { event } = await buildZapRequest(fakeSigner, {
       recipientPubkey: 'recipient_pub',
-      amountMsat: 21_000,
+      amountMsats: 21_000,
       relays: ['wss://relay.test', 'wss://relay2.test'],
     });
-    expect(ev.kind).toBe(9734);
-    expect(ev.pubkey).toBe('sender_pub');
-    expect(ev.sig).toBe('sig_hex');
-    const tagsByName = Object.fromEntries(ev.tags.map((t) => [t[0], t.slice(1)]));
+    expect(event.kind).toBe(9734);
+    expect(event.pubkey).toBe('sender_pub');
+    expect(event.sig).toBe('sig_hex');
+    const tagsByName = Object.fromEntries(event.tags.map((t) => [t[0], t.slice(1)]));
     expect(tagsByName.amount).toEqual(['21000']);
     expect(tagsByName.p).toEqual(['recipient_pub']);
     expect(tagsByName.relays).toEqual(['wss://relay.test', 'wss://relay2.test']);
   });
 
-  it('includes optional e tag when messageId is provided', async () => {
-    const ev = await buildZapRequest(fakeSigner, {
+  it('includes optional e tag when eventId is provided', async () => {
+    const { event } = await buildZapRequest(fakeSigner, {
       recipientPubkey: 'recipient_pub',
-      amountMsat: 1000,
+      amountMsats: 1000,
       relays: ['wss://r'],
-      messageId: 'msg_abc',
+      eventId: 'msg_abc',
     });
-    const eTag = ev.tags.find((t) => t[0] === 'e');
+    const eTag = event.tags.find((t) => t[0] === 'e');
     expect(eTag).toEqual(['e', 'msg_abc']);
   });
 
-  it('omits e tag when no messageId', async () => {
-    const ev = await buildZapRequest(fakeSigner, {
+  it('omits e tag when no eventId', async () => {
+    const { event } = await buildZapRequest(fakeSigner, {
       recipientPubkey: 'recipient_pub',
-      amountMsat: 1000,
+      amountMsats: 1000,
       relays: ['wss://r'],
     });
-    expect(ev.tags.find((t) => t[0] === 'e')).toBeUndefined();
+    expect(event.tags.find((t) => t[0] === 'e')).toBeUndefined();
   });
 
   it('uses comment as content', async () => {
-    const ev = await buildZapRequest(fakeSigner, {
+    const { event } = await buildZapRequest(fakeSigner, {
       recipientPubkey: 'recipient_pub',
-      amountMsat: 1000,
+      amountMsats: 1000,
       relays: ['wss://r'],
       comment: 'gracias',
     });
-    expect(ev.content).toBe('gracias');
+    expect(event.content).toBe('gracias');
   });
 
   it('content defaults to empty string', async () => {
-    const ev = await buildZapRequest(fakeSigner, {
+    const { event } = await buildZapRequest(fakeSigner, {
       recipientPubkey: 'r',
-      amountMsat: 1,
+      amountMsats: 1,
       relays: ['wss://r'],
     });
-    expect(ev.content).toBe('');
+    expect(event.content).toBe('');
   });
 
   it('rejects empty relays array (per NIP-57)', async () => {
     await expect(
-      buildZapRequest(fakeSigner, { recipientPubkey: 'r', amountMsat: 1, relays: [] })
+      buildZapRequest(fakeSigner, { recipientPubkey: 'r', amountMsats: 1, relays: [] })
     ).rejects.toThrow(/relays/i);
   });
 
-  it('rejects non-positive amountMsat', async () => {
+  it('rejects non-positive amountMsats', async () => {
     await expect(
-      buildZapRequest(fakeSigner, { recipientPubkey: 'r', amountMsat: 0, relays: ['wss://r'] })
+      buildZapRequest(fakeSigner, { recipientPubkey: 'r', amountMsats: 0, relays: ['wss://r'] })
     ).rejects.toThrow(/amount/i);
+  });
+
+  it('returns the signed event uri-encoded for use as `nostr=...` LNURL param', async () => {
+    const { encoded, event } = await buildZapRequest(fakeSigner, {
+      recipientPubkey: 'recipient_pub',
+      amountMsats: 1000,
+      relays: ['wss://r'],
+    });
+    expect(decodeURIComponent(encoded)).toBe(JSON.stringify(event));
   });
 });

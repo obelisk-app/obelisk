@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateZapReceipt, type RawNostrEvent } from './zap-receipt';
+import { validateZapReceipt, type RawNostrEvent } from '@nostr-wot/wallet';
 
 const RECIPIENT = 'recipient_pub';
 const SENDER = 'sender_pub';
