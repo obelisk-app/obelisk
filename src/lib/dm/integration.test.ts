@@ -4,21 +4,33 @@ const fastEvents: any[] = [];
 const slowEvents: any[] = [];
 let onevent: ((e: any) => void) | null = null;
 
-// Mock at the shared-pool path because the coalescer (now in
-// `@/lib/nostr-coalescer`) imports SimplePool from there. The DM-flavored
-// `./pool` is a re-export of the same module, so mocking the underlying
-// path is the only place that intercepts cleanly.
-vi.mock('@/lib/nostr-pool', () => ({
-  verifyNostrEvent: () => true,
-  getNostrPool: () => ({
-    subscribeMany: (_relays: string[], _filters: any, h: any) => {
-      onevent = h.onevent;
-      queueMicrotask(() => fastEvents.forEach((e) => onevent!(e)));
-      setTimeout(() => slowEvents.forEach((e) => onevent!(e)), 200);
-      return { close: () => {} };
+// Mock the SDK coalescer so it routes through our fake pool. The SDK's
+// `sharedCoalescer` calls SDK's `getPool()`; in tests that's an unconfigured
+// SimplePool that would try real WebSocket connects. Mocking the data module
+// lets us intercept `enqueue` directly.
+vi.mock('@nostr-wot/data', async () => {
+  const actual = await vi.importActual<typeof import('@nostr-wot/data')>('@nostr-wot/data');
+  return {
+    ...actual,
+    sharedCoalescer: {
+      enqueue: (req: { onEvent: (e: any) => void }) => {
+        onevent = req.onEvent;
+        queueMicrotask(() => fastEvents.forEach((e) => onevent!(e)));
+        setTimeout(() => slowEvents.forEach((e) => onevent!(e)), 200);
+        return () => {};
+      },
+      querySync: vi.fn(),
     },
-  }),
-  resetNostrPool: () => {},
+  };
+});
+
+// dm.ts calls `verifyDMEvent` (NIP-01 sig check) before ingesting events.
+// The test fixtures use `sig: 'x'` placeholders, so bypass verification at
+// the DM-pool seam — same effect as the previous `@/lib/nostr-pool` mock.
+vi.mock('./pool', () => ({
+  verifyDMEvent: () => true,
+  getDMPool: () => ({ subscribeMany: () => ({ close: () => {} }) }),
+  resetDMPool: () => {},
 }));
 
 vi.mock('./relay-list-cache', () => ({

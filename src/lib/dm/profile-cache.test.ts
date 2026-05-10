@@ -2,12 +2,16 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { getProfile, setProfileTestRelays, _resetProfileCache } from './profile-cache';
 
 const enqueueMock = vi.fn();
-vi.mock('@/lib/nostr-coalescer', () => ({
-  sharedCoalescer: {
-    enqueue: (req: any) => { enqueueMock(req); return () => {}; },
-    querySync: vi.fn(),
-  },
-}));
+vi.mock('@nostr-wot/data', async () => {
+  const actual = await vi.importActual<typeof import('@nostr-wot/data')>('@nostr-wot/data');
+  return {
+    ...actual,
+    sharedCoalescer: {
+      enqueue: (req: any) => { enqueueMock(req); return () => {}; },
+      querySync: vi.fn(),
+    },
+  };
+});
 
 const me = 'a'.repeat(64);
 const partner = 'b'.repeat(64);

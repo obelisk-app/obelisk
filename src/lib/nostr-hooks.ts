@@ -11,7 +11,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools/pure';
 import type { Filter } from 'nostr-tools/filter';
-import { sharedCoalescer } from './nostr-coalescer';
+import { sharedCoalescer } from '@nostr-wot/data';
 
 export interface NostrQueryOptions {
   /** Relay set to query. If omitted, the coalescer's default fallback set

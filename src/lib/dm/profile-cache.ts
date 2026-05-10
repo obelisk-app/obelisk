@@ -1,7 +1,5 @@
 import type { Event as NostrEvent } from 'nostr-tools/pure';
-import { sharedCoalescer } from '@/lib/nostr-coalescer';
-import { getDefaultRelays } from '@nostr-wot/data';
-import { createKeyedObservable, type Slot } from '@/lib/nostr-store';
+import { sharedCoalescer, getDefaultRelays, createKeyedObservable, type Slot } from '@nostr-wot/data';
 
 /**
  * SDK pool default relays. Browser-only — returns `[]` server-side because

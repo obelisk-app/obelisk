@@ -21,9 +21,19 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { NostrSessionProvider } from '@nostr-wot/ui';
 import { useLogin, useLogout, useSigner } from '@nostr-wot/data/react';
+import { setPool } from '@nostr-wot/data';
 import type { SessionSigner } from '@nostr-wot/data/react';
 import { getBridge } from '@/lib/nostr-bridge';
 import type { NostrBridge } from '@/lib/nostr-bridge/types';
+import { getNostrPool } from '@/lib/nostr-pool';
+
+// Share Obelisk's TextCoercing-aware SimplePool with the SDK so SDK
+// fetchers (fetchProfile, fetchRelayList, …) ride the same WebSocket
+// connections and don't trip on relays that push binary frames. Runs
+// at module load — browser only, since the pool needs `WebSocket`.
+if (typeof window !== 'undefined') {
+  try { setPool(getNostrPool()); } catch { /* ignore */ }
+}
 
 function buildAdapter(bridge: NostrBridge): SessionSigner {
   return {

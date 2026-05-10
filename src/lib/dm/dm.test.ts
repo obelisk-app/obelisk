@@ -6,23 +6,20 @@ const me = 'a'.repeat(64);
 const partner = 'b'.repeat(64);
 
 const enqueueMock = vi.fn();
-vi.mock('@/lib/nostr-coalescer', () => ({
-  sharedCoalescer: {
-    enqueue: (req: any) => { enqueueMock(req); return () => {}; },
-    querySync: vi.fn(),
-  },
-}));
+vi.mock('@nostr-wot/data', async () => {
+  const actual = await vi.importActual<typeof import('@nostr-wot/data')>('@nostr-wot/data');
+  return {
+    ...actual,
+    sharedCoalescer: {
+      enqueue: (req: any) => { enqueueMock(req); return () => {}; },
+      querySync: vi.fn(),
+    },
+  };
+});
 
 vi.mock('./relay-list-cache', () => ({
   getRelays: () => ({
     result: { inbox: ['wss://inbox.partner'], readRelays: ['wss://read.partner'], writeRelays: ['wss://write.partner'], stale: false },
-  }),
-}));
-
-vi.mock('@/lib/nostr', () => ({
-  getNDK: () => ({
-    signer: { user: async () => ({ pubkey: me }) },
-    pool: { relays: new Map() },
   }),
 }));
 

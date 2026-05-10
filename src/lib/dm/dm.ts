@@ -1,6 +1,6 @@
 import type { Event as NostrEvent } from 'nostr-tools/pure';
 import type { Filter } from 'nostr-tools/filter';
-import { sharedCoalescer } from '@/lib/nostr-coalescer';
+import { sharedCoalescer } from '@nostr-wot/data';
 import { verifyDMEvent } from './pool';
 import { getCursors, setCursor, putEvent, getEvent, getCachedEvents, type CachedDMEvent } from './dm-cache';
 import { getRelays } from './relay-list-cache';

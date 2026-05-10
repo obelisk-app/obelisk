@@ -1,8 +1,7 @@
 // src/lib/dm/relay-list-cache.ts
 import type { Event as NostrEvent } from 'nostr-tools/pure';
-import { sharedCoalescer } from '@/lib/nostr-coalescer';
+import { sharedCoalescer, createKeyedObservable, type Slot } from '@nostr-wot/data';
 import { parseRelayListMeta, parseInboxRelays } from '@/lib/nostr-read';
-import { createKeyedObservable, type Slot } from '@/lib/nostr-store';
 
 export interface RelayListResult {
   inbox: string[];

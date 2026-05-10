@@ -8,8 +8,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools/pure';
-import { sharedCoalescer } from '@/lib/nostr-coalescer';
-import { getDefaultRelays } from '@nostr-wot/data';
+import { sharedCoalescer, getDefaultRelays } from '@nostr-wot/data';
 import { validateZapReceipt, type RawNostrEvent } from '@/lib/wallet/zap-receipt';
 
 export interface MessageZapTotal {

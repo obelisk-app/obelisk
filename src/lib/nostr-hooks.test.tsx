@@ -4,12 +4,16 @@ import React from 'react';
 
 const enqueueMock = vi.fn();
 const querySyncMock = vi.fn();
-vi.mock('@/lib/nostr-coalescer', () => ({
-  sharedCoalescer: {
-    enqueue: (req: any) => { enqueueMock(req); return () => {}; },
-    querySync: (filters: any, opts: any) => querySyncMock(filters, opts),
-  },
-}));
+vi.mock('@nostr-wot/data', async () => {
+  const actual = await vi.importActual<typeof import('@nostr-wot/data')>('@nostr-wot/data');
+  return {
+    ...actual,
+    sharedCoalescer: {
+      enqueue: (req: any) => { enqueueMock(req); return () => {}; },
+      querySync: (filters: any, opts: any) => querySyncMock(filters, opts),
+    },
+  };
+});
 
 import { useNostrQuery } from './nostr-hooks';
 

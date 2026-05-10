@@ -1,6 +1,6 @@
 import type { Event as NostrEvent } from 'nostr-tools/pure';
 import { setFollowSet } from './dm-cache';
-import { createKeyedObservable } from '@/lib/nostr-store';
+import { createKeyedObservable } from '@nostr-wot/data';
 
 interface FollowsCacheShape {
   event: NostrEvent;
