@@ -14,7 +14,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools/pure';
-import { npubToHex } from '@/lib/nostr';
+import { npubToHex } from '@nostr-wot/data';
 import { useNostrQuery } from '@/lib/nostr-hooks';
 
 export interface UserHit {

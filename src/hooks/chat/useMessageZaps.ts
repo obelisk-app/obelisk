@@ -9,7 +9,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools/pure';
 import { sharedCoalescer } from '@/lib/nostr-coalescer';
-import { getNDK } from '@/lib/nostr';
+import { getDefaultRelays } from '@nostr-wot/data';
 import { validateZapReceipt, type RawNostrEvent } from '@/lib/wallet/zap-receipt';
 
 export interface MessageZapTotal {
@@ -37,8 +37,7 @@ export function useMessageZaps(messageIds: ReadonlyArray<string>): Map<string, M
     const ids = idsKey.split(',').filter(Boolean);
     if (ids.length === 0) return;
 
-    const ndk = getNDK();
-    const relays = Array.from((ndk.pool?.relays as Map<string, unknown> | undefined)?.keys?.() ?? []) as string[];
+    const relays = getDefaultRelays();
     if (relays.length === 0) return;
 
     const handle = (raw: NostrEvent | RawNostrEvent) => {

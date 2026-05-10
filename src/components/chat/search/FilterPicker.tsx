@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from 'react';
 import { useSearchStore, ActiveFilters, HasFilter } from '@/store/search';
 import { useChatStore } from '@/store/chat';
 import { useT } from '@/store/locale';
-import { formatPubkey } from '@/lib/nostr';
+import { formatPubkey } from '@nostr-wot/data';
 import { useClickOutside } from '@/hooks/useClickOutside';
 
 interface Props {

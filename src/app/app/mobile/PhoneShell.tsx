@@ -51,7 +51,7 @@ import { subscribeVoiceJump } from '@/lib/voice/jump-to-voice';
 import MessageContent from '@/components/chat/MessageContent';
 import EmojiPicker from '@/components/chat/EmojiPicker';
 import { uploadToBlossom } from '@/lib/blossom';
-import { formatPubkey, pubkeyToNpub, formatTimestamp } from '@/lib/nostr';
+import { formatPubkey, hexToNpub as pubkeyToNpub } from '@nostr-wot/data';
 import { faviconFor, fetchRelayInfo } from '@/lib/relay-info';
 import {
   useChannelLayout,
@@ -117,7 +117,16 @@ function shortNpub(pubkey: string | null | undefined): string {
 }
 
 function relativeTime(ts: number): string {
-  return formatTimestamp(ts);
+  const date = new Date(ts * 1000);
+  const diff = Date.now() - date.getTime();
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes}m`;
+  if (hours < 24) return `${hours}h`;
+  if (days < 7) return `${days}d`;
+  return date.toLocaleDateString();
 }
 
 function dayKey(ts: number): string {

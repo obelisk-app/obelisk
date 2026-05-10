@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect } from 'react';
-import type { NDKEvent } from '@nostr-dev-kit/ndk';
-import { getNDK, connectNDK } from '@/lib/nostr';
+import type { Event as NostrEvent } from 'nostr-tools/pure';
+import { getPool, getDefaultRelays } from '@nostr-wot/data';
 import { useChatStore } from '@/store/chat';
 
 /** A user counts as online if they published an event in this window. */
@@ -40,28 +40,22 @@ export function useNostrPresence(pubkeys: string[]): void {
   useEffect(() => {
     if (!authors.length) return;
 
-    let cancelled = false;
-    let sub: { stop: () => void } | null = null;
-
-    (async () => {
-      await connectNDK();
-      if (cancelled) return;
-      const ndk = getNDK();
-      const since = Math.floor((Date.now() - PRESENCE_WINDOW_MS) / 1000);
-      const s = ndk.subscribe(
-        { kinds: ACTIVITY_KINDS, authors, since },
-        { closeOnEose: false },
-      );
-      s.on('event', (ev: NDKEvent) => {
-        const ts = (ev.created_at ?? 0) * 1000;
-        if (ts > 0 && ev.pubkey) recordActivity(ev.pubkey, ts);
-      });
-      sub = s as unknown as { stop: () => void };
-    })();
+    const pool = getPool();
+    const relays = getDefaultRelays();
+    const since = Math.floor((Date.now() - PRESENCE_WINDOW_MS) / 1000);
+    const sub = pool.subscribeMany(
+      relays,
+      { kinds: ACTIVITY_KINDS, authors, since },
+      {
+        onevent: (ev: NostrEvent) => {
+          const ts = (ev.created_at ?? 0) * 1000;
+          if (ts > 0 && ev.pubkey) recordActivity(ev.pubkey, ts);
+        },
+      },
+    );
 
     return () => {
-      cancelled = true;
-      try { sub?.stop(); } catch { /* ignore */ }
+      try { sub.close(); } catch { /* ignore */ }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);

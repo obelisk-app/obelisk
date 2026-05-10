@@ -5,7 +5,7 @@ import { useMessageZapStore } from '@/store/messageZap';
 import { useToastStore } from '@/store/toast';
 import { isWebLNAvailable, zapMessageViaWebLN } from '@/lib/wallet/webln-zap';
 import { bridgeZapRequestSigner } from '@/lib/wallet/bridge-zap-signer';
-import { getNDK } from '@/lib/nostr';
+import { getDefaultRelays } from '@nostr-wot/data';
 import { useProfile } from '@nostr-wot/data/react';
 
 const QUICK_AMOUNTS = [21, 100, 500, 1000, 5000, 21000];
@@ -49,8 +49,7 @@ export default function MessageZapModal() {
     setBusy(true);
     setErr(null);
     try {
-      const ndk = getNDK();
-      const relays = Array.from((ndk.pool?.relays as Map<string, unknown> | undefined)?.keys?.() ?? []) as string[];
+      const relays = getDefaultRelays();
       await zapMessageViaWebLN({
         signer: bridgeZapRequestSigner(),
         recipientPubkey: target.recipientPubkey,

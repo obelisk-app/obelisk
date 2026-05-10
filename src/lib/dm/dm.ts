@@ -428,88 +428,6 @@ export interface DMMessage {
   sendError?: string;
 }
 
-export interface SendDMArgs {
-  myPubkey: string;
-  recipientPubkey: string;
-  content: string;
-  protocol: DMProtocol;
-}
-
-export async function sendDM(args: SendDMArgs): Promise<NostrEvent> {
-  const { getNDK } = await import('@/lib/nostr');
-  const ndk = getNDK();
-  if (!ndk.signer) throw new Error('No signer');
-
-  const { NDKEvent: NDKEventClass, NDKUser } = await import('@nostr-dev-kit/ndk');
-  const recipient = new NDKUser({ pubkey: args.recipientPubkey });
-  recipient.ndk = ndk;
-
-  const partnerRelays = getRelays(args.myPubkey, args.recipientPubkey).result;
-  const targetRelays =
-    args.protocol === 'nip17'
-      ? partnerRelays.inbox
-      : partnerRelays.readRelays;
-
-  if (args.protocol === 'nip04') {
-    const ev = new NDKEventClass(ndk);
-    ev.kind = KIND_NIP04;
-    ev.tags = [['p', args.recipientPubkey]];
-    ev.content = args.content;
-    await ev.encrypt(recipient, ndk.signer, 'nip04');
-    await publishToRelays(ndk, ev, targetRelays);
-    const raw = ev.rawEvent() as NostrEvent;
-    putEvent(args.myPubkey, toCached(raw));
-    setCursor(args.myPubkey, 'nip04Out', raw.created_at);
-    return raw;
-  }
-
-  const { giftWrap } = await import('@nostr-dev-kit/ndk');
-  const rumor = new NDKEventClass(ndk);
-  rumor.kind = KIND_RUMOR;
-  rumor.content = args.content;
-  rumor.tags = [['p', args.recipientPubkey]];
-  // NDK's giftWrap hashes the rumor (kind 14) without signing it. The hash
-  // requires every field per NIP-01 — pubkey + created_at + kind + tags +
-  // content. Without these, serializeEvent throws "can't serialize event
-  // with wrong or missing properties".
-  rumor.pubkey = args.myPubkey;
-  rumor.created_at = Math.floor(Date.now() / 1000);
-
-  // NIP-17 requires TWO wraps per outbound message:
-  //   1. Wrap-for-recipient → encrypted with recipient's pubkey, published
-  //      to the recipient's kind-10050 inbox so they can decrypt.
-  //   2. Wrap-for-self → encrypted with the sender's own pubkey, published
-  //      to the sender's inbox AND cached locally so the SENDER can also
-  //      decrypt and see their own outbound. Without this, our own gift
-  //      wraps stay opaque locally (we wrapped them for the recipient, so
-  //      our signer can't unwrap them) and outgoing NIP-17 messages
-  //      vanish from our UI the moment the optimistic stub is replaced.
-  //
-  // The wraps share the same rumor (same `id`/`created_at`), so the
-  // recipient seeing the wrap and the sender seeing their self-wrap
-  // converge to the same logical message in any client.
-  const me = new NDKUser({ pubkey: args.myPubkey });
-  me.ndk = ndk;
-  const wrapForRecipient = await giftWrap(rumor, recipient, ndk.signer);
-  const wrapForSelf = await giftWrap(rumor, me, ndk.signer);
-
-  // Publish both. Recipient-wrap goes to the recipient's inbox (already
-  // computed in `targetRelays`); self-wrap goes to the user's own pool
-  // relays so it persists somewhere and replays on next session. Failures
-  // are non-fatal — the local cache write below guarantees the message
-  // shows up immediately even if the publish hasn't completed.
-  await publishToRelays(ndk, wrapForRecipient, targetRelays);
-  const myPoolRelays = Array.from(ndk.pool?.relays?.keys?.() ?? []) as string[];
-  await publishToRelays(ndk, wrapForSelf, myPoolRelays).catch((err) => {
-    console.warn('[dm-send] self-wrap publish failed (cache fallback in effect):', err);
-  });
-
-  const rawSelf = wrapForSelf.rawEvent() as NostrEvent;
-  putEvent(args.myPubkey, toCached(rawSelf));
-  setCursor(args.myPubkey, 'nip17Wrap', rawSelf.created_at);
-  return rawSelf;
-}
-
 /**
  * Detect whether the recent slice of a thread is using NIP-04. Used by
  * DMChat to surface a "this conversation is on legacy NIP-04 — switch to
@@ -520,14 +438,4 @@ export async function sendDM(args: SendDMArgs): Promise<NostrEvent> {
 export function detectNip04InRecent(messages: DMMessage[], count = 10): boolean {
   const recent = messages.slice(-count);
   return recent.some((m) => m.protocol === 'nip04');
-}
-
-async function publishToRelays(ndk: any, event: any, relays: string[]): Promise<void> {
-  if (relays.length === 0) {
-    await event.publish();
-    return;
-  }
-  const { NDKRelaySet } = await import('@nostr-dev-kit/ndk');
-  const set = NDKRelaySet.fromRelayUrls(relays, ndk);
-  await event.publish(set);
 }

@@ -1,21 +1,16 @@
 import type { Event as NostrEvent } from 'nostr-tools/pure';
 import { sharedCoalescer } from '@/lib/nostr-coalescer';
-import { getNDK } from '@/lib/nostr';
+import { getDefaultRelays } from '@nostr-wot/data';
 import { createKeyedObservable, type Slot } from '@/lib/nostr-store';
 
 /**
- * Pull whatever relays the NDK pool already knows about. NDK's outbox
- * model populates the pool from observed event signatures, so this set
- * grows as the user uses the app — a profile fetch fired before the DM
- * walker can run still gets coverage from the pool.
- *
- * Returns `[]` server-side (NDK is browser-only here).
+ * SDK pool default relays. Browser-only — returns `[]` server-side because
+ * the SDK pool is configured per-app.
  */
-function ndkPoolRelays(): string[] {
+function poolRelays(): string[] {
   if (typeof window === 'undefined') return [];
   try {
-    const ndk = getNDK();
-    return Array.from(ndk.pool?.relays?.keys?.() ?? []) as string[];
+    return getDefaultRelays();
   } catch {
     return [];
   }
@@ -145,7 +140,7 @@ export function getProfile(
   if (stale) {
     const relays = Array.from(new Set([
       ...PROFILE_AGGREGATORS,
-      ...ndkPoolRelays(),
+      ...poolRelays(),
       ...dynamicRelays,
       ...extraRelays,
     ]));

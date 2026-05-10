@@ -8,17 +8,11 @@ vi.mock('@nostr-wot/data/react', () => ({
   usePubkey: () => null,
 }));
 
-vi.mock('@/lib/nostr', () => ({
+vi.mock('@nostr-wot/data', () => ({
   formatPubkey: vi.fn((pk: string) => `${pk.slice(0, 8)}…`),
   // Faithful enough for the npub1-prefix assertion below; real encoding isn't
   // needed since the test only checks the `npub1` prefix survives the format.
-  pubkeyToNpub: vi.fn((pk: string) => `npub1${pk}`),
-  // ProfilePopover transitively pulls in the auth store, which subscribes
-  // to onSignerChange at module load. No-op stub keeps the import graph
-  // happy without booting NDK.
-  onSignerChange: vi.fn(() => () => {}),
-  setNDKSigner: vi.fn(),
-  getNDK: vi.fn(() => ({ signer: undefined })),
+  hexToNpub: vi.fn((pk: string) => `npub1${pk}`),
 }));
 
 describe('ProfilePopover', () => {

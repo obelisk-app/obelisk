@@ -4,7 +4,7 @@ import { Fragment, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { useChatStore } from '@/store/chat';
 import { useToastStore } from '@/store/toast';
 import { useModerationStore } from '@/store/moderation';
-import { formatPubkey, pubkeyToNpub } from '@/lib/nostr';
+import { formatPubkey, hexToNpub as pubkeyToNpub } from '@nostr-wot/data';
 import { nip19 } from 'nostr-tools';
 import { useProfile, usePubkey } from '@nostr-wot/data/react';
 const useUserMetadata = useProfile;

@@ -22,7 +22,7 @@ import {
 import { useProfile } from '@nostr-wot/data/react';
 import { useNostrUserSearch, type UserHit } from '@/lib/hooks/useNostrUserSearch';
 import { searchGroups } from '@/lib/group-search';
-import { formatPubkey } from '@/lib/nostr';
+import { formatPubkey } from '@nostr-wot/data';
 import ProfilePopover from '@/components/chat/ProfilePopover';
 
 const HISTORY_KEY = 'obelisk-dex/search-history';
