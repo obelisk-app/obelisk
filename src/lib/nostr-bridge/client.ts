@@ -1250,14 +1250,25 @@ class BridgeImpl implements NostrBridge {
       // ones) appeared "Connected" instantly. ensureRelay actually awaits
       // the handshake and rejects on timeout / refused / DNS failure.
       //
-      // Use allSettled, not all: if any single relay is slow/down/blocked,
-      // we still want to fire subscriptions on the relays that did connect.
-      // Previously one flaky relay (out of 5 defaults) would reject the
-      // whole connect and leave the UI empty until the user refreshed.
-      const results = await Promise.allSettled(
-        this.relays.map(async (url) => {
+      // First-response wins: resolve as soon as ONE relay handshakes so
+      // the rehydrate gate flips to "logged in" quickly. Slower relays
+      // continue handshaking in the background; their subscriptions queue
+      // on the pool and fire as each socket comes online. If every relay
+      // rejects, we throw and `initialize()` falls through to background
+      // reconnect with capped backoff.
+      //
+      // Per-relay `connectionTimeout` is intentionally tighter than the
+      // 5000 ms used previously — a single slow relay used to stall the
+      // entire login by holding `Promise.allSettled` open. With first-
+      // response-wins this is bounded by `HARD_CEILING_MS` below, but a
+      // tighter per-relay cap also gets stragglers marked `unreachable`
+      // sooner so the relay banner reflects reality.
+      const PER_RELAY_TIMEOUT_MS = 3000;
+      const HARD_CEILING_MS = 1500;
+      const handles = this.relays.map((url) =>
+        (async () => {
           validateRelayUrl(url);
-          const relay = await this.pool.ensureRelay(url, { connectionTimeout: 5000 });
+          const relay = await this.pool.ensureRelay(url, { connectionTimeout: PER_RELAY_TIMEOUT_MS });
           if (!relay.connected) throw new Error(`relay ${url} did not complete handshake`);
           // Mark the pool's socket alive so subsequent close() calls
           // attempt the network CLOSE; cleared in the onclose handler.
@@ -1277,20 +1288,37 @@ class BridgeImpl implements NostrBridge {
             }
           };
           return url;
-        }),
+        })(),
       );
-      // Mark every relay whose handshake failed as unreachable so the banner
-      // says "Cannot reach {host}" instead of stalling on "Connecting…".
-      results.forEach((r, i) => {
-        if (r.status === 'rejected') {
-          this.setRelayAccess(this.relays[i], 'unreachable');
-        }
+      // Mark each relay `unreachable` as its handshake fails, in the
+      // background. Doesn't await — banner updates as we get news; UI
+      // proceeds at the first success or hard ceiling, whichever fires
+      // first.
+      handles.forEach((p, i) => {
+        p.catch(() => this.setRelayAccess(this.relays[i], 'unreachable'));
       });
-      const connectedCount = results.filter((r) => r.status === 'fulfilled').length;
-      if (connectedCount === 0) {
-        const firstError = results.find((r) => r.status === 'rejected') as PromiseRejectedResult | undefined;
-        throw new Error(firstError ? String(firstError.reason?.message ?? firstError.reason) : 'no relays connected');
+      // Race: first relay ready vs hard ceiling vs all relays rejected.
+      // - 'first-ready' → at least one socket is open; subscriptions go
+      //   live now, slow relays keep handshaking in the background.
+      // - 'ceiling' → no relay has handshaken in HARD_CEILING_MS; flip the
+      //   gate anyway so the user isn't stuck on "Reconnecting…". Pending
+      //   handshakes continue and their subs queue on the pool.
+      // - 'all-rejected' → every handshake failed; throw so initialize()
+      //   falls through to capped background reconnect.
+      const firstReady: Promise<'first-ready' | 'all-rejected'> = Promise.any(handles)
+        .then(() => 'first-ready' as const)
+        .catch(() => 'all-rejected' as const);
+      const ceiling: Promise<'ceiling'> = new Promise((res) => setTimeout(() => res('ceiling'), HARD_CEILING_MS));
+      const winner = await Promise.race([firstReady, ceiling]);
+      if (winner === 'all-rejected') {
+        throw new Error('no relays connected');
       }
+      // For the 'ceiling' branch, ALSO check the eventual outcome of
+      // `firstReady` in the background — if every relay later rejects,
+      // the relay banner is updated by the per-handle `.catch` above and
+      // `reconnectInBackground` kicks in via the next session/relay
+      // change. Subscriptions registered below queue against the pool
+      // and bind as relays come online.
       this.subscribeGroupMetadata();
       // Single relay-wide REQ for admin/member (kinds 39001+39002, no `#d`).
       // Restores the "category authors" set used by NIP-78 channel-layout
@@ -1323,7 +1351,11 @@ class BridgeImpl implements NostrBridge {
       }
       this.connectionState.set('Connected');
       this.reconnectAttempt = 0;
-      resolveActivity(activityId, `${connectedCount}/${this.relays.length} relays`);
+      // Activity message reflects the snapshot at the moment the gate
+      // flipped, not the final count — slower relays may still be
+      // handshaking. Approximate by resolving "1+/N" rather than tracking
+      // the exact count, which would require awaiting all handles.
+      resolveActivity(activityId, `connected to ${this.relays.length === 1 ? this.relays[0] : `${this.relays.length} relays`}`);
     } catch (e: unknown) {
       this.connectionState.set(`Error:${(e as Error).message}`);
       failActivity(activityId, (e as Error).message);
