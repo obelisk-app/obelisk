@@ -12,7 +12,10 @@ vi.mock('@/lib/nostr-bridge', () => ({
     setActiveGroup: (...a: unknown[]) => mockSetActiveGroup(...a),
   },
   useGroups: () => mockGroups,
-  useUserMetadata: () => null,
+}));
+
+vi.mock('@nostr-wot/data/react', () => ({
+  useProfile: () => null,
 }));
 
 const mockUseNostrUserSearch = vi.fn();

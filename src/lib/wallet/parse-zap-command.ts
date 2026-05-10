@@ -3,7 +3,7 @@
 // member list, so any channel user (and any pubkey on the relay) can be
 // zapped by name or npub.
 
-import { nip19 } from 'nostr-tools';
+import { formatPubkey, npubToHex } from '@nostr-wot/data';
 import { getBridgeImpl } from '@/lib/nostr-bridge';
 import type { ZapTarget } from '@/store/messageZap';
 
@@ -99,14 +99,11 @@ function resolveRecipient(
   // `nostr:npub1…` insertions and a hand-typed `@npub…` both resolve.
   const stripped = token.replace(/^@/, '').replace(/^nostr:/, '');
   if (stripped.startsWith('npub1') || stripped.startsWith('nprofile1')) {
-    try {
-      const dec = nip19.decode(stripped);
-      if (dec.type === 'npub') return dec.data as string;
-      if (dec.type === 'nprofile') return (dec.data as { pubkey: string }).pubkey;
-    } catch { /* fall through */ }
-    return null;
+    return npubToHex(stripped);
   }
-  // raw hex pubkey
+  // raw hex pubkey — npubToHex handles this too, but keep the explicit
+  // branch so a malformed name token like a 64-char nickname doesn't fall
+  // through into the npub path silently.
   if (/^[0-9a-f]{64}$/i.test(stripped)) return stripped.toLowerCase();
 
   // @name or bare name — match channel members by name (case-insensitive).
@@ -126,6 +123,3 @@ function resolveRecipient(
   return null;
 }
 
-function formatPubkey(hex: string): string {
-  return hex.slice(0, 8) + '…' + hex.slice(-4);
-}
