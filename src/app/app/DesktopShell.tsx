@@ -9,6 +9,8 @@ import {
   useCurrentRelayUrl,
   useGroups,
   useMessages,
+  useMessagesEose,
+  useGroupMetadataEose,
   useLoadEarlier,
   useUserMetadata,
   useReactions,
@@ -1766,6 +1768,8 @@ function ChatPanel({
   onSelectGroup: (groupId: string) => void;
 }) {
   const messages = useMessages(groupId);
+  const messagesEose = useMessagesEose(groupId);
+  const groupMetadataEose = useGroupMetadataEose();
   const reactions = useReactions(groupId);
   const messageIds = useMemo(() => messages.map((m) => m.id), [messages]);
   const zapTotals = useMessageZaps(messageIds);
@@ -2197,28 +2201,54 @@ function ChatPanel({
       <div className="relative flex min-h-0 flex-1 flex-col">
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-4" data-testid={messagesVisible ? undefined : 'messages-gated-by-auth'}>
         {messages.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-sm text-lc-muted">
-            <div className="max-w-md text-center">
-              {group ? (
-                <>
-                  <div className="text-base font-medium text-lc-white">
-                    Welcome to #{group.name ?? 'channel'}
+          // Three distinct empty states. Without the EOSE-gated split, a
+          // freshly-opened channel briefly renders "No messages yet" while
+          // history is still streaming — confusing for an active relay.
+          //   1. group missing + 39000 EOSE not yet:           loading
+          //   2. group missing + 39000 EOSE seen:              not visible
+          //   3. group present + per-group EOSE not yet:       loading
+          //   4. group present + per-group EOSE + 0 messages:  welcome
+          (() => {
+            const groupKnownEmpty = group && messagesEose;
+            const channelKnownMissing = !group && groupMetadataEose;
+            if (!groupKnownEmpty && !channelKnownMissing) {
+              return (
+                <div
+                  className="flex h-full items-center justify-center text-sm text-lc-muted"
+                  data-testid="messages-loading"
+                >
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="lc-spinner" aria-hidden="true" />
+                    <div>Loading messages…</div>
                   </div>
-                  <div className="mt-1">No messages yet — be the first.</div>
-                </>
-              ) : (
-                <>
-                  <div className="text-base font-medium text-lc-white">
-                    Channel not visible on this relay
-                  </div>
-                  <div className="mt-1">
-                    The link points to <span className="font-mono text-xs text-lc-muted">{groupId.slice(0, 16)}…</span>
-                    , but this relay isn&apos;t exposing it to you. You may need to be added as a member, or switch to the relay that hosts it.
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
+                </div>
+              );
+            }
+            return (
+              <div className="flex h-full items-center justify-center text-sm text-lc-muted">
+                <div className="max-w-md text-center">
+                  {group ? (
+                    <>
+                      <div className="text-base font-medium text-lc-white">
+                        Welcome to #{group.name ?? 'channel'}
+                      </div>
+                      <div className="mt-1">No messages yet — be the first.</div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-base font-medium text-lc-white">
+                        Channel not visible on this relay
+                      </div>
+                      <div className="mt-1">
+                        The link points to <span className="font-mono text-xs text-lc-muted">{groupId.slice(0, 16)}…</span>
+                        , but this relay isn&apos;t exposing it to you. You may need to be added as a member, or switch to the relay that hosts it.
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+          })()
         ) : (
           messages.map((m, i) => {
             const prev = messages[i - 1];

@@ -10,6 +10,7 @@ export {
   useGroupMetadataEose,
   useMessages,
   useMessagesByGroup,
+  useMessagesEose,
   useLoadEarlier,
   useUserMetadata,
   useReactions,

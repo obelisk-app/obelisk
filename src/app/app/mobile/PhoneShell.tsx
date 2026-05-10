@@ -26,6 +26,7 @@ import {
   useGroups,
   useChildrenByParent,
   useMessages,
+  useMessagesEose,
   useLoadEarlier,
   useDirectMessages,
   useUserMetadata,
@@ -2480,6 +2481,7 @@ function ChannelScreen({
     ? `${parentGroup.name ?? parentGroup.id.slice(0, 8)}/${group?.name ?? groupId.slice(0, 8)}`
     : (group?.name ?? groupId.slice(0, 8));
   const messages = useMessages(groupId);
+  const messagesEose = useMessagesEose(groupId);
   const reactions = useReactions(groupId);
   const myPubkey = useMyPubkey();
   const relay = useCurrentRelayUrl();
@@ -2691,11 +2693,21 @@ function ChannelScreen({
       <div className="messages-wrap relative flex min-h-0 flex-1 flex-col">
       <div className="messages" ref={messagesRef}>
         {renderable.length === 0 ? (
-          <div className="empty-state">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
-            <div className="empty-state-title">No messages yet</div>
-            <div className="empty-state-desc">Be the first to say hi.</div>
-          </div>
+          // Don't claim "no messages yet" until the relay has actually said
+          // EOSE for this channel — otherwise the user sees the empty copy
+          // flash for a moment while history is still streaming.
+          !messagesEose ? (
+            <div className="empty-state" data-testid="messages-loading">
+              <div className="lc-spinner" aria-hidden="true" />
+              <div className="empty-state-title">Loading messages…</div>
+            </div>
+          ) : (
+            <div className="empty-state">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+              <div className="empty-state-title">No messages yet</div>
+              <div className="empty-state-desc">Be the first to say hi.</div>
+            </div>
+          )
         ) : (
           renderable.map((it) =>
             it.type === 'divider' ? (

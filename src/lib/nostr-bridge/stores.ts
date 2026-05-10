@@ -288,6 +288,21 @@ export function useGroupMetadataEose(): boolean {
   );
 }
 
+/**
+ * `true` once the relay has emitted EOSE for the per-group kind 9 messages
+ * REQ. The chat pane reads this together with `useMessages(groupId)` to
+ * decide between "still loading — show spinner" and "confirmed empty — show
+ * welcome copy". Calling this hook also subscribes the group's messages,
+ * so a freshly-opened channel always has a live REQ.
+ */
+export function useMessagesEose(groupId: string | null): boolean {
+  return useSubscription<boolean>(
+    (b, cb) => (groupId ? b.subscribeMessagesEose(groupId, cb) : () => {}),
+    false,
+    [groupId],
+  );
+}
+
 export function useUserMetadata(pubkey: string | null): JsUserMetadata | null {
   return useSubscription<JsUserMetadata | null>(
     (b, cb) => (pubkey ? b.subscribeUserMetadata(pubkey, cb) : () => {}),
