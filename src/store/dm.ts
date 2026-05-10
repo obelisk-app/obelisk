@@ -1,6 +1,23 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { DMMessage, DMProtocol } from '@/lib/dm/dm';
+
+export type DMProtocol = 'nip04' | 'nip17';
+
+/**
+ * In-memory shape used by the UI / store. Plaintext lives only in RAM.
+ */
+export interface DMMessage {
+  id: string;
+  senderPubkey: string;
+  recipientPubkey: string;
+  content: string;
+  createdAt: number; // unix timestamp (seconds)
+  protocol: DMProtocol;
+  /** Optimistic-send state — true while the event is still publishing. */
+  isPending?: boolean;
+  /** Populated when publish fails; presence of this field enables the retry UI. */
+  sendError?: string;
+}
 
 export interface DMThread {
   pubkey: string; // the other participant

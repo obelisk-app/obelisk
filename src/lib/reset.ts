@@ -2,10 +2,6 @@ import { useChatStore } from '@/store/chat';
 import { useReadStateStore } from '@/store/read-state';
 import { useVoiceStore } from '@/store/voice';
 import { _resetCacheKeyState } from '@/lib/dm/cache-key';
-import { _resetDMCacheState } from '@/lib/dm/dm-cache';
-import { _resetFollows } from '@/lib/dm/follows';
-import { _resetProfileCache } from '@/lib/dm/profile-cache';
-import { _resetRelayCache } from '@/lib/dm/relay-list-cache';
 
 // Clears all per-identity client state. Called from `BridgeImpl.logout()`
 // so the next user never sees the previous account's servers, channels,
@@ -18,15 +14,10 @@ export function resetAllClientState(): void {
   useReadStateStore.getState().reset();
   useVoiceStore.getState().leaveVoice();
 
-  // DM module-level RAM state (KEK in-memory key map, dm-cache ramCache mirror
-  // and follow set, profile/relay-list subscribers). Persisted localStorage
-  // blobs are per-pubkey-keyed already and survive — the next session reads
-  // them back. We only zero out cross-identity in-memory leakage here.
+  // DM cache-key (KEK in-memory key map). Persisted localStorage blobs are
+  // per-pubkey-keyed already and survive — the next session reads them back.
+  // We only zero out cross-identity in-memory leakage here.
   _resetCacheKeyState();
-  _resetDMCacheState();
-  _resetFollows();
-  _resetProfileCache();
-  _resetRelayCache();
 
   if (typeof window === 'undefined') return;
   try {

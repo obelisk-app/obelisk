@@ -30,7 +30,7 @@ import { ensureReadStateStoreForAccount } from '@/store/read-state';
 import { ensureDMStoreForAccount } from '@/store/dm';
 import { ensureForumFollowForAccount } from '@/store/chat/forum-follow-slice';
 import { startGroupsRelaySync, startDMRelaySync } from '@/lib/read-state/relay-sync';
-import { fetchMyDmRelays } from '@/lib/dm/dm';
+import { fetchRelayList } from '@nostr-wot/data';
 import { PROFILE_RELAYS } from '@/lib/nostr-bridge/client';
 
 const AppShell = dynamic(() => import('./DesktopShell'), { ssr: false });
@@ -96,11 +96,11 @@ function ReadStateRoot() {
   useEffect(() => {
     if (!myPubkey) return;
     let cancelled = false;
-    void fetchMyDmRelays({
-      myPubkey,
-      searchRelays: Array.from(new Set([...relays, ...PROFILE_RELAYS])),
-    }).then((found) => {
+    const searchRelays = Array.from(new Set([...relays, ...PROFILE_RELAYS]));
+    void fetchRelayList(myPubkey, searchRelays).then((list) => {
       if (cancelled) return;
+      // NIP-65 union of read+write — matches DM coverage requirement.
+      const found = list ? Array.from(new Set([...list.read, ...list.write])) : [];
       // Fall back to the configured set if the user has no NIP-65 list yet
       // — better one-relay sync than no sync at all.
       setDmRelays(found.length > 0 ? found : relays);

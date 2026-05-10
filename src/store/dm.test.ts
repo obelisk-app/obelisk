@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useDMStore, ensureDMStoreForAccount } from './dm';
-import type { DMMessage } from '@/lib/dm/dm';
+import type { DMMessage } from './dm';
 
 const makeMsg = (overrides: Partial<DMMessage> = {}): DMMessage => ({
   id: '1',
