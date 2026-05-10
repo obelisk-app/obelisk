@@ -33,7 +33,7 @@ import { PROFILE_RELAYS } from '@/lib/nostr-bridge/client';
 const AppShell = dynamic(() => import('./DesktopShell'), { ssr: false });
 const MobileShell = dynamic(() => import('./mobile/PhoneShell'), { ssr: false });
 
-const MOBILE_QUERY = '(max-width: 767px)';
+const MOBILE_QUERY = '(max-width: 1023px)';
 
 function useIsMobile(): boolean | null {
   const [isMobile, setIsMobile] = useState<boolean | null>(null);
