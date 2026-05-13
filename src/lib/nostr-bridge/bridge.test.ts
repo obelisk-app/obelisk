@@ -14,7 +14,7 @@ type Sink = (ev: NostrEvent) => void;
 
 const fake = vi.hoisted(() => {
   const state = {
-    published: [] as Array<{ kind: number; pubkey: string; tags: string[][]; content: string; id: string }>,
+    published: [] as Array<{ kind: number; pubkey: string; tags: string[][]; content: string; id: string; relays?: string[] }>,
     subscriptions: [] as Array<{
       filter: Record<string, unknown>;
       sink: (ev: any) => void;
@@ -47,8 +47,8 @@ const fake = vi.hoisted(() => {
       queueMicrotask(() => opts.oneose?.());
       return { close: () => { state.subscriptions = state.subscriptions.filter((s) => s !== sub); } };
     }
-    publish(_relays: string[], event: any): Promise<string>[] {
-      state.published.push(event);
+    publish(relays: string[], event: any): Promise<string>[] {
+      state.published.push({ ...event, relays });
       queueMicrotask(() => {
         for (const sub of state.subscriptions) if (matchesInternal(sub.filter, event)) sub.sink(event);
       });
@@ -931,6 +931,24 @@ describe('nostr-bridge', () => {
     const impl = getBridgeImpl()!;
     expect(impl.configuredRelays.get().filter((url) => url === 'wss://lacrypta-relay.obelisk.ar')).toHaveLength(1);
     expect(impl.configuredRelays.get()).not.toContain('wss://lacrypta-relay.obelisk.ar/');
+  });
+
+  it('editUserMetadata publishes kind 0 to profile relays instead of the active group relay', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    await bridge.switchRelay('wss://lacrypta-relay.obelisk.ar');
+    fake.state.published = [];
+
+    await bridge.editUserMetadata({ name: 'Alice', displayName: 'Alice' });
+
+    const metadataEvent = fake.state.published.find((event) => event.kind === 0);
+    expect(metadataEvent).toBeTruthy();
+    expect(metadataEvent?.relays).toContain('wss://relay.damus.io');
+    expect(metadataEvent?.relays).not.toContain('wss://lacrypta-relay.obelisk.ar');
   });
 });
 

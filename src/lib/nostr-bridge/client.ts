@@ -2286,12 +2286,15 @@ class BridgeImpl implements NostrBridge {
     if (opts.website !== undefined) merged.website = opts.website;
     if (opts.lud16 !== undefined) merged.lud16 = opts.lud16;
 
-    await this.signAndPublish({
-      kind: KIND_USER_METADATA,
-      content: JSON.stringify(merged),
-      tags: [],
-      created_at: Math.floor(Date.now() / 1000),
-    });
+    await this.signAndPublish(
+      {
+        kind: KIND_USER_METADATA,
+        content: JSON.stringify(merged),
+        tags: [],
+        created_at: Math.floor(Date.now() / 1000),
+      },
+      { extraRelays: PROFILE_RELAYS, mode: 'replace' },
+    );
   }
 
   /**
