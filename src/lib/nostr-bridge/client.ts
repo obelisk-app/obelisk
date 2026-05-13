@@ -2293,7 +2293,7 @@ class BridgeImpl implements NostrBridge {
         tags: [],
         created_at: Math.floor(Date.now() / 1000),
       },
-      { extraRelays: PROFILE_RELAYS, mode: 'replace' },
+      PROFILE_RELAYS,
     );
   }
 

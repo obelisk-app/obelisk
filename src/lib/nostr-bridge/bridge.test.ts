@@ -933,7 +933,7 @@ describe('nostr-bridge', () => {
     expect(impl.configuredRelays.get()).not.toContain('wss://lacrypta-relay.obelisk.ar/');
   });
 
-  it('editUserMetadata publishes kind 0 to profile relays instead of the active group relay', async () => {
+  it('editUserMetadata publishes kind 0 to the active relay plus profile relays', async () => {
     const { getBridge } = await import('./client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
@@ -948,7 +948,7 @@ describe('nostr-bridge', () => {
     const metadataEvent = fake.state.published.find((event) => event.kind === 0);
     expect(metadataEvent).toBeTruthy();
     expect(metadataEvent?.relays).toContain('wss://relay.damus.io');
-    expect(metadataEvent?.relays).not.toContain('wss://lacrypta-relay.obelisk.ar');
+    expect(metadataEvent?.relays).toContain('wss://lacrypta-relay.obelisk.ar');
   });
 });
 
