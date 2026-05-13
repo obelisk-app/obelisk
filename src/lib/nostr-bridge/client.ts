@@ -52,7 +52,15 @@ import type {
  * slash and occasionally without, so direct string compare is unreliable.
  */
 function normalizeRelayUrl(u: string): string {
-  return u.replace(/\/+$/, '').toLowerCase();
+  const trimmed = u.trim();
+  if (!trimmed) return '';
+  try {
+    const parsed = new URL(trimmed);
+    const pathname = parsed.pathname === '/' ? '' : parsed.pathname.replace(/\/+$/, '');
+    return `${parsed.protocol}//${parsed.host}${pathname}${parsed.search}`;
+  } catch {
+    return trimmed.replace(/\/+$/, '').toLowerCase();
+  }
 }
 
 /**
@@ -734,11 +742,12 @@ class BridgeImpl implements NostrBridge {
         try {
           const list = JSON.parse(rawRelays) as string[];
           if (Array.isArray(list) && list.length > 0) {
-            const merged = [...list];
-            let mutated = false;
+            const merged = uniqueRelayUrls(list);
+            let mutated = merged.length !== list.length || merged.some((url, i) => url !== list[i]);
             for (const def of DEFAULT_RELAYS) {
-              if (!merged.includes(def)) {
-                merged.push(def);
+              const normalizedDefault = normalizeRelayUrl(def);
+              if (!merged.includes(normalizedDefault)) {
+                merged.push(normalizedDefault);
                 mutated = true;
               }
             }
@@ -756,6 +765,7 @@ class BridgeImpl implements NostrBridge {
     if (!raw) return;
     try {
       const parsed = JSON.parse(raw) as PersistedSession;
+      parsed.relayUrl = normalizeRelayUrl(parsed.relayUrl);
       this.session = parsed;
       this.currentRelayUrl.set(parsed.relayUrl);
       this.relays = [parsed.relayUrl];
@@ -820,9 +830,10 @@ class BridgeImpl implements NostrBridge {
   }
 
   private ensureRelayInList(url: string): void {
+    const normalized = normalizeRelayUrl(url);
     const list = this.configuredRelays.get();
-    if (list.includes(url)) return;
-    const next = [...list, url];
+    if (list.includes(normalized)) return;
+    const next = uniqueRelayUrls([...list, normalized]);
     this.configuredRelays.set(next);
     this.persistRelays();
   }
@@ -1428,6 +1439,8 @@ class BridgeImpl implements NostrBridge {
   }
 
   async switchRelay(url: string): Promise<void> {
+    const normalized = normalizeRelayUrl(url);
+    validateRelayUrl(normalized);
     // Same teardown semantics as resetPoolForSessionChange: skip the
     // pool.close() sweep to avoid CLOSING/CLOSED spam, just stop each
     // watched-sub's retry loop and replace the pool reference.
@@ -1435,10 +1448,10 @@ class BridgeImpl implements NostrBridge {
     this.subs = [];
     this.poolSocketAlive = false;
     this.pool = this.createPool();
-    this.relays = [url];
-    this.currentRelayUrl.set(url);
-    this.ensureRelayInList(url);
-    if (this.session) this.session.relayUrl = url;
+    this.relays = [normalized];
+    this.currentRelayUrl.set(normalized);
+    this.ensureRelayInList(normalized);
+    if (this.session) this.session.relayUrl = normalized;
     this.persist();
     this.groups.set([]);
     this.messagesByGroup.set({});
@@ -1497,12 +1510,12 @@ class BridgeImpl implements NostrBridge {
     this.authActivityIds.clear();
     // Re-paint instantly from disk for the new relay; live events will
     // overwrite as they arrive. See {@link seedCacheForRelay}.
-    this.seedCacheForRelay(url);
+    this.seedCacheForRelay(normalized);
     await this.connect();
   }
 
   async addRelay(url: string): Promise<void> {
-    const trimmed = url.trim();
+    const trimmed = normalizeRelayUrl(url);
     if (!trimmed) return;
     validateRelayUrl(trimmed);
     // Register in the rail only — do NOT push into `this.relays` (the active
@@ -1517,11 +1530,12 @@ class BridgeImpl implements NostrBridge {
   }
 
   async removeRelay(url: string): Promise<void> {
-    const list = this.configuredRelays.get().filter((u) => u !== url);
+    const normalized = normalizeRelayUrl(url);
+    const list = this.configuredRelays.get().filter((u) => normalizeRelayUrl(u) !== normalized);
     if (list.length === 0) return; // never empty the rail
     this.configuredRelays.set(list);
     this.persistRelays();
-    if (this.currentRelayUrl.get() === url) {
+    if (normalizeRelayUrl(this.currentRelayUrl.get()) === normalized) {
       await this.switchRelay(list[0]);
     }
   }
@@ -3817,6 +3831,23 @@ function validateRelayUrl(url: string): void {
   if (!isIp && !isLocalhost && !host.includes('.')) {
     throw new Error(`"${host}" is not a valid relay hostname (single-label hosts are not allowed)`);
   }
+}
+
+function uniqueRelayUrls(urls: readonly string[]): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of urls) {
+    try {
+      const normalized = normalizeRelayUrl(raw);
+      validateRelayUrl(normalized);
+      if (seen.has(normalized)) continue;
+      seen.add(normalized);
+      out.push(normalized);
+    } catch {
+      // Ignore corrupted persisted relay entries; users can re-add them.
+    }
+  }
+  return out;
 }
 
 function generateGroupId(): string {

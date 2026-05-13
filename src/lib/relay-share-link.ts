@@ -11,7 +11,7 @@
 
 const ALIASES: Record<string, string> = {
   obelisk: 'wss://relay.obelisk.ar',
-  lacrypta: 'wss://lacrypta-relay.obelisk.ar/',
+  lacrypta: 'wss://lacrypta-relay.obelisk.ar',
   public: 'wss://public.obelisk.ar',
 };
 

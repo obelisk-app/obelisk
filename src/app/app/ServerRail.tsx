@@ -26,7 +26,7 @@ const SUGGESTED_RELAYS: { url: string; fallbackName?: string; fallbackDescriptio
     fallbackDescription: 'Default NIP-29 relay for Obelisk groups.',
   },
   {
-    url: 'wss://lacrypta-relay.obelisk.ar/',
+    url: 'wss://lacrypta-relay.obelisk.ar',
     fallbackName: 'La Crypta relay',
     fallbackDescription: 'NIP-29 relay for La Crypta.',
   },

@@ -917,6 +917,21 @@ describe('nostr-bridge', () => {
     expect(impl.configuredRelays.get()).toContain(CUSTOM_RELAY);
     expect(fake.state.ensureRelayCalls).toEqual([]);
   });
+
+  it('addRelay deduplicates equivalent relay URLs with and without a trailing slash', async () => {
+    const { getBridge, getBridgeImpl } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    await bridge.addRelay('wss://lacrypta-relay.obelisk.ar/');
+    await bridge.addRelay('wss://lacrypta-relay.obelisk.ar');
+
+    const impl = getBridgeImpl()!;
+    expect(impl.configuredRelays.get().filter((url) => url === 'wss://lacrypta-relay.obelisk.ar')).toHaveLength(1);
+    expect(impl.configuredRelays.get()).not.toContain('wss://lacrypta-relay.obelisk.ar/');
+  });
 });
 
 // -- helpers ------------------------------------------------------------
