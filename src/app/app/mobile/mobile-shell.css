@@ -1076,6 +1076,41 @@
   object-fit: cover;
 }
 .obelisk-mobile .msg-body { flex: 1; min-width: 0; }
+.obelisk-mobile .msg-reply-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  margin-bottom: 2px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  font-size: 12px;
+  color: var(--app-text-dim);
+  cursor: pointer;
+  overflow: hidden;
+  text-align: left;
+}
+.obelisk-mobile .msg-reply-row .msg-reply-arrow { color: #b4f953; flex-shrink: 0; }
+.obelisk-mobile .msg-reply-row .msg-reply-name {
+  font-weight: 600;
+  color: var(--app-text);
+  flex-shrink: 0;
+}
+.obelisk-mobile .msg-reply-row .msg-reply-text {
+  color: var(--app-text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.obelisk-mobile .msg-reply-row-missing {
+  font-size: 12px;
+  color: var(--app-text-dim);
+  font-style: italic;
+  margin-bottom: 2px;
+}
+.obelisk-mobile .msg.msg-flash { background: rgba(180, 249, 83, 0.12); transition: background 0.2s; }
 .obelisk-mobile .msg-head {
   display: flex;
   align-items: baseline;

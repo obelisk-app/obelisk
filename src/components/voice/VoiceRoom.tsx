@@ -523,10 +523,10 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
   //   - Else, if anyone is screen-sharing, default to first sharer.
   //   - Else no stage → grid mode.
   const activeStage = useMemo<
-    | { pubkey: string; isLocal: boolean; kind: 'screen' | 'camera'; videoStream: MediaStream | null; audioStream: MediaStream | null }
+    | { pubkey: string; isLocal: boolean; kind: 'screen' | 'camera'; videoStream: MediaStream | null }
     | null
   >(() => {
-    const build = (pk: string): { pubkey: string; isLocal: boolean; kind: 'screen' | 'camera'; videoStream: MediaStream | null; audioStream: MediaStream | null } | null => {
+    const build = (pk: string): { pubkey: string; isLocal: boolean; kind: 'screen' | 'camera'; videoStream: MediaStream | null } | null => {
       const isLocal = pk === selfPubkey;
       const slot = tracksByPubkey.get(pk);
       const hasScreen = isLocal ? !!localScreenStream : !!slot?.screen;
@@ -536,7 +536,6 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
           isLocal,
           kind: 'screen',
           videoStream: isLocal ? localScreenStream : (slot?.screen?.stream ?? null),
-          audioStream: isLocal ? null : (slot?.screenAudio?.stream ?? null),
         };
       }
       const hasCam = isLocal ? !!localCamStream : !!slot?.camera;
@@ -546,7 +545,6 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
           isLocal,
           kind: 'camera',
           videoStream: isLocal ? localCamStream : (slot?.camera?.stream ?? null),
-          audioStream: isLocal ? null : (slot?.audio?.stream ?? null),
         };
       }
       return null;
@@ -563,7 +561,6 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
         isLocal: first.isLocal,
         kind: 'screen',
         videoStream: first.isLocal ? localScreenStream : (first.track?.stream ?? null),
-        audioStream: first.isLocal ? null : (tracksByPubkey.get(first.pubkey)?.screenAudio?.stream ?? null),
       };
     }
     return null;
@@ -658,7 +655,6 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
                   isLocal={activeStage!.isLocal}
                   kind={activeStage!.kind}
                   videoStream={activeStage!.videoStream}
-                  audioStream={activeStage!.audioStream}
                   pinned={pinned === activeStage!.pubkey}
                   onTogglePin={() => setPinned((p) => (p === activeStage!.pubkey ? null : activeStage!.pubkey))}
                 />
@@ -672,7 +668,6 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
                     pubkey={pk}
                     isLocal={pk === selfPubkey}
                     videoStream={pk === selfPubkey ? localCamStream : (tracksByPubkey.get(pk)?.camera?.stream ?? null)}
-                    audioStream={pk === selfPubkey ? null : (tracksByPubkey.get(pk)?.audio?.stream ?? null)}
                     isPinned={pinned === pk}
                     isStage={activeStage!.pubkey === pk}
                     onClick={() => setPinned((p) => (p === pk ? null : pk))}
@@ -683,7 +678,6 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
                     key={pk}
                     pubkey={pk}
                     isLocal={pk === selfPubkey}
-                    audioStream={pk === selfPubkey ? null : (tracksByPubkey.get(pk)?.audio?.stream ?? null)}
                   />
                 ))}
               </ScrollableRail>
@@ -699,7 +693,6 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
                         pubkey={videoPubkeys[0]}
                         isLocal={videoPubkeys[0] === selfPubkey}
                         videoStream={videoPubkeys[0] === selfPubkey ? localCamStream : (tracksByPubkey.get(videoPubkeys[0])?.camera?.stream ?? null)}
-                        audioStream={videoPubkeys[0] === selfPubkey ? null : (tracksByPubkey.get(videoPubkeys[0])?.audio?.stream ?? null)}
                         onPin={() => setPinned(videoPubkeys[0])}
                         fit="contain"
                         fillParent
@@ -724,7 +717,6 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
                           pubkey={pk}
                           isLocal={pk === selfPubkey}
                           videoStream={pk === selfPubkey ? localCamStream : (tracksByPubkey.get(pk)?.camera?.stream ?? null)}
-                          audioStream={pk === selfPubkey ? null : (tracksByPubkey.get(pk)?.audio?.stream ?? null)}
                           onPin={() => setPinned(pk)}
                           fit="cover"
                           fillParent
@@ -754,7 +746,6 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
                         key={pk}
                         pubkey={pk}
                         isLocal={pk === selfPubkey}
-                        audioStream={pk === selfPubkey ? null : (tracksByPubkey.get(pk)?.audio?.stream ?? null)}
                       />
                     ))}
                   </div>
@@ -768,7 +759,6 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
                       key={pk}
                       pubkey={pk}
                       isLocal={pk === selfPubkey}
-                      audioStream={pk === selfPubkey ? null : (tracksByPubkey.get(pk)?.audio?.stream ?? null)}
                     />
                   ))}
                 </div>
@@ -922,25 +912,18 @@ function RoomHeader({ name, count, sfuStatus }: {
   );
 }
 
-function Stage({ pubkey, isLocal, kind, videoStream, audioStream, pinned, onTogglePin }: {
+function Stage({ pubkey, isLocal, kind, videoStream, pinned, onTogglePin }: {
   pubkey: string;
   isLocal: boolean;
   kind: 'screen' | 'camera';
   videoStream: MediaStream | null;
-  audioStream: MediaStream | null;
   pinned: boolean;
   onTogglePin: () => void;
 }) {
   const meta = useProfile(pubkey);
   const name = meta?.displayName || meta?.name || pubkey.slice(0, 8);
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  // The fullscreen target wraps both the <video> and the <audio>: making
-  // just the <video> fullscreen detaches its sibling audio from the focus
-  // surface and Safari has been observed to mute it. Wrapping both keeps
-  // audio playing through the transition.
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const isMutedForMe = useTileAudioMuted(pubkey);
   const speaking = useTileSpeaking(pubkey);
   useEffect(() => {
     const el = videoRef.current;
@@ -948,12 +931,6 @@ function Stage({ pubkey, isLocal, kind, videoStream, audioStream, pinned, onTogg
     el.srcObject = videoStream;
     if (videoStream) void el.play().catch(() => {});
   }, [videoStream]);
-  useEffect(() => {
-    const el = audioRef.current;
-    if (!el) return;
-    el.srcObject = audioStream;
-    if (audioStream) void el.play().catch(() => {});
-  }, [audioStream]);
   const label =
     kind === 'screen'
       ? isLocal ? 'You are presenting' : `${name} is presenting`
@@ -974,7 +951,6 @@ function Stage({ pubkey, isLocal, kind, videoStream, audioStream, pinned, onTogg
         muted={isLocal}
         className={'w-full h-full object-contain ' + (kind === 'camera' && isLocal ? 'scale-x-[-1]' : '')}
       />
-      {!isLocal && <audio ref={audioRef} autoPlay muted={isMutedForMe} />}
       <div className="absolute top-2 left-2 flex items-center gap-1.5 px-2 py-1 rounded-md bg-black/60 backdrop-blur text-[11px] text-lc-green border border-lc-green/30">
         <span className="font-medium">{label}</span>
       </div>
@@ -1003,11 +979,10 @@ function Stage({ pubkey, isLocal, kind, videoStream, audioStream, pinned, onTogg
   );
 }
 
-function VideoTile({ pubkey, isLocal, videoStream, audioStream, onPin, fit = 'cover', fillParent = false }: {
+function VideoTile({ pubkey, isLocal, videoStream, onPin, fit = 'cover', fillParent = false }: {
   pubkey: string;
   isLocal: boolean;
   videoStream: MediaStream | null;
-  audioStream: MediaStream | null;
   onPin?: () => void;
   fit?: 'cover' | 'contain';
   fillParent?: boolean;
@@ -1015,9 +990,7 @@ function VideoTile({ pubkey, isLocal, videoStream, audioStream, onPin, fit = 'co
   const meta = useProfile(pubkey);
   const name = meta?.displayName || meta?.name || pubkey.slice(0, 8);
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const isMutedForMe = useTileAudioMuted(pubkey);
   const speaking = useTileSpeaking(pubkey);
 
   useEffect(() => {
@@ -1026,12 +999,6 @@ function VideoTile({ pubkey, isLocal, videoStream, audioStream, onPin, fit = 'co
     el.srcObject = videoStream;
     if (videoStream) el.play().catch(() => {});
   }, [videoStream]);
-  useEffect(() => {
-    const el = audioRef.current;
-    if (!el) return;
-    el.srcObject = audioStream;
-    if (audioStream) el.play().catch(() => {});
-  }, [audioStream]);
 
   const fitClass = fit === 'contain' ? 'object-contain bg-black' : 'object-cover';
   // Use a div with role=button so we can host nested controls (mute,
@@ -1062,7 +1029,6 @@ function VideoTile({ pubkey, isLocal, videoStream, audioStream, onPin, fit = 'co
           <Avatar pubkey={pubkey} picture={meta?.picture} name={name} size={20} speaking={speaking} />
         </div>
       )}
-      {!isLocal && <audio ref={audioRef} autoPlay muted={isMutedForMe} />}
       <div className="absolute top-2 right-2 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
         {!isLocal && <MuteForMeButton pubkey={pubkey} />}
         {videoStream && <FullscreenButton targetRef={containerRef} />}
@@ -1178,7 +1144,6 @@ function RailVideoTile({ isPinned, isStage, onClick, ...props }: {
   pubkey: string;
   isLocal: boolean;
   videoStream: MediaStream | null;
-  audioStream: MediaStream | null;
   isPinned?: boolean;
   isStage?: boolean;
   onClick?: () => void;
@@ -1196,22 +1161,13 @@ function RailVideoTile({ isPinned, isStage, onClick, ...props }: {
   );
 }
 
-function AudioTile({ pubkey, isLocal, audioStream }: {
+function AudioTile({ pubkey, isLocal }: {
   pubkey: string;
   isLocal: boolean;
-  audioStream: MediaStream | null;
 }) {
   const meta = useProfile(pubkey);
   const name = meta?.displayName || meta?.name || pubkey.slice(0, 8);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const isMutedForMe = useTileAudioMuted(pubkey);
   const speaking = useTileSpeaking(pubkey);
-  useEffect(() => {
-    const el = audioRef.current;
-    if (!el) return;
-    el.srcObject = audioStream;
-    if (audioStream) el.play().catch(() => {});
-  }, [audioStream, pubkey]);
   return (
     <div
       className={
@@ -1232,27 +1188,17 @@ function AudioTile({ pubkey, isLocal, audioStream }: {
           <MuteForMeButton pubkey={pubkey} />
         </div>
       )}
-      {!isLocal && <audio ref={audioRef} autoPlay muted={isMutedForMe} />}
     </div>
   );
 }
 
-function RailAudioTile({ pubkey, isLocal, audioStream }: {
+function RailAudioTile({ pubkey, isLocal }: {
   pubkey: string;
   isLocal: boolean;
-  audioStream: MediaStream | null;
 }) {
   const meta = useProfile(pubkey);
   const name = meta?.displayName || meta?.name || pubkey.slice(0, 8);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const isMutedForMe = useTileAudioMuted(pubkey);
   const speaking = useTileSpeaking(pubkey);
-  useEffect(() => {
-    const el = audioRef.current;
-    if (!el) return;
-    el.srcObject = audioStream;
-    if (audioStream) el.play().catch(() => {});
-  }, [audioStream, pubkey]);
   return (
     <div
       className={
@@ -1268,27 +1214,17 @@ function RailAudioTile({ pubkey, isLocal, audioStream }: {
           <MuteForMeButton pubkey={pubkey} compact />
         </div>
       )}
-      {!isLocal && <audio ref={audioRef} autoPlay muted={isMutedForMe} />}
     </div>
   );
 }
 
-function AudioChip({ pubkey, isLocal, audioStream }: {
+function AudioChip({ pubkey, isLocal }: {
   pubkey: string;
   isLocal: boolean;
-  audioStream: MediaStream | null;
 }) {
   const meta = useProfile(pubkey);
   const name = meta?.displayName || meta?.name || pubkey.slice(0, 8);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const isMutedForMe = useTileAudioMuted(pubkey);
   const speaking = useTileSpeaking(pubkey);
-  useEffect(() => {
-    const el = audioRef.current;
-    if (!el) return;
-    el.srcObject = audioStream;
-    if (audioStream) el.play().catch(() => {});
-  }, [audioStream, pubkey]);
   return (
     <div
       className={
@@ -1300,7 +1236,6 @@ function AudioChip({ pubkey, isLocal, audioStream }: {
       <Avatar pubkey={pubkey} picture={meta?.picture} name={name} size={6} speaking={speaking} />
       <span className="text-xs text-white/85 truncate max-w-[10rem]">{isLocal ? `You · ${name}` : name}</span>
       {!isLocal && <MuteForMeButton pubkey={pubkey} compact />}
-      {!isLocal && <audio ref={audioRef} autoPlay muted={isMutedForMe} />}
     </div>
   );
 }
@@ -1322,16 +1257,10 @@ function Avatar({ pubkey, picture, name, size, speaking = false }: { pubkey: str
   );
 }
 
-// ── Hooks: speaking, per-peer mute ─────────────────────────────────────
+// ── Hooks: speaking ────────────────────────────────────────────────────
 
 function useTileSpeaking(pubkey: string): boolean {
   return useVoiceStore((s) => !!s.speakingPubkeys[pubkey]);
-}
-
-/** Combined "this tile's audio should be muted right now" — true when the
- *  user has deafened OR has muted-for-me'd this specific peer. */
-function useTileAudioMuted(pubkey: string): boolean {
-  return useVoiceStore((s) => s.isDeafened || !!s.localMutedPubkeys[pubkey]);
 }
 
 // ── UI atoms: mute-for-me, fullscreen ──────────────────────────────────

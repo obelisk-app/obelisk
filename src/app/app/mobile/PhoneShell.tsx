@@ -25,6 +25,7 @@ import {
   useGroups,
   useChildrenByParent,
   useMessages,
+  useMessagesEose,
   useLoadEarlier,
   useDirectMessages,
   useAdmins,
@@ -52,8 +53,10 @@ const useUserMetadata = useProfile;
 import LoginModal from '../LoginModal';
 import VoiceRoom from '@/components/voice/VoiceRoom';
 import VoiceStatusBar from '@/components/voice/VoiceStatusBar';
+import BackgroundVoiceAudio from '@/components/voice/BackgroundVoiceAudio';
 import { subscribeVoiceJump } from '@/lib/voice/jump-to-voice';
 import MessageContent from '@/components/chat/MessageContent';
+import { MentionText } from '@/components/chat/MentionText';
 import MentionNavigator from '@/components/chat/MentionNavigator';
 import EmojiPicker from '@/components/chat/EmojiPicker';
 import { uploadToBlossom } from '@/lib/blossom';
@@ -2078,6 +2081,22 @@ function ChannelListEmptyState({
   );
 }
 
+// Preserve vertical scroll position across remounts when the user navigates
+// between top-level tabs (e.g., server ↔ dms-list). Each screen unmounts on
+// tab switch, so without this the scroll resets to 0 on every return.
+const screenScrollMemo = new Map<string, number>();
+function useScreenScrollMemo(key: string, ref: React.RefObject<HTMLElement | null>) {
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const saved = screenScrollMemo.get(key);
+    if (saved != null) el.scrollTop = saved;
+    const onScroll = () => { screenScrollMemo.set(key, el.scrollTop); };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => { el.removeEventListener('scroll', onScroll); };
+  }, [key, ref]);
+}
+
 function ServerScreen({
   go,
   selectGroup,
@@ -2130,6 +2149,7 @@ function ServerScreen({
   const channelListRef = useRef<HTMLDivElement>(null);
   const stripRef = useRef<HTMLDivElement>(null);
   const stripHostRef = useRef<HTMLDivElement>(null);
+  useScreenScrollMemo(`server:${relay ?? ''}`, channelListRef);
 
   // Toggle edge-fade affordances on the spaces strip when there's more content
   // to scroll. The fades are pure CSS pseudo-elements; we only flip the state
@@ -2469,6 +2489,7 @@ function ChannelScreen({
     ? `${parentGroup.name ?? parentGroup.id.slice(0, 8)}/${group?.name ?? groupId.slice(0, 8)}`
     : (group?.name ?? groupId.slice(0, 8));
   const messages = useMessages(groupId);
+  const messagesEose = useMessagesEose(groupId);
   const reactions = useReactions(groupId);
   const myPubkey = useMyPubkey();
   const relay = useCurrentRelayUrl();
@@ -2680,11 +2701,21 @@ function ChannelScreen({
       <div className="messages-wrap relative flex min-h-0 flex-1 flex-col">
       <div className="messages" ref={messagesRef}>
         {renderable.length === 0 ? (
-          <div className="empty-state">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
-            <div className="empty-state-title">No messages yet</div>
-            <div className="empty-state-desc">Be the first to say hi.</div>
-          </div>
+          // Don't claim "no messages yet" until the relay has actually said
+          // EOSE for this channel — otherwise the user sees the empty copy
+          // flash for a moment while history is still streaming.
+          !messagesEose ? (
+            <div className="empty-state" data-testid="messages-loading">
+              <div className="lc-spinner" aria-hidden="true" />
+              <div className="empty-state-title">Loading messages…</div>
+            </div>
+          ) : (
+            <div className="empty-state">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+              <div className="empty-state-title">No messages yet</div>
+              <div className="empty-state-desc">Be the first to say hi.</div>
+            </div>
+          )
         ) : (
           renderable.map((it) =>
             it.type === 'divider' ? (
@@ -2693,6 +2724,11 @@ function ChannelScreen({
               <ChannelMessage
                 key={it.key}
                 msg={it.msg}
+                parent={
+                  it.msg.replyToId
+                    ? messages.find((x) => x.id === it.msg.replyToId) ?? null
+                    : null
+                }
                 myPubkey={myPubkey}
                 groupId={groupId}
                 reactions={reactions[it.msg.id] ?? []}
@@ -2714,7 +2750,7 @@ function ChannelScreen({
               <span className="composer-reply-label">
                 Replying to <ReplyAuthorName pubkey={replyingTo.pubkey} />
               </span>
-              <span className="composer-reply-text">{replyingTo.content.slice(0, 80)}</span>
+              <span className="composer-reply-text"><MentionText content={replyingTo.content.slice(0, 80)} /></span>
             </div>
             <button
               type="button"
@@ -2832,8 +2868,32 @@ function ChannelScreen({
   );
 }
 
+function MobileReplyPreviewRow({
+  parent,
+  onJump,
+}: {
+  parent: JsMessage;
+  onJump: () => void;
+}) {
+  const meta = useUserMetadata(parent.pubkey);
+  const name = meta?.displayName || meta?.name || shortNpub(parent.pubkey);
+  const preview = parent.content.replace(/\s+/g, ' ').slice(0, 120);
+  return (
+    <button
+      type="button"
+      className="msg-reply-row"
+      onClick={(e) => { e.stopPropagation(); onJump(); }}
+    >
+      <span className="msg-reply-arrow">↩</span>
+      <span className="msg-reply-name">{name}</span>
+      <span className="msg-reply-text"><MentionText content={preview} /></span>
+    </button>
+  );
+}
+
 export function ChannelMessage({
   msg,
+  parent,
   myPubkey,
   groupId,
   reactions,
@@ -2842,6 +2902,7 @@ export function ChannelMessage({
   onAvatar,
 }: {
   msg: JsMessage;
+  parent?: JsMessage | null;
   myPubkey: string | null;
   groupId: string;
   reactions: ReadonlyArray<{ id: string; pubkey: string; emoji: string }>;
@@ -2890,12 +2951,29 @@ export function ChannelMessage({
     void nostrActions.cancelPendingMessage(groupId, msg.clientTag);
   };
 
+  const onJumpToParent = () => {
+    if (!parent) return;
+    const el = document.querySelector(`[data-msg-id="${parent.id}"]`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('msg-flash');
+      setTimeout(() => el.classList.remove('msg-flash'), 1200);
+    }
+  };
+
   return (
-    <div className={'msg' + (msg.pending ? ' pending' : '') + (msg.failed ? ' failed' : '')}>
+    <div
+      data-msg-id={msg.id}
+      className={'msg' + (msg.pending ? ' pending' : '') + (msg.failed ? ' failed' : '')}
+    >
       <div className="msg-ava" style={avatarStyle(msg.pubkey)} onClick={onAvatar} role="button">
         {meta?.picture ? <img src={meta.picture} alt="" /> : initialsFor(name, shortNpub(msg.pubkey))}
       </div>
       <div className="msg-body">
+        {parent && <MobileReplyPreviewRow parent={parent} onJump={onJumpToParent} />}
+        {msg.replyToId && !parent && (
+          <div className="msg-reply-row msg-reply-row-missing">↩ replying to a message</div>
+        )}
         <div className="msg-head">
           <span className="msg-name" onClick={onAvatar} role="button">{name}</span>
           <span className="msg-time">{timeOfDay(msg.createdAt)}</span>
@@ -3052,6 +3130,9 @@ function DmsListScreen({
   const followsCount = peers.filter((p) => followsSet.has(p.peer)).length;
   const othersCount = peers.length - followsCount;
 
+  const listRef = useRef<HTMLDivElement>(null);
+  useScreenScrollMemo(`dms-list:${tab}`, listRef);
+
   return (
     <div className="screen active" data-screen="dms-list">
       <div className="app-header">
@@ -3075,7 +3156,7 @@ function DmsListScreen({
         </button>
       </div>
 
-      <div className="dms-list-rows">
+      <div className="dms-list-rows" ref={listRef}>
         {filtered.length === 0 && (
           <div className="empty-state">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><rect x="3" y="11" width="18" height="9" rx="1.5" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
@@ -3400,7 +3481,7 @@ function InboxCard({ event, onJump }: { event: InboxEvent; onJump: () => void })
         </div>
         <div className="mc-body">
           <div className="mc-name" style={{ color: 'var(--app-text)' }}>{name}</div>
-          <div className="mc-text" style={{ color: 'var(--app-text-dim)' }}>{event.preview}</div>
+          <div className="mc-text" style={{ color: 'var(--app-text-dim)' }}><MentionText content={event.preview ?? ''} /></div>
         </div>
       </div>
     </button>
@@ -4444,6 +4525,12 @@ export default function MobileShell() {
   // newly-mounted screen doesn't double-animate (the drag layer already
   // animated it into place).
   const suppressSlideRef = useRef(false);
+  // Remembers the last sub-screen the user was on for each top-level tab so
+  // that tapping that tab's bottom-nav item from a different tab restores the
+  // user to where they left off (e.g. server>channelA → DMs → tap Servers
+  // returns to channelA, not the bare server list). Tapping the same tab's
+  // button while already inside it still pops to the bare top-level.
+  const lastSubScreenByTabRef = useRef<Partial<Record<ScreenName, NavState>>>({});
 
   // ── navigation helpers ───────────────────────────────────────────────
   // We update `useChatStore.activeChannelId` / `useDMStore.activeDMPubkey`
@@ -4484,6 +4571,51 @@ export default function MobileShell() {
       (prev === 'settings-profile' && screen === 'settings-prefs') ||
       (prev === 'settings-prefs' && screen === 'settings-profile');
     if (isSettingsTabSwitch) suppressSlideRef.current = true;
+
+    // Tab-aware "remember where I was" logic. If the user is leaving one
+    // top-level tab (or any of its sub-screens) for a *different* top-level
+    // tab, snapshot the current nav so a return tap can restore it. Sheets
+    // are transient overlays — collapse them to their underlying base screen
+    // before remembering.
+    const prevParent = NAV_ORDER.includes(prev) ? prev : (SUB_TO_NAV[prev] ?? null);
+    const targetIsTopLevel = NAV_ORDER.includes(screen);
+    if (prevParent && targetIsTopLevel && prevParent !== screen) {
+      if (NAV_ORDER.includes(prev)) {
+        // Leaving from the bare tab → no sub-screen to remember; clear any
+        // stale memory so the next return doesn't restore an old position.
+        delete lastSubScreenByTabRef.current[prevParent];
+      } else if (prev === 'msg-actions' || prev === 'zap-modal') {
+        const base = navRef.current.baseScreen;
+        if (base) {
+          lastSubScreenByTabRef.current[prevParent] = {
+            ...navRef.current,
+            screen: base,
+            baseScreen: null,
+            msgContext: null,
+          };
+        }
+      } else {
+        lastSubScreenByTabRef.current[prevParent] = navRef.current;
+      }
+    }
+
+    // When tapping a *different* tab's bottom-nav item, restore that tab's
+    // remembered sub-screen if any. Tapping the active tab's button while
+    // already inside one of its sub-screens still pops to the bare tab.
+    if (targetIsTopLevel && prevParent !== screen) {
+      const remembered = lastSubScreenByTabRef.current[screen];
+      if (remembered) {
+        useChatStore.setState({
+          activeChannelId: remembered.screen === 'channel' ? remembered.groupId : null,
+        });
+        useDMStore.setState({
+          activeDMPubkey: remembered.screen === 'dm-thread' ? remembered.dmPeer : null,
+        });
+        pushNav(() => remembered, dir);
+        return;
+      }
+    }
+
     if (screen !== 'channel') useChatStore.setState({ activeChannelId: null });
     if (screen !== 'dm-thread') useDMStore.setState({ activeDMPubkey: null });
     pushNav((n) => ({ ...n, screen, baseScreen: null, msgContext: null }), dir);
@@ -4582,7 +4714,15 @@ export default function MobileShell() {
         const isSettingsTabSwitch =
           (prev === 'settings-profile' && next.screen === 'settings-prefs') ||
           (prev === 'settings-prefs' && next.screen === 'settings-profile');
-        if (isSettingsTabSwitch) {
+        // Sheets (msg-actions / zap-modal) float over a base screen with their
+        // own vertical slide-up animation. Any popstate that opens or closes a
+        // sheet (or hops between two sheets) must NOT also animate the base
+        // layer — otherwise the channel underneath slides laterally while the
+        // sheet appears/disappears, which reads as a glitchy refresh.
+        const isSheetTransition =
+          prev === 'msg-actions' || prev === 'zap-modal' ||
+          next.screen === 'msg-actions' || next.screen === 'zap-modal';
+        if (isSettingsTabSwitch || isSheetTransition) {
           suppressSlideRef.current = true;
           setSlideDir(null);
         } else {
@@ -4694,24 +4834,46 @@ export default function MobileShell() {
         layer.style.transition = TRANSITION;
         layer.style.transform = `translateX(${targetTx}px)`;
       }
+      // Snapshot where the user is leaving from so a return swipe/tap to this
+      // tab can restore the same sub-screen. Done before the timeout so the
+      // ref is updated synchronously with the user's commit gesture.
+      const leavingFrom = navRef.current.screen;
+      const leavingParent = NAV_ORDER.includes(leavingFrom)
+        ? leavingFrom
+        : (SUB_TO_NAV[leavingFrom] ?? null);
+      if (leavingParent && leavingParent !== action.target) {
+        if (NAV_ORDER.includes(leavingFrom)) {
+          delete lastSubScreenByTabRef.current[leavingParent];
+        } else if (leavingFrom !== 'msg-actions' && leavingFrom !== 'zap-modal') {
+          lastSubScreenByTabRef.current[leavingParent] = navRef.current;
+        }
+      }
       window.setTimeout(() => {
         suppressSlideRef.current = true;
-        // Land on the bare top-level. A previous version restored the target
-        // tab's last-visited sub-screen here (so server>channelA → DMs →
-        // swipe-right would re-enter channelA), but that re-entry happened
-        // AFTER the visual swipe had already settled on the bare tab — the
-        // channel popped on top, which read as a glitchy refresh. The
-        // drag-prev/drag-next slots only ever show `renderTopLevelScreen`,
-        // not the remembered sub-screen, so previewing it during the swipe
-        // wasn't possible without re-architecting the carousel. Lands-on-bare
-        // is the consistent option: what you see during the swipe is what you
-        // get on commit.
-        useChatStore.setState({ activeChannelId: null });
-        useDMStore.setState({ activeDMPubkey: null });
-        pushNav(
-          (n) => ({ ...n, screen: action.target, baseScreen: null, msgContext: null }),
-          action.dir,
-        );
+        // Restore the target tab's last sub-screen if we have one. The drag
+        // slots only render the bare top-level (renderTopLevelScreen), so
+        // during the swipe the user sees the bare tab sliding in — then the
+        // sub-screen overlay appears on top once we push it. There's still a
+        // brief visual seam there, but the destination matches the user's
+        // expectation ("take me back to the channel I was reading"), which
+        // is the more important property.
+        const remembered = lastSubScreenByTabRef.current[action.target];
+        if (remembered) {
+          useChatStore.setState({
+            activeChannelId: remembered.screen === 'channel' ? remembered.groupId : null,
+          });
+          useDMStore.setState({
+            activeDMPubkey: remembered.screen === 'dm-thread' ? remembered.dmPeer : null,
+          });
+          pushNav(() => remembered, action.dir);
+        } else {
+          useChatStore.setState({ activeChannelId: null });
+          useDMStore.setState({ activeDMPubkey: null });
+          pushNav(
+            (n) => ({ ...n, screen: action.target, baseScreen: null, msgContext: null }),
+            action.dir,
+          );
+        }
         setIsDragging(false);
       }, 240);
     } else {
@@ -4809,9 +4971,13 @@ export default function MobileShell() {
     pushNav((n) => ({ ...n, screen: 'member-list' }));
   }, [pushNav]);
   const openMsgActions = useCallback((msg: { id: string; pubkey: string; content: string }) => {
+    // The sheet animates in vertically on top of the base screen — suppress the
+    // default forward slide so the underlying channel doesn't lateral-slide too.
+    suppressSlideRef.current = true;
     pushNav((n) => ({ ...n, baseScreen: n.screen, screen: 'msg-actions', msgContext: msg }));
   }, [pushNav]);
   const openZap = useCallback((msg: { id: string; pubkey: string; content: string }) => {
+    suppressSlideRef.current = true;
     pushNav((n) => ({ ...n, baseScreen: n.screen === 'msg-actions' ? n.baseScreen : n.screen, screen: 'zap-modal', msgContext: msg }));
   }, [pushNav]);
   const closeSheet = useCallback(() => {
@@ -5023,6 +5189,7 @@ export default function MobileShell() {
       onTouchEnd={onTouchEnd}
       onTouchCancel={onTouchCancel}
     >
+      <BackgroundVoiceAudio />
       <div className="screens-host" ref={screensHostRef}>
         <div ref={dragLayerRef} className={`drag-layer ${isDragging ? 'is-dragging' : ''}`}>
           {/* All four top-level screens are persistently mounted with stable

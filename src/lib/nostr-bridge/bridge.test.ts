@@ -730,6 +730,145 @@ describe('nostr-bridge', () => {
     expect(cacheGet(NEW_RELAY, 39000, 'leaked-from-old-relay')).toBeNull();
   });
 
+  // -- per-group messages-EOSE flag ----------------------------------------
+  // The chat pane needs to tell "still loading from relay" from "relay
+  // confirmed empty" so the loading spinner doesn't flash to "No messages
+  // yet — be the first" mid-stream. The bridge exposes a per-group flag
+  // (StateStore<Record<groupId, boolean>>) that flips on EOSE for the
+  // kind 9 subscription scoped to that group.
+
+  it('subscribeMessagesEose stays false until EOSE, flips to true after EOSE', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const groupId = 'eose-test-group';
+    const observed: boolean[] = [];
+    bridge.subscribeMessagesEose(groupId, (eose) => observed.push(eose));
+    // Initial replay: false (no EOSE yet for this group).
+    expect(observed[0]).toBe(false);
+
+    // FakePool fires EOSE via queueMicrotask, so flush() lets it land.
+    await flush();
+    expect(observed.at(-1)).toBe(true);
+  });
+
+  it('messagesEoseByGroup resets on relay switch so the new relay starts in loading state', async () => {
+    const { getBridge, getBridgeImpl } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const groupId = 'eose-reset-test';
+    bridge.subscribeMessagesEose(groupId, () => {});
+    await flush();
+
+    const impl = getBridgeImpl()!;
+    expect(impl.messagesEoseByGroup.get()[groupId]).toBe(true);
+
+    await bridge.switchRelay('wss://other-relay.example');
+    expect(impl.messagesEoseByGroup.get()[groupId]).toBeFalsy();
+  });
+
+  // -- active-group priority for kind 9 REQs ------------------------------
+  // Background fan-out from kind 39000 used to fire a kind 9 REQ per
+  // discovered group on the same tick — on a busy relay the channel the
+  // user actually clicked landed at the back of the response queue and
+  // its history rendered late. The bridge now queues background subs and
+  // fast-tracks the active group via `setActiveGroup` so the channel in
+  // view always wins the relay's first response.
+
+  it('background metadata defers per-group message REQs; setActiveGroup fires the active one immediately', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const messageSubsFor = (groupId: string) =>
+      fake.state.subscriptions.filter((s) => {
+        const f = s.filter as { kinds?: number[]; '#h'?: string[] };
+        return f.kinds?.includes(9) && f['#h']?.includes(groupId);
+      });
+
+    bridge.setActiveGroup('active-group');
+
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      // Inject metadata for the active group + several background ones in
+      // the same tick — mirrors what a real relay does at login.
+      deliver(await fakeRelayMetadata({ groupId: 'active-group', name: 'Active' }));
+      deliver(await fakeRelayMetadata({ groupId: 'bg-1', name: 'B1' }));
+      deliver(await fakeRelayMetadata({ groupId: 'bg-2', name: 'B2' }));
+      deliver(await fakeRelayMetadata({ groupId: 'bg-3', name: 'B3' }));
+
+      // Synchronously: only the active group has a kind 9 sub. Background
+      // groups are sitting in the queue waiting for the drain timer.
+      expect(messageSubsFor('active-group')).toHaveLength(1);
+      expect(messageSubsFor('bg-1')).toHaveLength(0);
+      expect(messageSubsFor('bg-2')).toHaveLength(0);
+      expect(messageSubsFor('bg-3')).toHaveLength(0);
+
+      // Drain the queue.
+      await vi.advanceTimersByTimeAsync(100);
+    } finally {
+      vi.useRealTimers();
+    }
+    await flush();
+
+    expect(messageSubsFor('bg-1')).toHaveLength(1);
+    expect(messageSubsFor('bg-2')).toHaveLength(1);
+    expect(messageSubsFor('bg-3')).toHaveLength(1);
+  });
+
+  it('setActiveGroup after a queued metadata burst promotes the clicked channel to the head of the queue', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const messageSubsFor = (groupId: string) =>
+      fake.state.subscriptions.filter((s) => {
+        const f = s.filter as { kinds?: number[]; '#h'?: string[] };
+        return f.kinds?.includes(9) && f['#h']?.includes(groupId);
+      });
+
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      // Metadata arrives first — every group is queued (no active group yet).
+      deliver(await fakeRelayMetadata({ groupId: 'bg-a', name: 'A' }));
+      deliver(await fakeRelayMetadata({ groupId: 'bg-b', name: 'B' }));
+      deliver(await fakeRelayMetadata({ groupId: 'bg-c', name: 'C' }));
+
+      // No subs yet — queue waiting for the drain timer.
+      expect(messageSubsFor('bg-a')).toHaveLength(0);
+      expect(messageSubsFor('bg-b')).toHaveLength(0);
+      expect(messageSubsFor('bg-c')).toHaveLength(0);
+
+      // User clicks on bg-c — it should fire synchronously even though it's
+      // sitting in the middle of the queue.
+      bridge.setActiveGroup('bg-c');
+      expect(messageSubsFor('bg-c')).toHaveLength(1);
+      // bg-a and bg-b are still queued.
+      expect(messageSubsFor('bg-a')).toHaveLength(0);
+      expect(messageSubsFor('bg-b')).toHaveLength(0);
+
+      await vi.advanceTimersByTimeAsync(100);
+    } finally {
+      vi.useRealTimers();
+    }
+    await flush();
+
+    // After the drain, bg-a and bg-b come up, but bg-c is not double-subscribed.
+    expect(messageSubsFor('bg-a')).toHaveLength(1);
+    expect(messageSubsFor('bg-b')).toHaveLength(1);
+    expect(messageSubsFor('bg-c')).toHaveLength(1);
+  });
+
   it('addRelay registers a relay in the rail without subscribing to it (no multi-relay bleed)', async () => {
     // Reproduces the second leak path: addRelay used to push the new URL
     // into `this.relays`, the bridge's active subscription set. A subsequent

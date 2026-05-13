@@ -6,16 +6,35 @@
 import type { VoiceClient } from './client';
 
 let active: VoiceClient | null = null;
+const listeners = new Set<(c: VoiceClient | null) => void>();
 
 export function setActiveVoiceClient(client: VoiceClient | null): void {
   active = client;
   if (typeof window !== 'undefined') {
     (window as unknown as { __obeliskActiveVoiceClient?: VoiceClient | null }).__obeliskActiveVoiceClient = client;
   }
+  for (const cb of listeners) {
+    try { cb(client); } catch { /* swallow — listener errors must not block setActiveVoiceClient */ }
+  }
 }
 
 export function getActiveVoiceClient(): VoiceClient | null {
   return active;
+}
+
+/**
+ * Subscribe to active VoiceClient changes. The callback fires immediately
+ * with the current value, then again every time `setActiveVoiceClient`
+ * runs. Returns an unsubscribe function.
+ *
+ * Used by `BackgroundVoiceAudio` so the global hidden-audio sink can
+ * follow join/leave/channel-switch transitions without owning the
+ * `events` callback (which `VoiceRoom` owns when it's mounted).
+ */
+export function subscribeActiveVoiceClient(cb: (c: VoiceClient | null) => void): () => void {
+  listeners.add(cb);
+  try { cb(active); } catch { /* swallow */ }
+  return () => { listeners.delete(cb); };
 }
 
 /**

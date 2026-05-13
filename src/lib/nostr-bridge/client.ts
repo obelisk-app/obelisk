@@ -604,6 +604,14 @@ class BridgeImpl implements NostrBridge {
    */
   membershipReadyByGroup = new StateStore<Record<string, boolean>>({});
   /**
+   * Per-group flag flipped to `true` once the relay has emitted EOSE for
+   * the kind 9 messages REQ scoped to that group. Lets the message pane
+   * tell "still loading" apart from "relay confirmed empty" — the latter
+   * is what justifies the welcome / empty-state copy. Reset on relay
+   * switch / logout (the new relay hasn't responded yet).
+   */
+  messagesEoseByGroup = new StateStore<Record<string, boolean>>({});
+  /**
    * SFU active-call state per channel id. Populated from kind 31314 events
    * the SFU publishes when a room is live. The UI reads this to show a
    * "LIVE" indicator on voice channels in the sidebar — even for users
@@ -685,6 +693,24 @@ class BridgeImpl implements NostrBridge {
     adminMember: string[];
     metadata: string[];
   } | null = null;
+  /**
+   * Background queue for kind 9 message subscriptions discovered via
+   * `ingestGroupMetadata`. The relay typically streams hundreds of kind
+   * 39000 events back-to-back at login; firing N message REQs in the same
+   * tick floods the relay's per-connection sub limit and the channel the
+   * user is actually looking at ends up at the back of the response queue.
+   * Instead, we queue background subs here and process them in small
+   * batches — the active group is always fast-tracked via
+   * {@link setActiveGroup} or {@link bumpGroupMessagesPriority} so the
+   * channel currently in view gets its history first.
+   *
+   * Maintained as both an ordered array (for FIFO drain) and a Set (for
+   * O(1) dedup). Cleared on relay switch / logout alongside
+   * `messageSubscribedGroups` so old work doesn't leak into a new pool.
+   */
+  private pendingMessageQueue: string[] = [];
+  private pendingMessageSet = new Set<string>();
+  private pendingMessageTimer: ReturnType<typeof setTimeout> | null = null;
   // Per-pubkey cache of recipient NIP-65 read relays (where they read DMs).
   // Populated on first sendDirectMessage to that pubkey; TTL'd to avoid
   // requerying every send.
@@ -990,6 +1016,20 @@ class BridgeImpl implements NostrBridge {
     this.adminMemberSubscribedGroups.clear();
     this.adminMemberLatestAt.clear();
     this.metadataRequested.clear();
+    // The new pool's per-group REQs haven't been issued yet — drop any
+    // EOSE bits captured from the old pool so the chat pane shows its
+    // loading spinner until the resub completes (see `pendingResubscribe`
+    // handling in `connect()`).
+    this.messagesEoseByGroup.set({});
+    // Drop the background queue: it's tied to the dead pool's filters
+    // and the new pool will receive a fresh kind 39000 fan-out which
+    // will repopulate it.
+    this.pendingMessageQueue = [];
+    this.pendingMessageSet.clear();
+    if (this.pendingMessageTimer) {
+      clearTimeout(this.pendingMessageTimer);
+      this.pendingMessageTimer = null;
+    }
     // Re-login on the same browser keeps the in-memory bridge instance, so
     // the kind 39000 newest-wins guard retains every `groupId → created_at`
     // pair from the previous session. Kind 39000 is replaceable: the new
@@ -1210,6 +1250,16 @@ class BridgeImpl implements NostrBridge {
     this.adminsByGroup.set({});
     this.membersByGroup.set({});
     this.membershipReadyByGroup.set({});
+    this.messagesEoseByGroup.set({});
+    // Drop the background message-subscription queue too — pending work
+    // is scoped to the previous session's authored REQs.
+    this.pendingMessageQueue = [];
+    this.pendingMessageSet.clear();
+    if (this.pendingMessageTimer) {
+      clearTimeout(this.pendingMessageTimer);
+      this.pendingMessageTimer = null;
+    }
+    this.activeGroupId = null;
     // Forget any in-flight relay-access state and tear down dangling
     // "Authenticating with {host}" entries — the next session must
     // re-prove access from scratch.
@@ -1336,7 +1386,18 @@ class BridgeImpl implements NostrBridge {
       const pending = this.pendingResubscribe;
       this.pendingResubscribe = null;
       if (pending) {
-        pending.messages.forEach((id) => this.subscribeGroupMessages(id));
+        // Fast-track the active group so the channel currently in view
+        // gets its messages first after a relay/session swap, even if
+        // it was somewhere in the middle of the previous live-sub list.
+        const messages = [...pending.messages];
+        if (this.activeGroupId) {
+          const idx = messages.indexOf(this.activeGroupId);
+          if (idx > 0) {
+            messages.splice(idx, 1);
+            messages.unshift(this.activeGroupId);
+          }
+        }
+        messages.forEach((id) => this.subscribeGroupMessages(id));
         pending.reactions.forEach((id) => this.subscribeGroupReactions(id));
         pending.adminMember.forEach((id) => this.subscribeAdminMember(id));
         pending.metadata.forEach((pk) => this.ensureUserMetadata(pk));
@@ -1421,6 +1482,18 @@ class BridgeImpl implements NostrBridge {
     // Without this, voice gates and member rails would still be marked
     // "loaded" from the previous relay's data.
     this.membershipReadyByGroup.set({});
+    // Same reset as logout: the new relay hasn't delivered EOSE for any
+    // per-group kind 9 REQ yet, so the message pane should show its
+    // loading spinner rather than the cached "ok, empty" state.
+    this.messagesEoseByGroup.set({});
+    // Drop background queue — pending entries point at filters bound to
+    // the old pool. The new relay's kind 39000 fan-out will repopulate.
+    this.pendingMessageQueue = [];
+    this.pendingMessageSet.clear();
+    if (this.pendingMessageTimer) {
+      clearTimeout(this.pendingMessageTimer);
+      this.pendingMessageTimer = null;
+    }
     // Per-relay state that previously bled across switches: parent→children
     // index, group-creator map, reactions, the newest-wins guard cursor for
     // group metadata, and the per-group creator-sub set. Without clearing
@@ -1570,6 +1643,19 @@ class BridgeImpl implements NostrBridge {
     cb: (byGroup: Readonly<Record<string, ReadonlyArray<JsMessage>>>) => void,
   ): Unsubscribe {
     return this.messagesByGroup.subscribe(cb);
+  }
+  /**
+   * Per-group EOSE flag for the kind 9 messages REQ. Fires `false` until
+   * the relay has emitted EOSE for this group's subscription, then `true`.
+   * Lets the chat pane distinguish "still loading from relay" from "relay
+   * confirmed empty" without hand-rolling timeouts. Calling this also
+   * fast-tracks the subscription so a freshly-mounted pane prioritizes
+   * the channel the user is actively looking at.
+   */
+  subscribeMessagesEose(groupId: string, cb: (eose: boolean) => void): Unsubscribe {
+    this.subscribeGroupMessages(groupId);
+    const adapter: Listener<Record<string, boolean>> = (m) => cb(!!m[groupId]);
+    return this.messagesEoseByGroup.subscribe(adapter);
   }
   subscribeUserMetadata(pubkey: string, cb: (meta: JsUserMetadata | null) => void): Unsubscribe {
     this.ensureUserMetadata(pubkey);
@@ -2312,6 +2398,13 @@ class BridgeImpl implements NostrBridge {
 
   setActiveGroup(groupId: string | null): void {
     this.activeGroupId = groupId;
+    if (!groupId) return;
+    // Fast-track the channel the user just clicked: if the kind 9 REQ
+    // hasn't been fired yet (because metadata is still streaming or this
+    // group was sitting in the background queue from the kind 39000
+    // fan-out), promote it now so the relay's first response is the
+    // channel actually in view.
+    this.bumpGroupMessagesPriority(groupId);
   }
 
   // -- Voice channels ---------------------------------------------------
@@ -2761,9 +2854,98 @@ class BridgeImpl implements NostrBridge {
     this.subs.push(sub);
   }
 
+  /**
+   * Background entry-point used by {@link ingestGroupMetadata} for groups
+   * the user has *not* explicitly opened. Defers the kind 9 REQ to a small
+   * batch processed off-tick so the channel currently in view gets the
+   * relay's first response. Already-subscribed and currently-active groups
+   * are no-ops here — they're handled by direct {@link subscribeGroupMessages}
+   * calls.
+   */
+  private queueGroupMessages(groupId: string): void {
+    if (this.messageSubscribedGroups.has(groupId)) return;
+    if (this.pendingMessageSet.has(groupId)) return;
+    if (groupId === this.activeGroupId) {
+      // The active group always gets its REQ immediately, even if metadata
+      // arrived later than the user's click — this is the whole point of
+      // the queue.
+      this.subscribeGroupMessages(groupId);
+      return;
+    }
+    this.pendingMessageSet.add(groupId);
+    this.pendingMessageQueue.push(groupId);
+    this.scheduleMessageQueueDrain();
+  }
+
+  private scheduleMessageQueueDrain(): void {
+    if (this.pendingMessageTimer) return;
+    // Small delay so the active group's REQ (fired synchronously when the
+    // user clicks a channel) lands before the relay sees a flood of
+    // background REQs. Longer than a microtask so React's render commit
+    // can settle first; short enough that background unread badges still
+    // populate within ~1s on a heavy relay.
+    this.pendingMessageTimer = setTimeout(() => {
+      this.pendingMessageTimer = null;
+      this.drainMessageQueue();
+    }, 80);
+  }
+
+  private drainMessageQueue(): void {
+    // Always promote the active group to the head of the queue if it
+    // happens to be sitting in there — handles the case where the user
+    // switched channels while a background batch was in flight.
+    if (this.activeGroupId && this.pendingMessageSet.has(this.activeGroupId)) {
+      this.pendingMessageSet.delete(this.activeGroupId);
+      this.pendingMessageQueue = this.pendingMessageQueue.filter((id) => id !== this.activeGroupId);
+      if (!this.messageSubscribedGroups.has(this.activeGroupId)) {
+        this.subscribeGroupMessages(this.activeGroupId);
+      }
+    }
+    const BATCH = 4;
+    let processed = 0;
+    while (this.pendingMessageQueue.length > 0 && processed < BATCH) {
+      const id = this.pendingMessageQueue.shift()!;
+      this.pendingMessageSet.delete(id);
+      if (!this.messageSubscribedGroups.has(id)) {
+        this.subscribeGroupMessages(id);
+        processed++;
+      }
+    }
+    if (this.pendingMessageQueue.length > 0) {
+      this.scheduleMessageQueueDrain();
+    }
+  }
+
+  /**
+   * Move `groupId` to the head of the pending message queue (or fire its
+   * REQ immediately if it isn't queued yet). Called by {@link setActiveGroup}
+   * when the user clicks a channel — it ensures the channel currently in
+   * view always wins the relay's attention, even if hundreds of other
+   * groups are queued ahead of it from the kind 39000 fan-out.
+   */
+  private bumpGroupMessagesPriority(groupId: string): void {
+    if (this.messageSubscribedGroups.has(groupId)) return;
+    if (this.pendingMessageSet.has(groupId)) {
+      this.pendingMessageSet.delete(groupId);
+      this.pendingMessageQueue = this.pendingMessageQueue.filter((id) => id !== groupId);
+    }
+    this.subscribeGroupMessages(groupId);
+  }
+
   private subscribeGroupMessages(groupId: string): void {
     if (this.messageSubscribedGroups.has(groupId)) return;
     this.messageSubscribedGroups.add(groupId);
+    // A fresh REQ has not yet seen EOSE — make sure the flag reflects that
+    // for callers that subscribed *before* a relay switch reused the same
+    // bridge instance.
+    if (this.messagesEoseByGroup.get()[groupId]) {
+      this.messagesEoseByGroup.update((prev) => {
+        if (!prev[groupId]) return prev;
+        const { [groupId]: _drop, ...rest } = prev;
+        void _drop;
+        return rest;
+      });
+    }
     const filter: Filter = {
       kinds: [KIND_GROUP_MESSAGE],
       '#h': [groupId],
@@ -2773,7 +2955,14 @@ class BridgeImpl implements NostrBridge {
       this.relays,
       filter,
       (ev) => this.ingestMessage(groupId, ev),
-      undefined,
+      () => {
+        // Flip per-group EOSE once the relay confirms it has finished
+        // serving the stored history for this REQ. The chat pane reads
+        // this to swap a loading spinner for the welcome / empty state.
+        this.messagesEoseByGroup.update((prev) =>
+          prev[groupId] ? prev : { ...prev, [groupId]: true },
+        );
+      },
       { affectsRelayAccess: false },
     );
     this.subs.push(sub);
@@ -3076,8 +3265,10 @@ class BridgeImpl implements NostrBridge {
     // Start streaming messages immediately so opening the channel doesn't
     // wait on a fresh REQ round-trip — the store already has them. The
     // per-group REQ caps at BACKGROUND_MESSAGE_LIMIT; older history is
-    // paged via loadMoreMessages.
-    this.subscribeGroupMessages(groupId);
+    // paged via loadMoreMessages. Queued (rather than fired inline) so
+    // the channel the user is actively viewing wins the relay's first
+    // response — see {@link queueGroupMessages}.
+    this.queueGroupMessages(groupId);
     // Admin/member (39001/39002) is intentionally NOT fanned out here.
     // Subscribing to every discovered group on login was expensive on
     // accounts that belong to many channels and slowed setup of recently

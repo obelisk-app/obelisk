@@ -212,6 +212,14 @@ export interface NostrBridge {
   subscribeMessagesByGroup(
     cb: (byGroup: Readonly<Record<string, ReadonlyArray<JsMessage>>>) => void,
   ): Unsubscribe;
+  /**
+   * Fires `true` once the relay has emitted EOSE for the per-group kind 9
+   * REQ. Used by the chat pane to swap a loading spinner for the welcome /
+   * empty state — without this signal, an empty `messagesByGroup[groupId]`
+   * looks the same whether the relay is still serving history or has
+   * already confirmed the channel is empty.
+   */
+  subscribeMessagesEose(groupId: string, cb: (eose: boolean) => void): Unsubscribe;
   subscribeUserMetadata(pubkey: string, cb: (meta: JsUserMetadata | null) => void): Unsubscribe;
   /** Reactions targeting any event in [groupId]. Keyed by target event id. */
   subscribeReactions(
