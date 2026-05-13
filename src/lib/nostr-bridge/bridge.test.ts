@@ -21,6 +21,7 @@ const fake = vi.hoisted(() => {
       relays?: string[];
       onclose?: (reasons: string[]) => void;
     }>,
+    ensureRelayCalls: [] as string[],
   };
 
   function matchesInternal(f: Record<string, unknown>, ev: { kind: number; pubkey: string; tags: string[][] }): boolean {
@@ -63,6 +64,7 @@ const fake = vi.hoisted(() => {
      * tests pretend every relay is reachable.
      */
     async ensureRelay(_url: string, _opts?: { connectionTimeout?: number }): Promise<{ connected: boolean; onclose?: () => void }> {
+      state.ensureRelayCalls.push(_url);
       return { connected: true };
     }
   }
@@ -98,7 +100,7 @@ async function flush(times = 4) {
 }
 
 beforeEach(() => {
-  (() => { fake.state.published = []; fake.state.subscriptions = []; })();
+  (() => { fake.state.published = []; fake.state.subscriptions = []; fake.state.ensureRelayCalls = []; })();
   // Each test starts fresh — clear the bridge module-level singleton by
   // resetting modules so getBridge() returns a new instance.
   vi.resetModules();
@@ -107,7 +109,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  (() => { fake.state.published = []; fake.state.subscriptions = []; })();
+  (() => { fake.state.published = []; fake.state.subscriptions = []; fake.state.ensureRelayCalls = []; })();
 });
 
 describe('nostr-bridge', () => {
@@ -898,6 +900,22 @@ describe('nostr-bridge', () => {
 
     // But the rail (configuredRelays) does include the new relay.
     expect(impl.configuredRelays.get()).toContain(NEW_RELAY);
+  });
+
+  it('addRelay persists a custom relay without preflight handshaking it', async () => {
+    const { getBridge, getBridgeImpl } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+    fake.state.ensureRelayCalls = [];
+
+    const CUSTOM_RELAY = 'wss://custom-relay.example';
+    await bridge.addRelay(CUSTOM_RELAY);
+
+    const impl = getBridgeImpl()!;
+    expect(impl.configuredRelays.get()).toContain(CUSTOM_RELAY);
+    expect(fake.state.ensureRelayCalls).toEqual([]);
   });
 });
 

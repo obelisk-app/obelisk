@@ -1505,18 +1505,6 @@ class BridgeImpl implements NostrBridge {
     const trimmed = url.trim();
     if (!trimmed) return;
     validateRelayUrl(trimmed);
-    // Verify the relay is actually reachable before persisting it. Use a
-    // throwaway pool so a failed probe doesn't pollute the live pool's
-    // internal relay map, and so we can guarantee the socket is closed.
-    const probe = new SimplePool({
-      websocketImplementation: TextCoercingWebSocket as unknown as typeof WebSocket,
-    } as ConstructorParameters<typeof SimplePool>[0]);
-    try {
-      const relay = await probe.ensureRelay(trimmed, { connectionTimeout: 5000 });
-      if (!relay.connected) throw new Error('relay did not complete handshake');
-    } finally {
-      try { probe.close([trimmed]); } catch { /* ignore */ }
-    }
     // Register in the rail only — do NOT push into `this.relays` (the active
     // subscription set). NIP-29 channels are per-relay, so subscribing to
     // multiple relays simultaneously mixes channels from different servers
