@@ -17,8 +17,26 @@ export const KIND_TEXT_NOTE = 1;
 /** NIP-04 — legacy encrypted direct message. Deprecated in favor of NIP-17. */
 export const KIND_ENCRYPTED_DM = 4;
 
+/** NIP-29 — group chat message. */
+export const KIND_GROUP_CHAT_MESSAGE = 9;
+
+/** NIP-29 — group create (admin event). */
+export const KIND_GROUP_CREATE = 9007;
+
+/** NIP-29 — group metadata (replaceable, addressable by `["d", groupId]`). */
+export const KIND_GROUP_METADATA = 39000;
+
+/** NIP-29 — group admins list. */
+export const KIND_GROUP_ADMINS = 39001;
+
+/** NIP-29 — group members list. */
+export const KIND_GROUP_MEMBERS = 39002;
+
 /** NIP-17 — private message rumor (the inner unsigned event inside a 1059 gift wrap). */
 export const KIND_DM_RUMOR = 14;
+
+/** NIP-59 — seal (kind 13), the inner signed event between rumor and gift wrap. */
+export const KIND_SEAL = 13;
 
 /** NIP-65 — relay list metadata (user's preferred relays). */
 export const KIND_RELAY_LIST = 10002;
@@ -31,6 +49,13 @@ export const KIND_GIFT_WRAP = 1059;
 
 /** NIP-46 — Nostr Connect request/response (bunker signer protocol). */
 export const KIND_NOSTR_CONNECT = 24133;
+
+/**
+ * NIP-78 — application-specific replaceable parameterized event. Obelisk
+ * stores channel layout, relay branding, encrypted multi-device read state,
+ * and per-channel SFU pins under this kind, distinguished by their `d` tag.
+ */
+export const KIND_NIP78_APP_DATA = 30078;
 
 /** BUD-01 — Blossom auth event for media server uploads. */
 export const KIND_BLOSSOM_AUTH = 24242;

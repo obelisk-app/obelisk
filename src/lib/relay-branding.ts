@@ -16,8 +16,7 @@ import { useEffect, useState } from 'react';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import { getBridge, getBridgeImpl } from '@/lib/nostr-bridge/client';
 import { cacheGet, cacheSet } from '@/lib/nostr-bridge/cache';
-
-const KIND_BRANDING = 30078;
+import { KIND_NIP78_APP_DATA as KIND_BRANDING } from '@/lib/nip-kinds';
 
 export interface RelayBranding {
   readonly icon: string;

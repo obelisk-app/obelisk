@@ -20,6 +20,7 @@ const useMyPubkey = usePubkey;
 import { faviconFor, fetchRelayInfo, type RelayInfo } from '@/lib/relay-info';
 import { encodeRelayShareCode } from '@/lib/relay-share-link';
 import { useHasAnyHighlights } from '@/lib/read-state/selectors';
+import ModalShell from '@/components/ModalShell';
 
 const SUGGESTED_RELAYS: { url: string; fallbackName?: string; fallbackDescription?: string }[] = [
   {
@@ -295,14 +296,10 @@ function AddRelayModal({ onClose }: { onClose: () => void }) {
   const configuredSet = useMemo(() => new Set(configured), [configured]);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
-      onClick={onClose}
+    <ModalShell
+      onClose={onClose}
+      panelClassName="lc-card flex max-h-[85vh] w-full max-w-lg mx-4 flex-col overflow-hidden rounded-2xl border border-lc-border bg-lc-dark shadow-2xl"
     >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="lc-card flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-lc-border bg-lc-dark shadow-2xl"
-      >
         <div className="flex items-start justify-between gap-4 px-6 pt-6">
           <div>
             <h2 className="text-lg font-bold text-lc-white">Add a Relay</h2>
@@ -338,8 +335,7 @@ function AddRelayModal({ onClose }: { onClose: () => void }) {
             <CustomRelayForm onAdded={onClose} />
           )}
         </div>
-      </div>
-    </div>
+    </ModalShell>
   );
 }
 

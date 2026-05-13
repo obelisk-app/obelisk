@@ -28,6 +28,7 @@ import type { NipSigner } from '@/lib/nip-59';
 import { parseRelayListMeta, parseInboxRelays } from '@/lib/nostr-read';
 import { TextCoercingWebSocket } from '@/lib/nostr-pool';
 import { cacheGet, cacheSet, cacheClearAll, cacheListIds } from './cache';
+import { normalizeRelayUrl } from './relay-url';
 import { wotEngine } from '@/lib/wot/engine';
 import { useModerationStore } from '@/store/moderation';
 import { resetAllClientState } from '@/lib/reset';
@@ -45,15 +46,6 @@ import type {
   RelayAccessState,
   Unsubscribe,
 } from './types';
-
-/**
- * Normalize a relay URL for equality comparison: lowercase host/scheme and
- * strip trailing slashes. nostr-tools occasionally passes a URL with the
- * slash and occasionally without, so direct string compare is unreliable.
- */
-function normalizeRelayUrl(u: string): string {
-  return u.replace(/\/+$/, '').toLowerCase();
-}
 
 /**
  * Map a CLOSED reason or publish-rejection message to a RelayAccessState.

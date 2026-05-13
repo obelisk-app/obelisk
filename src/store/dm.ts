@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { createEnsureForAccount } from './multi-account';
 
 export type DMProtocol = 'nip04' | 'nip17';
 
@@ -144,19 +145,11 @@ export const useDMStore = create<DMState>()(
   ),
 );
 
-let activeStorageName = 'obelisk-dm-store';
-
 /**
- * Multi-account isolation: swap the persist storage key to one namespaced
- * by the active account's pubkey. Without this, `protocolOverrides` would
- * leak across logins on the same device.
- *
- * Idempotent — a no-op when the key is already pointing at this account.
+ * Multi-account isolation — swaps the persist key to `obelisk-dm-store:{pubkey}`
+ * so per-peer protocol overrides don't leak across logins. Idempotent.
  */
-export function ensureDMStoreForAccount(myPubkey: string): void {
-  const next = `obelisk-dm-store:${myPubkey}`;
-  if (next === activeStorageName) return;
-  activeStorageName = next;
-  useDMStore.persist.setOptions({ name: next });
-  void useDMStore.persist.rehydrate();
-}
+export const ensureDMStoreForAccount = createEnsureForAccount(
+  'obelisk-dm-store',
+  useDMStore,
+);

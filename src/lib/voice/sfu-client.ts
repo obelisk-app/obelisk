@@ -31,32 +31,8 @@ import type {
 import { SfuRpc } from './sfu-rpc';
 import type { RpcNotification } from './sfu-rpc';
 import type { VoiceTrackKind } from './types';
+import { ICE_SERVERS } from './ice-config';
 
-/**
- * STUN/TURN servers for mediasoup-client transports. Without these, the
- * browser only emits LAN-private host candidates and the SFU has no
- * reachable address to send STUN binding requests to — connection state
- * stays at `connecting` forever. STUN gives us a srflx candidate;
- * TURN provides a relay fallback when symmetric NAT defeats srflx.
- */
-function buildIceServers(): RTCIceServer[] {
-  const servers: RTCIceServer[] = [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun.cloudflare.com:3478' },
-  ];
-  const turnUrls = (process.env.NEXT_PUBLIC_TURN_URLS ?? '')
-    .split(',').map((s) => s.trim()).filter(Boolean);
-  if (turnUrls.length > 0) {
-    servers.push({
-      urls: turnUrls,
-      username: process.env.NEXT_PUBLIC_TURN_USERNAME,
-      credential: process.env.NEXT_PUBLIC_TURN_CREDENTIAL,
-    });
-  }
-  return servers;
-}
-
-const ICE_SERVERS = buildIceServers();
 
 export interface SfuRemoteTrack {
   /** Origin pubkey (the *producer's* author, not the SFU). */

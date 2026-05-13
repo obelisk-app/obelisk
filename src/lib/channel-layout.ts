@@ -19,8 +19,7 @@ import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import { getBridge, getBridgeImpl } from '@/lib/nostr-bridge/client';
 import { cacheGet, cacheSet } from '@/lib/nostr-bridge/cache';
 import { fetchRelayInfo } from '@/lib/relay-info';
-
-const KIND_LAYOUT = 30078;
+import { KIND_NIP78_APP_DATA as KIND_LAYOUT } from '@/lib/nip-kinds';
 
 export interface ChannelLayoutCategory {
   readonly id: string;

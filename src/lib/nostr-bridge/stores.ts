@@ -6,13 +6,10 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getBridge } from './client';
+import { normalizeRelayUrl } from './relay-url';
 import { wotEngine } from '@/lib/wot/engine';
 import { useWotEnabled } from '@/lib/wot';
 import type { JsGroup, JsMessage, JsReaction, JsDirectMessage, RelayAccessState } from './types';
-
-function normalizeRelayUrl(u: string): string {
-  return u.replace(/\/+$/, '').toLowerCase();
-}
 
 function useSubscription<T>(
   subscribe: (

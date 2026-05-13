@@ -28,6 +28,7 @@ import { startStatsMonitor, type QualitySample, type StatsMonitorHandle } from '
 import { AUDIO_MAX_BITRATE } from './quality';
 import { ControlChannel, type ControlMessage } from './control-channel';
 import type { VoiceMetrics } from './metrics';
+import { ICE_SERVERS, ICE_TRANSPORT_POLICY } from './ice-config';
 
 // ── Reconnect schedule ───────────────────────────────────────────────────
 //
@@ -75,35 +76,6 @@ export const INITIAL_CONNECT_TIMEOUT_MS = 25000;
 // watchdog still owns the hard-reset path for genuinely stuck PCs.
 export const OFFER_ACK_TIMEOUT_MS = 8000;
 export const OFFER_RETRY_LIMIT = 2;
-
-/**
- * STUN-only configurations work on permissive NATs but fail on symmetric /
- * carrier-grade NATs. Set `NEXT_PUBLIC_TURN_URLS` (comma-separated) for a
- * TURN fallback; provide `NEXT_PUBLIC_TURN_USERNAME` and
- * `NEXT_PUBLIC_TURN_CREDENTIAL` if the TURN needs auth. Use
- * `NEXT_PUBLIC_FORCE_RELAY=1` to force `iceTransportPolicy: 'relay'` for
- * connectivity debugging.
- */
-function buildIceServers(): RTCIceServer[] {
-  const servers: RTCIceServer[] = [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun.cloudflare.com:3478' },
-  ];
-  const turnUrls = (process.env.NEXT_PUBLIC_TURN_URLS ?? '')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-  if (turnUrls.length > 0) {
-    const username = process.env.NEXT_PUBLIC_TURN_USERNAME;
-    const credential = process.env.NEXT_PUBLIC_TURN_CREDENTIAL;
-    servers.push({ urls: turnUrls, ...(username ? { username } : {}), ...(credential ? { credential } : {}) });
-  }
-  return servers;
-}
-
-const ICE_SERVERS: RTCIceServer[] = buildIceServers();
-const ICE_TRANSPORT_POLICY: RTCIceTransportPolicy =
-  process.env.NEXT_PUBLIC_FORCE_RELAY === '1' ? 'relay' : 'all';
 
 export interface PeerEvents {
   /**

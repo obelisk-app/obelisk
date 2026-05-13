@@ -22,8 +22,7 @@
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 
 import { getBridge, getBridgeImpl, isImportableRelayUrl } from '@/lib/nostr-bridge/client';
-
-const KIND_NIP78 = 30078;
+import { KIND_NIP78_APP_DATA as KIND_NIP78 } from '@/lib/nip-kinds';
 
 export interface SfuPin {
   pubkey: string;

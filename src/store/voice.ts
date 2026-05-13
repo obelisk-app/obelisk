@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import type { VideoQuality } from '@/lib/voice/quality';
 import type { QualitySample } from '@/lib/voice/stats';
 
@@ -72,31 +73,9 @@ interface VoiceState {
   leaveVoice: () => void;
 }
 
-const STORAGE_KEY = 'obelisk:voice:quality';
-
-function loadPersisted(): { videoQuality: VideoQuality; receivedVideoQuality: VideoQuality } {
-  if (typeof localStorage === 'undefined') return { videoQuality: 'auto', receivedVideoQuality: 'auto' };
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { videoQuality: 'auto', receivedVideoQuality: 'auto' };
-    const parsed = JSON.parse(raw) as { videoQuality?: VideoQuality; receivedVideoQuality?: VideoQuality };
-    return {
-      videoQuality: parsed.videoQuality ?? 'auto',
-      receivedVideoQuality: parsed.receivedVideoQuality ?? 'auto',
-    };
-  } catch {
-    return { videoQuality: 'auto', receivedVideoQuality: 'auto' };
-  }
-}
-
-function persist(state: { videoQuality: VideoQuality; receivedVideoQuality: VideoQuality }) {
-  if (typeof localStorage === 'undefined') return;
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch { /* ignore */ }
-}
-
-const persisted = loadPersisted();
-
-export const useVoiceStore = create<VoiceState>()((set, get) => ({
+export const useVoiceStore = create<VoiceState>()(
+  persist(
+    (set) => ({
   currentVoiceChannelId: null,
   currentVoiceRelayUrl: null,
   isMuted: false,
@@ -106,8 +85,8 @@ export const useVoiceStore = create<VoiceState>()((set, get) => ({
   isConnecting: false,
   error: null,
   isVoiceChatOpen: false,
-  videoQuality: persisted.videoQuality,
-  receivedVideoQuality: persisted.receivedVideoQuality,
+  videoQuality: 'auto' as VideoQuality,
+  receivedVideoQuality: 'auto' as VideoQuality,
   peerQuality: {},
   speakingPubkeys: {},
   localMutedPubkeys: {},
@@ -126,14 +105,8 @@ export const useVoiceStore = create<VoiceState>()((set, get) => ({
   setConnecting: (isConnecting) => set({ isConnecting }),
   setError: (error) => set({ error }),
   setVoiceChatOpen: (isVoiceChatOpen) => set({ isVoiceChatOpen }),
-  setVideoQuality: (videoQuality) => {
-    set({ videoQuality });
-    persist({ videoQuality, receivedVideoQuality: get().receivedVideoQuality });
-  },
-  setReceivedVideoQuality: (receivedVideoQuality) => {
-    set({ receivedVideoQuality });
-    persist({ videoQuality: get().videoQuality, receivedVideoQuality });
-  },
+  setVideoQuality: (videoQuality) => set({ videoQuality }),
+  setReceivedVideoQuality: (receivedVideoQuality) => set({ receivedVideoQuality }),
   setPeerQuality: (pubkey, sample) =>
     set((s) => ({ peerQuality: { ...s.peerQuality, [pubkey]: sample } })),
   clearPeerQuality: (pubkey) =>
@@ -181,4 +154,16 @@ export const useVoiceStore = create<VoiceState>()((set, get) => ({
       speakingPubkeys: {},
       localMutedPubkeys: {},
     }),
-}));
+    }),
+    {
+      name: 'obelisk:voice:quality',
+      storage: createJSONStorage(() => localStorage),
+      // Only persist user-set quality preferences; runtime state (current
+      // channel, mic/camera, peer samples) must reset on reload.
+      partialize: (state) => ({
+        videoQuality: state.videoQuality,
+        receivedVideoQuality: state.receivedVideoQuality,
+      }),
+    },
+  ),
+);

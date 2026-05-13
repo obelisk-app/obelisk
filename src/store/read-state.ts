@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { createEnsureForAccount } from './multi-account';
 
 export type InboxEventType = 'mention' | 'reply' | 'everyone' | 'dm' | 'message' | 'zap';
 
@@ -212,22 +213,14 @@ export const useReadStateStore = create<ReadStateStore>()(
   ),
 );
 
-let activeStorageName = 'obelisk-read-state';
-
 /**
- * Multi-account isolation: swap the persist storage key to one namespaced
- * by the active pubkey. Mirrors `ensureDMStoreForAccount` so cursors don't
- * leak across logins on the same device.
- *
- * Idempotent — a no-op when already pointing at this account.
+ * Multi-account isolation — swaps the persist key to `obelisk-read-state:{pubkey}`
+ * so cursors don't leak across logins on the same device. Idempotent.
  */
-export function ensureReadStateStoreForAccount(myPubkey: string): void {
-  const next = `obelisk-read-state:${myPubkey}`;
-  if (next === activeStorageName) return;
-  activeStorageName = next;
-  useReadStateStore.persist.setOptions({ name: next });
-  void useReadStateStore.persist.rehydrate();
-}
+export const ensureReadStateStoreForAccount = createEnsureForAccount(
+  'obelisk-read-state',
+  useReadStateStore,
+);
 
 /**
  * Inbox unread count selector for use outside React. Counts events whose

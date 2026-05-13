@@ -26,9 +26,7 @@ import { getBridgeImpl } from '@/lib/nostr-bridge/client';
 import { unwrapForSelf, wrapForSelf, type Rumor } from '@/lib/nip-59';
 import { useReadStateStore, type RemoteReadState } from '@/store/read-state';
 import { cacheGet, cacheSet } from '@/lib/nostr-bridge/cache';
-
-const KIND_GIFT_WRAP = 1059;
-const KIND_INNER = 30078;
+import { KIND_GIFT_WRAP, KIND_NIP78_APP_DATA as KIND_INNER } from '@/lib/nip-kinds';
 
 /** Inner rumor d-tag for groups-scope state events. */
 export const D_TAG_GROUPS = 'obelisk:readstate:v1';

@@ -17,29 +17,14 @@ export type RelayInfo = {
   fetchedAt: number;
 };
 
-const CACHE_KEY = 'obelisk:relay-info-v2';
+import { createLocalStore } from './local-store';
+
 const TTL_MS = 24 * 60 * 60 * 1000; // 24h
 const FETCH_TIMEOUT_MS = 5000;
 
 type Cache = Record<string, RelayInfo>;
 
-function readCache(): Cache {
-  if (typeof localStorage === 'undefined') return {};
-  try {
-    return JSON.parse(localStorage.getItem(CACHE_KEY) || '{}') as Cache;
-  } catch {
-    return {};
-  }
-}
-
-function writeCache(c: Cache) {
-  if (typeof localStorage === 'undefined') return;
-  try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify(c));
-  } catch {
-    // quota / serialization — ignore
-  }
-}
+const cacheStore = createLocalStore<Cache>('obelisk:relay-info-v2', {});
 
 function toHttpUrl(wsUrl: string): string {
   return wsUrl.replace(/^ws:/, 'http:').replace(/^wss:/, 'https:');
@@ -58,7 +43,7 @@ export function faviconFor(wsUrl: string): string | null {
 const inflight = new Map<string, Promise<RelayInfo | null>>();
 
 export async function fetchRelayInfo(wsUrl: string): Promise<RelayInfo | null> {
-  const cache = readCache();
+  const cache = cacheStore.load();
   const cached = cache[wsUrl];
   if (cached && Date.now() - cached.fetchedAt < TTL_MS) return cached;
 
@@ -82,9 +67,9 @@ export async function fetchRelayInfo(wsUrl: string): Promise<RelayInfo | null> {
         pubkey: typeof json.pubkey === 'string' && /^[0-9a-f]{64}$/i.test(json.pubkey) ? json.pubkey.toLowerCase() : undefined,
         fetchedAt: Date.now(),
       };
-      const next = readCache();
+      const next = cacheStore.load();
       next[wsUrl] = info;
-      writeCache(next);
+      cacheStore.save(next);
       return info;
     } catch {
       return null;

@@ -8,6 +8,7 @@ import { useProfile, usePublishProfile } from '@nostr-wot/data/react';
 import BlossomImageInput from '@/components/BlossomImageInput';
 import { usePreferences, setPreference } from '@/lib/preferences';
 import WotSettings from '@/components/settings/WotSettings';
+import UserAvatar from '@/components/UserAvatar';
 
 interface UserPanelProps {
   pubkey: string;
@@ -82,14 +83,7 @@ export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, ini
             <div className="px-5 py-5 border-b border-lc-border">
               <div className="text-[10px] uppercase tracking-wider text-lc-muted font-semibold mb-2">User settings</div>
               <div className="flex items-center gap-2 min-w-0">
-                {meta?.picture ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={meta.picture} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" />
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-lc-olive flex items-center justify-center text-lc-green text-sm font-semibold shrink-0">
-                    {displayName[0]?.toUpperCase()}
-                  </div>
-                )}
+                <UserAvatar pubkey={pubkey} picture={meta?.picture ?? null} size={8} name={displayName} initialClassName="text-sm" />
                 <div className="min-w-0">
                   <div className="text-sm text-lc-white truncate">{displayName}</div>
                   {meta?.nip05 && <div className="text-[10px] text-lc-green truncate">{meta.nip05}</div>}
@@ -165,18 +159,15 @@ export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, ini
 
         {/* Avatar + name */}
         <div className="relative -mt-10 px-5">
-          {meta?.picture ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={meta.picture}
-              alt={displayName}
-              className="h-20 w-20 rounded-full object-cover ring-4 ring-lc-dark"
-            />
-          ) : (
-            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-lc-olive text-2xl font-semibold text-lc-green ring-4 ring-lc-dark">
-              {displayName[0]?.toUpperCase()}
-            </div>
-          )}
+          <UserAvatar
+            pubkey={pubkey}
+            picture={meta?.picture ?? null}
+            size={20}
+            name={displayName}
+            alt={displayName}
+            className="ring-4 ring-lc-dark"
+            initialClassName="text-2xl"
+          />
           <div className="mt-3">
             <div className="text-lg font-semibold text-lc-white">{displayName}</div>
             {meta?.nip05 && <div className="truncate text-xs text-lc-green">{meta.nip05}</div>}

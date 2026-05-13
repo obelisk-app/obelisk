@@ -27,7 +27,20 @@ import { useFaviconBadge } from '@/hooks/useFaviconBadge';
 import { useAutoMarkRead } from '@/hooks/useAutoMarkRead';
 import { ensureReadStateStoreForAccount } from '@/store/read-state';
 import { ensureDMStoreForAccount } from '@/store/dm';
+import { ensureModerationStoreForAccount } from '@/store/moderation';
 import { ensureForumFollowForAccount } from '@/store/chat/forum-follow-slice';
+
+/**
+ * Per-account persistence wiring. Add new per-account stores here — AppGate
+ * loops through this on every login change. Forgetting an entry silently
+ * leaks state across accounts on the same browser.
+ */
+const PER_ACCOUNT_STORES = [
+  ensureReadStateStoreForAccount,
+  ensureDMStoreForAccount,
+  ensureModerationStoreForAccount,
+  ensureForumFollowForAccount,
+] as const;
 import { startGroupsRelaySync, startDMRelaySync } from '@/lib/read-state/relay-sync';
 import { fetchProfile, fetchRelayList } from '@nostr-wot/data';
 import { PROFILE_RELAYS } from '@/lib/nostr-bridge/client';
@@ -69,9 +82,7 @@ function ReadStateRoot() {
 
   useEffect(() => {
     if (!myPubkey) return;
-    ensureReadStateStoreForAccount(myPubkey);
-    ensureDMStoreForAccount(myPubkey);
-    ensureForumFollowForAccount(myPubkey);
+    for (const ensure of PER_ACCOUNT_STORES) ensure(myPubkey);
   }, [myPubkey]);
 
   // Per-relay groups state sync. We only know which group ids "belong to"

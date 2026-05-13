@@ -57,6 +57,7 @@ import EmojiPicker from '@/components/chat/EmojiPicker';
 import { useMessageZaps, type MessageZapTotal } from '@/hooks/chat/useMessageZaps';
 import { useMessageZapStore } from '@/store/messageZap';
 import MessageZapModal from '@/components/chat/MessageZapModal';
+import ModalShell from '@/components/ModalShell';
 import { parseZapCommand } from '@/lib/wallet/parse-zap-command';
 import MentionAutocomplete from '@/components/chat/MentionAutocomplete';
 import SlashCommandAutocomplete, { SLASH_COMMANDS, type SlashCommand } from '@/components/chat/SlashCommandAutocomplete';
@@ -1239,11 +1240,10 @@ function RelayBrandingModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="lc-card flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden bg-lc-dark"
-      >
+    <ModalShell
+      onClose={onClose}
+      panelClassName="lc-card flex max-h-[90vh] w-full max-w-lg mx-4 flex-col overflow-hidden bg-lc-dark"
+    >
         <header className="flex shrink-0 items-center justify-between border-b border-lc-border px-5 py-3">
           <div>
             <div className="text-base font-bold text-lc-white">Relay branding</div>
@@ -1298,8 +1298,7 @@ function RelayBrandingModal({
             {saving ? 'Saving…' : 'Save'}
           </button>
         </footer>
-      </div>
-    </div>
+    </ModalShell>
   );
 }
 
@@ -1430,11 +1429,10 @@ function ManageLayoutModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="lc-card flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden bg-lc-dark"
-      >
+    <ModalShell
+      onClose={onClose}
+      panelClassName="lc-card flex max-h-[90vh] w-full max-w-2xl mx-4 flex-col overflow-hidden bg-lc-dark"
+    >
         <header className="flex shrink-0 items-center justify-between border-b border-lc-border px-5 py-3">
           <div>
             <div className="text-base font-bold text-lc-white">Categories &amp; order</div>
@@ -1590,8 +1588,7 @@ function ManageLayoutModal({
             </button>
           </div>
         </footer>
-      </div>
-    </div>
+    </ModalShell>
   );
 }
 
@@ -3229,11 +3226,10 @@ function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClose: () 
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="lc-card flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden bg-lc-dark"
-      >
+    <ModalShell
+      onClose={onClose}
+      panelClassName="lc-card flex max-h-[90vh] w-full max-w-2xl mx-4 flex-col overflow-hidden bg-lc-dark"
+    >
         <header className="flex shrink-0 items-center justify-between border-b border-lc-border px-5 py-3">
           <div className="text-base font-bold text-lc-white">Channel settings · #{group.name ?? group.id.slice(0, 8)}</div>
           <button onClick={onClose} className="rounded p-1 text-lc-muted hover:bg-lc-card hover:text-lc-white" aria-label="Close">
@@ -3486,8 +3482,7 @@ function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClose: () 
             </button>
           </div>
         </footer>
-      </div>
-    </div>
+    </ModalShell>
   );
 }
 
@@ -3875,17 +3870,13 @@ function RelayAccessModal() {
   const tone = isAuth ? 'yellow' : 'red';
 
   return (
-    <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4"
-      onClick={() => setDismissed(key)}
+    <ModalShell
+      onClose={() => setDismissed(key)}
+      panelClassName={
+        'max-w-md mx-4 rounded-xl border bg-lc-card p-6 shadow-2xl ' +
+        (tone === 'yellow' ? 'border-yellow-500/50' : 'border-red-500/50')
+      }
     >
-      <div
-        className={
-          'max-w-md rounded-xl border bg-lc-card p-6 shadow-2xl ' +
-          (tone === 'yellow' ? 'border-yellow-500/50' : 'border-red-500/50')
-        }
-        onClick={(e) => e.stopPropagation()}
-      >
         <div className={'text-xl font-bold ' + (tone === 'yellow' ? 'text-yellow-200' : 'text-red-300')}>
           {title}
         </div>
@@ -3898,8 +3889,7 @@ function RelayAccessModal() {
             Got it
           </button>
         </div>
-      </div>
-    </div>
+    </ModalShell>
   );
 }
 

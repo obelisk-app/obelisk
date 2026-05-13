@@ -16,24 +16,22 @@
  */
 
 import { wotBatch } from './extension';
+import {
+  KIND_GROUP_CREATE,
+  KIND_GROUP_METADATA,
+  KIND_GROUP_ADMINS,
+  KIND_GROUP_MEMBERS,
+  // Voice signaling — mesh voice is gated by NIP-29 membership inside the
+  // channel; layering WoT on top means a participant whose follow graph is
+  // sparse can fail to talk to half the room. The room is small (cap 8),
+  // the participants are already vetted by the channel admin's member
+  // list, and the events are short-lived ephemeral kinds.
+  KIND_VOICE_PRESENCE,
+  KIND_VOICE_SIGNAL,
+} from '@/lib/nip-kinds';
 
 const VERDICT_TTL_MS = 30 * 60 * 1000;
 const BATCH_DEBOUNCE_MS = 100;
-
-const KIND_USER_METADATA = 0;
-const KIND_GROUP_CREATE = 9007;
-const KIND_GROUP_METADATA = 39000;
-const KIND_GROUP_ADMINS = 39001;
-const KIND_GROUP_MEMBERS = 39002;
-// Voice signaling. Mesh voice is gated by NIP-29 membership inside the
-// channel; layering WoT on top means a participant whose follow graph
-// is sparse can fail to talk to half the room. The room is small (cap
-// 8), the participants are already vetted by the channel admin's
-// member list, and the events are short-lived ephemeral kinds — the
-// trust shape is fundamentally different from broadcast surfaces like
-// chat or profiles.
-const KIND_VOICE_PRESENCE = 20078;
-const KIND_VOICE_SIGNAL = 25050;
 
 const ALWAYS_ALLOW_KINDS = new Set<number>([
   KIND_GROUP_METADATA,
@@ -370,5 +368,3 @@ export function isAllowed(pubkey: string, kind?: number): boolean {
 
 export const KINDS_ALWAYS_ALLOW = ALWAYS_ALLOW_KINDS;
 export const _internals = { VERDICT_TTL_MS, BATCH_DEBOUNCE_MS };
-// Suppress unused-export lint for KIND_USER_METADATA — kept for parity with bridge.
-void KIND_USER_METADATA;

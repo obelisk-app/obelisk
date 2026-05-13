@@ -15,6 +15,7 @@ import {
 import { useFollows, useProfile, usePubkey } from '@nostr-wot/data/react';
 import { useDMUnreadCount } from '@/lib/read-state/selectors';
 import DMComposer from './DMComposer';
+import UserAvatar from '@/components/UserAvatar';
 
 type Tab = 'follows' | 'others';
 
@@ -170,7 +171,7 @@ function DMRow({
         (active ? 'bg-lc-border/40' : 'hover:bg-lc-border/20')
       }
     >
-      <Avatar pubkey={pubkey} size={8} picture={meta?.picture ?? null} />
+      <UserAvatar pubkey={pubkey} size={8} picture={meta?.picture ?? null} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
           <span
@@ -201,30 +202,7 @@ function DMRow({
   );
 }
 
-export function Avatar({ pubkey, size, picture }: { pubkey: string; size: number; picture: string | null }) {
-  const px = `${size * 4}px`;
-  if (picture) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={picture}
-        alt=""
-        style={{ width: px, height: px }}
-        className="shrink-0 rounded-full bg-lc-olive object-cover"
-        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-      />
-    );
-  }
-  const display = pubkey.slice(0, 1).toUpperCase();
-  return (
-    <div
-      style={{ width: px, height: px }}
-      className="flex shrink-0 items-center justify-center rounded-full bg-lc-olive text-xs font-semibold text-lc-green"
-    >
-      {display}
-    </div>
-  );
-}
+export { default as Avatar } from '@/components/UserAvatar';
 
 function npubLike(pubkey: string): string {
   // Pretty-print a hex pubkey like "npub1xxxx…yyyy" without bech32.

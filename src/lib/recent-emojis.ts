@@ -1,29 +1,20 @@
 // Persist most-recently-used emojis in localStorage for the picker.
 // MRU-ordered, capped at MAX. Safe to call during SSR (returns []).
 
-const KEY = 'obelisk:recent-emojis';
+import { createLocalStore } from './local-store';
+
 const MAX = 24;
 
+const store = createLocalStore<string[]>('obelisk:recent-emojis', []);
+
 export function loadRecentEmojis(): string[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    const raw = window.localStorage.getItem(KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter((x): x is string => typeof x === 'string').slice(0, MAX);
-  } catch {
-    return [];
-  }
+  const raw = store.load();
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((x): x is string => typeof x === 'string').slice(0, MAX);
 }
 
 export function saveRecentEmojis(list: ReadonlyArray<string>): void {
-  if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.setItem(KEY, JSON.stringify(list.slice(0, MAX)));
-  } catch {
-    /* quota / private mode — ignore */
-  }
+  store.save([...list.slice(0, MAX)]);
 }
 
 export function pushRecentEmoji(emoji: string): string[] {

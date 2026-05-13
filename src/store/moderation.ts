@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { createEnsureForAccount } from './multi-account';
 
 interface ModerationState {
   mutedPubkeys: string[];
@@ -35,4 +36,13 @@ export const useModerationStore = create<ModerationState>()(
       storage: createJSONStorage(() => localStorage),
     },
   ),
+);
+
+/**
+ * Multi-account isolation — swaps the persist key to `obelisk:moderation:{pubkey}`
+ * so mutes/blocks don't leak across logins on the same device.
+ */
+export const ensureModerationStoreForAccount = createEnsureForAccount(
+  'obelisk:moderation',
+  useModerationStore,
 );

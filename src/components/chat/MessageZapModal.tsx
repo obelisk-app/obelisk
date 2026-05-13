@@ -7,6 +7,7 @@ import { isWebLNAvailable, zapViaWebLN } from '@nostr-wot/wallet';
 import type { NostrSigner } from '@nostr-wot/signers';
 import { getDefaultRelays } from '@nostr-wot/data';
 import { useProfile, useSigner } from '@nostr-wot/data/react';
+import ModalShell from '@/components/ModalShell';
 
 const QUICK_AMOUNTS = [21, 100, 500, 1000, 5000, 21000];
 
@@ -80,11 +81,10 @@ export default function MessageZapModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={close}>
-      <div
-        className="w-full max-w-md rounded-xl border border-lc-border bg-lc-dark p-5"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <ModalShell
+      onClose={close}
+      panelClassName="w-full max-w-md mx-4 rounded-xl border border-lc-border bg-lc-dark p-5"
+    >
         <div className="mb-3 flex items-center gap-2">
           <BoltIcon className="h-5 w-5 text-yellow-400" />
           <h3 className="font-semibold text-lc-white">Zap {displayName}</h3>
@@ -141,8 +141,7 @@ export default function MessageZapModal() {
             {busy ? 'Sending…' : `Zap ${amount.toLocaleString()} sats`}
           </button>
         </div>
-      </div>
-    </div>
+    </ModalShell>
   );
 }
 

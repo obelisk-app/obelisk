@@ -15,6 +15,7 @@ import {
 } from '@/lib/emoji-shortcodes';
 import ChannelEmoji from './ChannelEmoji';
 import WotBadge from './WotBadge';
+import UserAvatar from '@/components/UserAvatar';
 
 function renderWithEmojis(text: string, serverEmojis: Record<string, string>): ReactNode {
   if (!text) return text;
@@ -152,22 +153,15 @@ export default function ProfilePopover({ pubkey, onClose }: {
         {/* Avatar (overlaps banner) */}
         <div className="relative px-4">
           <div className="absolute -top-10 left-4">
-            {member?.picture ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={member.picture}
-                alt={displayName}
-                className="w-20 h-20 rounded-full object-cover border-4 border-lc-dark bg-lc-dark"
-                data-testid="profile-avatar"
-              />
-            ) : (
-              <div
-                className="w-20 h-20 rounded-full border-4 border-lc-dark bg-lc-olive flex items-center justify-center text-lc-green text-2xl font-semibold"
-                data-testid="profile-avatar-fallback"
-              >
-                {displayName[0]?.toUpperCase() || '?'}
-              </div>
-            )}
+            <UserAvatar
+              pubkey={pubkey}
+              picture={member?.picture ?? null}
+              size={20}
+              name={displayName || '?'}
+              alt={displayName}
+              className="border-4 border-lc-dark"
+              initialClassName="text-2xl"
+            />
           </div>
         </div>
 
