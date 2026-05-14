@@ -63,6 +63,26 @@ export const DIAGRAM_ASSET_META: Record<string, GuideAssetMeta> = {
     height: 352,
     alt: 'Obelisk swap matrix: every layer of the stack — client, voice, bots, relay — has independent alternatives, so any one component can be replaced without changing the others.',
   },
+  'mark-dex': {
+    width: 120,
+    height: 120,
+    alt: 'obelisk-dex logo mark: a chat bubble containing the Obelisk monument, representing the browser chat client that signs Nostr events and posts them to a relay.',
+  },
+  'mark-sfu': {
+    width: 120,
+    height: 120,
+    alt: 'obelisk-sfu logo mark: a central voice mixer hub connected by spokes to five peers, representing the Selective Forwarding Unit that mixes streams for large group calls.',
+  },
+  'mark-bots': {
+    width: 120,
+    height: 120,
+    alt: 'obelisk-bots logo mark: a small robot head with an antenna, representing the bot runtime where each bot has its own Nostr keypair and posts messages like any user.',
+  },
+  'mark-relay': {
+    width: 120,
+    height: 120,
+    alt: 'obelisk-relay logo mark: a relay tower broadcasting concentric signal arcs, representing the self-hostable Nostr relay with built-in whitelisting and admin UI.',
+  },
 };
 
 export function isHero(name: string): boolean {

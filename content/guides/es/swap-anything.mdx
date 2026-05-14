@@ -17,10 +17,10 @@ Obelisk está construido para no parecerse en nada a eso. Es un chat grupal esti
 
 <SvgHero name="swap-anything" />
 
-- **obelisk-dex** — el cliente de chat. Es lo que ves en el navegador cuando abrís obelisk.ar. Firma mensajes con tu clave y los manda a un relay. Eso es casi todo lo que hace.
-- **obelisk-sfu** — el servidor de voz para llamadas grandes. Cuando una llamada de grupo se vuelve muy grande para que todos hablen con todos directamente, el SFU mezcla los streams. Señaliza por Nostr como cualquier otro participante.
-- **obelisk-bots** — el motor que corre los bots. Bots de moderación, bots de juego, bots de integración. Cada bot tiene su propio par de claves y postea mensajes igual que un usuario humano. No hay una API especial para bots.
-- **obelisk-relay** — un relay de Nostr que podés correr vos. Viene con whitelisting incorporado y un CLI que te pone online en unos minutos. Tiene una web UI para administrarlo sin tocar la terminal.
+- <Mark name="mark-dex" /> **obelisk-dex** — el cliente de chat. Es lo que ves en el navegador cuando abrís obelisk.ar. Firma mensajes con tu clave y los manda a un relay. Eso es casi todo lo que hace.
+- <Mark name="mark-sfu" /> **obelisk-sfu** — el servidor de voz para llamadas grandes. Cuando una llamada de grupo se vuelve muy grande para que todos hablen con todos directamente, el SFU mezcla los streams. Señaliza por Nostr como cualquier otro participante.
+- <Mark name="mark-bots" /> **obelisk-bots** — el motor que corre los bots. Bots de moderación, bots de juego, bots de integración. Cada bot tiene su propio par de claves y postea mensajes igual que un usuario humano. No hay una API especial para bots.
+- <Mark name="mark-relay" /> **obelisk-relay** — un relay de Nostr que podés correr vos. Viene con whitelisting incorporado y un CLI que te pone online en unos minutos. Tiene una web UI para administrarlo sin tocar la terminal.
 
 Ninguno de estos cuatro proyectos importa código de otro. Nunca tuvieron que hacerlo. Hablan todos el mismo protocolo y se encuentran en el relay.
 

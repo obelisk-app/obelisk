@@ -10,6 +10,10 @@ import WotGraphDiagram from './diagrams/WotGraphDiagram';
 import RelayGroupsDiagram from './diagrams/RelayGroupsDiagram';
 import ZapFlowDiagram from './diagrams/ZapFlowDiagram';
 import SwapMatrixDiagram from './diagrams/SwapMatrixDiagram';
+import DexMark from './marks/DexMark';
+import SfuMark from './marks/SfuMark';
+import BotsMark from './marks/BotsMark';
+import RelayMark from './marks/RelayMark';
 import {
   HERO_ASSET_META,
   DIAGRAM_ASSET_META,
@@ -32,6 +36,10 @@ export const DIAGRAM_REGISTRY: Record<string, ComponentType> = {
   'relay-groups': RelayGroupsDiagram,
   'zap-flow': ZapFlowDiagram,
   'swap-matrix': SwapMatrixDiagram,
+  'mark-dex': DexMark,
+  'mark-sfu': SfuMark,
+  'mark-bots': BotsMark,
+  'mark-relay': RelayMark,
 };
 
 function IndexableSvg({
@@ -72,6 +80,33 @@ export function SvgHero({ name }: { name: string }) {
     <div className="w-full rounded-xl overflow-hidden border border-lc-border bg-lc-dark">
       <IndexableSvg name={name} Component={C} meta={meta} />
     </div>
+  );
+}
+
+export function Mark({ name, size = 40 }: { name: string; size?: number }) {
+  const C = DIAGRAM_REGISTRY[name];
+  const meta = DIAGRAM_ASSET_META[name];
+  if (!C || !meta) return null;
+  const paths = snapshotPaths(name);
+  return (
+    <span
+      className="relative inline-block align-middle mr-2 rounded-md overflow-hidden border border-lc-border bg-lc-dark"
+      style={{ width: size, height: size }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={paths.png}
+        alt={meta.alt}
+        width={size}
+        height={size}
+        className="block w-full h-full"
+        loading="lazy"
+        decoding="async"
+      />
+      <span className="absolute inset-0" aria-hidden="true">
+        <C />
+      </span>
+    </span>
   );
 }
 
