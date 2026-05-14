@@ -24,6 +24,8 @@ import type { VoicePresence, VoiceSignalPayload, VideoSlotKind } from './types';
 import { pushVoiceDebug } from './debug';
 
 const PRESENCE_TTL_SECONDS = 30;
+const VOICE_SUB_WATCHDOG_MS = 2500;
+const SEEN_SIGNAL_IDS_MAX = 2048;
 
 async function bridge() {
   await getBridge();
@@ -165,6 +167,7 @@ export async function subscribeRoster(
       });
       emit();
     },
+    { watchdogMs: VOICE_SUB_WATCHDOG_MS },
   );
 
   emit();
@@ -217,6 +220,19 @@ export async function subscribeSignals(
 ): Promise<() => void> {
   const b = await bridge();
   const since = Math.floor(Date.now() / 1000) - 60;
+  const seenIds = new Set<string>();
+
+  function rememberSignalId(id: string | undefined): boolean {
+    if (!id) return true;
+    if (seenIds.has(id)) return false;
+    seenIds.add(id);
+    if (seenIds.size > SEEN_SIGNAL_IDS_MAX) {
+      const oldest = seenIds.values().next().value;
+      if (oldest) seenIds.delete(oldest);
+    }
+    return true;
+  }
+
   // Watched variant — same reasoning as `subscribeRoster`. Without auto-
   // retry, a relay disconnect mid-call means SDP offers / answers / ICE
   // candidates from new joiners never reach us; the call stays formed for
@@ -228,6 +244,10 @@ export async function subscribeSignals(
       since,
     },
     (ev) => {
+      if (!rememberSignalId(ev.id)) {
+        pushVoiceDebug({ kind: 'signal-dropped', reason: 'duplicate', peer: ev.pubkey });
+        return;
+      }
       if (ev.pubkey === selfPubkey) {
         pushVoiceDebug({ kind: 'signal-dropped', reason: 'self' });
         return;
@@ -246,6 +266,7 @@ export async function subscribeSignals(
         console.warn('[voice] malformed signal', e);
       }
     },
+    { watchdogMs: VOICE_SUB_WATCHDOG_MS },
   );
 }
 

@@ -7,7 +7,7 @@
  * Two-peer round-trips live in `peer-pair.integration.test.ts`.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Peer, type PeerEvents } from './peer';
+import { ICE_CANDIDATE_BATCH_MS, Peer, type PeerEvents } from './peer';
 import type { VoiceSignalPayload } from './types';
 import {
   FakeRTCPeerConnection,
@@ -231,6 +231,56 @@ describe('Peer.setLocalTrack', () => {
     const tx = pc.getTransceivers().find((t) => t.kind === 'audio');
     expect(tx).toBeDefined();
     expect(tx!.codecPreferences).toEqual([]);
+  });
+});
+
+describe('Peer ICE candidate batching', () => {
+  it('publishes multiple local candidates as one signal batch', async () => {
+    vi.useFakeTimers();
+    const { peer, sent } = makePeer();
+    try {
+      const pc = peer.pc as unknown as FakeRTCPeerConnection;
+      const candidate = (value: string) => Object.assign(Object.create(null), {
+        toJSON: () => ({ candidate: value, sdpMid: '0' }),
+      }) as RTCIceCandidateInit;
+
+      pc.onicecandidate?.({ candidate: candidate('candidate-a') });
+      pc.onicecandidate?.({ candidate: candidate('candidate-b') });
+      await vi.advanceTimersByTimeAsync(ICE_CANDIDATE_BATCH_MS);
+      await flushMicrotasks(4);
+
+      const ice = sent.filter((s) => s.type === 'ice');
+      expect(ice).toHaveLength(1);
+      expect(ice[0].candidates).toEqual([
+        { candidate: 'candidate-a', sdpMid: '0' },
+        { candidate: 'candidate-b', sdpMid: '0' },
+      ]);
+    } finally {
+      peer.close();
+      vi.useRealTimers();
+    }
+  });
+
+  it('flushes a pending candidate batch when gathering completes', async () => {
+    vi.useFakeTimers();
+    const { peer, sent } = makePeer();
+    try {
+      const pc = peer.pc as unknown as FakeRTCPeerConnection;
+      const candidate = Object.assign(Object.create(null), {
+        toJSON: () => ({ candidate: 'candidate-a', sdpMid: '0' }),
+      }) as RTCIceCandidateInit;
+
+      pc.onicecandidate?.({ candidate });
+      pc.onicecandidate?.({ candidate: null });
+      await flushMicrotasks(4);
+
+      const ice = sent.filter((s) => s.type === 'ice');
+      expect(ice).toHaveLength(1);
+      expect(ice[0].candidates).toEqual([{ candidate: 'candidate-a', sdpMid: '0' }]);
+    } finally {
+      peer.close();
+      vi.useRealTimers();
+    }
   });
 });
 

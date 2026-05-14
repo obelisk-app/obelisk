@@ -42,13 +42,14 @@ const bridgeFake = vi.hoisted(() => {
   const impl = {
     getPublicKey: () => selfPubkey,
     publishEvent: vi.fn(async (input: { kind: number; content: string; tags: string[][] }) => {
+      const createdAt = nextEventCreatedAt++;
       const ev: FakeEvent = {
         pubkey: selfPubkey,
         kind: input.kind,
         content: input.content,
         tags: input.tags,
-        created_at: nextEventCreatedAt++,
-        id: 'fake-id',
+        created_at: createdAt,
+        id: `fake-id-${createdAt}`,
       };
       // Synchronous fan-out — simpler to test than queueMicrotask.
       for (const s of subs) if (matches(s.filter, ev)) s.sink(ev);
@@ -266,6 +267,23 @@ describe('signal addressing', () => {
       created_at: Math.floor(Date.now() / 1000),
     });
     expect(got).toHaveLength(0);
+    unsub();
+  });
+
+  it('subscribeSignals drops duplicate relay deliveries with the same event id', async () => {
+    const got: unknown[] = [];
+    const unsub = await subscribeSignals('ch1', 'me', (_from, p) => { got.push(p); });
+    const ev = {
+      id: 'same-event-id',
+      pubkey: 'peer1',
+      kind: KIND_VOICE_SIGNAL,
+      content: JSON.stringify({ type: 'ice', candidates: [{ candidate: 'fake', sdpMid: '0' }], sessionId: 's', seq: 1 }),
+      tags: [['e', 'ch1'], ['p', 'me']],
+      created_at: Math.floor(Date.now() / 1000),
+    };
+    bridgeFake.inject(ev);
+    bridgeFake.inject(ev);
+    expect(got).toHaveLength(1);
     unsub();
   });
 });

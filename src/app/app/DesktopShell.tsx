@@ -3947,6 +3947,10 @@ function RelayAccessBanner({ compact = false }: { compact?: boolean } = {}) {
   const isLoggedIn = useIsLoggedIn();
   if (!relay) return null;
   if (access === 'ok') return null;
+  // The active signing prompt already appears through ActivityIndicator as
+  // a fixed bottom-right popup. Rendering an inline banner here reflows the
+  // channel/sidebar while the extension or bunker signature is pending.
+  if (access === 'authenticating') return null;
 
   const host = shortHost(relay);
   const wrapperBase = compact
@@ -3975,31 +3979,6 @@ function RelayAccessBanner({ compact = false }: { compact?: boolean } = {}) {
         <div className="mt-1 text-sm text-lc-muted">
           Waiting for the relay to respond. Channels stay hidden until the relay confirms read access.
         </div>
-      </div>
-    );
-  }
-
-  if (access === 'authenticating') {
-    const reason =
-      loginMethod === 'bunker'
-        ? 'Approve the signing request in your bunker app to complete NIP-42 AUTH.'
-        : loginMethod === 'nip07'
-          ? 'Approve the signing request in your Nostr extension to complete NIP-42 AUTH.'
-          : 'Signing the relay AUTH challenge…';
-    return (
-      <div
-        className={`${wrapperBase} border-yellow-500/40 bg-yellow-500/10`}
-        data-testid="relay-access-banner"
-        data-state="authenticating"
-      >
-        <div className={`${titleSize} font-semibold flex items-center gap-2 text-yellow-200`}>
-          <span
-            className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-yellow-300/30 border-t-yellow-200"
-            aria-hidden
-          />
-          Authenticating with {host}…
-        </div>
-        <div className="mt-1 text-sm text-yellow-100/80">{reason}</div>
       </div>
     );
   }

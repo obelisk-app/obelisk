@@ -15,6 +15,7 @@ export type VoiceDebugReason =
   | 'membership-final'
   | 'self'
   | 'not-for-me'
+  | 'duplicate'
   | 'unknown-payload'
   | 'sfu-routed'
   | 'deferred-overflow'

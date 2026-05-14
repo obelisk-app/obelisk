@@ -69,8 +69,10 @@ vi.mock('./transport', () => ({
 // per-case via `sfuControlFake.setPick(...)`.
 const sfuControlFake = vi.hoisted(() => {
   let next: { pubkey: string; trustedRelays: readonly string[]; url: string | null } | null = null;
+  const publishSfuStart = vi.fn(async () => true);
   return {
     pickSfu: vi.fn(async () => next),
+    publishSfuStart,
     setPick: (
       pick: { pubkey: string; trustedRelays?: readonly string[]; url?: string | null } | null,
     ) => {
@@ -82,11 +84,15 @@ const sfuControlFake = vi.hoisted(() => {
           }
         : null;
     },
-    reset: () => { next = null; },
+    reset: () => {
+      next = null;
+      publishSfuStart.mockClear();
+    },
   };
 });
 vi.mock('./sfu-control', () => ({
   pickSfu: sfuControlFake.pickSfu,
+  publishSfuStart: sfuControlFake.publishSfuStart,
 }));
 
 // ── sfu-client mock ─────────────────────────────────────────────────────
@@ -492,6 +498,7 @@ describe('VoiceClient setExpectSfu', () => {
     // Make pickSfu hand back the SFU pubkey so the transition succeeds.
     sfuControlFake.setPick({ pubkey: SFU });
     client.setExpectSfu(true);
+    await new Promise((resolve) => setTimeout(resolve, 400));
     await flushMicrotasks(10);
     expect(onTopologyChange).toHaveBeenCalledWith(SFU);
     expect(sfuClientFake.last()?.sfuPubkey).toBe(SFU);

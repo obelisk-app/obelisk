@@ -34,20 +34,22 @@ import { ICE_SERVERS, ICE_TRANSPORT_POLICY } from './ice-config';
 //
 // Start small so transient ICE hiccups (Wi-Fi roam, ~1–2 s) self-heal without
 // a visible gap, then back off so we don't hammer dead peers. The first
-// retry fires fast (1 s) so a single dropped offer/answer round-trip during
+// retry fires fast so a single dropped offer/answer round-trip during
 // the initial handshake doesn't strand the user behind the watchdog.
-export const RECONNECT_DELAYS_MS = [1000, 2500, 5000, 10000, 15000];
+export const RECONNECT_DELAYS_MS = [750, 1500, 3000, 6000, 10000];
 // Polite side waits longer because it's asking the remote to do a full PC
 // rebuild — we don't want to spam those requests.
-export const POLITE_RESET_DELAYS_MS = [6000, 10000, 16000];
+export const POLITE_RESET_DELAYS_MS = [2500, 5000, 10000];
 // After this many ICE restarts we escalate to a full PC recreate.
 export const ICE_RESTART_LIMIT = 3;
 // Max time the initial handshake is allowed to sit before we treat it as
-// wedged and trigger a fresh PC. Lowered from 15 s to 8 s — beyond ~8 s
+// wedged and trigger a fresh PC. Beyond ~9 s
 // the user perceives the channel as "stuck" and reflexively refreshes,
 // which is exactly what the reconnect ladder is meant to prevent. The
 // polite/impolite request-reset path picks up immediately at this mark.
-export const INITIAL_CONNECT_TIMEOUT_MS = 25000;
+export const INITIAL_CONNECT_TIMEOUT_MS = 9000;
+export const ICE_CANDIDATE_BATCH_MS = 80;
+const ICE_CANDIDATE_POOL_SIZE = 4;
 
 // After we send an offer we expect an answer back fast — the round-trip
 // is one relay-mediated kind 25050 in each direction. If signalingState
@@ -64,7 +66,7 @@ export const INITIAL_CONNECT_TIMEOUT_MS = 25000;
 // by `armConnectWatchdog`, which has its own escalation path; running
 // both on the same first offer would double up resets.
 //
-// 8 s gives the relay + SFU forwarding path generous time before
+// 5 s gives the relay + SFU forwarding path enough time before
 // declaring the leg dropped — the SFU's own offer-to-other-peers
 // renegotiation can take a few seconds before the answer to ours lands.
 //
@@ -74,8 +76,8 @@ export const INITIAL_CONNECT_TIMEOUT_MS = 25000;
 // fresh getUserMedia trackIds, which the SFU treats as new ingest
 // (and "ended via renegotiation" for the old IDs). The connect
 // watchdog still owns the hard-reset path for genuinely stuck PCs.
-export const OFFER_ACK_TIMEOUT_MS = 8000;
-export const OFFER_RETRY_LIMIT = 2;
+export const OFFER_ACK_TIMEOUT_MS = 5000;
+export const OFFER_RETRY_LIMIT = 3;
 
 export interface PeerEvents {
   /**
@@ -192,6 +194,8 @@ export class Peer {
    * offer/answer lands, then drain in order.
    */
   private pendingIce: RTCIceCandidateInit[] = [];
+  private pendingLocalIce: RTCIceCandidateInit[] = [];
+  private localIceFlushTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(opts: PeerOptions) {
     this.remotePubkey = opts.remotePubkey;
@@ -260,7 +264,11 @@ export class Peer {
   }
 
   private createPc(): RTCPeerConnection {
-    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS, iceTransportPolicy: ICE_TRANSPORT_POLICY });
+    const pc = new RTCPeerConnection({
+      iceServers: ICE_SERVERS,
+      iceTransportPolicy: ICE_TRANSPORT_POLICY,
+      iceCandidatePoolSize: ICE_CANDIDATE_POOL_SIZE,
+    });
     if (typeof console !== 'undefined') {
       console.log('[voice] new PC for', this.remotePubkey.slice(0, 8), 'iceServers=', ICE_SERVERS.map(s => s.urls), 'policy=', ICE_TRANSPORT_POLICY);
     }
@@ -294,13 +302,11 @@ export class Peer {
     };
 
     pc.onicecandidate = ({ candidate }) => {
-      if (!candidate) return;
-      void this.sendSignal({
-        type: 'ice',
-        candidates: [candidate.toJSON()],
-        sessionId: this.sessionId,
-        seq: ++this.outboundSeq,
-      });
+      if (!candidate) {
+        void this.flushLocalIceCandidates();
+        return;
+      }
+      this.queueLocalIceCandidate(candidate.toJSON());
     };
 
     // Once an answer is applied (or the PC otherwise leaves
@@ -501,6 +507,8 @@ export class Peer {
       this.pc.onnegotiationneeded = null;
     } catch { /* ignore — old browsers may not allow null assignment */ }
     try { this.pc.close(); } catch { /* already closed */ }
+    this.clearLocalIceBatch();
+    this.clearOfferAckWatchdog(false);
     // Tear down the control channel attached to the old PC; the new
     // attachControlChannel() below will install a fresh one on the new pc.
     if (this.controlChannel) {
@@ -569,6 +577,40 @@ export class Peer {
     } catch (e) {
       console.error('[voice] signal send failed', e);
     }
+  }
+
+  private queueLocalIceCandidate(candidate: RTCIceCandidateInit): void {
+    if (this.closed) return;
+    this.pendingLocalIce.push(candidate);
+    if (this.localIceFlushTimer) return;
+    this.localIceFlushTimer = setTimeout(() => {
+      this.localIceFlushTimer = null;
+      void this.flushLocalIceCandidates();
+    }, ICE_CANDIDATE_BATCH_MS);
+    (this.localIceFlushTimer as unknown as { unref?: () => void }).unref?.();
+  }
+
+  private async flushLocalIceCandidates(): Promise<void> {
+    if (this.localIceFlushTimer) {
+      clearTimeout(this.localIceFlushTimer);
+      this.localIceFlushTimer = null;
+    }
+    if (this.closed || this.pendingLocalIce.length === 0) return;
+    const candidates = this.pendingLocalIce.splice(0);
+    await this.sendSignal({
+      type: 'ice',
+      candidates,
+      sessionId: this.sessionId,
+      seq: ++this.outboundSeq,
+    });
+  }
+
+  private clearLocalIceBatch(): void {
+    if (this.localIceFlushTimer) {
+      clearTimeout(this.localIceFlushTimer);
+      this.localIceFlushTimer = null;
+    }
+    this.pendingLocalIce.length = 0;
   }
 
   /**
@@ -974,6 +1016,8 @@ export class Peer {
     this.closed = true;
     if (this.reconnectTimer) { clearTimeout(this.reconnectTimer); this.reconnectTimer = null; }
     if (this.connectWatchdogTimer) { clearTimeout(this.connectWatchdogTimer); this.connectWatchdogTimer = null; }
+    this.clearLocalIceBatch();
+    this.clearOfferAckWatchdog(false);
     if (this.statsMonitor) { this.statsMonitor.stop(); this.statsMonitor = null; }
     // Send the control-channel bye BEFORE the relay bye and BEFORE
     // pc.close() so the remote learns instantly even if the relay drops

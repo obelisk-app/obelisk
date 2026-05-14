@@ -7,7 +7,7 @@
 // constant and produce the same chunk hash as before.
 if (typeof globalThis !== 'undefined') {
   (globalThis as { __obeliskVoiceBuild?: string }).__obeliskVoiceBuild =
-    '2026-05-07T18:30:00Z-multi-device-keyframe-heartbeat';
+    '2026-05-14T22:45:00Z-sfu-start-before-rpc';
 }
 
 /**
@@ -28,7 +28,7 @@ if (typeof globalThis !== 'undefined') {
 import { Peer } from './peer';
 import { SfuClient } from './sfu-client';
 import type { SfuRemoteTrack } from './sfu-client';
-import { pickSfu } from './sfu-control';
+import { pickSfu, publishSfuStart } from './sfu-control';
 import type {
   VoicePresence,
   VoiceSignalPayload,
@@ -125,6 +125,11 @@ const DEFERRED_SIGNAL_PER_PEER_CAP = 8;
 const DEFERRED_SIGNAL_TOTAL_CAP = 64;
 /** How often the deferred queue self-sweeps for expired entries. */
 const DEFERRED_SIGNAL_SWEEP_MS = 1_000;
+/**
+ * Give the SFU's control subscription a short chance to process the
+ * just-published `start` event before the first mediasoup RPC.
+ */
+const SFU_START_SETTLE_MS = 350;
 
 export interface RemoteTrack {
   /**
@@ -1093,6 +1098,40 @@ export class VoiceClient {
    *
    * Caller (`enterSfuMode`) guarantees the previous client was torn down.
    */
+  private async publishSfuStartOrThrow(sfuPubkey: string, trustedRelays: readonly string[]): Promise<void> {
+    const ok = await publishSfuStart(this.channelId, sfuPubkey, {
+      trustedRelays,
+      params: { video: true, screen: true, maxParticipants: 50 },
+      force: true,
+    });
+    if (!ok) throw new Error('Could not publish SFU start control event.');
+    await new Promise((resolve) => setTimeout(resolve, SFU_START_SETTLE_MS));
+  }
+
+  private isInitialSfuRpcTimeout(err: unknown): boolean {
+    return err instanceof Error && err.message.includes('rpc timeout: getRouterRtpCapabilities');
+  }
+
+  private async failSfuStart(client: SfuClient, sfuPubkey: string, err: unknown): Promise<never> {
+    console.warn('[voice] SfuClient.start failed', err);
+    // start() failed — no live RPC subscription to gracefully close.
+    // Use 0-budget close (skip the bounded await for the leave RPC),
+    // since the SFU may not have registered a peer for us.
+    try { await client.close(0); } catch { /* ignore */ }
+    if (this.sfuClient === client) this.sfuClient = null;
+    if (this.sfuPubkey === sfuPubkey) {
+      this.sfuPubkey = null;
+      try { this.events.onTopologyChange?.(null); } catch { /* ignore */ }
+    }
+    // SFU-pinned channels stay on SFU. Surface a clear error and stop —
+    // mesh fallback would silently change the call's semantics (peer cap,
+    // forwarding, recording capability) and the channel admin's pin is
+    // an explicit choice we shouldn't override on a transient outage.
+    const msg = err instanceof Error ? err.message : String(err);
+    try { this.events.onError?.(`Could not connect to the SFU: ${msg}`); } catch { /* ignore */ }
+    throw err;
+  }
+
   private async startSfuClient(sfuPubkey: string): Promise<void> {
     // SFU's listening relays may be a strict subset of the dex's bridge
     // default relays (relay.obelisk.ar only, not public.obelisk.ar). Pass
@@ -1112,7 +1151,7 @@ export class VoiceClient {
         .map((s) => s.trim())
         .filter(Boolean);
     }
-    const client = new SfuClient({
+    const makeClient = (): SfuClient => new SfuClient({
       channelId: this.channelId,
       sfuPubkey,
       selfPubkey: this.selfPubkey,
@@ -1187,27 +1226,32 @@ export class VoiceClient {
         },
       },
     });
+
+    let client = makeClient();
     this.sfuClient = client;
     try {
+      await this.publishSfuStartOrThrow(sfuPubkey, trustedRelays);
       await client.start();
     } catch (err) {
-      console.warn('[voice] SfuClient.start failed', err);
-      // start() failed — no live RPC subscription to gracefully close.
-      // Use 0-budget close (skip the bounded await for the leave RPC),
-      // since the SFU never registered a peer for us.
+      if (!this.isInitialSfuRpcTimeout(err)) {
+        return this.failSfuStart(client, sfuPubkey, err);
+      }
+
+      // The common cold-start race is: start control publish returns,
+      // but the SFU room has not processed the event before our first
+      // RPC lands. Republish forcefully and retry once with a fresh RPC
+      // client so stale pending calls cannot leak into the retry.
+      console.warn('[voice] SFU room not ready for initial RPC; republishing start and retrying');
       try { await client.close(0); } catch { /* ignore */ }
       if (this.sfuClient === client) this.sfuClient = null;
-      if (this.sfuPubkey === sfuPubkey) {
-        this.sfuPubkey = null;
-        try { this.events.onTopologyChange?.(null); } catch { /* ignore */ }
+      try {
+        await this.publishSfuStartOrThrow(sfuPubkey, trustedRelays);
+        client = makeClient();
+        this.sfuClient = client;
+        await client.start();
+      } catch (retryErr) {
+        return this.failSfuStart(client, sfuPubkey, retryErr);
       }
-      // SFU-pinned channels stay on SFU. Surface a clear error and stop —
-      // mesh fallback would silently change the call's semantics (peer cap,
-      // forwarding, recording capability) and the channel admin's pin is
-      // an explicit choice we shouldn't override on a transient outage.
-      const msg = err instanceof Error ? err.message : String(err);
-      try { this.events.onError?.(`Could not connect to the SFU: ${msg}`); } catch { /* ignore */ }
-      throw err;
     }
     // Push existing local tracks to the new client.
     if (this.micTrack) await client.publishTrack('audio', this.micTrack).catch((e) => console.warn('[voice] publish mic threw', e));

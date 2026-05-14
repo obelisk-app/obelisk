@@ -219,9 +219,13 @@ export class SfuClient {
   async start(): Promise<void> {
     if (this.closed) throw new Error('SfuClient closed');
     await this.rpc.start();
+    if (this.closed) return;
     const caps = await this.rpc.request<RtpCapabilities>('getRouterRtpCapabilities');
-    this.device = new Device();
-    await this.device.load({ routerRtpCapabilities: caps });
+    if (this.closed) return;
+    const device = new Device();
+    await device.load({ routerRtpCapabilities: caps });
+    if (this.closed) return;
+    this.device = device;
     await this.createTransports();
   }
 
@@ -229,19 +233,28 @@ export class SfuClient {
    * media kind — `produce()` resolves that for us. */
   async publishTrack(kind: VoiceTrackKind, track: MediaStreamTrack): Promise<void> {
     if (this.closed) return;
-    if (!this.sendTransport) throw new Error('sendTransport not ready');
+    const sendTransport = this.sendTransport;
+    if (!sendTransport) throw new Error('sendTransport not ready');
 
     // Replace if we already have one of this voice-kind — clients flip
     // camera → screen all the time and we don't want to leak Producers.
     const existing = this.producers.get(kind);
     if (existing) {
-      try { await existing.replaceTrack({ track }); return; }
-      catch { /* fall through and re-produce */ }
+      if (!existing.closed) {
+        try { await existing.replaceTrack({ track }); return; }
+        catch { /* fall through and re-produce */ }
+      }
+      try { existing.close(); } catch { /* ignore */ }
+      this.producers.delete(kind);
     }
-    const producer = await this.sendTransport.produce({
+    const producer = await sendTransport.produce({
       track,
       appData: { kind } as AppData,
     });
+    if (this.closed) {
+      try { producer.close(); } catch { /* ignore */ }
+      return;
+    }
     this.producers.set(kind, producer);
     producer.on('transportclose', () => this.producers.delete(kind));
     producer.on('trackended', () => {
@@ -298,6 +311,7 @@ export class SfuClient {
       } catch { /* ignore */ }
     }
     this.stopStaleWatchdog();
+    this.pendingProducers = [];
     for (const pending of Array.from(this.pendingConsumes.values())) {
       if (pending.timer) clearTimeout(pending.timer);
       // Don't close the consumer here — we hand it off via `consumer`
@@ -325,7 +339,9 @@ export class SfuClient {
   // ── transports ─────────────────────────────────────────────────────────
 
   private async createTransports(): Promise<void> {
-    if (!this.device) throw new Error('device not loaded');
+    const device = this.device;
+    if (!device) throw new Error('device not loaded');
+    if (this.closed) return;
 
     // Send transport — for our outbound producers.
     const sendInfo = await this.rpc.request<{
@@ -334,20 +350,34 @@ export class SfuClient {
       iceCandidates: unknown[];
       dtlsParameters: DtlsParameters;
     }>('createWebRtcTransport', { direction: 'send' });
-    this.sendTransport = this.device.createSendTransport({
+    if (this.closed) return;
+    const sendTransport = device.createSendTransport({
       id: sendInfo.id,
       iceParameters: sendInfo.iceParameters as never,
       iceCandidates: sendInfo.iceCandidates as never,
       dtlsParameters: sendInfo.dtlsParameters,
       iceServers: ICE_SERVERS,
     });
-    this.sendTransport.on('connect', ({ dtlsParameters }, callback, errback) => {
+    if (this.closed) {
+      try { sendTransport.close(); } catch { /* ignore */ }
+      return;
+    }
+    this.sendTransport = sendTransport;
+    sendTransport.on('connect', ({ dtlsParameters }, callback, errback) => {
+      if (this.closed) {
+        errback(new Error('SfuClient closed'));
+        return;
+      }
       this.rpc.request('connectWebRtcTransport', {
         transportId: sendInfo.id,
         dtlsParameters,
       }).then(() => callback()).catch((err) => errback(err as Error));
     });
-    this.sendTransport.on('produce', ({ kind, rtpParameters, appData }, callback, errback) => {
+    sendTransport.on('produce', ({ kind, rtpParameters, appData }, callback, errback) => {
+      if (this.closed) {
+        errback(new Error('SfuClient closed'));
+        return;
+      }
       this.rpc.request<{ id: string }>('produce', {
         transportId: sendInfo.id,
         kind,
@@ -355,7 +385,7 @@ export class SfuClient {
         appData,
       }).then(({ id }) => callback({ id })).catch((err) => errback(err as Error));
     });
-    this.sendTransport.on('connectionstatechange', (state) => {
+    sendTransport.on('connectionstatechange', (state) => {
       this.events.onConnectionStateChange?.(state);
     });
 
@@ -366,14 +396,30 @@ export class SfuClient {
       iceCandidates: unknown[];
       dtlsParameters: DtlsParameters;
     }>('createWebRtcTransport', { direction: 'recv' });
-    this.recvTransport = this.device.createRecvTransport({
+    if (this.closed) {
+      try { sendTransport.close(); } catch { /* ignore */ }
+      if (this.sendTransport === sendTransport) this.sendTransport = null;
+      return;
+    }
+    const recvTransport = device.createRecvTransport({
       id: recvInfo.id,
       iceParameters: recvInfo.iceParameters as never,
       iceCandidates: recvInfo.iceCandidates as never,
       dtlsParameters: recvInfo.dtlsParameters,
       iceServers: ICE_SERVERS,
     });
-    this.recvTransport.on('connect', ({ dtlsParameters }, callback, errback) => {
+    if (this.closed) {
+      try { recvTransport.close(); } catch { /* ignore */ }
+      try { sendTransport.close(); } catch { /* ignore */ }
+      if (this.sendTransport === sendTransport) this.sendTransport = null;
+      return;
+    }
+    this.recvTransport = recvTransport;
+    recvTransport.on('connect', ({ dtlsParameters }, callback, errback) => {
+      if (this.closed) {
+        errback(new Error('SfuClient closed'));
+        return;
+      }
       this.rpc.request('connectWebRtcTransport', {
         transportId: recvInfo.id,
         dtlsParameters,
@@ -385,6 +431,7 @@ export class SfuClient {
     // transport request lands too, so a duplicate is fine — we dedupe by
     // producerId.
     const queued = this.pendingProducers.splice(0);
+    if (this.closed) return;
     for (const item of queued) {
       this.enqueueConsume(item.producerId, item.appData);
     }
@@ -393,6 +440,7 @@ export class SfuClient {
   // ── server notifications ───────────────────────────────────────────────
 
   private handleNotification(n: RpcNotification): void {
+    if (this.closed) return;
     if (n.method === 'newProducer') {
       const data = n.data as { producerId: string; kind: 'audio' | 'video'; appData: ProducerAppData | null };
       if (!data?.producerId) return;
@@ -418,7 +466,7 @@ export class SfuClient {
     } else if (n.method === 'kicked') {
       const data = n.data as { reason?: string };
       console.warn('[sfu] kicked from room', data?.reason ?? '');
-      this.close();
+      void this.close().catch(() => undefined);
     } else if (n.method === 'participantList') {
       // Authoritative snapshot the SFU pushes when our recv transport opens.
       // Replaces — not merges — so the dex's roster always matches the
@@ -589,6 +637,10 @@ export class SfuClient {
           kind: consumeData.kind,
           rtpParameters: consumeData.rtpParameters,
         });
+        if (this.closed || !this.pendingConsumes.has(entry.producerId)) {
+          try { consumer.close(); } catch { /* ignore */ }
+          return;
+        }
         consumeAppData = consumeData.appData ?? entry.appData;
         consumerKind = consumeData.kind;
         entry.consumer = consumer;
@@ -606,6 +658,7 @@ export class SfuClient {
       this.surfaceConsumer(entry.producerId, consumer, consumerKind, consumeAppData ?? entry.appData);
       this.pendingConsumes.delete(entry.producerId);
     } catch (err) {
+      if (this.closed || !this.pendingConsumes.has(entry.producerId)) return;
       const code = (err as Error & { code?: string }).code;
       const message = err instanceof Error ? err.message : String(err);
       if (this.isPermanentConsumeError(code)) {
