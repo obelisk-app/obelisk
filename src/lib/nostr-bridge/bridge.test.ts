@@ -14,13 +14,14 @@ type Sink = (ev: NostrEvent) => void;
 
 const fake = vi.hoisted(() => {
   const state = {
-    published: [] as Array<{ kind: number; pubkey: string; tags: string[][]; content: string; id: string }>,
+    published: [] as Array<{ kind: number; pubkey: string; tags: string[][]; content: string; id: string; relays?: string[] }>,
     subscriptions: [] as Array<{
       filter: Record<string, unknown>;
       sink: (ev: any) => void;
       relays?: string[];
       onclose?: (reasons: string[]) => void;
     }>,
+    ensureRelayCalls: [] as string[],
   };
 
   function matchesInternal(f: Record<string, unknown>, ev: { kind: number; pubkey: string; tags: string[][] }): boolean {
@@ -46,8 +47,8 @@ const fake = vi.hoisted(() => {
       queueMicrotask(() => opts.oneose?.());
       return { close: () => { state.subscriptions = state.subscriptions.filter((s) => s !== sub); } };
     }
-    publish(_relays: string[], event: any): Promise<string>[] {
-      state.published.push(event);
+    publish(relays: string[], event: any): Promise<string>[] {
+      state.published.push({ ...event, relays });
       queueMicrotask(() => {
         for (const sub of state.subscriptions) if (matchesInternal(sub.filter, event)) sub.sink(event);
       });
@@ -63,6 +64,7 @@ const fake = vi.hoisted(() => {
      * tests pretend every relay is reachable.
      */
     async ensureRelay(_url: string, _opts?: { connectionTimeout?: number }): Promise<{ connected: boolean; onclose?: () => void }> {
+      state.ensureRelayCalls.push(_url);
       return { connected: true };
     }
   }
@@ -98,7 +100,7 @@ async function flush(times = 4) {
 }
 
 beforeEach(() => {
-  (() => { fake.state.published = []; fake.state.subscriptions = []; })();
+  (() => { fake.state.published = []; fake.state.subscriptions = []; fake.state.ensureRelayCalls = []; })();
   // Each test starts fresh — clear the bridge module-level singleton by
   // resetting modules so getBridge() returns a new instance.
   vi.resetModules();
@@ -107,7 +109,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  (() => { fake.state.published = []; fake.state.subscriptions = []; })();
+  (() => { fake.state.published = []; fake.state.subscriptions = []; fake.state.ensureRelayCalls = []; })();
 });
 
 describe('nostr-bridge', () => {
@@ -898,6 +900,55 @@ describe('nostr-bridge', () => {
 
     // But the rail (configuredRelays) does include the new relay.
     expect(impl.configuredRelays.get()).toContain(NEW_RELAY);
+  });
+
+  it('addRelay persists a custom relay without preflight handshaking it', async () => {
+    const { getBridge, getBridgeImpl } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+    fake.state.ensureRelayCalls = [];
+
+    const CUSTOM_RELAY = 'wss://custom-relay.example';
+    await bridge.addRelay(CUSTOM_RELAY);
+
+    const impl = getBridgeImpl()!;
+    expect(impl.configuredRelays.get()).toContain(CUSTOM_RELAY);
+    expect(fake.state.ensureRelayCalls).toEqual([]);
+  });
+
+  it('addRelay deduplicates equivalent relay URLs with and without a trailing slash', async () => {
+    const { getBridge, getBridgeImpl } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    await bridge.addRelay('wss://lacrypta-relay.obelisk.ar/');
+    await bridge.addRelay('wss://lacrypta-relay.obelisk.ar');
+
+    const impl = getBridgeImpl()!;
+    expect(impl.configuredRelays.get().filter((url) => url === 'wss://lacrypta-relay.obelisk.ar')).toHaveLength(1);
+    expect(impl.configuredRelays.get()).not.toContain('wss://lacrypta-relay.obelisk.ar/');
+  });
+
+  it('editUserMetadata publishes kind 0 to the active relay plus profile relays', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    await bridge.switchRelay('wss://lacrypta-relay.obelisk.ar');
+    fake.state.published = [];
+
+    await bridge.editUserMetadata({ name: 'Alice', displayName: 'Alice' });
+
+    const metadataEvent = fake.state.published.find((event) => event.kind === 0);
+    expect(metadataEvent).toBeTruthy();
+    expect(metadataEvent?.relays).toContain('wss://relay.damus.io');
+    expect(metadataEvent?.relays).toContain('wss://lacrypta-relay.obelisk.ar');
   });
 });
 
