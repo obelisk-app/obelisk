@@ -577,7 +577,10 @@ button:not(:disabled),
   mix-blend-mode: overlay;
   z-index: 0;
 }
-.obelisk-desktop-bg > * {
+/* Elevate children above the ::before/::after background layers without
+ * clobbering Tailwind positioning utilities like `fixed`. `:where()` keeps
+ * the selector at specificity 0 so `.fixed` still wins. */
+:where(.obelisk-desktop-bg) > * {
   position: relative;
   z-index: 1;
 }
