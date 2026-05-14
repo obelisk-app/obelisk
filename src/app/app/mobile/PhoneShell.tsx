@@ -2667,7 +2667,6 @@ function ChannelScreen({
                 groupId={groupId}
                 reactions={reactions[it.msg.id] ?? []}
                 onLongPress={() => openMsgActions({ id: it.msg.id, pubkey: it.msg.pubkey, content: it.msg.content })}
-                onZap={() => openZap({ id: it.msg.id, pubkey: it.msg.pubkey, content: it.msg.content })}
                 onAvatar={() => openProfile(it.msg.pubkey)}
               />
             ),
@@ -2832,7 +2831,6 @@ export function ChannelMessage({
   groupId,
   reactions,
   onLongPress,
-  onZap,
   onAvatar,
 }: {
   msg: JsMessage;
@@ -2841,7 +2839,6 @@ export function ChannelMessage({
   groupId: string;
   reactions: ReadonlyArray<{ id: string; pubkey: string; emoji: string }>;
   onLongPress: () => void;
-  onZap: () => void;
   onAvatar: () => void;
 }) {
   const meta = useUserMetadata(msg.pubkey);
@@ -2968,8 +2965,6 @@ export function ChannelMessage({
                 {r.emoji} {r.count}
               </button>
             ))}
-            <button className="reaction-add" onClick={onLongPress}>+</button>
-            <button className="reaction zap" onClick={onZap}>⚡ zap</button>
           </div>
         )}
       </div>
