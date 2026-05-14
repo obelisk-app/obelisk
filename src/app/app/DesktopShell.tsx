@@ -37,6 +37,7 @@ import { faviconFor, fetchRelayInfo } from '@/lib/relay-info';
 import ServerRail from './ServerRail';
 import DMList from './DMList';
 import LoginModal from './LoginModal';
+import ShootingStars from '@/components/ShootingStars';
 import UserPanel from './UserPanel';
 import SearchBar from './SearchBar';
 import MessageContent from '@/components/chat/MessageContent';
@@ -208,7 +209,20 @@ export default function AppShell() {
     // server/client mismatch on the modal-overlay div. Rendering a no-op
     // placeholder for the first paint sidesteps the hydration warning.
     if (!mounted) return <ActivityIndicator />;
-    return (<><LoginModal /><ActivityIndicator /></>);
+    return (
+      <>
+        {/* Animated backdrop — matrix grid + shooting stars + green corner
+            glows. Sits behind the SDK modal (z-index 0; modal portal is at
+            9999). The la-crypta overlay is dimmed in globals.css so the
+            animation bleeds through around the centered card. */}
+        <div className="lc-login-backdrop" aria-hidden="true">
+          <div className="lc-grid-bg absolute inset-0" />
+          <ShootingStars />
+        </div>
+        <LoginModal />
+        <ActivityIndicator />
+      </>
+    );
   }
 
   const railMode: { kind: 'dm' } | { kind: 'relay'; url: string } =
