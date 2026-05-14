@@ -59,8 +59,8 @@ Los bans NIP-29 son por-relay. Si alguien está baneado de tu grupo en el relay 
 
 Versiones anteriores de Obelisk traían un CLI de Node (`scripts/admin-cli`) que dejaba a los agentes manejar la API HTTP de admin con su propio nsec. Con la API afuera, el CLI también está afuera. El mismo resultado — agentes manejando grupos end-to-end — ahora es alcanzable directo con `nostr-tools` o cualquier SDK Nostr: cargás un nsec, armás los eventos NIP-29, publicás al relay. Quizás publiquemos un helper finito para esto; seguí el issue tracker.
 
-## Ver también
-
-- [Cómo funciona Obelisk](/guides/how-obelisk-works) — la arquitectura sin backend
-- [Traé tu propio relay](/guides/web-of-trust) — relays como comunidades soberanas
-- [Qué hay en el roadmap](/guides/future-nostr-relays)
+<RelatedGuides items={[
+  { slug: "how-obelisk-works", note: "la arquitectura sin backend" },
+  { slug: "web-of-trust", note: "relays como comunidades soberanas" },
+  { slug: "future-nostr-relays" }
+]} />

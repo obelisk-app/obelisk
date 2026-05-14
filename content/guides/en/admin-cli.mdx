@@ -59,8 +59,8 @@ NIP-29 bans are per-relay. If someone is banned from your group on relay A, noth
 
 Earlier versions of Obelisk shipped a Node CLI (`scripts/admin-cli`) that let agents drive the HTTP admin API with their own nsec. With the API gone, the CLI is gone too. The same outcome — agents managing groups end-to-end — is now achievable directly with `nostr-tools` or any Nostr SDK: load an nsec, build the NIP-29 events, publish to the relay. We may publish a thin helper for this; track the issue tracker.
 
-## See also
-
-- [How Obelisk works](/guides/how-obelisk-works) — the no-backend architecture
-- [Bring your own relay](/guides/web-of-trust) — relays as sovereign communities
-- [What's on the roadmap](/guides/future-nostr-relays)
+<RelatedGuides items={[
+  { slug: "how-obelisk-works", note: "the no-backend architecture" },
+  { slug: "web-of-trust", note: "relays as sovereign communities" },
+  { slug: "future-nostr-relays" }
+]} />

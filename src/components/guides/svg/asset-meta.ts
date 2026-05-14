@@ -2,6 +2,11 @@ export interface GuideAssetMeta {
   alt: string;
   width: number;
   height: number;
+  /**
+   * If set, snap-guide-svgs also writes `<name>-banner.png` rendered at this
+   * width — for reuse as repo logos / social banners outside this project.
+   */
+  bannerWidth?: number;
 }
 
 export const HERO_ASSET_META: Record<string, GuideAssetMeta> = {
@@ -66,21 +71,25 @@ export const DIAGRAM_ASSET_META: Record<string, GuideAssetMeta> = {
   'mark-dex': {
     width: 120,
     height: 120,
+    bannerWidth: 1600,
     alt: 'obelisk-dex logo mark: a chat bubble containing the Obelisk monument, representing the browser chat client that signs Nostr events and posts them to a relay.',
   },
   'mark-sfu': {
     width: 120,
     height: 120,
+    bannerWidth: 1600,
     alt: 'obelisk-sfu logo mark: a central voice mixer hub connected by spokes to five peers, representing the Selective Forwarding Unit that mixes streams for large group calls.',
   },
   'mark-bots': {
     width: 120,
     height: 120,
+    bannerWidth: 1600,
     alt: 'obelisk-bots logo mark: a small robot head with an antenna, representing the bot runtime where each bot has its own Nostr keypair and posts messages like any user.',
   },
   'mark-relay': {
     width: 120,
     height: 120,
+    bannerWidth: 1600,
     alt: 'obelisk-relay logo mark: a relay tower broadcasting concentric signal arcs, representing the self-hostable Nostr relay with built-in whitelisting and admin UI.',
   },
 };

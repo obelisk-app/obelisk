@@ -143,7 +143,7 @@ export default function Navbar(_props: { onLoginSuccess?: () => void } = {}) {
               <>
                 <Link
                   href="/app"
-                  className="lc-pill lc-pill-secondary text-sm"
+                  className="lc-pill lc-pill-primary text-sm"
                   data-testid="nav-app-pill"
                 >
                   {t('nav.app')}

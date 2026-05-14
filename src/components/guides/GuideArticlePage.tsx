@@ -12,6 +12,7 @@ import { guidesHref } from '@/lib/guide-urls';
 import ArticleShell from '@/components/guides/ArticleShell';
 import GuideLocaleSync from '@/components/guides/GuideLocaleSync';
 import { mdxComponents } from '@/components/guides/mdx-components';
+import RelatedGuides from '@/components/guides/RelatedGuides';
 import {
   HERO_ASSET_META,
   DIAGRAM_ASSET_META,
@@ -185,7 +186,12 @@ export default async function GuideArticlePage({
       >
         <MDXRemote
           source={guide.content}
-          components={mdxComponents}
+          components={{
+            ...mdxComponents,
+            RelatedGuides: (props: { items: Array<{ slug: string; note?: string }> }) => (
+              <RelatedGuides locale={locale} {...props} />
+            ),
+          }}
           options={{ mdxOptions: { remarkPlugins: [remarkGfm] } }}
         />
       </ArticleShell>

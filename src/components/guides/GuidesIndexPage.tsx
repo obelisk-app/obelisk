@@ -102,7 +102,7 @@ export default async function GuidesIndexPage({ locale }: { locale: Locale }) {
         <div className="mb-10">
           <Link
             href="/"
-            className="text-sm text-lc-muted hover:text-lc-green transition-colors"
+            className="inline-flex items-center text-sm font-medium text-lc-green hover:text-lc-green-dark transition-colors"
           >
             {copy.backHome}
           </Link>
