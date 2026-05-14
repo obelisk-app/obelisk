@@ -218,7 +218,7 @@ export default function AppShell() {
 
   return (
     <div
-      className="flex w-screen flex-col overflow-hidden bg-lc-black text-lc-white"
+      className="obelisk-desktop-bg flex w-screen flex-col overflow-hidden text-lc-white"
       style={{ height: '100dvh' }}
       onTouchStart={(e) => {
         const t = e.touches[0];
@@ -291,7 +291,7 @@ export default function AppShell() {
             )}
           </ResizablePane>
         </div>
-        <main className="flex flex-1 flex-col overflow-hidden bg-lc-black min-w-0 border-l border-t border-r border-lc-border">
+        <main className="flex flex-1 flex-col overflow-hidden min-w-0 border-l border-t border-r border-lc-border">
           {view.kind === 'group' ? (
             <ChatLayout
               groupId={view.groupId}
@@ -420,7 +420,7 @@ function RelayTopBar({
   const iconUrl = info?.icon;
   return (
     <div
-      className="h-14 md:h-10 shrink-0 bg-lc-black px-3"
+      className="h-14 md:h-10 shrink-0 px-3"
       style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
     >
       {onOpenSidebar && (

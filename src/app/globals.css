@@ -539,3 +539,53 @@ button:not(:disabled),
   border-bottom-left-radius: 6px;
   pointer-events: none;
 }
+
+/* ─────────────────────────────────────────────────────────────────────
+ * Desktop ambient background — mirrors the mobile shell's corner radials,
+ * drifting green blob, and film-grain overlay. Applied at the DesktopShell
+ * root so the chat surfaces (which sit on transparent panels) read against
+ * the same lively backdrop the mobile UI uses.
+ * ───────────────────────────────────────────────────────────────── */
+.obelisk-desktop-bg {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(1100px 620px at 85% -8%, rgba(180, 249, 83, 0.14) 0%, transparent 62%),
+    radial-gradient(900px 540px at -5% 105%, rgba(180, 249, 83, 0.10) 0%, transparent 58%),
+    #0a0a0a;
+}
+.obelisk-desktop-bg::before {
+  content: '';
+  position: absolute;
+  inset: -8%;
+  pointer-events: none;
+  background:
+    radial-gradient(40% 32% at 28% 22%, rgba(180, 249, 83, 0.16), transparent 65%),
+    radial-gradient(36% 30% at 72% 78%, rgba(180, 249, 83, 0.12), transparent 65%),
+    radial-gradient(28% 24% at 50% 55%, rgba(139, 195, 74, 0.08), transparent 70%);
+  z-index: 0;
+  will-change: transform;
+  animation: obelisk-bg-drift 24s ease-in-out infinite alternate;
+}
+.obelisk-desktop-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.55 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.4'/></svg>");
+  opacity: 0.06;
+  mix-blend-mode: overlay;
+  z-index: 0;
+}
+.obelisk-desktop-bg > * {
+  position: relative;
+  z-index: 1;
+}
+@keyframes obelisk-bg-drift {
+  0%   { transform: translate3d(-3%, -2%, 0) scale(1); }
+  50%  { transform: translate3d(2%,  3%, 0) scale(1.06); }
+  100% { transform: translate3d(-2%, 1%, 0) scale(1.02); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .obelisk-desktop-bg::before { animation: none; }
+}
