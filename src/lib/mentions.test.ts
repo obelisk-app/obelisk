@@ -450,4 +450,27 @@ describe('applyMentionToDraft', () => {
     const { next, cursor } = applyMentionToDraft('hi @ali', 7, pk);
     expect(next.slice(0, cursor)).toBe(`hi nostr:${nip19.npubEncode(pk)} `);
   });
+
+  describe('with slash-command slot range', () => {
+    const npub = nip19.npubEncode(pk);
+
+    it('replaces the slot range when the user typed a partial name', () => {
+      // `/zap dum` — slot range covers "dum" at chars 5..8.
+      const { next, cursor } = applyMentionToDraft('/zap dum', 8, pk, { start: 5, end: 8 });
+      expect(next).toBe(`/zap nostr:${npub} `);
+      expect(cursor).toBe(`/zap nostr:${npub} `.length);
+    });
+
+    it('preserves the trailing amount when replacing an in-slot token', () => {
+      // `/zap dum 100` — slot covers "dum"; the trailing "100" stays put.
+      const { next } = applyMentionToDraft('/zap dum 100', 8, pk, { start: 5, end: 8 });
+      expect(next).toBe(`/zap nostr:${npub}  100`);
+    });
+
+    it('ignores the @-regex path even if `@name` sits before the slot', () => {
+      // The slot range takes priority over the legacy `@word` capture.
+      const { next } = applyMentionToDraft('@bystander /zap dum', 19, pk, { start: 16, end: 19 });
+      expect(next).toBe(`@bystander /zap nostr:${npub} `);
+    });
+  });
 });

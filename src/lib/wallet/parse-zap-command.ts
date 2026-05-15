@@ -95,19 +95,27 @@ function resolveRecipient(
   memberPubkeys: ReadonlyArray<string>,
   metadata: Record<string, { name?: string | null; displayName?: string | null }>,
 ): string | null {
-  // Strip optional `nostr:` URI scheme and leading `@` so the autocomplete's
-  // `nostr:npub1…` insertions and a hand-typed `@npub…` both resolve.
-  const stripped = token.replace(/^@/, '').replace(/^nostr:/, '');
-  if (stripped.startsWith('npub1') || stripped.startsWith('nprofile1')) {
-    return npubToHex(stripped);
-  }
-  // raw hex pubkey — npubToHex handles this too, but keep the explicit
-  // branch so a malformed name token like a 64-char nickname doesn't fall
-  // through into the npub path silently.
-  if (/^[0-9a-f]{64}$/i.test(stripped)) return stripped.toLowerCase();
+  const trimmed = token.trim();
+  if (!trimmed) return null;
 
-  // @name or bare name — match channel members by name (case-insensitive).
-  const needle = token.replace(/^@/, '').toLowerCase();
+  // First pass: prefer an explicit identifier (npub/nprofile/hex) anywhere
+  // in the input. This is defence-in-depth for older drafts whose mention
+  // picker left a partial display name in front of the npub
+  // (`dum nostr:npub1…`) — the npub is still authoritative, the orphan name
+  // is composer cruft we can safely ignore.
+  for (const piece of trimmed.split(/\s+/)) {
+    const stripped = piece.replace(/^@/, '').replace(/^nostr:/, '');
+    if (stripped.startsWith('npub1') || stripped.startsWith('nprofile1')) {
+      const hex = npubToHex(stripped);
+      if (hex) return hex;
+    }
+    if (/^[0-9a-f]{64}$/i.test(stripped)) return stripped.toLowerCase();
+  }
+
+  // Second pass: treat the whole input as a display-name query. Display
+  // names can contain spaces, so we match against the joined input (sans a
+  // leading `@`).
+  const needle = trimmed.replace(/^@/, '').toLowerCase();
   if (!needle) return null;
   for (const pk of memberPubkeys) {
     const meta = metadata[pk];

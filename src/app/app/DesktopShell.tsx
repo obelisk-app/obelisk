@@ -70,9 +70,9 @@ import ModalShell from '@/components/ModalShell';
 import { parseZapCommand } from '@/lib/wallet/parse-zap-command';
 import MentionAutocomplete from '@/components/chat/MentionAutocomplete';
 import SlashCommandAutocomplete, { SLASH_COMMANDS, type SlashCommand } from '@/components/chat/SlashCommandAutocomplete';
-import SlashCommandScaffold, { scaffoldMentionSlotQuery } from '@/components/chat/SlashCommandScaffold';
-import { filterMembers, relayMentionCandidates } from '@/lib/mentions';
-import { hexToNpub, npubToHex } from '@nostr-wot/data';
+import SlashCommandScaffold, { scaffoldMentionSlotQuery, scaffoldMentionSlotRange } from '@/components/chat/SlashCommandScaffold';
+import { applyMentionToDraft, filterMembers, relayMentionCandidates } from '@/lib/mentions';
+import { npubToHex } from '@nostr-wot/data';
 import {
   useChannelLayout,
   useRelayOperatorPubkey,
@@ -2142,26 +2142,17 @@ function ChatPanel({
     const ta = inputRef.current;
     if (!ta) return;
     const cursor = ta.selectionStart ?? draft.length;
-    const before = draft.slice(0, cursor);
-    const after = draft.slice(cursor);
-    const token = `nostr:${hexToNpub(member.pubkey)} `;
-    let replaced: string;
-    if (/@(\w*)$/.test(before)) {
-      replaced = before.replace(/@(\w*)$/, () => token);
-    } else {
-      // Slash-command slot picker can open without an `@` typed (e.g. `/zap `).
-      // Insert at the cursor with a leading space if needed.
-      const sep = before.length > 0 && !/\s$/.test(before) ? ' ' : '';
-      replaced = before + sep + token;
-    }
-    const next = replaced + after;
+    // When the picker is opened by a slash-command slot, replace whatever
+    // partial token the user already typed (e.g. `/zap dum` → the `dum`
+    // token) instead of appending another mention token after it.
+    const slotRange = scaffoldMentionSlotRange(draft, cursor);
+    const { next, cursor: nextCursor } = applyMentionToDraft(draft, cursor, member.pubkey, slotRange);
     setDraft(next);
     setMentionQuery(null);
     requestAnimationFrame(() => {
-      const pos = replaced.length;
       ta.focus();
-      ta.setSelectionRange(pos, pos);
-      setCaret(pos);
+      ta.setSelectionRange(nextCursor, nextCursor);
+      setCaret(nextCursor);
     });
   }
   function onMentionKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
