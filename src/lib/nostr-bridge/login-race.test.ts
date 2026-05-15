@@ -171,7 +171,7 @@ describe('Fix B (revised) — admin/member subscription is lazy', () => {
   // and slowed setup of recently created groups. The new contract:
   // ingest does NOT fan out admin/member; per-group REQs open lazily on
   // first useAdmins / useMembers / subscribeAdmins / subscribeMembers
-  // call from the chat panel. See docs/progressive-loading.md.
+  // call from the chat panel. See docs/data-system.md.
   it('does NOT subscribe to kinds 39001+39002 on kind 39000 ingest', async () => {
     const { getBridge } = await import('./client');
     const { skHex, pkHex } = makeKeypair();

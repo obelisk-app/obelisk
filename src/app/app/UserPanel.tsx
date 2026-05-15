@@ -9,6 +9,8 @@ import BlossomImageInput from '@/components/BlossomImageInput';
 import { usePreferences, setPreference } from '@/lib/preferences';
 import WotSettings from '@/components/settings/WotSettings';
 import UserAvatar from '@/components/UserAvatar';
+import ModalShell from '@/components/ModalShell';
+import { clearAllClientCacheExceptSession } from '@/lib/nostr-bridge/cache-clear';
 
 interface UserPanelProps {
   pubkey: string;
@@ -391,6 +393,85 @@ function PreferencesPanel() {
         onChange={(v) => setPreference('showActivityIndicator', v)}
       />
       <WotSettings />
+      <LocalDataSection />
+    </div>
+  );
+}
+
+function LocalDataSection() {
+  const [confirming, setConfirming] = useState(false);
+  const [clearing, setClearing] = useState(false);
+
+  const onConfirm = () => {
+    setClearing(true);
+    const removed = clearAllClientCacheExceptSession();
+    // Tiny pause so the modal copy reads naturally before the reload.
+    setTimeout(() => {
+      // Reload from server to rebuild every store from scratch. We keep the
+      // session + preferences so the user lands back in the same place.
+      if (typeof window !== 'undefined') {
+        window.location.reload();
+      }
+      // Defensive: if the reload didn't fire (e.g. test harness), reset state.
+      setClearing(false);
+      setConfirming(false);
+      void removed;
+    }, 200);
+  };
+
+  return (
+    <div className="pt-2 border-t border-lc-border">
+      <div className="text-xs uppercase tracking-wider text-lc-muted font-semibold pt-2 pb-2">
+        Local data
+      </div>
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <div className="text-sm text-lc-white">Clear local cache</div>
+          <div className="text-xs text-lc-muted mt-0.5">
+            Wipes cached channels, profiles, branding, member lists, read positions, and DM cache. Live data re-streams from the relay on next paint. Your session and preferences are kept.
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => setConfirming(true)}
+          disabled={clearing}
+          className="shrink-0 rounded-md border border-lc-border bg-lc-black px-3 py-1.5 text-sm text-lc-white hover:bg-lc-border/40 disabled:opacity-50"
+          data-testid="clear-cache-button"
+        >
+          Clear cache
+        </button>
+      </div>
+      {confirming && (
+        <ModalShell
+          onClose={() => !clearing && setConfirming(false)}
+          testId="clear-cache-confirm"
+          panelClassName="w-full max-w-md mx-4 rounded-xl bg-lc-dark border border-lc-border p-6 shadow-xl"
+        >
+          <div className="text-lg font-semibold text-lc-white mb-2">Clear local cache?</div>
+          <div className="text-sm text-lc-muted mb-4">
+            This wipes every locally-cached relay response (channels, profiles, branding, members, read positions, DM cache, UI flags) and reloads the page. Your session and preferences stay; you stay logged in.
+          </div>
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setConfirming(false)}
+              disabled={clearing}
+              className="rounded-md border border-lc-border px-3 py-1.5 text-sm text-lc-white hover:bg-lc-border/40 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={onConfirm}
+              disabled={clearing}
+              className="rounded-md bg-lc-green px-3 py-1.5 text-sm font-semibold text-lc-black hover:bg-lc-green/90 disabled:opacity-50"
+              data-testid="clear-cache-confirm-button"
+            >
+              {clearing ? 'Clearing…' : 'Clear & reload'}
+            </button>
+          </div>
+        </ModalShell>
+      )}
     </div>
   );
 }

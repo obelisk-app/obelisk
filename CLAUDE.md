@@ -89,7 +89,7 @@ npm run test:coverage # Run tests with coverage report
 
 ## Auth (3 methods, all relay-only)
 
-See [docs/auth-and-data-loading.md](docs/auth-and-data-loading.md) for the complete contract.
+See [docs/data-system.md](docs/data-system.md) for the complete contract.
 
 | Method | Signer | Login entry |
 |---|---|---|
@@ -123,7 +123,7 @@ This is what makes "groups where I am admin" resolve on first paint without the 
 
 ## bridgeCache (stale-while-revalidate)
 
-`src/lib/nostr-bridge/cache.ts` is a tiny `localStorage` cache for relay-derived state. Currently wired through admin/member lists (kinds 39001/39002); group metadata, profiles, layout, and branding are TODOs at the call sites. See [docs/auth-and-data-loading.md §8](docs/auth-and-data-loading.md) for the full contract.
+`src/lib/nostr-bridge/cache.ts` is a tiny `localStorage` cache for relay-derived state. Wired through admin/member lists (39001/39002), group metadata (39000), creators (9007), user metadata (0), and NIP-78 layout/branding (30078). Messages and reactions are intentionally not cached. See [docs/data-system.md §9](docs/data-system.md) for the full contract.
 
 ## Voice & video
 
@@ -207,12 +207,12 @@ await bridge.editUserMetadata({ name: 'Alice', displayName: 'Alice' });
 When adding new persisted per-user state, follow the read-state store as the
 canonical example: define a Zustand `persist` store keyed by
 `obelisk-{name}` with an `ensureXxxForAccount(pubkey)` helper that swaps the
-key on login. Wire the helper into the `useEffect` in `AppGate.tsx`'s
-`ReadStateRoot` alongside the existing ones. See
-[docs/notifications.md](docs/notifications.md) for the full pattern (cursor
-model, mention/reply detection, encrypted multi-device sync via NIP-59),
-and [docs/auth-and-data-loading.md §8](docs/auth-and-data-loading.md) for
-where this sits relative to the bridgeCache.
+key on login. Wire the helper into the `PER_ACCOUNT_STORES` array in
+`src/lib/read-state/root.tsx` alongside the existing ones. See
+[docs/read-state.md](docs/read-state.md) for the full pattern (cursor
+model, mention/reply detection, encrypted multi-device sync via NIP-59,
+deferred-mount gating), and [docs/data-system.md §9](docs/data-system.md)
+for where this sits relative to the bridgeCache.
 
 ## Testing
 
@@ -245,8 +245,8 @@ where this sits relative to the bridgeCache.
 - **User relays:** Auto-fetched from NIP-65 (kind 10002) for DM delivery (`fetchMyDmRelays`)
 
 ## Resources
-- [docs/auth-and-data-loading.md](docs/auth-and-data-loading.md) — login flow, NIP-42 AUTH, watchdog, bridgeCache
-- [docs/notifications.md](docs/notifications.md) — unified read-state + notifications: per-channel cursors, mention/reply detection, MentionNavigator, encrypted multi-device sync via NIP-59 gift wrap (groups state per relay; DM state on NIP-65 relays)
+- [docs/data-system.md](docs/data-system.md) — priority orchestrator (P0/P1/P2/P3), login → connect contract, whitelist preflight (1.5s, no soak), connection banner, bridgeCache, NIP-42 AUTH, watchdog tunables, UI loading states, "Clear cache" semantics
+- [docs/read-state.md](docs/read-state.md) — per-channel and per-DM cursors, mention/reply detection, MentionNavigator, encrypted multi-device sync via NIP-59 gift wrap (groups state per relay; DM state on NIP-65 relays), deferred-mount gating for relay-sync subs
 - [docs/voice/](docs/voice/README.md) — mesh voice: protocol, modules, failure modes, testing (P2P WebRTC over Nostr signaling + `obelisk-control` data channel)
 - [docs/sfu-system.md](docs/sfu-system.md) — SFU architecture (mediasoup engine, Nostr-RPC signaling)
 - [obelisk-app/obelisk-sfu](https://github.com/obelisk-app/obelisk-sfu) — SFU server repo (protocol spec, operator guide, deploy)

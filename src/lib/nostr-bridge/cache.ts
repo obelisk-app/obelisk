@@ -24,14 +24,18 @@
  *     invalidate on relay-switch — caches for the previous relay stay on
  *     disk and re-paint instantly if the user switches back.
  *
- * Currently wired:
- *   - kind 39001 / 39002 (admin/member lists)  — see `client.ts` ingestAdminMember
+ * Currently wired (every entry pairs an ingest writer with a seed reader):
+ *   - kind 39001 / 39002 (admin/member lists)  — `client.ts:ingestAdminMember` + `seedCacheForRelay`
+ *   - kind 39000         (group metadata)       — `client.ts:ingestGroupMetadata` + `seedCacheForRelay`
+ *   - kind 9007          (group creators)       — `client.ts:ingestGroupCreator` + `seedCacheForRelay`
+ *   - kind 0             (user profile)         — `client.ts:ingestUserMetadata` + `seedCacheForRelay`
+ *   - kind 30078 layout   (channel layout)      — `channel-layout.ts:subscribeLayout`
+ *   - kind 30078 branding (relay branding)      — `relay-branding.ts:subscribeBranding`
  *
- * TODO (extend later, foundation is here):
- *   - kind 39000   (group metadata)
- *   - kind 0       (user profile metadata)
- *   - kind 30078   (channel layout, NIP-78)
- *   - relay branding events
+ * Deliberately NOT cached:
+ *   - kind 9 messages — would blow the 5MB localStorage cap on active channels.
+ *   - kind 7 reactions — same.
+ *   - kind 4 DMs — already persisted by the DM store with its own per-account key.
  */
 
 // v3 — bumped to evict cache entries written by the pre-bleed-fix bridge,

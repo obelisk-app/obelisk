@@ -25,13 +25,16 @@ import {
   useGroups,
   useChildrenByParent,
   useMessages,
+  useMessagesByGroup,
   useMessagesEose,
+  useSignerReady,
   useLoadEarlier,
   useDirectMessages,
   useAdmins,
   useAdminsByGroup,
   useMembers,
   useMembersByGroup,
+  useMembershipReady,
   useGroupCreators,
   useReactions,
   useConfiguredRelays,
@@ -43,6 +46,7 @@ import {
   getBridge,
   getBridgeImpl,
   type JsGroup,
+  type JsForumTag,
   type JsMessage,
   type JsDirectMessage,
   type JsUserMetadata,
@@ -51,6 +55,7 @@ import { useFollows, useProfile, usePubkey, usePublishProfile } from '@nostr-wot
 const useMyPubkey = usePubkey;
 const useUserMetadata = useProfile;
 import LoginModal from '../LoginModal';
+import { RelayStatusBadge } from '../RelayStatusBanner';
 import VoiceRoom from '@/components/voice/VoiceRoom';
 import VoiceStatusBar from '@/components/voice/VoiceStatusBar';
 import BackgroundVoiceAudio from '@/components/voice/BackgroundVoiceAudio';
@@ -1417,6 +1422,10 @@ function ChannelSettingsSheet({
         isPublic,
         isOpen,
         kind: channelKind,
+        // Preserve the admin-curated forum tag set as-is — mobile doesn't
+        // expose a tag editor (desktop does), and NIP-29 9002 is a full
+        // replacement so we'd otherwise drop them on every mobile save.
+        forumTags: group.forumTags,
       });
       close();
     } catch (ex) {
@@ -2008,9 +2017,15 @@ function ChannelListEmptyState({
     label = 'Whitelisting required';
   }
 
+  const isLoading = label === 'Channels loading…';
   return (
-    <div style={{ padding: '10px 12px', color: 'var(--app-text-mute)', fontSize: 13 }}>
-      {label}
+    <div
+      style={{ padding: '10px 12px', color: 'var(--app-text-mute)', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}
+      data-testid={isLoading ? 'channels-loading' : 'channels-empty'}
+      data-state={label}
+    >
+      {isLoading && <div className="lc-spinner" style={{ width: 14, height: 14, borderWidth: 2 }} aria-hidden="true" />}
+      <span>{label}</span>
     </div>
   );
 }
@@ -2427,6 +2442,27 @@ function ChannelScreen({
   const reactions = useReactions(groupId);
   const myPubkey = useMyPubkey();
   const relay = useCurrentRelayUrl();
+  // 5s grace before trusting an empty EOSE — same contract as desktop
+  // ChatPanel. Auth-gated / silent-filtering relays send EOSE-empty fast
+  // and trickle events afterwards; the grace keeps the spinner up so
+  // users don't see "No messages yet" flash on channels that do have
+  // messages.
+  const [emptyGracePassed, setEmptyGracePassed] = useState(false);
+  useEffect(() => {
+    setEmptyGracePassed(false);
+    const t = setTimeout(() => setEmptyGracePassed(true), 5000);
+    return () => clearTimeout(t);
+  }, [groupId]);
+  // Force-restart the kind 9 sub when reopening a stale-empty channel so
+  // the user doesn't need to refresh the page to get messages. Mirrors
+  // the desktop ChatPanel behavior.
+  useEffect(() => {
+    if (!groupId) return;
+    if (messagesEose && messages.length === 0) {
+      void nostrActions.refreshGroupMessages(groupId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupId]);
   const channelAdmins = useAdmins(groupId);
   const isChannelAdmin = !!myPubkey && channelAdmins.includes(myPubkey);
   const [draft, setDraft] = useState('');
@@ -2632,13 +2668,14 @@ function ChannelScreen({
         </div>
       </div>
 
+      <RelayStatusBadge />
       <div className="messages-wrap relative flex min-h-0 flex-1 flex-col">
       <div className="messages" ref={messagesRef}>
         {renderable.length === 0 ? (
-          // Don't claim "no messages yet" until the relay has actually said
-          // EOSE for this channel — otherwise the user sees the empty copy
-          // flash for a moment while history is still streaming.
-          !messagesEose ? (
+          // Don't claim "no messages yet" until BOTH the relay EOSE'd AND
+          // we've waited 5s — auth-gated / silent-filtering relays send
+          // EOSE-empty fast and trickle events afterwards.
+          !messagesEose || !emptyGracePassed ? (
             <div className="empty-state" data-testid="messages-loading">
               <div className="lc-spinner" aria-hidden="true" />
               <div className="empty-state-title">Loading messages…</div>
@@ -3494,6 +3531,7 @@ function MemberListScreen({ groupId, back, openProfile }: { groupId: string; bac
     : (group?.name ?? groupId.slice(0, 8));
   const admins = useAdmins(groupId);
   const members = useMembers(groupId);
+  const membershipReady = useMembershipReady(groupId);
 
   const adminSet = useMemo(() => new Set(admins), [admins]);
   const nonAdminMembers = useMemo(() => members.filter((m) => !adminSet.has(m)), [members, adminSet]);
@@ -3546,7 +3584,17 @@ function MemberListScreen({ groupId, back, openProfile }: { groupId: string; bac
             {nonAdminMembers.map((p) => <MemberRow key={p} pubkey={p} online={isOnline(p)} onClick={() => openProfile(p)} />)}
           </>
         )}
-        {members.length === 0 && admins.length === 0 && (
+        {members.length === 0 && admins.length === 0 && !membershipReady && (
+          <div
+            className="empty-state"
+            data-testid="members-loading"
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}
+          >
+            <div className="lc-spinner" aria-hidden="true" />
+            <div className="empty-state-title">Loading members…</div>
+          </div>
+        )}
+        {members.length === 0 && admins.length === 0 && membershipReady && (
           <div className="empty-state">
             <div className="empty-state-title">No members</div>
             <div className="empty-state-desc">No relay-published 39002 members yet.</div>
@@ -3702,6 +3750,54 @@ function SearchScreen({ back }: { back: () => void }) {
 // ───────────────────────────────────────────────────────────────────────────
 // 13 — forum (channel-of-channels)
 
+type MobileForumSortBy = 'recent' | 'created';
+type MobileForumTagMatch = 'any' | 'all';
+
+interface MobileForumPrefs {
+  readonly sortBy: MobileForumSortBy;
+  readonly tagMatch: MobileForumTagMatch;
+}
+
+const MOBILE_FORUM_DEFAULT_PREFS: MobileForumPrefs = { sortBy: 'recent', tagMatch: 'any' };
+
+function mobileForumPrefsKey(forumGroupId: string): string {
+  return `obelisk-dex/forum-prefs-mobile/${forumGroupId}`;
+}
+
+function loadMobileForumPrefs(forumGroupId: string): MobileForumPrefs {
+  if (typeof window === 'undefined') return MOBILE_FORUM_DEFAULT_PREFS;
+  try {
+    const raw = window.localStorage.getItem(mobileForumPrefsKey(forumGroupId));
+    if (!raw) return MOBILE_FORUM_DEFAULT_PREFS;
+    const parsed = JSON.parse(raw) as Partial<MobileForumPrefs>;
+    return {
+      sortBy: parsed.sortBy === 'created' ? 'created' : 'recent',
+      tagMatch: parsed.tagMatch === 'all' ? 'all' : 'any',
+    };
+  } catch {
+    return MOBILE_FORUM_DEFAULT_PREFS;
+  }
+}
+
+function saveMobileForumPrefs(forumGroupId: string, prefs: MobileForumPrefs): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(mobileForumPrefsKey(forumGroupId), JSON.stringify(prefs));
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Mobile equivalent of `src/components/chat/ForumView`. Same Discord-style
+ * chrome (search-or-create, sort sheet, tag chips) and same UX rule that
+ * empty / aborted threads stay hidden until their first message — but laid
+ * out for a phone screen and styled with the mobile CSS primitives.
+ *
+ * Gallery view is intentionally not exposed on mobile: at the column count
+ * a phone can sensibly show, gallery cards land at roughly the same size as
+ * list cards and the toggle isn't worth the dropdown real-estate.
+ */
 function ForumScreen({
   groupId,
   back,
@@ -3712,9 +3808,85 @@ function ForumScreen({
   selectChild: (childId: string) => void;
 }) {
   const groups = useGroups();
+  const childrenByParent = useChildrenByParent();
+  const groupMetadataEose = useGroupMetadataEose();
+  const messagesByGroup = useMessagesByGroup();
   const group = groups.find((g) => g.id === groupId);
-  const children = groups.filter((g) => g.parent === groupId);
   const relay = useCurrentRelayUrl();
+  const forumTags: ReadonlyArray<JsForumTag> = group?.forumTags ?? [];
+  const childIds = childrenByParent[groupId] ?? [];
+  const children = useMemo<JsGroup[]>(() => {
+    const byId = new Map(groups.map((g) => [g.id, g] as const));
+    return childIds.map((id) => byId.get(id)).filter(Boolean) as JsGroup[];
+  }, [childIds, groups]);
+
+  const [prefs, setPrefs] = useState<MobileForumPrefs>(() => loadMobileForumPrefs(groupId));
+  useEffect(() => {
+    setPrefs(loadMobileForumPrefs(groupId));
+  }, [groupId]);
+  const updatePrefs = (patch: Partial<MobileForumPrefs>) => {
+    setPrefs((prev) => {
+      const next = { ...prev, ...patch };
+      saveMobileForumPrefs(groupId, next);
+      return next;
+    });
+  };
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTagIds, setSelectedTagIds] = useState<ReadonlyArray<string>>([]);
+  const [showNewThread, setShowNewThread] = useState(false);
+  const [showSort, setShowSort] = useState(false);
+  const [prefillTitle, setPrefillTitle] = useState('');
+
+  useEffect(() => {
+    setSearchQuery('');
+    setSelectedTagIds([]);
+  }, [groupId]);
+
+  const exactMatch = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return true;
+    return children.some((t) => (t.name ?? '').toLowerCase() === q);
+  }, [children, searchQuery]);
+
+  const visibleThreads = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    const filtered = children.filter((t) => {
+      if (q && !(t.name ?? '').toLowerCase().includes(q)) return false;
+      if (selectedTagIds.length > 0) {
+        const set = new Set(t.topics);
+        if (prefs.tagMatch === 'all') {
+          for (const id of selectedTagIds) if (!set.has(id)) return false;
+        } else {
+          if (!selectedTagIds.some((id) => set.has(id))) return false;
+        }
+      }
+      return true;
+    });
+    filtered.sort((a, b) => {
+      const aMsgs = messagesByGroup[a.id] ?? [];
+      const bMsgs = messagesByGroup[b.id] ?? [];
+      const aT = prefs.sortBy === 'recent'
+        ? aMsgs[aMsgs.length - 1]?.createdAt ?? 0
+        : aMsgs[0]?.createdAt ?? 0;
+      const bT = prefs.sortBy === 'recent'
+        ? bMsgs[bMsgs.length - 1]?.createdAt ?? 0
+        : bMsgs[0]?.createdAt ?? 0;
+      return bT - aT;
+    });
+    return filtered;
+  }, [children, searchQuery, selectedTagIds, prefs, messagesByGroup]);
+
+  const threadsLoading = children.length === 0 && !groupMetadataEose;
+  const openNewThread = (initial = '') => {
+    setPrefillTitle(initial);
+    setShowNewThread(true);
+  };
+  const toggleTag = (id: string) => {
+    setSelectedTagIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+  const allActive = selectedTagIds.length === 0;
+  const canCreateFromSearch = !exactMatch && searchQuery.trim().length > 0;
 
   return (
     <div className="screen forum-screen active" data-screen="forum">
@@ -3734,39 +3906,503 @@ function ForumScreen({
           </div>
         </div>
       </div>
-      <button className="forum-new-thread" onClick={() => { /* TODO: open new-thread sheet */ }}>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
-        New thread
-      </button>
+
+      <div className="forum-chrome" data-testid="mobile-forum-chrome">
+        <form
+          className="forum-search-row"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (canCreateFromSearch) openNewThread(searchQuery.trim());
+          }}
+        >
+          <div className="search-input-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={canCreateFromSearch ? 'Tap + to create…' : 'Search or create a post…'}
+              aria-label="Search or create a thread"
+              data-testid="mobile-forum-search-input"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                className="search-clear"
+                onClick={() => setSearchQuery('')}
+                aria-label="Clear search"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+          <button
+            type="button"
+            className="forum-new-pill"
+            onClick={() => openNewThread('')}
+            data-testid="mobile-forum-new-thread-btn"
+            aria-label="New thread"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
+          </button>
+        </form>
+        <div className="forum-filter-row">
+          <button
+            type="button"
+            className="forum-chip muted"
+            onClick={() => setShowSort(true)}
+            data-testid="mobile-forum-sort-trigger"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 4v16" /><path d="m3 8 4-4 4 4" /><path d="M17 20V4" /><path d="m21 16-4 4-4-4" /></svg>
+            Sort
+          </button>
+          {forumTags.map((tag) => (
+            <button
+              key={tag.id}
+              type="button"
+              className={`forum-chip ${selectedTagIds.includes(tag.id) ? 'active' : ''}`}
+              onClick={() => toggleTag(tag.id)}
+              data-testid={`mobile-forum-tag-${tag.id}`}
+              aria-pressed={selectedTagIds.includes(tag.id)}
+            >
+              {tag.emoji && <span>{tag.emoji}</span>}
+              <span>{tag.name}</span>
+            </button>
+          ))}
+          <button
+            type="button"
+            className={`forum-chip ${allActive ? '' : 'muted'}`}
+            onClick={() => setSelectedTagIds([])}
+            data-testid="mobile-forum-tag-all"
+            aria-pressed={allActive}
+          >
+            All
+          </button>
+        </div>
+      </div>
+
       <div className="forum-list">
-        {children.length === 0 && (
+        {threadsLoading ? (
+          <div className="empty-state" data-testid="mobile-forum-loading">
+            <div className="empty-state-title">Loading threads…</div>
+          </div>
+        ) : children.length === 0 ? (
           <div className="empty-state">
             <div className="empty-state-title">No threads yet</div>
-            <div className="empty-state-desc">Tap "New thread" to start one.</div>
+            <div className="empty-state-desc">Tap + to start one.</div>
           </div>
+        ) : visibleThreads.length === 0 ? (
+          <div className="empty-state" data-testid="mobile-forum-no-matches">
+            <div className="empty-state-title">
+              No threads match {searchQuery.trim() ? `"${searchQuery.trim()}"` : 'the selected tags'}.
+            </div>
+            {searchQuery.trim() && (
+              <button
+                type="button"
+                className="forum-new-pill"
+                onClick={() => openNewThread(searchQuery.trim())}
+                style={{ marginTop: 10 }}
+              >
+                Create &ldquo;{searchQuery.trim()}&rdquo;
+              </button>
+            )}
+          </div>
+        ) : (
+          visibleThreads.map((c) => (
+            <MobileForumCard
+              key={c.id}
+              group={c}
+              forumTags={forumTags}
+              onClick={() => selectChild(c.id)}
+            />
+          ))
         )}
-        {children.map((c) => <ForumCard key={c.id} group={c} onClick={() => selectChild(c.id)} />)}
+      </div>
+
+      {showNewThread && (
+        <NewThreadSheet
+          forumGroupId={groupId}
+          forumTags={forumTags}
+          initialTitle={prefillTitle}
+          isPublic={group?.isPublic ?? true}
+          isOpen={group?.isOpen ?? true}
+          close={() => setShowNewThread(false)}
+          onCreated={(childId) => {
+            setShowNewThread(false);
+            setSearchQuery('');
+            selectChild(childId);
+          }}
+        />
+      )}
+      {showSort && (
+        <ForumSortSheet
+          prefs={prefs}
+          onChange={updatePrefs}
+          close={() => setShowSort(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+function resolveMobileTopics(
+  topics: ReadonlyArray<string>,
+  forumTags: ReadonlyArray<JsForumTag>,
+): JsForumTag[] {
+  if (topics.length === 0 || forumTags.length === 0) return [];
+  const byId = new Map(forumTags.map((t) => [t.id, t] as const));
+  const seen = new Set<string>();
+  const out: JsForumTag[] = [];
+  for (const id of topics) {
+    if (seen.has(id)) continue;
+    seen.add(id);
+    const ft = byId.get(id);
+    if (ft) out.push(ft);
+  }
+  return out;
+}
+
+/**
+ * Pair `messagesEose` with a 5s dwell window before declaring a thread
+ * truly empty (see desktop ForumView's same hook + feedback_empty_eose_grace).
+ */
+function useMobileEmptyEoseGrace(threadId: string): boolean {
+  const [passed, setPassed] = useState(false);
+  useEffect(() => {
+    setPassed(false);
+    const t = setTimeout(() => setPassed(true), 5000);
+    return () => clearTimeout(t);
+  }, [threadId]);
+  return passed;
+}
+
+function MobileForumCard({
+  group,
+  forumTags,
+  onClick,
+}: {
+  group: JsGroup;
+  forumTags: ReadonlyArray<JsForumTag>;
+  onClick: () => void;
+}) {
+  const messages = useMessages(group.id);
+  const messagesEose = useMessagesEose(group.id);
+  const op = messages[0] ?? null;
+  const lastMsg = messages[messages.length - 1] ?? null;
+  const opMeta = useUserMetadata(op?.pubkey ?? null);
+  const lastMeta = useUserMetadata(lastMsg?.pubkey ?? null);
+  const emptyGracePassed = useMobileEmptyEoseGrace(group.id);
+  const tags = useMemo(() => resolveMobileTopics(group.topics, forumTags), [group.topics, forumTags]);
+  // Hide truly-empty threads (matches the desktop forum UX rule).
+  if (!op || !lastMsg) {
+    if (messagesEose && emptyGracePassed) return null;
+    // Skeleton-ish: render the card with whatever we have so the user knows
+    // the thread exists and is incoming.
+    return (
+      <button className="forum-card" onClick={onClick} data-testid="mobile-forum-card-skeleton" data-thread-id={group.id}>
+        <div className="forum-card-row">
+          <div className="dm-ava-list" style={{ ...avatarStyle(group.id), width: 36, height: 36, fontSize: 12 }}>
+            {group.picture ? <img src={group.picture} alt="" /> : initialsFor(group.name, group.id.slice(0, 2).toUpperCase())}
+          </div>
+          <div className="forum-card-body">
+            <div className="forum-card-title">{group.name ?? group.id.slice(0, 8)}</div>
+            <div className="forum-card-preview" style={{ opacity: 0.6 }}>Loading…</div>
+          </div>
+        </div>
+      </button>
+    );
+  }
+  const opName = opMeta?.displayName || opMeta?.name || `${op.pubkey.slice(0, 8)}…`;
+  const lastName = lastMeta?.displayName || lastMeta?.name || `${lastMsg.pubkey.slice(0, 8)}…`;
+  return (
+    <button
+      className="forum-card"
+      onClick={onClick}
+      data-testid="mobile-forum-card"
+      data-thread-id={group.id}
+    >
+      <div className="forum-card-row">
+        <div className="dm-ava-list" style={{ ...avatarStyle(group.id), width: 36, height: 36, fontSize: 12 }}>
+          {opMeta?.picture ? (
+            <img src={opMeta.picture} alt="" />
+          ) : group.picture ? (
+            <img src={group.picture} alt="" />
+          ) : (
+            initialsFor(group.name, group.id.slice(0, 2).toUpperCase())
+          )}
+        </div>
+        <div className="forum-card-body">
+          <div className="forum-card-title">{group.name ?? group.id.slice(0, 8)}</div>
+          <div className="forum-card-preview">{op.content}</div>
+          {tags.length > 0 && (
+            <div className="forum-card-tags">
+              {tags.map((t) => (
+                <span key={t.id} className="forum-card-tag" data-testid={`mobile-thread-tag-${t.id}`}>
+                  {t.emoji && <span>{t.emoji}</span>}
+                  <span>{t.name}</span>
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="forum-card-meta">
+            <span><strong>OP</strong> {opName}</span>
+            <span>{messages.length} {messages.length === 1 ? 'msg' : 'msgs'}</span>
+            <span>last {lastName}</span>
+          </div>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function ForumSortSheet({
+  prefs,
+  onChange,
+  close,
+}: {
+  prefs: MobileForumPrefs;
+  onChange: (p: Partial<MobileForumPrefs>) => void;
+  close: () => void;
+}) {
+  return (
+    <div className="sheet-host" data-screen="forum-sort" data-testid="mobile-forum-sort-sheet">
+      <div className="sheet-backdrop" onClick={close} />
+      <div className="sheet">
+        <div className="sheet-handle" />
+        <div className="zap-title">Sort &amp; view</div>
+        <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>Sort by</label>
+          <SortSheetRow
+            label="Recently active"
+            checked={prefs.sortBy === 'recent'}
+            onClick={() => onChange({ sortBy: 'recent' })}
+            testId="mobile-forum-sort-recent"
+          />
+          <SortSheetRow
+            label="Creation date"
+            checked={prefs.sortBy === 'created'}
+            onClick={() => onChange({ sortBy: 'created' })}
+            testId="mobile-forum-sort-created"
+          />
+          <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em', marginTop: 12 }}>Tag matching</label>
+          <SortSheetRow
+            label="Match any"
+            checked={prefs.tagMatch === 'any'}
+            onClick={() => onChange({ tagMatch: 'any' })}
+            testId="mobile-forum-match-any"
+          />
+          <SortSheetRow
+            label="Match all"
+            checked={prefs.tagMatch === 'all'}
+            onClick={() => onChange({ tagMatch: 'all' })}
+            testId="mobile-forum-match-all"
+          />
+        </section>
+        <div className="setup-actions">
+          <button
+            type="button"
+            className="forum-new-pill"
+            onClick={close}
+            style={{ width: '100%', justifyContent: 'center' }}
+          >
+            Done
+          </button>
+        </div>
       </div>
     </div>
   );
 }
 
-function ForumCard({ group, onClick }: { group: JsGroup; onClick: () => void }) {
+function SortSheetRow({
+  label,
+  checked,
+  onClick,
+  testId,
+}: {
+  label: string;
+  checked: boolean;
+  onClick: () => void;
+  testId: string;
+}) {
   return (
-    <button className="forum-card" onClick={onClick}>
-      <div className="forum-card-row">
-        <div className="dm-ava-list" style={{ ...avatarStyle(group.id), width: 36, height: 36, fontSize: 12 }}>
-          {group.picture ? <img src={group.picture} alt="" /> : initialsFor(group.name, group.id.slice(0, 2).toUpperCase())}
-        </div>
-        <div className="forum-card-body">
-          <div className="forum-card-title">{group.name ?? group.id.slice(0, 8)}</div>
-          {group.about && <div className="forum-card-preview">{group.about}</div>}
-          <div className="forum-card-meta">
-            <span>{group.id.slice(0, 8)}</span>
-          </div>
-        </div>
-      </div>
+    <button
+      type="button"
+      onClick={onClick}
+      data-testid={testId}
+      data-checked={checked ? 'true' : 'false'}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '10px 4px',
+        background: 'transparent',
+        border: 'none',
+        color: 'var(--app-text)',
+        fontSize: 14,
+        cursor: 'pointer',
+        textAlign: 'left',
+      }}
+    >
+      <span>{label}</span>
+      <span
+        style={{
+          width: 16,
+          height: 16,
+          borderRadius: 999,
+          border: `2px solid ${checked ? 'var(--accent)' : 'var(--app-line)'}`,
+          background: checked ? 'var(--accent)' : 'transparent',
+          flexShrink: 0,
+        }}
+      />
     </button>
+  );
+}
+
+function NewThreadSheet({
+  forumGroupId,
+  forumTags,
+  initialTitle,
+  isPublic,
+  isOpen,
+  close,
+  onCreated,
+}: {
+  forumGroupId: string;
+  forumTags: ReadonlyArray<JsForumTag>;
+  initialTitle: string;
+  isPublic: boolean;
+  isOpen: boolean;
+  close: () => void;
+  onCreated: (childId: string) => void;
+}) {
+  const [title, setTitle] = useState(initialTitle);
+  const [body, setBody] = useState('');
+  const [selectedTagIds, setSelectedTagIds] = useState<ReadonlyArray<string>>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const ready = useSignerReady();
+  const myPubkey = useMyPubkey();
+  const MAX_TAGS = 5;
+
+  const toggleTag = (id: string) => {
+    setSelectedTagIds((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      if (prev.length >= MAX_TAGS) return prev;
+      return [...prev, id];
+    });
+  };
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim() || !body.trim() || submitting || !myPubkey) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const childId = await nostrActions.createGroup({
+        name: title.trim(),
+        about: undefined,
+        isPublic,
+        isOpen,
+        parent: forumGroupId,
+        topics: selectedTagIds,
+      });
+      await nostrActions.sendMessage(childId, body.trim());
+      onCreated(childId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="sheet-host" data-screen="new-thread" data-testid="mobile-new-thread-sheet">
+      <div className="sheet-backdrop" onClick={close} />
+      <form className="sheet" onSubmit={onSubmit} style={{ maxHeight: '92%' }}>
+        <div className="sheet-handle" />
+        <div className="zap-title">New thread</div>
+        <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>Title</label>
+          <div className="setup-input-wrap">
+            <input
+              autoFocus
+              className="setup-input"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Thread title"
+              maxLength={140}
+              data-testid="mobile-new-thread-title"
+            />
+          </div>
+          <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em', marginTop: 6 }}>First message</label>
+          <textarea
+            className="setup-textarea"
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            placeholder="What's the post about?"
+            rows={5}
+            data-testid="mobile-new-thread-body"
+          />
+          {forumTags.length > 0 && (
+            <>
+              <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em', marginTop: 6 }}>
+                Tags ({selectedTagIds.length}/{MAX_TAGS})
+              </label>
+              <div className="forum-filter-row" style={{ flexWrap: 'wrap', overflow: 'visible', margin: 0, padding: 0 }} data-testid="mobile-new-thread-tag-picker">
+                {forumTags.map((tag) => {
+                  const active = selectedTagIds.includes(tag.id);
+                  const disabled = !active && selectedTagIds.length >= MAX_TAGS;
+                  return (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      onClick={() => toggleTag(tag.id)}
+                      disabled={disabled}
+                      className={`forum-chip ${active ? 'active' : ''}`}
+                      style={{ opacity: disabled ? 0.4 : 1 }}
+                      data-testid={`mobile-new-thread-tag-${tag.id}`}
+                      aria-pressed={active}
+                    >
+                      {tag.emoji && <span>{tag.emoji}</span>}
+                      <span>{tag.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+          {error && <div style={{ color: '#fca5a5', fontSize: 12 }}>{error}</div>}
+        </section>
+        <div className="setup-actions" style={{ display: 'flex', gap: 8 }}>
+          <button
+            type="button"
+            onClick={close}
+            style={{
+              flex: 1,
+              padding: '12px',
+              borderRadius: 12,
+              background: 'transparent',
+              border: '1px solid var(--app-line)',
+              color: 'var(--app-text-dim)',
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={!ready || submitting || !title.trim() || !body.trim()}
+            className="forum-new-pill"
+            style={{ flex: 1, justifyContent: 'center', padding: '12px' }}
+            data-testid="mobile-new-thread-submit"
+          >
+            {submitting ? 'Creating…' : 'Create'}
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }
 

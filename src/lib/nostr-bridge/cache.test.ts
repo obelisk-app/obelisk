@@ -117,4 +117,25 @@ describe('cache', () => {
     expect(cacheGet<string[]>(RELAY, KIND, groupId)!.value).toEqual(['pk']);
     expect(cacheListIds(RELAY, KIND)).toContain(groupId);
   });
+
+  it('round-trips a kind 0 user-metadata entry in the shape ingestUserMetadata writes', () => {
+    const pubkey = 'a'.repeat(64);
+    const meta = {
+      pubkey,
+      name: 'alice',
+      displayName: 'Alice',
+      picture: 'https://example.com/a.png',
+      about: 'hello',
+      nip05: 'alice@example.com',
+      banner: null,
+      lud16: null,
+      website: null,
+    };
+    cacheSet(RELAY, 0, pubkey, { meta, createdAt: 1700_000_000 });
+    const entry = cacheGet<{ meta: typeof meta; createdAt: number }>(RELAY, 0, pubkey);
+    expect(entry).not.toBeNull();
+    expect(entry!.value.meta.displayName).toBe('Alice');
+    expect(entry!.value.createdAt).toBe(1700_000_000);
+    expect(cacheListIds(RELAY, 0)).toContain(pubkey);
+  });
 });

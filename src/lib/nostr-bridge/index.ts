@@ -20,6 +20,7 @@ export {
   useAdminsByGroup,
   useMembers,
   useMembersByGroup,
+  useMembershipReady,
   useGroupCreator,
   useGroupCreators,
   useMyMutes,
@@ -33,6 +34,7 @@ export {
 export type { ActiveCallInfo } from './stores';
 export type {
   JsGroup,
+  JsForumTag,
   JsMessage,
   JsUserMetadata,
   JsReaction,

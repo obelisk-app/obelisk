@@ -24,7 +24,7 @@ export default defineConfig({
     ['list'],
     ['html', { outputFolder: './playwright-report', open: 'never' }],
   ],
-  retries: 0,
+  retries: 1,
   fullyParallel: false,
   workers: 1,
   // 180s lets voice specs hold a real WebRTC mesh open for the full

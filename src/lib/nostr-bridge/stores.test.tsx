@@ -6,7 +6,7 @@
  *
  * The bug this guards against: navigating from the landing page back to /app
  * showed the LoginModal even though the user had a valid persisted session.
- * See `docs/auth-and-data-loading.md` §3 for the contract.
+ * See `docs/data-system.md` §3 for the contract.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';

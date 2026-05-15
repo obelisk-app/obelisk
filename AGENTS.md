@@ -89,7 +89,7 @@ npm run test:coverage # Run tests with coverage report
 
 ## Auth (3 methods, all relay-only)
 
-See [docs/auth-and-data-loading.md](docs/auth-and-data-loading.md) for the complete contract.
+See [docs/data-system.md](docs/data-system.md) for the complete contract.
 
 | Method | Signer | Login entry |
 |---|---|---|
@@ -123,7 +123,7 @@ This is what makes "groups where I am admin" resolve on first paint without the 
 
 ## bridgeCache (stale-while-revalidate)
 
-`src/lib/nostr-bridge/cache.ts` is a tiny `localStorage` cache for relay-derived state. Currently wired through admin/member lists (kinds 39001/39002); group metadata, profiles, layout, and branding are TODOs at the call sites. See [docs/auth-and-data-loading.md §8](docs/auth-and-data-loading.md) for the full contract.
+`src/lib/nostr-bridge/cache.ts` is a tiny `localStorage` cache for relay-derived state. Currently wired through admin/member lists (kinds 39001/39002); group metadata, profiles, layout, and branding are TODOs at the call sites. See [docs/data-system.md §8](docs/data-system.md) for the full contract.
 
 ## Voice & video
 
@@ -225,7 +225,7 @@ await bridge.editUserMetadata({ name: 'Alice', displayName: 'Alice' });
 - **User relays:** Auto-fetched from NIP-65 (kind 10002) for DM delivery (`fetchMyDmRelays`)
 
 ## Resources
-- [docs/auth-and-data-loading.md](docs/auth-and-data-loading.md) — login flow, NIP-42 AUTH, watchdog, bridgeCache
+- [docs/data-system.md](docs/data-system.md) — login flow, NIP-42 AUTH, watchdog, bridgeCache
 - [docs/voice-system.md](docs/voice-system.md) — mesh voice (P2P over Nostr signaling)
 - [docs/sfu-system.md](docs/sfu-system.md) — SFU architecture (mediasoup engine, Nostr-RPC signaling)
 - [obelisk-app/obelisk-sfu](https://github.com/obelisk-app/obelisk-sfu) — SFU server repo (protocol spec, operator guide, deploy)

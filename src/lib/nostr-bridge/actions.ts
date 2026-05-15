@@ -69,6 +69,8 @@ export const nostrActions = {
     (await getBridge()).deleteGroupEvent(groupId, eventId),
   loadMoreMessages: async (groupId: string) =>
     (await getBridge()).loadMoreMessages(groupId),
+  refreshGroupMessages: async (groupId: string) =>
+    (await getBridge()).refreshGroupMessages(groupId),
 
   setActiveGroup: async (groupId: string | null) =>
     (await getBridge()).setActiveGroup(groupId),

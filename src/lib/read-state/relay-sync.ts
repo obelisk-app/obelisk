@@ -14,7 +14,7 @@
  *   The relay sees only `kind:1059 from random pubkey #p=me` — same
  *   shape as a NIP-17 DM. There is no plaintext `d` tag, no app
  *   fingerprint, no replaceable-event slot announcing "this user has
- *   Obelisk read state on this relay." See docs/notifications.md.
+ *   Obelisk read state on this relay." See docs/read-state.md.
  *
  * The downside (no event replacement) is mitigated by a 60-second
  * debounce — bursts of cursor advances during active reading collapse
@@ -394,5 +394,5 @@ export const __INTERNAL = {
 
 // Suppress the unused RemoteReadState import warning — it's part of the
 // public surface that the store action accepts and is referenced from
-// docs/notifications.md as the apply shape.
+// docs/read-state.md as the apply shape.
 export type { RemoteReadState };

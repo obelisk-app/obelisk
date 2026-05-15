@@ -67,7 +67,7 @@ function useMounted(): boolean {
  * `true` while a stored session is being rehydrated on cold load. The bridge
  * has parsed credentials out of localStorage and is awaiting `connect()`'s
  * relay handshake, but {@link useIsLoggedIn} stays `false` until that
- * resolves (see `docs/auth-and-data-loading.md` §3 for the contract).
+ * resolves (see `docs/data-system.md` §3 for the contract).
  *
  * UI consumers use this to suppress the login modal during that window —
  * without it, users navigating from the landing page back to `/app` see a
@@ -240,7 +240,7 @@ export function useMessagesByGroup(): Readonly<Record<string, ReadonlyArray<JsMe
 
 /**
  * Pagination control for a channel. The live REQ caps at the background
- * limit (see docs/progressive-loading.md); this hook exposes a `loadEarlier`
+ * limit (see docs/data-system.md); this hook exposes a `loadEarlier`
  * action that pulls the next page of older messages on demand and a
  * `reachedStart` flag so the UI can stop offering "Load earlier" once the
  * relay returns no further history.
@@ -285,6 +285,19 @@ export function useGroupMetadataEose(): boolean {
   return useSubscription<boolean>(
     (b, cb) => b.subscribeGroupMetadataEose(cb),
     false,
+  );
+}
+
+/**
+ * `true` once the per-group admin/member subscriptions have emitted EOSE,
+ * or seeded values were pulled from {@link bridgeCache}. The members pane
+ * reads this to decide between "Loading members…" and an empty MemberList.
+ */
+export function useMembershipReady(groupId: string | null): boolean {
+  return useSubscription<boolean>(
+    (b, cb) => (groupId ? b.subscribeMembershipReady(groupId, cb) : () => {}),
+    false,
+    [groupId],
   );
 }
 

@@ -438,6 +438,127 @@ describe('nostr-bridge', () => {
     expect(last.parent1).toContain('child1');
   });
 
+  it('parses [forum-tag,id,name,emoji?] entries on kind 39000 into JsGroup.forumTags', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+
+    const seen: ReadonlyArray<ReadonlyArray<{ id: string; tags: ReadonlyArray<{ id: string; name: string; emoji: string | null }> }>> = [] as never;
+    const observed: { id: string; tags: ReadonlyArray<{ id: string; name: string; emoji: string | null }> }[][] = [];
+    bridge.subscribeGroups((g) =>
+      observed.push(g.map((x) => ({ id: x.id, tags: x.forumTags }))),
+    );
+    void seen;
+
+    // One forum tag with emoji, one without, plus a malformed entry that
+    // must be silently dropped (missing name).
+    deliver(
+      await fakeRelayMetadataWithExtraTags({
+        groupId: 'g-forum-with-tags',
+        name: 'Plaza',
+        extraTags: [
+          ['t', 'forum'],
+          ['forum-tag', 'tag-lacrypta', 'LaCrypta', '📜'],
+          ['forum-tag', 'tag-trabajo', 'trabajo'],
+          ['forum-tag', '', 'broken-no-id'],
+          ['forum-tag', 'tag-empty-name', ''],
+        ],
+      }),
+    );
+    await flush();
+
+    const last = observed.at(-1) as { id: string; tags: ReadonlyArray<{ id: string; name: string; emoji: string | null }> }[];
+    const forum = last.find((g) => g.id === 'g-forum-with-tags');
+    expect(forum).toBeTruthy();
+    expect(forum?.tags).toEqual([
+      { id: 'tag-lacrypta', name: 'LaCrypta', emoji: '📜' },
+      { id: 'tag-trabajo', name: 'trabajo', emoji: null },
+    ]);
+  });
+
+  it('parses [topic,id] entries on kind 39000 into JsGroup.topics, de-duped', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+
+    const observed: { id: string; topics: ReadonlyArray<string> }[][] = [];
+    bridge.subscribeGroups((g) => observed.push(g.map((x) => ({ id: x.id, topics: x.topics }))));
+
+    deliver(
+      await fakeRelayMetadataWithExtraTags({
+        groupId: 'thread-1',
+        name: 'a thread',
+        parent: 'forum-1',
+        extraTags: [
+          ['topic', 'tag-a'],
+          ['topic', 'tag-b'],
+          ['topic', 'tag-a'], // duplicate — must be de-duped
+          ['topic', ''], // empty — dropped
+        ],
+      }),
+    );
+    await flush();
+
+    const last = observed.at(-1) as { id: string; topics: ReadonlyArray<string> }[];
+    const t = last.find((g) => g.id === 'thread-1');
+    expect(t?.topics).toEqual(['tag-a', 'tag-b']);
+  });
+
+  it('createGroup with topics emits one [topic,id] tag per entry on kind 9002', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+
+    const childId = await bridge.createGroup({
+      name: 'tagged thread',
+      isPublic: true,
+      isOpen: true,
+      parent: 'forum-1',
+      topics: ['tag-a', 'tag-b'],
+    });
+    await flush();
+
+    const meta = fake.state.published.find(
+      (e) => e.kind === 9002 && e.tags.some((t) => t[0] === 'h' && t[1] === childId),
+    );
+    expect(meta).toBeTruthy();
+    expect(meta?.tags).toContainEqual(['topic', 'tag-a']);
+    expect(meta?.tags).toContainEqual(['topic', 'tag-b']);
+  });
+
+  it('editGroupMetadata with forumTags emits [forum-tag,id,name,emoji?] for each entry', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+
+    await bridge.editGroupMetadata({
+      groupId: 'forum-edit-1',
+      name: 'Plaza',
+      kind: 'forum',
+      forumTags: [
+        { id: 'tag-1', name: 'LaCrypta', emoji: '📜' },
+        { id: 'tag-2', name: 'no-emoji', emoji: null },
+        // Bad entry: empty name. editGroupMetadata's tag emitter drops these.
+        { id: 'tag-3', name: '', emoji: '🙃' },
+      ],
+    });
+    await flush();
+
+    const meta = fake.state.published.find(
+      (e) => e.kind === 9002 && e.tags.some((t) => t[0] === 'h' && t[1] === 'forum-edit-1'),
+    );
+    expect(meta).toBeTruthy();
+    expect(meta?.tags).toContainEqual(['forum-tag', 'tag-1', 'LaCrypta', '📜']);
+    expect(meta?.tags).toContainEqual(['forum-tag', 'tag-2', 'no-emoji']);
+    // Bad entry must NOT show up.
+    const bad = meta?.tags.find((t) => t[0] === 'forum-tag' && t[1] === 'tag-3');
+    expect(bad).toBeUndefined();
+  });
+
   it('relayAccess flips to ok on event/EOSE and stays ok across per-sub CLOSED reasons', async () => {
     const { getBridge } = await import('./client');
     const { skHex, pkHex } = makeKeypair();
@@ -615,11 +736,30 @@ describe('nostr-bridge', () => {
       observed.push((m as Record<string, string>)[norm]),
     );
 
-    // Fire CLOSED auth-required on every active sub. Without the soak guard
-    // the banner state would flip to 'auth-required' immediately for each
-    // sub. With the guard, the downgrade is deferred and the retry path
-    // gets a chance to heal it back to 'ok' first.
+    // Fire CLOSED auth-required on every non-preflight sub. Without the
+    // soak guard the banner state would flip to 'auth-required' immediately
+    // for each sub. With the guard, the downgrade is deferred and the
+    // retry path gets a chance to heal it back to 'ok' first.
+    //
+    // The whitelist preflight sub (kind 0, authors=[me], limit 1) is
+    // explicitly excluded: it uses `immediateAccessDowngrade: true` so
+    // a rejection on the preflight surfaces within ~1.5s. The deferred-
+    // soak contract still holds for every other sub.
+    const isPreflight = (sub: { filter?: Record<string, unknown> }) => {
+      const kinds = sub.filter?.kinds as number[] | undefined;
+      const authors = sub.filter?.authors as string[] | undefined;
+      const limit = sub.filter?.limit as number | undefined;
+      return (
+        Array.isArray(kinds) &&
+        kinds.length === 1 &&
+        kinds[0] === 0 &&
+        Array.isArray(authors) &&
+        authors.includes(pkHex) &&
+        limit === 1
+      );
+    };
     for (const sub of fake.state.subscriptions) {
+      if (isPreflight(sub)) continue;
       const reasons = (sub.relays ?? [activeRelay]).map(() => 'auth-required: please AUTH');
       sub.onclose?.(reasons);
     }
@@ -993,6 +1133,30 @@ async function fakeRelayMetadataWithT(opts: {
   const pk = getPublicKey(sk);
   const tags: string[][] = [['d', opts.groupId], ['t', opts.t]];
   if (opts.name) tags.push(['name', opts.name]);
+  return finalizeEvent(
+    {
+      kind: 39000,
+      content: '',
+      tags,
+      created_at: Math.floor(Date.now() / 1000),
+      pubkey: pk,
+    } as Parameters<typeof finalizeEvent>[0],
+    sk,
+  );
+}
+
+async function fakeRelayMetadataWithExtraTags(opts: {
+  groupId: string;
+  name?: string;
+  parent?: string;
+  extraTags: string[][];
+}): Promise<NostrEvent> {
+  const sk = generateSecretKey();
+  const pk = getPublicKey(sk);
+  const tags: string[][] = [['d', opts.groupId]];
+  if (opts.name) tags.push(['name', opts.name]);
+  if (opts.parent) tags.push(['parent', opts.parent]);
+  for (const t of opts.extraTags) tags.push(t);
   return finalizeEvent(
     {
       kind: 39000,

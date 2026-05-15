@@ -181,6 +181,17 @@ button:not(:disabled),
   display: none;
 }
 
+/* Banner placeholder — used by the sidebar header while branding (kind
+ * 30078 obelisk:branding) is still arriving. Transparent feel that
+ * occupies the banner slot so swapping in the real image doesn't shift
+ * the layout. Matches lc-card with a very subtle radial highlight. */
+.lc-banner-placeholder {
+  background:
+    radial-gradient(ellipse at top, rgba(180, 249, 83, 0.04), transparent 60%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.015) 0%, transparent 100%),
+    #0f0f0f;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

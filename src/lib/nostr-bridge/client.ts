@@ -29,6 +29,7 @@ import { parseRelayListMeta, parseInboxRelays } from '@/lib/nostr-read';
 import { TextCoercingWebSocket } from '@/lib/nostr-pool';
 import { cacheGet, cacheSet, cacheClearAll, cacheListIds } from './cache';
 import { normalizeRelayUrl } from './relay-url';
+import { runConnectFanOut, type TierAction } from './orchestrator';
 import { wotEngine } from '@/lib/wot/engine';
 import { useModerationStore } from '@/store/moderation';
 import { resetAllClientState } from '@/lib/reset';
@@ -39,6 +40,7 @@ import { extractMentionPubkeysFromMessage } from '@/lib/mentions';
 import type {
   NostrBridge,
   JsGroup,
+  JsForumTag,
   JsMessage,
   JsUserMetadata,
   JsReaction,
@@ -137,7 +139,7 @@ const DEFAULT_RELAYS = ['wss://public.obelisk.ar'];
 // events are pulled into `messagesByGroup` on the live REQ; older messages
 // are paged in on demand via `loadMoreMessages`. Keeps the initial fan-out
 // cheap when the user belongs to many channels and trims memory growth on
-// long-lived sessions. See docs/progressive-loading.md.
+// long-lived sessions. See docs/data-system.md.
 const BACKGROUND_MESSAGE_LIMIT = 50;
 const LOAD_MORE_PAGE_SIZE = 50;
 
@@ -656,6 +658,13 @@ class BridgeImpl implements NostrBridge {
   private metadataRequested = new Set<string>();
   // Group ids we already have a message subscription for.
   private messageSubscribedGroups = new Set<string>();
+  /**
+   * Per-group kind 9 subscription handles. Tracked so
+   * {@link refreshGroupMessages} can close the previous sub before opening
+   * a fresh one — without this the bridge would leak stale subs every time
+   * a chat panel re-mounts a stale channel.
+   */
+  private messageSubByGroup = new Map<string, { close: () => void; markClosed?: () => void }>();
   // Group ids we already have a reaction subscription for.
   private reactionSubscribedGroups = new Set<string>();
   private dmSubscribed = false;
@@ -782,7 +791,7 @@ class BridgeImpl implements NostrBridge {
       // If we set isLoggedIn=true first, AppShell mounts and fires per-group
       // REQs against an unauthenticated socket — relays drop them silently
       // and the user is left needing 2-3 manual refreshes. See finalizeLogin
-      // and docs/auth-and-data-loading.md.
+      // and docs/data-system.md.
       try {
         await this.connect();
       } catch {
@@ -889,7 +898,14 @@ class BridgeImpl implements NostrBridge {
         groupId,
       );
       if (!entry) continue;
-      const { group, createdAt } = entry.value;
+      const { group: cached, createdAt } = entry.value;
+      // Backfill fields added after the cache was written so older entries
+      // don't surface as `undefined` to consumers expecting an array.
+      const group: JsGroup = {
+        ...cached,
+        forumTags: cached.forumTags ?? [],
+        topics: cached.topics ?? [],
+      };
       this.groupMetadataLatestAt.set(groupId, createdAt);
       this.groups.update((prev) => {
         if (prev.some((g) => g.id === groupId)) return prev;
@@ -927,6 +943,24 @@ class BridgeImpl implements NostrBridge {
         this.groupCreators.update((prev) => ({ ...prev, [groupId]: entry.value }));
       }
     }
+    // Kind 0 — bounded iteration so a large cache (popular relay, many DM
+    // contacts) doesn't block first paint. 500 pubkeys is well past any
+    // realistic working set; the live REQs overwrite anything we skip.
+    const userMetaIds = cacheListIds(relay, KIND_USER_METADATA);
+    const SEED_CAP = 500;
+    const seedTargets = userMetaIds.length > SEED_CAP ? userMetaIds.slice(0, SEED_CAP) : userMetaIds;
+    for (const pubkey of seedTargets) {
+      const entry = cacheGet<{ meta: JsUserMetadata; createdAt: number }>(
+        relay,
+        KIND_USER_METADATA,
+        pubkey,
+      );
+      if (!entry) continue;
+      const { meta, createdAt } = entry.value;
+      if ((this.userMetadataLatestAt.get(pubkey) ?? 0) >= createdAt) continue;
+      this.userMetadata.update((prev) => ({ ...prev, [pubkey]: meta }));
+      this.userMetadataLatestAt.set(pubkey, createdAt);
+    }
   }
 
   /**
@@ -953,7 +987,7 @@ class BridgeImpl implements NostrBridge {
    * subscribed to admin/member/messages while NIP-42 was still being
    * negotiated, the relay dropped those REQs silently, and the user had to
    * refresh 2-3 times for everything to populate. See
-   * `docs/auth-and-data-loading.md`.
+   * `docs/data-system.md`.
    */
   private async finalizeLogin(): Promise<void> {
     this.persist();
@@ -1364,47 +1398,18 @@ class BridgeImpl implements NostrBridge {
       // `reconnectInBackground` kicks in via the next session/relay
       // change. Subscriptions registered below queue against the pool
       // and bind as relays come online.
-      this.subscribeGroupMetadata();
-      // Single relay-wide REQ for admin/member (kinds 39001+39002, no `#d`).
-      // Restores the "category authors" set used by NIP-78 channel-layout
-      // queries without re-introducing per-group fan-out. Categories
-      // depend on knowing which pubkeys the operator/admins are; without
-      // this, on a fresh relay visit (no admin cache yet) the layout REQ
-      // has only the operator pubkey and categories silently fail to load
-      // when the layout is admin-authored. One REQ regardless of how
-      // many groups exist on the relay.
-      this.subscribeAllAdminMember();
-      this.subscribeIncomingDMs();
-      this.subscribeMyContactList();
-      this.subscribeMyMuteList();
-      this.subscribeMyAuthoredGroups();
-      this.subscribeActiveCalls();
-      // Resolve the user's own profile so the UI has it immediately.
-      if (this.session) this.ensureUserMetadata(this.session.pubKeyHex);
       // Reopen any per-group REQs that were live on the previous pool.
       // Components that mounted pre-login (or pre-relay-switch) still have
       // their store listeners wired up; without this re-issue the new pool
       // has no subscriptions feeding them and the data only appears after
-      // a manual refresh.
+      // a manual refresh. The orchestrator delegates the actual re-apply
+      // to {@link applyPendingResubscribe} once its P2 microtask runs.
       const pending = this.pendingResubscribe;
       this.pendingResubscribe = null;
-      if (pending) {
-        // Fast-track the active group so the channel currently in view
-        // gets its messages first after a relay/session swap, even if
-        // it was somewhere in the middle of the previous live-sub list.
-        const messages = [...pending.messages];
-        if (this.activeGroupId) {
-          const idx = messages.indexOf(this.activeGroupId);
-          if (idx > 0) {
-            messages.splice(idx, 1);
-            messages.unshift(this.activeGroupId);
-          }
-        }
-        messages.forEach((id) => this.subscribeGroupMessages(id));
-        pending.reactions.forEach((id) => this.subscribeGroupReactions(id));
-        pending.adminMember.forEach((id) => this.subscribeAdminMember(id));
-        pending.metadata.forEach((pk) => this.ensureUserMetadata(pk));
-      }
+      runConnectFanOut({
+        dispatch: (action) => this.dispatchOrchestratorAction(action),
+        applyResubscribe: () => this.applyPendingResubscribe(pending),
+      });
       this.connectionState.set('Connected');
       this.reconnectAttempt = 0;
       // Activity message reflects the snapshot at the moment the gate
@@ -1507,7 +1512,7 @@ class BridgeImpl implements NostrBridge {
     // to be older than A's (the same NIP-29 `d`-tag can exist on two relays
     // independently), and left A's reactions painted on B's messages. The
     // user-visible symptom was channels and structure from different relays
-    // appearing mixed. See docs/progressive-loading.md.
+    // appearing mixed. See docs/data-system.md.
     this.childrenByParent.set({});
     this.groupCreators.set({});
     this.reactionsByGroup.set({});
@@ -2074,6 +2079,8 @@ class BridgeImpl implements NostrBridge {
     isOpen?: boolean;
     kind?: 'text' | 'voice' | 'voice-sfu' | 'forum';
     parent?: string;
+    forumTags?: ReadonlyArray<JsForumTag>;
+    topics?: ReadonlyArray<string>;
   }): Promise<string> {
     const groupId = opts.groupId ?? generateGroupId();
     await this.signAndPublish({
@@ -2199,6 +2206,8 @@ class BridgeImpl implements NostrBridge {
     isOpen?: boolean;
     kind?: 'text' | 'voice' | 'voice-sfu' | 'forum';
     parent?: string;
+    forumTags?: ReadonlyArray<JsForumTag>;
+    topics?: ReadonlyArray<string>;
   }): Promise<void> {
     const tags: string[][] = [['h', opts.groupId]];
     if (opts.name !== undefined) tags.push(['name', opts.name]);
@@ -2215,6 +2224,21 @@ class BridgeImpl implements NostrBridge {
     if (opts.kind === 'voice') tags.push(['t', 'voice']);
     else if (opts.kind === 'voice-sfu') tags.push(['t', 'voice-sfu']);
     else if (opts.kind === 'forum') tags.push(['t', 'forum']);
+    // Curated forum tags (admin) + thread topic references. Kind 9002 is a
+    // full replacement, so callers MUST pass the full intended set on every
+    // edit. The new ForumView chrome and ChannelSettingsModal both load the
+    // current set into local state and pass it back on save to preserve it.
+    if (opts.forumTags) {
+      for (const ft of opts.forumTags) {
+        if (!ft.id || !ft.name) continue;
+        tags.push(ft.emoji ? ['forum-tag', ft.id, ft.name, ft.emoji] : ['forum-tag', ft.id, ft.name]);
+      }
+    }
+    if (opts.topics) {
+      for (const id of opts.topics) {
+        if (id) tags.push(['topic', id]);
+      }
+    }
     await this.signAndPublish({
       kind: KIND_GROUP_EDIT_METADATA,
       content: '',
@@ -2529,7 +2553,20 @@ class BridgeImpl implements NostrBridge {
     filter: Filter,
     onevent: (ev: NostrEvent) => void,
     oneose?: () => void,
-    options?: { watchdogMs?: number; maxAttempts?: number; affectsRelayAccess?: boolean },
+    options?: {
+      watchdogMs?: number;
+      maxAttempts?: number;
+      affectsRelayAccess?: boolean;
+      /**
+       * When true, an `auth-required` / `restricted` CLOSED for this sub
+       * downgrades relay-access state **immediately** (no 4s soak). Used
+       * by the dedicated preflight REQ in {@link preflightRelayAccess} so
+       * the user sees a "Not whitelisted" banner within ~1.5s instead of
+       * waiting through the deferred soak window. Other subs keep the
+       * soak so transient AUTH races don't flash the banner.
+       */
+      immediateAccessDowngrade?: boolean;
+    },
   ): { close: () => void; markClosed: () => void } {
     const WATCHDOG_MS = options?.watchdogMs ?? 5000;
     const MAX_ATTEMPTS = options?.maxAttempts ?? Infinity;
@@ -2540,6 +2577,7 @@ class BridgeImpl implements NostrBridge {
     // relay-wide access banner; otherwise the user sees "Not whitelisted"
     // even when their global metadata sub is delivering everything fine.
     const AFFECTS_ACCESS = options?.affectsRelayAccess ?? true;
+    const IMMEDIATE_ACCESS_DOWNGRADE = options?.immediateAccessDowngrade ?? false;
     const MAX_BACKOFF_MS = 30_000;
     let attempt = 0;
     let activeSub: { close: () => void } | null = null;
@@ -2682,7 +2720,15 @@ class BridgeImpl implements NostrBridge {
                 // A per-channel CLOSED ("you can't read this one") still
                 // schedules a retry, but it does NOT update the relay-wide
                 // banner — see AFFECTS_ACCESS comment above.
-                if (AFFECTS_ACCESS) this.setRelayAccessDeferred(url, state);
+                if (AFFECTS_ACCESS) {
+                  if (IMMEDIATE_ACCESS_DOWNGRADE) {
+                    // Preflight path — surface "Not whitelisted" within the
+                    // sub's own watchdog window, no 4s soak.
+                    this.setRelayAccess(url, state);
+                  } else {
+                    this.setRelayAccessDeferred(url, state);
+                  }
+                }
                 shouldRetry = true;
               } else if (AFFECTS_ACCESS) {
                 this.setRelayAccess(url, state);
@@ -2817,6 +2863,101 @@ class BridgeImpl implements NostrBridge {
       }
       throw new Error('Cannot sign auth event with current login method');
     };
+  }
+
+  /**
+   * Side-effect runner for {@link runConnectFanOut}. The orchestrator owns
+   * tier ordering; this method translates a {@link TierAction} into the
+   * matching `subscribeXxx` call. Keeping this dispatch table in one place
+   * makes the priority tiers grep-able from the orchestrator file.
+   */
+  private dispatchOrchestratorAction(action: TierAction): void {
+    switch (action) {
+      case 'preflightRelayAccess':
+        if (this.session) this.preflightRelayAccess();
+        break;
+      case 'subscribeGroupMetadata':
+        this.subscribeGroupMetadata();
+        break;
+      case 'ensureMyMetadata':
+        if (this.session) this.ensureUserMetadata(this.session.pubKeyHex);
+        break;
+      case 'subscribeAllAdminMember':
+        this.subscribeAllAdminMember();
+        break;
+      case 'subscribeIncomingDMs':
+        this.subscribeIncomingDMs();
+        break;
+      case 'subscribeMyContactList':
+        this.subscribeMyContactList();
+        break;
+      case 'subscribeMyMuteList':
+        this.subscribeMyMuteList();
+        break;
+      case 'subscribeMyAuthoredGroups':
+        this.subscribeMyAuthoredGroups();
+        break;
+      case 'subscribeActiveCalls':
+        this.subscribeActiveCalls();
+        break;
+    }
+  }
+
+  /**
+   * P0 whitelist preflight — fires a tight kind:0 `authors:[me]` REQ on the
+   * active relay so an `auth-required:` or `restricted:` rejection downgrades
+   * `relayAccess` within ~1.5s, well before the rest of the fan-out hits
+   * the 4s deferred soak. EOSE on this filter is harmless (the relay
+   * just doesn't have my kind:0 yet) and still flips `relayAccess` to
+   * 'ok' through the standard onevent/oneose path.
+   *
+   * `maxAttempts: 1` so a rejection doesn't trigger exponential-backoff
+   * retries that would extend the perceived rejection window.
+   */
+  private preflightRelayAccess(): void {
+    if (!this.session) return;
+    const filter: Filter = {
+      kinds: [KIND_USER_METADATA],
+      authors: [this.session.pubKeyHex],
+      limit: 1,
+    };
+    const sub = this.subscribeWatched(
+      this.relays,
+      filter,
+      (ev) => this.ingestUserMetadata(ev),
+      undefined,
+      {
+        watchdogMs: 1500,
+        maxAttempts: 1,
+        affectsRelayAccess: true,
+        immediateAccessDowngrade: true,
+      },
+    );
+    this.subs.push(sub);
+  }
+
+  /**
+   * Reapply the per-group REQs captured by {@link resetPoolForSessionChange}.
+   * The active group is bumped to the head of the messages list so that —
+   * after a relay or session swap — the channel currently in view gets the
+   * relay's first per-group response. No-op when there is no pending state.
+   */
+  private applyPendingResubscribe(
+    pending: { messages: string[]; reactions: string[]; adminMember: string[]; metadata: string[] } | null,
+  ): void {
+    if (!pending) return;
+    const messages = [...pending.messages];
+    if (this.activeGroupId) {
+      const idx = messages.indexOf(this.activeGroupId);
+      if (idx > 0) {
+        messages.splice(idx, 1);
+        messages.unshift(this.activeGroupId);
+      }
+    }
+    messages.forEach((id) => this.subscribeGroupMessages(id));
+    pending.reactions.forEach((id) => this.subscribeGroupReactions(id));
+    pending.adminMember.forEach((id) => this.subscribeAdminMember(id));
+    pending.metadata.forEach((pk) => this.ensureUserMetadata(pk));
   }
 
   private subscribeGroupMetadata(): void {
@@ -2963,6 +3104,44 @@ class BridgeImpl implements NostrBridge {
       { affectsRelayAccess: false },
     );
     this.subs.push(sub);
+    this.messageSubByGroup.set(groupId, sub);
+  }
+
+  /**
+   * Force-restart the kind 9 subscription for `groupId`. Closes any
+   * existing sub (so a silently-dead WebSocket frame queue can't keep us
+   * stuck on stale `messagesEose=true && messages.length===0`), clears
+   * the EOSE flag so the UI returns to its loading state, and re-fires a
+   * fresh REQ.
+   *
+   * Use case: the user navigates back to a channel that looked empty.
+   * Auth-gated / silent-filtering relays sometimes send EOSE-empty
+   * quickly and then never deliver the actual events; a fresh sub is the
+   * only way to recover short of a full page reload.
+   */
+  refreshGroupMessages(groupId: string): void {
+    if (!groupId) return;
+    const existing = this.messageSubByGroup.get(groupId);
+    if (existing) {
+      try {
+        existing.markClosed?.();
+        existing.close();
+      } catch {
+        // ignore — relay may already have torn the socket down
+      }
+      this.messageSubByGroup.delete(groupId);
+      this.subs = this.subs.filter((s) => s !== existing);
+    }
+    this.messageSubscribedGroups.delete(groupId);
+    // Reset EOSE so the chat pane returns to "Loading messages…" while we
+    // wait for the relay to confirm the fresh REQ.
+    this.messagesEoseByGroup.update((prev) => {
+      if (!prev[groupId]) return prev;
+      const { [groupId]: _drop, ...rest } = prev;
+      void _drop;
+      return rest;
+    });
+    this.subscribeGroupMessages(groupId);
   }
 
   private subscribeKind0(pubkey: string): void {
@@ -3237,6 +3416,29 @@ class BridgeImpl implements NostrBridge {
     const isVoiceSfu = ev.tags.some((t) => t[0] === 't' && t[1] === 'voice-sfu');
     const isVoice = !isVoiceSfu && ev.tags.some((t) => t[0] === 't' && t[1] === 'voice');
     const isForum = !isVoiceSfu && !isVoice && ev.tags.some((t) => t[0] === 't' && t[1] === 'forum');
+    // `["forum-tag", id, name, emoji?]` — admin-curated tag definitions on a
+    // forum container. The `id` is opaque and stable; threads under the forum
+    // reference it via their own `["topic", id]` tags. Skipping malformed
+    // entries (missing id/name) keeps a typo-publish from blowing up the chip
+    // bar. De-duped on id, last entry wins.
+    const forumTagMap = new Map<string, JsForumTag>();
+    for (const t of ev.tags) {
+      if (t[0] !== 'forum-tag') continue;
+      const id = t[1];
+      const name = t[2];
+      if (!id || !name) continue;
+      const emoji = t[3] && t[3].length > 0 ? t[3] : null;
+      forumTagMap.set(id, { id, name, emoji });
+    }
+    const forumTags: ReadonlyArray<JsForumTag> = Array.from(forumTagMap.values());
+    // `["topic", id]` on a thread's metadata references a forum-tag id on
+    // its parent forum container. We surface raw ids here; the UI resolves
+    // them against the parent's `forumTags`.
+    const topicSet = new Set<string>();
+    for (const t of ev.tags) {
+      if (t[0] === 'topic' && t[1]) topicSet.add(t[1]);
+    }
+    const topics: ReadonlyArray<string> = Array.from(topicSet);
     const next: JsGroup = {
       id: groupId,
       name: tag('name') ?? null,
@@ -3247,6 +3449,8 @@ class BridgeImpl implements NostrBridge {
       isOpen,
       parent,
       kind: isVoiceSfu ? 'voice-sfu' : isVoice ? 'voice' : isForum ? 'forum' : 'text',
+      forumTags,
+      topics,
     };
     this.groups.update((prev) => {
       const filtered = prev.filter((g) => g.id !== groupId);
@@ -3273,7 +3477,7 @@ class BridgeImpl implements NostrBridge {
     // admin/member REQs now open lazily on first useAdmins / useMembers
     // call from the chat panel. Tradeoff: the sidebar's "I'm an admin of
     // X" badge no longer paints before opening each channel — acceptable
-    // given the load-time win. See docs/progressive-loading.md.
+    // given the load-time win. See docs/data-system.md.
     // Resolve the kind 9007 author so claimCreatorAdmin knows whether the
     // local user is the creator without having to assume it on every login.
     this.subscribeGroupCreator(groupId);
@@ -3589,6 +3793,10 @@ class BridgeImpl implements NostrBridge {
       };
       this.userMetadata.update((prev) => ({ ...prev, [ev.pubkey]: meta }));
       this.userMetadataLatestAt.set(ev.pubkey, ev.created_at);
+      cacheSet(this.currentRelayUrl.get(), KIND_USER_METADATA, ev.pubkey, {
+        meta,
+        createdAt: ev.created_at,
+      });
     } catch {
       // ignore malformed kind:0 content
     }

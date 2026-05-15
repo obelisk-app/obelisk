@@ -19,30 +19,12 @@ import dynamic from 'next/dynamic';
 // in practice means the first paint of the mobile UI is unstyled (SVG
 // icons render at default browser size, etc.).
 import './mobile/mobile-shell.css';
-import { useIsLoggedIn, useConfiguredRelays, useGroups } from '@/lib/nostr-bridge';
+import { useIsLoggedIn, useConfiguredRelays } from '@/lib/nostr-bridge';
 import { usePubkey } from '@nostr-wot/data/react';
 const useMyPubkey = usePubkey;
 import ProfileEditor from '@/components/ProfileEditor';
-import { useFaviconBadge } from '@/hooks/useFaviconBadge';
-import { useAutoMarkRead } from '@/hooks/useAutoMarkRead';
-import { ensureReadStateStoreForAccount } from '@/store/read-state';
-import { ensureDMStoreForAccount } from '@/store/dm';
-import { ensureModerationStoreForAccount } from '@/store/moderation';
-import { ensureForumFollowForAccount } from '@/store/chat/forum-follow-slice';
-
-/**
- * Per-account persistence wiring. Add new per-account stores here — AppGate
- * loops through this on every login change. Forgetting an entry silently
- * leaks state across accounts on the same browser.
- */
-const PER_ACCOUNT_STORES = [
-  ensureReadStateStoreForAccount,
-  ensureDMStoreForAccount,
-  ensureModerationStoreForAccount,
-  ensureForumFollowForAccount,
-] as const;
-import { startGroupsRelaySync, startDMRelaySync } from '@/lib/read-state/relay-sync';
-import { fetchProfile, fetchRelayList } from '@nostr-wot/data';
+import ReadStateRoot from '@/lib/read-state/root';
+import { fetchProfile } from '@nostr-wot/data';
 import { PROFILE_RELAYS } from '@/lib/nostr-bridge/client';
 
 const AppShell = dynamic(() => import('./DesktopShell'), { ssr: false });
@@ -64,68 +46,6 @@ function useIsMobile(): boolean | null {
     return () => mq.removeEventListener('change', update);
   }, []);
   return isMobile;
-}
-
-/**
- * Cross-shell side-effects that are identical on mobile and desktop:
- *   - swap zustand persist keys to the active account so cursors and DM
- *     overrides don't leak across logins on the same browser
- *   - mount the auto-mark hook so cursors advance while the user is reading
- *   - mount the favicon badge so the tab title and favicon reflect unreads
- *
- * Mounted only while logged in so the hooks don't run for guests.
- */
-function ReadStateRoot() {
-  const myPubkey = useMyPubkey();
-  const relays = useConfiguredRelays();
-  const groups = useGroups();
-
-  useEffect(() => {
-    if (!myPubkey) return;
-    for (const ensure of PER_ACCOUNT_STORES) ensure(myPubkey);
-  }, [myPubkey]);
-
-  // Per-relay groups state sync. We only know which group ids "belong to"
-  // the active relay set (the bridge subscribes to messages on `this.relays`
-  // — inactive relays have no group data here). Re-mount when the visible
-  // group list changes so freshly-discovered groups get included in the
-  // next debounced publish.
-  const groupIdsKey = groups.map((g) => g.id).sort().join(',');
-  useEffect(() => {
-    if (!myPubkey || relays.length === 0) return;
-    const ids = groups.map((g) => g.id);
-    if (ids.length === 0) return;
-    const cleanups = relays.map((relay) => startGroupsRelaySync(relay, ids));
-    return () => cleanups.forEach((c) => c());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [myPubkey, relays.join(','), groupIdsKey]);
-
-  // DM-state sync targets the user's NIP-65 relays so cursors converge
-  // across devices regardless of which relay they're chatting on.
-  const [dmRelays, setDmRelays] = useState<ReadonlyArray<string>>([]);
-  useEffect(() => {
-    if (!myPubkey) return;
-    let cancelled = false;
-    const searchRelays = Array.from(new Set([...relays, ...PROFILE_RELAYS]));
-    void fetchRelayList(myPubkey, searchRelays).then((list) => {
-      if (cancelled) return;
-      // NIP-65 union of read+write — matches DM coverage requirement.
-      const found = list ? Array.from(new Set([...list.read, ...list.write])) : [];
-      // Fall back to the configured set if the user has no NIP-65 list yet
-      // — better one-relay sync than no sync at all.
-      setDmRelays(found.length > 0 ? found : relays);
-    });
-    return () => { cancelled = true; };
-  }, [myPubkey, relays]);
-
-  useEffect(() => {
-    if (!myPubkey || dmRelays.length === 0) return;
-    return startDMRelaySync(dmRelays);
-  }, [myPubkey, dmRelays]);
-
-  useAutoMarkRead();
-  useFaviconBadge();
-  return null;
 }
 
 /**

@@ -5,7 +5,7 @@
  * production) with a fresh nsec identity, log everything the client does
  * (console, websocket frames, relay-access state transitions, activity
  * indicator entries, toasts), and assert each step against the contract
- * documented in `docs/auth-and-data-loading.md`.
+ * documented in `docs/data-system.md`.
  *
  * The harness skips the LoginModal: it seeds the bridge's persisted-
  * session shape directly into `localStorage` before the page loads, so
@@ -25,6 +25,9 @@ import { generateSecretKey, getPublicKey, nip19 } from 'nostr-tools';
 export const STORAGE_KEY = 'obelisk-dex/session';
 export const RELAYS_KEY = 'obelisk-dex/relays';
 export const DEFAULT_RELAY = 'wss://public.obelisk.ar';
+
+/** Whitelist-rejection specs use this restricted relay by default. */
+export const DEFAULT_RESTRICTED_RELAY = 'wss://relay.obelisk.ar';
 
 export interface PersistedSession {
   privKeyHex?: string;
@@ -321,6 +324,67 @@ export function firstChannelRow(page: Page) {
 
 function escapeRe(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Returns the active session's PersistedSession scoped to a restricted relay.
+ * Caller is responsible for `test.skip()`ing when no restricted relay is
+ * available (see `whitelist-rejection.spec.ts`). The relay is read from
+ * `OBELISK_E2E_RESTRICTED_RELAY` and defaults to {@link DEFAULT_RESTRICTED_RELAY}.
+ */
+export function restrictedNsecSession(id: FreshIdentity): PersistedSession {
+  const relayUrl = process.env.OBELISK_E2E_RESTRICTED_RELAY ?? DEFAULT_RESTRICTED_RELAY;
+  return {
+    privKeyHex: id.skHex,
+    pubKeyHex: id.pkHex,
+    relayUrl,
+    loginMethod: 'nsec',
+  };
+}
+
+/**
+ * Open the PreferencesPanel and click the "Clear local cache" button,
+ * confirming the modal. The page is expected to reload as part of the
+ * confirm action; the caller should wait for `domcontentloaded` again.
+ */
+export async function clearLocalCacheViaSettings(page: Page): Promise<void> {
+  // The desktop chat header has a Settings icon (gear) that opens
+  // UserPanel into the Preferences tab via `setSettingsTab('preferences')`.
+  // Mobile lives behind the bottom-nav "you" tab → preferences.
+  // The shared affordance: a `[data-testid="clear-cache-button"]` is in
+  // PreferencesPanel regardless of how the user navigated there.
+  //
+  // Tests open the user-edit modal directly via the avatar pill on
+  // desktop. We just rely on the button's testid being unique.
+  const button = page.getByTestId('clear-cache-button');
+  await button.waitFor({ state: 'visible', timeout: 10_000 });
+  await button.click();
+  const confirm = page.getByTestId('clear-cache-confirm-button');
+  await confirm.waitFor({ state: 'visible', timeout: 2_000 });
+  await confirm.click();
+  // The implementation reloads via window.location.reload() after a small
+  // pause. Wait for the next domcontentloaded so callers can assert the
+  // post-clear state cleanly.
+  await page.waitForLoadState('domcontentloaded');
+}
+
+/**
+ * Read a localStorage value as JSON. Returns `null` if the key is absent
+ * or doesn't parse. Useful for cross-context cursor convergence asserts.
+ */
+export async function readLocalStorageJSON<T>(
+  page: Page,
+  key: string,
+): Promise<T | null> {
+  return page.evaluate((k) => {
+    try {
+      const raw = window.localStorage.getItem(k);
+      if (raw === null) return null;
+      return JSON.parse(raw) as unknown;
+    } catch {
+      return null;
+    }
+  }, key) as Promise<T | null>;
 }
 
 /**

@@ -3,7 +3,7 @@
 Playwright-driven end-to-end tests that drive a real browser against a
 running app, capture every signal the client emits, and assert each
 step against the auth/data-loading contract documented in
-`docs/auth-and-data-loading.md`.
+`docs/data-system.md`.
 
 The harness skips the LoginModal — it seeds an nsec PersistedSession
 into `localStorage` before the page loads, so `BridgeImpl.initialize()`
@@ -31,9 +31,24 @@ Useful overrides:
 | Variable | Default | What it does |
 |---|---|---|
 | `OBELISK_E2E_BASE_URL` | `http://localhost:3001` | Origin under test. |
-| `OBELISK_E2E_RELAY` | `wss://public.obelisk.ar` | Relay seeded into the bridge session. |
+| `OBELISK_E2E_RELAY` | `wss://public.obelisk.ar` | Open relay used by every spec except the whitelist-rejection one. |
+| `OBELISK_E2E_RESTRICTED_RELAY` | `wss://relay.obelisk.ar` | Restricted relay used by `whitelist-rejection.spec.ts`. Must reject fresh pubkeys with `auth-required` or `restricted` CLOSED reasons. |
 | `OBELISK_E2E_CHANNEL` | `general` | Channel name to open + post into. Falls back to the first visible channel if not found. |
 | `HEADED` | unset | Set to `1` to launch a non-headless browser. |
+
+## Specs
+
+| Spec | What it asserts | Relay |
+|---|---|---|
+| `login-and-send.spec.ts` | Smoke: rehydrate → relay-ok → open channel → publish kind 9. | `OBELISK_E2E_RELAY` |
+| `paint-order.spec.ts` | Channel menu spinner / row paints before the chat content. | `OBELISK_E2E_RELAY` |
+| `transparent-banner.spec.ts` | `lc-banner-placeholder` until branding lands; title skeleton until grace+real value. | `OBELISK_E2E_RELAY` |
+| `members-loading.spec.ts` | "Loading members…" until `useMembershipReady` flips. | `OBELISK_E2E_RELAY` |
+| `whitelist-rejection.spec.ts` | Preflight surfaces `relay-access-banner[data-state=restricted\|auth-required]` within ~3.5s — under the 4s soak. | `OBELISK_E2E_RESTRICTED_RELAY` |
+| `connection-loss.spec.ts` | `connection-loss-banner` appears on `setOffline(true)` and clears on `setOffline(false)`. | `OBELISK_E2E_RELAY` |
+| `cache-second-load.spec.ts` | Reload paints first channel row in <1500ms from cache. | `OBELISK_E2E_RELAY` |
+| `clear-cache.spec.ts` | Preferences → Clear cache wipes relay/UI/read-state keys; preserves session + preferences. | `OBELISK_E2E_RELAY` |
+| `read-state-convergence.spec.ts` | Two contexts seeded with the same nsec converge cursors within ~12s. | `OBELISK_E2E_RELAY` |
 
 ## What gets logged
 

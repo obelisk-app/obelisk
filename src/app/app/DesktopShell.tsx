@@ -21,11 +21,13 @@ import {
   useDirectMessages,
   useAdmins,
   useMembers,
+  useMembershipReady,
   useGroupCreator,
   useMyMutes,
   useRelayAccess,
   useMyLoginMethod,
   type JsGroup,
+  type JsForumTag,
   type JsMessage,
   type JsUserMetadata,
 } from '@/lib/nostr-bridge';
@@ -37,6 +39,7 @@ import { faviconFor, fetchRelayInfo } from '@/lib/relay-info';
 import ServerRail from './ServerRail';
 import DMList from './DMList';
 import LoginModal from './LoginModal';
+import RelayStatusBanner from './RelayStatusBanner';
 import ShootingStars from '@/components/ShootingStars';
 import UserPanel from './UserPanel';
 import SearchBar from './SearchBar';
@@ -202,7 +205,7 @@ export default function AppShell() {
     // A stored session is being reconnected (cold load → relay handshake +
     // optional NIP-46 bunker pre-warm). Show a connecting screen instead of
     // the LoginModal so the user isn't told they're logged out when they're
-    // not. See `useIsRehydrating` and docs/auth-and-data-loading.md §3.
+    // not. See `useIsRehydrating` and docs/data-system.md §3.
     if (isRehydrating) return (<><RehydratingScreen /><ActivityIndicator /></>);
     // Defer LoginModal until after mount: the underlying nui Modal portal +
     // a NIP-07 extension that injects DOM before React hydrates produce a
@@ -724,6 +727,22 @@ function Sidebar({
     [layout, roots],
   );
   const branding = useRelayBranding(relay || null, relayAuthors);
+  // 1500ms grace period for the title — keeps a skeleton in place while
+  // we wait for branding. If nothing arrives by then, fall back to the
+  // shortHost() label so the user isn't staring at shimmer forever.
+  const [brandingGraceElapsed, setBrandingGraceElapsed] = useState(branding.updatedAt > 0);
+  useEffect(() => {
+    if (branding.updatedAt > 0) {
+      setBrandingGraceElapsed(true);
+      return;
+    }
+    setBrandingGraceElapsed(false);
+    const t = setTimeout(() => setBrandingGraceElapsed(true), 1500);
+    return () => clearTimeout(t);
+  }, [branding.updatedAt, relay]);
+  const brandingLoaded = branding.updatedAt > 0;
+  const showTitleSkeleton = !brandingLoaded && !brandingGraceElapsed;
+  const groupMetadataEoseGlobal = useGroupMetadataEose();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [layoutOpen, setLayoutOpen] = useState(false);
   const [brandingOpen, setBrandingOpen] = useState(false);
@@ -747,8 +766,23 @@ function Sidebar({
 
   return (
     <>
-      <div className="group relative shrink-0 border-b border-transparent shadow-sm transition-colors hover:border-lc-border">
-        {branding.banner && (
+      <div
+        className="group relative shrink-0 border-b border-transparent shadow-sm transition-colors hover:border-lc-border"
+        data-testid="sidebar-header"
+      >
+        {/* Banner slot — always present so swapping in the real image
+            doesn't shift layout. Three states:
+              - branding not loaded yet: lc-banner-placeholder (transparent feel)
+              - branding loaded + has banner URL: image fades in
+              - branding loaded + no banner URL: nothing rendered (clean) */}
+        {!brandingLoaded && (
+          <div
+            aria-hidden
+            data-testid="sidebar-banner-placeholder"
+            className="lc-banner-placeholder absolute inset-0 h-full w-full"
+          />
+        )}
+        {brandingLoaded && branding.banner && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={branding.banner}
@@ -757,14 +791,21 @@ function Sidebar({
             className="absolute inset-0 h-full w-full object-cover"
           />
         )}
-        {branding.banner && (
+        {brandingLoaded && branding.banner && (
           <div
             aria-hidden
             className="absolute inset-0 bg-gradient-to-b from-lc-black/85 via-lc-black/40 to-transparent"
           />
         )}
         <div className="relative flex h-14 items-center gap-3 overflow-hidden px-4">
-          {branding.icon && (
+          {!brandingLoaded && (
+            <div
+              aria-hidden
+              data-testid="sidebar-icon-skeleton"
+              className="lc-skeleton h-9 w-9 shrink-0 rounded-lg border border-lc-border"
+            />
+          )}
+          {brandingLoaded && branding.icon && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={branding.icon}
@@ -773,7 +814,15 @@ function Sidebar({
             />
           )}
           <div className="min-w-0 flex-1 truncate text-base font-bold text-lc-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-            {branding.name || shortHost(relay)}
+            {showTitleSkeleton ? (
+              <span
+                aria-hidden
+                data-testid="sidebar-title-skeleton"
+                className="lc-skeleton inline-block h-4 w-32 align-middle"
+              />
+            ) : (
+              branding.name || shortHost(relay)
+            )}
           </div>
           <span
             title={conn}
@@ -827,7 +876,14 @@ function Sidebar({
             </button>
           )}
         </div>
-        {branding.banner && <div aria-hidden className="relative h-24" />}
+        {/* Banner-height spacer. Reserved while branding is still loading
+            so the placeholder occupies the same vertical space the real
+            banner would — no layout shift when the image arrives. After
+            branding loads we only keep the spacer if there's an actual
+            banner URL (kept-clean fallback for branding-without-banner). */}
+        {(!brandingLoaded || (brandingLoaded && branding.banner)) && (
+          <div aria-hidden className="relative h-24" />
+        )}
       </div>
 
       {channelsVisible && (
@@ -838,13 +894,24 @@ function Sidebar({
       )}
 
       <div className={`flex-1 overflow-y-auto px-2 pb-2 ${inVoice ? 'md:pb-52' : 'md:pb-20'}`}>
-        {!channelsVisible && (
-          <div className="px-2 py-3">
-            <RelayAccessBanner compact />
+        {/* RelayStatusBanner above the chat pane is the single source of
+            truth for relay/AUTH state — the sidebar no longer duplicates it. */}
+        {groups.length === 0 && channelsVisible && !groupMetadataEoseGlobal && (
+          <div
+            className="px-2 py-3 flex items-center gap-2 text-xs text-lc-muted"
+            data-testid="channels-loading"
+          >
+            <div className="lc-spinner" style={{ width: 14, height: 14, borderWidth: 2 }} />
+            <span>Loading channels…</span>
           </div>
         )}
-        {groups.length === 0 && channelsVisible && (
-          <div className="px-2 py-3 text-xs text-lc-muted">Discovering channels… (kind 39000)</div>
+        {groups.length === 0 && channelsVisible && groupMetadataEoseGlobal && (
+          <div
+            className="px-2 py-3 text-xs text-lc-muted"
+            data-testid="channels-empty"
+          >
+            No channels on this relay yet.
+          </div>
         )}
         {laidOut.categories.map((cat) => (
           <CategorySection
@@ -1776,6 +1843,31 @@ function ChatPanel({
   const messages = useMessages(groupId);
   const messagesEose = useMessagesEose(groupId);
   const groupMetadataEose = useGroupMetadataEose();
+  // Per-channel grace timer. EOSE alone is NOT proof the channel is
+  // genuinely empty — auth-gated relays, silent filterers, and slow
+  // sockets all reach EOSE-empty quickly and then trickle real events
+  // afterwards. Require both EOSE AND a minimum dwell time before we
+  // claim the channel is empty; until then keep the spinner up.
+  const [emptyGracePassed, setEmptyGracePassed] = useState(false);
+  useEffect(() => {
+    setEmptyGracePassed(false);
+    const t = setTimeout(() => setEmptyGracePassed(true), 5000);
+    return () => clearTimeout(t);
+  }, [groupId]);
+  // If we re-enter a channel that's already in "EOSE-empty stale" state
+  // (a previous visit completed empty), force-restart the kind 9 sub so
+  // the user gets fresh data without having to refresh the whole page.
+  // Idempotent / cheap on healthy channels: just one extra REQ per
+  // re-open. Bridge handles dedup.
+  useEffect(() => {
+    if (!groupId) return;
+    if (messagesEose && messages.length === 0) {
+      void nostrActions.refreshGroupMessages(groupId);
+    }
+    // Only fires on `groupId` change — not when `messagesEose` flips
+    // mid-session (which is normal and shouldn't trigger a re-sub).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupId]);
   const reactions = useReactions(groupId);
   const messageIds = useMemo(() => messages.map((m) => m.id), [messages]);
   const zapTotals = useMessageZaps(messageIds);
@@ -2203,7 +2295,7 @@ function ChatPanel({
       {(() => {
         const textBody = (
       <>
-      <RelayAccessBanner />
+      <RelayStatusBanner />
       <div className="relative flex min-h-0 flex-1 flex-col">
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-4" data-testid={messagesVisible ? undefined : 'messages-gated-by-auth'}>
         {messages.length === 0 ? (
@@ -2215,17 +2307,28 @@ function ChatPanel({
           //   3. group present + per-group EOSE not yet:       loading
           //   4. group present + per-group EOSE + 0 messages:  welcome
           (() => {
-            const groupKnownEmpty = group && messagesEose;
-            const channelKnownMissing = !group && groupMetadataEose;
+            // EOSE alone isn't proof of emptiness — wait at least 5s
+            // (`emptyGracePassed`) before trusting it. This guards
+            // against auth-gated / silent-filtering relays that send
+            // EOSE-empty fast and then trickle real events afterwards.
+            const groupKnownEmpty = group && messagesEose && emptyGracePassed;
+            const channelKnownMissing = !group && groupMetadataEose && emptyGracePassed;
             if (!groupKnownEmpty && !channelKnownMissing) {
+              // Split the copy by which tier we're still waiting on:
+              //   - !group → kind 39000 hasn't ingested this groupId yet
+              //   - group && !messagesEose → kind 9 stream hasn't EOSE'd
+              //   - group && messagesEose && !emptyGracePassed → soaking
+              //     the empty-EOSE-then-events race
+              const stage = !group ? 'Loading channel info…' : 'Loading messages…';
               return (
                 <div
                   className="flex h-full items-center justify-center text-sm text-lc-muted"
                   data-testid="messages-loading"
+                  data-stage={!group ? 'channel-info' : 'messages'}
                 >
                   <div className="flex flex-col items-center gap-3">
                     <div className="lc-spinner" aria-hidden="true" />
-                    <div>Loading messages…</div>
+                    <div>{stage}</div>
                   </div>
                 </div>
               );
@@ -3004,10 +3107,25 @@ function MessageRow({
 // -- Members panel ------------------------------------------------------
 
 function MembersPanel({ groupId }: { groupId: string }) {
+  // Members are P3 in the priority orchestrator — the lazy per-group
+  // admin/member REQs fire when this panel mounts. Surface a loading state
+  // until {@link useMembershipReady} flips, so the user knows the empty
+  // pane is "still loading" not "no members."
+  const ready = useMembershipReady(groupId);
   return (
     <>
       <ChatStoreMembersAdapter groupId={groupId} />
-      <MemberList profileCache={EMPTY_PROFILE_CACHE} />
+      {ready ? (
+        <MemberList profileCache={EMPTY_PROFILE_CACHE} />
+      ) : (
+        <div
+          className="w-60 h-full bg-lc-dark border-l border-lc-border flex flex-col items-center justify-center gap-3 text-sm text-lc-muted"
+          data-testid="members-loading"
+        >
+          <div className="lc-spinner" aria-hidden="true" />
+          <div>Loading members…</div>
+        </div>
+      )}
       <ProfilePopupBridge />
     </>
   );
@@ -3138,6 +3256,11 @@ function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClose: () 
   const [isPublic, setIsPublic] = useState(group.isPublic);
   const [isOpen, setIsOpen] = useState(group.isOpen);
   const [channelKind, setChannelKind] = useState<'text' | 'voice' | 'voice-sfu' | 'forum'>(group.kind);
+  // Forum-container curated tags. Initialized from the relay's current
+  // metadata so the admin sees the existing set on open; mutated through
+  // the Forum tags section below and republished on save. NIP-29 9002 is a
+  // full replacement, so we always send the full intended set.
+  const [forumTags, setForumTags] = useState<ReadonlyArray<JsForumTag>>(group.forumTags);
   const [savingMeta, setSavingMeta] = useState(false);
   const [metaErr, setMetaErr] = useState<string | null>(null);
   const [uploading, setUploading] = useState<null | 'icon' | 'banner'>(null);
@@ -3208,6 +3331,11 @@ function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClose: () 
         isPublic,
         isOpen,
         kind: channelKind,
+        // Only meaningful for forums; harmless on other kinds (the chip
+        // bar only renders for `kind === 'forum'`). Passing the full set
+        // every time keeps NIP-29 9002's full-replacement semantics from
+        // dropping admin-curated tags.
+        forumTags,
       });
       // Persist the SFU pin only when this is an SFU channel and the
       // admin filled in the pubkey + URL. Empty fields => skip publish
@@ -3460,6 +3588,21 @@ function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClose: () 
               )}
             </section>
 
+            {channelKind === 'forum' && (
+              <section className="space-y-3" data-testid="forum-tags-editor">
+                <SectionHeader
+                  title="Forum tags"
+                  hint="Curated; emit as forum-tag NIP-29 metadata"
+                />
+                <p className="text-[11px] text-lc-muted">
+                  Pick a small set of categories so members can browse threads by topic.
+                  Each thread creator picks from this list — they can&apos;t invent new tags.
+                  Emoji is optional but helps the chip row scan at a glance.
+                </p>
+                <ForumTagsEditor value={forumTags} onChange={setForumTags} />
+              </section>
+            )}
+
             {metaErr && (
               <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">{metaErr}</div>
             )}
@@ -3633,6 +3776,97 @@ function ImageUploadRow({
           />
         </label>
       </div>
+    </div>
+  );
+}
+
+function newForumTagId(): string {
+  // 8-char URL-safe slug. Only needs uniqueness within one forum's tag set;
+  // collision risk inside a typical < 20-tag list is negligible.
+  return Math.random().toString(36).slice(2, 10);
+}
+
+function ForumTagsEditor({
+  value,
+  onChange,
+}: {
+  value: ReadonlyArray<JsForumTag>;
+  onChange: (next: ReadonlyArray<JsForumTag>) => void;
+}) {
+  const MAX = 20;
+  const updateAt = (idx: number, patch: Partial<JsForumTag>) => {
+    const next = value.map((t, i) => (i === idx ? { ...t, ...patch } : t));
+    onChange(next);
+  };
+  const removeAt = (idx: number) => {
+    onChange(value.filter((_, i) => i !== idx));
+  };
+  const addTag = () => {
+    if (value.length >= MAX) return;
+    onChange([...value, { id: newForumTagId(), name: '', emoji: null }]);
+  };
+  return (
+    <div className="space-y-2">
+      {value.length === 0 && (
+        <div className="rounded-lg border border-dashed border-lc-border px-3 py-3 text-center text-xs text-lc-muted">
+          No tags yet. Add one to give thread creators something to pick.
+        </div>
+      )}
+      {value.map((tag, idx) => (
+        <div
+          key={tag.id}
+          className="flex items-center gap-2 rounded-lg border border-lc-border bg-lc-black px-2 py-1.5"
+          data-testid={`forum-tag-row-${tag.id}`}
+        >
+          <input
+            type="text"
+            value={tag.emoji ?? ''}
+            onChange={(e) => {
+              const v = e.target.value;
+              // Keep it short — a single grapheme is the visual target, but
+              // browsers and emoji selectors vary, so we cap at 4 code units
+              // rather than insisting on grapheme-cluster math here.
+              updateAt(idx, { emoji: v ? v.slice(0, 4) : null });
+            }}
+            placeholder="🌐"
+            maxLength={4}
+            className="w-12 shrink-0 rounded-md border border-lc-border bg-lc-dark px-2 py-1 text-center text-sm text-lc-white outline-none focus:border-lc-green/60"
+            aria-label="Tag emoji"
+            data-testid={`forum-tag-emoji-${tag.id}`}
+          />
+          <input
+            type="text"
+            value={tag.name}
+            onChange={(e) => updateAt(idx, { name: e.target.value })}
+            placeholder="Tag name"
+            maxLength={40}
+            className="flex-1 min-w-0 rounded-md border border-lc-border bg-lc-dark px-2 py-1 text-sm text-lc-white outline-none focus:border-lc-green/60"
+            aria-label="Tag name"
+            data-testid={`forum-tag-name-${tag.id}`}
+          />
+          <button
+            type="button"
+            onClick={() => removeAt(idx)}
+            className="shrink-0 rounded-md p-1 text-lc-muted hover:bg-lc-card hover:text-red-300"
+            aria-label="Remove tag"
+            data-testid={`forum-tag-remove-${tag.id}`}
+          >
+            ✕
+          </button>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={addTag}
+        disabled={value.length >= MAX}
+        className="lc-pill-secondary text-xs px-3 py-1.5 disabled:opacity-40"
+        data-testid="forum-tag-add"
+      >
+        + Add tag
+      </button>
+      {value.length >= MAX && (
+        <p className="text-[11px] text-lc-muted">Maximum {MAX} tags reached.</p>
+      )}
     </div>
   );
 }
@@ -3940,110 +4174,10 @@ function RelayAccessModal() {
   );
 }
 
-function RelayAccessBanner({ compact = false }: { compact?: boolean } = {}) {
-  const relay = useCurrentRelayUrl();
-  const access = useRelayAccess();
-  const loginMethod = useMyLoginMethod();
-  const isLoggedIn = useIsLoggedIn();
-  if (!relay) return null;
-  if (access === 'ok') return null;
-  // The active signing prompt already appears through ActivityIndicator as
-  // a fixed bottom-right popup. Rendering an inline banner here reflows the
-  // channel/sidebar while the extension or bunker signature is pending.
-  if (access === 'authenticating') return null;
-
-  const host = shortHost(relay);
-  const wrapperBase = compact
-    ? 'rounded-xl border p-4'
-    : 'mx-5 mt-4 rounded-xl border p-5';
-  const titleSize = compact ? 'text-base' : 'text-lg';
-
-  if (access === 'unknown') {
-    // Pre-AUTH "no signal yet" state. Hidden when logged out — LoginModal
-    // owns that surface and a duplicate "Connecting" message would just
-    // crowd it.
-    if (!isLoggedIn) return null;
-    return (
-      <div
-        className={`${wrapperBase} border-lc-border bg-lc-card/60`}
-        data-testid="relay-access-banner"
-        data-state="unknown"
-      >
-        <div className={`${titleSize} font-semibold flex items-center gap-2 text-lc-white`}>
-          <span
-            className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-lc-green/30 border-t-lc-green"
-            aria-hidden
-          />
-          Connecting to {host}…
-        </div>
-        <div className="mt-1 text-sm text-lc-muted">
-          Waiting for the relay to respond. Channels stay hidden until the relay confirms read access.
-        </div>
-      </div>
-    );
-  }
-
-  if (access === 'auth-required') {
-    const reason = !isLoggedIn
-      ? 'Log in with a Nostr key — this relay only serves authenticated readers.'
-      : loginMethod === 'bunker'
-        ? 'Approve the signing request in your bunker app to complete NIP-42 AUTH.'
-        : loginMethod === 'nip07'
-          ? 'Approve the signing request in your Nostr extension to complete NIP-42 AUTH.'
-          : 'NIP-42 AUTH did not complete. Try reloading or switching login methods.';
-    return (
-      <div
-        className={`${wrapperBase} border-yellow-500/40 bg-yellow-500/10`}
-        data-testid="relay-access-banner"
-        data-state="auth-required"
-      >
-        <div className={`${titleSize} font-semibold text-yellow-200`}>
-          Not authenticated to {host}
-        </div>
-        <div className="mt-1 text-sm text-yellow-100/80">{reason}</div>
-      </div>
-    );
-  }
-  // 'restricted' | 'unreachable' | 'error'
-  return (
-    <div
-      className={`${wrapperBase} border-red-500/40 bg-red-500/10`}
-      data-testid="relay-access-banner"
-      data-state={access}
-    >
-      <div className={`${titleSize} font-semibold text-red-200`}>
-        {access === 'restricted'
-          ? `Not whitelisted on ${host}`
-          : access === 'unreachable'
-            ? `Cannot reach ${host}`
-            : `Relay error on ${host}`}
-      </div>
-      <div className="mt-1 text-sm text-red-100/80">
-        {access === 'restricted'
-          ? 'This relay accepted your signature but won’t serve or accept events from your pubkey. Ask the operator to add you to its allowlist, or switch relays.'
-          : access === 'unreachable'
-            ? 'The relay isn’t responding. It may be offline, blocked by your network, or briefly unavailable. We’ll keep retrying in the background.'
-            : 'The relay rejected the request. Try reloading or switching relays.'}
-      </div>
-    </div>
-  );
-}
-
 function EmptyState() {
-  const relay = useCurrentRelayUrl();
-  const access = useRelayAccess(relay || null);
-  // If the relay hasn't confirmed access we surface the same banner the
-  // sidebar shows, instead of "Pick a channel or DM" — the sidebar has no
-  // channels to pick yet, so that prompt would just confuse.
-  if (access !== 'ok') {
-    return (
-      <div className="flex h-full items-center justify-center px-5">
-        <div className="w-full max-w-md">
-          <RelayAccessBanner compact />
-        </div>
-      </div>
-    );
-  }
+  // Relay/AUTH state is surfaced exclusively by the chat-pane
+  // RelayStatusBanner now. The EmptyState only shows the "pick a
+  // channel" prompt — the banner mounts above this section regardless.
   return (
     <div className="flex h-full items-center justify-center text-lc-muted">
       <div className="text-center">

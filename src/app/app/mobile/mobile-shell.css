@@ -2825,6 +2825,102 @@
   font-weight: 600;
 }
 
+/* Forum chrome — search/create bar, sort/view menu, tag chip row.
+   Sits above .forum-list inside .forum-screen. Mirrors the desktop ForumView
+   layout: row 1 = search + new-thread button, row 2 = sort pill + tag chips. */
+.obelisk-mobile .forum-chrome {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--app-line);
+  flex-shrink: 0;
+}
+.obelisk-mobile .forum-search-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.obelisk-mobile .forum-search-row .search-input-wrap {
+  padding: 8px 12px;
+}
+.obelisk-mobile .forum-new-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  border: none;
+}
+.obelisk-mobile .forum-new-pill:disabled { opacity: 0.4; cursor: not-allowed; }
+.obelisk-mobile .forum-new-pill svg { width: 14px; height: 14px; }
+.obelisk-mobile .forum-filter-row {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+  overscroll-behavior-x: contain;
+  margin: 0 -12px;
+  padding: 0 12px;
+}
+.obelisk-mobile .forum-filter-row::-webkit-scrollbar { display: none; }
+.obelisk-mobile .forum-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--app-surface);
+  border: 1px solid var(--app-line);
+  color: var(--app-text);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.obelisk-mobile .forum-chip.active {
+  background: var(--accent-soft);
+  border-color: rgba(180, 249, 83, 0.4);
+  color: var(--accent);
+}
+.obelisk-mobile .forum-chip.muted {
+  background: transparent;
+  color: var(--app-text-mute);
+}
+.obelisk-mobile .forum-chip svg { width: 12px; height: 12px; }
+
+/* Per-thread tag chips inside a forum card. Smaller than the filter chips
+   above, no interaction state. */
+.obelisk-mobile .forum-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+.obelisk-mobile .forum-card-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--app-surface-2);
+  border: 1px solid var(--app-line-soft);
+  color: var(--app-text-dim);
+  font-size: 10.5px;
+  max-width: 140px;
+}
+.obelisk-mobile .forum-card-tag span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 /* ===== sheets (msg actions, zap modal) ===== */
 .obelisk-mobile .sheet-host {
   position: absolute;

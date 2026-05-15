@@ -7,6 +7,14 @@
  * Keep these two files in sync when extending the @JsExport surface.
  */
 
+export interface JsForumTag {
+  /** Short opaque slug. Stable across edits — threads reference this id. */
+  readonly id: string;
+  readonly name: string;
+  /** Single emoji char (or short pictograph). `null` when the admin didn't set one. */
+  readonly emoji: string | null;
+}
+
 export interface JsGroup {
   readonly id: string;
   readonly name: string | null;
@@ -33,6 +41,21 @@ export interface JsGroup {
    * marker is just another tag.
    */
   readonly kind: 'text' | 'voice' | 'voice-sfu' | 'forum';
+  /**
+   * Curated forum tags. Only meaningful when `kind === 'forum'` — defined by
+   * the forum's admin and carried as `["forum-tag", id, name, emoji?]` tags
+   * on the container's kind 9002/39000 metadata. Threads under the forum
+   * reference these by id via their own `topics` field. Empty for non-forum
+   * channels (and for forums that haven't defined any tags yet).
+   */
+  readonly forumTags: ReadonlyArray<JsForumTag>;
+  /**
+   * Topic ids this thread is tagged with — references entries in the parent
+   * forum container's `forumTags`. Carried as `["topic", id]` tags on the
+   * thread's kind 9002/39000 metadata. Empty for channels that aren't a
+   * forum thread or that the OP didn't tag.
+   */
+  readonly topics: ReadonlyArray<string>;
 }
 
 export interface JsMessage {
@@ -393,6 +416,18 @@ export interface NostrBridge {
      * child group of its forum container).
      */
     parent?: string;
+    /**
+     * Forum-container tags (admin-curated). Emits one
+     * `["forum-tag", id, name, emoji?]` tag per entry. Only meaningful when
+     * `kind === 'forum'` — ignored for other channel kinds.
+     */
+    forumTags?: ReadonlyArray<JsForumTag>;
+    /**
+     * Topic ids this thread is tagged with — references entries in the
+     * parent forum container's `forumTags`. Emits one `["topic", id]` tag
+     * per entry. Only meaningful when `parent` points at a forum container.
+     */
+    topics?: ReadonlyArray<string>;
   }): Promise<string>;
   editGroupMetadata(opts: {
     groupId: string;
@@ -407,6 +442,18 @@ export interface NostrBridge {
     kind?: 'text' | 'voice' | 'voice-sfu' | 'forum';
     /** NIP-29 parent group id (for nesting / forum threads). */
     parent?: string;
+    /**
+     * Replace the forum container's curated tag set. NIP-29 9002 is a full
+     * replacement, so callers must pass the full intended set on every edit
+     * — pass `[]` to clear, omit to drop them. Each entry emits a
+     * `["forum-tag", id, name, emoji?]` tag.
+     */
+    forumTags?: ReadonlyArray<JsForumTag>;
+    /**
+     * Replace the thread's topic ids. Each entry emits a `["topic", id]`
+     * tag. Pass `[]` to clear, omit to drop them.
+     */
+    topics?: ReadonlyArray<string>;
   }): Promise<void>;
   /**
    * NIP-50 search against the active relay(s). Builds a single `REQ` filter
@@ -444,6 +491,13 @@ export interface NostrBridge {
     lud16?: string;
   }): Promise<void>;
   loadMoreMessages(groupId: string): Promise<boolean>;
+  /**
+   * Close the existing kind 9 subscription for `groupId` and open a fresh
+   * one. Use when a stale EOSE-empty state may be hiding real messages —
+   * e.g. user reopens a channel that looked empty after auth-gated /
+   * silent-filtering relay behavior.
+   */
+  refreshGroupMessages(groupId: string): void;
   setActiveGroup(groupId: string | null): void;
   /** Fetch kind:0 metadata for a pubkey on demand (used by chat to resolve names lazily). */
   ensureUserMetadata(pubkey: string): void;
