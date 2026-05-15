@@ -37,7 +37,14 @@ export default function RelayShareLinkPage({ params }: { params: Promise<{ code:
         if (cancelled) return;
         await nostrActions.switchRelay(url);
         if (cancelled) return;
-        router.replace('/app');
+        // Encode the relay in the URL so AppShell's deep-link effect re-applies
+        // it on mount. Without this, a logged-out visitor whose switchRelay()
+        // can't persist (no session yet) loses the choice on the next reload,
+        // and `initialize()` restores the prior session's relay.
+        const host = (() => {
+          try { return new URL(url).host; } catch { return url.replace(/^wss?:\/\//, '').replace(/\/+$/, ''); }
+        })();
+        router.replace(`/app?relay=${encodeURIComponent(host)}`);
       } catch (e) {
         if (!cancelled) setError((e as Error).message || 'Failed to add relay.');
       }
