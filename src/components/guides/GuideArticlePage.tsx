@@ -96,11 +96,20 @@ export async function buildGuideArticleMetadata(
       publishedTime: fm.publishedAt,
       modifiedTime: fm.updatedAt,
       tags: fm.tags,
+      images: [
+        {
+          url: `${SITE_URL}${canonical}/opengraph-image`,
+          width: 1200,
+          height: 630,
+          alt: fm.title,
+        },
+      ],
     },
     twitter: {
       card: 'summary_large_image',
       title: fm.title,
       description: fm.description,
+      images: [`${SITE_URL}${canonical}/opengraph-image`],
     },
     keywords: fm.tags,
   };

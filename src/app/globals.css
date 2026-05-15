@@ -589,11 +589,15 @@ button:not(:disabled),
   z-index: 0;
 }
 /* Elevate children above the ::before/::after background layers without
- * clobbering Tailwind positioning utilities like `fixed`. `:where()` keeps
- * the selector at specificity 0 so `.fixed` still wins. */
-:where(.obelisk-desktop-bg) > * {
-  position: relative;
-  z-index: 1;
+ * clobbering Tailwind positioning utilities like `fixed`. Wrapped in
+ * `@layer base` so Tailwind's `@layer utilities` (where `.fixed` lives)
+ * wins — un-layered rules always beat layered ones regardless of
+ * specificity, which previously dropped `fixed` toasts into normal flow. */
+@layer base {
+  :where(.obelisk-desktop-bg) > * {
+    position: relative;
+    z-index: 1;
+  }
 }
 @keyframes obelisk-bg-drift {
   0%   { transform: translate3d(-3%, -2%, 0) scale(1); }
