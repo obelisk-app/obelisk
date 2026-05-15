@@ -132,6 +132,91 @@ function getAllTags(ev: NostrEvent, name: string): string[] {
   return out;
 }
 
+/**
+ * Single-pass parser for NIP-29 kind 39000 (group metadata) tag arrays.
+ * Replaces ~9 separate `ev.tags.find / .some / for-of` scans with one loop.
+ *
+ * Semantics preserved bit-for-bit from the previous open-coded version:
+ *  - `d`, `parent`, `name`, `about`, `picture`, `banner`: first occurrence wins
+ *    (matches the old `tag(name)` lambda which used `ev.tags.find`).
+ *  - `public` / `open`: presence-as-boolean flags.
+ *  - `t`: channel-kind hint with `voice-sfu > voice > forum > text` precedence.
+ *  - `forum-tag`: id-keyed map, last entry wins; malformed entries (missing
+ *    id or name) are skipped silently.
+ *  - `topic`: deduped via Set, document order preserved.
+ *
+ * Hot path — runs on every kind 39000 event in the fan-out at login, and
+ * the relay can deliver hundreds of these back-to-back.
+ */
+function parseGroupMetadataTags(tags: NostrEvent['tags']): {
+  d?: string;
+  parent?: string;
+  name?: string;
+  about?: string;
+  picture?: string;
+  banner?: string;
+  isPublic: boolean;
+  isOpen: boolean;
+  channelKind: 'voice-sfu' | 'voice' | 'forum' | 'text';
+  forumTags: JsForumTag[];
+  topics: string[];
+} {
+  let d: string | undefined;
+  let parent: string | undefined;
+  let name: string | undefined;
+  let about: string | undefined;
+  let picture: string | undefined;
+  let banner: string | undefined;
+  let isPublic = false;
+  let isOpen = false;
+  let hasVoiceSfu = false;
+  let hasVoice = false;
+  let hasForum = false;
+  const forumTagMap = new Map<string, JsForumTag>();
+  const topicSet = new Set<string>();
+
+  for (const t of tags) {
+    const k = t[0];
+    if (k === 'd') { if (d === undefined) d = t[1]; continue; }
+    if (k === 'name') { if (name === undefined) name = t[1]; continue; }
+    if (k === 'parent') { if (parent === undefined) parent = t[1]; continue; }
+    if (k === 'about') { if (about === undefined) about = t[1]; continue; }
+    if (k === 'picture') { if (picture === undefined) picture = t[1]; continue; }
+    if (k === 'banner') { if (banner === undefined) banner = t[1]; continue; }
+    if (k === 'public') { isPublic = true; continue; }
+    if (k === 'open') { isOpen = true; continue; }
+    if (k === 't') {
+      const v = t[1];
+      if (v === 'voice-sfu') hasVoiceSfu = true;
+      else if (v === 'voice') hasVoice = true;
+      else if (v === 'forum') hasForum = true;
+      continue;
+    }
+    if (k === 'forum-tag') {
+      const id = t[1];
+      const ftName = t[2];
+      if (!id || !ftName) continue;
+      const emoji = t[3] && t[3].length > 0 ? t[3] : null;
+      forumTagMap.set(id, { id, name: ftName, emoji });
+      continue;
+    }
+    if (k === 'topic') {
+      if (t[1]) topicSet.add(t[1]);
+      continue;
+    }
+  }
+
+  const channelKind: 'voice-sfu' | 'voice' | 'forum' | 'text' =
+    hasVoiceSfu ? 'voice-sfu' : hasVoice ? 'voice' : hasForum ? 'forum' : 'text';
+
+  return {
+    d, parent, name, about, picture, banner,
+    isPublic, isOpen, channelKind,
+    forumTags: Array.from(forumTagMap.values()),
+    topics: Array.from(topicSet),
+  };
+}
+
 // -- NIP-29 kinds --------------------------------------------------------
 const KIND_GROUP_MESSAGE = 9;
 const KIND_GROUP_METADATA = 39000;
@@ -3680,8 +3765,11 @@ class BridgeImpl implements NostrBridge {
   }
 
   private ingestGroupMetadata(ev: NostrEvent): void {
-    const tag = (name: string) => ev.tags.find((t) => t[0] === name)?.[1];
-    const groupId = tag('d');
+    // Single-pass parse — see {@link parseGroupMetadataTags} for the
+    // tag-precedence rules (preserved bit-for-bit from the previous
+    // multi-scan version).
+    const t = parseGroupMetadataTags(ev.tags);
+    const groupId = t.d;
     if (!groupId) return;
     // Drop older revisions arriving out-of-order from slower relays so the
     // sidebar doesn't oscillate. The cached seed (with its own created_at)
@@ -3689,53 +3777,20 @@ class BridgeImpl implements NostrBridge {
     const prevAt = this.groupMetadataLatestAt.get(groupId) ?? 0;
     if (ev.created_at <= prevAt) return;
     this.groupMetadataLatestAt.set(groupId, ev.created_at);
-    const isPublic = ev.tags.some((t) => t[0] === 'public');
-    const isOpen = ev.tags.some((t) => t[0] === 'open');
-    const parent = tag('parent') ?? null;
-    // `["t","voice"]` / `["t","voice-sfu"]` / `["t","forum"]` are the
-    // Obelisk channel-variant markers. Everything else defaults to `text`
-    // so existing groups keep working unchanged. `voice-sfu` is checked
-    // before `voice` because it's the more specific marker — a channel
-    // tagged with both is "big-room voice".
-    const isVoiceSfu = ev.tags.some((t) => t[0] === 't' && t[1] === 'voice-sfu');
-    const isVoice = !isVoiceSfu && ev.tags.some((t) => t[0] === 't' && t[1] === 'voice');
-    const isForum = !isVoiceSfu && !isVoice && ev.tags.some((t) => t[0] === 't' && t[1] === 'forum');
-    // `["forum-tag", id, name, emoji?]` — admin-curated tag definitions on a
-    // forum container. The `id` is opaque and stable; threads under the forum
-    // reference it via their own `["topic", id]` tags. Skipping malformed
-    // entries (missing id/name) keeps a typo-publish from blowing up the chip
-    // bar. De-duped on id, last entry wins.
-    const forumTagMap = new Map<string, JsForumTag>();
-    for (const t of ev.tags) {
-      if (t[0] !== 'forum-tag') continue;
-      const id = t[1];
-      const name = t[2];
-      if (!id || !name) continue;
-      const emoji = t[3] && t[3].length > 0 ? t[3] : null;
-      forumTagMap.set(id, { id, name, emoji });
-    }
-    const forumTags: ReadonlyArray<JsForumTag> = Array.from(forumTagMap.values());
-    // `["topic", id]` on a thread's metadata references a forum-tag id on
-    // its parent forum container. We surface raw ids here; the UI resolves
-    // them against the parent's `forumTags`.
-    const topicSet = new Set<string>();
-    for (const t of ev.tags) {
-      if (t[0] === 'topic' && t[1]) topicSet.add(t[1]);
-    }
-    const topics: ReadonlyArray<string> = Array.from(topicSet);
     const next: JsGroup = {
       id: groupId,
-      name: tag('name') ?? null,
-      about: tag('about') ?? null,
-      picture: tag('picture') ?? null,
-      banner: tag('banner') ?? null,
-      isPublic,
-      isOpen,
-      parent,
-      kind: isVoiceSfu ? 'voice-sfu' : isVoice ? 'voice' : isForum ? 'forum' : 'text',
-      forumTags,
-      topics,
+      name: t.name ?? null,
+      about: t.about ?? null,
+      picture: t.picture ?? null,
+      banner: t.banner ?? null,
+      isPublic: t.isPublic,
+      isOpen: t.isOpen,
+      parent: t.parent ?? null,
+      kind: t.channelKind,
+      forumTags: t.forumTags,
+      topics: t.topics,
     };
+    const parent = next.parent;
     this.groups.update((prev) => {
       const filtered = prev.filter((g) => g.id !== groupId);
       return [...filtered, next].sort((a, b) => (a.name ?? a.id).localeCompare(b.name ?? b.id));
