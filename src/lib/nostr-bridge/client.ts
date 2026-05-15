@@ -917,6 +917,34 @@ class BridgeImpl implements NostrBridge {
   private pendingMessageSet = new Set<string>();
   private pendingMessageTimer: ReturnType<typeof setTimeout> | null = null;
   /**
+   * Upper bound on how long the background message-queue drain stays
+   * paused waiting for the active channel's first EOSE / event. Without
+   * this, an active channel that never responds (silent socket,
+   * auth-gated relay that never delivers, watchdog-thrashing sub) would
+   * starve every other channel's kind 9 sub indefinitely — and since
+   * `ingestMessage` is where `ensureUserMetadata` is fanned out, that
+   * also starves the profile-picture lookups for those channels'
+   * authors. {@link ACTIVE_PRIORITY_MAX_PAUSE_MS} caps the pause; after
+   * it elapses, the queue drains even if the active sub is still
+   * `loading`. Tuned to give the watched channel a healthy head start
+   * without leaving background data stranded for noticeably long.
+   */
+  private static readonly ACTIVE_PRIORITY_MAX_PAUSE_MS = 3000;
+  /**
+   * Wall-clock deadline after which the active-channel priority gate
+   * stops pausing the background drain. Set on every {@link setActiveGroup}
+   * call; reset to 0 on logout / relay switch / pool reset.
+   */
+  private activeGroupPriorityDeadline = 0;
+  /**
+   * Single-shot timer that fires at {@link activeGroupPriorityDeadline}
+   * and force-releases the gate. Without an explicit fire, a queue that
+   * arrived while the gate was engaged would sit forever if the active
+   * sub never produced an EOSE / event to trigger
+   * {@link maybeResumeMessageQueueDrain}.
+   */
+  private activeGroupPriorityTimer: ReturnType<typeof setTimeout> | null = null;
+  /**
    * Per-group retry tracking for the kind 9 stream. Populated on the first
    * empty EOSE; cleared on first event ingest, channel logout, or after
    * {@link EMPTY_RETRY_DELAYS}.length restarts (whichever comes first).
@@ -1292,6 +1320,11 @@ class BridgeImpl implements NostrBridge {
       clearTimeout(this.pendingMessageTimer);
       this.pendingMessageTimer = null;
     }
+    if (this.activeGroupPriorityTimer) {
+      clearTimeout(this.activeGroupPriorityTimer);
+      this.activeGroupPriorityTimer = null;
+    }
+    this.activeGroupPriorityDeadline = 0;
     // Re-login on the same browser keeps the in-memory bridge instance, so
     // the kind 39000 newest-wins guard retains every `groupId → created_at`
     // pair from the previous session. Kind 39000 is replaceable: the new
@@ -1523,6 +1556,11 @@ class BridgeImpl implements NostrBridge {
       clearTimeout(this.pendingMessageTimer);
       this.pendingMessageTimer = null;
     }
+    if (this.activeGroupPriorityTimer) {
+      clearTimeout(this.activeGroupPriorityTimer);
+      this.activeGroupPriorityTimer = null;
+    }
+    this.activeGroupPriorityDeadline = 0;
     this.activeGroupId = null;
     // Forget any in-flight relay-access state and tear down dangling
     // "Authenticating with {host}" entries — the next session must
@@ -1733,6 +1771,11 @@ class BridgeImpl implements NostrBridge {
       clearTimeout(this.pendingMessageTimer);
       this.pendingMessageTimer = null;
     }
+    if (this.activeGroupPriorityTimer) {
+      clearTimeout(this.activeGroupPriorityTimer);
+      this.activeGroupPriorityTimer = null;
+    }
+    this.activeGroupPriorityDeadline = 0;
     // Per-relay state that previously bled across switches: parent→children
     // index, group-creator map, reactions, the newest-wins guard cursor for
     // group metadata, and the per-group creator-sub set. Without clearing
@@ -2700,6 +2743,24 @@ class BridgeImpl implements NostrBridge {
   setActiveGroup(groupId: string | null): void {
     const previousActive = this.activeGroupId;
     this.activeGroupId = groupId;
+    // Reset the priority deadline + arm a force-release timer. See
+    // {@link ACTIVE_PRIORITY_MAX_PAUSE_MS} for the rationale.
+    if (this.activeGroupPriorityTimer) {
+      clearTimeout(this.activeGroupPriorityTimer);
+      this.activeGroupPriorityTimer = null;
+    }
+    if (groupId) {
+      this.activeGroupPriorityDeadline = Date.now() + BridgeImpl.ACTIVE_PRIORITY_MAX_PAUSE_MS;
+      this.activeGroupPriorityTimer = setTimeout(() => {
+        this.activeGroupPriorityTimer = null;
+        // Deadline passed — release the gate even if status is still
+        // 'loading'. If there's pending background work, drain it now;
+        // otherwise this is a no-op.
+        this.maybeResumeMessageQueueDrain();
+      }, BridgeImpl.ACTIVE_PRIORITY_MAX_PAUSE_MS);
+    } else {
+      this.activeGroupPriorityDeadline = 0;
+    }
     // Switching away from a still-loading channel? Resume the background
     // queue drain so other channels' subs aren't held forever.
     if (previousActive && previousActive !== groupId) {
@@ -3346,12 +3407,16 @@ class BridgeImpl implements NostrBridge {
 
   /**
    * True iff the user is watching a channel whose kind 9 stream has not
-   * yet produced either an EOSE or a message. Used to gate background
-   * REQs so the watched channel always gets the relay's first attention.
+   * yet produced either an EOSE or a message AND the priority deadline
+   * has not yet elapsed. Used to gate background REQs so the watched
+   * channel always gets the relay's first attention — but bounded by
+   * {@link ACTIVE_PRIORITY_MAX_PAUSE_MS} so a silent active sub can't
+   * starve every other channel.
    */
   private isActiveGroupStillLoading(): boolean {
     const id = this.activeGroupId;
     if (!id) return false;
+    if (Date.now() >= this.activeGroupPriorityDeadline) return false;
     const status = this.messagesStatusByGroup.get()[id];
     return !status || status === 'loading';
   }
