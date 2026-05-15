@@ -810,6 +810,16 @@ class BridgeImpl implements NostrBridge {
   // revision from a slow relay can't overwrite a fresher one. Also lets
   // the cached seed survive against stale events still in flight.
   private groupMetadataLatestAt = new Map<string, number>();
+  /**
+   * Reverse index for {@link childrenByParent}: groupId → its current parent
+   * (or `null` if root). Used by {@link ingestGroupMetadata} to update the
+   * children map in O(1) on every kind 39000 ingest instead of scanning
+   * every parent bucket for the groupId — the relay can deliver hundreds of
+   * 39000 events back-to-back at login, and the old `Object.keys(prev)` +
+   * `.filter()` per ingest was O(parents × children) on a hot path.
+   * Lifecycle mirrors {@link childrenByParent}.
+   */
+  private groupParentMap = new Map<string, string | null>();
   // Newest-wins guard for kind 0 (user metadata). Without this, an older
   // revision returned by a slow profile relay overwrites a newer one from a
   // faster relay — the symptom is the member rail's names/avatars loading
@@ -1060,6 +1070,10 @@ class BridgeImpl implements NostrBridge {
         topics: cached.topics ?? [],
       };
       this.groupMetadataLatestAt.set(groupId, createdAt);
+      // Track parent for the reverse index even when null — keeps
+      // {@link ingestGroupMetadata}'s fast-path "parent didn't change"
+      // comparison working after a cache-seeded paint.
+      this.groupParentMap.set(groupId, group.parent ?? null);
       this.groups.update((prev) => {
         if (prev.some((g) => g.id === groupId)) return prev;
         return [...prev, group].sort((a, b) => (a.name ?? a.id).localeCompare(b.name ?? b.id));
@@ -1673,6 +1687,7 @@ class BridgeImpl implements NostrBridge {
     // user-visible symptom was channels and structure from different relays
     // appearing mixed. See docs/data-system.md.
     this.childrenByParent.set({});
+    this.groupParentMap.clear();
     this.groupCreators.set({});
     this.reactionsByGroup.set({});
     this.groupMetadataLatestAt.clear();
@@ -3821,20 +3836,35 @@ class BridgeImpl implements NostrBridge {
     // local user is the creator without having to assume it on every login.
     this.subscribeGroupCreator(groupId);
     // Maintain parent → children index so the sidebar can render nesting.
-    this.childrenByParent.update((prev) => {
-      const next: Record<string, string[]> = { ...prev };
-      // Remove this groupId from any old parent buckets to handle re-parents.
-      for (const k of Object.keys(next)) {
-        if (next[k].includes(groupId)) {
-          next[k] = next[k].filter((id) => id !== groupId);
+    // O(1) update via {@link groupParentMap}: look up the previous parent
+    // for this groupId in the reverse map and only touch the affected
+    // buckets. Fast path when the parent didn't change is a no-op.
+    const oldParent = this.groupParentMap.get(groupId) ?? null;
+    if (oldParent !== parent) {
+      this.childrenByParent.update((prev) => {
+        let nextMap = prev;
+        if (oldParent && prev[oldParent]) {
+          const filtered = prev[oldParent].filter((id) => id !== groupId);
+          if (filtered.length !== prev[oldParent].length) {
+            if (filtered.length === 0) {
+              const { [oldParent]: _drop, ...rest } = nextMap;
+              void _drop;
+              nextMap = rest;
+            } else {
+              nextMap = { ...nextMap, [oldParent]: filtered };
+            }
+          }
         }
-      }
-      if (parent) {
-        const arr = next[parent] ?? [];
-        if (!arr.includes(groupId)) next[parent] = [...arr, groupId].sort();
-      }
-      return next;
-    });
+        if (parent) {
+          const arr = nextMap[parent] ?? [];
+          if (!arr.includes(groupId)) {
+            nextMap = { ...nextMap, [parent]: [...arr, groupId].sort() };
+          }
+        }
+        return nextMap;
+      });
+      this.groupParentMap.set(groupId, parent);
+    }
   }
 
   private ingestMessage(groupId: string, ev: NostrEvent): void {

@@ -438,6 +438,56 @@ describe('nostr-bridge', () => {
     expect(last.parent1).toContain('child1');
   });
 
+  it('re-parenting a group moves it to the new parent bucket without leaving stale entries', async () => {
+    // Regression test for the O(1) reverse-index optimization
+    // ({@link groupParentMap}) — when a kind 39000 event arrives with a
+    // different parent than we previously had cached, the child must be
+    // removed from the old parent's bucket and only the new parent's
+    // bucket should contain it. Prior implementation scanned every bucket
+    // with Object.keys+filter; the new one looks up the previous parent
+    // in O(1). This test ensures the new code still handles re-parents.
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+
+    const observed: Record<string, ReadonlyArray<string>>[] = [];
+    bridge.subscribeChildrenByParent((m) => observed.push({ ...m }));
+
+    // Three revisions of the same child with increasing created_at so each
+    // ingest replaces the prior (newest-wins guard). created_at must
+    // strictly increase to avoid being dropped.
+    const base = Math.floor(Date.now() / 1000);
+    const sk = generateSecretKey();
+    const pk = getPublicKey(sk);
+    const buildRevision = async (parent: string, ts: number): Promise<NostrEvent> =>
+      finalizeEvent(
+        {
+          kind: 39000,
+          content: '',
+          tags: [['d', 'mover'], ['name', 'Mover'], ['parent', parent]],
+          created_at: ts,
+          pubkey: pk,
+        } as Parameters<typeof finalizeEvent>[0],
+        sk,
+      );
+
+    deliver(await fakeRelayMetadata({ groupId: 'p-a', name: 'A' }));
+    deliver(await fakeRelayMetadata({ groupId: 'p-b', name: 'B' }));
+    deliver(await fakeRelayMetadata({ groupId: 'p-c', name: 'C' }));
+    deliver(await buildRevision('p-a', base + 1));
+    deliver(await buildRevision('p-b', base + 2));
+    deliver(await buildRevision('p-c', base + 3));
+    await flush();
+
+    const last = observed.at(-1) as Record<string, ReadonlyArray<string>>;
+    // Final parent must contain the child.
+    expect(last['p-c']).toContain('mover');
+    // Old parents must NOT — this is what the reverse index guarantees.
+    expect(last['p-a'] ?? []).not.toContain('mover');
+    expect(last['p-b'] ?? []).not.toContain('mover');
+  });
+
   it('parses [forum-tag,id,name,emoji?] entries on kind 39000 into JsGroup.forumTags', async () => {
     const { getBridge } = await import('./client');
     const { skHex, pkHex } = makeKeypair();
