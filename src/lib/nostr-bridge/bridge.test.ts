@@ -67,6 +67,17 @@ const fake = vi.hoisted(() => {
       state.ensureRelayCalls.push(_url);
       return { connected: true };
     }
+    /**
+     * Resolve to every previously-`publish()`ed event that matches the
+     * filter. The bridge uses this for fetchGroupMetadata, search, and
+     * (post cold-load-fix) the kind-9 querySync fallback when the retry
+     * ladder exhausts. Tests that want querySync to return events should
+     * pre-`publish` them; tests that want it empty just leave state.published
+     * alone for that filter.
+     */
+    async querySync(_relays: string[], filter: Record<string, unknown>, _opts?: { maxWait?: number }): Promise<NostrEvent[]> {
+      return state.published.filter((ev) => matchesInternal(filter, ev as { kind: number; pubkey: string; tags: string[][] })) as NostrEvent[];
+    }
   }
 
   return { state, FakePool, matchesInternal };
@@ -824,6 +835,64 @@ describe('nostr-bridge', () => {
     expect(subsAfter[0]).toBe(firstSub);
   });
 
+  it('caps the auth-required immediate retry — second onclose falls back to backoff', async () => {
+    // Regression for the kind-9 tight-loop bug: when a relay persistently
+    // rejects with CLOSED auth-required, the old scheduleRetry path fired
+    // a fresh REQ at 0ms delay on EVERY close (the comment claimed
+    // "subsequent failures hit backoff" but the code always passed
+    // immediate=true). That tight loop hammered the relay and starved
+    // every other REQ (admin/member, kind 0, branding). The fix caps the
+    // immediate path to the first onclose; subsequent closes use the
+    // standard exponential backoff.
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const groupId = 'auth-required-backoff-after-first';
+    bridge.subscribeMessages(groupId, () => {});
+    await flush();
+
+    const findMessageSubs = () =>
+      fake.state.subscriptions.filter((s) => {
+        const f = s.filter as { kinds?: number[]; '#h'?: string[] };
+        return f.kinds?.includes(9) && f['#h']?.includes(groupId);
+      });
+
+    const firstSub = findMessageSubs().at(-1)!;
+    expect(firstSub).toBeTruthy();
+
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      // First auth-required CLOSED on this closure (attempt === 1).
+      // useImmediate is true → delay 0 → retried sub appears synchronously
+      // after the next tick.
+      firstSub.onclose?.((firstSub.relays ?? ['']).map(() => 'auth-required: please AUTH'));
+      await vi.advanceTimersByTimeAsync(10);
+      const secondSub = findMessageSubs().at(-1)!;
+      expect(secondSub).toBeTruthy();
+      expect(secondSub).not.toBe(firstSub);
+
+      // Second auth-required CLOSED on the retried sub (attempt === 2).
+      // useImmediate is now FALSE (the cap kicks in). Delay becomes
+      // 2^(attempt-1) * 1000 = 2000ms. Within 100ms of the close, no
+      // new sub should have been opened — that's the whole point of the
+      // backoff cap.
+      secondSub.onclose?.((secondSub.relays ?? ['']).map(() => 'auth-required: please AUTH'));
+      await vi.advanceTimersByTimeAsync(100);
+      expect(findMessageSubs()).toHaveLength(0);
+
+      // After the full backoff window elapses, the retried sub appears.
+      await vi.advanceTimersByTimeAsync(2000);
+      const thirdSub = findMessageSubs().at(-1);
+      expect(thirdSub).toBeDefined();
+      expect(thirdSub).not.toBe(secondSub);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('does not flash the relay-access banner on transient auth-required CLOSED', async () => {
     const { getBridge, getBridgeImpl } = await import('./client');
     const { skHex, pkHex } = makeKeypair();
@@ -1283,6 +1352,498 @@ describe('nostr-bridge', () => {
     }
   });
 
+  it('setActiveGroup on a stuck-loading channel restarts the sub so the click gets fresh priority', async () => {
+    // Regression for "I clicked the channel and it's still spinning,
+    // had to refresh the page for it to load." When the background
+    // drain has already subscribed a channel and the sub is stuck
+    // (status not 'has-messages'), a user click via setActiveGroup
+    // MUST tear down the stuck sub and open a fresh one. Otherwise
+    // the click just bumps a sub that's never going to deliver.
+    const { getBridge, getBridgeImpl } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const impl = getBridgeImpl()!;
+    const groupId = 'click-restart-on-stuck';
+
+    const subsFor = () =>
+      fake.state.subscriptions.filter((s) => {
+        const f = s.filter as { kinds?: number[]; '#h'?: string[] };
+        return f.kinds?.includes(9) && f['#h']?.includes(groupId);
+      });
+
+    // Background-drain-style subscribe: existing sub on the channel.
+    bridge.subscribeMessages(groupId, () => {});
+    await flush();
+    const initialSubs = subsFor();
+    expect(initialSubs).toHaveLength(1);
+    const firstSub = initialSubs[0];
+    // After flush, FakePool's auto-EOSE fired empty → status =
+    // 'empty-unconfirmed'.
+    expect(impl.messagesStatusByGroup.get()[groupId]).toBe('empty-unconfirmed');
+
+    // User click: setActiveGroup must restart the stuck sub.
+    bridge.setActiveGroup(groupId);
+    // Synchronously: messageSubscribedGroups was repopulated by the
+    // restart, but the sub object should be a FRESH one — the old
+    // firstSub is gone from state.subscriptions.
+    const afterClick = subsFor();
+    expect(afterClick).toHaveLength(1);
+    expect(afterClick[0]).not.toBe(firstSub);
+    expect(impl.messagesStatusByGroup.get()[groupId]).toBe('loading');
+  });
+
+  it('setActiveGroup on a stuck channel ALSO fires querySync in parallel (defense in depth)', async () => {
+    // Regression for "some channels still need a refresh even after
+    // the click-restart fix." The live sub restart sometimes wedges
+    // on the same conditions that had the previous sub stuck
+    // (relay-side per-REQ AUTH quirks, SimplePool dedup of identical
+    // filters on the same socket). Firing querySync alongside the
+    // restart gives the channel a parallel second chance — if either
+    // path returns events, ingestMessage promotes to 'has-messages'.
+    const { getBridge, getBridgeImpl } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const impl = getBridgeImpl()!;
+    const groupId = 'click-parallel-querysync';
+
+    // Spy on pool.querySync to count kind-9 calls for this group.
+    const pool = (impl as unknown as { pool: { querySync: (...args: unknown[]) => Promise<NostrEvent[]> } }).pool;
+    let kind9QueryCalls = 0;
+    (pool as { querySync: (...args: unknown[]) => Promise<NostrEvent[]> }).querySync = async (_relays: unknown, filter: unknown) => {
+      const f = filter as { kinds?: number[]; '#h'?: string[] };
+      if (f.kinds?.includes(9) && f['#h']?.includes(groupId)) kind9QueryCalls++;
+      return [];
+    };
+
+    // Initial subscribe → status flips to 'empty-unconfirmed' after
+    // FakePool's auto-EOSE.
+    bridge.subscribeMessages(groupId, () => {});
+    await flush();
+    expect(impl.messagesStatusByGroup.get()[groupId]).toBe('empty-unconfirmed');
+    expect(kind9QueryCalls).toBe(0);
+
+    // Click → setActiveGroup → bumpGroupMessagesPriority → both
+    // refreshGroupMessages (live restart) AND querySync fire.
+    bridge.setActiveGroup(groupId);
+    await flush();
+    expect(kind9QueryCalls).toBe(1);
+  });
+
+  it('AUTH ok also refreshes channels stuck in "loading" (not just empty-*)', async () => {
+    // Regression for "the channel sat in Loading messages… forever
+    // because a sub opened during AUTH-pending got stranded with no
+    // EOSE, and the wireAuthSettledHook only refreshed channels in
+    // empty-*." Channels in 'loading' get refreshed too now.
+    const { getBridge, getBridgeImpl } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const impl = getBridgeImpl()!;
+    const groupId = 'auth-ok-refresh-loading';
+
+    const activeRelay = impl['relays'][0];
+    (impl as unknown as { relayAccess: { set: (v: Record<string, unknown>) => void } }).relayAccess.set({
+      [activeRelay]: 'authenticating',
+    });
+
+    const subsFor = () =>
+      fake.state.subscriptions.filter((s) => {
+        const f = s.filter as { kinds?: number[]; '#h'?: string[] };
+        return f.kinds?.includes(9) && f['#h']?.includes(groupId);
+      });
+
+    // Pre-set status to 'loading' WITHOUT going through the FakePool
+    // auto-EOSE (which would flip it to empty-unconfirmed). We do this
+    // by intercepting the FakePool subscribe to suppress its EOSE for
+    // this specific filter, simulating a sub that opened on a not-yet-
+    // AUTH'd socket and never received an EOSE.
+    bridge.setActiveGroup(groupId);
+    bridge.subscribeMessages(groupId, () => {});
+    // Don't flush microtasks fully — we want the initial 'loading'
+    // status to persist. Sync setMessagesStatus is the cleanest path:
+    (impl as unknown as { setMessagesStatus: (id: string, s: string) => void }).setMessagesStatus(groupId, 'loading');
+    expect(impl.messagesStatusByGroup.get()[groupId]).toBe('loading');
+    const initialSubs = subsFor();
+    expect(initialSubs.length).toBeGreaterThan(0);
+    const initialSub = initialSubs.at(-1)!;
+
+    // AUTH settles → wireAuthSettledHook should refresh the 'loading'
+    // channel (the active one).
+    (impl as unknown as { setRelayAccess: (url: string, state: string) => void }).setRelayAccess(activeRelay, 'ok');
+    await flush();
+
+    const afterSubs = subsFor();
+    expect(afterSubs.length).toBeGreaterThan(0);
+    expect(afterSubs.at(-1)).not.toBe(initialSub); // fresh sub exists
+  });
+
+  it('setActiveGroup on a has-messages channel does NOT restart the sub (no relay churn)', async () => {
+    // Mirror image of the previous test: if the existing sub is
+    // healthy and delivering, a click must NOT tear it down. Otherwise
+    // every channel switch would burn a REQ on the relay for no
+    // benefit.
+    const { getBridge, getBridgeImpl } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const impl = getBridgeImpl()!;
+    const groupId = 'click-noop-when-loaded';
+
+    const subsFor = () =>
+      fake.state.subscriptions.filter((s) => {
+        const f = s.filter as { kinds?: number[]; '#h'?: string[] };
+        return f.kinds?.includes(9) && f['#h']?.includes(groupId);
+      });
+
+    // Pre-deliver an event so the sub lands in 'has-messages'.
+    bridge.subscribeMessages(groupId, () => {});
+    deliver(await fakeRelayMessage({ groupId, content: 'pre-existing' }));
+    await flush();
+    expect(impl.messagesStatusByGroup.get()[groupId]).toBe('has-messages');
+    const before = subsFor();
+    expect(before).toHaveLength(1);
+    const stableSub = before[0];
+
+    bridge.setActiveGroup(groupId);
+    const after = subsFor();
+    expect(after).toHaveLength(1);
+    expect(after[0]).toBe(stableSub); // identity check — no replacement
+  });
+
+  it('AUTH-pending defers empty-confirmed promotion — stuck channels stay in empty-unconfirmed', async () => {
+    // Regression for "user is staring at their NIP-46 bunker waiting to
+    // approve, meanwhile the chat pane has flipped to 'No messages yet'
+    // even though the channel has plenty of history the relay just
+    // hasn't been allowed to serve yet." The empty-EOSE retry ladder
+    // now checks `relayAccess[activeRelay]` before promoting; if AUTH
+    // is still in flight (`'unknown'` / `'authenticating'`), the
+    // verdict is deferred and status stays at `empty-unconfirmed` so
+    // the UI keeps the spinner up. The wireAuthSettledHook fires a
+    // fresh REQ when AUTH eventually settles.
+    const { getBridge, getBridgeImpl } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const impl = getBridgeImpl()!;
+    const groupId = 'auth-pending-defer';
+
+    // Force relayAccess back to a pending state. The FakePool's
+    // synchronous EOSE replay flipped it to 'ok' on login; we want to
+    // exercise the path where the relay hasn't authed us yet.
+    const activeRelay = impl['relays'][0];
+    (impl as unknown as { relayAccess: { set: (v: Record<string, unknown>) => void } }).relayAccess.set({
+      [activeRelay]: 'authenticating',
+    });
+
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      bridge.subscribeMessagesStatus(groupId, () => {});
+      bridge.subscribeMessages(groupId, () => {});
+      await Promise.resolve();
+      await Promise.resolve();
+      // Drive the ladder to exhaustion. WITHOUT the AUTH gate, status
+      // would flip to 'empty-confirmed' here. WITH the gate, it stays
+      // at 'empty-unconfirmed' and the retry entry is cleared (so no
+      // zombie timer ticks in the background).
+      await vi.advanceTimersByTimeAsync(10000);
+    } finally {
+      vi.useRealTimers();
+    }
+    await flush();
+
+    expect(impl.messagesStatusByGroup.get()[groupId]).toBe('empty-unconfirmed');
+    expect(impl.messagesRetryByGroup.has(groupId)).toBe(false);
+  });
+
+  it('AUTH settles to ok → stuck channels auto-refresh and deliver pending history', async () => {
+    // Regression for the "tap approve, then I have to refresh the
+    // whole page" UX. When `relayAccess` transitions from pending to
+    // 'ok' on the active relay, the bridge fires `refreshGroupMessages`
+    // for any channel held in `empty-unconfirmed` / `empty-confirmed`.
+    // The fresh REQ rides the now-AUTH'd socket and delivers history
+    // — no page reload required.
+    const { getBridge, getBridgeImpl } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const impl = getBridgeImpl()!;
+    const groupId = 'auth-settle-autorefresh';
+
+    const activeRelay = impl['relays'][0];
+    (impl as unknown as { relayAccess: { set: (v: Record<string, unknown>) => void } }).relayAccess.set({
+      [activeRelay]: 'authenticating',
+    });
+
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      bridge.setActiveGroup(groupId);
+      bridge.subscribeMessages(groupId, () => {});
+      await Promise.resolve();
+      await Promise.resolve();
+      await vi.advanceTimersByTimeAsync(10000);
+      expect(impl.messagesStatusByGroup.get()[groupId]).toBe('empty-unconfirmed');
+
+      // Pre-publish an event before AUTH flips — it sits in
+      // `state.published` and will be replayed to the next sub.
+      deliver(await fakeRelayMessage({ groupId, content: 'arrived after AUTH' }));
+
+      // Simulate AUTH success. setRelayAccess takes the public path
+      // (not a raw store overwrite) so the wireAuthSettledHook fires
+      // via the StateStore subscriber chain.
+      (impl as unknown as { setRelayAccess: (url: string, state: string) => void }).setRelayAccess(activeRelay, 'ok');
+
+      // The hook calls refreshGroupMessages → new sub → synchronous
+      // FakePool.subscribe replays state.published (including the
+      // freshly stashed event) → onevent → ingestMessage → status
+      // flips to 'has-messages'.
+      await vi.advanceTimersByTimeAsync(50);
+    } finally {
+      vi.useRealTimers();
+    }
+    await flush();
+
+    const msgs = impl.messagesByGroup.get()[groupId] ?? [];
+    expect(msgs.map((m) => m.content)).toContain('arrived after AUTH');
+    expect(impl.messagesStatusByGroup.get()[groupId]).toBe('has-messages');
+  });
+
+  it('AUTH fails permanently → stuck empty-unconfirmed channels promote to empty-confirmed', async () => {
+    // Regression for the third state: AUTH-pending defer would
+    // otherwise hold channels in `empty-unconfirmed` forever. When
+    // `relayAccess` transitions to a failed state ('auth-required',
+    // 'restricted', etc.), the bridge promotes everything stuck on
+    // the gate so the chat pane shows "No messages yet" alongside the
+    // RelayStatusBanner explaining the access failure.
+    const { getBridge, getBridgeImpl } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const impl = getBridgeImpl()!;
+    const groupId = 'auth-fail-promote';
+    const activeRelay = impl['relays'][0];
+
+    (impl as unknown as { relayAccess: { set: (v: Record<string, unknown>) => void } }).relayAccess.set({
+      [activeRelay]: 'authenticating',
+    });
+
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      bridge.subscribeMessagesStatus(groupId, () => {});
+      bridge.subscribeMessages(groupId, () => {});
+      await Promise.resolve();
+      await Promise.resolve();
+      await vi.advanceTimersByTimeAsync(10000);
+      expect(impl.messagesStatusByGroup.get()[groupId]).toBe('empty-unconfirmed');
+
+      (impl as unknown as { setRelayAccess: (url: string, state: string) => void }).setRelayAccess(activeRelay, 'auth-required');
+      await vi.advanceTimersByTimeAsync(0);
+    } finally {
+      vi.useRealTimers();
+    }
+    await flush();
+
+    expect(impl.messagesStatusByGroup.get()[groupId]).toBe('empty-confirmed');
+  });
+
+  it('cold-load fallback: querySync fires after the ladder exhausts and recovers messages', async () => {
+    // Regression for "first cold load shows Loading messages… forever
+    // because the relay never delivered kind 9 to the live REQ." After
+    // the 1.5/3/5s ladder exhausts, the bridge fires a focused
+    // `pool.querySync` with a longer maxWait — a second-chance request
+    // that goes out as a fresh frame, by which point AUTH / whitelist
+    // state has had time to settle. Events ingested through that path
+    // promote status back from `empty-confirmed` to `has-messages`.
+    const { getBridge, getBridgeImpl } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const impl = getBridgeImpl()!;
+    const groupId = 'cold-load-fallback';
+
+    // Stash a kind 9 event directly in `state.published` so the
+    // FakePool's `querySync` resolves with content. We push BEFORE
+    // subscribing so the bridge's onevent (from the live REQ's
+    // synchronous replay in FakePool.subscribe) ingests it too — but
+    // we accept that side effect; the key assertion is that the test
+    // ends with `has-messages` regardless of which path got us there.
+    // (A purer test for the fallback specifically would stub
+    // pool.subscribe to skip the synchronous replay; the single-shot
+    // counter test below covers the "only fallback fired" case.)
+    const sk = generateSecretKey();
+    const pk = getPublicKey(sk);
+    const stashed = finalizeEvent(
+      {
+        kind: 9,
+        content: 'rescued by querySync',
+        tags: [['h', groupId]],
+        created_at: Math.floor(Date.now() / 1000),
+        pubkey: pk,
+      } as Parameters<typeof finalizeEvent>[0],
+      sk,
+    );
+    fake.state.published.push(stashed);
+
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      // Install fake timers BEFORE subscribing — otherwise the first
+      // retry timer (armed in oneose) lives on the real timer queue
+      // and advanceTimersByTimeAsync below would never fire it.
+      bridge.subscribeMessagesStatus(groupId, () => {});
+      bridge.subscribeMessages(groupId, () => {});
+      await Promise.resolve();
+      await Promise.resolve();
+      // Drive the retry ladder to exhaustion (1.5 + 3 + 5 = 9.5s) and
+      // give the post-final EOSE microtask + querySync resolution a
+      // pad.
+      await vi.advanceTimersByTimeAsync(10000);
+    } finally {
+      vi.useRealTimers();
+    }
+    await flush();
+    await flush();
+
+    const msgs = impl.messagesByGroup.get()[groupId] ?? [];
+    expect(msgs.map((m) => m.content)).toContain('rescued by querySync');
+    expect(impl.messagesStatusByGroup.get()[groupId]).toBe('has-messages');
+  });
+
+  it('cold-load fallback is single-shot per session unless refreshGroupMessages re-arms it', async () => {
+    const { getBridge, getBridgeImpl } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const impl = getBridgeImpl()!;
+    const groupId = 'cold-load-fallback-singleshot';
+
+    // Stub `pool.querySync` to count calls AND return empty so the
+    // status reaches `empty-confirmed` (not has-messages — that would
+    // hit ingestMessage which clears retry state and complicates the
+    // single-shot trace).
+    const pool = (impl as unknown as { pool: { querySync: (...args: unknown[]) => Promise<NostrEvent[]> } }).pool;
+    let kind9QueryCalls = 0;
+    (pool as { querySync: (...args: unknown[]) => Promise<NostrEvent[]> }).querySync = async (_relays: unknown, filter: unknown) => {
+      const f = filter as { kinds?: number[]; '#h'?: string[] };
+      if (f.kinds?.includes(9) && f['#h']?.includes(groupId)) kind9QueryCalls++;
+      return [];
+    };
+
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      bridge.subscribeMessagesStatus(groupId, () => {});
+      bridge.subscribeMessages(groupId, () => {});
+      await Promise.resolve();
+      await Promise.resolve();
+      await vi.advanceTimersByTimeAsync(10000);
+    } finally {
+      vi.useRealTimers();
+    }
+    await flush();
+    expect(kind9QueryCalls).toBe(1);
+    expect(impl.messagesStatusByGroup.get()[groupId]).toBe('empty-confirmed');
+
+    // No second auto-fire even after another full ladder length — the
+    // empty-confirmed guard prevents the ladder from restarting, and
+    // the single-shot flag prevents a redundant querySync.
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      await vi.advanceTimersByTimeAsync(15000);
+    } finally {
+      vi.useRealTimers();
+    }
+    await flush();
+    expect(kind9QueryCalls).toBe(1);
+
+    // Explicit user retry re-arms the fallback flag and restarts the
+    // sub. The new ladder runs to exhaustion → fallback fires a second
+    // time.
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      bridge.refreshGroupMessages(groupId);
+      await Promise.resolve();
+      await Promise.resolve();
+      await vi.advanceTimersByTimeAsync(10000);
+    } finally {
+      vi.useRealTimers();
+    }
+    await flush();
+    expect(kind9QueryCalls).toBe(2);
+  });
+
+  it('post-empty-confirmed EOSE keeps status pinned and does not restart the ladder', async () => {
+    // Regression for the "Loading messages… ↔ No messages yet" loop:
+    // after the retry ladder has reached `empty-confirmed`,
+    // `subscribeWatched` keeps re-issuing the REQ when the relay sends
+    // CLOSED auth-required (the EOSE-then-CLOSED race). Each fresh REQ
+    // delivers another empty EOSE, which used to call back through the
+    // bridge's `oneose` and downgrade status to `empty-unconfirmed`,
+    // restarting the 1.5/3/5s ladder. UI consequence: the chat pane
+    // oscillated between the spinner and the welcome copy forever.
+    const { getBridge, getBridgeImpl } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const impl = getBridgeImpl()!;
+    const groupId = 'post-empty-confirmed-no-restart';
+
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      bridge.subscribeMessagesStatus(groupId, () => {});
+      // Drive status to empty-confirmed via the ladder (1.5+3+5=9.5s).
+      await vi.advanceTimersByTimeAsync(10000);
+      expect(impl.messagesStatusByGroup.get()[groupId]).toBe('empty-confirmed');
+
+      // Locate the current live kind-9 sub for this group. The retry
+      // ladder closed and reopened a few times; the last one in
+      // state.subscriptions is the one still alive.
+      const kind9Subs = fake.state.subscriptions.filter((s) => {
+        const f = s.filter as { kinds?: number[]; '#h'?: string[] };
+        return f.kinds?.includes(9) && f['#h']?.includes(groupId);
+      });
+      expect(kind9Subs.length).toBeGreaterThan(0);
+      const liveSub = kind9Subs.at(-1)!;
+
+      // Simulate the EOSE-then-CLOSED race. CLOSED auth-required drives
+      // subscribeWatched's scheduleRetry(true) → fresh pool.subscribe →
+      // fresh queueMicrotask EOSE → bridge's oneose runs again. The fix
+      // gates the downgrade on `messagesStatusByGroup[groupId] !==
+      // 'empty-confirmed'` so the ladder must NOT restart here.
+      liveSub.onclose?.((liveSub.relays ?? ['']).map(() => 'auth-required: please AUTH'));
+      // Advance enough for the immediate retry setTimeout(0) to fire,
+      // the new pool.subscribe to queue its oneose microtask, and that
+      // oneose to drain through to bridge.oneose.
+      await vi.advanceTimersByTimeAsync(10);
+
+      // Without the guard: status would now be 'empty-unconfirmed' and
+      // messagesRetryByGroup would contain a fresh 1500ms timer.
+      expect(impl.messagesStatusByGroup.get()[groupId]).toBe('empty-confirmed');
+      expect(impl.messagesRetryByGroup.has(groupId)).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('setActiveGroup on an "empty-confirmed" channel restarts the sub and resets confidence to "loading"', async () => {
     const { getBridge, getBridgeImpl } = await import('./client');
     const { skHex, pkHex } = makeKeypair();
@@ -1384,6 +1945,262 @@ describe('nostr-bridge', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  // -- message + reaction caching ----------------------------------------
+  // Per the new cache contract (CLAUDE.md §bridgeCache + cache.ts header),
+  // kind 9 and kind 7 events are persisted to localStorage so the chat pane
+  // can paint stale history instantly on cold load instead of staring at
+  // "Loading messages…" while the relay round-trips. Tests below assert the
+  // write-on-ingest, the cap, the optimistic filter, and the seed-on-login
+  // round trip.
+
+  it('ingestMessage persists confirmed messages to bridgeCache after the debounce', async () => {
+    const { getBridge, getBridgeImpl } = await import('./client');
+    const { cacheGet } = await import('./cache');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const impl = getBridgeImpl()!;
+    const groupId = 'msg-cache-roundtrip';
+    bridge.subscribeMessages(groupId, () => {});
+    await flush();
+
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      deliver(await fakeRelayMessage({ groupId, content: 'first' }));
+      deliver(await fakeRelayMessage({ groupId, content: 'second' }));
+      // Cache flush is debounced; nothing on disk yet.
+      const beforeFlush = cacheGet<unknown[]>(impl.currentRelayUrl.get(), 9, groupId);
+      expect(beforeFlush).toBeNull();
+
+      // Drain the 200ms debounce.
+      await vi.advanceTimersByTimeAsync(300);
+    } finally {
+      vi.useRealTimers();
+    }
+    await flush();
+
+    const cached = cacheGet<{ content: string }[]>(
+      impl.currentRelayUrl.get(),
+      9,
+      groupId,
+    );
+    expect(cached).toBeTruthy();
+    expect(cached!.value.map((m) => m.content)).toEqual(['first', 'second']);
+  });
+
+  it('cached messages cap at MESSAGE_CACHE_LIMIT (last 50 by createdAt)', async () => {
+    const { getBridge, getBridgeImpl } = await import('./client');
+    const { cacheGet } = await import('./cache');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const impl = getBridgeImpl()!;
+    const groupId = 'msg-cache-cap';
+    bridge.subscribeMessages(groupId, () => {});
+    await flush();
+
+    // Pre-sign 60 events with increasing created_at so the ordering is stable.
+    const events: NostrEvent[] = [];
+    const baseTs = Math.floor(Date.now() / 1000);
+    for (let i = 0; i < 60; i++) {
+      const sk = generateSecretKey();
+      const pk = getPublicKey(sk);
+      events.push(
+        finalizeEvent(
+          {
+            kind: 9,
+            content: `m${i}`,
+            tags: [['h', groupId]],
+            created_at: baseTs + i,
+            pubkey: pk,
+          } as Parameters<typeof finalizeEvent>[0],
+          sk,
+        ),
+      );
+    }
+
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      for (const ev of events) deliver(ev);
+      await vi.advanceTimersByTimeAsync(300);
+    } finally {
+      vi.useRealTimers();
+    }
+    await flush();
+
+    const cached = cacheGet<{ content: string }[]>(
+      impl.currentRelayUrl.get(),
+      9,
+      groupId,
+    );
+    expect(cached).toBeTruthy();
+    expect(cached!.value).toHaveLength(50);
+    // Newest-by-createdAt window: m10..m59. The first 10 are dropped.
+    expect(cached!.value[0].content).toBe('m10');
+    expect(cached!.value[49].content).toBe('m59');
+  });
+
+  it('optimistic placeholders are filtered out before the cache write', async () => {
+    const { getBridge, getBridgeImpl } = await import('./client');
+    const { cacheGet } = await import('./cache');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const impl = getBridgeImpl()!;
+    const groupId = 'msg-cache-no-optimistic';
+    bridge.subscribeMessages(groupId, () => {});
+    await flush();
+
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      // bridge.sendMessage inserts an optimistic placeholder synchronously,
+      // then publishes, then the relay echo replaces it. Drive the full
+      // round-trip so the cache flush sees only the confirmed copy.
+      await bridge.sendMessage(groupId, 'sent-via-bridge');
+      await vi.advanceTimersByTimeAsync(300);
+    } finally {
+      vi.useRealTimers();
+    }
+    await flush();
+
+    const cached = cacheGet<{ content: string; pending?: boolean }[]>(
+      impl.currentRelayUrl.get(),
+      9,
+      groupId,
+    );
+    expect(cached).toBeTruthy();
+    expect(cached!.value).toHaveLength(1);
+    // No leftover `pending: true` on a cached entry — that would resurrect
+    // a stale spinner bubble on next session.
+    expect(cached!.value[0].pending).toBeUndefined();
+    expect(cached!.value[0].content).toBe('sent-via-bridge');
+  });
+
+  it('seedCacheForRelay paints cached messages into messagesByGroup before live REQ', async () => {
+    const { getBridge, getBridgeImpl } = await import('./client');
+    const { cacheSet } = await import('./cache');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const impl = getBridgeImpl()!;
+    const groupId = 'msg-cache-seed';
+    const relay = impl.currentRelayUrl.get();
+
+    // Pre-populate the cache as if a previous session had written 3 messages.
+    const baseTs = Math.floor(Date.now() / 1000) - 60;
+    cacheSet(relay, 9, groupId, [
+      { id: 'a', pubkey: 'x'.repeat(64), content: 'cold-1', createdAt: baseTs, kind: 9, replyToId: null, mentions: [] },
+      { id: 'b', pubkey: 'y'.repeat(64), content: 'cold-2', createdAt: baseTs + 1, kind: 9, replyToId: null, mentions: [] },
+      { id: 'c', pubkey: 'z'.repeat(64), content: 'cold-3', createdAt: baseTs + 2, kind: 9, replyToId: null, mentions: [] },
+    ]);
+
+    // switchRelay re-runs seedCacheForRelay against the (same) relay url and
+    // re-paints from the just-written cache, mirroring what a fresh page
+    // load does on cold start.
+    await bridge.switchRelay(relay);
+    await flush();
+
+    const inMemory = impl.messagesByGroup.get()[groupId] ?? [];
+    expect(inMemory.map((m) => m.content)).toEqual(['cold-1', 'cold-2', 'cold-3']);
+  });
+
+  it('ingestReaction persists to bridgeCache and seedCacheForRelay paints it', async () => {
+    const { getBridge, getBridgeImpl } = await import('./client');
+    const { cacheGet, cacheSet } = await import('./cache');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const impl = getBridgeImpl()!;
+    const groupId = 'rxn-cache';
+    bridge.subscribeReactions(groupId, () => {});
+    await flush();
+
+    // Drive an inbound reaction through the relay.
+    const sk = generateSecretKey();
+    const pk = getPublicKey(sk);
+    const rxnEv = finalizeEvent(
+      {
+        kind: 7,
+        content: '🔥',
+        tags: [['e', 'tgt-1'], ['h', groupId]],
+        created_at: Math.floor(Date.now() / 1000),
+        pubkey: pk,
+      } as Parameters<typeof finalizeEvent>[0],
+      sk,
+    );
+
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      deliver(rxnEv);
+      await vi.advanceTimersByTimeAsync(300);
+    } finally {
+      vi.useRealTimers();
+    }
+    await flush();
+
+    const cached = cacheGet<Record<string, { emoji: string }[]>>(
+      impl.currentRelayUrl.get(),
+      7,
+      groupId,
+    );
+    expect(cached).toBeTruthy();
+    expect(cached!.value['tgt-1']).toBeDefined();
+    expect(cached!.value['tgt-1'][0].emoji).toBe('🔥');
+
+    // Now wipe in-memory state and verify the seed re-populates from cache.
+    impl.reactionsByGroup.set({});
+    // Write a sentinel cache value so we can prove the seed read it.
+    cacheSet(impl.currentRelayUrl.get(), 7, groupId, {
+      'tgt-2': [{ id: 'r2', pubkey: pk, emoji: '👀', targetEventId: 'tgt-2', createdAt: 1 }],
+    });
+    await bridge.switchRelay(impl.currentRelayUrl.get());
+    await flush();
+
+    const seeded = impl.reactionsByGroup.get()[groupId];
+    expect(seeded).toBeTruthy();
+    expect(seeded['tgt-2'][0].emoji).toBe('👀');
+  });
+
+  it('logout wipes the bridgeCache so the next user does not inherit cached messages', async () => {
+    const { getBridge, getBridgeImpl } = await import('./client');
+    const { cacheGet } = await import('./cache');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const impl = getBridgeImpl()!;
+    const groupId = 'msg-cache-logout';
+    bridge.subscribeMessages(groupId, () => {});
+    await flush();
+
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      deliver(await fakeRelayMessage({ groupId, content: 'before logout' }));
+      await vi.advanceTimersByTimeAsync(300);
+    } finally {
+      vi.useRealTimers();
+    }
+    await flush();
+    const relay = impl.currentRelayUrl.get();
+    expect(cacheGet(relay, 9, groupId)).toBeTruthy();
+
+    await bridge.logout();
+    // Logout calls cacheClearAll synchronously via the shared
+    // clearLocalStateAfterLogout helper — the next read must miss.
+    expect(cacheGet(relay, 9, groupId)).toBeNull();
   });
 
   it('background message-queue drain is gated by the active channel reaching its first EOSE / event', async () => {

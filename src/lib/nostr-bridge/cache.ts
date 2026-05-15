@@ -16,26 +16,33 @@
  *     via `cacheSet`.
  *   - Keyed by `relay + kind + id`. The relay scoping prevents cross-relay
  *     leakage (a server's admin list is meaningful only for that relay).
- *   - localStorage-backed. Synchronous, ~5MB cap per origin. v1 only stores
- *     small lists (39001/39002 = N pubkeys per group, kind 0 ~1KB per user).
- *     Messages are NOT cached here — they would blow the cap.
+ *   - localStorage-backed. Synchronous, ~5MB cap per origin. Entries stay
+ *     small by capping the cached window per kind (MESSAGE_CACHE_LIMIT,
+ *     REACTION_CACHE_LIMIT in client.ts); even a heavy account with 20+
+ *     channels stays well under quota.
  *   - Invalidation: explicit only. {@link cacheClearAll} on logout.
  *     {@link cacheDelete} for surgical removal. We deliberately do NOT
  *     invalidate on relay-switch — caches for the previous relay stay on
  *     disk and re-paint instantly if the user switches back.
  *
  * Currently wired (every entry pairs an ingest writer with a seed reader):
- *   - kind 39001 / 39002 (admin/member lists)  — `client.ts:ingestAdminMember` + `seedCacheForRelay`
- *   - kind 39000         (group metadata)       — `client.ts:ingestGroupMetadata` + `seedCacheForRelay`
- *   - kind 9007          (group creators)       — `client.ts:ingestGroupCreator` + `seedCacheForRelay`
  *   - kind 0             (user profile)         — `client.ts:ingestUserMetadata` + `seedCacheForRelay`
+ *   - kind 7             (reactions)            — `client.ts:ingestReaction` (debounced) + `seedCacheForRelay`
+ *   - kind 9             (group messages)       — `client.ts:ingestMessage` (debounced) + `seedCacheForRelay`
+ *   - kind 9007          (group creators)       — `client.ts:ingestGroupCreator` + `seedCacheForRelay`
+ *   - kind 39000         (group metadata)       — `client.ts:ingestGroupMetadata` + `seedCacheForRelay`
+ *   - kind 39001 / 39002 (admin/member lists)   — `client.ts:ingestAdminMember` + `seedCacheForRelay`
  *   - kind 30078 layout   (channel layout)      — `channel-layout.ts:subscribeLayout`
  *   - kind 30078 branding (relay branding)      — `relay-branding.ts:subscribeBranding`
  *
  * Deliberately NOT cached:
- *   - kind 9 messages — would blow the 5MB localStorage cap on active channels.
- *   - kind 7 reactions — same.
  *   - kind 4 DMs — already persisted by the DM store with its own per-account key.
+ *
+ * Note on messages + reactions: the on-disk window is the last
+ * MESSAGE_CACHE_LIMIT messages and REACTION_CACHE_LIMIT reactions per
+ * channel (50 and 500 respectively today). The live REQ still runs and
+ * its echoes overwrite the in-memory store; the cache exists purely to
+ * give the chat pane something to paint before the relay round-trips.
  */
 
 // v3 — bumped to evict cache entries written by the pre-bleed-fix bridge,

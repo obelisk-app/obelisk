@@ -64,6 +64,11 @@ const fake = vi.hoisted(() => {
     async ensureRelay(_url: string, _opts?: { connectionTimeout?: number }) {
       return { connected: true };
     }
+    async querySync(_relays: string[], _filter: Record<string, unknown>, _opts?: { maxWait?: number }): Promise<NostrEvent[]> {
+      // Preflight tests don't subscribe to messages; the kind-9 querySync
+      // fallback path won't fire. Returning empty is safe.
+      return [];
+    }
   }
 
   return { state, FakePool };

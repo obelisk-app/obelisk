@@ -54,6 +54,9 @@ const fake = vi.hoisted(() => {
       state.connectOrder.push(`ensureRelay:${url}`);
       return { connected: true };
     }
+    async querySync(_relays: string[], filter: Record<string, unknown>, _opts?: { maxWait?: number }): Promise<NostrEvent[]> {
+      return state.published.filter((ev) => matches(filter, ev));
+    }
   }
 
   return { state, FakePool, matches };

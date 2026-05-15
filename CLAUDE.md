@@ -22,60 +22,93 @@ Payments          Nostr Wallet Connect (NIP-47) — src/lib/wallet/
 
 ## Stack
 - **Next.js 16** + TypeScript + Tailwind CSS v4 (purely client-rendered — no API routes)
-- **nostr-tools** — `SimplePool`, `BunkerSigner`, `finalizeEvent`, NIP-04/NIP-44 helpers
-- **NDK** (Nostr Dev Kit) — used for some helper paths (`getNDK()` in `src/lib/nostr.ts`); **the active login + relay surface is the bridge, not NDK**
-- **Zustand** — client-side state (`src/store/chat.ts`, `src/store/notification.ts`, `src/store/voice.ts`, etc.). Identity comes from the bridge, not a Zustand store.
+- **nostr-tools** — `SimplePool`, `BunkerSigner`, `finalizeEvent`, NIP-04/NIP-44 helpers. This is the only Nostr client in the running code path.
+- **@nostr-wot/data** + **@nostr-wot/ui** — WoT-aware profile/follow hooks (`useProfile`, `useFollows`, `usePubkey`, `formatPubkey`, `hexToNpub`) consumed by the rail / search / DM list. Orthogonal to the bridge — the bridge owns identity + relay subs; nostr-wot owns WoT scoring + profile cache.
+- **Zustand** — client-side state under `src/store/` (chat, dm, voice, notification, read-state, settings, appearance, moderation, multi-account, search, toast, locale, messageZap, notificationPrefs). Identity is NOT a Zustand store — it lives on the bridge.
 - **Vitest** + **React Testing Library** + **jsdom** — testing
+- **NDK** is in `package.json` for historical reasons but is **not imported anywhere in `src/`** — do not reach for it when adding features.
 
 ## Project Structure
 ```
 src/
-├── app/
-│   ├── layout.tsx        # Root layout (La Crypta theme)
-│   ├── page.tsx          # Landing page
-│   ├── app/              # /app — chat UI lives here
-│   │   ├── AppShell.tsx      # Top-level chat shell, gates on useIsLoggedIn
-│   │   ├── LoginModal.tsx    # 3 auth methods + QR bunker flow
-│   │   ├── ServerRail.tsx    # Relay-list rail
-│   │   ├── DMList.tsx        # Direct messages
+├── app/                          # Next.js App Router
+│   ├── layout.tsx                # Root layout (La Crypta theme)
+│   ├── page.tsx                  # Landing page
+│   ├── app/                      # /app — chat surface
+│   │   ├── page.tsx                # Mounts <AppGate />
+│   │   ├── AppGate.tsx             # Viewport-based switch: desktop or mobile shell (`useIsMobile`)
+│   │   ├── DesktopShell.tsx        # Desktop chat shell (default export named AppShell)
+│   │   ├── mobile/                 # Phone shell + per-screen views
+│   │   │   └── PhoneShell.tsx
+│   │   ├── LoginModal.tsx          # 3 auth methods + QR bunker flow
+│   │   ├── RelayStatusBanner.tsx   # Unified connection + access banner
+│   │   ├── ServerRail.tsx          # Relay-list rail
+│   │   ├── DMList.tsx, DMComposer.tsx
 │   │   ├── SearchBar.tsx
 │   │   └── UserPanel.tsx
-│   ├── guides/           # Markdown guides + SVG diagrams
+│   ├── guides/                   # Markdown guides + SVG diagrams
+│   ├── r/[code]/                 # Per-relay branded share-link routes
+│   ├── voice/                    # Voice channel surface
 │   ├── manifest.ts, robots.ts, sitemap.ts, opengraph-image.tsx
-│   └── voice/            # Voice channel surface
 ├── components/
-│   ├── Navbar.tsx        # Landing-page nav (uses bridge identity hooks)
-│   ├── ProfileEditor.tsx # kind:0 editor — calls bridge.editUserMetadata
-│   ├── chat/
-│   │   ├── MemberList.tsx
-│   │   ├── MessageContent.tsx, MessageZapModal.tsx
-│   │   ├── ProfilePopover.tsx
-│   │   └── InvoiceCard.tsx   # BOLT11 invoice payment via local NWC
-│   └── voice/            # VoiceRoom, VoiceStatusBar
+│   ├── Navbar.tsx, Footer.tsx, LandingPage.tsx, Showcase.tsx
+│   ├── ProfileEditor.tsx           # kind:0 editor — `bridge.editUserMetadata`
+│   ├── ActivityIndicator.tsx, ToastStack.tsx, ModalShell.tsx
+│   ├── BlossomImageInput.tsx, UserAvatar.tsx, ObeliskIcon.tsx
+│   ├── ShootingStars.tsx, LanguageToggle.tsx, FAQItem.tsx, SdkSessionBridge.tsx
+│   ├── admin/                       # RelayAdminPanel
+│   ├── chat/                        # MemberList, MessageContent, MessageZapModal,
+│   │                                 # ForumView, ProfilePopover, InvoiceCard,
+│   │                                 # EmojiPicker, MentionAutocomplete/Navigator,
+│   │                                 # LinkPreview, CodeBlock, SpoilerText, WotBadge, …
+│   ├── guides/                      # ArticleShell, GuideCard, Callout, …
+│   ├── settings/                    # Account / relay / appearance panels
+│   └── voice/                       # VoiceRoom, VoiceStatusBar
 ├── hooks/
-│   ├── useIdentity.ts    # Thin facade over bridge hooks
-│   └── chat/             # useNostrPresence, useMessageZaps, useVoiceChatPane
+│   ├── useIdentity.ts             # Thin facade over bridge identity hooks
+│   ├── useAutoMarkRead.ts, useClickOutside.ts, useCopyToClipboard.ts
+│   ├── useDebouncedCallback.ts, useFaviconBadge.ts
+│   └── chat/                      # useNostrPresence, useMessageZaps, useVoiceChatPane
 ├── lib/
-│   ├── nostr-bridge/     # ⭐ THE bridge — read this first
-│   │   ├── client.ts         # SimplePool wrapper, sessions, subscriptions
-│   │   ├── stores.ts         # React hooks: useIsLoggedIn, useGroups, useAdmins, ...
-│   │   ├── actions.ts        # Imperative login / publish actions
-│   │   ├── cache.ts          # Stale-while-revalidate localStorage cache
-│   │   ├── types.ts          # NostrBridge interface, JsGroup/JsMessage/...
-│   │   └── index.ts          # Public re-exports
-│   ├── nostr.ts          # NDK helpers used outside the bridge (getNDK, formatPubkey, ...)
-│   ├── channel-layout.ts # NIP-78 (kind 30078) channel layout
-│   ├── relay-branding.ts # Operator-controlled relay branding
-│   ├── dm/               # NIP-04 DM cache + relay list resolution
-│   ├── wallet/           # NWC client (NIP-47)
-│   ├── blossom.ts        # Blossom (BUD-01) image upload
-│   ├── nip98.ts          # NIP-98 HTTP auth (signed Authorization headers)
-│   └── voice/            # Voice room utilities
-├── store/                # Zustand stores (chat, notification, voice, dm, ...)
-└── test/setup.ts         # Vitest + jsdom setup
+│   ├── nostr-bridge/              # ⭐ THE bridge — read this first
+│   │   ├── client.ts                # SimplePool wrapper, sessions, subscriptions
+│   │   ├── stores.ts                # React hooks: useIsLoggedIn, useGroups, useAdmins, …
+│   │   ├── actions.ts               # Imperative login / publish actions
+│   │   ├── orchestrator.ts          # P0/P2 tier plan + dispatcher
+│   │   ├── cache.ts                 # Stale-while-revalidate localStorage cache
+│   │   ├── cache-clear.ts           # Sweep for "Clear cache" UX
+│   │   ├── relay-url.ts             # normalizeRelayUrl + validation
+│   │   ├── types.ts                 # NostrBridge interface, JsGroup/JsMessage/…
+│   │   └── index.ts                 # Public re-exports
+│   ├── channel-layout.ts          # NIP-78 (kind 30078) channel layout + operator pubkey
+│   ├── relay-branding.ts          # Operator-controlled relay branding (kind 30078)
+│   ├── relay-info.ts              # NIP-11 fetcher (relay name, icon, operator pubkey)
+│   ├── relay-share-link.ts        # /r/<code> share-link encoder/decoder
+│   ├── nip-kinds.ts, nip-59.ts, nip98.ts  # Protocol helpers
+│   ├── mentions.ts, markdown.ts, emoji-shortcodes.ts, remark-spoiler.ts
+│   ├── attachments.ts, blossom.ts, bolt11.ts
+│   ├── group-search.ts, guides.ts, guide-urls.ts
+│   ├── i18n.ts, json-safe.ts, local-store.ts, promise.ts, preferences.ts
+│   ├── activity-log.ts, favicon-badge.ts, recent-emojis.ts, read-gates.ts
+│   ├── reset.ts                   # `resetAllClientState()` — login/logout teardown
+│   ├── dm/                        # NIP-04 DM cache + relay-list resolution
+│   ├── wallet/                    # Nostr Wallet Connect (NIP-47)
+│   ├── voice/                     # Mesh + SFU client (`client.ts`, `peer.ts`, `sfu-client.ts`)
+│   ├── wot/                       # Web-of-trust engine + colors
+│   ├── read-state/                # Read-state store + relay-sync (NIP-59 gift wrap)
+│   ├── notifications/             # Inbox cards + favicon badge
+│   ├── hooks/                     # Bridge-internal hook utilities
+│   ├── server/                    # Server-side helpers (currently OG image)
+│   ├── nostr-hooks.ts, nostr-pool.ts, nostr-read.ts  # Legacy thin wrappers
+├── store/                         # Zustand stores (chat, dm, voice, notification,
+│                                   # read-state, settings, search, multi-account,
+│                                   # moderation, appearance, locale, toast, …)
+└── test/setup.ts                  # Vitest + jsdom setup
 ```
 
 The `prisma/`, `server.ts`, and `src/app/api/` directories from the legacy stack are gone. References to `useAuthStore`, `restoreSession`, `syncProfile`, `/api/auth/*`, `/api/members/*` are no longer in the tree — if you find one, it slipped through and should be removed.
+
+The chat shell entry point is `AppGate.tsx` (mounted by `app/page.tsx`); it picks between `DesktopShell` and `mobile/PhoneShell` based on `useIsMobile()`. Both shells observe `useIsLoggedIn()` and render the same store-fed UI.
 
 ## Commands
 ```bash
@@ -110,20 +143,34 @@ All four entrypoints (and the page-reload rehydration in `initialize()`) route t
 
 ## Data subscriptions
 
-`connect()` opens global REQs at login: group metadata (kind 39000), incoming DMs (kind 4 with `#p` and `authors`), own contact list (kind 3), own kind:0. Per-group REQs are eagerly fired from `ingestGroupMetadata`:
+`connect()` runs the priority orchestrator (`src/lib/nostr-bridge/orchestrator.ts`). Two tiers leave the wire in strict order:
+
+- **P0** (same microtask): whitelist preflight (kind 0 `authors:[me]` limit 1), group metadata (kind 39000), own kind 0.
+- **P2** (next microtask): relay-wide admin/member (kinds 39001+39002, no `#d`), incoming DMs (kind 4 with `#p` and `authors`), own contact list (kind 3), mute list (kind 10000), authored groups (kind 9007), active calls (kind 31314).
+
+`ingestGroupMetadata` fans out per-group work for every discovered channel:
 
 ```
 ingestGroupMetadata(ev)
 ├── this.groups.update(...)
-├── subscribeGroupMessages(groupId)        — kind 9, #h=groupId
-└── subscribeAdminMember(groupId)          — kinds 39001+39002, #d=groupId
+├── queueGroupMessages(groupId)        — kind 9, #h=groupId (deferred batch drain, active channel jumps the queue)
+└── subscribeGroupCreator(groupId)     — kind 9007, #h=groupId (one-shot, for the WoT exemption + lazy admin-claim)
 ```
 
-This is what makes "groups where I am admin" resolve on first paint without the user opening each channel.
+Per-group admin/member (`subscribeAdminMember`) is **not** fired here — the relay-wide P2 sub covers it. The lazy per-group sub on `useAdmins` / `useMembers` mount is idempotent and serves as a fallback.
 
 ## bridgeCache (stale-while-revalidate)
 
-`src/lib/nostr-bridge/cache.ts` is a tiny `localStorage` cache for relay-derived state. Wired through admin/member lists (39001/39002), group metadata (39000), creators (9007), user metadata (0), and NIP-78 layout/branding (30078). Messages and reactions are intentionally not cached. See [docs/data-system.md §9](docs/data-system.md) for the full contract.
+`src/lib/nostr-bridge/cache.ts` is a small `localStorage` cache for relay-derived state. Each entry pairs an ingest writer (via `cacheSet`, often with an equality guard or a debounce) with a seed reader (`seedCacheForRelay` on bridge construction / login / `switchRelay`).
+
+Currently wired:
+- kind 0 (user profiles) — capped iteration on seed (500 pubkeys)
+- kind 7 (reactions) — per-channel map, debounced 200ms, capped at `REACTION_CACHE_LIMIT` (500/channel)
+- kind 9 (messages) — per-channel list, debounced 200ms, capped at `MESSAGE_CACHE_LIMIT` (50/channel); optimistic placeholders are filtered out before write
+- kind 9007 (creators), 39000 (group metadata), 39001/39002 (admin/member lists)
+- kind 30078 (NIP-78) — channel layout + relay branding share this kind under different `d`-tags
+
+Deliberately not cached: kind 4 DMs (the DM store keeps its own per-account persistence). See [docs/data-system.md §9](docs/data-system.md) for the full contract.
 
 ## Voice & video
 
@@ -239,7 +286,7 @@ for where this sits relative to the bridgeCache.
 > **No exceptions. Tests are part of the implementation, not an afterthought.**
 
 ## Relays
-- **Default for groups:** `wss://relay.obelisk.ar` (overridable per session)
+- **Default for groups:** `wss://public.obelisk.ar` (constant `DEFAULT_RELAY` in `src/lib/nostr-bridge/client.ts`, overridable per session)
 - **Profile relays (kind:0 / kind:3):** relay.damus.io, relay.nostr.band, nos.lol, relay.primal.net, purplepag.es
 - **NostrConnect rendezvous:** relay.nsec.app + the profile relays
 - **User relays:** Auto-fetched from NIP-65 (kind 10002) for DM delivery (`fetchMyDmRelays`)

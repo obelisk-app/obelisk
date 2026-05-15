@@ -27,7 +27,7 @@ import { v2 as nip44 } from 'nostr-tools/nip44';
 import type { NipSigner } from '@/lib/nip-59';
 import { parseRelayListMeta, parseInboxRelays } from '@/lib/nostr-read';
 import { TextCoercingWebSocket } from '@/lib/nostr-pool';
-import { cacheGet, cacheSet, cacheClearAll, cacheListIds } from './cache';
+import { cacheGet, cacheSet, cacheDelete, cacheClearAll, cacheListIds } from './cache';
 import { normalizeRelayUrl } from './relay-url';
 import { runConnectFanOut, type TierAction } from './orchestrator';
 import { wotEngine } from '@/lib/wot/engine';
@@ -314,6 +314,22 @@ const DEFAULT_RELAYS = ['wss://public.obelisk.ar'];
 const BACKGROUND_MESSAGE_LIMIT = 50;
 const LOAD_MORE_PAGE_SIZE = 50;
 
+// How many of the most recent confirmed messages per channel get persisted to
+// `bridgeCache`. Matched to BACKGROUND_MESSAGE_LIMIT so a cold load paints the
+// same window the live REQ is about to request — stale-while-revalidate, with
+// no visible "jump" when the relay echo lands.
+const MESSAGE_CACHE_LIMIT = 50;
+// Hard cap on cached reactions per channel. Reactions are tiny (~80 bytes
+// each), so 500 fits well under 50KB per channel. When the live store grows
+// past this, the cache flush drops the oldest by createdAt.
+const REACTION_CACHE_LIMIT = 500;
+// Debounce delay for message / reaction cache flushes. A backfill burst from
+// the relay (kind 9 limit:50) lands as N synchronous ingest calls in the same
+// tick; the debounce coalesces them into a single localStorage.setItem at the
+// end. Short enough that a steady-state message arriving on its own still
+// reaches disk well before the next reload window.
+const CACHE_FLUSH_DELAY_MS = 200;
+
 // How long to wait before flipping the relay-access banner from 'unknown' to
 // a non-ok state on retryable rejections (auth-required/restricted). The
 // `subscribeWatched` retry path heals most NIP-42 AUTH races in <1s; a 4s
@@ -564,6 +580,99 @@ class BridgeImpl implements NostrBridge {
   constructor() {
     this.pool = this.createPool();
     this.wireWotEngine();
+    this.wireAuthSettledHook();
+  }
+
+  /**
+   * Detect `relayAccess` transitions to `'ok'` on the active relay and
+   * refresh kind 9 channels that were stuck waiting on AUTH. Without
+   * this, a user who taps "approve" in their NIP-46 bunker 20s after
+   * page load would still see "Loading messages…" forever because:
+   *   - The empty-EOSE retry ladder exhausted before AUTH settled
+   *     ({@link scheduleEmptyRetry}'s exhaustion path now defers
+   *     promotion-to-`empty-confirmed` while access is
+   *     `'authenticating'` / `'unknown'`), so channels sit in
+   *     `'empty-unconfirmed'` waiting for a signal.
+   *   - `subscribeWatched`'s inner retry loop continues at backoff, but
+   *     it can't re-paint stale messages because there's nothing in
+   *     `messagesByGroup` yet.
+   * The hook below provides that signal: AUTH just settled → refresh
+   * the active channel (and a small batch of background stuck channels)
+   * so the fresh REQ rides the now-AUTH'd socket.
+   *
+   * Cap on background refreshes: many-channel accounts (50+) could
+   * otherwise blast the relay with N parallel kind 9 restarts. 5 is
+   * arbitrary but bounded; channels the user actually opens still get
+   * a direct refresh via setActiveGroup's re-entry path.
+   */
+  private lastRelayAccessByUrl = new Map<string, RelayAccessState>();
+  private wireAuthSettledHook(): void {
+    this.relayAccess.subscribe((byRelay) => {
+      const active = this.currentRelayUrl.get();
+      const cur = byRelay[active];
+      const prev = this.lastRelayAccessByUrl.get(active);
+      this.lastRelayAccessByUrl.set(active, cur ?? 'unknown');
+      // We only care about the *first* time AUTH leaves the in-flight
+      // state for the active relay — i.e., transitions out of
+      // 'unknown' / 'authenticating' / undefined. Transitions between
+      // non-pending states (e.g., 'ok' → 'unreachable' on a socket
+      // drop) are handled by the reconnect path elsewhere.
+      const wasPending = prev === undefined || prev === 'unknown' || prev === 'authenticating';
+      if (!wasPending) return;
+      if (cur === 'unknown' || cur === 'authenticating' || cur === undefined) return;
+      if (cur === 'ok') {
+        // Happy path: AUTH succeeded. Refresh stuck channels so the
+        // fresh kind 9 REQs ride the now-AUTH'd socket and deliver
+        // history without the user manually reloading.
+        this.refreshStuckChannelsAfterAuthOk();
+      } else {
+        // 'auth-required' / 'restricted' / 'unreachable' / 'error' —
+        // AUTH definitively failed. Any channel held in
+        // `empty-unconfirmed` by the ladder's AUTH-pending defer
+        // promotes to `empty-confirmed` now so the UI shows the
+        // honest "No messages yet" instead of a forever spinner.
+        // The RelayStatusBanner explains the failure separately.
+        this.promoteStuckChannelsAfterAuthFail();
+      }
+    });
+  }
+
+  private refreshStuckChannelsAfterAuthOk(): void {
+    // "Stuck" here means anything not yet `has-messages`. Channels in
+    // `'loading'` matter too: a sub opened during AUTH-pending often
+    // hits the EOSE-then-CLOSED auth-required race AND never reaches
+    // EOSE again on its current closure, so it gets stranded in
+    // 'loading' (no events, no EOSE, no error to retry on). Refreshing
+    // tears down that zombie and opens a fresh REQ on the now-AUTH'd
+    // socket.
+    const isStuck = (status: MessagesStatus | undefined): boolean =>
+      status === 'loading'
+      || status === 'empty-unconfirmed'
+      || status === 'empty-confirmed';
+    const statuses = this.messagesStatusByGroup.get();
+    const activeGroup = this.activeGroupId;
+    if (activeGroup && isStuck(statuses[activeGroup])) {
+      this.refreshGroupMessages(activeGroup);
+    }
+    let batched = 0;
+    for (const [id, status] of Object.entries(statuses)) {
+      if (id === activeGroup) continue;
+      if (isStuck(status)) {
+        this.refreshGroupMessages(id);
+        batched++;
+        if (batched >= 5) break;
+      }
+    }
+  }
+
+  private promoteStuckChannelsAfterAuthFail(): void {
+    const statuses = this.messagesStatusByGroup.get();
+    for (const [id, status] of Object.entries(statuses)) {
+      if (status === 'empty-unconfirmed') {
+        this.setMessagesStatus(id, 'empty-confirmed');
+        this.clearMessagesRetry(id);
+      }
+    }
   }
 
   /**
@@ -959,6 +1068,30 @@ class BridgeImpl implements NostrBridge {
     timer: ReturnType<typeof setTimeout> | null;
   }>();
   /**
+   * Per-group flag for the cold-load `querySync` fallback. The bridge
+   * fires one explicit `pool.querySync` after the empty-EOSE retry
+   * ladder exhausts — bypasses the live REQ retry loop and gives the
+   * relay a last shot to deliver kind 9 once AUTH / whitelist state
+   * has had time to settle. Single-shot per groupId per session;
+   * cleared on logout / relay switch / dispose, and reset by
+   * {@link refreshGroupMessages} so an explicit user retry can fire
+   * it again.
+   */
+  private querySyncFallbackFired = new Set<string>();
+  /**
+   * Per-group debounce timers for message-cache flushes. Coalesces a burst
+   * of `ingestMessage` calls (typical of a kind 9 limit:50 backfill arriving
+   * in one tick) into a single localStorage.setItem at the end of the
+   * burst. Cleared on logout / dispose / relay switch — see
+   * {@link clearAllCacheFlushers}.
+   */
+  private messageCacheFlushTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  /**
+   * Per-group debounce timers for reaction-cache flushes. Same shape and
+   * lifecycle as {@link messageCacheFlushTimers}.
+   */
+  private reactionCacheFlushTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  /**
    * Backoff schedule for empty-EOSE retries. Tuned so the worst-case time
    * before declaring a channel empty is the sum of all delays plus the
    * relay's own response time (≈9.5s + EOSE latency). Auth-gated relays
@@ -1096,6 +1229,11 @@ class BridgeImpl implements NostrBridge {
     // Clear auto-auth allow-list so the next session doesn't sign AUTH
     // for relays the previous user happened to subscribe to.
     this.authAllowedRelays.clear();
+    // Drop debounced cache flushes — even though scheduleXxxCacheFlush is
+    // session-gated, a flusher armed just before dispose would otherwise
+    // fire after the pool is gone.
+    this.clearAllCacheFlushers();
+    this.querySyncFallbackFired.clear();
   }
 
   // -- Auth --------------------------------------------------------------
@@ -1212,6 +1350,32 @@ class BridgeImpl implements NostrBridge {
       this.userMetadata.update((prev) => ({ ...prev, [pubkey]: meta }));
       this.userMetadataLatestAt.set(pubkey, createdAt);
     }
+    // Kind 9 — per-channel message backfill. Paints the last
+    // MESSAGE_CACHE_LIMIT messages instantly so the chat pane has content
+    // before the live REQ round-trips. Subsequent ingests dedupe by event
+    // id, so the relay's authoritative window overwrites without dupes.
+    for (const groupId of cacheListIds(relay, KIND_GROUP_MESSAGE)) {
+      const entry = cacheGet<JsMessage[]>(relay, KIND_GROUP_MESSAGE, groupId);
+      if (!entry || entry.value.length === 0) continue;
+      // Backfill optional fields added after the cache was written so older
+      // entries don't surface `undefined` for a now-required field.
+      const msgs: JsMessage[] = entry.value.map((m) => ({
+        ...m,
+        mentions: m.mentions ?? [],
+      }));
+      this.messagesByGroup.update((prev) =>
+        prev[groupId] ? prev : { ...prev, [groupId]: msgs },
+      );
+    }
+    // Kind 7 — per-channel reaction backfill. Emoji badges paint with
+    // their message bubbles instead of popping in a frame later.
+    for (const groupId of cacheListIds(relay, KIND_REACTION)) {
+      const entry = cacheGet<Record<string, JsReaction[]>>(relay, KIND_REACTION, groupId);
+      if (!entry) continue;
+      this.reactionsByGroup.update((prev) =>
+        prev[groupId] ? prev : { ...prev, [groupId]: entry.value },
+      );
+    }
   }
 
   /**
@@ -1325,6 +1489,12 @@ class BridgeImpl implements NostrBridge {
       this.activeGroupPriorityTimer = null;
     }
     this.activeGroupPriorityDeadline = 0;
+    // Cancel any debounced cache flushes that were armed against the dead
+    // pool's `currentRelayUrl` — the new pool may target a different relay,
+    // and a stale flush would write under the wrong key. The next ingest
+    // re-arms flushers cleanly.
+    this.clearAllCacheFlushers();
+    this.querySyncFallbackFired.clear();
     // Re-login on the same browser keeps the in-memory bridge instance, so
     // the kind 39000 newest-wins guard retains every `groupId → created_at`
     // pair from the previous session. Kind 39000 is replaceable: the new
@@ -1562,6 +1732,10 @@ class BridgeImpl implements NostrBridge {
     }
     this.activeGroupPriorityDeadline = 0;
     this.activeGroupId = null;
+    // Cancel pending cache flushes. The next session's relay scope may
+    // differ; let fresh ingests re-arm flushers from scratch.
+    this.clearAllCacheFlushers();
+    this.querySyncFallbackFired.clear();
     // Forget any in-flight relay-access state and tear down dangling
     // "Authenticating with {host}" entries — the next session must
     // re-prove access from scratch.
@@ -1776,6 +1950,12 @@ class BridgeImpl implements NostrBridge {
       this.activeGroupPriorityTimer = null;
     }
     this.activeGroupPriorityDeadline = 0;
+    // Discard pending message/reaction cache flushes — they were armed
+    // against the old relay URL. The seed for the new relay paints any
+    // previously-cached entries; fresh ingests rebuild the on-disk state
+    // for the new relay scope.
+    this.clearAllCacheFlushers();
+    this.querySyncFallbackFired.clear();
     // Per-relay state that previously bled across switches: parent→children
     // index, group-creator map, reactions, the newest-wins guard cursor for
     // group metadata, and the per-group creator-sub set. Without clearing
@@ -2953,10 +3133,16 @@ class BridgeImpl implements NostrBridge {
     };
 
     // Common funnel for "this attempt is dead, schedule the next start()".
-    // `immediate` skips backoff for the first onclose-driven retry: the relay
-    // has already issued AUTH, so re-firing the REQ in the next tick lets
-    // nostr-tools attach AUTH and deliver. Subsequent failures still hit the
-    // backoff because `attempt` keeps incrementing in start().
+    // `immediate` requests skipping backoff so nostr-tools can attach AUTH
+    // and re-deliver in the next tick. The caller signals this for
+    // auth-required / restricted CLOSED — but we only honour it on the
+    // first onclose-driven retry. A relay that keeps rejecting with
+    // auth-required after the first immediate retry isn't going to be
+    // unstuck by another 0-delay round-trip; without this cap, that
+    // closure would fire REQ → EOSE → CLOSED → REQ in a tight loop that
+    // hammers the relay, starves other REQs (admin/member, kind 0,
+    // branding), and on auth-gated channels causes the message pane to
+    // oscillate "Loading messages…" ↔ "No messages yet".
     const scheduleRetry = (immediate: boolean) => {
       if (closed || !armed) return;
       armed = false;
@@ -2964,7 +3150,12 @@ class BridgeImpl implements NostrBridge {
       try { activeSub?.close(); } catch { /* ignore */ }
       activeSub = null;
       if (attempt >= MAX_ATTEMPTS) return;
-      const delay = immediate ? 0 : Math.min(1000 * 2 ** (attempt - 1), MAX_BACKOFF_MS);
+      // attempt is incremented at the top of start(), so attempt === 1
+      // means we just finished the very first attempt — the only one
+      // eligible for the immediate retry. Subsequent failures fall
+      // through to exponential backoff.
+      const useImmediate = immediate && attempt <= 1;
+      const delay = useImmediate ? 0 : Math.min(1000 * 2 ** (attempt - 1), MAX_BACKOFF_MS);
       timer = setTimeout(start, delay);
     };
 
@@ -3459,9 +3650,39 @@ class BridgeImpl implements NostrBridge {
    * when the user clicks a channel — it ensures the channel currently in
    * view always wins the relay's attention, even if hundreds of other
    * groups are queued ahead of it from the kind 39000 fan-out.
+   *
+   * If the channel is already subscribed but hasn't loaded ("loading" /
+   * "empty-unconfirmed" / "empty-confirmed"), the existing sub is torn
+   * down and a fresh one is opened. The background drain typically
+   * subscribes every visible channel from kind 39000 fan-out — those
+   * subs land on a still-AUTH-ing socket and routinely get stuck in
+   * the EOSE-then-CLOSED auth-required race. The user's click is the
+   * canonical signal to retry from scratch with the active-channel
+   * priority gate engaged. Channels in 'has-messages' are left alone —
+   * a successful sub is delivering live updates and replacing it would
+   * just churn the relay.
    */
   private bumpGroupMessagesPriority(groupId: string): void {
-    if (this.messageSubscribedGroups.has(groupId)) return;
+    if (this.messageSubscribedGroups.has(groupId)) {
+      const status = this.messagesStatusByGroup.get()[groupId];
+      if (status === 'has-messages') return;
+      // Stuck — restart so the user's click gets a fresh REQ on the
+      // (likely now AUTH'd) socket. refreshGroupMessages also resets
+      // the retry counter and re-arms the querySync fallback flag.
+      this.refreshGroupMessages(groupId);
+      // Defense in depth: fire a parallel `querySync` immediately,
+      // don't wait for the retry ladder to exhaust. The live REQ
+      // restart above sometimes wedges on the same conditions that
+      // had the previous sub stuck (relay-side per-REQ AUTH quirks,
+      // SimplePool dedup of identical filters on the same socket,
+      // etc.). A querySync goes out as a separate frame and has its
+      // own response window — events it returns flow through
+      // ingestMessage and unstick the chat pane without the user
+      // having to refresh the page.
+      this.querySyncFallbackFired.add(groupId);
+      void this.querySyncFallbackForGroup(groupId);
+      return;
+    }
     if (this.pendingMessageSet.has(groupId)) {
       this.pendingMessageSet.delete(groupId);
       this.pendingMessageQueue = this.pendingMessageQueue.filter((id) => id !== groupId);
@@ -3513,7 +3734,15 @@ class BridgeImpl implements NostrBridge {
         if (msgs.length > 0) {
           this.setMessagesStatus(groupId, 'has-messages');
           this.clearMessagesRetry(groupId);
-        } else {
+        } else if (this.messagesStatusByGroup.get()[groupId] !== 'empty-confirmed') {
+          // Once the ladder has promoted status to `empty-confirmed`, additional
+          // empty EOSEs (typically caused by `subscribeWatched` re-issuing the
+          // REQ after an `auth-required` CLOSED race) MUST NOT bounce status
+          // back to `empty-unconfirmed` — that would restart the ladder and the
+          // UI would oscillate "No messages yet" ↔ "Loading messages…" forever.
+          // A late real message still promotes status via `ingestMessage →
+          // setMessagesStatus('has-messages')`, so this doesn't trap a stale
+          // empty verdict against future arrivals.
           this.setMessagesStatus(groupId, 'empty-unconfirmed');
           this.scheduleEmptyRetry(groupId);
         }
@@ -3562,6 +3791,112 @@ class BridgeImpl implements NostrBridge {
   }
 
   /**
+   * Schedule a debounced write of `messagesByGroup[groupId]` to the
+   * stale-while-revalidate cache. A burst of ingest calls (e.g. the
+   * initial kind 9 limit:50 backfill) collapses into a single
+   * localStorage.setItem at the end of the burst — cheap, and the
+   * worst-case data loss on tab close is whatever arrived in the last
+   * 200ms which the relay will re-deliver next session anyway.
+   *
+   * No-ops while logged out so a late ingest (e.g. an in-flight event on
+   * a markClosed sub from the previous session) can't write under the
+   * old account's relay key. See `cacheClearAll` on logout.
+   */
+  private scheduleMessageCacheFlush(groupId: string): void {
+    if (!this.session) return;
+    const existing = this.messageCacheFlushTimers.get(groupId);
+    if (existing) clearTimeout(existing);
+    const timer = setTimeout(() => {
+      this.messageCacheFlushTimers.delete(groupId);
+      this.flushMessageCache(groupId);
+    }, CACHE_FLUSH_DELAY_MS);
+    this.messageCacheFlushTimers.set(groupId, timer);
+  }
+
+  /**
+   * Synchronous write of the last {@link MESSAGE_CACHE_LIMIT} confirmed
+   * messages for `groupId` to localStorage. Filters out optimistic
+   * placeholders — a cached pending bubble would resurrect on cold load
+   * even though the publish actually finished hours ago.
+   */
+  private flushMessageCache(groupId: string): void {
+    if (!this.session) return;
+    const all = this.messagesByGroup.get()[groupId] ?? [];
+    const confirmed = all.filter((m) => !m.pending && !m.failed);
+    if (confirmed.length === 0) {
+      // Nothing worth caching (only optimistic placeholders, or store
+      // emptied between schedule and flush). Drop any stale on-disk entry
+      // so a previous larger snapshot doesn't ghost-paint after the user
+      // saw the channel empty.
+      cacheDelete(this.currentRelayUrl.get(), KIND_GROUP_MESSAGE, groupId);
+      return;
+    }
+    const trimmed = confirmed.length > MESSAGE_CACHE_LIMIT
+      ? confirmed.slice(confirmed.length - MESSAGE_CACHE_LIMIT)
+      : confirmed;
+    cacheSet(this.currentRelayUrl.get(), KIND_GROUP_MESSAGE, groupId, trimmed);
+  }
+
+  /** Mirror of {@link scheduleMessageCacheFlush} for kind 7 reactions. */
+  private scheduleReactionCacheFlush(groupId: string): void {
+    if (!this.session) return;
+    const existing = this.reactionCacheFlushTimers.get(groupId);
+    if (existing) clearTimeout(existing);
+    const timer = setTimeout(() => {
+      this.reactionCacheFlushTimers.delete(groupId);
+      this.flushReactionCache(groupId);
+    }, CACHE_FLUSH_DELAY_MS);
+    this.reactionCacheFlushTimers.set(groupId, timer);
+  }
+
+  /**
+   * Synchronous write of the reaction map for `groupId`. Caps total
+   * reactions at {@link REACTION_CACHE_LIMIT} by dropping the oldest by
+   * `createdAt`. Cheaper than per-target caps and avoids favouring a
+   * single high-reaction message.
+   */
+  private flushReactionCache(groupId: string): void {
+    if (!this.session) return;
+    const byTarget = this.reactionsByGroup.get()[groupId];
+    if (!byTarget) {
+      cacheDelete(this.currentRelayUrl.get(), KIND_REACTION, groupId);
+      return;
+    }
+    let total = 0;
+    for (const arr of Object.values(byTarget)) total += arr.length;
+    if (total === 0) {
+      cacheDelete(this.currentRelayUrl.get(), KIND_REACTION, groupId);
+      return;
+    }
+    let toCache: Record<string, JsReaction[]> = byTarget;
+    if (total > REACTION_CACHE_LIMIT) {
+      const flat: JsReaction[] = [];
+      for (const arr of Object.values(byTarget)) flat.push(...arr);
+      flat.sort((a, b) => a.createdAt - b.createdAt);
+      const kept = flat.slice(flat.length - REACTION_CACHE_LIMIT);
+      const regrouped: Record<string, JsReaction[]> = {};
+      for (const r of kept) {
+        const cur = regrouped[r.targetEventId] ?? [];
+        regrouped[r.targetEventId] = [...cur, r];
+      }
+      toCache = regrouped;
+    }
+    cacheSet(this.currentRelayUrl.get(), KIND_REACTION, groupId, toCache);
+  }
+
+  /**
+   * Drop every pending cache-flush timer. Called on logout / dispose /
+   * relay switch so a debounce that armed under the previous relay can't
+   * fire after `currentRelayUrl` flipped and write to the wrong key.
+   */
+  private clearAllCacheFlushers(): void {
+    for (const t of this.messageCacheFlushTimers.values()) clearTimeout(t);
+    this.messageCacheFlushTimers.clear();
+    for (const t of this.reactionCacheFlushTimers.values()) clearTimeout(t);
+    this.reactionCacheFlushTimers.clear();
+  }
+
+  /**
    * Empty-EOSE retry ladder. Auth-gated and silent-filtering relays
    * routinely send EOSE-empty fast (before AUTH completes, or after a
    * NIP-29 ACL filter dropped every event). Without this, the UI flashes
@@ -3577,8 +3912,38 @@ class BridgeImpl implements NostrBridge {
     const prior = this.messagesRetryByGroup.get(groupId);
     const attempts = prior?.attempts ?? 0;
     if (attempts >= BridgeImpl.EMPTY_RETRY_DELAYS.length) {
+      // Hold off on the verdict while NIP-42 AUTH is still in flight on
+      // the active relay. The user might be staring at their NIP-46
+      // bunker waiting to tap "approve" — the chat pane should keep
+      // showing the spinner (status = 'empty-unconfirmed' is the right
+      // signal for that), not flip to "No messages yet" and bait them
+      // into thinking the channel is empty. When AUTH settles,
+      // {@link wireAuthSettledHook} fires a fresh REQ via
+      // refreshGroupMessages and the verdict will be re-evaluated then.
+      // Failed AUTH states ('auth-required', 'restricted', etc.) bypass
+      // the gate — there the relay banner explains the situation and
+      // 'empty-confirmed' is honest.
+      const relay = this.currentRelayUrl.get();
+      const access = this.relayAccess.get()[relay];
+      if (access === 'unknown' || access === 'authenticating') {
+        this.clearMessagesRetry(groupId);
+        return;
+      }
       this.setMessagesStatus(groupId, 'empty-confirmed');
       this.clearMessagesRetry(groupId);
+      // Last shot: fire one focused `querySync` for this channel. The
+      // live REQ has exhausted its retries against the EOSE-then-CLOSED
+      // auth-required race; a fresh querySync goes out as a separate
+      // request, by which point the relay's AUTH / whitelist evaluation
+      // for this socket has had time to settle. If it returns events,
+      // {@link ingestMessage} flips status from `empty-confirmed` back
+      // to `has-messages`. If it returns empty, the verdict stands.
+      // Single-shot per groupId per session — `refreshGroupMessages`
+      // clears the flag so an explicit user retry gets another shot.
+      if (!this.querySyncFallbackFired.has(groupId)) {
+        this.querySyncFallbackFired.add(groupId);
+        void this.querySyncFallbackForGroup(groupId);
+      }
       return;
     }
     const delay = BridgeImpl.EMPTY_RETRY_DELAYS[attempts];
@@ -3606,6 +3971,41 @@ class BridgeImpl implements NostrBridge {
   }
 
   /**
+   * Cold-load fallback for the kind 9 stream. Fires after the retry
+   * ladder has exhausted (status is currently `empty-confirmed`). Sends
+   * one focused `pool.querySync` with a longer maxWait than the live
+   * REQ retries used, so the relay gets a final chance to serve history
+   * once AUTH and whitelist evaluation have had time to settle.
+   *
+   * On success: events are ingested through {@link ingestMessage}, which
+   * flips status to `has-messages`, clears the retry tracking, AND
+   * triggers a cache write so subsequent reloads paint instantly.
+   * On empty / error: the `empty-confirmed` verdict already set by the
+   * caller stands — no further action needed.
+   */
+  private async querySyncFallbackForGroup(groupId: string): Promise<void> {
+    if (!this.session) return;
+    const filter: Filter = {
+      kinds: [KIND_GROUP_MESSAGE],
+      '#h': [groupId],
+      limit: BACKGROUND_MESSAGE_LIMIT,
+    };
+    let events: NostrEvent[];
+    try {
+      events = await this.pool.querySync(this.relays, filter, { maxWait: 6000 });
+    } catch {
+      return;
+    }
+    // Session may have ended between dispatch and resolution — silently
+    // drop any results that arrived for a dead pool. Also bail if the
+    // user has since switched to a different active channel and an
+    // unrelated path already flipped status (don't fight ingest races).
+    if (!this.session) return;
+    if (events.length === 0) return;
+    for (const ev of events) this.ingestMessage(groupId, ev);
+  }
+
+  /**
    * Close any existing kind 9 sub for `groupId` and open a fresh one.
    * Does NOT reset the retry counter — used by both the retry ladder
    * (continuing attempts) and {@link refreshGroupMessages} (which resets
@@ -3616,7 +4016,16 @@ class BridgeImpl implements NostrBridge {
     const existing = this.messageSubByGroup.get(groupId);
     if (existing) {
       try {
-        existing.markClosed?.();
+        // `close()` only — do NOT also call `markClosed()`. Both run
+        // synchronously and `markClosed` zeros `activeSub` before
+        // `close()` can hand it the network CLOSE frame, leaving the
+        // old REQ alive on the pool. The result: every restart left
+        // a zombie kind-9 sub hammering the relay, AND the user's
+        // click was answered by whichever sub the relay served next
+        // (frequently the stuck one, since it had been waiting first).
+        // markClosed is only correct for pool-replacement paths
+        // (resetPoolForSessionChange / switchRelay / dispose) where
+        // the WebSocket is going away wholesale.
         existing.close();
       } catch {
         // ignore — relay may already have torn the socket down
@@ -3648,6 +4057,11 @@ class BridgeImpl implements NostrBridge {
   refreshGroupMessages(groupId: string): void {
     if (!groupId) return;
     this.clearMessagesRetry(groupId);
+    // An explicit user-driven refresh should also re-arm the querySync
+    // fallback — otherwise a channel that was already declared
+    // `empty-confirmed` (and fallback-fired) in this session would never
+    // get a second querySync shot from a "Reload" tap.
+    this.querySyncFallbackFired.delete(groupId);
     this.internalRestartMessageSub(groupId);
   }
 
@@ -4057,6 +4471,11 @@ class BridgeImpl implements NostrBridge {
       this.setMessagesStatus(groupId, 'has-messages');
       this.clearMessagesRetry(groupId);
       if (groupId === this.activeGroupId) this.maybeResumeMessageQueueDrain();
+      // Persist for next reload — stale-while-revalidate paint of the last
+      // window of messages so the chat pane has something to show before
+      // the live REQ round-trips. See {@link MESSAGE_CACHE_LIMIT} and
+      // {@link flushMessageCache} for the cap + sanitization.
+      this.scheduleMessageCacheFlush(groupId);
     }
     // Inbox card for @-mentions. Unread badges are derived in the UI from
     // `useReadStateStore.groupCursors[groupId]` vs `messages[].createdAt`,
@@ -4105,13 +4524,20 @@ class BridgeImpl implements NostrBridge {
       targetEventId,
       createdAt: ev.created_at,
     };
+    let changed = false;
     this.reactionsByGroup.update((all) => {
       const forGroup = { ...(all[groupId] ?? {}) };
       const existing = forGroup[targetEventId] ?? [];
       if (existing.some((r) => r.id === reaction.id)) return all;
+      changed = true;
       forGroup[targetEventId] = [...existing, reaction];
       return { ...all, [groupId]: forGroup };
     });
+    // Persist reactions so emoji badges paint instantly on cold load — same
+    // motivation as message caching above. Skipping when nothing changed
+    // avoids a write storm on re-ingest of already-known reactions (typical
+    // after a relay reconnect).
+    if (changed) this.scheduleReactionCacheFlush(groupId);
   }
 
   private async ingestIncomingDM(ev: NostrEvent): Promise<void> {
