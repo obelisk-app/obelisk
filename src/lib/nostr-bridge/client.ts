@@ -217,6 +217,62 @@ function parseGroupMetadataTags(tags: NostrEvent['tags']): {
   };
 }
 
+/**
+ * Strict equality on string arrays. Used to skip redundant cacheSet writes
+ * when an admin/member list republished by the relay matches the
+ * already-cached snapshot.
+ */
+function arraysEqualStrict(a: readonly string[], b: readonly string[]): boolean {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
+}
+
+/**
+ * Deep equality on `JsGroup`. Two groups are equal iff every scalar field
+ * matches and the `forumTags` / `topics` arrays match positionally. Used to
+ * skip redundant cacheSet writes when a kind 39000 republish carries the
+ * same payload.
+ */
+function groupEqual(a: JsGroup, b: JsGroup): boolean {
+  if (a === b) return true;
+  if (a.id !== b.id || a.name !== b.name || a.about !== b.about
+      || a.picture !== b.picture || a.banner !== b.banner
+      || a.isPublic !== b.isPublic || a.isOpen !== b.isOpen
+      || a.parent !== b.parent || a.kind !== b.kind) return false;
+  if (a.forumTags.length !== b.forumTags.length) return false;
+  for (let i = 0; i < a.forumTags.length; i++) {
+    const x = a.forumTags[i];
+    const y = b.forumTags[i];
+    if (!x || !y) return false;
+    if (x.id !== y.id || x.name !== y.name || x.emoji !== y.emoji) return false;
+  }
+  if (a.topics.length !== b.topics.length) return false;
+  for (let i = 0; i < a.topics.length; i++) {
+    if (a.topics[i] !== b.topics[i]) return false;
+  }
+  return true;
+}
+
+/**
+ * Shallow equality on `JsUserMetadata`. All fields are flat scalars. Used
+ * to skip redundant cacheSet writes when a kind 0 republish carries the
+ * same fields under a newer `created_at`.
+ */
+function userMetadataEqual(a: JsUserMetadata, b: JsUserMetadata): boolean {
+  if (a === b) return true;
+  return a.pubkey === b.pubkey
+    && a.name === b.name
+    && a.displayName === b.displayName
+    && a.picture === b.picture
+    && a.about === b.about
+    && a.nip05 === b.nip05
+    && a.banner === b.banner
+    && a.lud16 === b.lud16
+    && a.website === b.website;
+}
+
 // -- NIP-29 kinds --------------------------------------------------------
 const KIND_GROUP_MESSAGE = 9;
 const KIND_GROUP_METADATA = 39000;
@@ -3645,8 +3701,15 @@ class BridgeImpl implements NostrBridge {
     store.update((prev) => ({ ...prev, [groupId]: pubkeys }));
     // Persist for next reload — paints instantly before the relay round-trip
     // completes. See cache.ts. Scoped by relay so cross-relay browsing
-    // doesn't leak admin lists.
-    cacheSet(this.currentRelayUrl.get(), ev.kind, groupId, pubkeys);
+    // doesn't leak admin lists. Skip the write if the list matches what's
+    // already on disk — relays republish identical 39001/39002 events
+    // routinely after a reconnect, and localStorage.setItem is a
+    // main-thread blocker we'd rather avoid.
+    const relay = this.currentRelayUrl.get();
+    const cached = cacheGet<string[]>(relay, ev.kind, groupId);
+    if (!cached || !arraysEqualStrict(cached.value, pubkeys)) {
+      cacheSet(relay, ev.kind, groupId, pubkeys);
+    }
     // Positive signal: the relay has delivered membership data for this
     // group, even if the list is empty. Consumers (voice gate) can now
     // distinguish "not loaded yet" from "loaded and you're not in it".
@@ -3813,10 +3876,20 @@ class BridgeImpl implements NostrBridge {
     // Persist for next reload — the sidebar paints channels instantly before
     // the live REQ round-trip completes. Store the snapshot together with
     // its created_at so the seed can re-establish the newest-wins guard.
-    cacheSet(this.currentRelayUrl.get(), KIND_GROUP_METADATA, groupId, {
-      group: next,
-      createdAt: ev.created_at,
-    });
+    // Skip the write when the on-disk payload already matches — a
+    // republished 39000 with the same fields under a newer created_at is
+    // common (admin re-publishes for liveness), and avoiding the
+    // localStorage.setItem keeps the main thread from blocking.
+    {
+      const relay = this.currentRelayUrl.get();
+      const cached = cacheGet<{ group: JsGroup; createdAt: number }>(relay, KIND_GROUP_METADATA, groupId);
+      if (!cached || !groupEqual(cached.value.group, next)) {
+        cacheSet(relay, KIND_GROUP_METADATA, groupId, {
+          group: next,
+          createdAt: ev.created_at,
+        });
+      }
+    }
     // Start streaming messages immediately so opening the channel doesn't
     // wait on a fresh REQ round-trip — the store already has them. The
     // per-group REQ caps at BACKGROUND_MESSAGE_LIMIT; older history is
@@ -4172,10 +4245,18 @@ class BridgeImpl implements NostrBridge {
       };
       this.userMetadata.update((prev) => ({ ...prev, [ev.pubkey]: meta }));
       this.userMetadataLatestAt.set(ev.pubkey, ev.created_at);
-      cacheSet(this.currentRelayUrl.get(), KIND_USER_METADATA, ev.pubkey, {
-        meta,
-        createdAt: ev.created_at,
-      });
+      // Skip the write when the cached profile already matches — kind 0
+      // events are republished often (nip-05 verifier handshakes, profile
+      // editor saves with the same fields, multi-relay re-broadcast) and
+      // localStorage.setItem on a popular profile is a real cost.
+      const relay = this.currentRelayUrl.get();
+      const cached = cacheGet<{ meta: JsUserMetadata; createdAt: number }>(relay, KIND_USER_METADATA, ev.pubkey);
+      if (!cached || !userMetadataEqual(cached.value.meta, meta)) {
+        cacheSet(relay, KIND_USER_METADATA, ev.pubkey, {
+          meta,
+          createdAt: ev.created_at,
+        });
+      }
     } catch {
       // ignore malformed kind:0 content
     }

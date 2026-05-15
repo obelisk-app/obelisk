@@ -438,6 +438,67 @@ describe('nostr-bridge', () => {
     expect(last.parent1).toContain('child1');
   });
 
+  it('skips localStorage cacheSet when an admin/member republish carries identical pubkeys', async () => {
+    // Regression test for the cache-write skip optimization (A4). The
+    // bridge persists 39001/39002 admin/member lists per relay for
+    // instant-paint on reload. A relay routinely republishes the same
+    // event under a fresher created_at after a reconnect — the in-memory
+    // newest-wins guard short-circuits the store update, but without this
+    // skip the localStorage.setItem would still fire (a sync main-thread
+    // operation we want to avoid).
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
+    try {
+      const groupId = 'cache-skip-group';
+      const member = generateSecretKey();
+      const memberPk = getPublicKey(member);
+      const author = generateSecretKey();
+      const authorPk = getPublicKey(author);
+      const base = Math.floor(Date.now() / 1000);
+      const buildAdmins = async (ts: number): Promise<NostrEvent> =>
+        finalizeEvent(
+          {
+            kind: 39001,
+            content: '',
+            tags: [['d', groupId], ['p', memberPk]],
+            created_at: ts,
+            pubkey: authorPk,
+          } as Parameters<typeof finalizeEvent>[0],
+          author,
+        );
+
+      // Drive a subscription so the ingest path runs.
+      bridge.subscribeAdmins(groupId, () => {});
+
+      deliver(await buildAdmins(base + 1));
+      await flush();
+
+      // Locate cache writes targeting THIS group's admin entry — we don't
+      // care about unrelated bridge bookkeeping (session storage etc.).
+      const cacheKeyMatcher = (call: unknown[]) =>
+        typeof call[0] === 'string' && call[0].includes(`/39001/${groupId}`);
+      const firstWrites = setItemSpy.mock.calls.filter(cacheKeyMatcher).length;
+      expect(firstWrites).toBe(1);
+
+      // Republish the identical pubkey list under a later created_at.
+      // Newest-wins guard lets ingest proceed; the cache equality check
+      // must suppress the write.
+      setItemSpy.mockClear();
+      deliver(await buildAdmins(base + 2));
+      await flush();
+
+      const secondWrites = setItemSpy.mock.calls.filter(cacheKeyMatcher).length;
+      expect(secondWrites).toBe(0);
+    } finally {
+      setItemSpy.mockRestore();
+    }
+  });
+
   it('re-parenting a group moves it to the new parent bucket without leaving stale entries', async () => {
     // Regression test for the O(1) reverse-index optimization
     // ({@link groupParentMap}) — when a kind 39000 event arrives with a
