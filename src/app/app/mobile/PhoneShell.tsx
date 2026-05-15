@@ -46,6 +46,7 @@ import {
   useActiveCallByChannel,
   getBridge,
   getBridgeImpl,
+  getBridgeSync,
   type JsGroup,
   type JsForumTag,
   type JsMessage,
@@ -5561,6 +5562,31 @@ export default function MobileShell() {
 
   const dragNeighbors = useMemo(() => neighborsFor(nav.screen), [nav.screen]);
 
+
+  // Mirror the watched channel into the bridge. Without this:
+  //   1) the active-channel priority gate (background message-queue drain
+  //      pauses while the active channel is in 'loading') never engages
+  //      on mobile — the watched channel doesn't get its bandwidth boost.
+  //   2) Re-entering a channel that was previously declared
+  //      `empty-confirmed` doesn't auto-restart its kind 9 sub, so the
+  //      user sees "No messages yet" flash before the bridge gets a
+  //      chance to recover.
+  //
+  // useLayoutEffect (not useEffect): the bridge's setActiveGroup flips
+  // status to 'loading' synchronously when it restarts a stale empty
+  // channel. Running before paint means the chat panel's first paint
+  // already reflects 'loading' instead of the stale 'empty-confirmed'.
+  // Sync `getBridgeSync` is used over async `nostrActions.setActiveGroup`
+  // so the status flip lands in this commit, not a later microtask.
+  useLayoutEffect(() => {
+    const bridge = getBridgeSync();
+    if (!bridge) return;
+    if (nav.screen === 'channel' && nav.groupId) {
+      bridge.setActiveGroup(nav.groupId);
+    } else {
+      bridge.setActiveGroup(null);
+    }
+  }, [nav.screen, nav.groupId]);
 
   // Listen for reaction emit from msg-actions sheet
   useEffect(() => {

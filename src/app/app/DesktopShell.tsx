@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   nostrActions,
   useIsLoggedIn,
@@ -32,7 +32,7 @@ import {
   type JsMessage,
   type JsUserMetadata,
 } from '@/lib/nostr-bridge';
-import { getBridge, getBridgeImpl } from '@/lib/nostr-bridge';
+import { getBridge, getBridgeImpl, getBridgeSync } from '@/lib/nostr-bridge';
 import { useProfile, usePubkey } from '@nostr-wot/data/react';
 import { initializeWot, useWotEnabled, wotEngine } from '@/lib/wot';
 import { wotColorClass } from '@/lib/wot/colors';
@@ -108,9 +108,21 @@ export default function AppShell() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
-  useEffect(() => {
+  // useLayoutEffect (not useEffect): we need the bridge's setActiveGroup
+  // to run BEFORE the browser paints. If it runs in useEffect, the chat
+  // panel renders once with the stale per-group status (e.g.
+  // 'empty-confirmed' from a previous visit) BEFORE the bridge restarts
+  // the sub and flips status to 'loading' — the user sees a one-frame
+  // flash of "No messages yet" → spinner. useLayoutEffect schedules the
+  // state change before paint so only the final state ('loading') hits
+  // the screen. Using `getBridgeSync` keeps the call truly synchronous —
+  // the async `nostrActions.setActiveGroup` indirection would defer the
+  // status flip to a microtask, after the first paint had already
+  // landed.
+  useLayoutEffect(() => {
+    const bridge = getBridgeSync();
     if (view.kind === 'group') {
-      nostrActions.setActiveGroup(view.groupId);
+      bridge?.setActiveGroup(view.groupId);
       // Mirror into the chat store so `isUserWatchingChannel` returns true
       // here too. Without this, desktop's read-state machinery is silently
       // disabled (the gate stays false → cursor never advances → unread
@@ -118,7 +130,7 @@ export default function AppShell() {
       // routes through `setView` instead, so we mirror in the same effect.
       useChatStore.setState({ activeChannelId: view.groupId, isNearBottom: true });
     } else {
-      nostrActions.setActiveGroup(null);
+      bridge?.setActiveGroup(null);
       useChatStore.setState({ activeChannelId: null });
     }
   }, [view]);
