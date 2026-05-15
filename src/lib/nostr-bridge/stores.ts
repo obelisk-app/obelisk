@@ -215,6 +215,27 @@ export function useGroups(): ReadonlyArray<JsGroup> {
   }, [all, creators, adminsByGroup, membersByGroup, myPubkey, wotEnabled]);
 }
 
+/**
+ * Look up a single group by id from the bridge's raw store — bypasses the
+ * WoT filter that `useGroups()` applies. Use this whenever the user has
+ * explicitly navigated to a specific channel (URL deep-link, sidebar
+ * click); WoT-hiding a channel the user is trying to view causes a false
+ * "Channel not visible" state in the chat pane. The sidebar list still
+ * uses `useGroups()` (filtered) — discovery and the explicit-navigation
+ * read-path are different operations.
+ */
+export function useGroupById(groupId: string | null): JsGroup | null {
+  const groups = useSubscription<ReadonlyArray<JsGroup>>(
+    (b, cb) => b.subscribeGroups(cb),
+    [],
+    [groupId],
+  );
+  return useMemo(
+    () => (groupId ? groups.find((g) => g.id === groupId) ?? null : null),
+    [groups, groupId],
+  );
+}
+
 export function useMessages(groupId: string | null): ReadonlyArray<JsMessage> {
   // Mute / WoT filtering happens at ingest now (see wotEngine.isAllowed in
   // client.ts subscribeWatched.onevent + the verdict-deny pruner). If a

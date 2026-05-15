@@ -498,6 +498,14 @@ export interface NostrBridge {
    * silent-filtering relay behavior.
    */
   refreshGroupMessages(groupId: string): void;
+  /**
+   * Focused fetch of a single group's kind 39000 metadata. Use when the
+   * chat pane mounts on a `groupId` not yet in the bridge's `groups`
+   * store — guarantees the channel is fetched even if the global metadata
+   * stream missed it for this session. Resolves `true` if at least one
+   * previously-unseen 39000 event was ingested.
+   */
+  fetchGroupMetadata(groupId: string): Promise<boolean>;
   setActiveGroup(groupId: string | null): void;
   /** Fetch kind:0 metadata for a pubkey on demand (used by chat to resolve names lazily). */
   ensureUserMetadata(pubkey: string): void;

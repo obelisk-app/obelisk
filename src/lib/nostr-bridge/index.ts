@@ -7,6 +7,7 @@ export {
   useCurrentRelayUrl,
   useConfiguredRelays,
   useGroups,
+  useGroupById,
   useGroupMetadataEose,
   useMessages,
   useMessagesByGroup,

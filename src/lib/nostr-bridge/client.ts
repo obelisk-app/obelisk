@@ -2417,6 +2417,41 @@ class BridgeImpl implements NostrBridge {
     return added > 0;
   }
 
+  /**
+   * Fetch a single group's kind 39000 metadata on demand. Used by the chat
+   * pane when it mounts onto a `groupId` that isn't in the bridge's
+   * `groups` store yet — the global metadata stream is supposed to catch
+   * every group, but slow / silent-filtering relays can miss specific ids
+   * for a session. A focused `querySync` with `#d:[groupId]` gives the
+   * relay exactly one event to deliver and unblocks the chat pane without
+   * waiting for a full page refresh.
+   *
+   * Returns `true` when at least one previously-unseen 39000 event was
+   * ingested.
+   */
+  async fetchGroupMetadata(groupId: string): Promise<boolean> {
+    if (!groupId) return false;
+    const filter: Filter = {
+      kinds: [KIND_GROUP_METADATA],
+      '#d': [groupId],
+      limit: 1,
+    };
+    let events: NostrEvent[];
+    try {
+      events = await this.pool.querySync(this.relays, filter, { maxWait: 4000 });
+    } catch {
+      return false;
+    }
+    let added = 0;
+    for (const ev of events) {
+      const before = this.groups.get().length;
+      this.ingestGroupMetadata(ev);
+      const after = this.groups.get().length;
+      if (after > before) added++;
+    }
+    return added > 0;
+  }
+
   setActiveGroup(groupId: string | null): void {
     this.activeGroupId = groupId;
     if (!groupId) return;

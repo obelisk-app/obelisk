@@ -23,6 +23,7 @@ import {
   useIsLoggedIn,
   useIsRehydrating,
   useGroups,
+  useGroupById,
   useChildrenByParent,
   useMessages,
   useMessagesByGroup,
@@ -2431,8 +2432,12 @@ function ChannelScreen({
   openProfile: (pubkey: string) => void;
   openMembers: () => void;
 }) {
+  // Raw lookup — bypasses WoT filtering. Mirrors desktop ChatPanel: the
+  // user explicitly navigated to this groupId; hiding it because a WoT
+  // verdict hasn't resolved yet causes a false "Channel not visible"
+  // verdict.
+  const group = useGroupById(groupId);
   const groups = useGroups();
-  const group = groups.find((g) => g.id === groupId) ?? null;
   const parentGroup = group?.parent ? groups.find((g) => g.id === group.parent) ?? null : null;
   const headerLabel = parentGroup
     ? `${parentGroup.name ?? parentGroup.id.slice(0, 8)}/${group?.name ?? groupId.slice(0, 8)}`
@@ -2461,6 +2466,17 @@ function ChannelScreen({
     if (messagesEose && messages.length === 0) {
       void nostrActions.refreshGroupMessages(groupId);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupId]);
+  // Focused fetch of kind 39000 for this groupId — guarantees the channel
+  // metadata is fetched even if the global stream missed it. The mobile
+  // chat header reads `group.name` for the title; without this fetch the
+  // user can stare at the channel id slice forever on a slow / silently-
+  // filtering relay.
+  useEffect(() => {
+    if (!groupId) return;
+    if (group) return;
+    void nostrActions.fetchGroupMetadata(groupId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groupId]);
   const channelAdmins = useAdmins(groupId);

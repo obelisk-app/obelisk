@@ -8,6 +8,7 @@ import {
   useConnectionState,
   useCurrentRelayUrl,
   useGroups,
+  useGroupById,
   useMessages,
   useMessagesEose,
   useGroupMetadataEose,
@@ -1868,11 +1869,50 @@ function ChatPanel({
     // mid-session (which is normal and shouldn't trigger a re-sub).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groupId]);
+  // Force-fetch kind 39000 for the channel if the bridge doesn't have it
+  // yet. Without this the user would stare at "Loading channel info…"
+  // for the entire global-metadata stream — or, worse, hit "Channel not
+  // visible" if the stream EOSE'd before this specific id arrived. The
+  // focused querySync is cheap (limit: 1) and unblocks the chat pane on
+  // every navigation, with or without cache.
+  //
+  // `metadataFetchDone` flips true after the focused query resolves
+  // (either way). It gates the final "channel not visible" verdict so
+  // we never declare a channel missing until we've actually tried.
+  const [metadataFetchDone, setMetadataFetchDone] = useState(false);
+  useEffect(() => {
+    setMetadataFetchDone(false);
+    if (!groupId) {
+      setMetadataFetchDone(true);
+      return;
+    }
+    if (group) {
+      setMetadataFetchDone(true);
+      return;
+    }
+    let cancelled = false;
+    void nostrActions
+      .fetchGroupMetadata(groupId)
+      .catch(() => undefined)
+      .then(() => {
+        if (!cancelled) setMetadataFetchDone(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // Only re-fire on groupId change. `group` is read for the early-exit
+    // — if it arrives mid-fetch, we still flip done on resolve.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupId]);
   const reactions = useReactions(groupId);
   const messageIds = useMemo(() => messages.map((m) => m.id), [messages]);
   const zapTotals = useMessageZaps(messageIds);
+  // Raw lookup — bypasses WoT filtering. The user explicitly navigated to
+  // this groupId; WoT-hiding it would cause a false "Channel not visible"
+  // state in the chat pane. The sidebar still uses WoT-filtered
+  // `useGroups()` for discovery, but click-through stays accessible.
+  const group = useGroupById(groupId);
   const groups = useGroups();
-  const group = groups.find((g) => g.id === groupId);
   const admins = useAdmins(groupId);
   const myPubkey = useMyPubkey();
   const isAdmin = !!myPubkey && admins.includes(myPubkey);
@@ -2312,7 +2352,13 @@ function ChatPanel({
             // against auth-gated / silent-filtering relays that send
             // EOSE-empty fast and then trickle real events afterwards.
             const groupKnownEmpty = group && messagesEose && emptyGracePassed;
-            const channelKnownMissing = !group && groupMetadataEose && emptyGracePassed;
+            // Never declare a channel "missing" until the focused
+            // metadataFetch has had its chance, AND the global stream has
+            // EOSE'd, AND the grace window has passed. Three gates so the
+            // user never sees "not visible" on a channel the relay still
+            // hasn't been asked about properly.
+            const channelKnownMissing =
+              !group && groupMetadataEose && emptyGracePassed && metadataFetchDone;
             if (!groupKnownEmpty && !channelKnownMissing) {
               // Split the copy by which tier we're still waiting on:
               //   - !group → kind 39000 hasn't ingested this groupId yet
