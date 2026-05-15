@@ -499,7 +499,7 @@ function RelayTopBar({
       {notifOpen && (
         <div
           data-notif-popover
-          className="absolute right-2 md:right-3 top-full mt-1 z-50 w-[min(380px,calc(100vw-1rem))] max-h-[70vh] overflow-hidden rounded-xl border border-lc-border bg-lc-dark shadow-2xl flex flex-col"
+          className="fixed right-2 md:right-3 top-[3.75rem] md:top-11 z-[60] w-[min(380px,calc(100vw-1rem))] max-h-[70vh] overflow-hidden rounded-xl border border-lc-border bg-lc-dark shadow-2xl flex flex-col"
         >
           <div className="flex items-center justify-between px-4 py-3 border-b border-lc-border">
             <span className="text-sm font-semibold text-lc-white">Notifications</span>
@@ -2170,6 +2170,19 @@ function ChatPanel({
   }
 
   const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [emojiOpen, setEmojiOpen] = useState(false);
+  const emojiBtnRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!emojiOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (emojiBtnRef.current && !emojiBtnRef.current.contains(e.target as Node)) {
+        setEmojiOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [emojiOpen]);
   async function onPickFiles(files: File[]) {
     if (files.length === 0) return;
     // Cap at 4 — matches the gallery's 2x2 matrix renderer.
@@ -2554,6 +2567,32 @@ function ChatPanel({
               className="w-full bg-transparent text-sm text-lc-white outline-none placeholder:text-lc-muted disabled:opacity-50"
             />
           </div>
+          <div ref={emojiBtnRef} className="relative">
+            <button
+              type="button"
+              onClick={() => setEmojiOpen((v) => !v)}
+              className="text-lc-muted hover:text-lc-white"
+              title="Add emoji"
+              aria-label="Add emoji"
+              aria-haspopup="dialog"
+              aria-expanded={emojiOpen}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="9" />
+                <path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01" />
+              </svg>
+            </button>
+            {emojiOpen && (
+              <EmojiPicker
+                onPick={(emoji) => {
+                  setDraft((d) => d + emoji);
+                  setEmojiOpen(false);
+                  inputRef.current?.focus();
+                }}
+                onClose={() => setEmojiOpen(false)}
+              />
+            )}
+          </div>
           <button
             type="submit"
             disabled={!draft.trim() || uploadingMedia}
@@ -2795,6 +2834,7 @@ function MessageRow({
   const meta = useProfile(msg.pubkey);
   const relay = useCurrentRelayUrl();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [menuPlacement, setMenuPlacement] = useState<'down' | 'up'>('down');
   const [panelPinned, setPanelPinned] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -3039,7 +3079,17 @@ function MessageRow({
           }
         >
           <button
-            onClick={(e) => { e.stopPropagation(); setMenuOpen((v) => !v); setPickerOpen(false); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!menuOpen && menuRef.current) {
+                const rect = menuRef.current.getBoundingClientRect();
+                const estimatedMenuHeight = isAdmin ? 280 : 240;
+                const spaceBelow = window.innerHeight - rect.bottom;
+                setMenuPlacement(spaceBelow < estimatedMenuHeight ? 'up' : 'down');
+              }
+              setMenuOpen((v) => !v);
+              setPickerOpen(false);
+            }}
             className="rounded px-1.5 py-0.5 text-sm text-lc-muted hover:bg-lc-card hover:text-lc-white"
             title="More actions"
             aria-label="More actions"
@@ -3052,7 +3102,10 @@ function MessageRow({
         {menuOpen && (
           <div
             role="menu"
-            className="absolute right-0 top-7 z-20 w-48 rounded-md border border-lc-border bg-lc-dark p-1 shadow-2xl"
+            className={
+              'absolute right-0 z-20 w-48 rounded-md border border-lc-border bg-lc-dark p-1 shadow-2xl ' +
+              (menuPlacement === 'up' ? 'bottom-full mb-1' : 'top-7')
+            }
           >
             <button
               role="menuitem"
