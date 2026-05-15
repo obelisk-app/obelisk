@@ -17,7 +17,7 @@
  *   mechanical (replace this file's body).
  *
  *   See `nostrord/composeApp/src/wasmJsMain/.../bridge/README.md` (deleted
- *   when the broken first-draft was reverted) and obeliskord/HANDOFF.md
+ *   when the broken first-draft was reverted) and obelisk/HANDOFF.md
  *   for the WASM swap recipe.
  */
 import { SimplePool, type Filter, type Event as NostrEvent, type EventTemplate, type VerifiedEvent, finalizeEvent, getPublicKey, nip19, nip04 } from 'nostr-tools';
@@ -45,6 +45,7 @@ import type {
   JsUserMetadata,
   JsReaction,
   JsDirectMessage,
+  MessagesStatus,
   RelayAccessState,
   Unsubscribe,
 } from './types';
@@ -611,8 +612,23 @@ class BridgeImpl implements NostrBridge {
    * tell "still loading" apart from "relay confirmed empty" — the latter
    * is what justifies the welcome / empty-state copy. Reset on relay
    * switch / logout (the new relay hasn't responded yet).
+   *
+   * Prefer {@link messagesStatusByGroup} for new UI code: EOSE alone is
+   * not proof of emptiness on auth-gated / silent-filtering relays. The
+   * status field carries the bridge's retry-backed confidence.
    */
   messagesEoseByGroup = new StateStore<Record<string, boolean>>({});
+  /**
+   * Per-group confidence enum for the kind 9 messages stream. See
+   * {@link MessagesStatus} for transitions. The chat pane reads this to
+   * decide between "Loading messages…" (loading | empty-unconfirmed) and
+   * "No messages yet" (empty-confirmed). Empty-unconfirmed exists because
+   * auth-gated relays routinely send EOSE-empty fast and trickle real
+   * events afterwards; the bridge stays in that state through up to
+   * {@link EMPTY_RETRY_DELAYS}.length restarts before promoting to
+   * empty-confirmed, so the UI never falsely flashes "No messages".
+   */
+  messagesStatusByGroup = new StateStore<Record<string, MessagesStatus>>({});
   /**
    * SFU active-call state per channel id. Populated from kind 31314 events
    * the SFU publishes when a room is live. The UI reads this to show a
@@ -720,6 +736,29 @@ class BridgeImpl implements NostrBridge {
   private pendingMessageQueue: string[] = [];
   private pendingMessageSet = new Set<string>();
   private pendingMessageTimer: ReturnType<typeof setTimeout> | null = null;
+  /**
+   * Per-group retry tracking for the kind 9 stream. Populated on the first
+   * empty EOSE; cleared on first event ingest, channel logout, or after
+   * {@link EMPTY_RETRY_DELAYS}.length restarts (whichever comes first).
+   *
+   * `attempts` counts the number of retries already executed (0 = just got
+   * first EOSE-empty, no retry yet). `sawEvent` is currently informational
+   * — the authoritative event check happens against `messagesByGroup` on
+   * retry-fire so we don't race the StateStore.
+   */
+  private messagesRetryByGroup = new Map<string, {
+    attempts: number;
+    timer: ReturnType<typeof setTimeout> | null;
+  }>();
+  /**
+   * Backoff schedule for empty-EOSE retries. Tuned so the worst-case time
+   * before declaring a channel empty is the sum of all delays plus the
+   * relay's own response time (≈9.5s + EOSE latency). Auth-gated relays
+   * that send EOSE-empty before AUTH completes typically deliver real
+   * events within the first 1500ms; the longer tail covers slow relays
+   * and transient network hiccups.
+   */
+  private static readonly EMPTY_RETRY_DELAYS = [1500, 3000, 5000] as const;
   // Per-pubkey cache of recipient NIP-65 read relays (where they read DMs).
   // Populated on first sendDirectMessage to that pubkey; TTL'd to avoid
   // requerying every send.
