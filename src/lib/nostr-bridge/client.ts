@@ -103,6 +103,35 @@ export interface PublishOpts {
   readonly mode?: 'merge' | 'replace';
 }
 
+/**
+ * First value of the first tag whose name matches, or `undefined`. Equivalent
+ * to `ev.tags.find((t) => t[0] === name)?.[1]` but single-pass and avoids the
+ * intermediate closure allocation per ingest.
+ *
+ * For tags that carry a marker as a fourth element (e.g. NIP-10
+ * `["e", id, relay, "reply"]`), use the explicit `.find()` form — the marker
+ * predicate doesn't fit a generic helper.
+ */
+function getTag(ev: NostrEvent, name: string): string | undefined {
+  for (const t of ev.tags) {
+    if (t[0] === name) return t[1];
+  }
+  return undefined;
+}
+
+/**
+ * Values of every tag matching `name`, in document order, skipping entries
+ * whose value is empty. Equivalent to
+ * `ev.tags.filter((t) => t[0] === name).map((t) => t[1])` but single-pass.
+ */
+function getAllTags(ev: NostrEvent, name: string): string[] {
+  const out: string[] = [];
+  for (const t of ev.tags) {
+    if (t[0] === name && typeof t[1] === 'string' && t[1].length > 0) out.push(t[1]);
+  }
+  return out;
+}
+
 // -- NIP-29 kinds --------------------------------------------------------
 const KIND_GROUP_MESSAGE = 9;
 const KIND_GROUP_METADATA = 39000;
@@ -2347,9 +2376,9 @@ class BridgeImpl implements NostrBridge {
         content: e.content,
         createdAt: e.created_at,
         kind: e.kind,
-        replyToId: e.tags.find((t) => t[0] === 'e')?.[1] ?? null,
+        replyToId: getTag(e, 'e') ?? null,
         mentions: extractMentionPubkeysFromMessage(e.content, e.tags),
-        groupId: e.tags.find((t) => t[0] === 'h')?.[1] ?? null,
+        groupId: getTag(e, 'h') ?? null,
       }))
       .sort((a, b) => b.createdAt - a.createdAt);
   }
@@ -3488,7 +3517,7 @@ class BridgeImpl implements NostrBridge {
   }
 
   private ingestGroupCreator(ev: NostrEvent): void {
-    const groupId = ev.tags.find((t) => t[0] === 'h')?.[1];
+    const groupId = getTag(ev, 'h');
     if (!groupId) return;
     // Newest-wins isn't meaningful for kind 9007 (a group is created exactly
     // once), but we still guard against mid-flight duplicates so we don't
@@ -3500,7 +3529,7 @@ class BridgeImpl implements NostrBridge {
   }
 
   private ingestAdminMember(ev: NostrEvent): void {
-    const groupId = ev.tags.find((t) => t[0] === 'd')?.[1];
+    const groupId = getTag(ev, 'd');
     if (!groupId) return;
     // Drop older revisions arriving out-of-order from slower relays. Without
     // this, admins/members lists oscillate as different relays return
@@ -3511,7 +3540,7 @@ class BridgeImpl implements NostrBridge {
     if (ev.created_at <= prevAt) return;
     this.adminMemberLatestAt.set(cacheKey, ev.created_at);
 
-    const pubkeys = ev.tags.filter((t) => t[0] === 'p').map((t) => t[1]);
+    const pubkeys = getAllTags(ev, 'p');
     const store = ev.kind === KIND_GROUP_ADMINS ? this.adminsByGroup : this.membersByGroup;
     store.update((prev) => ({ ...prev, [groupId]: pubkeys }));
     // Persist for next reload — paints instantly before the relay round-trip
@@ -3541,7 +3570,7 @@ class BridgeImpl implements NostrBridge {
       // newest by created_at so an older replica doesn't clobber a newer one.
       if (ev.created_at <= latestCreatedAt) return;
       latestCreatedAt = ev.created_at;
-      const pubkeys = ev.tags.filter((t) => t[0] === 'p').map((t) => t[1]);
+      const pubkeys = getAllTags(ev, 'p');
       this.myFollows.set(pubkeys);
       pubkeys.forEach((pk) => this.ensureUserMetadata(pk));
     });
@@ -3559,8 +3588,7 @@ class BridgeImpl implements NostrBridge {
     const sub = this.subscribeWatched(relays, filter, (ev) => {
       if (ev.created_at <= latestCreatedAt) return;
       latestCreatedAt = ev.created_at;
-      const pubkeys = ev.tags.filter((t) => t[0] === 'p' && typeof t[1] === 'string').map((t) => t[1]);
-      this.myMutes.set(pubkeys);
+      this.myMutes.set(getAllTags(ev, 'p'));
     });
     this.subs.push(sub);
   }
@@ -3588,19 +3616,18 @@ class BridgeImpl implements NostrBridge {
   }
 
   private ingestActiveCall(ev: NostrEvent): void {
-    const tag = (name: string) => ev.tags.find((t) => t[0] === name)?.[1];
-    const channelId = tag('d');
+    const channelId = getTag(ev, 'd');
     if (!channelId) return;
-    const status = tag('status') ?? 'active';
-    const hostPubkey = tag('host') ?? ev.pubkey;
-    const expirationStr = tag('expiration');
+    const status = getTag(ev, 'status') ?? 'active';
+    const hostPubkey = getTag(ev, 'host') ?? ev.pubkey;
+    const expirationStr = getTag(ev, 'expiration');
     const expiresAt = expirationStr ? parseInt(expirationStr, 10) || 0 : 0;
     // Participant count: SFU started tagging this so consumers can
     // distinguish "live call with people" from "room still open during
     // empty-grace." Older SFU builds don't tag — treat absent as -1
     // (unknown, render badge to preserve back-compat) so we don't go
     // silent on a partial deploy.
-    const countStr = tag('count');
+    const countStr = getTag(ev, 'count');
     const participantCount = countStr === undefined ? -1 : (parseInt(countStr, 10) || 0);
     const cur = this.activeCallByChannel.get();
     const prev = cur[channelId];
@@ -3846,7 +3873,7 @@ class BridgeImpl implements NostrBridge {
   }
 
   private ingestReaction(groupId: string, ev: NostrEvent): void {
-    const targetEventId = ev.tags.find((t) => t[0] === 'e')?.[1];
+    const targetEventId = getTag(ev, 'e');
     if (!targetEventId) return;
     const reaction: JsReaction = {
       id: ev.id,
@@ -3867,7 +3894,7 @@ class BridgeImpl implements NostrBridge {
   private async ingestIncomingDM(ev: NostrEvent): Promise<void> {
     if (!this.session) return;
     const me = this.session.pubKeyHex;
-    const recipient = ev.tags.find((t) => t[0] === 'p')?.[1];
+    const recipient = getTag(ev, 'p');
     const isOutgoing = ev.pubkey === me;
     const counterparty = isOutgoing ? (recipient ?? '') : ev.pubkey;
     if (!counterparty) return;
