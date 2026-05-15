@@ -12,7 +12,11 @@ let mockGroups: JsGroup[] = [];
 let mockChildrenByParent: Record<string, string[]> = {};
 let mockMessagesByGroup: Record<string, JsMessage[]> = {};
 let mockGroupMetadataEose = true;
-const mockMessagesEoseByGroup = new Map<string, boolean>();
+// Default to 'empty-confirmed' so empty-thread cards behave the same way
+// they used to under `mockMessagesEoseByGroup.get(id) ?? true` (i.e. the
+// "EOSE has arrived" default). Override per-test if you need to render a
+// skeleton state ('loading' | 'empty-unconfirmed').
+const mockMessagesStatusByGroup = new Map<string, 'loading' | 'empty-unconfirmed' | 'empty-confirmed' | 'has-messages'>();
 
 const mockCreateGroup = vi.fn();
 const mockSendMessage = vi.fn();
@@ -23,7 +27,8 @@ vi.mock('@/lib/nostr-bridge', () => ({
   useGroupMetadataEose: () => mockGroupMetadataEose,
   useMessagesByGroup: () => mockMessagesByGroup,
   useMessages: (groupId: string) => mockMessagesByGroup[groupId] ?? [],
-  useMessagesEose: (groupId: string) => mockMessagesEoseByGroup.get(groupId) ?? true,
+  useMessagesStatus: (groupId: string) =>
+    mockMessagesStatusByGroup.get(groupId) ?? 'empty-confirmed',
   useSignerReady: () => true,
   nostrActions: {
     createGroup: (...a: unknown[]) => mockCreateGroup(...a),
@@ -99,7 +104,7 @@ beforeEach(() => {
   mockChildrenByParent = {};
   mockMessagesByGroup = {};
   mockGroupMetadataEose = true;
-  mockMessagesEoseByGroup.clear();
+  mockMessagesStatusByGroup.clear();
   mockCreateGroup.mockReset();
   mockSendMessage.mockReset();
   if (typeof window !== 'undefined') window.localStorage.clear();

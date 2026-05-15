@@ -9,7 +9,7 @@ import { getBridge } from './client';
 import { normalizeRelayUrl } from './relay-url';
 import { wotEngine } from '@/lib/wot/engine';
 import { useWotEnabled } from '@/lib/wot';
-import type { JsGroup, JsMessage, JsReaction, JsDirectMessage, JsUserMetadata, RelayAccessState } from './types';
+import type { JsGroup, JsMessage, JsReaction, JsDirectMessage, JsUserMetadata, MessagesStatus, RelayAccessState } from './types';
 
 function useSubscription<T>(
   subscribe: (
@@ -324,15 +324,34 @@ export function useMembershipReady(groupId: string | null): boolean {
 
 /**
  * `true` once the relay has emitted EOSE for the per-group kind 9 messages
- * REQ. The chat pane reads this together with `useMessages(groupId)` to
- * decide between "still loading — show spinner" and "confirmed empty — show
- * welcome copy". Calling this hook also subscribes the group's messages,
- * so a freshly-opened channel always has a live REQ.
+ * REQ. Prefer {@link useMessagesStatus} for new code — EOSE alone is not
+ * proof of emptiness on auth-gated / silent-filtering relays, and the
+ * status hook carries the bridge's retry-backed confidence.
  */
 export function useMessagesEose(groupId: string | null): boolean {
   return useSubscription<boolean>(
     (b, cb) => (groupId ? b.subscribeMessagesEose(groupId, cb) : () => {}),
     false,
+    [groupId],
+  );
+}
+
+/**
+ * Per-group confidence enum for the kind 9 messages stream.
+ *  - `loading`           — still waiting for the first EOSE / first event
+ *  - `empty-unconfirmed` — relay returned EOSE before any events; bridge is retrying
+ *  - `empty-confirmed`   — retries exhausted, treat the channel as empty
+ *  - `has-messages`      — at least one event ingested
+ *
+ * The chat pane should show a loading spinner for `loading` and
+ * `empty-unconfirmed`, and only render "No messages yet" once status
+ * reaches `empty-confirmed`. Subscribing also fast-tracks the underlying
+ * kind 9 REQ.
+ */
+export function useMessagesStatus(groupId: string | null): MessagesStatus {
+  return useSubscription<MessagesStatus>(
+    (b, cb) => (groupId ? b.subscribeMessagesStatus(groupId, cb) : () => {}),
+    'loading',
     [groupId],
   );
 }

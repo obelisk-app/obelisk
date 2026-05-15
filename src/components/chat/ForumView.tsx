@@ -30,7 +30,7 @@ import {
   useSignerReady,
   useMessages,
   useMessagesByGroup,
-  useMessagesEose,
+  useMessagesStatus,
   nostrActions,
 } from '@/lib/nostr-bridge';
 import { useProfile, usePubkey } from '@nostr-wot/data/react';
@@ -699,30 +699,19 @@ function resolveTopics(
 }
 
 /**
- * Pair `messagesEose` with a 5s dwell window before declaring a thread
- * "truly empty". Some auth-gated relays emit EOSE-empty fast and trickle
- * the real events a few seconds later (see feedback_empty_eose_grace);
- * without the grace the card would flicker skeleton → hidden → real.
- */
-function useEmptyEoseGrace(threadId: string): boolean {
-  const [passed, setPassed] = useState(false);
-  useEffect(() => {
-    setPassed(false);
-    const t = setTimeout(() => setPassed(true), 5000);
-    return () => clearTimeout(t);
-  }, [threadId]);
-  return passed;
-}
-
-/**
  * Thread card (list view). Three states:
- *   - messages.length > 0           → full render (OP + last + counts)
- *   - messages.length === 0, no EOSE OR within 5s grace → skeleton placeholder
- *   - messages.length === 0, EOSE + grace passed → return null (truly empty)
+ *   - messages.length > 0                             → full render (OP + last + counts)
+ *   - messages.length === 0, status !== empty-confirmed → skeleton placeholder
+ *   - messages.length === 0, status === empty-confirmed → return null (truly empty)
+ *
+ * Confidence comes from the bridge's retry ladder — it stays in
+ * `empty-unconfirmed` while it re-fires the kind 9 REQ a few times
+ * against auth-gated / silent-filtering relays before promoting to
+ * `empty-confirmed`. The card flickers less and never hides a thread
+ * that genuinely has messages just because the first EOSE landed empty.
  *
  * The skeleton is clickable: opening the thread sets it as the bridge's
- * active group, which bumps its kind 9 REQ to the head of the queue (see
- * queueGroupMessages's activeGroupId branch).
+ * active group, which bumps its kind 9 REQ to the head of the queue.
  */
 function ThreadCard({
   thread,
@@ -734,7 +723,7 @@ function ThreadCard({
   onOpen: () => void;
 }) {
   const messages = useMessages(thread.id);
-  const messagesEose = useMessagesEose(thread.id);
+  const messagesStatus = useMessagesStatus(thread.id);
   const op = messages[0] ?? null;
   const lastMsg = messages[messages.length - 1] ?? null;
   // Hooks must run unconditionally — pass `null` while there's nothing to
@@ -742,10 +731,9 @@ function ThreadCard({
   // message lands.
   const opMeta = useUserMetadata(op?.pubkey ?? null);
   const lastMeta = useUserMetadata(lastMsg?.pubkey ?? null);
-  const emptyGracePassed = useEmptyEoseGrace(thread.id);
   const tags = useMemo(() => resolveTopics(thread.topics, forumTags), [thread.topics, forumTags]);
   if (!op || !lastMsg) {
-    if (messagesEose && emptyGracePassed) return null;
+    if (messagesStatus === 'empty-confirmed') return null;
     return <ThreadCardSkeleton thread={thread} onOpen={onOpen} />;
   }
   const opName = opMeta?.displayName || opMeta?.name || `${op.pubkey.slice(0, 8)}…`;
@@ -814,14 +802,13 @@ function ThreadGalleryCard({
   onOpen: () => void;
 }) {
   const messages = useMessages(thread.id);
-  const messagesEose = useMessagesEose(thread.id);
+  const messagesStatus = useMessagesStatus(thread.id);
   const op = messages[0] ?? null;
   const lastMsg = messages[messages.length - 1] ?? null;
   const opMeta = useUserMetadata(op?.pubkey ?? null);
-  const emptyGracePassed = useEmptyEoseGrace(thread.id);
   const tags = useMemo(() => resolveTopics(thread.topics, forumTags), [thread.topics, forumTags]);
   if (!op || !lastMsg) {
-    if (messagesEose && emptyGracePassed) return null;
+    if (messagesStatus === 'empty-confirmed') return null;
     return <ThreadGalleryCardSkeleton thread={thread} onOpen={onOpen} />;
   }
   const opName = opMeta?.displayName || opMeta?.name || `${op.pubkey.slice(0, 8)}…`;

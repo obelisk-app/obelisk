@@ -27,7 +27,7 @@ import {
   useChildrenByParent,
   useMessages,
   useMessagesByGroup,
-  useMessagesEose,
+  useMessagesStatus,
   useSignerReady,
   useLoadEarlier,
   useDirectMessages,
@@ -2443,31 +2443,13 @@ function ChannelScreen({
     ? `${parentGroup.name ?? parentGroup.id.slice(0, 8)}/${group?.name ?? groupId.slice(0, 8)}`
     : (group?.name ?? groupId.slice(0, 8));
   const messages = useMessages(groupId);
-  const messagesEose = useMessagesEose(groupId);
+  // Retry-backed confidence: bridge owns the dwell + retry ladder so
+  // this surface never needs to second-guess an empty EOSE. See
+  // `MessagesStatus` in src/lib/nostr-bridge/types.ts.
+  const messagesStatus = useMessagesStatus(groupId);
   const reactions = useReactions(groupId);
   const myPubkey = useMyPubkey();
   const relay = useCurrentRelayUrl();
-  // 5s grace before trusting an empty EOSE — same contract as desktop
-  // ChatPanel. Auth-gated / silent-filtering relays send EOSE-empty fast
-  // and trickle events afterwards; the grace keeps the spinner up so
-  // users don't see "No messages yet" flash on channels that do have
-  // messages.
-  const [emptyGracePassed, setEmptyGracePassed] = useState(false);
-  useEffect(() => {
-    setEmptyGracePassed(false);
-    const t = setTimeout(() => setEmptyGracePassed(true), 5000);
-    return () => clearTimeout(t);
-  }, [groupId]);
-  // Force-restart the kind 9 sub when reopening a stale-empty channel so
-  // the user doesn't need to refresh the page to get messages. Mirrors
-  // the desktop ChatPanel behavior.
-  useEffect(() => {
-    if (!groupId) return;
-    if (messagesEose && messages.length === 0) {
-      void nostrActions.refreshGroupMessages(groupId);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [groupId]);
   // Focused fetch of kind 39000 for this groupId — guarantees the channel
   // metadata is fetched even if the global stream missed it. The mobile
   // chat header reads `group.name` for the title; without this fetch the
@@ -2688,10 +2670,10 @@ function ChannelScreen({
       <div className="messages-wrap relative flex min-h-0 flex-1 flex-col">
       <div className="messages" ref={messagesRef}>
         {renderable.length === 0 ? (
-          // Don't claim "no messages yet" until BOTH the relay EOSE'd AND
-          // we've waited 5s — auth-gated / silent-filtering relays send
-          // EOSE-empty fast and trickle events afterwards.
-          !messagesEose || !emptyGracePassed ? (
+          // Bridge-owned confidence: only render "No messages yet" once
+          // the retry ladder has exhausted (status === 'empty-confirmed').
+          // 'loading' and 'empty-unconfirmed' both keep the spinner up.
+          messagesStatus !== 'empty-confirmed' ? (
             <div className="empty-state" data-testid="messages-loading">
               <div className="lc-spinner" aria-hidden="true" />
               <div className="empty-state-title">Loading messages…</div>
@@ -4078,20 +4060,6 @@ function resolveMobileTopics(
   return out;
 }
 
-/**
- * Pair `messagesEose` with a 5s dwell window before declaring a thread
- * truly empty (see desktop ForumView's same hook + feedback_empty_eose_grace).
- */
-function useMobileEmptyEoseGrace(threadId: string): boolean {
-  const [passed, setPassed] = useState(false);
-  useEffect(() => {
-    setPassed(false);
-    const t = setTimeout(() => setPassed(true), 5000);
-    return () => clearTimeout(t);
-  }, [threadId]);
-  return passed;
-}
-
 function MobileForumCard({
   group,
   forumTags,
@@ -4102,16 +4070,17 @@ function MobileForumCard({
   onClick: () => void;
 }) {
   const messages = useMessages(group.id);
-  const messagesEose = useMessagesEose(group.id);
+  // Bridge-owned retry ladder replaces the old UI dwell timer — see
+  // src/lib/nostr-bridge/types.ts MessagesStatus.
+  const messagesStatus = useMessagesStatus(group.id);
   const op = messages[0] ?? null;
   const lastMsg = messages[messages.length - 1] ?? null;
   const opMeta = useUserMetadata(op?.pubkey ?? null);
   const lastMeta = useUserMetadata(lastMsg?.pubkey ?? null);
-  const emptyGracePassed = useMobileEmptyEoseGrace(group.id);
   const tags = useMemo(() => resolveMobileTopics(group.topics, forumTags), [group.topics, forumTags]);
   // Hide truly-empty threads (matches the desktop forum UX rule).
   if (!op || !lastMsg) {
-    if (messagesEose && emptyGracePassed) return null;
+    if (messagesStatus === 'empty-confirmed') return null;
     // Skeleton-ish: render the card with whatever we have so the user knows
     // the thread exists and is incoming.
     return (

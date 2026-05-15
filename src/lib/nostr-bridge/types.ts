@@ -155,6 +155,16 @@ export type RelayAccessState =
   | 'unreachable'
   | 'error';
 
+/**
+ * Per-group confidence enum for the kind 9 messages stream. See
+ * `subscribeMessagesStatus` for the contract.
+ */
+export type MessagesStatus =
+  | 'loading'
+  | 'empty-unconfirmed'
+  | 'empty-confirmed'
+  | 'has-messages';
+
 export interface NostrBridge {
   initialize(): Promise<void>;
   dispose(): void;
@@ -241,8 +251,31 @@ export interface NostrBridge {
    * empty state — without this signal, an empty `messagesByGroup[groupId]`
    * looks the same whether the relay is still serving history or has
    * already confirmed the channel is empty.
+   *
+   * Prefer {@link subscribeMessagesStatus} for new code: EOSE alone is not
+   * proof of emptiness on auth-gated relays. The status enum surfaces the
+   * bridge's retry-backed confidence so the UI never prematurely declares
+   * "No messages".
    */
   subscribeMessagesEose(groupId: string, cb: (eose: boolean) => void): Unsubscribe;
+  /**
+   * Confidence enum for the per-group kind 9 messages stream.
+   *
+   *  - `loading`           — REQ open, no EOSE yet, no events ingested
+   *  - `empty-unconfirmed` — relay sent EOSE before any events; retries pending
+   *  - `empty-confirmed`   — retries exhausted, relay agrees the channel is empty
+   *  - `has-messages`      — at least one event ingested
+   *
+   * The UI should show a loading spinner for `loading` / `empty-unconfirmed`
+   * and only render "No messages yet" once the status reaches
+   * `empty-confirmed`. The bridge owns the retry timing (see
+   * `EMPTY_RETRY_DELAYS` in client.ts) so consumers never need to hand-roll
+   * dwell windows.
+   */
+  subscribeMessagesStatus(
+    groupId: string,
+    cb: (status: MessagesStatus) => void,
+  ): Unsubscribe;
   subscribeUserMetadata(pubkey: string, cb: (meta: JsUserMetadata | null) => void): Unsubscribe;
   /** Reactions targeting any event in [groupId]. Keyed by target event id. */
   subscribeReactions(

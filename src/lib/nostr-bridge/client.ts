@@ -1097,6 +1097,8 @@ class BridgeImpl implements NostrBridge {
     // loading spinner until the resub completes (see `pendingResubscribe`
     // handling in `connect()`).
     this.messagesEoseByGroup.set({});
+    this.messagesStatusByGroup.set({});
+    this.clearAllMessagesRetry();
     // Drop the background queue: it's tied to the dead pool's filters
     // and the new pool will receive a fresh kind 39000 fan-out which
     // will repopulate it.
@@ -1327,6 +1329,8 @@ class BridgeImpl implements NostrBridge {
     this.membersByGroup.set({});
     this.membershipReadyByGroup.set({});
     this.messagesEoseByGroup.set({});
+    this.messagesStatusByGroup.set({});
+    this.clearAllMessagesRetry();
     // Drop the background message-subscription queue too — pending work
     // is scoped to the previous session's authored REQs.
     this.pendingMessageQueue = [];
@@ -1535,6 +1539,8 @@ class BridgeImpl implements NostrBridge {
     // per-group kind 9 REQ yet, so the message pane should show its
     // loading spinner rather than the cached "ok, empty" state.
     this.messagesEoseByGroup.set({});
+    this.messagesStatusByGroup.set({});
+    this.clearAllMessagesRetry();
     // Drop background queue — pending entries point at filters bound to
     // the old pool. The new relay's kind 39000 fan-out will repopulate.
     this.pendingMessageQueue = [];
@@ -1694,6 +1700,21 @@ class BridgeImpl implements NostrBridge {
     this.subscribeGroupMessages(groupId);
     const adapter: Listener<Record<string, boolean>> = (m) => cb(!!m[groupId]);
     return this.messagesEoseByGroup.subscribe(adapter);
+  }
+  /**
+   * Per-group confidence enum for the kind 9 messages stream. The chat
+   * pane reads this to decide between "Loading messages…" and
+   * "No messages yet". See {@link MessagesStatus} for transitions.
+   * Subscribing also fast-tracks the underlying REQ, matching
+   * {@link subscribeMessagesEose}'s behavior.
+   */
+  subscribeMessagesStatus(
+    groupId: string,
+    cb: (status: MessagesStatus) => void,
+  ): Unsubscribe {
+    this.subscribeGroupMessages(groupId);
+    const adapter: Listener<Record<string, MessagesStatus>> = (m) => cb(m[groupId] ?? 'loading');
+    return this.messagesStatusByGroup.subscribe(adapter);
   }
   subscribeUserMetadata(pubkey: string, cb: (meta: JsUserMetadata | null) => void): Unsubscribe {
     this.ensureUserMetadata(pubkey);
@@ -2492,8 +2513,24 @@ class BridgeImpl implements NostrBridge {
   }
 
   setActiveGroup(groupId: string | null): void {
+    const previousActive = this.activeGroupId;
     this.activeGroupId = groupId;
+    // Switching away from a still-loading channel? Resume the background
+    // queue drain so other channels' subs aren't held forever.
+    if (previousActive && previousActive !== groupId) {
+      this.maybeResumeMessageQueueDrain();
+    }
     if (!groupId) return;
+    // Re-entering a channel that was previously declared empty-confirmed
+    // is the canonical "stale empty" recovery path. The bridge owns this
+    // restart so the UI never has to fire its own refresh effect.
+    const currentStatus = this.messagesStatusByGroup.get()[groupId];
+    const msgs = this.messagesByGroup.get()[groupId] ?? [];
+    if (currentStatus === 'empty-confirmed' && msgs.length === 0) {
+      this.clearMessagesRetry(groupId);
+      this.internalRestartMessageSub(groupId);
+      return;
+    }
     // Fast-track the channel the user just clicked: if the kind 9 REQ
     // hasn't been fired yet (because metadata is still streaming or this
     // group was sitting in the background queue from the kind 39000
@@ -3091,6 +3128,15 @@ class BridgeImpl implements NostrBridge {
 
   private scheduleMessageQueueDrain(): void {
     if (this.pendingMessageTimer) return;
+    // Strict active-channel priority: while the watched channel's kind 9
+    // sub is still in `loading` (no EOSE, no events), hold all background
+    // REQs back. The active sub's own EOSE / first-event handler calls
+    // {@link maybeResumeMessageQueueDrain} to release the queue. Without
+    // this gate, the relay's response queue interleaves the active
+    // channel's history with N background channels' histories — making
+    // the user wait visibly while watching one channel that already has
+    // the data in flight.
+    if (this.isActiveGroupStillLoading()) return;
     // Small delay so the active group's REQ (fired synchronously when the
     // user clicks a channel) lands before the relay sees a flood of
     // background REQs. Longer than a microtask so React's render commit
@@ -3102,7 +3148,36 @@ class BridgeImpl implements NostrBridge {
     }, 80);
   }
 
+  /**
+   * Re-arm the background drain when the active channel transitions out
+   * of `loading` (its EOSE arrived, or its first event was ingested).
+   * No-op if the queue is empty or the active channel is still loading.
+   */
+  private maybeResumeMessageQueueDrain(): void {
+    if (this.pendingMessageQueue.length === 0) return;
+    if (this.isActiveGroupStillLoading()) return;
+    this.scheduleMessageQueueDrain();
+  }
+
+  /**
+   * True iff the user is watching a channel whose kind 9 stream has not
+   * yet produced either an EOSE or a message. Used to gate background
+   * REQs so the watched channel always gets the relay's first attention.
+   */
+  private isActiveGroupStillLoading(): boolean {
+    const id = this.activeGroupId;
+    if (!id) return false;
+    const status = this.messagesStatusByGroup.get()[id];
+    return !status || status === 'loading';
+  }
+
   private drainMessageQueue(): void {
+    // Race guard: the active group's status may have flipped back to
+    // 'loading' while the 80ms drain timer was pending (e.g. user clicked
+    // a new channel just before the timer fired). Bail in that case;
+    // {@link maybeResumeMessageQueueDrain} will pick up when the new
+    // active channel's EOSE / first event lands.
+    if (this.isActiveGroupStillLoading()) return;
     // Always promote the active group to the head of the queue if it
     // happens to be sitting in there — handles the case where the user
     // switched channels while a background batch was in flight.
@@ -3158,6 +3233,12 @@ class BridgeImpl implements NostrBridge {
         return rest;
       });
     }
+    // Initial status: if the bridge already has cached messages for this
+    // group (e.g. a returning subscriber after a relay switch), keep
+    // 'has-messages'; otherwise enter 'loading' so the UI shows a spinner
+    // until the bridge confirms emptiness or events arrive.
+    const seedMsgs = this.messagesByGroup.get()[groupId] ?? [];
+    this.setMessagesStatus(groupId, seedMsgs.length > 0 ? 'has-messages' : 'loading');
     const filter: Filter = {
       kinds: [KIND_GROUP_MESSAGE],
       '#h': [groupId],
@@ -3170,10 +3251,25 @@ class BridgeImpl implements NostrBridge {
       () => {
         // Flip per-group EOSE once the relay confirms it has finished
         // serving the stored history for this REQ. The chat pane reads
-        // this to swap a loading spinner for the welcome / empty state.
+        // this for legacy purposes; the authoritative loading→empty
+        // signal is now `messagesStatusByGroup`.
         this.messagesEoseByGroup.update((prev) =>
           prev[groupId] ? prev : { ...prev, [groupId]: true },
         );
+        // Decide confidence: events already ingested? Trust the relay
+        // and stop retrying. Empty? Drop to 'empty-unconfirmed' and let
+        // the retry ladder run before the UI ever sees "No messages".
+        const msgs = this.messagesByGroup.get()[groupId] ?? [];
+        if (msgs.length > 0) {
+          this.setMessagesStatus(groupId, 'has-messages');
+          this.clearMessagesRetry(groupId);
+        } else {
+          this.setMessagesStatus(groupId, 'empty-unconfirmed');
+          this.scheduleEmptyRetry(groupId);
+        }
+        // If this is the watched channel, release any background REQs we
+        // were holding back to give it priority bandwidth.
+        if (groupId === this.activeGroupId) this.maybeResumeMessageQueueDrain();
       },
       { affectsRelayAccess: false },
     );
@@ -3182,19 +3278,91 @@ class BridgeImpl implements NostrBridge {
   }
 
   /**
-   * Force-restart the kind 9 subscription for `groupId`. Closes any
-   * existing sub (so a silently-dead WebSocket frame queue can't keep us
-   * stuck on stale `messagesEose=true && messages.length===0`), clears
-   * the EOSE flag so the UI returns to its loading state, and re-fires a
-   * fresh REQ.
-   *
-   * Use case: the user navigates back to a channel that looked empty.
-   * Auth-gated / silent-filtering relays sometimes send EOSE-empty
-   * quickly and then never deliver the actual events; a fresh sub is the
-   * only way to recover short of a full page reload.
+   * Write `status` to `messagesStatusByGroup[groupId]` only if it changed,
+   * so React subscribers don't churn on redundant writes.
    */
-  refreshGroupMessages(groupId: string): void {
-    if (!groupId) return;
+  private setMessagesStatus(groupId: string, status: MessagesStatus): void {
+    this.messagesStatusByGroup.update((prev) => {
+      if (prev[groupId] === status) return prev;
+      return { ...prev, [groupId]: status };
+    });
+  }
+
+  /**
+   * Drop any pending retry timer for `groupId`. Called when a message
+   * arrives (we've proven the channel isn't empty), when the user logs
+   * out / switches relay (the sub is going away), and when the retry
+   * ladder is exhausted.
+   */
+  private clearMessagesRetry(groupId: string): void {
+    const entry = this.messagesRetryByGroup.get(groupId);
+    if (entry?.timer) clearTimeout(entry.timer);
+    this.messagesRetryByGroup.delete(groupId);
+  }
+
+  /**
+   * Drop every pending retry timer. Called on logout / pool reset /
+   * relay switch — pending retries are tied to the old pool's filters.
+   */
+  private clearAllMessagesRetry(): void {
+    for (const entry of this.messagesRetryByGroup.values()) {
+      if (entry.timer) clearTimeout(entry.timer);
+    }
+    this.messagesRetryByGroup.clear();
+  }
+
+  /**
+   * Empty-EOSE retry ladder. Auth-gated and silent-filtering relays
+   * routinely send EOSE-empty fast (before AUTH completes, or after a
+   * NIP-29 ACL filter dropped every event). Without this, the UI flashes
+   * "No messages yet" on a channel that genuinely has history.
+   *
+   * Each call advances the attempt counter. After
+   * {@link EMPTY_RETRY_DELAYS}.length attempts the status is promoted to
+   * `empty-confirmed`. If a message arrives at any point, the timer is
+   * cancelled and status flips to `has-messages`.
+   */
+  private scheduleEmptyRetry(groupId: string): void {
+    if (!this.session) return; // logged out — drop the work
+    const prior = this.messagesRetryByGroup.get(groupId);
+    const attempts = prior?.attempts ?? 0;
+    if (attempts >= BridgeImpl.EMPTY_RETRY_DELAYS.length) {
+      this.setMessagesStatus(groupId, 'empty-confirmed');
+      this.clearMessagesRetry(groupId);
+      return;
+    }
+    const delay = BridgeImpl.EMPTY_RETRY_DELAYS[attempts];
+    if (prior?.timer) clearTimeout(prior.timer);
+    const timer = setTimeout(() => {
+      const entry = this.messagesRetryByGroup.get(groupId);
+      if (!entry) return; // cleared by a concurrent message / logout
+      entry.timer = null;
+      entry.attempts += 1;
+      this.messagesRetryByGroup.set(groupId, entry);
+      // If a message arrived between scheduling and firing, the entry
+      // would already be cleared by `clearMessagesRetry`. Guard anyway.
+      const msgs = this.messagesByGroup.get()[groupId] ?? [];
+      if (msgs.length > 0) {
+        this.setMessagesStatus(groupId, 'has-messages');
+        this.clearMessagesRetry(groupId);
+        return;
+      }
+      // Restart the sub so the relay sees a fresh REQ — most likely to
+      // unstick auth-gated relays whose AUTH handshake finished after
+      // the initial EOSE-empty.
+      this.internalRestartMessageSub(groupId);
+    }, delay);
+    this.messagesRetryByGroup.set(groupId, { attempts, timer });
+  }
+
+  /**
+   * Close any existing kind 9 sub for `groupId` and open a fresh one.
+   * Does NOT reset the retry counter — used by both the retry ladder
+   * (continuing attempts) and {@link refreshGroupMessages} (which resets
+   * the counter before calling this).
+   */
+  private internalRestartMessageSub(groupId: string): void {
+    if (!this.session) return;
     const existing = this.messageSubByGroup.get(groupId);
     if (existing) {
       try {
@@ -3215,7 +3383,22 @@ class BridgeImpl implements NostrBridge {
       void _drop;
       return rest;
     });
+    this.setMessagesStatus(groupId, 'loading');
     this.subscribeGroupMessages(groupId);
+  }
+
+  /**
+   * Force-restart the kind 9 subscription for `groupId` and reset the
+   * empty-EOSE retry counter so the user gets a fresh budget of attempts.
+   * Use when an external surface needs to recover a stale-empty channel
+   * (e.g. a "Reload" button). The active-group switch path also calls
+   * this implicitly via {@link setActiveGroup} when re-entering an
+   * empty-confirmed channel.
+   */
+  refreshGroupMessages(groupId: string): void {
+    if (!groupId) return;
+    this.clearMessagesRetry(groupId);
+    this.internalRestartMessageSub(groupId);
   }
 
   private subscribeKind0(pubkey: string): void {
@@ -3615,6 +3798,16 @@ class BridgeImpl implements NostrBridge {
     if (replacedClientTag) this.pendingGroupSends.delete(replacedClientTag);
     // Lazy metadata fetch for any author we haven't seen yet.
     this.ensureUserMetadata(ev.pubkey);
+    // A real event arrived: the channel is definitively non-empty. Cancel
+    // any pending empty-EOSE retry and flip status. Doing this here
+    // (rather than only in the EOSE callback) covers the case where
+    // events arrive AFTER an empty EOSE but BEFORE the retry timer fires
+    // — without it the bridge would still schedule a needless restart.
+    if (isNew) {
+      this.setMessagesStatus(groupId, 'has-messages');
+      this.clearMessagesRetry(groupId);
+      if (groupId === this.activeGroupId) this.maybeResumeMessageQueueDrain();
+    }
     // Inbox card for @-mentions. Unread badges are derived in the UI from
     // `useReadStateStore.groupCursors[groupId]` vs `messages[].createdAt`,
     // so this path only needs to surface the mention as an inbox event

@@ -1090,6 +1090,188 @@ describe('nostr-bridge', () => {
     expect(metadataEvent?.relays).toContain('wss://relay.damus.io');
     expect(metadataEvent?.relays).toContain('wss://lacrypta-relay.obelisk.ar');
   });
+
+  // -- per-group messages-status confidence + retry ladder ----------------
+  // EOSE alone is NOT proof a channel is empty: auth-gated and silent-
+  // filtering relays routinely send EOSE-empty before any events arrive.
+  // The bridge owns a retry ladder (see `EMPTY_RETRY_DELAYS` in client.ts)
+  // that re-fires the kind 9 REQ a few times before promoting to
+  // `empty-confirmed`. The UI reads `messagesStatusByGroup` to decide
+  // between the loading spinner and "No messages yet" copy.
+
+  it('subscribeMessagesStatus: starts at "loading", flips to "empty-unconfirmed" after empty EOSE', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const groupId = 'empty-eose-status-test';
+    const observed: string[] = [];
+    bridge.subscribeMessagesStatus(groupId, (s) => observed.push(s));
+    // Initial replay before any EOSE microtask drains.
+    expect(observed[0]).toBe('loading');
+
+    // FakePool fires EOSE via queueMicrotask; flush drains it.
+    await flush();
+    // Empty EOSE → bridge holds "empty-unconfirmed" while the retry ladder
+    // is pending. UI must keep the spinner up here, NOT show "no messages".
+    expect(observed.at(-1)).toBe('empty-unconfirmed');
+  });
+
+  it('event arriving after empty EOSE flips status to "has-messages" and cancels the retry', async () => {
+    const { getBridge, getBridgeImpl } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const impl = getBridgeImpl()!;
+    const groupId = 'event-arrival-status-test';
+    bridge.subscribeMessagesStatus(groupId, () => {});
+    await flush();
+    expect(impl.messagesStatusByGroup.get()[groupId]).toBe('empty-unconfirmed');
+    // Retry entry exists, timer scheduled.
+    expect(impl.messagesRetryByGroup.has(groupId)).toBe(true);
+
+    // Simulate the auth-gated relay finally delivering a real event after
+    // its EOSE-empty head-fake.
+    deliver(await fakeRelayMessage({ groupId, content: 'late history msg' }));
+    await flush();
+
+    expect(impl.messagesStatusByGroup.get()[groupId]).toBe('has-messages');
+    // Retry was cancelled so we don't fire a needless restart.
+    expect(impl.messagesRetryByGroup.has(groupId)).toBe(false);
+  });
+
+  it('exhausting the retry ladder (3 retries) promotes status to "empty-confirmed"', async () => {
+    const { getBridge, getBridgeImpl } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const impl = getBridgeImpl()!;
+    const groupId = 'retry-exhaustion-test';
+
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      bridge.subscribeMessagesStatus(groupId, () => {});
+      // Drain microtasks so the initial EOSE fires.
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(impl.messagesStatusByGroup.get()[groupId]).toBe('empty-unconfirmed');
+
+      // 1500 + 3000 + 5000 = 9500ms of retry ladder. Pad slightly so the
+      // post-final-retry EOSE microtask + scheduleEmptyRetry call complete.
+      await vi.advanceTimersByTimeAsync(10000);
+      expect(impl.messagesStatusByGroup.get()[groupId]).toBe('empty-confirmed');
+      expect(impl.messagesRetryByGroup.has(groupId)).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('setActiveGroup on an "empty-confirmed" channel restarts the sub and resets confidence to "loading"', async () => {
+    const { getBridge, getBridgeImpl } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const impl = getBridgeImpl()!;
+    const groupId = 'stale-empty-reopen';
+
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      // Drive status to empty-confirmed via the retry ladder.
+      bridge.subscribeMessagesStatus(groupId, () => {});
+      await vi.advanceTimersByTimeAsync(10000);
+      expect(impl.messagesStatusByGroup.get()[groupId]).toBe('empty-confirmed');
+
+      // User now opens this channel — bridge must restart the sub so a
+      // previously-empty verdict can be revised.
+      bridge.setActiveGroup(groupId);
+      // status flips to 'loading' synchronously inside subscribeGroupMessages;
+      // the fresh EOSE microtask hasn't drained yet.
+      expect(impl.messagesStatusByGroup.get()[groupId]).toBe('loading');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('refreshGroupMessages resets retry counter and restarts the kind 9 sub', async () => {
+    const { getBridge, getBridgeImpl } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const impl = getBridgeImpl()!;
+    const groupId = 'refresh-resets-retry';
+
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      bridge.subscribeMessagesStatus(groupId, () => {});
+      // First retry advances attempts to 1.
+      await vi.advanceTimersByTimeAsync(1500);
+      expect(impl.messagesRetryByGroup.get(groupId)?.attempts).toBe(1);
+
+      // External refresh: must reset attempts to 0 and reopen the sub.
+      bridge.refreshGroupMessages(groupId);
+      // Synchronously: retry tracking was cleared (no entry until next
+      // empty EOSE schedules a fresh ladder).
+      expect(impl.messagesRetryByGroup.has(groupId)).toBe(false);
+      // Status is 'loading' until the fresh EOSE microtask drains.
+      expect(impl.messagesStatusByGroup.get()[groupId]).toBe('loading');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('background message-queue drain is gated by the active channel reaching its first EOSE / event', async () => {
+    const { getBridge, getBridgeImpl } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const impl = getBridgeImpl()!;
+    const subsFor = (id: string) =>
+      fake.state.subscriptions.filter((s) => {
+        const f = s.filter as { kinds?: number[]; '#h'?: string[] };
+        return f.kinds?.includes(9) && f['#h']?.includes(id);
+      });
+
+    // Pre-sign the background metadata BEFORE the synchronous block: the
+    // assertions below must run with no microtask drains in between (any
+    // `await` would let queueMicrotask(EOSE) fire and flip the watched
+    // channel's status out of 'loading' prematurely).
+    const bgAEvent = await fakeRelayMetadata({ groupId: 'bg-a', name: 'A' });
+    const bgBEvent = await fakeRelayMetadata({ groupId: 'bg-b', name: 'B' });
+
+    // — synchronous block — no awaits! —
+    bridge.setActiveGroup('watched-grp');
+    deliver(bgAEvent);
+    deliver(bgBEvent);
+
+    // Synchronously: only watched sub exists. bg subs are queued but
+    // the drain timer was NOT armed — `isActiveGroupStillLoading()` saw
+    // status='loading' on the active group and bailed.
+    expect(subsFor('watched-grp')).toHaveLength(1);
+    expect(subsFor('bg-a')).toHaveLength(0);
+    expect(subsFor('bg-b')).toHaveLength(0);
+    expect(impl.messagesStatusByGroup.get()['watched-grp']).toBe('loading');
+    // — end synchronous block —
+
+    // Now allow microtasks to drain (EOSE for watched fires → status
+    // flips off 'loading' → maybeResumeMessageQueueDrain arms the 80ms
+    // drain timer).
+    await flush();
+    await new Promise((r) => setTimeout(r, 150));
+    expect(subsFor('bg-a')).toHaveLength(1);
+    expect(subsFor('bg-b')).toHaveLength(1);
+  });
 });
 
 // -- helpers ------------------------------------------------------------
@@ -1162,6 +1344,24 @@ async function fakeRelayMetadataWithExtraTags(opts: {
       kind: 39000,
       content: '',
       tags,
+      created_at: Math.floor(Date.now() / 1000),
+      pubkey: pk,
+    } as Parameters<typeof finalizeEvent>[0],
+    sk,
+  );
+}
+
+async function fakeRelayMessage(opts: {
+  groupId: string;
+  content: string;
+}): Promise<NostrEvent> {
+  const sk = generateSecretKey();
+  const pk = getPublicKey(sk);
+  return finalizeEvent(
+    {
+      kind: 9,
+      content: opts.content,
+      tags: [['h', opts.groupId]],
       created_at: Math.floor(Date.now() / 1000),
       pubkey: pk,
     } as Parameters<typeof finalizeEvent>[0],

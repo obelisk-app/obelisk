@@ -10,7 +10,7 @@ import {
   useGroups,
   useGroupById,
   useMessages,
-  useMessagesEose,
+  useMessagesStatus,
   useGroupMetadataEose,
   useLoadEarlier,
   useReactions,
@@ -1842,32 +1842,21 @@ function ChatPanel({
   onSelectGroup: (groupId: string) => void;
 }) {
   const messages = useMessages(groupId);
-  const messagesEose = useMessagesEose(groupId);
+  // Retry-backed confidence enum — the bridge runs an internal retry
+  // ladder on empty EOSE before promoting to `empty-confirmed`, so the
+  // UI doesn't need its own dwell timer or auto-refresh effect. See
+  // `MessagesStatus` in src/lib/nostr-bridge/types.ts.
+  const messagesStatus = useMessagesStatus(groupId);
   const groupMetadataEose = useGroupMetadataEose();
-  // Per-channel grace timer. EOSE alone is NOT proof the channel is
-  // genuinely empty — auth-gated relays, silent filterers, and slow
-  // sockets all reach EOSE-empty quickly and then trickle real events
-  // afterwards. Require both EOSE AND a minimum dwell time before we
-  // claim the channel is empty; until then keep the spinner up.
-  const [emptyGracePassed, setEmptyGracePassed] = useState(false);
+  // Grace window for the *channel-missing* verdict (kind 39000), which
+  // still uses the simpler "EOSE + dwell" gate. The bridge owns kind 9
+  // confidence directly; this timer only matters for the
+  // "Channel not visible on this relay" copy.
+  const [channelMissingGrace, setChannelMissingGrace] = useState(false);
   useEffect(() => {
-    setEmptyGracePassed(false);
-    const t = setTimeout(() => setEmptyGracePassed(true), 5000);
+    setChannelMissingGrace(false);
+    const t = setTimeout(() => setChannelMissingGrace(true), 5000);
     return () => clearTimeout(t);
-  }, [groupId]);
-  // If we re-enter a channel that's already in "EOSE-empty stale" state
-  // (a previous visit completed empty), force-restart the kind 9 sub so
-  // the user gets fresh data without having to refresh the whole page.
-  // Idempotent / cheap on healthy channels: just one extra REQ per
-  // re-open. Bridge handles dedup.
-  useEffect(() => {
-    if (!groupId) return;
-    if (messagesEose && messages.length === 0) {
-      void nostrActions.refreshGroupMessages(groupId);
-    }
-    // Only fires on `groupId` change — not when `messagesEose` flips
-    // mid-session (which is normal and shouldn't trigger a re-sub).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groupId]);
   // Force-fetch kind 39000 for the channel if the bridge doesn't have it
   // yet. Without this the user would stare at "Loading channel info…"
@@ -2339,32 +2328,31 @@ function ChatPanel({
       <div className="relative flex min-h-0 flex-1 flex-col">
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-4" data-testid={messagesVisible ? undefined : 'messages-gated-by-auth'}>
         {messages.length === 0 ? (
-          // Three distinct empty states. Without the EOSE-gated split, a
+          // Three distinct empty states. Without the status-gated split, a
           // freshly-opened channel briefly renders "No messages yet" while
           // history is still streaming — confusing for an active relay.
-          //   1. group missing + 39000 EOSE not yet:           loading
-          //   2. group missing + 39000 EOSE seen:              not visible
-          //   3. group present + per-group EOSE not yet:       loading
-          //   4. group present + per-group EOSE + 0 messages:  welcome
+          //   1. group missing + 39000 EOSE not yet:                          loading
+          //   2. group missing + 39000 EOSE + missing-grace passed:           not visible
+          //   3. group present + status === 'loading' | 'empty-unconfirmed':  loading
+          //   4. group present + status === 'empty-confirmed':                welcome
           (() => {
-            // EOSE alone isn't proof of emptiness — wait at least 5s
-            // (`emptyGracePassed`) before trusting it. This guards
-            // against auth-gated / silent-filtering relays that send
-            // EOSE-empty fast and then trickle real events afterwards.
-            const groupKnownEmpty = group && messagesEose && emptyGracePassed;
+            // Trust the bridge's confidence enum: it has already run a
+            // retry ladder against auth-gated / silent-filtering relays
+            // before reaching `empty-confirmed`. No UI dwell timer
+            // needed on this branch.
+            const groupKnownEmpty = group && messagesStatus === 'empty-confirmed';
             // Never declare a channel "missing" until the focused
             // metadataFetch has had its chance, AND the global stream has
-            // EOSE'd, AND the grace window has passed. Three gates so the
-            // user never sees "not visible" on a channel the relay still
-            // hasn't been asked about properly.
+            // EOSE'd, AND the missing-grace window has passed. Three
+            // gates so the user never sees "not visible" on a channel
+            // the relay still hasn't been asked about properly.
             const channelKnownMissing =
-              !group && groupMetadataEose && emptyGracePassed && metadataFetchDone;
+              !group && groupMetadataEose && channelMissingGrace && metadataFetchDone;
             if (!groupKnownEmpty && !channelKnownMissing) {
               // Split the copy by which tier we're still waiting on:
               //   - !group → kind 39000 hasn't ingested this groupId yet
-              //   - group && !messagesEose → kind 9 stream hasn't EOSE'd
-              //   - group && messagesEose && !emptyGracePassed → soaking
-              //     the empty-EOSE-then-events race
+              //   - group && status !== 'empty-confirmed' → kind 9 still
+              //     loading or in the retry ladder
               const stage = !group ? 'Loading channel info…' : 'Loading messages…';
               return (
                 <div
