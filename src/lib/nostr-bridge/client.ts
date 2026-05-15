@@ -190,7 +190,19 @@ interface PersistedSession {
   bunkerLocalSecretHex?: string;
 }
 
-const NOSTRCONNECT_RELAYS = ['wss://relay.nsec.app', 'wss://relay.damus.io', 'wss://nos.lol'];
+// Rendezvous relays for NIP-46 NostrConnect (QR pairing). The bunker
+// scans the QR, then needs to find the client on at least one relay we
+// listed. `relay.nsec.app` is the canonical NIP-46 hub but is frequently
+// rate-limited; the profile relays give the bunker plenty of fallbacks
+// so a single slow/unreachable relay doesn't break pairing.
+const NOSTRCONNECT_RELAYS = [
+  'wss://relay.nsec.app',
+  'wss://relay.damus.io',
+  'wss://relay.nostr.band',
+  'wss://nos.lol',
+  'wss://relay.primal.net',
+  'wss://purplepag.es',
+];
 
 type Listener<T> = (value: T) => void;
 
