@@ -311,7 +311,10 @@ lives under `scripts/e2e/`. See [§14](#14-playwright-e2e).
 
 ## 14. Playwright E2E
 
-Specs run via `npm run test:e2e` against a local dev server (`localhost:3001`)
+Specs run via `npm run test:e2e` against a local dev server (the harness
+defaults to `localhost:3001`, matching `ecosystem.config.js`; `npm run
+dev` serves `:3000`, so set `OBELISK_E2E_BASE_URL` or run dev with
+`PORT=3001` — see `scripts/e2e/README.md` for the full port story)
 talking to real relays.
 
 | Spec | What it asserts | Relay |
@@ -322,7 +325,7 @@ talking to real relays.
 | `members-loading.spec.ts` | "Loading members…" until 39002 ingest | `wss://public.obelisk.ar` |
 | `whitelist-rejection.spec.ts` | preflight surfaces `RelayAccessBanner[data-state="restricted"]` within ~3s | `wss://relay.obelisk.ar` (restricted; configurable via `OBELISK_E2E_RESTRICTED_RELAY`) |
 | `connection-loss.spec.ts` | banner appears on socket drop, disappears on recovery | `wss://public.obelisk.ar` |
-| `cache-second-load.spec.ts` | reload paints first channel row within 500ms of `navigationStart` | `wss://public.obelisk.ar` |
+| `cache-second-load.spec.ts` | reload paints first channel row within 1500ms of `navigationStart` | `wss://public.obelisk.ar` |
 | `clear-cache.spec.ts` | Preferences → Clear cache wipes the right keys, preserves session | `wss://public.obelisk.ar` |
 | `read-state-convergence.spec.ts` | two contexts, same nsec → cursor converges within 12s | `wss://public.obelisk.ar` |
 
