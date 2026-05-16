@@ -7,7 +7,14 @@
  * member filtering, mic/cam toggles, quality propagation, capacity cap.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { installWebRtcMocks, installMediaDevicesMocks, flushMicrotasks, FakeRTCPeerConnection } from '@/test/mocks/webrtc';
+import {
+  installWebRtcMocks,
+  installMediaDevicesMocks,
+  flushMicrotasks,
+  FakeMediaStream,
+  FakeMediaStreamTrack,
+  FakeRTCPeerConnection,
+} from '@/test/mocks/webrtc';
 import type { VoicePresence, VoiceSignalPayload } from './types';
 
 // ── transport mock ──────────────────────────────────────────────────────
@@ -68,19 +75,39 @@ vi.mock('./transport', () => ({
 // SFU beacon to appear in the roster. Tests configure the return value
 // per-case via `sfuControlFake.setPick(...)`.
 const sfuControlFake = vi.hoisted(() => {
-  let next: { pubkey: string; trustedRelays: readonly string[]; url: string | null } | null = null;
+  let next: {
+    pubkey: string;
+    trustedRelays: readonly string[];
+    generalRelays: readonly string[];
+    url: string | null;
+    region: string | null;
+    cap: number | null;
+    createdAt: number;
+  } | null = null;
   const publishSfuStart = vi.fn(async () => true);
   return {
     pickSfu: vi.fn(async () => next),
     publishSfuStart,
     setPick: (
-      pick: { pubkey: string; trustedRelays?: readonly string[]; url?: string | null } | null,
+      pick: {
+        pubkey: string;
+        trustedRelays?: readonly string[];
+        generalRelays?: readonly string[];
+        url?: string | null;
+        region?: string | null;
+        cap?: number | null;
+        createdAt?: number;
+      } | null,
     ) => {
       next = pick
         ? {
             pubkey: pick.pubkey,
             trustedRelays: pick.trustedRelays ?? [],
+            generalRelays: pick.generalRelays ?? pick.trustedRelays ?? [],
             url: pick.url ?? null,
+            region: pick.region ?? null,
+            cap: pick.cap ?? null,
+            createdAt: pick.createdAt ?? 1,
           }
         : null;
     },
@@ -107,6 +134,7 @@ const sfuClientFake = vi.hoisted(() => {
     onConnectionStateChange?: (s: string) => void;
     onPeersChange?: (pubkeys: string[]) => void;
   };
+  type StartOutcome = 'ok' | 'timeout' | 'generic-fail';
   const instances: Array<{
     channelId: string;
     sfuPubkey: string;
@@ -116,11 +144,19 @@ const sfuClientFake = vi.hoisted(() => {
     closed: boolean;
     publishedKinds: string[];
     fail: boolean;
+    outcome: StartOutcome;
   }> = [];
   let nextStartShouldFail = false;
+  // Per-instance outcome queue. Each new SfuClient construction consumes
+  // one entry; once exhausted defaults to 'ok'. Used to drive the
+  // bootstrap-retry tests deterministically.
+  const outcomeQueue: StartOutcome[] = [];
   class StubSfuClient {
     private readonly state: typeof instances[number];
     constructor(opts: { channelId: string; sfuPubkey: string; selfPubkey: string; events: Events }) {
+      const outcome: StartOutcome = outcomeQueue.length > 0
+        ? outcomeQueue.shift()!
+        : (nextStartShouldFail ? 'generic-fail' : 'ok');
       this.state = {
         channelId: opts.channelId,
         sfuPubkey: opts.sfuPubkey,
@@ -129,13 +165,19 @@ const sfuClientFake = vi.hoisted(() => {
         started: false,
         closed: false,
         publishedKinds: [],
-        fail: nextStartShouldFail,
+        fail: outcome !== 'ok',
+        outcome,
       };
       nextStartShouldFail = false;
       instances.push(this.state);
     }
     async start(): Promise<void> {
-      if (this.state.fail) throw new Error('start failed (mock)');
+      if (this.state.outcome === 'timeout') {
+        throw new Error('rpc timeout: getRouterRtpCapabilities');
+      }
+      if (this.state.outcome === 'generic-fail') {
+        throw new Error('start failed (mock)');
+      }
       this.state.started = true;
     }
     async publishTrack(kind: string, _track: unknown): Promise<void> {
@@ -149,14 +191,45 @@ const sfuClientFake = vi.hoisted(() => {
     instances,
     last: () => instances[instances.length - 1],
     setNextStartShouldFail: () => { nextStartShouldFail = true; },
+    queueStartOutcomes: (...outcomes: StartOutcome[]) => { outcomeQueue.push(...outcomes); },
     reset: () => {
       instances.length = 0;
       nextStartShouldFail = false;
+      outcomeQueue.length = 0;
     },
   };
 });
 vi.mock('./sfu-client', () => ({
   SfuClient: sfuClientFake.SfuClient,
+}));
+
+// ── nostr-bridge mock ───────────────────────────────────────────────────
+// VoiceClient.subscribeActiveCallStatus calls `getBridge()` and registers
+// for kind 31314 status updates. Tests drive this through `bridgeFake.fire`
+// to simulate the SFU publishing status=closed.
+type ActiveCallEntry = { hostPubkey: string; status: string; participantCount: number; expiresAt: number; createdAt: number };
+const bridgeFake = vi.hoisted(() => {
+  const cbs: Array<(byChannel: Record<string, ActiveCallEntry>) => void> = [];
+  let unsubCalls = 0;
+  const bridge = {
+    subscribeActiveCallByChannel: (cb: (byChannel: Record<string, ActiveCallEntry>) => void) => {
+      cbs.push(cb);
+      return () => { unsubCalls += 1; const i = cbs.indexOf(cb); if (i >= 0) cbs.splice(i, 1); };
+    },
+    waitForRelayAuth: vi.fn(async () => 'ok'),
+  };
+  return {
+    bridge,
+    getBridge: vi.fn(async () => bridge),
+    fire: (byChannel: Record<string, ActiveCallEntry>) => {
+      for (const cb of [...cbs]) cb(byChannel);
+    },
+    unsubCalls: () => unsubCalls,
+    reset: () => { cbs.length = 0; unsubCalls = 0; bridgeFake.getBridge.mockClear(); },
+  };
+});
+vi.mock('@/lib/nostr-bridge/client', () => ({
+  getBridge: bridgeFake.getBridge,
 }));
 
 // Import VoiceClient after mocks.
@@ -176,12 +249,18 @@ beforeEach(() => {
   transportFake.setSelfPubkey(SELF);
   sfuControlFake.reset();
   sfuClientFake.reset();
+  bridgeFake.reset();
 });
 
 afterEach(() => {
   webrtc.uninstall();
   media.uninstall();
   vi.clearAllMocks();
+  // Guarantee timer state is real before the next test runs — bootstrap
+  // retry tests use fake timers and a failed assertion mid-test would
+  // otherwise leave them active, hanging the next test on its first
+  // real setTimeout (e.g. the SFU_START_SETTLE_MS post-publish wait).
+  vi.useRealTimers();
 });
 
 function presence(
@@ -207,6 +286,52 @@ describe('VoiceClient.join', () => {
     expect(transportFake.publishPresenceBeacon).toHaveBeenCalledWith('ch1', [], []);
     expect(transportFake.subscribeRoster).toHaveBeenCalled();
     expect(transportFake.subscribeSignals).toHaveBeenCalled();
+    await client.leave();
+  });
+
+  it('starts mesh and publishes the first beacon without waiting for microphone permission', async () => {
+    let resolveGum: ((stream: MediaStream) => void) | null = null;
+    const nav = globalThis.navigator as unknown as {
+      mediaDevices: {
+        getUserMedia: (constraints: MediaStreamConstraints) => Promise<MediaStream>;
+      };
+    };
+    nav.mediaDevices.getUserMedia = vi.fn(
+      () => new Promise<MediaStream>((resolve) => { resolveGum = resolve; }),
+    );
+
+    const client = new VoiceClient('ch1', { members: [SELF] });
+    await client.join();
+
+    expect(transportFake.subscribeSignals).toHaveBeenCalled();
+    expect(transportFake.subscribeRoster).toHaveBeenCalled();
+    expect(transportFake.publishPresenceBeacon).toHaveBeenCalledWith('ch1', [], []);
+    expect(client.isJoined()).toBe(true);
+    expect(client.getLocalTracks().mic).toBeNull();
+
+    resolveGum?.(new FakeMediaStream([new FakeMediaStreamTrack('audio')]) as unknown as MediaStream);
+    await flushMicrotasks(8);
+    expect(client.getLocalTracks().mic).not.toBeNull();
+    await client.leave();
+  });
+
+  it('stays joined muted when initial microphone permission is denied', async () => {
+    const onLocalTracksChange = vi.fn();
+    media.rejectNextGum({ name: 'NotAllowedError', message: 'denied' });
+    const client = new VoiceClient('ch1', {
+      members: [SELF, PEER1],
+      events: { onLocalTracksChange },
+    });
+
+    await client.join();
+    await flushMicrotasks(8);
+
+    expect(client.isJoined()).toBe(true);
+    expect(client.getLocalTracks().mic).toBeNull();
+    expect(onLocalTracksChange).toHaveBeenCalledWith({ mic: false, camera: false, screen: false });
+    transportFake.fireRoster([presence(PEER1)]);
+    await flushMicrotasks(8);
+    expect(client.getParticipants()).toContain(PEER1);
     await client.leave();
   });
 
@@ -250,6 +375,38 @@ describe('VoiceClient roster → peer lifecycle', () => {
     // PEER2 should be torn down.
     const remaining = client.getRemoteTracks().map((t) => t.pubkey);
     expect(remaining).not.toContain(PEER2);
+    await client.leave();
+  });
+
+  it('removes a never-connected peer after relay/control discovery disappears', async () => {
+    const client = new VoiceClient('ch1', { members: [SELF, PEER1] });
+    await client.join();
+    transportFake.fireRoster([presence(PEER1)]);
+    await flushMicrotasks(8);
+    expect(client.getParticipants()).toContain(PEER1);
+
+    transportFake.fireRoster([]);
+    await flushMicrotasks(8);
+    expect(client.getParticipants()).not.toContain(PEER1);
+    await client.leave();
+  });
+
+  it('keeps a connected peer across a missing beacon but removes it on close', async () => {
+    const client = new VoiceClient('ch1', { members: [SELF, PEER1] });
+    await client.join();
+    transportFake.fireRoster([presence(PEER1)]);
+    await flushMicrotasks(8);
+    const pc = webrtc.last();
+    pc.forceState('connected');
+    await flushMicrotasks(8);
+
+    transportFake.fireRoster([]);
+    await flushMicrotasks(8);
+    expect(client.getParticipants()).toContain(PEER1);
+
+    pc.forceState('closed');
+    await flushMicrotasks(8);
+    expect(client.getParticipants()).not.toContain(PEER1);
     await client.leave();
   });
 
@@ -304,6 +461,32 @@ describe('VoiceClient mic/cam/screen toggles', () => {
 
     await client.leave();
     useVoiceStore.getState().setVideoQuality('auto');
+  });
+
+  it('switchCamera replaces the local camera track and emits a local update', async () => {
+    const onLocalTracksChange = vi.fn();
+    const client = new VoiceClient('ch1', {
+      members: [SELF, PEER1],
+      events: { onLocalTracksChange },
+    });
+    await client.join();
+    transportFake.fireRoster([presence(PEER1)]);
+    await flushMicrotasks(8);
+
+    await client.setCameraEnabled(true);
+    const before = client.getLocalTracks().camera as FakeMediaStreamTrack | null;
+    expect(before).not.toBeNull();
+    onLocalTracksChange.mockClear();
+
+    await client.switchCamera();
+    const after = client.getLocalTracks().camera as FakeMediaStreamTrack | null;
+    expect(after).not.toBeNull();
+    expect(after).not.toBe(before);
+    expect(before?.readyState).toBe('ended');
+    expect(onLocalTracksChange).toHaveBeenCalledWith(
+      expect.objectContaining({ camera: true }),
+    );
+    await client.leave();
   });
 
   it('setScreenShareEnabled cleans up when the browser ends the share', async () => {
@@ -701,6 +884,179 @@ describe('VoiceClient room-full rejection', () => {
       (s) => s.to === bPub && s.payload.type === 'bye' && s.payload.byeReason === 'room-full',
     );
     expect(byeToB, 'no room-full bye to in-cap peer').toBeUndefined();
+    await client.leave();
+  });
+});
+
+describe('VoiceClient SFU bootstrap retry ladder', () => {
+  const SFU = 'f'.repeat(64);
+
+  it('survives a transient timeout and joins on the second attempt', async () => {
+    sfuControlFake.setPick({ pubkey: SFU });
+    // First bootstrap throws an rpc timeout, second succeeds.
+    sfuClientFake.queueStartOutcomes('timeout', 'ok');
+    const onTopologyChange = vi.fn();
+    const onError = vi.fn();
+    const client = new VoiceClient('ch1', {
+      members: [SELF, PEER1],
+      expectSfu: true,
+      events: { onTopologyChange, onError },
+    });
+    vi.useFakeTimers();
+    try {
+      const joining = client.join();
+      // Per attempt: 350 ms SFU_START_SETTLE_MS + start() resolves immediately.
+      // Attempt 0 timeout at t=350. Retry delay 2 s. Attempt 1 settle ends
+      // at t=2700, then start() succeeds. Pad a bit for microtask drain.
+      await vi.advanceTimersByTimeAsync(3_000);
+      await joining;
+      // Two SfuClient instances were constructed (one per attempt); the
+      // first is closed, the second is the live one.
+      expect(sfuClientFake.instances.length).toBe(2);
+      expect(sfuClientFake.instances[0]!.closed).toBe(true);
+      expect(sfuClientFake.instances[1]!.started).toBe(true);
+      expect(sfuClientFake.instances[1]!.closed).toBe(false);
+      // publishSfuStart was called once per attempt — both with force=true.
+      expect(sfuControlFake.publishSfuStart).toHaveBeenCalledTimes(2);
+      for (const call of sfuControlFake.publishSfuStart.mock.calls) {
+        const opts = call[2] as { force?: boolean };
+        expect(opts.force).toBe(true);
+      }
+      // onTopologyChange fired once with SFU pubkey (on success), and
+      // critically NOT with null between attempts — the retry is
+      // internal, the user sees one clean transition.
+      expect(onTopologyChange.mock.calls.map((c) => c[0])).toEqual([SFU]);
+      expect(onError).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+      await client.leave();
+    }
+  });
+
+  it('fails join with a single onError after 3 consecutive timeouts', async () => {
+    sfuControlFake.setPick({ pubkey: SFU });
+    sfuClientFake.queueStartOutcomes('timeout', 'timeout', 'timeout');
+    const onTopologyChange = vi.fn();
+    const onError = vi.fn();
+    const client = new VoiceClient('ch1', {
+      members: [SELF, PEER1],
+      expectSfu: true,
+      events: { onTopologyChange, onError },
+    });
+    vi.useFakeTimers();
+    try {
+      // Attach the rejection handler BEFORE advancing timers — the loop's
+      // failSfuStart throws synchronously as the last attempt resolves,
+      // and a bare `client.join()` would surface as an unhandled rejection
+      // partway through the advance.
+      const settled = client.join().then(() => 'ok' as const, (e) => e as Error);
+      // Per attempt: 350 ms settle then timeout. Retry delays 0/2/4 s.
+      // Timeline: 350 (atmpt 0) + 2000 + 350 (atmpt 1) + 4000 + 350 (atmpt 2) ≈ 7050 ms.
+      await vi.advanceTimersByTimeAsync(7_500);
+      const result = await settled;
+      expect(result).toBeInstanceOf(Error);
+      expect((result as Error).message).toMatch(/rpc timeout/);
+      expect(sfuClientFake.instances.length).toBe(3);
+      for (const inst of sfuClientFake.instances) expect(inst.closed).toBe(true);
+      expect(onError).toHaveBeenCalledTimes(1);
+      expect(onTopologyChange.mock.calls.map((c) => c[0])).toEqual([null]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not retry a non-timeout failure', async () => {
+    sfuControlFake.setPick({ pubkey: SFU });
+    sfuClientFake.queueStartOutcomes('generic-fail');
+    const onError = vi.fn();
+    const client = new VoiceClient('ch1', {
+      members: [SELF, PEER1],
+      expectSfu: true,
+      events: { onError },
+    });
+    await expect(client.join()).rejects.toThrow();
+    // Only one SfuClient was constructed — no retries for non-timeout errors.
+    expect(sfuClientFake.instances.length).toBe(1);
+    expect(onError).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('VoiceClient remote-SFU-closure recovery', () => {
+  const SFU = 'f'.repeat(64);
+
+  it('tears down SfuClient + fires onTopologyChange(null) when the bridge drops the active-call entry', async () => {
+    sfuControlFake.setPick({ pubkey: SFU });
+    const onTopologyChange = vi.fn();
+    const client = new VoiceClient('ch1', {
+      members: [SELF, PEER1],
+      expectSfu: true,
+      events: { onTopologyChange },
+    });
+    await client.join();
+    await flushMicrotasks(20);
+    // After join the watcher should have asked for a bridge handle and
+    // subscribed to activeCallByChannel.
+    expect(bridgeFake.getBridge).toHaveBeenCalled();
+    const initial = sfuClientFake.last();
+    expect(initial.closed).toBe(false);
+    expect(onTopologyChange.mock.calls.map((c) => c[0])).toEqual([SFU]);
+
+    // Arm the watcher with an active snapshot, then close.
+    bridgeFake.fire({ ch1: { hostPubkey: SELF, status: 'active', participantCount: 1, expiresAt: 9_999_999_999, createdAt: 1 } });
+    await flushMicrotasks(5);
+    bridgeFake.fire({}); // status=closed → bridge deletes the entry
+    await flushMicrotasks(5);
+
+    expect(initial.closed).toBe(true);
+    // The supervisor in VoiceRoom.tsx listens for this to bump
+    // `sfuRepublishCounter` — that's what re-enters SFU mode.
+    expect(onTopologyChange.mock.calls.map((c) => c[0])).toEqual([SFU, null]);
+    await client.leave();
+  });
+
+  it('ignores an empty snapshot delivered before the active entry has ever been seen', async () => {
+    sfuControlFake.setPick({ pubkey: SFU });
+    const onTopologyChange = vi.fn();
+    const client = new VoiceClient('ch1', {
+      members: [SELF, PEER1],
+      expectSfu: true,
+      events: { onTopologyChange },
+    });
+    await client.join();
+    await flushMicrotasks(20);
+    const initial = sfuClientFake.last();
+    expect(onTopologyChange.mock.calls.map((c) => c[0])).toEqual([SFU]);
+
+    // Fire only an empty snapshot — no prior active entry seen. This is
+    // the steady-state at join (the SFU may not have published 31314 yet),
+    // and reacting to it would loop the bootstrap.
+    bridgeFake.fire({});
+    await flushMicrotasks(5);
+    expect(initial.closed).toBe(false);
+    expect(onTopologyChange.mock.calls.map((c) => c[0])).toEqual([SFU]);
+    await client.leave();
+  });
+
+  it('does not react to active-call snapshots for a different channel', async () => {
+    sfuControlFake.setPick({ pubkey: SFU });
+    const onTopologyChange = vi.fn();
+    const client = new VoiceClient('ch1', {
+      members: [SELF, PEER1],
+      expectSfu: true,
+      events: { onTopologyChange },
+    });
+    await client.join();
+    await flushMicrotasks(20);
+    const initial = sfuClientFake.last();
+    // Drive the watcher with snapshots that ONLY mention another channel.
+    bridgeFake.fire({ ch2: { hostPubkey: SELF, status: 'active', participantCount: 1, expiresAt: 9_999_999_999, createdAt: 1 } });
+    await flushMicrotasks(5);
+    bridgeFake.fire({});
+    await flushMicrotasks(5);
+    // The dex never saw OUR channel as active, so the empty snapshot
+    // cannot trigger recovery.
+    expect(initial.closed).toBe(false);
+    expect(onTopologyChange.mock.calls.map((c) => c[0])).toEqual([SFU]);
     await client.leave();
   });
 });

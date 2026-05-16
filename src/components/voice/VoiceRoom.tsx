@@ -496,11 +496,11 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
   const localCamStream = useMemo(() => {
     const cam = clientRef.current?.getLocalTracks().camera ?? null;
     return cam ? new MediaStream([cam]) : null;
-  }, [local.camera]);
+  }, [local]);
   const localScreenStream = useMemo(() => {
     const s = clientRef.current?.getLocalTracks().screen ?? null;
     return s ? new MediaStream([s]) : null;
-  }, [local.screen]);
+  }, [local]);
 
   const videoPubkeys: string[] = [];
   const audioPubkeys: string[] = [];
