@@ -48,6 +48,28 @@ export function decideSnap(
   return 'revert';
 }
 
+// Resolve the top-level tab a nav state belongs to. Returns null for
+// top-level tabs themselves (they have no parent). Sub-screens prefer the
+// dynamic `parentScreen` recorded at navigation time and fall back to the
+// static SUB_TO_NAV map only when that's null — e.g. a cold deep-link reload
+// without the `pr` URL param. See docs/mobile-navigation.md §3.
+export function resolveParent(nav: NavState): ScreenName | null {
+  if (NAV_ORDER.includes(nav.screen)) return null;
+  if (nav.parentScreen) {
+    // The parent may itself be a sub-screen (e.g. opened profile from
+    // member-list which was opened from channel). Walk up until we hit a
+    // top-level tab or run out of map.
+    let cursor: ScreenName | null = nav.parentScreen;
+    const visited = new Set<ScreenName>();
+    while (cursor && !NAV_ORDER.includes(cursor) && !visited.has(cursor)) {
+      visited.add(cursor);
+      cursor = SUB_TO_NAV[cursor] ?? null;
+    }
+    if (cursor) return cursor;
+  }
+  return SUB_TO_NAV[nav.screen] ?? null;
+}
+
 // Visual neighbors for the drag-tracking carousel: which screen, if any, sits
 // to the left/right of the current screen and should be rendered partially
 // behind the active one while the user pans.
@@ -59,7 +81,12 @@ export function decideSnap(
 // directions. The parent itself sits at the active position behind the
 // sub-screen overlay; the renderer in PhoneShell handles that placement
 // directly rather than going through this function.
-export function neighborsFor(screen: ScreenName): { left: ScreenName | null; right: ScreenName | null } {
+//
+// Accepts either a NavState (preferred — respects dynamic parentScreen) or a
+// bare ScreenName (falls back to the static SUB_TO_NAV map). The bare-name
+// form is kept for tests and pre-NavState callers.
+export function neighborsFor(arg: NavState | ScreenName): { left: ScreenName | null; right: ScreenName | null } {
+  const screen: ScreenName = typeof arg === 'string' ? arg : arg.screen;
   const navIndex = NAV_ORDER.indexOf(screen);
   if (navIndex >= 0) {
     return {
@@ -67,7 +94,9 @@ export function neighborsFor(screen: ScreenName): { left: ScreenName | null; rig
       right: navIndex < NAV_ORDER.length - 1 ? NAV_ORDER[navIndex + 1] : null,
     };
   }
-  const parent = SUB_TO_NAV[screen];
+  const parent = typeof arg === 'string'
+    ? SUB_TO_NAV[screen] ?? null
+    : resolveParent(arg);
   if (!parent) return { left: null, right: null };
   const parentIdx = NAV_ORDER.indexOf(parent);
   return {
@@ -116,7 +145,39 @@ export function buildSeedHistory(parsed: NavState, relay: string | null): SeedHi
   return entries;
 }
 
-export function decideSwipeNav(screen: ScreenName, goingRight: boolean): SwipeNavAction {
+// Accepts either a NavState (respects dynamic parentScreen) or a bare
+// ScreenName (static fallback). PhoneShell passes navRef.current; tests
+// pass screen names.
+// Decide what a tap on a bottom-nav tab means given the user's current nav.
+//
+// Three branches:
+//   • noop   — user is already on that exact screen (e.g. bare Servers + tap
+//              Servers). Prevents the phantom history entry that produced
+//              the historic "press back twice" feel.
+//   • pop    — user is on a sub-screen whose top-level tab equals the target.
+//              The sub-screen is collapsed back to the bare tab.
+//   • switch — different top-level tab. Direction follows NAV_ORDER spatial
+//              position so tap and swipe agree on what "left/right" means.
+//
+// See docs/mobile-navigation.md §4 for the full transition matrix.
+export type TabPressAction =
+  | { kind: 'noop' }
+  | { kind: 'pop'; target: ScreenName }
+  | { kind: 'switch'; target: ScreenName; dir: 'forward' | 'back' };
+
+export function decideTabPress(cur: NavState, target: ScreenName): TabPressAction {
+  if (cur.screen === target) return { kind: 'noop' };
+  const curTab = NAV_ORDER.includes(cur.screen) ? cur.screen : resolveParent(cur);
+  if (curTab === target) return { kind: 'pop', target };
+  const fromIdx = NAV_ORDER.indexOf(curTab ?? 'server');
+  const toIdx = NAV_ORDER.indexOf(target);
+  if (toIdx < 0) return { kind: 'noop' }; // defensive: caller passed a non-tab
+  const dir: 'forward' | 'back' = toIdx > fromIdx ? 'forward' : 'back';
+  return { kind: 'switch', target, dir };
+}
+
+export function decideSwipeNav(arg: NavState | ScreenName, goingRight: boolean): SwipeNavAction {
+  const screen: ScreenName = typeof arg === 'string' ? arg : arg.screen;
   const navIndex = NAV_ORDER.indexOf(screen);
   if (navIndex >= 0) {
     const nextIdx = goingRight ? navIndex - 1 : navIndex + 1;
@@ -127,7 +188,9 @@ export function decideSwipeNav(screen: ScreenName, goingRight: boolean): SwipeNa
       dir: goingRight ? 'back' : 'forward',
     };
   }
-  const parent = SUB_TO_NAV[screen];
+  const parent = typeof arg === 'string'
+    ? SUB_TO_NAV[screen] ?? null
+    : resolveParent(arg);
   if (!parent) return { kind: 'noop' };
   const parentIdx = NAV_ORDER.indexOf(parent);
   const nextIdx = goingRight ? parentIdx - 1 : parentIdx + 1;
