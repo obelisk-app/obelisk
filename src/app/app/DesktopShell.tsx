@@ -49,6 +49,7 @@ import MessageContent from '@/components/chat/MessageContent';
 import { MentionText } from '@/components/chat/MentionText';
 import MentionNavigator from '@/components/chat/MentionNavigator';
 import MemberList from '@/components/chat/MemberList';
+import ChatStoreMembersAdapter from '@/components/chat/ChatStoreMembersAdapter';
 import RelayAdminPanel from '@/components/admin/RelayAdminPanel';
 import VoiceRoom from '@/components/voice/VoiceRoom';
 import ForumView from '@/components/chat/ForumView';
@@ -3224,68 +3225,6 @@ function MembersPanel({ groupId }: { groupId: string }) {
 }
 
 const EMPTY_PROFILE_CACHE = new Map<string, { name?: string; picture?: string }>();
-
-function ChatStoreMembersAdapter({ groupId }: { groupId: string }) {
-  const admins = useAdmins(groupId);
-  const members = useMembers(groupId);
-  const setMemberList = useChatStore((s) => s.setMemberList);
-  const setOnlinePubkeys = useChatStore((s) => s.setOnlinePubkeys);
-
-  const allPubkeys = useMemo(() => {
-    const set = new Set<string>([...admins, ...members]);
-    return Array.from(set);
-  }, [admins, members]);
-
-  const adminSet = useMemo(() => new Set(admins), [admins]);
-
-  // Seed/refresh the list when admin or member sets change. Preserve any
-  // metadata (displayName/picture/nip05/customRoles) already attached to a
-  // row — without this, every relay-driven update to admins/members (e.g.
-  // a fresh 39001/39002 after NIP-42 AUTH) wipes every row back to
-  // `pubkey.slice(0,10)` with no picture, and `MemberMetaSync` only re-runs
-  // when `meta` itself changes, so the cached metadata never re-applies and
-  // names/pictures vanish until a manual refresh.
-  useEffect(() => {
-    const prev = useChatStore.getState().memberList;
-    const prevByPk = new Map(prev.map((m) => [m.pubkey, m]));
-    const list: MemberInfo[] = allPubkeys.map((pubkey) => {
-      const role = adminSet.has(pubkey) ? 'admin' : 'member';
-      const existing = prevByPk.get(pubkey);
-      if (existing) return { ...existing, role };
-      return { pubkey, displayName: pubkey.slice(0, 10), role };
-    });
-    setMemberList(list);
-    setOnlinePubkeys(allPubkeys);
-  }, [allPubkeys, adminSet, setMemberList, setOnlinePubkeys]);
-
-  return (
-    <>
-      {allPubkeys.map((pk) => (
-        <MemberMetaSync key={pk} pubkey={pk} />
-      ))}
-    </>
-  );
-}
-
-function MemberMetaSync({ pubkey }: { pubkey: string }) {
-  const meta = useProfile(pubkey);
-  useEffect(() => {
-    if (!meta) return;
-    useChatStore.setState((state) => {
-      const idx = state.memberList.findIndex((m) => m.pubkey === pubkey);
-      if (idx === -1) return state;
-      const next = [...state.memberList];
-      next[idx] = {
-        ...next[idx],
-        displayName: meta.displayName || meta.name || next[idx].displayName,
-        picture: meta.picture ?? next[idx].picture,
-        nip05: meta.nip05 ?? next[idx].nip05,
-      };
-      return { memberList: next } as Partial<typeof state> as typeof state;
-    });
-  }, [pubkey, meta]);
-  return null;
-}
 
 function ProfilePopupBridge() {
   const popupPubkey = useChatStore((s) => s.profilePopupPubkey);
