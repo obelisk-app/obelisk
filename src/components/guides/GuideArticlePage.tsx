@@ -73,6 +73,13 @@ export async function buildGuideArticleMetadata(
 
   const fm = guide.frontmatter as GuideFrontmatter;
   const canonical = guidesHref(locale, slug);
+  const heroMeta = HERO_ASSET_META[fm.heroComponent];
+  const heroUrl = heroMeta
+    ? `${SITE_URL}${snapshotPaths(fm.heroComponent).png}`
+    : `${SITE_URL}${canonical}/opengraph-image`;
+  const heroWidth = heroMeta ? heroMeta.width * 2 : 1200;
+  const heroHeight = heroMeta ? heroMeta.height * 2 : 630;
+  const heroAlt = heroMeta?.alt ?? fm.title;
 
   return {
     title: fm.title,
@@ -98,10 +105,10 @@ export async function buildGuideArticleMetadata(
       tags: fm.tags,
       images: [
         {
-          url: `${SITE_URL}${canonical}/opengraph-image`,
-          width: 1200,
-          height: 630,
-          alt: fm.title,
+          url: heroUrl,
+          width: heroWidth,
+          height: heroHeight,
+          alt: heroAlt,
         },
       ],
     },
@@ -109,7 +116,7 @@ export async function buildGuideArticleMetadata(
       card: 'summary_large_image',
       title: fm.title,
       description: fm.description,
-      images: [`${SITE_URL}${canonical}/opengraph-image`],
+      images: [heroUrl],
     },
     keywords: fm.tags,
   };
@@ -131,6 +138,13 @@ export default async function GuideArticlePage({
   const canonical = guidesHref(locale, slug);
 
   const guideImages = collectGuideImages(fm.heroComponent, guide.content, SITE_URL);
+  const heroMeta = HERO_ASSET_META[fm.heroComponent];
+  const heroUrl = heroMeta
+    ? `${SITE_URL}${snapshotPaths(fm.heroComponent).png}`
+    : `${SITE_URL}${canonical}/opengraph-image`;
+  const heroWidth = heroMeta ? heroMeta.width * 2 : 1200;
+  const heroHeight = heroMeta ? heroMeta.height * 2 : 630;
+  const heroAlt = heroMeta?.alt ?? fm.title;
 
   const articleLd = {
     '@context': 'https://schema.org',
@@ -143,17 +157,20 @@ export default async function GuideArticlePage({
     image: [
       {
         '@type': 'ImageObject',
-        url: `${SITE_URL}${canonical}/opengraph-image`,
-        width: 1200,
-        height: 630,
+        url: heroUrl,
+        width: heroWidth,
+        height: heroHeight,
+        caption: heroAlt,
       },
-      ...guideImages.map((img) => ({
-        '@type': 'ImageObject',
-        url: img.url,
-        width: img.meta.width * 2,
-        height: img.meta.height * 2,
-        caption: img.meta.alt,
-      })),
+      ...guideImages
+        .filter((img) => img.url !== heroUrl)
+        .map((img) => ({
+          '@type': 'ImageObject',
+          url: img.url,
+          width: img.meta.width * 2,
+          height: img.meta.height * 2,
+          caption: img.meta.alt,
+        })),
     ],
     author: {
       '@type': 'Organization',
