@@ -89,6 +89,18 @@ export interface RpcNotification<T = unknown> {
 }
 
 const DEFAULT_TIMEOUT_MS = 8000;
+const SUBSCRIBE_SETTLE_MS = 200;
+const DEFAULT_RETRY_ATTEMPTS = 3;
+const DEFAULT_RETRY_TIMEOUT_MS = 4500;
+const DEFAULT_RETRY_DELAY_MS = 150;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isRpcTimeout(err: unknown): boolean {
+  return err instanceof Error && err.message.startsWith('rpc timeout:');
+}
 
 interface PendingCall {
   resolve: (data: unknown) => void;
@@ -178,6 +190,9 @@ export class SfuRpc {
       },
       this.publishRelays.length > 0 ? { relays: this.publishRelays } : undefined,
     );
+    // The bridge does not expose relay subscription readiness. Give AUTH
+    // gated relays one tick to attach before the first startup RPC goes out.
+    await sleep(SUBSCRIBE_SETTLE_MS);
   }
 
   close(): void {
@@ -214,17 +229,55 @@ export class SfuRpc {
         timer,
       });
     });
-    const b = await bridge();
-    await b.publishEvent({
-      kind: KIND_VOICE_SIGNAL,
-      content: JSON.stringify(envelope),
-      tags: [
-        ['p', this.sfuPubkey],
-        ['e', this.channelId],
-        ['t', 'obelisk-voice-signal'],
-      ],
-    }, this.publishRelays.length > 0 ? { extraRelays: [...this.publishRelays] } : undefined);
+    try {
+      const b = await bridge();
+      await b.publishEvent({
+        kind: KIND_VOICE_SIGNAL,
+        content: JSON.stringify(envelope),
+        tags: [
+          ['p', this.sfuPubkey],
+          ['e', this.channelId],
+          ['t', 'obelisk-voice-signal'],
+        ],
+      }, this.publishRelays.length > 0 ? { extraRelays: [...this.publishRelays] } : undefined);
+    } catch (err) {
+      const pending = this.pending.get(requestId);
+      if (pending) {
+        clearTimeout(pending.timer);
+        this.pending.delete(requestId);
+      }
+      throw err;
+    }
     return result;
+  }
+
+  async requestWithRetry<T = unknown>(
+    method: string,
+    data?: unknown,
+    opts: {
+      attempts?: number;
+      timeoutMs?: number;
+      retryDelayMs?: number;
+    } = {},
+  ): Promise<T> {
+    const attempts = Math.max(1, opts.attempts ?? DEFAULT_RETRY_ATTEMPTS);
+    const timeoutMs = opts.timeoutMs ?? DEFAULT_RETRY_TIMEOUT_MS;
+    const retryDelayMs = opts.retryDelayMs ?? DEFAULT_RETRY_DELAY_MS;
+
+    let lastErr: unknown;
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      try {
+        return await this.request<T>(method, data, timeoutMs);
+      } catch (err) {
+        lastErr = err;
+        if (this.closed || attempt >= attempts || !isRpcTimeout(err)) {
+          throw err;
+        }
+        await sleep(retryDelayMs);
+      }
+    }
+
+    throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
   }
 
   private handleResponse(resp: RpcResponse): void {

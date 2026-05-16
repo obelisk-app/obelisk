@@ -117,6 +117,8 @@ export const STALE_TIMEOUT_MS = 12_000;
  * after the consumer is first surfaced so warm-up isn't misdiagnosed.
  */
 export const STALE_WARMUP_MS = 3_000;
+const STARTUP_RPC_RETRY = { attempts: 3, timeoutMs: 4500, retryDelayMs: 150 } as const;
+const CONNECT_RPC_RETRY = { attempts: 2, timeoutMs: 4500, retryDelayMs: 150 } as const;
 
 interface ProducerAppData {
   kind?: VoiceTrackKind;
@@ -220,7 +222,11 @@ export class SfuClient {
     if (this.closed) throw new Error('SfuClient closed');
     await this.rpc.start();
     if (this.closed) return;
-    const caps = await this.rpc.request<RtpCapabilities>('getRouterRtpCapabilities');
+    const caps = await this.rpc.requestWithRetry<RtpCapabilities>(
+      'getRouterRtpCapabilities',
+      undefined,
+      STARTUP_RPC_RETRY,
+    );
     if (this.closed) return;
     const device = new Device();
     await device.load({ routerRtpCapabilities: caps });
@@ -344,12 +350,12 @@ export class SfuClient {
     if (this.closed) return;
 
     // Send transport — for our outbound producers.
-    const sendInfo = await this.rpc.request<{
+    const sendInfo = await this.rpc.requestWithRetry<{
       id: string;
       iceParameters: unknown;
       iceCandidates: unknown[];
       dtlsParameters: DtlsParameters;
-    }>('createWebRtcTransport', { direction: 'send' });
+    }>('createWebRtcTransport', { direction: 'send' }, STARTUP_RPC_RETRY);
     if (this.closed) return;
     const sendTransport = device.createSendTransport({
       id: sendInfo.id,
@@ -368,10 +374,10 @@ export class SfuClient {
         errback(new Error('SfuClient closed'));
         return;
       }
-      this.rpc.request('connectWebRtcTransport', {
+      this.rpc.requestWithRetry('connectWebRtcTransport', {
         transportId: sendInfo.id,
         dtlsParameters,
-      }).then(() => callback()).catch((err) => errback(err as Error));
+      }, CONNECT_RPC_RETRY).then(() => callback()).catch((err) => errback(err as Error));
     });
     sendTransport.on('produce', ({ kind, rtpParameters, appData }, callback, errback) => {
       if (this.closed) {
@@ -390,12 +396,12 @@ export class SfuClient {
     });
 
     // Recv transport — for consumers the server pushes us.
-    const recvInfo = await this.rpc.request<{
+    const recvInfo = await this.rpc.requestWithRetry<{
       id: string;
       iceParameters: unknown;
       iceCandidates: unknown[];
       dtlsParameters: DtlsParameters;
-    }>('createWebRtcTransport', { direction: 'recv' });
+    }>('createWebRtcTransport', { direction: 'recv' }, STARTUP_RPC_RETRY);
     if (this.closed) {
       try { sendTransport.close(); } catch { /* ignore */ }
       if (this.sendTransport === sendTransport) this.sendTransport = null;
@@ -420,10 +426,10 @@ export class SfuClient {
         errback(new Error('SfuClient closed'));
         return;
       }
-      this.rpc.request('connectWebRtcTransport', {
+      this.rpc.requestWithRetry('connectWebRtcTransport', {
         transportId: recvInfo.id,
         dtlsParameters,
-      }).then(() => callback()).catch((err) => errback(err as Error));
+      }, CONNECT_RPC_RETRY).then(() => callback()).catch((err) => errback(err as Error));
     });
 
     // Drain any newProducer events that arrived before the recv transport
