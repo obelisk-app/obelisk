@@ -29,6 +29,7 @@ import { Peer } from './peer';
 import { SfuClient } from './sfu-client';
 import type { SfuRemoteTrack } from './sfu-client';
 import { pickSfu, publishSfuStart } from './sfu-control';
+import type { SfuAdvertisement } from './sfu-control';
 import type {
   VoicePresence,
   VoiceSignalPayload,
@@ -498,7 +499,7 @@ export class VoiceClient {
           return;
         }
         this.exitMeshMode();
-        await this.enterSfuMode(picked.pubkey);
+        await this.enterSfuMode(picked.pubkey, picked);
       })();
     }
   }
@@ -674,7 +675,7 @@ export class VoiceClient {
           'No SFU is currently reachable for this channel. Ask the channel admin to verify the pinned SFU is online.',
         );
       }
-      await this.enterSfuMode(picked.pubkey);
+      await this.enterSfuMode(picked.pubkey, picked);
       return;
     }
 
@@ -829,7 +830,7 @@ export class VoiceClient {
    * `onTopologyChange(sfu)` then `onTopologyChange(null)` so the badge
    * reflects the live state.
    */
-  private async enterSfuMode(sfuPubkey: string): Promise<void> {
+  private async enterSfuMode(sfuPubkey: string, resolvedSfu?: SfuAdvertisement): Promise<void> {
     if (this.sfuPubkey === sfuPubkey && this.sfuClient) return;
 
     if (this.sfuClient) {
@@ -850,7 +851,7 @@ export class VoiceClient {
     // (clears sfuPubkey, fires onTopologyChange(null), surfaces onError,
     // re-throws). We only fire onTopologyChange(sfuPubkey) on success.
     this.sfuPubkey = sfuPubkey;
-    await this.startSfuClient(sfuPubkey);
+    await this.startSfuClient(sfuPubkey, resolvedSfu);
     try { this.events.onTopologyChange?.(sfuPubkey); } catch (err) {
       console.warn('[voice] onTopologyChange handler threw', err);
     }
@@ -1141,7 +1142,9 @@ export class VoiceClient {
     // Resolution order matches `pickSfu(channelId)`:
     //   1. per-channel pin (kind 30078)        — preferred
     //   2. NEXT_PUBLIC_SFU_TRUSTED_RELAYS env  — fallback for unconfigured channels
-    const picked = await pickSfu(this.channelId);
+    const picked = resolvedSfu?.pubkey === sfuPubkey
+      ? resolvedSfu
+      : await pickSfu(this.channelId);
     let trustedRelays: string[] = [];
     if (picked && picked.pubkey === sfuPubkey && picked.trustedRelays.length > 0) {
       trustedRelays = [...picked.trustedRelays];
