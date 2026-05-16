@@ -1,39 +1,43 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useMessageZapStore } from '@/store/messageZap';
+import { useState } from 'react';
+import { useMessageZapStore, type ZapTarget } from '@/store/messageZap';
 import { useToastStore } from '@/store/toast';
-import { isWebLNAvailable, zapViaWebLN } from '@nostr-wot/wallet';
+import { isWebLNAvailable, requestZapInvoice } from '@nostr-wot/wallet';
 import type { NostrSigner } from '@nostr-wot/signers';
 import { getDefaultRelays } from '@nostr-wot/data';
 import { useProfile, useSigner } from '@nostr-wot/data/react';
+import { getBridgeImpl, useCurrentRelayUrl } from '@/lib/nostr-bridge';
 import ModalShell from '@/components/ModalShell';
 
 const QUICK_AMOUNTS = [21, 100, 500, 1000, 5000, 21000];
+
+type WebLNProvider = {
+  enable: () => Promise<void>;
+  sendPayment: (paymentRequest: string) => Promise<unknown>;
+};
 
 export default function MessageZapModal() {
   const target = useMessageZapStore((s) => s.target);
   const close = useMessageZapStore((s) => s.close);
 
-  const [amount, setAmount] = useState<number>(100);
+  if (!target) return null;
+
+  const key = `${target.groupId}:${target.messageId ?? ''}:${target.recipientPubkey}:${target.defaultAmountSats ?? 100}`;
+  return <MessageZapModalInner key={key} target={target} close={close} />;
+}
+
+function MessageZapModalInner({ target, close }: { target: ZapTarget; close: () => void }) {
+  const [amount, setAmount] = useState<number>(target.defaultAmountSats ?? 100);
   const [comment, setComment] = useState<string>('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!target) return;
-    setAmount(target.defaultAmountSats ?? 100);
-    setComment('');
-    setErr(null);
-  }, [target]);
-
-  // Hook order is fixed; call before any early return.
   const meta = useProfile(target?.recipientPubkey ?? null);
   const signer = useSigner();
+  const currentRelay = useCurrentRelayUrl();
   const lud16 = meta?.lud16 ?? target?.recipientLud16 ?? null;
   const displayName = target ? (meta?.displayName || meta?.name || target.displayName) : '';
-
-  if (!target) return null;
 
   const send = async () => {
     if (!lud16) {
@@ -55,19 +59,54 @@ export default function MessageZapModal() {
     setBusy(true);
     setErr(null);
     try {
-      const relays = getDefaultRelays();
-      // SessionSigner is structurally a NostrSigner — the SDK keeps it loosely
-      // typed (signEvent returns `unknown`) so @nostr-wot/data has no hard
-      // dependency on @nostr-wot/signers. The cast is safe at runtime.
-      await zapViaWebLN({
-        signer: signer as unknown as NostrSigner,
+      const webln = (window as unknown as { webln?: WebLNProvider }).webln;
+      if (!webln) throw new Error('No WebLN extension detected. Install Alby (or similar) to zap.');
+      await webln.enable();
+
+      const relays = Array.from(new Set([
+        ...(currentRelay ? [currentRelay] : []),
+        ...getDefaultRelays(),
+      ]));
+      const amountMsats = amount * 1000;
+      const { invoice, zapRequest } = await requestZapInvoice(signer as unknown as NostrSigner, {
         recipientPubkey: target.recipientPubkey,
-        recipientLud16: lud16,
+        lud16,
         eventId: target.messageId ?? undefined,
-        amountSats: amount,
+        amountMsats,
         relays,
         comment: comment.trim() || undefined,
       });
+
+      await webln.sendPayment(invoice);
+
+      const tags: string[][] = [
+        ...(target.messageId ? [['e', target.messageId]] : []),
+        ['p', target.recipientPubkey],
+        ['h', target.groupId],
+        ['amount', String(amountMsats), 'msat'],
+        ['bolt11', invoice],
+        ['description', JSON.stringify(zapRequest)],
+      ];
+      const bridge = getBridgeImpl();
+      if (!bridge) throw new Error('Nostr bridge is not ready.');
+      try {
+        await bridge.publishEvent(
+          {
+            kind: 7,
+            content: '⚡',
+            tags,
+          },
+          currentRelay ? { extraRelays: [currentRelay] } : undefined,
+        );
+      } catch (publishErr) {
+        useToastStore.getState().pushToast({
+          title: `⚡ Sent ${amount.toLocaleString()} sats to ${displayName}`,
+          body: `Payment succeeded, but the group zap marker was not published: ${(publishErr as Error).message}`,
+        });
+        close();
+        return;
+      }
+
       useToastStore.getState().pushToast({
         title: `⚡ Sent ${amount.toLocaleString()} sats to ${displayName}`,
         body: comment.trim() || '',

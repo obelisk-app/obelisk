@@ -102,7 +102,9 @@ import {
 } from '@/lib/read-state/selectors';
 import { useChatStore } from '@/store/chat';
 import { useDMStore } from '@/store/dm';
+import { useMessageZapStore } from '@/store/messageZap';
 import { useNostrPresence, PRESENCE_WINDOW_MS } from '@/hooks/chat/useNostrPresence';
+import MessageZapModal from '@/components/chat/MessageZapModal';
 import { type ScreenName, type NavState, initialNav, urlFor, parseUrl } from './url-state';
 import { buildSeedHistory, decideSnap, decideSwipeNav, decideTabPress, neighborsFor, NAV_ORDER, resolveParent, SUB_TO_NAV } from './swipe-nav';
 import { useKeyboardInset } from './use-keyboard';
@@ -5597,21 +5599,24 @@ export default function MobileShell() {
     suppressSlideRef.current = true;
     pushNav((n) => ({ ...n, baseScreen: n.screen, screen: 'msg-actions', msgContext: msg, parentScreen: n.screen }));
   }, [pushNav]);
-  const openZap = useCallback((msg: { id: string; pubkey: string; content: string }) => {
-    suppressSlideRef.current = true;
-    pushNav((n) => ({
-      ...n,
-      baseScreen: n.screen === 'msg-actions' ? n.baseScreen : n.screen,
-      screen: 'zap-modal',
-      msgContext: msg,
-      // If we're opening zap from inside msg-actions, inherit msg-actions' parent
-      // (which is the original base). Otherwise the parent is the current screen.
-      parentScreen: n.screen === 'msg-actions' ? (n.parentScreen ?? n.baseScreen) : n.screen,
-    }));
-  }, [pushNav]);
   const closeSheet = useCallback(() => {
     if (typeof window !== 'undefined') window.history.back();
   }, []);
+  const openSharedZap = useMessageZapStore((s) => s.open);
+  const openZap = useCallback((msg: { id: string; pubkey: string; content: string }) => {
+    const groupId = navRef.current.groupId;
+    if (!groupId || msg.pubkey === myPubkey) return;
+    openSharedZap({
+      messageId: msg.id,
+      recipientPubkey: msg.pubkey,
+      recipientLud16: null,
+      displayName: shortNpub(msg.pubkey),
+      groupId,
+    });
+    if (navRef.current.screen === 'msg-actions' || navRef.current.screen === 'zap-modal') {
+      closeSheet();
+    }
+  }, [closeSheet, myPubkey, openSharedZap]);
   const backFromChannel = useCallback(() => {
     if (typeof window !== 'undefined') window.history.back();
   }, []);
@@ -6014,6 +6019,7 @@ export default function MobileShell() {
       onTouchEnd={onTouchEnd}
       onTouchCancel={onTouchCancel}
     >
+      <MessageZapModal />
       <BackgroundVoiceAudio />
       <div className="screens-host" ref={screensHostRef}>
         <div ref={dragLayerRef} className={`drag-layer ${isDragging ? 'is-dragging' : ''}`}>
