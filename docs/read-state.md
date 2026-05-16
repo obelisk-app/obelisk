@@ -140,8 +140,24 @@ Two scopes share the same engine (`src/lib/read-state/relay-sync.ts`):
 
 | Scope | Where it's published | Inner d-tag | Contents |
 |---|---|---|---|
-| **Groups state** | Each configured relay | `obelisk:readstate:v1` | `{ v:1, groups: { [groupId]: { lastReadAt } } }` |
+| **Groups state** | The **active** relay only (`useCurrentRelayUrl`) | `obelisk:readstate:v1` | `{ v:1, groups: { [groupId]: { lastReadAt } } }` |
 | **DM state** | User's NIP-65 read+write union (`fetchRelayList`) | `obelisk:dm-readstate:v1` | `{ v:1, dms: { [peerHex]: { lastReadAt } }, inboxLastReadAt }` |
+
+The groups-scope sub used to fan out across `useConfiguredRelays()` —
+every relay in the rail got a kind 1059 REQ. That was the source of the
+"send AUTH on a closed connection" loop: a whitelist-gated relay (e.g.
+`lacrypta-relay.obelisk.ar`) the user had in their rail but wasn't
+browsing would issue NIP-42 AUTH, the bridge would auto-sign and send,
+the relay would close the socket, and nostr-tools would resend on
+reconnect. Switching to active-relay-only also satisfies the
+[architectural rule in CLAUDE.md](../CLAUDE.md#single-relay-rule-for-groups-cross-relay-only-for-dms):
+**only DMs run cross-relay**.
+
+Per-relay group-id collisions are not an in-memory concern because
+NIP-29 group ids are random hex blobs (effectively unique across
+relays); the on-the-wire payload is always scoped per relay (each
+gift wrap carries only `groupIdsForRelay`), and `bridgeCache` keys are
+`${relay}|${kind}|${dTag}`.
 
 ### Why NIP-59 gift wrap
 
@@ -206,16 +222,25 @@ pubkey never appears on the kind 1059 envelope.
 
 ## 8. Priority orchestrator alignment
 
-The relay-sync subscriptions are P2 — they MUST NOT block the
-channel-menu paint. `useReadyToSync()` (in `src/lib/read-state/root.tsx`)
-gates the two relay-sync `useEffect`s on either:
+The two scopes have different priorities now:
 
-1. `groupMetadataEose === true` — the relay finished streaming kind
-   39000; channels painted. OR
-2. 1000ms post-`Connected` — even on a relay that silently filters kind
-   39000 (no EOSE), don't defer cursor sync forever.
+- **Groups scope** (active relay only) — fires as soon as `myPubkey`,
+  `activeRelay`, and at least one group are known. **No `useReadyToSync`
+  gate.** It must land before messages paint, otherwise unread badges
+  flash on then off when cursors arrive (the bridgeCache seed paints
+  instantly; the live REQ overwrites). The store defaults are "from
+  zero," so a relay that doesn't store our wrap (or doesn't accept kind
+  1059) leaves cursors at zero and a fresh wrap is published the moment
+  the user marks anything read.
+- **DM scope** (NIP-65 read+write union) — still gated by
+  `useReadyToSync()` because it depends on the asynchronous `fetchRelayList`
+  resolution and is one of two acceptable cross-relay fanouts (DMs
+  themselves being the other).
 
-The 8s debounce in `flush()` means a ~1s mount delay is imperceptible.
+`useReadyToSync()` waits for either `groupMetadataEose === true` (channel
+menu painted) OR 1000ms post-`Connected` (some relays filter kind 39000
+silently). The 8s debounce in `flush()` keeps mount-delay invisible to
+the user either way.
 
 See [`data-system.md` §4](./data-system.md) for the full priority table.
 
@@ -229,9 +254,8 @@ src/app/app/AppGate.tsx
     ├── ensureDMStoreForAccount(myPubkey)
     ├── ensureModerationStoreForAccount(myPubkey)
     ├── ensureForumFollowForAccount(myPubkey)
-    ├── [gated by useReadyToSync] for each configured relay:
-    │       startGroupsRelaySync(relay, groupIds)
-    ├── fetchRelayList(...) → setDmRelays
+    ├── [no gate] startGroupsRelaySync(activeRelay, groupIds)
+    ├── fetchRelayList(...) → setDmRelays  (NIP-65 read+write union)
     ├── [gated by useReadyToSync] startDMRelaySync(dmRelays)
     ├── useAutoMarkRead()
     └── useFaviconBadge()

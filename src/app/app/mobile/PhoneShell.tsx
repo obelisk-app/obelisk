@@ -2570,7 +2570,26 @@ function ChannelScreen({
     }
   };
 
-  // Auto-scroll to bottom when new messages arrive
+  // Entering a new channel: jump to the newest message (matches desktop).
+  // Without this, mobile lands at scrollTop=0 which means the OLDEST visible
+  // message — the user complained about being dropped at the "top of channels
+  // they've already read." The auto-mark-read effect then clears the unread
+  // badge from this position because the user is already looking at the tail.
+  // We use `messages.length > 0` as the trigger so the first batch of REQ
+  // events lands the user at the bottom even when groupId already matched.
+  const lastJumpedGroupRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (messages.length === 0) return;
+    if (lastJumpedGroupRef.current === groupId) return;
+    const el = messagesRef.current;
+    if (!el) return;
+    requestAnimationFrame(() => {
+      el.scrollTop = el.scrollHeight;
+    });
+    lastJumpedGroupRef.current = groupId;
+  }, [groupId, messages.length]);
+
+  // Auto-scroll to bottom when new messages arrive (only if already near).
   useEffect(() => {
     const el = messagesRef.current;
     if (!el) return;

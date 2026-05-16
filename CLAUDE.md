@@ -159,6 +159,32 @@ ingestGroupMetadata(ev)
 
 Per-group admin/member (`subscribeAdminMember`) is **not** fired here — the relay-wide P2 sub covers it. The lazy per-group sub on `useAdmins` / `useMembers` mount is idempotent and serves as a fallback.
 
+### Single-relay rule for groups; cross-relay only for DMs
+
+**Groups bind to the active relay. Only DMs run cross-relay.** This is the
+load-bearing rule that keeps the bridge from leaking pubkey via NIP-42 AUTH
+challenges to relays the user isn't browsing, and keeps background work
+predictable:
+
+| Subscription                      | Scope                                      |
+|----------------------------------|--------------------------------------------|
+| Group metadata / messages / reactions / admin / member (kinds 9, 39000, 39001, 39002, 7, 9007) | **Active relay only** (`this.relays = [activeRelay]`) |
+| Group read-state cursors (NIP-59 wraps over kind 30078) | **Active relay only** — `startGroupsRelaySync(activeRelay, ids)` in `src/lib/read-state/root.tsx` |
+| Inbox / mention / reply / @everyone notifications | **Active relay only** (derived from active-relay messages) |
+| DMs (kind 4) | **NIP-65 read+write union** of the user's relay list |
+| DM read-state cursors + `inboxLastReadAt` (NIP-59 wraps) | **NIP-65 read+write union** |
+| Voice signaling / SFU RPC (kinds 25050, 31313, 31314) | Per-channel relay set (mesh: active relay; SFU: pinned trust set) |
+
+When you add a new background subscription, decide upfront which row it
+belongs to. If it's not DMs, it goes on the active relay only — never on
+`useConfiguredRelays()`. Fanning out across configured relays opens
+sockets to whitelist-gated relays the user hasn't authenticated against
+and produces the `Tried to send AUTH on a closed connection` loop.
+
+Future: in-OS background notifications (browser Notification API,
+service-worker push) are DM-only too. Group mentions only notify while
+the user has the group's relay open as the active relay.
+
 ## bridgeCache (stale-while-revalidate)
 
 `src/lib/nostr-bridge/cache.ts` is a small `localStorage` cache for relay-derived state. Each entry pairs an ingest writer (via `cacheSet`, often with an equality guard or a debounce) with a seed reader (`seedCacheForRelay` on bridge construction / login / `switchRelay`).

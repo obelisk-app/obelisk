@@ -78,7 +78,8 @@ default plan:
 | **P2** | `subscribeMyMuteList` (kind 10000) | After P0 EOSE | 5000ms / 4 | no | n/a |
 | **P2** | `subscribeMyAuthoredGroups` (kind 9007 `authors:[me]`) | After P0 EOSE | 5000ms / ∞ | no | yes (per-group) |
 | **P2** | `subscribeActiveCalls` (kind 31314) | After P0 EOSE | 5000ms / ∞ | no | no |
-| **P2** | Read-state relay-sync (kind 1059, groups + DM scopes) | After `groupMetadataEose` OR 1000ms post-`Connected` | 5000ms / ∞ | no | yes |
+| **P0** | Read-state relay-sync, **groups scope** (kind 1059 `#p:[me]`, ACTIVE relay only) | As soon as `myPubkey` + `activeRelay` + first group are known — fires before messages paint so unread badges don't flash | 5000ms / ∞ | no | yes |
+| **P2** | Read-state relay-sync, **DM scope** (kind 1059 `#p:[me]`, NIP-65 read+write union) | After NIP-65 list resolves (cross-relay; the only background fanout we tolerate) | 5000ms / ∞ | no | yes |
 | **P3** | Per-group `subscribeAdminMember(id)` | On first `useAdmins`/`useMembers` mount | 5000ms / 4 | no | yes |
 | **P3** | Per-pubkey kind 0 | On first `ensureUserMetadata` | 3000ms / 2 | no | yes |
 
@@ -86,9 +87,20 @@ Implementation notes:
 - P0 actions are dispatched synchronously inside `connect()` (in the same
   microtask). P2 actions are dispatched on `queueMicrotask`, so their
   WebSocket frames go out strictly after P0 frames.
-- Read-state relay-sync is in P2 but is additionally gated by the
-  `useReadyToSync()` hook in `src/lib/read-state/root.tsx`. See
-  [`read-state.md`](./read-state.md).
+- Read-state relay-sync is split: the **groups scope** (active relay
+  only) fires unconditionally — it must land before messages paint so the
+  unread badges don't flash on then off when cursors arrive. The **DM
+  scope** (NIP-65 read+write union) is still gated by `useReadyToSync()`
+  in `src/lib/read-state/root.tsx`. See [`read-state.md`](./read-state.md).
+- **Architectural rule — single-relay groups, cross-relay DMs:**
+  every background subscription except DMs and DM-state sync runs on
+  `this.relays = [activeRelay]` only. Fanning a non-DM REQ across
+  `useConfiguredRelays()` opens sockets to whitelist-gated relays the
+  user hasn't AUTH'd against, leaks pubkey via the NIP-42 challenge, and
+  produces the `Tried to send AUTH on a closed connection` loop. If you
+  add a new background sub, it goes on the active relay. Future in-OS
+  notifications (browser Notification API / service-worker push) are
+  DM-only too.
 - `pendingResubscribe` (per-group REQs that were live on the previous
   pool) is applied at the end of the P2 microtask via
   `applyPendingResubscribe`, with the active group bumped to the head of

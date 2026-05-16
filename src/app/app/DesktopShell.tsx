@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   nostrActions,
   useIsLoggedIn,
@@ -496,7 +497,7 @@ function RelayTopBar({
           </svg>
         </a>
       </div>
-      {notifOpen && (
+      {notifOpen && typeof document !== 'undefined' && createPortal(
         <div
           data-notif-popover
           className="fixed right-2 md:right-3 top-[3.75rem] md:top-11 z-[60] w-[min(380px,calc(100vw-1rem))] max-h-[70vh] overflow-hidden rounded-xl border border-lc-border bg-lc-dark shadow-2xl flex flex-col"
@@ -556,7 +557,8 @@ function RelayTopBar({
               </ul>
             )}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
       <div className="flex items-center gap-2 min-w-0 max-w-[55%]">
         {iconUrl && !iconFailed ? (

@@ -11,9 +11,12 @@
  *
  * Mount timing — Phase 5 of the data-system redesign:
  *
- * Relay-sync subscriptions (one `{kinds:[1059], '#p':[me]}` per configured
+ * Relay-sync subscriptions (one `{kinds:[1059], '#p':[me]}` on the ACTIVE
  * relay for groups-scope state, one per NIP-65 read+write relay for DM-
  * scope state) are P2 priority. They MUST NOT block the channel-menu paint.
+ *
+ * Architectural rule: groups bind to the active relay only; only DMs and
+ * DM-state sync run cross-relay. See CLAUDE.md and docs/data-system.md §4.
  * The {@link useReadyToSync} hook gates the two `useEffect`s on either:
  *   1. `groupMetadataEose === true` — the relay has finished streaming kind
  *      39000; channels are painted. OR
@@ -30,7 +33,13 @@
  */
 
 import { useEffect, useState } from 'react';
-import { useConfiguredRelays, useConnectionState, useGroupMetadataEose, useGroups } from '@/lib/nostr-bridge';
+import {
+  useConfiguredRelays,
+  useConnectionState,
+  useCurrentRelayUrl,
+  useGroupMetadataEose,
+  useGroups,
+} from '@/lib/nostr-bridge';
 import { usePubkey } from '@nostr-wot/data/react';
 import { useAutoMarkRead } from '@/hooks/useAutoMarkRead';
 import { useFaviconBadge } from '@/hooks/useFaviconBadge';
@@ -81,6 +90,7 @@ export function useReadyToSync(): boolean {
 export default function ReadStateRoot() {
   const myPubkey = useMyPubkey();
   const relays = useConfiguredRelays();
+  const activeRelay = useCurrentRelayUrl();
   const groups = useGroups();
   const readyToSync = useReadyToSync();
 
@@ -89,22 +99,33 @@ export default function ReadStateRoot() {
     for (const ensure of PER_ACCOUNT_STORES) ensure(myPubkey);
   }, [myPubkey]);
 
-  // Per-relay groups state sync. Deferred to P2 — only mounts once the
-  // channel menu has painted, so the orchestrator's P0 fan-out doesn't
-  // compete with kind 1059 REQs for the AUTH-gated frame queue.
+  // Groups-scope cursor sync runs on the ACTIVE relay only. Fanning out
+  // across every configured relay opened background sockets to relays the
+  // user wasn't browsing — leaking pubkey via NIP-42 AUTH and triggering
+  // a "send AUTH on closed connection" loop on whitelist-gated relays.
+  // Architectural rule: groups bind to the active relay; only DMs (and
+  // DM-state sync) run cross-relay. See docs/data-system.md §4.
+  //
+  // The read-state wrap MUST land before messages paint — otherwise the
+  // unread badges flash on, then off when cursors arrive. So we no longer
+  // gate this on `useReadyToSync` (which deferred until after EOSE / 1s
+  // grace); instead we mount as soon as the active relay + first group
+  // are known. The empty-store defaults are "from zero", so a relay that
+  // never delivers our wrap (no stored gift wrap, or a relay that doesn't
+  // accept kind 1059) leaves cursors at zero and the user gets a fresh
+  // wrap published as soon as they mark anything read.
   const groupIdsKey = groups.map((g) => g.id).sort().join(',');
   useEffect(() => {
-    if (!readyToSync) return;
-    if (!myPubkey || relays.length === 0) return;
+    if (!myPubkey || !activeRelay) return;
     const ids = groups.map((g) => g.id);
     if (ids.length === 0) return;
-    const cleanups = relays.map((relay) => startGroupsRelaySync(relay, ids));
-    return () => cleanups.forEach((c) => c());
+    return startGroupsRelaySync(activeRelay, ids);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [readyToSync, myPubkey, relays.join(','), groupIdsKey]);
+  }, [myPubkey, activeRelay, groupIdsKey]);
 
   // DM-state sync targets the user's NIP-65 relays so cursors converge
-  // across devices regardless of which relay they're chatting on.
+  // across devices regardless of which relay they're chatting on. This is
+  // the ONE place we fan subscriptions across multiple relays.
   const [dmRelays, setDmRelays] = useState<ReadonlyArray<string>>([]);
   useEffect(() => {
     if (!myPubkey) return;
@@ -114,12 +135,13 @@ export default function ReadStateRoot() {
       if (cancelled) return;
       // NIP-65 union of read+write — matches DM coverage requirement.
       const found = list ? Array.from(new Set([...list.read, ...list.write])) : [];
-      // Fall back to the configured set if the user has no NIP-65 list yet
-      // — better one-relay sync than no sync at all.
-      setDmRelays(found.length > 0 ? found : relays);
+      // Fall back to the active relay if the user has no NIP-65 list yet
+      // — better one-relay sync than no sync at all, and matches the
+      // "active relay only for groups, NIP-65 for DMs" architectural rule.
+      setDmRelays(found.length > 0 ? found : (activeRelay ? [activeRelay] : []));
     });
     return () => { cancelled = true; };
-  }, [myPubkey, relays]);
+  }, [myPubkey, relays, activeRelay]);
 
   useEffect(() => {
     if (!readyToSync) return;
