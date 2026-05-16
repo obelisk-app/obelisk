@@ -117,8 +117,8 @@ export const STALE_TIMEOUT_MS = 12_000;
  * after the consumer is first surfaced so warm-up isn't misdiagnosed.
  */
 export const STALE_WARMUP_MS = 3_000;
-const STARTUP_RPC_RETRY = { attempts: 3, timeoutMs: 4500, retryDelayMs: 150 } as const;
-const CONNECT_RPC_RETRY = { attempts: 2, timeoutMs: 4500, retryDelayMs: 150 } as const;
+const STARTUP_RPC_RETRY = { attempts: 4, timeoutMs: 1800, retryDelayMs: 75 } as const;
+const CONNECT_RPC_RETRY = { attempts: 3, timeoutMs: 2000, retryDelayMs: 75 } as const;
 
 interface ProducerAppData {
   kind?: VoiceTrackKind;

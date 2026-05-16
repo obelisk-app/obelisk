@@ -89,10 +89,12 @@ export interface RpcNotification<T = unknown> {
 }
 
 const DEFAULT_TIMEOUT_MS = 8000;
-const SUBSCRIBE_SETTLE_MS = 200;
-const DEFAULT_RETRY_ATTEMPTS = 3;
-const DEFAULT_RETRY_TIMEOUT_MS = 4500;
-const DEFAULT_RETRY_DELAY_MS = 150;
+const SUBSCRIBE_SETTLE_MS = 100;
+const SFU_RPC_WATCHDOG_MS = 800;
+const SFU_RPC_MAX_SUBSCRIBE_ATTEMPTS = 8;
+const DEFAULT_RETRY_ATTEMPTS = 4;
+const DEFAULT_RETRY_TIMEOUT_MS = 1800;
+const DEFAULT_RETRY_DELAY_MS = 75;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -165,6 +167,16 @@ export class SfuRpc {
     // public.obelisk.ar would otherwise time out every RPC. The bridge
     // merges with its own relay list so we don't drop events from
     // peers that publish to the default relays either.
+    const watchOptions = this.publishRelays.length > 0
+      ? {
+          relays: this.publishRelays,
+          watchdogMs: SFU_RPC_WATCHDOG_MS,
+          maxAttempts: SFU_RPC_MAX_SUBSCRIBE_ATTEMPTS,
+        }
+      : {
+          watchdogMs: SFU_RPC_WATCHDOG_MS,
+          maxAttempts: SFU_RPC_MAX_SUBSCRIBE_ATTEMPTS,
+        };
     this.signalUnsub = b.subscribeFilterWatched(
       {
         kinds: [KIND_VOICE_SIGNAL],
@@ -188,7 +200,7 @@ export class SfuRpc {
         }
         // requests from SFU don't exist in v1 — server is response-only.
       },
-      this.publishRelays.length > 0 ? { relays: this.publishRelays } : undefined,
+      watchOptions,
     );
     // The bridge does not expose relay subscription readiness. Give AUTH
     // gated relays one tick to attach before the first startup RPC goes out.
