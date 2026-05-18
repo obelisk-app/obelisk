@@ -41,6 +41,8 @@ export const nostrActions = {
   ) => (await getBridge()).sendReaction(targetEventId, targetPubkey, emoji, groupId, emojiTags),
   removeReaction: async (groupId: string, reactionEventId: string) =>
     (await getBridge()).removeReaction(groupId, reactionEventId),
+  removeMessage: async (groupId: string, eventId: string) =>
+    (await getBridge()).removeMessage(groupId, eventId),
   sendDirectMessage: async (recipientPubkey: string, content: string) =>
     (await getBridge()).sendDirectMessage(recipientPubkey, content),
   retryMessage: async (groupId: string, clientTag: string) =>

@@ -295,6 +295,76 @@ describe('nostr-bridge', () => {
     expect(seen.at(-1)?.targetEventId123 ?? []).toEqual([]);
   });
 
+  it('removeMessage publishes a NIP-09 delete event and removes the local message', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+
+    const groupId = 'remove-message-group';
+    const seen: Array<Array<{ id: string; content: string }>> = [];
+    bridge.subscribeMessages(groupId, (msgs) => {
+      seen.push(msgs.map((m) => ({ id: m.id, content: m.content })));
+    });
+
+    await bridge.sendMessage(groupId, 'delete this');
+    await flush();
+    const message = fake.state.published.find((e) => e.kind === 9);
+    expect(message).toBeTruthy();
+
+    await bridge.removeMessage(groupId, message!.id);
+    await flush();
+
+    const deletion = fake.state.published.find((e) => e.kind === 5);
+    expect(deletion?.content).toBe('remove message');
+    expect(deletion?.tags).toContainEqual(['e', message!.id]);
+    expect(deletion?.tags).toContainEqual(['k', '9']);
+    expect(deletion?.tags).toContainEqual(['h', groupId]);
+    expect(seen.at(-1)?.some((m) => m.id === message!.id)).toBe(false);
+  });
+
+  it('deleteGroupEvent removes moderated messages and reactions from local state', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+
+    const groupId = 'moderation-delete-group';
+    const seenMessages: Array<Array<string>> = [];
+    const seenReactions: Array<Record<string, string[]>> = [];
+    bridge.subscribeMessages(groupId, (msgs) => {
+      seenMessages.push(msgs.map((m) => m.id));
+    });
+    bridge.subscribeReactions(groupId, (byEvent) => {
+      seenReactions.push(Object.fromEntries(
+        Object.entries(byEvent).map(([eventId, reactions]) => [
+          eventId,
+          reactions.map((r) => r.id),
+        ]),
+      ));
+    });
+
+    await bridge.sendMessage(groupId, 'moderate this');
+    await flush();
+    const message = fake.state.published.find((e) => e.kind === 9);
+    expect(message).toBeTruthy();
+
+    await bridge.sendReaction(message!.id, pkHex, '🔥', groupId);
+    await flush();
+    const reaction = fake.state.published.find((e) => e.kind === 7);
+    expect(reaction).toBeTruthy();
+    expect(seenReactions.at(-1)?.[message!.id]).toContain(reaction!.id);
+
+    await bridge.deleteGroupEvent(groupId, reaction!.id);
+    await flush();
+    expect(fake.state.published.find((e) => e.kind === 9005)?.tags).toContainEqual(['e', reaction!.id]);
+    expect(seenReactions.at(-1)?.[message!.id] ?? []).toEqual([]);
+
+    await bridge.deleteGroupEvent(groupId, message!.id);
+    await flush();
+    expect(seenMessages.at(-1)).not.toContain(message!.id);
+  });
+
   it('NIP-04 DM round-trip: alice → bob, decrypts on bob side', async () => {
     const { getBridge: getBridgeAlice } = await import('./client');
     const alice = makeKeypair();

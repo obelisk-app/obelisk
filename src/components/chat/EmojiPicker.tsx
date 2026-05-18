@@ -16,6 +16,18 @@ export interface PickedCustomEmoji {
   readonly url: string;
 }
 
+interface CustomEmojiEntry extends PickedCustomEmoji {
+  readonly isGif: boolean;
+}
+
+function isGifEmojiUrl(url: string): boolean {
+  try {
+    return /\.gif$/i.test(new URL(url).pathname);
+  } catch {
+    return /\.gif(?:$|[?#])/i.test(url);
+  }
+}
+
 export interface EmojiPickerProps {
   onPick: (emoji: string, custom?: PickedCustomEmoji) => void;
   onClose: () => void;
@@ -28,6 +40,8 @@ export interface EmojiPickerProps {
    * `sheet`: fills its parent (used inside the mobile bottom-sheet host).
    */
   variant?: 'popover' | 'sheet';
+  /** Popover direction relative to the trigger. Ignored for sheet variant. */
+  placement?: 'above' | 'below';
   className?: string;
   customEmojis?: CustomEmojiMap;
 }
@@ -38,6 +52,7 @@ export default function EmojiPicker({
   disabledEmojis,
   skipRecent = false,
   variant = 'popover',
+  placement = 'above',
   className,
   customEmojis: customEmojisProp,
 }: EmojiPickerProps) {
@@ -51,17 +66,34 @@ export default function EmojiPicker({
     if (!q) return null;
     return SEARCHABLE_EMOJI.filter((e) => e.haystack.includes(q)).slice(0, 80);
   }, [q]);
-  const customEntries = useMemo(
+  const customEntries = useMemo<CustomEmojiEntry[]>(
     () => Object.entries(customEmojis)
-      .map(([name, url]) => ({ name: normalizeCustomEmojiName(name), url }))
+      .map(([name, url]) => ({
+        name: normalizeCustomEmojiName(name),
+        url,
+        isGif: isGifEmojiUrl(url),
+      }))
       .filter((e) => e.name && e.url)
       .sort((a, b) => a.name.localeCompare(b.name)),
     [customEmojis],
   );
-  const filteredCustom = useMemo(() => {
-    if (!q) return customEntries;
-    return customEntries.filter((e) => e.name.includes(q)).slice(0, 80);
-  }, [customEntries, q]);
+  const customGifEntries = useMemo(
+    () => customEntries.filter((e) => e.isGif),
+    [customEntries],
+  );
+  const customEmojiEntries = useMemo(
+    () => customEntries.filter((e) => !e.isGif),
+    [customEntries],
+  );
+  const filteredCustomGifEntries = useMemo(() => {
+    const list = q ? customGifEntries.filter((e) => e.name.includes(q)) : customGifEntries;
+    return list.slice(0, 80);
+  }, [customGifEntries, q]);
+  const filteredCustomEmojiEntries = useMemo(() => {
+    const list = q ? customEmojiEntries.filter((e) => e.name.includes(q)) : customEmojiEntries;
+    return list.slice(0, 80);
+  }, [customEmojiEntries, q]);
+  const filteredCustomCount = filteredCustomGifEntries.length + filteredCustomEmojiEntries.length;
 
   const disabled = disabledEmojis ?? new Set<string>();
 
@@ -76,9 +108,10 @@ export default function EmojiPicker({
   };
 
   const isSheet = variant === 'sheet';
+  const popoverPlacementClass = placement === 'below' ? 'top-full mt-1' : 'bottom-full mb-1';
   const containerClass = isSheet
     ? 'flex h-full w-full flex-col bg-[#313338] p-3 text-lc-white '
-    : 'absolute right-0 bottom-full mb-1 z-30 flex h-[430px] w-[360px] flex-col overflow-hidden rounded-lg border border-black/40 bg-[#313338] text-lc-white shadow-2xl ';
+    : `absolute right-0 ${popoverPlacementClass} z-30 flex h-[430px] w-[360px] flex-col overflow-hidden rounded-lg border border-black/40 bg-[#313338] text-lc-white shadow-2xl `;
   const gridClass = isSheet
     ? 'grid grid-cols-7 gap-1.5'
     : 'grid grid-cols-8 gap-1 px-3';
@@ -94,6 +127,32 @@ export default function EmojiPicker({
   const customImageClass = isSheet
     ? 'h-[1.45em] w-[1.45em] object-contain'
     : 'h-8 w-8 object-contain';
+
+  const renderCustomSection = (title: string, entries: ReadonlyArray<CustomEmojiEntry>) => {
+    if (entries.length === 0) return null;
+    return (
+      <div className="mb-2">
+        <div className={sectionTitleClass}>{title}</div>
+        <div className={gridClass}>
+          {entries.map((e) => {
+            const shortcode = `:${e.name}:`;
+            const mine = disabled.has(shortcode);
+            return (
+              <button
+                key={`custom-${e.name}`}
+                onClick={() => handlePickCustom(e)}
+                disabled={mine}
+                className={emojiBtnClass}
+                title={mine ? 'Already reacted' : shortcode}
+              >
+                <img src={e.url} alt={shortcode} className={customImageClass} />
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div
@@ -143,30 +202,10 @@ export default function EmojiPicker({
       <div className={scrollClass}>
         {filtered ? (
           <>
-            {filteredCustom.length > 0 && (
-              <div className="mb-2">
-                <div className={sectionTitleClass}>Server emojis &amp; GIFs</div>
-                <div className={gridClass}>
-                  {filteredCustom.map((e) => {
-                    const shortcode = `:${e.name}:`;
-                    const mine = disabled.has(shortcode);
-                    return (
-                      <button
-                        key={`custom-${e.name}`}
-                        onClick={() => handlePickCustom(e)}
-                        disabled={mine}
-                        className={emojiBtnClass}
-                        title={mine ? 'Already reacted' : shortcode}
-                      >
-                        <img src={e.url} alt={shortcode} className={customImageClass} />
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+            {renderCustomSection('Server GIFs', filteredCustomGifEntries)}
+            {renderCustomSection('Server emojis', filteredCustomEmojiEntries)}
             <div className={gridClass}>
-              {filtered.length === 0 && filteredCustom.length === 0 && (
+              {filtered.length === 0 && filteredCustomCount === 0 && (
                 <div className="col-span-8 py-4 text-center text-xs text-lc-muted">No matches</div>
               )}
               {filtered.map((e) => {
@@ -212,28 +251,8 @@ export default function EmojiPicker({
                 </div>
               </div>
             )}
-            {customEntries.length > 0 && (
-              <div className="mb-2">
-                <div className={sectionTitleClass}>Server emojis &amp; GIFs</div>
-                <div className={gridClass}>
-                  {customEntries.map((e) => {
-                    const shortcode = `:${e.name}:`;
-                    const mine = disabled.has(shortcode);
-                    return (
-                      <button
-                        key={`custom-${e.name}`}
-                        onClick={() => handlePickCustom(e)}
-                        disabled={mine}
-                        className={emojiBtnClass}
-                        title={mine ? 'Already reacted' : shortcode}
-                      >
-                        <img src={e.url} alt={shortcode} className={customImageClass} />
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+            {renderCustomSection('Server GIFs', customGifEntries)}
+            {renderCustomSection('Server emojis', customEmojiEntries)}
             {EMOJI_CATEGORY_NAMES.map((cat) => (
               <div key={cat} className="mb-2">
                 <div className={sectionTitleClass}>{cat}</div>

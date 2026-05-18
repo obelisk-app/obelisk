@@ -2859,6 +2859,7 @@ function MessageRow({
   msg: JsMessage;
   allMessages: ReadonlyArray<JsMessage>;
   reactions: ReadonlyArray<{
+    id: string;
     emoji: string;
     pubkey: string;
     customEmojis?: Readonly<Record<string, string>>;
@@ -2887,6 +2888,7 @@ function MessageRow({
   const [menuPlacement, setMenuPlacement] = useState<'down' | 'up'>('down');
   const [panelPinned, setPanelPinned] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerPlacement, setPickerPlacement] = useState<'above' | 'below'>('above');
   const menuRef = useRef<HTMLDivElement | null>(null);
   const myPubkey = useMyPubkey();
   const serverEmojis = useChatStore((s) => s.serverEmojis);
@@ -2903,6 +2905,14 @@ function MessageRow({
     }
   };
   const closeAll = () => { setMenuOpen(false); setPanelPinned(false); setPickerOpen(false); };
+  const updatePickerPlacement = () => {
+    if (!menuRef.current || typeof window === 'undefined') return;
+    const rect = menuRef.current.getBoundingClientRect();
+    const estimatedPickerHeight = 440;
+    const spaceAbove = rect.top;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    setPickerPlacement(spaceAbove < estimatedPickerHeight && spaceBelow > spaceAbove ? 'below' : 'above');
+  };
   useEffect(() => {
     if (!menuOpen && !panelPinned && !pickerOpen) return;
     const onDocClick = (e: MouseEvent) => {
@@ -2924,6 +2934,7 @@ function MessageRow({
       emoji: string;
       customEmojis: CustomEmojiMap;
       pubkeys: Set<string>;
+      reactionIds: string[];
       myReactionId: string | null;
     }>();
     for (const r of reactions) {
@@ -2938,11 +2949,13 @@ function MessageRow({
           emoji: resolved.kind === 'custom' ? `:${resolved.name}:` : resolved.char,
           customEmojis: resolved.kind === 'custom' ? { [resolved.name]: resolved.url } : {},
           pubkeys: new Set<string>(),
+          reactionIds: [],
           myReactionId: null,
         };
         m.set(key, entry);
       }
       entry.pubkeys.add(r.pubkey);
+      entry.reactionIds.push(r.id);
       if (r.pubkey === myPubkey) entry.myReactionId = r.id;
     }
     return m;
@@ -2959,7 +2972,16 @@ function MessageRow({
     for (const entry of reactionsByEmoji.values()) if (entry.myReactionId) out.add(entry.emoji);
     return out;
   }, [reactionsByEmoji, myPubkey]);
-  const onReactionClick = (emoji: string, customEmojis?: CustomEmojiMap, reactionId?: string | null) => {
+  const onReactionClick = (
+    emoji: string,
+    customEmojis?: CustomEmojiMap,
+    reactionId?: string | null,
+    reactionIds?: ReadonlyArray<string>,
+  ) => {
+    if (isAdmin && reactionIds && reactionIds.length > 0) {
+      void Promise.all(reactionIds.map((id) => nostrActions.deleteGroupEvent(groupId, id)));
+      return;
+    }
     if (reactionId) {
       void nostrActions.removeReaction(groupId, reactionId);
       return;
@@ -2996,6 +3018,13 @@ function MessageRow({
   const onDismissFailed = () => {
     if (!msg.clientTag) return;
     void nostrActions.cancelPendingMessage(groupId, msg.clientTag);
+  };
+  const canDeleteMessage = isAdmin || msg.pubkey === myPubkey;
+  const deleteMessage = () => {
+    const label = isAdmin ? 'Delete this message for everyone?' : 'Delete your message?';
+    if (!confirm(label)) return;
+    if (isAdmin) void nostrActions.deleteGroupEvent(groupId, msg.id);
+    else void nostrActions.removeMessage(groupId, msg.id);
   };
 
   return (
@@ -3094,17 +3123,18 @@ function MessageRow({
                 <ZapperHoverCard zapTotal={zapTotal} />
               </div>
             )}
-            {counts.map(({ emoji, customEmojis, pubkeys, count, myReactionId }) => {
+            {counts.map(({ emoji, customEmojis, pubkeys, reactionIds, count, myReactionId }) => {
               const mine = myReactedEmojis.has(emoji);
               const resolved = resolveReactionEmoji(emoji, customEmojis);
+              const removeForEveryone = isAdmin;
               return (
                 <div key={emoji} className="group/pill relative">
                   <button
-                    onClick={() => onReactionClick(emoji, customEmojis, myReactionId)}
-                    title={mine ? 'Remove your reaction' : 'React'}
+                    onClick={() => onReactionClick(emoji, customEmojis, myReactionId, removeForEveryone ? reactionIds : undefined)}
+                    title={removeForEveryone ? 'Remove reactions for everyone' : mine ? 'Remove your reaction' : 'React'}
                     className={
                       'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs text-lc-white ' +
-                      (mine
+                      (removeForEveryone || mine
                         ? 'border-lc-green/60 bg-lc-green/10 hover:border-red-400'
                         : 'border-lc-border bg-lc-card hover:border-lc-green')
                     }
@@ -3148,7 +3178,11 @@ function MessageRow({
             );
           })}
           <button
-            onClick={() => { setPickerOpen((v) => !v); setPanelPinned(true); }}
+            onClick={() => {
+              updatePickerPlacement();
+              setPickerOpen((v) => !v);
+              setPanelPinned(true);
+            }}
             className="rounded px-1.5 py-0.5 text-sm text-lc-muted hover:bg-lc-card hover:text-lc-white"
             title="More emojis…"
             aria-label="Open emoji picker"
@@ -3201,7 +3235,12 @@ function MessageRow({
             </button>
             <button
               role="menuitem"
-              onClick={() => { setMenuOpen(false); setPickerOpen(true); setPanelPinned(true); }}
+              onClick={() => {
+                updatePickerPlacement();
+                setMenuOpen(false);
+                setPickerOpen(true);
+                setPanelPinned(true);
+              }}
               className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-lc-white hover:bg-lc-card"
             >
               <span className="w-4 text-center">😊</span> React
@@ -3244,16 +3283,17 @@ function MessageRow({
               <span className="w-4 text-center">🔕</span>
               {isMuted ? 'Unmute user' : 'Mute user'}
             </button>
-            {isAdmin && (
+            {canDeleteMessage && (
               <button
                 role="menuitem"
                 onClick={() => {
-                  if (confirm('Delete this message?')) nostrActions.deleteGroupEvent(groupId, msg.id);
+                  deleteMessage();
                   setMenuOpen(false);
                 }}
                 className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-red-400 hover:bg-lc-card"
               >
-                <span className="w-4 text-center">🗑</span> Delete (admin)
+                <span className="w-4 text-center">🗑</span>
+                {isAdmin ? 'Delete for everyone' : 'Delete message'}
               </button>
             )}
           </div>
@@ -3261,6 +3301,7 @@ function MessageRow({
         {pickerOpen && (
           <EmojiPicker
             disabledEmojis={myReactedEmojis}
+            placement={pickerPlacement}
             onPick={(e, custom) => {
               onReactionClick(e, custom ? { [custom.name]: custom.url } : undefined);
               closeAll();

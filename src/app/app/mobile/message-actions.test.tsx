@@ -9,6 +9,8 @@ vi.mock('@/lib/nostr-bridge', () => ({
   nostrActions: {
     sendReaction: vi.fn().mockResolvedValue(undefined),
     removeReaction: vi.fn().mockResolvedValue(undefined),
+    removeMessage: vi.fn().mockResolvedValue(undefined),
+    deleteGroupEvent: vi.fn().mockResolvedValue(undefined),
     sendMessage: vi.fn().mockResolvedValue(undefined),
     createGroup: vi.fn(),
     switchRelay: vi.fn(),
@@ -152,6 +154,31 @@ describe('ChannelMessage kebab button', () => {
     });
     expect(nostrActions.sendReaction).not.toHaveBeenCalled();
   });
+
+  it('removes another user reaction for everyone when I am an admin', async () => {
+    render(
+      <ChannelMessage
+        msg={sampleMsg}
+        myPubkey={'b'.repeat(64)}
+        isAdmin
+        groupId="rly/group"
+        reactions={[{
+          id: 'reaction-2',
+          pubkey: 'c'.repeat(64),
+          emoji: '👀',
+        }]}
+        onLongPress={() => {}}
+        onAvatar={() => {}}
+      />,
+    );
+
+    fireEvent.click(screen.getByText(/👀/));
+    await vi.waitFor(() => {
+      expect(nostrActions.deleteGroupEvent).toHaveBeenCalledWith('rly/group', 'reaction-2');
+    });
+    expect(nostrActions.removeReaction).not.toHaveBeenCalled();
+    expect(nostrActions.sendReaction).not.toHaveBeenCalled();
+  });
 });
 
 describe('MessageActionsSheet Reply', () => {
@@ -211,5 +238,61 @@ describe('MessageActionsSheet reactions', () => {
     } finally {
       window.removeEventListener('obelisk-mobile:react', listener as EventListener);
     }
+  });
+});
+
+describe('MessageActionsSheet deletion', () => {
+  it('deletes a message for everyone when moderation is allowed', async () => {
+    const close = vi.fn();
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    render(
+      <MessageActionsSheet
+        msg={{
+          id: 'msg-9',
+          pubkey: 'c'.repeat(64),
+          content: 'hi',
+          groupId: 'rly/group',
+          canModerate: true,
+        }}
+        close={close}
+        onZap={() => {}}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('mobile-msg-actions-delete'));
+    await vi.waitFor(() => {
+      expect(nostrActions.deleteGroupEvent).toHaveBeenCalledWith('rly/group', 'msg-9');
+    });
+    expect(nostrActions.removeMessage).not.toHaveBeenCalled();
+    expect(close).toHaveBeenCalledTimes(1);
+    confirm.mockRestore();
+  });
+
+  it('removes my own message with NIP-09 when I am not a moderator', async () => {
+    const close = vi.fn();
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    render(
+      <MessageActionsSheet
+        msg={{
+          id: 'msg-10',
+          pubkey: 'c'.repeat(64),
+          content: 'hi',
+          groupId: 'rly/group',
+          canDeleteOwn: true,
+        }}
+        close={close}
+        onZap={() => {}}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('mobile-msg-actions-delete'));
+    await vi.waitFor(() => {
+      expect(nostrActions.removeMessage).toHaveBeenCalledWith('rly/group', 'msg-10');
+    });
+    expect(nostrActions.deleteGroupEvent).not.toHaveBeenCalled();
+    expect(close).toHaveBeenCalledTimes(1);
+    confirm.mockRestore();
   });
 });

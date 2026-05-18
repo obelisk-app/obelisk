@@ -387,6 +387,8 @@ export interface NostrBridge {
   ): Promise<void>;
   /** NIP-09 kind 5 deletion for the local user's kind 7 reaction event. */
   removeReaction(groupId: string, reactionEventId: string): Promise<void>;
+  /** NIP-09 kind 5 deletion for the local user's kind 9 message event. */
+  removeMessage(groupId: string, eventId: string): Promise<void>;
   /**
    * Same optimistic contract as {@link sendMessage}, for NIP-04 DMs. The
    * placeholder is added under the recipient pubkey in `dmsByPeer`; the

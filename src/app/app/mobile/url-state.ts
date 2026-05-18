@@ -25,7 +25,14 @@ export interface NavState {
   profilePubkey: string | null;
   forumGroupId: string | null;
   baseScreen: ScreenName | null;
-  msgContext: { id: string; pubkey: string; content: string } | null;
+  msgContext: {
+    id: string;
+    pubkey: string;
+    content: string;
+    groupId?: string;
+    canModerate?: boolean;
+    canDeleteOwn?: boolean;
+  } | null;
   // The top-level tab (or sub-screen) the user came from when this screen
   // was opened. Drives the bottom-nav active highlight and swipe-back target
   // for screens reachable from multiple contexts (profile-view, member-list,

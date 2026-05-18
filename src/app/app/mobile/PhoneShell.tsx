@@ -2465,7 +2465,7 @@ function ChannelScreen({
   groupId: string;
   go: (s: ScreenName) => void;
   back: () => void;
-  openMsgActions: (m: { id: string; pubkey: string; content: string }) => void;
+  openMsgActions: (m: { id: string; pubkey: string; content: string; groupId: string; canModerate: boolean; canDeleteOwn: boolean }) => void;
   openZap: (m: { id: string; pubkey: string; content: string }) => void;
   openProfile: (pubkey: string) => void;
   openMembers: () => void;
@@ -2758,9 +2758,17 @@ function ChannelScreen({
                     : null
                 }
                 myPubkey={myPubkey}
+                isAdmin={isChannelAdmin}
                 groupId={groupId}
                 reactions={reactions[it.msg.id] ?? []}
-                onLongPress={() => openMsgActions({ id: it.msg.id, pubkey: it.msg.pubkey, content: it.msg.content })}
+                onLongPress={() => openMsgActions({
+                  id: it.msg.id,
+                  pubkey: it.msg.pubkey,
+                  content: it.msg.content,
+                  groupId,
+                  canModerate: isChannelAdmin,
+                  canDeleteOwn: it.msg.pubkey === myPubkey,
+                })}
                 onAvatar={() => openProfile(it.msg.pubkey)}
               />
             ),
@@ -2922,6 +2930,7 @@ export function ChannelMessage({
   msg,
   parent,
   myPubkey,
+  isAdmin,
   groupId,
   reactions,
   onLongPress,
@@ -2930,6 +2939,7 @@ export function ChannelMessage({
   msg: JsMessage;
   parent?: JsMessage | null;
   myPubkey: string | null;
+  isAdmin?: boolean;
   groupId: string;
   reactions: ReadonlyArray<{
     id: string;
@@ -2951,6 +2961,7 @@ export function ChannelMessage({
       customEmojis: CustomEmojiMap;
       count: number;
       mine: boolean;
+      reactionIds: string[];
       myReactionId: string | null;
     }>();
     for (const r of reactions) {
@@ -2964,9 +2975,11 @@ export function ChannelMessage({
         customEmojis: resolved.kind === 'custom' ? { [resolved.name]: resolved.url } : {},
         count: 0,
         mine: false,
+        reactionIds: [],
         myReactionId: null,
       };
       ex.count++;
+      ex.reactionIds.push(r.id);
       if (r.pubkey === myPubkey) {
         ex.mine = true;
         ex.myReactionId = r.id;
@@ -2981,8 +2994,13 @@ export function ChannelMessage({
     mine: boolean,
     customEmojis?: CustomEmojiMap,
     reactionId?: string | null,
+    reactionIds?: ReadonlyArray<string>,
   ) => {
     try {
+      if (isAdmin && reactionIds && reactionIds.length > 0) {
+        await Promise.all(reactionIds.map((id) => nostrActions.deleteGroupEvent(groupId, id)));
+        return;
+      }
       if (mine && reactionId) {
         await nostrActions.removeReaction(groupId, reactionId);
         return;
@@ -3097,8 +3115,8 @@ export function ChannelMessage({
                 <button
                   key={r.emoji}
                   className={`reaction ${r.mine ? 'mine' : ''}`}
-                  title={r.mine ? 'Remove your reaction' : 'React'}
-                  onClick={() => void handleReaction(r.emoji, r.mine, r.customEmojis, r.myReactionId)}
+                  title={isAdmin ? 'Remove reactions for everyone' : r.mine ? 'Remove your reaction' : 'React'}
+                  onClick={() => void handleReaction(r.emoji, r.mine, r.customEmojis, r.myReactionId, isAdmin ? r.reactionIds : undefined)}
                 >
                   {resolved.kind === 'custom' ? (
                     <img src={resolved.url} alt={`:${resolved.name}:`} style={{ width: 16, height: 16, objectFit: 'contain' }} />
@@ -4512,13 +4530,29 @@ export function MessageActionsSheet({
   close,
   onZap,
 }: {
-  msg: { id: string; pubkey: string; content: string };
+  msg: {
+    id: string;
+    pubkey: string;
+    content: string;
+    groupId?: string;
+    canModerate?: boolean;
+    canDeleteOwn?: boolean;
+  };
   close: () => void;
   onZap: () => void;
 }) {
   const meta = useUserMetadata(msg.pubkey);
   const name = meta?.displayName || meta?.name || shortNpub(msg.pubkey);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const canDeleteMessage = !!msg.groupId && (msg.canModerate || msg.canDeleteOwn);
+  const deleteMessage = async () => {
+    if (!msg.groupId) return;
+    const label = msg.canModerate ? 'Delete this message for everyone?' : 'Delete your message?';
+    if (typeof window !== 'undefined' && !window.confirm(label)) return;
+    if (msg.canModerate) await nostrActions.deleteGroupEvent(msg.groupId, msg.id);
+    else await nostrActions.removeMessage(msg.groupId, msg.id);
+    close();
+  };
   const emitReaction = (emoji: string, custom?: PickedCustomEmoji) => {
     try {
       window.dispatchEvent(new CustomEvent('obelisk-mobile:react', {
@@ -4597,6 +4631,16 @@ export function MessageActionsSheet({
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
             Copy event id
           </button>
+          {canDeleteMessage && (
+            <button
+              className="ma-action danger"
+              data-testid="mobile-msg-actions-delete"
+              onClick={() => { void deleteMessage(); }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M8 6V4h8v2" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v5M14 11v5" /></svg>
+              {msg.canModerate ? 'Delete for everyone' : 'Delete message'}
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -5709,7 +5753,14 @@ export default function MobileShell() {
   const openMembers = useCallback(() => {
     pushNav((n) => ({ ...n, screen: 'member-list', parentScreen: n.screen }));
   }, [pushNav]);
-  const openMsgActions = useCallback((msg: { id: string; pubkey: string; content: string }) => {
+  const openMsgActions = useCallback((msg: {
+    id: string;
+    pubkey: string;
+    content: string;
+    groupId: string;
+    canModerate: boolean;
+    canDeleteOwn: boolean;
+  }) => {
     // The sheet animates in vertically on top of the base screen — suppress the
     // default forward slide so the underlying channel doesn't lateral-slide too.
     suppressSlideRef.current = true;

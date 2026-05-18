@@ -847,7 +847,8 @@ class BridgeImpl implements NostrBridge {
   messagesByGroup = new StateStore<Record<string, JsMessage[]>>({});
   userMetadata = new StateStore<Record<string, JsUserMetadata>>({});
   reactionsByGroup = new StateStore<Record<string, Record<string, JsReaction[]>>>({});
-  private deletedReactionIdsByGroup = new Map<string, Map<string, string>>();
+  private deletedEventIdsByGroup = new Map<string, Map<string, string>>();
+  private moderatedEventIdsByGroup = new Map<string, Set<string>>();
   childrenByParent = new StateStore<Record<string, string[]>>({});
   dmsByPeer = new StateStore<Record<string, JsDirectMessage[]>>({});
   /**
@@ -966,6 +967,8 @@ class BridgeImpl implements NostrBridge {
   private messageSubByGroup = new Map<string, { close: () => void; markClosed?: () => void }>();
   // Group ids we already have a reaction subscription for.
   private reactionSubscribedGroups = new Set<string>();
+  private eventDeletionSubscribedGroups = new Set<string>();
+  private groupModerationDeletionSubscribedGroups = new Set<string>();
   private dmSubscribed = false;
   private adminMemberSubscribedGroups = new Set<string>();
   private creatorSubscribedGroups = new Set<string>();
@@ -1238,6 +1241,8 @@ class BridgeImpl implements NostrBridge {
     // fire after the pool is gone.
     this.clearAllCacheFlushers();
     this.querySyncFallbackFired.clear();
+    this.deletedEventIdsByGroup.clear();
+    this.moderatedEventIdsByGroup.clear();
   }
 
   // -- Auth --------------------------------------------------------------
@@ -1470,6 +1475,8 @@ class BridgeImpl implements NostrBridge {
     this.pool = this.createPool();
     this.messageSubscribedGroups.clear();
     this.reactionSubscribedGroups.clear();
+    this.eventDeletionSubscribedGroups.clear();
+    this.groupModerationDeletionSubscribedGroups.clear();
     this.adminMemberSubscribedGroups.clear();
     this.adminMemberLatestAt.clear();
     this.metadataRequested.clear();
@@ -1927,6 +1934,8 @@ class BridgeImpl implements NostrBridge {
     // Reset per-group caches: they're scoped to one relay.
     this.messageSubscribedGroups.clear();
     this.reactionSubscribedGroups.clear();
+    this.eventDeletionSubscribedGroups.clear();
+    this.groupModerationDeletionSubscribedGroups.clear();
     this.adminMemberSubscribedGroups.clear();
     this.adminMemberLatestAt.clear();
     this.metadataRequested.clear();
@@ -1974,6 +1983,8 @@ class BridgeImpl implements NostrBridge {
     this.groupParentMap.clear();
     this.groupCreators.set({});
     this.reactionsByGroup.set({});
+    this.deletedEventIdsByGroup.clear();
+    this.moderatedEventIdsByGroup.clear();
     this.groupMetadataLatestAt.clear();
     this.creatorSubscribedGroups.clear();
     this.groupMetadataEose.set(false);
@@ -2276,7 +2287,21 @@ class BridgeImpl implements NostrBridge {
       ],
       created_at: Math.floor(Date.now() / 1000),
     });
-    this.ingestReactionDeletion(groupId, event);
+    this.ingestEventDeletion(groupId, event);
+  }
+
+  async removeMessage(groupId: string, eventId: string): Promise<void> {
+    const event = await this.signAndPublish({
+      kind: KIND_EVENT_DELETION,
+      content: 'remove message',
+      tags: [
+        ['e', eventId],
+        ['k', String(KIND_GROUP_MESSAGE)],
+        ['h', groupId],
+      ],
+      created_at: Math.floor(Date.now() / 1000),
+    });
+    this.ingestEventDeletion(groupId, event);
   }
 
   async sendDirectMessage(recipientPubkey: string, content: string): Promise<void> {
@@ -2692,12 +2717,13 @@ class BridgeImpl implements NostrBridge {
   }
 
   async deleteGroupEvent(groupId: string, eventId: string): Promise<void> {
-    await this.signAndPublish({
+    const event = await this.signAndPublish({
       kind: KIND_GROUP_DELETE_EVENT,
       content: '',
       tags: [['h', groupId], ['e', eventId]],
       created_at: Math.floor(Date.now() / 1000),
     });
+    this.ingestGroupEventDeletion(groupId, event);
   }
 
   async editGroupMetadata(opts: {
@@ -3791,6 +3817,8 @@ class BridgeImpl implements NostrBridge {
     );
     this.subs.push(sub);
     this.messageSubByGroup.set(groupId, sub);
+    this.subscribeGroupEventDeletions(groupId);
+    this.subscribeGroupModerationDeletions(groupId);
   }
 
   /**
@@ -4129,12 +4157,31 @@ class BridgeImpl implements NostrBridge {
       { watchdogMs: 3000, affectsRelayAccess: false },
     );
     this.subs.push(reactionSub);
+    this.subscribeGroupEventDeletions(groupId);
+  }
 
+  private subscribeGroupEventDeletions(groupId: string): void {
+    if (this.eventDeletionSubscribedGroups.has(groupId)) return;
+    this.eventDeletionSubscribedGroups.add(groupId);
     const deletionFilter: Filter = { kinds: [KIND_EVENT_DELETION], '#h': [groupId], limit: 500 };
     const deletionSub = this.subscribeWatched(
       this.relays,
       deletionFilter,
-      (ev) => this.ingestReactionDeletion(groupId, ev),
+      (ev) => this.ingestEventDeletion(groupId, ev),
+      undefined,
+      { watchdogMs: 3000, affectsRelayAccess: false },
+    );
+    this.subs.push(deletionSub);
+  }
+
+  private subscribeGroupModerationDeletions(groupId: string): void {
+    if (this.groupModerationDeletionSubscribedGroups.has(groupId)) return;
+    this.groupModerationDeletionSubscribedGroups.add(groupId);
+    const deletionFilter: Filter = { kinds: [KIND_GROUP_DELETE_EVENT], '#h': [groupId], limit: 500 };
+    const deletionSub = this.subscribeWatched(
+      this.relays,
+      deletionFilter,
+      (ev) => this.ingestGroupEventDeletion(groupId, ev),
       undefined,
       { watchdogMs: 3000, affectsRelayAccess: false },
     );
@@ -4466,7 +4513,17 @@ class BridgeImpl implements NostrBridge {
     }
   }
 
+  private isEventModerated(groupId: string, eventId: string): boolean {
+    return this.moderatedEventIdsByGroup.get(groupId)?.has(eventId) ?? false;
+  }
+
+  private isEventDeletedByAuthor(groupId: string, eventId: string, pubkey: string): boolean {
+    return this.deletedEventIdsByGroup.get(groupId)?.get(eventId) === pubkey;
+  }
+
   private ingestMessage(groupId: string, ev: NostrEvent): void {
+    if (this.isEventModerated(groupId, ev.id)) return;
+    if (this.isEventDeletedByAuthor(groupId, ev.id, ev.pubkey)) return;
     const replyTo = ev.tags.find((t) => t[0] === 'e' && t[3] === 'reply')?.[1] ?? null;
     const mentions = extractMentionPubkeysFromMessage(ev.content, ev.tags);
     const msg: JsMessage = {
@@ -4565,7 +4622,9 @@ class BridgeImpl implements NostrBridge {
   private ingestReaction(groupId: string, ev: NostrEvent): void {
     const targetEventId = getTag(ev, 'e');
     if (!targetEventId) return;
-    if (this.deletedReactionIdsByGroup.get(groupId)?.get(ev.id) === ev.pubkey) return;
+    if (this.isEventModerated(groupId, ev.id)) return;
+    if (this.isEventDeletedByAuthor(groupId, ev.id, ev.pubkey)) return;
+    if (this.isEventModerated(groupId, targetEventId)) return;
     const reaction: JsReaction = {
       id: ev.id,
       pubkey: ev.pubkey,
@@ -4590,38 +4649,104 @@ class BridgeImpl implements NostrBridge {
     if (changed) this.scheduleReactionCacheFlush(groupId);
   }
 
-  private ingestReactionDeletion(groupId: string, ev: NostrEvent): void {
+  private ingestEventDeletion(groupId: string, ev: NostrEvent): void {
     const ids = ev.tags
       .filter((tag) => tag[0] === 'e' && tag[1])
       .map((tag) => tag[1]);
     if (ids.length === 0) return;
 
-    let tombstones = this.deletedReactionIdsByGroup.get(groupId);
+    let tombstones = this.deletedEventIdsByGroup.get(groupId);
     if (!tombstones) {
       tombstones = new Map<string, string>();
-      this.deletedReactionIdsByGroup.set(groupId, tombstones);
+      this.deletedEventIdsByGroup.set(groupId, tombstones);
     }
     for (const id of ids) tombstones.set(id, ev.pubkey);
 
-    let changed = false;
+    const idSet = new Set(ids);
+    const deletedMessageIds = new Set<string>();
+    let messagesChanged = false;
+    this.messagesByGroup.update((all) => {
+      const existing = all[groupId];
+      if (!existing) return all;
+      const next = existing.filter((msg) => {
+        if (!idSet.has(msg.id) || msg.pubkey !== ev.pubkey) return true;
+        deletedMessageIds.add(msg.id);
+        return false;
+      });
+      if (next.length === existing.length) return all;
+      messagesChanged = true;
+      return { ...all, [groupId]: next };
+    });
+    if (messagesChanged) this.scheduleMessageCacheFlush(groupId);
+
+    let reactionsChanged = false;
     this.reactionsByGroup.update((all) => {
       const forGroup = all[groupId];
       if (!forGroup) return all;
       const nextGroup: Record<string, JsReaction[]> = {};
       for (const [targetEventId, reactions] of Object.entries(forGroup)) {
+        if (deletedMessageIds.has(targetEventId)) {
+          reactionsChanged = true;
+          continue;
+        }
         const nextReactions = reactions.filter((reaction) => {
-          if (!ids.includes(reaction.id)) return true;
+          if (!idSet.has(reaction.id)) return true;
           // NIP-09 delete events are accepted here only from the reaction
           // author. Group moderation uses NIP-29 kind 9005 instead.
           return reaction.pubkey !== ev.pubkey;
         });
-        if (nextReactions.length !== reactions.length) changed = true;
+        if (nextReactions.length !== reactions.length) reactionsChanged = true;
         if (nextReactions.length > 0) nextGroup[targetEventId] = nextReactions;
       }
-      if (!changed) return all;
+      if (!reactionsChanged) return all;
       return { ...all, [groupId]: nextGroup };
     });
-    if (changed) this.scheduleReactionCacheFlush(groupId);
+    if (reactionsChanged || messagesChanged) this.scheduleReactionCacheFlush(groupId);
+  }
+
+  private ingestGroupEventDeletion(groupId: string, ev: NostrEvent): void {
+    const ids = ev.tags
+      .filter((tag) => tag[0] === 'e' && tag[1])
+      .map((tag) => tag[1]);
+    if (ids.length === 0) return;
+
+    let tombstones = this.moderatedEventIdsByGroup.get(groupId);
+    if (!tombstones) {
+      tombstones = new Set<string>();
+      this.moderatedEventIdsByGroup.set(groupId, tombstones);
+    }
+    for (const id of ids) tombstones.add(id);
+
+    const idSet = new Set(ids);
+    let messagesChanged = false;
+    this.messagesByGroup.update((all) => {
+      const existing = all[groupId];
+      if (!existing) return all;
+      const next = existing.filter((msg) => !idSet.has(msg.id));
+      if (next.length === existing.length) return all;
+      messagesChanged = true;
+      return { ...all, [groupId]: next };
+    });
+    if (messagesChanged) this.scheduleMessageCacheFlush(groupId);
+
+    let reactionsChanged = false;
+    this.reactionsByGroup.update((all) => {
+      const forGroup = all[groupId];
+      if (!forGroup) return all;
+      const nextGroup: Record<string, JsReaction[]> = {};
+      for (const [targetEventId, reactions] of Object.entries(forGroup)) {
+        if (idSet.has(targetEventId)) {
+          reactionsChanged = true;
+          continue;
+        }
+        const nextReactions = reactions.filter((reaction) => !idSet.has(reaction.id));
+        if (nextReactions.length !== reactions.length) reactionsChanged = true;
+        if (nextReactions.length > 0) nextGroup[targetEventId] = nextReactions;
+      }
+      if (!reactionsChanged) return all;
+      return { ...all, [groupId]: nextGroup };
+    });
+    if (reactionsChanged) this.scheduleReactionCacheFlush(groupId);
   }
 
   private async ingestIncomingDM(ev: NostrEvent): Promise<void> {

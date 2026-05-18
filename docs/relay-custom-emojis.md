@@ -67,9 +67,10 @@ Supported file types in the admin UI:
 - GIF
 - WebP
 
-GIF files are handled the same way as static emoji images: they upload to
-Blossom, appear in the **Server emojis & GIFs** section of the picker, and
-are referenced by normal NIP-30 `emoji` tags when used.
+GIF files are handled with the same protocol as static emoji images: they
+upload to Blossom and are referenced by normal NIP-30 `emoji` tags when
+used. The picker presents them separately under **Server GIFs**, while
+static images appear under **Server emojis**.
 
 ## Folder import
 
@@ -104,7 +105,7 @@ This means old events remain renderable even if the relay's current emoji
 list later changes, and other NIP-30-aware clients can render the custom
 emoji from the event itself.
 
-## Removing reactions
+## Removing messages and reactions
 
 Clicking a reaction pill that the current user already added removes that
 reaction by publishing a NIP-09 deletion event:
@@ -118,8 +119,23 @@ reaction by publishing a NIP-09 deletion event:
 ```
 
 The deletion event is `kind:5` with content `remove reaction`. Obelisk
-accepts reaction deletions only from the pubkey that authored the reaction
-event. Group/admin message moderation continues to use NIP-29 `kind:9005`.
+accepts NIP-09 deletions only from the pubkey that authored the target
+event. The same path is used when a user deletes their own group message,
+with `["k", "9"]` and content `remove message`.
+
+Admins remove messages or reactions for everyone with NIP-29
+`kind:9005` delete-event moderation:
+
+```json
+[
+  ["h", "<group-id>"],
+  ["e", "<message-or-reaction-event-id>"]
+]
+```
+
+Obelisk subscribes to both deletion protocols per group. A `kind:9005`
+event removes the targeted group message or reaction from local state, and
+deleting a message also hides reactions that targeted that message.
 
 ## Code map
 
