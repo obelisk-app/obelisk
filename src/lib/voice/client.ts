@@ -234,6 +234,7 @@ export class VoiceClient {
   private expectSfu: boolean;
 
   private peers = new Map<string, Peer>();
+  private openingPeers = new Set<string>();
   private remoteTracks = new Map<string, RemoteTrack>(); // key: trackId
   private rosterPubkeys: string[] = [];
   /**
@@ -1305,10 +1306,12 @@ export class VoiceClient {
       controlRelays = envControlRelays;
       rpcRelays = envRpcRelays.length > 0 ? envRpcRelays : envControlRelays;
     }
+    const directUrl = picked?.pubkey === sfuPubkey && picked.url ? picked.url : null;
     const makeClient = (): SfuClient => new SfuClient({
       channelId: this.channelId,
       sfuPubkey,
       selfPubkey: this.selfPubkey,
+      ...(directUrl ? { directUrl } : {}),
       ...(rpcRelays.length > 0 ? { trustedRelays: rpcRelays } : {}),
       events: {
         onRemoteTrack: (t: SfuRemoteTrack) => {
@@ -1399,7 +1402,9 @@ export class VoiceClient {
       client = makeClient();
       this.sfuClient = client;
       try {
-        await this.publishSfuStartOrThrow(sfuPubkey, controlRelays);
+        if (!directUrl) {
+          await this.publishSfuStartOrThrow(sfuPubkey, controlRelays);
+        }
         await client.start();
         lastErr = null;
         break;
@@ -1447,6 +1452,7 @@ export class VoiceClient {
     // Late-arriving rosters can otherwise trigger openPeer post-teardown
     // and the resulting RTCPeerConnection would never be cleaned up.
     if (!this.joined) return;
+    if (this.peers.has(remotePubkey) || this.openingPeers.has(remotePubkey)) return;
     // SFU peer is handled by `SfuClient`/mediasoup-client, not by the mesh
     // perfect-negotiation path. Don't construct a `Peer` for it.
     if (this.sfuPubkey && remotePubkey === this.sfuPubkey) return;
@@ -1461,164 +1467,173 @@ export class VoiceClient {
     const polite = isSfuPeer ? true : this.selfPubkey > remotePubkey;
     console.log('[voice] openPeer', remotePubkey.slice(0, 8),
       'polite=', polite, isSfuPeer ? '(sfu)' : '');
-    const peer = new Peer({
-      remotePubkey,
-      polite,
-      sessionId: this.sessionId,
-      send: (payload) => withRateLimitBackoff(
-        () => sendSignal(this.channelId, remotePubkey, payload),
-        { metrics: this.metrics },
-      ),
-      // SFU peers don't speak our control-channel protocol — only mesh
-      // peers get the obelisk-control data channel. The flag is the same
-      // one we use to force polite negotiation for SFUs.
-      control: isSfuPeer ? undefined : {
-        selfBuild: SELF_BUILD_TAG,
-        metrics: this.metrics,
-        getCurrentPeers: () => Array.from(this.connectedPubkeys),
-      },
-      events: {
-        onTransitivePeers: (peers, _build) => {
-          // Hello carries the remote peer's full connected set. Add each
-          // entry to discovery via this peer; dial loop kicks debounced.
-          let added = 0;
-          for (const pk of peers) {
-            if (pk === this.selfPubkey) continue;
-            if (this.discovery.addControlDiscovered(pk, remotePubkey)) added++;
-          }
-          if (added > 0) {
-            this.metrics.transitive.discoveredViaControl += added;
-            this.scheduleDialFromDiscovery();
-          }
+    this.openingPeers.add(remotePubkey);
+    let peer: Peer | null = null;
+    try {
+      const createdPeer = new Peer({
+        remotePubkey,
+        polite,
+        sessionId: this.sessionId,
+        send: (payload) => withRateLimitBackoff(
+          () => sendSignal(this.channelId, remotePubkey, payload),
+          { metrics: this.metrics },
+        ),
+        // SFU peers don't speak our control-channel protocol — only mesh
+        // peers get the obelisk-control data channel. The flag is the same
+        // one we use to force polite negotiation for SFUs.
+        control: isSfuPeer ? undefined : {
+          selfBuild: SELF_BUILD_TAG,
+          metrics: this.metrics,
+          getCurrentPeers: () => Array.from(this.connectedPubkeys),
         },
-        onControlPeerAdded: (pubkey) => {
-          if (pubkey === this.selfPubkey) return;
-          if (this.discovery.addControlDiscovered(pubkey, remotePubkey)) {
-            this.metrics.transitive.discoveredViaControl++;
-            this.scheduleDialFromDiscovery();
-          }
-        },
-        onControlPeerRemoved: (pubkey) => {
-          this.discovery.removeControlDiscovered(pubkey, remotePubkey);
-        },
-        onPeerDead: (reason) => {
-          // Active capacity rejection — the remote is telling us the room
-          // is full. Surface a clean error and leave; without this, our
-          // reconnect ladder would loop trying to re-dial them.
-          if (reason === 'bye:room-full') {
+        events: {
+          onTransitivePeers: (peers, _build) => {
+            // Hello carries the remote peer's full connected set. Add each
+            // entry to discovery via this peer; dial loop kicks debounced.
+            let added = 0;
+            for (const pk of peers) {
+              if (pk === this.selfPubkey) continue;
+              if (this.discovery.addControlDiscovered(pk, remotePubkey)) added++;
+            }
+            if (added > 0) {
+              this.metrics.transitive.discoveredViaControl += added;
+              this.scheduleDialFromDiscovery();
+            }
+          },
+          onControlPeerAdded: (pubkey) => {
+            if (pubkey === this.selfPubkey) return;
+            if (this.discovery.addControlDiscovered(pubkey, remotePubkey)) {
+              this.metrics.transitive.discoveredViaControl++;
+              this.scheduleDialFromDiscovery();
+            }
+          },
+          onControlPeerRemoved: (pubkey) => {
+            this.discovery.removeControlDiscovered(pubkey, remotePubkey);
+          },
+          onPeerDead: (reason) => {
+            // Active capacity rejection — the remote is telling us the room
+            // is full. Surface a clean error and leave; without this, our
+            // reconnect ladder would loop trying to re-dial them.
+            if (reason === 'bye:room-full') {
+              pushVoiceDebug({
+                kind: 'pc-state',
+                peer: remotePubkey,
+                payload: { event: 'rejected-room-full' },
+              });
+              this.metrics.peers.tornDown++;
+              try { this.events.onError?.('Room is full — try again when someone leaves.'); }
+              catch (e) { console.warn('[voice] onError threw on room-full', e); }
+              // Use a microtask so the current signal-routing call returns
+              // before we dismantle our own state.
+              queueMicrotask(() => { void this.leave().catch(() => {}); });
+              return;
+            }
+            // FAST hangup — control channel detected the peer is gone. Route
+            // through tearDownPeer (idempotent) so the rest of the cleanup
+            // happens identically to the relay-bye / connectionState='closed'
+            // paths. The bye-via-control split counter helps the diagnostic
+            // overlay distinguish the source.
+            if (reason.startsWith('bye:')) {
+              this.metrics.signals.byeViaControl++;
+            }
+            this.metrics.peers.tornDown++;
             pushVoiceDebug({
               kind: 'pc-state',
               peer: remotePubkey,
-              payload: { event: 'rejected-room-full' },
+              payload: { event: 'fast-hangup', reason },
             });
-            this.metrics.peers.tornDown++;
-            try { this.events.onError?.('Room is full — try again when someone leaves.'); }
-            catch (e) { console.warn('[voice] onError threw on room-full', e); }
-            // Use a microtask so the current signal-routing call returns
-            // before we dismantle our own state.
-            queueMicrotask(() => { void this.leave().catch(() => {}); });
-            return;
-          }
-          // FAST hangup — control channel detected the peer is gone. Route
-          // through tearDownPeer (idempotent) so the rest of the cleanup
-          // happens identically to the relay-bye / connectionState='closed'
-          // paths. The bye-via-control split counter helps the diagnostic
-          // overlay distinguish the source.
-          if (reason.startsWith('bye:')) {
-            this.metrics.signals.byeViaControl++;
-          }
-          this.metrics.peers.tornDown++;
-          pushVoiceDebug({
-            kind: 'pc-state',
-            peer: remotePubkey,
-            payload: { event: 'fast-hangup', reason },
-          });
-          // Remove anything this peer claimed transitively so we don't
-          // keep re-dialing through them.
-          this.discovery.dropClaimsFromPeer(remotePubkey);
-          this.tearDownPeer(remotePubkey);
-        },
-        onRemoteTrack: (track, stream, kind, originPubkey) => {
-          // Apply current deafen state to brand-new audio arrivals so a peer
-          // who joins after we deafened doesn't suddenly become audible.
-          if (this.deafened && (kind === 'audio' || kind === 'screen-audio')) {
-            track.enabled = false;
-          }
-          // In SFU mode `originPubkey` differs from `remotePubkey` (the SFU
-          // is the RTC peer; the participant who actually produced the
-          // media is the origin). Tile mapping uses the origin so the
-          // sound shows up on the right person's tile, not the SFU's.
-          const logicalPubkey = originPubkey ?? remotePubkey;
-          this.remoteTracks.set(track.id, {
-            pubkey: logicalPubkey,
-            viaPubkey: remotePubkey,
-            trackId: track.id,
-            kind,
-            stream,
-          });
-          // Speaking detection keyed by origin so SFU mode lights up the
-          // correct tile, not "the SFU is speaking" for everyone.
-          if (kind === 'audio') {
-            this.attachSpeakingDetector(logicalPubkey, stream);
-          }
-          this.emitRemoteTracks();
-        },
-        onRemoteTrackEnded: (trackId) => {
-          const removed = this.remoteTracks.get(trackId);
-          this.remoteTracks.delete(trackId);
-          // If the ended track was the peer's mic, stop their detector so
-          // the orb doesn't strobe on stale RMS readings post-disconnect.
-          // Use the track's logical (origin) pubkey, not the RTC remote.
-          if (removed?.kind === 'audio') {
-            this.detachSpeakingDetector(removed.pubkey);
-          }
-          this.emitRemoteTracks();
-        },
-        onConnectionEstablished: () => {
-          if (!this.connectedPubkeys.has(remotePubkey)) {
-            this.metrics.peers.connected = this.connectedPubkeys.size + 1;
-          }
-          this.connectedPubkeys.add(remotePubkey);
-          this.metrics.peers.ever++;
-          pushVoiceDebug({ kind: 'pc-state', peer: remotePubkey, payload: 'connected' });
-          this.scheduleBeaconRefresh();
-          // Tell every OTHER mesh peer about this new connection so they
-          // can transitively discover us through this one. The control
-          // channel may not be open yet on this peer; that's fine — its
-          // own `hello` will carry the up-to-date list when it opens.
-          for (const [otherPk, otherPeer] of this.peers.entries()) {
-            if (otherPk === remotePubkey) continue;
-            otherPeer.broadcastControl({ type: 'peerAdded', pubkey: remotePubkey });
-          }
-        },
-        onConnectionLost: () => {
-          if (this.connectedPubkeys.delete(remotePubkey)) {
-            this.scheduleBeaconRefresh();
-          }
-          for (const [otherPk, otherPeer] of this.peers.entries()) {
-            if (otherPk === remotePubkey) continue;
-            otherPeer.broadcastControl({ type: 'peerRemoved', pubkey: remotePubkey });
-          }
-          this.runDialLoop();
-        },
-        onQualitySample: (sample) => {
-          try { useVoiceStore.getState().setPeerQuality(remotePubkey, sample); } catch { /* test envs */ }
-        },
-        onConnectionStateChange: (state) => {
-          if (state === 'closed') {
-            // Drop the peer so a future signal/beacon from the same pubkey
-            // can spawn a fresh PC instead of routing into a dead one. The
-            // Peer's reconnect ladder handles 'failed'/'disconnected'
-            // internally — only react to 'closed' here, which means the
-            // ladder has explicitly given up or close() was called.
-            const p = this.peers.get(remotePubkey);
-            if (p && p === peer) {
-              this.tearDownPeer(remotePubkey);
+            // Remove anything this peer claimed transitively so we don't
+            // keep re-dialing through them.
+            this.discovery.dropClaimsFromPeer(remotePubkey);
+            this.tearDownPeer(remotePubkey);
+          },
+          onRemoteTrack: (track, stream, kind, originPubkey) => {
+            // Apply current deafen state to brand-new audio arrivals so a peer
+            // who joins after we deafened doesn't suddenly become audible.
+            if (this.deafened && (kind === 'audio' || kind === 'screen-audio')) {
+              track.enabled = false;
             }
-          }
+            // In SFU mode `originPubkey` differs from `remotePubkey` (the SFU
+            // is the RTC peer; the participant who actually produced the
+            // media is the origin). Tile mapping uses the origin so the
+            // sound shows up on the right person's tile, not the SFU's.
+            const logicalPubkey = originPubkey ?? remotePubkey;
+            this.remoteTracks.set(track.id, {
+              pubkey: logicalPubkey,
+              viaPubkey: remotePubkey,
+              trackId: track.id,
+              kind,
+              stream,
+            });
+            // Speaking detection keyed by origin so SFU mode lights up the
+            // correct tile, not "the SFU is speaking" for everyone.
+            if (kind === 'audio') {
+              this.attachSpeakingDetector(logicalPubkey, stream);
+            }
+            this.emitRemoteTracks();
+          },
+          onRemoteTrackEnded: (trackId) => {
+            const removed = this.remoteTracks.get(trackId);
+            this.remoteTracks.delete(trackId);
+            // If the ended track was the peer's mic, stop their detector so
+            // the orb doesn't strobe on stale RMS readings post-disconnect.
+            // Use the track's logical (origin) pubkey, not the RTC remote.
+            if (removed?.kind === 'audio') {
+              this.detachSpeakingDetector(removed.pubkey);
+            }
+            this.emitRemoteTracks();
+          },
+          onConnectionEstablished: () => {
+            if (!this.connectedPubkeys.has(remotePubkey)) {
+              this.metrics.peers.connected = this.connectedPubkeys.size + 1;
+            }
+            this.connectedPubkeys.add(remotePubkey);
+            this.metrics.peers.ever++;
+            pushVoiceDebug({ kind: 'pc-state', peer: remotePubkey, payload: 'connected' });
+            this.scheduleBeaconRefresh();
+            // Tell every OTHER mesh peer about this new connection so they
+            // can transitively discover us through this one. The control
+            // channel may not be open yet on this peer; that's fine — its
+            // own `hello` will carry the up-to-date list when it opens.
+            for (const [otherPk, otherPeer] of this.peers.entries()) {
+              if (otherPk === remotePubkey) continue;
+              otherPeer.broadcastControl({ type: 'peerAdded', pubkey: remotePubkey });
+            }
+          },
+          onConnectionLost: () => {
+            if (this.connectedPubkeys.delete(remotePubkey)) {
+              this.scheduleBeaconRefresh();
+            }
+            for (const [otherPk, otherPeer] of this.peers.entries()) {
+              if (otherPk === remotePubkey) continue;
+              otherPeer.broadcastControl({ type: 'peerRemoved', pubkey: remotePubkey });
+            }
+            this.runDialLoop();
+          },
+          onQualitySample: (sample) => {
+            try { useVoiceStore.getState().setPeerQuality(remotePubkey, sample); } catch { /* test envs */ }
+          },
+          onConnectionStateChange: (state) => {
+            if (state === 'closed') {
+              // Drop the peer so a future signal/beacon from the same pubkey
+              // can spawn a fresh PC instead of routing into a dead one. The
+              // Peer's reconnect ladder handles 'failed'/'disconnected'
+              // internally — only react to 'closed' here, which means the
+              // ladder has explicitly given up or close() was called.
+              const p = this.peers.get(remotePubkey);
+              if (p && p === peer) {
+                this.tearDownPeer(remotePubkey);
+              }
+            }
+          },
         },
-      },
-    });
+      });
+      peer = createdPeer;
+      this.peers.set(remotePubkey, createdPeer);
+    } finally {
+      this.openingPeers.delete(remotePubkey);
+    }
+    if (!peer) return;
 
     // Push existing local tracks to the new peer.
     void this.attachAllLocalTracks(peer).then(() => {
@@ -1632,8 +1647,6 @@ export class VoiceClient {
         void peer.kickInitialOffer();
       }
     });
-
-    this.peers.set(remotePubkey, peer);
   }
 
   /**

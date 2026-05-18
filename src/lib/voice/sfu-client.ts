@@ -30,6 +30,7 @@ import type {
 
 import { SfuRpc } from './sfu-rpc';
 import type { RpcNotification } from './sfu-rpc';
+import { SfuDirectRpc } from './sfu-direct-rpc';
 import type { VoiceTrackKind } from './types';
 import { ICE_SERVERS } from './ice-config';
 
@@ -149,8 +150,10 @@ interface ConsumerHealth {
   lastProgressAt: number;
 }
 
+type SfuRpcTransport = Pick<SfuRpc, 'start' | 'close' | 'request' | 'requestWithRetry'>;
+
 export class SfuClient {
-  private readonly rpc: SfuRpc;
+  private readonly rpc: SfuRpcTransport;
   private readonly events: SfuClientEvents;
   private device: Device | null = null;
   private sendTransport: Transport | null = null;
@@ -205,17 +208,27 @@ export class SfuClient {
     /** Trusted-author relays the SFU listens on. Outbound RPC envelopes
      *  must publish here, not the dex's default relays. */
     trustedRelays?: readonly string[];
+    /** Direct SFU HTTP(S) URL. When present, mediasoup RPC uses WebSocket
+     *  `/rpc` instead of relay-carried kind 25050 envelopes. */
+    directUrl?: string | null;
   }) {
     this.events = opts.events;
-    this.rpc = new SfuRpc({
-      channelId: opts.channelId,
-      sfuPubkey: opts.sfuPubkey,
-      selfPubkey: opts.selfPubkey,
-      onNotification: (n) => this.handleNotification(n),
-      ...(opts.trustedRelays && opts.trustedRelays.length > 0
-        ? { publishRelays: opts.trustedRelays }
-        : {}),
-    });
+    this.rpc = opts.directUrl
+      ? new SfuDirectRpc({
+          channelId: opts.channelId,
+          sfuPubkey: opts.sfuPubkey,
+          url: opts.directUrl,
+          onNotification: (n) => this.handleNotification(n),
+        })
+      : new SfuRpc({
+          channelId: opts.channelId,
+          sfuPubkey: opts.sfuPubkey,
+          selfPubkey: opts.selfPubkey,
+          onNotification: (n) => this.handleNotification(n),
+          ...(opts.trustedRelays && opts.trustedRelays.length > 0
+            ? { publishRelays: opts.trustedRelays }
+            : {}),
+        });
   }
 
   async start(): Promise<void> {
