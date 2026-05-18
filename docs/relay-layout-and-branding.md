@@ -9,6 +9,10 @@ what every user sees for a given relay:
 
 Both follow the same "shared, multi-author, latest-wins" model.
 
+Relay custom emojis use the same author-set model, but they are stored as
+NIP-51 `kind:30030` emoji-set events instead of NIP-78. See
+[relay-custom-emojis.md](relay-custom-emojis.md).
+
 ## Storage
 
 | What | Kind | d-tag |

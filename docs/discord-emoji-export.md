@@ -1,6 +1,8 @@
-# Exporting Discord Custom Emojis (as a regular member)
+# Exporting Discord custom emojis (as a regular member)
 
-How to bulk-download the custom emojis of a Discord server you're a member of, preserving their original names. Useful for migrating emoji packs to Obelisk's per-server GIF/emoji library.
+How to bulk-download the custom emojis of a Discord server you're a member
+of, preserving their original names. Useful for migrating emoji packs into
+Obelisk's relay custom emoji list.
 
 > **ToS note:** scraping via your user token is self-botting and violates Discord's ToS. The DOM/Network method below avoids the API entirely — you're only saving images your browser already fetched to render the emoji picker. Low risk, but not zero.
 
@@ -94,4 +96,14 @@ You should see files like `nostrgr.webp`, `pepe.png`, `warhammerthrust.gif`.
 
 ## Importing into Obelisk
 
-Once renamed, upload the files via the per-server emoji/GIF library admin UI, or drop them directly into `/uploads/<server>/emojis/` (see [uploads.md](uploads.md) for the storage model).
+Once renamed, import the folder through the relay emoji admin UI:
+
+1. Open `/app`.
+2. Select the target relay.
+3. Open **Relay emojis** from the relay admin controls.
+4. Click **Upload folder** and choose the renamed emoji folder.
+5. Review the generated shortcodes and click **Save**.
+
+Obelisk uploads each image to Blossom, publishes the relay-scoped NIP-51
+emoji set, and later includes NIP-30 `emoji` tags on messages/reactions
+that use those shortcodes. See [relay-custom-emojis.md](relay-custom-emojis.md).

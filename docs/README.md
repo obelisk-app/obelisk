@@ -10,6 +10,7 @@ Detailed specs, plans and references for Obelisk subsystems. High-level roadmap 
 - [sfu-system.md](sfu-system.md) — SFU engine (mediasoup, Nostr-RPC signaling). Server lives in the [obelisk-app/obelisk-sfu](https://github.com/obelisk-app/obelisk-sfu) repo.
 - [direct-messages.md](direct-messages.md) — NIP-04 DMs.
 - [relay-layout-and-branding.md](relay-layout-and-branding.md) — operator-controlled categories, channel order, and relay branding (NIP-78 kind 30078, multi-author latest-wins).
+- [relay-custom-emojis.md](relay-custom-emojis.md) — relay-scoped custom emoji lists, NIP-51 kind 30030, NIP-30 message/reaction tags, Blossom upload, folder import.
 - [server-banner.md](server-banner.md) — relay-level banner image.
 - [uploads.md](uploads.md) — Blossom storage + URL format.
 - [search.md](search.md) — NIP-50 search (`bridge.searchMessages`) and query syntax.
