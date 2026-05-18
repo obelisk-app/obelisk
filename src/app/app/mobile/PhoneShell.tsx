@@ -2951,6 +2951,7 @@ export function ChannelMessage({
       customEmojis: CustomEmojiMap;
       count: number;
       mine: boolean;
+      myReactionId: string | null;
     }>();
     for (const r of reactions) {
       const customEmojis = mergeCustomEmojiMaps(serverEmojis, r.customEmojis as CustomEmojiMap | undefined);
@@ -2963,17 +2964,30 @@ export function ChannelMessage({
         customEmojis: resolved.kind === 'custom' ? { [resolved.name]: resolved.url } : {},
         count: 0,
         mine: false,
+        myReactionId: null,
       };
       ex.count++;
-      if (r.pubkey === myPubkey) ex.mine = true;
+      if (r.pubkey === myPubkey) {
+        ex.mine = true;
+        ex.myReactionId = r.id;
+      }
       m.set(key, ex);
     }
     return Array.from(m.values()).sort((a, b) => b.count - a.count);
   }, [reactions, myPubkey, serverEmojis]);
 
-  const handleReaction = async (emoji: string, mine: boolean, customEmojis?: CustomEmojiMap) => {
-    if (mine) return; // already reacted with this emoji
+  const handleReaction = async (
+    emoji: string,
+    mine: boolean,
+    customEmojis?: CustomEmojiMap,
+    reactionId?: string | null,
+  ) => {
     try {
+      if (mine && reactionId) {
+        await nostrActions.removeReaction(groupId, reactionId);
+        return;
+      }
+      if (mine) return;
       const emojiTags = emojiTagsForContent(emoji, mergeCustomEmojiMaps(serverEmojis, customEmojis));
       await nostrActions.sendReaction(msg.id, msg.pubkey, emoji, groupId, emojiTags);
     } catch (err) { console.warn('[mobile] sendReaction failed', err); }
@@ -3083,7 +3097,8 @@ export function ChannelMessage({
                 <button
                   key={r.emoji}
                   className={`reaction ${r.mine ? 'mine' : ''}`}
-                  onClick={() => void handleReaction(r.emoji, r.mine, r.customEmojis)}
+                  title={r.mine ? 'Remove your reaction' : 'React'}
+                  onClick={() => void handleReaction(r.emoji, r.mine, r.customEmojis, r.myReactionId)}
                 >
                   {resolved.kind === 'custom' ? (
                     <img src={resolved.url} alt={`:${resolved.name}:`} style={{ width: 16, height: 16, objectFit: 'contain' }} />

@@ -262,6 +262,39 @@ describe('nostr-bridge', () => {
     });
   });
 
+  it('removeReaction publishes a NIP-09 delete event and removes the local reaction', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+
+    const groupId = 'remove-reaction-group';
+    const seen: Array<Record<string, Array<{ id: string; emoji: string }>>> = [];
+    bridge.subscribeReactions(groupId, (byEvent) => {
+      seen.push(Object.fromEntries(
+        Object.entries(byEvent).map(([eventId, reactions]) => [
+          eventId,
+          reactions.map((r) => ({ id: r.id, emoji: r.emoji })),
+        ]),
+      ));
+    });
+
+    await bridge.sendReaction('targetEventId123', pkHex, '🔥', groupId);
+    await flush();
+    const reaction = fake.state.published.find((e) => e.kind === 7);
+    expect(reaction).toBeTruthy();
+
+    await bridge.removeReaction(groupId, reaction!.id);
+    await flush();
+
+    const deletion = fake.state.published.find((e) => e.kind === 5);
+    expect(deletion?.content).toBe('remove reaction');
+    expect(deletion?.tags).toContainEqual(['e', reaction!.id]);
+    expect(deletion?.tags).toContainEqual(['k', '7']);
+    expect(deletion?.tags).toContainEqual(['h', groupId]);
+    expect(seen.at(-1)?.targetEventId123 ?? []).toEqual([]);
+  });
+
   it('NIP-04 DM round-trip: alice → bob, decrypts on bob side', async () => {
     const { getBridge: getBridgeAlice } = await import('./client');
     const alice = makeKeypair();

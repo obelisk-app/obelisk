@@ -2924,6 +2924,7 @@ function MessageRow({
       emoji: string;
       customEmojis: CustomEmojiMap;
       pubkeys: Set<string>;
+      myReactionId: string | null;
     }>();
     for (const r of reactions) {
       const customEmojis = mergeCustomEmojiMaps(serverEmojis, r.customEmojis as CustomEmojiMap | undefined);
@@ -2937,13 +2938,15 @@ function MessageRow({
           emoji: resolved.kind === 'custom' ? `:${resolved.name}:` : resolved.char,
           customEmojis: resolved.kind === 'custom' ? { [resolved.name]: resolved.url } : {},
           pubkeys: new Set<string>(),
+          myReactionId: null,
         };
         m.set(key, entry);
       }
       entry.pubkeys.add(r.pubkey);
+      if (r.pubkey === myPubkey) entry.myReactionId = r.id;
     }
     return m;
-  }, [reactions, serverEmojis]);
+  }, [reactions, serverEmojis, myPubkey]);
   const counts = useMemo(
     () => Array.from(reactionsByEmoji.values())
       .map((entry) => ({ ...entry, count: entry.pubkeys.size }))
@@ -2953,13 +2956,15 @@ function MessageRow({
   const myReactedEmojis = useMemo(() => {
     if (!myPubkey) return new Set<string>();
     const out = new Set<string>();
-    for (const entry of reactionsByEmoji.values()) {
-      if (entry.pubkeys.has(myPubkey)) out.add(entry.emoji);
-    }
+    for (const entry of reactionsByEmoji.values()) if (entry.myReactionId) out.add(entry.emoji);
     return out;
   }, [reactionsByEmoji, myPubkey]);
-  const onReactionClick = (emoji: string, customEmojis?: CustomEmojiMap) => {
-    if (myReactedEmojis.has(emoji)) return; // already reacted — no-op until retraction is wired
+  const onReactionClick = (emoji: string, customEmojis?: CustomEmojiMap, reactionId?: string | null) => {
+    if (reactionId) {
+      void nostrActions.removeReaction(groupId, reactionId);
+      return;
+    }
+    if (myReactedEmojis.has(emoji)) return;
     const emojiTags = emojiTagsForContent(emoji, mergeCustomEmojiMaps(serverEmojis, customEmojis));
     void nostrActions.sendReaction(msg.id, msg.pubkey, emoji, groupId, emojiTags);
   };
@@ -3089,18 +3094,18 @@ function MessageRow({
                 <ZapperHoverCard zapTotal={zapTotal} />
               </div>
             )}
-            {counts.map(({ emoji, customEmojis, pubkeys, count }) => {
+            {counts.map(({ emoji, customEmojis, pubkeys, count, myReactionId }) => {
               const mine = myReactedEmojis.has(emoji);
               const resolved = resolveReactionEmoji(emoji, customEmojis);
               return (
                 <div key={emoji} className="group/pill relative">
                   <button
-                    onClick={() => onReactionClick(emoji, customEmojis)}
-                    disabled={mine}
+                    onClick={() => onReactionClick(emoji, customEmojis, myReactionId)}
+                    title={mine ? 'Remove your reaction' : 'React'}
                     className={
                       'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs text-lc-white ' +
                       (mine
-                        ? 'border-lc-green/60 bg-lc-green/10 cursor-default'
+                        ? 'border-lc-green/60 bg-lc-green/10 hover:border-red-400'
                         : 'border-lc-border bg-lc-card hover:border-lc-green')
                     }
                   >

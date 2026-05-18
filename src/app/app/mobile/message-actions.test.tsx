@@ -8,6 +8,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 vi.mock('@/lib/nostr-bridge', () => ({
   nostrActions: {
     sendReaction: vi.fn().mockResolvedValue(undefined),
+    removeReaction: vi.fn().mockResolvedValue(undefined),
     sendMessage: vi.fn().mockResolvedValue(undefined),
     createGroup: vi.fn(),
     switchRelay: vi.fn(),
@@ -81,6 +82,7 @@ vi.mock('@/components/chat/EmojiPicker', () => ({
   ),
 }));
 
+import { nostrActions } from '@/lib/nostr-bridge';
 import { ChannelMessage, MessageActionsSheet } from './PhoneShell';
 
 const sampleMsg = {
@@ -126,6 +128,29 @@ describe('ChannelMessage kebab button', () => {
     );
     fireEvent.click(screen.getByTestId('mobile-msg-more'));
     expect(onLongPress).toHaveBeenCalledTimes(1);
+  });
+
+  it('removes my reaction when tapping a reaction I already sent', async () => {
+    render(
+      <ChannelMessage
+        msg={sampleMsg}
+        myPubkey={'b'.repeat(64)}
+        groupId="rly/group"
+        reactions={[{
+          id: 'reaction-1',
+          pubkey: 'b'.repeat(64),
+          emoji: '🔥',
+        }]}
+        onLongPress={() => {}}
+        onAvatar={() => {}}
+      />,
+    );
+
+    fireEvent.click(screen.getByText(/🔥/));
+    await vi.waitFor(() => {
+      expect(nostrActions.removeReaction).toHaveBeenCalledWith('rly/group', 'reaction-1');
+    });
+    expect(nostrActions.sendReaction).not.toHaveBeenCalled();
   });
 });
 

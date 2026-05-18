@@ -67,6 +67,10 @@ Supported file types in the admin UI:
 - GIF
 - WebP
 
+GIF files are handled the same way as static emoji images: they upload to
+Blossom, appear in the **Server emojis & GIFs** section of the picker, and
+are referenced by normal NIP-30 `emoji` tags when used.
+
 ## Folder import
 
 The relay emoji admin modal supports folder import:
@@ -100,6 +104,23 @@ This means old events remain renderable even if the relay's current emoji
 list later changes, and other NIP-30-aware clients can render the custom
 emoji from the event itself.
 
+## Removing reactions
+
+Clicking a reaction pill that the current user already added removes that
+reaction by publishing a NIP-09 deletion event:
+
+```json
+[
+  ["e", "<reaction-event-id>"],
+  ["k", "7"],
+  ["h", "<group-id>"]
+]
+```
+
+The deletion event is `kind:5` with content `remove reaction`. Obelisk
+accepts reaction deletions only from the pubkey that authored the reaction
+event. Group/admin message moderation continues to use NIP-29 `kind:9005`.
+
 ## Code map
 
 ```text
@@ -110,4 +131,5 @@ src/components/admin/RelayEmojiAdminModal.tsx
 src/components/chat/EmojiPicker.tsx      custom emoji picker entries
 src/components/chat/MessageContent.tsx   event-local custom emoji rendering
 src/lib/nostr-bridge/client.ts           sendMessage/sendReaction emoji tags
+                                         removeReaction NIP-09 kind 5 events
 ```

@@ -280,6 +280,7 @@ const KIND_GROUP_METADATA = 39000;
 const KIND_GROUP_JOIN_REQUEST = 9021;
 const KIND_GROUP_LEAVE_REQUEST = 9022;
 const KIND_USER_METADATA = 0;
+const KIND_EVENT_DELETION = 5;
 const KIND_REACTION = 7;
 const KIND_DIRECT_MESSAGE = 4;
 const KIND_GROUP_CREATE = 9007;
@@ -846,6 +847,7 @@ class BridgeImpl implements NostrBridge {
   messagesByGroup = new StateStore<Record<string, JsMessage[]>>({});
   userMetadata = new StateStore<Record<string, JsUserMetadata>>({});
   reactionsByGroup = new StateStore<Record<string, Record<string, JsReaction[]>>>({});
+  private deletedReactionIdsByGroup = new Map<string, Map<string, string>>();
   childrenByParent = new StateStore<Record<string, string[]>>({});
   dmsByPeer = new StateStore<Record<string, JsDirectMessage[]>>({});
   /**
@@ -2261,6 +2263,20 @@ class BridgeImpl implements NostrBridge {
       created_at: Math.floor(Date.now() / 1000),
     });
     this.ingestReaction(groupId, event);
+  }
+
+  async removeReaction(groupId: string, reactionEventId: string): Promise<void> {
+    const event = await this.signAndPublish({
+      kind: KIND_EVENT_DELETION,
+      content: 'remove reaction',
+      tags: [
+        ['e', reactionEventId],
+        ['k', String(KIND_REACTION)],
+        ['h', groupId],
+      ],
+      created_at: Math.floor(Date.now() / 1000),
+    });
+    this.ingestReactionDeletion(groupId, event);
   }
 
   async sendDirectMessage(recipientPubkey: string, content: string): Promise<void> {
@@ -4104,15 +4120,25 @@ class BridgeImpl implements NostrBridge {
   private subscribeGroupReactions(groupId: string): void {
     if (this.reactionSubscribedGroups.has(groupId)) return;
     this.reactionSubscribedGroups.add(groupId);
-    const filter: Filter = { kinds: [KIND_REACTION], '#h': [groupId], limit: 500 };
-    const sub = this.subscribeWatched(
+    const reactionFilter: Filter = { kinds: [KIND_REACTION], '#h': [groupId], limit: 500 };
+    const reactionSub = this.subscribeWatched(
       this.relays,
-      filter,
+      reactionFilter,
       (ev) => this.ingestReaction(groupId, ev),
       undefined,
       { watchdogMs: 3000, affectsRelayAccess: false },
     );
-    this.subs.push(sub);
+    this.subs.push(reactionSub);
+
+    const deletionFilter: Filter = { kinds: [KIND_EVENT_DELETION], '#h': [groupId], limit: 500 };
+    const deletionSub = this.subscribeWatched(
+      this.relays,
+      deletionFilter,
+      (ev) => this.ingestReactionDeletion(groupId, ev),
+      undefined,
+      { watchdogMs: 3000, affectsRelayAccess: false },
+    );
+    this.subs.push(deletionSub);
   }
 
   private subscribeAdminMember(groupId: string): void {
@@ -4539,6 +4565,7 @@ class BridgeImpl implements NostrBridge {
   private ingestReaction(groupId: string, ev: NostrEvent): void {
     const targetEventId = getTag(ev, 'e');
     if (!targetEventId) return;
+    if (this.deletedReactionIdsByGroup.get(groupId)?.get(ev.id) === ev.pubkey) return;
     const reaction: JsReaction = {
       id: ev.id,
       pubkey: ev.pubkey,
@@ -4560,6 +4587,40 @@ class BridgeImpl implements NostrBridge {
     // motivation as message caching above. Skipping when nothing changed
     // avoids a write storm on re-ingest of already-known reactions (typical
     // after a relay reconnect).
+    if (changed) this.scheduleReactionCacheFlush(groupId);
+  }
+
+  private ingestReactionDeletion(groupId: string, ev: NostrEvent): void {
+    const ids = ev.tags
+      .filter((tag) => tag[0] === 'e' && tag[1])
+      .map((tag) => tag[1]);
+    if (ids.length === 0) return;
+
+    let tombstones = this.deletedReactionIdsByGroup.get(groupId);
+    if (!tombstones) {
+      tombstones = new Map<string, string>();
+      this.deletedReactionIdsByGroup.set(groupId, tombstones);
+    }
+    for (const id of ids) tombstones.set(id, ev.pubkey);
+
+    let changed = false;
+    this.reactionsByGroup.update((all) => {
+      const forGroup = all[groupId];
+      if (!forGroup) return all;
+      const nextGroup: Record<string, JsReaction[]> = {};
+      for (const [targetEventId, reactions] of Object.entries(forGroup)) {
+        const nextReactions = reactions.filter((reaction) => {
+          if (!ids.includes(reaction.id)) return true;
+          // NIP-09 delete events are accepted here only from the reaction
+          // author. Group moderation uses NIP-29 kind 9005 instead.
+          return reaction.pubkey !== ev.pubkey;
+        });
+        if (nextReactions.length !== reactions.length) changed = true;
+        if (nextReactions.length > 0) nextGroup[targetEventId] = nextReactions;
+      }
+      if (!changed) return all;
+      return { ...all, [groupId]: nextGroup };
+    });
     if (changed) this.scheduleReactionCacheFlush(groupId);
   }
 

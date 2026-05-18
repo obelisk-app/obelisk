@@ -39,6 +39,8 @@ export const nostrActions = {
     groupId: string,
     emojiTags?: ReadonlyArray<ReadonlyArray<string>>,
   ) => (await getBridge()).sendReaction(targetEventId, targetPubkey, emoji, groupId, emojiTags),
+  removeReaction: async (groupId: string, reactionEventId: string) =>
+    (await getBridge()).removeReaction(groupId, reactionEventId),
   sendDirectMessage: async (recipientPubkey: string, content: string) =>
     (await getBridge()).sendDirectMessage(recipientPubkey, content),
   retryMessage: async (groupId: string, clientTag: string) =>

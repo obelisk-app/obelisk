@@ -77,17 +77,23 @@ export default function EmojiPicker({
 
   const isSheet = variant === 'sheet';
   const containerClass = isSheet
-    ? 'flex h-full w-full flex-col bg-lc-dark p-3 '
-    : 'absolute right-0 bottom-full mb-1 z-30 w-72 rounded-md border border-lc-border bg-lc-dark p-2 shadow-2xl ';
+    ? 'flex h-full w-full flex-col bg-[#313338] p-3 text-lc-white '
+    : 'absolute right-0 bottom-full mb-1 z-30 flex h-[430px] w-[360px] flex-col overflow-hidden rounded-lg border border-black/40 bg-[#313338] text-lc-white shadow-2xl ';
   const gridClass = isSheet
-    ? 'grid grid-cols-8 gap-1'
-    : 'grid grid-cols-8 gap-0.5';
+    ? 'grid grid-cols-7 gap-1.5'
+    : 'grid grid-cols-8 gap-1 px-3';
   const emojiBtnClass = isSheet
-    ? 'flex aspect-square items-center justify-center rounded text-2xl active:bg-lc-card disabled:opacity-40 disabled:cursor-default'
-    : 'rounded p-1 text-lg hover:bg-lc-card disabled:opacity-40 disabled:cursor-default';
+    ? 'flex aspect-square items-center justify-center rounded-md text-2xl active:bg-[#3f4147] disabled:cursor-default disabled:opacity-40'
+    : 'flex aspect-square items-center justify-center rounded-md text-2xl hover:bg-[#3f4147] disabled:cursor-default disabled:opacity-40';
   const scrollClass = isSheet
     ? 'min-h-0 flex-1 overflow-y-auto'
-    : 'max-h-64 overflow-y-auto';
+    : 'min-h-0 flex-1 overflow-y-auto pb-3';
+  const sectionTitleClass = isSheet
+    ? 'mb-2 px-1 text-[11px] font-bold uppercase tracking-wider text-[#b5bac1]'
+    : 'sticky top-0 z-10 mb-2 bg-[#313338]/95 px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-[#b5bac1] backdrop-blur';
+  const customImageClass = isSheet
+    ? 'h-[1.45em] w-[1.45em] object-contain'
+    : 'h-8 w-8 object-contain';
 
   return (
     <div
@@ -96,37 +102,50 @@ export default function EmojiPicker({
       className={containerClass + (className ?? '')}
       onClick={(e) => e.stopPropagation()}
     >
-      <div className="mb-2 flex items-center gap-2">
+      <div className={isSheet ? 'mb-2 flex items-center gap-2' : 'border-b border-black/20 p-3'}>
+        {!isSheet && (
+          <div className="mb-2 flex items-center justify-between">
+            <div>
+              <div className="text-sm font-bold text-lc-white">Emoji</div>
+              <div className="text-[11px] text-[#b5bac1]">Server emojis, GIFs, and unicode</div>
+            </div>
+            <button
+              onClick={onClose}
+              className="flex h-7 w-7 items-center justify-center rounded text-[#b5bac1] hover:bg-[#3f4147] hover:text-lc-white"
+              aria-label="Close emoji picker"
+              title="Close"
+            >
+              x
+            </button>
+          </div>
+        )}
         <input
           autoFocus={!isSheet}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search emoji…"
           className={
-            'flex-1 rounded border border-lc-border bg-lc-black text-lc-white placeholder:text-lc-muted focus:border-lc-green focus:outline-none ' +
-            (isSheet ? 'px-3 py-2 text-sm' : 'px-2 py-1 text-xs')
+            'w-full rounded border border-transparent bg-[#1e1f22] text-lc-white placeholder:text-[#949ba4] focus:border-lc-green focus:outline-none ' +
+            (isSheet ? 'px-3 py-2 text-sm' : 'px-2.5 py-2 text-xs')
           }
         />
-        <button
-          onClick={onClose}
-          className={
-            'rounded text-lc-muted hover:bg-lc-card hover:text-lc-white ' +
-            (isSheet ? 'h-9 w-9 text-base' : 'p-1')
-          }
-          aria-label="Close emoji picker"
-          title="Close"
-        >
-          ✕
-        </button>
+        {isSheet && (
+          <button
+            onClick={onClose}
+            className="h-9 w-9 rounded text-lc-muted hover:bg-[#3f4147] hover:text-lc-white"
+            aria-label="Close emoji picker"
+            title="Close"
+          >
+            x
+          </button>
+        )}
       </div>
       <div className={scrollClass}>
         {filtered ? (
           <>
             {filteredCustom.length > 0 && (
               <div className="mb-2">
-                <div className="mb-1 px-1 text-[10px] font-bold uppercase tracking-wider text-lc-muted">
-                  Custom
-                </div>
+                <div className={sectionTitleClass}>Server emojis &amp; GIFs</div>
                 <div className={gridClass}>
                   {filteredCustom.map((e) => {
                     const shortcode = `:${e.name}:`;
@@ -139,7 +158,7 @@ export default function EmojiPicker({
                         className={emojiBtnClass}
                         title={mine ? 'Already reacted' : shortcode}
                       >
-                        <img src={e.url} alt={shortcode} className="h-[1.35em] w-[1.35em] object-contain" />
+                        <img src={e.url} alt={shortcode} className={customImageClass} />
                       </button>
                     );
                   })}
@@ -170,9 +189,7 @@ export default function EmojiPicker({
           <>
             {recents.length > 0 && (
               <div className="mb-2">
-                <div className="mb-1 px-1 text-[10px] font-bold uppercase tracking-wider text-lc-muted">
-                  Recent
-                </div>
+                <div className={sectionTitleClass}>Frequently used</div>
                 <div className={gridClass}>
                   {recents.map((char) => {
                     const customMatch = /^:([a-z0-9_]{1,64}):$/i.exec(char);
@@ -187,7 +204,7 @@ export default function EmojiPicker({
                         title={mine ? 'Already reacted' : 'Recent'}
                       >
                         {custom ? (
-                          <img src={custom.url} alt={char} className="h-[1.35em] w-[1.35em] object-contain" />
+                          <img src={custom.url} alt={char} className={customImageClass} />
                         ) : char}
                       </button>
                     );
@@ -197,9 +214,7 @@ export default function EmojiPicker({
             )}
             {customEntries.length > 0 && (
               <div className="mb-2">
-                <div className="mb-1 px-1 text-[10px] font-bold uppercase tracking-wider text-lc-muted">
-                  Custom
-                </div>
+                <div className={sectionTitleClass}>Server emojis &amp; GIFs</div>
                 <div className={gridClass}>
                   {customEntries.map((e) => {
                     const shortcode = `:${e.name}:`;
@@ -212,7 +227,7 @@ export default function EmojiPicker({
                         className={emojiBtnClass}
                         title={mine ? 'Already reacted' : shortcode}
                       >
-                        <img src={e.url} alt={shortcode} className="h-[1.35em] w-[1.35em] object-contain" />
+                        <img src={e.url} alt={shortcode} className={customImageClass} />
                       </button>
                     );
                   })}
@@ -221,9 +236,7 @@ export default function EmojiPicker({
             )}
             {EMOJI_CATEGORY_NAMES.map((cat) => (
               <div key={cat} className="mb-2">
-                <div className="mb-1 px-1 text-[10px] font-bold uppercase tracking-wider text-lc-muted">
-                  {cat}
-                </div>
+                <div className={sectionTitleClass}>{cat}</div>
                 <div className={gridClass}>
                   {EMOJI_CATEGORIES[cat].map((e) => {
                     const mine = disabled.has(e.char);
