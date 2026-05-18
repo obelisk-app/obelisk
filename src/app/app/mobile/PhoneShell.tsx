@@ -66,7 +66,7 @@ import { subscribeVoiceJump } from '@/lib/voice/jump-to-voice';
 import MessageContent from '@/components/chat/MessageContent';
 import { MentionText } from '@/components/chat/MentionText';
 import MentionNavigator from '@/components/chat/MentionNavigator';
-import EmojiPicker from '@/components/chat/EmojiPicker';
+import EmojiPicker, { type PickedCustomEmoji } from '@/components/chat/EmojiPicker';
 import { uploadToBlossom } from '@/lib/blossom';
 import { formatPubkey, hexToNpub as pubkeyToNpub } from '@nostr-wot/data';
 import { faviconFor, fetchRelayInfo } from '@/lib/relay-info';
@@ -83,8 +83,20 @@ import {
   publishBranding,
   type RelayBranding,
 } from '@/lib/relay-branding';
+import {
+  useRelayEmojiSet,
+  relayEmojiMap,
+  type RelayEmojiSet,
+} from '@/lib/relay-emojis';
+import {
+  emojiTagsForContent,
+  mergeCustomEmojiMaps,
+  type CustomEmojiMap,
+} from '@/lib/custom-emoji-tags';
+import { resolveReactionEmoji } from '@/lib/emoji-shortcodes';
 import BlossomImageInput from '@/components/BlossomImageInput';
 import RelayAdminPanel from '@/components/admin/RelayAdminPanel';
+import RelayEmojiAdminModal from '@/components/admin/RelayEmojiAdminModal';
 import { npubToHex } from '@nostr-wot/data';
 import {
   applyMentionToDraft,
@@ -356,6 +368,7 @@ export function RelayMenuSheet({
   iconUrl,
   isAdmin = false,
   branding,
+  emojiSet,
   layout,
   rootChannels,
 }: {
@@ -365,13 +378,14 @@ export function RelayMenuSheet({
   iconUrl?: string | null;
   isAdmin?: boolean;
   branding?: RelayBranding;
+  emojiSet?: RelayEmojiSet;
   layout?: ChannelLayout;
   rootChannels?: ReadonlyArray<JsGroup>;
 }) {
   const relays = useConfiguredRelays();
   const [busy, setBusy] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
-  const [adminPanel, setAdminPanel] = useState<null | 'branding' | 'categories' | 'members'>(null);
+  const [adminPanel, setAdminPanel] = useState<null | 'branding' | 'emojis' | 'categories' | 'members'>(null);
 
   const flash = (msg: string) => {
     setToast(msg);
@@ -520,6 +534,12 @@ export function RelayMenuSheet({
                 onClick={() => setAdminPanel('branding')}
               />
               <Row
+                icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01" /></svg>}
+                rowLabel="Custom emojis"
+                hint="NIP-51"
+                onClick={() => setAdminPanel('emojis')}
+              />
+              <Row
                 icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>}
                 rowLabel="Categories & order"
                 hint="layout"
@@ -551,6 +571,14 @@ export function RelayMenuSheet({
           relayUrl={relayUrl}
           branding={branding}
           close={() => setAdminPanel(null)}
+        />
+      )}
+      {adminPanel === 'emojis' && emojiSet && (
+        <RelayEmojiAdminModal
+          relayUrl={relayUrl}
+          emojiSet={emojiSet}
+          configuredRelays={relays}
+          onClose={() => setAdminPanel(null)}
         />
       )}
       {adminPanel === 'categories' && layout && (
@@ -2170,6 +2198,11 @@ function ServerScreen({
     [layout, roots],
   );
   const branding = useRelayBranding(relay || null, relayAuthors);
+  const emojiSet = useRelayEmojiSet(relay || null, relayAuthors);
+  const setServerEmojis = useChatStore((s) => s.setServerEmojis);
+  useEffect(() => {
+    setServerEmojis(relayEmojiMap(emojiSet));
+  }, [emojiSet, setServerEmojis]);
 
   // Renders a single channel row, plus — for forum containers with thread
   // children — the inline thread list when the user has expanded it. Used by
@@ -2305,6 +2338,7 @@ function ServerScreen({
           iconUrl={relayMenuFor.iconUrl}
           isAdmin={!!myPubkey && relayAuthors.includes(myPubkey)}
           branding={branding}
+          emojiSet={emojiSet}
           layout={layout}
           rootChannels={roots}
         />
@@ -2452,6 +2486,7 @@ function ChannelScreen({
   // `MessagesStatus` in src/lib/nostr-bridge/types.ts.
   const messagesStatus = useMessagesStatus(groupId);
   const reactions = useReactions(groupId);
+  const serverEmojis = useChatStore((s) => s.serverEmojis);
   const myPubkey = useMyPubkey();
   const relay = useCurrentRelayUrl();
   // Focused fetch of kind 39000 for this groupId — guarantees the channel
@@ -2635,7 +2670,8 @@ function ChannelScreen({
     // surface a retry button on the bubble itself, not in the composer.
     setDraft('');
     setReplyingTo(null);
-    nostrActions.sendMessage(groupId, text, replyToCopy).catch((err) => {
+    const emojiTags = emojiTagsForContent(text, serverEmojis);
+    nostrActions.sendMessage(groupId, text, replyToCopy, emojiTags).catch((err) => {
       console.warn('[mobile] sendMessage scheduling failed', err);
     });
   };
@@ -2895,29 +2931,51 @@ export function ChannelMessage({
   parent?: JsMessage | null;
   myPubkey: string | null;
   groupId: string;
-  reactions: ReadonlyArray<{ id: string; pubkey: string; emoji: string }>;
+  reactions: ReadonlyArray<{
+    id: string;
+    pubkey: string;
+    emoji: string;
+    customEmojis?: Readonly<Record<string, string>>;
+  }>;
   onLongPress: () => void;
   onAvatar: () => void;
 }) {
   const meta = useUserMetadata(msg.pubkey);
   const name = meta?.displayName || meta?.name || shortNpub(msg.pubkey);
+  const serverEmojis = useChatStore((s) => s.serverEmojis);
 
   // Aggregate reaction emojis with counts
   const grouped = useMemo(() => {
-    const m = new Map<string, { count: number; mine: boolean }>();
+    const m = new Map<string, {
+      emoji: string;
+      customEmojis: CustomEmojiMap;
+      count: number;
+      mine: boolean;
+    }>();
     for (const r of reactions) {
-      const ex = m.get(r.emoji) ?? { count: 0, mine: false };
+      const customEmojis = mergeCustomEmojiMaps(serverEmojis, r.customEmojis as CustomEmojiMap | undefined);
+      const resolved = resolveReactionEmoji(r.emoji, customEmojis);
+      const key = resolved.kind === 'custom'
+        ? `custom:${resolved.name}:${resolved.url}`
+        : `unicode:${resolved.char}`;
+      const ex = m.get(key) ?? {
+        emoji: resolved.kind === 'custom' ? `:${resolved.name}:` : resolved.char,
+        customEmojis: resolved.kind === 'custom' ? { [resolved.name]: resolved.url } : {},
+        count: 0,
+        mine: false,
+      };
       ex.count++;
       if (r.pubkey === myPubkey) ex.mine = true;
-      m.set(r.emoji, ex);
+      m.set(key, ex);
     }
-    return Array.from(m.entries()).map(([emoji, info]) => ({ emoji, ...info }));
-  }, [reactions, myPubkey]);
+    return Array.from(m.values()).sort((a, b) => b.count - a.count);
+  }, [reactions, myPubkey, serverEmojis]);
 
-  const handleReaction = async (emoji: string, mine: boolean) => {
+  const handleReaction = async (emoji: string, mine: boolean, customEmojis?: CustomEmojiMap) => {
     if (mine) return; // already reacted with this emoji
     try {
-      await nostrActions.sendReaction(msg.id, msg.pubkey, emoji, groupId);
+      const emojiTags = emojiTagsForContent(emoji, mergeCustomEmojiMaps(serverEmojis, customEmojis));
+      await nostrActions.sendReaction(msg.id, msg.pubkey, emoji, groupId, emojiTags);
     } catch (err) { console.warn('[mobile] sendReaction failed', err); }
   };
 
@@ -2989,7 +3047,12 @@ export function ChannelMessage({
           onTouchCancel={cancelPress}
           onContextMenu={(e) => { e.preventDefault(); onLongPress(); }}
         >
-          <MessageContent content={msg.content} messageId={msg.id} channelId={groupId} />
+          <MessageContent
+            content={msg.content}
+            messageId={msg.id}
+            channelId={groupId}
+            customEmojis={msg.customEmojis as CustomEmojiMap | undefined}
+          />
         </div>
         {msg.failed && (
           <div className="msg-failed" data-testid="mobile-msg-failed">
@@ -3014,15 +3077,21 @@ export function ChannelMessage({
         )}
         {grouped.length > 0 && (
           <div className="reactions">
-            {grouped.map((r) => (
-              <button
-                key={r.emoji}
-                className={`reaction ${r.mine ? 'mine' : ''}`}
-                onClick={() => void handleReaction(r.emoji, r.mine)}
-              >
-                {r.emoji} {r.count}
-              </button>
-            ))}
+            {grouped.map((r) => {
+              const resolved = resolveReactionEmoji(r.emoji, r.customEmojis);
+              return (
+                <button
+                  key={r.emoji}
+                  className={`reaction ${r.mine ? 'mine' : ''}`}
+                  onClick={() => void handleReaction(r.emoji, r.mine, r.customEmojis)}
+                >
+                  {resolved.kind === 'custom' ? (
+                    <img src={resolved.url} alt={`:${resolved.name}:`} style={{ width: 16, height: 16, objectFit: 'contain' }} />
+                  ) : resolved.char}{' '}
+                  {r.count}
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
@@ -4290,6 +4359,7 @@ function NewThreadSheet({
   const [error, setError] = useState<string | null>(null);
   const ready = useSignerReady();
   const myPubkey = useMyPubkey();
+  const serverEmojis = useChatStore((s) => s.serverEmojis);
   const MAX_TAGS = 5;
 
   const toggleTag = (id: string) => {
@@ -4314,7 +4384,12 @@ function NewThreadSheet({
         parent: forumGroupId,
         topics: selectedTagIds,
       });
-      await nostrActions.sendMessage(childId, body.trim());
+      await nostrActions.sendMessage(
+        childId,
+        body.trim(),
+        null,
+        emojiTagsForContent(body.trim(), serverEmojis),
+      );
       onCreated(childId);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -4428,6 +4503,18 @@ export function MessageActionsSheet({
 }) {
   const meta = useUserMetadata(msg.pubkey);
   const name = meta?.displayName || meta?.name || shortNpub(msg.pubkey);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const emitReaction = (emoji: string, custom?: PickedCustomEmoji) => {
+    try {
+      window.dispatchEvent(new CustomEvent('obelisk-mobile:react', {
+        detail: {
+          msg,
+          emoji,
+          customEmojis: custom ? { [custom.name]: custom.url } : undefined,
+        },
+      }));
+    } catch { /* ignore */ }
+  };
 
   return (
     <div className="sheet-host" data-screen="msg-actions">
@@ -4442,18 +4529,31 @@ export function MessageActionsSheet({
         <div className="sheet-handle" />
         <div className="ma-quick-reactions">
           {['👍', '❤️', '🚀', '🔥', '👀', '+'].map((e) => (
-            <button key={e} className="ma-quick-react" onClick={async () => {
-              if (e !== '+') {
-                try {
-                  // We need groupId — caller must close, so reaction is fired from the opener.
-                  // For now: emit through window event so the channel can pick it up.
-                  window.dispatchEvent(new CustomEvent('obelisk-mobile:react', { detail: { msg, emoji: e } }));
-                } catch { /* ignore */ }
+            <button key={e} className="ma-quick-react" onClick={() => {
+              if (e === '+') {
+                setPickerOpen(true);
+                return;
               }
+              emitReaction(e);
               close();
             }}>{e}</button>
           ))}
         </div>
+        {pickerOpen && (
+          <div className="emoji-sheet-host" onClick={() => setPickerOpen(false)}>
+            <div className="emoji-sheet" onClick={(e) => e.stopPropagation()}>
+              <div className="sheet-handle" />
+              <EmojiPicker
+                variant="sheet"
+                onPick={(emoji, custom) => {
+                  emitReaction(emoji, custom);
+                  close();
+                }}
+                onClose={() => setPickerOpen(false)}
+              />
+            </div>
+          </div>
+        )}
         <div className="ma-action-list">
           <button
             className="ma-action"
@@ -5073,6 +5173,7 @@ export default function MobileShell() {
   const dms = useDirectMessages();
   const myFollowsEntry = useFollows(myPubkey);
   const myFollows = useMemo(() => myFollowsEntry?.follows ?? [], [myFollowsEntry]);
+  const serverEmojis = useChatStore((s) => s.serverEmojis);
 
   const [nav, setNav] = useState<NavState>(initialNav);
   const navRef = useRef<NavState>(initialNav);
@@ -5845,16 +5946,30 @@ export default function MobileShell() {
   // Listen for reaction emit from msg-actions sheet
   useEffect(() => {
     const handler = async (e: Event) => {
-      const ev = e as CustomEvent<{ msg: { id: string; pubkey: string }; emoji: string }>;
+      const ev = e as CustomEvent<{
+        msg: { id: string; pubkey: string };
+        emoji: string;
+        customEmojis?: CustomEmojiMap;
+      }>;
       const groupId = nav.groupId;
       if (!groupId) return;
       try {
-        await nostrActions.sendReaction(ev.detail.msg.id, ev.detail.msg.pubkey, ev.detail.emoji, groupId);
+        const emojiTags = emojiTagsForContent(
+          ev.detail.emoji,
+          mergeCustomEmojiMaps(serverEmojis, ev.detail.customEmojis),
+        );
+        await nostrActions.sendReaction(
+          ev.detail.msg.id,
+          ev.detail.msg.pubkey,
+          ev.detail.emoji,
+          groupId,
+          emojiTags,
+        );
       } catch (err) { console.warn('[mobile] react failed', err); }
     };
     window.addEventListener('obelisk-mobile:react', handler);
     return () => window.removeEventListener('obelisk-mobile:react', handler);
-  }, [nav.groupId]);
+  }, [nav.groupId, serverEmojis]);
 
   // ── DM and inbox badges ─────────────────────────────────────────────
   // Both totals are derived from the persisted read-state cursor; they

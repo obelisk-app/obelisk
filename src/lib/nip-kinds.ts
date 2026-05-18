@@ -44,6 +44,9 @@ export const KIND_RELAY_LIST = 10002;
 /** NIP-17 — DM inbox relays. */
 export const KIND_DM_INBOX_RELAYS = 10050;
 
+/** NIP-51 / NIP-30 — addressable custom emoji set. */
+export const KIND_EMOJI_SET = 30030;
+
 /** NIP-59 — gift-wrapped event, transport for NIP-17 DMs. */
 export const KIND_GIFT_WRAP = 1059;
 

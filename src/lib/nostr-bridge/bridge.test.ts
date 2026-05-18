@@ -191,6 +191,29 @@ describe('nostr-bridge', () => {
     expect(published[0].tags).toContainEqual(['h', groupId]);
   });
 
+  it('sendMessage carries NIP-30 custom emoji tags', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+
+    const groupId = 'emoji-group';
+    const seen: Array<Array<{ content: string; customEmojis?: Readonly<Record<string, string>> }>> = [];
+    bridge.subscribeMessages(groupId, (msgs) => {
+      seen.push(msgs.map((m) => ({ content: m.content, customEmojis: m.customEmojis })));
+    });
+
+    await bridge.sendMessage(groupId, 'hello :party:', null, [
+      ['emoji', 'party', 'https://example.com/party.webp'],
+    ]);
+    await flush();
+
+    const published = fake.state.published.filter((e) => e.kind === 9);
+    expect(published).toHaveLength(1);
+    expect(published[0].tags).toContainEqual(['emoji', 'party', 'https://example.com/party.webp']);
+    expect(seen.flat().some((m) => m.customEmojis?.party === 'https://example.com/party.webp')).toBe(true);
+  });
+
   it('sendReaction emits a kind 7 with target and group tags', async () => {
     const { getBridge } = await import('./client');
     const { skHex, pkHex } = makeKeypair();
@@ -207,6 +230,36 @@ describe('nostr-bridge', () => {
     expect(reactions[0].content).toBe('🔥');
     expect(reactions[0].tags).toContainEqual(['e', 'targetEventId123']);
     expect(reactions[0].tags).toContainEqual(['h', groupId]);
+  });
+
+  it('sendReaction carries NIP-30 custom emoji tags', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+
+    const groupId = 'emoji-reaction-group';
+    const seen: Array<Array<{ emoji: string; customEmojis?: Readonly<Record<string, string>> }>> = [];
+    bridge.subscribeReactions(groupId, (byEvent) => {
+      seen.push((byEvent.targetEventId123 ?? []).map((r) => ({
+        emoji: r.emoji,
+        customEmojis: r.customEmojis,
+      })));
+    });
+
+    await bridge.sendReaction('targetEventId123', pkHex, ':party:', groupId, [
+      ['emoji', 'party', 'https://example.com/party.webp'],
+    ]);
+    await flush();
+
+    const reactions = fake.state.published.filter((e) => e.kind === 7);
+    expect(reactions).toHaveLength(1);
+    expect(reactions[0].content).toBe(':party:');
+    expect(reactions[0].tags).toContainEqual(['emoji', 'party', 'https://example.com/party.webp']);
+    expect(seen.flat()).toContainEqual({
+      emoji: ':party:',
+      customEmojis: { party: 'https://example.com/party.webp' },
+    });
   });
 
   it('NIP-04 DM round-trip: alice → bob, decrypts on bob side', async () => {

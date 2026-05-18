@@ -73,6 +73,13 @@ export interface JsMessage {
    */
   readonly mentions: ReadonlyArray<string>;
   /**
+   * NIP-30 custom emoji tags carried on the source event, normalized as
+   * shortcode name -> image URL. Renderers merge this with the relay's
+   * current emoji set so older messages stay portable even if the relay list
+   * changes later.
+   */
+  readonly customEmojis?: Readonly<Record<string, string>>;
+  /**
    * Optimistic-send fields. Present only on placeholders the bridge inserted
    * for an in-flight or just-failed publish from this client. Once the relay
    * echo ingest replaces the placeholder, all three are absent.
@@ -106,6 +113,8 @@ export interface JsReaction {
   readonly id: string;
   readonly pubkey: string;
   readonly emoji: string;
+  /** NIP-30 custom emoji tags carried on the reaction event. */
+  readonly customEmojis?: Readonly<Record<string, string>>;
   readonly targetEventId: string;
   readonly createdAt: number;
 }
@@ -363,8 +372,19 @@ export interface NostrBridge {
    * (see {@link JsMessage}). Throws synchronously only when there is no
    * active session.
    */
-  sendMessage(groupId: string, content: string, replyTo?: { id: string; pubkey: string } | null): Promise<void>;
-  sendReaction(targetEventId: string, targetPubkey: string, emoji: string, groupId: string): Promise<void>;
+  sendMessage(
+    groupId: string,
+    content: string,
+    replyTo?: { id: string; pubkey: string } | null,
+    emojiTags?: ReadonlyArray<ReadonlyArray<string>>,
+  ): Promise<void>;
+  sendReaction(
+    targetEventId: string,
+    targetPubkey: string,
+    emoji: string,
+    groupId: string,
+    emojiTags?: ReadonlyArray<ReadonlyArray<string>>,
+  ): Promise<void>;
   /**
    * Same optimistic contract as {@link sendMessage}, for NIP-04 DMs. The
    * placeholder is added under the recipient pubkey in `dmsByPeer`; the

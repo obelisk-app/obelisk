@@ -64,6 +64,23 @@ vi.mock('@/components/chat/MessageContent', () => ({
   default: ({ content }: { content: string }) => <span>{content}</span>,
 }));
 
+vi.mock('@/components/chat/EmojiPicker', () => ({
+  default: ({
+    onPick,
+    onClose,
+  }: {
+    onPick: (emoji: string, custom?: { name: string; url: string }) => void;
+    onClose: () => void;
+  }) => (
+    <div role="dialog" aria-label="Emoji picker">
+      <button onClick={() => onPick(':party:', { name: 'party', url: 'https://example.com/party.webp' })}>
+        Pick custom
+      </button>
+      <button onClick={onClose}>Close picker</button>
+    </div>
+  ),
+}));
+
 import { ChannelMessage, MessageActionsSheet } from './PhoneShell';
 
 const sampleMsg = {
@@ -89,7 +106,6 @@ describe('ChannelMessage kebab button', () => {
         groupId="rly/group"
         reactions={[]}
         onLongPress={() => {}}
-        onZap={() => {}}
         onAvatar={() => {}}
       />,
     );
@@ -105,7 +121,6 @@ describe('ChannelMessage kebab button', () => {
         groupId="rly/group"
         reactions={[]}
         onLongPress={onLongPress}
-        onZap={() => {}}
         onAvatar={() => {}}
       />,
     );
@@ -137,6 +152,39 @@ describe('MessageActionsSheet Reply', () => {
       expect(close).toHaveBeenCalledTimes(1);
     } finally {
       window.removeEventListener('obelisk-mobile:reply', listener as EventListener);
+    }
+  });
+});
+
+describe('MessageActionsSheet reactions', () => {
+  it('opens the emoji picker from the + quick reaction and dispatches the picked emoji', () => {
+    const close = vi.fn();
+    const listener = vi.fn();
+    window.addEventListener('obelisk-mobile:react', listener as EventListener);
+
+    try {
+      render(
+        <MessageActionsSheet
+          msg={{ id: 'msg-8', pubkey: 'c'.repeat(64), content: 'hi' }}
+          close={close}
+          onZap={() => {}}
+        />,
+      );
+
+      fireEvent.click(screen.getByText('+'));
+      expect(screen.getByRole('dialog', { name: 'Emoji picker' })).toBeTruthy();
+
+      fireEvent.click(screen.getByText('Pick custom'));
+      expect(listener).toHaveBeenCalledTimes(1);
+      const ev = listener.mock.calls[0][0] as CustomEvent<{
+        emoji: string;
+        customEmojis?: Record<string, string>;
+      }>;
+      expect(ev.detail.emoji).toBe(':party:');
+      expect(ev.detail.customEmojis).toEqual({ party: 'https://example.com/party.webp' });
+      expect(close).toHaveBeenCalledTimes(1);
+    } finally {
+      window.removeEventListener('obelisk-mobile:react', listener as EventListener);
     }
   });
 });

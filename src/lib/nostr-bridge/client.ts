@@ -37,6 +37,7 @@ import { pushActivity, resolveActivity, failActivity, trackActivity, dismissActi
 import { useReadStateStore } from '@/store/read-state';
 import { isUserWatchingDM, isUserWatchingChannel } from '@/lib/read-gates';
 import { extractMentionPubkeysFromMessage } from '@/lib/mentions';
+import { customEmojiMapFromTags } from '@/lib/custom-emoji-tags';
 import type {
   NostrBridge,
   JsGroup,
@@ -858,6 +859,7 @@ class BridgeImpl implements NostrBridge {
     groupId: string;
     content: string;
     replyTo: { id: string; pubkey: string } | null;
+    emojiTags: string[][];
     createdAt: number;
   }>();
   /** Same as {@link pendingGroupSends} for NIP-04 DMs. */
@@ -1362,6 +1364,7 @@ class BridgeImpl implements NostrBridge {
       const msgs: JsMessage[] = entry.value.map((m) => ({
         ...m,
         mentions: m.mentions ?? [],
+        customEmojis: m.customEmojis ?? {},
       }));
       this.messagesByGroup.update((prev) =>
         prev[groupId] ? prev : { ...prev, [groupId]: msgs },
@@ -2210,11 +2213,17 @@ class BridgeImpl implements NostrBridge {
 
   // -- Group operations --------------------------------------------------
 
-  async sendMessage(groupId: string, content: string, replyTo?: { id: string; pubkey: string } | null): Promise<void> {
+  async sendMessage(
+    groupId: string,
+    content: string,
+    replyTo?: { id: string; pubkey: string } | null,
+    emojiTags: ReadonlyArray<ReadonlyArray<string>> = [],
+  ): Promise<void> {
     if (!this.session) throw new Error('Not logged in');
     const clientTag = generateClientTag();
     const createdAt = Math.floor(Date.now() / 1000);
     const replyToCopy = replyTo ? { id: replyTo.id, pubkey: replyTo.pubkey } : null;
+    const emojiTagsCopy = emojiTags.map((tag) => [...tag]);
     const pendingMsg: JsMessage = {
       id: `pending:${clientTag}`,
       pubkey: this.session.pubKeyHex,
@@ -2223,19 +2232,28 @@ class BridgeImpl implements NostrBridge {
       kind: KIND_GROUP_MESSAGE,
       replyToId: replyToCopy?.id ?? null,
       mentions: [],
+      customEmojis: customEmojiMapFromTags(emojiTagsCopy),
       pending: true,
       clientTag,
     };
-    this.pendingGroupSends.set(clientTag, { groupId, content, replyTo: replyToCopy, createdAt });
+    this.pendingGroupSends.set(clientTag, { groupId, content, replyTo: replyToCopy, emojiTags: emojiTagsCopy, createdAt });
     this.upsertPendingGroupMessage(groupId, pendingMsg);
-    void this.publishGroupMessage(groupId, content, replyToCopy, clientTag, createdAt);
+    void this.publishGroupMessage(groupId, content, replyToCopy, emojiTagsCopy, clientTag, createdAt);
   }
 
-  async sendReaction(targetEventId: string, targetPubkey: string, emoji: string, groupId: string): Promise<void> {
+  async sendReaction(
+    targetEventId: string,
+    targetPubkey: string,
+    emoji: string,
+    groupId: string,
+    emojiTags: ReadonlyArray<ReadonlyArray<string>> = [],
+  ): Promise<void> {
+    const emojiTagsCopy = emojiTags.map((tag) => [...tag]);
     const event = await this.signAndPublish({
       kind: KIND_REACTION,
       content: emoji,
       tags: [
+        ...emojiTagsCopy,
         ['e', targetEventId],
         ['p', targetPubkey],
         ['h', groupId],
@@ -2294,10 +2312,11 @@ class BridgeImpl implements NostrBridge {
     groupId: string,
     content: string,
     replyTo: { id: string; pubkey: string } | null,
+    emojiTags: string[][],
     clientTag: string,
     createdAt: number,
   ): Promise<void> {
-    const tags: string[][] = [['h', groupId]];
+    const tags: string[][] = [...emojiTags, ['h', groupId]];
     if (replyTo) {
       tags.push(['e', replyTo.id, '', 'reply']);
       tags.push(['p', replyTo.pubkey]);
@@ -2324,7 +2343,7 @@ class BridgeImpl implements NostrBridge {
     const msg = list.find((m) => m.clientTag === clientTag);
     if (!msg || !msg.failed) return;
     this.flipPendingGroupMessageToPending(groupId, clientTag);
-    void this.publishGroupMessage(args.groupId, args.content, args.replyTo, clientTag, args.createdAt);
+    void this.publishGroupMessage(args.groupId, args.content, args.replyTo, args.emojiTags, clientTag, args.createdAt);
   }
 
   async retryDirectMessage(counterparty: string, clientTag: string): Promise<void> {
@@ -2381,6 +2400,7 @@ class BridgeImpl implements NostrBridge {
       kind: ev.kind,
       replyToId: replyTo,
       mentions,
+      customEmojis: customEmojiMapFromTags(ev.tags),
     };
     this.messagesByGroup.update((prev) => {
       const existing = prev[groupId] ?? [];
@@ -2757,6 +2777,7 @@ class BridgeImpl implements NostrBridge {
         kind: e.kind,
         replyToId: getTag(e, 'e') ?? null,
         mentions: extractMentionPubkeysFromMessage(e.content, e.tags),
+        customEmojis: customEmojiMapFromTags(e.tags),
         groupId: getTag(e, 'h') ?? null,
       }))
       .sort((a, b) => b.createdAt - a.createdAt);
@@ -4430,6 +4451,7 @@ class BridgeImpl implements NostrBridge {
       kind: ev.kind,
       replyToId: replyTo,
       mentions,
+      customEmojis: customEmojiMapFromTags(ev.tags),
     };
     let isNew = false;
     let replacedClientTag: string | null = null;
@@ -4521,6 +4543,7 @@ class BridgeImpl implements NostrBridge {
       id: ev.id,
       pubkey: ev.pubkey,
       emoji: ev.content || '+',
+      customEmojis: customEmojiMapFromTags(ev.tags),
       targetEventId,
       createdAt: ev.created_at,
     };

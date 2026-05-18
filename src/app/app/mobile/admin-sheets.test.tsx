@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 
 // Bridge actions live behind a singleton + IndexedDB-backed cache. The
@@ -49,6 +49,12 @@ vi.mock('@/lib/relay-branding', () => ({
   publishBranding: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock('@/lib/relay-emojis', () => ({
+  useRelayEmojiSet: () => ({ title: '', emojis: [], updatedAt: 0 }),
+  relayEmojiMap: () => ({}),
+  publishRelayEmojiSet: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('@/lib/channel-layout', () => ({
   useChannelLayout: () => ({ categories: [], channels: [], updatedAt: 0 }),
   useRelayOperatorPubkey: () => null,
@@ -64,6 +70,12 @@ vi.mock('@/components/BlossomImageInput', () => ({
 vi.mock('@/components/admin/RelayAdminPanel', () => ({
   default: ({ onClose }: { onClose: () => void }) => (
     <div data-testid="relay-admin-panel-stub" onClick={onClose}>panel</div>
+  ),
+}));
+
+vi.mock('@/components/admin/RelayEmojiAdminModal', () => ({
+  default: ({ onClose }: { onClose: () => void }) => (
+    <div data-testid="relay-emoji-admin-stub" onClick={onClose}>emoji panel</div>
   ),
 }));
 
@@ -129,11 +141,12 @@ describe('RelayMenuSheet admin gating', () => {
     );
     expect(screen.queryByTestId('mobile-relay-admin-section')).toBeNull();
     expect(screen.queryByText('Edit branding')).toBeNull();
+    expect(screen.queryByText('Custom emojis')).toBeNull();
     expect(screen.queryByText('Categories & order')).toBeNull();
     expect(screen.queryByText('Admins & members')).toBeNull();
   });
 
-  it('renders the three admin entries for admins', () => {
+  it('renders the relay admin entries for admins', () => {
     render(
       <RelayMenuSheet
         close={() => {}}
@@ -147,8 +160,26 @@ describe('RelayMenuSheet admin gating', () => {
     );
     expect(screen.getByTestId('mobile-relay-admin-section')).toBeTruthy();
     expect(screen.getByText('Edit branding')).toBeTruthy();
+    expect(screen.getByText('Custom emojis')).toBeTruthy();
     expect(screen.getByText('Categories & order')).toBeTruthy();
     expect(screen.getByText('Admins & members')).toBeTruthy();
+  });
+
+  it('opens the emoji admin panel when the admin taps "Custom emojis"', () => {
+    render(
+      <RelayMenuSheet
+        close={() => {}}
+        relayUrl="wss://relay.obelisk.ar"
+        label="Obelisk"
+        isAdmin
+        branding={{ icon: '', banner: '', name: '', description: '', updatedAt: 0 }}
+        emojiSet={{ title: '', emojis: [], updatedAt: 0 }}
+        layout={{ categories: [], channels: [], updatedAt: 0 }}
+        rootChannels={[]}
+      />,
+    );
+    fireEvent.click(screen.getByText('Custom emojis'));
+    expect(screen.getByTestId('relay-emoji-admin-stub')).toBeTruthy();
   });
 
   it('opens the RelayAdminPanel when the admin taps "Admins & members"', () => {

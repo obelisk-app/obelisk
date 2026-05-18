@@ -8,6 +8,7 @@ import {
   useIsRehydrating,
   useConnectionState,
   useCurrentRelayUrl,
+  useConfiguredRelays,
   useGroups,
   useGroupById,
   useMessages,
@@ -88,6 +89,17 @@ import {
   publishBranding,
   type RelayBranding,
 } from '@/lib/relay-branding';
+import {
+  useRelayEmojiSet,
+  relayEmojiMap,
+} from '@/lib/relay-emojis';
+import {
+  emojiTagsForContent,
+  mergeCustomEmojiMaps,
+  type CustomEmojiMap,
+} from '@/lib/custom-emoji-tags';
+import { resolveReactionEmoji } from '@/lib/emoji-shortcodes';
+import RelayEmojiAdminModal from '@/components/admin/RelayEmojiAdminModal';
 import BlossomImageInput from '@/components/BlossomImageInput';
 import ActivityIndicator from '@/components/ActivityIndicator';
 import { extractUrls, isImageUrl } from '@/lib/markdown';
@@ -743,6 +755,11 @@ function Sidebar({
     [layout, roots],
   );
   const branding = useRelayBranding(relay || null, relayAuthors);
+  const emojiSet = useRelayEmojiSet(relay || null, relayAuthors);
+  const setServerEmojis = useChatStore((s) => s.setServerEmojis);
+  useEffect(() => {
+    setServerEmojis(relayEmojiMap(emojiSet));
+  }, [emojiSet, setServerEmojis]);
   // 1500ms grace period for the title — keeps a skeleton in place while
   // we wait for branding. If nothing arrives by then, fall back to the
   // shortHost() label so the user isn't staring at shimmer forever.
@@ -762,7 +779,9 @@ function Sidebar({
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [layoutOpen, setLayoutOpen] = useState(false);
   const [brandingOpen, setBrandingOpen] = useState(false);
+  const [emojisOpen, setEmojisOpen] = useState(false);
   const [adminPanelOpen, setAdminPanelOpen] = useState(false);
+  const configuredRelays = useConfiguredRelays();
   // The desktop FloatingUserPanel (SidebarMe pill, plus VoiceStatusBar when a
   // call is active) sits absolutely over the bottom of the channel list. Pad
   // the scroll container so the last channels can be scrolled clear of it.
@@ -873,6 +892,20 @@ function Sidebar({
                 <line x1="3" y1="6" x2="21" y2="6" />
                 <line x1="3" y1="12" x2="21" y2="12" />
                 <line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            </button>
+          )}
+          {isOperator && (
+            <button
+              onClick={() => setEmojisOpen(true)}
+              title="Manage relay emojis (group admins only)"
+              aria-label="Manage relay emojis"
+              className="shrink-0 rounded p-1 text-lc-muted hover:bg-lc-card hover:text-lc-white"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="9" />
+                <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+                <path d="M9 9h.01M15 9h.01" />
               </svg>
             </button>
           )}
@@ -1013,6 +1046,14 @@ function Sidebar({
           relayUrl={relay}
           branding={branding}
           onClose={() => setBrandingOpen(false)}
+        />
+      )}
+      {emojisOpen && relay && (
+        <RelayEmojiAdminModal
+          relayUrl={relay}
+          emojiSet={emojiSet}
+          configuredRelays={configuredRelays}
+          onClose={() => setEmojisOpen(false)}
         />
       )}
       {adminPanelOpen && (
@@ -1929,6 +1970,7 @@ function ChatPanel({
   // explains the situation in-place.
   const relayAccess = useRelayAccess(relay || null);
   const messagesVisible = relayAccess === 'ok';
+  const serverEmojis = useChatStore((s) => s.serverEmojis);
   const [draft, setDraft] = useState('');
   const [sendError, setSendError] = useState<string | null>(null);
   const [replyingTo, setReplyingTo] = useState<JsMessage | null>(null);
@@ -2274,7 +2316,8 @@ function ChatPanel({
 
     // Fire-and-forget — bridge inserts the pending placeholder synchronously
     // and surfaces send failures via the bubble's `failed` flag (with retry).
-    nostrActions.sendMessage(groupId, content, replyToCopy).catch((err) => {
+    const emojiTags = emojiTagsForContent(content, serverEmojis);
+    nostrActions.sendMessage(groupId, content, replyToCopy, emojiTags).catch((err) => {
       console.error('send failed', err);
     });
   }
@@ -2815,7 +2858,11 @@ function MessageRow({
 }: {
   msg: JsMessage;
   allMessages: ReadonlyArray<JsMessage>;
-  reactions: ReadonlyArray<{ emoji: string }>;
+  reactions: ReadonlyArray<{
+    emoji: string;
+    pubkey: string;
+    customEmojis?: Readonly<Record<string, string>>;
+  }>;
   zapTotal: MessageZapTotal | null;
   groupId: string;
   grouped: boolean;
@@ -2842,6 +2889,7 @@ function MessageRow({
   const [pickerOpen, setPickerOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const myPubkey = useMyPubkey();
+  const serverEmojis = useChatStore((s) => s.serverEmojis);
   const myMutes = useMyMutes();
   const isMuted = myMutes.includes(msg.pubkey);
   const toggleMute = async () => {
@@ -2872,29 +2920,48 @@ function MessageRow({
   // emoji even if the relay re-delivered or the user double-tapped before the
   // first kind:7 round-tripped.
   const reactionsByEmoji = useMemo(() => {
-    const m = new Map<string, Set<string>>();
-    for (const r of reactions as ReadonlyArray<{ emoji: string; pubkey: string }>) {
-      let s = m.get(r.emoji);
-      if (!s) { s = new Set(); m.set(r.emoji, s); }
-      s.add(r.pubkey);
+    const m = new Map<string, {
+      emoji: string;
+      customEmojis: CustomEmojiMap;
+      pubkeys: Set<string>;
+    }>();
+    for (const r of reactions) {
+      const customEmojis = mergeCustomEmojiMaps(serverEmojis, r.customEmojis as CustomEmojiMap | undefined);
+      const resolved = resolveReactionEmoji(r.emoji, customEmojis);
+      const key = resolved.kind === 'custom'
+        ? `custom:${resolved.name}:${resolved.url}`
+        : `unicode:${resolved.char}`;
+      let entry = m.get(key);
+      if (!entry) {
+        entry = {
+          emoji: resolved.kind === 'custom' ? `:${resolved.name}:` : resolved.char,
+          customEmojis: resolved.kind === 'custom' ? { [resolved.name]: resolved.url } : {},
+          pubkeys: new Set<string>(),
+        };
+        m.set(key, entry);
+      }
+      entry.pubkeys.add(r.pubkey);
     }
     return m;
-  }, [reactions]);
+  }, [reactions, serverEmojis]);
   const counts = useMemo(
-    () => Array.from(reactionsByEmoji.entries())
-      .map(([emoji, set]) => [emoji, set.size] as const)
-      .sort((a, b) => b[1] - a[1]),
+    () => Array.from(reactionsByEmoji.values())
+      .map((entry) => ({ ...entry, count: entry.pubkeys.size }))
+      .sort((a, b) => b.count - a.count),
     [reactionsByEmoji],
   );
   const myReactedEmojis = useMemo(() => {
     if (!myPubkey) return new Set<string>();
     const out = new Set<string>();
-    for (const [emoji, set] of reactionsByEmoji) if (set.has(myPubkey)) out.add(emoji);
+    for (const entry of reactionsByEmoji.values()) {
+      if (entry.pubkeys.has(myPubkey)) out.add(entry.emoji);
+    }
     return out;
   }, [reactionsByEmoji, myPubkey]);
-  const onReactionClick = (emoji: string) => {
+  const onReactionClick = (emoji: string, customEmojis?: CustomEmojiMap) => {
     if (myReactedEmojis.has(emoji)) return; // already reacted — no-op until retraction is wired
-    void nostrActions.sendReaction(msg.id, msg.pubkey, emoji, groupId);
+    const emojiTags = emojiTagsForContent(emoji, mergeCustomEmojiMaps(serverEmojis, customEmojis));
+    void nostrActions.sendReaction(msg.id, msg.pubkey, emoji, groupId, emojiTags);
   };
   const openZap = useMessageZapStore((s) => s.open);
   const onZapClick = () => {
@@ -2969,7 +3036,12 @@ function MessageRow({
             setPanelPinned((v) => !v);
           }}
         >
-          <MessageContent content={msg.content} messageId={msg.id} channelId={groupId} />
+          <MessageContent
+            content={msg.content}
+            messageId={msg.id}
+            channelId={groupId}
+            customEmojis={msg.customEmojis as CustomEmojiMap | undefined}
+          />
         </div>
         {msg.failed && (
           <div className="mt-1 flex items-center gap-2 text-[11px] text-red-400" data-testid="message-failed">
@@ -3017,25 +3089,30 @@ function MessageRow({
                 <ZapperHoverCard zapTotal={zapTotal} />
               </div>
             )}
-            {counts.map(([emoji, n]) => {
+            {counts.map(({ emoji, customEmojis, pubkeys, count }) => {
               const mine = myReactedEmojis.has(emoji);
-              const reactors = reactionsByEmoji.get(emoji);
+              const resolved = resolveReactionEmoji(emoji, customEmojis);
               return (
                 <div key={emoji} className="group/pill relative">
                   <button
-                    onClick={() => onReactionClick(emoji)}
+                    onClick={() => onReactionClick(emoji, customEmojis)}
                     disabled={mine}
                     className={
-                      'rounded-full border px-2 py-0.5 text-xs text-lc-white ' +
+                      'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs text-lc-white ' +
                       (mine
                         ? 'border-lc-green/60 bg-lc-green/10 cursor-default'
                         : 'border-lc-border bg-lc-card hover:border-lc-green')
                     }
                   >
-                    {emoji} {n}
+                    {resolved.kind === 'custom' ? (
+                      <img src={resolved.url} alt={`:${resolved.name}:`} className="h-4 w-4 object-contain" />
+                    ) : (
+                      <span>{resolved.char}</span>
+                    )}
+                    <span>{count}</span>
                   </button>
-                  {reactors && reactors.size > 0 && (
-                    <ReactorHoverCard emoji={emoji} pubkeys={reactors} />
+                  {pubkeys.size > 0 && (
+                    <ReactorHoverCard emoji={emoji} pubkeys={pubkeys} />
                   )}
                 </div>
               );
@@ -3179,7 +3256,10 @@ function MessageRow({
         {pickerOpen && (
           <EmojiPicker
             disabledEmojis={myReactedEmojis}
-            onPick={(e) => { onReactionClick(e); closeAll(); }}
+            onPick={(e, custom) => {
+              onReactionClick(e, custom ? { [custom.name]: custom.url } : undefined);
+              closeAll();
+            }}
             onClose={() => setPickerOpen(false)}
           />
         )}
