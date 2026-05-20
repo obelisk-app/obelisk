@@ -315,6 +315,7 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
           admins: gate.admins,
           open: gate.open,
           expectSfu: channelKind === 'voice-sfu',
+          originRelayUrl: currentRelayUrl,
           events,
         });
         clientRef.current = client;

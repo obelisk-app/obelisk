@@ -51,6 +51,12 @@ vi.mock('./transport', () => ({
   subscribeRoster: transportFake.subscribeRoster,
   sendSignal: transportFake.sendSignal,
   subscribeSignals: transportFake.subscribeSignals,
+  createVoiceTransport: vi.fn(() => ({
+    publishPresenceBeacon: transportFake.publishPresenceBeacon,
+    subscribeRoster: transportFake.subscribeRoster,
+    sendSignal: transportFake.sendSignal,
+    subscribeSignals: transportFake.subscribeSignals,
+  })),
   getSelfPubkey: transportFake.getSelfPubkey,
   transitiveParticipants: (roster: VoicePresence[]) => {
     const set = new Set<string>();

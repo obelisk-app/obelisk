@@ -55,6 +55,12 @@ vi.mock('./transport', () => ({
   subscribeRoster: transportFake.subscribeRoster,
   sendSignal: transportFake.sendSignal,
   subscribeSignals: transportFake.subscribeSignals,
+  createVoiceTransport: vi.fn(() => ({
+    publishPresenceBeacon: transportFake.publishPresenceBeacon,
+    subscribeRoster: transportFake.subscribeRoster,
+    sendSignal: transportFake.sendSignal,
+    subscribeSignals: transportFake.subscribeSignals,
+  })),
   getSelfPubkey: transportFake.getSelfPubkey,
   // Pure function — pass through unchanged for tests. Roster types now
   // carry `videoTracks` too; the transitive computation only unions

@@ -38,11 +38,9 @@ import type {
   VideoSlotKind,
 } from './types';
 import {
-  publishPresenceBeacon,
-  subscribeRoster,
-  sendSignal,
-  subscribeSignals,
+  createVoiceTransport,
   getSelfPubkey,
+  type VoiceTransport,
   transitiveParticipants,
 } from './transport';
 import { getPreset, MIC_CONSTRAINTS, type VideoQuality } from './quality';
@@ -211,6 +209,9 @@ export interface VoiceClientOptions {
    * gate on join/canJoin becomes unconditional.
    */
   open?: boolean;
+  /** Relay where this call was joined. Mesh voice traffic remains pinned here
+   *  even when the user browses another server. */
+  originRelayUrl?: string | null;
   events?: VoiceClientEvents;
 }
 
@@ -218,6 +219,7 @@ export class VoiceClient {
   readonly channelId: string;
   readonly selfPubkey: string;
   private events: VoiceClientEvents;
+  private readonly transport: VoiceTransport;
   private readonly sessionId = randomId();
 
   private members: ReadonlySet<string>;
@@ -392,6 +394,7 @@ export class VoiceClient {
   constructor(channelId: string, options: VoiceClientOptions = {}) {
     this.channelId = channelId;
     this.events = options.events ?? {};
+    this.transport = createVoiceTransport({ relayUrl: options.originRelayUrl ?? null });
     this.members = new Set(options.members ?? []);
     this.admins = new Set(options.admins ?? []);
     // Honor the explicit `open` flag from kind 39000 first. Falling back
@@ -751,7 +754,7 @@ export class VoiceClient {
 
     // Subscribe to incoming signaling first so we don't miss offers from
     // peers who learn about us via the beacon we're about to send.
-    this.signalsUnsub = await subscribeSignals(
+    this.signalsUnsub = await this.transport.subscribeSignals(
       this.channelId,
       this.selfPubkey,
       (from, payload) => {
@@ -780,7 +783,7 @@ export class VoiceClient {
       },
     );
 
-    this.rosterUnsub = await subscribeRoster(this.channelId, (roster) => {
+    this.rosterUnsub = await this.transport.subscribeRoster(this.channelId, (roster) => {
       // Snapshot the live roster so the video-slot computation can see
       // every other peer's `videoTracks` claim alongside our own state.
       this.currentRoster = roster;
@@ -1065,7 +1068,7 @@ export class VoiceClient {
     if (this.screenTrack) videoTracks.push('screen');
     try {
       await withRateLimitBackoff(
-        () => publishPresenceBeacon(this.channelId, [...this.connectedPubkeys], videoTracks),
+        () => this.transport.publishPresenceBeacon(this.channelId, [...this.connectedPubkeys], videoTracks),
         { metrics: this.metrics },
       );
       this.metrics.beacons.sent++;
@@ -1475,7 +1478,7 @@ export class VoiceClient {
         polite,
         sessionId: this.sessionId,
         send: (payload) => withRateLimitBackoff(
-          () => sendSignal(this.channelId, remotePubkey, payload),
+          () => this.transport.sendSignal(this.channelId, remotePubkey, payload),
           { metrics: this.metrics },
         ),
         // SFU peers don't speak our control-channel protocol — only mesh
@@ -1787,7 +1790,7 @@ export class VoiceClient {
     // immediately. Already-open peers (in this.peers) bypass this
     // check — they're members of the in-set by definition.
     if (!this.peers.has(fromPubkey) && !this.isWithinRoomCap(fromPubkey)) {
-      void sendSignal(this.channelId, fromPubkey, {
+      void this.transport.sendSignal(this.channelId, fromPubkey, {
         type: 'bye',
         sessionId: this.sessionId,
         seq: 0,

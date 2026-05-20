@@ -98,6 +98,7 @@ import {
   sendSignal,
   subscribeSignals,
   getSelfPubkey,
+  createVoiceTransport,
 } from './transport';
 
 beforeEach(() => {
@@ -126,6 +127,56 @@ describe('publishPresenceBeacon', () => {
     const exp = call.tags.find((t) => t[0] === 'expiration');
     expect(exp).toBeDefined();
     expect(parseInt(exp![1], 10)).toBeGreaterThan(0);
+  });
+});
+
+describe('pinned relay voice transport', () => {
+  it('publishes beacons to the origin relay only', async () => {
+    const transport = createVoiceTransport({ relayUrl: 'wss://origin.example' });
+    await transport.publishPresenceBeacon('ch1');
+    expect(bridgeFake.impl.publishEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: KIND_VOICE_PRESENCE }),
+      { extraRelays: ['wss://origin.example'], mode: 'replace' },
+    );
+  });
+
+  it('pins roster and signal subscriptions to the origin relay', async () => {
+    const transport = createVoiceTransport({ relayUrl: 'wss://origin.example' });
+    const unsubRoster = await transport.subscribeRoster('ch1', () => {});
+    const unsubSignals = await transport.subscribeSignals('ch1', 'me', () => {});
+
+    expect(bridgeFake.impl.subscribeFilterWatched).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ kinds: [KIND_VOICE_PRESENCE], '#e': ['ch1'] }),
+      expect.any(Function),
+      expect.objectContaining({
+        relays: ['wss://origin.example'],
+        relayMode: 'replace',
+        affectsRelayAccess: false,
+      }),
+    );
+    expect(bridgeFake.impl.subscribeFilterWatched).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ kinds: [KIND_VOICE_SIGNAL], '#e': ['ch1'] }),
+      expect.any(Function),
+      expect.objectContaining({
+        relays: ['wss://origin.example'],
+        relayMode: 'replace',
+        affectsRelayAccess: false,
+      }),
+    );
+
+    unsubRoster();
+    unsubSignals();
+  });
+
+  it('publishes signals to the origin relay only', async () => {
+    const transport = createVoiceTransport({ relayUrl: 'wss://origin.example' });
+    await transport.sendSignal('ch1', 'recipient-pk', { type: 'bye', sessionId: 's1', seq: 1 });
+    expect(bridgeFake.impl.publishEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: KIND_VOICE_SIGNAL }),
+      { extraRelays: ['wss://origin.example'], mode: 'replace' },
+    );
   });
 });
 

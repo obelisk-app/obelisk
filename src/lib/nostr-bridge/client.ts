@@ -21,6 +21,7 @@
  *   for the WASM swap recipe.
  */
 import { SimplePool, type Filter, type Event as NostrEvent, type EventTemplate, type VerifiedEvent, finalizeEvent, getPublicKey, nip19, nip04 } from 'nostr-tools';
+import { KIND_VOICE_PRESENCE } from '@/lib/nip-kinds';
 import { BunkerSigner, parseBunkerInput, createNostrConnectURI } from 'nostr-tools/nip46';
 import { generateSecretKey } from 'nostr-tools/pure';
 import { v2 as nip44 } from 'nostr-tools/nip44';
@@ -922,7 +923,10 @@ class BridgeImpl implements NostrBridge {
    * so a stale advertisement doesn't pin "LIVE" forever after an SFU
    * crash that never published `status=closed`.
    */
-  activeCallByChannel = new StateStore<Record<string, { hostPubkey: string; status: string; participantCount: number; expiresAt: number; createdAt: number }>>({});
+  activeCallByChannel = new StateStore<Record<string, { hostPubkey: string; status: string; participantCount: number; expiresAt: number; createdAt: number; mode?: 'sfu' | 'mesh'; participantPubkeys?: string[] }>>({});
+  private sfuActiveCalls = new Map<string, { hostPubkey: string; status: string; participantCount: number; expiresAt: number; createdAt: number; mode: 'sfu' }>();
+  private meshPresenceByChannel = new Map<string, Map<string, { expiresAt: number; createdAt: number }>>();
+  private meshPresenceSweepTimer: ReturnType<typeof setInterval> | null = null;
   myFollows = new StateStore<string[]>([]);
   /**
    * NIP-51 kind 10000 mute list — pubkeys the local user has muted (public
@@ -1241,6 +1245,7 @@ class BridgeImpl implements NostrBridge {
     // fire after the pool is gone.
     this.clearAllCacheFlushers();
     this.querySyncFallbackFired.clear();
+    this.clearActiveCallState();
     this.deletedEventIdsByGroup.clear();
     this.moderatedEventIdsByGroup.clear();
   }
@@ -1730,6 +1735,7 @@ class BridgeImpl implements NostrBridge {
     this.messagesEoseByGroup.set({});
     this.messagesStatusByGroup.set({});
     this.clearAllMessagesRetry();
+    this.clearActiveCallState();
     // Drop the background message-subscription queue too — pending work
     // is scoped to the previous session's authored REQs.
     this.pendingMessageQueue = [];
@@ -1951,6 +1957,7 @@ class BridgeImpl implements NostrBridge {
     this.messagesEoseByGroup.set({});
     this.messagesStatusByGroup.set({});
     this.clearAllMessagesRetry();
+    this.clearActiveCallState();
     // Drop background queue — pending entries point at filters bound to
     // the old pool. The new relay's kind 39000 fan-out will repopulate.
     this.pendingMessageQueue = [];
@@ -3092,7 +3099,13 @@ class BridgeImpl implements NostrBridge {
   subscribeFilterWatched(
     filter: Filter,
     onEvent: (ev: NostrEvent) => void,
-    options?: { watchdogMs?: number; maxAttempts?: number; relays?: readonly string[] },
+    options?: {
+      watchdogMs?: number;
+      maxAttempts?: number;
+      relays?: readonly string[];
+      relayMode?: 'merge' | 'replace';
+      affectsRelayAccess?: boolean;
+    },
   ): () => void {
     // Optional `relays` override merges with the bridge's default relay
     // list. Used by callers that need to listen on relays the bridge
@@ -3102,7 +3115,9 @@ class BridgeImpl implements NostrBridge {
     // override, getRouterRtpCapabilities responses never reach the
     // browser and `start()` times out at 8s.
     const targetRelays = options?.relays && options.relays.length > 0
-      ? Array.from(new Set([...this.relays, ...options.relays]))
+      ? Array.from(new Set(options.relayMode === 'replace'
+          ? [...options.relays]
+          : [...this.relays, ...options.relays]))
       : this.relays;
     if (options?.relays) {
       // Tell auto-auth to sign for these too — without this the relay
@@ -4330,25 +4345,33 @@ class BridgeImpl implements NostrBridge {
   }
 
   /**
-   * Global subscription to kind 31314 (Obelisk SFU active-call announcement).
-   * The SFU emits one per live room, replaceable on `d=<channelId>`. We track
-   * them in `activeCallByChannel` so the sidebar can flag voice channels
-   * that have a call in progress without anyone needing to be in it.
+   * Global subscriptions for voice-channel liveness. SFU calls publish kind
+   * 31314 active-call announcements; mesh calls publish short-lived kind
+   * 20078 presence beacons. Both feed activeCallByChannel so desktop
+   * and mobile channel rows can render one consistent LIVE indicator.
    *
-   * `affectsRelayAccess: false` because absence of 31314 events is normal
-   * (a relay might serve groups but not host any active SFU calls) and a
-   * CLOSED for this filter shouldn't flip the relay-wide banner.
+   * affectsRelayAccess: false because absence of live-call traffic is
+   * normal and should not influence the relay-wide AUTH banner.
    */
   private subscribeActiveCalls(): void {
-    const filter: Filter = { kinds: [KIND_SFU_ACTIVE_CALL] };
-    const sub = this.subscribeWatched(
+    const sfuSub = this.subscribeWatched(
       this.relays,
-      filter,
+      { kinds: [KIND_SFU_ACTIVE_CALL] },
       (ev) => this.ingestActiveCall(ev),
       undefined,
       { affectsRelayAccess: false },
     );
-    this.subs.push(sub);
+    this.subs.push(sfuSub);
+
+    const meshSub = this.subscribeWatched(
+      this.relays,
+      { kinds: [KIND_VOICE_PRESENCE], '#t': ['obelisk-voice-presence'] } as Filter,
+      (ev) => this.ingestMeshVoicePresence(ev),
+      undefined,
+      { affectsRelayAccess: false },
+    );
+    this.subs.push(meshSub);
+    this.ensureMeshPresenceSweep();
   }
 
   private ingestActiveCall(ev: NostrEvent): void {
@@ -4360,32 +4383,130 @@ class BridgeImpl implements NostrBridge {
     const expiresAt = expirationStr ? parseInt(expirationStr, 10) || 0 : 0;
     // Participant count: SFU started tagging this so consumers can
     // distinguish "live call with people" from "room still open during
-    // empty-grace." Older SFU builds don't tag — treat absent as -1
+    // empty-grace." Older SFU builds don't tag - treat absent as -1
     // (unknown, render badge to preserve back-compat) so we don't go
     // silent on a partial deploy.
     const countStr = getTag(ev, 'count');
     const participantCount = countStr === undefined ? -1 : (parseInt(countStr, 10) || 0);
-    const cur = this.activeCallByChannel.get();
-    const prev = cur[channelId];
+    const prev = this.sfuActiveCalls.get(channelId);
     // Newest-wins: replaceable kind, stale duplicates from slow relays
     // shouldn't overwrite a fresher announcement.
     if (prev && prev.createdAt >= ev.created_at) return;
     if (status === 'closed') {
-      if (!prev) return;
-      const next = { ...cur };
-      delete next[channelId];
-      this.activeCallByChannel.set(next);
+      this.sfuActiveCalls.delete(channelId);
+      this.recomputeActiveCallByChannel();
       return;
     }
-    this.activeCallByChannel.set({
-      ...cur,
-      [channelId]: { hostPubkey, status, participantCount, expiresAt, createdAt: ev.created_at },
+    this.sfuActiveCalls.set(channelId, {
+      hostPubkey,
+      status,
+      participantCount,
+      expiresAt,
+      createdAt: ev.created_at,
+      mode: 'sfu',
     });
+    this.recomputeActiveCallByChannel();
+  }
+
+  private ingestMeshVoicePresence(ev: NostrEvent): void {
+    // SFU infrastructure also publishes kind 20078 with ["sfu","1"].
+    // Those are topology beacons, not participant evidence for mesh LIVE.
+    if (ev.tags.some((t) => t[0] === 'sfu' && t[1] === '1')) return;
+    const channelId = getTag(ev, 'e');
+    if (!channelId) return;
+    const expirationStr = getTag(ev, 'expiration');
+    const expiresAt = expirationStr
+      ? parseInt(expirationStr, 10) || 0
+      : ev.created_at + 30;
+    if (!Number.isFinite(expiresAt) || expiresAt <= Math.floor(Date.now() / 1000)) return;
+
+    let byPubkey = this.meshPresenceByChannel.get(channelId);
+    if (!byPubkey) {
+      byPubkey = new Map();
+      this.meshPresenceByChannel.set(channelId, byPubkey);
+    }
+    const prev = byPubkey.get(ev.pubkey);
+    if (prev && prev.createdAt >= ev.created_at) return;
+    byPubkey.set(ev.pubkey, { expiresAt, createdAt: ev.created_at });
+    this.recomputeActiveCallByChannel();
+  }
+
+  private ensureMeshPresenceSweep(): void {
+    if (this.meshPresenceSweepTimer) return;
+    this.meshPresenceSweepTimer = setInterval(() => {
+      if (this.pruneMeshPresence()) this.recomputeActiveCallByChannel();
+    }, 15_000);
+  }
+
+  private pruneMeshPresence(): boolean {
+    const now = Math.floor(Date.now() / 1000);
+    let changed = false;
+    for (const [channelId, byPubkey] of Array.from(this.meshPresenceByChannel.entries())) {
+      for (const [pubkey, presence] of Array.from(byPubkey.entries())) {
+        if (presence.expiresAt > now) continue;
+        byPubkey.delete(pubkey);
+        changed = true;
+      }
+      if (byPubkey.size === 0) {
+        this.meshPresenceByChannel.delete(channelId);
+        changed = true;
+      }
+    }
+    return changed;
+  }
+
+  private recomputeActiveCallByChannel(): void {
+    this.pruneMeshPresence();
+    const next: Record<string, {
+      hostPubkey: string;
+      status: string;
+      participantCount: number;
+      expiresAt: number;
+      createdAt: number;
+      mode?: 'sfu' | 'mesh';
+      participantPubkeys?: string[];
+    }> = {};
+
+    for (const [channelId, byPubkey] of this.meshPresenceByChannel.entries()) {
+      const pubkeys = Array.from(byPubkey.keys()).sort();
+      if (pubkeys.length === 0) continue;
+      let createdAt = 0;
+      let expiresAt = Number.MAX_SAFE_INTEGER;
+      for (const presence of byPubkey.values()) {
+        createdAt = Math.max(createdAt, presence.createdAt);
+        expiresAt = Math.min(expiresAt, presence.expiresAt);
+      }
+      next[channelId] = {
+        hostPubkey: pubkeys[0],
+        status: 'active',
+        participantCount: pubkeys.length,
+        expiresAt,
+        createdAt,
+        mode: 'mesh',
+        participantPubkeys: pubkeys,
+      };
+    }
+
+    for (const [channelId, call] of this.sfuActiveCalls.entries()) {
+      next[channelId] = call;
+    }
+
+    this.activeCallByChannel.set(next);
+  }
+
+  private clearActiveCallState(): void {
+    this.sfuActiveCalls.clear();
+    this.meshPresenceByChannel.clear();
+    if (this.meshPresenceSweepTimer) {
+      clearInterval(this.meshPresenceSweepTimer);
+      this.meshPresenceSweepTimer = null;
+    }
+    this.activeCallByChannel.set({});
   }
 
   /** Subscribe to the active-call state for any channel. */
   subscribeActiveCallByChannel(
-    cb: (byChannel: Readonly<Record<string, { hostPubkey: string; status: string; participantCount: number; expiresAt: number; createdAt: number }>>) => void,
+    cb: (byChannel: Readonly<Record<string, { hostPubkey: string; status: string; participantCount: number; expiresAt: number; createdAt: number; mode?: 'sfu' | 'mesh'; participantPubkeys?: string[] }>>) => void,
   ): Unsubscribe {
     return this.activeCallByChannel.subscribe(cb);
   }

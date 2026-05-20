@@ -137,22 +137,34 @@ const relayFake = vi.hoisted(() => {
   };
 });
 
-vi.mock('./transport', () => ({
-  publishPresenceBeacon: vi.fn(async (channelId: string, connectedTo: string[] = [], videoTracks: ('camera' | 'screen')[] = []) => {
+vi.mock('./transport', () => {
+  const publishPresenceBeacon = vi.fn(async (channelId: string, connectedTo: string[] = [], videoTracks: ('camera' | 'screen')[] = []) => {
     relayFake.publishBeacon(channelId, connectedTo, videoTracks);
-  }),
-  subscribeRoster: vi.fn(async (channelId: string, cb: (r: VoicePresence[]) => void) => {
+  });
+  const subscribeRoster = vi.fn(async (channelId: string, cb: (r: VoicePresence[]) => void) => {
     return relayFake.subscribeRoster(channelId, cb);
-  }),
-  sendSignal: vi.fn(async (channelId: string, toPubkey: string, payload: VoiceSignalPayload) => {
+  });
+  const sendSignal = vi.fn(async (channelId: string, toPubkey: string, payload: VoiceSignalPayload) => {
     relayFake.sendSignal(channelId, toPubkey, payload);
-  }),
-  subscribeSignals: vi.fn(async (channelId: string, selfPubkey: string, cb: (from: string, p: VoiceSignalPayload) => void) => {
+  });
+  const subscribeSignals = vi.fn(async (channelId: string, selfPubkey: string, cb: (from: string, p: VoiceSignalPayload) => void) => {
     return relayFake.subscribeSignals(channelId, selfPubkey, cb);
-  }),
-  getSelfPubkey: vi.fn(() => '__no_self__'),
-  transitiveParticipants: (roster: VoicePresence[]) => relayFake.transitive(roster),
-}));
+  });
+  return {
+    publishPresenceBeacon,
+    subscribeRoster,
+    sendSignal,
+    subscribeSignals,
+    createVoiceTransport: vi.fn(() => ({
+      publishPresenceBeacon,
+      subscribeRoster,
+      sendSignal,
+      subscribeSignals,
+    })),
+    getSelfPubkey: vi.fn(() => '__no_self__'),
+    transitiveParticipants: (roster: VoicePresence[]) => relayFake.transitive(roster),
+  };
+});
 
 // VoiceClient calls `getSelfPubkey()` once in its constructor. We swap the
 // mock to return whichever client is currently being constructed by stuffing

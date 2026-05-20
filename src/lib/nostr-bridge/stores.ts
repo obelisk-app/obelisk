@@ -452,6 +452,8 @@ export interface ActiveCallInfo {
   participantCount: number;
   expiresAt: number;
   createdAt: number;
+  mode?: 'sfu' | 'mesh';
+  participantPubkeys?: string[];
 }
 
 /**

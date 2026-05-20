@@ -9,6 +9,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { generateSecretKey, getPublicKey, nip19, finalizeEvent, type Event as NostrEvent, type Filter } from 'nostr-tools';
+import { KIND_VOICE_PRESENCE } from '@/lib/nip-kinds';
 
 type Sink = (ev: NostrEvent) => void;
 
@@ -2357,6 +2358,108 @@ describe('nostr-bridge', () => {
     // Logout calls cacheClearAll synchronously via the shared
     // clearLocalStateAfterLogout helper — the next read must miss.
     expect(cacheGet(relay, 9, groupId)).toBeNull();
+  });
+
+  it('keeps replace-mode voice subscriptions pinned across relay switches', async () => {
+    const { getBridge, getBridgeImpl } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const impl = getBridgeImpl()!;
+    const seen: NostrEvent[] = [];
+    const unsub = impl.subscribeFilterWatched(
+      { kinds: [KIND_VOICE_PRESENCE] },
+      (ev) => seen.push(ev),
+      { relays: ['wss://origin.example'], relayMode: 'replace', affectsRelayAccess: false },
+    );
+    expect(fake.state.subscriptions.at(-1)?.relays).toEqual(['wss://origin.example']);
+
+    await bridge.switchRelay('wss://other.example');
+    await flush();
+
+    const peerSk = generateSecretKey();
+    const peerPk = getPublicKey(peerSk);
+    deliver(finalizeEvent({
+      kind: KIND_VOICE_PRESENCE,
+      content: '',
+      tags: [['e', 'mesh-channel'], ['t', 'obelisk-voice-presence']],
+      created_at: Math.floor(Date.now() / 1000),
+      pubkey: peerPk,
+    } as Parameters<typeof finalizeEvent>[0], peerSk));
+    expect(seen).toHaveLength(1);
+
+    await impl.publishEvent(
+      { kind: KIND_VOICE_PRESENCE, content: '', tags: [['e', 'mesh-channel']] },
+      { extraRelays: ['wss://origin.example'], mode: 'replace' },
+    );
+    await flush();
+    expect(fake.state.published.at(-1)?.relays).toEqual(['wss://origin.example']);
+    unsub();
+  });
+
+  it('marks mesh voice channels live from presence beacons', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const snapshots: Array<Readonly<Record<string, { mode?: string; participantCount: number; participantPubkeys?: string[] }>>> = [];
+    const unsub = bridge.subscribeActiveCallByChannel((m) => snapshots.push(m));
+    const peerSk = generateSecretKey();
+    const peerPk = getPublicKey(peerSk);
+    const now = Math.floor(Date.now() / 1000);
+    deliver(finalizeEvent({
+      kind: KIND_VOICE_PRESENCE,
+      content: '',
+      tags: [
+        ['e', 'mesh-channel'],
+        ['t', 'obelisk-voice-presence'],
+        ['expiration', String(now + 30)],
+      ],
+      created_at: now,
+      pubkey: peerPk,
+    } as Parameters<typeof finalizeEvent>[0], peerSk));
+    await flush();
+
+    expect(snapshots.at(-1)?.['mesh-channel']).toMatchObject({
+      mode: 'mesh',
+      participantCount: 1,
+      participantPubkeys: [peerPk],
+    });
+    unsub();
+  });
+
+  it('ignores SFU topology beacons for mesh live detection', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    let latest: Readonly<Record<string, { mode?: string }>> = {};
+    const unsub = bridge.subscribeActiveCallByChannel((m) => { latest = m; });
+    const sfuSk = generateSecretKey();
+    const sfuPk = getPublicKey(sfuSk);
+    const now = Math.floor(Date.now() / 1000);
+    deliver(finalizeEvent({
+      kind: KIND_VOICE_PRESENCE,
+      content: '',
+      tags: [
+        ['e', 'voice-sfu-channel'],
+        ['t', 'obelisk-voice-presence'],
+        ['sfu', '1'],
+        ['expiration', String(now + 30)],
+      ],
+      created_at: now,
+      pubkey: sfuPk,
+    } as Parameters<typeof finalizeEvent>[0], sfuSk));
+    await flush();
+
+    expect(latest['voice-sfu-channel']).toBeUndefined();
+    unsub();
   });
 
   it('background message-queue drain is gated by the active channel reaching its first EOSE / event', async () => {

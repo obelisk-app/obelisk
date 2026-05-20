@@ -27,6 +27,70 @@ const PRESENCE_TTL_SECONDS = 30;
 const VOICE_SUB_WATCHDOG_MS = 2500;
 const SEEN_SIGNAL_IDS_MAX = 2048;
 
+export interface VoiceTransportOptions {
+  /**
+   * When set, all mesh voice traffic is pinned to this relay instead of the
+   * bridge's currently-viewed relay. This keeps an active call's beacons and
+   * signaling alive while the user browses other servers.
+   */
+  relayUrl?: string | null;
+}
+
+export interface VoiceTransport {
+  publishPresenceBeacon(
+    channelId: string,
+    connectedTo?: readonly string[],
+    videoTracks?: readonly VideoSlotKind[],
+  ): Promise<void>;
+  subscribeRoster(channelId: string, onChange: (roster: VoicePresence[]) => void): Promise<() => void>;
+  sendSignal(channelId: string, toPubkey: string, payload: VoiceSignalPayload): Promise<void>;
+  subscribeSignals(
+    channelId: string,
+    selfPubkey: string,
+    onSignal: (fromPubkey: string, payload: VoiceSignalPayload) => void,
+  ): Promise<() => void>;
+}
+
+function publishOpts(options?: VoiceTransportOptions) {
+  return options?.relayUrl
+    ? { extraRelays: [options.relayUrl], mode: 'replace' as const }
+    : undefined;
+}
+
+async function publishViaBridge(
+  b: Awaited<ReturnType<typeof bridge>>,
+  template: { kind: number; content: string; tags: string[][] },
+  options?: VoiceTransportOptions,
+): Promise<void> {
+  const opts = publishOpts(options);
+  if (opts) await b.publishEvent(template, opts);
+  else await b.publishEvent(template);
+}
+
+function subscribeOpts(options?: VoiceTransportOptions) {
+  return {
+    watchdogMs: VOICE_SUB_WATCHDOG_MS,
+    ...(options?.relayUrl
+      ? {
+          relays: [options.relayUrl],
+          relayMode: 'replace' as const,
+          affectsRelayAccess: false,
+        }
+      : {}),
+  };
+}
+
+export function createVoiceTransport(options: VoiceTransportOptions = {}): VoiceTransport {
+  return {
+    publishPresenceBeacon: (channelId, connectedTo = [], videoTracks = []) =>
+      publishPresenceBeacon(channelId, connectedTo, videoTracks, options),
+    subscribeRoster: (channelId, onChange) => subscribeRoster(channelId, onChange, options),
+    sendSignal: (channelId, toPubkey, payload) => sendSignal(channelId, toPubkey, payload, options),
+    subscribeSignals: (channelId, selfPubkey, onSignal) =>
+      subscribeSignals(channelId, selfPubkey, onSignal, options),
+  };
+}
+
 async function bridge() {
   await getBridge();
   const impl = getBridgeImpl();
@@ -56,6 +120,7 @@ export async function publishPresenceBeacon(
   channelId: string,
   connectedTo: readonly string[] = [],
   videoTracks: readonly VideoSlotKind[] = [],
+  options: VoiceTransportOptions = {},
 ): Promise<void> {
   const b = await bridge();
   const expiration = Math.floor(Date.now() / 1000) + PRESENCE_TTL_SECONDS;
@@ -78,11 +143,15 @@ export async function publishPresenceBeacon(
     seenV.add(kind);
     tags.push(['v', kind]);
   }
-  await b.publishEvent({
-    kind: KIND_VOICE_PRESENCE,
-    content: '',
-    tags,
-  });
+  await publishViaBridge(
+    b,
+    {
+      kind: KIND_VOICE_PRESENCE,
+      content: '',
+      tags,
+    },
+    options,
+  );
   console.log(
     '[voice] beacon published for', channelId.slice(0, 8),
     '+', connectedTo.length, 'connections',
@@ -102,6 +171,7 @@ export async function publishPresenceBeacon(
 export async function subscribeRoster(
   channelId: string,
   onChange: (roster: VoicePresence[]) => void,
+  options: VoiceTransportOptions = {},
 ): Promise<() => void> {
   const b = await bridge();
   const latest = new Map<string, VoicePresence>();
@@ -167,7 +237,7 @@ export async function subscribeRoster(
       });
       emit();
     },
-    { watchdogMs: VOICE_SUB_WATCHDOG_MS },
+    subscribeOpts(options),
   );
 
   emit();
@@ -187,17 +257,22 @@ export async function sendSignal(
   channelId: string,
   toPubkey: string,
   payload: VoiceSignalPayload,
+  options: VoiceTransportOptions = {},
 ): Promise<void> {
   const b = await bridge();
-  await b.publishEvent({
-    kind: KIND_VOICE_SIGNAL,
-    content: JSON.stringify(payload),
-    tags: [
-      ['p', toPubkey],
-      ['e', channelId],
-      ['t', 'obelisk-voice-signal'],
-    ],
-  });
+  await publishViaBridge(
+    b,
+    {
+      kind: KIND_VOICE_SIGNAL,
+      content: JSON.stringify(payload),
+      tags: [
+        ['p', toPubkey],
+        ['e', channelId],
+        ['t', 'obelisk-voice-signal'],
+      ],
+    },
+    options,
+  );
   console.log('[voice] →', payload.type, 'to', toPubkey.slice(0, 8), 'seq', payload.seq);
   pushVoiceDebug({ kind: 'signal-sent', peer: toPubkey, payload: { type: payload.type, seq: payload.seq } });
   // Also bump the global metrics counter (mirrored to window.__obeliskVoiceMetrics)
@@ -217,6 +292,7 @@ export async function subscribeSignals(
   channelId: string,
   selfPubkey: string,
   onSignal: (fromPubkey: string, payload: VoiceSignalPayload) => void,
+  options: VoiceTransportOptions = {},
 ): Promise<() => void> {
   const b = await bridge();
   const since = Math.floor(Date.now() / 1000) - 60;
@@ -266,7 +342,7 @@ export async function subscribeSignals(
         console.warn('[voice] malformed signal', e);
       }
     },
-    { watchdogMs: VOICE_SUB_WATCHDOG_MS },
+    subscribeOpts(options),
   );
 }
 
