@@ -4365,7 +4365,7 @@ class BridgeImpl implements NostrBridge {
 
     const meshSub = this.subscribeWatched(
       this.relays,
-      { kinds: [KIND_VOICE_PRESENCE], '#t': ['obelisk-voice-presence'] } as Filter,
+      { kinds: [KIND_VOICE_PRESENCE] } as Filter,
       (ev) => this.ingestMeshVoicePresence(ev),
       undefined,
       { affectsRelayAccess: false },
@@ -4409,6 +4409,7 @@ class BridgeImpl implements NostrBridge {
   }
 
   private ingestMeshVoicePresence(ev: NostrEvent): void {
+    if (!ev.tags.some((t) => t[0] === 't' && t[1] === 'obelisk-voice-presence')) return;
     // SFU infrastructure also publishes kind 20078 with ["sfu","1"].
     // Those are topology beacons, not participant evidence for mesh LIVE.
     if (ev.tags.some((t) => t[0] === 'sfu' && t[1] === '1')) return;
@@ -5180,6 +5181,9 @@ class BridgeImpl implements NostrBridge {
         event = (await b.signEvent(template)) as NostrEvent;
       } else {
         throw new Error(`Login method ${this.session.loginMethod} cannot sign events in this build`);
+      }
+      if (template.kind === KIND_VOICE_PRESENCE) {
+        this.ingestMeshVoicePresence(event);
       }
       if (signId != null) resolveActivity(signId);
     } catch (e) {

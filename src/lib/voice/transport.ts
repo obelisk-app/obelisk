@@ -196,9 +196,9 @@ export async function subscribeRoster(
   const unsub = b.subscribeFilterWatched(
     {
       kinds: [KIND_VOICE_PRESENCE],
-      '#e': [channelId],
     },
     (ev) => {
+      if (!ev.tags.some((t) => t[0] === 'e' && t[1] === channelId)) return;
       const expirationTag = ev.tags.find((t) => t[0] === 'expiration')?.[1];
       const expiresAt = expirationTag
         ? parseInt(expirationTag, 10)
@@ -285,8 +285,8 @@ export async function sendSignal(
 
 /**
  * Subscribe to incoming signaling events addressed to the local user in the
- * given channel. Some relays don't index `#p` for ephemeral kinds so we
- * subscribe by `#e` (channel) only and gate by p-tag in the handler.
+ * given channel. Some relays don't reliably index tags for ephemeral kinds,
+ * so we subscribe by kind and gate channel/recipient in the handler.
  */
 export async function subscribeSignals(
   channelId: string,
@@ -316,7 +316,6 @@ export async function subscribeSignals(
   return b.subscribeFilterWatched(
     {
       kinds: [KIND_VOICE_SIGNAL],
-      '#e': [channelId],
       since,
     },
     (ev) => {
@@ -326,6 +325,10 @@ export async function subscribeSignals(
       }
       if (ev.pubkey === selfPubkey) {
         pushVoiceDebug({ kind: 'signal-dropped', reason: 'self' });
+        return;
+      }
+      if (!ev.tags.some((t) => t[0] === 'e' && t[1] === channelId)) {
+        pushVoiceDebug({ kind: 'signal-dropped', reason: 'wrong-channel', peer: ev.pubkey });
         return;
       }
       const targets = ev.tags.filter((t) => t[0] === 'p').map((t) => t[1]);

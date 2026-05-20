@@ -458,7 +458,7 @@ export interface ActiveCallInfo {
 
 /**
  * Live-call state for every voice channel the relay knows about, derived
- * from kind 31314 announcements published by the SFU. Use the per-channel
+ * from SFU kind 31314 announcements and mesh kind 20078 beacons. Use the per-channel
  * variant {@link useActiveCall} for single-channel "LIVE" badges; use this
  * map directly when the consumer iterates many channels (sidebar GroupNode
  * renders).
@@ -474,10 +474,9 @@ export function useActiveCallByChannel(): Readonly<Record<string, ActiveCallInfo
 }
 
 /**
- * `true` when a kind 31314 active-call advertisement is current for this
- * channel — i.e. the SFU has a live room there. Auto-expires off the
- * advertisement's `expiration` tag. UI: render a "LIVE" pill on the
- * channel row when this is true.
+ * Current when an SFU active-call advertisement or mesh presence beacon is
+ * live for this channel. Auto-expires off the event's `expiration` tag.
+ * UI: render a "LIVE" pill on the channel row when this is true.
  */
 export function useActiveCall(channelId: string | null): ActiveCallInfo | null {
   const map = useActiveCallByChannel();

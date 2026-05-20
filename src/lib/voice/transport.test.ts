@@ -147,7 +147,7 @@ describe('pinned relay voice transport', () => {
 
     expect(bridgeFake.impl.subscribeFilterWatched).toHaveBeenNthCalledWith(
       1,
-      expect.objectContaining({ kinds: [KIND_VOICE_PRESENCE], '#e': ['ch1'] }),
+      expect.objectContaining({ kinds: [KIND_VOICE_PRESENCE] }),
       expect.any(Function),
       expect.objectContaining({
         relays: ['wss://origin.example'],
@@ -157,7 +157,7 @@ describe('pinned relay voice transport', () => {
     );
     expect(bridgeFake.impl.subscribeFilterWatched).toHaveBeenNthCalledWith(
       2,
-      expect.objectContaining({ kinds: [KIND_VOICE_SIGNAL], '#e': ['ch1'] }),
+      expect.objectContaining({ kinds: [KIND_VOICE_SIGNAL] }),
       expect.any(Function),
       expect.objectContaining({
         relays: ['wss://origin.example'],
@@ -215,6 +215,21 @@ describe('subscribeRoster', () => {
     });
 
     expect(lastRoster.map((p) => p.pubkey)).toEqual(['p1']);
+    unsub();
+  });
+
+  it('ignores beacons for other channels after broad kind-only delivery', async () => {
+    let lastRoster: { pubkey: string }[] = [];
+    const unsub = await subscribeRoster('ch1', (r) => { lastRoster = r; });
+    const now = Math.floor(Date.now() / 1000);
+
+    bridgeFake.inject({
+      pubkey: 'p-other', kind: KIND_VOICE_PRESENCE, content: '',
+      tags: [['e', 'other-channel'], ['expiration', String(now + 30)]],
+      created_at: now,
+    });
+
+    expect(lastRoster).toEqual([]);
     unsub();
   });
 
@@ -286,6 +301,14 @@ describe('signal addressing', () => {
       pubkey: 'peer1', kind: KIND_VOICE_SIGNAL,
       content: JSON.stringify({ type: 'offer', sdp: 'v=0', sessionId: 's', seq: 1 }),
       tags: [['e', 'ch1'], ['p', 'me']],
+      created_at: Math.floor(Date.now() / 1000),
+    });
+    // Event for another channel — should be dropped even though the relay
+    // subscription is intentionally kind-only for tag-index reliability.
+    bridgeFake.inject({
+      pubkey: 'peer1', kind: KIND_VOICE_SIGNAL,
+      content: JSON.stringify({ type: 'offer', sdp: 'v=0', sessionId: 's', seq: 4 }),
+      tags: [['e', 'other-channel'], ['p', 'me']],
       created_at: Math.floor(Date.now() / 1000),
     });
     // Event addressed to someone else — should be dropped.

@@ -2432,6 +2432,64 @@ describe('nostr-bridge', () => {
     unsub();
   });
 
+  it('marks a locally published mesh beacon live without waiting for relay echo', async () => {
+    const { getBridge, getBridgeImpl } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const impl = getBridgeImpl()!;
+    let latest: Readonly<Record<string, { mode?: string; participantCount: number }>> = {};
+    const unsub = bridge.subscribeActiveCallByChannel((m) => { latest = m; });
+    const now = Math.floor(Date.now() / 1000);
+
+    await impl.publishEvent({
+      kind: KIND_VOICE_PRESENCE,
+      content: '',
+      tags: [
+        ['e', 'local-mesh-channel'],
+        ['t', 'obelisk-voice-presence'],
+        ['expiration', String(now + 30)],
+      ],
+      created_at: now,
+    });
+
+    expect(latest['local-mesh-channel']).toMatchObject({
+      mode: 'mesh',
+      participantCount: 1,
+    });
+    unsub();
+  });
+
+  it('ignores non-Obelisk kind 20078 events for mesh live detection', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    let latest: Readonly<Record<string, { mode?: string }>> = {};
+    const unsub = bridge.subscribeActiveCallByChannel((m) => { latest = m; });
+    const peerSk = generateSecretKey();
+    const peerPk = getPublicKey(peerSk);
+    const now = Math.floor(Date.now() / 1000);
+    deliver(finalizeEvent({
+      kind: KIND_VOICE_PRESENCE,
+      content: '',
+      tags: [
+        ['e', 'mesh-channel'],
+        ['expiration', String(now + 30)],
+      ],
+      created_at: now,
+      pubkey: peerPk,
+    } as Parameters<typeof finalizeEvent>[0], peerSk));
+    await flush();
+
+    expect(latest['mesh-channel']).toBeUndefined();
+    unsub();
+  });
+
   it('ignores SFU topology beacons for mesh live detection', async () => {
     const { getBridge } = await import('./client');
     const { skHex, pkHex } = makeKeypair();
