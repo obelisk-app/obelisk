@@ -1710,17 +1710,23 @@ export class VoiceClient {
 
     // Push existing local tracks to the new peer. Muted joins only force a
     // recv-only media offer when the roster says the remote side is already
-    // publishing media or is an operator-spawned mesh test peer; ordinary
-    // browser peers still bootstrap through the control data channel.
+    // publishing media or is an operator-spawned mesh test peer. Ordinary
+    // browser peers still negotiate data-channel-only, but the impolite
+    // side explicitly sends that offer so mobile browsers do not have to
+    // deliver a perfect onnegotiationneeded event for createDataChannel().
     void this.attachAllLocalTracks(peer).then(() => {
-      if (shouldKickRecvOnly) void peer.kickInitialOffer();
+      if (shouldKickRecvOnly) {
+        void peer.kickInitialOffer();
+      } else if (!polite) {
+        void peer.kickControlOffer();
+      }
     });
   }
 
   private shouldKickRecvOnlyOffer(remotePubkey: string, isSfuPeer: boolean, polite: boolean): boolean {
     if (isSfuPeer) return true;
-    if (polite) return false;
     if (this.knownMeshTestPeerPubkeys.has(remotePubkey)) return true;
+    if (polite) return false;
     const presence = this.currentRoster.find((p) => p.pubkey === remotePubkey);
     return (presence?.videoTracks?.length ?? 0) > 0;
   }

@@ -396,6 +396,9 @@ describe('VoiceClient roster → peer lifecycle', () => {
 
     const pc = webrtc.last();
     expect(pc.getTransceivers()).toHaveLength(0);
+    expect(transportFake.sentSignals.some((s) =>
+      s.to === PEER1 && s.payload.type === 'offer',
+    )).toBe(true);
     await client.leave();
   });
 
@@ -409,6 +412,21 @@ describe('VoiceClient roster → peer lifecycle', () => {
     expect(pc.getTransceivers().map((t) => t.kind)).toEqual(['video', 'audio']);
     expect(pc.getTransceivers().map((t) => t.direction)).toEqual(['recvonly', 'recvonly']);
     expect(pc.getSenders().map((s) => s.track)).toEqual([null, null]);
+    await client.leave();
+  });
+
+  it('media-bootstraps marked mesh test peers even when local side is polite', async () => {
+    const lowerPeer = '0'.repeat(64);
+    const client = new VoiceClient('ch1', { members: [SELF], admins: [SELF] });
+    await client.join();
+    transportFake.fireRoster([meshTestPresence(lowerPeer)]);
+    await flushMicrotasks(12);
+
+    const pc = webrtc.last();
+    expect(pc.getTransceivers().map((t) => t.kind)).toEqual(['video', 'audio']);
+    expect(transportFake.sentSignals.some((s) =>
+      s.to === lowerPeer && s.payload.type === 'offer',
+    )).toBe(true);
     await client.leave();
   });
 

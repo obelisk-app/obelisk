@@ -682,6 +682,11 @@ export class Peer {
     queueMicrotask(() => { void this.kickNegotiation(); });
   }
 
+  /** Force the current PC to send an offer without adding media sections. */
+  async kickControlOffer(): Promise<void> {
+    await this.kickNegotiation();
+  }
+
   /**
    * Send an initial offer even when no local tracks are attached. Muted mesh
    * joins still need recv-only media m-lines so remote audio/video can arrive
