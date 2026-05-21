@@ -680,8 +680,8 @@ export class Peer {
 
   /**
    * Send an initial offer even when no local tracks are attached. Used for
-   * listening-only joins so peers can establish recvonly media channels in
-   * the background before the user unmutes or starts camera/screen.
+   * legacy SFU peers where the SFU never initiates first. Normal mesh
+   * listening-only joins bootstrap through the control data channel instead.
    */
   async kickInitialOffer(): Promise<void> {
     if (this.closed) return;

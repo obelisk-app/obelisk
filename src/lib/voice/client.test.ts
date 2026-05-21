@@ -404,15 +404,16 @@ describe('VoiceClient roster → peer lifecycle', () => {
   });
 
   it('removes a never-connected peer after relay/control discovery disappears', async () => {
-    const client = new VoiceClient('ch1', { members: [SELF, PEER1] });
+    const quietPeer = '0'.repeat(64);
+    const client = new VoiceClient('ch1', { members: [SELF, quietPeer] });
     await client.join();
-    transportFake.fireRoster([presence(PEER1)]);
+    transportFake.fireRoster([presence(quietPeer)]);
     await flushMicrotasks(8);
-    expect(client.getParticipants()).toContain(PEER1);
+    expect(client.getParticipants()).toContain(quietPeer);
 
     transportFake.fireRoster([]);
     await flushMicrotasks(8);
-    expect(client.getParticipants()).not.toContain(PEER1);
+    expect(client.getParticipants()).not.toContain(quietPeer);
     await client.leave();
   });
 

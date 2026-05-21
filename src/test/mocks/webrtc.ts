@@ -20,6 +20,37 @@
 
 type Listener = (ev: unknown) => void;
 
+class FakeDataChannel extends EventTarget {
+  readonly label: string;
+  readyState: RTCDataChannelState = 'connecting';
+  onopen: (() => void) | null = null;
+  onclose: (() => void) | null = null;
+  onerror: ((ev: Event) => void) | null = null;
+  onmessage: ((ev: MessageEvent) => void) | null = null;
+
+  constructor(label: string) {
+    super();
+    this.label = label;
+    queueMicrotask(() => {
+      if (this.readyState !== 'connecting') return;
+      this.readyState = 'open';
+      this.onopen?.();
+      this.dispatchEvent(new Event('open'));
+    });
+  }
+
+  send(_data: string): void {
+    if (this.readyState !== 'open') throw new Error('DataChannel is not open');
+  }
+
+  close(): void {
+    if (this.readyState === 'closed') return;
+    this.readyState = 'closed';
+    this.onclose?.();
+    this.dispatchEvent(new Event('close'));
+  }
+}
+
 class TinyEventTarget {
   private listeners = new Map<string, Set<Listener>>();
   addEventListener(type: string, fn: Listener): void {
@@ -196,6 +227,7 @@ export class FakeRTCPeerConnection extends TinyEventTarget {
   onnegotiationneeded: (() => void) | null = null;
   onicecandidate: ((ev: { candidate: RTCIceCandidateInit | null }) => void) | null = null;
   ontrack: ((ev: { track: FakeMediaStreamTrack; streams: FakeMediaStream[] }) => void) | null = null;
+  ondatachannel: ((ev: { channel: FakeDataChannel }) => void) | null = null;
   onconnectionstatechange: (() => void) | null = null;
   oniceconnectionstatechange: (() => void) | null = null;
 
@@ -238,6 +270,13 @@ export class FakeRTCPeerConnection extends TinyEventTarget {
     this.transceivers.push(tx);
     queueMicrotask(() => { this.onnegotiationneeded?.(); });
     return sender;
+  }
+
+  createDataChannel(label: string, _init?: RTCDataChannelInit): FakeDataChannel {
+    if (this.closed) throw new Error('PC is closed');
+    const channel = new FakeDataChannel(label);
+    queueMicrotask(() => { this.onnegotiationneeded?.(); });
+    return channel;
   }
 
   removeTrack(sender: FakeRtpSender): void {

@@ -1706,13 +1706,14 @@ export class VoiceClient {
     }
     if (!peer) return;
 
-    // Push existing local tracks to the new peer, then make sure listening-only
-    // joins still start a recvonly negotiation in the background. If senders
-    // already exist, kickInitialOffer is a no-op beyond the normal negotiation
-    // guard; if they do not, it adds recvonly m-sections so the peer can send
-    // media later without waiting for us to unmute first.
+    // Push existing local tracks to the new peer. The mesh control data
+    // channel already starts negotiation for listening-only joins; only
+    // legacy SFU peers need an explicit recvonly media offer because they
+    // never initiate first.
     void this.attachAllLocalTracks(peer).then(() => {
-      void peer.kickInitialOffer();
+      if (isSfuPeer) {
+        void peer.kickInitialOffer();
+      }
     });
   }
 
