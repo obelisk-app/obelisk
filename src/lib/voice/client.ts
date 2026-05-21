@@ -162,6 +162,7 @@ export interface VoiceClientEvents {
   onParticipantsChange?(pubkeys: string[]): void;
   onRemoteTracksChange?(tracks: RemoteTrack[]): void;
   onLocalTracksChange?(local: { mic: boolean; camera: boolean; screen: boolean }): void;
+  onPeerConnectionStatesChange?(states: Record<string, RTCPeerConnectionState>): void;
   /**
    * Topology change — null means "back on mesh", a hex pubkey means "now
    * forwarding through this SFU". Fires every time `setSfuMode` flips,
@@ -463,6 +464,13 @@ export class VoiceClient {
     const peer = this.peers.get(pubkey);
     return peer?.pc?.connectionState ?? null;
   }
+  getPeerConnectionStates(): Record<string, RTCPeerConnectionState> {
+    const states: Record<string, RTCPeerConnectionState> = {};
+    for (const [pubkey, peer] of this.peers.entries()) {
+      states[pubkey] = peer.pc.connectionState;
+    }
+    return states;
+  }
   /**
    * Currently-active SFU pubkey for this channel, or null in mesh mode.
    * UI uses this to render an "SFU mode" badge or hide the participant
@@ -683,6 +691,11 @@ export class VoiceClient {
     // AudioContext used by SpeakingDetector. Browsers create it suspended.
     void resumeSharedAudioContext();
 
+    // Join starts listening-only. The user can publish their mic explicitly
+    // from the mic button; presence, beacons, and remote audio do not depend
+    // on microphone permission.
+    this.emitLocal();
+
     // Topology decision is made up-front, not driven by the beacon roster
     // arriving late: for `voice-sfu` channels, ask `pickSfu` (per-channel
     // pin → env override → kind 31313 advertisement) and switch to SFU
@@ -698,12 +711,6 @@ export class VoiceClient {
     // 9th joiner gets evicted, audio quality drops) than surfacing the
     // outage clearly and letting the user retry.
     if (this.expectSfu) {
-      // Mic-on by default, but best-effort: permission prompts must not gate
-      // the room join. If this resolves before the SFU is ready,
-      // startSfuClient publishes the stored track; if it resolves after,
-      // setMicEnabled publishes straight to the live client.
-      void this.enableInitialMicBestEffort();
-
       const picked = await pickSfu(this.channelId).catch((err) => {
         console.warn('[voice] pickSfu threw at join', err);
         return null;
@@ -719,11 +726,6 @@ export class VoiceClient {
     }
 
     await this.enterMeshMode();
-    // Mesh discovery should not wait on the browser's microphone prompt:
-    // beacons are the bootstrap signal that lets the next peer dial us.
-    // If mic access is denied, the user stays joined muted and can retry
-    // from the mic button.
-    void this.enableInitialMicBestEffort();
 
     // Tab close / refresh: synchronous best-effort goodbye so the other
     // side learns within ~10 ms instead of waiting for the data-channel
@@ -740,15 +742,6 @@ export class VoiceClient {
         void this.leave().catch(() => {});
       },
     });
-  }
-
-  private async enableInitialMicBestEffort(): Promise<void> {
-    try {
-      await this.setMicEnabled(true);
-    } catch (err) {
-      console.warn('[voice] initial mic unavailable; joining muted', err);
-      this.emitLocal();
-    }
   }
 
   /**
@@ -877,6 +870,7 @@ export class VoiceClient {
     if (this.controlSnapshotTimer) { clearTimeout(this.controlSnapshotTimer); this.controlSnapshotTimer = null; }
     for (const peer of this.peers.values()) peer.close();
     this.peers.clear();
+    this.emitPeerConnectionStates();
     this.unsubscribeActiveCallStatus();
   }
 
@@ -1027,6 +1021,7 @@ export class VoiceClient {
 
     for (const peer of this.peers.values()) peer.close();
     this.peers.clear();
+    this.emitPeerConnectionStates();
     this.unsubscribeActiveCallStatus();
     if (this.sfuClient) {
       // Bounded await so the SFU sees our `leave` RPC before its
@@ -1670,6 +1665,7 @@ export class VoiceClient {
               otherPeer.broadcastControl({ type: 'peerAdded', pubkey: remotePubkey });
             }
             this.scheduleControlPeerSnapshot();
+            this.emitPeerConnectionStates();
           },
           onConnectionLost: () => {
             if (this.connectedPubkeys.delete(remotePubkey)) {
@@ -1680,12 +1676,14 @@ export class VoiceClient {
               otherPeer.broadcastControl({ type: 'peerRemoved', pubkey: remotePubkey });
             }
             this.scheduleControlPeerSnapshot();
+            this.emitPeerConnectionStates();
             this.runDialLoop();
           },
           onQualitySample: (sample) => {
             try { useVoiceStore.getState().setPeerQuality(remotePubkey, sample); } catch { /* test envs */ }
           },
           onConnectionStateChange: (state) => {
+            this.emitPeerConnectionStates();
             if (state === 'closed') {
               // Drop the peer so a future signal/beacon from the same pubkey
               // can spawn a fresh PC instead of routing into a dead one. The
@@ -1702,22 +1700,19 @@ export class VoiceClient {
       });
       peer = createdPeer;
       this.peers.set(remotePubkey, createdPeer);
+      this.emitPeerConnectionStates();
     } finally {
       this.openingPeers.delete(remotePubkey);
     }
     if (!peer) return;
 
-    // Push existing local tracks to the new peer.
+    // Push existing local tracks to the new peer, then make sure listening-only
+    // joins still start a recvonly negotiation in the background. If senders
+    // already exist, kickInitialOffer is a no-op beyond the normal negotiation
+    // guard; if they do not, it adds recvonly m-sections so the peer can send
+    // media later without waiting for us to unmute first.
     void this.attachAllLocalTracks(peer).then(() => {
-      // For SFU peers we MUST initiate the offer ourselves — werift's SFU
-      // never sends the first offer, it only answers. If the user joined
-      // with no mic/cam, attachAllLocalTracks adds zero tracks and no
-      // negotiation kicks; both sides then deadlock waiting. kickInitialOffer
-      // is a no-op when senders already exist (setLocalTrack already kicked),
-      // and otherwise adds recvonly transceivers so the offer has m-sections.
-      if (isSfuPeer) {
-        void peer.kickInitialOffer();
-      }
+      void peer.kickInitialOffer();
     });
   }
 
@@ -1761,6 +1756,7 @@ export class VoiceClient {
       this.scheduleControlPeerSnapshot();
     }
     try { useVoiceStore.getState().clearPeerQuality(pubkey); } catch { /* test envs */ }
+    this.emitPeerConnectionStates();
   }
 
   private async attachAllLocalTracks(peer: Peer) {
@@ -2248,6 +2244,10 @@ export class VoiceClient {
   }
 
   // ── helpers ────────────────────────────────────────────────────────────
+
+  private emitPeerConnectionStates() {
+    this.events.onPeerConnectionStatesChange?.(this.getPeerConnectionStates());
+  }
 
   private emitRemoteTracks() {
     const arr = Array.from(this.remoteTracks.values());

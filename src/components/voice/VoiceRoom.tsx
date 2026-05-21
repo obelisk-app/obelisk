@@ -56,6 +56,7 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
   const [error, setError] = useState<string | null>(null);
   const [participants, setParticipants] = useState<string[]>([]);
   const [remoteTracks, setRemoteTracks] = useState<RemoteTrack[]>([]);
+  const [peerConnectionStates, setPeerConnectionStates] = useState<Record<string, RTCPeerConnectionState>>({});
   const [local, setLocal] = useState<{ mic: boolean; camera: boolean; screen: boolean }>({ mic: false, camera: false, screen: false });
   const [selfPubkey, setSelfPubkey] = useState<string>('');
   // Pinned participant — when set, that person's screen (preferred) or camera
@@ -212,6 +213,9 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
     const events = {
       onParticipantsChange: (p: string[]) => { if (!cancelled) setParticipants(p); },
       onRemoteTracksChange: (t: RemoteTrack[]) => { if (!cancelled) setRemoteTracks(t); },
+      onPeerConnectionStatesChange: (states: Record<string, RTCPeerConnectionState>) => {
+        if (!cancelled) setPeerConnectionStates(states);
+      },
       onLocalTracksChange: (l: { mic: boolean; camera: boolean; screen: boolean }) => {
         if (cancelled) return;
         setLocal(l);
@@ -263,6 +267,7 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
       clientRef.current = existing;
       setParticipants(existing.getParticipants());
       setRemoteTracks(existing.getRemoteTracks());
+      setPeerConnectionStates(existing.getPeerConnectionStates());
       const tracks = existing.getLocalTracks();
       const localState = { mic: !!tracks.mic, camera: !!tracks.camera, screen: !!tracks.screen };
       setLocal(localState);
@@ -462,6 +467,7 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
     setJoined(false);
     setParticipants([]);
     setRemoteTracks([]);
+    setPeerConnectionStates({});
     setLocal({ mic: false, camera: false, screen: false });
   }, []);
 
@@ -475,6 +481,7 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
         setJoined(false);
         setParticipants([]);
         setRemoteTracks([]);
+        setPeerConnectionStates({});
         setLocal({ mic: false, camera: false, screen: false });
       }
     });
@@ -567,6 +574,15 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
     return null;
   }, [pinned, screenSharers, tracksByPubkey, selfPubkey, localCamStream, localScreenStream]);
 
+  const meshSyncingCount = useMemo(() => {
+    if (!joined || channelKind === 'voice-sfu') return 0;
+    let count = 0;
+    for (const pk of participants) {
+      if (peerConnectionStates[pk] !== 'connected') count += 1;
+    }
+    return count;
+  }, [joined, channelKind, participants, peerConnectionStates]);
+
   if (gate.phase === 'init' || gate.phase === 'loading-roles') {
     return (
       <CenteredPanel>
@@ -643,7 +659,7 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
       {debugOverlay && <DebugOverlay />}
       <div className="flex-1 flex flex-col min-h-0 relative overflow-hidden rounded-2xl border border-lc-border bg-gradient-to-br from-indigo-950 via-indigo-900 to-violet-800 shadow-2xl">
         <StageBackdrop />
-        <RoomHeader name={displayName} count={totalCount} sfuStatus={sfuStatus} />
+        <RoomHeader name={displayName} count={totalCount} sfuStatus={sfuStatus} meshSyncingCount={meshSyncingCount} />
 
         {/* Stage area */}
         <div className="relative z-10 flex-1 min-h-0 flex flex-col md:flex-row gap-2 sm:gap-3 p-2 sm:p-3 pb-24 sm:pb-28 overflow-hidden">
@@ -878,10 +894,35 @@ function SfuStatusPill({ status }: {
   );
 }
 
-function RoomHeader({ name, count, sfuStatus }: {
+export function MeshSyncStatusPill({ count }: { count: number }) {
+  if (count <= 0) return null;
+  const detail = count === 1
+    ? 'Peer detected; WebRTC media channels are still syncing in the background.'
+    : count + ' peers detected; WebRTC media channels are still syncing in the background.';
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      data-testid="mesh-sync-status"
+      title={detail}
+      className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-medium leading-none whitespace-nowrap bg-amber-500/15 border-amber-400/40 text-amber-100"
+    >
+      <span className="relative inline-flex h-1.5 w-1.5">
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-300 opacity-70" />
+        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-amber-300" />
+      </span>
+      <span className="hidden sm:inline">Media syncing</span>
+      <span className="sm:hidden">Syncing</span>
+      {count > 1 && <span className="tabular-nums text-amber-50/90">{count}</span>}
+    </div>
+  );
+}
+
+function RoomHeader({ name, count, sfuStatus, meshSyncingCount = 0 }: {
   name: string;
   count: number;
   sfuStatus?: 'na' | 'starting' | 'connected' | 'unavailable' | 'unauthorized';
+  meshSyncingCount?: number;
 }) {
   return (
     <div className="relative z-10 px-3 sm:px-5 py-3 flex items-center gap-3 border-b border-white/5" data-testid="voice-room-header">
@@ -895,10 +936,14 @@ function RoomHeader({ name, count, sfuStatus }: {
           <div className="font-semibold text-lc-white truncate text-sm sm:text-base leading-tight">{name}</div>
         </div>
       </div>
-      {/* Centered SFU status — only renders for voice-sfu calls. Tooltip
-          carries the long-form detail so the pill stays compact. */}
+      {/* Compact topology status. SFU channels get the SFU badge; mesh
+          channels show a live media-sync badge while peer PCs connect. */}
       <div className="flex justify-center shrink-0">
-        <SfuStatusPill status={sfuStatus ?? 'na'} />
+        {(sfuStatus ?? 'na') !== 'na' ? (
+          <SfuStatusPill status={sfuStatus ?? 'na'} />
+        ) : (
+          <MeshSyncStatusPill count={meshSyncingCount} />
+        )}
       </div>
       <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-white/80 shrink-0">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

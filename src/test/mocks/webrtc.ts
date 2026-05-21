@@ -144,6 +144,7 @@ interface FakeTransceiver {
   mid: string;
   kind: 'audio' | 'video';
   sender: FakeRtpSender;
+  receiver: { track: { kind: 'audio' | 'video' } };
   /** 'sendrecv' when active, 'recvonly' after removeTrack (m-line preserved). */
   direction: 'sendrecv' | 'recvonly' | 'inactive';
   /** Whether the remote is currently sending media on this m-line — set
@@ -228,6 +229,7 @@ export class FakeRTCPeerConnection extends TinyEventTarget {
       mid,
       kind: track.kind,
       sender,
+      receiver: { track: { kind: track.kind } },
       direction: 'sendrecv',
       remoteSending: false,
       codecPreferences: [],
@@ -247,6 +249,29 @@ export class FakeRTCPeerConnection extends TinyEventTarget {
     tx.direction = 'recvonly';
     sender.track = null;
     queueMicrotask(() => { this.onnegotiationneeded?.(); });
+  }
+
+  addTransceiver(
+    kind: 'audio' | 'video',
+    init?: { direction?: 'sendrecv' | 'recvonly' | 'inactive' },
+  ): FakeTransceiver {
+    if (this.closed) throw new Error('PC is closed');
+    const sender = new FakeRtpSender(null);
+    const mid = String(this.midSeq++);
+    sender.mid = mid;
+    const tx: FakeTransceiver = {
+      mid,
+      kind,
+      sender,
+      receiver: { track: { kind } },
+      direction: init?.direction ?? 'sendrecv',
+      remoteSending: false,
+      codecPreferences: [],
+      setCodecPreferences(codecs: FakeCodecCapability[]) { this.codecPreferences = [...codecs]; },
+    };
+    this.transceivers.push(tx);
+    queueMicrotask(() => { this.onnegotiationneeded?.(); });
+    return tx;
   }
 
   getSenders(): FakeRtpSender[] {
@@ -345,6 +370,7 @@ export class FakeRTCPeerConnection extends TinyEventTarget {
           mid: ml.mid,
           kind: ml.kind,
           sender,
+          receiver: { track: { kind: ml.kind } },
           direction: 'recvonly',
           remoteSending: false,
           codecPreferences: [],

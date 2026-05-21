@@ -301,35 +301,32 @@ describe('VoiceClient.join', () => {
     await client.leave();
   });
 
-  it('starts mesh and publishes the first beacon without waiting for microphone permission', async () => {
-    let resolveGum: ((stream: MediaStream) => void) | null = null;
+  it('starts mesh and publishes the first beacon without opening the microphone', async () => {
     const nav = globalThis.navigator as unknown as {
       mediaDevices: {
         getUserMedia: (constraints: MediaStreamConstraints) => Promise<MediaStream>;
       };
     };
-    nav.mediaDevices.getUserMedia = vi.fn(
-      () => new Promise<MediaStream>((resolve) => { resolveGum = resolve; }),
-    );
+    const getUserMedia = vi.fn(async () => (
+      new FakeMediaStream([new FakeMediaStreamTrack('audio')]) as unknown as MediaStream
+    ));
+    nav.mediaDevices.getUserMedia = getUserMedia;
 
     const client = new VoiceClient('ch1', { members: [SELF] });
     await client.join();
+    await flushMicrotasks(8);
 
     expect(transportFake.subscribeSignals).toHaveBeenCalled();
     expect(transportFake.subscribeRoster).toHaveBeenCalled();
     expect(transportFake.publishPresenceBeacon).toHaveBeenCalledWith('ch1', [], [], []);
     expect(client.isJoined()).toBe(true);
     expect(client.getLocalTracks().mic).toBeNull();
-
-    resolveGum?.(new FakeMediaStream([new FakeMediaStreamTrack('audio')]) as unknown as MediaStream);
-    await flushMicrotasks(8);
-    expect(client.getLocalTracks().mic).not.toBeNull();
+    expect(getUserMedia).not.toHaveBeenCalled();
     await client.leave();
   });
 
-  it('stays joined muted when initial microphone permission is denied', async () => {
+  it('emits listening-only local state on join', async () => {
     const onLocalTracksChange = vi.fn();
-    media.rejectNextGum({ name: 'NotAllowedError', message: 'denied' });
     const client = new VoiceClient('ch1', {
       members: [SELF, PEER1],
       events: { onLocalTracksChange },
@@ -438,6 +435,30 @@ describe('VoiceClient roster → peer lifecycle', () => {
     await client.leave();
   });
 
+  it('emits mesh peer connection states while media channels connect', async () => {
+    const onPeerConnectionStatesChange = vi.fn();
+    const client = new VoiceClient('ch1', {
+      members: [SELF, PEER1],
+      events: { onPeerConnectionStatesChange },
+    });
+    await client.join();
+    transportFake.fireRoster([presence(PEER1)]);
+    await flushMicrotasks(8);
+
+    expect(client.getPeerConnectionStates()[PEER1]).toBe('new');
+    expect(onPeerConnectionStatesChange).toHaveBeenCalledWith({ [PEER1]: 'new' });
+
+    const pc = webrtc.last();
+    pc.forceState('connected');
+    await flushMicrotasks(8);
+
+    expect(client.getPeerConnectionStates()[PEER1]).toBe('connected');
+    expect(onPeerConnectionStatesChange).toHaveBeenCalledWith({ [PEER1]: 'connected' });
+
+    await client.leave();
+    expect(onPeerConnectionStatesChange).toHaveBeenLastCalledWith({});
+  });
+
   it('drops signals from non-members', async () => {
     const client = new VoiceClient('ch1', { members: [SELF, PEER1] });
     await client.join();
@@ -466,8 +487,6 @@ describe('VoiceClient mic/cam/screen toggles', () => {
     await client.join();
     transportFake.fireRoster([presence(PEER1)]);
     await flushMicrotasks(8);
-    // join() already enables mic; toggle off then on to exercise both paths.
-    await client.setMicEnabled(false);
     await client.setMicEnabled(true);
     await flushMicrotasks(8);
 
@@ -553,6 +572,8 @@ describe('VoiceClient mic/cam/screen toggles', () => {
     await flushMicrotasks(20);
     // Drive a remote audio track in via a remote offer.
     // Easiest: mark the existing remote PC as receiving on its current m-line.
+    await client.setMicEnabled(true);
+    await flushMicrotasks(8);
     client.setDeafenEnabled(true);
     expect(client.isDeafened()).toBe(true);
     // Local mic state is independent.

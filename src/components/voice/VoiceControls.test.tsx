@@ -56,6 +56,13 @@ describe('VoiceControls toolbar', () => {
     expect(activeClient.setMicEnabled).toHaveBeenCalled();
   });
 
+  it('unmutes explicitly when the call starts listening-only', async () => {
+    useVoiceStore.setState({ isMuted: true });
+    render(<VoiceControls onLeave={() => {}} />);
+    fireEvent.click(screen.getByTestId('mute-btn'));
+    expect(activeClient.setMicEnabled).toHaveBeenCalledWith(true);
+  });
+
   it('camera button toggles via the active client', () => {
     render(<VoiceControls onLeave={() => {}} />);
     fireEvent.click(screen.getByTestId('camera-btn'));
