@@ -335,6 +335,43 @@ describe('Peer perfect-negotiation glare', () => {
     expect(sent.find((s) => s.type === 'answer')).toBeDefined();
   });
 
+  it('renegotiates local media added while answering a remote offer', async () => {
+    const { peer, sent } = makePeer({ polite: true });
+    const pc = peer.pc as unknown as FakeRTCPeerConnection;
+
+    const originalSetRemoteDescription = pc.setRemoteDescription.bind(pc);
+    let releaseRemoteOffer: (() => void) | null = null;
+    let holdFirstOffer = true;
+    pc.setRemoteDescription = async (desc) => {
+      await originalSetRemoteDescription(desc);
+      if (holdFirstOffer && desc.type === 'offer') {
+        holdFirstOffer = false;
+        await new Promise<void>((resolve) => { releaseRemoteOffer = resolve; });
+      }
+    };
+
+    const remotePc = new FakeRTCPeerConnection();
+    await remotePc.setLocalDescription();
+    const handling = peer.handleSignal({ type: 'offer', sdp: remotePc.localDescription!.sdp, sessionId: 's', seq: 1 });
+    await flushMicrotasks(4);
+    expect(pc.signalingState).toBe('have-remote-offer');
+
+    await peer.setLocalTrack('camera', new FakeMediaStreamTrack('video') as unknown as MediaStreamTrack);
+    await flushMicrotasks(8);
+    expect(sent.some((payload) => payload.type === 'offer')).toBe(false);
+
+    if (!releaseRemoteOffer) throw new Error('remote offer was not held');
+    releaseRemoteOffer();
+    await handling;
+    await flushMicrotasks(12);
+
+    const answerIndex = sent.findIndex((payload) => payload.type === 'answer');
+    const offerIndex = sent.findIndex((payload, i) => i > answerIndex && payload.type === 'offer');
+    expect(answerIndex).toBeGreaterThanOrEqual(0);
+    expect(offerIndex).toBeGreaterThan(answerIndex);
+    expect(sent[offerIndex].sdp).toContain('"kind":"video"');
+  });
+
   it('impolite peer ignores a colliding remote offer', async () => {
     const { peer, sent } = makePeer({ polite: false });
     const pc = peer.pc as unknown as FakeRTCPeerConnection;

@@ -145,6 +145,12 @@ export class Peer {
   pc: RTCPeerConnection;
 
   private makingOffer = false;
+  /**
+   * Set when local media changes while the PC cannot create an offer yet
+   * (e.g. while answering a remote data-only offer). Flushed as soon as the
+   * signaling state returns to stable so remote peers do not stay avatar-only.
+   */
+  private negotiationQueued = false;
   private ignoreOffer = false;
   private outboundSeq = 0;
   /** Track-id → kind, applied in `ontrack`. Sender announces via `trackInfo`. */
@@ -284,32 +290,9 @@ export class Peer {
       console.log('[voice] new PC for', this.remotePubkey.slice(0, 8), 'iceServers=', ICE_SERVERS.map(s => s.urls), 'policy=', ICE_TRANSPORT_POLICY);
     }
 
-    pc.onnegotiationneeded = async () => {
-      // kickNegotiation + onnegotiationneeded can race when we add a track
-      // to an already-connected peer. Whoever sets makingOffer first wins;
-      // the other bails so we don't double-call setLocalDescription.
-      if (this.makingOffer || pc.signalingState !== 'stable') {
-        console.log('[voice] negotiationneeded skip — busy', pc.signalingState, 'peer', this.remotePubkey.slice(0, 8));
-        return;
-      }
+    pc.onnegotiationneeded = () => {
       console.log('[voice] negotiationneeded for', this.remotePubkey.slice(0, 8), 'state=', pc.signalingState);
-      try {
-        this.makingOffer = true;
-        await pc.setLocalDescription();
-        if (pc.localDescription) {
-          await this.sendSignal({
-            type: 'offer',
-            sdp: pc.localDescription.sdp,
-            sessionId: this.sessionId,
-            seq: ++this.outboundSeq,
-          });
-          this.armOfferAckWatchdog();
-        }
-      } catch (e) {
-        console.error('[voice] negotiationneeded failed', e);
-      } finally {
-        this.makingOffer = false;
-      }
+      void this.kickNegotiation();
     };
 
     pc.onicecandidate = ({ candidate }) => {
@@ -327,6 +310,7 @@ export class Peer {
     pc.onsignalingstatechange = () => {
       if (pc.signalingState === 'stable') {
         this.clearOfferAckWatchdog(true);
+        this.flushQueuedNegotiation();
       }
     };
 
@@ -529,6 +513,7 @@ export class Peer {
     // localSenders refer to the old PC; clear them so re-add creates new ones.
     this.localSenders.clear();
     this.makingOffer = false;
+    this.negotiationQueued = false;
     this.ignoreOffer = false;
     this.pendingIce.length = 0;
     this.pc = this.createPc();
@@ -712,8 +697,26 @@ export class Peer {
   }
 
   /**
-   * Force an SDP offer if the PC is stable and we haven't sent one. No-op
-   * during ongoing negotiation — `onnegotiationneeded` will run when stable.
+   * Remember that negotiation is needed once the PC can legally create
+   * another offer. This is the answering-side media race: a remote peer can
+   * send a data-only offer while we are attaching camera/screen tracks.
+   */
+  private queueNegotiation(reason: string): void {
+    if (this.closed) return;
+    this.negotiationQueued = true;
+    console.log('[voice] negotiation queued —', reason, 'peer', this.remotePubkey.slice(0, 8));
+  }
+
+  private flushQueuedNegotiation(): void {
+    if (this.closed || !this.negotiationQueued) return;
+    if (this.makingOffer || this.pc.signalingState !== 'stable') return;
+    this.negotiationQueued = false;
+    queueMicrotask(() => { void this.kickNegotiation(); });
+  }
+
+  /**
+   * Force an SDP offer if the PC is stable. If the PC is currently answering
+   * or waiting for an answer, queue one retry for the next stable transition.
    */
   private async kickNegotiation(): Promise<void> {
     if (this.closed) return;
@@ -722,7 +725,7 @@ export class Peer {
       return;
     }
     if (this.pc.signalingState !== 'stable') {
-      console.log('[voice] kickNegotiation skip — state=', this.pc.signalingState, 'for', this.remotePubkey.slice(0, 8));
+      this.queueNegotiation('state=' + this.pc.signalingState);
       return;
     }
     console.log('[voice] kickNegotiation forcing offer to', this.remotePubkey.slice(0, 8));
@@ -742,6 +745,7 @@ export class Peer {
       console.error('[voice] kickNegotiation failed', e);
     } finally {
       this.makingOffer = false;
+      this.flushQueuedNegotiation();
     }
   }
 
@@ -942,6 +946,8 @@ export class Peer {
       }
     } catch (e) {
       console.error('[voice] handleSignal error', e);
+    } finally {
+      this.flushQueuedNegotiation();
     }
   }
 
