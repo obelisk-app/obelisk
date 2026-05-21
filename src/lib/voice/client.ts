@@ -1529,6 +1529,7 @@ export class VoiceClient {
     // the perfect-negotiation invariants while accommodating werift.
     const isSfuPeer = this.knownSfuPubkeys.has(remotePubkey);
     const polite = isSfuPeer ? true : this.selfPubkey > remotePubkey;
+    const shouldKickRecvOnly = this.shouldKickRecvOnlyOffer(remotePubkey, isSfuPeer, polite);
     console.log('[voice] openPeer', remotePubkey.slice(0, 8),
       'polite=', polite, isSfuPeer ? '(sfu)' : '');
     this.openingPeers.add(remotePubkey);
@@ -1538,6 +1539,7 @@ export class VoiceClient {
         remotePubkey,
         polite,
         sessionId: this.sessionId,
+        bootstrapRecvOnlyMedia: shouldKickRecvOnly,
         send: (payload) => withRateLimitBackoff(
           () => this.transport.sendSignal(this.channelId, remotePubkey, payload),
           { metrics: this.metrics },
@@ -1706,15 +1708,21 @@ export class VoiceClient {
     }
     if (!peer) return;
 
-    // Push existing local tracks to the new peer. The mesh control data
-    // channel already starts negotiation for listening-only joins; only
-    // legacy SFU peers need an explicit recvonly media offer because they
-    // never initiate first.
+    // Push existing local tracks to the new peer. Muted joins only force a
+    // recv-only media offer when the roster says the remote side is already
+    // publishing media or is an operator-spawned mesh test peer; ordinary
+    // browser peers still bootstrap through the control data channel.
     void this.attachAllLocalTracks(peer).then(() => {
-      if (isSfuPeer) {
-        void peer.kickInitialOffer();
-      }
+      if (shouldKickRecvOnly) void peer.kickInitialOffer();
     });
+  }
+
+  private shouldKickRecvOnlyOffer(remotePubkey: string, isSfuPeer: boolean, polite: boolean): boolean {
+    if (isSfuPeer) return true;
+    if (polite) return false;
+    if (this.knownMeshTestPeerPubkeys.has(remotePubkey)) return true;
+    const presence = this.currentRoster.find((p) => p.pubkey === remotePubkey);
+    return (presence?.videoTracks?.length ?? 0) > 0;
   }
 
   /**

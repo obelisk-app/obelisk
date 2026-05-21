@@ -388,6 +388,30 @@ describe('VoiceClient roster → peer lifecycle', () => {
     await memberClient.leave();
   });
 
+  it('keeps ordinary muted mesh peers on data-channel bootstrap only', async () => {
+    const client = new VoiceClient('ch1', { members: [SELF, PEER1] });
+    await client.join();
+    transportFake.fireRoster([presence(PEER1)]);
+    await flushMicrotasks(12);
+
+    const pc = webrtc.last();
+    expect(pc.getTransceivers()).toHaveLength(0);
+    await client.leave();
+  });
+
+  it('opens recv-only media m-lines for marked mesh test peers', async () => {
+    const client = new VoiceClient('ch1', { members: [SELF], admins: [SELF] });
+    await client.join();
+    transportFake.fireRoster([meshTestPresence(PEER2)]);
+    await flushMicrotasks(12);
+
+    const pc = webrtc.last();
+    expect(pc.getTransceivers().map((t) => t.kind)).toEqual(['video', 'audio']);
+    expect(pc.getTransceivers().map((t) => t.direction)).toEqual(['recvonly', 'recvonly']);
+    expect(pc.getSenders().map((s) => s.track)).toEqual([null, null]);
+    await client.leave();
+  });
+
   it('updateRoles tears down peers that just left the member set', async () => {
     const client = new VoiceClient('ch1', { members: [SELF, PEER1, PEER2] });
     await client.join();

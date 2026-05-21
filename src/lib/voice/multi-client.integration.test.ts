@@ -225,7 +225,7 @@ async function spawn(allMembers: string[]): Promise<Node> {
 /** Run `fn` with the FakeRelay's current-publisher context set to `node`'s
  *  pubkey. Necessary so the relay attributes outgoing beacons/signals from
  *  this VoiceClient correctly when multiple clients are alive. */
-async function withPublisher<T>(node: Node, fn: () => Promise<T> | T): Promise<T> {
+async function withPublisher<T>(node: { pubkey: string }, fn: () => Promise<T> | T): Promise<T> {
   relayFake.setCurrentPublisher(node.pubkey);
   currentSelfPubkey = node.pubkey;
   try {
@@ -233,6 +233,14 @@ async function withPublisher<T>(node: Node, fn: () => Promise<T> | T): Promise<T
   } finally {
     relayFake.setCurrentPublisher(null);
   }
+}
+
+async function waitForMeshCondition(label: string, predicate: () => boolean): Promise<void> {
+  for (let i = 0; i < 20; i++) {
+    if (predicate()) return;
+    await flushMicrotasks(20);
+  }
+  throw new Error('timed out waiting for ' + label);
 }
 
 // Note on stderr noise:
@@ -317,88 +325,41 @@ describe('multi-client mesh formation', () => {
 });
 
 describe('transitive discovery survives a dropped publisher beacon', () => {
-  it('discovers E via A\'s p-tag when E\'s own beacons are blocked', async () => {
+  it("discovers E via A's p-tag when E's own beacons are blocked", async () => {
     const allPubkeys: string[] = [];
-    const nodes: Node[] = [];
     for (let i = 0; i < 5; i++) allPubkeys.push(makeRealKeypair().pkHex);
-    for (const pk of allPubkeys) {
-      relayFake.register(pk);
-      currentSelfPubkey = pk;
-      const client = new VoiceClient(CHANNEL, { members: allPubkeys });
-      nodes.push({ pubkey: pk, client });
-    }
-    const E = nodes[4];
-    const A = nodes[0];
-    const C = nodes[2];
+    for (const pk of allPubkeys) relayFake.register(pk);
 
-    // Block E's outgoing beacons. E still hears everyone else; nobody hears
-    // E's own beacons. The only way C learns E exists is via someone's
-    // connectedTo p-tag list.
+    const A = { pubkey: allPubkeys[0] };
+    const cPubkey = allPubkeys[2];
+    currentSelfPubkey = cPubkey;
+    const C = {
+      pubkey: cPubkey,
+      client: new VoiceClient(CHANNEL, { members: allPubkeys }),
+    };
+    const E = { pubkey: allPubkeys[4] };
+
+    // Block E's outgoing beacons. C's client is the only live browser here;
+    // A is represented by raw relay beacons so this test isolates the
+    // transitive p-tag path from unrelated WebRTC connection timing.
     relayFake.setBeaconsBlocked(E.pubkey, true);
 
-    // Everyone joins. E publishes (silently dropped); others publish normally.
-    for (const n of nodes) {
-      await withPublisher(n, async () => { await n.client.join(); });
-    }
-    await flushMicrotasks(20);
+    await withPublisher(C, async () => { await C.client.join(); });
 
-    // C's roster should NOT yet include E — no beacon for E and nobody has
-    // listed E in their connectedTo.
+    // A is visible, but E is not until A advertises E in connectedTo.
+    await withPublisher(A, async () => { relayFake.publishBeacon(CHANNEL, []); });
+    await flushMicrotasks(20);
+    expect(C.client.getParticipants()).toContain(A.pubkey);
     expect(C.client.getParticipants()).not.toContain(E.pubkey);
 
-    // Force-mark A↔E and B↔E connections as 'connected' on the actual PCs
-    // by walking webrtc.pcs() and matching by remote pubkey isn't trivial.
-    // Instead, we synthesize the connection state by directly toggling A's
-    // and B's connectedPubkeys via a beacon publish from E (which fails to
-    // deliver) PLUS A advertising E in its beacon's p-tag.
-    //
-    // Simpler integration: directly manipulate A's connectedPubkeys via
-    // an internal hook — since `getConnectedPubkeys` is exposed, we'll
-    // exercise the path that drives it: simulate "E sent A a signal that
-    // resulted in pc.connected".
-    //
-    // The cleanest expression of the protocol: A tells the relay
-    // "I'm connected to E" via its beacon's p-tags. We can't trigger the
-    // pc.onConnectionEstablished without a real handshake, so we drive a
-    // beacon for A directly with E in its connectedTo list, simulating
-    // what the production code would do once A and E completed their PC
-    // handshake.
-    //
-    // Production code: A's Peer for E hits 'connected' →
-    // onConnectionEstablished → connectedPubkeys.add(E) → beacon refresh.
-    // Test shortcut: poke an A-side connection-established event through
-    // a synthetic beacon publish that includes E.
-    //
-    // We do this via raw FakeRelay (the publishBeacon path bypasses
-    // VoiceClient's connectedPubkeys), so we still have to make sure A's
-    // OWN VoiceClient considers E connected for its OWN future beacons.
-    //
-    // Simulate: A's pc to E reaches 'connected'. We find the FakePc that A
-    // created for E via the events map.
-    // (Easier: drive A's events.onConnectionEstablished for E directly.)
-    // Since the Peer construction wires onConnectionEstablished into
-    // A.connectedPubkeys, we instead call A.publishBeacon AFTER manually
-    // poking A's connectedPubkeys via the public test-friendly path:
-    // mark *every* PC as connected so all clients update their connected
-    // sets from the actual onConnectionEstablished firings.
-    for (const pc of webrtc.pcs()) pc.forceState('connected');
-    await flushMicrotasks(20);
+    await withPublisher(A, async () => { relayFake.publishBeacon(CHANNEL, [E.pubkey]); });
+    await waitForMeshCondition("C to learn E from A's connectedTo p-tag", () =>
+      C.client.getParticipants().includes(E.pubkey),
+    );
 
-    // A republishes its beacon with E in connectedTo (E's beacon still blocked).
-    await withPublisher(A, async () => { await A.client.publishBeacon(); });
-    await flushMicrotasks(20);
-
-    // C's roster now includes E via A's beacon's p-tag, even though E's own
-    // beacons are still being dropped.
     expect(C.client.getParticipants()).toContain(E.pubkey);
 
-    // Sanity: relayFake never delivered any beacon for E.
-    // (No direct assertion possible — but the only path for C to learn of
-    // E is the transitive p-tag route, which is what we set out to verify.)
-
-    for (const n of nodes) {
-      await withPublisher(n, async () => { await n.client.leave(); });
-    }
+    await withPublisher(C, async () => { await C.client.leave(); });
   });
 });
 

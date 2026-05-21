@@ -116,6 +116,9 @@ export interface PeerOptions {
    *  the polite peer rolls back on offer glare. */
   polite: boolean;
   sessionId: string;
+  /** Preserve muted recv-only media sections across hard resets for peers
+   *  that were explicitly bootstrapped to receive remote media. */
+  bootstrapRecvOnlyMedia?: boolean;
   send: (payload: VoiceSignalPayload) => Promise<void> | void;
   events: PeerEvents;
   /** Optional control-channel hookup. When provided, an `obelisk-control`
@@ -136,6 +139,7 @@ export class Peer {
   private readonly events: PeerEvents;
   private readonly sessionId: string;
   private readonly controlOpts: PeerOptions['control'];
+  private readonly bootstrapRecvOnlyMedia: boolean;
   private controlChannel: ControlChannel | null = null;
 
   pc: RTCPeerConnection;
@@ -206,6 +210,7 @@ export class Peer {
     this.events = opts.events;
     this.sessionId = opts.sessionId;
     this.controlOpts = opts.control;
+    this.bootstrapRecvOnlyMedia = opts.bootstrapRecvOnlyMedia ?? false;
     this.pc = this.createPc();
     this.attachControlChannel();
     this.armConnectWatchdog();
@@ -528,14 +533,13 @@ export class Peer {
     this.pendingIce.length = 0;
     this.pc = this.createPc();
     this.attachControlChannel();
-    // If we have no local tracks (e.g. SFU peer with mic/cam off), add
-    // recvonly transceivers so the offer SDP has m-sections and the SFU
-    // can attach its forwarded tracks. Without this the kickNegotiation
-    // below produces an empty offer the SFU has nothing to answer.
-    if (this.localTracks.size === 0) {
+    // If this peer was explicitly bootstrapped for muted receive, preserve
+    // those recv-only media sections across a reset. Video first matches the
+    // mesh test peer's sendonly order and keeps m-line ordering stable.
+    if (this.bootstrapRecvOnlyMedia && this.localTracks.size === 0) {
       try {
-        this.pc.addTransceiver('audio', { direction: 'recvonly' });
         this.pc.addTransceiver('video', { direction: 'recvonly' });
+        this.pc.addTransceiver('audio', { direction: 'recvonly' });
       } catch (e) {
         console.warn('[voice] hardReset addTransceiver recvonly failed', e);
       }
@@ -679,9 +683,9 @@ export class Peer {
   }
 
   /**
-   * Send an initial offer even when no local tracks are attached. Used for
-   * legacy SFU peers where the SFU never initiates first. Normal mesh
-   * listening-only joins bootstrap through the control data channel instead.
+   * Send an initial offer even when no local tracks are attached. Muted mesh
+   * joins still need recv-only media m-lines so remote audio/video can arrive
+   * before the user unmutes.
    */
   async kickInitialOffer(): Promise<void> {
     if (this.closed) return;
@@ -691,8 +695,10 @@ export class Peer {
       try {
         const hasAudio = this.pc.getTransceivers().some((t) => t.receiver?.track?.kind === 'audio');
         const hasVideo = this.pc.getTransceivers().some((t) => t.receiver?.track?.kind === 'video');
-        if (!hasAudio) this.pc.addTransceiver('audio', { direction: 'recvonly' });
+        // Match the synthetic mesh peer's video/audio order so werift does
+        // not reject the initial muted browser offer on m-line ordering.
         if (!hasVideo) this.pc.addTransceiver('video', { direction: 'recvonly' });
+        if (!hasAudio) this.pc.addTransceiver('audio', { direction: 'recvonly' });
       } catch (e) {
         console.warn('[voice] addTransceiver recvonly failed', e);
       }
