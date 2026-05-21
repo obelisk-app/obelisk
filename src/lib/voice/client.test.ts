@@ -70,6 +70,7 @@ vi.mock('./transport', () => ({
     for (const p of roster) {
       set.add(p.pubkey);
       for (const pk of p.connectedTo) set.add(pk);
+      for (const pk of p.knownPeers ?? []) set.add(pk);
     }
     return Array.from(set);
   },
@@ -292,10 +293,9 @@ describe('VoiceClient.join', () => {
   it('joins, publishes a beacon, and subscribes to roster + signals', async () => {
     const client = new VoiceClient('ch1', { members: [SELF] });
     await client.join();
-    // Beacon now carries the publisher's connected-peer list AND the
-    // active video tracks (both empty on first beacon — no peers yet, no
-    // video).
-    expect(transportFake.publishPresenceBeacon).toHaveBeenCalledWith('ch1', [], []);
+    // Beacon now carries connected peers, known peers, and active video
+    // tracks (all empty on the first beacon).
+    expect(transportFake.publishPresenceBeacon).toHaveBeenCalledWith('ch1', [], [], []);
     expect(transportFake.subscribeRoster).toHaveBeenCalled();
     expect(transportFake.subscribeSignals).toHaveBeenCalled();
     await client.leave();
@@ -317,7 +317,7 @@ describe('VoiceClient.join', () => {
 
     expect(transportFake.subscribeSignals).toHaveBeenCalled();
     expect(transportFake.subscribeRoster).toHaveBeenCalled();
-    expect(transportFake.publishPresenceBeacon).toHaveBeenCalledWith('ch1', [], []);
+    expect(transportFake.publishPresenceBeacon).toHaveBeenCalledWith('ch1', [], [], []);
     expect(client.isJoined()).toBe(true);
     expect(client.getLocalTracks().mic).toBeNull();
 
@@ -593,7 +593,7 @@ describe('VoiceClient quality propagation', () => {
 });
 
 describe('VoiceClient bring-up beacon burst', () => {
-  it('schedules extra publishes during the first ~12 s after join', async () => {
+  it('schedules extra publishes during the first ~18 s after join', async () => {
     vi.useFakeTimers();
     try {
       const client = new VoiceClient('ch1', { members: [SELF] });
@@ -602,13 +602,13 @@ describe('VoiceClient bring-up beacon burst', () => {
       expect(transportFake.publishPresenceBeacon).toHaveBeenCalledTimes(1);
 
       // Walk past every front-loaded delay; each must produce a publish.
-      for (const t of [500, 1500, 3500, 7000, 12_000]) {
+      for (const t of [300, 900, 1800, 3500, 7000, 12_000, 18_000]) {
         vi.setSystemTime(t);
         vi.advanceTimersByTime(t);
         await flushMicrotasks(2);
       }
-      // 1 (initial) + 5 (burst) = 6 calls before the first 15 s tick.
-      expect(transportFake.publishPresenceBeacon.mock.calls.length).toBeGreaterThanOrEqual(6);
+      // 1 (initial) + 7 (burst) before the steady 10 s cadence dominates.
+      expect(transportFake.publishPresenceBeacon.mock.calls.length).toBeGreaterThanOrEqual(8);
       await client.leave();
     } finally {
       vi.useRealTimers();

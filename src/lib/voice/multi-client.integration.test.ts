@@ -74,7 +74,7 @@ const relayFake = vi.hoisted(() => {
     },
     /** Set before each call to a publisher-attributed transport function. */
     setCurrentPublisher(pubkey: string | null): void { currentPublisher = pubkey; },
-    publishBeacon(channelId: string, connectedTo: readonly string[], videoTracks: readonly ('camera' | 'screen')[] = []): void {
+    publishBeacon(channelId: string, connectedTo: readonly string[], knownPeers: readonly string[] = [], videoTracks: readonly ('camera' | 'screen')[] = []): void {
       // If no publisher is set, this is a stray beacon from a microtask that
       // outlived its `withPublisher` context. Drop it instead of throwing —
       // throwing creates an unhandled-rejection chain that V8's
@@ -88,8 +88,9 @@ const relayFake = vi.hoisted(() => {
         pubkey: currentPublisher,
         channelId,
         createdAt: now,
-        expiresAt: now + 30,
+        expiresAt: now + 45,
         connectedTo: Array.from(connectedTo),
+        knownPeers: Array.from(new Set([...knownPeers, ...connectedTo])),
         videoTracks: Array.from(videoTracks),
         isSfu: false,
       });
@@ -126,7 +127,11 @@ const relayFake = vi.hoisted(() => {
     },
     transitive(roster: readonly VoicePresence[]): string[] {
       const set = new Set<string>();
-      for (const p of roster) { set.add(p.pubkey); for (const pk of p.connectedTo) set.add(pk); }
+      for (const p of roster) {
+        set.add(p.pubkey);
+        for (const pk of p.connectedTo) set.add(pk);
+        for (const pk of p.knownPeers ?? []) set.add(pk);
+      }
       return Array.from(set);
     },
     reset(): void {
@@ -138,8 +143,13 @@ const relayFake = vi.hoisted(() => {
 });
 
 vi.mock('./transport', () => {
-  const publishPresenceBeacon = vi.fn(async (channelId: string, connectedTo: string[] = [], videoTracks: ('camera' | 'screen')[] = []) => {
-    relayFake.publishBeacon(channelId, connectedTo, videoTracks);
+  const publishPresenceBeacon = vi.fn(async (
+    channelId: string,
+    connectedTo: string[] = [],
+    knownPeers: string[] = [],
+    videoTracks: ('camera' | 'screen')[] = [],
+  ) => {
+    relayFake.publishBeacon(channelId, connectedTo, knownPeers, videoTracks);
   });
   const subscribeRoster = vi.fn(async (channelId: string, cb: (r: VoicePresence[]) => void) => {
     return relayFake.subscribeRoster(channelId, cb);

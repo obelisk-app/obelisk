@@ -99,6 +99,8 @@ export interface PeerEvents {
   onQualitySample?(sample: QualitySample): void;
   /** Control-channel: remote sent a `hello` with their current peer list. */
   onTransitivePeers?(remotePeers: string[], remoteBuild: string): void;
+  /** Control-channel: remote sent a full current peer snapshot. */
+  onControlPeerSnapshot?(remotePeers: string[]): void;
   /** Control-channel: remote announces a peer they just connected to. */
   onControlPeerAdded?(pubkey: string): void;
   /** Control-channel: remote announces a peer they just lost. */
@@ -231,6 +233,10 @@ export class Peer {
         onHello: (peers, build) => {
           try { this.events.onTransitivePeers?.(peers, build); }
           catch (e) { console.warn('[voice] onTransitivePeers threw', e); }
+        },
+        onPeerSnapshot: (peers) => {
+          try { this.events.onControlPeerSnapshot?.(peers); }
+          catch (e) { console.warn('[voice] onControlPeerSnapshot threw', e); }
         },
         onPeerAdded: (pubkey) => {
           try { this.events.onControlPeerAdded?.(pubkey); }

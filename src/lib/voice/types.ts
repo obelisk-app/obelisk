@@ -82,6 +82,15 @@ export interface VoicePresence {
    */
   connectedTo: readonly string[];
   /**
+   * Pubkeys this publisher currently believes are active in the call,
+   * whether or not it already has a direct RTCPeerConnection to them.
+   * This is the mesh gossip set: relay beacons and established
+   * `obelisk-control` data channels both propagate it so a partially
+   * connected room can converge without waiting for every peer's own
+   * beacon to arrive.
+   */
+  knownPeers?: readonly string[];
+  /**
    * `["sfu","1"]` tag on the beacon — set only by an SFU service announcing
    * itself as a forwarding endpoint for this channel. When any beacon in
    * the roster carries this flag, the local client switches into SFU mode:

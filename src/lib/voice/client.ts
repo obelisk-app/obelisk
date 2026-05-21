@@ -7,14 +7,14 @@
 // constant and produce the same chunk hash as before.
 if (typeof globalThis !== 'undefined') {
   (globalThis as { __obeliskVoiceBuild?: string }).__obeliskVoiceBuild =
-    '2026-05-16T01:10:00Z-sfu-rpc-general-relays';
+    '2026-05-21T05:35:00Z-mesh-peer-gossip';
 }
 
 /**
  * VoiceClient orchestrates a peer mesh inside a single channel:
- *  - publishes presence beacons on a 15s cadence + opportunistically when
- *    the local connected-peer set changes (so transitive discovery on
- *    other clients converges within one beacon hop, not 15 s)
+ *  - publishes presence beacons on a 10s cadence + opportunistically when
+ *    the local connected/known peer set changes (so transitive discovery
+ *    on other clients converges within one beacon hop, not 10 s)
  *  - subscribes to the roster + opens a `Peer` per remote pubkey
  *  - subscribes to incoming signaling and routes to the right `Peer`
  *  - manages local mic / camera / screen tracks across all peers
@@ -60,11 +60,11 @@ import {
 
 const SELF_BUILD_TAG = '2026-05-09T-control-channel';
 
-const BEACON_INTERVAL_MS = 15_000;
+const BEACON_INTERVAL_MS = 10_000;
 /**
  * Aggressive beacon burst right after `join()`. NIP-29 voice beacons are
  * ephemeral — relays don't backfill them — so a peer who joined a few
- * seconds before us would otherwise be invisible until their next 15 s
+ * seconds before us would otherwise be invisible until their next 10 s
  * tick. Firing additional publishes in the first ~12 s collapses that
  * worst-case discovery latency to a few seconds while keeping the
  * total relay traffic bounded (six small events vs ~one event every
@@ -75,7 +75,7 @@ const BEACON_INTERVAL_MS = 15_000;
  * roughly 2× the previous so a slow NIP-42 AUTH has multiple chances
  * to land a beacon before we settle into the steady-state cadence.
  */
-const BEACON_BRINGUP_DELAYS_MS = [500, 1500, 3500, 7000, 12_000];
+const BEACON_BRINGUP_DELAYS_MS = [300, 900, 1800, 3500, 7000, 12_000, 18_000];
 /**
  * Audio-mesh cap. 8 participants × 7 outbound audio streams each = 56 PCs
  * worst-case room-wide; that's still inside what a typical home upstream
@@ -110,6 +110,7 @@ const MAX_VIDEO_SLOTS = 4;
  * into a single beacon publish so we don't spam the relay.
  */
 const BEACON_REFRESH_DEBOUNCE_MS = 250;
+const CONTROL_SNAPSHOT_DEBOUNCE_MS = 150;
 /**
  * Window during which we hold an inbound signal from a peer who isn't yet
  * known to be a member. 5 s comfortably covers the expected race between
@@ -348,6 +349,8 @@ export class VoiceClient {
   /** Coalesce dial-loop runs triggered by control-channel propagation
    *  arriving in microtask order during a single hello. */
   private dialDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Coalesce full peer-set gossip across open WebRTC control channels. */
+  private controlSnapshotTimer: ReturnType<typeof setTimeout> | null = null;
   private unloadHandler: UnloadHandlerHandle | null = null;
   private rosterUnsub: (() => void) | null = null;
   private signalsUnsub: (() => void) | null = null;
@@ -871,6 +874,7 @@ export class VoiceClient {
     this.seenRosterPubkeys.clear();
     this.discovery.reset();
     if (this.dialDebounceTimer) { clearTimeout(this.dialDebounceTimer); this.dialDebounceTimer = null; }
+    if (this.controlSnapshotTimer) { clearTimeout(this.controlSnapshotTimer); this.controlSnapshotTimer = null; }
     for (const peer of this.peers.values()) peer.close();
     this.peers.clear();
     this.unsubscribeActiveCallStatus();
@@ -1014,6 +1018,7 @@ export class VoiceClient {
     this.seenRosterPubkeys.clear();
     this.discovery.reset();
     if (this.dialDebounceTimer) { clearTimeout(this.dialDebounceTimer); this.dialDebounceTimer = null; }
+    if (this.controlSnapshotTimer) { clearTimeout(this.controlSnapshotTimer); this.controlSnapshotTimer = null; }
     if (this.unloadHandler) { this.unloadHandler.uninstall(); this.unloadHandler = null; }
     this.signalsUnsub?.();
     this.signalsUnsub = null;
@@ -1060,9 +1065,28 @@ export class VoiceClient {
   // ── Beacon publishing ──────────────────────────────────────────────────
 
   /**
-   * Publish a presence beacon advertising our currently-connected peers
-   * AND the outbound video tracks we're sending. The connected list powers
-   * transitive discovery on other clients; the video list lets every peer
+   * Known active mesh pubkeys from every source we currently trust:
+   * direct PCs, relay beacons, control-channel snapshots, and the rendered
+   * participant list. This set is what we gossip as `peer` tags and
+   * `peerSnapshot` messages, so partially formed meshes can converge even
+   * before every direct connection exists.
+   */
+  private meshKnownPubkeys(): string[] {
+    const known = new Set<string>();
+    for (const pk of this.connectedPubkeys) known.add(pk);
+    for (const pk of this.discovery.effectivePeers()) known.add(pk);
+    for (const pk of this.rosterPubkeys) known.add(pk);
+    for (const pk of this.peers.keys()) known.add(pk);
+    known.delete(this.selfPubkey);
+    return Array.from(known).filter((pk) => this.isMember(pk)).sort();
+  }
+
+  /**
+   * Publish a presence beacon advertising our currently-connected peers,
+   * our full known active peer set, and the outbound video tracks we're
+   * sending. The connected list powers legacy transitive discovery; the
+   * known-peer list lets other clients dial participants that we know about
+   * but have not directly established yet. The video list lets every peer
    * compute the room-wide video count for `MAX_VIDEO_SLOTS` enforcement.
    *
    * Public so multi-client integration tests can drive each node's beacon
@@ -1076,7 +1100,7 @@ export class VoiceClient {
     if (this.screenTrack) videoTracks.push('screen');
     try {
       await withRateLimitBackoff(
-        () => this.transport.publishPresenceBeacon(this.channelId, [...this.connectedPubkeys], videoTracks),
+        () => this.transport.publishPresenceBeacon(this.channelId, [...this.connectedPubkeys], this.meshKnownPubkeys(), videoTracks),
         { metrics: this.metrics },
       );
       this.metrics.beacons.sent++;
@@ -1104,6 +1128,23 @@ export class VoiceClient {
     }, BEACON_REFRESH_DEBOUNCE_MS);
   }
 
+  private scheduleControlPeerSnapshot(): void {
+    if (!this.joined || this.sfuPubkey) return;
+    if (this.controlSnapshotTimer) return;
+    this.controlSnapshotTimer = setTimeout(() => {
+      this.controlSnapshotTimer = null;
+      if (!this.joined || this.sfuPubkey) return;
+      this.broadcastControlPeerSnapshot();
+    }, CONTROL_SNAPSHOT_DEBOUNCE_MS);
+  }
+
+  private broadcastControlPeerSnapshot(): void {
+    const peers = this.meshKnownPubkeys();
+    for (const peer of this.peers.values()) {
+      peer.broadcastControl({ type: 'peerSnapshot', peers, ts: Date.now() });
+    }
+  }
+
   // ── Roster + peer management ───────────────────────────────────────────
 
   /**
@@ -1115,6 +1156,7 @@ export class VoiceClient {
    */
   private handleRoster(pubkeys: string[]) {
     const others = pubkeys.filter((p) => p !== this.selfPubkey);
+    const beforeDiscoveryKey = this.discovery.effectivePeers().slice().sort().join('|');
 
     // Track relay-discovered set in the discovery engine so the dial-loop
     // sees the union of relay + control-channel sources. Increment the
@@ -1122,6 +1164,7 @@ export class VoiceClient {
     // we hadn't seen on the relay before.
     const previouslyRelay = new Set(others.filter((p) => this.discovery.source(p).relay));
     this.discovery.setRelayDiscovered(others);
+    const afterDiscoveryKey = this.discovery.effectivePeers().slice().sort().join('|');
     let relayNew = 0;
     for (const p of others) {
       if (!previouslyRelay.has(p)) relayNew++;
@@ -1141,9 +1184,24 @@ export class VoiceClient {
         sawNew = true;
       }
     }
-    if (sawNew) this.scheduleBeaconRefresh();
+    if (sawNew || beforeDiscoveryKey !== afterDiscoveryKey) {
+      this.scheduleBeaconRefresh();
+      this.scheduleControlPeerSnapshot();
+    }
 
     this.runDialLoop();
+  }
+
+  private applyControlPeerSnapshot(remotePubkey: string, peers: readonly string[]): void {
+    const filtered = peers
+      .filter((pk) => pk && pk !== this.selfPubkey)
+      .filter((pk) => this.isMember(pk));
+    const { added, removed } = this.discovery.setControlDiscovered(remotePubkey, filtered);
+    if (added.length === 0 && removed.length === 0) return;
+    this.metrics.transitive.discoveredViaControl += added.length;
+    this.scheduleDialFromDiscovery();
+    this.scheduleBeaconRefresh();
+    this.scheduleControlPeerSnapshot();
   }
 
   /**
@@ -1495,31 +1553,30 @@ export class VoiceClient {
         control: isSfuPeer ? undefined : {
           selfBuild: SELF_BUILD_TAG,
           metrics: this.metrics,
-          getCurrentPeers: () => Array.from(this.connectedPubkeys),
+          getCurrentPeers: () => this.meshKnownPubkeys(),
         },
         events: {
           onTransitivePeers: (peers, _build) => {
-            // Hello carries the remote peer's full connected set. Add each
-            // entry to discovery via this peer; dial loop kicks debounced.
-            let added = 0;
-            for (const pk of peers) {
-              if (pk === this.selfPubkey) continue;
-              if (this.discovery.addControlDiscovered(pk, remotePubkey)) added++;
-            }
-            if (added > 0) {
-              this.metrics.transitive.discoveredViaControl += added;
-              this.scheduleDialFromDiscovery();
-            }
+            this.applyControlPeerSnapshot(remotePubkey, peers);
+          },
+          onControlPeerSnapshot: (peers) => {
+            this.applyControlPeerSnapshot(remotePubkey, peers);
           },
           onControlPeerAdded: (pubkey) => {
             if (pubkey === this.selfPubkey) return;
             if (this.discovery.addControlDiscovered(pubkey, remotePubkey)) {
               this.metrics.transitive.discoveredViaControl++;
               this.scheduleDialFromDiscovery();
+              this.scheduleBeaconRefresh();
+              this.scheduleControlPeerSnapshot();
             }
           },
           onControlPeerRemoved: (pubkey) => {
-            this.discovery.removeControlDiscovered(pubkey, remotePubkey);
+            if (this.discovery.removeControlDiscovered(pubkey, remotePubkey)) {
+              this.scheduleDialFromDiscovery();
+              this.scheduleBeaconRefresh();
+              this.scheduleControlPeerSnapshot();
+            }
           },
           onPeerDead: (reason) => {
             // Active capacity rejection — the remote is telling us the room
@@ -1556,6 +1613,8 @@ export class VoiceClient {
             // Remove anything this peer claimed transitively so we don't
             // keep re-dialing through them.
             this.discovery.dropClaimsFromPeer(remotePubkey);
+            this.scheduleBeaconRefresh();
+            this.scheduleControlPeerSnapshot();
             this.tearDownPeer(remotePubkey);
           },
           onRemoteTrack: (track, stream, kind, originPubkey) => {
@@ -1610,6 +1669,7 @@ export class VoiceClient {
               if (otherPk === remotePubkey) continue;
               otherPeer.broadcastControl({ type: 'peerAdded', pubkey: remotePubkey });
             }
+            this.scheduleControlPeerSnapshot();
           },
           onConnectionLost: () => {
             if (this.connectedPubkeys.delete(remotePubkey)) {
@@ -1619,6 +1679,7 @@ export class VoiceClient {
               if (otherPk === remotePubkey) continue;
               otherPeer.broadcastControl({ type: 'peerRemoved', pubkey: remotePubkey });
             }
+            this.scheduleControlPeerSnapshot();
             this.runDialLoop();
           },
           onQualitySample: (sample) => {
@@ -1673,6 +1734,11 @@ export class VoiceClient {
    */
   private tearDownPeer(pubkey: string): void {
     const peer = this.peers.get(pubkey);
+    const droppedClaims = this.discovery.dropClaimsFromPeer(pubkey);
+    if (droppedClaims.length > 0) {
+      this.scheduleBeaconRefresh();
+      this.scheduleControlPeerSnapshot();
+    }
     if (peer) {
       this.peers.delete(pubkey);
       peer.close();
@@ -1680,7 +1746,8 @@ export class VoiceClient {
       pushVoiceDebug({ kind: 'peer-torn-down', peer: pubkey });
     }
     const nextRoster = this.rosterPubkeys.filter((pk) => pk !== pubkey);
-    if (nextRoster.length !== this.rosterPubkeys.length) {
+    const rosterChanged = nextRoster.length !== this.rosterPubkeys.length;
+    if (rosterChanged) {
       this.rosterPubkeys = nextRoster;
       this.events.onParticipantsChange?.([...this.rosterPubkeys]);
     }
@@ -1689,6 +1756,9 @@ export class VoiceClient {
     if (this.connectedPubkeys.delete(pubkey)) {
       this.metrics.peers.connected = this.connectedPubkeys.size;
       this.scheduleBeaconRefresh();
+    }
+    if (peer || rosterChanged || droppedClaims.length > 0) {
+      this.scheduleControlPeerSnapshot();
     }
     try { useVoiceStore.getState().clearPeerQuality(pubkey); } catch { /* test envs */ }
   }

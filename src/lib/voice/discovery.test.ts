@@ -43,6 +43,20 @@ describe('DiscoveryEngine', () => {
     expect(d.addControlDiscovered('x', 'a')).toBe(false);
   });
 
+  it('setControlDiscovered replaces one peer snapshot without dropping other claimants', () => {
+    const d = new DiscoveryEngine();
+    d.addControlDiscovered('x', 'a');
+    d.addControlDiscovered('y', 'a');
+    d.addControlDiscovered('y', 'b');
+
+    const diff = d.setControlDiscovered('a', ['z', 'y', 'a']);
+
+    expect(diff.added).toEqual(['z']);
+    expect(diff.removed).toEqual(['x']);
+    expect(d.effectivePeers().sort()).toEqual(['y', 'z']);
+    expect(d.attribution('y').viaControl.sort()).toEqual(['a', 'b']);
+  });
+
   it('dropClaimsFromPeer removes all entries claimed via that peer', () => {
     const d = new DiscoveryEngine();
     d.addControlDiscovered('x', 'a');

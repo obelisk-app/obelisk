@@ -63,6 +63,7 @@ vi.mock('./transport', () => ({
     for (const p of roster) {
       set.add(p.pubkey);
       for (const pk of p.connectedTo) set.add(pk);
+      for (const pk of p.knownPeers ?? []) set.add(pk);
     }
     return Array.from(set);
   },

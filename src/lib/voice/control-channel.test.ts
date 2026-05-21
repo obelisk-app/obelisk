@@ -5,6 +5,7 @@ import {
   PING_INTERVAL_MS,
   DEAD_PEER_TIMEOUT_MS,
   OPEN_TIMEOUT_MS,
+  PEER_SNAPSHOT_INTERVAL_MS,
   type ControlMessage,
 } from './control-channel';
 import { emptyVoiceMetrics, type VoiceMetrics } from './metrics';
@@ -80,6 +81,7 @@ class FakePc {
 function makeEvents() {
   return {
     onHello: vi.fn<(peers: string[], build: string) => void>(),
+    onPeerSnapshot: vi.fn<(peers: string[]) => void>(),
     onPeerAdded: vi.fn<(pubkey: string) => void>(),
     onPeerRemoved: vi.fn<(pubkey: string) => void>(),
     onBye: vi.fn<(reason: string) => void>(),
@@ -180,6 +182,35 @@ describe('ControlChannel', () => {
     imp.send({ type: 'peerRemoved', pubkey: 'newPeer' });
     await Promise.resolve(); await Promise.resolve();
     expect(polEv.onPeerRemoved).toHaveBeenCalledWith('newPeer');
+  });
+
+  it('sends periodic peerSnapshot messages with the latest peer set', async () => {
+    const impPc = new FakePc();
+    const polPc = new FakePc();
+    const impEv = makeEvents();
+    const polEv = makeEvents();
+    let peers = ['initial'];
+
+    new ControlChannel({
+      pc: impPc as unknown as RTCPeerConnection,
+      impolite: true, sessionId: 's', selfBuild: 'b', remotePubkey: 'pol',
+      initialPeers: () => peers, events: impEv, metrics,
+    });
+    new ControlChannel({
+      pc: polPc as unknown as RTCPeerConnection,
+      impolite: false, sessionId: 's', selfBuild: 'b', remotePubkey: 'imp',
+      initialPeers: () => [], events: polEv, metrics,
+    });
+    impPc.linkTwin(polPc);
+    impPc.channels[0].open();
+    impPc.channels[0].twin!.open();
+    await vi.advanceTimersByTimeAsync(0);
+    peers = ['nextA', 'nextB'];
+
+    await vi.advanceTimersByTimeAsync(PEER_SNAPSHOT_INTERVAL_MS);
+    await Promise.resolve(); await Promise.resolve();
+
+    expect(polEv.onPeerSnapshot).toHaveBeenCalledWith(['nextA', 'nextB']);
   });
 
   it('ping/pong updates RTT and resets the dead-peer timer', async () => {
@@ -300,6 +331,7 @@ describe('ControlMessage shape', () => {
   it('round-trips through JSON.stringify / parse', () => {
     const msgs: ControlMessage[] = [
       { type: 'hello', peers: ['a', 'b'], sessionId: 's', build: 'b' },
+      { type: 'peerSnapshot', peers: ['a'], ts: 1 },
       { type: 'peerAdded', pubkey: 'x' },
       { type: 'peerRemoved', pubkey: 'y' },
       { type: 'bye', reason: 'r' },

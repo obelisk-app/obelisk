@@ -3,11 +3,15 @@
  * signaling. Sits on top of the existing nostr-bridge so we share the relay
  * pool, signing, and NIP-42 auth retry path.
  *
- * Beacons (kind 20078) optionally announce the publisher's currently-
- * connected peers as `p` tags. That feeds transitive discovery in the
- * VoiceClient: a fresh joiner whose relay drops some publishers' beacons
- * still learns about those peers via the `p`-tag list of any beacon they
- * do receive — so mesh formation converges from any starting position.
+ * Beacons (kind 20078) announce two peer sets:
+ *  - `p` tags: peers with confirmed live RTCPeerConnections.
+ *  - `peer` tags: peers the publisher currently knows are active in the
+ *    call, even if the direct PC is not established yet.
+ *
+ * VoiceClient unions both sets for transitive discovery. A fresh joiner
+ * whose relay drops some publishers' beacons can still learn about them
+ * from another participant's signed beacon or WebRTC control-channel
+ * snapshot, so mesh formation converges from partial connectivity.
  *
  * Signaling (kind 25050) carries SDP / ICE / track-info / quality hints /
  * polite-side `requestReset` payloads.
@@ -23,7 +27,7 @@ import {
 import type { VoicePresence, VoiceSignalPayload, VideoSlotKind } from './types';
 import { pushVoiceDebug } from './debug';
 
-const PRESENCE_TTL_SECONDS = 30;
+const PRESENCE_TTL_SECONDS = 45;
 const VOICE_SUB_WATCHDOG_MS = 2500;
 const SEEN_SIGNAL_IDS_MAX = 2048;
 
@@ -40,6 +44,7 @@ export interface VoiceTransport {
   publishPresenceBeacon(
     channelId: string,
     connectedTo?: readonly string[],
+    knownPeers?: readonly string[],
     videoTracks?: readonly VideoSlotKind[],
   ): Promise<void>;
   subscribeRoster(channelId: string, onChange: (roster: VoicePresence[]) => void): Promise<() => void>;
@@ -82,8 +87,8 @@ function subscribeOpts(options?: VoiceTransportOptions) {
 
 export function createVoiceTransport(options: VoiceTransportOptions = {}): VoiceTransport {
   return {
-    publishPresenceBeacon: (channelId, connectedTo = [], videoTracks = []) =>
-      publishPresenceBeacon(channelId, connectedTo, videoTracks, options),
+    publishPresenceBeacon: (channelId, connectedTo = [], knownPeers = [], videoTracks = []) =>
+      publishPresenceBeacon(channelId, connectedTo, knownPeers, videoTracks, options),
     subscribeRoster: (channelId, onChange) => subscribeRoster(channelId, onChange, options),
     sendSignal: (channelId, toPubkey, payload) => sendSignal(channelId, toPubkey, payload, options),
     subscribeSignals: (channelId, selfPubkey, onSignal) =>
@@ -107,18 +112,23 @@ async function bridge() {
  *   discover them transitively when their relay drops the publisher's
  *   own beacon. Empty / omitted = "no successful connections yet"
  *   (cold-started client).
+ * @param knownPeers - Pubkeys the publisher believes are active in the
+ *   call from any source: own PCs, relay beacons, or WebRTC control
+ *   snapshots. Emitted as `peer` tags so peers can gossip participants
+ *   before every direct connection is established.
  * @param videoTracks - Outbound video tracks the publisher is currently
  *   sending (any of `camera`, `screen`). Emitted as `v` tags so every
  *   participant can compute the room-wide video count and enforce the
  *   `MAX_VIDEO_SLOTS` cap (see `client.ts`). Empty for audio-only joiners.
  *
- * Caller is responsible for the cadence (every ~15s while in the channel)
- * and for opportunistic re-publishes when `connectedTo` or `videoTracks`
- * changes.
+ * Caller is responsible for the cadence (every ~10s while in the channel)
+ * and for opportunistic re-publishes when `connectedTo`, `knownPeers`,
+ * or `videoTracks` changes.
  */
 export async function publishPresenceBeacon(
   channelId: string,
   connectedTo: readonly string[] = [],
+  knownPeers: readonly string[] = [],
   videoTracks: readonly VideoSlotKind[] = [],
   options: VoiceTransportOptions = {},
 ): Promise<void> {
@@ -135,6 +145,12 @@ export async function publishPresenceBeacon(
     if (!pk || seenP.has(pk)) continue;
     seenP.add(pk);
     tags.push(['p', pk]);
+  }
+  const seenKnown = new Set<string>();
+  for (const pk of [...knownPeers, ...connectedTo]) {
+    if (!pk || seenKnown.has(pk)) continue;
+    seenKnown.add(pk);
+    tags.push(['peer', pk]);
   }
   const seenV = new Set<string>();
   for (const kind of videoTracks) {
@@ -155,6 +171,7 @@ export async function publishPresenceBeacon(
   console.log(
     '[voice] beacon published for', channelId.slice(0, 8),
     '+', connectedTo.length, 'connections',
+    '+', new Set([...knownPeers, ...connectedTo]).size, 'known',
     videoTracks.length > 0 ? `+ video=[${videoTracks.join(',')}]` : '',
   );
 }
@@ -219,6 +236,16 @@ export async function subscribeRoster(
         // Drop self-references defensively — a beacon claiming it's
         // connected to itself is meaningless and would inflate the roster.
         .filter((pk) => pk !== ev.pubkey);
+      const knownPeerSet = new Set<string>();
+      for (const t of ev.tags) {
+        if (t[0] !== 'peer') continue;
+        if (typeof t[1] !== 'string' || t[1].length === 0) continue;
+        if (t[1] === ev.pubkey) continue;
+        knownPeerSet.add(t[1]);
+      }
+      // Back-compat: old beacons only published connected peers as `p` tags.
+      for (const pk of connectedTo) knownPeerSet.add(pk);
+      const knownPeers = Array.from(knownPeerSet);
       const videoTracks = ev.tags
         .filter((t) => t[0] === 'v' && (t[1] === 'camera' || t[1] === 'screen'))
         .map((t) => t[1] as VideoSlotKind);
@@ -236,6 +263,7 @@ export async function subscribeRoster(
         createdAt: ev.created_at,
         expiresAt,
         connectedTo,
+        knownPeers,
         videoTracks,
         isSfu,
         isMeshTestPeer,
@@ -363,9 +391,10 @@ export function getSelfPubkey(): string | null {
  *
  * The relay only tells us about publishers we directly received beacons
  * from. To survive dropped beacons, each beacon also lists who its
- * publisher has confirmed live connections with — `connectedTo`. Union
- * those into the publisher set and you get every pubkey known to be in
- * the room.
+ * publisher has confirmed live connections with — `connectedTo` — and
+ * who the publisher currently knows about from relay/control gossip —
+ * `knownPeers`. Union those into the publisher set and you get every
+ * pubkey known to be in the room.
  *
  * Self is included as a transitive hint when other peers list us — but
  * `VoiceClient` always filters `selfPubkey` out before opening peers, so
@@ -378,6 +407,7 @@ export function transitiveParticipants(
   for (const p of roster) {
     set.add(p.pubkey);
     for (const pk of p.connectedTo) set.add(pk);
+    for (const pk of p.knownPeers ?? []) set.add(pk);
   }
   return Array.from(set);
 }

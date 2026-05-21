@@ -2,14 +2,15 @@
  * Per-peer control plane that rides over an RTCDataChannel inside the
  * mesh PeerConnection. Used for:
  *
- *  - Fast hangup detection. A 2.5 s ping/pong heartbeat with a 7 s
- *    dead-peer timer brings detection of a vanished peer well under
- *    10 s, vs. the ~30+ s ICE-failure path the underlying PC alone
- *    would take.
- *  - Transitive WebRTC discovery. The `hello` and `peerAdded` /
- *    `peerRemoved` messages let A learn about C through B without
- *    ever consulting the relay roster — the dex stays workable when
- *    a single peer's beacons are dropped or the relay throttles.
+ *  - Fast hangup detection. A 2.5 s ping/pong heartbeat with a 20 s
+ *    dead-peer timer catches vanished peers faster than the underlying
+ *    ICE-failure path while avoiding false teardown from background-tab
+ *    timer throttling.
+ *  - Transitive WebRTC discovery. The `hello`, periodic
+ *    `peerSnapshot`, and `peerAdded` / `peerRemoved` messages let A
+ *    learn about C through B without ever consulting the relay roster —
+ *    the dex stays workable when a single peer's beacons are dropped or
+ *    the relay throttles.
  *  - Graceful goodbye. The `bye` message reaches the remote
  *    instantly even when the relay refuses our final kind 25050.
  *
@@ -25,11 +26,13 @@ import { pushVoiceDebug } from './debug';
 
 export const CONTROL_CHANNEL_LABEL = 'obelisk-control';
 export const PING_INTERVAL_MS = 2500;
-export const DEAD_PEER_TIMEOUT_MS = 7000;
-export const OPEN_TIMEOUT_MS = 10_000;
+export const DEAD_PEER_TIMEOUT_MS = 20_000;
+export const OPEN_TIMEOUT_MS = 15_000;
+export const PEER_SNAPSHOT_INTERVAL_MS = 5_000;
 
 export type ControlMessage =
   | { type: 'hello'; peers: string[]; sessionId: string; build: string }
+  | { type: 'peerSnapshot'; peers: string[]; ts: number }
   | { type: 'peerAdded'; pubkey: string }
   | { type: 'peerRemoved'; pubkey: string }
   | { type: 'bye'; reason: string }
@@ -38,6 +41,7 @@ export type ControlMessage =
 
 export interface ControlChannelEvents {
   onHello(remotePeers: string[], remoteBuild: string): void;
+  onPeerSnapshot(remotePeers: string[]): void;
   onPeerAdded(pubkey: string): void;
   onPeerRemoved(pubkey: string): void;
   onBye(reason: string): void;
@@ -60,6 +64,7 @@ export interface ControlChannelOptions {
 export class ControlChannel {
   private dc: RTCDataChannel | null = null;
   private pingTimer: ReturnType<typeof setInterval> | null = null;
+  private peerSnapshotTimer: ReturnType<typeof setInterval> | null = null;
   private deadTimer: ReturnType<typeof setTimeout> | null = null;
   private openTimer: ReturnType<typeof setTimeout> | null = null;
   private closed = false;
@@ -133,6 +138,11 @@ export class ControlChannel {
     }
   }
 
+  /** Send the latest known peer set immediately over this open channel. */
+  sendPeerSnapshot(): void {
+    this.send({ type: 'peerSnapshot', peers: this.initialPeers(), ts: Date.now() });
+  }
+
   /** Idempotent. Sends `bye` if the channel is still open, then tears down. */
   close(reason = 'local-leave'): void {
     if (this.closed) return;
@@ -142,6 +152,7 @@ export class ControlChannel {
       catch { /* best effort */ }
     }
     if (this.pingTimer) { clearInterval(this.pingTimer); this.pingTimer = null; }
+    if (this.peerSnapshotTimer) { clearInterval(this.peerSnapshotTimer); this.peerSnapshotTimer = null; }
     if (this.deadTimer) { clearTimeout(this.deadTimer); this.deadTimer = null; }
     if (this.openTimer) { clearTimeout(this.openTimer); this.openTimer = null; }
     try { this.dc?.close(); } catch { /* ignore */ }
@@ -162,6 +173,7 @@ export class ControlChannel {
       });
       this.armDeadTimer();
       this.pingTimer = setInterval(() => this.sendPing(), PING_INTERVAL_MS);
+      this.peerSnapshotTimer = setInterval(() => this.sendPeerSnapshot(), PEER_SNAPSHOT_INTERVAL_MS);
       pushVoiceDebug({
         kind: 'pc-state',
         peer: this.remotePubkey,
@@ -201,6 +213,10 @@ export class ControlChannel {
         // Hello implies the channel is alive; reset the dead-peer timer.
         this.armDeadTimer();
         break;
+      case 'peerSnapshot':
+        this.events.onPeerSnapshot(Array.isArray(msg.peers) ? msg.peers : []);
+        this.armDeadTimer();
+        break;
       case 'peerAdded':
         if (typeof msg.pubkey === 'string') this.events.onPeerAdded(msg.pubkey);
         this.armDeadTimer();
@@ -216,6 +232,7 @@ export class ControlChannel {
         // tornDown counter.
         this.closed = true;
         if (this.pingTimer) { clearInterval(this.pingTimer); this.pingTimer = null; }
+        if (this.peerSnapshotTimer) { clearInterval(this.peerSnapshotTimer); this.peerSnapshotTimer = null; }
         if (this.deadTimer) { clearTimeout(this.deadTimer); this.deadTimer = null; }
         if (this.openTimer) { clearTimeout(this.openTimer); this.openTimer = null; }
         try { this.dc?.close(); } catch { /* ignore */ }
