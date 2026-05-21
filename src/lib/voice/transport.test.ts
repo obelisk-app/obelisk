@@ -218,6 +218,27 @@ describe('subscribeRoster', () => {
     unsub();
   });
 
+  it('parses marked mesh test peer beacons', async () => {
+    let lastRoster: { pubkey: string; isMeshTestPeer?: boolean }[] = [];
+    const unsub = await subscribeRoster('ch1', (r) => { lastRoster = r; });
+    const now = Math.floor(Date.now() / 1000);
+
+    bridgeFake.inject({
+      pubkey: 'p-test', kind: KIND_VOICE_PRESENCE, content: '',
+      tags: [
+        ['e', 'ch1'],
+        ['client', 'obelisk-mesh-test-peer'],
+        ['test-peer', 'mesh'],
+        ['expiration', String(now + 30)],
+      ],
+      created_at: now,
+    });
+
+    expect(lastRoster).toHaveLength(1);
+    expect(lastRoster[0].isMeshTestPeer).toBe(true);
+    unsub();
+  });
+
   it('ignores beacons for other channels after broad kind-only delivery', async () => {
     let lastRoster: { pubkey: string }[] = [];
     const unsub = await subscribeRoster('ch1', (r) => { lastRoster = r; });

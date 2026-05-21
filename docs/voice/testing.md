@@ -61,6 +61,23 @@ test-only constructor exposure) with `{ open: true }` to skip the
 membership gate. The transport, peer, and control-channel paths
 under test are unaffected.
 
+### SFU-hosted mesh test peer
+
+The SFU repo includes a synthetic mesh peer that reuses the ffmpeg test-pattern
+media path while speaking the browser mesh protocol:
+
+```bash
+cd /root/obelisk-sfu
+TEST_PEER_RELAYS=wss://relay.obelisk.ar npm run test-peer:mesh -- <channel-id>
+```
+
+From the SFU admin UI, choose **Mesh P2P** in the Test peers form. The script
+publishes kind 20078 beacons with the diagnostic markers documented in
+`mesh-protocol.md`, then exchanges kind 25050 offer/answer/ICE directly with
+channel peers. Browser clients admit the marked peer only when the local viewer
+is a channel admin, which lets operators test private channels without editing
+the NIP-29 member list.
+
 ### Synthetic media
 
 Headless Chromium's `--use-fake-device-for-media-stream` can hang on

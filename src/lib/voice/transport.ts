@@ -226,6 +226,10 @@ export async function subscribeRoster(
       // never set it. The presence/absence is the topology marker the
       // VoiceClient uses to switch dial behavior — see `setSfuMode`.
       const isSfu = ev.tags.some((t) => t[0] === 'sfu' && t[1] === '1');
+      const isMeshTestPeer = ev.tags.some((t) =>
+        (t[0] === 'client' && t[1] === 'obelisk-mesh-test-peer') ||
+        (t[0] === 'test-peer' && t[1] === 'mesh'),
+      );
       latest.set(ev.pubkey, {
         pubkey: ev.pubkey,
         channelId,
@@ -234,6 +238,7 @@ export async function subscribeRoster(
         connectedTo,
         videoTracks,
         isSfu,
+        isMeshTestPeer,
       });
       emit();
     },

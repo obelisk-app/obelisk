@@ -20,7 +20,9 @@ Two Nostr event kinds + one in-PC data channel:
     ["expiration", "<unix-seconds, +30 from publish>"],
     ["p", "<connected-peer-pubkey>"], // 0..N — peers we have a live PC to
     ["v", "camera"], ["v", "screen"],  // 0..2 — outbound video tracks
-    ["sfu", "1"]                        // present iff this client is an SFU node
+    ["sfu", "1"],                       // present iff this client is an SFU node
+    ["client", "obelisk-mesh-test-peer"], // diagnostic mesh test peer marker
+    ["test-peer", "mesh"]                // legacy/simple diagnostic marker
   ]
 }
 ```
@@ -39,6 +41,21 @@ Cadence:
 The receiver dedups by `(pubkey, created_at)` — newer beacons replace
 older ones; expired beacons (`expiration` past) are swept out by
 `subscribeRoster`'s `(PRESENCE_TTL_SECONDS / 2) * 1000` interval.
+
+### Diagnostic mesh test peers
+
+Synthetic mesh peers spawned from the SFU admin UI publish the same presence
+beacon plus both diagnostic markers:
+
+- `["client", "obelisk-mesh-test-peer"]`
+- `["test-peer", "mesh"]`
+
+These peers are not SFUs and still negotiate direct P2P mesh. The marker only
+changes the browser-side admission gate: a local channel admin may dial and
+accept signals from the marked pubkey without first adding it to the NIP-29
+member list. Regular members still apply the normal member/admin/open-room gate,
+so the marker cannot be used by arbitrary pubkeys to join private calls for
+non-admin viewers. This is for operator diagnostics and synthetic media tests.
 
 ## Signal envelope (kind 25050)
 
@@ -153,6 +170,8 @@ All four converge on the same `tearDownPeer(pubkey)` (idempotent — see
 ## Membership + WoT
 
 - The voice channel's NIP-29 admin/member list is the trust gate.
+  Marked mesh test peers are a narrow diagnostic exception for local channel
+  admins only; they do not change the gate for regular members.
   Signals from non-members are deferred for up to
   `DEFERRED_SIGNAL_TTL_MS = 5_000` ms; if `updateRoles()` admits the
   sender within that window the queue replays through `routeSignal`.

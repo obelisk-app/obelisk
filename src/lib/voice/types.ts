@@ -90,6 +90,13 @@ export interface VoicePresence {
    */
   isSfu: boolean;
   /**
+   * Diagnostic mesh peers are synthetic ffmpeg-driven clients spawned by an
+   * operator from the SFU admin UI. They are not SFUs and still negotiate
+   * direct P2P mesh, but channel admins can use this signed marker to admit
+   * them into the local dial gate without editing the NIP-29 member list.
+   */
+  isMeshTestPeer?: boolean;
+  /**
    * Outbound video tracks the publisher is currently sending (camera and/or
    * screen-share). Drives the room-wide video-slot cap: every participant
    * counts the union of these across all live beacons and refuses to start

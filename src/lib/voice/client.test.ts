@@ -279,6 +279,10 @@ function presence(
   return { pubkey, channelId: 'ch1', createdAt: 1, expiresAt: 9999999999, connectedTo, videoTracks, isSfu: false };
 }
 
+function meshTestPresence(pubkey: string): VoicePresence {
+  return { ...presence(pubkey), isMeshTestPeer: true };
+}
+
 describe('VoiceClient.join', () => {
   it('throws when the local user is not in the member list', async () => {
     const client = new VoiceClient('ch1', { members: [PEER1] });
@@ -371,6 +375,22 @@ describe('VoiceClient roster → peer lifecycle', () => {
     await client.leave();
   });
 
+  it('admits marked mesh test peers only for local channel admins', async () => {
+    const adminClient = new VoiceClient('ch1', { members: [SELF], admins: [SELF] });
+    await adminClient.join();
+    transportFake.fireRoster([meshTestPresence(PEER2)]);
+    await flushMicrotasks(8);
+    expect(adminClient.getParticipants()).toEqual([PEER2]);
+    await adminClient.leave();
+
+    const memberClient = new VoiceClient('ch1', { members: [SELF], admins: [] });
+    await memberClient.join();
+    transportFake.fireRoster([meshTestPresence(PEER2)]);
+    await flushMicrotasks(8);
+    expect(memberClient.getParticipants()).toEqual([]);
+    await memberClient.leave();
+  });
+
   it('updateRoles tears down peers that just left the member set', async () => {
     const client = new VoiceClient('ch1', { members: [SELF, PEER1, PEER2] });
     await client.join();
@@ -425,6 +445,17 @@ describe('VoiceClient roster → peer lifecycle', () => {
     await flushMicrotasks(4);
     // No peer was created for PEER2.
     expect(webrtc.pcs()).toHaveLength(0);
+    await client.leave();
+  });
+
+  it('routes signals from marked mesh test peers after the admin sees their beacon', async () => {
+    const client = new VoiceClient('ch1', { members: [SELF], admins: [SELF] });
+    await client.join();
+    transportFake.fireRoster([meshTestPresence(PEER2)]);
+    await flushMicrotasks(8);
+    transportFake.fireSignal(PEER2, { type: 'offer', sdp: 'v=0\r\n', sessionId: 's', seq: 1 });
+    await flushMicrotasks(4);
+    expect(webrtc.pcs().length).toBeGreaterThan(0);
     await client.leave();
   });
 });

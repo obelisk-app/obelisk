@@ -287,6 +287,7 @@ export class VoiceClient {
    * actually started a call); v0 trusts the beacon flag alone.
    */
   private knownSfuPubkeys = new Set<string>();
+  private knownMeshTestPeerPubkeys = new Set<string>();
   /**
    * Pubkeys we currently have RTCPeerConnections in `connected` state with.
    * Drives the `connectedTo` field of our own beacon — every other peer who
@@ -657,6 +658,10 @@ export class VoiceClient {
     // to every channel's NIP-29 member list. Filter is the same on the
     // signaling path so the SFU's offers/answers/ICE aren't dropped.
     if (this.knownSfuPubkeys.has(pubkey)) return true;
+    // Operator-spawned mesh test peers are diagnostics, not room members.
+    // Admit them only for local channel admins; regular members keep the
+    // normal NIP-29 gate so a random beacon marker cannot join private calls.
+    if (this.knownMeshTestPeerPubkeys.has(pubkey) && this.admins.has(this.selfPubkey)) return true;
     return this.openRoom || this.members.has(pubkey) || this.admins.has(pubkey);
   }
 
@@ -793,6 +798,7 @@ export class VoiceClient {
       // operators shouldn't have to babysit the member list every
       // time they want to spin up an SFU.
       this.knownSfuPubkeys = new Set(roster.filter((r) => r.isSfu).map((r) => r.pubkey));
+      this.knownMeshTestPeerPubkeys = new Set(roster.filter((r) => r.isMeshTestPeer).map((r) => r.pubkey));
       // Compute the transitive participant set first — including peers we
       // only know about from someone else's `connectedTo` p-tags — then
       // filter by membership and hand to handleRoster for cap+open logic.
@@ -861,6 +867,7 @@ export class VoiceClient {
     this.signalsUnsub?.(); this.signalsUnsub = null;
     this.rosterUnsub?.(); this.rosterUnsub = null;
     this.currentRoster = [];
+    this.knownMeshTestPeerPubkeys.clear();
     this.seenRosterPubkeys.clear();
     this.discovery.reset();
     if (this.dialDebounceTimer) { clearTimeout(this.dialDebounceTimer); this.dialDebounceTimer = null; }
@@ -1030,6 +1037,7 @@ export class VoiceClient {
     this.connectedPubkeys.clear();
     this.localVideoClaimedAt.clear();
     this.currentRoster = [];
+    this.knownMeshTestPeerPubkeys.clear();
     this.remoteTracks.clear();
     this.emitRemoteTracks();
 
