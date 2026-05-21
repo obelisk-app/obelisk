@@ -335,7 +335,7 @@ export default function AppShell() {
             )}
           </ResizablePane>
         </div>
-        <main className="flex flex-1 flex-col overflow-hidden min-w-0 border-l border-t border-r border-lc-border">
+        <main className="flex flex-1 flex-col overflow-hidden min-w-0 border-t border-r border-lc-border">
           {view.kind === 'group' ? (
             <ChatLayout
               groupId={view.groupId}
@@ -650,10 +650,11 @@ function ResizablePane({
   const handle = (
     <div
       onMouseDown={onMouseDown}
-      className="group/handle relative w-1 cursor-col-resize bg-transparent hover:bg-lc-green/40 active:bg-lc-green/60 max-md:hidden"
+      className="group/handle relative z-20 w-0 cursor-col-resize max-md:hidden"
       title="Drag to resize"
     >
-      <div className="absolute inset-y-0 -left-1 -right-1" />
+      <div className="absolute inset-y-0 -left-2 right-0 w-4" />
+      <div className="pointer-events-none absolute inset-y-0 -left-px w-px bg-lc-green opacity-0 transition-opacity group-hover/handle:opacity-100 group-active/handle:opacity-100" />
     </div>
   );
 
