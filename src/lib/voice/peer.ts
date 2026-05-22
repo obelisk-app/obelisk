@@ -119,6 +119,8 @@ export interface PeerOptions {
   /** Preserve muted recv-only media sections across hard resets for peers
    *  that were explicitly bootstrapped to receive remote media. */
   bootstrapRecvOnlyMedia?: boolean;
+  /** Some legacy/SFU peers cannot initiate their side of the first offer. */
+  allowPoliteInitialOffer?: boolean;
   send: (payload: VoiceSignalPayload) => Promise<void> | void;
   events: PeerEvents;
   /** Optional control-channel hookup. When provided, an `obelisk-control`
@@ -140,6 +142,7 @@ export class Peer {
   private readonly sessionId: string;
   private readonly controlOpts: PeerOptions['control'];
   private readonly bootstrapRecvOnlyMedia: boolean;
+  private readonly allowPoliteInitialOffer: boolean;
   private controlChannel: ControlChannel | null = null;
 
   pc: RTCPeerConnection;
@@ -217,6 +220,7 @@ export class Peer {
     this.sessionId = opts.sessionId;
     this.controlOpts = opts.control;
     this.bootstrapRecvOnlyMedia = opts.bootstrapRecvOnlyMedia ?? false;
+    this.allowPoliteInitialOffer = opts.allowPoliteInitialOffer ?? false;
     this.pc = this.createPc();
     this.attachControlChannel();
     this.armConnectWatchdog();
@@ -726,6 +730,10 @@ export class Peer {
     }
     if (this.pc.signalingState !== 'stable') {
       this.queueNegotiation('state=' + this.pc.signalingState);
+      return;
+    }
+    if (this.polite && !this.wasConnected && !this.allowPoliteInitialOffer) {
+      console.log('[voice] kickNegotiation skip — polite pre-connect peer waits for remote offer from', this.remotePubkey.slice(0, 8));
       return;
     }
     console.log('[voice] kickNegotiation forcing offer to', this.remotePubkey.slice(0, 8));

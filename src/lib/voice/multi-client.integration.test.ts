@@ -151,6 +151,7 @@ vi.mock('./transport', () => {
   ) => {
     relayFake.publishBeacon(channelId, connectedTo, knownPeers, videoTracks);
   });
+  const publishLeavePresence = vi.fn(async () => {});
   const subscribeRoster = vi.fn(async (channelId: string, cb: (r: VoicePresence[]) => void) => {
     return relayFake.subscribeRoster(channelId, cb);
   });
@@ -162,11 +163,13 @@ vi.mock('./transport', () => {
   });
   return {
     publishPresenceBeacon,
+    publishLeavePresence,
     subscribeRoster,
     sendSignal,
     subscribeSignals,
     createVoiceTransport: vi.fn(() => ({
       publishPresenceBeacon,
+      publishLeavePresence,
       subscribeRoster,
       sendSignal,
       subscribeSignals,

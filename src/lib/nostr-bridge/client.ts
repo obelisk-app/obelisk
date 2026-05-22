@@ -924,8 +924,11 @@ class BridgeImpl implements NostrBridge {
    * crash that never published `status=closed`.
    */
   activeCallByChannel = new StateStore<Record<string, { hostPubkey: string; status: string; participantCount: number; expiresAt: number; createdAt: number; mode?: 'sfu' | 'mesh'; participantPubkeys?: string[] }>>({});
-  private sfuActiveCalls = new Map<string, { hostPubkey: string; status: string; participantCount: number; expiresAt: number; createdAt: number; mode: 'sfu' }>();
+  private sfuActiveCalls = new Map<string, { hostPubkey: string; status: string; participantCount: number; expiresAt: number; createdAt: number; mode: 'sfu'; participantPubkeys?: string[] }>();
+  private sfuPresenceByChannel = new Map<string, Map<string, { expiresAt: number; createdAt: number; participantPubkeys: string[] }>>();
   private meshPresenceByChannel = new Map<string, Map<string, { expiresAt: number; createdAt: number }>>();
+  /** Newest mesh presence event seen per channel/pubkey, including leave tombstones. */
+  private meshPresenceSeenAtByChannel = new Map<string, Map<string, number>>();
   private meshPresenceSweepTimer: ReturnType<typeof setInterval> | null = null;
   myFollows = new StateStore<string[]>([]);
   /**
@@ -4374,6 +4377,37 @@ class BridgeImpl implements NostrBridge {
     this.ensureMeshPresenceSweep();
   }
 
+  private parseSfuParticipantPubkeys(ev: NostrEvent): string[] {
+    const fromTags = getAllTags(ev, 'p');
+    let fromContent: string[] = [];
+    if (ev.content.trim().length > 0) {
+      try {
+        const parsed = JSON.parse(ev.content) as { participants?: unknown };
+        if (Array.isArray(parsed?.participants)) {
+          fromContent = parsed.participants.filter((pk): pk is string => typeof pk === 'string' && pk.length > 0);
+        }
+      } catch {
+        // Older SFU builds used empty content; malformed content should not
+        // discard the tag-sourced roster.
+      }
+    }
+    return this.mergePubkeys(fromTags, fromContent);
+  }
+
+  private mergePubkeys(...sets: Array<readonly string[] | undefined>): string[] {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const set of sets) {
+      if (!set) continue;
+      for (const pk of set) {
+        if (!pk || seen.has(pk)) continue;
+        seen.add(pk);
+        out.push(pk);
+      }
+    }
+    return out.sort();
+  }
+
   private ingestActiveCall(ev: NostrEvent): void {
     const channelId = getTag(ev, 'd');
     if (!channelId) return;
@@ -4381,19 +4415,23 @@ class BridgeImpl implements NostrBridge {
     const hostPubkey = getTag(ev, 'host') ?? ev.pubkey;
     const expirationStr = getTag(ev, 'expiration');
     const expiresAt = expirationStr ? parseInt(expirationStr, 10) || 0 : 0;
+    const participantPubkeys = this.parseSfuParticipantPubkeys(ev);
     // Participant count: SFU started tagging this so consumers can
     // distinguish "live call with people" from "room still open during
     // empty-grace." Older SFU builds don't tag - treat absent as -1
-    // (unknown, render badge to preserve back-compat) so we don't go
-    // silent on a partial deploy.
+    // (unknown, render badge to preserve back-compat) unless the event
+    // content/tags include a passive participant roster.
     const countStr = getTag(ev, 'count');
-    const participantCount = countStr === undefined ? -1 : (parseInt(countStr, 10) || 0);
+    const participantCount = countStr === undefined
+      ? (participantPubkeys.length > 0 ? participantPubkeys.length : -1)
+      : (parseInt(countStr, 10) || 0);
     const prev = this.sfuActiveCalls.get(channelId);
     // Newest-wins: replaceable kind, stale duplicates from slow relays
     // shouldn't overwrite a fresher announcement.
     if (prev && prev.createdAt >= ev.created_at) return;
     if (status === 'closed') {
       this.sfuActiveCalls.delete(channelId);
+      this.sfuPresenceByChannel.delete(channelId);
       this.recomputeActiveCallByChannel();
       return;
     }
@@ -4404,31 +4442,77 @@ class BridgeImpl implements NostrBridge {
       expiresAt,
       createdAt: ev.created_at,
       mode: 'sfu',
+      participantPubkeys: participantPubkeys.length > 0 ? participantPubkeys : undefined,
     });
     this.recomputeActiveCallByChannel();
   }
 
   private ingestMeshVoicePresence(ev: NostrEvent): void {
     if (!ev.tags.some((t) => t[0] === 't' && t[1] === 'obelisk-voice-presence')) return;
-    // SFU infrastructure also publishes kind 20078 with ["sfu","1"].
-    // Those are topology beacons, not participant evidence for mesh LIVE.
-    if (ev.tags.some((t) => t[0] === 'sfu' && t[1] === '1')) return;
     const channelId = getTag(ev, 'e');
     if (!channelId) return;
     const expirationStr = getTag(ev, 'expiration');
     const expiresAt = expirationStr
       ? parseInt(expirationStr, 10) || 0
       : ev.created_at + 30;
-    if (!Number.isFinite(expiresAt) || expiresAt <= Math.floor(Date.now() / 1000)) return;
+    if (!Number.isFinite(expiresAt)) return;
+
+    const status = getTag(ev, 'status');
+    const expired = expiresAt <= Math.floor(Date.now() / 1000);
+    const terminal = status === 'left' || status === 'closed' || expired;
+    let seenByPubkey = this.meshPresenceSeenAtByChannel.get(channelId);
+    if (!seenByPubkey) {
+      seenByPubkey = new Map();
+      this.meshPresenceSeenAtByChannel.set(channelId, seenByPubkey);
+    }
+    const seenAt = seenByPubkey.get(ev.pubkey) ?? 0;
+    if (seenAt > ev.created_at) return;
+    if (seenAt === ev.created_at && !terminal) return;
+    seenByPubkey.set(ev.pubkey, ev.created_at);
+
+    // SFU infrastructure publishes kind 20078 with ["sfu","1"] and p-tags
+    // for users it has live PCs to. Those p-tags are passive roster evidence
+    // for the Join Channel view, but the SFU pubkey itself is not a mesh
+    // participant and must not be counted as one.
+    if (ev.tags.some((t) => t[0] === 'sfu' && t[1] === '1')) {
+      this.ingestSfuVoicePresence(ev, channelId, expiresAt);
+      return;
+    }
 
     let byPubkey = this.meshPresenceByChannel.get(channelId);
+    if (terminal) {
+      byPubkey?.delete(ev.pubkey);
+      if (byPubkey && byPubkey.size === 0) this.meshPresenceByChannel.delete(channelId);
+      this.recomputeActiveCallByChannel();
+      return;
+    }
+
     if (!byPubkey) {
       byPubkey = new Map();
       this.meshPresenceByChannel.set(channelId, byPubkey);
     }
-    const prev = byPubkey.get(ev.pubkey);
-    if (prev && prev.createdAt >= ev.created_at) return;
     byPubkey.set(ev.pubkey, { expiresAt, createdAt: ev.created_at });
+    this.recomputeActiveCallByChannel();
+  }
+
+  private ingestSfuVoicePresence(ev: NostrEvent, channelId: string, expiresAt: number): void {
+    let bySfu = this.sfuPresenceByChannel.get(channelId);
+    if (!bySfu) {
+      bySfu = new Map();
+      this.sfuPresenceByChannel.set(channelId, bySfu);
+    }
+    const prev = bySfu.get(ev.pubkey);
+    if (prev && prev.createdAt >= ev.created_at) return;
+
+    const participantPubkeys = this.mergePubkeys(getAllTags(ev, 'p'));
+    if (participantPubkeys.length === 0) {
+      bySfu.delete(ev.pubkey);
+      if (bySfu.size === 0) this.sfuPresenceByChannel.delete(channelId);
+      this.recomputeActiveCallByChannel();
+      return;
+    }
+
+    bySfu.set(ev.pubkey, { expiresAt, createdAt: ev.created_at, participantPubkeys });
     this.recomputeActiveCallByChannel();
   }
 
@@ -4450,6 +4534,17 @@ class BridgeImpl implements NostrBridge {
       }
       if (byPubkey.size === 0) {
         this.meshPresenceByChannel.delete(channelId);
+        changed = true;
+      }
+    }
+    for (const [channelId, bySfu] of Array.from(this.sfuPresenceByChannel.entries())) {
+      for (const [sfuPubkey, presence] of Array.from(bySfu.entries())) {
+        if (presence.expiresAt > now) continue;
+        bySfu.delete(sfuPubkey);
+        changed = true;
+      }
+      if (bySfu.size === 0) {
+        this.sfuPresenceByChannel.delete(channelId);
         changed = true;
       }
     }
@@ -4488,8 +4583,47 @@ class BridgeImpl implements NostrBridge {
       };
     }
 
+    const sfuPresence: Record<string, {
+      hostPubkey: string;
+      participantPubkeys: string[];
+      expiresAt: number;
+      createdAt: number;
+    }> = {};
+    for (const [channelId, bySfu] of this.sfuPresenceByChannel.entries()) {
+      let createdAt = 0;
+      let expiresAt = Number.MAX_SAFE_INTEGER;
+      let hostPubkey = '';
+      let participantPubkeys: string[] = [];
+      for (const [sfuPubkey, presence] of bySfu.entries()) {
+        if (!hostPubkey || presence.createdAt > createdAt) hostPubkey = sfuPubkey;
+        createdAt = Math.max(createdAt, presence.createdAt);
+        expiresAt = Math.min(expiresAt, presence.expiresAt);
+        participantPubkeys = this.mergePubkeys(participantPubkeys, presence.participantPubkeys);
+      }
+      if (participantPubkeys.length === 0) continue;
+      sfuPresence[channelId] = { hostPubkey, participantPubkeys, expiresAt, createdAt };
+      next[channelId] = {
+        hostPubkey,
+        status: 'active',
+        participantCount: participantPubkeys.length,
+        expiresAt,
+        createdAt,
+        mode: 'sfu',
+        participantPubkeys,
+      };
+    }
+
     for (const [channelId, call] of this.sfuActiveCalls.entries()) {
-      next[channelId] = call;
+      const presence = sfuPresence[channelId];
+      const participantPubkeys = this.mergePubkeys(call.participantPubkeys, presence?.participantPubkeys);
+      const participantCount = call.participantCount >= 0
+        ? Math.max(call.participantCount, participantPubkeys.length)
+        : (participantPubkeys.length > 0 ? participantPubkeys.length : call.participantCount);
+      next[channelId] = {
+        ...call,
+        participantCount,
+        participantPubkeys: participantPubkeys.length > 0 ? participantPubkeys : call.participantPubkeys,
+      };
     }
 
     this.activeCallByChannel.set(next);
@@ -4497,7 +4631,9 @@ class BridgeImpl implements NostrBridge {
 
   private clearActiveCallState(): void {
     this.sfuActiveCalls.clear();
+    this.sfuPresenceByChannel.clear();
     this.meshPresenceByChannel.clear();
+    this.meshPresenceSeenAtByChannel.clear();
     if (this.meshPresenceSweepTimer) {
       clearInterval(this.meshPresenceSweepTimer);
       this.meshPresenceSweepTimer = null;

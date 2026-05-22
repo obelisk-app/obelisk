@@ -20,9 +20,10 @@ import { setActiveVoiceClient, getActiveVoiceClient } from '@/lib/voice/active-c
 import { getBridge } from '@/lib/nostr-bridge/client';
 import type { NostrBridge } from '@/lib/nostr-bridge/types';
 import { useVoiceStore } from '@/store/voice';
-import { useGroups, useCurrentRelayUrl } from '@/lib/nostr-bridge';
+import { useActiveCall, useGroups, useCurrentRelayUrl } from '@/lib/nostr-bridge';
 import { useProfile } from '@nostr-wot/data/react';
 import { ensureSfuRoomStarted } from '@/lib/voice/sfu-control';
+import { shouldUseSfuTopology } from '@/lib/voice/topology';
 import VoiceControls from './VoiceControls';
 import { DebugOverlay } from './DebugOverlay';
 import ShootingStars from '@/components/ShootingStars';
@@ -51,6 +52,12 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
     () => groups.find((g) => g.id === channelId)?.kind ?? null,
     [groups, channelId],
   );
+  const currentVoiceChannelId = useVoiceStore((s) => s.currentVoiceChannelId);
+  const activeCall = useActiveCall(channelId);
+  const expectSfu = useMemo(
+    () => shouldUseSfuTopology(channelKind, activeCall?.mode),
+    [channelKind, activeCall?.mode],
+  );
   const clientRef = useRef<VoiceClient | null>(null);
   const [gate, setGate] = useState<AuthGate>({ phase: 'init' });
   const [error, setError] = useState<string | null>(null);
@@ -63,10 +70,11 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
   // takes the main stage and everyone else collapses to the rail. Any user can
   // pin/unpin from any tile.
   const [pinned, setPinned] = useState<string | null>(null);
-  const [joined, setJoined] = useState<boolean>(() => {
+  const [joinedChannelId, setJoinedChannelId] = useState<string | null>(() => {
     const c = getActiveVoiceClient();
-    return !!(c && c.channelId === channelId && c.isJoined());
+    return c && c.isJoined() ? c.channelId : null;
   });
+  const joined = joinedChannelId === channelId;
 
   /**
    * SFU upgrade status for the current call. Distinct from voice-client
@@ -92,6 +100,16 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
    * brief SFU restart is recovered without the user having to rejoin.
    */
   const [sfuRepublishCounter, setSfuRepublishCounter] = useState(0);
+
+  useEffect(() => {
+    if (joined) return;
+    clientRef.current = null;
+    setParticipants([]);
+    setRemoteTracks([]);
+    setPeerConnectionStates({});
+    setLocal({ mic: false, camera: false, screen: false });
+    setPinned(null);
+  }, [channelId, joined]);
 
   // Phase 1 — bridge + role subscriptions, gate decision.
   useEffect(() => {
@@ -229,7 +247,7 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
         // Only voice-sfu channels are tracking SFU upgrade status; for
         // a plain voice channel an SFU showing up wouldn't make sense
         // anyway, but keep the state machine local to that channel kind.
-        if (channelKind !== 'voice-sfu') return;
+        if (!expectSfu) return;
         if (sfu) {
           setSfuStatus('connected');
           // Clear any stale connection error from a prior failed attempt.
@@ -263,7 +281,7 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
       // Reapply expected-topology so a channel-kind reclassification
       // mid-call (admin republished kind 39000 with/without
       // ["t","voice-sfu"]) flips the live client immediately.
-      existing.setExpectSfu(channelKind === 'voice-sfu');
+      existing.setExpectSfu(expectSfu);
       clientRef.current = existing;
       setParticipants(existing.getParticipants());
       setRemoteTracks(existing.getRemoteTracks());
@@ -319,7 +337,7 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
           members: gate.members,
           admins: gate.admins,
           open: gate.open,
-          expectSfu: channelKind === 'voice-sfu',
+          expectSfu: expectSfu,
           originRelayUrl: currentRelayUrl,
           events,
         });
@@ -348,7 +366,22 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gate.phase, channelId, joined]);
+  }, [gate.phase, channelId, joined, expectSfu]);
+
+  // Feed the joined mesh client with the same passive live-call roster used
+  // by the pre-join UI. This gives mesh bootstrap a second source when an
+  // ephemeral roster REQ misses a beacon but the bridge-level call detector
+  // has already seen it.
+  useEffect(() => {
+    const c = clientRef.current ?? getActiveVoiceClient();
+    if (!joined || !c || c.channelId !== channelId) return;
+    if (typeof c.setPassiveParticipantHints !== 'function') return;
+    if (activeCall?.mode === 'sfu') {
+      c.setPassiveParticipantHints([]);
+      return;
+    }
+    c.setPassiveParticipantHints(activeCall?.participantPubkeys ?? []);
+  }, [joined, channelId, activeCall?.mode, activeCall?.participantPubkeys]);
 
   // Mirror channel-kind reclassifications into the running voice client.
   // If the admin republishes kind 39000 toggling ["t","voice-sfu"] while
@@ -359,8 +392,8 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
   useEffect(() => {
     const c = clientRef.current ?? getActiveVoiceClient();
     if (!c || c.channelId !== channelId) return;
-    c.setExpectSfu(channelKind === 'voice-sfu');
-  }, [channelKind, channelId]);
+    c.setExpectSfu(expectSfu);
+  }, [expectSfu, channelId]);
 
   // SFU supervisor — owns the publish/retry/republish lifecycle for
   // `voice-sfu` channels. Re-runs whenever the user joins, the channel
@@ -387,7 +420,7 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
   useEffect(() => {
     if (gate.phase !== 'ready') return;
     if (!joined) return;
-    if (channelKind !== 'voice-sfu') {
+    if (!expectSfu) {
       setSfuStatus('na');
       return;
     }
@@ -456,7 +489,7 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
       cancelled = true;
       clearTimers();
     };
-  }, [gate.phase, joined, channelKind, channelId, sfuRepublishCounter]);
+  }, [gate.phase, joined, expectSfu, channelId, sfuRepublishCounter]);
 
   const leave = useCallback(async () => {
     const c = clientRef.current ?? getActiveVoiceClient();
@@ -464,7 +497,7 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
     if (c) await c.leave();
     setActiveVoiceClient(null);
     useVoiceStore.getState().leaveVoice();
-    setJoined(false);
+    setJoinedChannelId(null);
     setParticipants([]);
     setRemoteTracks([]);
     setPeerConnectionStates({});
@@ -478,7 +511,7 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
     const unsub = useVoiceStore.subscribe((state, prev) => {
       if (prev.currentVoiceChannelId === channelId && state.currentVoiceChannelId !== channelId) {
         clientRef.current = null;
-        setJoined(false);
+        setJoinedChannelId(null);
         setParticipants([]);
         setRemoteTracks([]);
         setPeerConnectionStates({});
@@ -575,13 +608,13 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
   }, [pinned, screenSharers, tracksByPubkey, selfPubkey, localCamStream, localScreenStream]);
 
   const meshSyncingCount = useMemo(() => {
-    if (!joined || channelKind === 'voice-sfu') return 0;
+    if (!joined || expectSfu) return 0;
     let count = 0;
     for (const pk of participants) {
       if (peerConnectionStates[pk] !== 'connected') count += 1;
     }
     return count;
-  }, [joined, channelKind, participants, peerConnectionStates]);
+  }, [joined, expectSfu, participants, peerConnectionStates]);
 
   if (gate.phase === 'init' || gate.phase === 'loading-roles') {
     return (
@@ -611,15 +644,23 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
 
   const totalCount = participants.length + 1;
   const displayName = channelName ?? `${channelId.slice(0, 16)}…`;
+  const passiveParticipantPubkeys = activeCall?.participantPubkeys ?? [];
+  const passiveCount = activeCall
+    ? Math.max(
+        activeCall.participantCount > 0 ? activeCall.participantCount : 0,
+        passiveParticipantPubkeys.length,
+      )
+    : 0;
+  const browsingWhileConnected = !!currentVoiceChannelId && currentVoiceChannelId !== channelId;
 
   if (!joined) {
     return (
       <div className="relative flex-1 flex min-h-0 p-2 sm:p-3 gap-2" data-testid="voice-channel">
         <div className="flex-1 flex flex-col min-h-0 relative overflow-hidden rounded-2xl border border-lc-border bg-gradient-to-br from-indigo-950 via-indigo-900 to-violet-800 shadow-2xl">
           <StageBackdrop />
-          <RoomHeader name={displayName} count={0} />
+          <RoomHeader name={displayName} count={passiveCount} />
           <div className="relative z-10 flex-1 flex items-center justify-center p-6">
-            <div className="text-center max-w-sm">
+            <div className="text-center max-w-md">
               <div className="mx-auto mb-5 w-16 h-16 rounded-2xl bg-lc-green/10 ring-1 ring-lc-green/30 flex items-center justify-center text-lc-green">
                 <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
@@ -629,10 +670,24 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
                 </svg>
               </div>
               <div className="text-xl font-semibold text-lc-white mb-1">{displayName}</div>
-              <div className="text-sm text-lc-muted mb-6">No one&apos;s here yet. Be the first to join.</div>
+              <div className="text-sm text-lc-muted mb-5">
+                {passiveCount > 0
+                  ? passiveCount + ' ' + (passiveCount === 1 ? 'person is' : 'people are') + ' in this call.'
+                  : activeCall
+                    ? 'This call is live.'
+                    : 'No one is detected in this call yet.'}
+                {browsingWhileConnected && (
+                  <span className="block mt-1 text-lc-white/70">You will stay connected to your current call until you join this one.</span>
+                )}
+              </div>
+              <PassiveCallRoster
+                pubkeys={passiveParticipantPubkeys}
+                count={passiveCount}
+                mode={activeCall?.mode}
+              />
               <button
-                onClick={() => setJoined(true)}
-                className="bg-lc-green hover:bg-lc-green/90 text-lc-black px-6 py-2.5 rounded-full text-sm font-semibold transition-colors shadow-lg shadow-lc-green/20"
+                onClick={() => setJoinedChannelId(channelId)}
+                className="mt-6 bg-lc-green hover:bg-lc-green/90 text-lc-black px-6 py-2.5 rounded-full text-sm font-semibold transition-colors shadow-lg shadow-lc-green/20"
                 data-testid="join-voice-btn"
               >
                 Join voice channel
@@ -800,6 +855,57 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
 }
 
 // ---- Sub-components ------------------------------------------------------
+
+function PassiveCallRoster({ pubkeys, count, mode }: {
+  pubkeys: readonly string[];
+  count: number;
+  mode?: 'sfu' | 'mesh';
+}) {
+  if (count <= 0 && pubkeys.length === 0) return null;
+  const visible = pubkeys.slice(0, 6);
+  const hidden = Math.max(0, count - visible.length);
+  const topology = mode === 'sfu' ? 'SFU' : mode === 'mesh' ? 'Mesh' : 'Live';
+  return (
+    <div
+      className="mx-auto mb-1 w-full rounded-xl border border-white/10 bg-black/25 px-3 py-3 text-left"
+      data-testid="passive-call-roster"
+    >
+      <div className="mb-2 flex items-center justify-between gap-3 text-[11px] uppercase tracking-[0.12em] text-lc-muted">
+        <span>In Call</span>
+        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-lc-white/75">{topology}</span>
+      </div>
+      {visible.length > 0 ? (
+        <div className="flex flex-wrap gap-2">
+          {visible.map((pk) => <PassiveCallParticipant key={pk} pubkey={pk} />)}
+          {hidden > 0 && (
+            <span className="inline-flex min-w-0 items-center rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-lc-muted">
+              +{hidden} more
+            </span>
+          )}
+        </div>
+      ) : (
+        <div className="text-xs text-lc-muted">
+          {count > 0 ? count + ' participant' + (count === 1 ? '' : 's') + ' detected; roster names are still syncing.' : 'Roster is syncing.'}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PassiveCallParticipant({ pubkey }: { pubkey: string }) {
+  const meta = useProfile(pubkey);
+  const name = meta?.displayName || meta?.name || pubkey.slice(0, 8);
+  return (
+    <span
+      className="inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2 py-1 text-xs text-lc-white/85"
+      data-testid="passive-call-participant"
+      title={pubkey}
+    >
+      <Avatar pubkey={pubkey} picture={meta?.picture} name={name} size={5} />
+      <span className="truncate">{name}</span>
+    </span>
+  );
+}
 
 function StageBackdrop() {
   return (

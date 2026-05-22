@@ -9,7 +9,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { generateSecretKey, getPublicKey, nip19, finalizeEvent, type Event as NostrEvent, type Filter } from 'nostr-tools';
-import { KIND_VOICE_PRESENCE } from '@/lib/nip-kinds';
+import { KIND_SFU_ACTIVE_CALL, KIND_VOICE_PRESENCE } from '@/lib/nip-kinds';
 
 type Sink = (ev: NostrEvent) => void;
 
@@ -2432,6 +2432,64 @@ describe('nostr-bridge', () => {
     unsub();
   });
 
+  it('removes mesh voice participants when a same-second leave beacon arrives', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    let latest: Readonly<Record<string, { mode?: string; participantCount: number; participantPubkeys?: string[] }>> = {};
+    const unsub = bridge.subscribeActiveCallByChannel((m) => { latest = m; });
+    const peerSk = generateSecretKey();
+    const peerPk = getPublicKey(peerSk);
+    const now = Math.floor(Date.now() / 1000);
+
+    deliver(finalizeEvent({
+      kind: KIND_VOICE_PRESENCE,
+      content: '',
+      tags: [
+        ['e', 'mesh-channel'],
+        ['t', 'obelisk-voice-presence'],
+        ['expiration', String(now + 30)],
+      ],
+      created_at: now,
+      pubkey: peerPk,
+    } as Parameters<typeof finalizeEvent>[0], peerSk));
+    await flush();
+    expect(latest['mesh-channel']).toMatchObject({ participantPubkeys: [peerPk] });
+
+    deliver(finalizeEvent({
+      kind: KIND_VOICE_PRESENCE,
+      content: '',
+      tags: [
+        ['e', 'mesh-channel'],
+        ['t', 'obelisk-voice-presence'],
+        ['status', 'left'],
+        ['expiration', String(now - 1)],
+      ],
+      created_at: now,
+      pubkey: peerPk,
+    } as Parameters<typeof finalizeEvent>[0], peerSk));
+    await flush();
+    expect(latest['mesh-channel']).toBeUndefined();
+
+    deliver(finalizeEvent({
+      kind: KIND_VOICE_PRESENCE,
+      content: '',
+      tags: [
+        ['e', 'mesh-channel'],
+        ['t', 'obelisk-voice-presence'],
+        ['expiration', String(now + 30)],
+      ],
+      created_at: now,
+      pubkey: peerPk,
+    } as Parameters<typeof finalizeEvent>[0], peerSk));
+    await flush();
+    expect(latest['mesh-channel']).toBeUndefined();
+    unsub();
+  });
+
   it('marks a locally published mesh beacon live without waiting for relay echo', async () => {
     const { getBridge, getBridgeImpl } = await import('./client');
     const { skHex, pkHex } = makeKeypair();
@@ -2459,6 +2517,46 @@ describe('nostr-bridge', () => {
       mode: 'mesh',
       participantCount: 1,
     });
+    unsub();
+  });
+
+  it('clears a locally published mesh call when the local user publishes a leave beacon', async () => {
+    const { getBridge, getBridgeImpl } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const impl = getBridgeImpl()!;
+    let latest: Readonly<Record<string, { mode?: string; participantCount: number }>> = {};
+    const unsub = bridge.subscribeActiveCallByChannel((m) => { latest = m; });
+    const now = Math.floor(Date.now() / 1000);
+
+    await impl.publishEvent({
+      kind: KIND_VOICE_PRESENCE,
+      content: '',
+      tags: [
+        ['e', 'local-mesh-channel'],
+        ['t', 'obelisk-voice-presence'],
+        ['expiration', String(now + 30)],
+      ],
+      created_at: now,
+    });
+    expect(latest['local-mesh-channel']).toMatchObject({ participantCount: 1 });
+
+    await impl.publishEvent({
+      kind: KIND_VOICE_PRESENCE,
+      content: '',
+      tags: [
+        ['e', 'local-mesh-channel'],
+        ['t', 'obelisk-voice-presence'],
+        ['status', 'left'],
+        ['expiration', String(now - 1)],
+      ],
+      created_at: now,
+    });
+
+    expect(latest['local-mesh-channel']).toBeUndefined();
     unsub();
   });
 
@@ -2517,6 +2615,79 @@ describe('nostr-bridge', () => {
     await flush();
 
     expect(latest['voice-sfu-channel']).toBeUndefined();
+    unsub();
+  });
+
+  it('uses SFU topology beacon p-tags as passive active-call participants', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    let latest: Readonly<Record<string, { mode?: string; participantCount: number; participantPubkeys?: string[]; hostPubkey?: string }>> = {};
+    const unsub = bridge.subscribeActiveCallByChannel((m) => { latest = m; });
+    const sfuSk = generateSecretKey();
+    const sfuPk = getPublicKey(sfuSk);
+    const peerA = getPublicKey(generateSecretKey());
+    const peerB = getPublicKey(generateSecretKey());
+    const now = Math.floor(Date.now() / 1000);
+    deliver(finalizeEvent({
+      kind: KIND_VOICE_PRESENCE,
+      content: '',
+      tags: [
+        ['e', 'voice-sfu-channel'],
+        ['t', 'obelisk-voice-presence'],
+        ['sfu', '1'],
+        ['p', peerB],
+        ['p', peerA],
+        ['expiration', String(now + 30)],
+      ],
+      created_at: now,
+      pubkey: sfuPk,
+    } as Parameters<typeof finalizeEvent>[0], sfuSk));
+    await flush();
+
+    expect(latest['voice-sfu-channel']).toMatchObject({
+      hostPubkey: sfuPk,
+      mode: 'sfu',
+      participantCount: 2,
+      participantPubkeys: [peerA, peerB].sort(),
+    });
+    unsub();
+  });
+
+  it('parses SFU active-call content participants for passive rosters', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    let latest: Readonly<Record<string, { mode?: string; participantCount: number; participantPubkeys?: string[] }>> = {};
+    const unsub = bridge.subscribeActiveCallByChannel((m) => { latest = m; });
+    const sfuSk = generateSecretKey();
+    const peerA = getPublicKey(generateSecretKey());
+    const peerB = getPublicKey(generateSecretKey());
+    const now = Math.floor(Date.now() / 1000);
+    deliver(finalizeEvent({
+      kind: KIND_SFU_ACTIVE_CALL,
+      content: JSON.stringify({ participants: [peerB, peerA] }),
+      tags: [
+        ['d', 'voice-sfu-channel'],
+        ['status', 'active'],
+        ['count', '2'],
+        ['expiration', String(now + 90)],
+      ],
+      created_at: now,
+    } as Parameters<typeof finalizeEvent>[0], sfuSk));
+    await flush();
+
+    expect(latest['voice-sfu-channel']).toMatchObject({
+      mode: 'sfu',
+      participantCount: 2,
+      participantPubkeys: [peerA, peerB].sort(),
+    });
     unsub();
   });
 

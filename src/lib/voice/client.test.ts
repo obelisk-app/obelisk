@@ -22,9 +22,12 @@ const transportFake = vi.hoisted(() => {
   let rosterCb: ((roster: VoicePresence[]) => void) | null = null;
   let signalsCb: ((from: string, p: VoiceSignalPayload) => void) | null = null;
   const sentSignals: { to: string; payload: VoiceSignalPayload }[] = [];
+  const publishPresenceBeacon = vi.fn(async () => {});
+  const publishLeavePresence = vi.fn(async () => {});
   let selfPubkey = 'self';
   return {
-    publishPresenceBeacon: vi.fn(async () => {}),
+    publishPresenceBeacon,
+    publishLeavePresence,
     subscribeRoster: vi.fn(async (_id: string, cb: (r: VoicePresence[]) => void) => {
       rosterCb = cb;
       return () => { rosterCb = null; };
@@ -45,6 +48,8 @@ const transportFake = vi.hoisted(() => {
       rosterCb = null;
       signalsCb = null;
       sentSignals.length = 0;
+      publishPresenceBeacon.mockClear();
+      publishLeavePresence.mockClear();
       selfPubkey = 'self';
     },
   };
@@ -52,11 +57,13 @@ const transportFake = vi.hoisted(() => {
 
 vi.mock('./transport', () => ({
   publishPresenceBeacon: transportFake.publishPresenceBeacon,
+  publishLeavePresence: transportFake.publishLeavePresence,
   subscribeRoster: transportFake.subscribeRoster,
   sendSignal: transportFake.sendSignal,
   subscribeSignals: transportFake.subscribeSignals,
   createVoiceTransport: vi.fn(() => ({
     publishPresenceBeacon: transportFake.publishPresenceBeacon,
+    publishLeavePresence: transportFake.publishLeavePresence,
     subscribeRoster: transportFake.subscribeRoster,
     sendSignal: transportFake.sendSignal,
     subscribeSignals: transportFake.subscribeSignals,
@@ -216,7 +223,7 @@ vi.mock('./sfu-client', () => ({
 // VoiceClient.subscribeActiveCallStatus calls `getBridge()` and registers
 // for kind 31314 status updates. Tests drive this through `bridgeFake.fire`
 // to simulate the SFU publishing status=closed.
-type ActiveCallEntry = { hostPubkey: string; status: string; participantCount: number; expiresAt: number; createdAt: number };
+type ActiveCallEntry = { hostPubkey: string; status: string; participantCount: number; expiresAt: number; createdAt: number; mode?: 'sfu' | 'mesh'; participantPubkeys?: string[] };
 const bridgeFake = vi.hoisted(() => {
   const cbs: Array<(byChannel: Record<string, ActiveCallEntry>) => void> = [];
   let unsubCalls = 0;
@@ -301,6 +308,16 @@ describe('VoiceClient.join', () => {
     await client.leave();
   });
 
+  it('publishes a terminal mesh presence beacon when leaving', async () => {
+    const client = new VoiceClient('ch1', { members: [SELF] });
+    await client.join();
+
+    await client.leave();
+
+    expect(transportFake.publishLeavePresence).toHaveBeenCalledTimes(1);
+    expect(transportFake.publishLeavePresence).toHaveBeenCalledWith('ch1');
+  });
+
   it('starts mesh and publishes the first beacon without opening the microphone', async () => {
     const nav = globalThis.navigator as unknown as {
       mediaDevices: {
@@ -372,7 +389,7 @@ describe('VoiceClient roster → peer lifecycle', () => {
     await client.leave();
   });
 
-  it('admits marked mesh test peers only for local channel admins', async () => {
+  it('admits marked mesh test peers for non-admin users who can join', async () => {
     const adminClient = new VoiceClient('ch1', { members: [SELF], admins: [SELF] });
     await adminClient.join();
     transportFake.fireRoster([meshTestPresence(PEER2)]);
@@ -384,26 +401,116 @@ describe('VoiceClient roster → peer lifecycle', () => {
     await memberClient.join();
     transportFake.fireRoster([meshTestPresence(PEER2)]);
     await flushMicrotasks(8);
-    expect(memberClient.getParticipants()).toEqual([]);
+    expect(memberClient.getParticipants()).toEqual([PEER2]);
     await memberClient.leave();
   });
 
-  it('keeps ordinary muted mesh peers on data-channel bootstrap only', async () => {
+  it('dials passive active-call hints when the dedicated roster misses a mesh peer', async () => {
+    const client = new VoiceClient('ch1', { members: [SELF], admins: [], open: true });
+    await client.join();
+
+    client.setPassiveParticipantHints([SELF, PEER2]);
+    await flushMicrotasks(12);
+
+    expect(client.getParticipants()).toEqual([PEER2]);
+    const pc = webrtc.last();
+    expect(pc.getTransceivers().map((t) => t.kind)).toEqual(['video', 'audio']);
+    expect(pc.getTransceivers().map((t) => t.direction)).toEqual(['recvonly', 'recvonly']);
+    expect(transportFake.sentSignals.some((s) =>
+      s.to === PEER2 && s.payload.type === 'offer',
+    )).toBe(true);
+
+    await client.publishBeacon();
+    expect(transportFake.publishPresenceBeacon).toHaveBeenLastCalledWith('ch1', [], [PEER2], []);
+    await client.leave();
+  });
+
+  it('dials mesh active-call participants reported by the bridge when the dedicated roster is empty', async () => {
+    const client = new VoiceClient('ch1', { members: [SELF], admins: [], open: true });
+    await client.join();
+    await flushMicrotasks(12);
+
+    bridgeFake.fire({
+      ch1: {
+        hostPubkey: PEER2,
+        status: 'active',
+        participantCount: 2,
+        expiresAt: 9_999_999_999,
+        createdAt: 1,
+        mode: 'mesh',
+        participantPubkeys: [SELF, PEER2],
+      },
+    });
+    await flushMicrotasks(12);
+
+    expect(client.getParticipants()).toEqual([PEER2]);
+    expect(transportFake.sentSignals.some((s) =>
+      s.to === PEER2 && s.payload.type === 'offer',
+    )).toBe(true);
+
+    await client.publishBeacon();
+    expect(transportFake.publishPresenceBeacon).toHaveBeenLastCalledWith('ch1', [], [PEER2], []);
+    await client.leave();
+  });
+
+  it('rebuilds a passive-hint peer when a later beacon marks it as a mesh test peer', async () => {
+    const lowerPeer = '0'.repeat(64);
+    const client = new VoiceClient('ch1', { members: [SELF], admins: [], open: true });
+    await client.join();
+
+    client.setPassiveParticipantHints([lowerPeer]);
+    await flushMicrotasks(12);
+    const firstPc = webrtc.last();
+    expect(firstPc.connectionState).toBe('new');
+
+    transportFake.fireRoster([meshTestPresence(lowerPeer)]);
+    await flushMicrotasks(12);
+
+    const secondPc = webrtc.last();
+    expect(secondPc).not.toBe(firstPc);
+    expect(firstPc.connectionState).toBe('closed');
+    expect(client.getParticipants()).toEqual([lowerPeer]);
+    expect(transportFake.sentSignals.filter((s) =>
+      s.to === lowerPeer && s.payload.type === 'offer',
+    ).length).toBeGreaterThanOrEqual(2);
+    await client.leave();
+  });
+
+  it('drives initial offers to passive active-call hints even when pubkey order would be polite', async () => {
+    const lowerPeer = '0'.repeat(64);
+    const client = new VoiceClient('ch1', { members: [SELF], admins: [], open: true });
+    await client.join();
+
+    client.setPassiveParticipantHints([lowerPeer]);
+    await flushMicrotasks(12);
+
+    expect(client.getParticipants()).toEqual([lowerPeer]);
+    const pc = webrtc.last();
+    expect(pc.getTransceivers().map((t) => t.kind)).toEqual(['video', 'audio']);
+    expect(transportFake.sentSignals.some((s) =>
+      s.to === lowerPeer && s.payload.type === 'offer',
+    )).toBe(true);
+    await client.leave();
+  });
+
+  it('opens recv-only media m-lines for ordinary muted mesh peers', async () => {
     const client = new VoiceClient('ch1', { members: [SELF, PEER1] });
     await client.join();
     transportFake.fireRoster([presence(PEER1)]);
     await flushMicrotasks(12);
 
     const pc = webrtc.last();
-    expect(pc.getTransceivers()).toHaveLength(0);
+    expect(pc.getTransceivers().map((t) => t.kind)).toEqual(['video', 'audio']);
+    expect(pc.getTransceivers().map((t) => t.direction)).toEqual(['recvonly', 'recvonly']);
+    expect(pc.getSenders().map((s) => s.track)).toEqual([null, null]);
     expect(transportFake.sentSignals.some((s) =>
       s.to === PEER1 && s.payload.type === 'offer',
     )).toBe(true);
     await client.leave();
   });
 
-  it('opens recv-only media m-lines for marked mesh test peers', async () => {
-    const client = new VoiceClient('ch1', { members: [SELF], admins: [SELF] });
+  it('opens recv-only media m-lines for marked mesh test peers as a non-admin caller', async () => {
+    const client = new VoiceClient('ch1', { members: [SELF], admins: [] });
     await client.join();
     transportFake.fireRoster([meshTestPresence(PEER2)]);
     await flushMicrotasks(12);
@@ -412,12 +519,16 @@ describe('VoiceClient roster → peer lifecycle', () => {
     expect(pc.getTransceivers().map((t) => t.kind)).toEqual(['video', 'audio']);
     expect(pc.getTransceivers().map((t) => t.direction)).toEqual(['recvonly', 'recvonly']);
     expect(pc.getSenders().map((s) => s.track)).toEqual([null, null]);
+    expect(transportFake.sentSignals.some((s) =>
+      s.to === PEER2 && s.payload.type === 'offer',
+    )).toBe(true);
     await client.leave();
   });
 
-  it('media-bootstraps marked mesh test peers even when local side is polite', async () => {
+  it('drives initial offers to marked mesh test peers even when pubkey order would be polite', async () => {
     const lowerPeer = '0'.repeat(64);
-    const client = new VoiceClient('ch1', { members: [SELF], admins: [SELF] });
+
+    const client = new VoiceClient('ch1', { members: [SELF], admins: [] });
     await client.join();
     transportFake.fireRoster([meshTestPresence(lowerPeer)]);
     await flushMicrotasks(12);
@@ -512,14 +623,35 @@ describe('VoiceClient roster → peer lifecycle', () => {
     await client.leave();
   });
 
-  it('routes signals from marked mesh test peers after the admin sees their beacon', async () => {
-    const client = new VoiceClient('ch1', { members: [SELF], admins: [SELF] });
+  it('routes signals from marked mesh test peers after a non-admin caller sees their beacon', async () => {
+    const client = new VoiceClient('ch1', { members: [SELF], admins: [] });
     await client.join();
     transportFake.fireRoster([meshTestPresence(PEER2)]);
     await flushMicrotasks(8);
     transportFake.fireSignal(PEER2, { type: 'offer', sdp: 'v=0\r\n', sessionId: 's', seq: 1 });
     await flushMicrotasks(4);
     expect(webrtc.pcs().length).toBeGreaterThan(0);
+    await client.leave();
+  });
+
+  it('drains deferred mesh test peer signals once a non-admin caller sees their beacon', async () => {
+    const client = new VoiceClient('ch1', { members: [SELF], admins: [] });
+    const remotePc = new FakeRTCPeerConnection();
+    remotePc.addTrack(new FakeMediaStreamTrack('video'));
+    remotePc.addTrack(new FakeMediaStreamTrack('audio'));
+    const offer = await remotePc.createOffer();
+
+    await client.join();
+    transportFake.fireSignal(PEER2, { type: 'offer', sdp: offer.sdp, sessionId: 'remote-s', seq: 1 });
+    await flushMicrotasks(4);
+    expect(webrtc.pcs()).toHaveLength(0);
+
+    transportFake.fireRoster([meshTestPresence(PEER2)]);
+    await flushMicrotasks(16);
+
+    expect(transportFake.sentSignals.some((s) =>
+      s.to === PEER2 && s.payload.type === 'offer',
+    )).toBe(true);
     await client.leave();
   });
 });

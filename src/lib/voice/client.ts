@@ -7,7 +7,7 @@
 // constant and produce the same chunk hash as before.
 if (typeof globalThis !== 'undefined') {
   (globalThis as { __obeliskVoiceBuild?: string }).__obeliskVoiceBuild =
-    '2026-05-21T05:35:00Z-mesh-peer-gossip';
+    '2026-05-22T05:20:00Z-mesh-active-call-hints';
 }
 
 /**
@@ -58,7 +58,7 @@ import {
   type UnloadHandlerHandle,
 } from './failure-handlers';
 
-const SELF_BUILD_TAG = '2026-05-09T-control-channel';
+const SELF_BUILD_TAG = '2026-05-22T05:20:00Z-mesh-active-call-hints';
 
 const BEACON_INTERVAL_MS = 10_000;
 /**
@@ -291,6 +291,13 @@ export class VoiceClient {
   private knownSfuPubkeys = new Set<string>();
   private knownMeshTestPeerPubkeys = new Set<string>();
   /**
+   * Passive active-call participants from the bridge's global kind 20078
+   * watcher. This is a fallback bootstrap source for the joined mesh client:
+   * if the dedicated roster subscription misses an ephemeral beacon, the UI's
+   * live-call detector can still hand us the pubkeys it already sees.
+   */
+  private passiveParticipantHints = new Set<string>();
+  /**
    * Pubkeys we currently have RTCPeerConnections in `connected` state with.
    * Drives the `connectedTo` field of our own beacon — every other peer who
    * sees our beacon learns to dial these pubkeys, even if those pubkeys'
@@ -419,6 +426,9 @@ export class VoiceClient {
     if (!pk) throw new Error('Not logged in to nostr');
     this.selfPubkey = pk;
     setVoiceMetricsRef(this.metrics);
+    if (typeof window !== 'undefined') {
+      (window as unknown as { __obeliskVoiceSelfPubkey?: string }).__obeliskVoiceSelfPubkey = pk;
+    }
   }
 
   /** Swap the event listeners — used when a fresh React owner picks up an
@@ -491,6 +501,9 @@ export class VoiceClient {
   setOpen(open: boolean): void {
     if (this.openRoom === open) return;
     this.openRoom = open;
+    // Passive hints are filtered through isMember/canJoin, so an open-room
+    // transition can make already-detected callers dialable immediately.
+    this.scheduleDialFromDiscovery();
     // Re-run the membership trim if we just locked the room down so any
     // already-connected non-members are dropped immediately.
     if (!open) {
@@ -500,6 +513,33 @@ export class VoiceClient {
         }
       }
     }
+  }
+
+  /**
+   * Feed the active mesh client with the bridge-level live-call detector.
+   * The detector is driven by the same kind 20078 beacons shown in the
+   * pre-join UI, so using it here prevents a split-brain state where the
+   * room says people are present but the joined WebRTC client never dials
+   * them because its dedicated ephemeral roster REQ missed the beacon.
+   */
+  setPassiveParticipantHints(pubkeys: readonly string[] = []): void {
+    const next = new Set<string>();
+    for (const pk of pubkeys) {
+      if (!pk || pk === this.selfPubkey) continue;
+      if (!/^[0-9a-f]{64}$/i.test(pk)) continue;
+      next.add(pk.toLowerCase());
+    }
+    const before = Array.from(this.passiveParticipantHints).sort().join('|');
+    const after = Array.from(next).sort().join('|');
+    if (before === after) return;
+    this.passiveParticipantHints = next;
+    pushVoiceDebug({
+      kind: 'peer-discovered',
+      payload: { source: 'active-call-hints', peers: Array.from(next).sort() },
+    });
+    if (!this.joined || this.sfuPubkey) return;
+    this.runDialLoop();
+    this.scheduleBeaconRefresh();
   }
 
   /**
@@ -670,9 +710,11 @@ export class VoiceClient {
     // signaling path so the SFU's offers/answers/ICE aren't dropped.
     if (this.knownSfuPubkeys.has(pubkey)) return true;
     // Operator-spawned mesh test peers are diagnostics, not room members.
-    // Admit them only for local channel admins; regular members keep the
-    // normal NIP-29 gate so a random beacon marker cannot join private calls.
-    if (this.knownMeshTestPeerPubkeys.has(pubkey) && this.admins.has(this.selfPubkey)) return true;
+    // Once their signed beacon marks them as a mesh test peer, admit them
+    // for any local user who can join this call. The join gate still enforces
+    // NIP-29 membership/open-room access for the browser user, but the test
+    // peer itself does not need to be duplicated into every member list.
+    if (this.knownMeshTestPeerPubkeys.has(pubkey) && this.canJoin()) return true;
     return this.openRoom || this.members.has(pubkey) || this.admins.has(pubkey);
   }
 
@@ -794,7 +836,23 @@ export class VoiceClient {
       // operators shouldn't have to babysit the member list every
       // time they want to spin up an SFU.
       this.knownSfuPubkeys = new Set(roster.filter((r) => r.isSfu).map((r) => r.pubkey));
+      const previousMeshTestPeers = this.knownMeshTestPeerPubkeys;
       this.knownMeshTestPeerPubkeys = new Set(roster.filter((r) => r.isMeshTestPeer).map((r) => r.pubkey));
+      for (const pk of this.knownMeshTestPeerPubkeys) {
+        if (previousMeshTestPeers.has(pk)) continue;
+        const peer = this.peers.get(pk);
+        if (peer?.polite) {
+          // A passive active-call hint can open the peer before the roster
+          // beacon reveals it as a mesh test peer. Rebuild so the browser
+          // becomes the offer-driving side instead of staying polite forever.
+          this.tearDownPeer(pk);
+        }
+      }
+      // Mesh test peers are admitted by their roster beacon, not by NIP-29
+      // role updates. Signals can arrive first because we subscribe to
+      // signaling before roster, so replay any queued offers as soon as the
+      // marker makes them a valid peer for allowed local callers.
+      this.drainDeferredSignals();
       // Compute the transitive participant set first — including peers we
       // only know about from someone else's `connectedTo` p-tags — then
       // filter by membership and hand to handleRoster for cap+open logic.
@@ -806,6 +864,12 @@ export class VoiceClient {
       // outside the leading slice and require local eviction.
       this.enforceVideoSlotCap();
     });
+
+    // The bridge's active-call detector is the same source that powers the
+    // pre-join "people are in this call" UI. Subscribe from the mesh engine
+    // too so discovery doesn't depend on the React room effect racing in
+    // after join; the callback replays the current store value immediately.
+    this.subscribeActiveCallStatus();
 
     // Wait for NIP-42 AUTH to complete on the active relay before the
     // first beacon publish. Without this, on slower relays the
@@ -864,6 +928,7 @@ export class VoiceClient {
     this.rosterUnsub?.(); this.rosterUnsub = null;
     this.currentRoster = [];
     this.knownMeshTestPeerPubkeys.clear();
+    this.passiveParticipantHints.clear();
     this.seenRosterPubkeys.clear();
     this.discovery.reset();
     if (this.dialDebounceTimer) { clearTimeout(this.dialDebounceTimer); this.dialDebounceTimer = null; }
@@ -937,6 +1002,13 @@ export class VoiceClient {
       if (cancelled) return;
       const realUnsub = b.subscribeActiveCallByChannel((byChannel) => {
         const entry = byChannel[this.channelId];
+        if (!this.sfuClient && !this.sfuPubkey) {
+          if (entry?.mode === 'mesh') {
+            this.setPassiveParticipantHints(entry.participantPubkeys ?? []);
+          } else {
+            this.setPassiveParticipantHints([]);
+          }
+        }
         if (entry && (entry.status === 'active' || entry.status === 'starting')) {
           this.activeCallSeen = true;
           return;
@@ -993,6 +1065,7 @@ export class VoiceClient {
 
   async leave(): Promise<void> {
     if (!this.joined) return;
+    const wasMeshMode = !!(this.signalsUnsub || this.rosterUnsub) && !this.sfuPubkey && !this.sfuClient;
     this.joined = false;
     if (this.beaconTimer) {
       clearInterval(this.beaconTimer);
@@ -1014,6 +1087,14 @@ export class VoiceClient {
     if (this.dialDebounceTimer) { clearTimeout(this.dialDebounceTimer); this.dialDebounceTimer = null; }
     if (this.controlSnapshotTimer) { clearTimeout(this.controlSnapshotTimer); this.controlSnapshotTimer = null; }
     if (this.unloadHandler) { this.unloadHandler.uninstall(); this.unloadHandler = null; }
+    if (wasMeshMode) {
+      try {
+        await this.transport.publishLeavePresence(this.channelId);
+        this.metrics.signals.byeViaRelay++;
+      } catch (err) {
+        console.warn('[voice] leave beacon failed', err);
+      }
+    }
     this.signalsUnsub?.();
     this.signalsUnsub = null;
     this.rosterUnsub?.();
@@ -1038,6 +1119,7 @@ export class VoiceClient {
     this.localVideoClaimedAt.clear();
     this.currentRoster = [];
     this.knownMeshTestPeerPubkeys.clear();
+    this.passiveParticipantHints.clear();
     this.remoteTracks.clear();
     this.emitRemoteTracks();
 
@@ -1070,6 +1152,7 @@ export class VoiceClient {
     const known = new Set<string>();
     for (const pk of this.connectedPubkeys) known.add(pk);
     for (const pk of this.discovery.effectivePeers()) known.add(pk);
+    for (const pk of this.passiveParticipantHints) known.add(pk);
     for (const pk of this.rosterPubkeys) known.add(pk);
     for (const pk of this.peers.keys()) known.add(pk);
     known.delete(this.selfPubkey);
@@ -1220,7 +1303,12 @@ export class VoiceClient {
    * `scheduleDialFromDiscovery` (control-channel-driven). Idempotent.
    */
   private runDialLoop(): void {
-    const others = this.discovery.effectivePeers().filter((p) => p !== this.selfPubkey);
+    const others = Array.from(new Set([
+      ...this.discovery.effectivePeers(),
+      ...this.passiveParticipantHints,
+    ]))
+      .filter((p) => p !== this.selfPubkey)
+      .filter((p) => this.isMember(p));
 
     // Hard cap: if more than MAX_PARTICIPANTS would be present and we're
     // not in the leading slice, deterministically (lex) trim the tail so
@@ -1528,10 +1616,13 @@ export class VoiceClient {
     // other's offer. Forcing the browser to be polite for SFU peers keeps
     // the perfect-negotiation invariants while accommodating werift.
     const isSfuPeer = this.knownSfuPubkeys.has(remotePubkey);
-    const polite = isSfuPeer ? true : this.selfPubkey > remotePubkey;
+    const isMeshTestPeer = this.knownMeshTestPeerPubkeys.has(remotePubkey);
+    const forceInitialOffer =
+      isSfuPeer || isMeshTestPeer || this.passiveParticipantHints.has(remotePubkey);
+    const polite = isSfuPeer ? true : isMeshTestPeer ? false : this.selfPubkey > remotePubkey;
     const shouldKickRecvOnly = this.shouldKickRecvOnlyOffer(remotePubkey, isSfuPeer, polite);
     console.log('[voice] openPeer', remotePubkey.slice(0, 8),
-      'polite=', polite, isSfuPeer ? '(sfu)' : '');
+      'polite=', polite, isSfuPeer ? '(sfu)' : isMeshTestPeer ? '(mesh-test-peer)' : '');
     this.openingPeers.add(remotePubkey);
     let peer: Peer | null = null;
     try {
@@ -1540,6 +1631,7 @@ export class VoiceClient {
         polite,
         sessionId: this.sessionId,
         bootstrapRecvOnlyMedia: shouldKickRecvOnly,
+        allowPoliteInitialOffer: forceInitialOffer,
         send: (payload) => withRateLimitBackoff(
           () => this.transport.sendSignal(this.channelId, remotePubkey, payload),
           { metrics: this.metrics },
@@ -1708,17 +1800,15 @@ export class VoiceClient {
     }
     if (!peer) return;
 
-    // Push existing local tracks to the new peer. Muted joins only force a
-    // recv-only media offer when the roster says the remote side is already
-    // publishing media or is an operator-spawned mesh test peer. Ordinary
-    // browser peers still negotiate data-channel-only, but the impolite
-    // side explicitly sends that offer so mobile browsers do not have to
-    // deliver a perfect onnegotiationneeded event for createDataChannel().
+    // Push existing local tracks to the new peer. Muted joins still need
+    // recv-only media sections on at least one side of the pair; otherwise
+    // a listener can see the roster/control state but have no audio/video
+    // m-lines to receive a peer who was already publishing mic audio.
+    // The impolite side drives that initial recv-only offer for ordinary
+    // browser peers. Special peers can force it regardless of polarity.
     void this.attachAllLocalTracks(peer).then(() => {
-      if (shouldKickRecvOnly) {
+      if (shouldKickRecvOnly || !polite) {
         void peer.kickInitialOffer();
-      } else if (!polite) {
-        void peer.kickControlOffer();
       }
     });
   }
@@ -1726,6 +1816,7 @@ export class VoiceClient {
   private shouldKickRecvOnlyOffer(remotePubkey: string, isSfuPeer: boolean, polite: boolean): boolean {
     if (isSfuPeer) return true;
     if (this.knownMeshTestPeerPubkeys.has(remotePubkey)) return true;
+    if (this.passiveParticipantHints.has(remotePubkey)) return true;
     if (polite) return false;
     const presence = this.currentRoster.find((p) => p.pubkey === remotePubkey);
     return (presence?.videoTracks?.length ?? 0) > 0;

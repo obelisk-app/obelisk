@@ -94,6 +94,7 @@ vi.mock('@/lib/nostr-bridge/client', () => ({
 
 import {
   publishPresenceBeacon,
+  publishLeavePresence,
   subscribeRoster,
   sendSignal,
   subscribeSignals,
@@ -127,6 +128,28 @@ describe('publishPresenceBeacon', () => {
     const exp = call.tags.find((t) => t[0] === 'expiration');
     expect(exp).toBeDefined();
     expect(parseInt(exp![1], 10)).toBeGreaterThan(0);
+  });
+});
+
+describe('publishLeavePresence', () => {
+  it('publishes a terminal kind 20078 leave beacon with a past expiration', async () => {
+    await publishLeavePresence('ch1');
+
+    expect(bridgeFake.impl.publishEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: KIND_VOICE_PRESENCE,
+        content: '',
+        tags: expect.arrayContaining([
+          ['e', 'ch1'],
+          ['t', 'obelisk-voice-presence'],
+          ['status', 'left'],
+        ]),
+      }),
+    );
+    const call = bridgeFake.impl.publishEvent.mock.calls[0][0] as { tags: string[][] };
+    const exp = call.tags.find((t) => t[0] === 'expiration');
+    expect(exp).toBeDefined();
+    expect(parseInt(exp![1], 10)).toBeLessThanOrEqual(Math.floor(Date.now() / 1000));
   });
 });
 
@@ -175,6 +198,18 @@ describe('pinned relay voice transport', () => {
     await transport.sendSignal('ch1', 'recipient-pk', { type: 'bye', sessionId: 's1', seq: 1 });
     expect(bridgeFake.impl.publishEvent).toHaveBeenCalledWith(
       expect.objectContaining({ kind: KIND_VOICE_SIGNAL }),
+      { extraRelays: ['wss://origin.example'], mode: 'replace' },
+    );
+  });
+
+  it('publishes leave beacons to the origin relay only', async () => {
+    const transport = createVoiceTransport({ relayUrl: 'wss://origin.example' });
+    await transport.publishLeavePresence('ch1');
+    expect(bridgeFake.impl.publishEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: KIND_VOICE_PRESENCE,
+        tags: expect.arrayContaining([['status', 'left']]),
+      }),
       { extraRelays: ['wss://origin.example'], mode: 'replace' },
     );
   });
@@ -265,6 +300,34 @@ describe('subscribeRoster', () => {
       created_at: now - 60,
     });
 
+    expect(lastRoster).toEqual([]);
+    unsub();
+  });
+
+  it('lets terminal leave beacons remove a same-second active beacon', async () => {
+    let lastRoster: { pubkey: string }[] = [];
+    const unsub = await subscribeRoster('ch1', (r) => { lastRoster = r; });
+    const now = Math.floor(Date.now() / 1000);
+
+    bridgeFake.inject({
+      pubkey: 'p1', kind: KIND_VOICE_PRESENCE, content: '',
+      tags: [['e', 'ch1'], ['t', 'obelisk-voice-presence'], ['expiration', String(now + 30)]],
+      created_at: now,
+    });
+    expect(lastRoster.map((p) => p.pubkey)).toEqual(['p1']);
+
+    bridgeFake.inject({
+      pubkey: 'p1', kind: KIND_VOICE_PRESENCE, content: '',
+      tags: [['e', 'ch1'], ['t', 'obelisk-voice-presence'], ['status', 'left'], ['expiration', String(now - 1)]],
+      created_at: now,
+    });
+    expect(lastRoster).toEqual([]);
+
+    bridgeFake.inject({
+      pubkey: 'p1', kind: KIND_VOICE_PRESENCE, content: '',
+      tags: [['e', 'ch1'], ['t', 'obelisk-voice-presence'], ['expiration', String(now + 30)]],
+      created_at: now,
+    });
     expect(lastRoster).toEqual([]);
     unsub();
   });

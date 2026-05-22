@@ -47,6 +47,7 @@ export interface VoiceTransport {
     knownPeers?: readonly string[],
     videoTracks?: readonly VideoSlotKind[],
   ): Promise<void>;
+  publishLeavePresence(channelId: string): Promise<void>;
   subscribeRoster(channelId: string, onChange: (roster: VoicePresence[]) => void): Promise<() => void>;
   sendSignal(channelId: string, toPubkey: string, payload: VoiceSignalPayload): Promise<void>;
   subscribeSignals(
@@ -89,6 +90,7 @@ export function createVoiceTransport(options: VoiceTransportOptions = {}): Voice
   return {
     publishPresenceBeacon: (channelId, connectedTo = [], knownPeers = [], videoTracks = []) =>
       publishPresenceBeacon(channelId, connectedTo, knownPeers, videoTracks, options),
+    publishLeavePresence: (channelId) => publishLeavePresence(channelId, options),
     subscribeRoster: (channelId, onChange) => subscribeRoster(channelId, onChange, options),
     sendSignal: (channelId, toPubkey, payload) => sendSignal(channelId, toPubkey, payload, options),
     subscribeSignals: (channelId, selfPubkey, onSignal) =>
@@ -177,6 +179,35 @@ export async function publishPresenceBeacon(
 }
 
 /**
+ * Publish a terminal mesh presence update. This is intentionally the same
+ * kind/tag family as the normal beacon, but with a past expiration and an
+ * explicit status marker so subscribers can remove the publisher immediately
+ * instead of waiting for the previous beacon's TTL.
+ */
+export async function publishLeavePresence(
+  channelId: string,
+  options: VoiceTransportOptions = {},
+): Promise<void> {
+  const b = await bridge();
+  const now = Math.floor(Date.now() / 1000);
+  await publishViaBridge(
+    b,
+    {
+      kind: KIND_VOICE_PRESENCE,
+      content: '',
+      tags: [
+        ['e', channelId],
+        ['t', 'obelisk-voice-presence'],
+        ['status', 'left'],
+        ['expiration', String(now - 1)],
+      ],
+    },
+    options,
+  );
+  console.log('[voice] leave beacon published for', channelId.slice(0, 8));
+}
+
+/**
  * Subscribe to presence beacons for a channel.
  *
  * Calls `onChange` with the live roster (publishers with non-expired beacons,
@@ -228,8 +259,10 @@ export async function subscribeRoster(
       };
       if (w.__obeliskVoiceMetrics) w.__obeliskVoiceMetrics.beacons.rcvd++;
       pushVoiceDebug({ kind: 'beacon-rcvd', peer: ev.pubkey });
+      const status = ev.tags.find((t) => t[0] === 'status')?.[1];
+      const terminal = status === 'left' || status === 'closed' || expiresAt <= Math.floor(Date.now() / 1000);
       const prev = latest.get(ev.pubkey);
-      if (prev && prev.createdAt >= ev.created_at) return;
+      if (prev && (prev.createdAt > ev.created_at || (prev.createdAt === ev.created_at && !terminal))) return;
       const connectedTo = ev.tags
         .filter((t) => t[0] === 'p' && typeof t[1] === 'string' && t[1].length > 0)
         .map((t) => t[1])

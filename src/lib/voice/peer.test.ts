@@ -28,6 +28,7 @@ afterEach(() => {
 interface MakePeerOpts {
   remotePubkey?: string;
   polite?: boolean;
+  allowPoliteInitialOffer?: boolean;
   events?: Partial<PeerEvents>;
 }
 
@@ -36,6 +37,7 @@ function makePeer(opts: MakePeerOpts = {}) {
   const peer = new Peer({
     remotePubkey: opts.remotePubkey ?? 'b'.repeat(64),
     polite: opts.polite ?? true,
+    allowPoliteInitialOffer: opts.allowPoliteInitialOffer,
     sessionId: 'sess-1',
     send: async (p) => { sent.push(p); },
     events: {
@@ -194,14 +196,33 @@ describe('Peer.setLocalTrack', () => {
     expect(pc.getSenders()[0].track).toBe(replacement);
   });
 
-  it('triggers an offer publication via the send callback', async () => {
-    const { peer, sent } = makePeer();
+  it('triggers an offer publication from the impolite side via the send callback', async () => {
+    const { peer, sent } = makePeer({ polite: false });
     const track = new FakeMediaStreamTrack('audio') as unknown as MediaStreamTrack;
     await peer.setLocalTrack('audio', track);
     await flushMicrotasks(8);
 
     expect(sent.find((s) => s.type === 'offer')).toBeDefined();
     expect(sent.find((s) => s.type === 'trackinfo')).toBeDefined();
+  });
+
+  it('does not publish a pre-connect offer from the polite side', async () => {
+    const { peer, sent } = makePeer({ polite: true });
+    const track = new FakeMediaStreamTrack('audio') as unknown as MediaStreamTrack;
+    await peer.setLocalTrack('audio', track);
+    await flushMicrotasks(8);
+
+    expect(sent.find((s) => s.type === 'offer')).toBeUndefined();
+    expect(sent.find((s) => s.type === 'trackinfo')).toBeDefined();
+  });
+
+  it('can explicitly allow a polite pre-connect offer for legacy peers', async () => {
+    const { peer, sent } = makePeer({ polite: true, allowPoliteInitialOffer: true });
+    const track = new FakeMediaStreamTrack('audio') as unknown as MediaStreamTrack;
+    await peer.setLocalTrack('audio', track);
+    await flushMicrotasks(8);
+
+    expect(sent.find((s) => s.type === 'offer')).toBeDefined();
   });
 
   it('biases video transceiver toward VP9 → H.264 → VP8', async () => {
