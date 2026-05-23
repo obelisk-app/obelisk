@@ -7,7 +7,7 @@
 // constant and produce the same chunk hash as before.
 if (typeof globalThis !== 'undefined') {
   (globalThis as { __obeliskVoiceBuild?: string }).__obeliskVoiceBuild =
-    '2026-05-22T05:20:00Z-mesh-active-call-hints';
+    '2026-05-23T20:35:00Z-mesh-media-glare-reoffer';
 }
 
 /**
@@ -58,7 +58,7 @@ import {
   type UnloadHandlerHandle,
 } from './failure-handlers';
 
-const SELF_BUILD_TAG = '2026-05-22T05:20:00Z-mesh-active-call-hints';
+const SELF_BUILD_TAG = '2026-05-23T20:35:00Z-mesh-media-glare-reoffer';
 
 const BEACON_INTERVAL_MS = 10_000;
 /**
@@ -265,6 +265,7 @@ export class VoiceClient {
    * beacon to expire from the roster.
    */
   private activeCallUnsub: (() => void) | null = null;
+  private voiceRelayCapacityRelease: (() => void) | null = null;
   /**
    * Have we ever observed our channel as `active` in the bridge's
    * active-call store? Used as an armed-flag so a snapshot that lands
@@ -522,8 +523,11 @@ export class VoiceClient {
    * room says people are present but the joined WebRTC client never dials
    * them because its dedicated ephemeral roster REQ missed the beacon.
    */
-  setPassiveParticipantHints(pubkeys: readonly string[] = []): void {
-    const next = new Set<string>();
+  setPassiveParticipantHints(
+    pubkeys: readonly string[] = [],
+    options: { merge?: boolean } = {},
+  ): void {
+    const next = options.merge ? new Set(this.passiveParticipantHints) : new Set<string>();
     for (const pk of pubkeys) {
       if (!pk || pk === this.selfPubkey) continue;
       if (!/^[0-9a-f]{64}$/i.test(pk)) continue;
@@ -715,6 +719,12 @@ export class VoiceClient {
     // NIP-29 membership/open-room access for the browser user, but the test
     // peer itself does not need to be duplicated into every member list.
     if (this.knownMeshTestPeerPubkeys.has(pubkey) && this.canJoin()) return true;
+    // The bridge-level active-call detector is driven by signed kind 20078
+    // beacons on this channel. Treat those pubkeys as provisional mesh
+    // members while the local user is allowed to join, so a slow/stale
+    // NIP-29 member snapshot cannot open a peer and then immediately
+    // evict it before SDP/ICE completes.
+    if (this.passiveParticipantHints.has(pubkey) && this.canJoin()) return true;
     return this.openRoom || this.members.has(pubkey) || this.admins.has(pubkey);
   }
 
@@ -786,6 +796,18 @@ export class VoiceClient {
     });
   }
 
+  private async reserveMeshRelayCapacity(): Promise<void> {
+    if (this.voiceRelayCapacityRelease) return;
+    try {
+      const bridge = await getBridge() as unknown as {
+        reserveVoiceRelayCapacity?: (channelId: string) => () => void;
+      };
+      this.voiceRelayCapacityRelease = bridge.reserveVoiceRelayCapacity?.(this.channelId) ?? null;
+    } catch {
+      this.voiceRelayCapacityRelease = null;
+    }
+  }
+
   /**
    * Subscribe to roster + signaling, publish the first beacon, and start
    * the periodic beacon timer. Idempotent — re-running is a no-op when
@@ -794,6 +816,8 @@ export class VoiceClient {
    */
   private async enterMeshMode(): Promise<void> {
     if (this.signalsUnsub || this.rosterUnsub) return;
+
+    await this.reserveMeshRelayCapacity();
 
     // Subscribe to incoming signaling first so we don't miss offers from
     // peers who learn about us via the beacon we're about to send.
@@ -926,6 +950,7 @@ export class VoiceClient {
     this.bringupTimers.length = 0;
     this.signalsUnsub?.(); this.signalsUnsub = null;
     this.rosterUnsub?.(); this.rosterUnsub = null;
+    this.voiceRelayCapacityRelease?.(); this.voiceRelayCapacityRelease = null;
     this.currentRoster = [];
     this.knownMeshTestPeerPubkeys.clear();
     this.passiveParticipantHints.clear();
@@ -1099,6 +1124,8 @@ export class VoiceClient {
     this.signalsUnsub = null;
     this.rosterUnsub?.();
     this.rosterUnsub = null;
+    this.voiceRelayCapacityRelease?.();
+    this.voiceRelayCapacityRelease = null;
 
     for (const peer of this.peers.values()) peer.close();
     this.peers.clear();
@@ -1143,18 +1170,16 @@ export class VoiceClient {
 
   /**
    * Known active mesh pubkeys from every source we currently trust:
-   * direct PCs, relay beacons, control-channel snapshots, and the rendered
-   * participant list. This set is what we gossip as `peer` tags and
-   * `peerSnapshot` messages, so partially formed meshes can converge even
-   * before every direct connection exists.
+   * connected PCs, relay beacons, control-channel snapshots, and active-call
+   * hints. This set is what we gossip as `peer` tags and `peerSnapshot`
+   * messages, so partially formed meshes can converge without re-advertising
+   * stale PCs that never connected.
    */
   private meshKnownPubkeys(): string[] {
     const known = new Set<string>();
     for (const pk of this.connectedPubkeys) known.add(pk);
     for (const pk of this.discovery.effectivePeers()) known.add(pk);
     for (const pk of this.passiveParticipantHints) known.add(pk);
-    for (const pk of this.rosterPubkeys) known.add(pk);
-    for (const pk of this.peers.keys()) known.add(pk);
     known.delete(this.selfPubkey);
     return Array.from(known).filter((pk) => this.isMember(pk)).sort();
   }
@@ -1173,6 +1198,7 @@ export class VoiceClient {
    * or local video toggle).
    */
   async publishBeacon(): Promise<void> {
+    if (!this.joined || this.sfuPubkey || this.sfuClient) return;
     const videoTracks: VideoSlotKind[] = [];
     if (this.camTrack) videoTracks.push('camera');
     if (this.screenTrack) videoTracks.push('screen');

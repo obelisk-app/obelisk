@@ -227,12 +227,14 @@ type ActiveCallEntry = { hostPubkey: string; status: string; participantCount: n
 const bridgeFake = vi.hoisted(() => {
   const cbs: Array<(byChannel: Record<string, ActiveCallEntry>) => void> = [];
   let unsubCalls = 0;
+  let releaseCalls = 0;
   const bridge = {
     subscribeActiveCallByChannel: (cb: (byChannel: Record<string, ActiveCallEntry>) => void) => {
       cbs.push(cb);
       return () => { unsubCalls += 1; const i = cbs.indexOf(cb); if (i >= 0) cbs.splice(i, 1); };
     },
     waitForRelayAuth: vi.fn(async () => 'ok'),
+    reserveVoiceRelayCapacity: vi.fn((_channelId: string) => () => { releaseCalls += 1; }),
   };
   return {
     bridge,
@@ -241,7 +243,14 @@ const bridgeFake = vi.hoisted(() => {
       for (const cb of [...cbs]) cb(byChannel);
     },
     unsubCalls: () => unsubCalls,
-    reset: () => { cbs.length = 0; unsubCalls = 0; bridgeFake.getBridge.mockClear(); },
+    releaseCalls: () => releaseCalls,
+    reset: () => {
+      cbs.length = 0;
+      unsubCalls = 0;
+      releaseCalls = 0;
+      bridge.reserveVoiceRelayCapacity.mockClear();
+      bridgeFake.getBridge.mockClear();
+    },
   };
 });
 vi.mock('@/lib/nostr-bridge/client', () => ({
@@ -305,7 +314,9 @@ describe('VoiceClient.join', () => {
     expect(transportFake.publishPresenceBeacon).toHaveBeenCalledWith('ch1', [], [], []);
     expect(transportFake.subscribeRoster).toHaveBeenCalled();
     expect(transportFake.subscribeSignals).toHaveBeenCalled();
+    expect(bridgeFake.bridge.reserveVoiceRelayCapacity).toHaveBeenCalledWith('ch1');
     await client.leave();
+    expect(bridgeFake.releaseCalls()).toBe(1);
   });
 
   it('publishes a terminal mesh presence beacon when leaving', async () => {
@@ -425,6 +436,22 @@ describe('VoiceClient roster → peer lifecycle', () => {
     await client.leave();
   });
 
+  it('does not keep gossiping a passive-hint peer after the hint is cleared before connection', async () => {
+    const client = new VoiceClient('ch1', { members: [SELF], admins: [], open: true });
+    await client.join();
+
+    client.setPassiveParticipantHints([PEER2]);
+    await flushMicrotasks(12);
+    expect(client.getParticipants()).toEqual([PEER2]);
+
+    client.setPassiveParticipantHints([]);
+    await flushMicrotasks(12);
+
+    await client.publishBeacon();
+    expect(transportFake.publishPresenceBeacon).toHaveBeenLastCalledWith('ch1', [], [], []);
+    await client.leave();
+  });
+
   it('dials mesh active-call participants reported by the bridge when the dedicated roster is empty', async () => {
     const client = new VoiceClient('ch1', { members: [SELF], admins: [], open: true });
     await client.join();
@@ -450,6 +477,65 @@ describe('VoiceClient roster → peer lifecycle', () => {
 
     await client.publishBeacon();
     expect(transportFake.publishPresenceBeacon).toHaveBeenLastCalledWith('ch1', [], [PEER2], []);
+    await client.leave();
+  });
+
+  it('keeps an active-call hinted mesh peer through membership reconciliation', async () => {
+    const client = new VoiceClient('ch1', { members: [SELF], admins: [] });
+    await client.join();
+
+    client.setPassiveParticipantHints([PEER1], { merge: true });
+    await flushMicrotasks(12);
+    expect(client.getParticipants()).toEqual([PEER1]);
+    expect(transportFake.sentSignals.some((s) =>
+      s.to === PEER1 && s.payload.type === 'offer',
+    )).toBe(true);
+
+    client.updateRoles([SELF], []);
+    await flushMicrotasks(4);
+    expect(client.getParticipants()).toEqual([PEER1]);
+
+    await client.leave();
+  });
+
+  it('does not re-gossip a previously hinted mesh peer after a later active-call snapshot drops it', async () => {
+    const client = new VoiceClient('ch1', { members: [SELF], admins: [], open: true });
+    await client.join();
+    await flushMicrotasks(12);
+
+    bridgeFake.fire({
+      ch1: {
+        hostPubkey: PEER1,
+        status: 'active',
+        participantCount: 2,
+        expiresAt: 9_999_999_999,
+        createdAt: 1,
+        mode: 'mesh',
+        participantPubkeys: [SELF, PEER1],
+      },
+    });
+    await flushMicrotasks(12);
+
+    bridgeFake.fire({
+      ch1: {
+        hostPubkey: SELF,
+        status: 'active',
+        participantCount: 1,
+        expiresAt: 9_999_999_999,
+        createdAt: 2,
+        mode: 'mesh',
+        participantPubkeys: [SELF],
+      },
+    });
+    await flushMicrotasks(12);
+
+    expect(client.getParticipants()).toEqual([PEER1]);
+    expect(transportFake.sentSignals.some((s) =>
+      s.to === PEER1 && s.payload.type === 'offer',
+    )).toBe(true);
+
+    await client.publishBeacon();
+    expect(transportFake.publishPresenceBeacon).toHaveBeenLastCalledWith('ch1', [], [], []);
     await client.leave();
   });
 
@@ -650,7 +736,7 @@ describe('VoiceClient roster → peer lifecycle', () => {
     await flushMicrotasks(16);
 
     expect(transportFake.sentSignals.some((s) =>
-      s.to === PEER2 && s.payload.type === 'offer',
+      s.to === PEER2 && s.payload.type === 'answer',
     )).toBe(true);
     await client.leave();
   });

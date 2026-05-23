@@ -37,6 +37,8 @@ import {
   DEFAULT_RELAY,
 } from '../lib';
 import {
+  getInboundAudioBytes,
+  getInboundVideoBytes,
   getPeerState,
   installFakeMediaStreams,
   joinMeshChannel,
@@ -46,12 +48,15 @@ import {
   logWarn,
   makeProbeChannelId,
   readMetrics,
+  setCameraEnabled,
+  setMicEnabled,
   waitFor,
   waitForBridgeReady,
 } from './lib-voice';
 
 const RELAY_URL = process.env.OBELISK_E2E_RELAY ?? DEFAULT_RELAY;
 const FALLBACK_RELAY = 'wss://relay.obelisk.ar';
+const MEDIA_FLOW_TIMEOUT_MS = 30_000;
 
 test('two real mesh peers connect via the public relay', async () => {
   test.setTimeout(150_000);
@@ -204,6 +209,47 @@ test('two real mesh peers connect via the public relay', async () => {
       ),
     ]);
     logOk('WebRTC connectionState=connected on both sides');
+
+    // ── Media flow: prove connected peers actually exchange RTP bytes ──
+    await Promise.all([
+      setMicEnabled(pageA, true),
+      setMicEnabled(pageB, true),
+    ]);
+    await Promise.all([
+      waitFor(
+        () => getInboundAudioBytes(pageA, pkB),
+        (bytes) => bytes > 0,
+        MEDIA_FLOW_TIMEOUT_MS,
+        'peerA receives peerB audio RTP bytes',
+      ),
+      waitFor(
+        () => getInboundAudioBytes(pageB, pkA),
+        (bytes) => bytes > 0,
+        MEDIA_FLOW_TIMEOUT_MS,
+        'peerB receives peerA audio RTP bytes',
+      ),
+    ]);
+    logOk('audio RTP bytes are flowing both ways');
+
+    await Promise.all([
+      setCameraEnabled(pageA, true),
+      setCameraEnabled(pageB, true),
+    ]);
+    await Promise.all([
+      waitFor(
+        () => getInboundVideoBytes(pageA, pkB),
+        (bytes) => bytes > 0,
+        MEDIA_FLOW_TIMEOUT_MS,
+        'peerA receives peerB camera RTP bytes',
+      ),
+      waitFor(
+        () => getInboundVideoBytes(pageB, pkA),
+        (bytes) => bytes > 0,
+        MEDIA_FLOW_TIMEOUT_MS,
+        'peerB receives peerA camera RTP bytes',
+      ),
+    ]);
+    logOk('camera RTP bytes are flowing both ways');
 
     // ── Hold for 5 s of steady state, then snapshot ───────────────────
     await pageA.waitForTimeout(5_000);

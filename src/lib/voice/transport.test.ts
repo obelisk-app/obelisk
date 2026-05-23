@@ -66,6 +66,11 @@ const bridgeFake = vi.hoisted(() => {
       subs.push(sub);
       return () => { const i = subs.indexOf(sub); if (i >= 0) subs.splice(i, 1); };
     }),
+    subscribeVoiceFilterWatched: vi.fn((filter: SubFilter, sink: (ev: FakeEvent) => void) => {
+      const sub = { filter, sink };
+      subs.push(sub);
+      return () => { const i = subs.indexOf(sub); if (i >= 0) subs.splice(i, 1); };
+    }),
   };
 
   return {
@@ -83,6 +88,7 @@ const bridgeFake = vi.hoisted(() => {
       impl.publishEvent.mockClear();
       impl.subscribeFilter.mockClear();
       impl.subscribeFilterWatched.mockClear();
+      impl.subscribeVoiceFilterWatched.mockClear();
     },
   };
 });
@@ -168,7 +174,7 @@ describe('pinned relay voice transport', () => {
     const unsubRoster = await transport.subscribeRoster('ch1', () => {});
     const unsubSignals = await transport.subscribeSignals('ch1', 'me', () => {});
 
-    expect(bridgeFake.impl.subscribeFilterWatched).toHaveBeenNthCalledWith(
+    expect(bridgeFake.impl.subscribeVoiceFilterWatched).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({ kinds: [KIND_VOICE_PRESENCE] }),
       expect.any(Function),
@@ -178,7 +184,7 @@ describe('pinned relay voice transport', () => {
         affectsRelayAccess: false,
       }),
     );
-    expect(bridgeFake.impl.subscribeFilterWatched).toHaveBeenNthCalledWith(
+    expect(bridgeFake.impl.subscribeVoiceFilterWatched).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({ kinds: [KIND_VOICE_SIGNAL] }),
       expect.any(Function),
@@ -215,8 +221,8 @@ describe('pinned relay voice transport', () => {
   });
 });
 
-describe('voice subs use the watched variant for relay-drop recovery', () => {
-  it('subscribeRoster goes through subscribeFilterWatched, not the raw subscribeFilter', async () => {
+describe('voice subs use the dedicated watched variant for relay-drop recovery', () => {
+  it('subscribeRoster goes through subscribeVoiceFilterWatched, not the raw subscribeFilter', async () => {
     // The raw `subscribeFilter` runs once and dies silently when the relay's
     // WebSocket drops mid-call (network blip, server restart). The watched
     // variant has a 5s no-EVENT/EOSE watchdog with exponential-backoff retry,
@@ -224,14 +230,14 @@ describe('voice subs use the watched variant for relay-drop recovery', () => {
     // against the bug where one browser logs "WebSocket already in
     // CLOSING/CLOSED" while another never sees a new joiner.
     const unsub = await subscribeRoster('ch1', () => {});
-    expect(bridgeFake.impl.subscribeFilterWatched).toHaveBeenCalled();
+    expect(bridgeFake.impl.subscribeVoiceFilterWatched).toHaveBeenCalled();
     expect(bridgeFake.impl.subscribeFilter).not.toHaveBeenCalled();
     unsub();
   });
 
-  it('subscribeSignals goes through subscribeFilterWatched', async () => {
+  it('subscribeSignals goes through subscribeVoiceFilterWatched', async () => {
     const unsub = await subscribeSignals('ch1', 'me', () => {});
-    expect(bridgeFake.impl.subscribeFilterWatched).toHaveBeenCalled();
+    expect(bridgeFake.impl.subscribeVoiceFilterWatched).toHaveBeenCalled();
     expect(bridgeFake.impl.subscribeFilter).not.toHaveBeenCalled();
     unsub();
   });

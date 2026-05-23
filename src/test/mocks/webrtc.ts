@@ -232,9 +232,11 @@ export class FakeRTCPeerConnection extends TinyEventTarget {
   oniceconnectionstatechange: (() => void) | null = null;
 
   private closed = false;
+  readonly config: RTCConfiguration | undefined;
 
-  constructor(_config?: RTCConfiguration) {
+  constructor(config?: RTCConfiguration) {
     super();
+    this.config = config;
   }
 
   // -- track management --------------------------------------------------

@@ -283,6 +283,14 @@ export async function setCameraEnabled(page: Page, on: boolean): Promise<void> {
   }, on);
 }
 
+/** Toggle microphone on the active VoiceClient. */
+export async function setMicEnabled(page: Page, on: boolean): Promise<void> {
+  await page.evaluate(async (enabled) => {
+    const c = (window as unknown as { __test_voice?: { setMicEnabled: (on: boolean) => Promise<void> } }).__test_voice;
+    if (c) await c.setMicEnabled(enabled);
+  }, on);
+}
+
 /** Toggle screen share on the active VoiceClient. */
 export async function setScreenShareEnabled(page: Page, on: boolean): Promise<void> {
   await page.evaluate(async (enabled) => {

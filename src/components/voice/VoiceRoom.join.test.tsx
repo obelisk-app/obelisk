@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import VoiceRoom from './VoiceRoom';
 import { useVoiceStore } from '@/store/voice';
 
@@ -42,7 +42,7 @@ vi.mock('@/lib/voice/active-client', () => ({
 }));
 
 vi.mock('@/lib/voice/client', () => ({
-  VoiceClient: vi.fn().mockImplementation((channelId: string) => {
+  VoiceClient: vi.fn().mockImplementation(function VoiceClientMock(channelId: string) {
     const client = {
       channelId,
       isJoined: () => true,
@@ -50,6 +50,7 @@ vi.mock('@/lib/voice/client', () => ({
       leave: vi.fn(async () => {}),
       setEvents: vi.fn(),
       setExpectSfu: vi.fn(),
+      setPassiveParticipantHints: vi.fn(),
       getParticipants: () => [],
       getRemoteTracks: () => [],
       getPeerConnectionStates: () => ({}),
@@ -81,6 +82,7 @@ function makeActiveClient(channelId: string) {
     leave: vi.fn(async () => {}),
     setEvents: vi.fn(),
     setExpectSfu: vi.fn(),
+    setPassiveParticipantHints: vi.fn(),
     getParticipants: () => [],
     getRemoteTracks: () => [],
     getPeerConnectionStates: () => ({}),
@@ -139,6 +141,27 @@ describe('VoiceRoom join page', () => {
     expect(active.leave).not.toHaveBeenCalled();
     expect(voiceHarness.voiceClientCtor).not.toHaveBeenCalledWith('new-voice');
     expect(screen.getByText(/stay connected to your current call/i)).toBeInTheDocument();
+  });
+
+  it('passes detected mesh occupants into the media client immediately on join', async () => {
+    bridgeHarness.activeCalls['old-voice'] = {
+      hostPubkey: 'peer-a',
+      status: 'active',
+      participantCount: 2,
+      expiresAt: Math.floor(Date.now() / 1000) + 90,
+      createdAt: Math.floor(Date.now() / 1000),
+      mode: 'mesh',
+      participantPubkeys: ['me-pubkey', 'peer-a'],
+    };
+
+    render(<VoiceRoom channelId="old-voice" channelName="Old Voice" />);
+
+    fireEvent.click(await screen.findByTestId('join-voice-btn'));
+    expect(await screen.findByTestId('voice-controls')).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(voiceHarness.activeClient?.setPassiveParticipantHints).toHaveBeenCalledWith(['me-pubkey', 'peer-a']);
+    });
   });
 
   it('renders passive SFU or mesh occupants on the join page without connecting', async () => {

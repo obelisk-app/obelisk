@@ -282,6 +282,11 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
       // mid-call (admin republished kind 39000 with/without
       // ["t","voice-sfu"]) flips the live client immediately.
       existing.setExpectSfu(expectSfu);
+      if (activeCall?.mode === 'mesh') {
+        existing.setPassiveParticipantHints(activeCall.participantPubkeys ?? []);
+      } else {
+        existing.setPassiveParticipantHints([]);
+      }
       clientRef.current = existing;
       setParticipants(existing.getParticipants());
       setRemoteTracks(existing.getRemoteTracks());
@@ -343,6 +348,9 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
         });
         clientRef.current = client;
         setActiveVoiceClient(client);
+        if (activeCall?.mode === 'mesh') {
+          client.setPassiveParticipantHints(activeCall.participantPubkeys ?? []);
+        }
         await client.join();
         if (cancelled) return;
         const s = useVoiceStore.getState();
@@ -376,11 +384,11 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
     const c = clientRef.current ?? getActiveVoiceClient();
     if (!joined || !c || c.channelId !== channelId) return;
     if (typeof c.setPassiveParticipantHints !== 'function') return;
-    if (activeCall?.mode === 'sfu') {
+    if (activeCall?.mode === 'mesh') {
+      c.setPassiveParticipantHints(activeCall.participantPubkeys ?? []);
+    } else {
       c.setPassiveParticipantHints([]);
-      return;
     }
-    c.setPassiveParticipantHints(activeCall?.participantPubkeys ?? []);
   }, [joined, channelId, activeCall?.mode, activeCall?.participantPubkeys]);
 
   // Mirror channel-kind reclassifications into the running voice client.

@@ -9,7 +9,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { generateSecretKey, getPublicKey, nip19, finalizeEvent, type Event as NostrEvent, type Filter } from 'nostr-tools';
-import { KIND_SFU_ACTIVE_CALL, KIND_VOICE_PRESENCE } from '@/lib/nip-kinds';
+import { KIND_SFU_ACTIVE_CALL, KIND_VOICE_PRESENCE, KIND_VOICE_SIGNAL } from '@/lib/nip-kinds';
 
 type Sink = (ev: NostrEvent) => void;
 
@@ -21,8 +21,10 @@ const fake = vi.hoisted(() => {
       sink: (ev: any) => void;
       relays?: string[];
       onclose?: (reasons: string[]) => void;
+      poolId?: number;
     }>,
     ensureRelayCalls: [] as string[],
+    poolSeq: 0,
   };
 
   function matchesInternal(f: Record<string, unknown>, ev: { kind: number; pubkey: string; tags: string[][] }): boolean {
@@ -39,8 +41,12 @@ const fake = vi.hoisted(() => {
   }
 
   class FakePool {
+    private readonly id: number;
+    constructor() {
+      this.id = ++state.poolSeq;
+    }
     subscribe(relays: string[], filter: Record<string, unknown>, opts: { onevent: (ev: any) => void; oneose?: () => void; onclose?: (reasons: string[]) => void; onauth?: unknown }) {
-      const sub = { filter, sink: opts.onevent, relays, onclose: opts.onclose };
+      const sub = { filter, sink: opts.onevent, relays, onclose: opts.onclose, poolId: this.id };
       state.subscriptions.push(sub);
       for (const ev of state.published) if (matchesInternal(filter, ev as any)) opts.onevent(ev);
       // Fire EOSE so subscribeWatched's watchdog marks the sub as alive and
@@ -56,7 +62,7 @@ const fake = vi.hoisted(() => {
       return [Promise.resolve('ok')];
     }
     close(_relays: string[]): void {
-      state.subscriptions = [];
+      state.subscriptions = state.subscriptions.filter((sub) => sub.poolId !== this.id);
     }
     /**
      * The bridge's `connect()` awaits `pool.ensureRelay(url, ...)` before
@@ -112,7 +118,7 @@ async function flush(times = 4) {
 }
 
 beforeEach(() => {
-  (() => { fake.state.published = []; fake.state.subscriptions = []; fake.state.ensureRelayCalls = []; })();
+  (() => { fake.state.published = []; fake.state.subscriptions = []; fake.state.ensureRelayCalls = []; fake.state.poolSeq = 0; })();
   // Each test starts fresh — clear the bridge module-level singleton by
   // resetting modules so getBridge() returns a new instance.
   vi.resetModules();
@@ -121,7 +127,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  (() => { fake.state.published = []; fake.state.subscriptions = []; fake.state.ensureRelayCalls = []; })();
+  (() => { fake.state.published = []; fake.state.subscriptions = []; fake.state.ensureRelayCalls = []; fake.state.poolSeq = 0; })();
 });
 
 describe('nostr-bridge', () => {
@@ -990,6 +996,108 @@ describe('nostr-bridge', () => {
     const subsAfter = findMessageSubs();
     expect(subsAfter).toHaveLength(1);
     expect(subsAfter[0]).toBe(firstSub);
+  });
+
+  it('does NOT retry a sub when CLOSED is relay quota/rate-limit', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const groupId = 'racetest-quota-close';
+    bridge.subscribeMessages(groupId, () => {});
+    await flush();
+
+    const findMessageSubs = () =>
+      fake.state.subscriptions.filter((sub) => {
+        const f = sub.filter as { kinds?: number[]; '#h'?: string[] };
+        return f.kinds?.includes(9) && f['#h']?.includes(groupId);
+      });
+
+    const firstSub = findMessageSubs()[0];
+    expect(firstSub).toBeTruthy();
+
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      firstSub.onclose?.((firstSub.relays ?? ['']).map(() => 'restricted: Subscription quota exceeded: 50/50'));
+      await vi.advanceTimersByTimeAsync(60_000);
+    } finally {
+      vi.useRealTimers();
+    }
+    await flush();
+
+    expect(findMessageSubs()).toHaveLength(0);
+  });
+
+  it('subscribeVoiceFilterWatched uses a dedicated pool for mesh signaling', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const existingPoolIds = new Set(fake.state.subscriptions.map((sub) => sub.poolId));
+    const poolSeqBefore = fake.state.poolSeq;
+    const unsubscribe = (bridge as unknown as {
+      subscribeVoiceFilterWatched: (
+        filter: Filter,
+        onEvent: (ev: NostrEvent) => void,
+        options?: { relays?: readonly string[]; relayMode?: 'replace' | 'merge' },
+      ) => () => void;
+    }).subscribeVoiceFilterWatched(
+      { kinds: [KIND_VOICE_SIGNAL] },
+      () => {},
+      { relays: ['wss://public.obelisk.ar'], relayMode: 'replace' },
+    );
+    await flush();
+
+    const voiceSub = fake.state.subscriptions.find((sub) => {
+      const f = sub.filter as { kinds?: number[] };
+      return f.kinds?.includes(KIND_VOICE_SIGNAL);
+    });
+    expect(voiceSub).toBeTruthy();
+    expect(voiceSub!.poolId).toBeGreaterThan(poolSeqBefore);
+    expect(existingPoolIds.has(voiceSub!.poolId)).toBe(false);
+
+    unsubscribe();
+    await flush();
+    expect(fake.state.subscriptions.some((sub) => {
+      const f = sub.filter as { kinds?: number[] };
+      return f.kinds?.includes(KIND_VOICE_SIGNAL);
+    })).toBe(false);
+    expect(fake.state.subscriptions.length).toBeGreaterThan(0);
+  });
+
+  it('reserveVoiceRelayCapacity closes non-active background group subs', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    bridge.subscribeMessages('voice-channel', () => {});
+    bridge.subscribeMessages('background-channel', () => {});
+    bridge.subscribeReactions('background-channel', () => {});
+    await flush();
+
+    const subsForGroup = (groupId: string) =>
+      fake.state.subscriptions.filter((sub) => {
+        const f = sub.filter as { '#h'?: string[] };
+        return f['#h']?.includes(groupId);
+      });
+
+    expect(subsForGroup('voice-channel').length).toBeGreaterThan(0);
+    expect(subsForGroup('background-channel').length).toBeGreaterThan(0);
+
+    const release = (bridge as unknown as {
+      reserveVoiceRelayCapacity: (channelId: string) => () => void;
+    }).reserveVoiceRelayCapacity('voice-channel');
+    await flush();
+
+    expect(subsForGroup('voice-channel').length).toBeGreaterThan(0);
+    expect(subsForGroup('background-channel')).toHaveLength(0);
+    release();
   });
 
   it('caps the auth-required immediate retry — second onclose falls back to backoff', async () => {

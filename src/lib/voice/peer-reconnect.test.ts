@@ -40,6 +40,7 @@ afterEach(() => {
 
 interface MakeOpts {
   polite?: boolean;
+  iceTransportPolicy?: RTCIceTransportPolicy;
   events?: Partial<PeerEvents>;
 }
 
@@ -48,6 +49,7 @@ function makePeer(opts: MakeOpts = {}) {
   const peer = new Peer({
     remotePubkey: 'b'.repeat(64),
     polite: opts.polite ?? false,
+    iceTransportPolicy: opts.iceTransportPolicy,
     sessionId: 'sess-1',
     send: async (p) => { sent.push(p); },
     events: {
@@ -78,12 +80,27 @@ describe('Peer initial-connect watchdog', () => {
 
   it('polite peer publishes requestReset on watchdog timeout', async () => {
     const { peer, sent } = makePeer({ polite: true });
+    const firstPc = peer.pc as unknown as FakeRTCPeerConnection;
     vi.advanceTimersByTime(INITIAL_CONNECT_TIMEOUT_MS + 10);
     await settle();
     // Polite side does NOT recreate its own PC — it asks the impolite side to.
     expect(sent.some((s) => s.type === 'requestReset')).toBe(true);
-    // Same PC instance still in place.
-    expect(peer.pc).toBeDefined();
+    expect(firstPc.connectionState).not.toBe('closed');
+    expect(peer.pc).toBe(firstPc);
+  });
+
+  it('relaxes relay-only ICE to all after an initial failed connection', async () => {
+    const { peer } = makePeer({ polite: false, iceTransportPolicy: 'relay' });
+    const firstPc = peer.pc as unknown as FakeRTCPeerConnection;
+    expect(firstPc.config?.iceTransportPolicy).toBe('relay');
+
+    firstPc.forceState('failed');
+    await settle();
+
+    const fallbackPc = peer.pc as unknown as FakeRTCPeerConnection;
+    expect(firstPc.connectionState).toBe('closed');
+    expect(fallbackPc).not.toBe(firstPc);
+    expect(fallbackPc.config?.iceTransportPolicy).toBe('all');
   });
 
   it('does nothing if the peer reaches connected before the watchdog fires', async () => {

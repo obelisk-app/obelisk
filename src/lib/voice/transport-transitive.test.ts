@@ -45,6 +45,11 @@ const bridgeFake = vi.hoisted(() => {
       subs.push(sub);
       return () => { const i = subs.indexOf(sub); if (i >= 0) subs.splice(i, 1); };
     }),
+    subscribeVoiceFilterWatched: vi.fn((filter: SubFilter, sink: (ev: FakeEvent) => void) => {
+      const sub = { filter, sink };
+      subs.push(sub);
+      return () => { const i = subs.indexOf(sub); if (i >= 0) subs.splice(i, 1); };
+    }),
   };
 
   return {
@@ -59,6 +64,7 @@ const bridgeFake = vi.hoisted(() => {
       impl.publishEvent.mockClear();
       impl.subscribeFilter.mockClear();
       impl.subscribeFilterWatched.mockClear();
+      impl.subscribeVoiceFilterWatched.mockClear();
     },
   };
 });

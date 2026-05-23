@@ -78,6 +78,11 @@ const ICE_CANDIDATE_POOL_SIZE = 4;
 // watchdog still owns the hard-reset path for genuinely stuck PCs.
 export const OFFER_ACK_TIMEOUT_MS = 5000;
 export const OFFER_RETRY_LIMIT = 3;
+// Remote video tracks can briefly enter muted while the browser wires RTP
+// to the decoder, especially right after SDP/ICE completes. Dropping the
+// track immediately makes the tile blink black during otherwise healthy
+// startup, so only treat a mute as removal if it persists.
+export const REMOTE_VIDEO_MUTE_GRACE_MS = 2500;
 
 export interface PeerEvents {
   /**
@@ -123,6 +128,8 @@ export interface PeerOptions {
   allowPoliteInitialOffer?: boolean;
   send: (payload: VoiceSignalPayload) => Promise<void> | void;
   events: PeerEvents;
+  /** Test/debug override. Production uses ICE_TRANSPORT_POLICY from ice-config. */
+  iceTransportPolicy?: RTCIceTransportPolicy;
   /** Optional control-channel hookup. When provided, an `obelisk-control`
    *  RTCDataChannel is opened over the PC for fast hangup detection and
    *  transitive peer discovery. Tests may omit to keep the Peer minimal. */
@@ -143,17 +150,30 @@ export class Peer {
   private readonly controlOpts: PeerOptions['control'];
   private readonly bootstrapRecvOnlyMedia: boolean;
   private readonly allowPoliteInitialOffer: boolean;
+  private iceTransportPolicy: RTCIceTransportPolicy;
   private controlChannel: ControlChannel | null = null;
 
   pc: RTCPeerConnection;
 
   private makingOffer = false;
   /**
+   * Temporarily blocks local offers while we rebuild the PC in order to
+   * accept a remote offer. Re-attaching tracks during that rebuild fires
+   * negotiationneeded; those offers must wait until the remote offer has
+   * been answered.
+   */
+  private negotiationSuppressed = false;
+  /**
    * Set when local media changes while the PC cannot create an offer yet
    * (e.g. while answering a remote data-only offer). Flushed as soon as the
    * signaling state returns to stable so remote peers do not stay avatar-only.
    */
   private negotiationQueued = false;
+  // Monotonic marker for local changes that actually require a new local offer.
+  // Native negotiationneeded can also fire after answers with no local change;
+  // honoring those spurious events creates an offer/answer storm.
+  private negotiationRevision = 0;
+  private offeredNegotiationRevision = 0;
   private ignoreOffer = false;
   private outboundSeq = 0;
   /** Track-id → kind, applied in `ontrack`. Sender announces via `trackInfo`. */
@@ -168,6 +188,7 @@ export class Peer {
    *  hard reset. The local sender map is rebuilt as part of that re-attach. */
   private localTracks = new Map<VoiceTrackKind, MediaStreamTrack>();
   private remoteStreams = new Map<string, MediaStream>();
+  private remoteVideoMuteTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private closed = false;
   /** Mirrors whether the underlying `pc` is currently in `'connected'`.
    *  Drives the `onConnectionEstablished` / `onConnectionLost` edges so
@@ -221,6 +242,7 @@ export class Peer {
     this.controlOpts = opts.control;
     this.bootstrapRecvOnlyMedia = opts.bootstrapRecvOnlyMedia ?? false;
     this.allowPoliteInitialOffer = opts.allowPoliteInitialOffer ?? false;
+    this.iceTransportPolicy = opts.iceTransportPolicy ?? ICE_TRANSPORT_POLICY;
     this.pc = this.createPc();
     this.attachControlChannel();
     this.armConnectWatchdog();
@@ -287,15 +309,19 @@ export class Peer {
   private createPc(): RTCPeerConnection {
     const pc = new RTCPeerConnection({
       iceServers: ICE_SERVERS,
-      iceTransportPolicy: ICE_TRANSPORT_POLICY,
+      iceTransportPolicy: this.iceTransportPolicy,
       iceCandidatePoolSize: ICE_CANDIDATE_POOL_SIZE,
     });
     if (typeof console !== 'undefined') {
-      console.log('[voice] new PC for', this.remotePubkey.slice(0, 8), 'iceServers=', ICE_SERVERS.map(s => s.urls), 'policy=', ICE_TRANSPORT_POLICY);
+      console.log('[voice] new PC for', this.remotePubkey.slice(0, 8), 'iceServers=', ICE_SERVERS.map(s => s.urls), 'policy=', this.iceTransportPolicy);
     }
 
     pc.onnegotiationneeded = () => {
       console.log('[voice] negotiationneeded for', this.remotePubkey.slice(0, 8), 'state=', pc.signalingState);
+      if (!this.hasPendingLocalNegotiation()) {
+        console.log('[voice] negotiationneeded ignored — no local change for', this.remotePubkey.slice(0, 8));
+        return;
+      }
       void this.kickNegotiation();
     };
 
@@ -327,6 +353,7 @@ export class Peer {
       console.log('[voice] ontrack', kind, 'from', this.remotePubkey.slice(0, 8),
         origin ? `origin=${origin.slice(0, 8)}` : '');
       ev.track.onended = () => {
+        this.clearRemoteVideoMuteTimer(ev.track.id);
         this.events.onRemoteTrackEnded(ev.track.id);
         this.remoteStreams.delete(ev.track.id);
         this.remoteTrackKinds.delete(ev.track.id);
@@ -334,20 +361,27 @@ export class Peer {
       };
       // When the sender calls `pc.removeTrack(...)` (camera off, screen-share
       // ended, peer dropped without a clean bye), the receiver does NOT get
-      // an `ended` event — only `mute`. Without handling it the <video>
-      // element keeps the last frame painted, so the UI looks like the peer
-      // is still presenting. Treat a video mute as "track gone for now": fire
-      // onRemoteTrackEnded so the React layer drops the stream entry. If the
-      // sender re-enables, `unmute` (or a fresh `ontrack`) re-adds it.
+      // an `ended` event — only `mute`. Keep short startup mutes attached so
+      // the UI does not blink black during normal decoder warm-up, but drop
+      // the track if the mute persists and the sender is probably gone/off.
       // Audio mute is intentionally ignored — silent audio is still valid
       // playback state and the speaking detector handles silence on its own.
       if (kind === 'camera' || kind === 'screen') {
         ev.track.onmute = () => {
           console.log('[voice] remote', kind, 'muted from', this.remotePubkey.slice(0, 8));
-          this.events.onRemoteTrackEnded(ev.track.id);
+          this.clearRemoteVideoMuteTimer(ev.track.id);
+          const timer = setTimeout(() => {
+            this.remoteVideoMuteTimers.delete(ev.track.id);
+            if (this.closed) return;
+            if (ev.track.readyState === 'ended') return;
+            if ('muted' in ev.track && !ev.track.muted) return;
+            this.events.onRemoteTrackEnded(ev.track.id);
+          }, REMOTE_VIDEO_MUTE_GRACE_MS);
+          this.remoteVideoMuteTimers.set(ev.track.id, timer);
         };
         ev.track.onunmute = () => {
           console.log('[voice] remote', kind, 'unmuted from', this.remotePubkey.slice(0, 8));
+          this.clearRemoteVideoMuteTimer(ev.track.id);
           // Re-emit the same track + stream — the React layer keys on
           // trackId, so this is an upsert not a duplicate.
           this.events.onRemoteTrack(ev.track, stream, kind, origin);
@@ -390,6 +424,7 @@ export class Peer {
         this.wasConnected = false;
         try { this.events.onConnectionLost?.(); } catch (e) { console.warn('[voice] onConnectionLost threw', e); }
       }
+      if (state === 'failed' && this.relaxRelayOnlyIcePolicy()) return;
       this.scheduleReconnect();
       return;
     }
@@ -404,6 +439,15 @@ export class Peer {
     }
   }
 
+  private relaxRelayOnlyIcePolicy(): boolean {
+    if (this.iceTransportPolicy !== 'relay') return false;
+    this.iceTransportPolicy = 'all';
+    console.warn('[voice] relay-only ICE failed for', this.remotePubkey.slice(0, 8),
+      '— retrying with policy=all');
+    this.performHardReset();
+    return true;
+  }
+
   private armConnectWatchdog(): void {
     if (this.closed) return;
     if (this.connectWatchdogTimer) clearTimeout(this.connectWatchdogTimer);
@@ -413,12 +457,10 @@ export class Peer {
       if (this.pc.connectionState === 'connected') return;
       console.warn('[voice] initial connect timeout for', this.remotePubkey.slice(0, 8),
         '— state:', this.pc.connectionState, 'polite:', this.polite);
-      // Send requestReset so the remote can clear stale state, then ALWAYS
-      // hard-reset locally so we drive a fresh offer. Without the local
-      // hard reset, polite peers would just sit waiting for a remote redial
-      // that the SFU never initiates.
       if (this.polite) {
         this.requestRemoteReset();
+        this.scheduleReconnect();
+        return;
       }
       this.performHardReset();
     }, INITIAL_CONNECT_TIMEOUT_MS);
@@ -479,6 +521,7 @@ export class Peer {
       'attempt', this.reconnectAttempts);
     try {
       this.pc.restartIce();
+      this.markNegotiationNeeded('ice-restart');
     } catch (err) {
       console.warn('[voice] restartIce failed:', err);
     }
@@ -489,10 +532,12 @@ export class Peer {
    * track. The new PC's `addTrack` calls fire `onnegotiationneeded`, which
    * drives a fresh offer through the existing signaling path.
    */
-  private performHardReset(): void {
+  private performHardReset(options: { kickNegotiationAfterReset?: boolean } = {}): void {
     if (this.closed) return;
+    const kickNegotiationAfterReset = options.kickNegotiationAfterReset ?? true;
     console.log('[voice] hard reset for', this.remotePubkey.slice(0, 8));
     if (this.statsMonitor) { this.statsMonitor.stop(); this.statsMonitor = null; }
+    this.clearRemoteVideoMuteTimers();
     // Detach the old PC's handlers BEFORE closing it. `pc.close()` fires
     // `onconnectionstatechange('closed')` and the owner (`VoiceClient`)
     // treats a closed state as "the ladder gave up" and tears the Peer
@@ -518,6 +563,7 @@ export class Peer {
     this.localSenders.clear();
     this.makingOffer = false;
     this.negotiationQueued = false;
+    this.offeredNegotiationRevision = this.negotiationRevision;
     this.ignoreOffer = false;
     this.pendingIce.length = 0;
     this.pc = this.createPc();
@@ -551,7 +597,9 @@ export class Peer {
       });
     }
     this.armConnectWatchdog();
-    queueMicrotask(() => { void this.kickNegotiation(); });
+    if (kickNegotiationAfterReset) {
+      this.markNegotiationNeeded('hard-reset');
+    }
   }
 
   // ── Signaling ───────────────────────────────────────────────────────────
@@ -612,6 +660,36 @@ export class Peer {
     this.pendingLocalIce.length = 0;
   }
 
+  private isRemoteOfferMlineOrderError(error: unknown): boolean {
+    const name = typeof error === 'object' && error !== null && 'name' in error
+      ? String((error as { name?: unknown }).name ?? '')
+      : '';
+    const message = error instanceof Error ? error.message : String(error);
+    return name === 'InvalidAccessError'
+      && /m-?lines?/i.test(message)
+      && /order/i.test(message);
+  }
+
+  private async applyRemoteOffer(sdp: string): Promise<void> {
+    try {
+      await this.pc.setRemoteDescription({ type: 'offer', sdp });
+      return;
+    } catch (error) {
+      if (!this.isRemoteOfferMlineOrderError(error)) throw error;
+      console.warn('[voice] remote offer m-line order changed for',
+        this.remotePubkey.slice(0, 8), '— rebuilding PC before applying offer');
+      this.remoteTrackKinds.clear();
+      this.remoteTrackOrigins.clear();
+      this.negotiationSuppressed = true;
+      this.performHardReset({ kickNegotiationAfterReset: false });
+      try {
+        await this.pc.setRemoteDescription({ type: 'offer', sdp });
+      } finally {
+        this.negotiationSuppressed = false;
+      }
+    }
+  }
+
   /**
    * Add or replace a local track of a given kind. Returns nothing — the
    * caller doesn't need the sender; we keep it internally for setParameters
@@ -624,11 +702,13 @@ export class Peer {
       if (existing) {
         try { this.pc.removeTrack(existing); } catch { /* may already be gone */ }
         this.localSenders.delete(kind);
+        this.markNegotiationNeeded('local-track-removed:' + kind);
       }
       this.localTracks.delete(kind);
       return;
     }
     this.localTracks.set(kind, track);
+    let needsNegotiation = false;
     // Attach the track to the PC FIRST. The trackinfo announcement is
     // best-effort metadata for the UI; previously we awaited the relay
     // round-trip before addTrack, which let a racing remote offer trigger
@@ -641,6 +721,7 @@ export class Peer {
       try {
         const sender = this.pc.addTrack(track);
         this.localSenders.set(kind, sender);
+        needsNegotiation = true;
         // Bias the offer SDP toward modern codecs (VP9 → H.264 → VP8) for
         // the new transceiver. setCodecPreferences must run BEFORE the
         // first setLocalDescription on this transceiver, which we're
@@ -668,11 +749,14 @@ export class Peer {
     // event is best-effort: some browsers debounce or skip it when called
     // immediately after PC creation. Kick negotiation explicitly so the
     // first offer reliably reaches the remote.
-    queueMicrotask(() => { void this.kickNegotiation(); });
+    if (needsNegotiation) {
+      this.markNegotiationNeeded('local-track-added:' + kind);
+    }
   }
 
   /** Force the current PC to send an offer without adding media sections. */
   async kickControlOffer(): Promise<void> {
+    this.markNegotiationNeeded('control-offer');
     await this.kickNegotiation();
   }
 
@@ -697,7 +781,20 @@ export class Peer {
         console.warn('[voice] addTransceiver recvonly failed', e);
       }
     }
+    this.markNegotiationNeeded('initial-offer');
     await this.kickNegotiation();
+  }
+
+  private hasPendingLocalNegotiation(): boolean {
+    return this.negotiationRevision > this.offeredNegotiationRevision;
+  }
+
+  private markNegotiationNeeded(reason: string): void {
+    if (this.closed) return;
+    this.negotiationRevision += 1;
+    console.log('[voice] negotiation requested —', reason, 'peer', this.remotePubkey.slice(0, 8),
+      'rev=', this.negotiationRevision);
+    queueMicrotask(() => { void this.kickNegotiation(); });
   }
 
   /**
@@ -712,9 +809,11 @@ export class Peer {
   }
 
   private flushQueuedNegotiation(): void {
-    if (this.closed || !this.negotiationQueued) return;
+    if (this.closed) return;
+    if (!this.negotiationQueued && !this.hasPendingLocalNegotiation()) return;
     if (this.makingOffer || this.pc.signalingState !== 'stable') return;
     this.negotiationQueued = false;
+    if (!this.hasPendingLocalNegotiation()) return;
     queueMicrotask(() => { void this.kickNegotiation(); });
   }
 
@@ -724,8 +823,18 @@ export class Peer {
    */
   private async kickNegotiation(): Promise<void> {
     if (this.closed) return;
+    const revisionToOffer = this.negotiationRevision;
+    if (revisionToOffer <= this.offeredNegotiationRevision) {
+      console.log('[voice] kickNegotiation skip — no local change for', this.remotePubkey.slice(0, 8));
+      return;
+    }
+    if (this.negotiationSuppressed) {
+      this.queueNegotiation('remote-offer-reset');
+      return;
+    }
     if (this.makingOffer) {
       console.log('[voice] kickNegotiation skip — already making offer for', this.remotePubkey.slice(0, 8));
+      this.queueNegotiation('making-offer');
       return;
     }
     if (this.pc.signalingState !== 'stable') {
@@ -747,6 +856,7 @@ export class Peer {
           sessionId: this.sessionId,
           seq: ++this.outboundSeq,
         });
+        this.offeredNegotiationRevision = Math.max(this.offeredNegotiationRevision, revisionToOffer);
         this.armOfferAckWatchdog();
       }
     } catch (e) {
@@ -881,6 +991,8 @@ export class Peer {
 
       if (payload.type === 'offer' && payload.sdp) {
         const offerCollision = this.makingOffer || this.pc.signalingState !== 'stable';
+        const localOfferWasInFlight = this.makingOffer || this.pc.signalingState === 'have-local-offer';
+        const shouldRenegotiateAfterAnswer = offerCollision && localOfferWasInFlight;
         this.ignoreOffer = !this.polite && offerCollision;
         console.log('[voice] handleOffer from', this.remotePubkey.slice(0, 8), 'polite=', this.polite, 'collision=', offerCollision, 'ignored=', this.ignoreOffer);
         if (this.ignoreOffer) return;
@@ -893,7 +1005,7 @@ export class Peer {
           try { await this.pc.setLocalDescription({ type: 'rollback' }); }
           catch (e) { console.warn('[voice] explicit rollback failed', e); }
         }
-        await this.pc.setRemoteDescription({ type: 'offer', sdp: payload.sdp });
+        await this.applyRemoteOffer(payload.sdp);
         await this.flushPendingIce();
         await this.pc.setLocalDescription();
         if (this.pc.localDescription) {
@@ -903,6 +1015,20 @@ export class Peer {
             sessionId: this.sessionId,
             seq: ++this.outboundSeq,
           });
+          if (shouldRenegotiateAfterAnswer) {
+            // We just discarded a local offer that may have contained new
+            // media m-lines. The answer cannot be trusted to advertise that
+            // local change, so make the current revision pending again and
+            // offer once the PC is back to stable.
+            this.offeredNegotiationRevision = Math.min(
+              this.offeredNegotiationRevision,
+              Math.max(0, this.negotiationRevision - 1),
+            );
+            this.queueNegotiation('post-glare-local-change');
+          } else {
+            this.offeredNegotiationRevision = this.negotiationRevision;
+            this.negotiationQueued = false;
+          }
         }
       } else if (payload.type === 'answer' && payload.sdp) {
         if (this.pc.signalingState === 'have-local-offer') {
@@ -1049,6 +1175,7 @@ export class Peer {
     if (this.connectWatchdogTimer) { clearTimeout(this.connectWatchdogTimer); this.connectWatchdogTimer = null; }
     this.clearLocalIceBatch();
     this.clearOfferAckWatchdog(false);
+    this.clearRemoteVideoMuteTimers();
     if (this.statsMonitor) { this.statsMonitor.stop(); this.statsMonitor = null; }
     // Send the control-channel bye BEFORE the relay bye and BEFORE
     // pc.close() so the remote learns instantly even if the relay drops
@@ -1067,6 +1194,20 @@ export class Peer {
       this.wasConnected = false;
       try { this.events.onConnectionLost?.(); } catch (e) { console.warn('[voice] onConnectionLost threw', e); }
     }
+  }
+
+  private clearRemoteVideoMuteTimer(trackId: string): void {
+    const timer = this.remoteVideoMuteTimers.get(trackId);
+    if (!timer) return;
+    clearTimeout(timer);
+    this.remoteVideoMuteTimers.delete(trackId);
+  }
+
+  private clearRemoteVideoMuteTimers(): void {
+    for (const timer of this.remoteVideoMuteTimers.values()) {
+      clearTimeout(timer);
+    }
+    this.remoteVideoMuteTimers.clear();
   }
 }
 

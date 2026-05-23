@@ -58,6 +58,18 @@ import type {
  * the existing state untouched. Pattern bank derives from common relay
  * implementations: strfry, nostream, nostrudel, gnost-relay.
  */
+function isRelayQuotaOrRateLimit(reason: string): boolean {
+  const r = reason.toLowerCase();
+  return (
+    r.includes('rate limit') ||
+    r.includes('rate-limit') ||
+    r.includes('too many') ||
+    r.includes('slow down') ||
+    r.includes('quota') ||
+    r.includes('concurrent')
+  );
+}
+
 function parseRelayRejection(reason: string): RelayAccessState | null {
   const r = reason.toLowerCase();
   // Rate-limit / quota messages often ship with the "restricted:" prefix
@@ -65,19 +77,8 @@ function parseRelayRejection(reason: string): RelayAccessState | null {
   // Subscription quota exceeded: 50/50", "ERROR: too many concurrent REQs").
   // They are transient — not a pubkey-allowlist signal — and classifying
   // them as 'restricted' would wrongly flash "Not whitelisted" to legitimate
-  // users. Returning null here also keeps the onclose handler from setting
-  // `shouldRetry`, which is what stops the sub-flood that exhausts the very
-  // quota the relay was complaining about.
-  if (
-    r.includes('rate limit') ||
-    r.includes('rate-limit') ||
-    r.includes('too many') ||
-    r.includes('slow down') ||
-    r.includes('quota') ||
-    r.includes('concurrent')
-  ) {
-    return null;
-  }
+  // users.
+  if (isRelayQuotaOrRateLimit(reason)) return null;
   if (r.includes('auth-required') || r.includes('auth_required') || r.includes('auth required')) {
     return 'auth-required';
   }
@@ -825,6 +826,12 @@ class BridgeImpl implements NostrBridge {
    * a normal reconnect cycle.
    */
   private poolSocketAlive = false;
+  /** Dedicated pool for latency-sensitive mesh voice roster/signaling REQs.
+   *  Kept off the chat bridge socket so public-relay per-WebSocket REQ caps
+   *  cannot starve a call after the app shell opens message/profile streams. */
+  private voicePool: SimplePool | null = null;
+  private voicePoolRefs = 0;
+  private voicePoolRelays = new Set<string>();
   // Reactive state
   isLoggedIn = new StateStore(false);
   /**
@@ -974,11 +981,16 @@ class BridgeImpl implements NostrBridge {
   private messageSubByGroup = new Map<string, { close: () => void; markClosed?: () => void }>();
   // Group ids we already have a reaction subscription for.
   private reactionSubscribedGroups = new Set<string>();
+  private reactionSubByGroup = new Map<string, { close: () => void; markClosed?: () => void }>();
   private eventDeletionSubscribedGroups = new Set<string>();
+  private eventDeletionSubByGroup = new Map<string, { close: () => void; markClosed?: () => void }>();
   private groupModerationDeletionSubscribedGroups = new Set<string>();
+  private groupModerationDeletionSubByGroup = new Map<string, { close: () => void; markClosed?: () => void }>();
   private dmSubscribed = false;
   private adminMemberSubscribedGroups = new Set<string>();
   private creatorSubscribedGroups = new Set<string>();
+  private creatorSubByGroup = new Map<string, { close: () => void; markClosed?: () => void }>();
+  private voiceRelayCapacityReservations = 0;
   // Newest `created_at` we've seen for kind-39001 (admins) / kind-39002
   // (members) per group id. Used to drop out-of-order ingests so an older
   // revision arriving second from a slower relay can't clobber the newer
@@ -1230,6 +1242,16 @@ class BridgeImpl implements NostrBridge {
     window.localStorage.setItem(RELAYS_KEY, JSON.stringify(this.configuredRelays.get()));
   }
 
+  private closeVoicePool(): void {
+    const pool = this.voicePool;
+    if (!pool) return;
+    const relays = this.voicePoolRelays.size > 0 ? Array.from(this.voicePoolRelays) : this.relays;
+    this.voicePool = null;
+    this.voicePoolRefs = 0;
+    this.voicePoolRelays.clear();
+    try { pool.close(relays); } catch { /* ignore */ }
+  }
+
   dispose(): void {
     // pool.close() handles the network teardown atomically; calling each
     // sub's close beforehand is redundant and races with the pool's own
@@ -1239,6 +1261,7 @@ class BridgeImpl implements NostrBridge {
     if (this.poolSocketAlive) {
       try { this.pool.close(this.relays); } catch { /* ignore */ }
     }
+    this.closeVoicePool();
     this.poolSocketAlive = false;
     // Clear auto-auth allow-list so the next session doesn't sign AUTH
     // for relays the previous user happened to subscribe to.
@@ -1457,6 +1480,7 @@ class BridgeImpl implements NostrBridge {
    * AUTH round-trip with the just-installed session.
    */
   private resetPoolForSessionChange(): void {
+    this.closeVoicePool();
     // Capture the per-group REQs that were live on the old pool so connect()
     // can reopen them on the new one. Without this, components mounted before
     // login keep their store listeners but have nothing feeding them.
@@ -1482,9 +1506,13 @@ class BridgeImpl implements NostrBridge {
     this.poolSocketAlive = false;
     this.pool = this.createPool();
     this.messageSubscribedGroups.clear();
+    this.messageSubByGroup.clear();
     this.reactionSubscribedGroups.clear();
+    this.reactionSubByGroup.clear();
     this.eventDeletionSubscribedGroups.clear();
+    this.eventDeletionSubByGroup.clear();
     this.groupModerationDeletionSubscribedGroups.clear();
+    this.groupModerationDeletionSubByGroup.clear();
     this.adminMemberSubscribedGroups.clear();
     this.adminMemberLatestAt.clear();
     this.metadataRequested.clear();
@@ -1528,6 +1556,7 @@ class BridgeImpl implements NostrBridge {
     // re-opens them.
     this.groupMetadataLatestAt.clear();
     this.creatorSubscribedGroups.clear();
+    this.creatorSubByGroup.clear();
     // Clear the per-group readiness flags too — the new pool has not seen
     // 39001/39002 yet, so consumers must wait for fresh evidence before
     // deciding "not a member".
@@ -1942,9 +1971,13 @@ class BridgeImpl implements NostrBridge {
     // flight when the user pivots to a new relay can still finish there.
     // Reset per-group caches: they're scoped to one relay.
     this.messageSubscribedGroups.clear();
+    this.messageSubByGroup.clear();
     this.reactionSubscribedGroups.clear();
+    this.reactionSubByGroup.clear();
     this.eventDeletionSubscribedGroups.clear();
+    this.eventDeletionSubByGroup.clear();
     this.groupModerationDeletionSubscribedGroups.clear();
+    this.groupModerationDeletionSubByGroup.clear();
     this.adminMemberSubscribedGroups.clear();
     this.adminMemberLatestAt.clear();
     this.metadataRequested.clear();
@@ -1997,6 +2030,7 @@ class BridgeImpl implements NostrBridge {
     this.moderatedEventIdsByGroup.clear();
     this.groupMetadataLatestAt.clear();
     this.creatorSubscribedGroups.clear();
+    this.creatorSubByGroup.clear();
     this.groupMetadataEose.set(false);
     this.dmSubscribed = false;
     // Auth/whitelist state is per-relay; the new one hasn't been probed yet.
@@ -2088,6 +2122,18 @@ class BridgeImpl implements NostrBridge {
       });
     });
   }
+
+  reserveVoiceRelayCapacity(channelId: string): Unsubscribe {
+    this.voiceRelayCapacityReservations += 1;
+    this.trimBackgroundSubscriptionsForVoice(channelId);
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      this.voiceRelayCapacityReservations = Math.max(0, this.voiceRelayCapacityReservations - 1);
+    };
+  }
+
   subscribeConnectionState(cb: (label: string) => void): Unsubscribe {
     return this.connectionState.subscribe(cb);
   }
@@ -3099,6 +3145,51 @@ class BridgeImpl implements NostrBridge {
    * silently drop the REQ and force the user to refresh. Wraps the sub with
    * the same watchdog the per-group subscriptions use.
    */
+  subscribeVoiceFilterWatched(
+    filter: Filter,
+    onEvent: (ev: NostrEvent) => void,
+    options?: {
+      watchdogMs?: number;
+      maxAttempts?: number;
+      relays?: readonly string[];
+      relayMode?: 'merge' | 'replace';
+      affectsRelayAccess?: boolean;
+    },
+  ): () => void {
+    const targetRelays = options?.relays && options.relays.length > 0
+      ? Array.from(new Set(options.relayMode === 'replace'
+          ? [...options.relays]
+          : [...this.relays, ...options.relays]))
+      : this.relays;
+    if (options?.relays) {
+      for (const r of options.relays) this.authAllowedRelays.add(normalizeRelayUrl(r));
+    }
+
+    const pool = this.voicePool ?? (this.voicePool = this.createPool());
+    for (const r of targetRelays) this.voicePoolRelays.add(r);
+    this.voicePoolRefs += 1;
+    const sub = this.subscribeWatched(
+      targetRelays,
+      filter,
+      onEvent,
+      undefined,
+      { ...options, affectsRelayAccess: options?.affectsRelayAccess ?? false },
+      pool,
+      () => true,
+    );
+
+    let closed = false;
+    return () => {
+      if (closed) return;
+      closed = true;
+      sub.close();
+      this.voicePoolRefs = Math.max(0, this.voicePoolRefs - 1);
+      if (this.voicePoolRefs === 0 && this.voicePool === pool) {
+        this.closeVoicePool();
+      }
+    };
+  }
+
   subscribeFilterWatched(
     filter: Filter,
     onEvent: (ev: NostrEvent) => void,
@@ -3185,6 +3276,8 @@ class BridgeImpl implements NostrBridge {
        */
       immediateAccessDowngrade?: boolean;
     },
+    pool: SimplePool = this.pool,
+    isPoolSocketAlive: () => boolean = () => this.poolSocketAlive,
   ): { close: () => void; markClosed: () => void } {
     const WATCHDOG_MS = options?.watchdogMs ?? 5000;
     const MAX_ATTEMPTS = options?.maxAttempts ?? Infinity;
@@ -3281,7 +3374,7 @@ class BridgeImpl implements NostrBridge {
       attempt++;
       alive = false;
       armed = true;
-      const sub = this.pool.subscribe(relays, filter, {
+      const sub = pool.subscribe(relays, filter, {
         onevent: (ev) => {
           // switchRelay / resetPoolForSessionChange / dispose call markClosed
           // on every active sub but deliberately skip pool.close() to avoid
@@ -3340,6 +3433,7 @@ class BridgeImpl implements NostrBridge {
           // existing state alone in that case.
           let shouldRetry = false;
           let unknownClose = false;
+          let quotaOrRateLimitClose = false;
           reasons.forEach((reason, i) => {
             if (!reason) return;
             const url = relays[i];
@@ -3362,12 +3456,16 @@ class BridgeImpl implements NostrBridge {
               } else if (AFFECTS_ACCESS) {
                 this.setRelayAccess(url, state);
               }
+            } else if (isRelayQuotaOrRateLimit(reason)) {
+              // Quota/rate-limit CLOSED means the relay is explicitly telling
+              // us it cannot accept another live REQ. Retrying from every
+              // watched sub turns a full connection into a retry storm, and
+              // voice signaling is usually the first thing starved. Leave
+              // recovery to the caller opening a fresh, higher-priority sub.
+              quotaOrRateLimitClose = true;
             } else {
-              // Reason carried but didn't classify — typically a transient
-              // quota / rate-limit ("Subscription quota exceeded: 50/50",
-              // "too many concurrent REQs"). Backoff-retry rather than
-              // immediate-retry so we don't blast the relay at the exact
-              // moment its quota is full and trigger a sub-flood.
+              // Reason carried but didn't classify. Treat it as a transient
+              // transport close and retry with backoff.
               unknownClose = true;
             }
           });
@@ -3376,6 +3474,12 @@ class BridgeImpl implements NostrBridge {
           // already succeeded or the watchdog already fired.
           if (shouldRetry) scheduleRetry(true);
           else if (unknownClose) scheduleRetry(false);
+          else if (quotaOrRateLimitClose) {
+            armed = false;
+            clearTimer();
+            try { activeSub?.close(); } catch { /* ignore */ }
+            activeSub = null;
+          }
         },
         onauth: wrappedSigner,
       });
@@ -3394,7 +3498,7 @@ class BridgeImpl implements NostrBridge {
         // browser warning per sub ("WebSocket is already in CLOSING or
         // CLOSED state") that the try/catch can't suppress because it's
         // logged at the WebSocket layer, not raised as an exception.
-        if (!this.poolSocketAlive) {
+        if (!isPoolSocketAlive()) {
           activeSub = null;
           return;
         }
@@ -3619,6 +3723,60 @@ class BridgeImpl implements NostrBridge {
       { affectsRelayAccess: false },
     );
     this.subs.push(sub);
+  }
+
+  private closeTrackedSub(sub: { close: () => void; markClosed?: () => void } | undefined): void {
+    if (!sub) return;
+    try { sub.close(); } catch { /* ignore */ }
+    this.subs = this.subs.filter((s) => s !== sub);
+  }
+
+  private closePerGroupSub(
+    groupId: string,
+    subscribed: Set<string>,
+    byGroup: Map<string, { close: () => void; markClosed?: () => void }>,
+  ): void {
+    const sub = byGroup.get(groupId);
+    this.closeTrackedSub(sub);
+    byGroup.delete(groupId);
+    subscribed.delete(groupId);
+  }
+
+  /**
+   * Mesh voice needs two live REQs on the active relay (presence + directed
+   * signaling). Background message/creator streams are useful for snappy chat
+   * preload, but on public relays with a 50-subscription cap they can consume
+   * every slot before the user joins a call. When a mesh client starts, drop
+   * non-active background group streams and pause future metadata fan-out so
+   * the media signaling path can claim stable relay capacity.
+   */
+  private trimBackgroundSubscriptionsForVoice(channelId: string): void {
+    const keep = new Set<string>([channelId]);
+    if (this.activeGroupId) keep.add(this.activeGroupId);
+
+    if (this.pendingMessageTimer) {
+      clearTimeout(this.pendingMessageTimer);
+      this.pendingMessageTimer = null;
+    }
+    this.pendingMessageQueue = this.pendingMessageQueue.filter((id) => keep.has(id));
+    this.pendingMessageSet = new Set(this.pendingMessageQueue);
+
+    for (const groupId of Array.from(this.messageSubByGroup.keys())) {
+      if (keep.has(groupId)) continue;
+      this.clearMessagesRetry(groupId);
+      this.closePerGroupSub(groupId, this.messageSubscribedGroups, this.messageSubByGroup);
+      this.closePerGroupSub(groupId, this.eventDeletionSubscribedGroups, this.eventDeletionSubByGroup);
+      this.closePerGroupSub(groupId, this.groupModerationDeletionSubscribedGroups, this.groupModerationDeletionSubByGroup);
+    }
+    for (const groupId of Array.from(this.reactionSubByGroup.keys())) {
+      if (keep.has(groupId)) continue;
+      this.closePerGroupSub(groupId, this.reactionSubscribedGroups, this.reactionSubByGroup);
+      this.closePerGroupSub(groupId, this.eventDeletionSubscribedGroups, this.eventDeletionSubByGroup);
+    }
+    for (const groupId of Array.from(this.creatorSubByGroup.keys())) {
+      if (keep.has(groupId)) continue;
+      this.closePerGroupSub(groupId, this.creatorSubscribedGroups, this.creatorSubByGroup);
+    }
   }
 
   /**
@@ -4175,6 +4333,7 @@ class BridgeImpl implements NostrBridge {
       { watchdogMs: 3000, affectsRelayAccess: false },
     );
     this.subs.push(reactionSub);
+    this.reactionSubByGroup.set(groupId, reactionSub);
     this.subscribeGroupEventDeletions(groupId);
   }
 
@@ -4190,6 +4349,7 @@ class BridgeImpl implements NostrBridge {
       { watchdogMs: 3000, affectsRelayAccess: false },
     );
     this.subs.push(deletionSub);
+    this.eventDeletionSubByGroup.set(groupId, deletionSub);
   }
 
   private subscribeGroupModerationDeletions(groupId: string): void {
@@ -4204,6 +4364,7 @@ class BridgeImpl implements NostrBridge {
       { watchdogMs: 3000, affectsRelayAccess: false },
     );
     this.subs.push(deletionSub);
+    this.groupModerationDeletionSubByGroup.set(groupId, deletionSub);
   }
 
   private subscribeAdminMember(groupId: string): void {
@@ -4244,6 +4405,7 @@ class BridgeImpl implements NostrBridge {
       { affectsRelayAccess: false },
     );
     this.subs.push(sub);
+    this.creatorSubByGroup.set(groupId, sub);
   }
 
   /**
@@ -4727,7 +4889,9 @@ class BridgeImpl implements NostrBridge {
     // paged via loadMoreMessages. Queued (rather than fired inline) so
     // the channel the user is actively viewing wins the relay's first
     // response — see {@link queueGroupMessages}.
-    this.queueGroupMessages(groupId);
+    if (this.voiceRelayCapacityReservations === 0) {
+      this.queueGroupMessages(groupId);
+    }
     // Admin/member (39001/39002) is intentionally NOT fanned out here.
     // Subscribing to every discovered group on login was expensive on
     // accounts that belong to many channels and slowed setup of recently
@@ -4738,7 +4902,9 @@ class BridgeImpl implements NostrBridge {
     // given the load-time win. See docs/data-system.md.
     // Resolve the kind 9007 author so claimCreatorAdmin knows whether the
     // local user is the creator without having to assume it on every login.
-    this.subscribeGroupCreator(groupId);
+    if (this.voiceRelayCapacityReservations === 0) {
+      this.subscribeGroupCreator(groupId);
+    }
     // Maintain parent → children index so the sidebar can render nesting.
     // O(1) update via {@link groupParentMap}: look up the previous parent
     // for this groupId in the reverse map and only touch the affected

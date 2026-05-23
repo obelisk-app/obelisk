@@ -1,7 +1,8 @@
 /**
  * Thin Nostr transport for voice channels: presence beacons + per-peer
- * signaling. Sits on top of the existing nostr-bridge so we share the relay
- * pool, signing, and NIP-42 auth retry path.
+ * signaling. Publishes through the nostr-bridge signer, but keeps roster and
+ * signal subscriptions on the bridge's dedicated voice pool so chat/app REQs
+ * cannot consume the relay's per-WebSocket subscription quota for media setup.
  *
  * Beacons (kind 20078) announce two peer sets:
  *  - `p` tags: peers with confirmed live RTCPeerConnections.
@@ -84,6 +85,15 @@ function subscribeOpts(options?: VoiceTransportOptions) {
         }
       : {}),
   };
+}
+
+function subscribeVoice(
+  b: Awaited<ReturnType<typeof bridge>>,
+  filter: Parameters<typeof b.subscribeFilterWatched>[0],
+  onEvent: Parameters<typeof b.subscribeFilterWatched>[1],
+  options?: ReturnType<typeof subscribeOpts>,
+): () => void {
+  return b.subscribeVoiceFilterWatched(filter, onEvent, options);
 }
 
 export function createVoiceTransport(options: VoiceTransportOptions = {}): VoiceTransport {
@@ -241,7 +251,8 @@ export async function subscribeRoster(
   // logs "WebSocket is already in CLOSING or CLOSED state" while another
   // never sees a new joiner because its sub went dead. The watchdog detects
   // the silence (5 s no EVENT/EOSE) and re-issues the REQ with backoff.
-  const unsub = b.subscribeFilterWatched(
+  const unsub = subscribeVoice(
+    b,
     {
       kinds: [KIND_VOICE_PRESENCE],
     },
@@ -379,7 +390,8 @@ export async function subscribeSignals(
   // retry, a relay disconnect mid-call means SDP offers / answers / ICE
   // candidates from new joiners never reach us; the call stays formed for
   // existing peers but a third joiner appears to "not be detected".
-  return b.subscribeFilterWatched(
+  return subscribeVoice(
+    b,
     {
       kinds: [KIND_VOICE_SIGNAL],
       since,
