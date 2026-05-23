@@ -208,8 +208,20 @@ export default async function RootLayout({
         <Script id="obelisk-pwa-register" strategy="afterInteractive" nonce={nonce}>
           {`
             if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.addEventListener('message', function (event) {
+                if (!event.data || event.data.type !== 'OBELISK_SW_UPDATED') return;
+                var key = 'obelisk-sw-version';
+                var nextVersion = String(event.data.version || '');
+                try {
+                  if (nextVersion && localStorage.getItem(key) === nextVersion) return;
+                  if (nextVersion) localStorage.setItem(key, nextVersion);
+                } catch (e) {}
+                window.location.reload();
+              });
               window.addEventListener('load', function () {
-                navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function () {
+                navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' }).then(function (registration) {
+                  registration.update().catch(function () {});
+                }).catch(function () {
                   /* swallow — installability is a UX bonus, not a hard requirement */
                 });
               });

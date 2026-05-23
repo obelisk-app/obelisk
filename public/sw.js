@@ -6,7 +6,7 @@
 //
 // Bump CACHE_VERSION to force every installed client to throw away the
 // previous worker and re-register.
-const CACHE_VERSION = 'obelisk-v1';
+const CACHE_VERSION = 'obelisk-v2-voice-refresh';
 
 self.addEventListener('install', () => {
   // Activate the new worker as soon as it finishes installing instead of
@@ -24,6 +24,10 @@ self.addEventListener('activate', (event) => {
         keys.filter((k) => k !== CACHE_VERSION).map((k) => caches.delete(k)),
       );
       await self.clients.claim();
+      const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      for (const client of clients) {
+        client.postMessage({ type: 'OBELISK_SW_UPDATED', version: CACHE_VERSION });
+      }
     })(),
   );
 });

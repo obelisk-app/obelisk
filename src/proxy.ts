@@ -16,6 +16,12 @@ import { countryToLocale } from './i18n/index';
  *      detection.
  */
 export function proxy(request: NextRequest) {
+  if (request.nextUrl.pathname === '/sw.js') {
+    const response = NextResponse.next();
+    response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    response.headers.set('Service-Worker-Allowed', '/');
+    return response;
+  }
   // 16 random bytes → ~22 base64 chars. Edge runtime exposes
   // crypto.randomUUID; we strip dashes and base64-encode for compactness.
   const nonce = btoa(crypto.randomUUID().replace(/-/g, ''));
@@ -103,6 +109,7 @@ export const config = {
   // Skip API + static assets — they don't render HTML and don't need a
   // per-request CSP. Match everything else (pages + dynamic routes).
   matcher: [
+    '/sw.js',
     '/((?!api|_next/static|_next/image|favicon.ico|.*\\.[^/]+$).*)',
   ],
 };
