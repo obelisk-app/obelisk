@@ -97,7 +97,7 @@ the receiver dedup retransmits within a session.
 
 Polite/impolite is decided by lexicographic pubkey comparison
 (`selfPubkey > remotePubkey` ⇒ polite). The polite peer rolls back its
-offer on glare, applies the remote, then re-negotiates. Impolite never
+offer on glare, applies the remote, answers it, and then re-offers any rolled-back local media revision once stable. That follow-up offer is required when both sides enable mic, camera, or screen at the same time; without it the mesh can be connected while media stays black or silent. Impolite never
 rolls back — its offer always wins. SFU peers are forced
 remote-impolite (we're polite for them) because werift can't roll back.
 

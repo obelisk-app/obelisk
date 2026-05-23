@@ -23,9 +23,8 @@ Canonical list of open bugs and tech debt in Obelisk. Fixes are tracked here unt
 ## Voice
 
 - **Voice presence beacons and signaling are plaintext on the relay** — `src/lib/voice/transport.ts` publishes presence beacons (kind 20078) and WebRTC signaling (kind 25050) as signed but unencrypted ephemeral events. Beacons leak `{pubkey, channelId, timestamp}` every ~15s while a user is in voice — any relay subscriber can build a real-time roster of who is in which voice channel and reconstruct session timing. Signaling events are worse: `content` is plaintext JSON containing SDP + ICE candidates, so the relay (or any subscriber filtering `kinds:[25050], #e:[channelId]`) sees codec fingerprints and harvested local/public IPs; the `#p` target is only enforced client-side (`transport.ts:144`). Media itself is fine (DTLS-SRTP peer-to-peer in mesh). Fix: wrap both kinds in NIP-59 gift-wrap (or NIP-44 to the addressed peer for signals); the transport file already flags this as a v1 shortcut. Until then, treat voice channel membership and participant IPs as public to anyone watching the relay.
-- **No reconnection ladder on dropped peer connections** — `Peer` does not drive ICE-restart or hard-reset on `connectionState === 'failed'`/`'disconnected'`. A network blip strands the peer until both sides leave/rejoin. The legacy mesh client had a 15 s handshake watchdog + impolite-side ICE restart ladder + polite-side `requestReset` signal; that pattern needs to be ported to `src/lib/voice/peer.ts`.
 - **No speaking detector** — voice tiles in `VoiceRoom.tsx` don't react to voice activity because there's no per-peer `AnalyserNode` sampling RMS off incoming audio. Local mute state is reflected; actual speaking is not. Port the `SpeakingDetector` (FFT 512, 20 Hz sampling, threshold ~0.02, 400 ms hangover) and feed `setSpeaking(pubkey, speaking)` into `useVoiceStore`.
-- **No TURN configured** — symmetric-NAT participants fail to connect with `connectionState: 'failed'`. Public STUN only (Google + Cloudflare). Operator-config follow-up.
+
 
 ## Notifications
 
