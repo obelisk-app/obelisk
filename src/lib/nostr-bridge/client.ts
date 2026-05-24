@@ -1118,6 +1118,16 @@ class BridgeImpl implements NostrBridge {
    */
   private reactionCacheFlushTimers = new Map<string, ReturnType<typeof setTimeout>>();
   /**
+   * Empty kind-39000 EOSE is provisional. Some relays answer the global
+   * channel-list REQ before AUTH / whitelist evaluation has fully settled,
+   * then deliver metadata on a later request. Keep the sidebar in
+   * "Loading channels..." for a bounded retry window instead of painting the
+   * "No channels" empty state immediately.
+   */
+  private groupMetadataEmptyRetryTimer: ReturnType<typeof setTimeout> | null = null;
+  private groupMetadataEmptyRetryAttempts = 0;
+  private static readonly GROUP_METADATA_EMPTY_RETRY_DELAYS = [1500, 3000, 5000] as const;
+  /**
    * Backoff schedule for empty-EOSE retries. Tuned so the worst-case time
    * before declaring a channel empty is the sum of all delays plus the
    * relay's own response time (≈9.5s + EOSE latency). Auth-gated relays
@@ -1568,6 +1578,7 @@ class BridgeImpl implements NostrBridge {
     // here, fresh login or background reconnect could paint the wrong
     // empty-state copy in the gap before the new EOSE arrives.
     this.groupMetadataEose.set(false);
+    this.clearGroupMetadataEmptyRetry();
     this.dmSubscribed = false;
     // Forget any auth/whitelist signal we'd captured against the previous
     // pool — the next REQ on the fresh sockets must re-prove access.
@@ -1774,6 +1785,7 @@ class BridgeImpl implements NostrBridge {
     this.connectionState.set('Disconnected');
     this.groups.set([]);
     this.groupMetadataEose.set(false);
+    this.clearGroupMetadataEmptyRetry();
     this.messagesByGroup.set({});
     this.pendingGroupSends.clear();
     this.pendingDMSends.clear();
@@ -1823,6 +1835,8 @@ class BridgeImpl implements NostrBridge {
   // -- Connection --------------------------------------------------------
 
   async connect(): Promise<void> {
+    const generation = ++this.connectGeneration;
+    const relaySnapshot = [...this.relays];
     this.connectionState.set('Connecting');
     const activityId = pushActivity(
       'Connecting to relays',
@@ -1849,7 +1863,7 @@ class BridgeImpl implements NostrBridge {
       // sooner so the relay banner reflects reality.
       const PER_RELAY_TIMEOUT_MS = 3000;
       const HARD_CEILING_MS = 1500;
-      const handles = this.relays.map((url) =>
+      const handles = relaySnapshot.map((url) =>
         (async () => {
           validateRelayUrl(url);
           const relay = await this.pool.ensureRelay(url, { connectionTimeout: PER_RELAY_TIMEOUT_MS });
@@ -1862,7 +1876,7 @@ class BridgeImpl implements NostrBridge {
           // refresh when the relay or network blips.
           relay.onclose = () => {
             this.poolSocketAlive = false;
-            if (this.relays.includes(url) && this.session) {
+            if (generation === this.connectGeneration && this.relays.includes(url) && this.session) {
               this.connectionState.set('Disconnected');
               // Don't override sticky-OK on transient drops — a brief socket
               // bounce shouldn't flash "Cannot reach". connectionState
@@ -1879,7 +1893,11 @@ class BridgeImpl implements NostrBridge {
       // proceeds at the first success or hard ceiling, whichever fires
       // first.
       handles.forEach((p, i) => {
-        p.catch(() => this.setRelayAccess(this.relays[i], 'unreachable'));
+        const url = relaySnapshot[i];
+        p.catch(() => {
+          if (generation !== this.connectGeneration) return;
+          this.setRelayAccess(url, 'unreachable');
+        });
       });
       // Race: first relay ready vs hard ceiling vs all relays rejected.
       // - 'first-ready' → at least one socket is open; subscriptions go
@@ -1896,6 +1914,16 @@ class BridgeImpl implements NostrBridge {
       const winner = await Promise.race([firstReady, ceiling]);
       if (winner === 'all-rejected') {
         throw new Error('no relays connected');
+      }
+      if (winner === 'ceiling') {
+        firstReady.then((result) => {
+          if (result !== 'all-rejected') return;
+          if (generation !== this.connectGeneration) return;
+          if (!this.session) return;
+          this.connectionState.set('Disconnected');
+          for (const url of relaySnapshot) this.setRelayAccess(url, 'unreachable');
+          this.reconnectInBackground();
+        });
       }
       // For the 'ceiling' branch, ALSO check the eventual outcome of
       // `firstReady` in the background — if every relay later rejects,
@@ -1921,7 +1949,7 @@ class BridgeImpl implements NostrBridge {
       // flipped, not the final count — slower relays may still be
       // handshaking. Approximate by resolving "1+/N" rather than tracking
       // the exact count, which would require awaiting all handles.
-      resolveActivity(activityId, `connected to ${this.relays.length === 1 ? this.relays[0] : `${this.relays.length} relays`}`);
+      resolveActivity(activityId, `connected to ${relaySnapshot.length === 1 ? relaySnapshot[0] : `${relaySnapshot.length} relays`}`);
     } catch (e: unknown) {
       this.connectionState.set(`Error:${(e as Error).message}`);
       failActivity(activityId, (e as Error).message);
@@ -1939,6 +1967,7 @@ class BridgeImpl implements NostrBridge {
    */
   private reconnectAttempt = 0;
   private reconnectInFlight = false;
+  private connectGeneration = 0;
   private reconnectInBackground(): void {
     if (this.reconnectInFlight) return;
     if (!this.session) return;
@@ -2048,6 +2077,7 @@ class BridgeImpl implements NostrBridge {
     this.creatorSubscribedGroups.clear();
     this.creatorSubByGroup.clear();
     this.groupMetadataEose.set(false);
+    this.clearGroupMetadataEmptyRetry();
     this.dmSubscribed = false;
     // Auth/whitelist state is per-relay; the new one hasn't been probed yet.
     this.relayAccess.set({});
@@ -2061,7 +2091,11 @@ class BridgeImpl implements NostrBridge {
     // Re-paint instantly from disk for the new relay; live events will
     // overwrite as they arrive. See {@link seedCacheForRelay}.
     this.seedCacheForRelay(normalized);
-    await this.connect();
+    try {
+      await this.connect();
+    } catch {
+      void this.reconnectInBackground();
+    }
   }
 
   async addRelay(url: string): Promise<void> {
@@ -3715,7 +3749,7 @@ class BridgeImpl implements NostrBridge {
       this.relays,
       filter,
       (ev) => this.ingestGroupMetadata(ev),
-      () => this.groupMetadataEose.set(true),
+      () => this.handleGroupMetadataEose(),
     );
     this.subs.push(sub);
   }
@@ -4034,6 +4068,58 @@ class BridgeImpl implements NostrBridge {
     const entry = this.messagesRetryByGroup.get(groupId);
     if (entry?.timer) clearTimeout(entry.timer);
     this.messagesRetryByGroup.delete(groupId);
+  }
+
+  private clearGroupMetadataEmptyRetry(): void {
+    if (this.groupMetadataEmptyRetryTimer) {
+      clearTimeout(this.groupMetadataEmptyRetryTimer);
+      this.groupMetadataEmptyRetryTimer = null;
+    }
+    this.groupMetadataEmptyRetryAttempts = 0;
+  }
+
+  private handleGroupMetadataEose(): void {
+    if (this.groups.get().length > 0) {
+      this.clearGroupMetadataEmptyRetry();
+      this.groupMetadataEose.set(true);
+      return;
+    }
+    if (this.groupMetadataEmptyRetryAttempts >= BridgeImpl.GROUP_METADATA_EMPTY_RETRY_DELAYS.length) {
+      this.clearGroupMetadataEmptyRetry();
+      this.groupMetadataEose.set(true);
+      return;
+    }
+    this.groupMetadataEose.set(false);
+    const delay = BridgeImpl.GROUP_METADATA_EMPTY_RETRY_DELAYS[this.groupMetadataEmptyRetryAttempts];
+    this.groupMetadataEmptyRetryAttempts += 1;
+    if (this.groupMetadataEmptyRetryTimer) clearTimeout(this.groupMetadataEmptyRetryTimer);
+    this.groupMetadataEmptyRetryTimer = setTimeout(() => {
+      this.groupMetadataEmptyRetryTimer = null;
+      void this.querySyncFallbackForGroupMetadata();
+    }, delay);
+  }
+
+  private async querySyncFallbackForGroupMetadata(): Promise<void> {
+    if (!this.session) return;
+    const relay = this.currentRelayUrl.get();
+    const pool = this.pool;
+    const relays = [...this.relays];
+    let events: NostrEvent[];
+    try {
+      events = await pool.querySync(relays, { kinds: [KIND_GROUP_METADATA] }, { maxWait: 6000 });
+    } catch {
+      if (!this.session || this.currentRelayUrl.get() !== relay || this.pool !== pool) return;
+      this.handleGroupMetadataEose();
+      return;
+    }
+    if (!this.session || this.currentRelayUrl.get() !== relay || this.pool !== pool) return;
+    for (const ev of events) this.ingestGroupMetadata(ev);
+    if (this.groups.get().length > 0) {
+      this.clearGroupMetadataEmptyRetry();
+      this.groupMetadataEose.set(true);
+      return;
+    }
+    this.handleGroupMetadataEose();
   }
 
   /**
@@ -4882,6 +4968,7 @@ class BridgeImpl implements NostrBridge {
       const filtered = prev.filter((g) => g.id !== groupId);
       return [...filtered, next].sort((a, b) => (a.name ?? a.id).localeCompare(b.name ?? b.id));
     });
+    this.clearGroupMetadataEmptyRetry();
     // Persist for next reload — the sidebar paints channels instantly before
     // the live REQ round-trip completes. Store the snapshot together with
     // its created_at so the seed can re-establish the newest-wins guard.

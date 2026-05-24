@@ -24,6 +24,7 @@ const fake = vi.hoisted(() => {
       poolId?: number;
     }>,
     ensureRelayCalls: [] as string[],
+    ensureRelayImpl: null as null | ((url: string, opts?: { connectionTimeout?: number }) => Promise<{ connected: boolean; onclose?: () => void }>),
     poolSeq: 0,
   };
 
@@ -72,6 +73,7 @@ const fake = vi.hoisted(() => {
      */
     async ensureRelay(_url: string, _opts?: { connectionTimeout?: number }): Promise<{ connected: boolean; onclose?: () => void }> {
       state.ensureRelayCalls.push(_url);
+      if (state.ensureRelayImpl) return state.ensureRelayImpl(_url, _opts);
       return { connected: true };
     }
     /**
@@ -118,7 +120,7 @@ async function flush(times = 4) {
 }
 
 beforeEach(() => {
-  (() => { fake.state.published = []; fake.state.subscriptions = []; fake.state.ensureRelayCalls = []; fake.state.poolSeq = 0; })();
+  (() => { fake.state.published = []; fake.state.subscriptions = []; fake.state.ensureRelayCalls = []; fake.state.ensureRelayImpl = null; fake.state.poolSeq = 0; })();
   // Each test starts fresh — clear the bridge module-level singleton by
   // resetting modules so getBridge() returns a new instance.
   vi.resetModules();
@@ -127,7 +129,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  (() => { fake.state.published = []; fake.state.subscriptions = []; fake.state.ensureRelayCalls = []; fake.state.poolSeq = 0; })();
+  (() => { fake.state.published = []; fake.state.subscriptions = []; fake.state.ensureRelayCalls = []; fake.state.ensureRelayImpl = null; fake.state.poolSeq = 0; })();
+  vi.useRealTimers();
 });
 
 describe('nostr-bridge', () => {
@@ -1358,6 +1361,63 @@ describe('nostr-bridge', () => {
 
     await bridge.switchRelay('wss://other-relay.example');
     expect(impl.messagesEoseByGroup.get()[groupId]).toBeFalsy();
+  });
+
+  it('keeps an empty channel-list EOSE provisional until the metadata retry window is exhausted', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      const { getBridge, getBridgeImpl } = await import('./client');
+      const { skHex, pkHex } = makeKeypair();
+      const bridge = await getBridge();
+      await bridge.loginWithNsec(skHex, pkHex);
+      await flush();
+
+      const impl = getBridgeImpl()!;
+      expect(impl.groups.get()).toEqual([]);
+      expect(impl.groupMetadataEose.get()).toBe(false);
+
+      await vi.advanceTimersByTimeAsync(1500);
+      await flush();
+      expect(impl.groupMetadataEose.get()).toBe(false);
+
+      await vi.advanceTimersByTimeAsync(3000);
+      await flush();
+      expect(impl.groupMetadataEose.get()).toBe(false);
+
+      await vi.advanceTimersByTimeAsync(5000);
+      await flush();
+      expect(impl.groupMetadataEose.get()).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('continues reconnecting after switchRelay resolves on the hard ceiling and the relay later rejects', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      const { getBridge } = await import('./client');
+      const { skHex, pkHex } = makeKeypair();
+      const bridge = await getBridge();
+      await bridge.loginWithNsec(skHex, pkHex);
+      await flush();
+
+      const relay = 'wss://slow-fail.example';
+      fake.state.ensureRelayImpl = (url) => new Promise((_resolve, reject) => {
+        setTimeout(() => reject(new Error(`cannot connect ${url}`)), 3000);
+      });
+
+      const switchPromise = bridge.switchRelay(relay);
+      await vi.advanceTimersByTimeAsync(1500);
+      await switchPromise;
+      expect(fake.state.ensureRelayCalls.filter((url) => url === relay)).toHaveLength(1);
+
+      await vi.advanceTimersByTimeAsync(1500);
+      await flush(8);
+      expect(fake.state.ensureRelayCalls.filter((url) => url === relay).length).toBeGreaterThan(1);
+    } finally {
+      fake.state.ensureRelayImpl = null;
+      vi.useRealTimers();
+    }
   });
 
   // -- active-group priority for kind 9 REQs ------------------------------

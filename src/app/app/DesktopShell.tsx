@@ -314,9 +314,14 @@ export default function AppShell() {
             mode={railMode}
             onPickDM={() => { setView({ kind: 'dm', peer: null }); closeDrawer(); }}
             onPickRelay={async (url) => {
-              if (url !== relay) await nostrActions.switchRelay(url);
               setView({ kind: 'empty' });
-              closeDrawer();
+              try {
+                if (url !== relay) await nostrActions.switchRelay(url);
+              } catch (err) {
+                console.warn('[appshell] switchRelay from rail failed', err);
+              } finally {
+                closeDrawer();
+              }
             }}
           />
           <ResizablePane storageKey={SIDEBAR_KEY} defaultWidth={264} min={200} max={500} onWidthChange={setSidebarWidth}>
