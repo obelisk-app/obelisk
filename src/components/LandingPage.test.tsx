@@ -53,7 +53,7 @@ describe('LandingPage hero', () => {
     vi.stubGlobal('IntersectionObserver', MockIntersectionObserver);
   });
 
-  it('renders the restored animation beside the current CTA copy', () => {
+  it('renders the transparent animation and restored hero screenshots beside the current CTA copy', () => {
     render(
       <LocaleProvider initialLocale="en">
         <LandingPage />
@@ -66,11 +66,21 @@ describe('LandingPage hero', () => {
     expect(within(hero).getByText('No accounts. No backend. Your keys, your relays.')).toBeInTheDocument();
 
     const animation = within(hero).getByTestId('hero-animation');
+    expect(animation.className).toContain('overflow-visible');
     expect(animation.querySelector('.animate-float-up')).not.toBeNull();
     expect(animation.querySelector('.animate-orbit')).not.toBeNull();
     expect(animation.querySelector('.animate-orbit-vertical')).not.toBeNull();
     expect(animation.querySelector('.animate-particle')).not.toBeNull();
-    expect(within(hero).queryByAltText(/Obelisk desktop screenshot/i)).not.toBeInTheDocument();
+
+    const heroPreview = within(hero).getByTestId('hero-product-preview');
+    expect(within(heroPreview).getByAltText(/Obelisk desktop screenshot/i)).toHaveAttribute(
+      'src',
+      '/pictures-for-posts/desktop-large-voice-channel-with-sfu-peer-trasmission-test.png',
+    );
+    expect(within(heroPreview).getByAltText(/Obelisk mobile screenshot/i)).toHaveAttribute(
+      'src',
+      '/pictures-for-posts/mobile-server-and-channels-view.png',
+    );
   });
 
   it('keeps the latest screenshot preview cards below the hero', () => {
