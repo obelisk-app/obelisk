@@ -7,7 +7,7 @@
 // constant and produce the same chunk hash as before.
 if (typeof globalThis !== 'undefined') {
   (globalThis as { __obeliskVoiceBuild?: string }).__obeliskVoiceBuild =
-    '2026-05-23T20:35:00Z-mesh-media-glare-reoffer';
+    '2026-05-24T01:00:00Z-voice-video-autoplay-retry';
 }
 
 /**
@@ -58,7 +58,7 @@ import {
   type UnloadHandlerHandle,
 } from './failure-handlers';
 
-const SELF_BUILD_TAG = '2026-05-23T20:35:00Z-mesh-media-glare-reoffer';
+const SELF_BUILD_TAG = '2026-05-24T01:00:00Z-voice-video-autoplay-retry';
 
 const BEACON_INTERVAL_MS = 10_000;
 /**

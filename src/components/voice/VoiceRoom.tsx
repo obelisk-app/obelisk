@@ -1089,7 +1089,18 @@ function Stage({ pubkey, isLocal, kind, videoStream, pinned, onTogglePin }: {
     const el = videoRef.current;
     if (!el) return;
     el.srcObject = videoStream;
-    if (videoStream) void el.play().catch(() => {});
+    el.muted = true;
+    if (!videoStream) return;
+    const play = () => { void el.play().catch(() => {}); };
+    play();
+    el.addEventListener('loadedmetadata', play);
+    el.addEventListener('canplay', play);
+    for (const track of videoStream.getVideoTracks()) track.addEventListener('unmute', play);
+    return () => {
+      el.removeEventListener('loadedmetadata', play);
+      el.removeEventListener('canplay', play);
+      for (const track of videoStream.getVideoTracks()) track.removeEventListener('unmute', play);
+    };
   }, [videoStream]);
   const label =
     kind === 'screen'
@@ -1108,7 +1119,7 @@ function Stage({ pubkey, isLocal, kind, videoStream, pinned, onTogglePin }: {
         ref={videoRef}
         autoPlay
         playsInline
-        muted={isLocal}
+        muted
         className={'w-full h-full object-contain ' + (kind === 'camera' && isLocal ? 'scale-x-[-1]' : '')}
       />
       <div className="absolute top-2 left-2 flex items-center gap-1.5 px-2 py-1 rounded-md bg-black/60 backdrop-blur text-[11px] text-lc-green border border-lc-green/30">
@@ -1157,7 +1168,18 @@ function VideoTile({ pubkey, isLocal, videoStream, onPin, fit = 'cover', fillPar
     const el = videoRef.current;
     if (!el) return;
     el.srcObject = videoStream;
-    if (videoStream) el.play().catch(() => {});
+    el.muted = true;
+    if (!videoStream) return;
+    const play = () => { void el.play().catch(() => {}); };
+    play();
+    el.addEventListener('loadedmetadata', play);
+    el.addEventListener('canplay', play);
+    for (const track of videoStream.getVideoTracks()) track.addEventListener('unmute', play);
+    return () => {
+      el.removeEventListener('loadedmetadata', play);
+      el.removeEventListener('canplay', play);
+      for (const track of videoStream.getVideoTracks()) track.removeEventListener('unmute', play);
+    };
   }, [videoStream]);
 
   const fitClass = fit === 'contain' ? 'object-contain bg-black' : 'object-cover';
@@ -1183,7 +1205,7 @@ function VideoTile({ pubkey, isLocal, videoStream, onPin, fit = 'cover', fillPar
       title={onPin ? 'Pin to stage' : undefined}
     >
       {videoStream ? (
-        <video ref={videoRef} autoPlay playsInline muted={isLocal} className={`w-full h-full ${fitClass} ${isLocal ? 'scale-x-[-1]' : ''}`} />
+        <video ref={videoRef} autoPlay playsInline muted className={`w-full h-full ${fitClass} ${isLocal ? 'scale-x-[-1]' : ''}`} />
       ) : (
         <div className="w-full h-full flex items-center justify-center">
           <Avatar pubkey={pubkey} picture={meta?.picture} name={name} size={20} speaking={speaking} />
