@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { proxy } from '../proxy';
+import { LOCALE_COOKIE, LOCALE_HEADER } from '../i18n';
 
 describe('CSP', () => {
   beforeEach(() => {
@@ -30,5 +31,44 @@ describe('CSP', () => {
     const styleSrc = directives.find((d) => d.startsWith('style-src'));
     expect(styleSrc).toBeDefined();
     expect(styleSrc).toContain("'self'");
+  });
+});
+
+describe('locale proxy', () => {
+  beforeEach(() => {
+    vi.spyOn(crypto, 'randomUUID').mockReturnValue('00000000-0000-4000-8000-000000000000' as any);
+  });
+
+  it('sets a locale cookie and request header on direct app routes', () => {
+    const req = new NextRequest('https://obelisk.test/app', {
+      headers: { 'x-vercel-ip-country': 'AR' },
+    });
+    const res = proxy(req);
+
+    expect(res.cookies.get(LOCALE_COOKIE)?.value).toBe('es');
+    expect(res.headers.get('x-middleware-request-' + LOCALE_HEADER)).toBe('es');
+  });
+
+  it('uses Accept-Language when geo headers are unavailable', () => {
+    const req = new NextRequest('https://obelisk.test/guides', {
+      headers: { 'accept-language': 'en-US,en;q=0.8,es;q=0.7' },
+    });
+    const res = proxy(req);
+
+    expect(res.cookies.get(LOCALE_COOKIE)?.value).toBe('en');
+    expect(res.headers.get('x-middleware-request-' + LOCALE_HEADER)).toBe('en');
+  });
+
+  it('preserves an explicit user locale cookie', () => {
+    const req = new NextRequest('https://obelisk.test/app', {
+      headers: {
+        cookie: `${LOCALE_COOKIE}=en`,
+        'x-vercel-ip-country': 'AR',
+      },
+    });
+    const res = proxy(req);
+
+    expect(res.cookies.get(LOCALE_COOKIE)).toBeUndefined();
+    expect(res.headers.get('x-middleware-request-' + LOCALE_HEADER)).toBe('en');
   });
 });

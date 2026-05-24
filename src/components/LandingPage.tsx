@@ -8,7 +8,6 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import Navbar from '@/components/Navbar';
-import LoginModal from '@/app/app/LoginModal';
 import ObeliskIcon from '@/components/ObeliskIcon';
 import ShootingStars from '@/components/ShootingStars';
 import FAQItem from '@/components/FAQItem';
@@ -134,7 +133,6 @@ const TECH_STACK: { name: string; desc: string; color: string; icon?: string; im
 
 export default function LandingPage() {
   const router = useRouter();
-  const [showLogin, setShowLogin] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
   const { t, locale } = useTranslation();
 
@@ -189,177 +187,68 @@ export default function LandingPage() {
       <Navbar onLoginSuccess={handleLoginSuccess} />
 
       {/* Hero */}
-      <section className="relative pt-24 pb-24 px-6 overflow-hidden">
-        {/* Glow behind obelisk */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-lc-green/5 rounded-full blur-[120px] pointer-events-none" />
+      <section
+        data-testid="landing-hero"
+        className="relative pt-20 pb-10 md:pt-24 md:pb-0 px-6 overflow-hidden"
+      >
+        <div className="absolute inset-0 bg-lc-black/35 pointer-events-none" aria-hidden="true" />
+        <div className="absolute top-24 left-1/2 -translate-x-1/2 w-[520px] h-[520px] bg-lc-green/3 rounded-full blur-[120px] pointer-events-none" />
+        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-b from-transparent to-lc-black pointer-events-none" aria-hidden="true" />
 
-        {/* Floating chat bubbles */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
-          {[
-            { left: '8%',  bottom: '-10%', size: 16, opacity: 0.06, duration: '18s', delay: '0s' },
-            { left: '18%', bottom: '-15%', size: 20, opacity: 0.08, duration: '22s', delay: '3s' },
-            { left: '30%', bottom: '-5%',  size: 12, opacity: 0.05, duration: '16s', delay: '7s' },
-            { left: '42%', bottom: '-20%', size: 24, opacity: 0.1,  duration: '25s', delay: '1s' },
-            { left: '55%', bottom: '-8%',  size: 14, opacity: 0.07, duration: '19s', delay: '5s' },
-            { left: '65%', bottom: '-12%', size: 18, opacity: 0.09, duration: '21s', delay: '9s' },
-            { left: '75%', bottom: '-18%', size: 22, opacity: 0.06, duration: '24s', delay: '2s' },
-            { left: '88%', bottom: '-6%',  size: 15, opacity: 0.08, duration: '17s', delay: '6s' },
-          ].map((b, i) => (
-            <svg
-              key={i}
-              width={b.size}
-              height={b.size}
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              className="absolute text-lc-green animate-float-up"
-              style={{
-                left: b.left,
-                bottom: b.bottom,
-                '--bubble-opacity': b.opacity,
-                '--float-duration': b.duration,
-                '--float-delay': b.delay,
-              } as React.CSSProperties}
-            >
-              <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
-            </svg>
-          ))}
-        </div>
-
-        {/* Orbiting Nostr keys + sun/moon around obelisk */}
-        <div className="absolute top-28 left-1/2 -translate-x-1/2 pointer-events-none" aria-hidden="true" style={{ width: 300, height: 200 }}>
-          {/* Sun & Moon — vertical orbit, bottom half clipped to hide behind obelisk */}
-          <div className="absolute left-1/2 -translate-x-1/2" style={{ top: -60, width: 300, height: 320, clipPath: 'inset(0 0 50% 0)' }}>
-            <div className="relative w-full" style={{ height: 320 }}>
-              {/* Sun */}
-              <svg
-                width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
-                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-yellow-400 animate-orbit-vertical drop-shadow-[0_0_10px_rgba(250,204,21,0.6)]"
-                style={{ '--orbit-radius': '120px', '--orbit-duration': '28s' } as React.CSSProperties}
+        <div className="max-w-6xl mx-auto flex flex-col items-center text-center relative z-10">
+          <div className="order-2 md:order-1 flex flex-col items-center">
+            <div className="relative mb-5 h-16 w-16 md:h-18 md:w-18" aria-hidden="true">
+              <div className="absolute left-1/2 top-1/2 h-14 w-14 -translate-x-1/2 -translate-y-1/2 rounded-full bg-lc-green/10 blur-xl animate-glow-pulse" />
+              <div className="absolute left-1/2 top-1/2 h-1.5 w-1.5 rounded-full bg-blue-400 animate-orbit" style={{ '--orbit-radius': '28px', '--orbit-duration': '12s' } as React.CSSProperties} />
+              <div className="absolute left-1/2 top-1/2 h-1.5 w-1.5 rounded-full bg-lc-green animate-orbit-reverse" style={{ '--orbit-radius': '22px', '--orbit-duration': '16s' } as React.CSSProperties} />
+              <ObeliskIcon className="absolute inset-2 h-auto w-12 text-lc-green opacity-90" />
+            </div>
+            <h1 className={`${locale === 'es' ? 'text-xl min-[380px]:text-2xl sm:text-5xl md:text-6xl whitespace-nowrap' : 'text-4xl sm:text-5xl md:text-6xl'} font-extrabold tracking-tight leading-[1.05] mb-4 max-w-4xl`}>
+              {t('hero.title')}{' '}
+              <span className="text-lc-green lc-glow-text">{t('hero.titleHighlight')}</span>
+            </h1>
+            <p className="text-base md:text-xl text-lc-white max-w-2xl leading-relaxed">
+              {t('hero.subtitle')}
+            </p>
+            <p className="mt-3 text-sm md:text-base text-lc-muted max-w-2xl leading-relaxed">
+              {t('hero.trustLine')}
+            </p>
+            <div className="mt-7 flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={() => router.push('/app')}
+                className="lc-pill lc-pill-primary text-base px-8 py-3 flex items-center justify-center gap-2"
               >
-                <circle cx="12" cy="12" r="5"/>
-                <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
-                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-                <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
-                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-              </svg>
-              {/* Moon — opposite side */}
-              <svg
-                width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
-                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-slate-300 animate-orbit-vertical drop-shadow-[0_0_8px_rgba(203,213,225,0.5)]"
-                style={{ '--orbit-radius': '120px', '--orbit-duration': '28s', animationDelay: '-14s' } as React.CSSProperties}
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/>
+                  <polyline points="10 17 15 12 10 7"/>
+                  <line x1="15" y1="12" x2="3" y2="12"/>
+                </svg>
+                {t('hero.launchApp')}
+              </button>
+              <a
+                href="https://github.com/Fabricio333/obelisk"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="lc-pill lc-pill-secondary text-base px-8 py-3 flex items-center justify-center gap-2"
               >
-                <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
-              </svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+                </svg>
+                {t('hero.github')}
+              </a>
             </div>
           </div>
 
-          {/* Pulsing glow behind obelisk */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-lc-green/8 rounded-full animate-glow-pulse" />
-
-          {/* Floating particles */}
-          {[
-            { size: 3, x: '15%', y: '20%', delay: '0s', dur: '6s' },
-            { size: 2, x: '80%', y: '30%', delay: '2s', dur: '8s' },
-            { size: 3, x: '85%', y: '75%', delay: '4s', dur: '7s' },
-            { size: 2, x: '10%', y: '70%', delay: '1s', dur: '9s' },
-          ].map((p, i) => (
-            <div
-              key={`particle-${i}`}
-              className="absolute rounded-full bg-lc-green animate-particle"
-              style={{
-                width: p.size,
-                height: p.size,
-                left: p.x,
-                top: p.y,
-                '--particle-delay': p.delay,
-                '--particle-duration': p.dur,
-              } as React.CSSProperties}
-            />
-          ))}
-
-          {/* 3D orbit container — scaleY creates the perspective ellipse */}
-          <div className="relative w-full h-full" style={{ transform: 'scaleY(0.35)' }}>
-            {/* Key 1 (Blue) */}
-            <svg
-              width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-blue-500 animate-orbit drop-shadow-[0_0_8px_rgba(59,130,246,0.6)]"
-              style={{ '--orbit-radius': '90px', '--orbit-duration': '16s', transform: 'scaleY(2.85)' } as React.CSSProperties}
-            >
-              <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
-            </svg>
-            {/* Key 2 (Red) — opposite side */}
-            <svg
-              width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-red-500 animate-orbit drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]"
-              style={{ '--orbit-radius': '90px', '--orbit-duration': '16s', animationDelay: '-8s', transform: 'scaleY(2.85)' } as React.CSSProperties}
-            >
-              <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
-            </svg>
-
-          </div>
-        </div>
-
-        <div className="max-w-6xl mx-auto flex flex-col items-center text-center relative z-10">
-          <ObeliskIcon className="w-24 h-auto mb-8 text-lc-green opacity-90" />
-          <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight leading-[1.1] mb-6">
-            {t('hero.title')}{' '}
-            <span className="text-lc-green lc-glow-text">{t('hero.titleHighlight')}</span>
-          </h1>
-          <p className="text-lg md:text-xl text-lc-muted max-w-2xl mb-10 leading-relaxed">
-            {t('hero.subtitle')}
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <button
-              onClick={() => router.push('/app')}
-              className="lc-pill lc-pill-primary text-base px-8 py-3 flex items-center gap-2"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/>
-                <polyline points="10 17 15 12 10 7"/>
-                <line x1="15" y1="12" x2="3" y2="12"/>
-              </svg>
-              {t('hero.launchApp')}
-            </button>
-            <a
-              href="https://github.com/Fabricio333/obelisk"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="lc-pill lc-pill-secondary text-base px-8 py-3 flex items-center gap-2"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
-              </svg>
-              {t('hero.github')}
-            </a>
-          </div>
-        </div>
-      </section>
-
-      {/* Hero showcase — desktop voice channel + floating mobile preview, so
-          visitors immediately see what Obelisk looks like on every screen
-          before they scroll into the per-device tour cards below. */}
-      <section className="relative pt-2 pb-20 md:pt-4 md:pb-28 px-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-10 md:mb-12">
-            <h2 className="text-2xl md:text-3xl font-bold text-lc-white">
-              {t('landing.showcase.heading')}<span className="text-lc-green">.</span>
-            </h2>
-            <p className="mt-3 text-sm md:text-base text-lc-muted max-w-xl mx-auto">
-              {t('landing.showcase.subtitle')}
-            </p>
-          </div>
-
-          <div className="relative mx-auto max-w-5xl">
-            {/* Soft green glow behind the screens */}
+          <div
+            data-testid="hero-product-preview"
+            className="order-1 md:order-2 relative mx-auto mt-2 mb-7 md:mt-10 md:mb-0 w-full max-w-5xl"
+          >
             <div
               aria-hidden="true"
-              className="absolute inset-x-12 inset-y-4 bg-lc-green/10 rounded-[2rem] blur-[80px] -z-10 pointer-events-none"
+              className="absolute inset-x-10 inset-y-6 bg-lc-green/12 rounded-[2rem] blur-[80px] -z-10 pointer-events-none"
             />
 
-            {/* Desktop screenshot in a monitor-style frame */}
-            <figure className="rounded-2xl border border-lc-border bg-lc-dark overflow-hidden shadow-2xl shadow-black/40 lg:mr-20">
+            <figure className="hidden md:block rounded-2xl border border-lc-border bg-lc-dark overflow-hidden shadow-2xl shadow-black/40 lg:mr-20">
               <Image
                 src="/pictures-for-posts/desktop-large-voice-channel-with-sfu-peer-trasmission-test.png"
                 alt={t('landing.showcase.desktop.alt')}
@@ -371,9 +260,16 @@ export default function LandingPage() {
               />
             </figure>
 
-            {/* Mobile screenshot — stacked centered on small screens, floating
-                bottom-right overlay on lg+ for a device-mockup composition. */}
-            <div className="mt-6 mx-auto w-[150px] sm:w-[180px] lg:mt-0 lg:mx-0 lg:w-[210px] lg:absolute lg:right-0 lg:-bottom-10">
+            <div className="hidden md:block absolute left-12 top-10 h-3 w-3 rounded-full bg-lc-green shadow-[0_0_18px_rgba(180,249,83,0.85)] animate-dot-pulse" aria-hidden="true" />
+            <div className="hidden md:block absolute right-28 top-14 rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white shadow-lg animate-glow-pulse" aria-hidden="true">
+              3
+            </div>
+            <div className="hidden md:flex absolute right-40 bottom-8 items-center gap-2 rounded-full border border-lc-green/30 bg-lc-black/80 px-3 py-1.5 text-xs font-semibold text-lc-green shadow-xl shadow-black/40" aria-hidden="true">
+              <span className="h-2 w-2 rounded-full bg-lc-green animate-dot-pulse" />
+              Voice live
+            </div>
+
+            <div className="mx-auto w-[168px] sm:w-[190px] md:mt-6 lg:mt-0 lg:mx-0 lg:w-[210px] lg:absolute lg:right-0 lg:-bottom-10">
               <figure className="rounded-[1.75rem] border-2 border-lc-border bg-lc-dark overflow-hidden shadow-2xl shadow-black/70">
                 <Image
                   src="/pictures-for-posts/mobile-server-and-channels-view.png"
@@ -381,7 +277,7 @@ export default function LandingPage() {
                   width={720}
                   height={1600}
                   className="w-full h-auto block"
-                  sizes="(max-width: 1024px) 180px, 210px"
+                  sizes="(max-width: 1024px) 190px, 210px"
                 />
               </figure>
             </div>

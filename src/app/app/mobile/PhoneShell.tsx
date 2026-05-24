@@ -97,6 +97,8 @@ import { resolveReactionEmoji } from '@/lib/emoji-shortcodes';
 import BlossomImageInput from '@/components/BlossomImageInput';
 import RelayAdminPanel from '@/components/admin/RelayAdminPanel';
 import RelayEmojiAdminModal from '@/components/admin/RelayEmojiAdminModal';
+import LanguagePreference from '@/components/LanguagePreference';
+import { useTranslation } from '@/i18n/context';
 import { npubToHex } from '@nostr-wot/data';
 import {
   applyMentionToDraft,
@@ -4798,6 +4800,7 @@ function DisconnectConfirmSheet({ onConfirm, onCancel }: { onConfirm: () => void
 }
 
 export function SettingsProfileScreen({ go }: { go: (s: ScreenName) => void }) {
+  const { t } = useTranslation();
   const myPubkey = useMyPubkey();
   const meta = useUserMetadata(myPubkey);
   const name = meta?.displayName || meta?.name || shortNpub(myPubkey ?? '');
@@ -4807,11 +4810,11 @@ export function SettingsProfileScreen({ go }: { go: (s: ScreenName) => void }) {
   return (
     <div className="screen active" data-screen="settings-profile">
       <div className="app-header">
-        <h2>You</h2>
+        <h2>{t('settings.you')}</h2>
       </div>
       <div className="settings-tabs">
-        <button className="settings-tab active">Profile</button>
-        <button className="settings-tab" onClick={() => go('settings-prefs')}>Preferences</button>
+        <button className="settings-tab active">{t('settings.profile')}</button>
+        <button className="settings-tab" onClick={() => go('settings-prefs')}>{t('settings.preferences')}</button>
       </div>
       <div className="settings-body">
         <div className="settings-card profile-card">
@@ -5159,7 +5162,8 @@ export function EditProfileScreen({ go }: { go: (s: ScreenName, dir?: 'forward' 
 // ───────────────────────────────────────────────────────────────────────────
 // 17 — settings · preferences
 
-function SettingsPrefsScreen({ go }: { go: (s: ScreenName) => void }) {
+export function SettingsPrefsScreen({ go }: { go: (s: ScreenName) => void }) {
+  const { t } = useTranslation();
   const relays = useConfiguredRelays();
   const currentRelay = useCurrentRelayUrl();
 
@@ -5169,8 +5173,8 @@ function SettingsPrefsScreen({ go }: { go: (s: ScreenName) => void }) {
         <h2>You</h2>
       </div>
       <div className="settings-tabs">
-        <button className="settings-tab" onClick={() => go('settings-profile')}>Profile</button>
-        <button className="settings-tab active">Preferences</button>
+        <button className="settings-tab" onClick={() => go('settings-profile')}>{t('settings.profile')}</button>
+        <button className="settings-tab active">{t('settings.preferences')}</button>
       </div>
       <div className="settings-body">
         <div className="settings-section">
@@ -5186,19 +5190,20 @@ function SettingsPrefsScreen({ go }: { go: (s: ScreenName) => void }) {
                 <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {shortHost(url)}
                 </span>
-                <span className={`settings-row-meta ${isCurrent ? 'ok' : 'muted'}`}>{isCurrent ? 'active' : 'switch'}</span>
+                <span className={`settings-row-meta ${isCurrent ? 'ok' : 'muted'}`}>{isCurrent ? t('preferences.relays.status.active') : t('preferences.relays.status.switch')}</span>
               </button>
             );
           })}
         </div>
         <div className="settings-section">
-          <div className="settings-section-title">App</div>
+          <div className="settings-section-title">{t('preferences.mobile.app')}</div>
+          <LanguagePreference variant="mobile" />
           <div className="settings-row">
-            <span>Theme</span>
+            <span>{t('preferences.mobile.theme')}</span>
             <span className="settings-row-meta">La Crypta · dark</span>
           </div>
           <div className="settings-row">
-            <span>Version</span>
+            <span>{t('preferences.mobile.version')}</span>
             <span className="settings-row-meta muted">obelisk · mobile</span>
           </div>
         </div>

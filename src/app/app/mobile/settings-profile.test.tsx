@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, act } from '@testing-library/react';
+import type { ReactElement } from 'react';
 
 // Bridge identity hooks back the profile screen — mock them so the test can
 // drive the rendered values without a real relay connection.
@@ -84,7 +85,12 @@ vi.mock('@/components/admin/RelayAdminPanel', () => ({
   default: () => <div data-testid="relay-admin-panel-stub" />,
 }));
 
-import { SettingsProfileScreen, EditProfileScreen } from './PhoneShell';
+import { LocaleProvider } from '@/i18n/context';
+import { SettingsProfileScreen, EditProfileScreen, SettingsPrefsScreen } from './PhoneShell';
+
+function renderWithLocale(ui: ReactElement) {
+  return render(<LocaleProvider initialLocale="en">{ui}</LocaleProvider>);
+}
 
 const PUBKEY = '1'.repeat(64);
 
@@ -111,7 +117,7 @@ afterEach(() => {
 
 describe('SettingsProfileScreen', () => {
   it('renders the user banner when present', () => {
-    render(<SettingsProfileScreen go={vi.fn()} />);
+    renderWithLocale(<SettingsProfileScreen go={vi.fn()} />);
     const banner = screen.getByTestId('profile-banner');
     const img = banner.querySelector('img');
     expect(img).not.toBeNull();
@@ -120,20 +126,20 @@ describe('SettingsProfileScreen', () => {
 
   it('renders an empty banner placeholder when no banner is set', () => {
     mockMeta = { ...mockMeta!, banner: null };
-    render(<SettingsProfileScreen go={vi.fn()} />);
+    renderWithLocale(<SettingsProfileScreen go={vi.fn()} />);
     const banner = screen.getByTestId('profile-banner');
     expect(banner.querySelector('img')).toBeNull();
   });
 
   it('renders the user about/description when present', () => {
-    render(<SettingsProfileScreen go={vi.fn()} />);
+    renderWithLocale(<SettingsProfileScreen go={vi.fn()} />);
     const about = screen.getByTestId('profile-about');
     expect(about.textContent).toBe('Building Obelisk on Nostr.');
   });
 
   it('does not render the about block when no about is set', () => {
     mockMeta = { ...mockMeta!, about: null };
-    render(<SettingsProfileScreen go={vi.fn()} />);
+    renderWithLocale(<SettingsProfileScreen go={vi.fn()} />);
     expect(screen.queryByTestId('profile-about')).toBeNull();
   });
 
@@ -142,7 +148,7 @@ describe('SettingsProfileScreen', () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
 
-    render(<SettingsProfileScreen go={vi.fn()} />);
+    renderWithLocale(<SettingsProfileScreen go={vi.fn()} />);
     const npubBtn = screen.getByTestId('copy-npub');
     expect(npubBtn.className).not.toContain('copied');
 
@@ -160,43 +166,56 @@ describe('SettingsProfileScreen', () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
 
-    render(<SettingsProfileScreen go={vi.fn()} />);
+    renderWithLocale(<SettingsProfileScreen go={vi.fn()} />);
     fireEvent.click(screen.getByTestId('copy-hex'));
     expect(writeText).toHaveBeenCalledWith(PUBKEY);
   });
 
   it('navigates to profile-edit when "Edit Nostr Profile" is tapped', () => {
     const go = vi.fn();
-    render(<SettingsProfileScreen go={go} />);
+    renderWithLocale(<SettingsProfileScreen go={go} />);
     fireEvent.click(screen.getByTestId('edit-profile-btn'));
     expect(go).toHaveBeenCalledWith('profile-edit');
   });
 
   it('opens a confirmation sheet on Disconnect — does NOT log out immediately', () => {
-    render(<SettingsProfileScreen go={vi.fn()} />);
+    renderWithLocale(<SettingsProfileScreen go={vi.fn()} />);
     fireEvent.click(screen.getByTestId('disconnect-btn'));
     expect(mockLogout).not.toHaveBeenCalled();
     expect(screen.getByTestId('disconnect-confirm')).toBeTruthy();
   });
 
   it('calls logout only after the confirmation button is tapped', () => {
-    render(<SettingsProfileScreen go={vi.fn()} />);
+    renderWithLocale(<SettingsProfileScreen go={vi.fn()} />);
     fireEvent.click(screen.getByTestId('disconnect-btn'));
     fireEvent.click(screen.getByTestId('disconnect-confirm'));
     expect(mockLogout).toHaveBeenCalledTimes(1);
   });
 });
 
+describe('SettingsPrefsScreen', () => {
+  it('shows language controls in preferences', () => {
+    render(
+      <LocaleProvider initialLocale="en">
+        <SettingsPrefsScreen go={vi.fn()} />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByTestId('language-preference')).toBeTruthy();
+    expect(screen.getByTestId('language-option-en')).toHaveAttribute('aria-pressed', 'true');
+  });
+});
+
 describe('EditProfileScreen', () => {
   it('hydrates inputs from the current user metadata', () => {
-    render(<EditProfileScreen go={vi.fn()} />);
+    renderWithLocale(<EditProfileScreen go={vi.fn()} />);
     expect((screen.getByTestId('edit-name') as HTMLInputElement).value).toBe('Fabricio');
     expect((screen.getByTestId('edit-about') as HTMLTextAreaElement).value).toBe('Building Obelisk on Nostr.');
   });
 
   it('publishes via publishProfile and pops back on save', async () => {
     const go = vi.fn();
-    render(<EditProfileScreen go={go} />);
+    renderWithLocale(<EditProfileScreen go={go} />);
     fireEvent.change(screen.getByTestId('edit-name'), { target: { value: 'Fabricio v2' } });
     fireEvent.change(screen.getByTestId('edit-about'), { target: { value: 'New bio' } });
     await act(async () => {
@@ -211,7 +230,7 @@ describe('EditProfileScreen', () => {
   });
 
   it('blocks save when the display name is empty', () => {
-    render(<EditProfileScreen go={vi.fn()} />);
+    renderWithLocale(<EditProfileScreen go={vi.fn()} />);
     fireEvent.change(screen.getByTestId('edit-name'), { target: { value: '   ' } });
     const saveBtn = screen.getByTestId('save-profile') as HTMLButtonElement;
     expect(saveBtn.disabled).toBe(true);

@@ -8,9 +8,11 @@ import { useProfile, usePublishProfile } from '@nostr-wot/data/react';
 import BlossomImageInput from '@/components/BlossomImageInput';
 import { usePreferences, setPreference } from '@/lib/preferences';
 import WotSettings from '@/components/settings/WotSettings';
+import LanguagePreference from '@/components/LanguagePreference';
 import UserAvatar from '@/components/UserAvatar';
 import ModalShell from '@/components/ModalShell';
 import { clearAllClientCacheExceptSession } from '@/lib/nostr-bridge/cache-clear';
+import { useTranslation } from '@/i18n/context';
 
 interface UserPanelProps {
   pubkey: string;
@@ -384,11 +386,13 @@ function EditProfileForm({
 
 function PreferencesPanel() {
   const prefs = usePreferences();
+  const { t } = useTranslation();
   return (
     <div className="space-y-4 p-4">
+      <LanguagePreference />
       <ToggleRow
-        label="Show activity indicator"
-        description="Bottom-right notifications for login, signing, and relay publishing."
+        label={t('preferences.activity.label')}
+        description={t('preferences.activity.description')}
         checked={prefs.showActivityIndicator}
         onChange={(v) => setPreference('showActivityIndicator', v)}
       />
@@ -399,6 +403,7 @@ function PreferencesPanel() {
 }
 
 function LocalDataSection() {
+  const { t } = useTranslation();
   const [confirming, setConfirming] = useState(false);
   const [clearing, setClearing] = useState(false);
 
@@ -422,13 +427,13 @@ function LocalDataSection() {
   return (
     <div className="pt-2 border-t border-lc-border">
       <div className="text-xs uppercase tracking-wider text-lc-muted font-semibold pt-2 pb-2">
-        Local data
+        {t('preferences.localData.title')}
       </div>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <div className="text-sm text-lc-white">Clear local cache</div>
+          <div className="text-sm text-lc-white">{t('preferences.localData.clear.title')}</div>
           <div className="text-xs text-lc-muted mt-0.5">
-            Wipes cached channels, profiles, branding, member lists, read positions, and DM cache. Live data re-streams from the relay on next paint. Your session and preferences are kept.
+            {t('preferences.localData.clear.description')}
           </div>
         </div>
         <button
@@ -438,7 +443,7 @@ function LocalDataSection() {
           className="shrink-0 rounded-md border border-lc-border bg-lc-black px-3 py-1.5 text-sm text-lc-white hover:bg-lc-border/40 disabled:opacity-50"
           data-testid="clear-cache-button"
         >
-          Clear cache
+          {t('preferences.localData.clear.button')}
         </button>
       </div>
       {confirming && (
@@ -447,9 +452,9 @@ function LocalDataSection() {
           testId="clear-cache-confirm"
           panelClassName="w-full max-w-md mx-4 rounded-xl bg-lc-dark border border-lc-border p-6 shadow-xl"
         >
-          <div className="text-lg font-semibold text-lc-white mb-2">Clear local cache?</div>
+          <div className="text-lg font-semibold text-lc-white mb-2">{t('preferences.localData.confirm.title')}</div>
           <div className="text-sm text-lc-muted mb-4">
-            This wipes every locally-cached relay response (channels, profiles, branding, members, read positions, DM cache, UI flags) and reloads the page. Your session and preferences stay; you stay logged in.
+            {t('preferences.localData.confirm.description')}
           </div>
           <div className="flex justify-end gap-2">
             <button
@@ -458,7 +463,7 @@ function LocalDataSection() {
               disabled={clearing}
               className="rounded-md border border-lc-border px-3 py-1.5 text-sm text-lc-white hover:bg-lc-border/40 disabled:opacity-50"
             >
-              Cancel
+              {t('preferences.localData.confirm.cancel')}
             </button>
             <button
               type="button"
@@ -467,7 +472,7 @@ function LocalDataSection() {
               className="rounded-md bg-lc-green px-3 py-1.5 text-sm font-semibold text-lc-black hover:bg-lc-green/90 disabled:opacity-50"
               data-testid="clear-cache-confirm-button"
             >
-              {clearing ? 'Clearing…' : 'Clear & reload'}
+              {clearing ? t('preferences.localData.confirm.clearing') : t('preferences.localData.confirm.action')}
             </button>
           </div>
         </ModalShell>
