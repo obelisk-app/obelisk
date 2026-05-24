@@ -1177,7 +1177,7 @@ class BridgeImpl implements NostrBridge {
       this.seedCacheForRelay(parsed.relayUrl);
       // For NIP-46 (bunker) sessions: pre-warm the BunkerSigner so the first
       // NIP-42 AUTH challenge from the relay doesn't trigger a cold
-      // BunkerSigner.fromBunker + signer.connect() round-trip from inside
+      // BunkerSigner.fromBunker + first RPC round-trip from inside
       // the auth-signing callback. Many relays time out the AUTH window
       // before the cold path completes, the REQ is dropped silently, the
       // watchdog retries, and the user sees the "needs 2-3 refreshes" bug.
@@ -1600,6 +1600,7 @@ class BridgeImpl implements NostrBridge {
     // with — otherwise the bunker rejects our connect request because
     // this client pubkey was never authorized. Falling back to a fresh
     // key is correct when we *are* the pairing party.
+    const pairedByHost = Boolean(options?.clientSecretHex);
     const localSecret = options?.clientSecretHex
       ? hexToBytes(options.clientSecretHex)
       : generateSecretKey();
@@ -1611,14 +1612,19 @@ class BridgeImpl implements NostrBridge {
       },
     });
     const connectId = pushActivity('Connecting to bunker', 'waiting for remote signer');
+    let pubKeyHex: string;
     try {
-      await signer.connect();
+      // If the SDK hands us a client secret, it already completed the
+      // NostrConnect/bunker pairing with that client identity. Re-running
+      // `connect()` here can send an empty/mismatched secret for QR-created
+      // bunker URLs and make remote signers reject with "no secret".
+      if (!pairedByHost) await signer.connect();
+      pubKeyHex = await signer.getPublicKey();
     } catch (e) {
       failActivity(connectId, e instanceof Error ? e.message : String(e));
       throw e;
     }
     resolveActivity(connectId);
-    const pubKeyHex = await signer.getPublicKey();
     this.bunkerSigner = signer;
     this.session = {
       pubKeyHex,
@@ -1713,9 +1719,9 @@ class BridgeImpl implements NostrBridge {
    *     hit the cached signer instantly.
    *   - If pre-warm failed (bunker relay down) or `initialize` hasn't run yet,
    *     the first NIP-42 AUTH triggers this lazy path: parse bunker URL,
-   *     reconstruct localSecret, build BunkerSigner, await its connect()
-   *     handshake, then sign. This adds 1-3s of latency but is the fallback
-   *     of last resort.
+   *     reconstruct localSecret, build BunkerSigner, warm the RPC channel,
+   *     then sign. This adds 1-3s of latency but is the fallback of last
+   *     resort.
    */
   private async ensureBunkerSigner(): Promise<BunkerSigner> {
     if (this.bunkerSigner) return this.bunkerSigner;
@@ -1731,8 +1737,18 @@ class BridgeImpl implements NostrBridge {
         else if (typeof window !== 'undefined') window.open(url, '_blank', 'width=600,height=700');
       },
     });
-    await signer.connect();
+    if (bp.secret) {
+      await signer.connect();
+    } else {
+      // SDK QR logins persist a bunker URL synthesized from the paired signer
+      // and relays; the original nostrconnect secret is not recoverable from
+      // the SDK's public API. The client secret is the durable authorization,
+      // so warm the RPC channel with get_public_key instead of sending a
+      // bogus connect request with an empty secret.
+      await signer.getPublicKey();
+    }
     this.bunkerSigner = signer;
+    this.bunkerSignerReady.set(true);
     return signer;
   }
 
