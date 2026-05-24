@@ -45,6 +45,11 @@ export const HERO_ASSET_META: Record<string, GuideAssetMeta> = {
     height: 400,
     alt: 'The Obelisk ecosystem: one self-hostable Nostr relay connected to a chat client, a voice SFU, and a bot runtime — every component independently replaceable, nothing locked together.',
   },
+  'obelisk-bots': {
+    width: 800,
+    height: 400,
+    alt: 'Obelisk zap bot hero: a stylish robot with black sunglasses listening for Nostr zap receipts and group reactions, then posting signed kind 9 announcements into NIP-29 groups.',
+  },
 };
 
 export const DIAGRAM_ASSET_META: Record<string, GuideAssetMeta> = {

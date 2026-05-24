@@ -6,6 +6,7 @@ import FutureRelaysHero from './FutureRelaysHero';
 import BitcoinZapsHero from './BitcoinZapsHero';
 import AdminCliHero from './AdminCliHero';
 import SwapAnythingHero from './SwapAnythingHero';
+import ObeliskBotsHero from './ObeliskBotsHero';
 import WotGraphDiagram from './diagrams/WotGraphDiagram';
 import RelayGroupsDiagram from './diagrams/RelayGroupsDiagram';
 import ZapFlowDiagram from './diagrams/ZapFlowDiagram';
@@ -29,6 +30,7 @@ export const HERO_REGISTRY: Record<string, ComponentType> = {
   'bitcoin-zaps': BitcoinZapsHero,
   'admin-cli': AdminCliHero,
   'swap-anything': SwapAnythingHero,
+  'obelisk-bots': ObeliskBotsHero,
 };
 
 export const DIAGRAM_REGISTRY: Record<string, ComponentType> = {
