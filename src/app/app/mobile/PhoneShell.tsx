@@ -199,6 +199,10 @@ function shortHost(url: string): string {
   try { return new URL(url).host; } catch { return url; }
 }
 
+function normalizeRelayUrl(url: string | null | undefined): string {
+  return (url ?? '').replace(/\/+$/, '').toLowerCase();
+}
+
 // ───────────────────────────────────────────────────────────────────────────
 // shared sub-components
 
@@ -1848,6 +1852,107 @@ export function RelayTile({
   );
 }
 
+
+export function MobileServerRail({
+  relays,
+  activeRelay,
+  onSelectRelay,
+  onAddRelay,
+  onLongPress,
+}: {
+  relays: ReadonlyArray<string>;
+  activeRelay: string | null;
+  onSelectRelay: (url: string) => void;
+  onAddRelay: () => void;
+  onLongPress?: (info: { url: string; label: string; iconUrl: string | null }) => void;
+}) {
+  const activeKey = normalizeRelayUrl(activeRelay);
+  return (
+    <aside className="spaces-rail" data-testid="mobile-server-rail" aria-label="Servers">
+      <div className="spaces-rail-scroll" data-no-swipe>
+        {relays.map((url) => {
+          const isActive = normalizeRelayUrl(url) === activeKey;
+          return (
+            <RelayTile
+              key={url}
+              url={url}
+              active={isActive}
+              onClick={() => onSelectRelay(url)}
+              onLongPress={onLongPress}
+            />
+          );
+        })}
+        <button className="space space-add" onClick={onAddRelay} aria-label="Add relay">
+          <div className="space-icon s-add">+</div>
+          <span className="space-name">&nbsp;</span>
+        </button>
+      </div>
+    </aside>
+  );
+}
+
+export function MobileServerBanner({
+  label,
+  relayUrl,
+  iconUrl,
+  bannerUrl,
+  onSearch,
+  onCreateChannel,
+  onOpenMenu,
+}: {
+  label: string;
+  relayUrl: string | null;
+  iconUrl?: string | null;
+  bannerUrl?: string | null;
+  onSearch: () => void;
+  onCreateChannel: () => void;
+  onOpenMenu: () => void;
+}) {
+  const host = relayUrl ? shortHost(relayUrl) : '';
+  const iconFallback = relayUrl ? shortHost(relayUrl).slice(0, 1).toUpperCase() : 'O';
+  return (
+    <header className="server-banner" data-testid="mobile-server-banner">
+      {bannerUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img className="server-banner-img" src={bannerUrl} alt="" aria-hidden="true" />
+      ) : (
+        <div className="server-banner-fallback" aria-hidden="true" />
+      )}
+      <div className="server-banner-shade" aria-hidden="true" />
+      <div className="server-banner-actions">
+        <button className="icon-btn" aria-label="Search this server" onClick={onSearch}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+        </button>
+        <button
+          className="icon-btn"
+          aria-label="Create channel"
+          data-testid="mobile-create-channel-btn"
+          onClick={onCreateChannel}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
+        </button>
+        <button className="icon-btn" aria-label="Space menu" onClick={onOpenMenu}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="5" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="19" r="1.5" /></svg>
+        </button>
+      </div>
+      <div className="server-banner-meta">
+        <div className="server-banner-icon" style={iconUrl ? undefined : avatarStyle(relayUrl || label)}>
+          {iconUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={iconUrl} alt="" />
+          ) : (
+            iconFallback
+          )}
+        </div>
+        <div className="server-banner-copy">
+          <h2>{label}</h2>
+          {host && <span>{host}</span>}
+        </div>
+      </div>
+    </header>
+  );
+}
+
 // Single row in the channel list — picks the right icon for text/voice/forum
 // and surfaces the live-call indicator on voice channels. The `unread` and
 // `mentioned` variants are derived from the read-state cursor (per-channel
@@ -2095,7 +2200,6 @@ function ServerScreen({
   const metadataEose = useGroupMetadataEose();
   const relays = useConfiguredRelays();
   const myPubkey = useMyPubkey();
-  const meta = useUserMetadata(myPubkey);
   const calls = useActiveCallByChannel();
   const adminsByGroup = useAdminsByGroup();
   const operatorPubkey = useRelayOperatorPubkey(relay || null);
@@ -2131,31 +2235,7 @@ function ServerScreen({
     });
   }, []);
   const channelListRef = useRef<HTMLDivElement>(null);
-  const stripRef = useRef<HTMLDivElement>(null);
-  const stripHostRef = useRef<HTMLDivElement>(null);
   useScreenScrollMemo(`server:${relay ?? ''}`, channelListRef);
-
-  // Toggle edge-fade affordances on the spaces strip when there's more content
-  // to scroll. The fades are pure CSS pseudo-elements; we only flip the state
-  // classes on the host wrapper.
-  useEffect(() => {
-    const el = stripRef.current;
-    const host = stripHostRef.current;
-    if (!el || !host) return;
-    const update = () => {
-      const max = el.scrollWidth - el.clientWidth;
-      const left = el.scrollLeft;
-      host.classList.toggle('can-scroll-left', left > 1);
-      host.classList.toggle('can-scroll-right', left < max - 1);
-    };
-    update();
-    el.addEventListener('scroll', update, { passive: true });
-    window.addEventListener('resize', update);
-    return () => {
-      el.removeEventListener('scroll', update);
-      window.removeEventListener('resize', update);
-    };
-  }, [relays.length]);
 
   // NIP-11 name + icon for the active relay header. Mirrors RelayTopBar on
   // desktop — both surfaces show the operator-set name (e.g. "Obelisk Public
@@ -2257,96 +2337,40 @@ function ServerScreen({
   // name (matches desktop banner), fall back to NIP-11 doc, then to the URL
   // host while everything resolves.
   const activeSpaceLabel = branding.name || activeRelayInfo?.name || (relay ? shortHost(relay) : 'Obelisk');
+  const activeSpaceIcon = branding.icon || activeRelayInfo?.icon || null;
+  const activeSpaceBanner = branding.banner || null;
+  const openActiveRelayMenu = () => {
+    if (!relay) return;
+    setRelayMenuFor({ url: relay, label: activeSpaceLabel, iconUrl: activeSpaceIcon });
+  };
 
   return (
     <div className="screen active" data-screen="server">
-      <div className="app-header">
-        <h2>{activeSpaceLabel}</h2>
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          <button className="icon-btn" aria-label="Search this server" onClick={() => go('search')}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
-          </button>
-          <button
-            className="icon-btn"
-            aria-label="Create channel"
-            data-testid="mobile-create-channel-btn"
-            onClick={() => { if (relay) setCreateChannelOpen(true); }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
-          </button>
-          <button
-            className="icon-btn"
-            aria-label="Space menu"
-            onClick={() => {
-              if (!relay) return;
-              setRelayMenuFor({ url: relay, label: activeSpaceLabel, iconUrl: activeRelayInfo?.icon ?? null });
-            }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="5" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="19" r="1.5" /></svg>
-          </button>
-        </div>
-      </div>
-
-      {/* Spaces strip — one tile per configured relay. Wrapped in a host div
-       * so edge-fade pseudo-elements can hint at scrollability. */}
-      <div className="spaces-strip-host" ref={stripHostRef}>
-        <div className="spaces-strip" ref={stripRef}>
-          {relays.map((url) => {
-            const isActive = url.replace(/\/+$/, '').toLowerCase() === relay.replace(/\/+$/, '').toLowerCase();
-            return (
-              <RelayTile
-                key={url}
-                url={url}
-                active={isActive}
-                onClick={() => { if (!isActive) void nostrActions.switchRelay(url); }}
-                onLongPress={(info) => setRelayMenuFor(info)}
-              />
-            );
-          })}
-          <button className="space" onClick={() => setAddRelayOpen(true)} aria-label="Add relay">
-            <div className="space-icon s-add">+</div>
-            <span className="space-name">&nbsp;</span>
-          </button>
-        </div>
-        <span className="spaces-arrow spaces-arrow-left" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 6 9 12 15 18" /></svg>
-        </span>
-        <span className="spaces-arrow spaces-arrow-right" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 6 15 12 9 18" /></svg>
-        </span>
-      </div>
-      {relays.length > 1 && (
-        <div className="spaces-dots" aria-hidden="true">
-          {relays.map((url) => {
-            const isActive = url.replace(/\/+$/, '').toLowerCase() === relay.replace(/\/+$/, '').toLowerCase();
-            return <span key={url} className={`spaces-dot ${isActive ? 'active' : ''}`} />;
-          })}
-        </div>
-      )}
-
-      {addRelayOpen && <AddRelaySheet close={() => setAddRelayOpen(false)} />}
-      {createChannelOpen && relay && (
-        <CreateChannelSheet
-          relayLabel={activeSpaceLabel}
-          close={() => setCreateChannelOpen(false)}
-          onCreated={(id) => selectGroup(id, 'text')}
+      <div className="server-mobile-layout">
+        <MobileServerRail
+          relays={relays}
+          activeRelay={relay}
+          onSelectRelay={(url) => {
+            if (normalizeRelayUrl(url) !== normalizeRelayUrl(relay)) void nostrActions.switchRelay(url);
+          }}
+          onAddRelay={() => setAddRelayOpen(true)}
+          onLongPress={(info) => setRelayMenuFor(info)}
         />
-      )}
-      {relayMenuFor && (
-        <RelayMenuSheet
-          close={() => setRelayMenuFor(null)}
-          relayUrl={relayMenuFor.url}
-          label={relayMenuFor.label}
-          iconUrl={relayMenuFor.iconUrl}
-          isAdmin={!!myPubkey && relayAuthors.includes(myPubkey)}
-          branding={branding}
-          emojiSet={emojiSet}
-          layout={layout}
-          rootChannels={roots}
-        />
-      )}
 
-      <div className="channel-list" ref={channelListRef}>
+        <section className="server-channel-pane" data-testid="mobile-channel-menu">
+          <MobileServerBanner
+            label={activeSpaceLabel}
+            relayUrl={relay}
+            iconUrl={activeSpaceIcon}
+            bannerUrl={activeSpaceBanner}
+            onSearch={() => go('search')}
+            onCreateChannel={() => { if (relay) setCreateChannelOpen(true); }}
+            onOpenMenu={openActiveRelayMenu}
+          />
+
+          <RelayStatusBadge />
+
+          <div className="channel-list" ref={channelListRef}>
         {laidOut.categories.map((cat) => {
           const list = cat.channelIds
             .map((id) => groupsById[id])
@@ -2396,7 +2420,31 @@ function ServerScreen({
             metadataEose={metadataEose}
           />
         )}
+          </div>
+        </section>
       </div>
+
+      {addRelayOpen && <AddRelaySheet close={() => setAddRelayOpen(false)} />}
+      {createChannelOpen && relay && (
+        <CreateChannelSheet
+          relayLabel={activeSpaceLabel}
+          close={() => setCreateChannelOpen(false)}
+          onCreated={(id) => selectGroup(id, 'text')}
+        />
+      )}
+      {relayMenuFor && (
+        <RelayMenuSheet
+          close={() => setRelayMenuFor(null)}
+          relayUrl={relayMenuFor.url}
+          label={relayMenuFor.label}
+          iconUrl={relayMenuFor.iconUrl}
+          isAdmin={!!myPubkey && relayAuthors.includes(myPubkey)}
+          branding={branding}
+          emojiSet={emojiSet}
+          layout={layout}
+          rootChannels={roots}
+        />
+      )}
     </div>
   );
 }
@@ -5516,7 +5564,7 @@ export default function MobileShell() {
     const t = e.touches[0];
     const target = e.target as HTMLElement | null;
     const ignored = !!target?.closest(
-      '.spaces-strip, .dms-tabs, .filter-tabs, .cats-strip, .emoji-sheet-host, .sheet-host, [data-no-swipe]'
+      '.spaces-strip, .spaces-rail, .dms-tabs, .filter-tabs, .cats-strip, .emoji-sheet-host, .sheet-host, [data-no-swipe]'
     );
     const width = screensHostRef.current?.clientWidth ?? (typeof window !== 'undefined' ? window.innerWidth : 0);
     const now = Date.now();

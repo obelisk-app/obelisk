@@ -567,6 +567,214 @@
   font-weight: 600;
 }
 
+.obelisk-mobile .server-mobile-layout {
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  overflow: hidden;
+}
+
+.obelisk-mobile .spaces-rail {
+  width: 74px;
+  flex: 0 0 74px;
+  min-height: 0;
+  border-right: 1px solid var(--app-line-soft);
+  background: rgba(10, 10, 10, 0.92);
+  padding: max(10px, env(safe-area-inset-top)) 6px calc(8px + env(safe-area-inset-bottom));
+}
+
+.obelisk-mobile .spaces-rail-scroll {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+.obelisk-mobile .spaces-rail-scroll::-webkit-scrollbar { display: none; }
+
+.obelisk-mobile .spaces-rail .space {
+  width: 100%;
+  min-height: 66px;
+  gap: 5px;
+  position: relative;
+}
+
+.obelisk-mobile .spaces-rail .space::before {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: 13px;
+  width: 3px;
+  height: 28px;
+  border-radius: 0 999px 999px 0;
+  background: var(--app-accent);
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.obelisk-mobile .spaces-rail .space.active::before {
+  opacity: 1;
+}
+
+.obelisk-mobile .spaces-rail .space-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  font-size: 17px;
+}
+
+.obelisk-mobile .spaces-rail .space.active .space-icon {
+  box-shadow: 0 0 0 2px rgba(180, 249, 83, 0.22), 0 0 22px rgba(180, 249, 83, 0.18);
+}
+
+.obelisk-mobile .spaces-rail .space-icon.s-add {
+  font-size: 25px;
+}
+
+.obelisk-mobile .spaces-rail .space-name {
+  width: 60px;
+  font-size: 10.5px;
+  line-height: 1.1;
+}
+
+.obelisk-mobile .server-channel-pane {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.obelisk-mobile .server-banner {
+  position: relative;
+  min-height: calc(132px + env(safe-area-inset-top));
+  flex-shrink: 0;
+  overflow: hidden;
+  border-bottom: 1px solid var(--app-line-soft);
+  background: var(--app-surface);
+}
+
+.obelisk-mobile .server-banner-img,
+.obelisk-mobile .server-banner-fallback,
+.obelisk-mobile .server-banner-shade {
+  position: absolute;
+  inset: 0;
+}
+
+.obelisk-mobile .server-banner-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.obelisk-mobile .server-banner-fallback {
+  background:
+    linear-gradient(135deg, rgba(38, 38, 38, 0.96) 0%, rgba(30, 43, 22, 0.94) 48%, rgba(12, 21, 22, 0.98) 100%),
+    var(--app-surface);
+}
+
+.obelisk-mobile .server-banner-shade {
+  background:
+    linear-gradient(180deg, rgba(10, 10, 10, 0.88) 0%, rgba(10, 10, 10, 0.24) 42%, rgba(10, 10, 10, 0.9) 100%),
+    linear-gradient(90deg, rgba(10, 10, 10, 0.72) 0%, rgba(10, 10, 10, 0.18) 70%, rgba(10, 10, 10, 0.58) 100%);
+}
+
+.obelisk-mobile .server-banner-actions {
+  position: absolute;
+  top: max(10px, env(safe-area-inset-top));
+  right: 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.obelisk-mobile .server-banner-actions .icon-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  color: var(--app-text);
+  background: rgba(10, 10, 10, 0.46);
+  border: 1px solid rgba(250, 250, 250, 0.08);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+.obelisk-mobile .server-banner-actions .icon-btn:active {
+  background: rgba(23, 23, 23, 0.82);
+}
+
+.obelisk-mobile .server-banner-meta {
+  position: absolute;
+  left: 14px;
+  right: 10px;
+  bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+}
+
+.obelisk-mobile .server-banner-icon {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(250, 250, 250, 0.18);
+  color: var(--app-text);
+  font-size: 18px;
+  font-weight: 800;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.38);
+}
+
+.obelisk-mobile .server-banner-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.obelisk-mobile .server-banner-copy {
+  min-width: 0;
+}
+
+.obelisk-mobile .server-banner-copy h2 {
+  margin: 0;
+  color: var(--app-text);
+  font-size: 23px;
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.72);
+}
+
+.obelisk-mobile .server-banner-copy span {
+  display: block;
+  margin-top: 3px;
+  color: var(--app-text-dim);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.78);
+}
+
 /* Horizontal category pills — strip above the channel list. Tapping a pill
  * scrolls the channel-list to that section so users can jump between
  * categories without scrolling through the full list. */
