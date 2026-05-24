@@ -131,6 +131,149 @@ const TECH_STACK: { name: string; desc: string; color: string; icon?: string; im
   { name: 'Tailwind v4', desc: 'Styling', color: 'text-cyan-400', icon: '~', href: 'https://tailwindcss.com' },
 ];
 
+
+function LandingHeroAnimation() {
+  return (
+    <div
+      data-testid="hero-animation"
+      className="relative mx-auto h-[330px] w-full max-w-[520px] overflow-hidden lg:h-[440px]"
+      aria-hidden="true"
+    >
+      <div className="absolute inset-0 rounded-full bg-lc-green/5 blur-[120px] pointer-events-none" />
+
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {[
+          { left: '8%', bottom: '-10%', size: 16, opacity: 0.06, duration: '18s', delay: '0s' },
+          { left: '18%', bottom: '-15%', size: 20, opacity: 0.08, duration: '22s', delay: '3s' },
+          { left: '30%', bottom: '-5%', size: 12, opacity: 0.05, duration: '16s', delay: '7s' },
+          { left: '42%', bottom: '-20%', size: 24, opacity: 0.1, duration: '25s', delay: '1s' },
+          { left: '55%', bottom: '-8%', size: 14, opacity: 0.07, duration: '19s', delay: '5s' },
+          { left: '65%', bottom: '-12%', size: 18, opacity: 0.09, duration: '21s', delay: '9s' },
+          { left: '75%', bottom: '-18%', size: 22, opacity: 0.06, duration: '24s', delay: '2s' },
+          { left: '88%', bottom: '-6%', size: 15, opacity: 0.08, duration: '17s', delay: '6s' },
+        ].map((b, i) => (
+          <svg
+            key={i}
+            width={b.size}
+            height={b.size}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            className="absolute text-lc-green animate-float-up"
+            style={{
+              left: b.left,
+              bottom: b.bottom,
+              '--bubble-opacity': b.opacity,
+              '--float-duration': b.duration,
+              '--float-delay': b.delay,
+            } as React.CSSProperties}
+          >
+            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+          </svg>
+        ))}
+      </div>
+
+      <div className="absolute left-1/2 top-1/2 h-[260px] w-[330px] -translate-x-1/2 -translate-y-1/2 pointer-events-none sm:w-[380px] lg:h-[320px] lg:w-[440px]">
+        <div
+          className="absolute left-1/2 -translate-x-1/2"
+          style={{ top: -60, width: 300, height: 320, clipPath: 'inset(0 0 50% 0)' }}
+        >
+          <div className="relative w-full" style={{ height: 320 }}>
+            <svg
+              width="28"
+              height="28"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-yellow-400 animate-orbit-vertical drop-shadow-[0_0_10px_rgba(250,204,21,0.6)]"
+              style={{ '--orbit-radius': '120px', '--orbit-duration': '28s' } as React.CSSProperties}
+            >
+              <circle cx="12" cy="12" r="5" />
+              <line x1="12" y1="1" x2="12" y2="3" />
+              <line x1="12" y1="21" x2="12" y2="23" />
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+              <line x1="1" y1="12" x2="3" y2="12" />
+              <line x1="21" y1="12" x2="23" y2="12" />
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+            </svg>
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-slate-300 animate-orbit-vertical drop-shadow-[0_0_8px_rgba(203,213,225,0.5)]"
+              style={{ '--orbit-radius': '120px', '--orbit-duration': '28s', animationDelay: '-14s' } as React.CSSProperties}
+            >
+              <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+            </svg>
+          </div>
+        </div>
+
+        <div className="absolute top-1/2 left-1/2 h-24 w-24 -translate-x-1/2 -translate-y-1/2 rounded-full bg-lc-green/8 animate-glow-pulse" />
+
+        {[
+          { size: 3, x: '15%', y: '20%', delay: '0s', dur: '6s' },
+          { size: 2, x: '80%', y: '30%', delay: '2s', dur: '8s' },
+          { size: 3, x: '85%', y: '75%', delay: '4s', dur: '7s' },
+          { size: 2, x: '10%', y: '70%', delay: '1s', dur: '9s' },
+        ].map((p, i) => (
+          <div
+            key={'particle-' + i}
+            className="absolute rounded-full bg-lc-green animate-particle"
+            style={{
+              width: p.size,
+              height: p.size,
+              left: p.x,
+              top: p.y,
+              '--particle-delay': p.delay,
+              '--particle-duration': p.dur,
+            } as React.CSSProperties}
+          />
+        ))}
+
+        <div className="relative h-full w-full" style={{ transform: 'scaleY(0.35)' }}>
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-blue-500 animate-orbit drop-shadow-[0_0_8px_rgba(59,130,246,0.6)]"
+            style={{ '--orbit-radius': '118px', '--orbit-duration': '16s', transform: 'scaleY(2.85)' } as React.CSSProperties}
+          >
+            <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
+          </svg>
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-red-500 animate-orbit drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]"
+            style={{ '--orbit-radius': '118px', '--orbit-duration': '16s', animationDelay: '-8s', transform: 'scaleY(2.85)' } as React.CSSProperties}
+          >
+            <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
+          </svg>
+        </div>
+      </div>
+
+      <ObeliskIcon className="absolute left-1/2 top-1/2 h-auto w-24 -translate-x-1/2 -translate-y-1/2 text-lc-green opacity-90 drop-shadow-[0_0_36px_rgba(180,249,83,0.28)] sm:w-28 lg:w-32" />
+    </div>
+  );
+}
+
 export default function LandingPage() {
   const router = useRouter();
   const [isNavigating, setIsNavigating] = useState(false);
@@ -189,21 +332,17 @@ export default function LandingPage() {
       {/* Hero */}
       <section
         data-testid="landing-hero"
-        className="relative pt-20 pb-10 md:pt-24 md:pb-0 px-6 overflow-hidden"
+        className="relative pt-20 pb-14 md:pt-24 md:pb-20 px-6 overflow-hidden"
       >
         <div className="absolute inset-0 bg-lc-black/35 pointer-events-none" aria-hidden="true" />
         <div className="absolute top-24 left-1/2 -translate-x-1/2 w-[520px] h-[520px] bg-lc-green/3 rounded-full blur-[120px] pointer-events-none" />
         <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-b from-transparent to-lc-black pointer-events-none" aria-hidden="true" />
 
-        <div className="max-w-6xl mx-auto flex flex-col items-center text-center relative z-10">
-          <div className="order-2 md:order-1 flex flex-col items-center">
-            <div className="relative mb-5 h-16 w-16 md:h-18 md:w-18" aria-hidden="true">
-              <div className="absolute left-1/2 top-1/2 h-14 w-14 -translate-x-1/2 -translate-y-1/2 rounded-full bg-lc-green/10 blur-xl animate-glow-pulse" />
-              <div className="absolute left-1/2 top-1/2 h-1.5 w-1.5 rounded-full bg-blue-400 animate-orbit" style={{ '--orbit-radius': '28px', '--orbit-duration': '12s' } as React.CSSProperties} />
-              <div className="absolute left-1/2 top-1/2 h-1.5 w-1.5 rounded-full bg-lc-green animate-orbit-reverse" style={{ '--orbit-radius': '22px', '--orbit-duration': '16s' } as React.CSSProperties} />
-              <ObeliskIcon className="absolute inset-2 h-auto w-12 text-lc-green opacity-90" />
-            </div>
-            <h1 className={`${locale === 'es' ? 'text-xl min-[380px]:text-2xl sm:text-5xl md:text-6xl whitespace-nowrap' : 'text-4xl sm:text-5xl md:text-6xl'} font-extrabold tracking-tight leading-[1.05] mb-4 max-w-4xl`}>
+        <div className="max-w-6xl mx-auto grid gap-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-center relative z-10">
+          <LandingHeroAnimation />
+
+          <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
+            <h1 className={(locale === 'es' ? 'text-xl min-[380px]:text-2xl sm:text-4xl lg:text-[2.55rem] xl:text-5xl whitespace-nowrap' : 'text-4xl sm:text-5xl lg:text-6xl') + ' font-extrabold tracking-tight leading-[1.05] mb-4 max-w-[680px]'}>
               {t('hero.title')}{' '}
               <span className="text-lc-green lc-glow-text">{t('hero.titleHighlight')}</span>
             </h1>
@@ -236,50 +375,6 @@ export default function LandingPage() {
                 </svg>
                 {t('hero.github')}
               </a>
-            </div>
-          </div>
-
-          <div
-            data-testid="hero-product-preview"
-            className="order-1 md:order-2 relative mx-auto mt-2 mb-7 md:mt-10 md:mb-0 w-full max-w-5xl"
-          >
-            <div
-              aria-hidden="true"
-              className="absolute inset-x-10 inset-y-6 bg-lc-green/12 rounded-[2rem] blur-[80px] -z-10 pointer-events-none"
-            />
-
-            <figure className="hidden md:block rounded-2xl border border-lc-border bg-lc-dark overflow-hidden shadow-2xl shadow-black/40 lg:mr-20">
-              <Image
-                src="/pictures-for-posts/desktop-large-voice-channel-with-sfu-peer-trasmission-test.png"
-                alt={t('landing.showcase.desktop.alt')}
-                width={1470}
-                height={799}
-                priority
-                className="w-full h-auto block"
-                sizes="(max-width: 1024px) 95vw, 960px"
-              />
-            </figure>
-
-            <div className="hidden md:block absolute left-12 top-10 h-3 w-3 rounded-full bg-lc-green shadow-[0_0_18px_rgba(180,249,83,0.85)] animate-dot-pulse" aria-hidden="true" />
-            <div className="hidden md:block absolute right-28 top-14 rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white shadow-lg animate-glow-pulse" aria-hidden="true">
-              3
-            </div>
-            <div className="hidden md:flex absolute right-40 bottom-8 items-center gap-2 rounded-full border border-lc-green/30 bg-lc-black/80 px-3 py-1.5 text-xs font-semibold text-lc-green shadow-xl shadow-black/40" aria-hidden="true">
-              <span className="h-2 w-2 rounded-full bg-lc-green animate-dot-pulse" />
-              Voice live
-            </div>
-
-            <div className="mx-auto w-[168px] sm:w-[190px] md:mt-6 lg:mt-0 lg:mx-0 lg:w-[210px] lg:absolute lg:right-0 lg:-bottom-10">
-              <figure className="rounded-[1.75rem] border-2 border-lc-border bg-lc-dark overflow-hidden shadow-2xl shadow-black/70">
-                <Image
-                  src="/pictures-for-posts/mobile-server-and-channels-view.png"
-                  alt={t('landing.showcase.mobile.alt')}
-                  width={720}
-                  height={1600}
-                  className="w-full h-auto block"
-                  sizes="(max-width: 1024px) 190px, 210px"
-                />
-              </figure>
             </div>
           </div>
         </div>

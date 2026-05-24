@@ -53,7 +53,7 @@ describe('LandingPage hero', () => {
     vi.stubGlobal('IntersectionObserver', MockIntersectionObserver);
   });
 
-  it('puts the product preview directly inside the hero', () => {
+  it('renders the restored animation beside the current CTA copy', () => {
     render(
       <LocaleProvider initialLocale="en">
         <LandingPage />
@@ -62,16 +62,31 @@ describe('LandingPage hero', () => {
 
     const hero = screen.getByTestId('landing-hero');
     expect(within(hero).getByRole('heading', { level: 1 })).toHaveTextContent('Tus comunidades, bajo tu control');
-    expect(hero.querySelector('.animate-orbit')).not.toBeNull();
     expect(within(hero).getByText('Discord-style group chat built directly on Nostr relays.')).toBeInTheDocument();
     expect(within(hero).getByText('No accounts. No backend. Your keys, your relays.')).toBeInTheDocument();
 
-    const preview = within(hero).getByTestId('hero-product-preview');
-    expect(within(preview).getByAltText(/Obelisk desktop screenshot/i)).toHaveAttribute(
+    const animation = within(hero).getByTestId('hero-animation');
+    expect(animation.querySelector('.animate-float-up')).not.toBeNull();
+    expect(animation.querySelector('.animate-orbit')).not.toBeNull();
+    expect(animation.querySelector('.animate-orbit-vertical')).not.toBeNull();
+    expect(animation.querySelector('.animate-particle')).not.toBeNull();
+    expect(within(hero).queryByAltText(/Obelisk desktop screenshot/i)).not.toBeInTheDocument();
+  });
+
+  it('keeps the latest screenshot preview cards below the hero', () => {
+    render(
+      <LocaleProvider initialLocale="en">
+        <LandingPage />
+      </LocaleProvider>,
+    );
+
+    const desktopPreview = screen.getByTestId('landing-preview-desktop');
+    const mobilePreview = screen.getByTestId('landing-preview-mobile');
+    expect(within(desktopPreview).getByAltText(/Obelisk desktop screenshot/i)).toHaveAttribute(
       'src',
       '/pictures-for-posts/desktop-large-voice-channel-with-sfu-peer-trasmission-test.png',
     );
-    expect(within(preview).getByAltText(/Obelisk mobile screenshot/i)).toHaveAttribute(
+    expect(within(mobilePreview).getByAltText(/Obelisk mobile screenshot/i)).toHaveAttribute(
       'src',
       '/pictures-for-posts/mobile-server-and-channels-view.png',
     );
