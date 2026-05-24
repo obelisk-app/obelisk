@@ -22,6 +22,8 @@ interface DraftEmoji {
 const inputClasses =
   'w-full rounded border border-lc-border bg-lc-black px-2 py-1.5 text-sm text-lc-white outline-none focus:border-lc-green';
 const IMAGE_EXT_RE = /\.(png|jpe?g|gif|webp)$/i;
+const secondaryButtonClasses =
+  'rounded border border-lc-border px-3 py-1.5 text-sm text-lc-white hover:border-lc-green disabled:opacity-50';
 
 function shortHost(url: string): string {
   try {
@@ -65,6 +67,17 @@ function isEmojiImageFile(file: File): boolean {
   return file.type.startsWith('image/') || IMAGE_EXT_RE.test(file.name);
 }
 
+function draftEmojiIssue(row: DraftEmoji, nameCounts: ReadonlyMap<string, number>): string | null {
+  const name = normalizeCustomEmojiName(row.name);
+  const url = row.url.trim();
+  if (!name && !url) return null;
+  if (!name) return "Shortcode needed";
+  if (!url) return "Image URL needed";
+  if (!isValidCustomEmojiName(name)) return "Invalid shortcode";
+  if ((nameCounts.get(name) ?? 0) > 1) return "Duplicate shortcode";
+  return null;
+}
+
 export default function RelayEmojiAdminModal({
   relayUrl,
   emojiSet,
@@ -85,21 +98,82 @@ export default function RelayEmojiAdminModal({
   const [err, setErr] = useState<string | null>(null);
   const folderInputRef = useRef<HTMLInputElement | null>(null);
 
+  const [query, setQuery] = useState("");
   const shareTargets = useMemo(
     () => configuredRelays.filter((r) => r !== relayUrl),
     [configuredRelays, relayUrl],
   );
-  const [shareRelay, setShareRelay] = useState('');
-  const activeShareRelay = shareRelay && shareTargets.includes(shareRelay)
-    ? shareRelay
-    : (shareTargets[0] ?? '');
+  const [selectedShareRelays, setSelectedShareRelays] = useState<Set<string>>(
+    () => new Set(shareTargets[0] ? [shareTargets[0]] : []),
+  );
+  const [shareProgress, setShareProgress] = useState<{ done: number; total: number } | null>(null);
+  const [shareSuccess, setShareSuccess] = useState<string | null>(null);
+
+  const selectedShareTargets = useMemo(
+    () => shareTargets.filter((target) => selectedShareRelays.has(target)),
+    [selectedShareRelays, shareTargets],
+  );
+  const shareTargetCount = selectedShareTargets.length;
+
+  const nameCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const row of rows) {
+      const name = normalizeCustomEmojiName(row.name);
+      if (!name) continue;
+      counts.set(name, (counts.get(name) ?? 0) + 1);
+    }
+    return counts;
+  }, [rows]);
+
+  const rowIssues = useMemo(() => {
+    const issues = new Map<string, string>();
+    for (const row of rows) {
+      const issue = draftEmojiIssue(row, nameCounts);
+      if (issue) issues.set(row.id, issue);
+    }
+    return issues;
+  }, [nameCounts, rows]);
+  const hasRowIssues = rowIssues.size > 0;
+
+  const filteredRows = useMemo(() => {
+    const raw = query.trim().toLowerCase();
+    const normalized = normalizeCustomEmojiName(query);
+    if (!raw && !normalized) return rows;
+    return rows.filter((row) => {
+      const name = normalizeCustomEmojiName(row.name);
+      return name.includes(normalized) || row.url.toLowerCase().includes(raw);
+    });
+  }, [query, rows]);
+  const hiddenRowCount = rows.length - filteredRows.length;
 
   function updateRow(id: string, patch: Partial<DraftEmoji>) {
+    setShareSuccess(null);
     setRows((prev) => prev.map((row) => row.id === id ? { ...row, ...patch } : row));
   }
 
   function removeRow(id: string) {
+    setShareSuccess(null);
     setRows((prev) => prev.filter((row) => row.id !== id));
+  }
+
+  function toggleShareRelay(target: string) {
+    setShareSuccess(null);
+    setSelectedShareRelays((prev) => {
+      const next = new Set(prev);
+      if (next.has(target)) next.delete(target);
+      else next.add(target);
+      return next;
+    });
+  }
+
+  function selectAllShareTargets() {
+    setShareSuccess(null);
+    setSelectedShareRelays(new Set(shareTargets));
+  }
+
+  function clearShareTargets() {
+    setShareSuccess(null);
+    setSelectedShareRelays(new Set());
   }
 
   function buildSet(): RelayEmojiSet {
@@ -125,6 +199,7 @@ export default function RelayEmojiAdminModal({
   async function save() {
     setSaving(true);
     setErr(null);
+    setShareSuccess(null);
     try {
       await publishRelayEmojiSet(relayUrl, buildSet());
       onClose();
@@ -136,15 +211,23 @@ export default function RelayEmojiAdminModal({
   }
 
   async function share() {
-    if (!activeShareRelay) return;
+    if (shareTargetCount === 0 || hasRowIssues) return;
     setSharing(true);
     setErr(null);
+    setShareSuccess(null);
+    setShareProgress({ done: 0, total: shareTargetCount });
     try {
-      await publishRelayEmojiSet(activeShareRelay, buildSet());
+      const set = buildSet();
+      for (let i = 0; i < selectedShareTargets.length; i += 1) {
+        await publishRelayEmojiSet(selectedShareTargets[i], set);
+        setShareProgress({ done: i + 1, total: selectedShareTargets.length });
+      }
+      setShareSuccess(`Shared to ${selectedShareTargets.length} relay${selectedShareTargets.length === 1 ? "" : "s"}.`);
     } catch (e) {
       setErr((e as Error).message);
     } finally {
       setSharing(false);
+      setShareProgress(null);
     }
   }
 
@@ -152,6 +235,7 @@ export default function RelayEmojiAdminModal({
     if (!file) return;
     setUploadingId(row.id);
     setErr(null);
+    setShareSuccess(null);
     try {
       const url = await uploadToBlossom(file);
       updateRow(row.id, {
@@ -174,6 +258,7 @@ export default function RelayEmojiAdminModal({
 
     setFolderUpload({ done: 0, total: imageFiles.length });
     setErr(null);
+    setShareSuccess(null);
     const usedNames = new Set(
       rows.map((row) => normalizeCustomEmojiName(row.name)).filter(Boolean),
     );
@@ -200,200 +285,262 @@ export default function RelayEmojiAdminModal({
   return (
     <ModalShell
       onClose={onClose}
-      panelClassName="lc-card mx-4 flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden bg-lc-dark"
+      panelClassName="lc-card mx-3 flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden bg-lc-dark"
     >
-      <header className="flex shrink-0 items-center justify-between border-b border-lc-border px-5 py-3">
-        <div>
-          <div className="text-base font-bold text-lc-white">Relay emojis</div>
-          <div className="text-[11px] text-lc-muted">
-            Stored on {shortHost(relayUrl)} as NIP-51 kind 30030 emoji tags.
+      <header className="flex shrink-0 items-center justify-between gap-3 border-b border-lc-border px-5 py-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <div className="truncate text-base font-bold text-lc-white">Relay emojis</div>
+            <span className="rounded-full border border-lc-border px-2 py-0.5 text-[11px] text-lc-muted">
+              {rows.length} item{rows.length === 1 ? "" : "s"}
+            </span>
           </div>
+          <div className="truncate text-[11px] text-lc-muted">{shortHost(relayUrl)}</div>
         </div>
         <button
           onClick={onClose}
-          className="rounded p-1 text-lc-muted hover:bg-lc-card hover:text-lc-white"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-lc-muted hover:bg-lc-card hover:text-lc-white"
           aria-label="Close"
+          title="Close"
         >
           x
         </button>
       </header>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-5">
-        <div className="mb-4">
-          <label className="mb-1.5 block text-xs uppercase tracking-wider text-lc-muted">Set title</label>
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Obelisk emojis"
-            className={inputClasses}
-          />
-        </div>
+      <div className="grid min-h-0 flex-1 md:grid-cols-[minmax(0,1fr)_18rem]">
+        <section className="flex min-h-0 flex-col">
+          <div className="grid shrink-0 gap-3 border-b border-lc-border p-4 md:grid-cols-[minmax(0,1fr)_minmax(14rem,18rem)]">
+            <label className="block min-w-0">
+              <span className="mb-1.5 block text-xs uppercase tracking-wider text-lc-muted">Set title</span>
+              <input
+                value={title}
+                onChange={(e) => {
+                  setShareSuccess(null);
+                  setTitle(e.target.value);
+                }}
+                placeholder="Obelisk emojis"
+                className={inputClasses}
+              />
+            </label>
+            <label className="block min-w-0">
+              <span className="mb-1.5 block text-xs uppercase tracking-wider text-lc-muted">Search</span>
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="party, wave, .gif"
+                className={inputClasses}
+              />
+            </label>
+            <div className="flex flex-wrap items-center gap-2 md:col-span-2">
+              <button
+                type="button"
+                onClick={() => setRows((prev) => [...prev, emptyDraftEmoji()])}
+                className={secondaryButtonClasses}
+              >
+                Add emoji
+              </button>
+              <button
+                type="button"
+                onClick={() => folderInputRef.current?.click()}
+                disabled={!!folderUpload}
+                className={secondaryButtonClasses}
+              >
+                Upload folder
+              </button>
+              <input
+                ref={folderInputRef}
+                type="file"
+                multiple
+                accept="image/png,image/jpeg,image/gif,image/webp"
+                data-testid="relay-emoji-folder-input"
+                className="hidden"
+                {...({
+                  webkitdirectory: "",
+                  directory: "",
+                } as React.InputHTMLAttributes<HTMLInputElement> & {
+                  webkitdirectory: string;
+                  directory: string;
+                })}
+                onChange={(e) => {
+                  void uploadFolder(e.currentTarget.files);
+                  e.currentTarget.value = "";
+                }}
+              />
+              {folderUpload && (
+                <span className="text-xs text-lc-muted">
+                  Uploading {folderUpload.done}/{folderUpload.total}...
+                </span>
+              )}
+              {hiddenRowCount > 0 && (
+                <span className="text-xs text-lc-muted">{hiddenRowCount} hidden by search</span>
+              )}
+            </div>
+          </div>
 
-        <div className="overflow-hidden rounded border border-lc-border">
-          <table className="w-full text-sm">
-            <thead className="bg-lc-black/60 text-left text-[11px] uppercase text-lc-muted">
-              <tr>
-                <th className="w-16 px-3 py-2">Emoji</th>
-                <th className="px-2 py-2">Shortcode</th>
-                <th className="px-2 py-2">Image URL</th>
-                <th className="w-40 px-2 py-2">Upload</th>
-                <th className="w-20 px-2 py-2" />
-              </tr>
-            </thead>
-            <tbody>
-              {rows.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-sm text-lc-muted">
-                    No custom emojis on this relay yet.
-                  </td>
-                </tr>
-              ) : rows.map((row) => {
-                const normalized = normalizeCustomEmojiName(row.name);
-                return (
-                  <tr key={row.id} className="border-t border-lc-border/60">
-                    <td className="px-3 py-2">
-                      {row.url ? (
-                        <img
-                          src={row.url}
-                          alt={normalized ? `:${normalized}:` : ''}
-                          className="h-9 w-9 rounded bg-lc-black object-contain"
-                        />
-                      ) : (
-                        <div className="h-9 w-9 rounded bg-lc-black" />
-                      )}
-                    </td>
-                    <td className="px-2 py-2">
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            {rows.length === 0 ? (
+              <div className="px-4 py-10 text-center text-sm text-lc-muted">
+                No custom emojis on this relay yet.
+              </div>
+            ) : filteredRows.length === 0 ? (
+              <div className="px-4 py-10 text-center text-sm text-lc-muted">
+                No emojis match this search.
+              </div>
+            ) : filteredRows.map((row) => {
+              const normalized = normalizeCustomEmojiName(row.name);
+              const issue = rowIssues.get(row.id);
+              return (
+                <div key={row.id} className="grid gap-3 border-b border-lc-border/60 px-4 py-3 md:grid-cols-[3rem_minmax(0,1fr)_auto]">
+                  <div className="flex md:block">
+                    {row.url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={row.url}
+                        alt={normalized ? ":" + normalized + ":" : ""}
+                        className="h-12 w-12 rounded bg-lc-black object-contain"
+                      />
+                    ) : (
+                      <div className="h-12 w-12 rounded bg-lc-black" />
+                    )}
+                  </div>
+                  <div className="grid min-w-0 gap-2 md:grid-cols-[minmax(9rem,14rem)_minmax(0,1fr)]">
+                    <label className="min-w-0">
+                      <span className="mb-1 block text-[10px] uppercase tracking-wider text-lc-muted">Shortcode</span>
                       <input
                         value={row.name}
                         onChange={(e) => updateRow(row.id, { name: e.target.value })}
                         onBlur={() => updateRow(row.id, { name: normalized })}
                         placeholder="party"
                         className={inputClasses}
+                        aria-invalid={!!issue}
                       />
-                      {normalized && (
-                        <div className="mt-1 text-[10px] text-lc-muted">:{normalized}:</div>
-                      )}
-                    </td>
-                    <td className="px-2 py-2">
+                      <div className="mt-1 min-h-4 text-[10px]">
+                        {issue ? (
+                          <span className="text-red-300">{issue}</span>
+                        ) : normalized ? (
+                          <span className="text-lc-muted">:{normalized}:</span>
+                        ) : null}
+                      </div>
+                    </label>
+                    <label className="min-w-0">
+                      <span className="mb-1 block text-[10px] uppercase tracking-wider text-lc-muted">Image URL</span>
                       <input
                         value={row.url}
                         onChange={(e) => updateRow(row.id, { url: e.target.value })}
                         placeholder="https://..."
                         className={inputClasses}
                       />
-                    </td>
-                    <td className="px-2 py-2">
+                    </label>
+                  </div>
+                  <div className="flex items-end gap-2 md:flex-col md:items-stretch md:justify-end">
+                    <label className={secondaryButtonClasses + " cursor-pointer text-center"}>
+                      <span>{uploadingId === row.id ? "Uploading..." : "Upload"}</span>
                       <input
                         type="file"
                         accept="image/png,image/jpeg,image/gif,image/webp"
                         disabled={uploadingId === row.id}
                         onChange={(e) => {
                           void upload(row, e.currentTarget.files?.[0] ?? null);
-                          e.currentTarget.value = '';
+                          e.currentTarget.value = "";
                         }}
-                        className="block w-full text-xs text-lc-muted file:mr-2 file:rounded file:border-0 file:bg-lc-card file:px-2 file:py-1 file:text-xs file:text-lc-white hover:file:bg-lc-border"
+                        className="hidden"
                       />
-                      {uploadingId === row.id && (
-                        <div className="mt-1 text-[10px] text-lc-green">Uploading...</div>
-                      )}
-                    </td>
-                    <td className="px-2 py-2 text-right">
-                      <button
-                        type="button"
-                        onClick={() => removeRow(row.id)}
-                        className="rounded px-2 py-1 text-xs text-red-300 hover:bg-red-500/10"
-                      >
-                        Remove
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setRows((prev) => [...prev, emptyDraftEmoji()])}
-            className="rounded border border-lc-border px-3 py-1.5 text-sm text-lc-white hover:border-lc-green"
-          >
-            Add emoji
-          </button>
-          <button
-            type="button"
-            onClick={() => folderInputRef.current?.click()}
-            disabled={!!folderUpload}
-            className="rounded border border-lc-border px-3 py-1.5 text-sm text-lc-white hover:border-lc-green disabled:opacity-50"
-          >
-            Upload folder
-          </button>
-          <input
-            ref={folderInputRef}
-            type="file"
-            multiple
-            accept="image/png,image/jpeg,image/gif,image/webp"
-            data-testid="relay-emoji-folder-input"
-            className="hidden"
-            {...({
-              webkitdirectory: '',
-              directory: '',
-            } as React.InputHTMLAttributes<HTMLInputElement> & {
-              webkitdirectory: string;
-              directory: string;
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => removeRow(row.id)}
+                      className="rounded border border-transparent px-3 py-1.5 text-sm text-red-300 hover:border-red-500/40 hover:bg-red-500/10"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              );
             })}
-            onChange={(e) => {
-              void uploadFolder(e.currentTarget.files);
-              e.currentTarget.value = '';
-            }}
-          />
-          {folderUpload && (
-            <span className="text-xs text-lc-muted">
-              Uploading {folderUpload.done}/{folderUpload.total}...
-            </span>
-          )}
-        </div>
-
-        <div className="mt-5 flex flex-wrap items-end gap-2 border-t border-lc-border pt-4">
-          <div className="min-w-[220px] flex-1">
-            <label className="mb-1.5 block text-xs uppercase tracking-wider text-lc-muted">
-              Share this list to another relay
-            </label>
-            <select
-              value={activeShareRelay}
-              onChange={(e) => setShareRelay(e.target.value)}
-              disabled={shareTargets.length === 0}
-              className={inputClasses}
-            >
-              {shareTargets.length === 0 ? (
-                <option value="">No other configured relays</option>
-              ) : shareTargets.map((target) => (
-                <option key={target} value={target}>{shortHost(target)}</option>
-              ))}
-            </select>
           </div>
-          <button
-            type="button"
-            onClick={share}
-            disabled={sharing || !!folderUpload || !activeShareRelay}
-            className="rounded-lg border border-lc-border px-4 py-1.5 text-sm font-semibold text-lc-white hover:border-lc-green disabled:opacity-50"
-          >
-            {sharing ? 'Sharing...' : 'Share'}
-          </button>
-        </div>
+        </section>
 
-        {err && <p className="mt-4 text-xs text-red-400">{err}</p>}
+        <aside className="flex min-h-0 flex-col border-t border-lc-border bg-lc-black/30 md:border-l md:border-t-0">
+          <div className="border-b border-lc-border p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-sm font-semibold text-lc-white">Share to relays</div>
+                <div className="text-[11px] text-lc-muted">
+                  {shareTargets.length === 0 ? "No targets" : shareTargetCount + "/" + shareTargets.length + " selected"}
+                </div>
+              </div>
+              {shareTargets.length > 1 && (
+                <div className="flex gap-2 text-[11px]">
+                  <button type="button" onClick={selectAllShareTargets} className="text-lc-green hover:underline">
+                    All
+                  </button>
+                  <button type="button" onClick={clearShareTargets} className="text-lc-muted hover:text-lc-white">
+                    None
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto p-3">
+            {shareTargets.length === 0 ? (
+              <div className="rounded border border-lc-border px-3 py-4 text-center text-xs text-lc-muted">
+                No other configured relays.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {shareTargets.map((target) => {
+                  const checked = selectedShareRelays.has(target);
+                  return (
+                    <label
+                      key={target}
+                      className={
+                        "flex cursor-pointer items-center gap-3 rounded border px-3 py-2 text-sm transition " +
+                        (checked
+                          ? "border-lc-green/70 bg-lc-green/10 text-lc-white"
+                          : "border-lc-border text-lc-muted hover:border-lc-green/50 hover:text-lc-white")
+                      }
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleShareRelay(target)}
+                        className="h-4 w-4 accent-lc-green"
+                      />
+                      <span className="min-w-0 flex-1 truncate">{shortHost(target)}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className="border-t border-lc-border p-4">
+            <button
+              type="button"
+              onClick={share}
+              disabled={sharing || !!folderUpload || hasRowIssues || shareTargetCount === 0}
+              className="w-full rounded-lg border border-lc-border px-4 py-2 text-sm font-semibold text-lc-white hover:border-lc-green disabled:opacity-50"
+            >
+              {sharing && shareProgress
+                ? "Sharing " + shareProgress.done + "/" + shareProgress.total + "..."
+                : "Share to " + shareTargetCount + " relay" + (shareTargetCount === 1 ? "" : "s")}
+            </button>
+            {shareSuccess && <div className="mt-2 text-xs text-lc-green">{shareSuccess}</div>}
+          </div>
+        </aside>
       </div>
+
+      {err && <p className="shrink-0 border-t border-lc-border px-5 py-2 text-xs text-red-400">{err}</p>}
 
       <footer className="flex shrink-0 items-center justify-end gap-2 border-t border-lc-border px-5 py-3">
         <button onClick={onClose} className="lc-pill lc-pill-secondary text-xs">Cancel</button>
         <button
           onClick={save}
-          disabled={saving || !!folderUpload}
+          disabled={saving || !!folderUpload || hasRowIssues}
           className="rounded-lg bg-lc-green px-4 py-1.5 text-sm font-semibold text-lc-black disabled:opacity-50"
         >
-          {saving ? 'Saving...' : 'Save'}
+          {saving ? "Saving..." : "Save"}
         </button>
       </footer>
     </ModalShell>
