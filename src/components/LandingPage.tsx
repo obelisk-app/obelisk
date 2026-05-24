@@ -136,7 +136,7 @@ function LandingHeroAnimation() {
   return (
     <div
       data-testid="hero-animation"
-      className="relative mx-auto h-[330px] w-full max-w-[520px] overflow-hidden lg:h-[440px]"
+      className="relative mx-auto h-[330px] w-full max-w-[520px] min-w-0 overflow-hidden lg:h-[440px]"
       aria-hidden="true"
     >
       <div className="absolute inset-0 rounded-full bg-lc-green/5 blur-[120px] pointer-events-none" />
@@ -341,8 +341,8 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto grid gap-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-center relative z-10">
           <LandingHeroAnimation />
 
-          <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
-            <h1 className={(locale === 'es' ? 'text-xl min-[380px]:text-2xl sm:text-4xl lg:text-[2.55rem] xl:text-5xl whitespace-nowrap' : 'text-4xl sm:text-5xl lg:text-6xl') + ' font-extrabold tracking-tight leading-[1.05] mb-4 max-w-[680px]'}>
+          <div className="flex min-w-0 flex-col items-center text-center lg:items-start lg:text-left">
+            <h1 className={(locale === 'es' ? 'text-sm min-[360px]:text-base min-[380px]:text-lg sm:text-4xl lg:text-[2.55rem] xl:text-5xl whitespace-nowrap' : 'text-4xl sm:text-5xl lg:text-6xl') + ' w-full font-extrabold tracking-normal leading-[1.05] mb-4 max-w-[680px]'}>
               {t('hero.title')}{' '}
               <span className="text-lc-green lc-glow-text">{t('hero.titleHighlight')}</span>
             </h1>
