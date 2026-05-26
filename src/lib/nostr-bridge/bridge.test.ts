@@ -1409,6 +1409,11 @@ describe('nostr-bridge', () => {
     const kind0Subs = fake.state.subscriptions.filter((s) => (s.filter.kinds as number[] | undefined)?.includes(0));
     expect(kind0Subs).toHaveLength(1);
     expect(kind0Subs[0].relays).toEqual(['wss://public.obelisk.ar']);
+    const contactMuteSubs = fake.state.subscriptions.filter((s) => {
+      const kinds = s.filter.kinds as number[] | undefined;
+      return kinds?.includes(3) || kinds?.includes(10000);
+    });
+    expect(contactMuteSubs.every((s) => s.relays?.every((r) => r === 'wss://public.obelisk.ar'))).toBe(true);
     expect(kind0Subs[0].relays).not.toContain('wss://nos.lol');
     expect(kind0Subs[0].relays).not.toContain('wss://relay.primal.net');
     expect(kind0Subs[0].relays).not.toContain('wss://relay.nostr.band');

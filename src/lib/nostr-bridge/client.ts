@@ -4603,8 +4603,10 @@ class BridgeImpl implements NostrBridge {
 
   private async lookupExternalUserMetadata(pubkey: string): Promise<void> {
     const now = Date.now();
-    const last = this.profileLookupAt.get(pubkey) ?? 0;
-    if (now - last < OTHER_PROFILE_LOOKUP_TTL_MS) return;
+    const state = this.session?.pubKeyHex === pubkey ? loadProfileSyncState() : null;
+    const last = state?.ownProfileLookupAt[pubkey] ?? this.profileLookupAt.get(pubkey) ?? 0;
+    const ttl = this.session?.pubKeyHex === pubkey ? OWN_PROFILE_LOOKUP_TTL_MS : OTHER_PROFILE_LOOKUP_TTL_MS;
+    if (now - last < ttl) return;
     const inFlight = this.profileLookupInFlight.get(pubkey);
     if (inFlight) return inFlight;
     const p = (async () => {
@@ -4615,11 +4617,21 @@ class BridgeImpl implements NostrBridge {
           { kinds: [KIND_USER_METADATA], authors: [pubkey], limit: 5 },
           { maxWait: PROFILE_LOOKUP_MAX_WAIT_MS },
         );
+        if (state) {
+          const next = loadProfileSyncState();
+          next.ownProfileLookupAt[pubkey] = now;
+          saveProfileSyncState(next);
+        }
         const newest = newestEvent(events.filter((e) => e.kind === KIND_USER_METADATA && e.pubkey === pubkey));
         if (!newest) return;
         setCachedKind0(newest);
         this.ingestUserMetadata(newest, { cacheRelayScoped: false });
       } catch {
+        if (state) {
+          const next = loadProfileSyncState();
+          next.ownProfileLookupAt[pubkey] = now;
+          saveProfileSyncState(next);
+        }
         // best-effort only
       } finally {
         this.profileLookupInFlight.delete(pubkey);
@@ -4783,13 +4795,13 @@ class BridgeImpl implements NostrBridge {
   private subscribeMyContactList(): void {
     if (!this.session) return;
     const filter: Filter = { kinds: [3], authors: [this.session.pubKeyHex], limit: 1 };
-    // Kind 3 (NIP-02 contact list) is rarely on the dex's NIP-29 relay —
-    // users publish it to their general-purpose relays (damus, nos.lol, …).
-    // Subscribing only on `this.relays` left the Follows tab perpetually
-    // empty for anyone whose contact list lives elsewhere.
-    const relays = Array.from(new Set([...this.relays, ...PROFILE_RELAYS]));
+    // Kind 3 (NIP-02 contact list) is often published to profile/outbox
+    // relays, but normal server browsing must not hold persistent external
+    // subscriptions open. Keep the live watch scoped to the active relay; a
+    // separate bounded one-shot can be added for cross-client import if the
+    // Follows UX needs it.
     let latestCreatedAt = 0;
-    const sub = this.subscribeWatched(relays, filter, (ev) => {
+    const sub = this.subscribeWatched(this.relays, filter, (ev) => {
       // Multiple relays may return different revisions of kind 3; keep the
       // newest by created_at so an older replica doesn't clobber a newer one.
       if (ev.created_at <= latestCreatedAt) return;
@@ -4804,12 +4816,10 @@ class BridgeImpl implements NostrBridge {
   private subscribeMyMuteList(): void {
     if (!this.session) return;
     const filter: Filter = { kinds: [KIND_MUTE_LIST], authors: [this.session.pubKeyHex], limit: 1 };
-    // Like kind 3, the mute list is typically published to general-purpose
-    // relays rather than the dex's NIP-29 relay — widen the search so we
-    // don't miss it.
-    const relays = Array.from(new Set([...this.relays, ...PROFILE_RELAYS]));
+    // Like kind 3, mute lists may live on profile/outbox relays. Do not keep
+    // persistent external subscriptions open during normal server browsing.
     let latestCreatedAt = 0;
-    const sub = this.subscribeWatched(relays, filter, (ev) => {
+    const sub = this.subscribeWatched(this.relays, filter, (ev) => {
       if (ev.created_at <= latestCreatedAt) return;
       latestCreatedAt = ev.created_at;
       this.myMutes.set(getAllTags(ev, 'p'));
