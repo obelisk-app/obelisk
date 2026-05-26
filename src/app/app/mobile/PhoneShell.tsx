@@ -17,7 +17,6 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { flushSync } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import {
   nostrActions,
@@ -110,6 +109,7 @@ import {
 import { useReadStateStore, type InboxEvent } from '@/store/read-state';
 import {
   useChannelHighlights,
+  useCachedChannelHighlights,
   useDMUnreadCount,
   useTotalDMUnread,
   useInboxUnreadCount,
@@ -120,7 +120,7 @@ import { useMessageZapStore } from '@/store/messageZap';
 import { useNostrPresence, PRESENCE_WINDOW_MS } from '@/hooks/chat/useNostrPresence';
 import MessageZapModal from '@/components/chat/MessageZapModal';
 import { type ScreenName, type NavState, initialNav, urlFor, parseUrl } from './url-state';
-import { buildSeedHistory, decideSnap, decideSwipeNav, decideTabPress, neighborsFor, NAV_ORDER, resolveParent, SUB_TO_NAV } from './swipe-nav';
+import { buildSeedHistory, decideSnap, decideSwipeNav, decideTabPress, neighborsFor, NAV_ORDER, resolveParent } from './swipe-nav';
 import { useKeyboardInset } from './use-keyboard';
 // CSS is hoisted to AppGate.tsx so it lands in the route's eagerly-loaded
 // stylesheet, not in this dynamic chunk's late-arriving sidecar.
@@ -351,6 +351,17 @@ function BottomNav({
         </button>
       ))}
     </nav>
+  );
+}
+
+export function shouldHideMobileBottomNav(screen: ScreenName, kbInset: number): boolean {
+  return (
+    screen === 'voice-room' ||
+    screen === 'profile-view' ||
+    screen === 'search' ||
+    screen === 'compose-dm' ||
+    screen === 'profile-edit' ||
+    kbInset > 0
   );
 }
 
@@ -2006,7 +2017,7 @@ function ChannelRow({
   indent?: boolean;
 }) {
   const myPubkey = useMyPubkey();
-  const highlights = useChannelHighlights(group.id, myPubkey);
+  const highlights = useCachedChannelHighlights(group.id, myPubkey);
   const unread = highlights.unread;
   const mentionsOrReplies = highlights.mentions + highlights.replies;
   const name = group.name ?? group.id.slice(0, 8);
@@ -3893,7 +3904,13 @@ function ComposeRecentRow({ peer, onClick }: { peer: string; onClick: () => void
 // ───────────────────────────────────────────────────────────────────────────
 // 12 — search
 
-function SearchScreen({ back }: { back: () => void }) {
+export function SearchScreen({
+  back,
+  selectGroup,
+}: {
+  back: () => void;
+  selectGroup: (groupId: string, kind: JsGroup['kind']) => void;
+}) {
   const [query, setQuery] = useState('');
   const [chip, setChip] = useState<'all' | 'from' | 'in' | 'mentions' | 'has-image'>('all');
   const groups = useGroups();
@@ -3931,7 +3948,7 @@ function SearchScreen({ back }: { back: () => void }) {
           .filter((g) => !query || (g.name ?? '').toLowerCase().includes(query.toLowerCase()))
           .slice(0, 30)
           .map((g) => (
-            <button key={g.id} className="ch-row" onClick={() => { /* navigate */ }}>
+            <button key={g.id} className="ch-row" onClick={() => selectGroup(g.id, g.kind)}>
               <span className="ch-icon">#</span>
               <span className="ch-name">{g.name ?? g.id.slice(0, 8)}</span>
             </button>
@@ -5336,16 +5353,14 @@ export default function MobileShell() {
   const [isDragging, setIsDragging] = useState(false);
   const dragLayerRef = useRef<HTMLDivElement>(null);
   const screensHostRef = useRef<HTMLDivElement>(null);
+  // Pending animation timer for tap-switches. Rapid direct navigation (search,
+  // channel row, DM row) must cancel it so the delayed tab switch cannot
+  // overwrite the user's latest tap.
+  const tabAnimTimerRef = useRef<number | null>(null);
   // After a drag-commit we suppress the next slide-from-x animation so the
   // newly-mounted screen doesn't double-animate (the drag layer already
   // animated it into place).
   const suppressSlideRef = useRef(false);
-  // Remembers the last sub-screen the user was on for each top-level tab so
-  // that tapping that tab's bottom-nav item from a different tab restores the
-  // user to where they left off (e.g. server>channelA → DMs → tap Servers
-  // returns to channelA, not the bare server list). Tapping the same tab's
-  // button while already inside it still pops to the bare top-level.
-  const lastSubScreenByTabRef = useRef<Partial<Record<ScreenName, NavState>>>({});
 
   // ── navigation helpers ───────────────────────────────────────────────
   // We update `useChatStore.activeChannelId` / `useDMStore.activeDMPubkey`
@@ -5372,11 +5387,25 @@ export default function MobileShell() {
     });
   }, []);
 
+  const cancelPendingTabTransition = useCallback(() => {
+    if (tabAnimTimerRef.current !== null) {
+      window.clearTimeout(tabAnimTimerRef.current);
+      tabAnimTimerRef.current = null;
+    }
+    setIsDragging(false);
+    const layer = dragLayerRef.current;
+    if (layer) {
+      layer.style.transition = 'none';
+      layer.style.transform = '';
+    }
+  }, []);
+
   const go = useCallback((screen: ScreenName, dir: 'forward' | 'back' = 'forward') => {
     if (dir === 'back' && typeof window !== 'undefined') {
       window.history.back();
       return;
     }
+    cancelPendingTabTransition();
     // Sibling tabs in the settings group (Profile ↔ Preferences) toggle
     // in-place. They visually share the `.settings-tabs` strip, so a slide
     // animation reads as broken — the user tapped a tab, not navigated to
@@ -5387,63 +5416,22 @@ export default function MobileShell() {
       (prev === 'settings-prefs' && screen === 'settings-profile');
     if (isSettingsTabSwitch) suppressSlideRef.current = true;
 
-    // Tab-aware "remember where I was" logic. If the user is leaving one
-    // top-level tab (or any of its sub-screens) for a *different* top-level
-    // tab, snapshot the current nav so a return tap can restore it. Sheets
-    // are transient overlays — collapse them to their underlying base screen
-    // before remembering.
-    const prevParent = NAV_ORDER.includes(prev) ? prev : (SUB_TO_NAV[prev] ?? null);
-    const targetIsTopLevel = NAV_ORDER.includes(screen);
-    if (prevParent && targetIsTopLevel && prevParent !== screen) {
-      if (NAV_ORDER.includes(prev)) {
-        // Leaving from the bare tab → no sub-screen to remember; clear any
-        // stale memory so the next return doesn't restore an old position.
-        delete lastSubScreenByTabRef.current[prevParent];
-      } else if (prev === 'msg-actions' || prev === 'zap-modal') {
-        const base = navRef.current.baseScreen;
-        if (base) {
-          lastSubScreenByTabRef.current[prevParent] = {
-            ...navRef.current,
-            screen: base,
-            baseScreen: null,
-            msgContext: null,
-          };
-        }
-      } else {
-        lastSubScreenByTabRef.current[prevParent] = navRef.current;
-      }
-    }
-
-    // When tapping a *different* tab's bottom-nav item, restore that tab's
-    // remembered sub-screen if any. Tapping the active tab's button while
-    // already inside one of its sub-screens still pops to the bare tab.
-    if (targetIsTopLevel && prevParent !== screen) {
-      const remembered = lastSubScreenByTabRef.current[screen];
-      if (remembered) {
-        useChatStore.setState({
-          activeChannelId: remembered.screen === 'channel' ? remembered.groupId : null,
-        });
-        useDMStore.setState({
-          activeDMPubkey: remembered.screen === 'dm-thread' ? remembered.dmPeer : null,
-        });
-        pushNav(() => remembered, dir);
-        return;
-      }
-    }
-
     if (screen !== 'channel') useChatStore.setState({ activeChannelId: null });
     if (screen !== 'dm-thread') useDMStore.setState({ activeDMPubkey: null });
-    pushNav((n) => ({
-      ...n,
-      screen,
-      baseScreen: null,
-      msgContext: null,
-      // Top-level targets clear the parent; sub-screen targets record where
-      // we came from so the bottom-nav highlight + swipe-back behave correctly
-      // for screens reachable from multiple tabs (search, etc).
-      parentScreen: NAV_ORDER.includes(screen) ? null : n.screen,
-    }), dir);
-  }, [pushNav]);
+    pushNav((n) => {
+      if (NAV_ORDER.includes(screen)) return { ...initialNav, screen };
+      return {
+        ...n,
+        screen,
+        baseScreen: null,
+        msgContext: null,
+        // Sub-screen targets record where we came from so the bottom-nav
+        // highlight + swipe-back behave correctly for screens reachable from
+        // multiple tabs (search, etc).
+        parentScreen: n.screen,
+      };
+    }, dir);
+  }, [cancelPendingTabTransition, pushNav]);
 
   // VoiceStatusBar "jump back to call": the bar lives outside the screens host
   // and can't reach `pushNav` directly, so it dispatches through the
@@ -5460,7 +5448,17 @@ export default function MobileShell() {
       // Voice jump originates from outside the shell (status bar etc.) — no
       // meaningful entry parent. Anchor to 'server' so the highlight + swipe
       // behave like opening voice from the channel list.
-      pushNav((n) => ({ ...n, screen: 'voice-room', groupId: channelId, baseScreen: null, msgContext: null, parentScreen: 'server' }));
+      pushNav((n) => ({
+        ...n,
+        screen: 'voice-room',
+        groupId: channelId,
+        dmPeer: null,
+        profilePubkey: null,
+        forumGroupId: null,
+        baseScreen: null,
+        msgContext: null,
+        parentScreen: 'server',
+      }));
     });
   }, [currentRelayUrl, pushNav]);
 
@@ -5653,67 +5651,22 @@ export default function MobileShell() {
     const layer = dragLayerRef.current;
     const TRANSITION = 'transform 240ms cubic-bezier(0.2, 0.85, 0.25, 1)';
     if (snap === 'commit' && action.kind === 'top-level') {
-      // Snapshot where the user is leaving from so a return swipe/tap to this
-      // tab can restore the same sub-screen.
-      const leavingFrom = navRef.current.screen;
-      const leavingParent = NAV_ORDER.includes(leavingFrom)
-        ? leavingFrom
-        : resolveParent(navRef.current);
-      if (leavingParent && leavingParent !== action.target) {
-        if (NAV_ORDER.includes(leavingFrom)) {
-          delete lastSubScreenByTabRef.current[leavingParent];
-        } else if (leavingFrom !== 'msg-actions' && leavingFrom !== 'zap-modal') {
-          lastSubScreenByTabRef.current[leavingParent] = navRef.current;
-        }
-      }
-
-      const remembered = lastSubScreenByTabRef.current[action.target];
-
-      if (remembered) {
-        // Path B (mirrors commitCarouselTransition Path B): pre-mount the
-        // destination overlay via flushSync, then animate the layer from an
-        // offset that keeps the leaving screen visually at the same viewport
-        // position the finger left it.
-        const offsetAdjust = action.dir === 'back' ? -width : width;
-        const startTx = dx - offsetAdjust;
-        suppressSlideRef.current = true;
-        flushSync(() => {
-          useChatStore.setState({
-            activeChannelId: remembered.screen === 'channel' ? remembered.groupId : null,
-          });
-          useDMStore.setState({
-            activeDMPubkey: remembered.screen === 'dm-thread' ? remembered.dmPeer : null,
-          });
-          pushNav(() => remembered, action.dir);
-        });
-        if (layer) {
-          layer.style.transition = 'none';
-          layer.style.transform = `translateX(${startTx}px)`;
-          void layer.offsetHeight;
-          layer.style.transition = TRANSITION;
-          layer.style.transform = 'translateX(0)';
-        }
-      } else {
-        // Path A: animate first, push after. The leaving overlay (if any)
-        // stays mounted and slides off with the layer; the bare destination
-        // is already in the neighbor slot and slides in.
-        const targetTx = goingRight ? width : -width;
-        if (layer) {
-          layer.style.transition = TRANSITION;
-          layer.style.transform = `translateX(${targetTx}px)`;
-        }
+      // Animate first, push after. Top-level tab switches always land on the
+      // actual tab, not a remembered thread/channel/voice room.
+      const targetTx = goingRight ? width : -width;
+      if (layer) {
+        layer.style.transition = TRANSITION;
+        layer.style.transform = `translateX(${targetTx}px)`;
       }
 
       window.setTimeout(() => {
-        if (!remembered) {
-          suppressSlideRef.current = true;
-          useChatStore.setState({ activeChannelId: null });
-          useDMStore.setState({ activeDMPubkey: null });
-          pushNav(
-            (n) => ({ ...n, screen: action.target, baseScreen: null, msgContext: null, parentScreen: null }),
-            action.dir,
-          );
-        }
+        suppressSlideRef.current = true;
+        useChatStore.setState({ activeChannelId: null });
+        useDMStore.setState({ activeDMPubkey: null });
+        pushNav(
+          () => ({ ...initialNav, screen: action.target }),
+          action.dir,
+        );
         setIsDragging(false);
       }, 240);
     } else {
@@ -5802,25 +5755,71 @@ export default function MobileShell() {
   const kbInset = useKeyboardInset();
 
   const selectGroup = useCallback((groupId: string, kind: JsGroup['kind']) => {
+    cancelPendingTabTransition();
     if (kind === 'voice' || kind === 'voice-sfu') {
       useChatStore.setState({ activeChannelId: null });
-      pushNav((n) => ({ ...n, screen: 'voice-room', groupId, parentScreen: n.screen }));
+      useDMStore.setState({ activeDMPubkey: null });
+      pushNav((n) => ({
+        ...n,
+        screen: 'voice-room',
+        groupId,
+        dmPeer: null,
+        profilePubkey: null,
+        forumGroupId: null,
+        baseScreen: null,
+        msgContext: null,
+        parentScreen: 'server',
+      }));
     } else if (kind === 'forum') {
       useChatStore.setState({ activeChannelId: null });
-      pushNav((n) => ({ ...n, screen: 'forum', groupId, forumGroupId: groupId, parentScreen: n.screen }));
+      useDMStore.setState({ activeDMPubkey: null });
+      pushNav((n) => ({
+        ...n,
+        screen: 'forum',
+        groupId,
+        forumGroupId: groupId,
+        dmPeer: null,
+        profilePubkey: null,
+        baseScreen: null,
+        msgContext: null,
+        parentScreen: 'server',
+      }));
     } else {
       // Pure navigation. The cursor is advanced by `useAutoMarkRead` once the
       // user is actually watching the channel (visible + focused + active).
       useChatStore.setState({ activeChannelId: groupId, isNearBottom: true });
-      pushNav((n) => ({ ...n, screen: 'channel', groupId, parentScreen: n.screen }));
+      useDMStore.setState({ activeDMPubkey: null });
+      pushNav((n) => ({
+        ...n,
+        screen: 'channel',
+        groupId,
+        dmPeer: null,
+        profilePubkey: null,
+        forumGroupId: null,
+        baseScreen: null,
+        msgContext: null,
+        parentScreen: 'server',
+      }));
     }
-  }, [pushNav]);
+  }, [cancelPendingTabTransition, pushNav]);
   const selectPeer = useCallback((peer: string) => {
+    cancelPendingTabTransition();
     // Pure navigation. The cursor is advanced by `useAutoMarkRead` once the
     // DM thread is open, focused, and visible.
+    useChatStore.setState({ activeChannelId: null });
     useDMStore.setState({ activeDMPubkey: peer });
-    pushNav((n) => ({ ...n, screen: 'dm-thread', dmPeer: peer, parentScreen: n.screen }));
-  }, [pushNav]);
+    pushNav((n) => ({
+      ...n,
+      screen: 'dm-thread',
+      groupId: null,
+      dmPeer: peer,
+      profilePubkey: null,
+      forumGroupId: null,
+      baseScreen: null,
+      msgContext: null,
+      parentScreen: 'dms-list',
+    }));
+  }, [cancelPendingTabTransition, pushNav]);
   // Cross-context screens: stamp parentScreen with the current screen so the
   // bottom-nav highlight + swipe direction reflect where the user came from.
   // E.g. profile-view from Inbox keeps Inbox as parent; from a channel keeps
@@ -5871,101 +5870,23 @@ export default function MobileShell() {
   }, []);
 
   // ── bottom-nav: direction-aware tab switching ───────────────────────
-  // Pending animation timer for tap-switches. Rapid taps replace it so the
-  // earlier animation's `setIsDragging(false)` cleanup doesn't interrupt
-  // the in-flight new one.
-  const tabAnimTimerRef = useRef<number | null>(null);
-
-  // Shared with finishDrag's swipe-commit branch: snapshot the user's
-  // current sub-screen position so a return to the leaving tab restores
-  // it. Sheets are collapsed to their base before remembering.
-  const snapshotTabMemory = useCallback((target: ScreenName) => {
-    const cur = navRef.current;
-    const fromScreen = cur.screen;
-    const fromTab = NAV_ORDER.includes(fromScreen) ? fromScreen : resolveParent(cur);
-    if (!fromTab || fromTab === target) return;
-    if (NAV_ORDER.includes(fromScreen)) {
-      delete lastSubScreenByTabRef.current[fromTab];
-    } else if (fromScreen === 'msg-actions' || fromScreen === 'zap-modal') {
-      const base = cur.baseScreen;
-      if (base) {
-        lastSubScreenByTabRef.current[fromTab] = {
-          ...cur,
-          screen: base,
-          baseScreen: null,
-          msgContext: null,
-        };
-      }
-    } else {
-      lastSubScreenByTabRef.current[fromTab] = cur;
-    }
-  }, []);
-
-  // Tap-switch animation. Two paths depending on whether the target tab has
-  // a remembered sub-screen, because the visual contracts differ:
-  //
-  // • No remembered → simple bare-tab switch.
-  //   Animate the drag-layer FIRST, push the new nav AFTER. The leaving
-  //   overlay (if any) stays mounted during the slide and rides inside the
-  //   layer to the off-screen side. The destination bare tab is already
-  //   pre-rendered in the neighbor slot (drag-prev/drag-next) and slides
-  //   into view as the layer translates. This is the original code path
-  //   that has always worked for plain tab swaps — touching it caused the
-  //   "channel fades away when going to DMs" regression.
-  //
-  // • Has remembered → restore a sub-screen the user was on previously.
-  //   Push the new nav FIRST via flushSync, then position the layer at the
-  //   offset where the leaving content remains at viewport center, then
-  //   animate to translateX(0). The destination overlay is mounted and
-  //   rides inside the layer, so the user sees their remembered channel
-  //   sliding in (no "bare destination tab flashes then overlay snaps in"
-  //   glitch).
-  //
-  // In both paths the post-animation cleanup is identical: 240 ms after
-  // kickoff, setIsDragging(false). The layout effect then clears the
-  // inline transform and resets suppressSlideRef in a rAF.
+  // Tap-switch animation. Top-level buttons are literal: DMs opens DMs,
+  // Servers opens the channel list, etc. Sub-screens can still be popped by
+  // tapping their active tab, but cross-tab switches never restore a hidden
+  // thread/channel/voice-room.
   const commitCarouselTransition = useCallback((target: ScreenName, dir: 'forward' | 'back') => {
-    snapshotTabMemory(target);
     const layer = dragLayerRef.current;
     const width = screensHostRef.current?.clientWidth ?? (typeof window !== 'undefined' ? window.innerWidth : 0);
-    const remembered = lastSubScreenByTabRef.current[target];
     const TRANSITION = 'transform 240ms cubic-bezier(0.2, 0.85, 0.25, 1)';
 
-    if (remembered) {
-      // Path B — pre-mount the destination overlay.
-      const initialOffset = dir === 'back' ? -width : width;
-      suppressSlideRef.current = true;
-      flushSync(() => {
-        setIsDragging(true);
-        useChatStore.setState({
-          activeChannelId: remembered.screen === 'channel' ? remembered.groupId : null,
-        });
-        useDMStore.setState({
-          activeDMPubkey: remembered.screen === 'dm-thread' ? remembered.dmPeer : null,
-        });
-        pushNav(() => remembered, dir);
-      });
-      if (layer && width > 0) {
-        layer.style.transition = 'none';
-        layer.style.transform = `translateX(${initialOffset}px)`;
-        void layer.offsetHeight;
-        layer.style.transition = TRANSITION;
-        layer.style.transform = 'translateX(0)';
-      }
-    } else {
-      // Path A — animate first, push after. The leaving overlay (if the
-      // user was on a sub-screen) stays mounted during the slide and rides
-      // inside the layer off-screen. The destination bare tab is already
-      // pre-rendered in the neighbor slot.
-      const targetTx = dir === 'forward' ? -width : width;
-      setIsDragging(true);
-      if (layer && width > 0) {
-        layer.style.transition = 'none';
-        layer.style.transform = 'translateX(0)';
-        void layer.offsetHeight;
-        layer.style.transition = TRANSITION;
-        layer.style.transform = `translateX(${targetTx}px)`;
-      }
+    const targetTx = dir === 'forward' ? -width : width;
+    setIsDragging(true);
+    if (layer && width > 0) {
+      layer.style.transition = 'none';
+      layer.style.transform = 'translateX(0)';
+      void layer.offsetHeight;
+      layer.style.transition = TRANSITION;
+      layer.style.transform = `translateX(${targetTx}px)`;
     }
 
     if (tabAnimTimerRef.current !== null) {
@@ -5973,21 +5894,19 @@ export default function MobileShell() {
     }
     tabAnimTimerRef.current = window.setTimeout(() => {
       tabAnimTimerRef.current = null;
-      if (!remembered) {
-        // Path A: push the bare target now that the animation is done.
-        // suppressSlideRef must be set BEFORE pushNav so the screen-anim
-        // wrapper (if any sub-screen is involved) doesn't re-animate.
-        suppressSlideRef.current = true;
-        useChatStore.setState({ activeChannelId: null });
-        useDMStore.setState({ activeDMPubkey: null });
-        pushNav(
-          (n) => ({ ...n, screen: target, baseScreen: null, msgContext: null, parentScreen: null }),
-          dir,
-        );
-      }
+      // Push the bare target now that the animation is done.
+      // suppressSlideRef must be set BEFORE pushNav so the screen-anim
+      // wrapper (if any sub-screen is involved) doesn't re-animate.
+      suppressSlideRef.current = true;
+      useChatStore.setState({ activeChannelId: null });
+      useDMStore.setState({ activeDMPubkey: null });
+      pushNav(
+        () => ({ ...initialNav, screen: target }),
+        dir,
+      );
       setIsDragging(false);
     }, 240);
-  }, [pushNav, snapshotTabMemory]);
+  }, [pushNav]);
 
   // Pop to the bare top-level tab while on a sub-screen. The parent tab
   // is already at drag-curr behind the overlay, so we just slide the
@@ -6198,7 +6117,7 @@ export default function MobileShell() {
       body = <ComposeDmScreen back={() => go('dms-list', 'back')} selectPeer={selectPeer} />;
       break;
     case 'search':
-      body = <SearchScreen back={() => go('server', 'back')} />;
+      body = <SearchScreen back={() => go('server', 'back')} selectGroup={selectGroup} />;
       break;
     case 'forum':
       body = nav.groupId ? (
@@ -6251,12 +6170,7 @@ export default function MobileShell() {
   // so the nav doesn't wedge between the composer and the keyboard.
   // (kbInset is already declared above the guest-branch early return so the
   // hook count stays stable across login state transitions.)
-  const hideNav =
-    nav.screen === 'profile-view' ||
-    nav.screen === 'search' ||
-    nav.screen === 'compose-dm' ||
-    nav.screen === 'profile-edit' ||
-    kbInset > 0;
+  const hideNav = shouldHideMobileBottomNav(nav.screen, kbInset);
 
   // Sheet screens (msg-actions / zap-modal) render the underlying screen as
   // `body` (see switch above) so the sub-overlay slot stays mounted. The key

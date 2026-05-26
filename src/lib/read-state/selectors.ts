@@ -227,6 +227,27 @@ export function useChannelHighlights(
 }
 
 /**
+ * Highlight selector for channel lists. Unlike {@link useChannelHighlights},
+ * this reads the already-loaded messages map and does not open a per-channel
+ * message subscription. Channel menus can render dozens of rows; subscribing
+ * each row would turn one menu paint into a relay REQ burst.
+ */
+export function useCachedChannelHighlights(
+  groupId: string | null | undefined,
+  ownPubkey: string | null,
+): ChannelHighlights {
+  const byGroup = useMessagesByGroup();
+  const stored = useReadStateStore((s) =>
+    groupId ? s.groupCursors[groupId] : undefined,
+  );
+  const messages = groupId ? byGroup[groupId] : undefined;
+  return useMemo(() => {
+    if (!groupId || !messages || messages.length === 0) return EMPTY_HIGHLIGHTS;
+    return computeChannelHighlights(messages, effectiveCursor(stored), ownPubkey);
+  }, [groupId, messages, stored, ownPubkey]);
+}
+
+/**
  * `true` when ANY currently-loaded channel has unread mentions or replies.
  * Used by the ServerRail to overlay an `@`-icon on the active relay tile.
  *

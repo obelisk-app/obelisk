@@ -341,6 +341,9 @@
 
 /* ===== bottom nav ===== */
 .obelisk-mobile .bottom-nav {
+  position: sticky;
+  bottom: 0;
+  z-index: 30;
   margin-top: auto;
   border-top: 1px solid var(--app-line-soft);
   padding: 8px 8px calc(10px + env(safe-area-inset-bottom));
@@ -349,6 +352,7 @@
   justify-content: space-around;
   align-items: center;
   flex-shrink: 0;
+  min-height: calc(64px + env(safe-area-inset-bottom));
 }
 .obelisk-mobile .nav-item {
   flex: 1;

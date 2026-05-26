@@ -18,7 +18,7 @@ vi.mock('@/lib/voice/jump-to-voice', () => ({
 }));
 
 import { useVoiceStore } from '@/store/voice';
-import { MobileVoiceStatusSlot } from './PhoneShell';
+import { MobileVoiceStatusSlot, shouldHideMobileBottomNav } from './PhoneShell';
 
 describe('MobileVoiceStatusSlot', () => {
   it('stays mounted across screens during a call so the bar can show via CSS', () => {
@@ -49,5 +49,19 @@ describe('MobileVoiceStatusSlot', () => {
     const slot = screen.getByTestId('mobile-voice-status-slot');
     expect(slot.classList.contains('is-hidden')).toBe(false);
     expect(slot.children.length).toBe(0);
+  });
+});
+
+describe('shouldHideMobileBottomNav', () => {
+  it('hides on full-screen/transient mobile routes and while the keyboard is open', () => {
+    expect(shouldHideMobileBottomNav('voice-room', 0)).toBe(true);
+    expect(shouldHideMobileBottomNav('search', 0)).toBe(true);
+    expect(shouldHideMobileBottomNav('channel', 280)).toBe(true);
+  });
+
+  it('keeps top-level tabs visible when there is no keyboard inset', () => {
+    expect(shouldHideMobileBottomNav('server', 0)).toBe(false);
+    expect(shouldHideMobileBottomNav('dms-list', 0)).toBe(false);
+    expect(shouldHideMobileBottomNav('inbox', 0)).toBe(false);
   });
 });

@@ -58,7 +58,7 @@ import VoiceStatusBar from '@/components/voice/VoiceStatusBar';
 import BackgroundVoiceAudio from '@/components/voice/BackgroundVoiceAudio';
 import { useVoiceStore } from '@/store/voice';
 import { useReadStateStore, type InboxEvent } from '@/store/read-state';
-import { useInboxUnreadCount, useChannelHighlights } from '@/lib/read-state/selectors';
+import { useInboxUnreadCount, useChannelHighlights, useCachedChannelHighlights } from '@/lib/read-state/selectors';
 import { subscribeVoiceJump } from '@/lib/voice/jump-to-voice';
 import { useVoiceChatPane } from '@/hooks/chat/useVoiceChatPane';
 import { useChatStore } from '@/store/chat';
@@ -1158,7 +1158,7 @@ function GroupNode({
   const childIds = childrenByParent[group.id] ?? [];
   const active = view.kind === 'group' && view.groupId === group.id;
   const myPubkey = useMyPubkey();
-  const highlights = useChannelHighlights(group.id, myPubkey);
+  const highlights = useCachedChannelHighlights(group.id, myPubkey);
   // When the user is actively viewing the channel, the auto-mark hook is
   // about to advance the cursor — suppress the badge to avoid a brief
   // count flash. Matches the existing favicon-badge subtraction at
