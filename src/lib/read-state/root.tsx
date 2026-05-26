@@ -49,7 +49,7 @@ import { ensureModerationStoreForAccount } from '@/store/moderation';
 import { ensureForumFollowForAccount } from '@/store/chat/forum-follow-slice';
 import { startGroupsRelaySync, startDMRelaySync } from './relay-sync';
 import { fetchRelayList } from '@nostr-wot/data';
-import { PROFILE_RELAYS } from '@/lib/nostr-bridge/client';
+import { DEFAULT_PROFILE_LOOKUP_RELAYS } from '@/lib/nostr-bridge/client';
 
 const useMyPubkey = usePubkey;
 
@@ -130,7 +130,7 @@ export default function ReadStateRoot() {
   useEffect(() => {
     if (!myPubkey) return;
     let cancelled = false;
-    const searchRelays = Array.from(new Set([...relays, ...PROFILE_RELAYS]));
+    const searchRelays = Array.from(new Set([...relays, ...DEFAULT_PROFILE_LOOKUP_RELAYS]));
     void fetchRelayList(myPubkey, searchRelays).then((list) => {
       if (cancelled) return;
       // NIP-65 union of read+write — matches DM coverage requirement.
