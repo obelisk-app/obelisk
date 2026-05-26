@@ -359,18 +359,132 @@ function readMigrated(key: string, legacyKey: string): string | null {
   return null;
 }
 
-// Outbox/profile relays for fetching kind:0 metadata. NIP-29 group relays
-// generally don't carry user profile events, so we query well-known public
-// relays in addition to the active group relay.
-export const PROFILE_RELAYS = [
+// Quiet outbox/profile relays for bounded kind:0 metadata lookups. Keep this
+// list intentionally small: normal channel browsing must not open persistent
+// subscriptions against broad public profile relays.
+export const DEFAULT_PROFILE_LOOKUP_RELAYS = [
   'wss://relay.obelisk.ar',
   'wss://public.obelisk.ar',
-  'wss://relay.damus.io',
-  'wss://relay.nostr.band',
-  'wss://nos.lol',
-  'wss://relay.primal.net',
   'wss://purplepag.es',
-];
+] as const;
+const PROFILE_RELAYS = DEFAULT_PROFILE_LOOKUP_RELAYS;
+
+export const PROFILE_SYNC_CACHE_KEY = 'obelisk/profile-sync-cache/v1';
+export const PROFILE_SYNC_STATE_KEY = 'obelisk/profile-sync-state/v1';
+export const PROFILE_LOOKUP_RELAYS_KEY = 'obelisk/profile-lookup-relays/v1';
+const OWN_PROFILE_LOOKUP_TTL_MS = 12 * 60 * 60 * 1000;
+const OTHER_PROFILE_LOOKUP_TTL_MS = 6 * 60 * 60 * 1000;
+const PROFILE_LOOKUP_MAX_WAIT_MS = 3500;
+
+export interface CachedKind0Event {
+  id: string;
+  pubkey: string;
+  created_at: number;
+  content: string;
+  tags: string[][];
+  sig: string;
+}
+
+interface ProfileSyncCache {
+  byPubkey: Record<string, CachedKind0Event>;
+}
+
+interface ProfileSyncState {
+  ownProfileLookupAt: Record<string, number>;
+  ownProfileSyncedToRelay: Record<string, number>;
+}
+
+function profileRelayKey(pubkey: string, relay: string): string {
+  return `${pubkey}|${normalizeRelayUrl(relay)}`;
+}
+
+function emptyProfileSyncCache(): ProfileSyncCache {
+  return { byPubkey: {} };
+}
+
+function emptyProfileSyncState(): ProfileSyncState {
+  return { ownProfileLookupAt: {}, ownProfileSyncedToRelay: {} };
+}
+
+function loadProfileSyncCache(): ProfileSyncCache {
+  if (typeof window === 'undefined') return emptyProfileSyncCache();
+  try {
+    const raw = window.localStorage.getItem(PROFILE_SYNC_CACHE_KEY);
+    if (!raw) return emptyProfileSyncCache();
+    const parsed = JSON.parse(raw) as ProfileSyncCache;
+    return parsed && typeof parsed === 'object' && parsed.byPubkey ? parsed : emptyProfileSyncCache();
+  } catch {
+    return emptyProfileSyncCache();
+  }
+}
+
+function saveProfileSyncCache(cache: ProfileSyncCache): void {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(PROFILE_SYNC_CACHE_KEY, JSON.stringify(cache));
+}
+
+function loadProfileSyncState(): ProfileSyncState {
+  if (typeof window === 'undefined') return emptyProfileSyncState();
+  try {
+    const raw = window.localStorage.getItem(PROFILE_SYNC_STATE_KEY);
+    if (!raw) return emptyProfileSyncState();
+    const parsed = JSON.parse(raw) as ProfileSyncState;
+    return {
+      ownProfileLookupAt: parsed?.ownProfileLookupAt ?? {},
+      ownProfileSyncedToRelay: parsed?.ownProfileSyncedToRelay ?? {},
+    };
+  } catch {
+    return emptyProfileSyncState();
+  }
+}
+
+function saveProfileSyncState(state: ProfileSyncState): void {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(PROFILE_SYNC_STATE_KEY, JSON.stringify(state));
+}
+
+export function getCachedKind0(pubkey: string): CachedKind0Event | null {
+  return loadProfileSyncCache().byPubkey[pubkey] ?? null;
+}
+
+function toCachedKind0(ev: NostrEvent): CachedKind0Event {
+  return {
+    id: ev.id,
+    pubkey: ev.pubkey,
+    created_at: ev.created_at,
+    content: ev.content,
+    tags: ev.tags.map((t) => [...t]),
+    sig: ev.sig,
+  };
+}
+
+function newestEvent<T extends { created_at: number }>(events: readonly T[]): T | null {
+  let newest: T | null = null;
+  for (const ev of events) {
+    if (!newest || ev.created_at > newest.created_at) newest = ev;
+  }
+  return newest;
+}
+
+function cachedKind0ToEvent(ev: CachedKind0Event): NostrEvent {
+  return { ...ev, kind: KIND_USER_METADATA } as NostrEvent;
+}
+
+export function setCachedKind0(ev: NostrEvent | CachedKind0Event): boolean {
+  const cache = loadProfileSyncCache();
+  const prev = cache.byPubkey[ev.pubkey];
+  if (prev && prev.created_at >= ev.created_at) return false;
+  cache.byPubkey[ev.pubkey] = {
+    id: ev.id,
+    pubkey: ev.pubkey,
+    created_at: ev.created_at,
+    content: ev.content,
+    tags: ev.tags.map((t) => [...t]),
+    sig: ev.sig,
+  };
+  saveProfileSyncCache(cache);
+  return true;
+}
 
 interface PersistedSession {
   privKeyHex?: string;     // optional: only nsec login persists this
@@ -1140,6 +1254,8 @@ class BridgeImpl implements NostrBridge {
   // Populated on first sendDirectMessage to that pubkey; TTL'd to avoid
   // requerying every send.
   private recipientReadRelaysCache = new Map<string, { relays: string[]; fetchedAt: number }>();
+  private profileLookupInFlight = new Map<string, Promise<void>>();
+  private profileLookupAt = new Map<string, number>();
   // Own NIP-17 inbox + NIP-65 relays — wider than `this.relays`. Used to
   // subscribe for incoming DMs published to relays the user actually reads.
   private myDmRelays: string[] = [];
@@ -1184,7 +1300,7 @@ class BridgeImpl implements NostrBridge {
       // last-known admin status instantly while the live REQ catches up.
       // Stale-while-revalidate: arriving relay events overwrite via the
       // newest-wins logic in ingestAdminMember.
-      this.seedCacheForRelay(parsed.relayUrl);
+      const hasRenderableCache = this.seedCacheForRelay(parsed.relayUrl);
       // For NIP-46 (bunker) sessions: pre-warm the BunkerSigner so the first
       // NIP-42 AUTH challenge from the relay doesn't trigger a cold
       // BunkerSigner.fromBunker + first RPC round-trip from inside
@@ -1214,18 +1330,22 @@ class BridgeImpl implements NostrBridge {
         // First connect attempt failed (relay unreachable, AUTH timeout,
         // etc.). Keep the session in memory and silently retry in the
         // background with capped exponential backoff so the user doesn't
-        // have to refresh. The cached sidebar paint from seedCacheForRelay
-        // is already on screen (admins/members/groups), so the UI doesn't
-        // flash empty — we just keep trying until a relay answers.
-        this.myPubkey.set(parsed.pubKeyHex);
-        this.myLoginMethod.set(parsed.loginMethod);
-        this.isLoggedIn.set(true);
+        // have to refresh. If seedCacheForRelay found renderable channel
+        // state, keep the cached shell mounted; otherwise leave the app
+        // behind useIsRehydrating so a cache-free user never sees an empty
+        // chat shell as the "successful" first paint.
+        if (hasRenderableCache) {
+          this.myPubkey.set(parsed.pubKeyHex);
+          this.myLoginMethod.set(parsed.loginMethod);
+          this.isLoggedIn.set(true);
+        }
         void this.reconnectInBackground();
         return;
       }
       this.myPubkey.set(parsed.pubKeyHex);
       this.myLoginMethod.set(parsed.loginMethod);
       this.isLoggedIn.set(true);
+      void this.syncOwnProfileToActiveRelay('login');
     } catch {
       // Corrupt storage: drop both the current and legacy session entries so
       // `useIsRehydrating` doesn't latch true forever on the next paint
@@ -1323,7 +1443,8 @@ class BridgeImpl implements NostrBridge {
    * for the active relay. Caches for other relays stay on disk untouched
    * (they re-paint instantly if the user switches back).
    */
-  private seedCacheForRelay(relay: string): void {
+  private seedCacheForRelay(relay: string): boolean {
+    let hasRenderableCache = false;
     // Group metadata first so the sidebar lights up with channel rows even
     // before the per-group admin/member seeds populate badges.
     for (const groupId of cacheListIds(relay, KIND_GROUP_METADATA)) {
@@ -1350,6 +1471,7 @@ class BridgeImpl implements NostrBridge {
         if (prev.some((g) => g.id === groupId)) return prev;
         return [...prev, group].sort((a, b) => (a.name ?? a.id).localeCompare(b.name ?? b.id));
       });
+      hasRenderableCache = true;
       if (group.parent) {
         this.childrenByParent.update((prev) => {
           const arr = prev[group.parent!] ?? [];
@@ -1417,6 +1539,7 @@ class BridgeImpl implements NostrBridge {
       this.messagesByGroup.update((prev) =>
         prev[groupId] ? prev : { ...prev, [groupId]: msgs },
       );
+      hasRenderableCache = true;
     }
     // Kind 7 — per-channel reaction backfill. Emoji badges paint with
     // their message bubbles instead of popping in a frame later.
@@ -1427,6 +1550,7 @@ class BridgeImpl implements NostrBridge {
         prev[groupId] ? prev : { ...prev, [groupId]: entry.value },
       );
     }
+    return hasRenderableCache;
   }
 
   /**
@@ -1478,6 +1602,7 @@ class BridgeImpl implements NostrBridge {
     this.myPubkey.set(this.session?.pubKeyHex ?? null);
     this.myLoginMethod.set(this.session?.loginMethod ?? null);
     this.isLoggedIn.set(true);
+    void this.syncOwnProfileToActiveRelay('login');
   }
 
   /**
@@ -1848,21 +1973,22 @@ class BridgeImpl implements NostrBridge {
       // ones) appeared "Connected" instantly. ensureRelay actually awaits
       // the handshake and rejects on timeout / refused / DNS failure.
       //
-      // First-response wins: resolve as soon as ONE relay handshakes so
-      // the rehydrate gate flips to "logged in" quickly. Slower relays
-      // continue handshaking in the background; their subscriptions queue
-      // on the pool and fire as each socket comes online. If every relay
-      // rejects, we throw and `initialize()` falls through to background
+      // First-response wins: resolve as soon as ONE relay handshakes. Slower
+      // relays continue handshaking in the background; their subscriptions
+      // queue on the pool and fire as each socket comes online. If every
+      // relay rejects, we throw and `initialize()` falls through to background
       // reconnect with capped backoff.
       //
       // Per-relay `connectionTimeout` is intentionally tighter than the
       // 5000 ms used previously — a single slow relay used to stall the
-      // entire login by holding `Promise.allSettled` open. With first-
-      // response-wins this is bounded by `HARD_CEILING_MS` below, but a
-      // tighter per-relay cap also gets stragglers marked `unreachable`
-      // sooner so the relay banner reflects reality.
+      // entire login by holding `Promise.allSettled` open. First-response
+      // wins keeps successful relays fast, while this cap gets stragglers
+      // marked `unreachable` promptly. Do not run the subscription fan-out
+      // before the first successful handshake: on an empty cache that mounts
+      // the app shell with REQs queued against a not-yet-ready pool, that
+      // reproduces the "refresh twice before content appears" cold-load
+      // failure.
       const PER_RELAY_TIMEOUT_MS = 3000;
-      const HARD_CEILING_MS = 1500;
       const handles = relaySnapshot.map((url) =>
         (async () => {
           validateRelayUrl(url);
@@ -1889,9 +2015,8 @@ class BridgeImpl implements NostrBridge {
         })(),
       );
       // Mark each relay `unreachable` as its handshake fails, in the
-      // background. Doesn't await — banner updates as we get news; UI
-      // proceeds at the first success or hard ceiling, whichever fires
-      // first.
+      // background. Doesn't await — banner updates as we get news; the UI
+      // proceeds only after the first successful handshake.
       handles.forEach((p, i) => {
         const url = relaySnapshot[i];
         p.catch(() => {
@@ -1899,38 +2024,11 @@ class BridgeImpl implements NostrBridge {
           this.setRelayAccess(url, 'unreachable');
         });
       });
-      // Race: first relay ready vs hard ceiling vs all relays rejected.
-      // - 'first-ready' → at least one socket is open; subscriptions go
-      //   live now, slow relays keep handshaking in the background.
-      // - 'ceiling' → no relay has handshaken in HARD_CEILING_MS; flip the
-      //   gate anyway so the user isn't stuck on "Reconnecting…". Pending
-      //   handshakes continue and their subs queue on the pool.
-      // - 'all-rejected' → every handshake failed; throw so initialize()
-      //   falls through to capped background reconnect.
-      const firstReady: Promise<'first-ready' | 'all-rejected'> = Promise.any(handles)
-        .then(() => 'first-ready' as const)
-        .catch(() => 'all-rejected' as const);
-      const ceiling: Promise<'ceiling'> = new Promise((res) => setTimeout(() => res('ceiling'), HARD_CEILING_MS));
-      const winner = await Promise.race([firstReady, ceiling]);
-      if (winner === 'all-rejected') {
+      try {
+        await Promise.any(handles);
+      } catch {
         throw new Error('no relays connected');
       }
-      if (winner === 'ceiling') {
-        firstReady.then((result) => {
-          if (result !== 'all-rejected') return;
-          if (generation !== this.connectGeneration) return;
-          if (!this.session) return;
-          this.connectionState.set('Disconnected');
-          for (const url of relaySnapshot) this.setRelayAccess(url, 'unreachable');
-          this.reconnectInBackground();
-        });
-      }
-      // For the 'ceiling' branch, ALSO check the eventual outcome of
-      // `firstReady` in the background — if every relay later rejects,
-      // the relay banner is updated by the per-handle `.catch` above and
-      // `reconnectInBackground` kicks in via the next session/relay
-      // change. Subscriptions registered below queue against the pool
-      // and bind as relays come online.
       // Reopen any per-group REQs that were live on the previous pool.
       // Components that mounted pre-login (or pre-relay-switch) still have
       // their store listeners wired up; without this re-issue the new pool
@@ -1983,6 +2081,11 @@ class BridgeImpl implements NostrBridge {
         // the new attempt from making progress.
         this.resetPoolForSessionChange();
         await this.connect();
+        if (this.session) {
+          this.myPubkey.set(this.session.pubKeyHex);
+          this.myLoginMethod.set(this.session.loginMethod);
+          this.isLoggedIn.set(true);
+        }
         this.reconnectInFlight = false;
         this.reconnectAttempt = 0;
       } catch {
@@ -2093,6 +2196,7 @@ class BridgeImpl implements NostrBridge {
     this.seedCacheForRelay(normalized);
     try {
       await this.connect();
+      void this.syncOwnProfileToActiveRelay('switch');
     } catch {
       void this.reconnectInBackground();
     }
@@ -2943,11 +3047,12 @@ class BridgeImpl implements NostrBridge {
   }): Promise<void> {
     if (!this.session) throw new Error('Not logged in');
     const me = this.session.pubKeyHex;
-    const profileRelays = Array.from(new Set([...this.relays, ...PROFILE_RELAYS]));
+    const profileRelays = Array.from(new Set([...this.relays, ...DEFAULT_PROFILE_LOOKUP_RELAYS]));
 
     let existing: Record<string, unknown> = {};
     try {
-      const ev = await this.pool.get(profileRelays, { kinds: [KIND_USER_METADATA], authors: [me] });
+      const events = await this.pool.querySync(profileRelays, { kinds: [KIND_USER_METADATA], authors: [me], limit: 5 }, { maxWait: PROFILE_LOOKUP_MAX_WAIT_MS });
+      const ev = newestEvent(events.filter((e) => e.kind === KIND_USER_METADATA && e.pubkey === me));
       if (ev) existing = JSON.parse(ev.content) as Record<string, unknown>;
     } catch {
       // ignore — start from empty
@@ -2963,15 +3068,21 @@ class BridgeImpl implements NostrBridge {
     if (opts.website !== undefined) merged.website = opts.website;
     if (opts.lud16 !== undefined) merged.lud16 = opts.lud16;
 
-    await this.signAndPublish(
+    const event = await this.signAndPublish(
       {
         kind: KIND_USER_METADATA,
         content: JSON.stringify(merged),
         tags: [],
         created_at: Math.floor(Date.now() / 1000),
       },
-      PROFILE_RELAYS,
+      { extraRelays: Array.from(DEFAULT_PROFILE_LOOKUP_RELAYS) },
     );
+    setCachedKind0(event);
+    this.ingestUserMetadata(event, { cacheRelayScoped: true });
+    const state = loadProfileSyncState();
+    for (const relay of profileRelays) state.ownProfileSyncedToRelay[profileRelayKey(me, relay)] = event.created_at;
+    state.ownProfileLookupAt[me] = Date.now();
+    saveProfileSyncState(state);
   }
 
   /**
@@ -4410,17 +4521,112 @@ class BridgeImpl implements NostrBridge {
 
   private subscribeKind0(pubkey: string): void {
     const filter: Filter = { kinds: [KIND_USER_METADATA], authors: [pubkey] };
-    const relays = Array.from(new Set([...this.relays, ...PROFILE_RELAYS]));
-    // Non-critical path: a missing kind:0 just shows the npub instead of a
-    // display name. Tighter watchdog so we fail fast on cold profile relays.
+    // Persistent profile REQs stay scoped to the active server relay. External
+    // profile relays are queried separately as bounded one-shots below.
     const sub = this.subscribeWatched(
-      relays,
+      this.relays,
       filter,
-      (ev) => this.ingestUserMetadata(ev),
+      (ev) => this.ingestUserMetadata(ev, { cacheRelayScoped: true }),
       undefined,
       { watchdogMs: 3000, affectsRelayAccess: false },
     );
     this.subs.push(sub);
+    const cached = getCachedKind0(pubkey);
+    if (cached) this.ingestUserMetadata(cachedKind0ToEvent(cached), { cacheRelayScoped: false });
+    void this.lookupExternalUserMetadata(pubkey);
+  }
+
+  private getProfileLookupRelays(): string[] {
+    if (typeof window === 'undefined') return Array.from(DEFAULT_PROFILE_LOOKUP_RELAYS);
+    try {
+      const raw = window.localStorage.getItem(PROFILE_LOOKUP_RELAYS_KEY);
+      if (!raw) return Array.from(DEFAULT_PROFILE_LOOKUP_RELAYS);
+      const parsed = JSON.parse(raw) as string[];
+      const imported = Array.isArray(parsed) ? parsed.filter(isImportableRelayUrl) : [];
+      return imported.length > 0 ? uniqueRelayUrls(imported) : Array.from(DEFAULT_PROFILE_LOOKUP_RELAYS);
+    } catch {
+      return Array.from(DEFAULT_PROFILE_LOOKUP_RELAYS);
+    }
+  }
+
+  private async findNewestOwnProfileFromLookupRelays(pubkey: string): Promise<NostrEvent | null> {
+    const relays = uniqueRelayUrls([...this.getProfileLookupRelays(), ...this.relays]);
+    const events = await this.pool.querySync(
+      relays,
+      { kinds: [KIND_USER_METADATA], authors: [pubkey], limit: 5 },
+      { maxWait: PROFILE_LOOKUP_MAX_WAIT_MS },
+    );
+    return newestEvent(events.filter((e) => e.kind === KIND_USER_METADATA && e.pubkey === pubkey));
+  }
+
+  private async publishSignedEventToRelays(ev: NostrEvent, relays: readonly string[]): Promise<string[]> {
+    const targets = uniqueRelayUrls(Array.from(relays));
+    const publishes = this.pool.publish(targets, ev, { onauth: this.getAuthSigner() });
+    const results = await Promise.allSettled(publishes);
+    return targets.filter((_, i) => results[i]?.status === 'fulfilled');
+  }
+
+  private async syncOwnProfileToActiveRelay(reason: 'login' | 'switch' | 'edit' | 'manual'): Promise<void> {
+    if (!this.session) return;
+    const me = this.session.pubKeyHex;
+    const state = loadProfileSyncState();
+    let cached = getCachedKind0(me);
+    const now = Date.now();
+    const lastLookup = state.ownProfileLookupAt[me] ?? 0;
+    const shouldLookup = !cached || now - lastLookup >= OWN_PROFILE_LOOKUP_TTL_MS || reason === 'manual' || reason === 'edit';
+    if (shouldLookup) {
+      try {
+        const newest = await this.findNewestOwnProfileFromLookupRelays(me);
+        state.ownProfileLookupAt[me] = now;
+        if (newest) {
+          setCachedKind0(newest);
+          cached = toCachedKind0(newest);
+          this.ingestUserMetadata(newest, { cacheRelayScoped: false });
+        }
+      } catch {
+        state.ownProfileLookupAt[me] = now;
+      }
+      saveProfileSyncState(state);
+    }
+    if (!cached) return;
+    const relay = this.currentRelayUrl.get();
+    const key = profileRelayKey(me, relay);
+    if ((state.ownProfileSyncedToRelay[key] ?? 0) >= cached.created_at) return;
+    const ok = await this.publishSignedEventToRelays(cachedKind0ToEvent(cached), [relay]);
+    if (ok.length > 0) {
+      const next = loadProfileSyncState();
+      next.ownProfileLookupAt[me] = state.ownProfileLookupAt[me] ?? lastLookup;
+      next.ownProfileSyncedToRelay[key] = cached.created_at;
+      saveProfileSyncState(next);
+    }
+  }
+
+  private async lookupExternalUserMetadata(pubkey: string): Promise<void> {
+    const now = Date.now();
+    const last = this.profileLookupAt.get(pubkey) ?? 0;
+    if (now - last < OTHER_PROFILE_LOOKUP_TTL_MS) return;
+    const inFlight = this.profileLookupInFlight.get(pubkey);
+    if (inFlight) return inFlight;
+    const p = (async () => {
+      this.profileLookupAt.set(pubkey, now);
+      try {
+        const events = await this.pool.querySync(
+          this.getProfileLookupRelays(),
+          { kinds: [KIND_USER_METADATA], authors: [pubkey], limit: 5 },
+          { maxWait: PROFILE_LOOKUP_MAX_WAIT_MS },
+        );
+        const newest = newestEvent(events.filter((e) => e.kind === KIND_USER_METADATA && e.pubkey === pubkey));
+        if (!newest) return;
+        setCachedKind0(newest);
+        this.ingestUserMetadata(newest, { cacheRelayScoped: false });
+      } catch {
+        // best-effort only
+      } finally {
+        this.profileLookupInFlight.delete(pubkey);
+      }
+    })();
+    this.profileLookupInFlight.set(pubkey, p);
+    return p;
   }
 
   private subscribeGroupReactions(groupId: string): void {
@@ -5454,7 +5660,7 @@ class BridgeImpl implements NostrBridge {
     throw new Error('Cannot decrypt with current login method');
   }
 
-  private ingestUserMetadata(ev: NostrEvent): void {
+  private ingestUserMetadata(ev: NostrEvent, opts: { cacheRelayScoped?: boolean } = { cacheRelayScoped: true }): void {
     const prevAt = this.userMetadataLatestAt.get(ev.pubkey) ?? 0;
     if (ev.created_at <= prevAt) return;
     try {
@@ -5476,13 +5682,15 @@ class BridgeImpl implements NostrBridge {
       // events are republished often (nip-05 verifier handshakes, profile
       // editor saves with the same fields, multi-relay re-broadcast) and
       // localStorage.setItem on a popular profile is a real cost.
-      const relay = this.currentRelayUrl.get();
-      const cached = cacheGet<{ meta: JsUserMetadata; createdAt: number }>(relay, KIND_USER_METADATA, ev.pubkey);
-      if (!cached || !userMetadataEqual(cached.value.meta, meta)) {
-        cacheSet(relay, KIND_USER_METADATA, ev.pubkey, {
-          meta,
-          createdAt: ev.created_at,
-        });
+      if (opts.cacheRelayScoped !== false) {
+        const relay = this.currentRelayUrl.get();
+        const cached = cacheGet<{ meta: JsUserMetadata; createdAt: number }>(relay, KIND_USER_METADATA, ev.pubkey);
+        if (!cached || !userMetadataEqual(cached.value.meta, meta)) {
+          cacheSet(relay, KIND_USER_METADATA, ev.pubkey, {
+            meta,
+            createdAt: ev.created_at,
+          });
+        }
       }
     } catch {
       // ignore malformed kind:0 content

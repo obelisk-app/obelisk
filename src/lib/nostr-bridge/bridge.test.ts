@@ -25,6 +25,7 @@ const fake = vi.hoisted(() => {
     }>,
     ensureRelayCalls: [] as string[],
     ensureRelayImpl: null as null | ((url: string, opts?: { connectionTimeout?: number }) => Promise<{ connected: boolean; onclose?: () => void }>),
+    querySyncCalls: [] as Array<{ relays: string[]; filter: Record<string, unknown>; opts?: { maxWait?: number } }>,
     poolSeq: 0,
   };
 
@@ -85,6 +86,7 @@ const fake = vi.hoisted(() => {
      * alone for that filter.
      */
     async querySync(_relays: string[], filter: Record<string, unknown>, _opts?: { maxWait?: number }): Promise<NostrEvent[]> {
+      state.querySyncCalls.push({ relays: _relays, filter, opts: _opts });
       return state.published.filter((ev) => matchesInternal(filter, ev as { kind: number; pubkey: string; tags: string[][] })) as NostrEvent[];
     }
   }
@@ -120,7 +122,7 @@ async function flush(times = 4) {
 }
 
 beforeEach(() => {
-  (() => { fake.state.published = []; fake.state.subscriptions = []; fake.state.ensureRelayCalls = []; fake.state.ensureRelayImpl = null; fake.state.poolSeq = 0; })();
+  (() => { fake.state.published = []; fake.state.subscriptions = []; fake.state.ensureRelayCalls = []; fake.state.ensureRelayImpl = null; fake.state.querySyncCalls = []; fake.state.poolSeq = 0; })();
   // Each test starts fresh — clear the bridge module-level singleton by
   // resetting modules so getBridge() returns a new instance.
   vi.resetModules();
@@ -129,7 +131,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  (() => { fake.state.published = []; fake.state.subscriptions = []; fake.state.ensureRelayCalls = []; fake.state.ensureRelayImpl = null; fake.state.poolSeq = 0; })();
+  (() => { fake.state.published = []; fake.state.subscriptions = []; fake.state.ensureRelayCalls = []; fake.state.ensureRelayImpl = null; fake.state.querySyncCalls = []; fake.state.poolSeq = 0; })();
   vi.useRealTimers();
 });
 
@@ -1392,7 +1394,151 @@ describe('nostr-bridge', () => {
     }
   });
 
-  it('continues reconnecting after switchRelay resolves on the hard ceiling and the relay later rejects', async () => {
+  it('subscribes to kind:0 persistently only on the active relay and bounds external lookup', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const other = makeKeypair().pkHex;
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    fake.state.subscriptions = [];
+    fake.state.querySyncCalls = [];
+
+    bridge.ensureUserMetadata(other);
+    await flush(8);
+
+    const kind0Subs = fake.state.subscriptions.filter((s) => (s.filter.kinds as number[] | undefined)?.includes(0));
+    expect(kind0Subs).toHaveLength(1);
+    expect(kind0Subs[0].relays).toEqual(['wss://public.obelisk.ar']);
+    expect(kind0Subs[0].relays).not.toContain('wss://nos.lol');
+    expect(kind0Subs[0].relays).not.toContain('wss://relay.primal.net');
+    expect(kind0Subs[0].relays).not.toContain('wss://relay.nostr.band');
+    const externalLookup = fake.state.querySyncCalls.find((c) => (c.filter.authors as string[] | undefined)?.includes(other));
+    expect(externalLookup?.relays).toEqual(['wss://relay.obelisk.ar', 'wss://public.obelisk.ar', 'wss://purplepag.es']);
+  });
+
+  it('editUserMetadata publishes kind:0 to the active relay plus quiet lookup relays', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    fake.state.published = [];
+
+    await bridge.editUserMetadata({ name: 'Alice' });
+
+    const meta = fake.state.published.find((e) => e.kind === 0 && e.pubkey === pkHex);
+    expect(meta?.relays).toContain('wss://public.obelisk.ar');
+    expect(meta?.relays).toContain('wss://relay.obelisk.ar');
+    expect(meta?.relays).toContain('wss://purplepag.es');
+    expect(meta?.relays).not.toContain('wss://nos.lol');
+  });
+
+  it('cached kind:0 keeps the newest event', async () => {
+    const { getCachedKind0, setCachedKind0 } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const older = finalizeEvent({ kind: 0, content: '{"name":"old"}', tags: [], created_at: 10 }, hexToBytesForTest(skHex));
+    const newer = finalizeEvent({ kind: 0, content: '{"name":"new"}', tags: [], created_at: 20 }, hexToBytesForTest(skHex));
+    expect(older.pubkey).toBe(pkHex);
+
+    expect(setCachedKind0(newer)).toBe(true);
+    expect(setCachedKind0(older)).toBe(false);
+
+    expect(getCachedKind0(pkHex)?.content).toBe('{"name":"new"}');
+  });
+
+  it('switchRelay republishes cached kind:0 without repeating wide profile lookup inside TTL', async () => {
+    const { getBridge, setCachedKind0 } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const cached = finalizeEvent({ kind: 0, content: '{"name":"Cached"}', tags: [], created_at: 30 }, hexToBytesForTest(skHex));
+    setCachedKind0(cached);
+    window.localStorage.setItem('obelisk/profile-sync-state/v1', JSON.stringify({ ownProfileLookupAt: { [pkHex]: Date.now() }, ownProfileSyncedToRelay: {} }));
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush(8);
+    fake.state.querySyncCalls = [];
+    fake.state.published = [];
+
+    await bridge.switchRelay('wss://relay.obelisk.ar');
+    await flush(8);
+
+    expect(fake.state.querySyncCalls.filter((c) => (c.filter.kinds as number[] | undefined)?.includes(0))).toHaveLength(0);
+    const meta = fake.state.published.find((e) => e.kind === 0 && e.pubkey === pkHex);
+    expect(meta?.content).toBe('{"name":"Cached"}');
+    expect(meta?.relays).toEqual(['wss://relay.obelisk.ar']);
+  });
+
+  it('does not run connect fan-out or flip login before a delayed relay handshake completes', async () => {
+    const { getBridge, getBridgeImpl } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+
+    let resolveRelay: (relay: { connected: boolean; onclose?: () => void }) => void = () => {
+      throw new Error('delayed relay resolver was not installed');
+    };
+    fake.state.ensureRelayImpl = () => new Promise((resolve) => {
+      resolveRelay = resolve;
+    });
+
+    const loginPromise = bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const impl = getBridgeImpl()!;
+    expect(fake.state.ensureRelayCalls).toHaveLength(1);
+    expect(fake.state.subscriptions).toHaveLength(0);
+    expect(impl.isLoggedIn.get()).toBe(false);
+
+    resolveRelay({ connected: true });
+    await loginPromise;
+    await flush();
+
+    expect(impl.isLoggedIn.get()).toBe(true);
+    expect(fake.state.subscriptions.some((s) => {
+      const kinds = s.filter.kinds as number[] | undefined;
+      return kinds?.includes(39000);
+    })).toBe(true);
+  });
+
+  it('rehydrated cache-free sessions stay logged out until background reconnect succeeds', async () => {
+    const { skHex, pkHex } = makeKeypair();
+    window.localStorage.setItem('obelisk-dex/session', JSON.stringify({
+      privKeyHex: skHex,
+      pubKeyHex: pkHex,
+      loginMethod: 'nsec',
+      relayUrl: 'wss://public.obelisk.ar',
+    }));
+
+    let attempts = 0;
+    let resolveReconnect: (relay: { connected: boolean; onclose?: () => void }) => void = () => {
+      throw new Error('reconnect resolver was not installed');
+    };
+    fake.state.ensureRelayImpl = () => {
+      attempts += 1;
+      if (attempts === 1) return Promise.reject(new Error('first connection failed'));
+      return new Promise((resolve) => {
+        resolveReconnect = resolve;
+      });
+    };
+
+    const { getBridge, getBridgeImpl } = await import('./client');
+    await getBridge();
+    await flush();
+
+    const impl = getBridgeImpl()!;
+    expect(attempts).toBe(2);
+    expect(impl.isLoggedIn.get()).toBe(false);
+    expect(fake.state.subscriptions).toHaveLength(0);
+
+    resolveReconnect({ connected: true });
+    await flush(8);
+
+    expect(impl.isLoggedIn.get()).toBe(true);
+    expect(impl.myPubkey.get()).toBe(pkHex);
+    expect(fake.state.subscriptions.some((s) => {
+      const kinds = s.filter.kinds as number[] | undefined;
+      return kinds?.includes(39000);
+    })).toBe(true);
+  });
+
+  it('waits for switchRelay handshake failure instead of resolving on the old hard ceiling', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     try {
       const { getBridge } = await import('./client');
@@ -1406,13 +1552,17 @@ describe('nostr-bridge', () => {
         setTimeout(() => reject(new Error(`cannot connect ${url}`)), 3000);
       });
 
-      const switchPromise = bridge.switchRelay(relay);
+      let settled = false;
+      const switchPromise = bridge.switchRelay(relay).then(() => { settled = true; });
       await vi.advanceTimersByTimeAsync(1500);
-      await switchPromise;
+      await flush();
+      expect(settled).toBe(false);
       expect(fake.state.ensureRelayCalls.filter((url) => url === relay)).toHaveLength(1);
 
       await vi.advanceTimersByTimeAsync(1500);
+      await switchPromise;
       await flush(8);
+      expect(settled).toBe(true);
       expect(fake.state.ensureRelayCalls.filter((url) => url === relay).length).toBeGreaterThan(1);
     } finally {
       fake.state.ensureRelayImpl = null;
@@ -1578,7 +1728,7 @@ describe('nostr-bridge', () => {
     expect(impl.configuredRelays.get()).not.toContain('wss://lacrypta-relay.obelisk.ar/');
   });
 
-  it('editUserMetadata publishes kind 0 to the active relay plus profile relays', async () => {
+  it('editUserMetadata publishes kind 0 to the active relay plus quiet profile lookup relays', async () => {
     const { getBridge } = await import('./client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
@@ -1592,8 +1742,11 @@ describe('nostr-bridge', () => {
 
     const metadataEvent = fake.state.published.find((event) => event.kind === 0);
     expect(metadataEvent).toBeTruthy();
-    expect(metadataEvent?.relays).toContain('wss://relay.damus.io');
+    expect(metadataEvent?.relays).toContain('wss://relay.obelisk.ar');
+    expect(metadataEvent?.relays).toContain('wss://public.obelisk.ar');
+    expect(metadataEvent?.relays).toContain('wss://purplepag.es');
     expect(metadataEvent?.relays).toContain('wss://lacrypta-relay.obelisk.ar');
+    expect(metadataEvent?.relays).not.toContain('wss://relay.damus.io');
   });
 
   // -- per-group messages-status confidence + retry ladder ----------------
@@ -2905,6 +3058,12 @@ describe('nostr-bridge', () => {
 });
 
 // -- helpers ------------------------------------------------------------
+
+function hexToBytesForTest(hex: string): Uint8Array {
+  const out = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < out.length; i++) out[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+  return out;
+}
 
 async function fakeRelayMetadata(opts: {
   groupId: string;
