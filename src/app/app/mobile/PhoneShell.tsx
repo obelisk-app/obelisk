@@ -203,6 +203,35 @@ function normalizeRelayUrl(url: string | null | undefined): string {
   return (url ?? '').replace(/\/+$/, '').toLowerCase();
 }
 
+const MOBILE_SWIPE_IGNORE_SELECTOR = [
+  // Chrome controls own tap/scroll gestures. If a shaky tap on Search also
+  // seeds the carousel, the delayed swipe commit can overwrite the click nav.
+  '.spaces-strip',
+  '.spaces-rail',
+  '.dms-tabs',
+  '.filter-tabs',
+  '.cats-strip',
+  '.search-filter-chips',
+  '.forum-filter-row',
+  '.emoji-sheet-host',
+  '.sheet-host',
+  '.bottom-nav',
+  '.server-banner-actions',
+  '.app-header .icon-btn',
+  '.chat-actions .icon-btn',
+  '.search-header',
+  '[data-no-swipe]',
+  'input',
+  'textarea',
+  'select',
+  '[contenteditable="true"]',
+].join(', ');
+
+export function shouldIgnoreMobileSwipeTarget(target: EventTarget | null): boolean {
+  if (typeof Element === 'undefined' || !(target instanceof Element)) return false;
+  return !!target.closest(MOBILE_SWIPE_IGNORE_SELECTOR);
+}
+
 // ───────────────────────────────────────────────────────────────────────────
 // shared sub-components
 
@@ -5562,10 +5591,7 @@ export default function MobileShell() {
   const onTouchStart = useCallback((e: React.TouchEvent) => {
     if (e.touches.length !== 1) { dragRef.current = null; return; }
     const t = e.touches[0];
-    const target = e.target as HTMLElement | null;
-    const ignored = !!target?.closest(
-      '.spaces-strip, .spaces-rail, .dms-tabs, .filter-tabs, .cats-strip, .emoji-sheet-host, .sheet-host, [data-no-swipe]'
-    );
+    const ignored = shouldIgnoreMobileSwipeTarget(e.target);
     const width = screensHostRef.current?.clientWidth ?? (typeof window !== 'undefined' ? window.innerWidth : 0);
     const now = Date.now();
     dragRef.current = {

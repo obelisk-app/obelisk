@@ -10,7 +10,29 @@ vi.mock('@/lib/relay-branding', () => ({
   useRelayBranding: () => ({}),
 }));
 
-import { MobileServerBanner, MobileServerRail, RelayTile } from './PhoneShell';
+import { MobileServerBanner, MobileServerRail, RelayTile, shouldIgnoreMobileSwipeTarget } from './PhoneShell';
+
+describe('mobile swipe target guard', () => {
+  it('ignores search/header chrome so a tap cannot also commit carousel navigation', () => {
+    const banner = document.createElement('div');
+    banner.className = 'server-banner-actions';
+    const search = document.createElement('button');
+    search.className = 'icon-btn';
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    banner.append(search);
+    search.append(svg);
+
+    expect(shouldIgnoreMobileSwipeTarget(svg)).toBe(true);
+  });
+
+  it('keeps ordinary content eligible for horizontal swipe navigation', () => {
+    const row = document.createElement('button');
+    row.className = 'ch-row';
+    row.textContent = 'general';
+
+    expect(shouldIgnoreMobileSwipeTarget(row)).toBe(false);
+  });
+});
 
 describe('RelayTile long-press', () => {
   beforeEach(() => { vi.useFakeTimers(); });
@@ -158,4 +180,3 @@ describe('Mobile server layout pieces', () => {
     expect(onOpenMenu).toHaveBeenCalledTimes(1);
   });
 });
-
