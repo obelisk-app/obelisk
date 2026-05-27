@@ -143,6 +143,10 @@ const SPINNER_CLASSES: Record<Severity, string> = {
   error: 'border-red-300/30 border-t-red-200',
 };
 
+function bannerTestId(state: string): 'connection-loss-banner' | 'relay-access-banner' {
+  return state === 'disconnected' ? 'connection-loss-banner' : 'relay-access-banner';
+}
+
 /**
  * The unified desktop banner. Renders a full-width strip above the chat
  * pane. Mobile uses {@link RelayStatusBadge} for a tighter inline pill.
@@ -158,7 +162,7 @@ export default function RelayStatusBanner() {
   if (!status) return null;
   return (
     <div
-      data-testid="relay-status-banner"
+      data-testid={bannerTestId(status.state)}
       data-state={status.state}
       data-severity={status.severity}
       className={`flex items-start gap-3 border-b px-4 py-2.5 ${SEVERITY_CLASSES[status.severity]}`}
@@ -198,7 +202,7 @@ export function RelayStatusBadge() {
   if (!status) return null;
   return (
     <div
-      data-testid="relay-status-banner"
+      data-testid={bannerTestId(status.state)}
       data-state={status.state}
       data-severity={status.severity}
       className={`flex items-center gap-2 px-3 py-1.5 border-b text-xs ${SEVERITY_CLASSES[status.severity]}`}

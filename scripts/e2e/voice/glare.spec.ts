@@ -37,7 +37,7 @@ const RELAY_URL = process.env.OBELISK_E2E_RELAY ?? DEFAULT_RELAY;
 test('simultaneous join still establishes a single PC + control channel pair', async () => {
   test.setTimeout(120_000);
   const browser = await chromium.launch({
-    args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'],
+    args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream', '--autoplay-policy=no-user-gesture-required'],
   });
 
   try {

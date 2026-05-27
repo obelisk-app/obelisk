@@ -64,7 +64,7 @@ test('5 peers with audio + camera + screen-share', async () => {
   test.setTimeout(300_000);
 
   const browser = await chromium.launch({
-    args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'],
+    args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream', '--autoplay-policy=no-user-gesture-required'],
   });
 
   try {

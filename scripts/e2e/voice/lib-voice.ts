@@ -43,6 +43,12 @@ export async function installFakeMediaStreams(context: import('@playwright/test'
     function makeFakeAudioStream(): MediaStream {
       const Ctx = (w.AudioContext ?? w.webkitAudioContext)!;
       const ac = new Ctx();
+      const resume = () => { void ac.resume().catch(() => {}); };
+      resume();
+      const resumeTimer = window.setInterval(() => {
+        if (ac.state === 'running') window.clearInterval(resumeTimer);
+        else resume();
+      }, 500);
       const osc = ac.createOscillator();
       osc.frequency.value = 220;
       const gain = ac.createGain();

@@ -595,7 +595,7 @@ class BridgeImpl implements NostrBridge {
    * be allowed to downgrade from 'ok'; otherwise the banner never surfaces
    * a non-whitelisted user who first saw an EOSE on an empty filter.
    */
-  private setRelayAccess(url: string, state: RelayAccessState, _opts?: { override?: boolean }): void {
+  private setRelayAccess(url: string, state: RelayAccessState, opts?: { override?: boolean }): void {
     if (!this.isActiveRelay(url)) return;
     const key = normalizeRelayUrl(url);
     const cur = this.relayAccess.get();
@@ -604,7 +604,7 @@ class BridgeImpl implements NostrBridge {
     // back to a non-'ok' state. Per-channel CLOSED rejections (private
     // channels the user isn't a member of, NIP-29 publish races) are normal
     // mid-session noise — letting them flip the banner causes flashing.
-    if (cur[key] === 'ok' && state !== 'ok') return;
+    if (cur[key] === 'ok' && state !== 'ok' && !opts?.override) return;
     // Any state transition supersedes a pending deferred downgrade — most
     // importantly, a flip to 'ok' must cancel a pending 'auth-required' so
     // the banner never appears for transient AUTH races that healed via
@@ -1179,6 +1179,13 @@ class BridgeImpl implements NostrBridge {
    * without leaving background data stranded for noticeably long.
    */
   private static readonly ACTIVE_PRIORITY_MAX_PAUSE_MS = 3000;
+  /**
+   * Passive background message streams are useful for unread badges, but every
+   * open group consumes a relay subscription. Keep a hard ceiling well under
+   * public.obelisk.ar's 50-sub limit so global REQs, voice signaling, and the
+   * currently-open channel have room. Active channels bypass this cap.
+   */
+  private static readonly MAX_BACKGROUND_MESSAGE_STREAMS = 24;
   /**
    * Wall-clock deadline after which the active-channel priority gate
    * stops pausing the background drain. Set on every {@link setActiveGroup}
@@ -3608,7 +3615,7 @@ class BridgeImpl implements NostrBridge {
                   if (IMMEDIATE_ACCESS_DOWNGRADE) {
                     // Preflight path — surface "Not whitelisted" within the
                     // sub's own watchdog window, no 4s soak.
-                    this.setRelayAccess(url, state);
+                    this.setRelayAccess(url, state, { override: true });
                   } else {
                     this.setRelayAccessDeferred(url, state);
                   }
@@ -3958,6 +3965,7 @@ class BridgeImpl implements NostrBridge {
       this.subscribeGroupMessages(groupId);
       return;
     }
+    if (this.backgroundMessageStreamCount() >= BridgeImpl.MAX_BACKGROUND_MESSAGE_STREAMS) return;
     this.pendingMessageSet.add(groupId);
     this.pendingMessageQueue.push(groupId);
     this.scheduleMessageQueueDrain();
@@ -4032,6 +4040,11 @@ class BridgeImpl implements NostrBridge {
     const BATCH = 4;
     let processed = 0;
     while (this.pendingMessageQueue.length > 0 && processed < BATCH) {
+      if (this.backgroundMessageStreamCount() >= BridgeImpl.MAX_BACKGROUND_MESSAGE_STREAMS) {
+        this.pendingMessageQueue = [];
+        this.pendingMessageSet.clear();
+        break;
+      }
       const id = this.pendingMessageQueue.shift()!;
       this.pendingMessageSet.delete(id);
       if (!this.messageSubscribedGroups.has(id)) {
@@ -4042,6 +4055,14 @@ class BridgeImpl implements NostrBridge {
     if (this.pendingMessageQueue.length > 0) {
       this.scheduleMessageQueueDrain();
     }
+  }
+
+  private backgroundMessageStreamCount(): number {
+    let count = 0;
+    for (const groupId of this.messageSubscribedGroups) {
+      if (groupId !== this.activeGroupId) count++;
+    }
+    return count;
   }
 
   /**
@@ -4111,14 +4132,18 @@ class BridgeImpl implements NostrBridge {
     const seedMsgs = this.messagesByGroup.get()[groupId] ?? [];
     this.setMessagesStatus(groupId, seedMsgs.length > 0 ? 'has-messages' : 'loading');
     const filter: Filter = {
-      kinds: [KIND_GROUP_MESSAGE],
+      kinds: [KIND_GROUP_MESSAGE, KIND_EVENT_DELETION, KIND_GROUP_DELETE_EVENT],
       '#h': [groupId],
       limit: BACKGROUND_MESSAGE_LIMIT,
     };
     const sub = this.subscribeWatched(
       this.relays,
       filter,
-      (ev) => this.ingestMessage(groupId, ev),
+      (ev) => {
+        if (ev.kind === KIND_GROUP_MESSAGE) this.ingestMessage(groupId, ev);
+        else if (ev.kind === KIND_EVENT_DELETION) this.ingestEventDeletion(groupId, ev);
+        else if (ev.kind === KIND_GROUP_DELETE_EVENT) this.ingestGroupEventDeletion(groupId, ev);
+      },
       () => {
         // Flip per-group EOSE once the relay confirms it has finished
         // serving the stored history for this REQ. The chat pane reads
@@ -4154,8 +4179,6 @@ class BridgeImpl implements NostrBridge {
     );
     this.subs.push(sub);
     this.messageSubByGroup.set(groupId, sub);
-    this.subscribeGroupEventDeletions(groupId);
-    this.subscribeGroupModerationDeletions(groupId);
   }
 
   /**
@@ -4521,14 +4544,17 @@ class BridgeImpl implements NostrBridge {
 
   private subscribeKind0(pubkey: string): void {
     const filter: Filter = { kinds: [KIND_USER_METADATA], authors: [pubkey] };
-    // Persistent profile REQs stay scoped to the active server relay. External
-    // profile relays are queried separately as bounded one-shots below.
-    const sub = this.subscribeWatched(
+    // Active-relay profile REQs are bounded one-shots. External profile
+    // relays are queried separately as querySync one-shots below.
+    let sub: { close: () => void; markClosed?: () => void } | undefined;
+    sub = this.subscribeWatched(
       this.relays,
       filter,
       (ev) => this.ingestUserMetadata(ev, { cacheRelayScoped: true }),
-      undefined,
-      { watchdogMs: 3000, affectsRelayAccess: false },
+      () => {
+        if (sub) this.closeTrackedSub(sub);
+      },
+      { watchdogMs: 3000, maxAttempts: 2, affectsRelayAccess: false },
     );
     this.subs.push(sub);
     const cached = getCachedKind0(pubkey);
@@ -5219,11 +5245,9 @@ class BridgeImpl implements NostrBridge {
     // call from the chat panel. Tradeoff: the sidebar's "I'm an admin of
     // X" badge no longer paints before opening each channel — acceptable
     // given the load-time win. See docs/data-system.md.
-    // Resolve the kind 9007 author so claimCreatorAdmin knows whether the
-    // local user is the creator without having to assume it on every login.
-    if (this.voiceRelayCapacityReservations === 0) {
-      this.subscribeGroupCreator(groupId);
-    }
+    // Per-group creator REQs are intentionally not fanned out here. The
+    // global authored-groups subscription covers the only write path that
+    // needs this eagerly (claiming admin on groups the local user created).
     // Maintain parent → children index so the sidebar can render nesting.
     // O(1) update via {@link groupParentMap}: look up the previous parent
     // for this groupId in the reverse map and only touch the affected

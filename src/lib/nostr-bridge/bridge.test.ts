@@ -874,6 +874,8 @@ describe('nostr-bridge', () => {
     // "Not whitelisted" banner gets stuck on for users who actually are
     // whitelisted.
     for (const sub of fake.state.subscriptions) {
+      const f = sub.filter as { kinds?: number[]; authors?: string[]; limit?: number };
+      if (f.kinds?.includes(0) && f.authors?.includes(pkHex) && f.limit === 1) continue;
       const reasons = (sub.relays ?? [activeRelay]).map(() => 'auth-required: please AUTH');
       sub.onclose?.(reasons);
     }
@@ -881,6 +883,8 @@ describe('nostr-bridge', () => {
     expect(observed.at(-1)?.[norm]).toBe('ok');
 
     for (const sub of fake.state.subscriptions) {
+      const f = sub.filter as { kinds?: number[]; authors?: string[]; limit?: number };
+      if (f.kinds?.includes(0) && f.authors?.includes(pkHex) && f.limit === 1) continue;
       const reasons = (sub.relays ?? [activeRelay]).map(() => 'restricted: pubkey not whitelisted');
       sub.onclose?.(reasons);
     }
@@ -1394,7 +1398,7 @@ describe('nostr-bridge', () => {
     }
   });
 
-  it('subscribes to kind:0 persistently only on the active relay and bounds external lookup', async () => {
+  it('opens kind:0 on the active relay as a bounded one-shot and bounds external lookup', async () => {
     const { getBridge } = await import('./client');
     const { skHex, pkHex } = makeKeypair();
     const other = makeKeypair().pkHex;
@@ -1404,19 +1408,22 @@ describe('nostr-bridge', () => {
     fake.state.querySyncCalls = [];
 
     bridge.ensureUserMetadata(other);
+    const initialKind0Subs = fake.state.subscriptions.filter((s) => (s.filter.kinds as number[] | undefined)?.includes(0));
+    expect(initialKind0Subs).toHaveLength(1);
+    expect(initialKind0Subs[0].relays).toEqual(['wss://public.obelisk.ar']);
+
     await flush(8);
 
     const kind0Subs = fake.state.subscriptions.filter((s) => (s.filter.kinds as number[] | undefined)?.includes(0));
-    expect(kind0Subs).toHaveLength(1);
-    expect(kind0Subs[0].relays).toEqual(['wss://public.obelisk.ar']);
+    expect(kind0Subs).toHaveLength(0);
     const contactMuteSubs = fake.state.subscriptions.filter((s) => {
       const kinds = s.filter.kinds as number[] | undefined;
       return kinds?.includes(3) || kinds?.includes(10000);
     });
     expect(contactMuteSubs.every((s) => s.relays?.every((r) => r === 'wss://public.obelisk.ar'))).toBe(true);
-    expect(kind0Subs[0].relays).not.toContain('wss://nos.lol');
-    expect(kind0Subs[0].relays).not.toContain('wss://relay.primal.net');
-    expect(kind0Subs[0].relays).not.toContain('wss://relay.nostr.band');
+    expect(initialKind0Subs[0].relays).not.toContain('wss://nos.lol');
+    expect(initialKind0Subs[0].relays).not.toContain('wss://relay.primal.net');
+    expect(initialKind0Subs[0].relays).not.toContain('wss://relay.nostr.band');
     const externalLookup = fake.state.querySyncCalls.find((c) => (c.filter.authors as string[] | undefined)?.includes(other));
     expect(externalLookup?.relays).toEqual(['wss://relay.obelisk.ar', 'wss://public.obelisk.ar', 'wss://purplepag.es']);
   });
@@ -1624,6 +1631,70 @@ describe('nostr-bridge', () => {
     expect(messageSubsFor('bg-1')).toHaveLength(1);
     expect(messageSubsFor('bg-2')).toHaveLength(1);
     expect(messageSubsFor('bg-3')).toHaveLength(1);
+  });
+
+  it('uses one live per-group stream for messages and deletes', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const groupId = 'merged-message-stream';
+    fake.state.subscriptions = [];
+    bridge.subscribeMessages(groupId, () => {});
+
+    const groupSubs = fake.state.subscriptions.filter((s) => {
+      const f = s.filter as { kinds?: number[]; '#h'?: string[] };
+      return f['#h']?.includes(groupId);
+    });
+    expect(groupSubs).toHaveLength(1);
+    expect((groupSubs[0].filter.kinds as number[]).sort()).toEqual([5, 9, 9005]);
+  });
+
+  it('does not open per-group creator subscriptions during metadata fan-out', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    fake.state.subscriptions = [];
+    deliver(await fakeRelayMetadata({ groupId: 'creator-bg-1', name: 'Creator BG 1' }));
+    deliver(await fakeRelayMetadata({ groupId: 'creator-bg-2', name: 'Creator BG 2' }));
+
+    const creatorSubs = fake.state.subscriptions.filter((s) => {
+      const f = s.filter as { kinds?: number[]; '#h'?: string[] };
+      return f.kinds?.includes(9007) && !!f['#h'];
+    });
+    expect(creatorSubs).toHaveLength(0);
+  });
+
+  it('caps background message streams below public relay subscription quota', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      for (let i = 0; i < 40; i++) {
+        deliver(await fakeRelayMetadata({ groupId: `quota-bg-${i}`, name: `Quota ${i}` }));
+      }
+      for (let i = 0; i < 10; i++) {
+        await vi.advanceTimersByTimeAsync(100);
+      }
+    } finally {
+      vi.useRealTimers();
+    }
+    await flush();
+
+    const messageSubs = fake.state.subscriptions.filter((s) => {
+      const f = s.filter as { kinds?: number[]; '#h'?: string[] };
+      return f.kinds?.includes(9) && f['#h']?.[0]?.startsWith('quota-bg-');
+    });
+    expect(messageSubs.length).toBeLessThanOrEqual(24);
   });
 
   it('setActiveGroup after a queued metadata burst promotes the clicked channel to the head of the queue', async () => {

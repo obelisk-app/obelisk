@@ -6,9 +6,8 @@
  * localStorage, navigate to Preferences, click Clear cache, confirm in
  * the modal, then assert which keys remain.
  *
- * The Preferences modal is opened by clicking the user avatar pill,
- * then the Edit-profile path navigates to the modal where the
- * Preferences tab lives.
+ * The Preferences modal is opened through the current user Settings gear,
+ * then the Preferences tab exposes the clear-cache control.
  */
 import { test, expect } from '@playwright/test';
 import {
@@ -57,22 +56,9 @@ test('Clear cache wipes relay/UI state but preserves session + preferences', asy
   expect(before.cacheEntry).not.toBeNull();
   logOk('pre-clear: session, prefs, read-state, cache entry all present');
 
-  // Open the user-edit modal via the avatar pill ("Edit profile" button).
-  logStep('Open Preferences', 'Avatar pill → Edit profile → Preferences tab');
-  // The desktop pill is a button containing the user's name/initials.
-  // We navigate via the explicit "Edit profile" entry in the UserPanel
-  // popover. The popover opens when clicking the bottom-left user pill.
-  const userPanelTrigger = page.locator('[data-testid="user-edit-modal"], button:has-text("Edit profile")').first();
-  // Try to open the user popover first.
-  const editEntry = page.getByRole('button', { name: /Edit profile/i });
-  if ((await editEntry.count()) === 0) {
-    // Fallback: click the bottom-left pill if accessible by name.
-    const pill = page.locator('button').filter({ hasText: id.pkHex.slice(0, 6) }).first();
-    if ((await pill.count()) > 0) await pill.click();
-  }
-  await editEntry.first().waitFor({ state: 'visible', timeout: 10_000 });
-  await editEntry.first().click();
-  await userPanelTrigger.waitFor({ state: 'visible', timeout: 10_000 }).catch(() => {});
+  logStep('Open Preferences', 'User Settings gear → Preferences tab');
+  await page.getByTestId('user-settings-button').click();
+  await page.getByTestId('user-edit-modal').waitFor({ state: 'visible', timeout: 10_000 });
   await page.getByRole('button', { name: /Preferences/ }).first().click();
 
   // Click Clear cache and confirm.

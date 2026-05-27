@@ -202,6 +202,32 @@ describe('preflight — whitelist detection', () => {
     expect(ok).toBeDefined();
   });
 
+  it('downgrades preflight EOSE-then-CLOSED auth-required instead of sticking on ok', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+
+    const accessSnapshots: Array<Record<string, string>> = [];
+    bridge.subscribeRelayAccess((snap) => {
+      accessSnapshots.push({ ...snap });
+    });
+
+    await bridge.loginWithNsec(skHex, pkHex);
+    await Promise.resolve();
+    const preflight = findPreflightSub(pkHex);
+    expect(preflight).toBeDefined();
+
+    preflight!.oneose?.();
+    expect(accessSnapshots.find((s) => Object.values(s).includes('ok'))).toBeDefined();
+
+    preflight!.onclose?.(preflight!.relays.map(() => 'auth-required: this relay only accepts whitelisted pubkeys'));
+
+    const authRequired = accessSnapshots.find((s) =>
+      Object.values(s).includes('auth-required'),
+    );
+    expect(authRequired).toBeDefined();
+  });
+
   it('does not retry preflight after the single attempt (maxAttempts=1)', async () => {
     const { getBridge } = await import('./client');
     const { skHex, pkHex } = makeKeypair();

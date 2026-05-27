@@ -23,6 +23,7 @@ import {
   nsecSession,
   readLocalStorageJSON,
   seedSession,
+  sendMessageInActiveChannel,
   waitForRelayOk,
 } from './lib';
 
@@ -55,10 +56,13 @@ test('read-state cursors converge across two contexts on the same nsec', async (
   await channelA.waitFor({ state: 'visible', timeout: 30_000 });
   await channelA.click();
 
-  // Read the active channel id from the persisted store via the chat
-  // store — easier than introspecting the URL.
-  // Wait until messages render to give auto-mark-read a window to fire.
-  await pageA.waitForTimeout(2_000);
+  // Ensure the selected channel has a fresh message. The production relay can
+  // legitimately return an empty first channel, in which case auto-mark-read
+  // has no timestamp to advance and the convergence assertion is testing a
+  // missing fixture rather than the read-state machinery.
+  const probe = `read-state convergence ${Date.now()} ${id.pkHex.slice(0, 6)}`;
+  await pageA.getByPlaceholder(/^Message #/i).first().waitFor({ state: 'visible', timeout: 15_000 });
+  await sendMessageInActiveChannel(pageA, probe);
 
   // Read the cursor the auto-mark hook should have advanced.
   let preA = await readLocalStorageJSON<ReadStatePersist>(pageA, READ_STATE_KEY(id.pkHex));
