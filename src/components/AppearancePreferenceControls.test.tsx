@@ -34,6 +34,25 @@ describe('AppearancePreferenceControls', () => {
     });
   });
 
+  it('renders desktop quick color presets with softer rounded controls', async () => {
+    const user = userEvent.setup();
+    const { default: AppearancePreferenceControls } = await import('./AppearancePreferenceControls');
+    const { getPreferences } = await import('@/lib/preferences');
+
+    render(<AppearancePreferenceControls />);
+
+    const accentPreset = screen.getByRole('button', { name: /set accent color to violet/i });
+    expect(accentPreset).toHaveClass('rounded-full');
+    expect(screen.getByTestId('appearance-accent-color')).toHaveClass('rounded-xl');
+    expect(screen.getByTestId('appearance-bubble-animation')).toHaveClass('rounded-xl');
+
+    await user.click(accentPreset);
+
+    expect(getPreferences()).toMatchObject({
+      accentColor: '#a78bfa',
+    });
+  });
+
   it('renders the compact mobile controls and resets to defaults', async () => {
     const user = userEvent.setup();
     const { default: AppearancePreferenceControls } = await import('./AppearancePreferenceControls');

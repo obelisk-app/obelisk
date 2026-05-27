@@ -42,6 +42,14 @@ const CONTROLS: Array<{ key: AppearanceKey; label: string; description: string; 
   },
 ];
 
+const DESKTOP_COLOR_PRESETS = [
+  { name: 'Obelisk', value: '#b4f953' },
+  { name: 'Cyan', value: '#7ec8ff' },
+  { name: 'Violet', value: '#a78bfa' },
+  { name: 'Amber', value: '#f0c14a' },
+  { name: 'Rose', value: '#ff7ad9' },
+] as const;
+
 export default function AppearancePreferenceControls({ variant = 'desktop' }: AppearancePreferenceControlsProps) {
   const prefs = usePreferences();
   const isMobile = variant === 'mobile';
@@ -49,7 +57,7 @@ export default function AppearancePreferenceControls({ variant = 'desktop' }: Ap
   return (
     <div
       data-testid="appearance-controls"
-      className={isMobile ? 'settings-section' : 'space-y-3 border-t border-lc-border pt-4'}
+      className={isMobile ? 'settings-section' : 'space-y-3 rounded-2xl border border-lc-border bg-lc-black/30 p-4'}
     >
       <div className={isMobile ? 'settings-section-title' : 'text-xs font-semibold uppercase tracking-wider text-lc-muted'}>
         Appearance
@@ -70,7 +78,7 @@ export default function AppearancePreferenceControls({ variant = 'desktop' }: Ap
         onClick={resetAppearancePreferences}
         className={isMobile
           ? 'settings-btn-secondary'
-          : 'rounded-md border border-lc-border bg-lc-black px-3 py-1.5 text-sm text-lc-white transition hover:bg-lc-border/40'}
+          : 'rounded-xl border border-lc-border bg-lc-black px-3 py-1.5 text-sm text-lc-white transition hover:bg-lc-border/40'}
       >
         Reset appearance
       </button>
@@ -101,7 +109,7 @@ function ColorPreferenceRow({
   };
 
   return (
-    <div className={isMobile ? 'settings-row appearance-row' : 'rounded-md border border-lc-border bg-lc-black/40 p-3'}>
+    <div className={isMobile ? 'settings-row appearance-row' : 'rounded-2xl border border-lc-border bg-lc-black/40 p-3'}>
       <div className={isMobile ? 'appearance-row-copy' : 'mb-2'}>
         <div className={isMobile ? '' : 'text-sm font-medium text-lc-white'}>{control.label}</div>
         <div className={isMobile ? 'settings-row-meta muted' : 'mt-0.5 text-xs text-lc-muted'}>{control.description}</div>
@@ -112,7 +120,7 @@ function ColorPreferenceRow({
           aria-label={`${control.label} color`}
           value={value}
           onChange={(e) => commit(e.target.value)}
-          className="h-9 w-9 shrink-0 cursor-pointer rounded-md border border-lc-border bg-transparent p-0"
+          className="h-9 w-9 shrink-0 cursor-pointer rounded-xl border border-lc-border bg-transparent p-0"
         />
         <input
           type="text"
@@ -124,9 +132,23 @@ function ColorPreferenceRow({
           aria-label={`${control.label} hex color`}
           className={isMobile
             ? 'appearance-hex-input'
-            : 'w-24 rounded-md border border-lc-border bg-lc-dark px-2 py-1.5 font-mono text-xs text-lc-white outline-none focus:border-lc-green'}
+            : 'w-24 rounded-xl border border-lc-border bg-lc-dark px-2 py-1.5 font-mono text-xs text-lc-white outline-none focus:border-lc-green'}
           placeholder={APPEARANCE_DEFAULTS[control.key]}
         />
+        {!isMobile && (
+          <div className="flex flex-wrap gap-1.5" aria-label={`${control.label} quick colors`}>
+            {DESKTOP_COLOR_PRESETS.map((preset) => (
+              <button
+                key={preset.value}
+                type="button"
+                aria-label={`Set ${control.label} color to ${preset.name}`}
+                onClick={() => commit(preset.value)}
+                className={`h-6 w-6 rounded-full border transition hover:scale-110 ${value === preset.value ? 'border-lc-white ring-2 ring-lc-green/40' : 'border-lc-border'}`}
+                style={{ backgroundColor: preset.value }}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -142,7 +164,7 @@ const BUBBLE_ANIMATION_OPTIONS = [
 
 function BubbleAnimationRow({ value, isMobile }: { value: Preferences['bubbleAnimation']; isMobile: boolean }) {
   return (
-    <div className={isMobile ? 'settings-row appearance-row' : 'rounded-md border border-lc-border bg-lc-black/40 p-3'}>
+    <div className={isMobile ? 'settings-row appearance-row' : 'rounded-2xl border border-lc-border bg-lc-black/40 p-3'}>
       <div className={isMobile ? 'appearance-row-copy' : 'mb-2'}>
         <div className={isMobile ? '' : 'text-sm font-medium text-lc-white'}>Bubble motion</div>
         <div className={isMobile ? 'settings-row-meta muted' : 'mt-0.5 text-xs text-lc-muted'}>
@@ -156,7 +178,7 @@ function BubbleAnimationRow({ value, isMobile }: { value: Preferences['bubbleAni
         aria-label="Bubble animation style"
         className={isMobile
           ? 'appearance-select'
-          : 'w-full rounded-md border border-lc-border bg-lc-dark px-2 py-1.5 text-xs text-lc-white outline-none focus:border-lc-green'}
+          : 'w-full rounded-xl border border-lc-border bg-lc-dark px-2 py-1.5 text-xs text-lc-white outline-none focus:border-lc-green'}
       >
         {BUBBLE_ANIMATION_OPTIONS.map((option) => (
           <option key={option.value} value={option.value}>{option.label}</option>
