@@ -21,11 +21,16 @@ describe('AppearancePreferenceControls', () => {
     await user.type(screen.getByTestId('appearance-background-color'), '#111827');
     await user.clear(screen.getByTestId('appearance-button-color'));
     await user.type(screen.getByTestId('appearance-button-color'), '#f0c14a');
+    await user.clear(screen.getByTestId('appearance-bubble-color'));
+    await user.type(screen.getByTestId('appearance-bubble-color'), '#ff7ad9');
+    await user.selectOptions(screen.getByTestId('appearance-bubble-animation'), 'drift');
 
     expect(getPreferences()).toMatchObject({
       accentColor: '#7ec8ff',
       backgroundColor: '#111827',
       buttonColor: '#f0c14a',
+      bubbleColor: '#ff7ad9',
+      bubbleAnimation: 'drift',
     });
   });
 
@@ -36,6 +41,8 @@ describe('AppearancePreferenceControls', () => {
     setPreference('accentColor', '#7ec8ff');
     setPreference('backgroundColor', '#111827');
     setPreference('buttonColor', '#f0c14a');
+    setPreference('bubbleColor', '#ff7ad9');
+    setPreference('bubbleAnimation', 'orbit');
 
     render(<AppearancePreferenceControls variant="mobile" />);
 
@@ -47,6 +54,8 @@ describe('AppearancePreferenceControls', () => {
       accentColor: '#b4f953',
       backgroundColor: '#0a0a0a',
       buttonColor: '#b4f953',
+      bubbleColor: '#b4f953',
+      bubbleAnimation: 'float',
     });
   });
 });

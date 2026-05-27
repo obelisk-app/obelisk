@@ -9,7 +9,7 @@ import {
   type Preferences,
 } from '@/lib/preferences';
 
-type AppearanceKey = 'accentColor' | 'backgroundColor' | 'buttonColor';
+type AppearanceKey = 'accentColor' | 'backgroundColor' | 'buttonColor' | 'bubbleColor';
 
 interface AppearancePreferenceControlsProps {
   variant?: 'desktop' | 'mobile';
@@ -34,6 +34,12 @@ const CONTROLS: Array<{ key: AppearanceKey; label: string; description: string; 
     description: 'Primary actions',
     testId: 'appearance-button-color',
   },
+  {
+    key: 'bubbleColor',
+    label: 'Bubbles',
+    description: 'Animated background chat bubbles',
+    testId: 'appearance-bubble-color',
+  },
 ];
 
 export default function AppearancePreferenceControls({ variant = 'desktop' }: AppearancePreferenceControlsProps) {
@@ -57,6 +63,7 @@ export default function AppearancePreferenceControls({ variant = 'desktop' }: Ap
             isMobile={isMobile}
           />
         ))}
+        <BubbleAnimationRow value={prefs.bubbleAnimation} isMobile={isMobile} />
       </div>
       <button
         type="button"
@@ -121,6 +128,40 @@ function ColorPreferenceRow({
           placeholder={APPEARANCE_DEFAULTS[control.key]}
         />
       </div>
+    </div>
+  );
+}
+
+
+const BUBBLE_ANIMATION_OPTIONS = [
+  { value: 'float', label: 'Float up' },
+  { value: 'drift', label: 'Slow drift' },
+  { value: 'orbit', label: 'Orbit' },
+  { value: 'still', label: 'Still' },
+] as const;
+
+function BubbleAnimationRow({ value, isMobile }: { value: Preferences['bubbleAnimation']; isMobile: boolean }) {
+  return (
+    <div className={isMobile ? 'settings-row appearance-row' : 'rounded-md border border-lc-border bg-lc-black/40 p-3'}>
+      <div className={isMobile ? 'appearance-row-copy' : 'mb-2'}>
+        <div className={isMobile ? '' : 'text-sm font-medium text-lc-white'}>Bubble motion</div>
+        <div className={isMobile ? 'settings-row-meta muted' : 'mt-0.5 text-xs text-lc-muted'}>
+          Animation style for the decorative background bubbles
+        </div>
+      </div>
+      <select
+        value={value}
+        onChange={(e) => setPreference('bubbleAnimation', e.target.value as Preferences['bubbleAnimation'])}
+        data-testid="appearance-bubble-animation"
+        aria-label="Bubble animation style"
+        className={isMobile
+          ? 'appearance-select'
+          : 'w-full rounded-md border border-lc-border bg-lc-dark px-2 py-1.5 text-xs text-lc-white outline-none focus:border-lc-green'}
+      >
+        {BUBBLE_ANIMATION_OPTIONS.map((option) => (
+          <option key={option.value} value={option.value}>{option.label}</option>
+        ))}
+      </select>
     </div>
   );
 }

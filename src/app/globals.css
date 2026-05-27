@@ -22,6 +22,8 @@
   --obelisk-button: #b4f953;
   --obelisk-button-hover: #c5ff6e;
   --obelisk-button-ink: #0a0a0a;
+  --obelisk-bubble: #b4f953;
+  --obelisk-bubble-soft: #2d3a1a;
   --background: var(--obelisk-app-bg);
   --foreground: #fafafa;
   --color-lc-black: var(--obelisk-app-bg);
@@ -47,7 +49,9 @@ body {
 .lc-grid-bg {
   background-image:
     linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
+    linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px),
+    radial-gradient(circle at 20% 20%, color-mix(in oklab, var(--obelisk-accent) 4%, transparent), transparent 30%);
+  background-color: var(--obelisk-app-bg);
   background-size: 60px 60px;
 }
 
@@ -64,8 +68,8 @@ body {
 
 /* Card hover effect */
 .lc-card {
-  background: #171717;
-  border: 1px solid #262626;
+  background: var(--obelisk-app-bg-panel, #171717);
+  border: 1px solid color-mix(in oklab, var(--obelisk-app-bg-panel, #171717) 78%, white);
   border-radius: 12px;
   transition: all 0.3s ease;
 }
@@ -252,21 +256,71 @@ button:not(:disabled),
 /* Floating chat bubbles */
 @keyframes float-up {
   0% {
-    transform: translateY(0) translateX(0);
-    opacity: var(--bubble-opacity, 0.08);
+    transform: translate3d(0, 18px, 0) scale(0.96) rotate(-2deg);
+    opacity: 0;
   }
-  50% {
-    opacity: var(--bubble-opacity, 0.08);
+  12% {
+    opacity: var(--bubble-opacity, 0.12);
+  }
+  62% {
+    opacity: var(--bubble-opacity, 0.12);
+    transform: translate3d(18px, -48vh, 0) scale(1.04) rotate(4deg);
   }
   100% {
-    transform: translateY(-100vh) translateX(20px);
+    transform: translate3d(-18px, -105vh, 0) scale(0.88) rotate(-6deg);
     opacity: 0;
   }
 }
 
+@keyframes bubble-drift {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1) rotate(-3deg);
+    opacity: calc(var(--bubble-opacity, 0.12) * 0.62);
+  }
+  35% {
+    transform: translate3d(22px, -24px, 0) scale(1.08) rotate(3deg);
+    opacity: var(--bubble-opacity, 0.12);
+  }
+  70% {
+    transform: translate3d(-18px, 18px, 0) scale(0.96) rotate(-1deg);
+    opacity: calc(var(--bubble-opacity, 0.12) * 0.8);
+  }
+}
+
+@keyframes bubble-orbit {
+  from {
+    transform: rotate(0deg) translateX(var(--bubble-orbit-radius, 28px)) rotate(0deg) scale(0.98);
+    opacity: var(--bubble-opacity, 0.12);
+  }
+  to {
+    transform: rotate(360deg) translateX(var(--bubble-orbit-radius, 28px)) rotate(-360deg) scale(1.02);
+    opacity: var(--bubble-opacity, 0.12);
+  }
+}
+
 .animate-float-up {
-  animation: float-up var(--float-duration, 18s) linear infinite;
+  color: var(--obelisk-bubble, var(--obelisk-accent));
+  filter: drop-shadow(0 0 16px color-mix(in oklab, var(--obelisk-bubble, var(--obelisk-accent)) 18%, transparent));
+  animation: float-up var(--float-duration, 18s) cubic-bezier(0.42, 0, 0.58, 1) infinite;
   animation-delay: var(--float-delay, 0s);
+}
+
+[data-bubble-animation='drift'] .animate-float-up,
+[data-bubble-animation='drift'] [data-bubble-animation] .animate-float-up {
+  animation-name: bubble-drift;
+  animation-duration: calc(var(--float-duration, 18s) * 0.85);
+}
+
+[data-bubble-animation='orbit'] .animate-float-up,
+[data-bubble-animation='orbit'] [data-bubble-animation] .animate-float-up {
+  animation-name: bubble-orbit;
+  animation-duration: calc(var(--float-duration, 18s) * 0.72);
+}
+
+[data-bubble-animation='still'] .animate-float-up,
+[data-bubble-animation='still'] [data-bubble-animation] .animate-float-up {
+  animation: none;
+  opacity: calc(var(--bubble-opacity, 0.12) * 0.78);
 }
 
 /* Orbiting keys — uses CSS custom property for radius */

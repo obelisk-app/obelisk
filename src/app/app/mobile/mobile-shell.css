@@ -3835,7 +3835,8 @@
   min-width: 0;
   flex: 1;
 }
-.obelisk-mobile .appearance-hex-input {
+.obelisk-mobile .appearance-hex-input,
+.obelisk-mobile .appearance-select {
   width: 86px;
   border: 1px solid var(--app-line);
   border-radius: 8px;
@@ -3846,8 +3847,12 @@
   padding: 8px 9px;
   outline: none;
 }
-.obelisk-mobile .appearance-hex-input:focus {
+.obelisk-mobile .appearance-hex-input:focus,
+.obelisk-mobile .appearance-select:focus {
   border-color: var(--accent);
+}
+.obelisk-mobile .appearance-select {
+  width: 116px;
 }
 .obelisk-mobile .toggle {
   width: 36px;

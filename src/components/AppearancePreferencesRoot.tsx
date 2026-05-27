@@ -12,6 +12,7 @@ export default function AppearancePreferencesRoot() {
     for (const [name, value] of Object.entries(vars)) {
       root.style.setProperty(name, value);
     }
+    root.dataset.bubbleAnimation = prefs.bubbleAnimation;
   }, [prefs]);
 
   return null;
