@@ -49,10 +49,12 @@ body {
 .lc-grid-bg {
   background-image:
     linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px),
-    radial-gradient(circle at 20% 20%, color-mix(in oklab, var(--obelisk-accent) 4%, transparent), transparent 30%);
-  background-color: var(--obelisk-app-bg);
+    linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
   background-size: 60px 60px;
+}
+
+.appearance-bg {
+  background-color: var(--obelisk-app-bg);
 }
 
 /* Glow effects */

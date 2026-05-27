@@ -246,7 +246,7 @@ export default function AppShell() {
             9999). The la-crypta overlay is dimmed in globals.css so the
             animation bleeds through around the centered card. */}
         <div className="lc-login-backdrop" aria-hidden="true">
-          <div className="lc-grid-bg absolute inset-0" />
+          <div className="appearance-bg lc-grid-bg absolute inset-0" />
           <ShootingStars />
         </div>
         <LoginModal />
@@ -367,7 +367,7 @@ export default function AppShell() {
 function RehydratingScreen() {
   return (
     <div
-      className="lc-grid-bg fixed inset-0 z-50 flex items-center justify-center bg-lc-black p-4"
+      className="appearance-bg lc-grid-bg fixed inset-0 z-50 flex items-center justify-center bg-lc-black p-4"
       data-testid="rehydrating-screen"
       role="status"
       aria-live="polite"
