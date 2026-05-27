@@ -5647,7 +5647,7 @@ export default function MobileShell() {
     const hasTarget = action.kind === 'top-level';
     const snap = hasTarget ? decideSnap(dx, velocity, width) : 'revert';
     const layer = dragLayerRef.current;
-    const TRANSITION = 'transform 240ms cubic-bezier(0.2, 0.85, 0.25, 1)';
+    const TRANSITION = 'transform 180ms cubic-bezier(0.2, 0.85, 0.25, 1)';
     if (snap === 'commit' && action.kind === 'top-level') {
       // Animate first, push after. Top-level tab switches always land on the
       // actual tab, not a remembered thread/channel/voice room.
@@ -5666,7 +5666,7 @@ export default function MobileShell() {
           action.dir,
         );
         setIsDragging(false);
-      }, 240);
+      }, 180);
     } else {
       if (layer) {
         layer.style.transition = TRANSITION;
@@ -5674,7 +5674,7 @@ export default function MobileShell() {
       }
       window.setTimeout(() => {
         setIsDragging(false);
-      }, 240);
+      }, 180);
     }
   }, [pushNav]);
 
@@ -5875,7 +5875,7 @@ export default function MobileShell() {
   const commitCarouselTransition = useCallback((target: ScreenName, dir: 'forward' | 'back') => {
     const layer = dragLayerRef.current;
     const width = screensHostRef.current?.clientWidth ?? (typeof window !== 'undefined' ? window.innerWidth : 0);
-    const TRANSITION = 'transform 240ms cubic-bezier(0.2, 0.85, 0.25, 1)';
+    const TRANSITION = 'transform 180ms cubic-bezier(0.2, 0.85, 0.25, 1)';
 
     const targetTx = dir === 'forward' ? -width : width;
     setIsDragging(true);
@@ -5903,7 +5903,7 @@ export default function MobileShell() {
         dir,
       );
       setIsDragging(false);
-    }, 240);
+    }, 180);
   }, [pushNav]);
 
   // Pop to the bare top-level tab while on a sub-screen. The parent tab
@@ -5915,7 +5915,7 @@ export default function MobileShell() {
   const popToBareTab = useCallback((target: ScreenName) => {
     const overlay = screensHostRef.current?.querySelector('.drag-overlay') as HTMLElement | null;
     if (overlay) {
-      overlay.style.transition = 'transform 240ms cubic-bezier(0.2, 0.85, 0.25, 1)';
+      overlay.style.transition = 'transform 180ms cubic-bezier(0.2, 0.85, 0.25, 1)';
       overlay.style.transform = 'translateX(100%)';
     }
     if (tabAnimTimerRef.current !== null) {
@@ -5941,7 +5941,7 @@ export default function MobileShell() {
         overlay.style.transition = '';
         overlay.style.transform = '';
       }
-    }, 240);
+    }, 180);
   }, []);
 
   const onTabPress = useCallback((target: ScreenName) => {
