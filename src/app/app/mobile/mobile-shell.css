@@ -14,7 +14,7 @@
 .obelisk-mobile {
   font-size: 14.5px;
   /* design tokens */
-  --app-bg: #0a0a0a;
+  --app-bg: var(--obelisk-app-bg, #0a0a0a);
   --app-surface: #171717;
   --app-surface-2: #1a1a1a;
   --app-line: #262626;
@@ -22,12 +22,12 @@
   --app-text: #fafafa;
   --app-text-dim: #a3a3a3;
   --app-text-mute: #6b6b6b;
-  --app-accent: #b4f953;
-  --app-accent-bg: #2d3a1a;
-  --accent: #b4f953;
-  --accent-deep: #8bc34a;
-  --accent-soft: #2d3a1a;
-  --accent-ink: #0a0a0a;
+  --app-accent: var(--obelisk-accent, #b4f953);
+  --app-accent-bg: var(--obelisk-accent-soft, #2d3a1a);
+  --accent: var(--obelisk-accent, #b4f953);
+  --accent-deep: var(--obelisk-accent-deep, #8bc34a);
+  --accent-soft: var(--obelisk-accent-soft, #2d3a1a);
+  --accent-ink: var(--obelisk-accent-ink, #0a0a0a);
   --role-blue: #7ec8ff;
   --role-pink: #ff9ec5;
   --role-green: #b4f953;
@@ -56,8 +56,8 @@
    * screens get the same glow the login modal had. Voice room overrides
    * everything with its own indigo→violet stage. */
   background:
-    radial-gradient(1100px 620px at 85% -8%, rgba(180, 249, 83, 0.14) 0%, transparent 62%),
-    radial-gradient(900px 540px at -5% 105%, rgba(180, 249, 83, 0.10) 0%, transparent 58%),
+    radial-gradient(1100px 620px at 85% -8%, color-mix(in oklab, var(--accent) 14%, transparent) 0%, transparent 62%),
+    radial-gradient(900px 540px at -5% 105%, color-mix(in oklab, var(--accent) 10%, transparent) 0%, transparent 58%),
     var(--app-bg);
   color: var(--app-text);
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -81,9 +81,9 @@
   inset: -12%;
   pointer-events: none;
   background:
-    radial-gradient(40% 32% at 28% 22%, rgba(180, 249, 83, 0.16), transparent 65%),
-    radial-gradient(36% 30% at 72% 78%, rgba(180, 249, 83, 0.12), transparent 65%),
-    radial-gradient(28% 24% at 50% 55%, rgba(139, 195, 74, 0.08), transparent 70%);
+    radial-gradient(40% 32% at 28% 22%, color-mix(in oklab, var(--accent) 16%, transparent), transparent 65%),
+    radial-gradient(36% 30% at 72% 78%, color-mix(in oklab, var(--accent) 12%, transparent), transparent 65%),
+    radial-gradient(28% 24% at 50% 55%, color-mix(in oklab, var(--accent-deep) 8%, transparent), transparent 70%);
   z-index: 0;
   will-change: transform;
   animation: obelisk-bg-drift 24s ease-in-out infinite alternate;
@@ -3828,6 +3828,27 @@
 .obelisk-mobile .settings-row-meta.ok { color: var(--accent); }
 .obelisk-mobile .settings-row-meta.warn { color: var(--presence-idle); }
 .obelisk-mobile .settings-row-meta.muted { color: var(--app-text-mute); }
+.obelisk-mobile .appearance-row {
+  align-items: flex-start;
+}
+.obelisk-mobile .appearance-row-copy {
+  min-width: 0;
+  flex: 1;
+}
+.obelisk-mobile .appearance-hex-input {
+  width: 86px;
+  border: 1px solid var(--app-line);
+  border-radius: 8px;
+  background: var(--app-surface-2);
+  color: var(--app-text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  padding: 8px 9px;
+  outline: none;
+}
+.obelisk-mobile .appearance-hex-input:focus {
+  border-color: var(--accent);
+}
 .obelisk-mobile .toggle {
   width: 36px;
   height: 22px;
@@ -3861,14 +3882,14 @@
 .obelisk-mobile .settings-btn-primary {
   width: 100%;
   padding: 13px;
-  background: var(--accent);
-  color: var(--accent-ink);
+  background: var(--obelisk-button, var(--accent));
+  color: var(--obelisk-button-ink, var(--accent-ink));
   border: none;
   border-radius: 10px;
   font-weight: 700;
   font-size: 13.5px;
   cursor: pointer;
-  box-shadow: 0 0 18px rgba(180, 249, 83, 0.2);
+  box-shadow: 0 0 18px color-mix(in oklab, var(--obelisk-button, var(--accent)) 20%, transparent);
 }
 .obelisk-mobile .settings-btn-secondary {
   width: 100%;

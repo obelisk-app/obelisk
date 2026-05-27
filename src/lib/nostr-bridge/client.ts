@@ -800,9 +800,11 @@ class BridgeImpl implements NostrBridge {
    *   - Synced mute list (NIP-51 kind 10000) + local zustand mute list →
    *     engine's union via {@link syncMutesToEngine}.
    *   - Local zustand block list → engine's hard denylist.
-   *   - `verdict-deny` listener prunes any data we admitted while a verdict
-   *     was still resolving so the "no untrusted state persists" invariant
-   *     holds eventually.
+   *
+   * Important: WoT/mute/block verdicts are non-destructive. They gate future
+   * ingestion/rendering decisions, but they must not wipe cached messages,
+   * DMs, metadata, channels, admins, or members. Only explicit relay/user
+   * delete/moderation events are allowed to remove user-visible data.
    */
   private wireWotEngine(): void {
     this.myPubkey.subscribe((pk) => wotEngine.setOwnPubkey(pk));
@@ -815,30 +817,6 @@ class BridgeImpl implements NostrBridge {
       useModerationStore.subscribe(() => this.syncMutesToEngine());
       this.syncMutesToEngine();
     }
-    wotEngine.on('verdict-deny', (pubkey) => this.pruneAuthor(pubkey));
-    wotEngine.onEnabledChanged((enabled) => {
-      if (enabled) this.reevaluateKnownAuthors();
-    });
-  }
-
-  /**
-   * Walk every author currently present in the stores and enqueue them for
-   * a fresh WoT verdict. Deny verdicts fire `verdict-deny` → pruneAuthor()
-   * wipes their entries, so toggling WoT on retroactively cleans up data
-   * that came in fail-open while the engine was disabled. No-op when WoT
-   * is off (`markUnknown` short-circuits).
-   */
-  private reevaluateKnownAuthors(): void {
-    const authors = new Set<string>();
-    for (const msgs of Object.values(this.messagesByGroup.get())) {
-      for (const m of msgs) authors.add(m.pubkey);
-    }
-    for (const peer of Object.keys(this.dmsByPeer.get())) authors.add(peer);
-    for (const pk of Object.keys(this.userMetadata.get())) authors.add(pk);
-    for (const list of Object.values(this.adminsByGroup.get())) for (const pk of list) authors.add(pk);
-    for (const list of Object.values(this.membersByGroup.get())) for (const pk of list) authors.add(pk);
-    if (this.session) authors.delete(this.session.pubKeyHex);
-    for (const pk of authors) wotEngine.markUnknown(pk);
   }
 
   private syncMutesToEngine(): void {
@@ -847,39 +825,6 @@ class BridgeImpl implements NostrBridge {
     const muteUnion = new Set<string>([...(synced ?? []), ...(local?.mutedPubkeys ?? [])]);
     wotEngine.setMutedPubkeys(Array.from(muteUnion));
     wotEngine.setBlockedPubkeys(local?.blockedPubkeys ?? []);
-  }
-
-  /**
-   * Wipe in-memory + cache entries authored by `pubkey`. Called when the WoT
-   * engine resolves a deny verdict (or when the user just muted/blocked the
-   * author) — ensures untrusted state doesn't linger after the verdict
-   * arrives, even if it slipped through fail-open earlier.
-   */
-  private pruneAuthor(pubkey: string): void {
-    this.messagesByGroup.update((prev) => {
-      let touched = false;
-      const next: Record<string, JsMessage[]> = {};
-      for (const [gid, msgs] of Object.entries(prev)) {
-        const filtered = msgs.filter((m) => m.pubkey !== pubkey);
-        if (filtered.length !== msgs.length) touched = true;
-        next[gid] = filtered;
-      }
-      return touched ? next : prev;
-    });
-    this.dmsByPeer.update((prev) => {
-      if (!Object.prototype.hasOwnProperty.call(prev, pubkey)) return prev;
-      const { [pubkey]: _drop, ...rest } = prev;
-      void _drop;
-      return rest;
-    });
-    this.userMetadata.update((prev) => {
-      if (!Object.prototype.hasOwnProperty.call(prev, pubkey)) return prev;
-      const { [pubkey]: _drop, ...rest } = prev;
-      void _drop;
-      return rest;
-    });
-    this.userMetadataLatestAt.delete(pubkey);
-    this.metadataRequested.delete(pubkey);
   }
 
   /**
@@ -1102,6 +1047,7 @@ class BridgeImpl implements NostrBridge {
   private groupModerationDeletionSubByGroup = new Map<string, { close: () => void; markClosed?: () => void }>();
   private dmSubscribed = false;
   private adminMemberSubscribedGroups = new Set<string>();
+  private adminMemberSubByGroup = new Map<string, { close: () => void; markClosed?: () => void }>();
   private creatorSubscribedGroups = new Set<string>();
   private creatorSubByGroup = new Map<string, { close: () => void; markClosed?: () => void }>();
   private voiceRelayCapacityReservations = 0;
@@ -1185,7 +1131,7 @@ class BridgeImpl implements NostrBridge {
    * public.obelisk.ar's 50-sub limit so global REQs, voice signaling, and the
    * currently-open channel have room. Active channels bypass this cap.
    */
-  private static readonly MAX_BACKGROUND_MESSAGE_STREAMS = 24;
+  private static readonly MAX_BACKGROUND_MESSAGE_STREAMS = 8;
   /**
    * Wall-clock deadline after which the active-channel priority gate
    * stops pausing the background drain. Set on every {@link setActiveGroup}
@@ -1656,6 +1602,7 @@ class BridgeImpl implements NostrBridge {
     this.groupModerationDeletionSubscribedGroups.clear();
     this.groupModerationDeletionSubByGroup.clear();
     this.adminMemberSubscribedGroups.clear();
+    this.adminMemberSubByGroup.clear();
     this.adminMemberLatestAt.clear();
     this.metadataRequested.clear();
     // The new pool's per-group REQs haven't been issued yet — drop any
@@ -2134,6 +2081,7 @@ class BridgeImpl implements NostrBridge {
     this.groupModerationDeletionSubscribedGroups.clear();
     this.groupModerationDeletionSubByGroup.clear();
     this.adminMemberSubscribedGroups.clear();
+    this.adminMemberSubByGroup.clear();
     this.adminMemberLatestAt.clear();
     this.metadataRequested.clear();
     this.adminsByGroup.set({});
@@ -3121,9 +3069,10 @@ class BridgeImpl implements NostrBridge {
     const otherTags = existingTags.filter((t) => !(t[0] === 'p' && t[1] === pubkey));
     const nextTags = muted ? [...otherTags, ['p', pubkey]] : otherTags;
 
-    // Optimistic update so consumers (useMessages / useDirectMessages) hide
-    // the user immediately; the relay echo will overwrite this with the
-    // canonical list via subscribeMyMuteList.
+    // Optimistic update so mute/unmute UI reflects immediately; the relay
+    // echo will overwrite this with the canonical list via
+    // subscribeMyMuteList. This is intentionally non-destructive: existing
+    // messages/DMs/metadata stay in the local stores.
     const current = this.myMutes.get();
     const optimistic = muted
       ? current.includes(pubkey) ? current : [...current, pubkey]
@@ -3443,6 +3392,7 @@ class BridgeImpl implements NostrBridge {
        * soak so transient AUTH races don't flash the banner.
        */
       immediateAccessDowngrade?: boolean;
+      onQuotaOrRateLimitClose?: () => void;
     },
     pool: SimplePool = this.pool,
     isPoolSocketAlive: () => boolean = () => this.poolSocketAlive,
@@ -3647,6 +3597,7 @@ class BridgeImpl implements NostrBridge {
             clearTimer();
             try { activeSub?.close(); } catch { /* ignore */ }
             activeSub = null;
+            options?.onQuotaOrRateLimitClose?.();
           }
         },
         onauth: wrappedSigner,
@@ -3822,11 +3773,19 @@ class BridgeImpl implements NostrBridge {
       authors: [this.session.pubKeyHex],
       limit: 1,
     };
-    const sub = this.subscribeWatched(
+    let sub: { close: () => void; markClosed?: () => void } | undefined;
+    sub = this.subscribeWatched(
       this.relays,
       filter,
-      (ev) => this.ingestUserMetadata(ev),
-      undefined,
+      (ev) => {
+        this.ingestUserMetadata(ev);
+        if (sub) this.closeTrackedSub(sub);
+      },
+      () => {
+        // EOSE proves the relay accepted the query, but keep the preflight
+        // handle alive until CLOSED/event so an immediate EOSE-then-CLOSED
+        // auth-required can still downgrade relayAccess.
+      },
       {
         watchdogMs: 1500,
         maxAttempts: 1,
@@ -3910,6 +3869,17 @@ class BridgeImpl implements NostrBridge {
     subscribed.delete(groupId);
   }
 
+  private forgetPerGroupSub(
+    groupId: string,
+    subscribed: Set<string>,
+    byGroup: Map<string, { close: () => void; markClosed?: () => void }>,
+  ): void {
+    const sub = byGroup.get(groupId);
+    if (sub) this.subs = this.subs.filter((s) => s !== sub);
+    byGroup.delete(groupId);
+    subscribed.delete(groupId);
+  }
+
   /**
    * Mesh voice needs two live REQs on the active relay (presence + directed
    * signaling). Background message/creator streams are useful for snappy chat
@@ -3944,6 +3914,10 @@ class BridgeImpl implements NostrBridge {
     for (const groupId of Array.from(this.creatorSubByGroup.keys())) {
       if (keep.has(groupId)) continue;
       this.closePerGroupSub(groupId, this.creatorSubscribedGroups, this.creatorSubByGroup);
+    }
+    for (const groupId of Array.from(this.adminMemberSubByGroup.keys())) {
+      if (keep.has(groupId)) continue;
+      this.closePerGroupSub(groupId, this.adminMemberSubscribedGroups, this.adminMemberSubByGroup);
     }
   }
 
@@ -4175,7 +4149,13 @@ class BridgeImpl implements NostrBridge {
         // were holding back to give it priority bandwidth.
         if (groupId === this.activeGroupId) this.maybeResumeMessageQueueDrain();
       },
-      { affectsRelayAccess: false },
+      {
+        affectsRelayAccess: false,
+        onQuotaOrRateLimitClose: () => {
+          this.clearMessagesRetry(groupId);
+          this.forgetPerGroupSub(groupId, this.messageSubscribedGroups, this.messageSubByGroup);
+        },
+      },
     );
     this.subs.push(sub);
     this.messageSubByGroup.set(groupId, sub);
@@ -4676,7 +4656,13 @@ class BridgeImpl implements NostrBridge {
       reactionFilter,
       (ev) => this.ingestReaction(groupId, ev),
       undefined,
-      { watchdogMs: 3000, affectsRelayAccess: false },
+      {
+        watchdogMs: 3000,
+        affectsRelayAccess: false,
+        onQuotaOrRateLimitClose: () => {
+          this.forgetPerGroupSub(groupId, this.reactionSubscribedGroups, this.reactionSubByGroup);
+        },
+      },
     );
     this.subs.push(reactionSub);
     this.reactionSubByGroup.set(groupId, reactionSub);
@@ -4692,7 +4678,13 @@ class BridgeImpl implements NostrBridge {
       deletionFilter,
       (ev) => this.ingestEventDeletion(groupId, ev),
       undefined,
-      { watchdogMs: 3000, affectsRelayAccess: false },
+      {
+        watchdogMs: 3000,
+        affectsRelayAccess: false,
+        onQuotaOrRateLimitClose: () => {
+          this.forgetPerGroupSub(groupId, this.eventDeletionSubscribedGroups, this.eventDeletionSubByGroup);
+        },
+      },
     );
     this.subs.push(deletionSub);
     this.eventDeletionSubByGroup.set(groupId, deletionSub);
@@ -4707,7 +4699,17 @@ class BridgeImpl implements NostrBridge {
       deletionFilter,
       (ev) => this.ingestGroupEventDeletion(groupId, ev),
       undefined,
-      { watchdogMs: 3000, affectsRelayAccess: false },
+      {
+        watchdogMs: 3000,
+        affectsRelayAccess: false,
+        onQuotaOrRateLimitClose: () => {
+          this.forgetPerGroupSub(
+            groupId,
+            this.groupModerationDeletionSubscribedGroups,
+            this.groupModerationDeletionSubByGroup,
+          );
+        },
+      },
     );
     this.subs.push(deletionSub);
     this.groupModerationDeletionSubByGroup.set(groupId, deletionSub);
@@ -4725,9 +4727,15 @@ class BridgeImpl implements NostrBridge {
       filter,
       (ev) => this.ingestAdminMember(ev),
       undefined,
-      { affectsRelayAccess: false },
+      {
+        affectsRelayAccess: false,
+        onQuotaOrRateLimitClose: () => {
+          this.forgetPerGroupSub(groupId, this.adminMemberSubscribedGroups, this.adminMemberSubByGroup);
+        },
+      },
     );
     this.subs.push(sub);
+    this.adminMemberSubByGroup.set(groupId, sub);
   }
 
   /**
@@ -4748,7 +4756,12 @@ class BridgeImpl implements NostrBridge {
       filter,
       (ev) => this.ingestGroupCreator(ev),
       undefined,
-      { affectsRelayAccess: false },
+      {
+        affectsRelayAccess: false,
+        onQuotaOrRateLimitClose: () => {
+          this.forgetPerGroupSub(groupId, this.creatorSubscribedGroups, this.creatorSubByGroup);
+        },
+      },
     );
     this.subs.push(sub);
     this.creatorSubByGroup.set(groupId, sub);

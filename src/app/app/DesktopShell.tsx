@@ -263,6 +263,7 @@ export default function AppShell() {
   return (
     <div
       className="obelisk-desktop-bg flex w-screen flex-col overflow-hidden text-lc-white"
+      data-obelisk-app
       style={{ height: '100dvh' }}
       onTouchStart={(e) => {
         const t = e.touches[0];

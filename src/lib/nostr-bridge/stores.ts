@@ -237,9 +237,10 @@ export function useGroupById(groupId: string | null): JsGroup | null {
 }
 
 export function useMessages(groupId: string | null): ReadonlyArray<JsMessage> {
-  // Mute / WoT filtering happens at ingest now (see wotEngine.isAllowed in
-  // client.ts subscribeWatched.onevent + the verdict-deny pruner). If a
-  // message is in the store, it's allowed.
+  // The bridge owns durable message storage. Moderation/WoT decisions must be
+  // non-destructive: they may hide/filter in UI paths, but they must not wipe
+  // cached channel data just because a verdict or subscription-budget change
+  // happened.
   return useSubscription<ReadonlyArray<JsMessage>>(
     (b, cb) => (groupId ? b.subscribeMessages(groupId, cb) : () => {}),
     [],
@@ -379,8 +380,8 @@ export function useChildrenByParent(): Readonly<Record<string, ReadonlyArray<str
 }
 
 export function useDirectMessages(): Readonly<Record<string, ReadonlyArray<JsDirectMessage>>> {
-  // Mute / WoT filtering happens at ingest; muted peers are already pruned
-  // from the bridge store via the WoT engine's verdict-deny pruner.
+  // Non-destructive store: muted/WoT-denied peers may be hidden by UI policy,
+  // but the bridge does not delete DM history automatically.
   return useSubscription<Readonly<Record<string, ReadonlyArray<JsDirectMessage>>>>(
     (b, cb) => b.subscribeDirectMessages(cb),
     {},

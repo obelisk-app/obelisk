@@ -97,6 +97,7 @@ import BlossomImageInput from '@/components/BlossomImageInput';
 import RelayAdminPanel from '@/components/admin/RelayAdminPanel';
 import RelayEmojiAdminModal from '@/components/admin/RelayEmojiAdminModal';
 import LanguagePreference from '@/components/LanguagePreference';
+import AppearancePreferenceControls from '@/components/AppearancePreferenceControls';
 import { useTranslation } from '@/i18n/context';
 import { npubToHex } from '@nostr-wot/data';
 import {
@@ -5293,14 +5294,11 @@ export function SettingsPrefsScreen({ go }: { go: (s: ScreenName) => void }) {
           <div className="settings-section-title">{t('preferences.mobile.app')}</div>
           <LanguagePreference variant="mobile" />
           <div className="settings-row">
-            <span>{t('preferences.mobile.theme')}</span>
-            <span className="settings-row-meta">La Crypta · dark</span>
-          </div>
-          <div className="settings-row">
             <span>{t('preferences.mobile.version')}</span>
             <span className="settings-row-meta muted">obelisk · mobile</span>
           </div>
         </div>
+        <AppearancePreferenceControls variant="mobile" />
       </div>
     </div>
   );
@@ -6048,7 +6046,7 @@ export default function MobileShell() {
   if (!isLoggedIn) {
     if (isRehydrating) {
       return (
-        <div className="obelisk-mobile">
+        <div className="obelisk-mobile" data-obelisk-app>
           <div className="screens-host">
             <RehydratingScreen />
           </div>
@@ -6056,7 +6054,7 @@ export default function MobileShell() {
       );
     }
     return (
-      <div className="obelisk-mobile">
+      <div className="obelisk-mobile" data-obelisk-app>
         <div className="screens-host">
           <LoginScreen />
         </div>
@@ -6187,6 +6185,7 @@ export default function MobileShell() {
   return (
     <div
       className="obelisk-mobile"
+      data-obelisk-app
       style={kbInset > 0 ? ({ ['--kb-inset' as string]: `${kbInset}px` } as React.CSSProperties) : undefined}
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}

@@ -1039,6 +1039,57 @@ describe('nostr-bridge', () => {
     expect(findMessageSubs()).toHaveLength(0);
   });
 
+  it('frees the group slot when a message sub is CLOSED for relay quota', async () => {
+    const { getBridge, getBridgeImpl } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const groupId = 'quota-slot-freed';
+    bridge.subscribeMessages(groupId, () => {});
+    await flush();
+
+    const impl = getBridgeImpl()!;
+    const findMessageSubs = () =>
+      fake.state.subscriptions.filter((sub) => {
+        const f = sub.filter as { kinds?: number[]; '#h'?: string[] };
+        return f.kinds?.includes(9) && f['#h']?.includes(groupId);
+      });
+
+    const firstSub = findMessageSubs()[0];
+    expect(firstSub).toBeTruthy();
+    expect(impl['messageSubscribedGroups'].has(groupId)).toBe(true);
+
+    firstSub.onclose?.((firstSub.relays ?? ['']).map(() => 'restricted: Subscription quota exceeded: 50/50'));
+    await flush();
+
+    expect(findMessageSubs()).toHaveLength(0);
+    expect(impl['messageSubscribedGroups'].has(groupId)).toBe(false);
+    expect(impl['messageSubByGroup'].has(groupId)).toBe(false);
+
+    bridge.subscribeMessages(groupId, () => {});
+    await flush();
+
+    expect(findMessageSubs()).toHaveLength(1);
+    expect(impl['messageSubscribedGroups'].has(groupId)).toBe(true);
+  });
+
+  it('preflight relay-access keeps EOSE-accepted slot available for immediate CLOSED downgrade', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const preflightSubs = fake.state.subscriptions.filter((sub) => {
+      const f = sub.filter as { kinds?: number[]; authors?: string[]; limit?: number };
+      return f.kinds?.length === 1 && f.kinds[0] === 0 && f.authors?.includes(pkHex) && f.limit === 1;
+    });
+
+    expect(preflightSubs).toHaveLength(1);
+  });
+
   it('subscribeVoiceFilterWatched uses a dedicated pool for mesh signaling', async () => {
     const { getBridge } = await import('./client');
     const { skHex, pkHex } = makeKeypair();
@@ -1106,6 +1157,37 @@ describe('nostr-bridge', () => {
 
     expect(subsForGroup('voice-channel').length).toBeGreaterThan(0);
     expect(subsForGroup('background-channel')).toHaveLength(0);
+    release();
+  });
+
+  it('reserveVoiceRelayCapacity closes non-active lazy admin/member subs', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    bridge.setActiveGroup('active-channel');
+    bridge.subscribeAdmins('active-channel', () => {});
+    bridge.subscribeMembers('background-channel', () => {});
+    await flush();
+
+    const adminMemberSubsFor = (groupId: string) =>
+      fake.state.subscriptions.filter((sub) => {
+        const f = sub.filter as { kinds?: number[]; '#d'?: string[] };
+        return f.kinds?.includes(39001) && f.kinds?.includes(39002) && f['#d']?.includes(groupId);
+      });
+
+    expect(adminMemberSubsFor('active-channel')).toHaveLength(1);
+    expect(adminMemberSubsFor('background-channel')).toHaveLength(1);
+
+    const release = (bridge as unknown as {
+      reserveVoiceRelayCapacity: (channelId: string) => () => void;
+    }).reserveVoiceRelayCapacity('voice-channel');
+    await flush();
+
+    expect(adminMemberSubsFor('active-channel')).toHaveLength(1);
+    expect(adminMemberSubsFor('background-channel')).toHaveLength(0);
     release();
   });
 
@@ -1694,7 +1776,7 @@ describe('nostr-bridge', () => {
       const f = s.filter as { kinds?: number[]; '#h'?: string[] };
       return f.kinds?.includes(9) && f['#h']?.[0]?.startsWith('quota-bg-');
     });
-    expect(messageSubs.length).toBeLessThanOrEqual(24);
+    expect(messageSubs.length).toBeLessThanOrEqual(8);
   });
 
   it('setActiveGroup after a queued metadata burst promotes the clicked channel to the head of the queue', async () => {

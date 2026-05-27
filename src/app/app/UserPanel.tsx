@@ -9,6 +9,7 @@ import BlossomImageInput from '@/components/BlossomImageInput';
 import { usePreferences, setPreference } from '@/lib/preferences';
 import WotSettings from '@/components/settings/WotSettings';
 import LanguagePreference from '@/components/LanguagePreference';
+import AppearancePreferenceControls from '@/components/AppearancePreferenceControls';
 import UserAvatar from '@/components/UserAvatar';
 import ModalShell from '@/components/ModalShell';
 import { clearAllClientCacheExceptSession } from '@/lib/nostr-bridge/cache-clear';
@@ -384,12 +385,13 @@ function EditProfileForm({
   );
 }
 
-function PreferencesPanel() {
+export function PreferencesPanel() {
   const prefs = usePreferences();
   const { t } = useTranslation();
   return (
     <div className="space-y-4 p-4">
       <LanguagePreference />
+      <AppearancePreferenceControls />
       <ToggleRow
         label={t('preferences.activity.label')}
         description={t('preferences.activity.description')}
