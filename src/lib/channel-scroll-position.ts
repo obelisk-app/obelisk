@@ -92,10 +92,10 @@ export function restoreChannelScrollPosition(
       : finiteNumber(saved.scrollTop)
     : maxTop;
   const scrollTop = clamp(desiredScrollTop, 0, maxTop);
-  const complete = !saved || saved.nearBottom || scrollTop === desiredScrollTop;
+  const complete = saved ? saved.nearBottom || scrollTop === desiredScrollTop : maxTop > 0;
 
   el.scrollTop = scrollTop;
-  const snapshot = rememberChannelScrollPosition(key, el, nearBottomPx);
+  const snapshot = complete ? rememberChannelScrollPosition(key, el, nearBottomPx) : null;
   return {
     source: saved ? 'saved' : 'bottom',
     scrollTop,

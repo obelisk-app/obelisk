@@ -92,6 +92,17 @@ describe('useChannelScrollPosition', () => {
     expect(el.scrollTop).toBe(0);
   });
 
+  it('keeps a first-open channel bottom-locked while the initial latest messages fill in', () => {
+    const { rerender } = render(<Harness scrollKey="relay::g1" itemCount={1} scrollHeight={200} />);
+    const el = screen.getByTestId('scroller') as HTMLDivElement;
+
+    expect(el.scrollTop).toBe(0);
+
+    rerender(<Harness scrollKey="relay::g1" itemCount={8} scrollHeight={1000} />);
+
+    expect(el.scrollTop).toBe(800);
+  });
+
   it('keeps retrying a saved mid-history restore until enough mobile history is rendered', () => {
     rememberChannelScrollPosition('relay::g1', { scrollTop: 640, scrollHeight: 1200, clientHeight: 200 });
     const { rerender } = render(<Harness scrollKey="relay::g1" itemCount={0} scrollHeight={200} />);
