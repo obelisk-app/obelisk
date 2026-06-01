@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getBridge } from './client';
 import { normalizeRelayUrl } from './relay-url';
+import { usePreferences } from '@/lib/preferences';
 import { wotEngine } from '@/lib/wot/engine';
 import { useWotEnabled } from '@/lib/wot';
 import type { JsGroup, JsMessage, JsReaction, JsDirectMessage, JsUserMetadata, MessagesStatus, RelayAccessState } from './types';
@@ -382,10 +383,25 @@ export function useChildrenByParent(): Readonly<Record<string, ReadonlyArray<str
 export function useDirectMessages(): Readonly<Record<string, ReadonlyArray<JsDirectMessage>>> {
   // Non-destructive store: muted/WoT-denied peers may be hidden by UI policy,
   // but the bridge does not delete DM history automatically.
-  return useSubscription<Readonly<Record<string, ReadonlyArray<JsDirectMessage>>>>(
-    (b, cb) => b.subscribeDirectMessages(cb),
-    {},
-  );
+  const dmEnabled = usePreferences().directMessagesEnabled;
+  const [value, setValue] = useState<Readonly<Record<string, ReadonlyArray<JsDirectMessage>>>>({});
+  useEffect(() => {
+    let unsub: (() => void) | null = null;
+    let cancelled = false;
+    if (!dmEnabled) {
+      setValue({});
+      return () => {};
+    }
+    getBridge().then((bridge) => {
+      if (cancelled) return;
+      unsub = bridge.subscribeDirectMessages(setValue);
+    });
+    return () => {
+      cancelled = true;
+      unsub?.();
+    };
+  }, [dmEnabled]);
+  return value;
 }
 
 export function useAdmins(groupId: string | null): ReadonlyArray<string> {

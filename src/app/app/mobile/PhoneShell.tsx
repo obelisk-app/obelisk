@@ -57,6 +57,7 @@ import { useFollows, useProfile, usePubkey, usePublishProfile } from '@nostr-wot
 const useMyPubkey = usePubkey;
 const useUserMetadata = useProfile;
 import LoginModal from '../LoginModal';
+import DMOptInGate from '../DMOptInGate';
 import { RelayStatusBadge } from '../RelayStatusBanner';
 import VoiceRoom from '@/components/voice/VoiceRoom';
 import VoiceStatusBar from '@/components/voice/VoiceStatusBar';
@@ -117,6 +118,7 @@ import {
 } from '@/lib/read-state/selectors';
 import { useChatStore } from '@/store/chat';
 import { useDMStore } from '@/store/dm';
+import { setDmOptInEnabled, useDmOptInEnabled } from '@/lib/dm/opt-in';
 import { useMessageZapStore } from '@/store/messageZap';
 import { useNostrPresence, PRESENCE_WINDOW_MS } from '@/hooks/chat/useNostrPresence';
 import MessageZapModal from '@/components/chat/MessageZapModal';
@@ -3275,6 +3277,27 @@ function VoiceRoomScreen({ groupId, back, openChat }: { groupId: string; back: (
 // ───────────────────────────────────────────────────────────────────────────
 // 06 — DMs list
 
+function MobileDmOptInScreen({
+  onSecondary,
+  secondaryLabel = 'Not now',
+}: {
+  onSecondary: () => void;
+  secondaryLabel?: string;
+}) {
+  return (
+    <div className="screen active" data-screen="dms-list">
+      <div className="app-header">
+        <h2>Direct Messages</h2>
+      </div>
+      <DMOptInGate
+        surface="mobile"
+        secondaryLabel={secondaryLabel}
+        onSecondary={onSecondary}
+      />
+    </div>
+  );
+}
+
 function DmsListScreen({
   go,
   selectPeer,
@@ -5261,6 +5284,7 @@ export function SettingsPrefsScreen({ go }: { go: (s: ScreenName) => void }) {
   const { t } = useTranslation();
   const relays = useConfiguredRelays();
   const currentRelay = useCurrentRelayUrl();
+  const dmOptInEnabled = useDmOptInEnabled();
 
   return (
     <div className="screen active" data-screen="settings-prefs">
@@ -5293,6 +5317,24 @@ export function SettingsPrefsScreen({ go }: { go: (s: ScreenName) => void }) {
         <div className="settings-section">
           <div className="settings-section-title">{t('preferences.mobile.app')}</div>
           <LanguagePreference variant="mobile" />
+          <button
+            type="button"
+            className="settings-row action"
+            onClick={() => setDmOptInEnabled(!dmOptInEnabled)}
+          >
+            <span style={{ minWidth: 0, flex: 1 }}>
+              <span style={{ display: 'block' }}>Direct messages</span>
+              <span className="settings-row-meta muted" style={{ display: 'block', maxWidth: '100%', marginTop: 3 }}>
+                Nostr encrypted DMs on this device
+              </span>
+            </span>
+            <span
+              className={`toggle ${dmOptInEnabled ? 'on' : ''}`}
+              role="switch"
+              aria-checked={dmOptInEnabled}
+              data-testid="mobile-dm-opt-in-toggle"
+            />
+          </button>
           <div className="settings-row">
             <span>{t('preferences.mobile.version')}</span>
             <span className="settings-row-meta muted">obelisk · mobile</span>
@@ -5324,9 +5366,9 @@ function RehydratingScreen() {
 export default function MobileShell() {
   const isLoggedIn = useIsLoggedIn();
   const isRehydrating = useIsRehydrating();
+  const dmOptInEnabled = useDmOptInEnabled();
   const myPubkey = useMyPubkey();
   const groups = useGroups();
-  const dms = useDirectMessages();
   const myFollowsEntry = useFollows(myPubkey);
   const myFollows = useMemo(() => myFollowsEntry?.follows ?? [], [myFollowsEntry]);
   const serverEmojis = useChatStore((s) => s.serverEmojis);
@@ -5480,7 +5522,7 @@ export default function MobileShell() {
     navRef.current = parsed;
     if (parsed.screen === 'channel' && parsed.groupId) {
       useChatStore.setState({ activeChannelId: parsed.groupId, isNearBottom: true });
-    } else if (parsed.screen === 'dm-thread' && parsed.dmPeer) {
+    } else if (dmOptInEnabled && parsed.screen === 'dm-thread' && parsed.dmPeer) {
       useDMStore.setState({ activeDMPubkey: parsed.dmPeer });
     }
     // Guard entry: a sentinel sits BEHIND the current nav so the first
@@ -5497,7 +5539,7 @@ export default function MobileShell() {
         window.history.pushState(entries[i].state, '', entries[i].url);
       }
     } catch { /* ignore */ }
-  }, [isLoggedIn, currentRelayUrl]);
+  }, [isLoggedIn, currentRelayUrl, dmOptInEnabled]);
 
   // Keep relayRef + URL relay param in sync without pushing history entries.
   useEffect(() => {
@@ -5554,12 +5596,12 @@ export default function MobileShell() {
         setNav(next);
         navRef.current = next;
         useChatStore.setState({ activeChannelId: next.screen === 'channel' ? next.groupId : null });
-        useDMStore.setState({ activeDMPubkey: next.screen === 'dm-thread' ? next.dmPeer : null });
+        useDMStore.setState({ activeDMPubkey: dmOptInEnabled && next.screen === 'dm-thread' ? next.dmPeer : null });
       }
     };
     window.addEventListener('popstate', handler);
     return () => window.removeEventListener('popstate', handler);
-  }, [router]);
+  }, [router, dmOptInEnabled]);
 
   // ── horizontal swipe navigation (drag-tracking carousel) ────────────
   // The user pans horizontally; the active screen translates with the finger
@@ -5802,6 +5844,22 @@ export default function MobileShell() {
   }, [cancelPendingTabTransition, pushNav]);
   const selectPeer = useCallback((peer: string) => {
     cancelPendingTabTransition();
+    if (!dmOptInEnabled) {
+      useChatStore.setState({ activeChannelId: null });
+      useDMStore.setState({ activeDMPubkey: null });
+      pushNav((n) => ({
+        ...n,
+        screen: 'dm-thread',
+        groupId: null,
+        dmPeer: peer,
+        profilePubkey: null,
+        forumGroupId: null,
+        baseScreen: null,
+        msgContext: null,
+        parentScreen: n.screen,
+      }));
+      return;
+    }
     // Pure navigation. The cursor is advanced by `useAutoMarkRead` once the
     // DM thread is open, focused, and visible.
     useChatStore.setState({ activeChannelId: null });
@@ -5817,7 +5875,7 @@ export default function MobileShell() {
       msgContext: null,
       parentScreen: 'dms-list',
     }));
-  }, [cancelPendingTabTransition, pushNav]);
+  }, [cancelPendingTabTransition, dmOptInEnabled, pushNav]);
   // Cross-context screens: stamp parentScreen with the current screen so the
   // bottom-nav highlight + swipe direction reflect where the user came from.
   // E.g. profile-view from Inbox keeps Inbox as parent; from a channel keeps
@@ -5967,7 +6025,9 @@ export default function MobileShell() {
       case 'server':
         return <ServerScreen go={go} selectGroup={selectGroup} />;
       case 'dms-list':
-        return <DmsListScreen go={go} selectPeer={selectPeer} myFollows={myFollows} />;
+        return dmOptInEnabled
+          ? <DmsListScreen go={go} selectPeer={selectPeer} myFollows={myFollows} />
+          : <MobileDmOptInScreen onSecondary={() => go('server')} />;
       case 'inbox':
         return <InboxScreen go={go} selectGroup={selectGroup} selectPeer={selectPeer} />;
       case 'settings-profile':
@@ -5975,7 +6035,7 @@ export default function MobileShell() {
       default:
         return null;
     }
-  }, [go, selectGroup, selectPeer, myFollows]);
+  }, [dmOptInEnabled, go, selectGroup, selectPeer, myFollows]);
 
   const dragNeighbors = useMemo(() => neighborsFor(nav), [nav]);
 
@@ -6004,6 +6064,12 @@ export default function MobileShell() {
       bridge.setActiveGroup(null);
     }
   }, [nav.screen, nav.groupId]);
+
+  useEffect(() => {
+    useDMStore.setState({
+      activeDMPubkey: dmOptInEnabled && nav.screen === 'dm-thread' ? nav.dmPeer : null,
+    });
+  }, [dmOptInEnabled, nav.screen, nav.dmPeer]);
 
   // Listen for reaction emit from msg-actions sheet
   useEffect(() => {
@@ -6091,10 +6157,14 @@ export default function MobileShell() {
       ) : <EmptyScreen go={go} title="No voice channel" />;
       break;
     case 'dms-list':
-      body = <DmsListScreen go={go} selectPeer={selectPeer} myFollows={myFollows} />;
+      body = dmOptInEnabled
+        ? <DmsListScreen go={go} selectPeer={selectPeer} myFollows={myFollows} />
+        : <MobileDmOptInScreen onSecondary={() => go('server')} />;
       break;
     case 'dm-thread':
-      body = nav.dmPeer ? (
+      body = !dmOptInEnabled ? (
+        <MobileDmOptInScreen secondaryLabel="Back" onSecondary={() => go('dms-list', 'back')} />
+      ) : nav.dmPeer ? (
         <DmThreadScreen peer={nav.dmPeer} back={() => go('dms-list', 'back')} openProfile={openProfile} />
       ) : <EmptyScreen go={go} title="No conversation" />;
       break;
@@ -6112,7 +6182,9 @@ export default function MobileShell() {
       ) : <EmptyScreen go={go} title="No channel" />;
       break;
     case 'compose-dm':
-      body = <ComposeDmScreen back={() => go('dms-list', 'back')} selectPeer={selectPeer} />;
+      body = dmOptInEnabled
+        ? <ComposeDmScreen back={() => go('dms-list', 'back')} selectPeer={selectPeer} />
+        : <MobileDmOptInScreen secondaryLabel="Back" onSecondary={() => go('dms-list', 'back')} />;
       break;
     case 'search':
       body = <SearchScreen back={() => go('server', 'back')} selectGroup={selectGroup} />;
@@ -6150,7 +6222,9 @@ export default function MobileShell() {
           />
         );
       } else if (nav.baseScreen === 'dm-thread' && nav.dmPeer) {
-        body = <DmThreadScreen peer={nav.dmPeer} back={() => go('dms-list', 'back')} openProfile={openProfile} />;
+        body = dmOptInEnabled
+          ? <DmThreadScreen peer={nav.dmPeer} back={() => go('dms-list', 'back')} openProfile={openProfile} />
+          : <MobileDmOptInScreen secondaryLabel="Back" onSecondary={() => go('dms-list', 'back')} />;
       } else {
         body = null;
       }

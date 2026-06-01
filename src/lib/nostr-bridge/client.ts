@@ -1046,6 +1046,7 @@ class BridgeImpl implements NostrBridge {
   private groupModerationDeletionSubscribedGroups = new Set<string>();
   private groupModerationDeletionSubByGroup = new Map<string, { close: () => void; markClosed?: () => void }>();
   private dmSubscribed = false;
+  private dmSubHandles: Array<{ close: () => void; markClosed?: () => void }> = [];
   private adminMemberSubscribedGroups = new Set<string>();
   private adminMemberSubByGroup = new Map<string, { close: () => void; markClosed?: () => void }>();
   private creatorSubscribedGroups = new Set<string>();
@@ -1341,6 +1342,7 @@ class BridgeImpl implements NostrBridge {
     // closeAllSubscriptions sweep, producing CLOSING/CLOSED warnings.
     this.subs.forEach((s) => (s.markClosed ?? s.close)());
     this.subs = [];
+    this.dmSubHandles = [];
     if (this.poolSocketAlive) {
       try { this.pool.close(this.relays); } catch { /* ignore */ }
     }
@@ -1517,7 +1519,8 @@ class BridgeImpl implements NostrBridge {
    *   2. `resetPoolForSessionChange()` — fresh sockets so NIP-42 AUTH
    *      renegotiates with the new key (see that method's JSDoc).
    *   3. `await connect()` — relay handshake + open the global subscriptions
-   *      (group metadata, DMs, contact list, own profile). Resolves only
+   *      (group metadata, contact list, own profile). DM subscriptions open
+   *      later only after the local DM opt-in is enabled. Resolves only
    *      once at least one relay has handshaken and the global REQs are
    *      issued. Throws on total failure.
    *   4. `isLoggedIn.set(true)` — flip the gate **last**. AppShell mounts
@@ -1582,6 +1585,7 @@ class BridgeImpl implements NostrBridge {
     // without sending per-sub CLOSE frames on the old pool's sockets.
     this.subs.forEach((s) => (s.markClosed ?? s.close)());
     this.subs = [];
+    this.dmSubHandles = [];
     // Don't call pool.close() — its internal closeAllSubscriptions sweep
     // sends a CLOSE frame per subscription, and the relay-side socket
     // routinely transitions to CLOSING between our last message and this
@@ -1659,6 +1663,7 @@ class BridgeImpl implements NostrBridge {
     this.groupMetadataEose.set(false);
     this.clearGroupMetadataEmptyRetry();
     this.dmSubscribed = false;
+    this.dmSubHandles = [];
     // Forget any auth/whitelist signal we'd captured against the previous
     // pool — the next REQ on the fresh sockets must re-prove access.
     this.relayAccess.set({});
@@ -2058,6 +2063,7 @@ class BridgeImpl implements NostrBridge {
     // watched-sub's retry loop and replace the pool reference.
     this.subs.forEach((s) => (s.markClosed ?? s.close)());
     this.subs = [];
+    this.dmSubHandles = [];
     this.poolSocketAlive = false;
     this.pool = this.createPool();
     this.relays = [normalized];
@@ -2137,6 +2143,7 @@ class BridgeImpl implements NostrBridge {
     this.groupMetadataEose.set(false);
     this.clearGroupMetadataEmptyRetry();
     this.dmSubscribed = false;
+    this.dmSubHandles = [];
     // Auth/whitelist state is per-relay; the new one hasn't been probed yet.
     this.relayAccess.set({});
     // Drop any pending downgrade timers + auth-activity entries scoped to
@@ -2332,6 +2339,15 @@ class BridgeImpl implements NostrBridge {
   ): Unsubscribe {
     if (!this.dmSubscribed) this.subscribeIncomingDMs();
     return this.dmsByPeer.subscribe(cb);
+  }
+
+  disableDirectMessages(): void {
+    for (const sub of this.dmSubHandles) {
+      this.closeTrackedSub(sub);
+    }
+    this.dmSubHandles = [];
+    this.dmSubscribed = false;
+    this.myDmRelays = [];
   }
 
   subscribeMyFollows(cb: (pubkeys: ReadonlyArray<string>) => void): Unsubscribe {
@@ -5177,17 +5193,20 @@ class BridgeImpl implements NostrBridge {
     for (const f of [filterIn, filterOut]) {
       const sub = this.subscribeWatched(this.relays, f, (ev) => this.ingestIncomingDM(ev));
       this.subs.push(sub);
+      this.dmSubHandles.push(sub);
     }
     // Wide-net pickup: other clients publish DMs to the user's own NIP-17
     // (10050) inbox or NIP-65 (10002) read/write relays — not necessarily
     // `this.relays`. Resolve those, then add a parallel subscription.
     void this.fetchMyDmRelays().then((urls) => {
+      if (!this.dmSubscribed || !this.session || this.session.pubKeyHex !== me) return;
       const extras = urls.filter((u) => !this.relays.includes(u));
       if (extras.length === 0) return;
       this.myDmRelays = extras;
       for (const f of [filterIn, filterOut]) {
         const sub = this.subscribeWatched(extras, f, (ev) => this.ingestIncomingDM(ev));
         this.subs.push(sub);
+        this.dmSubHandles.push(sub);
       }
     });
   }

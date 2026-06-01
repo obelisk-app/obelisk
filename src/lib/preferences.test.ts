@@ -10,6 +10,7 @@ describe('preferences store', () => {
     const { getPreferences, setPreference } = await import('./preferences');
 
     expect(getPreferences()).toMatchObject({
+      directMessagesEnabled: false,
       accentColor: '#b4f953',
       backgroundColor: '#0a0a0a',
       buttonColor: '#b4f953',
@@ -17,6 +18,7 @@ describe('preferences store', () => {
       bubbleAnimation: 'float',
     });
 
+    setPreference('directMessagesEnabled', true);
     setPreference('accentColor', '#7ec8ff');
     setPreference('backgroundColor', '#111827');
     setPreference('buttonColor', '#f0c14a');
@@ -24,6 +26,7 @@ describe('preferences store', () => {
     setPreference('bubbleAnimation', 'drift');
 
     expect(getPreferences()).toMatchObject({
+      directMessagesEnabled: true,
       accentColor: '#7ec8ff',
       backgroundColor: '#111827',
       buttonColor: '#f0c14a',
@@ -31,12 +34,28 @@ describe('preferences store', () => {
       bubbleAnimation: 'drift',
     });
     expect(JSON.parse(localStorage.getItem('obelisk:preferences') ?? '{}')).toMatchObject({
+      directMessagesEnabled: true,
       accentColor: '#7ec8ff',
       backgroundColor: '#111827',
       buttonColor: '#f0c14a',
       bubbleColor: '#ff7ad9',
       bubbleAnimation: 'drift',
     });
+  });
+
+  it('stores DM opt-in as a non-secret boolean preference', async () => {
+    const { DM_OPT_IN_PREFERENCE_KEY, DM_OPT_IN_STORAGE_KEY, setDmOptInEnabled } = await import('./dm/opt-in');
+
+    expect(DM_OPT_IN_STORAGE_KEY).toBe('obelisk:preferences');
+    expect(DM_OPT_IN_PREFERENCE_KEY).toBe('directMessagesEnabled');
+    expect(`${DM_OPT_IN_STORAGE_KEY}:${DM_OPT_IN_PREFERENCE_KEY}`).not.toMatch(/session|secret|nsec|private|token/i);
+
+    setDmOptInEnabled(true);
+
+    const stored = JSON.parse(localStorage.getItem(DM_OPT_IN_STORAGE_KEY) ?? '{}');
+    expect(stored[DM_OPT_IN_PREFERENCE_KEY]).toBe(true);
+    expect(typeof stored[DM_OPT_IN_PREFERENCE_KEY]).toBe('boolean');
+    expect(JSON.stringify(stored)).not.toMatch(/nsec|private|secret/i);
   });
 
   it('sanitizes invalid persisted color values and can reset appearance defaults', async () => {

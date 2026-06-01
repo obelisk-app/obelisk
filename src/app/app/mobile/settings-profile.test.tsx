@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, act } from '@testing-library/react';
 import type { ReactElement } from 'react';
+import { DM_OPT_IN_STORAGE_KEY, setDmOptInEnabled } from '@/lib/dm/opt-in';
 
 // Bridge identity hooks back the profile screen — mock them so the test can
 // drive the rendered values without a real relay connection.
@@ -95,6 +96,8 @@ function renderWithLocale(ui: ReactElement) {
 const PUBKEY = '1'.repeat(64);
 
 beforeEach(() => {
+  localStorage.clear();
+  setDmOptInEnabled(false);
   mockPubkey = PUBKEY;
   mockMeta = {
     pubkey: PUBKEY,
@@ -203,6 +206,23 @@ describe('SettingsPrefsScreen', () => {
 
     expect(screen.getByTestId('language-preference')).toBeTruthy();
     expect(screen.getByTestId('language-option-en')).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('lets users enable or reset DM opt-in from preferences', () => {
+    render(
+      <LocaleProvider initialLocale="en">
+        <SettingsPrefsScreen go={vi.fn()} />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByTestId('mobile-dm-opt-in-toggle')).toHaveAttribute('aria-checked', 'false');
+
+    fireEvent.click(screen.getByText('Direct messages').closest('button')!);
+
+    expect(screen.getByTestId('mobile-dm-opt-in-toggle')).toHaveAttribute('aria-checked', 'true');
+    expect(JSON.parse(localStorage.getItem(DM_OPT_IN_STORAGE_KEY) ?? '{}')).toMatchObject({
+      directMessagesEnabled: true,
+    });
   });
 });
 

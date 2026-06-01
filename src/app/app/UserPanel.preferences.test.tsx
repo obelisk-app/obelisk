@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { LocaleProvider } from '@/i18n/context';
+import { DM_OPT_IN_STORAGE_KEY } from '@/lib/dm/opt-in';
 
 vi.mock('@/i18n/context', () => ({
   LocaleProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
@@ -33,5 +34,24 @@ describe('PreferencesPanel appearance controls', () => {
     expect(screen.getByTestId('appearance-accent-color')).toBeInTheDocument();
     expect(screen.getByTestId('appearance-background-color')).toBeInTheDocument();
     expect(screen.getByTestId('appearance-button-color')).toBeInTheDocument();
+  });
+
+  it('includes a direct-message opt-in reset toggle', async () => {
+    const { PreferencesPanel } = await import('./UserPanel');
+
+    render(
+      <LocaleProvider initialLocale="en">
+        <PreferencesPanel />
+      </LocaleProvider>,
+    );
+
+    const label = screen.getByText('Direct messages');
+    const button = label.closest('label')?.querySelector('button');
+    expect(button).toBeTruthy();
+
+    fireEvent.click(button!);
+    expect(JSON.parse(localStorage.getItem(DM_OPT_IN_STORAGE_KEY) ?? '{}')).toMatchObject({
+      directMessagesEnabled: true,
+    });
   });
 });

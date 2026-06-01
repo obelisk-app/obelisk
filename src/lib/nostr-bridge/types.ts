@@ -299,6 +299,11 @@ export interface NostrBridge {
   subscribeDirectMessages(
     cb: (byPeer: Readonly<Record<string, ReadonlyArray<JsDirectMessage>>>) => void,
   ): Unsubscribe;
+  /**
+   * Close live DM relay subscriptions. This does not delete local caches,
+   * decrypted messages already in memory, or any login/session material.
+   */
+  disableDirectMessages(): void;
   /** NIP-29 39001 admins (relay-published). Keyed by pubkey hex. */
   subscribeAdmins(groupId: string, cb: (admins: ReadonlyArray<string>) => void): Unsubscribe;
   /** Full admin map for every group the bridge has seen on the active relay. */

@@ -41,6 +41,7 @@ import { wotColorClass } from '@/lib/wot/colors';
 import { faviconFor, fetchRelayInfo } from '@/lib/relay-info';
 import ServerRail from './ServerRail';
 import DMList from './DMList';
+import { DMOptInBoundary } from './DMOptInGate';
 import LoginModal from './LoginModal';
 import RelayStatusBanner from './RelayStatusBanner';
 import ShootingStars from '@/components/ShootingStars';
@@ -259,6 +260,10 @@ export default function AppShell() {
     view.kind === 'dm' ? { kind: 'dm' } : { kind: 'relay', url: relay };
 
   const closeDrawer = () => setSidebarOpen(false);
+  const leaveDms = () => {
+    setView({ kind: 'empty' });
+    closeDrawer();
+  };
 
   return (
     <div
@@ -287,6 +292,7 @@ export default function AppShell() {
       <MessageZapModal />
       <RelayAccessModal />
       <BackgroundVoiceAudio />
+      <DirectMessageSubscriptionAnchor />
       <RelayTopBar
         relay={relay}
         onOpenSidebar={() => setSidebarOpen(true)}
@@ -327,10 +333,12 @@ export default function AppShell() {
           />
           <ResizablePane storageKey={SIDEBAR_KEY} defaultWidth={264} min={200} max={500} onWidthChange={setSidebarWidth}>
             {view.kind === 'dm' ? (
-              <DMList
-                activePeer={view.peer}
-                onPick={(p) => { setView({ kind: 'dm', peer: p }); closeDrawer(); }}
-              />
+              <DMOptInBoundary surface="sidebar" secondaryLabel="Not now" onSecondary={leaveDms}>
+                <DMList
+                  activePeer={view.peer}
+                  onPick={(p) => { setView({ kind: 'dm', peer: p }); closeDrawer(); }}
+                />
+              </DMOptInBoundary>
             ) : (
               <Sidebar
                 relay={relay}
@@ -352,7 +360,9 @@ export default function AppShell() {
               onSelectGroup={(gid) => setView({ kind: 'group', groupId: gid })}
             />
           ) : view.kind === 'dm' ? (
-            <DMPanel peer={view.peer} onPickPeer={(p) => setView({ kind: 'dm', peer: p })} />
+            <DMOptInBoundary surface="desktop" secondaryLabel="Continue without DMs" onSecondary={leaveDms}>
+              <DMPanel peer={view.peer} onPickPeer={(p) => setView({ kind: 'dm', peer: p })} />
+            </DMOptInBoundary>
           ) : (
             <EmptyState />
           )}
@@ -362,6 +372,11 @@ export default function AppShell() {
       <ActivityIndicator />
     </div>
   );
+}
+
+function DirectMessageSubscriptionAnchor() {
+  useDirectMessages();
+  return null;
 }
 
 function RehydratingScreen() {

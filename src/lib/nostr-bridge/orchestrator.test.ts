@@ -99,4 +99,9 @@ describe('runConnectFanOut', () => {
     expect(DEFAULT_TIER_PLAN.P0).not.toContain('subscribeAllAdminMember');
     expect(DEFAULT_TIER_PLAN.P2).toContain('subscribeAllAdminMember');
   });
+
+  it('default plan does not subscribe to DMs before explicit local opt-in', () => {
+    expect(DEFAULT_TIER_PLAN.P0).not.toContain('subscribeIncomingDMs');
+    expect(DEFAULT_TIER_PLAN.P2).not.toContain('subscribeIncomingDMs');
+  });
 });

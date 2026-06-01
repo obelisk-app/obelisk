@@ -7,6 +7,7 @@ export type BubbleAnimationStyle = 'float' | 'drift' | 'orbit' | 'still';
 
 export interface Preferences {
   showActivityIndicator: boolean;
+  directMessagesEnabled: boolean;
   accentColor: string;
   backgroundColor: string;
   buttonColor: string;
@@ -16,6 +17,7 @@ export interface Preferences {
 
 const DEFAULTS: Preferences = {
   showActivityIndicator: true,
+  directMessagesEnabled: false,
   accentColor: '#b4f953',
   backgroundColor: '#0a0a0a',
   buttonColor: '#b4f953',
@@ -110,6 +112,9 @@ function normalizePreferences(raw: Partial<Preferences>): Preferences {
     showActivityIndicator: typeof raw.showActivityIndicator === 'boolean'
       ? raw.showActivityIndicator
       : DEFAULTS.showActivityIndicator,
+    directMessagesEnabled: typeof raw.directMessagesEnabled === 'boolean'
+      ? raw.directMessagesEnabled
+      : DEFAULTS.directMessagesEnabled,
     accentColor: sanitizeHexColor(raw.accentColor, DEFAULTS.accentColor),
     backgroundColor: sanitizeHexColor(raw.backgroundColor, DEFAULTS.backgroundColor),
     buttonColor: sanitizeHexColor(raw.buttonColor, DEFAULTS.buttonColor),

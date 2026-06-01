@@ -172,8 +172,10 @@ describe('Fix A — login → render race', () => {
     });
 
     await bridge.loginWithNsec(skHex, pkHex);
-    // At least: group metadata, kind 4 DM in/out, kind 3 contact list, own kind 0.
+    // At least: group metadata, kind 3 contact list, own kind 0. DM kind 4
+    // subscriptions are intentionally gated behind the local DM opt-in.
     expect(subsCountAtFlip).toBeGreaterThanOrEqual(3);
+    expect(fake.state.subscriptions.some((s) => (s.filter.kinds as number[] | undefined)?.includes(4))).toBe(false);
   });
 });
 

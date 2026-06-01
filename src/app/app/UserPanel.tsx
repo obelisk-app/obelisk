@@ -7,6 +7,7 @@ import { nostrActions } from '@/lib/nostr-bridge';
 import { useProfile, usePublishProfile } from '@nostr-wot/data/react';
 import BlossomImageInput from '@/components/BlossomImageInput';
 import { usePreferences, setPreference } from '@/lib/preferences';
+import { setDmOptInEnabled } from '@/lib/dm/opt-in';
 import WotSettings from '@/components/settings/WotSettings';
 import LanguagePreference from '@/components/LanguagePreference';
 import AppearancePreferenceControls from '@/components/AppearancePreferenceControls';
@@ -397,6 +398,12 @@ export function PreferencesPanel() {
         description={t('preferences.activity.description')}
         checked={prefs.showActivityIndicator}
         onChange={(v) => setPreference('showActivityIndicator', v)}
+      />
+      <ToggleRow
+        label="Direct messages"
+        description="Allow this device to open Nostr encrypted DM subscriptions and display conversations."
+        checked={prefs.directMessagesEnabled}
+        onChange={setDmOptInEnabled}
       />
       <WotSettings />
       <LocalDataSection />

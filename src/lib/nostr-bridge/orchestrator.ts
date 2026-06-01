@@ -8,8 +8,8 @@
  *       group bumped to the head of the queue. Not represented here as a
  *       static plan; it's stateful.
  *   P2  Everything else needed to bootstrap the rest of the app: layout-
- *       author seeding (relay-wide admin/member), DMs, contact list, mute
- *       list, authored-groups index, active SFU calls.
+ *       author seeding (relay-wide admin/member), contact list, mute list,
+ *       authored-groups index, active SFU calls.
  *   P3  Lazy on first hook call: per-group admin/member, per-group
  *       reactions, per-pubkey kind:0 metadata. Owned by the bridge methods
  *       themselves (e.g. `useAdmins` mount → `subscribeAdminMember`).
@@ -23,6 +23,10 @@
  * Read-state relay-sync (kind 1059 subs) is NOT in this plan. It mounts
  * from `ReadStateRoot` and is gated on `groupMetadataEose` OR a 1000ms
  * post-`Connected` timer — see `docs/read-state.md`.
+ *
+ * Direct-message subscriptions are intentionally NOT in the default plan.
+ * They open from `useDirectMessages()` only after the local DM opt-in
+ * preference is enabled.
  */
 
 export type TierAction =
@@ -56,7 +60,6 @@ export const DEFAULT_TIER_PLAN: TierPlan = {
   P0: ['preflightRelayAccess', 'subscribeGroupMetadata', 'ensureMyMetadata'],
   P2: [
     'subscribeAllAdminMember',
-    'subscribeIncomingDMs',
     'subscribeMyContactList',
     'subscribeMyMuteList',
     'subscribeMyAuthoredGroups',

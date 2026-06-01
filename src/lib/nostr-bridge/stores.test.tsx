@@ -16,6 +16,19 @@ const LEGACY_SESSION_KEY = 'obeliskord/session';
 
 let mockLoggedIn = false;
 const subscribers = new Set<(v: boolean) => void>();
+let dmSubscribeCalls = 0;
+let dmUnsubscribeCalls = 0;
+const dmSnapshot = {
+  ['b'.repeat(64)]: [
+    {
+      id: 'dm-1',
+      counterparty: 'b'.repeat(64),
+      outgoing: false,
+      content: 'hello',
+      createdAt: 100,
+    },
+  ],
+};
 
 function setMockLoggedIn(v: boolean) {
   mockLoggedIn = v;
@@ -33,20 +46,49 @@ vi.mock('./client', () => {
             subscribers.delete(cb);
           };
         },
+        subscribeDirectMessages: (cb: (v: typeof dmSnapshot) => void) => {
+          dmSubscribeCalls += 1;
+          cb(dmSnapshot);
+          return () => {
+            dmUnsubscribeCalls += 1;
+          };
+        },
       }),
   };
 });
 
-import { useIsRehydrating } from './stores';
+import { setPreference } from '@/lib/preferences';
+import { useDirectMessages, useIsRehydrating } from './stores';
 
 beforeEach(() => {
   mockLoggedIn = false;
+  dmSubscribeCalls = 0;
+  dmUnsubscribeCalls = 0;
   subscribers.clear();
   window.localStorage.clear();
+  setPreference('directMessagesEnabled', false);
 });
 
 afterEach(() => {
   subscribers.clear();
+});
+
+describe('useDirectMessages', () => {
+  it('does not subscribe to relay DMs until local opt-in is enabled', async () => {
+    const { result } = renderHook(() => useDirectMessages());
+
+    await Promise.resolve();
+    expect(dmSubscribeCalls).toBe(0);
+    expect(result.current).toEqual({});
+
+    act(() => setPreference('directMessagesEnabled', true));
+    await waitFor(() => expect(dmSubscribeCalls).toBe(1));
+    expect(result.current).toEqual(dmSnapshot);
+
+    act(() => setPreference('directMessagesEnabled', false));
+    await waitFor(() => expect(result.current).toEqual({}));
+    expect(dmUnsubscribeCalls).toBe(1);
+  });
 });
 
 describe('useIsRehydrating', () => {
