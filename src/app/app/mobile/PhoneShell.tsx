@@ -328,11 +328,12 @@ function BottomNav({
   dmBadge?: number;
   inboxBadge?: number;
 }) {
+  const { t } = useTranslation();
   const tabs: NavTab[] = [
-    { id: 'server', icon: NAV_ICONS.servers, label: 'Servers' },
+    { id: 'server', icon: NAV_ICONS.servers, label: t('mobile.nav.servers') },
     { id: 'dms-list', icon: NAV_ICONS.dms, label: 'DMs', badge: dmBadge },
-    { id: 'inbox', icon: NAV_ICONS.inbox, label: 'Inbox', badge: inboxBadge },
-    { id: 'settings-profile', icon: NAV_ICONS.you, label: 'You' },
+    { id: 'inbox', icon: NAV_ICONS.inbox, label: t('inbox.title'), badge: inboxBadge },
+    { id: 'settings-profile', icon: NAV_ICONS.you, label: t('settings.you') },
   ];
   // Active tab = the top-level tab the current nav resolves to. For sub-
   // screens with dynamic parents (profile-view from inbox, member-list from
@@ -1744,6 +1745,7 @@ function ManageMemberRowMobile({
   pubkey: string;
   isAdmin: boolean;
 }) {
+  const { t } = useTranslation();
   const meta = useUserMetadata(pubkey);
   const name = meta?.displayName || meta?.name || shortNpub(pubkey);
   return (
@@ -2565,6 +2567,7 @@ function ChannelScreen({
   openProfile: (pubkey: string) => void;
   openMembers: () => void;
 }) {
+  const { t } = useTranslation();
   // Raw lookup — bypasses WoT filtering. Mirrors desktop ChatPanel: the
   // user explicitly navigated to this groupId; hiding it because a WoT
   // verdict hasn't resolved yet causes a false "Channel not visible"
@@ -2793,26 +2796,26 @@ function ChannelScreen({
       <div className="chat-header chat-header-compact">
         <div className="chat-row">
           <div className="chat-title-block">
-            <button className="back-btn" onClick={back} aria-label="Back">
+            <button className="back-btn" onClick={back} aria-label={t('common.back')}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
             </button>
             <div className="chat-channel"><span className="hash">#</span>{headerLabel}</div>
           </div>
           <div className="chat-actions">
-            <button className="icon-btn" onClick={() => go('search')} aria-label="Search">
+            <button className="icon-btn" onClick={() => go('search')} aria-label={t('common.search')}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
             </button>
             {isChannelAdmin && (
               <button
                 className="icon-btn"
                 onClick={() => setSettingsOpen(true)}
-                aria-label="Channel settings"
+                aria-label={t('desktop.channel.settings')}
                 data-testid="mobile-channel-settings-btn"
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>
               </button>
             )}
-            <button className="icon-btn" onClick={openMembers} aria-label="Members">
+            <button className="icon-btn" onClick={openMembers} aria-label={t('mobile.members.members')}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="7" r="4" /><path d="M3 21a6 6 0 0 1 12 0" /><circle cx="17" cy="9" r="3" /><path d="M23 19a4 4 0 0 0-7-2.65" /></svg>
             </button>
           </div>
@@ -2829,13 +2832,13 @@ function ChannelScreen({
           messagesStatus !== 'empty-confirmed' ? (
             <div className="empty-state" data-testid="messages-loading">
               <div className="lc-spinner" aria-hidden="true" />
-              <div className="empty-state-title">Loading messages…</div>
+              <div className="empty-state-title">{t('mobile.channel.loadingMessages')}</div>
             </div>
           ) : (
             <div className="empty-state">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
-              <div className="empty-state-title">No messages yet</div>
-              <div className="empty-state-desc">Be the first to say hi.</div>
+              <div className="empty-state-title">{t('mobile.channel.noMessages')}</div>
+              <div className="empty-state-desc">{t('mobile.channel.noMessagesDescription')}</div>
             </div>
           )
         ) : (
@@ -2877,7 +2880,7 @@ function ChannelScreen({
           <div className="composer-reply" data-testid="mobile-reply-preview">
             <div className="composer-reply-info">
               <span className="composer-reply-label">
-                Replying to <ReplyAuthorName pubkey={replyingTo.pubkey} />
+                {t('mobile.channel.replyingTo')} <ReplyAuthorName pubkey={replyingTo.pubkey} />
               </span>
               <span className="composer-reply-text"><MentionText content={replyingTo.content.slice(0, 80)} /></span>
             </div>
@@ -2885,7 +2888,7 @@ function ChannelScreen({
               type="button"
               className="composer-reply-close"
               onClick={() => setReplyingTo(null)}
-              aria-label="Cancel reply"
+              aria-label={t('mobile.channel.cancelReply')}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
             </button>
@@ -2914,7 +2917,7 @@ function ChannelScreen({
           <button
             className="composer-attach"
             style={{ opacity: uploading ? 0.4 : 1 }}
-            aria-label="Attach"
+            aria-label={t('dm.attach')}
             disabled={uploading}
             onClick={() => fileInputRef.current?.click()}
           >
@@ -2929,7 +2932,7 @@ function ChannelScreen({
               const t = e.currentTarget;
               handleDraftInput(t.value, t.selectionStart ?? t.value.length);
             }}
-            placeholder={`Message #${group?.name ?? 'channel'}`}
+            placeholder={t('mobile.channel.messagePlaceholder').replace('{name}', group?.name ?? 'channel')}
             onKeyDown={(e) => {
               if (mentionQuery !== null && filteredMentionMembers.length > 0) {
                 if (e.key === 'ArrowDown') {
@@ -2961,7 +2964,7 @@ function ChannelScreen({
           />
           <div className="composer-btns">
             {draft.trim() ? (
-              <button className="composer-send" onClick={() => send()} aria-label="Send">
+              <button className="composer-send" onClick={() => send()} aria-label={t('common.send')}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 14-7-7 14-2-5-5-2z" /></svg>
               </button>
             ) : (
@@ -3285,10 +3288,11 @@ function MobileDmOptInScreen({
   onSecondary: () => void;
   secondaryLabel?: string;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="screen active" data-screen="dms-list">
       <div className="app-header">
-        <h2>Direct Messages</h2>
+        <h2>{t('dm.title')}</h2>
       </div>
       <DMOptInGate
         surface="mobile"
@@ -3308,6 +3312,7 @@ function DmsListScreen({
   selectPeer: (peer: string) => void;
   myFollows: ReadonlyArray<string>;
 }) {
+  const { t } = useTranslation();
   const dms = useDirectMessages();
   const [tab, setTab] = useState<'follows' | 'others'>('follows');
 
@@ -3340,12 +3345,12 @@ function DmsListScreen({
   return (
     <div className="screen active" data-screen="dms-list">
       <div className="app-header">
-        <h2>Direct Messages</h2>
+        <h2>{t('dm.title')}</h2>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          <button className="icon-btn" onClick={() => go('search')} aria-label="Search">
+          <button className="icon-btn" onClick={() => go('search')} aria-label={t('common.search')}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
           </button>
-          <button className="icon-btn" onClick={() => go('compose-dm')} aria-label="New message">
+          <button className="icon-btn" onClick={() => go('compose-dm')} aria-label={t('dm.newMessage')}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
           </button>
         </div>
@@ -3353,10 +3358,10 @@ function DmsListScreen({
 
       <div className="dms-tabs native-scroll-x">
         <button className={`filter-tab ${tab === 'follows' ? 'active' : ''}`} onClick={() => setTab('follows')}>
-          Follows · {followsCount}
+          {t('dm.follows')} · {followsCount}
         </button>
         <button className={`filter-tab ${tab === 'others' ? 'active' : ''}`} onClick={() => setTab('others')}>
-          Others · {othersCount}
+          {t('dm.others')} · {othersCount}
         </button>
       </div>
 
@@ -3364,12 +3369,12 @@ function DmsListScreen({
         {filtered.length === 0 && (
           <div className="empty-state">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><rect x="3" y="11" width="18" height="9" rx="1.5" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-            <div className="empty-state-title">No conversations yet</div>
-            <div className="empty-state-desc">Tap + to start an encrypted DM with anyone on Nostr.</div>
+            <div className="empty-state-title">{t('dm.noConversations')}</div>
+            <div className="empty-state-desc">{t('dm.emptyMobileDescription')}</div>
           </div>
         )}
         {filtered.map((p) => (
-          <DmRow key={p.peer} peer={p.peer} latest={p.latest} onClick={() => selectPeer(p.peer)} />
+          <DmRow key={p.peer} peer={p.peer} latest={p.latest} youPrefix={t('dm.youPrefix')} onClick={() => selectPeer(p.peer)} />
         ))}
       </div>
     </div>
@@ -3379,10 +3384,12 @@ function DmsListScreen({
 function DmRow({
   peer,
   latest,
+  youPrefix,
   onClick,
 }: {
   peer: string;
   latest: JsDirectMessage;
+  youPrefix: string;
   onClick: () => void;
 }) {
   const meta = useUserMetadata(peer);
@@ -3400,7 +3407,7 @@ function DmRow({
         </div>
         <div className="dm-preview">
           <svg className="lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="9" rx="1.5" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-          {latest.outgoing ? 'You: ' : ''}{latest.content}
+          {latest.outgoing ? youPrefix : ''}{latest.content}
         </div>
       </div>
       {unreadCount > 0 && <span className="unread-dot" />}
@@ -3420,6 +3427,7 @@ function DmThreadScreen({
   back: () => void;
   openProfile: (pubkey: string) => void;
 }) {
+  const { t } = useTranslation();
   const dms = useDirectMessages();
   const meta = useUserMetadata(peer);
   const myPubkey = useMyPubkey();
@@ -3478,7 +3486,7 @@ function DmThreadScreen({
   return (
     <div className="screen active" data-screen="dm-thread">
       <div className="dm-header">
-        <button className="back-btn" onClick={back} aria-label="Back">
+        <button className="back-btn" onClick={back} aria-label={t('common.back')}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
         </button>
         <div className="dm-ava-list" style={avatarStyle(peer)} onClick={() => openProfile(peer)}>
@@ -3496,7 +3504,7 @@ function DmThreadScreen({
       <div className="dm-messages native-scroll-y" ref={msgsRef}>
         <div className="dm-encryption-pill">
           <svg className="lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="9" rx="1.5" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-          Messages are NIP-04 encrypted end-to-end
+          {t('dm.encryptedPill')}
         </div>
         {grouped.map((it) =>
           it.type === 'divider' ? (
@@ -3513,25 +3521,25 @@ function DmThreadScreen({
             >
               <div className="dm-bubble-text">{it.msg.content}</div>
               <div className="dm-bubble-meta">
-                {it.msg.pending && <span className="dm-bubble-spinner" aria-label="Sending" role="status" />}
+                {it.msg.pending && <span className="dm-bubble-spinner" aria-label={t('common.sending')} role="status" />}
                 <span className="dm-bubble-time">{timeOfDay(it.msg.createdAt)}</span>
               </div>
               {it.msg.failed && it.msg.clientTag && (
                 <div className="dm-bubble-failed" data-testid="mobile-dm-failed">
-                  <span className="dm-bubble-failed-label">Couldn’t send</span>
+                  <span className="dm-bubble-failed-label">{t('dm.failedSend')}</span>
                   <button
                     type="button"
                     className="dm-bubble-retry"
                     onClick={() => onRetry(it.msg.clientTag!)}
                     data-testid="mobile-dm-retry"
                   >
-                    Retry
+                    {t('common.retry')}
                   </button>
                   <button
                     type="button"
                     className="dm-bubble-dismiss"
                     onClick={() => onDismiss(it.msg.clientTag!)}
-                    aria-label="Dismiss failed message"
+                    aria-label={t('dm.dismissFailed')}
                   >
                     ✕
                   </button>
@@ -3544,14 +3552,14 @@ function DmThreadScreen({
 
       <div className="composer">
         <div className="composer-inner">
-          <button className="composer-attach" aria-label="Attach">
+          <button className="composer-attach" aria-label={t('dm.attach')}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
           </button>
           <input
             className="composer-input"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder="Encrypted message (NIP-04)"
+            placeholder={t('dm.placeholderEncrypted')}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -3561,7 +3569,7 @@ function DmThreadScreen({
           />
           <div className="composer-btns">
             {draft.trim() ? (
-              <button className="composer-send" onClick={() => send()} aria-label="Send">
+              <button className="composer-send" onClick={() => send()} aria-label={t('common.send')}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 14-7-7 14-2-5-5-2z" /></svg>
               </button>
             ) : (
@@ -3589,6 +3597,7 @@ function InboxScreen({
   selectGroup: (groupId: string, kind: JsGroup['kind']) => void;
   selectPeer: (peer: string) => void;
 }) {
+  const { t } = useTranslation();
   const events = useReadStateStore((s) => s.inboxEvents);
   const markInboxRead = useReadStateStore((s) => s.advanceInboxRead);
   const markAllAsRead = useReadStateStore((s) => s.markAllAsRead);
@@ -3624,22 +3633,22 @@ function InboxScreen({
   return (
     <div className="screen active" data-screen="inbox">
       <div className="app-header">
-        <h2>Inbox</h2>
-        <button className="mark-all-read" onClick={handleMarkAll}>Mark all read</button>
+        <h2>{t('inbox.title')}</h2>
+        <button className="mark-all-read" onClick={handleMarkAll}>{t('inbox.markAllRead')}</button>
       </div>
       <div className="filter-tabs native-scroll-x">
-        <button className={`filter-tab ${tab === 'all' ? 'active' : ''}`} onClick={() => setTab('all')}>All · {events.length}</button>
-        <button className={`filter-tab ${tab === 'mentions' ? 'active' : ''}`} onClick={() => setTab('mentions')}>@mentions</button>
-        <button className={`filter-tab ${tab === 'replies' ? 'active' : ''}`} onClick={() => setTab('replies')}>Replies</button>
+        <button className={`filter-tab ${tab === 'all' ? 'active' : ''}`} onClick={() => setTab('all')}>{t('mobile.inbox.all')} · {events.length}</button>
+        <button className={`filter-tab ${tab === 'mentions' ? 'active' : ''}`} onClick={() => setTab('mentions')}>{t('mobile.inbox.mentions')}</button>
+        <button className={`filter-tab ${tab === 'replies' ? 'active' : ''}`} onClick={() => setTab('replies')}>{t('mobile.inbox.replies')}</button>
         <button className={`filter-tab ${tab === 'dms' ? 'active' : ''}`} onClick={() => setTab('dms')}>DMs</button>
-        <button className={`filter-tab ${tab === 'zaps' ? 'active' : ''}`} onClick={() => setTab('zaps')}>Zaps</button>
+        <button className={`filter-tab ${tab === 'zaps' ? 'active' : ''}`} onClick={() => setTab('zaps')}>{t('mobile.inbox.zaps')}</button>
       </div>
       <div className="activity-list native-scroll-y">
         {filtered.length === 0 && (
           <div className="empty-state" style={{ padding: '40px 24px' }}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" /></svg>
-            <div className="empty-state-title">All caught up</div>
-            <div className="empty-state-desc">Mentions, replies, DMs, and zaps land here as they arrive.</div>
+            <div className="empty-state-title">{t('mobile.inbox.caughtUp')}</div>
+            <div className="empty-state-desc">{t('mobile.inbox.emptyDescription')}</div>
           </div>
         )}
         {filtered.map((e) => (
@@ -3651,18 +3660,19 @@ function InboxScreen({
 }
 
 function InboxCard({ event, onJump }: { event: InboxEvent; onJump: () => void }) {
+  const { t } = useTranslation();
   const meta = useUserMetadata(event.senderPubkey);
   const inboxLastReadAt = useReadStateStore((s) => s.inboxLastReadAt);
   const name = meta?.displayName || meta?.name || shortNpub(event.senderPubkey);
   const tsSec = Math.floor(new Date(event.createdAt).getTime() / 1000);
   const isRead = Date.parse(event.createdAt) <= inboxLastReadAt;
   const typeLabel: Record<InboxEvent['type'], string> = {
-    mention: '@ Mentioned you',
-    reply: '↩ Replied to you',
-    dm: 'Direct message',
-    zap: '⚡ Zap received',
-    everyone: '@ everyone',
-    message: 'Message',
+    mention: t('mobile.inbox.type.mention'),
+    reply: t('mobile.inbox.type.reply'),
+    dm: t('inbox.type.dm'),
+    zap: t('mobile.inbox.type.zap'),
+    everyone: t('mobile.inbox.type.everyone'),
+    message: t('mobile.inbox.type.message'),
   };
   return (
     <button
@@ -3716,10 +3726,10 @@ function ProfileViewScreen({
         style={meta?.banner ? { backgroundImage: `url(${meta.banner})` } : undefined}
       >
         <div className="profile-view-topbar">
-          <button className="back-btn" onClick={back} aria-label="Back">
+          <button className="back-btn" onClick={back} aria-label={t('common.back')}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
           </button>
-          <button className="icon-btn" aria-label="More">
+          <button className="icon-btn" aria-label={t('mobile.profile.more')}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><circle cx="12" cy="5" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="19" r="1.5" /></svg>
           </button>
         </div>
@@ -3737,11 +3747,11 @@ function ProfileViewScreen({
         <div className="profile-view-actions">
           <button className="profile-action follow">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="7" r="4" /><path d="M3 21a6 6 0 0 1 12 0" /><path d="M19 8v6M16 11h6" /></svg>
-            Follow
+            {t('mobile.profile.follow')}
           </button>
           <button className="profile-action" onClick={() => openDm(pubkey)}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
-            Message
+            {t('mobile.profile.message')}
           </button>
           <button className="profile-action zap">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2 3 14h7l-2 8 10-12h-7l2-8z" /></svg>
@@ -3750,8 +3760,8 @@ function ProfileViewScreen({
         </div>
       )}
       <div style={{ flex: 1, padding: 24, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--app-text-mute)', fontSize: 12, textAlign: 'center', gap: 6 }}>
-        <span>Posts and replies will surface here</span>
-        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10 }}>(kind 1 timeline · coming soon)</span>
+        <span>{t('mobile.profile.postsComing')}</span>
+        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10 }}>{t('mobile.profile.timelineComing')}</span>
       </div>
     </div>
   );
@@ -3761,6 +3771,7 @@ function ProfileViewScreen({
 // 10 — member list
 
 function MemberListScreen({ groupId, back, openProfile }: { groupId: string; back: () => void; openProfile: (p: string) => void }) {
+  const { t } = useTranslation();
   const groups = useGroups();
   const group = groups.find((g) => g.id === groupId) ?? null;
   const parentGroup = group?.parent ? groups.find((g) => g.id === group.parent) ?? null : null;
@@ -3801,10 +3812,10 @@ function MemberListScreen({ groupId, back, openProfile }: { groupId: string; bac
       <div className="chat-header chat-header-compact">
         <div className="chat-row">
           <div className="chat-title-block">
-            <button className="back-btn" onClick={back} aria-label="Back">
+            <button className="back-btn" onClick={back} aria-label={t('common.back')}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
             </button>
-            <div className="chat-channel"><span className="hash">#</span>{headerLabel} · members</div>
+            <div className="chat-channel"><span className="hash">#</span>{headerLabel} · {t('mobile.members.label')}</div>
           </div>
           <div className="member-presence-count">{onlineCount}/{allPubkeys.length}</div>
         </div>
@@ -3812,13 +3823,13 @@ function MemberListScreen({ groupId, back, openProfile }: { groupId: string; bac
       <div className="search-body">
         {admins.length > 0 && (
           <>
-            <div className="member-section-label">Admins · {admins.length}</div>
+            <div className="member-section-label">{t('mobile.members.admins')} · {admins.length}</div>
             {admins.map((p) => <MemberRow key={p} pubkey={p} role="admin" online={isOnline(p)} onClick={() => openProfile(p)} />)}
           </>
         )}
         {nonAdminMembers.length > 0 && (
           <>
-            <div className="member-section-label">Members · {nonAdminMembers.length}</div>
+            <div className="member-section-label">{t('mobile.members.members')} · {nonAdminMembers.length}</div>
             {nonAdminMembers.map((p) => <MemberRow key={p} pubkey={p} online={isOnline(p)} onClick={() => openProfile(p)} />)}
           </>
         )}
@@ -3829,13 +3840,13 @@ function MemberListScreen({ groupId, back, openProfile }: { groupId: string; bac
             style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}
           >
             <div className="lc-spinner" aria-hidden="true" />
-            <div className="empty-state-title">Loading members…</div>
+            <div className="empty-state-title">{t('mobile.members.loading')}</div>
           </div>
         )}
         {members.length === 0 && admins.length === 0 && membershipReady && (
           <div className="empty-state">
-            <div className="empty-state-title">No members</div>
-            <div className="empty-state-desc">No relay-published 39002 members yet.</div>
+            <div className="empty-state-title">{t('mobile.members.empty')}</div>
+            <div className="empty-state-desc">{t('mobile.members.emptyDescription')}</div>
           </div>
         )}
       </div>
@@ -3844,6 +3855,7 @@ function MemberListScreen({ groupId, back, openProfile }: { groupId: string; bac
 }
 
 function MemberRow({ pubkey, role, online, onClick }: { pubkey: string; role?: 'admin'; online: boolean; onClick: () => void }) {
+  const { t } = useTranslation();
   const meta = useUserMetadata(pubkey);
   const name = meta?.displayName || meta?.name || shortNpub(pubkey);
   return (
@@ -3855,7 +3867,7 @@ function MemberRow({ pubkey, role, online, onClick }: { pubkey: string; role?: '
         <span className="member-row-name">{name}</span>
         <span className="member-row-nip">{meta?.nip05 ?? shortNpub(pubkey)}</span>
       </div>
-      {role === 'admin' && <span className="role-badge b-core">admin</span>}
+      {role === 'admin' && <span className="role-badge b-core">{t('mobile.members.admin')}</span>}
       <span className={`member-row-presence ${online ? 'on' : 'off'}`} />
     </button>
   );
@@ -3865,6 +3877,7 @@ function MemberRow({ pubkey, role, online, onClick }: { pubkey: string; role?: '
 // 11 — compose DM (search + open thread)
 
 function ComposeDmScreen({ back, selectPeer }: { back: () => void; selectPeer: (peer: string) => void }) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const dms = useDirectMessages();
 
@@ -3875,31 +3888,31 @@ function ComposeDmScreen({ back, selectPeer }: { back: () => void; selectPeer: (
   return (
     <div className="screen compose-dm-screen active" data-screen="compose-dm">
       <div className="compose-dm-header">
-        <button className="compose-dm-cancel" onClick={back}>Cancel</button>
-        <h2>New message</h2>
+        <button className="compose-dm-cancel" onClick={back}>{t('common.cancel')}</button>
+        <h2>{t('dm.newMessage')}</h2>
         <button
           className={`compose-dm-next ${decoded ? 'active' : ''}`}
           disabled={!decoded}
           onClick={() => decoded && selectPeer(decoded)}
         >
-          Next
+          {t('dm.compose.next')}
         </button>
       </div>
       <div className="compose-dm-to">
-        <span className="compose-dm-to-label">To:</span>
+        <span className="compose-dm-to-label">{t('dm.compose.to')}</span>
         <input
           className="compose-dm-to-input"
-          placeholder="npub… or hex pubkey"
+          placeholder={t('dm.compose.placeholder')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
       </div>
-      <div className="search-section-label">Recent</div>
+      <div className="search-section-label">{t('dm.compose.recent')}</div>
       <div className="compose-dm-body">
         {recent.length === 0 && (
           <div className="empty-state">
-            <div className="empty-state-title">No recent conversations</div>
-            <div className="empty-state-desc">Paste an npub above and tap Next.</div>
+            <div className="empty-state-title">{t('dm.compose.noRecent')}</div>
+            <div className="empty-state-desc">{t('dm.compose.noRecentDescription')}</div>
           </div>
         )}
         {recent.map((p) => <ComposeRecentRow key={p} peer={p} onClick={() => selectPeer(p)} />)}
@@ -3936,6 +3949,7 @@ export function SearchScreen({
   back: () => void;
   selectGroup: (groupId: string, kind: JsGroup['kind']) => void;
 }) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [chip, setChip] = useState<'all' | 'from' | 'in' | 'mentions' | 'has-image'>('all');
   const groups = useGroups();
@@ -3944,7 +3958,7 @@ export function SearchScreen({
   return (
     <div className="screen search-screen active" data-screen="search">
       <div className="search-header">
-        <button className="back-btn" onClick={back} aria-label="Back">
+        <button className="back-btn" onClick={back} aria-label={t('common.back')}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
         </button>
         <div className="search-input-wrap">
@@ -3952,13 +3966,13 @@ export function SearchScreen({
           <input
             type="search"
             name="obelisk-mobile-search"
-            aria-label="Search messages, people, and channels"
+            aria-label={t('mobile.search.aria')}
             inputMode="search"
             autoComplete="off"
             autoCorrect="off"
             autoCapitalize="none"
             spellCheck={false}
-            placeholder="Search messages, people, channels…"
+            placeholder={t('mobile.search.placeholder')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             autoFocus
@@ -3968,13 +3982,13 @@ export function SearchScreen({
       </div>
       <div className="search-context-pill">in:{shortHost(relay)}</div>
       <div className="search-filter-chips">
-        <button className={`search-chip ${chip === 'all' ? 'active' : ''}`} onClick={() => setChip('all')}>All</button>
+        <button className={`search-chip ${chip === 'all' ? 'active' : ''}`} onClick={() => setChip('all')}>{t('mobile.search.all')}</button>
         <button className={`search-chip ${chip === 'from' ? 'active' : ''}`} onClick={() => setChip('from')}>from:</button>
         <button className={`search-chip ${chip === 'in' ? 'active' : ''}`} onClick={() => setChip('in')}>in:#channel</button>
         <button className={`search-chip ${chip === 'mentions' ? 'active' : ''}`} onClick={() => setChip('mentions')}>mentions:@you</button>
         <button className={`search-chip ${chip === 'has-image' ? 'active' : ''}`} onClick={() => setChip('has-image')}>has:image</button>
       </div>
-      <div className="search-section-label">Channels</div>
+      <div className="search-section-label">{t('search.channels')}</div>
       <div className="search-body">
         {groups
           .filter((g) => !query || (g.name ?? '').toLowerCase().includes(query.toLowerCase()))
@@ -3990,7 +4004,7 @@ export function SearchScreen({
             <div className="search-empty-mark">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
             </div>
-            Type to filter channels.<br />Server-side message search uses <code>from:</code>, <code>in:#</code>, <code>has:</code>.
+            {t('mobile.search.channelsHelp')}<br />{t('mobile.search.serverSideHelp')}
           </div>
         )}
       </div>
@@ -4868,6 +4882,7 @@ function CopyRow({
   copyText: string;
   testId?: string;
 }) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); }, []);
@@ -4885,16 +4900,17 @@ function CopyRow({
       className={`copy-row ${copied ? 'copied' : ''}`}
       onClick={onCopy}
       data-testid={testId}
-      aria-label={`Copy ${tag}`}
+      aria-label={t('common.copy').replace('{label}', tag)}
     >
       <span className="copy-row-tag">{tag}</span>
-      <span className="copy-row-value">{copied ? 'Copied!' : value}</span>
+      <span className="copy-row-value">{copied ? t('common.copied') : value}</span>
       <span className="copy-row-icon">{copied ? <CopiedIcon /> : <CopyIcon />}</span>
     </button>
   );
 }
 
 function DisconnectConfirmSheet({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
+  const { t } = useTranslation();
   return (
     <div className="sheet-host" data-screen="disconnect-confirm">
       <div className="sheet-backdrop" onClick={onCancel} />
@@ -4907,9 +4923,9 @@ function DisconnectConfirmSheet({ onConfirm, onCancel }: { onConfirm: () => void
             <line x1="21" y1="12" x2="9" y2="12" />
           </svg>
         </div>
-        <div className="confirm-sheet-title">Disconnect from Nostr?</div>
+        <div className="confirm-sheet-title">{t('mobile.settings.disconnectTitle')}</div>
         <div className="confirm-sheet-desc">
-          Your session will end on this device. You'll need your nsec, signer extension, or bunker to log back in.
+          {t('mobile.settings.disconnectDescription')}
         </div>
         <button className="settings-btn-danger" onClick={onConfirm} data-testid="disconnect-confirm">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -4917,9 +4933,9 @@ function DisconnectConfirmSheet({ onConfirm, onCancel }: { onConfirm: () => void
             <polyline points="16 17 21 12 16 7" />
             <line x1="21" y1="12" x2="9" y2="12" />
           </svg>
-          Yes, disconnect
+          {t('mobile.settings.disconnectConfirm')}
         </button>
-        <button className="btn-cancel" onClick={onCancel}>Cancel</button>
+        <button className="btn-cancel" onClick={onCancel}>{t('common.cancel')}</button>
       </div>
     </div>
   );
@@ -4960,7 +4976,7 @@ export function SettingsProfileScreen({ go }: { go: (s: ScreenName) => void }) {
           )}
         </div>
         <div className="settings-section">
-          <div className="settings-section-title">Identity</div>
+          <div className="settings-section-title">{t('mobile.settings.identity')}</div>
           {myPubkey && <CopyRow tag="npub" value={shortNpub(myPubkey)} copyText={npub} testId="copy-npub" />}
           {myPubkey && <CopyRow tag="hex" value={`${myPubkey.slice(0, 10)}…${myPubkey.slice(-6)}`} copyText={myPubkey} testId="copy-hex" />}
           {myPubkey && (
@@ -4971,13 +4987,13 @@ export function SettingsProfileScreen({ go }: { go: (s: ScreenName) => void }) {
               rel="noopener noreferrer"
               style={{ textDecoration: 'none' }}
             >
-              <span>Open in another client</span>
+              <span>{t('mobile.settings.openOtherClient')}</span>
               <span className="settings-row-meta muted">njump.me ↗</span>
             </a>
           )}
         </div>
         <button className="settings-btn-primary" onClick={() => go('profile-edit')} data-testid="edit-profile-btn">
-          Edit Nostr Profile
+          {t('mobile.settings.editNostrProfile')}
         </button>
         <button
           className="settings-btn-danger"
@@ -4989,7 +5005,7 @@ export function SettingsProfileScreen({ go }: { go: (s: ScreenName) => void }) {
             <polyline points="16 17 21 12 16 7" />
             <line x1="21" y1="12" x2="9" y2="12" />
           </svg>
-          Disconnect
+          {t('mobile.settings.disconnect')}
         </button>
       </div>
       {confirmingLogout && (
@@ -5006,6 +5022,7 @@ export function SettingsProfileScreen({ go }: { go: (s: ScreenName) => void }) {
 // 16b — settings · profile · edit
 
 export function EditProfileScreen({ go }: { go: (s: ScreenName, dir?: 'forward' | 'back') => void }) {
+  const { t } = useTranslation();
   const myPubkey = useMyPubkey();
   const meta = useUserMetadata(myPubkey);
   const publishProfile = usePublishProfile();
@@ -5052,8 +5069,8 @@ export function EditProfileScreen({ go }: { go: (s: ScreenName, dir?: 'forward' 
   }, [picturePreview, bannerPreview]);
 
   const pickAvatar = (file: File) => {
-    if (!file.type.startsWith('image/')) { setError('Please select an image file'); return; }
-    if (file.size > 10 * 1024 * 1024) { setError('Image is too large (max 10MB)'); return; }
+    if (!file.type.startsWith('image/')) { setError(t('mobile.settings.imageOnly')); return; }
+    if (file.size > 10 * 1024 * 1024) { setError(t('mobile.settings.imageTooLarge')); return; }
     setError(null);
     markDirty();
     setPictureFile(file);
@@ -5062,8 +5079,8 @@ export function EditProfileScreen({ go }: { go: (s: ScreenName, dir?: 'forward' 
   };
 
   const pickBanner = (file: File) => {
-    if (!file.type.startsWith('image/')) { setError('Please select an image file'); return; }
-    if (file.size > 10 * 1024 * 1024) { setError('Image is too large (max 10MB)'); return; }
+    if (!file.type.startsWith('image/')) { setError(t('mobile.settings.imageOnly')); return; }
+    if (file.size > 10 * 1024 * 1024) { setError(t('mobile.settings.imageTooLarge')); return; }
     setError(null);
     markDirty();
     setBannerFile(file);
@@ -5092,7 +5109,7 @@ export function EditProfileScreen({ go }: { go: (s: ScreenName, dir?: 'forward' 
         try { finalBanner = await uploadToBlossom(bannerFile); }
         finally { setUploadingBanner(false); }
       }
-      if (!publishProfile) throw new Error('Not signed in');
+      if (!publishProfile) throw new Error(t('user.notSignedIn'));
       await publishProfile({
         name: nameTrimmed,
         display_name: nameTrimmed,
@@ -5106,7 +5123,7 @@ export function EditProfileScreen({ go }: { go: (s: ScreenName, dir?: 'forward' 
       go('settings-profile', 'back');
     } catch (err) {
       console.warn('[mobile] publishProfile failed', err);
-      setError(err instanceof Error ? err.message : 'Failed to publish profile');
+      setError(err instanceof Error ? err.message : t('mobile.settings.publishFailed'));
     } finally {
       setSaving(false);
     }
@@ -5121,19 +5138,19 @@ export function EditProfileScreen({ go }: { go: (s: ScreenName, dir?: 'forward' 
         <button
           className="back-btn"
           onClick={() => go('settings-profile', 'back')}
-          aria-label="Back"
+          aria-label={t('common.back')}
           disabled={busy}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
         </button>
-        <h2>Edit profile</h2>
+        <h2>{t('mobile.settings.editProfile')}</h2>
         <button
           className="setup-skip save-action"
           onClick={save}
           disabled={!nameValid || busy}
           data-testid="save-profile"
         >
-          {saving ? 'Saving…' : uploadingAvatar || uploadingBanner ? 'Uploading…' : 'Save'}
+          {saving ? t('common.saving') : uploadingAvatar || uploadingBanner ? t('common.uploading') : t('common.save')}
         </button>
       </div>
       <div className="setup-body edit-profile-body">
@@ -5143,7 +5160,7 @@ export function EditProfileScreen({ go }: { go: (s: ScreenName, dir?: 'forward' 
           type="button"
           className={`edit-banner-tap ${currentBanner ? '' : 'empty'} ${uploadingBanner ? 'uploading' : ''}`}
           onClick={() => bannerInputRef.current?.click()}
-          aria-label="Change banner image"
+          aria-label={t('mobile.settings.changeBannerImage')}
           data-testid="edit-banner-tap"
         >
           {currentBanner && <img src={currentBanner} alt="" />}
@@ -5157,7 +5174,7 @@ export function EditProfileScreen({ go }: { go: (s: ScreenName, dir?: 'forward' 
                   <polyline points="17 8 12 3 7 8" />
                   <line x1="12" y1="3" x2="12" y2="15" />
                 </svg>
-                <span>{currentBanner ? 'Change banner' : 'Tap to add banner'}</span>
+                <span>{currentBanner ? t('mobile.settings.changeBanner') : t('mobile.settings.addBanner')}</span>
               </>
             )}
           </div>
@@ -5175,7 +5192,7 @@ export function EditProfileScreen({ go }: { go: (s: ScreenName, dir?: 'forward' 
             type="button"
             className={`edit-avatar-tap ${currentPicture ? '' : 'empty'} ${uploadingAvatar ? 'uploading' : ''}`}
             onClick={() => avatarInputRef.current?.click()}
-            aria-label="Change profile picture"
+            aria-label={t('mobile.settings.changeProfilePicture')}
             data-testid="edit-avatar-tap"
           >
             <NameAvatar pubkey={myPubkey ?? ''} name={name} picture={currentPicture} size={88} className="me-avatar" />
@@ -5198,31 +5215,31 @@ export function EditProfileScreen({ go }: { go: (s: ScreenName, dir?: 'forward' 
             />
           </button>
           <div className="edit-avatar-tip">
-            Tap your avatar or banner to upload a new image. Your changes are published as kind:0 metadata.
+            {t('mobile.settings.uploadTip')}
           </div>
         </div>
 
         <div className="edit-fields">
           <div className="setup-field">
-            <label>Display name</label>
+            <label>{t('mobile.settings.displayName')}</label>
             <div className="setup-input-wrap">
               <input
                 className="setup-input"
                 value={name}
                 onChange={(e) => { markDirty(); setName(e.target.value); }}
-                placeholder="Your name"
+                placeholder={t('mobile.settings.yourName')}
                 maxLength={50}
                 data-testid="edit-name"
               />
             </div>
           </div>
           <div className="setup-field">
-            <label>About</label>
+            <label>{t('user.about')}</label>
             <textarea
               className="setup-textarea"
               value={about}
               onChange={(e) => { markDirty(); setAbout(e.target.value); }}
-              placeholder="A short bio…"
+              placeholder={t('mobile.settings.aboutPlaceholder')}
               maxLength={500}
               rows={3}
               data-testid="edit-about"
@@ -5243,7 +5260,7 @@ export function EditProfileScreen({ go }: { go: (s: ScreenName, dir?: 'forward' 
             </div>
           </div>
           <div className="setup-field">
-            <label>Lightning address</label>
+            <label>{t('mobile.settings.lightningAddress')}</label>
             <div className="setup-input-wrap">
               <input
                 className="setup-input"
@@ -5257,7 +5274,7 @@ export function EditProfileScreen({ go }: { go: (s: ScreenName, dir?: 'forward' 
             </div>
           </div>
           <div className="setup-field">
-            <label>Website</label>
+            <label>{t('user.field.website')}</label>
             <div className="setup-input-wrap">
               <input
                 className="setup-input"
@@ -5278,7 +5295,7 @@ export function EditProfileScreen({ go }: { go: (s: ScreenName, dir?: 'forward' 
           onClick={save}
           disabled={!nameValid || busy}
         >
-          {saving ? 'Saving…' : uploadingAvatar || uploadingBanner ? 'Uploading…' : 'Save changes'}
+          {saving ? t('common.saving') : uploadingAvatar || uploadingBanner ? t('common.uploading') : t('mobile.settings.saveChanges')}
         </button>
       </div>
     </div>
@@ -5297,7 +5314,7 @@ export function SettingsPrefsScreen({ go }: { go: (s: ScreenName) => void }) {
   return (
     <div className="screen active" data-screen="settings-prefs">
       <div className="app-header">
-        <h2>You</h2>
+        <h2>{t('settings.you')}</h2>
       </div>
       <div className="settings-tabs native-scroll-x">
         <button className="settings-tab" onClick={() => go('settings-profile')}>{t('settings.profile')}</button>
@@ -5305,7 +5322,7 @@ export function SettingsPrefsScreen({ go }: { go: (s: ScreenName) => void }) {
       </div>
       <div className="settings-body">
         <div className="settings-section">
-          <div className="settings-section-title">Relays · {relays.length}</div>
+          <div className="settings-section-title">{t('mobile.settings.relays')} · {relays.length}</div>
           {relays.map((url) => {
             const isCurrent = url.replace(/\/+$/, '').toLowerCase() === currentRelay.replace(/\/+$/, '').toLowerCase();
             return (
@@ -5331,9 +5348,9 @@ export function SettingsPrefsScreen({ go }: { go: (s: ScreenName) => void }) {
             onClick={() => setDmOptInEnabled(!dmOptInEnabled)}
           >
             <span style={{ minWidth: 0, flex: 1 }}>
-              <span style={{ display: 'block' }}>Direct messages</span>
+              <span style={{ display: 'block' }}>{t('preferences.directMessages.label')}</span>
               <span className="settings-row-meta muted" style={{ display: 'block', maxWidth: '100%', marginTop: 3 }}>
-                Nostr encrypted DMs on this device
+                {t('preferences.directMessages.mobileDescription')}
               </span>
             </span>
             <span
@@ -5358,11 +5375,12 @@ export function SettingsPrefsScreen({ go }: { go: (s: ScreenName) => void }) {
 // rehydrating
 
 function RehydratingScreen() {
+  const { t } = useTranslation();
   return (
     <div className="screen active">
       <div className="conn-screen">
         <div className="conn-spinner" />
-        <div style={{ color: 'var(--app-text-dim)', fontSize: 13 }}>Reconnecting…</div>
+        <div style={{ color: 'var(--app-text-dim)', fontSize: 13 }}>{t('common.reconnecting')}</div>
       </div>
     </div>
   );
@@ -5372,6 +5390,7 @@ function RehydratingScreen() {
 // shell — owns nav state
 
 export default function MobileShell() {
+  const { t } = useTranslation();
   const isLoggedIn = useIsLoggedIn();
   const isRehydrating = useIsRehydrating();
   const dmOptInEnabled = useDmOptInEnabled();
@@ -6153,7 +6172,7 @@ export default function MobileShell() {
           openProfile={openProfile}
           openMembers={openMembers}
         />
-      ) : <EmptyScreen go={go} title="No channel selected" />;
+      ) : <EmptyScreen go={go} title={t('mobile.empty.noChannelSelected')} />;
       break;
     case 'voice-room':
       body = nav.groupId ? (
@@ -6162,7 +6181,7 @@ export default function MobileShell() {
           back={() => go('server', 'back')}
           openChat={() => { pushNav((n) => ({ ...n, screen: 'channel' })); }}
         />
-      ) : <EmptyScreen go={go} title="No voice channel" />;
+      ) : <EmptyScreen go={go} title={t('mobile.empty.noVoiceChannel')} />;
       break;
     case 'dms-list':
       body = dmOptInEnabled
@@ -6171,10 +6190,10 @@ export default function MobileShell() {
       break;
     case 'dm-thread':
       body = !dmOptInEnabled ? (
-        <MobileDmOptInScreen secondaryLabel="Back" onSecondary={() => go('dms-list', 'back')} />
+        <MobileDmOptInScreen secondaryLabel={t('common.back')} onSecondary={() => go('dms-list', 'back')} />
       ) : nav.dmPeer ? (
         <DmThreadScreen peer={nav.dmPeer} back={() => go('dms-list', 'back')} openProfile={openProfile} />
-      ) : <EmptyScreen go={go} title="No conversation" />;
+      ) : <EmptyScreen go={go} title={t('mobile.empty.noConversation')} />;
       break;
     case 'inbox':
       body = <InboxScreen go={go} selectGroup={selectGroup} selectPeer={selectPeer} />;
@@ -6182,17 +6201,17 @@ export default function MobileShell() {
     case 'profile-view':
       body = nav.profilePubkey ? (
         <ProfileViewScreen pubkey={nav.profilePubkey} back={backFromProfile} openDm={selectPeer} />
-      ) : <EmptyScreen go={go} title="No profile selected" />;
+      ) : <EmptyScreen go={go} title={t('mobile.empty.noProfileSelected')} />;
       break;
     case 'member-list':
       body = nav.groupId ? (
         <MemberListScreen groupId={nav.groupId} back={() => { if (typeof window !== 'undefined') window.history.back(); }} openProfile={openProfile} />
-      ) : <EmptyScreen go={go} title="No channel" />;
+      ) : <EmptyScreen go={go} title={t('mobile.empty.noChannel')} />;
       break;
     case 'compose-dm':
       body = dmOptInEnabled
         ? <ComposeDmScreen back={() => go('dms-list', 'back')} selectPeer={selectPeer} />
-        : <MobileDmOptInScreen secondaryLabel="Back" onSecondary={() => go('dms-list', 'back')} />;
+        : <MobileDmOptInScreen secondaryLabel={t('common.back')} onSecondary={() => go('dms-list', 'back')} />;
       break;
     case 'search':
       body = <SearchScreen back={() => go('server', 'back')} selectGroup={selectGroup} />;
@@ -6200,7 +6219,7 @@ export default function MobileShell() {
     case 'forum':
       body = nav.groupId ? (
         <ForumScreen groupId={nav.groupId} back={() => go('server', 'back')} selectChild={(childId) => selectGroup(childId, 'text')} />
-      ) : <EmptyScreen go={go} title="No forum" />;
+      ) : <EmptyScreen go={go} title={t('mobile.empty.noForum')} />;
       break;
     case 'settings-profile':
       body = <SettingsProfileScreen go={go} />;
@@ -6232,13 +6251,13 @@ export default function MobileShell() {
       } else if (nav.baseScreen === 'dm-thread' && nav.dmPeer) {
         body = dmOptInEnabled
           ? <DmThreadScreen peer={nav.dmPeer} back={() => go('dms-list', 'back')} openProfile={openProfile} />
-          : <MobileDmOptInScreen secondaryLabel="Back" onSecondary={() => go('dms-list', 'back')} />;
+          : <MobileDmOptInScreen secondaryLabel={t('common.back')} onSecondary={() => go('dms-list', 'back')} />;
       } else {
         body = null;
       }
       break;
     default:
-      body = <EmptyScreen go={go} title="Unknown screen" />;
+      body = <EmptyScreen go={go} title={t('mobile.empty.unknownScreen')} />;
   }
 
   // Bottom nav visibility — hide on: voice-room (full-bleed), profile-view,
@@ -6337,7 +6356,7 @@ export default function MobileShell() {
       {!hideNav && <BottomNav nav={nav} onTabPress={onTabPress} dmBadge={dmBadge} inboxBadge={inboxBadge} />}
       {exitToast && (
         <div className="mobile-exit-toast" role="status" aria-live="polite">
-          Press back again to exit
+          {t('mobile.navigation.pressBackAgain')}
         </div>
       )}
     </div>
@@ -6371,12 +6390,13 @@ export function MobileVoiceStatusSlot({
 }
 
 function EmptyScreen({ go, title }: { go: (s: ScreenName) => void; title: string }) {
+  const { t } = useTranslation();
   return (
     <div className="screen active">
       <div className="empty-state">
         <div className="empty-state-title">{title}</div>
         <button className="btn-primary" style={{ width: 'auto', padding: '10px 18px' }} onClick={() => go('server')}>
-          Back to home
+          {t('mobile.empty.backHome')}
         </button>
       </div>
     </div>

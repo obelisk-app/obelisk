@@ -24,6 +24,7 @@ import { useNostrUserSearch, type UserHit } from '@/lib/hooks/useNostrUserSearch
 import { searchGroups } from '@/lib/group-search';
 import { formatPubkey } from '@nostr-wot/data';
 import ProfilePopover from '@/components/chat/ProfilePopover';
+import { useTranslation } from '@/i18n/context';
 
 const HISTORY_KEY = 'obelisk-dex/search-history';
 const HISTORY_MAX = 10;
@@ -108,6 +109,7 @@ export default function SearchBar({
   activeGroupId: string | null;
   onJump?: (msg: JsMessage & { groupId: string | null }) => void;
 }) {
+  const { t } = useTranslation();
   const [raw, setRaw] = useState('');
   const [open, setOpen] = useState(false);
   const [mobileExpanded, setMobileExpanded] = useState(false);
@@ -180,7 +182,7 @@ export default function SearchBar({
           'sm:hidden rounded-md p-2 text-lc-muted hover:text-lc-white hover:bg-lc-card ' +
           (mobileExpanded ? 'hidden' : '')
         }
-        aria-label="Open search"
+        aria-label={t('search.open')}
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="11" cy="11" r="7" />
@@ -201,10 +203,10 @@ export default function SearchBar({
           value={raw}
           onChange={(e) => setRaw(e.target.value)}
           onFocus={() => setOpen(true)}
-          placeholder={`Buscar ${serverName}`}
+          placeholder={t('search.placeholderIn').replace('{server}', serverName)}
           className="flex-1 min-w-0 bg-transparent text-sm sm:text-xs text-lc-white outline-none placeholder:text-lc-muted"
         />
-        <button type="submit" className="text-lc-muted hover:text-lc-white shrink-0" aria-label="Search">
+        <button type="submit" className="text-lc-muted hover:text-lc-white shrink-0" aria-label={t('common.search')}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="11" cy="11" r="7" />
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
@@ -214,7 +216,7 @@ export default function SearchBar({
           type="button"
           onClick={() => { setMobileExpanded(false); setOpen(false); setRaw(''); }}
           className="sm:hidden text-lc-muted hover:text-lc-white shrink-0"
-          aria-label="Close search"
+          aria-label={t('search.close')}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <line x1="18" y1="6" x2="6" y2="18" />
@@ -228,6 +230,7 @@ export default function SearchBar({
           {!raw.trim() ? (
             <FilterAndHistoryPane
               history={history}
+              t={t}
               onPickFilter={applyFilter}
               onPickHistory={(h) => runSearch(h)}
               onClearHistory={() => { clearHistory(); setHistory([]); }}
@@ -240,6 +243,7 @@ export default function SearchBar({
               error={error}
               results={results}
               onPickFilter={applyFilter}
+              t={t}
               onJump={(m) => { onJump?.(m); setOpen(false); }}
               onClose={() => setOpen(false)}
               onPreviewUser={(pk) => { setPreviewPubkey(pk); setOpen(false); }}
@@ -255,25 +259,26 @@ export default function SearchBar({
 }
 
 function FilterAndHistoryPane({
-  history, onPickFilter, onPickHistory, onClearHistory,
+  history, t, onPickFilter, onPickHistory, onClearHistory,
 }: {
   history: string[];
+  t: (key: string) => string;
   onPickFilter: (token: string) => void;
   onPickHistory: (q: string) => void;
   onClearHistory: () => void;
 }) {
   return (
     <>
-      <div className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-lc-muted border-b border-lc-border">Filtros</div>
-      <FilterRow icon="👤" title="De un usuario específico" hint="from: usuario" onClick={() => onPickFilter('from:')} />
-      <FilterRow icon="#" title="Enviado en un canal específico" hint="in: canal" onClick={() => onPickFilter('in:')} />
-      <FilterRow icon="🔗" title="Incluye un tipo concreto de datos" hint="has: enlace, imagen o archivo" onClick={() => onPickFilter('has:link')} />
-      <FilterRow icon="@" title="Menciona a un usuario en concreto" hint="mentions: usuario" onClick={() => onPickFilter('mentions:')} />
+      <div className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-lc-muted border-b border-lc-border">{t('search.filters.title')}</div>
+      <FilterRow icon="👤" title={t('search.filters.fromUser.title')} hint={t('search.filters.fromUser.example')} onClick={() => onPickFilter('from:')} />
+      <FilterRow icon="#" title={t('search.filters.inChannel.title')} hint={t('search.filters.inChannel.example')} onClick={() => onPickFilter('in:')} />
+      <FilterRow icon="🔗" title={t('search.filters.has.title')} hint={t('search.filters.has.example')} onClick={() => onPickFilter('has:link')} />
+      <FilterRow icon="@" title={t('search.filters.mentions.title')} hint={t('search.filters.mentions.example')} onClick={() => onPickFilter('mentions:')} />
       {history.length > 0 && (
         <>
           <div className="flex items-center justify-between px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-lc-muted border-t border-lc-border">
-            <span>Historial</span>
-            <button onClick={onClearHistory} className="text-lc-muted hover:text-lc-white" aria-label="Borrar historial">
+            <span>{t('search.history.title')}</span>
+            <button onClick={onClearHistory} className="text-lc-muted hover:text-lc-white" aria-label={t('search.history.clear')}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/>
               </svg>
@@ -310,12 +315,13 @@ function FilterRow({ icon, title, hint, onClick }: { icon: string; title: string
   );
 }
 
-function ResultsPane({ raw, parsed, busy, error, results, onPickFilter, onJump, onClose, onPreviewUser }: {
+function ResultsPane({ raw, parsed, busy, error, results, t, onPickFilter, onJump, onClose, onPreviewUser }: {
   raw: string;
   parsed: ParsedQuery;
   busy: boolean;
   error: string | null;
   results: ReadonlyArray<JsMessage & { groupId: string | null }>;
+  t: (key: string) => string;
   onPickFilter: (token: string) => void;
   onJump: (m: JsMessage & { groupId: string | null }) => void;
   onClose: () => void;
@@ -334,23 +340,23 @@ function ResultsPane({ raw, parsed, busy, error, results, onPickFilter, onJump, 
 
   return (
     <>
-      {showEntities && <UsersSection query={userQuery} onPreviewUser={onPreviewUser} />}
-      {showEntities && <ChannelsSection query={userQuery} onClose={onClose} />}
+      {showEntities && <UsersSection query={userQuery} t={t} onPreviewUser={onPreviewUser} />}
+      {showEntities && <ChannelsSection query={userQuery} t={t} onClose={onClose} />}
       <div className="flex items-center gap-2 px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-lc-muted border-b border-lc-border">
-        <span data-testid="search-messages-header">{busy ? 'Buscando mensajes…' : `Mensajes · ${results.length}`}</span>
+        <span data-testid="search-messages-header">{busy ? t('search.messagesSearching') : t('search.messagesHeader').replace('{count}', String(results.length))}</span>
       </div>
       {error && <div className="px-3 py-2 text-xs text-red-400">{error}</div>}
       {!busy && results.length === 0 && !error && (
         <div className="px-3 py-3 text-center text-xs text-lc-muted">
-          Pulsá Enter para buscar mensajes. Probá filtros (from:, in:, mentions:, has:).
+          {t('search.messagesPrompt')}
         </div>
       )}
-      {results.map((m) => <ResultRow key={m.id} msg={m} onJump={() => onJump(m)} onAuthor={(pk) => onPickFilter(`from:${pk}`)} />)}
+      {results.map((m) => <ResultRow key={m.id} msg={m} t={t} onJump={() => onJump(m)} onAuthor={(pk) => onPickFilter(`from:${pk}`)} />)}
     </>
   );
 }
 
-function UsersSection({ query, onPreviewUser }: { query: string; onPreviewUser: (pubkey: string) => void }) {
+function UsersSection({ query, t, onPreviewUser }: { query: string; t: (key: string) => string; onPreviewUser: (pubkey: string) => void }) {
   const { directHit, nip05Hit, nostrResults, loading } = useNostrUserSearch(query);
 
   const rows: Array<{ key: string; hit: UserHit; badge?: string }> = [];
@@ -366,11 +372,11 @@ function UsersSection({ query, onPreviewUser }: { query: string; onPreviewUser: 
   return (
     <section data-testid="search-users-section">
       <div className="flex items-center justify-between px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-lc-muted border-b border-lc-border">
-        <span>Usuarios</span>
-        {loading && <span className="text-[10px] normal-case font-normal text-lc-muted">Buscando…</span>}
+        <span>{t('search.users')}</span>
+        {loading && <span className="text-[10px] normal-case font-normal text-lc-muted">{t('search.searching')}</span>}
       </div>
       {rows.length === 0 && !loading && (
-        <div className="px-3 py-2 text-xs text-lc-muted">Sin coincidencias.</div>
+        <div className="px-3 py-2 text-xs text-lc-muted">{t('search.noMatches')}</div>
       )}
       {rows.map((r) => (
         <UserResultRow key={r.key} hit={r.hit} badge={r.badge} onPick={() => onPreviewUser(r.hit.pubkey)} />
@@ -414,7 +420,7 @@ function UserResultRow({ hit, badge, onPick }: { hit: UserHit; badge?: string; o
   );
 }
 
-function ChannelsSection({ query, onClose }: { query: string; onClose: () => void }) {
+function ChannelsSection({ query, t, onClose }: { query: string; t: (key: string) => string; onClose: () => void }) {
   const groups = useGroups();
   const matches = useMemo(() => searchGroups(groups, query), [groups, query]);
   if (matches.length === 0) return null;
@@ -427,7 +433,7 @@ function ChannelsSection({ query, onClose }: { query: string; onClose: () => voi
   return (
     <section data-testid="search-channels-section">
       <div className="flex items-center px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-lc-muted border-b border-lc-border">
-        <span>Canales</span>
+        <span>{t('search.channels')}</span>
       </div>
       {matches.slice(0, 10).map((g) => (
         <button
@@ -456,8 +462,9 @@ function ChannelsSection({ query, onClose }: { query: string; onClose: () => voi
   );
 }
 
-function ResultRow({ msg, onJump, onAuthor }: {
+function ResultRow({ msg, t, onJump, onAuthor }: {
   msg: JsMessage & { groupId: string | null };
+  t: (key: string) => string;
   onJump: () => void;
   onAuthor: (pk: string) => void;
 }) {
@@ -472,7 +479,7 @@ function ResultRow({ msg, onJump, onAuthor }: {
     <div className="px-3 py-2 hover:bg-lc-card border-b border-lc-border/40 last:border-b-0">
       <div className="flex items-baseline gap-2 text-xs">
         <button onClick={() => onAuthor(msg.pubkey)} className="font-semibold text-lc-white hover:underline truncate">{name}</button>
-        <span className="text-lc-muted">in</span>
+        <span className="text-lc-muted">{t('search.in')}</span>
         <span className="text-lc-green truncate">#{groupName}</span>
         <span className="ml-auto text-[10px] text-lc-muted">
           {new Date(msg.createdAt * 1000).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}

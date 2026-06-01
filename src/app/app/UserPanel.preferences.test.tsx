@@ -3,11 +3,6 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { LocaleProvider } from '@/i18n/context';
 import { DM_OPT_IN_STORAGE_KEY } from '@/lib/dm/opt-in';
 
-vi.mock('@/i18n/context', () => ({
-  LocaleProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  useTranslation: () => ({ t: (key: string) => key, locale: 'en', setLocale: vi.fn() }),
-}));
-
 vi.mock('@/components/settings/WotSettings', () => ({
   default: () => <div data-testid="wot-settings" />,
 }));
@@ -19,7 +14,6 @@ vi.mock('@/lib/nostr-bridge/cache-clear', () => ({
 describe('PreferencesPanel appearance controls', () => {
   beforeEach(() => {
     localStorage.clear();
-    vi.resetModules();
   });
 
   it('includes shared app appearance controls', async () => {
@@ -53,5 +47,19 @@ describe('PreferencesPanel appearance controls', () => {
     expect(JSON.parse(localStorage.getItem(DM_OPT_IN_STORAGE_KEY) ?? '{}')).toMatchObject({
       directMessagesEnabled: true,
     });
+  });
+
+  it('renders preference labels from the configured language', async () => {
+    const { PreferencesPanel } = await import('./UserPanel');
+
+    render(
+      <LocaleProvider initialLocale="es">
+        <PreferencesPanel />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByText('Idioma')).toBeInTheDocument();
+    expect(screen.getByText('Mensajes directos')).toBeInTheDocument();
+    expect(screen.getByText(/DMs encriptados de Nostr/i)).toBeInTheDocument();
   });
 });

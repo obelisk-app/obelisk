@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { LocaleProvider } from '@/i18n/context';
 import SearchBar from './SearchBar';
 import type { JsGroup } from '@/lib/nostr-bridge';
+import type { ReactElement } from 'react';
 
 const mockSearchMessages = vi.fn();
 const mockSetActiveGroup = vi.fn();
@@ -37,7 +39,12 @@ const g = (id: string, name: string): JsGroup => ({
   forumTags: [], topics: [],
 });
 
+function renderSearchBar(ui: ReactElement) {
+  return render(<LocaleProvider initialLocale="es">{ui}</LocaleProvider>);
+}
+
 beforeEach(() => {
+  localStorage.clear();
   mockSearchMessages.mockReset().mockResolvedValue([]);
   mockSetActiveGroup.mockReset();
   mockUseNostrUserSearch.mockReset().mockReturnValue({
@@ -48,7 +55,7 @@ beforeEach(() => {
 
 describe('SearchBar', () => {
   it('shows Filtros pane when input is empty and focused', () => {
-    render(<SearchBar serverName="test" activeGroupId={null} />);
+    renderSearchBar(<SearchBar serverName="test" activeGroupId={null} />);
     fireEvent.focus(screen.getByPlaceholderText(/Buscar test/));
     expect(screen.getByText('Filtros')).toBeTruthy();
   });
@@ -60,7 +67,7 @@ describe('SearchBar', () => {
       nostrResults: [{ pubkey: 'a'.repeat(64), displayName: 'Alice', picture: null, nip05: null }],
       loading: false,
     });
-    render(<SearchBar serverName="test" activeGroupId={null} />);
+    renderSearchBar(<SearchBar serverName="test" activeGroupId={null} />);
     const input = screen.getByPlaceholderText(/Buscar test/);
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: 'general' } });
@@ -76,7 +83,7 @@ describe('SearchBar', () => {
   });
 
   it('hides Users + Channels when query has structured tokens', async () => {
-    render(<SearchBar serverName="test" activeGroupId={null} />);
+    renderSearchBar(<SearchBar serverName="test" activeGroupId={null} />);
     const input = screen.getByPlaceholderText(/Buscar test/);
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: 'from:npub1abc' } });
@@ -95,7 +102,7 @@ describe('SearchBar', () => {
       nostrResults: [{ pubkey: pk, displayName: 'Alice', picture: null, nip05: null }],
       loading: false,
     });
-    render(<SearchBar serverName="test" activeGroupId={null} />);
+    renderSearchBar(<SearchBar serverName="test" activeGroupId={null} />);
     const input = screen.getByPlaceholderText(/Buscar test/);
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: 'alice' } });
@@ -106,7 +113,7 @@ describe('SearchBar', () => {
   });
 
   it('clicking a channel calls setActiveGroup with its id', async () => {
-    render(<SearchBar serverName="test" activeGroupId={null} />);
+    renderSearchBar(<SearchBar serverName="test" activeGroupId={null} />);
     const input = screen.getByPlaceholderText(/Buscar test/);
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: 'general' } });
@@ -116,14 +123,28 @@ describe('SearchBar', () => {
   });
 
   it('submitting the form runs nostrActions.searchMessages', async () => {
-    render(<SearchBar serverName="test" activeGroupId="g1" />);
+    renderSearchBar(<SearchBar serverName="test" activeGroupId="g1" />);
     const input = screen.getByPlaceholderText(/Buscar test/);
     fireEvent.change(input, { target: { value: 'hello' } });
     fireEvent.submit(input.closest('form')!);
     await waitFor(() => {
-      expect(mockSearchMessages).toHaveBeenCalledWith(
+    expect(mockSearchMessages).toHaveBeenCalledWith(
         expect.objectContaining({ query: 'hello', groupIds: ['g1'] }),
       );
     });
+  });
+
+  it('renders desktop search labels from the configured language', () => {
+    localStorage.setItem('obelisk-dex/search-history', JSON.stringify(['hello']));
+    render(
+      <LocaleProvider initialLocale="en">
+        <SearchBar serverName="test" activeGroupId={null} />
+      </LocaleProvider>,
+    );
+
+    fireEvent.focus(screen.getByPlaceholderText('Search test'));
+    expect(screen.getByText('Filters')).toBeTruthy();
+    expect(screen.getByText('From a specific user')).toBeTruthy();
+    expect(screen.getByLabelText('Clear history')).toBeTruthy();
   });
 });

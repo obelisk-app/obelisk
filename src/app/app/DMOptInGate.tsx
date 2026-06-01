@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { setDmOptInEnabled, useDmOptInEnabled } from '@/lib/dm/opt-in';
+import { useTranslation } from '@/i18n/context';
 
 type Surface = 'desktop' | 'sidebar' | 'mobile';
 
@@ -16,11 +17,11 @@ interface BoundaryProps extends GateProps {
   children: ReactNode;
 }
 
-const copy = [
-  'DMs use Nostr encrypted direct-message events.',
-  'Enabling DMs may open DM relay subscriptions and decrypt/display conversations for this device/session.',
-  'Leave DMs off if you do not want DM traffic or notifications on this device.',
-];
+const COPY_KEYS = [
+  'dm.optIn.point.events',
+  'dm.optIn.point.subscriptions',
+  'dm.optIn.point.device',
+] as const;
 
 export function DMOptInBoundary({
   children,
@@ -45,12 +46,14 @@ export function DMOptInBoundary({
 
 export default function DMOptInGate({
   surface = 'desktop',
-  secondaryLabel = 'Not now',
+  secondaryLabel,
   onEnable,
   onSecondary,
 }: GateProps) {
+  const { t } = useTranslation();
   const compact = surface === 'sidebar';
   const mobile = surface === 'mobile';
+  const resolvedSecondaryLabel = secondaryLabel ?? t('dm.optIn.notNow');
 
   const enable = () => {
     setDmOptInEnabled(true);
@@ -85,17 +88,17 @@ export default function DMOptInGate({
           </div>
           <div className="min-w-0">
             <h2 id={`dm-opt-in-title-${surface}`} className={compact ? 'text-sm font-bold text-lc-white' : 'text-lg font-bold text-lc-white'}>
-              Turn on direct messages
+              {t('dm.optIn.title')}
             </h2>
-            <p className="mt-1 text-xs text-lc-muted">Enable DMs only on devices where you want them active.</p>
+            <p className="mt-1 text-xs text-lc-muted">{t('dm.optIn.subtitle')}</p>
           </div>
         </div>
 
         <ul className={compact ? 'space-y-2 text-xs text-lc-muted' : 'space-y-2 text-sm text-lc-muted'}>
-          {copy.map((line) => (
-            <li key={line} className="flex gap-2">
+          {COPY_KEYS.map((key) => (
+            <li key={key} className="flex gap-2">
               <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-lc-green" aria-hidden="true" />
-              <span>{line}</span>
+              <span>{t(key)}</span>
             </li>
           ))}
         </ul>
@@ -107,7 +110,7 @@ export default function DMOptInGate({
             className="inline-flex min-h-11 items-center justify-center rounded-full bg-lc-green px-4 py-2 text-sm font-bold text-lc-black transition hover:bg-lc-green/90"
             data-testid="enable-dms-button"
           >
-            Enable DMs
+            {t('dm.optIn.enable')}
           </button>
           {onSecondary && (
             <button
@@ -115,7 +118,7 @@ export default function DMOptInGate({
               onClick={onSecondary}
               className="inline-flex min-h-11 items-center justify-center rounded-full border border-lc-border px-4 py-2 text-sm font-semibold text-lc-white transition hover:bg-lc-border/40"
             >
-              {secondaryLabel}
+              {resolvedSecondaryLabel}
             </button>
           )}
         </div>

@@ -12,8 +12,9 @@ describe('AppearancePreferenceControls', () => {
     const user = userEvent.setup();
     const { default: AppearancePreferenceControls } = await import('./AppearancePreferenceControls');
     const { getPreferences } = await import('@/lib/preferences');
+    const { LocaleProvider } = await import('@/i18n/context');
 
-    render(<AppearancePreferenceControls />);
+    render(<LocaleProvider initialLocale="en"><AppearancePreferenceControls /></LocaleProvider>);
 
     await user.clear(screen.getByTestId('appearance-accent-color'));
     await user.type(screen.getByTestId('appearance-accent-color'), '#7ec8ff');
@@ -38,13 +39,14 @@ describe('AppearancePreferenceControls', () => {
     const user = userEvent.setup();
     const { default: AppearancePreferenceControls } = await import('./AppearancePreferenceControls');
     const { getPreferences, setPreference } = await import('@/lib/preferences');
+    const { LocaleProvider } = await import('@/i18n/context');
     setPreference('accentColor', '#7ec8ff');
     setPreference('backgroundColor', '#111827');
     setPreference('buttonColor', '#f0c14a');
     setPreference('bubbleColor', '#ff7ad9');
     setPreference('bubbleAnimation', 'orbit');
 
-    render(<AppearancePreferenceControls variant="mobile" />);
+    render(<LocaleProvider initialLocale="en"><AppearancePreferenceControls variant="mobile" /></LocaleProvider>);
 
     expect(screen.getByTestId('appearance-controls')).toHaveClass('settings-section');
 

@@ -28,6 +28,7 @@ interface UserPanelProps {
 }
 
 export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, initialEditing = false }: UserPanelProps) {
+  const { t } = useTranslation();
   const meta = useProfile(pubkey);
   const [editing, setEditing] = useState(initialEditing);
   const [settingsTab, setSettingsTab] = useState<'profile' | 'preferences'>('profile');
@@ -77,8 +78,8 @@ export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, ini
           <button
             onClick={() => { setEditing(false); onClose(); }}
             className="absolute top-5 right-5 z-10 w-12 h-12 rounded-full bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/30 flex items-center justify-center transition-colors ring-2 ring-red-500/30 hover:ring-red-500/60"
-            aria-label="Close"
-            title="Close (Esc)"
+            aria-label={t('common.close')}
+            title={`${t('common.close')} (Esc)`}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
               <line x1="18" y1="6" x2="6" y2="18"/>
@@ -87,7 +88,7 @@ export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, ini
           </button>
           <aside className="w-64 shrink-0 bg-lc-dark border-r border-lc-border flex flex-col">
             <div className="px-5 py-5 border-b border-lc-border">
-              <div className="text-[10px] uppercase tracking-wider text-lc-muted font-semibold mb-2">User settings</div>
+              <div className="text-[10px] uppercase tracking-wider text-lc-muted font-semibold mb-2">{t('user.settings')}</div>
               <div className="flex items-center gap-2 min-w-0">
                 <UserAvatar pubkey={pubkey} picture={meta?.picture ?? null} size={8} name={displayName} initialClassName="text-sm" />
                 <div className="min-w-0">
@@ -103,7 +104,7 @@ export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, ini
                 className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm ${settingsTab === 'profile' ? 'bg-lc-green/15 text-lc-green' : 'text-lc-white hover:bg-lc-border/40'}`}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                <span>Profile</span>
+                <span>{t('settings.profile')}</span>
               </button>
               <button
                 type="button"
@@ -111,7 +112,7 @@ export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, ini
                 className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm ${settingsTab === 'preferences' ? 'bg-lc-green/15 text-lc-green' : 'text-lc-white hover:bg-lc-border/40'}`}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-                <span>Preferences</span>
+                <span>{t('settings.preferences')}</span>
               </button>
             </nav>
           </aside>
@@ -120,8 +121,8 @@ export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, ini
               {settingsTab === 'profile' ? (
                 <>
                   <div className="mb-6">
-                    <div className="text-xs uppercase tracking-wider text-lc-muted font-semibold">Profile</div>
-                    <h2 className="text-lc-white text-xl font-semibold mt-2">Edit profile</h2>
+                    <div className="text-xs uppercase tracking-wider text-lc-muted font-semibold">{t('settings.profile')}</div>
+                    <h2 className="text-lc-white text-xl font-semibold mt-2">{t('user.editProfile')}</h2>
                   </div>
                   <EditProfileForm
                     initial={meta}
@@ -132,8 +133,8 @@ export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, ini
               ) : (
                 <>
                   <div className="mb-6">
-                    <div className="text-xs uppercase tracking-wider text-lc-muted font-semibold">Preferences</div>
-                    <h2 className="text-lc-white text-xl font-semibold mt-2">App preferences</h2>
+                    <div className="text-xs uppercase tracking-wider text-lc-muted font-semibold">{t('settings.preferences')}</div>
+                    <h2 className="text-lc-white text-xl font-semibold mt-2">{t('user.appPreferences')}</h2>
                   </div>
                   <PreferencesPanel />
                 </>
@@ -189,7 +190,7 @@ export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, ini
         {meta?.about && (
           <div className="mt-2 px-4">
             <div className="text-[10px] font-semibold uppercase tracking-wider text-lc-muted">
-              About
+              {t('user.about')}
             </div>
             <div className="mt-0.5 line-clamp-3 text-xs text-lc-muted">{meta.about}</div>
           </div>
@@ -208,7 +209,7 @@ export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, ini
                   <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
                   <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
                 </svg>
-                Copy npub
+                {t('user.copyNpub')}
               </button>
             )}
             <button
@@ -219,7 +220,7 @@ export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, ini
                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
                 <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
               </svg>
-              Copy pubkey (hex)
+              {t('user.copyPubkeyHex')}
             </button>
             {npub && (
               <a
@@ -233,7 +234,7 @@ export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, ini
                   <polyline points="15 3 21 3 21 9" />
                   <line x1="10" y1="14" x2="21" y2="3" />
                 </svg>
-                Open in another Nostr client
+                {t('user.openNostrClient')}
               </a>
             )}
 
@@ -248,7 +249,7 @@ export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, ini
                     <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
                     <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
                   </svg>
-                  Edit profile
+                  {t('user.editProfile')}
                 </button>
                 <div className="border-t border-lc-border" />
                 <button
@@ -260,7 +261,7 @@ export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, ini
                     <polyline points="16 17 21 12 16 7" />
                     <line x1="21" y1="12" x2="9" y2="12" />
                   </svg>
-                  Log out
+                  {t('user.logOut')}
                 </button>
               </>
             )}
@@ -281,6 +282,7 @@ function EditProfileForm({
   onCancel: () => void;
   onSaved: () => void;
 }) {
+  const { t } = useTranslation();
   const publishProfile = usePublishProfile();
   const [name, setName] = useState(initial?.displayName || initial?.name || '');
   const [about, setAbout] = useState(initial?.about || '');
@@ -314,11 +316,11 @@ function EditProfileForm({
   }, [initial]);
 
   const save = async () => {
-    if (!name.trim()) { setError('Name is required'); return; }
+    if (!name.trim()) { setError(t('user.nameRequired')); return; }
     setSaving(true);
     setError(null);
     try {
-      if (!publishProfile) throw new Error('Not signed in');
+      if (!publishProfile) throw new Error(t('user.notSignedIn'));
       await publishProfile({
         name: name.trim(),
         display_name: name.trim(),
@@ -330,7 +332,7 @@ function EditProfileForm({
       });
       onSaved();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to publish');
+      setError(e instanceof Error ? e.message : t('user.publishFailed'));
     } finally {
       setSaving(false);
     }
@@ -340,20 +342,20 @@ function EditProfileForm({
 
   return (
     <div className="space-y-3 p-4">
-      <Field label="Name">
+      <Field label={t('user.field.name')}>
         <input ref={firstField} value={name} onChange={(e) => { markDirty(); setName(e.target.value); }} className={fieldCls} />
       </Field>
-      <Field label="About">
+      <Field label={t('user.about')}>
         <textarea value={about} onChange={(e) => { markDirty(); setAbout(e.target.value); }} rows={2} className={fieldCls} />
       </Field>
       <BlossomImageInput
-        label="Picture"
+        label={t('user.field.picture')}
         value={picture}
         onChange={(url) => { markDirty(); setPicture(url); }}
         shape="square"
       />
       <BlossomImageInput
-        label="Banner"
+        label={t('user.field.banner')}
         value={banner}
         onChange={(url) => { markDirty(); setBanner(url); }}
         shape="wide"
@@ -362,7 +364,7 @@ function EditProfileForm({
       <Field label="NIP-05">
         <input value={nip05} onChange={(e) => { markDirty(); setNip05(e.target.value); }} placeholder="you@example.com" className={fieldCls} />
       </Field>
-      <Field label="Website">
+      <Field label={t('user.field.website')}>
         <input value={website} onChange={(e) => { markDirty(); setWebsite(e.target.value); }} placeholder="https://…" className={fieldCls} />
       </Field>
       {error && <div className="text-xs text-red-400">{error}</div>}
@@ -372,14 +374,14 @@ function EditProfileForm({
           disabled={saving}
           className="rounded-md bg-lc-green px-3 py-1.5 text-sm font-semibold text-lc-black hover:bg-lc-green/90 disabled:opacity-50"
         >
-          {saving ? 'Saving…' : 'Save'}
+          {saving ? t('common.saving') : t('common.save')}
         </button>
         <button
           onClick={onCancel}
           disabled={saving}
           className="rounded-md border border-lc-border px-3 py-1.5 text-sm text-lc-white hover:bg-lc-border/40"
         >
-          Cancel
+          {t('common.cancel')}
         </button>
       </div>
     </div>
@@ -400,8 +402,8 @@ export function PreferencesPanel() {
         onChange={(v) => setPreference('showActivityIndicator', v)}
       />
       <ToggleRow
-        label="Direct messages"
-        description="Allow this device to open Nostr encrypted DM subscriptions and display conversations."
+        label={t('preferences.directMessages.label')}
+        description={t('preferences.directMessages.description')}
         checked={prefs.directMessagesEnabled}
         onChange={setDmOptInEnabled}
       />

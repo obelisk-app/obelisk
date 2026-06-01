@@ -87,10 +87,11 @@ vi.mock('@/components/admin/RelayAdminPanel', () => ({
 }));
 
 import { LocaleProvider } from '@/i18n/context';
+import type { Locale } from '@/i18n/index';
 import { SettingsProfileScreen, EditProfileScreen, SettingsPrefsScreen } from './PhoneShell';
 
-function renderWithLocale(ui: ReactElement) {
-  return render(<LocaleProvider initialLocale="en">{ui}</LocaleProvider>);
+function renderWithLocale(ui: ReactElement, locale: Locale = 'en') {
+  return render(<LocaleProvider initialLocale={locale}>{ui}</LocaleProvider>);
 }
 
 const PUBKEY = '1'.repeat(64);
@@ -194,6 +195,16 @@ describe('SettingsProfileScreen', () => {
     fireEvent.click(screen.getByTestId('disconnect-confirm'));
     expect(mockLogout).toHaveBeenCalledTimes(1);
   });
+
+  it('renders profile actions from the configured language', () => {
+    renderWithLocale(<SettingsProfileScreen go={vi.fn()} />, 'es');
+
+    expect(screen.getByRole('heading', { name: 'Vos' })).toBeTruthy();
+    expect(screen.getByText('Identidad')).toBeTruthy();
+    expect(screen.getByText('Abrir en otro cliente')).toBeTruthy();
+    expect(screen.getByTestId('edit-profile-btn')).toHaveTextContent('Editar perfil Nostr');
+    expect(screen.getByTestId('disconnect-btn')).toHaveTextContent('Desconectar');
+  });
 });
 
 describe('SettingsPrefsScreen', () => {
@@ -223,6 +234,19 @@ describe('SettingsPrefsScreen', () => {
     expect(JSON.parse(localStorage.getItem(DM_OPT_IN_STORAGE_KEY) ?? '{}')).toMatchObject({
       directMessagesEnabled: true,
     });
+  });
+
+  it('renders preferences from the configured language', () => {
+    render(
+      <LocaleProvider initialLocale="es">
+        <SettingsPrefsScreen go={vi.fn()} />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByRole('heading', { name: 'Vos' })).toBeTruthy();
+    expect(screen.getByText(/Relays/)).toBeTruthy();
+    expect(screen.getByText('Mensajes directos')).toBeTruthy();
+    expect(screen.getByText(/DMs encriptados de Nostr/i)).toBeTruthy();
   });
 });
 

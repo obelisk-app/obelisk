@@ -16,6 +16,7 @@ import { useFollows, useProfile, usePubkey } from '@nostr-wot/data/react';
 import { useDMUnreadCount } from '@/lib/read-state/selectors';
 import DMComposer from './DMComposer';
 import UserAvatar from '@/components/UserAvatar';
+import { useTranslation } from '@/i18n/context';
 
 type Tab = 'follows' | 'others';
 
@@ -26,6 +27,7 @@ export default function DMList({
   activePeer: string | null;
   onPick: (peer: string) => void;
 }) {
+  const { t } = useTranslation();
   const dms = useDirectMessages();
   const myPk = usePubkey();
   const followsEntry = useFollows(myPk);
@@ -53,13 +55,13 @@ export default function DMList({
   return (
     <aside className="relative flex h-full w-full flex-col overflow-hidden bg-lc-dark">
       <div className="flex h-14 shrink-0 items-center justify-between border-b border-lc-border px-4 shadow-sm">
-        <h3 className="truncate text-sm font-bold text-lc-white">Direct Messages</h3>
+        <h3 className="truncate text-sm font-bold text-lc-white">{t('dm.title')}</h3>
         <div className="flex items-center gap-1">
           <button
-            onClick={() => alert('DM cache wipe is local-only; this client keeps DMs in memory only — refresh to clear.')}
+            onClick={() => alert(t('dm.clearCacheAlert'))}
             className="p-1 text-lc-muted transition-colors hover:text-red-400"
-            title="Clear DM cache (no-op in this build)"
-            aria-label="Clear DM cache"
+            title={t('dm.clearCacheTitle')}
+            aria-label={t('dm.clearCache')}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="3 6 5 6 21 6" />
@@ -72,8 +74,8 @@ export default function DMList({
           <button
             onClick={() => setComposing((v) => !v)}
             className={`p-1 transition-colors ${composing ? 'text-lc-green' : 'text-lc-muted hover:text-lc-green'}`}
-            title="New DM"
-            aria-label="New DM"
+            title={t('dm.new')}
+            aria-label={t('dm.new')}
             aria-pressed={composing}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -92,20 +94,20 @@ export default function DMList({
       )}
 
       <div className="flex shrink-0 border-b border-lc-border" role="tablist">
-        {(['follows', 'others'] as const).map((t) => {
-          const active = effectiveTab === t;
-          const count = t === 'follows' ? followsThreads.length : othersThreads.length;
+        {(['follows', 'others'] as const).map((tabId) => {
+          const active = effectiveTab === tabId;
+          const count = tabId === 'follows' ? followsThreads.length : othersThreads.length;
           return (
             <button
-              key={t}
+              key={tabId}
               role="tab"
               aria-selected={active}
-              onClick={() => setTab(t)}
+              onClick={() => setTab(tabId)}
               className={`relative flex-1 py-2 text-xs font-medium capitalize transition-colors ${
                 active ? '-mb-px border-b-2 border-lc-green text-lc-green' : 'text-lc-muted hover:text-lc-white'
               }`}
             >
-              {t} <span className="text-[10px] opacity-70">({count})</span>
+              {tabId === 'follows' ? t('dm.follows') : t('dm.others')} <span className="text-[10px] opacity-70">({count})</span>
             </button>
           );
         })}
@@ -114,20 +116,20 @@ export default function DMList({
       <div className="flex-1 overflow-y-auto">
         {peers.length === 0 ? (
           <div className="p-4 text-center">
-            <p className="text-sm text-lc-muted">No conversations yet</p>
+            <p className="text-sm text-lc-muted">{t('dm.noConversations')}</p>
             <button
               onClick={() => setComposing(true)}
               className="mt-2 text-xs text-lc-green hover:underline"
             >
-              Start a conversation
+              {t('dm.startConversation')}
             </button>
           </div>
         ) : visible.length === 0 ? (
           <div className="p-4 text-center">
             <p className="text-sm text-lc-muted">
               {effectiveTab === 'follows'
-                ? 'None of your follows have messaged you yet'
-                : "Everyone you've messaged is in Follows"}
+                ? t('dm.noFollows')
+                : t('dm.everyoneInFollows')}
             </p>
           </div>
         ) : (
@@ -136,6 +138,7 @@ export default function DMList({
               key={p.pubkey}
               pubkey={p.pubkey}
               last={p.last}
+              youPrefix={t('dm.youPrefix')}
               active={activePeer === p.pubkey}
               onClick={() => onPick(p.pubkey)}
             />
@@ -149,11 +152,13 @@ export default function DMList({
 function DMRow({
   pubkey,
   last,
+  youPrefix,
   active,
   onClick,
 }: {
   pubkey: string;
   last: JsDirectMessage | undefined;
+  youPrefix: string;
   active: boolean;
   onClick: () => void;
 }) {
@@ -161,7 +166,7 @@ function DMRow({
   const unread = useDMUnreadCount(pubkey);
   const display = meta?.displayName || meta?.name || npubLike(pubkey);
   const preview = last
-    ? (last.outgoing ? 'You: ' : '') + last.content.replace(/\s+/g, ' ').slice(0, 60)
+    ? (last.outgoing ? youPrefix : '') + last.content.replace(/\s+/g, ' ').slice(0, 60)
     : null;
   return (
     <button

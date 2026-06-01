@@ -106,6 +106,7 @@ import RelayEmojiAdminModal from '@/components/admin/RelayEmojiAdminModal';
 import BlossomImageInput from '@/components/BlossomImageInput';
 import ActivityIndicator from '@/components/ActivityIndicator';
 import { extractUrls, isImageUrl } from '@/lib/markdown';
+import { useTranslation } from '@/i18n/context';
 
 type View =
   | { kind: 'group'; groupId: string }
@@ -117,6 +118,7 @@ const MEMBERS_KEY = 'obelisk-dex/members-width';
 const SHOW_MEMBERS_KEY = 'obelisk-dex/show-members';
 
 export default function AppShell() {
+  const { t } = useTranslation();
   const isLoggedIn = useIsLoggedIn();
   const isRehydrating = useIsRehydrating();
   const conn = useConnectionState();
@@ -335,7 +337,7 @@ export default function AppShell() {
           />
           <ResizablePane storageKey={SIDEBAR_KEY} defaultWidth={264} min={200} max={500} onWidthChange={setSidebarWidth}>
             {view.kind === 'dm' ? (
-              <DMOptInBoundary surface="sidebar" secondaryLabel="Not now" onSecondary={leaveDms}>
+              <DMOptInBoundary surface="sidebar" secondaryLabel={t('dm.optIn.notNow')} onSecondary={leaveDms}>
                 <DMList
                   activePeer={view.peer}
                   onPick={(p) => { setView({ kind: 'dm', peer: p }); closeDrawer(); }}
@@ -362,7 +364,7 @@ export default function AppShell() {
               onSelectGroup={(gid) => setView({ kind: 'group', groupId: gid })}
             />
           ) : view.kind === 'dm' ? (
-            <DMOptInBoundary surface="desktop" secondaryLabel="Continue without DMs" onSecondary={leaveDms}>
+            <DMOptInBoundary surface="desktop" secondaryLabel={t('dm.optIn.continueWithout')} onSecondary={leaveDms}>
               <DMPanel peer={view.peer} onPickPeer={(p) => setView({ kind: 'dm', peer: p })} />
             </DMOptInBoundary>
           ) : (
@@ -382,6 +384,7 @@ function DirectMessageSubscriptionAnchor() {
 }
 
 function RehydratingScreen() {
+  const { t } = useTranslation();
   return (
     <div
       className="appearance-bg lc-grid-bg fixed inset-0 z-50 flex items-center justify-center bg-lc-black p-4"
@@ -391,7 +394,7 @@ function RehydratingScreen() {
     >
       <div className="flex flex-col items-center gap-4">
         <div className="lc-spinner" />
-        <div className="text-sm text-lc-muted">Reconnecting…</div>
+        <div className="text-sm text-lc-muted">{t('common.reconnecting')}</div>
       </div>
     </div>
   );
@@ -427,6 +430,7 @@ function RelayTopBar({
   onJumpToChannel?: (channelId: string) => void;
   onJumpToDm?: (peer: string) => void;
 }) {
+  const { t } = useTranslation();
   const [info, setInfo] = useState<{ name?: string; icon?: string } | null>(null);
   const [iconFailed, setIconFailed] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -508,8 +512,8 @@ function RelayTopBar({
           data-notif-trigger
           onClick={() => setNotifOpen((v) => !v)}
           className="relative p-2.5 md:p-1.5 rounded-lg text-lc-muted hover:text-lc-white hover:bg-lc-border/40 transition-colors"
-          title="Notifications"
-          aria-label="Notifications"
+          title={t('common.notifications')}
+          aria-label={t('common.notifications')}
         >
           <svg className="w-6 h-6 md:w-4 md:h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
@@ -523,8 +527,8 @@ function RelayTopBar({
         <a
           href="/"
           className="p-2.5 md:p-1.5 rounded-lg text-lc-muted hover:text-lc-white hover:bg-lc-border/40 transition-colors inline-flex"
-          title="Help"
-          aria-label="Help"
+          title={t('common.help')}
+          aria-label={t('common.help')}
         >
           <svg className="w-6 h-6 md:w-4 md:h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10" />
@@ -539,24 +543,24 @@ function RelayTopBar({
           className="fixed right-2 md:right-3 top-[3.75rem] md:top-11 z-[60] w-[min(380px,calc(100vw-1rem))] max-h-[70vh] overflow-hidden rounded-xl border border-lc-border bg-lc-dark shadow-2xl flex flex-col"
         >
           <div className="flex items-center justify-between px-4 py-3 border-b border-lc-border">
-            <span className="text-sm font-semibold text-lc-white">Notifications</span>
+            <span className="text-sm font-semibold text-lc-white">{t('common.notifications')}</span>
             <div className="flex gap-2">
               {inboxEvents.length > 0 && unreadInboxCount > 0 && (
                 <button
                   onClick={handleMarkAllAsRead}
                   className="text-xs text-lc-green hover:underline"
-                  title="Mark all messages, DMs, and notifications as read"
+                  title={t('desktop.inbox.markReadTitle')}
                 >
-                  Mark read
+                  {t('desktop.inbox.markRead')}
                 </button>
               )}
               {inboxEvents.length > 0 && (
                 <button
                   onClick={clearInboxEvents}
                   className="text-xs text-lc-muted hover:text-lc-white"
-                  title="Clear"
+                  title={t('common.clear')}
                 >
-                  Clear
+                  {t('common.clear')}
                 </button>
               )}
             </div>
@@ -564,7 +568,7 @@ function RelayTopBar({
           <div className="overflow-y-auto flex-1">
             {inboxEvents.length === 0 ? (
               <div className="px-4 py-8 text-center text-sm text-lc-muted">
-                You&apos;re all caught up.
+                {t('desktop.inbox.caughtUp')}
               </div>
             ) : (
               <ul className="flex flex-col">
@@ -579,7 +583,7 @@ function RelayTopBar({
                       <span className={`mt-1 inline-block w-2 h-2 rounded-full shrink-0 ${isRead ? 'bg-transparent' : 'bg-lc-green'}`} />
                       <div className="flex-1 min-w-0">
                         <div className="text-xs uppercase tracking-wider text-lc-muted font-mono mb-0.5">
-                          {e.type === 'dm' ? 'Direct message' : e.type === 'mention' ? '@ Mention' : e.type === 'reply' ? 'Reply' : e.type === 'everyone' ? '@ Everyone' : 'Message'}
+                          {e.type === 'dm' ? t('inbox.type.dm') : e.type === 'mention' ? t('desktop.inbox.type.mention') : e.type === 'reply' ? t('desktop.inbox.type.reply') : e.type === 'everyone' ? t('desktop.inbox.type.everyone') : t('inbox.type.message')}
                           <span className="ml-2 text-lc-muted/70 normal-case tracking-normal">{new Date(e.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                         </div>
                         {e.preview && (
@@ -1922,6 +1926,7 @@ function ChatPanel({
   onConsumePendingMessageId: () => void;
   onSelectGroup: (groupId: string) => void;
 }) {
+  const { t } = useTranslation();
   const messages = useMessages(groupId);
   // Retry-backed confidence enum — the bridge runs an internal retry
   // ladder on empty EOSE before promoting to `empty-confirmed`, so the
@@ -2375,8 +2380,8 @@ function ChatPanel({
             <button
               onClick={() => setShowSettings(true)}
               className="rounded-md p-2 text-lc-muted hover:bg-lc-card hover:text-lc-white"
-              title="Channel settings"
-              aria-label="Channel settings"
+              title={t('desktop.channel.settings')}
+              aria-label={t('desktop.channel.settings')}
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <circle cx="12" cy="12" r="3" />
@@ -2390,8 +2395,8 @@ function ChatPanel({
               'rounded-md p-2 hover:bg-lc-card ' +
               (showMembers ? 'text-lc-green' : 'text-lc-muted hover:text-lc-white')
             }
-            title={showMembers ? 'Hide member list' : 'Show member list'}
-            aria-label={showMembers ? 'Hide member list' : 'Show member list'}
+            title={showMembers ? t('desktop.channel.hideMembers') : t('desktop.channel.showMembers')}
+            aria-label={showMembers ? t('desktop.channel.hideMembers') : t('desktop.channel.showMembers')}
             aria-pressed={showMembers}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -2403,7 +2408,7 @@ function ChatPanel({
           </button>
           <CopyInviteLinkButton groupId={groupId} />
           <SearchBar
-            serverName={group?.name ?? 'channel'}
+            serverName={group?.name ?? t('common.channel')}
             activeGroupId={groupId}
           />
         </div>
@@ -2444,7 +2449,7 @@ function ChatPanel({
               //   - !group → kind 39000 hasn't ingested this groupId yet
               //   - group && status !== 'empty-confirmed' → kind 9 still
               //     loading or in the retry ladder
-              const stage = !group ? 'Loading channel info…' : 'Loading messages…';
+              const stage = !group ? t('desktop.channel.loadingInfo') : t('desktop.channel.loadingMessages');
               return (
                 <div
                   className="flex h-full items-center justify-center text-sm text-lc-muted"
@@ -2464,18 +2469,17 @@ function ChatPanel({
                   {group ? (
                     <>
                       <div className="text-base font-medium text-lc-white">
-                        Welcome to #{group.name ?? 'channel'}
+                        {t('desktop.channel.welcome').replace('{name}', group.name ?? t('common.channel'))}
                       </div>
-                      <div className="mt-1">No messages yet — be the first.</div>
+                      <div className="mt-1">{t('desktop.channel.noMessages')}</div>
                     </>
                   ) : (
                     <>
                       <div className="text-base font-medium text-lc-white">
-                        Channel not visible on this relay
+                        {t('desktop.channel.notVisible')}
                       </div>
                       <div className="mt-1">
-                        The link points to <span className="font-mono text-xs text-lc-muted">{groupId.slice(0, 16)}…</span>
-                        , but this relay isn&apos;t exposing it to you. You may need to be added as a member, or switch to the relay that hosts it.
+                        {t('desktop.channel.notVisibleDescription').replace('{id}', `${groupId.slice(0, 16)}...`)}
                       </div>
                     </>
                   )}
@@ -2512,14 +2516,14 @@ function ChatPanel({
         {replyingTo && (
           <div className="mb-2 flex items-center justify-between gap-2 rounded-t-md border border-b-0 border-lc-border bg-lc-card/60 px-3 py-1.5 text-xs text-lc-muted">
             <span className="truncate">
-              Replying to <ReplyAuthorName pubkey={replyingTo.pubkey} />
+              {t('desktop.composer.replyingTo')} <ReplyAuthorName pubkey={replyingTo.pubkey} />
               <span className="ml-2 truncate text-lc-muted"><MentionText content={replyingTo.content.slice(0, 80)} /></span>
             </span>
             <button
               type="button"
               onClick={() => setReplyingTo(null)}
               className="text-lc-muted hover:text-lc-white"
-              aria-label="Cancel reply"
+              aria-label={t('desktop.composer.cancelReply')}
             >
               ✕
             </button>
@@ -2552,7 +2556,7 @@ function ChatPanel({
                     type="button"
                     onClick={() => removeUrl(url)}
                     className="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-[11px] text-lc-white opacity-90 hover:bg-black"
-                    aria-label="Remove attachment"
+                    aria-label={t('desktop.composer.removeAttachment')}
                   >
                     ×
                   </button>
@@ -2569,8 +2573,8 @@ function ChatPanel({
         <div className="flex min-h-[3.5rem] items-center gap-2 rounded-xl border border-lc-border bg-lc-card px-4 focus-within:border-lc-green">
           <label
             className="cursor-pointer text-lc-muted hover:text-lc-white"
-            title="Attach media"
-            aria-label="Attach media"
+            title={t('desktop.composer.attachMedia')}
+            aria-label={t('desktop.composer.attachMedia')}
           >
             {uploadingMedia ? (
               <span className="text-[10px] uppercase tracking-wider text-lc-muted">…</span>
@@ -2638,7 +2642,7 @@ function ChatPanel({
                   void onPickFiles(files);
                 }
               }}
-              placeholder={`Message #${group?.name ?? groupId.slice(0, 8)}`}
+              placeholder={t('desktop.composer.placeholder').replace('{name}', group?.name ?? groupId.slice(0, 8))}
               className="w-full bg-transparent text-sm text-lc-white outline-none placeholder:text-lc-muted disabled:opacity-50"
             />
           </div>
@@ -2647,8 +2651,8 @@ function ChatPanel({
               type="button"
               onClick={() => setEmojiOpen((v) => !v)}
               className="text-lc-muted hover:text-lc-white"
-              title="Add emoji"
-              aria-label="Add emoji"
+              title={t('desktop.composer.addEmoji')}
+              aria-label={t('desktop.composer.addEmoji')}
               aria-haspopup="dialog"
               aria-expanded={emojiOpen}
             >
@@ -2673,7 +2677,7 @@ function ChatPanel({
             disabled={!draft.trim() || uploadingMedia}
             className="text-xs font-semibold text-lc-green hover:text-lc-green/80 disabled:opacity-30"
           >
-            Send
+            {t('common.send')}
           </button>
         </div>
       </form>
@@ -2705,14 +2709,14 @@ function ChatPanel({
                   <div
                     onMouseDown={onResize}
                     className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-lc-green/40 active:bg-lc-green/60 z-10"
-                    title="Drag to resize"
+                    title={t('desktop.voiceChat.dragResize')}
                   />
                   <div className="h-12 px-4 border-b border-lc-border flex items-center justify-between shrink-0">
-                    <span className="text-sm font-semibold text-lc-white">Chat</span>
+                    <span className="text-sm font-semibold text-lc-white">{t('desktop.voiceChat.chat')}</span>
                     <button
                       onClick={() => setVoiceChatOpen(false)}
                       className="text-lc-muted hover:text-lc-white"
-                      title="Hide chat"
+                      title={t('desktop.voiceChat.hideChat')}
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                         <line x1="18" y1="6" x2="6" y2="18" />
@@ -2742,6 +2746,7 @@ function ChatPanel({
 const QUICK_REACTIONS = ['🔥', '⚡', '😂', '🤔'];
 
 function CopyInviteLinkButton({ groupId }: { groupId: string }) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const relay = useCurrentRelayUrl();
   const onCopy = async () => {
@@ -2761,8 +2766,8 @@ function CopyInviteLinkButton({ groupId }: { groupId: string }) {
         'rounded-md p-2 hover:bg-lc-card hover:text-lc-white ' +
         (copied ? 'text-lc-green' : 'text-lc-muted')
       }
-      title={copied ? 'Link copied — only members of this relay can open it' : 'Copy invite link'}
-      aria-label="Copy invite link"
+      title={copied ? t('desktop.invite.copiedTitle') : t('desktop.invite.copy')}
+      aria-label={t('desktop.invite.copy')}
     >
       {copied ? (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -2810,24 +2815,27 @@ function ReactorHoverCard({
   emoji: string;
   pubkeys: ReadonlySet<string>;
 }) {
+  const { t } = useTranslation();
   const list = useMemo(() => Array.from(pubkeys), [pubkeys]);
   const shown = list.slice(0, 20);
   const extra = list.length - shown.length;
+  const reactionLabel = t(list.length === 1 ? 'desktop.reactions.one' : 'desktop.reactions.many');
   return (
-    <HoverCardShell title={`${emoji} ${list.length} ${list.length === 1 ? 'reaction' : 'reactions'}`}>
+    <HoverCardShell title={`${emoji} ${list.length} ${reactionLabel}`}>
       <ul className="space-y-0.5">
         {shown.map((pk) => (
           <li key={pk} className="truncate">
             <PubkeyName pubkey={pk} />
           </li>
         ))}
-        {extra > 0 && <li className="text-lc-muted">…and {extra} more</li>}
+        {extra > 0 && <li className="text-lc-muted">{t('desktop.reactions.andMore').replace('{count}', String(extra))}</li>}
       </ul>
     </HoverCardShell>
   );
 }
 
 function ZapperHoverCard({ zapTotal }: { zapTotal: MessageZapTotal }) {
+  const { t } = useTranslation();
   const entries = useMemo(
     () => Array.from(zapTotal.zapperAmounts.entries()).sort((a, b) => b[1] - a[1]),
     [zapTotal],
@@ -2836,7 +2844,7 @@ function ZapperHoverCard({ zapTotal }: { zapTotal: MessageZapTotal }) {
   const extra = entries.length - shown.length;
   return (
     <HoverCardShell
-      title={`⚡ ${zapTotal.totalSats.toLocaleString()} sats · ${zapTotal.count} zap${zapTotal.count === 1 ? '' : 's'}`}
+      title={`⚡ ${zapTotal.totalSats.toLocaleString()} sats · ${zapTotal.count} ${t(zapTotal.count === 1 ? 'desktop.zaps.one' : 'desktop.zaps.many')}`}
     >
       <ul className="space-y-0.5">
         {shown.map(([pk, sats]) => (
@@ -2845,7 +2853,7 @@ function ZapperHoverCard({ zapTotal }: { zapTotal: MessageZapTotal }) {
             <span className="shrink-0 text-yellow-300">{sats.toLocaleString()}</span>
           </li>
         ))}
-        {extra > 0 && <li className="text-lc-muted">…and {extra} more</li>}
+        {extra > 0 && <li className="text-lc-muted">{t('desktop.reactions.andMore').replace('{count}', String(extra))}</li>}
       </ul>
     </HoverCardShell>
   );
@@ -2858,6 +2866,7 @@ function ReplyPreviewRow({
   parent: JsMessage;
   onJump: () => void;
 }) {
+  const { t } = useTranslation();
   const meta = useProfile(parent.pubkey);
   const name = meta?.displayName || meta?.name || parent.pubkey.slice(0, 8);
   const preview = parent.content.replace(/\s+/g, ' ').slice(0, 120);
@@ -2866,7 +2875,7 @@ function ReplyPreviewRow({
       type="button"
       onClick={onJump}
       className="mb-1 flex max-w-full items-center gap-2 truncate text-xs text-lc-muted hover:text-lc-white"
-      title="Jump to replied message"
+      title={t('desktop.message.jumpToReply')}
     >
       <span className="text-lc-green">↩</span>
       <span className="font-semibold text-lc-white/80">{name}</span>
@@ -2899,6 +2908,7 @@ function MessageRow({
   isAdmin: boolean;
   onReply: (m: JsMessage) => void;
 }) {
+  const { t } = useTranslation();
   const parent = msg.replyToId
     ? allMessages.find((x) => x.id === msg.replyToId) ?? null
     : null;
@@ -2928,7 +2938,7 @@ function MessageRow({
       await nostrActions.setMuted(msg.pubkey, !isMuted);
     } catch (e) {
       useToastStore.getState().pushToast({
-        title: 'No se pudo silenciar',
+        title: t('desktop.message.muteFailed'),
         body: e instanceof Error ? e.message : String(e),
       });
     }
@@ -3022,7 +3032,7 @@ function MessageRow({
   const openZap = useMessageZapStore((s) => s.open);
   const onZapClick = () => {
     if (msg.pubkey === myPubkey) {
-      useToastStore.getState().pushToast({ title: '⚠️ Cannot zap yourself', body: '' });
+      useToastStore.getState().pushToast({ title: `⚠️ ${t('desktop.message.cannotZapSelf')}`, body: '' });
       return;
     }
     openZap({
@@ -3050,7 +3060,7 @@ function MessageRow({
   };
   const canDeleteMessage = isAdmin || msg.pubkey === myPubkey;
   const deleteMessage = () => {
-    const label = isAdmin ? 'Delete this message for everyone?' : 'Delete your message?';
+    const label = isAdmin ? t('desktop.message.confirmDeleteEveryone') : t('desktop.message.confirmDeleteOwn');
     if (!confirm(label)) return;
     if (isAdmin) void nostrActions.deleteGroupEvent(groupId, msg.id);
     else void nostrActions.removeMessage(groupId, msg.id);
@@ -3080,7 +3090,7 @@ function MessageRow({
             {msg.pending && (
               <span
                 className="inline-block h-2.5 w-2.5 animate-spin rounded-full border border-lc-muted/40 border-t-lc-muted"
-                aria-label="Sending"
+                aria-label={t('common.sending')}
                 role="status"
               />
             )}
@@ -3088,7 +3098,7 @@ function MessageRow({
         )}
         {parent && <ReplyPreviewRow parent={parent} onJump={onJumpToParent} />}
         {msg.replyToId && !parent && (
-          <div className="mb-1 text-xs italic text-lc-muted">↩ replying to a message</div>
+          <div className="mb-1 text-xs italic text-lc-muted">↩ {t('desktop.message.replyingToMessage')}</div>
         )}
         <div
           className="break-words text-sm text-lc-white cursor-pointer"
@@ -3109,20 +3119,20 @@ function MessageRow({
         {msg.failed && (
           <div className="mt-1 flex items-center gap-2 text-[11px] text-red-400" data-testid="message-failed">
             <span aria-hidden="true">!</span>
-            <span>Couldn’t send</span>
+            <span>{t('dm.failedSend')}</span>
             <button
               type="button"
               onClick={onRetry}
               className="rounded bg-red-500/10 px-2 py-0.5 font-semibold text-red-300 hover:bg-red-500/20"
               data-testid="message-retry"
             >
-              Retry
+              {t('common.retry')}
             </button>
             <button
               type="button"
               onClick={onDismissFailed}
               className="text-red-400/70 hover:text-red-300"
-              aria-label="Dismiss failed message"
+              aria-label={t('dm.dismissFailed')}
             >
               ✕
             </button>
@@ -3131,7 +3141,7 @@ function MessageRow({
         {grouped && msg.pending && (
           <span
             className="ml-2 inline-block h-2.5 w-2.5 animate-spin rounded-full border border-lc-muted/40 border-t-lc-muted align-middle"
-            aria-label="Sending"
+            aria-label={t('common.sending')}
             role="status"
           />
         )}
@@ -3160,7 +3170,7 @@ function MessageRow({
                 <div key={emoji} className="group/pill relative">
                   <button
                     onClick={() => onReactionClick(emoji, customEmojis, myReactionId, removeForEveryone ? reactionIds : undefined)}
-                    title={removeForEveryone ? 'Remove reactions for everyone' : mine ? 'Remove your reaction' : 'React'}
+                    title={removeForEveryone ? t('desktop.reactions.removeEveryone') : mine ? t('desktop.reactions.removeOwn') : t('desktop.reactions.react')}
                     className={
                       'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs text-lc-white ' +
                       (removeForEveryone || mine
@@ -3200,7 +3210,7 @@ function MessageRow({
                 onClick={() => { onReactionClick(e); closeAll(); }}
                 disabled={mine}
                 className="rounded px-1.5 py-0.5 text-sm hover:bg-lc-card disabled:opacity-40 disabled:cursor-default"
-                title={mine ? 'Already reacted' : `React ${e}`}
+                title={mine ? t('desktop.reactions.alreadyReacted') : t('desktop.reactions.reactEmoji').replace('{emoji}', e)}
               >
                 {e}
               </button>
@@ -3213,8 +3223,8 @@ function MessageRow({
               setPanelPinned(true);
             }}
             className="rounded px-1.5 py-0.5 text-sm text-lc-muted hover:bg-lc-card hover:text-lc-white"
-            title="More emojis…"
-            aria-label="Open emoji picker"
+            title={t('desktop.reactions.moreEmojis')}
+            aria-label={t('desktop.reactions.openEmojiPicker')}
           >
             ➕
           </button>
@@ -3239,8 +3249,8 @@ function MessageRow({
               setPickerOpen(false);
             }}
             className="rounded px-1.5 py-0.5 text-sm text-lc-muted hover:bg-lc-card hover:text-lc-white"
-            title="More actions"
-            aria-label="More actions"
+            title={t('desktop.message.moreActions')}
+            aria-label={t('desktop.message.moreActions')}
             aria-haspopup="menu"
             aria-expanded={menuOpen}
           >
@@ -3260,7 +3270,7 @@ function MessageRow({
               onClick={() => { onReply(msg); setMenuOpen(false); }}
               className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-lc-white hover:bg-lc-card"
             >
-              <span className="w-4 text-center">↩</span> Reply
+              <span className="w-4 text-center">↩</span> {t('desktop.message.reply')}
             </button>
             <button
               role="menuitem"
@@ -3272,7 +3282,7 @@ function MessageRow({
               }}
               className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-lc-white hover:bg-lc-card"
             >
-              <span className="w-4 text-center">😊</span> React
+              <span className="w-4 text-center">😊</span> {t('desktop.reactions.react')}
             </button>
             <button
               role="menuitem"
@@ -3283,7 +3293,7 @@ function MessageRow({
               <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12" aria-hidden="true" className="ml-0.5">
                 <path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z" />
               </svg>
-              Zap
+              {t('desktop.message.zap')}
             </button>
             <button
               role="menuitem"
@@ -3295,13 +3305,13 @@ function MessageRow({
                   url.searchParams.set('m', msg.id);
                   if (relay) url.searchParams.set('relay', shortHost(relay));
                   navigator.clipboard.writeText(url.toString());
-                  useToastStore.getState().pushToast({ title: '🔗 Link copied', body: '' });
+                  useToastStore.getState().pushToast({ title: `🔗 ${t('desktop.message.linkCopied')}`, body: '' });
                 }
                 setMenuOpen(false);
               }}
               className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-lc-white hover:bg-lc-card"
             >
-              <span className="w-4 text-center">🔗</span> Copy link
+              <span className="w-4 text-center">🔗</span> {t('desktop.message.copyLink')}
             </button>
             <button
               role="menuitem"
@@ -3310,7 +3320,7 @@ function MessageRow({
               className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-red-400 hover:bg-lc-card disabled:opacity-40 disabled:hover:bg-transparent"
             >
               <span className="w-4 text-center">🔕</span>
-              {isMuted ? 'Unmute user' : 'Mute user'}
+              {isMuted ? t('desktop.message.unmuteUser') : t('desktop.message.muteUser')}
             </button>
             {canDeleteMessage && (
               <button
@@ -3322,7 +3332,7 @@ function MessageRow({
                 className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-red-400 hover:bg-lc-card"
               >
                 <span className="w-4 text-center">🗑</span>
-                {isAdmin ? 'Delete for everyone' : 'Delete message'}
+                {isAdmin ? t('desktop.message.deleteEveryone') : t('desktop.message.deleteMessage')}
               </button>
             )}
           </div>
@@ -4111,6 +4121,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 // -- DMs ----------------------------------------------------------------
 
 function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string) => void }) {
+  const { t } = useTranslation();
   const dms = useDirectMessages();
   const meta = useProfile(peer);
   const thread = peer ? dms[peer] ?? [] : [];
@@ -4167,7 +4178,7 @@ function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string) => voi
   if (!peer) {
     return (
       <div className="flex h-full items-center justify-center text-sm text-lc-muted">
-        Pick or start a DM conversation.
+        {t('dm.pickConversation')}
       </div>
     );
   }
@@ -4185,7 +4196,7 @@ function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string) => voi
       </header>
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-4">
         {thread.length === 0 ? (
-          <div className="text-sm text-lc-muted">No messages yet. Send the first one (NIP-04 encrypted).</div>
+          <div className="text-sm text-lc-muted">{t('dm.emptyEncrypted')}</div>
         ) : (
           thread.map((m) => {
             const onRetryDM = () => {
@@ -4213,7 +4224,7 @@ function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string) => voi
                   {m.pending && (
                     <span
                       className={'inline-block h-2.5 w-2.5 animate-spin rounded-full border ' + (m.outgoing ? 'border-black/30 border-t-black/70' : 'border-lc-muted/40 border-t-lc-muted')}
-                      aria-label="Sending"
+                      aria-label={t('common.sending')}
                       role="status"
                     />
                   )}
@@ -4226,20 +4237,20 @@ function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string) => voi
                 </div>
                 {m.failed && (
                   <div className="mt-1.5 flex items-center justify-end gap-2 text-[11px] text-red-500" data-testid="dm-failed">
-                    <span>Couldn’t send</span>
+                    <span>{t('dm.failedSend')}</span>
                     <button
                       type="button"
                       onClick={onRetryDM}
                       className="rounded bg-red-500/15 px-2 py-0.5 font-semibold text-red-500 hover:bg-red-500/25"
                       data-testid="dm-retry"
                     >
-                      Retry
+                      {t('common.retry')}
                     </button>
                     <button
                       type="button"
                       onClick={onDismissDM}
                       className="text-red-500/70 hover:text-red-500"
-                      aria-label="Dismiss failed message"
+                      aria-label={t('dm.dismissFailed')}
                     >
                       ✕
                     </button>
@@ -4255,7 +4266,7 @@ function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string) => voi
           <input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder="Encrypted message (NIP-04)"
+            placeholder={t('dm.placeholderEncrypted')}
             className="flex-1 bg-transparent text-sm text-lc-white outline-none placeholder:text-lc-muted disabled:opacity-50"
           />
           <button
@@ -4263,7 +4274,7 @@ function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string) => voi
             disabled={!draft.trim()}
             className="text-xs font-semibold text-lc-green disabled:opacity-30"
           >
-            Send
+            {t('common.send')}
           </button>
         </div>
       </form>
@@ -4361,14 +4372,15 @@ function RelayAccessModal() {
 }
 
 function EmptyState() {
+  const { t } = useTranslation();
   // Relay/AUTH state is surfaced exclusively by the chat-pane
   // RelayStatusBanner now. The EmptyState only shows the "pick a
   // channel" prompt — the banner mounts above this section regardless.
   return (
     <div className="flex h-full items-center justify-center text-lc-muted">
       <div className="text-center">
-        <div className="text-lg font-medium text-lc-white">Pick a channel or DM</div>
-        <div className="mt-1 text-sm">Choose from the sidebar — or hit + to create a new channel.</div>
+        <div className="text-lg font-medium text-lc-white">{t('desktop.empty.title')}</div>
+        <div className="mt-1 text-sm">{t('desktop.empty.description')}</div>
       </div>
     </div>
   );
