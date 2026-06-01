@@ -1,0 +1,105 @@
+export const CHANNEL_SCROLL_NEAR_BOTTOM_PX = 120;
+
+export interface ChannelScrollSnapshot {
+  readonly scrollTop: number;
+  readonly scrollHeight: number;
+  readonly clientHeight: number;
+  readonly nearBottom: boolean;
+  readonly updatedAt: number;
+}
+
+export interface ChannelScrollRestoreResult {
+  readonly source: 'saved' | 'bottom';
+  readonly scrollTop: number;
+  readonly nearBottom: boolean;
+}
+
+export interface ChannelScrollElement {
+  scrollTop: number;
+  readonly scrollHeight: number;
+  readonly clientHeight: number;
+}
+
+const positions = new Map<string, ChannelScrollSnapshot>();
+
+function finiteNumber(value: number): number {
+  return Number.isFinite(value) ? value : 0;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function maxScrollTop(el: ChannelScrollElement): number {
+  return Math.max(0, finiteNumber(el.scrollHeight) - finiteNumber(el.clientHeight));
+}
+
+function distanceFromBottom(el: ChannelScrollElement): number {
+  return maxScrollTop(el) - finiteNumber(el.scrollTop);
+}
+
+export function channelScrollPositionKey(
+  relayUrl: string | null | undefined,
+  groupId: string | null | undefined,
+): string | null {
+  if (!groupId) return null;
+  const relay = (relayUrl ?? 'unknown-relay').replace(/\/+$/, '').toLowerCase();
+  return `${relay || 'unknown-relay'}::${groupId}`;
+}
+
+export function isChannelScrollNearBottom(
+  el: ChannelScrollElement,
+  nearBottomPx = CHANNEL_SCROLL_NEAR_BOTTOM_PX,
+): boolean {
+  return distanceFromBottom(el) <= nearBottomPx;
+}
+
+export function getChannelScrollPosition(key: string | null | undefined): ChannelScrollSnapshot | null {
+  if (!key) return null;
+  return positions.get(key) ?? null;
+}
+
+export function rememberChannelScrollPosition(
+  key: string | null | undefined,
+  el: ChannelScrollElement,
+  nearBottomPx = CHANNEL_SCROLL_NEAR_BOTTOM_PX,
+): ChannelScrollSnapshot | null {
+  if (!key) return null;
+  const maxTop = maxScrollTop(el);
+  const scrollTop = clamp(finiteNumber(el.scrollTop), 0, maxTop);
+  const snapshot: ChannelScrollSnapshot = {
+    scrollTop,
+    scrollHeight: finiteNumber(el.scrollHeight),
+    clientHeight: finiteNumber(el.clientHeight),
+    nearBottom: maxTop - scrollTop <= nearBottomPx,
+    updatedAt: Date.now(),
+  };
+  positions.set(key, snapshot);
+  return snapshot;
+}
+
+export function restoreChannelScrollPosition(
+  key: string,
+  el: ChannelScrollElement,
+  nearBottomPx = CHANNEL_SCROLL_NEAR_BOTTOM_PX,
+): ChannelScrollRestoreResult {
+  const saved = positions.get(key);
+  const maxTop = maxScrollTop(el);
+  const scrollTop = saved
+    ? saved.nearBottom
+      ? maxTop
+      : clamp(saved.scrollTop, 0, maxTop)
+    : maxTop;
+
+  el.scrollTop = scrollTop;
+  const snapshot = rememberChannelScrollPosition(key, el, nearBottomPx);
+  return {
+    source: saved ? 'saved' : 'bottom',
+    scrollTop,
+    nearBottom: snapshot?.nearBottom ?? isChannelScrollNearBottom(el, nearBottomPx),
+  };
+}
+
+export function clearChannelScrollPositions(): void {
+  positions.clear();
+}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   nostrActions,
@@ -100,6 +100,8 @@ import {
   type CustomEmojiMap,
 } from '@/lib/custom-emoji-tags';
 import { resolveReactionEmoji } from '@/lib/emoji-shortcodes';
+import { channelScrollPositionKey } from '@/lib/channel-scroll-position';
+import { useChannelScrollPosition } from '@/hooks/chat/useChannelScrollPosition';
 import RelayEmojiAdminModal from '@/components/admin/RelayEmojiAdminModal';
 import BlossomImageInput from '@/components/BlossomImageInput';
 import ActivityIndicator from '@/components/ActivityIndicator';
@@ -143,7 +145,7 @@ export default function AppShell() {
       // disabled (the gate stays false → cursor never advances → unread
       // counts never clear). Mobile sets these in `selectGroup`; desktop
       // routes through `setView` instead, so we mirror in the same effect.
-      useChatStore.setState({ activeChannelId: view.groupId, isNearBottom: true });
+      useChatStore.setState({ activeChannelId: view.groupId });
     } else {
       bridge?.setActiveGroup(null);
       useChatStore.setState({ activeChannelId: null });
@@ -2026,6 +2028,11 @@ function ChatPanel({
   }, [groupId, myPubkey, groupCreator, admins, relay, relayAccess]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const voiceMainRef = useRef<HTMLDivElement>(null);
+  const scrollKey = useMemo(() => channelScrollPositionKey(relay, groupId), [relay, groupId]);
+  const scrollKeyRef = useRef(scrollKey);
+  useEffect(() => {
+    scrollKeyRef.current = scrollKey;
+  }, [scrollKey]);
   // Highlights drive the floating mention/reply navigator at the bottom-right
   // of the message viewport — same data the channel-row badges read.
   const channelHighlights = useChannelHighlights(groupId, myPubkey);
@@ -2041,6 +2048,19 @@ function ChatPanel({
   // the now-removed messagesVisible unmount it also re-rendered users to
   // the top of the channel on AUTH flicker.
   const stickToBottomRef = useRef(true);
+  const setNearBottom = useCallback((near: boolean) => {
+    stickToBottomRef.current = near;
+    const cur = useChatStore.getState().isNearBottom;
+    if (cur !== near) useChatStore.setState({ isNearBottom: near });
+  }, []);
+  useChannelScrollPosition({
+    scrollKey,
+    scrollRef,
+    itemCount: messages.length,
+    disabled: !!pendingMessageId,
+    nearBottomPx: 100,
+    onNearBottomChange: setNearBottom,
+  });
   const { loadEarlier, loading: loadingEarlier, reachedStart } = useLoadEarlier(groupId);
   useEffect(() => {
     const el = scrollRef.current;
@@ -2048,22 +2068,18 @@ function ChatPanel({
     const onScroll = () => {
       const dist = el.scrollHeight - el.scrollTop - el.clientHeight;
       const near = dist < 100;
-      stickToBottomRef.current = near;
-      // Mirror near-bottom into the chat store so `isUserWatchingChannel`
-      // (in `read-gates.ts`) reflects scroll position. Without this, desktop
-      // would always think the user is at the bottom and silently advance
-      // the read cursor while they're scrolled up reading history.
-      const cur = useChatStore.getState().isNearBottom;
-      if (cur !== near) useChatStore.setState({ isNearBottom: near });
+      setNearBottom(near);
       // Top-of-list pagination. Anchor by pre-load scrollHeight so the
       // viewport stays on the same message after the older page is
       // prepended instead of snapping to the new top.
       if (el.scrollTop < 80 && !loadingEarlier && !reachedStart) {
+        const loadKey = scrollKeyRef.current;
         const prevHeight = el.scrollHeight;
         void loadEarlier().then(() => {
           requestAnimationFrame(() => {
             const e = scrollRef.current;
             if (!e) return;
+            if (loadKey && scrollKeyRef.current !== loadKey) return;
             e.scrollTop = e.scrollHeight - prevHeight;
           });
         });
@@ -2071,17 +2087,7 @@ function ChatPanel({
     };
     el.addEventListener('scroll', onScroll, { passive: true });
     return () => el.removeEventListener('scroll', onScroll);
-  }, [loadEarlier, loadingEarlier, reachedStart]);
-  // Entering a new channel: jump to bottom and reset stickiness so the
-  // first batch of incoming messages keeps following the tail until the
-  // user scrolls up themselves.
-  useEffect(() => {
-    if (pendingMessageId) return;
-    const el = scrollRef.current;
-    if (!el) return;
-    el.scrollTop = el.scrollHeight;
-    stickToBottomRef.current = true;
-  }, [groupId, pendingMessageId]);
+  }, [loadEarlier, loadingEarlier, reachedStart, setNearBottom]);
   // New messages: stick to bottom only if the user was already there.
   useEffect(() => {
     if (pendingMessageId) return;

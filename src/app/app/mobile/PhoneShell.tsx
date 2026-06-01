@@ -125,6 +125,8 @@ import MessageZapModal from '@/components/chat/MessageZapModal';
 import { type ScreenName, type NavState, initialNav, urlFor, parseUrl } from './url-state';
 import { buildSeedHistory, decideSnap, decideSwipeNav, decideTabPress, neighborsFor, NAV_ORDER, resolveParent } from './swipe-nav';
 import { useKeyboardInset } from './use-keyboard';
+import { channelScrollPositionKey } from '@/lib/channel-scroll-position';
+import { useChannelScrollPosition } from '@/hooks/chat/useChannelScrollPosition';
 // CSS is hoisted to AppGate.tsx so it lands in the route's eagerly-loaded
 // stylesheet, not in this dynamic chunk's late-arriving sidecar.
 
@@ -2601,6 +2603,11 @@ function ChannelScreen({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [replyingTo, setReplyingTo] = useState<JsMessage | null>(null);
   const messagesRef = useRef<HTMLDivElement>(null);
+  const scrollKey = useMemo(() => channelScrollPositionKey(relay, groupId), [relay, groupId]);
+  const scrollKeyRef = useRef(scrollKey);
+  useEffect(() => {
+    scrollKeyRef.current = scrollKey;
+  }, [scrollKey]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const composerInputRef = useRef<HTMLInputElement>(null);
   const channelHighlights = useChannelHighlights(groupId, myPubkey);
@@ -2701,24 +2708,16 @@ function ChannelScreen({
     }
   };
 
-  // Entering a new channel: jump to the newest message (matches desktop).
-  // Without this, mobile lands at scrollTop=0 which means the OLDEST visible
-  // message — the user complained about being dropped at the "top of channels
-  // they've already read." The auto-mark-read effect then clears the unread
-  // badge from this position because the user is already looking at the tail.
-  // We use `messages.length > 0` as the trigger so the first batch of REQ
-  // events lands the user at the bottom even when groupId already matched.
-  const lastJumpedGroupRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (messages.length === 0) return;
-    if (lastJumpedGroupRef.current === groupId) return;
-    const el = messagesRef.current;
-    if (!el) return;
-    requestAnimationFrame(() => {
-      el.scrollTop = el.scrollHeight;
-    });
-    lastJumpedGroupRef.current = groupId;
-  }, [groupId, messages.length]);
+  useChannelScrollPosition({
+    scrollKey,
+    scrollRef: messagesRef,
+    itemCount: messages.length,
+    nearBottomPx: 200,
+    onNearBottomChange: (near) => {
+      const cur = useChatStore.getState().isNearBottom;
+      if (cur !== near) useChatStore.setState({ isNearBottom: near });
+    },
+  });
 
   // Auto-scroll to bottom when new messages arrive (only if already near).
   useEffect(() => {
@@ -2741,11 +2740,13 @@ function ChannelScreen({
     if (!el) return;
     const onScroll = () => {
       if (el.scrollTop < 80 && !loadingEarlier && !reachedStart) {
+        const loadKey = scrollKeyRef.current;
         const prevHeight = el.scrollHeight;
         void loadEarlier().then(() => {
           requestAnimationFrame(() => {
             const e = messagesRef.current;
             if (!e) return;
+            if (loadKey && scrollKeyRef.current !== loadKey) return;
             e.scrollTop = e.scrollHeight - prevHeight;
           });
         });
@@ -5528,7 +5529,7 @@ export default function MobileShell() {
     setNav(parsed);
     navRef.current = parsed;
     if (parsed.screen === 'channel' && parsed.groupId) {
-      useChatStore.setState({ activeChannelId: parsed.groupId, isNearBottom: true });
+      useChatStore.setState({ activeChannelId: parsed.groupId });
     } else if (dmOptInEnabled && parsed.screen === 'dm-thread' && parsed.dmPeer) {
       useDMStore.setState({ activeDMPubkey: parsed.dmPeer });
     }
@@ -5834,7 +5835,7 @@ export default function MobileShell() {
     } else {
       // Pure navigation. The cursor is advanced by `useAutoMarkRead` once the
       // user is actually watching the channel (visible + focused + active).
-      useChatStore.setState({ activeChannelId: groupId, isNearBottom: true });
+      useChatStore.setState({ activeChannelId: groupId });
       useDMStore.setState({ activeDMPubkey: null });
       pushNav((n) => ({
         ...n,
