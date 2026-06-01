@@ -125,7 +125,8 @@ import MessageZapModal from '@/components/chat/MessageZapModal';
 import { type ScreenName, type NavState, initialNav, urlFor, parseUrl } from './url-state';
 import { buildSeedHistory, decideSnap, decideSwipeNav, decideTabPress, neighborsFor, NAV_ORDER, resolveParent } from './swipe-nav';
 import { useKeyboardInset } from './use-keyboard';
-import { channelScrollPositionKey } from '@/lib/channel-scroll-position';
+import { channelScrollPositionKey, getChannelScrollPosition, rememberChannelScrollPosition } from '@/lib/channel-scroll-position';
+import { channelInitialAnchorFromCursor } from '@/lib/channel-scroll-anchor';
 import { useChannelScrollPosition } from '@/hooks/chat/useChannelScrollPosition';
 // CSS is hoisted to AppGate.tsx so it lands in the route's eagerly-loaded
 // stylesheet, not in this dynamic chunk's late-arriving sidecar.
@@ -2614,6 +2615,7 @@ function ChannelScreen({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const composerInputRef = useRef<HTMLInputElement>(null);
   const channelHighlights = useChannelHighlights(groupId, myPubkey);
+  const readCursorMs = useReadStateStore((s) => s.groupCursors[groupId]);
 
   // ── @-mention autocomplete ───────────────────────────────────────────
   // Mentions span the whole relay (every visible group's members + admins
@@ -2721,6 +2723,25 @@ function ChannelScreen({
       if (cur !== near) useChatStore.setState({ isNearBottom: near });
     },
   });
+
+  useLayoutEffect(() => {
+    if (!scrollKey || getChannelScrollPosition(scrollKey)) return;
+    const anchor = channelInitialAnchorFromCursor(messages, readCursorMs, myPubkey);
+    if (anchor.kind !== 'message') return;
+
+    const scrollToAnchor = () => {
+      if (getChannelScrollPosition(scrollKey)) return;
+      const scroller = messagesRef.current;
+      const target = document.querySelector<HTMLElement>(`[data-msg-id="${CSS.escape(anchor.messageId)}"]`);
+      if (!scroller || !target || !scroller.contains(target)) return;
+      scroller.scrollTop = target.offsetTop;
+      rememberChannelScrollPosition(scrollKey, scroller, 200);
+    };
+
+    scrollToAnchor();
+    const frame = requestAnimationFrame(scrollToAnchor);
+    return () => cancelAnimationFrame(frame);
+  }, [messages, myPubkey, readCursorMs, scrollKey]);
 
   // Auto-scroll to bottom when new messages arrive (only if already near).
   useEffect(() => {
