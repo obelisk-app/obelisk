@@ -529,7 +529,7 @@ export function RelayMenuSheet({
   return (
     <div className="sheet-host" data-screen="relay-menu">
       <div className="sheet-backdrop" onClick={close} />
-      <div className="sheet" style={{ maxHeight: '88%' }}>
+      <div className="sheet native-scroll-y" style={{ maxHeight: '88%' }}>
         <div className="sheet-handle" />
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '4px 4px 14px' }}>
           <div className="space-icon" style={{ width: 44, height: 44, ...(iconUrl ? {} : avatarStyle(relayUrl)) }}>
@@ -651,13 +651,13 @@ function AddRelaySheet({ close }: { close: () => void }) {
   return (
     <div className="sheet-host" data-screen="add-relay">
       <div className="sheet-backdrop" onClick={close} />
-      <div className="sheet" style={{ maxHeight: '88%' }}>
+      <div className="sheet native-scroll-y" style={{ maxHeight: '88%' }}>
         <div className="sheet-handle" />
         <div className="zap-title">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
           Add a relay
         </div>
-        <div className="dms-tabs" style={{ padding: 0 }}>
+        <div className="dms-tabs native-scroll-x" style={{ padding: 0 }}>
           <button className={`filter-tab ${tab === 'suggested' ? 'active' : ''}`} onClick={() => setTab('suggested')}>
             Suggested
           </button>
@@ -875,7 +875,7 @@ export function CreateChannelSheet({
   return (
     <div className="sheet-host" data-screen="create-channel">
       <div className="sheet-backdrop" onClick={close} />
-      <div className="sheet" style={{ maxHeight: '88%' }}>
+      <div className="sheet native-scroll-y" style={{ maxHeight: '88%' }}>
         <div className="sheet-handle" />
         <div className="zap-title">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
@@ -970,7 +970,7 @@ function EditBrandingSheet({
   return (
     <div className="sheet-host" data-screen="edit-branding" style={{ zIndex: 20 }}>
       <div className="sheet-backdrop" onClick={close} />
-      <div className="sheet" style={{ maxHeight: '94%' }}>
+      <div className="sheet native-scroll-y" style={{ maxHeight: '94%' }}>
         <div className="sheet-handle" />
         <div className="zap-title">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" /></svg>
@@ -1178,7 +1178,7 @@ function ManageCategoriesSheet({
   return (
     <div className="sheet-host" data-screen="manage-categories" style={{ zIndex: 20 }}>
       <div className="sheet-backdrop" onClick={close} />
-      <div className="sheet" style={{ maxHeight: '94%' }}>
+      <div className="sheet native-scroll-y" style={{ maxHeight: '94%' }}>
         <div className="sheet-handle" />
         <div className="zap-title">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
@@ -1560,7 +1560,7 @@ function ChannelSettingsSheet({
   return (
     <div className="sheet-host" data-screen="channel-settings">
       <div className="sheet-backdrop" onClick={close} />
-      <div className="sheet" style={{ maxHeight: '94%' }}>
+      <div className="sheet native-scroll-y" style={{ maxHeight: '94%' }}>
         <div className="sheet-handle" />
         <div className="zap-title">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>
@@ -1910,7 +1910,7 @@ export function MobileServerRail({
   const activeKey = normalizeRelayUrl(activeRelay);
   return (
     <aside className="spaces-rail" data-testid="mobile-server-rail" aria-label="Servers">
-      <div className="spaces-rail-scroll" data-no-swipe>
+      <div className="spaces-rail-scroll native-scroll-y" data-no-swipe>
         {relays.map((url) => {
           const isActive = normalizeRelayUrl(url) === activeKey;
           return (
@@ -2411,7 +2411,7 @@ function ServerScreen({
 
           <RelayStatusBadge />
 
-          <div className="channel-list" ref={channelListRef}>
+          <div className="channel-list native-scroll-y" ref={channelListRef}>
         {laidOut.categories.map((cat) => {
           const list = cat.channelIds
             .map((id) => groupsById[id])
@@ -2818,7 +2818,7 @@ function ChannelScreen({
 
       <RelayStatusBadge />
       <div className="messages-wrap relative flex min-h-0 flex-1 flex-col">
-      <div className="messages" ref={messagesRef}>
+      <div className="messages native-scroll-y" ref={messagesRef}>
         {renderable.length === 0 ? (
           // Bridge-owned confidence: only render "No messages yet" once
           // the retry ladder has exhausted (status === 'empty-confirmed').
@@ -2970,7 +2970,7 @@ function ChannelScreen({
         </div>
         {emojiOpen && (
           <div className="emoji-sheet-host" onClick={() => setEmojiOpen(false)}>
-            <div className="emoji-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="emoji-sheet native-scroll-y" onClick={(e) => e.stopPropagation()}>
               <div className="sheet-handle" />
               <EmojiPicker
                 variant="sheet"
@@ -3327,7 +3327,7 @@ function DmsListScreen({
         </div>
       </div>
 
-      <div className="dms-tabs">
+      <div className="dms-tabs native-scroll-x">
         <button className={`filter-tab ${tab === 'follows' ? 'active' : ''}`} onClick={() => setTab('follows')}>
           Follows · {followsCount}
         </button>
@@ -3336,7 +3336,7 @@ function DmsListScreen({
         </button>
       </div>
 
-      <div className="dms-list-rows" ref={listRef}>
+      <div className="dms-list-rows native-scroll-y" ref={listRef}>
         {filtered.length === 0 && (
           <div className="empty-state">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><rect x="3" y="11" width="18" height="9" rx="1.5" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
@@ -3469,7 +3469,7 @@ function DmThreadScreen({
         </div>
       </div>
 
-      <div className="dm-messages" ref={msgsRef}>
+      <div className="dm-messages native-scroll-y" ref={msgsRef}>
         <div className="dm-encryption-pill">
           <svg className="lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="9" rx="1.5" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
           Messages are NIP-04 encrypted end-to-end
@@ -3603,14 +3603,14 @@ function InboxScreen({
         <h2>Inbox</h2>
         <button className="mark-all-read" onClick={handleMarkAll}>Mark all read</button>
       </div>
-      <div className="filter-tabs">
+      <div className="filter-tabs native-scroll-x">
         <button className={`filter-tab ${tab === 'all' ? 'active' : ''}`} onClick={() => setTab('all')}>All · {events.length}</button>
         <button className={`filter-tab ${tab === 'mentions' ? 'active' : ''}`} onClick={() => setTab('mentions')}>@mentions</button>
         <button className={`filter-tab ${tab === 'replies' ? 'active' : ''}`} onClick={() => setTab('replies')}>Replies</button>
         <button className={`filter-tab ${tab === 'dms' ? 'active' : ''}`} onClick={() => setTab('dms')}>DMs</button>
         <button className={`filter-tab ${tab === 'zaps' ? 'active' : ''}`} onClick={() => setTab('zaps')}>Zaps</button>
       </div>
-      <div className="activity-list">
+      <div className="activity-list native-scroll-y">
         {filtered.length === 0 && (
           <div className="empty-state" style={{ padding: '40px 24px' }}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" /></svg>
@@ -4201,7 +4201,7 @@ function ForumScreen({
         </div>
       </div>
 
-      <div className="forum-list">
+      <div className="forum-list native-scroll-y">
         {threadsLoading ? (
           <div className="empty-state" data-testid="mobile-forum-loading">
             <div className="empty-state-title">Loading threads…</div>
@@ -4374,7 +4374,7 @@ function ForumSortSheet({
   return (
     <div className="sheet-host" data-screen="forum-sort" data-testid="mobile-forum-sort-sheet">
       <div className="sheet-backdrop" onClick={close} />
-      <div className="sheet">
+      <div className="sheet native-scroll-y">
         <div className="sheet-handle" />
         <div className="zap-title">Sort &amp; view</div>
         <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -4531,7 +4531,7 @@ function NewThreadSheet({
   return (
     <div className="sheet-host" data-screen="new-thread" data-testid="mobile-new-thread-sheet">
       <div className="sheet-backdrop" onClick={close} />
-      <form className="sheet" onSubmit={onSubmit} style={{ maxHeight: '92%' }}>
+      <form className="sheet native-scroll-y" onSubmit={onSubmit} style={{ maxHeight: '92%' }}>
         <div className="sheet-handle" />
         <div className="zap-title">New thread</div>
         <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -4671,7 +4671,7 @@ export function MessageActionsSheet({
         </div>
       </div>
       <div className="sheet-backdrop" onClick={close} />
-      <div className="sheet">
+      <div className="sheet native-scroll-y">
         <div className="sheet-handle" />
         <div className="ma-quick-reactions">
           {['👍', '❤️', '🚀', '🔥', '👀', '+'].map((e) => (
@@ -4687,7 +4687,7 @@ export function MessageActionsSheet({
         </div>
         {pickerOpen && (
           <div className="emoji-sheet-host" onClick={() => setPickerOpen(false)}>
-            <div className="emoji-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="emoji-sheet native-scroll-y" onClick={(e) => e.stopPropagation()}>
               <div className="sheet-handle" />
               <EmojiPicker
                 variant="sheet"
@@ -4700,7 +4700,7 @@ export function MessageActionsSheet({
             </div>
           </div>
         )}
-        <div className="ma-action-list">
+        <div className="ma-action-list native-scroll-y">
           <button
             className="ma-action"
             data-testid="mobile-msg-actions-reply"
@@ -4768,7 +4768,7 @@ function ZapModalSheet({
   return (
     <div className="sheet-host" data-screen="zap-modal">
       <div className="sheet-backdrop" onClick={close} />
-      <div className="sheet">
+      <div className="sheet native-scroll-y">
         <div className="sheet-handle" />
         <div className="zap-title">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2 3 14h7l-2 8 10-12h-7l2-8z" /></svg>
@@ -4867,7 +4867,7 @@ function DisconnectConfirmSheet({ onConfirm, onCancel }: { onConfirm: () => void
   return (
     <div className="sheet-host" data-screen="disconnect-confirm">
       <div className="sheet-backdrop" onClick={onCancel} />
-      <div className="sheet">
+      <div className="sheet native-scroll-y">
         <div className="sheet-handle" />
         <div className="confirm-sheet-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -4907,7 +4907,7 @@ export function SettingsProfileScreen({ go }: { go: (s: ScreenName) => void }) {
       <div className="app-header">
         <h2>{t('settings.you')}</h2>
       </div>
-      <div className="settings-tabs">
+      <div className="settings-tabs native-scroll-x">
         <button className="settings-tab active">{t('settings.profile')}</button>
         <button className="settings-tab" onClick={() => go('settings-prefs')}>{t('settings.preferences')}</button>
       </div>
@@ -5267,7 +5267,7 @@ export function SettingsPrefsScreen({ go }: { go: (s: ScreenName) => void }) {
       <div className="app-header">
         <h2>You</h2>
       </div>
-      <div className="settings-tabs">
+      <div className="settings-tabs native-scroll-x">
         <button className="settings-tab" onClick={() => go('settings-profile')}>{t('settings.profile')}</button>
         <button className="settings-tab active">{t('settings.preferences')}</button>
       </div>
