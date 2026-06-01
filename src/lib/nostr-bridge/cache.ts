@@ -120,9 +120,29 @@ export function cacheGet<T>(relay: string, kind: number, id: string): CachedEntr
  */
 export function cacheSet<T>(relay: string, kind: number, id: string, value: T): void {
   if (!isAvailable()) return;
-  const payload: Storable<T> = { v: value, t: Date.now() };
   try {
-    window.localStorage.setItem(buildKey(relay, kind, id), JSON.stringify(payload));
+    const key = buildKey(relay, kind, id);
+    const valueJson = JSON.stringify(value);
+    if (valueJson === undefined) return;
+
+    const raw = window.localStorage.getItem(key);
+    if (raw !== null) {
+      try {
+        const existing = JSON.parse(raw) as Storable<T>;
+        if (
+          existing
+          && typeof existing === 'object'
+          && 'v' in existing
+          && JSON.stringify(existing.v) === valueJson
+        ) {
+          return;
+        }
+      } catch {
+        // Corrupt entries are overwritten below.
+      }
+    }
+
+    window.localStorage.setItem(key, `{"v":${valueJson},"t":${Date.now()}}`);
   } catch {
     // Quota exceeded, private mode, etc. — degrade silently.
   }

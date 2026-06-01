@@ -3949,7 +3949,14 @@ export function SearchScreen({
         <div className="search-input-wrap">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
           <input
-            type="text"
+            type="search"
+            name="obelisk-mobile-search"
+            aria-label="Search messages, people, and channels"
+            inputMode="search"
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="none"
+            spellCheck={false}
             placeholder="Search messages, people, channels…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}

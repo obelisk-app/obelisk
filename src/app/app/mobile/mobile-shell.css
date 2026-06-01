@@ -1350,6 +1350,8 @@
   display: flex;
   gap: 10px;
   align-items: flex-start;
+  width: 100%;
+  min-width: 0;
 }
 .obelisk-mobile .msg-ava {
   width: 36px;
@@ -1371,57 +1373,90 @@
   height: 100%;
   object-fit: cover;
 }
-.obelisk-mobile .msg-body { flex: 1; min-width: 0; }
+.obelisk-mobile .msg > .msg-ava {
+  min-width: 36px;
+  min-height: 36px;
+}
+.obelisk-mobile .msg-body {
+  flex: 1 1 0;
+  min-width: 0;
+}
 .obelisk-mobile .msg-reply-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, min(36%, 11rem)) minmax(0, 1fr);
   align-items: center;
   gap: 6px;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
   max-width: 100%;
   margin-bottom: 2px;
   padding: 0;
   background: transparent;
   border: 0;
   font-size: 12px;
+  line-height: 1.35;
   color: var(--app-text-dim);
   cursor: pointer;
   overflow: hidden;
   text-align: left;
+  white-space: nowrap;
 }
-.obelisk-mobile .msg-reply-row .msg-reply-arrow { color: #b4f953; flex-shrink: 0; }
-.obelisk-mobile .msg-reply-row .msg-reply-name {
-  font-weight: 600;
-  color: var(--app-text);
+.obelisk-mobile .msg-reply-row .msg-reply-arrow {
+  color: #b4f953;
   flex-shrink: 0;
 }
+.obelisk-mobile .msg-reply-row .msg-reply-name {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  color: var(--app-text);
+}
 .obelisk-mobile .msg-reply-row .msg-reply-text {
+  display: block;
+  min-width: 0;
   color: var(--app-text-dim);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  min-width: 0;
 }
 .obelisk-mobile .msg-reply-row-missing {
+  display: block;
+  width: 100%;
+  min-height: 0;
   font-size: 12px;
   color: var(--app-text-dim);
   font-style: italic;
   margin-bottom: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .obelisk-mobile .msg.msg-flash { background: rgba(180, 249, 83, 0.12); transition: background 0.2s; }
 .obelisk-mobile .msg-head {
   display: flex;
-  align-items: baseline;
-  gap: 8px;
+  align-items: center;
+  gap: 6px;
   margin-bottom: 2px;
-  flex-wrap: wrap;
+  min-width: 0;
+  flex-wrap: nowrap;
 }
 .obelisk-mobile .msg-name {
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
   font-size: 14px;
+  line-height: 1.25;
   font-weight: 600;
   color: var(--app-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 50vw;
+  max-width: none;
 }
 .obelisk-mobile .role-badge {
   font-size: 9px;
@@ -1442,14 +1477,17 @@
   background: rgba(255, 158, 197, 0.12);
 }
 .obelisk-mobile .msg-time {
+  flex: 0 0 auto;
   font-size: 10px;
   color: var(--app-text-mute);
-  margin-left: auto;
+  margin-left: 0;
   font-family: 'JetBrains Mono', monospace;
 }
 .obelisk-mobile .msg-more {
   width: 28px;
   height: 28px;
+  min-width: 28px;
+  min-height: 28px;
   margin-right: -6px;
   display: flex;
   align-items: center;
@@ -1469,11 +1507,25 @@
   color: var(--app-text);
 }
 .obelisk-mobile .msg-text {
+  min-width: 0;
+  max-width: 100%;
   font-size: 15px;
   line-height: 1.5;
   color: var(--app-text);
   word-wrap: break-word;
   overflow-wrap: anywhere;
+}
+.obelisk-mobile .msg-text [data-testid="message-content"] {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+}
+.obelisk-mobile .msg-text :where(p, ul, ol, blockquote, pre) {
+  min-width: 0;
+  max-width: 100%;
+}
+.obelisk-mobile .msg-text :where(img, video, audio, iframe) {
+  max-width: 100%;
 }
 .obelisk-mobile .msg-text code {
   font-family: 'JetBrains Mono', monospace;
@@ -1491,6 +1543,7 @@
   color: rgba(248, 113, 113, 0.9);
 }
 .obelisk-mobile .msg-spinner {
+  flex: 0 0 auto;
   display: inline-block;
   width: 9px;
   height: 9px;
@@ -1512,6 +1565,8 @@
   opacity: 0.85;
 }
 .obelisk-mobile .msg-retry {
+  min-width: 0;
+  min-height: 28px;
   background: rgba(248, 113, 113, 0.18);
   color: rgb(248, 113, 113);
   border: none;
@@ -1526,6 +1581,8 @@
   background: rgba(248, 113, 113, 0.32);
 }
 .obelisk-mobile .msg-dismiss {
+  min-width: 28px;
+  min-height: 28px;
   background: transparent;
   color: rgba(248, 113, 113, 0.7);
   border: none;
@@ -1541,6 +1598,8 @@
   margin-top: 6px;
 }
 .obelisk-mobile .reaction {
+  min-width: 0;
+  min-height: 28px;
   background: var(--app-surface);
   border: 1px solid var(--app-line);
   border-radius: 12px;
@@ -1567,6 +1626,8 @@
   font-size: 10.5px;
 }
 .obelisk-mobile .reaction-add {
+  min-width: 0;
+  min-height: 28px;
   background: transparent;
   border: 1px dashed var(--app-line);
   color: var(--app-text-mute);
@@ -1647,6 +1708,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
   background: var(--app-surface);
   border: 1px solid var(--app-line);
   border-radius: 12px;
@@ -1662,6 +1724,8 @@
   gap: 1px;
 }
 .obelisk-mobile .composer-reply-label {
+  display: block;
+  min-width: 0;
   font-size: 11px;
   color: var(--app-text-mute);
   white-space: nowrap;
@@ -1669,10 +1733,18 @@
   text-overflow: ellipsis;
 }
 .obelisk-mobile .composer-reply-author {
+  display: inline-block;
+  max-width: min(44vw, 12rem);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+  white-space: nowrap;
   color: var(--app-accent);
   font-weight: 600;
 }
 .obelisk-mobile .composer-reply-text {
+  display: block;
+  min-width: 0;
   font-size: 12px;
   color: var(--app-text-dim);
   white-space: nowrap;
@@ -1682,6 +1754,8 @@
 .obelisk-mobile .composer-reply-close {
   width: 28px;
   height: 28px;
+  min-width: 28px;
+  min-height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -4368,10 +4442,42 @@
 .obelisk-mobile .dm-row,
 .obelisk-mobile .forum-card,
 .obelisk-mobile .member-row,
+.obelisk-mobile .msg-ava,
+.obelisk-mobile .msg-name,
+.obelisk-mobile .msg-reply-row,
+.obelisk-mobile .msg-more,
+.obelisk-mobile .msg-retry,
+.obelisk-mobile .msg-dismiss,
+.obelisk-mobile .reaction,
+.obelisk-mobile .reaction-add,
+.obelisk-mobile .composer-attach,
+.obelisk-mobile .composer-emoji,
+.obelisk-mobile .composer-send,
+.obelisk-mobile .composer-reply-close,
+.obelisk-mobile .composer-mention-row,
+.obelisk-mobile .ma-action,
+.obelisk-mobile .ma-quick-react,
+.obelisk-mobile .zap-amount,
+.obelisk-mobile .filter-tab,
+.obelisk-mobile .mark-all-read,
+.obelisk-mobile .compose-dm-next,
+.obelisk-mobile .settings-tab,
+.obelisk-mobile .settings-btn-primary,
+.obelisk-mobile .settings-btn-secondary,
+.obelisk-mobile .settings-btn-danger,
+.obelisk-mobile .copy-row,
+.obelisk-mobile .login-method,
 .obelisk-mobile .pill,
 .obelisk-mobile .primary-btn,
-.obelisk-mobile .secondary-btn {
-  transition: transform 120ms cubic-bezier(0.2, 0.8, 0.2, 1), background-color 140ms ease;
+.obelisk-mobile .secondary-btn,
+.obelisk-mobile .btn-primary,
+.obelisk-mobile .btn-cancel {
+  transition:
+    transform 120ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    background-color 140ms ease,
+    border-color 140ms ease,
+    opacity 140ms ease,
+    box-shadow 140ms ease;
   -webkit-tap-highlight-color: transparent;
 }
 .obelisk-mobile .ch-row:active,
@@ -4383,10 +4489,53 @@
 .obelisk-mobile .dm-row:active,
 .obelisk-mobile .forum-card:active,
 .obelisk-mobile .member-row:active,
+.obelisk-mobile .msg-ava:active,
+.obelisk-mobile .msg-name:active,
+.obelisk-mobile .msg-reply-row:active,
+.obelisk-mobile .msg-more:active,
+.obelisk-mobile .msg-retry:active,
+.obelisk-mobile .msg-dismiss:active,
+.obelisk-mobile .reaction:active,
+.obelisk-mobile .reaction-add:active,
+.obelisk-mobile .composer-attach:active,
+.obelisk-mobile .composer-emoji:active,
+.obelisk-mobile .composer-send:active,
+.obelisk-mobile .composer-reply-close:active,
+.obelisk-mobile .composer-mention-row:active,
+.obelisk-mobile .ma-action:active,
+.obelisk-mobile .ma-quick-react:active,
+.obelisk-mobile .zap-amount:active,
+.obelisk-mobile .filter-tab:active,
+.obelisk-mobile .mark-all-read:active,
+.obelisk-mobile .compose-dm-next:active,
+.obelisk-mobile .settings-tab:active,
+.obelisk-mobile .settings-btn-primary:active,
+.obelisk-mobile .settings-btn-secondary:active,
+.obelisk-mobile .settings-btn-danger:active,
+.obelisk-mobile .copy-row:active,
+.obelisk-mobile .login-method:active,
 .obelisk-mobile .pill:active,
 .obelisk-mobile .primary-btn:active,
-.obelisk-mobile .secondary-btn:active {
+.obelisk-mobile .secondary-btn:active,
+.obelisk-mobile .btn-primary:active,
+.obelisk-mobile .btn-cancel:active {
   transform: scale(0.97);
+}
+.obelisk-mobile .ma-action:active,
+.obelisk-mobile .zap-amount:active,
+.obelisk-mobile .btn-cancel:active {
+  background: var(--app-surface);
+  border-color: rgba(180, 249, 83, 0.22);
+}
+.obelisk-mobile .reaction:active,
+.obelisk-mobile .reaction-add:active,
+.obelisk-mobile .msg-reply-row:active {
+  opacity: 0.82;
+}
+.obelisk-mobile .composer-send:active,
+.obelisk-mobile .btn-primary:active,
+.obelisk-mobile .settings-btn-primary:active {
+  box-shadow: 0 0 10px rgba(180, 249, 83, 0.24);
 }
 @media (prefers-reduced-motion: reduce) {
   .obelisk-mobile .ch-row:active,
@@ -4398,9 +4547,36 @@
   .obelisk-mobile .dm-row:active,
   .obelisk-mobile .forum-card:active,
   .obelisk-mobile .member-row:active,
+  .obelisk-mobile .msg-ava:active,
+  .obelisk-mobile .msg-name:active,
+  .obelisk-mobile .msg-reply-row:active,
+  .obelisk-mobile .msg-more:active,
+  .obelisk-mobile .msg-retry:active,
+  .obelisk-mobile .msg-dismiss:active,
+  .obelisk-mobile .reaction:active,
+  .obelisk-mobile .reaction-add:active,
+  .obelisk-mobile .composer-attach:active,
+  .obelisk-mobile .composer-emoji:active,
+  .obelisk-mobile .composer-send:active,
+  .obelisk-mobile .composer-reply-close:active,
+  .obelisk-mobile .composer-mention-row:active,
+  .obelisk-mobile .ma-action:active,
+  .obelisk-mobile .ma-quick-react:active,
+  .obelisk-mobile .zap-amount:active,
+  .obelisk-mobile .filter-tab:active,
+  .obelisk-mobile .mark-all-read:active,
+  .obelisk-mobile .compose-dm-next:active,
+  .obelisk-mobile .settings-tab:active,
+  .obelisk-mobile .settings-btn-primary:active,
+  .obelisk-mobile .settings-btn-secondary:active,
+  .obelisk-mobile .settings-btn-danger:active,
+  .obelisk-mobile .copy-row:active,
+  .obelisk-mobile .login-method:active,
   .obelisk-mobile .pill:active,
   .obelisk-mobile .primary-btn:active,
-  .obelisk-mobile .secondary-btn:active {
+  .obelisk-mobile .secondary-btn:active,
+  .obelisk-mobile .btn-primary:active,
+  .obelisk-mobile .btn-cancel:active {
     transform: none;
   }
 }

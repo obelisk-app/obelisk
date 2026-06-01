@@ -69,6 +69,14 @@ const nextConfig: NextConfig = {
           { key: 'Cache-Control', value: 'no-cache, must-revalidate' },
         ],
       },
+      // The manifest is app-shell metadata, not user/session state. Keep it
+      // revalidating so installed PWAs pick up icon/start_url/display changes.
+      {
+        source: '/manifest.webmanifest',
+        headers: [
+          { key: 'Cache-Control', value: 'no-cache, must-revalidate' },
+        ],
+      },
       // Service worker updates must bypass browser/CDN caches so stale
       // installed PWAs can pick up new hashed chunk manifests after deploys.
       {
