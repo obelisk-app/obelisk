@@ -68,6 +68,11 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  user-select: none;
   isolation: isolate;
   z-index: 1;
 }
@@ -109,7 +114,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .obelisk-mobile::before { animation: none; }
+  .obelisk-mobile::before {
+    animation: none;
+    will-change: auto;
+  }
 }
 
 /* Lift direct children above the ambient layers. */
@@ -122,6 +130,29 @@
 .obelisk-mobile *::before,
 .obelisk-mobile *::after {
   box-sizing: border-box;
+}
+
+.obelisk-mobile input,
+.obelisk-mobile textarea,
+.obelisk-mobile [contenteditable='true'],
+.obelisk-mobile [data-testid="message-content"] {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.obelisk-mobile a,
+.obelisk-mobile button,
+.obelisk-mobile [role='button'],
+.obelisk-mobile input,
+.obelisk-mobile textarea,
+.obelisk-mobile select {
+  touch-action: manipulation;
+}
+
+.obelisk-mobile button,
+.obelisk-mobile [role='button'] {
+  min-width: 44px;
+  min-height: 44px;
 }
 
 /* Button reset for the mobile shell. Wrapped in `@layer base` so Tailwind v4's
@@ -149,6 +180,18 @@
 .obelisk-mobile .mention-card,
 .obelisk-mobile .si-item {
   -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.obelisk-mobile [role='button']:active,
+.obelisk-mobile button:active,
+.obelisk-mobile .nav-item:active,
+.obelisk-mobile .ch-row:active,
+.obelisk-mobile .dm-row:active,
+.obelisk-mobile .mention-card:active,
+.obelisk-mobile .si-item:active {
+  transform: translate3d(0, 1px, 0) scale(0.99);
 }
 
 /* ===== screen container ===== */
@@ -215,9 +258,36 @@
 .obelisk-mobile .screens-host {
   position: relative;
   flex: 1 1 0;
+  min-width: 0;
   min-height: 0;
   width: 100%;
   overflow: hidden;
+}
+
+.obelisk-mobile :where(.native-scroll-y) {
+  overflow-y: auto;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  overscroll-behavior-x: none;
+  scroll-behavior: smooth;
+}
+
+.obelisk-mobile :where(.native-scroll-x) {
+  overflow-x: auto;
+  overflow-y: hidden;
+  min-width: 0;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+  overscroll-behavior-x: contain;
+  overscroll-behavior-y: auto;
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .obelisk-mobile :where(.native-scroll-y, .native-scroll-x) {
+    scroll-behavior: auto;
+  }
 }
 
 /* ===== drag-tracking carousel ===== */
@@ -449,8 +519,9 @@
   flex-shrink: 0;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-x;
+  touch-action: pan-x pan-y;
   overscroll-behavior-x: contain;
+  overscroll-behavior-y: auto;
 }
 .obelisk-mobile .spaces-strip::-webkit-scrollbar { display: none; }
 
@@ -803,8 +874,9 @@
   flex-shrink: 0;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-x;
+  touch-action: pan-x pan-y;
   overscroll-behavior-x: contain;
+  overscroll-behavior-y: auto;
 }
 .obelisk-mobile .cats-strip::-webkit-scrollbar { display: none; }
 .obelisk-mobile .cat-pill {
@@ -2021,8 +2093,9 @@
   overflow-y: hidden;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-x;
+  touch-action: pan-x pan-y;
   overscroll-behavior-x: contain;
+  overscroll-behavior-y: auto;
 }
 .obelisk-mobile .dms-tabs::-webkit-scrollbar { display: none; }
 .obelisk-mobile .filter-tab {
@@ -2326,8 +2399,9 @@
   overflow-y: hidden;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-x;
+  touch-action: pan-x pan-y;
   overscroll-behavior-x: contain;
+  overscroll-behavior-y: auto;
 }
 .obelisk-mobile .filter-tabs::-webkit-scrollbar { display: none; }
 .obelisk-mobile .activity-list {
@@ -2839,8 +2913,9 @@
   flex-shrink: 0;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-x;
+  touch-action: pan-x pan-y;
   overscroll-behavior-x: contain;
+  overscroll-behavior-y: auto;
 }
 .obelisk-mobile .search-filter-chips::-webkit-scrollbar { display: none; }
 .obelisk-mobile .search-chip {
@@ -3091,8 +3166,9 @@
   overflow-y: hidden;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-x;
+  touch-action: pan-x pan-y;
   overscroll-behavior-x: contain;
+  overscroll-behavior-y: auto;
   margin: 0 -12px;
   padding: 0 12px;
 }

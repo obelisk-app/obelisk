@@ -32,4 +32,43 @@ describe('mobile shell CSS', () => {
     expect(css).not.toContain('@keyframes obelisk-slide-from-right');
     expect(css).not.toContain('@keyframes obelisk-slide-from-left');
   });
+
+  it('locks the mobile PWA shell to native-feeling touch and viewport behavior', () => {
+    const root = ruleBody('.obelisk-mobile');
+    expect(root).toContain('height: calc(100dvh - var(--kb-inset, 0px))');
+    expect(root).toContain('overscroll-behavior: none');
+    expect(root).toContain('touch-action: manipulation');
+    expect(root).toContain('-webkit-tap-highlight-color: transparent');
+    expect(root).toContain('-webkit-touch-callout: none');
+    expect(root).toContain('user-select: none');
+
+    const host = ruleBody('.obelisk-mobile .screens-host');
+    expect(host).toContain('min-width: 0');
+    expect(host).toContain('min-height: 0');
+    expect(host).toContain('overflow: hidden');
+  });
+
+  it('keeps scroll surfaces momentum-friendly without blocking vertical pans in horizontal lists', () => {
+    const nativeY = ruleBody('.obelisk-mobile :where(.native-scroll-y)');
+    expect(nativeY).toContain('-webkit-overflow-scrolling: touch');
+    expect(nativeY).toContain('overscroll-behavior-y: contain');
+    expect(nativeY).toContain('scroll-behavior: smooth');
+
+    const nativeX = ruleBody('.obelisk-mobile :where(.native-scroll-x)');
+    expect(nativeX).toContain('-webkit-overflow-scrolling: touch');
+    expect(nativeX).toContain('touch-action: pan-x pan-y');
+    expect(nativeX).toContain('overscroll-behavior-x: contain');
+    expect(nativeX).toContain('overscroll-behavior-y: auto');
+    expect(css).not.toContain('touch-action: pan-x;');
+  });
+
+  it('restores selection only where mobile users need text entry or message copy', () => {
+    const selectable = ruleBody(`.obelisk-mobile input,
+.obelisk-mobile textarea,
+.obelisk-mobile [contenteditable='true'],
+.obelisk-mobile [data-testid="message-content"]`);
+    expect(selectable).toContain('user-select: text');
+    expect(selectable).toContain('-webkit-user-select: text');
+  });
+
 });
