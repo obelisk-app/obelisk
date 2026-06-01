@@ -12,6 +12,7 @@ export interface ChannelScrollRestoreResult {
   readonly source: 'saved' | 'bottom';
   readonly scrollTop: number;
   readonly nearBottom: boolean;
+  readonly complete: boolean;
 }
 
 export interface ChannelScrollElement {
@@ -85,11 +86,13 @@ export function restoreChannelScrollPosition(
 ): ChannelScrollRestoreResult {
   const saved = positions.get(key);
   const maxTop = maxScrollTop(el);
-  const scrollTop = saved
+  const desiredScrollTop = saved
     ? saved.nearBottom
       ? maxTop
-      : clamp(saved.scrollTop, 0, maxTop)
+      : finiteNumber(saved.scrollTop)
     : maxTop;
+  const scrollTop = clamp(desiredScrollTop, 0, maxTop);
+  const complete = !saved || saved.nearBottom || scrollTop === desiredScrollTop;
 
   el.scrollTop = scrollTop;
   const snapshot = rememberChannelScrollPosition(key, el, nearBottomPx);
@@ -97,6 +100,7 @@ export function restoreChannelScrollPosition(
     source: saved ? 'saved' : 'bottom',
     scrollTop,
     nearBottom: snapshot?.nearBottom ?? isChannelScrollNearBottom(el, nearBottomPx),
+    complete,
   };
 }
 

@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { useRef } from 'react';
+import { useLayoutEffect, useRef } from 'react';
 import { clearChannelScrollPositions, rememberChannelScrollPosition } from '@/lib/channel-scroll-position';
 import { useChannelScrollPosition } from './useChannelScrollPosition';
 
@@ -13,14 +13,19 @@ function Harness({
   scrollKey,
   itemCount,
   disabled = false,
+  scrollHeight = 1000,
   onNearBottomChange,
 }: {
   scrollKey: string;
   itemCount: number;
   disabled?: boolean;
+  scrollHeight?: number;
   onNearBottomChange?: (nearBottom: boolean) => void;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
+  useLayoutEffect(() => {
+    if (ref.current) defineScrollMetrics(ref.current, scrollHeight, 200);
+  }, [scrollHeight]);
   useChannelScrollPosition({
     scrollKey,
     scrollRef: ref,
@@ -32,7 +37,7 @@ function Harness({
     <div
       data-testid="scroller"
       ref={(node) => {
-        if (node) defineScrollMetrics(node, 1000, 200);
+        if (node) defineScrollMetrics(node, scrollHeight, 200);
         ref.current = node;
       }}
     />
@@ -85,6 +90,18 @@ describe('useChannelScrollPosition', () => {
     rerender(<Harness scrollKey="relay::g1" itemCount={5} disabled={false} />);
 
     expect(el.scrollTop).toBe(0);
+  });
+
+  it('keeps retrying a saved mid-history restore until enough mobile history is rendered', () => {
+    rememberChannelScrollPosition('relay::g1', { scrollTop: 640, scrollHeight: 1200, clientHeight: 200 });
+    const { rerender } = render(<Harness scrollKey="relay::g1" itemCount={0} scrollHeight={200} />);
+    const el = screen.getByTestId('scroller') as HTMLDivElement;
+
+    expect(el.scrollTop).toBe(0);
+
+    rerender(<Harness scrollKey="relay::g1" itemCount={8} scrollHeight={1000} />);
+
+    expect(el.scrollTop).toBe(640);
   });
 
   it('reports near-bottom changes from restored and user-driven positions', () => {

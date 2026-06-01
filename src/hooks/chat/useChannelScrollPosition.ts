@@ -57,10 +57,10 @@ export function useChannelScrollPosition({
       if (!el) return;
       const result = restoreChannelScrollPosition(scrollKey, el, nearBottomPx);
       onNearBottomChangeRef.current?.(result.nearBottom);
+      if (result.complete) restoredKeyRef.current = scrollKey;
     };
 
     applyRestore();
-    restoredKeyRef.current = scrollKey;
 
     const frame = requestAnimationFrame(applyRestore);
     return () => cancelAnimationFrame(frame);
