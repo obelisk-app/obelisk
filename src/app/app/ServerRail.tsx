@@ -29,6 +29,11 @@ const SUGGESTED_RELAYS: { url: string; fallbackName?: string; fallbackDescriptio
     fallbackDescription: 'Default NIP-29 relay for Obelisk groups.',
   },
   {
+    url: 'wss://lacrypta-relay.obelisk.ar',
+    fallbackName: 'La Crypta relay',
+    fallbackDescription: 'NIP-29 relay for La Crypta.',
+  },
+  {
     url: 'wss://public.obelisk.ar',
     fallbackName: 'Obelisk public',
     fallbackDescription: 'Open NIP-29 relay run by Obelisk.',
@@ -183,7 +188,7 @@ function RelayTile({
   const myPubkey = useMyPubkey();
   // The bridge only has message data for the currently-active relay, so the
   // highlights signal is meaningful on the active tile only. Cross-relay
-  // mention surveillance ships in a follow-up — see docs/notifications.md.
+  // mention surveillance ships in a follow-up — see docs/read-state.md.
   const hasHighlights = useHasAnyHighlights(myPubkey);
   const showHighlight = active && hasHighlights;
 

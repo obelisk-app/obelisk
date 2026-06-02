@@ -7,14 +7,14 @@
 // constant and produce the same chunk hash as before.
 if (typeof globalThis !== 'undefined') {
   (globalThis as { __obeliskVoiceBuild?: string }).__obeliskVoiceBuild =
-    '2026-05-07T18:30:00Z-multi-device-keyframe-heartbeat';
+    '2026-05-24T01:00:00Z-voice-video-autoplay-retry';
 }
 
 /**
  * VoiceClient orchestrates a peer mesh inside a single channel:
- *  - publishes presence beacons on a 15s cadence + opportunistically when
- *    the local connected-peer set changes (so transitive discovery on
- *    other clients converges within one beacon hop, not 15 s)
+ *  - publishes presence beacons on a 10s cadence + opportunistically when
+ *    the local connected/known peer set changes (so transitive discovery
+ *    on other clients converges within one beacon hop, not 10 s)
  *  - subscribes to the roster + opens a `Peer` per remote pubkey
  *  - subscribes to incoming signaling and routes to the right `Peer`
  *  - manages local mic / camera / screen tracks across all peers
@@ -28,7 +28,8 @@ if (typeof globalThis !== 'undefined') {
 import { Peer } from './peer';
 import { SfuClient } from './sfu-client';
 import type { SfuRemoteTrack } from './sfu-client';
-import { pickSfu } from './sfu-control';
+import { pickSfu, publishSfuStart } from './sfu-control';
+import type { SfuAdvertisement } from './sfu-control';
 import type {
   VoicePresence,
   VoiceSignalPayload,
@@ -37,11 +38,9 @@ import type {
   VideoSlotKind,
 } from './types';
 import {
-  publishPresenceBeacon,
-  subscribeRoster,
-  sendSignal,
-  subscribeSignals,
+  createVoiceTransport,
   getSelfPubkey,
+  type VoiceTransport,
   transitiveParticipants,
 } from './transport';
 import { getPreset, MIC_CONSTRAINTS, type VideoQuality } from './quality';
@@ -59,13 +58,13 @@ import {
   type UnloadHandlerHandle,
 } from './failure-handlers';
 
-const SELF_BUILD_TAG = '2026-05-09T-control-channel';
+const SELF_BUILD_TAG = '2026-05-24T01:00:00Z-voice-video-autoplay-retry';
 
-const BEACON_INTERVAL_MS = 15_000;
+const BEACON_INTERVAL_MS = 10_000;
 /**
  * Aggressive beacon burst right after `join()`. NIP-29 voice beacons are
  * ephemeral — relays don't backfill them — so a peer who joined a few
- * seconds before us would otherwise be invisible until their next 15 s
+ * seconds before us would otherwise be invisible until their next 10 s
  * tick. Firing additional publishes in the first ~12 s collapses that
  * worst-case discovery latency to a few seconds while keeping the
  * total relay traffic bounded (six small events vs ~one event every
@@ -76,7 +75,7 @@ const BEACON_INTERVAL_MS = 15_000;
  * roughly 2× the previous so a slow NIP-42 AUTH has multiple chances
  * to land a beacon before we settle into the steady-state cadence.
  */
-const BEACON_BRINGUP_DELAYS_MS = [500, 1500, 3500, 7000, 12_000];
+const BEACON_BRINGUP_DELAYS_MS = [300, 900, 1800, 3500, 7000, 12_000, 18_000];
 /**
  * Audio-mesh cap. 8 participants × 7 outbound audio streams each = 56 PCs
  * worst-case room-wide; that's still inside what a typical home upstream
@@ -111,6 +110,7 @@ const MAX_VIDEO_SLOTS = 4;
  * into a single beacon publish so we don't spam the relay.
  */
 const BEACON_REFRESH_DEBOUNCE_MS = 250;
+const CONTROL_SNAPSHOT_DEBOUNCE_MS = 150;
 /**
  * Window during which we hold an inbound signal from a peer who isn't yet
  * known to be a member. 5 s comfortably covers the expected race between
@@ -125,6 +125,20 @@ const DEFERRED_SIGNAL_PER_PEER_CAP = 8;
 const DEFERRED_SIGNAL_TOTAL_CAP = 64;
 /** How often the deferred queue self-sweeps for expired entries. */
 const DEFERRED_SIGNAL_SWEEP_MS = 1_000;
+/**
+ * Give the SFU's control subscription a short chance to process the
+ * just-published `start` event before the first mediasoup RPC.
+ */
+const SFU_START_SETTLE_MS = 350;
+/**
+ * Delays (ms) between successive SFU bootstrap attempts. Attempt 0 fires
+ * immediately; subsequent attempts wait this long before reissuing
+ * `publishSfuStart` + reopening RPC. Total wall-clock budget ≈ 6 s before
+ * the user sees an error toast — comfortably covers the worst-case window
+ * where the SFU process is still booting after a watchdog restart.
+ */
+const SFU_BOOTSTRAP_ATTEMPT_DELAYS_MS = [0, 2_000, 4_000];
+const SFU_BOOTSTRAP_MAX_ATTEMPTS = SFU_BOOTSTRAP_ATTEMPT_DELAYS_MS.length;
 
 export interface RemoteTrack {
   /**
@@ -148,6 +162,7 @@ export interface VoiceClientEvents {
   onParticipantsChange?(pubkeys: string[]): void;
   onRemoteTracksChange?(tracks: RemoteTrack[]): void;
   onLocalTracksChange?(local: { mic: boolean; camera: boolean; screen: boolean }): void;
+  onPeerConnectionStatesChange?(states: Record<string, RTCPeerConnectionState>): void;
   /**
    * Topology change — null means "back on mesh", a hex pubkey means "now
    * forwarding through this SFU". Fires every time `setSfuMode` flips,
@@ -196,6 +211,9 @@ export interface VoiceClientOptions {
    * gate on join/canJoin becomes unconditional.
    */
   open?: boolean;
+  /** Relay where this call was joined. Mesh voice traffic remains pinned here
+   *  even when the user browses another server. */
+  originRelayUrl?: string | null;
   events?: VoiceClientEvents;
 }
 
@@ -203,6 +221,7 @@ export class VoiceClient {
   readonly channelId: string;
   readonly selfPubkey: string;
   private events: VoiceClientEvents;
+  private readonly transport: VoiceTransport;
   private readonly sessionId = randomId();
 
   private members: ReadonlySet<string>;
@@ -219,6 +238,7 @@ export class VoiceClient {
   private expectSfu: boolean;
 
   private peers = new Map<string, Peer>();
+  private openingPeers = new Set<string>();
   private remoteTracks = new Map<string, RemoteTrack>(); // key: trackId
   private rosterPubkeys: string[] = [];
   /**
@@ -236,6 +256,24 @@ export class VoiceClient {
    */
   private sfuClient: SfuClient | null = null;
   /**
+   * Unsubscribe handle for the bridge's `activeCallByChannel` state store.
+   * We watch this only while in SFU mode — when our channel disappears or
+   * flips to `status='closed'`, the SFU has published a kind 31314 closure
+   * (intentional shutdown, watchdog auto-heal, or duration-cap end). Reacting
+   * here triggers the same supervisor-driven republish that an organic
+   * topology loss would, ~13s faster than waiting for the SFU's kind 20078
+   * beacon to expire from the roster.
+   */
+  private activeCallUnsub: (() => void) | null = null;
+  private voiceRelayCapacityRelease: (() => void) | null = null;
+  /**
+   * Have we ever observed our channel as `active` in the bridge's
+   * active-call store? Used as an armed-flag so a snapshot that lands
+   * before the SFU has had a chance to publish 31314 doesn't trigger
+   * a phantom closure-recovery.
+   */
+  private activeCallSeen = false;
+  /**
    * Pubkeys that have published a beacon with `["sfu","1"]` for this
    * channel. SFUs are infrastructure, not participants — they should be
    * trusted through the membership filter without operators having to
@@ -252,6 +290,14 @@ export class VoiceClient {
    * actually started a call); v0 trusts the beacon flag alone.
    */
   private knownSfuPubkeys = new Set<string>();
+  private knownMeshTestPeerPubkeys = new Set<string>();
+  /**
+   * Passive active-call participants from the bridge's global kind 20078
+   * watcher. This is a fallback bootstrap source for the joined mesh client:
+   * if the dedicated roster subscription misses an ephemeral beacon, the UI's
+   * live-call detector can still hand us the pubkeys it already sees.
+   */
+  private passiveParticipantHints = new Set<string>();
   /**
    * Pubkeys we currently have RTCPeerConnections in `connected` state with.
    * Drives the `connectedTo` field of our own beacon — every other peer who
@@ -312,6 +358,8 @@ export class VoiceClient {
   /** Coalesce dial-loop runs triggered by control-channel propagation
    *  arriving in microtask order during a single hello. */
   private dialDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Coalesce full peer-set gossip across open WebRTC control channels. */
+  private controlSnapshotTimer: ReturnType<typeof setTimeout> | null = null;
   private unloadHandler: UnloadHandlerHandle | null = null;
   private rosterUnsub: (() => void) | null = null;
   private signalsUnsub: (() => void) | null = null;
@@ -359,6 +407,7 @@ export class VoiceClient {
   constructor(channelId: string, options: VoiceClientOptions = {}) {
     this.channelId = channelId;
     this.events = options.events ?? {};
+    this.transport = createVoiceTransport({ relayUrl: options.originRelayUrl ?? null });
     this.members = new Set(options.members ?? []);
     this.admins = new Set(options.admins ?? []);
     // Honor the explicit `open` flag from kind 39000 first. Falling back
@@ -378,6 +427,9 @@ export class VoiceClient {
     if (!pk) throw new Error('Not logged in to nostr');
     this.selfPubkey = pk;
     setVoiceMetricsRef(this.metrics);
+    if (typeof window !== 'undefined') {
+      (window as unknown as { __obeliskVoiceSelfPubkey?: string }).__obeliskVoiceSelfPubkey = pk;
+    }
   }
 
   /** Swap the event listeners — used when a fresh React owner picks up an
@@ -423,6 +475,13 @@ export class VoiceClient {
     const peer = this.peers.get(pubkey);
     return peer?.pc?.connectionState ?? null;
   }
+  getPeerConnectionStates(): Record<string, RTCPeerConnectionState> {
+    const states: Record<string, RTCPeerConnectionState> = {};
+    for (const [pubkey, peer] of this.peers.entries()) {
+      states[pubkey] = peer.pc.connectionState;
+    }
+    return states;
+  }
   /**
    * Currently-active SFU pubkey for this channel, or null in mesh mode.
    * UI uses this to render an "SFU mode" badge or hide the participant
@@ -443,6 +502,9 @@ export class VoiceClient {
   setOpen(open: boolean): void {
     if (this.openRoom === open) return;
     this.openRoom = open;
+    // Passive hints are filtered through isMember/canJoin, so an open-room
+    // transition can make already-detected callers dialable immediately.
+    this.scheduleDialFromDiscovery();
     // Re-run the membership trim if we just locked the room down so any
     // already-connected non-members are dropped immediately.
     if (!open) {
@@ -452,6 +514,36 @@ export class VoiceClient {
         }
       }
     }
+  }
+
+  /**
+   * Feed the active mesh client with the bridge-level live-call detector.
+   * The detector is driven by the same kind 20078 beacons shown in the
+   * pre-join UI, so using it here prevents a split-brain state where the
+   * room says people are present but the joined WebRTC client never dials
+   * them because its dedicated ephemeral roster REQ missed the beacon.
+   */
+  setPassiveParticipantHints(
+    pubkeys: readonly string[] = [],
+    options: { merge?: boolean } = {},
+  ): void {
+    const next = options.merge ? new Set(this.passiveParticipantHints) : new Set<string>();
+    for (const pk of pubkeys) {
+      if (!pk || pk === this.selfPubkey) continue;
+      if (!/^[0-9a-f]{64}$/i.test(pk)) continue;
+      next.add(pk.toLowerCase());
+    }
+    const before = Array.from(this.passiveParticipantHints).sort().join('|');
+    const after = Array.from(next).sort().join('|');
+    if (before === after) return;
+    this.passiveParticipantHints = next;
+    pushVoiceDebug({
+      kind: 'peer-discovered',
+      payload: { source: 'active-call-hints', peers: Array.from(next).sort() },
+    });
+    if (!this.joined || this.sfuPubkey) return;
+    this.runDialLoop();
+    this.scheduleBeaconRefresh();
   }
 
   /**
@@ -493,7 +585,7 @@ export class VoiceClient {
           return;
         }
         this.exitMeshMode();
-        await this.enterSfuMode(picked.pubkey);
+        await this.enterSfuMode(picked.pubkey, picked);
       })();
     }
   }
@@ -621,6 +713,18 @@ export class VoiceClient {
     // to every channel's NIP-29 member list. Filter is the same on the
     // signaling path so the SFU's offers/answers/ICE aren't dropped.
     if (this.knownSfuPubkeys.has(pubkey)) return true;
+    // Operator-spawned mesh test peers are diagnostics, not room members.
+    // Once their signed beacon marks them as a mesh test peer, admit them
+    // for any local user who can join this call. The join gate still enforces
+    // NIP-29 membership/open-room access for the browser user, but the test
+    // peer itself does not need to be duplicated into every member list.
+    if (this.knownMeshTestPeerPubkeys.has(pubkey) && this.canJoin()) return true;
+    // The bridge-level active-call detector is driven by signed kind 20078
+    // beacons on this channel. Treat those pubkeys as provisional mesh
+    // members while the local user is allowed to join, so a slow/stale
+    // NIP-29 member snapshot cannot open a peer and then immediately
+    // evict it before SDP/ICE completes.
+    if (this.passiveParticipantHints.has(pubkey) && this.canJoin()) return true;
     return this.openRoom || this.members.has(pubkey) || this.admins.has(pubkey);
   }
 
@@ -639,10 +743,10 @@ export class VoiceClient {
     // AudioContext used by SpeakingDetector. Browsers create it suspended.
     void resumeSharedAudioContext();
 
-    // Mic-on by default — voice channels are voice-first and acquiring the
-    // mic eagerly tags the browser session as "communication", letting the
-    // OS auto-duck background media.
-    await this.setMicEnabled(true);
+    // Join starts listening-only. The user can publish their mic explicitly
+    // from the mic button; presence, beacons, and remote audio do not depend
+    // on microphone permission.
+    this.emitLocal();
 
     // Topology decision is made up-front, not driven by the beacon roster
     // arriving late: for `voice-sfu` channels, ask `pickSfu` (per-channel
@@ -669,7 +773,7 @@ export class VoiceClient {
           'No SFU is currently reachable for this channel. Ask the channel admin to verify the pinned SFU is online.',
         );
       }
-      await this.enterSfuMode(picked.pubkey);
+      await this.enterSfuMode(picked.pubkey, picked);
       return;
     }
 
@@ -692,6 +796,18 @@ export class VoiceClient {
     });
   }
 
+  private async reserveMeshRelayCapacity(): Promise<void> {
+    if (this.voiceRelayCapacityRelease) return;
+    try {
+      const bridge = await getBridge() as unknown as {
+        reserveVoiceRelayCapacity?: (channelId: string) => () => void;
+      };
+      this.voiceRelayCapacityRelease = bridge.reserveVoiceRelayCapacity?.(this.channelId) ?? null;
+    } catch {
+      this.voiceRelayCapacityRelease = null;
+    }
+  }
+
   /**
    * Subscribe to roster + signaling, publish the first beacon, and start
    * the periodic beacon timer. Idempotent — re-running is a no-op when
@@ -701,9 +817,11 @@ export class VoiceClient {
   private async enterMeshMode(): Promise<void> {
     if (this.signalsUnsub || this.rosterUnsub) return;
 
+    await this.reserveMeshRelayCapacity();
+
     // Subscribe to incoming signaling first so we don't miss offers from
     // peers who learn about us via the beacon we're about to send.
-    this.signalsUnsub = await subscribeSignals(
+    this.signalsUnsub = await this.transport.subscribeSignals(
       this.channelId,
       this.selfPubkey,
       (from, payload) => {
@@ -732,7 +850,7 @@ export class VoiceClient {
       },
     );
 
-    this.rosterUnsub = await subscribeRoster(this.channelId, (roster) => {
+    this.rosterUnsub = await this.transport.subscribeRoster(this.channelId, (roster) => {
       // Snapshot the live roster so the video-slot computation can see
       // every other peer's `videoTracks` claim alongside our own state.
       this.currentRoster = roster;
@@ -742,6 +860,23 @@ export class VoiceClient {
       // operators shouldn't have to babysit the member list every
       // time they want to spin up an SFU.
       this.knownSfuPubkeys = new Set(roster.filter((r) => r.isSfu).map((r) => r.pubkey));
+      const previousMeshTestPeers = this.knownMeshTestPeerPubkeys;
+      this.knownMeshTestPeerPubkeys = new Set(roster.filter((r) => r.isMeshTestPeer).map((r) => r.pubkey));
+      for (const pk of this.knownMeshTestPeerPubkeys) {
+        if (previousMeshTestPeers.has(pk)) continue;
+        const peer = this.peers.get(pk);
+        if (peer?.polite) {
+          // A passive active-call hint can open the peer before the roster
+          // beacon reveals it as a mesh test peer. Rebuild so the browser
+          // becomes the offer-driving side instead of staying polite forever.
+          this.tearDownPeer(pk);
+        }
+      }
+      // Mesh test peers are admitted by their roster beacon, not by NIP-29
+      // role updates. Signals can arrive first because we subscribe to
+      // signaling before roster, so replay any queued offers as soon as the
+      // marker makes them a valid peer for allowed local callers.
+      this.drainDeferredSignals();
       // Compute the transitive participant set first — including peers we
       // only know about from someone else's `connectedTo` p-tags — then
       // filter by membership and hand to handleRoster for cap+open logic.
@@ -753,6 +888,12 @@ export class VoiceClient {
       // outside the leading slice and require local eviction.
       this.enforceVideoSlotCap();
     });
+
+    // The bridge's active-call detector is the same source that powers the
+    // pre-join "people are in this call" UI. Subscribe from the mesh engine
+    // too so discovery doesn't depend on the React room effect racing in
+    // after join; the callback replays the current store value immediately.
+    this.subscribeActiveCallStatus();
 
     // Wait for NIP-42 AUTH to complete on the active relay before the
     // first beacon publish. Without this, on slower relays the
@@ -809,12 +950,18 @@ export class VoiceClient {
     this.bringupTimers.length = 0;
     this.signalsUnsub?.(); this.signalsUnsub = null;
     this.rosterUnsub?.(); this.rosterUnsub = null;
+    this.voiceRelayCapacityRelease?.(); this.voiceRelayCapacityRelease = null;
     this.currentRoster = [];
+    this.knownMeshTestPeerPubkeys.clear();
+    this.passiveParticipantHints.clear();
     this.seenRosterPubkeys.clear();
     this.discovery.reset();
     if (this.dialDebounceTimer) { clearTimeout(this.dialDebounceTimer); this.dialDebounceTimer = null; }
+    if (this.controlSnapshotTimer) { clearTimeout(this.controlSnapshotTimer); this.controlSnapshotTimer = null; }
     for (const peer of this.peers.values()) peer.close();
     this.peers.clear();
+    this.emitPeerConnectionStates();
+    this.unsubscribeActiveCallStatus();
   }
 
   /**
@@ -824,7 +971,7 @@ export class VoiceClient {
    * `onTopologyChange(sfu)` then `onTopologyChange(null)` so the badge
    * reflects the live state.
    */
-  private async enterSfuMode(sfuPubkey: string): Promise<void> {
+  private async enterSfuMode(sfuPubkey: string, resolvedSfu?: SfuAdvertisement): Promise<void> {
     if (this.sfuPubkey === sfuPubkey && this.sfuClient) return;
 
     if (this.sfuClient) {
@@ -836,6 +983,9 @@ export class VoiceClient {
       try { await this.sfuClient.close(); } catch { /* ignore */ }
       this.sfuClient = null;
     }
+    // Drop any prior watcher — we're switching SFUs (or re-entering after
+    // a closure-driven teardown). The new watcher arms after startSfuClient.
+    this.unsubscribeActiveCallStatus();
     // Track the *intended* SFU pubkey so other paths (peer mute, echo
     // suppression) can reason about the topology — but do NOT fire
     // onTopologyChange yet. The UI badge interprets a non-null sfuPubkey
@@ -845,14 +995,102 @@ export class VoiceClient {
     // (clears sfuPubkey, fires onTopologyChange(null), surfaces onError,
     // re-throws). We only fire onTopologyChange(sfuPubkey) on success.
     this.sfuPubkey = sfuPubkey;
-    await this.startSfuClient(sfuPubkey);
+    await this.startSfuClient(sfuPubkey, resolvedSfu);
+    // SfuClient is up — arm the kind 31314 watcher so we react fast when
+    // the SFU room closes (graceful restart, watchdog auto-heal, 1h cap).
+    this.subscribeActiveCallStatus();
     try { this.events.onTopologyChange?.(sfuPubkey); } catch (err) {
+      console.warn('[voice] onTopologyChange handler threw', err);
+    }
+  }
+
+  /**
+   * Watch the bridge's `activeCallByChannel` state for our channel. The
+   * SFU publishes kind 31314 status=closed when a room closes (graceful
+   * shutdown, watchdog auto-heal, or hard duration cap); the bridge
+   * deletes the entry on receipt. When that happens we fast-path the
+   * recovery without waiting for the SFU beacon's TTL to expire.
+   */
+  private subscribeActiveCallStatus(): void {
+    if (this.activeCallUnsub) return;
+    this.activeCallSeen = false;
+    // The bridge is async to obtain in some environments (tests, SSR);
+    // resolve it in the background and bail if teardown happens first.
+    let cancelled = false;
+    const cancel = () => { cancelled = true; };
+    // Stash a placeholder so a quick teardown-during-resolve still
+    // produces an observable "unsubbed" state.
+    this.activeCallUnsub = cancel;
+    void (async () => {
+      let b: Awaited<ReturnType<typeof getBridge>>;
+      try { b = await getBridge(); } catch { return; }
+      if (cancelled) return;
+      const realUnsub = b.subscribeActiveCallByChannel((byChannel) => {
+        const entry = byChannel[this.channelId];
+        if (!this.sfuClient && !this.sfuPubkey) {
+          if (entry?.mode === 'mesh') {
+            this.setPassiveParticipantHints(entry.participantPubkeys ?? []);
+          } else {
+            this.setPassiveParticipantHints([]);
+          }
+        }
+        if (entry && (entry.status === 'active' || entry.status === 'starting')) {
+          this.activeCallSeen = true;
+          return;
+        }
+        // Either status flipped away from active, or the bridge dropped
+        // the entry on a status=closed event. Recover only if we've
+        // previously seen an active entry — otherwise a snapshot that
+        // lands before the SFU has published 31314 would trip a phantom
+        // closure-recovery and we'd loop.
+        if (!this.activeCallSeen) return;
+        if (!this.sfuClient) return;
+        console.warn('[voice] SFU room closed remotely — recovering');
+        this.handleRemoteSfuClosure();
+      });
+      if (cancelled) {
+        try { realUnsub(); } catch { /* ignore */ }
+        return;
+      }
+      this.activeCallUnsub = realUnsub;
+    })();
+  }
+
+  private unsubscribeActiveCallStatus(): void {
+    try { this.activeCallUnsub?.(); } catch { /* ignore */ }
+    this.activeCallUnsub = null;
+    this.activeCallSeen = false;
+  }
+
+  /**
+   * SFU told us (via kind 31314 status=closed) that the call ended. Tear
+   * down the dead SfuClient and fire onTopologyChange(null) — the
+   * supervisor effect in VoiceRoom.tsx (around the
+   * `setSfuRepublishCounter` bump) responds by republishing `start`
+   * with force=true, and the next roster tick re-enters SFU mode via
+   * the regular enterSfuMode path.
+   */
+  private handleRemoteSfuClosure(): void {
+    const client = this.sfuClient;
+    this.sfuClient = null;
+    this.sfuPubkey = null;
+    // Drop the watcher — the next enterSfuMode will re-arm it. Leaving it
+    // armed would re-fire on every subsequent empty snapshot until the
+    // bridge sees a fresh active entry.
+    this.unsubscribeActiveCallStatus();
+    if (client) {
+      // 0-budget close: the SFU is gone, so awaiting a leave RPC just
+      // burns 500ms waiting for a timeout. Mirror the failSfuStart path.
+      void client.close(0).catch(() => undefined);
+    }
+    try { this.events.onTopologyChange?.(null); } catch (err) {
       console.warn('[voice] onTopologyChange handler threw', err);
     }
   }
 
   async leave(): Promise<void> {
     if (!this.joined) return;
+    const wasMeshMode = !!(this.signalsUnsub || this.rosterUnsub) && !this.sfuPubkey && !this.sfuClient;
     this.joined = false;
     if (this.beaconTimer) {
       clearInterval(this.beaconTimer);
@@ -872,14 +1110,27 @@ export class VoiceClient {
     this.seenRosterPubkeys.clear();
     this.discovery.reset();
     if (this.dialDebounceTimer) { clearTimeout(this.dialDebounceTimer); this.dialDebounceTimer = null; }
+    if (this.controlSnapshotTimer) { clearTimeout(this.controlSnapshotTimer); this.controlSnapshotTimer = null; }
     if (this.unloadHandler) { this.unloadHandler.uninstall(); this.unloadHandler = null; }
+    if (wasMeshMode) {
+      try {
+        await this.transport.publishLeavePresence(this.channelId);
+        this.metrics.signals.byeViaRelay++;
+      } catch (err) {
+        console.warn('[voice] leave beacon failed', err);
+      }
+    }
     this.signalsUnsub?.();
     this.signalsUnsub = null;
     this.rosterUnsub?.();
     this.rosterUnsub = null;
+    this.voiceRelayCapacityRelease?.();
+    this.voiceRelayCapacityRelease = null;
 
     for (const peer of this.peers.values()) peer.close();
     this.peers.clear();
+    this.emitPeerConnectionStates();
+    this.unsubscribeActiveCallStatus();
     if (this.sfuClient) {
       // Bounded await so the SFU sees our `leave` RPC before its
       // empty-grace timer / RTP reaper has to discover us via timeout.
@@ -894,6 +1145,8 @@ export class VoiceClient {
     this.connectedPubkeys.clear();
     this.localVideoClaimedAt.clear();
     this.currentRoster = [];
+    this.knownMeshTestPeerPubkeys.clear();
+    this.passiveParticipantHints.clear();
     this.remoteTracks.clear();
     this.emitRemoteTracks();
 
@@ -916,9 +1169,27 @@ export class VoiceClient {
   // ── Beacon publishing ──────────────────────────────────────────────────
 
   /**
-   * Publish a presence beacon advertising our currently-connected peers
-   * AND the outbound video tracks we're sending. The connected list powers
-   * transitive discovery on other clients; the video list lets every peer
+   * Known active mesh pubkeys from every source we currently trust:
+   * connected PCs, relay beacons, control-channel snapshots, and active-call
+   * hints. This set is what we gossip as `peer` tags and `peerSnapshot`
+   * messages, so partially formed meshes can converge without re-advertising
+   * stale PCs that never connected.
+   */
+  private meshKnownPubkeys(): string[] {
+    const known = new Set<string>();
+    for (const pk of this.connectedPubkeys) known.add(pk);
+    for (const pk of this.discovery.effectivePeers()) known.add(pk);
+    for (const pk of this.passiveParticipantHints) known.add(pk);
+    known.delete(this.selfPubkey);
+    return Array.from(known).filter((pk) => this.isMember(pk)).sort();
+  }
+
+  /**
+   * Publish a presence beacon advertising our currently-connected peers,
+   * our full known active peer set, and the outbound video tracks we're
+   * sending. The connected list powers legacy transitive discovery; the
+   * known-peer list lets other clients dial participants that we know about
+   * but have not directly established yet. The video list lets every peer
    * compute the room-wide video count for `MAX_VIDEO_SLOTS` enforcement.
    *
    * Public so multi-client integration tests can drive each node's beacon
@@ -927,12 +1198,13 @@ export class VoiceClient {
    * or local video toggle).
    */
   async publishBeacon(): Promise<void> {
+    if (!this.joined || this.sfuPubkey || this.sfuClient) return;
     const videoTracks: VideoSlotKind[] = [];
     if (this.camTrack) videoTracks.push('camera');
     if (this.screenTrack) videoTracks.push('screen');
     try {
       await withRateLimitBackoff(
-        () => publishPresenceBeacon(this.channelId, [...this.connectedPubkeys], videoTracks),
+        () => this.transport.publishPresenceBeacon(this.channelId, [...this.connectedPubkeys], this.meshKnownPubkeys(), videoTracks),
         { metrics: this.metrics },
       );
       this.metrics.beacons.sent++;
@@ -960,6 +1232,23 @@ export class VoiceClient {
     }, BEACON_REFRESH_DEBOUNCE_MS);
   }
 
+  private scheduleControlPeerSnapshot(): void {
+    if (!this.joined || this.sfuPubkey) return;
+    if (this.controlSnapshotTimer) return;
+    this.controlSnapshotTimer = setTimeout(() => {
+      this.controlSnapshotTimer = null;
+      if (!this.joined || this.sfuPubkey) return;
+      this.broadcastControlPeerSnapshot();
+    }, CONTROL_SNAPSHOT_DEBOUNCE_MS);
+  }
+
+  private broadcastControlPeerSnapshot(): void {
+    const peers = this.meshKnownPubkeys();
+    for (const peer of this.peers.values()) {
+      peer.broadcastControl({ type: 'peerSnapshot', peers, ts: Date.now() });
+    }
+  }
+
   // ── Roster + peer management ───────────────────────────────────────────
 
   /**
@@ -971,6 +1260,7 @@ export class VoiceClient {
    */
   private handleRoster(pubkeys: string[]) {
     const others = pubkeys.filter((p) => p !== this.selfPubkey);
+    const beforeDiscoveryKey = this.discovery.effectivePeers().slice().sort().join('|');
 
     // Track relay-discovered set in the discovery engine so the dial-loop
     // sees the union of relay + control-channel sources. Increment the
@@ -978,6 +1268,7 @@ export class VoiceClient {
     // we hadn't seen on the relay before.
     const previouslyRelay = new Set(others.filter((p) => this.discovery.source(p).relay));
     this.discovery.setRelayDiscovered(others);
+    const afterDiscoveryKey = this.discovery.effectivePeers().slice().sort().join('|');
     let relayNew = 0;
     for (const p of others) {
       if (!previouslyRelay.has(p)) relayNew++;
@@ -997,9 +1288,24 @@ export class VoiceClient {
         sawNew = true;
       }
     }
-    if (sawNew) this.scheduleBeaconRefresh();
+    if (sawNew || beforeDiscoveryKey !== afterDiscoveryKey) {
+      this.scheduleBeaconRefresh();
+      this.scheduleControlPeerSnapshot();
+    }
 
     this.runDialLoop();
+  }
+
+  private applyControlPeerSnapshot(remotePubkey: string, peers: readonly string[]): void {
+    const filtered = peers
+      .filter((pk) => pk && pk !== this.selfPubkey)
+      .filter((pk) => this.isMember(pk));
+    const { added, removed } = this.discovery.setControlDiscovered(remotePubkey, filtered);
+    if (added.length === 0 && removed.length === 0) return;
+    this.metrics.transitive.discoveredViaControl += added.length;
+    this.scheduleDialFromDiscovery();
+    this.scheduleBeaconRefresh();
+    this.scheduleControlPeerSnapshot();
   }
 
   /**
@@ -1023,7 +1329,12 @@ export class VoiceClient {
    * `scheduleDialFromDiscovery` (control-channel-driven). Idempotent.
    */
   private runDialLoop(): void {
-    const others = this.discovery.effectivePeers().filter((p) => p !== this.selfPubkey);
+    const others = Array.from(new Set([
+      ...this.discovery.effectivePeers(),
+      ...this.passiveParticipantHints,
+    ]))
+      .filter((p) => p !== this.selfPubkey)
+      .filter((p) => this.isMember(p));
 
     // Hard cap: if more than MAX_PARTICIPANTS would be present and we're
     // not in the leading slice, deterministically (lex) trim the tail so
@@ -1033,13 +1344,25 @@ export class VoiceClient {
       visible.sort();
       visible.splice(MAX_PARTICIPANTS - 1);
     }
+    const visibleSet = new Set(visible);
 
-    // Union of discovered pubkeys + already-open peers. Some peers are
-    // discovered via incoming signaling when relays don't deliver beacons
-    // symmetrically — keeping them in the UI list prevents them from
-    // disappearing mid-call.
+    // Peers that lost every discovery source and are not currently live
+    // should disappear immediately. The old union kept all open Peer
+    // objects forever, so a tab that closed before/after negotiation could
+    // remain rendered until a refresh even after its beacon expired.
+    for (const [pk, peer] of Array.from(this.peers.entries())) {
+      if (visibleSet.has(pk)) continue;
+      if (this.connectedPubkeys.has(pk) || peer.isControlOpen()) continue;
+      this.tearDownPeer(pk);
+    }
+
+    // Union of discovered pubkeys + actually-live peers. Connected/control
+    // peers stay visible across relay beacon gaps; non-live stale peers do
+    // not.
     const union = new Set(visible);
-    for (const pk of this.peers.keys()) union.add(pk);
+    for (const [pk, peer] of this.peers.entries()) {
+      if (this.connectedPubkeys.has(pk) || peer.isControlOpen()) union.add(pk);
+    }
     this.rosterPubkeys = Array.from(union);
     this.events.onParticipantsChange?.([...this.rosterPubkeys]);
 
@@ -1093,30 +1416,81 @@ export class VoiceClient {
    *
    * Caller (`enterSfuMode`) guarantees the previous client was torn down.
    */
-  private async startSfuClient(sfuPubkey: string): Promise<void> {
-    // SFU's listening relays may be a strict subset of the dex's bridge
-    // default relays (relay.obelisk.ar only, not public.obelisk.ar). Pass
-    // them through so kind 25050 RPC envelopes land where the SFU is
-    // actually subscribed.
+  private async publishSfuStartOrThrow(sfuPubkey: string, controlRelays: readonly string[]): Promise<void> {
+    const ok = await publishSfuStart(this.channelId, sfuPubkey, {
+      trustedRelays: controlRelays,
+      params: { video: true, screen: true, maxParticipants: 50 },
+      force: true,
+    });
+    if (!ok) throw new Error('Could not publish SFU start control event.');
+    await new Promise((resolve) => setTimeout(resolve, SFU_START_SETTLE_MS));
+  }
+
+  private isInitialSfuRpcTimeout(err: unknown): boolean {
+    return err instanceof Error && err.message.includes('rpc timeout: getRouterRtpCapabilities');
+  }
+
+  private async failSfuStart(client: SfuClient, sfuPubkey: string, err: unknown): Promise<never> {
+    console.warn('[voice] SfuClient.start failed', err);
+    // start() failed — no live RPC subscription to gracefully close.
+    // Use 0-budget close (skip the bounded await for the leave RPC),
+    // since the SFU may not have registered a peer for us.
+    try { await client.close(0); } catch { /* ignore */ }
+    if (this.sfuClient === client) this.sfuClient = null;
+    if (this.sfuPubkey === sfuPubkey) {
+      this.sfuPubkey = null;
+      try { this.events.onTopologyChange?.(null); } catch { /* ignore */ }
+    }
+    // SFU-pinned channels stay on SFU. Surface a clear error and stop —
+    // mesh fallback would silently change the call's semantics (peer cap,
+    // forwarding, recording capability) and the channel admin's pin is
+    // an explicit choice we shouldn't override on a transient outage.
+    const msg = err instanceof Error ? err.message : String(err);
+    try { this.events.onError?.(`Could not connect to the SFU: ${msg}`); } catch { /* ignore */ }
+    throw err;
+  }
+
+  private async startSfuClient(sfuPubkey: string, resolvedSfu?: SfuAdvertisement): Promise<void> {
+    // Keep control and RPC relay roles separate. `trusted_relay` is the
+    // authorization lane for kind 25052 start events; the SFU publishes
+    // kind 25050 RPC responses on its writable/general `relay` set. Using
+    // trusted-only relays for RPC makes browsers wait through rejected or
+    // closed relays before landing on the relay where the SFU answered.
     //
     // Resolution order matches `pickSfu(channelId)`:
     //   1. per-channel pin (kind 30078)        — preferred
     //   2. NEXT_PUBLIC_SFU_TRUSTED_RELAYS env  — fallback for unconfigured channels
-    const picked = await pickSfu(this.channelId);
-    let trustedRelays: string[] = [];
-    if (picked && picked.pubkey === sfuPubkey && picked.trustedRelays.length > 0) {
-      trustedRelays = [...picked.trustedRelays];
+    const picked = resolvedSfu?.pubkey === sfuPubkey
+      ? resolvedSfu
+      : await pickSfu(this.channelId);
+    let controlRelays: string[] = [];
+    let rpcRelays: string[] = [];
+    if (picked && picked.pubkey === sfuPubkey) {
+      controlRelays = picked.trustedRelays.length > 0
+        ? [...picked.trustedRelays]
+        : [...picked.generalRelays];
+      rpcRelays = picked.generalRelays.length > 0
+        ? [...picked.generalRelays]
+        : [...picked.trustedRelays];
     } else {
-      trustedRelays = (process.env.NEXT_PUBLIC_SFU_TRUSTED_RELAYS ?? '')
+      const envControlRelays = (process.env.NEXT_PUBLIC_SFU_TRUSTED_RELAYS ?? '')
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean);
+      const envRpcRelays = (process.env.NEXT_PUBLIC_SFU_RELAYS ?? '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+      controlRelays = envControlRelays;
+      rpcRelays = envRpcRelays.length > 0 ? envRpcRelays : envControlRelays;
     }
-    const client = new SfuClient({
+    const directUrl = picked?.pubkey === sfuPubkey && picked.url ? picked.url : null;
+    const makeClient = (): SfuClient => new SfuClient({
       channelId: this.channelId,
       sfuPubkey,
       selfPubkey: this.selfPubkey,
-      ...(trustedRelays.length > 0 ? { trustedRelays } : {}),
+      ...(directUrl ? { directUrl } : {}),
+      ...(rpcRelays.length > 0 ? { trustedRelays: rpcRelays } : {}),
       events: {
         onRemoteTrack: (t: SfuRemoteTrack) => {
           if (this.deafened && (t.kind === 'audio' || t.kind === 'screen-audio')) {
@@ -1187,27 +1561,62 @@ export class VoiceClient {
         },
       },
     });
-    this.sfuClient = client;
-    try {
-      await client.start();
-    } catch (err) {
-      console.warn('[voice] SfuClient.start failed', err);
-      // start() failed — no live RPC subscription to gracefully close.
-      // Use 0-budget close (skip the bounded await for the leave RPC),
-      // since the SFU never registered a peer for us.
-      try { await client.close(0); } catch { /* ignore */ }
-      if (this.sfuClient === client) this.sfuClient = null;
-      if (this.sfuPubkey === sfuPubkey) {
-        this.sfuPubkey = null;
-        try { this.events.onTopologyChange?.(null); } catch { /* ignore */ }
+
+    // Bootstrap loop. The common failure mode is a cold-start race where
+    // the SFU room hasn't finished processing our `start` event before the
+    // first RPC lands; the next-most-common is "SFU process is restarting
+    // after a watchdog auto-heal." Both are recoverable by reissuing
+    // `start` (force=true, already inside publishSfuStartOrThrow) with a
+    // fresh RPC client. Any non-timeout failure is treated as permanent —
+    // those are typically auth, network, or allow-list rejections, which
+    // retrying just lengthens the time before the user sees the error.
+    let client: SfuClient | null = null;
+    let lastErr: unknown = null;
+    for (let attempt = 0; attempt < SFU_BOOTSTRAP_MAX_ATTEMPTS; attempt++) {
+      const delay = SFU_BOOTSTRAP_ATTEMPT_DELAYS_MS[attempt] ?? 0;
+      if (delay > 0) {
+        await new Promise((r) => setTimeout(r, delay));
       }
-      // SFU-pinned channels stay on SFU. Surface a clear error and stop —
-      // mesh fallback would silently change the call's semantics (peer cap,
-      // forwarding, recording capability) and the channel admin's pin is
-      // an explicit choice we shouldn't override on a transient outage.
-      const msg = err instanceof Error ? err.message : String(err);
-      try { this.events.onError?.(`Could not connect to the SFU: ${msg}`); } catch { /* ignore */ }
-      throw err;
+      client = makeClient();
+      this.sfuClient = client;
+      try {
+        if (!directUrl) {
+          await this.publishSfuStartOrThrow(sfuPubkey, controlRelays);
+        }
+        await client.start();
+        lastErr = null;
+        break;
+      } catch (err) {
+        lastErr = err;
+        if (!this.isInitialSfuRpcTimeout(err)) {
+          return this.failSfuStart(client, sfuPubkey, err);
+        }
+        const next = attempt + 1;
+        console.warn(`[voice] SFU bootstrap attempt ${next}/${SFU_BOOTSTRAP_MAX_ATTEMPTS} timed out — retrying`);
+        try { await client.close(0); } catch { /* ignore */ }
+        if (this.sfuClient === client) this.sfuClient = null;
+        // Leave `client` pointing at the (now-closed) instance so the
+        // post-loop failSfuStart on exhaustion has a real reference to
+        // pass — recreating one just for the signature wastes resources
+        // (and would surface a phantom Nth SfuClient instance in tests).
+      }
+    }
+    if (lastErr) {
+      // All attempts exhausted on the cold-start race. Surface as the
+      // standard SFU-start failure so the UI's error toast + pinned-SFU
+      // guarantees behave the same as a single-attempt failure used to.
+      if (!client) {
+        // Defensive: the loop must have run at least one attempt before
+        // recording lastErr, so client should always be set.
+        throw new Error('SFU bootstrap failed with no client reference');
+      }
+      return this.failSfuStart(client, sfuPubkey, lastErr);
+    }
+    if (!client) {
+      // Defensive: the loop should always set `client` on success. Treat
+      // an unset client as a logic bug rather than silently producing a
+      // half-built state.
+      throw new Error('SFU bootstrap loop exited without a client');
     }
     // Push existing local tracks to the new client.
     if (this.micTrack) await client.publishTrack('audio', this.micTrack).catch((e) => console.warn('[voice] publish mic threw', e));
@@ -1221,6 +1630,7 @@ export class VoiceClient {
     // Late-arriving rosters can otherwise trigger openPeer post-teardown
     // and the resulting RTCPeerConnection would never be cleaned up.
     if (!this.joined) return;
+    if (this.peers.has(remotePubkey) || this.openingPeers.has(remotePubkey)) return;
     // SFU peer is handled by `SfuClient`/mediasoup-client, not by the mesh
     // perfect-negotiation path. Don't construct a `Peer` for it.
     if (this.sfuPubkey && remotePubkey === this.sfuPubkey) return;
@@ -1232,182 +1642,210 @@ export class VoiceClient {
     // other's offer. Forcing the browser to be polite for SFU peers keeps
     // the perfect-negotiation invariants while accommodating werift.
     const isSfuPeer = this.knownSfuPubkeys.has(remotePubkey);
-    const polite = isSfuPeer ? true : this.selfPubkey > remotePubkey;
+    const isMeshTestPeer = this.knownMeshTestPeerPubkeys.has(remotePubkey);
+    const forceInitialOffer =
+      isSfuPeer || isMeshTestPeer || this.passiveParticipantHints.has(remotePubkey);
+    const polite = isSfuPeer ? true : isMeshTestPeer ? false : this.selfPubkey > remotePubkey;
+    const shouldKickRecvOnly = this.shouldKickRecvOnlyOffer(remotePubkey, isSfuPeer, polite);
     console.log('[voice] openPeer', remotePubkey.slice(0, 8),
-      'polite=', polite, isSfuPeer ? '(sfu)' : '');
-    const peer = new Peer({
-      remotePubkey,
-      polite,
-      sessionId: this.sessionId,
-      send: (payload) => withRateLimitBackoff(
-        () => sendSignal(this.channelId, remotePubkey, payload),
-        { metrics: this.metrics },
-      ),
-      // SFU peers don't speak our control-channel protocol — only mesh
-      // peers get the obelisk-control data channel. The flag is the same
-      // one we use to force polite negotiation for SFUs.
-      control: isSfuPeer ? undefined : {
-        selfBuild: SELF_BUILD_TAG,
-        metrics: this.metrics,
-        getCurrentPeers: () => Array.from(this.connectedPubkeys),
-      },
-      events: {
-        onTransitivePeers: (peers, _build) => {
-          // Hello carries the remote peer's full connected set. Add each
-          // entry to discovery via this peer; dial loop kicks debounced.
-          let added = 0;
-          for (const pk of peers) {
-            if (pk === this.selfPubkey) continue;
-            if (this.discovery.addControlDiscovered(pk, remotePubkey)) added++;
-          }
-          if (added > 0) {
-            this.metrics.transitive.discoveredViaControl += added;
-            this.scheduleDialFromDiscovery();
-          }
+      'polite=', polite, isSfuPeer ? '(sfu)' : isMeshTestPeer ? '(mesh-test-peer)' : '');
+    this.openingPeers.add(remotePubkey);
+    let peer: Peer | null = null;
+    try {
+      const createdPeer = new Peer({
+        remotePubkey,
+        polite,
+        sessionId: this.sessionId,
+        bootstrapRecvOnlyMedia: shouldKickRecvOnly,
+        allowPoliteInitialOffer: forceInitialOffer,
+        send: (payload) => withRateLimitBackoff(
+          () => this.transport.sendSignal(this.channelId, remotePubkey, payload),
+          { metrics: this.metrics },
+        ),
+        // SFU peers don't speak our control-channel protocol — only mesh
+        // peers get the obelisk-control data channel. The flag is the same
+        // one we use to force polite negotiation for SFUs.
+        control: isSfuPeer ? undefined : {
+          selfBuild: SELF_BUILD_TAG,
+          metrics: this.metrics,
+          getCurrentPeers: () => this.meshKnownPubkeys(),
         },
-        onControlPeerAdded: (pubkey) => {
-          if (pubkey === this.selfPubkey) return;
-          if (this.discovery.addControlDiscovered(pubkey, remotePubkey)) {
-            this.metrics.transitive.discoveredViaControl++;
-            this.scheduleDialFromDiscovery();
-          }
-        },
-        onControlPeerRemoved: (pubkey) => {
-          this.discovery.removeControlDiscovered(pubkey, remotePubkey);
-        },
-        onPeerDead: (reason) => {
-          // Active capacity rejection — the remote is telling us the room
-          // is full. Surface a clean error and leave; without this, our
-          // reconnect ladder would loop trying to re-dial them.
-          if (reason === 'bye:room-full') {
+        events: {
+          onTransitivePeers: (peers, _build) => {
+            this.applyControlPeerSnapshot(remotePubkey, peers);
+          },
+          onControlPeerSnapshot: (peers) => {
+            this.applyControlPeerSnapshot(remotePubkey, peers);
+          },
+          onControlPeerAdded: (pubkey) => {
+            if (pubkey === this.selfPubkey) return;
+            if (this.discovery.addControlDiscovered(pubkey, remotePubkey)) {
+              this.metrics.transitive.discoveredViaControl++;
+              this.scheduleDialFromDiscovery();
+              this.scheduleBeaconRefresh();
+              this.scheduleControlPeerSnapshot();
+            }
+          },
+          onControlPeerRemoved: (pubkey) => {
+            if (this.discovery.removeControlDiscovered(pubkey, remotePubkey)) {
+              this.scheduleDialFromDiscovery();
+              this.scheduleBeaconRefresh();
+              this.scheduleControlPeerSnapshot();
+            }
+          },
+          onPeerDead: (reason) => {
+            // Active capacity rejection — the remote is telling us the room
+            // is full. Surface a clean error and leave; without this, our
+            // reconnect ladder would loop trying to re-dial them.
+            if (reason === 'bye:room-full') {
+              pushVoiceDebug({
+                kind: 'pc-state',
+                peer: remotePubkey,
+                payload: { event: 'rejected-room-full' },
+              });
+              this.metrics.peers.tornDown++;
+              try { this.events.onError?.('Room is full — try again when someone leaves.'); }
+              catch (e) { console.warn('[voice] onError threw on room-full', e); }
+              // Use a microtask so the current signal-routing call returns
+              // before we dismantle our own state.
+              queueMicrotask(() => { void this.leave().catch(() => {}); });
+              return;
+            }
+            // FAST hangup — control channel detected the peer is gone. Route
+            // through tearDownPeer (idempotent) so the rest of the cleanup
+            // happens identically to the relay-bye / connectionState='closed'
+            // paths. The bye-via-control split counter helps the diagnostic
+            // overlay distinguish the source.
+            if (reason.startsWith('bye:')) {
+              this.metrics.signals.byeViaControl++;
+            }
+            this.metrics.peers.tornDown++;
             pushVoiceDebug({
               kind: 'pc-state',
               peer: remotePubkey,
-              payload: { event: 'rejected-room-full' },
+              payload: { event: 'fast-hangup', reason },
             });
-            this.metrics.peers.tornDown++;
-            try { this.events.onError?.('Room is full — try again when someone leaves.'); }
-            catch (e) { console.warn('[voice] onError threw on room-full', e); }
-            // Use a microtask so the current signal-routing call returns
-            // before we dismantle our own state.
-            queueMicrotask(() => { void this.leave().catch(() => {}); });
-            return;
-          }
-          // FAST hangup — control channel detected the peer is gone. Route
-          // through tearDownPeer (idempotent) so the rest of the cleanup
-          // happens identically to the relay-bye / connectionState='closed'
-          // paths. The bye-via-control split counter helps the diagnostic
-          // overlay distinguish the source.
-          if (reason.startsWith('bye:')) {
-            this.metrics.signals.byeViaControl++;
-          }
-          this.metrics.peers.tornDown++;
-          pushVoiceDebug({
-            kind: 'pc-state',
-            peer: remotePubkey,
-            payload: { event: 'fast-hangup', reason },
-          });
-          // Remove anything this peer claimed transitively so we don't
-          // keep re-dialing through them.
-          this.discovery.dropClaimsFromPeer(remotePubkey);
-          this.tearDownPeer(remotePubkey);
-        },
-        onRemoteTrack: (track, stream, kind, originPubkey) => {
-          // Apply current deafen state to brand-new audio arrivals so a peer
-          // who joins after we deafened doesn't suddenly become audible.
-          if (this.deafened && (kind === 'audio' || kind === 'screen-audio')) {
-            track.enabled = false;
-          }
-          // In SFU mode `originPubkey` differs from `remotePubkey` (the SFU
-          // is the RTC peer; the participant who actually produced the
-          // media is the origin). Tile mapping uses the origin so the
-          // sound shows up on the right person's tile, not the SFU's.
-          const logicalPubkey = originPubkey ?? remotePubkey;
-          this.remoteTracks.set(track.id, {
-            pubkey: logicalPubkey,
-            viaPubkey: remotePubkey,
-            trackId: track.id,
-            kind,
-            stream,
-          });
-          // Speaking detection keyed by origin so SFU mode lights up the
-          // correct tile, not "the SFU is speaking" for everyone.
-          if (kind === 'audio') {
-            this.attachSpeakingDetector(logicalPubkey, stream);
-          }
-          this.emitRemoteTracks();
-        },
-        onRemoteTrackEnded: (trackId) => {
-          const removed = this.remoteTracks.get(trackId);
-          this.remoteTracks.delete(trackId);
-          // If the ended track was the peer's mic, stop their detector so
-          // the orb doesn't strobe on stale RMS readings post-disconnect.
-          // Use the track's logical (origin) pubkey, not the RTC remote.
-          if (removed?.kind === 'audio') {
-            this.detachSpeakingDetector(removed.pubkey);
-          }
-          this.emitRemoteTracks();
-        },
-        onConnectionEstablished: () => {
-          if (!this.connectedPubkeys.has(remotePubkey)) {
-            this.metrics.peers.connected = this.connectedPubkeys.size + 1;
-          }
-          this.connectedPubkeys.add(remotePubkey);
-          this.metrics.peers.ever++;
-          pushVoiceDebug({ kind: 'pc-state', peer: remotePubkey, payload: 'connected' });
-          this.scheduleBeaconRefresh();
-          // Tell every OTHER mesh peer about this new connection so they
-          // can transitively discover us through this one. The control
-          // channel may not be open yet on this peer; that's fine — its
-          // own `hello` will carry the up-to-date list when it opens.
-          for (const [otherPk, otherPeer] of this.peers.entries()) {
-            if (otherPk === remotePubkey) continue;
-            otherPeer.broadcastControl({ type: 'peerAdded', pubkey: remotePubkey });
-          }
-        },
-        onConnectionLost: () => {
-          if (this.connectedPubkeys.delete(remotePubkey)) {
+            // Remove anything this peer claimed transitively so we don't
+            // keep re-dialing through them.
+            this.discovery.dropClaimsFromPeer(remotePubkey);
             this.scheduleBeaconRefresh();
-          }
-          for (const [otherPk, otherPeer] of this.peers.entries()) {
-            if (otherPk === remotePubkey) continue;
-            otherPeer.broadcastControl({ type: 'peerRemoved', pubkey: remotePubkey });
-          }
-        },
-        onQualitySample: (sample) => {
-          try { useVoiceStore.getState().setPeerQuality(remotePubkey, sample); } catch { /* test envs */ }
-        },
-        onConnectionStateChange: (state) => {
-          if (state === 'closed') {
-            // Drop the peer so a future signal/beacon from the same pubkey
-            // can spawn a fresh PC instead of routing into a dead one. The
-            // Peer's reconnect ladder handles 'failed'/'disconnected'
-            // internally — only react to 'closed' here, which means the
-            // ladder has explicitly given up or close() was called.
-            const p = this.peers.get(remotePubkey);
-            if (p && p === peer) {
-              this.tearDownPeer(remotePubkey);
-              this.events.onParticipantsChange?.([...this.rosterPubkeys.filter((pk) => pk !== remotePubkey)]);
+            this.scheduleControlPeerSnapshot();
+            this.tearDownPeer(remotePubkey);
+          },
+          onRemoteTrack: (track, stream, kind, originPubkey) => {
+            // Apply current deafen state to brand-new audio arrivals so a peer
+            // who joins after we deafened doesn't suddenly become audible.
+            if (this.deafened && (kind === 'audio' || kind === 'screen-audio')) {
+              track.enabled = false;
             }
-          }
+            // In SFU mode `originPubkey` differs from `remotePubkey` (the SFU
+            // is the RTC peer; the participant who actually produced the
+            // media is the origin). Tile mapping uses the origin so the
+            // sound shows up on the right person's tile, not the SFU's.
+            const logicalPubkey = originPubkey ?? remotePubkey;
+            this.remoteTracks.set(track.id, {
+              pubkey: logicalPubkey,
+              viaPubkey: remotePubkey,
+              trackId: track.id,
+              kind,
+              stream,
+            });
+            // Speaking detection keyed by origin so SFU mode lights up the
+            // correct tile, not "the SFU is speaking" for everyone.
+            if (kind === 'audio') {
+              this.attachSpeakingDetector(logicalPubkey, stream);
+            }
+            this.emitRemoteTracks();
+          },
+          onRemoteTrackEnded: (trackId) => {
+            const removed = this.remoteTracks.get(trackId);
+            this.remoteTracks.delete(trackId);
+            // If the ended track was the peer's mic, stop their detector so
+            // the orb doesn't strobe on stale RMS readings post-disconnect.
+            // Use the track's logical (origin) pubkey, not the RTC remote.
+            if (removed?.kind === 'audio') {
+              this.detachSpeakingDetector(removed.pubkey);
+            }
+            this.emitRemoteTracks();
+          },
+          onConnectionEstablished: () => {
+            if (!this.connectedPubkeys.has(remotePubkey)) {
+              this.metrics.peers.connected = this.connectedPubkeys.size + 1;
+            }
+            this.connectedPubkeys.add(remotePubkey);
+            this.metrics.peers.ever++;
+            pushVoiceDebug({ kind: 'pc-state', peer: remotePubkey, payload: 'connected' });
+            this.scheduleBeaconRefresh();
+            // Tell every OTHER mesh peer about this new connection so they
+            // can transitively discover us through this one. The control
+            // channel may not be open yet on this peer; that's fine — its
+            // own `hello` will carry the up-to-date list when it opens.
+            for (const [otherPk, otherPeer] of this.peers.entries()) {
+              if (otherPk === remotePubkey) continue;
+              otherPeer.broadcastControl({ type: 'peerAdded', pubkey: remotePubkey });
+            }
+            this.scheduleControlPeerSnapshot();
+            this.emitPeerConnectionStates();
+          },
+          onConnectionLost: () => {
+            if (this.connectedPubkeys.delete(remotePubkey)) {
+              this.scheduleBeaconRefresh();
+            }
+            for (const [otherPk, otherPeer] of this.peers.entries()) {
+              if (otherPk === remotePubkey) continue;
+              otherPeer.broadcastControl({ type: 'peerRemoved', pubkey: remotePubkey });
+            }
+            this.scheduleControlPeerSnapshot();
+            this.emitPeerConnectionStates();
+            this.runDialLoop();
+          },
+          onQualitySample: (sample) => {
+            try { useVoiceStore.getState().setPeerQuality(remotePubkey, sample); } catch { /* test envs */ }
+          },
+          onConnectionStateChange: (state) => {
+            this.emitPeerConnectionStates();
+            if (state === 'closed') {
+              // Drop the peer so a future signal/beacon from the same pubkey
+              // can spawn a fresh PC instead of routing into a dead one. The
+              // Peer's reconnect ladder handles 'failed'/'disconnected'
+              // internally — only react to 'closed' here, which means the
+              // ladder has explicitly given up or close() was called.
+              const p = this.peers.get(remotePubkey);
+              if (p && p === peer) {
+                this.tearDownPeer(remotePubkey);
+              }
+            }
+          },
         },
-      },
-    });
+      });
+      peer = createdPeer;
+      this.peers.set(remotePubkey, createdPeer);
+      this.emitPeerConnectionStates();
+    } finally {
+      this.openingPeers.delete(remotePubkey);
+    }
+    if (!peer) return;
 
-    // Push existing local tracks to the new peer.
+    // Push existing local tracks to the new peer. Muted joins still need
+    // recv-only media sections on at least one side of the pair; otherwise
+    // a listener can see the roster/control state but have no audio/video
+    // m-lines to receive a peer who was already publishing mic audio.
+    // The impolite side drives that initial recv-only offer for ordinary
+    // browser peers. Special peers can force it regardless of polarity.
     void this.attachAllLocalTracks(peer).then(() => {
-      // For SFU peers we MUST initiate the offer ourselves — werift's SFU
-      // never sends the first offer, it only answers. If the user joined
-      // with no mic/cam, attachAllLocalTracks adds zero tracks and no
-      // negotiation kicks; both sides then deadlock waiting. kickInitialOffer
-      // is a no-op when senders already exist (setLocalTrack already kicked),
-      // and otherwise adds recvonly transceivers so the offer has m-sections.
-      if (isSfuPeer) {
+      if (shouldKickRecvOnly || !polite) {
         void peer.kickInitialOffer();
       }
     });
+  }
 
-    this.peers.set(remotePubkey, peer);
+  private shouldKickRecvOnlyOffer(remotePubkey: string, isSfuPeer: boolean, polite: boolean): boolean {
+    if (isSfuPeer) return true;
+    if (this.knownMeshTestPeerPubkeys.has(remotePubkey)) return true;
+    if (this.passiveParticipantHints.has(remotePubkey)) return true;
+    if (polite) return false;
+    const presence = this.currentRoster.find((p) => p.pubkey === remotePubkey);
+    return (presence?.videoTracks?.length ?? 0) > 0;
   }
 
   /**
@@ -1423,11 +1861,22 @@ export class VoiceClient {
    */
   private tearDownPeer(pubkey: string): void {
     const peer = this.peers.get(pubkey);
+    const droppedClaims = this.discovery.dropClaimsFromPeer(pubkey);
+    if (droppedClaims.length > 0) {
+      this.scheduleBeaconRefresh();
+      this.scheduleControlPeerSnapshot();
+    }
     if (peer) {
       this.peers.delete(pubkey);
       peer.close();
       this.metrics.peers.tornDown++;
       pushVoiceDebug({ kind: 'peer-torn-down', peer: pubkey });
+    }
+    const nextRoster = this.rosterPubkeys.filter((pk) => pk !== pubkey);
+    const rosterChanged = nextRoster.length !== this.rosterPubkeys.length;
+    if (rosterChanged) {
+      this.rosterPubkeys = nextRoster;
+      this.events.onParticipantsChange?.([...this.rosterPubkeys]);
     }
     this.removeRemoteTracksFor(pubkey);
     this.detachSpeakingDetector(pubkey);
@@ -1435,7 +1884,11 @@ export class VoiceClient {
       this.metrics.peers.connected = this.connectedPubkeys.size;
       this.scheduleBeaconRefresh();
     }
+    if (peer || rosterChanged || droppedClaims.length > 0) {
+      this.scheduleControlPeerSnapshot();
+    }
     try { useVoiceStore.getState().clearPeerQuality(pubkey); } catch { /* test envs */ }
+    this.emitPeerConnectionStates();
   }
 
   private async attachAllLocalTracks(peer: Peer) {
@@ -1543,7 +1996,7 @@ export class VoiceClient {
     // immediately. Already-open peers (in this.peers) bypass this
     // check — they're members of the in-set by definition.
     if (!this.peers.has(fromPubkey) && !this.isWithinRoomCap(fromPubkey)) {
-      void sendSignal(this.channelId, fromPubkey, {
+      void this.transport.sendSignal(this.channelId, fromPubkey, {
         type: 'bye',
         sessionId: this.sessionId,
         seq: 0,
@@ -1923,6 +2376,10 @@ export class VoiceClient {
   }
 
   // ── helpers ────────────────────────────────────────────────────────────
+
+  private emitPeerConnectionStates() {
+    this.events.onPeerConnectionStatesChange?.(this.getPeerConnectionStates());
+  }
 
   private emitRemoteTracks() {
     const arr = Array.from(this.remoteTracks.values());

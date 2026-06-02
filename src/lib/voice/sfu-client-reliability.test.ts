@@ -34,6 +34,7 @@ vi.mock('./sfu-rpc', () => {
     async start() { /* no-op */ }
     close() { /* no-op */ }
     request = rpcRequest;
+    requestWithRetry = rpcRequest;
   }
   return { SfuRpc: FakeSfuRpc };
 });

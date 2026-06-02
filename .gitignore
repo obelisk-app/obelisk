@@ -89,3 +89,4 @@ scripts/.test-peer-ms/
 /scripts/e2e/test-results/
 /scripts/e2e/playwright-report/
 /scripts/e2e/.auth/
+tmp/

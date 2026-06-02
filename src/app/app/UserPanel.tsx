@@ -7,8 +7,14 @@ import { nostrActions } from '@/lib/nostr-bridge';
 import { useProfile, usePublishProfile } from '@nostr-wot/data/react';
 import BlossomImageInput from '@/components/BlossomImageInput';
 import { usePreferences, setPreference } from '@/lib/preferences';
+import { setDmOptInEnabled } from '@/lib/dm/opt-in';
 import WotSettings from '@/components/settings/WotSettings';
+import LanguagePreference from '@/components/LanguagePreference';
+import AppearancePreferenceControls from '@/components/AppearancePreferenceControls';
 import UserAvatar from '@/components/UserAvatar';
+import ModalShell from '@/components/ModalShell';
+import { clearAllClientCacheExceptSession } from '@/lib/nostr-bridge/cache-clear';
+import { useTranslation } from '@/i18n/context';
 
 interface UserPanelProps {
   pubkey: string;
@@ -22,6 +28,7 @@ interface UserPanelProps {
 }
 
 export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, initialEditing = false }: UserPanelProps) {
+  const { t } = useTranslation();
   const meta = useProfile(pubkey);
   const [editing, setEditing] = useState(initialEditing);
   const [settingsTab, setSettingsTab] = useState<'profile' | 'preferences'>('profile');
@@ -71,8 +78,8 @@ export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, ini
           <button
             onClick={() => { setEditing(false); onClose(); }}
             className="absolute top-5 right-5 z-10 w-12 h-12 rounded-full bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/30 flex items-center justify-center transition-colors ring-2 ring-red-500/30 hover:ring-red-500/60"
-            aria-label="Close"
-            title="Close (Esc)"
+            aria-label={t('common.close')}
+            title={`${t('common.close')} (Esc)`}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
               <line x1="18" y1="6" x2="6" y2="18"/>
@@ -81,7 +88,7 @@ export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, ini
           </button>
           <aside className="w-64 shrink-0 bg-lc-dark border-r border-lc-border flex flex-col">
             <div className="px-5 py-5 border-b border-lc-border">
-              <div className="text-[10px] uppercase tracking-wider text-lc-muted font-semibold mb-2">User settings</div>
+              <div className="text-[10px] uppercase tracking-wider text-lc-muted font-semibold mb-2">{t('user.settings')}</div>
               <div className="flex items-center gap-2 min-w-0">
                 <UserAvatar pubkey={pubkey} picture={meta?.picture ?? null} size={8} name={displayName} initialClassName="text-sm" />
                 <div className="min-w-0">
@@ -97,7 +104,7 @@ export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, ini
                 className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm ${settingsTab === 'profile' ? 'bg-lc-green/15 text-lc-green' : 'text-lc-white hover:bg-lc-border/40'}`}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                <span>Profile</span>
+                <span>{t('settings.profile')}</span>
               </button>
               <button
                 type="button"
@@ -105,7 +112,7 @@ export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, ini
                 className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm ${settingsTab === 'preferences' ? 'bg-lc-green/15 text-lc-green' : 'text-lc-white hover:bg-lc-border/40'}`}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-                <span>Preferences</span>
+                <span>{t('settings.preferences')}</span>
               </button>
             </nav>
           </aside>
@@ -114,8 +121,8 @@ export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, ini
               {settingsTab === 'profile' ? (
                 <>
                   <div className="mb-6">
-                    <div className="text-xs uppercase tracking-wider text-lc-muted font-semibold">Profile</div>
-                    <h2 className="text-lc-white text-xl font-semibold mt-2">Edit profile</h2>
+                    <div className="text-xs uppercase tracking-wider text-lc-muted font-semibold">{t('settings.profile')}</div>
+                    <h2 className="text-lc-white text-xl font-semibold mt-2">{t('user.editProfile')}</h2>
                   </div>
                   <EditProfileForm
                     initial={meta}
@@ -126,8 +133,8 @@ export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, ini
               ) : (
                 <>
                   <div className="mb-6">
-                    <div className="text-xs uppercase tracking-wider text-lc-muted font-semibold">Preferences</div>
-                    <h2 className="text-lc-white text-xl font-semibold mt-2">App preferences</h2>
+                    <div className="text-xs uppercase tracking-wider text-lc-muted font-semibold">{t('settings.preferences')}</div>
+                    <h2 className="text-lc-white text-xl font-semibold mt-2">{t('user.appPreferences')}</h2>
                   </div>
                   <PreferencesPanel />
                 </>
@@ -183,7 +190,7 @@ export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, ini
         {meta?.about && (
           <div className="mt-2 px-4">
             <div className="text-[10px] font-semibold uppercase tracking-wider text-lc-muted">
-              About
+              {t('user.about')}
             </div>
             <div className="mt-0.5 line-clamp-3 text-xs text-lc-muted">{meta.about}</div>
           </div>
@@ -202,7 +209,7 @@ export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, ini
                   <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
                   <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
                 </svg>
-                Copy npub
+                {t('user.copyNpub')}
               </button>
             )}
             <button
@@ -213,7 +220,7 @@ export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, ini
                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
                 <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
               </svg>
-              Copy pubkey (hex)
+              {t('user.copyPubkeyHex')}
             </button>
             {npub && (
               <a
@@ -227,7 +234,7 @@ export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, ini
                   <polyline points="15 3 21 3 21 9" />
                   <line x1="10" y1="14" x2="21" y2="3" />
                 </svg>
-                Open in another Nostr client
+                {t('user.openNostrClient')}
               </a>
             )}
 
@@ -242,7 +249,7 @@ export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, ini
                     <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
                     <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
                   </svg>
-                  Edit profile
+                  {t('user.editProfile')}
                 </button>
                 <div className="border-t border-lc-border" />
                 <button
@@ -254,7 +261,7 @@ export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, ini
                     <polyline points="16 17 21 12 16 7" />
                     <line x1="21" y1="12" x2="9" y2="12" />
                   </svg>
-                  Log out
+                  {t('user.logOut')}
                 </button>
               </>
             )}
@@ -275,6 +282,7 @@ function EditProfileForm({
   onCancel: () => void;
   onSaved: () => void;
 }) {
+  const { t } = useTranslation();
   const publishProfile = usePublishProfile();
   const [name, setName] = useState(initial?.displayName || initial?.name || '');
   const [about, setAbout] = useState(initial?.about || '');
@@ -308,11 +316,11 @@ function EditProfileForm({
   }, [initial]);
 
   const save = async () => {
-    if (!name.trim()) { setError('Name is required'); return; }
+    if (!name.trim()) { setError(t('user.nameRequired')); return; }
     setSaving(true);
     setError(null);
     try {
-      if (!publishProfile) throw new Error('Not signed in');
+      if (!publishProfile) throw new Error(t('user.notSignedIn'));
       await publishProfile({
         name: name.trim(),
         display_name: name.trim(),
@@ -324,7 +332,7 @@ function EditProfileForm({
       });
       onSaved();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to publish');
+      setError(e instanceof Error ? e.message : t('user.publishFailed'));
     } finally {
       setSaving(false);
     }
@@ -334,20 +342,20 @@ function EditProfileForm({
 
   return (
     <div className="space-y-3 p-4">
-      <Field label="Name">
+      <Field label={t('user.field.name')}>
         <input ref={firstField} value={name} onChange={(e) => { markDirty(); setName(e.target.value); }} className={fieldCls} />
       </Field>
-      <Field label="About">
+      <Field label={t('user.about')}>
         <textarea value={about} onChange={(e) => { markDirty(); setAbout(e.target.value); }} rows={2} className={fieldCls} />
       </Field>
       <BlossomImageInput
-        label="Picture"
+        label={t('user.field.picture')}
         value={picture}
         onChange={(url) => { markDirty(); setPicture(url); }}
         shape="square"
       />
       <BlossomImageInput
-        label="Banner"
+        label={t('user.field.banner')}
         value={banner}
         onChange={(url) => { markDirty(); setBanner(url); }}
         shape="wide"
@@ -356,7 +364,7 @@ function EditProfileForm({
       <Field label="NIP-05">
         <input value={nip05} onChange={(e) => { markDirty(); setNip05(e.target.value); }} placeholder="you@example.com" className={fieldCls} />
       </Field>
-      <Field label="Website">
+      <Field label={t('user.field.website')}>
         <input value={website} onChange={(e) => { markDirty(); setWebsite(e.target.value); }} placeholder="https://…" className={fieldCls} />
       </Field>
       {error && <div className="text-xs text-red-400">{error}</div>}
@@ -366,31 +374,120 @@ function EditProfileForm({
           disabled={saving}
           className="rounded-md bg-lc-green px-3 py-1.5 text-sm font-semibold text-lc-black hover:bg-lc-green/90 disabled:opacity-50"
         >
-          {saving ? 'Saving…' : 'Save'}
+          {saving ? t('common.saving') : t('common.save')}
         </button>
         <button
           onClick={onCancel}
           disabled={saving}
           className="rounded-md border border-lc-border px-3 py-1.5 text-sm text-lc-white hover:bg-lc-border/40"
         >
-          Cancel
+          {t('common.cancel')}
         </button>
       </div>
     </div>
   );
 }
 
-function PreferencesPanel() {
+export function PreferencesPanel() {
   const prefs = usePreferences();
+  const { t } = useTranslation();
   return (
     <div className="space-y-4 p-4">
+      <LanguagePreference />
+      <AppearancePreferenceControls />
       <ToggleRow
-        label="Show activity indicator"
-        description="Bottom-right notifications for login, signing, and relay publishing."
+        label={t('preferences.activity.label')}
+        description={t('preferences.activity.description')}
         checked={prefs.showActivityIndicator}
         onChange={(v) => setPreference('showActivityIndicator', v)}
       />
+      <ToggleRow
+        label={t('preferences.directMessages.label')}
+        description={t('preferences.directMessages.description')}
+        checked={prefs.directMessagesEnabled}
+        onChange={setDmOptInEnabled}
+      />
       <WotSettings />
+      <LocalDataSection />
+    </div>
+  );
+}
+
+function LocalDataSection() {
+  const { t } = useTranslation();
+  const [confirming, setConfirming] = useState(false);
+  const [clearing, setClearing] = useState(false);
+
+  const onConfirm = () => {
+    setClearing(true);
+    const removed = clearAllClientCacheExceptSession();
+    // Tiny pause so the modal copy reads naturally before the reload.
+    setTimeout(() => {
+      // Reload from server to rebuild every store from scratch. We keep the
+      // session + preferences so the user lands back in the same place.
+      if (typeof window !== 'undefined') {
+        window.location.reload();
+      }
+      // Defensive: if the reload didn't fire (e.g. test harness), reset state.
+      setClearing(false);
+      setConfirming(false);
+      void removed;
+    }, 200);
+  };
+
+  return (
+    <div className="pt-2 border-t border-lc-border">
+      <div className="text-xs uppercase tracking-wider text-lc-muted font-semibold pt-2 pb-2">
+        {t('preferences.localData.title')}
+      </div>
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <div className="text-sm text-lc-white">{t('preferences.localData.clear.title')}</div>
+          <div className="text-xs text-lc-muted mt-0.5">
+            {t('preferences.localData.clear.description')}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => setConfirming(true)}
+          disabled={clearing}
+          className="shrink-0 rounded-md border border-lc-border bg-lc-black px-3 py-1.5 text-sm text-lc-white hover:bg-lc-border/40 disabled:opacity-50"
+          data-testid="clear-cache-button"
+        >
+          {t('preferences.localData.clear.button')}
+        </button>
+      </div>
+      {confirming && (
+        <ModalShell
+          onClose={() => !clearing && setConfirming(false)}
+          testId="clear-cache-confirm"
+          panelClassName="w-full max-w-md mx-4 rounded-xl bg-lc-dark border border-lc-border p-6 shadow-xl"
+        >
+          <div className="text-lg font-semibold text-lc-white mb-2">{t('preferences.localData.confirm.title')}</div>
+          <div className="text-sm text-lc-muted mb-4">
+            {t('preferences.localData.confirm.description')}
+          </div>
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setConfirming(false)}
+              disabled={clearing}
+              className="rounded-md border border-lc-border px-3 py-1.5 text-sm text-lc-white hover:bg-lc-border/40 disabled:opacity-50"
+            >
+              {t('preferences.localData.confirm.cancel')}
+            </button>
+            <button
+              type="button"
+              onClick={onConfirm}
+              disabled={clearing}
+              className="rounded-md bg-lc-green px-3 py-1.5 text-sm font-semibold text-lc-black hover:bg-lc-green/90 disabled:opacity-50"
+              data-testid="clear-cache-confirm-button"
+            >
+              {clearing ? t('preferences.localData.confirm.clearing') : t('preferences.localData.confirm.action')}
+            </button>
+          </div>
+        </ModalShell>
+      )}
     </div>
   );
 }

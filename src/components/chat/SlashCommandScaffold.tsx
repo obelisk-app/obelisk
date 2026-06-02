@@ -59,6 +59,39 @@ export function scaffoldMentionSlotQuery(content: string, caret: number): string
   return null;
 }
 
+/**
+ * Absolute character range of the active mention-slot's existing token, or
+ * `null` when the caret isn't sitting in such a slot. Used by the mention
+ * picker so that selecting a member replaces the partial text already typed
+ * in the slot (e.g. `/zap dum` → `/zap nostr:npub1…`) instead of appending
+ * a second token after it.
+ */
+export function scaffoldMentionSlotRange(
+  content: string,
+  caret: number,
+): { start: number; end: number } | null {
+  const m = /^\/([a-zA-Z]+)(?:\s|$)/.exec(content);
+  if (!m) return null;
+  const cmd = SLASH_COMMANDS.find((c) => c.name === m[1].toLowerCase());
+  if (!cmd || !cmd.params || cmd.params.length === 0) return null;
+
+  const prefix = `/${cmd.name}`;
+  if (caret < prefix.length) return null;
+  const rest = content.slice(prefix.length);
+  const caretInRest = caret - prefix.length;
+  if (caretInRest <= 0) return null;
+
+  const tokens = tokenize(rest);
+  const active = activeParamIndex(rest, caretInRest, cmd.params);
+  if (cmd.params[active].kind !== 'mention') return null;
+
+  const tok = tokens[active];
+  if (tok && caretInRest >= tok.start && caretInRest <= tok.end) {
+    return { start: prefix.length + tok.start, end: prefix.length + tok.end };
+  }
+  return null;
+}
+
 export default function SlashCommandScaffold({ command, content, caret }: Props) {
   const params = command.params;
   if (!params || params.length === 0) return null;

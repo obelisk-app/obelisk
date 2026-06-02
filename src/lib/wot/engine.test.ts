@@ -101,7 +101,7 @@ describe('WotEngine', () => {
     expect(e.getDistance('alice')).toBe(null);
   });
 
-  it('newly-muted pubkey emits verdict-deny so callers can prune', () => {
+  it('newly-muted pubkey emits verdict-deny for non-destructive UI/policy refresh', () => {
     const e = makeEngine();
     const seen: string[] = [];
     e.on('verdict-deny', (pk) => seen.push(pk));

@@ -50,7 +50,7 @@ export default function DesktopShowcase() {
   ];
 
   return (
-    <main className="min-h-screen bg-lc-black lc-grid-bg relative">
+    <main className="min-h-screen bg-lc-black appearance-bg lc-grid-bg relative">
       <ShootingStars />
       <div className="relative z-10">
         <Navbar />

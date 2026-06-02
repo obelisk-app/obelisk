@@ -17,6 +17,15 @@ export async function renderGuideOgImage(locale: Locale, slug: string) {
     // fall through with defaults
   }
 
+  // Scale typography to title length so long titles (e.g. swap-anything) wrap
+  // cleanly inside the 1056px content area instead of overflowing the canvas.
+  const titleLen = title.length;
+  const titleFontSize = titleLen > 56 ? 52 : titleLen > 40 ? 60 : 72;
+  const descFontSize = titleLen > 56 ? 24 : 28;
+  const descMax = descFontSize > 24 ? 200 : 220;
+  const trimmedDesc =
+    description.length > descMax ? description.slice(0, descMax - 1) + '…' : description;
+
   return new ImageResponse(
     (
       <div
@@ -76,26 +85,27 @@ export async function renderGuideOgImage(locale: Locale, slug: string) {
         >
           <div
             style={{
-              fontSize: 68,
+              fontSize: titleFontSize,
               fontWeight: 800,
               letterSpacing: -1.5,
               lineHeight: 1.05,
               color: '#fafafa',
+              maxWidth: 1056,
             }}
           >
             {title}
           </div>
-          {description && (
+          {trimmedDesc && (
             <div
               style={{
-                fontSize: 28,
+                fontSize: descFontSize,
                 fontWeight: 400,
                 lineHeight: 1.35,
                 color: '#a3a3a3',
-                maxWidth: 1020,
+                maxWidth: 1056,
               }}
             >
-              {description.length > 160 ? description.slice(0, 157) + '…' : description}
+              {trimmedDesc}
             </div>
           )}
         </div>
@@ -114,7 +124,7 @@ export async function renderGuideOgImage(locale: Locale, slug: string) {
                 fontFamily: 'monospace',
               }}
             >
-              #{tag}
+              {`#${tag}`}
             </div>
           ))}
           <div style={{ flex: 1 }} />

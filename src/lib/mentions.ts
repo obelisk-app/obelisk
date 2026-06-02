@@ -246,15 +246,29 @@ export function detectMentionQuery(value: string, cursor: number): string | null
  * slot is open, the token is inserted at the cursor with a leading space
  * when needed. Returns the new draft text and the cursor position
  * immediately after the inserted token.
+ *
+ * `slotRange` (optional): when the picker was opened from a slash-command
+ * mention slot rather than a free-form `@` query, pass the absolute char
+ * range of the slot's existing token and we replace that range outright.
+ * Without it, a partial display name typed into the slot would be left in
+ * place and the npub appended after it — producing `/zap dum nostr:npub…`
+ * which the parser rejects as an unknown user.
  */
 export function applyMentionToDraft(
   draft: string,
   cursor: number,
   pubkey: string,
+  slotRange?: { start: number; end: number } | null,
 ): { next: string; cursor: number } {
+  const token = `nostr:${hexToNpub(pubkey)} `;
+
+  if (slotRange) {
+    const replaced = draft.slice(0, slotRange.start) + token + draft.slice(slotRange.end);
+    return { next: replaced, cursor: slotRange.start + token.length };
+  }
+
   const before = draft.slice(0, cursor);
   const after = draft.slice(cursor);
-  const token = `nostr:${hexToNpub(pubkey)} `;
   let replaced: string;
   if (/@(\w*)$/.test(before)) {
     replaced = before.replace(/@(\w*)$/, () => token);

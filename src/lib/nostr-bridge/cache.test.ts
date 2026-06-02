@@ -5,7 +5,7 @@
  * are independent. The fixture relay URL contains `:` and `/` to verify
  * the cache key format tolerates them without encoding.
  */
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { cacheGet, cacheSet, cacheDelete, cacheClearAll, cacheListIds } from './cache';
 
 const RELAY = 'wss://relay.example.com';
@@ -13,6 +13,10 @@ const KIND = 39001;
 
 beforeEach(() => {
   if (typeof window !== 'undefined') window.localStorage.clear();
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe('cache', () => {
@@ -45,6 +49,20 @@ describe('cache', () => {
     cacheSet(RELAY, KIND, 'group-1', ['old']);
     cacheSet(RELAY, KIND, 'group-1', ['new', 'list']);
     expect(cacheGet<string[]>(RELAY, KIND, 'group-1')!.value).toEqual(['new', 'list']);
+  });
+
+  it('skips rewriting an identical value', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_000);
+    cacheSet(RELAY, KIND, 'group-1', ['same']);
+
+    vi.setSystemTime(2_000);
+    cacheSet(RELAY, KIND, 'group-1', ['same']);
+
+    const entry = cacheGet<string[]>(RELAY, KIND, 'group-1');
+    expect(entry).not.toBeNull();
+    expect(entry!.value).toEqual(['same']);
+    expect(entry!.createdAt).toBe(1_000);
   });
 
   it('isolates by relay — same kind/id on different relays do not collide', () => {
@@ -116,5 +134,26 @@ describe('cache', () => {
     cacheSet(RELAY, KIND, groupId, ['pk']);
     expect(cacheGet<string[]>(RELAY, KIND, groupId)!.value).toEqual(['pk']);
     expect(cacheListIds(RELAY, KIND)).toContain(groupId);
+  });
+
+  it('round-trips a kind 0 user-metadata entry in the shape ingestUserMetadata writes', () => {
+    const pubkey = 'a'.repeat(64);
+    const meta = {
+      pubkey,
+      name: 'alice',
+      displayName: 'Alice',
+      picture: 'https://example.com/a.png',
+      about: 'hello',
+      nip05: 'alice@example.com',
+      banner: null,
+      lud16: null,
+      website: null,
+    };
+    cacheSet(RELAY, 0, pubkey, { meta, createdAt: 1700_000_000 });
+    const entry = cacheGet<{ meta: typeof meta; createdAt: number }>(RELAY, 0, pubkey);
+    expect(entry).not.toBeNull();
+    expect(entry!.value.meta.displayName).toBe('Alice');
+    expect(entry!.value.createdAt).toBe(1700_000_000);
+    expect(cacheListIds(RELAY, 0)).toContain(pubkey);
   });
 });

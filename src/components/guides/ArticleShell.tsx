@@ -33,7 +33,7 @@ export default function ArticleShell({
     <article className="max-w-3xl mx-auto px-6 pt-28 pb-24" data-testid="article-shell">
       <Link
         href={backHref}
-        className="inline-flex items-center gap-2 text-sm text-lc-muted hover:text-lc-green transition-colors mb-6"
+        className="inline-flex items-center gap-2 text-sm font-medium text-lc-green hover:text-lc-green-dark transition-colors mb-6"
       >
         <span aria-hidden="true">←</span> {backLabel}
       </Link>

@@ -26,10 +26,23 @@ export const nostrActions = {
   addRelay: async (url: string) => (await getBridge()).addRelay(url),
   removeRelay: async (url: string) => (await getBridge()).removeRelay(url),
 
-  sendMessage: async (groupId: string, content: string, replyTo?: { id: string; pubkey: string } | null) =>
-    (await getBridge()).sendMessage(groupId, content, replyTo),
-  sendReaction: async (targetEventId: string, targetPubkey: string, emoji: string, groupId: string) =>
-    (await getBridge()).sendReaction(targetEventId, targetPubkey, emoji, groupId),
+  sendMessage: async (
+    groupId: string,
+    content: string,
+    replyTo?: { id: string; pubkey: string } | null,
+    emojiTags?: ReadonlyArray<ReadonlyArray<string>>,
+  ) => (await getBridge()).sendMessage(groupId, content, replyTo, emojiTags),
+  sendReaction: async (
+    targetEventId: string,
+    targetPubkey: string,
+    emoji: string,
+    groupId: string,
+    emojiTags?: ReadonlyArray<ReadonlyArray<string>>,
+  ) => (await getBridge()).sendReaction(targetEventId, targetPubkey, emoji, groupId, emojiTags),
+  removeReaction: async (groupId: string, reactionEventId: string) =>
+    (await getBridge()).removeReaction(groupId, reactionEventId),
+  removeMessage: async (groupId: string, eventId: string) =>
+    (await getBridge()).removeMessage(groupId, eventId),
   sendDirectMessage: async (recipientPubkey: string, content: string) =>
     (await getBridge()).sendDirectMessage(recipientPubkey, content),
   retryMessage: async (groupId: string, clientTag: string) =>
@@ -69,6 +82,10 @@ export const nostrActions = {
     (await getBridge()).deleteGroupEvent(groupId, eventId),
   loadMoreMessages: async (groupId: string) =>
     (await getBridge()).loadMoreMessages(groupId),
+  refreshGroupMessages: async (groupId: string) =>
+    (await getBridge()).refreshGroupMessages(groupId),
+  fetchGroupMetadata: async (groupId: string) =>
+    (await getBridge()).fetchGroupMetadata(groupId),
 
   setActiveGroup: async (groupId: string | null) =>
     (await getBridge()).setActiveGroup(groupId),

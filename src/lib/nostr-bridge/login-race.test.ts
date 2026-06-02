@@ -17,6 +17,7 @@ const fake = vi.hoisted(() => {
     subscriptions: [] as Array<{ filter: Record<string, unknown>; sink: (ev: NostrEvent) => void }>,
     connectOrder: [] as string[],
     bunkerConnectCount: 0,
+    bunkerGetPublicKeyCount: 0,
   };
 
   function matches(f: Record<string, unknown>, ev: { kind: number; pubkey: string; tags: string[][] }): boolean {
@@ -54,6 +55,9 @@ const fake = vi.hoisted(() => {
       state.connectOrder.push(`ensureRelay:${url}`);
       return { connected: true };
     }
+    async querySync(_relays: string[], filter: Record<string, unknown>, _opts?: { maxWait?: number }): Promise<NostrEvent[]> {
+      return state.published.filter((ev) => matches(filter, ev));
+    }
   }
 
   return { state, FakePool, matches };
@@ -69,15 +73,19 @@ vi.mock('nostr-tools', async (orig) => {
 // test can assert connect is called exactly once during initialize.
 vi.mock('nostr-tools/nip46', () => {
   class BunkerSigner {
-    static fromBunker(_secret: Uint8Array, _bp: unknown, _opts: unknown) {
-      return new BunkerSigner();
+    bp: { pubkey: string; relays: string[]; secret: string | null };
+    constructor(bp = { pubkey: 'bunker-remote-pk', relays: ['wss://relay.nsec.app'] as string[], secret: 'sec' as string | null }) {
+      this.bp = bp;
+    }
+    static fromBunker(_secret: Uint8Array, bp: { pubkey: string; relays: string[]; secret: string | null }, _opts: unknown) {
+      return new BunkerSigner(bp);
     }
     static async fromURI(): Promise<BunkerSigner> { return new BunkerSigner(); }
-    bp = { pubkey: 'bunker-remote-pk', relays: ['wss://relay.nsec.app'] as string[], secret: 'sec' };
     async connect(): Promise<void> {
       fake.state.bunkerConnectCount++;
     }
     async getPublicKey(): Promise<string> {
+      fake.state.bunkerGetPublicKeyCount++;
       return 'a'.repeat(64);
     }
     async signEvent(evt: { kind: number; tags: string[][]; content: string; created_at?: number; pubkey?: string }) {
@@ -93,7 +101,11 @@ vi.mock('nostr-tools/nip46', () => {
   }
   return {
     BunkerSigner,
-    parseBunkerInput: async (_url: string) => ({ pubkey: 'bunker-remote-pk', relays: ['wss://relay.nsec.app'], secret: 'sec' }),
+    parseBunkerInput: async (url: string) => ({
+      pubkey: 'bunker-remote-pk',
+      relays: ['wss://relay.nsec.app'],
+      secret: url.includes('secret=') ? 'sec' : null,
+    }),
     createNostrConnectURI: () => 'nostrconnect://test',
   };
 });
@@ -112,6 +124,7 @@ beforeEach(() => {
   fake.state.subscriptions = [];
   fake.state.connectOrder = [];
   fake.state.bunkerConnectCount = 0;
+  fake.state.bunkerGetPublicKeyCount = 0;
   vi.resetModules();
   if (typeof window !== 'undefined') window.localStorage.clear();
 });
@@ -159,8 +172,10 @@ describe('Fix A — login → render race', () => {
     });
 
     await bridge.loginWithNsec(skHex, pkHex);
-    // At least: group metadata, kind 4 DM in/out, kind 3 contact list, own kind 0.
+    // At least: group metadata, kind 3 contact list, own kind 0. DM kind 4
+    // subscriptions are intentionally gated behind the local DM opt-in.
     expect(subsCountAtFlip).toBeGreaterThanOrEqual(3);
+    expect(fake.state.subscriptions.some((s) => (s.filter.kinds as number[] | undefined)?.includes(4))).toBe(false);
   });
 });
 
@@ -171,7 +186,7 @@ describe('Fix B (revised) — admin/member subscription is lazy', () => {
   // and slowed setup of recently created groups. The new contract:
   // ingest does NOT fan out admin/member; per-group REQs open lazily on
   // first useAdmins / useMembers / subscribeAdmins / subscribeMembers
-  // call from the chat panel. See docs/progressive-loading.md.
+  // call from the chat panel. See docs/data-system.md.
   it('does NOT subscribe to kinds 39001+39002 on kind 39000 ingest', async () => {
     const { getBridge } = await import('./client');
     const { skHex, pkHex } = makeKeypair();
@@ -255,6 +270,39 @@ describe('Fix C — bunker pre-warm on initialize', () => {
     await new Promise((r) => setTimeout(r, 0));
 
     expect(fake.state.bunkerConnectCount).toBeGreaterThanOrEqual(1);
+  });
+
+  it('pre-warms SDK QR bunker sessions without replaying connect when no secret is stored', async () => {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        pubKeyHex: 'a'.repeat(64),
+        loginMethod: 'bunker',
+        relayUrl: 'wss://relay.example.com',
+        bunkerUrl: 'bunker://abc?relay=wss://relay.nsec.app',
+        bunkerLocalSecretHex: 'b'.repeat(64),
+      }),
+    );
+
+    const { getBridge } = await import('./client');
+    await getBridge();
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(fake.state.bunkerConnectCount).toBe(0);
+    expect(fake.state.bunkerGetPublicKeyCount).toBeGreaterThanOrEqual(1);
+  });
+
+  it('does not replay connect for SDK-paired loginWithBunker handoff', async () => {
+    const { getBridge } = await import('./client');
+    const bridge = await getBridge();
+
+    await bridge.loginWithBunker('bunker://abc?relay=wss://relay.nsec.app', {
+      clientSecretHex: 'b'.repeat(64),
+    });
+
+    expect(bridge.getPublicKey()).toBe('a'.repeat(64));
+    expect(fake.state.bunkerConnectCount).toBe(0);
+    expect(fake.state.bunkerGetPublicKeyCount).toBeGreaterThanOrEqual(1);
   });
 
   it('does NOT pre-warm BunkerSigner for nsec sessions', async () => {

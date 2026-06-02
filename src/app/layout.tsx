@@ -3,11 +3,15 @@ import { Inter } from 'next/font/google';
 import Script from 'next/script';
 import { cookies, headers } from 'next/headers';
 import { LocaleProvider } from '@/i18n/context';
-import type { Locale } from '@/i18n/index';
+import { DEFAULT_LOCALE, LOCALE_COOKIE, LOCALE_HEADER, isLocale, type Locale } from '@/i18n/index';
 import ToastStack from '@/components/ToastStack';
 import SdkSessionBridge from '@/components/SdkSessionBridge';
-import './globals.css';
+import AppearancePreferencesRoot from '@/components/AppearancePreferencesRoot';
+// SDK styles first so our globals.css overrides win at equal specificity
+// (e.g. the la-crypta `--nui-overlay-bg` override that lets the login
+// backdrop animation bleed through the modal overlay).
 import '@nostr-wot/ui/styles.css';
+import './globals.css';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -109,12 +113,19 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   const cookieStore = await cookies();
-  const locale = (cookieStore.get('locale')?.value as Locale) || 'es';
+  const requestHeaders = await headers();
+  const headerLocale = requestHeaders.get(LOCALE_HEADER);
+  const cookieLocale = cookieStore.get(LOCALE_COOKIE)?.value;
+  const locale: Locale = isLocale(headerLocale)
+    ? headerLocale
+    : isLocale(cookieLocale)
+      ? cookieLocale
+      : DEFAULT_LOCALE;
   // Per-request CSP nonce minted by src/proxy.ts. Stamping it on every
   // inline <Script>/<script> we render keeps the strict CSP green; any
   // injected upstream script (Cloudflare, browser extensions) without
   // this nonce is correctly blocked.
-  const nonce = (await headers()).get('x-nonce') ?? undefined;
+  const nonce = requestHeaders.get('x-nonce') ?? undefined;
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -205,8 +216,20 @@ export default async function RootLayout({
         <Script id="obelisk-pwa-register" strategy="afterInteractive" nonce={nonce}>
           {`
             if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.addEventListener('message', function (event) {
+                if (!event.data || event.data.type !== 'OBELISK_SW_UPDATED') return;
+                var key = 'obelisk-sw-version';
+                var nextVersion = String(event.data.version || '');
+                try {
+                  if (nextVersion && localStorage.getItem(key) === nextVersion) return;
+                  if (nextVersion) localStorage.setItem(key, nextVersion);
+                } catch (e) {}
+                window.location.reload();
+              });
               window.addEventListener('load', function () {
-                navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function () {
+                navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' }).then(function (registration) {
+                  registration.update().catch(function () {});
+                }).catch(function () {
                   /* swallow — installability is a UX bonus, not a hard requirement */
                 });
               });
@@ -220,6 +243,7 @@ export default async function RootLayout({
         data-nui-theme="la-crypta"
       >
         <LocaleProvider initialLocale={locale}>
+          <AppearancePreferencesRoot />
           <SdkSessionBridge>{children}</SdkSessionBridge>
           <ToastStack />
         </LocaleProvider>

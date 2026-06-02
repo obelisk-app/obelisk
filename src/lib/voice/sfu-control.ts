@@ -57,6 +57,7 @@ const START_RATELIMIT_MS = 30_000;
  *  short wait is sufficient — and keeping it short means a bad/missing
  *  advertisement doesn't block the join. */
 const DISCOVERY_COLD_WAIT_MS = 1500;
+const PIN_COLD_WAIT_WITH_ENV_MS = 200;
 
 export interface SfuAdvertisement {
   pubkey: string;
@@ -150,12 +151,20 @@ async function ensureAdvertisementSub(): Promise<void> {
  * post-v0 concern.
  */
 export async function pickSfu(channelId?: string): Promise<SfuAdvertisement | null> {
+  const pinnedPubkey = process.env.NEXT_PUBLIC_SFU_PUBKEY;
+  const pinnedUrl = process.env.NEXT_PUBLIC_SFU_URL;
+  const pinnedRelays = (process.env.NEXT_PUBLIC_SFU_TRUSTED_RELAYS ?? '')
+    .split(',').map((s) => s.trim()).filter(Boolean);
+
   // 1) Per-channel pin (kind 30078) — what the channel admin chose. This
   //    is the path we want to be the rule, not the exception: any operator
   //    can run their own SFU and bind it to their channel without touching
   //    the dex build. Falls through if no pin is set yet for this channel.
   if (channelId) {
-    const channelPin = await resolveSfuPin(channelId);
+    const channelPin = await resolveSfuPin(
+      channelId,
+      pinnedPubkey ? PIN_COLD_WAIT_WITH_ENV_MS : undefined,
+    );
     if (channelPin) {
       return {
         pubkey: channelPin.pubkey,
@@ -176,11 +185,7 @@ export async function pickSfu(channelId?: string): Promise<SfuAdvertisement | nu
   //    subscriber ever sees it, so `pickSfu` returns null and the UI
   //    shows "SFU unavailable". With per-channel pins live, this layer
   //    is just a safety net for unconfigured channels.
-  const pinnedPubkey = process.env.NEXT_PUBLIC_SFU_PUBKEY;
-  const pinnedUrl = process.env.NEXT_PUBLIC_SFU_URL;
   if (pinnedPubkey && /^[0-9a-f]{64}$/i.test(pinnedPubkey)) {
-    const pinnedRelays = (process.env.NEXT_PUBLIC_SFU_TRUSTED_RELAYS ?? '')
-      .split(',').map((s) => s.trim()).filter(Boolean);
     return {
       pubkey: pinnedPubkey.toLowerCase(),
       url: pinnedUrl ?? null,

@@ -12,6 +12,8 @@ const g = (id: string, name: string | null, about: string | null = null): JsGrou
   isOpen: true,
   parent: null,
   kind: 'text',
+  forumTags: [],
+  topics: [],
 });
 
 describe('searchGroups', () => {

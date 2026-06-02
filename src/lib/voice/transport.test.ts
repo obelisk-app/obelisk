@@ -42,13 +42,14 @@ const bridgeFake = vi.hoisted(() => {
   const impl = {
     getPublicKey: () => selfPubkey,
     publishEvent: vi.fn(async (input: { kind: number; content: string; tags: string[][] }) => {
+      const createdAt = nextEventCreatedAt++;
       const ev: FakeEvent = {
         pubkey: selfPubkey,
         kind: input.kind,
         content: input.content,
         tags: input.tags,
-        created_at: nextEventCreatedAt++,
-        id: 'fake-id',
+        created_at: createdAt,
+        id: `fake-id-${createdAt}`,
       };
       // Synchronous fan-out — simpler to test than queueMicrotask.
       for (const s of subs) if (matches(s.filter, ev)) s.sink(ev);
@@ -61,6 +62,11 @@ const bridgeFake = vi.hoisted(() => {
     // Same signature; in production this version wraps the sub with a
     // 5-second EVENT/EOSE watchdog and exponential-backoff retry.
     subscribeFilterWatched: vi.fn((filter: SubFilter, sink: (ev: FakeEvent) => void) => {
+      const sub = { filter, sink };
+      subs.push(sub);
+      return () => { const i = subs.indexOf(sub); if (i >= 0) subs.splice(i, 1); };
+    }),
+    subscribeVoiceFilterWatched: vi.fn((filter: SubFilter, sink: (ev: FakeEvent) => void) => {
       const sub = { filter, sink };
       subs.push(sub);
       return () => { const i = subs.indexOf(sub); if (i >= 0) subs.splice(i, 1); };
@@ -82,6 +88,7 @@ const bridgeFake = vi.hoisted(() => {
       impl.publishEvent.mockClear();
       impl.subscribeFilter.mockClear();
       impl.subscribeFilterWatched.mockClear();
+      impl.subscribeVoiceFilterWatched.mockClear();
     },
   };
 });
@@ -93,10 +100,12 @@ vi.mock('@/lib/nostr-bridge/client', () => ({
 
 import {
   publishPresenceBeacon,
+  publishLeavePresence,
   subscribeRoster,
   sendSignal,
   subscribeSignals,
   getSelfPubkey,
+  createVoiceTransport,
 } from './transport';
 
 beforeEach(() => {
@@ -128,8 +137,92 @@ describe('publishPresenceBeacon', () => {
   });
 });
 
-describe('voice subs use the watched variant for relay-drop recovery', () => {
-  it('subscribeRoster goes through subscribeFilterWatched, not the raw subscribeFilter', async () => {
+describe('publishLeavePresence', () => {
+  it('publishes a terminal kind 20078 leave beacon with a past expiration', async () => {
+    await publishLeavePresence('ch1');
+
+    expect(bridgeFake.impl.publishEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: KIND_VOICE_PRESENCE,
+        content: '',
+        tags: expect.arrayContaining([
+          ['e', 'ch1'],
+          ['t', 'obelisk-voice-presence'],
+          ['status', 'left'],
+        ]),
+      }),
+    );
+    const call = bridgeFake.impl.publishEvent.mock.calls[0][0] as { tags: string[][] };
+    const exp = call.tags.find((t) => t[0] === 'expiration');
+    expect(exp).toBeDefined();
+    expect(parseInt(exp![1], 10)).toBeLessThanOrEqual(Math.floor(Date.now() / 1000));
+  });
+});
+
+describe('pinned relay voice transport', () => {
+  it('publishes beacons to the origin relay only', async () => {
+    const transport = createVoiceTransport({ relayUrl: 'wss://origin.example' });
+    await transport.publishPresenceBeacon('ch1');
+    expect(bridgeFake.impl.publishEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: KIND_VOICE_PRESENCE }),
+      { extraRelays: ['wss://origin.example'], mode: 'replace' },
+    );
+  });
+
+  it('pins roster and signal subscriptions to the origin relay', async () => {
+    const transport = createVoiceTransport({ relayUrl: 'wss://origin.example' });
+    const unsubRoster = await transport.subscribeRoster('ch1', () => {});
+    const unsubSignals = await transport.subscribeSignals('ch1', 'me', () => {});
+
+    expect(bridgeFake.impl.subscribeVoiceFilterWatched).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ kinds: [KIND_VOICE_PRESENCE] }),
+      expect.any(Function),
+      expect.objectContaining({
+        relays: ['wss://origin.example'],
+        relayMode: 'replace',
+        affectsRelayAccess: false,
+      }),
+    );
+    expect(bridgeFake.impl.subscribeVoiceFilterWatched).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ kinds: [KIND_VOICE_SIGNAL] }),
+      expect.any(Function),
+      expect.objectContaining({
+        relays: ['wss://origin.example'],
+        relayMode: 'replace',
+        affectsRelayAccess: false,
+      }),
+    );
+
+    unsubRoster();
+    unsubSignals();
+  });
+
+  it('publishes signals to the origin relay only', async () => {
+    const transport = createVoiceTransport({ relayUrl: 'wss://origin.example' });
+    await transport.sendSignal('ch1', 'recipient-pk', { type: 'bye', sessionId: 's1', seq: 1 });
+    expect(bridgeFake.impl.publishEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: KIND_VOICE_SIGNAL }),
+      { extraRelays: ['wss://origin.example'], mode: 'replace' },
+    );
+  });
+
+  it('publishes leave beacons to the origin relay only', async () => {
+    const transport = createVoiceTransport({ relayUrl: 'wss://origin.example' });
+    await transport.publishLeavePresence('ch1');
+    expect(bridgeFake.impl.publishEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: KIND_VOICE_PRESENCE,
+        tags: expect.arrayContaining([['status', 'left']]),
+      }),
+      { extraRelays: ['wss://origin.example'], mode: 'replace' },
+    );
+  });
+});
+
+describe('voice subs use the dedicated watched variant for relay-drop recovery', () => {
+  it('subscribeRoster goes through subscribeVoiceFilterWatched, not the raw subscribeFilter', async () => {
     // The raw `subscribeFilter` runs once and dies silently when the relay's
     // WebSocket drops mid-call (network blip, server restart). The watched
     // variant has a 5s no-EVENT/EOSE watchdog with exponential-backoff retry,
@@ -137,14 +230,14 @@ describe('voice subs use the watched variant for relay-drop recovery', () => {
     // against the bug where one browser logs "WebSocket already in
     // CLOSING/CLOSED" while another never sees a new joiner.
     const unsub = await subscribeRoster('ch1', () => {});
-    expect(bridgeFake.impl.subscribeFilterWatched).toHaveBeenCalled();
+    expect(bridgeFake.impl.subscribeVoiceFilterWatched).toHaveBeenCalled();
     expect(bridgeFake.impl.subscribeFilter).not.toHaveBeenCalled();
     unsub();
   });
 
-  it('subscribeSignals goes through subscribeFilterWatched', async () => {
+  it('subscribeSignals goes through subscribeVoiceFilterWatched', async () => {
     const unsub = await subscribeSignals('ch1', 'me', () => {});
-    expect(bridgeFake.impl.subscribeFilterWatched).toHaveBeenCalled();
+    expect(bridgeFake.impl.subscribeVoiceFilterWatched).toHaveBeenCalled();
     expect(bridgeFake.impl.subscribeFilter).not.toHaveBeenCalled();
     unsub();
   });
@@ -166,6 +259,42 @@ describe('subscribeRoster', () => {
     unsub();
   });
 
+  it('parses marked mesh test peer beacons', async () => {
+    let lastRoster: { pubkey: string; isMeshTestPeer?: boolean }[] = [];
+    const unsub = await subscribeRoster('ch1', (r) => { lastRoster = r; });
+    const now = Math.floor(Date.now() / 1000);
+
+    bridgeFake.inject({
+      pubkey: 'p-test', kind: KIND_VOICE_PRESENCE, content: '',
+      tags: [
+        ['e', 'ch1'],
+        ['client', 'obelisk-mesh-test-peer'],
+        ['test-peer', 'mesh'],
+        ['expiration', String(now + 30)],
+      ],
+      created_at: now,
+    });
+
+    expect(lastRoster).toHaveLength(1);
+    expect(lastRoster[0].isMeshTestPeer).toBe(true);
+    unsub();
+  });
+
+  it('ignores beacons for other channels after broad kind-only delivery', async () => {
+    let lastRoster: { pubkey: string }[] = [];
+    const unsub = await subscribeRoster('ch1', (r) => { lastRoster = r; });
+    const now = Math.floor(Date.now() / 1000);
+
+    bridgeFake.inject({
+      pubkey: 'p-other', kind: KIND_VOICE_PRESENCE, content: '',
+      tags: [['e', 'other-channel'], ['expiration', String(now + 30)]],
+      created_at: now,
+    });
+
+    expect(lastRoster).toEqual([]);
+    unsub();
+  });
+
   it('drops expired beacons', async () => {
     let lastRoster: { pubkey: string }[] = [];
     const unsub = await subscribeRoster('ch1', (r) => { lastRoster = r; });
@@ -177,6 +306,34 @@ describe('subscribeRoster', () => {
       created_at: now - 60,
     });
 
+    expect(lastRoster).toEqual([]);
+    unsub();
+  });
+
+  it('lets terminal leave beacons remove a same-second active beacon', async () => {
+    let lastRoster: { pubkey: string }[] = [];
+    const unsub = await subscribeRoster('ch1', (r) => { lastRoster = r; });
+    const now = Math.floor(Date.now() / 1000);
+
+    bridgeFake.inject({
+      pubkey: 'p1', kind: KIND_VOICE_PRESENCE, content: '',
+      tags: [['e', 'ch1'], ['t', 'obelisk-voice-presence'], ['expiration', String(now + 30)]],
+      created_at: now,
+    });
+    expect(lastRoster.map((p) => p.pubkey)).toEqual(['p1']);
+
+    bridgeFake.inject({
+      pubkey: 'p1', kind: KIND_VOICE_PRESENCE, content: '',
+      tags: [['e', 'ch1'], ['t', 'obelisk-voice-presence'], ['status', 'left'], ['expiration', String(now - 1)]],
+      created_at: now,
+    });
+    expect(lastRoster).toEqual([]);
+
+    bridgeFake.inject({
+      pubkey: 'p1', kind: KIND_VOICE_PRESENCE, content: '',
+      tags: [['e', 'ch1'], ['t', 'obelisk-voice-presence'], ['expiration', String(now + 30)]],
+      created_at: now,
+    });
     expect(lastRoster).toEqual([]);
     unsub();
   });
@@ -236,6 +393,14 @@ describe('signal addressing', () => {
       tags: [['e', 'ch1'], ['p', 'me']],
       created_at: Math.floor(Date.now() / 1000),
     });
+    // Event for another channel — should be dropped even though the relay
+    // subscription is intentionally kind-only for tag-index reliability.
+    bridgeFake.inject({
+      pubkey: 'peer1', kind: KIND_VOICE_SIGNAL,
+      content: JSON.stringify({ type: 'offer', sdp: 'v=0', sessionId: 's', seq: 4 }),
+      tags: [['e', 'other-channel'], ['p', 'me']],
+      created_at: Math.floor(Date.now() / 1000),
+    });
     // Event addressed to someone else — should be dropped.
     bridgeFake.inject({
       pubkey: 'peer1', kind: KIND_VOICE_SIGNAL,
@@ -266,6 +431,23 @@ describe('signal addressing', () => {
       created_at: Math.floor(Date.now() / 1000),
     });
     expect(got).toHaveLength(0);
+    unsub();
+  });
+
+  it('subscribeSignals drops duplicate relay deliveries with the same event id', async () => {
+    const got: unknown[] = [];
+    const unsub = await subscribeSignals('ch1', 'me', (_from, p) => { got.push(p); });
+    const ev = {
+      id: 'same-event-id',
+      pubkey: 'peer1',
+      kind: KIND_VOICE_SIGNAL,
+      content: JSON.stringify({ type: 'ice', candidates: [{ candidate: 'fake', sdpMid: '0' }], sessionId: 's', seq: 1 }),
+      tags: [['e', 'ch1'], ['p', 'me']],
+      created_at: Math.floor(Date.now() / 1000),
+    };
+    bridgeFake.inject(ev);
+    bridgeFake.inject(ev);
+    expect(got).toHaveLength(1);
     unsub();
   });
 });

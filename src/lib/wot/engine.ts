@@ -5,9 +5,9 @@
  *   - `isAllowed(pubkey, kind?)` is synchronous. It is called from the bridge
  *     ingest hot path and must never await.
  *   - When WoT is enabled and the verdict for `pubkey` is unresolved, we
- *     fail-open AND enqueue `pubkey` for batch resolution. A later
- *     "deny" verdict prunes the previously-admitted entries via the
- *     `verdict-deny` event.
+ *     fail-open AND enqueue `pubkey` for batch resolution. Later deny
+ *     verdicts notify UI/policy listeners, but must not delete cached bridge
+ *     data by themselves.
  *   - Mutes (union of NIP-51 + local zustand) override allow; blocks are a
  *     hard local denylist that also bypasses always-allow exemptions.
  *   - Always-allow kinds: own events, group metadata (39000), admins/members
@@ -119,7 +119,6 @@ export class WotEngine {
 
   setMutedPubkeys(list: ReadonlyArray<string>): void {
     const next = new Set(list);
-    // Newly-muted pubkeys: emit deny so cached entries get pruned.
     for (const pk of next) {
       if (!this.mutedPubkeys.has(pk)) this.fireDeny(pk);
     }

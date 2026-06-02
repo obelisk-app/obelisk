@@ -1,6 +1,6 @@
 ---
-title: 'Cambiá cualquier pieza, no confíes en ninguna'
-description: Obelisk son cuatro proyectos chicos, un protocolo abierto, sin servidor central. El cliente de chat, el SFU de voz, el runtime de bots y el relay hablan todos por Nostr — y cualquiera de ellos podés reemplazarlo por el de otro, o por el tuyo. Acá está cómo el ecosistema se mantiene resiliente por diseño.
+title: 'Cambiá cualquier pieza, no confíes en ninguna: el stack de Obelisk'
+description: Obelisk son cuatro proyectos sobre un protocolo abierto — chat, SFU de voz, runtime de bots y relay. Cualquier pieza es reemplazable, ninguna es central.
 heroComponent: swap-anything
 publishedAt: '2026-05-07'
 updatedAt: '2026-05-08'
@@ -17,10 +17,10 @@ Obelisk está construido para no parecerse en nada a eso. Es un chat grupal esti
 
 <SvgHero name="swap-anything" />
 
-- **obelisk-dex** — el cliente de chat. Es lo que ves en el navegador cuando abrís obelisk.ar. Firma mensajes con tu clave y los manda a un relay. Eso es casi todo lo que hace.
-- **obelisk-sfu** — el servidor de voz para llamadas grandes. Cuando una llamada de grupo se vuelve muy grande para que todos hablen con todos directamente, el SFU mezcla los streams. Señaliza por Nostr como cualquier otro participante.
-- **obelisk-bots** — el motor que corre los bots. Bots de moderación, bots de juego, bots de integración. Cada bot tiene su propio par de claves y postea mensajes igual que un usuario humano. No hay una API especial para bots.
-- **obelisk-relay** — un relay de Nostr que podés correr vos. Viene con whitelisting incorporado y un CLI que te pone online en unos minutos. Tiene una web UI para administrarlo sin tocar la terminal.
+- <Mark name="mark-dex" /> **obelisk-dex** — el cliente de chat. Es lo que ves en el navegador cuando abrís obelisk.ar. Firma mensajes con tu clave y los manda a un relay. Eso es casi todo lo que hace.
+- <Mark name="mark-sfu" /> **obelisk-sfu** — el servidor de voz para llamadas grandes. Cuando una llamada de grupo se vuelve muy grande para que todos hablen con todos directamente, el SFU mezcla los streams. Señaliza por Nostr como cualquier otro participante.
+- <Mark name="mark-bots" /> **obelisk-bots** — el motor que corre los bots. Bots de moderación, bots de juego, bots de integración. Cada bot tiene su propio par de claves y postea mensajes igual que un usuario humano. No hay una API especial para bots.
+- <Mark name="mark-relay" /> **obelisk-relay** — un relay de Nostr que podés correr vos. Viene con whitelisting incorporado y un CLI que te pone online en unos minutos. Tiene una web UI para administrarlo sin tocar la terminal.
 
 Ninguno de estos cuatro proyectos importa código de otro. Nunca tuvieron que hacerlo. Hablan todos el mismo protocolo y se encuentran en el relay.
 
@@ -84,8 +84,8 @@ Todo es open source. Forkealo, cambialo, reemplazalo.
 
 Si construís algo que le hable a cualquiera de estos, funciona. De eso se trata todo.
 
-## Ver también
-
-- [Cómo funciona Obelisk](/guides/how-obelisk-works) — la arquitectura sin backend
-- [Traé tu propio relay](/guides/web-of-trust) — relays como comunidades soberanas
-- [Qué hay en el roadmap](/guides/future-nostr-relays) — qué falta construir
+<RelatedGuides items={[
+  { slug: "how-obelisk-works", note: "la arquitectura sin backend" },
+  { slug: "web-of-trust", note: "relays como comunidades soberanas" },
+  { slug: "future-nostr-relays", note: "qué falta construir" }
+]} />

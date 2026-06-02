@@ -17,18 +17,20 @@
  *   mechanical (replace this file's body).
  *
  *   See `nostrord/composeApp/src/wasmJsMain/.../bridge/README.md` (deleted
- *   when the broken first-draft was reverted) and obeliskord/HANDOFF.md
+ *   when the broken first-draft was reverted) and obelisk/HANDOFF.md
  *   for the WASM swap recipe.
  */
 import { SimplePool, type Filter, type Event as NostrEvent, type EventTemplate, type VerifiedEvent, finalizeEvent, getPublicKey, nip19, nip04 } from 'nostr-tools';
+import { KIND_VOICE_PRESENCE } from '@/lib/nip-kinds';
 import { BunkerSigner, parseBunkerInput, createNostrConnectURI } from 'nostr-tools/nip46';
 import { generateSecretKey } from 'nostr-tools/pure';
 import { v2 as nip44 } from 'nostr-tools/nip44';
 import type { NipSigner } from '@/lib/nip-59';
 import { parseRelayListMeta, parseInboxRelays } from '@/lib/nostr-read';
 import { TextCoercingWebSocket } from '@/lib/nostr-pool';
-import { cacheGet, cacheSet, cacheClearAll, cacheListIds } from './cache';
+import { cacheGet, cacheSet, cacheDelete, cacheClearAll, cacheListIds } from './cache';
 import { normalizeRelayUrl } from './relay-url';
+import { runConnectFanOut, type TierAction } from './orchestrator';
 import { wotEngine } from '@/lib/wot/engine';
 import { useModerationStore } from '@/store/moderation';
 import { resetAllClientState } from '@/lib/reset';
@@ -36,13 +38,16 @@ import { pushActivity, resolveActivity, failActivity, trackActivity, dismissActi
 import { useReadStateStore } from '@/store/read-state';
 import { isUserWatchingDM, isUserWatchingChannel } from '@/lib/read-gates';
 import { extractMentionPubkeysFromMessage } from '@/lib/mentions';
+import { customEmojiMapFromTags } from '@/lib/custom-emoji-tags';
 import type {
   NostrBridge,
   JsGroup,
+  JsForumTag,
   JsMessage,
   JsUserMetadata,
   JsReaction,
   JsDirectMessage,
+  MessagesStatus,
   RelayAccessState,
   Unsubscribe,
 } from './types';
@@ -53,6 +58,18 @@ import type {
  * the existing state untouched. Pattern bank derives from common relay
  * implementations: strfry, nostream, nostrudel, gnost-relay.
  */
+function isRelayQuotaOrRateLimit(reason: string): boolean {
+  const r = reason.toLowerCase();
+  return (
+    r.includes('rate limit') ||
+    r.includes('rate-limit') ||
+    r.includes('too many') ||
+    r.includes('slow down') ||
+    r.includes('quota') ||
+    r.includes('concurrent')
+  );
+}
+
 function parseRelayRejection(reason: string): RelayAccessState | null {
   const r = reason.toLowerCase();
   // Rate-limit / quota messages often ship with the "restricted:" prefix
@@ -60,19 +77,8 @@ function parseRelayRejection(reason: string): RelayAccessState | null {
   // Subscription quota exceeded: 50/50", "ERROR: too many concurrent REQs").
   // They are transient — not a pubkey-allowlist signal — and classifying
   // them as 'restricted' would wrongly flash "Not whitelisted" to legitimate
-  // users. Returning null here also keeps the onclose handler from setting
-  // `shouldRetry`, which is what stops the sub-flood that exhausts the very
-  // quota the relay was complaining about.
-  if (
-    r.includes('rate limit') ||
-    r.includes('rate-limit') ||
-    r.includes('too many') ||
-    r.includes('slow down') ||
-    r.includes('quota') ||
-    r.includes('concurrent')
-  ) {
-    return null;
-  }
+  // users.
+  if (isRelayQuotaOrRateLimit(reason)) return null;
   if (r.includes('auth-required') || r.includes('auth_required') || r.includes('auth required')) {
     return 'auth-required';
   }
@@ -100,12 +106,183 @@ export interface PublishOpts {
   readonly mode?: 'merge' | 'replace';
 }
 
+/**
+ * First value of the first tag whose name matches, or `undefined`. Equivalent
+ * to `ev.tags.find((t) => t[0] === name)?.[1]` but single-pass and avoids the
+ * intermediate closure allocation per ingest.
+ *
+ * For tags that carry a marker as a fourth element (e.g. NIP-10
+ * `["e", id, relay, "reply"]`), use the explicit `.find()` form — the marker
+ * predicate doesn't fit a generic helper.
+ */
+function getTag(ev: NostrEvent, name: string): string | undefined {
+  for (const t of ev.tags) {
+    if (t[0] === name) return t[1];
+  }
+  return undefined;
+}
+
+/**
+ * Values of every tag matching `name`, in document order, skipping entries
+ * whose value is empty. Equivalent to
+ * `ev.tags.filter((t) => t[0] === name).map((t) => t[1])` but single-pass.
+ */
+function getAllTags(ev: NostrEvent, name: string): string[] {
+  const out: string[] = [];
+  for (const t of ev.tags) {
+    if (t[0] === name && typeof t[1] === 'string' && t[1].length > 0) out.push(t[1]);
+  }
+  return out;
+}
+
+/**
+ * Single-pass parser for NIP-29 kind 39000 (group metadata) tag arrays.
+ * Replaces ~9 separate `ev.tags.find / .some / for-of` scans with one loop.
+ *
+ * Semantics preserved bit-for-bit from the previous open-coded version:
+ *  - `d`, `parent`, `name`, `about`, `picture`, `banner`: first occurrence wins
+ *    (matches the old `tag(name)` lambda which used `ev.tags.find`).
+ *  - `public` / `open`: presence-as-boolean flags.
+ *  - `t`: channel-kind hint with `voice-sfu > voice > forum > text` precedence.
+ *  - `forum-tag`: id-keyed map, last entry wins; malformed entries (missing
+ *    id or name) are skipped silently.
+ *  - `topic`: deduped via Set, document order preserved.
+ *
+ * Hot path — runs on every kind 39000 event in the fan-out at login, and
+ * the relay can deliver hundreds of these back-to-back.
+ */
+function parseGroupMetadataTags(tags: NostrEvent['tags']): {
+  d?: string;
+  parent?: string;
+  name?: string;
+  about?: string;
+  picture?: string;
+  banner?: string;
+  isPublic: boolean;
+  isOpen: boolean;
+  channelKind: 'voice-sfu' | 'voice' | 'forum' | 'text';
+  forumTags: JsForumTag[];
+  topics: string[];
+} {
+  let d: string | undefined;
+  let parent: string | undefined;
+  let name: string | undefined;
+  let about: string | undefined;
+  let picture: string | undefined;
+  let banner: string | undefined;
+  let isPublic = false;
+  let isOpen = false;
+  let hasVoiceSfu = false;
+  let hasVoice = false;
+  let hasForum = false;
+  const forumTagMap = new Map<string, JsForumTag>();
+  const topicSet = new Set<string>();
+
+  for (const t of tags) {
+    const k = t[0];
+    if (k === 'd') { if (d === undefined) d = t[1]; continue; }
+    if (k === 'name') { if (name === undefined) name = t[1]; continue; }
+    if (k === 'parent') { if (parent === undefined) parent = t[1]; continue; }
+    if (k === 'about') { if (about === undefined) about = t[1]; continue; }
+    if (k === 'picture') { if (picture === undefined) picture = t[1]; continue; }
+    if (k === 'banner') { if (banner === undefined) banner = t[1]; continue; }
+    if (k === 'public') { isPublic = true; continue; }
+    if (k === 'open') { isOpen = true; continue; }
+    if (k === 't') {
+      const v = t[1];
+      if (v === 'voice-sfu') hasVoiceSfu = true;
+      else if (v === 'voice') hasVoice = true;
+      else if (v === 'forum') hasForum = true;
+      continue;
+    }
+    if (k === 'forum-tag') {
+      const id = t[1];
+      const ftName = t[2];
+      if (!id || !ftName) continue;
+      const emoji = t[3] && t[3].length > 0 ? t[3] : null;
+      forumTagMap.set(id, { id, name: ftName, emoji });
+      continue;
+    }
+    if (k === 'topic') {
+      if (t[1]) topicSet.add(t[1]);
+      continue;
+    }
+  }
+
+  const channelKind: 'voice-sfu' | 'voice' | 'forum' | 'text' =
+    hasVoiceSfu ? 'voice-sfu' : hasVoice ? 'voice' : hasForum ? 'forum' : 'text';
+
+  return {
+    d, parent, name, about, picture, banner,
+    isPublic, isOpen, channelKind,
+    forumTags: Array.from(forumTagMap.values()),
+    topics: Array.from(topicSet),
+  };
+}
+
+/**
+ * Strict equality on string arrays. Used to skip redundant cacheSet writes
+ * when an admin/member list republished by the relay matches the
+ * already-cached snapshot.
+ */
+function arraysEqualStrict(a: readonly string[], b: readonly string[]): boolean {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
+}
+
+/**
+ * Deep equality on `JsGroup`. Two groups are equal iff every scalar field
+ * matches and the `forumTags` / `topics` arrays match positionally. Used to
+ * skip redundant cacheSet writes when a kind 39000 republish carries the
+ * same payload.
+ */
+function groupEqual(a: JsGroup, b: JsGroup): boolean {
+  if (a === b) return true;
+  if (a.id !== b.id || a.name !== b.name || a.about !== b.about
+      || a.picture !== b.picture || a.banner !== b.banner
+      || a.isPublic !== b.isPublic || a.isOpen !== b.isOpen
+      || a.parent !== b.parent || a.kind !== b.kind) return false;
+  if (a.forumTags.length !== b.forumTags.length) return false;
+  for (let i = 0; i < a.forumTags.length; i++) {
+    const x = a.forumTags[i];
+    const y = b.forumTags[i];
+    if (!x || !y) return false;
+    if (x.id !== y.id || x.name !== y.name || x.emoji !== y.emoji) return false;
+  }
+  if (a.topics.length !== b.topics.length) return false;
+  for (let i = 0; i < a.topics.length; i++) {
+    if (a.topics[i] !== b.topics[i]) return false;
+  }
+  return true;
+}
+
+/**
+ * Shallow equality on `JsUserMetadata`. All fields are flat scalars. Used
+ * to skip redundant cacheSet writes when a kind 0 republish carries the
+ * same fields under a newer `created_at`.
+ */
+function userMetadataEqual(a: JsUserMetadata, b: JsUserMetadata): boolean {
+  if (a === b) return true;
+  return a.pubkey === b.pubkey
+    && a.name === b.name
+    && a.displayName === b.displayName
+    && a.picture === b.picture
+    && a.about === b.about
+    && a.nip05 === b.nip05
+    && a.banner === b.banner
+    && a.lud16 === b.lud16
+    && a.website === b.website;
+}
+
 // -- NIP-29 kinds --------------------------------------------------------
 const KIND_GROUP_MESSAGE = 9;
 const KIND_GROUP_METADATA = 39000;
 const KIND_GROUP_JOIN_REQUEST = 9021;
 const KIND_GROUP_LEAVE_REQUEST = 9022;
 const KIND_USER_METADATA = 0;
+const KIND_EVENT_DELETION = 5;
 const KIND_REACTION = 7;
 const KIND_DIRECT_MESSAGE = 4;
 const KIND_GROUP_CREATE = 9007;
@@ -137,9 +314,25 @@ const DEFAULT_RELAYS = ['wss://public.obelisk.ar'];
 // events are pulled into `messagesByGroup` on the live REQ; older messages
 // are paged in on demand via `loadMoreMessages`. Keeps the initial fan-out
 // cheap when the user belongs to many channels and trims memory growth on
-// long-lived sessions. See docs/progressive-loading.md.
+// long-lived sessions. See docs/data-system.md.
 const BACKGROUND_MESSAGE_LIMIT = 50;
 const LOAD_MORE_PAGE_SIZE = 50;
+
+// How many of the most recent confirmed messages per channel get persisted to
+// `bridgeCache`. Matched to BACKGROUND_MESSAGE_LIMIT so a cold load paints the
+// same window the live REQ is about to request — stale-while-revalidate, with
+// no visible "jump" when the relay echo lands.
+const MESSAGE_CACHE_LIMIT = 50;
+// Hard cap on cached reactions per channel. Reactions are tiny (~80 bytes
+// each), so 500 fits well under 50KB per channel. When the live store grows
+// past this, the cache flush drops the oldest by createdAt.
+const REACTION_CACHE_LIMIT = 500;
+// Debounce delay for message / reaction cache flushes. A backfill burst from
+// the relay (kind 9 limit:50) lands as N synchronous ingest calls in the same
+// tick; the debounce coalesces them into a single localStorage.setItem at the
+// end. Short enough that a steady-state message arriving on its own still
+// reaches disk well before the next reload window.
+const CACHE_FLUSH_DELAY_MS = 200;
 
 // How long to wait before flipping the relay-access banner from 'unknown' to
 // a non-ok state on retryable rejections (auth-required/restricted). The
@@ -166,18 +359,132 @@ function readMigrated(key: string, legacyKey: string): string | null {
   return null;
 }
 
-// Outbox/profile relays for fetching kind:0 metadata. NIP-29 group relays
-// generally don't carry user profile events, so we query well-known public
-// relays in addition to the active group relay.
-export const PROFILE_RELAYS = [
+// Quiet outbox/profile relays for bounded kind:0 metadata lookups. Keep this
+// list intentionally small: normal channel browsing must not open persistent
+// subscriptions against broad public profile relays.
+export const DEFAULT_PROFILE_LOOKUP_RELAYS = [
   'wss://relay.obelisk.ar',
   'wss://public.obelisk.ar',
-  'wss://relay.damus.io',
-  'wss://relay.nostr.band',
-  'wss://nos.lol',
-  'wss://relay.primal.net',
   'wss://purplepag.es',
-];
+] as const;
+const PROFILE_RELAYS = DEFAULT_PROFILE_LOOKUP_RELAYS;
+
+export const PROFILE_SYNC_CACHE_KEY = 'obelisk/profile-sync-cache/v1';
+export const PROFILE_SYNC_STATE_KEY = 'obelisk/profile-sync-state/v1';
+export const PROFILE_LOOKUP_RELAYS_KEY = 'obelisk/profile-lookup-relays/v1';
+const OWN_PROFILE_LOOKUP_TTL_MS = 12 * 60 * 60 * 1000;
+const OTHER_PROFILE_LOOKUP_TTL_MS = 6 * 60 * 60 * 1000;
+const PROFILE_LOOKUP_MAX_WAIT_MS = 3500;
+
+export interface CachedKind0Event {
+  id: string;
+  pubkey: string;
+  created_at: number;
+  content: string;
+  tags: string[][];
+  sig: string;
+}
+
+interface ProfileSyncCache {
+  byPubkey: Record<string, CachedKind0Event>;
+}
+
+interface ProfileSyncState {
+  ownProfileLookupAt: Record<string, number>;
+  ownProfileSyncedToRelay: Record<string, number>;
+}
+
+function profileRelayKey(pubkey: string, relay: string): string {
+  return `${pubkey}|${normalizeRelayUrl(relay)}`;
+}
+
+function emptyProfileSyncCache(): ProfileSyncCache {
+  return { byPubkey: {} };
+}
+
+function emptyProfileSyncState(): ProfileSyncState {
+  return { ownProfileLookupAt: {}, ownProfileSyncedToRelay: {} };
+}
+
+function loadProfileSyncCache(): ProfileSyncCache {
+  if (typeof window === 'undefined') return emptyProfileSyncCache();
+  try {
+    const raw = window.localStorage.getItem(PROFILE_SYNC_CACHE_KEY);
+    if (!raw) return emptyProfileSyncCache();
+    const parsed = JSON.parse(raw) as ProfileSyncCache;
+    return parsed && typeof parsed === 'object' && parsed.byPubkey ? parsed : emptyProfileSyncCache();
+  } catch {
+    return emptyProfileSyncCache();
+  }
+}
+
+function saveProfileSyncCache(cache: ProfileSyncCache): void {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(PROFILE_SYNC_CACHE_KEY, JSON.stringify(cache));
+}
+
+function loadProfileSyncState(): ProfileSyncState {
+  if (typeof window === 'undefined') return emptyProfileSyncState();
+  try {
+    const raw = window.localStorage.getItem(PROFILE_SYNC_STATE_KEY);
+    if (!raw) return emptyProfileSyncState();
+    const parsed = JSON.parse(raw) as ProfileSyncState;
+    return {
+      ownProfileLookupAt: parsed?.ownProfileLookupAt ?? {},
+      ownProfileSyncedToRelay: parsed?.ownProfileSyncedToRelay ?? {},
+    };
+  } catch {
+    return emptyProfileSyncState();
+  }
+}
+
+function saveProfileSyncState(state: ProfileSyncState): void {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(PROFILE_SYNC_STATE_KEY, JSON.stringify(state));
+}
+
+export function getCachedKind0(pubkey: string): CachedKind0Event | null {
+  return loadProfileSyncCache().byPubkey[pubkey] ?? null;
+}
+
+function toCachedKind0(ev: NostrEvent): CachedKind0Event {
+  return {
+    id: ev.id,
+    pubkey: ev.pubkey,
+    created_at: ev.created_at,
+    content: ev.content,
+    tags: ev.tags.map((t) => [...t]),
+    sig: ev.sig,
+  };
+}
+
+function newestEvent<T extends { created_at: number }>(events: readonly T[]): T | null {
+  let newest: T | null = null;
+  for (const ev of events) {
+    if (!newest || ev.created_at > newest.created_at) newest = ev;
+  }
+  return newest;
+}
+
+function cachedKind0ToEvent(ev: CachedKind0Event): NostrEvent {
+  return { ...ev, kind: KIND_USER_METADATA } as NostrEvent;
+}
+
+export function setCachedKind0(ev: NostrEvent | CachedKind0Event): boolean {
+  const cache = loadProfileSyncCache();
+  const prev = cache.byPubkey[ev.pubkey];
+  if (prev && prev.created_at >= ev.created_at) return false;
+  cache.byPubkey[ev.pubkey] = {
+    id: ev.id,
+    pubkey: ev.pubkey,
+    created_at: ev.created_at,
+    content: ev.content,
+    tags: ev.tags.map((t) => [...t]),
+    sig: ev.sig,
+  };
+  saveProfileSyncCache(cache);
+  return true;
+}
 
 interface PersistedSession {
   privKeyHex?: string;     // optional: only nsec login persists this
@@ -300,7 +607,7 @@ class BridgeImpl implements NostrBridge {
    * be allowed to downgrade from 'ok'; otherwise the banner never surfaces
    * a non-whitelisted user who first saw an EOSE on an empty filter.
    */
-  private setRelayAccess(url: string, state: RelayAccessState, _opts?: { override?: boolean }): void {
+  private setRelayAccess(url: string, state: RelayAccessState, opts?: { override?: boolean }): void {
     if (!this.isActiveRelay(url)) return;
     const key = normalizeRelayUrl(url);
     const cur = this.relayAccess.get();
@@ -309,7 +616,7 @@ class BridgeImpl implements NostrBridge {
     // back to a non-'ok' state. Per-channel CLOSED rejections (private
     // channels the user isn't a member of, NIP-29 publish races) are normal
     // mid-session noise — letting them flip the banner causes flashing.
-    if (cur[key] === 'ok' && state !== 'ok') return;
+    if (cur[key] === 'ok' && state !== 'ok' && !opts?.override) return;
     // Any state transition supersedes a pending deferred downgrade — most
     // importantly, a flip to 'ok' must cancel a pending 'auth-required' so
     // the banner never appears for transient AUTH races that healed via
@@ -403,6 +710,99 @@ class BridgeImpl implements NostrBridge {
   constructor() {
     this.pool = this.createPool();
     this.wireWotEngine();
+    this.wireAuthSettledHook();
+  }
+
+  /**
+   * Detect `relayAccess` transitions to `'ok'` on the active relay and
+   * refresh kind 9 channels that were stuck waiting on AUTH. Without
+   * this, a user who taps "approve" in their NIP-46 bunker 20s after
+   * page load would still see "Loading messages…" forever because:
+   *   - The empty-EOSE retry ladder exhausted before AUTH settled
+   *     ({@link scheduleEmptyRetry}'s exhaustion path now defers
+   *     promotion-to-`empty-confirmed` while access is
+   *     `'authenticating'` / `'unknown'`), so channels sit in
+   *     `'empty-unconfirmed'` waiting for a signal.
+   *   - `subscribeWatched`'s inner retry loop continues at backoff, but
+   *     it can't re-paint stale messages because there's nothing in
+   *     `messagesByGroup` yet.
+   * The hook below provides that signal: AUTH just settled → refresh
+   * the active channel (and a small batch of background stuck channels)
+   * so the fresh REQ rides the now-AUTH'd socket.
+   *
+   * Cap on background refreshes: many-channel accounts (50+) could
+   * otherwise blast the relay with N parallel kind 9 restarts. 5 is
+   * arbitrary but bounded; channels the user actually opens still get
+   * a direct refresh via setActiveGroup's re-entry path.
+   */
+  private lastRelayAccessByUrl = new Map<string, RelayAccessState>();
+  private wireAuthSettledHook(): void {
+    this.relayAccess.subscribe((byRelay) => {
+      const active = this.currentRelayUrl.get();
+      const cur = byRelay[active];
+      const prev = this.lastRelayAccessByUrl.get(active);
+      this.lastRelayAccessByUrl.set(active, cur ?? 'unknown');
+      // We only care about the *first* time AUTH leaves the in-flight
+      // state for the active relay — i.e., transitions out of
+      // 'unknown' / 'authenticating' / undefined. Transitions between
+      // non-pending states (e.g., 'ok' → 'unreachable' on a socket
+      // drop) are handled by the reconnect path elsewhere.
+      const wasPending = prev === undefined || prev === 'unknown' || prev === 'authenticating';
+      if (!wasPending) return;
+      if (cur === 'unknown' || cur === 'authenticating' || cur === undefined) return;
+      if (cur === 'ok') {
+        // Happy path: AUTH succeeded. Refresh stuck channels so the
+        // fresh kind 9 REQs ride the now-AUTH'd socket and deliver
+        // history without the user manually reloading.
+        this.refreshStuckChannelsAfterAuthOk();
+      } else {
+        // 'auth-required' / 'restricted' / 'unreachable' / 'error' —
+        // AUTH definitively failed. Any channel held in
+        // `empty-unconfirmed` by the ladder's AUTH-pending defer
+        // promotes to `empty-confirmed` now so the UI shows the
+        // honest "No messages yet" instead of a forever spinner.
+        // The RelayStatusBanner explains the failure separately.
+        this.promoteStuckChannelsAfterAuthFail();
+      }
+    });
+  }
+
+  private refreshStuckChannelsAfterAuthOk(): void {
+    // "Stuck" here means anything not yet `has-messages`. Channels in
+    // `'loading'` matter too: a sub opened during AUTH-pending often
+    // hits the EOSE-then-CLOSED auth-required race AND never reaches
+    // EOSE again on its current closure, so it gets stranded in
+    // 'loading' (no events, no EOSE, no error to retry on). Refreshing
+    // tears down that zombie and opens a fresh REQ on the now-AUTH'd
+    // socket.
+    const isStuck = (status: MessagesStatus | undefined): boolean =>
+      status === 'loading'
+      || status === 'empty-unconfirmed'
+      || status === 'empty-confirmed';
+    const statuses = this.messagesStatusByGroup.get();
+    const activeGroup = this.activeGroupId;
+    if (activeGroup && isStuck(statuses[activeGroup])) {
+      this.refreshGroupMessages(activeGroup);
+    }
+    let batched = 0;
+    for (const [id, status] of Object.entries(statuses)) {
+      if (id === activeGroup) continue;
+      if (isStuck(status)) {
+        this.refreshGroupMessages(id);
+        batched++;
+        if (batched >= 5) break;
+      }
+    }
+  }
+
+  private promoteStuckChannelsAfterAuthFail(): void {
+    const statuses = this.messagesStatusByGroup.get();
+    for (const [id, status] of Object.entries(statuses)) {
+      if (status === 'empty-unconfirmed') {
+        this.setMessagesStatus(id, 'empty-confirmed');
+        this.clearMessagesRetry(id);
+      }
+    }
   }
 
   /**
@@ -412,9 +812,11 @@ class BridgeImpl implements NostrBridge {
    *   - Synced mute list (NIP-51 kind 10000) + local zustand mute list →
    *     engine's union via {@link syncMutesToEngine}.
    *   - Local zustand block list → engine's hard denylist.
-   *   - `verdict-deny` listener prunes any data we admitted while a verdict
-   *     was still resolving so the "no untrusted state persists" invariant
-   *     holds eventually.
+   *
+   * Important: WoT/mute/block verdicts are non-destructive. They gate future
+   * ingestion/rendering decisions, but they must not wipe cached messages,
+   * DMs, metadata, channels, admins, or members. Only explicit relay/user
+   * delete/moderation events are allowed to remove user-visible data.
    */
   private wireWotEngine(): void {
     this.myPubkey.subscribe((pk) => wotEngine.setOwnPubkey(pk));
@@ -427,30 +829,6 @@ class BridgeImpl implements NostrBridge {
       useModerationStore.subscribe(() => this.syncMutesToEngine());
       this.syncMutesToEngine();
     }
-    wotEngine.on('verdict-deny', (pubkey) => this.pruneAuthor(pubkey));
-    wotEngine.onEnabledChanged((enabled) => {
-      if (enabled) this.reevaluateKnownAuthors();
-    });
-  }
-
-  /**
-   * Walk every author currently present in the stores and enqueue them for
-   * a fresh WoT verdict. Deny verdicts fire `verdict-deny` → pruneAuthor()
-   * wipes their entries, so toggling WoT on retroactively cleans up data
-   * that came in fail-open while the engine was disabled. No-op when WoT
-   * is off (`markUnknown` short-circuits).
-   */
-  private reevaluateKnownAuthors(): void {
-    const authors = new Set<string>();
-    for (const msgs of Object.values(this.messagesByGroup.get())) {
-      for (const m of msgs) authors.add(m.pubkey);
-    }
-    for (const peer of Object.keys(this.dmsByPeer.get())) authors.add(peer);
-    for (const pk of Object.keys(this.userMetadata.get())) authors.add(pk);
-    for (const list of Object.values(this.adminsByGroup.get())) for (const pk of list) authors.add(pk);
-    for (const list of Object.values(this.membersByGroup.get())) for (const pk of list) authors.add(pk);
-    if (this.session) authors.delete(this.session.pubKeyHex);
-    for (const pk of authors) wotEngine.markUnknown(pk);
   }
 
   private syncMutesToEngine(): void {
@@ -459,39 +837,6 @@ class BridgeImpl implements NostrBridge {
     const muteUnion = new Set<string>([...(synced ?? []), ...(local?.mutedPubkeys ?? [])]);
     wotEngine.setMutedPubkeys(Array.from(muteUnion));
     wotEngine.setBlockedPubkeys(local?.blockedPubkeys ?? []);
-  }
-
-  /**
-   * Wipe in-memory + cache entries authored by `pubkey`. Called when the WoT
-   * engine resolves a deny verdict (or when the user just muted/blocked the
-   * author) — ensures untrusted state doesn't linger after the verdict
-   * arrives, even if it slipped through fail-open earlier.
-   */
-  private pruneAuthor(pubkey: string): void {
-    this.messagesByGroup.update((prev) => {
-      let touched = false;
-      const next: Record<string, JsMessage[]> = {};
-      for (const [gid, msgs] of Object.entries(prev)) {
-        const filtered = msgs.filter((m) => m.pubkey !== pubkey);
-        if (filtered.length !== msgs.length) touched = true;
-        next[gid] = filtered;
-      }
-      return touched ? next : prev;
-    });
-    this.dmsByPeer.update((prev) => {
-      if (!Object.prototype.hasOwnProperty.call(prev, pubkey)) return prev;
-      const { [pubkey]: _drop, ...rest } = prev;
-      void _drop;
-      return rest;
-    });
-    this.userMetadata.update((prev) => {
-      if (!Object.prototype.hasOwnProperty.call(prev, pubkey)) return prev;
-      const { [pubkey]: _drop, ...rest } = prev;
-      void _drop;
-      return rest;
-    });
-    this.userMetadataLatestAt.delete(pubkey);
-    this.metadataRequested.delete(pubkey);
   }
 
   /**
@@ -552,6 +897,12 @@ class BridgeImpl implements NostrBridge {
    * a normal reconnect cycle.
    */
   private poolSocketAlive = false;
+  /** Dedicated pool for latency-sensitive mesh voice roster/signaling REQs.
+   *  Kept off the chat bridge socket so public-relay per-WebSocket REQ caps
+   *  cannot starve a call after the app shell opens message/profile streams. */
+  private voicePool: SimplePool | null = null;
+  private voicePoolRefs = 0;
+  private voicePoolRelays = new Set<string>();
   // Reactive state
   isLoggedIn = new StateStore(false);
   /**
@@ -575,6 +926,8 @@ class BridgeImpl implements NostrBridge {
   messagesByGroup = new StateStore<Record<string, JsMessage[]>>({});
   userMetadata = new StateStore<Record<string, JsUserMetadata>>({});
   reactionsByGroup = new StateStore<Record<string, Record<string, JsReaction[]>>>({});
+  private deletedEventIdsByGroup = new Map<string, Map<string, string>>();
+  private moderatedEventIdsByGroup = new Map<string, Set<string>>();
   childrenByParent = new StateStore<Record<string, string[]>>({});
   dmsByPeer = new StateStore<Record<string, JsDirectMessage[]>>({});
   /**
@@ -588,6 +941,7 @@ class BridgeImpl implements NostrBridge {
     groupId: string;
     content: string;
     replyTo: { id: string; pubkey: string } | null;
+    emojiTags: string[][];
     createdAt: number;
   }>();
   /** Same as {@link pendingGroupSends} for NIP-04 DMs. */
@@ -621,8 +975,23 @@ class BridgeImpl implements NostrBridge {
    * tell "still loading" apart from "relay confirmed empty" — the latter
    * is what justifies the welcome / empty-state copy. Reset on relay
    * switch / logout (the new relay hasn't responded yet).
+   *
+   * Prefer {@link messagesStatusByGroup} for new UI code: EOSE alone is
+   * not proof of emptiness on auth-gated / silent-filtering relays. The
+   * status field carries the bridge's retry-backed confidence.
    */
   messagesEoseByGroup = new StateStore<Record<string, boolean>>({});
+  /**
+   * Per-group confidence enum for the kind 9 messages stream. See
+   * {@link MessagesStatus} for transitions. The chat pane reads this to
+   * decide between "Loading messages…" (loading | empty-unconfirmed) and
+   * "No messages yet" (empty-confirmed). Empty-unconfirmed exists because
+   * auth-gated relays routinely send EOSE-empty fast and trickle real
+   * events afterwards; the bridge stays in that state through up to
+   * {@link EMPTY_RETRY_DELAYS}.length restarts before promoting to
+   * empty-confirmed, so the UI never falsely flashes "No messages".
+   */
+  messagesStatusByGroup = new StateStore<Record<string, MessagesStatus>>({});
   /**
    * SFU active-call state per channel id. Populated from kind 31314 events
    * the SFU publishes when a room is live. The UI reads this to show a
@@ -632,7 +1001,13 @@ class BridgeImpl implements NostrBridge {
    * so a stale advertisement doesn't pin "LIVE" forever after an SFU
    * crash that never published `status=closed`.
    */
-  activeCallByChannel = new StateStore<Record<string, { hostPubkey: string; status: string; participantCount: number; expiresAt: number; createdAt: number }>>({});
+  activeCallByChannel = new StateStore<Record<string, { hostPubkey: string; status: string; participantCount: number; expiresAt: number; createdAt: number; mode?: 'sfu' | 'mesh'; participantPubkeys?: string[] }>>({});
+  private sfuActiveCalls = new Map<string, { hostPubkey: string; status: string; participantCount: number; expiresAt: number; createdAt: number; mode: 'sfu'; participantPubkeys?: string[] }>();
+  private sfuPresenceByChannel = new Map<string, Map<string, { expiresAt: number; createdAt: number; participantPubkeys: string[] }>>();
+  private meshPresenceByChannel = new Map<string, Map<string, { expiresAt: number; createdAt: number }>>();
+  /** Newest mesh presence event seen per channel/pubkey, including leave tombstones. */
+  private meshPresenceSeenAtByChannel = new Map<string, Map<string, number>>();
+  private meshPresenceSweepTimer: ReturnType<typeof setInterval> | null = null;
   myFollows = new StateStore<string[]>([]);
   /**
    * NIP-51 kind 10000 mute list — pubkeys the local user has muted (public
@@ -668,11 +1043,27 @@ class BridgeImpl implements NostrBridge {
   private metadataRequested = new Set<string>();
   // Group ids we already have a message subscription for.
   private messageSubscribedGroups = new Set<string>();
+  /**
+   * Per-group kind 9 subscription handles. Tracked so
+   * {@link refreshGroupMessages} can close the previous sub before opening
+   * a fresh one — without this the bridge would leak stale subs every time
+   * a chat panel re-mounts a stale channel.
+   */
+  private messageSubByGroup = new Map<string, { close: () => void; markClosed?: () => void }>();
   // Group ids we already have a reaction subscription for.
   private reactionSubscribedGroups = new Set<string>();
+  private reactionSubByGroup = new Map<string, { close: () => void; markClosed?: () => void }>();
+  private eventDeletionSubscribedGroups = new Set<string>();
+  private eventDeletionSubByGroup = new Map<string, { close: () => void; markClosed?: () => void }>();
+  private groupModerationDeletionSubscribedGroups = new Set<string>();
+  private groupModerationDeletionSubByGroup = new Map<string, { close: () => void; markClosed?: () => void }>();
   private dmSubscribed = false;
+  private dmSubHandles: Array<{ close: () => void; markClosed?: () => void }> = [];
   private adminMemberSubscribedGroups = new Set<string>();
+  private adminMemberSubByGroup = new Map<string, { close: () => void; markClosed?: () => void }>();
   private creatorSubscribedGroups = new Set<string>();
+  private creatorSubByGroup = new Map<string, { close: () => void; markClosed?: () => void }>();
+  private voiceRelayCapacityReservations = 0;
   // Newest `created_at` we've seen for kind-39001 (admins) / kind-39002
   // (members) per group id. Used to drop out-of-order ingests so an older
   // revision arriving second from a slower relay can't clobber the newer
@@ -683,6 +1074,16 @@ class BridgeImpl implements NostrBridge {
   // revision from a slow relay can't overwrite a fresher one. Also lets
   // the cached seed survive against stale events still in flight.
   private groupMetadataLatestAt = new Map<string, number>();
+  /**
+   * Reverse index for {@link childrenByParent}: groupId → its current parent
+   * (or `null` if root). Used by {@link ingestGroupMetadata} to update the
+   * children map in O(1) on every kind 39000 ingest instead of scanning
+   * every parent bucket for the groupId — the relay can deliver hundreds of
+   * 39000 events back-to-back at login, and the old `Object.keys(prev)` +
+   * `.filter()` per ingest was O(parents × children) on a hot path.
+   * Lifecycle mirrors {@link childrenByParent}.
+   */
+  private groupParentMap = new Map<string, string | null>();
   // Newest-wins guard for kind 0 (user metadata). Without this, an older
   // revision returned by a slow profile relay overwrites a newer one from a
   // faster relay — the symptom is the member rail's names/avatars loading
@@ -723,10 +1124,104 @@ class BridgeImpl implements NostrBridge {
   private pendingMessageQueue: string[] = [];
   private pendingMessageSet = new Set<string>();
   private pendingMessageTimer: ReturnType<typeof setTimeout> | null = null;
+  /**
+   * Upper bound on how long the background message-queue drain stays
+   * paused waiting for the active channel's first EOSE / event. Without
+   * this, an active channel that never responds (silent socket,
+   * auth-gated relay that never delivers, watchdog-thrashing sub) would
+   * starve every other channel's kind 9 sub indefinitely — and since
+   * `ingestMessage` is where `ensureUserMetadata` is fanned out, that
+   * also starves the profile-picture lookups for those channels'
+   * authors. {@link ACTIVE_PRIORITY_MAX_PAUSE_MS} caps the pause; after
+   * it elapses, the queue drains even if the active sub is still
+   * `loading`. Tuned to give the watched channel a healthy head start
+   * without leaving background data stranded for noticeably long.
+   */
+  private static readonly ACTIVE_PRIORITY_MAX_PAUSE_MS = 3000;
+  /**
+   * Passive background message streams are useful for unread badges, but every
+   * open group consumes a relay subscription. Keep a hard ceiling well under
+   * public.obelisk.ar's 50-sub limit so global REQs, voice signaling, and the
+   * currently-open channel have room. Active channels bypass this cap.
+   */
+  private static readonly MAX_BACKGROUND_MESSAGE_STREAMS = 8;
+  /**
+   * Wall-clock deadline after which the active-channel priority gate
+   * stops pausing the background drain. Set on every {@link setActiveGroup}
+   * call; reset to 0 on logout / relay switch / pool reset.
+   */
+  private activeGroupPriorityDeadline = 0;
+  /**
+   * Single-shot timer that fires at {@link activeGroupPriorityDeadline}
+   * and force-releases the gate. Without an explicit fire, a queue that
+   * arrived while the gate was engaged would sit forever if the active
+   * sub never produced an EOSE / event to trigger
+   * {@link maybeResumeMessageQueueDrain}.
+   */
+  private activeGroupPriorityTimer: ReturnType<typeof setTimeout> | null = null;
+  /**
+   * Per-group retry tracking for the kind 9 stream. Populated on the first
+   * empty EOSE; cleared on first event ingest, channel logout, or after
+   * {@link EMPTY_RETRY_DELAYS}.length restarts (whichever comes first).
+   *
+   * `attempts` counts the number of retries already executed (0 = just got
+   * first EOSE-empty, no retry yet). `sawEvent` is currently informational
+   * — the authoritative event check happens against `messagesByGroup` on
+   * retry-fire so we don't race the StateStore.
+   */
+  private messagesRetryByGroup = new Map<string, {
+    attempts: number;
+    timer: ReturnType<typeof setTimeout> | null;
+  }>();
+  /**
+   * Per-group flag for the cold-load `querySync` fallback. The bridge
+   * fires one explicit `pool.querySync` after the empty-EOSE retry
+   * ladder exhausts — bypasses the live REQ retry loop and gives the
+   * relay a last shot to deliver kind 9 once AUTH / whitelist state
+   * has had time to settle. Single-shot per groupId per session;
+   * cleared on logout / relay switch / dispose, and reset by
+   * {@link refreshGroupMessages} so an explicit user retry can fire
+   * it again.
+   */
+  private querySyncFallbackFired = new Set<string>();
+  /**
+   * Per-group debounce timers for message-cache flushes. Coalesces a burst
+   * of `ingestMessage` calls (typical of a kind 9 limit:50 backfill arriving
+   * in one tick) into a single localStorage.setItem at the end of the
+   * burst. Cleared on logout / dispose / relay switch — see
+   * {@link clearAllCacheFlushers}.
+   */
+  private messageCacheFlushTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  /**
+   * Per-group debounce timers for reaction-cache flushes. Same shape and
+   * lifecycle as {@link messageCacheFlushTimers}.
+   */
+  private reactionCacheFlushTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  /**
+   * Empty kind-39000 EOSE is provisional. Some relays answer the global
+   * channel-list REQ before AUTH / whitelist evaluation has fully settled,
+   * then deliver metadata on a later request. Keep the sidebar in
+   * "Loading channels..." for a bounded retry window instead of painting the
+   * "No channels" empty state immediately.
+   */
+  private groupMetadataEmptyRetryTimer: ReturnType<typeof setTimeout> | null = null;
+  private groupMetadataEmptyRetryAttempts = 0;
+  private static readonly GROUP_METADATA_EMPTY_RETRY_DELAYS = [1500, 3000, 5000] as const;
+  /**
+   * Backoff schedule for empty-EOSE retries. Tuned so the worst-case time
+   * before declaring a channel empty is the sum of all delays plus the
+   * relay's own response time (≈9.5s + EOSE latency). Auth-gated relays
+   * that send EOSE-empty before AUTH completes typically deliver real
+   * events within the first 1500ms; the longer tail covers slow relays
+   * and transient network hiccups.
+   */
+  private static readonly EMPTY_RETRY_DELAYS = [1500, 3000, 5000] as const;
   // Per-pubkey cache of recipient NIP-65 read relays (where they read DMs).
   // Populated on first sendDirectMessage to that pubkey; TTL'd to avoid
   // requerying every send.
   private recipientReadRelaysCache = new Map<string, { relays: string[]; fetchedAt: number }>();
+  private profileLookupInFlight = new Map<string, Promise<void>>();
+  private profileLookupAt = new Map<string, number>();
   // Own NIP-17 inbox + NIP-65 relays — wider than `this.relays`. Used to
   // subscribe for incoming DMs published to relays the user actually reads.
   private myDmRelays: string[] = [];
@@ -738,11 +1233,12 @@ class BridgeImpl implements NostrBridge {
         try {
           const list = JSON.parse(rawRelays) as string[];
           if (Array.isArray(list) && list.length > 0) {
-            const merged = [...list];
-            let mutated = false;
+            const merged = uniqueRelayUrls(list);
+            let mutated = merged.length !== list.length || merged.some((url, i) => url !== list[i]);
             for (const def of DEFAULT_RELAYS) {
-              if (!merged.includes(def)) {
-                merged.push(def);
+              const normalizedDefault = normalizeRelayUrl(def);
+              if (!merged.includes(normalizedDefault)) {
+                merged.push(normalizedDefault);
                 mutated = true;
               }
             }
@@ -760,6 +1256,7 @@ class BridgeImpl implements NostrBridge {
     if (!raw) return;
     try {
       const parsed = JSON.parse(raw) as PersistedSession;
+      parsed.relayUrl = normalizeRelayUrl(parsed.relayUrl);
       this.session = parsed;
       this.currentRelayUrl.set(parsed.relayUrl);
       this.relays = [parsed.relayUrl];
@@ -769,10 +1266,10 @@ class BridgeImpl implements NostrBridge {
       // last-known admin status instantly while the live REQ catches up.
       // Stale-while-revalidate: arriving relay events overwrite via the
       // newest-wins logic in ingestAdminMember.
-      this.seedCacheForRelay(parsed.relayUrl);
+      const hasRenderableCache = this.seedCacheForRelay(parsed.relayUrl);
       // For NIP-46 (bunker) sessions: pre-warm the BunkerSigner so the first
       // NIP-42 AUTH challenge from the relay doesn't trigger a cold
-      // BunkerSigner.fromBunker + signer.connect() round-trip from inside
+      // BunkerSigner.fromBunker + first RPC round-trip from inside
       // the auth-signing callback. Many relays time out the AUTH window
       // before the cold path completes, the REQ is dropped silently, the
       // watchdog retries, and the user sees the "needs 2-3 refreshes" bug.
@@ -792,25 +1289,29 @@ class BridgeImpl implements NostrBridge {
       // If we set isLoggedIn=true first, AppShell mounts and fires per-group
       // REQs against an unauthenticated socket — relays drop them silently
       // and the user is left needing 2-3 manual refreshes. See finalizeLogin
-      // and docs/auth-and-data-loading.md.
+      // and docs/data-system.md.
       try {
         await this.connect();
       } catch {
         // First connect attempt failed (relay unreachable, AUTH timeout,
         // etc.). Keep the session in memory and silently retry in the
         // background with capped exponential backoff so the user doesn't
-        // have to refresh. The cached sidebar paint from seedCacheForRelay
-        // is already on screen (admins/members/groups), so the UI doesn't
-        // flash empty — we just keep trying until a relay answers.
-        this.myPubkey.set(parsed.pubKeyHex);
-        this.myLoginMethod.set(parsed.loginMethod);
-        this.isLoggedIn.set(true);
+        // have to refresh. If seedCacheForRelay found renderable channel
+        // state, keep the cached shell mounted; otherwise leave the app
+        // behind useIsRehydrating so a cache-free user never sees an empty
+        // chat shell as the "successful" first paint.
+        if (hasRenderableCache) {
+          this.myPubkey.set(parsed.pubKeyHex);
+          this.myLoginMethod.set(parsed.loginMethod);
+          this.isLoggedIn.set(true);
+        }
         void this.reconnectInBackground();
         return;
       }
       this.myPubkey.set(parsed.pubKeyHex);
       this.myLoginMethod.set(parsed.loginMethod);
       this.isLoggedIn.set(true);
+      void this.syncOwnProfileToActiveRelay('login');
     } catch {
       // Corrupt storage: drop both the current and legacy session entries so
       // `useIsRehydrating` doesn't latch true forever on the next paint
@@ -824,9 +1325,10 @@ class BridgeImpl implements NostrBridge {
   }
 
   private ensureRelayInList(url: string): void {
+    const normalized = normalizeRelayUrl(url);
     const list = this.configuredRelays.get();
-    if (list.includes(url)) return;
-    const next = [...list, url];
+    if (list.includes(normalized)) return;
+    const next = uniqueRelayUrls([...list, normalized]);
     this.configuredRelays.set(next);
     this.persistRelays();
   }
@@ -836,19 +1338,39 @@ class BridgeImpl implements NostrBridge {
     window.localStorage.setItem(RELAYS_KEY, JSON.stringify(this.configuredRelays.get()));
   }
 
+  private closeVoicePool(): void {
+    const pool = this.voicePool;
+    if (!pool) return;
+    const relays = this.voicePoolRelays.size > 0 ? Array.from(this.voicePoolRelays) : this.relays;
+    this.voicePool = null;
+    this.voicePoolRefs = 0;
+    this.voicePoolRelays.clear();
+    try { pool.close(relays); } catch { /* ignore */ }
+  }
+
   dispose(): void {
     // pool.close() handles the network teardown atomically; calling each
     // sub's close beforehand is redundant and races with the pool's own
     // closeAllSubscriptions sweep, producing CLOSING/CLOSED warnings.
     this.subs.forEach((s) => (s.markClosed ?? s.close)());
     this.subs = [];
+    this.dmSubHandles = [];
     if (this.poolSocketAlive) {
       try { this.pool.close(this.relays); } catch { /* ignore */ }
     }
+    this.closeVoicePool();
     this.poolSocketAlive = false;
     // Clear auto-auth allow-list so the next session doesn't sign AUTH
     // for relays the previous user happened to subscribe to.
     this.authAllowedRelays.clear();
+    // Drop debounced cache flushes — even though scheduleXxxCacheFlush is
+    // session-gated, a flusher armed just before dispose would otherwise
+    // fire after the pool is gone.
+    this.clearAllCacheFlushers();
+    this.querySyncFallbackFired.clear();
+    this.clearActiveCallState();
+    this.deletedEventIdsByGroup.clear();
+    this.moderatedEventIdsByGroup.clear();
   }
 
   // -- Auth --------------------------------------------------------------
@@ -888,7 +1410,8 @@ class BridgeImpl implements NostrBridge {
    * for the active relay. Caches for other relays stay on disk untouched
    * (they re-paint instantly if the user switches back).
    */
-  private seedCacheForRelay(relay: string): void {
+  private seedCacheForRelay(relay: string): boolean {
+    let hasRenderableCache = false;
     // Group metadata first so the sidebar lights up with channel rows even
     // before the per-group admin/member seeds populate badges.
     for (const groupId of cacheListIds(relay, KIND_GROUP_METADATA)) {
@@ -898,12 +1421,24 @@ class BridgeImpl implements NostrBridge {
         groupId,
       );
       if (!entry) continue;
-      const { group, createdAt } = entry.value;
+      const { group: cached, createdAt } = entry.value;
+      // Backfill fields added after the cache was written so older entries
+      // don't surface as `undefined` to consumers expecting an array.
+      const group: JsGroup = {
+        ...cached,
+        forumTags: cached.forumTags ?? [],
+        topics: cached.topics ?? [],
+      };
       this.groupMetadataLatestAt.set(groupId, createdAt);
+      // Track parent for the reverse index even when null — keeps
+      // {@link ingestGroupMetadata}'s fast-path "parent didn't change"
+      // comparison working after a cache-seeded paint.
+      this.groupParentMap.set(groupId, group.parent ?? null);
       this.groups.update((prev) => {
         if (prev.some((g) => g.id === groupId)) return prev;
         return [...prev, group].sort((a, b) => (a.name ?? a.id).localeCompare(b.name ?? b.id));
       });
+      hasRenderableCache = true;
       if (group.parent) {
         this.childrenByParent.update((prev) => {
           const arr = prev[group.parent!] ?? [];
@@ -936,6 +1471,53 @@ class BridgeImpl implements NostrBridge {
         this.groupCreators.update((prev) => ({ ...prev, [groupId]: entry.value }));
       }
     }
+    // Kind 0 — bounded iteration so a large cache (popular relay, many DM
+    // contacts) doesn't block first paint. 500 pubkeys is well past any
+    // realistic working set; the live REQs overwrite anything we skip.
+    const userMetaIds = cacheListIds(relay, KIND_USER_METADATA);
+    const SEED_CAP = 500;
+    const seedTargets = userMetaIds.length > SEED_CAP ? userMetaIds.slice(0, SEED_CAP) : userMetaIds;
+    for (const pubkey of seedTargets) {
+      const entry = cacheGet<{ meta: JsUserMetadata; createdAt: number }>(
+        relay,
+        KIND_USER_METADATA,
+        pubkey,
+      );
+      if (!entry) continue;
+      const { meta, createdAt } = entry.value;
+      if ((this.userMetadataLatestAt.get(pubkey) ?? 0) >= createdAt) continue;
+      this.userMetadata.update((prev) => ({ ...prev, [pubkey]: meta }));
+      this.userMetadataLatestAt.set(pubkey, createdAt);
+    }
+    // Kind 9 — per-channel message backfill. Paints the last
+    // MESSAGE_CACHE_LIMIT messages instantly so the chat pane has content
+    // before the live REQ round-trips. Subsequent ingests dedupe by event
+    // id, so the relay's authoritative window overwrites without dupes.
+    for (const groupId of cacheListIds(relay, KIND_GROUP_MESSAGE)) {
+      const entry = cacheGet<JsMessage[]>(relay, KIND_GROUP_MESSAGE, groupId);
+      if (!entry || entry.value.length === 0) continue;
+      // Backfill optional fields added after the cache was written so older
+      // entries don't surface `undefined` for a now-required field.
+      const msgs: JsMessage[] = entry.value.map((m) => ({
+        ...m,
+        mentions: m.mentions ?? [],
+        customEmojis: m.customEmojis ?? {},
+      }));
+      this.messagesByGroup.update((prev) =>
+        prev[groupId] ? prev : { ...prev, [groupId]: msgs },
+      );
+      hasRenderableCache = true;
+    }
+    // Kind 7 — per-channel reaction backfill. Emoji badges paint with
+    // their message bubbles instead of popping in a frame later.
+    for (const groupId of cacheListIds(relay, KIND_REACTION)) {
+      const entry = cacheGet<Record<string, JsReaction[]>>(relay, KIND_REACTION, groupId);
+      if (!entry) continue;
+      this.reactionsByGroup.update((prev) =>
+        prev[groupId] ? prev : { ...prev, [groupId]: entry.value },
+      );
+    }
+    return hasRenderableCache;
   }
 
   /**
@@ -949,7 +1531,8 @@ class BridgeImpl implements NostrBridge {
    *   2. `resetPoolForSessionChange()` — fresh sockets so NIP-42 AUTH
    *      renegotiates with the new key (see that method's JSDoc).
    *   3. `await connect()` — relay handshake + open the global subscriptions
-   *      (group metadata, DMs, contact list, own profile). Resolves only
+   *      (group metadata, contact list, own profile). DM subscriptions open
+   *      later only after the local DM opt-in is enabled. Resolves only
    *      once at least one relay has handshaken and the global REQs are
    *      issued. Throws on total failure.
    *   4. `isLoggedIn.set(true)` — flip the gate **last**. AppShell mounts
@@ -962,7 +1545,7 @@ class BridgeImpl implements NostrBridge {
    * subscribed to admin/member/messages while NIP-42 was still being
    * negotiated, the relay dropped those REQs silently, and the user had to
    * refresh 2-3 times for everything to populate. See
-   * `docs/auth-and-data-loading.md`.
+   * `docs/data-system.md`.
    */
   private async finalizeLogin(): Promise<void> {
     this.persist();
@@ -987,6 +1570,7 @@ class BridgeImpl implements NostrBridge {
     this.myPubkey.set(this.session?.pubKeyHex ?? null);
     this.myLoginMethod.set(this.session?.loginMethod ?? null);
     this.isLoggedIn.set(true);
+    void this.syncOwnProfileToActiveRelay('login');
   }
 
   /**
@@ -999,6 +1583,7 @@ class BridgeImpl implements NostrBridge {
    * AUTH round-trip with the just-installed session.
    */
   private resetPoolForSessionChange(): void {
+    this.closeVoicePool();
     // Capture the per-group REQs that were live on the old pool so connect()
     // can reopen them on the new one. Without this, components mounted before
     // login keep their store listeners but have nothing feeding them.
@@ -1012,6 +1597,7 @@ class BridgeImpl implements NostrBridge {
     // without sending per-sub CLOSE frames on the old pool's sockets.
     this.subs.forEach((s) => (s.markClosed ?? s.close)());
     this.subs = [];
+    this.dmSubHandles = [];
     // Don't call pool.close() — its internal closeAllSubscriptions sweep
     // sends a CLOSE frame per subscription, and the relay-side socket
     // routinely transitions to CLOSING between our last message and this
@@ -1024,8 +1610,15 @@ class BridgeImpl implements NostrBridge {
     this.poolSocketAlive = false;
     this.pool = this.createPool();
     this.messageSubscribedGroups.clear();
+    this.messageSubByGroup.clear();
     this.reactionSubscribedGroups.clear();
+    this.reactionSubByGroup.clear();
+    this.eventDeletionSubscribedGroups.clear();
+    this.eventDeletionSubByGroup.clear();
+    this.groupModerationDeletionSubscribedGroups.clear();
+    this.groupModerationDeletionSubByGroup.clear();
     this.adminMemberSubscribedGroups.clear();
+    this.adminMemberSubByGroup.clear();
     this.adminMemberLatestAt.clear();
     this.metadataRequested.clear();
     // The new pool's per-group REQs haven't been issued yet — drop any
@@ -1033,6 +1626,8 @@ class BridgeImpl implements NostrBridge {
     // loading spinner until the resub completes (see `pendingResubscribe`
     // handling in `connect()`).
     this.messagesEoseByGroup.set({});
+    this.messagesStatusByGroup.set({});
+    this.clearAllMessagesRetry();
     // Drop the background queue: it's tied to the dead pool's filters
     // and the new pool will receive a fresh kind 39000 fan-out which
     // will repopulate it.
@@ -1042,6 +1637,17 @@ class BridgeImpl implements NostrBridge {
       clearTimeout(this.pendingMessageTimer);
       this.pendingMessageTimer = null;
     }
+    if (this.activeGroupPriorityTimer) {
+      clearTimeout(this.activeGroupPriorityTimer);
+      this.activeGroupPriorityTimer = null;
+    }
+    this.activeGroupPriorityDeadline = 0;
+    // Cancel any debounced cache flushes that were armed against the dead
+    // pool's `currentRelayUrl` — the new pool may target a different relay,
+    // and a stale flush would write under the wrong key. The next ingest
+    // re-arms flushers cleanly.
+    this.clearAllCacheFlushers();
+    this.querySyncFallbackFired.clear();
     // Re-login on the same browser keeps the in-memory bridge instance, so
     // the kind 39000 newest-wins guard retains every `groupId → created_at`
     // pair from the previous session. Kind 39000 is replaceable: the new
@@ -1055,6 +1661,7 @@ class BridgeImpl implements NostrBridge {
     // re-opens them.
     this.groupMetadataLatestAt.clear();
     this.creatorSubscribedGroups.clear();
+    this.creatorSubByGroup.clear();
     // Clear the per-group readiness flags too — the new pool has not seen
     // 39001/39002 yet, so consumers must wait for fresh evidence before
     // deciding "not a member".
@@ -1066,7 +1673,9 @@ class BridgeImpl implements NostrBridge {
     // here, fresh login or background reconnect could paint the wrong
     // empty-state copy in the gap before the new EOSE arrives.
     this.groupMetadataEose.set(false);
+    this.clearGroupMetadataEmptyRetry();
     this.dmSubscribed = false;
+    this.dmSubHandles = [];
     // Forget any auth/whitelist signal we'd captured against the previous
     // pool — the next REQ on the fresh sockets must re-prove access.
     this.relayAccess.set({});
@@ -1098,6 +1707,7 @@ class BridgeImpl implements NostrBridge {
     // with — otherwise the bunker rejects our connect request because
     // this client pubkey was never authorized. Falling back to a fresh
     // key is correct when we *are* the pairing party.
+    const pairedByHost = Boolean(options?.clientSecretHex);
     const localSecret = options?.clientSecretHex
       ? hexToBytes(options.clientSecretHex)
       : generateSecretKey();
@@ -1109,14 +1719,19 @@ class BridgeImpl implements NostrBridge {
       },
     });
     const connectId = pushActivity('Connecting to bunker', 'waiting for remote signer');
+    let pubKeyHex: string;
     try {
-      await signer.connect();
+      // If the SDK hands us a client secret, it already completed the
+      // NostrConnect/bunker pairing with that client identity. Re-running
+      // `connect()` here can send an empty/mismatched secret for QR-created
+      // bunker URLs and make remote signers reject with "no secret".
+      if (!pairedByHost) await signer.connect();
+      pubKeyHex = await signer.getPublicKey();
     } catch (e) {
       failActivity(connectId, e instanceof Error ? e.message : String(e));
       throw e;
     }
     resolveActivity(connectId);
-    const pubKeyHex = await signer.getPublicKey();
     this.bunkerSigner = signer;
     this.session = {
       pubKeyHex,
@@ -1211,9 +1826,9 @@ class BridgeImpl implements NostrBridge {
    *     hit the cached signer instantly.
    *   - If pre-warm failed (bunker relay down) or `initialize` hasn't run yet,
    *     the first NIP-42 AUTH triggers this lazy path: parse bunker URL,
-   *     reconstruct localSecret, build BunkerSigner, await its connect()
-   *     handshake, then sign. This adds 1-3s of latency but is the fallback
-   *     of last resort.
+   *     reconstruct localSecret, build BunkerSigner, warm the RPC channel,
+   *     then sign. This adds 1-3s of latency but is the fallback of last
+   *     resort.
    */
   private async ensureBunkerSigner(): Promise<BunkerSigner> {
     if (this.bunkerSigner) return this.bunkerSigner;
@@ -1229,8 +1844,18 @@ class BridgeImpl implements NostrBridge {
         else if (typeof window !== 'undefined') window.open(url, '_blank', 'width=600,height=700');
       },
     });
-    await signer.connect();
+    if (bp.secret) {
+      await signer.connect();
+    } else {
+      // SDK QR logins persist a bunker URL synthesized from the paired signer
+      // and relays; the original nostrconnect secret is not recoverable from
+      // the SDK's public API. The client secret is the durable authorization,
+      // so warm the RPC channel with get_public_key instead of sending a
+      // bogus connect request with an empty secret.
+      await signer.getPublicKey();
+    }
     this.bunkerSigner = signer;
+    this.bunkerSignerReady.set(true);
     return signer;
   }
 
@@ -1256,6 +1881,7 @@ class BridgeImpl implements NostrBridge {
     this.connectionState.set('Disconnected');
     this.groups.set([]);
     this.groupMetadataEose.set(false);
+    this.clearGroupMetadataEmptyRetry();
     this.messagesByGroup.set({});
     this.pendingGroupSends.clear();
     this.pendingDMSends.clear();
@@ -1263,6 +1889,9 @@ class BridgeImpl implements NostrBridge {
     this.membersByGroup.set({});
     this.membershipReadyByGroup.set({});
     this.messagesEoseByGroup.set({});
+    this.messagesStatusByGroup.set({});
+    this.clearAllMessagesRetry();
+    this.clearActiveCallState();
     // Drop the background message-subscription queue too — pending work
     // is scoped to the previous session's authored REQs.
     this.pendingMessageQueue = [];
@@ -1271,7 +1900,16 @@ class BridgeImpl implements NostrBridge {
       clearTimeout(this.pendingMessageTimer);
       this.pendingMessageTimer = null;
     }
+    if (this.activeGroupPriorityTimer) {
+      clearTimeout(this.activeGroupPriorityTimer);
+      this.activeGroupPriorityTimer = null;
+    }
+    this.activeGroupPriorityDeadline = 0;
     this.activeGroupId = null;
+    // Cancel pending cache flushes. The next session's relay scope may
+    // differ; let fresh ingests re-arm flushers from scratch.
+    this.clearAllCacheFlushers();
+    this.querySyncFallbackFired.clear();
     // Forget any in-flight relay-access state and tear down dangling
     // "Authenticating with {host}" entries — the next session must
     // re-prove access from scratch.
@@ -1293,6 +1931,8 @@ class BridgeImpl implements NostrBridge {
   // -- Connection --------------------------------------------------------
 
   async connect(): Promise<void> {
+    const generation = ++this.connectGeneration;
+    const relaySnapshot = [...this.relays];
     this.connectionState.set('Connecting');
     const activityId = pushActivity(
       'Connecting to relays',
@@ -1304,22 +1944,23 @@ class BridgeImpl implements NostrBridge {
       // ones) appeared "Connected" instantly. ensureRelay actually awaits
       // the handshake and rejects on timeout / refused / DNS failure.
       //
-      // First-response wins: resolve as soon as ONE relay handshakes so
-      // the rehydrate gate flips to "logged in" quickly. Slower relays
-      // continue handshaking in the background; their subscriptions queue
-      // on the pool and fire as each socket comes online. If every relay
-      // rejects, we throw and `initialize()` falls through to background
+      // First-response wins: resolve as soon as ONE relay handshakes. Slower
+      // relays continue handshaking in the background; their subscriptions
+      // queue on the pool and fire as each socket comes online. If every
+      // relay rejects, we throw and `initialize()` falls through to background
       // reconnect with capped backoff.
       //
       // Per-relay `connectionTimeout` is intentionally tighter than the
       // 5000 ms used previously — a single slow relay used to stall the
-      // entire login by holding `Promise.allSettled` open. With first-
-      // response-wins this is bounded by `HARD_CEILING_MS` below, but a
-      // tighter per-relay cap also gets stragglers marked `unreachable`
-      // sooner so the relay banner reflects reality.
+      // entire login by holding `Promise.allSettled` open. First-response
+      // wins keeps successful relays fast, while this cap gets stragglers
+      // marked `unreachable` promptly. Do not run the subscription fan-out
+      // before the first successful handshake: on an empty cache that mounts
+      // the app shell with REQs queued against a not-yet-ready pool, that
+      // reproduces the "refresh twice before content appears" cold-load
+      // failure.
       const PER_RELAY_TIMEOUT_MS = 3000;
-      const HARD_CEILING_MS = 1500;
-      const handles = this.relays.map((url) =>
+      const handles = relaySnapshot.map((url) =>
         (async () => {
           validateRelayUrl(url);
           const relay = await this.pool.ensureRelay(url, { connectionTimeout: PER_RELAY_TIMEOUT_MS });
@@ -1332,7 +1973,7 @@ class BridgeImpl implements NostrBridge {
           // refresh when the relay or network blips.
           relay.onclose = () => {
             this.poolSocketAlive = false;
-            if (this.relays.includes(url) && this.session) {
+            if (generation === this.connectGeneration && this.relays.includes(url) && this.session) {
               this.connectionState.set('Disconnected');
               // Don't override sticky-OK on transient drops — a brief socket
               // bounce shouldn't flash "Cannot reach". connectionState
@@ -1345,82 +1986,39 @@ class BridgeImpl implements NostrBridge {
         })(),
       );
       // Mark each relay `unreachable` as its handshake fails, in the
-      // background. Doesn't await — banner updates as we get news; UI
-      // proceeds at the first success or hard ceiling, whichever fires
-      // first.
+      // background. Doesn't await — banner updates as we get news; the UI
+      // proceeds only after the first successful handshake.
       handles.forEach((p, i) => {
-        p.catch(() => this.setRelayAccess(this.relays[i], 'unreachable'));
+        const url = relaySnapshot[i];
+        p.catch(() => {
+          if (generation !== this.connectGeneration) return;
+          this.setRelayAccess(url, 'unreachable');
+        });
       });
-      // Race: first relay ready vs hard ceiling vs all relays rejected.
-      // - 'first-ready' → at least one socket is open; subscriptions go
-      //   live now, slow relays keep handshaking in the background.
-      // - 'ceiling' → no relay has handshaken in HARD_CEILING_MS; flip the
-      //   gate anyway so the user isn't stuck on "Reconnecting…". Pending
-      //   handshakes continue and their subs queue on the pool.
-      // - 'all-rejected' → every handshake failed; throw so initialize()
-      //   falls through to capped background reconnect.
-      const firstReady: Promise<'first-ready' | 'all-rejected'> = Promise.any(handles)
-        .then(() => 'first-ready' as const)
-        .catch(() => 'all-rejected' as const);
-      const ceiling: Promise<'ceiling'> = new Promise((res) => setTimeout(() => res('ceiling'), HARD_CEILING_MS));
-      const winner = await Promise.race([firstReady, ceiling]);
-      if (winner === 'all-rejected') {
+      try {
+        await Promise.any(handles);
+      } catch {
         throw new Error('no relays connected');
       }
-      // For the 'ceiling' branch, ALSO check the eventual outcome of
-      // `firstReady` in the background — if every relay later rejects,
-      // the relay banner is updated by the per-handle `.catch` above and
-      // `reconnectInBackground` kicks in via the next session/relay
-      // change. Subscriptions registered below queue against the pool
-      // and bind as relays come online.
-      this.subscribeGroupMetadata();
-      // Single relay-wide REQ for admin/member (kinds 39001+39002, no `#d`).
-      // Restores the "category authors" set used by NIP-78 channel-layout
-      // queries without re-introducing per-group fan-out. Categories
-      // depend on knowing which pubkeys the operator/admins are; without
-      // this, on a fresh relay visit (no admin cache yet) the layout REQ
-      // has only the operator pubkey and categories silently fail to load
-      // when the layout is admin-authored. One REQ regardless of how
-      // many groups exist on the relay.
-      this.subscribeAllAdminMember();
-      this.subscribeIncomingDMs();
-      this.subscribeMyContactList();
-      this.subscribeMyMuteList();
-      this.subscribeMyAuthoredGroups();
-      this.subscribeActiveCalls();
-      // Resolve the user's own profile so the UI has it immediately.
-      if (this.session) this.ensureUserMetadata(this.session.pubKeyHex);
       // Reopen any per-group REQs that were live on the previous pool.
       // Components that mounted pre-login (or pre-relay-switch) still have
       // their store listeners wired up; without this re-issue the new pool
       // has no subscriptions feeding them and the data only appears after
-      // a manual refresh.
+      // a manual refresh. The orchestrator delegates the actual re-apply
+      // to {@link applyPendingResubscribe} once its P2 microtask runs.
       const pending = this.pendingResubscribe;
       this.pendingResubscribe = null;
-      if (pending) {
-        // Fast-track the active group so the channel currently in view
-        // gets its messages first after a relay/session swap, even if
-        // it was somewhere in the middle of the previous live-sub list.
-        const messages = [...pending.messages];
-        if (this.activeGroupId) {
-          const idx = messages.indexOf(this.activeGroupId);
-          if (idx > 0) {
-            messages.splice(idx, 1);
-            messages.unshift(this.activeGroupId);
-          }
-        }
-        messages.forEach((id) => this.subscribeGroupMessages(id));
-        pending.reactions.forEach((id) => this.subscribeGroupReactions(id));
-        pending.adminMember.forEach((id) => this.subscribeAdminMember(id));
-        pending.metadata.forEach((pk) => this.ensureUserMetadata(pk));
-      }
+      runConnectFanOut({
+        dispatch: (action) => this.dispatchOrchestratorAction(action),
+        applyResubscribe: () => this.applyPendingResubscribe(pending),
+      });
       this.connectionState.set('Connected');
       this.reconnectAttempt = 0;
       // Activity message reflects the snapshot at the moment the gate
       // flipped, not the final count — slower relays may still be
       // handshaking. Approximate by resolving "1+/N" rather than tracking
       // the exact count, which would require awaiting all handles.
-      resolveActivity(activityId, `connected to ${this.relays.length === 1 ? this.relays[0] : `${this.relays.length} relays`}`);
+      resolveActivity(activityId, `connected to ${relaySnapshot.length === 1 ? relaySnapshot[0] : `${relaySnapshot.length} relays`}`);
     } catch (e: unknown) {
       this.connectionState.set(`Error:${(e as Error).message}`);
       failActivity(activityId, (e as Error).message);
@@ -1438,6 +2036,7 @@ class BridgeImpl implements NostrBridge {
    */
   private reconnectAttempt = 0;
   private reconnectInFlight = false;
+  private connectGeneration = 0;
   private reconnectInBackground(): void {
     if (this.reconnectInFlight) return;
     if (!this.session) return;
@@ -1453,6 +2052,11 @@ class BridgeImpl implements NostrBridge {
         // the new attempt from making progress.
         this.resetPoolForSessionChange();
         await this.connect();
+        if (this.session) {
+          this.myPubkey.set(this.session.pubKeyHex);
+          this.myLoginMethod.set(this.session.loginMethod);
+          this.isLoggedIn.set(true);
+        }
         this.reconnectInFlight = false;
         this.reconnectAttempt = 0;
       } catch {
@@ -1464,17 +2068,20 @@ class BridgeImpl implements NostrBridge {
   }
 
   async switchRelay(url: string): Promise<void> {
+    const normalized = normalizeRelayUrl(url);
+    validateRelayUrl(normalized);
     // Same teardown semantics as resetPoolForSessionChange: skip the
     // pool.close() sweep to avoid CLOSING/CLOSED spam, just stop each
     // watched-sub's retry loop and replace the pool reference.
     this.subs.forEach((s) => (s.markClosed ?? s.close)());
     this.subs = [];
+    this.dmSubHandles = [];
     this.poolSocketAlive = false;
     this.pool = this.createPool();
-    this.relays = [url];
-    this.currentRelayUrl.set(url);
-    this.ensureRelayInList(url);
-    if (this.session) this.session.relayUrl = url;
+    this.relays = [normalized];
+    this.currentRelayUrl.set(normalized);
+    this.ensureRelayInList(normalized);
+    if (this.session) this.session.relayUrl = normalized;
     this.persist();
     this.groups.set([]);
     this.messagesByGroup.set({});
@@ -1484,8 +2091,15 @@ class BridgeImpl implements NostrBridge {
     // flight when the user pivots to a new relay can still finish there.
     // Reset per-group caches: they're scoped to one relay.
     this.messageSubscribedGroups.clear();
+    this.messageSubByGroup.clear();
     this.reactionSubscribedGroups.clear();
+    this.reactionSubByGroup.clear();
+    this.eventDeletionSubscribedGroups.clear();
+    this.eventDeletionSubByGroup.clear();
+    this.groupModerationDeletionSubscribedGroups.clear();
+    this.groupModerationDeletionSubByGroup.clear();
     this.adminMemberSubscribedGroups.clear();
+    this.adminMemberSubByGroup.clear();
     this.adminMemberLatestAt.clear();
     this.metadataRequested.clear();
     this.adminsByGroup.set({});
@@ -1498,6 +2112,9 @@ class BridgeImpl implements NostrBridge {
     // per-group kind 9 REQ yet, so the message pane should show its
     // loading spinner rather than the cached "ok, empty" state.
     this.messagesEoseByGroup.set({});
+    this.messagesStatusByGroup.set({});
+    this.clearAllMessagesRetry();
+    this.clearActiveCallState();
     // Drop background queue — pending entries point at filters bound to
     // the old pool. The new relay's kind 39000 fan-out will repopulate.
     this.pendingMessageQueue = [];
@@ -1506,6 +2123,17 @@ class BridgeImpl implements NostrBridge {
       clearTimeout(this.pendingMessageTimer);
       this.pendingMessageTimer = null;
     }
+    if (this.activeGroupPriorityTimer) {
+      clearTimeout(this.activeGroupPriorityTimer);
+      this.activeGroupPriorityTimer = null;
+    }
+    this.activeGroupPriorityDeadline = 0;
+    // Discard pending message/reaction cache flushes — they were armed
+    // against the old relay URL. The seed for the new relay paints any
+    // previously-cached entries; fresh ingests rebuild the on-disk state
+    // for the new relay scope.
+    this.clearAllCacheFlushers();
+    this.querySyncFallbackFired.clear();
     // Per-relay state that previously bled across switches: parent→children
     // index, group-creator map, reactions, the newest-wins guard cursor for
     // group metadata, and the per-group creator-sub set. Without clearing
@@ -1514,14 +2142,20 @@ class BridgeImpl implements NostrBridge {
     // to be older than A's (the same NIP-29 `d`-tag can exist on two relays
     // independently), and left A's reactions painted on B's messages. The
     // user-visible symptom was channels and structure from different relays
-    // appearing mixed. See docs/progressive-loading.md.
+    // appearing mixed. See docs/data-system.md.
     this.childrenByParent.set({});
+    this.groupParentMap.clear();
     this.groupCreators.set({});
     this.reactionsByGroup.set({});
+    this.deletedEventIdsByGroup.clear();
+    this.moderatedEventIdsByGroup.clear();
     this.groupMetadataLatestAt.clear();
     this.creatorSubscribedGroups.clear();
+    this.creatorSubByGroup.clear();
     this.groupMetadataEose.set(false);
+    this.clearGroupMetadataEmptyRetry();
     this.dmSubscribed = false;
+    this.dmSubHandles = [];
     // Auth/whitelist state is per-relay; the new one hasn't been probed yet.
     this.relayAccess.set({});
     // Drop any pending downgrade timers + auth-activity entries scoped to
@@ -1533,26 +2167,19 @@ class BridgeImpl implements NostrBridge {
     this.authActivityIds.clear();
     // Re-paint instantly from disk for the new relay; live events will
     // overwrite as they arrive. See {@link seedCacheForRelay}.
-    this.seedCacheForRelay(url);
-    await this.connect();
+    this.seedCacheForRelay(normalized);
+    try {
+      await this.connect();
+      void this.syncOwnProfileToActiveRelay('switch');
+    } catch {
+      void this.reconnectInBackground();
+    }
   }
 
   async addRelay(url: string): Promise<void> {
-    const trimmed = url.trim();
+    const trimmed = normalizeRelayUrl(url);
     if (!trimmed) return;
     validateRelayUrl(trimmed);
-    // Verify the relay is actually reachable before persisting it. Use a
-    // throwaway pool so a failed probe doesn't pollute the live pool's
-    // internal relay map, and so we can guarantee the socket is closed.
-    const probe = new SimplePool({
-      websocketImplementation: TextCoercingWebSocket as unknown as typeof WebSocket,
-    } as ConstructorParameters<typeof SimplePool>[0]);
-    try {
-      const relay = await probe.ensureRelay(trimmed, { connectionTimeout: 5000 });
-      if (!relay.connected) throw new Error('relay did not complete handshake');
-    } finally {
-      try { probe.close([trimmed]); } catch { /* ignore */ }
-    }
     // Register in the rail only — do NOT push into `this.relays` (the active
     // subscription set). NIP-29 channels are per-relay, so subscribing to
     // multiple relays simultaneously mixes channels from different servers
@@ -1565,11 +2192,12 @@ class BridgeImpl implements NostrBridge {
   }
 
   async removeRelay(url: string): Promise<void> {
-    const list = this.configuredRelays.get().filter((u) => u !== url);
+    const normalized = normalizeRelayUrl(url);
+    const list = this.configuredRelays.get().filter((u) => normalizeRelayUrl(u) !== normalized);
     if (list.length === 0) return; // never empty the rail
     this.configuredRelays.set(list);
     this.persistRelays();
-    if (this.currentRelayUrl.get() === url) {
+    if (normalizeRelayUrl(this.currentRelayUrl.get()) === normalized) {
       await this.switchRelay(list[0]);
     }
   }
@@ -1622,6 +2250,18 @@ class BridgeImpl implements NostrBridge {
       });
     });
   }
+
+  reserveVoiceRelayCapacity(channelId: string): Unsubscribe {
+    this.voiceRelayCapacityReservations += 1;
+    this.trimBackgroundSubscriptionsForVoice(channelId);
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      this.voiceRelayCapacityReservations = Math.max(0, this.voiceRelayCapacityReservations - 1);
+    };
+  }
+
   subscribeConnectionState(cb: (label: string) => void): Unsubscribe {
     return this.connectionState.subscribe(cb);
   }
@@ -1669,6 +2309,21 @@ class BridgeImpl implements NostrBridge {
     const adapter: Listener<Record<string, boolean>> = (m) => cb(!!m[groupId]);
     return this.messagesEoseByGroup.subscribe(adapter);
   }
+  /**
+   * Per-group confidence enum for the kind 9 messages stream. The chat
+   * pane reads this to decide between "Loading messages…" and
+   * "No messages yet". See {@link MessagesStatus} for transitions.
+   * Subscribing also fast-tracks the underlying REQ, matching
+   * {@link subscribeMessagesEose}'s behavior.
+   */
+  subscribeMessagesStatus(
+    groupId: string,
+    cb: (status: MessagesStatus) => void,
+  ): Unsubscribe {
+    this.subscribeGroupMessages(groupId);
+    const adapter: Listener<Record<string, MessagesStatus>> = (m) => cb(m[groupId] ?? 'loading');
+    return this.messagesStatusByGroup.subscribe(adapter);
+  }
   subscribeUserMetadata(pubkey: string, cb: (meta: JsUserMetadata | null) => void): Unsubscribe {
     this.ensureUserMetadata(pubkey);
     const adapter: Listener<Record<string, JsUserMetadata>> = (m) => cb(m[pubkey] ?? null);
@@ -1696,6 +2351,15 @@ class BridgeImpl implements NostrBridge {
   ): Unsubscribe {
     if (!this.dmSubscribed) this.subscribeIncomingDMs();
     return this.dmsByPeer.subscribe(cb);
+  }
+
+  disableDirectMessages(): void {
+    for (const sub of this.dmSubHandles) {
+      this.closeTrackedSub(sub);
+    }
+    this.dmSubHandles = [];
+    this.dmSubscribed = false;
+    this.myDmRelays = [];
   }
 
   subscribeMyFollows(cb: (pubkeys: ReadonlyArray<string>) => void): Unsubscribe {
@@ -1755,11 +2419,17 @@ class BridgeImpl implements NostrBridge {
 
   // -- Group operations --------------------------------------------------
 
-  async sendMessage(groupId: string, content: string, replyTo?: { id: string; pubkey: string } | null): Promise<void> {
+  async sendMessage(
+    groupId: string,
+    content: string,
+    replyTo?: { id: string; pubkey: string } | null,
+    emojiTags: ReadonlyArray<ReadonlyArray<string>> = [],
+  ): Promise<void> {
     if (!this.session) throw new Error('Not logged in');
     const clientTag = generateClientTag();
     const createdAt = Math.floor(Date.now() / 1000);
     const replyToCopy = replyTo ? { id: replyTo.id, pubkey: replyTo.pubkey } : null;
+    const emojiTagsCopy = emojiTags.map((tag) => [...tag]);
     const pendingMsg: JsMessage = {
       id: `pending:${clientTag}`,
       pubkey: this.session.pubKeyHex,
@@ -1768,19 +2438,28 @@ class BridgeImpl implements NostrBridge {
       kind: KIND_GROUP_MESSAGE,
       replyToId: replyToCopy?.id ?? null,
       mentions: [],
+      customEmojis: customEmojiMapFromTags(emojiTagsCopy),
       pending: true,
       clientTag,
     };
-    this.pendingGroupSends.set(clientTag, { groupId, content, replyTo: replyToCopy, createdAt });
+    this.pendingGroupSends.set(clientTag, { groupId, content, replyTo: replyToCopy, emojiTags: emojiTagsCopy, createdAt });
     this.upsertPendingGroupMessage(groupId, pendingMsg);
-    void this.publishGroupMessage(groupId, content, replyToCopy, clientTag, createdAt);
+    void this.publishGroupMessage(groupId, content, replyToCopy, emojiTagsCopy, clientTag, createdAt);
   }
 
-  async sendReaction(targetEventId: string, targetPubkey: string, emoji: string, groupId: string): Promise<void> {
+  async sendReaction(
+    targetEventId: string,
+    targetPubkey: string,
+    emoji: string,
+    groupId: string,
+    emojiTags: ReadonlyArray<ReadonlyArray<string>> = [],
+  ): Promise<void> {
+    const emojiTagsCopy = emojiTags.map((tag) => [...tag]);
     const event = await this.signAndPublish({
       kind: KIND_REACTION,
       content: emoji,
       tags: [
+        ...emojiTagsCopy,
         ['e', targetEventId],
         ['p', targetPubkey],
         ['h', groupId],
@@ -1788,6 +2467,34 @@ class BridgeImpl implements NostrBridge {
       created_at: Math.floor(Date.now() / 1000),
     });
     this.ingestReaction(groupId, event);
+  }
+
+  async removeReaction(groupId: string, reactionEventId: string): Promise<void> {
+    const event = await this.signAndPublish({
+      kind: KIND_EVENT_DELETION,
+      content: 'remove reaction',
+      tags: [
+        ['e', reactionEventId],
+        ['k', String(KIND_REACTION)],
+        ['h', groupId],
+      ],
+      created_at: Math.floor(Date.now() / 1000),
+    });
+    this.ingestEventDeletion(groupId, event);
+  }
+
+  async removeMessage(groupId: string, eventId: string): Promise<void> {
+    const event = await this.signAndPublish({
+      kind: KIND_EVENT_DELETION,
+      content: 'remove message',
+      tags: [
+        ['e', eventId],
+        ['k', String(KIND_GROUP_MESSAGE)],
+        ['h', groupId],
+      ],
+      created_at: Math.floor(Date.now() / 1000),
+    });
+    this.ingestEventDeletion(groupId, event);
   }
 
   async sendDirectMessage(recipientPubkey: string, content: string): Promise<void> {
@@ -1839,10 +2546,11 @@ class BridgeImpl implements NostrBridge {
     groupId: string,
     content: string,
     replyTo: { id: string; pubkey: string } | null,
+    emojiTags: string[][],
     clientTag: string,
     createdAt: number,
   ): Promise<void> {
-    const tags: string[][] = [['h', groupId]];
+    const tags: string[][] = [...emojiTags, ['h', groupId]];
     if (replyTo) {
       tags.push(['e', replyTo.id, '', 'reply']);
       tags.push(['p', replyTo.pubkey]);
@@ -1869,7 +2577,7 @@ class BridgeImpl implements NostrBridge {
     const msg = list.find((m) => m.clientTag === clientTag);
     if (!msg || !msg.failed) return;
     this.flipPendingGroupMessageToPending(groupId, clientTag);
-    void this.publishGroupMessage(args.groupId, args.content, args.replyTo, clientTag, args.createdAt);
+    void this.publishGroupMessage(args.groupId, args.content, args.replyTo, args.emojiTags, clientTag, args.createdAt);
   }
 
   async retryDirectMessage(counterparty: string, clientTag: string): Promise<void> {
@@ -1926,6 +2634,7 @@ class BridgeImpl implements NostrBridge {
       kind: ev.kind,
       replyToId: replyTo,
       mentions,
+      customEmojis: customEmojiMapFromTags(ev.tags),
     };
     this.messagesByGroup.update((prev) => {
       const existing = prev[groupId] ?? [];
@@ -2092,6 +2801,8 @@ class BridgeImpl implements NostrBridge {
     isOpen?: boolean;
     kind?: 'text' | 'voice' | 'voice-sfu' | 'forum';
     parent?: string;
+    forumTags?: ReadonlyArray<JsForumTag>;
+    topics?: ReadonlyArray<string>;
   }): Promise<string> {
     const groupId = opts.groupId ?? generateGroupId();
     await this.signAndPublish({
@@ -2199,12 +2910,13 @@ class BridgeImpl implements NostrBridge {
   }
 
   async deleteGroupEvent(groupId: string, eventId: string): Promise<void> {
-    await this.signAndPublish({
+    const event = await this.signAndPublish({
       kind: KIND_GROUP_DELETE_EVENT,
       content: '',
       tags: [['h', groupId], ['e', eventId]],
       created_at: Math.floor(Date.now() / 1000),
     });
+    this.ingestGroupEventDeletion(groupId, event);
   }
 
   async editGroupMetadata(opts: {
@@ -2217,6 +2929,8 @@ class BridgeImpl implements NostrBridge {
     isOpen?: boolean;
     kind?: 'text' | 'voice' | 'voice-sfu' | 'forum';
     parent?: string;
+    forumTags?: ReadonlyArray<JsForumTag>;
+    topics?: ReadonlyArray<string>;
   }): Promise<void> {
     const tags: string[][] = [['h', opts.groupId]];
     if (opts.name !== undefined) tags.push(['name', opts.name]);
@@ -2233,6 +2947,21 @@ class BridgeImpl implements NostrBridge {
     if (opts.kind === 'voice') tags.push(['t', 'voice']);
     else if (opts.kind === 'voice-sfu') tags.push(['t', 'voice-sfu']);
     else if (opts.kind === 'forum') tags.push(['t', 'forum']);
+    // Curated forum tags (admin) + thread topic references. Kind 9002 is a
+    // full replacement, so callers MUST pass the full intended set on every
+    // edit. The new ForumView chrome and ChannelSettingsModal both load the
+    // current set into local state and pass it back on save to preserve it.
+    if (opts.forumTags) {
+      for (const ft of opts.forumTags) {
+        if (!ft.id || !ft.name) continue;
+        tags.push(ft.emoji ? ['forum-tag', ft.id, ft.name, ft.emoji] : ['forum-tag', ft.id, ft.name]);
+      }
+    }
+    if (opts.topics) {
+      for (const id of opts.topics) {
+        if (id) tags.push(['topic', id]);
+      }
+    }
     await this.signAndPublish({
       kind: KIND_GROUP_EDIT_METADATA,
       content: '',
@@ -2281,9 +3010,10 @@ class BridgeImpl implements NostrBridge {
         content: e.content,
         createdAt: e.created_at,
         kind: e.kind,
-        replyToId: e.tags.find((t) => t[0] === 'e')?.[1] ?? null,
+        replyToId: getTag(e, 'e') ?? null,
         mentions: extractMentionPubkeysFromMessage(e.content, e.tags),
-        groupId: e.tags.find((t) => t[0] === 'h')?.[1] ?? null,
+        customEmojis: customEmojiMapFromTags(e.tags),
+        groupId: getTag(e, 'h') ?? null,
       }))
       .sort((a, b) => b.createdAt - a.createdAt);
   }
@@ -2300,11 +3030,12 @@ class BridgeImpl implements NostrBridge {
   }): Promise<void> {
     if (!this.session) throw new Error('Not logged in');
     const me = this.session.pubKeyHex;
-    const profileRelays = Array.from(new Set([...this.relays, ...PROFILE_RELAYS]));
+    const profileRelays = Array.from(new Set([...this.relays, ...DEFAULT_PROFILE_LOOKUP_RELAYS]));
 
     let existing: Record<string, unknown> = {};
     try {
-      const ev = await this.pool.get(profileRelays, { kinds: [KIND_USER_METADATA], authors: [me] });
+      const events = await this.pool.querySync(profileRelays, { kinds: [KIND_USER_METADATA], authors: [me], limit: 5 }, { maxWait: PROFILE_LOOKUP_MAX_WAIT_MS });
+      const ev = newestEvent(events.filter((e) => e.kind === KIND_USER_METADATA && e.pubkey === me));
       if (ev) existing = JSON.parse(ev.content) as Record<string, unknown>;
     } catch {
       // ignore — start from empty
@@ -2320,12 +3051,21 @@ class BridgeImpl implements NostrBridge {
     if (opts.website !== undefined) merged.website = opts.website;
     if (opts.lud16 !== undefined) merged.lud16 = opts.lud16;
 
-    await this.signAndPublish({
-      kind: KIND_USER_METADATA,
-      content: JSON.stringify(merged),
-      tags: [],
-      created_at: Math.floor(Date.now() / 1000),
-    });
+    const event = await this.signAndPublish(
+      {
+        kind: KIND_USER_METADATA,
+        content: JSON.stringify(merged),
+        tags: [],
+        created_at: Math.floor(Date.now() / 1000),
+      },
+      { extraRelays: Array.from(DEFAULT_PROFILE_LOOKUP_RELAYS) },
+    );
+    setCachedKind0(event);
+    this.ingestUserMetadata(event, { cacheRelayScoped: true });
+    const state = loadProfileSyncState();
+    for (const relay of profileRelays) state.ownProfileSyncedToRelay[profileRelayKey(me, relay)] = event.created_at;
+    state.ownProfileLookupAt[me] = Date.now();
+    saveProfileSyncState(state);
   }
 
   /**
@@ -2357,9 +3097,10 @@ class BridgeImpl implements NostrBridge {
     const otherTags = existingTags.filter((t) => !(t[0] === 'p' && t[1] === pubkey));
     const nextTags = muted ? [...otherTags, ['p', pubkey]] : otherTags;
 
-    // Optimistic update so consumers (useMessages / useDirectMessages) hide
-    // the user immediately; the relay echo will overwrite this with the
-    // canonical list via subscribeMyMuteList.
+    // Optimistic update so mute/unmute UI reflects immediately; the relay
+    // echo will overwrite this with the canonical list via
+    // subscribeMyMuteList. This is intentionally non-destructive: existing
+    // messages/DMs/metadata stay in the local stores.
     const current = this.myMutes.get();
     const optimistic = muted
       ? current.includes(pubkey) ? current : [...current, pubkey]
@@ -2408,9 +3149,78 @@ class BridgeImpl implements NostrBridge {
     return added > 0;
   }
 
+  /**
+   * Fetch a single group's kind 39000 metadata on demand. Used by the chat
+   * pane when it mounts onto a `groupId` that isn't in the bridge's
+   * `groups` store yet — the global metadata stream is supposed to catch
+   * every group, but slow / silent-filtering relays can miss specific ids
+   * for a session. A focused `querySync` with `#d:[groupId]` gives the
+   * relay exactly one event to deliver and unblocks the chat pane without
+   * waiting for a full page refresh.
+   *
+   * Returns `true` when at least one previously-unseen 39000 event was
+   * ingested.
+   */
+  async fetchGroupMetadata(groupId: string): Promise<boolean> {
+    if (!groupId) return false;
+    const filter: Filter = {
+      kinds: [KIND_GROUP_METADATA],
+      '#d': [groupId],
+      limit: 1,
+    };
+    let events: NostrEvent[];
+    try {
+      events = await this.pool.querySync(this.relays, filter, { maxWait: 4000 });
+    } catch {
+      return false;
+    }
+    let added = 0;
+    for (const ev of events) {
+      const before = this.groups.get().length;
+      this.ingestGroupMetadata(ev);
+      const after = this.groups.get().length;
+      if (after > before) added++;
+    }
+    return added > 0;
+  }
+
   setActiveGroup(groupId: string | null): void {
+    const previousActive = this.activeGroupId;
     this.activeGroupId = groupId;
+    // Reset the priority deadline + arm a force-release timer. See
+    // {@link ACTIVE_PRIORITY_MAX_PAUSE_MS} for the rationale.
+    if (this.activeGroupPriorityTimer) {
+      clearTimeout(this.activeGroupPriorityTimer);
+      this.activeGroupPriorityTimer = null;
+    }
+    if (groupId) {
+      this.activeGroupPriorityDeadline = Date.now() + BridgeImpl.ACTIVE_PRIORITY_MAX_PAUSE_MS;
+      this.activeGroupPriorityTimer = setTimeout(() => {
+        this.activeGroupPriorityTimer = null;
+        // Deadline passed — release the gate even if status is still
+        // 'loading'. If there's pending background work, drain it now;
+        // otherwise this is a no-op.
+        this.maybeResumeMessageQueueDrain();
+      }, BridgeImpl.ACTIVE_PRIORITY_MAX_PAUSE_MS);
+    } else {
+      this.activeGroupPriorityDeadline = 0;
+    }
+    // Switching away from a still-loading channel? Resume the background
+    // queue drain so other channels' subs aren't held forever.
+    if (previousActive && previousActive !== groupId) {
+      this.maybeResumeMessageQueueDrain();
+    }
     if (!groupId) return;
+    // Re-entering a channel that was previously declared empty-confirmed
+    // is the canonical "stale empty" recovery path. The bridge owns this
+    // restart so the UI never has to fire its own refresh effect.
+    const currentStatus = this.messagesStatusByGroup.get()[groupId];
+    const msgs = this.messagesByGroup.get()[groupId] ?? [];
+    if (currentStatus === 'empty-confirmed' && msgs.length === 0) {
+      this.clearMessagesRetry(groupId);
+      this.internalRestartMessageSub(groupId);
+      return;
+    }
     // Fast-track the channel the user just clicked: if the kind 9 REQ
     // hasn't been fired yet (because metadata is still streaming or this
     // group was sitting in the background queue from the kind 39000
@@ -2480,10 +3290,61 @@ class BridgeImpl implements NostrBridge {
    * silently drop the REQ and force the user to refresh. Wraps the sub with
    * the same watchdog the per-group subscriptions use.
    */
+  subscribeVoiceFilterWatched(
+    filter: Filter,
+    onEvent: (ev: NostrEvent) => void,
+    options?: {
+      watchdogMs?: number;
+      maxAttempts?: number;
+      relays?: readonly string[];
+      relayMode?: 'merge' | 'replace';
+      affectsRelayAccess?: boolean;
+    },
+  ): () => void {
+    const targetRelays = options?.relays && options.relays.length > 0
+      ? Array.from(new Set(options.relayMode === 'replace'
+          ? [...options.relays]
+          : [...this.relays, ...options.relays]))
+      : this.relays;
+    if (options?.relays) {
+      for (const r of options.relays) this.authAllowedRelays.add(normalizeRelayUrl(r));
+    }
+
+    const pool = this.voicePool ?? (this.voicePool = this.createPool());
+    for (const r of targetRelays) this.voicePoolRelays.add(r);
+    this.voicePoolRefs += 1;
+    const sub = this.subscribeWatched(
+      targetRelays,
+      filter,
+      onEvent,
+      undefined,
+      { ...options, affectsRelayAccess: options?.affectsRelayAccess ?? false },
+      pool,
+      () => true,
+    );
+
+    let closed = false;
+    return () => {
+      if (closed) return;
+      closed = true;
+      sub.close();
+      this.voicePoolRefs = Math.max(0, this.voicePoolRefs - 1);
+      if (this.voicePoolRefs === 0 && this.voicePool === pool) {
+        this.closeVoicePool();
+      }
+    };
+  }
+
   subscribeFilterWatched(
     filter: Filter,
     onEvent: (ev: NostrEvent) => void,
-    options?: { watchdogMs?: number; maxAttempts?: number; relays?: readonly string[] },
+    options?: {
+      watchdogMs?: number;
+      maxAttempts?: number;
+      relays?: readonly string[];
+      relayMode?: 'merge' | 'replace';
+      affectsRelayAccess?: boolean;
+    },
   ): () => void {
     // Optional `relays` override merges with the bridge's default relay
     // list. Used by callers that need to listen on relays the bridge
@@ -2493,7 +3354,9 @@ class BridgeImpl implements NostrBridge {
     // override, getRouterRtpCapabilities responses never reach the
     // browser and `start()` times out at 8s.
     const targetRelays = options?.relays && options.relays.length > 0
-      ? Array.from(new Set([...this.relays, ...options.relays]))
+      ? Array.from(new Set(options.relayMode === 'replace'
+          ? [...options.relays]
+          : [...this.relays, ...options.relays]))
       : this.relays;
     if (options?.relays) {
       // Tell auto-auth to sign for these too — without this the relay
@@ -2544,7 +3407,23 @@ class BridgeImpl implements NostrBridge {
     filter: Filter,
     onevent: (ev: NostrEvent) => void,
     oneose?: () => void,
-    options?: { watchdogMs?: number; maxAttempts?: number; affectsRelayAccess?: boolean },
+    options?: {
+      watchdogMs?: number;
+      maxAttempts?: number;
+      affectsRelayAccess?: boolean;
+      /**
+       * When true, an `auth-required` / `restricted` CLOSED for this sub
+       * downgrades relay-access state **immediately** (no 4s soak). Used
+       * by the dedicated preflight REQ in {@link preflightRelayAccess} so
+       * the user sees a "Not whitelisted" banner within ~1.5s instead of
+       * waiting through the deferred soak window. Other subs keep the
+       * soak so transient AUTH races don't flash the banner.
+       */
+      immediateAccessDowngrade?: boolean;
+      onQuotaOrRateLimitClose?: () => void;
+    },
+    pool: SimplePool = this.pool,
+    isPoolSocketAlive: () => boolean = () => this.poolSocketAlive,
   ): { close: () => void; markClosed: () => void } {
     const WATCHDOG_MS = options?.watchdogMs ?? 5000;
     const MAX_ATTEMPTS = options?.maxAttempts ?? Infinity;
@@ -2555,6 +3434,7 @@ class BridgeImpl implements NostrBridge {
     // relay-wide access banner; otherwise the user sees "Not whitelisted"
     // even when their global metadata sub is delivering everything fine.
     const AFFECTS_ACCESS = options?.affectsRelayAccess ?? true;
+    const IMMEDIATE_ACCESS_DOWNGRADE = options?.immediateAccessDowngrade ?? false;
     const MAX_BACKOFF_MS = 30_000;
     let attempt = 0;
     let activeSub: { close: () => void } | null = null;
@@ -2573,10 +3453,16 @@ class BridgeImpl implements NostrBridge {
     };
 
     // Common funnel for "this attempt is dead, schedule the next start()".
-    // `immediate` skips backoff for the first onclose-driven retry: the relay
-    // has already issued AUTH, so re-firing the REQ in the next tick lets
-    // nostr-tools attach AUTH and deliver. Subsequent failures still hit the
-    // backoff because `attempt` keeps incrementing in start().
+    // `immediate` requests skipping backoff so nostr-tools can attach AUTH
+    // and re-deliver in the next tick. The caller signals this for
+    // auth-required / restricted CLOSED — but we only honour it on the
+    // first onclose-driven retry. A relay that keeps rejecting with
+    // auth-required after the first immediate retry isn't going to be
+    // unstuck by another 0-delay round-trip; without this cap, that
+    // closure would fire REQ → EOSE → CLOSED → REQ in a tight loop that
+    // hammers the relay, starves other REQs (admin/member, kind 0,
+    // branding), and on auth-gated channels causes the message pane to
+    // oscillate "Loading messages…" ↔ "No messages yet".
     const scheduleRetry = (immediate: boolean) => {
       if (closed || !armed) return;
       armed = false;
@@ -2584,7 +3470,12 @@ class BridgeImpl implements NostrBridge {
       try { activeSub?.close(); } catch { /* ignore */ }
       activeSub = null;
       if (attempt >= MAX_ATTEMPTS) return;
-      const delay = immediate ? 0 : Math.min(1000 * 2 ** (attempt - 1), MAX_BACKOFF_MS);
+      // attempt is incremented at the top of start(), so attempt === 1
+      // means we just finished the very first attempt — the only one
+      // eligible for the immediate retry. Subsequent failures fall
+      // through to exponential backoff.
+      const useImmediate = immediate && attempt <= 1;
+      const delay = useImmediate ? 0 : Math.min(1000 * 2 ** (attempt - 1), MAX_BACKOFF_MS);
       timer = setTimeout(start, delay);
     };
 
@@ -2629,7 +3520,7 @@ class BridgeImpl implements NostrBridge {
       attempt++;
       alive = false;
       armed = true;
-      const sub = this.pool.subscribe(relays, filter, {
+      const sub = pool.subscribe(relays, filter, {
         onevent: (ev) => {
           // switchRelay / resetPoolForSessionChange / dispose call markClosed
           // on every active sub but deliberately skip pool.close() to avoid
@@ -2688,6 +3579,7 @@ class BridgeImpl implements NostrBridge {
           // existing state alone in that case.
           let shouldRetry = false;
           let unknownClose = false;
+          let quotaOrRateLimitClose = false;
           reasons.forEach((reason, i) => {
             if (!reason) return;
             const url = relays[i];
@@ -2697,17 +3589,29 @@ class BridgeImpl implements NostrBridge {
                 // A per-channel CLOSED ("you can't read this one") still
                 // schedules a retry, but it does NOT update the relay-wide
                 // banner — see AFFECTS_ACCESS comment above.
-                if (AFFECTS_ACCESS) this.setRelayAccessDeferred(url, state);
+                if (AFFECTS_ACCESS) {
+                  if (IMMEDIATE_ACCESS_DOWNGRADE) {
+                    // Preflight path — surface "Not whitelisted" within the
+                    // sub's own watchdog window, no 4s soak.
+                    this.setRelayAccess(url, state, { override: true });
+                  } else {
+                    this.setRelayAccessDeferred(url, state);
+                  }
+                }
                 shouldRetry = true;
               } else if (AFFECTS_ACCESS) {
                 this.setRelayAccess(url, state);
               }
+            } else if (isRelayQuotaOrRateLimit(reason)) {
+              // Quota/rate-limit CLOSED means the relay is explicitly telling
+              // us it cannot accept another live REQ. Retrying from every
+              // watched sub turns a full connection into a retry storm, and
+              // voice signaling is usually the first thing starved. Leave
+              // recovery to the caller opening a fresh, higher-priority sub.
+              quotaOrRateLimitClose = true;
             } else {
-              // Reason carried but didn't classify — typically a transient
-              // quota / rate-limit ("Subscription quota exceeded: 50/50",
-              // "too many concurrent REQs"). Backoff-retry rather than
-              // immediate-retry so we don't blast the relay at the exact
-              // moment its quota is full and trigger a sub-flood.
+              // Reason carried but didn't classify. Treat it as a transient
+              // transport close and retry with backoff.
               unknownClose = true;
             }
           });
@@ -2716,6 +3620,13 @@ class BridgeImpl implements NostrBridge {
           // already succeeded or the watchdog already fired.
           if (shouldRetry) scheduleRetry(true);
           else if (unknownClose) scheduleRetry(false);
+          else if (quotaOrRateLimitClose) {
+            armed = false;
+            clearTimer();
+            try { activeSub?.close(); } catch { /* ignore */ }
+            activeSub = null;
+            options?.onQuotaOrRateLimitClose?.();
+          }
         },
         onauth: wrappedSigner,
       });
@@ -2734,7 +3645,7 @@ class BridgeImpl implements NostrBridge {
         // browser warning per sub ("WebSocket is already in CLOSING or
         // CLOSED state") that the try/catch can't suppress because it's
         // logged at the WebSocket layer, not raised as an exception.
-        if (!this.poolSocketAlive) {
+        if (!isPoolSocketAlive()) {
           activeSub = null;
           return;
         }
@@ -2834,13 +3745,116 @@ class BridgeImpl implements NostrBridge {
     };
   }
 
+  /**
+   * Side-effect runner for {@link runConnectFanOut}. The orchestrator owns
+   * tier ordering; this method translates a {@link TierAction} into the
+   * matching `subscribeXxx` call. Keeping this dispatch table in one place
+   * makes the priority tiers grep-able from the orchestrator file.
+   */
+  private dispatchOrchestratorAction(action: TierAction): void {
+    switch (action) {
+      case 'preflightRelayAccess':
+        if (this.session) this.preflightRelayAccess();
+        break;
+      case 'subscribeGroupMetadata':
+        this.subscribeGroupMetadata();
+        break;
+      case 'ensureMyMetadata':
+        if (this.session) this.ensureUserMetadata(this.session.pubKeyHex);
+        break;
+      case 'subscribeAllAdminMember':
+        this.subscribeAllAdminMember();
+        break;
+      case 'subscribeIncomingDMs':
+        this.subscribeIncomingDMs();
+        break;
+      case 'subscribeMyContactList':
+        this.subscribeMyContactList();
+        break;
+      case 'subscribeMyMuteList':
+        this.subscribeMyMuteList();
+        break;
+      case 'subscribeMyAuthoredGroups':
+        this.subscribeMyAuthoredGroups();
+        break;
+      case 'subscribeActiveCalls':
+        this.subscribeActiveCalls();
+        break;
+    }
+  }
+
+  /**
+   * P0 whitelist preflight — fires a tight kind:0 `authors:[me]` REQ on the
+   * active relay so an `auth-required:` or `restricted:` rejection downgrades
+   * `relayAccess` within ~1.5s, well before the rest of the fan-out hits
+   * the 4s deferred soak. EOSE on this filter is harmless (the relay
+   * just doesn't have my kind:0 yet) and still flips `relayAccess` to
+   * 'ok' through the standard onevent/oneose path.
+   *
+   * `maxAttempts: 1` so a rejection doesn't trigger exponential-backoff
+   * retries that would extend the perceived rejection window.
+   */
+  private preflightRelayAccess(): void {
+    if (!this.session) return;
+    const filter: Filter = {
+      kinds: [KIND_USER_METADATA],
+      authors: [this.session.pubKeyHex],
+      limit: 1,
+    };
+    let sub: { close: () => void; markClosed?: () => void } | undefined;
+    sub = this.subscribeWatched(
+      this.relays,
+      filter,
+      (ev) => {
+        this.ingestUserMetadata(ev);
+        if (sub) this.closeTrackedSub(sub);
+      },
+      () => {
+        // EOSE proves the relay accepted the query, but keep the preflight
+        // handle alive until CLOSED/event so an immediate EOSE-then-CLOSED
+        // auth-required can still downgrade relayAccess.
+      },
+      {
+        watchdogMs: 1500,
+        maxAttempts: 1,
+        affectsRelayAccess: true,
+        immediateAccessDowngrade: true,
+      },
+    );
+    this.subs.push(sub);
+  }
+
+  /**
+   * Reapply the per-group REQs captured by {@link resetPoolForSessionChange}.
+   * The active group is bumped to the head of the messages list so that —
+   * after a relay or session swap — the channel currently in view gets the
+   * relay's first per-group response. No-op when there is no pending state.
+   */
+  private applyPendingResubscribe(
+    pending: { messages: string[]; reactions: string[]; adminMember: string[]; metadata: string[] } | null,
+  ): void {
+    if (!pending) return;
+    const messages = [...pending.messages];
+    if (this.activeGroupId) {
+      const idx = messages.indexOf(this.activeGroupId);
+      if (idx > 0) {
+        messages.splice(idx, 1);
+        messages.unshift(this.activeGroupId);
+      }
+    }
+    messages.forEach((id) => this.subscribeGroupMessages(id));
+    pending.reactions.forEach((id) => this.subscribeGroupReactions(id));
+    pending.adminMember.forEach((id) => this.subscribeAdminMember(id));
+    pending.metadata.forEach((pk) => this.ensureUserMetadata(pk));
+  }
+
   private subscribeGroupMetadata(): void {
     const filter: Filter = { kinds: [KIND_GROUP_METADATA] };
     const sub = this.subscribeWatched(
       this.relays,
       filter,
       (ev) => this.ingestGroupMetadata(ev),
-      () => this.groupMetadataEose.set(true),
+      () => this.handleGroupMetadataEose(),
     );
     this.subs.push(sub);
   }
@@ -2866,6 +3880,75 @@ class BridgeImpl implements NostrBridge {
     this.subs.push(sub);
   }
 
+  private closeTrackedSub(sub: { close: () => void; markClosed?: () => void } | undefined): void {
+    if (!sub) return;
+    try { sub.close(); } catch { /* ignore */ }
+    this.subs = this.subs.filter((s) => s !== sub);
+  }
+
+  private closePerGroupSub(
+    groupId: string,
+    subscribed: Set<string>,
+    byGroup: Map<string, { close: () => void; markClosed?: () => void }>,
+  ): void {
+    const sub = byGroup.get(groupId);
+    this.closeTrackedSub(sub);
+    byGroup.delete(groupId);
+    subscribed.delete(groupId);
+  }
+
+  private forgetPerGroupSub(
+    groupId: string,
+    subscribed: Set<string>,
+    byGroup: Map<string, { close: () => void; markClosed?: () => void }>,
+  ): void {
+    const sub = byGroup.get(groupId);
+    if (sub) this.subs = this.subs.filter((s) => s !== sub);
+    byGroup.delete(groupId);
+    subscribed.delete(groupId);
+  }
+
+  /**
+   * Mesh voice needs two live REQs on the active relay (presence + directed
+   * signaling). Background message/creator streams are useful for snappy chat
+   * preload, but on public relays with a 50-subscription cap they can consume
+   * every slot before the user joins a call. When a mesh client starts, drop
+   * non-active background group streams and pause future metadata fan-out so
+   * the media signaling path can claim stable relay capacity.
+   */
+  private trimBackgroundSubscriptionsForVoice(channelId: string): void {
+    const keep = new Set<string>([channelId]);
+    if (this.activeGroupId) keep.add(this.activeGroupId);
+
+    if (this.pendingMessageTimer) {
+      clearTimeout(this.pendingMessageTimer);
+      this.pendingMessageTimer = null;
+    }
+    this.pendingMessageQueue = this.pendingMessageQueue.filter((id) => keep.has(id));
+    this.pendingMessageSet = new Set(this.pendingMessageQueue);
+
+    for (const groupId of Array.from(this.messageSubByGroup.keys())) {
+      if (keep.has(groupId)) continue;
+      this.clearMessagesRetry(groupId);
+      this.closePerGroupSub(groupId, this.messageSubscribedGroups, this.messageSubByGroup);
+      this.closePerGroupSub(groupId, this.eventDeletionSubscribedGroups, this.eventDeletionSubByGroup);
+      this.closePerGroupSub(groupId, this.groupModerationDeletionSubscribedGroups, this.groupModerationDeletionSubByGroup);
+    }
+    for (const groupId of Array.from(this.reactionSubByGroup.keys())) {
+      if (keep.has(groupId)) continue;
+      this.closePerGroupSub(groupId, this.reactionSubscribedGroups, this.reactionSubByGroup);
+      this.closePerGroupSub(groupId, this.eventDeletionSubscribedGroups, this.eventDeletionSubByGroup);
+    }
+    for (const groupId of Array.from(this.creatorSubByGroup.keys())) {
+      if (keep.has(groupId)) continue;
+      this.closePerGroupSub(groupId, this.creatorSubscribedGroups, this.creatorSubByGroup);
+    }
+    for (const groupId of Array.from(this.adminMemberSubByGroup.keys())) {
+      if (keep.has(groupId)) continue;
+      this.closePerGroupSub(groupId, this.adminMemberSubscribedGroups, this.adminMemberSubByGroup);
+    }
+  }
+
   /**
    * Background entry-point used by {@link ingestGroupMetadata} for groups
    * the user has *not* explicitly opened. Defers the kind 9 REQ to a small
@@ -2884,6 +3967,7 @@ class BridgeImpl implements NostrBridge {
       this.subscribeGroupMessages(groupId);
       return;
     }
+    if (this.backgroundMessageStreamCount() >= BridgeImpl.MAX_BACKGROUND_MESSAGE_STREAMS) return;
     this.pendingMessageSet.add(groupId);
     this.pendingMessageQueue.push(groupId);
     this.scheduleMessageQueueDrain();
@@ -2891,6 +3975,15 @@ class BridgeImpl implements NostrBridge {
 
   private scheduleMessageQueueDrain(): void {
     if (this.pendingMessageTimer) return;
+    // Strict active-channel priority: while the watched channel's kind 9
+    // sub is still in `loading` (no EOSE, no events), hold all background
+    // REQs back. The active sub's own EOSE / first-event handler calls
+    // {@link maybeResumeMessageQueueDrain} to release the queue. Without
+    // this gate, the relay's response queue interleaves the active
+    // channel's history with N background channels' histories — making
+    // the user wait visibly while watching one channel that already has
+    // the data in flight.
+    if (this.isActiveGroupStillLoading()) return;
     // Small delay so the active group's REQ (fired synchronously when the
     // user clicks a channel) lands before the relay sees a flood of
     // background REQs. Longer than a microtask so React's render commit
@@ -2902,7 +3995,40 @@ class BridgeImpl implements NostrBridge {
     }, 80);
   }
 
+  /**
+   * Re-arm the background drain when the active channel transitions out
+   * of `loading` (its EOSE arrived, or its first event was ingested).
+   * No-op if the queue is empty or the active channel is still loading.
+   */
+  private maybeResumeMessageQueueDrain(): void {
+    if (this.pendingMessageQueue.length === 0) return;
+    if (this.isActiveGroupStillLoading()) return;
+    this.scheduleMessageQueueDrain();
+  }
+
+  /**
+   * True iff the user is watching a channel whose kind 9 stream has not
+   * yet produced either an EOSE or a message AND the priority deadline
+   * has not yet elapsed. Used to gate background REQs so the watched
+   * channel always gets the relay's first attention — but bounded by
+   * {@link ACTIVE_PRIORITY_MAX_PAUSE_MS} so a silent active sub can't
+   * starve every other channel.
+   */
+  private isActiveGroupStillLoading(): boolean {
+    const id = this.activeGroupId;
+    if (!id) return false;
+    if (Date.now() >= this.activeGroupPriorityDeadline) return false;
+    const status = this.messagesStatusByGroup.get()[id];
+    return !status || status === 'loading';
+  }
+
   private drainMessageQueue(): void {
+    // Race guard: the active group's status may have flipped back to
+    // 'loading' while the 80ms drain timer was pending (e.g. user clicked
+    // a new channel just before the timer fired). Bail in that case;
+    // {@link maybeResumeMessageQueueDrain} will pick up when the new
+    // active channel's EOSE / first event lands.
+    if (this.isActiveGroupStillLoading()) return;
     // Always promote the active group to the head of the queue if it
     // happens to be sitting in there — handles the case where the user
     // switched channels while a background batch was in flight.
@@ -2916,6 +4042,11 @@ class BridgeImpl implements NostrBridge {
     const BATCH = 4;
     let processed = 0;
     while (this.pendingMessageQueue.length > 0 && processed < BATCH) {
+      if (this.backgroundMessageStreamCount() >= BridgeImpl.MAX_BACKGROUND_MESSAGE_STREAMS) {
+        this.pendingMessageQueue = [];
+        this.pendingMessageSet.clear();
+        break;
+      }
       const id = this.pendingMessageQueue.shift()!;
       this.pendingMessageSet.delete(id);
       if (!this.messageSubscribedGroups.has(id)) {
@@ -2928,15 +4059,53 @@ class BridgeImpl implements NostrBridge {
     }
   }
 
+  private backgroundMessageStreamCount(): number {
+    let count = 0;
+    for (const groupId of this.messageSubscribedGroups) {
+      if (groupId !== this.activeGroupId) count++;
+    }
+    return count;
+  }
+
   /**
    * Move `groupId` to the head of the pending message queue (or fire its
    * REQ immediately if it isn't queued yet). Called by {@link setActiveGroup}
    * when the user clicks a channel — it ensures the channel currently in
    * view always wins the relay's attention, even if hundreds of other
    * groups are queued ahead of it from the kind 39000 fan-out.
+   *
+   * If the channel is already subscribed but hasn't loaded ("loading" /
+   * "empty-unconfirmed" / "empty-confirmed"), the existing sub is torn
+   * down and a fresh one is opened. The background drain typically
+   * subscribes every visible channel from kind 39000 fan-out — those
+   * subs land on a still-AUTH-ing socket and routinely get stuck in
+   * the EOSE-then-CLOSED auth-required race. The user's click is the
+   * canonical signal to retry from scratch with the active-channel
+   * priority gate engaged. Channels in 'has-messages' are left alone —
+   * a successful sub is delivering live updates and replacing it would
+   * just churn the relay.
    */
   private bumpGroupMessagesPriority(groupId: string): void {
-    if (this.messageSubscribedGroups.has(groupId)) return;
+    if (this.messageSubscribedGroups.has(groupId)) {
+      const status = this.messagesStatusByGroup.get()[groupId];
+      if (status === 'has-messages') return;
+      // Stuck — restart so the user's click gets a fresh REQ on the
+      // (likely now AUTH'd) socket. refreshGroupMessages also resets
+      // the retry counter and re-arms the querySync fallback flag.
+      this.refreshGroupMessages(groupId);
+      // Defense in depth: fire a parallel `querySync` immediately,
+      // don't wait for the retry ladder to exhaust. The live REQ
+      // restart above sometimes wedges on the same conditions that
+      // had the previous sub stuck (relay-side per-REQ AUTH quirks,
+      // SimplePool dedup of identical filters on the same socket,
+      // etc.). A querySync goes out as a separate frame and has its
+      // own response window — events it returns flow through
+      // ingestMessage and unstick the chat pane without the user
+      // having to refresh the page.
+      this.querySyncFallbackFired.add(groupId);
+      void this.querySyncFallbackForGroup(groupId);
+      return;
+    }
     if (this.pendingMessageSet.has(groupId)) {
       this.pendingMessageSet.delete(groupId);
       this.pendingMessageQueue = this.pendingMessageQueue.filter((id) => id !== groupId);
@@ -2958,55 +4127,620 @@ class BridgeImpl implements NostrBridge {
         return rest;
       });
     }
+    // Initial status: if the bridge already has cached messages for this
+    // group (e.g. a returning subscriber after a relay switch), keep
+    // 'has-messages'; otherwise enter 'loading' so the UI shows a spinner
+    // until the bridge confirms emptiness or events arrive.
+    const seedMsgs = this.messagesByGroup.get()[groupId] ?? [];
+    this.setMessagesStatus(groupId, seedMsgs.length > 0 ? 'has-messages' : 'loading');
     const filter: Filter = {
-      kinds: [KIND_GROUP_MESSAGE],
+      kinds: [KIND_GROUP_MESSAGE, KIND_EVENT_DELETION, KIND_GROUP_DELETE_EVENT],
       '#h': [groupId],
       limit: BACKGROUND_MESSAGE_LIMIT,
     };
     const sub = this.subscribeWatched(
       this.relays,
       filter,
-      (ev) => this.ingestMessage(groupId, ev),
+      (ev) => {
+        if (ev.kind === KIND_GROUP_MESSAGE) this.ingestMessage(groupId, ev);
+        else if (ev.kind === KIND_EVENT_DELETION) this.ingestEventDeletion(groupId, ev);
+        else if (ev.kind === KIND_GROUP_DELETE_EVENT) this.ingestGroupEventDeletion(groupId, ev);
+      },
       () => {
         // Flip per-group EOSE once the relay confirms it has finished
         // serving the stored history for this REQ. The chat pane reads
-        // this to swap a loading spinner for the welcome / empty state.
+        // this for legacy purposes; the authoritative loading→empty
+        // signal is now `messagesStatusByGroup`.
         this.messagesEoseByGroup.update((prev) =>
           prev[groupId] ? prev : { ...prev, [groupId]: true },
         );
+        // Decide confidence: events already ingested? Trust the relay
+        // and stop retrying. Empty? Drop to 'empty-unconfirmed' and let
+        // the retry ladder run before the UI ever sees "No messages".
+        const msgs = this.messagesByGroup.get()[groupId] ?? [];
+        if (msgs.length > 0) {
+          this.setMessagesStatus(groupId, 'has-messages');
+          this.clearMessagesRetry(groupId);
+        } else if (this.messagesStatusByGroup.get()[groupId] !== 'empty-confirmed') {
+          // Once the ladder has promoted status to `empty-confirmed`, additional
+          // empty EOSEs (typically caused by `subscribeWatched` re-issuing the
+          // REQ after an `auth-required` CLOSED race) MUST NOT bounce status
+          // back to `empty-unconfirmed` — that would restart the ladder and the
+          // UI would oscillate "No messages yet" ↔ "Loading messages…" forever.
+          // A late real message still promotes status via `ingestMessage →
+          // setMessagesStatus('has-messages')`, so this doesn't trap a stale
+          // empty verdict against future arrivals.
+          this.setMessagesStatus(groupId, 'empty-unconfirmed');
+          this.scheduleEmptyRetry(groupId);
+        }
+        // If this is the watched channel, release any background REQs we
+        // were holding back to give it priority bandwidth.
+        if (groupId === this.activeGroupId) this.maybeResumeMessageQueueDrain();
       },
-      { affectsRelayAccess: false },
+      {
+        affectsRelayAccess: false,
+        onQuotaOrRateLimitClose: () => {
+          this.clearMessagesRetry(groupId);
+          this.forgetPerGroupSub(groupId, this.messageSubscribedGroups, this.messageSubByGroup);
+        },
+      },
     );
     this.subs.push(sub);
+    this.messageSubByGroup.set(groupId, sub);
+  }
+
+  /**
+   * Write `status` to `messagesStatusByGroup[groupId]` only if it changed,
+   * so React subscribers don't churn on redundant writes.
+   */
+  private setMessagesStatus(groupId: string, status: MessagesStatus): void {
+    this.messagesStatusByGroup.update((prev) => {
+      if (prev[groupId] === status) return prev;
+      return { ...prev, [groupId]: status };
+    });
+  }
+
+  /**
+   * Drop any pending retry timer for `groupId`. Called when a message
+   * arrives (we've proven the channel isn't empty), when the user logs
+   * out / switches relay (the sub is going away), and when the retry
+   * ladder is exhausted.
+   */
+  private clearMessagesRetry(groupId: string): void {
+    const entry = this.messagesRetryByGroup.get(groupId);
+    if (entry?.timer) clearTimeout(entry.timer);
+    this.messagesRetryByGroup.delete(groupId);
+  }
+
+  private clearGroupMetadataEmptyRetry(): void {
+    if (this.groupMetadataEmptyRetryTimer) {
+      clearTimeout(this.groupMetadataEmptyRetryTimer);
+      this.groupMetadataEmptyRetryTimer = null;
+    }
+    this.groupMetadataEmptyRetryAttempts = 0;
+  }
+
+  private handleGroupMetadataEose(): void {
+    if (this.groups.get().length > 0) {
+      this.clearGroupMetadataEmptyRetry();
+      this.groupMetadataEose.set(true);
+      return;
+    }
+    if (this.groupMetadataEmptyRetryAttempts >= BridgeImpl.GROUP_METADATA_EMPTY_RETRY_DELAYS.length) {
+      this.clearGroupMetadataEmptyRetry();
+      this.groupMetadataEose.set(true);
+      return;
+    }
+    this.groupMetadataEose.set(false);
+    const delay = BridgeImpl.GROUP_METADATA_EMPTY_RETRY_DELAYS[this.groupMetadataEmptyRetryAttempts];
+    this.groupMetadataEmptyRetryAttempts += 1;
+    if (this.groupMetadataEmptyRetryTimer) clearTimeout(this.groupMetadataEmptyRetryTimer);
+    this.groupMetadataEmptyRetryTimer = setTimeout(() => {
+      this.groupMetadataEmptyRetryTimer = null;
+      void this.querySyncFallbackForGroupMetadata();
+    }, delay);
+  }
+
+  private async querySyncFallbackForGroupMetadata(): Promise<void> {
+    if (!this.session) return;
+    const relay = this.currentRelayUrl.get();
+    const pool = this.pool;
+    const relays = [...this.relays];
+    let events: NostrEvent[];
+    try {
+      events = await pool.querySync(relays, { kinds: [KIND_GROUP_METADATA] }, { maxWait: 6000 });
+    } catch {
+      if (!this.session || this.currentRelayUrl.get() !== relay || this.pool !== pool) return;
+      this.handleGroupMetadataEose();
+      return;
+    }
+    if (!this.session || this.currentRelayUrl.get() !== relay || this.pool !== pool) return;
+    for (const ev of events) this.ingestGroupMetadata(ev);
+    if (this.groups.get().length > 0) {
+      this.clearGroupMetadataEmptyRetry();
+      this.groupMetadataEose.set(true);
+      return;
+    }
+    this.handleGroupMetadataEose();
+  }
+
+  /**
+   * Drop every pending retry timer. Called on logout / pool reset /
+   * relay switch — pending retries are tied to the old pool's filters.
+   */
+  private clearAllMessagesRetry(): void {
+    for (const entry of this.messagesRetryByGroup.values()) {
+      if (entry.timer) clearTimeout(entry.timer);
+    }
+    this.messagesRetryByGroup.clear();
+  }
+
+  /**
+   * Schedule a debounced write of `messagesByGroup[groupId]` to the
+   * stale-while-revalidate cache. A burst of ingest calls (e.g. the
+   * initial kind 9 limit:50 backfill) collapses into a single
+   * localStorage.setItem at the end of the burst — cheap, and the
+   * worst-case data loss on tab close is whatever arrived in the last
+   * 200ms which the relay will re-deliver next session anyway.
+   *
+   * No-ops while logged out so a late ingest (e.g. an in-flight event on
+   * a markClosed sub from the previous session) can't write under the
+   * old account's relay key. See `cacheClearAll` on logout.
+   */
+  private scheduleMessageCacheFlush(groupId: string): void {
+    if (!this.session) return;
+    const existing = this.messageCacheFlushTimers.get(groupId);
+    if (existing) clearTimeout(existing);
+    const timer = setTimeout(() => {
+      this.messageCacheFlushTimers.delete(groupId);
+      this.flushMessageCache(groupId);
+    }, CACHE_FLUSH_DELAY_MS);
+    this.messageCacheFlushTimers.set(groupId, timer);
+  }
+
+  /**
+   * Synchronous write of the last {@link MESSAGE_CACHE_LIMIT} confirmed
+   * messages for `groupId` to localStorage. Filters out optimistic
+   * placeholders — a cached pending bubble would resurrect on cold load
+   * even though the publish actually finished hours ago.
+   */
+  private flushMessageCache(groupId: string): void {
+    if (!this.session) return;
+    const all = this.messagesByGroup.get()[groupId] ?? [];
+    const confirmed = all.filter((m) => !m.pending && !m.failed);
+    if (confirmed.length === 0) {
+      // Nothing worth caching (only optimistic placeholders, or store
+      // emptied between schedule and flush). Drop any stale on-disk entry
+      // so a previous larger snapshot doesn't ghost-paint after the user
+      // saw the channel empty.
+      cacheDelete(this.currentRelayUrl.get(), KIND_GROUP_MESSAGE, groupId);
+      return;
+    }
+    const trimmed = confirmed.length > MESSAGE_CACHE_LIMIT
+      ? confirmed.slice(confirmed.length - MESSAGE_CACHE_LIMIT)
+      : confirmed;
+    cacheSet(this.currentRelayUrl.get(), KIND_GROUP_MESSAGE, groupId, trimmed);
+  }
+
+  /** Mirror of {@link scheduleMessageCacheFlush} for kind 7 reactions. */
+  private scheduleReactionCacheFlush(groupId: string): void {
+    if (!this.session) return;
+    const existing = this.reactionCacheFlushTimers.get(groupId);
+    if (existing) clearTimeout(existing);
+    const timer = setTimeout(() => {
+      this.reactionCacheFlushTimers.delete(groupId);
+      this.flushReactionCache(groupId);
+    }, CACHE_FLUSH_DELAY_MS);
+    this.reactionCacheFlushTimers.set(groupId, timer);
+  }
+
+  /**
+   * Synchronous write of the reaction map for `groupId`. Caps total
+   * reactions at {@link REACTION_CACHE_LIMIT} by dropping the oldest by
+   * `createdAt`. Cheaper than per-target caps and avoids favouring a
+   * single high-reaction message.
+   */
+  private flushReactionCache(groupId: string): void {
+    if (!this.session) return;
+    const byTarget = this.reactionsByGroup.get()[groupId];
+    if (!byTarget) {
+      cacheDelete(this.currentRelayUrl.get(), KIND_REACTION, groupId);
+      return;
+    }
+    let total = 0;
+    for (const arr of Object.values(byTarget)) total += arr.length;
+    if (total === 0) {
+      cacheDelete(this.currentRelayUrl.get(), KIND_REACTION, groupId);
+      return;
+    }
+    let toCache: Record<string, JsReaction[]> = byTarget;
+    if (total > REACTION_CACHE_LIMIT) {
+      const flat: JsReaction[] = [];
+      for (const arr of Object.values(byTarget)) flat.push(...arr);
+      flat.sort((a, b) => a.createdAt - b.createdAt);
+      const kept = flat.slice(flat.length - REACTION_CACHE_LIMIT);
+      const regrouped: Record<string, JsReaction[]> = {};
+      for (const r of kept) {
+        const cur = regrouped[r.targetEventId] ?? [];
+        regrouped[r.targetEventId] = [...cur, r];
+      }
+      toCache = regrouped;
+    }
+    cacheSet(this.currentRelayUrl.get(), KIND_REACTION, groupId, toCache);
+  }
+
+  /**
+   * Drop every pending cache-flush timer. Called on logout / dispose /
+   * relay switch so a debounce that armed under the previous relay can't
+   * fire after `currentRelayUrl` flipped and write to the wrong key.
+   */
+  private clearAllCacheFlushers(): void {
+    for (const t of this.messageCacheFlushTimers.values()) clearTimeout(t);
+    this.messageCacheFlushTimers.clear();
+    for (const t of this.reactionCacheFlushTimers.values()) clearTimeout(t);
+    this.reactionCacheFlushTimers.clear();
+  }
+
+  /**
+   * Empty-EOSE retry ladder. Auth-gated and silent-filtering relays
+   * routinely send EOSE-empty fast (before AUTH completes, or after a
+   * NIP-29 ACL filter dropped every event). Without this, the UI flashes
+   * "No messages yet" on a channel that genuinely has history.
+   *
+   * Each call advances the attempt counter. After
+   * {@link EMPTY_RETRY_DELAYS}.length attempts the status is promoted to
+   * `empty-confirmed`. If a message arrives at any point, the timer is
+   * cancelled and status flips to `has-messages`.
+   */
+  private scheduleEmptyRetry(groupId: string): void {
+    if (!this.session) return; // logged out — drop the work
+    const prior = this.messagesRetryByGroup.get(groupId);
+    const attempts = prior?.attempts ?? 0;
+    if (attempts >= BridgeImpl.EMPTY_RETRY_DELAYS.length) {
+      // Hold off on the verdict while NIP-42 AUTH is still in flight on
+      // the active relay. The user might be staring at their NIP-46
+      // bunker waiting to tap "approve" — the chat pane should keep
+      // showing the spinner (status = 'empty-unconfirmed' is the right
+      // signal for that), not flip to "No messages yet" and bait them
+      // into thinking the channel is empty. When AUTH settles,
+      // {@link wireAuthSettledHook} fires a fresh REQ via
+      // refreshGroupMessages and the verdict will be re-evaluated then.
+      // Failed AUTH states ('auth-required', 'restricted', etc.) bypass
+      // the gate — there the relay banner explains the situation and
+      // 'empty-confirmed' is honest.
+      const relay = this.currentRelayUrl.get();
+      const access = this.relayAccess.get()[relay];
+      if (access === 'unknown' || access === 'authenticating') {
+        this.clearMessagesRetry(groupId);
+        return;
+      }
+      this.setMessagesStatus(groupId, 'empty-confirmed');
+      this.clearMessagesRetry(groupId);
+      // Last shot: fire one focused `querySync` for this channel. The
+      // live REQ has exhausted its retries against the EOSE-then-CLOSED
+      // auth-required race; a fresh querySync goes out as a separate
+      // request, by which point the relay's AUTH / whitelist evaluation
+      // for this socket has had time to settle. If it returns events,
+      // {@link ingestMessage} flips status from `empty-confirmed` back
+      // to `has-messages`. If it returns empty, the verdict stands.
+      // Single-shot per groupId per session — `refreshGroupMessages`
+      // clears the flag so an explicit user retry gets another shot.
+      if (!this.querySyncFallbackFired.has(groupId)) {
+        this.querySyncFallbackFired.add(groupId);
+        void this.querySyncFallbackForGroup(groupId);
+      }
+      return;
+    }
+    const delay = BridgeImpl.EMPTY_RETRY_DELAYS[attempts];
+    if (prior?.timer) clearTimeout(prior.timer);
+    const timer = setTimeout(() => {
+      const entry = this.messagesRetryByGroup.get(groupId);
+      if (!entry) return; // cleared by a concurrent message / logout
+      entry.timer = null;
+      entry.attempts += 1;
+      this.messagesRetryByGroup.set(groupId, entry);
+      // If a message arrived between scheduling and firing, the entry
+      // would already be cleared by `clearMessagesRetry`. Guard anyway.
+      const msgs = this.messagesByGroup.get()[groupId] ?? [];
+      if (msgs.length > 0) {
+        this.setMessagesStatus(groupId, 'has-messages');
+        this.clearMessagesRetry(groupId);
+        return;
+      }
+      // Restart the sub so the relay sees a fresh REQ — most likely to
+      // unstick auth-gated relays whose AUTH handshake finished after
+      // the initial EOSE-empty.
+      this.internalRestartMessageSub(groupId);
+    }, delay);
+    this.messagesRetryByGroup.set(groupId, { attempts, timer });
+  }
+
+  /**
+   * Cold-load fallback for the kind 9 stream. Fires after the retry
+   * ladder has exhausted (status is currently `empty-confirmed`). Sends
+   * one focused `pool.querySync` with a longer maxWait than the live
+   * REQ retries used, so the relay gets a final chance to serve history
+   * once AUTH and whitelist evaluation have had time to settle.
+   *
+   * On success: events are ingested through {@link ingestMessage}, which
+   * flips status to `has-messages`, clears the retry tracking, AND
+   * triggers a cache write so subsequent reloads paint instantly.
+   * On empty / error: the `empty-confirmed` verdict already set by the
+   * caller stands — no further action needed.
+   */
+  private async querySyncFallbackForGroup(groupId: string): Promise<void> {
+    if (!this.session) return;
+    const filter: Filter = {
+      kinds: [KIND_GROUP_MESSAGE],
+      '#h': [groupId],
+      limit: BACKGROUND_MESSAGE_LIMIT,
+    };
+    let events: NostrEvent[];
+    try {
+      events = await this.pool.querySync(this.relays, filter, { maxWait: 6000 });
+    } catch {
+      return;
+    }
+    // Session may have ended between dispatch and resolution — silently
+    // drop any results that arrived for a dead pool. Also bail if the
+    // user has since switched to a different active channel and an
+    // unrelated path already flipped status (don't fight ingest races).
+    if (!this.session) return;
+    if (events.length === 0) return;
+    for (const ev of events) this.ingestMessage(groupId, ev);
+  }
+
+  /**
+   * Close any existing kind 9 sub for `groupId` and open a fresh one.
+   * Does NOT reset the retry counter — used by both the retry ladder
+   * (continuing attempts) and {@link refreshGroupMessages} (which resets
+   * the counter before calling this).
+   */
+  private internalRestartMessageSub(groupId: string): void {
+    if (!this.session) return;
+    const existing = this.messageSubByGroup.get(groupId);
+    if (existing) {
+      try {
+        // `close()` only — do NOT also call `markClosed()`. Both run
+        // synchronously and `markClosed` zeros `activeSub` before
+        // `close()` can hand it the network CLOSE frame, leaving the
+        // old REQ alive on the pool. The result: every restart left
+        // a zombie kind-9 sub hammering the relay, AND the user's
+        // click was answered by whichever sub the relay served next
+        // (frequently the stuck one, since it had been waiting first).
+        // markClosed is only correct for pool-replacement paths
+        // (resetPoolForSessionChange / switchRelay / dispose) where
+        // the WebSocket is going away wholesale.
+        existing.close();
+      } catch {
+        // ignore — relay may already have torn the socket down
+      }
+      this.messageSubByGroup.delete(groupId);
+      this.subs = this.subs.filter((s) => s !== existing);
+    }
+    this.messageSubscribedGroups.delete(groupId);
+    // Reset EOSE so the chat pane returns to "Loading messages…" while we
+    // wait for the relay to confirm the fresh REQ.
+    this.messagesEoseByGroup.update((prev) => {
+      if (!prev[groupId]) return prev;
+      const { [groupId]: _drop, ...rest } = prev;
+      void _drop;
+      return rest;
+    });
+    this.setMessagesStatus(groupId, 'loading');
+    this.subscribeGroupMessages(groupId);
+  }
+
+  /**
+   * Force-restart the kind 9 subscription for `groupId` and reset the
+   * empty-EOSE retry counter so the user gets a fresh budget of attempts.
+   * Use when an external surface needs to recover a stale-empty channel
+   * (e.g. a "Reload" button). The active-group switch path also calls
+   * this implicitly via {@link setActiveGroup} when re-entering an
+   * empty-confirmed channel.
+   */
+  refreshGroupMessages(groupId: string): void {
+    if (!groupId) return;
+    this.clearMessagesRetry(groupId);
+    // An explicit user-driven refresh should also re-arm the querySync
+    // fallback — otherwise a channel that was already declared
+    // `empty-confirmed` (and fallback-fired) in this session would never
+    // get a second querySync shot from a "Reload" tap.
+    this.querySyncFallbackFired.delete(groupId);
+    this.internalRestartMessageSub(groupId);
   }
 
   private subscribeKind0(pubkey: string): void {
     const filter: Filter = { kinds: [KIND_USER_METADATA], authors: [pubkey] };
-    const relays = Array.from(new Set([...this.relays, ...PROFILE_RELAYS]));
-    // Non-critical path: a missing kind:0 just shows the npub instead of a
-    // display name. Tighter watchdog so we fail fast on cold profile relays.
-    const sub = this.subscribeWatched(
-      relays,
+    // Active-relay profile REQs are bounded one-shots. External profile
+    // relays are queried separately as querySync one-shots below.
+    let sub: { close: () => void; markClosed?: () => void } | undefined;
+    sub = this.subscribeWatched(
+      this.relays,
       filter,
-      (ev) => this.ingestUserMetadata(ev),
-      undefined,
-      { watchdogMs: 3000, affectsRelayAccess: false },
+      (ev) => this.ingestUserMetadata(ev, { cacheRelayScoped: true }),
+      () => {
+        if (sub) this.closeTrackedSub(sub);
+      },
+      { watchdogMs: 3000, maxAttempts: 2, affectsRelayAccess: false },
     );
     this.subs.push(sub);
+    const cached = getCachedKind0(pubkey);
+    if (cached) this.ingestUserMetadata(cachedKind0ToEvent(cached), { cacheRelayScoped: false });
+    void this.lookupExternalUserMetadata(pubkey);
+  }
+
+  private getProfileLookupRelays(): string[] {
+    if (typeof window === 'undefined') return Array.from(DEFAULT_PROFILE_LOOKUP_RELAYS);
+    try {
+      const raw = window.localStorage.getItem(PROFILE_LOOKUP_RELAYS_KEY);
+      if (!raw) return Array.from(DEFAULT_PROFILE_LOOKUP_RELAYS);
+      const parsed = JSON.parse(raw) as string[];
+      const imported = Array.isArray(parsed) ? parsed.filter(isImportableRelayUrl) : [];
+      return imported.length > 0 ? uniqueRelayUrls(imported) : Array.from(DEFAULT_PROFILE_LOOKUP_RELAYS);
+    } catch {
+      return Array.from(DEFAULT_PROFILE_LOOKUP_RELAYS);
+    }
+  }
+
+  private async findNewestOwnProfileFromLookupRelays(pubkey: string): Promise<NostrEvent | null> {
+    const relays = uniqueRelayUrls([...this.getProfileLookupRelays(), ...this.relays]);
+    const events = await this.pool.querySync(
+      relays,
+      { kinds: [KIND_USER_METADATA], authors: [pubkey], limit: 5 },
+      { maxWait: PROFILE_LOOKUP_MAX_WAIT_MS },
+    );
+    return newestEvent(events.filter((e) => e.kind === KIND_USER_METADATA && e.pubkey === pubkey));
+  }
+
+  private async publishSignedEventToRelays(ev: NostrEvent, relays: readonly string[]): Promise<string[]> {
+    const targets = uniqueRelayUrls(Array.from(relays));
+    const publishes = this.pool.publish(targets, ev, { onauth: this.getAuthSigner() });
+    const results = await Promise.allSettled(publishes);
+    return targets.filter((_, i) => results[i]?.status === 'fulfilled');
+  }
+
+  private async syncOwnProfileToActiveRelay(reason: 'login' | 'switch' | 'edit' | 'manual'): Promise<void> {
+    if (!this.session) return;
+    const me = this.session.pubKeyHex;
+    const state = loadProfileSyncState();
+    let cached = getCachedKind0(me);
+    const now = Date.now();
+    const lastLookup = state.ownProfileLookupAt[me] ?? 0;
+    const shouldLookup = !cached || now - lastLookup >= OWN_PROFILE_LOOKUP_TTL_MS || reason === 'manual' || reason === 'edit';
+    if (shouldLookup) {
+      try {
+        const newest = await this.findNewestOwnProfileFromLookupRelays(me);
+        state.ownProfileLookupAt[me] = now;
+        if (newest) {
+          setCachedKind0(newest);
+          cached = toCachedKind0(newest);
+          this.ingestUserMetadata(newest, { cacheRelayScoped: false });
+        }
+      } catch {
+        state.ownProfileLookupAt[me] = now;
+      }
+      saveProfileSyncState(state);
+    }
+    if (!cached) return;
+    const relay = this.currentRelayUrl.get();
+    const key = profileRelayKey(me, relay);
+    if ((state.ownProfileSyncedToRelay[key] ?? 0) >= cached.created_at) return;
+    const ok = await this.publishSignedEventToRelays(cachedKind0ToEvent(cached), [relay]);
+    if (ok.length > 0) {
+      const next = loadProfileSyncState();
+      next.ownProfileLookupAt[me] = state.ownProfileLookupAt[me] ?? lastLookup;
+      next.ownProfileSyncedToRelay[key] = cached.created_at;
+      saveProfileSyncState(next);
+    }
+  }
+
+  private async lookupExternalUserMetadata(pubkey: string): Promise<void> {
+    const now = Date.now();
+    const state = this.session?.pubKeyHex === pubkey ? loadProfileSyncState() : null;
+    const last = state?.ownProfileLookupAt[pubkey] ?? this.profileLookupAt.get(pubkey) ?? 0;
+    const ttl = this.session?.pubKeyHex === pubkey ? OWN_PROFILE_LOOKUP_TTL_MS : OTHER_PROFILE_LOOKUP_TTL_MS;
+    if (now - last < ttl) return;
+    const inFlight = this.profileLookupInFlight.get(pubkey);
+    if (inFlight) return inFlight;
+    const p = (async () => {
+      this.profileLookupAt.set(pubkey, now);
+      try {
+        const events = await this.pool.querySync(
+          this.getProfileLookupRelays(),
+          { kinds: [KIND_USER_METADATA], authors: [pubkey], limit: 5 },
+          { maxWait: PROFILE_LOOKUP_MAX_WAIT_MS },
+        );
+        if (state) {
+          const next = loadProfileSyncState();
+          next.ownProfileLookupAt[pubkey] = now;
+          saveProfileSyncState(next);
+        }
+        const newest = newestEvent(events.filter((e) => e.kind === KIND_USER_METADATA && e.pubkey === pubkey));
+        if (!newest) return;
+        setCachedKind0(newest);
+        this.ingestUserMetadata(newest, { cacheRelayScoped: false });
+      } catch {
+        if (state) {
+          const next = loadProfileSyncState();
+          next.ownProfileLookupAt[pubkey] = now;
+          saveProfileSyncState(next);
+        }
+        // best-effort only
+      } finally {
+        this.profileLookupInFlight.delete(pubkey);
+      }
+    })();
+    this.profileLookupInFlight.set(pubkey, p);
+    return p;
   }
 
   private subscribeGroupReactions(groupId: string): void {
     if (this.reactionSubscribedGroups.has(groupId)) return;
     this.reactionSubscribedGroups.add(groupId);
-    const filter: Filter = { kinds: [KIND_REACTION], '#h': [groupId], limit: 500 };
-    const sub = this.subscribeWatched(
+    const reactionFilter: Filter = { kinds: [KIND_REACTION], '#h': [groupId], limit: 500 };
+    const reactionSub = this.subscribeWatched(
       this.relays,
-      filter,
+      reactionFilter,
       (ev) => this.ingestReaction(groupId, ev),
       undefined,
-      { watchdogMs: 3000, affectsRelayAccess: false },
+      {
+        watchdogMs: 3000,
+        affectsRelayAccess: false,
+        onQuotaOrRateLimitClose: () => {
+          this.forgetPerGroupSub(groupId, this.reactionSubscribedGroups, this.reactionSubByGroup);
+        },
+      },
     );
-    this.subs.push(sub);
+    this.subs.push(reactionSub);
+    this.reactionSubByGroup.set(groupId, reactionSub);
+    this.subscribeGroupEventDeletions(groupId);
+  }
+
+  private subscribeGroupEventDeletions(groupId: string): void {
+    if (this.eventDeletionSubscribedGroups.has(groupId)) return;
+    this.eventDeletionSubscribedGroups.add(groupId);
+    const deletionFilter: Filter = { kinds: [KIND_EVENT_DELETION], '#h': [groupId], limit: 500 };
+    const deletionSub = this.subscribeWatched(
+      this.relays,
+      deletionFilter,
+      (ev) => this.ingestEventDeletion(groupId, ev),
+      undefined,
+      {
+        watchdogMs: 3000,
+        affectsRelayAccess: false,
+        onQuotaOrRateLimitClose: () => {
+          this.forgetPerGroupSub(groupId, this.eventDeletionSubscribedGroups, this.eventDeletionSubByGroup);
+        },
+      },
+    );
+    this.subs.push(deletionSub);
+    this.eventDeletionSubByGroup.set(groupId, deletionSub);
+  }
+
+  private subscribeGroupModerationDeletions(groupId: string): void {
+    if (this.groupModerationDeletionSubscribedGroups.has(groupId)) return;
+    this.groupModerationDeletionSubscribedGroups.add(groupId);
+    const deletionFilter: Filter = { kinds: [KIND_GROUP_DELETE_EVENT], '#h': [groupId], limit: 500 };
+    const deletionSub = this.subscribeWatched(
+      this.relays,
+      deletionFilter,
+      (ev) => this.ingestGroupEventDeletion(groupId, ev),
+      undefined,
+      {
+        watchdogMs: 3000,
+        affectsRelayAccess: false,
+        onQuotaOrRateLimitClose: () => {
+          this.forgetPerGroupSub(
+            groupId,
+            this.groupModerationDeletionSubscribedGroups,
+            this.groupModerationDeletionSubByGroup,
+          );
+        },
+      },
+    );
+    this.subs.push(deletionSub);
+    this.groupModerationDeletionSubByGroup.set(groupId, deletionSub);
   }
 
   private subscribeAdminMember(groupId: string): void {
@@ -3021,9 +4755,15 @@ class BridgeImpl implements NostrBridge {
       filter,
       (ev) => this.ingestAdminMember(ev),
       undefined,
-      { affectsRelayAccess: false },
+      {
+        affectsRelayAccess: false,
+        onQuotaOrRateLimitClose: () => {
+          this.forgetPerGroupSub(groupId, this.adminMemberSubscribedGroups, this.adminMemberSubByGroup);
+        },
+      },
     );
     this.subs.push(sub);
+    this.adminMemberSubByGroup.set(groupId, sub);
   }
 
   /**
@@ -3044,9 +4784,15 @@ class BridgeImpl implements NostrBridge {
       filter,
       (ev) => this.ingestGroupCreator(ev),
       undefined,
-      { affectsRelayAccess: false },
+      {
+        affectsRelayAccess: false,
+        onQuotaOrRateLimitClose: () => {
+          this.forgetPerGroupSub(groupId, this.creatorSubscribedGroups, this.creatorSubByGroup);
+        },
+      },
     );
     this.subs.push(sub);
+    this.creatorSubByGroup.set(groupId, sub);
   }
 
   /**
@@ -3067,7 +4813,7 @@ class BridgeImpl implements NostrBridge {
   }
 
   private ingestGroupCreator(ev: NostrEvent): void {
-    const groupId = ev.tags.find((t) => t[0] === 'h')?.[1];
+    const groupId = getTag(ev, 'h');
     if (!groupId) return;
     // Newest-wins isn't meaningful for kind 9007 (a group is created exactly
     // once), but we still guard against mid-flight duplicates so we don't
@@ -3079,7 +4825,7 @@ class BridgeImpl implements NostrBridge {
   }
 
   private ingestAdminMember(ev: NostrEvent): void {
-    const groupId = ev.tags.find((t) => t[0] === 'd')?.[1];
+    const groupId = getTag(ev, 'd');
     if (!groupId) return;
     // Drop older revisions arriving out-of-order from slower relays. Without
     // this, admins/members lists oscillate as different relays return
@@ -3090,13 +4836,20 @@ class BridgeImpl implements NostrBridge {
     if (ev.created_at <= prevAt) return;
     this.adminMemberLatestAt.set(cacheKey, ev.created_at);
 
-    const pubkeys = ev.tags.filter((t) => t[0] === 'p').map((t) => t[1]);
+    const pubkeys = getAllTags(ev, 'p');
     const store = ev.kind === KIND_GROUP_ADMINS ? this.adminsByGroup : this.membersByGroup;
     store.update((prev) => ({ ...prev, [groupId]: pubkeys }));
     // Persist for next reload — paints instantly before the relay round-trip
     // completes. See cache.ts. Scoped by relay so cross-relay browsing
-    // doesn't leak admin lists.
-    cacheSet(this.currentRelayUrl.get(), ev.kind, groupId, pubkeys);
+    // doesn't leak admin lists. Skip the write if the list matches what's
+    // already on disk — relays republish identical 39001/39002 events
+    // routinely after a reconnect, and localStorage.setItem is a
+    // main-thread blocker we'd rather avoid.
+    const relay = this.currentRelayUrl.get();
+    const cached = cacheGet<string[]>(relay, ev.kind, groupId);
+    if (!cached || !arraysEqualStrict(cached.value, pubkeys)) {
+      cacheSet(relay, ev.kind, groupId, pubkeys);
+    }
     // Positive signal: the relay has delivered membership data for this
     // group, even if the list is empty. Consumers (voice gate) can now
     // distinguish "not loaded yet" from "loaded and you're not in it".
@@ -3109,18 +4862,18 @@ class BridgeImpl implements NostrBridge {
   private subscribeMyContactList(): void {
     if (!this.session) return;
     const filter: Filter = { kinds: [3], authors: [this.session.pubKeyHex], limit: 1 };
-    // Kind 3 (NIP-02 contact list) is rarely on the dex's NIP-29 relay —
-    // users publish it to their general-purpose relays (damus, nos.lol, …).
-    // Subscribing only on `this.relays` left the Follows tab perpetually
-    // empty for anyone whose contact list lives elsewhere.
-    const relays = Array.from(new Set([...this.relays, ...PROFILE_RELAYS]));
+    // Kind 3 (NIP-02 contact list) is often published to profile/outbox
+    // relays, but normal server browsing must not hold persistent external
+    // subscriptions open. Keep the live watch scoped to the active relay; a
+    // separate bounded one-shot can be added for cross-client import if the
+    // Follows UX needs it.
     let latestCreatedAt = 0;
-    const sub = this.subscribeWatched(relays, filter, (ev) => {
+    const sub = this.subscribeWatched(this.relays, filter, (ev) => {
       // Multiple relays may return different revisions of kind 3; keep the
       // newest by created_at so an older replica doesn't clobber a newer one.
       if (ev.created_at <= latestCreatedAt) return;
       latestCreatedAt = ev.created_at;
-      const pubkeys = ev.tags.filter((t) => t[0] === 'p').map((t) => t[1]);
+      const pubkeys = getAllTags(ev, 'p');
       this.myFollows.set(pubkeys);
       pubkeys.forEach((pk) => this.ensureUserMetadata(pk));
     });
@@ -3130,78 +4883,314 @@ class BridgeImpl implements NostrBridge {
   private subscribeMyMuteList(): void {
     if (!this.session) return;
     const filter: Filter = { kinds: [KIND_MUTE_LIST], authors: [this.session.pubKeyHex], limit: 1 };
-    // Like kind 3, the mute list is typically published to general-purpose
-    // relays rather than the dex's NIP-29 relay — widen the search so we
-    // don't miss it.
-    const relays = Array.from(new Set([...this.relays, ...PROFILE_RELAYS]));
+    // Like kind 3, mute lists may live on profile/outbox relays. Do not keep
+    // persistent external subscriptions open during normal server browsing.
     let latestCreatedAt = 0;
-    const sub = this.subscribeWatched(relays, filter, (ev) => {
+    const sub = this.subscribeWatched(this.relays, filter, (ev) => {
       if (ev.created_at <= latestCreatedAt) return;
       latestCreatedAt = ev.created_at;
-      const pubkeys = ev.tags.filter((t) => t[0] === 'p' && typeof t[1] === 'string').map((t) => t[1]);
-      this.myMutes.set(pubkeys);
+      this.myMutes.set(getAllTags(ev, 'p'));
     });
     this.subs.push(sub);
   }
 
   /**
-   * Global subscription to kind 31314 (Obelisk SFU active-call announcement).
-   * The SFU emits one per live room, replaceable on `d=<channelId>`. We track
-   * them in `activeCallByChannel` so the sidebar can flag voice channels
-   * that have a call in progress without anyone needing to be in it.
+   * Global subscriptions for voice-channel liveness. SFU calls publish kind
+   * 31314 active-call announcements; mesh calls publish short-lived kind
+   * 20078 presence beacons. Both feed activeCallByChannel so desktop
+   * and mobile channel rows can render one consistent LIVE indicator.
    *
-   * `affectsRelayAccess: false` because absence of 31314 events is normal
-   * (a relay might serve groups but not host any active SFU calls) and a
-   * CLOSED for this filter shouldn't flip the relay-wide banner.
+   * affectsRelayAccess: false because absence of live-call traffic is
+   * normal and should not influence the relay-wide AUTH banner.
    */
   private subscribeActiveCalls(): void {
-    const filter: Filter = { kinds: [KIND_SFU_ACTIVE_CALL] };
-    const sub = this.subscribeWatched(
+    const sfuSub = this.subscribeWatched(
       this.relays,
-      filter,
+      { kinds: [KIND_SFU_ACTIVE_CALL] },
       (ev) => this.ingestActiveCall(ev),
       undefined,
       { affectsRelayAccess: false },
     );
-    this.subs.push(sub);
+    this.subs.push(sfuSub);
+
+    const meshSub = this.subscribeWatched(
+      this.relays,
+      { kinds: [KIND_VOICE_PRESENCE] } as Filter,
+      (ev) => this.ingestMeshVoicePresence(ev),
+      undefined,
+      { affectsRelayAccess: false },
+    );
+    this.subs.push(meshSub);
+    this.ensureMeshPresenceSweep();
+  }
+
+  private parseSfuParticipantPubkeys(ev: NostrEvent): string[] {
+    const fromTags = getAllTags(ev, 'p');
+    let fromContent: string[] = [];
+    if (ev.content.trim().length > 0) {
+      try {
+        const parsed = JSON.parse(ev.content) as { participants?: unknown };
+        if (Array.isArray(parsed?.participants)) {
+          fromContent = parsed.participants.filter((pk): pk is string => typeof pk === 'string' && pk.length > 0);
+        }
+      } catch {
+        // Older SFU builds used empty content; malformed content should not
+        // discard the tag-sourced roster.
+      }
+    }
+    return this.mergePubkeys(fromTags, fromContent);
+  }
+
+  private mergePubkeys(...sets: Array<readonly string[] | undefined>): string[] {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const set of sets) {
+      if (!set) continue;
+      for (const pk of set) {
+        if (!pk || seen.has(pk)) continue;
+        seen.add(pk);
+        out.push(pk);
+      }
+    }
+    return out.sort();
   }
 
   private ingestActiveCall(ev: NostrEvent): void {
-    const tag = (name: string) => ev.tags.find((t) => t[0] === name)?.[1];
-    const channelId = tag('d');
+    const channelId = getTag(ev, 'd');
     if (!channelId) return;
-    const status = tag('status') ?? 'active';
-    const hostPubkey = tag('host') ?? ev.pubkey;
-    const expirationStr = tag('expiration');
+    const status = getTag(ev, 'status') ?? 'active';
+    const hostPubkey = getTag(ev, 'host') ?? ev.pubkey;
+    const expirationStr = getTag(ev, 'expiration');
     const expiresAt = expirationStr ? parseInt(expirationStr, 10) || 0 : 0;
+    const participantPubkeys = this.parseSfuParticipantPubkeys(ev);
     // Participant count: SFU started tagging this so consumers can
     // distinguish "live call with people" from "room still open during
-    // empty-grace." Older SFU builds don't tag — treat absent as -1
-    // (unknown, render badge to preserve back-compat) so we don't go
-    // silent on a partial deploy.
-    const countStr = tag('count');
-    const participantCount = countStr === undefined ? -1 : (parseInt(countStr, 10) || 0);
-    const cur = this.activeCallByChannel.get();
-    const prev = cur[channelId];
+    // empty-grace." Older SFU builds don't tag - treat absent as -1
+    // (unknown, render badge to preserve back-compat) unless the event
+    // content/tags include a passive participant roster.
+    const countStr = getTag(ev, 'count');
+    const participantCount = countStr === undefined
+      ? (participantPubkeys.length > 0 ? participantPubkeys.length : -1)
+      : (parseInt(countStr, 10) || 0);
+    const prev = this.sfuActiveCalls.get(channelId);
     // Newest-wins: replaceable kind, stale duplicates from slow relays
     // shouldn't overwrite a fresher announcement.
     if (prev && prev.createdAt >= ev.created_at) return;
     if (status === 'closed') {
-      if (!prev) return;
-      const next = { ...cur };
-      delete next[channelId];
-      this.activeCallByChannel.set(next);
+      this.sfuActiveCalls.delete(channelId);
+      this.sfuPresenceByChannel.delete(channelId);
+      this.recomputeActiveCallByChannel();
       return;
     }
-    this.activeCallByChannel.set({
-      ...cur,
-      [channelId]: { hostPubkey, status, participantCount, expiresAt, createdAt: ev.created_at },
+    this.sfuActiveCalls.set(channelId, {
+      hostPubkey,
+      status,
+      participantCount,
+      expiresAt,
+      createdAt: ev.created_at,
+      mode: 'sfu',
+      participantPubkeys: participantPubkeys.length > 0 ? participantPubkeys : undefined,
     });
+    this.recomputeActiveCallByChannel();
+  }
+
+  private ingestMeshVoicePresence(ev: NostrEvent): void {
+    if (!ev.tags.some((t) => t[0] === 't' && t[1] === 'obelisk-voice-presence')) return;
+    const channelId = getTag(ev, 'e');
+    if (!channelId) return;
+    const expirationStr = getTag(ev, 'expiration');
+    const expiresAt = expirationStr
+      ? parseInt(expirationStr, 10) || 0
+      : ev.created_at + 30;
+    if (!Number.isFinite(expiresAt)) return;
+
+    const status = getTag(ev, 'status');
+    const expired = expiresAt <= Math.floor(Date.now() / 1000);
+    const terminal = status === 'left' || status === 'closed' || expired;
+    let seenByPubkey = this.meshPresenceSeenAtByChannel.get(channelId);
+    if (!seenByPubkey) {
+      seenByPubkey = new Map();
+      this.meshPresenceSeenAtByChannel.set(channelId, seenByPubkey);
+    }
+    const seenAt = seenByPubkey.get(ev.pubkey) ?? 0;
+    if (seenAt > ev.created_at) return;
+    if (seenAt === ev.created_at && !terminal) return;
+    seenByPubkey.set(ev.pubkey, ev.created_at);
+
+    // SFU infrastructure publishes kind 20078 with ["sfu","1"] and p-tags
+    // for users it has live PCs to. Those p-tags are passive roster evidence
+    // for the Join Channel view, but the SFU pubkey itself is not a mesh
+    // participant and must not be counted as one.
+    if (ev.tags.some((t) => t[0] === 'sfu' && t[1] === '1')) {
+      this.ingestSfuVoicePresence(ev, channelId, expiresAt);
+      return;
+    }
+
+    let byPubkey = this.meshPresenceByChannel.get(channelId);
+    if (terminal) {
+      byPubkey?.delete(ev.pubkey);
+      if (byPubkey && byPubkey.size === 0) this.meshPresenceByChannel.delete(channelId);
+      this.recomputeActiveCallByChannel();
+      return;
+    }
+
+    if (!byPubkey) {
+      byPubkey = new Map();
+      this.meshPresenceByChannel.set(channelId, byPubkey);
+    }
+    byPubkey.set(ev.pubkey, { expiresAt, createdAt: ev.created_at });
+    this.recomputeActiveCallByChannel();
+  }
+
+  private ingestSfuVoicePresence(ev: NostrEvent, channelId: string, expiresAt: number): void {
+    let bySfu = this.sfuPresenceByChannel.get(channelId);
+    if (!bySfu) {
+      bySfu = new Map();
+      this.sfuPresenceByChannel.set(channelId, bySfu);
+    }
+    const prev = bySfu.get(ev.pubkey);
+    if (prev && prev.createdAt >= ev.created_at) return;
+
+    const participantPubkeys = this.mergePubkeys(getAllTags(ev, 'p'));
+    if (participantPubkeys.length === 0) {
+      bySfu.delete(ev.pubkey);
+      if (bySfu.size === 0) this.sfuPresenceByChannel.delete(channelId);
+      this.recomputeActiveCallByChannel();
+      return;
+    }
+
+    bySfu.set(ev.pubkey, { expiresAt, createdAt: ev.created_at, participantPubkeys });
+    this.recomputeActiveCallByChannel();
+  }
+
+  private ensureMeshPresenceSweep(): void {
+    if (this.meshPresenceSweepTimer) return;
+    this.meshPresenceSweepTimer = setInterval(() => {
+      if (this.pruneMeshPresence()) this.recomputeActiveCallByChannel();
+    }, 15_000);
+  }
+
+  private pruneMeshPresence(): boolean {
+    const now = Math.floor(Date.now() / 1000);
+    let changed = false;
+    for (const [channelId, byPubkey] of Array.from(this.meshPresenceByChannel.entries())) {
+      for (const [pubkey, presence] of Array.from(byPubkey.entries())) {
+        if (presence.expiresAt > now) continue;
+        byPubkey.delete(pubkey);
+        changed = true;
+      }
+      if (byPubkey.size === 0) {
+        this.meshPresenceByChannel.delete(channelId);
+        changed = true;
+      }
+    }
+    for (const [channelId, bySfu] of Array.from(this.sfuPresenceByChannel.entries())) {
+      for (const [sfuPubkey, presence] of Array.from(bySfu.entries())) {
+        if (presence.expiresAt > now) continue;
+        bySfu.delete(sfuPubkey);
+        changed = true;
+      }
+      if (bySfu.size === 0) {
+        this.sfuPresenceByChannel.delete(channelId);
+        changed = true;
+      }
+    }
+    return changed;
+  }
+
+  private recomputeActiveCallByChannel(): void {
+    this.pruneMeshPresence();
+    const next: Record<string, {
+      hostPubkey: string;
+      status: string;
+      participantCount: number;
+      expiresAt: number;
+      createdAt: number;
+      mode?: 'sfu' | 'mesh';
+      participantPubkeys?: string[];
+    }> = {};
+
+    for (const [channelId, byPubkey] of this.meshPresenceByChannel.entries()) {
+      const pubkeys = Array.from(byPubkey.keys()).sort();
+      if (pubkeys.length === 0) continue;
+      let createdAt = 0;
+      let expiresAt = Number.MAX_SAFE_INTEGER;
+      for (const presence of byPubkey.values()) {
+        createdAt = Math.max(createdAt, presence.createdAt);
+        expiresAt = Math.min(expiresAt, presence.expiresAt);
+      }
+      next[channelId] = {
+        hostPubkey: pubkeys[0],
+        status: 'active',
+        participantCount: pubkeys.length,
+        expiresAt,
+        createdAt,
+        mode: 'mesh',
+        participantPubkeys: pubkeys,
+      };
+    }
+
+    const sfuPresence: Record<string, {
+      hostPubkey: string;
+      participantPubkeys: string[];
+      expiresAt: number;
+      createdAt: number;
+    }> = {};
+    for (const [channelId, bySfu] of this.sfuPresenceByChannel.entries()) {
+      let createdAt = 0;
+      let expiresAt = Number.MAX_SAFE_INTEGER;
+      let hostPubkey = '';
+      let participantPubkeys: string[] = [];
+      for (const [sfuPubkey, presence] of bySfu.entries()) {
+        if (!hostPubkey || presence.createdAt > createdAt) hostPubkey = sfuPubkey;
+        createdAt = Math.max(createdAt, presence.createdAt);
+        expiresAt = Math.min(expiresAt, presence.expiresAt);
+        participantPubkeys = this.mergePubkeys(participantPubkeys, presence.participantPubkeys);
+      }
+      if (participantPubkeys.length === 0) continue;
+      sfuPresence[channelId] = { hostPubkey, participantPubkeys, expiresAt, createdAt };
+      next[channelId] = {
+        hostPubkey,
+        status: 'active',
+        participantCount: participantPubkeys.length,
+        expiresAt,
+        createdAt,
+        mode: 'sfu',
+        participantPubkeys,
+      };
+    }
+
+    for (const [channelId, call] of this.sfuActiveCalls.entries()) {
+      const presence = sfuPresence[channelId];
+      const participantPubkeys = this.mergePubkeys(call.participantPubkeys, presence?.participantPubkeys);
+      const participantCount = call.participantCount >= 0
+        ? Math.max(call.participantCount, participantPubkeys.length)
+        : (participantPubkeys.length > 0 ? participantPubkeys.length : call.participantCount);
+      next[channelId] = {
+        ...call,
+        participantCount,
+        participantPubkeys: participantPubkeys.length > 0 ? participantPubkeys : call.participantPubkeys,
+      };
+    }
+
+    this.activeCallByChannel.set(next);
+  }
+
+  private clearActiveCallState(): void {
+    this.sfuActiveCalls.clear();
+    this.sfuPresenceByChannel.clear();
+    this.meshPresenceByChannel.clear();
+    this.meshPresenceSeenAtByChannel.clear();
+    if (this.meshPresenceSweepTimer) {
+      clearInterval(this.meshPresenceSweepTimer);
+      this.meshPresenceSweepTimer = null;
+    }
+    this.activeCallByChannel.set({});
   }
 
   /** Subscribe to the active-call state for any channel. */
   subscribeActiveCallByChannel(
-    cb: (byChannel: Readonly<Record<string, { hostPubkey: string; status: string; participantCount: number; expiresAt: number; createdAt: number }>>) => void,
+    cb: (byChannel: Readonly<Record<string, { hostPubkey: string; status: string; participantCount: number; expiresAt: number; createdAt: number; mode?: 'sfu' | 'mesh'; participantPubkeys?: string[] }>>) => void,
   ): Unsubscribe {
     return this.activeCallByChannel.subscribe(cb);
   }
@@ -3216,24 +5205,30 @@ class BridgeImpl implements NostrBridge {
     for (const f of [filterIn, filterOut]) {
       const sub = this.subscribeWatched(this.relays, f, (ev) => this.ingestIncomingDM(ev));
       this.subs.push(sub);
+      this.dmSubHandles.push(sub);
     }
     // Wide-net pickup: other clients publish DMs to the user's own NIP-17
     // (10050) inbox or NIP-65 (10002) read/write relays — not necessarily
     // `this.relays`. Resolve those, then add a parallel subscription.
     void this.fetchMyDmRelays().then((urls) => {
+      if (!this.dmSubscribed || !this.session || this.session.pubKeyHex !== me) return;
       const extras = urls.filter((u) => !this.relays.includes(u));
       if (extras.length === 0) return;
       this.myDmRelays = extras;
       for (const f of [filterIn, filterOut]) {
         const sub = this.subscribeWatched(extras, f, (ev) => this.ingestIncomingDM(ev));
         this.subs.push(sub);
+        this.dmSubHandles.push(sub);
       }
     });
   }
 
   private ingestGroupMetadata(ev: NostrEvent): void {
-    const tag = (name: string) => ev.tags.find((t) => t[0] === name)?.[1];
-    const groupId = tag('d');
+    // Single-pass parse — see {@link parseGroupMetadataTags} for the
+    // tag-precedence rules (preserved bit-for-bit from the previous
+    // multi-scan version).
+    const t = parseGroupMetadataTags(ev.tags);
+    const groupId = t.d;
     if (!groupId) return;
     // Drop older revisions arriving out-of-order from slower relays so the
     // sidebar doesn't oscillate. The cached seed (with its own created_at)
@@ -3241,46 +5236,51 @@ class BridgeImpl implements NostrBridge {
     const prevAt = this.groupMetadataLatestAt.get(groupId) ?? 0;
     if (ev.created_at <= prevAt) return;
     this.groupMetadataLatestAt.set(groupId, ev.created_at);
-    const isPublic = ev.tags.some((t) => t[0] === 'public');
-    const isOpen = ev.tags.some((t) => t[0] === 'open');
-    const parent = tag('parent') ?? null;
-    // `["t","voice"]` / `["t","voice-sfu"]` / `["t","forum"]` are the
-    // Obelisk channel-variant markers. Everything else defaults to `text`
-    // so existing groups keep working unchanged. `voice-sfu` is checked
-    // before `voice` because it's the more specific marker — a channel
-    // tagged with both is "big-room voice".
-    const isVoiceSfu = ev.tags.some((t) => t[0] === 't' && t[1] === 'voice-sfu');
-    const isVoice = !isVoiceSfu && ev.tags.some((t) => t[0] === 't' && t[1] === 'voice');
-    const isForum = !isVoiceSfu && !isVoice && ev.tags.some((t) => t[0] === 't' && t[1] === 'forum');
     const next: JsGroup = {
       id: groupId,
-      name: tag('name') ?? null,
-      about: tag('about') ?? null,
-      picture: tag('picture') ?? null,
-      banner: tag('banner') ?? null,
-      isPublic,
-      isOpen,
-      parent,
-      kind: isVoiceSfu ? 'voice-sfu' : isVoice ? 'voice' : isForum ? 'forum' : 'text',
+      name: t.name ?? null,
+      about: t.about ?? null,
+      picture: t.picture ?? null,
+      banner: t.banner ?? null,
+      isPublic: t.isPublic,
+      isOpen: t.isOpen,
+      parent: t.parent ?? null,
+      kind: t.channelKind,
+      forumTags: t.forumTags,
+      topics: t.topics,
     };
+    const parent = next.parent;
     this.groups.update((prev) => {
       const filtered = prev.filter((g) => g.id !== groupId);
       return [...filtered, next].sort((a, b) => (a.name ?? a.id).localeCompare(b.name ?? b.id));
     });
+    this.clearGroupMetadataEmptyRetry();
     // Persist for next reload — the sidebar paints channels instantly before
     // the live REQ round-trip completes. Store the snapshot together with
     // its created_at so the seed can re-establish the newest-wins guard.
-    cacheSet(this.currentRelayUrl.get(), KIND_GROUP_METADATA, groupId, {
-      group: next,
-      createdAt: ev.created_at,
-    });
+    // Skip the write when the on-disk payload already matches — a
+    // republished 39000 with the same fields under a newer created_at is
+    // common (admin re-publishes for liveness), and avoiding the
+    // localStorage.setItem keeps the main thread from blocking.
+    {
+      const relay = this.currentRelayUrl.get();
+      const cached = cacheGet<{ group: JsGroup; createdAt: number }>(relay, KIND_GROUP_METADATA, groupId);
+      if (!cached || !groupEqual(cached.value.group, next)) {
+        cacheSet(relay, KIND_GROUP_METADATA, groupId, {
+          group: next,
+          createdAt: ev.created_at,
+        });
+      }
+    }
     // Start streaming messages immediately so opening the channel doesn't
     // wait on a fresh REQ round-trip — the store already has them. The
     // per-group REQ caps at BACKGROUND_MESSAGE_LIMIT; older history is
     // paged via loadMoreMessages. Queued (rather than fired inline) so
     // the channel the user is actively viewing wins the relay's first
     // response — see {@link queueGroupMessages}.
-    this.queueGroupMessages(groupId);
+    if (this.voiceRelayCapacityReservations === 0) {
+      this.queueGroupMessages(groupId);
+    }
     // Admin/member (39001/39002) is intentionally NOT fanned out here.
     // Subscribing to every discovered group on login was expensive on
     // accounts that belong to many channels and slowed setup of recently
@@ -3288,28 +5288,53 @@ class BridgeImpl implements NostrBridge {
     // admin/member REQs now open lazily on first useAdmins / useMembers
     // call from the chat panel. Tradeoff: the sidebar's "I'm an admin of
     // X" badge no longer paints before opening each channel — acceptable
-    // given the load-time win. See docs/progressive-loading.md.
-    // Resolve the kind 9007 author so claimCreatorAdmin knows whether the
-    // local user is the creator without having to assume it on every login.
-    this.subscribeGroupCreator(groupId);
+    // given the load-time win. See docs/data-system.md.
+    // Per-group creator REQs are intentionally not fanned out here. The
+    // global authored-groups subscription covers the only write path that
+    // needs this eagerly (claiming admin on groups the local user created).
     // Maintain parent → children index so the sidebar can render nesting.
-    this.childrenByParent.update((prev) => {
-      const next: Record<string, string[]> = { ...prev };
-      // Remove this groupId from any old parent buckets to handle re-parents.
-      for (const k of Object.keys(next)) {
-        if (next[k].includes(groupId)) {
-          next[k] = next[k].filter((id) => id !== groupId);
+    // O(1) update via {@link groupParentMap}: look up the previous parent
+    // for this groupId in the reverse map and only touch the affected
+    // buckets. Fast path when the parent didn't change is a no-op.
+    const oldParent = this.groupParentMap.get(groupId) ?? null;
+    if (oldParent !== parent) {
+      this.childrenByParent.update((prev) => {
+        let nextMap = prev;
+        if (oldParent && prev[oldParent]) {
+          const filtered = prev[oldParent].filter((id) => id !== groupId);
+          if (filtered.length !== prev[oldParent].length) {
+            if (filtered.length === 0) {
+              const { [oldParent]: _drop, ...rest } = nextMap;
+              void _drop;
+              nextMap = rest;
+            } else {
+              nextMap = { ...nextMap, [oldParent]: filtered };
+            }
+          }
         }
-      }
-      if (parent) {
-        const arr = next[parent] ?? [];
-        if (!arr.includes(groupId)) next[parent] = [...arr, groupId].sort();
-      }
-      return next;
-    });
+        if (parent) {
+          const arr = nextMap[parent] ?? [];
+          if (!arr.includes(groupId)) {
+            nextMap = { ...nextMap, [parent]: [...arr, groupId].sort() };
+          }
+        }
+        return nextMap;
+      });
+      this.groupParentMap.set(groupId, parent);
+    }
+  }
+
+  private isEventModerated(groupId: string, eventId: string): boolean {
+    return this.moderatedEventIdsByGroup.get(groupId)?.has(eventId) ?? false;
+  }
+
+  private isEventDeletedByAuthor(groupId: string, eventId: string, pubkey: string): boolean {
+    return this.deletedEventIdsByGroup.get(groupId)?.get(eventId) === pubkey;
   }
 
   private ingestMessage(groupId: string, ev: NostrEvent): void {
+    if (this.isEventModerated(groupId, ev.id)) return;
+    if (this.isEventDeletedByAuthor(groupId, ev.id, ev.pubkey)) return;
     const replyTo = ev.tags.find((t) => t[0] === 'e' && t[3] === 'reply')?.[1] ?? null;
     const mentions = extractMentionPubkeysFromMessage(ev.content, ev.tags);
     const msg: JsMessage = {
@@ -3320,6 +5345,7 @@ class BridgeImpl implements NostrBridge {
       kind: ev.kind,
       replyToId: replyTo,
       mentions,
+      customEmojis: customEmojiMapFromTags(ev.tags),
     };
     let isNew = false;
     let replacedClientTag: string | null = null;
@@ -3352,6 +5378,21 @@ class BridgeImpl implements NostrBridge {
     if (replacedClientTag) this.pendingGroupSends.delete(replacedClientTag);
     // Lazy metadata fetch for any author we haven't seen yet.
     this.ensureUserMetadata(ev.pubkey);
+    // A real event arrived: the channel is definitively non-empty. Cancel
+    // any pending empty-EOSE retry and flip status. Doing this here
+    // (rather than only in the EOSE callback) covers the case where
+    // events arrive AFTER an empty EOSE but BEFORE the retry timer fires
+    // — without it the bridge would still schedule a needless restart.
+    if (isNew) {
+      this.setMessagesStatus(groupId, 'has-messages');
+      this.clearMessagesRetry(groupId);
+      if (groupId === this.activeGroupId) this.maybeResumeMessageQueueDrain();
+      // Persist for next reload — stale-while-revalidate paint of the last
+      // window of messages so the chat pane has something to show before
+      // the live REQ round-trips. See {@link MESSAGE_CACHE_LIMIT} and
+      // {@link flushMessageCache} for the cap + sanitization.
+      this.scheduleMessageCacheFlush(groupId);
+    }
     // Inbox card for @-mentions. Unread badges are derived in the UI from
     // `useReadStateStore.groupCursors[groupId]` vs `messages[].createdAt`,
     // so this path only needs to surface the mention as an inbox event
@@ -3390,28 +5431,139 @@ class BridgeImpl implements NostrBridge {
   }
 
   private ingestReaction(groupId: string, ev: NostrEvent): void {
-    const targetEventId = ev.tags.find((t) => t[0] === 'e')?.[1];
+    const targetEventId = getTag(ev, 'e');
     if (!targetEventId) return;
+    if (this.isEventModerated(groupId, ev.id)) return;
+    if (this.isEventDeletedByAuthor(groupId, ev.id, ev.pubkey)) return;
+    if (this.isEventModerated(groupId, targetEventId)) return;
     const reaction: JsReaction = {
       id: ev.id,
       pubkey: ev.pubkey,
       emoji: ev.content || '+',
+      customEmojis: customEmojiMapFromTags(ev.tags),
       targetEventId,
       createdAt: ev.created_at,
     };
+    let changed = false;
     this.reactionsByGroup.update((all) => {
       const forGroup = { ...(all[groupId] ?? {}) };
       const existing = forGroup[targetEventId] ?? [];
       if (existing.some((r) => r.id === reaction.id)) return all;
+      changed = true;
       forGroup[targetEventId] = [...existing, reaction];
       return { ...all, [groupId]: forGroup };
     });
+    // Persist reactions so emoji badges paint instantly on cold load — same
+    // motivation as message caching above. Skipping when nothing changed
+    // avoids a write storm on re-ingest of already-known reactions (typical
+    // after a relay reconnect).
+    if (changed) this.scheduleReactionCacheFlush(groupId);
+  }
+
+  private ingestEventDeletion(groupId: string, ev: NostrEvent): void {
+    const ids = ev.tags
+      .filter((tag) => tag[0] === 'e' && tag[1])
+      .map((tag) => tag[1]);
+    if (ids.length === 0) return;
+
+    let tombstones = this.deletedEventIdsByGroup.get(groupId);
+    if (!tombstones) {
+      tombstones = new Map<string, string>();
+      this.deletedEventIdsByGroup.set(groupId, tombstones);
+    }
+    for (const id of ids) tombstones.set(id, ev.pubkey);
+
+    const idSet = new Set(ids);
+    const deletedMessageIds = new Set<string>();
+    let messagesChanged = false;
+    this.messagesByGroup.update((all) => {
+      const existing = all[groupId];
+      if (!existing) return all;
+      const next = existing.filter((msg) => {
+        if (!idSet.has(msg.id) || msg.pubkey !== ev.pubkey) return true;
+        deletedMessageIds.add(msg.id);
+        return false;
+      });
+      if (next.length === existing.length) return all;
+      messagesChanged = true;
+      return { ...all, [groupId]: next };
+    });
+    if (messagesChanged) this.scheduleMessageCacheFlush(groupId);
+
+    let reactionsChanged = false;
+    this.reactionsByGroup.update((all) => {
+      const forGroup = all[groupId];
+      if (!forGroup) return all;
+      const nextGroup: Record<string, JsReaction[]> = {};
+      for (const [targetEventId, reactions] of Object.entries(forGroup)) {
+        if (deletedMessageIds.has(targetEventId)) {
+          reactionsChanged = true;
+          continue;
+        }
+        const nextReactions = reactions.filter((reaction) => {
+          if (!idSet.has(reaction.id)) return true;
+          // NIP-09 delete events are accepted here only from the reaction
+          // author. Group moderation uses NIP-29 kind 9005 instead.
+          return reaction.pubkey !== ev.pubkey;
+        });
+        if (nextReactions.length !== reactions.length) reactionsChanged = true;
+        if (nextReactions.length > 0) nextGroup[targetEventId] = nextReactions;
+      }
+      if (!reactionsChanged) return all;
+      return { ...all, [groupId]: nextGroup };
+    });
+    if (reactionsChanged || messagesChanged) this.scheduleReactionCacheFlush(groupId);
+  }
+
+  private ingestGroupEventDeletion(groupId: string, ev: NostrEvent): void {
+    const ids = ev.tags
+      .filter((tag) => tag[0] === 'e' && tag[1])
+      .map((tag) => tag[1]);
+    if (ids.length === 0) return;
+
+    let tombstones = this.moderatedEventIdsByGroup.get(groupId);
+    if (!tombstones) {
+      tombstones = new Set<string>();
+      this.moderatedEventIdsByGroup.set(groupId, tombstones);
+    }
+    for (const id of ids) tombstones.add(id);
+
+    const idSet = new Set(ids);
+    let messagesChanged = false;
+    this.messagesByGroup.update((all) => {
+      const existing = all[groupId];
+      if (!existing) return all;
+      const next = existing.filter((msg) => !idSet.has(msg.id));
+      if (next.length === existing.length) return all;
+      messagesChanged = true;
+      return { ...all, [groupId]: next };
+    });
+    if (messagesChanged) this.scheduleMessageCacheFlush(groupId);
+
+    let reactionsChanged = false;
+    this.reactionsByGroup.update((all) => {
+      const forGroup = all[groupId];
+      if (!forGroup) return all;
+      const nextGroup: Record<string, JsReaction[]> = {};
+      for (const [targetEventId, reactions] of Object.entries(forGroup)) {
+        if (idSet.has(targetEventId)) {
+          reactionsChanged = true;
+          continue;
+        }
+        const nextReactions = reactions.filter((reaction) => !idSet.has(reaction.id));
+        if (nextReactions.length !== reactions.length) reactionsChanged = true;
+        if (nextReactions.length > 0) nextGroup[targetEventId] = nextReactions;
+      }
+      if (!reactionsChanged) return all;
+      return { ...all, [groupId]: nextGroup };
+    });
+    if (reactionsChanged) this.scheduleReactionCacheFlush(groupId);
   }
 
   private async ingestIncomingDM(ev: NostrEvent): Promise<void> {
     if (!this.session) return;
     const me = this.session.pubKeyHex;
-    const recipient = ev.tags.find((t) => t[0] === 'p')?.[1];
+    const recipient = getTag(ev, 'p');
     const isOutgoing = ev.pubkey === me;
     const counterparty = isOutgoing ? (recipient ?? '') : ev.pubkey;
     if (!counterparty) return;
@@ -3586,7 +5738,7 @@ class BridgeImpl implements NostrBridge {
     throw new Error('Cannot decrypt with current login method');
   }
 
-  private ingestUserMetadata(ev: NostrEvent): void {
+  private ingestUserMetadata(ev: NostrEvent, opts: { cacheRelayScoped?: boolean } = { cacheRelayScoped: true }): void {
     const prevAt = this.userMetadataLatestAt.get(ev.pubkey) ?? 0;
     if (ev.created_at <= prevAt) return;
     try {
@@ -3604,6 +5756,20 @@ class BridgeImpl implements NostrBridge {
       };
       this.userMetadata.update((prev) => ({ ...prev, [ev.pubkey]: meta }));
       this.userMetadataLatestAt.set(ev.pubkey, ev.created_at);
+      // Skip the write when the cached profile already matches — kind 0
+      // events are republished often (nip-05 verifier handshakes, profile
+      // editor saves with the same fields, multi-relay re-broadcast) and
+      // localStorage.setItem on a popular profile is a real cost.
+      if (opts.cacheRelayScoped !== false) {
+        const relay = this.currentRelayUrl.get();
+        const cached = cacheGet<{ meta: JsUserMetadata; createdAt: number }>(relay, KIND_USER_METADATA, ev.pubkey);
+        if (!cached || !userMetadataEqual(cached.value.meta, meta)) {
+          cacheSet(relay, KIND_USER_METADATA, ev.pubkey, {
+            meta,
+            createdAt: ev.created_at,
+          });
+        }
+      }
     } catch {
       // ignore malformed kind:0 content
     }
@@ -3706,6 +5872,9 @@ class BridgeImpl implements NostrBridge {
         event = (await b.signEvent(template)) as NostrEvent;
       } else {
         throw new Error(`Login method ${this.session.loginMethod} cannot sign events in this build`);
+      }
+      if (template.kind === KIND_VOICE_PRESENCE) {
+        this.ingestMeshVoicePresence(event);
       }
       if (signId != null) resolveActivity(signId);
     } catch (e) {
@@ -3865,6 +6034,23 @@ function validateRelayUrl(url: string): void {
   if (!isIp && !isLocalhost && !host.includes('.')) {
     throw new Error(`"${host}" is not a valid relay hostname (single-label hosts are not allowed)`);
   }
+}
+
+function uniqueRelayUrls(urls: readonly string[]): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of urls) {
+    try {
+      const normalized = normalizeRelayUrl(raw);
+      validateRelayUrl(normalized);
+      if (seen.has(normalized)) continue;
+      seen.add(normalized);
+      out.push(normalized);
+    } catch {
+      // Ignore corrupted persisted relay entries; users can re-add them.
+    }
+  }
+  return out;
 }
 
 function generateGroupId(): string {

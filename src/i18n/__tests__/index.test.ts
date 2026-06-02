@@ -1,17 +1,25 @@
 import { describe, it, expect } from 'vitest';
-import { getTranslation, countryToLocale, LATAM_COUNTRIES, DEFAULT_LOCALE } from '../index';
+import {
+  getTranslation,
+  countryToLocale,
+  acceptLanguageToLocale,
+  detectLocale,
+  LATAM_COUNTRIES,
+  DEFAULT_LOCALE,
+  type Locale,
+} from '../index';
 
 describe('getTranslation', () => {
   it('returns English strings for "en" locale', () => {
     const t = getTranslation('en');
-    expect(t('hero.title')).toBe('Discord-style group chat,');
-    expect(t('hero.titleHighlight')).toBe('pure Nostr');
+    expect(t('hero.title')).toBe('Tus comunidades,');
+    expect(t('hero.titleHighlight')).toBe('bajo tu control');
   });
 
   it('returns Spanish strings for "es" locale', () => {
     const t = getTranslation('es');
-    expect(t('hero.title')).toBe('Chat grupal estilo Discord,');
-    expect(t('hero.titleHighlight')).toBe('puro Nostr');
+    expect(t('hero.title')).toBe('Tus comunidades,');
+    expect(t('hero.titleHighlight')).toBe('bajo tu control');
   });
 
   it('returns the key itself for missing translations', () => {
@@ -20,8 +28,8 @@ describe('getTranslation', () => {
   });
 
   it('defaults to Spanish for unknown locale', () => {
-    const t = getTranslation('fr' as any);
-    expect(t('hero.title')).toBe('Chat grupal estilo Discord,');
+    const t = getTranslation('fr' as unknown as Locale);
+    expect(t('hero.title')).toBe('Tus comunidades,');
   });
 });
 
@@ -57,5 +65,35 @@ describe('countryToLocale', () => {
     expect(LATAM_COUNTRIES.has('MX')).toBe(true);
     expect(LATAM_COUNTRIES.has('CL')).toBe(true);
     expect(LATAM_COUNTRIES.has('US')).toBe(false);
+  });
+});
+
+
+describe('acceptLanguageToLocale', () => {
+  it('uses the highest-priority supported language', () => {
+    expect(acceptLanguageToLocale('en-US,en;q=0.8,es;q=0.7')).toBe('en');
+    expect(acceptLanguageToLocale('fr-FR,es-AR;q=0.9,en;q=0.4')).toBe('es');
+  });
+
+  it('returns null when no supported language is present', () => {
+    expect(acceptLanguageToLocale('fr-FR,pt-BR;q=0.9')).toBeNull();
+    expect(acceptLanguageToLocale(null)).toBeNull();
+  });
+});
+
+describe('detectLocale', () => {
+  it('keeps an explicit cookie locale ahead of geo and browser hints', () => {
+    expect(detectLocale({ cookieLocale: 'es', countryCode: 'US', acceptLanguage: 'en-US' })).toBe('es');
+    expect(detectLocale({ cookieLocale: 'en', countryCode: 'AR', acceptLanguage: 'es-AR' })).toBe('en');
+  });
+
+  it('uses country before Accept-Language when there is no cookie', () => {
+    expect(detectLocale({ countryCode: 'AR', acceptLanguage: 'en-US' })).toBe('es');
+    expect(detectLocale({ countryCode: 'US', acceptLanguage: 'es-AR' })).toBe('en');
+  });
+
+  it('falls back to Accept-Language and then the default locale', () => {
+    expect(detectLocale({ acceptLanguage: 'es-AR,es;q=0.9' })).toBe('es');
+    expect(detectLocale({ acceptLanguage: 'fr-FR' })).toBe(DEFAULT_LOCALE);
   });
 });

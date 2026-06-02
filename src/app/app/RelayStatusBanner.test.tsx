@@ -1,0 +1,50 @@
+import { render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const mockBridge = vi.hoisted(() => ({
+  isLoggedIn: true,
+  connectionState: 'Connected',
+  relayAccess: 'ok',
+  loginMethod: 'nsec' as 'nsec' | 'nip07' | 'bunker' | null,
+  relayUrl: 'wss://public.obelisk.ar',
+}));
+
+vi.mock('@/lib/nostr-bridge', () => ({
+  useIsLoggedIn: () => mockBridge.isLoggedIn,
+  useConnectionState: () => mockBridge.connectionState,
+  useRelayAccess: () => mockBridge.relayAccess,
+  useMyLoginMethod: () => mockBridge.loginMethod,
+  useCurrentRelayUrl: () => mockBridge.relayUrl,
+}));
+
+import RelayStatusBanner from './RelayStatusBanner';
+
+describe('RelayStatusBanner test ids', () => {
+  beforeEach(() => {
+    mockBridge.isLoggedIn = true;
+    mockBridge.connectionState = 'Connected';
+    mockBridge.relayAccess = 'ok';
+    mockBridge.loginMethod = 'nsec';
+    mockBridge.relayUrl = 'wss://public.obelisk.ar';
+  });
+
+  it('surfaces restricted relay access through the e2e relay-access banner selector', () => {
+    mockBridge.relayAccess = 'restricted';
+
+    render(<RelayStatusBanner />);
+
+    const banner = screen.getByTestId('relay-access-banner');
+    expect(banner).toHaveAttribute('data-state', 'restricted');
+    expect(banner).toHaveTextContent('Not whitelisted');
+  });
+
+  it('surfaces socket loss through the e2e connection-loss banner selector', () => {
+    mockBridge.connectionState = 'Disconnected';
+
+    render(<RelayStatusBanner />);
+
+    const banner = screen.getByTestId('connection-loss-banner');
+    expect(banner).toHaveAttribute('data-state', 'disconnected');
+    expect(banner).toHaveTextContent('Connection lost');
+  });
+});

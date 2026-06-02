@@ -7,7 +7,7 @@
  * Two-peer round-trips live in `peer-pair.integration.test.ts`.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Peer, type PeerEvents } from './peer';
+import { ICE_CANDIDATE_BATCH_MS, REMOTE_VIDEO_MUTE_GRACE_MS, Peer, type PeerEvents } from './peer';
 import type { VoiceSignalPayload } from './types';
 import {
   FakeRTCPeerConnection,
@@ -28,6 +28,7 @@ afterEach(() => {
 interface MakePeerOpts {
   remotePubkey?: string;
   polite?: boolean;
+  allowPoliteInitialOffer?: boolean;
   events?: Partial<PeerEvents>;
 }
 
@@ -36,6 +37,7 @@ function makePeer(opts: MakePeerOpts = {}) {
   const peer = new Peer({
     remotePubkey: opts.remotePubkey ?? 'b'.repeat(64),
     polite: opts.polite ?? true,
+    allowPoliteInitialOffer: opts.allowPoliteInitialOffer,
     sessionId: 'sess-1',
     send: async (p) => { sent.push(p); },
     events: {
@@ -194,14 +196,33 @@ describe('Peer.setLocalTrack', () => {
     expect(pc.getSenders()[0].track).toBe(replacement);
   });
 
-  it('triggers an offer publication via the send callback', async () => {
-    const { peer, sent } = makePeer();
+  it('triggers an offer publication from the impolite side via the send callback', async () => {
+    const { peer, sent } = makePeer({ polite: false });
     const track = new FakeMediaStreamTrack('audio') as unknown as MediaStreamTrack;
     await peer.setLocalTrack('audio', track);
     await flushMicrotasks(8);
 
     expect(sent.find((s) => s.type === 'offer')).toBeDefined();
     expect(sent.find((s) => s.type === 'trackinfo')).toBeDefined();
+  });
+
+  it('does not publish a pre-connect offer from the polite side', async () => {
+    const { peer, sent } = makePeer({ polite: true });
+    const track = new FakeMediaStreamTrack('audio') as unknown as MediaStreamTrack;
+    await peer.setLocalTrack('audio', track);
+    await flushMicrotasks(8);
+
+    expect(sent.find((s) => s.type === 'offer')).toBeUndefined();
+    expect(sent.find((s) => s.type === 'trackinfo')).toBeDefined();
+  });
+
+  it('can explicitly allow a polite pre-connect offer for legacy peers', async () => {
+    const { peer, sent } = makePeer({ polite: true, allowPoliteInitialOffer: true });
+    const track = new FakeMediaStreamTrack('audio') as unknown as MediaStreamTrack;
+    await peer.setLocalTrack('audio', track);
+    await flushMicrotasks(8);
+
+    expect(sent.find((s) => s.type === 'offer')).toBeDefined();
   });
 
   it('biases video transceiver toward VP9 → H.264 → VP8', async () => {
@@ -231,6 +252,56 @@ describe('Peer.setLocalTrack', () => {
     const tx = pc.getTransceivers().find((t) => t.kind === 'audio');
     expect(tx).toBeDefined();
     expect(tx!.codecPreferences).toEqual([]);
+  });
+});
+
+describe('Peer ICE candidate batching', () => {
+  it('publishes multiple local candidates as one signal batch', async () => {
+    vi.useFakeTimers();
+    const { peer, sent } = makePeer();
+    try {
+      const pc = peer.pc as unknown as FakeRTCPeerConnection;
+      const candidate = (value: string) => Object.assign(Object.create(null), {
+        toJSON: () => ({ candidate: value, sdpMid: '0' }),
+      }) as RTCIceCandidateInit;
+
+      pc.onicecandidate?.({ candidate: candidate('candidate-a') });
+      pc.onicecandidate?.({ candidate: candidate('candidate-b') });
+      await vi.advanceTimersByTimeAsync(ICE_CANDIDATE_BATCH_MS);
+      await flushMicrotasks(4);
+
+      const ice = sent.filter((s) => s.type === 'ice');
+      expect(ice).toHaveLength(1);
+      expect(ice[0].candidates).toEqual([
+        { candidate: 'candidate-a', sdpMid: '0' },
+        { candidate: 'candidate-b', sdpMid: '0' },
+      ]);
+    } finally {
+      peer.close();
+      vi.useRealTimers();
+    }
+  });
+
+  it('flushes a pending candidate batch when gathering completes', async () => {
+    vi.useFakeTimers();
+    const { peer, sent } = makePeer();
+    try {
+      const pc = peer.pc as unknown as FakeRTCPeerConnection;
+      const candidate = Object.assign(Object.create(null), {
+        toJSON: () => ({ candidate: 'candidate-a', sdpMid: '0' }),
+      }) as RTCIceCandidateInit;
+
+      pc.onicecandidate?.({ candidate });
+      pc.onicecandidate?.({ candidate: null });
+      await flushMicrotasks(4);
+
+      const ice = sent.filter((s) => s.type === 'ice');
+      expect(ice).toHaveLength(1);
+      expect(ice[0].candidates).toEqual([{ candidate: 'candidate-a', sdpMid: '0' }]);
+    } finally {
+      peer.close();
+      vi.useRealTimers();
+    }
   });
 });
 
@@ -283,6 +354,110 @@ describe('Peer perfect-negotiation glare', () => {
     // we should be stable again and have published an answer.
     expect(pc.signalingState === 'stable' || pc.signalingState === 'have-remote-offer').toBe(true);
     expect(sent.find((s) => s.type === 'answer')).toBeDefined();
+  });
+
+  it('re-offers a local media change after glare rolls back its offer', async () => {
+    const { peer, sent } = makePeer({ polite: true });
+    const pc = peer.pc as unknown as FakeRTCPeerConnection;
+    pc.forceState('connected');
+    await flushMicrotasks(4);
+
+    await peer.setLocalTrack('audio', new FakeMediaStreamTrack('audio') as unknown as MediaStreamTrack);
+    await flushMicrotasks(8);
+    expect(sent.filter((payload) => payload.type === 'offer')).toHaveLength(1);
+    expect(pc.signalingState).toBe('have-local-offer');
+
+    const remotePc = new FakeRTCPeerConnection();
+    remotePc.addTrack(new FakeMediaStreamTrack('audio'));
+    await remotePc.setLocalDescription();
+
+    await peer.handleSignal({ type: 'offer', sdp: remotePc.localDescription!.sdp, sessionId: 's', seq: 1 });
+    await flushMicrotasks(16);
+
+    expect(sent.filter((payload) => payload.type === 'answer')).toHaveLength(1);
+    expect(sent.filter((payload) => payload.type === 'offer')).toHaveLength(2);
+    expect(pc.signalingState).toBe('have-local-offer');
+  });
+
+  it('rebuilds once when a remote offer arrives with stale m-line order', async () => {
+    const { peer, sent } = makePeer({ polite: true });
+    const firstPc = peer.pc as unknown as FakeRTCPeerConnection;
+
+    const initialRemote = new FakeRTCPeerConnection();
+    initialRemote.addTrack(new FakeMediaStreamTrack('audio'));
+    initialRemote.addTrack(new FakeMediaStreamTrack('video'));
+    await initialRemote.setLocalDescription();
+
+    await peer.handleSignal({
+      type: 'offer',
+      sdp: initialRemote.localDescription!.sdp,
+      sessionId: 's',
+      seq: 1,
+    });
+    await flushMicrotasks(8);
+    const answersBefore = sent.filter((payload) => payload.type === 'answer').length;
+    expect(answersBefore).toBe(1);
+
+    const reorderedPayload = {
+      type: 'offer',
+      nonce: 999,
+      mlines: [
+        { mid: '1', kind: 'audio', direction: 'sendrecv' },
+        { mid: '0', kind: 'video', direction: 'sendrecv' },
+      ],
+    };
+    const reorderedOffer = 'v=0\r\n'
+      + 'a=fake-payload:'
+      + JSON.stringify(reorderedPayload)
+      + '\r\n';
+
+    await peer.handleSignal({ type: 'offer', sdp: reorderedOffer, sessionId: 's', seq: 2 });
+    await flushMicrotasks(8);
+
+    expect(firstPc.connectionState).toBe('closed');
+    expect(peer.pc).not.toBe(firstPc);
+    expect((peer.pc as unknown as FakeRTCPeerConnection).signalingState).toBe('stable');
+    expect(sent.filter((payload) => payload.type === 'answer')).toHaveLength(answersBefore + 1);
+  });
+
+  it('answers with local media added while applying a remote offer without starting an offer loop', async () => {
+    const { peer, sent } = makePeer({ polite: true });
+    const pc = peer.pc as unknown as FakeRTCPeerConnection;
+
+    const originalSetRemoteDescription = pc.setRemoteDescription.bind(pc);
+    let releaseRemoteOffer: (() => void) | null = null;
+    let holdFirstOffer = true;
+    pc.setRemoteDescription = async (desc) => {
+      await originalSetRemoteDescription(desc);
+      if (holdFirstOffer && desc.type === 'offer') {
+        holdFirstOffer = false;
+        await new Promise<void>((resolve) => { releaseRemoteOffer = resolve; });
+      }
+    };
+
+    const remotePc = new FakeRTCPeerConnection();
+    await remotePc.setLocalDescription();
+    const handling = peer.handleSignal({ type: 'offer', sdp: remotePc.localDescription!.sdp, sessionId: 's', seq: 1 });
+    await flushMicrotasks(4);
+    expect(pc.signalingState).toBe('have-remote-offer');
+
+    await peer.setLocalTrack('camera', new FakeMediaStreamTrack('video') as unknown as MediaStreamTrack);
+    await flushMicrotasks(8);
+    expect(sent.some((payload) => payload.type === 'offer')).toBe(false);
+
+    if (!releaseRemoteOffer) throw new Error('remote offer was not held');
+    releaseRemoteOffer();
+    await handling;
+    await flushMicrotasks(12);
+
+    const answers = sent.filter((payload) => payload.type === 'answer');
+    expect(answers).toHaveLength(1);
+    expect(answers[0].sdp).toContain('video');
+    expect(sent.filter((payload) => payload.type === 'offer')).toHaveLength(0);
+
+    pc.onnegotiationneeded?.();
+    await flushMicrotasks(8);
+    expect(sent.filter((payload) => payload.type === 'offer')).toHaveLength(0);
   });
 
   it('impolite peer ignores a colliding remote offer', async () => {
@@ -445,51 +620,69 @@ describe('Peer.close', () => {
   });
 });
 
-describe('Peer remote-track mute / unmute', () => {
-  it('treats a video mute event as track-ended so the receiver drops the frozen frame', async () => {
-    const onRemoteTrack = vi.fn();
-    const onRemoteTrackEnded = vi.fn();
-    const { peer } = makePeer({ events: { onRemoteTrack, onRemoteTrackEnded } });
-    const pc = peer.pc as unknown as FakeRTCPeerConnection;
+describe("Peer remote-track mute / unmute", () => {
+  it("debounces persistent video mute before dropping the stream entry", async () => {
+    vi.useFakeTimers();
+    try {
+      const onRemoteTrack = vi.fn();
+      const onRemoteTrackEnded = vi.fn();
+      const { peer } = makePeer({ events: { onRemoteTrack, onRemoteTrackEnded } });
+      const pc = peer.pc as unknown as FakeRTCPeerConnection;
 
-    // Pretend the receiver got a video track via ontrack.
-    const vid = new FakeMediaStreamTrack('video');
-    const stream = { getTracks: () => [vid] } as unknown as MediaStream;
-    pc.ontrack?.({ track: vid, streams: [stream as unknown as never] } as never);
+      const vid = new FakeMediaStreamTrack("video");
+      const stream = { getTracks: () => [vid] } as unknown as MediaStream;
+      pc.ontrack?.({ track: vid, streams: [stream as unknown as never] } as never);
 
-    expect(onRemoteTrack).toHaveBeenCalledTimes(1);
-    expect(typeof vid.onmute).toBe('function');
+      expect(onRemoteTrack).toHaveBeenCalledTimes(1);
+      expect(typeof vid.onmute).toBe("function");
 
-    // The sender turned their camera off → the receiver gets `mute`. We
-    // surface that as `onRemoteTrackEnded` so the React layer drops the
-    // stream entry (and the <video> falls back to the avatar tile).
-    vid.onmute?.();
-    expect(onRemoteTrackEnded).toHaveBeenCalledWith(vid.id);
+      vid.muted = true;
+      vid.onmute?.();
+      await vi.advanceTimersByTimeAsync(REMOTE_VIDEO_MUTE_GRACE_MS - 1);
+      expect(onRemoteTrackEnded).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(1);
+      expect(onRemoteTrackEnded).toHaveBeenCalledWith(vid.id);
+      peer.close();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
-  it('re-emits onRemoteTrack on unmute so the tile recovers when the sender re-enables', async () => {
-    const onRemoteTrack = vi.fn();
-    const { peer } = makePeer({ events: { onRemoteTrack } });
-    const pc = peer.pc as unknown as FakeRTCPeerConnection;
+  it("keeps the video track when startup mute clears before the grace window", async () => {
+    vi.useFakeTimers();
+    try {
+      const onRemoteTrack = vi.fn();
+      const onRemoteTrackEnded = vi.fn();
+      const { peer } = makePeer({ events: { onRemoteTrack, onRemoteTrackEnded } });
+      const pc = peer.pc as unknown as FakeRTCPeerConnection;
 
-    const vid = new FakeMediaStreamTrack('video');
-    const stream = { getTracks: () => [vid] } as unknown as MediaStream;
-    pc.ontrack?.({ track: vid, streams: [stream as unknown as never] } as never);
+      const vid = new FakeMediaStreamTrack("video");
+      const stream = { getTracks: () => [vid] } as unknown as MediaStream;
+      pc.ontrack?.({ track: vid, streams: [stream as unknown as never] } as never);
 
-    vid.onmute?.();
-    onRemoteTrack.mockClear();
-    vid.onunmute?.();
-    expect(onRemoteTrack).toHaveBeenCalledTimes(1);
+      vid.muted = true;
+      vid.onmute?.();
+      await vi.advanceTimersByTimeAsync(Math.floor(REMOTE_VIDEO_MUTE_GRACE_MS / 2));
+      vid.muted = false;
+      onRemoteTrack.mockClear();
+      vid.onunmute?.();
+      await vi.advanceTimersByTimeAsync(REMOTE_VIDEO_MUTE_GRACE_MS);
+
+      expect(onRemoteTrackEnded).not.toHaveBeenCalled();
+      expect(onRemoteTrack).toHaveBeenCalledTimes(1);
+      peer.close();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
-  it('does NOT install onmute / onunmute on remote audio tracks', async () => {
+  it("does NOT install onmute or onunmute on remote audio tracks", async () => {
     const { peer } = makePeer();
     const pc = peer.pc as unknown as FakeRTCPeerConnection;
-    const audio = new FakeMediaStreamTrack('audio');
+    const audio = new FakeMediaStreamTrack("audio");
     const stream = { getTracks: () => [audio] } as unknown as MediaStream;
     pc.ontrack?.({ track: audio, streams: [stream as unknown as never] } as never);
-    // Audio mute = silent audio, which is fine. The speaking detector handles
-    // it; we don't want to drop the stream entry.
     expect(audio.onmute).toBeNull();
     expect(audio.onunmute).toBeNull();
   });

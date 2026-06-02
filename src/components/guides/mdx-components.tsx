@@ -1,6 +1,6 @@
 import type { ComponentPropsWithoutRef } from 'react';
 import Callout from './Callout';
-import { SvgHero, Diagram } from './svg';
+import { SvgHero, Diagram, Mark } from './svg';
 
 function H2(props: ComponentPropsWithoutRef<'h2'>) {
   return (
@@ -87,4 +87,5 @@ export const mdxComponents = {
   Callout,
   SvgHero,
   Diagram,
+  Mark,
 };

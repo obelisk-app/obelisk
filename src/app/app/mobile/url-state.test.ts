@@ -43,4 +43,23 @@ describe('mobile url-state', () => {
     const parsed = parseUrl('?s=evil');
     expect(parsed.nav.screen).toBe('server');
   });
+
+  it('round-trips parentScreen so deep-link reloads keep cross-tab context', () => {
+    const nav = make({ screen: 'profile-view', profilePubkey: 'pk', parentScreen: 'inbox' });
+    const url = urlFor(nav, null);
+    expect(url).toContain('pr=inbox');
+    const parsed = parseUrl(new URL('http://x' + url).search);
+    expect(parsed.nav.screen).toBe('profile-view');
+    expect(parsed.nav.parentScreen).toBe('inbox');
+  });
+
+  it('omits the pr param when parentScreen is null', () => {
+    const nav = make({ screen: 'channel', groupId: 'g' });
+    expect(urlFor(nav, null)).not.toContain('pr=');
+  });
+
+  it('rejects unknown parentScreen values silently (parentScreen becomes null)', () => {
+    const parsed = parseUrl('?u=pk&pr=evil');
+    expect(parsed.nav.parentScreen).toBe(null);
+  });
 });

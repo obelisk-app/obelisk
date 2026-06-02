@@ -60,7 +60,7 @@ mirror the pieces each repo owns.
 - [ ] **Forum post parity with chat** — once forums are reintroduced on the relay-only stack, replies should reuse the same NIP-29 message pipeline as chat so reactions, edits, pagination and mentions work inside posts.
 - [ ] **WoT admin UI** — data layer is shipped; finish the /admin tab with referente preview, "Refrescar WoT" action, auto-authorized list and manual whitelist overrides. See [docs/wot-and-invite-credits.md](docs/wot-and-invite-credits.md).
 - [ ] **Wizard de setup inicial / instance owner desde UI** — remove the `INSTANCE_OWNER_PUBKEY` env hardcode; first authenticated NIP-07 user claims instance ownership, persisted in DB. Improves self-hosting UX.
-- [ ] **Browser & PWA notifications + sound (Phase 1.5 of notifications redesign)** — desktop `Notification` API, PWA service worker, Discord-style chime. Foundation in `docs/notifications.md` Phase 1.5 section; gates on the same `isUserWatching` predicate already used for inbox cards. Per-channel mute settings (All / Mentions only / Nothing) ride along.
+- [ ] **Browser & PWA notifications + sound (Phase 1.5 of notifications redesign)** — desktop `Notification` API, PWA service worker, Discord-style chime. Foundation in `docs/read-state.md` Phase 1.5 section; gates on the same `isUserWatching` predicate already used for inbox cards. Per-channel mute settings (All / Mentions only / Nothing) ride along.
 
 ## ✅ Shipped
 

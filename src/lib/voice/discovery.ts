@@ -57,6 +57,43 @@ export class DiscoveryEngine {
     return removed;
   }
 
+  /**
+   * Replace the full set of peers claimed by one control-channel neighbor.
+   * This lets periodic peer snapshots remove stale transitive claims instead
+   * of only ever accumulating peerAdded hints.
+   */
+  setControlDiscovered(viaPeer: string, pubkeys: ReadonlySet<string> | readonly string[]): { added: string[]; removed: string[] } {
+    const wanted = new Set<string>();
+    for (const pk of pubkeys) {
+      if (!pk || pk === viaPeer) continue;
+      wanted.add(pk);
+    }
+
+    const added: string[] = [];
+    const removed: string[] = [];
+
+    for (const [pubkey, claimants] of Array.from(this.control.entries())) {
+      if (!claimants.has(viaPeer)) continue;
+      if (wanted.has(pubkey)) continue;
+      claimants.delete(viaPeer);
+      if (claimants.size === 0) this.control.delete(pubkey);
+      removed.push(pubkey);
+    }
+
+    for (const pubkey of wanted) {
+      let set = this.control.get(pubkey);
+      if (!set) {
+        set = new Set();
+        this.control.set(pubkey, set);
+      }
+      if (set.has(viaPeer)) continue;
+      set.add(viaPeer);
+      added.push(pubkey);
+    }
+
+    return { added, removed };
+  }
+
   /** Drop all control-derived entries that came via this peer. */
   dropClaimsFromPeer(viaPeer: string): string[] {
     const dropped: string[] = [];

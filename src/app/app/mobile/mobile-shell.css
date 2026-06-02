@@ -14,7 +14,7 @@
 .obelisk-mobile {
   font-size: 14.5px;
   /* design tokens */
-  --app-bg: #0a0a0a;
+  --app-bg: var(--obelisk-app-bg, #0a0a0a);
   --app-surface: #171717;
   --app-surface-2: #1a1a1a;
   --app-line: #262626;
@@ -22,12 +22,12 @@
   --app-text: #fafafa;
   --app-text-dim: #a3a3a3;
   --app-text-mute: #6b6b6b;
-  --app-accent: #b4f953;
-  --app-accent-bg: #2d3a1a;
-  --accent: #b4f953;
-  --accent-deep: #8bc34a;
-  --accent-soft: #2d3a1a;
-  --accent-ink: #0a0a0a;
+  --app-accent: var(--obelisk-accent, #b4f953);
+  --app-accent-bg: var(--obelisk-accent-soft, #2d3a1a);
+  --accent: var(--obelisk-accent, #b4f953);
+  --accent-deep: var(--obelisk-accent-deep, #8bc34a);
+  --accent-soft: var(--obelisk-accent-soft, #2d3a1a);
+  --accent-ink: var(--obelisk-accent-ink, #0a0a0a);
   --role-blue: #7ec8ff;
   --role-pink: #ff9ec5;
   --role-green: #b4f953;
@@ -56,8 +56,8 @@
    * screens get the same glow the login modal had. Voice room overrides
    * everything with its own indigo→violet stage. */
   background:
-    radial-gradient(1100px 620px at 85% -8%, rgba(180, 249, 83, 0.14) 0%, transparent 62%),
-    radial-gradient(900px 540px at -5% 105%, rgba(180, 249, 83, 0.10) 0%, transparent 58%),
+    radial-gradient(1100px 620px at 85% -8%, color-mix(in oklab, var(--accent) 14%, transparent) 0%, transparent 62%),
+    radial-gradient(900px 540px at -5% 105%, color-mix(in oklab, var(--accent) 10%, transparent) 0%, transparent 58%),
     var(--app-bg);
   color: var(--app-text);
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -68,6 +68,11 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  user-select: none;
   isolation: isolate;
   z-index: 1;
 }
@@ -81,9 +86,9 @@
   inset: -12%;
   pointer-events: none;
   background:
-    radial-gradient(40% 32% at 28% 22%, rgba(180, 249, 83, 0.16), transparent 65%),
-    radial-gradient(36% 30% at 72% 78%, rgba(180, 249, 83, 0.12), transparent 65%),
-    radial-gradient(28% 24% at 50% 55%, rgba(139, 195, 74, 0.08), transparent 70%);
+    radial-gradient(40% 32% at 28% 22%, color-mix(in oklab, var(--accent) 16%, transparent), transparent 65%),
+    radial-gradient(36% 30% at 72% 78%, color-mix(in oklab, var(--accent) 12%, transparent), transparent 65%),
+    radial-gradient(28% 24% at 50% 55%, color-mix(in oklab, var(--accent-deep) 8%, transparent), transparent 70%);
   z-index: 0;
   will-change: transform;
   animation: obelisk-bg-drift 24s ease-in-out infinite alternate;
@@ -109,7 +114,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .obelisk-mobile::before { animation: none; }
+  .obelisk-mobile::before {
+    animation: none;
+    will-change: auto;
+  }
 }
 
 /* Lift direct children above the ambient layers. */
@@ -122,6 +130,29 @@
 .obelisk-mobile *::before,
 .obelisk-mobile *::after {
   box-sizing: border-box;
+}
+
+.obelisk-mobile input,
+.obelisk-mobile textarea,
+.obelisk-mobile [contenteditable='true'],
+.obelisk-mobile [data-testid="message-content"] {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.obelisk-mobile a,
+.obelisk-mobile button,
+.obelisk-mobile [role='button'],
+.obelisk-mobile input,
+.obelisk-mobile textarea,
+.obelisk-mobile select {
+  touch-action: manipulation;
+}
+
+.obelisk-mobile button,
+.obelisk-mobile [role='button'] {
+  min-width: 44px;
+  min-height: 44px;
 }
 
 /* Button reset for the mobile shell. Wrapped in `@layer base` so Tailwind v4's
@@ -149,6 +180,18 @@
 .obelisk-mobile .mention-card,
 .obelisk-mobile .si-item {
   -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.obelisk-mobile [role='button']:active,
+.obelisk-mobile button:active,
+.obelisk-mobile .nav-item:active,
+.obelisk-mobile .ch-row:active,
+.obelisk-mobile .dm-row:active,
+.obelisk-mobile .mention-card:active,
+.obelisk-mobile .si-item:active {
+  transform: translate3d(0, 1px, 0) scale(0.99);
 }
 
 /* ===== screen container ===== */
@@ -175,41 +218,76 @@
   display: flex;
 }
 
-/* Screen-mount slide animations. The slide is on the wrapper (.screen-anim)
- * so the inner .screen — which has its own absolute layout — can stay
- * unchanged. transform is intentionally only present during the brief
- * animation window so it doesn't create a persistent stacking context. */
+/* Screen-mount transitions. Proven mobile pattern: keep movement on
+ * compositor-only transform/opacity, isolate paint/layout work with contain,
+ * and avoid CSS keyframe animations that can restart on class churn. */
 .obelisk-mobile .screen-anim {
   position: absolute;
   inset: 0;
+  transform: translate3d(0, 0, 0);
+  opacity: 1;
+  will-change: transform, opacity;
+  contain: layout paint style;
+  backface-visibility: hidden;
 }
 .obelisk-mobile .screen-anim.slide-forward {
-  animation: obelisk-slide-from-right 260ms cubic-bezier(0.2, 0.85, 0.25, 1);
+  transform: translate3d(0, 0, 0);
+  opacity: 1;
+  transition:
+    transform 180ms cubic-bezier(0.2, 0.85, 0.25, 1),
+    opacity 120ms ease-out;
 }
 .obelisk-mobile .screen-anim.slide-back {
-  animation: obelisk-slide-from-left 260ms cubic-bezier(0.2, 0.85, 0.25, 1);
-}
-@keyframes obelisk-slide-from-right {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
-}
-@keyframes obelisk-slide-from-left {
-  from { transform: translateX(-100%); }
-  to { transform: translateX(0); }
+  transform: translate3d(0, 0, 0);
+  opacity: 1;
+  transition:
+    transform 180ms cubic-bezier(0.2, 0.85, 0.25, 1),
+    opacity 120ms ease-out;
 }
 @media (prefers-reduced-motion: reduce) {
+  .obelisk-mobile .screen-anim,
   .obelisk-mobile .screen-anim.slide-forward,
   .obelisk-mobile .screen-anim.slide-back {
-    animation: none;
+    transition: none;
+    transform: none;
+    opacity: 1;
+    will-change: auto;
   }
 }
 
 .obelisk-mobile .screens-host {
   position: relative;
   flex: 1 1 0;
+  min-width: 0;
   min-height: 0;
   width: 100%;
   overflow: hidden;
+}
+
+.obelisk-mobile :where(.native-scroll-y) {
+  overflow-y: auto;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  overscroll-behavior-x: none;
+  scroll-behavior: smooth;
+}
+
+.obelisk-mobile :where(.native-scroll-x) {
+  overflow-x: auto;
+  overflow-y: hidden;
+  min-width: 0;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+  overscroll-behavior-x: contain;
+  overscroll-behavior-y: auto;
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .obelisk-mobile :where(.native-scroll-y, .native-scroll-x) {
+    scroll-behavior: auto;
+  }
 }
 
 /* ===== drag-tracking carousel ===== */
@@ -341,6 +419,9 @@
 
 /* ===== bottom nav ===== */
 .obelisk-mobile .bottom-nav {
+  position: sticky;
+  bottom: 0;
+  z-index: 30;
   margin-top: auto;
   border-top: 1px solid var(--app-line-soft);
   padding: 8px 8px calc(10px + env(safe-area-inset-bottom));
@@ -349,6 +430,7 @@
   justify-content: space-around;
   align-items: center;
   flex-shrink: 0;
+  min-height: calc(64px + env(safe-area-inset-bottom));
 }
 .obelisk-mobile .nav-item {
   flex: 1;
@@ -437,8 +519,9 @@
   flex-shrink: 0;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-x;
+  touch-action: pan-x pan-y;
   overscroll-behavior-x: contain;
+  overscroll-behavior-y: auto;
 }
 .obelisk-mobile .spaces-strip::-webkit-scrollbar { display: none; }
 
@@ -567,6 +650,218 @@
   font-weight: 600;
 }
 
+.obelisk-mobile .server-mobile-layout {
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  overflow: hidden;
+}
+
+.obelisk-mobile .spaces-rail {
+  width: 74px;
+  flex: 0 0 74px;
+  min-height: 0;
+  border-right: 1px solid var(--app-line-soft);
+  background: rgba(10, 10, 10, 0.92);
+  padding: max(10px, env(safe-area-inset-top)) 6px calc(8px + env(safe-area-inset-bottom));
+}
+
+.obelisk-mobile .spaces-rail-scroll {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+.obelisk-mobile .spaces-rail-scroll::-webkit-scrollbar { display: none; }
+
+.obelisk-mobile .spaces-rail .space {
+  width: 100%;
+  min-height: 66px;
+  gap: 5px;
+  position: relative;
+}
+
+.obelisk-mobile .spaces-rail .space::before {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: 13px;
+  width: 3px;
+  height: 28px;
+  border-radius: 0 999px 999px 0;
+  background: var(--app-accent);
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.obelisk-mobile .spaces-rail .space.active::before {
+  opacity: 1;
+}
+
+.obelisk-mobile .spaces-rail .space-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  font-size: 17px;
+}
+
+.obelisk-mobile .spaces-rail .space.active .space-icon {
+  box-shadow: 0 0 0 2px rgba(180, 249, 83, 0.22), 0 0 22px rgba(180, 249, 83, 0.18);
+}
+
+.obelisk-mobile .spaces-rail .space-icon.s-add {
+  font-size: 25px;
+}
+
+.obelisk-mobile .spaces-rail .space-name {
+  width: 60px;
+  font-size: 10.5px;
+  line-height: 1.1;
+}
+
+.obelisk-mobile .server-channel-pane {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-left: 1px solid var(--app-line-soft);
+  border-top: 1px solid var(--app-line-soft);
+  border-top-left-radius: 0.75rem;
+  background: rgba(10, 10, 10, 0.18);
+}
+
+.obelisk-mobile .server-banner {
+  position: relative;
+  min-height: calc(132px + env(safe-area-inset-top));
+  flex-shrink: 0;
+  overflow: hidden;
+  border-bottom: 1px solid var(--app-line-soft);
+  background: var(--app-surface);
+}
+
+.obelisk-mobile .server-banner-img,
+.obelisk-mobile .server-banner-fallback,
+.obelisk-mobile .server-banner-shade {
+  position: absolute;
+  inset: 0;
+}
+
+.obelisk-mobile .server-banner-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.obelisk-mobile .server-banner-fallback {
+  background:
+    linear-gradient(135deg, rgba(38, 38, 38, 0.96) 0%, rgba(30, 43, 22, 0.94) 48%, rgba(12, 21, 22, 0.98) 100%),
+    var(--app-surface);
+}
+
+.obelisk-mobile .server-banner-shade {
+  background:
+    linear-gradient(180deg, rgba(10, 10, 10, 0.88) 0%, rgba(10, 10, 10, 0.24) 42%, rgba(10, 10, 10, 0.9) 100%),
+    linear-gradient(90deg, rgba(10, 10, 10, 0.72) 0%, rgba(10, 10, 10, 0.18) 70%, rgba(10, 10, 10, 0.58) 100%);
+}
+
+.obelisk-mobile .server-banner-actions {
+  position: absolute;
+  top: max(10px, env(safe-area-inset-top));
+  right: 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.obelisk-mobile .server-banner-actions .icon-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  color: var(--app-text);
+  background: rgba(10, 10, 10, 0.46);
+  border: 1px solid rgba(250, 250, 250, 0.08);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+.obelisk-mobile .server-banner-actions .icon-btn:active {
+  background: rgba(23, 23, 23, 0.82);
+}
+
+.obelisk-mobile .server-banner-meta {
+  position: absolute;
+  left: 14px;
+  right: 10px;
+  bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+}
+
+.obelisk-mobile .server-banner-icon {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(250, 250, 250, 0.18);
+  color: var(--app-text);
+  font-size: 18px;
+  font-weight: 800;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.38);
+}
+
+.obelisk-mobile .server-banner-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.obelisk-mobile .server-banner-copy {
+  min-width: 0;
+}
+
+.obelisk-mobile .server-banner-copy h2 {
+  margin: 0;
+  color: var(--app-text);
+  font-size: 23px;
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.72);
+}
+
+.obelisk-mobile .server-banner-copy span {
+  display: block;
+  margin-top: 3px;
+  color: var(--app-text-dim);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.78);
+}
+
 /* Horizontal category pills — strip above the channel list. Tapping a pill
  * scrolls the channel-list to that section so users can jump between
  * categories without scrolling through the full list. */
@@ -579,8 +874,9 @@
   flex-shrink: 0;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-x;
+  touch-action: pan-x pan-y;
   overscroll-behavior-x: contain;
+  overscroll-behavior-y: auto;
 }
 .obelisk-mobile .cats-strip::-webkit-scrollbar { display: none; }
 .obelisk-mobile .cat-pill {
@@ -1054,6 +1350,8 @@
   display: flex;
   gap: 10px;
   align-items: flex-start;
+  width: 100%;
+  min-width: 0;
 }
 .obelisk-mobile .msg-ava {
   width: 36px;
@@ -1075,57 +1373,90 @@
   height: 100%;
   object-fit: cover;
 }
-.obelisk-mobile .msg-body { flex: 1; min-width: 0; }
+.obelisk-mobile .msg > .msg-ava {
+  min-width: 36px;
+  min-height: 36px;
+}
+.obelisk-mobile .msg-body {
+  flex: 1 1 0;
+  min-width: 0;
+}
 .obelisk-mobile .msg-reply-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, min(36%, 11rem)) minmax(0, 1fr);
   align-items: center;
   gap: 6px;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
   max-width: 100%;
   margin-bottom: 2px;
   padding: 0;
   background: transparent;
   border: 0;
   font-size: 12px;
+  line-height: 1.35;
   color: var(--app-text-dim);
   cursor: pointer;
   overflow: hidden;
   text-align: left;
+  white-space: nowrap;
 }
-.obelisk-mobile .msg-reply-row .msg-reply-arrow { color: #b4f953; flex-shrink: 0; }
-.obelisk-mobile .msg-reply-row .msg-reply-name {
-  font-weight: 600;
-  color: var(--app-text);
+.obelisk-mobile .msg-reply-row .msg-reply-arrow {
+  color: #b4f953;
   flex-shrink: 0;
 }
+.obelisk-mobile .msg-reply-row .msg-reply-name {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  color: var(--app-text);
+}
 .obelisk-mobile .msg-reply-row .msg-reply-text {
+  display: block;
+  min-width: 0;
   color: var(--app-text-dim);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  min-width: 0;
 }
 .obelisk-mobile .msg-reply-row-missing {
+  display: block;
+  width: 100%;
+  min-height: 0;
   font-size: 12px;
   color: var(--app-text-dim);
   font-style: italic;
   margin-bottom: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .obelisk-mobile .msg.msg-flash { background: rgba(180, 249, 83, 0.12); transition: background 0.2s; }
 .obelisk-mobile .msg-head {
   display: flex;
-  align-items: baseline;
-  gap: 8px;
+  align-items: center;
+  gap: 6px;
   margin-bottom: 2px;
-  flex-wrap: wrap;
+  min-width: 0;
+  flex-wrap: nowrap;
 }
 .obelisk-mobile .msg-name {
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
   font-size: 14px;
+  line-height: 1.25;
   font-weight: 600;
   color: var(--app-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 50vw;
+  max-width: none;
 }
 .obelisk-mobile .role-badge {
   font-size: 9px;
@@ -1146,14 +1477,17 @@
   background: rgba(255, 158, 197, 0.12);
 }
 .obelisk-mobile .msg-time {
+  flex: 0 0 auto;
   font-size: 10px;
   color: var(--app-text-mute);
-  margin-left: auto;
+  margin-left: 0;
   font-family: 'JetBrains Mono', monospace;
 }
 .obelisk-mobile .msg-more {
   width: 28px;
   height: 28px;
+  min-width: 28px;
+  min-height: 28px;
   margin-right: -6px;
   display: flex;
   align-items: center;
@@ -1173,11 +1507,25 @@
   color: var(--app-text);
 }
 .obelisk-mobile .msg-text {
+  min-width: 0;
+  max-width: 100%;
   font-size: 15px;
   line-height: 1.5;
   color: var(--app-text);
   word-wrap: break-word;
   overflow-wrap: anywhere;
+}
+.obelisk-mobile .msg-text [data-testid="message-content"] {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+}
+.obelisk-mobile .msg-text :where(p, ul, ol, blockquote, pre) {
+  min-width: 0;
+  max-width: 100%;
+}
+.obelisk-mobile .msg-text :where(img, video, audio, iframe) {
+  max-width: 100%;
 }
 .obelisk-mobile .msg-text code {
   font-family: 'JetBrains Mono', monospace;
@@ -1195,6 +1543,7 @@
   color: rgba(248, 113, 113, 0.9);
 }
 .obelisk-mobile .msg-spinner {
+  flex: 0 0 auto;
   display: inline-block;
   width: 9px;
   height: 9px;
@@ -1216,6 +1565,8 @@
   opacity: 0.85;
 }
 .obelisk-mobile .msg-retry {
+  min-width: 0;
+  min-height: 28px;
   background: rgba(248, 113, 113, 0.18);
   color: rgb(248, 113, 113);
   border: none;
@@ -1230,6 +1581,8 @@
   background: rgba(248, 113, 113, 0.32);
 }
 .obelisk-mobile .msg-dismiss {
+  min-width: 28px;
+  min-height: 28px;
   background: transparent;
   color: rgba(248, 113, 113, 0.7);
   border: none;
@@ -1245,6 +1598,8 @@
   margin-top: 6px;
 }
 .obelisk-mobile .reaction {
+  min-width: 0;
+  min-height: 28px;
   background: var(--app-surface);
   border: 1px solid var(--app-line);
   border-radius: 12px;
@@ -1271,6 +1626,8 @@
   font-size: 10.5px;
 }
 .obelisk-mobile .reaction-add {
+  min-width: 0;
+  min-height: 28px;
   background: transparent;
   border: 1px dashed var(--app-line);
   color: var(--app-text-mute);
@@ -1351,6 +1708,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
   background: var(--app-surface);
   border: 1px solid var(--app-line);
   border-radius: 12px;
@@ -1366,6 +1724,8 @@
   gap: 1px;
 }
 .obelisk-mobile .composer-reply-label {
+  display: block;
+  min-width: 0;
   font-size: 11px;
   color: var(--app-text-mute);
   white-space: nowrap;
@@ -1373,10 +1733,18 @@
   text-overflow: ellipsis;
 }
 .obelisk-mobile .composer-reply-author {
+  display: inline-block;
+  max-width: min(44vw, 12rem);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+  white-space: nowrap;
   color: var(--app-accent);
   font-weight: 600;
 }
 .obelisk-mobile .composer-reply-text {
+  display: block;
+  min-width: 0;
   font-size: 12px;
   color: var(--app-text-dim);
   white-space: nowrap;
@@ -1386,6 +1754,8 @@
 .obelisk-mobile .composer-reply-close {
   width: 28px;
   height: 28px;
+  min-width: 28px;
+  min-height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1797,8 +2167,9 @@
   overflow-y: hidden;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-x;
+  touch-action: pan-x pan-y;
   overscroll-behavior-x: contain;
+  overscroll-behavior-y: auto;
 }
 .obelisk-mobile .dms-tabs::-webkit-scrollbar { display: none; }
 .obelisk-mobile .filter-tab {
@@ -2102,8 +2473,9 @@
   overflow-y: hidden;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-x;
+  touch-action: pan-x pan-y;
   overscroll-behavior-x: contain;
+  overscroll-behavior-y: auto;
 }
 .obelisk-mobile .filter-tabs::-webkit-scrollbar { display: none; }
 .obelisk-mobile .activity-list {
@@ -2615,8 +2987,9 @@
   flex-shrink: 0;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-x;
+  touch-action: pan-x pan-y;
   overscroll-behavior-x: contain;
+  overscroll-behavior-y: auto;
 }
 .obelisk-mobile .search-filter-chips::-webkit-scrollbar { display: none; }
 .obelisk-mobile .search-chip {
@@ -2824,6 +3197,103 @@
   color: var(--app-text-dim);
   font-weight: 600;
 }
+
+/* Forum chrome — search/create bar, sort/view menu, tag chip row.
+   Sits above .forum-list inside .forum-screen. Mirrors the desktop ForumView
+   layout: row 1 = search + new-thread button, row 2 = sort pill + tag chips. */
+.obelisk-mobile .forum-chrome {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--app-line);
+  flex-shrink: 0;
+}
+.obelisk-mobile .forum-search-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.obelisk-mobile .forum-search-row .search-input-wrap {
+  padding: 8px 12px;
+}
+.obelisk-mobile .forum-new-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  border: none;
+}
+.obelisk-mobile .forum-new-pill:disabled { opacity: 0.4; cursor: not-allowed; }
+.obelisk-mobile .forum-new-pill svg { width: 14px; height: 14px; }
+.obelisk-mobile .forum-filter-row {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+  overscroll-behavior-x: contain;
+  overscroll-behavior-y: auto;
+  margin: 0 -12px;
+  padding: 0 12px;
+}
+.obelisk-mobile .forum-filter-row::-webkit-scrollbar { display: none; }
+.obelisk-mobile .forum-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--app-surface);
+  border: 1px solid var(--app-line);
+  color: var(--app-text);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.obelisk-mobile .forum-chip.active {
+  background: var(--accent-soft);
+  border-color: rgba(180, 249, 83, 0.4);
+  color: var(--accent);
+}
+.obelisk-mobile .forum-chip.muted {
+  background: transparent;
+  color: var(--app-text-mute);
+}
+.obelisk-mobile .forum-chip svg { width: 12px; height: 12px; }
+
+/* Per-thread tag chips inside a forum card. Smaller than the filter chips
+   above, no interaction state. */
+.obelisk-mobile .forum-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+.obelisk-mobile .forum-card-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--app-surface-2);
+  border: 1px solid var(--app-line-soft);
+  color: var(--app-text-dim);
+  font-size: 10.5px;
+  max-width: 140px;
+}
+.obelisk-mobile .forum-card-tag span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ===== sheets (msg actions, zap modal) ===== */
 .obelisk-mobile .sheet-host {
@@ -3520,6 +3990,32 @@
 .obelisk-mobile .settings-row-meta.ok { color: var(--accent); }
 .obelisk-mobile .settings-row-meta.warn { color: var(--presence-idle); }
 .obelisk-mobile .settings-row-meta.muted { color: var(--app-text-mute); }
+.obelisk-mobile .appearance-row {
+  align-items: flex-start;
+}
+.obelisk-mobile .appearance-row-copy {
+  min-width: 0;
+  flex: 1;
+}
+.obelisk-mobile .appearance-hex-input,
+.obelisk-mobile .appearance-select {
+  width: 86px;
+  border: 1px solid var(--app-line);
+  border-radius: 8px;
+  background: var(--app-surface-2);
+  color: var(--app-text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  padding: 8px 9px;
+  outline: none;
+}
+.obelisk-mobile .appearance-hex-input:focus,
+.obelisk-mobile .appearance-select:focus {
+  border-color: var(--accent);
+}
+.obelisk-mobile .appearance-select {
+  width: 116px;
+}
 .obelisk-mobile .toggle {
   width: 36px;
   height: 22px;
@@ -3553,14 +4049,14 @@
 .obelisk-mobile .settings-btn-primary {
   width: 100%;
   padding: 13px;
-  background: var(--accent);
-  color: var(--accent-ink);
+  background: var(--obelisk-button, var(--accent));
+  color: var(--obelisk-button-ink, var(--accent-ink));
   border: none;
   border-radius: 10px;
   font-weight: 700;
   font-size: 13.5px;
   cursor: pointer;
-  box-shadow: 0 0 18px rgba(180, 249, 83, 0.2);
+  box-shadow: 0 0 18px color-mix(in oklab, var(--obelisk-button, var(--accent)) 20%, transparent);
 }
 .obelisk-mobile .settings-btn-secondary {
   width: 100%;
@@ -3946,10 +4442,42 @@
 .obelisk-mobile .dm-row,
 .obelisk-mobile .forum-card,
 .obelisk-mobile .member-row,
+.obelisk-mobile .msg-ava,
+.obelisk-mobile .msg-name,
+.obelisk-mobile .msg-reply-row,
+.obelisk-mobile .msg-more,
+.obelisk-mobile .msg-retry,
+.obelisk-mobile .msg-dismiss,
+.obelisk-mobile .reaction,
+.obelisk-mobile .reaction-add,
+.obelisk-mobile .composer-attach,
+.obelisk-mobile .composer-emoji,
+.obelisk-mobile .composer-send,
+.obelisk-mobile .composer-reply-close,
+.obelisk-mobile .composer-mention-row,
+.obelisk-mobile .ma-action,
+.obelisk-mobile .ma-quick-react,
+.obelisk-mobile .zap-amount,
+.obelisk-mobile .filter-tab,
+.obelisk-mobile .mark-all-read,
+.obelisk-mobile .compose-dm-next,
+.obelisk-mobile .settings-tab,
+.obelisk-mobile .settings-btn-primary,
+.obelisk-mobile .settings-btn-secondary,
+.obelisk-mobile .settings-btn-danger,
+.obelisk-mobile .copy-row,
+.obelisk-mobile .login-method,
 .obelisk-mobile .pill,
 .obelisk-mobile .primary-btn,
-.obelisk-mobile .secondary-btn {
-  transition: transform 120ms cubic-bezier(0.2, 0.8, 0.2, 1), background-color 140ms ease;
+.obelisk-mobile .secondary-btn,
+.obelisk-mobile .btn-primary,
+.obelisk-mobile .btn-cancel {
+  transition:
+    transform 120ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    background-color 140ms ease,
+    border-color 140ms ease,
+    opacity 140ms ease,
+    box-shadow 140ms ease;
   -webkit-tap-highlight-color: transparent;
 }
 .obelisk-mobile .ch-row:active,
@@ -3961,10 +4489,53 @@
 .obelisk-mobile .dm-row:active,
 .obelisk-mobile .forum-card:active,
 .obelisk-mobile .member-row:active,
+.obelisk-mobile .msg-ava:active,
+.obelisk-mobile .msg-name:active,
+.obelisk-mobile .msg-reply-row:active,
+.obelisk-mobile .msg-more:active,
+.obelisk-mobile .msg-retry:active,
+.obelisk-mobile .msg-dismiss:active,
+.obelisk-mobile .reaction:active,
+.obelisk-mobile .reaction-add:active,
+.obelisk-mobile .composer-attach:active,
+.obelisk-mobile .composer-emoji:active,
+.obelisk-mobile .composer-send:active,
+.obelisk-mobile .composer-reply-close:active,
+.obelisk-mobile .composer-mention-row:active,
+.obelisk-mobile .ma-action:active,
+.obelisk-mobile .ma-quick-react:active,
+.obelisk-mobile .zap-amount:active,
+.obelisk-mobile .filter-tab:active,
+.obelisk-mobile .mark-all-read:active,
+.obelisk-mobile .compose-dm-next:active,
+.obelisk-mobile .settings-tab:active,
+.obelisk-mobile .settings-btn-primary:active,
+.obelisk-mobile .settings-btn-secondary:active,
+.obelisk-mobile .settings-btn-danger:active,
+.obelisk-mobile .copy-row:active,
+.obelisk-mobile .login-method:active,
 .obelisk-mobile .pill:active,
 .obelisk-mobile .primary-btn:active,
-.obelisk-mobile .secondary-btn:active {
+.obelisk-mobile .secondary-btn:active,
+.obelisk-mobile .btn-primary:active,
+.obelisk-mobile .btn-cancel:active {
   transform: scale(0.97);
+}
+.obelisk-mobile .ma-action:active,
+.obelisk-mobile .zap-amount:active,
+.obelisk-mobile .btn-cancel:active {
+  background: var(--app-surface);
+  border-color: rgba(180, 249, 83, 0.22);
+}
+.obelisk-mobile .reaction:active,
+.obelisk-mobile .reaction-add:active,
+.obelisk-mobile .msg-reply-row:active {
+  opacity: 0.82;
+}
+.obelisk-mobile .composer-send:active,
+.obelisk-mobile .btn-primary:active,
+.obelisk-mobile .settings-btn-primary:active {
+  box-shadow: 0 0 10px rgba(180, 249, 83, 0.24);
 }
 @media (prefers-reduced-motion: reduce) {
   .obelisk-mobile .ch-row:active,
@@ -3976,9 +4547,36 @@
   .obelisk-mobile .dm-row:active,
   .obelisk-mobile .forum-card:active,
   .obelisk-mobile .member-row:active,
+  .obelisk-mobile .msg-ava:active,
+  .obelisk-mobile .msg-name:active,
+  .obelisk-mobile .msg-reply-row:active,
+  .obelisk-mobile .msg-more:active,
+  .obelisk-mobile .msg-retry:active,
+  .obelisk-mobile .msg-dismiss:active,
+  .obelisk-mobile .reaction:active,
+  .obelisk-mobile .reaction-add:active,
+  .obelisk-mobile .composer-attach:active,
+  .obelisk-mobile .composer-emoji:active,
+  .obelisk-mobile .composer-send:active,
+  .obelisk-mobile .composer-reply-close:active,
+  .obelisk-mobile .composer-mention-row:active,
+  .obelisk-mobile .ma-action:active,
+  .obelisk-mobile .ma-quick-react:active,
+  .obelisk-mobile .zap-amount:active,
+  .obelisk-mobile .filter-tab:active,
+  .obelisk-mobile .mark-all-read:active,
+  .obelisk-mobile .compose-dm-next:active,
+  .obelisk-mobile .settings-tab:active,
+  .obelisk-mobile .settings-btn-primary:active,
+  .obelisk-mobile .settings-btn-secondary:active,
+  .obelisk-mobile .settings-btn-danger:active,
+  .obelisk-mobile .copy-row:active,
+  .obelisk-mobile .login-method:active,
   .obelisk-mobile .pill:active,
   .obelisk-mobile .primary-btn:active,
-  .obelisk-mobile .secondary-btn:active {
+  .obelisk-mobile .secondary-btn:active,
+  .obelisk-mobile .btn-primary:active,
+  .obelisk-mobile .btn-cancel:active {
     transform: none;
   }
 }

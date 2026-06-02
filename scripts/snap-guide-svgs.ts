@@ -55,8 +55,19 @@ async function snap(
   await writeFile(pngPath, png);
 
   const kb = (n: number) => `${(n / 1024).toFixed(1)}KB`;
+  let bannerSuffix = '';
+  if (meta.bannerWidth) {
+    const bannerResvg = new Resvg(cleaned, {
+      fitTo: { mode: 'width', value: meta.bannerWidth },
+      background: '#0a0a0a',
+    });
+    const bannerPng = bannerResvg.render().asPng();
+    const bannerPath = join(OUT_DIR, `${name}-banner.png`);
+    await writeFile(bannerPath, bannerPng);
+    bannerSuffix = `   banner ${kb(bannerPng.byteLength).padStart(8)} @${meta.bannerWidth}px`;
+  }
   console.log(
-    `  ${name.padEnd(20)} svg ${kb(Buffer.byteLength(cleaned)).padStart(8)}   png ${kb(png.byteLength).padStart(8)}   @${meta.width * 2}px`,
+    `  ${name.padEnd(20)} svg ${kb(Buffer.byteLength(cleaned)).padStart(8)}   png ${kb(png.byteLength).padStart(8)}   @${meta.width * 2}px${bannerSuffix}`,
   );
 }
 

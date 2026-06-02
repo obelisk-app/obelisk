@@ -2,6 +2,11 @@ export interface GuideAssetMeta {
   alt: string;
   width: number;
   height: number;
+  /**
+   * If set, snap-guide-svgs also writes `<name>-banner.png` rendered at this
+   * width — for reuse as repo logos / social banners outside this project.
+   */
+  bannerWidth?: number;
 }
 
 export const HERO_ASSET_META: Record<string, GuideAssetMeta> = {
@@ -40,6 +45,11 @@ export const HERO_ASSET_META: Record<string, GuideAssetMeta> = {
     height: 400,
     alt: 'The Obelisk ecosystem: one self-hostable Nostr relay connected to a chat client, a voice SFU, and a bot runtime — every component independently replaceable, nothing locked together.',
   },
+  'obelisk-bots': {
+    width: 800,
+    height: 400,
+    alt: 'Obelisk zap bot hero: a stylish robot with black sunglasses listening for Nostr zap receipts and group reactions, then posting signed kind 9 announcements into NIP-29 groups.',
+  },
 };
 
 export const DIAGRAM_ASSET_META: Record<string, GuideAssetMeta> = {
@@ -62,6 +72,30 @@ export const DIAGRAM_ASSET_META: Record<string, GuideAssetMeta> = {
     width: 790,
     height: 352,
     alt: 'Obelisk swap matrix: every layer of the stack — client, voice, bots, relay — has independent alternatives, so any one component can be replaced without changing the others.',
+  },
+  'mark-dex': {
+    width: 120,
+    height: 120,
+    bannerWidth: 1600,
+    alt: 'obelisk-dex logo mark: a chat bubble containing the Obelisk monument, representing the browser chat client that signs Nostr events and posts them to a relay.',
+  },
+  'mark-sfu': {
+    width: 120,
+    height: 120,
+    bannerWidth: 1600,
+    alt: 'obelisk-sfu logo mark: a central voice mixer hub connected by spokes to five peers, representing the Selective Forwarding Unit that mixes streams for large group calls.',
+  },
+  'mark-bots': {
+    width: 120,
+    height: 120,
+    bannerWidth: 1600,
+    alt: 'obelisk-bots logo mark: a small robot head with an antenna, representing the bot runtime where each bot has its own Nostr keypair and posts messages like any user.',
+  },
+  'mark-relay': {
+    width: 120,
+    height: 120,
+    bannerWidth: 1600,
+    alt: 'obelisk-relay logo mark: a relay tower broadcasting concentric signal arcs, representing the self-hostable Nostr relay with built-in whitelisting and admin UI.',
   },
 };
 

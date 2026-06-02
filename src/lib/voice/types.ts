@@ -82,6 +82,15 @@ export interface VoicePresence {
    */
   connectedTo: readonly string[];
   /**
+   * Pubkeys this publisher currently believes are active in the call,
+   * whether or not it already has a direct RTCPeerConnection to them.
+   * This is the mesh gossip set: relay beacons and established
+   * `obelisk-control` data channels both propagate it so a partially
+   * connected room can converge without waiting for every peer's own
+   * beacon to arrive.
+   */
+  knownPeers?: readonly string[];
+  /**
    * `["sfu","1"]` tag on the beacon — set only by an SFU service announcing
    * itself as a forwarding endpoint for this channel. When any beacon in
    * the roster carries this flag, the local client switches into SFU mode:
@@ -89,6 +98,13 @@ export interface VoicePresence {
    * docs/sfu-system.md §3.4.
    */
   isSfu: boolean;
+  /**
+   * Diagnostic mesh peers are synthetic ffmpeg-driven clients spawned by an
+   * operator from the SFU admin UI. They are not SFUs and still negotiate
+   * direct P2P mesh, but channel admins can use this signed marker to admit
+   * them into the local dial gate without editing the NIP-29 member list.
+   */
+  isMeshTestPeer?: boolean;
   /**
    * Outbound video tracks the publisher is currently sending (camera and/or
    * screen-share). Drives the room-wide video-slot cap: every participant

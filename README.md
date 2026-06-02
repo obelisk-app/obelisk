@@ -167,5 +167,5 @@ See [CLAUDE.md](CLAUDE.md) for the full guide.
 
 ## Resources
 
-- Docs: [auth & data loading](docs/auth-and-data-loading.md) · [voice (mesh)](docs/voice/README.md) · [SFU](docs/sfu-system.md) · [layout & branding](docs/relay-layout-and-branding.md) · [uploads](docs/uploads.md) · [Cloudflare tunnel](docs/cloudflare-tunnel.md) · [known bugs](docs/known-bugs.md)
+- Docs: [auth & data loading](docs/data-system.md) · [voice (mesh)](docs/voice/README.md) · [SFU](docs/sfu-system.md) · [layout & branding](docs/relay-layout-and-branding.md) · [uploads](docs/uploads.md) · [Cloudflare tunnel](docs/cloudflare-tunnel.md) · [known bugs](docs/known-bugs.md)
 - External: [Nostr](https://nostr.com) · [NIPs](https://github.com/nostr-protocol/nips) · [La Crypta](https://lacrypta.ar)

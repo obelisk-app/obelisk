@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { buildSeedHistory, decideSnap, decideSwipeNav, NAV_ORDER, neighborsFor } from './swipe-nav';
-import { initialNav, type NavState } from './url-state';
+import { buildSeedHistory, decideSnap, decideSwipeNav, decideTabPress, NAV_ORDER, neighborsFor, resolveParent } from './swipe-nav';
+import { initialNav, type NavState, type ScreenName } from './url-state';
+
+const navOf = (screen: ScreenName, parentScreen: ScreenName | null = null): NavState => ({
+  ...initialNav,
+  screen,
+  parentScreen,
+});
 
 describe('mobile swipe-nav', () => {
   describe('top-level screens cycle through NAV_ORDER', () => {
@@ -254,6 +260,128 @@ describe('mobile swipe-nav', () => {
       for (const e of entries) {
         expect(e.url).toContain('relay=relay.obelisk.ar');
       }
+    });
+  });
+
+  describe('resolveParent — dynamic over static parent', () => {
+    it('top-level tabs have no parent', () => {
+      expect(resolveParent(navOf('server'))).toBe(null);
+      expect(resolveParent(navOf('dms-list'))).toBe(null);
+      expect(resolveParent(navOf('inbox'))).toBe(null);
+      expect(resolveParent(navOf('settings-profile'))).toBe(null);
+    });
+
+    it('static fallback when parentScreen is null', () => {
+      expect(resolveParent(navOf('channel'))).toBe('server');
+      expect(resolveParent(navOf('dm-thread'))).toBe('dms-list');
+      expect(resolveParent(navOf('settings-prefs'))).toBe('settings-profile');
+    });
+
+    it('dynamic parentScreen overrides the static map', () => {
+      expect(resolveParent(navOf('profile-view', 'inbox'))).toBe('inbox');
+      expect(resolveParent(navOf('profile-view', 'dms-list'))).toBe('dms-list');
+      expect(resolveParent(navOf('profile-view', 'server'))).toBe('server');
+      expect(resolveParent(navOf('member-list', 'channel'))).toBe('server');
+      expect(resolveParent(navOf('msg-actions', 'dm-thread'))).toBe('dms-list');
+    });
+
+    it('walks up nested parents until it hits a top-level tab', () => {
+      // profile-view opened from msg-actions which was opened from dm-thread
+      const nav = navOf('profile-view', 'msg-actions');
+      expect(resolveParent(nav)).toBe('server'); // static fallback for msg-actions
+    });
+
+    it('decideSwipeNav respects dynamic parent for profile-view from inbox', () => {
+      // From a profile reached via an inbox mention, swipe-right should go
+      // toward Servers (Inbox's left neighbor), not whatever SUB_TO_NAV said.
+      expect(decideSwipeNav(navOf('profile-view', 'inbox'), true)).toEqual({
+        kind: 'top-level',
+        target: 'dms-list',
+        dir: 'back',
+      });
+      expect(decideSwipeNav(navOf('profile-view', 'inbox'), false)).toEqual({
+        kind: 'top-level',
+        target: 'settings-profile',
+        dir: 'forward',
+      });
+    });
+
+    it('decideSwipeNav with dynamic parent dm-thread', () => {
+      // From a profile reached via a DM peer info tap, neighbors should be
+      // Servers (left of DMs) and Inbox (right of DMs).
+      expect(decideSwipeNav(navOf('profile-view', 'dms-list'), true)).toEqual({
+        kind: 'top-level',
+        target: 'server',
+        dir: 'back',
+      });
+      expect(decideSwipeNav(navOf('profile-view', 'dms-list'), false)).toEqual({
+        kind: 'top-level',
+        target: 'inbox',
+        dir: 'forward',
+      });
+    });
+
+    it('neighborsFor with dynamic parent profile-view from inbox', () => {
+      expect(neighborsFor(navOf('profile-view', 'inbox'))).toEqual({
+        left: 'dms-list',
+        right: 'settings-profile',
+      });
+    });
+  });
+
+  describe('decideTabPress — bottom-nav tap decision', () => {
+    it('noop: tapping the same exact screen', () => {
+      expect(decideTabPress(navOf('server'), 'server')).toEqual({ kind: 'noop' });
+      expect(decideTabPress(navOf('dms-list'), 'dms-list')).toEqual({ kind: 'noop' });
+      expect(decideTabPress(navOf('inbox'), 'inbox')).toEqual({ kind: 'noop' });
+      expect(decideTabPress(navOf('settings-profile'), 'settings-profile')).toEqual({ kind: 'noop' });
+    });
+
+    it('pop: tap parent tab while on its sub-screen (static parent)', () => {
+      expect(decideTabPress(navOf('channel'), 'server')).toEqual({ kind: 'pop', target: 'server' });
+      expect(decideTabPress(navOf('voice-room'), 'server')).toEqual({ kind: 'pop', target: 'server' });
+      expect(decideTabPress(navOf('forum'), 'server')).toEqual({ kind: 'pop', target: 'server' });
+      expect(decideTabPress(navOf('dm-thread'), 'dms-list')).toEqual({ kind: 'pop', target: 'dms-list' });
+      expect(decideTabPress(navOf('compose-dm'), 'dms-list')).toEqual({ kind: 'pop', target: 'dms-list' });
+      expect(decideTabPress(navOf('settings-prefs'), 'settings-profile')).toEqual({ kind: 'pop', target: 'settings-profile' });
+    });
+
+    it('pop: tap parent tab while on its sub-screen (dynamic parent)', () => {
+      // profile-view from inbox → Inbox is the resolved parent, so tap Inbox = pop.
+      expect(decideTabPress(navOf('profile-view', 'inbox'), 'inbox')).toEqual({
+        kind: 'pop',
+        target: 'inbox',
+      });
+      // profile-view from inbox → tap Servers = switch (not pop) because
+      // resolved parent is Inbox, not Servers.
+      expect(decideTabPress(navOf('profile-view', 'inbox'), 'server')).toEqual({
+        kind: 'switch',
+        target: 'server',
+        dir: 'back',
+      });
+    });
+
+    it('switch forward: target tab is to the right in NAV_ORDER', () => {
+      expect(decideTabPress(navOf('server'), 'dms-list')).toEqual({ kind: 'switch', target: 'dms-list', dir: 'forward' });
+      expect(decideTabPress(navOf('server'), 'inbox')).toEqual({ kind: 'switch', target: 'inbox', dir: 'forward' });
+      expect(decideTabPress(navOf('dms-list'), 'settings-profile')).toEqual({ kind: 'switch', target: 'settings-profile', dir: 'forward' });
+    });
+
+    it('switch back: target tab is to the left in NAV_ORDER', () => {
+      expect(decideTabPress(navOf('inbox'), 'server')).toEqual({ kind: 'switch', target: 'server', dir: 'back' });
+      expect(decideTabPress(navOf('settings-profile'), 'dms-list')).toEqual({ kind: 'switch', target: 'dms-list', dir: 'back' });
+      expect(decideTabPress(navOf('dms-list'), 'server')).toEqual({ kind: 'switch', target: 'server', dir: 'back' });
+    });
+
+    it('switch direction from a sub-screen uses the resolved parent index', () => {
+      // From a channel under Servers, tap DMs → forward (server idx 0 → dms idx 1).
+      expect(decideTabPress(navOf('channel'), 'dms-list')).toEqual({ kind: 'switch', target: 'dms-list', dir: 'forward' });
+      // From a dm-thread under DMs, tap Servers → back (dms idx 1 → server idx 0).
+      expect(decideTabPress(navOf('dm-thread'), 'server')).toEqual({ kind: 'switch', target: 'server', dir: 'back' });
+      // From a profile-view reached from Inbox, tap Servers → back (inbox idx 2 → server idx 0).
+      expect(decideTabPress(navOf('profile-view', 'inbox'), 'server')).toEqual({ kind: 'switch', target: 'server', dir: 'back' });
+      // From a profile-view reached from Inbox, tap You → forward.
+      expect(decideTabPress(navOf('profile-view', 'inbox'), 'settings-profile')).toEqual({ kind: 'switch', target: 'settings-profile', dir: 'forward' });
     });
   });
 

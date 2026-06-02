@@ -20,6 +20,37 @@
 
 type Listener = (ev: unknown) => void;
 
+class FakeDataChannel extends EventTarget {
+  readonly label: string;
+  readyState: RTCDataChannelState = 'connecting';
+  onopen: (() => void) | null = null;
+  onclose: (() => void) | null = null;
+  onerror: ((ev: Event) => void) | null = null;
+  onmessage: ((ev: MessageEvent) => void) | null = null;
+
+  constructor(label: string) {
+    super();
+    this.label = label;
+    queueMicrotask(() => {
+      if (this.readyState !== 'connecting') return;
+      this.readyState = 'open';
+      this.onopen?.();
+      this.dispatchEvent(new Event('open'));
+    });
+  }
+
+  send(_data: string): void {
+    if (this.readyState !== 'open') throw new Error('DataChannel is not open');
+  }
+
+  close(): void {
+    if (this.readyState === 'closed') return;
+    this.readyState = 'closed';
+    this.onclose?.();
+    this.dispatchEvent(new Event('close'));
+  }
+}
+
 class TinyEventTarget {
   private listeners = new Map<string, Set<Listener>>();
   addEventListener(type: string, fn: Listener): void {
@@ -144,6 +175,7 @@ interface FakeTransceiver {
   mid: string;
   kind: 'audio' | 'video';
   sender: FakeRtpSender;
+  receiver: { track: { kind: 'audio' | 'video' } };
   /** 'sendrecv' when active, 'recvonly' after removeTrack (m-line preserved). */
   direction: 'sendrecv' | 'recvonly' | 'inactive';
   /** Whether the remote is currently sending media on this m-line — set
@@ -195,13 +227,16 @@ export class FakeRTCPeerConnection extends TinyEventTarget {
   onnegotiationneeded: (() => void) | null = null;
   onicecandidate: ((ev: { candidate: RTCIceCandidateInit | null }) => void) | null = null;
   ontrack: ((ev: { track: FakeMediaStreamTrack; streams: FakeMediaStream[] }) => void) | null = null;
+  ondatachannel: ((ev: { channel: FakeDataChannel }) => void) | null = null;
   onconnectionstatechange: (() => void) | null = null;
   oniceconnectionstatechange: (() => void) | null = null;
 
   private closed = false;
+  readonly config: RTCConfiguration | undefined;
 
-  constructor(_config?: RTCConfiguration) {
+  constructor(config?: RTCConfiguration) {
     super();
+    this.config = config;
   }
 
   // -- track management --------------------------------------------------
@@ -228,6 +263,7 @@ export class FakeRTCPeerConnection extends TinyEventTarget {
       mid,
       kind: track.kind,
       sender,
+      receiver: { track: { kind: track.kind } },
       direction: 'sendrecv',
       remoteSending: false,
       codecPreferences: [],
@@ -236,6 +272,13 @@ export class FakeRTCPeerConnection extends TinyEventTarget {
     this.transceivers.push(tx);
     queueMicrotask(() => { this.onnegotiationneeded?.(); });
     return sender;
+  }
+
+  createDataChannel(label: string, _init?: RTCDataChannelInit): FakeDataChannel {
+    if (this.closed) throw new Error('PC is closed');
+    const channel = new FakeDataChannel(label);
+    queueMicrotask(() => { this.onnegotiationneeded?.(); });
+    return channel;
   }
 
   removeTrack(sender: FakeRtpSender): void {
@@ -247,6 +290,29 @@ export class FakeRTCPeerConnection extends TinyEventTarget {
     tx.direction = 'recvonly';
     sender.track = null;
     queueMicrotask(() => { this.onnegotiationneeded?.(); });
+  }
+
+  addTransceiver(
+    kind: 'audio' | 'video',
+    init?: { direction?: 'sendrecv' | 'recvonly' | 'inactive' },
+  ): FakeTransceiver {
+    if (this.closed) throw new Error('PC is closed');
+    const sender = new FakeRtpSender(null);
+    const mid = String(this.midSeq++);
+    sender.mid = mid;
+    const tx: FakeTransceiver = {
+      mid,
+      kind,
+      sender,
+      receiver: { track: { kind } },
+      direction: init?.direction ?? 'sendrecv',
+      remoteSending: false,
+      codecPreferences: [],
+      setCodecPreferences(codecs: FakeCodecCapability[]) { this.codecPreferences = [...codecs]; },
+    };
+    this.transceivers.push(tx);
+    queueMicrotask(() => { this.onnegotiationneeded?.(); });
+    return tx;
   }
 
   getSenders(): FakeRtpSender[] {
@@ -345,6 +411,7 @@ export class FakeRTCPeerConnection extends TinyEventTarget {
           mid: ml.mid,
           kind: ml.kind,
           sender,
+          receiver: { track: { kind: ml.kind } },
           direction: 'recvonly',
           remoteSending: false,
           codecPreferences: [],

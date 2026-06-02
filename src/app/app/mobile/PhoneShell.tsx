@@ -23,15 +23,19 @@ import {
   useIsLoggedIn,
   useIsRehydrating,
   useGroups,
+  useGroupById,
   useChildrenByParent,
   useMessages,
-  useMessagesEose,
+  useMessagesByGroup,
+  useMessagesStatus,
+  useSignerReady,
   useLoadEarlier,
   useDirectMessages,
   useAdmins,
   useAdminsByGroup,
   useMembers,
   useMembersByGroup,
+  useMembershipReady,
   useGroupCreators,
   useReactions,
   useConfiguredRelays,
@@ -42,7 +46,9 @@ import {
   useActiveCallByChannel,
   getBridge,
   getBridgeImpl,
+  getBridgeSync,
   type JsGroup,
+  type JsForumTag,
   type JsMessage,
   type JsDirectMessage,
   type JsUserMetadata,
@@ -51,6 +57,8 @@ import { useFollows, useProfile, usePubkey, usePublishProfile } from '@nostr-wot
 const useMyPubkey = usePubkey;
 const useUserMetadata = useProfile;
 import LoginModal from '../LoginModal';
+import DMOptInGate from '../DMOptInGate';
+import { RelayStatusBadge } from '../RelayStatusBanner';
 import VoiceRoom from '@/components/voice/VoiceRoom';
 import VoiceStatusBar from '@/components/voice/VoiceStatusBar';
 import BackgroundVoiceAudio from '@/components/voice/BackgroundVoiceAudio';
@@ -58,7 +66,7 @@ import { subscribeVoiceJump } from '@/lib/voice/jump-to-voice';
 import MessageContent from '@/components/chat/MessageContent';
 import { MentionText } from '@/components/chat/MentionText';
 import MentionNavigator from '@/components/chat/MentionNavigator';
-import EmojiPicker from '@/components/chat/EmojiPicker';
+import EmojiPicker, { type PickedCustomEmoji } from '@/components/chat/EmojiPicker';
 import { uploadToBlossom } from '@/lib/blossom';
 import { formatPubkey, hexToNpub as pubkeyToNpub } from '@nostr-wot/data';
 import { faviconFor, fetchRelayInfo } from '@/lib/relay-info';
@@ -75,8 +83,23 @@ import {
   publishBranding,
   type RelayBranding,
 } from '@/lib/relay-branding';
+import {
+  useRelayEmojiSet,
+  relayEmojiMap,
+  type RelayEmojiSet,
+} from '@/lib/relay-emojis';
+import {
+  emojiTagsForContent,
+  mergeCustomEmojiMaps,
+  type CustomEmojiMap,
+} from '@/lib/custom-emoji-tags';
+import { resolveReactionEmoji } from '@/lib/emoji-shortcodes';
 import BlossomImageInput from '@/components/BlossomImageInput';
 import RelayAdminPanel from '@/components/admin/RelayAdminPanel';
+import RelayEmojiAdminModal from '@/components/admin/RelayEmojiAdminModal';
+import LanguagePreference from '@/components/LanguagePreference';
+import AppearancePreferenceControls from '@/components/AppearancePreferenceControls';
+import { useTranslation } from '@/i18n/context';
 import { npubToHex } from '@nostr-wot/data';
 import {
   applyMentionToDraft,
@@ -88,16 +111,23 @@ import {
 import { useReadStateStore, type InboxEvent } from '@/store/read-state';
 import {
   useChannelHighlights,
+  useCachedChannelHighlights,
   useDMUnreadCount,
   useTotalDMUnread,
   useInboxUnreadCount,
 } from '@/lib/read-state/selectors';
 import { useChatStore } from '@/store/chat';
 import { useDMStore } from '@/store/dm';
+import { setDmOptInEnabled, useDmOptInEnabled } from '@/lib/dm/opt-in';
+import { useMessageZapStore } from '@/store/messageZap';
 import { useNostrPresence, PRESENCE_WINDOW_MS } from '@/hooks/chat/useNostrPresence';
+import MessageZapModal from '@/components/chat/MessageZapModal';
 import { type ScreenName, type NavState, initialNav, urlFor, parseUrl } from './url-state';
-import { buildSeedHistory, decideSnap, decideSwipeNav, neighborsFor, NAV_ORDER, SUB_TO_NAV } from './swipe-nav';
+import { buildSeedHistory, decideSnap, decideSwipeNav, decideTabPress, neighborsFor, NAV_ORDER, resolveParent } from './swipe-nav';
 import { useKeyboardInset } from './use-keyboard';
+import { channelScrollPositionKey, getChannelScrollPosition, rememberChannelScrollPosition } from '@/lib/channel-scroll-position';
+import { channelInitialAnchorFromCursor } from '@/lib/channel-scroll-anchor';
+import { useChannelScrollPosition } from '@/hooks/chat/useChannelScrollPosition';
 // CSS is hoisted to AppGate.tsx so it lands in the route's eagerly-loaded
 // stylesheet, not in this dynamic chunk's late-arriving sidecar.
 
@@ -173,6 +203,39 @@ function timeOfDay(ts: number): string {
 
 function shortHost(url: string): string {
   try { return new URL(url).host; } catch { return url; }
+}
+
+function normalizeRelayUrl(url: string | null | undefined): string {
+  return (url ?? '').replace(/\/+$/, '').toLowerCase();
+}
+
+const MOBILE_SWIPE_IGNORE_SELECTOR = [
+  // Chrome controls own tap/scroll gestures. If a shaky tap on Search also
+  // seeds the carousel, the delayed swipe commit can overwrite the click nav.
+  '.spaces-strip',
+  '.spaces-rail',
+  '.dms-tabs',
+  '.filter-tabs',
+  '.cats-strip',
+  '.search-filter-chips',
+  '.forum-filter-row',
+  '.emoji-sheet-host',
+  '.sheet-host',
+  '.bottom-nav',
+  '.server-banner-actions',
+  '.app-header .icon-btn',
+  '.chat-actions .icon-btn',
+  '.search-header',
+  '[data-no-swipe]',
+  'input',
+  'textarea',
+  'select',
+  '[contenteditable="true"]',
+].join(', ');
+
+export function shouldIgnoreMobileSwipeTarget(target: EventTarget | null): boolean {
+  if (typeof Element === 'undefined' || !(target instanceof Element)) return false;
+  return !!target.closest(MOBILE_SWIPE_IGNORE_SELECTOR);
 }
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -256,34 +319,35 @@ const NAV_ICONS: Record<'servers' | 'dms' | 'inbox' | 'you', ReactNode> = {
 };
 
 function BottomNav({
-  active,
-  go,
+  nav,
+  onTabPress,
   dmBadge,
   inboxBadge,
 }: {
-  active: ScreenName;
-  go: (s: ScreenName) => void;
+  nav: NavState;
+  onTabPress: (target: ScreenName) => void;
   dmBadge?: number;
   inboxBadge?: number;
 }) {
+  const { t } = useTranslation();
   const tabs: NavTab[] = [
-    { id: 'server', icon: NAV_ICONS.servers, label: 'Servers' },
+    { id: 'server', icon: NAV_ICONS.servers, label: t('mobile.nav.servers') },
     { id: 'dms-list', icon: NAV_ICONS.dms, label: 'DMs', badge: dmBadge },
-    { id: 'inbox', icon: NAV_ICONS.inbox, label: 'Inbox', badge: inboxBadge },
-    { id: 'settings-profile', icon: NAV_ICONS.you, label: 'You' },
+    { id: 'inbox', icon: NAV_ICONS.inbox, label: t('inbox.title'), badge: inboxBadge },
+    { id: 'settings-profile', icon: NAV_ICONS.you, label: t('settings.you') },
   ];
-  const isActive = (id: ScreenName) =>
-    active === id ||
-    (id === 'server' && (active === 'channel' || active === 'voice-room' || active === 'forum' || active === 'member-list' || active === 'search')) ||
-    (id === 'dms-list' && (active === 'dm-thread' || active === 'compose-dm')) ||
-    (id === 'settings-profile' && active === 'settings-prefs');
+  // Active tab = the top-level tab the current nav resolves to. For sub-
+  // screens with dynamic parents (profile-view from inbox, member-list from
+  // channel, ...) this respects where the user actually came from rather
+  // than the hardcoded static map. See docs/mobile-navigation.md §3.
+  const activeTab = NAV_ORDER.includes(nav.screen) ? nav.screen : resolveParent(nav);
   return (
     <nav className="bottom-nav">
       {tabs.map((t) => (
         <button
           key={t.id}
-          className={`nav-item ${isActive(t.id) ? 'active' : ''}`}
-          onClick={() => go(t.id)}
+          className={`nav-item ${activeTab === t.id ? 'active' : ''}`}
+          onClick={() => onTabPress(t.id)}
           aria-label={t.label}
         >
           {t.icon}
@@ -297,13 +361,24 @@ function BottomNav({
   );
 }
 
+export function shouldHideMobileBottomNav(screen: ScreenName, kbInset: number): boolean {
+  return (
+    screen === 'voice-room' ||
+    screen === 'profile-view' ||
+    screen === 'search' ||
+    screen === 'compose-dm' ||
+    screen === 'profile-edit' ||
+    kbInset > 0
+  );
+}
+
 // ───────────────────────────────────────────────────────────────────────────
 // 01 — login
 
 // nip07 is intentionally omitted on mobile — browser extensions don't run on
 // phones, and showing the option just leads to "no extension" errors. The
 // desktop shell still offers all four.
-type LoginMethod = 'nip46' | 'generate' | 'import';
+const MOBILE_LOGIN_METHODS = ['nip46', 'generate', 'import'] as const;
 
 const LoginObeliskMark = () => (
   <svg className="login-mark" viewBox="0 0 512 512" fill="currentColor" aria-hidden="true">
@@ -312,84 +387,17 @@ const LoginObeliskMark = () => (
   </svg>
 );
 
-const LOGIN_METHODS: ReadonlyArray<{
-  id: LoginMethod;
-  title: string;
-  desc: string;
-  icon: ReactNode;
-}> = [
-  {
-    id: 'nip46',
-    title: 'NIP-46',
-    desc: 'Remote signer · Bunker',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-      </svg>
-    ),
-  },
-  {
-    id: 'generate',
-    title: 'Generate',
-    desc: 'Create a new key',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5z" />
-        <path d="M19 16l.7 2.1L22 19l-2.3.9L19 22l-.7-2.1L16 19l2.3-.9z" />
-      </svg>
-    ),
-  },
-  {
-    id: 'import',
-    title: 'Import',
-    desc: 'Paste your nsec',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d="m21 2-9.6 9.6" />
-        <circle cx="7.5" cy="15.5" r="5.5" />
-        <path d="m21 2-3 3 2 2 3-3" />
-      </svg>
-    ),
-  },
-];
-
 function LoginScreen() {
-  // The mobile login is the mockup's hero + four method cards. Tapping a
-  // method opens the production LoginModal pre-scoped to that single method,
-  // reusing the existing SDK auth flow without touching the bridge logic.
-  const [pickedMethod, setPickedMethod] = useState<LoginMethod | null>(null);
-
+  // Mount the SDK login modal directly — no pre-picker. Going through an
+  // intermediate screen made every method appear twice (once in our picker
+  // and once in the SDK's flat list). The obelisk hero is forwarded via
+  // `headerSlot` so we keep the brand at the top of the modal.
   return (
     <div className="screen login-screen active" data-screen="login">
-      <div className="login-hero">
-        <LoginObeliskMark />
-        <h1>Connect to Nostr</h1>
-        <p>Choose your login method.</p>
-      </div>
-      <div className="login-methods">
-        {LOGIN_METHODS.map((m) => (
-          <button
-            key={m.id}
-            type="button"
-            className="login-method"
-            onClick={() => setPickedMethod(m.id)}
-          >
-            <span className="login-method-icon">{m.icon}</span>
-            <span className="login-method-meta">
-              <strong>{m.title}</strong>
-              <span>{m.desc}</span>
-            </span>
-            <span className="login-method-arrow" aria-hidden="true">→</span>
-          </button>
-        ))}
-      </div>
-      <div className="login-footer">Powered by @nostr-wot/ui · MIT</div>
-      {pickedMethod && (
-        <LoginModal
-          methods={[pickedMethod]}
-          onClose={() => setPickedMethod(null)}
-        />
-      )}
+      <LoginModal
+        methods={[...MOBILE_LOGIN_METHODS]}
+        headerSlot={<LoginObeliskMark />}
+      />
     </div>
   );
 }
@@ -398,6 +406,7 @@ function LoginScreen() {
 // same starting set of NIP-29 relays from the mobile + tile.
 const SUGGESTED_RELAYS: ReadonlyArray<{ url: string; fallbackName?: string; fallbackDescription?: string }> = [
   { url: 'wss://relay.obelisk.ar', fallbackName: 'Obelisk relay', fallbackDescription: 'Default NIP-29 relay for Obelisk groups.' },
+  { url: 'wss://lacrypta-relay.obelisk.ar', fallbackName: 'La Crypta relay', fallbackDescription: 'NIP-29 relay for La Crypta.' },
   { url: 'wss://public.obelisk.ar', fallbackName: 'Obelisk public', fallbackDescription: 'Open NIP-29 relay run by Obelisk.' },
   { url: 'wss://groups.0xchat.com', fallbackName: '0xchat Groups relay', fallbackDescription: 'NIP-29 relay powering 0xchat group messaging.' },
   { url: 'wss://relay.groups.nip29.com', fallbackName: 'relay.groups.nip29.com', fallbackDescription: 'Public NIP-29 groups relay.' },
@@ -412,6 +421,7 @@ export function RelayMenuSheet({
   iconUrl,
   isAdmin = false,
   branding,
+  emojiSet,
   layout,
   rootChannels,
 }: {
@@ -421,13 +431,14 @@ export function RelayMenuSheet({
   iconUrl?: string | null;
   isAdmin?: boolean;
   branding?: RelayBranding;
+  emojiSet?: RelayEmojiSet;
   layout?: ChannelLayout;
   rootChannels?: ReadonlyArray<JsGroup>;
 }) {
   const relays = useConfiguredRelays();
   const [busy, setBusy] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
-  const [adminPanel, setAdminPanel] = useState<null | 'branding' | 'categories' | 'members'>(null);
+  const [adminPanel, setAdminPanel] = useState<null | 'branding' | 'emojis' | 'categories' | 'members'>(null);
 
   const flash = (msg: string) => {
     setToast(msg);
@@ -524,7 +535,7 @@ export function RelayMenuSheet({
   return (
     <div className="sheet-host" data-screen="relay-menu">
       <div className="sheet-backdrop" onClick={close} />
-      <div className="sheet" style={{ maxHeight: '88%' }}>
+      <div className="sheet native-scroll-y" style={{ maxHeight: '88%' }}>
         <div className="sheet-handle" />
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '4px 4px 14px' }}>
           <div className="space-icon" style={{ width: 44, height: 44, ...(iconUrl ? {} : avatarStyle(relayUrl)) }}>
@@ -576,6 +587,12 @@ export function RelayMenuSheet({
                 onClick={() => setAdminPanel('branding')}
               />
               <Row
+                icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01" /></svg>}
+                rowLabel="Custom emojis"
+                hint="NIP-51"
+                onClick={() => setAdminPanel('emojis')}
+              />
+              <Row
                 icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>}
                 rowLabel="Categories & order"
                 hint="layout"
@@ -609,6 +626,14 @@ export function RelayMenuSheet({
           close={() => setAdminPanel(null)}
         />
       )}
+      {adminPanel === 'emojis' && emojiSet && (
+        <RelayEmojiAdminModal
+          relayUrl={relayUrl}
+          emojiSet={emojiSet}
+          configuredRelays={relays}
+          onClose={() => setAdminPanel(null)}
+        />
+      )}
       {adminPanel === 'categories' && layout && (
         <ManageCategoriesSheet
           relayUrl={relayUrl}
@@ -632,13 +657,13 @@ function AddRelaySheet({ close }: { close: () => void }) {
   return (
     <div className="sheet-host" data-screen="add-relay">
       <div className="sheet-backdrop" onClick={close} />
-      <div className="sheet" style={{ maxHeight: '88%' }}>
+      <div className="sheet native-scroll-y" style={{ maxHeight: '88%' }}>
         <div className="sheet-handle" />
         <div className="zap-title">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
           Add a relay
         </div>
-        <div className="dms-tabs" style={{ padding: 0 }}>
+        <div className="dms-tabs native-scroll-x" style={{ padding: 0 }}>
           <button className={`filter-tab ${tab === 'suggested' ? 'active' : ''}`} onClick={() => setTab('suggested')}>
             Suggested
           </button>
@@ -856,7 +881,7 @@ export function CreateChannelSheet({
   return (
     <div className="sheet-host" data-screen="create-channel">
       <div className="sheet-backdrop" onClick={close} />
-      <div className="sheet" style={{ maxHeight: '88%' }}>
+      <div className="sheet native-scroll-y" style={{ maxHeight: '88%' }}>
         <div className="sheet-handle" />
         <div className="zap-title">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
@@ -951,7 +976,7 @@ function EditBrandingSheet({
   return (
     <div className="sheet-host" data-screen="edit-branding" style={{ zIndex: 20 }}>
       <div className="sheet-backdrop" onClick={close} />
-      <div className="sheet" style={{ maxHeight: '94%' }}>
+      <div className="sheet native-scroll-y" style={{ maxHeight: '94%' }}>
         <div className="sheet-handle" />
         <div className="zap-title">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" /></svg>
@@ -1159,7 +1184,7 @@ function ManageCategoriesSheet({
   return (
     <div className="sheet-host" data-screen="manage-categories" style={{ zIndex: 20 }}>
       <div className="sheet-backdrop" onClick={close} />
-      <div className="sheet" style={{ maxHeight: '94%' }}>
+      <div className="sheet native-scroll-y" style={{ maxHeight: '94%' }}>
         <div className="sheet-handle" />
         <div className="zap-title">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
@@ -1483,6 +1508,10 @@ function ChannelSettingsSheet({
         isPublic,
         isOpen,
         kind: channelKind,
+        // Preserve the admin-curated forum tag set as-is — mobile doesn't
+        // expose a tag editor (desktop does), and NIP-29 9002 is a full
+        // replacement so we'd otherwise drop them on every mobile save.
+        forumTags: group.forumTags,
       });
       close();
     } catch (ex) {
@@ -1537,7 +1566,7 @@ function ChannelSettingsSheet({
   return (
     <div className="sheet-host" data-screen="channel-settings">
       <div className="sheet-backdrop" onClick={close} />
-      <div className="sheet" style={{ maxHeight: '94%' }}>
+      <div className="sheet native-scroll-y" style={{ maxHeight: '94%' }}>
         <div className="sheet-handle" />
         <div className="zap-title">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>
@@ -1717,6 +1746,7 @@ function ManageMemberRowMobile({
   pubkey: string;
   isAdmin: boolean;
 }) {
+  const { t } = useTranslation();
   const meta = useUserMetadata(pubkey);
   const name = meta?.displayName || meta?.name || shortNpub(pubkey);
   return (
@@ -1870,6 +1900,107 @@ export function RelayTile({
   );
 }
 
+
+export function MobileServerRail({
+  relays,
+  activeRelay,
+  onSelectRelay,
+  onAddRelay,
+  onLongPress,
+}: {
+  relays: ReadonlyArray<string>;
+  activeRelay: string | null;
+  onSelectRelay: (url: string) => void;
+  onAddRelay: () => void;
+  onLongPress?: (info: { url: string; label: string; iconUrl: string | null }) => void;
+}) {
+  const activeKey = normalizeRelayUrl(activeRelay);
+  return (
+    <aside className="spaces-rail" data-testid="mobile-server-rail" aria-label="Servers">
+      <div className="spaces-rail-scroll native-scroll-y" data-no-swipe>
+        {relays.map((url) => {
+          const isActive = normalizeRelayUrl(url) === activeKey;
+          return (
+            <RelayTile
+              key={url}
+              url={url}
+              active={isActive}
+              onClick={() => onSelectRelay(url)}
+              onLongPress={onLongPress}
+            />
+          );
+        })}
+        <button className="space space-add" onClick={onAddRelay} aria-label="Add relay">
+          <div className="space-icon s-add">+</div>
+          <span className="space-name">&nbsp;</span>
+        </button>
+      </div>
+    </aside>
+  );
+}
+
+export function MobileServerBanner({
+  label,
+  relayUrl,
+  iconUrl,
+  bannerUrl,
+  onSearch,
+  onCreateChannel,
+  onOpenMenu,
+}: {
+  label: string;
+  relayUrl: string | null;
+  iconUrl?: string | null;
+  bannerUrl?: string | null;
+  onSearch: () => void;
+  onCreateChannel: () => void;
+  onOpenMenu: () => void;
+}) {
+  const host = relayUrl ? shortHost(relayUrl) : '';
+  const iconFallback = relayUrl ? shortHost(relayUrl).slice(0, 1).toUpperCase() : 'O';
+  return (
+    <header className="server-banner" data-testid="mobile-server-banner">
+      {bannerUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img className="server-banner-img" src={bannerUrl} alt="" aria-hidden="true" />
+      ) : (
+        <div className="server-banner-fallback" aria-hidden="true" />
+      )}
+      <div className="server-banner-shade" aria-hidden="true" />
+      <div className="server-banner-actions">
+        <button className="icon-btn" aria-label="Search this server" onClick={onSearch}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+        </button>
+        <button
+          className="icon-btn"
+          aria-label="Create channel"
+          data-testid="mobile-create-channel-btn"
+          onClick={onCreateChannel}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
+        </button>
+        <button className="icon-btn" aria-label="Space menu" onClick={onOpenMenu}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="5" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="19" r="1.5" /></svg>
+        </button>
+      </div>
+      <div className="server-banner-meta">
+        <div className="server-banner-icon" style={iconUrl ? undefined : avatarStyle(relayUrl || label)}>
+          {iconUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={iconUrl} alt="" />
+          ) : (
+            iconFallback
+          )}
+        </div>
+        <div className="server-banner-copy">
+          <h2>{label}</h2>
+          {host && <span>{host}</span>}
+        </div>
+      </div>
+    </header>
+  );
+}
+
 // Single row in the channel list — picks the right icon for text/voice/forum
 // and surfaces the live-call indicator on voice channels. The `unread` and
 // `mentioned` variants are derived from the read-state cursor (per-channel
@@ -1894,7 +2025,7 @@ function ChannelRow({
   indent?: boolean;
 }) {
   const myPubkey = useMyPubkey();
-  const highlights = useChannelHighlights(group.id, myPubkey);
+  const highlights = useCachedChannelHighlights(group.id, myPubkey);
   const unread = highlights.unread;
   const mentionsOrReplies = highlights.mentions + highlights.replies;
   const name = group.name ?? group.id.slice(0, 8);
@@ -2074,9 +2205,15 @@ function ChannelListEmptyState({
     label = 'Whitelisting required';
   }
 
+  const isLoading = label === 'Channels loading…';
   return (
-    <div style={{ padding: '10px 12px', color: 'var(--app-text-mute)', fontSize: 13 }}>
-      {label}
+    <div
+      style={{ padding: '10px 12px', color: 'var(--app-text-mute)', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}
+      data-testid={isLoading ? 'channels-loading' : 'channels-empty'}
+      data-state={label}
+    >
+      {isLoading && <div className="lc-spinner" style={{ width: 14, height: 14, borderWidth: 2 }} aria-hidden="true" />}
+      <span>{label}</span>
     </div>
   );
 }
@@ -2111,7 +2248,6 @@ function ServerScreen({
   const metadataEose = useGroupMetadataEose();
   const relays = useConfiguredRelays();
   const myPubkey = useMyPubkey();
-  const meta = useUserMetadata(myPubkey);
   const calls = useActiveCallByChannel();
   const adminsByGroup = useAdminsByGroup();
   const operatorPubkey = useRelayOperatorPubkey(relay || null);
@@ -2147,31 +2283,7 @@ function ServerScreen({
     });
   }, []);
   const channelListRef = useRef<HTMLDivElement>(null);
-  const stripRef = useRef<HTMLDivElement>(null);
-  const stripHostRef = useRef<HTMLDivElement>(null);
   useScreenScrollMemo(`server:${relay ?? ''}`, channelListRef);
-
-  // Toggle edge-fade affordances on the spaces strip when there's more content
-  // to scroll. The fades are pure CSS pseudo-elements; we only flip the state
-  // classes on the host wrapper.
-  useEffect(() => {
-    const el = stripRef.current;
-    const host = stripHostRef.current;
-    if (!el || !host) return;
-    const update = () => {
-      const max = el.scrollWidth - el.clientWidth;
-      const left = el.scrollLeft;
-      host.classList.toggle('can-scroll-left', left > 1);
-      host.classList.toggle('can-scroll-right', left < max - 1);
-    };
-    update();
-    el.addEventListener('scroll', update, { passive: true });
-    window.addEventListener('resize', update);
-    return () => {
-      el.removeEventListener('scroll', update);
-      window.removeEventListener('resize', update);
-    };
-  }, [relays.length]);
 
   // NIP-11 name + icon for the active relay header. Mirrors RelayTopBar on
   // desktop — both surfaces show the operator-set name (e.g. "Obelisk Public
@@ -2216,6 +2328,11 @@ function ServerScreen({
     [layout, roots],
   );
   const branding = useRelayBranding(relay || null, relayAuthors);
+  const emojiSet = useRelayEmojiSet(relay || null, relayAuthors);
+  const setServerEmojis = useChatStore((s) => s.setServerEmojis);
+  useEffect(() => {
+    setServerEmojis(relayEmojiMap(emojiSet));
+  }, [emojiSet, setServerEmojis]);
 
   // Renders a single channel row, plus — for forum containers with thread
   // children — the inline thread list when the user has expanded it. Used by
@@ -2268,95 +2385,40 @@ function ServerScreen({
   // name (matches desktop banner), fall back to NIP-11 doc, then to the URL
   // host while everything resolves.
   const activeSpaceLabel = branding.name || activeRelayInfo?.name || (relay ? shortHost(relay) : 'Obelisk');
+  const activeSpaceIcon = branding.icon || activeRelayInfo?.icon || null;
+  const activeSpaceBanner = branding.banner || null;
+  const openActiveRelayMenu = () => {
+    if (!relay) return;
+    setRelayMenuFor({ url: relay, label: activeSpaceLabel, iconUrl: activeSpaceIcon });
+  };
 
   return (
     <div className="screen active" data-screen="server">
-      <div className="app-header">
-        <h2>{activeSpaceLabel}</h2>
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          <button className="icon-btn" aria-label="Search this server" onClick={() => go('search')}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
-          </button>
-          <button
-            className="icon-btn"
-            aria-label="Create channel"
-            data-testid="mobile-create-channel-btn"
-            onClick={() => { if (relay) setCreateChannelOpen(true); }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
-          </button>
-          <button
-            className="icon-btn"
-            aria-label="Space menu"
-            onClick={() => {
-              if (!relay) return;
-              setRelayMenuFor({ url: relay, label: activeSpaceLabel, iconUrl: activeRelayInfo?.icon ?? null });
-            }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="5" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="19" r="1.5" /></svg>
-          </button>
-        </div>
-      </div>
-
-      {/* Spaces strip — one tile per configured relay. Wrapped in a host div
-       * so edge-fade pseudo-elements can hint at scrollability. */}
-      <div className="spaces-strip-host" ref={stripHostRef}>
-        <div className="spaces-strip" ref={stripRef}>
-          {relays.map((url) => {
-            const isActive = url.replace(/\/+$/, '').toLowerCase() === relay.replace(/\/+$/, '').toLowerCase();
-            return (
-              <RelayTile
-                key={url}
-                url={url}
-                active={isActive}
-                onClick={() => { if (!isActive) void nostrActions.switchRelay(url); }}
-                onLongPress={(info) => setRelayMenuFor(info)}
-              />
-            );
-          })}
-          <button className="space" onClick={() => setAddRelayOpen(true)} aria-label="Add relay">
-            <div className="space-icon s-add">+</div>
-            <span className="space-name">&nbsp;</span>
-          </button>
-        </div>
-        <span className="spaces-arrow spaces-arrow-left" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 6 9 12 15 18" /></svg>
-        </span>
-        <span className="spaces-arrow spaces-arrow-right" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 6 15 12 9 18" /></svg>
-        </span>
-      </div>
-      {relays.length > 1 && (
-        <div className="spaces-dots" aria-hidden="true">
-          {relays.map((url) => {
-            const isActive = url.replace(/\/+$/, '').toLowerCase() === relay.replace(/\/+$/, '').toLowerCase();
-            return <span key={url} className={`spaces-dot ${isActive ? 'active' : ''}`} />;
-          })}
-        </div>
-      )}
-
-      {addRelayOpen && <AddRelaySheet close={() => setAddRelayOpen(false)} />}
-      {createChannelOpen && relay && (
-        <CreateChannelSheet
-          relayLabel={activeSpaceLabel}
-          close={() => setCreateChannelOpen(false)}
-          onCreated={(id) => selectGroup(id, 'text')}
+      <div className="server-mobile-layout">
+        <MobileServerRail
+          relays={relays}
+          activeRelay={relay}
+          onSelectRelay={(url) => {
+            if (normalizeRelayUrl(url) !== normalizeRelayUrl(relay)) void nostrActions.switchRelay(url);
+          }}
+          onAddRelay={() => setAddRelayOpen(true)}
+          onLongPress={(info) => setRelayMenuFor(info)}
         />
-      )}
-      {relayMenuFor && (
-        <RelayMenuSheet
-          close={() => setRelayMenuFor(null)}
-          relayUrl={relayMenuFor.url}
-          label={relayMenuFor.label}
-          iconUrl={relayMenuFor.iconUrl}
-          isAdmin={!!myPubkey && relayAuthors.includes(myPubkey)}
-          branding={branding}
-          layout={layout}
-          rootChannels={roots}
-        />
-      )}
 
-      <div className="channel-list" ref={channelListRef}>
+        <section className="server-channel-pane" data-testid="mobile-channel-menu">
+          <MobileServerBanner
+            label={activeSpaceLabel}
+            relayUrl={relay}
+            iconUrl={activeSpaceIcon}
+            bannerUrl={activeSpaceBanner}
+            onSearch={() => go('search')}
+            onCreateChannel={() => { if (relay) setCreateChannelOpen(true); }}
+            onOpenMenu={openActiveRelayMenu}
+          />
+
+          <RelayStatusBadge />
+
+          <div className="channel-list native-scroll-y" ref={channelListRef}>
         {laidOut.categories.map((cat) => {
           const list = cat.channelIds
             .map((id) => groupsById[id])
@@ -2406,7 +2468,31 @@ function ServerScreen({
             metadataEose={metadataEose}
           />
         )}
+          </div>
+        </section>
       </div>
+
+      {addRelayOpen && <AddRelaySheet close={() => setAddRelayOpen(false)} />}
+      {createChannelOpen && relay && (
+        <CreateChannelSheet
+          relayLabel={activeSpaceLabel}
+          close={() => setCreateChannelOpen(false)}
+          onCreated={(id) => selectGroup(id, 'text')}
+        />
+      )}
+      {relayMenuFor && (
+        <RelayMenuSheet
+          close={() => setRelayMenuFor(null)}
+          relayUrl={relayMenuFor.url}
+          label={relayMenuFor.label}
+          iconUrl={relayMenuFor.iconUrl}
+          isAdmin={!!myPubkey && relayAuthors.includes(myPubkey)}
+          branding={branding}
+          emojiSet={emojiSet}
+          layout={layout}
+          rootChannels={roots}
+        />
+      )}
     </div>
   );
 }
@@ -2477,22 +2563,42 @@ function ChannelScreen({
   groupId: string;
   go: (s: ScreenName) => void;
   back: () => void;
-  openMsgActions: (m: { id: string; pubkey: string; content: string }) => void;
+  openMsgActions: (m: { id: string; pubkey: string; content: string; groupId: string; canModerate: boolean; canDeleteOwn: boolean }) => void;
   openZap: (m: { id: string; pubkey: string; content: string }) => void;
   openProfile: (pubkey: string) => void;
   openMembers: () => void;
 }) {
+  const { t } = useTranslation();
+  // Raw lookup — bypasses WoT filtering. Mirrors desktop ChatPanel: the
+  // user explicitly navigated to this groupId; hiding it because a WoT
+  // verdict hasn't resolved yet causes a false "Channel not visible"
+  // verdict.
+  const group = useGroupById(groupId);
   const groups = useGroups();
-  const group = groups.find((g) => g.id === groupId) ?? null;
   const parentGroup = group?.parent ? groups.find((g) => g.id === group.parent) ?? null : null;
   const headerLabel = parentGroup
     ? `${parentGroup.name ?? parentGroup.id.slice(0, 8)}/${group?.name ?? groupId.slice(0, 8)}`
     : (group?.name ?? groupId.slice(0, 8));
   const messages = useMessages(groupId);
-  const messagesEose = useMessagesEose(groupId);
+  // Retry-backed confidence: bridge owns the dwell + retry ladder so
+  // this surface never needs to second-guess an empty EOSE. See
+  // `MessagesStatus` in src/lib/nostr-bridge/types.ts.
+  const messagesStatus = useMessagesStatus(groupId);
   const reactions = useReactions(groupId);
+  const serverEmojis = useChatStore((s) => s.serverEmojis);
   const myPubkey = useMyPubkey();
   const relay = useCurrentRelayUrl();
+  // Focused fetch of kind 39000 for this groupId — guarantees the channel
+  // metadata is fetched even if the global stream missed it. The mobile
+  // chat header reads `group.name` for the title; without this fetch the
+  // user can stare at the channel id slice forever on a slow / silently-
+  // filtering relay.
+  useEffect(() => {
+    if (!groupId) return;
+    if (group) return;
+    void nostrActions.fetchGroupMetadata(groupId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupId]);
   const channelAdmins = useAdmins(groupId);
   const isChannelAdmin = !!myPubkey && channelAdmins.includes(myPubkey);
   const [draft, setDraft] = useState('');
@@ -2501,9 +2607,15 @@ function ChannelScreen({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [replyingTo, setReplyingTo] = useState<JsMessage | null>(null);
   const messagesRef = useRef<HTMLDivElement>(null);
+  const scrollKey = useMemo(() => channelScrollPositionKey(relay, groupId), [relay, groupId]);
+  const scrollKeyRef = useRef(scrollKey);
+  useEffect(() => {
+    scrollKeyRef.current = scrollKey;
+  }, [scrollKey]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const composerInputRef = useRef<HTMLInputElement>(null);
   const channelHighlights = useChannelHighlights(groupId, myPubkey);
+  const readCursorMs = useReadStateStore((s) => s.groupCursors[groupId]);
 
   // ── @-mention autocomplete ───────────────────────────────────────────
   // Mentions span the whole relay (every visible group's members + admins
@@ -2601,7 +2713,37 @@ function ChannelScreen({
     }
   };
 
-  // Auto-scroll to bottom when new messages arrive
+  useChannelScrollPosition({
+    scrollKey,
+    scrollRef: messagesRef,
+    itemCount: messages.length,
+    nearBottomPx: 200,
+    onNearBottomChange: (near) => {
+      const cur = useChatStore.getState().isNearBottom;
+      if (cur !== near) useChatStore.setState({ isNearBottom: near });
+    },
+  });
+
+  useLayoutEffect(() => {
+    if (!scrollKey || getChannelScrollPosition(scrollKey)) return;
+    const anchor = channelInitialAnchorFromCursor(messages, readCursorMs, myPubkey);
+    if (anchor.kind !== 'message') return;
+
+    const scrollToAnchor = () => {
+      if (getChannelScrollPosition(scrollKey)) return;
+      const scroller = messagesRef.current;
+      const target = document.querySelector<HTMLElement>(`[data-msg-id="${CSS.escape(anchor.messageId)}"]`);
+      if (!scroller || !target || !scroller.contains(target)) return;
+      scroller.scrollTop = target.offsetTop;
+      rememberChannelScrollPosition(scrollKey, scroller, 200);
+    };
+
+    scrollToAnchor();
+    const frame = requestAnimationFrame(scrollToAnchor);
+    return () => cancelAnimationFrame(frame);
+  }, [messages, myPubkey, readCursorMs, scrollKey]);
+
+  // Auto-scroll to bottom when new messages arrive (only if already near).
   useEffect(() => {
     const el = messagesRef.current;
     if (!el) return;
@@ -2622,11 +2764,13 @@ function ChannelScreen({
     if (!el) return;
     const onScroll = () => {
       if (el.scrollTop < 80 && !loadingEarlier && !reachedStart) {
+        const loadKey = scrollKeyRef.current;
         const prevHeight = el.scrollHeight;
         void loadEarlier().then(() => {
           requestAnimationFrame(() => {
             const e = messagesRef.current;
             if (!e) return;
+            if (loadKey && scrollKeyRef.current !== loadKey) return;
             e.scrollTop = e.scrollHeight - prevHeight;
           });
         });
@@ -2644,7 +2788,8 @@ function ChannelScreen({
     // surface a retry button on the bubble itself, not in the composer.
     setDraft('');
     setReplyingTo(null);
-    nostrActions.sendMessage(groupId, text, replyToCopy).catch((err) => {
+    const emojiTags = emojiTagsForContent(text, serverEmojis);
+    nostrActions.sendMessage(groupId, text, replyToCopy, emojiTags).catch((err) => {
       console.warn('[mobile] sendMessage scheduling failed', err);
     });
   };
@@ -2672,48 +2817,49 @@ function ChannelScreen({
       <div className="chat-header chat-header-compact">
         <div className="chat-row">
           <div className="chat-title-block">
-            <button className="back-btn" onClick={back} aria-label="Back">
+            <button className="back-btn" onClick={back} aria-label={t('common.back')}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
             </button>
             <div className="chat-channel"><span className="hash">#</span>{headerLabel}</div>
           </div>
           <div className="chat-actions">
-            <button className="icon-btn" onClick={() => go('search')} aria-label="Search">
+            <button className="icon-btn" onClick={() => go('search')} aria-label={t('common.search')}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
             </button>
             {isChannelAdmin && (
               <button
                 className="icon-btn"
                 onClick={() => setSettingsOpen(true)}
-                aria-label="Channel settings"
+                aria-label={t('desktop.channel.settings')}
                 data-testid="mobile-channel-settings-btn"
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>
               </button>
             )}
-            <button className="icon-btn" onClick={openMembers} aria-label="Members">
+            <button className="icon-btn" onClick={openMembers} aria-label={t('mobile.members.members')}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="7" r="4" /><path d="M3 21a6 6 0 0 1 12 0" /><circle cx="17" cy="9" r="3" /><path d="M23 19a4 4 0 0 0-7-2.65" /></svg>
             </button>
           </div>
         </div>
       </div>
 
+      <RelayStatusBadge />
       <div className="messages-wrap relative flex min-h-0 flex-1 flex-col">
-      <div className="messages" ref={messagesRef}>
+      <div className="messages native-scroll-y" ref={messagesRef}>
         {renderable.length === 0 ? (
-          // Don't claim "no messages yet" until the relay has actually said
-          // EOSE for this channel — otherwise the user sees the empty copy
-          // flash for a moment while history is still streaming.
-          !messagesEose ? (
+          // Bridge-owned confidence: only render "No messages yet" once
+          // the retry ladder has exhausted (status === 'empty-confirmed').
+          // 'loading' and 'empty-unconfirmed' both keep the spinner up.
+          messagesStatus !== 'empty-confirmed' ? (
             <div className="empty-state" data-testid="messages-loading">
               <div className="lc-spinner" aria-hidden="true" />
-              <div className="empty-state-title">Loading messages…</div>
+              <div className="empty-state-title">{t('mobile.channel.loadingMessages')}</div>
             </div>
           ) : (
             <div className="empty-state">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
-              <div className="empty-state-title">No messages yet</div>
-              <div className="empty-state-desc">Be the first to say hi.</div>
+              <div className="empty-state-title">{t('mobile.channel.noMessages')}</div>
+              <div className="empty-state-desc">{t('mobile.channel.noMessagesDescription')}</div>
             </div>
           )
         ) : (
@@ -2730,10 +2876,17 @@ function ChannelScreen({
                     : null
                 }
                 myPubkey={myPubkey}
+                isAdmin={isChannelAdmin}
                 groupId={groupId}
                 reactions={reactions[it.msg.id] ?? []}
-                onLongPress={() => openMsgActions({ id: it.msg.id, pubkey: it.msg.pubkey, content: it.msg.content })}
-                onZap={() => openZap({ id: it.msg.id, pubkey: it.msg.pubkey, content: it.msg.content })}
+                onLongPress={() => openMsgActions({
+                  id: it.msg.id,
+                  pubkey: it.msg.pubkey,
+                  content: it.msg.content,
+                  groupId,
+                  canModerate: isChannelAdmin,
+                  canDeleteOwn: it.msg.pubkey === myPubkey,
+                })}
                 onAvatar={() => openProfile(it.msg.pubkey)}
               />
             ),
@@ -2748,7 +2901,7 @@ function ChannelScreen({
           <div className="composer-reply" data-testid="mobile-reply-preview">
             <div className="composer-reply-info">
               <span className="composer-reply-label">
-                Replying to <ReplyAuthorName pubkey={replyingTo.pubkey} />
+                {t('mobile.channel.replyingTo')} <ReplyAuthorName pubkey={replyingTo.pubkey} />
               </span>
               <span className="composer-reply-text"><MentionText content={replyingTo.content.slice(0, 80)} /></span>
             </div>
@@ -2756,7 +2909,7 @@ function ChannelScreen({
               type="button"
               className="composer-reply-close"
               onClick={() => setReplyingTo(null)}
-              aria-label="Cancel reply"
+              aria-label={t('mobile.channel.cancelReply')}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
             </button>
@@ -2785,7 +2938,7 @@ function ChannelScreen({
           <button
             className="composer-attach"
             style={{ opacity: uploading ? 0.4 : 1 }}
-            aria-label="Attach"
+            aria-label={t('dm.attach')}
             disabled={uploading}
             onClick={() => fileInputRef.current?.click()}
           >
@@ -2800,7 +2953,7 @@ function ChannelScreen({
               const t = e.currentTarget;
               handleDraftInput(t.value, t.selectionStart ?? t.value.length);
             }}
-            placeholder={`Message #${group?.name ?? 'channel'}`}
+            placeholder={t('mobile.channel.messagePlaceholder').replace('{name}', group?.name ?? 'channel')}
             onKeyDown={(e) => {
               if (mentionQuery !== null && filteredMentionMembers.length > 0) {
                 if (e.key === 'ArrowDown') {
@@ -2832,7 +2985,7 @@ function ChannelScreen({
           />
           <div className="composer-btns">
             {draft.trim() ? (
-              <button className="composer-send" onClick={() => send()} aria-label="Send">
+              <button className="composer-send" onClick={() => send()} aria-label={t('common.send')}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 14-7-7 14-2-5-5-2z" /></svg>
               </button>
             ) : (
@@ -2844,7 +2997,7 @@ function ChannelScreen({
         </div>
         {emojiOpen && (
           <div className="emoji-sheet-host" onClick={() => setEmojiOpen(false)}>
-            <div className="emoji-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="emoji-sheet native-scroll-y" onClick={(e) => e.stopPropagation()}>
               <div className="sheet-handle" />
               <EmojiPicker
                 variant="sheet"
@@ -2895,40 +3048,84 @@ export function ChannelMessage({
   msg,
   parent,
   myPubkey,
+  isAdmin,
   groupId,
   reactions,
   onLongPress,
-  onZap,
   onAvatar,
 }: {
   msg: JsMessage;
   parent?: JsMessage | null;
   myPubkey: string | null;
+  isAdmin?: boolean;
   groupId: string;
-  reactions: ReadonlyArray<{ id: string; pubkey: string; emoji: string }>;
+  reactions: ReadonlyArray<{
+    id: string;
+    pubkey: string;
+    emoji: string;
+    customEmojis?: Readonly<Record<string, string>>;
+  }>;
   onLongPress: () => void;
-  onZap: () => void;
   onAvatar: () => void;
 }) {
   const meta = useUserMetadata(msg.pubkey);
   const name = meta?.displayName || meta?.name || shortNpub(msg.pubkey);
+  const serverEmojis = useChatStore((s) => s.serverEmojis);
 
   // Aggregate reaction emojis with counts
   const grouped = useMemo(() => {
-    const m = new Map<string, { count: number; mine: boolean }>();
+    const m = new Map<string, {
+      emoji: string;
+      customEmojis: CustomEmojiMap;
+      count: number;
+      mine: boolean;
+      reactionIds: string[];
+      myReactionId: string | null;
+    }>();
     for (const r of reactions) {
-      const ex = m.get(r.emoji) ?? { count: 0, mine: false };
+      const customEmojis = mergeCustomEmojiMaps(serverEmojis, r.customEmojis as CustomEmojiMap | undefined);
+      const resolved = resolveReactionEmoji(r.emoji, customEmojis);
+      const key = resolved.kind === 'custom'
+        ? `custom:${resolved.name}:${resolved.url}`
+        : `unicode:${resolved.char}`;
+      const ex = m.get(key) ?? {
+        emoji: resolved.kind === 'custom' ? `:${resolved.name}:` : resolved.char,
+        customEmojis: resolved.kind === 'custom' ? { [resolved.name]: resolved.url } : {},
+        count: 0,
+        mine: false,
+        reactionIds: [],
+        myReactionId: null,
+      };
       ex.count++;
-      if (r.pubkey === myPubkey) ex.mine = true;
-      m.set(r.emoji, ex);
+      ex.reactionIds.push(r.id);
+      if (r.pubkey === myPubkey) {
+        ex.mine = true;
+        ex.myReactionId = r.id;
+      }
+      m.set(key, ex);
     }
-    return Array.from(m.entries()).map(([emoji, info]) => ({ emoji, ...info }));
-  }, [reactions, myPubkey]);
+    return Array.from(m.values()).sort((a, b) => b.count - a.count);
+  }, [reactions, myPubkey, serverEmojis]);
 
-  const handleReaction = async (emoji: string, mine: boolean) => {
-    if (mine) return; // already reacted with this emoji
+  const handleReaction = async (
+    emoji: string,
+    mine: boolean,
+    customEmojis?: CustomEmojiMap,
+    reactionId?: string | null,
+    reactionIds?: ReadonlyArray<string>,
+  ) => {
     try {
-      await nostrActions.sendReaction(msg.id, msg.pubkey, emoji, groupId);
+      if (isAdmin && reactionIds && reactionIds.length > 0) {
+        await Promise.all(reactionIds.map((id) => nostrActions.deleteGroupEvent(groupId, id)));
+        return;
+      }
+      if (mine && reactionId) {
+        await nostrActions.removeReaction(groupId, reactionId);
+        return;
+      }
+      if (mine) return;
+      const emojiTags = emojiTagsForContent(emoji, mergeCustomEmojiMaps(serverEmojis, customEmojis));
+      await nostrActions.sendReaction(msg.id, msg.pubkey, emoji, groupId, emojiTags);
     } catch (err) { console.warn('[mobile] sendReaction failed', err); }
   };
 
@@ -3000,7 +3197,12 @@ export function ChannelMessage({
           onTouchCancel={cancelPress}
           onContextMenu={(e) => { e.preventDefault(); onLongPress(); }}
         >
-          <MessageContent content={msg.content} messageId={msg.id} channelId={groupId} />
+          <MessageContent
+            content={msg.content}
+            messageId={msg.id}
+            channelId={groupId}
+            customEmojis={msg.customEmojis as CustomEmojiMap | undefined}
+          />
         </div>
         {msg.failed && (
           <div className="msg-failed" data-testid="mobile-msg-failed">
@@ -3025,17 +3227,22 @@ export function ChannelMessage({
         )}
         {grouped.length > 0 && (
           <div className="reactions">
-            {grouped.map((r) => (
-              <button
-                key={r.emoji}
-                className={`reaction ${r.mine ? 'mine' : ''}`}
-                onClick={() => void handleReaction(r.emoji, r.mine)}
-              >
-                {r.emoji} {r.count}
-              </button>
-            ))}
-            <button className="reaction-add" onClick={onLongPress}>+</button>
-            <button className="reaction zap" onClick={onZap}>⚡ zap</button>
+            {grouped.map((r) => {
+              const resolved = resolveReactionEmoji(r.emoji, r.customEmojis);
+              return (
+                <button
+                  key={r.emoji}
+                  className={`reaction ${r.mine ? 'mine' : ''}`}
+                  title={isAdmin ? 'Remove reactions for everyone' : r.mine ? 'Remove your reaction' : 'React'}
+                  onClick={() => void handleReaction(r.emoji, r.mine, r.customEmojis, r.myReactionId, isAdmin ? r.reactionIds : undefined)}
+                >
+                  {resolved.kind === 'custom' ? (
+                    <img src={resolved.url} alt={`:${resolved.name}:`} style={{ width: 16, height: 16, objectFit: 'contain' }} />
+                  ) : resolved.char}{' '}
+                  {r.count}
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
@@ -3095,6 +3302,28 @@ function VoiceRoomScreen({ groupId, back, openChat }: { groupId: string; back: (
 // ───────────────────────────────────────────────────────────────────────────
 // 06 — DMs list
 
+function MobileDmOptInScreen({
+  onSecondary,
+  secondaryLabel = 'Not now',
+}: {
+  onSecondary: () => void;
+  secondaryLabel?: string;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className="screen active" data-screen="dms-list">
+      <div className="app-header">
+        <h2>{t('dm.title')}</h2>
+      </div>
+      <DMOptInGate
+        surface="mobile"
+        secondaryLabel={secondaryLabel}
+        onSecondary={onSecondary}
+      />
+    </div>
+  );
+}
+
 function DmsListScreen({
   go,
   selectPeer,
@@ -3104,6 +3333,7 @@ function DmsListScreen({
   selectPeer: (peer: string) => void;
   myFollows: ReadonlyArray<string>;
 }) {
+  const { t } = useTranslation();
   const dms = useDirectMessages();
   const [tab, setTab] = useState<'follows' | 'others'>('follows');
 
@@ -3136,36 +3366,36 @@ function DmsListScreen({
   return (
     <div className="screen active" data-screen="dms-list">
       <div className="app-header">
-        <h2>Direct Messages</h2>
+        <h2>{t('dm.title')}</h2>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          <button className="icon-btn" onClick={() => go('search')} aria-label="Search">
+          <button className="icon-btn" onClick={() => go('search')} aria-label={t('common.search')}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
           </button>
-          <button className="icon-btn" onClick={() => go('compose-dm')} aria-label="New message">
+          <button className="icon-btn" onClick={() => go('compose-dm')} aria-label={t('dm.newMessage')}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
           </button>
         </div>
       </div>
 
-      <div className="dms-tabs">
+      <div className="dms-tabs native-scroll-x">
         <button className={`filter-tab ${tab === 'follows' ? 'active' : ''}`} onClick={() => setTab('follows')}>
-          Follows · {followsCount}
+          {t('dm.follows')} · {followsCount}
         </button>
         <button className={`filter-tab ${tab === 'others' ? 'active' : ''}`} onClick={() => setTab('others')}>
-          Others · {othersCount}
+          {t('dm.others')} · {othersCount}
         </button>
       </div>
 
-      <div className="dms-list-rows" ref={listRef}>
+      <div className="dms-list-rows native-scroll-y" ref={listRef}>
         {filtered.length === 0 && (
           <div className="empty-state">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><rect x="3" y="11" width="18" height="9" rx="1.5" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-            <div className="empty-state-title">No conversations yet</div>
-            <div className="empty-state-desc">Tap + to start an encrypted DM with anyone on Nostr.</div>
+            <div className="empty-state-title">{t('dm.noConversations')}</div>
+            <div className="empty-state-desc">{t('dm.emptyMobileDescription')}</div>
           </div>
         )}
         {filtered.map((p) => (
-          <DmRow key={p.peer} peer={p.peer} latest={p.latest} onClick={() => selectPeer(p.peer)} />
+          <DmRow key={p.peer} peer={p.peer} latest={p.latest} youPrefix={t('dm.youPrefix')} onClick={() => selectPeer(p.peer)} />
         ))}
       </div>
     </div>
@@ -3175,10 +3405,12 @@ function DmsListScreen({
 function DmRow({
   peer,
   latest,
+  youPrefix,
   onClick,
 }: {
   peer: string;
   latest: JsDirectMessage;
+  youPrefix: string;
   onClick: () => void;
 }) {
   const meta = useUserMetadata(peer);
@@ -3196,7 +3428,7 @@ function DmRow({
         </div>
         <div className="dm-preview">
           <svg className="lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="9" rx="1.5" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-          {latest.outgoing ? 'You: ' : ''}{latest.content}
+          {latest.outgoing ? youPrefix : ''}{latest.content}
         </div>
       </div>
       {unreadCount > 0 && <span className="unread-dot" />}
@@ -3216,6 +3448,7 @@ function DmThreadScreen({
   back: () => void;
   openProfile: (pubkey: string) => void;
 }) {
+  const { t } = useTranslation();
   const dms = useDirectMessages();
   const meta = useUserMetadata(peer);
   const myPubkey = useMyPubkey();
@@ -3274,7 +3507,7 @@ function DmThreadScreen({
   return (
     <div className="screen active" data-screen="dm-thread">
       <div className="dm-header">
-        <button className="back-btn" onClick={back} aria-label="Back">
+        <button className="back-btn" onClick={back} aria-label={t('common.back')}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
         </button>
         <div className="dm-ava-list" style={avatarStyle(peer)} onClick={() => openProfile(peer)}>
@@ -3289,10 +3522,10 @@ function DmThreadScreen({
         </div>
       </div>
 
-      <div className="dm-messages" ref={msgsRef}>
+      <div className="dm-messages native-scroll-y" ref={msgsRef}>
         <div className="dm-encryption-pill">
           <svg className="lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="9" rx="1.5" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-          Messages are NIP-04 encrypted end-to-end
+          {t('dm.encryptedPill')}
         </div>
         {grouped.map((it) =>
           it.type === 'divider' ? (
@@ -3309,25 +3542,25 @@ function DmThreadScreen({
             >
               <div className="dm-bubble-text">{it.msg.content}</div>
               <div className="dm-bubble-meta">
-                {it.msg.pending && <span className="dm-bubble-spinner" aria-label="Sending" role="status" />}
+                {it.msg.pending && <span className="dm-bubble-spinner" aria-label={t('common.sending')} role="status" />}
                 <span className="dm-bubble-time">{timeOfDay(it.msg.createdAt)}</span>
               </div>
               {it.msg.failed && it.msg.clientTag && (
                 <div className="dm-bubble-failed" data-testid="mobile-dm-failed">
-                  <span className="dm-bubble-failed-label">Couldn’t send</span>
+                  <span className="dm-bubble-failed-label">{t('dm.failedSend')}</span>
                   <button
                     type="button"
                     className="dm-bubble-retry"
                     onClick={() => onRetry(it.msg.clientTag!)}
                     data-testid="mobile-dm-retry"
                   >
-                    Retry
+                    {t('common.retry')}
                   </button>
                   <button
                     type="button"
                     className="dm-bubble-dismiss"
                     onClick={() => onDismiss(it.msg.clientTag!)}
-                    aria-label="Dismiss failed message"
+                    aria-label={t('dm.dismissFailed')}
                   >
                     ✕
                   </button>
@@ -3340,14 +3573,14 @@ function DmThreadScreen({
 
       <div className="composer">
         <div className="composer-inner">
-          <button className="composer-attach" aria-label="Attach">
+          <button className="composer-attach" aria-label={t('dm.attach')}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
           </button>
           <input
             className="composer-input"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder="Encrypted message (NIP-04)"
+            placeholder={t('dm.placeholderEncrypted')}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -3357,7 +3590,7 @@ function DmThreadScreen({
           />
           <div className="composer-btns">
             {draft.trim() ? (
-              <button className="composer-send" onClick={() => send()} aria-label="Send">
+              <button className="composer-send" onClick={() => send()} aria-label={t('common.send')}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 14-7-7 14-2-5-5-2z" /></svg>
               </button>
             ) : (
@@ -3385,6 +3618,7 @@ function InboxScreen({
   selectGroup: (groupId: string, kind: JsGroup['kind']) => void;
   selectPeer: (peer: string) => void;
 }) {
+  const { t } = useTranslation();
   const events = useReadStateStore((s) => s.inboxEvents);
   const markInboxRead = useReadStateStore((s) => s.advanceInboxRead);
   const markAllAsRead = useReadStateStore((s) => s.markAllAsRead);
@@ -3420,22 +3654,22 @@ function InboxScreen({
   return (
     <div className="screen active" data-screen="inbox">
       <div className="app-header">
-        <h2>Inbox</h2>
-        <button className="mark-all-read" onClick={handleMarkAll}>Mark all read</button>
+        <h2>{t('inbox.title')}</h2>
+        <button className="mark-all-read" onClick={handleMarkAll}>{t('inbox.markAllRead')}</button>
       </div>
-      <div className="filter-tabs">
-        <button className={`filter-tab ${tab === 'all' ? 'active' : ''}`} onClick={() => setTab('all')}>All · {events.length}</button>
-        <button className={`filter-tab ${tab === 'mentions' ? 'active' : ''}`} onClick={() => setTab('mentions')}>@mentions</button>
-        <button className={`filter-tab ${tab === 'replies' ? 'active' : ''}`} onClick={() => setTab('replies')}>Replies</button>
+      <div className="filter-tabs native-scroll-x">
+        <button className={`filter-tab ${tab === 'all' ? 'active' : ''}`} onClick={() => setTab('all')}>{t('mobile.inbox.all')} · {events.length}</button>
+        <button className={`filter-tab ${tab === 'mentions' ? 'active' : ''}`} onClick={() => setTab('mentions')}>{t('mobile.inbox.mentions')}</button>
+        <button className={`filter-tab ${tab === 'replies' ? 'active' : ''}`} onClick={() => setTab('replies')}>{t('mobile.inbox.replies')}</button>
         <button className={`filter-tab ${tab === 'dms' ? 'active' : ''}`} onClick={() => setTab('dms')}>DMs</button>
-        <button className={`filter-tab ${tab === 'zaps' ? 'active' : ''}`} onClick={() => setTab('zaps')}>Zaps</button>
+        <button className={`filter-tab ${tab === 'zaps' ? 'active' : ''}`} onClick={() => setTab('zaps')}>{t('mobile.inbox.zaps')}</button>
       </div>
-      <div className="activity-list">
+      <div className="activity-list native-scroll-y">
         {filtered.length === 0 && (
           <div className="empty-state" style={{ padding: '40px 24px' }}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" /></svg>
-            <div className="empty-state-title">All caught up</div>
-            <div className="empty-state-desc">Mentions, replies, DMs, and zaps land here as they arrive.</div>
+            <div className="empty-state-title">{t('mobile.inbox.caughtUp')}</div>
+            <div className="empty-state-desc">{t('mobile.inbox.emptyDescription')}</div>
           </div>
         )}
         {filtered.map((e) => (
@@ -3447,18 +3681,19 @@ function InboxScreen({
 }
 
 function InboxCard({ event, onJump }: { event: InboxEvent; onJump: () => void }) {
+  const { t } = useTranslation();
   const meta = useUserMetadata(event.senderPubkey);
   const inboxLastReadAt = useReadStateStore((s) => s.inboxLastReadAt);
   const name = meta?.displayName || meta?.name || shortNpub(event.senderPubkey);
   const tsSec = Math.floor(new Date(event.createdAt).getTime() / 1000);
   const isRead = Date.parse(event.createdAt) <= inboxLastReadAt;
   const typeLabel: Record<InboxEvent['type'], string> = {
-    mention: '@ Mentioned you',
-    reply: '↩ Replied to you',
-    dm: 'Direct message',
-    zap: '⚡ Zap received',
-    everyone: '@ everyone',
-    message: 'Message',
+    mention: t('mobile.inbox.type.mention'),
+    reply: t('mobile.inbox.type.reply'),
+    dm: t('inbox.type.dm'),
+    zap: t('mobile.inbox.type.zap'),
+    everyone: t('mobile.inbox.type.everyone'),
+    message: t('mobile.inbox.type.message'),
   };
   return (
     <button
@@ -3512,10 +3747,10 @@ function ProfileViewScreen({
         style={meta?.banner ? { backgroundImage: `url(${meta.banner})` } : undefined}
       >
         <div className="profile-view-topbar">
-          <button className="back-btn" onClick={back} aria-label="Back">
+          <button className="back-btn" onClick={back} aria-label={t('common.back')}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
           </button>
-          <button className="icon-btn" aria-label="More">
+          <button className="icon-btn" aria-label={t('mobile.profile.more')}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><circle cx="12" cy="5" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="19" r="1.5" /></svg>
           </button>
         </div>
@@ -3533,11 +3768,11 @@ function ProfileViewScreen({
         <div className="profile-view-actions">
           <button className="profile-action follow">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="7" r="4" /><path d="M3 21a6 6 0 0 1 12 0" /><path d="M19 8v6M16 11h6" /></svg>
-            Follow
+            {t('mobile.profile.follow')}
           </button>
           <button className="profile-action" onClick={() => openDm(pubkey)}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
-            Message
+            {t('mobile.profile.message')}
           </button>
           <button className="profile-action zap">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2 3 14h7l-2 8 10-12h-7l2-8z" /></svg>
@@ -3546,8 +3781,8 @@ function ProfileViewScreen({
         </div>
       )}
       <div style={{ flex: 1, padding: 24, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--app-text-mute)', fontSize: 12, textAlign: 'center', gap: 6 }}>
-        <span>Posts and replies will surface here</span>
-        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10 }}>(kind 1 timeline · coming soon)</span>
+        <span>{t('mobile.profile.postsComing')}</span>
+        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10 }}>{t('mobile.profile.timelineComing')}</span>
       </div>
     </div>
   );
@@ -3557,6 +3792,7 @@ function ProfileViewScreen({
 // 10 — member list
 
 function MemberListScreen({ groupId, back, openProfile }: { groupId: string; back: () => void; openProfile: (p: string) => void }) {
+  const { t } = useTranslation();
   const groups = useGroups();
   const group = groups.find((g) => g.id === groupId) ?? null;
   const parentGroup = group?.parent ? groups.find((g) => g.id === group.parent) ?? null : null;
@@ -3565,6 +3801,7 @@ function MemberListScreen({ groupId, back, openProfile }: { groupId: string; bac
     : (group?.name ?? groupId.slice(0, 8));
   const admins = useAdmins(groupId);
   const members = useMembers(groupId);
+  const membershipReady = useMembershipReady(groupId);
 
   const adminSet = useMemo(() => new Set(admins), [admins]);
   const nonAdminMembers = useMemo(() => members.filter((m) => !adminSet.has(m)), [members, adminSet]);
@@ -3596,10 +3833,10 @@ function MemberListScreen({ groupId, back, openProfile }: { groupId: string; bac
       <div className="chat-header chat-header-compact">
         <div className="chat-row">
           <div className="chat-title-block">
-            <button className="back-btn" onClick={back} aria-label="Back">
+            <button className="back-btn" onClick={back} aria-label={t('common.back')}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
             </button>
-            <div className="chat-channel"><span className="hash">#</span>{headerLabel} · members</div>
+            <div className="chat-channel"><span className="hash">#</span>{headerLabel} · {t('mobile.members.label')}</div>
           </div>
           <div className="member-presence-count">{onlineCount}/{allPubkeys.length}</div>
         </div>
@@ -3607,20 +3844,30 @@ function MemberListScreen({ groupId, back, openProfile }: { groupId: string; bac
       <div className="search-body">
         {admins.length > 0 && (
           <>
-            <div className="member-section-label">Admins · {admins.length}</div>
+            <div className="member-section-label">{t('mobile.members.admins')} · {admins.length}</div>
             {admins.map((p) => <MemberRow key={p} pubkey={p} role="admin" online={isOnline(p)} onClick={() => openProfile(p)} />)}
           </>
         )}
         {nonAdminMembers.length > 0 && (
           <>
-            <div className="member-section-label">Members · {nonAdminMembers.length}</div>
+            <div className="member-section-label">{t('mobile.members.members')} · {nonAdminMembers.length}</div>
             {nonAdminMembers.map((p) => <MemberRow key={p} pubkey={p} online={isOnline(p)} onClick={() => openProfile(p)} />)}
           </>
         )}
-        {members.length === 0 && admins.length === 0 && (
+        {members.length === 0 && admins.length === 0 && !membershipReady && (
+          <div
+            className="empty-state"
+            data-testid="members-loading"
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}
+          >
+            <div className="lc-spinner" aria-hidden="true" />
+            <div className="empty-state-title">{t('mobile.members.loading')}</div>
+          </div>
+        )}
+        {members.length === 0 && admins.length === 0 && membershipReady && (
           <div className="empty-state">
-            <div className="empty-state-title">No members</div>
-            <div className="empty-state-desc">No relay-published 39002 members yet.</div>
+            <div className="empty-state-title">{t('mobile.members.empty')}</div>
+            <div className="empty-state-desc">{t('mobile.members.emptyDescription')}</div>
           </div>
         )}
       </div>
@@ -3629,6 +3876,7 @@ function MemberListScreen({ groupId, back, openProfile }: { groupId: string; bac
 }
 
 function MemberRow({ pubkey, role, online, onClick }: { pubkey: string; role?: 'admin'; online: boolean; onClick: () => void }) {
+  const { t } = useTranslation();
   const meta = useUserMetadata(pubkey);
   const name = meta?.displayName || meta?.name || shortNpub(pubkey);
   return (
@@ -3640,7 +3888,7 @@ function MemberRow({ pubkey, role, online, onClick }: { pubkey: string; role?: '
         <span className="member-row-name">{name}</span>
         <span className="member-row-nip">{meta?.nip05 ?? shortNpub(pubkey)}</span>
       </div>
-      {role === 'admin' && <span className="role-badge b-core">admin</span>}
+      {role === 'admin' && <span className="role-badge b-core">{t('mobile.members.admin')}</span>}
       <span className={`member-row-presence ${online ? 'on' : 'off'}`} />
     </button>
   );
@@ -3650,6 +3898,7 @@ function MemberRow({ pubkey, role, online, onClick }: { pubkey: string; role?: '
 // 11 — compose DM (search + open thread)
 
 function ComposeDmScreen({ back, selectPeer }: { back: () => void; selectPeer: (peer: string) => void }) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const dms = useDirectMessages();
 
@@ -3660,31 +3909,31 @@ function ComposeDmScreen({ back, selectPeer }: { back: () => void; selectPeer: (
   return (
     <div className="screen compose-dm-screen active" data-screen="compose-dm">
       <div className="compose-dm-header">
-        <button className="compose-dm-cancel" onClick={back}>Cancel</button>
-        <h2>New message</h2>
+        <button className="compose-dm-cancel" onClick={back}>{t('common.cancel')}</button>
+        <h2>{t('dm.newMessage')}</h2>
         <button
           className={`compose-dm-next ${decoded ? 'active' : ''}`}
           disabled={!decoded}
           onClick={() => decoded && selectPeer(decoded)}
         >
-          Next
+          {t('dm.compose.next')}
         </button>
       </div>
       <div className="compose-dm-to">
-        <span className="compose-dm-to-label">To:</span>
+        <span className="compose-dm-to-label">{t('dm.compose.to')}</span>
         <input
           className="compose-dm-to-input"
-          placeholder="npub… or hex pubkey"
+          placeholder={t('dm.compose.placeholder')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
       </div>
-      <div className="search-section-label">Recent</div>
+      <div className="search-section-label">{t('dm.compose.recent')}</div>
       <div className="compose-dm-body">
         {recent.length === 0 && (
           <div className="empty-state">
-            <div className="empty-state-title">No recent conversations</div>
-            <div className="empty-state-desc">Paste an npub above and tap Next.</div>
+            <div className="empty-state-title">{t('dm.compose.noRecent')}</div>
+            <div className="empty-state-desc">{t('dm.compose.noRecentDescription')}</div>
           </div>
         )}
         {recent.map((p) => <ComposeRecentRow key={p} peer={p} onClick={() => selectPeer(p)} />)}
@@ -3714,7 +3963,14 @@ function ComposeRecentRow({ peer, onClick }: { peer: string; onClick: () => void
 // ───────────────────────────────────────────────────────────────────────────
 // 12 — search
 
-function SearchScreen({ back }: { back: () => void }) {
+export function SearchScreen({
+  back,
+  selectGroup,
+}: {
+  back: () => void;
+  selectGroup: (groupId: string, kind: JsGroup['kind']) => void;
+}) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [chip, setChip] = useState<'all' | 'from' | 'in' | 'mentions' | 'has-image'>('all');
   const groups = useGroups();
@@ -3723,14 +3979,21 @@ function SearchScreen({ back }: { back: () => void }) {
   return (
     <div className="screen search-screen active" data-screen="search">
       <div className="search-header">
-        <button className="back-btn" onClick={back} aria-label="Back">
+        <button className="back-btn" onClick={back} aria-label={t('common.back')}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
         </button>
         <div className="search-input-wrap">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
           <input
-            type="text"
-            placeholder="Search messages, people, channels…"
+            type="search"
+            name="obelisk-mobile-search"
+            aria-label={t('mobile.search.aria')}
+            inputMode="search"
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="none"
+            spellCheck={false}
+            placeholder={t('mobile.search.placeholder')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             autoFocus
@@ -3740,19 +4003,19 @@ function SearchScreen({ back }: { back: () => void }) {
       </div>
       <div className="search-context-pill">in:{shortHost(relay)}</div>
       <div className="search-filter-chips">
-        <button className={`search-chip ${chip === 'all' ? 'active' : ''}`} onClick={() => setChip('all')}>All</button>
+        <button className={`search-chip ${chip === 'all' ? 'active' : ''}`} onClick={() => setChip('all')}>{t('mobile.search.all')}</button>
         <button className={`search-chip ${chip === 'from' ? 'active' : ''}`} onClick={() => setChip('from')}>from:</button>
         <button className={`search-chip ${chip === 'in' ? 'active' : ''}`} onClick={() => setChip('in')}>in:#channel</button>
         <button className={`search-chip ${chip === 'mentions' ? 'active' : ''}`} onClick={() => setChip('mentions')}>mentions:@you</button>
         <button className={`search-chip ${chip === 'has-image' ? 'active' : ''}`} onClick={() => setChip('has-image')}>has:image</button>
       </div>
-      <div className="search-section-label">Channels</div>
+      <div className="search-section-label">{t('search.channels')}</div>
       <div className="search-body">
         {groups
           .filter((g) => !query || (g.name ?? '').toLowerCase().includes(query.toLowerCase()))
           .slice(0, 30)
           .map((g) => (
-            <button key={g.id} className="ch-row" onClick={() => { /* navigate */ }}>
+            <button key={g.id} className="ch-row" onClick={() => selectGroup(g.id, g.kind)}>
               <span className="ch-icon">#</span>
               <span className="ch-name">{g.name ?? g.id.slice(0, 8)}</span>
             </button>
@@ -3762,7 +4025,7 @@ function SearchScreen({ back }: { back: () => void }) {
             <div className="search-empty-mark">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
             </div>
-            Type to filter channels.<br />Server-side message search uses <code>from:</code>, <code>in:#</code>, <code>has:</code>.
+            {t('mobile.search.channelsHelp')}<br />{t('mobile.search.serverSideHelp')}
           </div>
         )}
       </div>
@@ -3773,6 +4036,54 @@ function SearchScreen({ back }: { back: () => void }) {
 // ───────────────────────────────────────────────────────────────────────────
 // 13 — forum (channel-of-channels)
 
+type MobileForumSortBy = 'recent' | 'created';
+type MobileForumTagMatch = 'any' | 'all';
+
+interface MobileForumPrefs {
+  readonly sortBy: MobileForumSortBy;
+  readonly tagMatch: MobileForumTagMatch;
+}
+
+const MOBILE_FORUM_DEFAULT_PREFS: MobileForumPrefs = { sortBy: 'recent', tagMatch: 'any' };
+
+function mobileForumPrefsKey(forumGroupId: string): string {
+  return `obelisk-dex/forum-prefs-mobile/${forumGroupId}`;
+}
+
+function loadMobileForumPrefs(forumGroupId: string): MobileForumPrefs {
+  if (typeof window === 'undefined') return MOBILE_FORUM_DEFAULT_PREFS;
+  try {
+    const raw = window.localStorage.getItem(mobileForumPrefsKey(forumGroupId));
+    if (!raw) return MOBILE_FORUM_DEFAULT_PREFS;
+    const parsed = JSON.parse(raw) as Partial<MobileForumPrefs>;
+    return {
+      sortBy: parsed.sortBy === 'created' ? 'created' : 'recent',
+      tagMatch: parsed.tagMatch === 'all' ? 'all' : 'any',
+    };
+  } catch {
+    return MOBILE_FORUM_DEFAULT_PREFS;
+  }
+}
+
+function saveMobileForumPrefs(forumGroupId: string, prefs: MobileForumPrefs): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(mobileForumPrefsKey(forumGroupId), JSON.stringify(prefs));
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Mobile equivalent of `src/components/chat/ForumView`. Same Discord-style
+ * chrome (search-or-create, sort sheet, tag chips) and same UX rule that
+ * empty / aborted threads stay hidden until their first message — but laid
+ * out for a phone screen and styled with the mobile CSS primitives.
+ *
+ * Gallery view is intentionally not exposed on mobile: at the column count
+ * a phone can sensibly show, gallery cards land at roughly the same size as
+ * list cards and the toggle isn't worth the dropdown real-estate.
+ */
 function ForumScreen({
   groupId,
   back,
@@ -3783,9 +4094,85 @@ function ForumScreen({
   selectChild: (childId: string) => void;
 }) {
   const groups = useGroups();
+  const childrenByParent = useChildrenByParent();
+  const groupMetadataEose = useGroupMetadataEose();
+  const messagesByGroup = useMessagesByGroup();
   const group = groups.find((g) => g.id === groupId);
-  const children = groups.filter((g) => g.parent === groupId);
   const relay = useCurrentRelayUrl();
+  const forumTags: ReadonlyArray<JsForumTag> = group?.forumTags ?? [];
+  const childIds = childrenByParent[groupId] ?? [];
+  const children = useMemo<JsGroup[]>(() => {
+    const byId = new Map(groups.map((g) => [g.id, g] as const));
+    return childIds.map((id) => byId.get(id)).filter(Boolean) as JsGroup[];
+  }, [childIds, groups]);
+
+  const [prefs, setPrefs] = useState<MobileForumPrefs>(() => loadMobileForumPrefs(groupId));
+  useEffect(() => {
+    setPrefs(loadMobileForumPrefs(groupId));
+  }, [groupId]);
+  const updatePrefs = (patch: Partial<MobileForumPrefs>) => {
+    setPrefs((prev) => {
+      const next = { ...prev, ...patch };
+      saveMobileForumPrefs(groupId, next);
+      return next;
+    });
+  };
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTagIds, setSelectedTagIds] = useState<ReadonlyArray<string>>([]);
+  const [showNewThread, setShowNewThread] = useState(false);
+  const [showSort, setShowSort] = useState(false);
+  const [prefillTitle, setPrefillTitle] = useState('');
+
+  useEffect(() => {
+    setSearchQuery('');
+    setSelectedTagIds([]);
+  }, [groupId]);
+
+  const exactMatch = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return true;
+    return children.some((t) => (t.name ?? '').toLowerCase() === q);
+  }, [children, searchQuery]);
+
+  const visibleThreads = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    const filtered = children.filter((t) => {
+      if (q && !(t.name ?? '').toLowerCase().includes(q)) return false;
+      if (selectedTagIds.length > 0) {
+        const set = new Set(t.topics);
+        if (prefs.tagMatch === 'all') {
+          for (const id of selectedTagIds) if (!set.has(id)) return false;
+        } else {
+          if (!selectedTagIds.some((id) => set.has(id))) return false;
+        }
+      }
+      return true;
+    });
+    filtered.sort((a, b) => {
+      const aMsgs = messagesByGroup[a.id] ?? [];
+      const bMsgs = messagesByGroup[b.id] ?? [];
+      const aT = prefs.sortBy === 'recent'
+        ? aMsgs[aMsgs.length - 1]?.createdAt ?? 0
+        : aMsgs[0]?.createdAt ?? 0;
+      const bT = prefs.sortBy === 'recent'
+        ? bMsgs[bMsgs.length - 1]?.createdAt ?? 0
+        : bMsgs[0]?.createdAt ?? 0;
+      return bT - aT;
+    });
+    return filtered;
+  }, [children, searchQuery, selectedTagIds, prefs, messagesByGroup]);
+
+  const threadsLoading = children.length === 0 && !groupMetadataEose;
+  const openNewThread = (initial = '') => {
+    setPrefillTitle(initial);
+    setShowNewThread(true);
+  };
+  const toggleTag = (id: string) => {
+    setSelectedTagIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+  const allActive = selectedTagIds.length === 0;
+  const canCreateFromSearch = !exactMatch && searchQuery.trim().length > 0;
 
   return (
     <div className="screen forum-screen active" data-screen="forum">
@@ -3805,39 +4192,496 @@ function ForumScreen({
           </div>
         </div>
       </div>
-      <button className="forum-new-thread" onClick={() => { /* TODO: open new-thread sheet */ }}>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
-        New thread
-      </button>
-      <div className="forum-list">
-        {children.length === 0 && (
+
+      <div className="forum-chrome" data-testid="mobile-forum-chrome">
+        <form
+          className="forum-search-row"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (canCreateFromSearch) openNewThread(searchQuery.trim());
+          }}
+        >
+          <div className="search-input-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={canCreateFromSearch ? 'Tap + to create…' : 'Search or create a post…'}
+              aria-label="Search or create a thread"
+              data-testid="mobile-forum-search-input"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                className="search-clear"
+                onClick={() => setSearchQuery('')}
+                aria-label="Clear search"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+          <button
+            type="button"
+            className="forum-new-pill"
+            onClick={() => openNewThread('')}
+            data-testid="mobile-forum-new-thread-btn"
+            aria-label="New thread"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
+          </button>
+        </form>
+        <div className="forum-filter-row">
+          <button
+            type="button"
+            className="forum-chip muted"
+            onClick={() => setShowSort(true)}
+            data-testid="mobile-forum-sort-trigger"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 4v16" /><path d="m3 8 4-4 4 4" /><path d="M17 20V4" /><path d="m21 16-4 4-4-4" /></svg>
+            Sort
+          </button>
+          {forumTags.map((tag) => (
+            <button
+              key={tag.id}
+              type="button"
+              className={`forum-chip ${selectedTagIds.includes(tag.id) ? 'active' : ''}`}
+              onClick={() => toggleTag(tag.id)}
+              data-testid={`mobile-forum-tag-${tag.id}`}
+              aria-pressed={selectedTagIds.includes(tag.id)}
+            >
+              {tag.emoji && <span>{tag.emoji}</span>}
+              <span>{tag.name}</span>
+            </button>
+          ))}
+          <button
+            type="button"
+            className={`forum-chip ${allActive ? '' : 'muted'}`}
+            onClick={() => setSelectedTagIds([])}
+            data-testid="mobile-forum-tag-all"
+            aria-pressed={allActive}
+          >
+            All
+          </button>
+        </div>
+      </div>
+
+      <div className="forum-list native-scroll-y">
+        {threadsLoading ? (
+          <div className="empty-state" data-testid="mobile-forum-loading">
+            <div className="empty-state-title">Loading threads…</div>
+          </div>
+        ) : children.length === 0 ? (
           <div className="empty-state">
             <div className="empty-state-title">No threads yet</div>
-            <div className="empty-state-desc">Tap "New thread" to start one.</div>
+            <div className="empty-state-desc">Tap + to start one.</div>
           </div>
+        ) : visibleThreads.length === 0 ? (
+          <div className="empty-state" data-testid="mobile-forum-no-matches">
+            <div className="empty-state-title">
+              No threads match {searchQuery.trim() ? `"${searchQuery.trim()}"` : 'the selected tags'}.
+            </div>
+            {searchQuery.trim() && (
+              <button
+                type="button"
+                className="forum-new-pill"
+                onClick={() => openNewThread(searchQuery.trim())}
+                style={{ marginTop: 10 }}
+              >
+                Create &ldquo;{searchQuery.trim()}&rdquo;
+              </button>
+            )}
+          </div>
+        ) : (
+          visibleThreads.map((c) => (
+            <MobileForumCard
+              key={c.id}
+              group={c}
+              forumTags={forumTags}
+              onClick={() => selectChild(c.id)}
+            />
+          ))
         )}
-        {children.map((c) => <ForumCard key={c.id} group={c} onClick={() => selectChild(c.id)} />)}
+      </div>
+
+      {showNewThread && (
+        <NewThreadSheet
+          forumGroupId={groupId}
+          forumTags={forumTags}
+          initialTitle={prefillTitle}
+          isPublic={group?.isPublic ?? true}
+          isOpen={group?.isOpen ?? true}
+          close={() => setShowNewThread(false)}
+          onCreated={(childId) => {
+            setShowNewThread(false);
+            setSearchQuery('');
+            selectChild(childId);
+          }}
+        />
+      )}
+      {showSort && (
+        <ForumSortSheet
+          prefs={prefs}
+          onChange={updatePrefs}
+          close={() => setShowSort(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+function resolveMobileTopics(
+  topics: ReadonlyArray<string>,
+  forumTags: ReadonlyArray<JsForumTag>,
+): JsForumTag[] {
+  if (topics.length === 0 || forumTags.length === 0) return [];
+  const byId = new Map(forumTags.map((t) => [t.id, t] as const));
+  const seen = new Set<string>();
+  const out: JsForumTag[] = [];
+  for (const id of topics) {
+    if (seen.has(id)) continue;
+    seen.add(id);
+    const ft = byId.get(id);
+    if (ft) out.push(ft);
+  }
+  return out;
+}
+
+function MobileForumCard({
+  group,
+  forumTags,
+  onClick,
+}: {
+  group: JsGroup;
+  forumTags: ReadonlyArray<JsForumTag>;
+  onClick: () => void;
+}) {
+  const messages = useMessages(group.id);
+  // Bridge-owned retry ladder replaces the old UI dwell timer — see
+  // src/lib/nostr-bridge/types.ts MessagesStatus.
+  const messagesStatus = useMessagesStatus(group.id);
+  const op = messages[0] ?? null;
+  const lastMsg = messages[messages.length - 1] ?? null;
+  const opMeta = useUserMetadata(op?.pubkey ?? null);
+  const lastMeta = useUserMetadata(lastMsg?.pubkey ?? null);
+  const tags = useMemo(() => resolveMobileTopics(group.topics, forumTags), [group.topics, forumTags]);
+  // Hide truly-empty threads (matches the desktop forum UX rule).
+  if (!op || !lastMsg) {
+    if (messagesStatus === 'empty-confirmed') return null;
+    // Skeleton-ish: render the card with whatever we have so the user knows
+    // the thread exists and is incoming.
+    return (
+      <button className="forum-card" onClick={onClick} data-testid="mobile-forum-card-skeleton" data-thread-id={group.id}>
+        <div className="forum-card-row">
+          <div className="dm-ava-list" style={{ ...avatarStyle(group.id), width: 36, height: 36, fontSize: 12 }}>
+            {group.picture ? <img src={group.picture} alt="" /> : initialsFor(group.name, group.id.slice(0, 2).toUpperCase())}
+          </div>
+          <div className="forum-card-body">
+            <div className="forum-card-title">{group.name ?? group.id.slice(0, 8)}</div>
+            <div className="forum-card-preview" style={{ opacity: 0.6 }}>Loading…</div>
+          </div>
+        </div>
+      </button>
+    );
+  }
+  const opName = opMeta?.displayName || opMeta?.name || `${op.pubkey.slice(0, 8)}…`;
+  const lastName = lastMeta?.displayName || lastMeta?.name || `${lastMsg.pubkey.slice(0, 8)}…`;
+  return (
+    <button
+      className="forum-card"
+      onClick={onClick}
+      data-testid="mobile-forum-card"
+      data-thread-id={group.id}
+    >
+      <div className="forum-card-row">
+        <div className="dm-ava-list" style={{ ...avatarStyle(group.id), width: 36, height: 36, fontSize: 12 }}>
+          {opMeta?.picture ? (
+            <img src={opMeta.picture} alt="" />
+          ) : group.picture ? (
+            <img src={group.picture} alt="" />
+          ) : (
+            initialsFor(group.name, group.id.slice(0, 2).toUpperCase())
+          )}
+        </div>
+        <div className="forum-card-body">
+          <div className="forum-card-title">{group.name ?? group.id.slice(0, 8)}</div>
+          <div className="forum-card-preview">{op.content}</div>
+          {tags.length > 0 && (
+            <div className="forum-card-tags">
+              {tags.map((t) => (
+                <span key={t.id} className="forum-card-tag" data-testid={`mobile-thread-tag-${t.id}`}>
+                  {t.emoji && <span>{t.emoji}</span>}
+                  <span>{t.name}</span>
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="forum-card-meta">
+            <span><strong>OP</strong> {opName}</span>
+            <span>{messages.length} {messages.length === 1 ? 'msg' : 'msgs'}</span>
+            <span>last {lastName}</span>
+          </div>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function ForumSortSheet({
+  prefs,
+  onChange,
+  close,
+}: {
+  prefs: MobileForumPrefs;
+  onChange: (p: Partial<MobileForumPrefs>) => void;
+  close: () => void;
+}) {
+  return (
+    <div className="sheet-host" data-screen="forum-sort" data-testid="mobile-forum-sort-sheet">
+      <div className="sheet-backdrop" onClick={close} />
+      <div className="sheet native-scroll-y">
+        <div className="sheet-handle" />
+        <div className="zap-title">Sort &amp; view</div>
+        <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>Sort by</label>
+          <SortSheetRow
+            label="Recently active"
+            checked={prefs.sortBy === 'recent'}
+            onClick={() => onChange({ sortBy: 'recent' })}
+            testId="mobile-forum-sort-recent"
+          />
+          <SortSheetRow
+            label="Creation date"
+            checked={prefs.sortBy === 'created'}
+            onClick={() => onChange({ sortBy: 'created' })}
+            testId="mobile-forum-sort-created"
+          />
+          <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em', marginTop: 12 }}>Tag matching</label>
+          <SortSheetRow
+            label="Match any"
+            checked={prefs.tagMatch === 'any'}
+            onClick={() => onChange({ tagMatch: 'any' })}
+            testId="mobile-forum-match-any"
+          />
+          <SortSheetRow
+            label="Match all"
+            checked={prefs.tagMatch === 'all'}
+            onClick={() => onChange({ tagMatch: 'all' })}
+            testId="mobile-forum-match-all"
+          />
+        </section>
+        <div className="setup-actions">
+          <button
+            type="button"
+            className="forum-new-pill"
+            onClick={close}
+            style={{ width: '100%', justifyContent: 'center' }}
+          >
+            Done
+          </button>
+        </div>
       </div>
     </div>
   );
 }
 
-function ForumCard({ group, onClick }: { group: JsGroup; onClick: () => void }) {
+function SortSheetRow({
+  label,
+  checked,
+  onClick,
+  testId,
+}: {
+  label: string;
+  checked: boolean;
+  onClick: () => void;
+  testId: string;
+}) {
   return (
-    <button className="forum-card" onClick={onClick}>
-      <div className="forum-card-row">
-        <div className="dm-ava-list" style={{ ...avatarStyle(group.id), width: 36, height: 36, fontSize: 12 }}>
-          {group.picture ? <img src={group.picture} alt="" /> : initialsFor(group.name, group.id.slice(0, 2).toUpperCase())}
-        </div>
-        <div className="forum-card-body">
-          <div className="forum-card-title">{group.name ?? group.id.slice(0, 8)}</div>
-          {group.about && <div className="forum-card-preview">{group.about}</div>}
-          <div className="forum-card-meta">
-            <span>{group.id.slice(0, 8)}</span>
-          </div>
-        </div>
-      </div>
+    <button
+      type="button"
+      onClick={onClick}
+      data-testid={testId}
+      data-checked={checked ? 'true' : 'false'}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '10px 4px',
+        background: 'transparent',
+        border: 'none',
+        color: 'var(--app-text)',
+        fontSize: 14,
+        cursor: 'pointer',
+        textAlign: 'left',
+      }}
+    >
+      <span>{label}</span>
+      <span
+        style={{
+          width: 16,
+          height: 16,
+          borderRadius: 999,
+          border: `2px solid ${checked ? 'var(--accent)' : 'var(--app-line)'}`,
+          background: checked ? 'var(--accent)' : 'transparent',
+          flexShrink: 0,
+        }}
+      />
     </button>
+  );
+}
+
+function NewThreadSheet({
+  forumGroupId,
+  forumTags,
+  initialTitle,
+  isPublic,
+  isOpen,
+  close,
+  onCreated,
+}: {
+  forumGroupId: string;
+  forumTags: ReadonlyArray<JsForumTag>;
+  initialTitle: string;
+  isPublic: boolean;
+  isOpen: boolean;
+  close: () => void;
+  onCreated: (childId: string) => void;
+}) {
+  const [title, setTitle] = useState(initialTitle);
+  const [body, setBody] = useState('');
+  const [selectedTagIds, setSelectedTagIds] = useState<ReadonlyArray<string>>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const ready = useSignerReady();
+  const myPubkey = useMyPubkey();
+  const serverEmojis = useChatStore((s) => s.serverEmojis);
+  const MAX_TAGS = 5;
+
+  const toggleTag = (id: string) => {
+    setSelectedTagIds((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      if (prev.length >= MAX_TAGS) return prev;
+      return [...prev, id];
+    });
+  };
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim() || !body.trim() || submitting || !myPubkey) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const childId = await nostrActions.createGroup({
+        name: title.trim(),
+        about: undefined,
+        isPublic,
+        isOpen,
+        parent: forumGroupId,
+        topics: selectedTagIds,
+      });
+      await nostrActions.sendMessage(
+        childId,
+        body.trim(),
+        null,
+        emojiTagsForContent(body.trim(), serverEmojis),
+      );
+      onCreated(childId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="sheet-host" data-screen="new-thread" data-testid="mobile-new-thread-sheet">
+      <div className="sheet-backdrop" onClick={close} />
+      <form className="sheet native-scroll-y" onSubmit={onSubmit} style={{ maxHeight: '92%' }}>
+        <div className="sheet-handle" />
+        <div className="zap-title">New thread</div>
+        <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>Title</label>
+          <div className="setup-input-wrap">
+            <input
+              autoFocus
+              className="setup-input"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Thread title"
+              maxLength={140}
+              data-testid="mobile-new-thread-title"
+            />
+          </div>
+          <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em', marginTop: 6 }}>First message</label>
+          <textarea
+            className="setup-textarea"
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            placeholder="What's the post about?"
+            rows={5}
+            data-testid="mobile-new-thread-body"
+          />
+          {forumTags.length > 0 && (
+            <>
+              <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em', marginTop: 6 }}>
+                Tags ({selectedTagIds.length}/{MAX_TAGS})
+              </label>
+              <div className="forum-filter-row" style={{ flexWrap: 'wrap', overflow: 'visible', margin: 0, padding: 0 }} data-testid="mobile-new-thread-tag-picker">
+                {forumTags.map((tag) => {
+                  const active = selectedTagIds.includes(tag.id);
+                  const disabled = !active && selectedTagIds.length >= MAX_TAGS;
+                  return (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      onClick={() => toggleTag(tag.id)}
+                      disabled={disabled}
+                      className={`forum-chip ${active ? 'active' : ''}`}
+                      style={{ opacity: disabled ? 0.4 : 1 }}
+                      data-testid={`mobile-new-thread-tag-${tag.id}`}
+                      aria-pressed={active}
+                    >
+                      {tag.emoji && <span>{tag.emoji}</span>}
+                      <span>{tag.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+          {error && <div style={{ color: '#fca5a5', fontSize: 12 }}>{error}</div>}
+        </section>
+        <div className="setup-actions" style={{ display: 'flex', gap: 8 }}>
+          <button
+            type="button"
+            onClick={close}
+            style={{
+              flex: 1,
+              padding: '12px',
+              borderRadius: 12,
+              background: 'transparent',
+              border: '1px solid var(--app-line)',
+              color: 'var(--app-text-dim)',
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={!ready || submitting || !title.trim() || !body.trim()}
+            className="forum-new-pill"
+            style={{ flex: 1, justifyContent: 'center', padding: '12px' }}
+            data-testid="mobile-new-thread-submit"
+          >
+            {submitting ? 'Creating…' : 'Create'}
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }
 
@@ -3849,12 +4693,40 @@ export function MessageActionsSheet({
   close,
   onZap,
 }: {
-  msg: { id: string; pubkey: string; content: string };
+  msg: {
+    id: string;
+    pubkey: string;
+    content: string;
+    groupId?: string;
+    canModerate?: boolean;
+    canDeleteOwn?: boolean;
+  };
   close: () => void;
   onZap: () => void;
 }) {
   const meta = useUserMetadata(msg.pubkey);
   const name = meta?.displayName || meta?.name || shortNpub(msg.pubkey);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const canDeleteMessage = !!msg.groupId && (msg.canModerate || msg.canDeleteOwn);
+  const deleteMessage = async () => {
+    if (!msg.groupId) return;
+    const label = msg.canModerate ? 'Delete this message for everyone?' : 'Delete your message?';
+    if (typeof window !== 'undefined' && !window.confirm(label)) return;
+    if (msg.canModerate) await nostrActions.deleteGroupEvent(msg.groupId, msg.id);
+    else await nostrActions.removeMessage(msg.groupId, msg.id);
+    close();
+  };
+  const emitReaction = (emoji: string, custom?: PickedCustomEmoji) => {
+    try {
+      window.dispatchEvent(new CustomEvent('obelisk-mobile:react', {
+        detail: {
+          msg,
+          emoji,
+          customEmojis: custom ? { [custom.name]: custom.url } : undefined,
+        },
+      }));
+    } catch { /* ignore */ }
+  };
 
   return (
     <div className="sheet-host" data-screen="msg-actions">
@@ -3865,23 +4737,36 @@ export function MessageActionsSheet({
         </div>
       </div>
       <div className="sheet-backdrop" onClick={close} />
-      <div className="sheet">
+      <div className="sheet native-scroll-y">
         <div className="sheet-handle" />
         <div className="ma-quick-reactions">
           {['👍', '❤️', '🚀', '🔥', '👀', '+'].map((e) => (
-            <button key={e} className="ma-quick-react" onClick={async () => {
-              if (e !== '+') {
-                try {
-                  // We need groupId — caller must close, so reaction is fired from the opener.
-                  // For now: emit through window event so the channel can pick it up.
-                  window.dispatchEvent(new CustomEvent('obelisk-mobile:react', { detail: { msg, emoji: e } }));
-                } catch { /* ignore */ }
+            <button key={e} className="ma-quick-react" onClick={() => {
+              if (e === '+') {
+                setPickerOpen(true);
+                return;
               }
+              emitReaction(e);
               close();
             }}>{e}</button>
           ))}
         </div>
-        <div className="ma-action-list">
+        {pickerOpen && (
+          <div className="emoji-sheet-host" onClick={() => setPickerOpen(false)}>
+            <div className="emoji-sheet native-scroll-y" onClick={(e) => e.stopPropagation()}>
+              <div className="sheet-handle" />
+              <EmojiPicker
+                variant="sheet"
+                onPick={(emoji, custom) => {
+                  emitReaction(emoji, custom);
+                  close();
+                }}
+                onClose={() => setPickerOpen(false)}
+              />
+            </div>
+          </div>
+        )}
+        <div className="ma-action-list native-scroll-y">
           <button
             className="ma-action"
             data-testid="mobile-msg-actions-reply"
@@ -3909,6 +4794,16 @@ export function MessageActionsSheet({
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
             Copy event id
           </button>
+          {canDeleteMessage && (
+            <button
+              className="ma-action danger"
+              data-testid="mobile-msg-actions-delete"
+              onClick={() => { void deleteMessage(); }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M8 6V4h8v2" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v5M14 11v5" /></svg>
+              {msg.canModerate ? 'Delete for everyone' : 'Delete message'}
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -3939,7 +4834,7 @@ function ZapModalSheet({
   return (
     <div className="sheet-host" data-screen="zap-modal">
       <div className="sheet-backdrop" onClick={close} />
-      <div className="sheet">
+      <div className="sheet native-scroll-y">
         <div className="sheet-handle" />
         <div className="zap-title">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2 3 14h7l-2 8 10-12h-7l2-8z" /></svg>
@@ -4008,6 +4903,7 @@ function CopyRow({
   copyText: string;
   testId?: string;
 }) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); }, []);
@@ -4025,20 +4921,21 @@ function CopyRow({
       className={`copy-row ${copied ? 'copied' : ''}`}
       onClick={onCopy}
       data-testid={testId}
-      aria-label={`Copy ${tag}`}
+      aria-label={t('common.copy').replace('{label}', tag)}
     >
       <span className="copy-row-tag">{tag}</span>
-      <span className="copy-row-value">{copied ? 'Copied!' : value}</span>
+      <span className="copy-row-value">{copied ? t('common.copied') : value}</span>
       <span className="copy-row-icon">{copied ? <CopiedIcon /> : <CopyIcon />}</span>
     </button>
   );
 }
 
 function DisconnectConfirmSheet({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
+  const { t } = useTranslation();
   return (
     <div className="sheet-host" data-screen="disconnect-confirm">
       <div className="sheet-backdrop" onClick={onCancel} />
-      <div className="sheet">
+      <div className="sheet native-scroll-y">
         <div className="sheet-handle" />
         <div className="confirm-sheet-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -4047,9 +4944,9 @@ function DisconnectConfirmSheet({ onConfirm, onCancel }: { onConfirm: () => void
             <line x1="21" y1="12" x2="9" y2="12" />
           </svg>
         </div>
-        <div className="confirm-sheet-title">Disconnect from Nostr?</div>
+        <div className="confirm-sheet-title">{t('mobile.settings.disconnectTitle')}</div>
         <div className="confirm-sheet-desc">
-          Your session will end on this device. You'll need your nsec, signer extension, or bunker to log back in.
+          {t('mobile.settings.disconnectDescription')}
         </div>
         <button className="settings-btn-danger" onClick={onConfirm} data-testid="disconnect-confirm">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -4057,15 +4954,16 @@ function DisconnectConfirmSheet({ onConfirm, onCancel }: { onConfirm: () => void
             <polyline points="16 17 21 12 16 7" />
             <line x1="21" y1="12" x2="9" y2="12" />
           </svg>
-          Yes, disconnect
+          {t('mobile.settings.disconnectConfirm')}
         </button>
-        <button className="btn-cancel" onClick={onCancel}>Cancel</button>
+        <button className="btn-cancel" onClick={onCancel}>{t('common.cancel')}</button>
       </div>
     </div>
   );
 }
 
 export function SettingsProfileScreen({ go }: { go: (s: ScreenName) => void }) {
+  const { t } = useTranslation();
   const myPubkey = useMyPubkey();
   const meta = useUserMetadata(myPubkey);
   const name = meta?.displayName || meta?.name || shortNpub(myPubkey ?? '');
@@ -4075,11 +4973,11 @@ export function SettingsProfileScreen({ go }: { go: (s: ScreenName) => void }) {
   return (
     <div className="screen active" data-screen="settings-profile">
       <div className="app-header">
-        <h2>You</h2>
+        <h2>{t('settings.you')}</h2>
       </div>
-      <div className="settings-tabs">
-        <button className="settings-tab active">Profile</button>
-        <button className="settings-tab" onClick={() => go('settings-prefs')}>Preferences</button>
+      <div className="settings-tabs native-scroll-x">
+        <button className="settings-tab active">{t('settings.profile')}</button>
+        <button className="settings-tab" onClick={() => go('settings-prefs')}>{t('settings.preferences')}</button>
       </div>
       <div className="settings-body">
         <div className="settings-card profile-card">
@@ -4099,7 +4997,7 @@ export function SettingsProfileScreen({ go }: { go: (s: ScreenName) => void }) {
           )}
         </div>
         <div className="settings-section">
-          <div className="settings-section-title">Identity</div>
+          <div className="settings-section-title">{t('mobile.settings.identity')}</div>
           {myPubkey && <CopyRow tag="npub" value={shortNpub(myPubkey)} copyText={npub} testId="copy-npub" />}
           {myPubkey && <CopyRow tag="hex" value={`${myPubkey.slice(0, 10)}…${myPubkey.slice(-6)}`} copyText={myPubkey} testId="copy-hex" />}
           {myPubkey && (
@@ -4110,13 +5008,13 @@ export function SettingsProfileScreen({ go }: { go: (s: ScreenName) => void }) {
               rel="noopener noreferrer"
               style={{ textDecoration: 'none' }}
             >
-              <span>Open in another client</span>
+              <span>{t('mobile.settings.openOtherClient')}</span>
               <span className="settings-row-meta muted">njump.me ↗</span>
             </a>
           )}
         </div>
         <button className="settings-btn-primary" onClick={() => go('profile-edit')} data-testid="edit-profile-btn">
-          Edit Nostr Profile
+          {t('mobile.settings.editNostrProfile')}
         </button>
         <button
           className="settings-btn-danger"
@@ -4128,7 +5026,7 @@ export function SettingsProfileScreen({ go }: { go: (s: ScreenName) => void }) {
             <polyline points="16 17 21 12 16 7" />
             <line x1="21" y1="12" x2="9" y2="12" />
           </svg>
-          Disconnect
+          {t('mobile.settings.disconnect')}
         </button>
       </div>
       {confirmingLogout && (
@@ -4145,6 +5043,7 @@ export function SettingsProfileScreen({ go }: { go: (s: ScreenName) => void }) {
 // 16b — settings · profile · edit
 
 export function EditProfileScreen({ go }: { go: (s: ScreenName, dir?: 'forward' | 'back') => void }) {
+  const { t } = useTranslation();
   const myPubkey = useMyPubkey();
   const meta = useUserMetadata(myPubkey);
   const publishProfile = usePublishProfile();
@@ -4191,8 +5090,8 @@ export function EditProfileScreen({ go }: { go: (s: ScreenName, dir?: 'forward' 
   }, [picturePreview, bannerPreview]);
 
   const pickAvatar = (file: File) => {
-    if (!file.type.startsWith('image/')) { setError('Please select an image file'); return; }
-    if (file.size > 10 * 1024 * 1024) { setError('Image is too large (max 10MB)'); return; }
+    if (!file.type.startsWith('image/')) { setError(t('mobile.settings.imageOnly')); return; }
+    if (file.size > 10 * 1024 * 1024) { setError(t('mobile.settings.imageTooLarge')); return; }
     setError(null);
     markDirty();
     setPictureFile(file);
@@ -4201,8 +5100,8 @@ export function EditProfileScreen({ go }: { go: (s: ScreenName, dir?: 'forward' 
   };
 
   const pickBanner = (file: File) => {
-    if (!file.type.startsWith('image/')) { setError('Please select an image file'); return; }
-    if (file.size > 10 * 1024 * 1024) { setError('Image is too large (max 10MB)'); return; }
+    if (!file.type.startsWith('image/')) { setError(t('mobile.settings.imageOnly')); return; }
+    if (file.size > 10 * 1024 * 1024) { setError(t('mobile.settings.imageTooLarge')); return; }
     setError(null);
     markDirty();
     setBannerFile(file);
@@ -4231,7 +5130,7 @@ export function EditProfileScreen({ go }: { go: (s: ScreenName, dir?: 'forward' 
         try { finalBanner = await uploadToBlossom(bannerFile); }
         finally { setUploadingBanner(false); }
       }
-      if (!publishProfile) throw new Error('Not signed in');
+      if (!publishProfile) throw new Error(t('user.notSignedIn'));
       await publishProfile({
         name: nameTrimmed,
         display_name: nameTrimmed,
@@ -4245,7 +5144,7 @@ export function EditProfileScreen({ go }: { go: (s: ScreenName, dir?: 'forward' 
       go('settings-profile', 'back');
     } catch (err) {
       console.warn('[mobile] publishProfile failed', err);
-      setError(err instanceof Error ? err.message : 'Failed to publish profile');
+      setError(err instanceof Error ? err.message : t('mobile.settings.publishFailed'));
     } finally {
       setSaving(false);
     }
@@ -4260,19 +5159,19 @@ export function EditProfileScreen({ go }: { go: (s: ScreenName, dir?: 'forward' 
         <button
           className="back-btn"
           onClick={() => go('settings-profile', 'back')}
-          aria-label="Back"
+          aria-label={t('common.back')}
           disabled={busy}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
         </button>
-        <h2>Edit profile</h2>
+        <h2>{t('mobile.settings.editProfile')}</h2>
         <button
           className="setup-skip save-action"
           onClick={save}
           disabled={!nameValid || busy}
           data-testid="save-profile"
         >
-          {saving ? 'Saving…' : uploadingAvatar || uploadingBanner ? 'Uploading…' : 'Save'}
+          {saving ? t('common.saving') : uploadingAvatar || uploadingBanner ? t('common.uploading') : t('common.save')}
         </button>
       </div>
       <div className="setup-body edit-profile-body">
@@ -4282,7 +5181,7 @@ export function EditProfileScreen({ go }: { go: (s: ScreenName, dir?: 'forward' 
           type="button"
           className={`edit-banner-tap ${currentBanner ? '' : 'empty'} ${uploadingBanner ? 'uploading' : ''}`}
           onClick={() => bannerInputRef.current?.click()}
-          aria-label="Change banner image"
+          aria-label={t('mobile.settings.changeBannerImage')}
           data-testid="edit-banner-tap"
         >
           {currentBanner && <img src={currentBanner} alt="" />}
@@ -4296,7 +5195,7 @@ export function EditProfileScreen({ go }: { go: (s: ScreenName, dir?: 'forward' 
                   <polyline points="17 8 12 3 7 8" />
                   <line x1="12" y1="3" x2="12" y2="15" />
                 </svg>
-                <span>{currentBanner ? 'Change banner' : 'Tap to add banner'}</span>
+                <span>{currentBanner ? t('mobile.settings.changeBanner') : t('mobile.settings.addBanner')}</span>
               </>
             )}
           </div>
@@ -4314,7 +5213,7 @@ export function EditProfileScreen({ go }: { go: (s: ScreenName, dir?: 'forward' 
             type="button"
             className={`edit-avatar-tap ${currentPicture ? '' : 'empty'} ${uploadingAvatar ? 'uploading' : ''}`}
             onClick={() => avatarInputRef.current?.click()}
-            aria-label="Change profile picture"
+            aria-label={t('mobile.settings.changeProfilePicture')}
             data-testid="edit-avatar-tap"
           >
             <NameAvatar pubkey={myPubkey ?? ''} name={name} picture={currentPicture} size={88} className="me-avatar" />
@@ -4337,31 +5236,31 @@ export function EditProfileScreen({ go }: { go: (s: ScreenName, dir?: 'forward' 
             />
           </button>
           <div className="edit-avatar-tip">
-            Tap your avatar or banner to upload a new image. Your changes are published as kind:0 metadata.
+            {t('mobile.settings.uploadTip')}
           </div>
         </div>
 
         <div className="edit-fields">
           <div className="setup-field">
-            <label>Display name</label>
+            <label>{t('mobile.settings.displayName')}</label>
             <div className="setup-input-wrap">
               <input
                 className="setup-input"
                 value={name}
                 onChange={(e) => { markDirty(); setName(e.target.value); }}
-                placeholder="Your name"
+                placeholder={t('mobile.settings.yourName')}
                 maxLength={50}
                 data-testid="edit-name"
               />
             </div>
           </div>
           <div className="setup-field">
-            <label>About</label>
+            <label>{t('user.about')}</label>
             <textarea
               className="setup-textarea"
               value={about}
               onChange={(e) => { markDirty(); setAbout(e.target.value); }}
-              placeholder="A short bio…"
+              placeholder={t('mobile.settings.aboutPlaceholder')}
               maxLength={500}
               rows={3}
               data-testid="edit-about"
@@ -4382,7 +5281,7 @@ export function EditProfileScreen({ go }: { go: (s: ScreenName, dir?: 'forward' 
             </div>
           </div>
           <div className="setup-field">
-            <label>Lightning address</label>
+            <label>{t('mobile.settings.lightningAddress')}</label>
             <div className="setup-input-wrap">
               <input
                 className="setup-input"
@@ -4396,7 +5295,7 @@ export function EditProfileScreen({ go }: { go: (s: ScreenName, dir?: 'forward' 
             </div>
           </div>
           <div className="setup-field">
-            <label>Website</label>
+            <label>{t('user.field.website')}</label>
             <div className="setup-input-wrap">
               <input
                 className="setup-input"
@@ -4417,7 +5316,7 @@ export function EditProfileScreen({ go }: { go: (s: ScreenName, dir?: 'forward' 
           onClick={save}
           disabled={!nameValid || busy}
         >
-          {saving ? 'Saving…' : uploadingAvatar || uploadingBanner ? 'Uploading…' : 'Save changes'}
+          {saving ? t('common.saving') : uploadingAvatar || uploadingBanner ? t('common.uploading') : t('mobile.settings.saveChanges')}
         </button>
       </div>
     </div>
@@ -4427,22 +5326,24 @@ export function EditProfileScreen({ go }: { go: (s: ScreenName, dir?: 'forward' 
 // ───────────────────────────────────────────────────────────────────────────
 // 17 — settings · preferences
 
-function SettingsPrefsScreen({ go }: { go: (s: ScreenName) => void }) {
+export function SettingsPrefsScreen({ go }: { go: (s: ScreenName) => void }) {
+  const { t } = useTranslation();
   const relays = useConfiguredRelays();
   const currentRelay = useCurrentRelayUrl();
+  const dmOptInEnabled = useDmOptInEnabled();
 
   return (
     <div className="screen active" data-screen="settings-prefs">
       <div className="app-header">
-        <h2>You</h2>
+        <h2>{t('settings.you')}</h2>
       </div>
-      <div className="settings-tabs">
-        <button className="settings-tab" onClick={() => go('settings-profile')}>Profile</button>
-        <button className="settings-tab active">Preferences</button>
+      <div className="settings-tabs native-scroll-x">
+        <button className="settings-tab" onClick={() => go('settings-profile')}>{t('settings.profile')}</button>
+        <button className="settings-tab active">{t('settings.preferences')}</button>
       </div>
       <div className="settings-body">
         <div className="settings-section">
-          <div className="settings-section-title">Relays · {relays.length}</div>
+          <div className="settings-section-title">{t('mobile.settings.relays')} · {relays.length}</div>
           {relays.map((url) => {
             const isCurrent = url.replace(/\/+$/, '').toLowerCase() === currentRelay.replace(/\/+$/, '').toLowerCase();
             return (
@@ -4454,22 +5355,38 @@ function SettingsPrefsScreen({ go }: { go: (s: ScreenName) => void }) {
                 <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {shortHost(url)}
                 </span>
-                <span className={`settings-row-meta ${isCurrent ? 'ok' : 'muted'}`}>{isCurrent ? 'active' : 'switch'}</span>
+                <span className={`settings-row-meta ${isCurrent ? 'ok' : 'muted'}`}>{isCurrent ? t('preferences.relays.status.active') : t('preferences.relays.status.switch')}</span>
               </button>
             );
           })}
         </div>
         <div className="settings-section">
-          <div className="settings-section-title">App</div>
+          <div className="settings-section-title">{t('preferences.mobile.app')}</div>
+          <LanguagePreference variant="mobile" />
+          <button
+            type="button"
+            className="settings-row action"
+            onClick={() => setDmOptInEnabled(!dmOptInEnabled)}
+          >
+            <span style={{ minWidth: 0, flex: 1 }}>
+              <span style={{ display: 'block' }}>{t('preferences.directMessages.label')}</span>
+              <span className="settings-row-meta muted" style={{ display: 'block', maxWidth: '100%', marginTop: 3 }}>
+                {t('preferences.directMessages.mobileDescription')}
+              </span>
+            </span>
+            <span
+              className={`toggle ${dmOptInEnabled ? 'on' : ''}`}
+              role="switch"
+              aria-checked={dmOptInEnabled}
+              data-testid="mobile-dm-opt-in-toggle"
+            />
+          </button>
           <div className="settings-row">
-            <span>Theme</span>
-            <span className="settings-row-meta">La Crypta · dark</span>
-          </div>
-          <div className="settings-row">
-            <span>Version</span>
+            <span>{t('preferences.mobile.version')}</span>
             <span className="settings-row-meta muted">obelisk · mobile</span>
           </div>
         </div>
+        <AppearancePreferenceControls variant="mobile" />
       </div>
     </div>
   );
@@ -4479,11 +5396,12 @@ function SettingsPrefsScreen({ go }: { go: (s: ScreenName) => void }) {
 // rehydrating
 
 function RehydratingScreen() {
+  const { t } = useTranslation();
   return (
     <div className="screen active">
       <div className="conn-screen">
         <div className="conn-spinner" />
-        <div style={{ color: 'var(--app-text-dim)', fontSize: 13 }}>Reconnecting…</div>
+        <div style={{ color: 'var(--app-text-dim)', fontSize: 13 }}>{t('common.reconnecting')}</div>
       </div>
     </div>
   );
@@ -4493,13 +5411,15 @@ function RehydratingScreen() {
 // shell — owns nav state
 
 export default function MobileShell() {
+  const { t } = useTranslation();
   const isLoggedIn = useIsLoggedIn();
   const isRehydrating = useIsRehydrating();
+  const dmOptInEnabled = useDmOptInEnabled();
   const myPubkey = useMyPubkey();
   const groups = useGroups();
-  const dms = useDirectMessages();
   const myFollowsEntry = useFollows(myPubkey);
   const myFollows = useMemo(() => myFollowsEntry?.follows ?? [], [myFollowsEntry]);
+  const serverEmojis = useChatStore((s) => s.serverEmojis);
 
   const [nav, setNav] = useState<NavState>(initialNav);
   const navRef = useRef<NavState>(initialNav);
@@ -4521,16 +5441,14 @@ export default function MobileShell() {
   const [isDragging, setIsDragging] = useState(false);
   const dragLayerRef = useRef<HTMLDivElement>(null);
   const screensHostRef = useRef<HTMLDivElement>(null);
+  // Pending animation timer for tap-switches. Rapid direct navigation (search,
+  // channel row, DM row) must cancel it so the delayed tab switch cannot
+  // overwrite the user's latest tap.
+  const tabAnimTimerRef = useRef<number | null>(null);
   // After a drag-commit we suppress the next slide-from-x animation so the
   // newly-mounted screen doesn't double-animate (the drag layer already
   // animated it into place).
   const suppressSlideRef = useRef(false);
-  // Remembers the last sub-screen the user was on for each top-level tab so
-  // that tapping that tab's bottom-nav item from a different tab restores the
-  // user to where they left off (e.g. server>channelA → DMs → tap Servers
-  // returns to channelA, not the bare server list). Tapping the same tab's
-  // button while already inside it still pops to the bare top-level.
-  const lastSubScreenByTabRef = useRef<Partial<Record<ScreenName, NavState>>>({});
 
   // ── navigation helpers ───────────────────────────────────────────────
   // We update `useChatStore.activeChannelId` / `useDMStore.activeDMPubkey`
@@ -4557,11 +5475,25 @@ export default function MobileShell() {
     });
   }, []);
 
+  const cancelPendingTabTransition = useCallback(() => {
+    if (tabAnimTimerRef.current !== null) {
+      window.clearTimeout(tabAnimTimerRef.current);
+      tabAnimTimerRef.current = null;
+    }
+    setIsDragging(false);
+    const layer = dragLayerRef.current;
+    if (layer) {
+      layer.style.transition = 'none';
+      layer.style.transform = '';
+    }
+  }, []);
+
   const go = useCallback((screen: ScreenName, dir: 'forward' | 'back' = 'forward') => {
     if (dir === 'back' && typeof window !== 'undefined') {
       window.history.back();
       return;
     }
+    cancelPendingTabTransition();
     // Sibling tabs in the settings group (Profile ↔ Preferences) toggle
     // in-place. They visually share the `.settings-tabs` strip, so a slide
     // animation reads as broken — the user tapped a tab, not navigated to
@@ -4572,54 +5504,22 @@ export default function MobileShell() {
       (prev === 'settings-prefs' && screen === 'settings-profile');
     if (isSettingsTabSwitch) suppressSlideRef.current = true;
 
-    // Tab-aware "remember where I was" logic. If the user is leaving one
-    // top-level tab (or any of its sub-screens) for a *different* top-level
-    // tab, snapshot the current nav so a return tap can restore it. Sheets
-    // are transient overlays — collapse them to their underlying base screen
-    // before remembering.
-    const prevParent = NAV_ORDER.includes(prev) ? prev : (SUB_TO_NAV[prev] ?? null);
-    const targetIsTopLevel = NAV_ORDER.includes(screen);
-    if (prevParent && targetIsTopLevel && prevParent !== screen) {
-      if (NAV_ORDER.includes(prev)) {
-        // Leaving from the bare tab → no sub-screen to remember; clear any
-        // stale memory so the next return doesn't restore an old position.
-        delete lastSubScreenByTabRef.current[prevParent];
-      } else if (prev === 'msg-actions' || prev === 'zap-modal') {
-        const base = navRef.current.baseScreen;
-        if (base) {
-          lastSubScreenByTabRef.current[prevParent] = {
-            ...navRef.current,
-            screen: base,
-            baseScreen: null,
-            msgContext: null,
-          };
-        }
-      } else {
-        lastSubScreenByTabRef.current[prevParent] = navRef.current;
-      }
-    }
-
-    // When tapping a *different* tab's bottom-nav item, restore that tab's
-    // remembered sub-screen if any. Tapping the active tab's button while
-    // already inside one of its sub-screens still pops to the bare tab.
-    if (targetIsTopLevel && prevParent !== screen) {
-      const remembered = lastSubScreenByTabRef.current[screen];
-      if (remembered) {
-        useChatStore.setState({
-          activeChannelId: remembered.screen === 'channel' ? remembered.groupId : null,
-        });
-        useDMStore.setState({
-          activeDMPubkey: remembered.screen === 'dm-thread' ? remembered.dmPeer : null,
-        });
-        pushNav(() => remembered, dir);
-        return;
-      }
-    }
-
     if (screen !== 'channel') useChatStore.setState({ activeChannelId: null });
     if (screen !== 'dm-thread') useDMStore.setState({ activeDMPubkey: null });
-    pushNav((n) => ({ ...n, screen, baseScreen: null, msgContext: null }), dir);
-  }, [pushNav]);
+    pushNav((n) => {
+      if (NAV_ORDER.includes(screen)) return { ...initialNav, screen };
+      return {
+        ...n,
+        screen,
+        baseScreen: null,
+        msgContext: null,
+        // Sub-screen targets record where we came from so the bottom-nav
+        // highlight + swipe-back behave correctly for screens reachable from
+        // multiple tabs (search, etc).
+        parentScreen: n.screen,
+      };
+    }, dir);
+  }, [cancelPendingTabTransition, pushNav]);
 
   // VoiceStatusBar "jump back to call": the bar lives outside the screens host
   // and can't reach `pushNav` directly, so it dispatches through the
@@ -4633,7 +5533,20 @@ export default function MobileShell() {
       }
       useChatStore.setState({ activeChannelId: null });
       useDMStore.setState({ activeDMPubkey: null });
-      pushNav((n) => ({ ...n, screen: 'voice-room', groupId: channelId, baseScreen: null, msgContext: null }));
+      // Voice jump originates from outside the shell (status bar etc.) — no
+      // meaningful entry parent. Anchor to 'server' so the highlight + swipe
+      // behave like opening voice from the channel list.
+      pushNav((n) => ({
+        ...n,
+        screen: 'voice-room',
+        groupId: channelId,
+        dmPeer: null,
+        profilePubkey: null,
+        forumGroupId: null,
+        baseScreen: null,
+        msgContext: null,
+        parentScreen: 'server',
+      }));
     });
   }, [currentRelayUrl, pushNav]);
 
@@ -4656,8 +5569,8 @@ export default function MobileShell() {
     setNav(parsed);
     navRef.current = parsed;
     if (parsed.screen === 'channel' && parsed.groupId) {
-      useChatStore.setState({ activeChannelId: parsed.groupId, isNearBottom: true });
-    } else if (parsed.screen === 'dm-thread' && parsed.dmPeer) {
+      useChatStore.setState({ activeChannelId: parsed.groupId });
+    } else if (dmOptInEnabled && parsed.screen === 'dm-thread' && parsed.dmPeer) {
       useDMStore.setState({ activeDMPubkey: parsed.dmPeer });
     }
     // Guard entry: a sentinel sits BEHIND the current nav so the first
@@ -4674,7 +5587,7 @@ export default function MobileShell() {
         window.history.pushState(entries[i].state, '', entries[i].url);
       }
     } catch { /* ignore */ }
-  }, [isLoggedIn, currentRelayUrl]);
+  }, [isLoggedIn, currentRelayUrl, dmOptInEnabled]);
 
   // Keep relayRef + URL relay param in sync without pushing history entries.
   useEffect(() => {
@@ -4731,12 +5644,12 @@ export default function MobileShell() {
         setNav(next);
         navRef.current = next;
         useChatStore.setState({ activeChannelId: next.screen === 'channel' ? next.groupId : null });
-        useDMStore.setState({ activeDMPubkey: next.screen === 'dm-thread' ? next.dmPeer : null });
+        useDMStore.setState({ activeDMPubkey: dmOptInEnabled && next.screen === 'dm-thread' ? next.dmPeer : null });
       }
     };
     window.addEventListener('popstate', handler);
     return () => window.removeEventListener('popstate', handler);
-  }, [router]);
+  }, [router, dmOptInEnabled]);
 
   // ── horizontal swipe navigation (drag-tracking carousel) ────────────
   // The user pans horizontally; the active screen translates with the finger
@@ -4764,10 +5677,7 @@ export default function MobileShell() {
   const onTouchStart = useCallback((e: React.TouchEvent) => {
     if (e.touches.length !== 1) { dragRef.current = null; return; }
     const t = e.touches[0];
-    const target = e.target as HTMLElement | null;
-    const ignored = !!target?.closest(
-      '.spaces-strip, .dms-tabs, .filter-tabs, .cats-strip, .emoji-sheet-host, .sheet-host, [data-no-swipe]'
-    );
+    const ignored = shouldIgnoreMobileSwipeTarget(e.target);
     const width = screensHostRef.current?.clientWidth ?? (typeof window !== 'undefined' ? window.innerWidth : 0);
     const now = Date.now();
     dragRef.current = {
@@ -4810,7 +5720,7 @@ export default function MobileShell() {
     }
     if (drag.decided !== 'horizontal') return;
     // Rubber-band when there's no neighbor on the side we're pulling from.
-    const neighbors = neighborsFor(navRef.current.screen);
+    const neighbors = neighborsFor(navRef.current);
     let displayDx = dx;
     if (dx > 0 && !neighbors.left) displayDx = dx * 0.3;
     else if (dx < 0 && !neighbors.right) displayDx = dx * 0.3;
@@ -4823,59 +5733,30 @@ export default function MobileShell() {
 
   const finishDrag = useCallback((dx: number, velocity: number, width: number) => {
     const goingRight = dx > 0;
-    const action = decideSwipeNav(navRef.current.screen, goingRight);
+    const action = decideSwipeNav(navRef.current, goingRight);
     const hasTarget = action.kind === 'top-level';
     const snap = hasTarget ? decideSnap(dx, velocity, width) : 'revert';
     const layer = dragLayerRef.current;
-    const TRANSITION = 'transform 240ms cubic-bezier(0.2, 0.85, 0.25, 1)';
+    const TRANSITION = 'transform 180ms cubic-bezier(0.2, 0.85, 0.25, 1)';
     if (snap === 'commit' && action.kind === 'top-level') {
+      // Animate first, push after. Top-level tab switches always land on the
+      // actual tab, not a remembered thread/channel/voice room.
       const targetTx = goingRight ? width : -width;
       if (layer) {
         layer.style.transition = TRANSITION;
         layer.style.transform = `translateX(${targetTx}px)`;
       }
-      // Snapshot where the user is leaving from so a return swipe/tap to this
-      // tab can restore the same sub-screen. Done before the timeout so the
-      // ref is updated synchronously with the user's commit gesture.
-      const leavingFrom = navRef.current.screen;
-      const leavingParent = NAV_ORDER.includes(leavingFrom)
-        ? leavingFrom
-        : (SUB_TO_NAV[leavingFrom] ?? null);
-      if (leavingParent && leavingParent !== action.target) {
-        if (NAV_ORDER.includes(leavingFrom)) {
-          delete lastSubScreenByTabRef.current[leavingParent];
-        } else if (leavingFrom !== 'msg-actions' && leavingFrom !== 'zap-modal') {
-          lastSubScreenByTabRef.current[leavingParent] = navRef.current;
-        }
-      }
+
       window.setTimeout(() => {
         suppressSlideRef.current = true;
-        // Restore the target tab's last sub-screen if we have one. The drag
-        // slots only render the bare top-level (renderTopLevelScreen), so
-        // during the swipe the user sees the bare tab sliding in — then the
-        // sub-screen overlay appears on top once we push it. There's still a
-        // brief visual seam there, but the destination matches the user's
-        // expectation ("take me back to the channel I was reading"), which
-        // is the more important property.
-        const remembered = lastSubScreenByTabRef.current[action.target];
-        if (remembered) {
-          useChatStore.setState({
-            activeChannelId: remembered.screen === 'channel' ? remembered.groupId : null,
-          });
-          useDMStore.setState({
-            activeDMPubkey: remembered.screen === 'dm-thread' ? remembered.dmPeer : null,
-          });
-          pushNav(() => remembered, action.dir);
-        } else {
-          useChatStore.setState({ activeChannelId: null });
-          useDMStore.setState({ activeDMPubkey: null });
-          pushNav(
-            (n) => ({ ...n, screen: action.target, baseScreen: null, msgContext: null }),
-            action.dir,
-          );
-        }
+        useChatStore.setState({ activeChannelId: null });
+        useDMStore.setState({ activeDMPubkey: null });
+        pushNav(
+          () => ({ ...initialNav, screen: action.target }),
+          action.dir,
+        );
         setIsDragging(false);
-      }, 240);
+      }, 180);
     } else {
       if (layer) {
         layer.style.transition = TRANSITION;
@@ -4883,7 +5764,7 @@ export default function MobileShell() {
       }
       window.setTimeout(() => {
         setIsDragging(false);
-      }, 240);
+      }, 180);
     }
   }, [pushNav]);
 
@@ -4932,10 +5813,27 @@ export default function MobileShell() {
   // the screen-anim wrapper keeps the slide-forward/back class indefinitely,
   // and any subsequent className flip (e.g., after a drag-commit's brief ''
   // suppression) re-triggers the animation as a ghost slide.
+  //
+  // We listen for `animationend` on the live `.screen-anim` element rather
+  // than using a fixed timer. Timers race with rapid re-navigation: a new
+  // `setSlideDir(...)` while the previous animation is still in flight used
+  // to leave the class on, producing the "repeated animation" glitch users
+  // saw. The event-based path scopes cleanup to the actual element that
+  // animated, so re-mounts (different key → fresh DOM node) get a fresh
+  // listener and stale ones don't interfere. The setTimeout fallback covers
+  // `prefers-reduced-motion`, hidden tabs, and other environments where
+  // `animationend` may not fire reliably.
   useEffect(() => {
     if (slideDir === null) return;
-    const id = setTimeout(() => setSlideDir(null), 320);
-    return () => clearTimeout(id);
+    const host = screensHostRef.current;
+    const el = host?.querySelector('.drag-overlay .screen-anim') as HTMLElement | null;
+    const onEnd = () => setSlideDir(null);
+    el?.addEventListener('animationend', onEnd, { once: true });
+    const fallback = window.setTimeout(() => setSlideDir(null), 360);
+    return () => {
+      el?.removeEventListener('animationend', onEnd);
+      clearTimeout(fallback);
+    };
   }, [slideDir, nav.screen]);
 
   // Must be called unconditionally — there's an early return for the guest
@@ -4945,50 +5843,226 @@ export default function MobileShell() {
   const kbInset = useKeyboardInset();
 
   const selectGroup = useCallback((groupId: string, kind: JsGroup['kind']) => {
+    cancelPendingTabTransition();
     if (kind === 'voice' || kind === 'voice-sfu') {
       useChatStore.setState({ activeChannelId: null });
-      pushNav((n) => ({ ...n, screen: 'voice-room', groupId }));
+      useDMStore.setState({ activeDMPubkey: null });
+      pushNav((n) => ({
+        ...n,
+        screen: 'voice-room',
+        groupId,
+        dmPeer: null,
+        profilePubkey: null,
+        forumGroupId: null,
+        baseScreen: null,
+        msgContext: null,
+        parentScreen: 'server',
+      }));
     } else if (kind === 'forum') {
       useChatStore.setState({ activeChannelId: null });
-      pushNav((n) => ({ ...n, screen: 'forum', groupId, forumGroupId: groupId }));
+      useDMStore.setState({ activeDMPubkey: null });
+      pushNav((n) => ({
+        ...n,
+        screen: 'forum',
+        groupId,
+        forumGroupId: groupId,
+        dmPeer: null,
+        profilePubkey: null,
+        baseScreen: null,
+        msgContext: null,
+        parentScreen: 'server',
+      }));
     } else {
       // Pure navigation. The cursor is advanced by `useAutoMarkRead` once the
       // user is actually watching the channel (visible + focused + active).
-      useChatStore.setState({ activeChannelId: groupId, isNearBottom: true });
-      pushNav((n) => ({ ...n, screen: 'channel', groupId }));
+      useChatStore.setState({ activeChannelId: groupId });
+      useDMStore.setState({ activeDMPubkey: null });
+      pushNav((n) => ({
+        ...n,
+        screen: 'channel',
+        groupId,
+        dmPeer: null,
+        profilePubkey: null,
+        forumGroupId: null,
+        baseScreen: null,
+        msgContext: null,
+        parentScreen: 'server',
+      }));
     }
-  }, [pushNav]);
+  }, [cancelPendingTabTransition, pushNav]);
   const selectPeer = useCallback((peer: string) => {
+    cancelPendingTabTransition();
+    if (!dmOptInEnabled) {
+      useChatStore.setState({ activeChannelId: null });
+      useDMStore.setState({ activeDMPubkey: null });
+      pushNav((n) => ({
+        ...n,
+        screen: 'dm-thread',
+        groupId: null,
+        dmPeer: peer,
+        profilePubkey: null,
+        forumGroupId: null,
+        baseScreen: null,
+        msgContext: null,
+        parentScreen: n.screen,
+      }));
+      return;
+    }
     // Pure navigation. The cursor is advanced by `useAutoMarkRead` once the
     // DM thread is open, focused, and visible.
+    useChatStore.setState({ activeChannelId: null });
     useDMStore.setState({ activeDMPubkey: peer });
-    pushNav((n) => ({ ...n, screen: 'dm-thread', dmPeer: peer }));
-  }, [pushNav]);
+    pushNav((n) => ({
+      ...n,
+      screen: 'dm-thread',
+      groupId: null,
+      dmPeer: peer,
+      profilePubkey: null,
+      forumGroupId: null,
+      baseScreen: null,
+      msgContext: null,
+      parentScreen: 'dms-list',
+    }));
+  }, [cancelPendingTabTransition, dmOptInEnabled, pushNav]);
+  // Cross-context screens: stamp parentScreen with the current screen so the
+  // bottom-nav highlight + swipe direction reflect where the user came from.
+  // E.g. profile-view from Inbox keeps Inbox as parent; from a channel keeps
+  // 'channel' (which resolveParent walks up to 'server'). See
+  // docs/mobile-navigation.md §3.
   const openProfile = useCallback((pubkey: string) => {
-    pushNav((n) => ({ ...n, screen: 'profile-view', profilePubkey: pubkey }));
+    pushNav((n) => ({ ...n, screen: 'profile-view', profilePubkey: pubkey, parentScreen: n.screen }));
   }, [pushNav]);
   const openMembers = useCallback(() => {
-    pushNav((n) => ({ ...n, screen: 'member-list' }));
+    pushNav((n) => ({ ...n, screen: 'member-list', parentScreen: n.screen }));
   }, [pushNav]);
-  const openMsgActions = useCallback((msg: { id: string; pubkey: string; content: string }) => {
+  const openMsgActions = useCallback((msg: {
+    id: string;
+    pubkey: string;
+    content: string;
+    groupId: string;
+    canModerate: boolean;
+    canDeleteOwn: boolean;
+  }) => {
     // The sheet animates in vertically on top of the base screen — suppress the
     // default forward slide so the underlying channel doesn't lateral-slide too.
     suppressSlideRef.current = true;
-    pushNav((n) => ({ ...n, baseScreen: n.screen, screen: 'msg-actions', msgContext: msg }));
-  }, [pushNav]);
-  const openZap = useCallback((msg: { id: string; pubkey: string; content: string }) => {
-    suppressSlideRef.current = true;
-    pushNav((n) => ({ ...n, baseScreen: n.screen === 'msg-actions' ? n.baseScreen : n.screen, screen: 'zap-modal', msgContext: msg }));
+    pushNav((n) => ({ ...n, baseScreen: n.screen, screen: 'msg-actions', msgContext: msg, parentScreen: n.screen }));
   }, [pushNav]);
   const closeSheet = useCallback(() => {
     if (typeof window !== 'undefined') window.history.back();
   }, []);
+  const openSharedZap = useMessageZapStore((s) => s.open);
+  const openZap = useCallback((msg: { id: string; pubkey: string; content: string }) => {
+    const groupId = navRef.current.groupId;
+    if (!groupId || msg.pubkey === myPubkey) return;
+    openSharedZap({
+      messageId: msg.id,
+      recipientPubkey: msg.pubkey,
+      recipientLud16: null,
+      displayName: shortNpub(msg.pubkey),
+      groupId,
+    });
+    if (navRef.current.screen === 'msg-actions' || navRef.current.screen === 'zap-modal') {
+      closeSheet();
+    }
+  }, [closeSheet, myPubkey, openSharedZap]);
   const backFromChannel = useCallback(() => {
     if (typeof window !== 'undefined') window.history.back();
   }, []);
   const backFromProfile = useCallback(() => {
     if (typeof window !== 'undefined') window.history.back();
   }, []);
+
+  // ── bottom-nav: direction-aware tab switching ───────────────────────
+  // Tap-switch animation. Top-level buttons are literal: DMs opens DMs,
+  // Servers opens the channel list, etc. Sub-screens can still be popped by
+  // tapping their active tab, but cross-tab switches never restore a hidden
+  // thread/channel/voice-room.
+  const commitCarouselTransition = useCallback((target: ScreenName, dir: 'forward' | 'back') => {
+    const layer = dragLayerRef.current;
+    const width = screensHostRef.current?.clientWidth ?? (typeof window !== 'undefined' ? window.innerWidth : 0);
+    const TRANSITION = 'transform 180ms cubic-bezier(0.2, 0.85, 0.25, 1)';
+
+    const targetTx = dir === 'forward' ? -width : width;
+    setIsDragging(true);
+    if (layer && width > 0) {
+      layer.style.transition = 'none';
+      layer.style.transform = 'translateX(0)';
+      void layer.offsetHeight;
+      layer.style.transition = TRANSITION;
+      layer.style.transform = `translateX(${targetTx}px)`;
+    }
+
+    if (tabAnimTimerRef.current !== null) {
+      window.clearTimeout(tabAnimTimerRef.current);
+    }
+    tabAnimTimerRef.current = window.setTimeout(() => {
+      tabAnimTimerRef.current = null;
+      // Push the bare target now that the animation is done.
+      // suppressSlideRef must be set BEFORE pushNav so the screen-anim
+      // wrapper (if any sub-screen is involved) doesn't re-animate.
+      suppressSlideRef.current = true;
+      useChatStore.setState({ activeChannelId: null });
+      useDMStore.setState({ activeDMPubkey: null });
+      pushNav(
+        () => ({ ...initialNav, screen: target }),
+        dir,
+      );
+      setIsDragging(false);
+    }, 180);
+  }, [pushNav]);
+
+  // Pop to the bare top-level tab while on a sub-screen. The parent tab
+  // is already at drag-curr behind the overlay, so we just slide the
+  // overlay off to the right and then `replaceState` (not pushState) to
+  // collapse the sub-screen entry. Using replaceState fixes the
+  // "press back twice" feel — the back-stack from the bare tab leads to
+  // whatever preceded the sub-screen, not back into it.
+  const popToBareTab = useCallback((target: ScreenName) => {
+    const overlay = screensHostRef.current?.querySelector('.drag-overlay') as HTMLElement | null;
+    if (overlay) {
+      overlay.style.transition = 'transform 180ms cubic-bezier(0.2, 0.85, 0.25, 1)';
+      overlay.style.transform = 'translateX(100%)';
+    }
+    if (tabAnimTimerRef.current !== null) {
+      window.clearTimeout(tabAnimTimerRef.current);
+    }
+    tabAnimTimerRef.current = window.setTimeout(() => {
+      tabAnimTimerRef.current = null;
+      suppressSlideRef.current = true;
+      useChatStore.setState({ activeChannelId: null });
+      useDMStore.setState({ activeDMPubkey: null });
+      const bare: NavState = { ...initialNav, screen: target };
+      setNav(bare);
+      navRef.current = bare;
+      setSlideDir(null);
+      if (typeof window !== 'undefined') {
+        try {
+          window.history.replaceState({ nav: bare }, '', urlFor(bare, relayRef.current));
+        } catch { /* ignore */ }
+      }
+      // Clear the inline transform on the (now unmounting) overlay so a
+      // future overlay mounts at the correct starting position.
+      if (overlay) {
+        overlay.style.transition = '';
+        overlay.style.transform = '';
+      }
+    }, 180);
+  }, []);
+
+  const onTabPress = useCallback((target: ScreenName) => {
+    const action = decideTabPress(navRef.current, target);
+    switch (action.kind) {
+      case 'noop':
+        return;
+      case 'pop':
+        popToBareTab(action.target);
+        return;
+      case 'switch':
+        commitCarouselTransition(action.target, action.dir);
+        return;
+    }
+  }, [commitCarouselTransition, popToBareTab]);
 
   // Renders one of the four top-level tab screens — used to mount the
   // neighbor screens in the drag carousel slots without duplicating the
@@ -4999,7 +6073,9 @@ export default function MobileShell() {
       case 'server':
         return <ServerScreen go={go} selectGroup={selectGroup} />;
       case 'dms-list':
-        return <DmsListScreen go={go} selectPeer={selectPeer} myFollows={myFollows} />;
+        return dmOptInEnabled
+          ? <DmsListScreen go={go} selectPeer={selectPeer} myFollows={myFollows} />
+          : <MobileDmOptInScreen onSecondary={() => go('server')} />;
       case 'inbox':
         return <InboxScreen go={go} selectGroup={selectGroup} selectPeer={selectPeer} />;
       case 'settings-profile':
@@ -5007,24 +6083,69 @@ export default function MobileShell() {
       default:
         return null;
     }
-  }, [go, selectGroup, selectPeer, myFollows]);
+  }, [dmOptInEnabled, go, selectGroup, selectPeer, myFollows]);
 
-  const dragNeighbors = useMemo(() => neighborsFor(nav.screen), [nav.screen]);
+  const dragNeighbors = useMemo(() => neighborsFor(nav), [nav]);
 
+
+  // Mirror the watched channel into the bridge. Without this:
+  //   1) the active-channel priority gate (background message-queue drain
+  //      pauses while the active channel is in 'loading') never engages
+  //      on mobile — the watched channel doesn't get its bandwidth boost.
+  //   2) Re-entering a channel that was previously declared
+  //      `empty-confirmed` doesn't auto-restart its kind 9 sub, so the
+  //      user sees "No messages yet" flash before the bridge gets a
+  //      chance to recover.
+  //
+  // useLayoutEffect (not useEffect): the bridge's setActiveGroup flips
+  // status to 'loading' synchronously when it restarts a stale empty
+  // channel. Running before paint means the chat panel's first paint
+  // already reflects 'loading' instead of the stale 'empty-confirmed'.
+  // Sync `getBridgeSync` is used over async `nostrActions.setActiveGroup`
+  // so the status flip lands in this commit, not a later microtask.
+  useLayoutEffect(() => {
+    const bridge = getBridgeSync();
+    if (!bridge) return;
+    if (nav.screen === 'channel' && nav.groupId) {
+      bridge.setActiveGroup(nav.groupId);
+    } else {
+      bridge.setActiveGroup(null);
+    }
+  }, [nav.screen, nav.groupId]);
+
+  useEffect(() => {
+    useDMStore.setState({
+      activeDMPubkey: dmOptInEnabled && nav.screen === 'dm-thread' ? nav.dmPeer : null,
+    });
+  }, [dmOptInEnabled, nav.screen, nav.dmPeer]);
 
   // Listen for reaction emit from msg-actions sheet
   useEffect(() => {
     const handler = async (e: Event) => {
-      const ev = e as CustomEvent<{ msg: { id: string; pubkey: string }; emoji: string }>;
+      const ev = e as CustomEvent<{
+        msg: { id: string; pubkey: string };
+        emoji: string;
+        customEmojis?: CustomEmojiMap;
+      }>;
       const groupId = nav.groupId;
       if (!groupId) return;
       try {
-        await nostrActions.sendReaction(ev.detail.msg.id, ev.detail.msg.pubkey, ev.detail.emoji, groupId);
+        const emojiTags = emojiTagsForContent(
+          ev.detail.emoji,
+          mergeCustomEmojiMaps(serverEmojis, ev.detail.customEmojis),
+        );
+        await nostrActions.sendReaction(
+          ev.detail.msg.id,
+          ev.detail.msg.pubkey,
+          ev.detail.emoji,
+          groupId,
+          emojiTags,
+        );
       } catch (err) { console.warn('[mobile] react failed', err); }
     };
     window.addEventListener('obelisk-mobile:react', handler);
     return () => window.removeEventListener('obelisk-mobile:react', handler);
-  }, [nav.groupId]);
+  }, [nav.groupId, serverEmojis]);
 
   // ── DM and inbox badges ─────────────────────────────────────────────
   // Both totals are derived from the persisted read-state cursor; they
@@ -5039,7 +6160,7 @@ export default function MobileShell() {
   if (!isLoggedIn) {
     if (isRehydrating) {
       return (
-        <div className="obelisk-mobile">
+        <div className="obelisk-mobile" data-obelisk-app>
           <div className="screens-host">
             <RehydratingScreen />
           </div>
@@ -5047,7 +6168,7 @@ export default function MobileShell() {
       );
     }
     return (
-      <div className="obelisk-mobile">
+      <div className="obelisk-mobile" data-obelisk-app>
         <div className="screens-host">
           <LoginScreen />
         </div>
@@ -5072,7 +6193,7 @@ export default function MobileShell() {
           openProfile={openProfile}
           openMembers={openMembers}
         />
-      ) : <EmptyScreen go={go} title="No channel selected" />;
+      ) : <EmptyScreen go={go} title={t('mobile.empty.noChannelSelected')} />;
       break;
     case 'voice-room':
       body = nav.groupId ? (
@@ -5081,15 +6202,19 @@ export default function MobileShell() {
           back={() => go('server', 'back')}
           openChat={() => { pushNav((n) => ({ ...n, screen: 'channel' })); }}
         />
-      ) : <EmptyScreen go={go} title="No voice channel" />;
+      ) : <EmptyScreen go={go} title={t('mobile.empty.noVoiceChannel')} />;
       break;
     case 'dms-list':
-      body = <DmsListScreen go={go} selectPeer={selectPeer} myFollows={myFollows} />;
+      body = dmOptInEnabled
+        ? <DmsListScreen go={go} selectPeer={selectPeer} myFollows={myFollows} />
+        : <MobileDmOptInScreen onSecondary={() => go('server')} />;
       break;
     case 'dm-thread':
-      body = nav.dmPeer ? (
+      body = !dmOptInEnabled ? (
+        <MobileDmOptInScreen secondaryLabel={t('common.back')} onSecondary={() => go('dms-list', 'back')} />
+      ) : nav.dmPeer ? (
         <DmThreadScreen peer={nav.dmPeer} back={() => go('dms-list', 'back')} openProfile={openProfile} />
-      ) : <EmptyScreen go={go} title="No conversation" />;
+      ) : <EmptyScreen go={go} title={t('mobile.empty.noConversation')} />;
       break;
     case 'inbox':
       body = <InboxScreen go={go} selectGroup={selectGroup} selectPeer={selectPeer} />;
@@ -5097,23 +6222,25 @@ export default function MobileShell() {
     case 'profile-view':
       body = nav.profilePubkey ? (
         <ProfileViewScreen pubkey={nav.profilePubkey} back={backFromProfile} openDm={selectPeer} />
-      ) : <EmptyScreen go={go} title="No profile selected" />;
+      ) : <EmptyScreen go={go} title={t('mobile.empty.noProfileSelected')} />;
       break;
     case 'member-list':
       body = nav.groupId ? (
         <MemberListScreen groupId={nav.groupId} back={() => { if (typeof window !== 'undefined') window.history.back(); }} openProfile={openProfile} />
-      ) : <EmptyScreen go={go} title="No channel" />;
+      ) : <EmptyScreen go={go} title={t('mobile.empty.noChannel')} />;
       break;
     case 'compose-dm':
-      body = <ComposeDmScreen back={() => go('dms-list', 'back')} selectPeer={selectPeer} />;
+      body = dmOptInEnabled
+        ? <ComposeDmScreen back={() => go('dms-list', 'back')} selectPeer={selectPeer} />
+        : <MobileDmOptInScreen secondaryLabel={t('common.back')} onSecondary={() => go('dms-list', 'back')} />;
       break;
     case 'search':
-      body = <SearchScreen back={() => go('server', 'back')} />;
+      body = <SearchScreen back={() => go('server', 'back')} selectGroup={selectGroup} />;
       break;
     case 'forum':
       body = nav.groupId ? (
         <ForumScreen groupId={nav.groupId} back={() => go('server', 'back')} selectChild={(childId) => selectGroup(childId, 'text')} />
-      ) : <EmptyScreen go={go} title="No forum" />;
+      ) : <EmptyScreen go={go} title={t('mobile.empty.noForum')} />;
       break;
     case 'settings-profile':
       body = <SettingsProfileScreen go={go} />;
@@ -5143,13 +6270,15 @@ export default function MobileShell() {
           />
         );
       } else if (nav.baseScreen === 'dm-thread' && nav.dmPeer) {
-        body = <DmThreadScreen peer={nav.dmPeer} back={() => go('dms-list', 'back')} openProfile={openProfile} />;
+        body = dmOptInEnabled
+          ? <DmThreadScreen peer={nav.dmPeer} back={() => go('dms-list', 'back')} openProfile={openProfile} />
+          : <MobileDmOptInScreen secondaryLabel={t('common.back')} onSecondary={() => go('dms-list', 'back')} />;
       } else {
         body = null;
       }
       break;
     default:
-      body = <EmptyScreen go={go} title="Unknown screen" />;
+      body = <EmptyScreen go={go} title={t('mobile.empty.unknownScreen')} />;
   }
 
   // Bottom nav visibility — hide on: voice-room (full-bleed), profile-view,
@@ -5161,12 +6290,7 @@ export default function MobileShell() {
   // so the nav doesn't wedge between the composer and the keyboard.
   // (kbInset is already declared above the guest-branch early return so the
   // hook count stays stable across login state transitions.)
-  const hideNav =
-    nav.screen === 'profile-view' ||
-    nav.screen === 'search' ||
-    nav.screen === 'compose-dm' ||
-    nav.screen === 'profile-edit' ||
-    kbInset > 0;
+  const hideNav = shouldHideMobileBottomNav(nav.screen, kbInset);
 
   // Sheet screens (msg-actions / zap-modal) render the underlying screen as
   // `body` (see switch above) so the sub-overlay slot stays mounted. The key
@@ -5183,12 +6307,14 @@ export default function MobileShell() {
   return (
     <div
       className="obelisk-mobile"
+      data-obelisk-app
       style={kbInset > 0 ? ({ ['--kb-inset' as string]: `${kbInset}px` } as React.CSSProperties) : undefined}
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
       onTouchCancel={onTouchCancel}
     >
+      <MessageZapModal />
       <BackgroundVoiceAudio />
       <div className="screens-host" ref={screensHostRef}>
         <div ref={dragLayerRef} className={`drag-layer ${isDragging ? 'is-dragging' : ''}`}>
@@ -5208,7 +6334,7 @@ export default function MobileShell() {
             // stays at drag-curr regardless of drag state. The actual
             // neighbors revealed by a drag are the previous/next top-level
             // tabs around the parent.
-            const subScreenParent = NAV_ORDER.includes(nav.screen) ? null : SUB_TO_NAV[nav.screen] ?? null;
+            const subScreenParent = resolveParent(nav);
             const role =
               s === nav.screen
                 ? 'drag-curr'
@@ -5248,10 +6374,10 @@ export default function MobileShell() {
         )}
       </div>
       <MobileVoiceStatusSlot screen={nav.screen} kbInset={kbInset} />
-      {!hideNav && <BottomNav active={nav.screen} go={go} dmBadge={dmBadge} inboxBadge={inboxBadge} />}
+      {!hideNav && <BottomNav nav={nav} onTabPress={onTabPress} dmBadge={dmBadge} inboxBadge={inboxBadge} />}
       {exitToast && (
         <div className="mobile-exit-toast" role="status" aria-live="polite">
-          Press back again to exit
+          {t('mobile.navigation.pressBackAgain')}
         </div>
       )}
     </div>
@@ -5285,12 +6411,13 @@ export function MobileVoiceStatusSlot({
 }
 
 function EmptyScreen({ go, title }: { go: (s: ScreenName) => void; title: string }) {
+  const { t } = useTranslation();
   return (
     <div className="screen active">
       <div className="empty-state">
         <div className="empty-state-title">{title}</div>
         <button className="btn-primary" style={{ width: 'auto', padding: '10px 18px' }} onClick={() => go('server')}>
-          Back to home
+          {t('mobile.empty.backHome')}
         </button>
       </div>
     </div>

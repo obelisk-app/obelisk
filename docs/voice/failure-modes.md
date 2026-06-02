@@ -35,6 +35,7 @@ expected)**.
 | Local tab close / refresh | `beforeunload` / `pagehide` → control-channel `bye` to all peers, then `pc.close()` | `peers.tornDownByUnload` (on the leaver), `signals.byeViaControl` (on the receivers) |
 | Multi-tab same pubkey reset | `sessionId` mismatch detected → local hard reset | `peers.sessionMismatchResets` |
 | Glare (simultaneous offers) | Perfect negotiation: polite rolls back, impolite proceeds. Tested by `scripts/e2e/voice/glare.spec.ts` | (assertion-only, no counter) |
+| Mid-call media glare leaves peers stuck on `Media syncing` | After a polite peer rolls back its local offer to answer a colliding remote offer, it keeps the rolled-back local media revision pending and sends a follow-up offer once stable | Assertion in `scripts/e2e/voice/two-peer-mesh.spec.ts`: audio and camera RTP bytes must flow both ways |
 
 ## Topology
 

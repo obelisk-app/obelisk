@@ -49,8 +49,8 @@ This means:
 
 Right now, anti-spam is whatever your relay enforces. Most NIP-29 relays use proof-of-work, allow-lists, or invite-based join flows. We're tracking community work on Web of Trust scoring at the relay level — once relays expose a standard, the client can show trust scores in-line. (Earlier versions of Obelisk computed WoT in the backend; with no backend, the client now defers to whatever the relay enforces.)
 
-## See also
-
-- [What is Obelisk?](/guides/what-is-obelisk) — the elevator pitch
-- [How Obelisk works](/guides/how-obelisk-works) — architecture detail
-- [What's on the roadmap](/guides/future-nostr-relays) — voice, bunker, more
+<RelatedGuides items={[
+  { slug: "what-is-obelisk", note: "the elevator pitch" },
+  { slug: "how-obelisk-works", note: "architecture detail" },
+  { slug: "future-nostr-relays", note: "voice, bunker, more" }
+]} />

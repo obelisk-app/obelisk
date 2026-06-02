@@ -16,22 +16,33 @@
  *     via `cacheSet`.
  *   - Keyed by `relay + kind + id`. The relay scoping prevents cross-relay
  *     leakage (a server's admin list is meaningful only for that relay).
- *   - localStorage-backed. Synchronous, ~5MB cap per origin. v1 only stores
- *     small lists (39001/39002 = N pubkeys per group, kind 0 ~1KB per user).
- *     Messages are NOT cached here — they would blow the cap.
+ *   - localStorage-backed. Synchronous, ~5MB cap per origin. Entries stay
+ *     small by capping the cached window per kind (MESSAGE_CACHE_LIMIT,
+ *     REACTION_CACHE_LIMIT in client.ts); even a heavy account with 20+
+ *     channels stays well under quota.
  *   - Invalidation: explicit only. {@link cacheClearAll} on logout.
  *     {@link cacheDelete} for surgical removal. We deliberately do NOT
  *     invalidate on relay-switch — caches for the previous relay stay on
  *     disk and re-paint instantly if the user switches back.
  *
- * Currently wired:
- *   - kind 39001 / 39002 (admin/member lists)  — see `client.ts` ingestAdminMember
+ * Currently wired (every entry pairs an ingest writer with a seed reader):
+ *   - kind 0             (user profile)         — `client.ts:ingestUserMetadata` + `seedCacheForRelay`
+ *   - kind 7             (reactions)            — `client.ts:ingestReaction` (debounced) + `seedCacheForRelay`
+ *   - kind 9             (group messages)       — `client.ts:ingestMessage` (debounced) + `seedCacheForRelay`
+ *   - kind 9007          (group creators)       — `client.ts:ingestGroupCreator` + `seedCacheForRelay`
+ *   - kind 39000         (group metadata)       — `client.ts:ingestGroupMetadata` + `seedCacheForRelay`
+ *   - kind 39001 / 39002 (admin/member lists)   — `client.ts:ingestAdminMember` + `seedCacheForRelay`
+ *   - kind 30078 layout   (channel layout)      — `channel-layout.ts:subscribeLayout`
+ *   - kind 30078 branding (relay branding)      — `relay-branding.ts:subscribeBranding`
  *
- * TODO (extend later, foundation is here):
- *   - kind 39000   (group metadata)
- *   - kind 0       (user profile metadata)
- *   - kind 30078   (channel layout, NIP-78)
- *   - relay branding events
+ * Deliberately NOT cached:
+ *   - kind 4 DMs — already persisted by the DM store with its own per-account key.
+ *
+ * Note on messages + reactions: the on-disk window is the last
+ * MESSAGE_CACHE_LIMIT messages and REACTION_CACHE_LIMIT reactions per
+ * channel (50 and 500 respectively today). The live REQ still runs and
+ * its echoes overwrite the in-memory store; the cache exists purely to
+ * give the chat pane something to paint before the relay round-trips.
  */
 
 // v3 — bumped to evict cache entries written by the pre-bleed-fix bridge,
@@ -109,9 +120,29 @@ export function cacheGet<T>(relay: string, kind: number, id: string): CachedEntr
  */
 export function cacheSet<T>(relay: string, kind: number, id: string, value: T): void {
   if (!isAvailable()) return;
-  const payload: Storable<T> = { v: value, t: Date.now() };
   try {
-    window.localStorage.setItem(buildKey(relay, kind, id), JSON.stringify(payload));
+    const key = buildKey(relay, kind, id);
+    const valueJson = JSON.stringify(value);
+    if (valueJson === undefined) return;
+
+    const raw = window.localStorage.getItem(key);
+    if (raw !== null) {
+      try {
+        const existing = JSON.parse(raw) as Storable<T>;
+        if (
+          existing
+          && typeof existing === 'object'
+          && 'v' in existing
+          && JSON.stringify(existing.v) === valueJson
+        ) {
+          return;
+        }
+      } catch {
+        // Corrupt entries are overwritten below.
+      }
+    }
+
+    window.localStorage.setItem(key, `{"v":${valueJson},"t":${Date.now()}}`);
   } catch {
     // Quota exceeded, private mode, etc. — degrade silently.
   }

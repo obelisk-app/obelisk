@@ -7,9 +7,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getBridge } from './client';
 import { normalizeRelayUrl } from './relay-url';
+import { usePreferences } from '@/lib/preferences';
 import { wotEngine } from '@/lib/wot/engine';
 import { useWotEnabled } from '@/lib/wot';
-import type { JsGroup, JsMessage, JsReaction, JsDirectMessage, JsUserMetadata, RelayAccessState } from './types';
+import type { JsGroup, JsMessage, JsReaction, JsDirectMessage, JsUserMetadata, MessagesStatus, RelayAccessState } from './types';
 
 function useSubscription<T>(
   subscribe: (
@@ -67,7 +68,7 @@ function useMounted(): boolean {
  * `true` while a stored session is being rehydrated on cold load. The bridge
  * has parsed credentials out of localStorage and is awaiting `connect()`'s
  * relay handshake, but {@link useIsLoggedIn} stays `false` until that
- * resolves (see `docs/auth-and-data-loading.md` §3 for the contract).
+ * resolves (see `docs/data-system.md` §3 for the contract).
  *
  * UI consumers use this to suppress the login modal during that window —
  * without it, users navigating from the landing page back to `/app` see a
@@ -215,10 +216,32 @@ export function useGroups(): ReadonlyArray<JsGroup> {
   }, [all, creators, adminsByGroup, membersByGroup, myPubkey, wotEnabled]);
 }
 
+/**
+ * Look up a single group by id from the bridge's raw store — bypasses the
+ * WoT filter that `useGroups()` applies. Use this whenever the user has
+ * explicitly navigated to a specific channel (URL deep-link, sidebar
+ * click); WoT-hiding a channel the user is trying to view causes a false
+ * "Channel not visible" state in the chat pane. The sidebar list still
+ * uses `useGroups()` (filtered) — discovery and the explicit-navigation
+ * read-path are different operations.
+ */
+export function useGroupById(groupId: string | null): JsGroup | null {
+  const groups = useSubscription<ReadonlyArray<JsGroup>>(
+    (b, cb) => b.subscribeGroups(cb),
+    [],
+    [groupId],
+  );
+  return useMemo(
+    () => (groupId ? groups.find((g) => g.id === groupId) ?? null : null),
+    [groups, groupId],
+  );
+}
+
 export function useMessages(groupId: string | null): ReadonlyArray<JsMessage> {
-  // Mute / WoT filtering happens at ingest now (see wotEngine.isAllowed in
-  // client.ts subscribeWatched.onevent + the verdict-deny pruner). If a
-  // message is in the store, it's allowed.
+  // The bridge owns durable message storage. Moderation/WoT decisions must be
+  // non-destructive: they may hide/filter in UI paths, but they must not wipe
+  // cached channel data just because a verdict or subscription-budget change
+  // happened.
   return useSubscription<ReadonlyArray<JsMessage>>(
     (b, cb) => (groupId ? b.subscribeMessages(groupId, cb) : () => {}),
     [],
@@ -240,7 +263,7 @@ export function useMessagesByGroup(): Readonly<Record<string, ReadonlyArray<JsMe
 
 /**
  * Pagination control for a channel. The live REQ caps at the background
- * limit (see docs/progressive-loading.md); this hook exposes a `loadEarlier`
+ * limit (see docs/data-system.md); this hook exposes a `loadEarlier`
  * action that pulls the next page of older messages on demand and a
  * `reachedStart` flag so the UI can stop offering "Load earlier" once the
  * relay returns no further history.
@@ -289,16 +312,48 @@ export function useGroupMetadataEose(): boolean {
 }
 
 /**
+ * `true` once the per-group admin/member subscriptions have emitted EOSE,
+ * or seeded values were pulled from {@link bridgeCache}. The members pane
+ * reads this to decide between "Loading members…" and an empty MemberList.
+ */
+export function useMembershipReady(groupId: string | null): boolean {
+  return useSubscription<boolean>(
+    (b, cb) => (groupId ? b.subscribeMembershipReady(groupId, cb) : () => {}),
+    false,
+    [groupId],
+  );
+}
+
+/**
  * `true` once the relay has emitted EOSE for the per-group kind 9 messages
- * REQ. The chat pane reads this together with `useMessages(groupId)` to
- * decide between "still loading — show spinner" and "confirmed empty — show
- * welcome copy". Calling this hook also subscribes the group's messages,
- * so a freshly-opened channel always has a live REQ.
+ * REQ. Prefer {@link useMessagesStatus} for new code — EOSE alone is not
+ * proof of emptiness on auth-gated / silent-filtering relays, and the
+ * status hook carries the bridge's retry-backed confidence.
  */
 export function useMessagesEose(groupId: string | null): boolean {
   return useSubscription<boolean>(
     (b, cb) => (groupId ? b.subscribeMessagesEose(groupId, cb) : () => {}),
     false,
+    [groupId],
+  );
+}
+
+/**
+ * Per-group confidence enum for the kind 9 messages stream.
+ *  - `loading`           — still waiting for the first EOSE / first event
+ *  - `empty-unconfirmed` — relay returned EOSE before any events; bridge is retrying
+ *  - `empty-confirmed`   — retries exhausted, treat the channel as empty
+ *  - `has-messages`      — at least one event ingested
+ *
+ * The chat pane should show a loading spinner for `loading` and
+ * `empty-unconfirmed`, and only render "No messages yet" once status
+ * reaches `empty-confirmed`. Subscribing also fast-tracks the underlying
+ * kind 9 REQ.
+ */
+export function useMessagesStatus(groupId: string | null): MessagesStatus {
+  return useSubscription<MessagesStatus>(
+    (b, cb) => (groupId ? b.subscribeMessagesStatus(groupId, cb) : () => {}),
+    'loading',
     [groupId],
   );
 }
@@ -326,12 +381,27 @@ export function useChildrenByParent(): Readonly<Record<string, ReadonlyArray<str
 }
 
 export function useDirectMessages(): Readonly<Record<string, ReadonlyArray<JsDirectMessage>>> {
-  // Mute / WoT filtering happens at ingest; muted peers are already pruned
-  // from the bridge store via the WoT engine's verdict-deny pruner.
-  return useSubscription<Readonly<Record<string, ReadonlyArray<JsDirectMessage>>>>(
-    (b, cb) => b.subscribeDirectMessages(cb),
-    {},
-  );
+  // Non-destructive store: muted/WoT-denied peers may be hidden by UI policy,
+  // but the bridge does not delete DM history automatically.
+  const dmEnabled = usePreferences().directMessagesEnabled;
+  const [value, setValue] = useState<Readonly<Record<string, ReadonlyArray<JsDirectMessage>>>>({});
+  useEffect(() => {
+    let unsub: (() => void) | null = null;
+    let cancelled = false;
+    if (!dmEnabled) {
+      setValue({});
+      return () => {};
+    }
+    getBridge().then((bridge) => {
+      if (cancelled) return;
+      unsub = bridge.subscribeDirectMessages(setValue);
+    });
+    return () => {
+      cancelled = true;
+      unsub?.();
+    };
+  }, [dmEnabled]);
+  return value;
 }
 
 export function useAdmins(groupId: string | null): ReadonlyArray<string> {
@@ -399,11 +469,13 @@ export interface ActiveCallInfo {
   participantCount: number;
   expiresAt: number;
   createdAt: number;
+  mode?: 'sfu' | 'mesh';
+  participantPubkeys?: string[];
 }
 
 /**
  * Live-call state for every voice channel the relay knows about, derived
- * from kind 31314 announcements published by the SFU. Use the per-channel
+ * from SFU kind 31314 announcements and mesh kind 20078 beacons. Use the per-channel
  * variant {@link useActiveCall} for single-channel "LIVE" badges; use this
  * map directly when the consumer iterates many channels (sidebar GroupNode
  * renders).
@@ -419,10 +491,9 @@ export function useActiveCallByChannel(): Readonly<Record<string, ActiveCallInfo
 }
 
 /**
- * `true` when a kind 31314 active-call advertisement is current for this
- * channel — i.e. the SFU has a live room there. Auto-expires off the
- * advertisement's `expiration` tag. UI: render a "LIVE" pill on the
- * channel row when this is true.
+ * Current when an SFU active-call advertisement or mesh presence beacon is
+ * live for this channel. Auto-expires off the event's `expiration` tag.
+ * UI: render a "LIVE" pill on the channel row when this is true.
  */
 export function useActiveCall(channelId: string | null): ActiveCallInfo | null {
   const map = useActiveCallByChannel();

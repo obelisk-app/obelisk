@@ -11,6 +11,7 @@ import {
   replaceShortcodes,
   CUSTOM_EMOJI_PLACEHOLDER_REGEX,
 } from '@/lib/emoji-shortcodes';
+import { mergeCustomEmojiMaps, type CustomEmojiMap } from '@/lib/custom-emoji-tags';
 import type { MemberInfo } from '@/lib/mentions';
 import SpoilerText from './SpoilerText';
 import CodeBlock from './CodeBlock';
@@ -172,8 +173,22 @@ function renderWithMentions(
 // by <WelcomeBanner> (with animated stars) instead of a generic <img>.
 const WELCOME_BANNER_MD_REGEX = /!\[([^\]]*)\]\(([^)\s]*\/api\/welcome-banner[^)\s]*)\)/;
 
-export default function MessageContent({ content, messageId, channelId }: { content: string; messageId?: string; channelId?: string }) {
+export default function MessageContent({
+  content,
+  messageId,
+  channelId,
+  customEmojis,
+}: {
+  content: string;
+  messageId?: string;
+  channelId?: string;
+  customEmojis?: CustomEmojiMap;
+}) {
   const { memberList, serverEmojis } = useChatStore();
+  const mergedEmojis = useMemo(
+    () => mergeCustomEmojiMaps(serverEmojis, customEmojis),
+    [serverEmojis, customEmojis],
+  );
 
   // Hoist image + video + audio URLs out of the message body so we can
   // render them as a gallery / inline player below the text. Without this,
@@ -224,8 +239,8 @@ export default function MessageContent({ content, messageId, channelId }: { cont
   // custom server emojis are replaced with placeholder tokens that
   // `processChildren` below swaps for <img> elements, mirroring mentions.
   const shortcodeResolved = useMemo(
-    () => replaceShortcodes(bodyContent, serverEmojis),
-    [bodyContent, serverEmojis],
+    () => replaceShortcodes(bodyContent, mergedEmojis),
+    [bodyContent, mergedEmojis],
   );
 
   const { text, mentions } = useMemo(
@@ -364,26 +379,26 @@ export default function MessageContent({ content, messageId, channelId }: { cont
       );
     },
     // Headings (limited like Discord)
-    h1({ children }) { return <p className="text-lg font-bold text-lc-white">{processChildren(children, mentions, serverEmojis)}</p>; },
-    h2({ children }) { return <p className="text-base font-bold text-lc-white">{processChildren(children, mentions, serverEmojis)}</p>; },
-    h3({ children }) { return <p className="text-sm font-bold text-lc-white">{processChildren(children, mentions, serverEmojis)}</p>; },
+    h1({ children }) { return <p className="text-lg font-bold text-lc-white">{processChildren(children, mentions, mergedEmojis)}</p>; },
+    h2({ children }) { return <p className="text-base font-bold text-lc-white">{processChildren(children, mentions, mergedEmojis)}</p>; },
+    h3({ children }) { return <p className="text-sm font-bold text-lc-white">{processChildren(children, mentions, mergedEmojis)}</p>; },
     // Text formatting
-    strong({ children }) { return <strong className="font-bold text-lc-white">{processChildren(children, mentions, serverEmojis)}</strong>; },
-    em({ children }) { return <em className="italic text-lc-white/80">{processChildren(children, mentions, serverEmojis)}</em>; },
-    del({ children }) { return <del className="line-through text-lc-muted">{processChildren(children, mentions, serverEmojis)}</del>; },
+    strong({ children }) { return <strong className="font-bold text-lc-white">{processChildren(children, mentions, mergedEmojis)}</strong>; },
+    em({ children }) { return <em className="italic text-lc-white/80">{processChildren(children, mentions, mergedEmojis)}</em>; },
+    del({ children }) { return <del className="line-through text-lc-muted">{processChildren(children, mentions, mergedEmojis)}</del>; },
     // Lists
     ul({ children }) { return <ul className="list-disc list-inside my-1 text-lc-white/90">{children}</ul>; },
     ol({ children }) { return <ol className="list-decimal list-inside my-1 text-lc-white/90">{children}</ol>; },
-    li({ children }) { return <li className="text-sm">{processChildren(children, mentions, serverEmojis)}</li>; },
+    li({ children }) { return <li className="text-sm">{processChildren(children, mentions, mergedEmojis)}</li>; },
     // Paragraph — swap mention placeholders
     p({ children }) {
-      return <p className="my-0">{processChildren(children, mentions, serverEmojis)}</p>;
+      return <p className="my-0">{processChildren(children, mentions, mergedEmojis)}</p>;
     },
     // Spoiler nodes (from our remark plugin)
     spoiler({ children }: { children?: ReactNode }) {
       return <SpoilerText>{children}</SpoilerText>;
     },
-  }), [mentions, serverEmojis]);
+  }), [mentions, mergedEmojis]);
 
   return (
     <span data-testid="message-content">

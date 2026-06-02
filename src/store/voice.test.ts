@@ -33,13 +33,15 @@ describe('voice store quality slice', () => {
     expect(useVoiceStore.getState().peerQuality.abc).toBeUndefined();
   });
 
-  it('leaveVoice resets per-peer quality', () => {
+  it('leaveVoice resets per-peer quality and returns to listening-only mic state', () => {
+    useVoiceStore.setState({ isMuted: false });
     useVoiceStore.getState().setPeerQuality('abc', {
       level: 'fair', rttMs: null, loss: null, jitterMs: null,
       outboundVideoBps: null, outboundFps: null, qualityLimitationReason: null,
     });
     useVoiceStore.getState().leaveVoice();
     expect(useVoiceStore.getState().peerQuality).toEqual({});
+    expect(useVoiceStore.getState().isMuted).toBe(true);
   });
 });
 

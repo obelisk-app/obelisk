@@ -1,9 +1,14 @@
 'use client';
 
 import { use, useEffect, useState } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { nostrActions } from '@/lib/nostr-bridge';
 import { decodeRelayShareCode } from '@/lib/relay-share-link';
+
+const RELAY_BRANDING: Record<string, { logo: string; alt: string }> = {
+  'wss://lacrypta-relay.obelisk.ar': { logo: '/lacrypta-logo.png', alt: 'La Crypta' },
+};
 
 export default function RelayShareLinkPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
@@ -32,7 +37,14 @@ export default function RelayShareLinkPage({ params }: { params: Promise<{ code:
         if (cancelled) return;
         await nostrActions.switchRelay(url);
         if (cancelled) return;
-        router.replace('/app');
+        // Encode the relay in the URL so AppShell's deep-link effect re-applies
+        // it on mount. Without this, a logged-out visitor whose switchRelay()
+        // can't persist (no session yet) loses the choice on the next reload,
+        // and `initialize()` restores the prior session's relay.
+        const host = (() => {
+          try { return new URL(url).host; } catch { return url.replace(/^wss?:\/\//, '').replace(/\/+$/, ''); }
+        })();
+        router.replace(`/app?relay=${encodeURIComponent(host)}`);
       } catch (e) {
         if (!cancelled) setError((e as Error).message || 'Failed to add relay.');
       }
@@ -58,6 +70,16 @@ export default function RelayShareLinkPage({ params }: { params: Promise<{ code:
           </>
         ) : (
           <>
+            {relayUrl && RELAY_BRANDING[relayUrl] && (
+              <Image
+                src={RELAY_BRANDING[relayUrl].logo}
+                alt={RELAY_BRANDING[relayUrl].alt}
+                width={96}
+                height={96}
+                className="mx-auto mb-4 h-24 w-24 rounded-xl object-contain"
+                priority
+              />
+            )}
             <h1 className="text-lg font-bold text-lc-white">Connecting to relay…</h1>
             {relayUrl && (
               <p className="mt-2 break-all font-mono text-xs text-lc-muted">{relayUrl}</p>

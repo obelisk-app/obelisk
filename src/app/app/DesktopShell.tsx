@@ -1,15 +1,18 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   nostrActions,
   useIsLoggedIn,
   useIsRehydrating,
   useConnectionState,
   useCurrentRelayUrl,
+  useConfiguredRelays,
   useGroups,
+  useGroupById,
   useMessages,
-  useMessagesEose,
+  useMessagesStatus,
   useGroupMetadataEose,
   useLoadEarlier,
   useReactions,
@@ -21,28 +24,34 @@ import {
   useDirectMessages,
   useAdmins,
   useMembers,
+  useMembershipReady,
   useGroupCreator,
   useMyMutes,
   useRelayAccess,
   useMyLoginMethod,
   type JsGroup,
+  type JsForumTag,
   type JsMessage,
   type JsUserMetadata,
 } from '@/lib/nostr-bridge';
-import { getBridge, getBridgeImpl } from '@/lib/nostr-bridge';
+import { getBridge, getBridgeImpl, getBridgeSync } from '@/lib/nostr-bridge';
 import { useProfile, usePubkey } from '@nostr-wot/data/react';
 import { initializeWot, useWotEnabled, wotEngine } from '@/lib/wot';
 import { wotColorClass } from '@/lib/wot/colors';
 import { faviconFor, fetchRelayInfo } from '@/lib/relay-info';
 import ServerRail from './ServerRail';
 import DMList from './DMList';
+import { DMOptInBoundary } from './DMOptInGate';
 import LoginModal from './LoginModal';
+import RelayStatusBanner from './RelayStatusBanner';
+import ShootingStars from '@/components/ShootingStars';
 import UserPanel from './UserPanel';
 import SearchBar from './SearchBar';
 import MessageContent from '@/components/chat/MessageContent';
 import { MentionText } from '@/components/chat/MentionText';
 import MentionNavigator from '@/components/chat/MentionNavigator';
 import MemberList from '@/components/chat/MemberList';
+import ChatStoreMembersAdapter from '@/components/chat/ChatStoreMembersAdapter';
 import RelayAdminPanel from '@/components/admin/RelayAdminPanel';
 import VoiceRoom from '@/components/voice/VoiceRoom';
 import ForumView from '@/components/chat/ForumView';
@@ -50,7 +59,7 @@ import VoiceStatusBar from '@/components/voice/VoiceStatusBar';
 import BackgroundVoiceAudio from '@/components/voice/BackgroundVoiceAudio';
 import { useVoiceStore } from '@/store/voice';
 import { useReadStateStore, type InboxEvent } from '@/store/read-state';
-import { useInboxUnreadCount, useChannelHighlights } from '@/lib/read-state/selectors';
+import { useInboxUnreadCount, useChannelHighlights, useCachedChannelHighlights } from '@/lib/read-state/selectors';
 import { subscribeVoiceJump } from '@/lib/voice/jump-to-voice';
 import { useVoiceChatPane } from '@/hooks/chat/useVoiceChatPane';
 import { useChatStore } from '@/store/chat';
@@ -65,9 +74,9 @@ import ModalShell from '@/components/ModalShell';
 import { parseZapCommand } from '@/lib/wallet/parse-zap-command';
 import MentionAutocomplete from '@/components/chat/MentionAutocomplete';
 import SlashCommandAutocomplete, { SLASH_COMMANDS, type SlashCommand } from '@/components/chat/SlashCommandAutocomplete';
-import SlashCommandScaffold, { scaffoldMentionSlotQuery } from '@/components/chat/SlashCommandScaffold';
-import { filterMembers, relayMentionCandidates } from '@/lib/mentions';
-import { hexToNpub, npubToHex } from '@nostr-wot/data';
+import SlashCommandScaffold, { scaffoldMentionSlotQuery, scaffoldMentionSlotRange } from '@/components/chat/SlashCommandScaffold';
+import { applyMentionToDraft, filterMembers, relayMentionCandidates } from '@/lib/mentions';
+import { npubToHex } from '@nostr-wot/data';
 import {
   useChannelLayout,
   useRelayOperatorPubkey,
@@ -81,9 +90,23 @@ import {
   publishBranding,
   type RelayBranding,
 } from '@/lib/relay-branding';
+import {
+  useRelayEmojiSet,
+  relayEmojiMap,
+} from '@/lib/relay-emojis';
+import {
+  emojiTagsForContent,
+  mergeCustomEmojiMaps,
+  type CustomEmojiMap,
+} from '@/lib/custom-emoji-tags';
+import { resolveReactionEmoji } from '@/lib/emoji-shortcodes';
+import { channelScrollPositionKey } from '@/lib/channel-scroll-position';
+import { useChannelScrollPosition } from '@/hooks/chat/useChannelScrollPosition';
+import RelayEmojiAdminModal from '@/components/admin/RelayEmojiAdminModal';
 import BlossomImageInput from '@/components/BlossomImageInput';
 import ActivityIndicator from '@/components/ActivityIndicator';
 import { extractUrls, isImageUrl } from '@/lib/markdown';
+import { useTranslation } from '@/i18n/context';
 
 type View =
   | { kind: 'group'; groupId: string }
@@ -95,6 +118,7 @@ const MEMBERS_KEY = 'obelisk-dex/members-width';
 const SHOW_MEMBERS_KEY = 'obelisk-dex/show-members';
 
 export default function AppShell() {
+  const { t } = useTranslation();
   const isLoggedIn = useIsLoggedIn();
   const isRehydrating = useIsRehydrating();
   const conn = useConnectionState();
@@ -103,17 +127,29 @@ export default function AppShell() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
-  useEffect(() => {
+  // useLayoutEffect (not useEffect): we need the bridge's setActiveGroup
+  // to run BEFORE the browser paints. If it runs in useEffect, the chat
+  // panel renders once with the stale per-group status (e.g.
+  // 'empty-confirmed' from a previous visit) BEFORE the bridge restarts
+  // the sub and flips status to 'loading' — the user sees a one-frame
+  // flash of "No messages yet" → spinner. useLayoutEffect schedules the
+  // state change before paint so only the final state ('loading') hits
+  // the screen. Using `getBridgeSync` keeps the call truly synchronous —
+  // the async `nostrActions.setActiveGroup` indirection would defer the
+  // status flip to a microtask, after the first paint had already
+  // landed.
+  useLayoutEffect(() => {
+    const bridge = getBridgeSync();
     if (view.kind === 'group') {
-      nostrActions.setActiveGroup(view.groupId);
+      bridge?.setActiveGroup(view.groupId);
       // Mirror into the chat store so `isUserWatchingChannel` returns true
       // here too. Without this, desktop's read-state machinery is silently
       // disabled (the gate stays false → cursor never advances → unread
       // counts never clear). Mobile sets these in `selectGroup`; desktop
       // routes through `setView` instead, so we mirror in the same effect.
-      useChatStore.setState({ activeChannelId: view.groupId, isNearBottom: true });
+      useChatStore.setState({ activeChannelId: view.groupId });
     } else {
-      nostrActions.setActiveGroup(null);
+      bridge?.setActiveGroup(null);
       useChatStore.setState({ activeChannelId: null });
     }
   }, [view]);
@@ -201,24 +237,42 @@ export default function AppShell() {
     // A stored session is being reconnected (cold load → relay handshake +
     // optional NIP-46 bunker pre-warm). Show a connecting screen instead of
     // the LoginModal so the user isn't told they're logged out when they're
-    // not. See `useIsRehydrating` and docs/auth-and-data-loading.md §3.
+    // not. See `useIsRehydrating` and docs/data-system.md §3.
     if (isRehydrating) return (<><RehydratingScreen /><ActivityIndicator /></>);
     // Defer LoginModal until after mount: the underlying nui Modal portal +
     // a NIP-07 extension that injects DOM before React hydrates produce a
     // server/client mismatch on the modal-overlay div. Rendering a no-op
     // placeholder for the first paint sidesteps the hydration warning.
     if (!mounted) return <ActivityIndicator />;
-    return (<><LoginModal /><ActivityIndicator /></>);
+    return (
+      <>
+        {/* Animated backdrop — matrix grid + shooting stars + green corner
+            glows. Sits behind the SDK modal (z-index 0; modal portal is at
+            9999). The la-crypta overlay is dimmed in globals.css so the
+            animation bleeds through around the centered card. */}
+        <div className="lc-login-backdrop" aria-hidden="true">
+          <div className="appearance-bg lc-grid-bg absolute inset-0" />
+          <ShootingStars />
+        </div>
+        <LoginModal />
+        <ActivityIndicator />
+      </>
+    );
   }
 
   const railMode: { kind: 'dm' } | { kind: 'relay'; url: string } =
     view.kind === 'dm' ? { kind: 'dm' } : { kind: 'relay', url: relay };
 
   const closeDrawer = () => setSidebarOpen(false);
+  const leaveDms = () => {
+    setView({ kind: 'empty' });
+    closeDrawer();
+  };
 
   return (
     <div
-      className="flex w-screen flex-col overflow-hidden bg-lc-black text-lc-white"
+      className="obelisk-desktop-bg flex w-screen flex-col overflow-hidden text-lc-white"
+      data-obelisk-app
       style={{ height: '100dvh' }}
       onTouchStart={(e) => {
         const t = e.touches[0];
@@ -242,6 +296,7 @@ export default function AppShell() {
       <MessageZapModal />
       <RelayAccessModal />
       <BackgroundVoiceAudio />
+      <DirectMessageSubscriptionAnchor />
       <RelayTopBar
         relay={relay}
         onOpenSidebar={() => setSidebarOpen(true)}
@@ -270,17 +325,24 @@ export default function AppShell() {
             mode={railMode}
             onPickDM={() => { setView({ kind: 'dm', peer: null }); closeDrawer(); }}
             onPickRelay={async (url) => {
-              if (url !== relay) await nostrActions.switchRelay(url);
               setView({ kind: 'empty' });
-              closeDrawer();
+              try {
+                if (url !== relay) await nostrActions.switchRelay(url);
+              } catch (err) {
+                console.warn('[appshell] switchRelay from rail failed', err);
+              } finally {
+                closeDrawer();
+              }
             }}
           />
           <ResizablePane storageKey={SIDEBAR_KEY} defaultWidth={264} min={200} max={500} onWidthChange={setSidebarWidth}>
             {view.kind === 'dm' ? (
-              <DMList
-                activePeer={view.peer}
-                onPick={(p) => { setView({ kind: 'dm', peer: p }); closeDrawer(); }}
-              />
+              <DMOptInBoundary surface="sidebar" secondaryLabel={t('dm.optIn.notNow')} onSecondary={leaveDms}>
+                <DMList
+                  activePeer={view.peer}
+                  onPick={(p) => { setView({ kind: 'dm', peer: p }); closeDrawer(); }}
+                />
+              </DMOptInBoundary>
             ) : (
               <Sidebar
                 relay={relay}
@@ -291,7 +353,7 @@ export default function AppShell() {
             )}
           </ResizablePane>
         </div>
-        <main className="flex flex-1 flex-col overflow-hidden bg-lc-black min-w-0 border-l border-t border-r border-lc-border">
+        <main className="flex flex-1 flex-col overflow-hidden min-w-0 border-t border-r border-lc-border">
           {view.kind === 'group' ? (
             <ChatLayout
               groupId={view.groupId}
@@ -302,7 +364,9 @@ export default function AppShell() {
               onSelectGroup={(gid) => setView({ kind: 'group', groupId: gid })}
             />
           ) : view.kind === 'dm' ? (
-            <DMPanel peer={view.peer} onPickPeer={(p) => setView({ kind: 'dm', peer: p })} />
+            <DMOptInBoundary surface="desktop" secondaryLabel={t('dm.optIn.continueWithout')} onSecondary={leaveDms}>
+              <DMPanel peer={view.peer} onPickPeer={(p) => setView({ kind: 'dm', peer: p })} />
+            </DMOptInBoundary>
           ) : (
             <EmptyState />
           )}
@@ -314,17 +378,23 @@ export default function AppShell() {
   );
 }
 
+function DirectMessageSubscriptionAnchor() {
+  useDirectMessages();
+  return null;
+}
+
 function RehydratingScreen() {
+  const { t } = useTranslation();
   return (
     <div
-      className="lc-grid-bg fixed inset-0 z-50 flex items-center justify-center bg-lc-black p-4"
+      className="appearance-bg lc-grid-bg fixed inset-0 z-50 flex items-center justify-center bg-lc-black p-4"
       data-testid="rehydrating-screen"
       role="status"
       aria-live="polite"
     >
       <div className="flex flex-col items-center gap-4">
         <div className="lc-spinner" />
-        <div className="text-sm text-lc-muted">Reconnecting…</div>
+        <div className="text-sm text-lc-muted">{t('common.reconnecting')}</div>
       </div>
     </div>
   );
@@ -360,6 +430,7 @@ function RelayTopBar({
   onJumpToChannel?: (channelId: string) => void;
   onJumpToDm?: (peer: string) => void;
 }) {
+  const { t } = useTranslation();
   const [info, setInfo] = useState<{ name?: string; icon?: string } | null>(null);
   const [iconFailed, setIconFailed] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -420,7 +491,7 @@ function RelayTopBar({
   const iconUrl = info?.icon;
   return (
     <div
-      className="h-14 md:h-10 shrink-0 bg-lc-black px-3"
+      className="h-14 md:h-10 shrink-0 px-3"
       style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
     >
       {onOpenSidebar && (
@@ -441,8 +512,8 @@ function RelayTopBar({
           data-notif-trigger
           onClick={() => setNotifOpen((v) => !v)}
           className="relative p-2.5 md:p-1.5 rounded-lg text-lc-muted hover:text-lc-white hover:bg-lc-border/40 transition-colors"
-          title="Notifications"
-          aria-label="Notifications"
+          title={t('common.notifications')}
+          aria-label={t('common.notifications')}
         >
           <svg className="w-6 h-6 md:w-4 md:h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
@@ -456,8 +527,8 @@ function RelayTopBar({
         <a
           href="/"
           className="p-2.5 md:p-1.5 rounded-lg text-lc-muted hover:text-lc-white hover:bg-lc-border/40 transition-colors inline-flex"
-          title="Help"
-          aria-label="Help"
+          title={t('common.help')}
+          aria-label={t('common.help')}
         >
           <svg className="w-6 h-6 md:w-4 md:h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10" />
@@ -466,30 +537,30 @@ function RelayTopBar({
           </svg>
         </a>
       </div>
-      {notifOpen && (
+      {notifOpen && typeof document !== 'undefined' && createPortal(
         <div
           data-notif-popover
-          className="absolute right-2 md:right-3 top-full mt-1 z-50 w-[min(380px,calc(100vw-1rem))] max-h-[70vh] overflow-hidden rounded-xl border border-lc-border bg-lc-dark shadow-2xl flex flex-col"
+          className="fixed right-2 md:right-3 top-[3.75rem] md:top-11 z-[60] w-[min(380px,calc(100vw-1rem))] max-h-[70vh] overflow-hidden rounded-xl border border-lc-border bg-lc-dark shadow-2xl flex flex-col"
         >
           <div className="flex items-center justify-between px-4 py-3 border-b border-lc-border">
-            <span className="text-sm font-semibold text-lc-white">Notifications</span>
+            <span className="text-sm font-semibold text-lc-white">{t('common.notifications')}</span>
             <div className="flex gap-2">
               {inboxEvents.length > 0 && unreadInboxCount > 0 && (
                 <button
                   onClick={handleMarkAllAsRead}
                   className="text-xs text-lc-green hover:underline"
-                  title="Mark all messages, DMs, and notifications as read"
+                  title={t('desktop.inbox.markReadTitle')}
                 >
-                  Mark read
+                  {t('desktop.inbox.markRead')}
                 </button>
               )}
               {inboxEvents.length > 0 && (
                 <button
                   onClick={clearInboxEvents}
                   className="text-xs text-lc-muted hover:text-lc-white"
-                  title="Clear"
+                  title={t('common.clear')}
                 >
-                  Clear
+                  {t('common.clear')}
                 </button>
               )}
             </div>
@@ -497,7 +568,7 @@ function RelayTopBar({
           <div className="overflow-y-auto flex-1">
             {inboxEvents.length === 0 ? (
               <div className="px-4 py-8 text-center text-sm text-lc-muted">
-                You&apos;re all caught up.
+                {t('desktop.inbox.caughtUp')}
               </div>
             ) : (
               <ul className="flex flex-col">
@@ -512,7 +583,7 @@ function RelayTopBar({
                       <span className={`mt-1 inline-block w-2 h-2 rounded-full shrink-0 ${isRead ? 'bg-transparent' : 'bg-lc-green'}`} />
                       <div className="flex-1 min-w-0">
                         <div className="text-xs uppercase tracking-wider text-lc-muted font-mono mb-0.5">
-                          {e.type === 'dm' ? 'Direct message' : e.type === 'mention' ? '@ Mention' : e.type === 'reply' ? 'Reply' : e.type === 'everyone' ? '@ Everyone' : 'Message'}
+                          {e.type === 'dm' ? t('inbox.type.dm') : e.type === 'mention' ? t('desktop.inbox.type.mention') : e.type === 'reply' ? t('desktop.inbox.type.reply') : e.type === 'everyone' ? t('desktop.inbox.type.everyone') : t('inbox.type.message')}
                           <span className="ml-2 text-lc-muted/70 normal-case tracking-normal">{new Date(e.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                         </div>
                         {e.preview && (
@@ -526,7 +597,8 @@ function RelayTopBar({
               </ul>
             )}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
       <div className="flex items-center gap-2 min-w-0 max-w-[55%]">
         {iconUrl && !iconFailed ? (
@@ -605,10 +677,11 @@ function ResizablePane({
   const handle = (
     <div
       onMouseDown={onMouseDown}
-      className="group/handle relative w-1 cursor-col-resize bg-transparent hover:bg-lc-green/40 active:bg-lc-green/60 max-md:hidden"
+      className="group/handle relative z-20 w-0 cursor-col-resize max-md:hidden"
       title="Drag to resize"
     >
-      <div className="absolute inset-y-0 -left-1 -right-1" />
+      <div className="absolute inset-y-0 -left-2 right-0 w-4" />
+      <div className="pointer-events-none absolute inset-y-0 -left-px w-px bg-lc-green opacity-0 transition-opacity group-hover/handle:opacity-100 group-active/handle:opacity-100" />
     </div>
   );
 
@@ -710,10 +783,33 @@ function Sidebar({
     [layout, roots],
   );
   const branding = useRelayBranding(relay || null, relayAuthors);
+  const emojiSet = useRelayEmojiSet(relay || null, relayAuthors);
+  const setServerEmojis = useChatStore((s) => s.setServerEmojis);
+  useEffect(() => {
+    setServerEmojis(relayEmojiMap(emojiSet));
+  }, [emojiSet, setServerEmojis]);
+  // 1500ms grace period for the title — keeps a skeleton in place while
+  // we wait for branding. If nothing arrives by then, fall back to the
+  // shortHost() label so the user isn't staring at shimmer forever.
+  const [brandingGraceElapsed, setBrandingGraceElapsed] = useState(branding.updatedAt > 0);
+  useEffect(() => {
+    if (branding.updatedAt > 0) {
+      setBrandingGraceElapsed(true);
+      return;
+    }
+    setBrandingGraceElapsed(false);
+    const t = setTimeout(() => setBrandingGraceElapsed(true), 1500);
+    return () => clearTimeout(t);
+  }, [branding.updatedAt, relay]);
+  const brandingLoaded = branding.updatedAt > 0;
+  const showTitleSkeleton = !brandingLoaded && !brandingGraceElapsed;
+  const groupMetadataEoseGlobal = useGroupMetadataEose();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [layoutOpen, setLayoutOpen] = useState(false);
   const [brandingOpen, setBrandingOpen] = useState(false);
+  const [emojisOpen, setEmojisOpen] = useState(false);
   const [adminPanelOpen, setAdminPanelOpen] = useState(false);
+  const configuredRelays = useConfiguredRelays();
   // The desktop FloatingUserPanel (SidebarMe pill, plus VoiceStatusBar when a
   // call is active) sits absolutely over the bottom of the channel list. Pad
   // the scroll container so the last channels can be scrolled clear of it.
@@ -733,8 +829,23 @@ function Sidebar({
 
   return (
     <>
-      <div className="group relative shrink-0 border-b border-transparent shadow-sm transition-colors hover:border-lc-border">
-        {branding.banner && (
+      <div
+        className="group relative shrink-0 border-b border-transparent shadow-sm transition-colors hover:border-lc-border"
+        data-testid="sidebar-header"
+      >
+        {/* Banner slot — always present so swapping in the real image
+            doesn't shift layout. Three states:
+              - branding not loaded yet: lc-banner-placeholder (transparent feel)
+              - branding loaded + has banner URL: image fades in
+              - branding loaded + no banner URL: nothing rendered (clean) */}
+        {!brandingLoaded && (
+          <div
+            aria-hidden
+            data-testid="sidebar-banner-placeholder"
+            className="lc-banner-placeholder absolute inset-0 h-full w-full"
+          />
+        )}
+        {brandingLoaded && branding.banner && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={branding.banner}
@@ -743,14 +854,21 @@ function Sidebar({
             className="absolute inset-0 h-full w-full object-cover"
           />
         )}
-        {branding.banner && (
+        {brandingLoaded && branding.banner && (
           <div
             aria-hidden
             className="absolute inset-0 bg-gradient-to-b from-lc-black/85 via-lc-black/40 to-transparent"
           />
         )}
         <div className="relative flex h-14 items-center gap-3 overflow-hidden px-4">
-          {branding.icon && (
+          {!brandingLoaded && (
+            <div
+              aria-hidden
+              data-testid="sidebar-icon-skeleton"
+              className="lc-skeleton h-9 w-9 shrink-0 rounded-lg border border-lc-border"
+            />
+          )}
+          {brandingLoaded && branding.icon && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={branding.icon}
@@ -759,7 +877,15 @@ function Sidebar({
             />
           )}
           <div className="min-w-0 flex-1 truncate text-base font-bold text-lc-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-            {branding.name || shortHost(relay)}
+            {showTitleSkeleton ? (
+              <span
+                aria-hidden
+                data-testid="sidebar-title-skeleton"
+                className="lc-skeleton inline-block h-4 w-32 align-middle"
+              />
+            ) : (
+              branding.name || shortHost(relay)
+            )}
           </div>
           <span
             title={conn}
@@ -799,6 +925,20 @@ function Sidebar({
           )}
           {isOperator && (
             <button
+              onClick={() => setEmojisOpen(true)}
+              title="Manage relay emojis (group admins only)"
+              aria-label="Manage relay emojis"
+              className="shrink-0 rounded p-1 text-lc-muted hover:bg-lc-card hover:text-lc-white"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="9" />
+                <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+                <path d="M9 9h.01M15 9h.01" />
+              </svg>
+            </button>
+          )}
+          {isOperator && (
+            <button
               onClick={() => setAdminPanelOpen(true)}
               title="Manage admins & members across every channel (group admins only)"
               aria-label="Manage admins and members"
@@ -813,7 +953,14 @@ function Sidebar({
             </button>
           )}
         </div>
-        {branding.banner && <div aria-hidden className="relative h-24" />}
+        {/* Banner-height spacer. Reserved while branding is still loading
+            so the placeholder occupies the same vertical space the real
+            banner would — no layout shift when the image arrives. After
+            branding loads we only keep the spacer if there's an actual
+            banner URL (kept-clean fallback for branding-without-banner). */}
+        {(!brandingLoaded || (brandingLoaded && branding.banner)) && (
+          <div aria-hidden className="relative h-24" />
+        )}
       </div>
 
       {channelsVisible && (
@@ -824,13 +971,24 @@ function Sidebar({
       )}
 
       <div className={`flex-1 overflow-y-auto px-2 pb-2 ${inVoice ? 'md:pb-52' : 'md:pb-20'}`}>
-        {!channelsVisible && (
-          <div className="px-2 py-3">
-            <RelayAccessBanner compact />
+        {/* RelayStatusBanner above the chat pane is the single source of
+            truth for relay/AUTH state — the sidebar no longer duplicates it. */}
+        {groups.length === 0 && channelsVisible && !groupMetadataEoseGlobal && (
+          <div
+            className="px-2 py-3 flex items-center gap-2 text-xs text-lc-muted"
+            data-testid="channels-loading"
+          >
+            <div className="lc-spinner" style={{ width: 14, height: 14, borderWidth: 2 }} />
+            <span>Loading channels…</span>
           </div>
         )}
-        {groups.length === 0 && channelsVisible && (
-          <div className="px-2 py-3 text-xs text-lc-muted">Discovering channels… (kind 39000)</div>
+        {groups.length === 0 && channelsVisible && groupMetadataEoseGlobal && (
+          <div
+            className="px-2 py-3 text-xs text-lc-muted"
+            data-testid="channels-empty"
+          >
+            No channels on this relay yet.
+          </div>
         )}
         {laidOut.categories.map((cat) => (
           <CategorySection
@@ -916,6 +1074,14 @@ function Sidebar({
           relayUrl={relay}
           branding={branding}
           onClose={() => setBrandingOpen(false)}
+        />
+      )}
+      {emojisOpen && relay && (
+        <RelayEmojiAdminModal
+          relayUrl={relay}
+          emojiSet={emojiSet}
+          configuredRelays={configuredRelays}
+          onClose={() => setEmojisOpen(false)}
         />
       )}
       {adminPanelOpen && (
@@ -1014,7 +1180,7 @@ function GroupNode({
   const childIds = childrenByParent[group.id] ?? [];
   const active = view.kind === 'group' && view.groupId === group.id;
   const myPubkey = useMyPubkey();
-  const highlights = useChannelHighlights(group.id, myPubkey);
+  const highlights = useCachedChannelHighlights(group.id, myPubkey);
   // When the user is actively viewing the channel, the auto-mark hook is
   // about to advance the cursor — suppress the badge to avoid a brief
   // count flash. Matches the existing favicon-badge subtraction at
@@ -1687,6 +1853,7 @@ function SidebarMe() {
         className="shrink-0 rounded p-1.5 text-lc-muted hover:bg-lc-card hover:text-lc-white transition-colors"
         title="Settings"
         aria-label="Settings"
+        data-testid="user-settings-button"
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="3"/>
@@ -1759,14 +1926,68 @@ function ChatPanel({
   onConsumePendingMessageId: () => void;
   onSelectGroup: (groupId: string) => void;
 }) {
+  const { t } = useTranslation();
   const messages = useMessages(groupId);
-  const messagesEose = useMessagesEose(groupId);
+  // Retry-backed confidence enum — the bridge runs an internal retry
+  // ladder on empty EOSE before promoting to `empty-confirmed`, so the
+  // UI doesn't need its own dwell timer or auto-refresh effect. See
+  // `MessagesStatus` in src/lib/nostr-bridge/types.ts.
+  const messagesStatus = useMessagesStatus(groupId);
   const groupMetadataEose = useGroupMetadataEose();
+  // Grace window for the *channel-missing* verdict (kind 39000), which
+  // still uses the simpler "EOSE + dwell" gate. The bridge owns kind 9
+  // confidence directly; this timer only matters for the
+  // "Channel not visible on this relay" copy.
+  const [channelMissingGrace, setChannelMissingGrace] = useState(false);
+  useEffect(() => {
+    setChannelMissingGrace(false);
+    const t = setTimeout(() => setChannelMissingGrace(true), 5000);
+    return () => clearTimeout(t);
+  }, [groupId]);
+  // Force-fetch kind 39000 for the channel if the bridge doesn't have it
+  // yet. Without this the user would stare at "Loading channel info…"
+  // for the entire global-metadata stream — or, worse, hit "Channel not
+  // visible" if the stream EOSE'd before this specific id arrived. The
+  // focused querySync is cheap (limit: 1) and unblocks the chat pane on
+  // every navigation, with or without cache.
+  //
+  // `metadataFetchDone` flips true after the focused query resolves
+  // (either way). It gates the final "channel not visible" verdict so
+  // we never declare a channel missing until we've actually tried.
+  const [metadataFetchDone, setMetadataFetchDone] = useState(false);
+  useEffect(() => {
+    setMetadataFetchDone(false);
+    if (!groupId) {
+      setMetadataFetchDone(true);
+      return;
+    }
+    if (group) {
+      setMetadataFetchDone(true);
+      return;
+    }
+    let cancelled = false;
+    void nostrActions
+      .fetchGroupMetadata(groupId)
+      .catch(() => undefined)
+      .then(() => {
+        if (!cancelled) setMetadataFetchDone(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // Only re-fire on groupId change. `group` is read for the early-exit
+    // — if it arrives mid-fetch, we still flip done on resolve.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupId]);
   const reactions = useReactions(groupId);
   const messageIds = useMemo(() => messages.map((m) => m.id), [messages]);
   const zapTotals = useMessageZaps(messageIds);
+  // Raw lookup — bypasses WoT filtering. The user explicitly navigated to
+  // this groupId; WoT-hiding it would cause a false "Channel not visible"
+  // state in the chat pane. The sidebar still uses WoT-filtered
+  // `useGroups()` for discovery, but click-through stays accessible.
+  const group = useGroupById(groupId);
   const groups = useGroups();
-  const group = groups.find((g) => g.id === groupId);
   const admins = useAdmins(groupId);
   const myPubkey = useMyPubkey();
   const isAdmin = !!myPubkey && admins.includes(myPubkey);
@@ -1779,6 +2000,7 @@ function ChatPanel({
   // explains the situation in-place.
   const relayAccess = useRelayAccess(relay || null);
   const messagesVisible = relayAccess === 'ok';
+  const serverEmojis = useChatStore((s) => s.serverEmojis);
   const [draft, setDraft] = useState('');
   const [sendError, setSendError] = useState<string | null>(null);
   const [replyingTo, setReplyingTo] = useState<JsMessage | null>(null);
@@ -1811,6 +2033,11 @@ function ChatPanel({
   }, [groupId, myPubkey, groupCreator, admins, relay, relayAccess]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const voiceMainRef = useRef<HTMLDivElement>(null);
+  const scrollKey = useMemo(() => channelScrollPositionKey(relay, groupId), [relay, groupId]);
+  const scrollKeyRef = useRef(scrollKey);
+  useEffect(() => {
+    scrollKeyRef.current = scrollKey;
+  }, [scrollKey]);
   // Highlights drive the floating mention/reply navigator at the bottom-right
   // of the message viewport — same data the channel-row badges read.
   const channelHighlights = useChannelHighlights(groupId, myPubkey);
@@ -1826,6 +2053,19 @@ function ChatPanel({
   // the now-removed messagesVisible unmount it also re-rendered users to
   // the top of the channel on AUTH flicker.
   const stickToBottomRef = useRef(true);
+  const setNearBottom = useCallback((near: boolean) => {
+    stickToBottomRef.current = near;
+    const cur = useChatStore.getState().isNearBottom;
+    if (cur !== near) useChatStore.setState({ isNearBottom: near });
+  }, []);
+  useChannelScrollPosition({
+    scrollKey,
+    scrollRef,
+    itemCount: messages.length,
+    disabled: !!pendingMessageId,
+    nearBottomPx: 100,
+    onNearBottomChange: setNearBottom,
+  });
   const { loadEarlier, loading: loadingEarlier, reachedStart } = useLoadEarlier(groupId);
   useEffect(() => {
     const el = scrollRef.current;
@@ -1833,22 +2073,18 @@ function ChatPanel({
     const onScroll = () => {
       const dist = el.scrollHeight - el.scrollTop - el.clientHeight;
       const near = dist < 100;
-      stickToBottomRef.current = near;
-      // Mirror near-bottom into the chat store so `isUserWatchingChannel`
-      // (in `read-gates.ts`) reflects scroll position. Without this, desktop
-      // would always think the user is at the bottom and silently advance
-      // the read cursor while they're scrolled up reading history.
-      const cur = useChatStore.getState().isNearBottom;
-      if (cur !== near) useChatStore.setState({ isNearBottom: near });
+      setNearBottom(near);
       // Top-of-list pagination. Anchor by pre-load scrollHeight so the
       // viewport stays on the same message after the older page is
       // prepended instead of snapping to the new top.
       if (el.scrollTop < 80 && !loadingEarlier && !reachedStart) {
+        const loadKey = scrollKeyRef.current;
         const prevHeight = el.scrollHeight;
         void loadEarlier().then(() => {
           requestAnimationFrame(() => {
             const e = scrollRef.current;
             if (!e) return;
+            if (loadKey && scrollKeyRef.current !== loadKey) return;
             e.scrollTop = e.scrollHeight - prevHeight;
           });
         });
@@ -1856,17 +2092,7 @@ function ChatPanel({
     };
     el.addEventListener('scroll', onScroll, { passive: true });
     return () => el.removeEventListener('scroll', onScroll);
-  }, [loadEarlier, loadingEarlier, reachedStart]);
-  // Entering a new channel: jump to bottom and reset stickiness so the
-  // first batch of incoming messages keeps following the tail until the
-  // user scrolls up themselves.
-  useEffect(() => {
-    if (pendingMessageId) return;
-    const el = scrollRef.current;
-    if (!el) return;
-    el.scrollTop = el.scrollHeight;
-    stickToBottomRef.current = true;
-  }, [groupId, pendingMessageId]);
+  }, [loadEarlier, loadingEarlier, reachedStart, setNearBottom]);
   // New messages: stick to bottom only if the user was already there.
   useEffect(() => {
     if (pendingMessageId) return;
@@ -1995,26 +2221,17 @@ function ChatPanel({
     const ta = inputRef.current;
     if (!ta) return;
     const cursor = ta.selectionStart ?? draft.length;
-    const before = draft.slice(0, cursor);
-    const after = draft.slice(cursor);
-    const token = `nostr:${hexToNpub(member.pubkey)} `;
-    let replaced: string;
-    if (/@(\w*)$/.test(before)) {
-      replaced = before.replace(/@(\w*)$/, () => token);
-    } else {
-      // Slash-command slot picker can open without an `@` typed (e.g. `/zap `).
-      // Insert at the cursor with a leading space if needed.
-      const sep = before.length > 0 && !/\s$/.test(before) ? ' ' : '';
-      replaced = before + sep + token;
-    }
-    const next = replaced + after;
+    // When the picker is opened by a slash-command slot, replace whatever
+    // partial token the user already typed (e.g. `/zap dum` → the `dum`
+    // token) instead of appending another mention token after it.
+    const slotRange = scaffoldMentionSlotRange(draft, cursor);
+    const { next, cursor: nextCursor } = applyMentionToDraft(draft, cursor, member.pubkey, slotRange);
     setDraft(next);
     setMentionQuery(null);
     requestAnimationFrame(() => {
-      const pos = replaced.length;
       ta.focus();
-      ta.setSelectionRange(pos, pos);
-      setCaret(pos);
+      ta.setSelectionRange(nextCursor, nextCursor);
+      setCaret(nextCursor);
     });
   }
   function onMentionKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -2032,6 +2249,19 @@ function ChatPanel({
   }
 
   const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [emojiOpen, setEmojiOpen] = useState(false);
+  const emojiBtnRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!emojiOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (emojiBtnRef.current && !emojiBtnRef.current.contains(e.target as Node)) {
+        setEmojiOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [emojiOpen]);
   async function onPickFiles(files: File[]) {
     if (files.length === 0) return;
     // Cap at 4 — matches the gallery's 2x2 matrix renderer.
@@ -2120,7 +2350,8 @@ function ChatPanel({
 
     // Fire-and-forget — bridge inserts the pending placeholder synchronously
     // and surfaces send failures via the bubble's `failed` flag (with retry).
-    nostrActions.sendMessage(groupId, content, replyToCopy).catch((err) => {
+    const emojiTags = emojiTagsForContent(content, serverEmojis);
+    nostrActions.sendMessage(groupId, content, replyToCopy, emojiTags).catch((err) => {
       console.error('send failed', err);
     });
   }
@@ -2149,8 +2380,8 @@ function ChatPanel({
             <button
               onClick={() => setShowSettings(true)}
               className="rounded-md p-2 text-lc-muted hover:bg-lc-card hover:text-lc-white"
-              title="Channel settings"
-              aria-label="Channel settings"
+              title={t('desktop.channel.settings')}
+              aria-label={t('desktop.channel.settings')}
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <circle cx="12" cy="12" r="3" />
@@ -2164,8 +2395,8 @@ function ChatPanel({
               'rounded-md p-2 hover:bg-lc-card ' +
               (showMembers ? 'text-lc-green' : 'text-lc-muted hover:text-lc-white')
             }
-            title={showMembers ? 'Hide member list' : 'Show member list'}
-            aria-label={showMembers ? 'Hide member list' : 'Show member list'}
+            title={showMembers ? t('desktop.channel.hideMembers') : t('desktop.channel.showMembers')}
+            aria-label={showMembers ? t('desktop.channel.hideMembers') : t('desktop.channel.showMembers')}
             aria-pressed={showMembers}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -2177,7 +2408,7 @@ function ChatPanel({
           </button>
           <CopyInviteLinkButton groupId={groupId} />
           <SearchBar
-            serverName={group?.name ?? 'channel'}
+            serverName={group?.name ?? t('common.channel')}
             activeGroupId={groupId}
           />
         </div>
@@ -2189,29 +2420,45 @@ function ChatPanel({
       {(() => {
         const textBody = (
       <>
-      <RelayAccessBanner />
+      <RelayStatusBanner />
       <div className="relative flex min-h-0 flex-1 flex-col">
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-4" data-testid={messagesVisible ? undefined : 'messages-gated-by-auth'}>
         {messages.length === 0 ? (
-          // Three distinct empty states. Without the EOSE-gated split, a
+          // Three distinct empty states. Without the status-gated split, a
           // freshly-opened channel briefly renders "No messages yet" while
           // history is still streaming — confusing for an active relay.
-          //   1. group missing + 39000 EOSE not yet:           loading
-          //   2. group missing + 39000 EOSE seen:              not visible
-          //   3. group present + per-group EOSE not yet:       loading
-          //   4. group present + per-group EOSE + 0 messages:  welcome
+          //   1. group missing + 39000 EOSE not yet:                          loading
+          //   2. group missing + 39000 EOSE + missing-grace passed:           not visible
+          //   3. group present + status === 'loading' | 'empty-unconfirmed':  loading
+          //   4. group present + status === 'empty-confirmed':                welcome
           (() => {
-            const groupKnownEmpty = group && messagesEose;
-            const channelKnownMissing = !group && groupMetadataEose;
+            // Trust the bridge's confidence enum: it has already run a
+            // retry ladder against auth-gated / silent-filtering relays
+            // before reaching `empty-confirmed`. No UI dwell timer
+            // needed on this branch.
+            const groupKnownEmpty = group && messagesStatus === 'empty-confirmed';
+            // Never declare a channel "missing" until the focused
+            // metadataFetch has had its chance, AND the global stream has
+            // EOSE'd, AND the missing-grace window has passed. Three
+            // gates so the user never sees "not visible" on a channel
+            // the relay still hasn't been asked about properly.
+            const channelKnownMissing =
+              !group && groupMetadataEose && channelMissingGrace && metadataFetchDone;
             if (!groupKnownEmpty && !channelKnownMissing) {
+              // Split the copy by which tier we're still waiting on:
+              //   - !group → kind 39000 hasn't ingested this groupId yet
+              //   - group && status !== 'empty-confirmed' → kind 9 still
+              //     loading or in the retry ladder
+              const stage = !group ? t('desktop.channel.loadingInfo') : t('desktop.channel.loadingMessages');
               return (
                 <div
                   className="flex h-full items-center justify-center text-sm text-lc-muted"
                   data-testid="messages-loading"
+                  data-stage={!group ? 'channel-info' : 'messages'}
                 >
                   <div className="flex flex-col items-center gap-3">
                     <div className="lc-spinner" aria-hidden="true" />
-                    <div>Loading messages…</div>
+                    <div>{stage}</div>
                   </div>
                 </div>
               );
@@ -2222,18 +2469,17 @@ function ChatPanel({
                   {group ? (
                     <>
                       <div className="text-base font-medium text-lc-white">
-                        Welcome to #{group.name ?? 'channel'}
+                        {t('desktop.channel.welcome').replace('{name}', group.name ?? t('common.channel'))}
                       </div>
-                      <div className="mt-1">No messages yet — be the first.</div>
+                      <div className="mt-1">{t('desktop.channel.noMessages')}</div>
                     </>
                   ) : (
                     <>
                       <div className="text-base font-medium text-lc-white">
-                        Channel not visible on this relay
+                        {t('desktop.channel.notVisible')}
                       </div>
                       <div className="mt-1">
-                        The link points to <span className="font-mono text-xs text-lc-muted">{groupId.slice(0, 16)}…</span>
-                        , but this relay isn&apos;t exposing it to you. You may need to be added as a member, or switch to the relay that hosts it.
+                        {t('desktop.channel.notVisibleDescription').replace('{id}', `${groupId.slice(0, 16)}...`)}
                       </div>
                     </>
                   )}
@@ -2270,14 +2516,14 @@ function ChatPanel({
         {replyingTo && (
           <div className="mb-2 flex items-center justify-between gap-2 rounded-t-md border border-b-0 border-lc-border bg-lc-card/60 px-3 py-1.5 text-xs text-lc-muted">
             <span className="truncate">
-              Replying to <ReplyAuthorName pubkey={replyingTo.pubkey} />
+              {t('desktop.composer.replyingTo')} <ReplyAuthorName pubkey={replyingTo.pubkey} />
               <span className="ml-2 truncate text-lc-muted"><MentionText content={replyingTo.content.slice(0, 80)} /></span>
             </span>
             <button
               type="button"
               onClick={() => setReplyingTo(null)}
               className="text-lc-muted hover:text-lc-white"
-              aria-label="Cancel reply"
+              aria-label={t('desktop.composer.cancelReply')}
             >
               ✕
             </button>
@@ -2310,7 +2556,7 @@ function ChatPanel({
                     type="button"
                     onClick={() => removeUrl(url)}
                     className="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-[11px] text-lc-white opacity-90 hover:bg-black"
-                    aria-label="Remove attachment"
+                    aria-label={t('desktop.composer.removeAttachment')}
                   >
                     ×
                   </button>
@@ -2327,8 +2573,8 @@ function ChatPanel({
         <div className="flex min-h-[3.5rem] items-center gap-2 rounded-xl border border-lc-border bg-lc-card px-4 focus-within:border-lc-green">
           <label
             className="cursor-pointer text-lc-muted hover:text-lc-white"
-            title="Attach media"
-            aria-label="Attach media"
+            title={t('desktop.composer.attachMedia')}
+            aria-label={t('desktop.composer.attachMedia')}
           >
             {uploadingMedia ? (
               <span className="text-[10px] uppercase tracking-wider text-lc-muted">…</span>
@@ -2396,16 +2642,42 @@ function ChatPanel({
                   void onPickFiles(files);
                 }
               }}
-              placeholder={`Message #${group?.name ?? groupId.slice(0, 8)}`}
+              placeholder={t('desktop.composer.placeholder').replace('{name}', group?.name ?? groupId.slice(0, 8))}
               className="w-full bg-transparent text-sm text-lc-white outline-none placeholder:text-lc-muted disabled:opacity-50"
             />
+          </div>
+          <div ref={emojiBtnRef} className="relative">
+            <button
+              type="button"
+              onClick={() => setEmojiOpen((v) => !v)}
+              className="text-lc-muted hover:text-lc-white"
+              title={t('desktop.composer.addEmoji')}
+              aria-label={t('desktop.composer.addEmoji')}
+              aria-haspopup="dialog"
+              aria-expanded={emojiOpen}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="9" />
+                <path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01" />
+              </svg>
+            </button>
+            {emojiOpen && (
+              <EmojiPicker
+                onPick={(emoji) => {
+                  setDraft((d) => d + emoji);
+                  setEmojiOpen(false);
+                  inputRef.current?.focus();
+                }}
+                onClose={() => setEmojiOpen(false)}
+              />
+            )}
           </div>
           <button
             type="submit"
             disabled={!draft.trim() || uploadingMedia}
             className="text-xs font-semibold text-lc-green hover:text-lc-green/80 disabled:opacity-30"
           >
-            Send
+            {t('common.send')}
           </button>
         </div>
       </form>
@@ -2437,14 +2709,14 @@ function ChatPanel({
                   <div
                     onMouseDown={onResize}
                     className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-lc-green/40 active:bg-lc-green/60 z-10"
-                    title="Drag to resize"
+                    title={t('desktop.voiceChat.dragResize')}
                   />
                   <div className="h-12 px-4 border-b border-lc-border flex items-center justify-between shrink-0">
-                    <span className="text-sm font-semibold text-lc-white">Chat</span>
+                    <span className="text-sm font-semibold text-lc-white">{t('desktop.voiceChat.chat')}</span>
                     <button
                       onClick={() => setVoiceChatOpen(false)}
                       className="text-lc-muted hover:text-lc-white"
-                      title="Hide chat"
+                      title={t('desktop.voiceChat.hideChat')}
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                         <line x1="18" y1="6" x2="6" y2="18" />
@@ -2474,6 +2746,7 @@ function ChatPanel({
 const QUICK_REACTIONS = ['🔥', '⚡', '😂', '🤔'];
 
 function CopyInviteLinkButton({ groupId }: { groupId: string }) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const relay = useCurrentRelayUrl();
   const onCopy = async () => {
@@ -2493,8 +2766,8 @@ function CopyInviteLinkButton({ groupId }: { groupId: string }) {
         'rounded-md p-2 hover:bg-lc-card hover:text-lc-white ' +
         (copied ? 'text-lc-green' : 'text-lc-muted')
       }
-      title={copied ? 'Link copied — only members of this relay can open it' : 'Copy invite link'}
-      aria-label="Copy invite link"
+      title={copied ? t('desktop.invite.copiedTitle') : t('desktop.invite.copy')}
+      aria-label={t('desktop.invite.copy')}
     >
       {copied ? (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -2542,24 +2815,27 @@ function ReactorHoverCard({
   emoji: string;
   pubkeys: ReadonlySet<string>;
 }) {
+  const { t } = useTranslation();
   const list = useMemo(() => Array.from(pubkeys), [pubkeys]);
   const shown = list.slice(0, 20);
   const extra = list.length - shown.length;
+  const reactionLabel = t(list.length === 1 ? 'desktop.reactions.one' : 'desktop.reactions.many');
   return (
-    <HoverCardShell title={`${emoji} ${list.length} ${list.length === 1 ? 'reaction' : 'reactions'}`}>
+    <HoverCardShell title={`${emoji} ${list.length} ${reactionLabel}`}>
       <ul className="space-y-0.5">
         {shown.map((pk) => (
           <li key={pk} className="truncate">
             <PubkeyName pubkey={pk} />
           </li>
         ))}
-        {extra > 0 && <li className="text-lc-muted">…and {extra} more</li>}
+        {extra > 0 && <li className="text-lc-muted">{t('desktop.reactions.andMore').replace('{count}', String(extra))}</li>}
       </ul>
     </HoverCardShell>
   );
 }
 
 function ZapperHoverCard({ zapTotal }: { zapTotal: MessageZapTotal }) {
+  const { t } = useTranslation();
   const entries = useMemo(
     () => Array.from(zapTotal.zapperAmounts.entries()).sort((a, b) => b[1] - a[1]),
     [zapTotal],
@@ -2568,7 +2844,7 @@ function ZapperHoverCard({ zapTotal }: { zapTotal: MessageZapTotal }) {
   const extra = entries.length - shown.length;
   return (
     <HoverCardShell
-      title={`⚡ ${zapTotal.totalSats.toLocaleString()} sats · ${zapTotal.count} zap${zapTotal.count === 1 ? '' : 's'}`}
+      title={`⚡ ${zapTotal.totalSats.toLocaleString()} sats · ${zapTotal.count} ${t(zapTotal.count === 1 ? 'desktop.zaps.one' : 'desktop.zaps.many')}`}
     >
       <ul className="space-y-0.5">
         {shown.map(([pk, sats]) => (
@@ -2577,7 +2853,7 @@ function ZapperHoverCard({ zapTotal }: { zapTotal: MessageZapTotal }) {
             <span className="shrink-0 text-yellow-300">{sats.toLocaleString()}</span>
           </li>
         ))}
-        {extra > 0 && <li className="text-lc-muted">…and {extra} more</li>}
+        {extra > 0 && <li className="text-lc-muted">{t('desktop.reactions.andMore').replace('{count}', String(extra))}</li>}
       </ul>
     </HoverCardShell>
   );
@@ -2590,6 +2866,7 @@ function ReplyPreviewRow({
   parent: JsMessage;
   onJump: () => void;
 }) {
+  const { t } = useTranslation();
   const meta = useProfile(parent.pubkey);
   const name = meta?.displayName || meta?.name || parent.pubkey.slice(0, 8);
   const preview = parent.content.replace(/\s+/g, ' ').slice(0, 120);
@@ -2598,7 +2875,7 @@ function ReplyPreviewRow({
       type="button"
       onClick={onJump}
       className="mb-1 flex max-w-full items-center gap-2 truncate text-xs text-lc-muted hover:text-lc-white"
-      title="Jump to replied message"
+      title={t('desktop.message.jumpToReply')}
     >
       <span className="text-lc-green">↩</span>
       <span className="font-semibold text-lc-white/80">{name}</span>
@@ -2619,13 +2896,19 @@ function MessageRow({
 }: {
   msg: JsMessage;
   allMessages: ReadonlyArray<JsMessage>;
-  reactions: ReadonlyArray<{ emoji: string }>;
+  reactions: ReadonlyArray<{
+    id: string;
+    emoji: string;
+    pubkey: string;
+    customEmojis?: Readonly<Record<string, string>>;
+  }>;
   zapTotal: MessageZapTotal | null;
   groupId: string;
   grouped: boolean;
   isAdmin: boolean;
   onReply: (m: JsMessage) => void;
 }) {
+  const { t } = useTranslation();
   const parent = msg.replyToId
     ? allMessages.find((x) => x.id === msg.replyToId) ?? null
     : null;
@@ -2641,10 +2924,13 @@ function MessageRow({
   const meta = useProfile(msg.pubkey);
   const relay = useCurrentRelayUrl();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [menuPlacement, setMenuPlacement] = useState<'down' | 'up'>('down');
   const [panelPinned, setPanelPinned] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerPlacement, setPickerPlacement] = useState<'above' | 'below'>('above');
   const menuRef = useRef<HTMLDivElement | null>(null);
   const myPubkey = useMyPubkey();
+  const serverEmojis = useChatStore((s) => s.serverEmojis);
   const myMutes = useMyMutes();
   const isMuted = myMutes.includes(msg.pubkey);
   const toggleMute = async () => {
@@ -2652,12 +2938,20 @@ function MessageRow({
       await nostrActions.setMuted(msg.pubkey, !isMuted);
     } catch (e) {
       useToastStore.getState().pushToast({
-        title: 'No se pudo silenciar',
+        title: t('desktop.message.muteFailed'),
         body: e instanceof Error ? e.message : String(e),
       });
     }
   };
   const closeAll = () => { setMenuOpen(false); setPanelPinned(false); setPickerOpen(false); };
+  const updatePickerPlacement = () => {
+    if (!menuRef.current || typeof window === 'undefined') return;
+    const rect = menuRef.current.getBoundingClientRect();
+    const estimatedPickerHeight = 440;
+    const spaceAbove = rect.top;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    setPickerPlacement(spaceAbove < estimatedPickerHeight && spaceBelow > spaceAbove ? 'below' : 'above');
+  };
   useEffect(() => {
     if (!menuOpen && !panelPinned && !pickerOpen) return;
     const onDocClick = (e: MouseEvent) => {
@@ -2675,34 +2969,70 @@ function MessageRow({
   // emoji even if the relay re-delivered or the user double-tapped before the
   // first kind:7 round-tripped.
   const reactionsByEmoji = useMemo(() => {
-    const m = new Map<string, Set<string>>();
-    for (const r of reactions as ReadonlyArray<{ emoji: string; pubkey: string }>) {
-      let s = m.get(r.emoji);
-      if (!s) { s = new Set(); m.set(r.emoji, s); }
-      s.add(r.pubkey);
+    const m = new Map<string, {
+      emoji: string;
+      customEmojis: CustomEmojiMap;
+      pubkeys: Set<string>;
+      reactionIds: string[];
+      myReactionId: string | null;
+    }>();
+    for (const r of reactions) {
+      const customEmojis = mergeCustomEmojiMaps(serverEmojis, r.customEmojis as CustomEmojiMap | undefined);
+      const resolved = resolveReactionEmoji(r.emoji, customEmojis);
+      const key = resolved.kind === 'custom'
+        ? `custom:${resolved.name}:${resolved.url}`
+        : `unicode:${resolved.char}`;
+      let entry = m.get(key);
+      if (!entry) {
+        entry = {
+          emoji: resolved.kind === 'custom' ? `:${resolved.name}:` : resolved.char,
+          customEmojis: resolved.kind === 'custom' ? { [resolved.name]: resolved.url } : {},
+          pubkeys: new Set<string>(),
+          reactionIds: [],
+          myReactionId: null,
+        };
+        m.set(key, entry);
+      }
+      entry.pubkeys.add(r.pubkey);
+      entry.reactionIds.push(r.id);
+      if (r.pubkey === myPubkey) entry.myReactionId = r.id;
     }
     return m;
-  }, [reactions]);
+  }, [reactions, serverEmojis, myPubkey]);
   const counts = useMemo(
-    () => Array.from(reactionsByEmoji.entries())
-      .map(([emoji, set]) => [emoji, set.size] as const)
-      .sort((a, b) => b[1] - a[1]),
+    () => Array.from(reactionsByEmoji.values())
+      .map((entry) => ({ ...entry, count: entry.pubkeys.size }))
+      .sort((a, b) => b.count - a.count),
     [reactionsByEmoji],
   );
   const myReactedEmojis = useMemo(() => {
     if (!myPubkey) return new Set<string>();
     const out = new Set<string>();
-    for (const [emoji, set] of reactionsByEmoji) if (set.has(myPubkey)) out.add(emoji);
+    for (const entry of reactionsByEmoji.values()) if (entry.myReactionId) out.add(entry.emoji);
     return out;
   }, [reactionsByEmoji, myPubkey]);
-  const onReactionClick = (emoji: string) => {
-    if (myReactedEmojis.has(emoji)) return; // already reacted — no-op until retraction is wired
-    void nostrActions.sendReaction(msg.id, msg.pubkey, emoji, groupId);
+  const onReactionClick = (
+    emoji: string,
+    customEmojis?: CustomEmojiMap,
+    reactionId?: string | null,
+    reactionIds?: ReadonlyArray<string>,
+  ) => {
+    if (isAdmin && reactionIds && reactionIds.length > 0) {
+      void Promise.all(reactionIds.map((id) => nostrActions.deleteGroupEvent(groupId, id)));
+      return;
+    }
+    if (reactionId) {
+      void nostrActions.removeReaction(groupId, reactionId);
+      return;
+    }
+    if (myReactedEmojis.has(emoji)) return;
+    const emojiTags = emojiTagsForContent(emoji, mergeCustomEmojiMaps(serverEmojis, customEmojis));
+    void nostrActions.sendReaction(msg.id, msg.pubkey, emoji, groupId, emojiTags);
   };
   const openZap = useMessageZapStore((s) => s.open);
   const onZapClick = () => {
     if (msg.pubkey === myPubkey) {
-      useToastStore.getState().pushToast({ title: '⚠️ Cannot zap yourself', body: '' });
+      useToastStore.getState().pushToast({ title: `⚠️ ${t('desktop.message.cannotZapSelf')}`, body: '' });
       return;
     }
     openZap({
@@ -2727,6 +3057,13 @@ function MessageRow({
   const onDismissFailed = () => {
     if (!msg.clientTag) return;
     void nostrActions.cancelPendingMessage(groupId, msg.clientTag);
+  };
+  const canDeleteMessage = isAdmin || msg.pubkey === myPubkey;
+  const deleteMessage = () => {
+    const label = isAdmin ? t('desktop.message.confirmDeleteEveryone') : t('desktop.message.confirmDeleteOwn');
+    if (!confirm(label)) return;
+    if (isAdmin) void nostrActions.deleteGroupEvent(groupId, msg.id);
+    else void nostrActions.removeMessage(groupId, msg.id);
   };
 
   return (
@@ -2753,7 +3090,7 @@ function MessageRow({
             {msg.pending && (
               <span
                 className="inline-block h-2.5 w-2.5 animate-spin rounded-full border border-lc-muted/40 border-t-lc-muted"
-                aria-label="Sending"
+                aria-label={t('common.sending')}
                 role="status"
               />
             )}
@@ -2761,7 +3098,7 @@ function MessageRow({
         )}
         {parent && <ReplyPreviewRow parent={parent} onJump={onJumpToParent} />}
         {msg.replyToId && !parent && (
-          <div className="mb-1 text-xs italic text-lc-muted">↩ replying to a message</div>
+          <div className="mb-1 text-xs italic text-lc-muted">↩ {t('desktop.message.replyingToMessage')}</div>
         )}
         <div
           className="break-words text-sm text-lc-white cursor-pointer"
@@ -2772,25 +3109,30 @@ function MessageRow({
             setPanelPinned((v) => !v);
           }}
         >
-          <MessageContent content={msg.content} messageId={msg.id} channelId={groupId} />
+          <MessageContent
+            content={msg.content}
+            messageId={msg.id}
+            channelId={groupId}
+            customEmojis={msg.customEmojis as CustomEmojiMap | undefined}
+          />
         </div>
         {msg.failed && (
           <div className="mt-1 flex items-center gap-2 text-[11px] text-red-400" data-testid="message-failed">
             <span aria-hidden="true">!</span>
-            <span>Couldn’t send</span>
+            <span>{t('dm.failedSend')}</span>
             <button
               type="button"
               onClick={onRetry}
               className="rounded bg-red-500/10 px-2 py-0.5 font-semibold text-red-300 hover:bg-red-500/20"
               data-testid="message-retry"
             >
-              Retry
+              {t('common.retry')}
             </button>
             <button
               type="button"
               onClick={onDismissFailed}
               className="text-red-400/70 hover:text-red-300"
-              aria-label="Dismiss failed message"
+              aria-label={t('dm.dismissFailed')}
             >
               ✕
             </button>
@@ -2799,7 +3141,7 @@ function MessageRow({
         {grouped && msg.pending && (
           <span
             className="ml-2 inline-block h-2.5 w-2.5 animate-spin rounded-full border border-lc-muted/40 border-t-lc-muted align-middle"
-            aria-label="Sending"
+            aria-label={t('common.sending')}
             role="status"
           />
         )}
@@ -2820,25 +3162,31 @@ function MessageRow({
                 <ZapperHoverCard zapTotal={zapTotal} />
               </div>
             )}
-            {counts.map(([emoji, n]) => {
+            {counts.map(({ emoji, customEmojis, pubkeys, reactionIds, count, myReactionId }) => {
               const mine = myReactedEmojis.has(emoji);
-              const reactors = reactionsByEmoji.get(emoji);
+              const resolved = resolveReactionEmoji(emoji, customEmojis);
+              const removeForEveryone = isAdmin;
               return (
                 <div key={emoji} className="group/pill relative">
                   <button
-                    onClick={() => onReactionClick(emoji)}
-                    disabled={mine}
+                    onClick={() => onReactionClick(emoji, customEmojis, myReactionId, removeForEveryone ? reactionIds : undefined)}
+                    title={removeForEveryone ? t('desktop.reactions.removeEveryone') : mine ? t('desktop.reactions.removeOwn') : t('desktop.reactions.react')}
                     className={
-                      'rounded-full border px-2 py-0.5 text-xs text-lc-white ' +
-                      (mine
-                        ? 'border-lc-green/60 bg-lc-green/10 cursor-default'
+                      'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs text-lc-white ' +
+                      (removeForEveryone || mine
+                        ? 'border-lc-green/60 bg-lc-green/10 hover:border-red-400'
                         : 'border-lc-border bg-lc-card hover:border-lc-green')
                     }
                   >
-                    {emoji} {n}
+                    {resolved.kind === 'custom' ? (
+                      <img src={resolved.url} alt={`:${resolved.name}:`} className="h-4 w-4 object-contain" />
+                    ) : (
+                      <span>{resolved.char}</span>
+                    )}
+                    <span>{count}</span>
                   </button>
-                  {reactors && reactors.size > 0 && (
-                    <ReactorHoverCard emoji={emoji} pubkeys={reactors} />
+                  {pubkeys.size > 0 && (
+                    <ReactorHoverCard emoji={emoji} pubkeys={pubkeys} />
                   )}
                 </div>
               );
@@ -2862,17 +3210,21 @@ function MessageRow({
                 onClick={() => { onReactionClick(e); closeAll(); }}
                 disabled={mine}
                 className="rounded px-1.5 py-0.5 text-sm hover:bg-lc-card disabled:opacity-40 disabled:cursor-default"
-                title={mine ? 'Already reacted' : `React ${e}`}
+                title={mine ? t('desktop.reactions.alreadyReacted') : t('desktop.reactions.reactEmoji').replace('{emoji}', e)}
               >
                 {e}
               </button>
             );
           })}
           <button
-            onClick={() => { setPickerOpen((v) => !v); setPanelPinned(true); }}
+            onClick={() => {
+              updatePickerPlacement();
+              setPickerOpen((v) => !v);
+              setPanelPinned(true);
+            }}
             className="rounded px-1.5 py-0.5 text-sm text-lc-muted hover:bg-lc-card hover:text-lc-white"
-            title="More emojis…"
-            aria-label="Open emoji picker"
+            title={t('desktop.reactions.moreEmojis')}
+            aria-label={t('desktop.reactions.openEmojiPicker')}
           >
             ➕
           </button>
@@ -2885,10 +3237,20 @@ function MessageRow({
           }
         >
           <button
-            onClick={(e) => { e.stopPropagation(); setMenuOpen((v) => !v); setPickerOpen(false); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!menuOpen && menuRef.current) {
+                const rect = menuRef.current.getBoundingClientRect();
+                const estimatedMenuHeight = isAdmin ? 280 : 240;
+                const spaceBelow = window.innerHeight - rect.bottom;
+                setMenuPlacement(spaceBelow < estimatedMenuHeight ? 'up' : 'down');
+              }
+              setMenuOpen((v) => !v);
+              setPickerOpen(false);
+            }}
             className="rounded px-1.5 py-0.5 text-sm text-lc-muted hover:bg-lc-card hover:text-lc-white"
-            title="More actions"
-            aria-label="More actions"
+            title={t('desktop.message.moreActions')}
+            aria-label={t('desktop.message.moreActions')}
             aria-haspopup="menu"
             aria-expanded={menuOpen}
           >
@@ -2898,21 +3260,29 @@ function MessageRow({
         {menuOpen && (
           <div
             role="menu"
-            className="absolute right-0 top-7 z-20 w-48 rounded-md border border-lc-border bg-lc-dark p-1 shadow-2xl"
+            className={
+              'absolute right-0 z-20 w-48 rounded-md border border-lc-border bg-lc-dark p-1 shadow-2xl ' +
+              (menuPlacement === 'up' ? 'bottom-full mb-1' : 'top-7')
+            }
           >
             <button
               role="menuitem"
               onClick={() => { onReply(msg); setMenuOpen(false); }}
               className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-lc-white hover:bg-lc-card"
             >
-              <span className="w-4 text-center">↩</span> Reply
+              <span className="w-4 text-center">↩</span> {t('desktop.message.reply')}
             </button>
             <button
               role="menuitem"
-              onClick={() => { setMenuOpen(false); setPickerOpen(true); setPanelPinned(true); }}
+              onClick={() => {
+                updatePickerPlacement();
+                setMenuOpen(false);
+                setPickerOpen(true);
+                setPanelPinned(true);
+              }}
               className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-lc-white hover:bg-lc-card"
             >
-              <span className="w-4 text-center">😊</span> React
+              <span className="w-4 text-center">😊</span> {t('desktop.reactions.react')}
             </button>
             <button
               role="menuitem"
@@ -2923,7 +3293,7 @@ function MessageRow({
               <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12" aria-hidden="true" className="ml-0.5">
                 <path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z" />
               </svg>
-              Zap
+              {t('desktop.message.zap')}
             </button>
             <button
               role="menuitem"
@@ -2935,13 +3305,13 @@ function MessageRow({
                   url.searchParams.set('m', msg.id);
                   if (relay) url.searchParams.set('relay', shortHost(relay));
                   navigator.clipboard.writeText(url.toString());
-                  useToastStore.getState().pushToast({ title: '🔗 Link copied', body: '' });
+                  useToastStore.getState().pushToast({ title: `🔗 ${t('desktop.message.linkCopied')}`, body: '' });
                 }
                 setMenuOpen(false);
               }}
               className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-lc-white hover:bg-lc-card"
             >
-              <span className="w-4 text-center">🔗</span> Copy link
+              <span className="w-4 text-center">🔗</span> {t('desktop.message.copyLink')}
             </button>
             <button
               role="menuitem"
@@ -2950,18 +3320,19 @@ function MessageRow({
               className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-red-400 hover:bg-lc-card disabled:opacity-40 disabled:hover:bg-transparent"
             >
               <span className="w-4 text-center">🔕</span>
-              {isMuted ? 'Unmute user' : 'Mute user'}
+              {isMuted ? t('desktop.message.unmuteUser') : t('desktop.message.muteUser')}
             </button>
-            {isAdmin && (
+            {canDeleteMessage && (
               <button
                 role="menuitem"
                 onClick={() => {
-                  if (confirm('Delete this message?')) nostrActions.deleteGroupEvent(groupId, msg.id);
+                  deleteMessage();
                   setMenuOpen(false);
                 }}
                 className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-red-400 hover:bg-lc-card"
               >
-                <span className="w-4 text-center">🗑</span> Delete (admin)
+                <span className="w-4 text-center">🗑</span>
+                {isAdmin ? t('desktop.message.deleteEveryone') : t('desktop.message.deleteMessage')}
               </button>
             )}
           </div>
@@ -2969,7 +3340,11 @@ function MessageRow({
         {pickerOpen && (
           <EmojiPicker
             disabledEmojis={myReactedEmojis}
-            onPick={(e) => { onReactionClick(e); closeAll(); }}
+            placement={pickerPlacement}
+            onPick={(e, custom) => {
+              onReactionClick(e, custom ? { [custom.name]: custom.url } : undefined);
+              closeAll();
+            }}
             onClose={() => setPickerOpen(false)}
           />
         )}
@@ -2990,78 +3365,31 @@ function MessageRow({
 // -- Members panel ------------------------------------------------------
 
 function MembersPanel({ groupId }: { groupId: string }) {
+  // Members are P3 in the priority orchestrator — the lazy per-group
+  // admin/member REQs fire when this panel mounts. Surface a loading state
+  // until {@link useMembershipReady} flips, so the user knows the empty
+  // pane is "still loading" not "no members."
+  const ready = useMembershipReady(groupId);
   return (
     <>
       <ChatStoreMembersAdapter groupId={groupId} />
-      <MemberList profileCache={EMPTY_PROFILE_CACHE} />
+      {ready ? (
+        <MemberList profileCache={EMPTY_PROFILE_CACHE} />
+      ) : (
+        <div
+          className="w-60 h-full bg-lc-dark border-l border-lc-border flex flex-col items-center justify-center gap-3 text-sm text-lc-muted"
+          data-testid="members-loading"
+        >
+          <div className="lc-spinner" aria-hidden="true" />
+          <div>Loading members…</div>
+        </div>
+      )}
       <ProfilePopupBridge />
     </>
   );
 }
 
 const EMPTY_PROFILE_CACHE = new Map<string, { name?: string; picture?: string }>();
-
-function ChatStoreMembersAdapter({ groupId }: { groupId: string }) {
-  const admins = useAdmins(groupId);
-  const members = useMembers(groupId);
-  const setMemberList = useChatStore((s) => s.setMemberList);
-  const setOnlinePubkeys = useChatStore((s) => s.setOnlinePubkeys);
-
-  const allPubkeys = useMemo(() => {
-    const set = new Set<string>([...admins, ...members]);
-    return Array.from(set);
-  }, [admins, members]);
-
-  const adminSet = useMemo(() => new Set(admins), [admins]);
-
-  // Seed/refresh the list when admin or member sets change. Preserve any
-  // metadata (displayName/picture/nip05/customRoles) already attached to a
-  // row — without this, every relay-driven update to admins/members (e.g.
-  // a fresh 39001/39002 after NIP-42 AUTH) wipes every row back to
-  // `pubkey.slice(0,10)` with no picture, and `MemberMetaSync` only re-runs
-  // when `meta` itself changes, so the cached metadata never re-applies and
-  // names/pictures vanish until a manual refresh.
-  useEffect(() => {
-    const prev = useChatStore.getState().memberList;
-    const prevByPk = new Map(prev.map((m) => [m.pubkey, m]));
-    const list: MemberInfo[] = allPubkeys.map((pubkey) => {
-      const role = adminSet.has(pubkey) ? 'admin' : 'member';
-      const existing = prevByPk.get(pubkey);
-      if (existing) return { ...existing, role };
-      return { pubkey, displayName: pubkey.slice(0, 10), role };
-    });
-    setMemberList(list);
-    setOnlinePubkeys(allPubkeys);
-  }, [allPubkeys, adminSet, setMemberList, setOnlinePubkeys]);
-
-  return (
-    <>
-      {allPubkeys.map((pk) => (
-        <MemberMetaSync key={pk} pubkey={pk} />
-      ))}
-    </>
-  );
-}
-
-function MemberMetaSync({ pubkey }: { pubkey: string }) {
-  const meta = useProfile(pubkey);
-  useEffect(() => {
-    if (!meta) return;
-    useChatStore.setState((state) => {
-      const idx = state.memberList.findIndex((m) => m.pubkey === pubkey);
-      if (idx === -1) return state;
-      const next = [...state.memberList];
-      next[idx] = {
-        ...next[idx],
-        displayName: meta.displayName || meta.name || next[idx].displayName,
-        picture: meta.picture ?? next[idx].picture,
-        nip05: meta.nip05 ?? next[idx].nip05,
-      };
-      return { memberList: next } as Partial<typeof state> as typeof state;
-    });
-  }, [pubkey, meta]);
-  return null;
-}
 
 function ProfilePopupBridge() {
   const popupPubkey = useChatStore((s) => s.profilePopupPubkey);
@@ -3124,6 +3452,11 @@ function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClose: () 
   const [isPublic, setIsPublic] = useState(group.isPublic);
   const [isOpen, setIsOpen] = useState(group.isOpen);
   const [channelKind, setChannelKind] = useState<'text' | 'voice' | 'voice-sfu' | 'forum'>(group.kind);
+  // Forum-container curated tags. Initialized from the relay's current
+  // metadata so the admin sees the existing set on open; mutated through
+  // the Forum tags section below and republished on save. NIP-29 9002 is a
+  // full replacement, so we always send the full intended set.
+  const [forumTags, setForumTags] = useState<ReadonlyArray<JsForumTag>>(group.forumTags);
   const [savingMeta, setSavingMeta] = useState(false);
   const [metaErr, setMetaErr] = useState<string | null>(null);
   const [uploading, setUploading] = useState<null | 'icon' | 'banner'>(null);
@@ -3194,6 +3527,11 @@ function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClose: () 
         isPublic,
         isOpen,
         kind: channelKind,
+        // Only meaningful for forums; harmless on other kinds (the chip
+        // bar only renders for `kind === 'forum'`). Passing the full set
+        // every time keeps NIP-29 9002's full-replacement semantics from
+        // dropping admin-curated tags.
+        forumTags,
       });
       // Persist the SFU pin only when this is an SFU channel and the
       // admin filled in the pubkey + URL. Empty fields => skip publish
@@ -3446,6 +3784,21 @@ function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClose: () 
               )}
             </section>
 
+            {channelKind === 'forum' && (
+              <section className="space-y-3" data-testid="forum-tags-editor">
+                <SectionHeader
+                  title="Forum tags"
+                  hint="Curated; emit as forum-tag NIP-29 metadata"
+                />
+                <p className="text-[11px] text-lc-muted">
+                  Pick a small set of categories so members can browse threads by topic.
+                  Each thread creator picks from this list — they can&apos;t invent new tags.
+                  Emoji is optional but helps the chip row scan at a glance.
+                </p>
+                <ForumTagsEditor value={forumTags} onChange={setForumTags} />
+              </section>
+            )}
+
             {metaErr && (
               <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">{metaErr}</div>
             )}
@@ -3623,6 +3976,97 @@ function ImageUploadRow({
   );
 }
 
+function newForumTagId(): string {
+  // 8-char URL-safe slug. Only needs uniqueness within one forum's tag set;
+  // collision risk inside a typical < 20-tag list is negligible.
+  return Math.random().toString(36).slice(2, 10);
+}
+
+function ForumTagsEditor({
+  value,
+  onChange,
+}: {
+  value: ReadonlyArray<JsForumTag>;
+  onChange: (next: ReadonlyArray<JsForumTag>) => void;
+}) {
+  const MAX = 20;
+  const updateAt = (idx: number, patch: Partial<JsForumTag>) => {
+    const next = value.map((t, i) => (i === idx ? { ...t, ...patch } : t));
+    onChange(next);
+  };
+  const removeAt = (idx: number) => {
+    onChange(value.filter((_, i) => i !== idx));
+  };
+  const addTag = () => {
+    if (value.length >= MAX) return;
+    onChange([...value, { id: newForumTagId(), name: '', emoji: null }]);
+  };
+  return (
+    <div className="space-y-2">
+      {value.length === 0 && (
+        <div className="rounded-lg border border-dashed border-lc-border px-3 py-3 text-center text-xs text-lc-muted">
+          No tags yet. Add one to give thread creators something to pick.
+        </div>
+      )}
+      {value.map((tag, idx) => (
+        <div
+          key={tag.id}
+          className="flex items-center gap-2 rounded-lg border border-lc-border bg-lc-black px-2 py-1.5"
+          data-testid={`forum-tag-row-${tag.id}`}
+        >
+          <input
+            type="text"
+            value={tag.emoji ?? ''}
+            onChange={(e) => {
+              const v = e.target.value;
+              // Keep it short — a single grapheme is the visual target, but
+              // browsers and emoji selectors vary, so we cap at 4 code units
+              // rather than insisting on grapheme-cluster math here.
+              updateAt(idx, { emoji: v ? v.slice(0, 4) : null });
+            }}
+            placeholder="🌐"
+            maxLength={4}
+            className="w-12 shrink-0 rounded-md border border-lc-border bg-lc-dark px-2 py-1 text-center text-sm text-lc-white outline-none focus:border-lc-green/60"
+            aria-label="Tag emoji"
+            data-testid={`forum-tag-emoji-${tag.id}`}
+          />
+          <input
+            type="text"
+            value={tag.name}
+            onChange={(e) => updateAt(idx, { name: e.target.value })}
+            placeholder="Tag name"
+            maxLength={40}
+            className="flex-1 min-w-0 rounded-md border border-lc-border bg-lc-dark px-2 py-1 text-sm text-lc-white outline-none focus:border-lc-green/60"
+            aria-label="Tag name"
+            data-testid={`forum-tag-name-${tag.id}`}
+          />
+          <button
+            type="button"
+            onClick={() => removeAt(idx)}
+            className="shrink-0 rounded-md p-1 text-lc-muted hover:bg-lc-card hover:text-red-300"
+            aria-label="Remove tag"
+            data-testid={`forum-tag-remove-${tag.id}`}
+          >
+            ✕
+          </button>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={addTag}
+        disabled={value.length >= MAX}
+        className="lc-pill-secondary text-xs px-3 py-1.5 disabled:opacity-40"
+        data-testid="forum-tag-add"
+      >
+        + Add tag
+      </button>
+      {value.length >= MAX && (
+        <p className="text-[11px] text-lc-muted">Maximum {MAX} tags reached.</p>
+      )}
+    </div>
+  );
+}
+
 function ManageMemberRow({ groupId, pubkey, isAdmin }: { groupId: string; pubkey: string; isAdmin: boolean }) {
   const meta = useProfile(pubkey);
   return (
@@ -3677,6 +4121,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 // -- DMs ----------------------------------------------------------------
 
 function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string) => void }) {
+  const { t } = useTranslation();
   const dms = useDirectMessages();
   const meta = useProfile(peer);
   const thread = peer ? dms[peer] ?? [] : [];
@@ -3733,7 +4178,7 @@ function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string) => voi
   if (!peer) {
     return (
       <div className="flex h-full items-center justify-center text-sm text-lc-muted">
-        Pick or start a DM conversation.
+        {t('dm.pickConversation')}
       </div>
     );
   }
@@ -3751,7 +4196,7 @@ function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string) => voi
       </header>
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-4">
         {thread.length === 0 ? (
-          <div className="text-sm text-lc-muted">No messages yet. Send the first one (NIP-04 encrypted).</div>
+          <div className="text-sm text-lc-muted">{t('dm.emptyEncrypted')}</div>
         ) : (
           thread.map((m) => {
             const onRetryDM = () => {
@@ -3779,7 +4224,7 @@ function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string) => voi
                   {m.pending && (
                     <span
                       className={'inline-block h-2.5 w-2.5 animate-spin rounded-full border ' + (m.outgoing ? 'border-black/30 border-t-black/70' : 'border-lc-muted/40 border-t-lc-muted')}
-                      aria-label="Sending"
+                      aria-label={t('common.sending')}
                       role="status"
                     />
                   )}
@@ -3792,20 +4237,20 @@ function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string) => voi
                 </div>
                 {m.failed && (
                   <div className="mt-1.5 flex items-center justify-end gap-2 text-[11px] text-red-500" data-testid="dm-failed">
-                    <span>Couldn’t send</span>
+                    <span>{t('dm.failedSend')}</span>
                     <button
                       type="button"
                       onClick={onRetryDM}
                       className="rounded bg-red-500/15 px-2 py-0.5 font-semibold text-red-500 hover:bg-red-500/25"
                       data-testid="dm-retry"
                     >
-                      Retry
+                      {t('common.retry')}
                     </button>
                     <button
                       type="button"
                       onClick={onDismissDM}
                       className="text-red-500/70 hover:text-red-500"
-                      aria-label="Dismiss failed message"
+                      aria-label={t('dm.dismissFailed')}
                     >
                       ✕
                     </button>
@@ -3821,7 +4266,7 @@ function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string) => voi
           <input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder="Encrypted message (NIP-04)"
+            placeholder={t('dm.placeholderEncrypted')}
             className="flex-1 bg-transparent text-sm text-lc-white outline-none placeholder:text-lc-muted disabled:opacity-50"
           />
           <button
@@ -3829,7 +4274,7 @@ function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string) => voi
             disabled={!draft.trim()}
             className="text-xs font-semibold text-lc-green disabled:opacity-30"
           >
-            Send
+            {t('common.send')}
           </button>
         </div>
       </form>
@@ -3926,136 +4371,16 @@ function RelayAccessModal() {
   );
 }
 
-function RelayAccessBanner({ compact = false }: { compact?: boolean } = {}) {
-  const relay = useCurrentRelayUrl();
-  const access = useRelayAccess();
-  const loginMethod = useMyLoginMethod();
-  const isLoggedIn = useIsLoggedIn();
-  if (!relay) return null;
-  if (access === 'ok') return null;
-
-  const host = shortHost(relay);
-  const wrapperBase = compact
-    ? 'rounded-xl border p-4'
-    : 'mx-5 mt-4 rounded-xl border p-5';
-  const titleSize = compact ? 'text-base' : 'text-lg';
-
-  if (access === 'unknown') {
-    // Pre-AUTH "no signal yet" state. Hidden when logged out — LoginModal
-    // owns that surface and a duplicate "Connecting" message would just
-    // crowd it.
-    if (!isLoggedIn) return null;
-    return (
-      <div
-        className={`${wrapperBase} border-lc-border bg-lc-card/60`}
-        data-testid="relay-access-banner"
-        data-state="unknown"
-      >
-        <div className={`${titleSize} font-semibold flex items-center gap-2 text-lc-white`}>
-          <span
-            className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-lc-green/30 border-t-lc-green"
-            aria-hidden
-          />
-          Connecting to {host}…
-        </div>
-        <div className="mt-1 text-sm text-lc-muted">
-          Waiting for the relay to respond. Channels stay hidden until the relay confirms read access.
-        </div>
-      </div>
-    );
-  }
-
-  if (access === 'authenticating') {
-    const reason =
-      loginMethod === 'bunker'
-        ? 'Approve the signing request in your bunker app to complete NIP-42 AUTH.'
-        : loginMethod === 'nip07'
-          ? 'Approve the signing request in your Nostr extension to complete NIP-42 AUTH.'
-          : 'Signing the relay AUTH challenge…';
-    return (
-      <div
-        className={`${wrapperBase} border-yellow-500/40 bg-yellow-500/10`}
-        data-testid="relay-access-banner"
-        data-state="authenticating"
-      >
-        <div className={`${titleSize} font-semibold flex items-center gap-2 text-yellow-200`}>
-          <span
-            className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-yellow-300/30 border-t-yellow-200"
-            aria-hidden
-          />
-          Authenticating with {host}…
-        </div>
-        <div className="mt-1 text-sm text-yellow-100/80">{reason}</div>
-      </div>
-    );
-  }
-
-  if (access === 'auth-required') {
-    const reason = !isLoggedIn
-      ? 'Log in with a Nostr key — this relay only serves authenticated readers.'
-      : loginMethod === 'bunker'
-        ? 'Approve the signing request in your bunker app to complete NIP-42 AUTH.'
-        : loginMethod === 'nip07'
-          ? 'Approve the signing request in your Nostr extension to complete NIP-42 AUTH.'
-          : 'NIP-42 AUTH did not complete. Try reloading or switching login methods.';
-    return (
-      <div
-        className={`${wrapperBase} border-yellow-500/40 bg-yellow-500/10`}
-        data-testid="relay-access-banner"
-        data-state="auth-required"
-      >
-        <div className={`${titleSize} font-semibold text-yellow-200`}>
-          Not authenticated to {host}
-        </div>
-        <div className="mt-1 text-sm text-yellow-100/80">{reason}</div>
-      </div>
-    );
-  }
-  // 'restricted' | 'unreachable' | 'error'
-  return (
-    <div
-      className={`${wrapperBase} border-red-500/40 bg-red-500/10`}
-      data-testid="relay-access-banner"
-      data-state={access}
-    >
-      <div className={`${titleSize} font-semibold text-red-200`}>
-        {access === 'restricted'
-          ? `Not whitelisted on ${host}`
-          : access === 'unreachable'
-            ? `Cannot reach ${host}`
-            : `Relay error on ${host}`}
-      </div>
-      <div className="mt-1 text-sm text-red-100/80">
-        {access === 'restricted'
-          ? 'This relay accepted your signature but won’t serve or accept events from your pubkey. Ask the operator to add you to its allowlist, or switch relays.'
-          : access === 'unreachable'
-            ? 'The relay isn’t responding. It may be offline, blocked by your network, or briefly unavailable. We’ll keep retrying in the background.'
-            : 'The relay rejected the request. Try reloading or switching relays.'}
-      </div>
-    </div>
-  );
-}
-
 function EmptyState() {
-  const relay = useCurrentRelayUrl();
-  const access = useRelayAccess(relay || null);
-  // If the relay hasn't confirmed access we surface the same banner the
-  // sidebar shows, instead of "Pick a channel or DM" — the sidebar has no
-  // channels to pick yet, so that prompt would just confuse.
-  if (access !== 'ok') {
-    return (
-      <div className="flex h-full items-center justify-center px-5">
-        <div className="w-full max-w-md">
-          <RelayAccessBanner compact />
-        </div>
-      </div>
-    );
-  }
+  const { t } = useTranslation();
+  // Relay/AUTH state is surfaced exclusively by the chat-pane
+  // RelayStatusBanner now. The EmptyState only shows the "pick a
+  // channel" prompt — the banner mounts above this section regardless.
   return (
     <div className="flex h-full items-center justify-center text-lc-muted">
       <div className="text-center">
-        <div className="text-lg font-medium text-lc-white">Pick a channel or DM</div>
-        <div className="mt-1 text-sm">Choose from the sidebar — or hit + to create a new channel.</div>
+        <div className="text-lg font-medium text-lc-white">{t('desktop.empty.title')}</div>
+        <div className="mt-1 text-sm">{t('desktop.empty.description')}</div>
       </div>
     </div>
   );

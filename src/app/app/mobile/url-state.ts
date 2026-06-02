@@ -25,7 +25,19 @@ export interface NavState {
   profilePubkey: string | null;
   forumGroupId: string | null;
   baseScreen: ScreenName | null;
-  msgContext: { id: string; pubkey: string; content: string } | null;
+  msgContext: {
+    id: string;
+    pubkey: string;
+    content: string;
+    groupId?: string;
+    canModerate?: boolean;
+    canDeleteOwn?: boolean;
+  } | null;
+  // The top-level tab (or sub-screen) the user came from when this screen
+  // was opened. Drives the bottom-nav active highlight and swipe-back target
+  // for screens reachable from multiple contexts (profile-view, member-list,
+  // search, msg-actions, zap-modal). See docs/mobile-navigation.md §3.
+  parentScreen: ScreenName | null;
 }
 
 export const initialNav: NavState = {
@@ -36,6 +48,7 @@ export const initialNav: NavState = {
   forumGroupId: null,
   baseScreen: null,
   msgContext: null,
+  parentScreen: null,
 };
 
 const KNOWN_SCREENS: ReadonlySet<ScreenName> = new Set<ScreenName>([
@@ -69,6 +82,7 @@ export function urlFor(nav: NavState, relay: string | null, pathname = '/app'): 
   if (nav.screen !== 'server' && nav.screen !== 'msg-actions' && nav.screen !== 'zap-modal') {
     params.set('s', nav.screen);
   }
+  if (nav.parentScreen) params.set('pr', nav.parentScreen);
   const qs = params.toString();
   return qs ? `${pathname}?${qs}` : pathname;
 }
@@ -85,6 +99,9 @@ export function parseUrl(search: string): { nav: NavState; relay: string | null 
   else if (p) screen = 'dm-thread';
   else if (u) screen = 'profile-view';
   const relay = params.get('relay');
+  const prParam = params.get('pr');
+  const parentScreen: ScreenName | null =
+    prParam && KNOWN_SCREENS.has(prParam as ScreenName) ? (prParam as ScreenName) : null;
   return {
     nav: {
       ...initialNav,
@@ -93,6 +110,7 @@ export function parseUrl(search: string): { nav: NavState; relay: string | null 
       dmPeer: p,
       profilePubkey: u,
       forumGroupId: params.get('f'),
+      parentScreen,
     },
     relay: relay ? (/^wss?:\/\//.test(relay) ? relay : `wss://${relay}`) : null,
   };

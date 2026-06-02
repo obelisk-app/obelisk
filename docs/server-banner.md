@@ -2,7 +2,7 @@
 
 NIP-29 defines `name`, `about`, and `picture` tags on group metadata events
 (kinds **39000** and **9002**), but does not standardise a banner image.
-Obeliskord adds a **`["banner", <url>]`** tag using the same events. Other
+Obelisk adds a **`["banner", <url>]`** tag using the same events. Other
 NIP-29 clients ignore unknown tags, so this is forward-compatible.
 
 ## Event shape

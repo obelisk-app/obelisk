@@ -43,6 +43,12 @@ export async function installFakeMediaStreams(context: import('@playwright/test'
     function makeFakeAudioStream(): MediaStream {
       const Ctx = (w.AudioContext ?? w.webkitAudioContext)!;
       const ac = new Ctx();
+      const resume = () => { void ac.resume().catch(() => {}); };
+      resume();
+      const resumeTimer = window.setInterval(() => {
+        if (ac.state === 'running') window.clearInterval(resumeTimer);
+        else resume();
+      }, 500);
       const osc = ac.createOscillator();
       osc.frequency.value = 220;
       const gain = ac.createGain();
@@ -280,6 +286,14 @@ export async function setCameraEnabled(page: Page, on: boolean): Promise<void> {
   await page.evaluate(async (enabled) => {
     const c = (window as unknown as { __test_voice?: { setCameraEnabled: (on: boolean) => Promise<void> } }).__test_voice;
     if (c) await c.setCameraEnabled(enabled);
+  }, on);
+}
+
+/** Toggle microphone on the active VoiceClient. */
+export async function setMicEnabled(page: Page, on: boolean): Promise<void> {
+  await page.evaluate(async (enabled) => {
+    const c = (window as unknown as { __test_voice?: { setMicEnabled: (on: boolean) => Promise<void> } }).__test_voice;
+    if (c) await c.setMicEnabled(enabled);
   }, on);
 }
 

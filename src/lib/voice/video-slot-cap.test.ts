@@ -22,9 +22,12 @@ import type { VoicePresence, VoiceSignalPayload } from './types';
 const transportFake = vi.hoisted(() => {
   let rosterCb: ((roster: VoicePresence[]) => void) | null = null;
   let signalsCb: ((from: string, p: VoiceSignalPayload) => void) | null = null;
+  const publishPresenceBeacon = vi.fn(async () => {});
+  const publishLeavePresence = vi.fn(async () => {});
   let selfPubkey = 'self';
   return {
-    publishPresenceBeacon: vi.fn(async () => {}),
+    publishPresenceBeacon,
+    publishLeavePresence,
     subscribeRoster: vi.fn(async (_id: string, cb: (r: VoicePresence[]) => void) => {
       rosterCb = cb;
       return () => { rosterCb = null; };
@@ -42,21 +45,32 @@ const transportFake = vi.hoisted(() => {
       rosterCb = null;
       signalsCb = null;
       selfPubkey = 'self';
+      publishPresenceBeacon.mockClear();
+      publishLeavePresence.mockClear();
     },
   };
 });
 
 vi.mock('./transport', () => ({
   publishPresenceBeacon: transportFake.publishPresenceBeacon,
+  publishLeavePresence: transportFake.publishLeavePresence,
   subscribeRoster: transportFake.subscribeRoster,
   sendSignal: transportFake.sendSignal,
   subscribeSignals: transportFake.subscribeSignals,
+  createVoiceTransport: vi.fn(() => ({
+    publishPresenceBeacon: transportFake.publishPresenceBeacon,
+    publishLeavePresence: transportFake.publishLeavePresence,
+    subscribeRoster: transportFake.subscribeRoster,
+    sendSignal: transportFake.sendSignal,
+    subscribeSignals: transportFake.subscribeSignals,
+  })),
   getSelfPubkey: transportFake.getSelfPubkey,
   transitiveParticipants: (roster: VoicePresence[]) => {
     const set = new Set<string>();
     for (const p of roster) {
       set.add(p.pubkey);
       for (const pk of p.connectedTo) set.add(pk);
+      for (const pk of p.knownPeers ?? []) set.add(pk);
     }
     return Array.from(set);
   },

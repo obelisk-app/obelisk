@@ -7,6 +7,14 @@
  * Keep these two files in sync when extending the @JsExport surface.
  */
 
+export interface JsForumTag {
+  /** Short opaque slug. Stable across edits — threads reference this id. */
+  readonly id: string;
+  readonly name: string;
+  /** Single emoji char (or short pictograph). `null` when the admin didn't set one. */
+  readonly emoji: string | null;
+}
+
 export interface JsGroup {
   readonly id: string;
   readonly name: string | null;
@@ -33,6 +41,21 @@ export interface JsGroup {
    * marker is just another tag.
    */
   readonly kind: 'text' | 'voice' | 'voice-sfu' | 'forum';
+  /**
+   * Curated forum tags. Only meaningful when `kind === 'forum'` — defined by
+   * the forum's admin and carried as `["forum-tag", id, name, emoji?]` tags
+   * on the container's kind 9002/39000 metadata. Threads under the forum
+   * reference these by id via their own `topics` field. Empty for non-forum
+   * channels (and for forums that haven't defined any tags yet).
+   */
+  readonly forumTags: ReadonlyArray<JsForumTag>;
+  /**
+   * Topic ids this thread is tagged with — references entries in the parent
+   * forum container's `forumTags`. Carried as `["topic", id]` tags on the
+   * thread's kind 9002/39000 metadata. Empty for channels that aren't a
+   * forum thread or that the OP didn't tag.
+   */
+  readonly topics: ReadonlyArray<string>;
 }
 
 export interface JsMessage {
@@ -49,6 +72,13 @@ export interface JsMessage {
    * Empty array when there are none.
    */
   readonly mentions: ReadonlyArray<string>;
+  /**
+   * NIP-30 custom emoji tags carried on the source event, normalized as
+   * shortcode name -> image URL. Renderers merge this with the relay's
+   * current emoji set so older messages stay portable even if the relay list
+   * changes later.
+   */
+  readonly customEmojis?: Readonly<Record<string, string>>;
   /**
    * Optimistic-send fields. Present only on placeholders the bridge inserted
    * for an in-flight or just-failed publish from this client. Once the relay
@@ -83,6 +113,8 @@ export interface JsReaction {
   readonly id: string;
   readonly pubkey: string;
   readonly emoji: string;
+  /** NIP-30 custom emoji tags carried on the reaction event. */
+  readonly customEmojis?: Readonly<Record<string, string>>;
   readonly targetEventId: string;
   readonly createdAt: number;
 }
@@ -131,6 +163,16 @@ export type RelayAccessState =
   | 'restricted'
   | 'unreachable'
   | 'error';
+
+/**
+ * Per-group confidence enum for the kind 9 messages stream. See
+ * `subscribeMessagesStatus` for the contract.
+ */
+export type MessagesStatus =
+  | 'loading'
+  | 'empty-unconfirmed'
+  | 'empty-confirmed'
+  | 'has-messages';
 
 export interface NostrBridge {
   initialize(): Promise<void>;
@@ -218,8 +260,31 @@ export interface NostrBridge {
    * empty state — without this signal, an empty `messagesByGroup[groupId]`
    * looks the same whether the relay is still serving history or has
    * already confirmed the channel is empty.
+   *
+   * Prefer {@link subscribeMessagesStatus} for new code: EOSE alone is not
+   * proof of emptiness on auth-gated relays. The status enum surfaces the
+   * bridge's retry-backed confidence so the UI never prematurely declares
+   * "No messages".
    */
   subscribeMessagesEose(groupId: string, cb: (eose: boolean) => void): Unsubscribe;
+  /**
+   * Confidence enum for the per-group kind 9 messages stream.
+   *
+   *  - `loading`           — REQ open, no EOSE yet, no events ingested
+   *  - `empty-unconfirmed` — relay sent EOSE before any events; retries pending
+   *  - `empty-confirmed`   — retries exhausted, relay agrees the channel is empty
+   *  - `has-messages`      — at least one event ingested
+   *
+   * The UI should show a loading spinner for `loading` / `empty-unconfirmed`
+   * and only render "No messages yet" once the status reaches
+   * `empty-confirmed`. The bridge owns the retry timing (see
+   * `EMPTY_RETRY_DELAYS` in client.ts) so consumers never need to hand-roll
+   * dwell windows.
+   */
+  subscribeMessagesStatus(
+    groupId: string,
+    cb: (status: MessagesStatus) => void,
+  ): Unsubscribe;
   subscribeUserMetadata(pubkey: string, cb: (meta: JsUserMetadata | null) => void): Unsubscribe;
   /** Reactions targeting any event in [groupId]. Keyed by target event id. */
   subscribeReactions(
@@ -234,6 +299,11 @@ export interface NostrBridge {
   subscribeDirectMessages(
     cb: (byPeer: Readonly<Record<string, ReadonlyArray<JsDirectMessage>>>) => void,
   ): Unsubscribe;
+  /**
+   * Close live DM relay subscriptions. This does not delete local caches,
+   * decrypted messages already in memory, or any login/session material.
+   */
+  disableDirectMessages(): void;
   /** NIP-29 39001 admins (relay-published). Keyed by pubkey hex. */
   subscribeAdmins(groupId: string, cb: (admins: ReadonlyArray<string>) => void): Unsubscribe;
   /** Full admin map for every group the bridge has seen on the active relay. */
@@ -269,7 +339,7 @@ export interface NostrBridge {
    * progress, even for users who aren't joined.
    */
   subscribeActiveCallByChannel(
-    cb: (byChannel: Readonly<Record<string, { hostPubkey: string; status: string; participantCount: number; expiresAt: number; createdAt: number }>>) => void,
+    cb: (byChannel: Readonly<Record<string, { hostPubkey: string; status: string; participantCount: number; expiresAt: number; createdAt: number; mode?: 'sfu' | 'mesh'; participantPubkeys?: string[] }>>) => void,
   ): Unsubscribe;
   /**
    * Add or remove a pubkey from the local user's NIP-51 mute list. Fetches
@@ -307,8 +377,23 @@ export interface NostrBridge {
    * (see {@link JsMessage}). Throws synchronously only when there is no
    * active session.
    */
-  sendMessage(groupId: string, content: string, replyTo?: { id: string; pubkey: string } | null): Promise<void>;
-  sendReaction(targetEventId: string, targetPubkey: string, emoji: string, groupId: string): Promise<void>;
+  sendMessage(
+    groupId: string,
+    content: string,
+    replyTo?: { id: string; pubkey: string } | null,
+    emojiTags?: ReadonlyArray<ReadonlyArray<string>>,
+  ): Promise<void>;
+  sendReaction(
+    targetEventId: string,
+    targetPubkey: string,
+    emoji: string,
+    groupId: string,
+    emojiTags?: ReadonlyArray<ReadonlyArray<string>>,
+  ): Promise<void>;
+  /** NIP-09 kind 5 deletion for the local user's kind 7 reaction event. */
+  removeReaction(groupId: string, reactionEventId: string): Promise<void>;
+  /** NIP-09 kind 5 deletion for the local user's kind 9 message event. */
+  removeMessage(groupId: string, eventId: string): Promise<void>;
   /**
    * Same optimistic contract as {@link sendMessage}, for NIP-04 DMs. The
    * placeholder is added under the recipient pubkey in `dmsByPeer`; the
@@ -393,6 +478,18 @@ export interface NostrBridge {
      * child group of its forum container).
      */
     parent?: string;
+    /**
+     * Forum-container tags (admin-curated). Emits one
+     * `["forum-tag", id, name, emoji?]` tag per entry. Only meaningful when
+     * `kind === 'forum'` — ignored for other channel kinds.
+     */
+    forumTags?: ReadonlyArray<JsForumTag>;
+    /**
+     * Topic ids this thread is tagged with — references entries in the
+     * parent forum container's `forumTags`. Emits one `["topic", id]` tag
+     * per entry. Only meaningful when `parent` points at a forum container.
+     */
+    topics?: ReadonlyArray<string>;
   }): Promise<string>;
   editGroupMetadata(opts: {
     groupId: string;
@@ -407,6 +504,18 @@ export interface NostrBridge {
     kind?: 'text' | 'voice' | 'voice-sfu' | 'forum';
     /** NIP-29 parent group id (for nesting / forum threads). */
     parent?: string;
+    /**
+     * Replace the forum container's curated tag set. NIP-29 9002 is a full
+     * replacement, so callers must pass the full intended set on every edit
+     * — pass `[]` to clear, omit to drop them. Each entry emits a
+     * `["forum-tag", id, name, emoji?]` tag.
+     */
+    forumTags?: ReadonlyArray<JsForumTag>;
+    /**
+     * Replace the thread's topic ids. Each entry emits a `["topic", id]`
+     * tag. Pass `[]` to clear, omit to drop them.
+     */
+    topics?: ReadonlyArray<string>;
   }): Promise<void>;
   /**
    * NIP-50 search against the active relay(s). Builds a single `REQ` filter
@@ -444,6 +553,21 @@ export interface NostrBridge {
     lud16?: string;
   }): Promise<void>;
   loadMoreMessages(groupId: string): Promise<boolean>;
+  /**
+   * Close the existing kind 9 subscription for `groupId` and open a fresh
+   * one. Use when a stale EOSE-empty state may be hiding real messages —
+   * e.g. user reopens a channel that looked empty after auth-gated /
+   * silent-filtering relay behavior.
+   */
+  refreshGroupMessages(groupId: string): void;
+  /**
+   * Focused fetch of a single group's kind 39000 metadata. Use when the
+   * chat pane mounts on a `groupId` not yet in the bridge's `groups`
+   * store — guarantees the channel is fetched even if the global metadata
+   * stream missed it for this session. Resolves `true` if at least one
+   * previously-unseen 39000 event was ingested.
+   */
+  fetchGroupMetadata(groupId: string): Promise<boolean>;
   setActiveGroup(groupId: string | null): void;
   /** Fetch kind:0 metadata for a pubkey on demand (used by chat to resolve names lazily). */
   ensureUserMetadata(pubkey: string): void;

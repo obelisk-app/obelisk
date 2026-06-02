@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 
 vi.mock('@/lib/relay-info', () => ({
   faviconFor: (url: string) => `https://favicon/${url}`,
@@ -10,7 +10,29 @@ vi.mock('@/lib/relay-branding', () => ({
   useRelayBranding: () => ({}),
 }));
 
-import { RelayTile } from './PhoneShell';
+import { MobileServerBanner, MobileServerRail, RelayTile, shouldIgnoreMobileSwipeTarget } from './PhoneShell';
+
+describe('mobile swipe target guard', () => {
+  it('ignores search/header chrome so a tap cannot also commit carousel navigation', () => {
+    const banner = document.createElement('div');
+    banner.className = 'server-banner-actions';
+    const search = document.createElement('button');
+    search.className = 'icon-btn';
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    banner.append(search);
+    search.append(svg);
+
+    expect(shouldIgnoreMobileSwipeTarget(svg)).toBe(true);
+  });
+
+  it('keeps ordinary content eligible for horizontal swipe navigation', () => {
+    const row = document.createElement('button');
+    row.className = 'ch-row';
+    row.textContent = 'general';
+
+    expect(shouldIgnoreMobileSwipeTarget(row)).toBe(false);
+  });
+});
 
 describe('RelayTile long-press', () => {
   beforeEach(() => { vi.useFakeTimers(); });
@@ -99,5 +121,62 @@ describe('RelayTile long-press', () => {
     tile.dispatchEvent(evt);
     expect(onLongPress).toHaveBeenCalledTimes(1);
     expect(evt.defaultPrevented).toBe(true);
+  });
+});
+
+describe('Mobile server layout pieces', () => {
+  it('renders relays in a vertical rail and normalizes the active relay URL', () => {
+    const onSelectRelay = vi.fn();
+    const onAddRelay = vi.fn();
+
+    render(
+      <MobileServerRail
+        relays={['wss://relay.one', 'wss://relay.two']}
+        activeRelay="wss://relay.one/"
+        onSelectRelay={onSelectRelay}
+        onAddRelay={onAddRelay}
+      />,
+    );
+
+    const rail = screen.getByTestId('mobile-server-rail');
+    expect(rail.className).toContain('spaces-rail');
+    expect(within(rail).getByRole('button', { name: /relay\.one/i }).className).toContain('active');
+
+    fireEvent.click(within(rail).getByRole('button', { name: /relay\.two/i }));
+    expect(onSelectRelay).toHaveBeenCalledWith('wss://relay.two');
+
+    fireEvent.click(within(rail).getByRole('button', { name: /add relay/i }));
+    expect(onAddRelay).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows the active relay banner above the channel menu controls', () => {
+    const onSearch = vi.fn();
+    const onCreateChannel = vi.fn();
+    const onOpenMenu = vi.fn();
+
+    render(
+      <MobileServerBanner
+        label="La Crypta relay"
+        relayUrl="wss://lacrypta-relay.obelisk.ar"
+        iconUrl="https://img.example/icon.png"
+        bannerUrl="https://img.example/banner.png"
+        onSearch={onSearch}
+        onCreateChannel={onCreateChannel}
+        onOpenMenu={onOpenMenu}
+      />,
+    );
+
+    const banner = screen.getByTestId('mobile-server-banner');
+    expect(banner.querySelector('.server-banner-img')).toHaveAttribute('src', 'https://img.example/banner.png');
+    expect(screen.getByRole('heading', { name: 'La Crypta relay' })).toBeTruthy();
+    expect(screen.getByText('lacrypta-relay.obelisk.ar')).toBeTruthy();
+
+    fireEvent.click(screen.getByLabelText('Search this server'));
+    fireEvent.click(screen.getByLabelText('Create channel'));
+    fireEvent.click(screen.getByLabelText('Space menu'));
+
+    expect(onSearch).toHaveBeenCalledTimes(1);
+    expect(onCreateChannel).toHaveBeenCalledTimes(1);
+    expect(onOpenMenu).toHaveBeenCalledTimes(1);
   });
 });

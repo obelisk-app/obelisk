@@ -11,6 +11,10 @@
  */
 
 import { UNICODE_EMOJI_ENTRIES, type EmojiEntry } from '@/components/chat/emoji-data';
+import {
+  normalizeCustomEmojiName,
+  type CustomEmojiMap,
+} from '@/lib/custom-emoji-tags';
 
 export type { EmojiEntry };
 
@@ -83,7 +87,7 @@ export function resolveUnicodeShortcode(name: string): string | null {
  */
 export function searchShortcodes(
   query: string,
-  customEmojis: Record<string, string> = {},
+  customEmojis: CustomEmojiMap = {},
   limit = 8,
 ): Array<{ name: string; char: string; isCustom: boolean }> {
   const q = query.toLowerCase();
@@ -148,7 +152,7 @@ const SHORTCODE_TOKEN_REGEX =
 
 export function replaceShortcodes(
   text: string,
-  customEmojis: Record<string, string> = {},
+  customEmojis: CustomEmojiMap = {},
 ): string {
   if (!text || !text.includes(':')) return text;
 
@@ -159,7 +163,7 @@ export function replaceShortcodes(
     const seg = parts[i];
     if (!seg || !seg.includes(':')) continue;
     parts[i] = seg.replace(SHORTCODE_TOKEN_REGEX, (_match, pre: string, _full: string, name: string) => {
-      const lower = name.toLowerCase();
+      const lower = normalizeCustomEmojiName(name);
       const unicode = MAP[lower];
       if (unicode) return `${pre}${unicode}`;
       if (customEmojis[lower]) {
@@ -178,11 +182,11 @@ export function replaceShortcodes(
  */
 export function resolveReactionEmoji(
   emoji: string,
-  customEmojis: Record<string, string> = {},
+  customEmojis: CustomEmojiMap = {},
 ): { kind: 'unicode'; char: string } | { kind: 'custom'; name: string; url: string } {
   const m = /^:([a-z0-9_+-]{1,64}):$/i.exec(emoji);
   if (m) {
-    const name = m[1].toLowerCase();
+    const name = normalizeCustomEmojiName(m[1]);
     if (customEmojis[name]) {
       return { kind: 'custom', name, url: customEmojis[name] };
     }

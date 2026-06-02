@@ -45,6 +45,11 @@ const bridgeFake = vi.hoisted(() => {
       subs.push(sub);
       return () => { const i = subs.indexOf(sub); if (i >= 0) subs.splice(i, 1); };
     }),
+    subscribeVoiceFilterWatched: vi.fn((filter: SubFilter, sink: (ev: FakeEvent) => void) => {
+      const sub = { filter, sink };
+      subs.push(sub);
+      return () => { const i = subs.indexOf(sub); if (i >= 0) subs.splice(i, 1); };
+    }),
   };
 
   return {
@@ -59,6 +64,7 @@ const bridgeFake = vi.hoisted(() => {
       impl.publishEvent.mockClear();
       impl.subscribeFilter.mockClear();
       impl.subscribeFilterWatched.mockClear();
+      impl.subscribeVoiceFilterWatched.mockClear();
     },
   };
 });
@@ -84,7 +90,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe('publishPresenceBeacon with connectedTo', () => {
+describe('publishPresenceBeacon with connectedTo and known peers', () => {
   it('emits one p-tag per connected pubkey', async () => {
     await publishPresenceBeacon('ch1', ['peerA', 'peerB']);
     const call = bridgeFake.impl.publishEvent.mock.calls[0][0] as { tags: string[][] };
@@ -99,6 +105,13 @@ describe('publishPresenceBeacon with connectedTo', () => {
     expect(pTags.sort()).toEqual(['peerA', 'peerB']);
   });
 
+  it('emits peer tags for known peers plus connected peers', async () => {
+    await publishPresenceBeacon('ch1', ['peerA'], ['peerB', 'peerA', 'peerB']);
+    const call = bridgeFake.impl.publishEvent.mock.calls[0][0] as { tags: string[][] };
+    const peerTags = call.tags.filter((t) => t[0] === 'peer').map((t) => t[1]);
+    expect(peerTags.sort()).toEqual(['peerA', 'peerB']);
+  });
+
   it('omits p-tags entirely when there are no connections', async () => {
     await publishPresenceBeacon('ch1');
     const call = bridgeFake.impl.publishEvent.mock.calls[0][0] as { tags: string[][] };
@@ -107,7 +120,7 @@ describe('publishPresenceBeacon with connectedTo', () => {
   });
 });
 
-describe('subscribeRoster captures connectedTo', () => {
+describe('subscribeRoster captures connectedTo and knownPeers', () => {
   it('exposes the publisher\'s p-tag list as connectedTo', async () => {
     let last: VoicePresence[] = [];
     const unsub = await subscribeRoster('ch1', (r) => { last = r; });
@@ -130,6 +143,22 @@ describe('subscribeRoster captures connectedTo', () => {
     unsub();
   });
 
+  it('exposes peer tags as knownPeers and backfills connected p-tags', async () => {
+    let last: VoicePresence[] = [];
+    const unsub = await subscribeRoster('ch1', (r) => { last = r; });
+    const now = Math.floor(Date.now() / 1000);
+
+    bridgeFake.inject({
+      pubkey: 'A', kind: KIND_VOICE_PRESENCE, content: '',
+      tags: [['e', 'ch1'], ['expiration', String(now + 45)], ['p', 'B'], ['peer', 'C'], ['peer', 'A']],
+      created_at: now,
+    });
+
+    expect(last[0].connectedTo).toEqual(['B']);
+    expect(last[0].knownPeers?.sort()).toEqual(['B', 'C']);
+    unsub();
+  });
+
   it('drops a self-referential p-tag', async () => {
     let last: VoicePresence[] = [];
     const unsub = await subscribeRoster('ch1', (r) => { last = r; });
@@ -147,13 +176,13 @@ describe('subscribeRoster captures connectedTo', () => {
 });
 
 describe('transitiveParticipants', () => {
-  it('unions publishers with their connectedTo lists', () => {
+  it('unions publishers with their connectedTo and knownPeers lists', () => {
     const now = Math.floor(Date.now() / 1000);
     const result = transitiveParticipants([
-      { pubkey: 'A', channelId: 'ch1', createdAt: now, expiresAt: now + 30, connectedTo: ['B', 'C'], videoTracks: [], isSfu: false },
-      { pubkey: 'D', channelId: 'ch1', createdAt: now, expiresAt: now + 30, connectedTo: ['E'], videoTracks: [], isSfu: false },
+      { pubkey: 'A', channelId: 'ch1', createdAt: now, expiresAt: now + 45, connectedTo: ['B', 'C'], knownPeers: ['F'], videoTracks: [], isSfu: false },
+      { pubkey: 'D', channelId: 'ch1', createdAt: now, expiresAt: now + 45, connectedTo: ['E'], knownPeers: [], videoTracks: [], isSfu: false },
     ]);
-    expect(result.sort()).toEqual(['A', 'B', 'C', 'D', 'E']);
+    expect(result.sort()).toEqual(['A', 'B', 'C', 'D', 'E', 'F']);
   });
 
   it('survives a missing publisher beacon when another peer mentions them', () => {

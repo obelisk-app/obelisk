@@ -78,7 +78,7 @@ export const useVoiceStore = create<VoiceState>()(
     (set) => ({
   currentVoiceChannelId: null,
   currentVoiceRelayUrl: null,
-  isMuted: false,
+  isMuted: true,
   isDeafened: false,
   isCameraOn: false,
   isScreenSharing: false,
@@ -144,7 +144,7 @@ export const useVoiceStore = create<VoiceState>()(
     set({
       currentVoiceChannelId: null,
       currentVoiceRelayUrl: null,
-      isMuted: false,
+      isMuted: true,
       isDeafened: false,
       isCameraOn: false,
       isScreenSharing: false,
