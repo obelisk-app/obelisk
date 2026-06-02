@@ -20,10 +20,11 @@
 import {
   LoginModal as SdkLoginModal,
   type LoginMethodId,
+  type LoginModalProps as SdkLoginModalProps,
 } from '@nostr-wot/ui';
 import { getPublicKey } from 'nostr-tools/pure';
 import { nsecToBytes, nsecToHex as sdkNsecToHex } from '@nostr-wot/data';
-import { useEffect, type ReactNode, type SVGProps } from 'react';
+import type { ReactNode, SVGProps } from 'react';
 import { nostrActions } from '@/lib/nostr-bridge';
 
 const iconBase = {
@@ -114,95 +115,6 @@ async function routeToBridge(args: {
   }
 }
 
-/**
- * Local patch for an "Open in signer app" deep-link button inside the SDK's
- * NIP-46 QR view. The fork at `../nostr-wot-sdk` already implements this
- * (Nip46Method.tsx:323-331) but it's missing from the published npm v0.6.0
- * that we currently consume. This sidecar finds the rendered `nostrconnect://`
- * URI in the DOM and inserts a tappable `<a>` above the QR — useful on mobile
- * where the user can't scan their own screen but can hand off to Amber, Nsec.app,
- * Keychat, etc. via the registered URL scheme.
- *
- * Implementation note: we scope the MutationObserver to `.nui-modal-overlay`
- * (and wait for it to appear) instead of watching the whole document. The
- * SDK's QR view re-renders frequently (spinner, slow-hint, restart) and we
- * only care about a single text node — narrowing the scope keeps this from
- * thrashing on every spinner tick.
- *
- * TODO: once @nostr-wot/ui publishes a version with the native button, delete
- *       this component and the matching `.nui-open-signer` CSS rule.
- */
-function Nip46SignerDeepLink(): null {
-  useEffect(() => {
-    if (typeof document === 'undefined') return;
-
-    let injected: HTMLAnchorElement | null = null;
-    let innerObserver: MutationObserver | null = null;
-
-    const removeInjected = () => {
-      if (injected && injected.isConnected) injected.remove();
-      injected = null;
-    };
-
-    const sync = () => {
-      const qrWrap = document.querySelector<HTMLElement>('.nui-modal .nui-qr-wrap');
-      const uri = qrWrap?.querySelector<HTMLElement>('.nui-key-display')?.textContent?.trim();
-
-      if (!qrWrap || !uri || !uri.startsWith('nostrconnect://')) {
-        removeInjected();
-        return;
-      }
-      if (injected && injected.isConnected && injected.getAttribute('href') === uri) return;
-
-      removeInjected();
-      const a = document.createElement('a');
-      a.href = uri;
-      a.className = 'nui-open-signer';
-      a.rel = 'noopener noreferrer';
-      const arrow = document.createElement('span');
-      arrow.setAttribute('aria-hidden', 'true');
-      arrow.textContent = '↗'; // ↗
-      const label = document.createElement('span');
-      label.textContent = 'Open in signer app';
-      a.append(arrow, label);
-      qrWrap.insertBefore(a, qrWrap.firstChild);
-      injected = a;
-    };
-
-    const attachInner = (overlay: Element) => {
-      innerObserver?.disconnect();
-      innerObserver = new MutationObserver(sync);
-      innerObserver.observe(overlay, { childList: true, subtree: true, characterData: true });
-      sync();
-    };
-
-    // The SDK portals the overlay to <body> when it mounts; we have to wait
-    // for that. A short interval is cheaper than a body-wide subtree
-    // observer and only runs until the overlay appears.
-    let outerInterval: ReturnType<typeof setInterval> | null = setInterval(() => {
-      const overlay = document.querySelector('.nui-modal-overlay');
-      if (!overlay) return;
-      if (outerInterval) { clearInterval(outerInterval); outerInterval = null; }
-      attachInner(overlay);
-    }, 100);
-
-    // Fast-path: overlay may already be in the DOM by the time this effect runs.
-    const existing = document.querySelector('.nui-modal-overlay');
-    if (existing) {
-      if (outerInterval) { clearInterval(outerInterval); outerInterval = null; }
-      attachInner(existing);
-    }
-
-    return () => {
-      if (outerInterval) clearInterval(outerInterval);
-      innerObserver?.disconnect();
-      removeInjected();
-    };
-  }, []);
-
-  return null;
-}
-
 interface LoginModalProps {
   onSuccess?: () => void;
   /** When provided, restrict the SDK modal to these methods (forwarded as-is). */
@@ -226,9 +138,7 @@ export default function LoginModal({
   headerSlot,
 }: LoginModalProps = {}) {
   return (
-    <>
-      <Nip46SignerDeepLink />
-      <SdkLoginModal
+    <SdkLoginModal
         open
         onClose={onClose ?? (() => { /* AppShell only mounts this when logged out — no dismiss */ })}
         title={title}
@@ -242,7 +152,9 @@ export default function LoginModal({
           generate: <SparkleIcon />,
           import: <KeyIcon />,
         }}
-        {...(headerSlot ? { slots: { header: headerSlot } } : {})}
+        {...(headerSlot
+          ? { slots: { header: headerSlot } as SdkLoginModalProps['slots'] }
+          : {})}
         onLogin={async ({ pubkey, method, nsec, bunkerUri, clientNsec }) => {
           await routeToBridge({
             method,
@@ -254,6 +166,5 @@ export default function LoginModal({
           onSuccess?.();
         }}
       />
-    </>
   );
 }

@@ -859,33 +859,19 @@ button:not(:disabled),
   padding-bottom: max(32px, env(safe-area-inset-bottom, 0px));
 }
 
-/* "Open in signer app" deep-link injected by Nip46SignerDeepLink (a local
- * patch over the npm SDK; the fork already has this natively — see the
- * TSDoc comment in LoginModal.tsx). Mobile-only: a desktop user scans the
- * QR with their phone signer, but on mobile the QR is unscannable so
- * handing off to Amber / Nsec.app / Keychat via the `nostrconnect://`
- * URL scheme is the only ergonomic path. */
-.nui-open-signer {
-  display: none;
-}
+/* "Open in signer app" deep-link now lives natively in the SDK's
+ * Nip46Method using the AnchorButton primitive (.nui-btn-secondary).
+ * Mobile-only emphasis lives here — desktop users can scan their QR with
+ * a phone, but on mobile the URL handler hand-off is the only path. */
 @media (max-width: 767px) {
-  .nui-open-signer {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    align-self: stretch;
-    padding: 12px 20px;
-    border-radius: 9999px;
+  .nui-qr-wrap .nui-btn-secondary {
     background: var(--color-lc-green);
     color: var(--color-lc-black);
+    border-color: var(--color-lc-green);
     font-weight: 700;
-    font-size: 14px;
-    text-decoration: none;
-    transition: background 0.15s, box-shadow 0.15s;
   }
-  .nui-open-signer:active {
+  .nui-qr-wrap .nui-btn-secondary:hover:not(:disabled) {
     background: color-mix(in oklab, var(--color-lc-green) 88%, black 12%);
+    border-color: var(--color-lc-green);
   }
-  .nui-open-signer > span:first-child { font-size: 16px; line-height: 1; }
 }
