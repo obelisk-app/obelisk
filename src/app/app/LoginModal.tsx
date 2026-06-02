@@ -1,26 +1,32 @@
 'use client';
 
 /**
- * Production login modal — thin wrapper around `@nostr-wot/ui`'s
- * `<LoginWidget>`. Updates to the fork's UI flow into obelisk-dex via
- * the `file:../nostr-wot-sdk/packages/ui` dep.
+ * Obelisk-owned login modal.
  *
- * The SDK builds its own `NostrSigner` and now hands the bridging
- * material directly through `onLogin` (`nsec` for generate/import,
- * `bunkerUri` for nip46). We route each method to the existing bridge
- * entrypoint without touching the SDK's localStorage:
- *   - nip07              → bridge.loginWithNip07(pubkey)
- *   - import / generate  → bridge.loginWithNsec(skHex, pkHex) using args.nsec
- *   - nip46              → bridge.loginWithBunker(args.bunkerUri)
+ * The modal *chrome* (backdrop, portal, ESC handling, scroll lock) is
+ * owned by obelisk via the SDK's `<Modal>` primitive — we explicitly do
+ * not consume the SDK's higher-level `<LoginModal>` wrapper, because we
+ * want to control mount/dismiss/sizing without inheriting the wrapper's
+ * defaults (e.g. `closeOnSuccess`).
  *
- * The bridge keeps its own session, so we suppress the SDK's
- * "Stay signed in" toggle to avoid two competing persistence layers.
+ * The modal *contents* (method picker, NIP-46 QR + paste, generate +
+ * import flows) are the SDK's `<LoginWidget>`. That keeps the visual
+ * identical to upstream — same `.nui-*` markup that obelisk styles
+ * through its global theme — while letting us evolve the modal class
+ * here without re-rendering the auth pipeline.
+ *
+ * Auth pipeline:
+ *   1. `<LoginWidget>` runs the chosen method, attaches the resulting
+ *      `NostrSigner` to the SDK session via its internal `useLogin`.
+ *   2. Our `onLogin` callback then routes the same credentials into
+ *      obelisk's bridge so its session (relays, subscriptions, cache)
+ *      is in sync with the SDK session.
  */
 
 import {
-  LoginModal as SdkLoginModal,
+  Modal,
+  LoginWidget,
   type LoginMethodId,
-  type LoginModalProps as SdkLoginModalProps,
 } from '@nostr-wot/ui';
 import { getPublicKey } from 'nostr-tools/pure';
 import { nsecToBytes, nsecToHex as sdkNsecToHex } from '@nostr-wot/data';
@@ -75,6 +81,11 @@ function nsecToSkHex(nsec: string): string {
   return skHex;
 }
 
+/**
+ * Forwards a successful SDK login into obelisk's bridge so the
+ * bridge-managed session (relay handshake, NIP-42 AUTH, global subs)
+ * stays paired with the SDK session.
+ */
 async function routeToBridge(args: {
   method: LoginMethodId;
   pubkey: string;
@@ -104,9 +115,8 @@ async function routeToBridge(args: {
 
     case 'nip46': {
       if (!bunkerUri) throw new Error('SDK did not provide a bunker URI');
-      // The SDK has already paired the remote signer with `clientNsec`.
-      // We must reuse that client identity — a fresh key would be
-      // rejected by the signer ("no secret") since it never authorized it.
+      // Reuse the SDK's `clientNsec` so the bunker recognizes the pairing —
+      // a fresh client key would be rejected (no prior authorization).
       await nostrActions.loginWithBunker(bunkerUri, {
         ...(clientNsec ? { clientSecretHex: nsecToSkHex(clientNsec) } : {}),
       });
@@ -117,15 +127,17 @@ async function routeToBridge(args: {
 
 interface LoginModalProps {
   onSuccess?: () => void;
-  /** When provided, restrict the SDK modal to these methods (forwarded as-is). */
+  /** Restrict the picker to a subset of methods. Mobile uses this to
+   *  scope the popup to a single picked entry point. */
   methods?: LoginMethodId[];
-  /** Lets the host dismiss the modal. Defaults to a no-op when the modal is the
-   * only visible UI (desktop AppShell). */
+  /** Caller-provided dismiss. Without it, the modal can't be closed
+   *  (matches the AppShell case where login is mandatory). */
   onClose?: () => void;
-  /** Passed through so a host can override the SDK's default copy. */
+  /** Override the widget's heading. */
   title?: string;
+  /** Override the widget's subheading. */
   subtitle?: string;
-  /** Optional node rendered above the title — e.g. the obelisk hero mark on mobile. */
+  /** Node rendered above the title — e.g. the obelisk hero mark on mobile. */
   headerSlot?: ReactNode;
 }
 
@@ -137,10 +149,20 @@ export default function LoginModal({
   subtitle = 'Choose your login method',
   headerSlot,
 }: LoginModalProps = {}) {
+  // AppShell mounts this only while logged-out; in that case the modal is
+  // not dismissible. Mobile + landing pages supply their own `onClose`.
+  const close = onClose ?? (() => { /* not dismissible */ });
+
   return (
-    <SdkLoginModal
-        open
-        onClose={onClose ?? (() => { /* AppShell only mounts this when logged out — no dismiss */ })}
+    <Modal
+      open
+      onClose={close}
+      aria-label="Sign in to Nostr"
+      showClose={Boolean(onClose)}
+      closeOnEscape={Boolean(onClose)}
+      closeOnOverlay={Boolean(onClose)}
+    >
+      <LoginWidget
         title={title}
         subtitle={subtitle}
         flatLayout
@@ -152,9 +174,11 @@ export default function LoginModal({
           generate: <SparkleIcon />,
           import: <KeyIcon />,
         }}
-        {...(headerSlot
-          ? { slots: { header: headerSlot } as SdkLoginModalProps['slots'] }
-          : {})}
+        // `slots.header` keeps the obelisk hero mark above the title on
+        // mobile. The cross-package React 18/19 type drift makes a direct
+        // assignment unhappy — the runtime shape is identical.
+        {...(headerSlot ? { slots: { header: headerSlot as never } } : {})}
+        onSuccess={close}
         onLogin={async ({ pubkey, method, nsec, bunkerUri, clientNsec }) => {
           await routeToBridge({
             method,
@@ -166,5 +190,6 @@ export default function LoginModal({
           onSuccess?.();
         }}
       />
+    </Modal>
   );
 }
