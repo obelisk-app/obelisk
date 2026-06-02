@@ -3,34 +3,32 @@
 /**
  * Obelisk-owned login modal.
  *
- * The modal *chrome* (backdrop, portal, ESC handling, scroll lock) is
- * owned by obelisk via the SDK's `<Modal>` primitive — we explicitly do
- * not consume the SDK's higher-level `<LoginModal>` wrapper, because we
- * want to control mount/dismiss/sizing without inheriting the wrapper's
- * defaults (e.g. `closeOnSuccess`).
- *
- * The modal *contents* (method picker, NIP-46 QR + paste, generate +
- * import flows) are the SDK's `<LoginWidget>`. That keeps the visual
- * identical to upstream — same `.nui-*` markup that obelisk styles
- * through its global theme — while letting us evolve the modal class
- * here without re-rendering the auth pipeline.
+ * Obelisk renders the modal chrome + picker JSX itself (same `.nui-*`
+ * class names as upstream so the La Crypta CSS theme in globals.css
+ * applies cleanly — visual is identical to main). The per-method panels
+ * (NIP-07 button, NIP-46 QR + paste, generate, import) come from the
+ * SDK directly; we never reach for `<LoginWidget>` or `<LoginModal>`.
  *
  * Auth pipeline:
- *   1. `<LoginWidget>` runs the chosen method, attaches the resulting
- *      `NostrSigner` to the SDK session via its internal `useLogin`.
- *   2. Our `onLogin` callback then routes the same credentials into
- *      obelisk's bridge so its session (relays, subscriptions, cache)
- *      is in sync with the SDK session.
+ *   1. The SDK method component runs its flow and calls `attach(signer, pubkey, extras)`.
+ *   2. `attach` pushes the signer into the SDK session via `useLogin`.
+ *   3. The same credentials are mirrored into obelisk's bridge so its
+ *      relay handshake / NIP-42 / global subs stay paired with the SDK session.
  */
 
+import { useState, type ReactNode, type SVGProps } from 'react';
 import {
   Modal,
-  LoginWidget,
+  Nip07Method,
+  Nip46Method,
+  GenerateMethod,
+  ImportMethod,
   type LoginMethodId,
 } from '@nostr-wot/ui';
+import type { NostrSigner } from '@nostr-wot/signers';
+import { useLogin } from '@nostr-wot/data/react';
 import { getPublicKey } from 'nostr-tools/pure';
 import { nsecToBytes, nsecToHex as sdkNsecToHex } from '@nostr-wot/data';
-import type { ReactNode, SVGProps } from 'react';
 import { nostrActions } from '@/lib/nostr-bridge';
 
 const iconBase = {
@@ -82,9 +80,8 @@ function nsecToSkHex(nsec: string): string {
 }
 
 /**
- * Forwards a successful SDK login into obelisk's bridge so the
- * bridge-managed session (relay handshake, NIP-42 AUTH, global subs)
- * stays paired with the SDK session.
+ * Mirrors a successful SDK login into obelisk's bridge so the
+ * bridge-managed session stays paired with the SDK session.
  */
 async function routeToBridge(args: {
   method: LoginMethodId;
@@ -115,8 +112,8 @@ async function routeToBridge(args: {
 
     case 'nip46': {
       if (!bunkerUri) throw new Error('SDK did not provide a bunker URI');
-      // Reuse the SDK's `clientNsec` so the bunker recognizes the pairing —
-      // a fresh client key would be rejected (no prior authorization).
+      // Reuse the SDK's `clientNsec` — a fresh client key would be
+      // rejected by the bunker since it never authorized it.
       await nostrActions.loginWithBunker(bunkerUri, {
         ...(clientNsec ? { clientSecretHex: nsecToSkHex(clientNsec) } : {}),
       });
@@ -129,16 +126,29 @@ interface LoginModalProps {
   onSuccess?: () => void;
   /** Restrict the picker to a subset of methods. Mobile uses this to
    *  scope the popup to a single picked entry point. */
-  methods?: LoginMethodId[];
+  methods?: ReadonlyArray<LoginMethodId>;
   /** Caller-provided dismiss. Without it, the modal can't be closed
    *  (matches the AppShell case where login is mandatory). */
   onClose?: () => void;
-  /** Override the widget's heading. */
+  /** Override the picker heading. */
   title?: string;
-  /** Override the widget's subheading. */
+  /** Override the picker subheading. */
   subtitle?: string;
   /** Node rendered above the title — e.g. the obelisk hero mark on mobile. */
   headerSlot?: ReactNode;
+}
+
+type ActiveView =
+  | { kind: 'picker' }
+  | { kind: 'nip46' }
+  | { kind: 'generate' }
+  | { kind: 'import' };
+
+function methodAllowed(
+  id: LoginMethodId,
+  methods?: ReadonlyArray<LoginMethodId>,
+): boolean {
+  return !methods || methods.includes(id);
 }
 
 export default function LoginModal({
@@ -149,9 +159,61 @@ export default function LoginModal({
   subtitle = 'Choose your login method',
   headerSlot,
 }: LoginModalProps = {}) {
-  // AppShell mounts this only while logged-out; in that case the modal is
-  // not dismissible. Mobile + landing pages supply their own `onClose`.
-  const close = onClose ?? (() => { /* not dismissible */ });
+  const login = useLogin();
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  // When the modal is scoped to a single non-list method, open directly
+  // into that method's panel — matches the mobile pre-picker UX.
+  const initialView: ActiveView = (() => {
+    if (!methods || methods.length !== 1) return { kind: 'picker' };
+    switch (methods[0]) {
+      case 'nip46': return { kind: 'nip46' };
+      case 'generate': return { kind: 'generate' };
+      case 'import': return { kind: 'import' };
+      default: return { kind: 'picker' };
+    }
+  })();
+  const [view, setView] = useState<ActiveView>(initialView);
+  const goBack = () => { setView({ kind: 'picker' }); setError(null); };
+
+  const close = onClose ?? (() => { /* not dismissible from the desktop AppShell mount */ });
+
+  // Single attach handler — invoked by every SDK method component's
+  // `onAttached` callback. Pushes the signer into the SDK session via
+  // `useLogin`, then mirrors credentials into obelisk's bridge.
+  async function attach(
+    method: LoginMethodId,
+    signer: NostrSigner,
+    pubkey: string,
+    extras?: { nsec?: string; bunkerUri?: string; clientNsec?: string },
+  ): Promise<void> {
+    setBusy(true);
+    setError(null);
+    try {
+      await login(signer);
+      await routeToBridge({
+        method,
+        pubkey,
+        ...(extras?.nsec ? { nsec: extras.nsec } : {}),
+        ...(extras?.bunkerUri ? { bunkerUri: extras.bunkerUri } : {}),
+        ...(extras?.clientNsec ? { clientNsec: extras.clientNsec } : {}),
+      });
+      onSuccess?.();
+      close();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const onErr = (msg: string) => setError(msg);
+
+  const showNip07 = methodAllowed('nip07', methods);
+  const showNip46 = methodAllowed('nip46', methods);
+  const showGenerate = methodAllowed('generate', methods);
+  const showImport = methodAllowed('import', methods);
 
   return (
     <Modal
@@ -162,34 +224,97 @@ export default function LoginModal({
       closeOnEscape={Boolean(onClose)}
       closeOnOverlay={Boolean(onClose)}
     >
-      <LoginWidget
-        title={title}
-        subtitle={subtitle}
-        flatLayout
-        showRememberToggle={false}
-        methods={methods}
-        methodIcons={{
-          nip07: <LockIcon />,
-          nip46: <ShieldIcon />,
-          generate: <SparkleIcon />,
-          import: <KeyIcon />,
-        }}
-        // `slots.header` keeps the obelisk hero mark above the title on
-        // mobile. The cross-package React 18/19 type drift makes a direct
-        // assignment unhappy — the runtime shape is identical.
-        {...(headerSlot ? { slots: { header: headerSlot as never } } : {})}
-        onSuccess={close}
-        onLogin={async ({ pubkey, method, nsec, bunkerUri, clientNsec }) => {
-          await routeToBridge({
-            method,
-            pubkey,
-            ...(nsec ? { nsec } : {}),
-            ...(bunkerUri ? { bunkerUri } : {}),
-            ...(clientNsec ? { clientNsec } : {}),
-          });
-          onSuccess?.();
-        }}
-      />
+      <div className="nui-widget">
+        {headerSlot}
+
+        <div>
+          <h2 className="nui-widget-title">{title}</h2>
+          <p className="nui-widget-subtitle">{subtitle}</p>
+        </div>
+
+        {error && <div className="nui-error">{error}</div>}
+
+        {busy && view.kind !== 'picker' && (
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', color: 'var(--nui-muted)', fontSize: 13 }}>
+            <span className="nui-spinner" /> Signing in…
+          </div>
+        )}
+
+        {view.kind === 'picker' && (
+          <div className="nui-widget-methods" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {showNip07 && (
+              <Nip07Method
+                onError={onErr}
+                onAttached={(signer, pubkey) => attach('nip07', signer, pubkey)}
+                icon={<LockIcon />}
+              />
+            )}
+            {showNip46 && (
+              <button
+                type="button"
+                className="nui-method-button"
+                onClick={() => setView({ kind: 'nip46' })}
+              >
+                <span className="nui-method-icon" aria-hidden><ShieldIcon /></span>
+                <span className="nui-method-text">
+                  <span className="nui-method-label">Remote signer (bunker)</span>
+                  <span className="nui-method-hint">NIP-46 — Amber, Nsec.app</span>
+                </span>
+              </button>
+            )}
+            {showGenerate && (
+              <button
+                type="button"
+                className="nui-method-button"
+                onClick={() => setView({ kind: 'generate' })}
+              >
+                <span className="nui-method-icon" aria-hidden><SparkleIcon /></span>
+                <span className="nui-method-text">
+                  <span className="nui-method-label">Create a new account</span>
+                  <span className="nui-method-hint">Generates a fresh keypair on this device</span>
+                </span>
+              </button>
+            )}
+            {showImport && (
+              <button
+                type="button"
+                className="nui-method-button"
+                onClick={() => setView({ kind: 'import' })}
+              >
+                <span className="nui-method-icon" aria-hidden><KeyIcon /></span>
+                <span className="nui-method-text">
+                  <span className="nui-method-label">Paste private key</span>
+                  <span className="nui-method-hint">nsec or 64-char hex — risky in browsers</span>
+                </span>
+              </button>
+            )}
+          </div>
+        )}
+
+        {view.kind === 'nip46' && (
+          <Nip46Method
+            inline
+            defaultMode="qr"
+            onError={onErr}
+            onAttached={(signer, pubkey, extras) => attach('nip46', signer, pubkey, extras)}
+            onBack={goBack}
+          />
+        )}
+        {view.kind === 'generate' && (
+          <GenerateMethod
+            onError={onErr}
+            onAttached={(signer, pubkey, extras) => attach('generate', signer, pubkey, extras)}
+            onBack={goBack}
+          />
+        )}
+        {view.kind === 'import' && (
+          <ImportMethod
+            onError={onErr}
+            onAttached={(signer, pubkey, extras) => attach('import', signer, pubkey, extras)}
+            onBack={goBack}
+          />
+        )}
+      </div>
     </Modal>
   );
 }
