@@ -50,6 +50,7 @@ import SearchBar from './SearchBar';
 import MessageContent from '@/components/chat/MessageContent';
 import { MentionText } from '@/components/chat/MentionText';
 import MentionNavigator from '@/components/chat/MentionNavigator';
+import HistoryPaginationStatus from '@/components/chat/HistoryPaginationStatus';
 import MemberList from '@/components/chat/MemberList';
 import ChatStoreMembersAdapter from '@/components/chat/ChatStoreMembersAdapter';
 import RelayAdminPanel from '@/components/admin/RelayAdminPanel';
@@ -101,6 +102,7 @@ import {
 } from '@/lib/custom-emoji-tags';
 import { resolveReactionEmoji } from '@/lib/emoji-shortcodes';
 import { channelScrollPositionKey } from '@/lib/channel-scroll-position';
+import { channelInitialAnchorFromCursor } from '@/lib/channel-scroll-anchor';
 import { useChannelScrollPosition } from '@/hooks/chat/useChannelScrollPosition';
 import RelayEmojiAdminModal from '@/components/admin/RelayEmojiAdminModal';
 import BlossomImageInput from '@/components/BlossomImageInput';
@@ -1993,6 +1995,7 @@ function ChatPanel({
   const isAdmin = !!myPubkey && admins.includes(myPubkey);
   const groupCreator = useGroupCreator(groupId);
   const relay = useCurrentRelayUrl();
+  const readCursorMs = useReadStateStore((s) => s.groupCursors[groupId]);
   // The compose form is gated on positive AUTH evidence so the user
   // doesn't type into a channel the relay won't accept events from. The
   // message list itself renders unconditionally — a cached or partial
@@ -2034,6 +2037,19 @@ function ChatPanel({
   const scrollRef = useRef<HTMLDivElement>(null);
   const voiceMainRef = useRef<HTMLDivElement>(null);
   const scrollKey = useMemo(() => channelScrollPositionKey(relay, groupId), [relay, groupId]);
+  const initialAnchor = useMemo(
+    () => channelInitialAnchorFromCursor(messages, readCursorMs, myPubkey),
+    [messages, myPubkey, readCursorMs],
+  );
+  const initialAnchorMessageId = initialAnchor.kind === 'message' ? initialAnchor.messageId : null;
+  const getInitialAnchorElement = useCallback(() => {
+    if (!initialAnchorMessageId) return null;
+    const scroller = scrollRef.current;
+    if (!scroller) return null;
+    const target = document.querySelector<HTMLElement>(`[data-msg-id="${CSS.escape(initialAnchorMessageId)}"]`);
+    if (!target || !scroller.contains(target)) return null;
+    return target;
+  }, [initialAnchorMessageId]);
   const scrollKeyRef = useRef(scrollKey);
   useEffect(() => {
     scrollKeyRef.current = scrollKey;
@@ -2063,6 +2079,8 @@ function ChatPanel({
     scrollRef,
     itemCount: messages.length,
     disabled: !!pendingMessageId,
+    initialAnchorKey: initialAnchorMessageId,
+    getInitialAnchorElement,
     nearBottomPx: 100,
     onNearBottomChange: setNearBottom,
   });
@@ -2080,12 +2098,14 @@ function ChatPanel({
       if (el.scrollTop < 80 && !loadingEarlier && !reachedStart) {
         const loadKey = scrollKeyRef.current;
         const prevHeight = el.scrollHeight;
-        void loadEarlier().then(() => {
+        const prevTop = el.scrollTop;
+        void loadEarlier().then((result) => {
+          if (result !== 'added') return;
           requestAnimationFrame(() => {
             const e = scrollRef.current;
             if (!e) return;
             if (loadKey && scrollKeyRef.current !== loadKey) return;
-            e.scrollTop = e.scrollHeight - prevHeight;
+            e.scrollTop = e.scrollHeight - prevHeight + prevTop;
           });
         });
       }
@@ -2488,30 +2508,39 @@ function ChatPanel({
             );
           })()
         ) : (
-          messages.map((m, i) => {
-            const prev = messages[i - 1];
-            const grouped =
-              prev && prev.pubkey === m.pubkey && m.createdAt - prev.createdAt < 300;
-            return (
-              <MessageRow
-                key={m.id}
-                msg={m}
-                allMessages={messages}
-                reactions={reactions[m.id] ?? []}
-                zapTotal={zapTotals.get(m.id) ?? null}
-                groupId={groupId}
-                grouped={!!grouped}
-                isAdmin={isAdmin}
-                onReply={setReplyingTo}
-              />
-            );
-          })
+          <>
+            {messages.map((m, i) => {
+              const prev = messages[i - 1];
+              const grouped =
+                prev && prev.pubkey === m.pubkey && m.createdAt - prev.createdAt < 300;
+              return (
+                <MessageRow
+                  key={m.id}
+                  msg={m}
+                  allMessages={messages}
+                  reactions={reactions[m.id] ?? []}
+                  zapTotal={zapTotals.get(m.id) ?? null}
+                  groupId={groupId}
+                  grouped={!!grouped}
+                  isAdmin={isAdmin}
+                  onReply={setReplyingTo}
+                />
+              );
+            })}
+          </>
         )}
       </div>
+      {messages.length > 0 && (
+        <HistoryPaginationStatus
+          loading={loadingEarlier}
+          reachedStart={reachedStart}
+          loadingLabel={t('desktop.channel.loadingEarlier')}
+          endLabel={t('desktop.channel.noEarlierMessages')}
+        />
+      )}
       <MentionNavigator scrollRef={scrollRef} eventIds={channelHighlights.eventIds} />
       </div>
 
-      {messagesVisible && (
       <form onSubmit={onSend} className="shrink-0 px-5 pt-3 pb-3">
         {replyingTo && (
           <div className="mb-2 flex items-center justify-between gap-2 rounded-t-md border border-b-0 border-lc-border bg-lc-card/60 px-3 py-1.5 text-xs text-lc-muted">
@@ -2681,7 +2710,6 @@ function ChatPanel({
           </button>
         </div>
       </form>
-      )}
       </>
         );
         if (group?.kind === 'forum') {

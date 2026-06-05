@@ -21,6 +21,10 @@ describe('channelInitialAnchorFromCursor', () => {
     });
   });
 
+  it('falls back to latest when the read boundary is older than loaded history', () => {
+    expect(channelInitialAnchorFromCursor(messages, 50_000, 'me')).toEqual({ kind: 'bottom' });
+  });
+
   it('falls back to latest when everything loaded is already read', () => {
     expect(channelInitialAnchorFromCursor(messages, 500_000, 'me')).toEqual({ kind: 'bottom' });
   });

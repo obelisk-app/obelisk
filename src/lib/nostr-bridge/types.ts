@@ -174,6 +174,11 @@ export type MessagesStatus =
   | 'empty-confirmed'
   | 'has-messages';
 
+export type LoadMoreMessagesResult =
+  | 'added'
+  | 'end'
+  | 'unavailable';
+
 export interface NostrBridge {
   initialize(): Promise<void>;
   dispose(): void;
@@ -552,7 +557,7 @@ export interface NostrBridge {
     website?: string;
     lud16?: string;
   }): Promise<void>;
-  loadMoreMessages(groupId: string): Promise<boolean>;
+  loadMoreMessages(groupId: string): Promise<LoadMoreMessagesResult>;
   /**
    * Close the existing kind 9 subscription for `groupId` and open a fresh
    * one. Use when a stale EOSE-empty state may be hiding real messages —

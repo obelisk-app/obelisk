@@ -46,6 +46,19 @@ describe('channel scroll positions', () => {
     expect(el.scrollTop).toBe(260);
   });
 
+  it('uses an initial read-cursor anchor when no saved position exists', () => {
+    const el = scroller(0);
+
+    const result = restoreChannelScrollPosition('relay::group-1', el, undefined, {
+      initialAnchorElement: { offsetTop: 360 },
+    });
+
+    expect(result.source).toBe('anchor');
+    expect(result.scrollTop).toBe(360);
+    expect(result.nearBottom).toBe(false);
+    expect(el.scrollTop).toBe(360);
+  });
+
   it('keeps bottom-locked channels at the new latest message', () => {
     rememberChannelScrollPosition('relay::group-1', scroller(790));
     const el = scroller(0, 1400, 200);

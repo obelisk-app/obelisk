@@ -14,12 +14,14 @@ function Harness({
   itemCount,
   disabled = false,
   scrollHeight = 1000,
+  initialAnchorOffset,
   onNearBottomChange,
 }: {
   scrollKey: string;
   itemCount: number;
   disabled?: boolean;
   scrollHeight?: number;
+  initialAnchorOffset?: number;
   onNearBottomChange?: (nearBottom: boolean) => void;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -31,6 +33,10 @@ function Harness({
     scrollRef: ref,
     itemCount,
     disabled,
+    initialAnchorKey: initialAnchorOffset == null ? null : `anchor-${initialAnchorOffset}`,
+    getInitialAnchorElement: initialAnchorOffset == null
+      ? undefined
+      : () => ({ offsetTop: initialAnchorOffset }) as HTMLElement,
     onNearBottomChange,
   });
   return (
@@ -78,6 +84,12 @@ describe('useChannelScrollPosition', () => {
 
     rerender(<Harness scrollKey="relay::g1" itemCount={5} />);
     expect(el.scrollTop).toBe(320);
+  });
+
+  it('uses a read-cursor anchor on first open when no saved position exists', () => {
+    render(<Harness scrollKey="relay::g1" itemCount={5} initialAnchorOffset={360} />);
+
+    expect((screen.getByTestId('scroller') as HTMLDivElement).scrollTop).toBe(360);
   });
 
   it('does not run passive restore after an explicit message jump takes over', () => {

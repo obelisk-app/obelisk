@@ -123,6 +123,10 @@ async function flush(times = 4) {
 
 beforeEach(() => {
   (() => { fake.state.published = []; fake.state.subscriptions = []; fake.state.ensureRelayCalls = []; fake.state.ensureRelayImpl = null; fake.state.querySyncCalls = []; fake.state.poolSeq = 0; })();
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+    ok: false,
+    json: vi.fn().mockResolvedValue({}),
+  }));
   // Each test starts fresh — clear the bridge module-level singleton by
   // resetting modules so getBridge() returns a new instance.
   vi.resetModules();
@@ -133,6 +137,7 @@ beforeEach(() => {
 afterEach(() => {
   (() => { fake.state.published = []; fake.state.subscriptions = []; fake.state.ensureRelayCalls = []; fake.state.ensureRelayImpl = null; fake.state.querySyncCalls = []; fake.state.poolSeq = 0; })();
   vi.useRealTimers();
+  vi.unstubAllGlobals();
 });
 
 describe('nostr-bridge', () => {
@@ -2748,6 +2753,59 @@ describe('nostr-bridge', () => {
 
     const inMemory = impl.messagesByGroup.get()[groupId] ?? [];
     expect(inMemory.map((m) => m.content)).toEqual(['cold-1', 'cold-2', 'cold-3']);
+    expect(impl.messagesStatusByGroup.get()[groupId]).toBe('has-messages');
+  });
+
+  it('setActiveGroup seeds cached messages when the channel memory is empty', async () => {
+    const { getBridge, getBridgeImpl } = await import('./client');
+    const { cacheSet } = await import('./cache');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const impl = getBridgeImpl()!;
+    const groupId = 'active-cache-seed';
+    const relay = impl.currentRelayUrl.get();
+    const baseTs = Math.floor(Date.now() / 1000) - 60;
+    cacheSet(relay, 9, groupId, [
+      { id: 'active-a', pubkey: 'x'.repeat(64), content: 'active-cold-1', createdAt: baseTs, kind: 9, replyToId: null, mentions: [] },
+      { id: 'active-b', pubkey: 'y'.repeat(64), content: 'active-cold-2', createdAt: baseTs + 1, kind: 9, replyToId: null, mentions: [] },
+    ]);
+
+    expect(impl.messagesByGroup.get()[groupId]).toBeUndefined();
+
+    bridge.setActiveGroup(groupId);
+
+    const inMemory = impl.messagesByGroup.get()[groupId] ?? [];
+    expect(inMemory.map((m) => m.content)).toEqual(['active-cold-1', 'active-cold-2']);
+    expect(impl.messagesStatusByGroup.get()[groupId]).toBe('has-messages');
+  });
+
+  it('refreshGroupMessages keeps cached messages visible while the live REQ restarts', async () => {
+    const { getBridge, getBridgeImpl } = await import('./client');
+    const { cacheSet } = await import('./cache');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const impl = getBridgeImpl()!;
+    const groupId = 'refresh-cache-seed';
+    const relay = impl.currentRelayUrl.get();
+    const baseTs = Math.floor(Date.now() / 1000) - 60;
+    cacheSet(relay, 9, groupId, [
+      { id: 'refresh-a', pubkey: 'x'.repeat(64), content: 'refresh-cold', createdAt: baseTs, kind: 9, replyToId: null, mentions: [] },
+    ]);
+
+    bridge.setActiveGroup(groupId);
+    await flush();
+    impl.messagesStatusByGroup.update((prev) => ({ ...prev, [groupId]: 'empty-confirmed' }));
+
+    bridge.refreshGroupMessages(groupId);
+
+    expect(impl.messagesByGroup.get()[groupId]?.map((m) => m.content)).toEqual(['refresh-cold']);
+    expect(impl.messagesStatusByGroup.get()[groupId]).toBe('has-messages');
   });
 
   it('ingestReaction persists to bridgeCache and seedCacheForRelay paints it', async () => {
@@ -3213,9 +3271,214 @@ describe('nostr-bridge', () => {
     expect(subsFor('bg-a')).toHaveLength(1);
     expect(subsFor('bg-b')).toHaveLength(1);
   });
+
+  it('returns end for normal relay pagination only after a confirmed empty page', async () => {
+    const { getBridge, getBridgeImpl } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const groupId = 'normal-pagination-empty';
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    bridge.setActiveGroup(groupId);
+    deliver(await fakeRelayMetadata({ groupId, name: 'Normal Pagination' }));
+    await flush();
+    deliver(await fakeRelayMessage({ groupId, content: 'newest normal message' }));
+    await flush();
+
+    const impl = getBridgeImpl()!;
+    impl.relayAccess.set({ [impl.currentRelayUrl.get()]: 'ok' });
+
+    await expect(bridge.loadMoreMessages(groupId)).resolves.toBe('end');
+  });
+
+  it('keeps normal relay pagination retryable when querySync fails', async () => {
+    const { getBridge, getBridgeImpl } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const groupId = 'normal-pagination-error';
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    bridge.setActiveGroup(groupId);
+    deliver(await fakeRelayMetadata({ groupId, name: 'Normal Pagination Error' }));
+    await flush();
+    deliver(await fakeRelayMessage({ groupId, content: 'newest normal message' }));
+    await flush();
+
+    const impl = getBridgeImpl()!;
+    impl.relayAccess.set({ [impl.currentRelayUrl.get()]: 'ok' });
+    const pool = (impl as unknown as { pool: { querySync: (...args: unknown[]) => Promise<NostrEvent[]> } }).pool;
+    pool.querySync = async () => {
+      throw new Error('relay query failed');
+    };
+
+    await expect(bridge.loadMoreMessages(groupId)).resolves.toBe('unavailable');
+  });
+
+  it('adds older messages from normal relay pagination', async () => {
+    const { getBridge, getBridgeImpl } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const groupId = 'normal-pagination-added';
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    bridge.setActiveGroup(groupId);
+    deliver(await fakeRelayMetadata({ groupId, name: 'Normal Pagination Added' }));
+    await flush();
+    const newest = await fakeRelayMessage({ groupId, content: 'newest normal message' });
+    const older = {
+      ...(await fakeRelayMessage({ groupId, content: 'older normal page' })),
+      id: 'older-normal-page',
+      created_at: newest.created_at - 10,
+    };
+    deliver(newest);
+    await flush();
+
+    const impl = getBridgeImpl()!;
+    impl.relayAccess.set({ [impl.currentRelayUrl.get()]: 'ok' });
+    const pool = (impl as unknown as { pool: { querySync: (...args: unknown[]) => Promise<NostrEvent[]> } }).pool;
+    pool.querySync = async () => [older];
+
+    await expect(bridge.loadMoreMessages(groupId)).resolves.toBe('added');
+    expect(impl.messagesByGroup.get()[groupId]?.map((m) => m.content)).toEqual([
+      'older normal page',
+      'newest normal message',
+    ]);
+  });
+
+  it('uses Obelisk indexed bootstrap when the relay advertises v1 support', async () => {
+    const { getBridge, getBridgeImpl } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const groupId = 'indexed-general';
+    const meta = await fakeRelayMetadata({ groupId, name: 'Indexed General' });
+    const msg = await fakeRelayMessage({ groupId, content: 'from indexed bootstrap' });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({
+        obelisk: {
+          indexed_bootstrap: {
+            version: 1,
+            url: '/api/obelisk/v1/bootstrap',
+            auth: 'nip98',
+          },
+        },
+      }))
+      .mockResolvedValueOnce(jsonResponse({
+        version: 1,
+        relay: 'wss://public.obelisk.ar',
+        generated_at: 1780617600,
+        cursor: { since: 1780617590 },
+        scopes: [
+          {
+            scope: 'default',
+            groups: [
+              { id: groupId, events: [meta, msg], next_before: msg.created_at - 1 },
+            ],
+          },
+        ],
+      }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const impl = getBridgeImpl()!;
+    expect(impl.groups.get().find((g) => g.id === groupId)?.name).toBe('Indexed General');
+    expect(impl.messagesByGroup.get()[groupId]?.map((m) => m.content)).toContain('from indexed bootstrap');
+    expect(impl.groupMetadataEose.get()).toBe(true);
+
+    const globalMetadataSubs = fake.state.subscriptions.filter((s) => {
+      const kinds = (s.filter.kinds as number[] | undefined) ?? [];
+      return kinds.length === 1 && kinds[0] === 39000;
+    });
+    expect(globalMetadataSubs).toHaveLength(0);
+    const liveSub = fake.state.subscriptions.find((s) => {
+      const kinds = (s.filter.kinds as number[] | undefined) ?? [];
+      return kinds.includes(39000) && kinds.includes(9) && s.filter.since === 1780617590;
+    });
+    expect(liveSub).toBeTruthy();
+    expect(fetchMock.mock.calls[1][0]).toBe('https://public.obelisk.ar/api/obelisk/v1/bootstrap?limit_per_group=50');
+    expect(fetchMock.mock.calls[1][1].headers.Authorization).toMatch(/^Nostr /);
+  });
+
+  it('pages older messages through the indexed HTTP endpoint before querySync fallback', async () => {
+    const { getBridge, getBridgeImpl } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const groupId = 'indexed-pages';
+    const meta = await fakeRelayMetadata({ groupId, name: 'Indexed Pages' });
+    const newest = await fakeRelayMessage({ groupId, content: 'newest indexed message' });
+    const older = {
+      ...(await fakeRelayMessage({ groupId, content: 'older indexed page' })),
+      id: 'older-indexed-page',
+      created_at: newest.created_at - 10,
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({
+        obelisk: {
+          indexed_bootstrap: {
+            version: 1,
+            url: '/api/obelisk/v1/bootstrap',
+            auth: 'nip98',
+          },
+        },
+      }))
+      .mockResolvedValueOnce(jsonResponse({
+        version: 1,
+        relay: 'wss://public.obelisk.ar',
+        generated_at: 1780617600,
+        cursor: { since: 1780617590 },
+        scopes: [
+          {
+            scope: 'default',
+            groups: [
+              { id: groupId, events: [meta, newest], next_before: newest.created_at - 1 },
+            ],
+          },
+        ],
+      }))
+      .mockResolvedValueOnce(jsonResponse({
+        version: 1,
+        scope: 'default',
+        group_id: groupId,
+        events: [older],
+        next_before: older.created_at - 1,
+      }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+    const added = await bridge.loadMoreMessages(groupId);
+
+    expect(added).toBe('added');
+    const impl = getBridgeImpl()!;
+    expect(impl.messagesByGroup.get()[groupId]?.map((m) => m.content)).toEqual([
+      'older indexed page',
+      'newest indexed message',
+    ]);
+    expect(fake.state.querySyncCalls.filter((c) =>
+      ((c.filter.kinds as number[] | undefined) ?? []).includes(9)
+      && ((c.filter['#h'] as string[] | undefined) ?? []).includes(groupId),
+    )).toHaveLength(0);
+    expect(fetchMock.mock.calls[2][0]).toBe(
+      `https://public.obelisk.ar/api/obelisk/v1/groups/${groupId}/messages?before=${newest.created_at - 1}&limit=50`,
+    );
+    expect(fetchMock.mock.calls[2][1].headers.Authorization).toMatch(/^Nostr /);
+  });
 });
 
 // -- helpers ------------------------------------------------------------
+
+function jsonResponse(body: unknown, ok = true): Response {
+  return {
+    ok,
+    json: vi.fn().mockResolvedValue(body),
+  } as unknown as Response;
+}
 
 function hexToBytesForTest(hex: string): Uint8Array {
   const out = new Uint8Array(hex.length / 2);

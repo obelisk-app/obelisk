@@ -66,6 +66,7 @@ import { subscribeVoiceJump } from '@/lib/voice/jump-to-voice';
 import MessageContent from '@/components/chat/MessageContent';
 import { MentionText } from '@/components/chat/MentionText';
 import MentionNavigator from '@/components/chat/MentionNavigator';
+import HistoryPaginationStatus from '@/components/chat/HistoryPaginationStatus';
 import EmojiPicker, { type PickedCustomEmoji } from '@/components/chat/EmojiPicker';
 import { uploadToBlossom } from '@/lib/blossom';
 import { formatPubkey, hexToNpub as pubkeyToNpub } from '@nostr-wot/data';
@@ -125,7 +126,7 @@ import MessageZapModal from '@/components/chat/MessageZapModal';
 import { type ScreenName, type NavState, initialNav, urlFor, parseUrl } from './url-state';
 import { buildSeedHistory, decideSnap, decideSwipeNav, decideTabPress, neighborsFor, NAV_ORDER, resolveParent } from './swipe-nav';
 import { useKeyboardInset } from './use-keyboard';
-import { channelScrollPositionKey, getChannelScrollPosition, rememberChannelScrollPosition } from '@/lib/channel-scroll-position';
+import { channelScrollPositionKey } from '@/lib/channel-scroll-position';
 import { channelInitialAnchorFromCursor } from '@/lib/channel-scroll-anchor';
 import { useChannelScrollPosition } from '@/hooks/chat/useChannelScrollPosition';
 // CSS is hoisted to AppGate.tsx so it lands in the route's eagerly-loaded
@@ -2606,8 +2607,22 @@ function ChannelScreen({
   const [uploading, setUploading] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [replyingTo, setReplyingTo] = useState<JsMessage | null>(null);
+  const readCursorMs = useReadStateStore((s) => s.groupCursors[groupId]);
   const messagesRef = useRef<HTMLDivElement>(null);
   const scrollKey = useMemo(() => channelScrollPositionKey(relay, groupId), [relay, groupId]);
+  const initialAnchor = useMemo(
+    () => channelInitialAnchorFromCursor(messages, readCursorMs, myPubkey),
+    [messages, myPubkey, readCursorMs],
+  );
+  const initialAnchorMessageId = initialAnchor.kind === 'message' ? initialAnchor.messageId : null;
+  const getInitialAnchorElement = useCallback(() => {
+    if (!initialAnchorMessageId) return null;
+    const scroller = messagesRef.current;
+    if (!scroller) return null;
+    const target = document.querySelector<HTMLElement>(`[data-msg-id="${CSS.escape(initialAnchorMessageId)}"]`);
+    if (!target || !scroller.contains(target)) return null;
+    return target;
+  }, [initialAnchorMessageId]);
   const scrollKeyRef = useRef(scrollKey);
   useEffect(() => {
     scrollKeyRef.current = scrollKey;
@@ -2615,7 +2630,6 @@ function ChannelScreen({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const composerInputRef = useRef<HTMLInputElement>(null);
   const channelHighlights = useChannelHighlights(groupId, myPubkey);
-  const readCursorMs = useReadStateStore((s) => s.groupCursors[groupId]);
 
   // ── @-mention autocomplete ───────────────────────────────────────────
   // Mentions span the whole relay (every visible group's members + admins
@@ -2717,31 +2731,14 @@ function ChannelScreen({
     scrollKey,
     scrollRef: messagesRef,
     itemCount: messages.length,
+    initialAnchorKey: initialAnchorMessageId,
+    getInitialAnchorElement,
     nearBottomPx: 200,
     onNearBottomChange: (near) => {
       const cur = useChatStore.getState().isNearBottom;
       if (cur !== near) useChatStore.setState({ isNearBottom: near });
     },
   });
-
-  useLayoutEffect(() => {
-    if (!scrollKey || getChannelScrollPosition(scrollKey)) return;
-    const anchor = channelInitialAnchorFromCursor(messages, readCursorMs, myPubkey);
-    if (anchor.kind !== 'message') return;
-
-    const scrollToAnchor = () => {
-      if (getChannelScrollPosition(scrollKey)) return;
-      const scroller = messagesRef.current;
-      const target = document.querySelector<HTMLElement>(`[data-msg-id="${CSS.escape(anchor.messageId)}"]`);
-      if (!scroller || !target || !scroller.contains(target)) return;
-      scroller.scrollTop = target.offsetTop;
-      rememberChannelScrollPosition(scrollKey, scroller, 200);
-    };
-
-    scrollToAnchor();
-    const frame = requestAnimationFrame(scrollToAnchor);
-    return () => cancelAnimationFrame(frame);
-  }, [messages, myPubkey, readCursorMs, scrollKey]);
 
   // Auto-scroll to bottom when new messages arrive (only if already near).
   useEffect(() => {
@@ -2766,12 +2763,14 @@ function ChannelScreen({
       if (el.scrollTop < 80 && !loadingEarlier && !reachedStart) {
         const loadKey = scrollKeyRef.current;
         const prevHeight = el.scrollHeight;
-        void loadEarlier().then(() => {
+        const prevTop = el.scrollTop;
+        void loadEarlier().then((result) => {
+          if (result !== 'added') return;
           requestAnimationFrame(() => {
             const e = messagesRef.current;
             if (!e) return;
             if (loadKey && scrollKeyRef.current !== loadKey) return;
-            e.scrollTop = e.scrollHeight - prevHeight;
+            e.scrollTop = e.scrollHeight - prevHeight + prevTop;
           });
         });
       }
@@ -2863,36 +2862,46 @@ function ChannelScreen({
             </div>
           )
         ) : (
-          renderable.map((it) =>
-            it.type === 'divider' ? (
-              <div key={it.key} className="day-divider">{it.label}</div>
-            ) : (
-              <ChannelMessage
-                key={it.key}
-                msg={it.msg}
-                parent={
-                  it.msg.replyToId
-                    ? messages.find((x) => x.id === it.msg.replyToId) ?? null
-                    : null
-                }
-                myPubkey={myPubkey}
-                isAdmin={isChannelAdmin}
-                groupId={groupId}
-                reactions={reactions[it.msg.id] ?? []}
-                onLongPress={() => openMsgActions({
-                  id: it.msg.id,
-                  pubkey: it.msg.pubkey,
-                  content: it.msg.content,
-                  groupId,
-                  canModerate: isChannelAdmin,
-                  canDeleteOwn: it.msg.pubkey === myPubkey,
-                })}
-                onAvatar={() => openProfile(it.msg.pubkey)}
-              />
-            ),
-          )
+          <>
+            {renderable.map((it) =>
+              it.type === 'divider' ? (
+                <div key={it.key} className="day-divider">{it.label}</div>
+              ) : (
+                <ChannelMessage
+                  key={it.key}
+                  msg={it.msg}
+                  parent={
+                    it.msg.replyToId
+                      ? messages.find((x) => x.id === it.msg.replyToId) ?? null
+                      : null
+                  }
+                  myPubkey={myPubkey}
+                  isAdmin={isChannelAdmin}
+                  groupId={groupId}
+                  reactions={reactions[it.msg.id] ?? []}
+                  onLongPress={() => openMsgActions({
+                    id: it.msg.id,
+                    pubkey: it.msg.pubkey,
+                    content: it.msg.content,
+                    groupId,
+                    canModerate: isChannelAdmin,
+                    canDeleteOwn: it.msg.pubkey === myPubkey,
+                  })}
+                  onAvatar={() => openProfile(it.msg.pubkey)}
+                />
+              ),
+            )}
+          </>
         )}
       </div>
+      {renderable.length > 0 && (
+        <HistoryPaginationStatus
+          loading={loadingEarlier}
+          reachedStart={reachedStart}
+          loadingLabel={t('mobile.channel.loadingEarlier')}
+          endLabel={t('mobile.channel.noEarlierMessages')}
+        />
+      )}
       <MentionNavigator scrollRef={messagesRef} eventIds={channelHighlights.eventIds} />
       </div>
 
@@ -3735,6 +3744,7 @@ function ProfileViewScreen({
   back: () => void;
   openDm: (peer: string) => void;
 }) {
+  const { t } = useTranslation();
   const meta = useUserMetadata(pubkey);
   const myPubkey = useMyPubkey();
   const isMe = myPubkey === pubkey;

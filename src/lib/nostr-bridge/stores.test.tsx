@@ -18,6 +18,7 @@ let mockLoggedIn = false;
 const subscribers = new Set<(v: boolean) => void>();
 let dmSubscribeCalls = 0;
 let dmUnsubscribeCalls = 0;
+let loadMoreMessagesMock: ReturnType<typeof vi.fn>;
 const dmSnapshot = {
   ['b'.repeat(64)]: [
     {
@@ -53,17 +54,19 @@ vi.mock('./client', () => {
             dmUnsubscribeCalls += 1;
           };
         },
+        loadMoreMessages: loadMoreMessagesMock,
       }),
   };
 });
 
 import { setPreference } from '@/lib/preferences';
-import { useDirectMessages, useIsRehydrating } from './stores';
+import { useDirectMessages, useIsRehydrating, useLoadEarlier } from './stores';
 
 beforeEach(() => {
   mockLoggedIn = false;
   dmSubscribeCalls = 0;
   dmUnsubscribeCalls = 0;
+  loadMoreMessagesMock = vi.fn();
   subscribers.clear();
   window.localStorage.clear();
   setPreference('directMessagesEnabled', false);
@@ -88,6 +91,69 @@ describe('useDirectMessages', () => {
     act(() => setPreference('directMessagesEnabled', false));
     await waitFor(() => expect(result.current).toEqual({}));
     expect(dmUnsubscribeCalls).toBe(1);
+  });
+});
+
+describe('useLoadEarlier', () => {
+  it('marks the start reached only on a confirmed end result', async () => {
+    loadMoreMessagesMock.mockResolvedValueOnce('end');
+    const { result } = renderHook(() => useLoadEarlier('g1'));
+
+    let loadResult: unknown = null;
+    await act(async () => {
+      loadResult = await result.current.loadEarlier();
+    });
+
+    expect(loadResult).toBe('end');
+    expect(loadMoreMessagesMock).toHaveBeenCalledWith('g1');
+    expect(result.current.loading).toBe(false);
+    expect(result.current.lastResult).toBe('end');
+    expect(result.current.reachedStart).toBe(true);
+  });
+
+  it('keeps pagination retryable when the bridge reports unavailable', async () => {
+    loadMoreMessagesMock.mockResolvedValueOnce('unavailable');
+    const { result } = renderHook(() => useLoadEarlier('g1'));
+
+    let loadResult: unknown = null;
+    await act(async () => {
+      loadResult = await result.current.loadEarlier();
+    });
+
+    expect(loadResult).toBe('unavailable');
+    expect(result.current.loading).toBe(false);
+    expect(result.current.lastResult).toBe('unavailable');
+    expect(result.current.reachedStart).toBe(false);
+  });
+
+  it('does not immediately retry unavailable pagination while still at the top', async () => {
+    loadMoreMessagesMock.mockResolvedValue('unavailable');
+    const { result } = renderHook(() => useLoadEarlier('g1'));
+
+    await act(async () => {
+      await result.current.loadEarlier();
+    });
+    let skipped: unknown = 'not-called';
+    await act(async () => {
+      skipped = await result.current.loadEarlier();
+    });
+
+    expect(skipped).toBeNull();
+    expect(loadMoreMessagesMock).toHaveBeenCalledTimes(1);
+    expect(result.current.reachedStart).toBe(false);
+  });
+
+  it('keeps pagination retryable when the bridge throws', async () => {
+    loadMoreMessagesMock.mockRejectedValueOnce(new Error('relay down'));
+    const { result } = renderHook(() => useLoadEarlier('g1'));
+
+    await act(async () => {
+      await result.current.loadEarlier();
+    });
+
+    expect(result.current.loading).toBe(false);
+    expect(result.current.lastResult).toBe('unavailable');
+    expect(result.current.reachedStart).toBe(false);
   });
 });
 

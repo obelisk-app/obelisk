@@ -12,6 +12,8 @@ interface UseChannelScrollPositionOptions {
   readonly scrollRef: RefObject<HTMLElement | null>;
   readonly itemCount: number;
   readonly disabled?: boolean;
+  readonly initialAnchorKey?: string | null;
+  readonly getInitialAnchorElement?: () => HTMLElement | null;
   readonly nearBottomPx?: number;
   readonly onNearBottomChange?: (nearBottom: boolean) => void;
 }
@@ -21,11 +23,15 @@ export function useChannelScrollPosition({
   scrollRef,
   itemCount,
   disabled = false,
+  initialAnchorKey = null,
+  getInitialAnchorElement,
   nearBottomPx = CHANNEL_SCROLL_NEAR_BOTTOM_PX,
   onNearBottomChange,
 }: UseChannelScrollPositionOptions): void {
   const restoredKeyRef = useRef<string | null>(null);
   const onNearBottomChangeRef = useRef(onNearBottomChange);
+  const getInitialAnchorElementRef = useRef(getInitialAnchorElement);
+  getInitialAnchorElementRef.current = getInitialAnchorElement;
 
   useEffect(() => {
     onNearBottomChangeRef.current = onNearBottomChange;
@@ -55,7 +61,9 @@ export function useChannelScrollPosition({
     const applyRestore = () => {
       const el = scrollRef.current;
       if (!el) return;
-      const result = restoreChannelScrollPosition(scrollKey, el, nearBottomPx);
+      const result = restoreChannelScrollPosition(scrollKey, el, nearBottomPx, {
+        initialAnchorElement: getInitialAnchorElementRef.current?.() ?? null,
+      });
       onNearBottomChangeRef.current?.(result.nearBottom);
       if (result.complete) restoredKeyRef.current = scrollKey;
     };
@@ -64,7 +72,7 @@ export function useChannelScrollPosition({
 
     const frame = requestAnimationFrame(applyRestore);
     return () => cancelAnimationFrame(frame);
-  }, [disabled, itemCount, nearBottomPx, scrollKey, scrollRef]);
+  }, [disabled, initialAnchorKey, itemCount, nearBottomPx, scrollKey, scrollRef]);
 
   useEffect(() => {
     if (!scrollKey) return;

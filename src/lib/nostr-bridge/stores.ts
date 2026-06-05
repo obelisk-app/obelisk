@@ -10,7 +10,7 @@ import { normalizeRelayUrl } from './relay-url';
 import { usePreferences } from '@/lib/preferences';
 import { wotEngine } from '@/lib/wot/engine';
 import { useWotEnabled } from '@/lib/wot';
-import type { JsGroup, JsMessage, JsReaction, JsDirectMessage, JsUserMetadata, MessagesStatus, RelayAccessState } from './types';
+import type { JsGroup, JsMessage, JsReaction, JsDirectMessage, JsUserMetadata, LoadMoreMessagesResult, MessagesStatus, RelayAccessState } from './types';
 
 function useSubscription<T>(
   subscribe: (
@@ -269,33 +269,52 @@ export function useMessagesByGroup(): Readonly<Record<string, ReadonlyArray<JsMe
  * relay returns no further history.
  */
 export function useLoadEarlier(groupId: string | null): {
-  loadEarlier: () => Promise<void>;
+  loadEarlier: () => Promise<LoadMoreMessagesResult | null>;
   loading: boolean;
   reachedStart: boolean;
+  lastResult: LoadMoreMessagesResult | null;
 } {
   const [loading, setLoading] = useState(false);
   const [reachedStart, setReachedStart] = useState(false);
+  const [lastResult, setLastResult] = useState<LoadMoreMessagesResult | null>(null);
   const inFlightRef = useRef(false);
+  const retryBlockedUntilRef = useRef(0);
 
   useEffect(() => {
     setReachedStart(false);
+    setLastResult(null);
+    retryBlockedUntilRef.current = 0;
   }, [groupId]);
 
   const loadEarlier = useCallback(async () => {
-    if (!groupId || inFlightRef.current || reachedStart) return;
+    if (!groupId || inFlightRef.current || reachedStart) return null;
+    if (Date.now() < retryBlockedUntilRef.current) return null;
     inFlightRef.current = true;
     setLoading(true);
     try {
       const bridge = await getBridge();
-      const got = await bridge.loadMoreMessages(groupId);
-      if (!got) setReachedStart(true);
+      const result = await bridge.loadMoreMessages(groupId);
+      setLastResult(result);
+      if (result === 'end') {
+        setReachedStart(true);
+      } else if (result === 'added') {
+        setReachedStart(false);
+        retryBlockedUntilRef.current = Date.now() + 250;
+      } else {
+        retryBlockedUntilRef.current = Date.now() + 1500;
+      }
+      return result;
+    } catch {
+      setLastResult('unavailable');
+      retryBlockedUntilRef.current = Date.now() + 1500;
+      return 'unavailable';
     } finally {
       inFlightRef.current = false;
       setLoading(false);
     }
   }, [groupId, reachedStart]);
 
-  return { loadEarlier, loading, reachedStart };
+  return { loadEarlier, loading, reachedStart, lastResult };
 }
 
 /**

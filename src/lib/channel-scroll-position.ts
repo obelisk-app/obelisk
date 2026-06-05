@@ -9,7 +9,7 @@ export interface ChannelScrollSnapshot {
 }
 
 export interface ChannelScrollRestoreResult {
-  readonly source: 'saved' | 'bottom';
+  readonly source: 'saved' | 'anchor' | 'bottom';
   readonly scrollTop: number;
   readonly nearBottom: boolean;
   readonly complete: boolean;
@@ -19,6 +19,10 @@ export interface ChannelScrollElement {
   scrollTop: number;
   readonly scrollHeight: number;
   readonly clientHeight: number;
+}
+
+export interface ChannelScrollAnchorElement {
+  readonly offsetTop: number;
 }
 
 const positions = new Map<string, ChannelScrollSnapshot>();
@@ -83,21 +87,30 @@ export function restoreChannelScrollPosition(
   key: string,
   el: ChannelScrollElement,
   nearBottomPx = CHANNEL_SCROLL_NEAR_BOTTOM_PX,
+  opts?: { readonly initialAnchorElement?: ChannelScrollAnchorElement | null },
 ): ChannelScrollRestoreResult {
   const saved = positions.get(key);
   const maxTop = maxScrollTop(el);
+  const anchor = opts?.initialAnchorElement ?? null;
+  const source: ChannelScrollRestoreResult['source'] = saved ? 'saved' : anchor ? 'anchor' : 'bottom';
   const desiredScrollTop = saved
     ? saved.nearBottom
       ? maxTop
       : finiteNumber(saved.scrollTop)
-    : maxTop;
+    : anchor
+      ? finiteNumber(anchor.offsetTop)
+      : maxTop;
   const scrollTop = clamp(desiredScrollTop, 0, maxTop);
-  const complete = saved ? saved.nearBottom || scrollTop === desiredScrollTop : maxTop > 0;
+  const complete = saved
+    ? saved.nearBottom || scrollTop === desiredScrollTop
+    : anchor
+      ? desiredScrollTop >= maxTop || scrollTop === desiredScrollTop
+      : maxTop > 0;
 
   el.scrollTop = scrollTop;
   const snapshot = complete ? rememberChannelScrollPosition(key, el, nearBottomPx) : null;
   return {
-    source: saved ? 'saved' : 'bottom',
+    source,
     scrollTop,
     nearBottom: snapshot?.nearBottom ?? isChannelScrollNearBottom(el, nearBottomPx),
     complete,
