@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useConnectionState } from '@/lib/nostr-bridge';
 import { useGamesStore, selectChannelSessions, selectSession } from '@/store/games';
 import { subscribeChannelGames, publishTimeout } from '@/lib/games/transport';
 import { controllerOf, isTurnExpired, seatsControlledBy, type GameSession } from '@/lib/games/session';
@@ -84,6 +85,29 @@ export function useChannelSessions(channelId: string | null): GameSession[] {
 }
 
 /**
+ * Grace between a deadline passing and this client being willing to say so.
+ *
+ * Two things it absorbs. A move already in flight — signed, published, not yet
+ * echoed back — should land before anybody reports its author. And our clock
+ * is not their clock: the reducer accepts a claim whose `created_at` is past
+ * the deadline, and `created_at` comes from whoever claims, so a browser
+ * running a few seconds fast would otherwise cut turns short for everyone
+ * else at the table.
+ */
+export const TIMEOUT_CLAIM_GRACE_S = 3;
+
+/**
+ * How long this client waits after (re)connecting before it claims anything.
+ *
+ * A turn clock derived from the log keeps running while the relay is
+ * unreachable, so the moment a table comes back everyone's deadline has
+ * already passed — through nobody's fault. Claiming then would hand the win
+ * to whoever reconnected first. Instead we give the player on move the same
+ * window on a healthy relay that the clock was supposed to give them.
+ */
+export const RECONNECT_CLAIM_GRACE_S = 20;
+
+/**
  * Publish the timeout claim when the clock runs out on someone else's turn.
  *
  * Somebody has to say it out loud — the deadline is derivable from the log,
@@ -93,7 +117,8 @@ export function useChannelSessions(channelId: string | null): GameSession[] {
  *
  * Only clients watching the table claim, and never against their own turn:
  * losing on time should cost you a move you didn't make, not a move your own
- * browser reported you for.
+ * browser reported you for. And never on a connection that only just came
+ * back — see `RECONNECT_CLAIM_GRACE_S`.
  */
 export function useTurnClockEnforcer(
   session: GameSession | null,
@@ -101,10 +126,25 @@ export function useTurnClockEnforcer(
   enabled: boolean,
 ): void {
   const now = useNowSeconds();
+  const connection = useConnectionState();
+  const connected = connection === 'Connected';
   // A ref, not state: "we already claimed this turn" is bookkeeping for the
   // effect, and nothing renders differently because of it. Re-rendering on
   // every claim would just be a cascade.
   const claimed = useRef<string | null>(null);
+  // When this client's socket last came up. Null while it is down, so a
+  // disconnected tab cannot report anybody for a turn it could not have seen.
+  const connectedSince = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!connected) {
+      connectedSince.current = null;
+      return;
+    }
+    if (connectedSince.current === null) {
+      connectedSince.current = Math.floor(Date.now() / 1000);
+    }
+  }, [connected]);
 
   useEffect(() => {
     if (!enabled || !session || !myPubkey || !session.currentTurn) return;
@@ -114,7 +154,11 @@ export function useTurnClockEnforcer(
     // its own players for running out the clock.
     if (seatsControlledBy(session, myPubkey).length === 0) return;
     if (controllerOf(session, session.currentTurn) === myPubkey) return;
-    if (!isTurnExpired(session, now)) return;
+    if (!isTurnExpired(session, now - TIMEOUT_CLAIM_GRACE_S)) return;
+
+    if (!connected) return;
+    const since = connectedSince.current;
+    if (since === null || now - since < RECONNECT_CLAIM_GRACE_S) return;
 
     const key = `${session.id}:${session.turnIndex}`;
     if (claimed.current === key) return;
@@ -122,5 +166,5 @@ export function useTurnClockEnforcer(
     publishTimeout(session.channelId, session.id, session.turnIndex).catch((err) => {
       console.warn('[games] timeout claim failed', err);
     });
-  }, [enabled, session, myPubkey, now]);
+  }, [enabled, session, myPubkey, now, connected]);
 }
