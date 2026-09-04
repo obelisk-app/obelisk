@@ -92,21 +92,28 @@ export function getAppearanceCssVariables(prefs: Pick<Preferences, 'accentColor'
     '--obelisk-app-bg-panel': mixHex(background, '#ffffff', 0.065),
     '--obelisk-accent': accent,
     '--obelisk-accent-deep': mixHex(accent, '#000000', 0.22),
-    '--obelisk-accent-soft': mixHex(accent, background, 0.18),
+    // The "soft" tints are the BACKGROUND carrying a little accent, not the
+    // accent carrying a little background. Written the other way round they
+    // came out at 80-odd percent accent, which turned every surface that is
+    // supposed to be a dark tint — tag chips, inline code, the mobile accent
+    // panels — into a near-solid slab of lime with lime text on it. The
+    // targets are the static values in globals.css (#2d3a1a / #1e2812) for
+    // the default palette; see preferences.test.ts.
+    '--obelisk-accent-soft': mixHex(background, accent, 0.2),
     '--obelisk-accent-ink': readableInk(accent),
     '--obelisk-button': button,
     '--obelisk-button-hover': mixHex(button, '#ffffff', 0.14),
     '--obelisk-button-ink': readableInk(button),
     '--obelisk-bubble': bubble,
-    '--obelisk-bubble-soft': mixHex(bubble, background, 0.46),
+    '--obelisk-bubble-soft': mixHex(background, bubble, 0.2),
     '--background': background,
     '--color-lc-black': background,
     '--color-lc-dark': mixHex(background, '#ffffff', 0.05),
     '--color-lc-card': mixHex(background, '#ffffff', 0.07),
     '--color-lc-green': accent,
     '--color-lc-green-dark': mixHex(accent, '#000000', 0.22),
-    '--color-lc-olive': mixHex(accent, background, 0.22),
-    '--color-lc-olive-dark': mixHex(accent, background, 0.14),
+    '--color-lc-olive': mixHex(background, accent, 0.2),
+    '--color-lc-olive-dark': mixHex(background, accent, 0.12),
   };
 }
 
