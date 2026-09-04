@@ -1,0 +1,88 @@
+---
+title: Stacker — real-time falling blocks over Nostr
+description: Six players, one shared piece order, and every line you clear buries somebody else. Stacker runs its board locally at sixty frames a second and publishes only the consequences — attacks, top-outs, and checkpoints anyone can replay.
+heroComponent: stacker
+publishedAt: '2026-09-04'
+updatedAt: '2026-09-04'
+tags: [games, stacker, real-time, nostr, kind-2390]
+---
+
+## The game
+
+Blocks fall. You fit them into rows. A completed row clears — and instead of scoring you points, it drops **garbage lines** into an opponent's well, with a single hole punched through them for them to dig out. Last player standing wins. One to six players; the solo table is a perfectly good way to practise.
+
+<Shot name="stacker-well" caption="A well mid-match, with the ghost of the falling piece showing where it lands." maxWidth={340} />
+
+Everyone in the match starts from the **same seed**, so everyone gets the same pieces in the same order. A match is a race, not a lottery. The seed comes from the table options, or from the table id itself — a hash, so it is unpredictable before the table exists and identical for everybody after.
+
+## Why it can't work the way the other games do
+
+Chain Reaction and Vesta are turn-based: one player moves, everybody replays the move, the board advances. Stacker has no seat "to move" — six boards are running at once — and a relay round-trip per keypress would feel like playing through treacle.
+
+So it splits in half:
+
+| | Where it runs |
+|---|---|
+| Board, gravity, input, the 60 Hz loop | **Your machine**, locally |
+| Attacks, top-outs, checkpoints | **The relay**, as kind 2390 events |
+
+Your well never leaves your computer. What leaves is what happened because of it.
+
+<Shot name="stacker-table" caption="A three-way match. Your well at full speed; opponents as miniature boards updated from their checkpoints, with attack and line counts." maxWidth={620} />
+
+Opponents are drawn coarsely on purpose. Their real boards are running on their own machines and only reach you every few seconds, so painting a detailed board would be painting a lie. What you get instead is the thing that stays true between updates: how buried they are.
+
+## The three events
+
+| op | content | meaning |
+|---|---|---|
+| `attack` | `{seat, target, lines, hole, nonce}` | garbage from one seat to another |
+| `topout` | `{seat}` | that player is out |
+| `checkpoint` | `{seat, frame, attacksSent, linesCleared, stackHeight, inputs, board}` | progress, plus the input log that produced it |
+
+Attacks are coalesced before they go out: three quick clears become one event with the lines summed. Signing an event takes milliseconds with a local key and considerably longer with a browser extension, so nothing is ever signed between two frames — outbound traffic leaves on its own timer, about four times a second.
+
+## How it stays honest
+
+The engine is a pure function of `(seed, inputs)`. That is what makes the checkpoint interesting: it carries the sender's compressed **input log**, so anybody can replay it against the shared seed, rebuild their board, and check whether the attacks they claimed to send actually happened. A seat whose claims its own log does not support gets marked in the UI.
+
+<Callout type="warn" title="This detects cheating, it does not prevent it">
+Garbage lands before the checkpoint justifying it arrives, so a modified client
+can land one round of unearned attacks before it is flagged. Preventing that
+outright means lockstep — a relay round-trip per frame — which would destroy
+the thing the game is for. The trade is deliberate. It also catches invented
+attacks, not a human being helped by a bot that plays legitimately well.
+</Callout>
+
+Incoming garbage is fed through the same input log as everything else, so a replay reproduces the board that actually happened, garbage included.
+
+## Feel
+
+The numbers that decide whether a game like this plays well:
+
+- **DAS 10 frames, ARR 2** — how long a held key waits before repeating, and how fast it repeats after.
+- **Gravity from 48 frames per step down to 4**, on the classic curve: gentle at the start, sharply faster through the teens, then a hard floor so it stays humanly playable. Ten lines is a level.
+- **Lock delay 30 frames with 15 slide resets** — the moment after a piece lands where you can still slide it.
+- The board draws straight to a canvas from the game loop. React never sees a frame; it only re-renders for the numbers a human reads, about eight times a second.
+
+Controls are rebindable from the table (⌨ **controls**), and the binding is stored per browser — it is a device preference, not account state, so it never goes near the relay.
+
+## Sound
+
+Effects are synthesized at runtime: line clears pitched by how many lines went, a distinct chime for spins, a rumble for garbage, a falling tone for a top-out. No audio files, and they fire straight off engine events.
+
+The music is the royalty-free set from [TETRA](https://github.com/soyezequiel/tetris-para-luna-negra) by **soyezequiel**, a La Crypta hackathon project, credited in the game UI with a link back. It shuffles once per session and advances on its own — there is no picker. If a track cannot load, or the browser refuses to autoplay it, a generative synth bed plays instead, so the game is never silent because of a missing file.
+
+## Playing it
+
+`/play` in a channel, pick Stacker, set a seed if you want a specific board order, and start. Because every player runs their own board, an account holds exactly **one** seat: hot-seat is meaningless when everybody is playing at the same time.
+
+## For the curious
+
+The engine, the runner and the match reducer live in `src/lib/games/stacker/`; the wire format and the reasoning behind the local/relay split are in [docs/games.md](https://github.com/obelisk-app/obelisk-dex/blob/main/docs/games.md).
+
+<RelatedGuides items={[
+  { slug: "chain-reaction", note: "turn-based, and one click can take the board" },
+  { slug: "vesta", note: "settlements, trade, and dice derived from the log" },
+  { slug: "how-obelisk-works", note: "the relay-only architecture underneath" }
+]} />

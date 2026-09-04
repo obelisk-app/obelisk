@@ -8,6 +8,9 @@ import AdminCliHero from './AdminCliHero';
 import SwapAnythingHero from './SwapAnythingHero';
 import ObeliskBotsHero from './ObeliskBotsHero';
 import QuantumSafeHero from './QuantumSafeHero';
+import ChainReactionHero from './ChainReactionHero';
+import VestaHero from './VestaHero';
+import StackerHero from './StackerHero';
 import WotGraphDiagram from './diagrams/WotGraphDiagram';
 import RelayGroupsDiagram from './diagrams/RelayGroupsDiagram';
 import ZapFlowDiagram from './diagrams/ZapFlowDiagram';
@@ -33,6 +36,9 @@ export const HERO_REGISTRY: Record<string, ComponentType> = {
   'swap-anything': SwapAnythingHero,
   'obelisk-bots': ObeliskBotsHero,
   'quantum-safe': QuantumSafeHero,
+  'chain-reaction': ChainReactionHero,
+  vesta: VestaHero,
+  stacker: StackerHero,
 };
 
 export const DIAGRAM_REGISTRY: Record<string, ComponentType> = {

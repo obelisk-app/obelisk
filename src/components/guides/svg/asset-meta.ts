@@ -55,6 +55,21 @@ export const HERO_ASSET_META: Record<string, GuideAssetMeta> = {
     height: 400,
     alt: 'Quantum-safe DMs hero: a sealed message at the center wrapped in two shells, an inner classic secp256k1 key exchange and an outer post-quantum layer, illustrating hybrid protection.',
   },
+  'chain-reaction': {
+    width: 800,
+    height: 400,
+    alt: 'Chain Reaction hero: a dark grid of cells holding red, lime and cyan orbs with one cell bursting and pushing an orb into each of its four neighbours, the cascade played over a Nostr relay.',
+  },
+  vesta: {
+    width: 800,
+    height: 400,
+    alt: 'Vesta hero: a hexagonal island of forest, brick, wool, grain and ore tiles with numbered dice tokens and player settlements, beside the event-log entropy the dice roll is derived from.',
+  },
+  stacker: {
+    width: 800,
+    height: 400,
+    alt: 'Stacker hero: two ten-column wells of falling coloured blocks, a cleared line in the left well sending grey garbage rows into the right one over a Nostr relay.',
+  },
 };
 
 export const DIAGRAM_ASSET_META: Record<string, GuideAssetMeta> = {

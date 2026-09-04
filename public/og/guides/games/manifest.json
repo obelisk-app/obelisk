@@ -1,0 +1,11 @@
+{
+  "base": "http://localhost:3000",
+  "shots": [
+    "chain-reaction-board",
+    "chain-reaction-result",
+    "vesta-board",
+    "stacker-well",
+    "stacker-table",
+    "game-picker"
+  ]
+}

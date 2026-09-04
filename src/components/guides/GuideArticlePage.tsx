@@ -19,10 +19,15 @@ import {
   snapshotPaths,
   type GuideAssetMeta,
 } from '@/components/guides/svg/asset-meta';
+import { SHOT_META, shotPath } from '@/components/guides/Shot';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 
 const ASSET_REF_RE = /<(?:Diagram|SvgHero)\s+[^>]*name=["']([^"']+)["']/g;
+/** Screenshots are PNGs on disk rather than rendered SVGs, so they resolve
+ *  through their own map — but they belong in the article's image list all
+ *  the same, which is the whole point of shipping them with alt text. */
+const SHOT_REF_RE = /<Shot\s+[^>]*name=["']([^"']+)["']/g;
 
 function collectGuideImages(
   heroName: string | undefined,
@@ -37,6 +42,11 @@ function collectGuideImages(
     const meta = HERO_ASSET_META[n] ?? DIAGRAM_ASSET_META[n];
     if (!meta) continue;
     out.push({ url: `${siteUrl}${snapshotPaths(n).png}`, meta });
+  }
+  for (const m of content.matchAll(SHOT_REF_RE)) {
+    const meta = SHOT_META[m[1]];
+    if (!meta) continue;
+    out.push({ url: `${siteUrl}${shotPath(m[1])}`, meta });
   }
   return out;
 }

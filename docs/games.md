@@ -311,6 +311,31 @@ that file to `MUSIC_TRACKS`.
 If the track cannot load or the browser refuses autoplay, a generative synth
 bed plays instead, so the game is never silent because of a missing file.
 
+## Guides and screenshots
+
+Each game has a public guide under `content/guides/{en,es}/` —
+`chain-reaction`, `vesta`, `stacker` — with an animated SVG hero
+(`src/components/guides/svg/`) and real screenshots of the running boards.
+
+The screenshots are generated, not curated:
+
+```bash
+npm run dev          # a dev server has to be up
+npm run snap-games   # → public/og/guides/games/*.png
+```
+
+`scripts/snap-game-shots.mjs` drives `/dev/game-shots` (a route that 404s in
+production) with Playwright. That page mounts the real board components over
+fixture *logs* — `src/app/dev/game-shots/fixtures.ts` builds kind 2390 events
+and hands them to `deriveSession`, so the pictures are the shipped engine
+rendering boards it derived, not mocked state. The Stacker table shot is
+played live with scripted keystrokes. A rules change that alters a board
+alters the guides the next time the script runs.
+
+Guides reference the output with `<Shot name="…" />`, whose alt text and
+intrinsic sizes live in `src/components/guides/Shot.tsx`; a shot named there
+with no file on disk fails `Shot.test.tsx`.
+
 ## Adding another game
 
 The runtime is game-agnostic. Port the engine from classic (`chess.ts`,

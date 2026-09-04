@@ -1,0 +1,95 @@
+---
+title: Chain Reaction, played on a relay
+description: Drop an orb, take a cell, and when a cell holds one orb too many it bursts into its neighbours — and their neighbours. Chain Reaction runs in an Obelisk channel with no game server — every client replays the same event log and reaches the same board.
+heroComponent: chain-reaction
+publishedAt: '2026-09-04'
+updatedAt: '2026-09-04'
+tags: [games, chain-reaction, nostr, nip-29, kind-2390]
+---
+
+## The rules, in four lines
+
+- Click a cell that is empty or already yours. It gains one orb.
+- A cell bursts when it holds as many orbs as it has neighbours — **2 in a corner, 3 on an edge, 4 in the middle**.
+- When it bursts, one orb goes into each neighbour, and every one of those cells becomes yours.
+- Bursting can make a neighbour critical too, so one click can roll across the board. Lose all your orbs after your first move and you are out; last player standing wins.
+
+That is the whole game. It is small enough to explain in a sentence and deep enough that a corner you ignored for six turns eventually takes half your board.
+
+<Shot name="chain-reaction-board" caption="A three-player board, mid-game. Cells with two orbs on an edge are one click from going off." maxWidth={420} />
+
+## Starting a table
+
+Type `/play` in a channel, pick Chain Reaction, and choose a board size — small (5×7), medium (6×9) or large (8×12) — and a turn clock. Creating the table publishes one event and posts a card into the channel. Anyone in the channel can hit **Join** on that card; when the roster looks right, the host hits **Start**.
+
+<Shot name="game-picker" caption="/play in the composer. Everything in this list — names, player ranges, clocks — comes from the game registry, not from the screen." maxWidth={448} />
+
+Chain Reaction seats **2 to 8 players** and defaults to a **45-second** clock. If several seats are assigned to the same account, those players are sharing one keyboard: the board follows whoever is on move, and their moves are signed by the same key. Everyone else plays from their own client.
+
+## What actually crosses the wire
+
+A move is one event. Not a board, not a cascade — a cell number:
+
+```json
+{
+  "kind": 2390,
+  "tags": [
+    ["h", "<channel-id>"],
+    ["t", "obelisk-game"],
+    ["op", "move"],
+    ["e", "<table-id>", "", "root"],
+    ["n", "17"]
+  ],
+  "content": "{\"n\":17,\"action\":{\"cell\":11},\"seat\":\"<seat-id>\"}"
+}
+```
+
+Your client publishes that to the channel's relay, the relay hands it to everybody subscribed, and every client — yours included — runs the same reducer over the same log. The explosion you watch is your own machine replaying the cascade the rules imply. Nobody sends you a board, because nobody has a more authoritative one than you do.
+
+<Callout type="info" title="Why there is no game server">
+The relay stores and forwards events; that is all it does. The rules live in
+every client, identically. That means a table survives anything except the
+relay itself going away — and it means a spectator arriving at move 40 can
+replay moves 1–39 and see exactly what everyone else sees.
+</Callout>
+
+## Why a cheating client gets nowhere
+
+Every client validates every move before applying it, so an event that breaks a rule is dropped everywhere at once. Concretely, a move is only applied when:
+
+1. it is signed by the account that controls the seat on move;
+2. it carries the current turn number `n` — a move published against a stale board fails here;
+3. the engine says the cell is legal (empty, or already yours).
+
+Publishing an illegal move is not an exploit; it is publishing noise. Ordering is decided by `(created_at, id)`, and the id is a hash, so two events landing in the same second break the tie identically on every machine. Nobody's clock skew reorders your match.
+
+## The turn clock without a server
+
+There is no timer process anywhere. The deadline is derived from the log: the turn started when the last accepted event landed, and it expires `turnTimeoutS` later. Once that moment passes, **any** player may publish a `timeout` claim for that turn. Everyone else checks the claim against the same log and reaches the same verdict, so the first valid one is accepted and the rest are harmless duplicates.
+
+Pick **No clock** and nothing enforces anything — a friendly table where somebody wanders off simply waits. That is a fair trade for a game with friends and a bad one with strangers.
+
+## When it ends
+
+A player who has moved at least once and then loses every orb is eliminated. When one player is left, the table is finished and the card in the channel turns into a result.
+
+<Shot name="chain-reaction-result" caption="The finished table, as it appears back in the channel." maxWidth={380} />
+
+The result is not a separate announcement anybody could forge — it is what the log says when you replay it.
+
+## What it does not protect you from
+
+- **Privacy.** Moves are plaintext on the relay, like the chat messages beside them. Chain Reaction has no hidden information, so there is nothing to leak; a game that did (poker, battleship) would need a commit-reveal scheme on top.
+- **Someone who walks away from a no-clock table.** See above.
+- **Seat order.** The host picks it, and turn order is a real advantage on a small board.
+- **A player using an engine.** Nothing here can tell a thoughtful human from a solver.
+
+## For the curious
+
+The whole thing is kind `2390` events in the channel's group, replayed by `src/lib/games/session.ts`. The engine — `chain-reaction.ts` — is a pure function: no clock, no randomness, no mutation. That is the entire reason it can be trusted to a client. If you want the wire format op by op, it lives in [docs/games.md](https://github.com/obelisk-app/obelisk-dex/blob/main/docs/games.md).
+
+<RelatedGuides items={[
+  { slug: "stacker", note: "the real-time one, where clearing lines buries somebody else" },
+  { slug: "vesta", note: "settlements, trade, and dice nobody rolls for themselves" },
+  { slug: "how-obelisk-works", note: "why there is no backend to put a game server in" }
+]} />

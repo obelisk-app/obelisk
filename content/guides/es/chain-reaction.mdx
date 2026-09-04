@@ -1,0 +1,95 @@
+---
+title: Chain Reaction, jugado sobre un relay
+description: Ponés un orbe, tomás una celda, y cuando una celda tiene un orbe de más explota hacia sus vecinas — y hacia las vecinas de esas. Chain Reaction corre en un canal de Obelisk sin servidor de juego — cada cliente reproduce el mismo log de eventos y llega al mismo tablero.
+heroComponent: chain-reaction
+publishedAt: '2026-09-04'
+updatedAt: '2026-09-04'
+tags: [juegos, chain-reaction, nostr, nip-29, kind-2390]
+---
+
+## Las reglas, en cuatro líneas
+
+- Hacé click en una celda vacía o que ya sea tuya. Suma un orbe.
+- Una celda explota cuando tiene tantos orbes como vecinas — **2 en una esquina, 3 en un borde, 4 en el medio**.
+- Al explotar, manda un orbe a cada vecina, y todas esas celdas pasan a ser tuyas.
+- Eso puede volver crítica a una vecina, así que un solo click puede recorrer el tablero. Si después de tu primera jugada te quedás sin orbes, quedás afuera; gana el último que queda en pie.
+
+Eso es todo el juego. Se explica en una frase y tiene la profundidad suficiente como para que esa esquina que ignoraste seis turnos termine llevándose medio tablero.
+
+<Shot name="chain-reaction-board" caption="Un tablero de tres jugadores a mitad de partida. Las celdas con dos orbes en un borde están a un click de detonar." maxWidth={420} />
+
+## Abrir una mesa
+
+Escribí `/play` en un canal, elegí Chain Reaction, y elegí tamaño de tablero — chico (5×7), mediano (6×9) o grande (8×12) — y reloj de turno. Crear la mesa publica un evento y postea una tarjeta en el canal. Cualquiera en el canal puede tocar **Unirse** en esa tarjeta; cuando la lista está lista, el host toca **Empezar**.
+
+<Shot name="game-picker" caption="/play en el composer. Todo lo que ves acá — nombres, rangos de jugadores, relojes — sale del registro de juegos, no de la pantalla." maxWidth={448} />
+
+Chain Reaction admite **de 2 a 8 jugadores** y usa un reloj de **45 segundos** por defecto. Si varios asientos quedan asignados a la misma cuenta, esos jugadores comparten un teclado: el tablero sigue a quien tenga el turno, y sus jugadas las firma la misma clave. El resto juega desde su propio cliente.
+
+## Qué viaja realmente por el cable
+
+Una jugada es un evento. No un tablero, no una cascada — un número de celda:
+
+```json
+{
+  "kind": 2390,
+  "tags": [
+    ["h", "<id-del-canal>"],
+    ["t", "obelisk-game"],
+    ["op", "move"],
+    ["e", "<id-de-la-mesa>", "", "root"],
+    ["n", "17"]
+  ],
+  "content": "{\"n\":17,\"action\":{\"cell\":11},\"seat\":\"<id-de-asiento>\"}"
+}
+```
+
+Tu cliente publica eso al relay del canal, el relay se lo entrega a todos los suscriptos, y cada cliente — el tuyo incluido — corre el mismo reductor sobre el mismo log. La explosión que ves es tu propia máquina reproduciendo la cascada que las reglas implican. Nadie te manda un tablero, porque nadie tiene uno más autoritativo que el tuyo.
+
+<Callout type="info" title="Por qué no hay servidor de juego">
+El relay guarda y reenvía eventos; eso es todo lo que hace. Las reglas viven en
+cada cliente, idénticas. Eso significa que la mesa sobrevive a todo menos a que
+desaparezca el relay — y que un espectador que llega en la jugada 40 puede
+reproducir las jugadas 1 a 39 y ver exactamente lo mismo que todos los demás.
+</Callout>
+
+## Por qué un cliente tramposo no llega a ningún lado
+
+Cada cliente valida cada jugada antes de aplicarla, así que un evento que rompe una regla se descarta en todos lados a la vez. En concreto, una jugada se aplica sólo si:
+
+1. la firma la cuenta que controla el asiento en turno;
+2. lleva el número de turno actual `n` — una jugada publicada contra un tablero viejo falla acá;
+3. el motor dice que la celda es legal (vacía, o ya tuya).
+
+Publicar una jugada ilegal no es un exploit; es publicar ruido. El orden lo deciden `(created_at, id)`, y el id es un hash, así que dos eventos que caen en el mismo segundo se desempatan igual en toda máquina. El reloj corrido de nadie reordena tu partida.
+
+## El reloj de turno sin servidor
+
+No hay ningún proceso con un timer. El vencimiento se deriva del log: el turno empezó cuando cayó el último evento aceptado, y vence `turnTimeoutS` después. Pasado ese momento, **cualquier** jugador puede publicar un reclamo de `timeout` para ese turno. Todos los demás lo verifican contra el mismo log y llegan al mismo veredicto, así que se acepta el primero válido y el resto son duplicados inofensivos.
+
+Elegí **Sin reloj** y no hay nada que forzar — una mesa entre amigos donde alguien se va simplemente espera. Es un buen trato entre conocidos y uno malo entre desconocidos.
+
+## Cuándo termina
+
+Un jugador que ya jugó al menos una vez y después pierde todos sus orbes queda eliminado. Cuando queda uno solo, la mesa termina y la tarjeta del canal se convierte en un resultado.
+
+<Shot name="chain-reaction-result" caption="La mesa terminada, tal como se ve de vuelta en el canal." maxWidth={380} />
+
+El resultado no es un anuncio aparte que alguien podría falsificar — es lo que dice el log cuando lo reproducís.
+
+## De qué no te protege
+
+- **Privacidad.** Las jugadas son texto plano en el relay, igual que los mensajes de chat al lado. Chain Reaction no tiene información oculta, así que no hay nada que filtrar; un juego que sí la tuviera (póker, batalla naval) necesitaría commit-reveal encima.
+- **Alguien que abandona una mesa sin reloj.** Ver arriba.
+- **El orden de asientos.** Lo elige el host, y en un tablero chico el orden de turno es una ventaja real.
+- **Un jugador usando un motor.** Nada de esto distingue a un humano pensante de un solver.
+
+## Para los curiosos
+
+Todo esto son eventos de kind `2390` en el grupo del canal, reproducidos por `src/lib/games/session.ts`. El motor — `chain-reaction.ts` — es una función pura: sin reloj, sin azar, sin mutación. Esa es exactamente la razón por la que se le puede confiar a un cliente. El formato de cable, operación por operación, está en [docs/games.md](https://github.com/obelisk-app/obelisk-dex/blob/main/docs/games.md).
+
+<RelatedGuides items={[
+  { slug: "stacker", note: "el de tiempo real, donde las líneas que hacés entierran a otro" },
+  { slug: "vesta", note: "asentamientos, comercio, y dados que nadie tira para sí mismo" },
+  { slug: "how-obelisk-works", note: "por qué no hay backend donde meter un servidor de juego" }
+]} />

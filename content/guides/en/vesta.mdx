@@ -1,0 +1,97 @@
+---
+title: Vesta — settlements, trade, and dice nobody rolls
+description: Vesta is a settlement-building game running inside an Obelisk channel. The rules come from an upstream package we track rather than fork, the dice are derived from the event log instead of rolled by a player, and every client checks every move.
+heroComponent: vesta
+publishedAt: '2026-09-04'
+updatedAt: '2026-09-04'
+tags: [games, vesta, nostr, dice, kind-2390]
+---
+
+## What it is
+
+**Vesta** — *Expanding Settlements Through Accord* — is a build-and-trade game for 2 to 4 players on a hex island. Settle corners, connect them with roads, upgrade to cities, trade resources, and race to the victory-point target while a robber parks itself on whichever tile hurts most.
+
+If you have played the classic of the genre, you already know it. What is worth reading about is what changes when the table has no referee.
+
+<Shot name="vesta-board" caption="A Vesta table in Obelisk: the island, each player's hand and points, and controls that only offer moves the engine will actually accept." />
+
+## The rules are not ours
+
+Vesta is a **tracked dependency**, not a fork:
+
+```json
+"vesta": "github:fchurca/vesta#semver:^0"
+```
+
+Upstream ([fchurca/vesta](https://github.com/fchurca/vesta)) keeps a core module that is already pure — `createGame(seed)` builds a board, `applyMove(state, move)` returns the next one — which happens to be exactly the contract an Obelisk game engine has to satisfy. So nothing in Obelisk encodes a Vesta rule. Our code translates vocabularies: their player index becomes our seat id, their `move.player` is replaced by whoever signed the event.
+
+`npm update vesta` pulls their rule changes. That is the whole upgrade path.
+
+## Three things a relay forces
+
+**1. A move may not name its own player.** Upstream's client is hot-seat: everyone shares a keyboard, so a move carrying `player: 2` is harmless. Over a relay it is an impersonation primitive. Here, the seat comes from the signature — you cannot publish a move "as" somebody else.
+
+**2. Every client validates every move.** Upstream splits the rules (`canBuildSettlement`) from the doing (`placeSettlement`) and lets its UI call the guard first. Over a relay there is no UI in the path: a modified client publishes straight to the socket. So the guards run on every client, for every move, before it is applied. Without that, you could publish a settlement onto an occupied corner and everyone would agree you owned it.
+
+**3. Dice cannot be self-reported.** This is the interesting one.
+
+## Where the numbers come from
+
+Upstream's `roll-dice` move carries its own values, because the player rolling is the player everybody is watching. Put that on a relay and the roller picks their own resources.
+
+So Obelisk ignores whatever values a move claims and derives the roll from the log:
+
+```
+entropy = <id of the last accepted event> : <turn index>
+dice    = mulberry32(xmur3(entropy))
+```
+
+Both inputs are fixed **before** the roller publishes anything, so grinding your own event changes nothing — your event is not an input. And because it is a pure function of the log, every client derives the same two numbers without exchanging a message about it.
+
+<Callout type="warn" title="The honest limitation">
+Whoever published the *previous* accepted event can grind that event to steer
+the next roll. In practice that is usually somebody else's end-turn, so the
+grinder is steering an opponent's dice — but it is real. Upstream's URD
+dependency (verifiable randomness) is the actual fix, and `vesta/dice.ts` is
+the single file that changes when it lands.
+</Callout>
+
+## Seats, and playing two people from one laptop
+
+A seat is not a pubkey. The `start` event freezes a seat list that looks like this:
+
+```json
+["start", {"seats": [
+  {"id": "<pubkey-a>",   "by": "<pubkey-a>", "label": "Ana"},
+  {"id": "<pubkey-a>#1", "by": "<pubkey-a>", "label": "Beto"},
+  {"id": "<pubkey-b>",   "by": "<pubkey-b>", "label": "Cami"}
+]}]
+```
+
+`id` is what the engine treats as a player; `by` is the account allowed to publish its moves. Two seats sharing a `by` are two people at one machine — separate players, separate resources, one keyboard and one signature. Seat order is turn order, and seats can be renamed before the start.
+
+The host can only seat accounts that actually joined, so nobody gets dragged into a match by a host filling rows.
+
+## No turn clock, by default
+
+Obelisk's clock is **per action**, and a Vesta turn is many actions — roll, build, trade, end. A 45-second timer would guillotine people mid-thought, so Vesta tables default to no clock. If you do set one, a timeout ends that seat's turn rather than removing the player: Vesta has no elimination, and deleting a player would rewrite everyone else's board.
+
+## Resuming a saved game
+
+Upstream exports a game record — `{startState, turns, endState}`. Drop that file into the table options when you create a table and the game starts from `endState` instead of a fresh island. A serialized state is around 4 KB, which fits comfortably in one event.
+
+When a table resumes a save, the seat rows are fixed to the saved players in the saved order, each showing the name it had. The host assigns each saved player to an account, rather than the mapping being implicit in the row order.
+
+## What the UI will and will not offer you
+
+Every button is gated by the engine's own validator, and the board highlights exactly the spots upstream calls legal. That is deliberate: a rejected move over a relay is **silent** — there is no error message coming back from anywhere — so if the interface offered an illegal move you would click it and simply watch nothing happen.
+
+## For the curious
+
+Everything travels as kind `2390` events in the channel's NIP-29 group and is replayed by `deriveSession`. The sequencing upstream keeps in its client — flipping setup steps, handing out second-round resources, deciding when the robber may move — happens deterministically on every replay instead, under a namespaced key inside the state so it survives a round-trip through upstream's reducers. The details are in [docs/games.md](https://github.com/obelisk-app/obelisk-dex/blob/main/docs/games.md).
+
+<RelatedGuides items={[
+  { slug: "chain-reaction", note: "the small one: one click, one cascade" },
+  { slug: "stacker", note: "real time, and the lines you clear land on somebody else" },
+  { slug: "how-obelisk-works", note: "the relay-only architecture underneath" }
+]} />

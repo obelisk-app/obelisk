@@ -11,7 +11,20 @@ const localIPs = Object.values(networkInterfaces())
 // per-request nonce. The static security headers below still apply
 // site-wide (proxy.ts is HTML-only via its matcher).
 
+/**
+ * `*.dev.tsx` routes exist only while `next dev` is running.
+ *
+ * The screenshot harness at /dev/game-shots mounts real game components over
+ * fixture logs so `npm run snap-games` can photograph them. It has no business
+ * in a production bundle, and a `NODE_ENV` check inside the page would still
+ * ship the route. Leaving the extension out of the production list means the
+ * file is not a route at all when it matters.
+ */
+const pageExtensions = ['tsx', 'ts', 'jsx', 'js'];
+if (process.env.NODE_ENV === 'development') pageExtensions.unshift('dev.tsx');
+
 const nextConfig: NextConfig = {
+  pageExtensions,
   // `vesta` is consumed straight from its GitHub source (its package `main`
   // is `src/vesta.ts`), so Next has to compile it like first-party code.
   // That is deliberate: it keeps us tracking upstream by version range

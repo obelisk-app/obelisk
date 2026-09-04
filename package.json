@@ -27,7 +27,8 @@
     "test:e2e:headed": "HEADED=1 playwright test --config=scripts/e2e/playwright.config.ts",
     "test:e2e:voice": "playwright test --config=scripts/e2e/playwright.config.ts scripts/e2e/voice/",
     "test:e2e:voice:headed": "HEADED=1 playwright test --config=scripts/e2e/playwright.config.ts scripts/e2e/voice/",
-    "snap-guides": "tsx scripts/snap-guide-svgs.ts"
+    "snap-guides": "tsx scripts/snap-guide-svgs.ts",
+    "snap-games": "node scripts/snap-game-shots.mjs"
   },
   "dependencies": {
     "@noble/hashes": "^2.0.1",
