@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { GameSession } from '@/lib/games/session';
 import type { CRState } from '@/lib/games/chain-reaction';
 
@@ -15,8 +15,25 @@ interface Props {
   onAction: (action: { cell: number }, seat: string) => Promise<void>;
   /** Cap on the rendered board width — the modal gives it more room than a card. */
   maxWidth?: number;
+  /**
+   * Cap on the rendered board height. Only fullscreen passes it, and passing
+   * it is what lets a cell grow past `CELL_DEFAULT_MAX`: without a height to
+   * fit into, a bigger cell would just push the bottom of the board off the
+   * screen. A 6×9 board at the old fixed cap came out 264px wide in the middle
+   * of a 1440px window, which is what "fullscreen" used to mean here.
+   */
+  maxHeight?: number;
   /** Names seats for the legend; two local players must read as two people. */
   seatLabel?: (seatId: string) => string;
+  /**
+   * Fired while the board is playing back a cascade.
+   *
+   * The table above uses it to hold the result splash: the winning move is the
+   * biggest chain in the game, and the splash used to cover it the instant the
+   * log said the match was over — so the one explosion worth watching was the
+   * one nobody ever saw.
+   */
+  onRevealChange?: (animating: boolean) => void;
 }
 
 /**
@@ -42,15 +59,24 @@ export const SEAT_COLORS = [
 // one need a widened type rather than an `any` cast.
 type CSSVars = React.CSSProperties & Record<`--${string}`, string>;
 
-function Orbs({ count, hex, orbit }: { count: number; hex: string; orbit: boolean }) {
+/** Cell size for an inline board — the size this game has always been. */
+const CELL_DEFAULT_MAX = 44;
+/** Ceiling when the board is given a height to fill. Past this it reads as a toy. */
+const CELL_FULLSCREEN_MAX = 92;
+/** Orb diameter as a share of the cell, so the pieces grow with the board. */
+const ORB_RATIO = 0.23;
+
+function Orbs({ count, hex, orbit, orb }: { count: number; hex: string; orbit: boolean; orb: number }) {
   if (count <= 0) return null;
   const dots = Math.min(count, 3);
-  // Orbs touch each other — offsets are tuned so a 10px-diameter ball sits
-  // flush against its neighbours (center-to-center ≈ diameter).
+  // Orbs touch each other — offsets are a share of the orb diameter so a ball
+  // sits flush against its neighbours at any board size (centre-to-centre ≈
+  // diameter). They were hardcoded for a 10px orb.
+  const near = orb * 0.45;
   const offsets: Array<[number, number]> =
     dots === 1 ? [[0, 0]]
-    : dots === 2 ? [[-4.5, 0], [4.5, 0]]
-    : [[-4.5, 3], [4.5, 3], [0, -4.5]];
+    : dots === 2 ? [[-near, 0], [near, 0]]
+    : [[-near, orb * 0.3], [near, orb * 0.3], [0, -near]];
   const dur = `${Math.max(0.9, 2.6 - dots * 0.5)}s`;
   // Stack three gradients: a tight specular highlight, the main lit sphere,
   // and a dark crescent on the far side — reads much more 3D than one ramp.
@@ -74,8 +100,8 @@ function Orbs({ count, hex, orbit }: { count: number; hex: string; orbit: boolea
             transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`,
             background: sphere,
             boxShadow: [
-              `0 0 10px ${hex}`,
-              `0 0 20px color-mix(in srgb, ${hex} 45%, transparent)`,
+              `0 0 ${orb}px ${hex}`,
+              `0 0 ${orb * 2}px color-mix(in srgb, ${hex} 45%, transparent)`,
               `0 1px 2px rgba(0,0,0,0.6)`,
               `inset -1.5px -2px 2.5px color-mix(in srgb, ${hex} 40%, black)`,
               `inset 1.5px 2px 1.5px rgba(255,255,255,0.35)`,
@@ -210,7 +236,7 @@ function Explosion({ hex }: { hex: string }) {
   );
 }
 
-export default function ChainReactionBoard({ game, mySeats, onAction, maxWidth = 320, seatLabel }: Props) {
+export default function ChainReactionBoard({ game, mySeats, onAction, maxWidth = 320, maxHeight, seatLabel, onRevealChange }: Props) {
   const [busy, setBusy] = useState(false);
   const state = (game.state ?? {}) as Partial<CRState>;
   const rows: number = state.rows ?? 9;
@@ -219,7 +245,15 @@ export default function ChainReactionBoard({ game, mySeats, onAction, maxWidth =
   const seats: Record<string, number> = state.seats ?? {};
   const order: string[] = state.order ?? [];
   const eliminated: string[] = state.eliminated ?? [];
-  const boardWidth = Math.min(maxWidth, cols * 44);
+  // Fit the board to whatever room it was given, in both directions. Without
+  // a height the cell keeps the inline size this game has always used.
+  const cellCap = maxHeight ? CELL_FULLSCREEN_MAX : CELL_DEFAULT_MAX;
+  const cellPx = Math.max(
+    16,
+    Math.floor(Math.min(maxWidth / cols, maxHeight ? maxHeight / rows : cellCap, cellCap)),
+  );
+  const boardWidth = cellPx * cols;
+  const orb = Math.round(Math.max(8, Math.min(cellPx * ORB_RATIO, 24)));
 
   // The seat being played right now: the one on move if we hold it, otherwise
   // our only seat (so a spectator-ish view still colours the right player).
@@ -256,6 +290,12 @@ export default function ChainReactionBoard({ game, mySeats, onAction, maxWidth =
   );
   const displayCells = reveal.cells;
   const animating = reveal.animating;
+  // A layout effect, not a plain one: the parent hides the result splash on
+  // this signal, and doing it after paint would flash the splash over the
+  // first frame of the cascade.
+  useLayoutEffect(() => {
+    onRevealChange?.(animating);
+  }, [animating, onRevealChange]);
   const [explosions, setExplosions] = useState<Record<number, { hex: string; id: number }>>({});
   // Fast enough to feel like a reaction rather than a wait. The original
   // timings (520/420) meant a long chain locked the board for several seconds,
@@ -416,6 +456,7 @@ export default function ChainReactionBoard({ game, mySeats, onAction, maxWidth =
           gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
           width: `${boardWidth}px`,
           '--cr-turn': matrixHex,
+          '--cr-orb': `${orb}px`,
         } as CSSVars}
       >
         {displayCells.map((cell, i) => {
@@ -436,7 +477,7 @@ export default function ChainReactionBoard({ game, mySeats, onAction, maxWidth =
               style={color ? { color: color.hex } : undefined}
               aria-label={`cell ${i}`}
             >
-              {color && <Orbs count={cell.count} hex={color.hex} orbit={cell.count >= 2} />}
+              {color && <Orbs count={cell.count} hex={color.hex} orbit={cell.count >= 2} orb={orb} />}
               {burst && <Explosion key={burst.id} hex={burst.hex} />}
             </button>
           );

@@ -87,6 +87,19 @@ export default function Harness() {
         />
       </Frame>
 
+      {/* Not a guide shot — this is here to eyeball the fullscreen board, which
+          sizes itself from the room it is given rather than a fixed cell cap. */}
+      <Frame name="chain-reaction-fullscreen" width={1200}>
+        <ChainReactionBoard
+          game={cr}
+          mySeats={[cr.currentTurn ?? 'seat-ana']}
+          onAction={noop}
+          maxWidth={1168}
+          maxHeight={690}
+          seatLabel={seatLabel}
+        />
+      </Frame>
+
       <Frame name="chain-reaction-result" width={380}>
         <GameResults session={crDone} seatLabel={seatLabel} myPubkey="pk-ana" />
       </Frame>

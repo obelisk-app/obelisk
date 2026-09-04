@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import ModalShell from '@/components/ModalShell';
 import UserAvatar from '@/components/UserAvatar';
 import { useGroupMemberInfo, useMyPubkey } from '@/lib/nostr-bridge';
@@ -49,6 +49,75 @@ export default function GameModal({ gameId, onClose }: { gameId: string; onClose
   const [fullscreen, setFullscreen] = useState(
     () => typeof window !== 'undefined' && window.innerWidth < 768,
   );
+
+  /**
+   * The room a fullscreen board actually gets.
+   *
+   * Turn-based boards used to take a width cap and nothing else, so fullscreen
+   * on Chain Reaction was a 264px board adrift in a 1440px window — the cell
+   * size was capped and there was no height to fill. Measuring here keeps the
+   * board component free of window queries, the same way StackerTable already
+   * sizes its own cells.
+   *
+   * The subtraction is the chrome above and below: title row, turn clock,
+   * seat legend, and the action buttons.
+   */
+  const FULLSCREEN_CHROME_PX = 210;
+  /**
+   * How long the result splash waits before covering the board.
+   *
+   * The deciding move is the biggest cascade in the game and it arrives in the
+   * same event that ends the match, so a splash that renders immediately hides
+   * the only explosion anybody wanted to watch. The board reports when it is
+   * animating (`onRevealChange`); this short delay covers the gap between the
+   * finished session landing and the board starting to play it back.
+   */
+  const RESULT_SPLASH_DELAY_MS = 300;
+  /** …and a ceiling, so a board that never reports "done" cannot eat the splash. */
+  const RESULT_SPLASH_MAX_WAIT_MS = 6000;
+  const [boardRevealing, setBoardRevealing] = useState(false);
+
+  // The window, read through a subscription rather than copied into state on
+  // every resize — the size is external, and mirroring it would re-render the
+  // whole table for a value only the board reads.
+  const viewport = useSyncExternalStore(
+    (notify) => {
+      if (typeof window === 'undefined') return () => {};
+      window.addEventListener('resize', notify);
+      return () => window.removeEventListener('resize', notify);
+    },
+    () => `${window.innerWidth}x${window.innerHeight}`,
+    () => '',
+  );
+  const boardBox = useMemo(() => {
+    if (!fullscreen || !viewport) return null;
+    const [w, h] = viewport.split('x').map(Number);
+    return {
+      width: Math.max(240, w - 32),
+      height: Math.max(240, h - FULLSCREEN_CHROME_PX),
+    };
+  }, [fullscreen, viewport]);
+
+  // Arm the splash a beat after the table finishes. Keyed by the result it is
+  // armed for, so it is derived rather than reset — a rematch on the same
+  // table id re-arms on its own, with no second effect to turn it back off.
+  const finished = session?.status === 'finished';
+  const resultKey = `${gameId}:${session?.finishedAt ?? ''}`;
+  const [splashArmedFor, setSplashArmedFor] = useState<string | null>(null);
+  const splashReady = finished && splashArmedFor === resultKey;
+  useEffect(() => {
+    if (!finished) return;
+    const t = setTimeout(() => setSplashArmedFor(resultKey), RESULT_SPLASH_DELAY_MS);
+    return () => clearTimeout(t);
+  }, [finished, resultKey]);
+
+  // The ceiling: however long the board claims to be animating, the result
+  // gets shown. A splash nobody can dismiss is worse than one that lands early.
+  useEffect(() => {
+    if (!finished || !boardRevealing) return;
+    const t = setTimeout(() => setBoardRevealing(false), RESULT_SPLASH_MAX_WAIT_MS);
+    return () => clearTimeout(t);
+  }, [finished, boardRevealing]);
 
   // Every client watching a table helps enforce its clock.
   useTurnClockEnforcer(session, myPubkey, true);
@@ -151,13 +220,15 @@ export default function GameModal({ gameId, onClose }: { gameId: string; onClose
         />
       )}
 
-      <GameOverOverlay
-        session={session}
-        myPubkey={myPubkey}
-        nameOf={nameOf}
-        pictureOf={pictureOf}
-        onClose={onClose}
-      />
+      {splashReady && !boardRevealing && (
+        <GameOverOverlay
+          session={session}
+          myPubkey={myPubkey}
+          nameOf={nameOf}
+          pictureOf={pictureOf}
+          onClose={onClose}
+        />
+      )}
 
       <div className="flex items-start justify-between gap-3">
         <div>
@@ -201,7 +272,7 @@ export default function GameModal({ gameId, onClose }: { gameId: string; onClose
         </div>
       </div>
 
-      <div className="mt-4">
+      <div className={fullscreen ? 'mt-3 flex flex-1 flex-col justify-center' : 'mt-4'}>
         {session.status === 'waiting' || session.status === 'cancelled' ? (
           <ul className="space-y-2" data-testid="game-roster">
             {roster.map((pk, i) => (
@@ -257,8 +328,10 @@ export default function GameModal({ gameId, onClose }: { gameId: string; onClose
             game={session}
             mySeats={mySeats}
             onAction={onAction}
-            maxWidth={fullscreen ? 560 : 420}
+            maxWidth={boardBox?.width ?? 420}
+            maxHeight={boardBox?.height}
             seatLabel={seatLabelFor}
+            onRevealChange={setBoardRevealing}
           />
         )}
       </div>

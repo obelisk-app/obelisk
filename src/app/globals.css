@@ -517,8 +517,10 @@ button:not(:disabled),
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 10px;
-  height: 10px;
+  /* Sized from the board, so the pieces grow with the cells in fullscreen.
+     `--cr-orb` is set on .cr-matrix by ChainReactionBoard. */
+  width: var(--cr-orb, 10px);
+  height: var(--cr-orb, 10px);
   border-radius: 9999px;
   box-shadow: 0 0 4px currentColor;
   animation: cr-pop-in 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -556,8 +558,8 @@ button:not(:disabled),
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 9px;
-  height: 9px;
+  width: calc(var(--cr-orb, 10px) * 0.9);
+  height: calc(var(--cr-orb, 10px) * 0.9);
   border-radius: 9999px;
   animation: cr-shard-fly 520ms cubic-bezier(0.25, 0.7, 0.35, 1) forwards;
 }
@@ -1137,8 +1139,10 @@ button:not(:disabled),
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 10px;
-  height: 10px;
+  /* Sized from the board, so the pieces grow with the cells in fullscreen.
+     `--cr-orb` is set on .cr-matrix by ChainReactionBoard. */
+  width: var(--cr-orb, 10px);
+  height: var(--cr-orb, 10px);
   border-radius: 9999px;
   box-shadow: 0 0 4px currentColor;
   animation: cr-pop-in 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -1176,8 +1180,8 @@ button:not(:disabled),
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 9px;
-  height: 9px;
+  width: calc(var(--cr-orb, 10px) * 0.9);
+  height: calc(var(--cr-orb, 10px) * 0.9);
   border-radius: 9999px;
   animation: cr-shard-fly 520ms cubic-bezier(0.25, 0.7, 0.35, 1) forwards;
 }
