@@ -1,6 +1,7 @@
 {
   "base": "http://localhost:3000",
   "shots": [
+    "games-feature",
     "chain-reaction-board",
     "chain-reaction-result",
     "vesta-board",

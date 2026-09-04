@@ -22,6 +22,8 @@ const OUT_DIR = join(process.cwd(), 'public', 'og', 'guides', 'games');
 
 /** Element shots, in the order the harness lays them out. */
 const SHOTS = [
+  // Landscape composite used on /features.
+  'games-feature',
   'chain-reaction-board',
   'chain-reaction-result',
   'vesta-board',
@@ -35,8 +37,11 @@ const SHOTS = [
  * well the same way a person would, only worse.
  */
 async function playStacker(page) {
-  const board = page.locator('[data-shot="stacker-table"]');
-  await board.scrollIntoViewIfNeeded();
+  // No scrollIntoViewIfNeeded: the page holds several live canvases and a
+  // board that settles its first frame after mount, so "wait for the element
+  // to stop moving" is a race the harness will sometimes lose. The element
+  // screenshot scrolls on its own anyway.
+  await page.locator('[data-shot="stacker-table"]').waitFor({ state: 'visible', timeout: 30_000 });
   await page.mouse.click(20, 20); // focus the document, not a control
 
   // Sweep left to right rather than dropping everything down one column: a
@@ -94,7 +99,7 @@ async function main() {
   const written = [];
   for (const name of SHOTS) {
     const el = page.locator(`[data-shot="${name}"]`);
-    await el.scrollIntoViewIfNeeded();
+    await el.waitFor({ state: 'visible', timeout: 30_000 });
     await page.waitForTimeout(150);
     const path = join(OUT_DIR, `${name}.png`);
     const buf = await el.screenshot({ path, animations: 'disabled' });

@@ -66,6 +66,8 @@
   "features.spamResistant.desc": "Self-hosting means serving HTML and JS. No database to operate, no Docker required. Run it from your laptop, a tunnel, or a static host.",
   "features.zaps.title": "Bitcoin zaps in chat",
   "features.zaps.desc": "Send sats from any message via NIP-57 zaps and Nostr Wallet Connect (NIP-47). No custodian, no platform fee, no middleman.",
+  "features.games.title": "Games on the relay",
+  "features.games.desc": "Chain Reaction, Vesta and Stacker run inside a channel with no game server. Every move is a signed event, and every client replays the same log to the same board.",
   "features.adminCli.title": "Open source",
   "features.adminCli.desc": "MIT-licensed, every line on GitHub. Read it, fork it, audit it, run it. The whole app is the client you can see.",
   "steps.heading": "Three steps",

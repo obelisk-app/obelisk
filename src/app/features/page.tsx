@@ -30,6 +30,13 @@ const FEATURES = [
     width: 2940, height: 1596,
   },
   {
+    title: 'Games in the channel',
+    description: 'Chain Reaction, Vesta and Stacker run inside a channel with no game server: every move is a signed Nostr event and every client replays the same log to the same board. Turn clocks, seats and results all come out of that log.',
+    image: '/og/guides/games/games-feature.png',
+    alt: 'Three Obelisk games running on a Nostr relay: a Chain Reaction board, a Vesta island, and a Stacker well',
+    width: 2360, height: 1004,
+  },
+  {
     title: 'Mobile PWA',
     description: 'Install Obelisk from the browser and use the complete responsive app: relays, channels, DMs, profiles, notifications, and calls.',
     image: '/pictures-for-posts/mobile-showcase-readme.png',
@@ -60,9 +67,9 @@ const FEATURES = [
 ] as const;
 
 export const metadata: Metadata = {
-  title: 'Features — Nostr group chat, video calls, stickers, and mobile PWA',
+  title: 'Features — Nostr group chat, video calls, games, stickers, and mobile PWA',
   description:
-    'Explore Obelisk features: NIP-29 groups, voice messages, sticker packs, mobile PWA, P2P video, large SFU calls, and portable Nostr profiles.',
+    'Explore Obelisk features: NIP-29 groups, voice messages, sticker packs, relay-native multiplayer games, mobile PWA, P2P video, large SFU calls, and portable Nostr profiles.',
   alternates: { canonical: '/features' },
   keywords: [
     'Nostr chat features',
@@ -71,12 +78,13 @@ export const metadata: Metadata = {
     'Nostr voice and video calls',
     'Nostr mobile PWA',
     'Nostr sticker marketplace',
+    'Nostr multiplayer games',
     'self-hosted community chat',
   ],
   openGraph: {
     title: 'Obelisk Features — relay-native group chat and calls',
     description:
-      'Relay-native groups, voice messages, sticker packs, mobile PWA, P2P video, large calls, and portable Nostr profiles.',
+      'Relay-native groups, voice messages, sticker packs, multiplayer games, mobile PWA, P2P video, large calls, and portable Nostr profiles.',
     url: SITE_URL + '/features',
     siteName: 'Obelisk',
     type: 'website',
@@ -91,7 +99,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Obelisk Features — Nostr group chat, calls, stickers, and PWA',
     description:
-      'Explore relay-native groups, voice messages, stickers, mobile PWA, P2P video, SFU calls, and portable Nostr profiles.',
+      'Explore relay-native groups, voice messages, stickers, games, mobile PWA, P2P video, SFU calls, and portable Nostr profiles.',
     images: ['/pictures-for-posts/mobile-showcase-readme.png'],
   },
 };

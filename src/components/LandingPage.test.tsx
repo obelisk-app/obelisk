@@ -149,6 +149,12 @@ describe('LandingPage hero', () => {
     expect(iframe?.src).toContain('youtube-nocookie.com/embed/Z86oghQkUbk');
   });
 
+  it('lists the games among the features, in both locales', () => {
+    render(<LocaleProvider><LandingPage /></LocaleProvider>);
+    expect(screen.getByRole('heading', { name: 'Games on the relay' })).toBeInTheDocument();
+    expect(screen.getByText(/Chain Reaction, Vesta and Stacker/)).toBeInTheDocument();
+  });
+
   it('allows the Spanish hero headline to wrap on narrow screens', () => {
     render(
       <LocaleProvider initialLocale="es">

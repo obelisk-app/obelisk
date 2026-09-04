@@ -95,6 +95,21 @@ const FEATURE_KEYS = [
     titleKey: 'features.zaps.title',
     descKey: 'features.zaps.desc',
   },
+  {
+    icon: (
+      // A die: the games are the one feature here you can lose at.
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="4" />
+        <circle cx="8.5" cy="8.5" r="1.1" fill="currentColor" stroke="none" />
+        <circle cx="15.5" cy="8.5" r="1.1" fill="currentColor" stroke="none" />
+        <circle cx="12" cy="12" r="1.1" fill="currentColor" stroke="none" />
+        <circle cx="8.5" cy="15.5" r="1.1" fill="currentColor" stroke="none" />
+        <circle cx="15.5" cy="15.5" r="1.1" fill="currentColor" stroke="none" />
+      </svg>
+    ),
+    titleKey: 'features.games.title',
+    descKey: 'features.games.desc',
+  },
 ];
 
 const STEP_ICONS = [

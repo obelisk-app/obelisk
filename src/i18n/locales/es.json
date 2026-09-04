@@ -66,6 +66,8 @@
   "features.spamResistant.desc": "Self-hostear es servir HTML y JS. Sin base de datos que operar, sin Docker obligatorio. Corrélo desde tu laptop, un túnel o un host estático.",
   "features.zaps.title": "Zaps de Bitcoin en el chat",
   "features.zaps.desc": "Mandá sats desde cualquier mensaje vía zaps NIP-57 y Nostr Wallet Connect (NIP-47). Sin custodio, sin fee de plataforma, sin intermediario.",
+  "features.games.title": "Juegos sobre el relay",
+  "features.games.desc": "Chain Reaction, Vesta y Stacker corren dentro de un canal sin servidor de juego. Cada jugada es un evento firmado, y cada cliente reproduce el mismo log hasta el mismo tablero.",
   "features.adminCli.title": "Open source",
   "features.adminCli.desc": "Licencia MIT, todo el código en GitHub. Leelo, forkealo, auditalo, corrélo. Toda la app es el cliente que estás viendo.",
   "steps.heading": "Tres pasos",

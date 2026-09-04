@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import type { GameState as VestaState } from 'vesta';
 import ChainReactionBoard from '@/components/chat/games/ChainReactionBoard';
 import VestaTable from '@/components/chat/games/vesta/VestaTable';
+import VestaBoard from '@/components/chat/games/vesta/VestaBoard';
 import StackerTable from '@/components/chat/games/stacker/StackerTable';
 import StackerBoard from '@/components/chat/games/stacker/StackerBoard';
 import type { StackerRunner } from '@/lib/games/stacker/runner';
@@ -76,6 +77,28 @@ export default function Harness() {
       >
         picker
       </button>
+
+      {/* The three games in one landscape frame, for the /features page. */}
+      <Frame name="games-feature" width={1180}>
+        <div className="flex items-center justify-center gap-7">
+          <ChainReactionBoard
+            game={cr}
+            mySeats={[cr.currentTurn ?? 'seat-ana']}
+            onAction={noop}
+            maxWidth={300}
+            maxHeight={420}
+            seatLabel={seatLabel}
+          />
+          {/* The Vesta board is a fixed-size canvas, so it is scaled and
+              scaled rather than re-rendered smaller. */}
+          <div style={{ width: 469, height: 363, overflow: 'hidden' }}>
+            <div style={{ transform: 'scale(0.625)', transformOrigin: 'top left' }}>
+              <VestaBoard state={vesta.state as VestaState} mode="none" />
+            </div>
+          </div>
+          <StackerBoard runner={still} cell={17} />
+        </div>
+      </Frame>
 
       <Frame name="chain-reaction-board" width={420}>
         <ChainReactionBoard
