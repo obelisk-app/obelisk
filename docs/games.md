@@ -88,10 +88,75 @@ answer on any client whose clock is roughly right.
 ## Relay scope
 
 Games follow the single-relay rule in [CLAUDE.md](../CLAUDE.md): a table lives
-on the channel's relay, because the channel does. `subscribeChannelGames`
-filters on kind + `since` and gates the `h` tag in the handler — a relay that
-doesn't index `#h` for an unfamiliar kind would answer a tag-filtered REQ with
-silence, and that failure looks exactly like "nobody is playing".
+on the channel's relay, because the channel does.
+
+`subscribeChannelGames` asks `{ kinds:[2390], '#h':[channel], since, limit }`.
+The `#h` is not free: a relay that doesn't index single-letter tags for an
+unfamiliar kind answers a tag-filtered REQ with silence, and that failure looks
+exactly like "nobody is playing" — which is why this filter was originally
+kind + `since` alone, gating `h` in the handler. The cost of that was
+downloading every game event on the relay for 24 hours on every channel visit,
+mostly Stacker checkpoints carrying board and input blobs.
+
+So when the tagged REQ produces nothing within `TAG_PROBE_MS`, a one-shot
+`{ kinds:[2390], '#t':[GAME_TAG], limit: 1 }` asks the question that actually
+distinguishes the two cases — same kind, same class of indexed tag, no channel
+in it. If it returns something the relay can index these tags, the quiet channel
+is genuinely quiet, and the wide filter never opens. If it returns nothing too,
+the old relay-wide filter opens as the fallback and the relay is remembered as
+needing it. Deciding on the tagged sub's silence alone would have re-opened the
+firehose on every quiet channel, which is most of them.
+
+`CHANNEL_GAME_LIMIT` returns the newest N events, so on a busy channel a
+`create` can fall off the end. That is only acceptable because a card resolves
+itself by id — see below.
+
+## Resolving one table
+
+The channel sub answers "what is live in here"; it is not how a specific card
+gets its content. A `[[game:<id>]]` marker is an ordinary chat message, so
+scrolling back past the 24-hour window used to leave a permanent skeleton.
+
+`src/lib/games/resolve.ts` fetches a table directly, batching ids across cards:
+`{ ids }` for the creates (a table's id *is* its create event's id, and exact-id
+is the most universally indexed filter in nostr) plus
+`{ kinds:[2390], '#e': ids, limit }` for the ops. Neither carries a `since`.
+The two are disjoint — only ops carry an `e` tag — so no limit on the op filter
+can starve a create, which is what guarantees a card always resolves to
+something. Ids that come back empty retry at 4s and 12s, then stop.
+
+## Where a card's content comes from
+
+Three sources, fastest first:
+
+1. **localStorage** (`src/lib/games/cache.ts`) — keyed per table, seeded in a
+   layout effect so the skeleton commits but never paints. Checkpoints are
+   omitted from the write entirely; stripping their blobs would be unsafe, not
+   just lossy, because the store dedupes by event id and the stripped copy would
+   permanently shadow the real one.
+2. **The channel subscription**, above.
+3. **The by-id resolver**, above.
+
+And for the person who published: `publishResilient` ingests its own signed
+event immediately (`echo`). That is not an optimistic guess — it is the same
+event, with the same id, that everyone else will replay.
+
+## Why replay is cheap now
+
+`replayLog` takes an event log and nothing else — in particular, **not the wall
+clock**. That is load-bearing: `selectSession` caches its result in a `WeakMap`
+keyed by the identity of the log array, which is only sound while the output
+depends on nothing but the log. The one time-dependent read (a waiting table
+going stale after an hour) lives in `applyWaitingExpiry`, which runs on every
+read and never mutates the cached replay. Reading the clock inside `replayLog`
+would silently freeze every card on whatever the clock said the first time.
+
+The log arrays are copy-on-write, so a new event produces a new array, a new
+cache key, and one replay — for that table only. `useGameSession` subscribes to
+`logs[gameId]`, not the whole map, so an event on one table no longer
+re-renders and re-derives every card in the channel. Relay events land through
+`src/lib/games/ingest.ts`, which batches a burst into one store update instead
+of one per event.
 
 ## UI
 
@@ -103,8 +168,10 @@ silence, and that failure looks exactly like "nobody is playing".
   now.
 - `GameModal` is the table — roster while waiting, board while playing.
   Every button publishes one event and then does nothing; the UI moves when
-  the event comes back off the relay. No optimistic board, because a board the
-  relay hasn't accepted is a board the other players cannot see.
+  the event is in the log. No optimistic board, because a board the relay
+  hasn't accepted is a board the other players cannot see — but the publisher's
+  own signed event goes into the log as soon as the relay confirms it, without a
+  second round trip to hear it echoed back.
 - Every client watching a table runs `useTurnClockEnforcer` and races to
   publish the timeout claim. The reducer accepts exactly one; the rest are
   harmless duplicates.

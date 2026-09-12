@@ -1,23 +1,53 @@
 'use client';
 
+import { memo, useEffect, useLayoutEffect } from 'react';
 import { useGroupMemberInfo, useMyPubkey } from '@/lib/nostr-bridge';
 import { useGamesStore } from '@/store/games';
 import { useGameSession } from '@/hooks/chat/useChannelGames';
-import { canJoin } from '@/lib/games/session';
+import { canJoin, controllerOf, type GameSession } from '@/lib/games/session';
+import { seatDisplayLabel } from '@/lib/games/seat-label';
 import { gameIcon, gameName } from '@/lib/games/catalog';
+import { seedGameFromCache } from '@/lib/games/cache';
+import { requestGameLoad } from '@/lib/games/resolve';
 import { SEAT_COLORS } from './ChainReactionBoard';
+
+/**
+ * How long a card without a session waits before asking the relay for its own
+ * table. Long enough that a card the channel backfill is about to resolve
+ * anyway doesn't cost a REQ; short enough that nobody reads it as a delay.
+ */
+export const RESOLVE_GRACE_MS = 400;
 
 /**
  * In-channel card for a table, rendered from the `[[game:<id>]]` marker the
  * host posts as an ordinary chat message. The card is a pointer, not a copy:
  * status comes from replaying the table's own event log, so a message from an
  * hour ago shows the match as it stands now.
+ *
+ * Three things get it something to replay, in order of how fast they are:
+ * the localStorage seed (before the first paint), the channel subscription, and
+ * — for a table the channel sub cannot reach, which is any table older than its
+ * 24-hour window — a direct lookup by id.
  */
-export default function GameCard({ gameId }: { gameId: string }) {
+function GameCard({ gameId }: { gameId: string }) {
   const session = useGameSession(gameId);
   const myPubkey = useMyPubkey();
-  const memberList = useGroupMemberInfo(session?.channelId ?? null);
   const setOpenGame = useGamesStore((s) => s.setOpenGame);
+
+  // A layout effect, so the synchronous re-render it triggers lands before the
+  // browser paints: the skeleton is committed but never seen.
+  useLayoutEffect(() => {
+    if (!session) seedGameFromCache(gameId);
+    // Only on mount / id change — re-seeding a table the relay has since
+    // extended would be pointless work and the seed no-ops anyway.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameId]);
+
+  useEffect(() => {
+    if (session) return;
+    const t = setTimeout(() => requestGameLoad(gameId), RESOLVE_GRACE_MS);
+    return () => clearTimeout(t);
+  }, [gameId, session]);
 
   if (!session) {
     return (
@@ -26,22 +56,6 @@ export default function GameCard({ gameId }: { gameId: string }) {
       </span>
     );
   }
-
-  // A finished table says who took it — the result is the whole point of
-  // looking at a game card after the fact.
-  // Rendered per viewer and never published, so naming the reader is safe
-  // here — unlike the seat labels that travel in the `start` event.
-  const nameOf = (pubkey: string) => {
-    if (pubkey === myPubkey) return 'you';
-    return memberList.find((m) => m.pubkey === pubkey)?.displayName ?? pubkey.slice(0, 8);
-  };
-
-  const label =
-    session.status === 'waiting' ? `Open table · ${session.joined.length}/${session.maxPlayers}`
-    : session.status === 'in_progress' ? 'In progress'
-    : session.status === 'finished'
-      ? (session.draw || !session.winner ? 'Finished · draw' : `🏆 ${nameOf(session.winner)} won`)
-    : 'Cancelled';
 
   const seats = session.status === 'waiting' ? session.joined : session.participants;
 
@@ -59,7 +73,9 @@ export default function GameCard({ gameId }: { gameId: string }) {
         <span className="block truncate text-xs font-semibold text-lc-white" data-testid="game-card-name">
           {gameName(session.game)}
         </span>
-        <span className="block text-[11px] text-lc-muted">{label}</span>
+        <span className="block text-[11px] text-lc-muted">
+          <StatusLabel session={session} myPubkey={myPubkey} />
+        </span>
       </span>
       <span className="flex shrink-0 items-center gap-1">
         {seats.slice(0, SEAT_COLORS.length).map((pk, i) => (
@@ -73,4 +89,47 @@ export default function GameCard({ gameId }: { gameId: string }) {
       </span>
     </button>
   );
+}
+
+// A card re-renders for its own table and nothing else. MessageContent re-renders
+// on plenty a card does not care about.
+export default memo(GameCard);
+
+function StatusLabel({ session, myPubkey }: { session: GameSession; myPubkey: string | null }) {
+  switch (session.status) {
+    case 'waiting':
+      return <>{`Open table · ${session.joined.length}/${session.maxPlayers}`}</>;
+    case 'in_progress':
+      return <>In progress</>;
+    case 'finished':
+      if (session.draw || !session.winner) return <>Finished · draw</>;
+      // Naming the reader is safe here — this is rendered per viewer and never
+      // published, unlike the seat labels that travel in the `start` event.
+      if (controllerOf(session, session.winner) === myPubkey) return <>🏆 you won</>;
+      return <WinnerLabel session={session} winner={session.winner} />;
+    default:
+      return <>Cancelled</>;
+  }
+}
+
+/**
+ * The winner's display name, in its own component so the member-metadata
+ * subscription behind it only mounts for a table that actually has a winner.
+ *
+ * `useGroupMemberInfo` subscribes to the whole user-metadata map and warms a
+ * profile fetch for every member of the channel. Calling it from the card
+ * itself meant every card in the channel did that, and re-rendered on every
+ * kind 0 that arrived, to resolve a string that most of them never showed.
+ */
+function WinnerLabel({ session, winner }: { session: GameSession; winner: string }) {
+  const memberList = useGroupMemberInfo(session.channelId);
+  // `winner` is a SEAT id, which on a hot-seat table is `pubkey#1` — looking
+  // that up in the member list misses and leaves a mangled hex prefix on
+  // screen. The controller is the person; the label is what the table chose to
+  // call the seat.
+  const controller = controllerOf(session, winner);
+  const profileName = memberList.find((m) => m.pubkey === controller)?.displayName
+    ?? controller.slice(0, 8);
+  const label = seatDisplayLabel(session.seats.find((s) => s.id === winner)?.label, profileName);
+  return <>{`🏆 ${label} won`}</>;
 }

@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { deriveSession, canJoin, canStart, isSoloTable, isTurnExpired, turnSecondsLeft } from './session';
+import {
+  deriveSession, replayLog, applyWaitingExpiry,
+  canJoin, canStart, isSoloTable, isTurnExpired, turnSecondsLeft,
+} from './session';
 import { parseGameEvent, buildCreate, buildGameOp, type GameEvent, type ParsedGameEvent } from './protocol';
 import { chainReaction, CR_SIZES } from './chain-reaction';
 import { KIND_GAME } from '@/lib/nip-kinds';
@@ -252,6 +255,26 @@ describe('deriveSession', () => {
     it('does not expire a table that already started', () => {
       const { log } = startedTable();
       expect(deriveSession(log, 1000 + 99999)!.status).toBe('in_progress');
+    });
+
+    // The store caches `replayLog` keyed by the identity of the log array it
+    // was handed (see selectSession), which is only sound while the replay
+    // itself never reads the clock. These two pin that split down.
+    it('keeps the clock out of replayLog', () => {
+      const createEv = ev(HOST, 1000, buildCreate(CH, { game: chainReaction.type, turnTimeoutS: 45 }), 'g6b');
+      const log = [parse(createEv)];
+      expect(replayLog(log)!.status).toBe('waiting');
+      expect(deriveSession(log, 1000 + 3601)!.status).toBe('cancelled');
+    });
+
+    it('never mutates the session it is handed the expiry for', () => {
+      const createEv = ev(HOST, 1000, buildCreate(CH, { game: chainReaction.type, turnTimeoutS: 45 }), 'g6c');
+      const base = replayLog([parse(createEv)])!;
+      expect(applyWaitingExpiry(base, 1000 + 3599)).toBe(base);
+      const expired = applyWaitingExpiry(base, 1000 + 3601);
+      expect(expired).not.toBe(base);
+      expect(expired.status).toBe('cancelled');
+      expect(base.status).toBe('waiting');
     });
   });
 

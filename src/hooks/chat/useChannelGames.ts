@@ -1,10 +1,14 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useConnectionState } from '@/lib/nostr-bridge';
 import { useGamesStore, selectChannelSessions, selectSession } from '@/store/games';
 import { subscribeChannelGames, publishTimeout } from '@/lib/games/transport';
+import { ingestGameEvent } from '@/lib/games/ingest';
+import { useNowSeconds } from '@/lib/games/clock';
 import { controllerOf, isTurnExpired, seatsControlledBy, type GameSession } from '@/lib/games/session';
+
+export { useNowSeconds };
 
 /**
  * Subscribe to the active channel's game log. One sub per channel, on the
@@ -18,9 +22,10 @@ export function useChannelGamesSubscription(channelId: string | null): void {
     let unsub: (() => void) | null = null;
     let cancelled = false;
 
-    void subscribeChannelGames(channelId, (ev) => {
-      useGamesStore.getState().ingest(ev);
-    }).then((fn) => {
+    // Batched, not per-event: the backfill for a channel that plays a lot is
+    // hundreds of events arriving across a socket drain, and one store update
+    // each meant one replay per event per visible card. See lib/games/ingest.
+    void subscribeChannelGames(channelId, ingestGameEvent).then((fn) => {
       if (cancelled) { fn(); return; }
       unsub = fn;
     }).catch((err) => {
@@ -40,36 +45,26 @@ export function useChannelGamesSubscription(channelId: string | null): void {
  */
 export const SESSION_CLOCK_MS = 30_000;
 
-/** A ticking "now" in unix seconds. Drives the turn clock without a re-derive storm. */
-export function useNowSeconds(intervalMs = 1000): number {
-  const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
-  useEffect(() => {
-    const t = setInterval(() => setNow(Math.floor(Date.now() / 1000)), intervalMs);
-    return () => clearInterval(t);
-  }, [intervalMs]);
-  return now;
-}
-
 /**
  * One table, replayed from its log. `null` until the create event lands.
  *
- * The clock is deliberately NOT a dependency once a table has started. `now`
- * only decides one thing — whether a table nobody started has gone stale — so
- * re-deriving a live match every second meant replaying the entire event log
- * once a second underneath a game running at 60 frames a second. Waiting
- * tables still follow the clock; their logs are a handful of events.
+ * Subscribes to **this table's log**, not to the whole map. That matters more
+ * than it looks: while this selected `s.logs`, every ingest anywhere produced a
+ * new map object, which re-rendered every mounted card and re-derived every
+ * table. A channel with a dozen cards and a live match in it spent its frame
+ * budget replaying tables nobody was looking at.
+ *
+ * The clock stays coarse for the same reason. `now` decides exactly one thing —
+ * whether a table nobody started has gone stale after an hour — and
+ * `selectSession` caches the replay by log identity, so a tick now costs a
+ * `WeakMap` lookup and an integer compare rather than a full replay.
  */
 export function useGameSession(gameId: string | null): GameSession | null {
-  const logs = useGamesStore((s) => s.logs);
-  // A coarse clock on purpose: `now` decides exactly one thing, whether a
-  // table nobody started has gone stale after an hour, and a 30-second
-  // granularity is plenty for an hour-long threshold. On a one-second clock
-  // this replayed the entire event log every second underneath a game running
-  // at sixty frames a second.
+  const log = useGamesStore((s) => (gameId ? s.logs[gameId] : undefined));
   const now = useNowSeconds(SESSION_CLOCK_MS);
   return useMemo(
-    () => (gameId ? selectSession({ logs }, gameId, now) : null),
-    [logs, gameId, now],
+    () => (gameId && log ? selectSession({ logs: { [gameId]: log } }, gameId, now) : null),
+    [log, gameId, now],
   );
 }
 

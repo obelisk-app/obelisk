@@ -10,12 +10,15 @@
  * across the user's configured relays.
  */
 import { getBridge, getBridgeImpl } from '@/lib/nostr-bridge/client';
+import type { Event as NostrEvent } from 'nostr-tools';
 import { KIND_GAME } from '@/lib/nip-kinds';
+import { ingestGameEvent } from './ingest';
 import {
   buildCreate,
   buildGameOp,
   parseGameEvent,
   GAME_LOG_WINDOW_SECONDS,
+  GAME_TAG,
   type GameEvent,
   type ParsedGameEvent,
   type SeatSpec,
@@ -45,13 +48,15 @@ async function bridge() {
  * attempt lands on a fresh one. Anything that is not a timeout — a real
  * refusal, with a reason — is passed straight through, because retrying a
  * rejection just annoys the relay twice.
+ *
+ * Whatever comes back is also fed straight into our own store. See {@link echo}.
  */
 async function publishResilient(
   template: { kind: number; content: string; tags: string[][] },
-): Promise<{ id: string }> {
+): Promise<NostrEvent> {
   const b = await bridge();
   try {
-    return await b.publishEvent(template);
+    return echo(await b.publishEvent(template));
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     if (!looksLikeLostConfirmation(message)) throw err;
@@ -62,8 +67,26 @@ async function publishResilient(
     // fresh one, then ask again.
     b.dropRelayConnection();
     await new Promise((resolve) => setTimeout(resolve, 300));
-    return b.publishEvent(template);
+    return echo(await b.publishEvent(template));
   }
+}
+
+/**
+ * Ingest an event we just published, without waiting for the relay to echo it.
+ *
+ * A publisher used to sit and look at its own skeleton: create a table, and the
+ * card stayed a spinner until the relay sent the kind 2390 back to us. There is
+ * nothing to wait for — this is the same signed event, with the same id, that
+ * every other client will replay, so putting it in the log now is not an
+ * optimistic guess. The relay's copy arrives later and the dedupe eats it.
+ *
+ * Tolerant of anything unparseable on purpose: a signer or a test stub that
+ * hands back a partial event must not break the publish it just completed.
+ */
+function echo(ev: NostrEvent): NostrEvent {
+  const parsed = parseGameEvent(ev as GameEvent);
+  if (parsed) ingestGameEvent(parsed);
+  return ev;
 }
 
 /**
@@ -139,6 +162,10 @@ export async function findCreateByNonce(
         const parsed = parseGameEvent(ev as GameEvent);
         if (!parsed || parsed.op !== 'create') return;
         if (parsed.channelId !== channelId || parsed.nonce !== nonce) return;
+        // The publish whose OK went missing did land. Put it in the log before
+        // handing the id back, so the card the caller is about to post a marker
+        // for has something to render.
+        ingestGameEvent(parsed);
         finish(parsed.gameId);
       },
       { watchdogMs: GAME_SUB_WATCHDOG_MS },
@@ -229,31 +256,145 @@ export async function publishCancel(channelId: string, gameId: string): Promise<
 }
 
 /**
+ * Tables fetched per channel. The relay returns the NEWEST n, so on a busy
+ * Stacker channel a `create` can fall off the end of this — which is only
+ * acceptable because a card resolves itself by id (`./resolve.ts`). This REQ is
+ * for what is live in the channel, not for making a specific card render. Don't
+ * lower it without checking that dependency still holds.
+ */
+export const CHANNEL_GAME_LIMIT = 400;
+
+/**
+ * How long the tagged REQ is given to produce something before we go looking
+ * for a reason it hasn't.
+ */
+export const TAG_PROBE_MS = 2500;
+
+/**
+ * Per relay: does it index single-letter tags for kind 2390? `true` once we
+ * have proof, `false` once we have proof it doesn't. Absent means unknown.
+ * Session-scoped — a relay's indexing does not change under us.
+ */
+const tagIndexOk = new Map<string, boolean>();
+
+/** Test seam. */
+export function __resetTagIndexProbe(): void {
+  tagIndexOk.clear();
+}
+
+/**
  * Subscribe to every game event in a channel.
  *
- * Filters on kind + `since` only, then gates the `h` tag in the handler —
- * same call the voice transport makes, for the same reason: a relay that
- * doesn't index `#h` for an unfamiliar kind would answer a tag-filtered REQ
- * with silence, and the failure looks exactly like "nobody is playing".
+ * This used to filter on kind + `since` alone and gate the `h` tag in the
+ * handler, for a real reason: a relay that doesn't index `#h` for an unfamiliar
+ * kind answers a tag-filtered REQ with silence, and that silence is
+ * indistinguishable from "nobody is playing here". The cost was that opening
+ * any channel downloaded every game event on the relay for 24 hours — mostly
+ * Stacker checkpoints, which carry board and input blobs — and `JSON.parse`d
+ * each one before finding out it belonged to somebody else.
+ *
+ * So: ask the narrow question, and when it comes back empty, ask a *different*
+ * question to find out why.
+ *
+ *   1. `{ kinds, '#h': [channel], since, limit }` — the live sub.
+ *   2. If it produces nothing within `TAG_PROBE_MS`, one-shot
+ *      `{ kinds, '#t': [GAME_TAG], limit: 1 }`. Same kind, same class of
+ *      single-letter indexed tag, no channel in it — so it answers exactly the
+ *      question at issue. Every game event carries `['t', GAME_TAG]`.
+ *      - It returns something → the relay does index these tags → the silent
+ *        `#h` REQ meant what it said, and the broad filter is never opened.
+ *      - It returns nothing → genuinely ambiguous → fall back to the old
+ *        relay-wide filter, and remember that about this relay so the next
+ *        channel skips the wait.
+ *
+ * Deciding on silence alone would have re-opened the firehose on every quiet
+ * channel, which is most of them — keeping most of the bug while looking like a
+ * fix.
  */
 export async function subscribeChannelGames(
   channelId: string,
   onEvent: (ev: ParsedGameEvent) => void,
 ): Promise<() => void> {
   const b = await bridge();
+  const relay = b.currentRelayUrl.get();
   const since = Math.floor(Date.now() / 1000) - GAME_LOG_WINDOW_SECONDS;
   const seen = new Set<string>();
 
-  return b.subscribeFilterWatched(
-    { kinds: [KIND_GAME], since },
-    (ev) => {
-      if (seen.has(ev.id)) return;
-      const parsed = parseGameEvent(ev as GameEvent);
-      if (!parsed) return;
-      if (parsed.channelId !== channelId) return;
-      seen.add(ev.id);
-      onEvent(parsed);
-    },
+  let closed = false;
+  let delivered = false;
+  let broadSub: (() => void) | null = null;
+  let probeSub: (() => void) | null = null;
+  let probeTimer: ReturnType<typeof setTimeout> | null = null;
+
+  const handle = (ev: NostrEvent, fromTagged: boolean) => {
+    if (fromTagged && !delivered) {
+      // Proof the relay indexes the tag. Nothing more to find out, and nothing
+      // more to listen to on the wide filter.
+      delivered = true;
+      tagIndexOk.set(relay, true);
+      if (probeTimer !== null) { clearTimeout(probeTimer); probeTimer = null; }
+      probeSub?.(); probeSub = null;
+      broadSub?.(); broadSub = null;
+    }
+    if (seen.has(ev.id)) return;
+    // Gate on the raw tag first. `parseGameEvent` parses the content blob, and
+    // a foreign Stacker checkpoint is the biggest blob on this kind — there is
+    // no reason to parse one to discover it isn't ours.
+    if (ev.tags.find((t) => t[0] === 'h')?.[1] !== channelId) return;
+    const parsed = parseGameEvent(ev as GameEvent);
+    if (!parsed) return;
+    seen.add(ev.id);
+    onEvent(parsed);
+  };
+
+  const openBroad = () => {
+    if (closed || delivered || broadSub) return;
+    broadSub = b.subscribeFilterWatched(
+      { kinds: [KIND_GAME], since },
+      (ev) => handle(ev, false),
+      { watchdogMs: GAME_SUB_WATCHDOG_MS },
+    );
+  };
+
+  const taggedSub = b.subscribeFilterWatched(
+    { kinds: [KIND_GAME], '#h': [channelId], since, limit: CHANNEL_GAME_LIMIT },
+    (ev) => handle(ev, true),
     { watchdogMs: GAME_SUB_WATCHDOG_MS },
   );
+
+  if (tagIndexOk.get(relay) === false) {
+    // Already established that this relay needs it. No point re-probing.
+    openBroad();
+  } else if (tagIndexOk.get(relay) !== true) {
+    probeTimer = setTimeout(() => {
+      probeTimer = null;
+      if (closed || delivered) return;
+      probeSub = b.subscribeFilterWatched(
+        { kinds: [KIND_GAME], '#t': [GAME_TAG], limit: 1 },
+        () => {
+          // The relay can index it after all, so the quiet `#h` sub is telling
+          // the truth: nobody is playing in this channel.
+          tagIndexOk.set(relay, true);
+          probeSub?.(); probeSub = null;
+          if (probeTimer !== null) { clearTimeout(probeTimer); probeTimer = null; }
+        },
+        { watchdogMs: GAME_SUB_WATCHDOG_MS },
+      );
+      probeTimer = setTimeout(() => {
+        probeTimer = null;
+        if (closed || delivered || tagIndexOk.get(relay) === true) return;
+        tagIndexOk.set(relay, false);
+        probeSub?.(); probeSub = null;
+        openBroad();
+      }, TAG_PROBE_MS);
+    }, TAG_PROBE_MS);
+  }
+
+  return () => {
+    closed = true;
+    if (probeTimer !== null) { clearTimeout(probeTimer); probeTimer = null; }
+    probeSub?.(); probeSub = null;
+    broadSub?.(); broadSub = null;
+    taggedSub();
+  };
 }

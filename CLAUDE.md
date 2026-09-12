@@ -215,6 +215,7 @@ Currently wired:
 - kind 9 (messages) — per-channel list, debounced 200ms, capped at `MESSAGE_CACHE_LIMIT` (50/channel); optimistic placeholders are filtered out before write
 - kind 9007 (creators), 39000 (group metadata), 39001/39002 (admin/member lists)
 - kind 30078 (NIP-78) — channel layout + relay branding share this kind under different `d`-tags
+- kind 2390 (game logs) — per **table**, not per channel (a `GameCard` knows only its table id, and seeds itself synchronously in a layout effect before first paint); debounced 200ms; `checkpoint` events omitted whole rather than stripped, and a table over `GAME_CACHE_EVENT_LIMIT` is skipped rather than truncated. Written via `src/lib/games/cache.ts`, not `client.ts`.
 
 Deliberately not cached: kind 4 DMs (the DM store keeps its own per-account persistence). See [docs/data-system.md §9](docs/data-system.md) for the full contract.
 

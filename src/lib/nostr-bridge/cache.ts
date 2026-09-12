@@ -34,9 +34,19 @@
  *   - kind 39001 / 39002 (admin/member lists)   — `client.ts:ingestAdminMember` + `seedCacheForRelay`
  *   - kind 30078 layout   (channel layout)      — `channel-layout.ts:subscribeLayout`
  *   - kind 30078 branding (relay branding)      — `relay-branding.ts:subscribeBranding`
+ *   - kind 2390          (game logs, per table) — `games/cache.ts` (debounced) + `seedGameFromCache`
  *
  * Deliberately NOT cached:
  *   - kind 4 DMs — already persisted by the DM store with its own per-account key.
+ *
+ * Note on game logs: keyed per table rather than per channel, because a
+ * `GameCard` knows its table id and nothing else — that is what lets it seed
+ * itself synchronously before its first paint. Stacker `checkpoint` events are
+ * omitted from the write entirely (never stripped of their `inputs`/`board`
+ * blobs — the store dedupes by event id, so a stripped copy would permanently
+ * shadow the real one), and a table whose remaining log exceeds
+ * GAME_CACHE_EVENT_LIMIT is skipped rather than truncated. See
+ * `src/lib/games/cache.ts`.
  *
  * Note on messages + reactions: the on-disk window is the last
  * MESSAGE_CACHE_LIMIT messages and REACTION_CACHE_LIMIT reactions per

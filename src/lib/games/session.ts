@@ -91,6 +91,22 @@ export function deriveSession(
   events: readonly ParsedGameEvent[],
   now: number = Math.floor(Date.now() / 1000),
 ): GameSession | null {
+  const session = replayLog(events);
+  return session ? applyWaitingExpiry(session, now) : null;
+}
+
+/**
+ * The replay proper: log in, board out, and **no wall clock anywhere**.
+ *
+ * That missing `now` parameter is load-bearing, not an oversight. The store
+ * caches this function's result keyed by the identity of the log array it was
+ * given (`selectSession` in `src/store/games.ts`), which is only sound while
+ * the output depends on nothing but the log. Reading the clock in here would
+ * silently make that cache wrong — a card would keep rendering whatever the
+ * clock said the first time it was derived. Anything time-dependent belongs in
+ * {@link applyWaitingExpiry}, which runs on every read.
+ */
+export function replayLog(events: readonly ParsedGameEvent[]): GameSession | null {
   const log = sortLog(events);
   const create = log.find((e) => e.op === 'create');
   if (!create || create.op !== 'create') return null;
@@ -309,17 +325,24 @@ export function deriveSession(
     }
   }
 
-  // A table nobody ever started stops being interesting after an hour. This
-  // is derived, not published: no event, no signature, same answer on every
-  // client that agrees roughly what time it is.
-  if (
-    session.status === 'waiting'
-    && now - session.createdAt > WAITING_EXPIRY_MINUTES * 60
-  ) {
-    session.status = 'cancelled';
-  }
-
   return session;
+}
+
+/**
+ * The one thing about a table that the wall clock decides: a table nobody ever
+ * started stops being interesting after an hour. Derived, not published — no
+ * event, no signature, same answer on every client that agrees roughly what
+ * time it is.
+ *
+ * Returns `session` itself when nothing has expired, and a **clone** when it
+ * has. Never mutates: the caller may be holding a cached replay shared with
+ * other renders, and flipping its status in place would change what everyone
+ * sees without changing the object identity React compares.
+ */
+export function applyWaitingExpiry(session: GameSession, now: number): GameSession {
+  if (session.status !== 'waiting') return session;
+  if (now - session.createdAt <= WAITING_EXPIRY_MINUTES * 60) return session;
+  return { ...session, status: 'cancelled' };
 }
 
 /**

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import ModalShell from '@/components/ModalShell';
 import UserAvatar from '@/components/UserAvatar';
 import { useGroupMemberInfo, useMyPubkey } from '@/lib/nostr-bridge';
@@ -28,6 +28,8 @@ import type { VestaAction } from '@/lib/games/vesta/definition';
 import { seatsControlledBy } from '@/lib/games/session';
 import { gameIcon, gameName } from '@/lib/games/catalog';
 import { seatDisplayLabel } from '@/lib/games/seat-label';
+import { seedGameFromCache } from '@/lib/games/cache';
+import { requestGameLoad } from '@/lib/games/resolve';
 
 /**
  * The table itself: roster while waiting, board while playing, result when
@@ -49,6 +51,17 @@ export default function GameModal({ gameId, onClose }: { gameId: string; onClose
   const [fullscreen, setFullscreen] = useState(
     () => typeof window !== 'undefined' && window.innerWidth < 768,
   );
+
+  // Same two fallbacks the card has, minus the grace period: the user is
+  // looking at this table, so the bytes are justified immediately.
+  useLayoutEffect(() => {
+    if (!session) seedGameFromCache(gameId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameId]);
+
+  useEffect(() => {
+    if (!session) requestGameLoad(gameId);
+  }, [gameId, session]);
 
   /**
    * The room a fullscreen board actually gets.

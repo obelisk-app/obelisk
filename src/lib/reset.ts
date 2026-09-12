@@ -3,6 +3,9 @@ import { useReadStateStore } from '@/store/read-state';
 import { useNotificationsStore } from '@/store/notifications';
 import { useVoiceStore } from "@/store/voice";
 import { useDMStore } from "@/store/dm";
+import { useGamesStore } from "@/store/games";
+import { resetGameIngest } from "@/lib/games/ingest";
+import { __resetGameResolver } from "@/lib/games/resolve";
 
 // Clears all per-identity client state. Called from `BridgeImpl.logout()`
 // so the next user never sees the previous account's servers, channels,
@@ -15,6 +18,12 @@ export function resetAllClientState(): void {
   useReadStateStore.getState().reset();
   useNotificationsStore.getState().reset();
   useVoiceStore.getState().leaveVoice();
+  // Tables are relay state, but which tables you can see depends on which
+  // relay you are authenticated against — so they don't survive a switch.
+  // Drop the pending ingest batch first, or it lands after the reset.
+  resetGameIngest();
+  __resetGameResolver();
+  useGamesStore.getState().reset();
   useDMStore.setState({
     isDMMode: false,
     activeDMPubkey: null,

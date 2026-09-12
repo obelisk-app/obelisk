@@ -14,11 +14,31 @@ vi.mock('@/lib/nostr-bridge', () => ({
   useConnectionState: () => connectionState,
 }));
 
+// Counts replays so the "one event must not re-derive every table" guarantee is
+// observable rather than inferred from timings.
+const { replaySpy } = vi.hoisted(() => ({ replaySpy: vi.fn() }));
+vi.mock('@/lib/games/session', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/games/session')>();
+  return {
+    ...actual,
+    replayLog: (events: Parameters<typeof actual.replayLog>[0]) => {
+      replaySpy();
+      return actual.replayLog(events);
+    },
+  };
+});
+
 const {
   useTurnClockEnforcer,
+  useGameSession,
+  SESSION_CLOCK_MS,
   RECONNECT_CLAIM_GRACE_S,
   TIMEOUT_CLAIM_GRACE_S,
 } = await import('./useChannelGames');
+const { useGamesStore } = await import('@/store/games');
+const { __resetGameClocks } = await import('@/lib/games/clock');
+const { parseGameEvent, buildCreate, buildGameOp } = await import('@/lib/games/protocol');
+const { chainReaction } = await import('@/lib/games/chain-reaction');
 
 const T0 = 1_760_000_000;
 
@@ -159,5 +179,65 @@ describe('useTurnClockEnforcer', () => {
     renderHook(() => useTurnClockEnforcer(noClock, 'pk-ana', true));
     tick(RECONNECT_CLAIM_GRACE_S + 5);
     expect(publishTimeout).not.toHaveBeenCalled();
+  });
+});
+
+describe('useGameSession', () => {
+  const CH = 'channel-1';
+  const HOST = 'pk-host';
+
+  function parsed(id: string, pubkey: string, at: number, template: { kind: number; content: string; tags: string[][] }) {
+    const p = parseGameEvent({ id, pubkey, created_at: at, kind: template.kind, tags: template.tags, content: template.content });
+    if (!p) throw new Error('unparseable');
+    return p;
+  }
+
+  const create = (id: string) => parsed(id, HOST, T0 - 10, buildCreate(CH, { game: chainReaction.type, turnTimeoutS: 45 }));
+  const join = (id: string, gameId: string) => parsed(id, `pk-${id}`, T0 - 9, buildGameOp(CH, gameId, 'join'));
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(T0 * 1000);
+    __resetGameClocks();
+    useGamesStore.getState().reset();
+    replaySpy.mockClear();
+  });
+
+  afterEach(() => {
+    __resetGameClocks();
+    vi.useRealTimers();
+  });
+
+  it('replays only the table that changed', () => {
+    useGamesStore.getState().ingestMany([create('g1'), create('g2')]);
+    const a = renderHook(() => useGameSession('g1'));
+    const b = renderHook(() => useGameSession('g2'));
+    const bBefore = b.result.current;
+    replaySpy.mockClear();
+
+    act(() => { useGamesStore.getState().ingest(join('j1', 'g1')); });
+
+    // One table grew, so one table is replayed — the other card is untouched,
+    // and hands back the very same session object it had before.
+    expect(replaySpy).toHaveBeenCalledTimes(1);
+    expect(b.result.current).toBe(bBefore);
+    expect(a.result.current!.joined).toHaveLength(2);
+  });
+
+  it('does not replay on a clock tick', () => {
+    useGamesStore.getState().ingestMany([create('g1'), join('j1', 'g1')]);
+    const { result } = renderHook(() => useGameSession('g1'));
+    const before = result.current;
+    replaySpy.mockClear();
+
+    act(() => { vi.advanceTimersByTime(SESSION_CLOCK_MS * 3); });
+
+    expect(replaySpy).not.toHaveBeenCalled();
+    expect(result.current).toBe(before);
+  });
+
+  it('is null for a table whose create has not arrived', () => {
+    const { result } = renderHook(() => useGameSession('nope'));
+    expect(result.current).toBeNull();
   });
 });

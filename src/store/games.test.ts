@@ -20,7 +20,10 @@ const create = (channel: string, id: string, at = 1000) =>
 
 describe('games store', () => {
   beforeEach(() => {
-    useGamesStore.setState({ logs: {}, channelOf: {}, openGameId: null });
+    // `reset()`, not `setState` — the dedupe index is module state, and a bare
+    // setState would leave it populated, so the next test's ingest of the same
+    // ids would be a silent no-op.
+    useGamesStore.getState().reset();
   });
 
   it('ingests an event and maps the table to its channel', () => {
@@ -76,6 +79,95 @@ describe('games store', () => {
     const s = useGamesStore.getState();
     expect(s.logs.g1).toBeUndefined();
     expect(s.logs.g3).toBeDefined();
+  });
+
+  it('clearChannel lets the channel be re-ingested afterwards', () => {
+    useGamesStore.getState().ingestMany([create(CH, 'g1')]);
+    useGamesStore.getState().clearChannel(CH);
+    useGamesStore.getState().ingestMany([create(CH, 'g1')]);
+    expect(useGamesStore.getState().logs.g1).toHaveLength(1);
+  });
+
+  describe('batched ingest', () => {
+    const bigBatch = (n: number) => [
+      create(CH, 'g1'),
+      create(OTHER, 'g2'),
+      ...Array.from({ length: n }, (_, i) =>
+        parsed(`j${i}`, `pk-${i}`, 1001 + i, buildGameOp(CH, 'g1', 'join'))),
+    ];
+
+    it('copies each touched log once, whatever the batch size', () => {
+      const batch = bigBatch(300);
+      const before = useGamesStore.getState().logs;
+      useGamesStore.getState().ingestMany(batch);
+      const after = useGamesStore.getState().logs;
+      expect(after).not.toBe(before);
+      expect(after.g1).toHaveLength(301);
+      expect(after.g2).toHaveLength(1);
+    });
+
+    it('notifies subscribers once for a whole batch', () => {
+      let notifications = 0;
+      const unsub = useGamesStore.subscribe(() => { notifications += 1; });
+      useGamesStore.getState().ingestMany(bigBatch(300));
+      unsub();
+      expect(notifications).toBe(1);
+    });
+
+    it('re-ingesting the same batch changes nothing', () => {
+      const batch = bigBatch(50);
+      useGamesStore.getState().ingestMany(batch);
+      const before = useGamesStore.getState().logs;
+      useGamesStore.getState().ingestMany(batch);
+      expect(useGamesStore.getState().logs).toBe(before);
+    });
+  });
+
+  describe('replay cache', () => {
+    const seed = () => useGamesStore.getState().ingestMany([
+      create(CH, 'g1'),
+      parsed('j1', B, 1001, buildGameOp(CH, 'g1', 'join')),
+      parsed('s1', HOST, 1002, buildGameOp(CH, 'g1', 'start', { seats: [HOST, B] })),
+    ]);
+
+    it('returns the identical session until the log changes', () => {
+      seed();
+      const first = selectSession(useGamesStore.getState(), 'g1', 1010);
+      expect(selectSession(useGamesStore.getState(), 'g1', 1010)).toBe(first);
+      // A different clock reading must not re-derive a table that has started.
+      expect(selectSession(useGamesStore.getState(), 'g1', 99_999)).toBe(first);
+    });
+
+    it('re-derives once the log grows, and not before', () => {
+      seed();
+      const before = selectSession(useGamesStore.getState(), 'g1', 1010);
+      useGamesStore.getState().ingest(parsed('j1', B, 1001, buildGameOp(CH, 'g1', 'join')));
+      expect(selectSession(useGamesStore.getState(), 'g1', 1010)).toBe(before);
+      useGamesStore.getState().ingest(
+        parsed('m1', HOST, 1003, buildGameOp(CH, 'g1', 'move', { n: 0, action: { cell: 0 } })),
+      );
+      const after = selectSession(useGamesStore.getState(), 'g1', 1010);
+      expect(after).not.toBe(before);
+      expect(after!.turnIndex).toBe(1);
+    });
+
+    it('keeps a stale waiting table\'s cancelled session stable across ticks', () => {
+      useGamesStore.getState().ingest(create(CH, 'g9', 1000));
+      const expired = selectSession(useGamesStore.getState(), 'g9', 1000 + 3601);
+      expect(expired!.status).toBe('cancelled');
+      expect(selectSession(useGamesStore.getState(), 'g9', 1000 + 4000)).toBe(expired);
+      // And the underlying replay is untouched — it is shared with every other
+      // reader, including ones on an earlier clock.
+      expect(selectSession(useGamesStore.getState(), 'g9', 1000 + 10)!.status).toBe('waiting');
+    });
+  });
+
+  it('reset drops the logs and the dedupe index together', () => {
+    useGamesStore.getState().ingest(create(CH, 'g1'));
+    useGamesStore.getState().reset();
+    expect(useGamesStore.getState().logs.g1).toBeUndefined();
+    useGamesStore.getState().ingest(create(CH, 'g1'));
+    expect(useGamesStore.getState().logs.g1).toHaveLength(1);
   });
 
   it('tracks which table the modal has open', () => {
