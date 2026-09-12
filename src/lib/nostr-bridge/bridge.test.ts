@@ -8,7 +8,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { generateSecretKey, getPublicKey, finalizeEvent, type Event as NostrEvent, type Filter } from 'nostr-tools';
-import { KIND_SFU_ACTIVE_CALL, KIND_VOICE_PRESENCE, KIND_VOICE_SIGNAL } from '@/lib/nip-kinds';
+import { KIND_GROUP_ADMINS, KIND_GROUP_METADATA, KIND_SFU_ACTIVE_CALL, KIND_VOICE_PRESENCE, KIND_VOICE_SIGNAL } from '@/lib/nip-kinds';
 
 const fake = vi.hoisted(() => {
   const state = {
@@ -32,6 +32,13 @@ const fake = vi.hoisted(() => {
     publishImpl: null as null | ((relays: string[], event: NostrEvent) => Promise<string>[]),
     querySyncCalls: [] as Array<{ relays: string[]; filter: Record<string, unknown>; opts?: { maxWait?: number } }>,
     suppressNextEose: false,
+    /**
+     * Silence EOSE on EVERY sub, not just the next one — a relay that is
+     * mid-scan and has answered nothing yet. `suppressNextEose` is consumed by
+     * whichever sub happens to open first, which on the login path is never the
+     * one a test is aiming at.
+     */
+    suppressAllEose: false,
     poolSeq: 0,
     poolOptions: [] as Array<Record<string, unknown>>,
     closeCalls: [] as Array<{ poolId: number; relays: string[] }>,
@@ -67,7 +74,8 @@ const fake = vi.hoisted(() => {
       for (const ev of state.published) if (matchesInternal(filter, ev as any)) opts.onevent(ev);
       // Fire EOSE so subscribeWatched's watchdog marks the sub as alive and
       // doesn't queue retries during tests.
-      if (state.suppressNextEose) state.suppressNextEose = false;
+      if (state.suppressAllEose) { /* relay is still scanning */ }
+      else if (state.suppressNextEose) state.suppressNextEose = false;
       else queueMicrotask(() => opts.oneose?.());
       return { close: () => { state.subscriptions = state.subscriptions.filter((s) => s !== sub); } };
     }
@@ -174,7 +182,7 @@ function setVisibility(value: DocumentVisibilityState): void {
 }
 
 beforeEach(() => {
-  (() => { fake.state.published = []; fake.state.subscriptions = []; fake.state.subscriptionLog = []; fake.state.ensureRelayCalls = []; fake.state.ensureRelayImpl = null; fake.state.publishImpl = null; fake.state.querySyncCalls = []; fake.state.suppressNextEose = false; fake.state.poolSeq = 0; fake.state.poolOptions = []; fake.state.closeCalls = []; fake.state.closeOpenSubscriptionCounts = []; })();
+  (() => { fake.state.published = []; fake.state.subscriptions = []; fake.state.subscriptionLog = []; fake.state.ensureRelayCalls = []; fake.state.ensureRelayImpl = null; fake.state.publishImpl = null; fake.state.querySyncCalls = []; fake.state.suppressNextEose = false; fake.state.suppressAllEose = false; fake.state.poolSeq = 0; fake.state.poolOptions = []; fake.state.closeCalls = []; fake.state.closeOpenSubscriptionCounts = []; })();
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
     ok: false,
     json: vi.fn().mockResolvedValue({}),
@@ -191,7 +199,7 @@ beforeEach(() => {
 afterEach(async () => {
   const { getBridgeImpl } = await import('./client');
   getBridgeImpl()?.dispose();
-  (() => { fake.state.published = []; fake.state.subscriptions = []; fake.state.subscriptionLog = []; fake.state.ensureRelayCalls = []; fake.state.ensureRelayImpl = null; fake.state.querySyncCalls = []; fake.state.suppressNextEose = false; fake.state.poolSeq = 0; fake.state.poolOptions = []; fake.state.closeCalls = []; fake.state.closeOpenSubscriptionCounts = []; })();
+  (() => { fake.state.published = []; fake.state.subscriptions = []; fake.state.subscriptionLog = []; fake.state.ensureRelayCalls = []; fake.state.ensureRelayImpl = null; fake.state.querySyncCalls = []; fake.state.suppressNextEose = false; fake.state.suppressAllEose = false; fake.state.poolSeq = 0; fake.state.poolOptions = []; fake.state.closeCalls = []; fake.state.closeOpenSubscriptionCounts = []; })();
   vi.useRealTimers();
   vi.unstubAllGlobals();
 });
@@ -1423,6 +1431,51 @@ describe('nostr-bridge', () => {
     const subsAfter = findMessageSubs();
     expect(subsAfter).toHaveLength(1);
     expect(subsAfter[0]).toBe(firstSub);
+  });
+
+  // -- slow relay must not look like a dead one ------------------------------
+  // Measured 2026-09-12 on public.obelisk.ar: `{kinds:[39000]}` took 20.9s to
+  // deliver its first event and `{kinds:[39001,39002]}` 20.4s — twenty seconds
+  // for twenty events. Under the 5s default watchdog those subs were torn down
+  // and retried forever, each retry restarting the same scan, so the channel
+  // list never populated from the relay and the user saw only the disk cache.
+  it('gives the relay-wide group subs far longer than 5s to answer', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+
+    // No EOSE and no events on any sub — exactly how a relay mid-scan looks.
+    fake.state.suppressAllEose = true;
+
+    const countSubs = (kind: number) =>
+      fake.state.subscriptionLog.filter((entry) => {
+        const f = entry.filter as { kinds?: number[]; '#d'?: string[] };
+        return f.kinds?.includes(kind) && !f['#d'];
+      }).length;
+
+    // Fake timers must be installed BEFORE the subs open, or the watchdog
+    // timer is armed against the real clock and advancing does nothing —
+    // which is exactly how this test passed while asserting nothing.
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      const bridge = await getBridge();
+      await bridge.loginWithNsec(skHex, pkHex);
+      await vi.advanceTimersByTimeAsync(0);
+
+      const metadataBefore = countSubs(KIND_GROUP_METADATA);
+      const adminBefore = countSubs(KIND_GROUP_ADMINS);
+      expect(metadataBefore).toBeGreaterThan(0);
+      expect(adminBefore).toBeGreaterThan(0);
+
+      // Well past the 5s default, and past the 21s the real relay needs.
+      await vi.advanceTimersByTimeAsync(30_000);
+
+      // Not re-issued: a slow answer is still an answer, and retrying is load
+      // on a relay that is already too slow.
+      expect(countSubs(KIND_GROUP_METADATA)).toBe(metadataBefore);
+      expect(countSubs(KIND_GROUP_ADMINS)).toBe(adminBefore);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('does NOT retry a sub when CLOSED is relay quota/rate-limit', async () => {
