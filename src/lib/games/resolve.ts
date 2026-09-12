@@ -35,6 +35,7 @@
 import { getBridge, getBridgeImpl } from '@/lib/nostr-bridge/client';
 import { KIND_GAME } from '@/lib/nip-kinds';
 import { useGamesStore } from '@/store/games';
+import { registerClientResetHook } from '@/lib/reset';
 import { ingestGameEvent } from './ingest';
 import { parseGameEvent, type GameEvent } from './protocol';
 
@@ -135,7 +136,7 @@ function scheduleRetry(ids: readonly string[]): void {
   }
 }
 
-/** Test seam, and the login/logout teardown hook. */
+/** Test seam, and the login/logout teardown hook (registered at the bottom). */
 export function __resetGameResolver(): void {
   pending = new Set();
   attempts.clear();
@@ -146,3 +147,7 @@ export function __resetGameResolver(): void {
   for (const t of retryTimers) clearTimeout(t);
   retryTimers.clear();
 }
+
+// In-flight lookups belong to the account that asked for them: the next one may
+// not even be able to read those tables.
+registerClientResetHook(__resetGameResolver);

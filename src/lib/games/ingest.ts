@@ -13,6 +13,7 @@
  * would flush between each one and coalesce nothing.
  */
 import { useGamesStore } from '@/store/games';
+import { registerClientResetHook } from '@/lib/reset';
 import type { ParsedGameEvent } from './protocol';
 
 /**
@@ -67,3 +68,11 @@ export function resetGameIngest(): void {
   }
   queue = [];
 }
+
+// Tables are relay state, but which tables you can see depends on which relay
+// you are authenticated against — so they do not survive an account switch.
+// The queue is dropped before the store, or a batch in flight lands after it.
+registerClientResetHook(() => {
+  resetGameIngest();
+  useGamesStore.getState().reset();
+});

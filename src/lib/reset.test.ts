@@ -16,7 +16,7 @@ vi.mock("@/store/dm", () => ({
   useDMStore: { setState: (...args: unknown[]) => dmSetState(...args) },
 }));
 
-import { resetAllClientState } from './reset';
+import { resetAllClientState, registerClientResetHook } from './reset';
 
 beforeEach(() => {
   localStorage.clear();
@@ -64,4 +64,52 @@ describe('resetAllClientState — localStorage wipe', () => {
     }));
   });
 
+});
+
+describe('registered teardown hooks', () => {
+  it('runs every registered hook, and stops running one that unregisters', () => {
+    const hook = vi.fn();
+    const unregister = registerClientResetHook(hook);
+
+    resetAllClientState();
+    expect(hook).toHaveBeenCalledTimes(1);
+
+    unregister();
+    resetAllClientState();
+    expect(hook).toHaveBeenCalledTimes(1);
+  });
+
+  it('one hook throwing does not strand the others', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const after = vi.fn();
+    const unregisterBad = registerClientResetHook(() => { throw new Error('boom'); });
+    const unregisterGood = registerClientResetHook(after);
+
+    // A subsystem that fails to tear down must not leave the next account
+    // inheriting whatever came after it in the list.
+    expect(() => resetAllClientState()).not.toThrow();
+    expect(after).toHaveBeenCalledTimes(1);
+
+    unregisterBad();
+    unregisterGood();
+    warn.mockRestore();
+  });
+
+  it('is what wires the games subsystem in, without reset.ts importing it', async () => {
+    // The import is the registration: `client.ts` imports reset.ts, so pulling
+    // the games store in here would put all three engines on the login path
+    // and make a cycle out of client -> reset -> games/resolve -> client.
+    const { useGamesStore } = await import('@/store/games');
+    await import('@/lib/games/ingest');
+
+    const { parseGameEvent, buildCreate } = await import('@/lib/games/protocol');
+    const { chainReaction } = await import('@/lib/games/chain-reaction');
+    const tmpl = buildCreate('channel-1', { game: chainReaction.type, turnTimeoutS: 45 });
+    const ev = parseGameEvent({ id: 'g1', pubkey: 'pk-host', created_at: 1000, kind: tmpl.kind, tags: tmpl.tags, content: tmpl.content })!;
+    useGamesStore.getState().ingest(ev);
+    expect(useGamesStore.getState().logs.g1).toHaveLength(1);
+
+    resetAllClientState();
+    expect(useGamesStore.getState().logs.g1).toBeUndefined();
+  });
 });

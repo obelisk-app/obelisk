@@ -3,9 +3,24 @@ import { useReadStateStore } from '@/store/read-state';
 import { useNotificationsStore } from '@/store/notifications';
 import { useVoiceStore } from "@/store/voice";
 import { useDMStore } from "@/store/dm";
-import { useGamesStore } from "@/store/games";
-import { resetGameIngest } from "@/lib/games/ingest";
-import { __resetGameResolver } from "@/lib/games/resolve";
+
+/**
+ * Teardown for subsystems this module must NOT import.
+ *
+ * `client.ts` imports this file, so anything imported here is on the login
+ * path. Reaching for the games store directly put `session.ts -> registry.ts`
+ * and all three game engines (including the `vesta` package) into the login
+ * chunk, and made a cycle out of `client.ts -> reset.ts -> games/resolve.ts ->
+ * client.ts`. Registering instead inverts it: a subsystem that has been loaded
+ * hooks itself up, and one that hasn't has no state to clear in the first
+ * place.
+ */
+const resetHooks = new Set<() => void>();
+
+export function registerClientResetHook(fn: () => void): () => void {
+  resetHooks.add(fn);
+  return () => resetHooks.delete(fn);
+}
 
 // Clears all per-identity client state. Called from `BridgeImpl.logout()`
 // so the next user never sees the previous account's servers, channels,
@@ -18,12 +33,11 @@ export function resetAllClientState(): void {
   useReadStateStore.getState().reset();
   useNotificationsStore.getState().reset();
   useVoiceStore.getState().leaveVoice();
-  // Tables are relay state, but which tables you can see depends on which
-  // relay you are authenticated against — so they don't survive a switch.
-  // Drop the pending ingest batch first, or it lands after the reset.
-  resetGameIngest();
-  __resetGameResolver();
-  useGamesStore.getState().reset();
+  for (const hook of resetHooks) {
+    // One subsystem failing to tear down must not strand the rest — the next
+    // account would inherit whatever came after it in the list.
+    try { hook(); } catch (err) { console.warn('[reset] teardown hook failed', err); }
+  }
   useDMStore.setState({
     isDMMode: false,
     activeDMPubkey: null,

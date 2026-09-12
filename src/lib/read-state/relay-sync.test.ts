@@ -28,7 +28,7 @@ vi.mock('@/lib/nostr-bridge/client', () => ({
 }));
 
 import { wrapForSelf, type NipSigner } from '@/lib/nip-59';
-import { startGroupsRelaySync, startDMRelaySync, D_TAG_GROUPS, __INTERNAL } from './relay-sync';
+import { startGroupsRelaySync, startDMRelaySync, D_TAG_GROUPS, READ_STATE_WATCHDOG_MS, __INTERNAL } from './relay-sync';
 import { useReadStateStore, READ_STATE_INITIAL } from '@/store/read-state';
 
 function nsecSigner(): NipSigner {
@@ -112,7 +112,18 @@ describe('startGroupsRelaySync ingest', () => {
     expect(subscribeMock).toHaveBeenCalledTimes(1);
     const [filter, , opts] = subscribeMock.mock.calls[0];
     expect(filter).toEqual({ kinds: [1059], '#p': [signer.pubkey] });
-    expect(opts).toEqual({ relays: ['wss://relay.test'] });
+    expect(opts).toEqual({ relays: ['wss://relay.test'], watchdogMs: READ_STATE_WATCHDOG_MS });
+  });
+
+  it('gives the sub far longer than the default watchdog to answer', () => {
+    // This REQ cannot be narrowed (ephemeral outer key, fuzzed created_at, the
+    // cursor wrap buried among DM wraps), so on a loaded relay it can take tens
+    // of seconds. Under the 5s default the watchdog tore it down and retried,
+    // each retry re-running the same scan — cursors never landed and every
+    // channel painted unread.
+    activeCleanups.push(startGroupsRelaySync('wss://relay.test', ['g1']));
+    const opts = subscribeMock.mock.calls[0][2] as { watchdogMs?: number };
+    expect(opts.watchdogMs).toBeGreaterThanOrEqual(30_000);
   });
 
   it('applies an incoming wrap as max-merged group cursors (only ids in scope)', async () => {
@@ -315,8 +326,8 @@ describe('startDMRelaySync', () => {
   it('subscribes on each NIP-65 relay', () => {
     activeCleanups.push(startDMRelaySync(['wss://a.test', 'wss://b.test']));
     expect(subscribeMock).toHaveBeenCalledTimes(2);
-    expect(subscribeMock.mock.calls[0][2]).toEqual({ relays: ['wss://a.test'] });
-    expect(subscribeMock.mock.calls[1][2]).toEqual({ relays: ['wss://b.test'] });
+    expect(subscribeMock.mock.calls[0][2]).toEqual({ relays: ['wss://a.test'], watchdogMs: READ_STATE_WATCHDOG_MS });
+    expect(subscribeMock.mock.calls[1][2]).toEqual({ relays: ['wss://b.test'], watchdogMs: READ_STATE_WATCHDOG_MS });
   });
 
   it('publishes a DM-scope wrap to all NIP-65 relays after debounce', async () => {

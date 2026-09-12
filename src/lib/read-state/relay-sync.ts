@@ -81,6 +81,28 @@ function parsePayload<T>(rumor: Rumor): T | null {
   }
 }
 
+/**
+ * How long this sub waits for its first event before the watchdog calls it dead.
+ *
+ * Much longer than the 5s default, because this REQ is unusually expensive and
+ * unusually patient-able. `{kinds:[1059], '#p':[me]}` cannot be narrowed: the
+ * outer wrap is signed by a throwaway key (so `authors` is useless), NIP-59
+ * fuzzes `created_at` backwards by up to two days (so `since` would drop live
+ * cursors), and the wrap that carries our cursors is a needle in a haystack of
+ * DM wraps (so `limit` could cut it off). Tagging our own wraps to make them
+ * findable is exactly the metadata leak docs/dm-metadata-privacy.md exists to
+ * prevent.
+ *
+ * So the query is as broad as it has to be, and on a loaded relay it can take
+ * tens of seconds to return anything. Under the default watchdog that read as
+ * failure: the sub was torn down at 5s and retried on a backoff, each retry
+ * re-running the same expensive scan, so the cursors never arrived and every
+ * channel painted unread. Nothing here is time-critical — it is invisible
+ * housekeeping behind a stale-while-revalidate cache — so waiting is strictly
+ * better than retrying.
+ */
+export const READ_STATE_WATCHDOG_MS = 60_000;
+
 interface SyncOptions {
   /** Where to subscribe + publish gift wraps. For groups-scope this is the
    * single home relay; for DM-scope this is the NIP-65 union. */
@@ -158,7 +180,7 @@ function subscribeAndIngest<T>(
         payload,
         createdAt: rumor.created_at,
       });
-    }, { relays: [relay] });
+    }, { relays: [relay], watchdogMs: READ_STATE_WATCHDOG_MS });
     unsubFns.push(unsub);
   }
   return () => unsubFns.forEach((fn) => fn());
