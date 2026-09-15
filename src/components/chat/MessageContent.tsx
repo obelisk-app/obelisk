@@ -18,6 +18,7 @@ import SpoilerText from './SpoilerText';
 import CodeBlock from './CodeBlock';
 import ChannelLinkPill from './ChannelLinkPill';
 import YouTubeEmbed from './YouTubeEmbed';
+import LinkPreview from './LinkPreview';
 import AttachmentCard from './AttachmentCard';
 import ImageGallery from './ImageGallery';
 import InvoiceCard from './InvoiceCard';
@@ -411,13 +412,24 @@ export default function MessageContent({
   // Hoist image + video + audio URLs out of the message body so we can
   // render them as a gallery / inline player below the text. Without this,
   // each URL would render inline wherever it appears in the markdown.
-  const { imageUrls, videoUrls, audioUrls, youtubeUrls } = useMemo(() => {
+  const { imageUrls, videoUrls, audioUrls, youtubeUrls, linkUrls } = useMemo(() => {
     const urls = voiceNote ? [] : extractUrls(content);
+    const images = urls.filter(isImageUrl);
+    const videos = urls.filter(isVideoUrl);
+    const audio = urls.filter(isAudioUrl);
+    const youtube = urls.filter((u) => !!extractYouTubeId(u));
+    // Whatever is left is an ordinary link: unfurl it. Media already renders as
+    // itself, so previewing it again would just duplicate the message. Capped
+    // at the first two so a wall of links cannot turn one message into a page
+    // of cards, and deduplicated so the same link posted twice unfurls once.
+    const claimed = new Set([...images, ...videos, ...audio, ...youtube]);
+    const links = [...new Set(urls.filter((u) => !claimed.has(u)))].slice(0, 2);
     return {
-      imageUrls: urls.filter(isImageUrl),
-      videoUrls: urls.filter(isVideoUrl),
-      audioUrls: urls.filter(isAudioUrl),
-      youtubeUrls: urls.filter((u) => !!extractYouTubeId(u)),
+      imageUrls: images,
+      videoUrls: videos,
+      audioUrls: audio,
+      youtubeUrls: youtube,
+      linkUrls: links,
     };
   }, [content, voiceNote]);
 
@@ -653,6 +665,9 @@ export default function MessageContent({
         const id = extractYouTubeId(url);
         return id ? <YouTubeEmbed key={url} videoId={id} /> : null;
       })}
+      {/* Ordinary links, unfurled. Renders nothing until (and unless) the
+          preview resolves, so a link that cannot be unfurled just stays a link. */}
+      {linkUrls.map((url) => <LinkPreview key={url} url={url} />)}
       {/* Videos: inline native player, one per video */}
       {videoUrls.map((url) => (
         <VideoMedia
