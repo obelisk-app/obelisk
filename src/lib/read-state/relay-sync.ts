@@ -1,25 +1,37 @@
 /**
- * Encrypted multi-device read-state sync over NIP-59 gift-wrapped events.
+ * Encrypted multi-device read-state sync. Two scopes, two transports.
  *
- * Two scopes share the same engine:
- *   - **Groups state** (per relay): published to the SINGLE relay whose
- *     groups it tracks. Each cursor advance for a group "belonging to"
- *     that relay debounces a fresh wrap.
- *   - **DM state** (account-global): published to the union of read+write
- *     relays from the user's NIP-65 (kind 10002) list. DM cursors plus
- *     `inboxLastReadAt` ride together so the bell badge syncs across
- *     devices.
+ *   - **Groups state** (per relay) — a replaceable `kind:30078` addressed by
+ *     `d` tag, NIP-44 encrypted to self. Published to the SINGLE relay whose
+ *     groups it tracks. The relay keeps one event per (pubkey, kind, d), so
+ *     cursor advances replace rather than accumulate.
+ *   - **DM state** (account-global) — NIP-59 gift wrap. Published to the union
+ *     of read+write relays from the user's NIP-65 (kind 10002) list. DM
+ *     cursors plus `inboxLastReadAt` ride together so the bell badge syncs
+ *     across devices.
  *
- * Why NIP-59 and not "kind 30078 + NIP-44 self-encrypted":
- *   The relay sees only `kind:1059 from random pubkey #p=me` — same
- *   shape as a NIP-17 DM. There is no plaintext `d` tag, no app
- *   fingerprint, no replaceable-event slot announcing "this user has
- *   Obelisk read state on this relay." See docs/read-state.md.
+ * Why the split: the wrap conceals that a user runs this app on a given relay.
+ * That is worth paying for on third-party NIP-65 relays. It is worth almost
+ * nothing on the groups relay, which already authenticates the user over
+ * NIP-42 and already publishes their membership as `kind:39002` — while the
+ * cost, an unbounded event per cursor advance, is charged in full. See
+ * docs/read-state.md.
  *
- * The downside (no event replacement) is mitigated by a 60-second
- * debounce — bursts of cursor advances during active reading collapse
- * into one wrap. Newest-wins on read; old wraps stay on the relay but
- * never affect correctness.
+ * Two traps, both hit in production:
+ *
+ *   1. A gift wrap must be published through `publishSignedEvent`.
+ *      `publishEvent` re-signs its template, which swaps the throwaway wrap
+ *      author for the user's own key and leaves the payload undecryptable —
+ *      the reader derives the conversation key from the wrap's pubkey.
+ *   2. Gift wraps can never be deleted by their author. `wrapForSelf`
+ *      generates the signing key inside the function and discards it, and
+ *      NIP-09 requires a deletion be signed by the same pubkey. Nobody can
+ *      issue a kind-5 for one. Do not propose it; bound the lifetime with
+ *      NIP-40 or use a replaceable event.
+ *
+ * Both transports debounce by DEBOUNCE_MS and merge newest-wins on read; the
+ * store merge is monotonic, so an out-of-order arrival cannot roll a cursor
+ * backwards.
  */
 import type { Filter } from 'nostr-tools';
 import { getBridgeImpl } from '@/lib/nostr-bridge/client';

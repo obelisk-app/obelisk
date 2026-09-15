@@ -16,9 +16,9 @@ for message data; `useNotificationsStore` holds the notification card
 logs. Pure selectors derive unread counts and highlights from the
 persisted cursor stores. An auto-mark hook advances
 cursors when the user is watching a channel/DM. A relay-sync engine
-wraps cursor snapshots in NIP-59 gift wraps and publishes them to the
-right relays with an 8-second debounce; the same engine subscribes on
-each device so cursors converge via monotonic `max()` merge.
+publishes cursor snapshots with an 8-second debounce — a replaceable
+`kind:30078` for groups scope, a NIP-59 gift wrap for DM scope — and
+subscribes on each device so cursors converge via monotonic `max()` merge.
 
 ```
             ┌─────────────────────────────┐
@@ -197,27 +197,72 @@ relays); the on-the-wire payload is always scoped per relay (each
 gift wrap carries only `groupIdsForRelay`), and `bridgeCache` keys are
 `${relay}|${kind}|${dTag}`.
 
-### Why NIP-59 gift wrap
+### Two transports, and why
 
-The relay sees only `kind:1059 from random pubkey #p=me` — the same
-shape as a NIP-17 DM. There is no plaintext `d` tag, no app fingerprint,
-no replaceable-event slot announcing "this user has Obelisk read state
-on this relay." Plausible deniability for app usage on any single
-relay.
+| Scope | Transport | Target |
+|---|---|---|
+| Groups | replaceable `kind:30078`, `d`-tagged, NIP-44 to self | the single relay owning those groups |
+| DMs | NIP-59 gift wrap | the user's NIP-65 read+write relays |
 
-### Cost: accumulation
+A gift wrap conceals that a user runs this app on a given relay: the relay
+sees only `kind:1059 from a random pubkey #p=me`, the same shape as a NIP-17
+DM. No plaintext `d` tag, no app fingerprint, no replaceable slot announcing
+"this user has Obelisk read state here."
 
-NIP-59 gift wraps aren't replaceable — every cursor advance creates a
-new event on the relay. Mitigated by an **8-second debounce** —
-bursts of cursor advances during active reading collapse into one
-publish. Newest-wins on read; old wraps stay on the relay but never
-affect correctness. We deliberately do NOT publish NIP-09 deletions for
-prior wraps — many relays don't honor them anyway.
+That is worth paying for on **third-party** relays, which is why DM scope
+still uses it. It is worth almost nothing on the **groups** relay: that relay
+already authenticates the user over NIP-42 and already publishes their
+membership as `kind:39002`. It learns nothing from a `d` tag it did not
+already know — while the cost is charged in full.
+
+### What the cost turned out to be
+
+Gift wraps are not replaceable: every cursor advance creates a permanent
+event. The original design offset that with a 60-second debounce. That window
+was later cut to **8 seconds** to fix a real convergence bug (users read for
+under a minute, then navigate away, and cleanup cleared the pending timer
+before it fired), which made the accumulation 7.5× worse without the trade-off
+being revisited.
+
+Groups scope is now a replaceable event, so that cost is gone: **one event per
+user per relay**, replaced in place.
+
+### Two traps
+
+**A gift wrap must be published through `publishSignedEvent`.** `publishEvent`
+re-signs whatever template it is given. Passing it an already-signed wrap
+replaces the throwaway author with the user's own key and leaves the payload
+undecryptable, because the reader derives the NIP-44 conversation key from the
+wrap's pubkey. This was live for both scopes: read-state sync did not converge,
+and the wraps carried the very identity the wrap exists to hide.
+
+**A gift wrap can never be deleted by its author.** `wrapForSelf` generates the
+signing key inside the function and discards it; NIP-09 requires a deletion be
+signed by the same pubkey. Nobody — not the user, not the app — can issue a
+kind-5 for one. Bound the lifetime with NIP-40, or use a replaceable event.
+
+### Migration
+
+Groups scope publishes `30078` only, and reads **both** `30078` and legacy
+wraps for one release so cursors written by an older client are not stranded.
+Precedence is by inner timestamp, and the store merge is monotonic, so an
+out-of-order arrival cannot roll a cursor backwards. Drop the legacy read path
+once the fleet has turned over.
+
+Existing wraps cannot be cleaned up by the client (see above) — they age out
+under the relay's own retention policy.
 
 ### Read protocol
 
-For each target relay, subscribe `{kinds:[1059], "#p":[myPubkey]}`,
-then for each event:
+**Groups scope** subscribes `{kinds:[30078], authors:[myPubkey], "#d":[tag]}`
+— one event back, one NIP-44 decrypt of `content`, then step 3 onward below.
+During the migration window it also runs the wrap path below.
+
+**DM scope** subscribes `{kinds:[1059], "#p":[myPubkey]}`. This filter cannot
+be narrowed — the wrap author is a throwaway key and `created_at` is fuzzed —
+so it delivers every wrap addressed to the user, overwhelmingly real NIP-17
+DMs, each costing two signer round-trips to open and discard. `wrap-ledger.ts`
+exists to remember those verdicts across reloads. For each event:
 
 1. `unwrapForSelf(wrap, signer)` — NIP-44 decrypt the wrap content to
    recover the seal (kind 13), verify `seal.pubkey === me`, NIP-44
