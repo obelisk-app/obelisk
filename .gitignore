@@ -99,3 +99,9 @@ tmp/
 # sheet is 214K of source art the app never loads.
 /issues.md
 /obelisk-promo-contact-sheet.jpg
+
+# Local edit-in-place backups of config, e.g.
+# package.json.pre-loopback-20260821T184306Z. Timestamped suffixes, so
+# *.bak / *.bak.* do not catch them.
+*.pre-*
+*-candidate

@@ -103,12 +103,27 @@ function parsePayload<T>(rumor: Rumor): T | null {
  */
 export const READ_STATE_WATCHDOG_MS = 60_000;
 
+/**
+ * How a scope puts its state on a relay.
+ *
+ * `replaceable` — a signed kind-30078 addressed by `d` tag. The relay keeps
+ * exactly one per (pubkey, kind, d), so the state cannot accumulate. Used for
+ * groups scope, whose target is the single relay that owns those groups and
+ * already knows the user from NIP-42 auth and their kind-39002 membership.
+ * Nothing is concealed by wrapping there.
+ *
+ * `giftwrap` — NIP-59 wrap under a throwaway key. No replaceable slot
+ * announces the user's app usage. Kept for DM scope, which publishes to the
+ * user's NIP-65 third-party relays where that deniability is real.
+ */
+type Transport = 'replaceable' | 'giftwrap';
+
 interface SyncOptions {
-  /** Where to subscribe + publish gift wraps. For groups-scope this is the
-   * single home relay; for DM-scope this is the NIP-65 union. */
+  /** Where to subscribe + publish. For groups-scope this is the single home
+   * relay; for DM-scope this is the NIP-65 union. */
   readonly relays: ReadonlyArray<string>;
-  /** Inner rumor d-tag — distinguishes groups state from DM state inside
-   * the wrap. */
+  /** `d` tag — on the event itself when replaceable, on the inner rumor when
+   * gift-wrapped. Distinguishes groups state from DM state either way. */
   readonly dTag: string;
   /** Cache key namespace under bridgeCache (per-relay). For DM scope there
    * are multiple relays — cache the merged snapshot under each one. */
@@ -116,6 +131,13 @@ interface SyncOptions {
   /** Which slot of the wrap ledger this scope marks. Each consumer of the
    * kind-1059 stream tracks its own progress — see `wrap-ledger.ts`. */
   readonly ledgerScope: WrapLedgerScope;
+  readonly transport: Transport;
+  /**
+   * Also ingest legacy gift wraps while migrating a scope off them, so state
+   * written by an older client is not stranded. Publishing always uses
+   * `transport`.
+   */
+  readonly alsoReadLegacyWraps?: boolean;
 }
 
 /**
@@ -139,14 +161,60 @@ function subscribeAndIngest<T>(
   // from a different relay (DM scope subscribes to multiple relays).
   let newestApplied = 0;
 
+  // Cache under the kind we publish, so a snapshot written by the previous
+  // transport can never be mistaken for the current format.
+  const cacheKind = opts.transport === 'replaceable' ? KIND_INNER : KIND_GIFT_WRAP;
+
   // Stale-while-revalidate: paint cached snapshot first.
   for (const relay of opts.relays) {
     const cached = cacheGet<{ payload: T; createdAt: number }>(
-      relay, KIND_GIFT_WRAP, opts.dTag,
+      relay, cacheKind, opts.dTag,
     );
     if (cached && cached.value.createdAt > newestApplied) {
       apply(cached.value.payload, cached.value.createdAt);
       newestApplied = cached.value.createdAt;
+    }
+  }
+
+  const unsubFns: Array<() => void> = [];
+
+  // Replaceable transport: ask for exactly our own event. One event back, one
+  // decrypt. The gift-wrap path below can only filter on `#p`, so it receives
+  // every wrap addressed to the user — overwhelmingly real NIP-17 DMs — and
+  // pays two signer round-trips each to discard them.
+  if (opts.transport === 'replaceable') {
+    const filter: Filter = {
+      kinds: [KIND_INNER],
+      authors: [signer.pubkey],
+      '#d': [opts.dTag],
+    };
+    for (const relay of opts.relays) {
+      const unsub = impl.subscribeFilterWatched(filter, async (ev) => {
+        if (ev.created_at <= newestApplied) return;
+        let payload: T | null = null;
+        try {
+          payload = JSON.parse(
+            await signer.nip44Decrypt(signer.pubkey, ev.content),
+          ) as T;
+        } catch {
+          // Written by a different app under the same d tag, or a payload we
+          // cannot read. Ignore rather than throw — this is background sync.
+          return;
+        }
+        if (!payload || (payload as { v?: number }).v !== 1) return;
+        apply(payload, ev.created_at);
+        newestApplied = ev.created_at;
+        cacheSet(relay, KIND_INNER, opts.dTag, {
+          payload,
+          createdAt: ev.created_at,
+        });
+      }, { relays: [relay], watchdogMs: READ_STATE_WATCHDOG_MS });
+      unsubFns.push(unsub);
+    }
+
+    // Migration: nothing else to do unless we are still reading old wraps.
+    if (!opts.alsoReadLegacyWraps) {
+      return () => unsubFns.forEach((fn) => fn());
     }
   }
 
@@ -155,7 +223,6 @@ function subscribeAndIngest<T>(
     '#p': [signer.pubkey],
   };
 
-  const unsubFns: Array<() => void> = [];
   for (const relay of opts.relays) {
     const unsub = impl.subscribeFilterWatched(filter, async (ev) => {
       // The `#p`-only filter delivers every gift wrap addressed to us —
@@ -176,7 +243,7 @@ function subscribeAndIngest<T>(
       if (!payload) return;
       apply(payload, rumor.created_at);
       newestApplied = rumor.created_at;
-      cacheSet(relay, KIND_GIFT_WRAP, opts.dTag, {
+      cacheSet(relay, cacheKind, opts.dTag, {
         payload,
         createdAt: rumor.created_at,
       });
@@ -223,27 +290,50 @@ function watchAndPublish(
     const payload = buildPayload();
     if (!payload) return;
     const fpAtFlush = lastFingerprint;
-    const wrap = await wrapForSelf(
-      {
-        kind: KIND_INNER,
-        tags: [['d', opts.dTag]],
-        content: JSON.stringify(payload),
-        created_at: Math.floor(Date.now() / 1000),
-      },
-      signer,
-    );
+    const createdAt = Math.floor(Date.now() / 1000);
+    const cacheKind = opts.transport === 'replaceable' ? KIND_INNER : KIND_GIFT_WRAP;
+
     try {
-      await impl.publishEvent(wrap, {
-        extraRelays: [...opts.relays],
-        mode: 'replace',
-      });
+      if (opts.transport === 'replaceable') {
+        // Signed normally with the user's own key: the relay must be able to
+        // address it by (pubkey, kind, d) to replace the previous one.
+        await impl.publishEvent(
+          {
+            kind: KIND_INNER,
+            tags: [['d', opts.dTag]],
+            content: await signer.nip44Encrypt(signer.pubkey, JSON.stringify(payload)),
+            created_at: createdAt,
+          },
+          { extraRelays: [...opts.relays], mode: 'replace' },
+        );
+      } else {
+        const wrap = await wrapForSelf(
+          {
+            kind: KIND_INNER,
+            tags: [['d', opts.dTag]],
+            content: JSON.stringify(payload),
+            created_at: createdAt,
+          },
+          signer,
+        );
+        // Must NOT go through publishEvent: that re-signs the template with the
+        // user's key, replacing the throwaway wrap author and leaving the
+        // payload undecryptable — the reader derives the conversation key from
+        // the wrap's pubkey. `last-resort` auth for the same reason NIP-17
+        // sends use it: an AUTH would staple the real pubkey to the socket
+        // carrying a wrap built not to carry it.
+        await impl.publishSignedEvent(wrap, [...opts.relays], {
+          quiet: true,
+          authMode: 'last-resort',
+        });
+      }
       lastPublishedFingerprint = fpAtFlush;
       // Update cache so a reload paints the freshly-published state
       // even before the relay ACKs it back.
       for (const relay of opts.relays) {
-        cacheSet(relay, KIND_GIFT_WRAP, opts.dTag, {
+        cacheSet(relay, cacheKind, opts.dTag, {
           payload,
-          createdAt: Math.floor(Date.now() / 1000),
+          createdAt,
         });
       }
     } catch {
@@ -322,6 +412,10 @@ export function startGroupsRelaySync(
     dTag: D_TAG_GROUPS,
     cacheNamespace: relayUrl,
     ledgerScope: 'readstate:groups',
+    transport: 'replaceable',
+    // Migration window: clients that published wraps before this release still
+    // have their cursors there. Drop once the fleet has turned over.
+    alsoReadLegacyWraps: true,
   };
 
   const apply = (payload: GroupsPayload) => {
@@ -399,6 +493,9 @@ export function startDMRelaySync(relays: ReadonlyArray<string>): () => void {
     dTag: D_TAG_DMS,
     cacheNamespace: 'dm',
     ledgerScope: 'readstate:dms',
+    // Stays gift-wrapped: this publishes to the user's NIP-65 third-party
+    // relays, where not announcing app usage is worth the accumulation.
+    transport: 'giftwrap',
   };
 
   const apply = (payload: DmsPayload) => {

@@ -17,12 +17,20 @@ const publishMock = vi.fn(
     _opts?: { extraRelays?: readonly string[]; mode?: 'replace' | 'append' },
   ) => {},
 );
+const publishSignedMock = vi.fn(
+  async (
+    _e: NostrEvent,
+    _relays: string[],
+    _opts?: { quiet?: boolean; authMode?: string },
+  ) => {},
+);
 const getNipSignerMock = vi.fn();
 
 vi.mock('@/lib/nostr-bridge/client', () => ({
   getBridgeImpl: () => ({
     subscribeFilterWatched: subscribeMock,
     publishEvent: publishMock,
+    publishSignedEvent: publishSignedMock,
     getNipSigner: getNipSignerMock,
   }),
 }));
@@ -96,6 +104,7 @@ describe('startGroupsRelaySync ingest', () => {
     subscribeMock.mockReset();
     subscribeMock.mockImplementation(() => () => {});
     publishMock.mockReset();
+    publishSignedMock.mockReset();
     signer = nsecSigner();
     getNipSignerMock.mockReturnValue(signer);
     activeCleanups = [];
@@ -106,13 +115,25 @@ describe('startGroupsRelaySync ingest', () => {
     vi.useRealTimers();
   });
 
-  it('subscribes to kind 1059 with #p=me on the target relay only', () => {
+  it('subscribes to its own 30078, plus legacy wraps during migration', () => {
     const cleanup = startGroupsRelaySync('wss://relay.test', ['g1', 'g2']);
     activeCleanups.push(cleanup);
-    expect(subscribeMock).toHaveBeenCalledTimes(1);
-    const [filter, , opts] = subscribeMock.mock.calls[0];
-    expect(filter).toEqual({ kinds: [1059], '#p': [signer.pubkey] });
-    expect(opts).toEqual({ relays: ['wss://relay.test'], watchdogMs: READ_STATE_WATCHDOG_MS });
+    // Two subs while migrating: the new addressable event, and the old wrap
+    // stream so cursors written by a previous client are not stranded.
+    expect(subscribeMock).toHaveBeenCalledTimes(2);
+
+    const [newFilter, , newOpts] = subscribeMock.mock.calls[0];
+    // Narrow by author + d: one event back, one decrypt. The wrap filter below
+    // can only match on #p and so receives every DM wrap addressed to us.
+    expect(newFilter).toEqual({
+      kinds: [30078],
+      authors: [signer.pubkey],
+      '#d': [D_TAG_GROUPS],
+    });
+    expect(newOpts).toEqual({ relays: ['wss://relay.test'], watchdogMs: READ_STATE_WATCHDOG_MS });
+
+    const [legacyFilter] = subscribeMock.mock.calls[1];
+    expect(legacyFilter).toEqual({ kinds: [1059], '#p': [signer.pubkey] });
   });
 
   it('gives the sub far longer than the default watchdog to answer', () => {
@@ -160,6 +181,91 @@ describe('startGroupsRelaySync ingest', () => {
     expect(cursors['g1']).toBe(5000);
     expect(cursors['g2']).toBe(10_000);
     expect(cursors['g3']).toBeUndefined();
+  });
+
+  /** Route each captured subscription by the kind it asked for. */
+  function captureByKind() {
+    const handlers: Record<number, (ev: NostrEvent) => void> = {};
+    subscribeMock.mockImplementation((f, cb) => {
+      const kind = (f as { kinds: number[] }).kinds[0];
+      handlers[kind] = cb;
+      return () => {};
+    });
+    return handlers;
+  }
+
+  async function settle() {
+    await vi.runOnlyPendingTimersAsync();
+    await Promise.resolve();
+    await Promise.resolve();
+  }
+
+  it('ingests a replaceable 30078 and merges its cursors', async () => {
+    const handlers = captureByKind();
+    activeCleanups.push(startGroupsRelaySync('wss://relay.test', ['g1', 'g2']));
+
+    const content = await signer.nip44Encrypt(
+      signer.pubkey,
+      JSON.stringify({
+        v: 1,
+        groups: {
+          g1: { lastReadAt: 7000 },
+          g3: { lastReadAt: 1 }, // out of scope
+        },
+      }),
+    );
+    handlers[30078]!(finalizeEvent({
+      kind: 30078,
+      tags: [['d', D_TAG_GROUPS]],
+      content,
+      created_at: Math.floor(Date.now() / 1000),
+    }, generateSecretKey()) as NostrEvent);
+    await settle();
+
+    const cursors = useReadStateStore.getState().groupCursors;
+    expect(cursors['g1']).toBe(7000);
+    expect(cursors['g3']).toBeUndefined();
+  });
+
+  it('a 30078 written after a legacy wrap wins, and vice versa', async () => {
+    const handlers = captureByKind();
+    activeCleanups.push(startGroupsRelaySync('wss://relay.test', ['g1']));
+    const base = Math.floor(Date.now() / 1000);
+
+    // Older legacy wrap first.
+    handlers[1059]!(await wrapForSelf({
+      kind: 30078,
+      tags: [['d', D_TAG_GROUPS]],
+      content: JSON.stringify({ v: 1, groups: { g1: { lastReadAt: 100 } } }),
+      created_at: base - 60,
+    }, signer));
+    await settle();
+    expect(useReadStateStore.getState().groupCursors['g1']).toBe(100);
+
+    // Newer 30078 supersedes it.
+    handlers[30078]!(finalizeEvent({
+      kind: 30078,
+      tags: [['d', D_TAG_GROUPS]],
+      content: await signer.nip44Encrypt(
+        signer.pubkey,
+        JSON.stringify({ v: 1, groups: { g1: { lastReadAt: 900 } } }),
+      ),
+      created_at: base,
+    }, generateSecretKey()) as NostrEvent);
+    await settle();
+    expect(useReadStateStore.getState().groupCursors['g1']).toBe(900);
+
+    // A legacy wrap that is OLDER than what we already applied must not
+    // resurrect a stale cursor. Cursors are monotonic, so the store keeps the
+    // max regardless — assert the merged result, not just the last write.
+    handlers[1059]!(await wrapForSelf({
+      kind: 30078,
+      tags: [['d', D_TAG_GROUPS]],
+      content: JSON.stringify({ v: 1, groups: { g1: { lastReadAt: 50 } } }),
+      created_at: base - 120,
+    }, signer));
+    await settle();
+    expect(useReadStateStore.getState().groupCursors['g1']).toBe(900);
   });
 
   it('drops wraps whose inner d-tag does not match (e.g. DM-scope wraps)', async () => {
@@ -215,7 +321,7 @@ describe('startGroupsRelaySync publish (debounced)', () => {
     expect(publishMock).not.toHaveBeenCalled();
   });
 
-  it('publishes once after 8s of changes, with mode=replace targeting the relay', async () => {
+  it('publishes once after 8s as a replaceable 30078, not a gift wrap', async () => {
     activeCleanups.push(startGroupsRelaySync('wss://relay.test', ['g1', 'g2']));
     useReadStateStore.getState().setGroupCursor('g1', 100);
     useReadStateStore.getState().setGroupCursor('g2', 200);
@@ -226,8 +332,29 @@ describe('startGroupsRelaySync publish (debounced)', () => {
     await Promise.resolve();
     expect(publishMock).toHaveBeenCalledTimes(1);
     const [event, opts] = publishMock.mock.calls[0];
-    expect(event.kind).toBe(1059);
+    // 30078 addressed by `d` — the relay keeps one per (pubkey, kind, d), so
+    // cursor advances replace rather than accumulate.
+    expect(event.kind).toBe(30078);
+    expect(event.tags).toEqual([['d', D_TAG_GROUPS]]);
     expect(opts).toEqual({ extraRelays: ['wss://relay.test'], mode: 'replace' });
+    // Payload is encrypted to self: the relay stores an opaque blob.
+    expect(event.content).not.toContain('g1');
+    expect(() => JSON.parse(event.content)).toThrow();
+    // Groups scope must not emit wraps any more.
+    expect(publishSignedMock).not.toHaveBeenCalled();
+  });
+
+  it('the published 30078 decrypts back to the cursors', async () => {
+    activeCleanups.push(startGroupsRelaySync('wss://relay.test', ['g1']));
+    useReadStateStore.getState().setGroupCursor('g1', 4242);
+    await vi.advanceTimersByTimeAsync(8_000);
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    const [event] = publishMock.mock.calls[0];
+    const plain = JSON.parse(await signer.nip44Decrypt(signer.pubkey, event.content));
+    expect(plain.v).toBe(1);
+    expect(plain.groups.g1.lastReadAt).toBe(4242);
   });
 
   it('skips publish when no in-scope cursor has advanced', async () => {
@@ -330,16 +457,24 @@ describe('startDMRelaySync', () => {
     expect(subscribeMock.mock.calls[1][2]).toEqual({ relays: ['wss://b.test'], watchdogMs: READ_STATE_WATCHDOG_MS });
   });
 
-  it('publishes a DM-scope wrap to all NIP-65 relays after debounce', async () => {
+  it('publishes a DM-scope wrap pre-signed, preserving the ephemeral author', async () => {
     activeCleanups.push(startDMRelaySync(['wss://a.test', 'wss://b.test']));
     useReadStateStore.getState().setDmCursor('alice', 1000);
     await vi.advanceTimersByTimeAsync(8_000);
     await Promise.resolve();
     await Promise.resolve();
     await Promise.resolve();
-    expect(publishMock).toHaveBeenCalledTimes(1);
-    const [, opts] = publishMock.mock.calls[0];
-    expect(opts!.mode).toBe('replace');
-    expect(opts!.extraRelays).toEqual(['wss://a.test', 'wss://b.test']);
+
+    // Must go through publishSignedEvent. publishEvent re-signs its template,
+    // which would swap the throwaway wrap author for the user's own key and
+    // leave the payload undecryptable.
+    expect(publishSignedMock).toHaveBeenCalledTimes(1);
+    expect(publishMock).not.toHaveBeenCalled();
+
+    const [event, relays, opts] = publishSignedMock.mock.calls[0];
+    expect(event.kind).toBe(1059);
+    expect(event.pubkey).not.toBe(signer.pubkey);
+    expect(relays).toEqual(['wss://a.test', 'wss://b.test']);
+    expect(opts!.authMode).toBe('last-resort');
   });
 });

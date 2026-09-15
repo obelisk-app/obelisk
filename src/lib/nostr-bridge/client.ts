@@ -7430,7 +7430,12 @@ export class BridgeImpl {
    *   a relay declining to store one is a non-event, and authenticating to
    *   relays the user never chose is not a price worth paying for it.
    */
-  private async publishSignedEvent(
+  // Public because gift wraps are built outside this class. `publishEvent`
+  // re-signs whatever template it is handed, which silently swaps an ephemeral
+  // wrap author for the user's own key and leaves the payload undecryptable —
+  // the reader derives the NIP-44 conversation key from the wrap's pubkey.
+  // Anything already signed must come through here.
+  async publishSignedEvent(
     event: NostrEvent,
     targetRelays: string[],
     opts?: { quiet?: boolean; authMode?: 'always' | 'last-resort' | 'never' },
