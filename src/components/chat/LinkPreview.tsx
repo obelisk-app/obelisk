@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { LinkPreview as Preview } from '@/app/api/link-preview/route';
+import type { LinkPreview as Preview } from '@/lib/link-preview';
 
 /**
  * Unfurled card for a plain link in a message.

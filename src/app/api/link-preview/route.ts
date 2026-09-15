@@ -17,6 +17,15 @@
  */
 
 import { NextResponse } from 'next/server';
+import {
+  decodeEntities,
+  isBlockedAddress,
+  isX,
+  readMeta,
+  syndicationToken,
+  tweetIdFrom,
+  type LinkPreview,
+} from '@/lib/link-preview';
 import dns from 'node:dns/promises';
 import net from 'node:net';
 
@@ -39,16 +48,6 @@ const RATE_WINDOW_MS = 60_000;
 
 const UA = 'Mozilla/5.0 (compatible; ObeliskBot/1.0; +https://obelisk.ar)';
 
-export interface LinkPreview {
-  url: string;
-  kind: 'link' | 'post';
-  title?: string;
-  description?: string;
-  image?: string;
-  siteName?: string;
-  author?: string;
-}
-
 const cache = new Map<string, { at: number; ttl: number; value: LinkPreview | null }>();
 const hits = new Map<string, { count: number; resetAt: number }>();
 
@@ -66,31 +65,6 @@ function rateLimited(ip: string): boolean {
   return entry.count > RATE_LIMIT;
 }
 
-/**
- * Reject anything that resolves to an address we should not be reaching.
- *
- * Checked against the resolved IPs rather than the hostname, because a
- * hostname is attacker-controlled and can point anywhere — `evil.com` with an
- * A record of 169.254.169.254 is the whole attack. Every redirect hop is
- * re-checked for the same reason.
- */
-export function isBlockedAddress(ip: string): boolean {
-  if (net.isIPv4(ip)) {
-    const [a, b] = ip.split('.').map(Number);
-    if (a === 0 || a === 10 || a === 127) return true;
-    if (a === 169 && b === 254) return true; // link-local, incl. cloud metadata
-    if (a === 172 && b >= 16 && b <= 31) return true;
-    if (a === 192 && b === 168) return true;
-    if (a === 100 && b >= 64 && b <= 127) return true; // CGNAT
-    if (a >= 224) return true; // multicast + reserved
-    return false;
-  }
-  const v6 = ip.toLowerCase().split('%')[0];
-  if (v6 === '::' || v6 === '::1') return true;
-  if (v6.startsWith('fe80') || v6.startsWith('fc') || v6.startsWith('fd')) return true;
-  if (v6.startsWith('::ffff:')) return isBlockedAddress(v6.slice(7)); // v4-mapped
-  return false;
-}
 
 async function assertPublicHost(hostname: string): Promise<void> {
   if (net.isIP(hostname)) {
@@ -163,50 +137,75 @@ async function safeFetch(startUrl: string): Promise<{ body: string; finalUrl: st
   return null;
 }
 
-function decodeEntities(text: string): string {
-  return text
-    .replace(/&quot;/g, '"')
-    .replace(/&#0?39;/g, "'")
-    .replace(/&apos;/g, "'")
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&mdash;/g, '\u2014')
-    .replace(/&ndash;/g, '\u2013')
-    .replace(/&hellip;/g, '\u2026')
-    .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number(code)))
-    .replace(/&#x([0-9a-f]+);/gi, (_, code) => String.fromCodePoint(parseInt(code, 16)))
-    // Last, so a literal "&amp;mdash;" does not become an em dash.
-    .replace(/&amp;/g, '&');
+
+
+
+
+
+interface SyndicationMedia {
+  media_url_https?: string;
+  type?: string;
 }
 
-/** Pull one meta value, accepting property= or name= in either attribute order. */
-export function readMeta(html: string, key: string): string | undefined {
-  const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const patterns = [
-    new RegExp(`<meta[^>]+(?:property|name)=["']${escaped}["'][^>]*?content=["']([^"']*)["']`, 'i'),
-    new RegExp(`<meta[^>]+content=["']([^"']*)["'][^>]*?(?:property|name)=["']${escaped}["']`, 'i'),
-  ];
-  for (const pattern of patterns) {
-    const match = html.match(pattern);
-    if (match?.[1]) return decodeEntities(match[1]).trim() || undefined;
+async function previewXSyndication(url: string, id: string): Promise<LinkPreview | null> {
+  const endpoint =
+    `https://cdn.syndication.twimg.com/tweet-result?id=${id}` +
+    `&token=${syndicationToken(id)}&lang=en`;
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const response = await fetch(endpoint, { signal: controller.signal, headers: { 'user-agent': UA } });
+    if (!response.ok) return null;
+    // A deleted or protected post answers with an HTML error page, not JSON.
+    if (!(response.headers.get('content-type') ?? '').includes('json')) return null;
+
+    const data = (await response.json()) as {
+      text?: string;
+      user?: { name?: string; screen_name?: string };
+      mediaDetails?: SyndicationMedia[];
+      photos?: { url?: string }[];
+    };
+    if (!data.text && !data.user?.name) return null;
+
+    const media =
+      data.mediaDetails?.find((m) => m.media_url_https)?.media_url_https ??
+      data.photos?.find((p) => p.url)?.url;
+
+    // Only https, and only from their media host: this URL goes straight into
+    // an <img> src, so it must not be a redirect to somewhere arbitrary.
+    let image: string | undefined;
+    if (media) {
+      try {
+        const parsed = new URL(media);
+        if (parsed.protocol === 'https:' && /(^|\.)twimg\.com$/.test(parsed.hostname)) {
+          image = parsed.toString();
+        }
+      } catch {
+        image = undefined;
+      }
+    }
+
+    const handle = data.user?.screen_name ? `@${data.user.screen_name}` : undefined;
+    const name = data.user?.name ?? handle ?? 'Post';
+
+    return {
+      url,
+      kind: 'post',
+      title: handle ? `${name} (${handle})` : `${name} on X`,
+      description: data.text?.trim().slice(0, 400) || undefined,
+      image,
+      siteName: 'X',
+      author: data.user?.name,
+    };
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
   }
-  return undefined;
 }
 
-function isX(hostname: string): boolean {
-  const host = hostname.replace(/^www\./, '').toLowerCase();
-  return host === 'x.com' || host === 'twitter.com' || host === 'mobile.twitter.com';
-}
-
-/**
- * X via oEmbed.
- *
- * Verified against the live endpoint: x.com returns no og: or twitter: meta to
- * any user-agent, so there is nothing to scrape, but oEmbed still serves the
- * post text and author without credentials.
- */
-async function previewX(url: string): Promise<LinkPreview | null> {
+async function previewXOembed(url: string): Promise<LinkPreview | null> {
   const endpoint = `https://publish.twitter.com/oembed?omit_script=1&dnt=1&url=${encodeURIComponent(url)}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -242,6 +241,15 @@ async function previewX(url: string): Promise<LinkPreview | null> {
   } finally {
     clearTimeout(timer);
   }
+}
+
+async function previewX(url: string, parsed: URL): Promise<LinkPreview | null> {
+  const id = tweetIdFrom(parsed);
+  if (id) {
+    const rich = await previewXSyndication(url, id);
+    if (rich) return rich;
+  }
+  return previewXOembed(url);
 }
 
 async function previewGeneric(url: string): Promise<LinkPreview | null> {
@@ -313,7 +321,7 @@ export async function GET(request: Request) {
 
   let preview: LinkPreview | null = null;
   try {
-    preview = isX(parsed.hostname) ? await previewX(key) : await previewGeneric(key);
+    preview = isX(parsed.hostname) ? await previewX(key, parsed) : await previewGeneric(key);
   } catch {
     preview = null;
   }
