@@ -1,26 +1,34 @@
 'use client';
 
 /**
- * Forum-channel view: a Discord-style list of child threads.
+ * Publications channel: a feed of child publications, each with its own chat.
  *
- * Each thread is itself a regular NIP-29 text channel — pinned to its forum
+ * Naming note: the wire format still says "forum" everywhere — the
+ * `["t","forum"]` channel marker, the `forum-tag` metadata tag, the
+ * `channelKind === 'forum'` union member, and every identifier in this file.
+ * Only the user-facing vocabulary is "publications"; nothing on the relay
+ * changed.
+ *
+ * Each publication is itself a regular NIP-29 text channel — pinned to its
  * container by the `["parent", forumGroupId]` tag on its kind 9002 metadata.
- * Clicking a thread navigates the app to that child group, where the existing
- * chat panel takes over. Threads carry optional `["topic", id]` tags that
- * reference forum-level tag definitions on the container's metadata
- * (`["forum-tag", id, name, emoji?]`). The forum's admin curates the tag set.
+ * Clicking one navigates the app to that child group, where the existing chat
+ * panel takes over. Publications carry optional `["topic", id]` tags that
+ * reference container-level tag definitions on its metadata
+ * (`["forum-tag", id, name, emoji?, color?]`). The admin curates the tag set;
+ * each tag's colour is either chosen there or derived from its id (see
+ * `src/lib/forum-tag-colors.ts`).
  *
- * UX rule: only threads with at least one chat message are shown; empty /
- * aborted threads stay hidden until someone speaks. Both list and gallery
- * views observe this rule.
+ * UX rule: only publications with at least one chat message are shown; empty /
+ * aborted ones stay hidden until someone speaks. Both list and gallery views
+ * observe this rule.
  *
  * Chrome (top → bottom):
- *   - Search-or-create bar: typing filters thread titles; if the exact title
- *     doesn't exist, pressing Enter (or clicking "Create") starts a new
- *     thread prefilled with the typed text.
+ *   - Search-or-create bar: typing filters titles. Enter opens an exact match,
+ *     or starts a new publication prefilled with the typed text when there
+ *     isn't one.
  *   - Filter row: a "Sort & view" pill (opens a popover for sort order, list
- *     vs gallery, and any/all tag matching), the forum's curated tag chips,
- *     and a trailing "All" chip that clears the tag filter.
+ *     vs gallery, and any/all tag matching), the curated tag chips, and a
+ *     trailing "All" chip that clears the tag filter.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -36,11 +44,12 @@ import {
   useUserMetadata,
 } from '@/lib/nostr-bridge';
 import type { JsGroup, JsForumTag, JsMessage } from '@/lib/nostr-bridge';
+import { paletteForTag, tagChipStyle } from '@/lib/forum-tag-colors';
 
 interface Props {
   groupId: string;
   channelName?: string;
-  /** Open a thread (child group) as the active view in the host shell. */
+  /** Open a publication (child group) as the active view in the host shell. */
   onSelectThread: (childGroupId: string) => void;
 }
 
@@ -161,9 +170,9 @@ export default function ForumView({ groupId, channelName, onSelectThread }: Prop
     return filtered;
   }, [childGroups, searchQuery, selectedTagIds, prefs.tagMatch, prefs.sortBy, threadActivity]);
 
-  // "Loading threads…" until the relay has finished its kind 39000 stream.
+  // "Loading publications…" until the relay has finished its kind 39000 stream.
   // Without this gate the EmptyForum CTA shows instantly even though child
-  // groups are still on the wire, which read as "no threads exist" when
+  // groups are still on the wire, which read as "none exist" when
   // really they just hadn't ingested yet.
   const threadsLoading = childGroups.length === 0 && !groupMetadataEose;
 
@@ -193,9 +202,13 @@ export default function ForumView({ groupId, channelName, onSelectThread }: Prop
         onSearchChange={setSearchQuery}
         exactMatch={exactMatch}
         onSubmitSearch={() => {
-          if (!exactMatch && searchQuery.trim()) {
-            openNewThread(searchQuery.trim());
-          }
+          const q = searchQuery.trim();
+          if (!q) return;
+          if (!exactMatch) { openNewThread(q); return; }
+          // Exact title match: Enter should open that thread. It used to do
+          // nothing at all, which read as a dead key.
+          const match = childGroups.find((c) => (c.name ?? '').toLowerCase() === q.toLowerCase());
+          if (match) onSelectThread(match.id);
         }}
         onClickNewThread={() => openNewThread('')}
         prefs={prefs}
@@ -305,10 +318,10 @@ function ForumChrome({
             type="text"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder={canCreate ? 'Press Enter to create…' : 'Search or create a post…'}
+            placeholder={canCreate ? 'Press Enter to create…' : 'Search or create a publication…'}
             className="w-full rounded-full bg-lc-black border border-lc-border pl-10 pr-3 py-2 text-sm text-lc-white outline-none focus:border-lc-green/60 placeholder:text-lc-muted"
             data-testid="forum-search-input"
-            aria-label="Search or create a thread"
+            aria-label="Search or create a publication"
           />
         </div>
         <button
@@ -317,10 +330,10 @@ function ForumChrome({
           disabled={!ready}
           className="lc-pill-primary text-xs px-3 py-2 flex items-center gap-1.5 shrink-0 disabled:opacity-40"
           data-testid="forum-new-thread-btn"
-          title={ready ? 'New thread' : 'Sign in to start a thread'}
+          title={ready ? 'New publication' : 'Sign in to start a publication'}
         >
           <NewPostIcon />
-          <span className="hidden sm:inline">New thread</span>
+          <span className="hidden sm:inline">New publication</span>
         </button>
       </form>
 
@@ -371,19 +384,30 @@ function TagChip({
     <button
       type="button"
       onClick={onClick}
-      className={
-        'rounded-full px-3 py-1 text-xs font-medium flex items-center gap-1.5 transition-colors shrink-0 ' +
-        (active
-          ? 'bg-lc-green/15 text-lc-green border border-lc-green/40'
-          : 'bg-lc-card text-lc-white/90 border border-lc-border hover:border-lc-muted')
-      }
+      // Color is per-tag (admin-chosen or derived from the id), so it has to
+      // be an inline style — Tailwind can't emit classes for runtime values.
+      style={tagChipStyle(tag, active)}
+      className="rounded-full border px-3 py-1 text-xs font-medium flex items-center gap-1.5 transition-colors shrink-0"
       data-testid={`forum-tag-${tag.id}`}
       data-active={active ? 'true' : 'false'}
       aria-pressed={active}
     >
-      {tag.emoji && <span className="text-sm leading-none">{tag.emoji}</span>}
+      {tag.emoji
+        ? <span className="text-sm leading-none">{tag.emoji}</span>
+        : <TagDot tag={tag} />}
       <span className="truncate max-w-[10rem]">{tag.name}</span>
     </button>
+  );
+}
+
+/** Leading color dot, used when a tag has no emoji of its own. */
+function TagDot({ tag }: { tag: JsForumTag }) {
+  return (
+    <span
+      aria-hidden
+      className="h-1.5 w-1.5 rounded-full shrink-0"
+      style={{ background: paletteForTag(tag).text }}
+    />
   );
 }
 
@@ -565,13 +589,13 @@ function ThreadCardSkeleton({ thread, onOpen }: { thread: JsGroup; onOpen: () =>
       className="lc-card w-full text-left p-3 opacity-70 hover:opacity-100 hover:border-lc-green/40 transition-all"
       data-testid="thread-card-skeleton"
       data-thread-id={thread.id}
-      aria-label={`Open ${thread.name ?? 'thread'} (still loading)`}
+      aria-label={`Open ${thread.name ?? 'publication'} (still loading)`}
     >
       <div className="flex items-start gap-3">
         <div className="lc-skeleton-circle w-8 h-8 shrink-0" />
         <div className="flex-1 min-w-0">
           <div className="text-sm font-semibold text-lc-white truncate">
-            {thread.name || '(loading thread)'}
+            {thread.name || '(loading publication)'}
           </div>
           <div className="lc-skeleton h-3 w-3/4 mt-1.5" />
           <div className="flex flex-wrap gap-x-3 mt-2">
@@ -598,12 +622,12 @@ function ThreadGalleryCardSkeleton({
       className="lc-card flex flex-col overflow-hidden opacity-70 hover:opacity-100 hover:border-lc-green/40 transition-all text-left"
       data-testid="thread-gallery-card-skeleton"
       data-thread-id={thread.id}
-      aria-label={`Open ${thread.name ?? 'thread'} (still loading)`}
+      aria-label={`Open ${thread.name ?? 'publication'} (still loading)`}
     >
       <div className="h-28 w-full bg-lc-black border-b border-lc-border" />
       <div className="p-3 space-y-2">
         <div className="text-sm font-semibold text-lc-white truncate">
-          {thread.name || '(loading thread)'}
+          {thread.name || '(loading publication)'}
         </div>
         <div className="lc-skeleton h-3 w-3/4" />
         <div className="lc-skeleton h-2 w-1/2" />
@@ -619,7 +643,7 @@ function LoadingThreads() {
       data-testid="threads-loading"
     >
       <div className="lc-spinner" aria-hidden="true" />
-      <div className="text-sm">Loading threads…</div>
+      <div className="text-sm">Loading publications…</div>
     </div>
   );
 }
@@ -628,14 +652,14 @@ function EmptyForum({ onNewThread }: { onNewThread: () => void }) {
   const ready = useSignerReady();
   return (
     <div className="flex flex-col items-center justify-center h-full text-center text-lc-muted py-12">
-      <div className="text-sm">No threads yet.</div>
+      <div className="text-sm">No publications yet.</div>
       {ready && (
         <button
           type="button"
           onClick={onNewThread}
           className="mt-3 text-lc-green hover:text-lc-green/80 text-sm font-medium"
         >
-          Start the first thread →
+          Start the first publication →
         </button>
       )}
     </div>
@@ -658,7 +682,7 @@ function NoMatchingThreads({
       data-testid="forum-no-matches"
     >
       <div className="text-sm">
-        No threads match{' '}
+        No publications match{' '}
         {query ? <span className="text-lc-white">&ldquo;{query}&rdquo;</span> : 'the selected tags'}
         {query && hasTagFilter ? ' with the current tag filter' : ''}.
       </div>
@@ -757,7 +781,7 @@ function ThreadCard({
         )}
         <div className="flex-1 min-w-0">
           <div className="text-sm font-semibold text-lc-white truncate">
-            {thread.name || '(untitled thread)'}
+            {thread.name || '(untitled publication)'}
           </div>
           <div className="text-xs text-lc-muted line-clamp-2 mt-0.5 break-words">
             {op.content}
@@ -846,7 +870,7 @@ function ThreadGalleryCard({
       </div>
       <div className="p-3 flex-1 flex flex-col gap-1.5">
         <div className="text-sm font-semibold text-lc-white truncate">
-          {thread.name || '(untitled thread)'}
+          {thread.name || '(untitled publication)'}
         </div>
         <div className="text-xs text-lc-muted line-clamp-3 break-words">{op.content}</div>
         <div className="mt-auto flex items-center justify-between gap-2 text-[11px] text-lc-muted pt-1">
@@ -864,10 +888,13 @@ function ThreadGalleryCard({
 function InlineTagChip({ tag }: { tag: JsForumTag }) {
   return (
     <span
-      className="rounded-full bg-lc-card border border-lc-border px-2 py-0.5 text-[10px] text-lc-white/90 flex items-center gap-1 max-w-[10rem]"
+      style={tagChipStyle(tag)}
+      className="rounded-full border px-2 py-0.5 text-[10px] flex items-center gap-1 max-w-[10rem]"
       data-testid={`thread-tag-${tag.id}`}
     >
-      {tag.emoji && <span className="leading-none">{tag.emoji}</span>}
+      {tag.emoji
+        ? <span className="leading-none">{tag.emoji}</span>
+        : <TagDot tag={tag} />}
       <span className="truncate">{tag.name}</span>
     </span>
   );
@@ -956,7 +983,7 @@ function NewThreadModal({
         className="lc-card w-full max-w-xl max-h-[85vh] overflow-y-auto p-4 space-y-3"
       >
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-lc-white">New thread</h3>
+          <h3 className="text-sm font-semibold text-lc-white">New publication</h3>
           <button
             type="button"
             onClick={onClose}
@@ -971,7 +998,7 @@ function NewThreadModal({
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Thread title"
+          placeholder="Publication title"
           maxLength={140}
           className="w-full bg-lc-black border border-lc-border rounded-lg px-3 py-2 text-sm text-lc-white outline-none focus:border-lc-green/60"
           data-testid="new-thread-title"
@@ -999,16 +1026,14 @@ function NewThreadModal({
                     type="button"
                     onClick={() => toggleTag(tag.id)}
                     disabled={disabled}
-                    className={
-                      'rounded-full px-3 py-1 text-xs font-medium flex items-center gap-1.5 transition-colors ' +
-                      (active
-                        ? 'bg-lc-green/15 text-lc-green border border-lc-green/40'
-                        : 'bg-lc-card text-lc-white/90 border border-lc-border hover:border-lc-muted disabled:opacity-40')
-                    }
+                    style={tagChipStyle(tag, active)}
+                    className="rounded-full border px-3 py-1 text-xs font-medium flex items-center gap-1.5 transition-colors disabled:opacity-40"
                     data-testid={`new-thread-tag-${tag.id}`}
                     aria-pressed={active}
                   >
-                    {tag.emoji && <span className="text-sm leading-none">{tag.emoji}</span>}
+                    {tag.emoji
+                      ? <span className="text-sm leading-none">{tag.emoji}</span>
+                      : <TagDot tag={tag} />}
                     <span className="truncate max-w-[10rem]">{tag.name}</span>
                   </button>
                 );
@@ -1031,7 +1056,7 @@ function NewThreadModal({
             className="lc-pill-primary text-xs px-4 py-2 disabled:opacity-40"
             data-testid="new-thread-submit"
           >
-            {submitting ? 'Creating…' : 'Create thread'}
+            {submitting ? 'Creating…' : 'Create publication'}
           </button>
         </div>
       </form>

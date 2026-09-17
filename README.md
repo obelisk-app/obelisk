@@ -51,10 +51,10 @@ Full guided tours: [obelisk.ar/desktop](https://obelisk.ar/desktop) · [obelisk.
 <p align="center"><sub>Public General Chat — server rail, channel list, message stream with reactions, and the live NIP-29 member list. Every message is a signed Nostr event.</sub></p>
 
 <p align="center">
-  <img src="public/pictures-for-posts/desktop-forums-view.png" alt="Obelisk desktop — threaded forum view of plaza-publica with OP, message count and last reply time" width="90%" />
+  <img src="public/pictures-for-posts/desktop-forums-view.png" alt="Obelisk desktop — publications view of plaza-publica with OP, message count and last reply time" width="90%" />
 </p>
 
-<p align="center"><sub>Forum-kind channels become Discord-style threaded boards — topic list, OP and last-reply metadata, same NIP-29 moderation as every other channel.</sub></p>
+<p align="center"><sub>Publication-kind channels become a tidy feed — a list of posts, OP and last-reply metadata, each with its own chat, same NIP-29 moderation as every other channel.</sub></p>
 
 <p align="center">
   <img src="public/pictures-for-posts/desktop-large-voice-channel-with-sfu-peer-trasmission-test.png" alt="Obelisk desktop — voice channel in SFU mode with a test peer streaming an SMPTE color-bar pattern" width="90%" />

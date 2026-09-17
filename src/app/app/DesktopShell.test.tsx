@@ -6,12 +6,20 @@ import type { ChannelLayout } from '@/lib/channel-layout';
 import { LocaleProvider } from '@/i18n/context';
 import { useNotificationsStore, NOTIFICATIONS_INITIAL } from '@/store/notifications';
 import { useReadStateStore, READ_STATE_INITIAL } from '@/store/read-state';
-import { ManageLayoutModal, RelayBrandingModal, RelaySettingsModal, RelayTopBar, SidebarMe } from './DesktopShell';
+import { ForumTagsEditor, ManageLayoutModal, ManageMemberRow, RelayBrandingModal, RelaySettingsModal, RelayTopBar, SidebarMe } from './DesktopShell';
+import type { JsForumTag } from '@/lib/nostr-bridge';
+
+const mockRemovePermission = vi.fn();
+const mockRemoveUser = vi.fn();
 
 vi.mock('@/lib/nostr-bridge', () => ({
   useMyPubkey: () => 'a'.repeat(64),
   useUserMetadata: () => ({ displayName: 'Alice', picture: null }),
   getBridgeImpl: () => null,
+  nostrActions: {
+    removePermission: (...a: unknown[]) => mockRemovePermission(...a),
+    removeUser: (...a: unknown[]) => mockRemoveUser(...a),
+  },
 }));
 
 vi.mock('@/lib/relay-info', () => ({
@@ -219,5 +227,109 @@ describe('RelayTopBar notification controls', () => {
 
     expect(screen.queryByTestId('notif-mark-read')).toBeNull();
     expect(screen.queryByTestId('notif-clear')).toBeNull();
+  });
+});
+
+describe('ManageMemberRow', () => {
+  const PK = 'd'.repeat(64);
+  beforeEach(() => {
+    mockRemovePermission.mockReset();
+    mockRemoveUser.mockReset();
+  });
+
+  const renderRow = (isAdmin = false) =>
+    render(
+      <LocaleProvider initialLocale="en">
+        <ManageMemberRow groupId="g1" pubkey={PK} isAdmin={isAdmin} />
+      </LocaleProvider>,
+    );
+
+  it('labels the role with a badge rather than a bare emoji', () => {
+    renderRow(true);
+    expect(screen.getByText('Admin')).toBeTruthy();
+    renderRow(false);
+    expect(screen.getByText('Member')).toBeTruthy();
+  });
+
+  it('shows an npub, not a raw hex prefix', () => {
+    renderRow();
+    const npub = screen.getByTestId(`member-npub-${PK}`);
+    expect(npub.textContent).toMatch(/^npub1/);
+    expect(npub.textContent).not.toContain('dddddddd');
+  });
+
+  it('asks inline before removing, and only acts on confirm', () => {
+    // Regression: this used to be a blocking `window.confirm`.
+    renderRow();
+    fireEvent.click(screen.getByTestId(`member-remove-${PK}`));
+    expect(mockRemoveUser).not.toHaveBeenCalled();
+
+    expect(screen.getByTestId(`member-confirm-${PK}`)).toBeTruthy();
+    fireEvent.click(screen.getByTestId(`member-confirm-ok-${PK}`));
+    expect(mockRemoveUser).toHaveBeenCalledWith('g1', PK);
+  });
+
+  it('cancelling the confirm does nothing and restores the row', () => {
+    renderRow();
+    fireEvent.click(screen.getByTestId(`member-remove-${PK}`));
+    fireEvent.click(screen.getByTestId(`member-confirm-cancel-${PK}`));
+    expect(mockRemoveUser).not.toHaveBeenCalled();
+    expect(screen.getByTestId(`member-remove-${PK}`)).toBeTruthy();
+  });
+
+  it('demote strips only the admin permission', () => {
+    renderRow(true);
+    fireEvent.click(screen.getByTestId(`member-demote-${PK}`));
+    fireEvent.click(screen.getByTestId(`member-confirm-ok-${PK}`));
+    expect(mockRemovePermission).toHaveBeenCalledWith('g1', PK, ['admin']);
+    expect(mockRemoveUser).not.toHaveBeenCalled();
+  });
+
+  it('offers no demote action for a plain member', () => {
+    renderRow(false);
+    expect(screen.queryByTestId(`member-demote-${PK}`)).toBeNull();
+  });
+});
+
+describe('ForumTagsEditor', () => {
+  const tag = (over: Partial<JsForumTag> = {}): JsForumTag => ({
+    id: 't1', name: 'Hardware', emoji: null, color: null, ...over,
+  });
+
+  it('new tags start with no colour override, so one is derived', () => {
+    const onChange = vi.fn();
+    render(<ForumTagsEditor value={[]} onChange={onChange} />);
+    fireEvent.click(screen.getByTestId('forum-tag-add'));
+    expect(onChange).toHaveBeenCalledWith([
+      expect.objectContaining({ name: '', emoji: null, color: null }),
+    ]);
+  });
+
+  it('picking a swatch sets that palette key', () => {
+    const onChange = vi.fn();
+    render(<ForumTagsEditor value={[tag()]} onChange={onChange} />);
+    fireEvent.click(screen.getByTestId('forum-tag-color-t1'));
+    fireEvent.click(screen.getByTestId('forum-tag-color-opt-amber'));
+    expect(onChange).toHaveBeenCalledWith([expect.objectContaining({ color: 'amber' })]);
+  });
+
+  it('Auto clears the override back to a derived colour', () => {
+    const onChange = vi.fn();
+    render(<ForumTagsEditor value={[tag({ color: 'amber' })]} onChange={onChange} />);
+    fireEvent.click(screen.getByTestId('forum-tag-color-t1'));
+    fireEvent.click(screen.getByTestId('forum-tag-color-auto-t1'));
+    expect(onChange).toHaveBeenCalledWith([expect.objectContaining({ color: null })]);
+  });
+
+  it('previews the chip exactly as members will see it', () => {
+    render(<ForumTagsEditor value={[tag({ color: 'amber' })]} onChange={vi.fn()} />);
+    const preview = screen.getByTestId('forum-tag-preview-t1');
+    expect(preview.textContent).toContain('Hardware');
+    expect(preview.style.color).toBe('rgb(251, 191, 36)');
+  });
+
+  it('shows no preview until the tag is named', () => {
+    render(<ForumTagsEditor value={[tag({ name: '' })]} onChange={vi.fn()} />);
+    expect(screen.queryByTestId('forum-tag-preview-t1')).toBeNull();
   });
 });

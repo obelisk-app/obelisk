@@ -43,10 +43,14 @@ import { extractMentionPubkeysFromMessage } from '@/lib/mentions';
 import { customEmojiMapFromTags } from '@/lib/custom-emoji-tags';
 import { stickerFromTags } from '@/lib/sticker-tags';
 import { voiceNoteFromTags } from '@/lib/voice-note-tags';
+import { matchesTerms, relaySearchTerm } from '@/lib/search-query';
+import { isTagColorKey } from '@/lib/forum-tag-colors';
 import type {
   JsGroup,
   JsForumTag,
   JsMessage,
+  JsSearchOptions,
+  JsSearchResponse,
   JsUserMetadata,
   JsReaction,
   JsDirectMessage,
@@ -231,7 +235,11 @@ function parseGroupMetadataTags(tags: NostrEvent['tags']): {
       const ftName = t[2];
       if (!id || !ftName) continue;
       const emoji = t[3] && t[3].length > 0 ? t[3] : null;
-      forumTagMap.set(id, { id, name: ftName, emoji });
+      // Slot 4 is the optional palette key. Validate it here rather than at
+      // render time — an arbitrary relay-supplied string must never reach a
+      // style attribute. Unknown value → null → color derived from the id.
+      const color = isTagColorKey(t[4]) ? t[4] : null;
+      forumTagMap.set(id, { id, name: ftName, emoji, color });
       continue;
     }
     if (k === 'topic') {
@@ -281,7 +289,7 @@ function groupEqual(a: JsGroup, b: JsGroup): boolean {
     const x = a.forumTags[i];
     const y = b.forumTags[i];
     if (!x || !y) return false;
-    if (x.id !== y.id || x.name !== y.name || x.emoji !== y.emoji) return false;
+    if (x.id !== y.id || x.name !== y.name || x.emoji !== y.emoji || x.color !== y.color) return false;
   }
   if (a.topics.length !== b.topics.length) return false;
   for (let i = 0; i < a.topics.length; i++) {
@@ -346,6 +354,16 @@ const KIND_MUTE_LIST = 10000;
  * even for users who aren't currently in the call.
  */
 const KIND_SFU_ACTIVE_CALL = 31314;
+
+/**
+ * Search tunables. The relay can pre-filter on at most one term, so when
+ * extra terms or `has:` filters will be applied client-side we pull a wider
+ * window and trim after — otherwise `has:image` fetches 30 recent messages,
+ * throws away 29 of them, and reads as "no results".
+ */
+const SEARCH_OVERFETCH_FACTOR = 8;
+const SEARCH_MAX_FETCH = 500;
+const SEARCH_TIMEOUT_MS = 8000;
 
 export const STORAGE_KEY = 'obelisk-dex/session';
 export const RELAYS_KEY = 'obelisk-dex/relays';
@@ -3721,7 +3739,13 @@ export class BridgeImpl {
     if (opts.forumTags) {
       for (const ft of opts.forumTags) {
         if (!ft.id || !ft.name) continue;
-        tags.push(ft.emoji ? ['forum-tag', ft.id, ft.name, ft.emoji] : ['forum-tag', ft.id, ft.name]);
+        // `["forum-tag", id, name, emoji?, color?]`. The color lives at slot
+        // 4, so when it's present the emoji slot must be emitted even if
+        // empty — otherwise the color would land at index 3 and be read back
+        // as an emoji. Old clients read slots 1-3 and ignore the rest.
+        if (ft.color) tags.push(['forum-tag', ft.id, ft.name, ft.emoji ?? '', ft.color]);
+        else if (ft.emoji) tags.push(['forum-tag', ft.id, ft.name, ft.emoji]);
+        else tags.push(['forum-tag', ft.id, ft.name]);
       }
     }
     if (opts.topics) {
@@ -3737,21 +3761,40 @@ export class BridgeImpl {
     });
   }
 
-  async searchMessages(opts: {
-    query?: string;
-    groupIds?: ReadonlyArray<string>;
-    authors?: ReadonlyArray<string>;
-    mentions?: ReadonlyArray<string>;
-    has?: ReadonlyArray<'link' | 'image' | 'file'>;
-    since?: number;
-    until?: number;
-    limit?: number;
-  }): Promise<ReadonlyArray<JsMessage & { groupId: string | null }>> {
+  /**
+   * NIP-50 message search over the active relay.
+   *
+   * Two things are deliberate here:
+   *
+   * 1. **Only one term goes to the relay.** NIP-50 leaves `search` semantics
+   *    relay-defined, and the relays Obelisk ships against match the value as
+   *    a literal substring of the *whole* string — so `search: "hola mundo"`
+   *    returns zero events. We send the most selective single term as a cheap
+   *    server-side prefilter and AND the rest client-side.
+   * 2. **Client-side filters over-fetch.** `has:` and the extra terms are
+   *    applied after the relay's `limit`, so asking for exactly `limit`
+   *    events and then filtering would usually leave almost nothing. We pull a
+   *    wider window and trim afterwards.
+   */
+  async searchMessages(opts: JsSearchOptions): Promise<JsSearchResponse> {
+    const limit = opts.limit ?? 50;
+    const terms = opts.terms ?? [];
+    const has = new Set(opts.has ?? []);
+    const relaySupportsSearch = opts.relaySupportsSearch !== false;
+
+    // The relay can only pre-filter on one term; anything beyond that (extra
+    // terms, `has:`) is our job, so widen the window when we'll be discarding.
+    const relayTerm = relaySupportsSearch ? relaySearchTerm(terms) : undefined;
+    const localOnly = (relayTerm === undefined ? terms.length : terms.length - 1) + has.size;
+    const fetchLimit = localOnly > 0
+      ? Math.min(limit * SEARCH_OVERFETCH_FACTOR, SEARCH_MAX_FETCH)
+      : limit;
+
     const filter: Filter & { search?: string } = {
       kinds: [KIND_GROUP_MESSAGE],
-      limit: opts.limit ?? 50,
+      limit: fetchLimit,
     };
-    if (opts.query && opts.query.trim()) filter.search = opts.query.trim();
+    if (relayTerm) filter.search = relayTerm;
     if (opts.authors && opts.authors.length > 0) filter.authors = [...opts.authors];
     if (opts.mentions && opts.mentions.length > 0) (filter as Record<string, unknown>)['#p'] = [...opts.mentions];
     if (opts.groupIds && opts.groupIds.length > 0) {
@@ -3759,21 +3802,23 @@ export class BridgeImpl {
     }
     if (opts.since) filter.since = opts.since;
     if (opts.until) filter.until = opts.until;
-    const { events, complete } = await this.queryRelaysWithConfidence(this.relays, filter, 4000);
+
+    const { events, complete } = await this.queryRelaysWithConfidence(this.relays, filter, SEARCH_TIMEOUT_MS);
     if (events.length === 0 && !complete) throw new Error('Search timed out. Try again.');
-    const has = new Set(opts.has ?? []);
+
     const URL_RE = /https?:\/\/\S+/i;
     const IMG_RE = /https?:\/\/\S+\.(?:png|jpe?g|gif|webp|avif|svg)(?:\?\S*)?/i;
     const FILE_RE = /https?:\/\/\S+\.(?:pdf|zip|tar|gz|mp3|mp4|mov|webm|wav|csv|json|txt|md)(?:\?\S*)?/i;
-    const matches = (content: string) => {
+    const hasMatches = (content: string) => {
       if (has.size === 0) return true;
       if (has.has('image') && !IMG_RE.test(content)) return false;
       if (has.has('file') && !FILE_RE.test(content)) return false;
       if (has.has('link') && !URL_RE.test(content)) return false;
       return true;
     };
-    return events
-      .filter((e) => matches(e.content))
+
+    const all = events
+      .filter((e) => hasMatches(e.content) && matchesTerms(e.content, terms))
       .map((e) => {
         const eventGroupId = getTag(e, 'h');
         return {
@@ -3791,6 +3836,14 @@ export class BridgeImpl {
         };
       })
       .sort((a, b) => b.createdAt - a.createdAt);
+
+    return {
+      hits: all.slice(0, limit),
+      // More matches than we can show, or the relay never finished: either
+      // way the list on screen is not the whole answer.
+      partial: !complete || all.length > limit || events.length >= fetchLimit,
+      relayFiltered: relayTerm !== undefined,
+    };
   }
 
   async editUserMetadata(opts: {

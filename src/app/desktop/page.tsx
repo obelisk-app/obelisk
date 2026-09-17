@@ -12,7 +12,7 @@ const SCREENSHOTS = [
   },
   {
     path: '/pictures-for-posts/desktop-forums-view.png',
-    name: 'Threaded NIP-29 forums on desktop',
+    name: 'NIP-29 publications on desktop',
     width: 1470,
     height: 799,
   },
@@ -27,7 +27,7 @@ const SCREENSHOTS = [
 export const metadata: Metadata = {
   title: 'Obelisk Desktop — Discord alternative for the open Nostr stack',
   description:
-    'A guided tour of Obelisk on desktop: a Nostr-powered Discord alternative with NIP-29 group chat, threaded forums, mediasoup SFU voice, encrypted DMs, and Lightning zaps. No email, no password — just your keys.',
+    'A guided tour of Obelisk on desktop: a Nostr-powered Discord alternative with NIP-29 group chat, publications, mediasoup SFU voice, encrypted DMs, and Lightning zaps. No email, no password — just your keys.',
   alternates: { canonical: '/desktop' },
   keywords: [
     'Discord alternative desktop',
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     'NIP-29 group chat',
     'mediasoup SFU voice',
     'self-hosted Discord',
-    'Nostr forums',
+    'Nostr publications',
     'encrypted group DMs',
     'Lightning zaps chat',
     'Web of Trust chat',
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Obelisk Desktop — Discord alternative for the open Nostr stack',
     description:
-      'A guided tour of Obelisk on desktop: NIP-29 group chat, threaded forums, mediasoup SFU voice, encrypted DMs and Lightning zaps.',
+      'A guided tour of Obelisk on desktop: NIP-29 group chat, publications, mediasoup SFU voice, encrypted DMs and Lightning zaps.',
     url: `${SITE_URL}/desktop`,
     type: 'website',
     images: [
@@ -60,7 +60,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Obelisk Desktop — Discord alternative for the open Nostr stack',
     description:
-      'A desktop tour of Obelisk: NIP-29 group chat, forums, SFU voice, encrypted DMs and Lightning zaps. No email, no password.',
+      'A desktop tour of Obelisk: NIP-29 group chat, publications, SFU voice, encrypted DMs and Lightning zaps. No email, no password.',
     images: ['/pictures-for-posts/dekstop-public-general-chat-view-with-member-list.png'],
   },
 };

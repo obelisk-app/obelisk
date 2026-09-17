@@ -1188,8 +1188,8 @@ describe('nostr-bridge', () => {
     const forum = last.find((g) => g.id === 'g-forum-with-tags');
     expect(forum).toBeTruthy();
     expect(forum?.tags).toEqual([
-      { id: 'tag-lacrypta', name: 'LaCrypta', emoji: '📜' },
-      { id: 'tag-trabajo', name: 'trabajo', emoji: null },
+      { id: 'tag-lacrypta', name: 'LaCrypta', emoji: '📜', color: null },
+      { id: 'tag-trabajo', name: 'trabajo', emoji: null, color: null },
     ]);
   });
 
@@ -1256,10 +1256,10 @@ describe('nostr-bridge', () => {
       name: 'Plaza',
       kind: 'forum',
       forumTags: [
-        { id: 'tag-1', name: 'LaCrypta', emoji: '📜' },
-        { id: 'tag-2', name: 'no-emoji', emoji: null },
+        { id: 'tag-1', name: 'LaCrypta', emoji: '📜', color: null },
+        { id: 'tag-2', name: 'no-emoji', emoji: null, color: null },
         // Bad entry: empty name. editGroupMetadata's tag emitter drops these.
-        { id: 'tag-3', name: '', emoji: '🙃' },
+        { id: 'tag-3', name: '', emoji: '🙃', color: null },
       ],
     });
     await flush();
@@ -1273,6 +1273,71 @@ describe('nostr-bridge', () => {
     // Bad entry must NOT show up.
     const bad = meta?.tags.find((t) => t[0] === 'forum-tag' && t[1] === 'tag-3');
     expect(bad).toBeUndefined();
+  });
+
+  it('round-trips a publication tag color through slot 4', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+
+    await bridge.editGroupMetadata({
+      groupId: 'forum-color-1',
+      name: 'Plaza',
+      kind: 'forum',
+      forumTags: [
+        { id: 'c1', name: 'Hardware', emoji: null, color: 'amber' },
+        { id: 'c2', name: 'Software', emoji: '💾', color: 'cyan' },
+        { id: 'c3', name: 'Plain', emoji: null, color: null },
+      ],
+    });
+    await flush();
+
+    const meta = fake.state.published.find(
+      (e) => e.kind === 9002 && e.tags.some((t) => t[0] === 'h' && t[1] === 'forum-color-1'),
+    );
+    // Color lives at slot 4, so a colored tag with no emoji must still emit
+    // the (empty) emoji slot — otherwise the color is read back as an emoji.
+    expect(meta?.tags).toContainEqual(['forum-tag', 'c1', 'Hardware', '', 'amber']);
+    expect(meta?.tags).toContainEqual(['forum-tag', 'c2', 'Software', '💾', 'cyan']);
+    // No color and no emoji → the short legacy form, unchanged.
+    expect(meta?.tags).toContainEqual(['forum-tag', 'c3', 'Plain']);
+  });
+
+  it('parses tag colors off the relay, ignoring unknown palette keys', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    await flush();
+
+    const seen: Array<ReadonlyArray<{ id: string; forumTags: unknown }>> = [];
+    bridge.subscribeGroups((g) => seen.push(g.map((x) => ({ id: x.id, forumTags: x.forumTags }))));
+
+    const relaySk = generateSecretKey();
+    deliver(finalizeEvent({
+      kind: KIND_GROUP_METADATA,
+      created_at: 900,
+      content: '',
+      tags: [
+        ['d', 'forum-parse-1'],
+        ['name', 'Plaza'],
+        ['t', 'forum'],
+        ['forum-tag', 'c1', 'Hardware', '', 'amber'],
+        // A legacy 3-slot tag still parses, with no color.
+        ['forum-tag', 'c2', 'Legacy'],
+        // Anything we don't recognise must not reach a style attribute.
+        ['forum-tag', 'c3', 'Evil', '', 'url(javascript:alert(1))'],
+      ],
+    }, relaySk));
+    await flush();
+
+    const group = seen.at(-1)?.find((g) => g.id === 'forum-parse-1');
+    expect(group?.forumTags).toEqual([
+      { id: 'c1', name: 'Hardware', emoji: null, color: 'amber' },
+      { id: 'c2', name: 'Legacy', emoji: null, color: null },
+      { id: 'c3', name: 'Evil', emoji: null, color: null },
+    ]);
   });
 
   it('relayAccess flips to ok on event/EOSE and stays ok across per-sub CLOSED reasons', async () => {
@@ -4417,3 +4482,117 @@ async function fakeRelayList(opts: {
 function deliver(ev: NostrEvent) {
   for (const sub of fake.state.subscriptions) if (matches(sub.filter as Filter, ev)) sub.sink(ev);
 }
+
+describe('searchMessages', () => {
+  /**
+   * Publish `n` kind-9 messages the fake relay will replay for any matching
+   * REQ. The fake ignores `search`/`limit`, which is exactly what a relay
+   * without NIP-50 does — so these tests exercise the client-side half.
+   */
+  function seedMessages(contents: string[], groupId = 'g1') {
+    const sk = generateSecretKey();
+    for (const [i, content] of contents.entries()) {
+      fake.state.published.push(finalizeEvent({
+        kind: 9,
+        created_at: 1000 + i,
+        content,
+        tags: [['h', groupId]],
+      }, sk));
+    }
+  }
+
+  /** The filter the bridge actually put on the wire for the search REQ. */
+  function lastSearchFilter(): Record<string, unknown> {
+    const call = fake.state.querySyncCalls.filter(
+      (c) => (c.filter.kinds as number[] | undefined)?.includes(9),
+    ).at(-1);
+    return call!.filter;
+  }
+
+  it('sends only the most selective term to the relay and ANDs the rest locally', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    seedMessages(['hola mundo cruel', 'hola solamente', 'mundo solo']);
+    fake.state.querySyncCalls = [];
+
+    const res = await bridge.searchMessages({
+      terms: [{ text: 'hola', phrase: false }, { text: 'mundo', phrase: false }],
+    });
+
+    // A relay matches `search` as a literal substring of the whole value, so
+    // sending "hola mundo" would return nothing. One term goes out...
+    expect(lastSearchFilter().search).toBe('mundo');
+    // ...and the AND is completed here.
+    expect(res.hits.map((h) => h.content)).toEqual(['hola mundo cruel']);
+  });
+
+  it('omits search entirely when the relay has no NIP-50, still filtering locally', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    seedMessages(['keep this one', 'drop that one']);
+    fake.state.querySyncCalls = [];
+
+    const res = await bridge.searchMessages({
+      terms: [{ text: 'keep', phrase: false }],
+      relaySupportsSearch: false,
+    });
+
+    expect(lastSearchFilter().search).toBeUndefined();
+    expect(res.relayFiltered).toBe(false);
+    expect(res.hits.map((h) => h.content)).toEqual(['keep this one']);
+  });
+
+  it('over-fetches before applying has:, instead of filtering an already-trimmed page', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    // One image among many plain messages: with limit-then-filter it would
+    // fall outside the window and the search would look empty.
+    seedMessages([
+      ...Array.from({ length: 20 }, (_, i) => `plain ${i}`),
+      'look https://cdn.example/cat.png',
+    ]);
+    fake.state.querySyncCalls = [];
+
+    const res = await bridge.searchMessages({ has: ['image'], limit: 5 });
+
+    expect(lastSearchFilter().limit).toBeGreaterThan(5);
+    expect(res.hits.map((h) => h.content)).toEqual(['look https://cdn.example/cat.png']);
+  });
+
+  it('trims to limit and flags the result as partial', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    seedMessages(Array.from({ length: 10 }, (_, i) => `hit ${i}`));
+    fake.state.querySyncCalls = [];
+
+    const res = await bridge.searchMessages({ terms: [{ text: 'hit', phrase: false }], limit: 3 });
+
+    expect(res.hits).toHaveLength(3);
+    expect(res.partial).toBe(true);
+    // Newest first.
+    expect(res.hits[0].createdAt).toBeGreaterThan(res.hits[1].createdAt);
+  });
+
+  it('matches a quoted phrase only when contiguous', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    seedMessages(['deployment failed badly', 'deployment then it failed']);
+    fake.state.querySyncCalls = [];
+
+    const res = await bridge.searchMessages({
+      terms: [{ text: 'deployment failed', phrase: true }],
+    });
+
+    expect(res.hits.map((h) => h.content)).toEqual(['deployment failed badly']);
+  });
+});

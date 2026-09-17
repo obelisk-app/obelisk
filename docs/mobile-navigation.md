@@ -68,7 +68,7 @@ matters for animation direction.
 |---|---|---|---|
 | `channel` | `server` | server (channel list) | NIP-29 group chat |
 | `voice-room` | `server` | channel header, server, jump-to-voice | mesh or SFU |
-| `forum` | `server` | server (forum-kind group) | forum-style group |
+| `forum` | `server` | server (publications-kind group) | publications feed (the route id keeps the `forum` wire name) |
 | `member-list` | dynamic | channel, voice-room | group members |
 | `search` | dynamic | channel, server, inbox | message search (NIP-50) |
 | `dm-thread` | `dms-list` | dms-list, compose-dm, inbox (reply) | 1:1 DM |

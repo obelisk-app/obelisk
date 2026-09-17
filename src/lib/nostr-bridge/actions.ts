@@ -3,6 +3,7 @@
  * from here instead of touching getBridge() directly.
  */
 import { getBridge, type RemoteSigner } from './client';
+import type { JsSearchOptions, JsSearchResponse } from './types';
 
 export const nostrActions = {
   loginWithNsec: async (privKeyHex: string, pubKeyHex: string) =>
@@ -98,9 +99,8 @@ export const nostrActions = {
     (await getBridge()).setActiveGroup(groupId),
   ensureUserMetadata: async (pubkey: string) =>
     (await getBridge()).ensureUserMetadata(pubkey),
-  searchMessages: async (
-    opts: Parameters<Awaited<ReturnType<typeof getBridge>>['searchMessages']>[0],
-  ) => (await getBridge()).searchMessages(opts),
+  searchMessages: async (opts: JsSearchOptions): Promise<JsSearchResponse> =>
+    (await getBridge()).searchMessages(opts),
   exportAccountData: async () => (await getBridge()).exportAccountData(),
 
   setMuted: async (pubkey: string, muted: boolean) =>

@@ -44,6 +44,7 @@ import {
   useReactions,
   useConfiguredRelays,
   useCurrentRelayUrl,
+  useRelayPeople,
   useRelayAccess,
   useConnectionState,
   useGroupMetadataEose,
@@ -54,6 +55,7 @@ import {
   type JsGroup,
   type JsForumTag,
   type JsMessage,
+  type JsSearchHit,
   type JsDirectMessage,
   type JsUserMetadata,
 } from '@/lib/nostr-bridge';
@@ -74,6 +76,10 @@ import { uploadToBlossom } from '@/lib/blossom';
 import { stickerTagsForContent, type MessageSticker } from '@/lib/sticker-tags';
 import { voiceNoteTagForContent, type MessageVoiceNote } from '@/lib/voice-note-tags';
 import { formatPubkey } from '@nostr-wot/data';
+import { nip19 } from 'nostr-tools';
+import { searchGroups } from '@/lib/group-search';
+import { parseSearchQuery, isEmptyQuery, nameMatches } from '@/lib/search-query';
+import { paletteForTag, tagChipStyle } from '@/lib/forum-tag-colors';
 import { faviconFor, fetchRelayInfo, SUGGESTED_RELAYS } from '@/lib/relay-info';
 import {
   applyLayout,
@@ -1619,7 +1625,7 @@ export function ChannelSettingsSheet({
                   fontWeight: 600,
                 }}
               >
-                {k === 'voice-sfu' ? 'Voice (SFU)' : k.charAt(0).toUpperCase() + k.slice(1)}
+                {CHANNEL_KIND_LABEL[k]}
               </button>
             ))}
           </div>
@@ -1706,6 +1712,20 @@ export function ChannelSettingsSheet({
   );
 }
 
+/**
+ * User-facing names for each channel kind.
+ *
+ * The kind ids are wire values (`["t","forum"]` and friends) and never
+ * change; this is the only place that decides what a human sees. Without it
+ * the picker derived its label from the id itself, so it printed "Forum".
+ */
+export const CHANNEL_KIND_LABEL: Record<JsGroup['kind'], string> = {
+  text: 'Text',
+  voice: 'Voice',
+  'voice-sfu': 'Voice (SFU)',
+  forum: 'Publications',
+};
+
 function ManageMemberRowMobile({
   groupId,
   pubkey,
@@ -1718,25 +1738,83 @@ function ManageMemberRowMobile({
   const { t } = useTranslation();
   const meta = useUserMetadata(pubkey);
   const name = meta?.displayName || meta?.name || shortNpub(pubkey);
+  // Inline confirm rather than `window.confirm` — a native dialog on mobile
+  // covers the sheet and names the person out of context.
+  const [confirming, setConfirming] = useState<null | 'demote' | 'kick'>(null);
+
+  const rowStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    padding: '8px 10px',
+    background: 'var(--app-surface)',
+    border: '1px solid var(--app-line)',
+    borderRadius: 12,
+  };
+
+  if (confirming) {
+    const demoting = confirming === 'demote';
+    return (
+      <div style={rowStyle} data-testid={`mobile-member-confirm-${pubkey}`}>
+        <span style={{ flex: 1, minWidth: 0, fontSize: 12, color: 'var(--app-text)' }}>
+          {demoting
+            ? `Demote ${name}? They keep channel access but lose admin rights.`
+            : `Kick ${name} from this channel?`}
+        </span>
+        <button
+          type="button"
+          onClick={() => setConfirming(null)}
+          style={{ border: '1px solid var(--app-line)', borderRadius: 8, padding: '4px 8px', background: 'transparent', color: 'var(--app-text-dim)', fontSize: 11 }}
+          data-testid={`mobile-member-confirm-cancel-${pubkey}`}
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            if (demoting) void nostrActions.removePermission(groupId, pubkey, ['admin']);
+            else void nostrActions.removeUser(groupId, pubkey);
+            setConfirming(null);
+          }}
+          style={{
+            border: '1px solid var(--app-line)',
+            borderRadius: 8,
+            padding: '4px 8px',
+            background: demoting ? 'var(--app-surface)' : 'var(--presence-dnd, #ef4444)',
+            color: demoting ? 'var(--app-text)' : '#fff',
+            fontSize: 11,
+            fontWeight: 600,
+          }}
+          data-testid={`mobile-member-confirm-ok-${pubkey}`}
+        >
+          {demoting ? 'Demote' : 'Kick'}
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-        padding: '8px 10px',
-        background: 'var(--app-surface)',
-        border: '1px solid var(--app-line)',
-        borderRadius: 12,
-      }}
-    >
+    <div style={rowStyle}>
       <div className="msg-ava" style={{ ...avatarStyle(pubkey), width: 32, height: 32 }}>
         {meta?.picture ? <img src={meta.picture} alt="" /> : initialsFor(name, shortNpub(pubkey))}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--app-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {name}
-          {isAdmin && <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>admin</span>}
+          {isAdmin && (
+            <span style={{
+              marginLeft: 6,
+              fontSize: 9,
+              fontWeight: 700,
+              color: 'var(--accent)',
+              background: 'var(--accent-soft)',
+              border: '1px solid rgba(180, 249, 83, 0.4)',
+              borderRadius: 999,
+              padding: '1px 6px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.12em',
+            }}>admin</span>
+          )}
         </div>
         <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: 'var(--app-text-mute)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {shortNpub(pubkey)}
@@ -1746,11 +1824,7 @@ function ManageMemberRowMobile({
         {isAdmin && (
           <button
             type="button"
-            onClick={() => {
-              if (window.confirm(`Demote ${name}? They keep channel access but lose admin rights.`)) {
-                void nostrActions.removePermission(groupId, pubkey, ['admin']);
-              }
-            }}
+            onClick={() => setConfirming('demote')}
             style={{
               border: '1px solid var(--app-line)',
               borderRadius: 8,
@@ -1766,11 +1840,7 @@ function ManageMemberRowMobile({
         )}
         <button
           type="button"
-          onClick={() => {
-            if (window.confirm(`Kick ${name} from this channel?`)) {
-              void nostrActions.removeUser(groupId, pubkey);
-            }
-          }}
+          onClick={() => setConfirming('kick')}
           style={{
             border: '1px solid var(--app-line)',
             borderRadius: 8,
@@ -2044,7 +2114,7 @@ function ChannelRow({
           <button
             className="ch-chevron-btn"
             onClick={onToggleExpand}
-            aria-label={expanded ? 'Collapse threads' : 'Expand threads'}
+            aria-label={expanded ? 'Collapse publications' : 'Expand publications'}
             aria-expanded={!!expanded}
           >
             <span className={`ch-chevron ${expanded ? 'expanded' : ''}`} aria-hidden="true">
@@ -2803,16 +2873,35 @@ function ChannelScreen({
     },
   });
 
+  // A search result asked to jump here. The message may not be loaded yet,
+  // so this re-runs as batches arrive and only consumes the request once it
+  // actually scrolled — same contract as the desktop `pendingMessageId`.
+  const pendingJump = useChatStore((s) => s.pendingJump);
+  useEffect(() => {
+    if (!pendingJump || pendingJump.groupId !== groupId) return;
+    if (!messages.some((m) => m.id === pendingJump.messageId)) return;
+    const el = messagesRef.current?.querySelector(`[data-msg-id="${CSS.escape(pendingJump.messageId)}"]`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.add('msg-flash');
+    setTimeout(() => el.classList.remove('msg-flash'), 1800);
+    useChatStore.getState().consumeJump();
+  }, [pendingJump, groupId, messages]);
+
   // Auto-scroll to bottom when new messages arrive (only if already near).
   useEffect(() => {
     const el = messagesRef.current;
     if (!el) return;
+    // Don't yank the view to the bottom while we're trying to land on a
+    // searched-for message further up.
+    if (pendingJump && pendingJump.groupId === groupId) return;
     const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 200;
     if (isNearBottom) {
       requestAnimationFrame(() => {
         el.scrollTop = el.scrollHeight;
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages.length]);
 
   // Top-of-list pagination. Live REQ caps at the background limit; older
@@ -4162,6 +4251,16 @@ function ComposeRecentRow({ peer, onClick }: { peer: string; onClick: () => void
 // ───────────────────────────────────────────────────────────────────────────
 // 12 — search
 
+const MOBILE_SEARCH_DEBOUNCE_MS = 250;
+
+/**
+ * Mobile search. Mirrors the desktop bar: channels *and* messages, with the
+ * same grammar from `src/lib/search-query.ts`.
+ *
+ * Previously this screen searched joined channel names only while its
+ * placeholder and aria-label promised messages and people, and its filter
+ * chips were decorative — they set local state no query ever read.
+ */
 export function SearchScreen({
   back,
   selectGroup,
@@ -4171,9 +4270,99 @@ export function SearchScreen({
 }) {
   const { t } = useTranslation();
   const [query, setQuery] = useState('');
-  const [chip, setChip] = useState<'all' | 'from' | 'in' | 'mentions' | 'has-image'>('all');
   const groups = useGroups();
+  const people = useRelayPeople();
   const relay = useCurrentRelayUrl();
+  const myPubkey = useMyPubkey();
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const [hits, setHits] = useState<ReadonlyArray<JsSearchHit>>([]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const resolvePubkey = useCallback((value: string): string | null => {
+    if (/^[0-9a-f]{64}$/i.test(value)) return value.toLowerCase();
+    if (value.startsWith('npub1')) {
+      try {
+        const d = nip19.decode(value);
+        if (d.type === 'npub') return d.data as string;
+      } catch { /* not bech32 */ }
+    }
+    return people.find((p) => nameMatches(p.displayName, value))?.pubkey ?? null;
+  }, [people]);
+
+  const resolveGroup = useCallback((value: string): string | null => {
+    if (groups.some((g) => g.id === value)) return value;
+    return searchGroups(groups, value)[0]?.id ?? null;
+  }, [groups]);
+
+  const parsed = useMemo(
+    () => parseSearchQuery(query, { resolvePubkey, resolveGroup }),
+    [query, resolvePubkey, resolveGroup],
+  );
+
+  const channelMatches = useMemo(() => {
+    const free = parsed.terms.map((x) => x.text).join(' ');
+    return free ? searchGroups(groups, free) : groups;
+  }, [groups, parsed.terms]);
+
+  // Same race/staleness guard as the desktop bar.
+  const reqRef = useRef(0);
+  useEffect(() => () => { reqRef.current = -1; }, []);
+
+  const queryKey = JSON.stringify([
+    parsed.terms, parsed.authors, parsed.mentions, parsed.groupIds,
+    parsed.has, parsed.since, parsed.until,
+  ]);
+  useEffect(() => {
+    reqRef.current++;
+    setHits([]);
+    setError(null);
+    if (isEmptyQuery(parsed)) { setBusy(false); return; }
+    setBusy(true);
+    const seq = reqRef.current;
+    const handle = setTimeout(() => {
+      void nostrActions.searchMessages({
+        terms: parsed.terms,
+        authors: parsed.authors.length > 0 ? parsed.authors : undefined,
+        mentions: parsed.mentions.length > 0 ? parsed.mentions : undefined,
+        groupIds: parsed.groupIds.length > 0 ? parsed.groupIds : undefined,
+        has: parsed.has.length > 0 ? parsed.has : undefined,
+        since: parsed.since,
+        until: parsed.until,
+        limit: 30,
+      }).then((res) => {
+        if (reqRef.current !== seq) return;
+        setHits(res.hits);
+        setBusy(false);
+      }).catch((e: Error) => {
+        if (reqRef.current !== seq) return;
+        setError(e.message);
+        setBusy(false);
+      });
+    }, MOBILE_SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryKey]);
+
+  // Chips now insert real grammar into the input instead of setting a flag
+  // nothing reads.
+  const addToken = (token: string) => {
+    setQuery((q) => (q.trim() ? `${q.trim()} ${token}` : token));
+    requestAnimationFrame(() => inputRef.current?.focus());
+  };
+
+  const groupById = useMemo(() => new Map(groups.map((g) => [g.id, g] as const)), [groups]);
+
+  const openHit = (h: JsSearchHit) => {
+    if (!h.groupId) return;
+    const g = groupById.get(h.groupId);
+    useChatStore.getState().requestJump(h.groupId, h.id);
+    selectGroup(h.groupId, g?.kind ?? 'text');
+  };
+
+  const showChannels = channelMatches.length > 0;
+  const nothingAtAll = !busy && !error && hits.length === 0 && !showChannels;
 
   return (
     <div className="screen search-screen active" data-screen="search">
@@ -4184,6 +4373,7 @@ export function SearchScreen({
         <div className="search-input-wrap">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
           <input
+            ref={inputRef}
             type="search"
             name="obelisk-mobile-search"
             aria-label={t('mobile.search.aria')}
@@ -4195,6 +4385,7 @@ export function SearchScreen({
             placeholder={t('mobile.search.placeholder')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Escape') { if (query) setQuery(''); else back(); } }}
             autoFocus
           />
           {query && <button className="search-clear" onClick={() => setQuery('')}>×</button>}
@@ -4202,24 +4393,61 @@ export function SearchScreen({
       </div>
       <div className="search-context-pill">in:{shortHost(relay)}</div>
       <div className="search-filter-chips">
-        <button className={`search-chip ${chip === 'all' ? 'active' : ''}`} onClick={() => setChip('all')}>{t('mobile.search.all')}</button>
-        <button className={`search-chip ${chip === 'from' ? 'active' : ''}`} onClick={() => setChip('from')}>from:</button>
-        <button className={`search-chip ${chip === 'in' ? 'active' : ''}`} onClick={() => setChip('in')}>in:#channel</button>
-        <button className={`search-chip ${chip === 'mentions' ? 'active' : ''}`} onClick={() => setChip('mentions')}>mentions:@you</button>
-        <button className={`search-chip ${chip === 'has-image' ? 'active' : ''}`} onClick={() => setChip('has-image')}>has:image</button>
+        <button className="search-chip" onClick={() => setQuery('')} data-testid="mobile-search-chip-all">{t('mobile.search.all')}</button>
+        <button className="search-chip" onClick={() => addToken('from:')} data-testid="mobile-search-chip-from">from:</button>
+        <button className="search-chip" onClick={() => addToken('in:')} data-testid="mobile-search-chip-in">in:#channel</button>
+        {myPubkey && (
+          <button className="search-chip" onClick={() => addToken(`mentions:${myPubkey}`)} data-testid="mobile-search-chip-mentions">mentions:@you</button>
+        )}
+        <button className="search-chip" onClick={() => addToken('has:image')} data-testid="mobile-search-chip-has">has:image</button>
       </div>
-      <div className="search-section-label">{t('search.channels')}</div>
+
       <div className="search-body">
-        {groups
-          .filter((g) => !query || (g.name ?? '').toLowerCase().includes(query.toLowerCase()))
-          .slice(0, 30)
-          .map((g) => (
-            <button key={g.id} className="ch-row" onClick={() => selectGroup(g.id, g.kind)}>
-              <span className="ch-icon">#</span>
-              <span className="ch-name">{g.name ?? g.id.slice(0, 8)}</span>
-            </button>
-          ))}
-        {!query && (
+        {parsed.unresolved.length > 0 && (
+          <div className="search-empty" data-testid="mobile-search-unresolved">
+            {parsed.unresolved.map((u) => (
+              <div key={`${u.key}:${u.value}`}>
+                {t('search.unresolved').replace('{token}', `${u.key}:${u.value}`)}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {showChannels && <div className="search-section-label">{t('search.channels')}</div>}
+        {channelMatches.map((g) => (
+          <button key={g.id} className="ch-row" onClick={() => selectGroup(g.id, g.kind)}>
+            <span className="ch-icon">#</span>
+            <span className="ch-name">{g.name ?? g.id.slice(0, 8)}</span>
+          </button>
+        ))}
+
+        {!isEmptyQuery(parsed) && (
+          <>
+            <div className="search-section-label">
+              {busy
+                ? t('search.messagesSearching')
+                : t('search.messagesHeader').replace('{count}', String(hits.length))}
+            </div>
+            {error && <div className="search-empty" data-testid="mobile-search-error">{error}</div>}
+            {hits.map((h) => (
+              <button
+                key={h.id}
+                className="ch-row"
+                onClick={() => openHit(h)}
+                data-testid="mobile-search-message-row"
+              >
+                <span className="ch-name">{h.content.slice(0, 120)}</span>
+              </button>
+            ))}
+            {!busy && !error && hits.length === 0 && (
+              <div className="search-empty" data-testid="mobile-search-no-matches">
+                {t('search.noMatches')}
+              </div>
+            )}
+          </>
+        )}
+
+        {nothingAtAll && (
           <div className="search-empty">
             <div className="search-empty-mark">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
@@ -4382,12 +4610,12 @@ function ForumScreen({
           </button>
           <span className="space-name-bc">{shortHost(relay)}</span>
           <span className="sep">/</span>
-          <span>{group?.name ?? 'forum'}</span>
+          <span>{group?.name ?? 'publications'}</span>
         </div>
         <div className="chat-row">
           <div className="chat-title-block">
-            <div className="chat-channel"><span className="hash">#</span>{group?.name ?? 'forum'}</div>
-            <span className="role-badge" style={{ marginLeft: 6 }}>forum</span>
+            <div className="chat-channel"><span className="hash">#</span>{group?.name ?? 'publications'}</div>
+            <span className="role-badge" style={{ marginLeft: 6 }}>publications</span>
           </div>
         </div>
       </div>
@@ -4406,8 +4634,8 @@ function ForumScreen({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={canCreateFromSearch ? 'Tap + to create…' : 'Search or create a post…'}
-              aria-label="Search or create a thread"
+              placeholder={canCreateFromSearch ? 'Tap + to create…' : 'Search or create a publication…'}
+              aria-label="Search or create a publication"
               data-testid="mobile-forum-search-input"
             />
             {searchQuery && (
@@ -4424,9 +4652,12 @@ function ForumScreen({
           <button
             type="button"
             className="forum-new-pill"
-            onClick={() => openNewThread('')}
+            // The placeholder tells the user to "Tap + to create", so + has
+            // to carry the text they typed — it used to discard it and open
+            // an empty composer.
+            onClick={() => openNewThread(searchQuery.trim())}
             data-testid="mobile-forum-new-thread-btn"
-            aria-label="New thread"
+            aria-label="New publication"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
           </button>
@@ -4445,12 +4676,15 @@ function ForumScreen({
             <button
               key={tag.id}
               type="button"
-              className={`forum-chip ${selectedTagIds.includes(tag.id) ? 'active' : ''}`}
+              className="forum-chip"
+              // Inline so the per-tag color wins over the neutral
+              // `.forum-chip` rule in mobile-shell.css.
+              style={tagChipStyle(tag, selectedTagIds.includes(tag.id))}
               onClick={() => toggleTag(tag.id)}
               data-testid={`mobile-forum-tag-${tag.id}`}
               aria-pressed={selectedTagIds.includes(tag.id)}
             >
-              {tag.emoji && <span>{tag.emoji}</span>}
+              {tag.emoji ? <span>{tag.emoji}</span> : <MobileTagDot tag={tag} />}
               <span>{tag.name}</span>
             </button>
           ))}
@@ -4469,17 +4703,17 @@ function ForumScreen({
       <div className="forum-list native-scroll-y">
         {threadsLoading ? (
           <div className="empty-state" data-testid="mobile-forum-loading">
-            <div className="empty-state-title">Loading threads…</div>
+            <div className="empty-state-title">Loading publications…</div>
           </div>
         ) : children.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-state-title">No threads yet</div>
+            <div className="empty-state-title">No publications yet</div>
             <div className="empty-state-desc">Tap + to start one.</div>
           </div>
         ) : visibleThreads.length === 0 ? (
           <div className="empty-state" data-testid="mobile-forum-no-matches">
             <div className="empty-state-title">
-              No threads match {searchQuery.trim() ? `"${searchQuery.trim()}"` : 'the selected tags'}.
+              No publications match {searchQuery.trim() ? `"${searchQuery.trim()}"` : 'the selected tags'}.
             </div>
             {searchQuery.trim() && (
               <button
@@ -4529,6 +4763,22 @@ function ForumScreen({
         />
       )}
     </div>
+  );
+}
+
+/** Leading color dot for a publication tag with no emoji of its own. */
+function MobileTagDot({ tag }: { tag: JsForumTag }) {
+  return (
+    <span
+      aria-hidden
+      style={{
+        width: 6,
+        height: 6,
+        borderRadius: 999,
+        flexShrink: 0,
+        background: paletteForTag(tag).text,
+      }}
+    />
   );
 }
 
@@ -4611,8 +4861,13 @@ function MobileForumCard({
           {tags.length > 0 && (
             <div className="forum-card-tags">
               {tags.map((t) => (
-                <span key={t.id} className="forum-card-tag" data-testid={`mobile-thread-tag-${t.id}`}>
-                  {t.emoji && <span>{t.emoji}</span>}
+                <span
+                  key={t.id}
+                  className="forum-card-tag"
+                  style={tagChipStyle(t)}
+                  data-testid={`mobile-thread-tag-${t.id}`}
+                >
+                  {t.emoji ? <span>{t.emoji}</span> : <MobileTagDot tag={t} />}
                   <span>{t.name}</span>
                 </span>
               ))}
@@ -4806,7 +5061,7 @@ function NewThreadSheet({
       <div className="sheet-backdrop" onClick={close} />
       <form className="sheet native-scroll-y" onSubmit={onSubmit} style={{ maxHeight: '92%' }}>
         <div className="sheet-handle" />
-        <div className="zap-title">New thread</div>
+        <div className="zap-title">New publication</div>
         <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>Title</label>
           <div className="setup-input-wrap">
@@ -4815,7 +5070,7 @@ function NewThreadSheet({
               className="setup-input"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Thread title"
+              placeholder="Publication title"
               maxLength={140}
               data-testid="mobile-new-thread-title"
             />
@@ -4825,7 +5080,7 @@ function NewThreadSheet({
             className="setup-textarea"
             value={body}
             onChange={(e) => setBody(e.target.value)}
-            placeholder="What's the post about?"
+            placeholder="What's the publication about?"
             rows={5}
             data-testid="mobile-new-thread-body"
           />
@@ -4844,12 +5099,12 @@ function NewThreadSheet({
                       type="button"
                       onClick={() => toggleTag(tag.id)}
                       disabled={disabled}
-                      className={`forum-chip ${active ? 'active' : ''}`}
-                      style={{ opacity: disabled ? 0.4 : 1 }}
+                      className="forum-chip"
+                      style={{ ...tagChipStyle(tag, active), opacity: disabled ? 0.4 : 1 }}
                       data-testid={`mobile-new-thread-tag-${tag.id}`}
                       aria-pressed={active}
                     >
-                      {tag.emoji && <span>{tag.emoji}</span>}
+                      {tag.emoji ? <span>{tag.emoji}</span> : <MobileTagDot tag={tag} />}
                       <span>{tag.name}</span>
                     </button>
                   );

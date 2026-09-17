@@ -12,7 +12,7 @@ The deployed La Crypta server is behind `prisma/seed.ts`. The initial channel co
 
 - Schema already has `Message.pinnedAt DateTime?` + `Message.pinnedByPubkey String?` and an index on `[channelId, pinnedAt]`.
 - `GET /api/channels/[channelId]/pins` is shipped, and `PinnedMessagesPanel.tsx` renders them.
-- Pending: NIP-29-compatible pin events to toggle pin state. Pin button in the message context menu (admin/mod+), badge 📌 on the pinned message inline. Works for forum posts too (pinned posts appear first in the list).
+- Pending: NIP-29-compatible pin events to toggle pin state. Pin button in the message context menu (admin/mod+), badge 📌 on the pinned message inline. Works for publications too (pinned ones appear first in the list).
 
 ### 2. Channel description / topic editor
 
@@ -24,7 +24,7 @@ For channels like `empezá-acá` or `indice` that today have seeded content, add
 
 ### 4. Migration of seeded content to DB
 
-One-shot migration script that walks each hardcoded block in `seed.ts` — welcome message of `empezá-acá`, posts of `indice`, posts of `méritos`, etc. — and creates it as a pinned message or forum post **attributed to the system member**, idempotent (skip if already present). After running, that content lives in the DB and is editable from /admin without touching code.
+One-shot migration script that walks each hardcoded block in `seed.ts` — welcome message of `empezá-acá`, posts of `indice`, posts of `méritos`, etc. — and creates it as a pinned message or publication **attributed to the system member**, idempotent (skip if already present). After running, that content lives in the DB and is editable from /admin without touching code.
 
 ### 5. Refactor of `prisma/seed.ts`
 

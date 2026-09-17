@@ -1,212 +1,153 @@
 # Message Search
 
-Obelisk includes a Discord-style message search engine with filter operators, real-time results, and jump-to-message navigation.
+Obelisk searches messages, users, and channels from one bar, over NIP-50
+(`search` filter) against the **active relay only**.
 
-## How to Use
+There is no server, no API route, and no database. Everything below runs in
+the client against the relay.
 
-Click the **search icon** (magnifying glass) in the top bar of any channel. This expands into a search input field.
+> Earlier revisions of this document described a Prisma/`GET /api/search`
+> stack. That stack no longer exists — see [data-system.md](data-system.md).
 
-### Basic Search
+## Surfaces
 
-Type any word or phrase to search across all messages in the current server:
+| Surface | File | Searches |
+|---|---|---|
+| Desktop bar | `src/app/app/SearchBar.tsx` | messages + users + channels |
+| Mobile screen | `SearchScreen` in `src/app/app/mobile/PhoneShell.tsx` | messages + channels |
+| Publications search-or-create | `src/components/chat/ForumView.tsx` | thread titles in the current container (local, no relay query) |
 
-```
-hello world
-```
+Users are resolved separately by `src/lib/hooks/useNostrUserSearch.ts`: NIP-19
+decode, NIP-05 `.well-known` lookup, and a kind-0 NIP-50 query against
+indexer relays. That is profile discovery, so — like the bridge's
+`DEFAULT_PROFILE_LOOKUP_RELAYS` — it is allowed to leave the active relay.
+Message search never is.
 
-This finds messages containing **both** "hello" and "world" (AND logic).
+## Grammar
 
-### Exact Phrases
+Parsed by `src/lib/search-query.ts` (`parseSearchQuery`), shared by both
+shells.
 
-Wrap text in double quotes to match an exact phrase:
+| Filter | Syntax | Notes |
+|---|---|---|
+| From user | `from:alice`, `from:npub1…`, `from:<hex>` | display name resolved against relay members |
+| In channel | `in:general`, `in:<groupId>` | channel name resolved against your channels |
+| Mentions | `mentions:bob` | `#p` tag filter |
+| Has content | `has:link`, `has:image`, `has:file` | matched on message content, client-side |
+| Before date | `before:2026-04-01` | `until` — UTC midnight |
+| After date | `after:2026-03-01` | `since` — UTC midnight |
+| Exact phrase | `"deployment failed"` | one literal term, never split |
+| Free text | `hello world` | terms ANDed |
 
-```
-"deployment failed"
-```
+A token whose value can't be resolved (`from:nobody`, `before:yesterday`,
+`has:video`) is **reported in the results pane**, not silently dropped.
+Quoting a token (`"from:alice"`) searches for it as literal text.
 
-### Search Filters
+## How multi-word search actually works
 
-Filters narrow results by specific criteria. Type a filter prefix (e.g., `from:`) and a value with no space between them. Filters can be combined with each other and with free text.
+This is the part worth understanding, because it constrains what the UI can
+promise.
 
-| Filter | Syntax | What it does |
-|--------|--------|--------------|
-| **From user** | `from:alice` | Messages sent by a user (matches display name, partial match) |
-| **In channel** | `in:general` | Messages in a specific channel (partial match on channel name) |
-| **Has content** | `has:link` | Messages containing a specific content type |
-| **Before date** | `before:2026-04-01` | Messages sent before a date (YYYY-MM-DD) |
-| **After date** | `after:2026-03-01` | Messages sent after a date (YYYY-MM-DD) |
-| **Mentions** | `mentions:bob` | Messages that mention a user by name |
+NIP-50 leaves `search` semantics entirely up to the relay. The relays Obelisk
+ships against match the value as a **literal substring of the whole string**,
+case-insensitively — not as tokens. Measured against
+`wss://public.obelisk.ar`:
 
-#### `has:` values
+| Filter | Events |
+|---|---|
+| `search:"the"` | 16 — matches inside words, e.g. "in **the**ory" |
+| `search:"a"` | 50 |
+| `search:"hola"` / `search:"HOLA"` | 1 each — case-insensitive |
+| `search:"hola mundo"` | **0** |
+| `search:""` | 0 |
 
-| Value | Matches |
-|-------|---------|
-| `link` | Messages containing any URL (`http://` or `https://`) |
-| `image` | Messages containing image URLs (`.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`) |
-| `video` | Messages containing video URLs (`.mp4`, `.mov`, `.webm`) |
-| `file` | Messages containing file URLs |
+So sending a user's raw query straight through means **any multi-word search
+returns nothing**. Instead:
 
-### Combining Filters
+1. `relaySearchTerm()` picks the **longest** term and sends only that as
+   `search` — the most selective needle, and cheapest on a substring matcher.
+2. `matchesTerms()` applies the full AND across every term client-side.
+3. Quoted phrases pass through intact, since a literal substring match is
+   exactly what these relays are good at.
 
-Stack multiple filters in a single query:
+Because steps 2 and 3 discard events the relay already counted against
+`limit`, `searchMessages` **over-fetches** (`SEARCH_OVERFETCH_FACTOR`, capped
+by `SEARCH_MAX_FETCH`) whenever a client-side filter is active, then trims to
+`limit`. Without that, `has:image` would fetch the 30 newest messages, throw
+away 29, and read as "no results".
 
-```
-from:alice in:general has:link after:2026-01-01
-```
+### Relays without NIP-50
 
-Mix filters with free text:
+A relay that doesn't implement NIP-50 does not error — it **ignores the
+`search` field** and returns unfiltered recent events. Presenting those as
+hits would be silently wrong, so the bar reads `supported_nips` from the
+relay's NIP-11 document (`supportsSearch` in `src/lib/relay-info.ts`), omits
+`search` when 50 is absent, filters entirely client-side, and tells the user
+that only recent messages were scanned.
 
-```
-from:alice deployment error
-```
+## Scope
 
-Mix filters with exact phrases:
+Message search is **relay-wide by default**, across all channels on the
+active relay. A toggle in the results header narrows it to the current
+channel, and an explicit `in:` token always wins.
 
-```
-in:bugs "null pointer" before:2026-04-01
-```
+This stays on the active relay, per the single-relay rule in
+[CLAUDE.md](../CLAUDE.md) — search never fans out across configured relays.
 
-### Filter Hints
+## Results
 
-When the search input is focused and empty, a dropdown shows all available filters. Click any filter to insert it into the input.
+- Messages show author (display name, else `npub1…` — never a raw hex
+  prefix), channel, timestamp, and a two-line content preview.
+- Newest first. NIP-50 relevance ordering is relay-defined and not relied on.
+- `Load more` pages by re-querying with `until` = oldest result's
+  `created_at` − 1, and only appears while the result set is partial.
+- Clicking a result — or highlighting it with ↑/↓ and pressing Enter —
+  raises `pendingJump` on the chat store. The shell switches channel and
+  reuses the same scroll-and-flash path as the `?m=` deep link, which waits
+  for the message to load before scrolling.
 
-## Search Results
-
-Results appear in a dropdown panel below the search bar:
-
-- Each result shows the **author** (avatar + name), **channel** (`#channel-name`), **date/time**, and a **content preview** with search terms highlighted in green
-- Results are ordered newest first
-- Click **"Load more results"** at the bottom to paginate (25 results per page)
-- Click any result to **jump to that message** in its channel
-
-## Jump to Message
-
-When you click a search result:
-
-1. The app navigates to the result's channel
-2. The message list loads
-3. The target message scrolls into view and briefly highlights with a green flash (2 seconds)
-
-This works across channels — if you're in `#general` and click a result from `#bugs`, it switches to `#bugs` and scrolls to the message.
-
-## Keyboard Shortcuts
+## Keyboard
 
 | Key | Action |
-|-----|--------|
-| `Escape` | Close search and clear results |
+|---|---|
+| `↓` / `↑` | Move through message results |
+| `Enter` | Jump to the highlighted result (or run the query, committing it to history) |
+| `Escape` | Clear the query; again to close the pane |
 
-## Architecture
+The input is a `role="combobox"` with `aria-activedescendant` pointing at the
+highlighted `role="option"`; the result count is `aria-live="polite"`.
 
-### Query Parser (`src/lib/search.ts`)
+## Behaviour notes
 
-The parser tokenizes the raw query string into a structured `SearchQuery` object:
-
-```typescript
-interface SearchQuery {
-  text: string[];       // Free text terms and quoted phrases
-  from?: string;        // from: filter value
-  in?: string;          // in: filter value
-  has?: string;         // has: filter value (link, image, video, file)
-  before?: Date;        // before: date filter
-  after?: Date;         // after: date filter
-  mentions?: string;    // mentions: filter value
-}
-```
-
-The `buildSearchWhere()` function converts a `SearchQuery` into a Prisma `where` clause with `AND` conditions. It resolves human-readable names to database IDs:
-
-- `from:alice` → looks up "alice" in the server's member list → filters by `authorPubkey`
-- `in:general` → looks up "general" in the server's channel list → filters by `channelId`
-
-Name matching is **case-insensitive** and supports **partial matches** (e.g., `from:ali` matches "Alice").
-
-### API Route (`GET /api/search`)
-
-**Parameters:**
-
-| Param | Required | Description |
-|-------|----------|-------------|
-| `q` | Yes | Search query string |
-| `serverId` | Yes | Server to search within |
-| `cursor` | No | Pagination cursor (message ID) |
-| `limit` | No | Results per page (default 25, max 50) |
-
-**Auth:** Requires a valid session cookie. User must be a member of the target server.
-
-**Response:**
-
-```json
-{
-  "results": [
-    {
-      "id": "msg-id",
-      "channelId": "ch-id",
-      "channelName": "general",
-      "authorPubkey": "abc123...",
-      "content": "hello world",
-      "createdAt": "2026-04-09T12:00:00.000Z",
-      "editedAt": null,
-      "replyTo": null,
-      "reactions": []
-    }
-  ],
-  "nextCursor": "msg-id-25" // null if no more results
-}
-```
-
-**How it works:**
-
-1. Validates auth and server membership
-2. Loads all members and channels for the server (for name → ID resolution)
-3. Parses the query string with `parseSearchQuery()`
-4. Builds Prisma where clause with `buildSearchWhere()`
-5. Queries messages with cursor-based pagination
-6. Attaches channel names to each result
-
-### Client State (`src/store/search.ts`)
-
-Zustand store managing:
-
-- `query` — current search input text
-- `results` — array of `SearchResult` objects
-- `isSearching` — loading state
-- `isOpen` — whether the search bar is expanded
-- `cursor` / `hasMore` — pagination state
-
-### UI Component (`src/components/chat/SearchBar.tsx`)
-
-- **Collapsed state:** Magnifying glass icon button
-- **Expanded state:** Input field with search icon, spinner, and close button
-- **Debounced search:** 300ms delay after typing stops before firing API request
-- **Filter hints:** Dropdown with clickable filter prefixes when input is empty
-- **Results panel:** Scrollable dropdown with result cards
-- **Text highlighting:** Search terms are highlighted in green within result previews
-
-### Jump-to-Message (`src/components/chat/MessageArea.tsx`)
-
-When a search result is clicked:
-
-1. `SearchBar.handleJump()` sets `activeChannelId` and `highlightedMessageId` in the chat store
-2. `MessageArea` detects `highlightedMessageId` change via `useEffect`
-3. Scrolls the target message into view with `scrollIntoView({ behavior: 'smooth', block: 'center' })`
-4. Applies a green background highlight that fades after 2 seconds
-5. Clears `highlightedMessageId` after the animation
+- **Live.** Message search is debounced (250 ms) and runs as you type, like
+  the Users and Channels sections beside it.
+- **No stale overwrites.** Every query carries a sequence id; a slow earlier
+  response that lands after a newer one is dropped, and results, errors, and
+  the count are cleared the moment the query changes.
+- **History** records only explicit commits (Enter or the submit button), not
+  every keystroke prefix, and appears immediately.
 
 ## Limitations
 
-- **Text matching uses `contains`** (SQL `LIKE '%term%'`), not full-text search. This is case-sensitive on PostgreSQL by default. For case-insensitive search at scale, consider adding PostgreSQL `tsvector` indexes or switching to a dedicated search engine.
-- **`has:` filters use heuristics** — they check for file extension strings in message content, not actual attachment metadata. A message saying "I like .jpg files" would match `has:image`.
-- **`from:` resolves the first partial match** — if multiple members match the search term, only the first one found is used.
-- **No boolean operators** — AND is implicit between terms, but OR and NOT are not supported.
-- **No regex support** — use exact phrases for precise matching.
-- **Forum post titles** are not searched separately — only message `content` is searched. Forum post titles are stored in the `title` field, which could be added as an additional search target.
+- **Substring, not full-text.** No stemming, ranking, or relevance ordering —
+  `has:image` on the relay side is impossible, and `the` matches `theory`.
+- **`has:` uses heuristics** — it looks for URL/extension patterns in message
+  content, not attachment metadata. "I like .jpg files" matches `has:image`.
+- **`from:` / `in:` resolve to the first partial match** among known relay
+  members and your channels. Someone who has never appeared in a member list
+  can only be targeted by npub or hex.
+- **No boolean operators.** AND is implicit; OR and NOT are unsupported.
+- **Publication titles** aren't searched by the message bar — only message
+  content. The search-or-create bar inside a publications channel filters
+  titles locally.
 
-## Future Improvements
+## Tests
 
-- **PostgreSQL full-text search** — add `tsvector` column and GIN index for faster, case-insensitive, stemmed search
-- **Keyboard navigation** — arrow keys to navigate results, Enter to jump
-- **Search history** — remember recent searches
-- **Result count** — show total matches
-- **Boolean operators** — support `OR` and `-term` (NOT) syntax
-- **Forum title search** — include `title` field in search scope
-- **Saved searches / pinned filters** — frequently used filter combinations
+- `src/lib/search-query.test.ts` — grammar, phrases, dates, term splitting,
+  AND matching, unresolved tokens.
+- `src/lib/nostr-bridge/bridge.test.ts` (`describe('searchMessages')`) —
+  single-term relay filter, over-fetch before `has:`, trim + partial flag,
+  phrase contiguity, NIP-50-absent fallback.
+- `src/app/app/SearchBar.test.tsx` — debounce, race, stale clearing, scope
+  toggle, keyboard, paging, jump.
+- `src/app/app/mobile/search-screen.test.tsx` — mobile parity.

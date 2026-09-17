@@ -232,6 +232,38 @@ Two engines, one client surface:
 
 The SFU server is a separate repo: **[obelisk-app/obelisk-sfu](https://github.com/obelisk-app/obelisk-sfu)** (mediasoup, Nostr-RPC signaling, allow-list, deploy). Synthetic test peers used to drive the SFU now live in that repo under `scripts/test-peers/` and can be spawned manually OR via the SFU's admin UI (`/admin` → "Spawn test peer").
 
+## Vocabulary: "publications", not "forums"
+
+Forum-kind channels are called **Publications** in every user-facing string
+(a single one is "a publication"). The old "forum" / "thread" wording is
+gone from the UI, SEO metadata, and both locale files.
+
+Nothing below the UI changed, and none of it should:
+
+| Stays `forum` | Where |
+|---|---|
+| `["t","forum"]` channel marker | kind 9002 / 39000 tags |
+| `["forum-tag", id, name, emoji?, color?]` | container metadata |
+| `channelKind === 'forum'` | `JsGroup['kind']` union |
+| `JsForumTag`, `JsGroup.forumTags`, `topics` | `types.ts` |
+| `ForumView.tsx` and every component name | `src/` |
+| `data-testid="forum-*"`, `.forum-*` CSS, `data-screen="forum"` | both shells |
+| `obelisk-dex/forum-prefs/*`, `obelisk-dex/forum-collapsed/*` | localStorage |
+
+So: renaming an identifier is a wire/compat change, renaming a string is
+copy. When adding a user-visible label, say "publication". The one place
+that maps kind id → label is `CHANNEL_KIND_LABEL` in `mobile/PhoneShell.tsx`
+— the mobile picker used to derive its label from the kind id and therefore
+printed "Forum" no matter what the strings said.
+
+Tag colors live in `src/lib/forum-tag-colors.ts`: a curated palette, chosen
+by the admin (persisted as slot 4 of `forum-tag`) or derived from a hash of
+the tag id. Returns raw color strings rather than Tailwind classes, because
+desktop styles with `lc-*` utilities and mobile with `--app-*` CSS
+variables — inline `style` is the only thing both consume. An unrecognised
+color key from a relay falls back to the derived color; never pass a
+relay-supplied string into a style attribute.
+
 ## Design System (La Crypta)
 - **Background:** `lc-black` (#0a0a0a) with subtle grid pattern
 - **Cards:** `lc-dark` (#171717) with `lc-border` (#262626), 12px radius

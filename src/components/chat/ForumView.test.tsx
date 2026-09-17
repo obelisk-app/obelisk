@@ -121,8 +121,8 @@ describe('ForumView chrome', () => {
     const forum = makeForum({
       id: 'forum-1',
       forumTags: [
-        { id: 'tag-a', name: 'LaCrypta', emoji: '📜' },
-        { id: 'tag-b', name: 'trabajo', emoji: null },
+        { id: 'tag-a', name: 'LaCrypta', emoji: '📜', color: null },
+        { id: 'tag-b', name: 'trabajo', emoji: null, color: null },
       ],
     });
     mockGroups = [forum];
@@ -133,6 +133,32 @@ describe('ForumView chrome', () => {
     expect(screen.getByTestId('forum-tag-tag-b')).toBeTruthy();
     // The "All" chip is active by default (no tag selected).
     expect(screen.getByTestId('forum-tag-all').getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('gives each tag its own color, and honours an admin-chosen one', () => {
+    const forum = makeForum({
+      id: 'forum-1',
+      forumTags: [
+        { id: 'tag-a', name: 'Hardware', emoji: null, color: 'amber' },
+        { id: 'tag-b', name: 'Software', emoji: null, color: 'cyan' },
+        { id: 'tag-c', name: 'Derived', emoji: null, color: null },
+      ],
+    });
+    mockGroups = [forum];
+
+    render(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
+
+    const a = screen.getByTestId('forum-tag-tag-a').style.color;
+    const b = screen.getByTestId('forum-tag-tag-b').style.color;
+    const c = screen.getByTestId('forum-tag-tag-c').style.color;
+    expect(a).toBe('rgb(251, 191, 36)');   // amber
+    expect(b).toBe('rgb(34, 211, 238)');   // cyan
+    expect(a).not.toBe(b);
+    // An uncoloured tag still gets a color, derived from its id.
+    expect(c).toBeTruthy();
+
+    // The "All" chip is a control, not a category — it stays neutral.
+    expect(screen.getByTestId('forum-tag-all').style.color).toBe('');
   });
 
   it('renders only the trailing "All" chip when the forum has no curated tags', () => {
@@ -199,9 +225,9 @@ describe('ForumView thread filtering & sorting', () => {
     const forum = makeForum({
       id: 'forum-1',
       forumTags: [
-        { id: 'tag-a', name: 'tagA', emoji: null },
-        { id: 'tag-b', name: 'tagB', emoji: null },
-        { id: 'tag-c', name: 'tagC', emoji: null },
+        { id: 'tag-a', name: 'tagA', emoji: null, color: null },
+        { id: 'tag-b', name: 'tagB', emoji: null, color: null },
+        { id: 'tag-c', name: 'tagC', emoji: null, color: null },
       ],
     });
     const t1 = makeThread({ id: 'thread-old', name: 'older thread', parent: 'forum-1', topics: ['tag-a'] });
@@ -243,6 +269,31 @@ describe('ForumView thread filtering & sorting', () => {
     });
     const create = screen.getByTestId('forum-create-from-search');
     expect(create.textContent).toContain('something completely new');
+  });
+
+  it('pressing Enter on an exact title match opens that thread', () => {
+    // Regression: submit was gated on `!exactMatch`, so Enter on a query
+    // that exactly matched an existing title did nothing at all.
+    render(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
+    const input = screen.getByTestId('forum-search-input');
+    fireEvent.change(input, { target: { value: 'newest thread' } });
+    fireEvent.submit(input.closest('form')!);
+    expect(onSelectThread).toHaveBeenCalledWith('thread-new');
+  });
+
+  it('Enter on an exact title match is case-insensitive', () => {
+    render(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
+    const input = screen.getByTestId('forum-search-input');
+    fireEvent.change(input, { target: { value: 'NEWEST THREAD' } });
+    fireEvent.submit(input.closest('form')!);
+    expect(onSelectThread).toHaveBeenCalledWith('thread-new');
+  });
+
+  it('Enter on a blank query does nothing', () => {
+    render(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
+    const input = screen.getByTestId('forum-search-input');
+    fireEvent.submit(input.closest('form')!);
+    expect(onSelectThread).not.toHaveBeenCalled();
   });
 
   it('clicking a tag chip filters threads to those carrying that topic (match-any)', () => {
@@ -346,8 +397,8 @@ describe('NewThreadModal tag picker', () => {
       makeForum({
         id: 'forum-1',
         forumTags: [
-          { id: 'tag-a', name: 'tagA', emoji: '📜' },
-          { id: 'tag-b', name: 'tagB', emoji: null },
+          { id: 'tag-a', name: 'tagA', emoji: '📜', color: null },
+          { id: 'tag-b', name: 'tagB', emoji: null, color: null },
         ],
       }),
     ];
@@ -378,8 +429,8 @@ describe('NewThreadModal tag picker', () => {
       makeForum({
         id: 'forum-1',
         forumTags: [
-          { id: 'tag-a', name: 'tagA', emoji: null },
-          { id: 'tag-b', name: 'tagB', emoji: null },
+          { id: 'tag-a', name: 'tagA', emoji: null, color: null },
+          { id: 'tag-b', name: 'tagB', emoji: null, color: null },
         ],
       }),
     ];

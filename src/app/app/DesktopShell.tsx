@@ -107,7 +107,8 @@ import MentionAutocomplete from '@/components/chat/MentionAutocomplete';
 import SlashCommandAutocomplete, { SLASH_COMMANDS, type SlashCommand } from '@/components/chat/SlashCommandAutocomplete';
 import SlashCommandScaffold, { scaffoldMentionSlotQuery, scaffoldMentionSlotRange } from '@/components/chat/SlashCommandScaffold';
 import { applyMentionToDraft, filterMembers, relayMentionCandidates, resolveDraftMentions, type DraftMention } from '@/lib/mentions';
-import { npubToHex } from '@nostr-wot/data';
+import { npubToHex, hexToNpub, formatPubkey } from '@nostr-wot/data';
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 import {
   applyLayout,
   relayOperatorAuthors,
@@ -116,6 +117,7 @@ import {
   type ChannelLayout,
 } from '@/lib/channel-layout';
 import { useChannelLayoutEditor } from '@/hooks/useChannelLayoutEditor';
+import { paletteForTag, tagChipStyle, TAG_PALETTES } from '@/lib/forum-tag-colors';
 import {
   useRelayBranding,
   publishBranding,
@@ -204,6 +206,19 @@ export default function AppShell() {
   }, []);
 
   const [pendingMessageId, setPendingMessageId] = useState<string | null>(null);
+
+  // Search results ask to jump here (see `pendingJump` in the chat store).
+  // The search bar is mounted inside the channel header, several levels
+  // below this state, so the store is the handoff. We reuse the same
+  // `pendingMessageId` path the `?m=` deep link uses — it already waits for
+  // the message to load before scrolling and flashing.
+  const pendingJump = useChatStore((s) => s.pendingJump);
+  useEffect(() => {
+    if (!pendingJump) return;
+    void nostrActions.setActiveGroup(pendingJump.groupId);
+    setPendingMessageId(pendingJump.messageId);
+    useChatStore.getState().consumeJump();
+  }, [pendingJump]);
 
   // Deep-link: ?c=<groupId>[&m=<messageId>][&relay=<host>] auto-selects a
   // channel on first render, switches to the requested relay, and (when m is
@@ -1530,8 +1545,8 @@ function GroupNode({
           <button
             onClick={toggleCollapsed}
             className="flex shrink-0 items-center justify-center px-2 py-1.5 text-lc-white/70 hover:text-lc-green"
-            aria-label={collapsed ? 'Expand threads' : 'Collapse threads'}
-            title={collapsed ? 'Expand threads' : 'Collapse threads'}
+            aria-label={collapsed ? 'Expand publications' : 'Collapse publications'}
+            title={collapsed ? 'Expand publications' : 'Collapse publications'}
           >
             <svg
               className={`h-3.5 w-3.5 transition-transform duration-150 ${collapsed ? '' : 'rotate-90'}`}
@@ -3897,7 +3912,7 @@ function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClose: () 
                   onClick={() => setChannelKind('text')}
                   icon="💬"
                   title="Text"
-                  subtitle="Messages, threads, reactions"
+                  subtitle="Messages, replies, reactions"
                 />
                 <ToggleCard
                   active={channelKind === 'voice'}
@@ -3917,8 +3932,8 @@ function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClose: () 
                   active={channelKind === 'forum'}
                   onClick={() => setChannelKind('forum')}
                   icon="📋"
-                  title="Forum"
-                  subtitle="Threaded posts with replies"
+                  title="Publications"
+                  subtitle="A feed of publications, each with its own chat"
                 />
               </div>
               {channelKind === 'voice' && (
@@ -3979,9 +3994,10 @@ function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClose: () 
               )}
               {channelKind === 'forum' && (
                 <p className="text-[11px] text-lc-muted">
-                  Adds a <code className="text-lc-white/80">[&quot;t&quot;,&quot;forum&quot;]</code> tag. The
-                  channel renders as a list of threaded posts (NIP-29 kind 11) with replies (kind 12)
-                  instead of a chat stream.
+                  Adds a <code className="text-lc-white/80">[&quot;t&quot;,&quot;forum&quot;]</code> tag
+                  (the wire value keeps its original name). The channel renders as a feed of
+                  publications instead of a chat stream — each publication is its own channel,
+                  with its own conversation.
                 </p>
               )}
             </section>
@@ -3989,13 +4005,14 @@ function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClose: () 
             {channelKind === 'forum' && (
               <section className="space-y-3" data-testid="forum-tags-editor">
                 <SectionHeader
-                  title="Forum tags"
-                  hint="Curated; emit as forum-tag NIP-29 metadata"
+                  title="Publication tags"
+                  hint="Curated; emitted as forum-tag NIP-29 metadata"
                 />
                 <p className="text-[11px] text-lc-muted">
-                  Pick a small set of categories so members can browse threads by topic.
-                  Each thread creator picks from this list — they can&apos;t invent new tags.
-                  Emoji is optional but helps the chip row scan at a glance.
+                  Pick a small set of categories so members can browse publications by topic.
+                  Authors pick from this list — they can&apos;t invent new tags. Each tag gets
+                  its own colour automatically; set one explicitly if you want a specific
+                  hue. Emoji is optional but helps the chip row scan at a glance.
                 </p>
                 <ForumTagsEditor value={forumTags} onChange={setForumTags} />
               </section>
@@ -4021,18 +4038,31 @@ function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClose: () 
                 onChange={(e) => setNewMember(e.target.value)}
                 placeholder="npub1… or hex pubkey"
                 spellCheck={false}
+                aria-label="Member npub or hex pubkey"
                 className={inputClasses + ' flex-1 min-w-[12rem]'}
               />
-              <label className="flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-lc-border bg-lc-black px-2.5 py-1.5 text-xs text-lc-muted">
-                <input type="checkbox" checked={makeAdmin} onChange={(e) => setMakeAdmin(e.target.checked)} />
-                admin
-              </label>
+              {/* A bare checkbox reads as a form field; as a toggle chip it
+                  reads as the role the new member will get. */}
+              <button
+                type="button"
+                onClick={() => setMakeAdmin((v) => !v)}
+                aria-pressed={makeAdmin}
+                data-testid="add-member-admin-toggle"
+                className={
+                  'shrink-0 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ' +
+                  (makeAdmin
+                    ? 'border-lc-green/40 bg-lc-green/15 text-lc-green'
+                    : 'border-lc-border text-lc-muted hover:border-lc-muted hover:text-lc-white')
+                }
+              >
+                {makeAdmin ? '👑 As admin' : 'As admin'}
+              </button>
               <button
                 type="submit"
                 disabled={memberBusy || !newMember.trim()}
-                className="shrink-0 rounded-lg bg-lc-green px-4 py-1.5 text-sm font-semibold text-lc-black disabled:opacity-50"
+                className="shrink-0 rounded-full bg-lc-green px-4 py-1.5 text-sm font-semibold text-lc-black transition-opacity disabled:opacity-50"
               >
-                {memberBusy ? '…' : 'Add'}
+                {memberBusy ? 'Adding…' : 'Add'}
               </button>
             </form>
             {memberErr && <div className="text-sm text-red-400">{memberErr}</div>}
@@ -4128,7 +4158,8 @@ function newForumTagId(): string {
   return Math.random().toString(36).slice(2, 10);
 }
 
-function ForumTagsEditor({
+// Exported for tests only — mounted internally by ChannelSettingsModal.
+export function ForumTagsEditor({
   value,
   onChange,
 }: {
@@ -4145,13 +4176,13 @@ function ForumTagsEditor({
   };
   const addTag = () => {
     if (value.length >= MAX) return;
-    onChange([...value, { id: newForumTagId(), name: '', emoji: null }]);
+    onChange([...value, { id: newForumTagId(), name: '', emoji: null, color: null }]);
   };
   return (
     <div className="space-y-2">
       {value.length === 0 && (
         <div className="rounded-lg border border-dashed border-lc-border px-3 py-3 text-center text-xs text-lc-muted">
-          No tags yet. Add one to give thread creators something to pick.
+          No tags yet. Add one to give publication authors something to pick.
         </div>
       )}
       {value.map((tag, idx) => (
@@ -4160,6 +4191,10 @@ function ForumTagsEditor({
           className="flex items-center gap-2 rounded-lg border border-lc-border bg-lc-black px-2 py-1.5"
           data-testid={`forum-tag-row-${tag.id}`}
         >
+          <TagColorPicker
+            tag={tag}
+            onPick={(color) => updateAt(idx, { color })}
+          />
           <input
             type="text"
             value={tag.emoji ?? ''}
@@ -4182,10 +4217,30 @@ function ForumTagsEditor({
             onChange={(e) => updateAt(idx, { name: e.target.value })}
             placeholder="Tag name"
             maxLength={40}
-            className="flex-1 min-w-0 rounded-md border border-lc-border bg-lc-dark px-2 py-1 text-sm text-lc-white outline-none focus:border-lc-green/60"
+            className="min-w-0 flex-1 rounded-md border border-lc-border bg-lc-dark px-2 py-1 text-sm text-lc-white outline-none focus:border-lc-green/60"
             aria-label="Tag name"
             data-testid={`forum-tag-name-${tag.id}`}
           />
+          {/* Shows the result rather than describing it: this is exactly how
+              the chip renders in the filter row. */}
+          {tag.name.trim() && (
+            <span
+              style={tagChipStyle(tag)}
+              className="hidden shrink-0 items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-medium sm:flex"
+              data-testid={`forum-tag-preview-${tag.id}`}
+            >
+              {tag.emoji ? (
+                <span className="leading-none">{tag.emoji}</span>
+              ) : (
+                <span
+                  aria-hidden
+                  className="h-1.5 w-1.5 shrink-0 rounded-full"
+                  style={{ background: paletteForTag(tag).text }}
+                />
+              )}
+              <span className="max-w-[7rem] truncate">{tag.name}</span>
+            </span>
+          )}
           <button
             type="button"
             onClick={() => removeAt(idx)}
@@ -4213,42 +4268,206 @@ function ForumTagsEditor({
   );
 }
 
-function ManageMemberRow({ groupId, pubkey, isAdmin }: { groupId: string; pubkey: string; isAdmin: boolean }) {
-  const meta = useProfile(pubkey);
+/**
+ * Swatch button + popover for a publication tag's color.
+ *
+ * "Auto" clears the override back to `null`, which leaves the color derived
+ * from the tag id — so a tag is never uncolored, only un-overridden.
+ */
+function TagColorPicker({
+  tag,
+  onPick,
+}: {
+  tag: JsForumTag;
+  onPick: (color: string | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+  const current = paletteForTag(tag);
   return (
-    <div className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-lc-card">
+    <div className="relative shrink-0" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex h-7 w-7 items-center justify-center rounded-md border border-lc-border bg-lc-dark hover:border-lc-muted"
+        style={{ borderColor: current.border }}
+        aria-label={`Tag color: ${tag.color ? current.label : 'automatic'}`}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        data-testid={`forum-tag-color-${tag.id}`}
+      >
+        <span
+          className="h-3.5 w-3.5 rounded-full"
+          style={{ background: current.text }}
+        />
+      </button>
+      {open && (
+        <div
+          role="menu"
+          className="absolute left-0 top-full z-40 mt-1.5 w-44 rounded-xl border border-lc-border bg-lc-dark p-2 shadow-xl"
+          data-testid={`forum-tag-color-menu-${tag.id}`}
+        >
+          <div className="grid grid-cols-5 gap-1.5">
+            {TAG_PALETTES.map((p) => (
+              <button
+                key={p.key}
+                type="button"
+                onClick={() => { onPick(p.key); setOpen(false); }}
+                title={p.label}
+                aria-label={p.label}
+                aria-pressed={tag.color === p.key}
+                className={
+                  'flex h-6 w-6 items-center justify-center rounded-full border transition-transform hover:scale-110 ' +
+                  (tag.color === p.key ? 'border-lc-white' : 'border-transparent')
+                }
+                style={{ background: p.text }}
+                data-testid={`forum-tag-color-opt-${p.key}`}
+              />
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => { onPick(null); setOpen(false); }}
+            className={
+              'mt-2 w-full rounded-md px-2 py-1 text-left text-[11px] hover:bg-lc-card ' +
+              (tag.color === null ? 'text-lc-green' : 'text-lc-muted hover:text-lc-white')
+            }
+            data-testid={`forum-tag-color-auto-${tag.id}`}
+          >
+            Auto {tag.color === null && '·  in use'}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Exported for tests only — mounted internally by ChannelSettingsModal.
+export function ManageMemberRow({ groupId, pubkey, isAdmin }: { groupId: string; pubkey: string; isAdmin: boolean }) {
+  const meta = useProfile(pubkey);
+  // Which destructive action this row is currently asking about. An inline
+  // confirm keeps the question attached to the row it's about — a
+  // `window.confirm` dialog names a person out of context and blocks the tab.
+  const [confirming, setConfirming] = useState<null | 'demote' | 'remove'>(null);
+  const { copy, copied } = useCopyToClipboard();
+  const name = meta?.displayName || meta?.name || formatPubkey(pubkey);
+  const npub = hexToNpub(pubkey);
+
+  if (confirming) {
+    const demoting = confirming === 'demote';
+    return (
+      <div
+        className="flex items-center gap-2 rounded-lg border border-lc-border bg-lc-black px-2 py-1.5"
+        data-testid={`member-confirm-${pubkey}`}
+      >
+        <span className="min-w-0 flex-1 truncate text-xs text-lc-white">
+          {demoting ? `Demote ${name} to member?` : `Remove ${name} from the channel?`}
+        </span>
+        <button
+          type="button"
+          onClick={() => setConfirming(null)}
+          className="shrink-0 rounded-full px-2.5 py-1 text-xs text-lc-muted hover:bg-lc-card hover:text-lc-white"
+          data-testid={`member-confirm-cancel-${pubkey}`}
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            if (demoting) void nostrActions.removePermission(groupId, pubkey, ['admin']);
+            else void nostrActions.removeUser(groupId, pubkey);
+            setConfirming(null);
+          }}
+          className={
+            'shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ' +
+            (demoting ? 'bg-lc-card text-lc-white hover:bg-lc-border' : 'bg-red-500/90 text-white hover:bg-red-500')
+          }
+          data-testid={`member-confirm-ok-${pubkey}`}
+        >
+          {demoting ? 'Demote' : 'Remove'}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="group flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-lc-card">
       <Avatar pubkey={pubkey} size={7} picture={meta?.picture ?? null} />
       <div className="min-w-0 flex-1">
-        <div className="truncate text-sm text-lc-white">
-          {meta?.displayName || meta?.name || pubkey.slice(0, 10)}
-          {isAdmin && <span className="ml-1 text-xs">👑</span>}
+        <div className="flex items-center gap-1.5">
+          <span className="truncate text-sm text-lc-white">{name}</span>
+          <MemberRoleBadge isAdmin={isAdmin} />
         </div>
-        <div className="truncate font-mono text-[10px] text-lc-muted">{pubkey.slice(0, 32)}…</div>
-      </div>
-      {isAdmin && (
         <button
-          onClick={() => {
-            if (confirm(`Demote ${meta?.name || pubkey.slice(0, 12)} to plain member?`)) {
-              nostrActions.removePermission(groupId, pubkey, ['admin']);
-            }
-          }}
-          className="rounded px-2 py-0.5 text-xs text-lc-muted hover:bg-lc-dark hover:text-lc-white"
-          title="Strip admin role; keep them in the channel as a regular member."
+          type="button"
+          onClick={() => copy(npub)}
+          title={npub}
+          className="block max-w-full truncate font-mono text-[10px] text-lc-muted hover:text-lc-white"
+          data-testid={`member-npub-${pubkey}`}
         >
-          Demote
+          {copied ? 'Copied' : npub}
         </button>
-      )}
-      <button
-        onClick={() => {
-          if (confirm(`Remove ${meta?.name || pubkey.slice(0, 12)} from channel?`)) {
-            nostrActions.removeUser(groupId, pubkey);
-          }
-        }}
-        className="rounded px-2 py-0.5 text-xs text-red-400 hover:bg-lc-dark"
-      >
-        Remove
-      </button>
+      </div>
+      {/* Dimmed until the row is hovered or something inside it has focus, so
+          a long member list isn't a wall of red text. `focus-within` keeps it
+          reachable by keyboard. */}
+      <div className="flex shrink-0 items-center gap-1 opacity-60 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+        {isAdmin && (
+          <button
+            type="button"
+            onClick={() => setConfirming('demote')}
+            className="rounded-full px-2.5 py-1 text-xs text-lc-muted hover:bg-lc-dark hover:text-lc-white"
+            title="Strip admin role; keep them in the channel as a regular member."
+            aria-label={`Demote ${name}`}
+            data-testid={`member-demote-${pubkey}`}
+          >
+            Demote
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => setConfirming('remove')}
+          className="rounded-full px-2.5 py-1 text-xs text-red-400 hover:bg-red-500/10 hover:text-red-300"
+          aria-label={`Remove ${name}`}
+          data-testid={`member-remove-${pubkey}`}
+        >
+          Remove
+        </button>
+      </div>
     </div>
+  );
+}
+
+/**
+ * Admin / member pill for the channel-settings member list. Replaces a bare
+ * 👑 emoji, which carried no label. Distinct from the imported `RoleBadge`,
+ * which renders operator-defined relay roles (see docs/relay-roles.md).
+ */
+function MemberRoleBadge({ isAdmin }: { isAdmin: boolean }) {
+  return (
+    <span
+      className={
+        'shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider ' +
+        (isAdmin
+          ? 'border-lc-green/40 bg-lc-green/15 text-lc-green'
+          : 'border-lc-border text-lc-muted')
+      }
+    >
+      {isAdmin ? 'Admin' : 'Member'}
+    </span>
   );
 }
 

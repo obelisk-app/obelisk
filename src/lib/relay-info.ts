@@ -16,9 +16,28 @@ export type RelayInfo = {
    *  authoritative author for shared metadata like the channel layout. */
   pubkey?: string;
   contact?: string;
+  /** NIP-11 `supported_nips`. Search needs it to tell a relay that honours
+   *  the NIP-50 `search` field from one that silently ignores it and hands
+   *  back unfiltered recent events. */
+  supportedNips?: ReadonlyArray<number>;
   /** When the entry was fetched (ms epoch). Used for TTL. */
   fetchedAt: number;
 };
+
+/** NIP-50 (`search` filter field). */
+export const NIP_SEARCH = 50;
+
+/**
+ * Whether a relay advertises NIP-50. `null` info (fetch failed, or not yet
+ * fetched) is treated as *supported* — assuming otherwise would make every
+ * search fall back to client-side-only matching on a cold cache, which is
+ * far worse than occasionally trusting a relay that turns out not to
+ * filter. Callers that need certainty should await `fetchRelayInfo` first.
+ */
+export function supportsSearch(info: RelayInfo | null): boolean {
+  if (!info || !info.supportedNips) return true;
+  return info.supportedNips.includes(NIP_SEARCH);
+}
 
 export function suggestedRelaysFromEnv(value?: string): ReadonlyArray<{ url: string }> {
   return [...new Set((value ?? '').split(',').map((url) => url.trim()).filter((url) => {
@@ -82,13 +101,18 @@ export async function fetchRelayInfo(wsUrl: string): Promise<RelayInfo | null> {
         signal: ctl.signal,
       });
       if (!res.ok) return null;
-      const json = (await res.json()) as { name?: string; description?: string; icon?: string; pubkey?: string; contact?: string };
+      const json = (await res.json()) as { name?: string; description?: string; icon?: string; pubkey?: string; contact?: string; supported_nips?: unknown };
       const info: RelayInfo = {
         name: typeof json.name === 'string' ? json.name : undefined,
         description: typeof json.description === 'string' ? json.description : undefined,
         icon: typeof json.icon === 'string' ? json.icon : undefined,
         pubkey: typeof json.pubkey === 'string' && /^[0-9a-f]{64}$/i.test(json.pubkey) ? json.pubkey.toLowerCase() : undefined,
         contact: typeof json.contact === 'string' ? json.contact : undefined,
+        // Some relays list NIPs as strings ("50") or as extension names
+        // ("nip50"); keep only the plain numbers rather than guessing.
+        supportedNips: Array.isArray(json.supported_nips)
+          ? json.supported_nips.filter((n): n is number => typeof n === 'number')
+          : undefined,
         fetchedAt: Date.now(),
       };
       const next = cacheStore.load();

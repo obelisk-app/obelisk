@@ -6,6 +6,13 @@ export interface JsForumTag {
   readonly name: string;
   /** Single emoji char (or short pictograph). `null` when the admin didn't set one. */
   readonly emoji: string | null;
+  /**
+   * Palette key chosen by the forum admin (see `src/lib/forum-tag-colors.ts`),
+   * carried as slot 4 of the `forum-tag` metadata tag. `null` when unset — the
+   * chip color is then derived from `id`, so every tag is colored either way.
+   * An unrecognised value is treated as `null`; this comes off a relay.
+   */
+  readonly color: string | null;
 }
 
 export interface JsGroup {
@@ -94,6 +101,48 @@ export interface JsMessage {
   readonly pending?: boolean;
   readonly failed?: boolean;
   readonly clientTag?: string;
+}
+
+/** A message search hit — a `JsMessage` plus the group it came from. */
+export type JsSearchHit = JsMessage & { readonly groupId: string | null };
+
+export interface JsSearchOptions {
+  /**
+   * Terms to match. ALL must be present in a message (AND).
+   *
+   * Only the most selective term is handed to the relay as the NIP-50
+   * `search` field — relays match it as a literal substring of the whole
+   * value, so passing a multi-word string returns nothing. The full AND is
+   * applied client-side. See `src/lib/search-query.ts`.
+   */
+  readonly terms?: ReadonlyArray<{ readonly text: string; readonly phrase: boolean }>;
+  readonly groupIds?: ReadonlyArray<string>;
+  readonly authors?: ReadonlyArray<string>;
+  readonly mentions?: ReadonlyArray<string>;
+  readonly has?: ReadonlyArray<'link' | 'image' | 'file'>;
+  readonly since?: number;
+  readonly until?: number;
+  /** Hits to return after all filtering. Defaults to 50. */
+  readonly limit?: number;
+  /**
+   * When false, the relay is known not to honour NIP-50 (`supported_nips`
+   * lacks 50), so the `search` field is omitted and matching happens purely
+   * client-side over whatever the other filters return.
+   */
+  readonly relaySupportsSearch?: boolean;
+}
+
+export interface JsSearchResponse {
+  readonly hits: ReadonlyArray<JsSearchHit>;
+  /**
+   * True when the relay did not finish answering (timeout) or when
+   * client-side filtering consumed the whole over-fetched window, so there
+   * are probably more matches than shown. The UI should say so rather than
+   * present a truncated list as complete.
+   */
+  readonly partial: boolean;
+  /** False when the relay does not advertise NIP-50 and matching was local. */
+  readonly relayFiltered: boolean;
 }
 
 export interface JsUserMetadata {

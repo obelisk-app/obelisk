@@ -29,12 +29,30 @@ const SEARCH_DEBOUNCE_MS = 250;
 /**
  * NIP-50 search isn't universally supported; query a couple of indexers in
  * parallel so a flaky single relay doesn't silently kill the whole feature.
+ *
+ * These are deliberately *not* the active relay: this is profile discovery
+ * (kind 0), the same category as `DEFAULT_PROFILE_LOOKUP_RELAYS` in the
+ * bridge, not group data. The single-relay rule in CLAUDE.md scopes group
+ * traffic; profile lookups have always been allowed to fan out. They are
+ * also not all equally healthy — measured 2026-09-17, `search.nos.today`
+ * answered in ~900ms, `relay.noswhere.com` EOSE'd instantly with an empty
+ * index, and `relay.nostr.band` errored after ~10s.
  */
 export const NIP50_RELAYS = [
   'wss://relay.nostr.band',
   'wss://relay.noswhere.com',
   'wss://search.nos.today',
 ];
+
+/**
+ * Deliberately short. `useNostrQuery` resolves only when *every* relay
+ * EOSEs, so the slowest (or dead) relay sets the floor — and its cleanup
+ * marks the query cancelled without closing the subscription, so a long
+ * timeout also means a long-lived orphaned REQ per keystroke. Capping this
+ * bounds both the spinner and the leak. Upstream fix belongs in
+ * `@nostr-wot/data`.
+ */
+const QUERY_TIMEOUT_MS = 3500;
 
 const NIP05_RE = /^([a-z0-9._-]+)@([a-z0-9.-]+\.[a-z]{2,})$/i;
 
@@ -135,7 +153,7 @@ export function useNostrUserSearch(rawQuery: string): NostrUserSearchResult {
   const { events, loading: queryLoading } = useNostrQuery(filters, {
     enabled,
     relays: NIP50_RELAYS,
-    timeoutMs: 10000,
+    timeoutMs: QUERY_TIMEOUT_MS,
   });
 
   const nostrResults = useMemo<UserHit[]>(() => {
@@ -159,10 +177,17 @@ export function useNostrUserSearch(rawQuery: string): NostrUserSearchResult {
     return out;
   }, [events, enabled, nip05Hit]);
 
+  // While the debounce window is open, `debounced` still holds the PREVIOUS
+  // query — so `nostrResults` describes text the user has already moved on
+  // from. Reporting `loading` here keeps the caller from rendering those
+  // stale hits (and a "no matches" flash) as a settled answer for the new
+  // query.
+  const debouncing = trimmed !== debounced;
+
   return {
     directHit,
     nip05Hit,
-    nostrResults,
-    loading: enabled && (queryLoading || nip05Loading),
+    nostrResults: debouncing ? [] : nostrResults,
+    loading: debouncing || (enabled && (queryLoading || nip05Loading)),
   };
 }
