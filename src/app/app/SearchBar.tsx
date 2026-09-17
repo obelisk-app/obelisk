@@ -638,7 +638,10 @@ function ChannelsSection({ query, t, onClose }: { query: string; t: (key: string
   if (matches.length === 0) return null;
 
   const pick = (g: JsGroup) => {
-    void nostrActions.setActiveGroup(g.id);
+    // `setActiveGroup` only moves the relay subscription — the shell decides
+    // what's rendered, so calling it from here left the user staring at the
+    // channel they were already in. Go through the shell.
+    useChatStore.getState().requestJump(g.id);
     onClose();
   };
 

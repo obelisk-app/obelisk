@@ -215,8 +215,13 @@ export default function AppShell() {
   const pendingJump = useChatStore((s) => s.pendingJump);
   useEffect(() => {
     if (!pendingJump) return;
-    void nostrActions.setActiveGroup(pendingJump.groupId);
-    setPendingMessageId(pendingJump.messageId);
+    // Navigate via `setView` — NOT `bridge.setActiveGroup`. What's on screen
+    // is this component's `view` state; the bridge call only moves the relay
+    // subscription, so calling it alone changes the data behind a panel the
+    // user never gets sent to. The `[view]` layout effect below issues the
+    // bridge call as a consequence of navigating.
+    setView({ kind: 'group', groupId: pendingJump.groupId });
+    if (pendingJump.messageId) setPendingMessageId(pendingJump.messageId);
     useChatStore.getState().consumeJump();
   }, [pendingJump]);
 

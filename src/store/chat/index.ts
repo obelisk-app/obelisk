@@ -15,22 +15,24 @@ export interface ChatState {
   profilePopupPubkey: string | null;
   profilePopupAnchor: { x: number; y: number } | null;
   /**
-   * A pending "jump to this message" request, raised by search results.
+   * A pending "open this channel" request raised by search results, with an
+   * optional message to land on. `messageId: null` means "just open it".
    *
-   * The shell owns both the active channel and the scroll/flash machinery,
-   * but the search bar is mounted several levels below it in the channel
-   * header, so this is the handoff. The shell switches channel, hands the
-   * id to the message pane's existing `pendingMessageId` path (which waits
-   * for the message to load before scrolling), and clears it.
+   * The shell owns navigation, but the search bar is mounted several levels
+   * below it in the channel header, so this is the handoff. Calling
+   * `bridge.setActiveGroup` from down there does NOT navigate — it only
+   * moves the relay subscription, while what's on screen is driven by the
+   * shell's own `view` state. Routing through the shell is the whole point
+   * of this field.
    */
-  pendingJump: { groupId: string; messageId: string } | null;
+  pendingJump: { groupId: string; messageId: string | null } | null;
   lastActivityAt: Record<string, number>;
   presenceTick: number;
   setServerEmojis: (emojis: Record<string, string>, kinds?: ChatState['serverMediaKinds']) => void;
   setRolesByPubkey: (roles: ChatState['rolesByPubkey']) => void;
   openProfilePopup: (pubkey: string, anchor?: { x: number; y: number }) => void;
   closeProfilePopup: () => void;
-  requestJump: (groupId: string, messageId: string) => void;
+  requestJump: (groupId: string, messageId?: string | null) => void;
   consumeJump: () => void;
   recordActivity: (pubkey: string, atMs: number) => void;
   bumpPresenceTick: () => void;
@@ -45,7 +47,7 @@ export const CHAT_INITIAL_STATE = {
   rolesByPubkey: {} as ChatState['rolesByPubkey'],
   profilePopupPubkey: null as string | null,
   profilePopupAnchor: null as { x: number; y: number } | null,
-  pendingJump: null as { groupId: string; messageId: string } | null,
+  pendingJump: null as { groupId: string; messageId: string | null } | null,
   lastActivityAt: {} as Record<string, number>,
   presenceTick: 0,
 };
@@ -56,7 +58,7 @@ export const useChatStore = create<ChatState>()((set) => ({
   setRolesByPubkey: (rolesByPubkey) => set({ rolesByPubkey }),
   openProfilePopup: (profilePopupPubkey, profilePopupAnchor = null) => set({ profilePopupPubkey, profilePopupAnchor }),
   closeProfilePopup: () => set({ profilePopupPubkey: null, profilePopupAnchor: null }),
-  requestJump: (groupId, messageId) => set({ pendingJump: { groupId, messageId } }),
+  requestJump: (groupId, messageId = null) => set({ pendingJump: { groupId, messageId } }),
   consumeJump: () => set({ pendingJump: null }),
   recordActivity: (pubkey, atMs) => set((state) =>
     atMs <= (state.lastActivityAt[pubkey] ?? 0)

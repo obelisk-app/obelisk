@@ -2879,8 +2879,12 @@ function ChannelScreen({
   const pendingJump = useChatStore((s) => s.pendingJump);
   useEffect(() => {
     if (!pendingJump || pendingJump.groupId !== groupId) return;
-    if (!messages.some((m) => m.id === pendingJump.messageId)) return;
-    const el = messagesRef.current?.querySelector(`[data-msg-id="${CSS.escape(pendingJump.messageId)}"]`);
+    const target = pendingJump.messageId;
+    // No message id → the request was "just open this channel", and
+    // navigating here has already satisfied it.
+    if (!target) { useChatStore.getState().consumeJump(); return; }
+    if (!messages.some((m) => m.id === target)) return;
+    const el = messagesRef.current?.querySelector(`[data-msg-id="${CSS.escape(target)}"]`);
     if (!el) return;
     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     el.classList.add('msg-flash');

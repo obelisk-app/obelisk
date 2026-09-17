@@ -141,13 +141,23 @@ describe('SearchBar', () => {
     expect(useChatStore.getState().profilePopupPubkey).toBe(pk);
   });
 
-  it('clicking a channel calls setActiveGroup with its id', async () => {
+  it('clicking a channel asks the shell to navigate, not just the bridge', async () => {
+    // Regression: this used to call `nostrActions.setActiveGroup`, which only
+    // moves the relay subscription. What's rendered is the shell's own `view`
+    // state, so the click changed data behind a panel the user was never sent
+    // to — i.e. clicking a result appeared to do nothing. The old test
+    // asserted the bridge mock was called, so it passed the whole time.
     renderSearchBar(<SearchBar serverName="test" activeGroupId={null} />);
     const input = screen.getByPlaceholderText(/Buscar test/);
     fireEvent.focus(input);
     await typeAndSettle(input, 'general');
     fireEvent.click(await screen.findByTestId('search-channel-row'));
-    expect(mockSetActiveGroup).toHaveBeenCalledWith('rly/abc');
+
+    expect(useChatStore.getState().pendingJump).toEqual({
+      groupId: 'rly/abc',
+      messageId: null,
+    });
+    expect(mockSetActiveGroup).not.toHaveBeenCalled();
   });
 
   it('renders desktop search labels from the configured language', () => {

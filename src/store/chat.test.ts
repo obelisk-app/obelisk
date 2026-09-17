@@ -66,3 +66,29 @@ describe('useChatStore', () => {
     });
   });
 });
+
+describe('pendingJump (search → shell navigation handoff)', () => {
+  beforeEach(() => useChatStore.getState().reset());
+
+  it('defaults messageId to null so "just open this channel" is expressible', () => {
+    useChatStore.getState().requestJump('g1');
+    expect(useChatStore.getState().pendingJump).toEqual({ groupId: 'g1', messageId: null });
+  });
+
+  it('carries a message id when one is given', () => {
+    useChatStore.getState().requestJump('g1', 'm1');
+    expect(useChatStore.getState().pendingJump).toEqual({ groupId: 'g1', messageId: 'm1' });
+  });
+
+  it('consumeJump clears it so the shell does not re-navigate', () => {
+    useChatStore.getState().requestJump('g1', 'm1');
+    useChatStore.getState().consumeJump();
+    expect(useChatStore.getState().pendingJump).toBeNull();
+  });
+
+  it('reset clears it', () => {
+    useChatStore.getState().requestJump('g1', 'm1');
+    useChatStore.getState().reset();
+    expect(useChatStore.getState().pendingJump).toBeNull();
+  });
+});
