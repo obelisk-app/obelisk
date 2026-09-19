@@ -50,6 +50,7 @@ import UserPanel from './UserPanel';
 import SearchBar from './SearchBar';
 import MessageContent from '@/components/chat/MessageContent';
 import NostrProfile from '@/components/chat/NostrProfile';
+import FeedScreen from '@/components/social/FeedScreen';
 import ProfilePopover from '@/components/chat/ProfilePopover';
 import { MentionText } from '@/components/chat/MentionText';
 import MentionNavigator from '@/components/chat/MentionNavigator';
@@ -152,6 +153,7 @@ import { useTranslation } from '@/i18n/context';
 type View =
   | { kind: 'group'; groupId: string }
   | { kind: 'dm'; peer: string | null }
+  | { kind: 'feed' }
   | { kind: 'empty' };
 
 const SIDEBAR_KEY = 'obelisk-dex/sidebar-width';
@@ -321,8 +323,12 @@ export default function AppShell() {
     );
   }
 
-  const railMode: { kind: 'dm' } | { kind: 'relay'; url: string } =
-    view.kind === 'dm' ? { kind: 'dm' } : { kind: 'relay', url: relay };
+  const railMode: { kind: 'dm' } | { kind: 'feed' } | { kind: 'relay'; url: string } =
+    view.kind === 'dm'
+      ? { kind: 'dm' }
+      : view.kind === 'feed'
+        ? { kind: 'feed' }
+        : { kind: 'relay', url: relay };
 
   const closeDrawer = () => setSidebarOpen(false);
   const leaveDms = () => {
@@ -386,6 +392,7 @@ export default function AppShell() {
           <ServerRail
             mode={railMode}
             onPickDM={() => { setView({ kind: 'dm', peer: null }); closeDrawer(); }}
+            onPickFeed={() => { setView({ kind: 'feed' }); closeDrawer(); }}
             onPickRelay={async (url) => {
               setView({ kind: 'empty' });
               try {
@@ -397,7 +404,7 @@ export default function AppShell() {
               }
             }}
           />
-          <ResizablePane storageKey={SIDEBAR_KEY} defaultWidth={264} min={200} max={500} onWidthChange={setSidebarWidth}>
+          {view.kind !== 'feed' && <ResizablePane storageKey={SIDEBAR_KEY} defaultWidth={264} min={200} max={500} onWidthChange={setSidebarWidth}>
             {view.kind === 'dm' ? (
               <DMOptInBoundary surface="sidebar" secondaryLabel={t('dm.optIn.notNow')} onSecondary={leaveDms}>
                 <DMList
@@ -413,7 +420,7 @@ export default function AppShell() {
                 setView={(v) => { setView(v); closeDrawer(); }}
               />
             )}
-          </ResizablePane>
+          </ResizablePane>}
         </div>
         <main className="flex flex-1 flex-col overflow-hidden min-w-0 border-t border-r border-lc-border">
           {view.kind === 'group' ? (
@@ -429,6 +436,8 @@ export default function AppShell() {
             <DMOptInBoundary surface="desktop" secondaryLabel={t('dm.optIn.continueWithout')} onSecondary={leaveDms}>
               <DMPanel peer={view.peer} onPickPeer={(p) => setView({ kind: 'dm', peer: p })} />
             </DMOptInBoundary>
+          ) : view.kind === 'feed' ? (
+            <FeedScreen onOpenProfile={setExploredProfilePubkey} />
           ) : (
             <EmptyState />
           )}

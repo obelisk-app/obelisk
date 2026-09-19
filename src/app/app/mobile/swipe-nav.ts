@@ -2,7 +2,7 @@ import { initialNav, urlFor, type NavState, type ScreenName } from './url-state'
 
 // Top-level bottom-nav screens, left-to-right. Swipe-left advances; swipe-right
 // retreats.
-export const NAV_ORDER: ScreenName[] = ['server', 'dms-list', 'inbox', 'settings-profile'];
+export const NAV_ORDER: ScreenName[] = ['server', 'feed', 'dms-list', 'inbox', 'settings-profile'];
 
 export function isAdjacentTabSwitch(from: ScreenName, to: ScreenName): boolean {
   return Math.abs(NAV_ORDER.indexOf(from) - NAV_ORDER.indexOf(to)) === 1;

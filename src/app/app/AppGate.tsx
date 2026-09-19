@@ -22,6 +22,8 @@ import './mobile/mobile-shell.css';
 import { useIsLoggedIn } from '@/lib/nostr-bridge';
 import ReadStateRoot from '@/lib/read-state/root';
 import ActivityIndicator from '@/components/ActivityIndicator';
+import { usePreferences } from '@/lib/preferences';
+import { initSocial } from '@/lib/social/pool';
 
 const AppShell = dynamic(() => import('./DesktopShell'), { ssr: false });
 const MobileShell = dynamic(() => import('./mobile/PhoneShell'), { ssr: false });
@@ -47,6 +49,15 @@ function useIsMobile(): boolean | null {
 export default function AppGate() {
   const isMobile = useIsMobile();
   const loggedIn = useIsLoggedIn();
+  const socialRelays = usePreferences().socialRelays;
+
+  // Point @nostr-wot/data at the user's social relays before any feed read.
+  // Without this the SDK would fall back to its own defaults, so a user who
+  // configured their relays would still be reading from somewhere else.
+  useEffect(() => {
+    initSocial(socialRelays);
+  }, [socialRelays]);
+
   if (isMobile === null) return null;
   return (
     <>

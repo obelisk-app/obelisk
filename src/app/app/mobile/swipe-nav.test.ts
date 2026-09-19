@@ -10,10 +10,10 @@ const navOf = (screen: ScreenName, parentScreen: ScreenName | null = null): NavS
 
 describe('mobile swipe-nav', () => {
   describe('top-level screens cycle through NAV_ORDER', () => {
-    it('swipe-left from server goes to dms-list', () => {
+    it('swipe-left from server goes to feed', () => {
       expect(decideSwipeNav('server', false)).toEqual({
         kind: 'top-level',
-        target: 'dms-list',
+        target: 'feed',
         dir: 'forward',
       });
     });
@@ -22,10 +22,10 @@ describe('mobile swipe-nav', () => {
       expect(decideSwipeNav('server', true)).toEqual({ kind: 'noop' });
     });
 
-    it('swipe-right from dms-list goes back to server', () => {
+    it('swipe-right from dms-list goes back to feed', () => {
       expect(decideSwipeNav('dms-list', true)).toEqual({
         kind: 'top-level',
-        target: 'server',
+        target: 'feed',
         dir: 'back',
       });
     });
@@ -48,18 +48,18 @@ describe('mobile swipe-nav', () => {
       expect(decideSwipeNav('channel', true)).toEqual({ kind: 'noop' });
     });
 
-    it('swipe-left from channel jumps to dms-list (past server parent)', () => {
+    it('swipe-left from channel jumps to feed (past server parent)', () => {
       expect(decideSwipeNav('channel', false)).toEqual({
         kind: 'top-level',
-        target: 'dms-list',
+        target: 'feed',
         dir: 'forward',
       });
     });
 
-    it('swipe-left from voice-room jumps to dms-list', () => {
+    it('swipe-left from voice-room jumps to feed', () => {
       expect(decideSwipeNav('voice-room', false)).toEqual({
         kind: 'top-level',
-        target: 'dms-list',
+        target: 'feed',
         dir: 'forward',
       });
     });
@@ -68,10 +68,10 @@ describe('mobile swipe-nav', () => {
       expect(decideSwipeNav('voice-room', true)).toEqual({ kind: 'noop' });
     });
 
-    it('swipe-left from forum jumps to dms-list', () => {
+    it('swipe-left from forum jumps to feed', () => {
       expect(decideSwipeNav('forum', false)).toEqual({
         kind: 'top-level',
-        target: 'dms-list',
+        target: 'feed',
         dir: 'forward',
       });
     });
@@ -80,10 +80,10 @@ describe('mobile swipe-nav', () => {
       expect(decideSwipeNav('forum', true)).toEqual({ kind: 'noop' });
     });
 
-    it('swipe-left from member-list jumps to dms-list', () => {
+    it('swipe-left from member-list jumps to feed', () => {
       expect(decideSwipeNav('member-list', false)).toEqual({
         kind: 'top-level',
-        target: 'dms-list',
+        target: 'feed',
         dir: 'forward',
       });
     });
@@ -94,10 +94,10 @@ describe('mobile swipe-nav', () => {
   });
 
   describe('sub-screens of dms-list', () => {
-    it('swipe-right from dm-thread jumps to server (before dms-list parent)', () => {
+    it('swipe-right from dm-thread jumps to feed (before dms-list parent)', () => {
       expect(decideSwipeNav('dm-thread', true)).toEqual({
         kind: 'top-level',
-        target: 'server',
+        target: 'feed',
         dir: 'back',
       });
     });
@@ -110,10 +110,10 @@ describe('mobile swipe-nav', () => {
       });
     });
 
-    it('swipe-right from compose-dm jumps to server', () => {
+    it('swipe-right from compose-dm jumps to feed', () => {
       expect(decideSwipeNav('compose-dm', true)).toEqual({
         kind: 'top-level',
-        target: 'server',
+        target: 'feed',
         dir: 'back',
       });
     });
@@ -166,23 +166,26 @@ describe('mobile swipe-nav', () => {
     });
   });
 
-  it('NAV_ORDER has exactly the 4 expected top-level tabs', () => {
-    expect(NAV_ORDER).toEqual(['server', 'dms-list', 'inbox', 'settings-profile']);
+  it('NAV_ORDER has exactly the 5 expected top-level tabs', () => {
+    expect(NAV_ORDER).toEqual(['server', 'feed', 'dms-list', 'inbox', 'settings-profile']);
   });
 
   it('only slides between adjacent bottom-nav tabs', () => {
-    expect(isAdjacentTabSwitch('server', 'dms-list')).toBe(true);
+    expect(isAdjacentTabSwitch('server', 'feed')).toBe(true);
+    expect(isAdjacentTabSwitch('feed', 'dms-list')).toBe(true);
+    expect(isAdjacentTabSwitch('server', 'dms-list')).toBe(false);
     expect(isAdjacentTabSwitch('server', 'inbox')).toBe(false);
     expect(isAdjacentTabSwitch('server', 'settings-profile')).toBe(false);
   });
 
   describe('neighborsFor — drag-carousel reveal', () => {
     it('first top-level tab has no left neighbor', () => {
-      expect(neighborsFor('server')).toEqual({ left: null, right: 'dms-list' });
+      expect(neighborsFor('server')).toEqual({ left: null, right: 'feed' });
     });
 
     it('middle top-level tabs have both neighbors', () => {
-      expect(neighborsFor('dms-list')).toEqual({ left: 'server', right: 'inbox' });
+      expect(neighborsFor('feed')).toEqual({ left: 'server', right: 'dms-list' });
+      expect(neighborsFor('dms-list')).toEqual({ left: 'feed', right: 'inbox' });
       expect(neighborsFor('inbox')).toEqual({ left: 'dms-list', right: 'settings-profile' });
     });
 
@@ -191,15 +194,15 @@ describe('mobile swipe-nav', () => {
     });
 
     it('sub-screen of server: no left (parent is first tab), right = next top-level', () => {
-      expect(neighborsFor('channel')).toEqual({ left: null, right: 'dms-list' });
-      expect(neighborsFor('voice-room')).toEqual({ left: null, right: 'dms-list' });
-      expect(neighborsFor('member-list')).toEqual({ left: null, right: 'dms-list' });
-      expect(neighborsFor('forum')).toEqual({ left: null, right: 'dms-list' });
+      expect(neighborsFor('channel')).toEqual({ left: null, right: 'feed' });
+      expect(neighborsFor('voice-room')).toEqual({ left: null, right: 'feed' });
+      expect(neighborsFor('member-list')).toEqual({ left: null, right: 'feed' });
+      expect(neighborsFor('forum')).toEqual({ left: null, right: 'feed' });
     });
 
-    it('sub-screen of dms-list: left = server, right = inbox', () => {
-      expect(neighborsFor('dm-thread')).toEqual({ left: 'server', right: 'inbox' });
-      expect(neighborsFor('compose-dm')).toEqual({ left: 'server', right: 'inbox' });
+    it('sub-screen of dms-list: left = feed, right = inbox', () => {
+      expect(neighborsFor('dm-thread')).toEqual({ left: 'feed', right: 'inbox' });
+      expect(neighborsFor('compose-dm')).toEqual({ left: 'feed', right: 'inbox' });
     });
 
     it('settings-prefs: left = inbox, right = null (last tab)', () => {
@@ -314,10 +317,10 @@ describe('mobile swipe-nav', () => {
 
     it('decideSwipeNav with dynamic parent dm-thread', () => {
       // From a profile reached via a DM peer info tap, neighbors should be
-      // Servers (left of DMs) and Inbox (right of DMs).
+      // Feed (left of DMs) and Inbox (right of DMs).
       expect(decideSwipeNav(navOf('profile-view', 'dms-list'), true)).toEqual({
         kind: 'top-level',
-        target: 'server',
+        target: 'feed',
         dir: 'back',
       });
       expect(decideSwipeNav(navOf('profile-view', 'dms-list'), false)).toEqual({

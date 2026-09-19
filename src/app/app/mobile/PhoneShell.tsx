@@ -125,6 +125,7 @@ import AccountBackupExport from '@/components/settings/AccountBackupExport';
 import DeveloperSignatureTest from '@/components/settings/DeveloperSignatureTest';
 import { clearAllClientCacheExceptSession } from '@/lib/nostr-bridge/cache-clear';
 import NostrProfile from '@/components/chat/NostrProfile';
+import FeedScreen from '@/components/social/FeedScreen';
 import ProfilePopover from '@/components/chat/ProfilePopover';
 import MobileSigningIndicator from '@/components/MobileSigningIndicator';
 import { useTranslation } from '@/i18n/context';
@@ -359,9 +360,12 @@ function StatusBar() {
 
 interface NavTab { id: ScreenName; icon: ReactNode; label: string; badge?: number }
 
-const NAV_ICONS: Record<'servers' | 'dms' | 'inbox' | 'you', ReactNode> = {
+const NAV_ICONS: Record<'servers' | 'feed' | 'dms' | 'inbox' | 'you', ReactNode> = {
   servers: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></svg>
+  ),
+  feed: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /><path d="M2 12h20" /></svg>
   ),
   dms: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2 11 13" /><path d="M22 2 15 22 11 13 2 9z" /></svg>
@@ -388,6 +392,7 @@ function BottomNav({
   const { t } = useTranslation();
   const tabs: NavTab[] = [
     { id: 'server', icon: NAV_ICONS.servers, label: t('mobile.nav.servers') },
+    { id: 'feed', icon: NAV_ICONS.feed, label: t('social.feed') },
     { id: 'dms-list', icon: NAV_ICONS.dms, label: 'DMs', badge: dmBadge },
     { id: 'inbox', icon: NAV_ICONS.inbox, label: t('inbox.title'), badge: inboxBadge },
     { id: 'settings-profile', icon: NAV_ICONS.you, label: t('settings.you') },
@@ -6510,6 +6515,8 @@ export default function MobileShell() {
     switch (screen) {
       case 'server':
         return <ServerScreen go={go} selectGroup={selectGroup} />;
+      case 'feed':
+        return <FeedScreen mobile onOpenProfile={(pubkey) => exploreProfile(pubkey)} />;
       case 'dms-list':
         return dmOptInEnabled
           ? <DmsListScreen go={go} selectPeer={selectPeer} myFollows={myFollows} />
@@ -6521,7 +6528,7 @@ export default function MobileShell() {
       default:
         return null;
     }
-  }, [dmOptInEnabled, go, selectGroup, selectPeer, myFollows]);
+  }, [dmOptInEnabled, go, selectGroup, selectPeer, myFollows, exploreProfile]);
 
   const dragNeighbors = useMemo(() => neighborsFor(nav), [nav]);
 
@@ -6622,6 +6629,9 @@ export default function MobileShell() {
   switch (nav.screen) {
     case 'server':
       body = <ServerScreen go={go} selectGroup={selectGroup} />;
+      break;
+    case 'feed':
+      body = <FeedScreen mobile onOpenProfile={(pubkey) => exploreProfile(pubkey)} />;
       break;
     case 'channel':
       body = nav.groupId ? (

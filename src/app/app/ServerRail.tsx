@@ -21,15 +21,17 @@ import { useHasAnyHighlights } from '@/lib/read-state/selectors';
 import ModalShell from '@/components/ModalShell';
 
 
-type RailMode = { kind: 'dm' } | { kind: 'relay'; url: string };
+type RailMode = { kind: 'dm' } | { kind: 'feed' } | { kind: 'relay'; url: string };
 
 export default function ServerRail({
   mode,
   onPickDM,
+  onPickFeed,
   onPickRelay,
 }: {
   mode: RailMode;
   onPickDM: () => void;
+  onPickFeed?: () => void;
   onPickRelay: (url: string) => void;
 }) {
   const relays = useConfiguredRelays();
@@ -50,6 +52,28 @@ export default function ServerRail({
         }
         emphasis
       />
+
+      {/*
+        The Nostr feed sits with DMs rather than with the relay tiles below:
+        both are account-wide surfaces that don't belong to any one NIP-29
+        relay, whereas each relay tile IS a server. Grouping it under the
+        relays would imply the feed changes when you switch servers.
+      */}
+      {onPickFeed && (
+        <RailTile
+          active={mode.kind === 'feed'}
+          title="Nostr feed"
+          onClick={onPickFeed}
+          icon={
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+              <path d="M2 12h20" />
+            </svg>
+          }
+          emphasis
+        />
+      )}
 
       <div className="my-1 h-px w-8 bg-lc-border" />
 

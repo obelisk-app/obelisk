@@ -4,6 +4,7 @@ export type ScreenName =
   | 'server'
   | 'channel'
   | 'voice-room'
+  | 'feed'
   | 'dms-list'
   | 'dm-thread'
   | 'inbox'
@@ -55,6 +56,7 @@ const KNOWN_SCREENS: ReadonlySet<ScreenName> = new Set<ScreenName>([
   'server',
   'channel',
   'voice-room',
+  'feed',
   'dms-list',
   'dm-thread',
   'inbox',

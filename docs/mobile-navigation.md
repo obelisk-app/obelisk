@@ -29,19 +29,21 @@ subs + connection lifecycle) and [`read-state.md`](./read-state.md)
 │  └────────────────────────────────────────────────────┘  │
 │  ┌────────────────────────────────────────────────────┐  │
 │  │ 1. Top-level tab carousel (`.drag-layer`)          │  │
-│  │    server | dms-list | inbox | settings-profile    │  │
-│  │    All four always mounted; role classes shift     │  │
+│  │    server | feed | dms-list | inbox |              │  │
+│  │    settings-profile                                │  │
+│  │    All five always mounted; role classes shift     │  │
 │  │    them between drag-prev / drag-curr / drag-next  │  │
 │  └────────────────────────────────────────────────────┘  │
 │  ┌────────────────────────────────────────────────────┐  │
-│  │ Bottom-nav (4 buttons + active highlight)          │  │
+│  │ Bottom-nav (5 buttons + active highlight)          │  │
 │  └────────────────────────────────────────────────────┘  │
 └──────────────────────────────────────────────────────────┘
 ```
 
-Layer 1 never remounts during a session — the four `<ServerScreen />`
-/ `<DmsListScreen />` / `<InboxScreen />` / `<SettingsProfileScreen />`
-instances live in `.drag-slot` divs that flip CSS roles. Layer 2
+Layer 1 never remounts during a session — the five `<ServerScreen />`
+/ `<FeedScreen />` / `<DmsListScreen />` / `<InboxScreen />` /
+`<SettingsProfileScreen />` instances live in `.drag-slot` divs that flip
+CSS roles. Layer 2
 remounts whenever the sub-screen changes (different `key` on
 `.drag-overlay`). Layer 3 is a separate React subtree that mounts/un-
 mounts on `nav.screen === 'msg-actions' | 'zap-modal'`.
@@ -53,12 +55,15 @@ mounts on `nav.screen === 'msg-actions' | 'zap-modal'`.
 | Screen | Purpose | Bottom-nav label |
 |---|---|---|
 | `server` | Active-relay group list + channel browser | Servers |
+| `feed` | Nostr feed (Following + Global) over the social relays — NOT the active NIP-29 relay | Feed |
 | `dms-list` | DM thread list with follows + recents | DMs |
 | `inbox` | Mentions, replies, reactions, zaps | Inbox |
 | `settings-profile` | Profile editor entry + settings home | You |
 
-`NAV_ORDER = ['server', 'dms-list', 'inbox', 'settings-profile']`
-(`swipe-nav.ts:5`). Left-to-right is the spatial order users feel when
+`NAV_ORDER = ['server', 'feed', 'dms-list', 'inbox', 'settings-profile']`
+(`swipe-nav.ts:5`). `feed` sits next to `server` because both are
+"read things other people wrote" surfaces; DMs and Inbox are the
+personal half of the app. Left-to-right is the spatial order users feel when
 swiping or tapping nav buttons; this is the only ordering that
 matters for animation direction.
 
