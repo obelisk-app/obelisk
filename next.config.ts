@@ -30,6 +30,16 @@ const nextConfig: NextConfig = {
   // That is deliberate: it keeps us tracking upstream by version range
   // instead of forking the rules into this repo. See docs/games.md.
   transpilePackages: ['@nostr-wot/ui', '@nostr-wot/data', 'vesta'],
+  /*
+   * The public note/profile viewers (`/notes/[id]`, `/p/[id]`) open real
+   * relay sockets on the server so link previews have content. Bundling
+   * nostr-tools into the server chunk resolves it through its browser
+   * condition, and `SimplePool` then returns nothing at all — the query
+   * "succeeds" in a couple of seconds with an empty result, which is
+   * indistinguishable from a missing note. Keeping it external makes the
+   * server require the Node build from node_modules.
+   */
+  serverExternalPackages: ['nostr-tools'],
   allowedDevOrigins: [...localIPs, 'obelisk.fabri.lat', 'obelisk.wearebitcoin.org', 'obelisk.nostr-wtf.com', 'dex-test.obelisk.ar', 'obelisk.ar'],
   // Temporary: skip typecheck during voice mesh-test runs to unblock the
   // diagnostic harness. The pre-existing LoginModal/relay-sync.test type

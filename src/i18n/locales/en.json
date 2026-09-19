@@ -657,5 +657,6 @@
   "noteViewer.openApp": "Open in Obelisk",
   "social.openInGroup": "Open in group",
   "social.eventIdLabel": "Event ID",
-  "social.kindLabel": "Kind"
+  "social.kindLabel": "Kind",
+  "noteViewer.footer": "Shared from Obelisk — Nostr group chat and feeds."
 }
