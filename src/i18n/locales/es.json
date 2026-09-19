@@ -617,5 +617,16 @@
   "preferences.socialRelays.importing": "Importando…",
   "preferences.socialRelays.importEmpty": "No se encontró una lista de relays para tu cuenta.",
   "preferences.socialRelays.reset": "Restablecer valores por defecto",
-  "preferences.socialRelays.invalid": "Introduce al menos una URL wss:// válida."
+  "preferences.socialRelays.invalid": "Introduce al menos una URL wss:// válida.",
+  "user.field.lud16": "Dirección Lightning",
+  "profileAppearance.changeBanner": "Cambiar banner",
+  "profileAppearance.addBanner": "Añadir banner",
+  "profileAppearance.changeAvatar": "Cambiar foto de perfil",
+  "profileAppearance.notImage": "Ese archivo no es una imagen.",
+  "profileAppearance.tooLarge": "Las imágenes deben pesar menos de 10 MB.",
+  "profileAppearance.fileSelected": "Archivo seleccionado — se guarda al publicar",
+  "moderation.title": "Silenciados y bloqueados",
+  "moderation.empty": "No has silenciado ni bloqueado a nadie.",
+  "moderation.muted": "Silenciado",
+  "moderation.blocked": "Bloqueado"
 }

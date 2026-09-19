@@ -5,13 +5,15 @@ import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { hexToNpub } from '@nostr-wot/data';
 import { nostrActions, useMyLoginMethod, useMyPubkey, useSignerReady, useUserMetadata as useProfile } from '@/lib/nostr-bridge';
-import BlossomImageInput from '@/components/BlossomImageInput';
 import { usePreferences, setPreference } from '@/lib/preferences';
 import { setDmOptInEnabled } from '@/lib/dm/opt-in';
 import WotSettings from '@/components/settings/WotSettings';
 import LanguagePreference from '@/components/LanguagePreference';
 import AppearancePreferenceControls from '@/components/AppearancePreferenceControls';
 import SocialRelaySettings from '@/components/settings/SocialRelaySettings';
+import MutedAndBlocked from '@/components/settings/MutedAndBlocked';
+import ProfileAppearanceEditor from '@/components/ProfileAppearanceEditor';
+import { uploadToBlossom } from '@/lib/blossom';
 import AccountBackupExport from '@/components/settings/AccountBackupExport';
 import DeveloperSignatureTest from '@/components/settings/DeveloperSignatureTest';
 import UserAvatar from '@/components/UserAvatar';
@@ -311,7 +313,7 @@ function EditProfileForm({
   onCancel,
   onSaved,
 }: {
-  initial: { displayName: string | null; name: string | null; about: string | null; picture: string | null; banner: string | null; nip05: string | null; website: string | null } | null;
+  initial: { displayName: string | null; name: string | null; about: string | null; picture: string | null; banner: string | null; nip05: string | null; lud16?: string | null; website: string | null } | null;
   onCancel: () => void;
   onSaved: () => void;
 }) {
@@ -322,7 +324,13 @@ function EditProfileForm({
   const [picture, setPicture] = useState(initial?.picture || '');
   const [banner, setBanner] = useState(initial?.banner || '');
   const [nip05, setNip05] = useState(initial?.nip05 || '');
+  // Desktop was missing lud16 entirely while mobile had it, so a user who
+  // set up their profile here could not be zapped.
+  const [lud16, setLud16] = useState(initial?.lud16 || '');
   const [website, setWebsite] = useState(initial?.website || '');
+  const [pictureFile, setPictureFile] = useState<File | null>(null);
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState<'picture' | 'banner' | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const firstField = useRef<HTMLInputElement>(null);
@@ -345,6 +353,7 @@ function EditProfileForm({
     setPicture(initial.picture || '');
     setBanner(initial.banner || '');
     setNip05(initial.nip05 || '');
+    setLud16(initial.lud16 || '');
     setWebsite(initial.website || '');
   }, [initial]);
 
@@ -354,19 +363,34 @@ function EditProfileForm({
     setError(null);
     try {
       if (!signerReady) throw new Error(t('user.notSignedIn'));
+      // Uploads are deferred to save so an abandoned edit doesn't burn
+      // Blossom storage for every image the user tried.
+      let finalPicture = picture.trim();
+      let finalBanner = banner.trim();
+      if (pictureFile) {
+        setUploading('picture');
+        finalPicture = await uploadToBlossom(pictureFile);
+      }
+      if (bannerFile) {
+        setUploading('banner');
+        finalBanner = await uploadToBlossom(bannerFile);
+      }
+      setUploading(null);
       await nostrActions.editUserMetadata({
         name: name.trim(),
         displayName: name.trim(),
         about: about.trim(),
-        picture: picture.trim(),
-        banner: banner.trim(),
+        picture: finalPicture,
+        banner: finalBanner,
         nip05: nip05.trim(),
+        lud16: lud16.trim(),
         website: website.trim(),
       });
       onSaved();
     } catch (e) {
       setError(e instanceof Error ? e.message : t('user.publishFailed'));
     } finally {
+      setUploading(null);
       setSaving(false);
     }
   };
@@ -375,51 +399,30 @@ function EditProfileForm({
 
   return (
     <div className="space-y-3 p-4">
-      <div
-        className="relative mb-14 aspect-[4/1] overflow-visible rounded-xl border border-lc-border bg-lc-black"
-        data-testid="profile-appearance-preview"
-      >
-        {banner ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={banner} alt={t('user.field.banner')} className="h-full w-full rounded-xl object-cover" />
-        ) : (
-          <div className="h-full w-full rounded-xl bg-gradient-to-r from-lc-olive/30 to-lc-dark" />
-        )}
-        <div className="absolute -bottom-12 left-6 rounded-full bg-lc-black">
-          <UserAvatar
-            pubkey={name || '0'}
-            picture={picture || null}
-            size={24}
-            name={name}
-            alt={t('user.field.picture')}
-            className="border-4 border-lc-black shadow-lg"
-            initialClassName="text-3xl"
-          />
-        </div>
-      </div>
+      <ProfileAppearanceEditor
+        pubkey={name || '0'}
+        displayName={name}
+        value={{ pictureUrl: picture, bannerUrl: banner, pictureFile, bannerFile }}
+        uploading={uploading}
+        onChange={(next) => {
+          markDirty();
+          setPicture(next.pictureUrl);
+          setBanner(next.bannerUrl);
+          setPictureFile(next.pictureFile);
+          setBannerFile(next.bannerFile);
+        }}
+      />
       <Field label={t('user.field.name')}>
         <input ref={firstField} value={name} onChange={(e) => { markDirty(); setName(e.target.value); }} className={fieldCls} />
       </Field>
       <Field label={t('user.about')}>
         <textarea value={about} onChange={(e) => { markDirty(); setAbout(e.target.value); }} rows={2} className={fieldCls} />
       </Field>
-      <BlossomImageInput
-        label={t('user.field.picture')}
-        value={picture}
-        onChange={(url) => { markDirty(); setPicture(url); }}
-        shape="square"
-        showPreview={false}
-      />
-      <BlossomImageInput
-        label={t('user.field.banner')}
-        value={banner}
-        onChange={(url) => { markDirty(); setBanner(url); }}
-        shape="wide"
-        accept="image/*"
-        showPreview={false}
-      />
       <Field label="NIP-05">
         <input value={nip05} onChange={(e) => { markDirty(); setNip05(e.target.value); }} placeholder="you@example.com" className={fieldCls} />
+      </Field>
+      <Field label={t('user.field.lud16')}>
+        <input value={lud16} onChange={(e) => { markDirty(); setLud16(e.target.value); }} placeholder="you@walletofsatoshi.com" className={fieldCls} />
       </Field>
       <Field label={t('user.field.website')}>
         <input value={website} onChange={(e) => { markDirty(); setWebsite(e.target.value); }} placeholder="https://…" className={fieldCls} />
@@ -466,6 +469,7 @@ export function PreferencesPanel() {
       {appearanceOpen && <AppearancePreferenceControls />}
 
       <SocialRelaySettings />
+      <MutedAndBlocked />
       <section className="space-y-2 rounded-lg border border-lc-border bg-lc-dark/30 p-3">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-lc-muted">
           {t("preferences.backup.advanced")}

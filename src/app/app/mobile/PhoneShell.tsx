@@ -121,6 +121,7 @@ import LanguagePreference from '@/components/LanguagePreference';
 import MediaLibraryModal from '@/components/media/MediaLibraryModal';
 import AppearancePreferenceControls from '@/components/AppearancePreferenceControls';
 import SocialRelaySettings from '@/components/settings/SocialRelaySettings';
+import MutedAndBlocked from '@/components/settings/MutedAndBlocked';
 import AccountBackupExport from '@/components/settings/AccountBackupExport';
 import DeveloperSignatureTest from '@/components/settings/DeveloperSignatureTest';
 import { clearAllClientCacheExceptSession } from '@/lib/nostr-bridge/cache-clear';
@@ -5660,6 +5661,54 @@ export function EditProfileScreen({ go }: { go: (s: ScreenName, dir?: 'forward' 
               />
             </div>
           </div>
+          {/*
+            Tapping the banner/avatar above is the fast path, but a user who
+            already hosts an image elsewhere needs somewhere to paste the
+            link. Picking a file clears the URL (and vice versa) so save()
+            can't upload a file while silently ignoring what was typed.
+          */}
+          <div className="setup-field">
+            <label>{t('user.field.picture')}</label>
+            <div className="setup-input-wrap">
+              <input
+                className="setup-input"
+                value={pictureFile ? '' : picture}
+                onChange={(e) => {
+                  markDirty();
+                  setPictureFile(null);
+                  if (picturePreview) { URL.revokeObjectURL(picturePreview); setPicturePreview(null); }
+                  setPicture(e.target.value);
+                }}
+                placeholder={pictureFile ? t('profileAppearance.fileSelected') : 'https://…'}
+                inputMode="url"
+                autoCapitalize="off"
+                autoCorrect="off"
+                spellCheck={false}
+                data-testid="edit-picture-url"
+              />
+            </div>
+          </div>
+          <div className="setup-field">
+            <label>{t('user.field.banner')}</label>
+            <div className="setup-input-wrap">
+              <input
+                className="setup-input"
+                value={bannerFile ? '' : banner}
+                onChange={(e) => {
+                  markDirty();
+                  setBannerFile(null);
+                  if (bannerPreview) { URL.revokeObjectURL(bannerPreview); setBannerPreview(null); }
+                  setBanner(e.target.value);
+                }}
+                placeholder={bannerFile ? t('profileAppearance.fileSelected') : 'https://…'}
+                inputMode="url"
+                autoCapitalize="off"
+                autoCorrect="off"
+                spellCheck={false}
+                data-testid="edit-banner-url"
+              />
+            </div>
+          </div>
           <div className="setup-field">
             <label>{t('user.field.website')}</label>
             <div className="setup-input-wrap">
@@ -5787,6 +5836,7 @@ export function SettingsPrefsScreen({ go }: { go: (s: ScreenName) => void }) {
           </button>
         </div>
         <SocialRelaySettings mobile />
+        <MutedAndBlocked mobile />
         <DeveloperSignatureTest mobile />
         <div className="settings-section">
           <div className="settings-section-title">{t("mobile.settings.identity")}</div>

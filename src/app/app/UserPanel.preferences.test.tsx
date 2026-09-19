@@ -71,9 +71,15 @@ describe('UserPanel personal media access', () => {
       </LocaleProvider>,
     );
 
-    const preview = screen.getByTestId('profile-appearance-preview');
-    expect(preview.querySelector('img[alt="Banner"]')).toHaveAttribute('src', 'https://cdn.example/banner.jpg');
-    expect(preview.querySelector('img[alt="Picture"]')).toHaveAttribute('src', 'https://cdn.example/alice.jpg');
+    // The banner and avatar are now a single clickable header: tapping
+    // either opens the file picker, and the URL fields stay below it for
+    // manual entry.
+    const editor = screen.getByTestId('profile-appearance-editor');
+    expect(editor.querySelector('img')).toHaveAttribute('src', 'https://cdn.example/banner.jpg');
+    expect(screen.getByTestId('edit-banner-tap')).toBeInTheDocument();
+    expect(screen.getByTestId('edit-avatar-tap')).toBeInTheDocument();
+    expect(screen.getByTestId('picture-url')).toHaveValue('https://cdn.example/alice.jpg');
+    expect(screen.getByTestId('banner-url')).toHaveValue('https://cdn.example/banner.jpg');
     expect(screen.getByTestId('save-profile-button')).toHaveClass('lc-pill-primary');
     expect(screen.getByTestId('desktop-logout')).toHaveClass('bg-red-500/20', 'text-red-300', 'hover:bg-red-500/30');
 

@@ -275,6 +275,27 @@ describe('EditProfileScreen', () => {
     expect(go).toHaveBeenCalledWith('settings-profile', 'back');
   });
 
+  it('offers URL fields for the picture and banner next to the tap-to-upload header', () => {
+    // Mobile already had tap-the-banner / tap-the-avatar, but no way to
+    // paste a link to an image hosted elsewhere.
+    renderWithLocale(<EditProfileScreen go={vi.fn()} />);
+    expect(screen.getByTestId('edit-banner-tap')).toBeInTheDocument();
+    expect(screen.getByTestId('edit-avatar-tap')).toBeInTheDocument();
+    expect(screen.getByTestId('edit-picture-url')).toBeInTheDocument();
+    expect(screen.getByTestId('edit-banner-url')).toBeInTheDocument();
+  });
+
+  it('publishes a pasted picture URL', async () => {
+    renderWithLocale(<EditProfileScreen go={vi.fn()} />);
+    fireEvent.change(screen.getByTestId('edit-picture-url'), {
+      target: { value: 'https://cdn.example/new.png' },
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('save-profile'));
+    });
+    expect(mockPublishProfile.mock.calls[0][0].picture).toBe('https://cdn.example/new.png');
+  });
+
   it('blocks save when the display name is empty', () => {
     renderWithLocale(<EditProfileScreen go={vi.fn()} />);
     fireEvent.change(screen.getByTestId('edit-name'), { target: { value: '   ' } });

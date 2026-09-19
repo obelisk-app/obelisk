@@ -617,5 +617,16 @@
   "preferences.socialRelays.importing": "Importing…",
   "preferences.socialRelays.importEmpty": "No relay list found for your account.",
   "preferences.socialRelays.reset": "Reset to defaults",
-  "preferences.socialRelays.invalid": "Enter at least one valid wss:// relay URL."
+  "preferences.socialRelays.invalid": "Enter at least one valid wss:// relay URL.",
+  "user.field.lud16": "Lightning address",
+  "profileAppearance.changeBanner": "Change banner",
+  "profileAppearance.addBanner": "Add banner",
+  "profileAppearance.changeAvatar": "Change profile picture",
+  "profileAppearance.notImage": "That file isn't an image.",
+  "profileAppearance.tooLarge": "Images must be under 10 MB.",
+  "profileAppearance.fileSelected": "File selected — saves on publish",
+  "moderation.title": "Muted & blocked",
+  "moderation.empty": "You haven't muted or blocked anyone.",
+  "moderation.muted": "Muted",
+  "moderation.blocked": "Blocked"
 }
