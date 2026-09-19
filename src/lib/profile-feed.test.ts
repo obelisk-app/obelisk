@@ -1,13 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { Event as NostrEvent } from 'nostr-tools';
 import {
-  DEFAULT_PROFILE_FEED_RELAYS,
   filterProfileFeed,
   hashtagTags,
   linkifyHashtags,
-  normalizeProfileFeedRelays,
-  parseProfileFeedRelays,
-  profileReplyTags,
   toggledFollowTags,
 } from './profile-feed';
 
@@ -46,18 +42,21 @@ describe('profile feed helpers', () => {
       'hello [#Nostr](https://njump.me/t/Nostr) and ([#bitcoin](https://njump.me/t/bitcoin))',
     );
     expect(hashtagTags('#Nostr #nostr #Bitcoin')).toEqual([['t', 'nostr'], ['t', 'bitcoin']]);
-    expect(profileReplyTags(note('parent', 'hello'))).toEqual([
-      ['e', 'parent', '', 'root'],
-      ['e', 'parent', '', 'reply'],
-      ['p', 'a'.repeat(64)],
-    ]);
   });
 
-  it('accepts exactly three unique wss relays and falls back safely', () => {
-    const custom = 'wss://one.example\nwss://two.example\nwss://three.example';
-    expect(parseProfileFeedRelays(custom)).toEqual(custom.split('\n'));
-    expect(parseProfileFeedRelays('wss://one.example\nhttps://bad.example\nwss://three.example')).toBeNull();
-    expect(normalizeProfileFeedRelays(['wss://same.example', 'wss://same.example', 'wss://three.example']))
-      .toEqual([...DEFAULT_PROFILE_FEED_RELAYS]);
+  it('does not file a quote under replies', () => {
+    // `isReply` now delegates to the NIP-10-marker-aware helper. The old
+    // version counted any `e` tag, so quote posts landed in the Replies tab.
+    const quote = note('quote', 'look at this', [['q', 'quoted-id', '', 'pk']]);
+    expect(filterProfileFeed([quote], 'replies')).toEqual([]);
+    expect(filterProfileFeed([quote], 'posts').map((event) => event.id)).toEqual(['quote']);
   });
 });
+
+/*
+ * Relay-list parsing moved to `src/lib/social/relays.test.ts` — the exactly
+ * three relay rule is gone, replaced by an editable 1–8 list. Reply tag
+ * construction moved to `src/lib/social/publish.test.ts`, which asserts the
+ * marked NIP-10 form (the old `profileReplyTags` emitted root AND reply
+ * pointing at the same id for a top-level reply).
+ */

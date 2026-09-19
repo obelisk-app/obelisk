@@ -12,10 +12,11 @@ describe('preferences store', () => {
     expect(getPreferences()).toMatchObject({
       directMessagesEnabled: false,
       developerRelayDebug: false,
-      profileFeedRelays: [
+      socialRelays: [
         'wss://relay.damus.io',
         'wss://nos.lol',
         'wss://relay.primal.net',
+        'wss://relay.nostr.band',
       ],
       accentColor: '#b4f953',
       backgroundColor: '#0a0a0a',
@@ -26,7 +27,7 @@ describe('preferences store', () => {
 
     setPreference('directMessagesEnabled', true);
     setPreference('developerRelayDebug', true);
-    setPreference('profileFeedRelays', ['wss://one.example', 'wss://two.example', 'wss://three.example']);
+    setPreference('socialRelays', ['wss://one.example', 'wss://two.example', 'wss://three.example']);
     setPreference('accentColor', '#7ec8ff');
     setPreference('backgroundColor', '#111827');
     setPreference('buttonColor', '#f0c14a');
@@ -36,7 +37,7 @@ describe('preferences store', () => {
     expect(getPreferences()).toMatchObject({
       directMessagesEnabled: true,
       developerRelayDebug: true,
-      profileFeedRelays: ['wss://one.example', 'wss://two.example', 'wss://three.example'],
+      socialRelays: ['wss://one.example', 'wss://two.example', 'wss://three.example'],
       accentColor: '#7ec8ff',
       backgroundColor: '#111827',
       buttonColor: '#f0c14a',
@@ -46,7 +47,7 @@ describe('preferences store', () => {
     expect(JSON.parse(localStorage.getItem('obelisk:preferences') ?? '{}')).toMatchObject({
       directMessagesEnabled: true,
       developerRelayDebug: true,
-      profileFeedRelays: ['wss://one.example', 'wss://two.example', 'wss://three.example'],
+      socialRelays: ['wss://one.example', 'wss://two.example', 'wss://three.example'],
       accentColor: '#7ec8ff',
       backgroundColor: '#111827',
       buttonColor: '#f0c14a',
@@ -79,7 +80,7 @@ describe('preferences store', () => {
       buttonColor: 'url(javascript:bad)',
       bubbleColor: 'pink',
       bubbleAnimation: 'teleport',
-      profileFeedRelays: ['https://bad.example', 'wss://duplicate.example', 'wss://duplicate.example'],
+      socialRelays: ['https://bad.example', 'wss://duplicate.example', 'wss://duplicate.example'],
     }));
 
     const { getPreferences, resetAppearancePreferences } = await import('./preferences');
@@ -91,11 +92,9 @@ describe('preferences store', () => {
       buttonColor: '#b4f953',
       bubbleColor: '#b4f953',
       bubbleAnimation: 'float',
-      profileFeedRelays: [
-        'wss://relay.damus.io',
-        'wss://nos.lol',
-        'wss://relay.primal.net',
-      ],
+      // One entry was invalid and two were duplicates: the good relay
+      // survives instead of the whole list being thrown away.
+      socialRelays: ['wss://duplicate.example'],
     });
 
     resetAppearancePreferences();

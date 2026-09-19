@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from 'react';
 import { createLocalStore } from './local-store';
-import { DEFAULT_PROFILE_FEED_RELAYS, normalizeProfileFeedRelays } from './profile-feed';
+import { DEFAULT_SOCIAL_RELAYS, normalizeSocialRelays } from './social/relays';
 
 export type BubbleAnimationStyle = 'float' | 'drift' | 'orbit' | 'still';
 
@@ -11,7 +11,12 @@ export interface Preferences {
   developerRelayDebug: boolean;
   directMessagesEnabled: boolean;
   postQuantumEnabled: boolean;
-  profileFeedRelays: string[];
+  /**
+   * Relays for ordinary Nostr traffic (feeds, profiles) — NOT the NIP-29
+   * group relays in the rail. Formerly `profileFeedRelays`, which was capped
+   * at exactly three entries; see `normalizeSocialRelays` for the migration.
+   */
+  socialRelays: string[];
   accentColor: string;
   backgroundColor: string;
   buttonColor: string;
@@ -31,7 +36,7 @@ const DEFAULTS: Preferences = {
   // conservative on its own (`resolvePqSend` only seals post-quantum when the
   // signer advertises it), so this default cannot cause a false claim.
   postQuantumEnabled: true,
-  profileFeedRelays: [...DEFAULT_PROFILE_FEED_RELAYS],
+  socialRelays: [...DEFAULT_SOCIAL_RELAYS],
   accentColor: '#b4f953',
   backgroundColor: '#0a0a0a',
   buttonColor: '#b4f953',
@@ -142,7 +147,12 @@ function normalizePreferences(raw: Partial<Preferences>): Preferences {
     postQuantumEnabled: typeof raw.postQuantumEnabled === 'boolean'
       ? raw.postQuantumEnabled
       : DEFAULTS.postQuantumEnabled,
-    profileFeedRelays: normalizeProfileFeedRelays(raw.profileFeedRelays),
+    // Migration: the old key held exactly three relays. Any stored value is
+    // a valid input to the new normalizer, so this is lossless — read the
+    // legacy key when the new one is absent.
+    socialRelays: normalizeSocialRelays(
+      raw.socialRelays ?? (raw as { profileFeedRelays?: unknown }).profileFeedRelays,
+    ),
     accentColor: sanitizeHexColor(raw.accentColor, DEFAULTS.accentColor),
     backgroundColor: sanitizeHexColor(raw.backgroundColor, DEFAULTS.backgroundColor),
     buttonColor: sanitizeHexColor(raw.buttonColor, DEFAULTS.buttonColor),
@@ -152,8 +162,8 @@ function normalizePreferences(raw: Partial<Preferences>): Preferences {
 }
 
 function normalizePreferenceValue<K extends keyof Preferences>(key: K, value: Preferences[K]): Preferences[K] {
-  if (key === 'profileFeedRelays') {
-    return normalizeProfileFeedRelays(value) as Preferences[K];
+  if (key === 'socialRelays') {
+    return normalizeSocialRelays(value) as Preferences[K];
   }
   if (key === 'bubbleAnimation') {
     return normalizeBubbleAnimation(value) as Preferences[K];

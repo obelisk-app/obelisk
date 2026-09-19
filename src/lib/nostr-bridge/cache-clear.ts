@@ -44,6 +44,11 @@ const PRESERVED_EXACT = new Set<string>([
 
 const WIPED_PREFIXES = [
   'obelisk-cache-v4/',
+  // @nostr-wot/data's own TTL cache (configurePersistence in
+  // src/lib/social/pool.ts). Holds profiles, relay lists and notes fetched
+  // for the social feed — without this, "Clear cache" leaves the feed
+  // serving the same stale content it just claimed to clear.
+  'obelisk-social-sdk/',
   'obelisk-cache-v3/',
   'obelisk-cache-v2/',
   'obelisk-cache/',
