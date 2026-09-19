@@ -63,7 +63,7 @@ export default function AuthorContext({
   if (!hasAnything) return null;
 
   return (
-    <div className="space-y-8" data-testid="author-context">
+    <div className="min-w-0 space-y-8" data-testid="author-context">
       {notes.length > 0 && (
         <Section title={`More from ${name}`} testId="author-more-notes">
           <ul className="space-y-2">
@@ -75,9 +75,9 @@ export default function AuthorContext({
                 <li key={note.id}>
                   <Link
                     href={eventPath(note)}
-                    className="block rounded-xl border border-lc-border bg-lc-dark p-3 transition-colors hover:border-lc-green/40"
+                    className="block min-w-0 rounded-xl border border-lc-border bg-lc-dark p-3 transition-colors hover:border-lc-green/40"
                   >
-                    <p className="line-clamp-2 text-sm text-lc-white">
+                    <p className="line-clamp-2 break-words text-sm text-lc-white">
                       {text || 'Shared media'}
                     </p>
                     <time
@@ -101,7 +101,7 @@ export default function AuthorContext({
               <Link
                 key={tag}
                 href={`/t/${encodeURIComponent(tag)}`}
-                className="rounded-full bg-lc-dark px-2.5 py-1 text-[11px] text-lc-muted transition-colors hover:text-lc-green"
+                className="max-w-full break-all rounded-full bg-lc-dark px-2.5 py-1 text-[11px] text-lc-muted transition-colors hover:text-lc-green"
               >
                 #{tag}
               </Link>
@@ -117,7 +117,7 @@ export default function AuthorContext({
               <li key={profile.pubkey}>
                 <Link
                   href={`/p/${npubOf(profile.pubkey)}`}
-                  className="flex items-center gap-2 rounded-xl border border-lc-border bg-lc-dark p-2 transition-colors hover:border-lc-green/40"
+                  className="flex min-w-0 items-center gap-2 rounded-xl border border-lc-border bg-lc-dark p-2 transition-colors hover:border-lc-green/40"
                 >
                   {profile.picture ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -149,7 +149,7 @@ export default function AuthorContext({
             {writeRelays.map((relay) => (
               <li
                 key={relay}
-                className="rounded-full border border-lc-border px-2.5 py-1 font-mono text-[10px] text-lc-muted"
+                className="max-w-full break-all rounded-full border border-lc-border px-2.5 py-1 font-mono text-[10px] text-lc-muted"
               >
                 {hostOf(relay)}
               </li>
@@ -174,7 +174,7 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section data-testid={testId}>
+    <section className="min-w-0" data-testid={testId}>
       <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-lc-muted">{title}</h2>
       {children}
     </section>

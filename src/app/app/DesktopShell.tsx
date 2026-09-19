@@ -273,6 +273,10 @@ export default function AppShell() {
         });
       }
     }
+    // `?s=feed` — shared by the mobile shell's screen param, so one link
+    // ("Open in Obelisk" from the public viewer) lands on the feed whichever
+    // shell picks it up. A channel deep-link still wins: it is more specific.
+    if (!c && params.get('s') === 'feed') setView({ kind: 'feed' });
     if (c) setView({ kind: 'group', groupId: c });
     if (m) setPendingMessageId(m);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -284,6 +288,8 @@ export default function AppShell() {
     const url = new URL(window.location.href);
     if (view.kind === 'group') url.searchParams.set('c', view.groupId);
     else url.searchParams.delete('c');
+    if (view.kind === 'feed') url.searchParams.set('s', 'feed');
+    else url.searchParams.delete('s');
     if (relay) url.searchParams.set('relay', shortHost(relay));
     else url.searchParams.delete('relay');
     window.history.replaceState(null, '', url.pathname + url.search);

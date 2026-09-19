@@ -18,7 +18,7 @@ import {
   type ViewerProfile,
 } from '@/lib/server/nostr-fetch';
 import { plainTextForPreview, previewImage } from '@/lib/server/note-preview';
-import ObeliskIcon from '@/components/ObeliskIcon';
+import ViewerHeader from '@/components/social/ViewerHeader';
 
 export const runtime = 'nodejs';
 export const revalidate = 120;
@@ -126,17 +126,7 @@ export default async function HashtagPage({ params }: Params) {
 function Shell({ children }: { children: React.ReactNode }) {
   return (
     <main className="min-h-screen bg-lc-black text-lc-white">
-      <header className="sticky top-0 z-10 border-b border-lc-border bg-lc-black/90 backdrop-blur">
-        <div className="mx-auto flex max-w-2xl items-center gap-3 px-5 py-3">
-          <Link href="/" className="flex items-center gap-2" aria-label="Obelisk">
-            <ObeliskIcon className="h-6 w-6" />
-            <span className="text-sm font-semibold">Obelisk</span>
-          </Link>
-          <Link href="/app" className="lc-pill-primary ml-auto px-4 py-2 text-xs">
-            Open in Obelisk
-          </Link>
-        </div>
-      </header>
+      <ViewerHeader />
       <div className="mx-auto max-w-2xl">{children}</div>
     </main>
   );

@@ -110,7 +110,7 @@ export default function NoteViewerClient({
       <div className="px-5 py-20 text-center" data-testid="note-viewer-missing">
         <h1 className="text-lg font-semibold text-lc-white">{t('social.noteNotFoundTitle')}</h1>
         <p className="mt-2 text-sm text-lc-muted">{t('social.noteNotFound')}</p>
-        <Link href="/app" className="lc-pill-primary mt-6 inline-block px-5 py-2 text-xs">
+        <Link href="/app?s=feed" className="lc-pill-primary mt-6 inline-block px-5 py-2 text-xs">
           {t('noteViewer.openApp')}
         </Link>
       </div>
@@ -126,12 +126,6 @@ export default function NoteViewerClient({
           <NoteCard note={note} />
         </div>
       )}
-      <div className="px-5 py-8 text-center">
-        <p className="text-xs text-lc-muted">{t('noteViewer.footer')}</p>
-        <Link href="/app" className="lc-pill-primary mt-3 inline-block px-5 py-2 text-xs">
-          {t('noteViewer.openApp')}
-        </Link>
-      </div>
     </div>
   );
 }

@@ -27,7 +27,7 @@ import {
   topHashtags,
 } from '@/lib/server/nostr-fetch';
 import { buildNotePreview } from '@/lib/server/note-preview';
-import ObeliskIcon from '@/components/ObeliskIcon';
+import ViewerHeader from '@/components/social/ViewerHeader';
 import NoteViewerClient from './NoteViewerClient';
 import AuthorContext from './AuthorContext';
 import OpenInClients from './OpenInClients';
@@ -102,17 +102,7 @@ export default async function NoteViewerPage({ params }: Params) {
 
   return (
     <main className="min-h-screen bg-lc-black text-lc-white">
-      <header className="sticky top-0 z-20 border-b border-lc-border bg-lc-black/90 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center gap-3 px-5 py-3">
-          <Link href="/" className="flex items-center gap-2" aria-label="Obelisk">
-            <ObeliskIcon className="h-6 w-6" />
-            <span className="text-sm font-semibold">Obelisk</span>
-          </Link>
-          <Link href="/app" className="lc-pill-primary ml-auto px-4 py-2 text-xs">
-            Open in Obelisk
-          </Link>
-        </div>
-      </header>
+      <ViewerHeader maxWidth="max-w-6xl" />
 
       {/*
         The server-rendered fallback is what a crawler and a no-JS reader see.
@@ -148,7 +138,19 @@ export default async function NoteViewerPage({ params }: Params) {
               scrolls past. `max-h`/`overflow-y` keep a long rail from
               becoming unreachable when it is taller than the viewport.
             */}
-            <div className="space-y-8 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto">
+            {/*
+              `min-w-0` plus `overflow-x-hidden`: making this a scroll
+              container means anything wider than the rail — an npub, a relay
+              host, a long display name — spills out to the right instead of
+              being clipped, and the vertical scrollbar eats width the layout
+              hasn't accounted for. `scrollbar-gutter: stable` reserves that
+              width up front so the content doesn't shift when it appears,
+              and the right padding keeps text off the scrollbar.
+            */}
+            <div
+              className="min-w-0 space-y-8 overflow-x-hidden [overflow-wrap:anywhere] lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pr-2"
+              style={{ scrollbarGutter: 'stable' }}
+            >
               <OpenInClients identifier={decodeURIComponent(id).replace(/^nostr:/i, '')} />
               {author && (
                 <AuthorContext

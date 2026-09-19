@@ -14,7 +14,7 @@ import { NOSTR_CLIENTS } from '@/lib/social/clients';
 
 export default function OpenInClients({ identifier }: { identifier: string }) {
   return (
-    <section data-testid="open-in-clients">
+    <section className="min-w-0" data-testid="open-in-clients">
       <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-lc-muted">
         Open in
       </h2>

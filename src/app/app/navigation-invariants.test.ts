@@ -63,6 +63,16 @@ describe('desktop navigation invariants', () => {
     expect(shell).toContain('onOpenThread={setThreadNoteId}');
   });
 
+  it('honours ?s=feed so a shared link can land on the feed', () => {
+    // The public viewer's "Open in Obelisk" points at /app?s=feed. Mobile
+    // already understands `?s=<screen>`; desktop had to learn it so one link
+    // works whichever shell picks it up.
+    const shell = read('DesktopShell.tsx');
+    expect(shell).toContain("params.get('s') === 'feed'");
+    // A channel deep-link is more specific and must still win.
+    expect(shell).toContain("if (!c && params.get('s') === 'feed')");
+  });
+
   it('the shell answers a pendingJump by changing `view`, not the bridge', () => {
     const shell = read('DesktopShell.tsx');
     const effect = shell.slice(
