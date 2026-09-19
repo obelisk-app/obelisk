@@ -25,8 +25,9 @@
  * matching what every other Nostr client does.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from '@/i18n/context';
+import AnchoredMenu from './AnchoredMenu';
 
 /** Per-action accent. Keyed by action so the mapping is legible at a glance. */
 const ACCENT = {
@@ -209,22 +210,6 @@ export function RepostButton({
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (event: MouseEvent) => {
-      if (!wrapRef.current?.contains(event.target as Node)) setOpen(false);
-    };
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false);
-    };
-    document.addEventListener('mousedown', onDown);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onDown);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [open]);
-
   // With no quote handler there's nothing to choose between, so stay a
   // one-tap button rather than opening a single-item menu.
   if (!onQuote) {
@@ -254,12 +239,20 @@ export function RepostButton({
         disabled={disabled}
         onClick={() => setOpen((value) => !value)}
       />
-      {open && (
-        <div
-          className="absolute bottom-full left-0 z-20 mb-1 w-36 overflow-hidden rounded-xl border border-lc-border bg-lc-dark py-1 shadow-2xl"
-          role="menu"
-          data-testid="note-repost-menu"
-        >
+      {/*
+        Portalled for the same reason as the ⋯ menu: a note card's
+        `contain: paint` clips and stacking-traps anything positioned inside
+        it, so this would render under the next card.
+      */}
+      <AnchoredMenu
+        open={open}
+        onClose={() => setOpen(false)}
+        anchorRef={wrapRef}
+        width={150}
+        align="start"
+        testId="note-repost-menu"
+      >
+        <>
           <button
             type="button"
             role="menuitem"
@@ -280,8 +273,8 @@ export function RepostButton({
             <QuoteIcon />
             {t('social.quote')}
           </button>
-        </div>
-      )}
+        </>
+      </AnchoredMenu>
     </div>
   );
 }

@@ -100,6 +100,34 @@ describe('NoteMenu', () => {
     expect(screen.queryByTestId('note-menu-mute')).not.toBeInTheDocument();
   });
 
+  it('renders outside the note card, not inside it', () => {
+    // Note cards carry `contain: paint`, which clips their children and traps
+    // their stacking context — an in-card menu rendered UNDER the next note
+    // no matter its z-index. Portalling to body is the only fix that keeps
+    // the containment (and so the scroll performance it buys).
+    cleanup();
+    const { container } = render(
+      <LocaleProvider initialLocale="en">
+        <div className="note-card" data-testid="card">
+          <NoteMenu note={note} isMine={false} />
+        </div>
+      </LocaleProvider>,
+    );
+    fireEvent.click(screen.getByTestId('note-more'));
+
+    const menu = screen.getByTestId('note-menu');
+    expect(menu).toBeInTheDocument();
+    expect(container.querySelector('[data-testid="note-menu"]')).toBeNull();
+    expect(menu.closest('.note-card')).toBeNull();
+    expect(document.body.contains(menu)).toBe(true);
+  });
+
+  it('is positioned with fixed coordinates so containment cannot clip it', () => {
+    open();
+    const menu = screen.getByTestId('note-menu');
+    expect(menu.style.position).toBe('fixed');
+  });
+
   it('closes on Escape', () => {
     open();
     expect(screen.getByTestId('note-menu')).toBeInTheDocument();

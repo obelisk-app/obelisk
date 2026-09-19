@@ -42,10 +42,14 @@ describe('desktop navigation invariants', () => {
     expect(shell).toContain("view.kind === 'feed' ? 'rounded-tl-xl border-l' : ''");
   });
 
-  it('group chat offers the Nostr feed as a second tab', () => {
+  it('the feed sits beside group chat, not as a tab inside it', () => {
+    // Chat/Feed tabs made the two exclusive: you lost sight of a live room
+    // to glance at the feed. The rail button cycles off → split → full.
     const shell = read('DesktopShell.tsx');
-    expect(shell).toContain('chat-pane-tab-');
-    expect(shell).toContain('<FeedScreen embedded');
+    expect(shell).not.toContain('chat-pane-tab-');
+    expect(shell).toContain('desktop-feed-pane');
+    expect(shell).toContain('const cycleFeed');
+    expect(shell).toContain('onPickFeed={cycleFeed}');
   });
 
   it('threads open in a side pane on desktop, not a modal', () => {

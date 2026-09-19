@@ -52,6 +52,7 @@ import MessageContent from '@/components/chat/MessageContent';
 import NostrProfile from '@/components/chat/NostrProfile';
 import FeedScreen from '@/components/social/FeedScreen';
 import NoteThread from '@/components/social/NoteThread';
+import { nextFeedAction } from './feed-pane';
 import ProfilePopover from '@/components/chat/ProfilePopover';
 import { MentionText } from '@/components/chat/MentionText';
 import MentionNavigator from '@/components/chat/MentionNavigator';
@@ -160,6 +161,7 @@ type View =
 const SIDEBAR_KEY = 'obelisk-dex/sidebar-width';
 const PROFILE_PANE_KEY = 'obelisk-dex/profile-pane-width';
 const THREAD_PANE_KEY = 'obelisk-dex/thread-pane-width';
+const FEED_PANE_KEY = 'obelisk-dex/feed-pane-width';
 const SHOW_MEMBERS_KEY = 'obelisk-dex/show-members';
 
 export default function AppShell() {
@@ -175,7 +177,24 @@ export default function AppShell() {
   // hides the list you were reading, which is exactly the context you need
   // while following a conversation.
   const [threadNoteId, setThreadNoteId] = useState<string | null>(null);
+  /**
+   * The feed alongside a group, rather than instead of it.
+   *
+   * Reading the wider network while a room is live is a normal thing to want,
+   * and the old in-chat Chat/Feed tabs made it exclusive — you lost sight of
+   * the conversation to glance at the feed. The rail button now cycles
+   * off → split → full → off, so one control covers "peek", "focus" and
+   * "put it away" without adding chrome to the group view.
+   */
+  const [splitFeed, setSplitFeed] = useState(false);
+  // Remembered so leaving the full-screen feed returns to the room you were
+  // in rather than an empty pane. Written in an effect rather than during
+  // render — a ref mutation in the render body is not safe to replay.
+  const lastGroupId = useRef<string | null>(null);
   const [view, setView] = useState<View>({ kind: 'empty' });
+  useEffect(() => {
+    if (view.kind === 'group') lastGroupId.current = view.groupId;
+  }, [view]);
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
@@ -332,9 +351,20 @@ export default function AppShell() {
   const railMode: { kind: 'dm' } | { kind: 'feed' } | { kind: 'relay'; url: string } =
     view.kind === 'dm'
       ? { kind: 'dm' }
-      : view.kind === 'feed'
+      : view.kind === 'feed' || splitFeed
         ? { kind: 'feed' }
         : { kind: 'relay', url: relay };
+
+  const cycleFeed = () => {
+    closeDrawer();
+    const action = nextFeedAction(view, splitFeed, lastGroupId.current);
+    if (action.kind === 'split') {
+      setSplitFeed(true);
+      return;
+    }
+    setSplitFeed(false);
+    setView(action.kind === 'full' ? { kind: 'feed' } : action.view);
+  };
 
   const closeDrawer = () => setSidebarOpen(false);
   const leaveDms = () => {
@@ -398,7 +428,7 @@ export default function AppShell() {
           <ServerRail
             mode={railMode}
             onPickDM={() => { setView({ kind: 'dm', peer: null }); closeDrawer(); }}
-            onPickFeed={() => { setView({ kind: 'feed' }); closeDrawer(); }}
+            onPickFeed={cycleFeed}
             onPickRelay={async (url) => {
               setView({ kind: 'empty' });
               try {
@@ -447,8 +477,6 @@ export default function AppShell() {
               pendingMessageId={pendingMessageId}
               onConsumePendingMessageId={() => setPendingMessageId(null)}
               onSelectGroup={(gid) => setView({ kind: 'group', groupId: gid })}
-              onOpenProfile={setExploredProfilePubkey}
-              onOpenThread={setThreadNoteId}
             />
           ) : view.kind === 'dm' ? (
             <DMOptInBoundary surface="desktop" secondaryLabel={t('dm.optIn.continueWithout')} onSecondary={leaveDms}>
@@ -463,6 +491,20 @@ export default function AppShell() {
             <EmptyState />
           )}
         </main>
+        {view.kind === 'group' && splitFeed && (
+          <ResizablePane storageKey={FEED_PANE_KEY} defaultWidth={520} min={360} max={900} side="left">
+            <aside
+              className="flex h-full min-w-0 flex-1 flex-col overflow-hidden border-l border-lc-border bg-lc-black"
+              data-testid="desktop-feed-pane"
+            >
+              <FeedScreen
+                embedded
+                onOpenProfile={setExploredProfilePubkey}
+                onOpenThread={setThreadNoteId}
+              />
+            </aside>
+          </ResizablePane>
+        )}
         {threadNoteId && (
           <ResizablePane storageKey={THREAD_PANE_KEY} defaultWidth={520} min={360} max={900} side="left">
             <aside className="flex h-full min-w-0 flex-1 flex-col overflow-hidden border-l border-lc-border bg-lc-black" data-testid="desktop-thread-pane">
@@ -2218,8 +2260,6 @@ function ChatLayout({
   pendingMessageId,
   onConsumePendingMessageId,
   onSelectGroup,
-  onOpenProfile,
-  onOpenThread,
 }: {
   groupId: string;
   showMembers: boolean;
@@ -2227,54 +2267,17 @@ function ChatLayout({
   pendingMessageId: string | null;
   onConsumePendingMessageId: () => void;
   onSelectGroup: (groupId: string) => void;
-  onOpenProfile?: (pubkey: string) => void;
-  onOpenThread?: (noteId: string) => void;
 }) {
-  const { t } = useTranslation();
-  // The Nostr feed rides alongside group chat rather than replacing it: a
-  // relay is a place you talk, and the wider network is a second tab of the
-  // same place. Chat stays mounted underneath so switching back doesn't
-  // re-subscribe or lose scroll position.
-  const [pane, setPane] = useState<'chat' | 'feed'>('chat');
-
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      <div className="flex shrink-0 items-center gap-1 border-b border-lc-border bg-lc-black/40 px-2" role="tablist">
-        {(['chat', 'feed'] as const).map((value) => (
-          <button
-            key={value}
-            type="button"
-            role="tab"
-            aria-selected={pane === value}
-            onClick={() => setPane(value)}
-            className={`relative px-4 py-2 text-xs font-semibold transition-colors ${
-              pane === value ? 'text-lc-white' : 'text-lc-muted hover:text-lc-white'
-            }`}
-            data-testid={`chat-pane-tab-${value}`}
-          >
-            {t(value === 'chat' ? 'chat.tab.chat' : 'social.feed')}
-            {pane === value && (
-              <span className="absolute inset-x-3 -bottom-px h-0.5 rounded-full bg-lc-green" aria-hidden="true" />
-            )}
-          </button>
-        ))}
-      </div>
-
-      <div className={pane === 'chat' ? 'flex flex-1 flex-col overflow-hidden' : 'hidden'}>
-        <ChatPanel
-          groupId={groupId}
-          showMembers={showMembers}
-          onToggleMembers={onToggleMembers}
-          pendingMessageId={pendingMessageId}
-          onConsumePendingMessageId={onConsumePendingMessageId}
-          onSelectGroup={onSelectGroup}
-        />
-      </div>
-      {pane === 'feed' && (
-        <div className="flex flex-1 flex-col overflow-hidden" data-testid="chat-pane-feed">
-          <FeedScreen embedded onOpenProfile={onOpenProfile} onOpenThread={onOpenThread} />
-        </div>
-      )}
+      <ChatPanel
+        groupId={groupId}
+        showMembers={showMembers}
+        onToggleMembers={onToggleMembers}
+        pendingMessageId={pendingMessageId}
+        onConsumePendingMessageId={onConsumePendingMessageId}
+        onSelectGroup={onSelectGroup}
+      />
     </div>
   );
 }

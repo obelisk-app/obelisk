@@ -10,7 +10,7 @@
  * look it up anywhere else.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { hexToNpub } from '@nostr-wot/data';
 import { usePreferences } from '@/lib/preferences';
@@ -18,6 +18,7 @@ import { useTranslation } from '@/i18n/context';
 import { useModerationStore } from '@/store/moderation';
 import { useToastStore } from '@/store/toast';
 import ModalShell from '@/components/ModalShell';
+import AnchoredMenu from './AnchoredMenu';
 import {
   groupNoteUrl,
   noteIdentifier,
@@ -46,23 +47,9 @@ export default function NoteMenu({
   const identifier = noteIdentifier(note, relays);
   const [open, setOpen] = useState(false);
   const [rawOpen, setRawOpen] = useState(false);
-  const wrapRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const muted = useModerationStore((state) => state.mutedPubkeys.includes(note.pubkey));
   const toggleMute = useModerationStore((state) => state.toggleMute);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (event: MouseEvent) => {
-      if (!wrapRef.current?.contains(event.target as Node)) setOpen(false);
-    };
-    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') setOpen(false); };
-    document.addEventListener('mousedown', onDown);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onDown);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [open]);
 
   const toast = (title: string) => useToastStore.getState().pushToast({ title, body: '' });
 
@@ -96,8 +83,9 @@ export default function NoteMenu({
   };
 
   return (
-    <div className="relative ml-auto" ref={wrapRef}>
+    <div className="relative ml-auto">
       <button
+        ref={triggerRef}
         type="button"
         className="group/act -m-1 flex items-center rounded-full p-1 text-lc-muted transition-colors"
         onClick={() => setOpen((value) => !value)}
@@ -110,12 +98,14 @@ export default function NoteMenu({
         </span>
       </button>
 
-      {open && (
-        <div
-          className="absolute bottom-full right-0 z-30 mb-1 w-60 overflow-hidden rounded-xl border border-lc-border bg-lc-dark py-1 shadow-2xl"
-          role="menu"
-          data-testid="note-menu"
-        >
+      <AnchoredMenu
+        open={open}
+        onClose={() => setOpen(false)}
+        anchorRef={triggerRef}
+        width={240}
+        testId="note-menu"
+      >
+        <>
           <Item onClick={() => void share()} testId="note-menu-share">
             {t('social.shareNote')}
           </Item>
@@ -182,8 +172,8 @@ export default function NoteMenu({
               </Item>
             </>
           )}
-        </div>
-      )}
+        </>
+      </AnchoredMenu>
 
       {rawOpen && (
         <ModalShell
