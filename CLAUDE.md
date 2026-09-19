@@ -18,6 +18,7 @@ Cache             localStorage stale-while-revalidate (src/lib/nostr-bridge/cach
 Voice (mesh)      P2P WebRTC, Nostr-signaled (kinds 20078 / 25050) + per-pair `obelisk-control` data channel (heartbeat, fast hangup, transitive discovery) — see docs/voice/
 Games             Chain Reaction over kind 2390 — event log replayed client-side (src/lib/games/)
 Voice (SFU)      mediasoup engine, Nostr-RPC signaling (kind 25050 envelopes) — src/lib/voice/sfu-client.ts (server: obelisk-app/obelisk-sfu)
+Social feeds     Ordinary Nostr (kinds 1/6/7/16/20/9802/30023/…) over user-chosen public relays — src/lib/social/
 Payments          Nostr Wallet Connect (NIP-47) — src/lib/wallet/
 ```
 
@@ -175,6 +176,7 @@ predictable:
 | DMs (kind 4) | **NIP-65 read+write union** of the user's relay list |
 | DM read-state cursors + `inboxLastReadAt` (NIP-59 wraps) | **NIP-65 read+write union** |
 | Voice signaling / SFU RPC (kinds 25050, 31313, 31314) | Per-channel relay set (mesh: active relay; SFU: pinned trust set) |
+| Social feeds / profiles (kinds 1, 6, 7, 16, 20, 1111, 9735, 9802, 30023) | **`preferences.socialRelays`** — user-chosen public relays, never the group relay. See [docs/social-feeds.md](docs/social-feeds.md) |
 
 Publishing has one extra rule that reads do not, because a publish rides an
 **authenticated** socket:
@@ -384,6 +386,7 @@ for where this sits relative to the bridgeCache.
 - [docs/relay-layout-and-branding.md](docs/relay-layout-and-branding.md) — shared NIP-78 layout & branding; multi-author latest-wins, gated on group-admin union
 - [docs/relay-roles.md](docs/relay-roles.md) — operator-defined tiered roles (NIP-78 kind 30078); highest tier held is the badge shown in chat and the member list
 - [docs/dm-metadata-privacy.md](docs/dm-metadata-privacy.md) — why gift-wrapped DMs can still leak the social graph, the ordered relay ladder, AUTH modes, what cannot be fixed client-side, and the rules for changing DM routing
+- [docs/social-feeds.md](docs/social-feeds.md) — the Nostr-proper surface: social as a fourth relay tier, the shared SDK pool, feed caching, `until` pagination, and the wire-format matrix (with the Amethyst/Damus/Primal quirks that make it not simply "follow the NIP")
 - [docs/games.md](docs/games.md) — Chain Reaction on the relay: kind 2390 wire format, deterministic replay as the trust model, turn clock without a server, what it doesn't defend against
 - [docs/uploads.md](docs/uploads.md) — Blossom storage + URL format
 - [docs/cloudflare-tunnel.md](docs/cloudflare-tunnel.md) — `npm run dev:tunnel` exposes localhost:3000 at https://obelisk.fabri.lat
