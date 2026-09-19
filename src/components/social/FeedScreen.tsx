@@ -15,6 +15,7 @@ import { useMyFollows, useMyPubkey, useUserMetadata } from '@/lib/nostr-bridge';
 import { usePreferences } from '@/lib/preferences';
 import { useTranslation } from '@/i18n/context';
 import { useFeed, type FeedSource } from '@/lib/social/useFeed';
+import { CONTENT_FILTERS, type ContentFilter } from '@/lib/social/kinds';
 import ModalShell from '@/components/ModalShell';
 import UserAvatar from '@/components/UserAvatar';
 import FeedList from './FeedList';
@@ -47,6 +48,7 @@ export default function FeedScreen({
   const follows = useMyFollows();
   const relays = usePreferences().socialRelays;
   const [tab, setTab] = useState<FeedTab>('following');
+  const [filter, setFilter] = useState<ContentFilter>('all');
   const [composer, setComposer] = useState<ComposerMode | null>(null);
   const [openNoteId, setOpenNoteId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -55,7 +57,7 @@ export default function FeedScreen({
     () => (tab === 'following' ? { kind: 'following', authors: follows } : { kind: 'global' }),
     [tab, follows],
   );
-  const state = useFeed(source, relays);
+  const state = useFeed(source, relays, filter);
 
   const emptyLabel = tab === 'following' && follows.length === 0
     ? t('social.followNobody')
@@ -134,6 +136,30 @@ export default function FeedScreen({
             <RefreshButton busy={state.loading} onClick={state.refresh} />
           </div>
         )}
+      </div>
+
+      {/*
+        Content filter. This narrows the REQ, not just the rendering — asking
+        for 50 mixed events and showing the three articles among them is how
+        an "Articles" view ends up looking empty.
+      */}
+      <div className="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-lc-border px-3 py-1.5">
+        {CONTENT_FILTERS.map((value) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => setFilter(value)}
+            aria-pressed={filter === value}
+            className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-medium transition-colors ${
+              filter === value
+                ? 'bg-lc-green/15 text-lc-green'
+                : 'text-lc-muted hover:bg-white/5 hover:text-lc-white'
+            }`}
+            data-testid={`feed-filter-${value}`}
+          >
+            {t(`social.filter.${value}`)}
+          </button>
+        ))}
       </div>
 
       <div

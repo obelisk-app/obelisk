@@ -39,6 +39,33 @@ export const FEED_KINDS = [
   KIND_COMMENT,
 ];
 
+/**
+ * Reader-facing content filter.
+ *
+ * "All" is the firehose; the others let someone read just the long-form or
+ * just the pictures without being buried in short notes, which is the main
+ * reason a mixed feed becomes unusable.
+ */
+export type ContentFilter = 'all' | 'notes' | 'articles' | 'media';
+
+export const CONTENT_FILTERS: ContentFilter[] = ['all', 'notes', 'articles', 'media'];
+
+/** Kinds to request for a given filter — narrowing the REQ, not just the view. */
+export function kindsForFilter(filter: ContentFilter): number[] {
+  switch (filter) {
+    case 'notes':
+      // Reposts belong here: a repost of a note is still a note in the feed.
+      return [KIND_NOTE, KIND_REPOST, KIND_GENERIC_REPOST, KIND_COMMENT];
+    case 'articles':
+      return [KIND_LONG_FORM, KIND_HIGHLIGHT];
+    case 'media':
+      return [KIND_PICTURE, KIND_VIDEO, KIND_SHORT_VIDEO];
+    case 'all':
+    default:
+      return FEED_KINDS;
+  }
+}
+
 /** How a feed row should render a given kind. */
 export type NoteRenderMode =
   | 'note'       // plain kind-1 style body

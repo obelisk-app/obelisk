@@ -661,5 +661,9 @@
   "social.followingBadge": "Siguiendo",
   "social.openIn": "Abrir en",
   "social.defaultApp": "Tu app predeterminada",
-  "social.share": "Compartir"
+  "social.share": "Compartir",
+  "social.filter.all": "Todo",
+  "social.filter.notes": "Notas",
+  "social.filter.articles": "Artículos",
+  "social.filter.media": "Media"
 }

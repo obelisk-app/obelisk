@@ -197,6 +197,31 @@ describe('FeedScreen', () => {
     expect(screen.queryByTestId('feed-loading')).not.toBeInTheDocument();
   });
 
+  it('narrows the relay request when you filter by content type', async () => {
+    // Asking for 50 mixed events and showing the three articles among them
+    // is how an "Articles" view ends up looking empty.
+    renderFeed();
+    await waitFor(() => expect(socialMocks.loadFollowingFeed).toHaveBeenCalled());
+
+    socialMocks.loadFollowingFeed.mockClear();
+    fireEvent.click(screen.getByTestId('feed-filter-articles'));
+    await waitFor(() => expect(socialMocks.loadFollowingFeed).toHaveBeenCalled());
+    expect(socialMocks.loadFollowingFeed.mock.calls.at(-1)?.[1])
+      .toMatchObject({ filter: 'articles' });
+  });
+
+  it('keeps a filtered feed in its own cache slot', async () => {
+    // A narrowed REQ returns a different page, so sharing a cache entry with
+    // the unfiltered feed would paint notes the filter excludes.
+    socialMocks.loadFollowingFeed.mockResolvedValue([note('a', 'a short note')]);
+    renderFeed();
+    await waitFor(() => expect(screen.getByText('a short note')).toBeInTheDocument());
+
+    socialMocks.loadFollowingFeed.mockResolvedValue([]);
+    fireEvent.click(screen.getByTestId('feed-filter-articles'));
+    await waitFor(() => expect(screen.queryByText('a short note')).not.toBeInTheDocument());
+  });
+
   it('exposes refresh and relay settings', async () => {
     const onOpenSettings = vi.fn();
     socialMocks.loadFollowingFeed.mockResolvedValue([note('a', 'first')]);

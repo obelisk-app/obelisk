@@ -99,7 +99,7 @@ export default function NoteViewerClient({
 
   if (state === 'loading') {
     return (
-      <div className="mx-auto max-w-2xl space-y-3 p-5" data-testid="note-viewer-loading">
+      <div className="space-y-3 p-5" data-testid="note-viewer-loading">
         {[0, 1, 2].map((item) => <div key={item} className="lc-skeleton h-24 rounded-xl" />)}
       </div>
     );
@@ -107,7 +107,7 @@ export default function NoteViewerClient({
 
   if (state === 'missing' || !note) {
     return (
-      <div className="mx-auto max-w-2xl px-5 py-20 text-center" data-testid="note-viewer-missing">
+      <div className="px-5 py-20 text-center" data-testid="note-viewer-missing">
         <h1 className="text-lg font-semibold text-lc-white">{t('social.noteNotFoundTitle')}</h1>
         <p className="mt-2 text-sm text-lc-muted">{t('social.noteNotFound')}</p>
         <Link href="/app" className="lc-pill-primary mt-6 inline-block px-5 py-2 text-xs">
@@ -118,7 +118,7 @@ export default function NoteViewerClient({
   }
 
   return (
-    <div className="mx-auto max-w-2xl" data-testid="note-viewer">
+    <div data-testid="note-viewer">
       {isArticle ? (
         <ArticleReader note={note} />
       ) : (

@@ -14,10 +14,14 @@ import { NOSTR_CLIENTS } from '@/lib/social/clients';
 
 export default function OpenInClients({ identifier }: { identifier: string }) {
   return (
-    <section className="border-t border-lc-border px-5 py-6" data-testid="open-in-clients">
+    <section data-testid="open-in-clients">
       <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-lc-muted">
         Open in
       </h2>
+      {/*
+        Wraps on a narrow rail and stays a single flowing row on mobile, so
+        one list works in both places without a second layout.
+      */}
       <ul className="flex flex-wrap gap-2">
         {NOSTR_CLIENTS.map((client) => (
           <li key={client.id}>

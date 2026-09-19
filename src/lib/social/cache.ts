@@ -29,10 +29,27 @@ export const FEED_CACHE_LIMIT = 50;
 
 const WRITE_DEBOUNCE_MS = 200;
 
-export type FeedCacheId = `feed:following` | `feed:global` | `profile:${string}`;
+/**
+ * Bumped when a previous version could have written wrong data.
+ *
+ * v2: before the `noteMatchesSource` guard existed, the shared coalescer fed
+ * other consumers' events into the Following feed, and those strangers were
+ * written straight to this cache. Since the cache is painted on every mount
+ * and `mergeNotes` only ever adds, a poisoned entry was permanent — a
+ * correct fetch could not evict it. Changing the id abandons those entries.
+ */
+const FEED_CACHE_VERSION = 'v2';
+
+export type FeedCacheId =
+  | `feed:${string}:following`
+  | `feed:${string}:global`
+  | `profile:${string}:${string}`;
+
+export const FOLLOWING_FEED_ID = `feed:${FEED_CACHE_VERSION}:following` as FeedCacheId;
+export const GLOBAL_FEED_ID = `feed:${FEED_CACHE_VERSION}:global` as FeedCacheId;
 
 export function profileFeedId(pubkey: string): FeedCacheId {
-  return `profile:${pubkey}`;
+  return `profile:${FEED_CACHE_VERSION}:${pubkey}` as FeedCacheId;
 }
 
 /**

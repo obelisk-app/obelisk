@@ -9,7 +9,7 @@
 import { fetchNotesByAuthor, findReplyParentId, findRootEventId } from '@nostr-wot/data';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import { KIND_TEXT_NOTE } from '../nip-kinds';
-import { FEED_KINDS } from './kinds';
+import { FEED_KINDS, kindsForFilter, type ContentFilter } from './kinds';
 import { querySocial } from './pool';
 import { dedupeReposts } from './repost';
 
@@ -45,8 +45,9 @@ export function noteMatchesSource(
   note: Pick<NostrEvent, 'pubkey' | 'kind'>,
   source: { kind: 'following'; authors: readonly string[] } | { kind: 'global' } | { kind: 'profile'; pubkey: string },
   allowedAuthors?: ReadonlySet<string>,
+  filter: ContentFilter = 'all',
 ): boolean {
-  if (!FEED_KINDS.includes(note.kind)) return false;
+  if (!kindsForFilter(filter).includes(note.kind)) return false;
   if (source.kind === 'profile') return note.pubkey === source.pubkey;
   if (source.kind === 'following') {
     const allowed = allowedAuthors ?? new Set(source.authors);
@@ -106,15 +107,18 @@ export function nextCursor(notes: readonly NostrEvent[]): number | undefined {
   return oldest === null ? undefined : oldest;
 }
 
-function baseFilter(limit: number, until?: number): Filter {
-  return { kinds: FEED_KINDS, limit, ...(until ? { until } : {}) };
+function baseFilter(limit: number, until?: number, filter: ContentFilter = 'all'): Filter {
+  // Narrow the REQ itself, not just the rendering — asking for 50 mixed
+  // events and showing the three articles among them is how an "Articles"
+  // view ends up looking empty.
+  return { kinds: kindsForFilter(filter), limit, ...(until ? { until } : {}) };
 }
 
 /** Global firehose. */
 export async function loadGlobalFeed(
-  opts: { until?: number; limit?: number; relays?: readonly string[] } = {},
+  opts: { until?: number; limit?: number; relays?: readonly string[]; filter?: ContentFilter } = {},
 ): Promise<NostrEvent[]> {
-  const events = await querySocial([baseFilter(opts.limit ?? FEED_PAGE_SIZE, opts.until)], {
+  const events = await querySocial([baseFilter(opts.limit ?? FEED_PAGE_SIZE, opts.until, opts.filter)], {
     ...(opts.relays ? { relays: opts.relays } : {}),
   });
   return dedupeReposts(mergeNotes([], events));
@@ -130,12 +134,12 @@ export async function loadGlobalFeed(
  */
 export async function loadFollowingFeed(
   authors: readonly string[],
-  opts: { until?: number; limit?: number; relays?: readonly string[] } = {},
+  opts: { until?: number; limit?: number; relays?: readonly string[]; filter?: ContentFilter } = {},
 ): Promise<NostrEvent[]> {
   if (authors.length === 0) return [];
   const limit = opts.limit ?? FEED_PAGE_SIZE;
   const filters = chunkAuthors(authors).map((chunk) => ({
-    ...baseFilter(limit, opts.until),
+    ...baseFilter(limit, opts.until, opts.filter),
     authors: chunk,
   }));
   const events = await querySocial(filters, {

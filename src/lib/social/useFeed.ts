@@ -29,9 +29,16 @@ import {
   mergeNotes,
   nextCursor,
 } from './feed';
-import { profileFeedId, readFeedCache, writeFeedCache, type FeedCacheId } from './cache';
+import {
+  FOLLOWING_FEED_ID,
+  GLOBAL_FEED_ID,
+  profileFeedId,
+  readFeedCache,
+  writeFeedCache,
+  type FeedCacheId,
+} from './cache';
 import { ensureCounts } from './engagement';
-import { FEED_KINDS } from './kinds';
+import { kindsForFilter, type ContentFilter } from './kinds';
 import { subscribeSocial } from './pool';
 import { dedupeReposts } from './repost';
 
@@ -56,7 +63,7 @@ export type FeedState = {
 
 function cacheIdFor(source: FeedSource): FeedCacheId {
   if (source.kind === 'profile') return profileFeedId(source.pubkey);
-  return source.kind === 'following' ? 'feed:following' : 'feed:global';
+  return source.kind === 'following' ? FOLLOWING_FEED_ID : GLOBAL_FEED_ID;
 }
 
 /**
@@ -87,19 +94,25 @@ async function fetchPage(
   source: FeedSource,
   relays: readonly string[],
   until?: number,
+  filter: ContentFilter = 'all',
 ): Promise<NostrEvent[]> {
   if (source.kind === 'profile') {
     return loadProfileFeed(source.pubkey, { until, relays, limit: FEED_PAGE_SIZE });
   }
   if (source.kind === 'following') {
-    return loadFollowingFeed(source.authors, { until, relays, limit: FEED_PAGE_SIZE });
+    return loadFollowingFeed(source.authors, { until, relays, limit: FEED_PAGE_SIZE, filter });
   }
-  return loadGlobalFeed({ until, relays, limit: FEED_PAGE_SIZE });
+  return loadGlobalFeed({ until, relays, limit: FEED_PAGE_SIZE, filter });
 }
 
-export function useFeed(source: FeedSource, relays: readonly string[]): FeedState {
+export function useFeed(
+  source: FeedSource,
+  relays: readonly string[],
+  filter: ContentFilter = 'all',
+): FeedState {
   const cacheId = cacheIdFor(source);
-  const key = `${sourceKey(source)}|${relays.join(',')}`;
+  // The filter is part of the key: a narrowed REQ returns a different page.
+  const key = `${sourceKey(source)}|${relays.join(',')}|${filter}`;
   const relayList = useMemo(() => [...relays], [relays.join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [notes, setNotes] = useState<NostrEvent[]>([]);
@@ -126,7 +139,11 @@ export function useFeed(source: FeedSource, relays: readonly string[]): FeedStat
   useLayoutEffect(() => {
     if (seededKey.current === key) return;
     seededKey.current = key;
-    const cached = readFeedCache(relayList, cacheId);
+    // Filter the seed too. A cache written before the guard existed holds
+    // strangers, and because it is painted on mount and `mergeNotes` only
+    // adds, a correct fetch can never evict them.
+    const cached = readFeedCache(relayList, cacheId)
+      .filter((note) => noteMatchesSource(note, source, allowedAuthors, filter));
     setNotes(cached);
     setPending([]);
     setExhausted(false);
@@ -142,7 +159,7 @@ export function useFeed(source: FeedSource, relays: readonly string[]): FeedStat
       return () => { cancelled = true; };
     }
     setError(false);
-    fetchPage(source, relayList)
+    fetchPage(source, relayList, undefined, filter)
       .then((page) => {
         if (cancelled) return;
         setNotes((current) => {
@@ -174,17 +191,18 @@ export function useFeed(source: FeedSource, relays: readonly string[]): FeedStat
     if (following && following.length === 0) return;
     liveRef.current = true;
     const since = Math.floor(Date.now() / 1000);
+    const kinds = kindsForFilter(filter);
     const filters = source.kind === 'profile'
-      ? [{ kinds: FEED_KINDS, authors: [source.pubkey], since }]
+      ? [{ kinds, authors: [source.pubkey], since }]
       : following
-        ? [{ kinds: FEED_KINDS, authors: [...following].slice(0, 300), since }]
-        : [{ kinds: FEED_KINDS, since }];
+        ? [{ kinds, authors: [...following].slice(0, 300), since }]
+        : [{ kinds, since }];
     const stop = subscribeSocial(filters, (event) => {
       if (!liveRef.current) return;
       // The coalescer delivers every event from every consumer sharing this
       // relay set, so an unguarded handler fills the Following feed with
       // whoever happened to reply to anything. See `noteMatchesSource`.
-      if (!noteMatchesSource(event, source, allowedAuthors)) return;
+      if (!noteMatchesSource(event, source, allowedAuthors, filter)) return;
       // A stale event from someone else's backfill is not "new".
       if (event.created_at < since) return;
       setPending((current) => (
@@ -209,7 +227,7 @@ export function useFeed(source: FeedSource, relays: readonly string[]): FeedStat
     const until = nextCursor(notes);
     if (until === undefined) return;
     setLoadingMore(true);
-    fetchPage(source, relayList, until)
+    fetchPage(source, relayList, until, filter)
       .then((page) => {
         setNotes((current) => {
           const merged = dedupeReposts(mergeNotes(current, page));
@@ -224,7 +242,7 @@ export function useFeed(source: FeedSource, relays: readonly string[]): FeedStat
       .catch(() => setExhausted(true))
       .finally(() => setLoadingMore(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [notes, loadingMore, exhausted, key, cacheId]);
+  }, [notes, loadingMore, exhausted, key, cacheId, filter]);
 
   const showPending = useCallback(() => {
     setPending((buffered) => {

@@ -102,8 +102,8 @@ export default async function NoteViewerPage({ params }: Params) {
 
   return (
     <main className="min-h-screen bg-lc-black text-lc-white">
-      <header className="sticky top-0 z-10 border-b border-lc-border bg-lc-black/90 backdrop-blur">
-        <div className="mx-auto flex max-w-2xl items-center gap-3 px-5 py-3">
+      <header className="sticky top-0 z-20 border-b border-lc-border bg-lc-black/90 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl items-center gap-3 px-5 py-3">
           <Link href="/" className="flex items-center gap-2" aria-label="Obelisk">
             <ObeliskIcon className="h-6 w-6" />
             <span className="text-sm font-semibold">Obelisk</span>
@@ -115,9 +115,9 @@ export default async function NoteViewerPage({ params }: Params) {
       </header>
 
       {/*
-        The server-rendered fallback below the island is what a crawler and a
-        no-JS reader see. It's plain on purpose — its job is to carry the
-        text, not to look like the app.
+        The server-rendered fallback is what a crawler and a no-JS reader see.
+        Plain on purpose — its job is to carry the text, not to look like the
+        app.
       */}
       <noscript>
         {note && (
@@ -127,29 +127,42 @@ export default async function NoteViewerPage({ params }: Params) {
         )}
       </noscript>
 
-      <NoteViewerClient target={target} initialNote={note} />
-
-      {note && (
-        <div className="mx-auto max-w-2xl">
-          {/*
-            The identifier we were asked for, not one we re-derive: it may
-            carry relay hints the reader's client needs to find the event.
-          */}
-          <OpenInClients identifier={decodeURIComponent(id).replace(/^nostr:/i, '')} />
+      {/*
+        Two columns from `lg` up: the note reads on the left at a comfortable
+        measure, and everything about its author lives in a rail on the right
+        rather than being buried a screen below the fold. Below `lg` the grid
+        collapses and the rail simply follows the note.
+      */}
+      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-x-10 px-0 lg:grid-cols-[minmax(0,1fr)_21rem] lg:px-5">
+        <div className="min-w-0 lg:border-x lg:border-lc-border">
+          <NoteViewerClient target={target} initialNote={note} />
         </div>
-      )}
 
-      {note && author && (
-        <div className="mx-auto max-w-2xl">
-          <AuthorContext
-            author={author}
-            notes={authorNotes}
-            hashtags={hashtags}
-            follows={follows.slice(0, 9)}
-            relays={relays}
-          />
-        </div>
-      )}
+        {note && (
+          <aside
+            className="min-w-0 border-t border-lc-border px-5 py-8 lg:border-t-0 lg:px-0 lg:py-8"
+            data-testid="note-sidebar"
+          >
+            {/*
+              Sticky so the context stays reachable while a long article
+              scrolls past. `max-h`/`overflow-y` keep a long rail from
+              becoming unreachable when it is taller than the viewport.
+            */}
+            <div className="space-y-8 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto">
+              <OpenInClients identifier={decodeURIComponent(id).replace(/^nostr:/i, '')} />
+              {author && (
+                <AuthorContext
+                  author={author}
+                  notes={authorNotes}
+                  hashtags={hashtags}
+                  follows={follows.slice(0, 9)}
+                  relays={relays}
+                />
+              )}
+            </div>
+          </aside>
+        )}
+      </div>
     </main>
   );
 }

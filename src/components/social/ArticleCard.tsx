@@ -79,15 +79,27 @@ export function ArticleCard({
       className="group block w-full overflow-hidden rounded-2xl border border-lc-border bg-lc-dark text-left transition-colors hover:border-lc-green/40"
       data-testid="note-article"
     >
-      {meta.image && (
+      {meta.image ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={meta.image}
           alt=""
           loading="lazy"
           decoding="async"
-          className="h-40 w-full object-cover"
+          // A fixed aspect rather than a fixed height: the banner is the
+          // whole reason an article stands out in a feed of short notes, and
+          // a 160px strip made it look like a broken thumbnail.
+          className="aspect-[2/1] w-full bg-lc-black object-cover"
         />
+      ) : (
+        // Without a banner the card had no visual weight at all and read as
+        // a slightly indented note.
+        <div className="flex aspect-[4/1] w-full items-center justify-center bg-gradient-to-br from-lc-olive/40 to-lc-black">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-lc-green/60" aria-hidden="true">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+          </svg>
+        </div>
       )}
       <div className="space-y-2 p-4">
         <div className="flex items-center gap-2 text-[10px] uppercase tracking-wider text-lc-green">
@@ -97,12 +109,17 @@ export function ArticleCard({
             {minutes} {t('social.minRead')}
           </span>
         </div>
-        <h3 className="line-clamp-2 text-base font-semibold leading-snug text-lc-white">
+        <h3 className="line-clamp-2 text-lg font-bold leading-snug text-lc-white">
           {meta.title || t('social.untitledArticle')}
         </h3>
-        {meta.summary && (
-          <p className="line-clamp-3 text-xs leading-relaxed text-lc-muted">{meta.summary}</p>
+        {(meta.summary || note.content) && (
+          <p className="line-clamp-3 text-xs leading-relaxed text-lc-muted">
+            {meta.summary || note.content.replace(/[#*_`>[\]()!]/g, '').slice(0, 220)}
+          </p>
         )}
+        <span className="inline-block pt-1 text-[11px] font-semibold text-lc-green">
+          {t('social.openArticle')} →
+        </span>
         {meta.hashtags.length > 0 && (
           <div className="flex flex-wrap gap-1 pt-1">
             {meta.hashtags.slice(0, 4).map((tag) => (

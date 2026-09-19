@@ -63,7 +63,7 @@ export default function AuthorContext({
   if (!hasAnything) return null;
 
   return (
-    <aside className="space-y-8 border-t border-lc-border px-5 py-8" data-testid="author-context">
+    <div className="space-y-8" data-testid="author-context">
       {notes.length > 0 && (
         <Section title={`More from ${name}`} testId="author-more-notes">
           <ul className="space-y-2">
@@ -112,7 +112,7 @@ export default function AuthorContext({
 
       {follows.length > 0 && (
         <Section title="Follows" testId="author-follows">
-          <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-1">
             {follows.map((profile) => (
               <li key={profile.pubkey}>
                 <Link
@@ -160,7 +160,7 @@ export default function AuthorContext({
           </p>
         </Section>
       )}
-    </aside>
+    </div>
   );
 }
 
