@@ -18,12 +18,18 @@ import Link from 'next/link';
 import { parseIdentifier } from '@/lib/social/identifier';
 import {
   displayNameFor,
+  fetchAuthorFollows,
   fetchAuthorForViewer,
+  fetchAuthorNotes,
+  fetchAuthorRelays,
   fetchEventForViewer,
+  fetchProfilesForViewer,
+  topHashtags,
 } from '@/lib/server/nostr-fetch';
 import { buildNotePreview } from '@/lib/server/note-preview';
 import ObeliskIcon from '@/components/ObeliskIcon';
 import NoteViewerClient from './NoteViewerClient';
+import AuthorContext from './AuthorContext';
 
 export const runtime = 'nodejs';
 /**
@@ -77,6 +83,22 @@ export default async function NoteViewerPage({ params }: Params) {
   const target = parseIdentifier(id);
   const note = target ? await fetchEventForViewer(target) : null;
 
+  // Author context, in parallel — a bare note is a fragment, and four
+  // sequential relay round-trips would be slower than the note itself.
+  const [author, authorNotes, followPubkeys, relays] = note
+    ? await Promise.all([
+      fetchAuthorForViewer(note.pubkey),
+      fetchAuthorNotes(note.pubkey, { excludeId: note.id, limit: 5 }),
+      fetchAuthorFollows(note.pubkey, 12),
+      fetchAuthorRelays(note.pubkey),
+    ])
+    : [null, [], [], { read: [], write: [] }];
+
+  const follows = followPubkeys.length ? await fetchProfilesForViewer(followPubkeys) : [];
+  // The author's own recent notes are the honest signal of what they write
+  // about; nobody declares a topic list.
+  const hashtags = topHashtags(note ? [note, ...authorNotes] : authorNotes);
+
   return (
     <main className="min-h-screen bg-lc-black text-lc-white">
       <header className="sticky top-0 z-10 border-b border-lc-border bg-lc-black/90 backdrop-blur">
@@ -105,6 +127,18 @@ export default async function NoteViewerPage({ params }: Params) {
       </noscript>
 
       <NoteViewerClient target={target} initialNote={note} />
+
+      {note && author && (
+        <div className="mx-auto max-w-2xl">
+          <AuthorContext
+            author={author}
+            notes={authorNotes}
+            hashtags={hashtags}
+            follows={follows.slice(0, 9)}
+            relays={relays}
+          />
+        </div>
+      )}
     </main>
   );
 }

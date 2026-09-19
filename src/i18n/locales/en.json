@@ -649,7 +649,6 @@
   "social.idCopied": "Event ID copied",
   "social.npubCopied": "npub copied",
   "social.textCopied": "Text copied",
-  "social.openInNjump": "Open on njump.me",
   "social.deleteNote": "Request deletion",
   "social.deleteRequested": "Deletion requested",
   "social.openArticle": "Read article",
@@ -658,5 +657,9 @@
   "social.openInGroup": "Open in group",
   "social.eventIdLabel": "Event ID",
   "social.kindLabel": "Kind",
-  "noteViewer.footer": "Shared from Obelisk — Nostr group chat and feeds."
+  "noteViewer.footer": "Shared from Obelisk — Nostr group chat and feeds.",
+  "social.followingBadge": "Following",
+  "social.openIn": "Open in",
+  "social.defaultApp": "Your default app",
+  "social.share": "Share"
 }

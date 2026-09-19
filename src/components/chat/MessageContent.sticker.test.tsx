@@ -18,9 +18,9 @@ describe('MessageContent stickers', () => {
   });
 
   it('renders Nostr hashtags blue and feed media at the available width', () => {
-    const { rerender } = render(<MessageContent content="[#Nostr](https://njump.me/t/Nostr)" />);
+    const { rerender } = render(<MessageContent content="[#Nostr](/t/nostr)" />);
     expect(screen.getByTestId('nostr-hashtag')).toHaveClass('text-sky-400');
-    expect(screen.getByTestId('nostr-hashtag')).toHaveAttribute('href', 'https://njump.me/t/Nostr');
+    expect(screen.getByTestId('nostr-hashtag')).toHaveAttribute('href', '/t/nostr');
 
     rerender(<MessageContent content="https://cdn.example/photo.jpg" wideMedia />);
     expect(screen.getByTestId('image-gallery')).toHaveClass('w-full', 'max-w-full');

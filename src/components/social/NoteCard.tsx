@@ -14,7 +14,7 @@ import { memo, useEffect, useMemo, useState } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { nip19 } from 'nostr-tools';
 import { hexToNpub } from '@nostr-wot/data';
-import { nostrActions, useMyPubkey, useUserMetadata } from '@/lib/nostr-bridge';
+import { nostrActions, useMyFollows, useMyPubkey, useUserMetadata } from '@/lib/nostr-bridge';
 import { useTranslation } from '@/i18n/context';
 import { parentIdOf } from '@/lib/social/feed';
 import { parseImeta } from '@/lib/social/imeta';
@@ -28,6 +28,8 @@ import {
   type NoteCounts,
 } from '@/lib/social/engagement';
 import { publishReaction, publishRepost } from '@/lib/social/publish';
+import { usePreferences } from '@/lib/preferences';
+import { noteShareUrl } from '@/lib/social/note-links';
 import { useModerationStore } from '@/store/moderation';
 import { useToastStore } from '@/store/toast';
 import UserAvatar from '@/components/UserAvatar';
@@ -39,7 +41,9 @@ import {
   LikeIcon,
   MoreIcon,
   RepostButton,
+  RepostIcon,
   ReplyIcon,
+  ShareIcon,
   ZapIcon,
   formatCount,
 } from './NoteActions';
@@ -55,8 +59,18 @@ export type NoteCardProps = {
   onQuote?: (note: NostrEvent) => void;
   onZap?: (note: NostrEvent) => void;
   onOpenArticle?: (note: NostrEvent) => void;
-  /** Rendered inside a quote/repost frame — suppresses nested chrome. */
-  embedded?: boolean;
+  /**
+   * `full` — a normal row with the whole action set.
+   * `quoted` — a bordered box with no actions, for a note embedded inside
+   *   another note's body (you act on the outer note, not the quoted one).
+   *
+   * These used to be one `embedded` boolean, which conflated "draw it as a
+   * box" with "no actions". A repost needs the first and NOT the second: the
+   * whole point is to reply to, like or zap the note that was reposted.
+   */
+  variant?: 'full' | 'quoted';
+  /** Parent already supplies the outer padding (repost attribution wrapper). */
+  nested?: boolean;
 };
 
 /**
@@ -71,7 +85,8 @@ export type NoteCardProps = {
  */
 export default memo(NoteCardInner, (prev, next) => (
   prev.note.id === next.note.id
-  && prev.embedded === next.embedded
+  && prev.variant === next.variant
+  && prev.nested === next.nested
   && prev.onReply === next.onReply
   && prev.onQuote === next.onQuote
   && prev.onZap === next.onZap
@@ -85,7 +100,7 @@ function NoteCardInner(props: NoteCardProps) {
 
   // A repost is a wrapper, not content: rendering its `content` as text shows
   // the reader a wall of raw JSON.
-  if (isRepost(note) && !props.embedded) {
+  if (isRepost(note) && !props.nested && props.variant !== 'quoted') {
     return <RepostCard {...props} />;
   }
   return <PlainNoteCard {...props} />;
@@ -103,19 +118,33 @@ function RepostCard(props: NoteCardProps) {
   const name = reposter?.displayName || reposter?.name || shortNpub(note.pubkey);
 
   return (
-    <article className="px-5 py-4" data-testid="repost-card">
-      <div className="mb-2 flex items-center gap-2 text-[11px] text-lc-muted">
-        <span aria-hidden="true">⇄</span>
-        <button
-          type="button"
-          className="hover:underline"
-          onClick={() => props.onOpenProfile?.(note.pubkey)}
-        >
-          {`${name} ${t('social.reposted')}`}
-        </button>
-      </div>
+    <article className="note-card px-5 py-4" data-testid="repost-card">
+      {/*
+        The attribution was 11px muted text with a `⇄` glyph — small enough to
+        miss, and the glyph rendered at a different weight than the SVG icons
+        beside it. It's the first thing you need to understand the row, so it
+        reads as a line of text now, with the reposter's name emphasised.
+      */}
+      <button
+        type="button"
+        className="group mb-2 flex items-center gap-2 text-[13px] text-lc-muted hover:text-lc-white"
+        onClick={() => props.onOpenProfile?.(note.pubkey)}
+        data-testid="repost-attribution"
+      >
+        <span className="flex h-4 w-4 shrink-0 items-center justify-center text-lc-green">
+          <RepostIcon />
+        </span>
+        <span className="truncate">
+          <span className="font-semibold text-lc-white group-hover:underline">{name}</span>
+          {' '}
+          {t('social.reposted')}
+        </span>
+      </button>
       {inner ? (
-        <NoteCardInner {...props} note={inner} embedded />
+        // `nested` (not `quoted`): the original keeps its full action row, so
+        // replying or liking from a repost targets the note that was
+        // reposted — which is what the reader means by those buttons.
+        <NoteCardInner {...props} note={inner} nested />
       ) : (
         // Empty-content repost: the target has to be fetched. Rather than
         // block the row, link out to what we know.
@@ -139,11 +168,16 @@ function PlainNoteCard({
   onQuote,
   onZap,
   onOpenArticle,
-  embedded = false,
+  variant = 'full',
+  nested = false,
 }: NoteCardProps) {
+  const quoted = variant === 'quoted';
   const { t } = useTranslation();
   const meta = useUserMetadata(note.pubkey);
   const myPubkey = useMyPubkey();
+  const follows = useMyFollows();
+  const relays = usePreferences().socialRelays;
+  const followSet = useMemo(() => new Set(follows), [follows]);
   const [counts, setCounts] = useState<NoteCounts>(() => getCounts(note.id));
   const [busy, setBusy] = useState(false);
   const [reacted, setReacted] = useState(false);
@@ -163,6 +197,22 @@ function PlainNoteCard({
 
   const displayName = meta?.displayName || meta?.name || shortNpub(note.pubkey);
   const canInteract = !!myPubkey;
+  const isMine = myPubkey === note.pubkey;
+  // Set lookup: a follow list runs to thousands and this renders per card.
+  const isFollowed = followSet.has(note.pubkey);
+
+  // Native share sheet where available, clipboard otherwise — both end with
+  // an Obelisk URL, never a third-party viewer.
+  const share = async () => {
+    const url = noteShareUrl(note, relays);
+    try {
+      if (navigator.share) await navigator.share({ url });
+      else await navigator.clipboard?.writeText(url);
+      useToastStore.getState().pushToast({ title: t('social.linkCopied'), body: '' });
+    } catch {
+      // Share sheet dismissed — not an error worth surfacing.
+    }
+  };
 
   const react = async () => {
     if (!canInteract || busy || reacted) return;
@@ -198,28 +248,50 @@ function PlainNoteCard({
 
   return (
     <article
-      className={embedded ? 'rounded-xl border border-lc-border bg-lc-dark p-3' : 'note-card px-5 py-4'}
+      className={
+        quoted
+          ? 'rounded-xl border border-lc-border bg-lc-dark p-3'
+          : nested
+            ? ''
+            : 'note-card px-5 py-4'
+      }
       data-testid="note-card"
       data-kind={note.kind}
     >
-      <header className="mb-2 flex items-center gap-3">
-        <button type="button" onClick={() => onOpenProfile?.(note.pubkey)} aria-label={displayName}>
+      <header className="mb-2 flex items-start gap-3">
+        <button type="button" className="shrink-0" onClick={() => onOpenProfile?.(note.pubkey)} aria-label={displayName}>
           <UserAvatar
             pubkey={note.pubkey}
             picture={meta?.picture}
-            size={embedded ? 8 : 10}
+            size={quoted ? 8 : 10}
             name={displayName}
             alt={displayName}
           />
         </button>
         <div className="min-w-0 flex-1">
-          <button
-            type="button"
-            className="block truncate text-sm font-semibold text-lc-white hover:underline"
-            onClick={() => onOpenProfile?.(note.pubkey)}
-          >
-            {displayName}
-          </button>
+          <div className="flex min-w-0 items-center gap-1.5">
+            <button
+              type="button"
+              className="min-w-0 truncate text-sm font-semibold text-lc-white hover:underline"
+              onClick={() => onOpenProfile?.(note.pubkey)}
+            >
+              {displayName}
+            </button>
+            {/*
+              In the Global feed every author looks the same as someone you
+              follow, so there's no way to tell whose voice you chose and
+              whose the relay handed you. The badge is deliberately quiet —
+              it marks the familiar rather than shouting about strangers.
+            */}
+            {!quoted && isFollowed && !isMine && (
+              <span
+                className="shrink-0 rounded-full bg-lc-green/15 px-1.5 py-0.5 text-[10px] font-semibold text-lc-green"
+                data-testid="note-following-badge"
+              >
+                {t('social.followingBadge')}
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-2 text-[10px] text-lc-muted">
             {isThreadReply && <span>↩ {t('social.reply')}</span>}
             {mode === 'article' && <span>{t('social.article')}</span>}
@@ -253,7 +325,7 @@ function PlainNoteCard({
         />
       )}
 
-      {!embedded && (
+      {!quoted && (
         <div className="mt-2 flex items-center gap-1 pt-1 text-xs">
           <ActionButton
             kind="reply"
@@ -290,7 +362,18 @@ function PlainNoteCard({
             disabled={!canInteract}
             onClick={() => onZap?.(note)}
           />
-          <NoteMenu note={note} isMine={myPubkey === note.pubkey} />
+          {/*
+            Sharing was buried in the ⋯ menu, two taps deep, even though it's
+            the thing a public note is for.
+          */}
+          <ActionButton
+            kind="share"
+            label={t('social.share')}
+            icon={<ShareIcon />}
+            testId="note-share"
+            onClick={() => void share()}
+          />
+          <NoteMenu note={note} isMine={isMine} />
         </div>
       )}
     </article>

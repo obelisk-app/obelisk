@@ -24,7 +24,7 @@ const HASHTAG_PATTERN = /(^|[\s(])#([\p{L}\p{N}_]+)/gu;
 
 export function linkifyHashtags(content: string): string {
   return content.replace(HASHTAG_PATTERN, (_match, prefix: string, hashtag: string) => (
-    `${prefix}[#${hashtag}](https://njump.me/t/${encodeURIComponent(hashtag)})`
+    `${prefix}[#${hashtag}](/t/${encodeURIComponent(hashtag.toLowerCase())})`
   ));
 }
 

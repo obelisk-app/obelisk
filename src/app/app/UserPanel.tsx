@@ -259,7 +259,7 @@ export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, ini
             </button>
             {npub && (
               <a
-                href={`https://njump.me/${npub}`}
+                href={`/p/${npub}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex w-full items-center gap-2 p-3 text-left text-sm text-lc-white transition hover:bg-lc-border/50"

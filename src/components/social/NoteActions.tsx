@@ -50,6 +50,11 @@ const ACCENT = {
     pad: 'group-hover/act:bg-amber-400/10 group-focus-visible/act:bg-amber-400/10',
     on: 'text-amber-400',
   },
+  share: {
+    text: 'group-hover/act:text-violet-400 group-focus-visible/act:text-violet-400',
+    pad: 'group-hover/act:bg-violet-400/10 group-focus-visible/act:bg-violet-400/10',
+    on: 'text-violet-400',
+  },
   neutral: {
     text: 'group-hover/act:text-lc-white group-focus-visible/act:text-lc-white',
     pad: 'group-hover/act:bg-white/10 group-focus-visible/act:bg-white/10',
@@ -103,6 +108,16 @@ export function ZapIcon({ filled }: { filled?: boolean }) {
   return (
     <svg {...svgProps} fill={filled ? 'currentColor' : 'none'}>
       <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z" />
+    </svg>
+  );
+}
+
+export function ShareIcon() {
+  return (
+    <svg {...svgProps}>
+      <path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7" />
+      <path d="m16 6-4-4-4 4" />
+      <path d="M12 2v14" />
     </svg>
   );
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { nip19 } from 'nostr-tools';
 import type { Event as NostrEvent } from 'nostr-tools';
-import { groupIdOf, groupNoteUrl, njumpUrl, noteIdentifier, noteShareUrl, rawEventJson } from './note-links';
+import { groupIdOf, groupNoteUrl, hashtagUrl, noteIdentifier, noteShareUrl, profileUrl, rawEventJson } from './note-links';
 
 const PK = 'a'.repeat(64);
 const ID = 'b'.repeat(64);
@@ -58,8 +58,19 @@ describe('share urls', () => {
     expect(url).not.toContain('njump.me');
   });
 
-  it('still offers njump as an explicit escape hatch', () => {
-    expect(njumpUrl(ev())).toMatch(/^https:\/\/njump\.me\/nevent1/);
+  it('never emits an njump link', () => {
+    // Pointing at njump handed readers to a third party, gave that third
+    // party the preview card, and made an Obelisk link a dead end for
+    // getting people into Obelisk.
+    expect(noteShareUrl(ev())).not.toContain('njump');
+    expect(profileUrl(PK)).not.toContain('njump');
+    expect(hashtagUrl('Nostr')).not.toContain('njump');
+  });
+
+  it('links profiles and hashtags to our own routes', () => {
+    expect(profileUrl(PK)).toMatch(/\/p\/npub1/);
+    // Hashtags are lowercase on the wire, so the URL is too.
+    expect(hashtagUrl('Bitcoin')).toBe('/t/bitcoin');
   });
 });
 

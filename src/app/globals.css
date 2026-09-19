@@ -298,7 +298,42 @@ button:not(:disabled),
  */
 .note-card {
   content-visibility: auto;
-  contain-intrinsic-size: auto 220px;
+  /*
+   * `auto <size>` lets the browser remember each card's real measured height
+   * after it has been rendered once, and only use the estimate for cards it
+   * has never seen. A plain fixed value made every offscreen card claim the
+   * same height, so the scrollbar lurched every time one came into view.
+   */
+  contain-intrinsic-size: auto 320px;
+
+  /*
+   * Containment is what actually stops the lag. Without `contain`, a note
+   * whose content overflows (an unbroken URL, a wide code block, an image
+   * that ignores max-width) forces the whole feed column to re-measure —
+   * and with hundreds of cards that reflow is O(n) on every scroll tick.
+   * Clipping here keeps one bad note from costing anything beyond itself.
+   */
+  contain: layout paint style;
+  overflow: hidden;
+}
+
+/*
+ * Long unbroken tokens are the single most common way a note escapes its
+ * column: bech32 ids, hex hashes and query-string URLs have no break
+ * opportunity, so the text node itself becomes wider than the card.
+ * `anywhere` (not `break-all`) breaks only when there is no better option,
+ * so ordinary prose still wraps on spaces.
+ */
+.note-media,
+.note-clamp {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-width: 0;
+}
+
+.note-media :where(pre, code, table) {
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 /* Animated gradient for banner */

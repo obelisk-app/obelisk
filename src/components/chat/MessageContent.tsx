@@ -517,12 +517,11 @@ export default function MessageContent({
     a({ href, children }) {
       if (!href) return <>{children}</>;
 
-      if (href.startsWith('https://njump.me/t/')) {
+      // Hashtags link to Obelisk's own /t/<tag> page, not a third party.
+      if (href.startsWith('/t/')) {
         return (
           <a
             href={href}
-            target="_blank"
-            rel="noopener noreferrer"
             className="break-all text-sky-400 hover:underline"
             data-testid="nostr-hashtag"
           >

@@ -1,14 +1,15 @@
 /**
  * Share links for notes and articles.
  *
- * These used to point at njump.me. That works, but it hands every shared
- * Obelisk link to a third party — the recipient lands somewhere that isn't
- * this app, and the preview card in whatever chat they pasted it into is
- * njump's. Links now point at our own `/notes/<nevent>` viewer, which renders
- * the same content with our OG metadata and an obvious way into the app.
+ * Every Nostr link this app produces stays on Obelisk. Pointing at njump.me
+ * handed the recipient to a third party, gave that third party the preview
+ * card in whatever chat the link was pasted into, and made an Obelisk link
+ * a dead end for getting people into Obelisk.
  *
- * `njumpUrl` is kept deliberately: "open on njump" is still a useful escape
- * hatch for cross-checking how a note looks elsewhere.
+ * The three shapes, all server-rendered with their own OG metadata:
+ *   /notes/<nevent|naddr>  a note or article
+ *   /p/<npub>              a profile
+ *   /t/<hashtag>           a hashtag feed
  */
 
 import { nip19 } from 'nostr-tools';
@@ -60,11 +61,21 @@ export function noteShareUrl(
   return `${origin()}${NOTE_VIEWER_PATH}/${noteIdentifier(note, relays)}`;
 }
 
-export function njumpUrl(
-  note: Pick<NostrEvent, 'id' | 'pubkey' | 'kind' | 'tags'>,
-  relays: readonly string[] = [],
-): string {
-  return `https://njump.me/${noteIdentifier(note, relays)}`;
+/** Absolute Obelisk URL for a profile. */
+export function profileUrl(pubkey: string, relays: readonly string[] = []): string {
+  try {
+    const encoded = relays.length
+      ? nip19.nprofileEncode({ pubkey, relays: relays.slice(0, 3) as string[] })
+      : nip19.npubEncode(pubkey);
+    return `${origin()}/p/${encoded}`;
+  } catch {
+    return `${origin()}/p/${pubkey}`;
+  }
+}
+
+/** Hashtags are lowercased on the wire, so the URL is too. */
+export function hashtagUrl(tag: string): string {
+  return `/t/${encodeURIComponent(tag.toLowerCase())}`;
 }
 
 /**

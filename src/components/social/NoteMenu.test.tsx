@@ -47,7 +47,8 @@ describe('NoteMenu', () => {
       'note-menu-copy-id',
       'note-menu-copy-npub',
       'note-menu-copy-text',
-      'note-menu-njump',
+      'note-menu-client-default',
+      'note-menu-client-jumble',
       'note-menu-mute',
     ]) {
       expect(screen.getByTestId(id)).toBeInTheDocument();
@@ -62,12 +63,25 @@ describe('NoteMenu', () => {
     expect(copied).not.toContain('njump.me');
   });
 
-  it('still links out to njump explicitly', () => {
+  it('offers other clients instead of a single njump link', () => {
+    // A note is a public event, not ours — readers may prefer their own
+    // client, and they can decode the id anyway.
     open();
-    expect(screen.getByTestId('note-menu-njump')).toHaveAttribute(
+    expect(screen.getByTestId('note-menu-client-default')).toHaveAttribute(
       'href',
-      expect.stringContaining('njump.me'),
+      expect.stringMatching(/^nostr:/),
     );
+    expect(screen.getByTestId('note-menu-client-jumble')).toHaveAttribute(
+      'href',
+      expect.stringContaining('jumble.social'),
+    );
+    expect(screen.queryByTestId('note-menu-njump')).not.toBeInTheDocument();
+  });
+
+  it('keeps a nostr: handler link in the same tab so the OS can claim it', () => {
+    open();
+    expect(screen.getByTestId('note-menu-client-default')).not.toHaveAttribute('target');
+    expect(screen.getByTestId('note-menu-client-jumble')).toHaveAttribute('target', '_blank');
   });
 
   it('shows the raw signed event', () => {

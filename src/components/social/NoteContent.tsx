@@ -92,9 +92,7 @@ function NostrRefChip({
   // inline yet; a link out beats printing bech32.
   return (
     <a
-      href={`https://njump.me/${refValue.raw.replace(/^nostr:/, '')}`}
-      target="_blank"
-      rel="noreferrer noopener"
+      href={`/notes/${refValue.raw.replace(/^nostr:/, '')}`}
       className="text-xs text-lc-green underline"
     >
       {refValue.identifier || 'article'}

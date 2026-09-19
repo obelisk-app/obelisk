@@ -39,7 +39,7 @@ describe('profile feed helpers', () => {
 
   it('links hashtags and builds interoperable post tags', () => {
     expect(linkifyHashtags('hello #Nostr and (#bitcoin)')).toBe(
-      'hello [#Nostr](https://njump.me/t/Nostr) and ([#bitcoin](https://njump.me/t/bitcoin))',
+      'hello [#Nostr](/t/nostr) and ([#bitcoin](/t/bitcoin))',
     );
     expect(hashtagTags('#Nostr #nostr #Bitcoin')).toEqual([['t', 'nostr'], ['t', 'bitcoin']]);
   });

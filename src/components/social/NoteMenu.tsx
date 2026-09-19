@@ -20,11 +20,11 @@ import { useToastStore } from '@/store/toast';
 import ModalShell from '@/components/ModalShell';
 import {
   groupNoteUrl,
-  njumpUrl,
   noteIdentifier,
   noteShareUrl,
   rawEventJson,
 } from '@/lib/social/note-links';
+import { NOSTR_CLIENTS } from '@/lib/social/clients';
 import { useCurrentRelayUrl } from '@/lib/nostr-bridge';
 import { MoreIcon } from './NoteActions';
 import { publishDelete } from '@/lib/social/publish';
@@ -44,6 +44,7 @@ export default function NoteMenu({
   // A note that came from a NIP-29 group is only fully meaningful inside it —
   // the replies and the people are there, not on the open network.
   const groupUrl = groupNoteUrl(note, activeRelay);
+  const identifier = noteIdentifier(note, relays);
   const [open, setOpen] = useState(false);
   const [rawOpen, setRawOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -135,7 +136,7 @@ export default function NoteMenu({
             {t('social.viewRaw')}
           </Item>
           <Item
-            onClick={() => copy(noteIdentifier(note, relays), t('social.idCopied'))}
+            onClick={() => copy(identifier, t('social.idCopied'))}
             testId="note-menu-copy-id"
           >
             {t('social.copyEventId')}
@@ -160,9 +161,26 @@ export default function NoteMenu({
               {t('social.openInGroup')}
             </LinkItem>
           )}
-          <LinkItem href={njumpUrl(note, relays)} testId="note-menu-njump">
-            {t('social.openInNjump')}
-          </LinkItem>
+
+          {/*
+            A note is a public event, not ours. Readers may prefer their own
+            client, and they can decode the id anyway — so help them.
+          */}
+          <div className="px-4 pb-1 pt-2 text-[10px] uppercase tracking-wider text-lc-muted">
+            {t('social.openIn')}
+          </div>
+          {NOSTR_CLIENTS.map((client) => (
+            <LinkItem
+              key={client.id}
+              href={client.event(identifier)}
+              testId={`note-menu-client-${client.id}`}
+              // A `nostr:` URI has to stay in this tab for the OS handler to
+              // pick it up; a new tab would just fail to navigate.
+              newTab={!client.isHandler}
+            >
+              {client.isHandler ? t('social.defaultApp') : client.name}
+            </LinkItem>
+          ))}
 
           {!isMine && (
             <>
