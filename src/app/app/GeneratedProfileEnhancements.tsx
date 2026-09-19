@@ -12,11 +12,6 @@ export function randomProfileName(random = Math.random): string {
   return `${ADJECTIVES[Math.floor(random() * ADJECTIVES.length)]} ${NOUNS[Math.floor(random() * NOUNS.length)]}`;
 }
 
-function setInputValue(input: HTMLInputElement, value: string): void {
-  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(input, value);
-  input.dispatchEvent(new Event('input', { bubbles: true }));
-}
-
 function filePicker(kind: 'picture' | 'banner', onPick: (file: File, picker: HTMLLabelElement) => void): HTMLLabelElement {
   const label = document.createElement('label');
   label.className = `obelisk-media-picker obelisk-${kind}-picker`;
@@ -46,6 +41,7 @@ export default function GeneratedProfileEnhancements({
   useEffect(() => {
     let secretKey: Uint8Array | null = null;
     let observer: MutationObserver | null = null;
+    let suggestion = '';
 
     const sync = () => {
       const modal = document.querySelector<HTMLElement>('.obelisk-login-modal');
@@ -58,20 +54,44 @@ export default function GeneratedProfileEnhancements({
         if (nsec) secretKey = nsecToBytes(nsec);
       }
 
-      const nameInput = modal.querySelector<HTMLInputElement>('input[placeholder="Satoshi"]');
-      if (nameInput && !nameInput.parentElement?.querySelector('.obelisk-random-name')) {
+      // The name field belongs to the SDK and is a React *controlled* input, so
+      // its value is owned by React state we cannot reach from out here. Writing
+      // to it via the native setter desyncs React's value tracker: the text shows
+      // up, but React's own state never advances, and the first keystroke gets
+      // slammed back by `restoreControlledState` — the field becomes untypeable.
+      // So we never touch `value`. The suggested name rides on `placeholder` and
+      // is carried to publish through the draft, which `publishGeneratedProfile`
+      // already falls back to when the user leaves the field empty.
+      const nameInput = modal.querySelector<HTMLInputElement>(
+        'input[placeholder="Satoshi"], input[data-obelisk-name]',
+      );
+      if (nameInput && !nameInput.dataset.obeliskName) {
+        nameInput.dataset.obeliskName = 'true';
         nameInput.classList.add('obelisk-name-input');
-        nameInput.required = true;
-        nameInput.addEventListener('input', () => onDraftChange({ name: nameInput.value }));
-        if (!nameInput.value.trim()) setInputValue(nameInput, randomProfileName());
+        suggestion = randomProfileName();
+        nameInput.placeholder = suggestion;
+        onDraftChange({ name: suggestion });
+
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'obelisk-random-name';
         button.textContent = '🎲';
-        button.title = 'Generate a random name';
-        button.setAttribute('aria-label', 'Generate a random name');
-        button.addEventListener('click', () => setInputValue(nameInput, randomProfileName()));
+        button.title = 'Suggest another name';
+        button.setAttribute('aria-label', 'Suggest another name');
+        button.addEventListener('click', () => {
+          suggestion = randomProfileName();
+          nameInput.placeholder = suggestion;
+          onDraftChange({ name: nameInput.value.trim() || suggestion });
+        });
         nameInput.insertAdjacentElement('afterend', button);
+
+        // Once the user types their own name the suggestion is moot, so the
+        // reroll control steps out of the way rather than sitting there inert.
+        nameInput.addEventListener('input', () => {
+          const typed = nameInput.value.trim();
+          button.hidden = typed.length > 0;
+          onDraftChange({ name: typed || suggestion });
+        });
       }
 
       const aboutInput = modal.querySelector<HTMLInputElement>('input[placeholder*="Builder"]');
@@ -112,7 +132,8 @@ export default function GeneratedProfileEnhancements({
           image.src = url;
           picker.classList.add('has-image');
           if (prompt) prompt.textContent = kind === 'picture' ? 'Change' : 'Change banner';
-          if (kind === 'picture') setInputValue(pictureInput, url);
+          // Same rule as the name field: never write into the SDK's controlled
+          // input. The upload reaches publish through the draft instead.
           onDraftChange({ [kind]: url });
         } catch (uploadError) {
           error.textContent = uploadError instanceof Error ? uploadError.message : 'Upload failed';

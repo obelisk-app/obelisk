@@ -887,7 +887,11 @@ button:not(:disabled),
 }
 
 .nui-profile-fields:has(.obelisk-name-input) { position: relative; }
-.obelisk-name-input { padding-right: 48px !important; }
+/* Only reserve room for the reroll control while it is actually on screen — it
+ * hides itself once the user types their own name. */
+.nui-profile-fields:has(.obelisk-random-name:not([hidden])) .obelisk-name-input {
+  padding-right: 48px !important;
+}
 .obelisk-random-name {
   position: absolute;
   right: 6px;

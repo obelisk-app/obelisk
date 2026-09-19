@@ -288,7 +288,12 @@ export default function LoginModal({
   const [generatedLogin, setGeneratedLogin] = useState<LoginArgs | null>(null);
   const [finishing, setFinishing] = useState(false);
   const [finishError, setFinishError] = useState('');
-  const [generatedProfile, setGeneratedProfile] = useState<GeneratedProfileDraft>({});
+  // The draft is written on every keystroke of the generated-profile step but is
+  // only ever *read* when the login completes, so it lives in a ref rather than
+  // state. Holding it in state re-rendered LoginModal on each character, which
+  // re-rendered the SDK's profile step and let its autofocused name input snatch
+  // focus mid-word — the fields became untypeable after the first character.
+  const generatedProfile = useRef<GeneratedProfileDraft>({});
   const [nip46Retry, setNip46Retry] = useState(0);
   const [hideTransientError, setHideTransientError] = useState(false);
   const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -297,7 +302,7 @@ export default function LoginModal({
     else router.push('/');
   }, [onClose, router]);
   const updateGeneratedProfile = useCallback((patch: GeneratedProfileDraft) => {
-    setGeneratedProfile((current) => ({ ...current, ...patch }));
+    generatedProfile.current = { ...generatedProfile.current, ...patch };
   }, []);
   useEffect(() => () => {
     if (retryTimer.current) clearTimeout(retryTimer.current);
@@ -403,7 +408,7 @@ export default function LoginModal({
             ...(signer ? { signer } : {}),
           };
           if (method === 'generate') {
-            if (nsec) await publishGeneratedProfile(nsec, generatedProfile);
+            if (nsec) await publishGeneratedProfile(nsec, generatedProfile.current);
             setGeneratedLogin(args);
             return;
           }
