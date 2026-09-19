@@ -184,6 +184,10 @@ export class StackerRunner {
 
   stop(): void {
     this.running = false;
+    // The keyup that would have cleared these is gone with the listeners, so a
+    // key still down when the table closes would otherwise auto-repeat from
+    // the moment the run resumes.
+    this.held.clear();
     if (this.raf !== null) cancelAnimationFrame(this.raf);
     if (this.statsTimer) clearInterval(this.statsTimer);
     if (this.flushTimer) clearInterval(this.flushTimer);

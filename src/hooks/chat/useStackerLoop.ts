@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { StackerRunner, STACKER_KEYS, type StackerStats, type StackerSoundEvent } from '@/lib/games/stacker/runner';
+import { STACKER_KEYS, type StackerStats, type StackerSoundEvent } from '@/lib/games/stacker/runner';
+import { acquireRun, releaseRun, setRunCallbacks } from '@/lib/games/stacker/run-registry';
 import { loadKeyMap, type KeyMap } from '@/lib/games/stacker/keymap';
 import type { AttackEvent } from '@/lib/games/stacker/match';
 import {
@@ -21,6 +22,14 @@ export { STACKER_KEYS };
  */
 export function useStackerLoop(opts: {
   seed: number;
+  /**
+   * Identity of this player's run, stable across closing and reopening the
+   * table. The run is kept in `run-registry` under this key so minimising the
+   * modal suspends the match instead of destroying it.
+   */
+  matchKey: string;
+  /** True once the match is decided — the run is then dropped rather than kept. */
+  matchOver: boolean;
   incoming: readonly AttackEvent[];
   enabled: boolean;
   onAttack: (lines: number, hole: number, nonce: number) => void;
@@ -34,12 +43,7 @@ export function useStackerLoop(opts: {
   }) => void;
   onTopOut: () => void;
 }) {
-  const { seed, incoming, enabled, onAttack, onCheckpoint, onTopOut } = opts;
-
-  const cb = useRef({ onAttack, onCheckpoint, onTopOut });
-  useEffect(() => {
-    cb.current = { onAttack, onCheckpoint, onTopOut };
-  }, [onAttack, onCheckpoint, onTopOut]);
+  const { seed, matchKey, matchOver, incoming, enabled, onAttack, onCheckpoint, onTopOut } = opts;
 
   const [prefs, setPrefs] = useState<AudioPrefs>(() => loadPrefs());
   // Re-read on every mount so a rebind in the panel takes effect on close.
@@ -53,32 +57,41 @@ export function useStackerLoop(opts: {
   const prefsRef = useRef(prefs);
   useEffect(() => { prefsRef.current = prefs; }, [prefs]);
 
-  // One runner per match. A new seed is a new match.
-  //
-  // The ref reads below happen inside callbacks the runner invokes later, not
-  // while this memo is evaluating — the lint rule cannot tell the difference
-  // between "reads a ref" and "reads a ref during render", and this is the
-  // latter only in the syntactic sense.
-  // eslint-disable-next-line react-hooks/refs
-  const runner = useMemo(() => new StackerRunner({
-    seed,
-    onAttack: (lines, hole, nonce) => cb.current.onAttack(lines, hole, nonce),
-    onCheckpoint: (payload) => cb.current.onCheckpoint(payload),
-    onTopOut: () => cb.current.onTopOut(),
-    onEvent: (event: StackerSoundEvent) => {
-      if (prefsRef.current.muted) return;
-      switch (event.kind) {
-        case 'clear': playClear(event.lines, event.spin, event.combo); break;
-        case 'garbage': playSfx('garbage'); break;
-        case 'topout': playSfx('topout'); break;
-        case 'move': playSfx('move'); break;
-        case 'rotate': playSfx('rotate'); break;
-        case 'hold': playSfx('hold'); break;
-        case 'drop': playSfx('drop'); break;
-        case 'lock': playSfx('lock'); break;
-      }
-    },
-  }), [seed]);
+  // One run per player per match, borrowed rather than built: it has to
+  // survive this component being unmounted when the table is closed.
+  const run = useMemo(() => acquireRun(matchKey, seed), [matchKey, seed]);
+  const runner = run.runner;
+
+  // Point the shared callbacks at the currently mounted table. Done in an
+  // effect, not during render, because the runner may fire between renders.
+  useEffect(() => {
+    setRunCallbacks(matchKey, {
+      onAttack,
+      onCheckpoint,
+      onTopOut,
+      onEvent: (event: StackerSoundEvent) => {
+        if (prefsRef.current.muted) return;
+        switch (event.kind) {
+          case 'clear': playClear(event.lines, event.spin, event.combo); break;
+          case 'garbage': playSfx('garbage'); break;
+          case 'topout': playSfx('topout'); break;
+          case 'move': playSfx('move'); break;
+          case 'rotate': playSfx('rotate'); break;
+          case 'hold': playSfx('hold'); break;
+          case 'drop': playSfx('drop'); break;
+          case 'lock': playSfx('lock'); break;
+        }
+      },
+    });
+  }, [matchKey, onAttack, onCheckpoint, onTopOut]);
+
+  // A finished match is not worth resuming, so it is dropped on the way out.
+  // An unfinished one is left suspended for the player to come back to.
+  const overRef = useRef(matchOver);
+  useEffect(() => { overRef.current = matchOver; }, [matchOver]);
+  useEffect(() => () => {
+    if (overRef.current) releaseRun(matchKey);
+  }, [matchKey]);
 
   const [stats, setStats] = useState<StackerStats>(() => runner.stats());
 

@@ -5,6 +5,7 @@ import { deriveSession, type GameSession } from '@/lib/games/session';
 import { buildCreate, buildGameOp, parseGameEvent, type GameEvent, type ParsedGameEvent } from '@/lib/games/protocol';
 import { applyMatchEvent } from '@/lib/games/stacker/match';
 import { StackerRunner } from '@/lib/games/stacker/runner';
+import { acquireRun, clearRuns } from '@/lib/games/stacker/run-registry';
 
 const CH = 'channel-1';
 const A = 'pk-ana';
@@ -60,6 +61,7 @@ describe('StackerTable', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    clearRuns();
   });
 
   let rafQueue: FrameRequestCallback[] = [];
@@ -83,6 +85,36 @@ describe('StackerTable', () => {
 
     const other = new StackerRunner({ seed: session.match!.seed + 1, onAttack: vi.fn(), onCheckpoint: vi.fn(), onTopOut: vi.fn() });
     expect(other.state.queue).not.toEqual(ana.state.queue);
+  });
+
+
+  it('resumes the same board when the table is closed and reopened', () => {
+    // The bug: GameModalHost unmounts the modal on close, which destroyed the
+    // runner. Reopening rebuilt it from the seed, so the player came back to an
+    // empty well on frame 0 instead of the game they were playing.
+    const session = match();
+    const first = renderTable(session);
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' }));
+      window.dispatchEvent(new KeyboardEvent('keyup', { code: 'Space' }));
+      window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' }));
+      window.dispatchEvent(new KeyboardEvent('keyup', { code: 'Space' }));
+    });
+
+    const key = `${session.id}:${A}`;
+    const played = acquireRun(key, session.match!.seed).runner;
+    const board = played.state.board.map((row) => [...row]);
+    const frame = played.frame;
+    expect(board.some((row) => row.some((c) => c !== 0))).toBe(true);
+
+    first.unmount();
+    renderTable(session);
+
+    const resumed = acquireRun(key, session.match!.seed).runner;
+    expect(resumed).toBe(played);
+    expect(resumed.state.board).toEqual(board);
+    expect(resumed.frame).toBe(frame);
   });
 
   it('renders the hold and next chips', () => {

@@ -69,6 +69,10 @@ export default function StackerTable({
 
   const { runner, stats, prefs, toggleMuted, reloadKeys } = useStackerLoop({
     seed: match.seed,
+    // Per player per table: two seats on one account are two separate runs,
+    // and reopening the same table must land back on the same one.
+    matchKey: `${session.id}:${mySeat ?? 'spectator'}`,
+    matchOver: match.over,
     incoming,
     enabled: iAmAlive && !match.over,
     onAttack: useCallback((lines: number, hole: number, nonce: number) => {
