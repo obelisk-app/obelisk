@@ -30,6 +30,29 @@ vi.mock('@/lib/relay-info', () => ({
 describe('SidebarMe', () => {
   beforeEach(() => useChatStore.setState(useChatStore.getInitialState()));
 
+  it('shows name and settings inline by default', () => {
+    render(<SidebarMe />);
+    expect(screen.getByTestId('user-settings-button').className).not.toContain('hidden');
+  });
+
+  it('hides everything but the avatar when collapsible, revealing on parent hover', () => {
+    // Views with no sidebar (the full-screen feed) have nothing for the bar
+    // to span, so a full-width panel floats over the feed looking leftover.
+    render(<SidebarMe collapsible />);
+    const settings = screen.getByTestId('user-settings-button');
+    expect(settings.className).toContain('hidden');
+    // Revealed by the PARENT's hover so the whole bar is one target, not
+    // just whichever child the pointer lands on.
+    expect(settings.className).toContain('group-hover/me:block');
+    // Keyboard users get the same reveal.
+    expect(settings.className).toContain('group-focus-within/me:block');
+  });
+
+  it('keeps the avatar visible while collapsed', () => {
+    render(<SidebarMe collapsible />);
+    expect(screen.getByTestId('sidebar-profile-button')).toBeInTheDocument();
+  });
+
   it('opens my profile in the shared anchored preview', () => {
     render(<SidebarMe />);
     fireEvent.click(screen.getByTestId('sidebar-profile-button'), { clientX: 120, clientY: 700 });

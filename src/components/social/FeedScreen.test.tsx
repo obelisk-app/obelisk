@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { LocaleProvider } from '@/i18n/context';
@@ -220,6 +220,52 @@ describe('FeedScreen', () => {
     socialMocks.loadFollowingFeed.mockResolvedValue([]);
     fireEvent.click(screen.getByTestId('feed-filter-articles'));
     await waitFor(() => expect(screen.queryByText('a short note')).not.toBeInTheDocument());
+  });
+
+  it('puts source, filters and actions on one toolbar row', () => {
+    // These were three stacked rows, so the chrome was taller than the first
+    // note — you scrolled before you read anything.
+    renderFeed({ onOpenSettings: vi.fn() });
+    const source = screen.getByTestId('feed-tab-following');
+    const filter = screen.getByTestId('feed-filter-all');
+    const refresh = screen.getByTestId('feed-refresh');
+
+    const toolbar = source.closest('div')?.parentElement;
+    expect(toolbar).toContainElement(filter);
+    expect(toolbar).toContainElement(refresh);
+  });
+
+  it('keeps an accessible heading even though the title text is gone', () => {
+    renderFeed();
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Feed');
+  });
+
+  it('shows a floating compose button once the compose row scrolls away', async () => {
+    // The inline row scrolls off within a screen or two, taking the only way
+    // to post with it. jsdom has no IntersectionObserver, so drive the
+    // callback directly.
+    const observers: Array<(entries: { isIntersecting: boolean }[]) => void> = [];
+    // Assigned directly rather than via vi.stubGlobal: the component reads
+    // `typeof IntersectionObserver` at effect time, and the stub wasn't
+    // visible to that lookup.
+    (globalThis as Record<string, unknown>).IntersectionObserver = class {
+      constructor(cb: (entries: { isIntersecting: boolean }[]) => void) { observers.push(cb); }
+      observe() {}
+      disconnect() {}
+    };
+
+    renderFeed();
+    expect(screen.queryByTestId('feed-compose-fab')).not.toBeInTheDocument();
+
+    await act(async () => { observers.forEach((cb) => cb([{ isIntersecting: false }])); });
+    expect(screen.getByTestId('feed-compose-fab')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('feed-compose-fab'));
+    expect(screen.getByTestId('composer-input')).toBeInTheDocument();
+    // It steps aside once the composer is open.
+    expect(screen.queryByTestId('feed-compose-fab')).not.toBeInTheDocument();
+
+    delete (globalThis as Record<string, unknown>).IntersectionObserver;
   });
 
   it('exposes refresh and relay settings', async () => {

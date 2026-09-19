@@ -9,7 +9,7 @@
  * one).
  */
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { useMyFollows, useMyPubkey, useUserMetadata } from '@/lib/nostr-bridge';
 import { usePreferences } from '@/lib/preferences';
@@ -52,6 +52,22 @@ export default function FeedScreen({
   const [composer, setComposer] = useState<ComposerMode | null>(null);
   const [openNoteId, setOpenNoteId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const composeRowRef = useRef<HTMLDivElement>(null);
+  // The inline compose row scrolls away within a screen or two, and with it
+  // the only way to post. A floating button takes over from there rather
+  // than making people scroll back up.
+  const [composeRowVisible, setComposeRowVisible] = useState(true);
+
+  useEffect(() => {
+    const node = composeRowRef.current;
+    if (!node || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setComposeRowVisible(entry.isIntersecting),
+      { root: scrollRef.current, threshold: 0 },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [myPubkey, composer]);
 
   const source = useMemo<FeedSource>(
     () => (tab === 'following' ? { kind: 'following', authors: follows } : { kind: 'global' }),
@@ -77,40 +93,21 @@ export default function FeedScreen({
   const closeComposer = useCallback(() => setComposer(null), []);
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-lc-black" data-testid="feed-screen">
-      {!embedded && (
-        <header className="flex shrink-0 items-center gap-2 px-4 py-3">
-          <h1 className="text-sm font-semibold text-lc-white">{t('social.feed')}</h1>
-          <div className="ml-auto flex items-center gap-1">
-            <RefreshButton busy={state.loading} onClick={state.refresh} />
-            {onOpenSettings && (
-              <button
-                type="button"
-                className="group/act -m-1 flex items-center rounded-full p-1 text-lc-muted"
-                onClick={onOpenSettings}
-                aria-label={t('social.relaySettings')}
-                title={t('social.relaySettings')}
-                data-testid="feed-settings"
-              >
-                <span className="flex h-8 w-8 items-center justify-center rounded-full transition-colors group-hover/act:bg-white/10 group-hover/act:text-lc-white">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <circle cx="12" cy="12" r="3" />
-                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-                  </svg>
-                </span>
-              </button>
-            )}
-          </div>
-        </header>
-      )}
+    <div className="relative flex h-full min-h-0 flex-col bg-lc-black" data-testid="feed-screen">
+      {/*
+        One toolbar, not three stacked rows.
+        Source, content filter and actions were each on their own line, so
+        the chrome was taller than the first note — you scrolled before you
+        read anything. They're one row now: source on the left (what you're
+        reading), filters in the middle (what kind), actions pinned right.
 
+        The middle scrolls horizontally rather than wrapping, so a narrow
+        split pane shortens the row instead of growing a second line.
+      */}
       <div className="flex shrink-0 items-center gap-2 border-b border-lc-border px-3 py-2">
-        {/*
-          A segmented pill, not underlined tabs: two underlined labels read as
-          two links rather than one control, and it wasn't obvious which feed
-          you were looking at.
-        */}
-        <div className="lc-segment" role="tablist" aria-label={t('social.feed')}>
+        <h1 className="sr-only">{t('social.feed')}</h1>
+
+        <div className="lc-segment shrink-0" role="tablist" aria-label={t('social.feed')}>
           {(['following', 'global'] as const).map((value) => (
             <button
               key={value}
@@ -119,6 +116,11 @@ export default function FeedScreen({
               aria-selected={tab === value}
               onClick={() => setTab(value)}
               className="lc-segment-item"
+              // The count lives here rather than as its own line of text —
+              // it's context for the choice, not a thing to read.
+              title={value === 'following'
+                ? `${follows.length} ${t('social.followingCount')}`
+                : `${relays.length} ${t('social.relayCount')}`}
               data-testid={`feed-tab-${value}`}
             >
               {value === 'following' ? <FollowingIcon /> : <GlobeIcon />}
@@ -126,40 +128,57 @@ export default function FeedScreen({
             </button>
           ))}
         </div>
-        <span className="hidden min-w-0 truncate text-[11px] text-lc-muted sm:block">
-          {tab === 'following'
-            ? `${follows.length} ${t('social.followingCount')}`
-            : `${relays.length} ${t('social.relayCount')}`}
-        </span>
-        {embedded && (
-          <div className="ml-auto flex items-center gap-1">
-            <RefreshButton busy={state.loading} onClick={state.refresh} />
-          </div>
-        )}
-      </div>
 
-      {/*
-        Content filter. This narrows the REQ, not just the rendering — asking
-        for 50 mixed events and showing the three articles among them is how
-        an "Articles" view ends up looking empty.
-      */}
-      <div className="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-lc-border px-3 py-1.5">
-        {CONTENT_FILTERS.map((value) => (
-          <button
-            key={value}
-            type="button"
-            onClick={() => setFilter(value)}
-            aria-pressed={filter === value}
-            className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-medium transition-colors ${
-              filter === value
-                ? 'bg-lc-green/15 text-lc-green'
-                : 'text-lc-muted hover:bg-white/5 hover:text-lc-white'
-            }`}
-            data-testid={`feed-filter-${value}`}
-          >
-            {t(`social.filter.${value}`)}
-          </button>
-        ))}
+        <div className="mx-1 hidden h-5 w-px shrink-0 bg-lc-border sm:block" aria-hidden="true" />
+
+        {/*
+          Narrows the REQ, not just the rendering — asking for 50 mixed
+          events and showing the three articles among them is how an
+          "Articles" view ends up looking empty.
+        */}
+        <div
+          className="-mx-1 flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          role="group"
+          aria-label={t('social.filter.all')}
+        >
+          {CONTENT_FILTERS.map((value) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setFilter(value)}
+              aria-pressed={filter === value}
+              className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                filter === value
+                  ? 'bg-lc-green/15 text-lc-green'
+                  : 'text-lc-muted hover:bg-white/5 hover:text-lc-white'
+              }`}
+              data-testid={`feed-filter-${value}`}
+            >
+              {t(`social.filter.${value}`)}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex shrink-0 items-center gap-0.5">
+          <RefreshButton busy={state.loading} onClick={state.refresh} />
+          {onOpenSettings && !embedded && (
+            <button
+              type="button"
+              className="group/act -m-1 flex items-center rounded-full p-1 text-lc-muted"
+              onClick={onOpenSettings}
+              aria-label={t('social.relaySettings')}
+              title={t('social.relaySettings')}
+              data-testid="feed-settings"
+            >
+              <span className="flex h-8 w-8 items-center justify-center rounded-full transition-colors group-hover/act:bg-white/10 group-hover/act:text-lc-white">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                </svg>
+              </span>
+            </button>
+          )}
+        </div>
       </div>
 
       <div
@@ -167,23 +186,25 @@ export default function FeedScreen({
         className={`min-h-0 flex-1 overflow-y-auto ${mobile ? 'native-scroll-y' : ''}`}
       >
         {myPubkey && (
-          composer?.kind === 'note' ? (
-            <div className="border-b border-lc-border p-4">
-              <NoteComposer
-                autoFocus
-                onPublished={() => { setComposer(null); state.refresh(); }}
-                onCancel={() => setComposer(null)}
+          <div ref={composeRowRef}>
+            {composer?.kind === 'note' ? (
+              <div className="border-b border-lc-border p-4">
+                <NoteComposer
+                  autoFocus
+                  onPublished={() => { setComposer(null); state.refresh(); }}
+                  onCancel={closeComposer}
+                />
+              </div>
+            ) : (
+              <ComposeButton
+                pubkey={myPubkey}
+                picture={meta?.picture}
+                name={meta?.displayName || meta?.name || ''}
+                onClick={openComposer}
+                testId="feed-compose"
               />
-            </div>
-          ) : (
-            <ComposeButton
-              pubkey={myPubkey}
-              picture={meta?.picture}
-              name={meta?.displayName || meta?.name || ''}
-              onClick={openComposer}
-              testId="feed-compose"
-            />
-          )
+            )}
+          </div>
         )}
 
         <FeedList
@@ -196,6 +217,28 @@ export default function FeedScreen({
           onQuote={startQuote}
         />
       </div>
+
+      {/*
+        Bottom-right rather than bottom-left: the profile bar lives bottom-left
+        on desktop, and the mobile bottom-nav sits under this, hence the
+        larger offset there.
+      */}
+      {myPubkey && !composeRowVisible && composer?.kind !== 'note' && (
+        <button
+          type="button"
+          onClick={openComposer}
+          aria-label={t('profileFeed.createPost')}
+          title={t('profileFeed.createPost')}
+          className={`absolute right-5 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-lc-green text-lc-black shadow-2xl shadow-black/50 transition hover:brightness-110 active:scale-95 ${
+            mobile ? 'bottom-6' : 'bottom-5'
+          }`}
+          data-testid="feed-compose-fab"
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
+            <path d="M12 5v14" /><path d="M5 12h14" />
+          </svg>
+        </button>
+      )}
 
       {composer && composer.kind !== 'note' && (
         <ModalShell onClose={() => setComposer(null)} testId="composer-modal">

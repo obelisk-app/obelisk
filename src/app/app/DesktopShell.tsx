@@ -560,7 +560,7 @@ export default function AppShell() {
             onMessage={(peer) => setView({ kind: 'dm', peer })}
           />
         )}
-        <FloatingUserPanel sidebarWidth={sidebarWidth} />
+        <FloatingUserPanel sidebarWidth={sidebarWidth} collapsed={view.kind === 'feed'} />
       </div>
     </div>
   );
@@ -588,20 +588,41 @@ function RehydratingScreen() {
   );
 }
 
-function FloatingUserPanel({ sidebarWidth }: { sidebarWidth: number }) {
+function FloatingUserPanel({
+  sidebarWidth,
+  collapsed = false,
+}: {
+  sidebarWidth: number;
+  /**
+   * Views with no sidebar (the full-screen feed) have nothing for this panel
+   * to span, so a full-width bar floats over the content looking like a
+   * leftover. Collapsed, it is just the avatar, and expands on hover.
+   *
+   * Done in CSS rather than hover state: this sits above a feed of hundreds
+   * of memoised cards, and a re-render on every pointer enter/leave is the
+   * kind of thing that makes scrolling feel bad for no visible reason.
+   */
+  collapsed?: boolean;
+}) {
   // Server rail is 72px wide; panel sits 8px from left with 8px right gap to
   // the sidebar's right edge, so it spans the full sidebar+rail width.
   const width = 72 + sidebarWidth - 16;
   return (
     <div
-      className="pointer-events-none absolute bottom-3 left-2 z-30 hidden md:flex flex-col gap-2"
-      style={{ width: `${width}px` }}
+      className={`group/me pointer-events-none absolute bottom-3 left-2 z-30 hidden flex-col gap-2 md:flex ${
+        collapsed ? 'w-14 transition-[width] duration-200 ease-out hover:w-64' : ''
+      }`}
+      style={collapsed ? undefined : { width: `${width}px` }}
     >
       <div className="pointer-events-auto empty:hidden [&>[data-testid=voice-status-bar]]:!p-0 [&_[data-testid=voice-status-bar]>div]:bg-lc-card/95 [&_[data-testid=voice-status-bar]>div]:shadow-2xl [&_[data-testid=voice-status-bar]>div]:backdrop-blur">
         <VoiceStatusBar />
       </div>
-      <div className="pointer-events-auto flex min-h-[3.5rem] items-center rounded-xl border border-lc-border bg-lc-card/95 px-4 shadow-2xl backdrop-blur">
-        <SidebarMe />
+      <div
+        className={`pointer-events-auto flex min-h-[3.5rem] items-center overflow-hidden rounded-xl border border-lc-border bg-lc-card/95 shadow-2xl backdrop-blur ${
+          collapsed ? 'px-3 group-hover/me:px-4' : 'px-4'
+        }`}
+      >
+        <SidebarMe collapsible={collapsed} />
       </div>
     </div>
   );
@@ -2211,11 +2232,17 @@ function DragHandleIcon() {
 }
 
 
-export function SidebarMe() {
+export function SidebarMe({ collapsible = false }: { collapsible?: boolean }) {
   const myPubkey = useMyPubkey();
   const meta = useProfile(myPubkey);
   const [editing, setEditing] = useState(false);
   if (!myPubkey) return null;
+  // Reveal on the PARENT's hover (`group/me`), not this element's, so the
+  // whole bar is one target — expanding only when the pointer happens to
+  // land on the avatar would feel broken.
+  const revealed = collapsible
+    ? 'hidden group-hover/me:flex group-focus-within/me:flex'
+    : 'flex';
   return (
     <div className="relative flex w-full items-center gap-2">
       <button
@@ -2226,7 +2253,7 @@ export function SidebarMe() {
         data-testid="sidebar-profile-button"
       >
         <Avatar pubkey={myPubkey} size={8} picture={meta?.picture ?? null} />
-        <div className="min-w-0 flex-1">
+        <div className={`min-w-0 flex-1 flex-col ${revealed}`}>
           <div className="truncate text-sm font-semibold text-lc-white">
             {meta?.displayName || meta?.name || 'You'}
           </div>
@@ -2235,7 +2262,9 @@ export function SidebarMe() {
       </button>
       <button
         onClick={() => setEditing(true)}
-        className="shrink-0 rounded p-1.5 text-lc-muted hover:bg-lc-card hover:text-lc-white transition-colors"
+        className={`shrink-0 rounded p-1.5 text-lc-muted transition-colors hover:bg-lc-card hover:text-lc-white ${
+          collapsible ? 'hidden group-hover/me:block group-focus-within/me:block' : ''
+        }`}
         title="Settings"
         aria-label="Settings"
         data-testid="user-settings-button"
