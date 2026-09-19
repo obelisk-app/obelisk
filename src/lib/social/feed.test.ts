@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Event as NostrEvent } from 'nostr-tools';
 import {
   AUTHORS_PER_FILTER,
+  noteMatchesSource,
   chunkAuthors,
   isReplyNote,
   mergeNotes,
@@ -95,6 +96,40 @@ describe('isReplyNote', () => {
 
   it('is false for a plain note', () => {
     expect(isReplyNote({ tags: [['t', 'nostr']] })).toBe(false);
+  });
+});
+
+describe('noteMatchesSource', () => {
+  const FOLLOWED = 'f'.repeat(64);
+  const STRANGER = 'a'.repeat(64);
+
+  it('rejects authors you do not follow', () => {
+    // The shared coalescer hands every consumer's events to every handle, so
+    // without this the Following feed fills with whoever replied to anything.
+    const source = { kind: 'following' as const, authors: [FOLLOWED] };
+    expect(noteMatchesSource({ pubkey: FOLLOWED, kind: 1 }, source)).toBe(true);
+    expect(noteMatchesSource({ pubkey: STRANGER, kind: 1 }, source)).toBe(false);
+  });
+
+  it('restricts a profile feed to that author', () => {
+    const source = { kind: 'profile' as const, pubkey: FOLLOWED };
+    expect(noteMatchesSource({ pubkey: FOLLOWED, kind: 1 }, source)).toBe(true);
+    expect(noteMatchesSource({ pubkey: STRANGER, kind: 1 }, source)).toBe(false);
+  });
+
+  it('accepts any author on the global feed', () => {
+    expect(noteMatchesSource({ pubkey: STRANGER, kind: 1 }, { kind: 'global' })).toBe(true);
+  });
+
+  it('rejects kinds the feed never requested', () => {
+    // Reactions and zap receipts are counted, not listed.
+    expect(noteMatchesSource({ pubkey: STRANGER, kind: 7 }, { kind: 'global' })).toBe(false);
+    expect(noteMatchesSource({ pubkey: STRANGER, kind: 9735 }, { kind: 'global' })).toBe(false);
+  });
+
+  it('uses a prebuilt author set when given one', () => {
+    const source = { kind: 'following' as const, authors: [] };
+    expect(noteMatchesSource({ pubkey: FOLLOWED, kind: 1 }, source, new Set([FOLLOWED]))).toBe(true);
   });
 });
 

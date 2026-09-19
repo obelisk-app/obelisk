@@ -30,6 +30,7 @@ import { buildNotePreview } from '@/lib/server/note-preview';
 import ObeliskIcon from '@/components/ObeliskIcon';
 import NoteViewerClient from './NoteViewerClient';
 import AuthorContext from './AuthorContext';
+import OpenInClients from './OpenInClients';
 
 export const runtime = 'nodejs';
 /**
@@ -127,6 +128,16 @@ export default async function NoteViewerPage({ params }: Params) {
       </noscript>
 
       <NoteViewerClient target={target} initialNote={note} />
+
+      {note && (
+        <div className="mx-auto max-w-2xl">
+          {/*
+            The identifier we were asked for, not one we re-derive: it may
+            carry relay hints the reader's client needs to find the event.
+          */}
+          <OpenInClients identifier={decodeURIComponent(id).replace(/^nostr:/i, '')} />
+        </div>
+      )}
 
       {note && author && (
         <div className="mx-auto max-w-2xl">

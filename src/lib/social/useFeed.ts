@@ -22,6 +22,7 @@ import { useModerationStore } from '@/store/moderation';
 import {
   FEED_PAGE_SIZE,
   applyModeration,
+  noteMatchesSource,
   loadFollowingFeed,
   loadGlobalFeed,
   loadProfileFeed,
@@ -58,10 +59,28 @@ function cacheIdFor(source: FeedSource): FeedCacheId {
   return source.kind === 'following' ? 'feed:following' : 'feed:global';
 }
 
+/**
+ * Cheap content fingerprint of a follow list.
+ *
+ * Keying on `authors.length` alone meant following one person and unfollowing
+ * another produced the same key — so the feed never refetched and the live
+ * tail kept filtering against the old set. Recomputed only when the array
+ * identity changes, so the O(n) walk is not per-render.
+ */
+function authorsFingerprint(authors: readonly string[]): string {
+  let hash = 0;
+  for (const author of authors) {
+    for (let i = 0; i < author.length; i += 8) {
+      hash = (Math.imul(hash, 31) + author.charCodeAt(i)) | 0;
+    }
+  }
+  return `${authors.length}:${(hash >>> 0).toString(36)}`;
+}
+
 function sourceKey(source: FeedSource): string {
   if (source.kind === 'profile') return `profile:${source.pubkey}`;
   if (source.kind === 'global') return 'global';
-  return `following:${source.authors.length}`;
+  return `following:${authorsFingerprint(source.authors)}`;
 }
 
 async function fetchPage(
@@ -93,6 +112,13 @@ export function useFeed(source: FeedSource, relays: readonly string[]): FeedStat
 
   const seededKey = useRef<string | null>(null);
   const liveRef = useRef(false);
+  // Built once per follow-list change rather than per delivered event: the
+  // live tail can fire hundreds of times a minute on a busy relay set.
+  const allowedAuthors = useMemo(
+    () => (source.kind === 'following' ? new Set(source.authors) : undefined),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [source.kind === 'following' ? source.authors : null],
+  );
 
   // Seed before paint. useLayoutEffect (not useEffect) is what makes the
   // cached notes appear in the FIRST frame rather than causing a flash of
@@ -155,6 +181,12 @@ export function useFeed(source: FeedSource, relays: readonly string[]): FeedStat
         : [{ kinds: FEED_KINDS, since }];
     const stop = subscribeSocial(filters, (event) => {
       if (!liveRef.current) return;
+      // The coalescer delivers every event from every consumer sharing this
+      // relay set, so an unguarded handler fills the Following feed with
+      // whoever happened to reply to anything. See `noteMatchesSource`.
+      if (!noteMatchesSource(event, source, allowedAuthors)) return;
+      // A stale event from someone else's backfill is not "new".
+      if (event.created_at < since) return;
       setPending((current) => (
         current.some((note) => note.id === event.id) ? current : [event, ...current]
       ));

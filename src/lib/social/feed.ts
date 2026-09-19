@@ -27,6 +27,34 @@ export const AUTHORS_PER_FILTER = 300;
 
 export type FeedKind = 'following' | 'global';
 
+/**
+ * Does this event actually belong in the feed that asked for it?
+ *
+ * This exists because the shared request coalescer fans every event out to
+ * every consumer sharing a relay set — it merges filters into one
+ * subscription and then calls `onEvent` on all active handles, without
+ * checking which handle's filter actually matched. So a feed subscribed to
+ * `authors: [...my follows]` still receives the kind-1 notes fetched by the
+ * reply-count query, which are by whoever happened to reply to anything.
+ *
+ * That is what put strangers in the Following feed. Relays over-deliver too
+ * (a filter is a hint, not a contract), so the guard is worth having on its
+ * own merits: never trust the transport to have applied your filter.
+ */
+export function noteMatchesSource(
+  note: Pick<NostrEvent, 'pubkey' | 'kind'>,
+  source: { kind: 'following'; authors: readonly string[] } | { kind: 'global' } | { kind: 'profile'; pubkey: string },
+  allowedAuthors?: ReadonlySet<string>,
+): boolean {
+  if (!FEED_KINDS.includes(note.kind)) return false;
+  if (source.kind === 'profile') return note.pubkey === source.pubkey;
+  if (source.kind === 'following') {
+    const allowed = allowedAuthors ?? new Set(source.authors);
+    return allowed.has(note.pubkey);
+  }
+  return true;
+}
+
 export function chunkAuthors(
   authors: readonly string[],
   size = AUTHORS_PER_FILTER,
@@ -113,7 +141,9 @@ export async function loadFollowingFeed(
   const events = await querySocial(filters, {
     ...(opts.relays ? { relays: opts.relays } : {}),
   });
-  return dedupeReposts(mergeNotes([], events));
+  // Filter by author on the way in: see `noteMatchesSource`.
+  const allowed = new Set(authors);
+  return dedupeReposts(mergeNotes([], events.filter((event) => allowed.has(event.pubkey))));
 }
 
 /**
@@ -132,7 +162,9 @@ export async function loadProfileFeed(
   });
   // NoteEntry -> NostrEvent shape. The SDK drops sig/kind because it only
   // ever returns kind 1 here; the rest of our pipeline wants real events.
-  return mergeNotes([], notes.map((n) => ({
+  // Same guard as the following feed: the coalescer fans other consumers'
+  // events into this handle too.
+  return mergeNotes([], notes.filter((n) => n.pubkey === pubkey).map((n) => ({
     id: n.id,
     pubkey: n.pubkey,
     content: n.content,

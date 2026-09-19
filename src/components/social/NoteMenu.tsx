@@ -24,7 +24,6 @@ import {
   noteShareUrl,
   rawEventJson,
 } from '@/lib/social/note-links';
-import { NOSTR_CLIENTS } from '@/lib/social/clients';
 import { useCurrentRelayUrl } from '@/lib/nostr-bridge';
 import { MoreIcon } from './NoteActions';
 import { publishDelete } from '@/lib/social/publish';
@@ -162,25 +161,6 @@ export default function NoteMenu({
             </LinkItem>
           )}
 
-          {/*
-            A note is a public event, not ours. Readers may prefer their own
-            client, and they can decode the id anyway — so help them.
-          */}
-          <div className="px-4 pb-1 pt-2 text-[10px] uppercase tracking-wider text-lc-muted">
-            {t('social.openIn')}
-          </div>
-          {NOSTR_CLIENTS.map((client) => (
-            <LinkItem
-              key={client.id}
-              href={client.event(identifier)}
-              testId={`note-menu-client-${client.id}`}
-              // A `nostr:` URI has to stay in this tab for the OS handler to
-              // pick it up; a new tab would just fail to navigate.
-              newTab={!client.isHandler}
-            >
-              {client.isHandler ? t('social.defaultApp') : client.name}
-            </LinkItem>
-          ))}
 
           {!isMine && (
             <>

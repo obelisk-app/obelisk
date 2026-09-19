@@ -57,9 +57,12 @@ vi.mock('@/components/chat/MessageContent', () => ({
 import FeedScreen from './FeedScreen';
 import { flushFeedCacheWrites } from '@/lib/social/cache';
 
-const note = (id: string, content: string, createdAt = 1000): NostrEvent => ({
+const FOLLOWED = 'f'.repeat(64);
+const STRANGER = 'a'.repeat(64);
+
+const note = (id: string, content: string, createdAt = 1000, pubkey = FOLLOWED): NostrEvent => ({
   id,
-  pubkey: 'a'.repeat(64),
+  pubkey,
   content,
   created_at: createdAt,
   tags: [],
@@ -132,8 +135,28 @@ describe('FeedScreen', () => {
     renderFeed();
     await waitFor(() => expect(screen.getByText('first')).toBeInTheDocument());
 
-    live.emit?.(note('live', 'just arrived', 3000));
+    live.emit?.(note('live', 'just arrived', Math.floor(Date.now() / 1000) + 5));
     await waitFor(() => expect(screen.getByText('just arrived')).toBeInTheDocument());
+    expect(screen.queryByTestId('feed-pending')).not.toBeInTheDocument();
+  });
+
+  it('drops live events from people you do not follow', async () => {
+    // The shared coalescer fans every consumer's events into every handle,
+    // so the Following feed was receiving the kind-1 notes fetched by the
+    // reply-count query — i.e. whoever replied to anything.
+    socialMocks.loadFollowingFeed.mockResolvedValue([note('a', 'first')]);
+    const live: { emit?: (event: NostrEvent) => void } = {};
+    socialMocks.subscribeSocial.mockImplementation((...args: unknown[]) => {
+      live.emit = args[1] as (event: NostrEvent) => void;
+      return () => {};
+    });
+
+    renderFeed();
+    await waitFor(() => expect(screen.getByText('first')).toBeInTheDocument());
+
+    live.emit?.(note('x', 'from a stranger', Math.floor(Date.now() / 1000) + 5, STRANGER));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.queryByText('from a stranger')).not.toBeInTheDocument();
     expect(screen.queryByTestId('feed-pending')).not.toBeInTheDocument();
   });
 
@@ -153,7 +176,7 @@ describe('FeedScreen', () => {
     Object.defineProperty(scroller, 'scrollTop', { value: 800, writable: true });
     fireEvent.scroll(scroller);
 
-    live.emit?.(note('live', 'just arrived', 3000));
+    live.emit?.(note('live', 'just arrived', Math.floor(Date.now() / 1000) + 5));
     await waitFor(() => expect(screen.getByTestId('feed-pending')).toBeInTheDocument());
     expect(screen.queryByText('just arrived')).not.toBeInTheDocument();
 
