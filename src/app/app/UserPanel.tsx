@@ -11,7 +11,7 @@ import { setDmOptInEnabled } from '@/lib/dm/opt-in';
 import WotSettings from '@/components/settings/WotSettings';
 import LanguagePreference from '@/components/LanguagePreference';
 import AppearancePreferenceControls from '@/components/AppearancePreferenceControls';
-import ProfileFeedRelaySettings from '@/components/settings/ProfileFeedRelaySettings';
+import SocialRelaySettings from '@/components/settings/SocialRelaySettings';
 import AccountBackupExport from '@/components/settings/AccountBackupExport';
 import DeveloperSignatureTest from '@/components/settings/DeveloperSignatureTest';
 import UserAvatar from '@/components/UserAvatar';
@@ -465,7 +465,7 @@ export function PreferencesPanel() {
       </button>
       {appearanceOpen && <AppearancePreferenceControls />}
 
-      <ProfileFeedRelaySettings />
+      <SocialRelaySettings />
       <section className="space-y-2 rounded-lg border border-lc-border bg-lc-dark/30 p-3">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-lc-muted">
           {t("preferences.backup.advanced")}

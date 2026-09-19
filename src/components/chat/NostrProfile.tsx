@@ -1,29 +1,40 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { SimplePool, type Event as NostrEvent } from 'nostr-tools';
-import { TextCoercingWebSocket, hexToNpub } from '@nostr-wot/data';
-import { getBridge, nostrActions, useMyContactList, useMyContactListReady, useMyPubkey, useUserMetadata } from '@/lib/nostr-bridge';
-import { usePreferences } from '@/lib/preferences';
+/**
+ * A profile with its feed.
+ *
+ * This used to own everything: its own `SimplePool`, its own subscription,
+ * its own note renderer and composer, and a `key={pubkey:relays}` remount
+ * that threw all of it away on any navigation. Now it composes the shared
+ * social core — one pool, cached notes, real pagination — and the same
+ * `NoteCard` the global feed uses, so a note renders identically wherever it
+ * appears.
+ */
+
+import { useEffect, useMemo, useState } from 'react';
+import type { Event as NostrEvent } from 'nostr-tools';
+import { hexToNpub } from '@nostr-wot/data';
 import {
-  filterProfileFeed,
-  hashtagTags,
-  isReply,
-  linkifyHashtags,
-  mediaUrls,
-  profileReplyTags,
-  toggledFollowTags,
-  type ProfileFeedTab,
-} from '@/lib/profile-feed';
+  getBridge,
+  nostrActions,
+  useMyContactList,
+  useMyContactListReady,
+  useMyPubkey,
+  useUserMetadata,
+} from '@/lib/nostr-bridge';
+import { usePreferences } from '@/lib/preferences';
+import { mediaUrls, toggledFollowTags, type ProfileFeedTab } from '@/lib/profile-feed';
+import { isReplyNote } from '@/lib/social/feed';
+import { useFeed } from '@/lib/social/useFeed';
 import { isVideoUrl } from '@/lib/attachments';
 import { useTranslation } from '@/i18n/context';
-import MessageContent from './MessageContent';
 import UserAvatar from '@/components/UserAvatar';
-import { uploadToBlossom } from '@/lib/blossom';
+import FeedList from '@/components/social/FeedList';
+import NoteComposer, { type ComposerMode } from '@/components/social/NoteComposer';
+import NoteThread from '@/components/social/NoteThread';
+import ModalShell from '@/components/ModalShell';
 import { useModerationStore } from '@/store/moderation';
 import { useToastStore } from '@/store/toast';
-
-const FEED_LIMIT = 100;
 
 type NostrProfileProps = {
   pubkey: string;
@@ -31,88 +42,58 @@ type NostrProfileProps = {
   onMessage?: (pubkey: string) => void;
   settingsMode?: boolean;
   onEditProfile?: () => void;
+  onOpenProfile?: (pubkey: string) => void;
 };
 
-export default function NostrProfile(props: NostrProfileProps) {
-  const relays = usePreferences().profileFeedRelays;
-  return <NostrProfileSession key={`${props.pubkey}:${relays.join(',')}`} {...props} relays={relays} />;
-}
-
-function NostrProfileSession({
+export default function NostrProfile({
   pubkey,
   onClose,
   onMessage,
   settingsMode = false,
   onEditProfile,
-  relays,
-}: NostrProfileProps & { relays: string[] }) {
+  onOpenProfile,
+}: NostrProfileProps) {
   const { t } = useTranslation();
   const meta = useUserMetadata(pubkey);
   const myPubkey = useMyPubkey();
-  const [notes, setNotes] = useState<NostrEvent[]>([]);
+  const relays = usePreferences().socialRelays;
   const contactEvent = useMyContactList();
+  const contactsReady = useMyContactListReady() || !myPubkey;
+
   const [tab, setTab] = useState<ProfileFeedTab>('posts');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
   const [followBusy, setFollowBusy] = useState(false);
   const [followError, setFollowError] = useState(false);
-  const contactsReady = useMyContactListReady() || !myPubkey;
-  const [composerOpen, setComposerOpen] = useState(false);
+  const [composer, setComposer] = useState<ComposerMode | null>(null);
   const [expandedMedia, setExpandedMedia] = useState<string | null>(null);
+  const [openNoteId, setOpenNoteId] = useState<string | null>(null);
+
+  // No `key=` remount any more: the feed hook keys its own cache, so
+  // switching profiles or relay sets reuses whatever is already cached
+  // instead of blanking the list.
+  const source = useMemo(() => ({ kind: 'profile' as const, pubkey }), [pubkey]);
+  const state = useFeed(source, relays);
 
   useEffect(() => {
     void nostrActions.ensureUserMetadata(pubkey).catch(() => {});
   }, [pubkey]);
 
-  useEffect(() => {
-    let closeTimer: ReturnType<typeof setTimeout> | null = null;
-    let receivedNote = false;
-    let reachedEose = false;
-    const pool = new SimplePool({
-      websocketImplementation: TextCoercingWebSocket as unknown as typeof WebSocket,
-      enablePing: true,
-    } as ConstructorParameters<typeof SimplePool>[0]);
-
-    const notesSub = pool.subscribe(relays, { kinds: [1], authors: [pubkey], limit: FEED_LIMIT }, {
-      onevent: (event) => {
-        receivedNote = true;
-        if (closeTimer) clearTimeout(closeTimer);
-        setLoading(false);
-        setError(false);
-        setNotes((current) => {
-          if (current.some((note) => note.id === event.id)) return current;
-          return [...current, event].sort((a, b) => b.created_at - a.created_at).slice(0, FEED_LIMIT);
-        });
-      },
-      oneose: () => {
-        reachedEose = true;
-        if (closeTimer) clearTimeout(closeTimer);
-        setLoading(false);
-        setError(false);
-      },
-      onclose: () => {
-        if (receivedNote || reachedEose || closeTimer) return;
-        closeTimer = setTimeout(() => {
-          setLoading(false);
-          setError(true);
-        }, 8000);
-      },
-    });
-    return () => {
-      if (closeTimer) clearTimeout(closeTimer);
-      notesSub.close();
-      pool.destroy();
-    };
-  }, [pubkey, myPubkey, relays]);
-
   const isMe = myPubkey === pubkey;
   const following = !!contactEvent?.tags.some((tag) => tag[0] === 'p' && tag[1] === pubkey);
-  const visibleNotes = useMemo(() => filterProfileFeed(notes, tab), [notes, tab]);
+  const displayName = meta?.displayName || meta?.name || shortNpub(pubkey);
+
+  const visibleNotes = useMemo(() => state.notes.filter((note) => (
+    tab === 'posts'
+      ? !isReplyNote(note)
+      : tab === 'replies'
+        ? isReplyNote(note)
+        : mediaUrls(note).length > 0
+  )), [state.notes, tab]);
+
   const media = useMemo(
     () => visibleNotes.flatMap((note) => mediaUrls(note).map((url) => ({ note, url }))),
     [visibleNotes],
   );
-  const displayName = meta?.displayName || meta?.name || shortNpub(pubkey);
+
   const copyNpub = () => {
     navigator.clipboard?.writeText(hexToNpub(pubkey)).catch(() => {});
     useToastStore.getState().pushToast({ title: t('profileFeed.npubCopied'), body: displayName });
@@ -138,34 +119,42 @@ function NostrProfileSession({
   };
 
   return (
-    <div className={(settingsMode ? "" : "screen active") + " profile-view-screen flex h-full min-h-0 flex-col overflow-y-auto bg-lc-black"} data-testid="nostr-profile">
-      {!settingsMode && <div className="sticky top-3 z-10 hidden h-0 shrink-0 md:block" data-testid="profile-explore-close-sticky">
-        <button
-          type="button"
-          onClick={onClose}
-          className="ml-auto mr-3 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-xl leading-none text-lc-white"
-          aria-label={t('common.close')}
-          data-testid="profile-explore-close"
-        >
-          <span aria-hidden="true">×</span>
-        </button>
-      </div>}
+    <div
+      className={(settingsMode ? '' : 'screen active') + ' profile-view-screen flex h-full min-h-0 flex-col overflow-y-auto bg-lc-black'}
+      data-testid="nostr-profile"
+    >
+      {!settingsMode && (
+        <div className="sticky top-3 z-10 hidden h-0 shrink-0 md:block" data-testid="profile-explore-close-sticky">
+          <button
+            type="button"
+            onClick={onClose}
+            className="ml-auto mr-3 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-xl leading-none text-lc-white"
+            aria-label={t('common.close')}
+            data-testid="profile-explore-close"
+          >
+            <span aria-hidden="true">×</span>
+          </button>
+        </div>
+      )}
+
       <div
         className="profile-view-banner relative h-36 shrink-0 bg-gradient-to-br from-lc-olive to-lc-black bg-cover bg-center"
         style={meta?.banner ? { backgroundImage: `url(${meta.banner})` } : undefined}
         data-testid="nostr-profile-banner"
       >
-        <div className={"profile-view-topbar absolute inset-x-3 top-3 z-10 flex " + (settingsMode ? "justify-end" : "justify-between")}>
-          {!settingsMode && <button
-            type="button"
-            onClick={onClose}
-            className="back-btn flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-lc-white md:hidden"
-            aria-label={t('common.back')}
-          >
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="m15 18-6-6 6-6" />
-            </svg>
-          </button>}
+        <div className={'profile-view-topbar absolute inset-x-3 top-3 z-10 flex ' + (settingsMode ? 'justify-end' : 'justify-between')}>
+          {!settingsMode && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="back-btn flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-lc-white md:hidden"
+              aria-label={t('common.back')}
+            >
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m15 18-6-6 6-6" />
+              </svg>
+            </button>
+          )}
           {settingsMode && onEditProfile && (
             <button
               type="button"
@@ -206,6 +195,7 @@ function NostrProfileSession({
           )}
         </div>
       </div>
+
       {meta?.about && (
         <p className="profile-view-bio whitespace-pre-wrap px-5 py-2 text-sm text-lc-muted">{meta.about}</p>
       )}
@@ -237,8 +227,8 @@ function NostrProfileSession({
           <button
             type="button"
             className="lc-pill-primary flex items-center gap-2 px-4 py-2 text-xs"
-            onClick={() => setComposerOpen((open) => !open)}
-            aria-expanded={composerOpen}
+            onClick={() => setComposer((open) => (open ? null : { kind: 'note' }))}
+            aria-expanded={composer !== null}
             data-testid="profile-create-post"
           >
             <span className="text-lg leading-none" aria-hidden="true">+</span>
@@ -247,16 +237,17 @@ function NostrProfileSession({
           {!settingsMode && <ProfileMoreMenu pubkey={pubkey} displayName={displayName} />}
         </div>
       )}
+
       {followError && <p className="px-5 pb-2 text-xs text-red-400">{t('profileFeed.followFailed')}</p>}
-      {isMe && composerOpen && (
-        <ProfileComposer
-          relays={relays}
-          onPublished={(event) => {
-            setNotes((current) => [event, ...current.filter((note) => note.id !== event.id)].slice(0, FEED_LIMIT));
-            setComposerOpen(false);
-            setTab('posts');
-          }}
-        />
+
+      {isMe && composer?.kind === 'note' && (
+        <div className="mx-5 mb-4">
+          <NoteComposer
+            autoFocus
+            onPublished={() => { setComposer(null); setTab('posts'); state.refresh(); }}
+            onCancel={() => setComposer(null)}
+          />
+        </div>
       )}
 
       <div className="profile-feed-tabs sticky top-0 z-[2] grid grid-cols-3 border-y border-lc-border bg-lc-black/95 backdrop-blur" role="tablist">
@@ -278,11 +269,7 @@ function NostrProfileSession({
       </div>
 
       <div className="profile-feed-content min-h-40 flex-1" aria-live="polite" role="tabpanel">
-        {loading && notes.length === 0 ? (
-          <div className="space-y-3 p-4" data-testid="profile-feed-loading">
-            {[0, 1, 2].map((item) => <div key={item} className="lc-skeleton h-24 rounded-xl" />)}
-          </div>
-        ) : tab === 'media' ? (
+        {tab === 'media' ? (
           media.length > 0 ? (
             <div className="grid grid-cols-3 gap-0.5" data-testid="profile-media-grid">
               {media.map(({ note, url }) => (
@@ -302,22 +289,39 @@ function NostrProfileSession({
                 </button>
               ))}
             </div>
-          ) : <EmptyFeed error={error} />
-        ) : visibleNotes.length > 0 ? (
-          <div className="divide-y divide-lc-border">
-            {visibleNotes.map((note) => (
-              <ProfileNote
-                key={note.id}
-                note={note}
-                displayName={displayName}
-                picture={meta?.picture}
-                relays={relays}
-                canInteract={!!myPubkey}
-              />
-            ))}
-          </div>
-        ) : <EmptyFeed error={error} />}
+          ) : (
+            <div className="flex min-h-40 items-center justify-center px-6 text-center text-sm text-lc-muted" data-testid="profile-feed-empty">
+              {t(state.error ? 'profileFeed.loadFailed' : 'profileFeed.empty')}
+            </div>
+          )
+        ) : (
+          <FeedList
+            state={{ ...state, notes: visibleNotes }}
+            onOpenProfile={onOpenProfile}
+            onOpenNote={setOpenNoteId}
+            onReply={(note) => setComposer({ kind: 'reply', parent: note })}
+            onQuote={(note) => setComposer({ kind: 'quote', target: note })}
+          />
+        )}
       </div>
+
+      {composer && composer.kind !== 'note' && (
+        <ModalShell onClose={() => setComposer(null)} testId="profile-composer-modal">
+          <NoteComposer
+            autoFocus
+            mode={composer}
+            onPublished={() => { setComposer(null); state.refresh(); }}
+            onCancel={() => setComposer(null)}
+          />
+        </ModalShell>
+      )}
+
+      {openNoteId && (
+        <ModalShell onClose={() => setOpenNoteId(null)} testId="profile-thread-modal">
+          <NoteThread noteId={openNoteId} onOpenProfile={onOpenProfile} onOpenNote={setOpenNoteId} />
+        </ModalShell>
+      )}
+
       {expandedMedia && (
         <ProfileMediaLightbox url={expandedMedia} onClose={() => setExpandedMedia(null)} />
       )}
@@ -362,7 +366,15 @@ function ProfileMediaLightbox({ url, onClose }: { url: string; onClose: () => vo
   );
 }
 
-function ProfileMoreMenu({ pubkey, displayName, canModerate = false }: { pubkey: string; displayName: string; canModerate?: boolean }) {
+function ProfileMoreMenu({
+  pubkey,
+  displayName,
+  canModerate = false,
+}: {
+  pubkey: string;
+  displayName: string;
+  canModerate?: boolean;
+}) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const muted = useModerationStore((state) => state.mutedPubkeys.includes(pubkey));
@@ -377,6 +389,7 @@ function ProfileMoreMenu({ pubkey, displayName, canModerate = false }: { pubkey:
     notify(t('profileFeed.npubCopied'));
     setOpen(false);
   };
+
   const shareProfile = async () => {
     try {
       if (navigator.share) await navigator.share({ title: displayName, text: npub });
@@ -405,270 +418,29 @@ function ProfileMoreMenu({ pubkey, displayName, canModerate = false }: { pubkey:
           <button type="button" className="block w-full px-4 py-2 text-left text-xs text-lc-white hover:bg-white/5" onClick={copyNpub}>
             {t('profileFeed.copyNpub')}
           </button>
-          {canModerate && <>
-            <button
-              type="button"
-              className="block w-full px-4 py-2 text-left text-xs text-lc-white hover:bg-white/5"
-              onClick={() => {
-                toggleMute(pubkey);
-                setOpen(false);
-              }}
-            >
-              {t(muted ? 'profileFeed.unmute' : 'profileFeed.mute')}
-            </button>
-            <button
-              type="button"
-              className="block w-full px-4 py-2 text-left text-xs text-red-400 hover:bg-white/5"
-              onClick={() => {
-                toggleBlock(pubkey);
-                setOpen(false);
-              }}
-            >
-              {t(blocked ? 'profileFeed.unblock' : 'profileFeed.block')}
-            </button>
-          </>}
+          {canModerate && (
+            <>
+              <button
+                type="button"
+                className="block w-full px-4 py-2 text-left text-xs text-lc-white hover:bg-white/5"
+                onClick={() => { toggleMute(pubkey); setOpen(false); }}
+              >
+                {t(muted ? 'profileFeed.unmute' : 'profileFeed.mute')}
+              </button>
+              <button
+                type="button"
+                className="block w-full px-4 py-2 text-left text-xs text-red-400 hover:bg-white/5"
+                onClick={() => { toggleBlock(pubkey); setOpen(false); }}
+              >
+                {t(blocked ? 'profileFeed.unblock' : 'profileFeed.block')}
+              </button>
+            </>
+          )}
           <button type="button" className="block w-full px-4 py-2 text-left text-xs text-lc-white hover:bg-white/5" onClick={() => void shareProfile()}>
             {t('profileFeed.shareProfile')}
           </button>
         </div>
       )}
-    </div>
-  );
-}
-
-function ProfileNote({
-  note,
-  displayName,
-  picture,
-  relays,
-  canInteract,
-}: {
-  note: NostrEvent;
-  displayName: string;
-  picture?: string | null;
-  relays: string[];
-  canInteract: boolean;
-}) {
-  const { t } = useTranslation();
-  const [replyOpen, setReplyOpen] = useState(false);
-  const [reply, setReply] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [reacted, setReacted] = useState(false);
-  const [status, setStatus] = useState<string | null>(null);
-
-  const publishReaction = async () => {
-    if (!canInteract || busy || reacted) return;
-    setBusy(true);
-    setStatus(null);
-    try {
-      const bridge = await getBridge();
-      await bridge.publishEvent({
-        kind: 7,
-        content: '❤️',
-        tags: [['e', note.id], ['p', note.pubkey]],
-      }, { extraRelays: relays, mode: 'replace' });
-      setReacted(true);
-      setStatus(t('profileFeed.reactionSent'));
-    } catch {
-      setStatus(t('profileFeed.actionFailed'));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const publishReply = async (event: React.FormEvent) => {
-    event.preventDefault();
-    const content = reply.trim();
-    if (!content || !canInteract || busy) return;
-    setBusy(true);
-    setStatus(null);
-    try {
-      const bridge = await getBridge();
-      await bridge.publishEvent({
-        kind: 1,
-        content,
-        tags: [...profileReplyTags(note), ...hashtagTags(content)],
-      }, { extraRelays: relays, mode: 'replace' });
-      setReply('');
-      setReplyOpen(false);
-      setStatus(t('profileFeed.replySent'));
-    } catch {
-      setStatus(t('profileFeed.actionFailed'));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <article className="px-5 py-4" data-testid="profile-note">
-      <header className="mb-3 flex items-center gap-3">
-        <UserAvatar pubkey={note.pubkey} picture={picture} size={10} name={displayName} alt={displayName} />
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-semibold text-lc-white">{displayName}</div>
-          <div className="flex items-center gap-2 text-[10px] text-lc-muted">
-            <span>{isReply(note) ? `↩ ${t('profileFeed.reply')}` : t('profileFeed.post')}</span>
-            <span aria-hidden="true">·</span>
-            <time dateTime={new Date(note.created_at * 1000).toISOString()}>
-              {new Date(note.created_at * 1000).toLocaleDateString()}
-            </time>
-          </div>
-        </div>
-      </header>
-      <div className="break-words text-sm text-lc-white">
-        <MessageContent content={linkifyHashtags(note.content)} messageId={note.id} wideMedia />
-      </div>
-      <div className="mt-3 flex items-center gap-4 border-t border-lc-border/70 pt-2 text-xs">
-        <button
-          type="button"
-          className="text-lc-muted hover:text-sky-400 disabled:opacity-40"
-          onClick={() => setReplyOpen((open) => !open)}
-          disabled={!canInteract || busy}
-          data-testid="profile-note-reply"
-        >
-          ↩ {t('profileFeed.replyAction')}
-        </button>
-        <button
-          type="button"
-          className={reacted ? 'text-red-400' : 'text-lc-muted hover:text-red-400 disabled:opacity-40'}
-          onClick={() => void publishReaction()}
-          disabled={!canInteract || busy || reacted}
-          data-testid="profile-note-react"
-        >
-          {reacted ? '♥' : '♡'} {t('profileFeed.react')}
-        </button>
-      </div>
-      {replyOpen && (
-        <form className="mt-3 flex gap-2" onSubmit={(event) => void publishReply(event)}>
-          <textarea
-            value={reply}
-            onChange={(event) => setReply(event.target.value)}
-            className="min-h-20 min-w-0 flex-1 resize-y rounded-xl border border-lc-border bg-lc-dark px-3 py-2 text-sm text-lc-white outline-none focus:border-lc-green"
-            placeholder={t('profileFeed.replyPlaceholder')}
-            data-testid="profile-reply-input"
-          />
-          <button type="submit" className="lc-pill-primary self-end px-4 py-2 text-xs" disabled={!reply.trim() || busy}>
-            {t('common.send')}
-          </button>
-        </form>
-      )}
-      {status && <p className="mt-2 text-[11px] text-lc-muted" role="status">{status}</p>}
-    </article>
-  );
-}
-
-function ProfileComposer({
-  relays,
-  onPublished,
-}: {
-  relays: string[];
-  onPublished: (event: NostrEvent) => void;
-}) {
-  const { t } = useTranslation();
-  const [draft, setDraft] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
-
-  const wrapSelection = (before: string, after = before) => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const selected = draft.slice(start, end);
-    const next = draft.slice(0, start) + before + selected + after + draft.slice(end);
-    setDraft(next);
-    requestAnimationFrame(() => {
-      textarea.focus();
-      textarea.setSelectionRange(start + before.length, end + before.length);
-    });
-  };
-
-  const uploadFiles = async (files: FileList | null) => {
-    if (!files?.length || busy) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const urls = await Promise.all([...files].slice(0, 4).map((file) => uploadToBlossom(file)));
-      setDraft((current) => [current.trim(), ...urls].filter(Boolean).join('\n'));
-    } catch (uploadError) {
-      setError(uploadError instanceof Error ? uploadError.message : t('profileFeed.actionFailed'));
-    } finally {
-      setBusy(false);
-      if (fileRef.current) fileRef.current.value = '';
-    }
-  };
-
-  const publish = async (event: React.FormEvent) => {
-    event.preventDefault();
-    const content = draft.trim();
-    if (!content || busy) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const bridge = await getBridge();
-      const published = await bridge.publishEvent({
-        kind: 1,
-        content,
-        tags: hashtagTags(content),
-      }, { extraRelays: relays, mode: 'replace' });
-      setDraft('');
-      onPublished(published);
-    } catch (publishError) {
-      setError(publishError instanceof Error ? publishError.message : t('profileFeed.actionFailed'));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <form className="mx-5 mb-4 rounded-xl border border-lc-border bg-lc-dark p-3" onSubmit={(event) => void publish(event)} data-testid="profile-composer">
-      <div className="mb-2 flex items-center gap-1">
-        <button type="button" className="rounded px-2 py-1 text-sm font-bold text-lc-muted hover:bg-white/5 hover:text-lc-white" onClick={() => wrapSelection('**')}>B</button>
-        <button type="button" className="rounded px-2 py-1 text-sm italic text-lc-muted hover:bg-white/5 hover:text-lc-white" onClick={() => wrapSelection('_')}>I</button>
-        <button type="button" className="rounded px-2 py-1 text-xs text-lc-muted hover:bg-white/5 hover:text-lc-white" onClick={() => wrapSelection('[', '](https://)')}>Link</button>
-        <button type="button" className="ml-auto rounded px-2 py-1 text-xs text-lc-muted hover:bg-white/5 hover:text-lc-white" onClick={() => fileRef.current?.click()} disabled={busy}>
-          + {t('profileFeed.upload')}
-        </button>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*,video/*,audio/*"
-          multiple
-          className="hidden"
-          onChange={(event) => void uploadFiles(event.target.files)}
-          data-testid="profile-post-files"
-        />
-      </div>
-      <textarea
-        ref={textareaRef}
-        value={draft}
-        onChange={(event) => setDraft(event.target.value)}
-        className="min-h-28 w-full resize-y rounded-lg border border-lc-border bg-lc-black px-3 py-2 text-sm text-lc-white outline-none focus:border-lc-green"
-        placeholder={t('profileFeed.postPlaceholder')}
-        data-testid="profile-post-input"
-      />
-      {draft.trim() && (
-        <div className="mt-2 rounded-lg border border-lc-border/70 bg-lc-black p-3 text-sm text-lc-white" data-testid="profile-post-preview">
-          <MessageContent content={linkifyHashtags(draft)} wideMedia />
-        </div>
-      )}
-      {error && <p className="mt-2 text-xs text-red-400" role="alert">{error}</p>}
-      <div className="mt-3 flex items-center justify-between gap-3">
-        <span className="text-[10px] text-lc-muted">{t('profileFeed.markdownHint')}</span>
-        <button type="submit" className="lc-pill-primary px-5 py-2 text-xs" disabled={!draft.trim() || busy}>
-          {busy ? t('common.saving') : t('profileFeed.publish')}
-        </button>
-      </div>
-    </form>
-  );
-}
-
-function EmptyFeed({ error }: { error: boolean }) {
-  const { t } = useTranslation();
-  return (
-    <div className="flex min-h-40 items-center justify-center px-6 text-center text-sm text-lc-muted" data-testid="profile-feed-empty">
-      {t(error ? 'profileFeed.loadFailed' : 'profileFeed.empty')}
     </div>
   );
 }
@@ -681,3 +453,5 @@ function shortNpub(pubkey: string): string {
     return `${pubkey.slice(0, 10)}…${pubkey.slice(-6)}`;
   }
 }
+
+export type { NostrEvent };

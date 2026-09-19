@@ -19,6 +19,7 @@ import { KIND_TEXT_NOTE } from '../nip-kinds';
 import { hashtagTags } from '../profile-feed';
 import { encodeEventRef, mentionedPubkeys, referencedEvents } from './nip27';
 import { socialRelays } from './pool';
+import { contentWarningTags } from './sensitive';
 
 export const KIND_REPOST = 6;
 export const KIND_REACTION = 7;
@@ -81,20 +82,30 @@ function quoteTags(content: string): string[][] {
 export function buildNoteTags(
   content: string,
   attachments: readonly Attachment[] = [],
+  opts: { contentWarning?: string | null } = {},
 ): string[][] {
-  return [
+  const tags = [
     ...hashtagTags(content),
     ...mentionTags(content),
     ...quoteTags(content),
     ...attachments.map(imetaTag),
   ];
+  if (opts.contentWarning !== undefined && opts.contentWarning !== null) {
+    tags.push(...contentWarningTags(opts.contentWarning, tags));
+  }
+  return tags;
 }
 
 export function publishNote(
   content: string,
   attachments: readonly Attachment[] = [],
+  opts: { contentWarning?: string | null } = {},
 ): Promise<NostrEvent> {
-  return publish({ kind: KIND_TEXT_NOTE, content, tags: buildNoteTags(content, attachments) });
+  return publish({
+    kind: KIND_TEXT_NOTE,
+    content,
+    tags: buildNoteTags(content, attachments, opts),
+  });
 }
 
 /**
@@ -142,13 +153,13 @@ export function buildReplyTags(
 export function publishReply(
   parent: Pick<NostrEvent, 'id' | 'pubkey' | 'tags'>,
   content: string,
-  opts: { relayHint?: string; attachments?: readonly Attachment[] } = {},
+  opts: { relayHint?: string; attachments?: readonly Attachment[]; contentWarning?: string | null } = {},
 ): Promise<NostrEvent> {
   const replyTags = buildReplyTags(parent, opts);
   const taggedPubkeys = new Set(
     replyTags.filter((tag) => tag[0] === 'p').map((tag) => tag[1]),
   );
-  const extra = buildNoteTags(content, opts.attachments ?? [])
+  const extra = buildNoteTags(content, opts.attachments ?? [], opts)
     // Don't duplicate a `p` the reply tags already carry.
     .filter((tag) => !(tag[0] === 'p' && taggedPubkeys.has(tag[1])));
   return publish({ kind: KIND_TEXT_NOTE, content, tags: [...replyTags, ...extra] });
@@ -191,12 +202,12 @@ export function publishRepost(
 export function publishQuote(
   note: Pick<NostrEvent, 'id' | 'pubkey'>,
   comment: string,
-  opts: { relayHint?: string; attachments?: readonly Attachment[] } = {},
+  opts: { relayHint?: string; attachments?: readonly Attachment[]; contentWarning?: string | null } = {},
 ): Promise<NostrEvent> {
   const relays = opts.relayHint ? [opts.relayHint] : [];
   const ref = encodeEventRef(note.id, { relays, author: note.pubkey });
   const content = comment.trim() ? `${comment.trim()}\n\n${ref}` : ref;
-  const tags = buildNoteTags(content, opts.attachments ?? []);
+  const tags = buildNoteTags(content, opts.attachments ?? [], opts);
   // `buildNoteTags` already derives the q tag from the inline reference, but
   // add the author p-tag so the quoted user is notified.
   if (!tags.some((tag) => tag[0] === 'p' && tag[1] === note.pubkey)) {

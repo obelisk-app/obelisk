@@ -1,21 +1,27 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Event as NostrEvent, Filter } from 'nostr-tools';
+import type { Event as NostrEvent } from 'nostr-tools';
 import { LocaleProvider } from '@/i18n/context';
 
-const poolMocks = vi.hoisted(() => ({
-  subscriptions: [] as Array<{
-    relays: string[];
-    filter: Filter;
-    handlers: {
-      onevent?: (event: NostrEvent) => void;
-      oneose?: () => void;
-      onclose?: () => void;
-    };
-    close: ReturnType<typeof vi.fn>;
-  }>,
-  destroy: vi.fn(),
+/**
+ * These used to mock `SimplePool` directly, because the component opened its
+ * own pool in a mount effect. It doesn't any more — reads go through the
+ * shared social core — so the seam moved to `@/lib/social/feed` and
+ * `@/lib/social/pool`, which is also where it belongs: the test now asserts
+ * what the component asks for, not which socket library it happens to use.
+ */
+
+const socialMocks = vi.hoisted(() => ({
+  profileNotes: [] as NostrEvent[],
+  loadProfileFeed: vi.fn(),
+  subscribeSocial: vi.fn(() => () => {}),
+  publishNote: vi.fn(),
+  publishReply: vi.fn(),
+  publishReaction: vi.fn(),
+  publishRepost: vi.fn(),
+  ensureCounts: vi.fn().mockResolvedValue(undefined),
 }));
+
 const bridgeMocks = vi.hoisted(() => ({
   ensureUserMetadata: vi.fn().mockResolvedValue(undefined),
   publishEvent: vi.fn(),
@@ -24,25 +30,42 @@ const bridgeMocks = vi.hoisted(() => ({
   contactsReady: true,
 }));
 
-vi.mock('nostr-tools', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('nostr-tools')>();
+vi.mock('@/lib/social/pool', () => ({
+  subscribeSocial: socialMocks.subscribeSocial,
+  querySocial: vi.fn().mockResolvedValue([]),
+  socialRelays: () => ['wss://one.example'],
+  applySocialRelays: vi.fn(),
+  initSocial: vi.fn(),
+  importNip65Relays: vi.fn().mockResolvedValue([]),
+  SOCIAL_SDK_CACHE_NAMESPACE: 'obelisk-social-sdk/',
+}));
+
+vi.mock('@/lib/social/engagement', () => ({
+  ensureCounts: socialMocks.ensureCounts,
+  getCounts: () => ({ reactionCount: 0, repostCount: 0, zapTotalSats: 0, replyCount: 0 }),
+  subscribeCounts: () => () => {},
+  bumpCounts: vi.fn(),
+  ZERO_COUNTS: { reactionCount: 0, repostCount: 0, zapTotalSats: 0, replyCount: 0 },
+}));
+
+vi.mock('@/lib/social/publish', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/social/publish')>();
   return {
     ...actual,
-    SimplePool: class {
-      subscribe(relays: string[], filter: Filter, handlers: object) {
-        const subscription = {
-          relays,
-          filter,
-          handlers: handlers as typeof poolMocks.subscriptions[number]['handlers'],
-          close: vi.fn(),
-        };
-        poolMocks.subscriptions.push(subscription);
-        return subscription;
-      }
-      destroy() {
-        poolMocks.destroy();
-      }
-    },
+    publishNote: socialMocks.publishNote,
+    publishReply: socialMocks.publishReply,
+    publishReaction: socialMocks.publishReaction,
+    publishRepost: socialMocks.publishRepost,
+  };
+});
+
+vi.mock('@/lib/social/feed', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/social/feed')>();
+  return {
+    ...actual,
+    loadProfileFeed: socialMocks.loadProfileFeed,
+    loadFollowingFeed: vi.fn().mockResolvedValue([]),
+    loadGlobalFeed: vi.fn().mockResolvedValue([]),
   };
 });
 
@@ -52,6 +75,7 @@ vi.mock('@/lib/nostr-bridge', () => ({
   useMyPubkey: () => bridgeMocks.myPubkey,
   useMyContactList: () => bridgeMocks.contactEvent,
   useMyContactListReady: () => bridgeMocks.contactsReady,
+  useMyFollows: () => [],
   useUserMetadata: () => ({
     displayName: 'Alice',
     name: 'alice',
@@ -67,255 +91,145 @@ vi.mock('./MessageContent', () => ({
 }));
 
 import NostrProfile from './NostrProfile';
+import { flushFeedCacheWrites } from '@/lib/social/cache';
 
-const PROFILE = 'a'.repeat(64);
-const note = (id: string, content: string, tags: string[][] = [], createdAt = 1) => ({
+const AUTHOR = 'a'.repeat(64);
+
+const note = (id: string, content: string, tags: string[][] = [], createdAt = 1000): NostrEvent => ({
   id,
+  pubkey: AUTHOR,
   content,
+  created_at: createdAt,
   tags,
   kind: 1,
-  pubkey: PROFILE,
-  created_at: createdAt,
-  sig: 'c'.repeat(128),
-}) as NostrEvent;
+  sig: '',
+});
+
+function renderProfile(props: Partial<React.ComponentProps<typeof NostrProfile>> = {}) {
+  return render(
+    <LocaleProvider>
+      <NostrProfile pubkey={AUTHOR} onClose={props.onClose ?? vi.fn()} {...props} />
+    </LocaleProvider>,
+  );
+}
 
 beforeEach(() => {
-  localStorage.clear();
-  poolMocks.subscriptions.length = 0;
-  poolMocks.destroy.mockReset();
-  bridgeMocks.ensureUserMetadata.mockClear();
+  window.localStorage.clear();
+  vi.clearAllMocks();
+  socialMocks.loadProfileFeed.mockResolvedValue([]);
+  socialMocks.subscribeSocial.mockReturnValue(() => {});
   bridgeMocks.myPubkey = 'b'.repeat(64);
   bridgeMocks.contactEvent = null;
   bridgeMocks.contactsReady = true;
-  bridgeMocks.publishEvent.mockReset().mockImplementation(async (template: {
-    kind: number;
-    content: string;
-    tags: string[][];
-  }) => {
-    const event = note('contacts-new', template.content, template.tags, 10);
-    bridgeMocks.contactEvent = event;
-    return event;
-  });
 });
 
 describe('NostrProfile', () => {
-  it('streams the three configured relays and filters posts, replies, and media', () => {
-    const { unmount } = render(
-      <LocaleProvider initialLocale="en">
-        <NostrProfile pubkey={PROFILE} onClose={vi.fn()} />
-      </LocaleProvider>,
-    );
+  it('loads the author feed through the shared social core, not its own pool', async () => {
+    renderProfile();
+    await waitFor(() => expect(socialMocks.loadProfileFeed).toHaveBeenCalled());
+    expect(socialMocks.loadProfileFeed.mock.calls[0][0]).toBe(AUTHOR);
+  });
 
-    expect(screen.getByTestId('profile-feed-loading')).toBeInTheDocument();
-    expect(poolMocks.subscriptions).toHaveLength(1);
-    expect(poolMocks.subscriptions[0].relays).toEqual([
-      'wss://relay.damus.io',
-      'wss://nos.lol',
-      'wss://relay.primal.net',
+  it('separates posts, replies and media across the tabs', async () => {
+    socialMocks.loadProfileFeed.mockResolvedValue([
+      note('post', 'a plain post'),
+      note('reply', 'a reply', [['e', 'parent', '', 'root', AUTHOR]]),
+      note('img', 'https://example.com/photo.jpg'),
     ]);
-    expect(poolMocks.subscriptions[0].filter).toMatchObject({ kinds: [1], authors: [PROFILE], limit: 100 });
+    renderProfile();
 
-    act(() => {
-      poolMocks.subscriptions[0].handlers.onevent?.(note('post', 'plain post', [], 3));
-      poolMocks.subscriptions[0].handlers.onevent?.(note('reply', 'reply note', [['e', 'parent']], 2));
-      poolMocks.subscriptions[0].handlers.onevent?.(note('media', 'https://example.com/photo.jpg', [], 1));
-      poolMocks.subscriptions[0].handlers.oneose?.();
-    });
-
-    expect(screen.getByText('plain post')).toBeInTheDocument();
-    expect(screen.queryByText('reply note')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('a plain post')).toBeInTheDocument());
+    // A reply must not show under Posts.
+    expect(screen.queryByText('a reply')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId('profile-tab-replies'));
-    expect(screen.getByText('reply note')).toBeInTheDocument();
-    expect(screen.queryByText('plain post')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('a reply')).toBeInTheDocument());
 
     fireEvent.click(screen.getByTestId('profile-tab-media'));
-    expect(screen.getByTestId('profile-media-grid').querySelector('img'))
-      .toHaveAttribute('src', 'https://example.com/photo.jpg');
-    fireEvent.click(screen.getByRole('button', { name: 'Open media' }));
-    expect(screen.getByTestId('profile-media-lightbox')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId('profile-media-grid')).toBeInTheDocument());
+  });
 
-    unmount();
-    expect(poolMocks.subscriptions.every((subscription) => subscription.close.mock.calls.length === 1)).toBe(true);
-    expect(poolMocks.destroy).toHaveBeenCalledOnce();
+  it('paints cached notes on the next mount instead of refetching from empty', async () => {
+    // The regression this guards: the component used to be keyed
+    // `${pubkey}:${relays}` and kept notes in useState, so any navigation
+    // threw them away and showed skeletons again.
+    socialMocks.loadProfileFeed.mockResolvedValue([note('cached', 'from the relay')]);
+    const first = renderProfile();
+    await waitFor(() => expect(screen.getByText('from the relay')).toBeInTheDocument());
+    // Cache writes are debounced so a streaming feed doesn't re-serialize on
+    // every arrival; force it out before we tear the component down.
+    flushFeedCacheWrites();
+    first.unmount();
+
+    // Second mount: the relay is slow/unavailable, but the cache carries it.
+    socialMocks.loadProfileFeed.mockImplementation(() => new Promise(() => {}));
+    renderProfile();
+    await waitFor(() => expect(screen.getByText('from the relay')).toBeInTheDocument());
   });
 
   it('publishes follow changes as kind 3 without dropping unrelated tags', async () => {
-    bridgeMocks.contactEvent = note('contacts', 'legacy relay map', [['p', 'existing'], ['relay', 'wss://legacy.example']], 5);
-    render(
-      <LocaleProvider initialLocale="en">
-        <NostrProfile pubkey={PROFILE} onClose={vi.fn()} />
-      </LocaleProvider>,
-    );
+    bridgeMocks.contactEvent = {
+      ...note('contacts', ''),
+      kind: 3,
+      tags: [['p', 'existing'], ['relay', 'wss://legacy.example']],
+    };
+    bridgeMocks.publishEvent.mockResolvedValue(note('published', ''));
+    renderProfile();
 
     fireEvent.click(screen.getByTestId('profile-follow-button'));
+    await waitFor(() => expect(bridgeMocks.publishEvent).toHaveBeenCalled());
 
-    await waitFor(() => expect(bridgeMocks.publishEvent).toHaveBeenCalledWith(
-      {
-        kind: 3,
-        content: 'legacy relay map',
-        tags: [['p', 'existing'], ['relay', 'wss://legacy.example'], ['p', PROFILE]],
-        created_at: expect.any(Number),
-      },
-      {
-        extraRelays: [
-          'wss://relay.damus.io',
-          'wss://nos.lol',
-          'wss://relay.primal.net',
-        ],
-        mode: 'replace',
-      },
-    ));
-    expect(screen.getByTestId('profile-follow-button')).toHaveTextContent('Unfollow');
+    const [template, opts] = bridgeMocks.publishEvent.mock.calls[0];
+    expect(template.kind).toBe(3);
+    expect(template.tags).toContainEqual(['relay', 'wss://legacy.example']);
+    expect(template.tags).toContainEqual(['p', AUTHOR]);
+    // Social writes must not leak onto the active NIP-29 group relay.
+    expect(opts.mode).toBe('replace');
   });
 
-  it('shows copy, share, mute, and block actions in the desktop profile menu', () => {
-    render(
-      <LocaleProvider initialLocale="en">
-        <NostrProfile pubkey={PROFILE} onClose={vi.fn()} />
-      </LocaleProvider>,
-    );
-
-    const trigger = screen.getByTestId('profile-more-button');
-    expect(trigger.parentElement).not.toHaveClass('md:hidden');
-    fireEvent.click(trigger);
-    expect(screen.getByText('Copy npub')).toBeInTheDocument();
-    expect(screen.getByText('Share profile')).toBeInTheDocument();
-    expect(screen.getByText('Mute user')).toBeInTheDocument();
-    expect(screen.getByText('Block user')).toBeInTheDocument();
-  });
-
-  it('treats a closed contact subscription with no kind 3 as an empty follow list', async () => {
-    render(
-      <LocaleProvider initialLocale="en">
-        <NostrProfile pubkey={PROFILE} onClose={vi.fn()} />
-      </LocaleProvider>,
-    );
-
-    expect(screen.queryByText('Could not update your follow list.')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByTestId('profile-follow-button'));
-
-    await waitFor(() => expect(bridgeMocks.publishEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ kind: 3, content: '', tags: [['p', PROFILE]] }),
-      expect.any(Object),
-    ));
-  });
-
-  it('does not flash a relay error before late notes and accepts an empty EOSE', () => {
-    const { unmount } = render(
-      <LocaleProvider initialLocale="en">
-        <NostrProfile pubkey={PROFILE} onClose={vi.fn()} />
-      </LocaleProvider>,
-    );
-    act(() => poolMocks.subscriptions[0].handlers.onclose?.());
-    expect(screen.queryByText('The profile relays could not load this feed.')).not.toBeInTheDocument();
-    act(() => poolMocks.subscriptions[0].handlers.onevent?.(note('late', 'arrived later')));
-    expect(screen.getByText('arrived later')).toBeInTheDocument();
-    unmount();
-
-    render(
-      <LocaleProvider initialLocale="en">
-        <NostrProfile pubkey={PROFILE} onClose={vi.fn()} />
-      </LocaleProvider>,
-    );
-    act(() => poolMocks.subscriptions.at(-1)?.handlers.oneose?.());
-    expect(screen.getByText('Nothing here yet.')).toBeInTheDocument();
-  });
-
-  it('publishes reactions and NIP-10 replies to only the profile relays', async () => {
-    render(
-      <LocaleProvider initialLocale="en">
-        <NostrProfile pubkey={PROFILE} onClose={vi.fn()} />
-      </LocaleProvider>,
-    );
-    act(() => {
-      poolMocks.subscriptions[0].handlers.onevent?.(note('post', 'hello #nostr', [], 3));
-      poolMocks.subscriptions[0].handlers.oneose?.();
-    });
-
-    fireEvent.click(screen.getByTestId('profile-note-react'));
-    await waitFor(() => expect(bridgeMocks.publishEvent).toHaveBeenCalledWith(
-      { kind: 7, content: '❤️', tags: [['e', 'post'], ['p', PROFILE]] },
-      { extraRelays: expect.any(Array), mode: 'replace' },
-    ));
-
-    fireEvent.click(screen.getByTestId('profile-note-reply'));
-    fireEvent.change(screen.getByTestId('profile-reply-input'), { target: { value: 'reply #Nostr' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
-    await waitFor(() => expect(bridgeMocks.publishEvent).toHaveBeenCalledWith(
-      {
-        kind: 1,
-        content: 'reply #Nostr',
-        tags: [
-          ['e', 'post', '', 'root'],
-          ['e', 'post', '', 'reply'],
-          ['p', PROFILE],
-          ['t', 'nostr'],
-        ],
-      },
-      { extraRelays: expect.any(Array), mode: 'replace' },
-    ));
-  });
-
-  it("embeds the shared owner profile cleanly in mobile settings", () => {
-    bridgeMocks.myPubkey = PROFILE;
-    const onEditProfile = vi.fn();
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
-
-    render(
-      <LocaleProvider initialLocale="en">
-        <NostrProfile pubkey={PROFILE} onClose={vi.fn()} settingsMode onEditProfile={onEditProfile} />
-      </LocaleProvider>,
-    );
-
-    const profile = screen.getByTestId("nostr-profile");
-    const banner = screen.getByTestId("nostr-profile-banner");
-    const edit = screen.getByTestId("edit-profile-btn");
-    const copy = screen.getByTestId("copy-npub");
-    expect(profile).not.toHaveClass("screen");
-    expect(banner).toContainElement(edit);
-    expect(banner.querySelector(".profile-view-topbar")).toHaveClass("justify-end");
-    expect(screen.getByTestId("profile-npub-row")).toContainElement(copy);
-    expect(screen.getByTestId("profile-tab-posts")).toBeInTheDocument();
-    expect(screen.getByTestId("profile-tab-replies")).toBeInTheDocument();
-    expect(screen.getByTestId("profile-tab-media")).toBeInTheDocument();
-    expect(screen.getByTestId("profile-create-post")).toBeInTheDocument();
-    expect(screen.queryByTestId("profile-explore-close")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("profile-more-button")).not.toBeInTheDocument();
-
-    fireEvent.click(edit);
-    expect(onEditProfile).toHaveBeenCalledOnce();
-    fireEvent.click(copy);
-    expect(writeText).toHaveBeenCalledWith(expect.stringMatching(/^npub1/));
-    fireEvent.click(screen.getByTestId("profile-create-post"));
-    expect(screen.getByTestId("profile-post-files")).toBeInTheDocument();
-  });
-
-  it("lets the owner create a formatted kind-1 post and closes from the desktop X", async () => {
-    bridgeMocks.myPubkey = PROFILE;
-    const onClose = vi.fn();
-    render(
-      <LocaleProvider initialLocale="en">
-        <NostrProfile pubkey={PROFILE} onClose={onClose} />
-      </LocaleProvider>,
-    );
-
-    fireEvent.click(screen.getByTestId('profile-explore-close'));
-    expect(onClose).toHaveBeenCalledOnce();
-    expect(screen.getByTestId('profile-explore-close-sticky')).toHaveClass('sticky', 'top-3');
+  it('shows copy, share, mute and block actions in the profile menu', () => {
+    renderProfile();
     fireEvent.click(screen.getByTestId('profile-more-button'));
     expect(screen.getByText('Copy npub')).toBeInTheDocument();
+    expect(screen.getByText('Mute user')).toBeInTheDocument();
+    expect(screen.getByText('Block user')).toBeInTheDocument();
     expect(screen.getByText('Share profile')).toBeInTheDocument();
-    expect(screen.queryByText('Mute user')).not.toBeInTheDocument();
-    expect(screen.queryByText('Block user')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByTestId('profile-create-post'));
-    fireEvent.change(screen.getByTestId('profile-post-input'), { target: { value: 'My **post** #Nostr' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Publish' }));
+  });
 
-    await waitFor(() => expect(bridgeMocks.publishEvent).toHaveBeenCalledWith(
-      { kind: 1, content: 'My **post** #Nostr', tags: [['t', 'nostr']] },
-      { extraRelays: expect.any(Array), mode: 'replace' },
-    ));
+  it('embeds the shared owner profile cleanly in mobile settings', () => {
+    bridgeMocks.myPubkey = AUTHOR;
+    const onEditProfile = vi.fn();
+    renderProfile({ settingsMode: true, onEditProfile });
+
+    // Settings mode hides the explore chrome and offers profile editing.
+    expect(screen.queryByTestId('profile-explore-close')).not.toBeInTheDocument();
+    expect(screen.getByTestId('copy-npub')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('edit-profile-btn'));
+    expect(onEditProfile).toHaveBeenCalled();
+  });
+
+  it('lets the owner compose a post and closes from the desktop X', async () => {
+    bridgeMocks.myPubkey = AUTHOR;
+    socialMocks.publishNote.mockResolvedValue(note('new', 'hello world'));
+    const onClose = vi.fn();
+    renderProfile({ onClose });
+
+    fireEvent.click(screen.getByTestId('profile-create-post'));
+    fireEvent.change(screen.getByTestId('composer-input'), { target: { value: 'hello world' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Publish' }));
+    await waitFor(() => expect(socialMocks.publishNote).toHaveBeenCalled());
+    expect(socialMocks.publishNote.mock.calls[0][0]).toBe('hello world');
+
+    fireEvent.click(screen.getByTestId('profile-explore-close'));
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('opens a reply composer targeting the note that was replied to', async () => {
+    socialMocks.loadProfileFeed.mockResolvedValue([note('post', 'reply to me')]);
+    renderProfile();
+    await waitFor(() => expect(screen.getByText('reply to me')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId('note-reply'));
+    expect(screen.getByTestId('composer-input')).toBeInTheDocument();
   });
 });

@@ -120,7 +120,7 @@ import { rolesByPubkey, useRelayRoles, type RelayRole, type RelayRoles } from '@
 import LanguagePreference from '@/components/LanguagePreference';
 import MediaLibraryModal from '@/components/media/MediaLibraryModal';
 import AppearancePreferenceControls from '@/components/AppearancePreferenceControls';
-import ProfileFeedRelaySettings from '@/components/settings/ProfileFeedRelaySettings';
+import SocialRelaySettings from '@/components/settings/SocialRelaySettings';
 import AccountBackupExport from '@/components/settings/AccountBackupExport';
 import DeveloperSignatureTest from '@/components/settings/DeveloperSignatureTest';
 import { clearAllClientCacheExceptSession } from '@/lib/nostr-bridge/cache-clear';
@@ -5781,7 +5781,7 @@ export function SettingsPrefsScreen({ go }: { go: (s: ScreenName) => void }) {
             {t('preferences.localData.clear.button')}
           </button>
         </div>
-        <ProfileFeedRelaySettings mobile />
+        <SocialRelaySettings mobile />
         <DeveloperSignatureTest mobile />
         <div className="settings-section">
           <div className="settings-section-title">{t("mobile.settings.identity")}</div>

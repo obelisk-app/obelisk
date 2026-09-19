@@ -141,7 +141,8 @@ describe('PreferencesPanel appearance controls', () => {
     });
   });
 
-  it('saves exactly three profile-feed relays', async () => {
+  it('saves an arbitrary number of feed relays, not exactly three', async () => {
+    // The old panel had three fixed slots and rejected any other count.
     const { PreferencesPanel } = await import('./UserPanel');
 
     render(
@@ -150,14 +151,40 @@ describe('PreferencesPanel appearance controls', () => {
       </LocaleProvider>,
     );
 
-    fireEvent.change(screen.getByLabelText('Profile feed relay 1'), { target: { value: 'wss://one.example' } });
-    fireEvent.change(screen.getByLabelText('Profile feed relay 2'), { target: { value: 'wss://two.example' } });
-    fireEvent.change(screen.getByLabelText('Profile feed relay 3'), { target: { value: 'wss://three.example' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    // Trim the default list down to a single relay — previously impossible.
+    const removeButtons = screen.getAllByRole('button', { name: /^Remove/ });
+    for (let i = removeButtons.length - 1; i > 0; i -= 1) {
+      fireEvent.click(removeButtons[i]);
+    }
+    fireEvent.change(screen.getByLabelText('Feed relay 1'), { target: { value: 'wss://one.example' } });
+    fireEvent.click(screen.getByTestId('social-relay-save'));
 
     expect(JSON.parse(localStorage.getItem('obelisk:preferences') ?? '{}')).toMatchObject({
-      profileFeedRelays: ['wss://one.example', 'wss://two.example', 'wss://three.example'],
+      socialRelays: ['wss://one.example'],
     });
+  });
+
+  it('adds a fourth feed relay', async () => {
+    const { PreferencesPanel } = await import('./UserPanel');
+
+    render(
+      <LocaleProvider initialLocale="en">
+        <PreferencesPanel />
+      </LocaleProvider>,
+    );
+
+    // Relative to whatever is configured — the preferences module is a
+    // singleton, so an earlier test in this file may have changed the list.
+    const before = screen.getAllByLabelText(/^Feed relay /).length;
+    fireEvent.click(screen.getByTestId('social-relay-add'));
+    const inputs = screen.getAllByLabelText(/^Feed relay /);
+    expect(inputs).toHaveLength(before + 1);
+    fireEvent.change(inputs[inputs.length - 1], { target: { value: 'wss://extra.example' } });
+    fireEvent.click(screen.getByTestId('social-relay-save'));
+
+    const stored = JSON.parse(localStorage.getItem('obelisk:preferences') ?? '{}');
+    expect(stored.socialRelays).toContain('wss://extra.example');
+    expect(stored.socialRelays).toHaveLength(before + 1);
   });
 
   it('renders preference labels from the configured language', async () => {

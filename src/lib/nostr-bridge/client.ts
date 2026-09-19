@@ -5942,7 +5942,7 @@ export class BridgeImpl {
     const relays = Array.from(new Set([
       ...this.relays,
       ...PROFILE_RELAYS,
-      ...getPreferences().profileFeedRelays,
+      ...getPreferences().socialRelays,
     ]));
     const options = {
       affectsRelayAccess: false,
@@ -5971,7 +5971,7 @@ export class BridgeImpl {
     const relays = Array.from(new Set([
       ...this.relays,
       ...PROFILE_RELAYS,
-      ...getPreferences().profileFeedRelays,
+      ...getPreferences().socialRelays,
     ]));
     const sub = this.subscribeWatched(
       relays,
