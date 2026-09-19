@@ -11,7 +11,7 @@
  * appears.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { hexToNpub } from '@nostr-wot/data';
 import {
@@ -94,6 +94,11 @@ export default function NostrProfile({
     () => visibleNotes.flatMap((note) => mediaUrls(note).map((url) => ({ note, url }))),
     [visibleNotes],
   );
+
+
+  // Stable handler identities keep the memoised NoteCards from re-rendering.
+  const startReply = useCallback((note: NostrEvent) => setComposer({ kind: 'reply', parent: note }), []);
+  const startQuote = useCallback((note: NostrEvent) => setComposer({ kind: 'quote', target: note }), []);
 
   const copyNpub = () => {
     navigator.clipboard?.writeText(hexToNpub(pubkey)).catch(() => {});
@@ -299,8 +304,8 @@ export default function NostrProfile({
             state={{ ...state, notes: visibleNotes }}
             onOpenProfile={onOpenProfile}
             onOpenNote={setOpenNoteId}
-            onReply={(note) => setComposer({ kind: 'reply', parent: note })}
-            onQuote={(note) => setComposer({ kind: 'quote', target: note })}
+            onReply={startReply}
+            onQuote={startQuote}
           />
         )}
       </div>

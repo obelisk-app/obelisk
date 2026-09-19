@@ -72,6 +72,7 @@ vi.mock('@/lib/social/feed', async (importOriginal) => {
 vi.mock('@/lib/nostr-bridge', () => ({
   getBridge: async () => ({ publishEvent: bridgeMocks.publishEvent }),
   nostrActions: { ensureUserMetadata: bridgeMocks.ensureUserMetadata },
+  useCurrentRelayUrl: () => 'wss://relay.example',
   useMyPubkey: () => bridgeMocks.myPubkey,
   useMyContactList: () => bridgeMocks.contactEvent,
   useMyContactListReady: () => bridgeMocks.contactsReady,

@@ -10,7 +10,7 @@
  * Amethyst and Primal don't show up as "unsupported".
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { nip19 } from 'nostr-tools';
 import { hexToNpub } from '@nostr-wot/data';
@@ -32,6 +32,8 @@ import { useModerationStore } from '@/store/moderation';
 import { useToastStore } from '@/store/toast';
 import UserAvatar from '@/components/UserAvatar';
 import NoteContent from './NoteContent';
+import { ArticleCard } from './ArticleCard';
+import NoteMenu from './NoteMenu';
 import {
   ActionButton,
   LikeIcon,
@@ -42,6 +44,9 @@ import {
   formatCount,
 } from './NoteActions';
 
+/** Above this many characters a note is collapsed behind "Show more". */
+const LONG_NOTE_CHARS = 1000;
+
 export type NoteCardProps = {
   note: NostrEvent;
   onOpenProfile?: (pubkey: string) => void;
@@ -49,11 +54,33 @@ export type NoteCardProps = {
   onReply?: (note: NostrEvent) => void;
   onQuote?: (note: NostrEvent) => void;
   onZap?: (note: NostrEvent) => void;
+  onOpenArticle?: (note: NostrEvent) => void;
   /** Rendered inside a quote/repost frame — suppresses nested chrome. */
   embedded?: boolean;
 };
 
-export default function NoteCard(props: NoteCardProps) {
+/**
+ * Memoised on the note identity and the handlers.
+ *
+ * A feed holds hundreds of these. Any state change in the parent — a page
+ * arriving, the live tail buffering, the moderation store ticking — used to
+ * re-render every card, and each card does real work on render: parsing
+ * imeta, tokenising `nostr:` references, scanning tags for content warnings.
+ * The note itself is immutable once received, so re-running that is pure
+ * waste.
+ */
+export default memo(NoteCardInner, (prev, next) => (
+  prev.note.id === next.note.id
+  && prev.embedded === next.embedded
+  && prev.onReply === next.onReply
+  && prev.onQuote === next.onQuote
+  && prev.onZap === next.onZap
+  && prev.onOpenNote === next.onOpenNote
+  && prev.onOpenProfile === next.onOpenProfile
+  && prev.onOpenArticle === next.onOpenArticle
+));
+
+function NoteCardInner(props: NoteCardProps) {
   const { note } = props;
 
   // A repost is a wrapper, not content: rendering its `content` as text shows
@@ -63,6 +90,8 @@ export default function NoteCard(props: NoteCardProps) {
   }
   return <PlainNoteCard {...props} />;
 }
+
+export { NoteCardInner };
 
 function RepostCard(props: NoteCardProps) {
   const { t } = useTranslation();
@@ -86,7 +115,7 @@ function RepostCard(props: NoteCardProps) {
         </button>
       </div>
       {inner ? (
-        <NoteCard {...props} note={inner} embedded />
+        <NoteCardInner {...props} note={inner} embedded />
       ) : (
         // Empty-content repost: the target has to be fetched. Rather than
         // block the row, link out to what we know.
@@ -109,6 +138,7 @@ function PlainNoteCard({
   onReply,
   onQuote,
   onZap,
+  onOpenArticle,
   embedded = false,
 }: NoteCardProps) {
   const { t } = useTranslation();
@@ -168,7 +198,7 @@ function PlainNoteCard({
 
   return (
     <article
-      className={embedded ? 'rounded-xl border border-lc-border bg-lc-dark p-3' : 'px-5 py-4'}
+      className={embedded ? 'rounded-xl border border-lc-border bg-lc-dark p-3' : 'note-card px-5 py-4'}
       data-testid="note-card"
       data-kind={note.kind}
     >
@@ -219,6 +249,7 @@ function PlainNoteCard({
           imetaCount={imeta.size}
           onOpenProfile={onOpenProfile}
           onOpenNote={onOpenNote}
+          onOpenArticle={onOpenArticle}
         />
       )}
 
@@ -272,32 +303,20 @@ function NoteBody({
   imetaCount,
   onOpenProfile,
   onOpenNote,
+  onOpenArticle,
 }: {
   note: NostrEvent;
   mode: ReturnType<typeof renderModeFor>;
   imetaCount: number;
   onOpenProfile?: (pubkey: string) => void;
   onOpenNote?: (id: string) => void;
+  onOpenArticle?: (note: NostrEvent) => void;
 }) {
   const { t } = useTranslation();
+  const [expanded, setExpanded] = useState(false);
 
   if (mode === 'article') {
-    // Addressable long-form: a card, not raw markdown in a note bubble.
-    const title = note.tags.find((tag) => tag[0] === 'title')?.[1];
-    const summary = note.tags.find((tag) => tag[0] === 'summary')?.[1];
-    const image = note.tags.find((tag) => tag[0] === 'image')?.[1];
-    return (
-      <div className="overflow-hidden rounded-xl border border-lc-border bg-lc-dark" data-testid="note-article">
-        {image && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={image} alt="" className="h-32 w-full object-cover" loading="lazy" />
-        )}
-        <div className="p-3">
-          <div className="text-sm font-semibold text-lc-white">{title || t('social.article')}</div>
-          {summary && <p className="mt-1 line-clamp-3 text-xs text-lc-muted">{summary}</p>}
-        </div>
-      </div>
-    );
+    return <ArticleCard note={note} onOpen={() => onOpenArticle?.(note)} />;
   }
 
   if (mode === 'highlight') {
@@ -324,17 +343,35 @@ function NoteBody({
     );
   }
 
+  // A long note shouldn't push the next ten posts off the screen. The
+  // threshold is on raw length rather than measured height so the decision is
+  // stable across reflows and doesn't need a layout pass.
+  const isLong = note.content.length > LONG_NOTE_CHARS;
+  const clamped = isLong && !expanded;
+
   return (
     <div className="break-words text-sm text-lc-white">
-      <NoteContent
-        content={note.content}
-        noteId={note.id}
-        onOpenProfile={onOpenProfile}
-        onOpenNote={onOpenNote}
-      />
-      {/* Picture/video notes put the media in imeta; content is a caption. */}
-      {(mode === 'picture' || mode === 'video') && imetaCount > 0 && (
-        <ImetaMedia note={note} />
+      <div className={`note-media ${clamped ? 'note-clamp' : ''}`} data-testid={clamped ? 'note-clamped' : undefined}>
+        <NoteContent
+          content={note.content}
+          noteId={note.id}
+          onOpenProfile={onOpenProfile}
+          onOpenNote={onOpenNote}
+        />
+        {/* Picture/video notes put the media in imeta; content is a caption. */}
+        {(mode === 'picture' || mode === 'video') && imetaCount > 0 && (
+          <ImetaMedia note={note} />
+        )}
+      </div>
+      {isLong && (
+        <button
+          type="button"
+          className="mt-1 text-xs font-semibold text-lc-green hover:underline"
+          onClick={() => setExpanded((value) => !value)}
+          data-testid="note-show-more"
+        >
+          {t(expanded ? 'social.showLess' : 'social.showMore')}
+        </button>
       )}
     </div>
   );
@@ -362,63 +399,13 @@ function ImetaMedia({ note }: { note: NostrEvent }) {
             src={item.url}
             alt={item.alt ?? ''}
             loading="lazy"
+            decoding="async"
             className="w-full rounded-xl object-cover"
             // `dim` reserves layout space so the feed doesn't jump as images load.
             style={item.width && item.height ? { aspectRatio: `${item.width}/${item.height}` } : undefined}
           />
         )
       ))}
-    </div>
-  );
-}
-
-function NoteMenu({ note, isMine }: { note: NostrEvent; isMine: boolean }) {
-  const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
-  const muted = useModerationStore((state) => state.mutedPubkeys.includes(note.pubkey));
-  const toggleMute = useModerationStore((state) => state.toggleMute);
-
-  const copyLink = () => {
-    try {
-      const nevent = nip19.neventEncode({ id: note.id, author: note.pubkey });
-      void navigator.clipboard?.writeText(`https://njump.me/${nevent}`);
-      useToastStore.getState().pushToast({ title: t('social.linkCopied'), body: '' });
-    } catch {
-      // Clipboard unavailable — not worth an error state.
-    }
-    setOpen(false);
-  };
-
-  return (
-    <div className="relative ml-auto">
-      <button
-        type="button"
-        className="group/act -m-1 flex items-center rounded-full p-1 text-lc-muted transition-colors"
-        onClick={() => setOpen((value) => !value)}
-        aria-label={t('social.more')}
-        aria-expanded={open}
-        data-testid="note-more"
-      >
-        <span className="flex h-7 w-7 items-center justify-center rounded-full transition-colors group-hover/act:bg-white/10 group-hover/act:text-lc-white">
-          <MoreIcon />
-        </span>
-      </button>
-      {open && (
-        <div className="absolute right-0 top-full z-20 mt-1 w-44 overflow-hidden rounded-xl border border-lc-border bg-lc-dark py-1 shadow-2xl">
-          <button type="button" className="block w-full px-4 py-2 text-left text-xs text-lc-white hover:bg-white/5" onClick={copyLink}>
-            {t('social.copyLink')}
-          </button>
-          {!isMine && (
-            <button
-              type="button"
-              className="block w-full px-4 py-2 text-left text-xs text-lc-white hover:bg-white/5"
-              onClick={() => { toggleMute(note.pubkey); setOpen(false); }}
-            >
-              {t(muted ? 'profileFeed.unmute' : 'profileFeed.mute')}
-            </button>
-          )}
-        </div>
-      )}
     </div>
   );
 }

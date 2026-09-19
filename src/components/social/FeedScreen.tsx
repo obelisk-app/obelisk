@@ -9,7 +9,7 @@
  * one).
  */
 
-import { useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { useMyFollows, useMyPubkey, useUserMetadata } from '@/lib/nostr-bridge';
 import { usePreferences } from '@/lib/preferences';
@@ -61,10 +61,18 @@ export default function FeedScreen({
     ? t('social.followNobody')
     : undefined;
 
-  const openThread = (noteId: string) => {
+  // Stable identities: NoteCard is memoised on its handlers, so inline
+  // arrows here would re-render every card in the feed on each keystroke in
+  // the composer or tick of the live tail.
+  const openThread = useCallback((noteId: string) => {
     if (onOpenThread) onOpenThread(noteId);
     else setOpenNoteId(noteId);
-  };
+  }, [onOpenThread]);
+
+  const startReply = useCallback((note: NostrEvent) => setComposer({ kind: 'reply', parent: note }), []);
+  const startQuote = useCallback((note: NostrEvent) => setComposer({ kind: 'quote', target: note }), []);
+  const openComposer = useCallback(() => setComposer({ kind: 'note' }), []);
+  const closeComposer = useCallback(() => setComposer(null), []);
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-lc-black" data-testid="feed-screen">
@@ -94,27 +102,35 @@ export default function FeedScreen({
         </header>
       )}
 
-      <div className="flex shrink-0 items-center gap-1 border-b border-lc-border px-2" role="tablist">
-        {(['following', 'global'] as const).map((value) => (
-          <button
-            key={value}
-            type="button"
-            role="tab"
-            aria-selected={tab === value}
-            onClick={() => setTab(value)}
-            className={`relative px-4 py-3 text-xs font-semibold transition-colors ${
-              tab === value ? 'text-lc-white' : 'text-lc-muted hover:text-lc-white'
-            }`}
-            data-testid={`feed-tab-${value}`}
-          >
-            {t(`social.${value}`)}
-            {tab === value && (
-              <span className="absolute inset-x-3 -bottom-px h-0.5 rounded-full bg-lc-green" aria-hidden="true" />
-            )}
-          </button>
-        ))}
+      <div className="flex shrink-0 items-center gap-2 border-b border-lc-border px-3 py-2">
+        {/*
+          A segmented pill, not underlined tabs: two underlined labels read as
+          two links rather than one control, and it wasn't obvious which feed
+          you were looking at.
+        */}
+        <div className="lc-segment" role="tablist" aria-label={t('social.feed')}>
+          {(['following', 'global'] as const).map((value) => (
+            <button
+              key={value}
+              type="button"
+              role="tab"
+              aria-selected={tab === value}
+              onClick={() => setTab(value)}
+              className="lc-segment-item"
+              data-testid={`feed-tab-${value}`}
+            >
+              {value === 'following' ? <FollowingIcon /> : <GlobeIcon />}
+              {t(`social.${value}`)}
+            </button>
+          ))}
+        </div>
+        <span className="hidden min-w-0 truncate text-[11px] text-lc-muted sm:block">
+          {tab === 'following'
+            ? `${follows.length} ${t('social.followingCount')}`
+            : `${relays.length} ${t('social.relayCount')}`}
+        </span>
         {embedded && (
-          <div className="ml-auto flex items-center gap-1 pr-1">
+          <div className="ml-auto flex items-center gap-1">
             <RefreshButton busy={state.loading} onClick={state.refresh} />
           </div>
         )}
@@ -138,7 +154,7 @@ export default function FeedScreen({
               pubkey={myPubkey}
               picture={meta?.picture}
               name={meta?.displayName || meta?.name || ''}
-              onClick={() => setComposer({ kind: 'note' })}
+              onClick={openComposer}
               testId="feed-compose"
             />
           )
@@ -150,8 +166,8 @@ export default function FeedScreen({
           emptyLabel={emptyLabel}
           onOpenProfile={onOpenProfile}
           onOpenNote={openThread}
-          onReply={(note) => setComposer({ kind: 'reply', parent: note })}
-          onQuote={(note) => setComposer({ kind: 'quote', target: note })}
+          onReply={startReply}
+          onQuote={startQuote}
         />
       </div>
 
@@ -180,6 +196,27 @@ export default function FeedScreen({
         </ModalShell>
       )}
     </div>
+  );
+}
+
+function FollowingIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  );
+}
+
+function GlobeIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+      <path d="M2 12h20" />
+    </svg>
   );
 }
 

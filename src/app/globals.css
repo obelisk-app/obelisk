@@ -118,6 +118,189 @@ button:not(:disabled),
   background: #333333;
 }
 
+/*
+ * Feed segmented switcher (Following / Global).
+ *
+ * These were underlined tabs, which read as two labels rather than one
+ * control — you couldn't tell at a glance which feed you were looking at.
+ * A segmented pill is the same vocabulary as the rest of the app's buttons
+ * and makes the selected state unmistakable.
+ */
+.lc-segment {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 9999px;
+  background: #171717;
+  border: 1px solid #262626;
+}
+
+.lc-segment-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #a3a3a3;
+  white-space: nowrap;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.lc-segment-item:hover {
+  color: #fafafa;
+}
+
+.lc-segment-item[aria-selected='true'] {
+  background: var(--obelisk-button);
+  color: var(--obelisk-button-ink);
+}
+
+/*
+ * Media inside a feed note.
+ *
+ * `MessageContent`'s `wideMedia` mode caps images at 32rem tall and full
+ * width, which is right for a chat bubble you're reading one of, and wrong
+ * for a feed where every third note is an image: a single post filled the
+ * viewport and scrolling past ten of them was a chore.
+ *
+ * Constraining here rather than forking `MessageContent`/`ImageGallery` into
+ * a third size variant keeps one media pipeline. `:where()` keeps the
+ * specificity low enough to override with a utility on a specific element,
+ * and the rule sits outside `@layer` so it wins over Tailwind's layered
+ * utilities regardless.
+ */
+.note-media :where(img, video) {
+  max-height: 22rem;
+  max-width: 100%;
+}
+
+.note-media :where(.grid) {
+  max-height: 22rem;
+}
+
+/* A gallery's own wrapper shouldn't stretch the full column width either. */
+.note-media > :where(div) {
+  max-width: 34rem;
+}
+
+/*
+ * Collapsed long notes. A 4000-character rant should not push the next ten
+ * posts off the screen, so the body is clipped and faded until expanded.
+ */
+.note-clamp {
+  max-height: 24rem;
+  overflow: hidden;
+  position: relative;
+}
+
+.note-clamp::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: 5rem;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent, var(--color-lc-black, #0a0a0a));
+}
+
+/*
+ * Long-form article typography (NIP-23 kind 30023).
+ *
+ * `MessageContent` renders markdown sized for chat, where a heading is a
+ * rare emphasis inside two lines of text. An article is the opposite: it is
+ * mostly structure, and read at length. These rules restore the vertical
+ * rhythm a reader needs without forking the markdown renderer.
+ */
+.article-body :where(h1, h2, h3, h4) {
+  color: #fafafa;
+  font-weight: 700;
+  line-height: 1.25;
+  margin-top: 1.75em;
+  margin-bottom: 0.5em;
+  text-wrap: balance;
+}
+
+.article-body :where(h1) { font-size: 1.75em; }
+.article-body :where(h2) { font-size: 1.4em; }
+.article-body :where(h3) { font-size: 1.15em; }
+.article-body :where(h4) { font-size: 1em; }
+
+.article-body :where(p) {
+  margin-bottom: 1.15em;
+}
+
+.article-body :where(ul, ol) {
+  margin: 0 0 1.15em 1.35em;
+  list-style-position: outside;
+}
+
+.article-body :where(ul) { list-style-type: disc; }
+.article-body :where(ol) { list-style-type: decimal; }
+
+.article-body :where(li) {
+  margin-bottom: 0.4em;
+}
+
+.article-body :where(blockquote) {
+  margin: 0 0 1.15em;
+  padding-left: 1em;
+  border-left: 3px solid var(--obelisk-button);
+  color: #a3a3a3;
+  font-style: italic;
+}
+
+.article-body :where(hr) {
+  margin: 2em 0;
+  border: 0;
+  border-top: 1px solid #262626;
+}
+
+.article-body :where(a) {
+  color: var(--obelisk-button);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Article images may run wider than a feed note's, but still not unbounded. */
+.article-body :where(img) {
+  max-height: 30rem;
+  border-radius: 0.75rem;
+  margin: 1.25em auto;
+}
+
+.article-body :where(table) {
+  width: 100%;
+  margin-bottom: 1.15em;
+  border-collapse: collapse;
+  font-size: 0.92em;
+}
+
+.article-body :where(th, td) {
+  border: 1px solid #262626;
+  padding: 0.45em 0.7em;
+  text-align: left;
+}
+
+/*
+ * Offscreen note cards skip layout and paint entirely.
+ *
+ * The feed holds up to 500 cards, each with an avatar, parsed markdown and
+ * often an image. Without this the browser lays out and paints all of them,
+ * and scroll performance falls off a cliff a few pages in.
+ *
+ * `contain-intrinsic-size` gives an estimated height so the scrollbar doesn't
+ * jump as cards are skipped and restored — without it, scrolling fast makes
+ * the thumb jitter. The value is a rough average card height; being wrong
+ * costs a little scroll drift, being absent costs a lot.
+ */
+.note-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 220px;
+}
+
 /* Animated gradient for banner */
 @keyframes shimmer {
   0% { background-position: 0% 50%; }
