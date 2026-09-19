@@ -51,6 +51,7 @@ import SearchBar from './SearchBar';
 import MessageContent from '@/components/chat/MessageContent';
 import NostrProfile from '@/components/chat/NostrProfile';
 import FeedScreen from '@/components/social/FeedScreen';
+import NoteThread from '@/components/social/NoteThread';
 import ProfilePopover from '@/components/chat/ProfilePopover';
 import { MentionText } from '@/components/chat/MentionText';
 import MentionNavigator from '@/components/chat/MentionNavigator';
@@ -158,6 +159,7 @@ type View =
 
 const SIDEBAR_KEY = 'obelisk-dex/sidebar-width';
 const PROFILE_PANE_KEY = 'obelisk-dex/profile-pane-width';
+const THREAD_PANE_KEY = 'obelisk-dex/thread-pane-width';
 const SHOW_MEMBERS_KEY = 'obelisk-dex/show-members';
 
 export default function AppShell() {
@@ -169,6 +171,10 @@ export default function AppShell() {
   const profilePopupPubkey = useChatStore((state) => state.profilePopupPubkey);
   const closeProfilePopup = useChatStore((state) => state.closeProfilePopup);
   const [exploredProfilePubkey, setExploredProfilePubkey] = useState<string | null>(null);
+  // Threads open beside the feed on desktop rather than in a modal — a modal
+  // hides the list you were reading, which is exactly the context you need
+  // while following a conversation.
+  const [threadNoteId, setThreadNoteId] = useState<string | null>(null);
   const [view, setView] = useState<View>({ kind: 'empty' });
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
@@ -422,7 +428,17 @@ export default function AppShell() {
             )}
           </ResizablePane>}
         </div>
-        <main className="flex flex-1 flex-col overflow-hidden min-w-0 border-t border-r border-lc-border">
+        {/*
+          The rounded top-left corner normally comes from the sidebar pane
+          (`rounded-tl-xl` on the channel list). The feed view has no sidebar,
+          so without this `main` is the leftmost surface and its corner sits
+          square against the rail while every other view is rounded.
+        */}
+        <main
+          className={`flex flex-1 flex-col overflow-hidden min-w-0 border-t border-r border-lc-border ${
+            view.kind === 'feed' ? 'rounded-tl-xl border-l' : ''
+          }`}
+        >
           {view.kind === 'group' ? (
             <ChatLayout
               groupId={view.groupId}
@@ -431,17 +447,49 @@ export default function AppShell() {
               pendingMessageId={pendingMessageId}
               onConsumePendingMessageId={() => setPendingMessageId(null)}
               onSelectGroup={(gid) => setView({ kind: 'group', groupId: gid })}
+              onOpenProfile={setExploredProfilePubkey}
+              onOpenThread={setThreadNoteId}
             />
           ) : view.kind === 'dm' ? (
             <DMOptInBoundary surface="desktop" secondaryLabel={t('dm.optIn.continueWithout')} onSecondary={leaveDms}>
               <DMPanel peer={view.peer} onPickPeer={(p) => setView({ kind: 'dm', peer: p })} />
             </DMOptInBoundary>
           ) : view.kind === 'feed' ? (
-            <FeedScreen onOpenProfile={setExploredProfilePubkey} />
+            <FeedScreen
+              onOpenProfile={setExploredProfilePubkey}
+              onOpenThread={setThreadNoteId}
+            />
           ) : (
             <EmptyState />
           )}
         </main>
+        {threadNoteId && (
+          <ResizablePane storageKey={THREAD_PANE_KEY} defaultWidth={520} min={360} max={900} side="left">
+            <aside className="flex h-full min-w-0 flex-1 flex-col overflow-hidden border-l border-lc-border bg-lc-black" data-testid="desktop-thread-pane">
+              <div className="flex shrink-0 items-center gap-2 border-b border-lc-border px-4 py-3">
+                <h2 className="text-sm font-semibold text-lc-white">{t('social.thread')}</h2>
+                <button
+                  type="button"
+                  className="ml-auto flex h-8 w-8 items-center justify-center rounded-full text-lc-muted transition-colors hover:bg-white/10 hover:text-lc-white"
+                  onClick={() => setThreadNoteId(null)}
+                  aria-label={t('common.close')}
+                  data-testid="desktop-thread-close"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                    <path d="M18 6 6 18" /><path d="m6 6 12 12" />
+                  </svg>
+                </button>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                <NoteThread
+                  noteId={threadNoteId}
+                  onOpenProfile={setExploredProfilePubkey}
+                  onOpenNote={setThreadNoteId}
+                />
+              </div>
+            </aside>
+          </ResizablePane>
+        )}
         {exploredProfilePubkey && (
           <ResizablePane storageKey={PROFILE_PANE_KEY} defaultWidth={520} min={340} max={900} side="left">
           <aside className="h-full min-w-0 flex-1 overflow-hidden bg-lc-black" data-testid="desktop-profile-pane">
@@ -2170,6 +2218,8 @@ function ChatLayout({
   pendingMessageId,
   onConsumePendingMessageId,
   onSelectGroup,
+  onOpenProfile,
+  onOpenThread,
 }: {
   groupId: string;
   showMembers: boolean;
@@ -2177,17 +2227,54 @@ function ChatLayout({
   pendingMessageId: string | null;
   onConsumePendingMessageId: () => void;
   onSelectGroup: (groupId: string) => void;
+  onOpenProfile?: (pubkey: string) => void;
+  onOpenThread?: (noteId: string) => void;
 }) {
+  const { t } = useTranslation();
+  // The Nostr feed rides alongside group chat rather than replacing it: a
+  // relay is a place you talk, and the wider network is a second tab of the
+  // same place. Chat stays mounted underneath so switching back doesn't
+  // re-subscribe or lose scroll position.
+  const [pane, setPane] = useState<'chat' | 'feed'>('chat');
+
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      <ChatPanel
-        groupId={groupId}
-        showMembers={showMembers}
-        onToggleMembers={onToggleMembers}
-        pendingMessageId={pendingMessageId}
-        onConsumePendingMessageId={onConsumePendingMessageId}
-        onSelectGroup={onSelectGroup}
-      />
+      <div className="flex shrink-0 items-center gap-1 border-b border-lc-border bg-lc-black/40 px-2" role="tablist">
+        {(['chat', 'feed'] as const).map((value) => (
+          <button
+            key={value}
+            type="button"
+            role="tab"
+            aria-selected={pane === value}
+            onClick={() => setPane(value)}
+            className={`relative px-4 py-2 text-xs font-semibold transition-colors ${
+              pane === value ? 'text-lc-white' : 'text-lc-muted hover:text-lc-white'
+            }`}
+            data-testid={`chat-pane-tab-${value}`}
+          >
+            {t(value === 'chat' ? 'chat.tab.chat' : 'social.feed')}
+            {pane === value && (
+              <span className="absolute inset-x-3 -bottom-px h-0.5 rounded-full bg-lc-green" aria-hidden="true" />
+            )}
+          </button>
+        ))}
+      </div>
+
+      <div className={pane === 'chat' ? 'flex flex-1 flex-col overflow-hidden' : 'hidden'}>
+        <ChatPanel
+          groupId={groupId}
+          showMembers={showMembers}
+          onToggleMembers={onToggleMembers}
+          pendingMessageId={pendingMessageId}
+          onConsumePendingMessageId={onConsumePendingMessageId}
+          onSelectGroup={onSelectGroup}
+        />
+      </div>
+      {pane === 'feed' && (
+        <div className="flex flex-1 flex-col overflow-hidden" data-testid="chat-pane-feed">
+          <FeedScreen embedded onOpenProfile={onOpenProfile} onOpenThread={onOpenThread} />
+        </div>
+      )}
     </div>
   );
 }

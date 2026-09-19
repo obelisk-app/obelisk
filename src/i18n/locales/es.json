@@ -628,5 +628,8 @@
   "moderation.title": "Silenciados y bloqueados",
   "moderation.empty": "No has silenciado ni bloqueado a nadie.",
   "moderation.muted": "Silenciado",
-  "moderation.blocked": "Bloqueado"
+  "moderation.blocked": "Bloqueado",
+  "social.post": "Publicar",
+  "social.loadingMore": "Cargando más…",
+  "chat.tab.chat": "Chat"
 }

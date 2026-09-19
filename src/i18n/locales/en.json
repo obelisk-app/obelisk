@@ -628,5 +628,8 @@
   "moderation.title": "Muted & blocked",
   "moderation.empty": "You haven't muted or blocked anyone.",
   "moderation.muted": "Muted",
-  "moderation.blocked": "Blocked"
+  "moderation.blocked": "Blocked",
+  "social.post": "Post",
+  "social.loadingMore": "Loading more…",
+  "chat.tab.chat": "Chat"
 }

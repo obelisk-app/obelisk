@@ -30,6 +30,7 @@ import { isVideoUrl } from '@/lib/attachments';
 import { useTranslation } from '@/i18n/context';
 import UserAvatar from '@/components/UserAvatar';
 import FeedList from '@/components/social/FeedList';
+import { ComposeButton, RefreshButton } from '@/components/social/FeedControls';
 import NoteComposer, { type ComposerMode } from '@/components/social/NoteComposer';
 import NoteThread from '@/components/social/NoteThread';
 import ModalShell from '@/components/ModalShell';
@@ -223,24 +224,15 @@ export default function NostrProfile({
           <ProfileMoreMenu pubkey={pubkey} displayName={displayName} canModerate />
         </div>
       ) : (
-        <div className="flex gap-2 px-5 py-3">
-          <button
-            type="button"
-            className="lc-pill-primary flex items-center gap-2 px-4 py-2 text-xs"
-            onClick={() => setComposer((open) => (open ? null : { kind: 'note' }))}
-            aria-expanded={composer !== null}
-            data-testid="profile-create-post"
-          >
-            <span className="text-lg leading-none" aria-hidden="true">+</span>
-            {t('profileFeed.createPost')}
-          </button>
+        <div className="flex items-center gap-2 px-5 py-3">
+          <RefreshButton busy={state.loading} onClick={state.refresh} testId="profile-refresh" />
           {!settingsMode && <ProfileMoreMenu pubkey={pubkey} displayName={displayName} />}
         </div>
       )}
 
       {followError && <p className="px-5 pb-2 text-xs text-red-400">{t('profileFeed.followFailed')}</p>}
 
-      {isMe && composer?.kind === 'note' && (
+      {isMe && (composer?.kind === 'note' ? (
         <div className="mx-5 mb-4">
           <NoteComposer
             autoFocus
@@ -248,7 +240,15 @@ export default function NostrProfile({
             onCancel={() => setComposer(null)}
           />
         </div>
-      )}
+      ) : (
+        <ComposeButton
+          pubkey={pubkey}
+          picture={meta?.picture}
+          name={displayName}
+          onClick={() => setComposer({ kind: 'note' })}
+          testId="profile-create-post"
+        />
+      ))}
 
       <div className="profile-feed-tabs sticky top-0 z-[2] grid grid-cols-3 border-y border-lc-border bg-lc-black/95 backdrop-blur" role="tablist">
         {(['posts', 'replies', 'media'] as const).map((value) => (

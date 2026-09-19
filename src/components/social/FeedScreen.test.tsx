@@ -118,9 +118,10 @@ describe('FeedScreen', () => {
     expect(lastCall?.[1]).toMatchObject({ until: 2000 });
   });
 
-  it('buffers live notes behind a pill rather than shoving the list', async () => {
+  it('shows new notes immediately while you are at the top of the feed', async () => {
+    // A feed that makes you click a pill to see new posts when you're
+    // already looking at the top of the list isn't live, it's just slow.
     socialMocks.loadFollowingFeed.mockResolvedValue([note('a', 'first')]);
-    // Held in an object so TS doesn't narrow it to `null` across the closure.
     const live: { emit?: (event: NostrEvent) => void } = {};
     socialMocks.subscribeSocial.mockImplementation((...args: unknown[]) => {
       live.emit = args[1] as (event: NostrEvent) => void;
@@ -129,6 +130,27 @@ describe('FeedScreen', () => {
 
     renderFeed();
     await waitFor(() => expect(screen.getByText('first')).toBeInTheDocument());
+
+    live.emit?.(note('live', 'just arrived', 3000));
+    await waitFor(() => expect(screen.getByText('just arrived')).toBeInTheDocument());
+    expect(screen.queryByTestId('feed-pending')).not.toBeInTheDocument();
+  });
+
+  it('buffers behind a pill once the reader has scrolled away', async () => {
+    socialMocks.loadFollowingFeed.mockResolvedValue([note('a', 'first')]);
+    const live: { emit?: (event: NostrEvent) => void } = {};
+    socialMocks.subscribeSocial.mockImplementation((...args: unknown[]) => {
+      live.emit = args[1] as (event: NostrEvent) => void;
+      return () => {};
+    });
+
+    renderFeed();
+    await waitFor(() => expect(screen.getByText('first')).toBeInTheDocument());
+
+    // Scroll down: splicing notes in here would shift what's being read.
+    const scroller = screen.getByTestId('feed-list').parentElement as HTMLElement;
+    Object.defineProperty(scroller, 'scrollTop', { value: 800, writable: true });
+    fireEvent.scroll(scroller);
 
     live.emit?.(note('live', 'just arrived', 3000));
     await waitFor(() => expect(screen.getByTestId('feed-pending')).toBeInTheDocument());
@@ -153,12 +175,26 @@ describe('FeedScreen', () => {
 
   it('exposes refresh and relay settings', async () => {
     const onOpenSettings = vi.fn();
+    socialMocks.loadFollowingFeed.mockResolvedValue([note('a', 'first')]);
     renderFeed({ onOpenSettings });
     fireEvent.click(screen.getByTestId('feed-settings'));
     expect(onOpenSettings).toHaveBeenCalled();
 
+    // Refresh is disabled while a fetch is in flight, so wait for the first
+    // load to settle before clicking it.
+    await waitFor(() => expect(screen.getByText('first')).toBeInTheDocument());
     socialMocks.loadFollowingFeed.mockClear();
     fireEvent.click(screen.getByTestId('feed-refresh'));
     await waitFor(() => expect(socialMocks.loadFollowingFeed).toHaveBeenCalled());
+  });
+
+  it('disables refresh while a fetch is in flight, and spins it', () => {
+    // The old refresh was a bare text glyph with no busy state: clicking it
+    // looked exactly like not clicking it.
+    socialMocks.loadFollowingFeed.mockImplementation(() => new Promise(() => {}));
+    renderFeed();
+    const refresh = screen.getByTestId('feed-refresh') as HTMLButtonElement;
+    expect(refresh.disabled).toBe(true);
+    expect(refresh.querySelector('svg')).toHaveClass('animate-spin');
   });
 });

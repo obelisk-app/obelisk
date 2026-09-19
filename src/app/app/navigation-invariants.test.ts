@@ -34,6 +34,31 @@ describe('desktop navigation invariants', () => {
     expect(read('SearchBar.tsx')).toContain('requestJump');
   });
 
+  it('the feed panel rounds its top-left corner, since it has no sidebar', () => {
+    // Every other view gets the rounded corner from the sidebar pane's
+    // `rounded-tl-xl`. The feed drops the sidebar, so `main` has to carry it
+    // or the corner sits square against the rail.
+    const shell = read('DesktopShell.tsx');
+    expect(shell).toContain("view.kind === 'feed' ? 'rounded-tl-xl border-l' : ''");
+  });
+
+  it('group chat offers the Nostr feed as a second tab', () => {
+    const shell = read('DesktopShell.tsx');
+    expect(shell).toContain('chat-pane-tab-');
+    expect(shell).toContain('<FeedScreen embedded');
+  });
+
+  it('threads open in a side pane on desktop, not a modal', () => {
+    // A modal hides the list you were reading, which is the context you need
+    // while following a conversation.
+    const shell = read('DesktopShell.tsx');
+    expect(shell).toContain('desktop-thread-pane');
+    expect(shell).toContain('THREAD_PANE_KEY');
+    // The feed hands thread opening to the shell rather than falling back to
+    // its own modal.
+    expect(shell).toContain('onOpenThread={setThreadNoteId}');
+  });
+
   it('the shell answers a pendingJump by changing `view`, not the bridge', () => {
     const shell = read('DesktopShell.tsx');
     const effect = shell.slice(

@@ -32,6 +32,15 @@ import { useModerationStore } from '@/store/moderation';
 import { useToastStore } from '@/store/toast';
 import UserAvatar from '@/components/UserAvatar';
 import NoteContent from './NoteContent';
+import {
+  ActionButton,
+  LikeIcon,
+  MoreIcon,
+  RepostButton,
+  ReplyIcon,
+  ZapIcon,
+  formatCount,
+} from './NoteActions';
 
 export type NoteCardProps = {
   note: NostrEvent;
@@ -214,28 +223,27 @@ function PlainNoteCard({
       )}
 
       {!embedded && (
-        <div className="mt-3 flex items-center gap-5 border-t border-lc-border/70 pt-2 text-xs">
+        <div className="mt-2 flex items-center gap-1 pt-1 text-xs">
           <ActionButton
+            kind="reply"
             label={t('social.replyAction')}
-            icon="↩"
+            icon={<ReplyIcon />}
             count={counts.replyCount}
             testId="note-reply"
             disabled={!canInteract}
             onClick={() => onReply?.(note)}
           />
-          <ActionButton
-            label={t('social.repost')}
-            icon="⇄"
+          <RepostButton
             count={counts.repostCount}
-            testId="note-repost"
             active={reposted}
             disabled={!canInteract || busy}
-            onClick={() => void repost()}
-            onLongPress={() => onQuote?.(note)}
+            onRepost={() => void repost()}
+            onQuote={onQuote ? () => onQuote(note) : undefined}
           />
           <ActionButton
+            kind="like"
             label={t('social.react')}
-            icon={reacted ? '♥' : '♡'}
+            icon={<LikeIcon filled={reacted} />}
             count={counts.reactionCount}
             testId="note-react"
             active={reacted}
@@ -243,8 +251,9 @@ function PlainNoteCard({
             onClick={() => void react()}
           />
           <ActionButton
+            kind="zap"
             label={t('social.zap')}
-            icon="⚡"
+            icon={<ZapIcon filled={counts.zapTotalSats > 0} />}
             count={counts.zapTotalSats}
             testId="note-zap"
             disabled={!canInteract}
@@ -363,42 +372,6 @@ function ImetaMedia({ note }: { note: NostrEvent }) {
   );
 }
 
-function ActionButton({
-  label,
-  icon,
-  count,
-  testId,
-  onClick,
-  onLongPress,
-  disabled,
-  active,
-}: {
-  label: string;
-  icon: string;
-  count: number;
-  testId: string;
-  onClick: () => void;
-  onLongPress?: () => void;
-  disabled?: boolean;
-  active?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      className={`flex items-center gap-1.5 disabled:opacity-40 ${active ? 'text-lc-green' : 'text-lc-muted hover:text-lc-white'}`}
-      onClick={onClick}
-      onContextMenu={onLongPress ? (event) => { event.preventDefault(); onLongPress(); } : undefined}
-      disabled={disabled}
-      aria-label={label}
-      title={label}
-      data-testid={testId}
-    >
-      <span aria-hidden="true">{icon}</span>
-      {count > 0 && <span className="tabular-nums">{formatCount(count)}</span>}
-    </button>
-  );
-}
-
 function NoteMenu({ note, isMine }: { note: NostrEvent; isMine: boolean }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -420,13 +393,15 @@ function NoteMenu({ note, isMine }: { note: NostrEvent; isMine: boolean }) {
     <div className="relative ml-auto">
       <button
         type="button"
-        className="px-2 text-lc-muted hover:text-lc-white"
+        className="group/act -m-1 flex items-center rounded-full p-1 text-lc-muted transition-colors"
         onClick={() => setOpen((value) => !value)}
         aria-label={t('social.more')}
         aria-expanded={open}
         data-testid="note-more"
       >
-        ⋯
+        <span className="flex h-7 w-7 items-center justify-center rounded-full transition-colors group-hover/act:bg-white/10 group-hover/act:text-lc-white">
+          <MoreIcon />
+        </span>
       </button>
       {open && (
         <div className="absolute right-0 top-full z-20 mt-1 w-44 overflow-hidden rounded-xl border border-lc-border bg-lc-dark py-1 shadow-2xl">
@@ -446,12 +421,6 @@ function NoteMenu({ note, isMine }: { note: NostrEvent; isMine: boolean }) {
       )}
     </div>
   );
-}
-
-function formatCount(value: number): string {
-  if (value < 1000) return String(value);
-  if (value < 1_000_000) return `${(value / 1000).toFixed(value < 10_000 ? 1 : 0)}k`;
-  return `${(value / 1_000_000).toFixed(1)}M`;
 }
 
 function relativeTime(createdAt: number, t: (key: string) => string): string {
