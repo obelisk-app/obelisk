@@ -222,7 +222,7 @@ describe('FeedScreen', () => {
     await waitFor(() => expect(screen.queryByText('a short note')).not.toBeInTheDocument());
   });
 
-  it('puts source, filters and actions on one toolbar row', () => {
+  it('puts source, filters and actions in one toolbar', () => {
     // These were three stacked rows, so the chrome was taller than the first
     // note — you scrolled before you read anything.
     renderFeed({ onOpenSettings: vi.fn() });
@@ -233,6 +233,18 @@ describe('FeedScreen', () => {
     const toolbar = source.closest('div')?.parentElement;
     expect(toolbar).toContainElement(filter);
     expect(toolbar).toContainElement(refresh);
+    // Wrapping is what keeps it usable when the row can't fit.
+    expect(toolbar?.className).toContain('flex-wrap');
+  });
+
+  it('never lets the filters be squeezed to zero width', () => {
+    // On a phone they had `min-w-0 flex-1` beside the source pill, so they
+    // shrank to nothing — present, sized to zero, and invisible because the
+    // scrollbar is hidden. Full width when wrapped, a floor when inline.
+    renderFeed();
+    const group = screen.getByTestId('feed-filter-all').parentElement;
+    expect(group?.className).toContain('w-full');
+    expect(group?.className).toContain('lg:min-w-[13rem]');
   });
 
   it('keeps an accessible heading even though the title text is gone', () => {

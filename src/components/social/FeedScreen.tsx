@@ -104,7 +104,7 @@ export default function FeedScreen({
         The middle scrolls horizontally rather than wrapping, so a narrow
         split pane shortens the row instead of growing a second line.
       */}
-      <div className="flex shrink-0 items-center gap-2 border-b border-lc-border px-3 py-2">
+      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-lc-border px-3 py-2">
         <h1 className="sr-only">{t('social.feed')}</h1>
 
         <div className="lc-segment shrink-0" role="tablist" aria-label={t('social.feed')}>
@@ -129,15 +129,24 @@ export default function FeedScreen({
           ))}
         </div>
 
-        <div className="mx-1 hidden h-5 w-px shrink-0 bg-lc-border sm:block" aria-hidden="true" />
+        <div className="mx-1 hidden h-5 w-px shrink-0 bg-lc-border lg:block" aria-hidden="true" />
 
         {/*
           Narrows the REQ, not just the rendering — asking for 50 mixed
           events and showing the three articles among them is how an
           "Articles" view ends up looking empty.
         */}
+        {/*
+          Wraps to its own line when it can't fit.
+          On one row this had `min-w-0 flex-1`, which let it shrink to zero
+          width next to the source pill — on a phone the filters were
+          present, sized to nothing, and invisible because the scrollbar is
+          hidden. The min-width means the flex container wraps it to a second
+          line instead of crushing it, which also covers a narrow split pane
+          on a wide screen (a viewport breakpoint would not).
+        */}
         <div
-          className="-mx-1 flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="-mx-1 order-last flex w-full min-w-0 items-center gap-0.5 overflow-x-auto px-1 lg:order-none lg:w-auto lg:min-w-[13rem] lg:flex-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           role="group"
           aria-label={t('social.filter.all')}
         >
@@ -159,7 +168,7 @@ export default function FeedScreen({
           ))}
         </div>
 
-        <div className="flex shrink-0 items-center gap-0.5">
+        <div className="ml-auto flex shrink-0 items-center gap-0.5 lg:ml-0">
           <RefreshButton busy={state.loading} onClick={state.refresh} />
           {onOpenSettings && !embedded && (
             <button
