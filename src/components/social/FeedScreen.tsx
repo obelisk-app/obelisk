@@ -16,6 +16,7 @@ import { usePreferences } from '@/lib/preferences';
 import { useTranslation } from '@/i18n/context';
 import { useFeed, type FeedSource } from '@/lib/social/useFeed';
 import { CONTENT_FILTERS, type ContentFilter } from '@/lib/social/kinds';
+import type { FeedSort } from '@/lib/social/rank';
 import ModalShell from '@/components/ModalShell';
 import UserAvatar from '@/components/UserAvatar';
 import FeedList from './FeedList';
@@ -56,6 +57,7 @@ export default function FeedScreen({
   const relays = usePreferences().socialRelays;
   const [tab, setTab] = useState<FeedTab>('following');
   const [filter, setFilter] = useState<ContentFilter>('all');
+  const [sort, setSort] = useState<FeedSort>('recent');
   const [composer, setComposer] = useState<ComposerMode | null>(null);
   const [openNoteId, setOpenNoteId] = useState<string | null>(null);
   const [openArticle, setOpenArticle] = useState<NostrEvent | null>(null);
@@ -81,7 +83,7 @@ export default function FeedScreen({
     () => (tab === 'following' ? { kind: 'following', authors: follows } : { kind: 'global' }),
     [tab, follows],
   );
-  const state = useFeed(source, relays, filter);
+  const state = useFeed(source, relays, filter, sort);
 
   const emptyLabel = tab === 'following' && follows.length === 0
     ? t('social.followNobody')
@@ -180,6 +182,29 @@ export default function FeedScreen({
               data-testid={`feed-filter-${value}`}
             >
               {t(`social.filter.${value}`)}
+            </button>
+          ))}
+        </div>
+
+        {/*
+          Sort sits with the filters: both answer "what am I looking at",
+          where the source pill answers "whose".
+        */}
+        <div className="flex shrink-0 items-center gap-0.5" role="group">
+          {(['recent', 'top'] as const).map((value) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setSort(value)}
+              aria-pressed={sort === value}
+              className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                sort === value
+                  ? 'bg-lc-green/15 text-lc-green'
+                  : 'text-lc-muted hover:bg-white/5 hover:text-lc-white'
+              }`}
+              data-testid={`feed-sort-${value}`}
+            >
+              {t(`social.sort.${value}`)}
             </button>
           ))}
         </div>

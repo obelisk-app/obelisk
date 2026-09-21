@@ -664,5 +664,7 @@
   "social.filter.notes": "Notas",
   "social.filter.articles": "Artículos",
   "social.filter.media": "Media",
-  "social.andOthers": "y {n} más"
+  "social.andOthers": "y {n} más",
+  "social.sort.recent": "Recientes",
+  "social.sort.top": "Destacados"
 }

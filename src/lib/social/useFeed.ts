@@ -37,8 +37,11 @@ import {
   writeFeedCache,
   type FeedCacheId,
 } from './cache';
-import { ensureCounts } from './engagement';
+import { ensureCounts, getCounts } from './engagement';
 import { ensureSocialProfiles } from './profiles';
+import { applySort, type FeedSort } from './rank';
+import { useMyFollows } from '@/lib/nostr-bridge';
+import { wotEngine } from '@/lib/wot';
 import { kindsForFilter, type ContentFilter } from './kinds';
 import { subscribeSocial } from './pool';
 import { groupReposts } from './repost';
@@ -112,9 +115,12 @@ export function useFeed(
   source: FeedSource,
   relays: readonly string[],
   filter: ContentFilter = 'all',
+  sort: FeedSort = 'recent',
 ): FeedState {
   const cacheId = cacheIdFor(source);
   // The filter is part of the key: a narrowed REQ returns a different page.
+  // `sort` is NOT part of the key: it reorders the window we already have,
+  // so changing it must not discard the page or refetch.
   const key = `${sourceKey(source)}|${relays.join(',')}|${filter}`;
   const relayList = useMemo(() => [...relays], [relays.join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -225,6 +231,14 @@ export function useFeed(
     void ensureCounts(notes.slice(0, 40).map((note) => note.id));
   }, [notes]);
 
+  // Ranking needs counts for more than the visible top. Warming the whole
+  // window would be wasteful, but ranking on mostly-zero counts is just
+  // chronological with extra steps.
+  useEffect(() => {
+    if (sort !== 'top' || notes.length === 0) return;
+    void ensureCounts(notes.slice(0, 100).map((note) => note.id));
+  }, [notes, sort]);
+
   // Author names, in ONE query for the whole page. Resolving per card meant
   // ~50 round trips for data that fits in a single `authors` filter, and the
   // cards that lost the race just showed a truncated npub.
@@ -273,6 +287,7 @@ export function useFeed(
     setNonce((n) => n + 1);
   }, []);
 
+  const follows = useMyFollows();
   const isMuted = useModerationStore((state) => state.isMuted);
   const isBlocked = useModerationStore((state) => state.isBlocked);
   const visible = useMemo(
@@ -284,8 +299,34 @@ export function useFeed(
   // grouping depends on which notes happen to share the window.
   const repostersByTarget = useMemo(() => groupReposts(visible).repostersByTarget, [visible]);
 
+  // Re-rank when late signals land. Counts and WoT verdicts resolve after the
+  // notes do, so a score computed once would be a score computed on zeros.
+  const [signalTick, setSignalTick] = useState(0);
+  useEffect(() => {
+    if (sort !== 'top') return;
+    const bump = () => setSignalTick((n) => n + 1);
+    const offWot = wotEngine.on('verdicts-changed', bump);
+    // Counts arrive in batches; a slow poll is cheaper than subscribing to
+    // every note id and re-rendering per arrival.
+    const timer = setInterval(bump, 4000);
+    return () => { offWot(); clearInterval(timer); };
+  }, [sort]);
+
+  const followSet = useMemo(() => new Set(follows), [follows]);
+
+  const ordered = useMemo(
+    () => applySort(visible, sort, {
+      counts: getCounts,
+      isFollowed: (pubkey) => followSet.has(pubkey),
+      repostersOf: (noteId) => repostersByTarget.get(noteId) ?? [],
+      wotDistance: (pubkey) => wotEngine.getDistance(pubkey),
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [visible, sort, followSet, repostersByTarget, signalTick],
+  );
+
   return {
-    notes: visible,
+    notes: ordered,
     repostersByTarget,
     loading,
     loadingMore,

@@ -314,6 +314,37 @@ describe('FeedScreen', () => {
     expect(screen.queryByTestId('article-modal')).not.toBeInTheDocument();
   });
 
+  it('reorders when you switch to Top, without refetching', async () => {
+    // Ranking reorders the window we already have — `sort` is deliberately
+    // not part of the feed key, so switching must not discard the page.
+    const now = Math.floor(Date.now() / 1000);
+    socialMocks.loadFollowingFeed.mockResolvedValue([
+      note('new', 'just posted', now),
+      note('old', 'older but busy', now - 7200),
+    ]);
+    renderFeed();
+    await waitFor(() => expect(screen.getByText('just posted')).toBeInTheDocument());
+
+    socialMocks.loadFollowingFeed.mockClear();
+    fireEvent.click(screen.getByTestId('feed-sort-top'));
+    // No refetch: the same notes, reordered.
+    expect(socialMocks.loadFollowingFeed).not.toHaveBeenCalled();
+    expect(screen.getByText('older but busy')).toBeInTheDocument();
+  });
+
+  it('keeps Recent as the raw timeline', async () => {
+    const now = Math.floor(Date.now() / 1000);
+    socialMocks.loadFollowingFeed.mockResolvedValue([
+      note('new', 'newest', now),
+      note('old', 'oldest', now - 7200),
+    ]);
+    renderFeed();
+    await waitFor(() => expect(screen.getByText('newest')).toBeInTheDocument());
+
+    const rows = screen.getAllByTestId('note-card');
+    expect(rows[0]).toHaveTextContent('newest');
+  });
+
   it('exposes refresh and relay settings', async () => {
     const onOpenSettings = vi.fn();
     socialMocks.loadFollowingFeed.mockResolvedValue([note('a', 'first')]);
