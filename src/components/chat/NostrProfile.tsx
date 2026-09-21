@@ -31,7 +31,10 @@ import { useTranslation } from '@/i18n/context';
 import UserAvatar from '@/components/UserAvatar';
 import FeedList from '@/components/social/FeedList';
 import { ComposeButton } from '@/components/social/FeedControls';
-import NoteComposer, { type ComposerMode } from '@/components/social/NoteComposer';
+import NoteComposer from '@/components/social/NoteComposer';
+import MobileComposer from '@/components/social/MobileComposer';
+import type { ComposerMode } from '@/components/social/useNoteDraft';
+import ProfileLinks from './ProfileLinks';
 import NoteThread from '@/components/social/NoteThread';
 import ArticleReader from '@/components/social/ArticleCard';
 import ModalShell from '@/components/ModalShell';
@@ -45,6 +48,10 @@ type NostrProfileProps = {
   settingsMode?: boolean;
   onEditProfile?: () => void;
   onOpenProfile?: (pubkey: string) => void;
+  /** Opens app preferences — the gear below the banner in mobile settings. */
+  onOpenSettings?: () => void;
+  /** Phone presentation: full-screen composer instead of the inline card. */
+  mobile?: boolean;
 };
 
 export default function NostrProfile({
@@ -54,6 +61,8 @@ export default function NostrProfile({
   settingsMode = false,
   onEditProfile,
   onOpenProfile,
+  onOpenSettings,
+  mobile = false,
 }: NostrProfileProps) {
   const { t } = useTranslation();
   const meta = useUserMetadata(pubkey);
@@ -178,17 +187,55 @@ export default function NostrProfile({
         </div>
       </div>
 
-      <UserAvatar
-        pubkey={pubkey}
-        picture={meta?.picture}
-        size={28}
-        name={displayName}
-        alt={displayName}
-        className="profile-view-avatar relative z-10 -mt-14 ml-5 border-4 border-lc-black"
-        initialClassName="text-3xl"
-      />
+      {/*
+        The strip beside the avatar used to be empty black. It's where a
+        phone expects the profile's own controls: settings on your own
+        profile, and the button that opens the composer.
+      */}
+      <div className="relative z-10 -mt-14 flex shrink-0 items-end justify-between gap-3 px-5">
+        <UserAvatar
+          pubkey={pubkey}
+          picture={meta?.picture}
+          size={28}
+          name={displayName}
+          alt={displayName}
+          className="profile-view-avatar border-4 border-lc-black"
+          initialClassName="text-3xl"
+        />
+        <div className="mb-2 flex items-center gap-2">
+          {isMe && mobile && (
+            <button
+              type="button"
+              onClick={() => setComposer({ kind: 'note' })}
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-lc-green text-lc-black active:scale-95"
+              aria-label={t('profileFeed.createPost')}
+              data-testid="profile-create-post"
+            >
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M12 20h9" />
+                <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+              </svg>
+            </button>
+          )}
+          {onOpenSettings && (
+            <button
+              type="button"
+              onClick={onOpenSettings}
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-lc-border bg-lc-dark text-lc-white active:scale-95"
+              aria-label={t('settings.preferences')}
+              title={t('settings.preferences')}
+              data-testid="profile-settings-gear"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+            </button>
+          )}
+        </div>
+      </div>
 
-      <div className="profile-view-meta shrink-0 px-5 pb-1 pt-2">
+      <div className="profile-view-meta shrink-0 px-5 pb-1 pt-3">
         <div className="profile-view-name text-xl font-extrabold text-lc-white">{displayName}</div>
         {meta?.nip05 && <div className="profile-view-nip05 mt-1 text-xs text-lc-green">{meta.nip05}</div>}
         <div className="mt-1 flex min-w-0 items-center gap-2" data-testid="profile-npub-row">
@@ -206,9 +253,7 @@ export default function NostrProfile({
         </div>
       </div>
 
-      {meta?.about && (
-        <p className="profile-view-bio whitespace-pre-wrap px-5 py-2 text-sm text-lc-muted">{meta.about}</p>
-      )}
+      <ProfileLinks about={meta?.about} website={meta?.website} lud16={meta?.lud16} />
 
       {!isMe ? (
         <div className="profile-view-actions flex shrink-0 gap-2 px-5 py-3">
@@ -245,7 +290,12 @@ export default function NostrProfile({
 
       {followError && <p className="px-5 pb-2 text-xs text-red-400">{t('profileFeed.followFailed')}</p>}
 
-      {isMe && (composer?.kind === 'note' ? (
+      {/*
+        Desktop composes in place; a phone gets the full-screen sheet from
+        the ✎ button in the header instead, because an inline row plus a
+        keyboard leaves about two lines to write in.
+      */}
+      {isMe && !mobile && (composer?.kind === 'note' ? (
         <div className="mx-5 mb-4">
           <NoteComposer
             autoFocus
@@ -325,7 +375,15 @@ export default function NostrProfile({
         )}
       </div>
 
-      {composer && composer.kind !== 'note' && (
+      {mobile && composer && (
+        <MobileComposer
+          mode={composer}
+          onPublished={() => { setComposer(null); setTab('posts'); state.refresh(); }}
+          onClose={() => setComposer(null)}
+        />
+      )}
+
+      {!mobile && composer && composer.kind !== 'note' && (
         <ModalShell onClose={() => setComposer(null)} testId="profile-composer-modal">
           <NoteComposer
             autoFocus

@@ -1,26 +1,25 @@
 'use client';
 
 /**
- * Composer for notes, replies and quotes.
+ * The desktop composer: a card that expands in place.
  *
- * Lifted from the old `ProfileComposer` (markdown buttons, Blossom upload,
- * live preview) and extended with what the feed needs: reply/quote modes, and
- * NIP-92 `imeta` tags derived from the uploaded file so other clients can
- * reserve layout space instead of janking as images load.
+ * It sits where the compose row was, beside the feed it's answering, with a
+ * live markdown preview and a mouse-sized toolbar. That works because a
+ * desktop viewport has room to show the composer *and* its context at once.
+ *
+ * A phone doesn't — the keyboard eats half the screen — so it gets its own
+ * presentation in `MobileComposer`. Both share `useNoteDraft`, which owns
+ * everything that touches Blossom, NIP-92 `imeta` and the relay, so the two
+ * can't drift on what actually gets published.
  */
 
-import { useEffect, useRef, useState } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { useTranslation } from '@/i18n/context';
-import { uploadToBlossom } from '@/lib/blossom';
-import { publishNote, publishQuote, publishReply, type Attachment } from '@/lib/social/publish';
 import MessageContent from '@/components/chat/MessageContent';
 import { linkifyHashtags } from '@/lib/profile-feed';
+import { useNoteDraft, type ComposerMode } from './useNoteDraft';
 
-export type ComposerMode =
-  | { kind: 'note' }
-  | { kind: 'reply'; parent: NostrEvent }
-  | { kind: 'quote'; target: NostrEvent };
+export type { ComposerMode };
 
 export default function NoteComposer({
   mode = { kind: 'note' },
@@ -34,167 +33,12 @@ export default function NoteComposer({
   autoFocus?: boolean;
 }) {
   const { t } = useTranslation();
-  const [draft, setDraft] = useState('');
-  const [attachments, setAttachments] = useState<Attachment[]>([]);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [sensitive, setSensitive] = useState(false);
-  const [dragging, setDragging] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (autoFocus) textareaRef.current?.focus();
-  }, [autoFocus]);
-
-  const wrapSelection = (before: string, after = before) => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const next = draft.slice(0, start) + before + draft.slice(start, end) + after + draft.slice(end);
-    setDraft(next);
-    requestAnimationFrame(() => {
-      textarea.focus();
-      textarea.setSelectionRange(start + before.length, end + before.length);
-    });
-  };
-
-  /**
-   * Measure the image before upload so `imeta` can carry `dim`. Reading it
-   * from the local File costs nothing and is the only chance we get — once
-   * it's a URL we'd have to download it again to find out.
-   */
-  const measure = (file: File): Promise<{ width: number; height: number } | null> => (
-    new Promise((resolve) => {
-      if (!file.type.startsWith('image/') || typeof URL?.createObjectURL !== 'function') {
-        return resolve(null);
-      }
-      let settled = false;
-      let url: string;
-      try {
-        url = URL.createObjectURL(file);
-      } catch {
-        return resolve(null);
-      }
-      const finish = (value: { width: number; height: number } | null) => {
-        if (settled) return;
-        settled = true;
-        try { URL.revokeObjectURL(url); } catch { /* already revoked */ }
-        resolve(value);
-      };
-      // Dimensions are an optimisation for `imeta`, not a precondition for
-      // posting: an image that never fires load or error must not strand the
-      // upload behind a promise that never settles.
-      const timer = setTimeout(() => finish(null), 3000);
-      const img = new Image();
-      img.onload = () => { clearTimeout(timer); finish({ width: img.naturalWidth, height: img.naturalHeight }); };
-      img.onerror = () => { clearTimeout(timer); finish(null); };
-      img.src = url;
-    })
-  );
-
-  const uploadFiles = async (files: FileList | File[] | null) => {
-    if (!files?.length || busy) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const picked = [...files].slice(0, 4);
-      const uploaded = await Promise.all(picked.map(async (file) => {
-        const dims = await measure(file);
-        const url = await uploadToBlossom(file);
-        return {
-          url,
-          mimeType: file.type || null,
-          width: dims?.width ?? null,
-          height: dims?.height ?? null,
-        } satisfies Attachment;
-      }));
-      setAttachments((current) => [...current, ...uploaded]);
-      // The bare URL stays in content — that's the universal read path for
-      // every client that doesn't parse imeta.
-      setDraft((current) => [current.trim(), ...uploaded.map((a) => a.url)].filter(Boolean).join('\n'));
-    } catch (uploadError) {
-      setError(uploadError instanceof Error ? uploadError.message : t('social.actionFailed'));
-    } finally {
-      setBusy(false);
-      if (fileRef.current) fileRef.current.value = '';
-    }
-  };
-
-  /**
-   * Pasting a screenshot is how most images actually reach a composer, and
-   * the file picker was the only way in. Drag-and-drop gets the same path.
-   */
-  const filesFromDataTransfer = (data: DataTransfer | null): File[] => {
-    if (!data) return [];
-    const files: File[] = [];
-    // `items` carries pasted screenshots (which have no entry in `files` on
-    // some browsers); `files` carries dragged ones. Union, then de-dupe.
-    for (const item of Array.from(data.items ?? [])) {
-      if (item.kind !== 'file') continue;
-      const file = item.getAsFile();
-      if (file && file.type.startsWith('image/')) files.push(file);
-    }
-    for (const file of Array.from(data.files ?? [])) {
-      if (file.type.startsWith('image/') && !files.some((f) => f.name === file.name && f.size === file.size)) {
-        files.push(file);
-      }
-    }
-    return files;
-  };
-
-  const onPaste = (event: React.ClipboardEvent) => {
-    const files = filesFromDataTransfer(event.clipboardData);
-    if (files.length === 0) return;
-    // Only swallow the event when we actually took an image — pasting text
-    // alongside an image must still land in the textarea.
-    event.preventDefault();
-    void uploadFiles(files);
-  };
-
-  const onDrop = (event: React.DragEvent) => {
-    const files = filesFromDataTransfer(event.dataTransfer);
-    if (files.length === 0) return;
-    event.preventDefault();
-    setDragging(false);
-    void uploadFiles(files);
-  };
-
-  const submit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    const content = draft.trim();
-    if (!content || busy) return;
-    setBusy(true);
-    setError(null);
-    try {
-      // `null` means "no warning"; a string (possibly empty) triggers the
-      // content-warning + #nsfw tag pair.
-      const contentWarning = sensitive ? '' : null;
-      let published: NostrEvent;
-      if (mode.kind === 'reply') {
-        published = await publishReply(mode.parent, content, { attachments, contentWarning });
-      } else if (mode.kind === 'quote') {
-        published = await publishQuote(mode.target, content, { attachments, contentWarning });
-      } else {
-        published = await publishNote(content, attachments, { contentWarning });
-      }
-      setDraft('');
-      setAttachments([]);
-      setSensitive(false);
-      onPublished?.(published);
-    } catch (publishError) {
-      setError(publishError instanceof Error ? publishError.message : t('social.actionFailed'));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const placeholder = mode.kind === 'reply'
-    ? t('social.replyPlaceholder')
-    : mode.kind === 'quote'
-      ? t('social.quotePlaceholder')
-      : t('social.postPlaceholder');
+  const composer = useNoteDraft({ mode, onPublished, autoFocus });
+  const {
+    draft, setDraft, busy, error, sensitive, setSensitive, dragging, setDragging,
+    textareaRef, fileRef, wrapSelection, uploadFiles, onPaste, onDrop, onDragOver,
+    submit, placeholder, canPost,
+  } = composer;
 
   return (
     <form
@@ -204,7 +48,7 @@ export default function NoteComposer({
       onSubmit={(event) => void submit(event)}
       onPaste={onPaste}
       onDrop={onDrop}
-      onDragOver={(event) => { if (event.dataTransfer?.types?.includes('Files')) { event.preventDefault(); setDragging(true); } }}
+      onDragOver={onDragOver}
       onDragLeave={() => setDragging(false)}
       data-testid="note-composer"
     >
@@ -266,7 +110,7 @@ export default function NoteComposer({
               {t('common.cancel')}
             </button>
           )}
-          <button type="submit" className="lc-pill-primary px-5 py-2 text-xs" disabled={!draft.trim() || busy}>
+          <button type="submit" className="lc-pill-primary px-5 py-2 text-xs" disabled={!canPost}>
             {busy ? t('common.saving') : t('profileFeed.publish')}
           </button>
         </div>
@@ -274,3 +118,5 @@ export default function NoteComposer({
     </form>
   );
 }
+
+export type { NostrEvent };

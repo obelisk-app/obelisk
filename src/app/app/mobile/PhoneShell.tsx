@@ -4024,7 +4024,7 @@ function ProfileViewScreen({
   back: () => void;
   openDm: (peer: string) => void;
 }) {
-  return <NostrProfile pubkey={pubkey} onClose={back} onMessage={openDm} />;
+  return <NostrProfile mobile pubkey={pubkey} onClose={back} onMessage={openDm} />;
 }
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -5388,17 +5388,20 @@ export function SettingsProfileScreen({ go }: { go: (s: ScreenName) => void }) {
       <div className="app-header">
         <h2>{t("settings.you")}</h2>
       </div>
-      <div className="settings-tabs native-scroll-x">
-        <button className="settings-tab active">{t("settings.profile")}</button>
-        <button className="settings-tab" onClick={() => go("settings-prefs")}>{t("settings.preferences")}</button>
-      </div>
+      {/*
+        The Perfil/Preferencias pair was a two-item tab bar sitting above a
+        screen that is obviously your profile. Preferences is now the gear
+        beside the avatar — one target, where a phone expects it.
+      */}
       <div className="min-h-0 flex-1">
         {myPubkey && (
           <NostrProfile
+            mobile
             pubkey={myPubkey}
             onClose={() => {}}
             settingsMode
             onEditProfile={() => go("profile-edit")}
+            onOpenSettings={() => go("settings-prefs")}
           />
         )}
       </div>
@@ -5741,7 +5744,7 @@ export function EditProfileScreen({ go }: { go: (s: ScreenName, dir?: 'forward' 
 // ───────────────────────────────────────────────────────────────────────────
 // 17 — settings · preferences
 
-export function SettingsPrefsScreen({ go }: { go: (s: ScreenName) => void }) {
+export function SettingsPrefsScreen({ go }: { go: (s: ScreenName, dir?: 'forward' | 'back') => void }) {
   const { t } = useTranslation();
   const dmOptInEnabled = useDmOptInEnabled();
   const [appearanceOpen, setAppearanceOpen] = useState(false);
@@ -5773,12 +5776,18 @@ export function SettingsPrefsScreen({ go }: { go: (s: ScreenName) => void }) {
   return (
     <>
     <div className="screen active" data-screen="settings-prefs">
+      {/* Back to the profile, since the tab pair that used to do this is gone. */}
       <div className="app-header">
-        <h2>{t('settings.you')}</h2>
-      </div>
-      <div className="settings-tabs native-scroll-x">
-        <button className="settings-tab" onClick={() => go('settings-profile')}>{t('settings.profile')}</button>
-        <button className="settings-tab active">{t('settings.preferences')}</button>
+        <button
+          className="back-btn"
+          type="button"
+          onClick={() => go('settings-profile', 'back')}
+          aria-label={t('common.back')}
+          data-testid="prefs-back"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+        </button>
+        <h2>{t('settings.preferences')}</h2>
       </div>
       <div className="settings-body">
         <div className="settings-section">
@@ -5969,15 +5978,9 @@ export default function MobileShell() {
       return;
     }
     cancelPendingTabTransition();
-    // Sibling tabs in the settings group (Profile ↔ Preferences) toggle
-    // in-place. They visually share the `.settings-tabs` strip, so a slide
-    // animation reads as broken — the user tapped a tab, not navigated to
-    // a new screen. Suppress the slide for that one pair.
-    const prev = navRef.current.screen;
-    const isSettingsTabSwitch =
-      (prev === 'settings-profile' && screen === 'settings-prefs') ||
-      (prev === 'settings-prefs' && screen === 'settings-profile');
-    if (isSettingsTabSwitch) suppressSlideRef.current = true;
+    // Profile → Preferences used to be a tab switch inside one screen and
+    // suppressed the slide. It's a real navigation now (gear in, arrow
+    // back), so it animates like every other push.
 
     if (screen !== 'channel') useChatStore.setState({ activeChannelId: null });
     if (screen !== 'dm-thread') useDMStore.setState({ activeDMPubkey: null });

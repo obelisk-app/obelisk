@@ -18,9 +18,12 @@ import { useFeed, type FeedSource } from '@/lib/social/useFeed';
 import { CONTENT_FILTERS, type ContentFilter } from '@/lib/social/kinds';
 import type { FeedSort } from '@/lib/social/rank';
 import ModalShell from '@/components/ModalShell';
+import { useHistoryDismiss } from '@/app/app/useHistoryDismiss';
 import UserAvatar from '@/components/UserAvatar';
 import FeedList from './FeedList';
-import NoteComposer, { type ComposerMode } from './NoteComposer';
+import NoteComposer from './NoteComposer';
+import MobileComposer from './MobileComposer';
+import type { ComposerMode } from './useNoteDraft';
 import NoteThread from './NoteThread';
 import ArticleReader from './ArticleCard';
 import { ComposeButton } from './FeedControls';
@@ -60,6 +63,7 @@ export default function FeedScreen({
   const [filter, setFilter] = useState<ContentFilter>('all');
   const [sort, setSort] = useState<FeedSort>('recent');
   const [searching, setSearching] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [composer, setComposer] = useState<ComposerMode | null>(null);
   const [openNoteId, setOpenNoteId] = useState<string | null>(null);
   const [openArticle, setOpenArticle] = useState<NostrEvent | null>(null);
@@ -178,7 +182,13 @@ export default function FeedScreen({
           line instead of crushing it, which also covers a narrow split pane
           on a wide screen (a viewport breakpoint would not).
         */}
-        <div
+        {/*
+          Desktop keeps the chips inline — there's room, and one tap is
+          better than two. On a phone they were a hairline-scrolling strip of
+          11px text; they live in the filter sheet instead, and are not
+          rendered here at all so the sheet's copies are the only ones.
+        */}
+        {!mobile && <div
           className="-mx-1 order-last flex w-full min-w-0 items-center gap-0.5 overflow-x-auto px-1 lg:order-none lg:w-auto lg:min-w-[13rem] lg:flex-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           role="group"
           aria-label={t('social.filter.all')}
@@ -199,13 +209,13 @@ export default function FeedScreen({
               {t(`social.filter.${value}`)}
             </button>
           ))}
-        </div>
+        </div>}
 
         {/*
           Sort sits with the filters: both answer "what am I looking at",
           where the source pill answers "whose".
         */}
-        <div className="flex shrink-0 items-center gap-0.5" role="group">
+        {!mobile && <div className="flex shrink-0 items-center gap-0.5" role="group">
           {(['recent', 'top'] as const).map((value) => (
             <button
               key={value}
@@ -222,9 +232,29 @@ export default function FeedScreen({
               {t(`social.sort.${value}`)}
             </button>
           ))}
-        </div>
+        </div>}
 
-        <div className="ml-auto flex shrink-0 items-center gap-0.5 lg:ml-0">
+        <div className="ml-auto flex shrink-0 items-center gap-1 lg:ml-0">
+          {/*
+            One target for "what am I looking at" on a phone, sized like the
+            rest of Obelisk's header buttons rather than an 11px chip.
+          */}
+          {mobile && (
+            <button
+              type="button"
+              className={`flex h-10 w-10 items-center justify-center rounded-full border border-lc-border transition-colors active:bg-white/10 ${
+                filter !== 'all' || sort !== 'recent' ? 'text-lc-green' : 'text-lc-muted'
+              }`}
+              onClick={() => setFiltersOpen(true)}
+              aria-label={t('social.filters')}
+              title={t('social.filters')}
+              data-testid="feed-filters-open"
+            >
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden="true">
+                <path d="M3 5h18" /><path d="M6 12h12" /><path d="M10 19h4" />
+              </svg>
+            </button>
+          )}
           {/*
             Refresh is gone: pulling up at the top of the feed refreshes, and
             new notes announce themselves with the green pill. A button that
@@ -232,17 +262,25 @@ export default function FeedScreen({
           */}
           <button
             type="button"
-            className="group/act -m-1 flex items-center rounded-full p-1 text-lc-muted"
+            className={mobile
+              ? 'flex h-10 w-10 items-center justify-center rounded-full border border-lc-border text-lc-muted transition-colors active:bg-white/10'
+              : 'group/act -m-1 flex items-center rounded-full p-1 text-lc-muted'}
             onClick={() => setSearching(true)}
             aria-label={t('social.search')}
             title={t('social.search')}
             data-testid="feed-search-open"
           >
-            <span className="flex h-8 w-8 items-center justify-center rounded-full transition-colors group-hover/act:bg-white/10 group-hover/act:text-lc-white">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" aria-hidden="true">
+            {mobile ? (
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden="true">
                 <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
               </svg>
-            </span>
+            ) : (
+              <span className="flex h-8 w-8 items-center justify-center rounded-full transition-colors group-hover/act:bg-white/10 group-hover/act:text-lc-white">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" aria-hidden="true">
+                  <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
+                </svg>
+              </span>
+            )}
           </button>
           {onOpenSettings && !embedded && (
             <button
@@ -268,7 +306,12 @@ export default function FeedScreen({
         ref={scrollRef}
         className={`min-h-0 flex-1 overflow-y-auto ${mobile ? 'native-scroll-y' : ''}`}
       >
-        {myPubkey && (
+        {/*
+          Desktop only. On a phone the row was a link to an input dressed as
+          an input; the FAB below opens the full-screen composer instead,
+          which is what every phone client does and what a thumb can hit.
+        */}
+        {myPubkey && !mobile && (
           <div ref={composeRowRef}>
             {composer?.kind === 'note' ? (
               <div className="border-b border-lc-border p-4">
@@ -307,7 +350,7 @@ export default function FeedScreen({
         on desktop, and the mobile bottom-nav sits under this, hence the
         larger offset there.
       */}
-      {myPubkey && !composeRowVisible && composer?.kind !== 'note' && (
+      {myPubkey && (mobile || !composeRowVisible) && !composer && (
         <button
           type="button"
           onClick={openComposer}
@@ -324,7 +367,19 @@ export default function FeedScreen({
         </button>
       )}
 
-      {composer && composer.kind !== 'note' && (
+      {/*
+        One sheet for every mode on mobile — note, reply and quote are the
+        same act of writing, and a phone has room for exactly one surface.
+      */}
+      {mobile && composer && (
+        <MobileComposer
+          mode={composer}
+          onPublished={() => { setComposer(null); state.refresh(); }}
+          onClose={closeComposer}
+        />
+      )}
+
+      {!mobile && composer && composer.kind !== 'note' && (
         <ModalShell onClose={() => setComposer(null)} testId="composer-modal">
           <div className="mb-3 text-sm font-semibold text-lc-white">
             {t(composer.kind === 'reply' ? 'social.replyAction' : 'social.quote')}
@@ -348,6 +403,16 @@ export default function FeedScreen({
         </ModalShell>
       )}
 
+      {filtersOpen && (
+        <FilterSheet
+          filter={filter}
+          sort={sort}
+          onFilter={setFilter}
+          onSort={setSort}
+          onClose={() => setFiltersOpen(false)}
+        />
+      )}
+
       {openNoteId && (
         <ModalShell onClose={() => setOpenNoteId(null)} testId="thread-modal">
           <div className="mb-3 text-sm font-semibold text-lc-white">{t('social.thread')}</div>
@@ -358,6 +423,98 @@ export default function FeedScreen({
           />
         </ModalShell>
       )}
+    </div>
+  );
+}
+
+/**
+ * The phone's answer to the chip strips.
+ *
+ * A bottom sheet rather than a dropdown: it's within thumb reach, and the
+ * options are big enough to read — which the 11px chips they replace were
+ * not.
+ */
+function FilterSheet({
+  filter,
+  sort,
+  onFilter,
+  onSort,
+  onClose,
+}: {
+  filter: ContentFilter;
+  sort: FeedSort;
+  onFilter: (value: ContentFilter) => void;
+  onSort: (value: FeedSort) => void;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const dismiss = useHistoryDismiss(true, onClose);
+
+  return (
+    <div
+      className="fixed inset-0 z-[120] flex flex-col justify-end bg-black/60"
+      role="dialog"
+      aria-modal="true"
+      aria-label={t('social.filters')}
+      onClick={dismiss}
+      data-testid="feed-filter-sheet"
+    >
+      <div
+        className="rounded-t-2xl border-t border-lc-border bg-lc-dark px-4 pb-8 pt-3"
+        onClick={(event) => event.stopPropagation()}
+        style={{ paddingBottom: 'calc(2rem + env(safe-area-inset-bottom))' }}
+      >
+        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-lc-border" aria-hidden="true" />
+
+        <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-lc-muted">
+          {t('social.sort.top')} · {t('social.sort.recent')}
+        </h2>
+        <div className="lc-segment mb-5 w-full">
+          {(['recent', 'top'] as const).map((value) => (
+            <button
+              key={value}
+              type="button"
+              aria-selected={sort === value}
+              onClick={() => onSort(value)}
+              className="lc-segment-item flex-1 justify-center py-2.5 text-sm"
+              data-testid={`feed-sort-${value}`}
+            >
+              {t(`social.sort.${value}`)}
+            </button>
+          ))}
+        </div>
+
+        <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-lc-muted">
+          {t('social.filters')}
+        </h2>
+        <div className="grid grid-cols-2 gap-2">
+          {CONTENT_FILTERS.map((value) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={filter === value}
+              onClick={() => onFilter(value)}
+              className={`rounded-full border px-4 py-2.5 text-sm font-semibold transition-colors ${
+                filter === value
+                  ? 'border-lc-green bg-lc-green/15 text-lc-green'
+                  : 'border-lc-border text-lc-muted'
+              }`}
+              data-testid={`feed-filter-${value}`}
+            >
+              {t(`social.filter.${value}`)}
+            </button>
+          ))}
+        </div>
+
+        <button
+          type="button"
+          onClick={dismiss}
+          className="lc-pill-secondary mt-5 w-full py-2.5 text-sm"
+          data-testid="feed-filter-sheet-close"
+        >
+          {t('common.close')}
+        </button>
+      </div>
     </div>
   );
 }

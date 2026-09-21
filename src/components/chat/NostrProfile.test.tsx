@@ -28,6 +28,7 @@ const bridgeMocks = vi.hoisted(() => ({
   myPubkey: 'b'.repeat(64),
   contactEvent: null as NostrEvent | null,
   contactsReady: true,
+  metadata: null as Record<string, string> | null,
 }));
 
 vi.mock('@/lib/social/pool', () => ({
@@ -77,14 +78,14 @@ vi.mock('@/lib/nostr-bridge', () => ({
   useMyContactList: () => bridgeMocks.contactEvent,
   useMyContactListReady: () => bridgeMocks.contactsReady,
   useMyFollows: () => [],
-  useUserMetadata: () => ({
+  useUserMetadata: () => bridgeMocks.metadata ?? {
     displayName: 'Alice',
     name: 'alice',
     picture: 'https://example.com/avatar.jpg',
     banner: 'https://example.com/banner.jpg',
     nip05: 'alice@example.com',
     about: 'hello from nostr',
-  }),
+  },
 }));
 
 vi.mock('./MessageContent', () => ({
@@ -117,6 +118,7 @@ function renderProfile(props: Partial<React.ComponentProps<typeof NostrProfile>>
 beforeEach(() => {
   window.localStorage.clear();
   vi.clearAllMocks();
+  bridgeMocks.metadata = null;
   socialMocks.loadProfileFeed.mockResolvedValue([]);
   socialMocks.subscribeSocial.mockReturnValue(() => {});
   bridgeMocks.myPubkey = 'b'.repeat(64);
@@ -215,6 +217,40 @@ describe('NostrProfile', () => {
     bridgeMocks.myPubkey = AUTHOR;
     renderProfile({ settingsMode: true, onEditProfile: vi.fn() });
     expect(screen.queryByTestId('profile-more-button')).not.toBeInTheDocument();
+  });
+
+  it('offers preferences as a gear beside the avatar', () => {
+    // The Perfil/Preferencias tab pair sat above a screen that is obviously
+    // your profile; one gear where a phone expects it replaces it.
+    bridgeMocks.myPubkey = AUTHOR;
+    const onOpenSettings = vi.fn();
+    renderProfile({ settingsMode: true, mobile: true, onOpenSettings });
+
+    fireEvent.click(screen.getByTestId('profile-settings-gear'));
+    expect(onOpenSettings).toHaveBeenCalled();
+  });
+
+  it('composes full-screen on a phone', async () => {
+    bridgeMocks.myPubkey = AUTHOR;
+    renderProfile({ mobile: true });
+    // No inline row: it promised an input and delivered a link to one.
+    expect(screen.queryByTestId('feed-compose')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('profile-create-post'));
+    expect(await screen.findByTestId('mobile-composer')).toBeInTheDocument();
+  });
+
+  it('links the website and the URLs inside the bio', () => {
+    bridgeMocks.metadata = {
+      displayName: 'Alice',
+      about: 'writing at https://alice.example',
+      website: 'alice.example',
+    };
+    renderProfile();
+
+    expect(screen.getByTestId('profile-bio-link')).toHaveAttribute('href', 'https://alice.example');
+    // A bare host in `website` would otherwise resolve against our own origin.
+    expect(screen.getByTestId('profile-website')).toHaveAttribute('href', 'https://alice.example');
   });
 
   it('renders the feed tabs as a segmented pill', () => {

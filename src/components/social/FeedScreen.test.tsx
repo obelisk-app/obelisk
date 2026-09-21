@@ -389,6 +389,44 @@ describe('FeedScreen', () => {
     expect(socialMocks.loadFollowingFeed.mock.calls.length).toBe(before);
   });
 
+  it('gives a phone one filter button instead of two chip strips', async () => {
+    // The chips were an 11px hairline-scrolling strip; on a phone they're
+    // behind a header-sized button that opens a sheet.
+    renderFeed({ mobile: true });
+    expect(screen.queryByTestId('feed-filter-articles')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('feed-filters-open'));
+    const sheet = screen.getByTestId('feed-filter-sheet');
+    expect(sheet).toContainElement(screen.getByTestId('feed-filter-articles'));
+    expect(sheet).toContainElement(screen.getByTestId('feed-sort-top'));
+
+    fireEvent.click(screen.getByTestId('feed-sort-top'));
+    expect(screen.getByTestId('feed-sort-top')).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('keeps the chips inline on desktop, where there is room', () => {
+    renderFeed();
+    expect(screen.queryByTestId('feed-filters-open')).not.toBeInTheDocument();
+    expect(screen.getByTestId('feed-filter-articles')).toBeInTheDocument();
+  });
+
+  it('composes full-screen on a phone, with no inline compose row', async () => {
+    // The row promised an input and delivered a link to one; the sheet is
+    // the input.
+    renderFeed({ mobile: true });
+    expect(screen.queryByTestId('feed-compose')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('feed-compose-fab'));
+    expect(await screen.findByTestId('mobile-composer')).toBeInTheDocument();
+  });
+
+  it('composes in place on desktop', async () => {
+    renderFeed();
+    fireEvent.click(await screen.findByTestId('feed-compose'));
+    expect(await screen.findByTestId('note-composer')).toBeInTheDocument();
+    expect(screen.queryByTestId('mobile-composer')).not.toBeInTheDocument();
+  });
+
   it('has no refresh button — pulling up at the top refreshes instead', () => {
     // A button duplicating a gesture people already make is just chrome,
     // and new notes announce themselves with the green pill.

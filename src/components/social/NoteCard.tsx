@@ -334,7 +334,7 @@ function PlainNoteCard({
           <div className="flex min-w-0 items-center gap-1.5">
             <button
               type="button"
-              className="min-w-0 truncate text-sm font-semibold text-lc-white hover:underline"
+              className="min-w-0 truncate text-[15px] font-semibold text-lc-white hover:underline"
               onClick={() => onOpenProfile?.(note.pubkey)}
             >
               {displayName}
@@ -354,7 +354,7 @@ function PlainNoteCard({
               </span>
             )}
           </div>
-          <div className="flex items-center gap-2 text-[10px] text-lc-muted">
+          <div className="flex items-center gap-2 text-[11px] text-lc-muted">
             {isThreadReply && <span>↩ {t('social.reply')}</span>}
             {mode === 'article' && <span>{t('social.article')}</span>}
             {mode === 'highlight' && <span>{t('social.highlight')}</span>}
@@ -363,6 +363,12 @@ function PlainNoteCard({
             </time>
           </div>
         </div>
+        {/*
+          Top-right, where every client puts it and where it can't be
+          confused with the interaction row — down there it was a sixth
+          action competing with reply and zap for the same thumb.
+        */}
+        {!quoted && <NoteMenu note={note} isMine={isMine} />}
       </header>
 
       {hidden ? (
@@ -387,8 +393,14 @@ function PlainNoteCard({
         />
       )}
 
+      {/*
+        `justify-between` rather than a left-packed row: on a phone the five
+        actions used a third of the card and left a dead zone the width of a
+        thumb. Spread, each one gets its own column and the targets stop
+        crowding each other.
+      */}
       {!quoted && (
-        <div className="mt-2 flex items-center gap-1 pt-1 text-xs">
+        <div className="mt-2 flex items-center justify-between gap-1 pt-1 text-xs sm:justify-start">
           <ActionButton
             kind="reply"
             label={t('social.replyAction')}
@@ -435,7 +447,6 @@ function PlainNoteCard({
             testId="note-share"
             onClick={() => void share()}
           />
-          <NoteMenu note={note} isMine={isMine} />
         </div>
       )}
     </article>
@@ -469,7 +480,7 @@ function NoteBody({
     // is the classic bug with kind 9802.
     const source = note.tags.find((tag) => tag[0] === 'r')?.[1];
     return (
-      <blockquote className="border-l-2 border-lc-green pl-3 text-sm italic text-lc-white" data-testid="note-highlight">
+      <blockquote className="border-l-2 border-lc-green pl-3 text-[15px] italic leading-relaxed text-lc-white" data-testid="note-highlight">
         {note.content}
         {source && (
           <a href={source} target="_blank" rel="noreferrer noopener" className="mt-1 block text-[10px] not-italic text-lc-muted underline">
@@ -495,7 +506,7 @@ function NoteBody({
   const clamped = isLong && !expanded;
 
   return (
-    <div className="break-words text-sm text-lc-white">
+    <div className="break-words text-[15px] leading-relaxed text-lc-white">
       <div className={`note-media ${clamped ? 'note-clamp' : ''}`} data-testid={clamped ? 'note-clamped' : undefined}>
         <NoteContent
           content={note.content}
@@ -511,7 +522,7 @@ function NoteBody({
       {isLong && (
         <button
           type="button"
-          className="mt-1 text-xs font-semibold text-lc-green hover:underline"
+          className="mt-1 text-[13px] font-semibold text-lc-green hover:underline"
           onClick={() => setExpanded((value) => !value)}
           data-testid="note-show-more"
         >

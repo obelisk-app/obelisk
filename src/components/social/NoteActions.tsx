@@ -175,7 +175,7 @@ export function ActionButton({
       data-testid={testId}
     >
       <span
-        className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors ${accent.pad} ${active ? '' : accent.text}`}
+        className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${accent.pad} ${active ? '' : accent.text}`}
       >
         {icon}
       </span>

@@ -244,7 +244,10 @@ describe("SettingsPrefsScreen", () => {
       </LocaleProvider>,
     );
 
-    expect(screen.getByRole('heading', { name: 'Vos' })).toBeTruthy();
+    // The header names the screen now that the Perfil/Preferencias tab
+    // pair is gone; back to the profile is the arrow beside it.
+    expect(screen.getByRole('heading', { name: 'Preferencias' })).toBeTruthy();
+    expect(screen.getByTestId('prefs-back')).toBeTruthy();
     expect(screen.queryByText('Relays · 1')).toBeNull();
     expect(screen.getByText('Apariencia')).toBeTruthy();
     expect(screen.getByText('Mensajes directos')).toBeTruthy();

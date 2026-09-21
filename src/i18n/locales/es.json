@@ -675,5 +675,7 @@
   "social.searchEmpty": "No se encontró nada. No todos los relays indexan búsqueda de texto.",
   "social.searchPeople": "Personas",
   "social.searchPosts": "Publicaciones",
-  "social.searchTags": "Etiquetas"
+  "social.searchTags": "Etiquetas",
+  "profileFeed.addressCopied": "Dirección Lightning copiada",
+  "social.filters": "Filtros"
 }

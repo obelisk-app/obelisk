@@ -102,7 +102,7 @@ export function ArticleCard({
         </div>
       )}
       <div className="space-y-2 p-4">
-        <div className="flex items-center gap-2 text-[10px] uppercase tracking-wider text-lc-green">
+        <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-lc-green">
           <span>{t('social.article')}</span>
           <span aria-hidden="true">·</span>
           <span className="normal-case tracking-normal text-lc-muted">
@@ -113,7 +113,7 @@ export function ArticleCard({
           {meta.title || t('social.untitledArticle')}
         </h3>
         {(meta.summary || note.content) && (
-          <p className="line-clamp-3 text-xs leading-relaxed text-lc-muted">
+          <p className="line-clamp-3 text-sm leading-relaxed text-lc-muted">
             {meta.summary || note.content.replace(/[#*_`>[\]()!]/g, '').slice(0, 220)}
           </p>
         )}
@@ -123,7 +123,7 @@ export function ArticleCard({
         {meta.hashtags.length > 0 && (
           <div className="flex flex-wrap gap-1 pt-1">
             {meta.hashtags.slice(0, 4).map((tag) => (
-              <span key={tag} className="rounded-full bg-lc-black px-2 py-0.5 text-[10px] text-lc-muted">
+              <span key={tag} className="rounded-full bg-lc-black px-2 py-0.5 text-[11px] text-lc-muted">
                 #{tag}
               </span>
             ))}

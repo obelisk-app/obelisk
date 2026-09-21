@@ -3811,37 +3811,6 @@
 }
 
 /* ===== settings ===== */
-/*
- * Perfil / Preferencias is a two-way switch, so it's a segmented pill like
- * every other switch in the app — the underlined-tab treatment it used to
- * have reads as navigation into separate sections, which these aren't.
- */
-.obelisk-mobile .settings-tabs {
-  margin: 10px 16px 4px;
-  padding: 3px;
-  display: flex;
-  gap: 2px;
-  flex-shrink: 0;
-  border-radius: 9999px;
-  background: var(--app-surface-2, #171717);
-  border: 1px solid var(--app-line-soft);
-}
-.obelisk-mobile .settings-tab {
-  flex: 1;
-  padding: 8px 10px;
-  border: none;
-  background: transparent;
-  color: var(--app-text-dim);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  border-radius: 9999px;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-.obelisk-mobile .settings-tab.active {
-  color: var(--app-bg, #0a0a0a);
-  background: var(--accent);
-}
 .obelisk-mobile .settings-body {
   flex: 1;
   min-height: 0;
@@ -4492,7 +4461,6 @@
 .obelisk-mobile .filter-tab,
 .obelisk-mobile .mark-all-read,
 .obelisk-mobile .compose-dm-next,
-.obelisk-mobile .settings-tab,
 .obelisk-mobile .settings-btn-primary,
 .obelisk-mobile .settings-btn-secondary,
 .obelisk-mobile .settings-btn-danger,
@@ -4539,7 +4507,6 @@
 .obelisk-mobile .filter-tab:active,
 .obelisk-mobile .mark-all-read:active,
 .obelisk-mobile .compose-dm-next:active,
-.obelisk-mobile .settings-tab:active,
 .obelisk-mobile .settings-btn-primary:active,
 .obelisk-mobile .settings-btn-secondary:active,
 .obelisk-mobile .settings-btn-danger:active,
@@ -4597,7 +4564,6 @@
   .obelisk-mobile .filter-tab:active,
   .obelisk-mobile .mark-all-read:active,
   .obelisk-mobile .compose-dm-next:active,
-  .obelisk-mobile .settings-tab:active,
   .obelisk-mobile .settings-btn-primary:active,
   .obelisk-mobile .settings-btn-secondary:active,
   .obelisk-mobile .settings-btn-danger:active,

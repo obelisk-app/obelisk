@@ -675,5 +675,7 @@
   "social.searchEmpty": "Nothing found. Not every relay indexes full-text search.",
   "social.searchPeople": "People",
   "social.searchPosts": "Posts",
-  "social.searchTags": "Tags"
+  "social.searchTags": "Tags",
+  "profileFeed.addressCopied": "Lightning address copied",
+  "social.filters": "Filters"
 }
