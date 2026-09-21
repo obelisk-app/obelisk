@@ -404,6 +404,14 @@ describe('FeedScreen', () => {
     expect(screen.getByTestId('feed-sort-top')).toHaveAttribute('aria-selected', 'true');
   });
 
+  it('takes host controls into its toolbar instead of a second header', () => {
+    // The desktop pane used to stack a "Feed" title bar with an ✕ above a
+    // toolbar that already says what you're looking at.
+    renderFeed({ actions: <button type="button" data-testid="feed-pane-close">x</button> });
+    const toolbar = screen.getByTestId('feed-search-open').closest('div')?.parentElement;
+    expect(toolbar).toContainElement(screen.getByTestId('feed-pane-close'));
+  });
+
   it('keeps the chips inline on desktop, where there is room', () => {
     renderFeed();
     expect(screen.queryByTestId('feed-filters-open')).not.toBeInTheDocument();

@@ -546,21 +546,27 @@ export default function AppShell() {
               <DMPanel peer={view.peer} onPickPeer={(p) => setView({ kind: 'dm', peer: p })} />
             </DMOptInBoundary>
           ) : view.kind === 'feed' ? (
-            <div className="flex min-h-0 flex-1 flex-col">
-              <FeedPaneHeader
-                mode="full"
-                canRestore={canRestore(feedHost, 'full')}
-                onExpand={() => applyFeedPane(expandFeed(feedPane))}
-                onRestore={() => applyFeedPane(restoreFeed(feedPane))}
-                onClose={() => applyFeedPane(closeFeed(feedPane))}
+            /*
+              No title bar. It was a 56px strip carrying the word "Feed" and
+              an ✕ across the full width of a desktop, above a toolbar that
+              already says what you're looking at — two headers where one
+              does the job. The pane controls live in that toolbar now.
+            */
+            <div className="flex min-h-0 flex-1 flex-col bg-lc-black">
+              <FeedScreen
+                onOpenProfile={setExploredProfilePubkey}
+                onOpenThread={(id) => { setPaneArticle(null); setThreadNoteId(id); }}
+                onOpenArticle={(note) => { setThreadNoteId(null); setPaneArticle(note); }}
+                actions={(
+                  <FeedPaneActions
+                    mode="full"
+                    canRestore={canRestore(feedHost, 'full')}
+                    onExpand={() => applyFeedPane(expandFeed(feedPane))}
+                    onRestore={() => applyFeedPane(restoreFeed(feedPane))}
+                    onClose={() => applyFeedPane(closeFeed(feedPane))}
+                  />
+                )}
               />
-              <div className="min-h-0 flex-1">
-                <FeedScreen
-                  onOpenProfile={setExploredProfilePubkey}
-                  onOpenThread={(id) => { setPaneArticle(null); setThreadNoteId(id); }}
-                  onOpenArticle={(note) => { setThreadNoteId(null); setPaneArticle(note); }}
-                />
-              </div>
             </div>
           ) : (
             <EmptyState />
@@ -572,13 +578,6 @@ export default function AppShell() {
               className="flex h-full min-w-0 flex-1 flex-col overflow-hidden border-l border-lc-border bg-lc-black"
               data-testid="desktop-feed-pane"
             >
-              <FeedPaneHeader
-                mode={feedPane.mode}
-                canRestore={canRestore(feedHost, feedPane.mode)}
-                onExpand={() => applyFeedPane(expandFeed(feedPane))}
-                onRestore={() => applyFeedPane(restoreFeed(feedPane))}
-                onClose={() => applyFeedPane(closeFeed(feedPane))}
-              />
               <div className="min-h-0 flex-1">
                 {/*
                   No `onOpenThread` / `onOpenArticle` here on purpose: the
@@ -587,7 +586,19 @@ export default function AppShell() {
                   chat, and three panes don't fit — `main` collapsed and
                   dragging any one handle appeared to resize all of them.
                 */}
-                <FeedScreen embedded onOpenProfile={setExploredProfilePubkey} />
+                <FeedScreen
+                  embedded
+                  onOpenProfile={setExploredProfilePubkey}
+                  actions={(
+                    <FeedPaneActions
+                      mode={feedPane.mode}
+                      canRestore={canRestore(feedHost, feedPane.mode)}
+                      onExpand={() => applyFeedPane(expandFeed(feedPane))}
+                      onRestore={() => applyFeedPane(restoreFeed(feedPane))}
+                      onClose={() => applyFeedPane(closeFeed(feedPane))}
+                    />
+                  )}
+                />
               </div>
             </aside>
           </ResizablePane>
@@ -760,7 +771,16 @@ function ReaderPaneHeader({
   );
 }
 
-function FeedPaneHeader({
+/**
+ * Expand / restore / close for the feed pane.
+ *
+ * These used to sit in a header of their own, which meant the feed carried
+ * two stacked bars: one saying "Feed" with an ✕, and the feed's own toolbar
+ * saying Following/Global, the filters and search. The second one already
+ * answers "what am I looking at", so the first was a 56px strip of empty
+ * space — very obviously empty once the pane went full width.
+ */
+function FeedPaneActions({
   mode,
   canRestore: restorable,
   onExpand,
@@ -775,14 +795,9 @@ function FeedPaneHeader({
 }) {
   const { t } = useTranslation();
   return (
-    <div
-      // `h-14` matches the chat header, so the feed's title sits on the same
-      // line as the channel's rather than floating above it.
-      className="flex h-14 shrink-0 items-center gap-1 border-b border-lc-border px-4"
-      data-testid="feed-pane-header"
-    >
-      <span className="text-sm font-semibold text-lc-white">{t('social.feed')}</span>
-      <div className="ml-auto flex items-center gap-0.5">
+    <>
+      <div className="mx-1 h-5 w-px shrink-0 bg-lc-border" aria-hidden="true" />
+      <div className="flex items-center gap-0.5" data-testid="feed-pane-actions">
         {mode === 'split' ? (
           <PaneIconButton
             label={t('social.expandFeed')}
@@ -806,7 +821,7 @@ function FeedPaneHeader({
           <path d="M18 6 6 18" /><path d="m6 6 12 12" />
         </PaneIconButton>
       </div>
-    </div>
+    </>
   );
 }
 

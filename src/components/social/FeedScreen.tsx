@@ -38,6 +38,7 @@ export default function FeedScreen({
   onOpenArticle,
   mobile = false,
   embedded = false,
+  actions,
 }: {
   onOpenProfile?: (pubkey: string) => void;
   onOpenSettings?: () => void;
@@ -53,6 +54,12 @@ export default function FeedScreen({
   onOpenArticle?: (note: NostrEvent) => void;
   mobile?: boolean;
   embedded?: boolean;
+  /**
+   * Host controls (expand / restore / close) appended to the toolbar's right
+   * cluster. The desktop pane used to carry its own title bar for these; one
+   * toolbar that already says what you're looking at is enough.
+   */
+  actions?: React.ReactNode;
 }) {
   const { t } = useTranslation();
   const myPubkey = useMyPubkey();
@@ -299,6 +306,7 @@ export default function FeedScreen({
               </span>
             </button>
           )}
+          {actions}
         </div>
       </div>
 
