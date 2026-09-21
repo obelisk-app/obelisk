@@ -52,6 +52,8 @@ import MessageContent from '@/components/chat/MessageContent';
 import NostrProfile from '@/components/chat/NostrProfile';
 import FeedScreen from '@/components/social/FeedScreen';
 import NoteThread from '@/components/social/NoteThread';
+import ArticleReader from '@/components/social/ArticleCard';
+import type { Event as NostrEvent } from 'nostr-tools';
 import { nextFeedAction } from './feed-pane';
 import ProfilePopover from '@/components/chat/ProfilePopover';
 import { MentionText } from '@/components/chat/MentionText';
@@ -177,6 +179,12 @@ export default function AppShell() {
   // hides the list you were reading, which is exactly the context you need
   // while following a conversation.
   const [threadNoteId, setThreadNoteId] = useState<string | null>(null);
+  /**
+   * Long-form shares the thread pane rather than opening a third one. Both
+   * are "the thing you clicked, beside the list you clicked it from", and
+   * two panes of reading material side by side is one too many.
+   */
+  const [paneArticle, setPaneArticle] = useState<NostrEvent | null>(null);
   /**
    * The feed alongside a group, rather than instead of it.
    *
@@ -491,7 +499,8 @@ export default function AppShell() {
           ) : view.kind === 'feed' ? (
             <FeedScreen
               onOpenProfile={setExploredProfilePubkey}
-              onOpenThread={setThreadNoteId}
+              onOpenThread={(id) => { setPaneArticle(null); setThreadNoteId(id); }}
+              onOpenArticle={(note) => { setThreadNoteId(null); setPaneArticle(note); }}
             />
           ) : (
             <EmptyState />
@@ -506,20 +515,23 @@ export default function AppShell() {
               <FeedScreen
                 embedded
                 onOpenProfile={setExploredProfilePubkey}
-                onOpenThread={setThreadNoteId}
+                onOpenThread={(id) => { setPaneArticle(null); setThreadNoteId(id); }}
+                onOpenArticle={(note) => { setThreadNoteId(null); setPaneArticle(note); }}
               />
             </aside>
           </ResizablePane>
         )}
-        {threadNoteId && (
+        {(threadNoteId || paneArticle) && (
           <ResizablePane storageKey={THREAD_PANE_KEY} defaultWidth={520} min={360} max={900} side="left">
             <aside className="flex h-full min-w-0 flex-1 flex-col overflow-hidden border-l border-lc-border bg-lc-black" data-testid="desktop-thread-pane">
               <div className="flex shrink-0 items-center gap-2 border-b border-lc-border px-4 py-3">
-                <h2 className="text-sm font-semibold text-lc-white">{t('social.thread')}</h2>
+                <h2 className="text-sm font-semibold text-lc-white">
+                  {paneArticle ? t('social.article') : t('social.thread')}
+                </h2>
                 <button
                   type="button"
                   className="ml-auto flex h-8 w-8 items-center justify-center rounded-full text-lc-muted transition-colors hover:bg-white/10 hover:text-lc-white"
-                  onClick={() => setThreadNoteId(null)}
+                  onClick={() => { setThreadNoteId(null); setPaneArticle(null); }}
                   aria-label={t('common.close')}
                   data-testid="desktop-thread-close"
                 >
@@ -528,12 +540,16 @@ export default function AppShell() {
                   </svg>
                 </button>
               </div>
-              <div className="min-h-0 flex-1 overflow-y-auto">
-                <NoteThread
-                  noteId={threadNoteId}
-                  onOpenProfile={setExploredProfilePubkey}
-                  onOpenNote={setThreadNoteId}
-                />
+              <div className="min-h-0 flex-1 overflow-y-auto" data-testid={paneArticle ? 'desktop-article-pane' : 'desktop-thread-body'}>
+                {paneArticle ? (
+                  <ArticleReader note={paneArticle} onOpenProfile={setExploredProfilePubkey} />
+                ) : (
+                  <NoteThread
+                    noteId={threadNoteId!}
+                    onOpenProfile={setExploredProfilePubkey}
+                    onOpenNote={setThreadNoteId}
+                  />
+                )}
               </div>
             </aside>
           </ResizablePane>

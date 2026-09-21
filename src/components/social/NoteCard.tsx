@@ -14,7 +14,8 @@ import { memo, useEffect, useMemo, useState } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { nip19 } from 'nostr-tools';
 import { hexToNpub } from '@nostr-wot/data';
-import { nostrActions, useMyFollows, useMyPubkey, useUserMetadata } from '@/lib/nostr-bridge';
+import { useMyFollows, useMyPubkey } from '@/lib/nostr-bridge';
+import { useAuthor } from '@/lib/social/useAuthor';
 import { useTranslation } from '@/i18n/context';
 import { parentIdOf } from '@/lib/social/feed';
 import { parseImeta } from '@/lib/social/imeta';
@@ -111,7 +112,7 @@ export { NoteCardInner };
 function RepostCard(props: NoteCardProps) {
   const { t } = useTranslation();
   const { note } = props;
-  const reposter = useUserMetadata(note.pubkey);
+  const reposter = useAuthor(note.pubkey);
   const inner = useMemo(() => embeddedRepostEvent(note), [note]);
   const target = useMemo(() => repostTarget(note), [note]);
 
@@ -173,7 +174,7 @@ function PlainNoteCard({
 }: NoteCardProps) {
   const quoted = variant === 'quoted';
   const { t } = useTranslation();
-  const meta = useUserMetadata(note.pubkey);
+  const meta = useAuthor(note.pubkey);
   const myPubkey = useMyPubkey();
   const follows = useMyFollows();
   const relays = usePreferences().socialRelays;
@@ -188,10 +189,6 @@ function PlainNoteCard({
   const warning = useMemo(() => sensitiveInfo(note), [note]);
   const imeta = useMemo(() => parseImeta(note), [note]);
   const isThreadReply = parentIdOf(note) !== null;
-
-  useEffect(() => {
-    void nostrActions.ensureUserMetadata(note.pubkey).catch(() => {});
-  }, [note.pubkey]);
 
   useEffect(() => subscribeCounts(note.id, setCounts), [note.id]);
 

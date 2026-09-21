@@ -21,6 +21,14 @@ import { encodeEventRef, mentionedPubkeys, referencedEvents } from './nip27';
 import { socialRelays } from './pool';
 import { contentWarningTags } from './sensitive';
 
+/**
+ * NIP-89 client attribution. Every event we publish says who made it, which
+ * is what lets other clients show "via Obelisk" and gives readers a route
+ * back to the app. One tag, on everything we sign — a reaction published
+ * without it is just as anonymous as a note.
+ */
+export const CLIENT_TAG: string[] = ['client', 'Obelisk'];
+
 export const KIND_REPOST = 6;
 export const KIND_REACTION = 7;
 export const KIND_DELETE = 5;
@@ -38,7 +46,11 @@ async function publish(
   template: { kind: number; content: string; tags: string[][] },
 ): Promise<NostrEvent> {
   const bridge = await getBridge();
-  return bridge.publishEvent(template, {
+  // Appended centrally so a new publish helper cannot forget it.
+  const tags = template.tags.some((tag) => tag[0] === 'client')
+    ? template.tags
+    : [...template.tags, CLIENT_TAG];
+  return bridge.publishEvent({ ...template, tags }, {
     extraRelays: socialRelays(),
     mode: 'replace',
   });

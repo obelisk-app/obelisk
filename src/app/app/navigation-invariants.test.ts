@@ -58,9 +58,12 @@ describe('desktop navigation invariants', () => {
     const shell = read('DesktopShell.tsx');
     expect(shell).toContain('desktop-thread-pane');
     expect(shell).toContain('THREAD_PANE_KEY');
-    // The feed hands thread opening to the shell rather than falling back to
-    // its own modal.
-    expect(shell).toContain('onOpenThread={setThreadNoteId}');
+    // The feed hands thread AND article opening to the shell rather than
+    // falling back to its own modal.
+    expect(shell).toContain('onOpenThread={');
+    expect(shell).toContain('onOpenArticle={');
+    // One pane holds one thing: opening an article clears the thread.
+    expect(shell).toContain('setThreadNoteId(null); setPaneArticle(note);');
   });
 
   it('honours ?s=feed so a shared link can land on the feed', () => {

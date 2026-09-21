@@ -38,6 +38,7 @@ import {
   type FeedCacheId,
 } from './cache';
 import { ensureCounts } from './engagement';
+import { ensureSocialProfiles } from './profiles';
 import { kindsForFilter, type ContentFilter } from './kinds';
 import { subscribeSocial } from './pool';
 import { dedupeReposts } from './repost';
@@ -220,6 +221,14 @@ export function useFeed(
   useEffect(() => {
     if (notes.length === 0) return;
     void ensureCounts(notes.slice(0, 40).map((note) => note.id));
+  }, [notes]);
+
+  // Author names, in ONE query for the whole page. Resolving per card meant
+  // ~50 round trips for data that fits in a single `authors` filter, and the
+  // cards that lost the race just showed a truncated npub.
+  useEffect(() => {
+    if (notes.length === 0) return;
+    void ensureSocialProfiles(notes.map((note) => note.pubkey));
   }, [notes]);
 
   const loadMore = useCallback(() => {

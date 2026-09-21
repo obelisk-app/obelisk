@@ -39,6 +39,7 @@ export default function NoteComposer({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sensitive, setSensitive] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -66,22 +67,34 @@ export default function NoteComposer({
    */
   const measure = (file: File): Promise<{ width: number; height: number } | null> => (
     new Promise((resolve) => {
-      if (!file.type.startsWith('image/')) return resolve(null);
-      const url = URL.createObjectURL(file);
+      if (!file.type.startsWith('image/') || typeof URL?.createObjectURL !== 'function') {
+        return resolve(null);
+      }
+      let settled = false;
+      let url: string;
+      try {
+        url = URL.createObjectURL(file);
+      } catch {
+        return resolve(null);
+      }
+      const finish = (value: { width: number; height: number } | null) => {
+        if (settled) return;
+        settled = true;
+        try { URL.revokeObjectURL(url); } catch { /* already revoked */ }
+        resolve(value);
+      };
+      // Dimensions are an optimisation for `imeta`, not a precondition for
+      // posting: an image that never fires load or error must not strand the
+      // upload behind a promise that never settles.
+      const timer = setTimeout(() => finish(null), 3000);
       const img = new Image();
-      img.onload = () => {
-        resolve({ width: img.naturalWidth, height: img.naturalHeight });
-        URL.revokeObjectURL(url);
-      };
-      img.onerror = () => {
-        resolve(null);
-        URL.revokeObjectURL(url);
-      };
+      img.onload = () => { clearTimeout(timer); finish({ width: img.naturalWidth, height: img.naturalHeight }); };
+      img.onerror = () => { clearTimeout(timer); finish(null); };
       img.src = url;
     })
   );
 
-  const uploadFiles = async (files: FileList | null) => {
+  const uploadFiles = async (files: FileList | File[] | null) => {
     if (!files?.length || busy) return;
     setBusy(true);
     setError(null);
@@ -107,6 +120,45 @@ export default function NoteComposer({
       setBusy(false);
       if (fileRef.current) fileRef.current.value = '';
     }
+  };
+
+  /**
+   * Pasting a screenshot is how most images actually reach a composer, and
+   * the file picker was the only way in. Drag-and-drop gets the same path.
+   */
+  const filesFromDataTransfer = (data: DataTransfer | null): File[] => {
+    if (!data) return [];
+    const files: File[] = [];
+    // `items` carries pasted screenshots (which have no entry in `files` on
+    // some browsers); `files` carries dragged ones. Union, then de-dupe.
+    for (const item of Array.from(data.items ?? [])) {
+      if (item.kind !== 'file') continue;
+      const file = item.getAsFile();
+      if (file && file.type.startsWith('image/')) files.push(file);
+    }
+    for (const file of Array.from(data.files ?? [])) {
+      if (file.type.startsWith('image/') && !files.some((f) => f.name === file.name && f.size === file.size)) {
+        files.push(file);
+      }
+    }
+    return files;
+  };
+
+  const onPaste = (event: React.ClipboardEvent) => {
+    const files = filesFromDataTransfer(event.clipboardData);
+    if (files.length === 0) return;
+    // Only swallow the event when we actually took an image — pasting text
+    // alongside an image must still land in the textarea.
+    event.preventDefault();
+    void uploadFiles(files);
+  };
+
+  const onDrop = (event: React.DragEvent) => {
+    const files = filesFromDataTransfer(event.dataTransfer);
+    if (files.length === 0) return;
+    event.preventDefault();
+    setDragging(false);
+    void uploadFiles(files);
   };
 
   const submit = async (event: React.FormEvent) => {
@@ -146,8 +198,14 @@ export default function NoteComposer({
 
   return (
     <form
-      className="rounded-xl border border-lc-border bg-lc-dark p-3"
+      className={`rounded-xl border bg-lc-dark p-3 transition-colors ${
+        dragging ? 'border-lc-green' : 'border-lc-border'
+      }`}
       onSubmit={(event) => void submit(event)}
+      onPaste={onPaste}
+      onDrop={onDrop}
+      onDragOver={(event) => { if (event.dataTransfer?.types?.includes('Files')) { event.preventDefault(); setDragging(true); } }}
+      onDragLeave={() => setDragging(false)}
       data-testid="note-composer"
     >
       <div className="mb-2 flex items-center gap-1">

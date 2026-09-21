@@ -21,6 +21,7 @@ import UserAvatar from '@/components/UserAvatar';
 import FeedList from './FeedList';
 import NoteComposer, { type ComposerMode } from './NoteComposer';
 import NoteThread from './NoteThread';
+import ArticleReader from './ArticleCard';
 import { ComposeButton, RefreshButton } from './FeedControls';
 
 export type FeedTab = 'following' | 'global';
@@ -29,6 +30,7 @@ export default function FeedScreen({
   onOpenProfile,
   onOpenSettings,
   onOpenThread,
+  onOpenArticle,
   mobile = false,
   embedded = false,
 }: {
@@ -39,6 +41,11 @@ export default function FeedScreen({
    * Without it the feed falls back to its own modal.
    */
   onOpenThread?: (noteId: string) => void;
+  /**
+   * Same handoff as `onOpenThread`, for long-form. The desktop shell reuses
+   * its side pane; without it the feed falls back to its own modal.
+   */
+  onOpenArticle?: (note: NostrEvent) => void;
   mobile?: boolean;
   embedded?: boolean;
 }) {
@@ -51,6 +58,7 @@ export default function FeedScreen({
   const [filter, setFilter] = useState<ContentFilter>('all');
   const [composer, setComposer] = useState<ComposerMode | null>(null);
   const [openNoteId, setOpenNoteId] = useState<string | null>(null);
+  const [openArticle, setOpenArticle] = useState<NostrEvent | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const composeRowRef = useRef<HTMLDivElement>(null);
   // The inline compose row scrolls away within a screen or two, and with it
@@ -86,6 +94,14 @@ export default function FeedScreen({
     if (onOpenThread) onOpenThread(noteId);
     else setOpenNoteId(noteId);
   }, [onOpenThread]);
+
+  // `useCallback` is load-bearing here, not hygiene: NoteCard's memo
+  // comparator checks these by reference, so an inline arrow re-renders every
+  // card in the feed on each parent render.
+  const handleOpenArticle = useCallback((note: NostrEvent) => {
+    if (onOpenArticle) onOpenArticle(note);
+    else setOpenArticle(note);
+  }, [onOpenArticle]);
 
   const startReply = useCallback((note: NostrEvent) => setComposer({ kind: 'reply', parent: note }), []);
   const startQuote = useCallback((note: NostrEvent) => setComposer({ kind: 'quote', target: note }), []);
@@ -224,6 +240,7 @@ export default function FeedScreen({
           onOpenNote={openThread}
           onReply={startReply}
           onQuote={startQuote}
+          onOpenArticle={handleOpenArticle}
         />
       </div>
 
@@ -260,6 +277,16 @@ export default function FeedScreen({
             onPublished={() => { setComposer(null); state.refresh(); }}
             onCancel={() => setComposer(null)}
           />
+        </ModalShell>
+      )}
+
+      {openArticle && (
+        <ModalShell
+          onClose={() => setOpenArticle(null)}
+          testId="article-modal"
+          panelClassName="w-full max-w-2xl mx-4 rounded-xl bg-lc-dark border border-lc-border shadow-xl max-h-[85vh] overflow-y-auto"
+        >
+          <ArticleReader note={openArticle} onOpenProfile={onOpenProfile} />
         </ModalShell>
       )}
 

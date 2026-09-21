@@ -13,7 +13,7 @@
 
 import { useEffect, useMemo } from 'react';
 import { hexToNpub } from '@nostr-wot/data';
-import { nostrActions, useUserMetadata } from '@/lib/nostr-bridge';
+import { useAuthor } from '@/lib/social/useAuthor';
 import { tokenizeContent, type NostrRef } from '@/lib/social/nip27';
 import { linkifyHashtags } from '@/lib/profile-feed';
 import MessageContent from '@/components/chat/MessageContent';
@@ -101,11 +101,7 @@ function NostrRefChip({
 }
 
 function MentionChip({ pubkey, onOpen }: { pubkey: string; onOpen?: (pubkey: string) => void }) {
-  const meta = useUserMetadata(pubkey);
-
-  useEffect(() => {
-    void nostrActions.ensureUserMetadata(pubkey).catch(() => {});
-  }, [pubkey]);
+  const meta = useAuthor(pubkey);
 
   const label = meta?.displayName || meta?.name || shortNpub(pubkey);
 

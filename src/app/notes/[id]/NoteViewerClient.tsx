@@ -13,6 +13,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import type { Event as NostrEvent } from 'nostr-tools';
+import { nip19 } from 'nostr-tools';
 import { fetchNote } from '@nostr-wot/data';
 import { initSocial, querySocial } from '@/lib/social/pool';
 import { DEFAULT_SOCIAL_RELAYS } from '@/lib/social/relays';
@@ -120,7 +121,18 @@ export default function NoteViewerClient({
   return (
     <div data-testid="note-viewer">
       {isArticle ? (
-        <ArticleReader note={note} />
+        <ArticleReader
+          note={note}
+          // The reader's author button was a dead click here: this page has no
+          // in-app profile pane, so send them to the public profile viewer.
+          onOpenProfile={(pubkey) => {
+            try {
+              window.location.assign(`/p/${nip19.npubEncode(pubkey)}`);
+            } catch {
+              window.location.assign(`/p/${pubkey}`);
+            }
+          }}
+        />
       ) : (
         <div className="border-b border-lc-border">
           <NoteCard note={note} />

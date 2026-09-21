@@ -280,6 +280,40 @@ describe('FeedScreen', () => {
     delete (globalThis as Record<string, unknown>).IntersectionObserver;
   });
 
+  it('opens an article when its card is clicked', async () => {
+    // The regression that prompted this: `onOpenArticle` was threaded all
+    // the way through NoteCard but FeedList never declared or forwarded it,
+    // so every article card was a focusable button whose handler no-oped.
+    socialMocks.loadFollowingFeed.mockResolvedValue([{
+      ...note('a', '## Body text'),
+      kind: 30023,
+      tags: [['d', 'post'], ['title', 'On Relays'], ['summary', 'Why they matter.']],
+    }]);
+    renderFeed();
+    await waitFor(() => expect(screen.getByTestId('note-article')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId('note-article'));
+    await waitFor(() => expect(screen.getByTestId('article-modal')).toBeInTheDocument());
+    expect(screen.getByTestId('article-reader')).toHaveTextContent('On Relays');
+  });
+
+  it('hands the article to the host when one is supplied', async () => {
+    // The desktop shell reuses its side pane rather than stacking a modal
+    // over the feed.
+    const onOpenArticle = vi.fn();
+    socialMocks.loadFollowingFeed.mockResolvedValue([{
+      ...note('a', 'body'),
+      kind: 30023,
+      tags: [['d', 'post'], ['title', 'On Relays']],
+    }]);
+    renderFeed({ onOpenArticle });
+    await waitFor(() => expect(screen.getByTestId('note-article')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId('note-article'));
+    expect(onOpenArticle).toHaveBeenCalledWith(expect.objectContaining({ kind: 30023 }));
+    expect(screen.queryByTestId('article-modal')).not.toBeInTheDocument();
+  });
+
   it('exposes refresh and relay settings', async () => {
     const onOpenSettings = vi.fn();
     socialMocks.loadFollowingFeed.mockResolvedValue([note('a', 'first')]);

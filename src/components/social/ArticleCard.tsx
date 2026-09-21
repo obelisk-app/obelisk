@@ -16,7 +16,7 @@
 
 import { useMemo } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
-import { useUserMetadata } from '@/lib/nostr-bridge';
+import { useAuthor } from '@/lib/social/useAuthor';
 import { useTranslation } from '@/i18n/context';
 import UserAvatar from '@/components/UserAvatar';
 import MessageContent from '@/components/chat/MessageContent';
@@ -143,7 +143,7 @@ export default function ArticleReader({
   onOpenProfile?: (pubkey: string) => void;
 }) {
   const { t } = useTranslation();
-  const author = useUserMetadata(note.pubkey);
+  const author = useAuthor(note.pubkey);
   const meta = useMemo(() => articleMeta(note), [note]);
   const minutes = useMemo(() => readingMinutes(note.content), [note.content]);
   const name = author?.displayName || author?.name || note.pubkey.slice(0, 10);

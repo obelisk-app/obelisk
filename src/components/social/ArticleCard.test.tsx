@@ -6,7 +6,7 @@ import { LocaleProvider } from '@/i18n/context';
 vi.mock('@/lib/nostr-bridge', () => ({
   useCurrentRelayUrl: () => 'wss://relay.example',
   useUserMetadata: () => ({ displayName: 'Alice', picture: null }),
-  nostrActions: { ensureUserMetadata: vi.fn() },
+  nostrActions: { ensureUserMetadata: vi.fn().mockResolvedValue(undefined) },
 }));
 
 vi.mock('@/components/chat/MessageContent', () => ({

@@ -35,6 +35,7 @@ export default function FeedList({
   onReply,
   onQuote,
   onZap,
+  onOpenArticle,
   emptyLabel,
   header,
   /** Scroll container to observe. Defaults to the nearest scrollable ancestor. */
@@ -46,6 +47,11 @@ export default function FeedList({
   onReply?: (note: NostrEvent) => void;
   onQuote?: (note: NostrEvent) => void;
   onZap?: (note: NostrEvent) => void;
+  /**
+   * Long-form cards are real focusable buttons, so omitting this made every
+   * article click a silent no-op — the reason articles "didn't work".
+   */
+  onOpenArticle?: (note: NostrEvent) => void;
   emptyLabel?: string;
   header?: React.ReactNode;
   scrollRef?: React.RefObject<HTMLElement | null>;
@@ -150,6 +156,7 @@ export default function FeedList({
             onReply={onReply}
             onQuote={onQuote}
             onZap={onZap}
+            onOpenArticle={onOpenArticle}
           />
         ))}
       </div>

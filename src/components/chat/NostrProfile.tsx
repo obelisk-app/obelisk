@@ -33,6 +33,7 @@ import FeedList from '@/components/social/FeedList';
 import { ComposeButton, RefreshButton } from '@/components/social/FeedControls';
 import NoteComposer, { type ComposerMode } from '@/components/social/NoteComposer';
 import NoteThread from '@/components/social/NoteThread';
+import ArticleReader from '@/components/social/ArticleCard';
 import ModalShell from '@/components/ModalShell';
 import { useModerationStore } from '@/store/moderation';
 import { useToastStore } from '@/store/toast';
@@ -67,6 +68,7 @@ export default function NostrProfile({
   const [composer, setComposer] = useState<ComposerMode | null>(null);
   const [expandedMedia, setExpandedMedia] = useState<string | null>(null);
   const [openNoteId, setOpenNoteId] = useState<string | null>(null);
+  const [openArticle, setOpenArticle] = useState<NostrEvent | null>(null);
 
   // No `key=` remount any more: the feed hook keys its own cache, so
   // switching profiles or relay sets reuses whatever is already cached
@@ -97,6 +99,8 @@ export default function NostrProfile({
 
 
   // Stable handler identities keep the memoised NoteCards from re-rendering.
+  // Stable identity: NoteCard's memo compares handlers by reference.
+  const handleOpenArticle = useCallback((note: NostrEvent) => setOpenArticle(note), []);
   const startReply = useCallback((note: NostrEvent) => setComposer({ kind: 'reply', parent: note }), []);
   const startQuote = useCallback((note: NostrEvent) => setComposer({ kind: 'quote', target: note }), []);
 
@@ -306,6 +310,7 @@ export default function NostrProfile({
             onOpenNote={setOpenNoteId}
             onReply={startReply}
             onQuote={startQuote}
+            onOpenArticle={handleOpenArticle}
           />
         )}
       </div>
@@ -318,6 +323,16 @@ export default function NostrProfile({
             onPublished={() => { setComposer(null); state.refresh(); }}
             onCancel={() => setComposer(null)}
           />
+        </ModalShell>
+      )}
+
+      {openArticle && (
+        <ModalShell
+          onClose={() => setOpenArticle(null)}
+          testId="profile-article-modal"
+          panelClassName="w-full max-w-2xl mx-4 rounded-xl bg-lc-dark border border-lc-border shadow-xl max-h-[85vh] overflow-y-auto"
+        >
+          <ArticleReader note={openArticle} onOpenProfile={onOpenProfile} />
         </ModalShell>
       )}
 

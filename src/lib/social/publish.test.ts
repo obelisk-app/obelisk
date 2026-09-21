@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Event as NostrEvent } from 'nostr-tools';
 import {
+  CLIENT_TAG,
   buildNoteTags,
   buildReactionTags,
   buildReplyTags,
@@ -131,6 +132,12 @@ describe('imetaTag (NIP-92)', () => {
   it('omits dim unless both dimensions are known', () => {
     const tag = imetaTag({ url: 'https://cdn.example/a.jpg', width: 800, height: null });
     expect(tag.some((part) => part.startsWith('dim '))).toBe(false);
+  });
+});
+
+describe('client attribution (NIP-89)', () => {
+  it('is a plain client tag naming the app', () => {
+    expect(CLIENT_TAG).toEqual(['client', 'Obelisk']);
   });
 });
 
