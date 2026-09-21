@@ -48,8 +48,13 @@ describe('desktop navigation invariants', () => {
     const shell = read('DesktopShell.tsx');
     expect(shell).not.toContain('chat-pane-tab-');
     expect(shell).toContain('desktop-feed-pane');
-    expect(shell).toContain('const cycleFeed');
-    expect(shell).toContain('onPickFeed={cycleFeed}');
+    // The rail button is a plain toggle; size lives on the pane itself,
+    // because three states behind one control meant you had to press it to
+    // find out what it would do.
+    expect(shell).toContain('onPickFeed={onToggleFeed}');
+    expect(shell).not.toContain('cycleFeed');
+    expect(shell).toContain('feed-pane-expand');
+    expect(shell).toContain('feed-pane-close');
   });
 
   it('threads open in a side pane on desktop, not a modal', () => {

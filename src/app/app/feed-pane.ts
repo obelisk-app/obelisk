@@ -1,51 +1,72 @@
 /**
- * What the rail's Feed button does, depending on where you already are.
+ * Where the feed sits relative to whatever else is on screen.
  *
- * Extracted from `DesktopShell` because it is a small state machine with
- * three inputs and four outcomes, and getting it wrong is the difference
- * between "one button covers peek / focus / dismiss" and "the button
- * sometimes does nothing".
+ * This replaced a single rail button that cycled off → split → full → off.
+ * That was three states behind one control with nothing on screen saying
+ * which you were in or what the next press would do — you had to press it and
+ * find out. The fix isn't a cleverer cycle, it's splitting the two questions
+ * apart and giving each a visible control:
  *
- * The shape it replaces: Chat and Feed were tabs inside the group view, which
- * made them mutually exclusive — you lost sight of a live room to glance at
- * the feed. Splitting first means the conversation stays on screen.
+ *   is the feed open?   → the rail button, a plain toggle
+ *   how big is it?      → ⤢ / ⤡ in the feed pane's own header
+ *
+ * Kept as a pure module with its own tests because the previous version's
+ * bug was in exactly this logic, inline in a 4000-line shell.
  */
 
-export type FeedView =
+export type FeedPaneMode = 'split' | 'full';
+
+export type FeedHost =
   | { kind: 'group'; groupId: string }
   | { kind: 'dm'; peer: string | null }
   | { kind: 'feed' }
   | { kind: 'empty' };
 
-export type FeedAction =
-  /** Show the feed beside the group you're in. */
-  | { kind: 'split' }
-  /** Take the whole surface. */
-  | { kind: 'full' }
-  /** Put it away and go back to `view`. */
-  | { kind: 'close'; view: FeedView };
-
-export function nextFeedAction(
-  view: FeedView,
-  splitFeed: boolean,
-  lastGroupId: string | null,
-): FeedAction {
-  // Already full screen: the next press puts it away. Returning to the room
-  // we came from beats dropping the user on an empty pane.
-  if (view.kind === 'feed') {
-    return {
-      kind: 'close',
-      view: lastGroupId ? { kind: 'group', groupId: lastGroupId } : { kind: 'empty' },
-    };
-  }
-
-  if (view.kind === 'group') {
-    // First press splits so the room stays visible; second press commits to
-    // the feed.
-    return splitFeed ? { kind: 'full' } : { kind: 'split' };
-  }
-
-  // DMs or an empty pane: there is nothing worth splitting against, so skip
-  // straight to full rather than showing a half-width feed beside nothing.
-  return { kind: 'full' };
+/**
+ * Splitting is only meaningful against a room. Beside a DM or an empty pane
+ * a half-width feed is just a narrow feed, so those open full.
+ */
+export function canSplitAgainst(host: FeedHost): boolean {
+  return host.kind === 'group';
 }
+
+/** The mode the feed should open in, given where the user already is. */
+export function openModeFor(host: FeedHost): FeedPaneMode {
+  return canSplitAgainst(host) ? 'split' : 'full';
+}
+
+/**
+ * Whether the pane should offer "restore to split".
+ *
+ * Only when there's something to sit beside — offering it against an empty
+ * pane would produce a half-width feed next to nothing, which is the state
+ * the old cycle could strand you in.
+ */
+export function canRestore(host: FeedHost, mode: FeedPaneMode): boolean {
+  return mode === 'full' && canSplitAgainst(host);
+}
+
+export type FeedPaneState = {
+  open: boolean;
+  mode: FeedPaneMode;
+};
+
+/** The rail button: open it, or put it away. Never a third thing. */
+export function toggleFeed(state: FeedPaneState, host: FeedHost): FeedPaneState {
+  if (state.open) return { ...state, open: false };
+  return { open: true, mode: openModeFor(host) };
+}
+
+export function expandFeed(state: FeedPaneState): FeedPaneState {
+  return { ...state, open: true, mode: 'full' };
+}
+
+export function restoreFeed(state: FeedPaneState): FeedPaneState {
+  return { ...state, open: true, mode: 'split' };
+}
+
+export function closeFeed(state: FeedPaneState): FeedPaneState {
+  return { ...state, open: false };
+}
+
+export const INITIAL_FEED_PANE: FeedPaneState = { open: false, mode: 'split' };

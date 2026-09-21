@@ -666,5 +666,7 @@
   "social.filter.media": "Media",
   "social.andOthers": "and {n} others",
   "social.sort.recent": "Recent",
-  "social.sort.top": "Top"
+  "social.sort.top": "Top",
+  "social.expandFeed": "Expand feed",
+  "social.restoreFeed": "Show beside chat"
 }

@@ -54,7 +54,17 @@ import FeedScreen from '@/components/social/FeedScreen';
 import NoteThread from '@/components/social/NoteThread';
 import ArticleReader from '@/components/social/ArticleCard';
 import type { Event as NostrEvent } from 'nostr-tools';
-import { nextFeedAction } from './feed-pane';
+import {
+  INITIAL_FEED_PANE,
+  canRestore,
+  closeFeed,
+  expandFeed,
+  restoreFeed,
+  toggleFeed,
+  type FeedHost,
+  type FeedPaneMode,
+  type FeedPaneState,
+} from './feed-pane';
 import ProfilePopover from '@/components/chat/ProfilePopover';
 import { MentionText } from '@/components/chat/MentionText';
 import MentionNavigator from '@/components/chat/MentionNavigator';
@@ -189,12 +199,12 @@ export default function AppShell() {
    * The feed alongside a group, rather than instead of it.
    *
    * Reading the wider network while a room is live is a normal thing to want,
-   * and the old in-chat Chat/Feed tabs made it exclusive — you lost sight of
-   * the conversation to glance at the feed. The rail button now cycles
-   * off → split → full → off, so one control covers "peek", "focus" and
-   * "put it away" without adding chrome to the group view.
+   * and the old in-chat Chat/Feed tabs made it exclusive. The rail button is
+   * a plain open/close toggle; size is the pane's own ⤢ / ⤡, because three
+   * states behind one control meant you had to press it to find out what it
+   * would do. See `feed-pane.ts`.
    */
-  const [splitFeed, setSplitFeed] = useState(false);
+  const [feedPane, setFeedPane] = useState<FeedPaneState>(INITIAL_FEED_PANE);
   // Remembered so leaving the full-screen feed returns to the room you were
   // in rather than an empty pane. Written in an effect rather than during
   // render — a ref mutation in the render body is not safe to replay.
@@ -362,6 +372,9 @@ export default function AppShell() {
     );
   }
 
+  const feedOpen = feedPane.open;
+  const splitFeed = feedOpen && feedPane.mode === 'split' && view.kind === 'group';
+
   const railMode: { kind: 'dm' } | { kind: 'feed' } | { kind: 'relay'; url: string } =
     view.kind === 'dm'
       ? { kind: 'dm' }
@@ -369,15 +382,33 @@ export default function AppShell() {
         ? { kind: 'feed' }
         : { kind: 'relay', url: relay };
 
-  const cycleFeed = () => {
-    closeDrawer();
-    const action = nextFeedAction(view, splitFeed, lastGroupId.current);
-    if (action.kind === 'split') {
-      setSplitFeed(true);
+  /**
+   * What the feed is sitting beside. While the feed is full-screen the host
+   * is the room we came from, so collapsing returns there rather than to an
+   * empty pane.
+   */
+  const feedHost: FeedHost = view.kind === 'feed'
+    ? (lastGroupId.current ? { kind: 'group', groupId: lastGroupId.current } : { kind: 'empty' })
+    : view;
+
+  /** Pane state is the source of truth; `view` is synced from it. */
+  const applyFeedPane = (next: FeedPaneState) => {
+    setFeedPane(next);
+    if (next.open && next.mode === 'full') {
+      setView({ kind: 'feed' });
       return;
     }
-    setSplitFeed(false);
-    setView(action.kind === 'full' ? { kind: 'feed' } : action.view);
+    // Split or closed: the feed must not be the main view any more.
+    if (view.kind === 'feed') {
+      setView(feedHost.kind === 'group'
+        ? { kind: 'group', groupId: feedHost.groupId }
+        : { kind: 'empty' });
+    }
+  };
+
+  const onToggleFeed = () => {
+    closeDrawer();
+    applyFeedPane(toggleFeed(feedPane, feedHost));
   };
 
   const closeDrawer = () => setSidebarOpen(false);
@@ -442,7 +473,7 @@ export default function AppShell() {
           <ServerRail
             mode={railMode}
             onPickDM={() => { setView({ kind: 'dm', peer: null }); closeDrawer(); }}
-            onPickFeed={cycleFeed}
+            onPickFeed={onToggleFeed}
             onPickRelay={async (url) => {
               setView({ kind: 'empty' });
               try {
@@ -497,27 +528,47 @@ export default function AppShell() {
               <DMPanel peer={view.peer} onPickPeer={(p) => setView({ kind: 'dm', peer: p })} />
             </DMOptInBoundary>
           ) : view.kind === 'feed' ? (
-            <FeedScreen
-              onOpenProfile={setExploredProfilePubkey}
-              onOpenThread={(id) => { setPaneArticle(null); setThreadNoteId(id); }}
-              onOpenArticle={(note) => { setThreadNoteId(null); setPaneArticle(note); }}
-            />
+            <div className="flex min-h-0 flex-1 flex-col">
+              <FeedPaneHeader
+                mode="full"
+                canRestore={canRestore(feedHost, 'full')}
+                onExpand={() => applyFeedPane(expandFeed(feedPane))}
+                onRestore={() => applyFeedPane(restoreFeed(feedPane))}
+                onClose={() => applyFeedPane(closeFeed(feedPane))}
+              />
+              <div className="min-h-0 flex-1">
+                <FeedScreen
+                  onOpenProfile={setExploredProfilePubkey}
+                  onOpenThread={(id) => { setPaneArticle(null); setThreadNoteId(id); }}
+                  onOpenArticle={(note) => { setThreadNoteId(null); setPaneArticle(note); }}
+                />
+              </div>
+            </div>
           ) : (
             <EmptyState />
           )}
         </main>
-        {view.kind === 'group' && splitFeed && (
+        {splitFeed && (
           <ResizablePane storageKey={FEED_PANE_KEY} defaultWidth={520} min={360} max={900} side="left">
             <aside
               className="flex h-full min-w-0 flex-1 flex-col overflow-hidden border-l border-lc-border bg-lc-black"
               data-testid="desktop-feed-pane"
             >
-              <FeedScreen
-                embedded
-                onOpenProfile={setExploredProfilePubkey}
-                onOpenThread={(id) => { setPaneArticle(null); setThreadNoteId(id); }}
-                onOpenArticle={(note) => { setThreadNoteId(null); setPaneArticle(note); }}
+              <FeedPaneHeader
+                mode={feedPane.mode}
+                canRestore={canRestore(feedHost, feedPane.mode)}
+                onExpand={() => applyFeedPane(expandFeed(feedPane))}
+                onRestore={() => applyFeedPane(restoreFeed(feedPane))}
+                onClose={() => applyFeedPane(closeFeed(feedPane))}
               />
+              <div className="min-h-0 flex-1">
+                <FeedScreen
+                  embedded
+                  onOpenProfile={setExploredProfilePubkey}
+                  onOpenThread={(id) => { setPaneArticle(null); setThreadNoteId(id); }}
+                  onOpenArticle={(note) => { setThreadNoteId(null); setPaneArticle(note); }}
+                />
+              </div>
             </aside>
           </ResizablePane>
         )}
@@ -601,6 +652,88 @@ function RehydratingScreen() {
         <div className="text-sm text-lc-muted">{t('common.reconnecting')}</div>
       </div>
     </div>
+  );
+}
+
+/**
+ * The feed pane's own controls.
+ *
+ * These exist because the rail button used to carry all of it: one control
+ * cycling off → split → full → off, with nothing on screen indicating the
+ * current state or the next one. Size belongs to the thing being sized.
+ */
+function FeedPaneHeader({
+  mode,
+  canRestore: restorable,
+  onExpand,
+  onRestore,
+  onClose,
+}: {
+  mode: FeedPaneMode;
+  canRestore: boolean;
+  onExpand: () => void;
+  onRestore: () => void;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div
+      className="flex shrink-0 items-center gap-1 border-b border-lc-border px-3 py-2"
+      data-testid="feed-pane-header"
+    >
+      <span className="text-xs font-semibold text-lc-white">{t('social.feed')}</span>
+      <div className="ml-auto flex items-center gap-0.5">
+        {mode === 'split' ? (
+          <PaneIconButton
+            label={t('social.expandFeed')}
+            testId="feed-pane-expand"
+            onClick={onExpand}
+          >
+            <path d="M15 3h6v6" /><path d="M9 21H3v-6" />
+            <path d="M21 3l-7 7" /><path d="M3 21l7-7" />
+          </PaneIconButton>
+        ) : restorable ? (
+          <PaneIconButton
+            label={t('social.restoreFeed')}
+            testId="feed-pane-restore"
+            onClick={onRestore}
+          >
+            <path d="M4 14h6v6" /><path d="M20 10h-6V4" />
+            <path d="M14 10l7-7" /><path d="M3 21l7-7" />
+          </PaneIconButton>
+        ) : null}
+        <PaneIconButton label={t('common.close')} testId="feed-pane-close" onClick={onClose}>
+          <path d="M18 6 6 18" /><path d="m6 6 12 12" />
+        </PaneIconButton>
+      </div>
+    </div>
+  );
+}
+
+function PaneIconButton({
+  label,
+  testId,
+  onClick,
+  children,
+}: {
+  label: string;
+  testId: string;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      className="flex h-8 w-8 items-center justify-center rounded-full text-lc-muted transition-colors hover:bg-white/10 hover:text-lc-white"
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      data-testid={testId}
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        {children}
+      </svg>
+    </button>
   );
 }
 
