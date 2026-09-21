@@ -57,7 +57,7 @@ export default function FeedList({
   scrollRef?: React.RefObject<HTMLElement | null>;
 }) {
   const { t } = useTranslation();
-  const { notes, loading, loadingMore, error, exhausted, pendingCount } = state;
+  const { notes, loading, loadingMore, error, exhausted, pendingCount, repostersByTarget } = state;
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [atTop, setAtTop] = useState(true);
 
@@ -157,6 +157,7 @@ export default function FeedList({
             onQuote={onQuote}
             onZap={onZap}
             onOpenArticle={onOpenArticle}
+            reposters={repostersByTarget.get(note.id)}
           />
         ))}
       </div>

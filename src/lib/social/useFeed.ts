@@ -41,7 +41,7 @@ import { ensureCounts } from './engagement';
 import { ensureSocialProfiles } from './profiles';
 import { kindsForFilter, type ContentFilter } from './kinds';
 import { subscribeSocial } from './pool';
-import { dedupeReposts } from './repost';
+import { groupReposts } from './repost';
 
 export type FeedSource =
   | { kind: 'following'; authors: readonly string[] }
@@ -50,6 +50,8 @@ export type FeedSource =
 
 export type FeedState = {
   notes: NostrEvent[];
+  /** Target note id → reposter pubkeys. Empty for notes nobody reposted. */
+  repostersByTarget: Map<string, string[]>;
   loading: boolean;
   loadingMore: boolean;
   error: boolean;
@@ -164,7 +166,7 @@ export function useFeed(
       .then((page) => {
         if (cancelled) return;
         setNotes((current) => {
-          const merged = dedupeReposts(mergeNotes(current, page));
+          const merged = groupReposts(mergeNotes(current, page)).notes;
           writeFeedCache(relayList, cacheId, merged);
           return merged;
         });
@@ -239,7 +241,7 @@ export function useFeed(
     fetchPage(source, relayList, until, filter)
       .then((page) => {
         setNotes((current) => {
-          const merged = dedupeReposts(mergeNotes(current, page));
+          const merged = groupReposts(mergeNotes(current, page)).notes;
           // A page that adds nothing new means we've reached the end of what
           // these relays will serve — `until` overlap guarantees at least the
           // boundary note comes back, so "no growth" is the honest signal.
@@ -257,7 +259,7 @@ export function useFeed(
     setPending((buffered) => {
       if (buffered.length === 0) return buffered;
       setNotes((current) => {
-        const merged = dedupeReposts(mergeNotes(current, buffered));
+        const merged = groupReposts(mergeNotes(current, buffered)).notes;
         writeFeedCache(relayList, cacheId, merged);
         return merged;
       });
@@ -278,8 +280,13 @@ export function useFeed(
     [notes, isMuted, isBlocked],
   );
 
+  // Derived on read rather than stored: the cache holds notes only, and the
+  // grouping depends on which notes happen to share the window.
+  const repostersByTarget = useMemo(() => groupReposts(visible).repostersByTarget, [visible]);
+
   return {
     notes: visible,
+    repostersByTarget,
     loading,
     loadingMore,
     error,

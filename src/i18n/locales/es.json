@@ -663,5 +663,6 @@
   "social.filter.all": "Todo",
   "social.filter.notes": "Notas",
   "social.filter.articles": "Artículos",
-  "social.filter.media": "Media"
+  "social.filter.media": "Media",
+  "social.andOthers": "y {n} más"
 }

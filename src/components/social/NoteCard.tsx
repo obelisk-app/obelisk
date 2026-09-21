@@ -61,6 +61,12 @@ export type NoteCardProps = {
   onZap?: (note: NostrEvent) => void;
   onOpenArticle?: (note: NostrEvent) => void;
   /**
+   * Everyone who reposted this note, newest first. A repost row renders the
+   * whole list; without it "eight people reposted this" reads as one
+   * anonymous row, which throws away the only signal a repost carries.
+   */
+  reposters?: readonly string[];
+  /**
    * `full` — a normal row with the whole action set.
    * `quoted` — a bordered box with no actions, for a note embedded inside
    *   another note's body (you act on the outer note, not the quoted one).
@@ -94,6 +100,9 @@ export default memo(NoteCardInner, (prev, next) => (
   && prev.onOpenNote === next.onOpenNote
   && prev.onOpenProfile === next.onOpenProfile
   && prev.onOpenArticle === next.onOpenArticle
+  // Compared by length: the list is rebuilt each page, so reference equality
+  // would defeat the memo, and reposters only ever grow for a given note.
+  && (prev.reposters?.length ?? 0) === (next.reposters?.length ?? 0)
 ));
 
 function NoteCardInner(props: NoteCardProps) {
@@ -111,12 +120,15 @@ export { NoteCardInner };
 
 function RepostCard(props: NoteCardProps) {
   const { t } = useTranslation();
-  const { note } = props;
-  const reposter = useAuthor(note.pubkey);
+  const { note, reposters } = props;
   const inner = useMemo(() => embeddedRepostEvent(note), [note]);
   const target = useMemo(() => repostTarget(note), [note]);
 
-  const name = reposter?.displayName || reposter?.name || shortNpub(note.pubkey);
+  // The row's own author first, then anyone else who reposted the same note.
+  const everyone = useMemo(() => {
+    const list = [note.pubkey, ...(reposters ?? [])];
+    return [...new Set(list)];
+  }, [note.pubkey, reposters]);
 
   return (
     <article className="note-card px-5 py-4" data-testid="repost-card">
@@ -124,23 +136,21 @@ function RepostCard(props: NoteCardProps) {
         The attribution was 11px muted text with a `⇄` glyph — small enough to
         miss, and the glyph rendered at a different weight than the SVG icons
         beside it. It's the first thing you need to understand the row, so it
-        reads as a line of text now, with the reposter's name emphasised.
+        reads as a line of text now, with the names emphasised.
       */}
-      <button
-        type="button"
-        className="group mb-2 flex items-center gap-2 text-[13px] text-lc-muted hover:text-lc-white"
-        onClick={() => props.onOpenProfile?.(note.pubkey)}
+      <div
+        className="mb-2 flex items-center gap-2 text-[13px] text-lc-muted"
         data-testid="repost-attribution"
       >
         <span className="flex h-4 w-4 shrink-0 items-center justify-center text-lc-green">
           <RepostIcon />
         </span>
-        <span className="truncate">
-          <span className="font-semibold text-lc-white group-hover:underline">{name}</span>
+        <span className="min-w-0 truncate">
+          <RepostersLine pubkeys={everyone} onOpenProfile={props.onOpenProfile} />
           {' '}
           {t('social.reposted')}
         </span>
-      </button>
+      </div>
       {inner ? (
         // `nested` (not `quoted`): the original keeps its full action row, so
         // replying or liking from a repost targets the note that was
@@ -158,6 +168,61 @@ function RepostCard(props: NoteCardProps) {
         </button>
       )}
     </article>
+  );
+}
+
+/**
+ * "Alice, Bob and 6 others".
+ *
+ * Two names then a count: three is already too wide for a feed row, and the
+ * number is what tells you how much reach the note actually got.
+ */
+function RepostersLine({
+  pubkeys,
+  onOpenProfile,
+}: {
+  pubkeys: readonly string[];
+  onOpenProfile?: (pubkey: string) => void;
+}) {
+  const { t } = useTranslation();
+  const shown = pubkeys.slice(0, 2);
+  const rest = pubkeys.length - shown.length;
+
+  return (
+    <>
+      {shown.map((pubkey, index) => (
+        <span key={pubkey}>
+          {index > 0 && <span>, </span>}
+          <ReposterName pubkey={pubkey} onOpenProfile={onOpenProfile} />
+        </span>
+      ))}
+      {rest > 0 && (
+        <span data-testid="repost-others">
+          {' '}
+          {t('social.andOthers').replace('{n}', String(rest))}
+        </span>
+      )}
+    </>
+  );
+}
+
+function ReposterName({
+  pubkey,
+  onOpenProfile,
+}: {
+  pubkey: string;
+  onOpenProfile?: (pubkey: string) => void;
+}) {
+  const author = useAuthor(pubkey);
+  const name = author?.displayName || author?.name || shortNpub(pubkey);
+  return (
+    <button
+      type="button"
+      className="font-semibold text-lc-white hover:underline"
+      onClick={() => onOpenProfile?.(pubkey)}
+    >
+      {name}
+    </button>
   );
 }
 

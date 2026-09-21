@@ -84,11 +84,28 @@ describe('repost rendering', () => {
     expect(attribution.textContent).not.toContain('⇄');
   });
 
-  it('opens the reposter profile from the attribution', () => {
+  it('opens the reposter profile from their name', () => {
     const onOpenProfile = vi.fn();
     renderRepost({ onOpenProfile });
-    fireEvent.click(screen.getByTestId('repost-attribution'));
+    fireEvent.click(screen.getByRole('button', { name: 'Gigi' }));
     expect(onOpenProfile).toHaveBeenCalledWith(REPOST.pubkey);
+  });
+
+  it('names several reposters and counts the rest', () => {
+    // Previously duplicates were discarded outright, so eight people
+    // reposting rendered as one anonymous row — the count is the only
+    // signal a repost actually carries.
+    const others = ['1'.repeat(64), '2'.repeat(64), '3'.repeat(64), '4'.repeat(64)];
+    renderRepost({ reposters: [REPOST.pubkey, ...others] });
+    const attribution = screen.getByTestId('repost-attribution');
+    expect(attribution).toHaveTextContent('Gigi');
+    // Two names then a number: three is already too wide for a feed row.
+    expect(screen.getByTestId('repost-others')).toHaveTextContent('3 others');
+  });
+
+  it('shows no count when only one person reposted', () => {
+    renderRepost({ reposters: [REPOST.pubkey] });
+    expect(screen.queryByTestId('repost-others')).not.toBeInTheDocument();
   });
 
   it('gives the reposted note a full action row', () => {

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Event as NostrEvent } from 'nostr-tools';
 import {
   dedupeReposts,
+  groupReposts,
   embeddedRepostEvent,
   isRepost,
   repostInnerKind,
@@ -73,6 +74,59 @@ describe('embeddedRepostEvent', () => {
 
   it('rejects JSON that is not an event', () => {
     expect(embeddedRepostEvent({ content: '{"foo":1}' })).toBeNull();
+  });
+});
+
+describe('groupReposts', () => {
+  it('keeps every reposter of the same note, not just the first', () => {
+    // The old dedupe discarded duplicates outright, so the count — the whole
+    // signal a repost carries — was lost.
+    const notes = [
+      ev({ id: 'r1', pubkey: 'gigi', kind: 6, tags: [['e', 'popular']] }),
+      ev({ id: 'r2', pubkey: 'jb55', kind: 6, tags: [['e', 'popular']] }),
+      ev({ id: 'r3', pubkey: 'alice', kind: 6, tags: [['e', 'popular']] }),
+    ];
+    const { notes: rows, repostersByTarget } = groupReposts(notes);
+    expect(rows.map((n) => n.id)).toEqual(['r1']);
+    expect(repostersByTarget.get('popular')).toEqual(['gigi', 'jb55', 'alice']);
+  });
+
+  it('counts one person reposting twice as one voucher', () => {
+    const notes = [
+      ev({ id: 'r1', pubkey: 'gigi', kind: 6, tags: [['e', 'popular']] }),
+      ev({ id: 'r2', pubkey: 'gigi', kind: 6, tags: [['e', 'popular']] }),
+    ];
+    expect(groupReposts(notes).repostersByTarget.get('popular')).toEqual(['gigi']);
+  });
+
+  it('lets the original win the row when it is also in the window', () => {
+    // Otherwise a note you already had appears twice — once alone, once
+    // wrapped in someone's repost.
+    const notes = [
+      ev({ id: 'popular', pubkey: 'author' }),
+      ev({ id: 'r1', pubkey: 'gigi', kind: 6, tags: [['e', 'popular']] }),
+    ];
+    const { notes: rows, repostersByTarget } = groupReposts(notes);
+    expect(rows.map((n) => n.id)).toEqual(['popular']);
+    expect(repostersByTarget.get('popular')).toEqual(['gigi']);
+  });
+
+  it('keeps an unresolvable repost as its own row rather than dropping it', () => {
+    const orphan = ev({ id: 'r1', kind: 6, tags: [] });
+    expect(groupReposts([orphan]).notes.map((n) => n.id)).toEqual(['r1']);
+  });
+
+  it('preserves ordinary notes and their order', () => {
+    const notes = [ev({ id: 'a' }), ev({ id: 'b' }), ev({ id: 'c' })];
+    expect(groupReposts(notes).notes.map((n) => n.id)).toEqual(['a', 'b', 'c']);
+  });
+
+  it('records reposters newest-first, following the input order', () => {
+    const notes = [
+      ev({ id: 'r1', pubkey: 'newest', kind: 6, created_at: 300, tags: [['e', 'x']] }),
+      ev({ id: 'r2', pubkey: 'oldest', kind: 6, created_at: 100, tags: [['e', 'x']] }),
+    ];
+    expect(groupReposts(notes).repostersByTarget.get('x')).toEqual(['newest', 'oldest']);
   });
 });
 

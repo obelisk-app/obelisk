@@ -78,29 +78,78 @@ export async function resolveRepost(note: NostrEvent): Promise<NostrEvent | null
   };
 }
 
+/** The note a repost row stands for, whether embedded or referenced. */
+function targetIdOf(note: NostrEvent): string | null {
+  return repostTarget(note)?.id ?? embeddedRepostEvent(note)?.id ?? null;
+}
+
+export type GroupedFeed = {
+  notes: NostrEvent[];
+  /** Target note id → reposter pubkeys, newest repost first. */
+  repostersByTarget: Map<string, string[]>;
+};
+
 /**
- * Collapse repeat reposts of the same note, keeping the most recent.
+ * Collapse repeat reposts of the same note into one row, keeping who did it.
  *
- * Amethyst does this (`distinctBy` on the repost *target* rather than the
- * repost id) and it matters: without it, a popular note reposted by eight
- * people you follow occupies eight consecutive rows.
+ * The previous version threw duplicates away, so "eight people you follow
+ * reposted this" rendered as one anonymous row — the count, which is the
+ * whole signal a repost carries, was discarded.
+ *
+ * Two collapses happen here:
+ *  - repost vs repost, keyed on the *target* rather than the repost id
+ *    (Amethyst does the same), so a popular note doesn't occupy eight
+ *    consecutive rows;
+ *  - repost vs **original**: if the note itself is in the window, the
+ *    original wins the row and the reposters are recorded against it.
+ *    Without this a note you already had appeared twice, once on its own and
+ *    once wrapped.
+ *
+ * Input order is assumed newest-first (as `mergeNotes` leaves it), which is
+ * what makes the reposter lists newest-first too.
  */
-export function dedupeReposts(notes: readonly NostrEvent[]): NostrEvent[] {
-  const seenTargets = new Set<string>();
+export function groupReposts(notes: readonly NostrEvent[]): GroupedFeed {
+  const repostersByTarget = new Map<string, string[]>();
+  // Originals present in the window, so a repost of one can defer to it.
+  const originals = new Set<string>();
+  for (const note of notes) {
+    if (!isRepost(note)) originals.add(note.id);
+  }
+
   const out: NostrEvent[] = [];
+  const rowForTarget = new Map<string, number>();
+
   for (const note of notes) {
     if (!isRepost(note)) {
       out.push(note);
       continue;
     }
-    const targetId = repostTarget(note)?.id ?? embeddedRepostEvent(note)?.id;
+    const targetId = targetIdOf(note);
     if (!targetId) {
+      // A repost we can't resolve is still a row; dropping it loses content.
       out.push(note);
       continue;
     }
-    if (seenTargets.has(targetId)) continue;
-    seenTargets.add(targetId);
+
+    const reposters = repostersByTarget.get(targetId) ?? [];
+    // De-duped: one person reposting twice is one voucher, not two.
+    if (!reposters.includes(note.pubkey)) reposters.push(note.pubkey);
+    repostersByTarget.set(targetId, reposters);
+
+    // Already represented — by the original, or by an earlier repost row.
+    if (originals.has(targetId) || rowForTarget.has(targetId)) continue;
+
+    rowForTarget.set(targetId, out.length);
     out.push(note);
   }
-  return out;
+
+  return { notes: out, repostersByTarget };
+}
+
+/**
+ * Back-compat shim for callers that only want the collapsed list.
+ * Prefer `groupReposts` — the reposter counts are the interesting part.
+ */
+export function dedupeReposts(notes: readonly NostrEvent[]): NostrEvent[] {
+  return groupReposts(notes).notes;
 }
