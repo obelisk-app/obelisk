@@ -14,12 +14,16 @@
  */
 
 import {
+  TextCoercingWebSocket,
   configurePersistence,
   fetchRelayList,
   getDefaultRelays,
+  getPool,
   setDefaultRelays,
+  setPool,
   sharedCoalescer,
 } from '@nostr-wot/data';
+import { SimplePool } from 'nostr-tools';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import { DEFAULT_SOCIAL_RELAYS, SOCIAL_RELAY_MAX, normalizeSocialRelays } from './relays';
 
@@ -29,6 +33,57 @@ export const SOCIAL_SDK_CACHE_NAMESPACE = 'obelisk-social-sdk/';
 const SDK_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 
 let initialized = false;
+
+/**
+ * Connection callbacks, set by `relay-status.ts`. Indirected through a
+ * mutable holder rather than imported so the two modules don't form a cycle:
+ * relay-status needs the pool, and the pool needs its callbacks.
+ */
+export const poolEvents: {
+  onConnect?: (url: string) => void;
+  onFailure?: (url: string) => void;
+} = {};
+
+/**
+ * Own the pool, at module scope.
+ *
+ * `@nostr-wot/data`'s `getPool()` lazily does `new SimplePool()` with no
+ * options — no connection callbacks, no ping, no WebSocket override. Those
+ * are constructor-only, so the only way to have them is to install our own
+ * pool BEFORE anything calls `getPool()`.
+ *
+ * This runs at import rather than from `initSocial()` because `initSocial`
+ * is called from an AppGate effect, and React runs child effects before
+ * parent ones — a feed read in a shell below it would create the default
+ * pool first and then have it swapped out from under a live subscription.
+ * Module scope is the only placement that's ordered correctly by
+ * construction.
+ */
+let poolInstalled = false;
+function installPool(): void {
+  if (poolInstalled) return;
+  poolInstalled = true;
+  try {
+    setPool(new SimplePool({
+      enablePing: true,
+      // Same coercion the bridge uses: some relays send Blob frames.
+      websocketImplementation: TextCoercingWebSocket as unknown as typeof WebSocket,
+      onRelayConnectionSuccess: (url: string) => poolEvents.onConnect?.(url),
+      onRelayConnectionFailure: (url: string) => poolEvents.onFailure?.(url),
+    } as ConstructorParameters<typeof SimplePool>[0]));
+  } catch {
+    // A pool we can't configure is still a working pool — fall back to the
+    // SDK's rather than breaking every read for the sake of status dots.
+  }
+}
+
+installPool();
+
+/** The configured pool. Never construct one alongside this. */
+export function socialPool(): ReturnType<typeof getPool> {
+  installPool();
+  return getPool();
+}
 
 /**
  * Point the SDK at the user's social relays. Safe to call repeatedly — the
