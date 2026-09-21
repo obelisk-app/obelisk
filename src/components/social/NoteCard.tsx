@@ -12,7 +12,6 @@
 
 import { memo, useEffect, useMemo, useState } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
-import { nip19 } from 'nostr-tools';
 import { hexToNpub } from '@nostr-wot/data';
 import { useMyFollows, useMyPubkey } from '@/lib/nostr-bridge';
 import { useAuthor } from '@/lib/social/useAuthor';
@@ -31,7 +30,6 @@ import {
 import { publishReaction, publishRepost } from '@/lib/social/publish';
 import { usePreferences } from '@/lib/preferences';
 import { noteShareUrl } from '@/lib/social/note-links';
-import { useModerationStore } from '@/store/moderation';
 import { useToastStore } from '@/store/toast';
 import UserAvatar from '@/components/UserAvatar';
 import NoteContent from './NoteContent';
@@ -40,13 +38,11 @@ import NoteMenu from './NoteMenu';
 import {
   ActionButton,
   LikeIcon,
-  MoreIcon,
   RepostButton,
   RepostIcon,
   ReplyIcon,
   ShareIcon,
   ZapIcon,
-  formatCount,
 } from './NoteActions';
 
 /** Above this many characters a note is collapsed behind "Show more". */

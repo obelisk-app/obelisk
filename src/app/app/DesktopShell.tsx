@@ -38,6 +38,7 @@ import {
   type JsUserMetadata,
 } from '@/lib/nostr-bridge';
 import { getBridge, getBridgeImpl, getBridgeSync } from '@/lib/nostr-bridge';
+import { relayWebsiteUrl } from '@/lib/nostr-bridge/relay-url';
 import { initializeWot, useWotEnabled, wotEngine } from '@/lib/wot';
 import { wotColorClass } from '@/lib/wot/colors';
 import { faviconFor, fetchRelayInfo } from '@/lib/relay-info';
@@ -1008,6 +1009,7 @@ export function RelayTopBar({
 
   const displayName = info?.name || shortHost(relay);
   const iconUrl = info?.icon;
+  const website = relayWebsiteUrl(relay);
   return (
     <div
       className="h-14 md:h-10 shrink-0 px-3"
@@ -1245,7 +1247,20 @@ export function RelayTopBar({
         </div>,
         document.body,
       )}
-      <div className="flex items-center gap-2 min-w-0 max-w-[55%]">
+      {/*
+        The relay's own page, which is where "who runs this and what are its
+        rules" actually lives. It was inert text, so the app never answered
+        that from inside the app.
+      */}
+      <a
+        href={website ?? undefined}
+        {...(website ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+        className={`flex items-center gap-2 min-w-0 max-w-[55%] rounded-lg px-1 py-0.5 ${
+          website ? 'transition-colors hover:bg-lc-border/40' : 'pointer-events-none'
+        }`}
+        title={website ?? displayName}
+        data-testid="relay-topbar-name"
+      >
         {iconUrl && !iconFailed ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -1260,7 +1275,7 @@ export function RelayTopBar({
           </div>
         )}
         <span className="text-sm md:text-xs font-semibold text-lc-white truncate">{displayName}</span>
-      </div>
+      </a>
     </div>
   );
 }

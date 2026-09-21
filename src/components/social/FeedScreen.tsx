@@ -19,7 +19,6 @@ import { CONTENT_FILTERS, type ContentFilter } from '@/lib/social/kinds';
 import type { FeedSort } from '@/lib/social/rank';
 import ModalShell from '@/components/ModalShell';
 import { useHistoryDismiss } from '@/app/app/useHistoryDismiss';
-import UserAvatar from '@/components/UserAvatar';
 import FeedList from './FeedList';
 import NoteComposer from './NoteComposer';
 import MobileComposer from './MobileComposer';
@@ -28,6 +27,8 @@ import NoteThread from './NoteThread';
 import ArticleReader from './ArticleCard';
 import { ComposeButton } from './FeedControls';
 import FeedSearch from './FeedSearch';
+import RelayStatusPill from './RelayStatusPill';
+import TrendingPanel from './TrendingPanel';
 
 export type FeedTab = 'following' | 'global';
 
@@ -70,6 +71,7 @@ export default function FeedScreen({
   const [filter, setFilter] = useState<ContentFilter>('all');
   const [sort, setSort] = useState<FeedSort>('recent');
   const [searching, setSearching] = useState(false);
+  const [searchSeed, setSearchSeed] = useState('');
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [composer, setComposer] = useState<ComposerMode | null>(null);
   const [openNoteId, setOpenNoteId] = useState<string | null>(null);
@@ -120,6 +122,7 @@ export default function FeedScreen({
 
   const startReply = useCallback((note: NostrEvent) => setComposer({ kind: 'reply', parent: note }), []);
   const startQuote = useCallback((note: NostrEvent) => setComposer({ kind: 'quote', target: note }), []);
+  const openTag = useCallback((tag: string) => { setSearchSeed(`#${tag}`); setSearching(true); }, []);
   const openComposer = useCallback(() => setComposer({ kind: 'note' }), []);
   const closeComposer = useCallback(() => setComposer(null), []);
 
@@ -127,10 +130,11 @@ export default function FeedScreen({
     return (
       <div className="flex h-full min-h-0 flex-col bg-lc-black" data-testid="feed-screen">
         <FeedSearch
+          initialQuery={searchSeed}
           onOpenProfile={onOpenProfile}
           onOpenNote={openThread}
           onOpenArticle={handleOpenArticle}
-          onClose={() => setSearching(false)}
+          onClose={() => { setSearching(false); setSearchSeed(''); }}
         />
       </div>
     );
@@ -243,6 +247,12 @@ export default function FeedScreen({
 
         <div className="ml-auto flex shrink-0 items-center gap-1 lg:ml-0">
           {/*
+            Connectivity belongs next to the feed, not buried in settings:
+            an empty feed and a feed whose relays all dropped look the same
+            without it.
+          */}
+          <RelayStatusPill relays={relays} onOpenSettings={onOpenSettings} compact={mobile} />
+          {/*
             One target for "what am I looking at" on a phone, sized like the
             rest of Obelisk's header buttons rather than an 11px chip.
           */}
@@ -313,7 +323,17 @@ export default function FeedScreen({
       <div
         ref={scrollRef}
         className={`min-h-0 flex-1 overflow-y-auto ${mobile ? 'native-scroll-y' : ''}`}
+        data-testid="feed-scroll"
       >
+        {/*
+          On a wide screen the feed was one column with ~600px of black on
+          either side. The column is capped at a readable measure and the
+          right-hand space carries context — what the loaded notes are about,
+          and whether the relays behind them are up. `xl:` only: a split pane
+          is nowhere near wide enough for two columns.
+        */}
+        <div className="mx-auto flex w-full max-w-[1100px] items-start gap-4">
+        <div className="min-w-0 flex-1 xl:max-w-[42rem]">
         {/*
           Desktop only. On a phone the row was a link to an input dressed as
           an input; the FAB below opens the full-screen composer instead,
@@ -351,6 +371,19 @@ export default function FeedScreen({
           onQuote={startQuote}
           onOpenArticle={handleOpenArticle}
         />
+        </div>
+
+        {!mobile && !embedded && (
+          <div className="sticky top-0 hidden xl:block">
+            <TrendingPanel
+              notes={state.notes}
+              relays={relays}
+              onOpenTag={openTag}
+              onOpenSettings={onOpenSettings}
+            />
+          </div>
+        )}
+        </div>
       </div>
 
       {/*
@@ -477,11 +510,12 @@ function FilterSheet({
         <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-lc-muted">
           {t('social.sort.top')} · {t('social.sort.recent')}
         </h2>
-        <div className="lc-segment mb-5 w-full">
+        <div className="lc-segment mb-5 w-full" role="tablist">
           {(['recent', 'top'] as const).map((value) => (
             <button
               key={value}
               type="button"
+              role="tab"
               aria-selected={sort === value}
               onClick={() => onSort(value)}
               className="lc-segment-item flex-1 justify-center py-2.5 text-sm"

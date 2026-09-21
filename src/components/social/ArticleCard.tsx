@@ -76,7 +76,11 @@ export function ArticleCard({
     <button
       type="button"
       onClick={onOpen}
-      className="group block w-full overflow-hidden rounded-2xl border border-lc-border bg-lc-dark text-left transition-colors hover:border-lc-green/40"
+      // Side-by-side above `sm`. Stacked with a 2:1 banner, one article on a
+      // desktop column was taller than the viewport — you scrolled past a
+      // poster to reach the next note. The thumbnail is a fixed 13rem, so
+      // the card's height stops depending on the column's width.
+      className="group flex w-full flex-col overflow-hidden rounded-2xl border border-lc-border bg-lc-dark text-left transition-colors hover:border-lc-green/40 sm:flex-row"
       data-testid="note-article"
     >
       {meta.image ? (
@@ -86,22 +90,19 @@ export function ArticleCard({
           alt=""
           loading="lazy"
           decoding="async"
-          // A fixed aspect rather than a fixed height: the banner is the
-          // whole reason an article stands out in a feed of short notes, and
-          // a 160px strip made it look like a broken thumbnail.
-          className="aspect-[2/1] w-full bg-lc-black object-cover"
+          className="aspect-[2/1] w-full shrink-0 bg-lc-black object-cover sm:aspect-auto sm:h-auto sm:w-52 sm:self-stretch"
         />
       ) : (
         // Without a banner the card had no visual weight at all and read as
         // a slightly indented note.
-        <div className="flex aspect-[4/1] w-full items-center justify-center bg-gradient-to-br from-lc-olive/40 to-lc-black">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-lc-green/60" aria-hidden="true">
+        <div className="flex aspect-[4/1] w-full shrink-0 items-center justify-center bg-gradient-to-br from-lc-olive/40 to-lc-black sm:aspect-auto sm:w-20 sm:self-stretch">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-lc-green/60" aria-hidden="true">
             <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
             <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
           </svg>
         </div>
       )}
-      <div className="space-y-2 p-4">
+      <div className="min-w-0 flex-1 space-y-1.5 p-3.5">
         <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-lc-green">
           <span>{t('social.article')}</span>
           <span aria-hidden="true">·</span>
@@ -109,11 +110,11 @@ export function ArticleCard({
             {minutes} {t('social.minRead')}
           </span>
         </div>
-        <h3 className="line-clamp-2 text-lg font-bold leading-snug text-lc-white">
+        <h3 className="line-clamp-2 text-base font-bold leading-snug text-lc-white">
           {meta.title || t('social.untitledArticle')}
         </h3>
         {(meta.summary || note.content) && (
-          <p className="line-clamp-3 text-sm leading-relaxed text-lc-muted">
+          <p className="line-clamp-2 text-[13px] leading-relaxed text-lc-muted">
             {meta.summary || note.content.replace(/[#*_`>[\]()!]/g, '').slice(0, 220)}
           </p>
         )}

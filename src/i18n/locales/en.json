@@ -677,5 +677,9 @@
   "social.searchPosts": "Posts",
   "social.searchTags": "Tags",
   "profileFeed.addressCopied": "Lightning address copied",
-  "social.filters": "Filters"
+  "social.filters": "Filters",
+  "social.relayOffline": "Offline",
+  "social.trending": "Trending",
+  "social.trendingEmpty": "Nothing trending in this feed yet",
+  "social.relays": "Relays"
 }

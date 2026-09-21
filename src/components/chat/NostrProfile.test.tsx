@@ -39,6 +39,13 @@ vi.mock('@/lib/social/pool', () => ({
   initSocial: vi.fn(),
   importNip65Relays: vi.fn().mockResolvedValue([]),
   SOCIAL_SDK_CACHE_NAMESPACE: 'obelisk-social-sdk/',
+  // The relay-status watcher the toolbar pill starts reads these.
+  poolEvents: {},
+  socialPool: () => ({
+    listConnectionStatus: () => new Map(),
+    ensureRelay: vi.fn().mockResolvedValue({ connected: true, onclose: () => {} }),
+    seenOn: new Map(),
+  }),
 }));
 
 vi.mock('@/lib/social/engagement', () => ({

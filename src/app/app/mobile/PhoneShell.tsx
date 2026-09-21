@@ -166,6 +166,7 @@ import { useChatStore } from '@/store/chat';
 import { useDMStore } from '@/store/dm';
 import { setDmOptInEnabled, useDmOptInEnabled } from '@/lib/dm/opt-in';
 import { setPreference, usePreferences } from '@/lib/preferences';
+import { relayWebsiteUrl } from '@/lib/nostr-bridge/relay-url';
 import { useMessageZapStore } from '@/store/messageZap';
 import { presenceActivityKey, useNostrPresence, PRESENCE_WINDOW_MS } from '@/hooks/chat/useNostrPresence';
 import MessageZapModal from '@/components/chat/MessageZapModal';
@@ -2003,6 +2004,7 @@ export function MobileServerBanner({
 }) {
   const host = relayUrl ? shortHost(relayUrl) : '';
   const iconFallback = relayUrl ? shortHost(relayUrl).slice(0, 1).toUpperCase() : 'O';
+  const website = relayUrl ? relayWebsiteUrl(relayUrl) : null;
   return (
     <header className="server-banner" data-testid="mobile-server-banner">
       {bannerUrl ? (
@@ -2040,7 +2042,14 @@ export function MobileServerBanner({
         </div>
         <div className="server-banner-copy">
           <h2>{label}</h2>
-          {host && <span>{host}</span>}
+          {/* The host is the relay's own page — its rules and operator. */}
+          {host && (website ? (
+            <a href={website} target="_blank" rel="noopener noreferrer" data-testid="mobile-relay-website">
+              {host}
+            </a>
+          ) : (
+            <span>{host}</span>
+          ))}
         </div>
       </div>
     </header>

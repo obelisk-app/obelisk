@@ -35,6 +35,7 @@ import NoteComposer from '@/components/social/NoteComposer';
 import MobileComposer from '@/components/social/MobileComposer';
 import type { ComposerMode } from '@/components/social/useNoteDraft';
 import ProfileLinks from './ProfileLinks';
+import MediaGrid, { type MediaItem } from './MediaGrid';
 import NoteThread from '@/components/social/NoteThread';
 import ArticleReader from '@/components/social/ArticleCard';
 import ModalShell from '@/components/ModalShell';
@@ -101,10 +102,13 @@ export default function NostrProfile({
         : mediaUrls(note).length > 0
   )), [state.notes, tab]);
 
-  const media = useMemo(
-    () => visibleNotes.flatMap((note) => mediaUrls(note).map((url) => ({ note, url }))),
-    [visibleNotes],
-  );
+  const media = useMemo<MediaItem[]>(() => visibleNotes.flatMap((note) => {
+    const urls = mediaUrls(note);
+    // `multiple` marks a note that carried a set, the way a carousel is
+    // badged in an explore grid — otherwise four tiles from one post look
+    // like four unrelated ones.
+    return urls.map((url) => ({ key: `${note.id}:${url}`, url, multiple: urls.length > 1 }));
+  }), [visibleNotes]);
 
 
   // Stable handler identities keep the memoised NoteCards from re-rendering.
@@ -340,24 +344,7 @@ export default function NostrProfile({
       <div className="profile-feed-content min-h-40 flex-1" aria-live="polite" role="tabpanel">
         {tab === 'media' ? (
           media.length > 0 ? (
-            <div className="grid grid-cols-3 gap-0.5" data-testid="profile-media-grid">
-              {media.map(({ note, url }) => (
-                <button
-                  type="button"
-                  key={`${note.id}:${url}`}
-                  className="aspect-square overflow-hidden bg-lc-dark"
-                  onClick={() => setExpandedMedia(url)}
-                  aria-label={t('profileFeed.openMedia')}
-                >
-                  {isVideoUrl(url) ? (
-                    <video src={url} muted playsInline preload="metadata" className="h-full w-full object-cover" />
-                  ) : (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={url} alt="" loading="lazy" className="h-full w-full object-cover" />
-                  )}
-                </button>
-              ))}
-            </div>
+            <MediaGrid items={media} onOpen={setExpandedMedia} />
           ) : (
             <div className="flex min-h-40 items-center justify-center px-6 text-center text-sm text-lc-muted" data-testid="profile-feed-empty">
               {t(state.error ? 'profileFeed.loadFailed' : 'profileFeed.empty')}

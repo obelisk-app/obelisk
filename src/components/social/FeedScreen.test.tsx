@@ -19,6 +19,13 @@ vi.mock('@/lib/social/pool', () => ({
   initSocial: vi.fn(),
   importNip65Relays: vi.fn().mockResolvedValue([]),
   SOCIAL_SDK_CACHE_NAMESPACE: 'obelisk-social-sdk/',
+  // The relay-status watcher the toolbar pill starts reads these.
+  poolEvents: {},
+  socialPool: () => ({
+    listConnectionStatus: () => new Map(),
+    ensureRelay: vi.fn().mockResolvedValue({ connected: true, onclose: () => {} }),
+    seenOn: new Map(),
+  }),
 }));
 
 vi.mock('@/lib/social/engagement', () => ({
@@ -172,7 +179,7 @@ describe('FeedScreen', () => {
     await waitFor(() => expect(screen.getByText('first')).toBeInTheDocument());
 
     // Scroll down: splicing notes in here would shift what's being read.
-    const scroller = screen.getByTestId('feed-list').parentElement as HTMLElement;
+    const scroller = screen.getByTestId('feed-scroll');
     Object.defineProperty(scroller, 'scrollTop', { value: 800, writable: true });
     fireEvent.scroll(scroller);
 
@@ -362,7 +369,7 @@ describe('FeedScreen', () => {
     renderFeed();
     await waitFor(() => expect(screen.getByText('first')).toBeInTheDocument());
 
-    const scroller = screen.getByTestId('feed-list').parentElement as HTMLElement;
+    const scroller = screen.getByTestId('feed-scroll');
     const before = socialMocks.loadFollowingFeed.mock.calls.length;
     // One nudge is below the threshold — otherwise a stray trackpad twitch
     // costs a relay round trip.
@@ -380,7 +387,7 @@ describe('FeedScreen', () => {
     renderFeed();
     await waitFor(() => expect(screen.getByText('first')).toBeInTheDocument());
 
-    const scroller = screen.getByTestId('feed-list').parentElement as HTMLElement;
+    const scroller = screen.getByTestId('feed-scroll');
     Object.defineProperty(scroller, 'scrollTop', { value: 400, writable: true });
     const before = socialMocks.loadFollowingFeed.mock.calls.length;
 

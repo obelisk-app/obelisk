@@ -858,7 +858,10 @@
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.72);
 }
 
-.obelisk-mobile .server-banner-copy span {
+/* The host reads the same whether it links out or not — underlining it
+ * inside a banner photo is noise; the tap target is what matters. */
+.obelisk-mobile .server-banner-copy span,
+.obelisk-mobile .server-banner-copy a {
   display: block;
   margin-top: 3px;
   color: var(--app-text-dim);
@@ -868,6 +871,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.78);
+  text-decoration: none;
 }
 
 /* Horizontal category pills — strip above the channel list. Tapping a pill

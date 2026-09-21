@@ -677,5 +677,9 @@
   "social.searchPosts": "Publicaciones",
   "social.searchTags": "Etiquetas",
   "profileFeed.addressCopied": "Dirección Lightning copiada",
-  "social.filters": "Filtros"
+  "social.filters": "Filtros",
+  "social.relayOffline": "Sin conexión",
+  "social.trending": "Tendencias",
+  "social.trendingEmpty": "Todavía no hay tendencias en este feed",
+  "social.relays": "Relays"
 }

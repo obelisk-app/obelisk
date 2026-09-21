@@ -25,6 +25,8 @@ import {
   probeRelay,
   subscribeRelayStatus,
   watchRelays,
+  relayStatusSummary,
+  type RelayStatus,
 } from './relay-status';
 
 const A = 'wss://a.example';
@@ -142,5 +144,54 @@ describe('subscribeRelayStatus', () => {
     stop();
     markConnected(A);
     expect(calls).toBe(initial);
+  });
+});
+
+describe('relayStatusSummary', () => {
+  const status = (url: string, state: RelayStatus['state']): Record<string, RelayStatus> => ({
+    [url]: { url, state, latencyMs: null, notes: 0, lastChange: 0 },
+  });
+
+  it('counts how many of your relays are answering', () => {
+    const summary = relayStatusSummary([A, B], {
+      ...status(A, 'connected'),
+      ...status(B, 'connecting'),
+    });
+    expect(summary).toMatchObject({ total: 2, connected: 1 });
+  });
+
+  it('reads green while any relay answers — the feed works', () => {
+    // One dead relay out of four is not an outage, and a red dot for it
+    // trains people to ignore the dot.
+    expect(relayStatusSummary([A, B], {
+      ...status(A, 'connected'),
+      ...status(B, 'failed'),
+    }).state).toBe('connected');
+  });
+
+  it('reports failed only when nothing is connected', () => {
+    expect(relayStatusSummary([A], status(A, 'failed')).state).toBe('failed');
+  });
+
+  it('collapses to offline rather than N separate failures', () => {
+    // The laptop's wifi dropping is one problem, not one per relay.
+    expect(relayStatusSummary([A, B], {
+      ...status(A, 'offline'),
+      ...status(B, 'connected'),
+    }).state).toBe('offline');
+  });
+
+  it('is connecting while relays are still unresolved', () => {
+    expect(relayStatusSummary([A], {}).state).toBe('connecting');
+  });
+
+  it('handles an empty relay list', () => {
+    expect(relayStatusSummary([], {})).toEqual({ total: 0, connected: 0, state: 'unknown' });
+  });
+
+  it('matches relays whose URL needs normalising', () => {
+    // Settings stores what the user typed; the store keys on the canonical
+    // form, and a trailing slash would otherwise read as "not connected".
+    expect(relayStatusSummary([`${A}/`], status(A, 'connected')).connected).toBe(1);
   });
 });

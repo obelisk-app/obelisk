@@ -26,19 +26,24 @@ import NoteCard from './NoteCard';
 const DEBOUNCE_MS = 300;
 
 export default function FeedSearch({
+  initialQuery = '',
   onOpenProfile,
   onOpenNote,
   onOpenArticle,
   onClose,
 }: {
+  /** Prefill, for arriving from a trending tag rather than the search button. */
+  initialQuery?: string;
   onOpenProfile?: (pubkey: string) => void;
   onOpenNote?: (id: string) => void;
   onOpenArticle?: (note: NostrEvent) => void;
   onClose?: () => void;
 }) {
   const { t } = useTranslation();
-  const [raw, setRaw] = useState('');
-  const [debounced, setDebounced] = useState('');
+  const [raw, setRaw] = useState(initialQuery);
+  // Seeded, not debounced-from-empty: arriving with a query already chosen
+  // shouldn't cost a 300ms wait before anything happens.
+  const [debounced, setDebounced] = useState(initialQuery);
   const [notes, setNotes] = useState<NostrEvent[]>([]);
   const [loading, setLoading] = useState(false);
 
