@@ -349,6 +349,21 @@ export default function AppShell() {
     });
   }, [relay]);
 
+  const paneOpen = !!(threadNoteId || paneArticle);
+  const closePane = useCallback(() => {
+    setThreadNoteId(null);
+    setPaneArticle(null);
+    setPaneFull(false);
+  }, []);
+  // Back / swipe-back closes the reader rather than leaving the app.
+  //
+  // Above the `!isLoggedIn` early return, and it has to stay there: this is
+  // a hook, and the logged-out branch returns before it. Calling it below
+  // meant logging in rendered one more hook than the previous render, which
+  // React refuses (#310) — the chat surface hit its error boundary the
+  // moment the gate flipped.
+  const dismissPane = useHistoryDismiss(paneOpen, closePane);
+
   if (!isLoggedIn) {
     // A stored session is being reconnected (cold load → relay handshake +
     // optional NIP-46 bunker pre-warm). Show a connecting screen instead of
@@ -374,15 +389,6 @@ export default function AppShell() {
       </>
     );
   }
-
-  const paneOpen = !!(threadNoteId || paneArticle);
-  const closePane = () => {
-    setThreadNoteId(null);
-    setPaneArticle(null);
-    setPaneFull(false);
-  };
-  // Back / swipe-back closes the reader rather than leaving the app.
-  const dismissPane = useHistoryDismiss(paneOpen, closePane);
 
   const feedOpen = feedPane.open;
   const splitFeed = feedOpen && feedPane.mode === 'split' && view.kind === 'group';
