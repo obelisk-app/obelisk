@@ -668,5 +668,12 @@
   "social.sort.recent": "Recientes",
   "social.sort.top": "Destacados",
   "social.expandFeed": "Expandir feed",
-  "social.restoreFeed": "Mostrar junto al chat"
+  "social.restoreFeed": "Mostrar junto al chat",
+  "social.search": "Buscar",
+  "social.searchPlaceholder": "Buscar personas, publicaciones y #etiquetas",
+  "social.searchHint": "Busca personas, publicaciones y #etiquetas en Nostr.",
+  "social.searchEmpty": "No se encontró nada. No todos los relays indexan búsqueda de texto.",
+  "social.searchPeople": "Personas",
+  "social.searchPosts": "Publicaciones",
+  "social.searchTags": "Etiquetas"
 }

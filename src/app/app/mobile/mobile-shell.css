@@ -3811,29 +3811,36 @@
 }
 
 /* ===== settings ===== */
+/*
+ * Perfil / Preferencias is a two-way switch, so it's a segmented pill like
+ * every other switch in the app — the underlined-tab treatment it used to
+ * have reads as navigation into separate sections, which these aren't.
+ */
 .obelisk-mobile .settings-tabs {
-  padding: 0 16px;
+  margin: 10px 16px 4px;
+  padding: 3px;
   display: flex;
-  gap: 4px;
+  gap: 2px;
   flex-shrink: 0;
-  border-bottom: 1px solid var(--app-line-soft);
+  border-radius: 9999px;
+  background: var(--app-surface-2, #171717);
+  border: 1px solid var(--app-line-soft);
 }
 .obelisk-mobile .settings-tab {
   flex: 1;
-  padding: 12px 6px;
+  padding: 8px 10px;
   border: none;
   background: transparent;
   color: var(--app-text-dim);
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
+  border-radius: 9999px;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 .obelisk-mobile .settings-tab.active {
-  color: var(--accent);
-  border-bottom-color: var(--accent);
-  font-weight: 600;
+  color: var(--app-bg, #0a0a0a);
+  background: var(--accent);
 }
 .obelisk-mobile .settings-body {
   flex: 1;

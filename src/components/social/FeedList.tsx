@@ -25,6 +25,14 @@ import NoteCard from './NoteCard';
 
 /** How close to the top counts as "still at the top" for auto-merge. */
 const AT_TOP_PX = 120;
+/**
+ * Pulling up when already at the top is the gesture people use to refresh,
+ * so honour it instead of making them find a button. Throttled, because the
+ * gesture fires continuously and each refresh is a relay round trip.
+ */
+const PULL_REFRESH_COOLDOWN_MS = 4000;
+/** Enough pull to be deliberate rather than the tail of a scroll. */
+const PULL_THRESHOLD_PX = 60;
 /** Start fetching this far before the sentinel is actually visible. */
 const PREFETCH_MARGIN = '600px';
 
@@ -61,7 +69,7 @@ export default function FeedList({
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [atTop, setAtTop] = useState(true);
 
-  const { loadMore, showPending } = state;
+  const { loadMore, showPending, refresh } = state;
 
   // Page as the sentinel approaches. `loadMore` already no-ops while a page
   // is in flight or the feed is exhausted, so a burst of intersections
@@ -99,6 +107,56 @@ export default function FeedList({
     scroller.addEventListener('scroll', read, { passive: true });
     return () => scroller.removeEventListener('scroll', read);
   }, [findScroller]);
+
+  // Pull-to-refresh, for mouse wheels and touch alike. Replaces the refresh
+  // button: at the top of a feed, pulling further up means "show me what's
+  // new", and that's the gesture people already reach for.
+  useEffect(() => {
+    const scroller = findScroller();
+    if (!scroller || scroller instanceof Window) return;
+
+    let pulled = 0;
+    let lastRefresh = 0;
+
+    const atVeryTop = () => scroller.scrollTop <= 0;
+    const maybeRefresh = () => {
+      const now = Date.now();
+      if (pulled < PULL_THRESHOLD_PX) return;
+      if (now - lastRefresh < PULL_REFRESH_COOLDOWN_MS) return;
+      lastRefresh = now;
+      pulled = 0;
+      refresh();
+    };
+
+    const onWheel = (event: WheelEvent) => {
+      if (!atVeryTop() || event.deltaY >= 0) {
+        pulled = 0;
+        return;
+      }
+      pulled += -event.deltaY;
+      maybeRefresh();
+    };
+
+    let touchStart: number | null = null;
+    const onTouchStart = (event: TouchEvent) => {
+      touchStart = atVeryTop() ? (event.touches[0]?.clientY ?? null) : null;
+      pulled = 0;
+    };
+    const onTouchMove = (event: TouchEvent) => {
+      if (touchStart === null || !atVeryTop()) return;
+      pulled = (event.touches[0]?.clientY ?? touchStart) - touchStart;
+      maybeRefresh();
+    };
+
+    scroller.addEventListener('wheel', onWheel, { passive: true });
+    scroller.addEventListener('touchstart', onTouchStart, { passive: true });
+    scroller.addEventListener('touchmove', onTouchMove, { passive: true });
+    return () => {
+      scroller.removeEventListener('wheel', onWheel);
+      scroller.removeEventListener('touchstart', onTouchStart);
+      scroller.removeEventListener('touchmove', onTouchMove);
+    };
+  }, [findScroller, refresh]);
 
   // At the top, new notes just appear — that's what "live" should mean.
   useEffect(() => {

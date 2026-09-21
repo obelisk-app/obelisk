@@ -228,11 +228,11 @@ describe('FeedScreen', () => {
     renderFeed({ onOpenSettings: vi.fn() });
     const source = screen.getByTestId('feed-tab-following');
     const filter = screen.getByTestId('feed-filter-all');
-    const refresh = screen.getByTestId('feed-refresh');
+    const search = screen.getByTestId('feed-search-open');
 
     const toolbar = source.closest('div')?.parentElement;
     expect(toolbar).toContainElement(filter);
-    expect(toolbar).toContainElement(refresh);
+    expect(toolbar).toContainElement(search);
     // Wrapping is what keeps it usable when the row can't fit.
     expect(toolbar?.className).toContain('flex-wrap');
   });
@@ -345,28 +345,55 @@ describe('FeedScreen', () => {
     expect(rows[0]).toHaveTextContent('newest');
   });
 
-  it('exposes refresh and relay settings', async () => {
+  it('exposes search and relay settings', async () => {
     const onOpenSettings = vi.fn();
-    socialMocks.loadFollowingFeed.mockResolvedValue([note('a', 'first')]);
     renderFeed({ onOpenSettings });
     fireEvent.click(screen.getByTestId('feed-settings'));
     expect(onOpenSettings).toHaveBeenCalled();
 
-    // Refresh is disabled while a fetch is in flight, so wait for the first
-    // load to settle before clicking it.
-    await waitFor(() => expect(screen.getByText('first')).toBeInTheDocument());
-    socialMocks.loadFollowingFeed.mockClear();
-    fireEvent.click(screen.getByTestId('feed-refresh'));
-    await waitFor(() => expect(socialMocks.loadFollowingFeed).toHaveBeenCalled());
+    fireEvent.click(screen.getByTestId('feed-search-open'));
+    expect(screen.getByTestId('feed-search')).toBeInTheDocument();
   });
 
-  it('disables refresh while a fetch is in flight, and spins it', () => {
-    // The old refresh was a bare text glyph with no busy state: clicking it
-    // looked exactly like not clicking it.
-    socialMocks.loadFollowingFeed.mockImplementation(() => new Promise(() => {}));
+  it('refreshes when you pull up at the top of the feed', async () => {
+    // The gesture that replaced the refresh button: at the top of a feed,
+    // pulling further up means "show me what's new".
+    socialMocks.loadFollowingFeed.mockResolvedValue([note('a', 'first')]);
     renderFeed();
-    const refresh = screen.getByTestId('feed-refresh') as HTMLButtonElement;
-    expect(refresh.disabled).toBe(true);
-    expect(refresh.querySelector('svg')).toHaveClass('animate-spin');
+    await waitFor(() => expect(screen.getByText('first')).toBeInTheDocument());
+
+    const scroller = screen.getByTestId('feed-list').parentElement as HTMLElement;
+    const before = socialMocks.loadFollowingFeed.mock.calls.length;
+    // One nudge is below the threshold — otherwise a stray trackpad twitch
+    // costs a relay round trip.
+    fireEvent.wheel(scroller, { deltaY: -20 });
+    expect(socialMocks.loadFollowingFeed.mock.calls.length).toBe(before);
+
+    fireEvent.wheel(scroller, { deltaY: -80 });
+    await waitFor(() => expect(
+      socialMocks.loadFollowingFeed.mock.calls.length,
+    ).toBeGreaterThan(before));
   });
+
+  it('does not refresh when the pull happens away from the top', async () => {
+    socialMocks.loadFollowingFeed.mockResolvedValue([note('a', 'first')]);
+    renderFeed();
+    await waitFor(() => expect(screen.getByText('first')).toBeInTheDocument());
+
+    const scroller = screen.getByTestId('feed-list').parentElement as HTMLElement;
+    Object.defineProperty(scroller, 'scrollTop', { value: 400, writable: true });
+    const before = socialMocks.loadFollowingFeed.mock.calls.length;
+
+    fireEvent.wheel(scroller, { deltaY: -400 });
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(socialMocks.loadFollowingFeed.mock.calls.length).toBe(before);
+  });
+
+  it('has no refresh button — pulling up at the top refreshes instead', () => {
+    // A button duplicating a gesture people already make is just chrome,
+    // and new notes announce themselves with the green pill.
+    renderFeed();
+    expect(screen.queryByTestId('feed-refresh')).not.toBeInTheDocument();
+  });
+
 });

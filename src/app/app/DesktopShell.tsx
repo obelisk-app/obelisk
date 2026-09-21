@@ -54,6 +54,7 @@ import FeedScreen from '@/components/social/FeedScreen';
 import NoteThread from '@/components/social/NoteThread';
 import ArticleReader from '@/components/social/ArticleCard';
 import type { Event as NostrEvent } from 'nostr-tools';
+import { useHistoryDismiss } from './useHistoryDismiss';
 import {
   INITIAL_FEED_PANE,
   canRestore,
@@ -195,6 +196,8 @@ export default function AppShell() {
    * two panes of reading material side by side is one too many.
    */
   const [paneArticle, setPaneArticle] = useState<NostrEvent | null>(null);
+  /** Threads and articles can take the whole surface, like the feed can. */
+  const [paneFull, setPaneFull] = useState(false);
   /**
    * The feed alongside a group, rather than instead of it.
    *
@@ -371,6 +374,15 @@ export default function AppShell() {
       </>
     );
   }
+
+  const paneOpen = !!(threadNoteId || paneArticle);
+  const closePane = () => {
+    setThreadNoteId(null);
+    setPaneArticle(null);
+    setPaneFull(false);
+  };
+  // Back / swipe-back closes the reader rather than leaving the app.
+  const dismissPane = useHistoryDismiss(paneOpen, closePane);
 
   const feedOpen = feedPane.open;
   const splitFeed = feedOpen && feedPane.mode === 'split' && view.kind === 'group';
@@ -549,7 +561,7 @@ export default function AppShell() {
           )}
         </main>
         {splitFeed && (
-          <ResizablePane storageKey={FEED_PANE_KEY} defaultWidth={520} min={360} max={900} side="left">
+          <ResizablePane storageKey={FEED_PANE_KEY} defaultWidth={520} min={360} max={900} side="left" rounded={false}>
             <aside
               className="flex h-full min-w-0 flex-1 flex-col overflow-hidden border-l border-lc-border bg-lc-black"
               data-testid="desktop-feed-pane"
@@ -562,35 +574,29 @@ export default function AppShell() {
                 onClose={() => applyFeedPane(closeFeed(feedPane))}
               />
               <div className="min-h-0 flex-1">
-                <FeedScreen
-                  embedded
-                  onOpenProfile={setExploredProfilePubkey}
-                  onOpenThread={(id) => { setPaneArticle(null); setThreadNoteId(id); }}
-                  onOpenArticle={(note) => { setThreadNoteId(null); setPaneArticle(note); }}
-                />
+                {/*
+                  No `onOpenThread` / `onOpenArticle` here on purpose: the
+                  feed falls back to its own modal. Handing them to the shell
+                  would open a third fixed-width column beside the sidebar and
+                  chat, and three panes don't fit — `main` collapsed and
+                  dragging any one handle appeared to resize all of them.
+                */}
+                <FeedScreen embedded onOpenProfile={setExploredProfilePubkey} />
               </div>
             </aside>
           </ResizablePane>
         )}
-        {(threadNoteId || paneArticle) && (
-          <ResizablePane storageKey={THREAD_PANE_KEY} defaultWidth={520} min={360} max={900} side="left">
-            <aside className="flex h-full min-w-0 flex-1 flex-col overflow-hidden border-l border-lc-border bg-lc-black" data-testid="desktop-thread-pane">
-              <div className="flex shrink-0 items-center gap-2 border-b border-lc-border px-4 py-3">
-                <h2 className="text-sm font-semibold text-lc-white">
-                  {paneArticle ? t('social.article') : t('social.thread')}
-                </h2>
-                <button
-                  type="button"
-                  className="ml-auto flex h-8 w-8 items-center justify-center rounded-full text-lc-muted transition-colors hover:bg-white/10 hover:text-lc-white"
-                  onClick={() => { setThreadNoteId(null); setPaneArticle(null); }}
-                  aria-label={t('common.close')}
-                  data-testid="desktop-thread-close"
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-                    <path d="M18 6 6 18" /><path d="m6 6 12 12" />
-                  </svg>
-                </button>
-              </div>
+        {paneOpen && (
+          paneFull ? (
+            // Fullscreen: an absolute overlay rather than another column, so
+            // widening it can't squeeze the panes underneath.
+            <div className="absolute inset-0 z-40 flex flex-col bg-lc-black" data-testid="desktop-thread-pane">
+              <ReaderPaneHeader
+                title={paneArticle ? t('social.article') : t('social.thread')}
+                full
+                onToggleFull={() => setPaneFull(false)}
+                onBack={dismissPane}
+              />
               <div className="min-h-0 flex-1 overflow-y-auto" data-testid={paneArticle ? 'desktop-article-pane' : 'desktop-thread-body'}>
                 {paneArticle ? (
                   <ArticleReader note={paneArticle} onOpenProfile={setExploredProfilePubkey} />
@@ -602,11 +608,33 @@ export default function AppShell() {
                   />
                 )}
               </div>
-            </aside>
-          </ResizablePane>
+            </div>
+          ) : (
+            <ResizablePane storageKey={THREAD_PANE_KEY} defaultWidth={520} min={360} max={900} side="left" rounded={false}>
+              <aside className="flex h-full min-w-0 flex-1 flex-col overflow-hidden border-l border-lc-border bg-lc-black" data-testid="desktop-thread-pane">
+                <ReaderPaneHeader
+                  title={paneArticle ? t('social.article') : t('social.thread')}
+                  full={false}
+                  onToggleFull={() => setPaneFull(true)}
+                  onBack={dismissPane}
+                />
+                <div className="min-h-0 flex-1 overflow-y-auto" data-testid={paneArticle ? 'desktop-article-pane' : 'desktop-thread-body'}>
+                  {paneArticle ? (
+                    <ArticleReader note={paneArticle} onOpenProfile={setExploredProfilePubkey} />
+                  ) : (
+                    <NoteThread
+                      noteId={threadNoteId!}
+                      onOpenProfile={setExploredProfilePubkey}
+                      onOpenNote={setThreadNoteId}
+                    />
+                  )}
+                </div>
+              </aside>
+            </ResizablePane>
+          )
         )}
         {exploredProfilePubkey && (
-          <ResizablePane storageKey={PROFILE_PANE_KEY} defaultWidth={520} min={340} max={900} side="left">
+          <ResizablePane storageKey={PROFILE_PANE_KEY} defaultWidth={520} min={340} max={900} side="left" rounded={false}>
           <aside className="h-full min-w-0 flex-1 overflow-hidden bg-lc-black" data-testid="desktop-profile-pane">
             <NostrProfile
               pubkey={exploredProfilePubkey}
@@ -662,6 +690,70 @@ function RehydratingScreen() {
  * cycling off → split → full → off, with nothing on screen indicating the
  * current state or the next one. Size belongs to the thing being sized.
  */
+/**
+ * Header for the thread / article reader.
+ *
+ * `h-14` and `px-4` are not arbitrary: they match the chat header and the
+ * feed pane header, so every column's title sits on the same baseline rather
+ * than each pane floating at its own height.
+ *
+ * Back rather than close, because this reader is reached *from* somewhere and
+ * the gesture people reach for is back — including the OS swipe, which
+ * `useHistoryDismiss` wires up.
+ */
+function ReaderPaneHeader({
+  title,
+  full,
+  onToggleFull,
+  onBack,
+}: {
+  title: string;
+  full: boolean;
+  onToggleFull: () => void;
+  onBack: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className="flex h-14 shrink-0 items-center gap-2 border-b border-lc-border px-4">
+      <button
+        type="button"
+        className="-ml-1 flex h-8 w-8 items-center justify-center rounded-full text-lc-muted transition-colors hover:bg-white/10 hover:text-lc-white"
+        onClick={onBack}
+        aria-label={t('common.back')}
+        title={t('common.back')}
+        data-testid="desktop-thread-back"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="m15 18-6-6 6-6" />
+        </svg>
+      </button>
+      <h2 className="text-sm font-semibold text-lc-white">{title}</h2>
+      <div className="ml-auto flex items-center gap-0.5">
+        <PaneIconButton
+          label={full ? t('social.restoreFeed') : t('social.expandFeed')}
+          testId="desktop-thread-expand"
+          onClick={onToggleFull}
+        >
+          {full ? (
+            <>
+              <path d="M4 14h6v6" /><path d="M20 10h-6V4" />
+              <path d="M14 10l7-7" /><path d="M3 21l7-7" />
+            </>
+          ) : (
+            <>
+              <path d="M15 3h6v6" /><path d="M9 21H3v-6" />
+              <path d="M21 3l-7 7" /><path d="M3 21l7-7" />
+            </>
+          )}
+        </PaneIconButton>
+        <PaneIconButton label={t('common.close')} testId="desktop-thread-close" onClick={onBack}>
+          <path d="M18 6 6 18" /><path d="m6 6 12 12" />
+        </PaneIconButton>
+      </div>
+    </div>
+  );
+}
+
 function FeedPaneHeader({
   mode,
   canRestore: restorable,
@@ -678,10 +770,12 @@ function FeedPaneHeader({
   const { t } = useTranslation();
   return (
     <div
-      className="flex shrink-0 items-center gap-1 border-b border-lc-border px-3 py-2"
+      // `h-14` matches the chat header, so the feed's title sits on the same
+      // line as the channel's rather than floating above it.
+      className="flex h-14 shrink-0 items-center gap-1 border-b border-lc-border px-4"
       data-testid="feed-pane-header"
     >
-      <span className="text-xs font-semibold text-lc-white">{t('social.feed')}</span>
+      <span className="text-sm font-semibold text-lc-white">{t('social.feed')}</span>
       <div className="ml-auto flex items-center gap-0.5">
         {mode === 'split' ? (
           <PaneIconButton
@@ -1158,6 +1252,7 @@ function ResizablePane({
   min,
   max,
   side = 'right',
+  rounded = true,
   children,
   onWidthChange,
 }: {
@@ -1166,6 +1261,12 @@ function ResizablePane({
   min: number;
   max: number;
   side?: 'right' | 'left';
+  /**
+   * The rounded top-left corner belongs to whatever sits leftmost against
+   * the rail — the sidebar. A pane on the RIGHT with a rounded top-left
+   * looks like a floating card wedged against its neighbour.
+   */
+  rounded?: boolean;
   children: React.ReactNode;
   onWidthChange?: (w: number) => void;
 }) {
@@ -1220,7 +1321,9 @@ function ResizablePane({
       {side === 'left' && handle}
       <div
         style={{ ['--pane-w' as string]: `${width}px` }}
-        className="flex shrink-0 flex-col overflow-hidden bg-lc-dark border-l border-t border-r border-lc-border rounded-tl-xl w-[var(--pane-w)] max-md:w-[min(72vw,300px)]"
+        className={`flex min-w-0 shrink-0 flex-col overflow-hidden bg-lc-dark border-l border-t border-r border-lc-border w-[var(--pane-w)] max-w-[45vw] max-md:w-[min(72vw,300px)] ${
+          rounded ? 'rounded-tl-xl' : ''
+        }`}
       >
         {children}
       </div>

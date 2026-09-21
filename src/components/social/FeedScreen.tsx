@@ -23,7 +23,8 @@ import FeedList from './FeedList';
 import NoteComposer, { type ComposerMode } from './NoteComposer';
 import NoteThread from './NoteThread';
 import ArticleReader from './ArticleCard';
-import { ComposeButton, RefreshButton } from './FeedControls';
+import { ComposeButton } from './FeedControls';
+import FeedSearch from './FeedSearch';
 
 export type FeedTab = 'following' | 'global';
 
@@ -58,6 +59,7 @@ export default function FeedScreen({
   const [tab, setTab] = useState<FeedTab>('following');
   const [filter, setFilter] = useState<ContentFilter>('all');
   const [sort, setSort] = useState<FeedSort>('recent');
+  const [searching, setSearching] = useState(false);
   const [composer, setComposer] = useState<ComposerMode | null>(null);
   const [openNoteId, setOpenNoteId] = useState<string | null>(null);
   const [openArticle, setOpenArticle] = useState<NostrEvent | null>(null);
@@ -109,6 +111,19 @@ export default function FeedScreen({
   const startQuote = useCallback((note: NostrEvent) => setComposer({ kind: 'quote', target: note }), []);
   const openComposer = useCallback(() => setComposer({ kind: 'note' }), []);
   const closeComposer = useCallback(() => setComposer(null), []);
+
+  if (searching) {
+    return (
+      <div className="flex h-full min-h-0 flex-col bg-lc-black" data-testid="feed-screen">
+        <FeedSearch
+          onOpenProfile={onOpenProfile}
+          onOpenNote={openThread}
+          onOpenArticle={handleOpenArticle}
+          onClose={() => setSearching(false)}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="relative flex h-full min-h-0 flex-col bg-lc-black" data-testid="feed-screen">
@@ -210,7 +225,25 @@ export default function FeedScreen({
         </div>
 
         <div className="ml-auto flex shrink-0 items-center gap-0.5 lg:ml-0">
-          <RefreshButton busy={state.loading} onClick={state.refresh} />
+          {/*
+            Refresh is gone: pulling up at the top of the feed refreshes, and
+            new notes announce themselves with the green pill. A button that
+            duplicates a gesture people already make is just chrome.
+          */}
+          <button
+            type="button"
+            className="group/act -m-1 flex items-center rounded-full p-1 text-lc-muted"
+            onClick={() => setSearching(true)}
+            aria-label={t('social.search')}
+            title={t('social.search')}
+            data-testid="feed-search-open"
+          >
+            <span className="flex h-8 w-8 items-center justify-center rounded-full transition-colors group-hover/act:bg-white/10 group-hover/act:text-lc-white">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" aria-hidden="true">
+                <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
+              </svg>
+            </span>
+          </button>
           {onOpenSettings && !embedded && (
             <button
               type="button"

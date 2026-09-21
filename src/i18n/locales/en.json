@@ -668,5 +668,12 @@
   "social.sort.recent": "Recent",
   "social.sort.top": "Top",
   "social.expandFeed": "Expand feed",
-  "social.restoreFeed": "Show beside chat"
+  "social.restoreFeed": "Show beside chat",
+  "social.search": "Search",
+  "social.searchPlaceholder": "Search people, posts and #tags",
+  "social.searchHint": "Search people, posts and #hashtags across Nostr.",
+  "social.searchEmpty": "Nothing found. Not every relay indexes full-text search.",
+  "social.searchPeople": "People",
+  "social.searchPosts": "Posts",
+  "social.searchTags": "Tags"
 }

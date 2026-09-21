@@ -209,6 +209,24 @@ describe('NostrProfile', () => {
     expect(onEditProfile).toHaveBeenCalled();
   });
 
+  it('leaves no empty action strip on your own profile in settings', () => {
+    // The row that carries follow/message/⋯ has nothing to carry here, and
+    // rendering it anyway left a band of black that read as a broken layout.
+    bridgeMocks.myPubkey = AUTHOR;
+    renderProfile({ settingsMode: true, onEditProfile: vi.fn() });
+    expect(screen.queryByTestId('profile-more-button')).not.toBeInTheDocument();
+  });
+
+  it('renders the feed tabs as a segmented pill', () => {
+    // Every other switch in Obelisk is a pill; three underlines stretched
+    // across a phone read as another app's chrome.
+    renderProfile();
+    const tab = screen.getByTestId('profile-tab-posts');
+    expect(tab.className).toContain('lc-segment-item');
+    expect(tab.closest('.lc-segment')).not.toBeNull();
+    expect(tab).toHaveAttribute('aria-selected', 'true');
+  });
+
   it('lets the owner compose a post and closes from the desktop X', async () => {
     bridgeMocks.myPubkey = AUTHOR;
     socialMocks.publishNote.mockResolvedValue(note('new', 'hello world'));

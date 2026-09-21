@@ -30,7 +30,7 @@ import { isVideoUrl } from '@/lib/attachments';
 import { useTranslation } from '@/i18n/context';
 import UserAvatar from '@/components/UserAvatar';
 import FeedList from '@/components/social/FeedList';
-import { ComposeButton, RefreshButton } from '@/components/social/FeedControls';
+import { ComposeButton } from '@/components/social/FeedControls';
 import NoteComposer, { type ComposerMode } from '@/components/social/NoteComposer';
 import NoteThread from '@/components/social/NoteThread';
 import ArticleReader from '@/components/social/ArticleCard';
@@ -232,12 +232,16 @@ export default function NostrProfile({
           )}
           <ProfileMoreMenu pubkey={pubkey} displayName={displayName} canModerate />
         </div>
-      ) : (
+      ) : !settingsMode ? (
         <div className="flex items-center gap-2 px-5 py-3">
-          <RefreshButton busy={state.loading} onClick={state.refresh} testId="profile-refresh" />
-          {!settingsMode && <ProfileMoreMenu pubkey={pubkey} displayName={displayName} />}
+          <ProfileMoreMenu pubkey={pubkey} displayName={displayName} />
         </div>
-      )}
+      ) : null /*
+        On your own profile in settings this row held nothing: an empty
+        strip of black between the bio and the composer that read as a
+        rendering bug. The ⋯ menu it would have carried is redundant there —
+        copy-npub is already next to the npub.
+      */}
 
       {followError && <p className="px-5 pb-2 text-xs text-red-400">{t('profileFeed.followFailed')}</p>}
 
@@ -259,22 +263,28 @@ export default function NostrProfile({
         />
       ))}
 
-      <div className="profile-feed-tabs sticky top-0 z-[2] grid grid-cols-3 border-y border-lc-border bg-lc-black/95 backdrop-blur" role="tablist">
-        {(['posts', 'replies', 'media'] as const).map((value) => (
-          <button
-            key={value}
-            type="button"
-            onClick={() => setTab(value)}
-            className={`border-b-2 px-2 py-3 text-xs font-semibold ${
-              tab === value ? 'border-lc-green text-lc-green' : 'border-transparent text-lc-muted'
-            }`}
-            data-testid={`profile-tab-${value}`}
-            role="tab"
-            aria-selected={tab === value}
-          >
-            {t(`profileFeed.${value}`)}
-          </button>
-        ))}
+      {/*
+        Pills, not underlined tabs: every other switch in Obelisk
+        (Siguiendo/Global, the filters, the settings tabs) is a segmented
+        pill, and three full-width underlines stretched across a phone read
+        as a different app's chrome.
+      */}
+      <div className="profile-feed-tabs sticky top-0 z-[2] flex justify-center border-y border-lc-border bg-lc-black/95 px-4 py-2 backdrop-blur" role="tablist">
+        <div className="lc-segment w-full max-w-sm">
+          {(['posts', 'replies', 'media'] as const).map((value) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setTab(value)}
+              className="lc-segment-item flex-1 justify-center"
+              data-testid={`profile-tab-${value}`}
+              role="tab"
+              aria-selected={tab === value}
+            >
+              {t(`profileFeed.${value}`)}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="profile-feed-content min-h-40 flex-1" aria-live="polite" role="tabpanel">

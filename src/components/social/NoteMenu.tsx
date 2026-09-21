@@ -54,7 +54,9 @@ export default function NoteMenu({
   const toast = (title: string) => useToastStore.getState().pushToast({ title, body: '' });
 
   const copy = (value: string, message: string) => {
-    navigator.clipboard?.writeText(value).catch(() => {});
+    // `Promise.resolve` because a clipboard shim can return undefined, and
+    // `.catch` on that throws out of the click handler — losing the toast.
+    void Promise.resolve(navigator.clipboard?.writeText(value)).catch(() => {});
     toast(message);
     setOpen(false);
   };
