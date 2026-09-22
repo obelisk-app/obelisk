@@ -6,10 +6,9 @@
  * unit-testable without a DOM. The hooks live in `useFeed.ts`.
  */
 
-import { fetchNotesByAuthor, findReplyParentId, findRootEventId } from '@nostr-wot/data';
+import { findReplyParentId, findRootEventId, relaysForAuthor } from '@nostr-wot/data';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
-import { KIND_TEXT_NOTE } from '../nip-kinds';
-import { FEED_KINDS, kindsForFilter, type ContentFilter } from './kinds';
+import { kindsForFilter, type ContentFilter } from './kinds';
 import { querySocial } from './pool';
 import { dedupeReposts } from './repost';
 
@@ -151,32 +150,69 @@ export async function loadFollowingFeed(
 }
 
 /**
- * One author's notes. Goes through the SDK's `fetchNotesByAuthor`, which
- * unions the default relays with the author's NIP-65 *write* relays — so a
- * user who publishes somewhere unfashionable is still found.
+ * Where a specific author's notes actually live (outbox model).
+ *
+ * Cached per pubkey for the session: a profile feed pages, and re-resolving
+ * NIP-65 on every page would cost a round trip per scroll.
+ */
+const authorRelayCache = new Map<string, Promise<string[]>>();
+
+export function authorOutboxRelays(
+  pubkey: string,
+  fallback: readonly string[],
+): Promise<string[]> {
+  const cached = authorRelayCache.get(pubkey);
+  if (cached) return cached;
+  // `relaysForAuthor` unions the author's kind-10002 *write* relays with the
+  // defaults it's given, and falls back to them when there's no relay list.
+  const promise = relaysForAuthor(pubkey, [...fallback]).catch(() => [...fallback]);
+  authorRelayCache.set(pubkey, promise);
+  return promise;
+}
+
+/** Test helper — the cache is session-scoped by design. */
+export function _resetAuthorRelayCache(): void {
+  authorRelayCache.clear();
+}
+
+/**
+ * One author's notes, read from where that author publishes.
+ *
+ * This used to call the SDK's `fetchNotesByAuthor` with our own relay list,
+ * and that helper takes `options.relays ?? relaysForAuthor(pubkey)` — so
+ * passing ours meant the outbox lookup never ran. A profile feed asked the
+ * *reader's* four relays and then said "that's everything these relays
+ * have", which for anyone who publishes elsewhere was true and useless.
+ *
+ * Now the author's NIP-65 write relays come first, unioned with ours so a
+ * person with no relay list (or an unreachable one) still resolves.
+ *
+ * It also no longer goes through `fetchNotesByAuthor` at all, because that
+ * helper is `kinds: [1]` only — a profile's articles, pictures and videos
+ * were invisible, which is why the Media and Articles tabs looked empty for
+ * people who post plenty of both.
  */
 export async function loadProfileFeed(
   pubkey: string,
-  opts: { until?: number; limit?: number; relays?: readonly string[] } = {},
+  opts: {
+    until?: number;
+    limit?: number;
+    relays?: readonly string[];
+    filter?: ContentFilter;
+  } = {},
 ): Promise<NostrEvent[]> {
-  const notes = await fetchNotesByAuthor(pubkey, {
-    limit: opts.limit ?? FEED_PAGE_SIZE,
-    ...(opts.until ? { until: opts.until } : {}),
-    ...(opts.relays ? { relays: [...opts.relays] } : {}),
-  });
-  // NoteEntry -> NostrEvent shape. The SDK drops sig/kind because it only
-  // ever returns kind 1 here; the rest of our pipeline wants real events.
+  const limit = opts.limit ?? FEED_PAGE_SIZE;
+  const relays = await authorOutboxRelays(pubkey, opts.relays ?? []);
+  if (relays.length === 0) return [];
+
+  const events = await querySocial(
+    [{ ...baseFilter(limit, opts.until, opts.filter), authors: [pubkey] }],
+    { relays },
+  );
+
   // Same guard as the following feed: the coalescer fans other consumers'
   // events into this handle too.
-  return mergeNotes([], notes.filter((n) => n.pubkey === pubkey).map((n) => ({
-    id: n.id,
-    pubkey: n.pubkey,
-    content: n.content,
-    created_at: n.createdAt,
-    tags: n.tags,
-    kind: KIND_TEXT_NOTE,
-    sig: '',
-  })));
+  return mergeNotes([], events.filter((event) => event.pubkey === pubkey));
 }
 
 /**

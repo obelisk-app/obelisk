@@ -580,7 +580,7 @@
   "social.refresh": "Refresh",
   "social.relaySettings": "Feed relays",
   "social.loadMore": "Load more",
-  "social.endOfFeed": "That's everything these relays have.",
+  "social.endOfFeed": "That's everything the relays had.",
   "social.newNotes": "new notes",
   "social.loadFailed": "The feed relays could not load this feed.",
   "social.followNobody": "You're not following anyone yet. Try the Global tab.",

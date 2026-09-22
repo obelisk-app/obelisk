@@ -104,7 +104,9 @@ async function fetchPage(
   filter: ContentFilter = 'all',
 ): Promise<NostrEvent[]> {
   if (source.kind === 'profile') {
-    return loadProfileFeed(source.pubkey, { until, relays, limit: FEED_PAGE_SIZE });
+    // The filter reaches the REQ here too now: a profile's articles and
+    // pictures were invisible while the loader was kind-1 only.
+    return loadProfileFeed(source.pubkey, { until, relays, limit: FEED_PAGE_SIZE, filter });
   }
   if (source.kind === 'following') {
     return loadFollowingFeed(source.authors, { until, relays, limit: FEED_PAGE_SIZE, filter });
