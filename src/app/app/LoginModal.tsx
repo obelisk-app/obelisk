@@ -30,6 +30,7 @@ import { useRouter } from 'next/navigation';
 import { nostrActions } from '@/lib/nostr-bridge';
 import { OBELISK_NIP46_PERMISSIONS } from '@/lib/nostr-signing-kinds';
 import GeneratedProfileEnhancements, { randomProfileName } from './GeneratedProfileEnhancements';
+import { profileUrl } from '@/lib/social/note-links';
 
 const NIP46_PERMS = OBELISK_NIP46_PERMISSIONS;
 
@@ -288,6 +289,7 @@ export default function LoginModal({
   const [generatedLogin, setGeneratedLogin] = useState<LoginArgs | null>(null);
   const [finishing, setFinishing] = useState(false);
   const [finishError, setFinishError] = useState('');
+  const [shared, setShared] = useState(false);
   // The draft is written on every keystroke of the generated-profile step but is
   // only ever *read* when the login completes, so it lives in a ref rather than
   // state. Holding it in state re-rendered LoginModal on each character, which
@@ -334,6 +336,21 @@ export default function LoginModal({
 
     const backFromGenerated = () => setGeneratedLogin(null);
 
+    const link = profileUrl(generatedLogin.pubkey);
+    const shareProfile = async () => {
+      try {
+        if (navigator.share) {
+          await navigator.share({ title: 'My Nostr profile', url: link });
+        } else {
+          await navigator.clipboard?.writeText(link);
+          setShared(true);
+        }
+      } catch {
+        // Share sheet dismissed, or the clipboard is unavailable: neither is
+        // an error worth putting in front of someone mid-signup.
+      }
+    };
+
     return (
       <Modal
         open
@@ -354,13 +371,29 @@ export default function LoginModal({
             </p>
           </div>
           <div className="nui-key-display">{npub}</div>
-          <button
-            type="button"
-            className="nui-back obelisk-copy-npub"
-            onClick={() => navigator.clipboard?.writeText(npub).catch(() => {})}
-          >
-            Copy my npub
-          </button>
+          <div className="obelisk-share-actions">
+            <button
+              type="button"
+              className="nui-back obelisk-copy-npub"
+              onClick={() => { void Promise.resolve(navigator.clipboard?.writeText(npub)).catch(() => {}); }}
+            >
+              Copy my npub
+            </button>
+            {/*
+              An npub is the address; a link is what people can actually open.
+              Same share path as a note — the Obelisk profile viewer, which
+              renders OG metadata so the link previews wherever it's pasted,
+              instead of landing the recipient on a third-party site.
+            */}
+            <button
+              type="button"
+              className="nui-back obelisk-share-profile"
+              onClick={() => void shareProfile()}
+              data-testid="share-generated-profile"
+            >
+              {shared ? 'Link copied' : 'Share my profile'}
+            </button>
+          </div>
           {finishError && <p className="nui-error" role="alert">{finishError}</p>}
           <button type="button" className="nui-login-button" disabled={finishing} onClick={() => void finish()}>
             {finishing ? 'Connecting…' : 'Enter Obelisk'}

@@ -1084,11 +1084,24 @@ button:not(:disabled),
   border-color: color-mix(in oklab, var(--color-lc-green) 30%, transparent);
   background: #0f0f0f;
 }
-.obelisk-npub-share .obelisk-copy-npub {
-  align-self: stretch;
+/* Copy (the address) and Share (the link) sit side by side — they're the
+ * same kind of action, and stacking two full-width pills above "Enter
+ * Obelisk" made the primary button look like the third option. */
+.obelisk-npub-share .obelisk-share-actions {
+  display: flex;
+  gap: 8px;
+}
+.obelisk-npub-share .obelisk-share-actions > button {
+  flex: 1;
   justify-content: center;
   min-height: 44px;
   margin: 0 !important;
+}
+.obelisk-npub-share .obelisk-share-profile {
+  /* Filled, because sending someone the link is the thing this step is
+   * actually for; copying the raw npub is the fallback. */
+  background: color-mix(in oklab, var(--color-lc-green) 20%, transparent);
+  border-color: color-mix(in oklab, var(--color-lc-green) 45%, transparent);
 }
 .obelisk-npub-share .nui-login-button { width: 100%; justify-content: center; }
 .obelisk-step-done {

@@ -130,6 +130,14 @@ describe('LoginModal generated identity flow', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Copy my npub' }));
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(expect.stringMatching(/^npub1/));
 
+    // An npub is the address; a link is what a recipient can open. Same
+    // share target as a note — the Obelisk profile viewer, which renders OG
+    // metadata rather than dumping people on a third-party site.
+    fireEvent.click(screen.getByTestId('share-generated-profile'));
+    await waitFor(() => expect(navigator.clipboard.writeText)
+      .toHaveBeenCalledWith(expect.stringMatching(/\/p\/npub1/)));
+    expect(await screen.findByText('Link copied')).toBeInTheDocument();
+
     fireEvent.click(screen.getByRole('button', { name: 'Enter Obelisk' }));
     await waitFor(() => expect(loginWithNsec).toHaveBeenCalledOnce());
   });
@@ -244,6 +252,28 @@ describe('LoginModal generated identity flow', () => {
     expect(sdkProps.styles).toEqual({ error: { display: 'none' } });
     await waitFor(() => expect(screen.getByTestId('sdk-login')).not.toBe(oldQr), { timeout: 1_000 });
     await waitFor(() => expect(screen.getByText('Open in signer app')).toBeInTheDocument());
+  });
+
+  it('uses the native share sheet when the device has one', async () => {
+    // On a phone, "copied to clipboard" is a dead end — the point is to send
+    // the link to someone, which is what the share sheet is for.
+    const share = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'share', { value: share, configurable: true });
+    render(<LoginModal />);
+
+    await act(async () => {
+      await (sdkProps.onLogin as (args: unknown) => Promise<void>)({
+        method: 'generate',
+        pubkey: '1'.repeat(64),
+        nsec: nip19.nsecEncode(new Uint8Array(32).fill(1)),
+      });
+    });
+
+    fireEvent.click(screen.getByTestId('share-generated-profile'));
+    await waitFor(() => expect(share).toHaveBeenCalledWith(
+      expect.objectContaining({ url: expect.stringMatching(/\/p\/npub1/) }),
+    ));
+    Reflect.deleteProperty(navigator, 'share');
   });
 
   it('shows an aligned back control on the final generated-profile screen', async () => {
