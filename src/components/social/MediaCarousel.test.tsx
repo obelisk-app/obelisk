@@ -67,6 +67,37 @@ describe('MediaCarousel', () => {
     expect(document.querySelector('img')).toHaveStyle({ aspectRatio: '800/400' });
   });
 
+  it('opens a lightbox on click, which a picture note never had', () => {
+    // The markdown image path had zoom; a kind-20 note rendered through
+    // here had no way to be opened at all.
+    render(<MediaCarousel items={[image(1), image(2)]} />);
+    fireEvent.click(screen.getAllByTestId('carousel-image')[1]);
+
+    expect(screen.getByTestId('lightbox')).toBeInTheDocument();
+    // Opened on the image that was clicked, not the first one.
+    expect(screen.getByText('2 / 2')).toBeInTheDocument();
+  });
+
+  it('renders the lightbox outside the note, which clips fixed children', () => {
+    // `.note-card` sets `contain: layout paint`, which makes it the
+    // containing block for `position: fixed` — the overlay was laid out
+    // against the card and clipped by it.
+    render(<MediaCarousel items={[image(1), image(2)]} />);
+    fireEvent.click(screen.getAllByTestId('carousel-image')[0]);
+    expect(screen.getByTestId('lightbox').parentElement).toBe(document.body);
+  });
+
+  it('skips videos when building the zoomable set', () => {
+    render(<MediaCarousel items={[
+      { url: 'https://example.com/a.mp4', mimeType: 'video/mp4' },
+      image(2),
+    ]} />);
+    fireEvent.click(screen.getByTestId('carousel-image'));
+    expect(screen.getByTestId('lightbox')).toBeInTheDocument();
+    // One still, so no "1 / 2" counter claiming a video is in the set.
+    expect(screen.queryByText('1 / 2')).not.toBeInTheDocument();
+  });
+
   it('renders a video slide with controls', () => {
     render(<MediaCarousel items={[{ url: 'https://example.com/a.mp4', mimeType: 'video/mp4' }]} />);
     expect(document.querySelector('video')).toHaveAttribute('controls');

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 
 interface ModalShellProps {
   onClose: () => void;
@@ -47,7 +48,7 @@ export default function ModalShell({
     return () => window.removeEventListener('keydown', onKey);
   }, [closeOnEscape, onClose]);
 
-  return (
+  const panel = (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
       onClick={closeOnBackdrop ? onClose : undefined}
@@ -58,4 +59,17 @@ export default function ModalShell({
       </div>
     </div>
   );
+
+  /*
+   * Portalled, because `fixed` is only viewport-relative while no ancestor
+   * establishes a containing block — and feed notes do: `.note-card` sets
+   * `contain: layout paint` to stop one overflowing note re-measuring the
+   * whole column. A modal opened from inside a card (the ⋯ menu's raw-event
+   * view, a sticker's pack viewer) was laid out against the card and
+   * clipped by it, which looks exactly like the click doing nothing.
+   *
+   * Events still reach React parents: a portal keeps the React tree, only
+   * the DOM position changes.
+   */
+  return typeof document === 'undefined' ? panel : createPortal(panel, document.body);
 }

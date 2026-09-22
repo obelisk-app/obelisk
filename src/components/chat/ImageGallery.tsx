@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import MediaLibraryModal from '@/components/media/MediaLibraryModal';
 import { normalizeCustomEmojiName } from '@/lib/custom-emoji-tags';
 import { inferMediaKind } from '@/lib/media-kind';
@@ -186,7 +187,8 @@ export default function ImageGallery({ urls, wide = false }: ImageGalleryProps) 
   );
 }
 
-interface LightboxProps {
+/** Exported so other media surfaces (the feed's carousel) zoom identically. */
+export interface LightboxProps {
   urls: string[];
   index: number;
   onClose: () => void;
@@ -194,7 +196,7 @@ interface LightboxProps {
   onNext: () => void;
 }
 
-function Lightbox({ urls, index, onClose, onPrev, onNext }: LightboxProps) {
+export function Lightbox({ urls, index, onClose, onPrev, onNext }: LightboxProps) {
   // Zoom + pan state. `scale` is clamped to [1, 5]; panning is only enabled
   // when scale > 1. Resets whenever the shown index changes.
   const [scale, setScale] = useState(1);
@@ -260,7 +262,19 @@ function Lightbox({ urls, index, onClose, onPrev, onNext }: LightboxProps) {
     onClose();
   };
 
-  return (
+  /*
+   * Portalled to `document.body`, and it has to be.
+   *
+   * `position: fixed` is positioned against the viewport only while no
+   * ancestor establishes a containing block — and a feed note does:
+   * `.note-card` carries `contain: layout paint` (that containment is what
+   * keeps one overflowing note from re-measuring the whole column on every
+   * scroll tick). Inside one, the lightbox was laid out against the card
+   * and clipped by it, so clicking an image in the feed appeared to do
+   * nothing. In chat there is no such ancestor, which is why the same code
+   * worked there.
+   */
+  const panel = (
     <div
       className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center"
       onClick={handleBackdropClick}
@@ -348,4 +362,8 @@ function Lightbox({ urls, index, onClose, onPrev, onNext }: LightboxProps) {
       )}
     </div>
   );
+
+  // During SSR there is no body to portal into; the lightbox only ever
+  // opens from a click, so rendering nothing then costs nothing.
+  return typeof document === 'undefined' ? panel : createPortal(panel, document.body);
 }

@@ -14,6 +14,7 @@
  */
 
 import { useCallback, useRef, useState } from 'react';
+import { Lightbox } from '@/components/chat/ImageGallery';
 
 export type CarouselItem = {
   url: string;
@@ -25,6 +26,7 @@ export type CarouselItem = {
 export default function MediaCarousel({ items }: { items: readonly CarouselItem[] }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [index, setIndex] = useState(0);
+  const [zoom, setZoom] = useState<number | null>(null);
 
   const onScroll = useCallback(() => {
     const track = trackRef.current;
@@ -41,8 +43,32 @@ export default function MediaCarousel({ items }: { items: readonly CarouselItem[
     track.scrollTo({ left: target * track.clientWidth, behavior: 'smooth' });
   };
 
+  // Zoom, like every other image in the app. A picture note rendered
+  // through this had no way to be opened at all — the markdown path had a
+  // lightbox and this one silently didn't.
+  const stills = items.filter((item) => !item.mimeType?.startsWith('video/')).map((item) => item.url);
+  const openAt = (url: string) => {
+    const at = stills.indexOf(url);
+    if (at >= 0) setZoom(at);
+  };
+
   if (items.length === 0) return null;
-  if (items.length === 1) return <Slide item={items[0]} />;
+  if (items.length === 1) {
+    return (
+      <>
+        <Slide item={items[0]} onOpen={openAt} />
+        {zoom !== null && (
+          <Lightbox
+            urls={stills}
+            index={zoom}
+            onClose={() => setZoom(null)}
+            onPrev={() => setZoom((at) => (at === null ? null : (at - 1 + stills.length) % stills.length))}
+            onNext={() => setZoom((at) => (at === null ? null : (at + 1) % stills.length))}
+          />
+        )}
+      </>
+    );
+  }
 
   return (
     <div className="relative" data-testid="media-carousel">
@@ -54,7 +80,7 @@ export default function MediaCarousel({ items }: { items: readonly CarouselItem[
       >
         {items.map((item) => (
           <div key={item.url} className="w-full shrink-0 snap-center">
-            <Slide item={item} />
+            <Slide item={item} onOpen={openAt} />
           </div>
         ))}
       </div>
@@ -82,11 +108,21 @@ export default function MediaCarousel({ items }: { items: readonly CarouselItem[
           />
         ))}
       </div>
+
+      {zoom !== null && (
+        <Lightbox
+          urls={stills}
+          index={zoom}
+          onClose={() => setZoom(null)}
+          onPrev={() => setZoom((at) => (at === null ? null : (at - 1 + stills.length) % stills.length))}
+          onNext={() => setZoom((at) => (at === null ? null : (at + 1) % stills.length))}
+        />
+      )}
     </div>
   );
 }
 
-function Slide({ item }: { item: CarouselItem }) {
+function Slide({ item, onOpen }: { item: CarouselItem; onOpen?: (url: string) => void }) {
   const ratio = item.width && item.height ? `${item.width}/${item.height}` : undefined;
   if (item.mimeType?.startsWith('video/')) {
     return (
@@ -107,7 +143,9 @@ function Slide({ item }: { item: CarouselItem }) {
       alt=""
       loading="lazy"
       decoding="async"
-      className="w-full rounded-xl object-cover"
+      onClick={onOpen ? () => onOpen(item.url) : undefined}
+      className={`w-full rounded-xl object-cover ${onOpen ? 'cursor-zoom-in' : ''}`}
+      data-testid="carousel-image"
       // `imeta` dimensions reserve the space before the bytes arrive, which
       // is the whole point of the tag — without it the feed jumps as images
       // land under the reader.
