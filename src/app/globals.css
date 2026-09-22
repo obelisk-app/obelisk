@@ -1603,3 +1603,16 @@ button:not(:disabled),
     width: 72px;
   }
 }
+
+/*
+ * A community highlight inside an article. Underline rather than the
+ * browser's yellow block: the passage is still body text being read, and a
+ * highlighter-pen fill turns a paragraph into a warning label.
+ */
+.article-body mark.article-highlight {
+  background: color-mix(in oklab, var(--color-lc-green) 14%, transparent);
+  box-shadow: inset 0 -2px 0 color-mix(in oklab, var(--color-lc-green) 55%, transparent);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
+}

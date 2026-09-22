@@ -479,6 +479,17 @@ describe('FeedScreen', () => {
     expect(screen.queryByTestId('feed-list')).not.toBeInTheDocument();
   });
 
+  it('pins the pane actions to the right, beside the source pill', async () => {
+    // `lg:ml-0` was for the wide layout where the chips fill the middle; in
+    // a half-width pane it left the actions bunched against the pill.
+    renderFeed({ embedded: true });
+    const actions = screen.getByTestId('feed-search-open').parentElement!;
+    expect(actions.className).toContain('ml-auto');
+    expect(actions.className).not.toContain('lg:ml-0');
+    // Filter, search and whatever the host adds all live in that cluster.
+    expect(actions).toContainElement(screen.getByTestId('feed-filters-open'));
+  });
+
   it('keeps the chips inline on desktop, where there is room', () => {
     renderFeed();
     expect(screen.queryByTestId('feed-filters-open')).not.toBeInTheDocument();

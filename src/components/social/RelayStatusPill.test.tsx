@@ -103,6 +103,17 @@ describe('RelayStatusPill', () => {
     expect(mocks.probeRelay).toHaveBeenCalledWith(A);
   });
 
+  it('renders the popover in a portal, not inside the header', () => {
+    // Absolutely positioned in the header it painted underneath the bar:
+    // the header and the surfaces below it are their own stacking contexts,
+    // so a z-index on the panel only ranked it within the header.
+    renderPill();
+    fireEvent.click(screen.getByTestId('relay-status-pill'));
+    const panel = screen.getByTestId('relay-status-popover');
+    expect(panel.parentElement).toBe(document.body);
+    expect(panel).toHaveStyle({ position: 'fixed' });
+  });
+
   it('closes on Escape', () => {
     renderPill();
     fireEvent.click(screen.getByTestId('relay-status-pill'));

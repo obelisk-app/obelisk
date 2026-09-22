@@ -15,9 +15,16 @@
  * Clicking opens the per-relay breakdown rather than routing into settings:
  * the question behind the click is "which one is down", and that answer fits
  * in a popover.
+ *
+ * That popover is portalled (`AnchoredMenu`). Absolutely positioned inside
+ * the header it painted *underneath* the bar: the header and the surfaces
+ * below it establish their own stacking contexts, so a z-index on the panel
+ * only ranked it within the header. Fixed coordinates on `document.body`
+ * rank it against the page instead.
  */
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import AnchoredMenu from './AnchoredMenu';
 import {
   getRelayStatuses,
   probeRelay,
@@ -60,23 +67,9 @@ export default function RelayStatusPill({
   const { t } = useTranslation();
   const statuses = useSyncExternalStore(subscribeRelayStatus, getRelayStatuses, getRelayStatuses);
   const [open, setOpen] = useState(false);
-  const wrapRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const connection = useConnectionState();
   const access = useRelayAccess(activeRelay ?? null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (event: MouseEvent) => {
-      if (!wrapRef.current?.contains(event.target as Node)) setOpen(false);
-    };
-    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') setOpen(false); };
-    document.addEventListener('mousedown', onDown);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onDown);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [open]);
 
   // The header is the surface that's always mounted, so it owns the watcher.
   // `watchRelays` is idempotent; settings calls it too.
@@ -89,8 +82,9 @@ export default function RelayStatusPill({
     : `${summary.connected}/${summary.total} ${t('social.relayCount')}`;
 
   return (
-    <div className="relative" ref={wrapRef}>
+    <>
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen((value) => !value)}
         className={`flex shrink-0 items-center gap-1.5 rounded-lg text-[11px] text-lc-muted transition-colors hover:bg-lc-border/40 hover:text-lc-white ${
@@ -106,11 +100,14 @@ export default function RelayStatusPill({
         {!compact && <span className="tabular-nums">{summary.connected}/{summary.total}</span>}
       </button>
 
-      {open && (
-        <div
-          className="absolute right-0 top-full z-50 mt-2 w-64 overflow-hidden rounded-xl border border-lc-border bg-lc-dark p-1 shadow-2xl"
-          data-testid="relay-status-popover"
-        >
+      <AnchoredMenu
+        open={open}
+        onClose={() => setOpen(false)}
+        anchorRef={triggerRef}
+        width={272}
+        testId="relay-status-popover"
+      >
+        <div className="p-1">
           {activeRelay && (
             <>
               <p className="px-2.5 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-lc-muted">
@@ -188,8 +185,8 @@ export default function RelayStatusPill({
             </button>
           )}
         </div>
-      )}
-    </div>
+      </AnchoredMenu>
+    </>
   );
 }
 

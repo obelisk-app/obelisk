@@ -271,7 +271,13 @@ export default function FeedScreen({
           ))}
         </div>}
 
-        <div className="ml-auto flex shrink-0 items-center gap-1 lg:ml-0">
+        {/*
+          Pinned right, always, when the toolbar is compact: `lg:ml-0` was
+          for the wide layout where the filter chips fill the middle, and in
+          a half-width pane on a wide screen it left the actions bunched
+          against the source pill with the rest of the row empty.
+        */}
+        <div className={`ml-auto flex shrink-0 items-center gap-1 ${compact ? '' : 'lg:ml-0'}`}>
           {/*
             One target for "what am I looking at" on a phone, sized like the
             rest of Obelisk's header buttons rather than an 11px chip.

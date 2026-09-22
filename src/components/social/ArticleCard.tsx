@@ -14,10 +14,13 @@
  * title an article has.
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { useAuthor } from '@/lib/social/useAuthor';
 import { useTranslation } from '@/i18n/context';
+import { usePreferences } from '@/lib/preferences';
+import { fetchArticleHighlights, highlightRuns } from '@/lib/social/highlights';
+import { markHighlights } from '@/lib/social/mark-highlights';
 import UserAvatar from '@/components/UserAvatar';
 import MessageContent from '@/components/chat/MessageContent';
 
@@ -148,6 +151,38 @@ export default function ArticleReader({
   const meta = useMemo(() => articleMeta(note), [note]);
   const minutes = useMemo(() => readingMinutes(note.content), [note.content]);
   const name = author?.displayName || author?.name || note.pubkey.slice(0, 10);
+  const relays = usePreferences().socialRelays;
+
+  // Off by default and fetched on demand: nobody pays for highlights unless
+  // they ask, and a feed of 50 articles would otherwise issue 50 queries.
+  const [showHighlights, setShowHighlights] = useState(false);
+  // Keyed by note id rather than reset in an effect: an effect that clears
+  // state on prop change renders once with the previous article's data.
+  const [fetched, setFetched] = useState<{ noteId: string; events: NostrEvent[] } | null>(null);
+  const highlights = fetched?.noteId === note.id ? fetched.events : null;
+  const bodyRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showHighlights || highlights !== null) return;
+    let cancelled = false;
+    fetchArticleHighlights(note, { relays })
+      .then((result) => { if (!cancelled) setFetched({ noteId: note.id, events: result }); })
+      .catch(() => { if (!cancelled) setFetched({ noteId: note.id, events: [] }); });
+    return () => { cancelled = true; };
+  }, [showHighlights, highlights, note, relays]);
+
+  const runs = useMemo(
+    () => (showHighlights && highlights ? highlightRuns(highlights) : []),
+    [showHighlights, highlights],
+  );
+
+  useEffect(() => {
+    const body = bodyRef.current;
+    if (!body || runs.length === 0) return;
+    // Marking returns its own undo, so toggling off restores the DOM rather
+    // than re-rendering content that hasn't changed.
+    return markHighlights(body, runs);
+  }, [runs, note.id]);
 
   return (
     <article className="mx-auto w-full max-w-2xl px-5 py-6" data-testid="article-reader">
@@ -184,6 +219,25 @@ export default function ArticleReader({
           {' · '}
           {minutes} {t('social.minRead')}
         </span>
+        {/*
+          Highlights belong here rather than in the feed: as feed rows they
+          read as strangers posting paragraphs they didn't write, and a
+          popular article produces dozens of overlapping ones.
+        */}
+        <button
+          type="button"
+          onClick={() => setShowHighlights((value) => !value)}
+          aria-pressed={showHighlights}
+          className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors ${
+            showHighlights
+              ? 'border-lc-green/50 bg-lc-green/15 text-lc-green'
+              : 'border-lc-border text-lc-muted hover:text-lc-white'
+          }`}
+          data-testid="article-highlights-toggle"
+        >
+          {t('social.highlights')}
+          {showHighlights && highlights !== null && ` · ${runs.length}`}
+        </button>
       </div>
 
       {/*
@@ -191,7 +245,7 @@ export default function ArticleReader({
         from `.article-body` in globals.css — headings, lists, quotes and
         code sized for reading rather than for a chat bubble.
       */}
-      <div className="article-body note-media mt-6 text-[15px] leading-7 text-lc-white">
+      <div ref={bodyRef} className="article-body note-media mt-6 text-[15px] leading-7 text-lc-white">
         <MessageContent content={note.content} messageId={note.id} wideMedia />
       </div>
 

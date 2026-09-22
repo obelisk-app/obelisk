@@ -696,5 +696,6 @@
   "social.packPeople": "people",
   "social.packAlreadyFollowing": "already followed",
   "social.packAllFollowed": "Following all",
-  "social.packFollowed": "Followed the pack"
+  "social.packFollowed": "Followed the pack",
+  "social.highlights": "Highlights"
 }

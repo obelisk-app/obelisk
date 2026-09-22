@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { LocaleProvider } from '@/i18n/context';
 
@@ -12,6 +12,17 @@ vi.mock('@/lib/nostr-bridge', () => ({
 vi.mock('@/components/chat/MessageContent', () => ({
   default: ({ content }: { content: string }) => <div data-testid="md">{content}</div>,
 }));
+
+const highlightMocks = vi.hoisted(() => ({ fetchArticleHighlights: vi.fn() }));
+vi.mock('@/lib/social/highlights', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/social/highlights')>();
+  return { ...actual, fetchArticleHighlights: highlightMocks.fetchArticleHighlights };
+});
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  highlightMocks.fetchArticleHighlights.mockResolvedValue([]);
+});
 
 import ArticleReader, { ArticleCard, articleMeta, readingMinutes } from './ArticleCard';
 
@@ -102,5 +113,51 @@ describe('ArticleReader', () => {
     expect(screen.getByText('Alice')).toBeInTheDocument();
     expect(screen.getByText('#nostr')).toBeInTheDocument();
     expect(screen.getByText('#relays')).toBeInTheDocument();
+  });
+});
+
+describe('community highlights in the reader', () => {
+  const highlight = (pubkey: string, content: string): NostrEvent => ({
+    id: `h-${pubkey}`,
+    pubkey,
+    kind: 9802,
+    content,
+    created_at: 1,
+    tags: [['a', `30023:${'b'.repeat(64)}:my-post`]],
+    sig: '',
+  });
+
+  it('asks for nothing until the reader turns them on', () => {
+    // A feed of 50 articles would otherwise issue 50 queries nobody wanted.
+    wrap(<ArticleReader note={article()} />);
+    expect(highlightMocks.fetchArticleHighlights).not.toHaveBeenCalled();
+  });
+
+  it('fetches and counts them when toggled', async () => {
+    highlightMocks.fetchArticleHighlights.mockResolvedValue([
+      highlight('c'.repeat(64), 'Some body text.'),
+      highlight('d'.repeat(64), 'Some body text.'),
+    ]);
+    wrap(<ArticleReader note={article()} />);
+
+    fireEvent.click(screen.getByTestId('article-highlights-toggle'));
+    await waitFor(() => expect(highlightMocks.fetchArticleHighlights).toHaveBeenCalled());
+    // Two people, one passage — identical passages merge.
+    await waitFor(() => expect(screen.getByTestId('article-highlights-toggle')).toHaveTextContent('1'));
+  });
+
+  it('reports pressed state, so the toggle reads as a switch', async () => {
+    wrap(<ArticleReader note={article()} />);
+    const toggle = screen.getByTestId('article-highlights-toggle');
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('does not break when the relays return nothing', async () => {
+    wrap(<ArticleReader note={article()} />);
+    fireEvent.click(screen.getByTestId('article-highlights-toggle'));
+    await waitFor(() => expect(highlightMocks.fetchArticleHighlights).toHaveBeenCalled());
+    expect(screen.getByTestId('article-reader')).toBeInTheDocument();
   });
 });

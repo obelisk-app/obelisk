@@ -29,6 +29,7 @@ import {
   mergeNotes,
   nextCursor,
 } from './feed';
+import { filterFeedHighlights } from './highlights';
 import {
   FOLLOWING_FEED_ID,
   GLOBAL_FEED_ID,
@@ -320,7 +321,14 @@ export function useFeed(
   const isMuted = useModerationStore((state) => state.isMuted);
   const isBlocked = useModerationStore((state) => state.isBlocked);
   const visible = useMemo(
-    () => applyModeration(notes, (pubkey) => isMuted(pubkey) || isBlocked(pubkey)),
+    () => applyModeration(
+      // A highlight of a Nostr article is not its own post — it's someone
+      // else's paragraph with no commentary, and it belongs on the article,
+      // where the reader can turn it on. Highlights of external pages stay:
+      // nothing here can render that page, so the passage IS the content.
+      filterFeedHighlights(notes),
+      (pubkey) => isMuted(pubkey) || isBlocked(pubkey),
+    ),
     [notes, isMuted, isBlocked],
   );
 
