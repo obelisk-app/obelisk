@@ -38,6 +38,9 @@ describe('GeneratedProfileEnhancements', () => {
     expect(nameInput.placeholder).not.toBe('');
     expect(nameInput.placeholder).not.toBe('Satoshi');
     expect(onDraftChange).toHaveBeenCalledWith({ name: nameInput.placeholder });
+    // The CSS hook that paints the suggestion like typed text rather than a
+    // grey "type something here" — it IS the name that gets published.
+    expect(nameInput.classList.contains('obelisk-name-input')).toBe(true);
 
     const firstSuggestion = nameInput.placeholder;
     fireEvent.click(randomButton);
@@ -62,6 +65,52 @@ describe('GeneratedProfileEnhancements', () => {
     fireEvent.change(bannerPicker!, { target: { files: [banner] } });
     await waitFor(() => expect(onDraftChange).toHaveBeenCalledWith({ banner: 'https://cdn.example/banner.jpg' }));
     expect(document.querySelector('[data-kind="banner"] img')).toHaveAttribute('src', 'https://cdn.example/banner.jpg');
+  });
+
+  it('drops the skip button and the "optional" preamble', async () => {
+    // Both tell someone who is already filling the form in that they needn't
+    // have bothered — and a profile with no name renders as a truncated npub
+    // everywhere in the app.
+    render(
+      <div className="nui-modal-overlay">
+        <GeneratedProfileEnhancements />
+        <div className="obelisk-login-modal">
+          <div className="nui-key-display">{nsec}</div>
+          <p>Optional. You can fill these in later from any Nostr client.</p>
+          <div className="nui-profile-fields">
+            <span className="nui-profile-field-label">Display name</span>
+            <input placeholder="Satoshi" />
+          </div>
+          <div className="nui-profile-fields">
+            <span className="nui-profile-field-label">About</span>
+            <input placeholder="Builder, chef, occasional cyclist." />
+          </div>
+          <button type="button" className="nui-profile-skip">Skip for now</button>
+        </div>
+      </div>,
+    );
+
+    await waitFor(() => expect(document.querySelector('.nui-profile-skip')).not.toBeVisible());
+    expect(screen.getByText(/Optional\. You can fill these in later/)).not.toBeVisible();
+    // Optionality moves onto the one field that actually is optional.
+    expect(screen.getByText('About (optional)')).toBeInTheDocument();
+  });
+
+  it('does not touch a re-rendered skip button by removing it from the DOM', async () => {
+    // The SDK owns this subtree; removing a node React still references
+    // throws NotFoundError on its next update.
+    render(
+      <div className="nui-modal-overlay">
+        <GeneratedProfileEnhancements />
+        <div className="obelisk-login-modal">
+          <div className="nui-key-display">{nsec}</div>
+          <button type="button" className="nui-profile-skip">Skip for now</button>
+        </div>
+      </div>,
+    );
+
+    await waitFor(() => expect(document.querySelector('.nui-profile-skip')).not.toBeVisible());
+    expect(document.querySelector('.nui-profile-skip')).toBeInTheDocument();
   });
 
   /** Mirrors the real @nostr-wot/ui profile step: React-controlled inputs. */

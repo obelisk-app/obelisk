@@ -54,6 +54,30 @@ export default function GeneratedProfileEnhancements({
         if (nsec) secretKey = nsecToBytes(nsec);
       }
 
+      // "Skip for now" and the "Optional, you can fill these in later" line
+      // both tell someone who is *already filling the form in* that they
+      // needn't have bothered. A profile with no name shows up as a truncated
+      // npub everywhere in the app, and the name field is pre-filled with a
+      // suggestion anyway — there is nothing to skip.
+      //
+      // Hidden rather than removed: the SDK owns this subtree and re-renders
+      // it, and removing a node React still holds a reference to is how you
+      // get NotFoundError on the next update.
+      modal.querySelector<HTMLElement>('.nui-profile-skip')?.setAttribute('hidden', '');
+      for (const paragraph of modal.querySelectorAll<HTMLElement>('p')) {
+        if (paragraph.textContent?.trim().startsWith('Optional.')) {
+          paragraph.hidden = true;
+        }
+      }
+
+      // Optionality moves onto the one field that actually is optional.
+      for (const label of modal.querySelectorAll<HTMLElement>('.nui-profile-field-label')) {
+        if (label.textContent?.trim() === 'About' && !label.dataset.obeliskOptional) {
+          label.dataset.obeliskOptional = 'true';
+          label.textContent = 'About (optional)';
+        }
+      }
+
       // The name field belongs to the SDK and is a React *controlled* input, so
       // its value is owned by React state we cannot reach from out here. Writing
       // to it via the native setter desyncs React's value tracker: the text shows

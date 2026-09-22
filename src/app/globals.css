@@ -1126,6 +1126,19 @@ button:not(:disabled),
   cursor: pointer;
   font-size: 18px;
 }
+/*
+ * The suggested name is carried on `placeholder`, not `value` — the SDK's
+ * input is React-controlled, and writing to `value` from outside desyncs
+ * React's value tracker and makes the field untypeable (see
+ * GeneratedProfileEnhancements). But a grey placeholder reads as "empty,
+ * type something", when the suggestion is in fact the name that will be
+ * published. So it's styled like typed text.
+ */
+.obelisk-name-input::placeholder {
+  color: var(--color-lc-white);
+  opacity: 1;
+}
+
 .obelisk-hidden-profile-label { display: none; }
 .obelisk-profile-media {
   position: relative;
@@ -1240,6 +1253,44 @@ button:not(:disabled),
   width: min(300px, calc(100vw - 64px));
   height: auto;
 }
+
+/*
+ * Back is an arrow, at every width.
+ *
+ * The step-back control was a "← Back" pill sitting in the flow, indented
+ * with the form, which reads as another action rather than as navigation —
+ * on phones it was already promoted to a ‹ in the corner, and there was no
+ * reason for a desktop to be the odd one out. Top-left, mirroring the close
+ * ✕ top-right, so the two ways out of a step are where you look for them.
+ *
+ * `:first-child` matters: the SDK reuses `.nui-back` for Copy npub, Copy
+ * nsec and Download .txt, which must stay labelled buttons.
+ */
+:is(
+  .obelisk-login-modal .nui-widget > div > .nui-back:first-child,
+  .obelisk-login-modal > .obelisk-flow-back
+) {
+  /* In flow on a desktop, pinned to the corner on a phone (below). Absolute
+     positioning at this width would land the arrow on top of the step
+     title, which sits at the top of the widget on wide layouts. */
+  align-self: flex-start;
+  width: 36px;
+  min-height: 36px;
+  padding: 0;
+  justify-content: center;
+  border-radius: 50%;
+  /* The label stays in the DOM — an icon button with no accessible name is
+     worse than a text one. `font-size: 0` hides it visually only. */
+  font-size: 0;
+}
+:is(
+  .obelisk-login-modal .nui-widget > div > .nui-back:first-child,
+  .obelisk-login-modal > .obelisk-flow-back
+)::before {
+  content: '‹';
+  font-size: 26px;
+  line-height: 1;
+}
 @media (max-width: 767px) {
   .nui-modal-overlay:has(.obelisk-login-modal .nui-nip46),
   .obelisk-login-modal:has(.nui-nip46) {
@@ -1249,6 +1300,8 @@ button:not(:disabled),
   .obelisk-login-modal:has(.nui-nip46) {
     max-height: calc(100dvh - 16px);
   }
+  /* Phone: pinned to the corner, mirroring the close ✕, and a touch-sized
+     40px rather than the 36px used with a pointer. */
   :is(
     .obelisk-login-modal .nui-widget > div > .nui-back:first-child,
     .obelisk-login-modal > .obelisk-flow-back
@@ -1258,10 +1311,6 @@ button:not(:disabled),
     left: 16px;
     width: 40px;
     min-height: 40px;
-    padding: 0;
-    justify-content: center;
-    border-radius: 50%;
-    font-size: 0;
   }
   :is(
     .obelisk-login-modal .nui-widget > div > .nui-back:first-child,

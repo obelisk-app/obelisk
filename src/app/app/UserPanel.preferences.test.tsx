@@ -36,6 +36,19 @@ vi.mock('@/lib/nostr-bridge', () => ({
   }),
 }));
 
+// Without this the relay-settings panel probes every configured relay for
+// real: the suite opens WebSockets to public relays, which is slow, flaky
+// and reaches outside the test environment.
+const RELAY_STATUSES = {};
+vi.mock('@/lib/social/relay-status', () => ({
+  subscribeRelayStatus: () => () => {},
+  // The SAME object each call: `useSyncExternalStore` compares by identity.
+  getRelayStatuses: () => RELAY_STATUSES,
+  watchRelays: vi.fn(),
+  probeRelay: vi.fn(),
+  relayStatusSummary: () => ({ total: 0, connected: 0, state: 'unknown' }),
+}));
+
 vi.mock('@/components/media/MediaLibraryModal', () => ({
   default: ({ embedded }: { embedded?: boolean }) => <div data-testid="media-library-stub" data-embedded={embedded ? 'true' : 'false'} />,
 }));
