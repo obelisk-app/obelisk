@@ -46,14 +46,16 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { id } = await params;
   const profile = await resolve(id);
   if (!profile) {
-    return { title: 'Profile not found · Obelisk', robots: { index: false } };
+    return { title: 'Profile not found', robots: { index: false } };
   }
 
   const name = displayNameFor(profile);
   const description = profile.about?.trim().slice(0, 200) || `${name} on Nostr`;
 
   return {
-    title: `${name} · Obelisk`,
+    // The root layout's template already appends "· Obelisk"; adding it
+    // here produced "Name · Obelisk · Obelisk" in the tab and in previews.
+    title: name,
     description,
     openGraph: {
       type: 'profile',

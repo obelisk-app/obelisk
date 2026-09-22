@@ -46,14 +46,14 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { id } = await params;
   const target = parseIdentifier(id);
   if (!target) {
-    return { title: 'Note not found · Obelisk', robots: { index: false } };
+    return { title: 'Note not found', robots: { index: false } };
   }
 
   const note = await fetchEventForViewer(target);
   if (!note) {
     // Don't index a page we couldn't resolve — it may resolve later, but a
     // crawler shouldn't cache the empty version as canonical.
-    return { title: 'Note not found · Obelisk', robots: { index: false } };
+    return { title: 'Note not found', robots: { index: false } };
   }
 
   const author = await fetchAuthorForViewer(note.pubkey);
@@ -61,7 +61,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const images = preview.image ? [{ url: preview.image }] : undefined;
 
   return {
-    title: `${preview.title} · Obelisk`,
+    title: preview.title,
     description: preview.description,
     openGraph: {
       type: preview.isArticle ? 'article' : 'website',

@@ -41,12 +41,12 @@ function normalizeTag(raw: string): string | null {
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { tag } = await params;
   const clean = normalizeTag(tag);
-  if (!clean) return { title: 'Tag not found · Obelisk', robots: { index: false } };
+  if (!clean) return { title: 'Tag not found', robots: { index: false } };
 
   const title = `#${clean}`;
   const description = `Notes tagged ${title} on Nostr, via Obelisk.`;
   return {
-    title: `${title} · Obelisk`,
+    title,
     description,
     openGraph: { type: 'website', title, description, siteName: 'Obelisk' },
     twitter: { card: 'summary', title, description },
