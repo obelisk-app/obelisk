@@ -699,5 +699,6 @@
   "social.packFollowed": "Followed the pack",
   "social.highlights": "Highlights",
   "social.searchScope": "All Nostr",
-  "search.scopeThisRelay": "in {server}"
+  "search.scopeThisRelay": "in {server}",
+  "profileFeed.articles": "Articles"
 }

@@ -699,5 +699,6 @@
   "social.packFollowed": "Seguiste el pack",
   "social.highlights": "Destacados",
   "social.searchScope": "Todo Nostr",
-  "search.scopeThisRelay": "en {server}"
+  "search.scopeThisRelay": "en {server}",
+  "profileFeed.articles": "Artículos"
 }

@@ -2,7 +2,7 @@ import type { Event as NostrEvent } from 'nostr-tools';
 import { isVideoUrl } from './attachments';
 import { extractUrls, isImageUrl } from './markdown';
 
-export type ProfileFeedTab = 'posts' | 'replies' | 'media';
+export type ProfileFeedTab = 'posts' | 'replies' | 'media' | 'articles';
 
 /**
  * Relay configuration moved to `src/lib/social/relays.ts`, which allows 1–8
@@ -34,10 +34,24 @@ export function hashtagTags(content: string): string[][] {
   return [...hashtags].map((hashtag) => ['t', hashtag]);
 }
 
+/** Long-form. Its own tab because it reads nothing like a short note. */
+export const ARTICLE_KIND = 30023;
+
+export function isArticle(note: Pick<NostrEvent, 'kind'>): boolean {
+  return note.kind === ARTICLE_KIND;
+}
+
 export function filterProfileFeed(notes: readonly NostrEvent[], tab: ProfileFeedTab): NostrEvent[] {
-  return notes.filter((note) => (
-    tab === 'posts' ? !isReplyNote(note) : tab === 'replies' ? isReplyNote(note) : mediaUrls(note).length > 0
-  ));
+  return notes.filter((note) => {
+    switch (tab) {
+      case 'replies': return isReplyNote(note);
+      case 'media': return mediaUrls(note).length > 0;
+      case 'articles': return isArticle(note);
+      // Posts excludes long-form: an essay in a list of one-liners buries
+      // them, and it has a tab of its own.
+      default: return !isReplyNote(note) && !isArticle(note);
+    }
+  });
 }
 
 export function toggledFollowTags(

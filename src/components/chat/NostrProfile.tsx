@@ -14,6 +14,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { hexToNpub } from '@nostr-wot/data';
+import type { JsUserMetadata } from '@/lib/nostr-bridge';
 import {
   getBridge,
   nostrActions,
@@ -23,8 +24,12 @@ import {
   useUserMetadata,
 } from '@/lib/nostr-bridge';
 import { usePreferences } from '@/lib/preferences';
-import { mediaUrls, toggledFollowTags, type ProfileFeedTab } from '@/lib/profile-feed';
-import { isReplyNote } from '@/lib/social/feed';
+import {
+  filterProfileFeed,
+  mediaUrls,
+  toggledFollowTags,
+  type ProfileFeedTab,
+} from '@/lib/profile-feed';
 import { useFeed } from '@/lib/social/useFeed';
 import { isVideoUrl } from '@/lib/attachments';
 import { useTranslation } from '@/i18n/context';
@@ -53,6 +58,15 @@ type NostrProfileProps = {
   onOpenSettings?: () => void;
   /** Phone presentation: full-screen composer instead of the inline card. */
   mobile?: boolean;
+  /**
+   * Server-fetched kind 0, for the public `/p` page.
+   *
+   * That page is server-rendered so a shared npub previews with a name and
+   * a bio; the bridge has nothing until it connects in the browser, so
+   * without this the first paint would be a nameless placeholder — worse
+   * than what the static page showed before.
+   */
+  initialMeta?: Partial<JsUserMetadata> | null;
 };
 
 export default function NostrProfile({
@@ -64,9 +78,16 @@ export default function NostrProfile({
   onOpenProfile,
   onOpenSettings,
   mobile = false,
+  initialMeta = null,
 }: NostrProfileProps) {
   const { t } = useTranslation();
-  const meta = useUserMetadata(pubkey);
+  const live = useUserMetadata(pubkey);
+  // Field-by-field: a relay copy that arrives with only `name` shouldn't
+  // blank the picture the server already resolved.
+  const meta = useMemo(
+    () => (initialMeta ? { ...initialMeta, ...stripEmpty(live) } : live),
+    [initialMeta, live],
+  );
   const myPubkey = useMyPubkey();
   const relays = usePreferences().socialRelays;
   const contactEvent = useMyContactList();
@@ -94,13 +115,10 @@ export default function NostrProfile({
   const following = !!contactEvent?.tags.some((tag) => tag[0] === 'p' && tag[1] === pubkey);
   const displayName = meta?.displayName || meta?.name || shortNpub(pubkey);
 
-  const visibleNotes = useMemo(() => state.notes.filter((note) => (
-    tab === 'posts'
-      ? !isReplyNote(note)
-      : tab === 'replies'
-        ? isReplyNote(note)
-        : mediaUrls(note).length > 0
-  )), [state.notes, tab]);
+  const visibleNotes = useMemo(
+    () => filterProfileFeed(state.notes, tab),
+    [state.notes, tab],
+  );
 
   const media = useMemo<MediaItem[]>(() => visibleNotes.flatMap((note) => {
     const urls = mediaUrls(note);
@@ -324,8 +342,8 @@ export default function NostrProfile({
         as a different app's chrome.
       */}
       <div className="profile-feed-tabs sticky top-0 z-[2] flex justify-center border-y border-lc-border bg-lc-black/95 px-4 py-2 backdrop-blur" role="tablist">
-        <div className="lc-segment w-full max-w-sm">
-          {(['posts', 'replies', 'media'] as const).map((value) => (
+        <div className="lc-segment w-full max-w-md">
+          {(['posts', 'replies', 'articles', 'media'] as const).map((value) => (
             <button
               key={value}
               type="button"
@@ -518,6 +536,14 @@ function ProfileMoreMenu({
       )}
     </div>
   );
+}
+
+/** Drop null/empty fields so a sparse relay copy can't erase a fuller one. */
+function stripEmpty<T extends object | null | undefined>(value: T): Partial<NonNullable<T>> {
+  if (!value) return {};
+  return Object.fromEntries(
+    Object.entries(value).filter(([, entry]) => entry !== null && entry !== undefined && entry !== ''),
+  ) as Partial<NonNullable<T>>;
 }
 
 function shortNpub(pubkey: string): string {

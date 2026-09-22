@@ -31,6 +31,24 @@ describe('profile feed helpers', () => {
     expect(filterProfileFeed(notes, 'media').map((event) => event.id)).toEqual(['image', 'video']);
   });
 
+  it('gives long-form its own tab and keeps it out of Posts', () => {
+    // An essay in a list of one-liners buries them, and the profile page
+    // was the one place a person's articles never showed up as articles.
+    const article = { ...note('essay', '## On relays'), kind: 30023 } as NostrEvent;
+    const notes = [note('post', 'hello'), article];
+
+    expect(filterProfileFeed(notes, 'articles').map((event) => event.id)).toEqual(['essay']);
+    expect(filterProfileFeed(notes, 'posts').map((event) => event.id)).toEqual(['post']);
+  });
+
+  it('still files a long-form reply under Replies', () => {
+    const reply = {
+      ...note('reply-essay', 'answering', [['e', 'parent', '', 'reply']]),
+      kind: 30023,
+    } as NostrEvent;
+    expect(filterProfileFeed([reply], 'replies').map((event) => event.id)).toEqual(['reply-essay']);
+  });
+
   it('preserves unrelated kind-3 tags while toggling one follow', () => {
     const tags = [['p', 'existing'], ['relay', 'wss://legacy.example']];
     expect(toggledFollowTags(tags, 'target', true)).toEqual([...tags, ['p', 'target']]);

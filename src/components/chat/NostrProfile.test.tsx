@@ -260,6 +260,31 @@ describe('NostrProfile', () => {
     expect(screen.getByTestId('profile-website')).toHaveAttribute('href', 'https://alice.example');
   });
 
+  it('has an Articles tab, and Posts no longer carries essays', async () => {
+    socialMocks.loadProfileFeed.mockResolvedValue([
+      note('short', 'a one-liner'),
+      { ...note('essay', '## On relays'), kind: 30023, tags: [['d', 'on-relays'], ['title', 'On Relays']] },
+    ]);
+    renderProfile();
+    await waitFor(() => expect(screen.getByText('a one-liner')).toBeInTheDocument());
+    expect(screen.queryByText('On Relays')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('profile-tab-articles'));
+    await waitFor(() => expect(screen.getByText('On Relays')).toBeInTheDocument());
+    expect(screen.queryByText('a one-liner')).not.toBeInTheDocument();
+  });
+
+  it('paints server-supplied metadata before the bridge has any', () => {
+    // The public /p page is server-rendered; without this the first paint
+    // would be a nameless placeholder — worse than the static card it
+    // replaced.
+    // Bridge connected, relay copy not in yet.
+    bridgeMocks.metadata = {};
+    renderProfile({ initialMeta: { displayName: 'Server Name', about: 'from the server' } });
+    expect(screen.getByText('Server Name')).toBeInTheDocument();
+    expect(screen.getByText('from the server')).toBeInTheDocument();
+  });
+
   it('renders the feed tabs as a segmented pill', () => {
     // Every other switch in Obelisk is a pill; three underlines stretched
     // across a phone read as another app's chrome.
