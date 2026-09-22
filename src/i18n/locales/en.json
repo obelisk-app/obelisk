@@ -670,7 +670,7 @@
   "social.expandFeed": "Expand feed",
   "social.restoreFeed": "Show beside chat",
   "social.search": "Search",
-  "social.searchPlaceholder": "Search people, posts and #tags",
+  "social.searchPlaceholder": "Search all of Nostr — people, posts, #tags",
   "social.searchHint": "Search people, posts and #hashtags across Nostr.",
   "social.searchEmpty": "Nothing found. Not every relay indexes full-text search.",
   "social.searchPeople": "People",
@@ -697,5 +697,7 @@
   "social.packAlreadyFollowing": "already followed",
   "social.packAllFollowed": "Following all",
   "social.packFollowed": "Followed the pack",
-  "social.highlights": "Highlights"
+  "social.highlights": "Highlights",
+  "social.searchScope": "All Nostr",
+  "search.scopeThisRelay": "in {server}"
 }

@@ -87,7 +87,7 @@ export default function RelayStatusPill({
         ref={triggerRef}
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className={`flex shrink-0 items-center gap-1.5 rounded-lg text-[11px] text-lc-muted transition-colors hover:bg-lc-border/40 hover:text-lc-white ${
+        className={`flex shrink-0 items-center gap-1.5 rounded-lg text-[11px] font-medium text-lc-white/70 transition-colors hover:bg-lc-border/40 hover:text-lc-white ${
           compact ? 'h-7 w-7 justify-center' : 'px-2 py-1'
         }`}
         title={label}

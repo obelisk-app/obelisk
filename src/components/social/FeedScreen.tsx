@@ -28,6 +28,7 @@ import ArticleReader from './ArticleCard';
 import { ComposeButton } from './FeedControls';
 import FeedSearch from './FeedSearch';
 import StarterPacks from './StarterPacks';
+import InfiniteSentinel from './InfiniteSentinel';
 import MediaGrid, { type MediaItem } from '@/components/chat/MediaGrid';
 import { mediaUrls } from '@/lib/profile-feed';
 import { parseImeta } from '@/lib/social/imeta';
@@ -178,7 +179,12 @@ export default function FeedScreen({
         The middle scrolls horizontally rather than wrapping, so a narrow
         split pane shortens the row instead of growing a second line.
       */}
-      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-lc-border px-3 py-2">
+      {/*
+        `bg-lc-dark` and `px-5`, like the chat header and the relay top bar:
+        the toolbar is a header, and on the content background it read as
+        the first row of the feed.
+      */}
+      <div className="flex min-h-14 shrink-0 flex-wrap items-center gap-2 border-b border-lc-border bg-lc-dark px-5 py-2">
         <h1 className="sr-only">{t('social.feed')}</h1>
 
         <div className="lc-segment shrink-0" role="tablist" aria-label={t('social.feed')}>
@@ -236,10 +242,10 @@ export default function FeedScreen({
               type="button"
               onClick={() => setFilter(value)}
               aria-pressed={filter === value}
-              className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
+              className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${
                 filter === value
-                  ? 'bg-lc-green/15 text-lc-green'
-                  : 'text-lc-muted hover:bg-white/5 hover:text-lc-white'
+                  ? 'bg-lc-green/20 text-lc-green'
+                  : 'text-lc-white/60 hover:bg-white/10 hover:text-lc-white'
               }`}
               data-testid={`feed-filter-${value}`}
             >
@@ -259,10 +265,10 @@ export default function FeedScreen({
               type="button"
               onClick={() => setSort(value)}
               aria-pressed={sort === value}
-              className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
+              className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${
                 sort === value
-                  ? 'bg-lc-green/15 text-lc-green'
-                  : 'text-lc-muted hover:bg-white/5 hover:text-lc-white'
+                  ? 'bg-lc-green/20 text-lc-green'
+                  : 'text-lc-white/60 hover:bg-white/10 hover:text-lc-white'
               }`}
               data-testid={`feed-sort-${value}`}
             >
@@ -285,8 +291,8 @@ export default function FeedScreen({
           {compact && (
             <button
               type="button"
-              className={`flex ${mobile ? 'h-10 w-10' : 'h-8 w-8'} items-center justify-center rounded-full border border-lc-border transition-colors hover:bg-white/5 active:bg-white/10 ${
-                filter !== 'all' || sort !== 'recent' ? 'text-lc-green' : 'text-lc-muted'
+              className={`flex ${mobile ? 'h-10 w-10' : 'h-8 w-8'} items-center justify-center rounded-full border border-lc-border transition-colors hover:bg-white/10 active:bg-white/10 ${
+                filter !== 'all' || sort !== 'recent' ? 'text-lc-green' : 'text-lc-white/70'
               }`}
               onClick={() => setFiltersOpen(true)}
               aria-label={t('social.filters')}
@@ -306,10 +312,10 @@ export default function FeedScreen({
           <button
             type="button"
             className={mobile
-              ? 'flex h-10 w-10 items-center justify-center rounded-full border border-lc-border text-lc-muted transition-colors active:bg-white/10'
+              ? 'flex h-10 w-10 items-center justify-center rounded-full border border-lc-border text-lc-white/70 transition-colors active:bg-white/10'
               : compact
-                ? 'flex h-8 w-8 items-center justify-center rounded-full border border-lc-border text-lc-muted transition-colors hover:bg-white/5'
-                : 'group/act -m-1 flex items-center rounded-full p-1 text-lc-muted'}
+                ? 'flex h-8 w-8 items-center justify-center rounded-full border border-lc-border text-lc-white/70 transition-colors hover:bg-white/10'
+                : 'group/act -m-1 flex items-center rounded-full p-1 text-lc-white/70'}
             onClick={() => setSearching(true)}
             aria-label={t('social.search')}
             title={t('social.search')}
@@ -330,7 +336,7 @@ export default function FeedScreen({
           {onOpenSettings && !embedded && (
             <button
               type="button"
-              className="group/act -m-1 flex items-center rounded-full p-1 text-lc-muted"
+              className="group/act -m-1 flex items-center rounded-full p-1 text-lc-white/70"
               onClick={onOpenSettings}
               aria-label={t('social.relaySettings')}
               title={t('social.relaySettings')}
@@ -398,7 +404,21 @@ export default function FeedScreen({
             point of picking Media is to look, and tapping a tile opens the
             note it came from.
           */
-          <MediaGrid items={mediaItems} onOpen={openMediaNote} />
+          <>
+            <MediaGrid items={mediaItems} onOpen={openMediaNote} />
+            {/*
+              The grid bypasses FeedList, and with it the sentinel that pages
+              the feed — scrolling a wall of images just stopped at the first
+              page.
+            */}
+            <InfiniteSentinel
+              onReach={state.loadMore}
+              disabled={state.exhausted || state.loadingMore}
+            />
+            {state.loadingMore && (
+              <p className="py-6 text-center text-xs text-lc-muted">{t('common.loading')}</p>
+            )}
+          </>
         ) : (
         <FeedList
           state={state}

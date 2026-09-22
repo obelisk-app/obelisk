@@ -346,6 +346,7 @@ export default function SearchBar({
         >
           {!raw.trim() ? (
             <FilterAndHistoryPane
+              serverName={serverName}
               history={history}
               t={t}
               onPickFilter={applyFilter}
@@ -392,17 +393,30 @@ function SearchIcon({ size }: { size: number }) {
 }
 
 function FilterAndHistoryPane({
-  history, t, onPickFilter, onPickHistory, onClearHistory,
+  history, t, serverName, onPickFilter, onPickHistory, onClearHistory,
 }: {
   history: string[];
   t: (key: string) => string;
+  serverName: string;
   onPickFilter: (token: string) => void;
   onPickHistory: (q: string) => void;
   onClearHistory: () => void;
 }) {
   return (
     <>
-      <div className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-lc-muted border-b border-lc-border">{t('search.filters.title')}</div>
+      {/*
+        Scope, not decoration: this pane is NIP-50 over one relay's channels,
+        while the feed's search is the open network. They looked identical.
+      */}
+      <div className="flex items-center justify-between gap-2 border-b border-lc-border px-3 py-2">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-lc-muted">{t('search.filters.title')}</span>
+        <span
+          className="shrink-0 truncate rounded-full border border-lc-border px-2 py-0.5 text-[10px] font-semibold text-lc-muted"
+          data-testid="search-scope-badge"
+        >
+          {t('search.scopeThisRelay').replace('{server}', serverName)}
+        </span>
+      </div>
       <FilterRow icon="👤" title={t('search.filters.fromUser.title')} hint={t('search.filters.fromUser.example')} onClick={() => onPickFilter('from:')} />
       <FilterRow icon="#" title={t('search.filters.inChannel.title')} hint={t('search.filters.inChannel.example')} onClick={() => onPickFilter('in:')} />
       <FilterRow icon="🔗" title={t('search.filters.has.title')} hint={t('search.filters.has.example')} onClick={() => onPickFilter('has:link')} />

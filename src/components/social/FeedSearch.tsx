@@ -103,23 +103,49 @@ export default function FeedSearch({
 
   return (
     <div className="flex h-full min-h-0 flex-col" data-testid="feed-search">
-      <div className="flex shrink-0 items-center gap-2 border-b border-lc-border px-3 py-3">
-        <SearchIcon />
-        <input
-          autoFocus
-          value={raw}
-          onChange={(event) => setRaw(event.target.value)}
-          placeholder={t('social.searchPlaceholder')}
-          aria-label={t('social.search')}
-          className="min-w-0 flex-1 bg-transparent text-sm text-lc-white outline-none placeholder:text-lc-muted"
-          data-testid="feed-search-input"
-        />
-        {busy && <span className="lc-spinner h-4 w-4 shrink-0" aria-hidden="true" />}
+      {/*
+        `h-14`, `bg-lc-dark`, `px-5`: the app's header contract, same as the
+        chat header and the relay top bar. This row was a bare full-width
+        strip on the content background, so it read as part of the feed
+        rather than as the surface's header, and it didn't line up with the
+        sidebar's search box beside it.
+      */}
+      <div className="flex h-14 shrink-0 items-center gap-2 border-b border-lc-border bg-lc-dark px-5">
+        {/*
+          Two searches exist and they answer different questions: the one in
+          the sidebar is NIP-50 over this relay's channels ("what was said
+          in this room"), and this one is the open network. Without a scope
+          badge they look identical and the results are inexplicable.
+        */}
+        <span
+          className="flex shrink-0 items-center gap-1.5 rounded-md border border-lc-green/40 bg-lc-green/10 px-2.5 py-1.5 text-[11px] font-semibold text-lc-green"
+          data-testid="feed-search-scope"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M2 12h20" />
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+          </svg>
+          {t('social.searchScope')}
+        </span>
+        <div className="flex min-w-0 flex-1 items-center gap-2 rounded-md border border-lc-border bg-lc-black/40 px-3 py-2 focus-within:border-lc-green/60">
+          <SearchIcon />
+          <input
+            autoFocus
+            value={raw}
+            onChange={(event) => setRaw(event.target.value)}
+            placeholder={t('social.searchPlaceholder')}
+            aria-label={t('social.search')}
+            className="min-w-0 flex-1 bg-transparent text-sm text-lc-white outline-none placeholder:text-lc-muted"
+            data-testid="feed-search-input"
+          />
+          {busy && <span className="lc-spinner h-4 w-4 shrink-0" aria-hidden="true" />}
+        </div>
         {onClose && (
           <button
             type="button"
             onClick={onClose}
-            className="shrink-0 rounded-full px-2 py-1 text-xs text-lc-muted hover:text-lc-white"
+            className="lc-pill-secondary shrink-0 px-4 py-1.5 text-xs"
             data-testid="feed-search-close"
           >
             {t('common.close')}
@@ -243,7 +269,7 @@ function SearchIcon() {
       stroke="currentColor"
       strokeWidth="2"
       strokeLinecap="round"
-      className="shrink-0 text-lc-muted"
+      className="shrink-0 text-lc-white/70"
       aria-hidden="true"
     >
       <circle cx="11" cy="11" r="8" />

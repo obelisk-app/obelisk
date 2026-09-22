@@ -30,6 +30,31 @@ export const DEFAULT_SOCIAL_RELAYS: readonly string[] = [
 ];
 
 /**
+ * Relays to widen into when a feed runs out.
+ *
+ * "That's everything the relays had" is often a statement about the four
+ * relays configured, not about Nostr: a small or unlucky relay set exhausts
+ * after a couple of pages while the same query has plenty more elsewhere.
+ * When paging goes dry we retry once against this wider set before telling
+ * the reader there's nothing left.
+ *
+ * Deliberately not added to the user's configured set: widening is a
+ * last-resort read, not a silent change to where their client lives.
+ */
+export const WIDER_SOCIAL_RELAYS: readonly string[] = [
+  ...DEFAULT_SOCIAL_RELAYS,
+  'wss://relay.snort.social',
+  'wss://nostr.wine',
+  'wss://relay.nostr.bg',
+  'wss://offchain.pub',
+];
+
+/** The user's relays plus the fallback set, deduped. */
+export function widenedRelays(relays: readonly string[]): string[] {
+  return [...new Set([...relays, ...WIDER_SOCIAL_RELAYS])];
+}
+
+/**
  * Canonical form of a single relay URL, or `null` if it isn't usable from a
  * browser page. Delegates the safety judgement to the SDK's `isPublicWssUrl`,
  * which rejects non-`wss:` schemes, localhost/.local, and RFC-1918 / loopback

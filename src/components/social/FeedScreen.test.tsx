@@ -490,6 +490,52 @@ describe('FeedScreen', () => {
     expect(actions).toContainElement(screen.getByTestId('feed-filters-open'));
   });
 
+  it('widens to more relays before declaring the feed finished', async () => {
+    // "No more content" is usually a statement about four relays, not
+    // about Nostr.
+    socialMocks.loadFollowingFeed
+      .mockResolvedValueOnce([note('a', 'first', 3000)])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([note('b', 'from a wider set', 2000)]);
+
+    renderFeed();
+    await waitFor(() => expect(screen.getByText('first')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId('feed-load-more'));
+    await waitFor(() => expect(screen.getByText('from a wider set')).toBeInTheDocument());
+
+    // The retry went to a bigger relay set than the configured one.
+    const [, firstOpts] = socialMocks.loadFollowingFeed.mock.calls[1];
+    const [, retryOpts] = socialMocks.loadFollowingFeed.mock.calls[2];
+    expect(retryOpts.relays.length).toBeGreaterThan(firstOpts.relays.length);
+  });
+
+  it('stops for good once the wider set is empty too', async () => {
+    socialMocks.loadFollowingFeed
+      .mockResolvedValueOnce([note('a', 'first', 3000)])
+      .mockResolvedValue([]);
+
+    renderFeed();
+    await waitFor(() => expect(screen.getByText('first')).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId('feed-load-more'));
+
+    await waitFor(() => expect(screen.queryByTestId('feed-load-more')).not.toBeInTheDocument());
+  });
+
+  it('pages the media grid too, not just the list', async () => {
+    // The grid bypasses FeedList and with it the sentinel that pages the
+    // feed — a wall of images stopped at the first page.
+    socialMocks.loadFollowingFeed.mockResolvedValue([
+      note('m1', 'look https://example.com/a.jpg'),
+    ]);
+    renderFeed();
+    await waitFor(() => expect(screen.getByTestId('feed-list')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId('feed-filter-media'));
+    await waitFor(() => expect(screen.getByTestId('profile-media-grid')).toBeInTheDocument());
+    expect(screen.getByTestId('infinite-sentinel')).toBeInTheDocument();
+  });
+
   it('keeps the chips inline on desktop, where there is room', () => {
     renderFeed();
     expect(screen.queryByTestId('feed-filters-open')).not.toBeInTheDocument();

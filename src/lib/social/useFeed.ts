@@ -30,6 +30,7 @@ import {
   nextCursor,
 } from './feed';
 import { filterFeedHighlights } from './highlights';
+import { widenedRelays } from './relays';
 import {
   FOLLOWING_FEED_ID,
   GLOBAL_FEED_ID,
@@ -143,6 +144,9 @@ export function useFeed(
   // into Global, and the next write persisted them there.
   const keyRef = useRef(key);
   keyRef.current = key;
+  // Whether this feed has already fallen back to the wider relay set. Reset
+  // with the feed key below — widening is per view, not per session.
+  const widenedRef = useRef(false);
   // Built once per follow-list change rather than per delivered event: the
   // live tail can fire hundreds of times a minute on a busy relay set.
   const allowedAuthors = useMemo(
@@ -183,6 +187,7 @@ export function useFeed(
     setNotes(cached);
     setPending([]);
     setExhausted(false);
+    widenedRef.current = false;
     setLoading(cached.length === 0);
   }, [key, cacheId, relayList]);
 
@@ -280,18 +285,39 @@ export function useFeed(
     if (until === undefined) return;
     setLoadingMore(true);
     const requestedFor = key;
-    fetchPage(source, relayList, until, filter)
-      .then((page) => {
+
+    /**
+     * Page, and if the configured relays have nothing left, widen once.
+     *
+     * "No more content" is usually a statement about four relays, not about
+     * Nostr — a small or unlucky relay set runs dry after a couple of pages
+     * while the same query has plenty more elsewhere. The widened read is a
+     * one-shot fallback, not a change to where the client lives: it does not
+     * touch the user's relay list.
+     */
+    const page = async (): Promise<{ events: NostrEvent[]; widened: boolean }> => {
+      const first = await fetchPage(source, relayList, until, filter);
+      if (first.length > 0 || widenedRef.current) return { events: first, widened: false };
+      const wider = widenedRelays(relayList);
+      if (wider.length === relayList.length) return { events: first, widened: false };
+      const second = await fetchPage(source, wider, until, filter);
+      return { events: second, widened: true };
+    };
+
+    void page()
+      .then(({ events, widened }) => {
         // The reader switched feeds while this page was in flight. Merging it
         // now would splice these notes into a different feed's list — and the
         // next write would persist them into that feed's cache.
         if (keyRef.current !== requestedFor) return;
+        if (widened) widenedRef.current = true;
         setNotes((current) => {
-          const merged = groupReposts(mergeNotes(current, page)).notes;
+          const merged = groupReposts(mergeNotes(current, events)).notes;
           // A page that adds nothing new means we've reached the end of what
           // these relays will serve — `until` overlap guarantees at least the
           // boundary note comes back, so "no growth" is the honest signal.
-          if (merged.length === current.length) setExhausted(true);
+          // Only final once the wider set has been tried too.
+          if (merged.length === current.length && widenedRef.current) setExhausted(true);
           persist(merged);
           return merged;
         });
