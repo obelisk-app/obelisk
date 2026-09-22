@@ -429,6 +429,7 @@ export default function FeedScreen({
           onReply={startReply}
           onQuote={startQuote}
           onOpenArticle={handleOpenArticle}
+          onOpenTag={openTag}
         />
         )}
         </div>

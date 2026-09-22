@@ -11,7 +11,7 @@
  * text runs to `MessageContent`, and render the references as real UI.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { hexToNpub } from '@nostr-wot/data';
 import { useAuthor } from '@/lib/social/useAuthor';
 import { tokenizeContent, type NostrRef } from '@/lib/social/nip27';
@@ -23,23 +23,52 @@ export default function NoteContent({
   noteId,
   onOpenProfile,
   onOpenNote,
+  onOpenTag,
 }: {
   content: string;
   noteId?: string;
   onOpenProfile?: (pubkey: string) => void;
   onOpenNote?: (id: string) => void;
+  /**
+   * Handle a hashtag in-app instead of navigating to `/t/<tag>`.
+   *
+   * `linkifyHashtags` turns `#bitcoin` into a markdown link so the public
+   * viewer pages have somewhere real to point — but inside the app, leaving
+   * for a standalone page throws away the feed you were reading. Hosts that
+   * have a tag surface of their own (the feed's search) pass this and the
+   * link becomes an in-app action; hosts that don't leave it alone and the
+   * anchor still works.
+   */
+  onOpenTag?: (tag: string) => void;
 }) {
   const tokens = useMemo(() => tokenizeContent(content), [content]);
+
+  // Delegated rather than per-link: the anchors are produced inside
+  // `MessageContent`'s markdown renderer, which has no hook for this.
+  const onClick = onOpenTag
+    ? (event: React.MouseEvent<HTMLDivElement>) => {
+      const anchor = (event.target as HTMLElement).closest?.('a');
+      const href = anchor?.getAttribute('href');
+      const tag = href?.match(/^\/t\/([^/?#]+)$/)?.[1];
+      if (!tag) return;
+      // Let a modified click do what the reader asked (new tab, etc.).
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
+      event.preventDefault();
+      onOpenTag(decodeURIComponent(tag));
+    }
+    : undefined;
 
   // Fast path: no references, so nothing to interleave.
   if (tokens.length === 1 && tokens[0].kind === 'text') {
     return (
-      <MessageContent content={linkifyHashtags(content)} messageId={noteId} wideMedia />
+      <div onClick={onClick} data-testid="note-content">
+        <MessageContent content={linkifyHashtags(content)} messageId={noteId} wideMedia />
+      </div>
     );
   }
 
   return (
-    <div className="space-y-1" data-testid="note-content">
+    <div className="space-y-1" onClick={onClick} data-testid="note-content">
       {tokens.map((token, index) => (
         token.kind === 'text' ? (
           token.value.trim() ? (

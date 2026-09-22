@@ -536,6 +536,19 @@ describe('FeedScreen', () => {
     expect(screen.getByTestId('infinite-sentinel')).toBeInTheDocument();
   });
 
+  it('opens a tag in its own search, seeded, rather than leaving for /t', async () => {
+    // Clicking #bitcoin used to navigate to a standalone page, and the feed
+    // you were reading was gone. Same handler a hashtag inside a note uses.
+    socialMocks.loadFollowingFeed.mockResolvedValue([
+      { ...note('a', 'gm'), tags: [['t', 'bitcoin']] },
+    ]);
+    renderFeed();
+    await waitFor(() => expect(screen.getByTestId('trending-tag')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId('trending-tag'));
+    expect(screen.getByTestId('feed-search-input')).toHaveValue('#bitcoin');
+  });
+
   it('keeps the chips inline on desktop, where there is room', () => {
     renderFeed();
     expect(screen.queryByTestId('feed-filters-open')).not.toBeInTheDocument();

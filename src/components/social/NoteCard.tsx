@@ -57,6 +57,8 @@ export type NoteCardProps = {
   onQuote?: (note: NostrEvent) => void;
   onZap?: (note: NostrEvent) => void;
   onOpenArticle?: (note: NostrEvent) => void;
+  /** Hashtags open in-app (the feed's search) instead of leaving for /t. */
+  onOpenTag?: (tag: string) => void;
   /**
    * Everyone who reposted this note, newest first. A repost row renders the
    * whole list; without it "eight people reposted this" reads as one
@@ -97,6 +99,7 @@ export default memo(NoteCardInner, (prev, next) => (
   && prev.onOpenNote === next.onOpenNote
   && prev.onOpenProfile === next.onOpenProfile
   && prev.onOpenArticle === next.onOpenArticle
+  && prev.onOpenTag === next.onOpenTag
   // Compared by length: the list is rebuilt each page, so reference equality
   // would defeat the memo, and reposters only ever grow for a given note.
   && (prev.reposters?.length ?? 0) === (next.reposters?.length ?? 0)
@@ -231,6 +234,7 @@ function PlainNoteCard({
   onQuote,
   onZap,
   onOpenArticle,
+  onOpenTag,
   variant = 'full',
   nested = false,
 }: NoteCardProps) {
@@ -387,6 +391,7 @@ function PlainNoteCard({
           onOpenProfile={onOpenProfile}
           onOpenNote={onOpenNote}
           onOpenArticle={onOpenArticle}
+          onOpenTag={onOpenTag}
         />
       )}
 
@@ -457,6 +462,7 @@ function NoteBody({
   onOpenProfile,
   onOpenNote,
   onOpenArticle,
+  onOpenTag,
 }: {
   note: NostrEvent;
   mode: ReturnType<typeof renderModeFor>;
@@ -464,6 +470,7 @@ function NoteBody({
   onOpenProfile?: (pubkey: string) => void;
   onOpenNote?: (id: string) => void;
   onOpenArticle?: (note: NostrEvent) => void;
+  onOpenTag?: (tag: string) => void;
 }) {
   const { t } = useTranslation();
   const activeRelay = useCurrentRelayUrl();
@@ -497,7 +504,7 @@ function NoteBody({
     return (
       <div data-testid="note-group-message">
         <div className="break-words text-[15px] leading-relaxed text-lc-white">
-          <NoteContent content={note.content} noteId={note.id} onOpenProfile={onOpenProfile} onOpenNote={onOpenNote} />
+          <NoteContent content={note.content} noteId={note.id} onOpenProfile={onOpenProfile} onOpenNote={onOpenNote} onOpenTag={onOpenTag} />
         </div>
         {groupHref && (
           <a
@@ -535,7 +542,7 @@ function NoteBody({
       <div className="rounded-xl border border-lc-border bg-lc-dark p-3" data-testid="note-unsupported">
         {note.content.trim() ? (
           <div className="break-words text-[15px] leading-relaxed text-lc-white">
-            <NoteContent content={note.content} noteId={note.id} onOpenProfile={onOpenProfile} onOpenNote={onOpenNote} />
+            <NoteContent content={note.content} noteId={note.id} onOpenProfile={onOpenProfile} onOpenNote={onOpenNote} onOpenTag={onOpenTag} />
           </div>
         ) : null}
         <p className="mt-2 text-[11px] text-lc-muted">
@@ -559,6 +566,7 @@ function NoteBody({
           noteId={note.id}
           onOpenProfile={onOpenProfile}
           onOpenNote={onOpenNote}
+          onOpenTag={onOpenTag}
         />
         {/* Picture/video notes put the media in imeta; content is a caption. */}
         {(mode === 'picture' || mode === 'video') && imetaCount > 0 && (

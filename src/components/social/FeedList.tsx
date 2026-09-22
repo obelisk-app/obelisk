@@ -44,6 +44,7 @@ export default function FeedList({
   onQuote,
   onZap,
   onOpenArticle,
+  onOpenTag,
   emptyLabel,
   header,
   /** Scroll container to observe. Defaults to the nearest scrollable ancestor. */
@@ -60,6 +61,8 @@ export default function FeedList({
    * article click a silent no-op — the reason articles "didn't work".
    */
   onOpenArticle?: (note: NostrEvent) => void;
+  /** Hashtags open the feed's own search instead of leaving for /t. */
+  onOpenTag?: (tag: string) => void;
   emptyLabel?: string;
   header?: React.ReactNode;
   scrollRef?: React.RefObject<HTMLElement | null>;
@@ -215,6 +218,7 @@ export default function FeedList({
             onQuote={onQuote}
             onZap={onZap}
             onOpenArticle={onOpenArticle}
+            onOpenTag={onOpenTag}
             reposters={repostersByTarget.get(note.id)}
           />
         ))}
