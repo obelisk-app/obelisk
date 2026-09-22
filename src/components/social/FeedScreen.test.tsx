@@ -9,6 +9,7 @@ const socialMocks = vi.hoisted(() => ({
   loadProfileFeed: vi.fn(),
   subscribeSocial: vi.fn((..._args: unknown[]) => () => {}),
   follows: ['f'.repeat(64)] as string[],
+  contactsReady: true,
 }));
 
 vi.mock('@/lib/social/pool', () => ({
@@ -53,7 +54,7 @@ vi.mock('@/lib/nostr-bridge', () => ({
   useMyPubkey: () => 'b'.repeat(64),
   useMyFollows: () => socialMocks.follows,
   useMyContactList: () => null,
-  useMyContactListReady: () => true,
+  useMyContactListReady: () => socialMocks.contactsReady,
   useUserMetadata: () => ({ displayName: 'Alice', name: 'alice' }),
 }));
 
@@ -85,6 +86,7 @@ beforeEach(() => {
   window.localStorage.clear();
   vi.clearAllMocks();
   socialMocks.follows = ['f'.repeat(64)];
+  socialMocks.contactsReady = true;
   socialMocks.loadFollowingFeed.mockResolvedValue([]);
   socialMocks.loadGlobalFeed.mockResolvedValue([]);
   socialMocks.subscribeSocial.mockReturnValue(() => {});
@@ -332,7 +334,7 @@ describe('FeedScreen', () => {
     await waitFor(() => expect(screen.getByTestId('note-article')).toBeInTheDocument());
 
     fireEvent.click(screen.getByTestId('note-article'));
-    await waitFor(() => expect(screen.getByTestId('article-modal')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId('feed-article-reader')).toBeInTheDocument());
     expect(screen.getByTestId('article-reader')).toHaveTextContent('On Relays');
   });
 
@@ -350,7 +352,7 @@ describe('FeedScreen', () => {
 
     fireEvent.click(screen.getByTestId('note-article'));
     expect(onOpenArticle).toHaveBeenCalledWith(expect.objectContaining({ kind: 30023 }));
-    expect(screen.queryByTestId('article-modal')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('feed-article-reader')).not.toBeInTheDocument();
   });
 
   it('reorders when you switch to Top, without refetching', async () => {
@@ -547,6 +549,49 @@ describe('FeedScreen', () => {
 
     fireEvent.click(screen.getByTestId('trending-tag'));
     expect(screen.getByTestId('feed-search-input')).toHaveValue('#bitcoin');
+  });
+
+  it('does not offer starter packs to an account whose follows are still loading', async () => {
+    // `useMyFollows()` is [] both for someone who follows nobody and for
+    // someone whose kind 3 is in flight — treating the second as the first
+    // showed the starter packs to accounts with hundreds of follows.
+    socialMocks.follows = [];
+    socialMocks.contactsReady = false;
+    renderFeed();
+    expect(screen.queryByTestId('starter-packs')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('starter-packs-loading')).not.toBeInTheDocument();
+  });
+
+  it('paints cached notes while the follow list is still loading', async () => {
+    // `authors` is [] both for "follows nobody" and "kind 3 hasn't landed",
+    // and filtering the cached Following feed against an empty set dropped
+    // every note — on exactly the paint the cache exists for.
+    socialMocks.loadFollowingFeed.mockResolvedValue([note('cached', 'from yesterday', 5000)]);
+    const first = renderFeed();
+    await waitFor(() => expect(screen.getByText('from yesterday')).toBeInTheDocument());
+    flushFeedCacheWrites();
+    first.unmount();
+
+    // Reload with the contact list not yet resolved.
+    socialMocks.follows = [];
+    socialMocks.contactsReady = false;
+    socialMocks.loadFollowingFeed.mockResolvedValue([]);
+    renderFeed();
+    expect(screen.getByText('from yesterday')).toBeInTheDocument();
+  });
+
+  it('does not overwrite the cache with nothing while follows are unknown', async () => {
+    socialMocks.loadFollowingFeed.mockResolvedValue([note('cached', 'from yesterday', 5000)]);
+    const first = renderFeed();
+    await waitFor(() => expect(screen.getByText('from yesterday')).toBeInTheDocument());
+    flushFeedCacheWrites();
+    first.unmount();
+
+    socialMocks.follows = [];
+    socialMocks.contactsReady = false;
+    renderFeed();
+    flushFeedCacheWrites();
+    expect(JSON.stringify(window.localStorage)).toContain('from yesterday');
   });
 
   it('keeps the chips inline on desktop, where there is room', () => {

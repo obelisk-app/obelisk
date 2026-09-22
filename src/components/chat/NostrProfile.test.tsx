@@ -218,12 +218,24 @@ describe('NostrProfile', () => {
     expect(onEditProfile).toHaveBeenCalled();
   });
 
-  it('leaves no empty action strip on your own profile in settings', () => {
-    // The row that carries follow/message/⋯ has nothing to carry here, and
-    // rendering it anyway left a band of black that read as a broken layout.
+  it('leaves no empty action strip on your own profile', () => {
+    // The row that carries follow/message has nothing to carry there, and
+    // rendering it anyway left a band of black that read as a broken
+    // layout. The ⋯ it used to hold lives beside the avatar now.
     bridgeMocks.myPubkey = AUTHOR;
     renderProfile({ settingsMode: true, onEditProfile: vi.fn() });
-    expect(screen.queryByTestId('profile-more-button')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('profile-follow-button')).not.toBeInTheDocument();
+    expect(screen.getByTestId('profile-more-button')).toBeInTheDocument();
+  });
+
+  it('keeps the ⋯ menu on screen instead of opening past the left edge', () => {
+    // Anchored inside a left-aligned row with `right-0`, the panel opened
+    // off the side of the screen.
+    renderProfile();
+    fireEvent.click(screen.getByTestId('profile-more-button'));
+    const panel = screen.getByTestId('profile-more-menu');
+    expect(panel.parentElement).toBe(document.body);
+    expect(panel).toHaveStyle({ position: 'fixed' });
   });
 
   it('offers preferences as a gear beside the avatar', () => {

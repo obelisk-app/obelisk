@@ -11,7 +11,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
-import { useMyFollows, useMyPubkey, useUserMetadata } from '@/lib/nostr-bridge';
+import {
+  useMyContactListReady,
+  useMyFollows,
+  useMyPubkey,
+  useUserMetadata,
+} from '@/lib/nostr-bridge';
 import { usePreferences } from '@/lib/preferences';
 import { useTranslation } from '@/i18n/context';
 import { useFeed, type FeedSource } from '@/lib/social/useFeed';
@@ -27,6 +32,7 @@ import NoteThread from './NoteThread';
 import ArticleReader from './ArticleCard';
 import { ComposeButton } from './FeedControls';
 import FeedSearch from './FeedSearch';
+import InlineReader from './InlineReader';
 import StarterPacks from './StarterPacks';
 import InfiniteSentinel from './InfiniteSentinel';
 import MediaGrid, { type MediaItem } from '@/components/chat/MediaGrid';
@@ -70,6 +76,7 @@ export default function FeedScreen({
   const myPubkey = useMyPubkey();
   const meta = useUserMetadata(myPubkey ?? '');
   const follows = useMyFollows();
+  const contactsReady = useMyContactListReady();
   const relays = usePreferences().socialRelays;
   const [tab, setTab] = useState<FeedTab>('following');
   const [filter, setFilter] = useState<ContentFilter>('all');
@@ -111,7 +118,13 @@ export default function FeedScreen({
   // A fresh key follows nobody. "Try the Global tab" pointed at a firehose
   // of strangers and left the actual job — find people worth following — to
   // the person who just arrived.
-  const noFollows = tab === 'following' && follows.length === 0;
+  //
+  // Gated on the contact list having actually arrived: `useMyFollows()` is
+  // `[]` both for someone who follows nobody and for someone whose kind 3
+  // is still in flight, and treating the second as the first showed the
+  // starter packs to accounts with hundreds of follows — and kept showing
+  // them if the list never landed on the current relay set.
+  const noFollows = tab === 'following' && contactsReady && follows.length === 0;
   const emptyLabel = noFollows ? t('social.followNobody') : undefined;
 
   // Stable identities: NoteCard is memoised on its handlers, so inline
@@ -152,6 +165,38 @@ export default function FeedScreen({
   }, [openThread]);
   const openComposer = useCallback(() => setComposer({ kind: 'note' }), []);
   const closeComposer = useCallback(() => setComposer(null), []);
+
+  // A thread or an article takes over the surface, the way search does.
+  // Handed to the host when it has a pane; otherwise inline here, never a
+  // modal: an article in a centred card has less room than the feed it came
+  // from, and a thread in one can't be scrolled and replied to comfortably.
+  if (openArticle) {
+    return (
+      <InlineReader
+        title={t('social.article')}
+        onBack={() => setOpenArticle(null)}
+        testId="feed-article-reader"
+      >
+        <ArticleReader note={openArticle} onOpenProfile={onOpenProfile} />
+      </InlineReader>
+    );
+  }
+
+  if (openNoteId) {
+    return (
+      <InlineReader
+        title={t('social.thread')}
+        onBack={() => setOpenNoteId(null)}
+        testId="feed-thread-reader"
+      >
+        <NoteThread
+          noteId={openNoteId}
+          onOpenProfile={onOpenProfile}
+          onOpenNote={setOpenNoteId}
+        />
+      </InlineReader>
+    );
+  }
 
   if (searching) {
     return (
@@ -490,15 +535,6 @@ export default function FeedScreen({
         </ModalShell>
       )}
 
-      {openArticle && (
-        <ModalShell
-          onClose={() => setOpenArticle(null)}
-          testId="article-modal"
-          panelClassName="w-full max-w-2xl mx-4 rounded-xl bg-lc-dark border border-lc-border shadow-xl max-h-[85vh] overflow-y-auto"
-        >
-          <ArticleReader note={openArticle} onOpenProfile={onOpenProfile} />
-        </ModalShell>
-      )}
 
       {filtersOpen && (
         <FilterSheet
@@ -511,16 +547,6 @@ export default function FeedScreen({
         />
       )}
 
-      {openNoteId && (
-        <ModalShell onClose={() => setOpenNoteId(null)} testId="thread-modal">
-          <div className="mb-3 text-sm font-semibold text-lc-white">{t('social.thread')}</div>
-          <NoteThread
-            noteId={openNoteId}
-            onOpenProfile={onOpenProfile}
-            onOpenNote={setOpenNoteId}
-          />
-        </ModalShell>
-      )}
     </div>
   );
 }

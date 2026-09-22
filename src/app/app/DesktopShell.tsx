@@ -200,6 +200,7 @@ export default function AppShell() {
   const [paneArticle, setPaneArticle] = useState<NostrEvent | null>(null);
   /** Threads and articles can take the whole surface, like the feed can. */
   const [paneFull, setPaneFull] = useState(false);
+  const [profileFull, setProfileFull] = useState(false);
   /**
    * The feed alongside a group, rather than instead of it.
    *
@@ -365,6 +366,13 @@ export default function AppShell() {
   // React refuses (#310) — the chat surface hit its error boundary the
   // moment the gate flipped.
   const dismissPane = useHistoryDismiss(paneOpen, closePane);
+
+  const closeProfile = useCallback(() => {
+    setExploredProfilePubkey(null);
+    setProfileFull(false);
+  }, []);
+  // Back closes the profile too, for the same reason it closes the reader.
+  const dismissProfile = useHistoryDismiss(!!exploredProfilePubkey, closeProfile);
 
   if (!isLoggedIn) {
     // A stored session is being reconnected (cold load → relay handshake +
@@ -652,19 +660,56 @@ export default function AppShell() {
             </ResizablePane>
           )
         )}
+        {/*
+          The profile pane gets the reader's chrome: a header with back and
+          expand, and a fullscreen mode. It was the one pane with no header
+          at all — its only way out was a floating ✕ inside the profile
+          itself, and it could not be widened past the drag handle, which
+          made a feed of notes read in a 520px column.
+        */}
         {exploredProfilePubkey && (
-          <ResizablePane storageKey={PROFILE_PANE_KEY} defaultWidth={520} min={340} max={900} side="left" rounded={false}>
-          <aside className="h-full min-w-0 flex-1 overflow-hidden bg-lc-black" data-testid="desktop-profile-pane">
-            <NostrProfile
-              pubkey={exploredProfilePubkey}
-              onClose={() => setExploredProfilePubkey(null)}
-              onMessage={(peer) => {
-                setView({ kind: 'dm', peer });
-                setExploredProfilePubkey(null);
-              }}
-            />
-          </aside>
-          </ResizablePane>
+          profileFull ? (
+            <div className="absolute inset-0 z-40 flex flex-col bg-lc-black" data-testid="desktop-profile-pane">
+              <ReaderPaneHeader
+                title={t('settings.profile')}
+                full
+                onToggleFull={() => setProfileFull(false)}
+                onBack={dismissProfile}
+              />
+              <div className="min-h-0 flex-1">
+                <NostrProfile
+                  pubkey={exploredProfilePubkey}
+                  hideClose
+                  onClose={closeProfile}
+                  onOpenProfile={setExploredProfilePubkey}
+                  onMessage={(peer) => { setView({ kind: 'dm', peer }); closeProfile(); }}
+                />
+              </div>
+            </div>
+          ) : (
+            <ResizablePane storageKey={PROFILE_PANE_KEY} defaultWidth={520} min={340} max={900} side="left" rounded={false}>
+              <aside
+                className="flex h-full min-w-0 flex-1 flex-col overflow-hidden border-l border-lc-border bg-lc-black"
+                data-testid="desktop-profile-pane"
+              >
+                <ReaderPaneHeader
+                  title={t('settings.profile')}
+                  full={false}
+                  onToggleFull={() => setProfileFull(true)}
+                  onBack={dismissProfile}
+                />
+                <div className="min-h-0 flex-1">
+                  <NostrProfile
+                    pubkey={exploredProfilePubkey}
+                    hideClose
+                    onClose={closeProfile}
+                    onOpenProfile={setExploredProfilePubkey}
+                    onMessage={(peer) => { setView({ kind: 'dm', peer }); closeProfile(); }}
+                  />
+                </div>
+              </aside>
+            </ResizablePane>
+          )
         )}
         {profilePopupPubkey && (
           <ProfilePopover

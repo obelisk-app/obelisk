@@ -165,6 +165,9 @@ export function useFeed(
    * invariant true by construction rather than by every caller remembering.
    */
   const persist = useCallback((merged: readonly NostrEvent[]) => {
+    // Same window as the seed: with no follows resolved yet, every note
+    // would be filtered out and the entry overwritten with an empty list.
+    if (source.kind === 'following' && source.authors.length === 0) return;
     writeFeedCache(
       relayList,
       cacheId,
@@ -179,11 +182,23 @@ export function useFeed(
   useLayoutEffect(() => {
     if (seededKey.current === key) return;
     seededKey.current = key;
-    // Filter the seed too. A cache written before the guard existed holds
-    // strangers, and because it is painted on mount and `mergeNotes` only
-    // adds, a correct fetch can never evict them.
+
+    /*
+     * Filter the seed too. A cache written before the guard existed holds
+     * strangers, and because it is painted on mount and `mergeNotes` only
+     * adds, a correct fetch can never evict them.
+     *
+     * Except while the follow list is still in flight. `authors` is `[]`
+     * both for "follows nobody" and "kind 3 hasn't arrived", and filtering
+     * a cached Following feed against an empty set drops every note —
+     * which is exactly when the cache is meant to earn its keep, on the
+     * first paint after a reload. The entries were written by a session
+     * that did know the follows, and the next seed (the key changes when
+     * they land) re-filters against the real set.
+     */
+    const authorsUnknown = source.kind === 'following' && source.authors.length === 0;
     const cached = readFeedCache(relayList, cacheId)
-      .filter((note) => noteMatchesSource(note, source, allowedAuthors, filter));
+      .filter((note) => authorsUnknown || noteMatchesSource(note, source, allowedAuthors, filter));
     setNotes(cached);
     setPending([]);
     setExhausted(false);

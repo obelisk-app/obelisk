@@ -11,7 +11,7 @@
  * appears.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { hexToNpub } from '@nostr-wot/data';
 import type { JsUserMetadata } from '@/lib/nostr-bridge';
@@ -44,6 +44,8 @@ import MediaGrid, { type MediaItem } from './MediaGrid';
 import NoteThread from '@/components/social/NoteThread';
 import ArticleReader from '@/components/social/ArticleCard';
 import ModalShell from '@/components/ModalShell';
+import InlineReader from '@/components/social/InlineReader';
+import AnchoredMenu from '@/components/social/AnchoredMenu';
 import { useModerationStore } from '@/store/moderation';
 import { useToastStore } from '@/store/toast';
 
@@ -67,6 +69,12 @@ type NostrProfileProps = {
    * than what the static page showed before.
    */
   initialMeta?: Partial<JsUserMetadata> | null;
+  /**
+   * The host draws the close control. Desktop panes have a header with
+   * back/expand now, and a second floating ✕ on top of the banner was one
+   * too many ways out of the same pane.
+   */
+  hideClose?: boolean;
 };
 
 export default function NostrProfile({
@@ -79,6 +87,7 @@ export default function NostrProfile({
   onOpenSettings,
   mobile = false,
   initialMeta = null,
+  hideClose = false,
 }: NostrProfileProps) {
   const { t } = useTranslation();
   const live = useUserMetadata(pubkey);
@@ -159,12 +168,40 @@ export default function NostrProfile({
     }
   };
 
+  // A thread or an article takes over the profile surface rather than
+  // opening in a modal on top of it — same reasoning as the feed: a card
+  // with a dimmed backdrop gives an article less room than the list it came
+  // from.
+  if (openArticle) {
+    return (
+      <InlineReader
+        title={t('social.article')}
+        onBack={() => setOpenArticle(null)}
+        testId="profile-article-reader"
+      >
+        <ArticleReader note={openArticle} onOpenProfile={onOpenProfile} />
+      </InlineReader>
+    );
+  }
+
+  if (openNoteId) {
+    return (
+      <InlineReader
+        title={t('social.thread')}
+        onBack={() => setOpenNoteId(null)}
+        testId="profile-thread-reader"
+      >
+        <NoteThread noteId={openNoteId} onOpenProfile={onOpenProfile} onOpenNote={setOpenNoteId} />
+      </InlineReader>
+    );
+  }
+
   return (
     <div
       className={(settingsMode ? '' : 'screen active') + ' profile-view-screen flex h-full min-h-0 flex-col overflow-y-auto bg-lc-black'}
       data-testid="nostr-profile"
     >
-      {!settingsMode && (
+      {!settingsMode && !hideClose && (
         <div className="sticky top-3 z-10 hidden h-0 shrink-0 md:block" data-testid="profile-explore-close-sticky">
           <button
             type="button"
@@ -225,6 +262,14 @@ export default function NostrProfile({
           initialClassName="text-3xl"
         />
         <div className="mb-2 flex items-center gap-2">
+          {/*
+            The ⋯ lives here on every profile. On your own it used to sit
+            alone in a row under the bio, left-aligned, with its panel
+            anchored `right-0` — so the dropdown opened off the left edge of
+            the screen. Beside the other profile controls it lines up with
+            them and the panel has room.
+          */}
+          <ProfileMoreMenu pubkey={pubkey} displayName={displayName} canModerate={!isMe} />
           {isMe && mobile && (
             <button
               type="button"
@@ -297,17 +342,12 @@ export default function NostrProfile({
               {t('mobile.profile.message')}
             </button>
           )}
-          <ProfileMoreMenu pubkey={pubkey} displayName={displayName} canModerate />
-        </div>
-      ) : !settingsMode ? (
-        <div className="flex items-center gap-2 px-5 py-3">
-          <ProfileMoreMenu pubkey={pubkey} displayName={displayName} />
         </div>
       ) : null /*
-        On your own profile in settings this row held nothing: an empty
-        strip of black between the bio and the composer that read as a
-        rendering bug. The ⋯ menu it would have carried is redundant there —
-        copy-npub is already next to the npub.
+        Your own profile has no follow/message row, and the ⋯ that used to
+        stand in for it moved up beside the avatar — leaving an empty strip
+        of black between the bio and the composer that read as a rendering
+        bug.
       */}
 
       {followError && <p className="px-5 pb-2 text-xs text-red-400">{t('profileFeed.followFailed')}</p>}
@@ -399,21 +439,7 @@ export default function NostrProfile({
         </ModalShell>
       )}
 
-      {openArticle && (
-        <ModalShell
-          onClose={() => setOpenArticle(null)}
-          testId="profile-article-modal"
-          panelClassName="w-full max-w-2xl mx-4 rounded-xl bg-lc-dark border border-lc-border shadow-xl max-h-[85vh] overflow-y-auto"
-        >
-          <ArticleReader note={openArticle} onOpenProfile={onOpenProfile} />
-        </ModalShell>
-      )}
 
-      {openNoteId && (
-        <ModalShell onClose={() => setOpenNoteId(null)} testId="profile-thread-modal">
-          <NoteThread noteId={openNoteId} onOpenProfile={onOpenProfile} onOpenNote={setOpenNoteId} />
-        </ModalShell>
-      )}
 
       {expandedMedia && (
         <ProfileMediaLightbox url={expandedMedia} onClose={() => setExpandedMedia(null)} />
@@ -470,6 +496,7 @@ function ProfileMoreMenu({
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const muted = useModerationStore((state) => state.mutedPubkeys.includes(pubkey));
   const blocked = useModerationStore((state) => state.blockedPubkeys.includes(pubkey));
   const toggleMute = useModerationStore((state) => state.toggleMute);
@@ -495,10 +522,11 @@ function ProfileMoreMenu({
   };
 
   return (
-    <div className="relative">
+    <>
       <button
+        ref={triggerRef}
         type="button"
-        className="lc-pill-secondary h-full px-4 text-base leading-none"
+        className="flex h-11 w-11 items-center justify-center rounded-full border border-lc-border bg-lc-dark text-base leading-none text-lc-white active:scale-95"
         onClick={() => setOpen((value) => !value)}
         aria-label={t('mobile.profile.more')}
         aria-expanded={open}
@@ -506,8 +534,19 @@ function ProfileMoreMenu({
       >
         ⋯
       </button>
-      {open && (
-        <div className="absolute right-0 top-full z-20 mt-2 w-44 overflow-hidden rounded-xl border border-lc-border bg-lc-dark py-1 shadow-2xl" data-testid="profile-more-menu">
+      {/*
+        Portalled and clamped to the viewport: anchored inside the row, the
+        panel opened past the left edge of the screen whenever the trigger
+        was near it.
+      */}
+      <AnchoredMenu
+        open={open}
+        onClose={() => setOpen(false)}
+        anchorRef={triggerRef}
+        width={176}
+        testId="profile-more-menu"
+      >
+        <div>
           <button type="button" className="block w-full px-4 py-2 text-left text-xs text-lc-white hover:bg-white/5" onClick={copyNpub}>
             {t('profileFeed.copyNpub')}
           </button>
@@ -533,8 +572,8 @@ function ProfileMoreMenu({
             {t('profileFeed.shareProfile')}
           </button>
         </div>
-      )}
-    </div>
+      </AnchoredMenu>
+    </>
   );
 }
 
