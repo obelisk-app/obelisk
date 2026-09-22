@@ -167,6 +167,7 @@ import { useDMStore } from '@/store/dm';
 import { setDmOptInEnabled, useDmOptInEnabled } from '@/lib/dm/opt-in';
 import { setPreference, usePreferences } from '@/lib/preferences';
 import { relayWebsiteUrl } from '@/lib/nostr-bridge/relay-url';
+import RelayStatusPill from '@/components/social/RelayStatusPill';
 import { useMessageZapStore } from '@/store/messageZap';
 import { presenceActivityKey, useNostrPresence, PRESENCE_WINDOW_MS } from '@/hooks/chat/useNostrPresence';
 import MessageZapModal from '@/components/chat/MessageZapModal';
@@ -2005,6 +2006,7 @@ export function MobileServerBanner({
   const host = relayUrl ? shortHost(relayUrl) : '';
   const iconFallback = relayUrl ? shortHost(relayUrl).slice(0, 1).toUpperCase() : 'O';
   const website = relayUrl ? relayWebsiteUrl(relayUrl) : null;
+  const socialRelays = usePreferences().socialRelays;
   return (
     <header className="server-banner" data-testid="mobile-server-banner">
       {bannerUrl ? (
@@ -2015,6 +2017,9 @@ export function MobileServerBanner({
       )}
       <div className="server-banner-shade" aria-hidden="true" />
       <div className="server-banner-actions">
+        {/* Beside the signing indicator, because it answers the same kind of
+            question: is the thing underneath this app working right now. */}
+        <RelayStatusPill relays={socialRelays} activeRelay={relayUrl} compact />
         <MobileSigningIndicator />
         <button className="icon-btn action-search" aria-label="Search this server" onClick={onSearch}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>

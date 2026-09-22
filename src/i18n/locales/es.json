@@ -681,5 +681,13 @@
   "social.relayOffline": "Sin conexión",
   "social.trending": "Tendencias",
   "social.trendingEmpty": "Todavía no hay tendencias en este feed",
-  "social.relays": "Relays"
+  "social.relays": "Relays",
+  "social.thisRelay": "Este relay",
+  "social.auth.unknown": "Verificando acceso…",
+  "social.auth.authenticating": "Autenticando con el relay (NIP-42)…",
+  "social.auth.ok": "Autenticado",
+  "social.auth.auth-required": "Falta autenticación — el relay rechazó el desafío",
+  "social.auth.restricted": "Restringido — este relay no admite tu clave",
+  "social.auth.unreachable": "Inalcanzable — el relay no responde",
+  "social.auth.error": "Error al hablar con el relay"
 }

@@ -27,7 +27,6 @@ import NoteThread from './NoteThread';
 import ArticleReader from './ArticleCard';
 import { ComposeButton } from './FeedControls';
 import FeedSearch from './FeedSearch';
-import RelayStatusPill from './RelayStatusPill';
 import TrendingPanel from './TrendingPanel';
 
 export type FeedTab = 'following' | 'global';
@@ -72,6 +71,10 @@ export default function FeedScreen({
   const [sort, setSort] = useState<FeedSort>('recent');
   const [searching, setSearching] = useState(false);
   const [searchSeed, setSearchSeed] = useState('');
+  // A half-width pane has no more room than a phone: the source segment, two
+  // chip strips and the actions wrapped onto a second line. Same answer as
+  // mobile — the filters go behind one button.
+  const compact = mobile || embedded;
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [composer, setComposer] = useState<ComposerMode | null>(null);
   const [openNoteId, setOpenNoteId] = useState<string | null>(null);
@@ -199,7 +202,7 @@ export default function FeedScreen({
           11px text; they live in the filter sheet instead, and are not
           rendered here at all so the sheet's copies are the only ones.
         */}
-        {!mobile && <div
+        {!compact && <div
           className="-mx-1 order-last flex w-full min-w-0 items-center gap-0.5 overflow-x-auto px-1 lg:order-none lg:w-auto lg:min-w-[13rem] lg:flex-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           role="group"
           aria-label={t('social.filter.all')}
@@ -226,7 +229,7 @@ export default function FeedScreen({
           Sort sits with the filters: both answer "what am I looking at",
           where the source pill answers "whose".
         */}
-        {!mobile && <div className="flex shrink-0 items-center gap-0.5" role="group">
+        {!compact && <div className="flex shrink-0 items-center gap-0.5" role="group">
           {(['recent', 'top'] as const).map((value) => (
             <button
               key={value}
@@ -247,19 +250,13 @@ export default function FeedScreen({
 
         <div className="ml-auto flex shrink-0 items-center gap-1 lg:ml-0">
           {/*
-            Connectivity belongs next to the feed, not buried in settings:
-            an empty feed and a feed whose relays all dropped look the same
-            without it.
-          */}
-          <RelayStatusPill relays={relays} onOpenSettings={onOpenSettings} compact={mobile} />
-          {/*
             One target for "what am I looking at" on a phone, sized like the
             rest of Obelisk's header buttons rather than an 11px chip.
           */}
-          {mobile && (
+          {compact && (
             <button
               type="button"
-              className={`flex h-10 w-10 items-center justify-center rounded-full border border-lc-border transition-colors active:bg-white/10 ${
+              className={`flex ${mobile ? 'h-10 w-10' : 'h-8 w-8'} items-center justify-center rounded-full border border-lc-border transition-colors hover:bg-white/5 active:bg-white/10 ${
                 filter !== 'all' || sort !== 'recent' ? 'text-lc-green' : 'text-lc-muted'
               }`}
               onClick={() => setFiltersOpen(true)}
@@ -281,14 +278,16 @@ export default function FeedScreen({
             type="button"
             className={mobile
               ? 'flex h-10 w-10 items-center justify-center rounded-full border border-lc-border text-lc-muted transition-colors active:bg-white/10'
-              : 'group/act -m-1 flex items-center rounded-full p-1 text-lc-muted'}
+              : compact
+                ? 'flex h-8 w-8 items-center justify-center rounded-full border border-lc-border text-lc-muted transition-colors hover:bg-white/5'
+                : 'group/act -m-1 flex items-center rounded-full p-1 text-lc-muted'}
             onClick={() => setSearching(true)}
             aria-label={t('social.search')}
             title={t('social.search')}
             data-testid="feed-search-open"
           >
-            {mobile ? (
-              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden="true">
+            {compact ? (
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden="true">
                 <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
               </svg>
             ) : (
@@ -375,12 +374,7 @@ export default function FeedScreen({
 
         {!mobile && !embedded && (
           <div className="sticky top-0 hidden xl:block">
-            <TrendingPanel
-              notes={state.notes}
-              relays={relays}
-              onOpenTag={openTag}
-              onOpenSettings={onOpenSettings}
-            />
+            <TrendingPanel notes={state.notes} onOpenTag={openTag} />
           </div>
         )}
         </div>
@@ -448,6 +442,7 @@ export default function FeedScreen({
         <FilterSheet
           filter={filter}
           sort={sort}
+          mobile={mobile}
           onFilter={setFilter}
           onSort={setSort}
           onClose={() => setFiltersOpen(false)}
@@ -478,22 +473,30 @@ export default function FeedScreen({
 function FilterSheet({
   filter,
   sort,
+  mobile,
   onFilter,
   onSort,
   onClose,
 }: {
   filter: ContentFilter;
   sort: FeedSort;
+  /** Phone: a bottom sheet within thumb reach. Pane: a dropdown under the button. */
+  mobile: boolean;
   onFilter: (value: ContentFilter) => void;
   onSort: (value: FeedSort) => void;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
-  const dismiss = useHistoryDismiss(true, onClose);
+  // Back closes the sheet on a phone. A desktop dropdown is dismissed by
+  // clicking away, and pushing history for it would make the back button
+  // feel like it did nothing.
+  const dismiss = useHistoryDismiss(mobile, onClose);
 
   return (
     <div
-      className="fixed inset-0 z-[120] flex flex-col justify-end bg-black/60"
+      className={mobile
+        ? 'fixed inset-0 z-[120] flex flex-col justify-end bg-black/60'
+        : 'fixed inset-0 z-[120]'}
       role="dialog"
       aria-modal="true"
       aria-label={t('social.filters')}
@@ -501,11 +504,13 @@ function FilterSheet({
       data-testid="feed-filter-sheet"
     >
       <div
-        className="rounded-t-2xl border-t border-lc-border bg-lc-dark px-4 pb-8 pt-3"
+        className={mobile
+          ? 'rounded-t-2xl border-t border-lc-border bg-lc-dark px-4 pb-8 pt-3'
+          : 'absolute right-4 top-14 w-72 rounded-xl border border-lc-border bg-lc-dark p-3 shadow-2xl'}
         onClick={(event) => event.stopPropagation()}
-        style={{ paddingBottom: 'calc(2rem + env(safe-area-inset-bottom))' }}
+        {...(mobile ? { style: { paddingBottom: 'calc(2rem + env(safe-area-inset-bottom))' } } : {})}
       >
-        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-lc-border" aria-hidden="true" />
+        {mobile && <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-lc-border" aria-hidden="true" />}
 
         <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-lc-muted">
           {t('social.sort.top')} · {t('social.sort.recent')}

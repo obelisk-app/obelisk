@@ -134,6 +134,12 @@ export function useFeed(
 
   const seededKey = useRef<string | null>(null);
   const liveRef = useRef(false);
+  // Which feed is on screen right now. An in-flight page resolves into
+  // whatever the hook is showing *then*, not what it was showing when the
+  // request went out — switching tabs mid-page-load merged Following notes
+  // into Global, and the next write persisted them there.
+  const keyRef = useRef(key);
+  keyRef.current = key;
   // Built once per follow-list change rather than per delivered event: the
   // live tail can fire hundreds of times a minute on a busy relay set.
   const allowedAuthors = useMemo(
@@ -141,6 +147,24 @@ export function useFeed(
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [source.kind === 'following' ? source.authors : null],
   );
+
+  /**
+   * Every cache write goes through here.
+   *
+   * The invariant is "this cache holds notes that belong to this feed", and
+   * it has been broken twice by different paths — the coalescer's
+   * over-delivery, then a page resolving after a tab switch. Enforcing it at
+   * the single write point costs a filter over ≤50 notes and makes the
+   * invariant true by construction rather than by every caller remembering.
+   */
+  const persist = useCallback((merged: readonly NostrEvent[]) => {
+    writeFeedCache(
+      relayList,
+      cacheId,
+      merged.filter((note) => noteMatchesSource(note, source, allowedAuthors, filter)),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [relayList, cacheId, key, allowedAuthors]);
 
   // Seed before paint. useLayoutEffect (not useEffect) is what makes the
   // cached notes appear in the FIRST frame rather than causing a flash of
@@ -173,7 +197,7 @@ export function useFeed(
         if (cancelled) return;
         setNotes((current) => {
           const merged = groupReposts(mergeNotes(current, page)).notes;
-          writeFeedCache(relayList, cacheId, merged);
+          persist(merged);
           return merged;
         });
         setLoading(false);
@@ -252,15 +276,20 @@ export function useFeed(
     const until = nextCursor(notes);
     if (until === undefined) return;
     setLoadingMore(true);
+    const requestedFor = key;
     fetchPage(source, relayList, until, filter)
       .then((page) => {
+        // The reader switched feeds while this page was in flight. Merging it
+        // now would splice these notes into a different feed's list — and the
+        // next write would persist them into that feed's cache.
+        if (keyRef.current !== requestedFor) return;
         setNotes((current) => {
           const merged = groupReposts(mergeNotes(current, page)).notes;
           // A page that adds nothing new means we've reached the end of what
           // these relays will serve — `until` overlap guarantees at least the
           // boundary note comes back, so "no growth" is the honest signal.
           if (merged.length === current.length) setExhausted(true);
-          writeFeedCache(relayList, cacheId, merged);
+          persist(merged);
           return merged;
         });
       })
@@ -274,13 +303,13 @@ export function useFeed(
       if (buffered.length === 0) return buffered;
       setNotes((current) => {
         const merged = groupReposts(mergeNotes(current, buffered)).notes;
-        writeFeedCache(relayList, cacheId, merged);
+        persist(merged);
         return merged;
       });
       return [];
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [relayList, cacheId]);
+  }, [persist]);
 
   const refresh = useCallback(() => {
     setExhausted(false);

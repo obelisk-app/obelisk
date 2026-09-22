@@ -3,18 +3,6 @@ import { describe, expect, it, vi } from 'vitest';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { LocaleProvider } from '@/i18n/context';
 
-// The snapshot must be the SAME object each call: `useSyncExternalStore`
-// compares by identity, and a fresh one per call is an infinite loop rather
-// than a slow render. The real store caches for this reason.
-const EMPTY_STATUSES = {};
-
-vi.mock('@/lib/social/relay-status', () => ({
-  subscribeRelayStatus: () => () => {},
-  getRelayStatuses: () => EMPTY_STATUSES,
-  watchRelays: vi.fn(),
-  relayStatusSummary: () => ({ total: 2, connected: 2, state: 'connected' }),
-}));
-
 import TrendingPanel from './TrendingPanel';
 
 const note = (id: string, pubkey: string, tags: string[]): NostrEvent => ({
@@ -29,7 +17,7 @@ const note = (id: string, pubkey: string, tags: string[]): NostrEvent => ({
 
 const renderPanel = (notes: NostrEvent[], props: Record<string, unknown> = {}) => render(
   <LocaleProvider initialLocale="en">
-    <TrendingPanel notes={notes} relays={['wss://a', 'wss://b']} {...props} />
+    <TrendingPanel notes={notes} {...props} />
   </LocaleProvider>,
 );
 
@@ -51,8 +39,4 @@ describe('TrendingPanel', () => {
     expect(screen.getByTestId('feed-trending-empty')).toBeInTheDocument();
   });
 
-  it('shows relay connectivity, which used to live only in settings', () => {
-    renderPanel([]);
-    expect(screen.getByTestId('relay-status-pill')).toHaveAttribute('data-state', 'connected');
-  });
 });

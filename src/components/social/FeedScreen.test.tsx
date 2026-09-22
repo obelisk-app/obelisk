@@ -147,6 +147,36 @@ describe('FeedScreen', () => {
     expect(screen.queryByTestId('feed-pending')).not.toBeInTheDocument();
   });
 
+  it('does not splice a late Following page into Global, or its cache', async () => {
+    // A page requested on one tab used to resolve into whichever feed was on
+    // screen when it landed — and the next write persisted those notes into
+    // that feed's cache, permanently, because merges only add.
+    let releaseFollowing: ((notes: NostrEvent[]) => void) | null = null;
+    socialMocks.loadFollowingFeed
+      .mockResolvedValueOnce([note('f1', 'from someone I follow', 3000)])
+      .mockImplementationOnce(() => new Promise((resolve) => { releaseFollowing = resolve; }));
+    socialMocks.loadGlobalFeed.mockResolvedValue([note('g1', 'from the world', 2000, STRANGER)]);
+
+    renderFeed();
+    await waitFor(() => expect(screen.getByText('from someone I follow')).toBeInTheDocument());
+
+    // Page 2 of Following goes out, then the reader switches to Global.
+    fireEvent.click(screen.getByTestId('feed-load-more'));
+    fireEvent.click(screen.getByTestId('feed-tab-global'));
+    await waitFor(() => expect(screen.getByText('from the world')).toBeInTheDocument());
+
+    await act(async () => {
+      releaseFollowing?.([note('f2', 'late following page', 2500)]);
+      await Promise.resolve();
+    });
+
+    expect(screen.queryByText('late following page')).not.toBeInTheDocument();
+
+    flushFeedCacheWrites();
+    const cached = JSON.stringify(window.localStorage);
+    expect(cached).not.toContain('late following page');
+  });
+
   it('drops live events from people you do not follow', async () => {
     // The shared coalescer fans every consumer's events into every handle,
     // so the Following feed was receiving the kind-1 notes fetched by the
@@ -417,6 +447,20 @@ describe('FeedScreen', () => {
     renderFeed({ actions: <button type="button" data-testid="feed-pane-close">x</button> });
     const toolbar = screen.getByTestId('feed-search-open').closest('div')?.parentElement;
     expect(toolbar).toContainElement(screen.getByTestId('feed-pane-close'));
+  });
+
+  it('gives a half-width pane the same one-line toolbar as a phone', async () => {
+    // Embedded in a split pane the source segment, two chip strips and the
+    // actions wrapped onto a second row — a pane is as narrow as a phone.
+    renderFeed({ embedded: true });
+    expect(screen.queryByTestId('feed-filter-articles')).not.toBeInTheDocument();
+    expect(screen.getByTestId('feed-filters-open')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('feed-filters-open'));
+    // A dropdown, not a bottom sheet: this is a pane on a desktop.
+    const sheet = screen.getByTestId('feed-filter-sheet');
+    expect(sheet.className).not.toContain('justify-end');
+    expect(sheet).toContainElement(screen.getByTestId('feed-filter-media'));
   });
 
   it('keeps the chips inline on desktop, where there is room', () => {

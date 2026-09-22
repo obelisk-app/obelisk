@@ -17,18 +17,13 @@ import type { Event as NostrEvent } from 'nostr-tools';
 import { useMemo } from 'react';
 import { trendingTags } from '@/lib/social/trending';
 import { useTranslation } from '@/i18n/context';
-import RelayStatusPill from './RelayStatusPill';
 
 export default function TrendingPanel({
   notes,
-  relays,
   onOpenTag,
-  onOpenSettings,
 }: {
   notes: readonly NostrEvent[];
-  relays: readonly string[];
   onOpenTag?: (tag: string) => void;
-  onOpenSettings?: () => void;
 }) {
   const { t } = useTranslation();
   const tags = useMemo(() => trendingTags(notes, { limit: 10 }), [notes]);
@@ -65,12 +60,6 @@ export default function TrendingPanel({
         )}
       </section>
 
-      <section className="flex items-center justify-between rounded-xl border border-lc-border bg-lc-dark/60 px-3 py-2.5">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-lc-muted">
-          {t('social.relays')}
-        </span>
-        <RelayStatusPill relays={relays} onOpenSettings={onOpenSettings} />
-      </section>
     </aside>
   );
 }

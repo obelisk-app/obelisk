@@ -681,5 +681,13 @@
   "social.relayOffline": "Offline",
   "social.trending": "Trending",
   "social.trendingEmpty": "Nothing trending in this feed yet",
-  "social.relays": "Relays"
+  "social.relays": "Relays",
+  "social.thisRelay": "This relay",
+  "social.auth.unknown": "Checking access…",
+  "social.auth.authenticating": "Signing in to the relay (NIP-42)…",
+  "social.auth.ok": "Signed in",
+  "social.auth.auth-required": "Sign-in required — the relay rejected the challenge",
+  "social.auth.restricted": "Restricted — this relay does not allow your key",
+  "social.auth.unreachable": "Unreachable — the relay is not answering",
+  "social.auth.error": "Error talking to the relay"
 }

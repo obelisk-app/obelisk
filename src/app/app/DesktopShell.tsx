@@ -39,6 +39,7 @@ import {
 } from '@/lib/nostr-bridge';
 import { getBridge, getBridgeImpl, getBridgeSync } from '@/lib/nostr-bridge';
 import { relayWebsiteUrl } from '@/lib/nostr-bridge/relay-url';
+import RelayStatusPill from '@/components/social/RelayStatusPill';
 import { initializeWot, useWotEnabled, wotEngine } from '@/lib/wot';
 import { wotColorClass } from '@/lib/wot/colors';
 import { faviconFor, fetchRelayInfo } from '@/lib/relay-info';
@@ -905,6 +906,7 @@ export function RelayTopBar({
   onJumpToDm?: (peer: string) => void;
 }) {
   const { t, locale } = useTranslation();
+  const socialRelays = usePreferences().socialRelays;
   const [info, setInfo] = useState<{ name?: string; icon?: string } | null>(null);
   const [iconFailed, setIconFailed] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -1029,6 +1031,13 @@ export function RelayTopBar({
         </button>
       )}
       <div className="absolute right-2 md:right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+        {/*
+          Relay state belongs with the other header state, not in a settings
+          panel you only open once you already suspect something. The popover
+          answers both halves of "is anything wrong": this relay's connection
+          and NIP-42 state, and whether the feed relays are up.
+        */}
+        <RelayStatusPill relays={socialRelays} activeRelay={relay} />
         <button
           data-notif-trigger
           onClick={() => setNotifOpen((v) => !v)}

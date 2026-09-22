@@ -14,12 +14,26 @@ const mockRemoveUser = vi.fn();
 
 vi.mock('@/lib/nostr-bridge', () => ({
   useMyPubkey: () => 'a'.repeat(64),
+  // The header carries the relay-status pill now.
+  useConnectionState: () => 'Connected',
+  useRelayAccess: () => 'ok',
   useUserMetadata: () => ({ displayName: 'Alice', picture: null }),
   getBridgeImpl: () => null,
   nostrActions: {
     removePermission: (...a: unknown[]) => mockRemovePermission(...a),
     removeUser: (...a: unknown[]) => mockRemoveUser(...a),
   },
+}));
+
+// Without this the header's relay pill probes relays for real, opening
+// WebSockets to public relays from the test run.
+const EMPTY_STATUSES = {};
+vi.mock('@/lib/social/relay-status', () => ({
+  subscribeRelayStatus: () => () => {},
+  getRelayStatuses: () => EMPTY_STATUSES,
+  watchRelays: vi.fn(),
+  probeRelay: vi.fn(),
+  relayStatusSummary: () => ({ total: 3, connected: 3, state: 'connected' }),
 }));
 
 vi.mock('@/lib/relay-info', () => ({
