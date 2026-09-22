@@ -27,6 +27,10 @@ import NoteThread from './NoteThread';
 import ArticleReader from './ArticleCard';
 import { ComposeButton } from './FeedControls';
 import FeedSearch from './FeedSearch';
+import StarterPacks from './StarterPacks';
+import MediaGrid, { type MediaItem } from '@/components/chat/MediaGrid';
+import { mediaUrls } from '@/lib/profile-feed';
+import { parseImeta } from '@/lib/social/imeta';
 import TrendingPanel from './TrendingPanel';
 
 export type FeedTab = 'following' | 'global';
@@ -103,9 +107,11 @@ export default function FeedScreen({
   );
   const state = useFeed(source, relays, filter, sort);
 
-  const emptyLabel = tab === 'following' && follows.length === 0
-    ? t('social.followNobody')
-    : undefined;
+  // A fresh key follows nobody. "Try the Global tab" pointed at a firehose
+  // of strangers and left the actual job — find people worth following — to
+  // the person who just arrived.
+  const noFollows = tab === 'following' && follows.length === 0;
+  const emptyLabel = noFollows ? t('social.followNobody') : undefined;
 
   // Stable identities: NoteCard is memoised on its handlers, so inline
   // arrows here would re-render every card in the feed on each keystroke in
@@ -126,6 +132,23 @@ export default function FeedScreen({
   const startReply = useCallback((note: NostrEvent) => setComposer({ kind: 'reply', parent: note }), []);
   const startQuote = useCallback((note: NostrEvent) => setComposer({ kind: 'quote', target: note }), []);
   const openTag = useCallback((tag: string) => { setSearchSeed(`#${tag}`); setSearching(true); }, []);
+
+  // Media tiles carry the id of the note they came from, so a tap opens the
+  // post rather than a bare image with no author and no way to reply.
+  const mediaItems = useMemo<MediaItem[]>(() => state.notes.flatMap((note) => {
+    const imeta = [...parseImeta(note).values()].map((item) => item.url);
+    const urls = [...new Set([...imeta, ...mediaUrls(note)])];
+    return urls.map((url) => ({
+      key: `${note.id}:${url}`,
+      url,
+      noteId: note.id,
+      multiple: urls.length > 1,
+    }));
+  }), [state.notes]);
+
+  const openMediaNote = useCallback((_url: string, noteId?: string) => {
+    if (noteId) openThread(noteId);
+  }, [openThread]);
   const openComposer = useCallback(() => setComposer({ kind: 'note' }), []);
   const closeComposer = useCallback(() => setComposer(null), []);
 
@@ -360,6 +383,17 @@ export default function FeedScreen({
           </div>
         )}
 
+        {noFollows ? (
+          <StarterPacks onOpenProfile={onOpenProfile} />
+        ) : filter === 'media' ? (
+          /*
+            A media filter that renders note rows is a text feed that happens
+            to contain pictures. Grid it, like every explore surface — the
+            point of picking Media is to look, and tapping a tile opens the
+            note it came from.
+          */
+          <MediaGrid items={mediaItems} onOpen={openMediaNote} />
+        ) : (
         <FeedList
           state={state}
           scrollRef={scrollRef}
@@ -370,6 +404,7 @@ export default function FeedScreen({
           onQuote={startQuote}
           onOpenArticle={handleOpenArticle}
         />
+        )}
         </div>
 
         {!mobile && !embedded && (

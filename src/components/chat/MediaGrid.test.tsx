@@ -22,7 +22,14 @@ describe('MediaGrid', () => {
   it('opens the item that was clicked', () => {
     const onOpen = renderGrid(items(2));
     fireEvent.click(screen.getAllByTestId('profile-media-tile')[1]);
-    expect(onOpen).toHaveBeenCalledWith('https://example.com/1.jpg');
+    expect(onOpen).toHaveBeenCalledWith('https://example.com/1.jpg', undefined);
+  });
+
+  it('carries the source note, so a feed grid can open the post', () => {
+    // A tile with no author and no way to reply is a dead end.
+    const onOpen = renderGrid([{ key: 'k', url: 'https://example.com/a.jpg', noteId: 'note-1' }]);
+    fireEvent.click(screen.getByTestId('profile-media-tile'));
+    expect(onOpen).toHaveBeenCalledWith('https://example.com/a.jpg', 'note-1');
   });
 
   it('breaks the grid up with a larger tile', () => {

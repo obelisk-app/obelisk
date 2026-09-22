@@ -689,5 +689,12 @@
   "social.auth.auth-required": "Falta autenticación — el relay rechazó el desafío",
   "social.auth.restricted": "Restringido — este relay no admite tu clave",
   "social.auth.unreachable": "Inalcanzable — el relay no responde",
-  "social.auth.error": "Error al hablar con el relay"
+  "social.auth.error": "Error al hablar con el relay",
+  "social.packsTitle": "Encontrá a quién seguir",
+  "social.packsSubtitle": "Packs curados desde los relays que leés. Seguí uno y tu feed se llena.",
+  "social.packsEmpty": "Todavía no hay packs en tus relays. La pestaña Global es la otra puerta de entrada.",
+  "social.packPeople": "personas",
+  "social.packAlreadyFollowing": "ya los seguís",
+  "social.packAllFollowed": "Los seguís a todos",
+  "social.packFollowed": "Seguiste el pack"
 }

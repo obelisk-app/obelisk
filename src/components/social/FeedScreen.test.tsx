@@ -105,11 +105,13 @@ describe('FeedScreen', () => {
     await waitFor(() => expect(screen.getByText('from the world')).toBeInTheDocument());
   });
 
-  it('points an empty Following feed at the Global tab instead of a dead end', async () => {
+  it('offers starter packs when you follow nobody, not a pointer to Global', async () => {
+    // A fresh key follows nobody. Sending someone to a firehose of
+    // strangers leaves them the job the app should be doing.
     socialMocks.follows = [];
     renderFeed();
-    await waitFor(() => expect(screen.getByTestId('feed-empty')).toBeInTheDocument());
-    expect(screen.getByText(/Global tab/)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId('starter-packs-loading')).toBeInTheDocument());
+    expect(screen.queryByTestId('feed-empty')).not.toBeInTheDocument();
     // With no follows there is nothing to ask the relays for.
     expect(socialMocks.loadFollowingFeed).not.toHaveBeenCalled();
   });
@@ -461,6 +463,20 @@ describe('FeedScreen', () => {
     const sheet = screen.getByTestId('feed-filter-sheet');
     expect(sheet.className).not.toContain('justify-end');
     expect(sheet).toContainElement(screen.getByTestId('feed-filter-media'));
+  });
+
+  it('grids the Media filter instead of listing note rows', async () => {
+    // Picking Media means "I want to look" — rows of text with pictures in
+    // them is a text feed that happens to contain images.
+    socialMocks.loadFollowingFeed.mockResolvedValue([
+      note('m1', 'look https://example.com/a.jpg'),
+    ]);
+    renderFeed();
+    await waitFor(() => expect(screen.getByTestId('feed-list')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId('feed-filter-media'));
+    await waitFor(() => expect(screen.getByTestId('profile-media-grid')).toBeInTheDocument());
+    expect(screen.queryByTestId('feed-list')).not.toBeInTheDocument();
   });
 
   it('keeps the chips inline on desktop, where there is room', () => {

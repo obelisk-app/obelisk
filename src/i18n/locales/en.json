@@ -689,5 +689,12 @@
   "social.auth.auth-required": "Sign-in required — the relay rejected the challenge",
   "social.auth.restricted": "Restricted — this relay does not allow your key",
   "social.auth.unreachable": "Unreachable — the relay is not answering",
-  "social.auth.error": "Error talking to the relay"
+  "social.auth.error": "Error talking to the relay",
+  "social.packsTitle": "Find people to follow",
+  "social.packsSubtitle": "Curated packs from the relays you read. Follow one and your feed fills up.",
+  "social.packsEmpty": "No starter packs on your relays yet. The Global tab is the other way in.",
+  "social.packPeople": "people",
+  "social.packAlreadyFollowing": "already followed",
+  "social.packAllFollowed": "Following all",
+  "social.packFollowed": "Followed the pack"
 }

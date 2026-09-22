@@ -35,6 +35,7 @@ import UserAvatar from '@/components/UserAvatar';
 import NoteContent from './NoteContent';
 import { ArticleCard } from './ArticleCard';
 import NoteMenu from './NoteMenu';
+import MediaCarousel from './MediaCarousel';
 import {
   ActionButton,
   LikeIcon,
@@ -531,33 +532,11 @@ function NoteBody({
 
 function ImetaMedia({ note }: { note: NostrEvent }) {
   const media = useMemo(() => [...parseImeta(note).values()], [note]);
+  // A set is a carousel, not a stack: four images stacked meant the note
+  // owned the viewport and everything after it was a scroll away.
   return (
-    <div className="mt-2 grid gap-2" data-testid="note-imeta-media">
-      {media.map((item) => (
-        item.mimeType?.startsWith('video/') ? (
-          <video
-            key={item.url}
-            src={item.url}
-            controls
-            playsInline
-            preload="metadata"
-            className="w-full rounded-xl"
-            style={item.width && item.height ? { aspectRatio: `${item.width}/${item.height}` } : undefined}
-          />
-        ) : (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            key={item.url}
-            src={item.url}
-            alt={item.alt ?? ''}
-            loading="lazy"
-            decoding="async"
-            className="w-full rounded-xl object-cover"
-            // `dim` reserves layout space so the feed doesn't jump as images load.
-            style={item.width && item.height ? { aspectRatio: `${item.width}/${item.height}` } : undefined}
-          />
-        )
-      ))}
+    <div className="mt-2" data-testid="note-imeta-media">
+      <MediaCarousel items={media} />
     </div>
   );
 }

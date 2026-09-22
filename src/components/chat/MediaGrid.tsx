@@ -19,7 +19,13 @@
 import { isVideoUrl } from '@/lib/attachments';
 import { useTranslation } from '@/i18n/context';
 
-export type MediaItem = { key: string; url: string; multiple?: boolean };
+export type MediaItem = {
+  key: string;
+  url: string;
+  multiple?: boolean;
+  /** Where the tile came from, when the host opens the post rather than the image. */
+  noteId?: string;
+};
 
 /** Every Nth tile spans 2×2. 7 keeps the pattern from looking like columns. */
 const FEATURE_EVERY = 7;
@@ -29,7 +35,7 @@ export default function MediaGrid({
   onOpen,
 }: {
   items: readonly MediaItem[];
-  onOpen: (url: string) => void;
+  onOpen: (url: string, noteId?: string) => void;
 }) {
   const { t } = useTranslation();
 
@@ -45,7 +51,7 @@ export default function MediaGrid({
           <button
             type="button"
             key={item.key}
-            onClick={() => onOpen(item.url)}
+            onClick={() => onOpen(item.url, item.noteId)}
             className={`group relative aspect-square overflow-hidden bg-lc-dark ${
               featured ? 'col-span-2 row-span-2' : ''
             }`}
