@@ -13,7 +13,7 @@
 import { memo, useEffect, useMemo, useState } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { hexToNpub } from '@nostr-wot/data';
-import { useMyFollows, useMyPubkey } from '@/lib/nostr-bridge';
+import { useCurrentRelayUrl, useMyFollows, useMyPubkey } from '@/lib/nostr-bridge';
 import { useAuthor } from '@/lib/social/useAuthor';
 import { useTranslation } from '@/i18n/context';
 import { parentIdOf } from '@/lib/social/feed';
@@ -29,7 +29,7 @@ import {
 } from '@/lib/social/engagement';
 import { publishReaction, publishRepost } from '@/lib/social/publish';
 import { usePreferences } from '@/lib/preferences';
-import { noteShareUrl } from '@/lib/social/note-links';
+import { groupNoteUrl, noteShareUrl } from '@/lib/social/note-links';
 import { useToastStore } from '@/store/toast';
 import UserAvatar from '@/components/UserAvatar';
 import NoteContent from './NoteContent';
@@ -466,7 +466,9 @@ function NoteBody({
   onOpenArticle?: (note: NostrEvent) => void;
 }) {
   const { t } = useTranslation();
+  const activeRelay = useCurrentRelayUrl();
   const [expanded, setExpanded] = useState(false);
+  const groupHref = mode === 'group' ? groupNoteUrl(note, activeRelay) : null;
 
   if (mode === 'article') {
     return <ArticleCard note={note} onOpen={() => onOpenArticle?.(note)} />;
@@ -488,10 +490,57 @@ function NoteBody({
     );
   }
 
-  if (mode === 'unsupported') {
+  if (mode === 'group') {
+    // A NIP-29 chat message. It's plain text like any note; what it needs
+    // that a note doesn't is a way back to the room it was said in, since
+    // the replies and the people are there rather than on the open network.
     return (
-      <div className="rounded-xl border border-lc-border bg-lc-dark p-3 text-xs text-lc-muted" data-testid="note-unsupported">
-        {`${t('social.unsupportedKind')} (kind ${note.kind})`}
+      <div data-testid="note-group-message">
+        <div className="break-words text-[15px] leading-relaxed text-lc-white">
+          <NoteContent content={note.content} noteId={note.id} onOpenProfile={onOpenProfile} onOpenNote={onOpenNote} />
+        </div>
+        {groupHref && (
+          <a
+            href={groupHref}
+            className="mt-2 inline-flex items-center gap-1 text-[13px] font-semibold text-lc-green hover:underline"
+            data-testid="note-open-in-group"
+          >
+            {t('social.openInGroup')} →
+          </a>
+        )}
+      </div>
+    );
+  }
+
+  if (mode === 'file') {
+    // NIP-94: the file is in tags, the content is a description. Rendering
+    // the content alone showed a caption with no file.
+    const url = note.tags.find((tag) => tag[0] === 'url')?.[1];
+    const mimeType = note.tags.find((tag) => tag[0] === 'm')?.[1] ?? null;
+    return (
+      <div data-testid="note-file">
+        {url && <MediaCarousel items={[{ url, mimeType }]} />}
+        {note.content.trim() && (
+          <p className="mt-2 text-[13px] text-lc-muted">{note.content}</p>
+        )}
+      </div>
+    );
+  }
+
+  if (mode === 'unsupported') {
+    // Show the text anyway when there is some. A kind this client doesn't
+    // model specially is usually still readable, and hiding the content
+    // behind "can't display this" is worse than rendering it plainly.
+    return (
+      <div className="rounded-xl border border-lc-border bg-lc-dark p-3" data-testid="note-unsupported">
+        {note.content.trim() ? (
+          <div className="break-words text-[15px] leading-relaxed text-lc-white">
+            <NoteContent content={note.content} noteId={note.id} onOpenProfile={onOpenProfile} onOpenNote={onOpenNote} />
+          </div>
+        ) : null}
+        <p className="mt-2 text-[11px] text-lc-muted">
+          {`${t('social.unsupportedKind')} (kind ${note.kind})`}
+        </p>
       </div>
     );
   }

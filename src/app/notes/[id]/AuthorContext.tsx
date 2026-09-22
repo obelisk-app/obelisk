@@ -18,6 +18,7 @@ import {
   type ViewerProfile,
 } from '@/lib/server/nostr-fetch';
 import { plainTextForPreview } from '@/lib/server/note-preview';
+import FollowButton from './FollowButton';
 
 function npubOf(pubkey: string): string {
   try {
@@ -133,9 +134,12 @@ export default function AuthorContext({
                       {displayNameFor(profile).slice(0, 1).toUpperCase()}
                     </span>
                   )}
-                  <span className="min-w-0 truncate text-xs text-lc-white">
+                  <span className="min-w-0 flex-1 truncate text-xs text-lc-white">
                     {displayNameFor(profile)}
                   </span>
+                  {/* A client island: the rest of this page is static HTML
+                      a crawler reads, but following needs a signer. */}
+                  <FollowButton pubkey={profile.pubkey} />
                 </Link>
               </li>
             ))}

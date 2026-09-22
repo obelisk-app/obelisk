@@ -29,8 +29,11 @@ export default function InfiniteSentinel({
   disabled?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  // Kept in a ref so the observer isn't torn down and rebuilt every time the
+  // handler's identity changes — which, since it closes over the current
+  // page, is on every page.
   const onReachRef = useRef(onReach);
-  onReachRef.current = onReach;
+  useEffect(() => { onReachRef.current = onReach; }, [onReach]);
 
   useEffect(() => {
     const node = ref.current;

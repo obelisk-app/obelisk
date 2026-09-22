@@ -25,6 +25,15 @@ export const KIND_SHORT_VIDEO = 22;
 export const KIND_HIGHLIGHT = 9802;
 export const KIND_LONG_FORM = 30023;
 export const KIND_COMMENT = 1111;
+/**
+ * NIP-29 group chat message. Deliberately NOT in `FEED_KINDS`: a group's
+ * messages belong to that group, not to the open feed. But a link to one
+ * can be opened in the viewer, and "this client can't display kind 9" is a
+ * silly thing for *this* client to say about its own chat messages.
+ */
+export const KIND_GROUP_CHAT = 9;
+/** NIP-94 file metadata — the media lives in tags, not the content. */
+export const KIND_FILE_METADATA = 1063;
 
 /** Kinds we request in a feed REQ. Reactions/zaps are counted, not listed. */
 export const FEED_KINDS = [
@@ -75,6 +84,8 @@ export type NoteRenderMode =
   | 'highlight'  // content is SOMEONE ELSE'S words — must be attributed
   | 'article'    // addressable long-form: title/summary/image card
   | 'comment'    // NIP-22, threads via A/E/I + K/P, NOT NIP-10
+  | 'group'      // NIP-29 chat message, shown with a way back to its group
+  | 'file'       // NIP-94: url/mime live in tags
   | 'unsupported';
 
 export function renderModeFor(kind: number): NoteRenderMode {
@@ -88,6 +99,8 @@ export function renderModeFor(kind: number): NoteRenderMode {
     case KIND_HIGHLIGHT: return 'highlight';
     case KIND_LONG_FORM: return 'article';
     case KIND_COMMENT: return 'comment';
+    case KIND_GROUP_CHAT: return 'group';
+    case KIND_FILE_METADATA: return 'file';
     default: return 'unsupported';
   }
 }
