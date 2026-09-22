@@ -1,3 +1,5 @@
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, it, expect } from 'vitest';
 import en from './locales/en.json';
 import es from './locales/es.json';
@@ -32,5 +34,46 @@ describe('locale files', () => {
       const inEs = (ES[k].match(/\{[a-zA-Z]+\}/g) ?? []).sort();
       expect(inEs, `placeholders for ${k}`).toEqual(inEn);
     }
+  });
+});
+
+/**
+ * Keys the code asks for, but nobody wrote.
+ *
+ * The parity test above compares the two locale files against each other,
+ * so a key missing from *both* is invisible to it — the string just renders
+ * as its own identifier in the UI ("common.loading"), which is how one
+ * shipped.
+ */
+describe('every key the code uses exists', () => {
+  const LITERAL = /\bt\(\s*'([a-zA-Z0-9_.]+)'\s*\)/g;
+
+  function sourceFiles(dir: string): string[] {
+    const out: string[] = [];
+    for (const entry of readdirSync(dir)) {
+      const path = join(dir, entry);
+      if (statSync(path).isDirectory()) out.push(...sourceFiles(path));
+      else if (/\.tsx?$/.test(entry) && !entry.includes('.test.')) out.push(path);
+    }
+    return out;
+  }
+
+  it('finds no t() call pointing at a key that does not exist', () => {
+    const missing: string[] = [];
+    let checked = 0;
+    for (const file of sourceFiles('src')) {
+      const source = readFileSync(file, 'utf8');
+      for (const match of source.matchAll(LITERAL)) {
+        const key = match[1];
+        checked += 1;
+        // Only plain literals are checked: `t(\`social.filter.${value}\`)`
+        // is resolved at runtime and can't be verified here.
+        if (!(key in EN)) missing.push(`${file}: ${key}`);
+      }
+    }
+    expect(missing).toEqual([]);
+    // A scan that matches nothing would pass forever. If this trips, the
+    // regex stopped recognising how the codebase calls `t`.
+    expect(checked).toBeGreaterThan(200);
   });
 });

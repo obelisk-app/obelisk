@@ -416,7 +416,7 @@ export default function FeedScreen({
               disabled={state.exhausted || state.loadingMore}
             />
             {state.loadingMore && (
-              <p className="py-6 text-center text-xs text-lc-muted">{t('common.loading')}</p>
+              <p className="py-6 text-center text-xs text-lc-muted">{t('social.loadingMore')}</p>
             )}
           </>
         ) : (
