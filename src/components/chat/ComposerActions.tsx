@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ComponentPropsWithoutRef } from 'react';
 import { VoiceMessage } from './MessageContent';
 import type { MessageVoiceNote } from '@/lib/voice-note-tags';
+import { useTranslation } from '@/i18n/context';
 
 const iconClass = 'flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-lc-muted hover:bg-white/5 hover:text-lc-white disabled:opacity-40';
 
@@ -15,6 +16,7 @@ type FileDropZoneProps = Omit<
 };
 
 export function FileDropZone({ children, className = '', disabled, onFiles, ...props }: FileDropZoneProps) {
+  const { t } = useTranslation();
   const [active, setActive] = useState(false);
   const dragDepth = useRef(0);
   const hasFiles = (event: React.DragEvent<HTMLDivElement>) =>
@@ -55,7 +57,7 @@ export function FileDropZone({ children, className = '', disabled, onFiles, ...p
         <div
           className="pointer-events-none absolute inset-0 z-[80] flex items-center justify-center bg-zinc-700/85 backdrop-blur-sm"
           role="status"
-          aria-label="Drop files to attach"
+          aria-label={t('composer.dropFiles')}
           data-testid="file-drop-overlay"
         >
           <span aria-hidden="true" className="flex h-32 w-32 items-center justify-center rounded-full border-4 border-white/80 text-8xl font-light text-white">
@@ -79,6 +81,7 @@ export function AttachmentMenu({
   onContact: (value: string) => void;
   onNewSticker: () => void;
 }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const mediaRef = useRef<HTMLInputElement>(null);
@@ -129,20 +132,20 @@ export function AttachmentMenu({
         className={iconClass}
         disabled={disabled}
         onClick={() => setOpen((value) => !value)}
-        aria-label="Add attachment"
+        aria-label={t('composer.addAttachment')}
         aria-expanded={open}
       >
         <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
       </button>
       {open && (
         <div className="absolute bottom-full left-0 z-40 mb-2 w-56 overflow-hidden rounded-2xl border border-lc-border bg-lc-dark p-2 text-sm text-lc-white shadow-2xl" role="menu">
-          <MenuItem label="Document" icon="document" onClick={() => pick(documentRef)} />
-          <MenuItem label="Photos & videos" icon="media" onClick={() => pick(mediaRef)} />
-          <MenuItem label="Camera" icon="camera" onClick={() => pick(cameraRef)} />
-          <MenuItem label="Contact" icon="contact" onClick={contact} />
-          <MenuItem label="New sticker" icon="sticker" onClick={() => { setOpen(false); onNewSticker(); }} />
-          <MenuItem label="Poll" icon="poll" disabled />
-          <MenuItem label="Event" icon="event" disabled />
+          <MenuItem label={t('composer.document')} icon="document" onClick={() => pick(documentRef)} />
+          <MenuItem label={t('composer.photos')} icon="media" onClick={() => pick(mediaRef)} />
+          <MenuItem label={t('composer.camera')} icon="camera" onClick={() => pick(cameraRef)} />
+          <MenuItem label={t('composer.contact')} icon="contact" onClick={contact} />
+          <MenuItem label={t('composer.newSticker')} icon="sticker" onClick={() => { setOpen(false); onNewSticker(); }} />
+          <MenuItem label={t('composer.poll')} icon="poll" disabled />
+          <MenuItem label={t('composer.event')} icon="event" disabled />
         </div>
       )}
     </div>
@@ -152,6 +155,7 @@ export function AttachmentMenu({
 type MenuIconKind = "document" | "media" | "camera" | "contact" | "sticker" | "poll" | "event";
 
 function MenuItem({ label, icon, onClick, disabled }: { label: string; icon: MenuIconKind; onClick?: () => void; disabled?: boolean }) {
+  const { t } = useTranslation();
   return (
     <button
       type="button"
@@ -164,7 +168,7 @@ function MenuItem({ label, icon, onClick, disabled }: { label: string; icon: Men
         <MenuIcon kind={icon} />
       </span>
       <span>{label}</span>
-      {disabled && <span className="ml-auto text-[10px] uppercase tracking-wide text-lc-muted">Later</span>}
+      {disabled && <span className="ml-auto text-[10px] uppercase tracking-wide text-lc-muted">{t('composer.later')}</span>}
     </button>
   );
 }
@@ -216,6 +220,7 @@ export function VoiceNoteDraft({
   note: MessageVoiceNote;
   onDiscard: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="flex min-w-0 flex-1 items-center gap-1" data-testid="voice-note-draft">
       <VoiceMessage note={note} compact />
@@ -223,8 +228,8 @@ export function VoiceNoteDraft({
         type="button"
         onClick={onDiscard}
         className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-lc-muted hover:bg-red-500/10 hover:text-red-400"
-        aria-label="Discard voice note"
-        title="Discard voice note"
+        aria-label={t('composer.discardVoice')}
+        title={t('composer.discardVoice')}
       >
         <TrashIcon />
       </button>
@@ -239,6 +244,7 @@ export function VoiceNoteButton({
   disabled?: boolean;
   onRecorded: (file: File, durationSeconds: number) => void;
 }) {
+  const { t } = useTranslation();
   const [recording, setRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -304,8 +310,8 @@ export function VoiceNoteButton({
           type="button"
           className="flex h-9 w-9 items-center justify-center rounded-full text-lc-muted hover:bg-red-500/10 hover:text-red-400"
           onClick={() => stop(true)}
-          aria-label="Discard voice recording"
-          title="Discard voice recording"
+          aria-label={t('composer.discardRecording')}
+          title={t('composer.discardRecording')}
         >
           <TrashIcon />
         </button>
@@ -317,8 +323,8 @@ export function VoiceNoteButton({
           type="button"
           className="flex h-9 w-9 items-center justify-center rounded-full bg-red-500/15 text-red-400 hover:bg-red-500/25"
           onClick={() => stop(false)}
-          aria-label="Stop voice note"
-          title="Finish recording"
+          aria-label={t('composer.stopVoice')}
+          title={t('composer.finishRecording')}
         >
           <span className="h-3 w-3 rounded-[3px] bg-current" aria-hidden="true" />
         </button>
@@ -332,7 +338,7 @@ export function VoiceNoteButton({
       className={iconClass}
       disabled={disabled}
       onClick={() => void start()}
-      aria-label="Record voice note"
+      aria-label={t('composer.recordVoice')}
     >
       <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="9" y="2" width="6" height="12" rx="3" />

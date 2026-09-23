@@ -8,8 +8,10 @@ import { shortNpub } from '@/lib/mentions';
 import { presenceActivityKey, useNostrPresence, PRESENCE_WINDOW_MS } from '@/hooks/chat/useNostrPresence';
 import RoleBadge from '@/components/chat/RoleBadge';
 import type { RelayRole } from '@/lib/relay-roles';
+import { useTranslation } from '@/i18n/context';
 
 function MemberItem({ member, isOnline }: { member: JsMemberInfo; isOnline: boolean }) {
+  const { t } = useTranslation();
   const name = member.displayName || shortNpub(member.pubkey);
   const openProfilePopup = useChatStore((state) => state.openProfilePopup);
 
@@ -35,7 +37,7 @@ function MemberItem({ member, isOnline }: { member: JsMemberInfo; isOnline: bool
           title={isOnline ? 'Online' : 'Offline'}
         />
       </div>
-      {member.role === 'admin' && <span title="Admin" aria-label="Role: Admin">🛡️</span>}
+      {member.role === 'admin' && <span title={t('mobile.members.admin')} aria-label={t('members.roleAdmin')}>🛡️</span>}
       <span className={`text-sm truncate ${isOnline ? 'text-lc-white' : 'text-lc-muted'}`}>
         {name}
       </span>

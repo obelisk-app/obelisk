@@ -9,12 +9,19 @@ vi.mock('@/lib/nostr-bridge', () => ({
 vi.mock('@/components/media/MediaLibraryModal', () => ({ default: () => null }));
 
 import ImageGallery from './ImageGallery';
+import { LocaleProvider } from '@/i18n/context';
+
+/** The component reads its copy from the dictionary, so it needs a provider. */
+const renderLocalized = (ui: React.ReactElement) => render(
+  <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,
+);
+
 
 const urls = (n: number) => Array.from({ length: n }, (_, i) => `https://example.com/${i}.jpg`);
 
 describe('ImageGallery lightbox', () => {
   it('opens on click', () => {
-    render(<ImageGallery urls={urls(1)} />);
+    renderLocalized(<ImageGallery urls={urls(1)} />);
     fireEvent.click(document.querySelector('img')!.closest('button') ?? document.querySelector('img')!);
     expect(screen.getByTestId('lightbox')).toBeInTheDocument();
   });
@@ -25,7 +32,7 @@ describe('ImageGallery lightbox', () => {
     // against the card and clipped by it, and clicking an image looked
     // like it did nothing. In chat there is no such ancestor, which is why
     // the same code worked there.
-    render(
+    renderLocalized(
       <div className="note-card" style={{ contain: 'layout paint' }}>
         <ImageGallery urls={urls(1)} />
       </div>,
@@ -35,7 +42,7 @@ describe('ImageGallery lightbox', () => {
   });
 
   it('closes on Escape', () => {
-    render(<ImageGallery urls={urls(2)} />);
+    renderLocalized(<ImageGallery urls={urls(2)} />);
     fireEvent.click(screen.getAllByRole('button')[0]);
     expect(screen.getByTestId('lightbox')).toBeInTheDocument();
 

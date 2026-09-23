@@ -5,6 +5,7 @@ import { parseBolt11, type ParsedInvoice } from '@/lib/bolt11';
 import { useMyPubkey, useNipSigner, useUserMetadata } from '@/lib/nostr-bridge';
 import { formatPubkey } from '@nostr-wot/data';
 import { useLocalWallet } from '@/lib/wallet/local-client';
+import { useTranslation } from '@/i18n/context';
 
 interface Props {
   invoice: string;
@@ -32,6 +33,7 @@ interface PaidState {
  * device will not show "Paid" for invoices another user paid.
  */
 export default function InvoiceCard({ invoice, messageId: _messageId, channelId: _channelId }: Props) {
+  const { t } = useTranslation();
   const myPubkey = useMyPubkey();
   const signer = useNipSigner();
   const { client: _walletClient } = useLocalWallet(myPubkey, signer);
@@ -95,7 +97,7 @@ export default function InvoiceCard({ invoice, messageId: _messageId, channelId:
             ✅ Pagada{payerName ? ` · ${payerName}` : ''}
           </span>
         ) : expired ? (
-          <span className="shrink-0 text-[11px] text-lc-muted">Expirada</span>
+          <span className="shrink-0 text-[11px] text-lc-muted">{t('invoice.expired')}</span>
         ) : (
           <button
             onClick={pay}

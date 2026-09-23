@@ -2,6 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import type { JsGroup, JsMessage, JsForumTag } from '@/lib/nostr-bridge';
 import ForumView from './ForumView';
+import { LocaleProvider } from '@/i18n/context';
+
+/** The component reads its copy from the dictionary, so it needs a provider. */
+const renderLocalized = (ui: React.ReactElement) => render(
+  <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,
+);
+
 
 // -- Bridge mocks ---------------------------------------------------------
 // The bridge surface is large, so we use module-scoped mocks updated per
@@ -127,7 +134,7 @@ describe('ForumView chrome', () => {
     });
     mockGroups = [forum];
 
-    render(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
+    renderLocalized(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
 
     expect(screen.getByTestId('forum-tag-tag-a')).toBeTruthy();
     expect(screen.getByTestId('forum-tag-tag-b')).toBeTruthy();
@@ -146,7 +153,7 @@ describe('ForumView chrome', () => {
     });
     mockGroups = [forum];
 
-    render(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
+    renderLocalized(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
 
     const a = screen.getByTestId('forum-tag-tag-a').style.color;
     const b = screen.getByTestId('forum-tag-tag-b').style.color;
@@ -165,7 +172,7 @@ describe('ForumView chrome', () => {
     const forum = makeForum({ id: 'forum-empty', forumTags: [] });
     mockGroups = [forum];
 
-    render(<ForumView groupId="forum-empty" onSelectThread={onSelectThread} />);
+    renderLocalized(<ForumView groupId="forum-empty" onSelectThread={onSelectThread} />);
 
     expect(screen.queryByTestId('forum-tag-tag-a')).toBeNull();
     expect(screen.getByTestId('forum-tag-all')).toBeTruthy();
@@ -174,7 +181,7 @@ describe('ForumView chrome', () => {
   it('Sort & view menu opens, exposes the four radio sets, and closes via Reset', () => {
     mockGroups = [makeForum({ id: 'forum-1' })];
 
-    render(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
+    renderLocalized(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
     expect(screen.queryByTestId('forum-sortview-menu')).toBeNull();
     fireEvent.click(screen.getByTestId('forum-sortview-trigger'));
     expect(screen.getByTestId('forum-sortview-menu')).toBeTruthy();
@@ -199,7 +206,7 @@ describe('ForumView chrome', () => {
   it('persists view preferences to localStorage per forum id', () => {
     mockGroups = [makeForum({ id: 'forum-1' })];
 
-    const { unmount } = render(
+    const { unmount } = renderLocalized(
       <ForumView groupId="forum-1" onSelectThread={onSelectThread} />,
     );
     fireEvent.click(screen.getByTestId('forum-sortview-trigger'));
@@ -207,7 +214,7 @@ describe('ForumView chrome', () => {
     unmount();
 
     // Same forum on remount → gallery sticks.
-    render(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
+    renderLocalized(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
     fireEvent.click(screen.getByTestId('forum-sortview-trigger'));
     expect(screen.getByTestId('forum-view-gallery').getAttribute('data-checked')).toBe('true');
   });
@@ -245,7 +252,7 @@ describe('ForumView thread filtering & sorting', () => {
   });
 
   it('renders every thread by default, sorted by most-recent activity', () => {
-    render(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
+    renderLocalized(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
     const cards = screen.getAllByTestId('thread-card');
     expect(cards.map((c) => c.getAttribute('data-thread-id'))).toEqual([
       'thread-new',
@@ -256,14 +263,14 @@ describe('ForumView thread filtering & sorting', () => {
   });
 
   it('search input filters thread cards by title (case-insensitive substring)', () => {
-    render(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
+    renderLocalized(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
     fireEvent.change(screen.getByTestId('forum-search-input'), { target: { value: 'NEW' } });
     const cards = screen.getAllByTestId('thread-card');
     expect(cards.map((c) => c.getAttribute('data-thread-id'))).toEqual(['thread-new']);
   });
 
   it('with no exact match, search shows a "Create" CTA prefilled with the query', () => {
-    render(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
+    renderLocalized(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
     fireEvent.change(screen.getByTestId('forum-search-input'), {
       target: { value: 'something completely new' },
     });
@@ -274,7 +281,7 @@ describe('ForumView thread filtering & sorting', () => {
   it('pressing Enter on an exact title match opens that thread', () => {
     // Regression: submit was gated on `!exactMatch`, so Enter on a query
     // that exactly matched an existing title did nothing at all.
-    render(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
+    renderLocalized(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
     const input = screen.getByTestId('forum-search-input');
     fireEvent.change(input, { target: { value: 'newest thread' } });
     fireEvent.submit(input.closest('form')!);
@@ -282,7 +289,7 @@ describe('ForumView thread filtering & sorting', () => {
   });
 
   it('Enter on an exact title match is case-insensitive', () => {
-    render(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
+    renderLocalized(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
     const input = screen.getByTestId('forum-search-input');
     fireEvent.change(input, { target: { value: 'NEWEST THREAD' } });
     fireEvent.submit(input.closest('form')!);
@@ -290,14 +297,14 @@ describe('ForumView thread filtering & sorting', () => {
   });
 
   it('Enter on a blank query does nothing', () => {
-    render(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
+    renderLocalized(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
     const input = screen.getByTestId('forum-search-input');
     fireEvent.submit(input.closest('form')!);
     expect(onSelectThread).not.toHaveBeenCalled();
   });
 
   it('clicking a tag chip filters threads to those carrying that topic (match-any)', () => {
-    render(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
+    renderLocalized(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
     fireEvent.click(screen.getByTestId('forum-tag-tag-a'));
     const cards = screen.getAllByTestId('thread-card');
     expect(cards.map((c) => c.getAttribute('data-thread-id')).sort()).toEqual([
@@ -307,7 +314,7 @@ describe('ForumView thread filtering & sorting', () => {
   });
 
   it('match-all narrows to threads carrying every selected tag', () => {
-    render(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
+    renderLocalized(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
     fireEvent.click(screen.getByTestId('forum-sortview-trigger'));
     fireEvent.click(screen.getByTestId('forum-match-all'));
     fireEvent.click(screen.getByTestId('forum-tag-tag-a'));
@@ -317,7 +324,7 @@ describe('ForumView thread filtering & sorting', () => {
   });
 
   it('"All" chip clears the active tag filter', () => {
-    render(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
+    renderLocalized(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
     fireEvent.click(screen.getByTestId('forum-tag-tag-a'));
     expect(screen.getAllByTestId('thread-card')).toHaveLength(2);
     fireEvent.click(screen.getByTestId('forum-tag-all'));
@@ -325,7 +332,7 @@ describe('ForumView thread filtering & sorting', () => {
   });
 
   it('sort-by-creation reorders by first message createdAt (newest first)', () => {
-    render(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
+    renderLocalized(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
     fireEvent.click(screen.getByTestId('forum-sortview-trigger'));
     fireEvent.click(screen.getByTestId('forum-sort-created'));
     const cards = screen.getAllByTestId('thread-card');
@@ -341,7 +348,7 @@ describe('ForumView thread filtering & sorting', () => {
   });
 
   it('switching to gallery swaps the list for the grid (thread-gallery-card)', () => {
-    render(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
+    renderLocalized(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
     fireEvent.click(screen.getByTestId('forum-sortview-trigger'));
     fireEvent.click(screen.getByTestId('forum-view-gallery'));
     expect(screen.queryAllByTestId('thread-card')).toHaveLength(0);
@@ -350,7 +357,7 @@ describe('ForumView thread filtering & sorting', () => {
   });
 
   it('clicking a thread card calls onSelectThread with that group id', () => {
-    render(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
+    renderLocalized(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
     const target = screen.getAllByTestId('thread-card').find((c) =>
       c.getAttribute('data-thread-id') === 'thread-new',
     )!;
@@ -368,7 +375,7 @@ describe('ForumView empty / loading states', () => {
     mockChildrenByParent = {};
     mockGroupMetadataEose = false;
 
-    render(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
+    renderLocalized(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
     expect(screen.getByTestId('threads-loading')).toBeTruthy();
   });
 
@@ -379,7 +386,7 @@ describe('ForumView empty / loading states', () => {
     mockChildrenByParent = { 'forum-1': [t.id] };
     mockMessagesByGroup = { t1: [makeMsg({ id: 'm1', content: 'hi' })] };
 
-    render(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
+    renderLocalized(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
     fireEvent.change(screen.getByTestId('forum-search-input'), {
       target: { value: 'nothing matches this' },
     });
@@ -403,7 +410,7 @@ describe('NewThreadModal tag picker', () => {
       }),
     ];
 
-    render(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
+    renderLocalized(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
     fireEvent.click(screen.getByTestId('forum-new-thread-btn'));
     expect(screen.getByTestId('new-thread-modal')).toBeTruthy();
     const picker = screen.getByTestId('new-thread-tag-picker');
@@ -414,7 +421,7 @@ describe('NewThreadModal tag picker', () => {
   it('Enter on a no-match search prefills the modal title with the typed query', () => {
     mockGroups = [makeForum({ id: 'forum-1' })];
 
-    render(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
+    renderLocalized(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
     const input = screen.getByTestId('forum-search-input') as HTMLInputElement;
     fireEvent.change(input, { target: { value: 'cool new title' } });
     fireEvent.submit(input.closest('form')!);
@@ -435,7 +442,7 @@ describe('NewThreadModal tag picker', () => {
       }),
     ];
 
-    render(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
+    renderLocalized(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
     fireEvent.click(screen.getByTestId('forum-new-thread-btn'));
     fireEvent.change(screen.getByTestId('new-thread-title'), { target: { value: 'a' } });
     fireEvent.change(screen.getByTestId('new-thread-body'), { target: { value: 'b' } });

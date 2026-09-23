@@ -30,6 +30,7 @@ import ShootingStars from '../ShootingStars';
 import type { Components } from 'react-markdown';
 import type { MessageSticker } from '@/lib/sticker-tags';
 import type { MessageVoiceNote } from '@/lib/voice-note-tags';
+import { useTranslation } from '@/i18n/context';
 
 function MentionChip({ pubkey, displayName }: { pubkey: string; displayName: string }) {
   const openProfilePopup = useChatStore((s) => s.openProfilePopup);
@@ -95,6 +96,7 @@ export function VoiceMessage({
   authorPicture?: string | null;
   timestamp?: number;
 }) {
+  const { t } = useTranslation();
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
@@ -164,7 +166,7 @@ export function VoiceMessage({
               setCurrent(next);
             }}
             className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-            aria-label="Voice message progress"
+            aria-label={t('voiceNote.progress')}
           />
         </span>
         <span className={`flex justify-between text-[11px] leading-none text-[#aebac1] ${compact ? "mt-0.5" : "absolute bottom-0 left-0 right-3"}`} data-testid="voice-time-row">
@@ -179,7 +181,7 @@ export function VoiceMessage({
       {!compact && (
         <span className="relative h-14 w-14 shrink-0" data-testid="voice-avatar">
           {authorPicture ? (
-            <img src={authorPicture} alt="Voice message sender" className="h-14 w-14 rounded-full object-cover" />
+            <img src={authorPicture} alt={t('voiceNote.sender')} className="h-14 w-14 rounded-full object-cover" />
           ) : (
             <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#6b7c85] text-white/80">
               <svg className="h-7 w-7" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Zm-8 9a8 8 0 0 1 16 0Z" /></svg>
@@ -194,7 +196,7 @@ export function VoiceMessage({
               onClick={cyclePlaybackRate}
               className="absolute inset-0 z-10 flex items-center justify-center rounded-full bg-black/60 text-sm font-bold text-white backdrop-blur-[1px]"
               aria-label={`Playback speed ${playbackRate}x`}
-              title="Change playback speed"
+              title={t('voiceNote.speed')}
             >
               {playbackRate}x
             </button>

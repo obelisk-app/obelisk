@@ -11,6 +11,7 @@ import { useChatStore } from '@/store/chat';
 import MediaLibraryModal from '@/components/media/MediaLibraryModal';
 import MediaThumb from '@/components/media/MediaThumb';
 import { detectGifPresentation, inferMediaKind } from '@/lib/media-kind';
+import { useTranslation } from '@/i18n/context';
 
 export type MediaPickerTab = 'emoji' | 'gif' | 'sticker';
 
@@ -115,6 +116,7 @@ export default function MessageMediaPicker({
   customEmojis?: CustomEmojiMap;
   initialTab?: MediaPickerTab;
 }) {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<MediaPickerTab>(initialTab);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<MediaCategory>('Trending');
@@ -331,8 +333,8 @@ export default function MessageMediaPicker({
 
   return (
     <div className={shellClass} data-testid="media-picker-shell">
-      <div role="dialog" aria-label="Media picker" className="flex h-full w-full flex-col overflow-hidden bg-lc-black p-2 text-lc-white" onClick={(event) => event.stopPropagation()}>
-      <nav className="mb-2 grid shrink-0 grid-cols-9 border-b border-lc-border px-1 pb-1" aria-label="Media categories">
+      <div role="dialog" aria-label={t('mediaPicker.title')} className="flex h-full w-full flex-col overflow-hidden bg-lc-black p-2 text-lc-white" onClick={(event) => event.stopPropagation()}>
+      <nav className="mb-2 grid shrink-0 grid-cols-9 border-b border-lc-border px-1 pb-1" aria-label={t('mediaPicker.categories')}>
         {MEDIA_CATEGORIES.map((value) => (
           <button
             type="button"
@@ -376,7 +378,7 @@ export default function MessageMediaPicker({
       </div>
       <div className="flex items-center justify-between gap-2 pb-1">
         <button type="button" onClick={() => setLibraryOpen("mine")} className="text-xs font-medium text-lc-green hover:underline" data-testid="manage-media-packs">
-          Favorites &amp; packs
+          {t('mediaPicker.favorites')}
         </button>
         <span className="text-right text-[10px] text-lc-muted">{tab === 'gif' ? 'Powered by GIPHY' : 'Stickers by Twemoji'}</span>
       </div>

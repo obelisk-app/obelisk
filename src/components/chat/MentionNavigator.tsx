@@ -19,6 +19,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from '@/i18n/context';
 
 const FLASH_MS = 1800;
 const NEAR_BOTTOM_PX = 80;
@@ -45,6 +46,7 @@ function scrollToId(scrollRoot: HTMLDivElement | null, id: string): boolean {
 }
 
 export default function MentionNavigator({ scrollRef, eventIds }: MentionNavigatorProps) {
+  const { t } = useTranslation();
   // Cursor through the highlights list. Starts at the OLDEST so the first
   // press of `↓` advances to the second item, not the third — matches
   // Discord behaviour where the indicator points at "the one you'd see
@@ -124,14 +126,14 @@ export default function MentionNavigator({ scrollRef, eventIds }: MentionNavigat
         <div
           className="pointer-events-auto flex items-center gap-1 rounded-full border border-lc-border bg-lc-dark/90 px-2 py-1 text-xs text-lc-white shadow-lg backdrop-blur"
           role="group"
-          aria-label="Mention navigation"
+          aria-label={t('mentions.navigation')}
         >
           <button
             onClick={goPrev}
             disabled={index === 0}
             className="rounded p-1 text-lc-muted transition hover:bg-lc-card hover:text-lc-green disabled:cursor-not-allowed disabled:opacity-40"
-            aria-label="Previous mention or reply (Shift+F7)"
-            title="Previous (Shift+F7)"
+            aria-label={t('mentions.previousTitle')}
+            title={t('mentions.previous')}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <polyline points="18 15 12 9 6 15" />
@@ -147,8 +149,8 @@ export default function MentionNavigator({ scrollRef, eventIds }: MentionNavigat
             onClick={goNext}
             disabled={index >= eventIds.length - 1}
             className="rounded p-1 text-lc-muted transition hover:bg-lc-card hover:text-lc-green disabled:cursor-not-allowed disabled:opacity-40"
-            aria-label="Next mention or reply (F7)"
-            title="Next (F7)"
+            aria-label={t('mentions.nextTitle')}
+            title={t('mentions.next')}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <polyline points="6 9 12 15 18 9" />
@@ -160,8 +162,8 @@ export default function MentionNavigator({ scrollRef, eventIds }: MentionNavigat
         <button
           onClick={jumpToLatest}
           className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full border border-lc-border bg-lc-dark/90 text-lc-muted shadow-lg backdrop-blur transition hover:bg-lc-card hover:text-lc-green"
-          aria-label="Jump to latest message"
-          title="Jump to latest"
+          aria-label={t('mentions.latestTitle')}
+          title={t('mentions.latest')}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <polyline points="6 9 12 15 18 9" />

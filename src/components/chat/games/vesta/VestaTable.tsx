@@ -6,6 +6,7 @@ import { getRobbableVertices, computeRates } from 'vesta';
 import type { GameSession } from '@/lib/games/session';
 import { vesta, isRobberPending, isStealPending, type VestaAction } from '@/lib/games/vesta/definition';
 import VestaBoard, { VESTA_PLAYER_COLORS, type PickMode } from './VestaBoard';
+import { useTranslation } from '@/i18n/context';
 
 const RESOURCES: TradeResource[] = ['brick', 'lumber', 'wool', 'grain', 'ore'];
 
@@ -37,6 +38,7 @@ export interface VestaTableProps {
  * offered, it is not legal.
  */
 export default function VestaTable({ session, state, mySeats, seatLabel, onAction, busy }: VestaTableProps) {
+  const { t } = useTranslation();
   const [pick, setPick] = useState<PickMode>('none');
   const [stealDone, setStealDone] = useState<string | null>(null);
   const [tradePartner, setTradePartner] = useState<number | 'bank' | null>(null);
@@ -202,7 +204,7 @@ export default function VestaTable({ session, state, mySeats, seatLabel, onActio
                   onClick={() => void send({ type: 'accept-trade' } as VestaAction)}
                   className="lc-pill-primary px-3 py-1 text-xs"
                 >
-                  Accept
+                  {t('games.vesta.accept')}
                 </button>
                 <button
                   type="button"
@@ -210,7 +212,7 @@ export default function VestaTable({ session, state, mySeats, seatLabel, onActio
                   onClick={() => void send({ type: 'reject-trade' } as VestaAction)}
                   className="lc-pill-secondary px-3 py-1 text-xs"
                 >
-                  Reject
+                  {t('games.vesta.reject')}
                 </button>
               </>
             )}
@@ -221,7 +223,7 @@ export default function VestaTable({ session, state, mySeats, seatLabel, onActio
                 onClick={() => void send({ type: 'cancel-proposal' } as VestaAction)}
                 className="lc-pill-secondary px-3 py-1 text-xs"
               >
-                Withdraw
+                {t('games.vesta.withdraw')}
               </button>
             )}
           </div>
@@ -231,14 +233,14 @@ export default function VestaTable({ session, state, mySeats, seatLabel, onActio
       {/* The robber is out and wants a target */}
       {robberPending && (
         <p className="rounded-lg border border-lc-green/40 bg-lc-green/10 p-2 text-center text-[11px] text-lc-green" data-testid="vesta-robber-prompt">
-          Pick a tile for the robber.
+          {t('games.vesta.robber')}
         </p>
       )}
 
       {/* Who to rob */}
       {showSteal && (
         <div className="rounded-lg border border-lc-border p-3" data-testid="vesta-steal">
-          <p className="text-[11px] text-lc-white">Steal from…</p>
+          <p className="text-[11px] text-lc-white">{t('games.vesta.steal')}</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {stealVictims.map((victim) => (
               <div key={victim} className="flex flex-wrap items-center gap-1">
@@ -261,7 +263,7 @@ export default function VestaTable({ session, state, mySeats, seatLabel, onActio
               onClick={() => setStealDone(stealKey)}
               className="lc-pill-secondary px-3 py-0.5 text-[11px]"
             >
-              Skip
+              {t('games.vesta.skip')}
             </button>
           </div>
         </div>
@@ -270,12 +272,12 @@ export default function VestaTable({ session, state, mySeats, seatLabel, onActio
       {/* Turn actions */}
       {myTurn && state.winner === null && !isSetup && (
         <div className="flex flex-wrap gap-2" data-testid="vesta-actions">
-          <Action label="🎲 Roll" enabled={!busy && can({ type: 'roll-dice' } as VestaAction)} onClick={() => void send({ type: 'roll-dice' } as VestaAction)} />
-          <Toggle label="🛖 Settlement" active={pick === 'settlement'} enabled={!busy && state.rolled} onClick={() => setPick(pick === 'settlement' ? 'none' : 'settlement')} />
-          <Toggle label="🛣 Road" active={pick === 'road'} enabled={!busy && state.rolled} onClick={() => setPick(pick === 'road' ? 'none' : 'road')} />
-          <Toggle label="🏯 City" active={pick === 'city'} enabled={!busy && state.rolled} onClick={() => setPick(pick === 'city' ? 'none' : 'city')} />
-          <Action label="🎴 Dev card" enabled={!busy && can({ type: 'buy-dev-card' } as VestaAction)} onClick={() => void send({ type: 'buy-dev-card' } as VestaAction)} />
-          <Action label="↪ End turn" enabled={!busy && can({ type: 'end-turn' } as VestaAction)} onClick={() => void send({ type: 'end-turn' } as VestaAction)} />
+          <Action label={t('games.vesta.roll')} enabled={!busy && can({ type: 'roll-dice' } as VestaAction)} onClick={() => void send({ type: 'roll-dice' } as VestaAction)} />
+          <Toggle label={t('games.vesta.settlement')} active={pick === 'settlement'} enabled={!busy && state.rolled} onClick={() => setPick(pick === 'settlement' ? 'none' : 'settlement')} />
+          <Toggle label={t('games.vesta.road')} active={pick === 'road'} enabled={!busy && state.rolled} onClick={() => setPick(pick === 'road' ? 'none' : 'road')} />
+          <Toggle label={t('games.vesta.city')} active={pick === 'city'} enabled={!busy && state.rolled} onClick={() => setPick(pick === 'city' ? 'none' : 'city')} />
+          <Action label={t('games.vesta.devCard')} enabled={!busy && can({ type: 'buy-dev-card' } as VestaAction)} onClick={() => void send({ type: 'buy-dev-card' } as VestaAction)} />
+          <Action label={t('games.vesta.endTurn')} enabled={!busy && can({ type: 'end-turn' } as VestaAction)} onClick={() => void send({ type: 'end-turn' } as VestaAction)} />
         </div>
       )}
 
@@ -299,17 +301,17 @@ export default function VestaTable({ session, state, mySeats, seatLabel, onActio
       {/* Trading */}
       {myTurn && state.rolled && !isSetup && state.winner === null && (
         <details className="rounded-lg border border-lc-border p-2" data-testid="vesta-trade">
-          <summary className="cursor-pointer text-[11px] text-lc-muted">Trade</summary>
+          <summary className="cursor-pointer text-[11px] text-lc-muted">{t('games.vesta.trade')}</summary>
           <div className="mt-2 space-y-2">
             <div className="flex flex-wrap gap-1">
-              <span className="text-[10px] uppercase tracking-wide text-lc-muted">With</span>
+              <span className="text-[10px] uppercase tracking-wide text-lc-muted">{t('games.vesta.with')}</span>
               <Chip label={`Bank${rates ? '' : ''}`} active={tradePartner === 'bank'} onClick={() => setTradePartner('bank')} />
               {participants.map((seat, i) => i === actingIdx ? null : (
                 <Chip key={seat} label={seatLabel(seat)} active={tradePartner === i} onClick={() => setTradePartner(i)} />
               ))}
             </div>
-            <Row label="Give" values={give} setValues={setGive} max={(r) => state.players[actingIdx]?.resources[r] ?? 0} />
-            <Row label="Take" values={take} setValues={setTake} max={() => 19} />
+            <Row label={t('games.vesta.give')} values={give} setValues={setGive} max={(r) => state.players[actingIdx]?.resources[r] ?? 0} />
+            <Row label={t('games.vesta.take')} values={take} setValues={setTake} max={() => 19} />
             {rates && tradePartner === 'bank' && (
               <p className="text-[10px] text-lc-muted">
                 Bank rates: {RESOURCES.map((r) => `${RESOURCE_EMOJI[r]}${rates[r]}:1`).join('  ')}

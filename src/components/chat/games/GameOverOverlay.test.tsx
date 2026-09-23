@@ -4,6 +4,13 @@ import GameOverOverlay from './GameOverOverlay';
 import { deriveSession, type GameSession } from '@/lib/games/session';
 import { buildCreate, buildGameOp, parseGameEvent, type GameEvent, type ParsedGameEvent } from '@/lib/games/protocol';
 import { chainReaction } from '@/lib/games/chain-reaction';
+import { LocaleProvider } from '@/i18n/context';
+
+/** The component reads its copy from the dictionary, so it needs a provider. */
+const renderLocalized = (ui: React.ReactElement) => render(
+  <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,
+);
+
 
 const CH = 'channel-1';
 const HOST = 'pk-host';
@@ -44,37 +51,37 @@ const props = {
 
 describe('GameOverOverlay', () => {
   it('stays out of the way while the game is running', () => {
-    render(<GameOverOverlay session={inProgressSession()} myPubkey={B} onClose={vi.fn()} {...props} />);
+    renderLocalized(<GameOverOverlay session={inProgressSession()} myPubkey={B} onClose={vi.fn()} {...props} />);
     expect(screen.queryByTestId('game-over-overlay')).not.toBeInTheDocument();
   });
 
   it('shouts YOU WON at the winner', () => {
-    render(<GameOverOverlay session={finishedSession()} myPubkey={B} onClose={vi.fn()} {...props} />);
+    renderLocalized(<GameOverOverlay session={finishedSession()} myPubkey={B} onClose={vi.fn()} {...props} />);
     expect(screen.getByTestId('game-over-headline')).toHaveTextContent('YOU WON');
     expect(screen.queryByTestId('game-over-winner')).not.toBeInTheDocument();
   });
 
   it('tells the loser they lost, and who took the board', () => {
-    render(<GameOverOverlay session={finishedSession()} myPubkey={HOST} onClose={vi.fn()} {...props} />);
+    renderLocalized(<GameOverOverlay session={finishedSession()} myPubkey={HOST} onClose={vi.fn()} {...props} />);
     expect(screen.getByTestId('game-over-headline')).toHaveTextContent('YOU LOST');
     expect(screen.getByTestId('game-over-winner')).toHaveTextContent('Bruno took the board');
   });
 
   it('shows spectators a neutral result', () => {
-    render(<GameOverOverlay session={finishedSession()} myPubkey="pk-nobody" onClose={vi.fn()} {...props} />);
+    renderLocalized(<GameOverOverlay session={finishedSession()} myPubkey="pk-nobody" onClose={vi.fn()} {...props} />);
     expect(screen.getByTestId('game-over-headline')).toHaveTextContent('GAME OVER');
     expect(screen.getByTestId('game-over-winner')).toHaveTextContent('Bruno took the board');
   });
 
   it('colours the headline with the winner\'s seat', () => {
-    render(<GameOverOverlay session={finishedSession()} myPubkey={B} onClose={vi.fn()} {...props} />);
+    renderLocalized(<GameOverOverlay session={finishedSession()} myPubkey={B} onClose={vi.fn()} {...props} />);
     // Seat 1 is lc-green in SEAT_COLORS.
     expect(screen.getByTestId('game-over-headline')).toHaveStyle({ color: '#b4f953' });
   });
 
   it('dismisses on the close button and calls back', () => {
     const onClose = vi.fn();
-    render(<GameOverOverlay session={finishedSession()} myPubkey={B} onClose={onClose} {...props} />);
+    renderLocalized(<GameOverOverlay session={finishedSession()} myPubkey={B} onClose={onClose} {...props} />);
     fireEvent.click(screen.getByTestId('game-over-close'));
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(screen.queryByTestId('game-over-overlay')).not.toBeInTheDocument();
@@ -82,14 +89,14 @@ describe('GameOverOverlay', () => {
 
   it('dismisses when the backdrop itself is clicked', () => {
     const onClose = vi.fn();
-    render(<GameOverOverlay session={finishedSession()} myPubkey={B} onClose={onClose} {...props} />);
+    renderLocalized(<GameOverOverlay session={finishedSession()} myPubkey={B} onClose={onClose} {...props} />);
     fireEvent.click(screen.getByTestId('game-over-overlay'));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it('reports a draw with no winner named', () => {
     const drawn: GameSession = { ...finishedSession(), winner: null, draw: true };
-    render(<GameOverOverlay session={drawn} myPubkey={B} onClose={vi.fn()} {...props} />);
+    renderLocalized(<GameOverOverlay session={drawn} myPubkey={B} onClose={vi.fn()} {...props} />);
     expect(screen.getByTestId('game-over-headline')).toHaveTextContent('DRAW');
     expect(screen.getByText('Nobody took the board.')).toBeInTheDocument();
   });

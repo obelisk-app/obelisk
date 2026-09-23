@@ -8,6 +8,7 @@ import { getDefaultRelays } from '@nostr-wot/data';
 import { useNipSigner, useUserMetadata } from '@/lib/nostr-bridge';
 import { getBridgeImpl, isImportableRelayUrl, useCurrentRelayUrl } from '@/lib/nostr-bridge';
 import ModalShell from '@/components/ModalShell';
+import { useTranslation } from '@/i18n/context';
 
 const QUICK_AMOUNTS = [21, 100, 500, 1000, 5000, 21000];
 
@@ -27,6 +28,7 @@ export default function MessageZapModal() {
 }
 
 function MessageZapModalInner({ target, close }: { target: ZapTarget; close: () => void }) {
+  const { t } = useTranslation();
   const [amount, setAmount] = useState<number>(target.defaultAmountSats ?? 100);
   const [comment, setComment] = useState<string>('');
   const [busy, setBusy] = useState(false);
@@ -130,7 +132,7 @@ function MessageZapModalInner({ target, close }: { target: ZapTarget; close: () 
           <BoltIcon className="h-5 w-5 text-yellow-400" />
           <h3 className="font-semibold text-lc-white">Zap {displayName}</h3>
         </div>
-        <div className="mb-2 text-xs text-lc-muted">Amount (sats)</div>
+        <div className="mb-2 text-xs text-lc-muted">{t('zap.amount')}</div>
         <input
           type="number"
           value={amount}
@@ -155,22 +157,22 @@ function MessageZapModalInner({ target, close }: { target: ZapTarget; close: () 
             </button>
           ))}
         </div>
-        <div className="mb-2 text-xs text-lc-muted">Comment (optional)</div>
+        <div className="mb-2 text-xs text-lc-muted">{t('zap.comment')}</div>
         <input
           type="text"
           value={comment}
           maxLength={200}
           onChange={(e) => setComment(e.target.value)}
-          placeholder="Nice post!"
+          placeholder={t('zap.commentPlaceholder')}
           className="mb-3 w-full rounded-lg border border-lc-border bg-lc-black px-3 py-2 text-sm text-lc-white outline-none focus:border-lc-green"
         />
         {err && <p className="mb-3 break-words text-xs text-red-400">{err}</p>}
         {!lud16 && (
-          <p className="mb-3 text-xs text-yellow-400">Recipient has no Lightning address — zap will fail.</p>
+          <p className="mb-3 text-xs text-yellow-400">{t('zap.noAddress')}</p>
         )}
         <div className="flex justify-end gap-2">
           <button type="button" onClick={close} className="lc-pill-secondary text-xs">
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             type="button"

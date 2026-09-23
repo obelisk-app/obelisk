@@ -20,6 +20,7 @@ import {
   type EdgeNode,
   type VertexNode,
 } from '@/lib/games/vesta/geometry';
+import { useTranslation } from '@/i18n/context';
 
 /** Seat colours, matching upstream's player palette. */
 export const VESTA_PLAYER_COLORS = ['#e07b30', '#3498db', '#2ecc71', '#e74c3c'];
@@ -69,6 +70,7 @@ export interface VestaBoardProps {
  * rules, and a click that lands on one is a move the engine will accept.
  */
 export default function VestaBoard({ state, mode, onPickVertex, onPickEdge, onPickHex }: VestaBoardProps) {
+  const { t } = useTranslation();
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const validKeys = useCallback((): Set<string> => {
@@ -298,7 +300,7 @@ export default function VestaBoard({ state, mode, onPickVertex, onPickEdge, onPi
       className={`w-full rounded-lg border border-lc-border ${mode === 'none' ? '' : 'cursor-pointer'}`}
       style={{ aspectRatio: `${CANVAS_WIDTH} / ${CANVAS_HEIGHT}` }}
       data-testid="vesta-board"
-      aria-label="Vesta board"
+      aria-label={t('games.vestaBoard')}
     />
   );
 }

@@ -45,6 +45,7 @@ import {
 } from '@/lib/nostr-bridge';
 import type { JsGroup, JsForumTag, JsMessage } from '@/lib/nostr-bridge';
 import { paletteForTag, tagChipStyle } from '@/lib/forum-tag-colors';
+import { useTranslation } from '@/i18n/context';
 
 interface Props {
   groupId: string;
@@ -296,6 +297,7 @@ function ForumChrome({
   onToggleTag: (id: string) => void;
   onClearTags: () => void;
 }) {
+  const { t } = useTranslation();
   const ready = useSignerReady();
   const canCreate = !exactMatch && searchQuery.trim().length > 0;
   const allActive = selectedTagIds.length === 0;
@@ -321,7 +323,7 @@ function ForumChrome({
             placeholder={canCreate ? 'Press Enter to create…' : 'Search or create a publication…'}
             className="w-full rounded-full bg-lc-black border border-lc-border pl-10 pr-3 py-2 text-sm text-lc-white outline-none focus:border-lc-green/60 placeholder:text-lc-muted"
             data-testid="forum-search-input"
-            aria-label="Search or create a publication"
+            aria-label={t('forum.searchPlaceholder')}
           />
         </div>
         <button
@@ -333,7 +335,7 @@ function ForumChrome({
           title={ready ? 'New publication' : 'Sign in to start a publication'}
         >
           <NewPostIcon />
-          <span className="hidden sm:inline">New publication</span>
+          <span className="hidden sm:inline">{t('forum.new')}</span>
         </button>
       </form>
 
@@ -364,7 +366,7 @@ function ForumChrome({
           data-testid="forum-tag-all"
           aria-pressed={allActive}
         >
-          All
+          {t('mobile.search.all')}
         </button>
       </div>
     </div>
@@ -418,6 +420,7 @@ function SortViewMenu({
   prefs: ForumPrefs;
   onChange: (p: Partial<ForumPrefs>) => void;
 }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -446,7 +449,7 @@ function SortViewMenu({
         aria-expanded={open}
       >
         <SortIcon />
-        <span>Sort &amp; view</span>
+        <span>{t('forum.sortTitle')}</span>
         <ChevronDownIcon />
       </button>
       {open && (
@@ -455,43 +458,43 @@ function SortViewMenu({
           className="absolute left-0 top-full mt-1.5 z-30 w-60 rounded-xl border border-lc-border bg-lc-dark p-3 shadow-xl space-y-3"
           data-testid="forum-sortview-menu"
         >
-          <MenuSection title="Sort by">
+          <MenuSection title={t('forum.sortBy')}>
             <RadioRow
-              label="Recently active"
+              label={t('forum.sortActive')}
               checked={prefs.sortBy === 'recent'}
               onClick={() => onChange({ sortBy: 'recent' })}
               testId="forum-sort-recent"
             />
             <RadioRow
-              label="Creation date"
+              label={t('forum.sortCreated')}
               checked={prefs.sortBy === 'created'}
               onClick={() => onChange({ sortBy: 'created' })}
               testId="forum-sort-created"
             />
           </MenuSection>
-          <MenuSection title="View as">
+          <MenuSection title={t('forum.viewAs')}>
             <RadioRow
-              label="List"
+              label={t('forum.viewList')}
               checked={prefs.viewMode === 'list'}
               onClick={() => onChange({ viewMode: 'list' })}
               testId="forum-view-list"
             />
             <RadioRow
-              label="Gallery"
+              label={t('forum.viewGallery')}
               checked={prefs.viewMode === 'gallery'}
               onClick={() => onChange({ viewMode: 'gallery' })}
               testId="forum-view-gallery"
             />
           </MenuSection>
-          <MenuSection title="Tag matching">
+          <MenuSection title={t('forum.tagMatching')}>
             <RadioRow
-              label="Match any"
+              label={t('forum.matchAny')}
               checked={prefs.tagMatch === 'any'}
               onClick={() => onChange({ tagMatch: 'any' })}
               testId="forum-match-any"
             />
             <RadioRow
-              label="Match all"
+              label={t('forum.matchAll')}
               checked={prefs.tagMatch === 'all'}
               onClick={() => onChange({ tagMatch: 'all' })}
               testId="forum-match-all"
@@ -504,7 +507,7 @@ function SortViewMenu({
             className="text-xs text-lc-muted hover:text-lc-white"
             data-testid="forum-sortview-reset"
           >
-            Reset to defaults
+            {t('forum.reset')}
           </button>
         </div>
       )}
@@ -637,29 +640,31 @@ function ThreadGalleryCardSkeleton({
 }
 
 function LoadingThreads() {
+  const { t } = useTranslation();
   return (
     <div
       className="flex flex-col items-center justify-center h-full text-center text-lc-muted py-12 gap-3"
       data-testid="threads-loading"
     >
       <div className="lc-spinner" aria-hidden="true" />
-      <div className="text-sm">Loading publications…</div>
+      <div className="text-sm">{t('forum.loading')}</div>
     </div>
   );
 }
 
 function EmptyForum({ onNewThread }: { onNewThread: () => void }) {
+  const { t } = useTranslation();
   const ready = useSignerReady();
   return (
     <div className="flex flex-col items-center justify-center h-full text-center text-lc-muted py-12">
-      <div className="text-sm">No publications yet.</div>
+      <div className="text-sm">{t('forum.emptyDesktop')}</div>
       {ready && (
         <button
           type="button"
           onClick={onNewThread}
           className="mt-3 text-lc-green hover:text-lc-green/80 text-sm font-medium"
         >
-          Start the first publication →
+          {t('forum.startFirst')}
         </button>
       )}
     </div>
@@ -923,6 +928,7 @@ function NewThreadModal({
   onClose: () => void;
   onCreated: (childId: string) => void;
 }) {
+  const { t } = useTranslation();
   const [title, setTitle] = useState(initialTitle);
   const [body, setBody] = useState('');
   const [selectedTagIds, setSelectedTagIds] = useState<ReadonlyArray<string>>([]);
@@ -983,12 +989,12 @@ function NewThreadModal({
         className="lc-card w-full max-w-xl max-h-[85vh] overflow-y-auto p-4 space-y-3"
       >
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-lc-white">New publication</h3>
+          <h3 className="text-sm font-semibold text-lc-white">{t('forum.new')}</h3>
           <button
             type="button"
             onClick={onClose}
             className="text-lc-muted hover:text-lc-white text-sm"
-            aria-label="Close"
+            aria-label={t('common.close')}
           >
             ✕
           </button>
@@ -998,7 +1004,7 @@ function NewThreadModal({
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Publication title"
+          placeholder={t('forum.titlePlaceholder')}
           maxLength={140}
           className="w-full bg-lc-black border border-lc-border rounded-lg px-3 py-2 text-sm text-lc-white outline-none focus:border-lc-green/60"
           data-testid="new-thread-title"
@@ -1006,7 +1012,7 @@ function NewThreadModal({
         <textarea
           value={body}
           onChange={(e) => setBody(e.target.value)}
-          placeholder="First message…"
+          placeholder={t('forum.firstMessagePlaceholder')}
           rows={6}
           className="w-full bg-lc-black border border-lc-border rounded-lg px-3 py-2 text-sm text-lc-white outline-none focus:border-lc-green/60 resize-y"
           data-testid="new-thread-body"
@@ -1048,7 +1054,7 @@ function NewThreadModal({
             onClick={onClose}
             className="lc-pill-secondary text-xs px-4 py-2"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             type="submit"

@@ -1,6 +1,13 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AttachmentMenu, FileDropZone, VoiceNoteButton, VoiceNoteDraft } from './ComposerActions';
+import { LocaleProvider } from '@/i18n/context';
+
+/** The component reads its copy from the dictionary, so it needs a provider. */
+const renderLocalized = (ui: React.ReactElement) => render(
+  <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,
+);
+
 
 afterEach(() => {
   vi.useRealTimers();
@@ -11,7 +18,7 @@ describe('FileDropZone', () => {
   it('shows the overlay while files are dragged and forwards dropped files', () => {
     const onFiles = vi.fn();
     const file = new File(['audio'], 'song.mp3', { type: 'audio/mpeg' });
-    render(<FileDropZone onFiles={onFiles}><span>Chat</span></FileDropZone>);
+    renderLocalized(<FileDropZone onFiles={onFiles}><span>Chat</span></FileDropZone>);
     const zone = screen.getByText('Chat').parentElement!;
     const dataTransfer = { types: ['Files'], files: [file], dropEffect: 'none' };
 
@@ -26,7 +33,7 @@ describe('FileDropZone', () => {
 
 describe('AttachmentMenu', () => {
   it('offers implemented actions and marks deferred actions', () => {
-    render(
+    renderLocalized(
       <AttachmentMenu
         onFiles={() => {}}
         onContact={() => {}}
@@ -51,7 +58,7 @@ describe('AttachmentMenu', () => {
 
   it('opens personal sticker creation', () => {
     const onNewSticker = vi.fn();
-    render(
+    renderLocalized(
       <AttachmentMenu
         onFiles={() => {}}
         onContact={() => {}}
@@ -69,7 +76,7 @@ describe('AttachmentMenu', () => {
 describe("VoiceNoteDraft", () => {
   it("lets the user discard a finished recording", () => {
     const onDiscard = vi.fn();
-    render(
+    renderLocalized(
       <VoiceNoteDraft
         note={{ url: "https://cdn.example/voice.webm", durationSeconds: 5 }}
         onDiscard={onDiscard}
@@ -101,7 +108,7 @@ describe("VoiceNoteButton", () => {
     vi.stubGlobal("MediaRecorder", FakeMediaRecorder);
     const onRecorded = vi.fn();
 
-    render(<VoiceNoteButton onRecorded={onRecorded} />);
+    renderLocalized(<VoiceNoteButton onRecorded={onRecorded} />);
     fireEvent.click(screen.getByRole("button", { name: "Record voice note" }));
     await act(async () => {});
 

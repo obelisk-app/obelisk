@@ -1,4 +1,5 @@
 import { render, screen, act } from '@testing-library/react';
+import { LocaleProvider } from '@/i18n/context';
 import { describe, expect, it, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import StackerTable, { type StackerTableProps } from './StackerTable';
 import { deriveSession, type GameSession } from '@/lib/games/session';
@@ -45,7 +46,12 @@ function renderTable(session: GameSession, overrides: Partial<StackerTableProps>
     onCheckpoint: overrides.onCheckpoint ?? vi.fn(),
     onTopOut: overrides.onTopOut ?? vi.fn(),
   };
-  return { ...render(<StackerTable {...props} />), props };
+  return {
+    ...render(
+      <LocaleProvider initialLocale="en"><StackerTable {...props} /></LocaleProvider>,
+    ),
+    props,
+  };
 }
 
 describe('StackerTable', () => {

@@ -6,6 +6,13 @@ import StartTableModal from '../StartTableModal';
 import { deriveSession, type GameSession } from '@/lib/games/session';
 import { buildCreate, buildGameOp, parseGameEvent, type GameEvent, type ParsedGameEvent } from '@/lib/games/protocol';
 import { vertices, edges, nearestVertex } from '@/lib/games/vesta/geometry';
+import { LocaleProvider } from '@/i18n/context';
+
+/** The component reads its copy from the dictionary, so it needs a provider. */
+const renderLocalized = (ui: React.ReactElement) => render(
+  <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,
+);
+
 
 const CH = 'channel-1';
 const HOST = 'pk-host';
@@ -41,7 +48,7 @@ describe('VestaTable', () => {
 
   it('renders the board and every player', () => {
     const session = table(remoteSeats);
-    render(
+    renderLocalized(
       <VestaTable
         session={session}
         state={session.state as GameState}
@@ -57,26 +64,24 @@ describe('VestaTable', () => {
 
   it('shows the setup prompt to the player on move and a wait to the other', () => {
     const session = table(remoteSeats);
-    const { rerender } = render(
+    const { rerender } = renderLocalized(
       <VestaTable session={session} state={session.state as GameState} mySeats={[HOST]} seatLabel={label} onAction={vi.fn()} />,
     );
     expect(screen.getByText(/Setup — Ana places a settlement/)).toBeInTheDocument();
 
-    rerender(
-      <VestaTable session={session} state={session.state as GameState} mySeats={[B]} seatLabel={label} onAction={vi.fn()} />,
-    );
+    rerender(<LocaleProvider initialLocale="en">{<><VestaTable session={session} state={session.state as GameState} mySeats={[B]} seatLabel={label} onAction={vi.fn()} /></>}</LocaleProvider>);
     expect(screen.getByText(/Waiting for Ana/)).toBeInTheDocument();
   });
 
   it('hides turn actions during setup and shows them in play', () => {
     const session = table(remoteSeats);
-    const { rerender } = render(
+    const { rerender } = renderLocalized(
       <VestaTable session={session} state={session.state as GameState} mySeats={[HOST]} seatLabel={label} onAction={vi.fn()} />,
     );
     expect(screen.queryByTestId('vesta-actions')).not.toBeInTheDocument();
 
     const playing = { ...(session.state as GameState), phase: 'play' as const, rolled: false };
-    rerender(<VestaTable session={session} state={playing} mySeats={[HOST]} seatLabel={label} onAction={vi.fn()} />);
+    rerender(<LocaleProvider initialLocale="en">{<><VestaTable session={session} state={playing} mySeats={[HOST]} seatLabel={label} onAction={vi.fn()} /></>}</LocaleProvider>);
     expect(screen.getByTestId('vesta-actions')).toBeInTheDocument();
     expect(screen.getByText('🎲 Roll')).toBeEnabled();
     // Can't end a turn before rolling — the engine says so, so the button says so.
@@ -87,7 +92,7 @@ describe('VestaTable', () => {
     const session = table(remoteSeats);
     const onAction = vi.fn().mockResolvedValue(undefined);
     const playing = { ...(session.state as GameState), phase: 'play' as const, rolled: false };
-    render(<VestaTable session={session} state={playing} mySeats={[HOST]} seatLabel={label} onAction={onAction} />);
+    renderLocalized(<VestaTable session={session} state={playing} mySeats={[HOST]} seatLabel={label} onAction={onAction} />);
 
     fireEvent.click(screen.getByText('🎲 Roll'));
     expect(onAction).toHaveBeenCalledWith({ type: 'roll-dice' }, HOST);
@@ -96,7 +101,7 @@ describe('VestaTable', () => {
   it('offers no actions to a player whose turn it is not', () => {
     const session = table(remoteSeats);
     const playing = { ...(session.state as GameState), phase: 'play' as const, rolled: false };
-    render(<VestaTable session={session} state={playing} mySeats={[B]} seatLabel={label} onAction={vi.fn()} />);
+    renderLocalized(<VestaTable session={session} state={playing} mySeats={[B]} seatLabel={label} onAction={vi.fn()} />);
     expect(screen.queryByTestId('vesta-actions')).not.toBeInTheDocument();
   });
 
@@ -112,7 +117,7 @@ describe('VestaTable', () => {
         : p),
     };
     // B is not on move, but a seven does not care whose turn it is.
-    render(<VestaTable session={session} state={fat} mySeats={[B]} seatLabel={label} onAction={vi.fn()} />);
+    renderLocalized(<VestaTable session={session} state={fat} mySeats={[B]} seatLabel={label} onAction={vi.fn()} />);
     expect(screen.getByTestId('vesta-discard')).toHaveTextContent('discard 5 of your 10 cards');
   });
 
@@ -125,7 +130,7 @@ describe('VestaTable', () => {
     } as GameState;
 
     const onAction = vi.fn().mockResolvedValue(undefined);
-    render(<VestaTable session={session} state={offered} mySeats={[B]} seatLabel={label} onAction={onAction} />);
+    renderLocalized(<VestaTable session={session} state={offered} mySeats={[B]} seatLabel={label} onAction={onAction} />);
     expect(screen.getByTestId('vesta-trade-offer')).toHaveTextContent('Ana offers 1🧱 for 1🪨');
     fireEvent.click(screen.getByText('Accept'));
     expect(onAction).toHaveBeenCalledWith({ type: 'accept-trade' }, B);
@@ -138,7 +143,7 @@ describe('VestaTable', () => {
       ...base,
       pendingTrade: { from: 0, to: 1, give: { brick: 1, lumber: 0, wool: 0, grain: 0, ore: 0 }, take: { ore: 1, brick: 0, lumber: 0, wool: 0, grain: 0 } },
     } as GameState;
-    render(<VestaTable session={session} state={offered} mySeats={[HOST]} seatLabel={label} onAction={vi.fn()} />);
+    renderLocalized(<VestaTable session={session} state={offered} mySeats={[HOST]} seatLabel={label} onAction={vi.fn()} />);
     expect(screen.getByText('Withdraw')).toBeInTheDocument();
     expect(screen.queryByText('Accept')).not.toBeInTheDocument();
   });
@@ -157,7 +162,7 @@ describe('VestaTable', () => {
       // The session's turn is seat 0; hand it a state where seat 1 is on move
       // by deriving a session whose currentTurn matches.
       const withTurn: GameSession = { ...session, currentTurn: `${HOST}#1` };
-      render(<VestaTable session={withTurn} state={playing} mySeats={[HOST, `${HOST}#1`]} seatLabel={(s) => hotSeats.find((h) => h.id === s)?.label ?? s} onAction={onAction} />);
+      renderLocalized(<VestaTable session={withTurn} state={playing} mySeats={[HOST, `${HOST}#1`]} seatLabel={(s) => hotSeats.find((h) => h.id === s)?.label ?? s} onAction={onAction} />);
 
       fireEvent.click(screen.getByText('🎲 Roll'));
       // Signed by the host's key, but played as Beto's seat.
@@ -166,7 +171,7 @@ describe('VestaTable', () => {
 
     it('names both local players separately on the board', () => {
       const session = table(hotSeats);
-      render(
+      renderLocalized(
         <VestaTable
           session={session}
           state={session.state as GameState}
@@ -184,7 +189,7 @@ describe('VestaTable', () => {
   it('announces the winner', () => {
     const session = table(remoteSeats);
     const won = { ...(session.state as GameState), winner: 1 };
-    render(<VestaTable session={session} state={won} mySeats={[HOST]} seatLabel={label} onAction={vi.fn()} />);
+    renderLocalized(<VestaTable session={session} state={won} mySeats={[HOST]} seatLabel={label} onAction={vi.fn()} />);
     expect(screen.getByText('Bruno wins')).toBeInTheDocument();
   });
 });
@@ -219,14 +224,14 @@ describe('StartTableModal', () => {
   const nameOf = (pk: string) => (pk === HOST ? 'Ana' : 'Bruno');
 
   it('gives every joined account a seat of its own, played remotely', () => {
-    render(<StartTableModal session={waiting} nameOf={nameOf} onClose={vi.fn()} onStart={vi.fn()} />);
+    renderLocalized(<StartTableModal session={waiting} nameOf={nameOf} onClose={vi.fn()} onStart={vi.fn()} />);
     expect(screen.getAllByRole('listitem')).toHaveLength(2);
     expect(screen.getByTestId('seat-mode-0')).toHaveTextContent('remote');
     expect(screen.getByTestId('seat-mode-1')).toHaveTextContent('remote');
   });
 
   it('turns two seats on one account into a shared machine', () => {
-    render(<StartTableModal session={waiting} nameOf={nameOf} onClose={vi.fn()} onStart={vi.fn()} />);
+    renderLocalized(<StartTableModal session={waiting} nameOf={nameOf} onClose={vi.fn()} onStart={vi.fn()} />);
     // Hand Bruno's seat to Ana: now Ana holds two, so both are hot-seat.
     fireEvent.click(screen.getByTestId(`seat-1-by-${HOST}`));
     expect(screen.getByTestId('seat-mode-0')).toHaveTextContent("on Ana's machine");
@@ -235,7 +240,7 @@ describe('StartTableModal', () => {
 
   it('publishes seat ids that encode who signs for each', () => {
     const onStart = vi.fn();
-    render(<StartTableModal session={waiting} nameOf={nameOf} onClose={vi.fn()} onStart={onStart} />);
+    renderLocalized(<StartTableModal session={waiting} nameOf={nameOf} onClose={vi.fn()} onStart={onStart} />);
     fireEvent.click(screen.getByTestId('add-seat'));
     fireEvent.click(screen.getByTestId('confirm-start'));
 
@@ -249,7 +254,7 @@ describe('StartTableModal', () => {
 
   it('reorders seats, because seat order is turn order', () => {
     const onStart = vi.fn();
-    render(<StartTableModal session={waiting} nameOf={nameOf} onClose={vi.fn()} onStart={onStart} />);
+    renderLocalized(<StartTableModal session={waiting} nameOf={nameOf} onClose={vi.fn()} onStart={onStart} />);
     fireEvent.click(screen.getAllByLabelText('Move down')[0]);
     fireEvent.click(screen.getByTestId('confirm-start'));
     expect(onStart.mock.calls[0][0][0]).toMatchObject({ id: B });
@@ -257,7 +262,7 @@ describe('StartTableModal', () => {
 
   it('carries the seat names people typed', () => {
     const onStart = vi.fn();
-    render(<StartTableModal session={waiting} nameOf={nameOf} onClose={vi.fn()} onStart={onStart} />);
+    renderLocalized(<StartTableModal session={waiting} nameOf={nameOf} onClose={vi.fn()} onStart={onStart} />);
     fireEvent.change(screen.getByLabelText('Seat 1 name'), { target: { value: 'La jefa' } });
     fireEvent.click(screen.getByTestId('confirm-start'));
     expect(onStart.mock.calls[0][0][0].label).toBe('La jefa');
@@ -265,7 +270,7 @@ describe('StartTableModal', () => {
 
   it('will not start below the minimum', () => {
     const alone: GameSession = { ...waiting, joined: [HOST] };
-    render(<StartTableModal session={alone} nameOf={nameOf} onClose={vi.fn()} onStart={vi.fn()} />);
+    renderLocalized(<StartTableModal session={alone} nameOf={nameOf} onClose={vi.fn()} onStart={vi.fn()} />);
     expect(screen.getByTestId('confirm-start')).toBeDisabled();
     expect(screen.getByText(/needs more players/)).toBeInTheDocument();
   });
@@ -286,7 +291,7 @@ describe('StartTableModal', () => {
     };
 
     it('shows one row per saved player, named as they were in the save', () => {
-      render(<StartTableModal session={resuming} nameOf={nameOf} onClose={vi.fn()} onStart={vi.fn()} />);
+      renderLocalized(<StartTableModal session={resuming} nameOf={nameOf} onClose={vi.fn()} onStart={vi.fn()} />);
       const rows = screen.getAllByRole('listitem');
       expect(rows).toHaveLength(3);
       expect(screen.getByText(/Takes over “Ana”/)).toBeInTheDocument();
@@ -296,7 +301,7 @@ describe('StartTableModal', () => {
 
     it('lets the host assign each saved player to an account', () => {
       const onStart = vi.fn();
-      render(<StartTableModal session={resuming} nameOf={nameOf} onClose={vi.fn()} onStart={onStart} />);
+      renderLocalized(<StartTableModal session={resuming} nameOf={nameOf} onClose={vi.fn()} onStart={onStart} />);
 
       // Saved player 1 → Bruno (remote), players 2 and 3 → Ana's machine.
       fireEvent.click(screen.getByTestId(`seat-0-by-${B}`));
@@ -311,7 +316,7 @@ describe('StartTableModal', () => {
     });
 
     it('marks the shared seats and leaves the solo one remote', () => {
-      render(<StartTableModal session={resuming} nameOf={nameOf} onClose={vi.fn()} onStart={vi.fn()} />);
+      renderLocalized(<StartTableModal session={resuming} nameOf={nameOf} onClose={vi.fn()} onStart={vi.fn()} />);
       fireEvent.click(screen.getByTestId(`seat-0-by-${B}`));
       fireEvent.click(screen.getByTestId(`seat-1-by-${HOST}`));
       fireEvent.click(screen.getByTestId(`seat-2-by-${HOST}`));
@@ -320,7 +325,7 @@ describe('StartTableModal', () => {
     });
 
     it('will not let the host change how many players the save had', () => {
-      render(<StartTableModal session={resuming} nameOf={nameOf} onClose={vi.fn()} onStart={vi.fn()} />);
+      renderLocalized(<StartTableModal session={resuming} nameOf={nameOf} onClose={vi.fn()} onStart={vi.fn()} />);
       expect(screen.queryByTestId('add-seat')).not.toBeInTheDocument();
       expect(screen.queryByLabelText('Remove seat')).not.toBeInTheDocument();
     });

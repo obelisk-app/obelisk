@@ -4,6 +4,13 @@ import NewGameModal from './NewGameModal';
 import GameCard from './GameCard';
 import { useGamesStore } from '@/store/games';
 import { buildCreate, parseGameEvent, type GameEvent, type ParsedGameEvent } from '@/lib/games/protocol';
+import { LocaleProvider } from '@/i18n/context';
+
+/** The component reads its copy from the dictionary, so it needs a provider. */
+const renderLocalized = (ui: React.ReactElement) => render(
+  <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,
+);
+
 
 const publishCreate = vi.hoisted(() => vi.fn());
 const publishStart = vi.hoisted(() => vi.fn());
@@ -29,7 +36,7 @@ describe('NewGameModal', () => {
     useGamesStore.setState({ logs: {}, channelOf: {}, openGameId: null });
   });
 
-  const open = () => render(
+  const open = () => renderLocalized(
     <NewGameModal channelId={CH} onClose={vi.fn()} onPostMarker={vi.fn()} />,
   );
 
@@ -154,7 +161,7 @@ describe('NewGameModal', () => {
 
     it('still posts the card so the channel can watch', async () => {
       const onPostMarker = vi.fn();
-      render(<NewGameModal channelId={CH} onClose={vi.fn()} onPostMarker={onPostMarker} />);
+      renderLocalized(<NewGameModal channelId={CH} onClose={vi.fn()} onPostMarker={onPostMarker} />);
       fireEvent.click(screen.getByTestId('pick-chain-reaction'));
       fireEvent.click(screen.getByTestId('players-local-2'));
       fireEvent.click(screen.getByTestId('game-create'));
@@ -164,7 +171,7 @@ describe('NewGameModal', () => {
 
   it('posts the marker for the table it just created', async () => {
     const onPostMarker = vi.fn();
-    render(<NewGameModal channelId={CH} onClose={vi.fn()} onPostMarker={onPostMarker} />);
+    renderLocalized(<NewGameModal channelId={CH} onClose={vi.fn()} onPostMarker={onPostMarker} />);
     fireEvent.click(screen.getByTestId('pick-vesta'));
     fireEvent.click(screen.getByTestId('game-create'));
     await waitFor(() => expect(onPostMarker).toHaveBeenCalledWith(`[[game:${'a'.repeat(64)}]]`));
@@ -181,7 +188,7 @@ describe('a table is labelled with its own game', () => {
     useGamesStore.getState().ingest(
       parsed(id, HOST, Math.floor(Date.now() / 1000) - 5, buildCreate(CH, { game: 'vesta', opts: { seed: 1 }, turnTimeoutS: 0 })),
     );
-    render(<GameCard gameId={id} />);
+    renderLocalized(<GameCard gameId={id} />);
     expect(screen.getByTestId('game-card-name')).toHaveTextContent('Vesta');
     expect(screen.getByTestId('game-card-name')).not.toHaveTextContent('Chain Reaction');
   });
@@ -191,7 +198,7 @@ describe('a table is labelled with its own game', () => {
     useGamesStore.getState().ingest(
       parsed(id, HOST, Math.floor(Date.now() / 1000) - 5, buildCreate(CH, { game: 'chain-reaction', turnTimeoutS: 45 })),
     );
-    render(<GameCard gameId={id} />);
+    renderLocalized(<GameCard gameId={id} />);
     expect(screen.getByTestId('game-card-name')).toHaveTextContent('Chain Reaction');
   });
 });

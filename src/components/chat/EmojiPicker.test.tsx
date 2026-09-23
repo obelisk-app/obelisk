@@ -1,6 +1,13 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import EmojiPicker from './EmojiPicker';
+import { LocaleProvider } from '@/i18n/context';
+
+/** The component reads its copy from the dictionary, so it needs a provider. */
+const renderLocalized = (ui: React.ReactElement) => render(
+  <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,
+);
+
 
 describe('EmojiPicker', () => {
   beforeEach(() => {
@@ -12,7 +19,7 @@ describe('EmojiPicker', () => {
     const gifUrl = 'https://cdn.example/emojis/party_dance.gif';
     const staticUrl = 'https://cdn.example/emojis/wave.webp';
 
-    render(
+    renderLocalized(
       <EmojiPicker
         onPick={onPick}
         onClose={() => {}}
@@ -39,7 +46,7 @@ describe('EmojiPicker', () => {
   });
 
   it("honors explicit sticker metadata even when the asset is a GIF", () => {
-    render(
+    renderLocalized(
       <EmojiPicker
         onPick={() => {}}
         onClose={() => {}}
@@ -54,7 +61,7 @@ describe('EmojiPicker', () => {
   });
 
   it("jumps directly to classified emoji sections", () => {
-    const { container } = render(
+    const { container } = renderLocalized(
       <EmojiPicker onPick={() => {}} onClose={() => {}} skipRecent customEmojis={{}} />,
     );
 
@@ -78,7 +85,7 @@ describe('EmojiPicker', () => {
   });
 
   it('uses a standard history icon and keeps recent emojis available', () => {
-    const { container } = render(<EmojiPicker onPick={() => {}} onClose={() => {}} customEmojis={{}} />);
+    const { container } = renderLocalized(<EmojiPicker onPick={() => {}} onClose={() => {}} customEmojis={{}} />);
     const recentButton = screen.getByRole('button', { name: 'Recent' });
     expect(within(recentButton).getByTestId('recent-icon')).toBeInTheDocument();
     const recentSection = container.querySelector<HTMLElement>('[data-emoji-category="Recent"]')!;
@@ -90,14 +97,14 @@ describe('EmojiPicker', () => {
 
   it('renders recent custom picks from their remembered URL', () => {
     const onPick = vi.fn();
-    const { rerender } = render(
+    const { rerender } = renderLocalized(
       <EmojiPicker onPick={onPick} onClose={() => {}} customEmojis={{ party_dance: 'https://cdn.example/party_dance.gif' }} />,
     );
 
     fireEvent.click(screen.getByTitle(':party_dance:'));
     // The server emoji set no longer carries the shortcode — the recents grid
     // must still show the media, not the text `:party_dance:`.
-    rerender(<EmojiPicker onPick={onPick} onClose={() => {}} customEmojis={{}} />);
+    rerender(<LocaleProvider initialLocale="en">{<><EmojiPicker onPick={onPick} onClose={() => {}} customEmojis={{}} /></>}</LocaleProvider>);
 
     const recentSection = document.querySelector<HTMLElement>('[data-emoji-category="Recent"]')!;
     expect(within(recentSection).getByAltText(':party_dance:')).toHaveAttribute('src', 'https://cdn.example/party_dance.gif');
@@ -110,7 +117,7 @@ describe('EmojiPicker', () => {
   it('drops recent shortcodes that cannot be resolved to media', () => {
     localStorage.setItem('obelisk:recent-emojis', JSON.stringify([':ghost_sticker:', '😀']));
 
-    const { container } = render(<EmojiPicker onPick={() => {}} onClose={() => {}} customEmojis={{}} />);
+    const { container } = renderLocalized(<EmojiPicker onPick={() => {}} onClose={() => {}} customEmojis={{}} />);
 
     const recentSection = container.querySelector<HTMLElement>('[data-emoji-category="Recent"]')!;
     expect(recentSection).not.toHaveTextContent(':ghost_sticker:');
@@ -118,7 +125,7 @@ describe('EmojiPicker', () => {
   });
 
   it('shows a glyph instead of the shortcode when custom media fails to load', () => {
-    render(<EmojiPicker onPick={() => {}} onClose={() => {}} skipRecent customEmojis={{ wave: 'https://cdn.example/gone.webp' }} />);
+    renderLocalized(<EmojiPicker onPick={() => {}} onClose={() => {}} skipRecent customEmojis={{ wave: 'https://cdn.example/gone.webp' }} />);
 
     fireEvent.error(screen.getByAltText(':wave:'));
 
@@ -129,11 +136,11 @@ describe('EmojiPicker', () => {
 
   it('hangs the popover off either edge of its trigger', () => {
     const props = { onPick: vi.fn(), onClose: vi.fn(), skipRecent: true, customEmojis: {} };
-    const { rerender } = render(<EmojiPicker {...props} />);
+    const { rerender } = renderLocalized(<EmojiPicker {...props} />);
 
     expect(screen.getByRole('dialog', { name: 'Emoji picker' })).toHaveClass('right-0');
 
-    rerender(<EmojiPicker {...props} align="left" />);
+    rerender(<LocaleProvider initialLocale="en">{<><EmojiPicker {...props} align="left" /></>}</LocaleProvider>);
 
     const dialog = screen.getByRole('dialog', { name: 'Emoji picker' });
     expect(dialog).toHaveClass('left-0');
@@ -147,11 +154,11 @@ describe('EmojiPicker', () => {
       skipRecent: true,
       customEmojis: {},
     };
-    const { rerender } = render(<EmojiPicker {...props} placement="below" />);
+    const { rerender } = renderLocalized(<EmojiPicker {...props} placement="below" />);
 
     expect(screen.getByRole('dialog', { name: 'Emoji picker' })).toHaveClass('top-full', 'mt-1');
 
-    rerender(<EmojiPicker {...props} placement="above" />);
+    rerender(<LocaleProvider initialLocale="en">{<><EmojiPicker {...props} placement="above" /></>}</LocaleProvider>);
 
     expect(screen.getByRole('dialog', { name: 'Emoji picker' })).toHaveClass('bottom-full', 'mb-1');
   });

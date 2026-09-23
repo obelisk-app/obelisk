@@ -3,6 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { nostrActions } from '@/lib/nostr-bridge';
 import MessageMediaPicker from './MessageMediaPicker';
 import { useChatStore } from '@/store/chat';
+import { LocaleProvider } from '@/i18n/context';
+
+/** The component reads its copy from the dictionary, so it needs a provider. */
+const renderLocalized = (ui: React.ReactElement) => render(
+  <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,
+);
+
 
 vi.mock('@/lib/blossom', () => ({
   uploadToBlossom: vi.fn().mockResolvedValue('https://cdn.example/mine.webp'),
@@ -32,7 +39,7 @@ describe('MessageMediaPicker', () => {
       },
       { dance: 'gif', wave: 'emoji', stamp: 'sticker', applause_copy: 'gif' },
     );
-    render(
+    renderLocalized(
       <MessageMediaPicker
         onPick={onPick}
         onClose={() => {}}
@@ -107,7 +114,7 @@ describe('MessageMediaPicker', () => {
 
   it('never falls back to shortcode text when media fails to load', () => {
     useChatStore.getState().setServerEmojis({ stamp: 'https://cdn.example/gone.webp' }, { stamp: 'sticker' });
-    render(
+    renderLocalized(
       <MessageMediaPicker
         initialTab="sticker"
         onPick={() => {}}
@@ -136,7 +143,7 @@ describe('MessageMediaPicker', () => {
       { char: ':dance:', url: 'https://cdn.example/dance.gif' },
       ':vanished:',
     ]));
-    render(
+    renderLocalized(
       <MessageMediaPicker
         onPick={() => {}}
         onClose={() => {}}
@@ -152,7 +159,7 @@ describe('MessageMediaPicker', () => {
 
   it('returns a picked sticker with its portable NIP-30 metadata', () => {
     const onPick = vi.fn();
-    render(
+    renderLocalized(
       <MessageMediaPicker
         initialTab="sticker"
         onPick={onPick}
@@ -178,7 +185,7 @@ describe('MessageMediaPicker', () => {
       { clip: 'https://cdn.example/clip.webp', stamp: 'https://cdn.example/stamp.gif' },
       { clip: 'gif', stamp: 'sticker' },
     );
-    render(
+    renderLocalized(
       <MessageMediaPicker
         initialTab="gif"
         onPick={() => {}}
@@ -196,7 +203,7 @@ describe('MessageMediaPicker', () => {
 
   it("favorites GIFs and opens pack creation in GIF mode", async () => {
     const saveFavorites = vi.spyOn(nostrActions, "saveMediaFavorites").mockResolvedValue(undefined);
-    render(<MessageMediaPicker initialTab="gif" onPick={() => {}} onClose={() => {}} customEmojis={{}} />);
+    renderLocalized(<MessageMediaPicker initialTab="gif" onPick={() => {}} onClose={() => {}} customEmojis={{}} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Add :applause: to favorites" }));
     await waitFor(() => expect(saveFavorites).toHaveBeenCalledWith({
@@ -220,7 +227,7 @@ describe('MessageMediaPicker', () => {
   ] as const)("creates an individual %s and opens favorites", async (initialTab, kind, buttonName) => {
     const saveFavorites = vi.spyOn(nostrActions, "saveMediaFavorites").mockResolvedValue(undefined);
     const savePack = vi.spyOn(nostrActions, "saveMediaPack").mockResolvedValue(undefined);
-    render(<MessageMediaPicker initialTab={initialTab} onPick={() => {}} onClose={() => {}} customEmojis={{}} />);
+    renderLocalized(<MessageMediaPicker initialTab={initialTab} onPick={() => {}} onClose={() => {}} customEmojis={{}} />);
 
     expect(screen.getByRole("button", { name: buttonName })).toBeInTheDocument();
     const input = document.querySelector<HTMLInputElement>("input[type=\"file\"]");

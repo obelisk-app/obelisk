@@ -2,6 +2,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import MemberList from './MemberList';
 import { useChatStore } from '@/store/chat';
+import { LocaleProvider } from '@/i18n/context';
+
+/** The component reads its copy from the dictionary, so it needs a provider. */
+const renderLocalized = (ui: React.ReactElement) => render(
+  <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,
+);
+
 
 const bridge = vi.hoisted(() => ({
   members: [] as Array<{
@@ -39,7 +46,7 @@ describe('MemberList', () => {
 
   it('renders relay members with presence and base roles', () => {
     setOnline('admin');
-    render(<MemberList groupId="group-1" />);
+    renderLocalized(<MemberList groupId="group-1" />);
 
     expect(screen.getByText(/Admin — 1/)).toBeInTheDocument();
     expect(screen.getByText(/Offline — 1/)).toBeInTheDocument();
@@ -53,7 +60,7 @@ describe('MemberList', () => {
     useChatStore.getState().setRolesByPubkey({
       admin: [{ id: 'core', name: 'Core', tier: 5, color: '#ff0000', emoji: '' }, { id: 'og', name: 'OG', tier: 1, color: '#00ff00', emoji: '' }],
     });
-    render(<MemberList groupId="group-1" />);
+    renderLocalized(<MemberList groupId="group-1" />);
 
     const badges = screen.getAllByTestId('role-badge');
     expect(badges).toHaveLength(1);
@@ -76,7 +83,7 @@ describe('MemberList', () => {
       // A role on an admin does not move them out of the admin section.
       admin: [{ id: 'og', name: 'OG', tier: 2, color: '#00ff00', emoji: '' }],
     });
-    render(<MemberList groupId="group-1" />);
+    renderLocalized(<MemberList groupId="group-1" />);
 
     const headings = Array.from(
       screen.getByTestId('member-list').querySelectorAll('[data-testid^="member-group-"] > div:first-child'),
@@ -92,7 +99,7 @@ describe('MemberList', () => {
 
   it('collapses offline members', () => {
     setOnline('admin');
-    render(<MemberList groupId="group-1" />);
+    renderLocalized(<MemberList groupId="group-1" />);
 
     expect(screen.getByText('Bob')).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('offline-toggle'));
@@ -100,7 +107,7 @@ describe('MemberList', () => {
   });
 
   it('opens the selected bridge profile', () => {
-    render(<MemberList groupId="group-1" />);
+    renderLocalized(<MemberList groupId="group-1" />);
     fireEvent.click(screen.getByText('Alice'), { clientX: 200, clientY: 300 });
     expect(useChatStore.getState().profilePopupPubkey).toBe('admin');
     expect(useChatStore.getState().profilePopupAnchor).toEqual({ x: 200, y: 300 });
@@ -108,7 +115,7 @@ describe('MemberList', () => {
 
   it('renders an empty list while relay members load', () => {
     bridge.members = [];
-    render(<MemberList groupId="group-1" />);
+    renderLocalized(<MemberList groupId="group-1" />);
     expect(screen.getByTestId('member-list')).toBeEmptyDOMElement();
   });
 });

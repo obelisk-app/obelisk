@@ -5,6 +5,7 @@ import UserAvatar from '@/components/UserAvatar';
 import type { GameSession } from '@/lib/games/session';
 import { isDraw, scoreFor } from '@/lib/games/standings';
 import { SEAT_COLORS } from './ChainReactionBoard';
+import { useTranslation } from '@/i18n/context';
 
 /**
  * The result splash. Covers the table the moment the log says the game is
@@ -27,6 +28,7 @@ export default function GameOverOverlay({
   pictureOf: (pubkey: string) => string | null;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   // Dismissal is keyed to the result it dismissed, so a later match on the
   // same table re-arms the splash on its own — no effect, no reset.
   const [dismissedResult, setDismissedResult] = useState<string | null>(null);
@@ -84,10 +86,10 @@ export default function GameOverOverlay({
       )}
 
       {!draw && iWon && (
-        <p className="mt-3 text-sm text-lc-muted">The board is yours.</p>
+        <p className="mt-3 text-sm text-lc-muted">{t('games.boardYours')}</p>
       )}
 
-      {draw && <p className="mt-3 text-sm text-lc-muted">Nobody took the board.</p>}
+      {draw && <p className="mt-3 text-sm text-lc-muted">{t('games.boardNobody')}</p>}
 
       {/* What you finished with — the thing you actually want to see. */}
       {myScore && (
@@ -103,7 +105,7 @@ export default function GameOverOverlay({
         data-testid="game-over-close"
         autoFocus
       >
-        Close
+        {t('common.close')}
       </button>
     </div>
   );

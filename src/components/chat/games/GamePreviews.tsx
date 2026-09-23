@@ -1,3 +1,4 @@
+import { useTranslation } from '@/i18n/context';
 /**
  * Thumbnails for the game picker.
  *
@@ -8,6 +9,7 @@
  */
 
 export function ChainReactionPreview({ size = 56 }: { size?: number }) {
+  const { t } = useTranslation();
   const cols = 4;
   const rows = 5;
   const gap = 1.5;
@@ -28,7 +30,7 @@ export function ChainReactionPreview({ size = 56 }: { size?: number }) {
       height={size}
       viewBox={`0 0 ${size} ${size}`}
       role="img"
-      aria-label="Chain Reaction preview"
+      aria-label={t('games.chainPreview')}
       className="shrink-0"
     >
       <rect x={0} y={0} width={size} height={size} rx={4} ry={4} fill="#0a0a0a" />
@@ -67,6 +69,7 @@ function OrbGroup({ x, y, cell, count, color }: { x: number; y: number; cell: nu
 }
 
 export function VestaPreview({ size = 56 }: { size?: number }) {
+  const { t } = useTranslation();
   // Seven hexes in a flower, in the board's own resource colours, with two
   // settlements on the vertices between them.
   const r = size * 0.17;
@@ -96,7 +99,7 @@ export function VestaPreview({ size = 56 }: { size?: number }) {
       height={size}
       viewBox={`0 0 ${size} ${size}`}
       role="img"
-      aria-label="Vesta preview"
+      aria-label={t('games.vestaPreview')}
       className="shrink-0"
     >
       <rect x={0} y={0} width={size} height={size} rx={4} ry={4} fill="#0a1628" />

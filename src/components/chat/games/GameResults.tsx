@@ -5,6 +5,7 @@ import { gameIcon, gameName } from '@/lib/games/catalog';
 import { isDraw, standingsFor } from '@/lib/games/standings';
 import { SEAT_COLORS } from './ChainReactionBoard';
 import { VESTA_PLAYER_COLORS } from './vesta/VestaBoard';
+import { useTranslation } from '@/i18n/context';
 
 /**
  * How a match ended, for everyone.
@@ -23,13 +24,14 @@ export default function GameResults({
   seatLabel: (seatId: string) => string;
   myPubkey: string | null;
 }) {
+  const { t } = useTranslation();
   const rows = rowsFor(session);
   const mine = session.seats.filter((s) => s.by === myPubkey).map((s) => s.id);
 
   return (
     <div className="space-y-3" data-testid="game-results">
       <div className="text-center">
-        <div className="text-[10px] uppercase tracking-[0.14em] text-lc-muted">Final result</div>
+        <div className="text-[10px] uppercase tracking-[0.14em] text-lc-muted">{t('games.finalResult')}</div>
         <div className="mt-0.5 text-sm font-semibold text-lc-white">
           {gameIcon(session.game)} {gameName(session.game)}
           {session.winner

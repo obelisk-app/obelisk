@@ -11,6 +11,7 @@ import { gameMarker } from '@/lib/games/protocol';
 import { useGamesStore } from '@/store/games';
 import { useMyPubkey } from '@/lib/nostr-bridge';
 import { GameTypePreview } from './GamePreviews';
+import { useTranslation } from '@/i18n/context';
 
 const TIMEOUTS: Array<{ label: string; seconds: number }> = [
   { label: 'No clock', seconds: 0 },
@@ -43,6 +44,7 @@ export default function NewGameModal({
   /** Posts the in-channel card. Given the table id once the relay accepts it. */
   onPostMarker: (marker: string) => void;
 }) {
+  const { t } = useTranslation();
   const catalog = gameCatalog();
   const [selected, setSelected] = useState<GameInfo | null>(null);
   const [size, setSize] = useState<CRSizeKey>('medium');
@@ -134,7 +136,7 @@ export default function NewGameModal({
     >
       {!selected ? (
         <>
-          <h2 className="text-sm font-semibold text-lc-white">Pick a game</h2>
+          <h2 className="text-sm font-semibold text-lc-white">{t('games.pick')}</h2>
           <div className="mt-3 space-y-2" data-testid="game-list">
             {catalog.map((info) => (
               <button
@@ -157,7 +159,7 @@ export default function NewGameModal({
           </div>
           <div className="mt-4 flex justify-end">
             <button type="button" onClick={onClose} className="lc-pill-secondary px-4 py-1.5 text-xs">
-              Cancel
+              {t('common.cancel')}
             </button>
           </div>
         </>
@@ -175,7 +177,7 @@ export default function NewGameModal({
 
           {selected.type === 'chain-reaction' && (
             <>
-              <p className="mt-4 text-[10px] uppercase tracking-wide text-lc-muted">Board</p>
+              <p className="mt-4 text-[10px] uppercase tracking-wide text-lc-muted">{t('games.board')}</p>
               <div className="mt-1 grid grid-cols-3 gap-2">
                 {(Object.keys(CR_SIZES) as CRSizeKey[]).map((key) => (
                   <button
@@ -196,36 +198,36 @@ export default function NewGameModal({
 
           {selected.type === 'stacker' && (
             <>
-              <p className="mt-4 text-[10px] uppercase tracking-wide text-lc-muted">Piece seed</p>
+              <p className="mt-4 text-[10px] uppercase tracking-wide text-lc-muted">{t('games.pieceSeed')}</p>
               <input
                 value={seed}
                 onChange={(e) => setSeed(e.target.value)}
                 className="mt-1 w-full rounded bg-lc-black/50 px-2 py-1 text-xs text-lc-white outline-none focus:ring-1 focus:ring-lc-green"
-                aria-label="Piece seed"
+                aria-label={t('games.pieceSeed')}
                 data-testid="stacker-seed"
               />
               <p className="mt-1 text-[10px] text-lc-muted">
-                Everyone gets the same pieces in the same order, so the match is a race, not a lottery.
+                {t('games.pieceSeedHelp')}
               </p>
             </>
           )}
 
           {selected.type === 'vesta' && (
             <>
-              <p className="mt-4 text-[10px] uppercase tracking-wide text-lc-muted">Board seed</p>
+              <p className="mt-4 text-[10px] uppercase tracking-wide text-lc-muted">{t('games.boardSeed')}</p>
               <input
                 value={seed}
                 onChange={(e) => { setSeed(e.target.value); setResume(null); }}
                 disabled={!!resume}
                 className="mt-1 w-full rounded bg-lc-black/50 px-2 py-1 text-xs text-lc-white outline-none focus:ring-1 focus:ring-lc-green disabled:opacity-40"
-                aria-label="Board seed"
+                aria-label={t('games.boardSeed')}
                 data-testid="vesta-seed"
               />
               <p className="mt-1 text-[10px] text-lc-muted">
-                The same seed always builds the same board, on every client.
+                {t('games.boardSeedHelp')}
               </p>
 
-              <p className="mt-4 text-[10px] uppercase tracking-wide text-lc-muted">Or continue a saved game</p>
+              <p className="mt-4 text-[10px] uppercase tracking-wide text-lc-muted">{t('games.continueSaved')}</p>
               <input
                 ref={fileRef}
                 type="file"
@@ -244,7 +246,7 @@ export default function NewGameModal({
                 className="mt-1 rounded-full border border-lc-border px-3 py-1 text-xs text-lc-muted hover:text-lc-white"
                 data-testid="vesta-import"
               >
-                Load a Vesta save…
+                {t('games.loadVesta')}
               </button>
               {resume && (
                 <p className="mt-2 text-[11px] text-lc-green" data-testid="vesta-resume-note">
@@ -254,7 +256,7 @@ export default function NewGameModal({
             </>
           )}
 
-          <p className="mt-4 text-[10px] uppercase tracking-wide text-lc-muted">Who plays</p>
+          <p className="mt-4 text-[10px] uppercase tracking-wide text-lc-muted">{t('games.whoPlays')}</p>
           <div className="mt-1 flex flex-wrap gap-2">
             <button
               type="button"
@@ -264,7 +266,7 @@ export default function NewGameModal({
               }`}
               data-testid="players-online"
             >
-              People in this channel
+              {t('games.peopleHere')}
             </button>
             {(selected.realtime
               // Real-time games run every board at once, so there is no
@@ -299,7 +301,7 @@ export default function NewGameModal({
 
           {selected.type !== 'stacker' && (
             <>
-          <p className="mt-4 text-[10px] uppercase tracking-wide text-lc-muted">Turn clock</p>
+          <p className="mt-4 text-[10px] uppercase tracking-wide text-lc-muted">{t('games.turnClock')}</p>
           <div className="mt-1 flex flex-wrap gap-2">
             {TIMEOUTS.map((t) => (
               <button
@@ -316,7 +318,7 @@ export default function NewGameModal({
           </div>
           {selected.type === 'vesta' && timeout > 0 && (
             <p className="mt-1 text-[10px] text-lc-muted">
-              The clock runs per action, and a Vesta turn is several — a short one will cut people off.
+              {t('games.turnClockHelp')}
             </p>
           )}
             </>
@@ -337,7 +339,7 @@ export default function NewGameModal({
               className="lc-pill-secondary px-4 py-1.5 text-xs"
               data-testid="game-back"
             >
-              Back
+              {t('common.back')}
             </button>
             <button
               type="button"

@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { GameSession } from '@/lib/games/session';
 import type { CRState } from '@/lib/games/chain-reaction';
+import { useTranslation } from '@/i18n/context';
 
 interface Props {
   game: GameSession;
@@ -237,6 +238,7 @@ function Explosion({ hex }: { hex: string }) {
 }
 
 export default function ChainReactionBoard({ game, mySeats, onAction, maxWidth = 320, maxHeight, seatLabel, onRevealChange }: Props) {
+  const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
   const state = (game.state ?? {}) as Partial<CRState>;
   const rows: number = state.rows ?? 9;
@@ -509,7 +511,7 @@ export default function ChainReactionBoard({ game, mySeats, onAction, maxWidth =
       </div>
       {myColor && (
         <div className="text-center text-[11px] text-lc-muted">
-          Jugás con <span className="font-semibold" style={{ color: myColor.hex }}>●</span>
+          {t('games.youPlayAs')} <span className="font-semibold" style={{ color: myColor.hex }}>●</span>
         </div>
       )}
     </div>

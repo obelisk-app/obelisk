@@ -6,6 +6,7 @@ import type { GameSession } from '@/lib/games/session';
 import { localSeatId, type SeatSpec } from '@/lib/games/protocol';
 import { readResumeState } from '@/lib/games/vesta/definition';
 import { gameInfo, gameName } from '@/lib/games/catalog';
+import { useTranslation } from '@/i18n/context';
 
 interface Row {
   /** Stable identity while editing; the published seat id is derived at the end. */
@@ -47,6 +48,7 @@ export default function StartTableModal({
   onClose: () => void;
   onStart: (seats: SeatSpec[]) => void;
 }) {
+  const { t } = useTranslation();
   // Real-time games give every player their own board, running at the same
   // time, so an account can hold exactly one seat. Hot-seat is meaningless
   // there: you cannot pass a keyboard between people who are all playing.
@@ -129,7 +131,7 @@ export default function StartTableModal({
       testId="start-table-modal"
       panelClassName="w-full max-w-lg mx-4 rounded-xl bg-lc-dark border border-lc-border p-5 max-h-[85vh] overflow-y-auto"
     >
-      <h2 className="text-sm font-semibold text-lc-white">Seats and turn order</h2>
+      <h2 className="text-sm font-semibold text-lc-white">{t('games.seats')}</h2>
       <p className="mt-1 text-[11px] text-lc-muted">
         {realtime
           ? `Every player needs their own device: ${gameName(session.game)} runs all the boards at once, so one seat per account.`
@@ -160,14 +162,14 @@ export default function StartTableModal({
                   {realtime ? 'own device' : shared ? `on ${nameOf(row.by)}'s machine` : 'remote'}
                 </span>
                 <div className="flex shrink-0 items-center gap-0.5">
-                  <button type="button" onClick={() => move(i, -1)} className="px-1 text-lc-muted hover:text-lc-white" aria-label="Move up">↑</button>
-                  <button type="button" onClick={() => move(i, 1)} className="px-1 text-lc-muted hover:text-lc-white" aria-label="Move down">↓</button>
+                  <button type="button" onClick={() => move(i, -1)} className="px-1 text-lc-muted hover:text-lc-white" aria-label={t('desktop.layout.moveUp')}>↑</button>
+                  <button type="button" onClick={() => move(i, 1)} className="px-1 text-lc-muted hover:text-lc-white" aria-label={t('desktop.layout.moveDown')}>↓</button>
                   {!savedPlayers && rows.length > session.minPlayers && (
                     <button
                       type="button"
                       onClick={() => removeRow(row.rowId)}
                       className="px-1 text-lc-muted hover:text-red-400"
-                      aria-label="Remove seat"
+                      aria-label={t('games.removeSeat')}
                     >
                       ×
                     </button>
@@ -177,7 +179,7 @@ export default function StartTableModal({
 
               {/* Who signs for this seat */}
               <div className="mt-1.5 flex flex-wrap items-center gap-1 pl-7">
-                <span className="text-[10px] uppercase tracking-wide text-lc-muted">Played by</span>
+                <span className="text-[10px] uppercase tracking-wide text-lc-muted">{t('games.playedBy')}</span>
                 {session.joined.map((pubkey) => (
                   <button
                     key={pubkey}
@@ -225,7 +227,7 @@ export default function StartTableModal({
 
       <div className="mt-4 flex justify-end gap-2">
         <button type="button" onClick={onClose} className="lc-pill-secondary px-4 py-1.5 text-xs">
-          Cancel
+          {t('common.cancel')}
         </button>
         <button
           type="button"
@@ -234,7 +236,7 @@ export default function StartTableModal({
           className="lc-pill-primary px-4 py-1.5 text-xs"
           data-testid="confirm-start"
         >
-          Start game
+          {t('games.start')}
         </button>
       </div>
     </ModalShell>

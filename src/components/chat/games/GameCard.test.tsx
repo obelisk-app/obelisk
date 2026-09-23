@@ -26,6 +26,13 @@ import { useGamesStore } from '@/store/games';
 import { buildCreate, buildGameOp, gameMarker, parseGameEvent, type GameEvent, type ParsedGameEvent } from '@/lib/games/protocol';
 import { chainReaction } from '@/lib/games/chain-reaction';
 import { deriveSession } from '@/lib/games/session';
+import { LocaleProvider } from '@/i18n/context';
+
+/** The component reads its copy from the dictionary, so it needs a provider. */
+const renderLocalized = (ui: React.ReactElement) => render(
+  <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,
+);
+
 
 const CH = 'channel-1';
 const HOST = 'pk-host';
@@ -61,20 +68,20 @@ describe('GameCard', () => {
   });
 
   it('shows a skeleton until the table\'s create event arrives', () => {
-    render(<GameCard gameId={GAME_ID} />);
+    renderLocalized(<GameCard gameId={GAME_ID} />);
     expect(screen.getByTestId('game-card-loading')).toBeInTheDocument();
   });
 
   it('renders an open table with its seat count', () => {
     seedWaitingTable();
-    render(<GameCard gameId={GAME_ID} />);
+    renderLocalized(<GameCard gameId={GAME_ID} />);
     expect(screen.getByTestId('game-card')).toBeInTheDocument();
     expect(screen.getByText(/Open table · 1\/8/)).toBeInTheDocument();
   });
 
   it('reflects the live status of a table, not the status when the message was sent', () => {
     useGamesStore.getState().ingestMany(startedLog());
-    render(<GameCard gameId={GAME_ID} />);
+    renderLocalized(<GameCard gameId={GAME_ID} />);
     expect(screen.getByText('In progress')).toBeInTheDocument();
   });
 
@@ -83,7 +90,7 @@ describe('GameCard', () => {
       ...startedLog(),
       parsed('r1', HOST, now - 5, buildGameOp(CH, GAME_ID, 'resign')),
     ]);
-    render(<GameCard gameId={GAME_ID} />);
+    renderLocalized(<GameCard gameId={GAME_ID} />);
     // The host resigned, so B took the board.
     expect(screen.getByText(/🏆 pk-b won/)).toBeInTheDocument();
     expect(screen.getByText('Result')).toBeInTheDocument();
@@ -91,7 +98,7 @@ describe('GameCard', () => {
 
   it('opens the table when clicked', () => {
     seedWaitingTable();
-    render(<GameCard gameId={GAME_ID} />);
+    renderLocalized(<GameCard gameId={GAME_ID} />);
     screen.getByTestId('game-card').click();
     expect(useGamesStore.getState().openGameId).toBe(GAME_ID);
   });
@@ -99,7 +106,7 @@ describe('GameCard', () => {
   it('only touches member metadata for a table that has a winner', () => {
     memberInfoCalls.count = 0;
     seedWaitingTable();
-    render(<GameCard gameId={GAME_ID} />);
+    renderLocalized(<GameCard gameId={GAME_ID} />);
     // A card with no winner to name must not warm a profile fetch for every
     // member of the channel, nor re-render on every kind 0 that arrives.
     expect(memberInfoCalls.count).toBe(0);
@@ -110,7 +117,7 @@ describe('GameCard', () => {
       ...startedLog(),
       parsed('r1', HOST, now - 5, buildGameOp(CH, GAME_ID, 'resign')),
     ]);
-    render(<GameCard gameId={GAME_ID} />);
+    renderLocalized(<GameCard gameId={GAME_ID} />);
     expect(memberInfoCalls.count).toBeGreaterThan(0);
   });
 
@@ -124,7 +131,7 @@ describe('GameCard', () => {
       // keyboard, whose id is not a pubkey — takes the board.
       parsed('r1', HOST, now - 5, buildGameOp(CH, GAME_ID, 'resign', { seat: HOST })),
     ]);
-    render(<GameCard gameId={GAME_ID} />);
+    renderLocalized(<GameCard gameId={GAME_ID} />);
     expect(screen.getByText(/🏆 Beto won/)).toBeInTheDocument();
   });
 
@@ -139,7 +146,7 @@ describe('GameCard', () => {
     });
 
     it('asks for its own log after the grace period', () => {
-      render(<GameCard gameId={GAME_ID} />);
+      renderLocalized(<GameCard gameId={GAME_ID} />);
       expect(requestGameLoad).not.toHaveBeenCalled();
       act(() => { vi.advanceTimersByTime(RESOLVE_GRACE_MS); });
       expect(requestGameLoad).toHaveBeenCalledWith(GAME_ID);
@@ -147,13 +154,13 @@ describe('GameCard', () => {
 
     it('does not ask when it already has the table', () => {
       seedWaitingTable();
-      render(<GameCard gameId={GAME_ID} />);
+      renderLocalized(<GameCard gameId={GAME_ID} />);
       act(() => { vi.advanceTimersByTime(RESOLVE_GRACE_MS * 10); });
       expect(requestGameLoad).not.toHaveBeenCalled();
     });
 
     it('does not ask when the log arrives inside the grace period', () => {
-      render(<GameCard gameId={GAME_ID} />);
+      renderLocalized(<GameCard gameId={GAME_ID} />);
       act(() => { seedWaitingTable(); });
       act(() => { vi.advanceTimersByTime(RESOLVE_GRACE_MS * 10); });
       expect(requestGameLoad).not.toHaveBeenCalled();
@@ -179,7 +186,7 @@ describe('GameCard seeded from disk', () => {
       ]);
     });
 
-    render(<GameCard gameId={GAME_ID} />);
+    renderLocalized(<GameCard gameId={GAME_ID} />);
 
     expect(seedGameFromCache).toHaveBeenCalledWith(GAME_ID);
     expect(screen.queryByTestId('game-card-loading')).not.toBeInTheDocument();
@@ -191,7 +198,7 @@ describe('GameCard seeded from disk', () => {
     useGamesStore.getState().ingestMany([
       parsed(GAME_ID, HOST, now - 10, buildCreate(CH, { game: chainReaction.type, turnTimeoutS: 45 })),
     ]);
-    render(<GameCard gameId={GAME_ID} />);
+    renderLocalized(<GameCard gameId={GAME_ID} />);
     expect(seedGameFromCache).not.toHaveBeenCalled();
   });
 });
@@ -203,14 +210,14 @@ describe('MessageContent game markers', () => {
   });
 
   it('renders the marker as a card and strips it from the message body', () => {
-    render(<MessageContent content={`Who is in? ${gameMarker(GAME_ID)}`} channelId={CH} />);
+    renderLocalized(<MessageContent content={`Who is in? ${gameMarker(GAME_ID)}`} channelId={CH} />);
     expect(screen.getByTestId('game-card')).toBeInTheDocument();
     expect(screen.getByText('Who is in?')).toBeInTheDocument();
     expect(screen.queryByText(new RegExp(GAME_ID))).not.toBeInTheDocument();
   });
 
   it('renders one card per table even when a marker is repeated', () => {
-    render(<MessageContent content={`${gameMarker(GAME_ID)} ${gameMarker(GAME_ID)}`} channelId={CH} />);
+    renderLocalized(<MessageContent content={`${gameMarker(GAME_ID)} ${gameMarker(GAME_ID)}`} channelId={CH} />);
     expect(screen.getAllByTestId('game-card')).toHaveLength(1);
   });
 });
@@ -228,7 +235,7 @@ describe('ChainReactionBoard', () => {
     const onAction = vi.fn().mockResolvedValue(undefined);
     const mySeats = [HOST, `${HOST}#1`];
 
-    render(<ChainReactionBoard game={session} mySeats={mySeats} onAction={onAction} />);
+    renderLocalized(<ChainReactionBoard game={session} mySeats={mySeats} onAction={onAction} />);
     screen.getByLabelText('cell 0').click();
     expect(onAction).toHaveBeenCalledWith({ cell: 0 }, HOST);
 
@@ -241,7 +248,7 @@ describe('ChainReactionBoard', () => {
     expect(next.currentTurn).toBe(`${HOST}#1`);
 
     onAction.mockClear();
-    render(<ChainReactionBoard game={next} mySeats={mySeats} onAction={onAction} />);
+    renderLocalized(<ChainReactionBoard game={next} mySeats={mySeats} onAction={onAction} />);
     screen.getAllByLabelText('cell 5')[1].click();
     expect(onAction).toHaveBeenCalledWith({ cell: 5 }, `${HOST}#1`);
   });
@@ -250,12 +257,12 @@ describe('ChainReactionBoard', () => {
     const session = deriveSession(startedLog(), now)!;
     const onAction = vi.fn().mockResolvedValue(undefined);
 
-    const { rerender } = render(<ChainReactionBoard game={session} mySeats={[B]} onAction={onAction} />);
+    const { rerender } = renderLocalized(<ChainReactionBoard game={session} mySeats={[B]} onAction={onAction} />);
     // B is not on move — every cell is disabled.
     screen.getByLabelText('cell 0').click();
     expect(onAction).not.toHaveBeenCalled();
 
-    rerender(<ChainReactionBoard game={session} mySeats={[HOST]} onAction={onAction} />);
+    rerender(<LocaleProvider initialLocale="en">{<><ChainReactionBoard game={session} mySeats={[HOST]} onAction={onAction} /></>}</LocaleProvider>);
     screen.getByLabelText('cell 0').click();
     expect(onAction).toHaveBeenCalledWith({ cell: 0 }, HOST);
   });
@@ -268,7 +275,7 @@ describe('ChainReactionBoard', () => {
     const session = deriveSession(log, now)!;
     const onAction = vi.fn().mockResolvedValue(undefined);
 
-    render(<ChainReactionBoard game={session} mySeats={[B]} onAction={onAction} />);
+    renderLocalized(<ChainReactionBoard game={session} mySeats={[B]} onAction={onAction} />);
     screen.getByLabelText('cell 0').click();
     expect(onAction).not.toHaveBeenCalled();
 

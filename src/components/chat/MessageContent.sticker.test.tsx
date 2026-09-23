@@ -3,6 +3,13 @@ import { describe, expect, it } from 'vitest';
 import { nip19 } from 'nostr-tools';
 import MessageContent from './MessageContent';
 import { useChatStore } from '@/store/chat';
+import { LocaleProvider } from '@/i18n/context';
+
+/** The component reads its copy from the dictionary, so it needs a provider. */
+const renderLocalized = (ui: React.ReactElement) => render(
+  <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,
+);
+
 
 describe('MessageContent stickers', () => {
   it('renders nprofile entities with the shared clickable profile chip', () => {
@@ -10,7 +17,7 @@ describe('MessageContent stickers', () => {
     const pubkey = 'c'.repeat(64);
     const nprofile = nip19.nprofileEncode({ pubkey, relays: ['wss://relay.example'] });
 
-    render(<MessageContent content={`nostr:${nprofile}`} />);
+    renderLocalized(<MessageContent content={`nostr:${nprofile}`} />);
     fireEvent.click(screen.getByTestId('mention-highlight'), { clientX: 80, clientY: 120 });
 
     expect(screen.queryByText(`nostr:${nprofile}`)).not.toBeInTheDocument();
@@ -18,16 +25,16 @@ describe('MessageContent stickers', () => {
   });
 
   it('renders Nostr hashtags blue and feed media at the available width', () => {
-    const { rerender } = render(<MessageContent content="[#Nostr](/t/nostr)" />);
+    const { rerender } = renderLocalized(<MessageContent content="[#Nostr](/t/nostr)" />);
     expect(screen.getByTestId('nostr-hashtag')).toHaveClass('text-sky-400');
     expect(screen.getByTestId('nostr-hashtag')).toHaveAttribute('href', '/t/nostr');
 
-    rerender(<MessageContent content="https://cdn.example/photo.jpg" wideMedia />);
+    rerender(<LocaleProvider initialLocale="en">{<><MessageContent content="https://cdn.example/photo.jpg" wideMedia /></>}</LocaleProvider>);
     expect(screen.getByTestId('image-gallery')).toHaveClass('w-full', 'max-w-full');
   });
 
   it('uses the waveform player for uploaded audio files', () => {
-    render(<MessageContent content="https://cdn.example/song.mp3" />);
+    renderLocalized(<MessageContent content="https://cdn.example/song.mp3" />);
 
     expect(screen.getByTestId('voice-message')).toBeInTheDocument();
     expect(screen.getByTestId('voice-waveform')).toBeInTheDocument();
@@ -35,7 +42,7 @@ describe('MessageContent stickers', () => {
   });
 
   it('renders tagged stickers as large media instead of inline custom emoji', () => {
-    render(
+    renderLocalized(
       <MessageContent
         content=":party_cat:"
         customEmojis={{ party_cat: 'https://cdn.example/party.webp' }}
@@ -54,7 +61,7 @@ describe('MessageContent stickers', () => {
   });
 
   it('opens shared GIFs in the same favorite and pack view as stickers', () => {
-    render(<MessageContent content="https://media.giphy.com/media/abc123/giphy.gif" />);
+    renderLocalized(<MessageContent content="https://media.giphy.com/media/abc123/giphy.gif" />);
 
     fireEvent.click(screen.getByTestId('image-gallery'));
 
@@ -66,7 +73,7 @@ describe('MessageContent stickers', () => {
 
   it("renders tagged voice notes with the compact player and no video canvas", () => {
     const url = "https://cdn.example/voice.webm";
-    render(
+    renderLocalized(
       <MessageContent
         content={url}
         voiceNote={{ url, durationSeconds: 5 }}
@@ -89,7 +96,7 @@ describe('MessageContent stickers', () => {
   });
 
   it("cycles playback speed over the sender picture only while audio plays", () => {
-    render(
+    renderLocalized(
       <MessageContent
         content="voice"
         voiceNote={{ url: "https://cdn.example/voice.webm", durationSeconds: 5 }}
@@ -114,7 +121,7 @@ describe('MessageContent stickers', () => {
 
   it("upgrades an untagged audio-only WebM without misclassifying real video", () => {
     const url = "https://cdn.example/legacy.webm";
-    render(<MessageContent content={url} voiceAuthorPicture="https://cdn.example/avatar.webp" voiceTimestamp={1_700_000_000} />);
+    renderLocalized(<MessageContent content={url} voiceAuthorPicture="https://cdn.example/avatar.webp" voiceTimestamp={1_700_000_000} />);
 
     const video = screen.getByTestId("video-player");
     Object.defineProperties(video, {

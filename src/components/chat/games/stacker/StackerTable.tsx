@@ -8,6 +8,7 @@ import { MUSIC_CREDIT, currentTrack, setTrackListener } from '@/lib/games/stacke
 import StackerBoard, { MiniBoard, PieceChip } from './StackerBoard';
 import StackerKeysPanel from './StackerKeysPanel';
 import { HEIGHT } from '@/lib/games/stacker/engine';
+import { useTranslation } from '@/i18n/context';
 
 export interface StackerTableProps {
   session: GameSession;
@@ -47,6 +48,7 @@ export default function StackerTable({
   onTopOut,
   fullscreen,
 }: StackerTableProps) {
+  const { t } = useTranslation();
   const mySeat = mySeats[0] ?? null;
   const alive = match.alive;
   const iAmAlive = !!mySeat && alive.includes(mySeat);
@@ -125,12 +127,12 @@ export default function StackerTable({
         {/* Left rail: hold and the numbers that matter */}
         <div className="flex w-[68px] shrink-0 flex-col gap-2">
           <div className="rounded-lg border border-lc-border bg-lc-black/40 p-1.5">
-            <PieceChip kind={runner.state.hold} label="Hold" dim={!runner.state.hold} />
+            <PieceChip kind={runner.state.hold} label={t('games.hold')} dim={!runner.state.hold} />
           </div>
-          <Stat label="Sent" value={stats.attacksSent} accent="#b4f953" testId="stacker-sent" />
-          <Stat label="Lines" value={stats.linesCleared} />
-          <Stat label="Level" value={stats.level} accent="#22d3ee" testId="stacker-level" />
-          {stats.combo > 1 && <Stat label="Combo" value={`${stats.combo}×`} accent="#facc15" />}
+          <Stat label={t('games.sent')} value={stats.attacksSent} accent="#b4f953" testId="stacker-sent" />
+          <Stat label={t('games.lines')} value={stats.linesCleared} />
+          <Stat label={t('games.level')} value={stats.level} accent="#22d3ee" testId="stacker-level" />
+          {stats.combo > 1 && <Stat label={t('games.combo')} value={`${stats.combo}×`} accent="#facc15" />}
           {stats.backToBack > 0 && <Stat label="B2B" value={stats.backToBack} accent="#a855f7" />}
         </div>
 
@@ -166,7 +168,7 @@ export default function StackerTable({
           {(stats.dead || !iAmAlive) && (
             <div className="absolute inset-0 flex items-center justify-center" data-testid="stacker-dead">
               <span className="rounded-lg bg-black/80 px-4 py-2 text-base font-black tracking-wide text-red-400">
-                TOPPED OUT
+                {t('games.toppedOut')}
               </span>
             </div>
           )}
@@ -175,7 +177,7 @@ export default function StackerTable({
         {/* Right rail: what's coming */}
         <div className="flex w-[68px] shrink-0 flex-col gap-1.5">
           <div className="rounded-lg border border-lc-border bg-lc-black/40 p-1.5">
-            <PieceChip kind={runner.state.queue[0] ?? null} label="Next" />
+            <PieceChip kind={runner.state.queue[0] ?? null} label={t('games.next')} />
             <div className="mt-1 space-y-1 opacity-80">
               {runner.state.queue.slice(1, 5).map((kind, i) => (
                 <PieceChip key={`${kind}-${i}`} kind={kind} dim />

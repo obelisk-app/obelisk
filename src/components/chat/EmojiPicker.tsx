@@ -12,6 +12,7 @@ import { useChatStore } from '@/store/chat';
 import { inferMediaKind } from '@/lib/media-kind';
 import MediaThumb from '@/components/media/MediaThumb';
 import type { JsMediaKind } from '@/lib/nostr-bridge';
+import { useTranslation } from '@/i18n/context';
 
 const EMOJI_SECTIONS = [
   { name: 'Smileys', icon: '😀', label: 'Smileys & people', categories: ['Smileys', 'Gestures'] },
@@ -123,6 +124,7 @@ export default function EmojiPicker({
   customEmojiAction,
   children,
 }: EmojiPickerProps) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [recents, setRecents] = useState<RecentEmoji[]>(() => loadRecentEmojis());
   const [activeCategory, setActiveCategory] = useState('Recent');
@@ -264,12 +266,12 @@ export default function EmojiPicker({
   return (
     <div
       role="dialog"
-      aria-label="Emoji picker"
+      aria-label={t('emoji.picker')}
       className={containerClass + (className ?? '')}
       onClick={(e) => e.stopPropagation()}
     >
       {!filtered && (
-        <nav className="mb-2 grid shrink-0 grid-cols-9 border-b border-lc-border px-1 pb-1" aria-label="Emoji categories">
+        <nav className="mb-2 grid shrink-0 grid-cols-9 border-b border-lc-border px-1 pb-1" aria-label={t('emoji.categories')}>
           {EMOJI_NAV.map((meta) => {
             const category = meta.name;
             return (
@@ -292,14 +294,14 @@ export default function EmojiPicker({
         {!isSheet && (
           <div className="mb-2 flex items-center justify-between">
             <div>
-              <div className="text-sm font-bold text-lc-white">Emoji</div>
-              <div className="text-[11px] text-[#b5bac1]">Server emojis, GIFs, and unicode</div>
+              <div className="text-sm font-bold text-lc-white">{t('emoji.title')}</div>
+              <div className="text-[11px] text-[#b5bac1]">{t('emoji.subtitle')}</div>
             </div>
             <button
               onClick={onClose}
               className="flex h-7 w-7 items-center justify-center rounded text-[#b5bac1] hover:bg-[#3f4147] hover:text-lc-white"
-              aria-label="Close emoji picker"
-              title="Close"
+              aria-label={t('emoji.close')}
+              title={t('common.close')}
             >
               x
             </button>
@@ -309,14 +311,14 @@ export default function EmojiPicker({
           autoFocus={!isSheet}
           value={query}
           onChange={setQuery}
-          placeholder="Search emoji"
+          placeholder={t('emoji.search')}
         />
         {isSheet && showClose && (
           <button
             onClick={onClose}
             className="h-9 w-9 rounded text-lc-muted hover:bg-[#3f4147] hover:text-lc-white"
-            aria-label="Close emoji picker"
-            title="Close"
+            aria-label={t('emoji.close')}
+            title={t('common.close')}
           >
             x
           </button>
@@ -330,7 +332,7 @@ export default function EmojiPicker({
             {renderCustomSection('Server emojis', filteredCustomEmojiEntries)}
             <div className={gridClass}>
               {filtered.length === 0 && filteredCustomCount === 0 && (
-                <div className="col-span-8 py-4 text-center text-xs text-lc-muted">No matches</div>
+                <div className="col-span-8 py-4 text-center text-xs text-lc-muted">{t('emoji.noMatches')}</div>
               )}
               {filtered.map((e) => {
                 const mine = disabled.has(e.char);
@@ -352,7 +354,7 @@ export default function EmojiPicker({
           <>
             {renderCustomSection("My emojis", [], customEmojiAction)}
             <div className="mb-2 scroll-mt-1" data-emoji-category="Recent">
-                <div className={sectionTitleClass}>Recent</div>
+                <div className={sectionTitleClass}>{t('emoji.recent')}</div>
                 <div className={gridClass}>
                   {recentEntries.map(({ char, custom }) => {
                     const mine = disabled.has(char);
@@ -370,7 +372,7 @@ export default function EmojiPicker({
                     );
                   })}
                 </div>
-                {recentEntries.length === 0 && <div className="px-1 py-3 text-xs text-lc-muted">No recent emojis</div>}
+                {recentEntries.length === 0 && <div className="px-1 py-3 text-xs text-lc-muted">{t('emoji.noRecent')}</div>}
               </div>
             {renderCustomSection('Server GIFs', customGifEntries)}
             {renderCustomSection('Server stickers', customStickerEntries)}

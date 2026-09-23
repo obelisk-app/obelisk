@@ -10,6 +10,13 @@ import {
 } from '@/lib/games/protocol';
 import { chainReaction } from '@/lib/games/chain-reaction';
 import { deriveSession, type GameSession } from '@/lib/games/session';
+import { LocaleProvider } from '@/i18n/context';
+
+/** The component reads its copy from the dictionary, so it needs a provider. */
+const renderLocalized = (ui: React.ReactElement) => render(
+  <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,
+);
+
 
 const CH = 'channel-1';
 const A = 'pk-ana';
@@ -45,14 +52,14 @@ function boardWidth(): number {
 
 describe('ChainReactionBoard sizing', () => {
   it('keeps the inline size when it is given only a width', () => {
-    render(<ChainReactionBoard game={table()} mySeats={[A]} onAction={vi.fn()} maxWidth={420} />);
+    renderLocalized(<ChainReactionBoard game={table()} mySeats={[A]} onAction={vi.fn()} maxWidth={420} />);
     // 5 columns at the inline cell cap of 44px.
     expect(boardWidth()).toBe(220);
   });
 
   it('grows to fill the room when a height comes with the width', () => {
     // What fullscreen passes on a 1440×900 window.
-    render(
+    renderLocalized(
       <ChainReactionBoard game={table()} mySeats={[A]} onAction={vi.fn()} maxWidth={1408} maxHeight={690} />,
     );
     // 7 rows into 690px is 98px, over the fullscreen cap, so the cap decides:
@@ -61,7 +68,7 @@ describe('ChainReactionBoard sizing', () => {
   });
 
   it('fits the shorter dimension rather than overflowing it', () => {
-    render(
+    renderLocalized(
       <ChainReactionBoard game={table()} mySeats={[A]} onAction={vi.fn()} maxWidth={1408} maxHeight={280} />,
     );
     // 280 / 7 rows = 40px cells, so the board is 200px wide and 280 tall —
@@ -70,13 +77,13 @@ describe('ChainReactionBoard sizing', () => {
   });
 
   it('scales the orbs with the cells, so a big board is not covered in dots', () => {
-    const { unmount } = render(
+    const { unmount } = renderLocalized(
       <ChainReactionBoard game={table([{ n: 0, by: A, cell: 0 }])} mySeats={[A]} onAction={vi.fn()} maxWidth={420} />,
     );
     const inline = (document.querySelector('.cr-matrix') as HTMLElement).style.getPropertyValue('--cr-orb');
     unmount();
 
-    render(
+    renderLocalized(
       <ChainReactionBoard game={table([{ n: 0, by: A, cell: 0 }])} mySeats={[A]} onAction={vi.fn()} maxWidth={1408} maxHeight={690} />,
     );
     const full = (document.querySelector('.cr-matrix') as HTMLElement).style.getPropertyValue('--cr-orb');
@@ -95,7 +102,7 @@ describe('ChainReactionBoard reveal reporting', () => {
       { n: 0, by: A, cell: 0 },
       { n: 1, by: B, cell: 34 },
     ]);
-    const { rerender } = render(
+    const { rerender } = renderLocalized(
       <ChainReactionBoard game={before} mySeats={[A]} onAction={vi.fn()} onRevealChange={onRevealChange} />,
     );
     expect(onRevealChange).toHaveBeenLastCalledWith(false);
@@ -108,7 +115,7 @@ describe('ChainReactionBoard reveal reporting', () => {
       { n: 2, by: A, cell: 0 },
     ]);
     act(() => {
-      rerender(<ChainReactionBoard game={after} mySeats={[A]} onAction={vi.fn()} onRevealChange={onRevealChange} />);
+      rerender(<LocaleProvider initialLocale="en">{<><ChainReactionBoard game={after} mySeats={[A]} onAction={vi.fn()} onRevealChange={onRevealChange} /></>}</LocaleProvider>);
     });
     expect(onRevealChange).toHaveBeenLastCalledWith(true);
 
@@ -117,7 +124,7 @@ describe('ChainReactionBoard reveal reporting', () => {
   });
 
   it('renders the board without a reveal listener at all', () => {
-    render(<ChainReactionBoard game={table()} mySeats={[A]} onAction={vi.fn()} />);
+    renderLocalized(<ChainReactionBoard game={table()} mySeats={[A]} onAction={vi.fn()} />);
     expect(screen.getByLabelText('cell 0')).toBeTruthy();
   });
 });

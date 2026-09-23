@@ -15,6 +15,7 @@ import {
   type PieceKind,
 } from '@/lib/games/stacker/engine';
 import type { StackerRunner } from '@/lib/games/stacker/runner';
+import { useTranslation } from '@/i18n/context';
 
 /** One colour per piece, plus grey for garbage. */
 export const PIECE_COLORS: Record<number, string> = {
@@ -52,6 +53,7 @@ export default function StackerBoard({
   cell?: number;
   dimmed?: boolean;
 }) {
+  const { t } = useTranslation();
   const ref = useRef<HTMLCanvasElement>(null);
   const dimmedRef = useRef(dimmed);
   useEffect(() => { dimmedRef.current = dimmed; }, [dimmed]);
@@ -178,7 +180,7 @@ export default function StackerBoard({
       style={{ width: WIDTH * cell, height: HEIGHT * cell }}
       className="rounded-xl border border-lc-border shadow-[0_0_50px_-16px_rgba(180,249,83,0.35)]"
       data-testid="stacker-board"
-      aria-label="Stacker playfield"
+      aria-label={t('games.stackerBoard')}
     />
   );
 }

@@ -30,6 +30,7 @@ import { gameIcon, gameName } from '@/lib/games/catalog';
 import { seatDisplayLabel } from '@/lib/games/seat-label';
 import { seedGameFromCache } from '@/lib/games/cache';
 import { requestGameLoad } from '@/lib/games/resolve';
+import { useTranslation } from '@/i18n/context';
 
 /**
  * The table itself: roster while waiting, board while playing, result when
@@ -39,6 +40,7 @@ import { requestGameLoad } from '@/lib/games/resolve';
  * hasn't accepted is a board the other players cannot see.
  */
 export default function GameModal({ gameId, onClose }: { gameId: string; onClose: () => void }) {
+  const { t } = useTranslation();
   const session = useGameSession(gameId);
   const myPubkey = useMyPubkey();
   const memberList = useGroupMemberInfo(session?.channelId ?? null);
@@ -200,7 +202,7 @@ export default function GameModal({ gameId, onClose }: { gameId: string; onClose
     return (
       <ModalShell onClose={onClose} testId="game-modal" panelClassName="w-full max-w-md mx-4 rounded-xl bg-lc-dark border border-lc-border p-6">
         <div className="lc-skeleton h-40 w-full rounded-lg" />
-        <p className="mt-3 text-center text-xs text-lc-muted">Loading the table from the relay…</p>
+        <p className="mt-3 text-center text-xs text-lc-muted">{t('games.loadingTable')}</p>
       </ModalShell>
     );
   }
@@ -278,7 +280,7 @@ export default function GameModal({ gameId, onClose }: { gameId: string; onClose
             type="button"
             onClick={onClose}
             className="text-lc-muted hover:text-lc-white text-lg leading-none"
-            aria-label="Close"
+            aria-label={t('common.close')}
           >
             ×
           </button>
@@ -366,7 +368,7 @@ export default function GameModal({ gameId, onClose }: { gameId: string; onClose
             className="lc-pill-primary px-4 py-1.5 text-xs"
             data-testid="game-join"
           >
-            Join
+            {t('games.join')}
           </button>
         )}
         {canStart(session, myPubkey) && (
@@ -387,7 +389,7 @@ export default function GameModal({ gameId, onClose }: { gameId: string; onClose
             onClick={() => run(() => publishCancel(session.channelId, session.id))}
             className="lc-pill-secondary px-4 py-1.5 text-xs"
           >
-            Cancel table
+            {t('games.cancelTable')}
           </button>
         )}
         {session.status === 'in_progress' && resignSeat && !session.eliminated.includes(resignSeat) && (
@@ -398,7 +400,7 @@ export default function GameModal({ gameId, onClose }: { gameId: string; onClose
             className="lc-pill-secondary px-4 py-1.5 text-xs"
             data-testid="game-resign"
           >
-            Resign
+            {t('games.resign')}
           </button>
         )}
         {session.status === 'waiting' && session.joined.length < session.minPlayers && (

@@ -7,6 +7,7 @@ import { normalizeCustomEmojiName } from '@/lib/custom-emoji-tags';
 import { inferMediaKind } from '@/lib/media-kind';
 import { useMediaPacks, useMyMediaFavorites, type JsMediaItem, type JsMediaPack } from '@/lib/nostr-bridge';
 import { useChatStore } from '@/store/chat';
+import { useTranslation } from '@/i18n/context';
 
 interface ImageGalleryProps {
   urls: string[];
@@ -197,6 +198,7 @@ export interface LightboxProps {
 }
 
 export function Lightbox({ urls, index, onClose, onPrev, onNext }: LightboxProps) {
+  const { t } = useTranslation();
   // Zoom + pan state. `scale` is clamped to [1, 5]; panning is only enabled
   // when scale > 1. Resets whenever the shown index changes.
   const [scale, setScale] = useState(1);
@@ -285,7 +287,7 @@ export function Lightbox({ urls, index, onClose, onPrev, onNext }: LightboxProps
     >
       <button
         type="button"
-        aria-label="Close"
+        aria-label={t('common.close')}
         onClick={(e) => {
           e.stopPropagation();
           onClose();
@@ -302,7 +304,7 @@ export function Lightbox({ urls, index, onClose, onPrev, onNext }: LightboxProps
         <>
           <button
             type="button"
-            aria-label="Previous"
+            aria-label={t('common.previous')}
             onClick={(e) => {
               e.stopPropagation();
               onPrev();
@@ -316,7 +318,7 @@ export function Lightbox({ urls, index, onClose, onPrev, onNext }: LightboxProps
           </button>
           <button
             type="button"
-            aria-label="Next"
+            aria-label={t('common.next')}
             onClick={(e) => {
               e.stopPropagation();
               onNext();

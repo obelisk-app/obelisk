@@ -4717,7 +4717,7 @@ function ForumScreen({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={canCreateFromSearch ? 'Tap + to create…' : 'Search or create a publication…'}
-              aria-label={t('mobile.forum.searchPlaceholder')}
+              aria-label={t('forum.searchPlaceholder')}
               data-testid="mobile-forum-search-input"
             />
             {searchQuery && (
@@ -4739,7 +4739,7 @@ function ForumScreen({
             // an empty composer.
             onClick={() => openNewThread(searchQuery.trim())}
             data-testid="mobile-forum-new-thread-btn"
-            aria-label={t('mobile.forum.new')}
+            aria-label={t('forum.new')}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
           </button>
@@ -4752,7 +4752,7 @@ function ForumScreen({
             data-testid="mobile-forum-sort-trigger"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 4v16" /><path d="m3 8 4-4 4 4" /><path d="M17 20V4" /><path d="m21 16-4 4-4-4" /></svg>
-            {t('mobile.forum.sort')}
+            {t('forum.sort')}
           </button>
           {forumTags.map((tag) => (
             <button
@@ -4785,7 +4785,7 @@ function ForumScreen({
       <div className="forum-list native-scroll-y">
         {threadsLoading ? (
           <div className="empty-state" data-testid="mobile-forum-loading">
-            <div className="empty-state-title">{t('mobile.forum.loading')}</div>
+            <div className="empty-state-title">{t('forum.loading')}</div>
           </div>
         ) : children.length === 0 ? (
           <div className="empty-state">
@@ -4982,30 +4982,30 @@ function ForumSortSheet({
       <div className="sheet-backdrop" onClick={close} />
       <div className="sheet native-scroll-y">
         <div className="sheet-handle" />
-        <div className="zap-title">{t('mobile.forum.sortTitle')}</div>
+        <div className="zap-title">{t('forum.sortTitle')}</div>
         <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>{t('mobile.forum.sortBy')}</label>
+          <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>{t('forum.sortBy')}</label>
           <SortSheetRow
-            label={t('mobile.forum.sortActive')}
+            label={t('forum.sortActive')}
             checked={prefs.sortBy === 'recent'}
             onClick={() => onChange({ sortBy: 'recent' })}
             testId="mobile-forum-sort-recent"
           />
           <SortSheetRow
-            label={t('mobile.forum.sortCreated')}
+            label={t('forum.sortCreated')}
             checked={prefs.sortBy === 'created'}
             onClick={() => onChange({ sortBy: 'created' })}
             testId="mobile-forum-sort-created"
           />
-          <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em', marginTop: 12 }}>{t('mobile.forum.tagMatching')}</label>
+          <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em', marginTop: 12 }}>{t('forum.tagMatching')}</label>
           <SortSheetRow
-            label={t('mobile.forum.matchAny')}
+            label={t('forum.matchAny')}
             checked={prefs.tagMatch === 'any'}
             onClick={() => onChange({ tagMatch: 'any' })}
             testId="mobile-forum-match-any"
           />
           <SortSheetRow
-            label={t('mobile.forum.matchAll')}
+            label={t('forum.matchAll')}
             checked={prefs.tagMatch === 'all'}
             onClick={() => onChange({ tagMatch: 'all' })}
             testId="mobile-forum-match-all"
@@ -5146,16 +5146,16 @@ function NewThreadSheet({
       <div className="sheet-backdrop" onClick={close} />
       <form className="sheet native-scroll-y" onSubmit={onSubmit} style={{ maxHeight: '92%' }}>
         <div className="sheet-handle" />
-        <div className="zap-title">{t('mobile.forum.new')}</div>
+        <div className="zap-title">{t('forum.new')}</div>
         <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>{t('mobile.forum.titleLabel')}</label>
+          <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>{t('forum.titleLabel')}</label>
           <div className="setup-input-wrap">
             <input
               autoFocus
               className="setup-input"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder={t('mobile.forum.titlePlaceholder')}
+              placeholder={t('forum.titlePlaceholder')}
               maxLength={140}
               data-testid="mobile-new-thread-title"
             />

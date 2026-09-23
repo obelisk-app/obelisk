@@ -10,6 +10,7 @@ import { gameIcon, gameName } from '@/lib/games/catalog';
 import { seedGameFromCache } from '@/lib/games/cache';
 import { requestGameLoad } from '@/lib/games/resolve';
 import { SEAT_COLORS } from './ChainReactionBoard';
+import { useTranslation } from '@/i18n/context';
 
 /**
  * How long a card without a session waits before asking the relay for its own
@@ -96,19 +97,20 @@ function GameCard({ gameId }: { gameId: string }) {
 export default memo(GameCard);
 
 function StatusLabel({ session, myPubkey }: { session: GameSession; myPubkey: string | null }) {
+  const { t } = useTranslation();
   switch (session.status) {
     case 'waiting':
       return <>{`Open table · ${session.joined.length}/${session.maxPlayers}`}</>;
     case 'in_progress':
-      return <>In progress</>;
+      return <>{t('games.inProgress')}</>;
     case 'finished':
-      if (session.draw || !session.winner) return <>Finished · draw</>;
+      if (session.draw || !session.winner) return <>{t('games.draw')}</>;
       // Naming the reader is safe here — this is rendered per viewer and never
       // published, unlike the seat labels that travel in the `start` event.
       if (controllerOf(session, session.winner) === myPubkey) return <>🏆 you won</>;
       return <WinnerLabel session={session} winner={session.winner} />;
     default:
-      return <>Cancelled</>;
+      return <>{t('games.cancelled')}</>;
   }
 }
 

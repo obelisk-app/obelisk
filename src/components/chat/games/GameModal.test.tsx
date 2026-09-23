@@ -1,6 +1,13 @@
 import { render, screen, act } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import type { GameSession } from '@/lib/games/session';
+import { LocaleProvider } from '@/i18n/context';
+
+/** The component reads its copy from the dictionary, so it needs a provider. */
+const renderLocalized = (ui: React.ReactElement) => render(
+  <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,
+);
+
 
 /**
  * The result splash and the winning cascade.
@@ -68,7 +75,7 @@ describe('GameModal result splash', () => {
 
   it('waits for the board to finish its cascade before covering it', () => {
     session = finishedTable();
-    render(<GameModal gameId="table-1" onClose={() => {}} />);
+    renderLocalized(<GameModal gameId="table-1" onClose={() => {}} />);
 
     // The board reports a cascade in flight the moment the final board lands.
     act(() => { revealListener?.(true); });
@@ -83,7 +90,7 @@ describe('GameModal result splash', () => {
 
   it('shows the splash on its own when no cascade is reported', () => {
     session = finishedTable();
-    render(<GameModal gameId="table-1" onClose={() => {}} />);
+    renderLocalized(<GameModal gameId="table-1" onClose={() => {}} />);
     expect(screen.queryByText('YOU WON')).toBeNull();
     act(() => { vi.advanceTimersByTime(400); });
     expect(screen.getByText('YOU WON')).toBeTruthy();
@@ -91,7 +98,7 @@ describe('GameModal result splash', () => {
 
   it('gives up waiting rather than swallowing the result forever', () => {
     session = finishedTable();
-    render(<GameModal gameId="table-1" onClose={() => {}} />);
+    renderLocalized(<GameModal gameId="table-1" onClose={() => {}} />);
     act(() => { revealListener?.(true); });
     // A board that never reports "settled" must not eat the splash.
     act(() => { vi.advanceTimersByTime(7000); });

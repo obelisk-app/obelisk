@@ -5,6 +5,13 @@ import GameResults from './GameResults';
 import { deriveSession, type GameSession } from '@/lib/games/session';
 import { buildCreate, buildGameOp, parseGameEvent, type GameEvent, type ParsedGameEvent } from '@/lib/games/protocol';
 import { applyMatchEvent } from '@/lib/games/stacker/match';
+import { LocaleProvider } from '@/i18n/context';
+
+/** The component reads its copy from the dictionary, so it needs a provider. */
+const renderLocalized = (ui: React.ReactElement) => render(
+  <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,
+);
+
 
 const CH = 'channel-1';
 const A = 'pk-ana';
@@ -32,7 +39,7 @@ function finishedChainReaction(): GameSession {
 describe('GameResults', () => {
   it('names the winner and lists everyone', () => {
     const session = finishedChainReaction();
-    render(<GameResults session={session} seatLabel={label} myPubkey={A} />);
+    renderLocalized(<GameResults session={session} seatLabel={label} myPubkey={A} />);
     expect(screen.getByTestId('game-results')).toHaveTextContent('Bruno won');
     expect(screen.getByTestId(`result-row-${A}`)).toBeInTheDocument();
     expect(screen.getByTestId(`result-row-${B}`)).toBeInTheDocument();
@@ -40,21 +47,21 @@ describe('GameResults', () => {
 
   it('marks which seat belongs to the person looking', () => {
     const session = finishedChainReaction();
-    render(<GameResults session={session} seatLabel={label} myPubkey={A} />);
+    renderLocalized(<GameResults session={session} seatLabel={label} myPubkey={A} />);
     expect(screen.getByTestId(`result-row-${A}`)).toHaveTextContent('(you)');
     expect(screen.getByTestId(`result-row-${B}`)).not.toHaveTextContent('(you)');
   });
 
   it('shows a spectator the same standings, with nothing marked as theirs', () => {
     const session = finishedChainReaction();
-    render(<GameResults session={session} seatLabel={label} myPubkey="pk-nobody" />);
+    renderLocalized(<GameResults session={session} seatLabel={label} myPubkey="pk-nobody" />);
     expect(screen.getByTestId('game-results')).toHaveTextContent('Bruno won');
     expect(screen.queryByText('(you)')).not.toBeInTheDocument();
   });
 
   it('scores Chain Reaction by orbs held, and marks the eliminated', () => {
     const session = finishedChainReaction();
-    render(<GameResults session={session} seatLabel={label} myPubkey={A} />);
+    renderLocalized(<GameResults session={session} seatLabel={label} myPubkey={A} />);
     expect(screen.getByTestId(`result-score-${A}`)).toHaveTextContent('out');
     expect(screen.getByTestId(`result-score-${B}`)).toHaveTextContent(/orbs/);
   });
@@ -69,7 +76,7 @@ describe('GameResults', () => {
       winner: B,
       match: null,
     };
-    render(<GameResults session={session} seatLabel={label} myPubkey={A} />);
+    renderLocalized(<GameResults session={session} seatLabel={label} myPubkey={A} />);
     expect(screen.getByTestId(`result-score-${B}`)).toHaveTextContent('10 VP');
     expect(screen.getByTestId(`result-score-${A}`)).toHaveTextContent('4 VP');
     // Highest score first.
@@ -89,7 +96,7 @@ describe('GameResults', () => {
     match = applyMatchEvent(match, { op: 'topout', seat: A, at: 20 });
 
     const session: GameSession = { ...base, game: 'stacker', state: null, match, winner: B };
-    render(<GameResults session={session} seatLabel={label} myPubkey={A} />);
+    renderLocalized(<GameResults session={session} seatLabel={label} myPubkey={A} />);
     expect(screen.getByTestId(`result-score-${B}`)).toHaveTextContent('21⚔');
     expect(screen.getByTestId(`result-score-${B}`)).toHaveTextContent('40▤');
   });
@@ -97,7 +104,7 @@ describe('GameResults', () => {
   it('says draw when nobody took it', () => {
     const base = finishedChainReaction();
     const session: GameSession = { ...base, winner: null, draw: true };
-    render(<GameResults session={session} seatLabel={label} myPubkey={A} />);
+    renderLocalized(<GameResults session={session} seatLabel={label} myPubkey={A} />);
     expect(screen.getByTestId('game-results')).toHaveTextContent('draw');
   });
 });

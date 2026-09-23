@@ -217,8 +217,8 @@ export default function ProfilePopover({ pubkey, onClose, onExplore, onMessage }
               type="button"
               onClick={zap}
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-lc-green/40 bg-lc-green/10 text-lc-green hover:bg-lc-green/20"
-              aria-label="Zap"
-              title="Zap"
+              aria-label={t('profilePopover.zap')}
+              title={t('profilePopover.zap')}
               data-testid="profile-zap-btn"
             >
               ⚡
@@ -235,7 +235,7 @@ export default function ProfilePopover({ pubkey, onClose, onExplore, onMessage }
           {/* Roles */}
           {baseRole && (
             <div>
-              <div className="text-[10px] uppercase tracking-wider text-lc-muted font-semibold mb-1.5">Roles</div>
+              <div className="text-[10px] uppercase tracking-wider text-lc-muted font-semibold mb-1.5">{t('profilePopover.roles')}</div>
               <div className="flex flex-wrap gap-1.5" data-testid="profile-roles">
                 <span
                   className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border"
@@ -321,7 +321,7 @@ export default function ProfilePopover({ pubkey, onClose, onExplore, onMessage }
                       : 'border-lc-border text-lc-muted hover:text-lc-white hover:border-lc-white/40'
                   }`}
                   data-testid="profile-mute-btn"
-                  title="Silenciar notificaciones de este usuario (solo en este dispositivo)"
+                  title={t('profilePopover.muteHint')}
                 >
                   {muted ? '🔕 Silenciado' : '🔕 Silenciar'}
                 </button>
@@ -345,7 +345,7 @@ export default function ProfilePopover({ pubkey, onClose, onExplore, onMessage }
                       : 'border-lc-border text-lc-muted hover:text-red-400 hover:border-red-500/40'
                   }`}
                   data-testid="profile-block-btn"
-                  title="Ocultar los mensajes de este usuario (solo en este dispositivo)"
+                  title={t('profilePopover.hideHint')}
                 >
                   {blocked ? '🚫 Bloqueado' : '🚫 Bloquear'}
                 </button>

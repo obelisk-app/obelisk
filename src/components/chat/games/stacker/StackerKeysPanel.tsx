@@ -7,6 +7,7 @@ import {
   type KeyMap,
 } from '@/lib/games/stacker/keymap';
 import type { InputKind } from '@/lib/games/stacker/engine';
+import { useTranslation } from '@/i18n/context';
 
 /**
  * Rebind the controls.
@@ -17,6 +18,7 @@ import type { InputKind } from '@/lib/games/stacker/engine';
  * both ↑ and X — so binding one key never clears the others.
  */
 export default function StackerKeysPanel({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation();
   const [map, setMap] = useState<KeyMap>(() => loadKeyMap());
   const [listening, setListening] = useState<InputKind | null>(null);
 
@@ -45,9 +47,9 @@ export default function StackerKeysPanel({ onClose }: { onClose: () => void }) {
       testId="stacker-keys-panel"
       panelClassName="w-full max-w-sm mx-4 rounded-xl bg-lc-dark border border-lc-border p-5"
     >
-      <h2 className="text-sm font-semibold text-lc-white">Controls</h2>
+      <h2 className="text-sm font-semibold text-lc-white">{t('games.controls')}</h2>
       <p className="mt-1 text-[11px] text-lc-muted">
-        Click an action, then press the key you want. Saved in this browser.
+        {t('games.controlsHelp')}
       </p>
 
       <ul className="mt-3 space-y-1.5" data-testid="stacker-key-list">
@@ -65,7 +67,7 @@ export default function StackerKeysPanel({ onClose }: { onClose: () => void }) {
                     setMap(next);
                     saveKeyMap(next);
                   }}
-                  title="Remove this key"
+                  title={t('games.removeKey')}
                   className="rounded border border-lc-border px-1.5 py-0.5 font-mono text-[10px] text-lc-muted hover:border-red-400 hover:text-red-400"
                 >
                   {keyLabel(code)}
@@ -95,10 +97,10 @@ export default function StackerKeysPanel({ onClose }: { onClose: () => void }) {
           className="lc-pill-secondary px-4 py-1.5 text-xs"
           data-testid="stacker-keys-reset"
         >
-          Reset
+          {t('games.resetKeys')}
         </button>
         <button type="button" onClick={onClose} className="lc-pill-primary px-4 py-1.5 text-xs">
-          Done
+          {t('common.done')}
         </button>
       </div>
     </ModalShell>
