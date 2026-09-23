@@ -1,3 +1,13 @@
+'use client';
+
+/*
+ * A client component because of `useTranslation`, which is a hook on a
+ * context that only exists in the browser. The three viewer pages that
+ * render this are server components, so without the directive Next resolves
+ * `useTranslation` to a client *reference* and calling it during the server
+ * render throws — every public /notes, /p and /t URL answered 500.
+ */
+
 import Link from 'next/link';
 import ObeliskIcon from '@/components/ObeliskIcon';
 import { useTranslation } from '@/i18n/context';
