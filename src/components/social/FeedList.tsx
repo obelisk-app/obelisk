@@ -45,6 +45,7 @@ export default function FeedList({
   onZap,
   onOpenArticle,
   onOpenTag,
+  onAtTopChange,
   emptyLabel,
   header,
   /** Scroll container to observe. Defaults to the nearest scrollable ancestor. */
@@ -63,6 +64,12 @@ export default function FeedList({
   onOpenArticle?: (note: NostrEvent) => void;
   /** Hashtags open the feed's own search instead of leaving for /t. */
   onOpenTag?: (tag: string) => void;
+  /**
+   * Scroll position, for hosts that render floating controls outside the
+   * scroller — the back-to-top button can't live in here, because inside
+   * the scroll container it would scroll away with the content.
+   */
+  onAtTopChange?: (atTop: boolean) => void;
   emptyLabel?: string;
   header?: React.ReactNode;
   scrollRef?: React.RefObject<HTMLElement | null>;
@@ -70,7 +77,10 @@ export default function FeedList({
   const { t } = useTranslation();
   const { notes, loading, loadingMore, error, exhausted, pendingCount, repostersByTarget } = state;
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const [atTop, setAtTop] = useState(true);
+  // Starts unknown rather than `true`: before the first scroll measurement
+  // a default of "at the top" let live notes splice in above a reader who
+  // was nowhere near it.
+  const [atTop, setAtTop] = useState(false);
 
   const { loadMore, showPending, refresh } = state;
 
@@ -99,17 +109,37 @@ export default function FeedList({
     return typeof window === 'undefined' ? null : window;
   }, [scrollRef]);
 
+  // Shared with the pull gesture below so the two can't double-fetch: both
+  // mean "show me what's new", and arriving at the top is the commoner of
+  // the two — a pull only happens once there's nowhere left to scroll.
+  const lastRefreshRef = useRef(0);
+
   useEffect(() => {
     const scroller = findScroller();
     if (!scroller) return;
+    let wasAtTop = true;
     const read = () => {
       const top = scroller instanceof Window ? scroller.scrollY : scroller.scrollTop;
-      setAtTop(top <= AT_TOP_PX);
+      const next = top <= AT_TOP_PX;
+      setAtTop(next);
+      onAtTopChange?.(next);
+      // Scrolling back up to the top refreshes. Without this the only way to
+      // pull new notes was a deliberate over-pull at an exact scroll offset,
+      // which on a phone is a gesture nobody discovers and the browser often
+      // swallows as rubber-banding.
+      if (next && !wasAtTop) {
+        const now = Date.now();
+        if (now - lastRefreshRef.current >= PULL_REFRESH_COOLDOWN_MS) {
+          lastRefreshRef.current = now;
+          refresh();
+        }
+      }
+      wasAtTop = next;
     };
     read();
     scroller.addEventListener('scroll', read, { passive: true });
     return () => scroller.removeEventListener('scroll', read);
-  }, [findScroller]);
+  }, [findScroller, refresh, onAtTopChange]);
 
   // Pull-to-refresh, for mouse wheels and touch alike. Replaces the refresh
   // button: at the top of a feed, pulling further up means "show me what's
@@ -119,14 +149,16 @@ export default function FeedList({
     if (!scroller || scroller instanceof Window) return;
 
     let pulled = 0;
-    let lastRefresh = 0;
 
-    const atVeryTop = () => scroller.scrollTop <= 0;
+    // `<= 2`, not `=== 0`: iOS rubber-banding and sub-pixel scroll offsets
+    // mean a feed the reader sees as "at the top" rarely reports exactly 0,
+    // and the strict check made the gesture do nothing on a phone.
+    const atVeryTop = () => scroller.scrollTop <= 2;
     const maybeRefresh = () => {
       const now = Date.now();
       if (pulled < PULL_THRESHOLD_PX) return;
-      if (now - lastRefresh < PULL_REFRESH_COOLDOWN_MS) return;
-      lastRefresh = now;
+      if (now - lastRefreshRef.current < PULL_REFRESH_COOLDOWN_MS) return;
+      lastRefreshRef.current = now;
       pulled = 0;
       refresh();
     };
@@ -146,7 +178,11 @@ export default function FeedList({
       pulled = 0;
     };
     const onTouchMove = (event: TouchEvent) => {
-      if (touchStart === null || !atVeryTop()) return;
+      // Only the *start* has to be at the top. Re-checking here meant that
+      // the moment the browser rubber-banded (scrollTop going negative or
+      // the content shifting under the finger) the pull was abandoned
+      // halfway, which is why the gesture never fired on a phone.
+      if (touchStart === null) return;
       pulled = (event.touches[0]?.clientY ?? touchStart) - touchStart;
       maybeRefresh();
     };

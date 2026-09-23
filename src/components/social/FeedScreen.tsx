@@ -97,6 +97,10 @@ export default function FeedScreen({
   // the only way to post. A floating button takes over from there rather
   // than making people scroll back up.
   const [composeRowVisible, setComposeRowVisible] = useState(true);
+  // The back-to-top control can't live inside FeedList: it renders inside
+  // the scroller, so a button placed there scrolls away with the notes.
+  // FeedList already measures the scroll position, so it reports it here.
+  const [feedAtTop, setFeedAtTop] = useState(true);
 
   useEffect(() => {
     const node = composeRowRef.current;
@@ -476,6 +480,7 @@ export default function FeedScreen({
           onQuote={startQuote}
           onOpenArticle={handleOpenArticle}
           onOpenTag={openTag}
+          onAtTopChange={setFeedAtTop}
         />
         )}
         </div>
@@ -493,6 +498,34 @@ export default function FeedScreen({
         on desktop, and the mobile bottom-nav sits under this, hence the
         larger offset there.
       */}
+      {/*
+        Back to the newest note. Scrolling up to the very top and holding a
+        pull is the only way the live tail merged, which on a phone meant a
+        reader a few screens down had no way to reach new notes at all — the
+        pending pill lives at the top of the list, where they weren't. This
+        both reports the count and takes them there.
+      */}
+      {!feedAtTop && !composer && filter !== 'media' && (
+        <button
+          type="button"
+          onClick={() => {
+            state.showPending();
+            scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          aria-label={t('social.backToTop')}
+          title={t('social.backToTop')}
+          className={`absolute right-5 z-20 flex h-11 items-center justify-center gap-1.5 rounded-full border border-lc-border bg-lc-dark/95 px-3 text-xs font-semibold text-lc-white shadow-2xl shadow-black/50 backdrop-blur transition hover:border-lc-green/40 active:scale-95 ${
+            state.pendingCount > 0 ? 'border-lc-green/60 text-lc-green' : ''
+          } bottom-24`}
+          data-testid="feed-back-to-top"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M12 19V5" /><path d="m5 12 7-7 7 7" />
+          </svg>
+          {state.pendingCount > 0 && <span>{state.pendingCount}</span>}
+        </button>
+      )}
+
       {myPubkey && (mobile || !composeRowVisible) && !composer && (
         <button
           type="button"

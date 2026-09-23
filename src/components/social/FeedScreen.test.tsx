@@ -430,6 +430,44 @@ describe('FeedScreen', () => {
     expect(socialMocks.loadFollowingFeed.mock.calls.length).toBe(before);
   });
 
+  it('refreshes on the way back up, without needing the pull gesture', async () => {
+    // The pull was the *only* way to fetch new notes, and it required being
+    // at an exact offset and over-scrolling from there — on a phone the
+    // browser eats that as rubber-banding, so scrolling up did nothing.
+    socialMocks.loadFollowingFeed.mockResolvedValue([note('a', 'first')]);
+    renderFeed();
+    await waitFor(() => expect(screen.getByText('first')).toBeInTheDocument());
+
+    const scroller = screen.getByTestId('feed-scroll');
+    Object.defineProperty(scroller, 'scrollTop', { value: 900, writable: true });
+    fireEvent.scroll(scroller);
+    const before = socialMocks.loadFollowingFeed.mock.calls.length;
+
+    (scroller as HTMLElement & { scrollTop: number }).scrollTop = 0;
+    fireEvent.scroll(scroller);
+    await waitFor(() => expect(
+      socialMocks.loadFollowingFeed.mock.calls.length,
+    ).toBeGreaterThan(before));
+  });
+
+  it('offers a way back to the top once you have scrolled away', async () => {
+    // Both shells: the pending-notes pill lives at the top of the list, so a
+    // reader several screens down had nothing to tap at all.
+    socialMocks.loadFollowingFeed.mockResolvedValue([note('a', 'first')]);
+    renderFeed();
+    await waitFor(() => expect(screen.getByText('first')).toBeInTheDocument());
+    expect(screen.queryByTestId('feed-back-to-top')).not.toBeInTheDocument();
+
+    const scroller = screen.getByTestId('feed-scroll');
+    Object.defineProperty(scroller, 'scrollTop', { value: 900, writable: true });
+    scroller.scrollTo = vi.fn();
+    fireEvent.scroll(scroller);
+
+    const button = await screen.findByTestId('feed-back-to-top');
+    fireEvent.click(button);
+    expect(scroller.scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
+  });
+
   it('gives a phone one filter button instead of two chip strips', async () => {
     // The chips were an 11px hairline-scrolling strip; on a phone they're
     // behind a header-sized button that opens a sheet.

@@ -582,6 +582,7 @@
   "social.loadMore": "Load more",
   "social.endOfFeed": "That's everything the relays had.",
   "social.newNotes": "new notes",
+  "social.backToTop": "Back to the newest",
   "social.loadFailed": "The feed relays could not load this feed.",
   "social.followNobody": "You're not following anyone yet. Try the Global tab.",
   "social.reply": "Reply",
