@@ -90,6 +90,12 @@ vi.mock('@/components/admin/RelayEmojiAdminModal', () => ({
 
 import { ChannelSettingsSheet, ComposeDmScreen, CreateChannelSheet, DmsListScreen, RelayMenuSheet } from './PhoneShell';
 
+/** Every screen in the shell reads copy from the dictionary now. */
+const renderLocalized = (ui: React.ReactElement) => render(
+  <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,
+);
+
+
 afterEach(() => {
   mockCreateGroup.mockReset();
   mockEditGroupMetadata.mockReset();
@@ -103,7 +109,7 @@ describe('CreateChannelSheet', () => {
     mockCreateGroup.mockResolvedValueOnce('rly/abc123');
     const onCreated = vi.fn();
     const close = vi.fn();
-    render(
+    renderLocalized(
       <CreateChannelSheet
         relayLabel="lacrypta-relay.obelisk.ar"
         close={close}
@@ -128,7 +134,7 @@ describe('CreateChannelSheet', () => {
   });
 
   it('keeps the submit button disabled while the channel name is empty', () => {
-    render(
+    renderLocalized(
       <CreateChannelSheet
         relayLabel="lacrypta-relay.obelisk.ar"
         close={() => {}}
@@ -143,7 +149,7 @@ describe('CreateChannelSheet', () => {
 
 describe('ChannelSettingsSheet layout', () => {
   it('shows appearance before name and description', () => {
-    render(
+    renderLocalized(
       <ChannelSettingsSheet
         close={() => {}}
         group={{
@@ -179,7 +185,7 @@ describe('ChannelSettingsSheet access presets', () => {
   ])('publishes %s as relay-enforced NIP-29 flags', async (_label, testId, expected) => {
     mockEditGroupMetadata.mockResolvedValueOnce(undefined);
     const close = vi.fn();
-    render(
+    renderLocalized(
       <ChannelSettingsSheet
         close={close}
         group={{
@@ -211,7 +217,7 @@ describe('ChannelSettingsSheet access presets', () => {
 
 describe('RelayMenuSheet admin gating', () => {
   it('hides the admin section for non-admins', () => {
-    render(
+    renderLocalized(
       <RelayMenuSheet
         close={() => {}}
         relayUrl="wss://lacrypta-relay.obelisk.ar"
@@ -228,7 +234,7 @@ describe('RelayMenuSheet admin gating', () => {
   });
 
   it('renders the relay admin entries for admins', () => {
-    render(
+    renderLocalized(
       <RelayMenuSheet
         close={() => {}}
         relayUrl="wss://lacrypta-relay.obelisk.ar"
@@ -247,7 +253,7 @@ describe('RelayMenuSheet admin gating', () => {
   });
 
   it('opens the emoji admin panel when the admin taps "Emoji, GIFs & stickers"', () => {
-    render(
+    renderLocalized(
       <RelayMenuSheet
         close={() => {}}
         relayUrl="wss://lacrypta-relay.obelisk.ar"
@@ -264,7 +270,7 @@ describe('RelayMenuSheet admin gating', () => {
   });
 
   it('opens the RelayAdminPanel when the admin taps "Admins & members"', () => {
-    render(
+    renderLocalized(
       <RelayMenuSheet
         close={() => {}}
         relayUrl="wss://lacrypta-relay.obelisk.ar"

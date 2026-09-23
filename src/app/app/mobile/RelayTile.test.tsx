@@ -13,6 +13,12 @@ vi.mock('@/lib/relay-branding', () => ({
 
 import { MobileServerBanner, MobileServerRail, RelayTile, shouldIgnoreMobileSwipeTarget } from './PhoneShell';
 
+/** Every screen in the shell reads copy from the dictionary now. */
+const renderLocalized = (ui: React.ReactElement) => render(
+  <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,
+);
+
+
 describe('mobile swipe target guard', () => {
   it('ignores search/header chrome so a tap cannot also commit carousel navigation', () => {
     const banner = document.createElement('div');
@@ -59,7 +65,7 @@ describe('RelayTile long-press', () => {
   it('fires onLongPress after 500ms and suppresses the click', () => {
     const onClick = vi.fn();
     const onLongPress = vi.fn();
-    render(
+    renderLocalized(
       <RelayTile
         url="wss://relay.example"
         active={false}
@@ -84,7 +90,7 @@ describe('RelayTile long-press', () => {
   it('does not fire onLongPress on a quick tap', () => {
     const onClick = vi.fn();
     const onLongPress = vi.fn();
-    render(
+    renderLocalized(
       <RelayTile
         url="wss://relay.example"
         active={false}
@@ -106,7 +112,7 @@ describe('RelayTile long-press', () => {
   it('cancels the timer when the touch moves (e.g. horizontal scroll drag)', () => {
     const onClick = vi.fn();
     const onLongPress = vi.fn();
-    render(
+    renderLocalized(
       <RelayTile
         url="wss://relay.example"
         active={false}
@@ -125,7 +131,7 @@ describe('RelayTile long-press', () => {
 
   it('fires onLongPress on right-click and suppresses the native menu', () => {
     const onLongPress = vi.fn();
-    render(
+    renderLocalized(
       <RelayTile
         url="wss://relay.example"
         active={false}
@@ -147,7 +153,7 @@ describe('Mobile server layout pieces', () => {
     const onSelectRelay = vi.fn();
     const onAddRelay = vi.fn();
 
-    render(
+    renderLocalized(
       <MobileServerRail
         relays={['wss://relay.one', 'wss://relay.two']}
         activeRelay="wss://relay.one/"

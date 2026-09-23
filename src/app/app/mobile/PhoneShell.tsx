@@ -534,6 +534,7 @@ export function RelayMenuSheet({
   layout?: ChannelLayout;
   rootChannels?: ReadonlyArray<JsGroup>;
 }) {
+  const { t } = useTranslation();
   const relays = useConfiguredRelays();
   const [busy, setBusy] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -648,19 +649,19 @@ export function RelayMenuSheet({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <Row
             icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M19 8v6M22 11h-6" /></svg>}
-            rowLabel="Invite people…"
+            rowLabel={t('mobile.space.invite')}
             hint={busy === 'invite' ? '…' : 'copy link'}
             onClick={() => void invite()}
           />
           <Row
             icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4" /></svg>}
-            rowLabel="Share this space"
+            rowLabel={t('mobile.space.share')}
             hint={busy === 'share' ? '…' : undefined}
             onClick={() => void share()}
           />
           <Row
             icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h10" /></svg>}
-            rowLabel="Copy relay URL"
+            rowLabel={t('mobile.space.copyUrl')}
             onClick={() => void copyUrl()}
           />
           {isAdmin && (
@@ -677,43 +678,43 @@ export function RelayMenuSheet({
                   color: 'var(--app-text-mute)',
                 }}
               >
-                Admin
+                {t('mobile.members.admin')}
               </div>
               <Row
                 icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" /></svg>}
-                rowLabel="Edit branding"
-                hint="name · icon · banner"
+                rowLabel={t('mobile.branding.edit')}
+                hint={t('mobile.branding.hint')}
                 onClick={() => setAdminPanel('branding')}
               />
               <Row
                 icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01" /></svg>}
-                rowLabel="Emoji, GIFs & stickers"
+                rowLabel={t('mobile.settings.packs')}
                 hint="NIP-51"
                 onClick={() => setAdminPanel('emojis')}
               />
               <Row
                 icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>}
-                rowLabel="Categories & order"
-                hint="layout"
+                rowLabel={t('mobile.layout.title')}
+                hint={t('mobile.space.layoutHint')}
                 onClick={() => setAdminPanel('categories')}
               />
               <Row
                 icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3 9.5 8 4 9l4 4-1 6 5-3 5 3-1-6 4-4-5.5-1z" /></svg>}
-                rowLabel="Roles & ranks"
-                hint="tiered badges"
+                rowLabel={t('mobile.space.roles')}
+                hint={t('mobile.space.rolesHint')}
                 onClick={() => setAdminPanel('roles')}
               />
               <Row
                 icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>}
-                rowLabel="Admins & members"
-                hint="bulk cleanup"
+                rowLabel={t('mobile.space.people')}
+                hint={t('mobile.space.peopleHint')}
                 onClick={() => setAdminPanel('members')}
               />
             </>
           )}
           <Row
             icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="m16 17 5-5-5-5" /><path d="M21 12H9" /></svg>}
-            rowLabel="Leave this space"
+            rowLabel={t('mobile.space.leave')}
             hint={busy === 'leave' ? '…' : undefined}
             danger
             onClick={() => void leave()}
@@ -722,7 +723,7 @@ export function RelayMenuSheet({
         {toast && (
           <div style={{ marginTop: 10, fontSize: 12, color: 'var(--accent, #b4f953)', textAlign: 'center' }}>{toast}</div>
         )}
-        <button className="btn-cancel relay-menu-close" onClick={close}>Close</button>
+        <button className="btn-cancel relay-menu-close" onClick={close}>{t('common.close')}</button>
       </div>
       {adminPanel === 'branding' && branding && (
         <EditBrandingSheet
@@ -762,6 +763,7 @@ export function RelayMenuSheet({
 }
 
 function AddRelaySheet({ close }: { close: () => void }) {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<'suggested' | 'custom'>('suggested');
   const configured = useConfiguredRelays();
   const configuredSet = useMemo(() => new Set(configured), [configured]);
@@ -773,14 +775,14 @@ function AddRelaySheet({ close }: { close: () => void }) {
         <div className="sheet-handle" />
         <div className="zap-title">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
-          Add a relay
+          {t('mobile.rail.addTitle')}
         </div>
         <div className="dms-tabs native-scroll-x" style={{ padding: 0 }}>
           <button className={`filter-tab ${tab === 'suggested' ? 'active' : ''}`} onClick={() => setTab('suggested')}>
-            Suggested
+            {t('rail.addModal.suggested')}
           </button>
           <button className={`filter-tab ${tab === 'custom' ? 'active' : ''}`} onClick={() => setTab('custom')}>
-            Custom URL
+            {t('rail.addModal.custom')}
           </button>
         </div>
         <div style={{ overflowY: 'auto', maxHeight: '54vh', display: 'flex', flexDirection: 'column', gap: 8, paddingRight: 2 }}>
@@ -799,7 +801,7 @@ function AddRelaySheet({ close }: { close: () => void }) {
             <CustomRelayForm onAdded={close} />
           )}
         </div>
-        <button className="btn-cancel" onClick={close}>Close</button>
+        <button className="btn-cancel" onClick={close}>{t('common.close')}</button>
       </div>
     </div>
   );
@@ -899,6 +901,7 @@ function SuggestedRelayItem({
 }
 
 function CustomRelayForm({ onAdded }: { onAdded: () => void }) {
+  const { t } = useTranslation();
   const [url, setUrl] = useState('wss://');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -925,10 +928,10 @@ function CustomRelayForm({ onAdded }: { onAdded: () => void }) {
   return (
     <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.12em', fontFamily: "'JetBrains Mono', monospace" }}>
-        Relay URL
+        {t('rail.addModal.urlLabel')}
       </label>
       <p style={{ fontSize: 12, color: 'var(--app-text-dim)', margin: 0, lineHeight: 1.5 }}>
-        Paste a NIP-29 group relay URL. Each relay is a separate &ldquo;server&rdquo; in the rail.
+        {t('mobile.rail.addHelp')}
       </p>
       <div className="setup-input-wrap">
         <input
@@ -966,6 +969,7 @@ export function CreateChannelSheet({
   close: () => void;
   onCreated: (groupId: string) => void;
 }) {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -997,11 +1001,11 @@ export function CreateChannelSheet({
         <div className="sheet-handle" />
         <div className="zap-title">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
-          New channel
+          {t('mobile.space.newChannel')}
         </div>
         <p style={{ fontSize: 12, color: 'var(--app-text-dim)', margin: 0, lineHeight: 1.5 }}>
           Channels are public and open by default — anyone the relay accepts can
-          read and post. You can lock it down later in <strong>Channel settings</strong>.
+          read and post. You can lock it down later in <strong>{t('desktop.channel.settings')}</strong>.
         </p>
         <form
           onSubmit={submit}
@@ -1040,7 +1044,7 @@ export function CreateChannelSheet({
             {busy ? 'Creating…' : 'Create channel'}
           </button>
         </form>
-        <button className="btn-cancel" type="button" onClick={close}>Cancel</button>
+        <button className="btn-cancel" type="button" onClick={close}>{t('common.cancel')}</button>
       </div>
     </div>
   );
@@ -1058,6 +1062,7 @@ function EditBrandingSheet({
   branding: RelayBranding;
   close: () => void;
 }) {
+  const { t } = useTranslation();
   const [icon, setIcon] = useState(branding.icon);
   const [banner, setBanner] = useState(branding.banner);
   const [name, setName] = useState(branding.name);
@@ -1091,29 +1096,29 @@ function EditBrandingSheet({
         <div className="sheet-handle" />
         <div className="zap-title">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" /></svg>
-          Edit branding
+          {t('mobile.branding.edit')}
         </div>
         <p style={{ fontSize: 11, color: 'var(--app-text-dim)', margin: 0, lineHeight: 1.5 }}>
-          Shown to everyone on this relay · NIP-78 kind 30078.
+          {t('mobile.branding.help')}
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <BlossomImageInput
-            label="Icon"
+            label={t('mobile.branding.iconAlt')}
             value={icon}
             onChange={setIcon}
             shape="square"
-            hint="Square logo shown next to the relay name."
+            hint={t('mobile.branding.iconHint')}
           />
           <BlossomImageInput
-            label="Banner"
+            label={t('mobile.branding.bannerAlt')}
             value={banner}
             onChange={setBanner}
             shape="wide"
-            hint="Wide image shown above the relay name."
+            hint={t('mobile.branding.bannerHint')}
           />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.12em', fontFamily: "'JetBrains Mono', monospace" }}>
-              Display name
+              {t('mobile.settings.displayName')}
             </label>
             <div className="setup-input-wrap">
               <input
@@ -1126,7 +1131,7 @@ function EditBrandingSheet({
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.12em', fontFamily: "'JetBrains Mono', monospace" }}>
-              Description
+              {t('mobile.field.description')}
             </label>
             <div className="setup-input-wrap">
               <textarea
@@ -1134,7 +1139,7 @@ function EditBrandingSheet({
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={2}
-                placeholder="What's this space about?"
+                placeholder={t('mobile.branding.descriptionPlaceholder')}
               />
             </div>
           </div>
@@ -1149,7 +1154,7 @@ function EditBrandingSheet({
         >
           {saving ? 'Saving…' : 'Save branding'}
         </button>
-        <button className="btn-cancel" type="button" onClick={close}>Cancel</button>
+        <button className="btn-cancel" type="button" onClick={close}>{t('common.cancel')}</button>
       </div>
     </div>
   );
@@ -1170,6 +1175,7 @@ function ManageCategoriesSheet({
   channels: ReadonlyArray<JsGroup>;
   close: () => void;
 }) {
+  const { t } = useTranslation();
   const {
     draft,
     error: err,
@@ -1214,15 +1220,15 @@ function ManageCategoriesSheet({
         <div className="sheet-handle" />
         <div className="zap-title">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
-          Categories &amp; order
+          {t('mobile.layout.title')}
         </div>
         <p style={{ fontSize: 11, color: 'var(--app-text-dim)', margin: 0, lineHeight: 1.5 }}>
-          Shared layout for everyone on this relay · any group admin can edit · NIP-78 kind 30078.
+          {t('mobile.layout.help')}
         </p>
 
         <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>
-            New category
+            {t('mobile.layout.newCategory')}
           </label>
           <div style={{ display: 'flex', gap: 8 }}>
             <div className="setup-input-wrap" style={{ flex: 1 }}>
@@ -1236,7 +1242,7 @@ function ManageCategoriesSheet({
                     addCategory();
                   }
                 }}
-                placeholder="e.g. General, Trading, Voice"
+                placeholder={t('mobile.layout.categoryPlaceholder')}
               />
             </div>
             <button
@@ -1246,18 +1252,18 @@ function ManageCategoriesSheet({
               className="btn-primary"
               style={{ width: 'auto', padding: '0 18px', boxShadow: 'none' }}
             >
-              Add
+              {t('rail.addModal.add')}
             </button>
           </div>
         </section>
 
         <section style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>
-            Categories
+            {t('mobile.layout.categories')}
           </label>
           {draft.categories.length === 0 ? (
             <div style={{ fontSize: 12, color: 'var(--app-text-mute)', padding: '6px 4px' }}>
-              No categories yet. Channels render under &ldquo;Uncategorized&rdquo; until you add one.
+              {t('mobile.layout.empty')}
             </div>
           ) : (
             draft.categories.map((c, i) => (
@@ -1274,10 +1280,10 @@ function ManageCategoriesSheet({
                 }}
               >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <button type="button" style={arrowBtnStyle} onClick={() => moveCategory(c.id, -1)} disabled={i === 0} aria-label="Move category up">
+                  <button type="button" style={arrowBtnStyle} onClick={() => moveCategory(c.id, -1)} disabled={i === 0} aria-label={t('mobile.layout.moveUp')}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15" /></svg>
                   </button>
-                  <button type="button" style={arrowBtnStyle} onClick={() => moveCategory(c.id, 1)} disabled={i === draft.categories.length - 1} aria-label="Move category down">
+                  <button type="button" style={arrowBtnStyle} onClick={() => moveCategory(c.id, 1)} disabled={i === draft.categories.length - 1} aria-label={t('mobile.layout.moveDown')}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
                   </button>
                 </div>
@@ -1298,9 +1304,9 @@ function ManageCategoriesSheet({
                     color: 'var(--presence-dnd, #ef4444)',
                     fontSize: 11,
                   }}
-                  aria-label="Delete category"
+                  aria-label={t('mobile.layout.deleteCategory')}
                 >
-                  Delete
+                  {t('mobile.layout.delete')}
                 </button>
               </div>
             ))
@@ -1313,7 +1319,7 @@ function ManageCategoriesSheet({
           </label>
           {channels.length === 0 ? (
             <div style={{ fontSize: 12, color: 'var(--app-text-mute)', padding: '6px 4px' }}>
-              No channels on this relay yet.
+              {t('mobile.space.noChannels')}
             </div>
           ) : (
             <>
@@ -1354,7 +1360,7 @@ function ManageCategoriesSheet({
         >
           {saving ? 'Saving…' : 'Publish layout'}
         </button>
-        <button className="btn-cancel" type="button" onClick={close}>Cancel</button>
+        <button className="btn-cancel" type="button" onClick={close}>{t('common.cancel')}</button>
       </div>
     </div>
   );
@@ -1498,6 +1504,7 @@ export function ChannelSettingsSheet({
   group: JsGroup;
   close: () => void;
 }) {
+  const { t } = useTranslation();
   const [name, setName] = useState(group.name ?? '');
   const [about, setAbout] = useState(group.about ?? '');
   const [picture, setPicture] = useState(group.picture ?? '');
@@ -1614,7 +1621,7 @@ export function ChannelSettingsSheet({
 
         {/* Basics */}
         <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>Name</label>
+          <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>{t('mobile.field.name')}</label>
           <div className="setup-input-wrap">
             <input
               className="setup-input"
@@ -1623,14 +1630,14 @@ export function ChannelSettingsSheet({
               data-testid="mobile-channel-settings-name"
             />
           </div>
-          <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>Description</label>
+          <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>{t('mobile.field.description')}</label>
           <div className="setup-input-wrap">
             <textarea
               className="setup-textarea"
               value={about}
               onChange={(e) => setAbout(e.target.value)}
               rows={2}
-              placeholder="What's this channel about?"
+              placeholder={t('mobile.channel.descriptionPlaceholder')}
             />
           </div>
         </section>
@@ -1638,29 +1645,29 @@ export function ChannelSettingsSheet({
 
         {/* Access */}
         <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>Access</label>
+          <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>{t('mobile.channel.access')}</label>
           <div style={{ display: 'flex', gap: 8 }}>
             <button type="button" data-testid="mobile-channel-access-public" style={togglePillStyle(access === 'public')} onClick={() => setAccess('public')}>
               <div style={{ fontSize: 16 }}>🌐</div>
-              <div>Public</div>
-              <div style={{ fontSize: 10, opacity: 0.7, fontWeight: 400 }}>everyone reads and posts</div>
+              <div>{t('mobile.channel.public')}</div>
+              <div style={{ fontSize: 10, opacity: 0.7, fontWeight: 400 }}>{t('mobile.channel.publicHint')}</div>
             </button>
             <button type="button" data-testid="mobile-channel-access-read-only" style={togglePillStyle(access === 'read-only')} onClick={() => setAccess('read-only')}>
               <div style={{ fontSize: 16 }}>👁</div>
-              <div>Read-only</div>
-              <div style={{ fontSize: 10, opacity: 0.7, fontWeight: 400 }}>members post</div>
+              <div>{t('mobile.channel.readOnly')}</div>
+              <div style={{ fontSize: 10, opacity: 0.7, fontWeight: 400 }}>{t('mobile.channel.readOnlyHint')}</div>
             </button>
             <button type="button" data-testid="mobile-channel-access-private" style={togglePillStyle(access === 'private')} onClick={() => setAccess('private')}>
               <div style={{ fontSize: 16 }}>🔒</div>
-              <div>Private</div>
-              <div style={{ fontSize: 10, opacity: 0.7, fontWeight: 400 }}>hidden; members only</div>
+              <div>{t('mobile.channel.private')}</div>
+              <div style={{ fontSize: 10, opacity: 0.7, fontWeight: 400 }}>{t('mobile.channel.privateHint')}</div>
             </button>
           </div>
         </section>
 
         {/* Channel kind */}
         <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>Channel type</label>
+          <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>{t('mobile.channel.type')}</label>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {(['text', 'voice', 'voice-sfu', 'forum'] as const).map((k) => (
               <button
@@ -1704,7 +1711,7 @@ export function ChannelSettingsSheet({
         {/* Members */}
         <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>
-            Add member · NIP-29 kind 9000
+            {t('mobile.members.addHelp')}
           </label>
           <form onSubmit={addMember} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div className="setup-input-wrap">
@@ -1712,7 +1719,7 @@ export function ChannelSettingsSheet({
                 className="setup-input"
                 value={newMember}
                 onChange={(e) => setNewMember(e.target.value)}
-                placeholder="npub1… or 64-char hex"
+                placeholder={t('mobile.members.addPlaceholder')}
                 spellCheck={false}
                 style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}
               />
@@ -1723,7 +1730,7 @@ export function ChannelSettingsSheet({
                 checked={makeAdmin}
                 onChange={(e) => setMakeAdmin(e.target.checked)}
               />
-              Make admin
+              {t('mobile.members.promote')}
             </label>
             {memberErr && <div style={{ fontSize: 12, color: 'var(--presence-dnd)' }}>{memberErr}</div>}
             <button
@@ -1743,7 +1750,7 @@ export function ChannelSettingsSheet({
           </label>
           {allPubkeys.length === 0 ? (
             <div style={{ fontSize: 12, color: 'var(--app-text-mute)', padding: '6px 4px' }}>
-              No members listed yet. Public channels do not require a member list.
+              {t('mobile.members.emptyHelp')}
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: '40vh', overflowY: 'auto' }}>
@@ -1759,7 +1766,7 @@ export function ChannelSettingsSheet({
           )}
         </section>
 
-        <button className="btn-cancel" type="button" onClick={close}>Close</button>
+        <button className="btn-cancel" type="button" onClick={close}>{t('common.close')}</button>
       </div>
     </div>
   );
@@ -1820,7 +1827,7 @@ function ManageMemberRowMobile({
           style={{ border: '1px solid var(--app-line)', borderRadius: 8, padding: '4px 8px', background: 'transparent', color: 'var(--app-text-dim)', fontSize: 11 }}
           data-testid={`mobile-member-confirm-cancel-${pubkey}`}
         >
-          Cancel
+          {t('common.cancel')}
         </button>
         <button
           type="button"
@@ -1888,7 +1895,7 @@ function ManageMemberRowMobile({
             }}
             aria-label={`Demote ${name}`}
           >
-            Demote
+            {t('mobile.members.demote')}
           </button>
         )}
         <button
@@ -1904,7 +1911,7 @@ function ManageMemberRowMobile({
           }}
           aria-label={`Kick ${name}`}
         >
-          Kick
+          {t('mobile.members.kick')}
         </button>
       </div>
     </div>
@@ -2006,9 +2013,10 @@ export function MobileServerRail({
   onAddRelay: () => void;
   onLongPress?: (info: { url: string; label: string; iconUrl: string | null }) => void;
 }) {
+  const { t } = useTranslation();
   const activeKey = normalizeRelayUrl(activeRelay);
   return (
-    <aside className="spaces-rail" data-testid="mobile-server-rail" aria-label="Servers">
+    <aside className="spaces-rail" data-testid="mobile-server-rail" aria-label={t('mobile.nav.servers')}>
       <div className="spaces-rail-scroll native-scroll-y" data-no-swipe>
         {relays.map((url) => {
           const isActive = normalizeRelayUrl(url) === activeKey;
@@ -2022,7 +2030,7 @@ export function MobileServerRail({
             />
           );
         })}
-        <button className="space space-add" onClick={onAddRelay} aria-label="Add relay">
+        <button className="space space-add" onClick={onAddRelay} aria-label={t('mobile.rail.addRelay')}>
           <div className="space-icon s-add">+</div>
           <span className="space-name">&nbsp;</span>
         </button>
@@ -2048,6 +2056,7 @@ export function MobileServerBanner({
   onCreateChannel: () => void;
   onOpenMenu: () => void;
 }) {
+  const { t } = useTranslation();
   const host = relayUrl ? shortHost(relayUrl) : '';
   const iconFallback = relayUrl ? shortHost(relayUrl).slice(0, 1).toUpperCase() : 'O';
   const website = relayUrl ? relayWebsiteUrl(relayUrl) : null;
@@ -2066,18 +2075,18 @@ export function MobileServerBanner({
             question: is the thing underneath this app working right now. */}
         <RelayStatusPill relays={socialRelays} activeRelay={relayUrl} compact />
         <MobileSigningIndicator />
-        <button className="icon-btn action-search" aria-label="Search this server" onClick={onSearch}>
+        <button className="icon-btn action-search" aria-label={t('mobile.header.search')} onClick={onSearch}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
         </button>
         <button
           className="icon-btn action-create"
-          aria-label="Create channel"
+          aria-label={t('mobile.header.createChannel')}
           data-testid="mobile-create-channel-btn"
           onClick={onCreateChannel}
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
         </button>
-        <button className="icon-btn action-menu" aria-label="Space menu" onClick={onOpenMenu}>
+        <button className="icon-btn action-menu" aria-label={t('mobile.header.spaceMenu')} onClick={onOpenMenu}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="5" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="19" r="1.5" /></svg>
         </button>
       </div>
@@ -2348,6 +2357,7 @@ function ServerScreen({
   go: (s: ScreenName) => void;
   selectGroup: (groupId: string, kind: JsGroup['kind']) => void;
 }) {
+  const { t } = useTranslation();
   const groups = useGroups();
   const relay = useCurrentRelayUrl();
   const relayAccess = useRelayAccess(relay || null);
@@ -2542,7 +2552,7 @@ function ServerScreen({
               </button>
               {!collapsed && list.map(renderChannel)}
               {!collapsed && list.length === 0 && (
-                <div className="cat-empty">No channels here yet.</div>
+                <div className="cat-empty">{t('mobile.channels.empty')}</div>
               )}
             </div>
           );
@@ -3190,7 +3200,7 @@ function ChannelScreen({
           <button
             type="button"
             className="composer-emoji"
-            aria-label="Open emoji, GIF, and sticker picker"
+            aria-label={t('mobile.composer.openPicker')}
             onClick={() => { setPickerTab("emoji"); setEmojiOpen(true); }}
           >
             <StickerIcon />
@@ -3332,6 +3342,7 @@ export function ChannelMessage({
   onLongPress: () => void;
   onAvatar: () => void;
 }) {
+  const { t } = useTranslation();
   const meta = useUserMetadata(msg.pubkey);
   const name = meta?.displayName || meta?.name || shortNpub(msg.pubkey);
   const serverEmojis = useChatStore((s) => s.serverEmojis);
@@ -3409,11 +3420,11 @@ export function ChannelMessage({
           <span className="msg-name" onClick={onAvatar} role="button">{name}</span>
           <RoleBadge pubkey={msg.pubkey} />
           <span className="msg-time">{timeOfDay(msg.createdAt)}</span>
-          {msg.pending && <span className="msg-spinner" aria-label="Sending" role="status" />}
+          {msg.pending && <span className="msg-spinner" aria-label={t('common.sending')} role="status" />}
           <button
             type="button"
             className="msg-more"
-            aria-label="Message actions"
+            aria-label={t('mobile.message.actions')}
             data-testid="mobile-msg-more"
             onClick={onLongPress}
           >
@@ -3445,20 +3456,20 @@ export function ChannelMessage({
         </div>
         {msg.failed && (
           <div className="msg-failed" data-testid="mobile-msg-failed">
-            <span className="msg-failed-label">Couldn’t send</span>
+            <span className="msg-failed-label">{t('mobile.message.failed')}</span>
             <button
               type="button"
               className="msg-retry"
               onClick={onRetry}
               data-testid="mobile-msg-retry"
             >
-              Retry
+              {t('common.retry')}
             </button>
             <button
               type="button"
               className="msg-dismiss"
               onClick={onDismissFailed}
-              aria-label="Dismiss failed message"
+              aria-label={t('mobile.message.dismissFailed')}
             >
               ✕
             </button>
@@ -3493,6 +3504,7 @@ export function ChannelMessage({
 // 05 — voice room
 
 function VoiceRoomScreen({ groupId, back, openChat }: { groupId: string; back: () => void; openChat: () => void }) {
+  const { t } = useTranslation();
   const groups = useGroups();
   const group = groups.find((g) => g.id === groupId) ?? null;
   const activeCallByChannel = useActiveCallByChannel();
@@ -3510,7 +3522,7 @@ function VoiceRoomScreen({ groupId, back, openChat }: { groupId: string; back: (
   return (
     <div className="screen voice-room-screen active" data-screen="voice-room">
       <div className="voice-room-topbar">
-        <button className="back-btn" onClick={back} aria-label="Back">
+        <button className="back-btn" onClick={back} aria-label={t('common.back')}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
         </button>
         <div className="voice-room-meta">
@@ -3520,11 +3532,11 @@ function VoiceRoomScreen({ groupId, back, openChat }: { groupId: string; back: (
               <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
             </svg>
             <span className="voice-room-name">{group?.name ?? 'Voice channel'}</span>
-            {isSfu && <span className="voice-sfu-pill" title="Routed through an SFU">SFU</span>}
+            {isSfu && <span className="voice-sfu-pill" title={t('mobile.voice.sfuTitle')}>SFU</span>}
           </div>
           {sub && <div className="voice-room-sub">{sub}</div>}
         </div>
-        <button className="back-btn" onClick={back} aria-label="Minimize call" data-testid="minimize-call-btn">
+        <button className="back-btn" onClick={back} aria-label={t('mobile.voice.minimize')} data-testid="minimize-call-btn">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 12h12" /></svg>
         </button>
       </div>
@@ -3878,7 +3890,7 @@ function DmThreadScreen({
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 14-7-7 14-2-5-5-2z" /></svg>
               </button>
             ) : (
-              <button className="composer-emoji" aria-label="Emoji">
+              <button className="composer-emoji" aria-label={t('mobile.composer.emoji')}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01" /></svg>
               </button>
             )}
@@ -4589,6 +4601,7 @@ function ForumScreen({
   back: () => void;
   selectChild: (childId: string) => void;
 }) {
+  const { t } = useTranslation();
   const groups = useGroups();
   const childrenByParent = useChildrenByParent();
   const groupMetadataEose = useGroupMetadataEose();
@@ -4674,7 +4687,7 @@ function ForumScreen({
     <div className="screen forum-screen active" data-screen="forum">
       <div className="chat-header">
         <div className="chat-breadcrumb">
-          <button className="back-btn" onClick={back} style={{ marginLeft: -6 }} aria-label="Back">
+          <button className="back-btn" onClick={back} style={{ marginLeft: -6 }} aria-label={t('common.back')}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
           </button>
           <span className="space-name-bc">{shortHost(relay)}</span>
@@ -4704,7 +4717,7 @@ function ForumScreen({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={canCreateFromSearch ? 'Tap + to create…' : 'Search or create a publication…'}
-              aria-label="Search or create a publication"
+              aria-label={t('mobile.forum.searchPlaceholder')}
               data-testid="mobile-forum-search-input"
             />
             {searchQuery && (
@@ -4712,7 +4725,7 @@ function ForumScreen({
                 type="button"
                 className="search-clear"
                 onClick={() => setSearchQuery('')}
-                aria-label="Clear search"
+                aria-label={t('mobile.forum.clearSearch')}
               >
                 ✕
               </button>
@@ -4726,7 +4739,7 @@ function ForumScreen({
             // an empty composer.
             onClick={() => openNewThread(searchQuery.trim())}
             data-testid="mobile-forum-new-thread-btn"
-            aria-label="New publication"
+            aria-label={t('mobile.forum.new')}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
           </button>
@@ -4739,7 +4752,7 @@ function ForumScreen({
             data-testid="mobile-forum-sort-trigger"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 4v16" /><path d="m3 8 4-4 4 4" /><path d="M17 20V4" /><path d="m21 16-4 4-4-4" /></svg>
-            Sort
+            {t('mobile.forum.sort')}
           </button>
           {forumTags.map((tag) => (
             <button
@@ -4764,7 +4777,7 @@ function ForumScreen({
             data-testid="mobile-forum-tag-all"
             aria-pressed={allActive}
           >
-            All
+            {t('mobile.search.all')}
           </button>
         </div>
       </div>
@@ -4772,12 +4785,12 @@ function ForumScreen({
       <div className="forum-list native-scroll-y">
         {threadsLoading ? (
           <div className="empty-state" data-testid="mobile-forum-loading">
-            <div className="empty-state-title">Loading publications…</div>
+            <div className="empty-state-title">{t('mobile.forum.loading')}</div>
           </div>
         ) : children.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-state-title">No publications yet</div>
-            <div className="empty-state-desc">Tap + to start one.</div>
+            <div className="empty-state-title">{t('mobile.forum.empty')}</div>
+            <div className="empty-state-desc">{t('mobile.forum.emptyHint')}</div>
           </div>
         ) : visibleThreads.length === 0 ? (
           <div className="empty-state" data-testid="mobile-forum-no-matches">
@@ -4877,6 +4890,7 @@ function MobileForumCard({
   forumTags: ReadonlyArray<JsForumTag>;
   onClick: () => void;
 }) {
+  const { t } = useTranslation();
   const messages = useMessages(group.id);
   // Bridge-owned retry ladder replaces the old UI dwell timer — see
   // src/lib/nostr-bridge/types.ts MessagesStatus.
@@ -4899,7 +4913,7 @@ function MobileForumCard({
           </div>
           <div className="forum-card-body">
             <div className="forum-card-title">{group.name ?? group.id.slice(0, 8)}</div>
-            <div className="forum-card-preview" style={{ opacity: 0.6 }}>Loading…</div>
+            <div className="forum-card-preview" style={{ opacity: 0.6 }}>{t('common.loading')}</div>
           </div>
         </div>
       </button>
@@ -4962,35 +4976,36 @@ function ForumSortSheet({
   onChange: (p: Partial<MobileForumPrefs>) => void;
   close: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="sheet-host" data-screen="forum-sort" data-testid="mobile-forum-sort-sheet">
       <div className="sheet-backdrop" onClick={close} />
       <div className="sheet native-scroll-y">
         <div className="sheet-handle" />
-        <div className="zap-title">Sort &amp; view</div>
+        <div className="zap-title">{t('mobile.forum.sortTitle')}</div>
         <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>Sort by</label>
+          <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>{t('mobile.forum.sortBy')}</label>
           <SortSheetRow
-            label="Recently active"
+            label={t('mobile.forum.sortActive')}
             checked={prefs.sortBy === 'recent'}
             onClick={() => onChange({ sortBy: 'recent' })}
             testId="mobile-forum-sort-recent"
           />
           <SortSheetRow
-            label="Creation date"
+            label={t('mobile.forum.sortCreated')}
             checked={prefs.sortBy === 'created'}
             onClick={() => onChange({ sortBy: 'created' })}
             testId="mobile-forum-sort-created"
           />
-          <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em', marginTop: 12 }}>Tag matching</label>
+          <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em', marginTop: 12 }}>{t('mobile.forum.tagMatching')}</label>
           <SortSheetRow
-            label="Match any"
+            label={t('mobile.forum.matchAny')}
             checked={prefs.tagMatch === 'any'}
             onClick={() => onChange({ tagMatch: 'any' })}
             testId="mobile-forum-match-any"
           />
           <SortSheetRow
-            label="Match all"
+            label={t('mobile.forum.matchAll')}
             checked={prefs.tagMatch === 'all'}
             onClick={() => onChange({ tagMatch: 'all' })}
             testId="mobile-forum-match-all"
@@ -5003,7 +5018,7 @@ function ForumSortSheet({
             onClick={close}
             style={{ width: '100%', justifyContent: 'center' }}
           >
-            Done
+            {t('common.done')}
           </button>
         </div>
       </div>
@@ -5077,6 +5092,7 @@ function NewThreadSheet({
   close: () => void;
   onCreated: (childId: string) => void;
 }) {
+  const { t } = useTranslation();
   const [title, setTitle] = useState(initialTitle);
   const [body, setBody] = useState('');
   const [selectedTagIds, setSelectedTagIds] = useState<ReadonlyArray<string>>([]);
@@ -5130,26 +5146,26 @@ function NewThreadSheet({
       <div className="sheet-backdrop" onClick={close} />
       <form className="sheet native-scroll-y" onSubmit={onSubmit} style={{ maxHeight: '92%' }}>
         <div className="sheet-handle" />
-        <div className="zap-title">New publication</div>
+        <div className="zap-title">{t('mobile.forum.new')}</div>
         <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>Title</label>
+          <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>{t('mobile.forum.titleLabel')}</label>
           <div className="setup-input-wrap">
             <input
               autoFocus
               className="setup-input"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Publication title"
+              placeholder={t('mobile.forum.titlePlaceholder')}
               maxLength={140}
               data-testid="mobile-new-thread-title"
             />
           </div>
-          <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em', marginTop: 6 }}>First message</label>
+          <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em', marginTop: 6 }}>{t('mobile.forum.firstMessage')}</label>
           <textarea
             className="setup-textarea"
             value={body}
             onChange={(e) => setBody(e.target.value)}
-            placeholder="What's the publication about?"
+            placeholder={t('mobile.forum.bodyPlaceholder')}
             rows={5}
             data-testid="mobile-new-thread-body"
           />
@@ -5199,7 +5215,7 @@ function NewThreadSheet({
               cursor: 'pointer',
             }}
           >
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             type="submit"
@@ -5235,6 +5251,7 @@ export function MessageActionsSheet({
   close: () => void;
   onZap: () => void;
 }) {
+  const { t } = useTranslation();
   const meta = useUserMetadata(msg.pubkey);
   const name = meta?.displayName || meta?.name || shortNpub(msg.pubkey);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -5311,19 +5328,19 @@ export function MessageActionsSheet({
             }}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7" /><path d="M20 18v-2a4 4 0 0 0-4-4H4" /></svg>
-            Reply
+            {t('social.reply')}
           </button>
           <button className="ma-action" onClick={() => { try { navigator.clipboard?.writeText(msg.content); } catch { /* ignore */ } close(); }}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
-            Copy text
+            {t('social.copyText')}
           </button>
           <button className="ma-action zap" onClick={onZap}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2 3 14h7l-2 8 10-12h-7l2-8z" /></svg>
-            Send zap
+            {t('mobile.message.zap')}
           </button>
           <button className="ma-action" onClick={() => { try { navigator.clipboard?.writeText(msg.id); } catch { /* ignore */ } close(); }}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
-            Copy event id
+            {t('social.copyEventId')}
           </button>
           {canDeleteMessage && (
             <button
@@ -5351,6 +5368,7 @@ function ZapModalSheet({
   msg: { id: string; pubkey: string; content: string };
   close: () => void;
 }) {
+  const { t } = useTranslation();
   const meta = useUserMetadata(msg.pubkey);
   const name = meta?.displayName || meta?.name || shortNpub(msg.pubkey);
   const [amount, setAmount] = useState(2100);
@@ -5369,7 +5387,7 @@ function ZapModalSheet({
         <div className="sheet-handle" />
         <div className="zap-title">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2 3 14h7l-2 8 10-12h-7l2-8z" /></svg>
-          Send a zap
+          {t('mobile.zap.title')}
         </div>
         <div className="zap-recipient">
           <NameAvatar pubkey={msg.pubkey} name={name} picture={meta?.picture} className="me-avatar" size={40} />
@@ -5394,10 +5412,10 @@ function ZapModalSheet({
         <div className="zap-memo">"{msg.content.slice(0, 80)}{msg.content.length > 80 ? '…' : ''}"</div>
         <div className="zap-wallet">
           <span className="settings-status-dot ok" />
-          Wallet · NWC · check on settings
+          {t('mobile.zap.walletHint')}
         </div>
         <button className="btn-primary" onClick={close}>⚡ Send {amount.toLocaleString()} sats</button>
-        <button className="btn-cancel" onClick={close}>Cancel</button>
+        <button className="btn-cancel" onClick={close}>{t('common.cancel')}</button>
       </div>
     </div>
   );
@@ -5875,8 +5893,8 @@ export function SettingsPrefsScreen({ go }: { go: (s: ScreenName, dir?: 'forward
           </button>
           <button type="button" className="settings-row action" onClick={() => setMediaLibraryOpen(true)} data-testid="mobile-media-library">
             <span style={{ minWidth: 0, flex: 1 }}>
-              <span style={{ display: 'block' }}>Emoji, GIFs &amp; stickers</span>
-              <span className="settings-row-meta muted" style={{ display: 'block', maxWidth: '100%', marginTop: 3 }}>Create packs and manage favorites.</span>
+              <span style={{ display: 'block' }}>{t('mobile.settings.packs')}</span>
+              <span className="settings-row-meta muted" style={{ display: 'block', maxWidth: '100%', marginTop: 3 }}>{t('mobile.settings.packsHint')}</span>
             </span>
             <span className="settings-row-meta muted" aria-hidden="true">›</span>
           </button>

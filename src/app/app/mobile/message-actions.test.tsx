@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { LocaleProvider } from '@/i18n/context';
 import { fireEvent, render, screen } from '@testing-library/react';
 
 // PhoneShell imports the whole bridge surface. The two components under
@@ -90,6 +91,12 @@ vi.mock('@/components/chat/EmojiPicker', () => ({
 import { nostrActions } from '@/lib/nostr-bridge';
 import { ChannelMessage, MessageActionsSheet } from './PhoneShell';
 
+/** Every screen in the shell reads copy from the dictionary now. */
+const renderLocalized = (ui: React.ReactElement) => render(
+  <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,
+);
+
+
 const sampleMsg = {
   id: 'msg-1',
   pubkey: 'a'.repeat(64),
@@ -106,7 +113,7 @@ afterEach(() => {
 
 describe('ChannelMessage kebab button', () => {
   it('renders the three-dots button on every message tile', () => {
-    render(
+    renderLocalized(
       <ChannelMessage
         msg={sampleMsg}
         myPubkey={null}
@@ -121,7 +128,7 @@ describe('ChannelMessage kebab button', () => {
 
   it('calls onLongPress when the kebab button is tapped (no 500ms hold required)', () => {
     const onLongPress = vi.fn();
-    render(
+    renderLocalized(
       <ChannelMessage
         msg={sampleMsg}
         myPubkey={null}
@@ -136,7 +143,7 @@ describe('ChannelMessage kebab button', () => {
   });
 
   it('removes my reaction when tapping a reaction I already sent', async () => {
-    render(
+    renderLocalized(
       <ChannelMessage
         msg={sampleMsg}
         myPubkey={'b'.repeat(64)}
@@ -159,7 +166,7 @@ describe('ChannelMessage kebab button', () => {
   });
 
   it('removes another user reaction for everyone when I am an admin', async () => {
-    render(
+    renderLocalized(
       <ChannelMessage
         msg={sampleMsg}
         myPubkey={'b'.repeat(64)}
@@ -192,7 +199,7 @@ describe('MessageActionsSheet Reply', () => {
     window.addEventListener('obelisk-mobile:reply', listener as EventListener);
 
     try {
-      render(
+      renderLocalized(
         <MessageActionsSheet
           msg={{ id: 'msg-7', pubkey: 'b'.repeat(64), content: 'hi' }}
           close={close}
@@ -218,7 +225,7 @@ describe('MessageActionsSheet reactions', () => {
     window.addEventListener('obelisk-mobile:react', listener as EventListener);
 
     try {
-      render(
+      renderLocalized(
         <MessageActionsSheet
           msg={{ id: 'msg-8', pubkey: 'c'.repeat(64), content: 'hi' }}
           close={close}
@@ -249,7 +256,7 @@ describe('MessageActionsSheet deletion', () => {
     const close = vi.fn();
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
 
-    render(
+    renderLocalized(
       <MessageActionsSheet
         msg={{
           id: 'msg-9',
@@ -276,7 +283,7 @@ describe('MessageActionsSheet deletion', () => {
     const close = vi.fn();
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
 
-    render(
+    renderLocalized(
       <MessageActionsSheet
         msg={{
           id: 'msg-10',

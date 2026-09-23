@@ -9,6 +9,12 @@ import { useReadStateStore, READ_STATE_INITIAL } from '@/store/read-state';
 import { ForumTagsEditor, ManageLayoutModal, ManageMemberRow, RelayBrandingModal, RelaySettingsModal, RelayTopBar, SidebarMe } from './DesktopShell';
 import type { JsForumTag } from '@/lib/nostr-bridge';
 
+/** These modals read their copy from the dictionary now. */
+const renderLocalized = (ui: React.ReactElement) => render(
+  <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,
+);
+
+
 const mockRemovePermission = vi.fn();
 const mockRemoveUser = vi.fn();
 
@@ -45,14 +51,14 @@ describe('SidebarMe', () => {
   beforeEach(() => useChatStore.setState(useChatStore.getInitialState()));
 
   it('shows name and settings inline by default', () => {
-    render(<SidebarMe />);
+    renderLocalized(<SidebarMe />);
     expect(screen.getByTestId('user-settings-button').className).not.toContain('hidden');
   });
 
   it('hides everything but the avatar when collapsible, revealing on parent hover', () => {
     // Views with no sidebar (the full-screen feed) have nothing for the bar
     // to span, so a full-width panel floats over the feed looking leftover.
-    render(<SidebarMe collapsible />);
+    renderLocalized(<SidebarMe collapsible />);
     const settings = screen.getByTestId('user-settings-button');
     expect(settings.className).toContain('hidden');
     // Revealed by the PARENT's hover so the whole bar is one target, not
@@ -63,12 +69,12 @@ describe('SidebarMe', () => {
   });
 
   it('keeps the avatar visible while collapsed', () => {
-    render(<SidebarMe collapsible />);
+    renderLocalized(<SidebarMe collapsible />);
     expect(screen.getByTestId('sidebar-profile-button')).toBeInTheDocument();
   });
 
   it('opens my profile in the shared anchored preview', () => {
-    render(<SidebarMe />);
+    renderLocalized(<SidebarMe />);
     fireEvent.click(screen.getByTestId('sidebar-profile-button'), { clientX: 120, clientY: 700 });
 
     expect(useChatStore.getState().profilePopupPubkey).toBe('a'.repeat(64));
@@ -78,7 +84,7 @@ describe('SidebarMe', () => {
 
 describe('RelaySettingsModal', () => {
   it('shows an SVG icon for every server settings destination', () => {
-    render(<RelaySettingsModal onClose={vi.fn()} onBranding={vi.fn()} onEmojis={vi.fn()} onLayout={vi.fn()} onMembers={vi.fn()} onRoles={vi.fn()} />);
+    renderLocalized(<RelaySettingsModal onClose={vi.fn()} onBranding={vi.fn()} onEmojis={vi.fn()} onLayout={vi.fn()} onMembers={vi.fn()} onRoles={vi.fn()} />);
 
     expect(screen.getAllByTestId(/^server-settings-icon-/)).toHaveLength(5);
     expect(screen.getAllByTestId(/^server-settings-icon-/).every((icon) => icon.querySelector('svg'))).toBe(true);
@@ -86,7 +92,7 @@ describe('RelaySettingsModal', () => {
 
   it('routes the roles entry to the roles admin surface', () => {
     const onRoles = vi.fn();
-    render(<RelaySettingsModal onClose={vi.fn()} onBranding={vi.fn()} onEmojis={vi.fn()} onLayout={vi.fn()} onMembers={vi.fn()} onRoles={onRoles} />);
+    renderLocalized(<RelaySettingsModal onClose={vi.fn()} onBranding={vi.fn()} onEmojis={vi.fn()} onLayout={vi.fn()} onMembers={vi.fn()} onRoles={onRoles} />);
 
     fireEvent.click(screen.getByText('Roles & ranks'));
 
@@ -96,7 +102,7 @@ describe('RelaySettingsModal', () => {
 
 describe('RelayBrandingModal', () => {
   it('reuses the channel settings appearance layout for relay basics', () => {
-    render(
+    renderLocalized(
       <RelayBrandingModal
         relayUrl="wss://relay.test"
         branding={{ name: 'Obelisk', description: 'A relay', icon: 'https://cdn/icon.png', banner: 'https://cdn/banner.png', updatedAt: 1 }}
@@ -127,7 +133,7 @@ describe('ManageLayoutModal', () => {
       isPublic: true, isHidden: false, isRestricted: false, isOpen: true,
       parent: null, kind: 'text', forumTags: [], topics: [],
     }];
-    render(<ManageLayoutModal relayUrl="wss://relay.test" layout={layout} channels={channels} onClose={vi.fn()} />);
+    renderLocalized(<ManageLayoutModal relayUrl="wss://relay.test" layout={layout} channels={channels} onClose={vi.fn()} />);
 
     const transfer = { effectAllowed: '' };
     fireEvent.dragStart(screen.getByLabelText('Grab channel Chat'), { dataTransfer: transfer });
@@ -335,7 +341,7 @@ describe('ForumTagsEditor', () => {
 
   it('new tags start with no colour override, so one is derived', () => {
     const onChange = vi.fn();
-    render(<ForumTagsEditor value={[]} onChange={onChange} />);
+    renderLocalized(<ForumTagsEditor value={[]} onChange={onChange} />);
     fireEvent.click(screen.getByTestId('forum-tag-add'));
     expect(onChange).toHaveBeenCalledWith([
       expect.objectContaining({ name: '', emoji: null, color: null }),
@@ -344,7 +350,7 @@ describe('ForumTagsEditor', () => {
 
   it('picking a swatch sets that palette key', () => {
     const onChange = vi.fn();
-    render(<ForumTagsEditor value={[tag()]} onChange={onChange} />);
+    renderLocalized(<ForumTagsEditor value={[tag()]} onChange={onChange} />);
     fireEvent.click(screen.getByTestId('forum-tag-color-t1'));
     fireEvent.click(screen.getByTestId('forum-tag-color-opt-amber'));
     expect(onChange).toHaveBeenCalledWith([expect.objectContaining({ color: 'amber' })]);
@@ -352,21 +358,21 @@ describe('ForumTagsEditor', () => {
 
   it('Auto clears the override back to a derived colour', () => {
     const onChange = vi.fn();
-    render(<ForumTagsEditor value={[tag({ color: 'amber' })]} onChange={onChange} />);
+    renderLocalized(<ForumTagsEditor value={[tag({ color: 'amber' })]} onChange={onChange} />);
     fireEvent.click(screen.getByTestId('forum-tag-color-t1'));
     fireEvent.click(screen.getByTestId('forum-tag-color-auto-t1'));
     expect(onChange).toHaveBeenCalledWith([expect.objectContaining({ color: null })]);
   });
 
   it('previews the chip exactly as members will see it', () => {
-    render(<ForumTagsEditor value={[tag({ color: 'amber' })]} onChange={vi.fn()} />);
+    renderLocalized(<ForumTagsEditor value={[tag({ color: 'amber' })]} onChange={vi.fn()} />);
     const preview = screen.getByTestId('forum-tag-preview-t1');
     expect(preview.textContent).toContain('Hardware');
     expect(preview.style.color).toBe('rgb(251, 191, 36)');
   });
 
   it('shows no preview until the tag is named', () => {
-    render(<ForumTagsEditor value={[tag({ name: '' })]} onChange={vi.fn()} />);
+    renderLocalized(<ForumTagsEditor value={[tag({ name: '' })]} onChange={vi.fn()} />);
     expect(screen.queryByTestId('forum-tag-preview-t1')).toBeNull();
   });
 });

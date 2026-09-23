@@ -169,6 +169,7 @@ import { extractUrls, isImageUrl } from '@/lib/markdown';
 import { stickerTagsForContent, type MessageSticker } from '@/lib/sticker-tags';
 import { voiceNoteTagForContent, type MessageVoiceNote } from '@/lib/voice-note-tags';
 import { useTranslation } from '@/i18n/context';
+import { rich } from '@/i18n/rich';
 
 type View =
   | { kind: 'group'; groupId: string }
@@ -1095,7 +1096,7 @@ export function RelayTopBar({
       {onOpenSidebar && (
         <button
           onClick={onOpenSidebar}
-          aria-label="Open menu"
+          aria-label={t('desktop.header.openMenu')}
           className="absolute left-2 top-1/2 -translate-y-1/2 p-3 md:p-1.5 rounded-lg text-lc-muted hover:text-lc-white hover:bg-lc-border/50 transition-colors md:hidden"
         >
           <svg className="w-7 h-7 md:w-5 md:h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1404,6 +1405,7 @@ function ResizablePane({
   children: React.ReactNode;
   onWidthChange?: (w: number) => void;
 }) {
+  const { t } = useTranslation();
   const [width, setWidth] = useState<number>(() => {
     if (typeof window === 'undefined') return defaultWidth;
     const v = window.localStorage.getItem(storageKey);
@@ -1443,7 +1445,7 @@ function ResizablePane({
     <div
       onMouseDown={onMouseDown}
       className="group/handle relative z-20 w-0 cursor-col-resize max-md:hidden"
-      title="Drag to resize"
+      title={t('desktop.pane.resize')}
     >
       <div className="absolute inset-y-0 -left-2 right-0 w-4" />
       <div className="pointer-events-none absolute inset-y-0 -left-px w-px bg-lc-green opacity-0 transition-opacity group-hover/handle:opacity-100 group-active/handle:opacity-100" />
@@ -1669,8 +1671,8 @@ function Sidebar({
           {isRelayOperator && (
             <button
               onClick={() => setSettingsOpen(true)}
-              title="Server settings"
-              aria-label="Server settings"
+              title={t('desktop.server.settings')}
+              aria-label={t('desktop.server.settings')}
               className="shrink-0 rounded p-1 text-lc-muted hover:bg-lc-card hover:text-lc-white"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1859,6 +1861,7 @@ export function RelaySettingsModal({
   onMembers: () => void;
   onRoles: () => void;
 }) {
+  const { t } = useTranslation();
   const items = [
     ['profile', 'Server profile & banner', 'Name, icon, banner, and description.', onBranding],
     ['emoji', 'Emoji, GIFs & stickers', 'Server favorites, packs, and marketplace.', onEmojis],
@@ -1871,10 +1874,10 @@ export function RelaySettingsModal({
     <ModalShell onClose={onClose} panelClassName="lc-card w-full max-w-lg mx-4 overflow-hidden bg-lc-dark">
       <header className="flex items-start justify-between border-b border-lc-border px-5 py-4">
         <div>
-          <h2 className="text-base font-bold text-lc-white">Server settings</h2>
-          <p className="mt-1 text-xs text-lc-muted">Available only to the relay operator.</p>
+          <h2 className="text-base font-bold text-lc-white">{t('desktop.server.settings')}</h2>
+          <p className="mt-1 text-xs text-lc-muted">{t('desktop.server.settingsHelp')}</p>
         </div>
-        <button onClick={onClose} className="rounded p-1 text-lc-muted hover:bg-lc-card hover:text-lc-white" aria-label="Close">
+        <button onClick={onClose} className="rounded p-1 text-lc-muted hover:bg-lc-card hover:text-lc-white" aria-label={t('common.close')}>
           ✕
         </button>
       </header>
@@ -1912,6 +1915,7 @@ function RelaySettingsIcon({ kind }: { kind: 'profile' | 'emoji' | 'channels' | 
 }
 
 function CreateGroupSection({ count, onCreated }: { count: number; onCreated: (groupId: string) => void }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
@@ -1954,7 +1958,7 @@ function CreateGroupSection({ count, onCreated }: { count: number; onCreated: (g
               autoFocus
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="channel name"
+              placeholder={t('desktop.channel.namePlaceholder')}
               className="min-w-0 flex-1 rounded border border-lc-border bg-lc-black px-2 py-1 text-xs text-lc-white outline-none focus:border-lc-green"
             />
             <button
@@ -1990,6 +1994,7 @@ function GroupNode({
   onSelect: (id: string) => void;
   distanceById?: Readonly<Record<string, number | null>>;
 }) {
+  const { t } = useTranslation();
   const childIds = childrenByParent[group.id] ?? [];
   const active = view.kind === 'group' && view.groupId === group.id;
   const myPubkey = useMyPubkey();
@@ -2042,8 +2047,8 @@ function GroupNode({
           >
             {group.name ?? group.id.slice(0, 12)}
           </span>
-          {!group.isPublic && <span title="Private" className="text-[10px]">🔒</span>}
-          {!group.isOpen && <span title="Closed (invite only)" className="text-[10px]">⊝</span>}
+          {!group.isPublic && <span title={t('mobile.channel.private')} className="text-[10px]">🔒</span>}
+          {!group.isOpen && <span title={t('desktop.channel.closed')} className="text-[10px]">⊝</span>}
           <ActiveCallBadge groupId={group.id} kind={group.kind} />
           {unread > 0 && (
             <span
@@ -2197,6 +2202,7 @@ export function RelayBrandingModal({
   branding: RelayBranding;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [icon, setIcon] = useState(branding.icon);
   const [banner, setBanner] = useState(branding.banner);
   const [name, setName] = useState(branding.name);
@@ -2230,10 +2236,10 @@ export function RelayBrandingModal({
     >
         <header className="flex shrink-0 items-center justify-between border-b border-lc-border px-5 py-3">
           <div>
-            <div className="text-base font-bold text-lc-white">Relay branding</div>
+            <div className="text-base font-bold text-lc-white">{t('desktop.branding.title')}</div>
             <div className="text-[11px] text-lc-muted">Shown to everyone on {shortHost(relayUrl)} · NIP-78 kind 30078</div>
           </div>
-          <button onClick={onClose} className="rounded p-1 text-lc-muted hover:bg-lc-card hover:text-lc-white" aria-label="Close">
+          <button onClick={onClose} className="rounded p-1 text-lc-muted hover:bg-lc-card hover:text-lc-white" aria-label={t('common.close')}>
             ✕
           </button>
         </header>
@@ -2243,7 +2249,7 @@ export function RelayBrandingModal({
           onSubmit={(event) => { event.preventDefault(); void save(); }}
         >
           <section className="space-y-4">
-            <SectionHeader title="Appearance" />
+            <SectionHeader title={t('desktop.branding.appearance')} />
             <ChannelAppearanceInput
               picture={icon}
               banner={banner}
@@ -2252,17 +2258,17 @@ export function RelayBrandingModal({
             />
           </section>
           <section className="space-y-3">
-            <Field label="Name">
+            <Field label={t('mobile.field.name')}>
               <input value={name} onChange={(event) => setName(event.target.value)} placeholder={shortHost(relayUrl)} className={inputClasses} />
             </Field>
-            <Field label="Description">
+            <Field label={t('mobile.field.description')}>
               <textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={2} className={inputClasses} />
             </Field>
           </section>
           {err && <p className="text-xs text-red-400">{err}</p>}
         </form>
         <footer className="flex shrink-0 items-center justify-end gap-2 border-t border-lc-border px-5 py-3">
-          <button onClick={onClose} className="lc-pill lc-pill-secondary text-xs">Cancel</button>
+          <button onClick={onClose} className="lc-pill lc-pill-secondary text-xs">{t('common.cancel')}</button>
           <button
             type="submit"
             form="relay-branding-form"
@@ -2287,6 +2293,7 @@ export function ManageLayoutModal({
   channels: ReadonlyArray<JsGroup>;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const {
     error: err,
     laidOut,
@@ -2316,17 +2323,17 @@ export function ManageLayoutModal({
     >
         <header className="flex shrink-0 items-center justify-between border-b border-lc-border px-5 py-3">
           <div>
-            <div className="text-base font-bold text-lc-white">Categories &amp; order</div>
+            <div className="text-base font-bold text-lc-white">{t('mobile.layout.title')}</div>
             <div className="text-[11px] text-lc-muted">Shared layout for {shortHost(relayUrl)} · operator only · NIP-78 kind 30078</div>
           </div>
-          <button onClick={onClose} className="rounded p-1 text-lc-muted hover:bg-lc-card hover:text-lc-white" aria-label="Close">
+          <button onClick={onClose} className="rounded p-1 text-lc-muted hover:bg-lc-card hover:text-lc-white" aria-label={t('common.close')}>
             ✕
           </button>
         </header>
         <div className="flex-1 overflow-y-auto p-5 space-y-6">
           {/* Add category */}
           <section className="space-y-2">
-            <div className="text-xs font-bold uppercase tracking-wider text-lc-muted">New category</div>
+            <div className="text-xs font-bold uppercase tracking-wider text-lc-muted">{t('mobile.layout.newCategory')}</div>
             <div className="flex gap-2">
               <input
                 value={newCatName}
@@ -2337,7 +2344,7 @@ export function ManageLayoutModal({
                     addCategory();
                   }
                 }}
-                placeholder="e.g. General, Trading, Voice"
+                placeholder={t('mobile.layout.categoryPlaceholder')}
                 className={inputClasses + ' flex-1'}
               />
               <button
@@ -2346,7 +2353,7 @@ export function ManageLayoutModal({
                 disabled={!newCatName.trim()}
                 className="shrink-0 rounded-lg bg-lc-green px-4 py-1.5 text-sm font-semibold text-lc-black disabled:opacity-50"
               >
-                Add
+                {t('rail.addModal.add')}
               </button>
             </div>
           </section>
@@ -2354,12 +2361,12 @@ export function ManageLayoutModal({
           {/* Categories list */}
           <section className="space-y-3">
             <div className="flex items-center justify-between gap-3">
-              <div className="text-xs font-bold uppercase tracking-wider text-lc-muted">Categories</div>
-              <div className="text-[11px] text-lc-muted">Grab ⠿ to arrange</div>
+              <div className="text-xs font-bold uppercase tracking-wider text-lc-muted">{t('mobile.layout.categories')}</div>
+              <div className="text-[11px] text-lc-muted">{t('desktop.layout.grabHint')}</div>
             </div>
             {laidOut.categories.length === 0 && (
               <div className="rounded-lg border border-dashed border-lc-border p-3 text-center text-xs text-lc-muted">
-                No categories yet. Add one above to start organizing.
+                {t('desktop.layout.empty')}
               </div>
             )}
             {laidOut.categories.map((cat, idx) => (
@@ -2386,7 +2393,7 @@ export function ManageLayoutModal({
                     onDragEnd={() => setDragged(null)}
                     className="cursor-grab rounded p-1 text-lc-muted hover:bg-lc-card hover:text-lc-white active:cursor-grabbing"
                     aria-label={`Grab category ${cat.name}`}
-                    title="Drag category"
+                    title={t('desktop.layout.dragCategory')}
                   >
                     <DragHandleIcon />
                   </button>
@@ -2400,7 +2407,7 @@ export function ManageLayoutModal({
                     onClick={() => moveCategory(cat.id, -1)}
                     disabled={idx === 0}
                     className="rounded p-1 text-lc-muted hover:bg-lc-card hover:text-lc-white disabled:opacity-30"
-                    title="Move up"
+                    title={t('desktop.layout.moveUp')}
                   >
                     ▲
                   </button>
@@ -2409,7 +2416,7 @@ export function ManageLayoutModal({
                     onClick={() => moveCategory(cat.id, +1)}
                     disabled={idx === laidOut.categories.length - 1}
                     className="rounded p-1 text-lc-muted hover:bg-lc-card hover:text-lc-white disabled:opacity-30"
-                    title="Move down"
+                    title={t('desktop.layout.moveDown')}
                   >
                     ▼
                   </button>
@@ -2417,15 +2424,15 @@ export function ManageLayoutModal({
                     type="button"
                     onClick={() => deleteCategory(cat.id)}
                     className="rounded px-2 py-0.5 text-xs text-red-400 hover:bg-lc-card"
-                    title="Delete category"
+                    title={t('mobile.layout.deleteCategory')}
                   >
-                    Delete
+                    {t('mobile.layout.delete')}
                   </button>
                 </div>
                 <div className="mt-2 space-y-1">
                   {cat.channelIds.length === 0 ? (
                     <div className="rounded border border-dashed border-lc-border px-2 py-2 text-center text-[11px] text-lc-muted">
-                      Drop channels here
+                      {t('desktop.layout.dropHere')}
                     </div>
                   ) : (
                     cat.channelIds.map((id, i) => (
@@ -2472,7 +2479,7 @@ export function ManageLayoutModal({
             >
               {laidOut.uncategorized.length === 0 ? (
                 <div className="rounded border border-dashed border-lc-border px-2 py-2 text-center text-[11px] text-lc-muted">
-                  All channels are placed in categories.
+                  {t('desktop.layout.allPlaced')}
                 </div>
               ) : (
                 laidOut.uncategorized.map((id, i) => (
@@ -2503,7 +2510,7 @@ export function ManageLayoutModal({
         </div>
         <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-lc-border bg-lc-dark px-5 py-3">
           <div className="text-[11px] text-lc-muted">
-            Saved as a single replaceable kind 30078 event signed by you.
+            {t('desktop.layout.saveHelp')}
           </div>
           <div className="flex gap-2">
             <button
@@ -2511,7 +2518,7 @@ export function ManageLayoutModal({
               onClick={onClose}
               className="rounded-lg px-4 py-1.5 text-sm font-medium text-lc-muted hover:bg-lc-card hover:text-lc-white"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="button"
@@ -2550,6 +2557,7 @@ function ChannelOrderRow({
   onDragEnd: () => void;
   onDropBefore: () => boolean;
 }) {
+  const { t } = useTranslation();
   if (!channel) return null;
   return (
     <div
@@ -2569,7 +2577,7 @@ function ChannelOrderRow({
         onDragEnd={onDragEnd}
         className="cursor-grab rounded p-0.5 text-lc-muted hover:text-lc-white active:cursor-grabbing"
         aria-label={`Grab channel ${channel.name ?? channel.id}`}
-        title="Drag channel"
+        title={t('desktop.layout.dragChannel')}
       >
         <DragHandleIcon />
       </button>
@@ -2594,7 +2602,7 @@ function ChannelOrderRow({
         onClick={() => onMove(-1)}
         disabled={first}
         className="rounded p-1 text-lc-muted hover:bg-lc-card hover:text-lc-white disabled:opacity-30"
-        title="Move up"
+        title={t('desktop.layout.moveUp')}
       >
         ▲
       </button>
@@ -2603,7 +2611,7 @@ function ChannelOrderRow({
         onClick={() => onMove(+1)}
         disabled={last}
         className="rounded p-1 text-lc-muted hover:bg-lc-card hover:text-lc-white disabled:opacity-30"
-        title="Move down"
+        title={t('desktop.layout.moveDown')}
       >
         ▼
       </button>
@@ -2623,6 +2631,7 @@ function DragHandleIcon() {
 
 
 export function SidebarMe({ collapsible = false }: { collapsible?: boolean }) {
+  const { t } = useTranslation();
   const myPubkey = useMyPubkey();
   const meta = useProfile(myPubkey);
   const [editing, setEditing] = useState(false);
@@ -2639,7 +2648,7 @@ export function SidebarMe({ collapsible = false }: { collapsible?: boolean }) {
         type="button"
         onClick={(event) => useChatStore.getState().openProfilePopup(myPubkey, { x: event.clientX, y: event.clientY })}
         className="flex min-w-0 flex-1 items-center gap-2 rounded text-left hover:bg-lc-card/50"
-        title="Profile"
+        title={t('desktop.me.profile')}
         data-testid="sidebar-profile-button"
         data-tour="profile-button"
       >
@@ -2656,8 +2665,8 @@ export function SidebarMe({ collapsible = false }: { collapsible?: boolean }) {
         className={`shrink-0 rounded p-1.5 text-lc-muted transition-colors hover:bg-lc-card hover:text-lc-white ${
           collapsible ? 'hidden group-hover/me:block group-focus-within/me:block' : ''
         }`}
-        title="Settings"
-        aria-label="Settings"
+        title={t('desktop.me.settings')}
+        aria-label={t('desktop.me.settings')}
         data-testid="user-settings-button"
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -3227,7 +3236,7 @@ function ChatPanel({
               </span>
               {isAdmin && (
                 <span className="rounded-full bg-lc-green/20 px-1.5 py-0.5 text-[10px] font-bold uppercase text-lc-green">
-                  Admin
+                  {t('mobile.members.admin')}
                 </span>
               )}
             </div>
@@ -3467,7 +3476,7 @@ function ChatPanel({
               type="button"
               onClick={() => { setPickerTab("emoji"); setEmojiOpen((value) => !value); }}
               className="flex h-9 w-9 items-center justify-center rounded-full text-lc-muted hover:bg-white/5 hover:text-lc-white"
-              aria-label="Open emoji, GIF, and sticker picker"
+              aria-label={t('mobile.composer.openPicker')}
               aria-haspopup="dialog"
               aria-expanded={emojiOpen}
             >
@@ -4206,6 +4215,7 @@ function MessageRow({
 // -- Members panel ------------------------------------------------------
 
 function MembersPanel({ groupId }: { groupId: string }) {
+  const { t } = useTranslation();
   // Members are P3 in the priority orchestrator — the lazy per-group
   // admin/member REQs fire when this panel mounts. Surface a loading state
   // until {@link useMembershipReady} flips, so the user knows the empty
@@ -4221,7 +4231,7 @@ function MembersPanel({ groupId }: { groupId: string }) {
           data-testid="members-loading"
         >
           <div className="lc-spinner" aria-hidden="true" />
-          <div>Loading members…</div>
+          <div>{t('desktop.members.loading')}</div>
         </div>
       )}
     </>
@@ -4231,6 +4241,7 @@ function MembersPanel({ groupId }: { groupId: string }) {
 // -- Channel settings (admin) -------------------------------------------
 
 function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClose: () => void }) {
+  const { t } = useTranslation();
   const [name, setName] = useState(group.name ?? '');
   const [about, setAbout] = useState(group.about ?? '');
   const [picture, setPicture] = useState(group.picture ?? '');
@@ -4373,7 +4384,7 @@ function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClose: () 
     >
         <header className="flex shrink-0 items-center justify-between border-b border-lc-border px-5 py-3">
           <div className="text-base font-bold text-lc-white">Channel settings · #{group.name ?? group.id.slice(0, 8)}</div>
-          <button onClick={onClose} className="rounded p-1 text-lc-muted hover:bg-lc-card hover:text-lc-white" aria-label="Close">
+          <button onClick={onClose} className="rounded p-1 text-lc-muted hover:bg-lc-card hover:text-lc-white" aria-label={t('common.close')}>
             ✕
           </button>
         </header>
@@ -4381,7 +4392,7 @@ function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClose: () 
           <form onSubmit={saveMeta} id="channel-meta-form" className="space-y-7 p-5">
             {/* Appearance ----------------------------------------------- */}
             <section className="space-y-4">
-              <SectionHeader title="Appearance" />
+              <SectionHeader title={t('desktop.branding.appearance')} />
               <ChannelAppearanceInput
                 picture={picture}
                 banner={banner}
@@ -4392,15 +4403,15 @@ function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClose: () 
 
             {/* Basics --------------------------------------------------- */}
             <section className="space-y-3">
-              <Field label="Name">
+              <Field label={t('mobile.field.name')}>
                 <input value={name} onChange={(e) => setName(e.target.value)} className={inputClasses} />
               </Field>
-              <Field label="Description">
+              <Field label={t('mobile.field.description')}>
                 <textarea
                   value={about}
                   onChange={(e) => setAbout(e.target.value)}
                   rows={2}
-                  placeholder="What's this channel about?"
+                  placeholder={t('mobile.channel.descriptionPlaceholder')}
                   className={inputClasses}
                 />
               </Field>
@@ -4408,88 +4419,89 @@ function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClose: () 
 
             {/* Access --------------------------------------------------- */}
             <section className="space-y-3">
-              <SectionHeader title="Access" hint="Relay-enforced NIP-29 permissions" />
+              <SectionHeader title={t('mobile.channel.access')} hint={t('desktop.channel.accessHint')} />
               <div className="grid gap-2 sm:grid-cols-3">
                 <ToggleCard
                   active={access === 'public'}
                   onClick={() => setAccess('public')}
                   icon="🌐"
-                  title="Public"
-                  subtitle="Everyone can read and post"
+                  title={t('mobile.channel.public')}
+                  subtitle={t('desktop.channel.publicHint')}
                 />
                 <ToggleCard
                   active={access === 'read-only'}
                   onClick={() => setAccess('read-only')}
                   icon="👁"
-                  title="Read-only"
-                  subtitle="Everyone reads; members post"
+                  title={t('mobile.channel.readOnly')}
+                  subtitle={t('desktop.channel.readOnlyHint')}
                 />
                 <ToggleCard
                   active={access === 'private'}
                   onClick={() => setAccess('private')}
                   icon="🔒"
-                  title="Private"
-                  subtitle="Hidden; members only"
+                  title={t('mobile.channel.private')}
+                  subtitle={t('desktop.channel.privateHint')}
                 />
               </div>
             </section>
 
             {/* Channel type --------------------------------------------- */}
             <section className="space-y-3">
-              <SectionHeader title="Channel type" />
+              <SectionHeader title={t('mobile.channel.type')} />
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                 <ToggleCard
                   active={channelKind === 'text'}
                   onClick={() => setChannelKind('text')}
                   icon="💬"
-                  title="Text"
-                  subtitle="Messages, replies, reactions"
+                  title={t('desktop.channel.kindText')}
+                  subtitle={t('desktop.channel.textHint')}
                 />
                 <ToggleCard
                   active={channelKind === 'voice'}
                   onClick={() => setChannelKind('voice')}
                   icon="🎙️"
-                  title="Voice / Video"
-                  subtitle="P2P mesh, up to 8 people"
+                  title={t('desktop.channel.kindVoice')}
+                  subtitle={t('desktop.channel.voiceHint')}
                 />
                 <ToggleCard
                   active={channelKind === 'voice-sfu'}
                   onClick={() => setChannelKind('voice-sfu')}
                   icon="📡"
-                  title="Big-room voice"
-                  subtitle="SFU-routed, up to 50 people"
+                  title={t('desktop.channel.kindSfu')}
+                  subtitle={t('desktop.channel.sfuHint')}
                 />
                 <ToggleCard
                   active={channelKind === 'forum'}
                   onClick={() => setChannelKind('forum')}
                   icon="📋"
-                  title="Publications"
-                  subtitle="A feed of publications, each with its own chat"
+                  title={t('desktop.channel.kindForum')}
+                  subtitle={t('desktop.channel.forumHint')}
                 />
               </div>
               {channelKind === 'voice' && (
                 <p className="text-[11px] text-lc-muted">
-                  Adds a <code className="text-lc-white/80">[&quot;t&quot;,&quot;voice&quot;]</code> tag. Members open{' '}
-                  <code className="text-lc-white/80">/voice/{group.id.slice(0, 8)}…</code> to join.
+                  {rich(t('desktop.channel.voiceHelp'), {
+                    tag: <code className="text-lc-white/80">[&quot;t&quot;,&quot;voice&quot;]</code>,
+                    url: <code className="text-lc-white/80">/voice/{group.id.slice(0, 8)}…</code>,
+                  })}
                 </p>
               )}
               {channelKind === 'voice-sfu' && (
                 <>
                   <p className="text-[11px] text-lc-muted">
-                    Adds a <code className="text-lc-white/80">[&quot;t&quot;,&quot;voice-sfu&quot;]</code> tag.
-                    Same join surface as voice, but the channel signals to operators &ldquo;expect a big
-                    room&rdquo;. An authorized SFU joins and forwards everyone&rsquo;s media so the room scales
-                    past the 8-peer mesh ceiling.
+                    {rich(t('desktop.channel.sfuHelp'), {
+                      tag: <code className="text-lc-white/80">[&quot;t&quot;,&quot;voice-sfu&quot;]</code>,
+                    })}
                   </p>
                   <div className="space-y-2 rounded-lg border border-lc-border bg-lc-black/40 p-3">
-                    <p className="text-[11px] uppercase tracking-wider text-lc-muted">SFU operator (kind 30078 pin)</p>
+                    <p className="text-[11px] uppercase tracking-wider text-lc-muted">{t('desktop.sfu.operator')}</p>
                     <p className="text-[11px] text-lc-muted">
-                      Enter one SFU URL. Obelisk verifies its <code className="text-lc-white/80">/info</code>{' '}
-                      descriptor and stores the returned identity automatically. Calls authenticate directly
-                      to the SFU; Nostr relays are only a compatibility fallback.
+                      {rich(t('desktop.sfu.help'), {
+                        info: <code className="text-lc-white/80">/info</code>,
+                      })}
                     </p>
                     <div>
-                      <label className="text-[11px] text-lc-muted">SFU URL</label>
+                      <label className="text-[11px] text-lc-muted">{t('desktop.sfu.url')}</label>
                       <div className="flex gap-2">
                         <input
                           value={sfuUrl}
@@ -4510,25 +4522,21 @@ function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClose: () 
                     </div>
                     {sfuVerified && (
                       <div className="rounded-md border border-lc-green/30 bg-lc-green/5 p-2 text-[11px] text-lc-muted">
-                        <span className="text-lc-green">Verified</span>
+                        <span className="text-lc-green">{t('desktop.sfu.verified')}</span>
                         {sfuVerified.region ? ` · ${sfuVerified.region}` : ''}
                         {sfuVerified.cap ? ` · up to ${sfuVerified.cap} participants` : ''}
                         <div className="mt-1 break-all font-mono text-lc-white/70">{sfuVerified.pubkey}</div>
                       </div>
                     )}
-                    <p className="text-[10px] text-lc-muted">
-                      The SFU checks your signed Nostr identity and whitelist when you join. The full pubkey
-                      above is available for advanced verification.
-                    </p>
+                    <p className="text-[10px] text-lc-muted">{t('desktop.sfu.verifyHelp')}</p>
                   </div>
                 </>
               )}
               {channelKind === 'forum' && (
                 <p className="text-[11px] text-lc-muted">
-                  Adds a <code className="text-lc-white/80">[&quot;t&quot;,&quot;forum&quot;]</code> tag
-                  (the wire value keeps its original name). The channel renders as a feed of
-                  publications instead of a chat stream — each publication is its own channel,
-                  with its own conversation.
+                  {rich(t('desktop.channel.forumHelp'), {
+                    tag: <code className="text-lc-white/80">[&quot;t&quot;,&quot;forum&quot;]</code>,
+                  })}
                 </p>
               )}
             </section>
@@ -4536,7 +4544,7 @@ function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClose: () 
             {channelKind === 'forum' && (
               <section className="space-y-3" data-testid="forum-tags-editor">
                 <SectionHeader
-                  title="Publication tags"
+                  title={t('desktop.channel.forumTags')}
                   hint="Curated; emitted as forum-tag NIP-29 metadata"
                 />
                 <p className="text-[11px] text-lc-muted">
@@ -4558,7 +4566,7 @@ function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClose: () 
 
           <section className="space-y-3 p-5">
             <div className="flex min-w-0 items-center gap-3">
-              <SectionHeader title="Members" hint="NIP-29 kind 9000 / 9001" />
+              <SectionHeader title={t('desktop.channel.members')} hint="NIP-29 kind 9000 / 9001" />
               <span className="shrink-0 rounded-full bg-lc-card px-2 py-0.5 text-[11px] font-semibold text-lc-muted">
                 {members.length}
               </span>
@@ -4567,9 +4575,9 @@ function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClose: () 
               <input
                 value={newMember}
                 onChange={(e) => setNewMember(e.target.value)}
-                placeholder="npub1… or hex pubkey"
+                placeholder={t('desktop.members.addPlaceholder')}
                 spellCheck={false}
-                aria-label="Member npub or hex pubkey"
+                aria-label={t('desktop.members.addLabel')}
                 className={inputClasses + ' flex-1 min-w-[12rem]'}
               />
               {/* A bare checkbox reads as a form field; as a toggle chip it
@@ -4612,14 +4620,14 @@ function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClose: () 
           </section>
         </div>
         <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-lc-border bg-lc-dark px-5 py-3">
-          <div className="text-[11px] text-lc-muted">Changes publish as NIP-29 kind 9002.</div>
+          <div className="text-[11px] text-lc-muted">{t('desktop.channel.saveHelp')}</div>
           <div className="flex gap-2">
             <button
               type="button"
               onClick={onClose}
               className="rounded-lg px-4 py-1.5 text-sm font-medium text-lc-muted hover:bg-lc-card hover:text-lc-white"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
@@ -4697,6 +4705,7 @@ export function ForumTagsEditor({
   value: ReadonlyArray<JsForumTag>;
   onChange: (next: ReadonlyArray<JsForumTag>) => void;
 }) {
+  const { t } = useTranslation();
   const MAX = 20;
   const updateAt = (idx: number, patch: Partial<JsForumTag>) => {
     const next = value.map((t, i) => (i === idx ? { ...t, ...patch } : t));
@@ -4713,7 +4722,7 @@ export function ForumTagsEditor({
     <div className="space-y-2">
       {value.length === 0 && (
         <div className="rounded-lg border border-dashed border-lc-border px-3 py-3 text-center text-xs text-lc-muted">
-          No tags yet. Add one to give publication authors something to pick.
+          {t('desktop.tags.empty')}
         </div>
       )}
       {value.map((tag, idx) => (
@@ -4739,17 +4748,17 @@ export function ForumTagsEditor({
             placeholder="🌐"
             maxLength={4}
             className="w-12 shrink-0 rounded-md border border-lc-border bg-lc-dark px-2 py-1 text-center text-sm text-lc-white outline-none focus:border-lc-green/60"
-            aria-label="Tag emoji"
+            aria-label={t('desktop.tags.emoji')}
             data-testid={`forum-tag-emoji-${tag.id}`}
           />
           <input
             type="text"
             value={tag.name}
             onChange={(e) => updateAt(idx, { name: e.target.value })}
-            placeholder="Tag name"
+            placeholder={t('desktop.tags.name')}
             maxLength={40}
             className="min-w-0 flex-1 rounded-md border border-lc-border bg-lc-dark px-2 py-1 text-sm text-lc-white outline-none focus:border-lc-green/60"
-            aria-label="Tag name"
+            aria-label={t('desktop.tags.name')}
             data-testid={`forum-tag-name-${tag.id}`}
           />
           {/* Shows the result rather than describing it: this is exactly how
@@ -4776,7 +4785,7 @@ export function ForumTagsEditor({
             type="button"
             onClick={() => removeAt(idx)}
             className="shrink-0 rounded-md p-1 text-lc-muted hover:bg-lc-card hover:text-red-300"
-            aria-label="Remove tag"
+            aria-label={t('desktop.tags.remove')}
             data-testid={`forum-tag-remove-${tag.id}`}
           >
             ✕
@@ -4888,6 +4897,7 @@ function TagColorPicker({
 
 // Exported for tests only — mounted internally by ChannelSettingsModal.
 export function ManageMemberRow({ groupId, pubkey, isAdmin }: { groupId: string; pubkey: string; isAdmin: boolean }) {
+  const { t } = useTranslation();
   const meta = useProfile(pubkey);
   // Which destructive action this row is currently asking about. An inline
   // confirm keeps the question attached to the row it's about — a
@@ -4913,7 +4923,7 @@ export function ManageMemberRow({ groupId, pubkey, isAdmin }: { groupId: string;
           className="shrink-0 rounded-full px-2.5 py-1 text-xs text-lc-muted hover:bg-lc-card hover:text-lc-white"
           data-testid={`member-confirm-cancel-${pubkey}`}
         >
-          Cancel
+          {t('common.cancel')}
         </button>
         <button
           type="button"
@@ -4961,11 +4971,11 @@ export function ManageMemberRow({ groupId, pubkey, isAdmin }: { groupId: string;
             type="button"
             onClick={() => setConfirming('demote')}
             className="rounded-full px-2.5 py-1 text-xs text-lc-muted hover:bg-lc-dark hover:text-lc-white"
-            title="Strip admin role; keep them in the channel as a regular member."
+            title={t('desktop.members.demoteHelp')}
             aria-label={`Demote ${name}`}
             data-testid={`member-demote-${pubkey}`}
           >
-            Demote
+            {t('mobile.members.demote')}
           </button>
         )}
         <button
@@ -4975,7 +4985,7 @@ export function ManageMemberRow({ groupId, pubkey, isAdmin }: { groupId: string;
           aria-label={`Remove ${name}`}
           data-testid={`member-remove-${pubkey}`}
         >
-          Remove
+          {t('desktop.members.remove')}
         </button>
       </div>
     </div>
@@ -5258,6 +5268,7 @@ function Avatar({ pubkey, size, picture }: { pubkey: string; size: number; pictu
 }
 
 function RelayAccessModal() {
+  const { t } = useTranslation();
   const relay = useCurrentRelayUrl();
   const access = useRelayAccess();
   const loginMethod = useMyLoginMethod();
@@ -5310,7 +5321,7 @@ function RelayAccessModal() {
             onClick={() => setDismissed(key)}
             className="rounded-lg bg-lc-green px-4 py-1.5 text-sm font-semibold text-lc-black"
           >
-            Got it
+            {t('desktop.gotIt')}
           </button>
         </div>
     </ModalShell>
@@ -5347,16 +5358,17 @@ function shortHost(url: string): string {
  * a stale (expired) announcement fades without needing a manual refresh.
  */
 function ActiveCallBadge({ groupId, kind }: { groupId: string; kind: JsGroup['kind'] }) {
+  const { t } = useTranslation();
   const active = useActiveCall(groupId);
   if (kind !== 'voice' && kind !== 'voice-sfu') return null;
   if (!active) return null;
   return (
     <span
-      title="Live call in progress"
+      title={t('desktop.voice.liveTitle')}
       className="ml-1 inline-flex items-center gap-1 rounded-full bg-red-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-red-300"
     >
       <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-400" />
-      Live
+      {t('desktop.voice.live')}
     </span>
   );
 }

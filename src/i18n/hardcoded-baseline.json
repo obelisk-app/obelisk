@@ -1,9 +1,8 @@
 {
-  "app/app/DesktopShell.tsx": 82,
   "app/app/DMComposer.tsx": 3,
   "app/app/GeneratedProfileEnhancements.tsx": 1,
   "app/app/LoginModal.tsx": 4,
-  "app/app/mobile/PhoneShell.tsx": 106,
+  "app/app/mobile/PhoneShell.tsx": 6,
   "app/app/UserPanel.tsx": 4,
   "app/features/page.tsx": 8,
   "app/media-kit/MediaKit.tsx": 53,
