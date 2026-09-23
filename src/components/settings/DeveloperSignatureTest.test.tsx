@@ -2,6 +2,13 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { OBELISK_SIGNING_KINDS } from '@/lib/nostr-signing-kinds';
 import DeveloperSignatureTest from './DeveloperSignatureTest';
+import { LocaleProvider } from '@/i18n/context';
+
+/** The component reads its copy from the dictionary, so it needs a provider. */
+const renderLocalized = (ui: React.ReactElement) => render(
+  <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,
+);
+
 
 const signEventTemplate = vi.hoisted(() => vi.fn());
 
@@ -14,7 +21,7 @@ describe('DeveloperSignatureTest', () => {
   beforeEach(() => signEventTemplate.mockReset().mockResolvedValue({ id: 'signed' }));
 
   it('requests every required signature without publishing anything', async () => {
-    render(<DeveloperSignatureTest />);
+    renderLocalized(<DeveloperSignatureTest />);
     fireEvent.click(screen.getByTestId('request-mock-signatures'));
 
     await waitFor(() => expect(signEventTemplate).toHaveBeenCalledTimes(OBELISK_SIGNING_KINDS.length));

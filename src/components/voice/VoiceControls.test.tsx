@@ -9,6 +9,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, cleanup } from '@testing-library/react';
 import VoiceControls from './VoiceControls';
 import { useVoiceStore } from '@/store/voice';
+import { LocaleProvider } from '@/i18n/context';
+
+/** The component reads its copy from the dictionary, so it needs a provider. */
+const renderLocalized = (ui: React.ReactElement) => render(
+  <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,
+);
+
 
 const activeClient = vi.hoisted(() => ({
   applyVideoQuality: vi.fn(async () => {}),
@@ -43,7 +50,7 @@ afterEach(() => {
 
 describe('VoiceControls toolbar', () => {
   it('renders the core buttons', () => {
-    render(<VoiceControls onLeave={() => {}} />);
+    renderLocalized(<VoiceControls onLeave={() => {}} />);
     expect(screen.getByTestId('mute-btn')).toBeInTheDocument();
     expect(screen.getByTestId('camera-btn')).toBeInTheDocument();
     expect(screen.getByTestId('quality-btn')).toBeInTheDocument();
@@ -51,27 +58,27 @@ describe('VoiceControls toolbar', () => {
   });
 
   it('mute button toggles via the active client', async () => {
-    render(<VoiceControls onLeave={() => {}} />);
+    renderLocalized(<VoiceControls onLeave={() => {}} />);
     fireEvent.click(screen.getByTestId('mute-btn'));
     expect(activeClient.setMicEnabled).toHaveBeenCalled();
   });
 
   it('unmutes explicitly when the call starts listening-only', async () => {
     useVoiceStore.setState({ isMuted: true });
-    render(<VoiceControls onLeave={() => {}} />);
+    renderLocalized(<VoiceControls onLeave={() => {}} />);
     fireEvent.click(screen.getByTestId('mute-btn'));
     expect(activeClient.setMicEnabled).toHaveBeenCalledWith(true);
   });
 
   it('camera button toggles via the active client', () => {
-    render(<VoiceControls onLeave={() => {}} />);
+    renderLocalized(<VoiceControls onLeave={() => {}} />);
     fireEvent.click(screen.getByTestId('camera-btn'));
     expect(activeClient.setCameraEnabled).toHaveBeenCalledWith(true);
   });
 
   it('leave button fires the onLeave callback', () => {
     const onLeave = vi.fn();
-    render(<VoiceControls onLeave={onLeave} />);
+    renderLocalized(<VoiceControls onLeave={onLeave} />);
     fireEvent.click(screen.getByTestId('leave-voice-btn'));
     expect(onLeave).toHaveBeenCalled();
   });
@@ -79,14 +86,14 @@ describe('VoiceControls toolbar', () => {
 
 describe('VoiceControls quality popover', () => {
   it('is hidden by default and toggles open on gear click', () => {
-    render(<VoiceControls onLeave={() => {}} />);
+    renderLocalized(<VoiceControls onLeave={() => {}} />);
     expect(screen.queryByTestId('quality-popover')).toBeNull();
     fireEvent.click(screen.getByTestId('quality-btn'));
     expect(screen.getByTestId('quality-popover')).toBeInTheDocument();
   });
 
   it('selecting "720p" for camera updates the store and forwards to client', async () => {
-    render(<VoiceControls onLeave={() => {}} />);
+    renderLocalized(<VoiceControls onLeave={() => {}} />);
     fireEvent.click(screen.getByTestId('quality-btn'));
 
     fireEvent.click(screen.getByTestId('quality-out-720p'));
@@ -99,7 +106,7 @@ describe('VoiceControls quality popover', () => {
   });
 
   it('selecting "480p" for incoming updates the store and broadcasts a hint', async () => {
-    render(<VoiceControls onLeave={() => {}} />);
+    renderLocalized(<VoiceControls onLeave={() => {}} />);
     fireEvent.click(screen.getByTestId('quality-btn'));
 
     fireEvent.click(screen.getByTestId('quality-in-480p'));
@@ -111,7 +118,7 @@ describe('VoiceControls quality popover', () => {
   });
 
   it('renders the four quality tiers per direction', () => {
-    render(<VoiceControls onLeave={() => {}} />);
+    renderLocalized(<VoiceControls onLeave={() => {}} />);
     fireEvent.click(screen.getByTestId('quality-btn'));
     for (const q of ['auto', '1080p', '720p', '480p']) {
       expect(screen.getByTestId(`quality-out-${q}`)).toBeInTheDocument();
@@ -120,7 +127,7 @@ describe('VoiceControls quality popover', () => {
   });
 
   it('shows the audio-quality footnote', () => {
-    render(<VoiceControls onLeave={() => {}} />);
+    renderLocalized(<VoiceControls onLeave={() => {}} />);
     fireEvent.click(screen.getByTestId('quality-btn'));
     expect(screen.getByText(/audio is always sent at high quality/i)).toBeInTheDocument();
   });
@@ -129,7 +136,7 @@ describe('VoiceControls quality popover', () => {
 describe('VoiceControls error surface', () => {
   it('renders the current error message', () => {
     useVoiceStore.setState({ error: 'mic blocked' });
-    render(<VoiceControls onLeave={() => {}} />);
+    renderLocalized(<VoiceControls onLeave={() => {}} />);
     expect(screen.getByTestId('voice-error')).toHaveTextContent('mic blocked');
   });
 });

@@ -1,6 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { LocaleProvider } from '@/i18n/context';
+
+/** The component reads its copy from the dictionary, so it needs a provider. */
+const renderLocalized = (ui: React.ReactElement) => render(
+  <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,
+);
+
 
 vi.mock('@/lib/wot', async () => {
   const React = await import('react');
@@ -50,7 +57,7 @@ describe('WotSettings', () => {
     const user = userEvent.setup();
     const { default: WotSettings } = await import('./WotSettings');
 
-    render(<WotSettings />);
+    renderLocalized(<WotSettings />);
 
     expect(screen.getByText('Web of Trust')).toBeInTheDocument();
     expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'false');

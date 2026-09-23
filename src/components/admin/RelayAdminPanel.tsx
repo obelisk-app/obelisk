@@ -9,6 +9,7 @@ import {
 } from '@/lib/nostr-bridge';
 import { useUserMetadata as useProfile } from '@/lib/nostr-bridge';
 import { getBridgeImpl } from '@/lib/nostr-bridge';
+import { useTranslation } from '@/i18n/context';
 
 interface Row {
   groupId: string;
@@ -20,6 +21,7 @@ interface Row {
 const rowKey = (r: Row) => `${r.groupId}/${r.pubkey}`;
 
 export default function RelayAdminPanel({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation();
   const groups = useGroups();
   const adminsByGroup = useAdminsByGroup();
   // Members lists are per-group state on the bridge — pull them in bulk via
@@ -103,7 +105,7 @@ export default function RelayAdminPanel({ onClose }: { onClose: () => void }) {
     <ModalShell onClose={onClose} panelClassName="w-full max-w-3xl mx-4 rounded-xl bg-lc-dark border border-lc-border shadow-xl flex flex-col max-h-[85vh]">
       <header className="flex items-center justify-between border-b border-lc-border px-5 py-3">
         <div>
-          <h2 className="text-base font-bold text-lc-white">Relay admins &amp; members</h2>
+          <h2 className="text-base font-bold text-lc-white">{t('admin.title')}</h2>
           <p className="text-xs text-lc-muted">
             Bulk cleanup across every channel on this relay. Kick removes the user (kind 9001); demote strips the admin role only (kind 9003).
           </p>
@@ -111,7 +113,7 @@ export default function RelayAdminPanel({ onClose }: { onClose: () => void }) {
         <button
           onClick={onClose}
           className="rounded p-1 text-lc-muted hover:bg-lc-card hover:text-lc-white"
-          aria-label="Close"
+          aria-label={t('common.close')}
         >
           ✕
         </button>
@@ -121,7 +123,7 @@ export default function RelayAdminPanel({ onClose }: { onClose: () => void }) {
         <input
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          placeholder="Filter by pubkey or channel name…"
+          placeholder={t('admin.filterPlaceholder')}
           className="min-w-[200px] flex-1 rounded border border-lc-border bg-lc-black px-3 py-1.5 text-sm text-lc-white outline-none focus:border-lc-green"
         />
         <select
@@ -129,16 +131,16 @@ export default function RelayAdminPanel({ onClose }: { onClose: () => void }) {
           onChange={(e) => setRoleFilter(e.target.value as typeof roleFilter)}
           className="rounded border border-lc-border bg-lc-black px-2 py-1.5 text-xs text-lc-white outline-none focus:border-lc-green"
         >
-          <option value="all">All roles</option>
-          <option value="admin">Admins only</option>
-          <option value="member">Members only</option>
+          <option value="all">{t('admin.allRoles')}</option>
+          <option value="admin">{t('admin.adminsOnly')}</option>
+          <option value="member">{t('admin.membersOnly')}</option>
         </select>
         <select
           value={groupFilter}
           onChange={(e) => setGroupFilter(e.target.value)}
           className="max-w-[180px] rounded border border-lc-border bg-lc-black px-2 py-1.5 text-xs text-lc-white outline-none focus:border-lc-green"
         >
-          <option value="all">All channels</option>
+          <option value="all">{t('admin.allChannels')}</option>
           {groups.map((g) => (
             <option key={g.id} value={g.id}>
               {g.name ?? g.id.slice(0, 12)}
@@ -159,9 +161,9 @@ export default function RelayAdminPanel({ onClose }: { onClose: () => void }) {
             <thead className="sticky top-0 bg-lc-dark/95 backdrop-blur">
               <tr className="text-left text-xs uppercase text-lc-muted">
                 <th className="px-3 py-2 w-8" />
-                <th className="px-2 py-2">User</th>
-                <th className="px-2 py-2">Channel</th>
-                <th className="px-2 py-2">Role</th>
+                <th className="px-2 py-2">{t('admin.colUser')}</th>
+                <th className="px-2 py-2">{t('admin.colChannel')}</th>
+                <th className="px-2 py-2">{t('admin.colRole')}</th>
               </tr>
             </thead>
             <tbody>
@@ -187,16 +189,16 @@ export default function RelayAdminPanel({ onClose }: { onClose: () => void }) {
             onClick={() => bulk('demote')}
             disabled={busy || selectedRows.every((r) => !r.isAdmin)}
             className="lc-pill lc-pill-secondary text-xs disabled:opacity-40"
-            title="Strip admin role from selected admin rows. Members are skipped."
+            title={t('admin.demoteHelp')}
           >
-            Demote
+            {t('mobile.members.demote')}
           </button>
           <button
             onClick={() => bulk('kick')}
             disabled={busy || selectedRows.length === 0}
             className="lc-pill text-xs bg-red-500/20 text-red-300 hover:bg-red-500/30 disabled:opacity-40"
           >
-            Kick
+            {t('mobile.members.kick')}
           </button>
         </div>
       </footer>
@@ -213,6 +215,7 @@ function RowItem({
   selected: boolean;
   onToggle: () => void;
 }) {
+  const { t } = useTranslation();
   const meta = useProfile(row.pubkey);
   return (
     <tr className="border-t border-lc-border/40 hover:bg-lc-card">
@@ -234,10 +237,10 @@ function RowItem({
       <td className="px-2 py-2">
         {row.isAdmin ? (
           <span className="rounded-full bg-lc-green/20 px-2 py-0.5 text-[10px] font-bold uppercase text-lc-green">
-            Admin
+            {t('mobile.members.admin')}
           </span>
         ) : (
-          <span className="text-xs text-lc-muted">Member</span>
+          <span className="text-xs text-lc-muted">{t('admin.member')}</span>
         )}
       </td>
     </tr>

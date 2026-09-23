@@ -1,6 +1,13 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import MediaLibraryModal from './MediaLibraryModal';
+import { LocaleProvider } from '@/i18n/context';
+
+/** The component reads its copy from the dictionary, so it needs a provider. */
+const renderLocalized = (ui: React.ReactElement) => render(
+  <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,
+);
+
 
 const author = 'a'.repeat(64);
 const pack = {
@@ -56,7 +63,7 @@ describe('MediaLibraryModal', () => {
 
   it('opens directly on a sticker detail and explores its source pack', () => {
     const onClose = vi.fn();
-    render(<MediaLibraryModal onClose={onClose} initialSelection={{ pack, item: pack.items[0] }} />);
+    renderLocalized(<MediaLibraryModal onClose={onClose} initialSelection={{ pack, item: pack.items[0] }} />);
 
     expect(screen.getByTestId('media-item-menu')).toBeInTheDocument();
     expect(screen.queryByTestId('media-library-modal')).toBeNull();
@@ -70,7 +77,7 @@ describe('MediaLibraryModal', () => {
   });
 
   it('explores a complete pack in place and favorites either the pack or one item', async () => {
-    render(<MediaLibraryModal onClose={() => {}} />);
+    renderLocalized(<MediaLibraryModal onClose={() => {}} />);
 
     const modal = screen.getByTestId('media-library-modal');
     expect(modal.firstElementChild).toHaveClass('h-[calc(100dvh_-_1rem)]', 'max-h-[calc(100%_-_1rem)]');
@@ -98,7 +105,7 @@ describe('MediaLibraryModal', () => {
   });
 
   it('renders inside an existing settings workspace without another modal', () => {
-    render(<MediaLibraryModal embedded onClose={() => {}} />);
+    renderLocalized(<MediaLibraryModal embedded onClose={() => {}} />);
 
     expect(screen.getByTestId('media-library-embedded')).toBeInTheDocument();
     expect(screen.queryByTestId('media-library-modal')).toBeNull();
@@ -106,7 +113,7 @@ describe('MediaLibraryModal', () => {
 
   it('deletes an owned pack after confirmation', async () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
-    render(<MediaLibraryModal onClose={() => {}} initialTab="mine" />);
+    renderLocalized(<MediaLibraryModal onClose={() => {}} initialTab="mine" />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
 
@@ -114,7 +121,7 @@ describe('MediaLibraryModal', () => {
   });
 
   it('creates and edits an independent named pack', async () => {
-    render(<MediaLibraryModal onClose={() => {}} initialTab="mine" />);
+    renderLocalized(<MediaLibraryModal onClose={() => {}} initialTab="mine" />);
     fireEvent.click(screen.getAllByRole('button', { name: 'Create pack' })[0]);
     const editor = screen.getByTestId('media-pack-editor');
     fireEvent.change(within(editor).getByRole('textbox', { name: 'Pack name' }), { target: { value: 'My reactions' } });
@@ -131,7 +138,7 @@ describe('MediaLibraryModal', () => {
   });
 
   it("uploads individual media and switches to favorites", async () => {
-    render(<MediaLibraryModal onClose={() => {}} initialTab="mine" initialKind="gif" />);
+    renderLocalized(<MediaLibraryModal onClose={() => {}} initialTab="mine" initialKind="gif" />);
 
     expect(screen.getAllByRole("button", { name: "Upload media" })).toHaveLength(2);
     const input = document.querySelector<HTMLInputElement>("input[type=\"file\"]");
@@ -147,7 +154,7 @@ describe('MediaLibraryModal', () => {
 
   it("opens an individual favorite from its thumbnail and only removes it from the star", async () => {
     mocks.favoriteItems = [pack.items[0]];
-    render(<MediaLibraryModal onClose={() => {}} initialTab="favorites" />);
+    renderLocalized(<MediaLibraryModal onClose={() => {}} initialTab="favorites" />);
 
     fireEvent.click(screen.getByRole("button", { name: "Open :party_cat: actions" }));
     expect(screen.getByTestId("media-item-menu")).toBeInTheDocument();
@@ -163,7 +170,7 @@ describe('MediaLibraryModal', () => {
   });
 
   it("server settings only track existing whole packs", async () => {
-    render(<MediaLibraryModal onClose={() => {}} server={{
+    renderLocalized(<MediaLibraryModal onClose={() => {}} server={{
       relayUrl: "wss://relay.example",
       emojiSet: {
         title: "Legacy server favorites",
@@ -194,7 +201,7 @@ describe('MediaLibraryModal', () => {
   });
 
   it("removes a selected live pack from the server", async () => {
-    render(<MediaLibraryModal onClose={() => {}} server={{
+    renderLocalized(<MediaLibraryModal onClose={() => {}} server={{
       relayUrl: "wss://relay.example",
       emojiSet: { title: "Server packs", emojis: [], packAddresses: [pack.address], updatedAt: 1 },
     }} />);

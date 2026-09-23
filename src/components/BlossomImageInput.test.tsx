@@ -6,13 +6,20 @@ const uploadToBlossom = vi.fn();
 vi.mock('@/lib/blossom', () => ({ uploadToBlossom }));
 
 import { ChannelAppearanceInput } from './BlossomImageInput';
+import { LocaleProvider } from '@/i18n/context';
+
+/** The component reads its copy from the dictionary, so it needs a provider. */
+const renderLocalized = (ui: React.ReactElement) => render(
+  <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,
+);
+
 
 describe('ChannelAppearanceInput', () => {
   it('shows a social header preview and only file upload controls', async () => {
     uploadToBlossom.mockResolvedValueOnce('https://cdn.example/new-picture.jpg');
     const onPictureChange = vi.fn();
 
-    render(
+    renderLocalized(
       <ChannelAppearanceInput
         picture="https://cdn.example/picture.jpg"
         banner="https://cdn.example/banner.jpg"

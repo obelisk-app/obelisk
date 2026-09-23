@@ -1,6 +1,17 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+/**
+ * The component reads its copy from the dictionary, so it needs a provider —
+ * and the provider has to come from the same module instance the component
+ * imported, which `vi.resetModules()` below makes a live question.
+ */
+const renderLocalized = async (ui: React.ReactElement) => {
+  const { LocaleProvider } = await import('@/i18n/context');
+  return render(<LocaleProvider initialLocale="en">{ui}</LocaleProvider>);
+};
+
+
 vi.mock('@/app/app/RelayStatusBanner', () => ({ default: () => 'relay status' }));
 
 describe('ActivityIndicator', () => {
@@ -20,7 +31,7 @@ describe('ActivityIndicator', () => {
       description: 'NIP-42 relay auth',
     });
 
-    render(<ActivityIndicator />);
+    await renderLocalized(<ActivityIndicator />);
 
     expect(screen.getByTestId('activity-indicator')).toHaveClass('hidden', 'lg:flex');
     expect(screen.getByText('Waiting for extension signature')).toBeInTheDocument();
@@ -35,7 +46,7 @@ describe('ActivityIndicator', () => {
     pushActivity('Waiting for extension signature', undefined, { operation: 'sign' });
     pushActivity('Publishing to relays', undefined, { operation: 'publish' });
 
-    render(<ActivityIndicator hideSigning />);
+    await renderLocalized(<ActivityIndicator hideSigning />);
 
     expect(screen.queryByText('Waiting for extension signature')).toBeNull();
     expect(screen.queryByText('Publishing to relays')).toBeNull();

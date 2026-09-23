@@ -9,6 +9,7 @@ import type { JsMediaItem, JsMediaKind, JsMediaPack } from '@/lib/nostr-bridge';
 import { publishRelayEmojiSet, type RelayEmojiSet } from '@/lib/relay-emojis';
 import { inferMediaKind } from '@/lib/media-kind';
 import MediaThumb from '@/components/media/MediaThumb';
+import { useTranslation } from '@/i18n/context';
 
 type LibraryTab = 'discover' | 'mine' | 'favorites' | 'server';
 type MediaFilter = 'all' | JsMediaKind;
@@ -62,6 +63,7 @@ export default function MediaLibraryModal({
   initialKind?: MediaFilter;
   initialSelection?: SelectedMedia;
 }) {
+  const { t } = useTranslation();
   const myPubkey = useMyPubkey();
   const uploadRef = useRef<HTMLInputElement>(null);
   const launchedFromItem = !!initialSelection;
@@ -236,30 +238,30 @@ export default function MediaLibraryModal({
       {!server && <input ref={uploadRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="hidden" onChange={(event) => { void uploadFavorite(event.target.files?.[0]); event.target.value = ""; }} />}
       <aside className="hidden w-52 shrink-0 flex-col border-r border-lc-border bg-lc-black/40 p-3 sm:flex">
         <div className="px-2 pb-4 pt-2">
-          <div className="text-base font-bold text-lc-white">Media library</div>
-          <div className="mt-1 text-xs text-lc-muted">Emoji · GIFs · Stickers</div>
+          <div className="text-base font-bold text-lc-white">{t('media.title')}</div>
+          <div className="mt-1 text-xs text-lc-muted">{t('media.subtitle')}</div>
         </div>
         <LibraryTabs tab={tab} setTab={setTab} server={!!server} />
         {!server && <div className="mt-auto grid gap-2">
-          <button type="button" disabled={busy} onClick={() => uploadRef.current?.click()} className="rounded-lg border border-lc-green px-3 py-2 text-sm font-semibold text-lc-green disabled:opacity-40">Upload media</button>
-          <button type="button" onClick={() => setEditing(newPack())} className="rounded-lg bg-lc-green px-3 py-2 text-sm font-semibold text-lc-black">Create pack</button>
+          <button type="button" disabled={busy} onClick={() => uploadRef.current?.click()} className="rounded-lg border border-lc-green px-3 py-2 text-sm font-semibold text-lc-green disabled:opacity-40">{t('media.upload')}</button>
+          <button type="button" onClick={() => setEditing(newPack())} className="rounded-lg bg-lc-green px-3 py-2 text-sm font-semibold text-lc-black">{t('media.createPack')}</button>
         </div>}
       </aside>
 
       <main className="flex min-h-0 min-w-0 flex-1 flex-col">
         <header className="flex shrink-0 items-center gap-3 border-b border-lc-border p-4">
           <div className="min-w-0 flex-1">
-            <div className="text-base font-bold text-lc-white sm:hidden">Media library</div>
+            <div className="text-base font-bold text-lc-white sm:hidden">{t('media.title')}</div>
             <input
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search packs and media"
-              aria-label="Search packs and media"
+              placeholder={t('media.searchPlaceholder')}
+              aria-label={t('media.searchPlaceholder')}
               className={`${fieldClass} mt-2 sm:mt-0`}
             />
           </div>
-          <button type="button" onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-lg text-lc-muted hover:bg-white/5 hover:text-lc-white" aria-label="Close media library">✕</button>
+          <button type="button" onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-lg text-lc-muted hover:bg-white/5 hover:text-lc-white" aria-label={t('media.close')}>✕</button>
         </header>
 
         <div className="shrink-0 overflow-x-auto border-b border-lc-border p-2 sm:hidden">
@@ -267,11 +269,11 @@ export default function MediaLibraryModal({
         </div>
 
         {!server && <div className="grid shrink-0 grid-cols-2 gap-2 border-b border-lc-border p-2 sm:hidden">
-          <button type="button" disabled={busy} onClick={() => uploadRef.current?.click()} className="rounded-lg border border-lc-green px-3 py-2 text-sm text-lc-green disabled:opacity-40">Upload media</button>
-          <button type="button" onClick={() => setEditing(newPack())} className="rounded-lg bg-lc-green px-3 py-2 text-sm font-semibold text-lc-black">Create pack</button>
+          <button type="button" disabled={busy} onClick={() => uploadRef.current?.click()} className="rounded-lg border border-lc-green px-3 py-2 text-sm text-lc-green disabled:opacity-40">{t('media.upload')}</button>
+          <button type="button" onClick={() => setEditing(newPack())} className="rounded-lg bg-lc-green px-3 py-2 text-sm font-semibold text-lc-black">{t('media.createPack')}</button>
         </div>}
 
-        <div className="flex shrink-0 gap-1 overflow-x-auto border-b border-lc-border px-4 py-2" role="group" aria-label="Filter packs by media type">
+        <div className="flex shrink-0 gap-1 overflow-x-auto border-b border-lc-border px-4 py-2" role="group" aria-label={t('media.filterByType')}>
           {([['all', 'All'], ['emoji', 'Emoji'], ['gif', 'GIFs'], ['sticker', 'Stickers']] as Array<[MediaFilter, string]>).map(([value, label]) => (
             <button key={value} type="button" onClick={() => setKindFilter(value)} aria-pressed={kindFilter === value} className={`rounded-full border px-3 py-1 text-xs ${kindFilter === value ? 'border-lc-green bg-lc-green/10 text-lc-green' : 'border-lc-border text-lc-muted'}`}>
               {label}
@@ -282,16 +284,16 @@ export default function MediaLibraryModal({
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
           {tab === "server" && server && (
             <section data-testid="server-pack-summary" className="mb-5 rounded-xl border border-lc-border bg-lc-black/40 p-4">
-              <h2 className="font-semibold text-lc-white">Server packs</h2>
+              <h2 className="font-semibold text-lc-white">{t('media.serverPacks')}</h2>
               <p className="mt-1 text-xs text-lc-muted">{(server.emojiSet.packAddresses ?? []).length} packs selected. Add or remove existing packs below.</p>
-              <p className="mt-2 text-xs text-lc-muted">Create and edit packs from My packs in your personal media settings.</p>
-              {server.emojiSet.emojis.length > 0 && <p className="mt-2 text-xs text-amber-300">Legacy individual items will be removed on the next pack change.</p>}
+              <p className="mt-2 text-xs text-lc-muted">{t('media.serverPacksHelp')}</p>
+              {server.emojiSet.emojis.length > 0 && <p className="mt-2 text-xs text-amber-300">{t('media.legacyHelp')}</p>}
             </section>
           )}
 
           {tab === "favorites" && favorites.items.length > 0 && (
             <section className="mb-5">
-              <h2 className="mb-2 text-sm font-semibold text-lc-white">Individual favorites</h2>
+              <h2 className="mb-2 text-sm font-semibold text-lc-white">{t('media.individualFavorites')}</h2>
               <MediaGrid
                 items={favorites.items.filter((item) => kindFilter === "all" || item.kind === kindFilter)}
                 favorites={favorites.items}
@@ -433,11 +435,12 @@ function PackCard({ pack, mine, favorite, itemFavorites, busy, server, serverSel
   onFavorite: () => void;
   onServer: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <article className="overflow-hidden rounded-xl border border-lc-border bg-lc-black/40">
       <div className="flex min-h-24 items-center gap-2 bg-lc-black p-3">
         {pack.items.slice(0, 5).map((item) => (
-          <button key={item.url} type="button" onClick={() => onOpenItem(item)} title="Open media actions" aria-label={"Open :" + item.name + ": actions"} className="group relative flex h-14 min-w-0 flex-1 items-center justify-center rounded-lg bg-lc-dark p-1">
+          <button key={item.url} type="button" onClick={() => onOpenItem(item)} title={t('media.openActions')} aria-label={"Open :" + item.name + ": actions"} className="group relative flex h-14 min-w-0 flex-1 items-center justify-center rounded-lg bg-lc-dark p-1">
             <MediaThumb src={item.url} alt={":" + item.name + ":"} className="max-h-full max-w-full object-contain" />
             {!server && itemFavorites.some((saved) => saved.url === item.url) && <span className="absolute right-1 top-1 text-xs text-lc-green">★</span>}
           </button>
@@ -447,10 +450,10 @@ function PackCard({ pack, mine, favorite, itemFavorites, busy, server, serverSel
         <h3 className="truncate text-sm font-semibold text-lc-white">{pack.title}</h3>
         <p className="mt-1 line-clamp-2 text-xs text-lc-muted">{pack.description || pack.items.length + " items"}</p>
         <div className="mt-3 flex flex-wrap gap-2">
-          <button type="button" onClick={onView} className="rounded-lg border border-lc-border px-2 py-1 text-xs text-lc-white">View pack</button>
+          <button type="button" onClick={onView} className="rounded-lg border border-lc-border px-2 py-1 text-xs text-lc-white">{t('media.viewPack')}</button>
           {!server && <button type="button" disabled={busy} onClick={onFavorite} className={"rounded-lg border px-2 py-1 text-xs " + (favorite ? "border-lc-green bg-lc-green/10 text-lc-green" : "border-lc-border text-lc-white")} aria-label={favorite ? "Remove " + pack.title + " from saved packs" : "Save " + pack.title}>{favorite ? "★ Saved" : "☆ Save pack"}</button>}
-          {mine && !server && <button type="button" onClick={onEdit} className="rounded-lg border border-lc-border px-2 py-1 text-xs text-lc-white">Edit</button>}
-          {mine && !server && <button type="button" disabled={busy} onClick={onDelete} className="rounded-lg border border-red-500/30 px-2 py-1 text-xs text-red-300">Delete</button>}
+          {mine && !server && <button type="button" onClick={onEdit} className="rounded-lg border border-lc-border px-2 py-1 text-xs text-lc-white">{t('media.edit')}</button>}
+          {mine && !server && <button type="button" disabled={busy} onClick={onDelete} className="rounded-lg border border-red-500/30 px-2 py-1 text-xs text-red-300">{t('media.delete')}</button>}
           {server && <button type="button" disabled={busy} onClick={onServer} className={"rounded-lg px-2 py-1 text-xs font-semibold " + (serverSelected ? "border border-red-500/30 text-red-300" : "bg-lc-green text-lc-black")}>{serverSelected ? "Remove pack from server" : "Add pack to server"}</button>}
           <span className="ml-auto self-center text-[10px] uppercase tracking-wide text-lc-muted">{pack.items.length} items</span>
         </div>
@@ -472,6 +475,7 @@ function PackViewer({ pack, favorite, itemFavorites, busy, server, serverSelecte
   onFavorite: () => void;
   onServer: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <ModalShell onClose={onClose} closeOnEscape={closeOnEscape} testId="media-pack-viewer" panelClassName="lc-card mx-3 flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden bg-lc-dark">
       <header className="flex items-start justify-between gap-4 border-b border-lc-border p-4">
@@ -479,7 +483,7 @@ function PackViewer({ pack, favorite, itemFavorites, busy, server, serverSelecte
           <h2 className="truncate font-semibold text-lc-white">{pack.title}</h2>
           <p className="mt-1 text-xs text-lc-muted">{pack.description ? pack.description + " · " : ""}{pack.items.length} items</p>
         </div>
-        <button type="button" onClick={onClose} aria-label="Close pack viewer" className="text-lc-muted">✕</button>
+        <button type="button" onClick={onClose} aria-label={t('media.closeViewer')} className="text-lc-muted">✕</button>
       </header>
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
         <MediaGrid items={pack.items} favorites={server ? [] : itemFavorites} onOpen={onOpenItem} />
@@ -503,6 +507,7 @@ function MediaItemMenu({ selection, favorite, busy, server, onClose, onViewPack,
   onFavorite: () => void;
   onCreatePack?: () => void;
 }) {
+  const { t } = useTranslation();
   const { item, pack } = selection;
   return (
     <ModalShell onClose={onClose} testId="media-item-menu" panelClassName="lc-card mx-3 w-full max-w-sm overflow-hidden bg-lc-dark">
@@ -511,14 +516,14 @@ function MediaItemMenu({ selection, favorite, busy, server, onClose, onViewPack,
           <h2 className="font-semibold text-lc-white">:{item.name}:</h2>
           <p className="mt-1 text-xs capitalize text-lc-muted">{item.kind}{pack ? " from " + pack.title : " · Individual favorite"}</p>
         </div>
-        <button type="button" onClick={onClose} aria-label="Close media actions" className="text-lc-muted">✕</button>
+        <button type="button" onClick={onClose} aria-label={t('media.closeActions')} className="text-lc-muted">✕</button>
       </header>
       <div className="flex h-64 items-center justify-center bg-lc-black p-6">
         <MediaThumb src={item.url} alt={":" + item.name + ":"} className="max-h-full max-w-full object-contain" />
       </div>
       <div className="grid gap-2 p-4">
         {pack && <button type="button" onClick={onViewPack} className="rounded-lg border border-lc-border px-3 py-2 text-sm text-lc-white">View {pack.title}</button>}
-        {!server && onCreatePack && <button type="button" onClick={onCreatePack} className="rounded-lg border border-lc-green px-3 py-2 text-sm text-lc-green">Create pack with this item</button>}
+        {!server && onCreatePack && <button type="button" onClick={onCreatePack} className="rounded-lg border border-lc-green px-3 py-2 text-sm text-lc-green">{t('media.createPackWithItem')}</button>}
         {!server && <button type="button" disabled={busy} onClick={onFavorite} className="rounded-lg bg-lc-green px-3 py-2 text-sm font-semibold text-lc-black">{favorite ? "Remove item from favorites" : "Add item to favorites"}</button>}
       </div>
     </ModalShell>
@@ -567,6 +572,7 @@ function PackEditor({ pack, initialKind, onClose, onSaved }: {
   onClose: () => void;
   onSaved: (pack: EditablePack) => Promise<void>;
 }) {
+  const { t } = useTranslation();
   const [draft, setDraft] = useState<EditablePack>({ ...pack, items: [...pack.items] });
   const [newItemKind, setNewItemKind] = useState<JsMediaKind>(initialKind);
   const [busy, setBusy] = useState(false);
@@ -619,24 +625,24 @@ function PackEditor({ pack, initialKind, onClose, onSaved }: {
   return (
     <ModalShell onClose={onClose} testId="media-pack-editor" panelClassName="lc-card mx-3 flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden bg-lc-dark">
       <header className="flex items-center justify-between border-b border-lc-border p-4">
-        <h2 className="font-semibold text-lc-white">Edit media pack</h2>
-        <button type="button" onClick={onClose} aria-label="Close pack editor" className="text-lc-muted">✕</button>
+        <h2 className="font-semibold text-lc-white">{t('media.editPack')}</h2>
+        <button type="button" onClick={onClose} aria-label={t('media.closeEditor')} className="text-lc-muted">✕</button>
       </header>
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
         <div className="grid gap-3 sm:grid-cols-2">
-          <input value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} className={fieldClass} placeholder="Pack name" aria-label="Pack name" />
-          <input value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} className={fieldClass} placeholder="Description" aria-label="Pack description" />
+          <input value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} className={fieldClass} placeholder={t('media.packName')} aria-label={t('media.packName')} />
+          <input value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} className={fieldClass} placeholder={t('mobile.field.description')} aria-label={t('media.packDescription')} />
         </div>
         <div className="my-4 flex flex-wrap items-end gap-2">
           <input ref={inputRef} type="file" multiple accept="image/*" className="hidden" onChange={(event) => { void addFiles(event.target.files); event.target.value = ''; }} />
           <label className="text-xs text-lc-muted">
-            <span className="mb-1 block">New items are</span>
-            <select value={newItemKind} onChange={(event) => setNewItemKind(event.target.value as JsMediaKind)} aria-label="New item type" className="rounded-lg border border-lc-border bg-lc-black px-3 py-2 text-sm text-lc-white">
+            <span className="mb-1 block">{t('media.newItemsAre')}</span>
+            <select value={newItemKind} onChange={(event) => setNewItemKind(event.target.value as JsMediaKind)} aria-label={t('media.newItemType')} className="rounded-lg border border-lc-border bg-lc-black px-3 py-2 text-sm text-lc-white">
               <option value="emoji">Emoji</option><option value="gif">GIF</option><option value="sticker">Sticker</option>
             </select>
           </label>
-          <button type="button" disabled={busy} onClick={() => inputRef.current?.click()} className="rounded-lg border border-lc-green px-3 py-2 text-sm text-lc-green">Upload media</button>
-          <button type="button" onClick={() => setDraft({ ...draft, items: [...draft.items, { name: '', url: '', kind: newItemKind }] })} className="rounded-lg border border-lc-border px-3 py-2 text-sm text-lc-white">Add URL</button>
+          <button type="button" disabled={busy} onClick={() => inputRef.current?.click()} className="rounded-lg border border-lc-green px-3 py-2 text-sm text-lc-green">{t('media.upload')}</button>
+          <button type="button" onClick={() => setDraft({ ...draft, items: [...draft.items, { name: '', url: '', kind: newItemKind }] })} className="rounded-lg border border-lc-border px-3 py-2 text-sm text-lc-white">{t('media.addUrl')}</button>
         </div>
         <div className="space-y-2">
           {draft.items.map((item, index) => (
@@ -647,15 +653,15 @@ function PackEditor({ pack, initialKind, onClose, onSaved }: {
                 <option value="emoji">Emoji</option><option value="gif">GIF</option><option value="sticker">Sticker</option>
               </select>
               <input value={item.url} onChange={(event) => setDraft({ ...draft, items: draft.items.map((value, itemIndex) => itemIndex === index ? { ...value, url: event.target.value } : value) })} className={fieldClass} placeholder="https://…" aria-label={`Item ${index + 1} URL`} />
-              <button type="button" onClick={() => setDraft({ ...draft, items: draft.items.filter((_, itemIndex) => itemIndex !== index) })} className="px-2 py-1 text-xs text-red-300">Remove</button>
+              <button type="button" onClick={() => setDraft({ ...draft, items: draft.items.filter((_, itemIndex) => itemIndex !== index) })} className="px-2 py-1 text-xs text-red-300">{t('media.remove')}</button>
             </div>
           ))}
-          {draft.items.length === 0 && <div className="py-10 text-center text-sm text-lc-muted">Upload emoji, GIFs, or stickers into this pack.</div>}
+          {draft.items.length === 0 && <div className="py-10 text-center text-sm text-lc-muted">{t('media.uploadHelp')}</div>}
         </div>
       </div>
       {error && <div className="border-t border-lc-border px-4 py-2 text-xs text-red-300" role="alert">{error}</div>}
       <footer className="flex justify-end gap-2 border-t border-lc-border p-4">
-        <button type="button" onClick={onClose} className="rounded-lg border border-lc-border px-4 py-2 text-sm text-lc-white">Cancel</button>
+        <button type="button" onClick={onClose} className="rounded-lg border border-lc-border px-4 py-2 text-sm text-lc-white">{t('common.cancel')}</button>
         <button type="button" disabled={busy} onClick={() => void save()} className="rounded-lg bg-lc-green px-4 py-2 text-sm font-semibold text-lc-black disabled:opacity-40">{busy ? "Saving…" : "Save pack"}</button>
       </footer>
     </ModalShell>

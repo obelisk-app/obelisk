@@ -29,6 +29,7 @@ import { DebugOverlay } from './DebugOverlay';
 import ShootingStars from '@/components/ShootingStars';
 import { qualityColor, type QualitySample } from '@/lib/voice/stats';
 import { toggleFullscreen, useFullscreenState } from './fullscreen';
+import { useTranslation } from '@/i18n/context';
 
 interface Props {
   channelId: string;
@@ -45,6 +46,7 @@ type AuthGate =
   | { phase: 'ready'; members: readonly string[]; admins: readonly string[]; open: boolean };
 
 export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen, onToggleChat }: Props) {
+  const { t } = useTranslation();
   const router = useRouter();
   const groups = useGroups();
   const currentRelayUrl = useCurrentRelayUrl();
@@ -636,7 +638,7 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
     return (
       <CenteredPanel>
         <Spinner />
-        <div className="mt-3 text-sm text-neutral-300">Loading channel membership…</div>
+        <div className="mt-3 text-sm text-neutral-300">{t('voice.loadingMembership')}</div>
         <div className="mt-1 font-mono text-xs text-neutral-500 break-all">{channelId}</div>
         {error && <div className="mt-3 text-xs text-red-400">{error}</div>}
       </CenteredPanel>
@@ -645,14 +647,14 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
   if (gate.phase === 'not-a-member') {
     return (
       <CenteredPanel>
-        <div className="text-lg font-semibold">You aren&apos;t a member of this channel.</div>
-        <div className="mt-2 text-sm text-neutral-400">Ask an admin to add you, then refresh this page.</div>
+        <div className="text-lg font-semibold">{t('voice.notMember')}</div>
+        <div className="mt-2 text-sm text-neutral-400">{t('voice.notMemberHelp')}</div>
         <div className="mt-4 font-mono text-xs text-neutral-500 break-all">{channelId}</div>
         <button
           onClick={() => router.push('/app')}
           className="mt-6 px-4 py-2 rounded-full bg-neutral-800 hover:bg-neutral-700 text-sm"
         >
-          Back
+          {t('common.back')}
         </button>
       </CenteredPanel>
     );
@@ -693,7 +695,7 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
                     ? 'This call is live.'
                     : 'No one is detected in this call yet.'}
                 {browsingWhileConnected && (
-                  <span className="block mt-1 text-lc-white/70">You will stay connected to your current call until you join this one.</span>
+                  <span className="block mt-1 text-lc-white/70">{t('voice.stayConnected')}</span>
                 )}
               </div>
               <PassiveCallRoster
@@ -707,7 +709,7 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
                 data-testid="join-voice-btn"
                 data-tour="voice-join"
               >
-                Join voice channel
+                {t('voice.join')}
               </button>
               {error && <div className="mt-4 text-xs text-red-300">{error}</div>}
             </div>
@@ -878,6 +880,7 @@ function PassiveCallRoster({ pubkeys, count, mode }: {
   count: number;
   mode?: 'sfu' | 'mesh';
 }) {
+  const { t } = useTranslation();
   if (count <= 0 && pubkeys.length === 0) return null;
   const visible = pubkeys.slice(0, 6);
   const hidden = Math.max(0, count - visible.length);
@@ -888,7 +891,7 @@ function PassiveCallRoster({ pubkeys, count, mode }: {
       data-testid="passive-call-roster"
     >
       <div className="mb-2 flex items-center justify-between gap-3 text-[11px] uppercase tracking-[0.12em] text-lc-muted">
-        <span>In Call</span>
+        <span>{t('voice.inCall')}</span>
         <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-lc-white/75">{topology}</span>
       </div>
       {visible.length > 0 ? (
@@ -1018,6 +1021,7 @@ function SfuStatusPill({ status }: {
 }
 
 export function MeshSyncStatusPill({ count }: { count: number }) {
+  const { t } = useTranslation();
   if (count <= 0) return null;
   const detail = count === 1
     ? 'Peer detected; WebRTC media channels are still syncing in the background.'
@@ -1034,8 +1038,8 @@ export function MeshSyncStatusPill({ count }: { count: number }) {
         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-300 opacity-70" />
         <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-amber-300" />
       </span>
-      <span className="hidden sm:inline">Media syncing</span>
-      <span className="sm:hidden">Syncing</span>
+      <span className="hidden sm:inline">{t('voice.mediaSyncing')}</span>
+      <span className="sm:hidden">{t('voice.syncing')}</span>
       {count > 1 && <span className="tabular-nums text-amber-50/90">{count}</span>}
     </div>
   );
@@ -1047,6 +1051,7 @@ function RoomHeader({ name, count, sfuStatus, meshSyncingCount = 0 }: {
   sfuStatus?: 'na' | 'starting' | 'connected' | 'unavailable' | 'unauthorized';
   meshSyncingCount?: number;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="relative z-10 px-3 sm:px-5 py-3 flex items-center gap-3 border-b border-white/5" data-testid="voice-room-header">
       <div className="min-w-0 flex items-center gap-2.5 flex-1 min-w-0">
@@ -1055,7 +1060,7 @@ function RoomHeader({ name, count, sfuStatus, meshSyncingCount = 0 }: {
           <span className="relative inline-flex rounded-full h-2 w-2 bg-lc-green" />
         </span>
         <div className="min-w-0">
-          <div className="text-[10px] uppercase tracking-[0.14em] text-lc-muted leading-none mb-1">Voice channel</div>
+          <div className="text-[10px] uppercase tracking-[0.14em] text-lc-muted leading-none mb-1">{t('voice.channel')}</div>
           <div className="font-semibold text-lc-white truncate text-sm sm:text-base leading-tight">{name}</div>
         </div>
       </div>
@@ -1254,6 +1259,7 @@ function QualityDot({ pubkey }: { pubkey: string }) {
 }
 
 function ScrollableRail({ children }: { children: React.ReactNode }) {
+  const { t } = useTranslation();
   const ref = useRef<HTMLElement | null>(null);
   const [canPrev, setCanPrev] = useState(false);
   const [canNext, setCanNext] = useState(false);
@@ -1305,7 +1311,7 @@ function ScrollableRail({ children }: { children: React.ReactNode }) {
         <button
           type="button"
           onClick={() => scroll(-1)}
-          aria-label="Scroll previous"
+          aria-label={t('common.previous')}
           className="absolute z-10 left-1 md:left-1/2 md:-translate-x-1/2 top-1 md:top-1 w-7 h-7 rounded-full bg-black/70 backdrop-blur text-white flex items-center justify-center shadow-lg ring-1 ring-white/15 hover:bg-black/85"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1318,7 +1324,7 @@ function ScrollableRail({ children }: { children: React.ReactNode }) {
         <button
           type="button"
           onClick={() => scroll(1)}
-          aria-label="Scroll next"
+          aria-label={t('common.next')}
           className="absolute z-10 right-1 md:right-auto md:left-1/2 md:-translate-x-1/2 bottom-auto top-1/2 -translate-y-1/2 md:translate-y-0 md:top-auto md:bottom-1 w-7 h-7 rounded-full bg-black/70 backdrop-blur text-white flex items-center justify-center shadow-lg ring-1 ring-white/15 hover:bg-black/85"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

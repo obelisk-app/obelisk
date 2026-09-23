@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 import { useVoiceStore } from '@/store/voice';
 import { getActiveVoiceClient } from '@/lib/voice/active-client';
 import { VIDEO_QUALITIES, type VideoQuality } from '@/lib/voice/quality';
+import { useTranslation } from '@/i18n/context';
 
 interface VoiceControlsProps {
   onLeave: () => void;
@@ -17,6 +18,7 @@ interface VoiceControlsProps {
 }
 
 export default function VoiceControls({ onLeave, isChatOpen, onToggleChat }: VoiceControlsProps) {
+  const { t } = useTranslation();
   const isMuted = useVoiceStore((s) => s.isMuted);
   const isDeafened = useVoiceStore((s) => s.isDeafened);
   const isCameraOn = useVoiceStore((s) => s.isCameraOn);
@@ -170,7 +172,7 @@ export default function VoiceControls({ onLeave, isChatOpen, onToggleChat }: Voi
           <CircleBtn
             active={false}
             onClick={handleSwitchCamera}
-            title="Switch camera"
+            title={t('voice.switchCamera')}
             data-testid="switch-camera-btn"
           >
             <SwitchCameraIcon />
@@ -202,7 +204,7 @@ export default function VoiceControls({ onLeave, isChatOpen, onToggleChat }: Voi
           <CircleBtn
             active={qualityOpen}
             onClick={() => setQualityOpen((v) => !v)}
-            title="Video quality"
+            title={t('voice.videoQuality')}
             data-testid="quality-btn"
           >
             <GearIcon />
@@ -213,19 +215,19 @@ export default function VoiceControls({ onLeave, isChatOpen, onToggleChat }: Voi
               data-testid="quality-popover"
             >
               <QualitySection
-                label="My camera"
+                label={t('voice.myCamera')}
                 value={videoQuality}
                 onChange={(q) => { void handleSetVideoQuality(q); }}
                 testid="quality-out"
               />
               <div className="h-px bg-white/10 my-3" />
               <QualitySection
-                label="Incoming"
+                label={t('voice.incoming')}
                 value={receivedVideoQuality}
                 onChange={(q) => { void handleSetReceivedQuality(q); }}
                 testid="quality-in"
               />
-              <p className="text-[10px] text-white/40 mt-2">Audio is always sent at high quality.</p>
+              <p className="text-[10px] text-white/40 mt-2">{t('voice.audioNote')}</p>
             </div>
           )}
         </div>
@@ -235,7 +237,7 @@ export default function VoiceControls({ onLeave, isChatOpen, onToggleChat }: Voi
         <button
           onClick={onLeave}
           className="w-11 h-11 rounded-full bg-red-600 hover:bg-red-500 active:bg-red-700 flex items-center justify-center text-white transition-colors shadow-lg shadow-red-900/40"
-          title="Disconnect"
+          title={t('voice.disconnect')}
           data-testid="leave-voice-btn"
         >
           <LeaveIcon />

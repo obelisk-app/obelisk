@@ -55,7 +55,7 @@ export default function NoteComposer({
       <div className="mb-2 flex items-center gap-1">
         <button type="button" className="rounded px-2 py-1 text-sm font-bold text-lc-muted hover:bg-white/5 hover:text-lc-white" onClick={() => wrapSelection('**')}>B</button>
         <button type="button" className="rounded px-2 py-1 text-sm italic text-lc-muted hover:bg-white/5 hover:text-lc-white" onClick={() => wrapSelection('_')}>I</button>
-        <button type="button" className="rounded px-2 py-1 text-xs text-lc-muted hover:bg-white/5 hover:text-lc-white" onClick={() => wrapSelection('[', '](https://)')}>Link</button>
+        <button type="button" className="rounded px-2 py-1 text-xs text-lc-muted hover:bg-white/5 hover:text-lc-white" onClick={() => wrapSelection('[', '](https://)')}>{t('composer.link')}</button>
         <button
           type="button"
           className={`ml-auto rounded px-2 py-1 text-xs ${sensitive ? 'text-lc-green' : 'text-lc-muted hover:text-lc-white'}`}

@@ -252,7 +252,7 @@ export default function ProfileEditor({ mode, onComplete, onSkip, embedded = fal
                 {currentPicture ? (
                   <img
                     src={currentPicture}
-                    alt="Avatar"
+                    alt={t('profileEditor.avatarAlt')}
                     className="w-24 h-24 rounded-full object-cover ring-2 ring-lc-border group-hover:ring-lc-green/50 transition"
                   />
                 ) : (

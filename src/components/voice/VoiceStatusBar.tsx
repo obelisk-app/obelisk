@@ -14,8 +14,10 @@ import { useGroups } from '@/lib/nostr-bridge';
 import { useVoiceStore } from '@/store/voice';
 import { getActiveVoiceClient, setActiveVoiceClient } from '@/lib/voice/active-client';
 import { requestVoiceJump } from '@/lib/voice/jump-to-voice';
+import { useTranslation } from '@/i18n/context';
 
 export default function VoiceStatusBar() {
+  const { t } = useTranslation();
   const channelId = useVoiceStore((s) => s.currentVoiceChannelId);
   const relayUrl = useVoiceStore((s) => s.currentVoiceRelayUrl);
   const isMuted = useVoiceStore((s) => s.isMuted);
@@ -126,13 +128,13 @@ export default function VoiceStatusBar() {
           <button
             onClick={handleJump}
             className="flex-1 min-w-0 flex items-center gap-2 text-left hover:bg-lc-border/30 rounded-md px-1.5 py-1 transition"
-            title="Go to voice channel"
+            title={t('voice.goToChannel')}
           >
             <span className="shrink-0 w-8 h-8 rounded-md bg-lc-green/10 flex items-center justify-center text-lc-green">
               <SignalIcon />
             </span>
             <span className="min-w-0 flex-1 leading-tight">
-              <span className="block text-sm text-lc-green font-semibold">Voice connected</span>
+              <span className="block text-sm text-lc-green font-semibold">{t('voice.connected')}</span>
               <span className="block text-xs text-lc-muted truncate">
                 {group?.name ?? `${channelId.slice(0, 8)}…`}
               </span>
@@ -141,7 +143,7 @@ export default function VoiceStatusBar() {
           <button
             onClick={handleLeave}
             className="w-7 h-7 rounded-md bg-red-600 hover:bg-red-700 flex items-center justify-center text-white transition-colors"
-            title="Disconnect"
+            title={t('voice.disconnect')}
             data-testid="voice-bar-leave"
           >
             <LeaveIcon />
@@ -159,7 +161,7 @@ export default function VoiceStatusBar() {
             {isCameraOn ? <CameraOn /> : <CameraOff />}
           </SmallBtn>
           {isCameraOn && hasMultipleCameras && (
-            <SmallBtn active={false} onClick={handleSwitchCamera} title="Switch camera" data-testid="voice-bar-switch-camera">
+            <SmallBtn active={false} onClick={handleSwitchCamera} title={t('voice.switchCamera')} data-testid="voice-bar-switch-camera">
               <SwitchCamera />
             </SmallBtn>
           )}

@@ -4,10 +4,12 @@ import { useState } from 'react';
 import { nostrActions, useSignerReady } from '@/lib/nostr-bridge';
 import { OBELISK_SIGNING_KINDS } from '@/lib/nostr-signing-kinds';
 import { setPreference, usePreferences } from '@/lib/preferences';
+import { useTranslation } from '@/i18n/context';
 
 type Result = 'pending' | 'accepted' | 'rejected';
 
 export default function DeveloperSignatureTest({ mobile = false }: { mobile?: boolean }) {
+  const { t } = useTranslation();
   const signerReady = useSignerReady();
   const prefs = usePreferences();
   const [running, setRunning] = useState(false);
@@ -40,7 +42,7 @@ export default function DeveloperSignatureTest({ mobile = false }: { mobile?: bo
   return (
     <details className={mobile ? 'settings-section' : 'rounded-lg border border-lc-border bg-lc-dark/30 p-3'} data-testid="developer-signature-test">
       <summary className={mobile ? 'settings-section-title cursor-pointer' : 'cursor-pointer text-xs font-semibold uppercase tracking-wider text-lc-muted'}>
-        Developer settings
+        {t('developer.title')}
       </summary>
       {mobile && (
         <button
@@ -49,8 +51,8 @@ export default function DeveloperSignatureTest({ mobile = false }: { mobile?: bo
           onClick={() => setPreference('developerRelayDebug', !prefs.developerRelayDebug)}
         >
           <span style={{ minWidth: 0, flex: 1 }}>
-            <span style={{ display: 'block' }}>Developer relay logs</span>
-            <span className="settings-row-meta muted" style={{ display: 'block', maxWidth: '100%', marginTop: 3 }}>Browser console.</span>
+            <span style={{ display: 'block' }}>{t('developer.relayLogs')}</span>
+            <span className="settings-row-meta muted" style={{ display: 'block', maxWidth: '100%', marginTop: 3 }}>{t('developer.console')}</span>
           </span>
           <span
             className={`toggle ${prefs.developerRelayDebug ? 'on' : ''}`}
@@ -62,7 +64,7 @@ export default function DeveloperSignatureTest({ mobile = false }: { mobile?: bo
       )}
       <div className={mobile ? 'settings-row !block' : 'mt-3 space-y-3'}>
         <div className={mobile ? 'settings-row-meta muted' : 'text-xs text-lc-muted'}>
-          Request mock signatures for every event kind Obelisk uses. Signed events are discarded and never published.
+          {t('developer.signatureHelp')}
         </div>
         <button
           type="button"

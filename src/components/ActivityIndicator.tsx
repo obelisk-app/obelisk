@@ -3,6 +3,7 @@
 import { useActivityLog, dismissActivity, type ActivityEntry } from '@/lib/activity-log';
 import { usePreferences } from '@/lib/preferences';
 import RelayStatusBanner from '@/app/app/RelayStatusBanner';
+import { useTranslation } from '@/i18n/context';
 
 export default function ActivityIndicator({ hideSigning = false }: { hideSigning?: boolean }) {
   const items = useActivityLog();
@@ -30,6 +31,7 @@ export default function ActivityIndicator({ hideSigning = false }: { hideSigning
 }
 
 function ActivityRow({ entry }: { entry: ActivityEntry }) {
+  const { t } = useTranslation();
   const color =
     entry.status === 'error'
       ? 'border-red-500/40 bg-red-950/80 text-red-100'
@@ -58,7 +60,7 @@ function ActivityRow({ entry }: { entry: ActivityEntry }) {
           type="button"
           onClick={() => dismissActivity(entry.id)}
           className="-mr-1 -mt-0.5 rounded p-0.5 text-red-200/80 hover:bg-red-500/20 hover:text-red-100"
-          aria-label="Dismiss"
+          aria-label={t('common.dismiss')}
         >
           <span aria-hidden>×</span>
         </button>

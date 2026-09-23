@@ -2,6 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import VoiceRoom from './VoiceRoom';
 import { useVoiceStore } from '@/store/voice';
+import { LocaleProvider } from '@/i18n/context';
+
+/** The component reads its copy from the dictionary, so it needs a provider. */
+const renderLocalized = (ui: React.ReactElement) => render(
+  <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,
+);
+
 
 const voiceHarness = vi.hoisted(() => ({
   activeClient: null as any,
@@ -134,10 +141,10 @@ describe('VoiceRoom join page', () => {
     voiceHarness.activeClient = active;
     useVoiceStore.setState({ currentVoiceChannelId: 'old-voice' });
 
-    const { rerender } = render(<VoiceRoom channelId="old-voice" channelName="Old Voice" />);
+    const { rerender } = renderLocalized(<VoiceRoom channelId="old-voice" channelName="Old Voice" />);
     expect(await screen.findByTestId('voice-controls')).toBeInTheDocument();
 
-    rerender(<VoiceRoom channelId="new-voice" channelName="New Voice" />);
+    rerender(<LocaleProvider initialLocale="en">{<><VoiceRoom channelId="new-voice" channelName="New Voice" /></>}</LocaleProvider>);
     expect(await screen.findByTestId('join-voice-btn')).toBeInTheDocument();
 
     expect(active.leave).not.toHaveBeenCalled();
@@ -156,7 +163,7 @@ describe('VoiceRoom join page', () => {
       participantPubkeys: ['me-pubkey', 'peer-a'],
     };
 
-    render(<VoiceRoom channelId="old-voice" channelName="Old Voice" />);
+    renderLocalized(<VoiceRoom channelId="old-voice" channelName="Old Voice" />);
 
     fireEvent.click(await screen.findByTestId('join-voice-btn'));
     expect(await screen.findByTestId('voice-controls')).toBeInTheDocument();
@@ -168,7 +175,7 @@ describe('VoiceRoom join page', () => {
 
   it('returns to the join page when relay signaling is rejected', async () => {
     voiceHarness.joinError = new Error('Relay rejected event: restricted: Access denied');
-    render(<VoiceRoom channelId="old-voice" channelName="Old Voice" />);
+    renderLocalized(<VoiceRoom channelId="old-voice" channelName="Old Voice" />);
 
     fireEvent.click(await screen.findByTestId('join-voice-btn'));
 
@@ -190,7 +197,7 @@ describe('VoiceRoom join page', () => {
     bridgeHarness.profiles['peer-a'] = { displayName: 'Ada' };
     bridgeHarness.profiles['peer-b'] = { name: 'Ben' };
 
-    render(<VoiceRoom channelId="new-voice" channelName="New Voice" />);
+    renderLocalized(<VoiceRoom channelId="new-voice" channelName="New Voice" />);
 
     expect(await screen.findByTestId('join-voice-btn')).toBeInTheDocument();
     expect(screen.getByText('2 people are in this call.')).toBeInTheDocument();

@@ -179,10 +179,10 @@ export default function MobileComposer({
           data-testid="composer-files"
         />
 
-        <ToolButton label="Bold" onClick={() => wrapSelection('**')} testId="mobile-composer-bold">
+        <ToolButton label={t('composer.bold')} onClick={() => wrapSelection('**')} testId="mobile-composer-bold">
           <span className="text-base font-bold">B</span>
         </ToolButton>
-        <ToolButton label="Link" onClick={() => wrapSelection('[', '](https://)')} testId="mobile-composer-link">
+        <ToolButton label={t('composer.link')} onClick={() => wrapSelection('[', '](https://)')} testId="mobile-composer-link">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
             <path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.5 1.5" />
             <path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7L12 19" />

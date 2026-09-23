@@ -18,6 +18,7 @@ import {
   type RelayRole,
   type RelayRoles,
 } from '@/lib/relay-roles';
+import { useTranslation } from '@/i18n/context';
 
 const fieldClass = 'rounded-lg border border-lc-border bg-lc-black px-3 py-2 text-sm text-lc-white outline-none focus:border-lc-green';
 
@@ -53,6 +54,7 @@ export default function RelayRolesAdminModal({
   roles: RelayRoles;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [draft, setDraft] = useState<RelayRole[]>(() => sortRoles(roles.roles));
   const [newName, setNewName] = useState('');
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -136,13 +138,13 @@ export default function RelayRolesAdminModal({
     >
       <header className="flex items-start justify-between gap-4 border-b border-lc-border px-5 py-4">
         <div>
-          <h2 className="text-base font-bold text-lc-white">Roles &amp; ranks</h2>
+          <h2 className="text-base font-bold text-lc-white">{t('roles.title')}</h2>
           <p className="mt-1 text-xs text-lc-muted">
             Ordered most senior first. Members can hold several roles — the top one they hold is the badge
             shown in chat and the member list, until you revoke it.
           </p>
         </div>
-        <button onClick={onClose} className="rounded p-1 text-lc-muted hover:bg-lc-card hover:text-lc-white" aria-label="Close">✕</button>
+        <button onClick={onClose} className="rounded p-1 text-lc-muted hover:bg-lc-card hover:text-lc-white" aria-label={t('common.close')}>✕</button>
       </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
@@ -151,23 +153,23 @@ export default function RelayRolesAdminModal({
             value={newName}
             onChange={(event) => setNewName(event.target.value)}
             onKeyDown={(event) => { if (event.key === 'Enter') addRole(); }}
-            placeholder="New role name…"
-            aria-label="New role name"
+            placeholder={t('roles.newPlaceholder')}
+            aria-label={t('roles.newLabel')}
             maxLength={32}
             className={`${fieldClass} min-w-[200px] flex-1`}
           />
-          <button type="button" onClick={addRole} className="lc-pill lc-pill-secondary text-xs">Add role</button>
+          <button type="button" onClick={addRole} className="lc-pill lc-pill-secondary text-xs">{t('roles.add')}</button>
         </div>
 
         {draft.length === 0 && (
-          <p className="py-10 text-center text-sm text-lc-muted">No roles yet. Create one above.</p>
+          <p className="py-10 text-center text-sm text-lc-muted">{t('roles.empty')}</p>
         )}
 
         <ul className="grid gap-2">
           {draft.map((role, index) => (
             <li key={role.id} data-testid={`role-row-${role.id}`} className="rounded-xl border border-lc-border bg-lc-black/40">
               <div className="flex flex-wrap items-center gap-2 p-3">
-                <span className="text-[10px] font-mono text-lc-muted" title="Tier — higher wins">T{role.tier}</span>
+                <span className="text-[10px] font-mono text-lc-muted" title={t('roles.tier')}>T{role.tier}</span>
                 <RoleEmojiField
                   role={role}
                   onPick={(emoji) => setDraft(draft.map((value) => value.id === role.id ? { ...value, emoji } : value))}
@@ -204,7 +206,7 @@ export default function RelayRolesAdminModal({
                   </svg>
                   {(roles.holders[role.id] ?? []).length} members
                 </button>
-                <button type="button" onClick={() => removeRole(role)} className="rounded border border-red-500/30 px-2 py-1 text-xs text-red-300" aria-label={`Delete ${role.name}`}>Delete</button>
+                <button type="button" onClick={() => removeRole(role)} className="rounded border border-red-500/30 px-2 py-1 text-xs text-red-300" aria-label={`Delete ${role.name}`}>{t('mobile.layout.delete')}</button>
               </div>
               {expanded === role.id && savedIds.has(role.id) && (
                 <RoleMembers
@@ -225,7 +227,7 @@ export default function RelayRolesAdminModal({
       <footer className="flex items-center justify-between gap-3 border-t border-lc-border px-5 py-3">
         <span className="text-xs text-lc-muted">{draft.length} roles · relay operator only</span>
         <div className="flex gap-2">
-          <button type="button" onClick={onClose} className="lc-pill lc-pill-secondary text-xs">Close</button>
+          <button type="button" onClick={onClose} className="lc-pill lc-pill-secondary text-xs">{t('common.close')}</button>
           <button
             type="button"
             onClick={saveRoles}
@@ -244,6 +246,7 @@ const EMOJI_POPOVER_W = 360;
 const EMOJI_POPOVER_H = 430;
 
 function RoleEmojiField({ role, onPick }: { role: RelayRole; onPick: (emoji: string) => void }) {
+  const { t } = useTranslation();
   const [anchor, setAnchor] = useState<{ left: number; top: number } | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -269,7 +272,7 @@ function RoleEmojiField({ role, onPick }: { role: RelayRole; onPick: (emoji: str
         onClick={() => (anchor ? setAnchor(null) : open())}
         aria-label={`${role.id} emoji`}
         aria-expanded={!!anchor}
-        title="Badge emoji"
+        title={t('roles.badgeEmoji')}
         className="flex h-9 w-10 items-center justify-center rounded-lg border border-lc-border bg-lc-black text-base hover:border-lc-green/50"
       >
         {role.emoji || <span className="text-xs text-lc-muted">+</span>}
@@ -319,6 +322,7 @@ function RoleMembers({ role, holders, busy, onGrant, onRevoke, onError }: {
   onRevoke: (pubkey: string) => void;
   onError: (message: string) => void;
 }) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const people = useRelayPeople();
   const held = useMemo(() => new Set(holders), [holders]);
@@ -351,7 +355,7 @@ function RoleMembers({ role, holders, busy, onGrant, onRevoke, onError }: {
         value={query}
         onChange={(event) => setQuery(event.target.value)}
         onKeyDown={(event) => { if (event.key === 'Enter' && pastedIsNew) grantPasted(); }}
-        placeholder="Search members by name, NIP-05 or npub…"
+        placeholder={t('roles.searchPlaceholder')}
         aria-label={`Grant ${role.name} to`}
         className={`${fieldClass} w-full`}
       />
@@ -395,7 +399,7 @@ function RoleMembers({ role, holders, busy, onGrant, onRevoke, onError }: {
           {holders.map((pubkey) => (
             <RoleHolderRow key={pubkey} pubkey={pubkey} roleName={role.name} busy={busy} onRevoke={() => onRevoke(pubkey)} />
           ))}
-          {holders.length === 0 && <li className="py-2 text-xs text-lc-muted">Nobody holds this role yet.</li>}
+          {holders.length === 0 && <li className="py-2 text-xs text-lc-muted">{t('roles.nobody')}</li>}
         </ul>
       </div>
     </div>
@@ -409,6 +413,7 @@ function RolePersonRow({ person, busy, roleName, onClick }: {
   roleName: string;
   onClick: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <li>
       <button
@@ -426,7 +431,7 @@ function RolePersonRow({ person, busy, roleName, onClick }: {
         {person.role === 'admin' && (
           <span className="shrink-0 rounded-full bg-lc-green/15 px-1.5 py-px text-[9px] font-bold uppercase text-lc-green">admin</span>
         )}
-        <span className="shrink-0 text-xs font-semibold text-lc-green">Grant</span>
+        <span className="shrink-0 text-xs font-semibold text-lc-green">{t('roles.grant')}</span>
       </button>
     </li>
   );
@@ -449,6 +454,7 @@ function RoleHolderRow({ pubkey, roleName, busy, onRevoke }: {
   busy: boolean;
   onRevoke: () => void;
 }) {
+  const { t } = useTranslation();
   const meta = useUserMetadata(pubkey);
   return (
     <li className="flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-lc-card">
@@ -463,7 +469,7 @@ function RoleHolderRow({ pubkey, roleName, busy, onRevoke }: {
         className="rounded border border-red-500/30 px-2 py-0.5 text-xs text-red-300 disabled:opacity-40"
         aria-label={`Revoke ${roleName} from ${shortNpub(pubkey)}`}
       >
-        Revoke
+        {t('roles.revoke')}
       </button>
     </li>
   );

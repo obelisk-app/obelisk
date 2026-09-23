@@ -11,6 +11,7 @@
  */
 
 import { useState } from 'react';
+import { useTranslation } from '@/i18n/context';
 
 interface Props {
   label: string;
@@ -38,6 +39,7 @@ export function ChannelAppearanceInput({
   onPictureChange: (url: string) => void;
   onBannerChange: (url: string) => void;
 }) {
+  const { t } = useTranslation();
   const [uploading, setUploading] = useState<'picture' | 'banner' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -64,12 +66,12 @@ export function ChannelAppearanceInput({
       >
         {banner && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={banner} alt="Channel banner preview" className="h-full w-full rounded-xl object-cover" />
+          <img src={banner} alt={t('upload.bannerPreview')} className="h-full w-full rounded-xl object-cover" />
         )}
         <div className="absolute -bottom-11 left-5 h-24 w-24 overflow-hidden rounded-full border-4 border-lc-dark bg-lc-card">
           {picture && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={picture} alt="Channel profile picture preview" className="h-full w-full object-cover" />
+            <img src={picture} alt={t('upload.avatarPreview')} className="h-full w-full object-cover" />
           )}
         </div>
       </div>

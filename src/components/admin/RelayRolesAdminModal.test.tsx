@@ -4,6 +4,13 @@ import { nip19 } from 'nostr-tools';
 import RelayRolesAdminModal, { parsePubkeyInput } from './RelayRolesAdminModal';
 import * as roles from '@/lib/relay-roles';
 import type { RelayRoles } from '@/lib/relay-roles';
+import { LocaleProvider } from '@/i18n/context';
+
+/** The component reads its copy from the dictionary, so it needs a provider. */
+const renderLocalized = (ui: React.ReactElement) => render(
+  <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,
+);
+
 
 const PEOPLE = [
   { pubkey: 'b'.repeat(64), displayName: 'Bob Builder', nip05: 'bob@obelisk.ar', role: 'member' as const },
@@ -32,11 +39,11 @@ afterEach(() => vi.restoreAllMocks());
 
 describe('RelayRolesAdminModal', () => {
   it('offers nothing to save until something actually changes', () => {
-    const { rerender } = render(<RelayRolesAdminModal relayUrl={RELAY} roles={roles.EMPTY_RELAY_ROLES} onClose={() => {}} />);
+    const { rerender } = renderLocalized(<RelayRolesAdminModal relayUrl={RELAY} roles={roles.EMPTY_RELAY_ROLES} onClose={() => {}} />);
 
     // Opened before the catalog arrived: the draft must adopt it, not read as
     // an edit that would publish an empty catalog over the relay's roles.
-    rerender(<RelayRolesAdminModal relayUrl={RELAY} roles={SAVED} onClose={() => {}} />);
+    rerender(<LocaleProvider initialLocale="en">{<><RelayRolesAdminModal relayUrl={RELAY} roles={SAVED} onClose={() => {}} /></>}</LocaleProvider>);
 
     expect(screen.getByDisplayValue('Moderator')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Save roles' })).toBeDisabled();
@@ -46,16 +53,16 @@ describe('RelayRolesAdminModal', () => {
   });
 
   it('keeps local edits when a newer catalog arrives', () => {
-    const { rerender } = render(<RelayRolesAdminModal relayUrl={RELAY} roles={SAVED} onClose={() => {}} />);
+    const { rerender } = renderLocalized(<RelayRolesAdminModal relayUrl={RELAY} roles={SAVED} onClose={() => {}} />);
 
     fireEvent.change(screen.getByLabelText('mod name'), { target: { value: 'Mods' } });
-    rerender(<RelayRolesAdminModal relayUrl={RELAY} roles={{ ...SAVED, updatedAt: 20, holders: { mod: [ALICE, BOB], og: [] } }} onClose={() => {}} />);
+    rerender(<LocaleProvider initialLocale="en">{<><RelayRolesAdminModal relayUrl={RELAY} roles={{ ...SAVED, updatedAt: 20, holders: { mod: [ALICE, BOB], og: [] } }} onClose={() => {}} /></>}</LocaleProvider>);
 
     expect(screen.getByDisplayValue('Mods')).toBeInTheDocument();
   });
 
   it('treats a reorder back to the original order as no change', () => {
-    render(<RelayRolesAdminModal relayUrl={RELAY} roles={SAVED} onClose={() => {}} />);
+    renderLocalized(<RelayRolesAdminModal relayUrl={RELAY} roles={SAVED} onClose={() => {}} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Move OG up' }));
     expect(screen.getByRole('button', { name: 'Save roles' })).not.toBeDisabled();
@@ -66,7 +73,7 @@ describe('RelayRolesAdminModal', () => {
 
   it('publishes a new role at the bottom of the ladder', async () => {
     const publish = vi.spyOn(roles, 'publishRoleCatalog').mockResolvedValue(undefined);
-    render(<RelayRolesAdminModal relayUrl={RELAY} roles={SAVED} onClose={() => {}} />);
+    renderLocalized(<RelayRolesAdminModal relayUrl={RELAY} roles={SAVED} onClose={() => {}} />);
 
     fireEvent.change(screen.getByLabelText('New role name'), { target: { value: 'Contributor' } });
     fireEvent.click(screen.getByRole('button', { name: 'Add role' }));
@@ -81,7 +88,7 @@ describe('RelayRolesAdminModal', () => {
 
   it('re-tiers roles when the operator moves one up', async () => {
     const publish = vi.spyOn(roles, 'publishRoleCatalog').mockResolvedValue(undefined);
-    render(<RelayRolesAdminModal relayUrl={RELAY} roles={SAVED} onClose={() => {}} />);
+    renderLocalized(<RelayRolesAdminModal relayUrl={RELAY} roles={SAVED} onClose={() => {}} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Move OG up' }));
     fireEvent.click(screen.getByRole('button', { name: 'Save roles' }));
@@ -94,7 +101,7 @@ describe('RelayRolesAdminModal', () => {
 
   it('grants and revokes a role for one member', async () => {
     const publish = vi.spyOn(roles, 'publishRoleHolders').mockResolvedValue(undefined);
-    render(<RelayRolesAdminModal relayUrl={RELAY} roles={SAVED} onClose={() => {}} />);
+    renderLocalized(<RelayRolesAdminModal relayUrl={RELAY} roles={SAVED} onClose={() => {}} />);
 
     fireEvent.click(screen.getByRole('button', { name: '1 members' }));
     const panel = screen.getByTestId('role-members-mod');
@@ -108,7 +115,7 @@ describe('RelayRolesAdminModal', () => {
   });
 
   it('searches relay members by name and NIP-05', () => {
-    render(<RelayRolesAdminModal relayUrl={RELAY} roles={SAVED} onClose={() => {}} />);
+    renderLocalized(<RelayRolesAdminModal relayUrl={RELAY} roles={SAVED} onClose={() => {}} />);
 
     fireEvent.click(screen.getByRole('button', { name: '1 members' }));
     const panel = screen.getByTestId('role-members-mod');
@@ -128,7 +135,7 @@ describe('RelayRolesAdminModal', () => {
   });
 
   it('hides existing holders from the candidate list', () => {
-    render(<RelayRolesAdminModal relayUrl={RELAY} roles={{ ...SAVED, holders: { mod: [ALICE, BOB], og: [] } }} onClose={() => {}} />);
+    renderLocalized(<RelayRolesAdminModal relayUrl={RELAY} roles={{ ...SAVED, holders: { mod: [ALICE, BOB], og: [] } }} onClose={() => {}} />);
 
     fireEvent.click(screen.getByRole('button', { name: '2 members' }));
     const candidates = screen.getByTestId('role-candidates-mod');
@@ -139,7 +146,7 @@ describe('RelayRolesAdminModal', () => {
   it('still grants to a pubkey pasted for a stranger', async () => {
     const publish = vi.spyOn(roles, 'publishRoleHolders').mockResolvedValue(undefined);
     const stranger = 'd'.repeat(64);
-    render(<RelayRolesAdminModal relayUrl={RELAY} roles={SAVED} onClose={() => {}} />);
+    renderLocalized(<RelayRolesAdminModal relayUrl={RELAY} roles={SAVED} onClose={() => {}} />);
 
     fireEvent.click(screen.getByRole('button', { name: '1 members' }));
     const panel = screen.getByTestId('role-members-mod');
@@ -150,7 +157,7 @@ describe('RelayRolesAdminModal', () => {
   });
 
   it('defers assignment until a freshly added role exists on the relay', () => {
-    render(<RelayRolesAdminModal relayUrl={RELAY} roles={SAVED} onClose={() => {}} />);
+    renderLocalized(<RelayRolesAdminModal relayUrl={RELAY} roles={SAVED} onClose={() => {}} />);
 
     fireEvent.change(screen.getByLabelText('New role name'), { target: { value: 'Contributor' } });
     fireEvent.click(screen.getByRole('button', { name: 'Add role' }));
@@ -161,7 +168,7 @@ describe('RelayRolesAdminModal', () => {
 
   it('picks a badge emoji for a role and clears it again', async () => {
     const publish = vi.spyOn(roles, 'publishRoleCatalog').mockResolvedValue(undefined);
-    render(<RelayRolesAdminModal relayUrl={RELAY} roles={SAVED} onClose={() => {}} />);
+    renderLocalized(<RelayRolesAdminModal relayUrl={RELAY} roles={SAVED} onClose={() => {}} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'og emoji' }));
     fireEvent.click(screen.getByTitle('grinning'));
@@ -184,7 +191,7 @@ describe('RelayRolesAdminModal', () => {
   });
 
   it('opens the emoji picker in a fixed layer the panel cannot clip', () => {
-    render(<RelayRolesAdminModal relayUrl={RELAY} roles={SAVED} onClose={() => {}} />);
+    renderLocalized(<RelayRolesAdminModal relayUrl={RELAY} roles={SAVED} onClose={() => {}} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'og emoji' }));
 
@@ -200,7 +207,7 @@ describe('RelayRolesAdminModal', () => {
   });
 
   it('shows the saved emoji on its role row', () => {
-    render(<RelayRolesAdminModal relayUrl={RELAY} roles={SAVED} onClose={() => {}} />);
+    renderLocalized(<RelayRolesAdminModal relayUrl={RELAY} roles={SAVED} onClose={() => {}} />);
 
     expect(screen.getByRole('button', { name: 'mod emoji' })).toHaveTextContent('🛡️');
     expect(screen.getByRole('button', { name: 'og emoji' })).toHaveTextContent('+');

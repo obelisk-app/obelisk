@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import ObeliskIcon from '@/components/ObeliskIcon';
+import { useTranslation } from '@/i18n/context';
 
 /**
  * Header for the public viewer pages (`/notes`, `/p`, `/t`).
@@ -14,6 +15,7 @@ import ObeliskIcon from '@/components/ObeliskIcon';
  * three times so the three pages can't drift apart.
  */
 export default function ViewerHeader({ maxWidth = 'max-w-2xl' }: { maxWidth?: string }) {
+  const { t } = useTranslation();
   return (
     <header className="sticky top-0 z-20 border-b border-lc-border bg-lc-black/90 backdrop-blur">
       <div className={`mx-auto flex ${maxWidth} items-center gap-3 px-5 py-2.5`}>
@@ -27,7 +29,7 @@ export default function ViewerHeader({ maxWidth = 'max-w-2xl' }: { maxWidth?: st
           channel they happened to leave open.
         */}
         <Link href="/app?s=feed" className="lc-pill-primary ml-auto px-4 py-2 text-xs">
-          Open in Obelisk
+          {t('viewer.openInObelisk')}
         </Link>
       </div>
     </header>

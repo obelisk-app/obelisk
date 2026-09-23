@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import type { VoiceMetrics } from '@/lib/voice/metrics';
 import type { VoiceDebugEvent } from '@/lib/voice/debug';
+import { useTranslation } from '@/i18n/context';
 
 const REFRESH_MS = 500;
 const SHOW_EVENTS = 50;
@@ -37,6 +38,7 @@ function readBag(): DebugBag | null {
  * end-user UI.
  */
 export function DebugOverlay() {
+  const { t } = useTranslation();
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
@@ -69,8 +71,8 @@ export function DebugOverlay() {
         pointerEvents: 'auto',
       }}
     >
-      <div style={{ fontWeight: 600, marginBottom: 4 }}>voice debug</div>
-      {!metrics && <div style={{ color: '#a3a3a3' }}>no VoiceClient mounted</div>}
+      <div style={{ fontWeight: 600, marginBottom: 4 }}>{t('voiceDebug.title')}</div>
+      {!metrics && <div style={{ color: '#a3a3a3' }}>{t('voiceDebug.noClient')}</div>}
       {metrics && (
         <>
           <Section title="peers">
@@ -80,7 +82,7 @@ export function DebugOverlay() {
             <Row k="byUnload" v={metrics.peers.tornDownByUnload} />
             <Row k="iceExhausted" v={metrics.peers.iceExhausted} />
           </Section>
-          <Section title="control channel">
+          <Section title={t('voiceDebug.controlChannel')}>
             <Row k="opened" v={metrics.controlChannel.opened} />
             <Row k="ping" v={`${metrics.controlChannel.pingSent}/${metrics.controlChannel.pongRcvd}`} />
             <Row k="lastRtt" v={metrics.controlChannel.lastRttMs ?? '—'} />
@@ -113,7 +115,7 @@ export function DebugOverlay() {
             <Row k="hit" v={metrics.rateLimit.hit} highlight={metrics.rateLimit.hit > 0} />
             <Row k="backoff" v={`${metrics.rateLimit.backoffMs}ms`} />
           </Section>
-          <Section title="sfu reliability">
+          <Section title={t('voiceDebug.sfuReliability')}>
             <Row
               k="retries"
               v={metrics.sfuReliability.consumeRetries}

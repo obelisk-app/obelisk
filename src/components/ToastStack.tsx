@@ -45,7 +45,7 @@ export default function ToastStack() {
             </div>
             <span
               role="button"
-              aria-label="Dismiss"
+              aria-label={t('common.dismiss')}
               tabIndex={-1}
               onClick={(e) => {
                 e.stopPropagation();
