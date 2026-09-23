@@ -35,18 +35,18 @@ export default function InlineReader({
   const dismiss = useHistoryDismiss(true, onBack);
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-lc-black" data-testid={testId}>
+    <div className="flex h-full min-h-0 flex-col" data-testid={testId}>
       {/* `h-14`/`px-5`: the app's header contract, same as every other one. */}
-      <div className="flex h-14 shrink-0 items-center gap-2 border-b border-lc-border bg-lc-dark px-5">
+      <div className="lc-header-surface flex h-14 shrink-0 items-center gap-2 border-b border-lc-border px-5">
         <button
           type="button"
           onClick={dismiss}
-          className="-ml-1 flex h-8 w-8 items-center justify-center rounded-full text-lc-white/70 transition-colors hover:bg-white/10 hover:text-lc-white"
+          className="lc-icon-btn -ml-1"
           aria-label={t('common.back')}
           title={t('common.back')}
           data-testid="inline-reader-back"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="m15 18-6-6 6-6" />
           </svg>
         </button>

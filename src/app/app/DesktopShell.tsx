@@ -567,7 +567,7 @@ export default function AppShell() {
               already says what you're looking at — two headers where one
               does the job. The pane controls live in that toolbar now.
             */
-            <div className="flex min-h-0 flex-1 flex-col bg-lc-black">
+            <div className="flex min-h-0 flex-1 flex-col">
               <FeedScreen
                 onOpenProfile={setExploredProfilePubkey}
                 onOpenThread={(id) => { setPaneArticle(null); setThreadNoteId(id); }}
@@ -590,7 +590,7 @@ export default function AppShell() {
         {splitFeed && (
           <ResizablePane storageKey={FEED_PANE_KEY} defaultWidth={520} min={360} max={900} side="left" rounded={false}>
             <aside
-              className="flex h-full min-w-0 flex-1 flex-col overflow-hidden border-l border-lc-border bg-lc-black"
+              className="flex h-full min-w-0 flex-1 flex-col overflow-hidden border-l border-lc-border"
               data-testid="desktop-feed-pane"
             >
               <div className="min-h-0 flex-1">
@@ -622,7 +622,7 @@ export default function AppShell() {
           paneFull ? (
             // Fullscreen: an absolute overlay rather than another column, so
             // widening it can't squeeze the panes underneath.
-            <div className="absolute inset-0 z-40 flex flex-col bg-lc-black" data-testid="desktop-thread-pane">
+            <div className="obelisk-desktop-bg absolute inset-0 z-40 flex flex-col" data-testid="desktop-thread-pane">
               <ReaderPaneHeader
                 title={paneArticle ? t('social.article') : t('social.thread')}
                 full
@@ -643,7 +643,7 @@ export default function AppShell() {
             </div>
           ) : (
             <ResizablePane storageKey={THREAD_PANE_KEY} defaultWidth={520} min={360} max={900} side="left" rounded={false}>
-              <aside className="flex h-full min-w-0 flex-1 flex-col overflow-hidden border-l border-lc-border bg-lc-black" data-testid="desktop-thread-pane">
+              <aside className="flex h-full min-w-0 flex-1 flex-col overflow-hidden border-l border-lc-border" data-testid="desktop-thread-pane">
                 <ReaderPaneHeader
                   title={paneArticle ? t('social.article') : t('social.thread')}
                   full={false}
@@ -674,7 +674,7 @@ export default function AppShell() {
         */}
         {exploredProfilePubkey && (
           profileFull ? (
-            <div className="absolute inset-0 z-40 flex flex-col bg-lc-black" data-testid="desktop-profile-pane">
+            <div className="obelisk-desktop-bg absolute inset-0 z-40 flex flex-col" data-testid="desktop-profile-pane">
               <ReaderPaneHeader
                 title={t('settings.profile')}
                 full
@@ -694,7 +694,7 @@ export default function AppShell() {
           ) : (
             <ResizablePane storageKey={PROFILE_PANE_KEY} defaultWidth={520} min={340} max={900} side="left" rounded={false}>
               <aside
-                className="flex h-full min-w-0 flex-1 flex-col overflow-hidden border-l border-lc-border bg-lc-black"
+                className="flex h-full min-w-0 flex-1 flex-col overflow-hidden border-l border-lc-border"
                 data-testid="desktop-profile-pane"
               >
                 <ReaderPaneHeader
@@ -809,16 +809,16 @@ function ReaderPaneHeader({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="flex h-14 shrink-0 items-center gap-2 border-b border-lc-border px-4">
+    <div className="lc-header-surface flex h-14 shrink-0 items-center gap-2 border-b border-lc-border px-4">
       <button
         type="button"
-        className="-ml-1 flex h-8 w-8 items-center justify-center rounded-full text-lc-muted transition-colors hover:bg-white/10 hover:text-lc-white"
+        className="lc-icon-btn -ml-1"
         onClick={onBack}
         aria-label={t('common.back')}
         title={t('common.back')}
         data-testid="desktop-thread-back"
       >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="m15 18-6-6 6-6" />
         </svg>
       </button>
@@ -917,13 +917,13 @@ function PaneIconButton({
   return (
     <button
       type="button"
-      className="flex h-8 w-8 items-center justify-center rounded-full text-lc-muted transition-colors hover:bg-white/10 hover:text-lc-white"
+      className="lc-icon-btn"
       onClick={onClick}
       aria-label={label}
       title={label}
       data-testid={testId}
     >
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         {children}
       </svg>
     </button>

@@ -104,13 +104,13 @@ export default function FeedSearch({
   return (
     <div className="flex h-full min-h-0 flex-col" data-testid="feed-search">
       {/*
-        `h-14`, `bg-lc-dark`, `px-5`: the app's header contract, same as the
+        `h-14`, `lc-header-surface`, `px-5`: the app's header contract, same as the
         chat header and the relay top bar. This row was a bare full-width
         strip on the content background, so it read as part of the feed
         rather than as the surface's header, and it didn't line up with the
         sidebar's search box beside it.
       */}
-      <div className="flex h-14 shrink-0 items-center gap-2 border-b border-lc-border bg-lc-dark px-5">
+      <div className="lc-header-surface flex h-14 shrink-0 items-center gap-2 border-b border-lc-border px-5">
         {/*
           Two searches exist and they answer different questions: the one in
           the sidebar is NIP-50 over this relay's channels ("what was said

@@ -13,6 +13,7 @@ import {
 import WotBadge from './WotBadge';
 import UserAvatar from '@/components/UserAvatar';
 import { useTranslation } from '@/i18n/context';
+import ProfileMenu from '@/components/social/ProfileMenu';
 
 function renderWithEmojis(text: string, serverEmojis: Record<string, string>): ReactNode {
   if (!text) return text;
@@ -58,11 +59,12 @@ function shortNpub(pubkey: string): string {
   }
 }
 
-const BASE_ROLE_LABEL: Record<string, { label: string; color: string }> = {
-  owner: { label: 'Owner', color: '#f59e0b' },
-  admin: { label: 'Admin', color: '#ef4444' },
-  mod: { label: 'Moderador', color: '#3b82f6' },
-  member: { label: 'Miembro', color: '#737373' },
+/** Colour per base role; the label is a key, resolved at render. */
+const BASE_ROLE: Record<string, { key: string; color: string }> = {
+  owner: { key: 'roles.base.owner', color: '#f59e0b' },
+  admin: { key: 'roles.base.admin', color: '#ef4444' },
+  mod: { key: 'roles.base.mod', color: '#3b82f6' },
+  member: { key: 'roles.base.member', color: '#737373' },
 };
 
 export default function ProfilePopover({ pubkey, onClose, onExplore, onMessage }: {
@@ -139,7 +141,7 @@ export default function ProfilePopover({ pubkey, onClose, onExplore, onMessage }
   const safeFallback = npub ? formatPubkey(pubkey) : pubkey;
   const displayName = member?.displayName || safeFallback;
   const npubShort = npub ? shortNpub(pubkey) : pubkey;
-  const baseRole = member?.role ? BASE_ROLE_LABEL[member.role] : undefined;
+  const baseRole = member?.role ? BASE_ROLE[member.role] : undefined;
   const zap = () => {
     const channelId = useChatStore.getState().activeChannelId;
     if (!channelId) return;
@@ -213,16 +215,29 @@ export default function ProfilePopover({ pubkey, onClose, onExplore, onMessage }
                 ) : pubkey}
               </div>
             </div>
-            <button
-              type="button"
-              onClick={zap}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-lc-green/40 bg-lc-green/10 text-lc-green hover:bg-lc-green/20"
-              aria-label={t('profilePopover.zap')}
-              title={t('profilePopover.zap')}
-              data-testid="profile-zap-btn"
-            >
-              ⚡
-            </button>
+            {/*
+              The popover used to end at "zap": no way to copy the link to
+              this person, no way to open their page, no ⋯ at all — while the
+              profile screen had one. Same menu, same items, both places.
+            */}
+            <div className="flex shrink-0 items-center gap-1.5">
+              <button
+                type="button"
+                onClick={zap}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-lc-green/40 bg-lc-green/10 text-lc-green hover:bg-lc-green/20"
+                aria-label={t('profilePopover.zap')}
+                title={t('profilePopover.zap')}
+                data-testid="profile-zap-btn"
+              >
+                ⚡
+              </button>
+              <ProfileMenu
+                pubkey={pubkey}
+                displayName={displayName}
+                canModerate={!isSelf}
+                size="sm"
+              />
+            </div>
           </div>
 
           {/* About */}
@@ -242,7 +257,7 @@ export default function ProfilePopover({ pubkey, onClose, onExplore, onMessage }
                   style={{ borderColor: baseRole.color, color: baseRole.color }}
                 >
                   <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: baseRole.color }} />
-                  {baseRole.label}
+                  {t(baseRole.key)}
                 </span>
               </div>
             </div>
@@ -309,10 +324,9 @@ export default function ProfilePopover({ pubkey, onClose, onExplore, onMessage }
                   onClick={() => {
                     const nowMuted = toggleMute(pubkey);
                     useToastStore.getState().pushToast({
-                      title: nowMuted ? 'Usuario silenciado' : 'Silencio quitado',
-                      body: nowMuted
-                        ? `Ya no verás notificaciones de ${displayName}`
-                        : `Volverás a recibir notificaciones de ${displayName}`,
+                      title: t(nowMuted ? 'profilePopover.muted' : 'profilePopover.unmuted'),
+                      body: t(nowMuted ? 'profilePopover.mutedBody' : 'profilePopover.unmutedBody')
+                        .replace('{name}', displayName),
                     });
                   }}
                   className={`rounded-lg border px-2 py-1.5 text-xs transition-colors ${
@@ -323,19 +337,18 @@ export default function ProfilePopover({ pubkey, onClose, onExplore, onMessage }
                   data-testid="profile-mute-btn"
                   title={t('profilePopover.muteHint')}
                 >
-                  {muted ? '🔕 Silenciado' : '🔕 Silenciar'}
+                  {muted ? `🔕 ${t('profileFeed.unmute')}` : `🔕 ${t('profileFeed.mute')}`}
                 </button>
                 <button
                   onClick={() => {
-                    if (!blocked && !window.confirm(`¿Bloquear a ${displayName}? Sus mensajes quedarán ocultos en este dispositivo.`)) {
+                    if (!blocked && !window.confirm(t('profilePopover.blockConfirm').replace('{name}', displayName))) {
                       return;
                     }
                     const nowBlocked = toggleBlock(pubkey);
                     useToastStore.getState().pushToast({
-                      title: nowBlocked ? 'Usuario bloqueado' : 'Bloqueo quitado',
-                      body: nowBlocked
-                        ? `Los mensajes de ${displayName} quedarán ocultos`
-                        : `Volverás a ver los mensajes de ${displayName}`,
+                      title: t(nowBlocked ? 'profilePopover.blocked' : 'profilePopover.unblocked'),
+                      body: t(nowBlocked ? 'profilePopover.blockedBody' : 'profilePopover.unblockedBody')
+                        .replace('{name}', displayName),
                     });
                     if (nowBlocked) onClose();
                   }}
@@ -347,7 +360,7 @@ export default function ProfilePopover({ pubkey, onClose, onExplore, onMessage }
                   data-testid="profile-block-btn"
                   title={t('profilePopover.hideHint')}
                 >
-                  {blocked ? '🚫 Bloqueado' : '🚫 Bloquear'}
+                  {blocked ? `🚫 ${t('profileFeed.unblock')}` : `🚫 ${t('profileFeed.block')}`}
                 </button>
               </div>
             )}

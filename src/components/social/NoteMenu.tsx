@@ -23,6 +23,7 @@ import {
   groupNoteUrl,
   noteIdentifier,
   noteShareUrl,
+  profileUrl,
   rawEventJson,
 } from '@/lib/social/note-links';
 import { useCurrentRelayUrl } from '@/lib/nostr-bridge';
@@ -137,6 +138,16 @@ export default function NoteMenu({
             testId="note-menu-copy-npub"
           >
             {t('social.copyAuthorNpub')}
+          </Item>
+          {/*
+            The npub is the identifier; this is the thing you can paste
+            anywhere and have it open as a page with a name on it.
+          */}
+          <Item
+            onClick={() => copy(profileUrl(note.pubkey, relays), t('profileFeed.linkCopied'))}
+            testId="note-menu-copy-author-link"
+          >
+            {t('social.copyAuthorLink')}
           </Item>
           <Item
             onClick={() => copy(note.content, t('social.textCopied'))}

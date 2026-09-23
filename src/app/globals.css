@@ -159,6 +159,62 @@ button:not(:disabled),
 }
 
 /*
+ * A header that sits on the app's background instead of hiding it.
+ *
+ * The shell paints a drifting gradient and a grain layer, and the chat body
+ * and the relay top bar are transparent so you see it. The feed was the one
+ * surface that wasn't: an opaque `bg-lc-black` column with an opaque
+ * `bg-lc-dark` bar, which read as a different app bolted into the window.
+ *
+ * Translucent plus a blur rather than fully transparent: a header has to
+ * stay readable with note text scrolling under it.
+ */
+.lc-header-surface {
+  background: color-mix(in oklab, var(--obelisk-app-bg-panel, #171717) 72%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+/*
+ * The icon buttons in a header: back, fullscreen, close, search.
+ *
+ * They were 32px of `text-lc-muted` with no border — the same grey as the
+ * body text around them, and small enough on a phone to miss. A control you
+ * navigate with should look like a control.
+ */
+.lc-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  height: 36px;
+  width: 36px;
+  border-radius: 9999px;
+  border: 1px solid #2f2f2f;
+  background: color-mix(in oklab, var(--obelisk-app-bg-panel, #171717) 85%, transparent);
+  color: #e6e6e6;
+  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.lc-icon-btn:hover {
+  color: #fafafa;
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+.lc-icon-btn:active {
+  transform: scale(0.95);
+}
+
+/* Thumbs need a bigger target than a cursor does. */
+@media (max-width: 768px) {
+  .lc-icon-btn {
+    height: 40px;
+    width: 40px;
+  }
+}
+
+/*
  * Media inside a feed note.
  *
  * `MessageContent`'s `wideMedia` mode caps images at 32rem tall and full

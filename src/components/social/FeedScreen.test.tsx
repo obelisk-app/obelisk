@@ -468,6 +468,28 @@ describe('FeedScreen', () => {
     expect(scroller.scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
   });
 
+  it('lets the app background through instead of painting over it', async () => {
+    // The shell paints a drifting gradient that the chat body and the relay
+    // top bar both show. The feed was an opaque black column with an opaque
+    // bar on top, which read as a different app inside the window.
+    socialMocks.loadFollowingFeed.mockResolvedValue([note('a', 'first')]);
+    renderFeed();
+    await waitFor(() => expect(screen.getByText('first')).toBeInTheDocument());
+
+    expect(screen.getByTestId('feed-screen').className).not.toContain('bg-lc-black');
+    const toolbar = screen.getByTestId('feed-tab-global').closest('div')?.parentElement;
+    expect(toolbar?.className).toContain('lc-header-surface');
+  });
+
+  it('keeps search reachable, and sized like a control', async () => {
+    socialMocks.loadFollowingFeed.mockResolvedValue([note('a', 'first')]);
+    renderFeed();
+    await waitFor(() => expect(screen.getByText('first')).toBeInTheDocument());
+    // On a wide pane this was a borderless grey glyph — present, but not
+    // reading as a button people could find.
+    expect(screen.getByTestId('feed-search-open').className).toContain('lc-icon-btn');
+  });
+
   it('gives a phone one filter button instead of two chip strips', async () => {
     // The chips were an 11px hairline-scrolling strip; on a phone they're
     // behind a header-sized button that opens a sheet.

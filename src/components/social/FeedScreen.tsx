@@ -204,7 +204,7 @@ export default function FeedScreen({
 
   if (searching) {
     return (
-      <div className="flex h-full min-h-0 flex-col bg-lc-black" data-testid="feed-screen">
+      <div className="flex h-full min-h-0 flex-col" data-testid="feed-screen">
         <FeedSearch
           initialQuery={searchSeed}
           onOpenProfile={onOpenProfile}
@@ -217,7 +217,7 @@ export default function FeedScreen({
   }
 
   return (
-    <div className="relative flex h-full min-h-0 flex-col bg-lc-black" data-testid="feed-screen">
+    <div className="relative flex h-full min-h-0 flex-col" data-testid="feed-screen">
       {/*
         One toolbar, not three stacked rows.
         Source, content filter and actions were each on their own line, so
@@ -229,11 +229,12 @@ export default function FeedScreen({
         split pane shortens the row instead of growing a second line.
       */}
       {/*
-        `bg-lc-dark` and `px-5`, like the chat header and the relay top bar:
-        the toolbar is a header, and on the content background it read as
-        the first row of the feed.
+        `px-5` like the chat header, and `lc-header-surface` rather than a
+        flat `bg-lc-dark`: the shell paints a drifting gradient that the chat
+        body and the relay top bar both let through, and an opaque bar here
+        made the feed look like a different app bolted into the window.
       */}
-      <div className="flex min-h-14 shrink-0 flex-wrap items-center gap-2 border-b border-lc-border bg-lc-dark px-5 py-2">
+      <div className="lc-header-surface flex min-h-14 shrink-0 flex-wrap items-center gap-2 border-b border-lc-border px-5 py-2">
         <h1 className="sr-only">{t('social.feed')}</h1>
 
         <div className="lc-segment shrink-0" role="tablist" aria-label={t('social.feed')} data-tour="feed-source">
@@ -340,9 +341,7 @@ export default function FeedScreen({
           {compact && (
             <button
               type="button"
-              className={`flex ${mobile ? 'h-10 w-10' : 'h-8 w-8'} items-center justify-center rounded-full border border-lc-border transition-colors hover:bg-white/10 active:bg-white/10 ${
-                filter !== 'all' || sort !== 'recent' ? 'text-lc-green' : 'text-lc-white/70'
-              }`}
+              className={`lc-icon-btn ${filter !== 'all' || sort !== 'recent' ? '!text-lc-green !border-lc-green/40' : ''}`}
               onClick={() => setFiltersOpen(true)}
               aria-label={t('social.filters')}
               title={t('social.filters')}
@@ -358,42 +357,35 @@ export default function FeedScreen({
             new notes announce themselves with the green pill. A button that
             duplicates a gesture people already make is just chrome.
           */}
+          {/*
+            Always present, and the same button in every layout. On a wide
+            pane it used to be a borderless grey glyph, which is how a
+            control people look for ends up looking like it isn't there.
+          */}
           <button
             type="button"
-            className={mobile
-              ? 'flex h-10 w-10 items-center justify-center rounded-full border border-lc-border text-lc-white/70 transition-colors active:bg-white/10'
-              : compact
-                ? 'flex h-8 w-8 items-center justify-center rounded-full border border-lc-border text-lc-white/70 transition-colors hover:bg-white/10'
-                : 'group/act -m-1 flex items-center rounded-full p-1 text-lc-white/70'}
+            className="lc-icon-btn"
             onClick={() => setSearching(true)}
             aria-label={t('social.search')}
             title={t('social.search')}
             data-testid="feed-search-open"
             data-tour="feed-search"
           >
-            {compact ? (
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden="true">
-                <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
-              </svg>
-            ) : (
-              <span className="flex h-8 w-8 items-center justify-center rounded-full transition-colors group-hover/act:bg-white/10 group-hover/act:text-lc-white">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" aria-hidden="true">
-                  <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
-                </svg>
-              </span>
-            )}
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
+            </svg>
           </button>
           {onOpenSettings && !embedded && (
             <button
               type="button"
-              className="group/act -m-1 flex items-center rounded-full p-1 text-lc-white/70"
+              className="lc-icon-btn"
               onClick={onOpenSettings}
               aria-label={t('social.relaySettings')}
               title={t('social.relaySettings')}
               data-testid="feed-settings"
             >
-              <span className="flex h-8 w-8 items-center justify-center rounded-full transition-colors group-hover/act:bg-white/10 group-hover/act:text-lc-white">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <span className="flex items-center justify-center">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <circle cx="12" cy="12" r="3" />
                   <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
                 </svg>

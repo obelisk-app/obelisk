@@ -11,7 +11,7 @@
  * appears.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { hexToNpub } from '@nostr-wot/data';
 import type { JsUserMetadata } from '@/lib/nostr-bridge';
@@ -33,6 +33,7 @@ import {
 import { useFeed } from '@/lib/social/useFeed';
 import { isVideoUrl } from '@/lib/attachments';
 import { useTranslation } from '@/i18n/context';
+import ProfileMenu from '@/components/social/ProfileMenu';
 import UserAvatar from '@/components/UserAvatar';
 import FeedList from '@/components/social/FeedList';
 import { ComposeButton } from '@/components/social/FeedControls';
@@ -45,8 +46,6 @@ import NoteThread from '@/components/social/NoteThread';
 import ArticleReader from '@/components/social/ArticleCard';
 import ModalShell from '@/components/ModalShell';
 import InlineReader from '@/components/social/InlineReader';
-import AnchoredMenu from '@/components/social/AnchoredMenu';
-import { useModerationStore } from '@/store/moderation';
 import { useToastStore } from '@/store/toast';
 
 type NostrProfileProps = {
@@ -269,7 +268,7 @@ export default function NostrProfile({
             the screen. Beside the other profile controls it lines up with
             them and the panel has room.
           */}
-          <ProfileMoreMenu pubkey={pubkey} displayName={displayName} canModerate={!isMe} />
+          <ProfileMenu pubkey={pubkey} displayName={displayName} canModerate={!isMe} />
           {isMe && mobile && (
             <button
               type="button"
@@ -482,98 +481,6 @@ function ProfileMediaLightbox({ url, onClose }: { url: string; onClose: () => vo
         <img src={url} alt="" className="max-h-full max-w-full object-contain" onClick={(event) => event.stopPropagation()} />
       )}
     </div>
-  );
-}
-
-function ProfileMoreMenu({
-  pubkey,
-  displayName,
-  canModerate = false,
-}: {
-  pubkey: string;
-  displayName: string;
-  canModerate?: boolean;
-}) {
-  const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const muted = useModerationStore((state) => state.mutedPubkeys.includes(pubkey));
-  const blocked = useModerationStore((state) => state.blockedPubkeys.includes(pubkey));
-  const toggleMute = useModerationStore((state) => state.toggleMute);
-  const toggleBlock = useModerationStore((state) => state.toggleBlock);
-  const npub = hexToNpub(pubkey);
-  const notify = (title: string) => useToastStore.getState().pushToast({ title, body: displayName });
-
-  const copyNpub = () => {
-    navigator.clipboard?.writeText(npub).catch(() => {});
-    notify(t('profileFeed.npubCopied'));
-    setOpen(false);
-  };
-
-  const shareProfile = async () => {
-    try {
-      if (navigator.share) await navigator.share({ title: displayName, text: npub });
-      else await navigator.clipboard?.writeText(npub);
-      notify(t('profileFeed.profileShared'));
-    } catch {
-      // Native share cancellation needs no error UI.
-    }
-    setOpen(false);
-  };
-
-  return (
-    <>
-      <button
-        ref={triggerRef}
-        type="button"
-        className="flex h-11 w-11 items-center justify-center rounded-full border border-lc-border bg-lc-dark text-base leading-none text-lc-white active:scale-95"
-        onClick={() => setOpen((value) => !value)}
-        aria-label={t('mobile.profile.more')}
-        aria-expanded={open}
-        data-testid="profile-more-button"
-      >
-        ⋯
-      </button>
-      {/*
-        Portalled and clamped to the viewport: anchored inside the row, the
-        panel opened past the left edge of the screen whenever the trigger
-        was near it.
-      */}
-      <AnchoredMenu
-        open={open}
-        onClose={() => setOpen(false)}
-        anchorRef={triggerRef}
-        width={176}
-        testId="profile-more-menu"
-      >
-        <div>
-          <button type="button" className="block w-full px-4 py-2 text-left text-xs text-lc-white hover:bg-white/5" onClick={copyNpub}>
-            {t('profileFeed.copyNpub')}
-          </button>
-          {canModerate && (
-            <>
-              <button
-                type="button"
-                className="block w-full px-4 py-2 text-left text-xs text-lc-white hover:bg-white/5"
-                onClick={() => { toggleMute(pubkey); setOpen(false); }}
-              >
-                {t(muted ? 'profileFeed.unmute' : 'profileFeed.mute')}
-              </button>
-              <button
-                type="button"
-                className="block w-full px-4 py-2 text-left text-xs text-red-400 hover:bg-white/5"
-                onClick={() => { toggleBlock(pubkey); setOpen(false); }}
-              >
-                {t(blocked ? 'profileFeed.unblock' : 'profileFeed.block')}
-              </button>
-            </>
-          )}
-          <button type="button" className="block w-full px-4 py-2 text-left text-xs text-lc-white hover:bg-white/5" onClick={() => void shareProfile()}>
-            {t('profileFeed.shareProfile')}
-          </button>
-        </div>
-      </AnchoredMenu>
-    </>
   );
 }
 
