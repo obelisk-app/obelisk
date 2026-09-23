@@ -17,6 +17,7 @@ interface Props {
 const HEADING: Record<Locale, string> = {
   en: 'See also',
   es: 'Ver también',
+  pt: 'Veja também',
 };
 
 async function resolveItem(locale: Locale, slug: string, note?: string) {

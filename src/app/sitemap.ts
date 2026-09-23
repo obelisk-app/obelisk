@@ -1,11 +1,11 @@
 import type { MetadataRoute } from 'next';
 import { listAllGuides, type Guide } from '@/lib/guides';
-import type { Locale } from '@/i18n';
+import { LOCALES, type Locale } from '@/i18n';
 import { guidesHref } from '@/lib/guide-urls';
 import { snapshotPaths } from '@/components/guides/svg/asset-meta';
 
 const SITE_URL = process.env.CORS_ORIGIN || 'https://obelisk.ar';
-const LOCALES: Locale[] = ['en', 'es'];
+
 
 const ASSET_REF_RE = /<(?:Diagram|SvgHero)\s+[^>]*name=["']([^"']+)["']/g;
 

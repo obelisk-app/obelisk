@@ -46,7 +46,16 @@ describe('countryToLocale', () => {
     expect(countryToLocale('ES')).toBe('es');
   });
 
-  it('returns "en" for non-LATAM countries', () => {
+  it('returns "pt" for Portuguese-speaking countries', () => {
+    // Brazil used to land on English: it is not in the LATAM set, and the
+    // fallback was binary.
+    expect(countryToLocale('BR')).toBe('pt');
+    expect(countryToLocale('PT')).toBe('pt');
+    expect(countryToLocale('AO')).toBe('pt');
+    expect(countryToLocale('MZ')).toBe('pt');
+  });
+
+  it('returns "en" for everywhere else', () => {
     expect(countryToLocale('US')).toBe('en');
     expect(countryToLocale('GB')).toBe('en');
     expect(countryToLocale('DE')).toBe('en');
@@ -55,6 +64,7 @@ describe('countryToLocale', () => {
   it('handles lowercase country codes', () => {
     expect(countryToLocale('ar')).toBe('es');
     expect(countryToLocale('us')).toBe('en');
+    expect(countryToLocale('br')).toBe('pt');
   });
 
   it('returns default locale (es) when country is null', () => {
@@ -80,8 +90,14 @@ describe('acceptLanguageToLocale', () => {
     expect(acceptLanguageToLocale('fr-FR,es-AR;q=0.9,en;q=0.4')).toBe('es');
   });
 
+  it('accepts Portuguese in any regional flavour', () => {
+    // Both pt-BR and pt-PT resolve to the one Portuguese we ship.
+    expect(acceptLanguageToLocale('fr-FR,pt-BR;q=0.9')).toBe('pt');
+    expect(acceptLanguageToLocale('pt-PT')).toBe('pt');
+  });
+
   it('returns null when no supported language is present', () => {
-    expect(acceptLanguageToLocale('fr-FR,pt-BR;q=0.9')).toBeNull();
+    expect(acceptLanguageToLocale('fr-FR,de-DE;q=0.9')).toBeNull();
     expect(acceptLanguageToLocale(null)).toBeNull();
   });
 });

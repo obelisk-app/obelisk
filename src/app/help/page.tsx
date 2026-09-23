@@ -6,6 +6,7 @@ import Navbar from '@/components/Navbar';
 import { guidesHref } from '@/lib/guide-urls';
 import { HELP_TOPICS } from '@/lib/help-topics';
 import { useTranslation } from '@/i18n/context';
+import type { Locale } from '@/i18n';
 
 const COPY = {
   en: {
@@ -20,7 +21,13 @@ const COPY = {
     back: '← Volver a Obelisk',
     all: 'Ver todas las guías →',
   },
-} as const;
+  pt: {
+    title: 'Como podemos ajudar?',
+    subtitle: 'Comece pelo básico ou vá direto ao assunto que você precisa.',
+    back: '← Voltar ao Obelisk',
+    all: 'Ver todos os guias →',
+  },
+} as const satisfies Record<Locale, Record<string, string>>;
 
 export default function HelpPage() {
   const { locale } = useTranslation();

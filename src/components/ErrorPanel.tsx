@@ -29,7 +29,7 @@ type Copy = {
   details: string;
 };
 
-const COPY: Record<'en' | 'es', Copy> = {
+const COPY: Record<'en' | 'es' | 'pt', Copy> = {
   en: {
     title: 'Something broke on this screen',
     body:
@@ -54,12 +54,25 @@ const COPY: Record<'en' | 'es', Copy> = {
     home: 'Volver al inicio',
     details: 'Detalles del error',
   },
+  pt: {
+    title: 'Algo quebrou nesta tela',
+    body:
+      'O chat encontrou um erro e parou de renderizar. Suas chaves e suas mensagens estão a salvo — nada se perdeu, é só a tela. Tente de novo; se continuar acontecendo, limpar o cache local reconstrói tudo a partir do relay.',
+    retry: 'Tentar de novo',
+    reload: 'Recarregar a página',
+    clear: 'Limpar o cache local e recarregar',
+    clearing: 'Limpando…',
+    cleared: (n) => `${n} ${n === 1 ? 'entrada limpa' : 'entradas limpas'} — recarregando…`,
+    home: 'Voltar ao início',
+    details: 'Detalhes do erro',
+  },
 };
 
 /** Locale off `<html lang>` — set by the root layout, no provider needed. */
-function readLocale(): 'en' | 'es' {
+function readLocale(): 'en' | 'es' | 'pt' {
   if (typeof document === 'undefined') return 'es';
-  return document.documentElement.lang === 'en' ? 'en' : 'es';
+  const lang = document.documentElement.lang;
+  return lang === 'en' || lang === 'pt' ? lang : 'es';
 }
 
 /** `<html lang>` is fixed for the life of the document — nothing to watch. */
@@ -67,7 +80,7 @@ const subscribeToNothing = () => () => {};
 // Mirrors i18n's DEFAULT_LOCALE, duplicated on purpose: importing it would
 // pull both JSON dictionaries into the error chunk, and this component's
 // whole contract is that it loads and renders with nothing else available.
-const serverLocale = (): 'en' | 'es' => 'es';
+const serverLocale = (): 'en' | 'es' | 'pt' => 'es';
 
 export default function ErrorPanel({
   error,

@@ -1,7 +1,15 @@
-export type Locale = 'en' | 'es';
+/**
+ * A second, older dictionary — search-filter copy only, kept inline.
+ *
+ * It duplicates `src/i18n` down to the `Locale` type. Folding it into the
+ * JSON dictionaries is a cleanup of its own; for now it carries the same
+ * languages, because a locale the app offers but this file has never heard
+ * of falls back to English mid-screen.
+ */
+export type Locale = 'en' | 'es' | 'pt';
 
 export const defaultLocale: Locale = 'es';
-export const supportedLocales: Locale[] = ['en', 'es'];
+export const supportedLocales: Locale[] = ['en', 'es', 'pt'];
 
 type Dict = Record<string, string>;
 
@@ -83,7 +91,46 @@ const es: Dict = {
   'search.has.file': 'Archivo',
 };
 
-const dictionaries: Record<Locale, Dict> = { en, es };
+const pt: Dict = {
+  'search.placeholder': 'Buscar',
+  'search.filters.title': 'Filtros',
+  'search.filters.fromUser.title': 'De uma pessoa específica',
+  'search.filters.fromUser.example': 'from: usuário',
+  'search.filters.inChannel.title': 'Enviado num canal específico',
+  'search.filters.inChannel.example': 'in: canal',
+  'search.filters.has.title': 'Inclui um tipo específico de conteúdo',
+  'search.filters.has.example': 'has: link, embed ou arquivo',
+  'search.filters.mentions.title': 'Menciona uma pessoa específica',
+  'search.filters.mentions.example': 'mentions: usuário',
+  'search.filters.more.title': 'Mais filtros',
+  'search.filters.more.example': 'datas, tipo de autor e mais',
+  'search.history.title': 'Histórico',
+  'search.history.clear': 'Limpar histórico',
+  'search.history.empty': 'Nenhuma busca recente',
+  'search.toolbar.filters': 'Filtros',
+  'search.toolbar.sort': 'Ordenar',
+  'search.sort.relevance': 'Relevância',
+  'search.sort.newest': 'Mais recentes',
+  'search.sort.oldest': 'Mais antigos',
+  'search.noResults': 'Nenhum resultado',
+  'search.loadMore': 'Carregar mais resultados',
+  'search.searching': 'Buscando…',
+  'search.picker.from.title': 'De qual pessoa?',
+  'search.picker.in.title': 'Em qual canal?',
+  'search.picker.mentions.title': 'Mencionando quem?',
+  'search.picker.has.title': 'Contendo o quê?',
+  'search.picker.more.title': 'Mais filtros',
+  'search.picker.before': 'Antes de',
+  'search.picker.after': 'Depois de',
+  'search.picker.searchMembers': 'Buscar membros',
+  'search.picker.searchChannels': 'Buscar canais',
+  'search.has.link': 'Link',
+  'search.has.image': 'Imagem',
+  'search.has.video': 'Vídeo',
+  'search.has.file': 'Arquivo',
+};
+
+const dictionaries: Record<Locale, Dict> = { en, es, pt };
 
 export function t(key: string, locale: Locale = defaultLocale): string {
   return dictionaries[locale]?.[key] ?? dictionaries.en[key] ?? key;

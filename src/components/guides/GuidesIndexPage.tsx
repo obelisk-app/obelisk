@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import type { Locale } from '@/i18n';
+import { LOCALES, type Locale } from '@/i18n';
 import { listAllGuides } from '@/lib/guides';
-import { guidesHref } from '@/lib/guide-urls';
+import { guideAlternates, guidesHref, OG_LOCALE } from '@/lib/guide-urls';
 import GuideCard from '@/components/guides/GuideCard';
 import GuideLocaleSync from '@/components/guides/GuideLocaleSync';
 import Navbar from '@/components/Navbar';
@@ -33,6 +33,17 @@ const COPY: Record<Locale, Record<string, string>> = {
     backHome: '← Volver al inicio',
     empty: 'Todavía no hay guías.',
   },
+  pt: {
+    title: 'Guias',
+    subtitle:
+      'Tudo sobre o Obelisk — o que é, como funciona, para onde vai. Escrito em linguagem clara, sem paredes de jargão.',
+    heading: 'Guias do Obelisk',
+    seoTitle: 'Guias · Obelisk',
+    seoDescription:
+      'Guias longos sobre o Obelisk, identidade Nostr, resistência a spam por Rede de Confiança e grupos Nostr baseados em relays.',
+    backHome: '← Voltar ao início',
+    empty: 'Ainda não há guias.',
+  },
 };
 
 export function buildGuidesIndexMetadata(locale: Locale): Metadata {
@@ -43,19 +54,15 @@ export function buildGuidesIndexMetadata(locale: Locale): Metadata {
     description: c.seoDescription,
     alternates: {
       canonical,
-      languages: {
-        'en-US': guidesHref('en'),
-        'es-AR': guidesHref('es'),
-        'x-default': guidesHref('en'),
-      },
+      languages: guideAlternates(),
     },
     openGraph: {
       title: c.seoTitle,
       description: c.seoDescription,
       url: `${SITE_URL}${canonical}`,
       siteName: 'Obelisk',
-      locale: locale === 'en' ? 'en_US' : 'es_AR',
-      alternateLocale: locale === 'en' ? ['es_AR'] : ['en_US'],
+      locale: OG_LOCALE[locale],
+      alternateLocale: LOCALES.filter((l) => l !== locale).map((l) => OG_LOCALE[l]),
       type: 'website',
     },
     twitter: {

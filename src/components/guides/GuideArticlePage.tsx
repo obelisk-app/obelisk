@@ -2,13 +2,13 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { MDXRemote } from 'next-mdx-remote/rsc';
 import remarkGfm from 'remark-gfm';
-import type { Locale } from '@/i18n';
+import { LOCALES, type Locale } from '@/i18n';
 import {
   readGuide,
   estimateReadMinutes,
   type GuideFrontmatter,
 } from '@/lib/guides';
-import { guidesHref } from '@/lib/guide-urls';
+import { guideAlternates, guidesHref, OG_LOCALE } from '@/lib/guide-urls';
 import ArticleShell from '@/components/guides/ArticleShell';
 import GuideLocaleSync from '@/components/guides/GuideLocaleSync';
 import { mdxComponents } from '@/components/guides/mdx-components';
@@ -64,6 +64,11 @@ const CHROME: Record<Locale, Record<string, string>> = {
     readTime: 'min de lectura',
     updated: 'Actualizado',
   },
+  pt: {
+    back: 'Todos os guias',
+    readTime: 'min de leitura',
+    updated: 'Atualizado',
+  },
 };
 
 async function safeRead(locale: Locale, slug: string) {
@@ -96,19 +101,15 @@ export async function buildGuideArticleMetadata(
     description: fm.description,
     alternates: {
       canonical,
-      languages: {
-        'en-US': guidesHref('en', slug),
-        'es-AR': guidesHref('es', slug),
-        'x-default': guidesHref('en', slug),
-      },
+      languages: guideAlternates(slug),
     },
     openGraph: {
       title: fm.title,
       description: fm.description,
       url: `${SITE_URL}${canonical}`,
       siteName: 'Obelisk',
-      locale: locale === 'en' ? 'en_US' : 'es_AR',
-      alternateLocale: locale === 'en' ? ['es_AR'] : ['en_US'],
+      locale: OG_LOCALE[locale],
+      alternateLocale: LOCALES.filter((l) => l !== locale).map((l) => OG_LOCALE[l]),
       type: 'article',
       publishedTime: fm.publishedAt,
       modifiedTime: fm.updatedAt,

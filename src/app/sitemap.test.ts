@@ -1,14 +1,21 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import sitemap from './sitemap';
 import { snapshotPaths } from '@/components/guides/svg/asset-meta';
+import { LOCALES } from '@/i18n';
+import { guidesHref } from '@/lib/guide-urls';
 
 let entries: Awaited<ReturnType<typeof sitemap>>;
 
+/**
+ * Index URLs derived from the locale list rather than spelled out: with
+ * `/guides/es` hardcoded, a third language's index was classified as an
+ * article and failed the "every article has an image" check.
+ */
+const INDEX_URLS = new Set(LOCALES.map((locale) => guidesHref(locale)));
+
 function isArticleEntry(url: string) {
-  // article URLs: /guides/<slug> (en) or /guides/es/<slug> — slug must not be the bare locale 'es'.
   if (!url.includes('/guides/')) return false;
-  if (url.endsWith('/guides') || url.endsWith('/guides/es')) return false;
-  return true;
+  return ![...INDEX_URLS].some((index) => url.endsWith(index));
 }
 
 beforeAll(async () => {

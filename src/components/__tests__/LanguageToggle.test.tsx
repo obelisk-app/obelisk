@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { LocaleProvider } from '@/i18n/context';
+import type { Locale } from '@/i18n';
 import LanguageToggle from '../LanguageToggle';
 
 const pushMock = vi.fn();
@@ -12,83 +12,101 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock, replace: vi.fn(), prefetch: vi.fn() }),
 }));
 
-function renderToggle(locale: 'en' | 'es' = 'es') {
+function renderToggle(locale: Locale = 'es') {
   return render(
     <LocaleProvider initialLocale={locale}>
       <LanguageToggle />
-    </LocaleProvider>
+    </LocaleProvider>,
   );
+}
+
+/** Open the picker and choose a language. */
+function pick(locale: Locale) {
+  fireEvent.click(screen.getByTestId('language-toggle'));
+  fireEvent.click(screen.getByTestId(`language-menu-${locale}`));
 }
 
 describe('LanguageToggle', () => {
   beforeEach(() => {
     pushMock.mockClear();
     currentPathname = '/';
+    document.cookie = 'locale=;path=/;max-age=0';
   });
 
-  it('shows "EN" when current locale is Spanish', () => {
+  it('shows the language you are reading, not the one you are not', () => {
+    // It used to render the *other* language's code, which only works
+    // while there are exactly two.
     renderToggle('es');
-    expect(screen.getByRole('button').textContent).toBe('EN');
+    expect(screen.getByTestId('language-toggle')).toHaveTextContent('ES');
   });
 
-  it('shows "ES" when current locale is English', () => {
-    renderToggle('en');
-    expect(screen.getByRole('button').textContent).toBe('ES');
-  });
-
-  it('toggles locale on click', async () => {
-    const user = userEvent.setup();
+  it('offers every language the app ships, in its own name', () => {
     renderToggle('es');
+    fireEvent.click(screen.getByTestId('language-toggle'));
 
-    const btn = screen.getByRole('button');
-    expect(btn.textContent).toBe('EN');
-
-    await user.click(btn);
-    expect(btn.textContent).toBe('ES');
+    const menu = screen.getByTestId('language-menu');
+    expect(menu).toHaveTextContent('English');
+    expect(menu).toHaveTextContent('Español');
+    // Someone looking for Portuguese can't be expected to recognise
+    // "Portuguese" in a language they don't read.
+    expect(menu).toHaveTextContent('Português');
   });
 
-  it('has correct aria-label', () => {
-    renderToggle('es');
-    expect(screen.getByRole('button')).toHaveAttribute('aria-label', 'Switch to English');
+  it('marks the language you are already reading', () => {
+    renderToggle('pt');
+    fireEvent.click(screen.getByTestId('language-toggle'));
+    expect(screen.getByTestId('language-menu-pt')).toHaveAttribute('aria-current', 'true');
   });
 
-  it('does not navigate on non-guide routes', async () => {
-    currentPathname = '/';
-    const user = userEvent.setup();
+  it('switches to the language that was picked', () => {
     renderToggle('es');
-    await user.click(screen.getByRole('button'));
+    pick('pt');
+    expect(document.cookie).toContain('locale=pt');
+  });
+
+  it('closes without changing anything when you pick what you already have', () => {
+    renderToggle('es');
+    pick('es');
     expect(pushMock).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('language-menu')).not.toBeInTheDocument();
   });
 
-  it('rewrites /guides (English default) to /guides/es when switching to Spanish', async () => {
-    currentPathname = '/guides';
-    const user = userEvent.setup();
+  it('moves you to the same guide in the new language', () => {
+    // English articles are unprefixed; every other language is
+    // /guides/<locale>.
+    currentPathname = '/guides/what-is-obelisk';
     renderToggle('en');
-    await user.click(screen.getByRole('button'));
-    expect(pushMock).toHaveBeenCalledWith('/guides/es');
+    pick('pt');
+    expect(pushMock).toHaveBeenCalledWith('/guides/pt/what-is-obelisk');
   });
 
-  it('rewrites /guides/es to /guides when switching to English', async () => {
+  it('moves you back to the English article', () => {
+    currentPathname = '/guides/pt/what-is-obelisk';
+    renderToggle('pt');
+    pick('en');
+    expect(pushMock).toHaveBeenCalledWith('/guides/what-is-obelisk');
+  });
+
+  it('switches between two non-English guide languages', () => {
+    // The old regex only knew about /guides/es, so this pathname was
+    // unrecognised and the URL was left pointing at the wrong language.
+    currentPathname = '/guides/es/what-is-obelisk';
+    renderToggle('es');
+    pick('pt');
+    expect(pushMock).toHaveBeenCalledWith('/guides/pt/what-is-obelisk');
+  });
+
+  it('rewrites the guides index too', () => {
     currentPathname = '/guides/es';
-    const user = userEvent.setup();
     renderToggle('es');
-    await user.click(screen.getByRole('button'));
-    expect(pushMock).toHaveBeenCalledWith('/guides');
+    pick('pt');
+    expect(pushMock).toHaveBeenCalledWith('/guides/pt');
   });
 
-  it('rewrites /guides/<slug> to /guides/es/<slug> when switching to Spanish', async () => {
-    currentPathname = '/guides/web-of-trust';
-    const user = userEvent.setup();
-    renderToggle('en');
-    await user.click(screen.getByRole('button'));
-    expect(pushMock).toHaveBeenCalledWith('/guides/es/web-of-trust');
-  });
-
-  it('rewrites /guides/es/<slug> to /guides/<slug> when switching to English', async () => {
-    currentPathname = '/guides/es/web-of-trust';
-    const user = userEvent.setup();
+  it('leaves other pages where they are', () => {
+    currentPathname = '/app';
     renderToggle('es');
-    await user.click(screen.getByRole('button'));
-    expect(pushMock).toHaveBeenCalledWith('/guides/web-of-trust');
+    pick('en');
+    expect(pushMock).not.toHaveBeenCalled();
   });
 });

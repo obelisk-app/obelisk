@@ -3,7 +3,8 @@ import { Inter } from 'next/font/google';
 import Script from 'next/script';
 import { cookies, headers } from 'next/headers';
 import { LocaleProvider } from '@/i18n/context';
-import { DEFAULT_LOCALE, LOCALE_COOKIE, LOCALE_HEADER, isLocale, type Locale } from '@/i18n/index';
+import { DEFAULT_LOCALE, LOCALE_COOKIE, LOCALE_HEADER, LOCALES, isLocale, type Locale } from '@/i18n/index';
+import { HREFLANG, OG_LOCALE } from '@/lib/guide-urls';
 import ToastStack from '@/components/ToastStack';
 import AppearancePreferencesRoot from '@/components/AppearancePreferencesRoot';
 // SDK styles first so our globals.css overrides win at equal specificity
@@ -72,8 +73,10 @@ export const metadata: Metadata = {
       'Group chat for crypto and privacy folks. Log in with your Nostr keys — no email, no password. Servers, voice, encrypted DMs, Web of Trust spam resistance.',
     siteName: 'Obelisk',
     url: SITE_URL,
-    locale: 'en_US',
-    alternateLocale: ['es_AR'],
+    // Static metadata can only name one; the rest are listed as alternates
+    // so a third language isn't invisible to crawlers.
+    locale: OG_LOCALE[DEFAULT_LOCALE],
+    alternateLocale: LOCALES.filter((l) => l !== DEFAULT_LOCALE).map((l) => OG_LOCALE[l]),
     type: 'website',
     images: [{
       url: '/og/obelisk.png?v=2',
@@ -145,7 +148,7 @@ export default async function RootLayout({
         name: 'Obelisk',
         description:
           'Discord alternative with Nostr login — no email, no password. Group chat for crypto and privacy communities.',
-        inLanguage: locale === 'en' ? 'en' : 'es-AR',
+        inLanguage: HREFLANG[locale],
         publisher: { '@id': `${SITE_URL}/#organization` },
       },
       {

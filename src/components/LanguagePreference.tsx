@@ -3,9 +3,11 @@
 import { useTranslation } from '@/i18n/context';
 import type { Locale } from '@/i18n/index';
 
+/** Each language named as its own speakers name it. */
 const OPTIONS: Array<{ locale: Locale; label: string }> = [
   { locale: 'es', label: 'Español' },
   { locale: 'en', label: 'English' },
+  { locale: 'pt', label: 'Português' },
 ];
 
 interface Props {

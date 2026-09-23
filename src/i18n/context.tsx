@@ -1,7 +1,15 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
-import { acceptLanguageToLocale, getTranslation, DEFAULT_LOCALE, LOCALE_COOKIE, type Locale } from './index';
+import {
+  acceptLanguageToLocale,
+  getTranslation,
+  isLocale,
+  DEFAULT_LOCALE,
+  LOCALE_COOKIE,
+  LOCALES,
+  type Locale,
+} from './index';
 import { useLocaleStore } from '@/store/locale';
 
 interface I18nContextValue {
@@ -15,12 +23,17 @@ const I18nContext = createContext<I18nContextValue | null>(null);
 function getInitialLocale(): Locale {
   if (typeof document === 'undefined') return DEFAULT_LOCALE;
 
-  const cookieMatch = document.cookie.match(new RegExp(`(?:^|; )${LOCALE_COOKIE}=(en|es)`));
-  if (cookieMatch?.[1]) return cookieMatch[1] as Locale;
+  // Built from LOCALES rather than a literal alternation: the next language
+  // should not need an edit here, and a stale list silently ignores a valid
+  // cookie and falls back to the default.
+  const cookieMatch = document.cookie.match(
+    new RegExp(`(?:^|; )${LOCALE_COOKIE}=(${LOCALES.join('|')})`),
+  );
+  if (isLocale(cookieMatch?.[1])) return cookieMatch[1] as Locale;
 
   try {
     const stored = localStorage.getItem(LOCALE_COOKIE);
-    if (stored === 'en' || stored === 'es') return stored;
+    if (isLocale(stored)) return stored;
   } catch {}
 
   const browserLanguages = typeof navigator === 'undefined' ? null : navigator.languages?.join(',') || navigator.language;

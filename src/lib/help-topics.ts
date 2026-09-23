@@ -58,10 +58,33 @@ export const HELP_TOPICS: Record<Locale, ReadonlyArray<HelpTopic>> = {
       description: 'Enviá pagos Lightning sin salir de la conversación.',
     },
   ],
+  pt: [
+    {
+      slug: 'what-is-obelisk',
+      title: 'Primeiros passos',
+      description: 'Entenda o que é o Obelisk e como funciona a sua identidade Nostr.',
+    },
+    {
+      slug: 'how-obelisk-works',
+      title: 'Como o Obelisk funciona',
+      description: 'Entenda grupos, relays, mensagens e privacidade.',
+    },
+    {
+      slug: 'admin-cli',
+      title: 'Administrar uma comunidade',
+      description: 'Crie e administre um grupo pela CLI.',
+    },
+    {
+      slug: 'bitcoin-zaps',
+      title: 'Pagamentos e zaps',
+      description: 'Mande pagamentos Lightning sem sair da conversa.',
+    },
+  ],
 };
 
 /** Label for the "see everything" affordance on both surfaces. */
 export const HELP_VIEW_MORE: Record<Locale, string> = {
   en: 'View more guides',
   es: 'Ver más guías',
+  pt: 'Ver mais guias',
 };

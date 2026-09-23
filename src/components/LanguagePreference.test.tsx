@@ -29,6 +29,22 @@ describe('LanguagePreference', () => {
     expect(localStorage.getItem('locale')).toBe('en');
   });
 
+  it('offers Portuguese too, and persists it', async () => {
+    const user = userEvent.setup();
+    render(
+      <LocaleProvider initialLocale="es">
+        <LanguagePreference />
+      </LocaleProvider>,
+    );
+
+    await user.click(screen.getByTestId('language-option-pt'));
+
+    expect(screen.getByText('Idioma')).toBeTruthy();
+    expect(screen.getByTestId('language-option-pt')).toHaveAttribute('aria-pressed', 'true');
+    expect(document.cookie).toContain('locale=pt');
+    expect(localStorage.getItem('locale')).toBe('pt');
+  });
+
   it('renders the compact mobile row', () => {
     render(
       <LocaleProvider initialLocale="en">

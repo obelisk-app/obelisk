@@ -21,11 +21,21 @@ export interface Guide {
 
 const DEFAULT_ROOT = path.join(process.cwd(), 'content', 'guides');
 
+/**
+ * What a language falls back to when an article hasn't been translated yet.
+ *
+ * Without this a locale whose directory is missing or incomplete produces
+ * an empty guides index and a 404 per article — the reader gets nothing
+ * rather than the English original, which is strictly worse. English is
+ * where every article exists first.
+ */
+const FALLBACK_LOCALE: Locale = 'en';
+
 function rootDir(override?: string) {
   return override || process.env.OBELISK_GUIDES_ROOT || DEFAULT_ROOT;
 }
 
-export async function listSlugs(locale: Locale, root?: string): Promise<string[]> {
+async function slugsIn(locale: Locale, root?: string): Promise<string[]> {
   const dir = path.join(rootDir(root), locale);
   try {
     const files = await fs.readdir(dir);
@@ -39,19 +49,41 @@ export async function listSlugs(locale: Locale, root?: string): Promise<string[]
   }
 }
 
+/**
+ * Every article available in this language — its own where translated,
+ * English where not, so a partially-translated locale lists the full set
+ * rather than a subset that looks like the site is missing pages.
+ */
+export async function listSlugs(locale: Locale, root?: string): Promise<string[]> {
+  const own = await slugsIn(locale, root);
+  if (locale === FALLBACK_LOCALE) return own;
+  const fallback = await slugsIn(FALLBACK_LOCALE, root);
+  return [...new Set([...own, ...fallback])].sort();
+}
+
 export async function readGuide(
   locale: Locale,
   slug: string,
   root?: string,
 ): Promise<Guide> {
-  const file = path.join(rootDir(root), locale, `${slug}.mdx`);
-  const raw = await fs.readFile(file, 'utf8');
+  const raw = await readRaw(locale, slug, root);
   const { data, content } = matter(raw);
   return {
     slug,
     frontmatter: data as GuideFrontmatter,
     content,
   };
+}
+
+/** The article in this language, or the English one when it isn't translated. */
+async function readRaw(locale: Locale, slug: string, root?: string): Promise<string> {
+  const file = path.join(rootDir(root), locale, `${slug}.mdx`);
+  try {
+    return await fs.readFile(file, 'utf8');
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== 'ENOENT' || locale === FALLBACK_LOCALE) throw err;
+    return fs.readFile(path.join(rootDir(root), FALLBACK_LOCALE, `${slug}.mdx`), 'utf8');
+  }
 }
 
 export async function listAllGuides(locale: Locale, root?: string): Promise<Guide[]> {
