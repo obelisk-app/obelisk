@@ -1488,6 +1488,7 @@ function Sidebar({
     () => groups.filter((g) => !g.parent || !groupsById[g.parent]),
     [groups, groupsById],
   );
+  const { t } = useTranslation();
   const myPubkey = useMyPubkey();
   const operatorPubkey = useRelayOperatorPubkey(relay || null);
   // Push the relay operator into the WoT engine so useGroups exempts the
@@ -1707,7 +1708,7 @@ function Sidebar({
             data-testid="channels-loading"
           >
             <div className="lc-spinner" style={{ width: 14, height: 14, borderWidth: 2 }} />
-            <span>Loading channels…</span>
+            <span>{t('desktop.channels.loading')}</span>
           </div>
         )}
         {groups.length === 0 && channelsVisible && groupMetadataEoseGlobal && (
@@ -1715,7 +1716,7 @@ function Sidebar({
             className="px-2 py-3 text-xs text-lc-muted"
             data-testid="channels-empty"
           >
-            No channels on this relay yet.
+            {t('desktop.channels.empty')}
           </div>
         )}
         {laidOut.categories.map((cat) => (

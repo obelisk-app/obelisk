@@ -20,10 +20,19 @@ vi.mock('@/lib/read-state/selectors', () => ({ useHasAnyHighlights: () => false 
 
 import ServerRail from './ServerRail';
 import { useHintsStore } from '@/store/hints';
+import { LocaleProvider } from '@/i18n/context';
+
+/**
+ * The rail speaks the app's language now, so its titles come from the
+ * dictionary rather than the source. Pin English so the assertions read
+ * as the strings a reader would see.
+ */
+const renderRail = (ui: React.ReactElement) =>
+  render(<LocaleProvider initialLocale="en">{ui}</LocaleProvider>);
 
 describe('ServerRail', () => {
   it('leaves its background transparent for the animated app backdrop', () => {
-    render(<ServerRail mode={{ kind: 'dm' }} onPickDM={() => {}} onPickRelay={() => {}} />);
+    renderRail(<ServerRail mode={{ kind: 'dm' }} onPickDM={() => {}} onPickRelay={() => {}} />);
 
     const rail = screen.getByTitle('Direct messages').parentElement;
     expect(rail).not.toHaveClass('bg-lc-black');
@@ -31,8 +40,7 @@ describe('ServerRail', () => {
 
   it('puts the Nostr feed tile directly below the DM tile', () => {
     const onPickFeed = vi.fn();
-    render(
-      <ServerRail
+    renderRail(<ServerRail
         mode={{ kind: 'dm' }}
         onPickDM={() => {}}
         onPickFeed={onPickFeed}
@@ -51,8 +59,7 @@ describe('ServerRail', () => {
   });
 
   it('marks the feed tile active when the feed is the current view', () => {
-    render(
-      <ServerRail
+    renderRail(<ServerRail
         mode={{ kind: 'feed' }}
         onPickDM={() => {}}
         onPickFeed={() => {}}
@@ -66,7 +73,7 @@ describe('ServerRail', () => {
   });
 
   it('omits the feed tile when no handler is supplied', () => {
-    render(<ServerRail mode={{ kind: 'dm' }} onPickDM={() => {}} onPickRelay={() => {}} />);
+    renderRail(<ServerRail mode={{ kind: 'dm' }} onPickDM={() => {}} onPickRelay={() => {}} />);
     expect(screen.queryByTitle('Nostr feed')).not.toBeInTheDocument();
   });
 });
@@ -81,8 +88,7 @@ describe('first-run anchors', () => {
     // The anchors are applied through a prop rather than written inline, so
     // a typo would silently leave a hint pointing at nothing.
     relays.list = ['wss://relay.example'];
-    render(
-      <ServerRail
+    renderRail(<ServerRail
         mode={{ kind: 'dm' }}
         onPickDM={() => {}}
         onPickFeed={() => {}}
@@ -97,21 +103,39 @@ describe('first-run anchors', () => {
 
   it('dots the controls a newcomer has not met', () => {
     relays.list = ['wss://relay.example'];
-    render(<ServerRail mode={{ kind: 'dm' }} onPickDM={() => {}} onPickFeed={() => {}} onPickRelay={() => {}} />);
+    renderRail(<ServerRail mode={{ kind: 'dm' }} onPickDM={() => {}} onPickFeed={() => {}} onPickRelay={() => {}} />);
     expect(screen.getAllByTestId('hint-dot').length).toBeGreaterThan(0);
   });
 
   it('marks only the first relay, not every one of them', () => {
     // A dot on each would read as unread traffic on each.
     relays.list = ['wss://one.example', 'wss://two.example', 'wss://three.example'];
-    render(<ServerRail mode={{ kind: 'relay', url: 'wss://one.example' }} onPickDM={() => {}} onPickRelay={() => {}} />);
+    renderRail(<ServerRail mode={{ kind: 'relay', url: 'wss://one.example' }} onPickDM={() => {}} onPickRelay={() => {}} />);
     expect(document.querySelectorAll('[data-tour="rail-relay"]')).toHaveLength(1);
   });
 
   it('drops the dots once the hints are seen', () => {
     relays.list = ['wss://relay.example'];
     useHintsStore.setState({ seen: ['rail-dm', 'rail-feed', 'rail-relay'] });
-    render(<ServerRail mode={{ kind: 'dm' }} onPickDM={() => {}} onPickFeed={() => {}} onPickRelay={() => {}} />);
+    renderRail(<ServerRail mode={{ kind: 'dm' }} onPickDM={() => {}} onPickFeed={() => {}} onPickRelay={() => {}} />);
     expect(screen.queryAllByTestId('hint-dot')).toHaveLength(0);
+  });
+});
+
+describe('speaks the reader\'s language', () => {
+  it('translates the rail tiles', () => {
+    // The rail had no `useTranslation` at all: "Direct messages", "Add
+    // relay" and the remove confirmation were English in the Spanish build
+    // too.
+    relays.list = ['wss://relay.example'];
+    render(
+      <LocaleProvider initialLocale="pt">
+        <ServerRail mode={{ kind: 'dm' }} onPickDM={() => {}} onPickFeed={() => {}} onPickRelay={() => {}} />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByTitle('Mensagens diretas')).toBeInTheDocument();
+    expect(screen.getByTitle('Feed do Nostr')).toBeInTheDocument();
+    expect(screen.getByTitle('Adicionar relay')).toBeInTheDocument();
   });
 });

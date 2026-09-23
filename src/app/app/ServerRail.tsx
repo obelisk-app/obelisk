@@ -20,6 +20,7 @@ import { encodeRelayShareCode } from '@/lib/relay-share-link';
 import { useHasAnyHighlights } from '@/lib/read-state/selectors';
 import ModalShell from '@/components/ModalShell';
 import HintDot from '@/components/hints/HintDot';
+import { useTranslation } from '@/i18n/context';
 
 
 type RailMode = { kind: 'dm' } | { kind: 'feed' } | { kind: 'relay'; url: string };
@@ -38,12 +39,13 @@ export default function ServerRail({
   const relays = useConfiguredRelays();
   const currentRelay = useCurrentRelayUrl();
   const [adding, setAdding] = useState(false);
+  const { t } = useTranslation();
 
   return (
     <div className="flex w-[72px] shrink-0 flex-col items-center gap-2 py-3">
       <RailTile
         active={mode.kind === 'dm'}
-        title="Direct messages"
+        title={t('rail.directMessages')}
         hint="rail-dm"
         onClick={onPickDM}
         icon={
@@ -64,7 +66,7 @@ export default function ServerRail({
       {onPickFeed && (
         <RailTile
           active={mode.kind === 'feed'}
-          title="Nostr feed"
+          title={t('rail.nostrFeed')}
           hint="rail-feed"
           onClick={onPickFeed}
           icon={
@@ -93,7 +95,9 @@ export default function ServerRail({
             onClick={() => onPickRelay(url)}
             onRemove={() => {
               if (relays.length <= 1) return;
-              if (confirm(`Remove relay ${shortHost(url)}?`)) nostrActions.removeRelay(url);
+              if (confirm(t('rail.confirmRemove').replace('{host}', shortHost(url)))) {
+                nostrActions.removeRelay(url);
+              }
             }}
           />
         );
@@ -101,8 +105,8 @@ export default function ServerRail({
 
       <button
         onClick={() => setAdding(true)}
-        title="Add relay"
-        aria-label="Add relay"
+        title={t('rail.addRelay')}
+        aria-label={t('rail.addRelay')}
         data-tour="rail-add-relay"
         className="group/tile relative flex h-12 w-12 items-center justify-center rounded-2xl bg-lc-card text-lc-green ring-1 ring-lc-border transition-all duration-150 hover:rounded-xl hover:bg-lc-green/15 hover:ring-lc-green"
       >
@@ -177,6 +181,7 @@ function RelayTile({
   onRemove: () => void;
   hint?: string;
 }) {
+  const { t } = useTranslation();
   const host = shortHost(url);
   const initials = letterFor(host);
   const accent = colorFor(host);
@@ -199,7 +204,7 @@ function RelayTile({
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      window.prompt('Copy this link', link);
+      window.prompt(t('rail.copyPrompt'), link);
     }
   }
 
@@ -259,8 +264,8 @@ function RelayTile({
       </button>
       {showHighlight && (
         <span
-          aria-label="Unread mentions or replies on this relay"
-          title="Unread mentions or replies"
+          aria-label={t('rail.unreadAria')}
+          title={t('rail.unreadTitle')}
           className="pointer-events-none absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-lc-green px-1 text-[9px] font-bold text-lc-black ring-2 ring-lc-black"
         >
           @
@@ -275,19 +280,19 @@ function RelayTile({
               onClick={() => { setMenu(false); onClick(); }}
               className="block w-full rounded px-3 py-1.5 text-left text-sm text-lc-muted hover:bg-lc-card hover:text-lc-white"
             >
-              Switch to relay
+              {t('rail.switchTo')}
             </button>
             <button
               onClick={() => { void copyShareLink(); }}
               className="block w-full rounded px-3 py-1.5 text-left text-sm text-lc-muted hover:bg-lc-card hover:text-lc-white"
             >
-              {copied ? 'Copied!' : 'Copy share link'}
+              {copied ? t('common.copied') : t('rail.copyShareLink')}
             </button>
             <button
               onClick={() => { setMenu(false); onRemove(); }}
               className="block w-full rounded px-3 py-1.5 text-left text-sm text-red-400 hover:bg-lc-card"
             >
-              Remove
+              {t('rail.remove')}
             </button>
           </div>
         </>
@@ -297,6 +302,7 @@ function RelayTile({
 }
 
 function AddRelayModal({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<'suggested' | 'custom'>('suggested');
   const configured = useConfiguredRelays();
   const configuredSet = useMemo(() => new Set(configured), [configured]);
@@ -308,14 +314,12 @@ function AddRelayModal({ onClose }: { onClose: () => void }) {
     >
         <div className="flex items-start justify-between gap-4 px-6 pt-6">
           <div>
-            <h2 className="text-lg font-bold text-lc-white">Add a Relay</h2>
-            <p className="mt-1 text-sm text-lc-muted">
-              Pick a popular relay or enter a custom URL to connect.
-            </p>
+            <h2 className="text-lg font-bold text-lc-white">{t('rail.addModal.title')}</h2>
+            <p className="mt-1 text-sm text-lc-muted">{t('rail.addModal.subtitle')}</p>
           </div>
           <button
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t('common.close')}
             className="rounded p-1 text-lc-muted hover:bg-lc-card hover:text-lc-white"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -327,10 +331,10 @@ function AddRelayModal({ onClose }: { onClose: () => void }) {
 
         <div className="mt-4 flex border-b border-lc-border px-6">
           <TabButton active={tab === 'suggested'} onClick={() => setTab('suggested')}>
-            Suggested
+            {t('rail.addModal.suggested')}
           </TabButton>
           <TabButton active={tab === 'custom'} onClick={() => setTab('custom')}>
-            Custom URL
+            {t('rail.addModal.custom')}
           </TabButton>
         </div>
 
@@ -409,6 +413,7 @@ function SuggestedRelayItem({
   alreadyAdded: boolean;
   onAdded: () => void;
 }) {
+  const { t } = useTranslation();
   const [info, setInfo] = useState<RelayInfo | null>(null);
   const [iconFailed, setIconFailed] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -471,13 +476,16 @@ function SuggestedRelayItem({
         disabled={alreadyAdded || busy}
         className="shrink-0 rounded-lg bg-lc-green px-4 py-1.5 text-sm font-semibold text-lc-black transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {alreadyAdded ? 'Added' : busy ? 'Adding…' : 'Add'}
+        {alreadyAdded
+          ? t('rail.addModal.added')
+          : busy ? t('rail.addModal.adding') : t('rail.addModal.add')}
       </button>
     </li>
   );
 }
 
 function CustomRelayForm({ onAdded }: { onAdded: () => void }) {
+  const { t } = useTranslation();
   const [url, setUrl] = useState('wss://');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -508,10 +516,8 @@ function CustomRelayForm({ onAdded }: { onAdded: () => void }) {
 
   return (
     <form onSubmit={submit}>
-      <label className="block text-sm font-semibold text-lc-white">Relay URL</label>
-      <p className="mt-1 text-xs text-lc-muted">
-        Paste a NIP-29 group relay URL. Each relay is a separate &ldquo;server&rdquo; in the rail.
-      </p>
+      <label className="block text-sm font-semibold text-lc-white">{t('rail.addModal.urlLabel')}</label>
+      <p className="mt-1 text-xs text-lc-muted">{t('rail.addModal.urlHint')}</p>
       <input
         autoFocus
         value={url}
@@ -526,7 +532,7 @@ function CustomRelayForm({ onAdded }: { onAdded: () => void }) {
           disabled={busy || !url.trim()}
           className="rounded-lg bg-lc-green px-4 py-1.5 text-sm font-semibold text-lc-black disabled:opacity-50"
         >
-          {busy ? 'Adding…' : 'Add relay'}
+          {busy ? t('rail.addModal.adding') : t('rail.addRelay')}
         </button>
       </div>
     </form>
