@@ -1,0 +1,74 @@
+---
+title: Deixando seus DMs à prova de quântica
+description: Mensagens criptografadas que você envia hoje podem ser gravadas agora e lidas daqui a anos, quando um computador quântico quebrar a troca de chaves que o Nostr usa. Essa é a parte do problema que dá para resolver por antecipação, e há dois jeitos de fazer isso.
+heroComponent: quantum-safe
+publishedAt: '2026-08-15'
+updatedAt: '2026-08-17'
+tags: [security, post-quantum, direct-messages, encryption]
+---
+
+## Por que isso importa agora
+
+As mensagens criptografadas do Nostr derivam a chave de secp256k1, a mesma curva elíptica que protege sua identidade. Qualquer pessoa pode copiar hoje uma mensagem criptografada de um relay público e simplesmente guardá-la. No dia em que um computador quântico conseguir quebrar essa curva, tudo o que foi guardado vira legível.
+
+Isso se chama **colher agora, descriptografar depois**, e é a única metade do problema quântico que dá para resolver com antecedência. Uma mensagem protegida hoje continua protegida depois dessa quebra, quando quer que ela chegue. Falsificação é outra história: ninguém consegue forjar a sua assinatura antes da quebra, então isso se resolve quando a rede inteira se mover.
+
+Chaves pós-quânticas fecham a metade da confidencialidade. A proteção é **híbrida**: o segredo pós-quântico é combinado com a chave comum de hoje, então nunca fica mais fraca do que o que você já tem.
+
+## Dois jeitos de obter chaves pós-quânticas
+
+### Uma conta nova a partir de uma frase de 24 palavras
+
+A opção mais limpa se você está começando do zero. Suas chaves pós-quânticas são derivadas da mesma frase de recuperação que a sua chave Nostr, como *irmãs* e não como filhas. Isso tem uma consequência específica que vale entender: se alguém quebrar sua chave Nostr, ainda assim não alcança suas chaves pós-quânticas, porque a derivação só corre num sentido. Uma frase restaura as duas.
+
+Tem que ser **24 palavras**. Uma frase de 12 palavras carrega 128 bits de entropia, o que faria da própria frase a parte mais fraca do sistema, e não da criptografia. Vinte e quatro palavras dão 256 bits, batendo com o nível de segurança que as chaves pós-quânticas miram.
+
+Nada extra para guardar: sua frase atual já cobre tudo.
+
+### Anexar uma identidade independente ao npub que você já tem
+
+Se você já tem um npub que não quer abandonar (ou o importou de uma `nsec` e não tem frase de onde derivar), dá para gerar um par de chaves pós-quânticas localmente e anexá-lo à sua conta existente.
+
+Seu npub não muda. Quem você segue, seu histórico, sua identidade — tudo continua exatamente como está. A extensão gera o par de chaves offline e publica um atestado assinado pela sua chave atual, e é isso que avisa às outras pessoas que sua conta pode receber mensagens pós-quânticas.
+
+O custo: essa chave **não pode ser recuperada pela sua frase de recuperação**, porque nunca foi derivada dela. Ela precisa do próprio backup separado. Guarde-a como você guarda a frase.
+
+## Como configurar
+
+Os dois caminhos passam pela [extensão Nostr WoT](https://nostr-wot.com), que é dona das suas chaves. O Obelisk nunca as vê: ele só lê o atestado público que diz que sua conta tem chaves pós-quânticas.
+
+Publicar o atestado é o que te torna alcançável para mensagens pós-quânticas, e não há mais nada a fazer do seu lado. No lado do Obelisk, ligue a **proteção pós-quântica** nas preferências. A partir daí, sempre que você e a pessoa para quem escreve publicarem chaves pós-quânticas, o Obelisk sela a mensagem com um envelope pós-quântico dentro do gift wrap comum.
+
+Uma condição fica fora do controle do Obelisk. Ele só criptografa em modo pós-quântico quando a sua extensão informa explicitamente que consegue, porque um pedido pós-quântico a uma extensão que não o entende volta como uma mensagem criptografada comum, sem aviso. Em vez de alegar uma proteção que não consegue verificar, o Obelisk envia a mensagem com criptografia comum e a rotula assim. O painel de preferências te diz em qual dos dois casos você está.
+
+Só logins por extensão de navegador conseguem usar o modo pós-quântico. Um login por `nsec` não tem frase de recuperação de onde derivar chaves, e o protocolo de assinatura remota de um bunker não tem campo para carregar material de chave pós-quântica. Isso corta dos dois lados: nesses logins o Obelisk também não consegue abrir uma mensagem pós-quântica recebida, porque abrir o envelope exige exatamente as chaves que ele não tem. Se alguém te mandar uma, ela não vai aparecer. Entre com a extensão para lê-la.
+
+Uma mensagem que não pode ser protegida nunca é bloqueada. Ela sempre é enviada.
+
+## Lendo as marcas
+
+O Obelisk envia mensagens NIP-17 com gift wrap por padrão agora, então os relays não veem mais para quem você escreve. O que veio antes disso não muda: criptografia não é retroativa, e nada consegue voltar no tempo para proteger uma mensagem que já está num relay. Um tópico antigo mantém seu histórico NIP-04 exatamente como estava.
+
+As marcas só aparecem com a **proteção pós-quântica** ligada, e apenas onde o nível de proteção *muda*. Um tópico longo de histórico NIP-04 ganha uma marca no topo, não uma em cada mensagem.
+
+- **Dá para ver com quem você fala**: uma mensagem NIP-04. O conteúdo é criptografado, mas os servidores que a carregaram viam com quem você conversava. É assim que se parece o seu histórico anterior ao NIP-17, e uma conversa que você deliberadamente voltou para o NIP-04.
+- **Não está extra segura**: uma mensagem com gift wrap, sem proteção pós-quântica. Trancada hoje, mas alguém pode guardá-la agora e abri-la daqui a anos.
+- **Sem marca**: com gift wrap e pós-quântica. Nada a sinalizar.
+
+Uma conversa fica em silêncio quando os dois lados estão enviando mensagens com gift wrap e pós-quânticas, e não antes.
+
+## O escudo no cabeçalho
+
+Cada conversa traz um pequeno escudo ao lado do nome da outra pessoa. Passe o mouse, ou toque nele no celular, e ele diz em qual dos três estados você está:
+
+- **Extra segura**: suas mensagens estão trancadas, ninguém vê com quem você fala, e nem um computador quântico do futuro conseguiria abri-las.
+- **Segura**: suas mensagens estão trancadas e ninguém vê com quem você fala. Um dia, porém, um computador quântico poderia abri-las.
+- **Básica**: suas mensagens estão trancadas, mas os servidores que as carregam veem com quem você fala.
+
+A maioria das conversas é **Segura**, e isso é uma boa notícia de verdade, não um alerta. O gift wrap já esconde com quem você fala. O escudo é pequeno de propósito: um aviso permanente sobre o estado em que quase toda conversa está deixa de ser lido em uma semana.
+
+## Para ler mais
+
+A criptografia pós-quântica aqui é **opcional por escolha**: um cliente a pede explicitamente, em vez de negociá-la pelas suas costas. Parece trabalho extra e é justamente o que impede o seu app de prometer uma proteção que não entregou. A Nostr WoT escreveu sobre [por que mensagens diretas resistentes a quântica precisam ser opt-in](https://nostr-wot.com/blog/opt-in-quantum-resistant-direct-messages), incluindo a falha que isso evita.
+
+O lado da identidade, de onde vêm as chaves, está em [identidades Nostr pós-quânticas](https://nostr-wot.com/blog/post-quantum-nostr-identities). O relato completo da implementação está na [QuantaKrypto](https://quantakrypto.com/blog/obelisk-first-nostr-client-post-quantum-dms).

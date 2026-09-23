@@ -1,0 +1,97 @@
+---
+title: Vesta — vilas, trocas e dados que ninguém rola
+description: O Vesta é um jogo de construção de vilas rodando dentro de um canal do Obelisk. As regras vêm de um pacote upstream que acompanhamos em vez de bifurcar, os dados são derivados do log de eventos em vez de rolados por um jogador, e cada cliente confere cada jogada.
+heroComponent: vesta
+publishedAt: '2026-09-04'
+updatedAt: '2026-09-04'
+tags: [games, vesta, nostr, dice, kind-2390]
+---
+
+## O que é
+
+**Vesta** — *Expanding Settlements Through Accord* — é um jogo de construir e trocar para 2 a 4 pessoas numa ilha de hexágonos. Funde vilas nos cantos, ligue-as com estradas, evolua para cidades, troque recursos e corra até a meta de pontos de vitória enquanto o ladrão estaciona justamente no hexágono que mais dói.
+
+Se você já jogou o clássico do gênero, já sabe jogar. O que vale ler é o que muda quando a mesa não tem juiz.
+
+<Shot name="vesta-board" caption="Uma mesa de Vesta no Obelisk: a ilha, a mão e os pontos de cada pessoa, e controles que só oferecem jogadas que o motor vai realmente aceitar." />
+
+## As regras não são nossas
+
+O Vesta é uma **dependência acompanhada**, não uma bifurcação:
+
+```json
+"vesta": "github:fchurca/vesta#semver:^0"
+```
+
+O upstream ([fchurca/vesta](https://github.com/fchurca/vesta)) mantém um módulo central que já é puro — `createGame(seed)` monta um tabuleiro, `applyMove(state, move)` devolve o próximo — o que por acaso é exatamente o contrato que um motor de jogo do Obelisk precisa cumprir. Então nada no Obelisk codifica uma regra do Vesta. Nosso código traduz vocabulários: o índice de jogador deles vira o id de assento nosso, e o `move.player` deles é substituído por quem assinou o evento.
+
+`npm update vesta` traz as mudanças de regra deles. Esse é o caminho de atualização inteiro.
+
+## Três coisas que um relay obriga
+
+**1. Uma jogada não pode dizer de quem ela é.** O cliente do upstream é de teclado compartilhado: todo mundo divide a mesma máquina, então uma jogada carregando `player: 2` é inofensiva. Sobre um relay, isso é uma primitiva de falsidade ideológica. Aqui, o assento vem da assinatura — você não consegue publicar uma jogada "como" outra pessoa.
+
+**2. Cada cliente valida cada jogada.** O upstream separa as regras (`canBuildSettlement`) do fazer (`placeSettlement`) e deixa a interface chamar a guarda primeiro. Sobre um relay não há interface no caminho: um cliente modificado publica direto no socket. Então as guardas rodam em cada cliente, para cada jogada, antes de aplicá-la. Sem isso, você poderia publicar uma vila num canto ocupado e todo mundo concordaria que ele é seu.
+
+**3. Dados não podem ser autodeclarados.** Essa é a parte interessante.
+
+## De onde vêm os números
+
+A jogada `roll-dice` do upstream carrega os próprios valores, porque quem rola é quem todo mundo está olhando. Coloque isso num relay e quem rola escolhe os próprios recursos.
+
+Então o Obelisk ignora quaisquer valores que a jogada declare e deriva a rolagem do log:
+
+```
+entropia = <id do último evento aceito> : <índice do turno>
+dados    = mulberry32(xmur3(entropia))
+```
+
+As duas entradas são fixadas **antes** de quem rola publicar qualquer coisa, então moer o próprio evento não muda nada — o seu evento não é uma entrada. E, por ser uma função pura do log, cada cliente deriva os mesmos dois números sem trocar uma mensagem sobre isso.
+
+<Callout type="warn" title="A limitação honesta">
+Quem publicou o evento aceito *anterior* pode moer aquele evento para
+direcionar a próxima rolagem. Na prática, esse costuma ser o fim de turno de
+outra pessoa, então quem mói está direcionando os dados de um adversário — mas
+é real. A dependência URD do upstream (aleatoriedade verificável) é a correção
+de verdade, e `vesta/dice.ts` é o único arquivo que muda quando ela chegar.
+</Callout>
+
+## Assentos, e jogar com duas pessoas num laptop
+
+Um assento não é uma pubkey. O evento `start` congela uma lista de assentos assim:
+
+```json
+["start", {"seats": [
+  {"id": "<pubkey-a>",   "by": "<pubkey-a>", "label": "Ana"},
+  {"id": "<pubkey-a>#1", "by": "<pubkey-a>", "label": "Beto"},
+  {"id": "<pubkey-b>",   "by": "<pubkey-b>", "label": "Cami"}
+]}]
+```
+
+`id` é o que o motor trata como jogador; `by` é a conta autorizada a publicar as jogadas dele. Dois assentos dividindo um `by` são duas pessoas numa máquina — jogadores separados, recursos separados, um teclado e uma assinatura. A ordem dos assentos é a ordem dos turnos, e os assentos podem ser renomeados antes de começar.
+
+Quem cria a mesa só consegue sentar contas que de fato entraram, então ninguém é arrastado para uma partida por alguém preenchendo linhas.
+
+## Sem relógio de turno, por padrão
+
+O relógio do Obelisk é **por ação**, e um turno de Vesta são várias ações — rolar, construir, trocar, encerrar. Um cronômetro de 45 segundos guilhotinaria as pessoas no meio do raciocínio, então mesas de Vesta não usam relógio por padrão. Se você definir um, um estouro encerra o turno daquele assento em vez de remover a pessoa: o Vesta não tem eliminação, e apagar um jogador reescreveria o tabuleiro de todo mundo.
+
+## Retomando um jogo salvo
+
+O upstream exporta um registro de partida — `{startState, turns, endState}`. Solte esse arquivo nas opções da mesa ao criá-la e o jogo começa a partir de `endState` em vez de uma ilha nova. Um estado serializado tem uns 4 KB, o que cabe confortavelmente num evento.
+
+Quando uma mesa retoma um save, as linhas de assento ficam fixas nos jogadores salvos, na ordem salva, cada uma mostrando o nome que tinha. Quem cria atribui cada jogador salvo a uma conta, em vez de o mapeamento ficar implícito na ordem das linhas.
+
+## O que a interface oferece e o que não oferece
+
+Cada botão passa pelo validador do próprio motor, e o tabuleiro destaca exatamente os pontos que o upstream considera legais. Isso é deliberado: uma jogada rejeitada sobre um relay é **silenciosa** — não vem mensagem de erro de lugar nenhum — então, se a interface oferecesse uma jogada ilegal, você clicaria e simplesmente veria nada acontecer.
+
+## Para quem quiser se aprofundar
+
+Tudo viaja como eventos kind `2390` no grupo NIP-29 do canal e é reproduzido por `deriveSession`. O sequenciamento que o upstream mantém no cliente — virar etapas de preparação, distribuir os recursos da segunda rodada, decidir quando o ladrão pode se mover — acontece deterministicamente em cada reprodução, sob uma chave com espaço de nomes dentro do estado, para sobreviver a uma ida e volta pelos redutores do upstream. Os detalhes estão em [docs/games.md](https://github.com/obelisk-app/obelisk-dex/blob/main/docs/games.md).
+
+<RelatedGuides items={[
+  { slug: "chain-reaction", note: "o pequeno: um clique, uma cascata" },
+  { slug: "stacker", note: "tempo real, e as linhas que você limpa caem em cima de outra pessoa" },
+  { slug: "how-obelisk-works", note: "a arquitetura só-relay por baixo de tudo" }
+]} />

@@ -1,0 +1,66 @@
+---
+title: Admins, membros e moderação no NIP-29
+description: Não existe mais painel de administração do Obelisk — a moderação vive no relay. Admins, membros, expulsões e banimentos são todos eventos NIP-29 padrão que qualquer cliente Nostr consegue ler. Veja como funciona o modelo de papéis, o que você pode fazer e o que permanece auditável.
+heroComponent: admin-cli
+publishedAt: '2026-04-18'
+updatedAt: '2026-04-28'
+tags: [moderation, nip-29, admins, roles]
+---
+
+## Onde a moderação vive
+
+No Obelisk híbrido antigo, os admins viviam numa tabela do Postgres e um painel web de administração chamava uma API HTTP para banir gente. No Obelisk novo, **tudo isso está no relay**. Moderação não é um recurso do app — é um recurso do NIP-29.
+
+Isso significa que:
+
+- Qualquer cliente NIP-29 mostra a mesma lista de admins, lista de membros, expulsões e banimentos.
+- Trocar de cliente não muda as permissões.
+- Trocar de relay *muda* — a moderação é por relay e por grupo, porque quem aplica é o relay.
+
+## Os eventos que importam
+
+O NIP-29 define um conjunto pequeno de kinds de evento. Os que afetam a moderação:
+
+| Kind  | O que é                                          |
+|-------|--------------------------------------------------|
+| `9007`  | Criação do grupo — quem assina vira admin       |
+| `9000`  | Adicionar usuário (incluir membro)               |
+| `9001`  | Remover usuário (expulsar)                       |
+| `9005`  | Apagar evento (remoção de mensagem pela moderação) |
+| `9002`  | Editar metadados                                 |
+| `39000` | Metadados do grupo (substituível)                |
+| `39001` | Lista de admins (substituível)                   |
+| `39002` | Lista de membros (substituível)                  |
+
+Toda ação que um moderador toma é um desses eventos, assinado por ele e datado pelo relay. Não há registro de moderação escondido — os eventos *são* o registro.
+
+## Os papéis
+
+- **Admin** — listado no evento `39001` mais recente. Pode editar metadados, adicionar ou remover membros, promover ou rebaixar outros admins, expulsar e apagar mensagens.
+- **Membro** — listado no evento `39002` mais recente. Pode publicar mensagens.
+- **Todo o resto** — no máximo leitura, dependendo das flags de metadados do grupo (`público` vs. `privado`).
+
+Na interface do Obelisk, esses papéis aparecem como selos ao lado dos nomes, botões de "expulsar" e "banir" no menu de contexto, e uma seção de admins nas configurações do grupo. Por baixo, cada clique publica um dos eventos acima.
+
+## O que um admin faz de verdade
+
+- **Promover um membro a admin** — publicar um novo `39001` incluindo a pubkey dele.
+- **Expulsar alguém** — publicar um evento `9001` com a pubkey da pessoa. O relay passa a recusar as mensagens dela.
+- **Apagar uma mensagem ruim** — publicar um evento `9005` referenciando o ID do evento em questão.
+- **Renomear ou mudar a identidade do grupo** — publicar um `9002` (editar metadados).
+
+Tudo isso passa pela interface do Obelisk hoje. Não há painel de administração separado porque não há nada sobre o que "painelar" — os eventos vão direto para o relay.
+
+## E banir em vários relays?
+
+Banimentos NIP-29 são por relay. Se alguém é banido do seu grupo no relay A, nada impede a pessoa de criar o mesmo ID de grupo no relay B e postar lá. Isso é por projeto — relays são soberanos. Se banimentos portáteis importam para você, rode o seu relay (ou um conjunto de relays que você controle) e replique o estado do grupo entre eles.
+
+## Para onde foi a CLI de administração
+
+Versões antigas do Obelisk traziam uma CLI em Node (`scripts/admin-cli`) que deixava agentes operarem a API HTTP de administração com a própria nsec. Com o fim da API, a CLI também acabou. O mesmo resultado — agentes gerenciando grupos de ponta a ponta — agora é alcançável direto com `nostr-tools` ou qualquer SDK Nostr: carregue uma nsec, monte os eventos NIP-29, publique no relay. Talvez a gente publique um auxiliar enxuto para isso; acompanhe o rastreador de issues.
+
+<RelatedGuides items={[
+  { slug: "how-obelisk-works", note: "a arquitetura sem backend" },
+  { slug: "web-of-trust", note: "relays como comunidades soberanas" },
+  { slug: "future-nostr-relays" }
+]} />

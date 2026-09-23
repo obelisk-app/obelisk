@@ -1,0 +1,91 @@
+---
+title: 'Troque tudo, confie em nada: a stack de quatro peças do Obelisk'
+description: O Obelisk são quatro projetos pequenos sobre um protocolo aberto — chat, SFU de voz, runtime de bots e relay. Qualquer peça é substituível, nenhuma é central.
+heroComponent: swap-anything
+publishedAt: '2026-05-07'
+updatedAt: '2026-05-08'
+tags: [ecosystem, sovereignty, nostr, architecture, self-host]
+---
+
+## A versão curta
+
+A maioria dos apps de chat é uma empresa. Um servidor, um banco de dados, um time que pode mudar as regras amanhã. Se você não gosta do Discord, pode sair do Discord — mas não pode levar sua comunidade junto. Os dados, a identidade e o histórico ficam para trás.
+
+O Obelisk foi construído para não se parecer nada com isso. É um chat em grupo no estilo do Discord, mas, em vez de um backend único, são **quatro projetos independentes** que conversam entre si por relays Nostr. Escolha as peças em que você confia e ignore o resto.
+
+## As quatro peças
+
+<SvgHero name="swap-anything" />
+
+- <Mark name="mark-dex" /> **obelisk-dex** — o cliente de chat. É o que você vê no navegador ao abrir obelisk.ar. Ele assina mensagens com a sua chave e as envia a um relay. É quase tudo o que faz.
+- <Mark name="mark-sfu" /> **obelisk-sfu** — o servidor de voz para chamadas grandes. Quando uma chamada em grupo fica grande demais para todo mundo falar com todo mundo diretamente, o SFU mistura os fluxos. Ele sinaliza por Nostr como qualquer outro participante.
+- <Mark name="mark-bots" /> **obelisk-bots** — o motor que roda bots. Bots de moderação, de jogos, de integração. Cada bot tem o próprio par de chaves e posta mensagens do mesmo jeito que uma pessoa. Não existe API especial de bot.
+- <Mark name="mark-relay" /> **obelisk-relay** — um relay Nostr que você pode rodar sozinho. Já vem com lista de permissão embutida e uma CLI que te coloca no ar em poucos minutos. Há uma interface web para administrá-lo sem tocar no terminal.
+
+Nenhum desses quatro projetos importa o código do outro. Nunca precisaram. Todos falam o mesmo protocolo e se encontram no relay.
+
+## O protocolo é o barramento
+
+Num app normal, o frontend chama o backend por uma API. O framework de bots se enfia no servidor de chat. O serviço de voz se autentica contra o banco de usuários. Cada componente depende de todos os outros. Troque uma peça e três coisas quebram.
+
+O Nostr muda isso. **Um relay é um barramento público de mensagens assinadas.** Qualquer coisa capaz de assinar e publicar pode entrar na conversa. Identidade é só uma chave pública. Autorização é só uma assinatura. Não há banco de dados compartilhado para coordenar.
+
+Então, quando um bot quer enviar uma mensagem, ele não chama uma API no cliente. Não existe API no cliente. Ele publica um evento assinado num relay, e qualquer cliente que assine aquele grupo vê. Mesmo caminho, mesmas regras, mesmas garantias de uma pessoa digitando no navegador.
+
+Quando o SFU quer iniciar uma sessão de voz, ele não avisa um servidor central. Ele troca sinalização WebRTC como eventos Nostr. O SFU é só mais um participante.
+
+Quando o relay quer aplicar uma lista de permissão, ele não precisa saber quais bots existem nem qual cliente você usa. Confere sua assinatura, confere sua pubkey contra a lista, aceita ou rejeita. Pronto.
+
+## Por que isso deixa o ecossistema resiliente
+
+Essa é a parte que importa. Como toda peça é substituível, nenhuma peça sozinha pode te manter refém.
+
+<Diagram name="swap-matrix" caption="Cada camada da stack tem alternativas. Nada importa nada, então nada pode exigir nada em segredo." />
+
+- **Não confia no nosso cliente?** Use outro. Qualquer cliente Nostr com suporte a chat em grupo funciona contra os mesmos relays e vê as mesmas mensagens.
+- **Não confia no nosso SFU?** Rode outro, ou use uma implementação de voz totalmente diferente. A sinalização está no fio e você pode auditá-la.
+- **Não quer nossos bots?** Escreva os seus, ou use os de outra pessoa. Bots são só pares de chaves que publicam eventos. Não há framework que você precise adotar.
+- **Não quer rodar nosso relay?** Rode qualquer relay NIP-29. Existem várias implementações. Sua comunidade se muda trocando a URL do relay.
+
+Quer misturar? Fique à vontade. Use nosso cliente com o relay de outra pessoa. Use nosso relay com o cliente de outra pessoa. Use nossos bots com o servidor de voz deles. As peças não se importam.
+
+<Callout type="info" title="Isso não é discurso de marketing">
+É uma propriedade estrutural. Como nada importa nada, nada pode exigir nada em segredo. O fio é o fio.
+</Callout>
+
+## O relay é a parte soberana
+
+Das quatro peças, o relay é a que mais importa para a soberania. O cliente é uma aba de navegador. O SFU é um par temporário. Os bots são processos sem estado. **O relay é onde o histórico do grupo vive, onde a participação é aplicada, onde a moderação acontece.**
+
+Se você quer uma comunidade que realmente controla, rode o seu relay. É por isso que o obelisk-relay foi construído com lista de permissão em primeiro lugar. Uma comunidade dona do seu relay é dona dos seus dados. Uma comunidade que aluga um relay não é dona de nada.
+
+A CLI é para operadores técnicos que não querem clicar. A interface web é para todo o resto. As duas administram a mesma lista de permissão, veem os mesmos usuários conectados, apontam para o mesmo banco.
+
+## Por que uma pessoa sozinha consegue entregar isso
+
+Construir quatro projetos parece mais trabalho do que construir um. Na prática é menos, porque o protocolo faz o trabalho de integração.
+
+- Não escrevemos autenticação. **A assinatura é a autenticação.**
+- Não escrevemos banco de usuários. **As chaves públicas são a identidade.**
+- Não escrevemos barramento de mensagens. **O relay é o barramento.**
+- Não escrevemos contratos cliente/servidor. **O formato de evento do Nostr é o contrato**, e ele já está especificado em NIPs que outras pessoas mantêm.
+
+O que sobra é a experiência de chat, a mistura de voz, o runtime de bots e a implementação do relay. Cada um é um projeto focado, com uma função clara. Nenhum precisa saber dos outros. É por isso que uma pessoa sozinha consegue carregar tudo.
+
+## Experimente a peça que quiser
+
+Tudo é código aberto. Bifurque, troque, substitua.
+
+- **App ao vivo** — [obelisk.ar](https://obelisk.ar)
+- **obelisk-dex** (cliente) — [github.com/obelisk-app/obelisk](https://github.com/obelisk-app/obelisk)
+- **obelisk-sfu** (servidor de voz) — [github.com/obelisk-app/obelisk-sfu](https://github.com/obelisk-app/obelisk-sfu)
+- **obelisk-bots** (motor de bots e modelos) — [github.com/obelisk-app/obelisk-bots](https://github.com/obelisk-app/obelisk-bots)
+- **obelisk-relay** (relay + CLI + interface web) — [github.com/obelisk-app/obelisk-relay](https://github.com/obelisk-app/obelisk-relay)
+
+Se você construir algo que fale com qualquer um deles, funciona. É esse o ponto.
+
+<RelatedGuides items={[
+  { slug: "how-obelisk-works", note: "a arquitetura sem backend" },
+  { slug: "web-of-trust", note: "relays como comunidades soberanas" },
+  { slug: "future-nostr-relays", note: "o que ainda está sendo construído" }
+]} />

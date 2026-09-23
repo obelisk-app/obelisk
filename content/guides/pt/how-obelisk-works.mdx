@@ -1,0 +1,82 @@
+---
+title: Como o Obelisk funciona
+description: O Obelisk é um frontend. Não há backend, não há banco de dados, não há servidor de API — o app assina eventos Nostr no seu navegador e publica direto nos relays que você escolher. Aqui está o que acontece quando você entra, envia uma mensagem ou entra num grupo.
+heroComponent: how-obelisk-works
+publishedAt: '2026-04-16'
+updatedAt: '2026-04-28'
+tags: [architecture, how-it-works, nostr, nip-29]
+---
+
+## O formato do app
+
+O Obelisk é um único pedaço de código: o **cliente**.
+
+```
+┌──────────────────────┐         ┌──────────────────┐
+│  Frontend do Obelisk │ ──────► │  Relay(s) Nostr  │
+│  (seu navegador)     │ ◄────── │  (você escolhe)  │
+└──────────────────────┘         └──────────────────┘
+```
+
+Essa é a arquitetura inteira. Não há servidor do Obelisk, nem banco de dados, nem serviço de autenticação, nem API. O navegador guarda sua chave (ou a pede emprestada a uma extensão NIP-07), assina eventos Nostr localmente e os envia aos relays que você configurou. Para ler mensagens, o mesmo cliente assina o fluxo do relay.
+
+## O que acontece quando você entra
+
+1. A tela de login oferece três caminhos:
+   - **NIP-07** — chamar `window.nostr.signEvent()` do assinador instalado (Alby, nos2x etc.)
+   - **nsec** — colar uma chave privada, guardada no `localStorage` e usada diretamente
+   - **Gerar** — criar um par de chaves novinho ali mesmo
+
+2. O app deriva sua pubkey, busca seu perfil kind 0 nos relays configurados, e pronto. Não há sessão, não há token, não há cookie — a chave criptográfica *é* a sessão.
+
+## O que acontece quando você envia uma mensagem
+
+1. Você digita uma mensagem num canal de grupo NIP-29.
+2. O cliente monta um evento kind 9 (mensagem de grupo NIP-29), etiquetado com o ID do grupo e, se for o caso, com o ID do evento pai, para respostas.
+3. O evento é assinado com sua chave (no navegador).
+4. Ele é publicado no relay ativo via `SimplePool.publish()`.
+5. Todo mundo que assina aquele grupo naquele relay vê a mensagem chegar.
+
+Não existe uma etapa de "enviar para o servidor do Obelisk". O relay é o barramento de mensagens.
+
+## O que acontece quando você entra num grupo ou cria um
+
+Grupos são grupos **NIP-29**. Quem os guarda é o relay, não nós.
+
+- **Criar** — o cliente envia um evento `9007` (criação de grupo). O relay registra você como primeiro admin por meio de um evento `39001`.
+- **Entrar / sair** — admins emitem eventos `9000` (adicionar usuário) e `9001` (remover usuário); o relay os aplica.
+- **Canais, metadados, admins, membros** — todos eventos NIP-29 padrão: `39000` (metadados), `39001` (admins), `39002` (membros), e assim por diante.
+
+Trocar de relay é só trocar de quais grupos NIP-29 você está vendo. O app não se importa com qual relay é, desde que ele fale NIP-29.
+
+## E os DMs?
+
+Mensagens diretas não usam NIP-29. Elas usam **DMs Nostr criptografados**:
+
+- **NIP-04** — o kind de DM criptografado mais antigo, ainda amplamente suportado
+- **NIP-17** — o DM mais novo, com "gift wrap" e privacidade de metadados; o cliente publica os eventos embrulhados nos relays de caixa de entrada NIP-17 do destinatário
+
+Os dois são criptografados ponta a ponta — só quem envia e quem recebe têm as chaves para descriptografar.
+
+## E os zaps Lightning?
+
+Zaps são **NIP-57 + NIP-47**:
+
+- Um pedido de zap (kind 9734) é enviado ao endpoint LNURL do destinatário.
+- Sua carteira (conectada via Nostr Wallet Connect, NIP-47) paga a fatura.
+- Um recibo de zap (kind 9735) é publicado de volta no relay, para todo mundo ver que os sats se moveram.
+
+Nenhuma plataforma cobra taxa. Sua carteira, a carteira de quem recebe, sem intermediário.
+
+## O que nós não fazemos
+
+- Não hospedamos suas mensagens.
+- Não temos banco de dados de usuários.
+- Não emitimos tokens nem cookies.
+- Não podemos te desplataformizar, e não podemos perder seus dados — porque nunca os tivemos.
+
+<RelatedGuides items={[
+  { slug: "what-is-obelisk", note: "o resumo de elevador" },
+  { slug: "web-of-trust", note: "a UX multi-relay em detalhe" },
+  { slug: "bitcoin-zaps", note: "passo a passo de NIP-57 + NWC" }
+]} />

@@ -1,0 +1,54 @@
+---
+title: Zaps de bitcoin no chat
+description: O Obelisk permite enviar bitcoin pela Lightning direto de uma mensagem de chat, usando zaps NIP-57 e Nostr Wallet Connect (NIP-47). Sem custodiante, sem taxa de plataforma, sem intermediário — só a sua carteira, a carteira de quem recebe e um evento Nostr assinado.
+heroComponent: bitcoin-zaps
+publishedAt: '2026-04-18'
+updatedAt: '2026-04-28'
+tags: [bitcoin, lightning, nwc, nip-47, nip-57, zaps]
+---
+
+## O que é um zap, afinal?
+
+Um **zap** é um pagamento Lightning que também é um evento Nostr público. Você paga sats para alguém pela Lightning, e o recibo — um evento `kind 9735` assinado — é publicado no relay, para todo mundo na conversa ver que os sats se moveram.
+
+No Obelisk, um zap é só um botão numa mensagem. Você clica, escolhe um valor, sua carteira assina e paga a fatura, a carteira de quem recebe recebe, e o chat mostra o zap ali mesmo.
+
+## O que está envolvido
+
+Zapear usa duas NIPs:
+
+- **NIP-57** — define o formato dos eventos de pedido e recibo de zap, e o fluxo LNURL que transforma uma identidade Nostr numa fatura Lightning
+- **NIP-47** — Nostr Wallet Connect (NWC), o protocolo que permite ao app pedir que sua carteira pague uma fatura via Nostr, sem nunca ter as suas chaves
+
+Juntas, elas deixam o Obelisk enviar sats da sua carteira para qualquer pessoa que tenha um `lud16` (endereço Lightning) no perfil Nostr — sem que a gente toque nos fundos, nas chaves ou na carteira.
+
+## Como funciona no app
+
+1. **Conecte uma carteira.** Abra as preferências e cole um URI de Nostr Wallet Connect de qualquer carteira compatível com NWC (Alby Hub, Mutiny, Phoenix etc.). O URI fica guardado no seu navegador, criptografado para a sua chave Nostr.
+2. **Escolha uma mensagem.** Clique no botão de zap da mensagem.
+3. **Escolha um valor.** Os valores padrão são configuráveis; você também pode digitar um número qualquer.
+4. **Assine e pague.** O Obelisk monta um pedido de zap `kind 9734`, envia ao endpoint LNURL de quem recebe para obter uma fatura Lightning, e pede à sua carteira (via NWC) que pague a fatura.
+5. **O recibo aparece.** O endpoint LNURL de quem recebe publica um recibo de zap `kind 9735` no relay. O chat mostra o zap.
+
+## O que é privado e o que não é
+
+- **O valor e quem recebe são públicos.** Qualquer pessoa lendo o canal vê "Alice zapeou 1000 sats para Bob".
+- **O saldo da sua carteira é privado.** O Obelisk nunca o vê — o NWC só passa comandos de pagar fatura.
+- **As chaves da sua carteira são privadas.** Elas nunca saem da carteira. O Obelisk só tem permissão para pedir que ela pague faturas, dentro do limite de gasto que você definir.
+- **O roteamento Lightning é privado** do mesmo jeito que qualquer pagamento Lightning — roteado em cebola, sem pegada on-chain.
+
+## Quanto custa?
+
+- **Sem taxa de plataforma.** O Obelisk não fica com nada. Não existe plataforma.
+- **Taxas de roteamento Lightning.** Alguns sats, no máximo, para valores típicos.
+- **Taxas da carteira.** O que o seu provedor de carteira cobrar, se cobrar algo.
+
+## Por que isso importa
+
+Zapear transforma "dinheiro de verdade" numa primitiva do chat em grupo. Dê uma gorjeta por um bom post. Pague uma recompensa. Financie um projeto de forma coletiva. Faça um Q&A pago. Nada disso exige processadora de pagamento, cartão de crédito ou um intermediário capaz de congelar a transação.
+
+<RelatedGuides items={[
+  { slug: "what-is-obelisk" },
+  { slug: "how-obelisk-works", note: 'a arquitetura sem backend que torna "sem taxa de plataforma" verdade de fato' },
+  { slug: "future-nostr-relays" }
+]} />

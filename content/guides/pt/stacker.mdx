@@ -1,0 +1,89 @@
+---
+title: Stacker — blocos caindo em tempo real sobre Nostr
+description: Seis jogadores, uma mesma ordem de peças, e cada linha que você limpa soterra outra pessoa. O Stacker roda o tabuleiro localmente a sessenta quadros por segundo e publica só as consequências — ataques, derrotas e checkpoints que qualquer um pode reproduzir.
+heroComponent: stacker
+publishedAt: '2026-09-04'
+updatedAt: '2026-09-04'
+tags: [games, stacker, real-time, nostr, kind-2390]
+---
+
+## O jogo
+
+Os blocos caem. Você os encaixa em fileiras. Uma fileira completa some — e, em vez de te dar pontos, joga **linhas de lixo** no poço de um adversário, com um único buraco aberto nelas para a pessoa cavar. Vence quem sobrar por último. De uma a seis pessoas; a mesa individual é um jeito perfeitamente bom de treinar.
+
+<Shot name="stacker-well" caption="Um poço no meio da partida, com o fantasma da peça mostrando onde ela vai cair." maxWidth={340} />
+
+Todo mundo na partida começa da **mesma semente**, então todo mundo recebe as mesmas peças na mesma ordem. Uma partida é uma corrida, não uma loteria. A semente vem das opções da mesa ou do próprio id da mesa — um hash, portanto imprevisível antes de a mesa existir e idêntico para todos depois.
+
+## Por que não dá para fazer como nos outros jogos
+
+Chain Reaction e Vesta são por turnos: uma pessoa joga, todo mundo reproduz a jogada, o tabuleiro avança. O Stacker não tem um assento "da vez" — seis tabuleiros rodam ao mesmo tempo — e uma ida e volta ao relay por tecla apertada pareceria jogar dentro de melado.
+
+Então ele se divide ao meio:
+
+| | Onde roda |
+|---|---|
+| Tabuleiro, gravidade, entrada, o laço a 60 Hz | **Na sua máquina**, localmente |
+| Ataques, derrotas, checkpoints | **No relay**, como eventos kind 2390 |
+
+Seu poço nunca sai do seu computador. O que sai é o que aconteceu por causa dele.
+
+<Shot name="stacker-table" caption="Uma partida de três. Seu poço em velocidade máxima; adversários como tabuleiros em miniatura, atualizados pelos checkpoints, com contagem de ataques e linhas." maxWidth={620} />
+
+Os adversários são desenhados de forma grosseira de propósito. Os tabuleiros reais deles rodam nas próprias máquinas e só chegam até você a cada poucos segundos, então pintar um tabuleiro detalhado seria pintar uma mentira. O que você recebe, em vez disso, é o que continua verdadeiro entre atualizações: o quanto a pessoa está soterrada.
+
+## Os três eventos
+
+| op | conteúdo | significado |
+|---|---|---|
+| `attack` | `{seat, target, lines, hole, nonce}` | lixo de um assento para outro |
+| `topout` | `{seat}` | aquela pessoa está fora |
+| `checkpoint` | `{seat, frame, attacksSent, linesCleared, stackHeight, inputs, board}` | progresso, mais o log de entradas que o produziu |
+
+Ataques são agrupados antes de sair: três limpezas rápidas viram um evento com as linhas somadas. Assinar um evento leva milissegundos com uma chave local e bem mais com uma extensão de navegador, então nada é assinado entre dois quadros — o tráfego de saída parte no próprio ritmo, cerca de quatro vezes por segundo.
+
+## Como isso continua honesto
+
+O motor é uma função pura de `(semente, entradas)`. É o que torna o checkpoint interessante: ele carrega o **log de entradas** comprimido de quem enviou, então qualquer pessoa pode reproduzi-lo contra a semente compartilhada, reconstruir o tabuleiro e conferir se os ataques declarados de fato aconteceram. Um assento cujas alegações o próprio log não sustenta é marcado na interface.
+
+<Callout type="warn" title="Isso detecta trapaça, não impede">
+O lixo cai antes de chegar o checkpoint que o justifica, então um cliente
+modificado consegue entregar uma rodada de ataques não merecidos antes de ser
+marcado. Impedir isso de vez exigiria lockstep — uma ida e volta ao relay por
+quadro — o que destruiria justamente o que faz o jogo valer a pena. A troca é
+deliberada. Também pega ataques inventados, não um humano ajudado por um bot
+que joga legitimamente bem.
+</Callout>
+
+O lixo que chega passa pelo mesmo log de entradas que todo o resto, então uma reprodução recria o tabuleiro que realmente aconteceu, lixo incluído.
+
+## O tato do jogo
+
+Os números que decidem se um jogo assim fica bom de jogar:
+
+- **DAS de 10 quadros, ARR de 2** — quanto tempo uma tecla segurada espera antes de repetir, e com que rapidez repete depois.
+- **Gravidade de 48 quadros por passo até 4**, na curva clássica: suave no começo, bem mais rápida na casa dos dez, e então um piso rígido para continuar humanamente jogável. Dez linhas são um nível.
+- **Atraso de travamento de 30 quadros, com 15 reinícios por deslize** — o instante depois de a peça pousar em que ainda dá para deslizá-la.
+- O tabuleiro é desenhado direto num canvas pelo laço do jogo. O React nunca vê um quadro; ele só rerenderiza para os números que um humano lê, cerca de oito vezes por segundo.
+
+Os controles são remapeáveis pela mesa (⌨ **controles**), e o mapeamento é guardado por navegador — é uma preferência do dispositivo, não estado da conta, então nunca chega perto do relay.
+
+## Som
+
+Os efeitos são sintetizados em tempo de execução: limpezas de linha afinadas conforme quantas linhas saíram, um toque distinto para giros, um estrondo para o lixo, um tom descendente para a derrota. Nenhum arquivo de áudio, e tudo dispara direto dos eventos do motor.
+
+A música é o conjunto livre de royalties do [TETRA](https://github.com/soyezequiel/tetris-para-luna-negra), de **soyezequiel**, um projeto de hackathon da La Crypta, creditado na interface do jogo com link de volta. Ela é embaralhada uma vez por sessão e avança sozinha — não há seletor. Se uma faixa não carregar, ou se o navegador se recusar a tocá-la automaticamente, entra uma cama sintetizada generativa, para o jogo nunca ficar mudo por causa de um arquivo faltando.
+
+## Jogando
+
+`/play` num canal, escolha Stacker, defina uma semente se quiser uma ordem específica de peças, e comece. Como cada pessoa roda o próprio tabuleiro, uma conta ocupa exatamente **um** assento: dividir o teclado não faz sentido quando todo mundo joga ao mesmo tempo.
+
+## Para quem quiser se aprofundar
+
+O motor, o executor e o redutor da partida vivem em `src/lib/games/stacker/`; o formato do fio e o raciocínio por trás da divisão local/relay estão em [docs/games.md](https://github.com/obelisk-app/obelisk-dex/blob/main/docs/games.md).
+
+<RelatedGuides items={[
+  { slug: "chain-reaction", note: "por turnos, e um clique pode levar o tabuleiro" },
+  { slug: "vesta", note: "vilas, trocas e dados derivados do log" },
+  { slug: "how-obelisk-works", note: "a arquitetura só-relay por baixo de tudo" }
+]} />

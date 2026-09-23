@@ -1,0 +1,56 @@
+---
+title: Traga o seu relay
+description: O Obelisk não tem servidor central — em vez disso, você se conecta a qualquer relay Nostr NIP-29 em que confie. Cada relay aparece como um servidor próprio na barra lateral. Veja como funciona a UX multi-relay e por que ela importa.
+heroComponent: wot
+publishedAt: '2026-04-16'
+updatedAt: '2026-08-17'
+tags: [relays, nip-29, sovereignty]
+---
+
+## O relay é o servidor
+
+No Discord, o "servidor" em que você entra é o servidor do Discord. No Obelisk, o "servidor" é **um relay Nostr**. Mais especificamente, um relay que fala **NIP-29** (grupos gerenciados pelo relay).
+
+Ao abrir o app, você vê uma barra à esquerda com um ou mais ícones. Cada ícone é um relay. Clique em um e você vê os grupos NIP-29 que existem naquele relay. Clique em `+` e adicione outro. Clique e segure para remover. O app é sempre o mesmo código — o que muda é *de quem é o relay* do outro lado do websocket.
+
+## Por que isso importa
+
+- **Sem aprisionamento de fornecedor.** Leve sua comunidade para outro relay se não gostar das políticas do atual. Sua chave, suas participações em grupos, suas listas de quem você segue — tudo portátil.
+- **Sem banimento em toda a rede.** O Obelisk opera dois relays públicos e só pode moderar esses. Qualquer operador pode te banir do relay dele, mas não do Nostr nem de um relay sem relação com ele.
+- **Sem plataforma decidindo quem pode falar.** O operador do relay define as regras daquele relay. Se você não gostar, rode o seu (`strfry`, `nostr-rs-relay` e outros suportam NIP-29).
+
+## Escolhendo um relay
+
+Instalações novas incluem hoje `wss://public.obelisk.ar` e `wss://lacrypta-relay.obelisk.ar`, ambos operados pelo Obelisk. Você pode remover ou trocar qualquer um, adicionar qualquer relay NIP-29 ou rodar o seu.
+
+Para uma comunidade de verdade, você provavelmente quer uma destas opções:
+
+1. **O seu próprio relay.** Uma VPS de 5 dólares por mês roda um relay NIP-29 tranquilamente para centenas de pessoas. Os dados são seus. A política é sua.
+2. **Um relay público amigável.** Existem muitos relays NIP-29 mantidos por comunidades; escolha um cujo operador você confie.
+3. **Um relay privado.** Se você quer só um grupo pequeno, a convite, rode um relay que aceite eventos apenas de um conjunto fixo de pubkeys.
+
+## Como funcionam as permissões
+
+Dentro de um grupo NIP-29, o relay aplica três papéis:
+
+- **Admins** — listados num evento `39001`. Podem adicionar membros, expulsar e banir.
+- **Membros** — listados num evento `39002`. Podem publicar.
+- **Todo o resto** — dependendo dos metadados do grupo, pode ou não ler.
+
+Expulsar e banir também são eventos Nostr (`9001`, `9005`). O relay se recusa a publicar mensagens de quem não tem permissão para postar.
+
+Isso significa que:
+
+- **A moderação é portátil.** Se você levar uma comunidade para um relay novo, basta reproduzir os eventos de admin e de membro para montar as mesmas permissões lá.
+- **A moderação é auditável.** Cada expulsão é um evento assinado, com data e motivo.
+- **A moderação é trabalho do relay, não do app.** O Obelisk não aplica políticas — o relay aplica.
+
+## E o spam?
+
+Hoje, o antispam é o que o seu relay aplicar. A maioria dos relays NIP-29 usa prova de trabalho, listas de permissão ou entrada por convite. Estamos acompanhando o trabalho da comunidade sobre pontuação de rede de confiança no nível do relay — quando os relays expuserem um padrão, o cliente pode mostrar a pontuação de confiança ali mesmo. (Versões antigas do Obelisk calculavam a rede de confiança no backend; sem backend, o cliente agora segue o que o relay aplicar.)
+
+<RelatedGuides items={[
+  { slug: "what-is-obelisk", note: "o resumo de elevador" },
+  { slug: "how-obelisk-works", note: "a arquitetura em detalhe" },
+  { slug: "future-nostr-relays", note: "voz, bunker e mais" }
+]} />

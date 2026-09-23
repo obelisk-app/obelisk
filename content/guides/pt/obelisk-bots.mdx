@@ -1,0 +1,97 @@
+---
+title: 'Obelisk Bots: agentes Nostr para grupos, zaps e operação'
+description: "O obelisk-bots é o runtime de bots para grupos Obelisk que vivem só em relays: scripts Node pequenos, com chaves Nostr próprias, que escutam eventos de grupo NIP-29, anunciam zaps, rodam cotações e automatizam a operação da comunidade sem backend."
+heroComponent: obelisk-bots
+publishedAt: '2026-05-22'
+updatedAt: '2026-05-22'
+tags: [bots, nostr, nip-29, zaps]
+---
+
+## O que é o Obelisk-bots
+
+O Obelisk-bots é o lado dos bots no ecossistema Obelisk. Não é uma extensão de servidor e não ganha uma API privada. Um bot é apenas uma identidade Nostr rodando como um processo Node pequeno: ele guarda a própria `nsec`, assina relays, reage a eventos e publica novos eventos assinados de volta.
+
+Isso importa porque mantém a mesma regra do resto do Obelisk: **o relay é o estado compartilhado**. Se um bot posta num grupo, ele posta uma mensagem NIP-29 `kind 9`. Se precisa entrar num grupo, um admin humano admite a pubkey dele pelo mesmo fluxo de membros usado com pessoas. Se algum dia precisar de poderes de moderação, ele tem que estar listado como admin no relay.
+
+## Por que bots se encaixam no modelo só-relay
+
+A maioria dos bots de chat é um plugin privilegiado parafusado num servidor central. O Obelisk-bots inverte isso. O bot não tem linha escondida em banco de dados nem sessão privilegiada. Ele tem um par de chaves.
+
+Isso dá aos operadores um modelo limpo:
+
+- **A identidade é visível** — o bot tem um `npub`, metadados de perfil e mensagens assinadas.
+- **As permissões são nativas do relay** — pertencer ao grupo e ter poder de admin são eventos NIP-29.
+- **A implantação é simples** — cada bot é um arquivo `.mjs` supervisionado pelo PM2.
+- **Os clientes continuam intercambiáveis** — o bot publica eventos Nostr normais, que qualquer cliente compatível lê.
+
+O repositório já inclui bots de preço do BTC, um bot de sat/ARS, utilitários de gestão e o bot de zaps em andamento.
+
+## O bot de zaps
+
+O bot de zaps é o exemplo mais social: ele observa um grupo em busca de atividade de zaps Lightning e transforma isso num momento visível do chat.
+
+Ele escuta dois formatos de evento:
+
+- **Recibos de zap NIP-57** — `kind 9735`, normalmente emitidos por provedores LNURL.
+- **Reações de zap locais do grupo** — reações `kind 7` que carregam valor ou metadados de fatura dentro de um grupo NIP-29.
+
+Quando o evento tem um valor que dá para interpretar, o bot resolve os perfis de quem enviou e de quem recebeu, remove duplicatas em memória e publica um anúncio `kind 9` de volta no grupo:
+
+```text
+Zap Bot: @alice enviou 420 satoshis para @bob
+```
+
+A imagem deste guia faz o bot parecer o emoji descolado de óculos escuros. O código de verdade é deliberadamente menos teatral: assinar, interpretar, resolver nomes, publicar um evento assinado.
+
+## Grupos fixos, descoberta dinâmica
+
+Bots podem ser apontados para grupos exatos com pares `relayUrl|groupId`. Essa é a configuração mais determinística para produção, porque IDs de grupo sobrevivem a renomeações.
+
+O bot de zaps também sabe descobrir grupos abertos observando metadados de grupo `kind 39000` nos relays configurados. Ou seja, um processo pode acompanhar um relay conforme novos grupos públicos aparecem, assinar cada grupo e parar de observar os que somem na próxima atualização.
+
+Grupos fechados ainda precisam de admissão explícita. A descoberta acha a sala, mas não concede permissão para postar.
+
+## O modelo de segurança
+
+Todo bot deve ter a própria chave. Não reutilize a chave de um admin humano para automação.
+
+A escada prática é:
+
+1. **Bot de perfil** — pode publicar os próprios metadados `kind 0`.
+2. **Bot membro do grupo** — admitido com `kind 9000`, pode postar mensagens.
+3. **Bot admin** — listado no `kind 39001`, pode executar ações de moderação.
+4. **Bot de operador do relay** — além disso, confiado pela lista de permissão do relay.
+
+A maioria dos bots só precisa ser membro. Um anunciador de zaps, um bot de cotação, um bot de boas-vindas ou um bot de jogo em geral conseguem postar sem direitos de admin. Reserve o poder de admin para bots que realmente precisem expulsar membros, apagar mensagens ou atualizar metadados do grupo.
+
+## Rodando um
+
+O repositório é propositalmente simples: Node 20+, `nostr-tools`, `ws` e PM2.
+
+```bash
+npm run new-bot -- zap-bot
+npm run set-profile -- --nsec-env=ZAP_BOT_NSEC
+npm run add-member
+npm run pm2:start
+pm2 logs obelisk-zap-bot
+```
+
+Para depurar localmente, rode o bot em primeiro plano:
+
+```bash
+npm run zap-bot
+```
+
+O hábito importante em produção é a separação: um bot, uma nsec, um processo, um conjunto estreito de permissões.
+
+## Para onde isso vai
+
+Bots fazem os grupos do Obelisk parecerem vivos sem transformar o app num produto com backend. O caminho de curto prazo é simples: terminar o anunciador de zaps, manter os bots de preço e de sat/ARS chatos e confiáveis, e então acrescentar mais auxiliares orientados a eventos para moderação, boas-vindas, jogos e operação da comunidade.
+
+A restrição útil continua a mesma: se outro cliente Nostr consegue ler o evento, o bot está fazendo certo.
+
+<RelatedGuides items={[
+  { slug: "bitcoin-zaps", note: "como os pagamentos Lightning aparecem no chat" },
+  { slug: "how-obelisk-works", note: "a arquitetura só-relay" },
+  { slug: "swap-anything", note: "onde os bots entram na stack do Obelisk" }
+]} />
