@@ -173,6 +173,7 @@ import { setDmOptInEnabled, useDmOptInEnabled } from '@/lib/dm/opt-in';
 import { setPreference, usePreferences } from '@/lib/preferences';
 import { relayWebsiteUrl } from '@/lib/nostr-bridge/relay-url';
 import RelayStatusPill from '@/components/social/RelayStatusPill';
+import { openSettings, onOpenSettings, revealSettingsSection } from '@/lib/open-settings';
 import HintDot from '@/components/hints/HintDot';
 import HintHost from '@/components/hints/HintHost';
 import { useHintsStore } from '@/store/hints';
@@ -2087,7 +2088,12 @@ export function MobileServerBanner({
       <div className="server-banner-actions">
         {/* Beside the signing indicator, because it answers the same kind of
             question: is the thing underneath this app working right now. */}
-        <RelayStatusPill relays={socialRelays} activeRelay={relayUrl} compact />
+        <RelayStatusPill
+          relays={socialRelays}
+          activeRelay={relayUrl}
+          onOpenSettings={() => openSettings('relays')}
+          compact
+        />
         <MobileSigningIndicator />
         <button className="icon-btn action-search" aria-label={t('mobile.header.search')} onClick={onSearch}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
@@ -6103,6 +6109,14 @@ export default function MobileShell() {
       };
     }, dir);
   }, [cancelPendingTabTransition, pushNav]);
+
+  // "Manage these relays" from the status pill in the server banner. The
+  // banner sits outside the screens host, same as the voice bar below, so it
+  // asks through the settings pub/sub rather than reaching for `go`.
+  useEffect(() => onOpenSettings(({ section }) => {
+    go('settings-prefs');
+    revealSettingsSection(section);
+  }), [go]);
 
   // VoiceStatusBar "jump back to call": the bar lives outside the screens host
   // and can't reach `pushNav` directly, so it dispatches through the

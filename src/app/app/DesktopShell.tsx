@@ -40,6 +40,7 @@ import {
 import { getBridge, getBridgeImpl, getBridgeSync } from '@/lib/nostr-bridge';
 import { relayWebsiteUrl } from '@/lib/nostr-bridge/relay-url';
 import RelayStatusPill from '@/components/social/RelayStatusPill';
+import { openSettings, onOpenSettings, revealSettingsSection, type SettingsSection } from '@/lib/open-settings';
 import HintHost from '@/components/hints/HintHost';
 import { useHintsStore } from '@/store/hints';
 import type { SurfaceId } from '@/lib/hints/registry';
@@ -196,7 +197,14 @@ export default function AppShell() {
   // Threads open beside the feed on desktop rather than in a modal — a modal
   // hides the list you were reading, which is exactly the context you need
   // while following a conversation.
-  const [threadNoteId, setThreadNoteId] = useState<string | null>(null);
+  /*
+   * A stack, not a single id. Opening a note from inside a thread used to
+   * overwrite the one you were reading, so back had nowhere to return to
+   * and closed the whole pane — three taps into a conversation, one tap
+   * back, and you were in the feed with your place lost.
+   */
+  const [threadStack, setThreadStack] = useState<string[]>([]);
+  const threadNoteId = threadStack.length > 0 ? threadStack[threadStack.length - 1] : null;
   /**
    * Long-form shares the thread pane rather than opening a third one. Both
    * are "the thing you clicked, beside the list you clicked it from", and
@@ -205,6 +213,18 @@ export default function AppShell() {
   const [paneArticle, setPaneArticle] = useState<NostrEvent | null>(null);
   /** Threads and articles can take the whole surface, like the feed can. */
   const [paneFull, setPaneFull] = useState(false);
+  /** Open a thread fresh — from the feed, a mention, a search result. */
+  const openThread = useCallback((id: string) => {
+    setPaneArticle(null);
+    setThreadStack([id]);
+  }, []);
+  /** Follow a note *from inside* a thread, keeping the way back. */
+  const pushThread = useCallback((id: string) => {
+    setThreadStack((stack) => (
+      stack[stack.length - 1] === id ? stack : [...stack, id]
+    ));
+  }, []);
+
   const [profileFull, setProfileFull] = useState(false);
   /**
    * The feed alongside a group, rather than instead of it.
@@ -358,8 +378,28 @@ export default function AppShell() {
   }, [relay]);
 
   const paneOpen = !!(threadNoteId || paneArticle);
+  /**
+   * One history entry per thread level, so the OS back gesture pops the
+   * stack the same way the header button does. An article is a single
+   * level — it has no stack of its own.
+   */
+  const paneDepth = paneArticle ? 1 : threadStack.length;
+  /*
+   * Back: up one thread, or out of the pane when there is no up.
+   *
+   * Read through a ref rather than the state value so the callback stays
+   * stable — `useHistoryDismiss` holds it across the pane's whole lifetime,
+   * and a new identity each level would re-run its effect and push a
+   * spurious history entry.
+   */
+  const threadDepthRef = useRef(0);
+  threadDepthRef.current = threadStack.length;
   const closePane = useCallback(() => {
-    setThreadNoteId(null);
+    if (threadDepthRef.current > 1) {
+      setThreadStack((stack) => stack.slice(0, -1));
+      return;
+    }
+    setThreadStack([]);
     setPaneArticle(null);
     setPaneFull(false);
   }, []);
@@ -370,7 +410,7 @@ export default function AppShell() {
   // meant logging in rendered one more hook than the previous render, which
   // React refuses (#310) — the chat surface hit its error boundary the
   // moment the gate flipped.
-  const dismissPane = useHistoryDismiss(paneOpen, closePane);
+  const dismissPane = useHistoryDismiss(paneDepth, closePane);
 
   const closeProfile = useCallback(() => {
     setExploredProfilePubkey(null);
@@ -570,8 +610,8 @@ export default function AppShell() {
             <div className="flex min-h-0 flex-1 flex-col">
               <FeedScreen
                 onOpenProfile={setExploredProfilePubkey}
-                onOpenThread={(id) => { setPaneArticle(null); setThreadNoteId(id); }}
-                onOpenArticle={(note) => { setThreadNoteId(null); setPaneArticle(note); }}
+                onOpenThread={openThread}
+                onOpenArticle={(note) => { setThreadStack([]); setPaneArticle(note); }}
                 actions={(
                   <FeedPaneActions
                     mode="full"
@@ -636,7 +676,7 @@ export default function AppShell() {
                   <NoteThread
                     noteId={threadNoteId!}
                     onOpenProfile={setExploredProfilePubkey}
-                    onOpenNote={setThreadNoteId}
+                    onOpenNote={pushThread}
                   />
                 )}
               </div>
@@ -657,7 +697,7 @@ export default function AppShell() {
                     <NoteThread
                       noteId={threadNoteId!}
                       onOpenProfile={setExploredProfilePubkey}
-                      onOpenNote={setThreadNoteId}
+                      onOpenNote={pushThread}
                     />
                   )}
                 </div>
@@ -1115,7 +1155,11 @@ export function RelayTopBar({
           answers both halves of "is anything wrong": this relay's connection
           and NIP-42 state, and whether the feed relays are up.
         */}
-        <RelayStatusPill relays={socialRelays} activeRelay={relay} />
+        <RelayStatusPill
+          relays={socialRelays}
+          activeRelay={relay}
+          onOpenSettings={() => openSettings('relays')}
+        />
         <button
           data-notif-trigger
           onClick={() => setNotifOpen((v) => !v)}
@@ -1459,7 +1503,7 @@ function ResizablePane({
       {side === 'left' && handle}
       <div
         style={{ ['--pane-w' as string]: `${width}px` }}
-        className={`flex min-w-0 shrink-0 flex-col overflow-hidden bg-lc-dark border-l border-t border-r border-lc-border w-[var(--pane-w)] max-w-[45vw] max-md:w-[min(72vw,300px)] ${
+        className={`lc-pane-surface flex min-w-0 shrink-0 flex-col overflow-hidden border-l border-t border-r border-lc-border w-[var(--pane-w)] max-w-[45vw] max-md:w-[min(72vw,300px)] ${
           rounded ? 'rounded-tl-xl' : ''
         }`}
       >
@@ -2637,6 +2681,16 @@ export function SidebarMe({ collapsible = false }: { collapsible?: boolean }) {
   const myPubkey = useMyPubkey();
   const meta = useProfile(myPubkey);
   const [editing, setEditing] = useState(false);
+  /* Set when the panel was opened by a "manage these" request rather than by
+     the gear, so it lands on preferences and scrolls to the right block. */
+  const [pendingSection, setPendingSection] = useState<SettingsSection | null>(null);
+
+  useEffect(() => onOpenSettings(({ section }) => {
+    setPendingSection(section);
+    setEditing(true);
+    revealSettingsSection(section);
+  }), []);
+
   if (!myPubkey) return null;
   // Reveal on the PARENT's hover (`group/me`), not this element's, so the
   // whole bar is one target — expanding only when the pointer happens to
@@ -2681,7 +2735,8 @@ export function SidebarMe({ collapsible = false }: { collapsible?: boolean }) {
           pubkey={myPubkey}
           isMe
           initialEditing
-          onClose={() => setEditing(false)}
+          initialTab={pendingSection ? 'preferences' : 'profile'}
+          onClose={() => { setEditing(false); setPendingSection(null); }}
         />
       )}
     </div>

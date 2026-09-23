@@ -14,6 +14,8 @@
 import { useMemo } from 'react';
 import { hexToNpub } from '@nostr-wot/data';
 import { useAuthor } from '@/lib/social/useAuthor';
+import { useNotePreview } from '@/lib/social/useNotePreview';
+import { useTranslation } from '@/i18n/context';
 import { tokenizeContent, type NostrRef } from '@/lib/social/nip27';
 import { linkifyHashtags } from '@/lib/profile-feed';
 import MessageContent from '@/components/chat/MessageContent';
@@ -105,17 +107,7 @@ function NostrRefChip({
     return <MentionChip pubkey={refValue.pubkey} onOpen={onOpenProfile} />;
   }
   if (refValue.type === 'event') {
-    return (
-      <button
-        type="button"
-        className="inline-flex max-w-full items-center gap-1 truncate rounded-lg border border-lc-border bg-lc-dark px-2 py-1 text-xs text-lc-muted hover:text-lc-white"
-        onClick={() => onOpenNote?.(refValue.id)}
-        data-testid="note-ref"
-      >
-        <span aria-hidden="true">↗</span>
-        <span className="truncate font-mono">{refValue.id.slice(0, 12)}…</span>
-      </button>
-    );
+    return <EventRefChip refValue={refValue} onOpenNote={onOpenNote} />;
   }
   // naddr — long-form and other addressable content. We don't render those
   // inline yet; a link out beats printing bech32.
@@ -126,6 +118,60 @@ function NostrRefChip({
     >
       {refValue.identifier || 'article'}
     </a>
+  );
+}
+
+/**
+ * A referenced note, named rather than hashed.
+ *
+ * This printed `↗ efaa274291b5…` — the id of a thing, which tells a reader
+ * nothing about the thing. It now resolves to the author and the opening
+ * words, which is what a quote looks like everywhere else, and falls back to
+ * the short id only when no relay still has the note.
+ *
+ * The author often arrives free: an `nevent` carries the pubkey, so the name
+ * can render while the body is still in flight.
+ */
+function EventRefChip({
+  refValue,
+  onOpenNote,
+}: {
+  refValue: Extract<NostrRef, { type: 'event' }>;
+  onOpenNote?: (id: string) => void;
+}) {
+  const { t } = useTranslation();
+  const preview = useNotePreview(refValue.id, refValue.relays);
+  const authorPubkey = refValue.author ?? preview?.pubkey ?? null;
+  const meta = useAuthor(authorPubkey);
+
+  const name = authorPubkey
+    ? meta?.displayName || meta?.name || shortNpub(authorPubkey)
+    : null;
+  const snippet = preview?.content?.replace(/\s+/g, ' ').trim();
+  const loading = preview === undefined;
+
+  return (
+    <button
+      type="button"
+      className="my-1 flex w-full max-w-full flex-col gap-0.5 rounded-lg border border-lc-border bg-lc-dark/60 px-2.5 py-1.5 text-left text-xs transition-colors hover:border-lc-green/40"
+      onClick={() => onOpenNote?.(refValue.id)}
+      data-testid="note-ref"
+      title={t('social.openNote')}
+    >
+      <span className="flex min-w-0 items-center gap-1 text-lc-muted">
+        <span aria-hidden="true">↗</span>
+        {name ? (
+          <span className="min-w-0 truncate font-medium text-lc-green">{name}</span>
+        ) : (
+          <span className="min-w-0 truncate font-mono">{refValue.id.slice(0, 12)}…</span>
+        )}
+      </span>
+      {loading ? (
+        <span className="lc-skeleton h-3 w-2/3 rounded" aria-hidden="true" />
+      ) : snippet ? (
+        <span className="line-clamp-2 min-w-0 text-lc-white/75">{snippet}</span>
+      ) : null}
+    </button>
   );
 }
 

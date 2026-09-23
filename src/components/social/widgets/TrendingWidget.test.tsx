@@ -3,7 +3,10 @@ import { describe, expect, it, vi } from 'vitest';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { LocaleProvider } from '@/i18n/context';
 
-import TrendingPanel from './TrendingPanel';
+import TrendingWidget from './TrendingWidget';
+
+/** The follow button needs a signed-in identity and the interests store. */
+vi.mock('@/lib/nostr-bridge', () => ({ useMyPubkey: () => null }));
 
 const note = (id: string, pubkey: string, tags: string[]): NostrEvent => ({
   id,
@@ -17,11 +20,11 @@ const note = (id: string, pubkey: string, tags: string[]): NostrEvent => ({
 
 const renderPanel = (notes: NostrEvent[], props: Record<string, unknown> = {}) => render(
   <LocaleProvider initialLocale="en">
-    <TrendingPanel notes={notes} {...props} />
+    <TrendingWidget notes={notes} {...props} />
   </LocaleProvider>,
 );
 
-describe('TrendingPanel', () => {
+describe('TrendingWidget', () => {
   it('lists what the loaded feed is about', () => {
     renderPanel([note('1', 'a', ['bitcoin']), note('2', 'b', ['bitcoin'])]);
     expect(screen.getByTestId('trending-tag')).toHaveTextContent('#bitcoin');

@@ -42,9 +42,8 @@ export default function NoteComposer({
 
   return (
     <form
-      className={`rounded-xl border bg-lc-dark p-3 transition-colors ${
-        dragging ? 'border-lc-green' : 'border-lc-border'
-      }`}
+      className="lc-composer p-3"
+      data-dragging={dragging || undefined}
       onSubmit={(event) => void submit(event)}
       onPaste={onPaste}
       onDrop={onDrop}
@@ -52,27 +51,61 @@ export default function NoteComposer({
       onDragLeave={() => setDragging(false)}
       data-testid="note-composer"
     >
-      <div className="mb-2 flex items-center gap-1">
-        <button type="button" className="rounded px-2 py-1 text-sm font-bold text-lc-muted hover:bg-white/5 hover:text-lc-white" onClick={() => wrapSelection('**')}>B</button>
-        <button type="button" className="rounded px-2 py-1 text-sm italic text-lc-muted hover:bg-white/5 hover:text-lc-white" onClick={() => wrapSelection('_')}>I</button>
-        <button type="button" className="rounded px-2 py-1 text-xs text-lc-muted hover:bg-white/5 hover:text-lc-white" onClick={() => wrapSelection('[', '](https://)')}>{t('composer.link')}</button>
+      {/*
+        The field carries no frame of its own. The card is already a
+        container, and a bordered well inside it read as a second box —
+        which is what made the old composer look like a dialog. Focus is
+        shown on the card (`.lc-composer:focus-within`) rather than here,
+        so the whole thing lights up as one surface.
+      */}
+      <textarea
+        ref={textareaRef}
+        value={draft}
+        onChange={(event) => setDraft(event.target.value)}
+        className="min-h-24 w-full resize-y border-0 bg-transparent px-1 py-1 text-[15px] leading-6 text-lc-white outline-none placeholder:text-lc-muted/70"
+        placeholder={placeholder}
+        data-testid="composer-input"
+      />
+
+      {draft.trim() && (
+        <div
+          className="mt-2 border-t border-lc-border/60 pt-3 text-sm text-lc-white"
+          data-testid="composer-preview"
+        >
+          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-lc-muted/70">
+            {t('composer.preview')}
+          </p>
+          <MessageContent content={linkifyHashtags(draft)} wideMedia />
+        </div>
+      )}
+
+      {error && <p className="mt-2 text-xs text-red-400" role="alert">{error}</p>}
+
+      <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-lc-border/60 pt-3">
+        <div className="lc-toolgroup">
+          <button type="button" className="lc-tool font-bold" onClick={() => wrapSelection('**')} title={t('composer.bold')} aria-label={t('composer.bold')}>B</button>
+          <button type="button" className="lc-tool italic" onClick={() => wrapSelection('_')} title={t('composer.italic')} aria-label={t('composer.italic')}>I</button>
+          <button type="button" className="lc-tool" onClick={() => wrapSelection('[', '](https://)')}>{t('composer.link')}</button>
+        </div>
+
         <button
           type="button"
-          className={`ml-auto rounded px-2 py-1 text-xs ${sensitive ? 'text-lc-green' : 'text-lc-muted hover:text-lc-white'}`}
+          className="lc-tool"
+          onClick={() => fileRef.current?.click()}
+          disabled={busy}
+        >
+          <span aria-hidden="true" className="text-sm leading-none">+</span>
+          {t('profileFeed.upload')}
+        </button>
+        <button
+          type="button"
+          className="lc-tool"
           onClick={() => setSensitive((value) => !value)}
           aria-pressed={sensitive}
           data-testid="composer-sensitive"
           title={t('social.markSensitive')}
         >
           {t('social.markSensitive')}
-        </button>
-        <button
-          type="button"
-          className="rounded px-2 py-1 text-xs text-lc-muted hover:bg-white/5 hover:text-lc-white"
-          onClick={() => fileRef.current?.click()}
-          disabled={busy}
-        >
-          + {t('profileFeed.upload')}
         </button>
         <input
           ref={fileRef}
@@ -83,34 +116,19 @@ export default function NoteComposer({
           onChange={(event) => void uploadFiles(event.target.files)}
           data-testid="composer-files"
         />
-      </div>
 
-      <textarea
-        ref={textareaRef}
-        value={draft}
-        onChange={(event) => setDraft(event.target.value)}
-        className="min-h-24 w-full resize-y rounded-lg border border-lc-border bg-lc-black px-3 py-2 text-sm text-lc-white outline-none focus:border-lc-green"
-        placeholder={placeholder}
-        data-testid="composer-input"
-      />
+        {/* Guidance, not a control — first thing to go when space is tight. */}
+        <span className="ml-auto hidden text-[10px] text-lc-muted/70 xl:inline">
+          {t('profileFeed.markdownHint')}
+        </span>
 
-      {draft.trim() && (
-        <div className="mt-2 rounded-lg border border-lc-border/70 bg-lc-black p-3 text-sm text-lc-white" data-testid="composer-preview">
-          <MessageContent content={linkifyHashtags(draft)} wideMedia />
-        </div>
-      )}
-
-      {error && <p className="mt-2 text-xs text-red-400" role="alert">{error}</p>}
-
-      <div className="mt-3 flex items-center justify-between gap-3">
-        <span className="text-[10px] text-lc-muted">{t('profileFeed.markdownHint')}</span>
-        <div className="flex gap-2">
+        <div className="ml-auto flex gap-2 xl:ml-3">
           {onCancel && (
-            <button type="button" className="lc-pill-secondary px-4 py-2 text-xs" onClick={onCancel}>
+            <button type="button" className="lc-pill-secondary px-4 py-1.5 text-xs" onClick={onCancel}>
               {t('common.cancel')}
             </button>
           )}
-          <button type="submit" className="lc-pill-primary px-5 py-2 text-xs" disabled={!canPost}>
+          <button type="submit" className="lc-pill-primary px-5 py-1.5 text-xs" disabled={!canPost}>
             {busy ? t('common.saving') : t('profileFeed.publish')}
           </button>
         </div>

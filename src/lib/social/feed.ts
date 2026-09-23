@@ -234,6 +234,38 @@ export function parentIdOf(note: Pick<NostrEvent, 'tags'>): string | null {
   return findReplyParentId(note.tags);
 }
 
+/**
+ * The note this one answers, with whatever the tag already tells us about it.
+ *
+ * A NIP-10 `e` tag is `['e', id, relayHint, marker, author]`, and the last
+ * two slots are the useful ones: the author lets "Replying to <name>" render
+ * immediately, and the relay hint is often the only place the parent can
+ * still be found — a reply travels further than the thing it replies to.
+ *
+ * Both are optional in the wild, so treat them as a head start rather than a
+ * source of truth; a caller that needs certainty still has to fetch.
+ */
+export interface ReplyParent {
+  id: string;
+  /** Author pubkey from the tag's 5th slot, when the publisher included it. */
+  author: string | null;
+  /** Relay hint from the tag's 3rd slot, when the publisher included it. */
+  relay: string | null;
+}
+
+export function replyParentOf(note: Pick<NostrEvent, 'tags'>): ReplyParent | null {
+  const id = findReplyParentId(note.tags);
+  if (!id) return null;
+  const tag = note.tags.find((entry) => entry[0] === 'e' && entry[1] === id);
+  const relay = tag?.[2]?.trim();
+  const author = tag?.[4]?.trim();
+  return {
+    id,
+    author: author && /^[0-9a-f]{64}$/i.test(author) ? author.toLowerCase() : null,
+    relay: relay && relay.startsWith('wss://') ? relay : null,
+  };
+}
+
 /** Hide notes from muted/blocked authors without refetching the feed. */
 export function applyModeration(
   notes: readonly NostrEvent[],

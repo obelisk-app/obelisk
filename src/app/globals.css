@@ -159,6 +159,83 @@ button:not(:disabled),
 }
 
 /*
+ * Composer toolbar chips.
+ *
+ * The compose card's controls were bare text buttons at three different
+ * sizes — bold B, italic I, then two differently-padded word buttons — which
+ * read as loose debris above the field rather than one toolbar. These give
+ * them a single shape, borrowed from `.lc-segment` so the composer speaks the
+ * same vocabulary as the feed switcher above it.
+ */
+.lc-toolgroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 9999px;
+  background: color-mix(in oklab, var(--obelisk-app-bg-panel, #171717) 60%, transparent);
+  border: 1px solid color-mix(in oklab, #262626 70%, transparent);
+}
+
+.lc-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  color: #a3a3a3;
+  white-space: nowrap;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.lc-tool:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fafafa;
+}
+
+.lc-tool:disabled {
+  opacity: 0.45;
+}
+
+/* A toggle that is on — same treatment as a selected segment. */
+.lc-tool[aria-pressed='true'] {
+  background: color-mix(in oklab, var(--obelisk-accent, #b4f953) 16%, transparent);
+  color: var(--obelisk-accent, #b4f953);
+}
+
+/*
+ * The compose card.
+ *
+ * It used to be an opaque panel holding a pure-black textarea — a hole cut
+ * into a box, on a feed whose own cards are hairline rows over the app's
+ * gradient. The field is the card now: one translucent surface, the accent
+ * arriving only on focus, so the composer reads as part of the column
+ * instead of a dialog dropped into it.
+ */
+.lc-composer {
+  border-radius: 16px;
+  background: color-mix(in oklab, var(--obelisk-app-bg-panel, #171717) 62%, transparent);
+  border: 1px solid #262626;
+  backdrop-filter: blur(8px);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.lc-composer:focus-within {
+  border-color: color-mix(in oklab, var(--obelisk-accent, #b4f953) 45%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--obelisk-accent, #b4f953) 10%, transparent);
+}
+
+/* Dragging a file over it — the whole card is the drop target. */
+.lc-composer[data-dragging='true'] {
+  border-color: var(--obelisk-accent, #b4f953);
+  background: color-mix(in oklab, var(--obelisk-accent, #b4f953) 7%, transparent);
+}
+
+/*
  * A header that sits on the app's background instead of hiding it.
  *
  * The shell paints a drifting gradient and a grain layer, and the chat body
@@ -171,6 +248,23 @@ button:not(:disabled),
  */
 .lc-header-surface {
   background: color-mix(in oklab, var(--obelisk-app-bg-panel, #171717) 72%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+/*
+ * A side pane — thread, article, profile, feed — over the app's background.
+ *
+ * These were an opaque `bg-lc-dark` slab. The shell paints a drifting
+ * gradient that the chat body, the relay bar and the feed header all let
+ * through, and the fullscreen version of each of these panes uses
+ * `.obelisk-desktop-bg` directly — so opening a thread half-screen and then
+ * expanding it changed the background under the same content. Same surface
+ * treatment as the headers: enough panel to separate it from the column
+ * beside it, translucent enough that the gradient carries straight through.
+ */
+.lc-pane-surface {
+  background: color-mix(in oklab, var(--obelisk-app-bg-panel, #171717) 68%, transparent);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
 }

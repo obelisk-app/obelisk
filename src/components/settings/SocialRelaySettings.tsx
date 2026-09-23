@@ -16,9 +16,11 @@ import { setPreference, usePreferences } from '@/lib/preferences';
 import {
   DEFAULT_SOCIAL_RELAYS,
   SOCIAL_RELAY_MAX,
+  SOCIAL_RELAY_PRESETS,
   invalidRelayIndexes,
   normalizeSocialRelays,
 } from '@/lib/social/relays';
+import { RELAY_SETTINGS_ANCHOR } from '@/lib/open-settings';
 import { applySocialRelays, importNip65Relays } from '@/lib/social/pool';
 import {
   getRelayStatuses,
@@ -52,6 +54,24 @@ export default function SocialRelaySettings({ mobile = false }: { mobile?: boole
 
   const update = (index: number, value: string) => {
     setDraft((current) => current.map((entry, i) => (i === index ? value : entry)));
+    setStatus('idle');
+  };
+
+  /**
+   * Add a suggested relay.
+   *
+   * It drops into an empty row if the reader left one behind, rather than
+   * appending past it — otherwise clicking a suggestion while a blank box is
+   * open silently spends one of the eight slots on nothing.
+   */
+  const addPreset = (url: string) => {
+    setDraft((current) => {
+      if (current.some((entry) => entry.trim().replace(/\/$/, '') === url)) return current;
+      const blank = current.findIndex((entry) => !entry.trim());
+      if (blank !== -1) return current.map((entry, i) => (i === blank ? url : entry));
+      if (current.length >= SOCIAL_RELAY_MAX) return current;
+      return [...current, url];
+    });
     setStatus('idle');
   };
 
@@ -165,6 +185,40 @@ export default function SocialRelaySettings({ mobile = false }: { mobile?: boole
         </button>
       </div>
 
+      <div className="space-y-1.5">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-lc-muted">
+          {t('preferences.socialRelays.suggested')}
+        </p>
+        <div className="flex flex-wrap gap-1.5" data-testid="social-relay-presets">
+          {SOCIAL_RELAY_PRESETS.map((preset) => {
+            const host = preset.url.replace(/^wss:\/\//, '');
+            const already = draft.some((entry) => entry.trim().replace(/\/$/, '') === preset.url);
+            return (
+              <button
+                key={preset.url}
+                type="button"
+                onClick={() => addPreset(preset.url)}
+                disabled={already || (!canAdd && !draft.some((entry) => !entry.trim()))}
+                className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] transition-colors disabled:cursor-default ${
+                  already
+                    ? 'border-lc-green/30 bg-lc-green/10 text-lc-green'
+                    : 'border-lc-border text-lc-muted hover:border-lc-green/40 hover:text-lc-white disabled:opacity-40 disabled:hover:border-lc-border disabled:hover:text-lc-muted'
+                }`}
+                title={t(`preferences.socialRelays.preset.${preset.note}`)}
+                data-testid="social-relay-preset"
+                data-added={already || undefined}
+              >
+                <span aria-hidden="true">{already ? '\u2713' : '+'}</span>
+                <span className="font-mono">{host}</span>
+                <span className="hidden text-lc-muted/70 sm:inline">
+                  {t(`preferences.socialRelays.preset.${preset.note}`)}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       <div className="flex items-center gap-3">
         <button type="button" onClick={save} className="lc-pill-primary px-4 py-2 text-xs" data-testid="social-relay-save">
           {t('common.save')}
@@ -190,12 +244,12 @@ export default function SocialRelaySettings({ mobile = false }: { mobile?: boole
   );
 
   return mobile ? (
-    <div className="settings-section" data-testid="social-relay-settings">
+    <div className="settings-section" id={RELAY_SETTINGS_ANCHOR} data-testid="social-relay-settings">
       <div className="settings-section-title">{t('preferences.socialRelays.title')}</div>
       <div className="settings-row !block space-y-3">{fields}</div>
     </div>
   ) : (
-    <div className="space-y-3 border-t border-lc-border pt-4" data-testid="social-relay-settings">
+    <div className="space-y-3 border-t border-lc-border pt-4" id={RELAY_SETTINGS_ANCHOR} data-testid="social-relay-settings">
       <div className="text-xs font-semibold uppercase tracking-wider text-lc-muted">
         {t('preferences.socialRelays.title')}
       </div>

@@ -33,13 +33,19 @@ interface UserPanelProps {
   anchor?: { x: number; y: number; placement?: 'top' | 'bottom' };
   /** Open directly into the fullscreen edit modal. */
   initialEditing?: boolean;
+  /**
+   * Which settings tab to land on. `preferences` is what "manage my relays"
+   * wants — the relay block lives there, and the panel otherwise always
+   * opens on the profile tab.
+   */
+  initialTab?: 'profile' | 'preferences' | 'media';
 }
 
-export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, initialEditing = false }: UserPanelProps) {
+export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, initialEditing = false, initialTab = 'profile' }: UserPanelProps) {
   const { t } = useTranslation();
   const meta = useProfile(pubkey);
   const [editing, setEditing] = useState(initialEditing);
-  const [settingsTab, setSettingsTab] = useState<'profile' | 'preferences' | 'media'>('profile');
+  const [settingsTab, setSettingsTab] = useState<'profile' | 'preferences' | 'media'>(initialTab);
 
   useEffect(() => {
     nostrActions.ensureUserMetadata(pubkey).catch(() => {});

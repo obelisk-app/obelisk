@@ -67,8 +67,17 @@ describe('desktop navigation invariants', () => {
     // falling back to its own modal.
     expect(shell).toContain('onOpenThread={');
     expect(shell).toContain('onOpenArticle={');
-    // One pane holds one thing: opening an article clears the thread.
-    expect(shell).toContain('setThreadNoteId(null); setPaneArticle(note);');
+    // One pane holds one thing: opening an article clears the thread stack.
+    expect(shell).toContain('setThreadStack([]); setPaneArticle(note);');
+    /*
+     * Threads stack. Opening a note from inside a thread used to overwrite
+     * the one being read, so back closed the pane instead of returning to
+     * the conversation you came from.
+     */
+    expect(shell).toContain('const [threadStack, setThreadStack]');
+    expect(shell).toContain('onOpenNote={pushThread}');
+    // Depth, not a boolean — one history entry per level.
+    expect(shell).toContain('useHistoryDismiss(paneDepth');
   });
 
   it('honours ?s=feed so a shared link can land on the feed', () => {

@@ -55,6 +55,35 @@ export function widenedRelays(relays: readonly string[]): string[] {
 }
 
 /**
+ * Relays offered as one-click additions in settings.
+ *
+ * The relay list started as four text boxes you had to fill from memory,
+ * which is a fine interface for someone who already knows four relay
+ * hostnames and a dead end for everyone else — the most common reason a
+ * feed looks empty is a relay set nobody ever chose. These are the
+ * well-known public ones, each with a note saying what it is for, because
+ * "add another relay" is only useful advice if you know which.
+ *
+ * `note` is an i18n key suffix under `preferences.socialRelays.preset.*`,
+ * not copy — the list is data and has to survive translation.
+ */
+export interface RelayPreset {
+  url: string;
+  note: 'general' | 'index' | 'search' | 'paid' | 'profiles';
+}
+
+export const SOCIAL_RELAY_PRESETS: readonly RelayPreset[] = [
+  { url: 'wss://relay.damus.io', note: 'general' },
+  { url: 'wss://nos.lol', note: 'general' },
+  { url: 'wss://relay.primal.net', note: 'index' },
+  { url: 'wss://relay.nostr.band', note: 'search' },
+  { url: 'wss://relay.snort.social', note: 'general' },
+  { url: 'wss://offchain.pub', note: 'general' },
+  { url: 'wss://nostr.wine', note: 'paid' },
+  { url: 'wss://purplepag.es', note: 'profiles' },
+];
+
+/**
  * Canonical form of a single relay URL, or `null` if it isn't usable from a
  * browser page. Delegates the safety judgement to the SDK's `isPublicWssUrl`,
  * which rejects non-`wss:` schemes, localhost/.local, and RFC-1918 / loopback

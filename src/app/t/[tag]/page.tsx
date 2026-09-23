@@ -19,6 +19,7 @@ import {
 } from '@/lib/server/nostr-fetch';
 import { plainTextForPreview, previewImage } from '@/lib/server/note-preview';
 import ViewerHeader from '@/components/social/ViewerHeader';
+import FollowTagButton from '@/components/social/FollowTagButton';
 import { serverLocale } from '@/lib/server/locale';
 import { formatDate } from '@/lib/format';
 
@@ -78,7 +79,11 @@ export default async function HashtagPage({ params }: Params) {
   return (
     <Shell>
       <div className="px-5 pb-4 pt-6">
-        <h1 className="text-2xl font-extrabold">#{clean}</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="min-w-0 truncate text-2xl font-extrabold">#{clean}</h1>
+          {/* NIP-51 kind 10015, so the follow is portable to other clients. */}
+          <FollowTagButton tag={clean} />
+        </div>
         <p className="mt-1 text-xs text-lc-muted">
           {notes.length > 0
             ? `${notes.length} recent note${notes.length === 1 ? '' : 's'} on the public relays`

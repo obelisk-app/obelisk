@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from 'react';
 import { createLocalStore } from './local-store';
 import { DEFAULT_SOCIAL_RELAYS, normalizeSocialRelays } from './social/relays';
+import { DEFAULT_FEED_WIDGETS, normalizeFeedWidgets } from './social/widgets';
 
 export type BubbleAnimationStyle = 'float' | 'drift' | 'orbit' | 'still';
 
@@ -17,6 +18,12 @@ export interface Preferences {
    * at exactly three entries; see `normalizeSocialRelays` for the migration.
    */
   socialRelays: string[];
+  /**
+   * Which panels the desktop feed's side column shows, in order. Two by
+   * default — the column has room for about that much above the fold, and a
+   * list of six is a sidebar nobody reads.
+   */
+  feedWidgets: string[];
   accentColor: string;
   backgroundColor: string;
   buttonColor: string;
@@ -37,6 +44,7 @@ const DEFAULTS: Preferences = {
   // signer advertises it), so this default cannot cause a false claim.
   postQuantumEnabled: true,
   socialRelays: [...DEFAULT_SOCIAL_RELAYS],
+  feedWidgets: [...DEFAULT_FEED_WIDGETS],
   accentColor: '#b4f953',
   backgroundColor: '#0a0a0a',
   buttonColor: '#b4f953',
@@ -153,6 +161,7 @@ function normalizePreferences(raw: Partial<Preferences>): Preferences {
     socialRelays: normalizeSocialRelays(
       raw.socialRelays ?? (raw as { profileFeedRelays?: unknown }).profileFeedRelays,
     ),
+    feedWidgets: normalizeFeedWidgets(raw.feedWidgets),
     accentColor: sanitizeHexColor(raw.accentColor, DEFAULTS.accentColor),
     backgroundColor: sanitizeHexColor(raw.backgroundColor, DEFAULTS.backgroundColor),
     buttonColor: sanitizeHexColor(raw.buttonColor, DEFAULTS.buttonColor),
@@ -167,6 +176,9 @@ function normalizePreferenceValue<K extends keyof Preferences>(key: K, value: Pr
   }
   if (key === 'bubbleAnimation') {
     return normalizeBubbleAnimation(value) as Preferences[K];
+  }
+  if (key === 'feedWidgets') {
+    return normalizeFeedWidgets(value) as Preferences[K];
   }
   if (!COLOR_KEYS.has(key)) return value;
   const fallback = DEFAULTS[key] as string;

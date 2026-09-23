@@ -38,7 +38,7 @@ import InfiniteSentinel from './InfiniteSentinel';
 import MediaGrid, { type MediaItem } from '@/components/chat/MediaGrid';
 import { mediaUrls } from '@/lib/profile-feed';
 import { parseImeta } from '@/lib/social/imeta';
-import TrendingPanel from './TrendingPanel';
+import FeedWidgets from './FeedWidgets';
 
 export type FeedTab = 'following' | 'global';
 
@@ -505,8 +505,22 @@ export default function FeedScreen({
         </div>
 
         {!mobile && !embedded && (
-          <div className="sticky top-0 hidden xl:block">
-            <TrendingPanel notes={state.notes} onOpenTag={openTag} />
+          /*
+            Bounded and scrollable, not just sticky: with three or four
+            widgets the column grew past the viewport and everything below
+            the fold — including the picker that put them there — was
+            unreachable, because `sticky` pins the top and lets the rest
+            hang off the bottom.
+
+            The offset is the feed header above this scroll container, which
+            is what `top-0` is measured from.
+          */
+          <div className="sticky top-0 hidden max-h-[calc(100dvh-4rem)] overflow-y-auto overscroll-contain xl:block [scrollbar-width:thin]">
+            <FeedWidgets
+              notes={state.notes}
+              onOpenTag={openTag}
+              onOpenProfile={onOpenProfile}
+            />
           </div>
         )}
         </div>

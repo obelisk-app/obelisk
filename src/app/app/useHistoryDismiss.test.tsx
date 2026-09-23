@@ -63,4 +63,72 @@ describe('useHistoryDismiss', () => {
     // The entry is already gone; popping again would navigate the app.
     expect(back).not.toHaveBeenCalled();
   });
+
+  /*
+   * Stacking overlays pass a depth. The reader is one: a note opened from
+   * inside a thread is a new level, and back has to return to the thread
+   * rather than closing the pane — which is what one entry for the whole
+   * pane did, because every level after the first was invisible to history.
+   */
+  describe('as a stack', () => {
+    it('pushes one entry per level', () => {
+      const push = vi.spyOn(window.history, 'pushState');
+      const { rerender } = renderHook(
+        ({ depth }) => useHistoryDismiss(depth, () => {}),
+        { initialProps: { depth: 1 } },
+      );
+      expect(push).toHaveBeenCalledTimes(1);
+
+      rerender({ depth: 2 });
+      expect(push).toHaveBeenCalledTimes(2);
+
+      rerender({ depth: 3 });
+      expect(push).toHaveBeenCalledTimes(3);
+    });
+
+    it('does not re-push when the depth is unchanged', () => {
+      const push = vi.spyOn(window.history, 'pushState');
+      const { rerender } = renderHook(
+        ({ depth }) => useHistoryDismiss(depth, () => {}),
+        { initialProps: { depth: 2 } },
+      );
+      const before = push.mock.calls.length;
+      rerender({ depth: 2 });
+      expect(push).toHaveBeenCalledTimes(before);
+    });
+
+    /** Going back up a level must not re-push on the way down again. */
+    it('pushes again only for levels it has not seen', () => {
+      const push = vi.spyOn(window.history, 'pushState');
+      const { rerender } = renderHook(
+        ({ depth }) => useHistoryDismiss(depth, () => {}),
+        { initialProps: { depth: 1 } },
+      );
+      rerender({ depth: 2 });
+      expect(push).toHaveBeenCalledTimes(2);
+      // Popped back to one level; history consumed the entry itself.
+      rerender({ depth: 1 });
+      expect(push).toHaveBeenCalledTimes(2);
+    });
+
+    it('pops one level per back, rather than closing outright', () => {
+      const onPop = vi.fn();
+      renderHook(() => useHistoryDismiss(3, onPop));
+      act(() => { window.dispatchEvent(new PopStateEvent('popstate')); });
+      expect(onPop).toHaveBeenCalledTimes(1);
+    });
+
+    it('treats zero depth as closed', () => {
+      const push = vi.spyOn(window.history, 'pushState');
+      renderHook(() => useHistoryDismiss(0, () => {}));
+      expect(push).not.toHaveBeenCalled();
+    });
+
+    it('still consumes an entry when dismissed from the UI at depth', () => {
+      const back = vi.spyOn(window.history, 'back').mockImplementation(() => {});
+      const { result } = renderHook(() => useHistoryDismiss(2, () => {}));
+      act(() => { result.current(); });
+      expect(back).toHaveBeenCalledTimes(1);
+    });
+  });
 });

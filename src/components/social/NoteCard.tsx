@@ -16,7 +16,7 @@ import { hexToNpub } from '@nostr-wot/data';
 import { useCurrentRelayUrl, useMyFollows, useMyPubkey } from '@/lib/nostr-bridge';
 import { useAuthor } from '@/lib/social/useAuthor';
 import { useTranslation } from '@/i18n/context';
-import { parentIdOf } from '@/lib/social/feed';
+import { replyParentOf } from '@/lib/social/feed';
 import { parseImeta } from '@/lib/social/imeta';
 import { renderModeFor } from '@/lib/social/kinds';
 import { embeddedRepostEvent, isRepost, repostTarget } from '@/lib/social/repost';
@@ -33,6 +33,7 @@ import { groupNoteUrl, noteShareUrl } from '@/lib/social/note-links';
 import { useToastStore } from '@/store/toast';
 import UserAvatar from '@/components/UserAvatar';
 import NoteContent from './NoteContent';
+import ReplyLine from './ReplyLine';
 import { ArticleCard } from './ArticleCard';
 import NoteMenu from './NoteMenu';
 import MediaCarousel from './MediaCarousel';
@@ -256,7 +257,7 @@ function PlainNoteCard({
   const mode = renderModeFor(note.kind);
   const warning = useMemo(() => sensitiveInfo(note), [note]);
   const imeta = useMemo(() => parseImeta(note), [note]);
-  const isThreadReply = parentIdOf(note) !== null;
+  const replyParent = useMemo(() => replyParentOf(note), [note]);
 
   useEffect(() => subscribeCounts(note.id, setCounts), [note.id]);
 
@@ -380,7 +381,15 @@ function PlainNoteCard({
             )}
           </div>
           <div className="flex items-center gap-2 text-[11px] text-lc-muted">
-            {isThreadReply && <span>↩ {t('social.reply')}</span>}
+            {/* Names who is being answered and links to them — a reply
+                that only says "reply" is half a conversation. */}
+            {replyParent && (
+              <ReplyLine
+                parent={replyParent}
+                onOpenNote={onOpenNote}
+                onOpenProfile={onOpenProfile}
+              />
+            )}
             {mode === 'article' && <span>{t('social.article')}</span>}
             {mode === 'highlight' && <span>{t('social.highlight')}</span>}
             {/*
