@@ -43,6 +43,7 @@ export function ComposeButton({
       onClick={onClick}
       className="group flex w-full items-center gap-2.5 border-b border-lc-border px-4 py-2.5 text-left transition-colors hover:bg-white/[0.03]"
       data-testid={testId}
+      data-tour="feed-compose"
     >
       <UserAvatar
         pubkey={pubkey}

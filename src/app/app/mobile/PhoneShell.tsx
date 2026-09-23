@@ -168,6 +168,11 @@ import { setDmOptInEnabled, useDmOptInEnabled } from '@/lib/dm/opt-in';
 import { setPreference, usePreferences } from '@/lib/preferences';
 import { relayWebsiteUrl } from '@/lib/nostr-bridge/relay-url';
 import RelayStatusPill from '@/components/social/RelayStatusPill';
+import HintDot from '@/components/hints/HintDot';
+import HintHost from '@/components/hints/HintHost';
+import { useHintsStore } from '@/store/hints';
+import { useToastStore } from '@/store/toast';
+import type { SurfaceId } from '@/lib/hints/registry';
 import { useMessageZapStore } from '@/store/messageZap';
 import { presenceActivityKey, useNostrPresence, PRESENCE_WINDOW_MS } from '@/hooks/chat/useNostrPresence';
 import MessageZapModal from '@/components/chat/MessageZapModal';
@@ -381,6 +386,42 @@ const NAV_ICONS: Record<'servers' | 'feed' | 'dms' | 'inbox' | 'you', ReactNode>
   ),
 };
 
+/**
+ * Which hint each bottom-nav tab introduces.
+ *
+ * The tab is the only control that exists before you have been to the
+ * screen, so it is where the dot goes: the app says "there is something
+ * over there" before it explains what.
+ */
+const NAV_HINT_ANCHOR: Partial<Record<ScreenName, string>> = {
+  feed: 'nav-feed',
+  'dms-list': 'dm-list',
+  inbox: 'inbox-tabs',
+  'settings-profile': 'profile-button',
+};
+
+const NAV_HINT_ID: Partial<Record<ScreenName, string>> = {
+  feed: 'feed-source',
+  'dms-list': 'dms',
+  inbox: 'inbox',
+  'settings-profile': 'identity',
+};
+
+
+/**
+ * Screens that have something to explain. Anything else (a sheet, an
+ * editor, a sub-screen) maps to nothing rather than borrowing its parent's
+ * hint, which would point at a control the reader cannot see.
+ */
+const HINT_SURFACES = new Set<string>([
+  'server', 'channel', 'feed', 'dms-list', 'inbox', 'settings-profile', 'voice-room',
+]);
+
+function hintSurfaceFor(screen: ScreenName): SurfaceId | null {
+  if (!HINT_SURFACES.has(screen)) return null;
+  return (screen === 'voice-room' ? 'voice' : screen) as SurfaceId;
+}
+
 function BottomNav({
   nav,
   onTabPress,
@@ -413,9 +454,13 @@ function BottomNav({
           className={`nav-item ${activeTab === t.id ? 'active' : ''}`}
           onClick={() => onTabPress(t.id)}
           aria-label={t.label}
+          // Anchors the first-run hint for that screen, and carries its dot
+          // until the screen has been visited or the hint dismissed.
+          data-tour={NAV_HINT_ANCHOR[t.id]}
         >
           {t.icon}
           <span>{t.label}</span>
+          {NAV_HINT_ID[t.id] && <HintDot hintId={NAV_HINT_ID[t.id] as string} />}
           {t.badge !== undefined && t.badge > 0 && (
             <span className="nav-badge">{t.badge > 99 ? '99+' : t.badge}</span>
           )}
@@ -5816,6 +5861,18 @@ export function SettingsPrefsScreen({ go }: { go: (s: ScreenName, dir?: 'forward
             <span>{t('preferences.appearance.title')}</span>
             <span className="settings-row-meta muted" aria-hidden="true">›</span>
           </button>
+          {/* The hints are one-shot, so this is the only way back to them. */}
+          <button
+            type="button"
+            className="settings-row action"
+            onClick={() => {
+              useHintsStore.getState().resetHints();
+              useToastStore.getState().pushToast({ title: t('hints.replayed'), body: '' });
+            }}
+            data-testid="mobile-replay-hints"
+          >
+            <span>{t('hints.replay')}</span>
+          </button>
           <button type="button" className="settings-row action" onClick={() => setMediaLibraryOpen(true)} data-testid="mobile-media-library">
             <span style={{ minWidth: 0, flex: 1 }}>
               <span style={{ display: 'block' }}>Emoji, GIFs &amp; stickers</span>
@@ -6894,6 +6951,11 @@ export default function MobileShell() {
       </div>
       <MobileVoiceStatusSlot screen={nav.screen} kbInset={kbInset} />
       {!hideNav && <BottomNav nav={nav} onTabPress={onTabPress} dmBadge={dmBadge} inboxBadge={inboxBadge} />}
+      {/*
+        The screen id doubles as the hint surface — the registry's surfaces
+        were named after these tabs so one list can serve both shells.
+      */}
+      <HintHost surface={hintSurfaceFor(nav.screen)} shell="mobile" />
       {exitToast && (
         <div className="mobile-exit-toast" role="status" aria-live="polite">
           {t('mobile.navigation.pressBackAgain')}

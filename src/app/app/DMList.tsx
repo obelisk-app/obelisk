@@ -53,7 +53,10 @@ export default function DMList({
   const visible = effectiveTab === 'follows' ? followsThreads : othersThreads;
 
   return (
-    <aside className="relative flex h-full w-full flex-col overflow-hidden bg-lc-dark">
+    <aside
+      className="relative flex h-full w-full flex-col overflow-hidden bg-lc-dark"
+      data-tour="dm-list"
+    >
       <div className="flex h-14 shrink-0 items-center justify-between border-b border-lc-border px-4 shadow-sm">
         <h3 className="truncate text-sm font-bold text-lc-white">{t('dm.title')}</h3>
         <div className="flex items-center gap-1">

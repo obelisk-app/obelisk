@@ -705,6 +705,7 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
                 onClick={() => setJoinedChannelId(channelId)}
                 className="mt-6 bg-lc-green hover:bg-lc-green/90 text-lc-black px-6 py-2.5 rounded-full text-sm font-semibold transition-colors shadow-lg shadow-lc-green/20"
                 data-testid="join-voice-btn"
+                data-tour="voice-join"
               >
                 Join voice channel
               </button>

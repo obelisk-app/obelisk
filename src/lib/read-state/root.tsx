@@ -47,6 +47,7 @@ import { ensureReadStateStoreForAccount } from '@/store/read-state';
 import { ensureNotificationsStoreForAccount } from '@/store/notifications';
 import { ensureDMStoreForAccount } from '@/store/dm';
 import { ensureModerationStoreForAccount } from '@/store/moderation';
+import { ensureHintsStoreForAccount } from '@/store/hints';
 import { startGroupsRelaySync, startDMRelaySync } from './relay-sync';
 import { fetchRelayList } from '@nostr-wot/data';
 import { DEFAULT_PROFILE_LOOKUP_RELAYS } from '@/lib/nostr-bridge/client';
@@ -62,6 +63,9 @@ const PER_ACCOUNT_STORES = [
   ensureNotificationsStoreForAccount,
   ensureDMStoreForAccount,
   ensureModerationStoreForAccount,
+  // Without this, a second account on the same device inherits the first
+  // one's "already seen" and gets explained nothing.
+  ensureHintsStoreForAccount,
 ] as const;
 
 /**

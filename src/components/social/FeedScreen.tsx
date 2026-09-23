@@ -232,7 +232,7 @@ export default function FeedScreen({
       <div className="flex min-h-14 shrink-0 flex-wrap items-center gap-2 border-b border-lc-border bg-lc-dark px-5 py-2">
         <h1 className="sr-only">{t('social.feed')}</h1>
 
-        <div className="lc-segment shrink-0" role="tablist" aria-label={t('social.feed')}>
+        <div className="lc-segment shrink-0" role="tablist" aria-label={t('social.feed')} data-tour="feed-source">
           {(['following', 'global'] as const).map((value) => (
             <button
               key={value}
@@ -365,6 +365,7 @@ export default function FeedScreen({
             aria-label={t('social.search')}
             title={t('social.search')}
             data-testid="feed-search-open"
+            data-tour="feed-search"
           >
             {compact ? (
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden="true">

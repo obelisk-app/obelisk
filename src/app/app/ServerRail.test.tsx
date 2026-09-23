@@ -1,16 +1,25 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const relays = { list: [] as string[] };
 
 vi.mock('@/lib/nostr-bridge', () => ({
   nostrActions: {},
-  useConfiguredRelays: () => [],
+  useConfiguredRelays: () => relays.list,
   useCurrentRelayUrl: () => '',
   useMyPubkey: () => null,
+}));
+
+vi.mock('@/lib/relay-info', () => ({
+  faviconFor: () => null,
+  fetchRelayInfo: vi.fn().mockResolvedValue(null),
+  SUGGESTED_RELAYS: [],
 }));
 
 vi.mock('@/lib/read-state/selectors', () => ({ useHasAnyHighlights: () => false }));
 
 import ServerRail from './ServerRail';
+import { useHintsStore } from '@/store/hints';
 
 describe('ServerRail', () => {
   it('leaves its background transparent for the animated app backdrop', () => {
@@ -59,5 +68,50 @@ describe('ServerRail', () => {
   it('omits the feed tile when no handler is supplied', () => {
     render(<ServerRail mode={{ kind: 'dm' }} onPickDM={() => {}} onPickRelay={() => {}} />);
     expect(screen.queryByTitle('Nostr feed')).not.toBeInTheDocument();
+  });
+});
+
+describe('first-run anchors', () => {
+  beforeEach(() => {
+    relays.list = [];
+    useHintsStore.setState({ seen: [], muted: false });
+  });
+
+  it('anchors every rail hint the registry expects to find here', () => {
+    // The anchors are applied through a prop rather than written inline, so
+    // a typo would silently leave a hint pointing at nothing.
+    relays.list = ['wss://relay.example'];
+    render(
+      <ServerRail
+        mode={{ kind: 'dm' }}
+        onPickDM={() => {}}
+        onPickFeed={() => {}}
+        onPickRelay={() => {}}
+      />,
+    );
+
+    for (const anchor of ['rail-dm', 'rail-feed', 'rail-relay', 'rail-add-relay']) {
+      expect(document.querySelector(`[data-tour="${anchor}"]`), anchor).not.toBeNull();
+    }
+  });
+
+  it('dots the controls a newcomer has not met', () => {
+    relays.list = ['wss://relay.example'];
+    render(<ServerRail mode={{ kind: 'dm' }} onPickDM={() => {}} onPickFeed={() => {}} onPickRelay={() => {}} />);
+    expect(screen.getAllByTestId('hint-dot').length).toBeGreaterThan(0);
+  });
+
+  it('marks only the first relay, not every one of them', () => {
+    // A dot on each would read as unread traffic on each.
+    relays.list = ['wss://one.example', 'wss://two.example', 'wss://three.example'];
+    render(<ServerRail mode={{ kind: 'relay', url: 'wss://one.example' }} onPickDM={() => {}} onPickRelay={() => {}} />);
+    expect(document.querySelectorAll('[data-tour="rail-relay"]')).toHaveLength(1);
+  });
+
+  it('drops the dots once the hints are seen', () => {
+    relays.list = ['wss://relay.example'];
+    useHintsStore.setState({ seen: ['rail-dm', 'rail-feed', 'rail-relay'] });
+    render(<ServerRail mode={{ kind: 'dm' }} onPickDM={() => {}} onPickFeed={() => {}} onPickRelay={() => {}} />);
+    expect(screen.queryAllByTestId('hint-dot')).toHaveLength(0);
   });
 });

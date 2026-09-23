@@ -40,6 +40,9 @@ import {
 import { getBridge, getBridgeImpl, getBridgeSync } from '@/lib/nostr-bridge';
 import { relayWebsiteUrl } from '@/lib/nostr-bridge/relay-url';
 import RelayStatusPill from '@/components/social/RelayStatusPill';
+import HintHost from '@/components/hints/HintHost';
+import { useHintsStore } from '@/store/hints';
+import type { SurfaceId } from '@/lib/hints/registry';
 import { initializeWot, useWotEnabled, wotEngine } from '@/lib/wot';
 import { wotColorClass } from '@/lib/wot/colors';
 import { faviconFor, fetchRelayInfo } from '@/lib/relay-info';
@@ -720,9 +723,35 @@ export default function AppShell() {
           />
         )}
         <FloatingUserPanel sidebarWidth={sidebarWidth} collapsed={view.kind === 'feed'} />
+        {/*
+          First-run hints for whatever is on screen. Mounted here rather than
+          per-view so a hint survives the view changing underneath it, and so
+          the "using a control teaches it" listener exists app-wide.
+        */}
+        <HintHost surface={surfaceForView(view, { feedOpen, exploredProfilePubkey })} shell="desktop" />
       </div>
     </div>
   );
+}
+
+
+/**
+ * Which surface the hints should be talking about.
+ *
+ * The desktop shell has no single "screen" — it has a view plus panes — so
+ * this maps that to the same surface ids the mobile nav uses, and the
+ * registry is shared.
+ */
+function surfaceForView(
+  view: View,
+  panes: { feedOpen: boolean; exploredProfilePubkey: string | null },
+): SurfaceId | null {
+  // A pane on top of the view is what the reader is actually looking at.
+  if (panes.exploredProfilePubkey) return 'settings-profile';
+  if (panes.feedOpen || view.kind === 'feed') return 'feed';
+  if (view.kind === 'dm') return 'dms-list';
+  if (view.kind === 'group') return 'channel';
+  return 'server';
 }
 
 function DirectMessageSubscriptionAnchor() {
@@ -951,6 +980,7 @@ export function RelayTopBar({
   onJumpToDm?: (peer: string) => void;
 }) {
   const { t, locale } = useTranslation();
+  const resetHints = useHintsStore((state) => state.resetHints);
   const socialRelays = usePreferences().socialRelays;
   const [info, setInfo] = useState<{ name?: string; icon?: string } | null>(null);
   const [iconFailed, setIconFailed] = useState(false);
@@ -1154,6 +1184,7 @@ export function RelayTopBar({
             className="flex gap-1 px-2 py-2 border-b border-lc-border"
             role="tablist"
             data-testid="notif-tabs"
+            data-tour="inbox-tabs"
           >
             {(['mentions', 'dms'] as const).map((key) => {
               const count = key === 'mentions' ? unreadMentions : unreadDms;
@@ -1288,7 +1319,7 @@ export function RelayTopBar({
               ))}
             </ul>
           </div>
-          <div className="border-t border-lc-border px-4 py-3">
+          <div className="space-y-2 border-t border-lc-border px-4 py-3">
             <a
               href={guidesHref(locale)}
               data-testid="help-popover-view-more"
@@ -1297,6 +1328,19 @@ export function RelayTopBar({
             >
               {HELP_VIEW_MORE[locale]}
             </a>
+            {/*
+              The in-app hints are one-shot by design, so this is the only
+              way back to them — and the only honest place for it is where
+              someone already goes when they want to be told something.
+            */}
+            <button
+              type="button"
+              onClick={() => { resetHints(); setHelpOpen(false); }}
+              className="w-full rounded-full px-4 py-2 text-xs text-lc-muted transition-colors hover:bg-white/5 hover:text-lc-white"
+              data-testid="help-popover-replay-hints"
+            >
+              {t('hints.replay')}
+            </button>
           </div>
         </div>,
         document.body,
@@ -1652,7 +1696,10 @@ function Sidebar({
         />
       )}
 
-      <div className={`flex-1 overflow-y-auto px-2 pb-2 ${inVoice ? 'md:pb-52' : 'md:pb-20'}`}>
+      <div
+        className={`flex-1 overflow-y-auto px-2 pb-2 ${inVoice ? 'md:pb-52' : 'md:pb-20'}`}
+        data-tour="channels-list"
+      >
         {/* Relay/AUTH state lives in the unified bottom-right activity stack. */}
         {groups.length === 0 && channelsVisible && !groupMetadataEoseGlobal && (
           <div
@@ -2593,6 +2640,7 @@ export function SidebarMe({ collapsible = false }: { collapsible?: boolean }) {
         className="flex min-w-0 flex-1 items-center gap-2 rounded text-left hover:bg-lc-card/50"
         title="Profile"
         data-testid="sidebar-profile-button"
+        data-tour="profile-button"
       >
         <Avatar pubkey={myPubkey} size={8} picture={meta?.picture ?? null} />
         <div className={`min-w-0 flex-1 flex-col ${revealed}`}>
@@ -3499,6 +3547,7 @@ function ChatPanel({
                 }
               }}
               placeholder={t('desktop.composer.placeholder').replace('{name}', group?.name ?? groupId.slice(0, 8))}
+              data-tour="composer"
               className={(draftVoiceNote ? "hidden " : "") + "w-full bg-transparent text-sm text-lc-white outline-none placeholder:text-lc-muted disabled:opacity-50"}
             />
           </div>

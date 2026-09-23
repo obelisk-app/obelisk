@@ -94,6 +94,7 @@ export default function RelayStatusPill({
         aria-label={label}
         aria-expanded={open}
         data-testid="relay-status-pill"
+        data-tour="relay-status"
         data-state={summary.state}
       >
         <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${DOT[summary.state]}`} aria-hidden="true" />

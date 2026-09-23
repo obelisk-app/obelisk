@@ -19,6 +19,7 @@ import { faviconFor, fetchRelayInfo, SUGGESTED_RELAYS, type RelayInfo } from '@/
 import { encodeRelayShareCode } from '@/lib/relay-share-link';
 import { useHasAnyHighlights } from '@/lib/read-state/selectors';
 import ModalShell from '@/components/ModalShell';
+import HintDot from '@/components/hints/HintDot';
 
 
 type RailMode = { kind: 'dm' } | { kind: 'feed' } | { kind: 'relay'; url: string };
@@ -43,6 +44,7 @@ export default function ServerRail({
       <RailTile
         active={mode.kind === 'dm'}
         title="Direct messages"
+        hint="rail-dm"
         onClick={onPickDM}
         icon={
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -63,6 +65,7 @@ export default function ServerRail({
         <RailTile
           active={mode.kind === 'feed'}
           title="Nostr feed"
+          hint="rail-feed"
           onClick={onPickFeed}
           icon={
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -77,13 +80,16 @@ export default function ServerRail({
 
       <div className="my-1 h-px w-8 bg-lc-border" />
 
-      {relays.map((url) => {
+      {relays.map((url, index) => {
         const active = mode.kind === 'relay' && currentRelay === url;
         return (
           <RelayTile
             key={url}
             url={url}
             active={active}
+            // Only the first tile carries it: the others are the same
+            // control, and a dot on each would read as unread traffic.
+            hint={index === 0 ? 'rail-relay' : undefined}
             onClick={() => onPickRelay(url)}
             onRemove={() => {
               if (relays.length <= 1) return;
@@ -97,6 +103,7 @@ export default function ServerRail({
         onClick={() => setAdding(true)}
         title="Add relay"
         aria-label="Add relay"
+        data-tour="rail-add-relay"
         className="group/tile relative flex h-12 w-12 items-center justify-center rounded-2xl bg-lc-card text-lc-green ring-1 ring-lc-border transition-all duration-150 hover:rounded-xl hover:bg-lc-green/15 hover:ring-lc-green"
       >
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
@@ -116,15 +123,19 @@ function RailTile({
   onClick,
   icon,
   emphasis,
+  hint,
 }: {
   active: boolean;
   title: string;
   onClick: () => void;
   icon: React.ReactNode;
   emphasis?: boolean;
+  /** Anchors a first-run hint, and carries its unseen dot. */
+  hint?: string;
 }) {
   return (
     <div className="relative">
+      {hint && <HintDot hintId={hint} />}
       <span
         className={
           'absolute -left-3 top-1/2 h-8 w-1 -translate-y-1/2 rounded-r bg-lc-green transition-all ' +
@@ -135,6 +146,7 @@ function RailTile({
         onClick={onClick}
         title={title}
         aria-label={title}
+        {...(hint ? { 'data-tour': hint } : {})}
         className={
           'group/tile relative flex h-12 w-12 items-center justify-center rounded-2xl ring-1 transition-all duration-150 hover:rounded-xl ' +
           (emphasis
@@ -157,11 +169,13 @@ function RelayTile({
   active,
   onClick,
   onRemove,
+  hint,
 }: {
   url: string;
   active: boolean;
   onClick: () => void;
   onRemove: () => void;
+  hint?: string;
 }) {
   const host = shortHost(url);
   const initials = letterFor(host);
@@ -201,6 +215,7 @@ function RelayTile({
   }, [url]);
   return (
     <div className="relative">
+      {hint && <HintDot hintId={hint} />}
       <span
         className={
           'absolute -left-3 top-1/2 h-8 w-1 -translate-y-1/2 rounded-r bg-lc-green transition-all ' +
@@ -212,6 +227,7 @@ function RelayTile({
         onContextMenu={(e) => { e.preventDefault(); setMenu(true); }}
         title={url}
         aria-label={url}
+        {...(hint ? { 'data-tour': hint } : {})}
         style={{
           background: active && !(iconUrl && !iconFailed) ? accent : undefined,
           color: active ? '#0a0a0a' : '#fff',
