@@ -11,6 +11,7 @@ import QuantumSafeHero from './QuantumSafeHero';
 import ChainReactionHero from './ChainReactionHero';
 import VestaHero from './VestaHero';
 import StackerHero from './StackerHero';
+import RelayHero from './RelayHero';
 import WotGraphDiagram from './diagrams/WotGraphDiagram';
 import RelayGroupsDiagram from './diagrams/RelayGroupsDiagram';
 import ZapFlowDiagram from './diagrams/ZapFlowDiagram';
@@ -39,6 +40,7 @@ export const HERO_REGISTRY: Record<string, ComponentType> = {
   'chain-reaction': ChainReactionHero,
   vesta: VestaHero,
   stacker: StackerHero,
+  'run-your-own-relay': RelayHero,
 };
 
 export const DIAGRAM_REGISTRY: Record<string, ComponentType> = {

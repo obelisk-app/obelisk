@@ -16,13 +16,13 @@ tags: [games, chain-reaction, nostr, nip-29, kind-2390]
 
 That is the whole game. It is small enough to explain in a sentence and deep enough that a corner you ignored for six turns eventually takes half your board.
 
-<Shot name="chain-reaction-board" caption="A three-player board, mid-game. Cells with two orbs on an edge are one click from going off." maxWidth={420} />
+<Shot name="games/chain-reaction-board" caption="A three-player board, mid-game. Cells with two orbs on an edge are one click from going off." maxWidth={420} />
 
 ## Starting a table
 
 Type `/play` in a channel, pick Chain Reaction, and choose a board size — small (5×7), medium (6×9) or large (8×12) — and a turn clock. Creating the table publishes one event and posts a card into the channel. Anyone in the channel can hit **Join** on that card; when the roster looks right, the host hits **Start**.
 
-<Shot name="game-picker" caption="/play in the composer. Everything in this list — names, player ranges, clocks — comes from the game registry, not from the screen." maxWidth={448} />
+<Shot name="games/game-picker" caption="/play in the composer. Everything in this list — names, player ranges, clocks — comes from the game registry, not from the screen." maxWidth={448} />
 
 Chain Reaction seats **2 to 8 players** and defaults to a **45-second** clock. If several seats are assigned to the same account, those players are sharing one keyboard: the board follows whoever is on move, and their moves are signed by the same key. Everyone else plays from their own client.
 
@@ -73,7 +73,7 @@ Pick **No clock** and nothing enforces anything — a friendly table where someb
 
 A player who has moved at least once and then loses every orb is eliminated. When one player is left, the table is finished and the card in the channel turns into a result.
 
-<Shot name="chain-reaction-result" caption="The finished table, as it appears back in the channel." maxWidth={380} />
+<Shot name="games/chain-reaction-result" caption="The finished table, as it appears back in the channel." maxWidth={380} />
 
 The result is not a separate announcement anybody could forge — it is what the log says when you replay it.
 

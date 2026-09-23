@@ -6,21 +6,30 @@ import Shot, { SHOT_META, shotPath } from './Shot';
 
 describe('Shot', () => {
   it('renders the screenshot with its alt text and intrinsic size', () => {
-    render(<Shot name="chain-reaction-board" />);
-    const img = screen.getByAltText(SHOT_META['chain-reaction-board'].alt);
+    render(<Shot name="games/chain-reaction-board" />);
+    const img = screen.getByAltText(SHOT_META['games/chain-reaction-board'].alt);
     expect(img.getAttribute('src')).toBe('/og/guides/games/chain-reaction-board.png');
     expect(img.getAttribute('width')).toBe('420');
     expect(img.getAttribute('height')).toBe('484');
   });
 
   it('renders a caption when given one', () => {
-    render(<Shot name="stacker-well" caption="A well mid-match" />);
+    render(<Shot name="games/stacker-well" caption="A well mid-match" />);
     expect(screen.getByText('A well mid-match')).toBeTruthy();
   });
 
   it('renders nothing for an unknown shot rather than a broken image', () => {
     const { container } = render(<Shot name="not-a-shot" />);
     expect(container.firstChild).toBeNull();
+  });
+
+  /**
+   * The namespace is what lets a non-game screenshot exist at all — before
+   * it, every shot resolved under `games/` whatever it was of.
+   */
+  it('resolves a shot under its own namespace, not a hardcoded one', () => {
+    expect(shotPath('relay/access-tabs')).toBe('/og/guides/relay/access-tabs.png');
+    expect(shotPath('games/vesta-board')).toBe('/og/guides/games/vesta-board.png');
   });
 
   /**
@@ -31,7 +40,10 @@ describe('Shot', () => {
   it('every declared shot has a file on disk and non-trivial alt text', () => {
     for (const [name, meta] of Object.entries(SHOT_META)) {
       const file = join(process.cwd(), 'public', shotPath(name));
-      expect(existsSync(file), `${name}.png is missing — run npm run snap-games`).toBe(true);
+      const how = name.startsWith('games/')
+        ? 'run npm run snap-games'
+        : 'it is a capture committed by hand — see the note in Shot.tsx';
+      expect(existsSync(file), `${name}.png is missing — ${how}`).toBe(true);
       expect(readFileSync(file).length).toBeGreaterThan(1000);
       expect(meta.alt.length).toBeGreaterThan(40);
       expect(meta.width).toBeGreaterThan(0);

@@ -1,0 +1,247 @@
+---
+title: 'Corré tu propio relay: la admisión es una escalera, no un interruptor'
+description: Obelisk Relay es un relay NIP-29 que decide por sí mismo quién puede conectarse — una lista escrita a mano, las cuentas que siguen tus referencias, y el grafo de follows más allá, cada una con una porción menor del presupuesto. Dos comandos para levantarlo.
+heroComponent: run-your-own-relay
+publishedAt: '2026-09-23'
+updatedAt: '2026-09-23'
+tags: [relay, self-host, nip-29, web-of-trust, moderacion]
+---
+
+## Un relay común es un depósito tonto
+
+Toma lo que le mandás y te lo devuelve. Ese es todo el contrato, y para la mayor
+parte de Nostr es el correcto.
+
+Eso sí: un relay así no tiene opinión sobre la membresía. Cualquiera que tenga
+el id de un grupo puede escribir ahí, y "quién está en este grupo" es lo que
+cada cliente decida creer. Un grupo privado es privado exactamente mientras
+todos los clientes acuerden fingir que lo es — y eso no es una propiedad de
+seguridad, es una cuestión de modales.
+
+## Un relay NIP-29 decide
+
+<Mark name="mark-relay" /> **obelisk-relay** aplica roles, membresía y
+visibilidad donde viven los datos, y filtra en la lectura. Alguien que no es
+miembro y pide los mensajes de un grupo privado no recibe un botón gris.
+No recibe nada, porque no hay nada que mandarle.
+
+Eso es una mejora real y una carga real. Decidir quién puede conectarse pasa a
+ser un trabajo que alguien tiene que hacer, sobre un disco que alguien tiene que
+pagar. Casi todo este artículo es sobre las herramientas para ese trabajo.
+
+## Dos comandos
+
+<Clip name="relay/install" caption="La instalación completa." />
+
+```bash
+git clone https://github.com/obelisk-app/obelisk-relay.git
+cd obelisk-relay
+
+./setup.sh     # un relay funcionando en localhost:8080
+./expose.sh    # publicalo en wss://tu.dominio, cuando estés listo
+```
+
+La división es deliberada: cada script hace una sola cosa. `setup.sh` verifica
+Docker, el puerto 8080 y el disco, pide el npub que va a administrar el relay,
+escribe una configuración nueva y levanta el contenedor. `expose.sh` te guía
+para crear un Cloudflare Tunnel, escribe un sidecar de `cloudflared`, actualiza
+la dirección publicada y reinicia ambos juntos después de un reboot.
+
+Si parás después del primero, tenés un relay en tu notebook. Es un lugar
+perfectamente válido donde parar.
+
+<Callout type="warn" title="Fijá el tag de la imagen">
+`setup.sh` baja `:latest`, que hoy está atrás de los builds fechados —
+`:latest` es multi-arquitectura y los builds actuales son solo arm64, así que
+moverlo rompería toda instalación amd64. Hasta que ambas arquitecturas estén
+publicadas y unidas, pasá el tag explícitamente:
+`RELAY_IMAGE_TAG=<tag-fechado> ./setup.sh`. Sacá el tag de `compose.yml` en el
+repo y no del README, que ya quedó atrás antes.
+</Callout>
+
+## El primer arranque
+
+Sin `relay_secret_key` configurada, el relay genera su propio par de claves al
+arrancar y lo escribe en `config/settings.local.yml`, logueando la pubkey una
+vez. Mantené `config/` en un volumen persistente: la identidad del relay es el
+ancla del estado de sus grupos, así que un relay que cambiara de pubkey en cada
+arranque invalidaría ese estado cada vez.
+
+Sin pubkeys de admin configuradas arranca en modo setup, y `/admin` muestra un
+asistente en vez de una pantalla de login. Tres pasos, todos en el navegador.
+
+<Shot name="relay/sign-in" caption="Demostrás propiedad firmando — no hay ningún campo de npub para completar." maxWidth={420} />
+
+La clave que firma acá es la que queda como primer admin. Vale leerlo dos veces:
+no nominás un npub, demostrás que controlás uno. Extensión del navegador, firmante
+remoto, o una clave pegada si insistís. Después elegís si el relay es abierto o
+restringido, y escribe su configuración y reinicia hacia la consola.
+
+<Callout type="note" title="Las capturas de abajo son violetas">
+Son del relay público en `wss://public.obelisk.ar`, que corre el build violeta.
+El lima de Obelisk es el cliente de chat. Mismo software, otro acento — tu
+propio relay se marca desde la pantalla de Settings.
+</Callout>
+
+## La salud del relay
+
+<Shot name="relay/overview" caption="Overview: conexiones y disco del último día, y una línea para quién está realmente acá." />
+
+Las conexiones y el tamaño de la base se dibujan por hora y se extienden en vivo
+mientras la pantalla está abierta. La línea que conviene entender es **Disk
+used**, porque no se comporta como un archivo común: el relay guarda los eventos
+en LMDB, que reutiliza internamente las páginas liberadas y nunca se las
+devuelve al filesystem. Borrar eventos aplana esa línea en vez de bajarla. Un
+conteo de eventos plano junto a una línea que sube significa que la base
+necesita compactación, no pruning.
+
+## La admisión es una escalera, no un interruptor
+
+Esta es la idea sobre la que está construido todo el producto, así que conviene
+enunciarla antes de mirar cualquier pantalla.
+
+<Clip name="relay/ladder" caption="Tres tiers y una lista de bloqueo, decididos en ese orden." />
+
+Alguien que agregaste a mano. Alguien que siguen tus cuentas de referencia. O
+alguien lo bastante cerca en el grafo de follows como para merecer el beneficio
+de la duda. Decidido en ese orden — y una lista de bloqueo que anula las tres,
+consultada primero.
+
+<Shot name="relay/access-tabs" caption="Una pantalla, cinco solapas, cada una con su conteo en vivo." />
+
+Las **cuentas de referencia** arriba de esa pantalla son la raíz de toda la
+estructura. Son las cuentas desde las que se mide cada tier: todos los que ellas
+siguen caen en Tier 1, y el grafo de follows se recorre hacia afuera desde ahí
+para llenar Tier 2 y Tier 3. Agregar una cuenta de referencia ensancha los tres
+tiers a la vez, y es el control de mayor apalancamiento del relay — el que más
+vale pensar.
+
+<Clip name="relay/numbers" caption="Dos cuentas de referencia, medidas en public.obelisk.ar el 22 de septiembre de 2026." />
+
+Tier 2 está a dos saltos. Tier 3 a tres, y la consola dice *al menos* en vez de
+imprimir un total, porque el salto más externo es justamente donde al grafo se
+le acaba el presupuesto. Honesto le gana a prolijo: un número presentado como
+completo cuando no lo es es peor que un piso sobre el que podés razonar.
+
+<Callout type="note" title="Esos conteos son una medición, no una especificación">
+1.062 / 45.966 / ≥119.708 es lo que alcanzaron dos cuentas de referencia en un
+relay un día. Te dicen la *forma* de la cosa — que una sola cuenta admite
+decenas de miles de personas a dos saltos — no un número que tu relay vaya a
+reproducir. El tuyo depende enteramente de en qué grafo de follows lo enraizaste.
+</Callout>
+
+## Lo que cuesta cada tier
+
+La confianza no es binaria, así que el presupuesto tampoco.
+
+<Shot name="relay/budget-ladder" caption="Cada tier publica sobre una porción del presupuesto por pubkey." />
+
+Tier 1 publica a 6.000 eventos por minuto. Tier 2 recibe la mitad, Tier 3 un
+cuarto, y quien entre mientras la admisión no se aplica recibe 600. El
+razonamiento es el mismo que ordena la escalera: cuanto más lejos esté alguien
+de tus cuentas de referencia, menos evidencia hay de que deba confiársele tu
+disco.
+
+Hay otros dos límites por encima del de pubkey, y los dos importan más de lo que
+parecen. El de **por conexión** debería estar por encima del presupuesto por
+pubkey — limita un socket, y ponerlo más bajo vuelve inalcanzable el número por
+pubkey. El de **relay entero** es el respaldo contra una avalancha de todos a la
+vez, y es el que te salva cuando los dos primeros quedaron optimistas.
+
+## Pegá una clave y obtené una respuesta
+
+<Shot name="relay/key-search" caption="Un npub, consultado: permitido, admitido por web of trust, a dos saltos." />
+
+La mayoría de las preguntas de acceso llegan como "¿por qué esta persona no
+puede conectarse?", y esta es la caja que las responde. Acepta un npub, una
+clave hex o una dirección NIP-05, y contesta con el tier que lo admite y a qué
+distancia está — o por qué fue rechazado. El botón de Block está al lado del
+veredicto, porque la respuesta y la acción van en el mismo lugar.
+
+## Moderación que sobrevive al contacto con la realidad
+
+Diez personas reportando un mensaje es una decisión, no diez. La cola agrupa por
+lo que fue reportado, una fila por cosa, contando reportantes distintos en vez
+de volumen.
+
+<Clip name="relay/snapshot" caption="El mensaje reportado, todavía legible después de que su autor lo borró." />
+
+La parte que más importa es la menos visible: **el relay saca una copia del
+mensaje reportado cuando llega el reporte.** Sin eso, una cuenta reportada borra
+su propio mensaje y la denuncia se vuelve irrevisable — el borrado como defensa
+en vez de como remedio.
+
+<Shot name="relay/reports" caption="Una fila por cosa reportada, con la decisión que tomaste." />
+
+Los reportes solo los pueden leer los admins del relay, y eso es una decisión
+deliberada, no un descuido. En un relay donde la admisión es un grafo social,
+una cola de reportes pública es un canal de represalia.
+
+<Callout type="note" title="Reportes anteriores a la copia">
+Las filas de antes de ese cambio lo dicen explícitamente: "esto fue reportado
+antes de que el relay empezara a guardar una copia, y el original ya no está".
+Una herramienta de moderación que calladamente no te muestra nada es peor que
+una que te explica por qué no tiene nada.
+</Callout>
+
+## Nada expira si no lo armás
+
+<Shot name="relay/storage" caption="Storage: qué hay en disco, y si se está borrando algo." />
+
+El pruning automático está apagado hasta que lo prendas, y la retención se
+configura **por kind de evento**, así que el tráfico efímero puede expirar sin
+tocar las conversaciones. Los kinds de gestión y estado de grupo nunca se
+borran, y tampoco nada reemplazable o direccionable — el relay guarda uno solo
+de esos por usuario, así que borrarlos destruiría estado vivo sin liberar
+espacio que valga la pena.
+
+Contá antes de armar una política. El overview muestrea en vez de escanear, y la
+muestra sobrerrepresenta los gift wraps.
+
+## Ponerlo detrás de un dominio
+
+El relay sirve HTTP, WebSocket y su propio frontend en un solo puerto. Atalo a
+loopback y terminá TLS adelante:
+
+```
+relay.ejemplo.com {
+    reverse_proxy 127.0.0.1:8080
+}
+```
+
+Caddy no necesita nada especial para los upgrades de WebSocket; nginx necesita
+que pases `Upgrade` y `Connection`.
+
+<Callout type="warn" title="`relay_url` no es cosmético">
+Tiene que coincidir con la dirección pública por la que los clientes realmente
+te alcanzan. Se usa para la autenticación NIP-42, así que un valor viejo no se
+degrada con elegancia: rompe la auth directamente. Configuralo desde
+Settings → Relay identity una vez que tengas dominio.
+</Callout>
+
+## Apuntar Obelisk hacia él
+
+<Shot name="relay/landing" caption="Tu relay sirve su propia portada, con la dirección lista para copiar." />
+
+Nada de tu relay es específico de Obelisk — habla NIP-29, y cualquier cliente
+que también lo hable va a funcionar. Pero si querés el cliente de chat:
+
+```
+https://obelisk.ar/app?relay=relay.ejemplo.com
+```
+
+Para algo que puedas pasarle a una persona en vez de pegarlo en una
+configuración, Obelisk codifica un relay en un link corto en
+`obelisk.ar/r/<código>`. Visitarlo agrega el relay a la lista del lector y
+cambia a él, y volver a visitarlo no hace nada — así que es seguro ponerlo en un
+mensaje fijado o en una bio.
+
+El relay es [AGPL-3.0 en GitHub](https://github.com/obelisk-app/obelisk-relay), y
+hay uno corriendo ahora mismo en `wss://public.obelisk.ar` si preferís mirar
+antes de instalar.
+
+<RelatedGuides items={[
+  { slug: "web-of-trust", note: "el grafo de follows que recorren estos tiers" },
+  { slug: "swap-anything", note: "dónde encaja el relay en el stack de cuatro piezas" },
+  { slug: "admin-cli", note: "moderar un grupo sin abrir la consola" }
+]} />

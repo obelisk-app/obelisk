@@ -21,6 +21,7 @@
   "components/guides/svg/marks/SfuMark.tsx": 1,
   "components/guides/svg/ObeliskBotsHero.tsx": 9,
   "components/guides/svg/QuantumSafeHero.tsx": 3,
+  "components/guides/svg/RelayHero.tsx": 5,
   "components/guides/svg/StackerHero.tsx": 5,
   "components/guides/svg/SwapAnythingHero.tsx": 3,
   "components/guides/svg/VestaHero.tsx": 5,

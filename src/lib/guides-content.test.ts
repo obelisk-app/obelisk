@@ -3,6 +3,7 @@ import { listSlugs, readGuide } from './guides';
 import { HERO_REGISTRY } from '@/components/guides/svg';
 import { HERO_ASSET_META } from '@/components/guides/svg/asset-meta';
 import { SHOT_META } from '@/components/guides/Shot';
+import { CLIP_META } from '@/components/guides/Clip';
 
 /**
  * The shipped guides, checked against the components they name.
@@ -14,17 +15,19 @@ import { SHOT_META } from '@/components/guides/Shot';
  */
 const HERO_RE = /<SvgHero\s+[^>]*name=["']([^"']+)["']/g;
 const SHOT_RE = /<Shot\s+[^>]*name=["']([^"']+)["']/g;
+const CLIP_RE = /<Clip\s+[^>]*name=["']([^"']+)["']/g;
 const RELATED_RE = /slug:\s*["']([^"']+)["']/g;
 
 describe('shipped guides', () => {
-  it('has the same slugs in both locales', async () => {
-    const [en, es] = await Promise.all([listSlugs('en'), listSlugs('es')]);
+  it('has the same slugs in every locale', async () => {
+    const [en, es, pt] = await Promise.all([listSlugs('en'), listSlugs('es'), listSlugs('pt')]);
     expect(es).toEqual(en);
+    expect(pt).toEqual(en);
     expect(en.length).toBeGreaterThan(0);
   });
 
   it('names a hero component that exists, with alt text for the snapshot', async () => {
-    for (const locale of ['en', 'es'] as const) {
+    for (const locale of ['en', 'es', 'pt'] as const) {
       for (const slug of await listSlugs(locale)) {
         const { frontmatter } = await readGuide(locale, slug);
         expect(HERO_REGISTRY[frontmatter.heroComponent], `${locale}/${slug}`).toBeTruthy();
@@ -34,7 +37,7 @@ describe('shipped guides', () => {
   });
 
   it('carries the frontmatter the article page and the cards read', async () => {
-    for (const locale of ['en', 'es'] as const) {
+    for (const locale of ['en', 'es', 'pt'] as const) {
       for (const slug of await listSlugs(locale)) {
         const { frontmatter: fm } = await readGuide(locale, slug);
         expect(fm.title?.length, `${locale}/${slug} title`).toBeGreaterThan(0);
@@ -46,8 +49,8 @@ describe('shipped guides', () => {
     }
   });
 
-  it('only references heroes, screenshots and sibling guides that exist', async () => {
-    for (const locale of ['en', 'es'] as const) {
+  it('only references heroes, screenshots, clips and sibling guides that exist', async () => {
+    for (const locale of ['en', 'es', 'pt'] as const) {
       const slugs = await listSlugs(locale);
       for (const slug of slugs) {
         const { content } = await readGuide(locale, slug);
@@ -56,6 +59,9 @@ describe('shipped guides', () => {
         }
         for (const m of content.matchAll(SHOT_RE)) {
           expect(SHOT_META[m[1]], `${locale}/${slug} → shot ${m[1]}`).toBeTruthy();
+        }
+        for (const m of content.matchAll(CLIP_RE)) {
+          expect(CLIP_META[m[1]], `${locale}/${slug} → clip ${m[1]}`).toBeTruthy();
         }
         for (const m of content.matchAll(RELATED_RE)) {
           expect(slugs.includes(m[1]), `${locale}/${slug} → related ${m[1]}`).toBe(true);

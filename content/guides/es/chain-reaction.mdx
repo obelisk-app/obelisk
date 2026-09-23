@@ -16,13 +16,13 @@ tags: [juegos, chain-reaction, nostr, nip-29, kind-2390]
 
 Eso es todo el juego. Se explica en una frase y tiene la profundidad suficiente como para que esa esquina que ignoraste seis turnos termine llevándose medio tablero.
 
-<Shot name="chain-reaction-board" caption="Un tablero de tres jugadores a mitad de partida. Las celdas con dos orbes en un borde están a un click de detonar." maxWidth={420} />
+<Shot name="games/chain-reaction-board" caption="Un tablero de tres jugadores a mitad de partida. Las celdas con dos orbes en un borde están a un click de detonar." maxWidth={420} />
 
 ## Abrir una mesa
 
 Escribí `/play` en un canal, elegí Chain Reaction, y elegí tamaño de tablero — chico (5×7), mediano (6×9) o grande (8×12) — y reloj de turno. Crear la mesa publica un evento y postea una tarjeta en el canal. Cualquiera en el canal puede tocar **Unirse** en esa tarjeta; cuando la lista está lista, el host toca **Empezar**.
 
-<Shot name="game-picker" caption="/play en el composer. Todo lo que ves acá — nombres, rangos de jugadores, relojes — sale del registro de juegos, no de la pantalla." maxWidth={448} />
+<Shot name="games/game-picker" caption="/play en el composer. Todo lo que ves acá — nombres, rangos de jugadores, relojes — sale del registro de juegos, no de la pantalla." maxWidth={448} />
 
 Chain Reaction admite **de 2 a 8 jugadores** y usa un reloj de **45 segundos** por defecto. Si varios asientos quedan asignados a la misma cuenta, esos jugadores comparten un teclado: el tablero sigue a quien tenga el turno, y sus jugadas las firma la misma clave. El resto juega desde su propio cliente.
 
@@ -73,7 +73,7 @@ Elegí **Sin reloj** y no hay nada que forzar — una mesa entre amigos donde al
 
 Un jugador que ya jugó al menos una vez y después pierde todos sus orbes queda eliminado. Cuando queda uno solo, la mesa termina y la tarjeta del canal se convierte en un resultado.
 
-<Shot name="chain-reaction-result" caption="La mesa terminada, tal como se ve de vuelta en el canal." maxWidth={380} />
+<Shot name="games/chain-reaction-result" caption="La mesa terminada, tal como se ve de vuelta en el canal." maxWidth={380} />
 
 El resultado no es un anuncio aparte que alguien podría falsificar — es lo que dice el log cuando lo reproducís.
 

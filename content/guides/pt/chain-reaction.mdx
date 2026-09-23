@@ -16,13 +16,13 @@ tags: [games, chain-reaction, nostr, nip-29, kind-2390]
 
 É o jogo inteiro. Pequeno o suficiente para explicar numa frase e profundo o bastante para que um canto ignorado por seis turnos acabe levando metade do seu tabuleiro.
 
-<Shot name="chain-reaction-board" caption="Um tabuleiro de três pessoas, no meio da partida. Casas com dois orbes numa borda estão a um clique de estourar." maxWidth={420} />
+<Shot name="games/chain-reaction-board" caption="Um tabuleiro de três pessoas, no meio da partida. Casas com dois orbes numa borda estão a um clique de estourar." maxWidth={420} />
 
 ## Abrindo uma mesa
 
 Digite `/play` num canal, escolha Chain Reaction e selecione um tamanho de tabuleiro — pequeno (5×7), médio (6×9) ou grande (8×12) — e um relógio de turno. Criar a mesa publica um evento e posta um card no canal. Qualquer pessoa do canal pode clicar em **Entrar** nesse card; quando a lista estiver boa, quem criou clica em **Começar**.
 
-<Shot name="game-picker" caption="/play no compositor. Tudo nesta lista — nomes, faixas de jogadores, relógios — vem do registro de jogos, não da tela." maxWidth={448} />
+<Shot name="games/game-picker" caption="/play no compositor. Tudo nesta lista — nomes, faixas de jogadores, relógios — vem do registro de jogos, não da tela." maxWidth={448} />
 
 O Chain Reaction acomoda de **2 a 8 pessoas** e usa um relógio de **45 segundos** por padrão. Se vários assentos forem atribuídos à mesma conta, essas pessoas estão dividindo um teclado: o tabuleiro segue quem está na vez, e as jogadas são assinadas pela mesma chave. Todo o resto joga do próprio cliente.
 
@@ -73,7 +73,7 @@ Escolha **Sem relógio** e nada é imposto — uma mesa entre amigos em que algu
 
 Quem já jogou pelo menos uma vez e depois perde todos os orbes é eliminado. Quando sobra uma pessoa, a mesa acabou e o card do canal vira um resultado.
 
-<Shot name="chain-reaction-result" caption="A mesa encerrada, como aparece de volta no canal." maxWidth={380} />
+<Shot name="games/chain-reaction-result" caption="A mesa encerrada, como aparece de volta no canal." maxWidth={380} />
 
 O resultado não é um anúncio separado que alguém poderia forjar — é o que o log diz quando você o reproduz.
 

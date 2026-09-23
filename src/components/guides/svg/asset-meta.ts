@@ -70,6 +70,11 @@ export const HERO_ASSET_META: Record<string, GuideAssetMeta> = {
     height: 400,
     alt: 'Stacker hero: two ten-column wells of falling coloured blocks, a cleared line in the left well sending grey garbage rows into the right one over a Nostr relay.',
   },
+  'run-your-own-relay': {
+    width: 800,
+    height: 400,
+    alt: 'Admission to a self-hosted Nostr relay drawn as a ladder: the relay at the left, three widening arcs of admitted keys around it — added by hand, two hops away, three hops away — publishing at 6,000, 3,000 and 1,500 events a minute, and a block list that is checked first and overrides every tier.',
+  },
 };
 
 export const DIAGRAM_ASSET_META: Record<string, GuideAssetMeta> = {
