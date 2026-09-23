@@ -130,6 +130,11 @@ import FeedScreen from '@/components/social/FeedScreen';
 import ProfilePopover from '@/components/chat/ProfilePopover';
 import MobileSigningIndicator from '@/components/MobileSigningIndicator';
 import { useTranslation } from '@/i18n/context';
+import { formatDate, formatNumber, formatTime } from '@/lib/format';
+import type { Locale } from '@/i18n';
+
+/** What `useTranslation().t` is, for the module-level date helpers. */
+type Translate = (key: string) => string;
 import { npubToHex } from '@nostr-wot/data';
 import {
   applyMentionToDraft,
@@ -228,17 +233,23 @@ function shortNpub(pubkey: string | null | undefined): string {
   try { return formatPubkey(pubkey); } catch { return pubkey.slice(0, 8) + '…'; }
 }
 
-function relativeTime(ts: number): string {
+/**
+ * The locale is a parameter rather than a hook call because these are
+ * module-level helpers shared by a dozen screens — and a bare
+ * `toLocaleDateString()` follows the *operating system*, not the app, so
+ * every one of these dates ignored the language the reader picked.
+ */
+function relativeTime(ts: number, t: Translate, locale: Locale): string {
   const date = new Date(ts * 1000);
   const diff = Date.now() - date.getTime();
   const minutes = Math.floor(diff / 60000);
   const hours = Math.floor(diff / 3600000);
   const days = Math.floor(diff / 86400000);
-  if (minutes < 1) return 'just now';
+  if (minutes < 1) return t('time.justNow');
   if (minutes < 60) return `${minutes}m`;
   if (hours < 24) return `${hours}h`;
   if (days < 7) return `${days}d`;
-  return date.toLocaleDateString();
+  return formatDate(locale, date, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 function dayKey(ts: number): string {
@@ -246,19 +257,22 @@ function dayKey(ts: number): string {
   return d.toDateString();
 }
 
-function dayLabel(ts: number): string {
+function dayLabel(ts: number, t: Translate, locale: Locale): string {
   const d = new Date(ts * 1000);
   const today = new Date();
   const yest = new Date();
   yest.setDate(today.getDate() - 1);
-  if (d.toDateString() === today.toDateString()) return `Today · ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-  if (d.toDateString() === yest.toDateString()) return 'Yesterday';
-  return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  if (d.toDateString() === today.toDateString()) {
+    return t('time.today').replace('{time}', formatTime(locale, d));
+  }
+  if (d.toDateString() === yest.toDateString()) return t('time.yesterday');
+  return formatDate(locale, d, { month: 'short', day: 'numeric' });
 }
 
-function timeOfDay(ts: number): string {
-  const d = new Date(ts * 1000);
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+function timeOfDay(ts: number, locale: Locale): string {
+  return formatTime(locale, new Date(ts * 1000), {
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  });
 }
 
 function shortHost(url: string): string {
@@ -2722,7 +2736,7 @@ function ChannelScreen({
   openProfile: (pubkey: string) => void;
   openMembers: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   // Raw lookup — bypasses WoT filtering. Mirrors desktop ChatPanel: the
   // user explicitly navigated to this groupId; hiding it because a WoT
   // verdict hasn't resolved yet causes a false "Channel not visible"
@@ -3040,7 +3054,7 @@ function ChannelScreen({
     for (const m of messages) {
       const k = dayKey(m.createdAt);
       if (k !== lastDay) {
-        out.push({ type: 'divider', key: `d-${k}`, label: dayLabel(m.createdAt) });
+        out.push({ type: 'divider', key: `d-${k}`, label: dayLabel(m.createdAt, t, locale) });
         lastDay = k;
       }
       out.push({ type: 'msg', key: m.id, msg: m });
@@ -3342,7 +3356,7 @@ export function ChannelMessage({
   onLongPress: () => void;
   onAvatar: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const meta = useUserMetadata(msg.pubkey);
   const name = meta?.displayName || meta?.name || shortNpub(msg.pubkey);
   const serverEmojis = useChatStore((s) => s.serverEmojis);
@@ -3419,7 +3433,7 @@ export function ChannelMessage({
         <div className="msg-head">
           <span className="msg-name" onClick={onAvatar} role="button">{name}</span>
           <RoleBadge pubkey={msg.pubkey} />
-          <span className="msg-time">{timeOfDay(msg.createdAt)}</span>
+          <span className="msg-time">{timeOfDay(msg.createdAt, locale)}</span>
           {msg.pending && <span className="msg-spinner" aria-label={t('common.sending')} role="status" />}
           <button
             type="button"
@@ -3668,6 +3682,7 @@ function DmRow({
   youPrefix: string;
   onClick: () => void;
 }) {
+  const { t, locale } = useTranslation();
   const meta = useUserMetadata(peer);
   const unreadCount = useDMUnreadCount(peer);
   const name = meta?.displayName || meta?.name || shortNpub(peer);
@@ -3679,7 +3694,7 @@ function DmRow({
       <div className="dm-meta">
         <div className="dm-row-top">
           <span className="dm-name">{name}</span>
-          <span className="dm-time">{relativeTime(latest.createdAt)}</span>
+          <span className="dm-time">{relativeTime(latest.createdAt, t, locale)}</span>
         </div>
         <div className="dm-preview">
           <svg className="lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="9" rx="1.5" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
@@ -3776,7 +3791,7 @@ function DmThreadScreen({
     messages.forEach((m, index) => {
       const k = dayKey(m.createdAt);
       if (k !== lastDay) {
-        out.push({ type: 'divider', key: `d-${k}`, label: dayLabel(m.createdAt) });
+        out.push({ type: 'divider', key: `d-${k}`, label: dayLabel(m.createdAt, t, locale) });
         lastDay = k;
       }
       out.push({ type: 'msg', key: m.id, msg: m, index });
@@ -3838,7 +3853,7 @@ function DmThreadScreen({
                     desktop's `bg-lc-green`. */}
                 <PqMessageMark mark={marks[it.index] ?? null} onAccent={it.msg.outgoing} />
                 {it.msg.pending && <span className="dm-bubble-spinner" aria-label={t('common.sending')} role="status" />}
-                <span className="dm-bubble-time">{timeOfDay(it.msg.createdAt)}</span>
+                <span className="dm-bubble-time">{timeOfDay(it.msg.createdAt, locale)}</span>
               </div>
               {it.msg.failed && it.msg.clientTag && (
                 <div className="dm-bubble-failed" data-testid="mobile-dm-failed">
@@ -4018,6 +4033,7 @@ function NotificationCard({
   typeClass: string;
   onJump: () => void;
 }) {
+  const { t, locale } = useTranslation();
   const meta = useUserMetadata(senderPubkey);
   const name = meta?.displayName || meta?.name || shortNpub(senderPubkey);
   return (
@@ -4031,7 +4047,7 @@ function NotificationCard({
           {icon}
           {label}
         </span>
-        <span className="mc-time">{relativeTime(Math.floor(createdAt / 1000))}</span>
+        <span className="mc-time">{relativeTime(Math.floor(createdAt / 1000), t, locale)}</span>
       </div>
       <div className="mc-msg" style={{ marginTop: 6 }}>
         <div className="mc-ava" style={avatarStyle(senderPubkey)}>
@@ -5368,7 +5384,7 @@ function ZapModalSheet({
   msg: { id: string; pubkey: string; content: string };
   close: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const meta = useUserMetadata(msg.pubkey);
   const name = meta?.displayName || meta?.name || shortNpub(msg.pubkey);
   const [amount, setAmount] = useState(2100);
@@ -5414,7 +5430,7 @@ function ZapModalSheet({
           <span className="settings-status-dot ok" />
           {t('mobile.zap.walletHint')}
         </div>
-        <button className="btn-primary" onClick={close}>⚡ Send {amount.toLocaleString()} sats</button>
+        <button className="btn-primary" onClick={close}>{t('zap.sendAmount').replace('{amount}', formatNumber(locale, amount))}</button>
         <button className="btn-cancel" onClick={close}>{t('common.cancel')}</button>
       </div>
     </div>

@@ -46,6 +46,7 @@ import { fetchRelayInfo, supportsSearch } from '@/lib/relay-info';
 import { formatPubkey } from '@nostr-wot/data';
 import { useChatStore } from '@/store/chat';
 import { useTranslation } from '@/i18n/context';
+import { useFormat } from '@/i18n/useFormat';
 
 const HISTORY_KEY = 'obelisk-dex/search-history';
 const HISTORY_MAX = 10;
@@ -700,6 +701,7 @@ function ResultRow({ id, active, msg, groupName, t, onJump, onAuthor }: {
   onJump: () => void;
   onAuthor: (pk: string) => void;
 }) {
+  const { formatDateTime } = useFormat();
   const meta = useProfile(msg.pubkey);
   // `formatPubkey` gives `npub1abc…xyz`; a raw hex slice is not an identity
   // a human can recognise or copy.
@@ -721,7 +723,7 @@ function ResultRow({ id, active, msg, groupName, t, onJump, onAuthor }: {
         <span className="text-lc-muted">{t('search.in')}</span>
         <span className="text-lc-green truncate">#{channel}</span>
         <span className="ml-auto text-[10px] text-lc-muted">
-          {new Date(msg.createdAt * 1000).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+          {formatDateTime(msg.createdAt)}
         </span>
       </div>
       <button onClick={onJump} className="mt-0.5 block w-full text-left text-sm text-lc-white/90 line-clamp-2">{msg.content}</button>

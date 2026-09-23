@@ -2,6 +2,8 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import type { Locale } from '@/i18n';
 import type { GuideFrontmatter } from '@/lib/guides';
+import { formatDate } from '@/lib/format';
+import { getTranslation } from '@/i18n';
 import { HERO_REGISTRY } from './svg';
 
 interface Props {
@@ -18,6 +20,7 @@ interface Props {
 
 export default function ArticleShell({
   frontmatter,
+  locale,
   readMinutes,
   backHref,
   backLabel,
@@ -60,7 +63,7 @@ export default function ArticleShell({
           </span>
           <span aria-hidden="true">·</span>
           <time dateTime={updated.toISOString()}>
-            {updatedLabel} {updated.toLocaleDateString(undefined, {
+            {updatedLabel} {formatDate(locale, updated, {
               year: 'numeric',
               month: 'short',
               day: 'numeric',
@@ -79,11 +82,15 @@ export default function ArticleShell({
 
       <footer className="mt-16 pt-8 border-t border-lc-border text-sm text-lc-muted">
         <time dateTime={published.toISOString()}>
-          Published {published.toLocaleDateString(undefined, {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-          })}
+          {/*
+            One key with a {date} slot, not the word "Published" glued onto a
+            formatted date: Spanish and Portuguese both need the date
+            somewhere English doesn't put it.
+          */}
+          {getTranslation(locale)('guides.publishedOn').replace(
+            '{date}',
+            formatDate(locale, published, { year: 'numeric', month: 'long', day: 'numeric' }),
+          )}
         </time>
       </footer>
     </article>

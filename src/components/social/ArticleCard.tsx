@@ -23,6 +23,8 @@ import { fetchArticleHighlights, highlightRuns } from '@/lib/social/highlights';
 import { markHighlights } from '@/lib/social/mark-highlights';
 import UserAvatar from '@/components/UserAvatar';
 import MessageContent from '@/components/chat/MessageContent';
+import { formatDate } from '@/lib/format';
+import type { Locale } from '@/i18n';
 
 export type ArticleMeta = {
   title: string | null;
@@ -55,12 +57,8 @@ export function readingMinutes(content: string): number {
   return Math.max(1, Math.round(words / 220));
 }
 
-function formatDate(seconds: number): string {
-  return new Date(seconds * 1000).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
+function articleDate(locale: Locale, seconds: number): string {
+  return formatDate(locale, seconds, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 /** Compact card for a feed row. */
@@ -146,7 +144,7 @@ export default function ArticleReader({
   note: NostrEvent;
   onOpenProfile?: (pubkey: string) => void;
 }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const author = useAuthor(note.pubkey);
   const meta = useMemo(() => articleMeta(note), [note]);
   const minutes = useMemo(() => readingMinutes(note.content), [note.content]);
@@ -215,7 +213,7 @@ export default function ArticleReader({
           <span className="text-sm font-medium text-lc-white hover:underline">{name}</span>
         </button>
         <span className="ml-auto text-[11px] text-lc-muted">
-          {meta.publishedAt ? formatDate(meta.publishedAt) : null}
+          {meta.publishedAt ? articleDate(locale, meta.publishedAt) : null}
           {' · '}
           {minutes} {t('social.minRead')}
         </span>

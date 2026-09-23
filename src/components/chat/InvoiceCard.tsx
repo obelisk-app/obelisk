@@ -6,6 +6,7 @@ import { useMyPubkey, useNipSigner, useUserMetadata } from '@/lib/nostr-bridge';
 import { formatPubkey } from '@nostr-wot/data';
 import { useLocalWallet } from '@/lib/wallet/local-client';
 import { useTranslation } from '@/i18n/context';
+import { useFormat } from '@/i18n/useFormat';
 
 interface Props {
   invoice: string;
@@ -33,6 +34,7 @@ interface PaidState {
  * device will not show "Paid" for invoices another user paid.
  */
 export default function InvoiceCard({ invoice, messageId: _messageId, channelId: _channelId }: Props) {
+  const { formatNumber } = useFormat();
   const { t } = useTranslation();
   const myPubkey = useMyPubkey();
   const signer = useNipSigner();
@@ -85,7 +87,7 @@ export default function InvoiceCard({ invoice, messageId: _messageId, channelId:
           <span className="text-lc-green text-lg" aria-hidden>⚡</span>
           <span className="min-w-0">
             <span className="block text-sm font-semibold text-lc-white">
-              {parsed.amountSats.toLocaleString()} sats
+              {formatNumber(parsed.amountSats)} sats
             </span>
             {parsed.description && (
               <span className="block text-[11px] text-lc-muted truncate">{parsed.description}</span>

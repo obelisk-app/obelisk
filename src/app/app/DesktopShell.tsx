@@ -170,6 +170,7 @@ import { stickerTagsForContent, type MessageSticker } from '@/lib/sticker-tags';
 import { voiceNoteTagForContent, type MessageVoiceNote } from '@/lib/voice-note-tags';
 import { useTranslation } from '@/i18n/context';
 import { rich } from '@/i18n/rich';
+import { useFormat } from '@/i18n/useFormat';
 
 type View =
   | { kind: 'group'; groupId: string }
@@ -980,6 +981,7 @@ export function RelayTopBar({
   onJumpToChannel?: (channelId: string) => void;
   onJumpToDm?: (peer: string) => void;
 }) {
+  const { formatTime } = useFormat();
   const { t, locale } = useTranslation();
   const resetHints = useHintsStore((state) => state.resetHints);
   const socialRelays = usePreferences().socialRelays;
@@ -1234,7 +1236,7 @@ export function RelayTopBar({
                       <div className="flex-1 min-w-0">
                         <div className="text-xs uppercase tracking-wider text-lc-muted font-mono mb-0.5">
                           {t('desktop.inbox.type.mention')}
-                          <span className="ml-2 text-lc-muted/70 normal-case tracking-normal">{new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                          <span className="ml-2 text-lc-muted/70 normal-case tracking-normal">{formatTime(m.createdAt)}</span>
                         </div>
                         {m.preview && (
                           <div className="text-sm text-lc-white truncate"><MentionText content={m.preview} /></div>
@@ -1259,7 +1261,7 @@ export function RelayTopBar({
                         <div className="flex-1 min-w-0">
                           <div className="text-xs uppercase tracking-wider text-lc-muted font-mono mb-0.5">
                             {t('inbox.type.dm')}
-                            <span className="ml-2 text-lc-muted/70 normal-case tracking-normal">{new Date(d.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            <span className="ml-2 text-lc-muted/70 normal-case tracking-normal">{formatTime(d.createdAt)}</span>
                           </div>
                           {d.preview && (
                             <div className="text-sm text-lc-white truncate"><MentionText content={d.preview} /></div>
@@ -3728,6 +3730,7 @@ function ReactorHoverCard({
 }
 
 function ZapperHoverCard({ zapTotal }: { zapTotal: MessageZapTotal }) {
+  const { formatNumber } = useFormat();
   const { t } = useTranslation();
   const entries = useMemo(
     () => Array.from(zapTotal.zapperAmounts.entries()).sort((a, b) => b[1] - a[1]),
@@ -3737,13 +3740,13 @@ function ZapperHoverCard({ zapTotal }: { zapTotal: MessageZapTotal }) {
   const extra = entries.length - shown.length;
   return (
     <HoverCardShell
-      title={`⚡ ${zapTotal.totalSats.toLocaleString()} sats · ${zapTotal.count} ${t(zapTotal.count === 1 ? 'desktop.zaps.one' : 'desktop.zaps.many')}`}
+      title={`⚡ ${formatNumber(zapTotal.totalSats)} sats · ${zapTotal.count} ${t(zapTotal.count === 1 ? 'desktop.zaps.one' : 'desktop.zaps.many')}`}
     >
       <ul className="space-y-0.5">
         {shown.map(([pk, sats]) => (
           <li key={pk} className="flex items-center justify-between gap-2 truncate">
             <span className="truncate"><PubkeyName pubkey={pk} /></span>
-            <span className="shrink-0 text-yellow-300">{sats.toLocaleString()}</span>
+            <span className="shrink-0 text-yellow-300">{formatNumber(sats)}</span>
           </li>
         ))}
         {extra > 0 && <li className="text-lc-muted">{t('desktop.reactions.andMore').replace('{count}', String(extra))}</li>}
@@ -3801,6 +3804,7 @@ function MessageRow({
   isAdmin: boolean;
   onReply: (m: JsMessage) => void;
 }) {
+  const { formatDateTime, formatNumber } = useFormat();
   const { t } = useTranslation();
   const parent = msg.replyToId
     ? allMessages.find((x) => x.id === msg.replyToId) ?? null
@@ -3935,7 +3939,7 @@ function MessageRow({
             <button onClick={openProfile} className="text-sm font-bold text-lc-white hover:underline">{displayName}</button>
             <RoleBadge pubkey={msg.pubkey} />
             <span className="text-[10px] text-lc-muted">
-              {new Date(msg.createdAt * 1000).toLocaleString(undefined, {
+              {formatDateTime(msg.createdAt, {
                 hour: '2-digit',
                 minute: '2-digit',
                 month: 'short',
@@ -4016,7 +4020,7 @@ function MessageRow({
                   <svg viewBox="0 0 24 24" fill="currentColor" width="11" height="11" aria-hidden="true">
                     <path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z" />
                   </svg>
-                  {zapTotal.totalSats.toLocaleString()}
+                  {formatNumber(zapTotal.totalSats)}
                 </button>
                 <ZapperHoverCard zapTotal={zapTotal} />
               </div>
@@ -5029,6 +5033,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 // Exported for tests only — mounted internally by `AppShell`, same as
 // `RelayTopBar` / `SidebarMe`.
 export function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string) => void }) {
+  const { formatTime } = useFormat();
   const { t, locale } = useTranslation();
   const dms = useDirectMessages();
   const meta = useProfile(peer);
@@ -5184,10 +5189,7 @@ export function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string)
                     />
                   )}
                   <span>
-                    {new Date(m.createdAt * 1000).toLocaleTimeString(undefined, {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
+                    {formatTime(m.createdAt)}
                   </span>
                 </div>
                 {m.failed && (

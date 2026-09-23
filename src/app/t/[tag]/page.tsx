@@ -20,6 +20,7 @@ import {
 import { plainTextForPreview, previewImage } from '@/lib/server/note-preview';
 import ViewerHeader from '@/components/social/ViewerHeader';
 import { serverLocale } from '@/lib/server/locale';
+import { formatDate } from '@/lib/format';
 
 export const runtime = 'nodejs';
 export const revalidate = 120;
@@ -55,7 +56,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 }
 
 export default async function HashtagPage({ params }: Params) {
-  const { t } = await serverLocale();
+  const { t, locale } = await serverLocale();
   const { tag } = await params;
   const clean = normalizeTag(tag);
 
@@ -102,7 +103,7 @@ export default async function HashtagPage({ params }: Params) {
                     className="ml-auto shrink-0 text-[10px] text-lc-muted"
                     dateTime={new Date(note.created_at * 1000).toISOString()}
                   >
-                    {new Date(note.created_at * 1000).toLocaleDateString()}
+                    {formatDate(locale, note.created_at, { year: 'numeric', month: 'short', day: 'numeric' })}
                   </time>
                 </div>
                 <p className="line-clamp-3 text-sm text-lc-white">{text || 'Shared media'}</p>

@@ -11,6 +11,7 @@
 
 import Link from 'next/link';
 import { serverLocale } from '@/lib/server/locale';
+import { formatDate } from '@/lib/format';
 import { nip19 } from 'nostr-tools';
 import type { Event as NostrEvent } from 'nostr-tools';
 import {
@@ -58,7 +59,7 @@ export default async function AuthorContext({
   follows: ViewerProfile[];
   relays: AuthorRelays;
 }) {
-  const { t } = await serverLocale();
+  const { t, locale } = await serverLocale();
   const name = displayNameFor(author);
   const writeRelays = relays.write.slice(0, 6);
 
@@ -87,7 +88,7 @@ export default async function AuthorContext({
                       className="mt-1 block text-[10px] text-lc-muted"
                       dateTime={new Date(note.created_at * 1000).toISOString()}
                     >
-                      {new Date(note.created_at * 1000).toLocaleDateString()}
+                      {formatDate(locale, note.created_at, { year: 'numeric', month: 'short', day: 'numeric' })}
                     </time>
                   </Link>
                 </li>

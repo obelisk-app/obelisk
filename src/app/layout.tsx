@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import { serverLocale } from '@/lib/server/locale';
 import { Inter } from 'next/font/google';
 import Script from 'next/script';
 import { cookies, headers } from 'next/headers';
@@ -20,93 +21,101 @@ const inter = Inter({
 
 const SITE_URL = process.env.CORS_ORIGIN || 'https://obelisk.ar';
 
-export const metadata: Metadata = {
-  metadataBase: new URL(SITE_URL),
-  title: {
-    default: 'Obelisk — Discord alternative with Nostr login. No email, no password.',
-    template: '%s · Obelisk',
-  },
-  description:
-    'The Discord alternative for crypto and privacy communities. Log in with your Nostr keys — no email, no password, no phone number. Servers, channels, voice and encrypted DMs, with Web of Trust spam resistance.',
-  applicationName: 'Obelisk',
-  keywords: [
-    'Discord alternative',
-    'Nostr login',
-    'Nostr chat',
-    'Nostr Discord',
-    'no email no password chat',
-    'private group chat',
-    'crypto community chat',
-    'decentralized Discord',
-    'self-hosted chat',
-    'sovereign identity chat',
-    'NIP-07',
-    'NIP-46 bunker',
-    'Web of Trust',
-    'open source Discord alternative',
-    'La Crypta',
-  ],
-  authors: [{ name: 'La Crypta', url: 'https://lacrypta.ar' }],
-  creator: 'La Crypta',
-  publisher: 'La Crypta',
-  category: 'social',
-  referrer: 'origin-when-cross-origin',
-  formatDetection: {
-    email: false,
-    address: false,
-    telephone: false,
-  },
-  icons: {
-    // Browser tab + legacy shortcut keep the small detail-rich favicon
-    // (dark circle with green obelisk) — works well at 16/32px.
-    icon: '/obelisk-favicon.png',
-    shortcut: '/obelisk-favicon.png',
-    // iOS home screen ("Add to Home Screen") uses the same vibrant icon
-    // as the Android PWA so the installed-app look matches across
-    // platforms. iOS rounds the corners automatically.
-    apple: '/icon-512.png',
-  },
-  manifest: '/manifest.webmanifest',
-  openGraph: {
-    title: 'Obelisk — Discord alternative with Nostr login',
-    description:
-      'Group chat for crypto and privacy folks. Log in with your Nostr keys — no email, no password. Servers, voice, encrypted DMs, Web of Trust spam resistance.',
-    siteName: 'Obelisk',
-    url: SITE_URL,
-    // Static metadata can only name one; the rest are listed as alternates
-    // so a third language isn't invisible to crawlers.
-    locale: OG_LOCALE[DEFAULT_LOCALE],
-    alternateLocale: LOCALES.filter((l) => l !== DEFAULT_LOCALE).map((l) => OG_LOCALE[l]),
-    type: 'website',
-    images: [{
-      url: '/og/obelisk.png?v=2',
-      width: 1200,
-      height: 630,
-      type: 'image/png',
-      alt: 'Obelisk — Group chat powered by Nostr identity',
-    }],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Obelisk — Discord alternative with Nostr login',
-    description:
-      'Group chat for crypto and privacy folks. Log in with your Nostr keys — no email, no password.',
-    creator: '@lacryptaar',
-    images: ['/og/obelisk.png?v=2'],
-  },
-  robots: {
-    index: true,
-    follow: true,
-    nocache: false,
-    googleBot: {
+/**
+ * Root metadata, in the reader's language.
+ *
+ * It was `export const metadata = {…}` — evaluated once at module load, so
+ * the title, description and both social cards were literal English for
+ * everyone. The keyword list stays English on purpose: those are search
+ * terms people type, not copy they read.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const { t, locale } = await serverLocale();
+  return {
+    metadataBase: new URL(SITE_URL),
+    title: {
+      default: t('meta.title'),
+      template: '%s · Obelisk',
+    },
+    description: t('meta.description'),
+    applicationName: 'Obelisk',
+    keywords: [
+      'Discord alternative',
+      'Nostr login',
+      'Nostr chat',
+      'Nostr Discord',
+      'no email no password chat',
+      'private group chat',
+      'crypto community chat',
+      'decentralized Discord',
+      'self-hosted chat',
+      'sovereign identity chat',
+      'NIP-07',
+      'NIP-46 bunker',
+      'Web of Trust',
+      'open source Discord alternative',
+      'La Crypta',
+    ],
+    authors: [{ name: 'La Crypta', url: 'https://lacrypta.ar' }],
+    creator: 'La Crypta',
+    publisher: 'La Crypta',
+    category: 'social',
+    referrer: 'origin-when-cross-origin',
+    formatDetection: {
+      email: false,
+      address: false,
+      telephone: false,
+    },
+    icons: {
+      // Browser tab + legacy shortcut keep the small detail-rich favicon
+      // (dark circle with green obelisk) — works well at 16/32px.
+      icon: '/obelisk-favicon.png',
+      shortcut: '/obelisk-favicon.png',
+      // iOS home screen ("Add to Home Screen") uses the same vibrant icon
+      // as the Android PWA so the installed-app look matches across
+      // platforms. iOS rounds the corners automatically.
+      apple: '/icon-512.png',
+    },
+    manifest: '/manifest.webmanifest',
+    openGraph: {
+      title: t('meta.ogTitle'),
+      description: t('meta.ogDescription'),
+      siteName: 'Obelisk',
+      url: SITE_URL,
+      // Static metadata can only name one; the rest are listed as alternates
+      // so a third language isn't invisible to crawlers.
+      locale: OG_LOCALE[locale],
+      alternateLocale: LOCALES.filter((l) => l !== locale).map((l) => OG_LOCALE[l]),
+      type: 'website',
+      images: [{
+        url: '/og/obelisk.png?v=2',
+        width: 1200,
+        height: 630,
+        type: 'image/png',
+        alt: t('meta.ogImageAlt'),
+      }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: t('meta.ogTitle'),
+      description: t('meta.twitterDescription'),
+      creator: '@lacryptaar',
+      images: ['/og/obelisk.png?v=2'],
+    },
+    robots: {
       index: true,
       follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
+      nocache: false,
+      googleBot: {
+        index: true,
+        follow: true,
+        'max-video-preview': -1,
+        'max-image-preview': 'large',
+        'max-snippet': -1,
+      },
     },
-  },
-};
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: '#0a0a0a',

@@ -31,6 +31,7 @@ import type { Components } from 'react-markdown';
 import type { MessageSticker } from '@/lib/sticker-tags';
 import type { MessageVoiceNote } from '@/lib/voice-note-tags';
 import { useTranslation } from '@/i18n/context';
+import { useFormat } from '@/i18n/useFormat';
 
 function MentionChip({ pubkey, displayName }: { pubkey: string; displayName: string }) {
   const openProfilePopup = useChatStore((s) => s.openProfilePopup);
@@ -96,6 +97,7 @@ export function VoiceMessage({
   authorPicture?: string | null;
   timestamp?: number;
 }) {
+  const { formatTime } = useFormat();
   const { t } = useTranslation();
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
@@ -174,7 +176,7 @@ export function VoiceMessage({
           {compact
             ? <span>{formatAudioTime(duration)}</span>
             : timestamp
-              ? <span>{new Date(timestamp * 1000).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}</span>
+              ? <span>{formatTime(timestamp, { hour: 'numeric', minute: '2-digit' })}</span>
               : null}
         </span>
       </span>

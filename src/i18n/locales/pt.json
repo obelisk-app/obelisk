@@ -1193,5 +1193,19 @@
   "profileViewer.notFoundHelp": "Não foi possível resolver esse identificador nos relays públicos.",
   "tagPage.notFound": "Etiqueta não encontrada",
   "tagPage.notFoundHelp": "Isso não parece um hashtag.",
-  "relayLanding.ogTagline": "Sem e-mails. Sem senhas. Identidade criptográfica."
+  "relayLanding.ogTagline": "Sem e-mails. Sem senhas. Identidade criptográfica.",
+  "guides.publishedOn": "Publicado em {date}",
+  "zap.sent": "⚡ Você enviou {amount} sats para {name}",
+  "zap.send": "Zap de {amount} sats",
+  "zap.markerFailed": "O pagamento deu certo, mas a marca de zap do grupo não foi publicada: {error}",
+  "time.justNow": "agora",
+  "time.today": "Hoje · {time}",
+  "time.yesterday": "Ontem",
+  "zap.sendAmount": "⚡ Enviar {amount} sats",
+  "meta.title": "Obelisk — a alternativa ao Discord com login Nostr. Sem e-mail, sem senha.",
+  "meta.description": "A alternativa ao Discord para comunidades cripto e de privacidade. Entre com suas chaves Nostr: sem e-mail, sem senha, sem telefone. Servidores, canais, voz e DMs criptografados, com resistência a spam por rede de confiança.",
+  "meta.ogTitle": "Obelisk — a alternativa ao Discord com login Nostr",
+  "meta.ogDescription": "Chat em grupo para quem é de cripto e privacidade. Entre com suas chaves Nostr: sem e-mail, sem senha. Servidores, voz, DMs criptografados e resistência a spam por rede de confiança.",
+  "meta.twitterDescription": "Chat em grupo para quem é de cripto e privacidade. Entre com suas chaves Nostr: sem e-mail, sem senha.",
+  "meta.ogImageAlt": "Obelisk — chat em grupo com identidade Nostr"
 }

@@ -9,6 +9,7 @@ import { useNipSigner, useUserMetadata } from '@/lib/nostr-bridge';
 import { getBridgeImpl, isImportableRelayUrl, useCurrentRelayUrl } from '@/lib/nostr-bridge';
 import ModalShell from '@/components/ModalShell';
 import { useTranslation } from '@/i18n/context';
+import { useFormat } from '@/i18n/useFormat';
 
 const QUICK_AMOUNTS = [21, 100, 500, 1000, 5000, 21000];
 
@@ -29,6 +30,11 @@ export default function MessageZapModal() {
 
 function MessageZapModalInner({ target, close }: { target: ZapTarget; close: () => void }) {
   const { t } = useTranslation();
+  const { formatNumber } = useFormat();
+  /** One toast title, two code paths — the payment succeeded either way. */
+  const sentTitle = (sats: number, to: string) => t('zap.sent')
+    .replace('{amount}', formatNumber(sats))
+    .replace('{name}', to);
   const [amount, setAmount] = useState<number>(target.defaultAmountSats ?? 100);
   const [comment, setComment] = useState<string>('');
   const [busy, setBusy] = useState(false);
@@ -104,15 +110,15 @@ function MessageZapModalInner({ target, close }: { target: ZapTarget; close: () 
         );
       } catch (publishErr) {
         useToastStore.getState().pushToast({
-          title: `⚡ Sent ${amount.toLocaleString()} sats to ${displayName}`,
-          body: `Payment succeeded, but the group zap marker was not published: ${(publishErr as Error).message}`,
+          title: sentTitle(amount, displayName),
+          body: t('zap.markerFailed').replace('{error}', (publishErr as Error).message),
         });
         close();
         return;
       }
 
       useToastStore.getState().pushToast({
-        title: `⚡ Sent ${amount.toLocaleString()} sats to ${displayName}`,
+        title: sentTitle(amount, displayName),
         body: comment.trim() || '',
       });
       close();
@@ -153,7 +159,7 @@ function MessageZapModalInner({ target, close }: { target: ZapTarget; close: () 
                   : 'border-lc-border text-lc-white hover:bg-lc-border/40'
               }`}
             >
-              {a.toLocaleString()}
+              {formatNumber(a)}
             </button>
           ))}
         </div>
@@ -181,7 +187,9 @@ function MessageZapModalInner({ target, close }: { target: ZapTarget; close: () 
             className="inline-flex items-center gap-1 rounded-full bg-yellow-400 px-4 py-1.5 text-xs font-semibold text-lc-black hover:bg-yellow-300 disabled:opacity-50"
           >
             <BoltIcon className="h-3.5 w-3.5" />
-            {busy ? 'Sending…' : `Zap ${amount.toLocaleString()} sats`}
+            {busy
+              ? t('common.sending')
+              : t('zap.send').replace('{amount}', formatNumber(amount))}
           </button>
         </div>
     </ModalShell>

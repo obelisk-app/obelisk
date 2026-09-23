@@ -1193,5 +1193,19 @@
   "profileViewer.notFoundHelp": "That identifier couldn’t be resolved on the public relays.",
   "tagPage.notFound": "Tag not found",
   "tagPage.notFoundHelp": "That doesn’t look like a hashtag.",
-  "relayLanding.ogTagline": "No emails. No passwords. Cryptographic identity."
+  "relayLanding.ogTagline": "No emails. No passwords. Cryptographic identity.",
+  "guides.publishedOn": "Published {date}",
+  "zap.sent": "⚡ Sent {amount} sats to {name}",
+  "zap.send": "Zap {amount} sats",
+  "zap.markerFailed": "Payment succeeded, but the group zap marker was not published: {error}",
+  "time.justNow": "just now",
+  "time.today": "Today · {time}",
+  "time.yesterday": "Yesterday",
+  "zap.sendAmount": "⚡ Send {amount} sats",
+  "meta.title": "Obelisk — Discord alternative with Nostr login. No email, no password.",
+  "meta.description": "The Discord alternative for crypto and privacy communities. Log in with your Nostr keys — no email, no password, no phone number. Servers, channels, voice and encrypted DMs, with Web of Trust spam resistance.",
+  "meta.ogTitle": "Obelisk — Discord alternative with Nostr login",
+  "meta.ogDescription": "Group chat for crypto and privacy folks. Log in with your Nostr keys — no email, no password. Servers, voice, encrypted DMs, Web of Trust spam resistance.",
+  "meta.twitterDescription": "Group chat for crypto and privacy folks. Log in with your Nostr keys — no email, no password.",
+  "meta.ogImageAlt": "Obelisk — Group chat powered by Nostr identity"
 }

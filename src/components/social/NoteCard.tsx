@@ -36,6 +36,8 @@ import NoteContent from './NoteContent';
 import { ArticleCard } from './ArticleCard';
 import NoteMenu from './NoteMenu';
 import MediaCarousel from './MediaCarousel';
+import { formatDate } from '@/lib/format';
+import type { Locale } from '@/i18n';
 import {
   ActionButton,
   LikeIcon,
@@ -239,7 +241,7 @@ function PlainNoteCard({
   nested = false,
 }: NoteCardProps) {
   const quoted = variant === 'quoted';
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const meta = useAuthor(note.pubkey);
   const myPubkey = useMyPubkey();
   const follows = useMyFollows();
@@ -360,7 +362,7 @@ function PlainNoteCard({
             {mode === 'article' && <span>{t('social.article')}</span>}
             {mode === 'highlight' && <span>{t('social.highlight')}</span>}
             <time dateTime={new Date(note.created_at * 1000).toISOString()}>
-              {relativeTime(note.created_at, t)}
+              {relativeTime(note.created_at, t, locale)}
             </time>
           </div>
         </div>
@@ -598,13 +600,13 @@ function ImetaMedia({ note }: { note: NostrEvent }) {
   );
 }
 
-function relativeTime(createdAt: number, t: (key: string) => string): string {
+function relativeTime(createdAt: number, t: (key: string) => string, locale: Locale): string {
   const seconds = Math.max(0, Math.floor(Date.now() / 1000) - createdAt);
   if (seconds < 60) return t('social.now');
   if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
   if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`;
   if (seconds < 604800) return `${Math.floor(seconds / 86400)}d`;
-  return new Date(createdAt * 1000).toLocaleDateString();
+  return formatDate(locale, createdAt, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 function shortNpub(pubkey: string): string {
