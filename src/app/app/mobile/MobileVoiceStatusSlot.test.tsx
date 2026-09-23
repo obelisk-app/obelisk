@@ -19,16 +19,23 @@ vi.mock('@/lib/voice/jump-to-voice', () => ({
 
 import { useVoiceStore } from '@/store/voice';
 import { MobileVoiceStatusSlot, shouldHideMobileBottomNav } from './PhoneShell';
+import { LocaleProvider } from '@/i18n/context';
+
+/** The component reads its copy from the dictionary, so it needs a provider. */
+const renderLocalized = (ui: React.ReactElement) => render(
+  <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,
+);
+
 
 describe('MobileVoiceStatusSlot', () => {
   it('stays mounted across screens during a call so the bar can show via CSS', () => {
     useVoiceStore.setState({ currentVoiceChannelId: 'group-1' });
-    const { rerender } = render(<MobileVoiceStatusSlot screen="voice-room" kbInset={0} />);
+    const { rerender } = renderLocalized(<MobileVoiceStatusSlot screen="voice-room" kbInset={0} />);
     const slot = screen.getByTestId('mobile-voice-status-slot');
     expect(slot.classList.contains('is-hidden')).toBe(true);
     expect(screen.getByTestId('voice-status-bar')).toBeTruthy();
 
-    rerender(<MobileVoiceStatusSlot screen="server" kbInset={0} />);
+    rerender(<LocaleProvider initialLocale="en">{<><MobileVoiceStatusSlot screen="server" kbInset={0} /></>}</LocaleProvider>);
     expect(slot.classList.contains('is-hidden')).toBe(false);
     expect(screen.getByTestId('voice-status-bar')).toBeTruthy();
 
@@ -37,7 +44,7 @@ describe('MobileVoiceStatusSlot', () => {
 
   it('hides the slot while the on-screen keyboard is open', () => {
     useVoiceStore.setState({ currentVoiceChannelId: 'group-1' });
-    render(<MobileVoiceStatusSlot screen="channel" kbInset={320} />);
+    renderLocalized(<MobileVoiceStatusSlot screen="channel" kbInset={320} />);
     const slot = screen.getByTestId('mobile-voice-status-slot');
     expect(slot.classList.contains('is-hidden')).toBe(true);
     useVoiceStore.getState().leaveVoice();
@@ -45,7 +52,7 @@ describe('MobileVoiceStatusSlot', () => {
 
   it('renders an empty slot when there is no active call', () => {
     useVoiceStore.getState().leaveVoice();
-    render(<MobileVoiceStatusSlot screen="server" kbInset={0} />);
+    renderLocalized(<MobileVoiceStatusSlot screen="server" kbInset={0} />);
     const slot = screen.getByTestId('mobile-voice-status-slot');
     expect(slot.classList.contains('is-hidden')).toBe(false);
     expect(slot.children.length).toBe(0);

@@ -5,12 +5,14 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { nostrActions } from '@/lib/nostr-bridge';
 import { decodeRelayShareCode } from '@/lib/relay-share-link';
+import { useTranslation } from '@/i18n/context';
 
 const RELAY_BRANDING: Record<string, { logo: string; alt: string }> = {
   'wss://lacrypta-relay.obelisk.ar': { logo: '/lacrypta-logo.png', alt: 'La Crypta' },
 };
 
 export default function RelayShareLinkPage({ params }: { params: Promise<{ code: string }> }) {
+  const { t } = useTranslation();
   const { code } = use(params);
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -59,13 +61,13 @@ export default function RelayShareLinkPage({ params }: { params: Promise<{ code:
       <div className="lc-card w-full max-w-md rounded-2xl border border-lc-border bg-lc-dark p-6 text-center">
         {error ? (
           <>
-            <h1 className="text-lg font-bold text-lc-white">Could not open relay</h1>
+            <h1 className="text-lg font-bold text-lc-white">{t('relayLanding.failed')}</h1>
             <p className="mt-2 text-sm text-lc-muted">{error}</p>
             <button
               onClick={() => router.replace('/app')}
               className="mt-4 rounded-lg bg-lc-green px-4 py-1.5 text-sm font-semibold text-lc-black"
             >
-              Go to app
+              {t('relayLanding.goToApp')}
             </button>
           </>
         ) : (
@@ -80,7 +82,7 @@ export default function RelayShareLinkPage({ params }: { params: Promise<{ code:
                 priority
               />
             )}
-            <h1 className="text-lg font-bold text-lc-white">Connecting to relay…</h1>
+            <h1 className="text-lg font-bold text-lc-white">{t('relayLanding.connecting')}</h1>
             {relayUrl && (
               <p className="mt-2 break-all font-mono text-xs text-lc-muted">{relayUrl}</p>
             )}

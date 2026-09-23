@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { toPng } from 'html-to-image';
+import { useTranslation } from '@/i18n/context';
 
 type Color = { name: string; token: string; hex: string; usage: string };
 
@@ -710,6 +711,7 @@ function EmbedPreview({
 }
 
 export default function MediaKit() {
+  const { t } = useTranslation();
   return (
     <main className="min-h-screen bg-lc-black text-lc-white">
       {/* Hero */}
@@ -717,10 +719,10 @@ export default function MediaKit() {
         <div className="mx-auto max-w-6xl px-4 sm:px-6 py-12 sm:py-20">
           <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-lc-green">
             <span className="inline-block w-2 h-2 rounded-full bg-lc-green lc-glow" />
-            Press &amp; Media
+            {t('mediaKit.eyebrow')}
           </div>
           <h1 className="mt-4 text-4xl sm:text-6xl font-extrabold tracking-tight">
-            Obelisk Media Kit
+            {t('mediaKit.title')}
           </h1>
           <p className="mt-4 max-w-2xl text-base sm:text-lg text-lc-muted">
             Logos, banners, icons, palette and copy ready to use. Everything
@@ -756,7 +758,7 @@ export default function MediaKit() {
         {/* About */}
         <Section
           id="about"
-          title="About Obelisk"
+          title={t('mediaKit.about')}
           description="Short and long pitch — English and Spanish, ready to copy."
         >
           <div className="grid gap-4 md:grid-cols-2">
@@ -802,7 +804,7 @@ export default function MediaKit() {
         {/* Logos */}
         <Section
           id="logos"
-          title="Logos & icons"
+          title={t('mediaKit.logos')}
           description="Right-click → Save image as… or use the Download button."
         >
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -834,7 +836,7 @@ export default function MediaKit() {
                     download={a.download}
                     className="lc-pill-primary text-xs px-3 py-1 shrink-0"
                   >
-                    Download
+                    {t('mediaKit.download')}
                   </a>
                 </div>
               </div>
@@ -845,12 +847,12 @@ export default function MediaKit() {
         {/* Banners */}
         <Section
           id="banners"
-          title="Banners"
+          title={t('mediaKit.banners')}
           description="Banners rendered in HTML/CSS — copy the snippets, screenshot them, or use the linked PNGs."
         >
           <div className="space-y-6">
             <BannerCard
-              title="Hero / Open Graph"
+              title={t('mediaKit.hero')}
               spec="1200 × 630 — share preview"
               filename="obelisk-hero-1200x630.png"
               pixelWidth={1200}
@@ -861,7 +863,7 @@ export default function MediaKit() {
                   rel="noopener noreferrer"
                   className="lc-pill-secondary px-3 py-1"
                 >
-                  Open OG PNG
+                  {t('mediaKit.openOgPng')}
                 </a>
               }
             >
@@ -869,7 +871,7 @@ export default function MediaKit() {
             </BannerCard>
 
             <BannerCard
-              title="X (Twitter) header"
+              title={t('mediaKit.xHeader')}
               spec="1500 × 500 — profile cover (3:1)"
               filename="obelisk-x-header-1500x500.png"
               pixelWidth={1500}
@@ -878,7 +880,7 @@ export default function MediaKit() {
             </BannerCard>
 
             <BannerCard
-              title="LinkedIn cover"
+              title={t('mediaKit.linkedin')}
               spec="1584 × 396 — profile background (4:1)"
               filename="obelisk-linkedin-1584x396.png"
               pixelWidth={1584}
@@ -887,7 +889,7 @@ export default function MediaKit() {
             </BannerCard>
 
             <BannerCard
-              title="GitHub social preview"
+              title={t('mediaKit.github')}
               spec="1280 × 640 — repository preview"
               filename="obelisk-github-1280x640.png"
               pixelWidth={1280}
@@ -896,7 +898,7 @@ export default function MediaKit() {
             </BannerCard>
 
             <BannerCard
-              title="Square / Instagram"
+              title={t('mediaKit.square')}
               spec="1080 × 1080 — post or avatar"
               filename="obelisk-square-1080x1080.png"
               pixelWidth={1080}
@@ -906,7 +908,7 @@ export default function MediaKit() {
 
             {/* Wide pill — footer / sponsor row */}
             <BannerCard
-              title="Wide pill"
+              title={t('mediaKit.widePill')}
               spec="footer / sponsor row"
               filename="obelisk-wide-pill.png"
               pixelWidth={1600}
@@ -927,14 +929,14 @@ export default function MediaKit() {
                   href={LINKS.site}
                   className="lc-pill-primary px-4 py-2 text-sm hidden sm:inline-block"
                 >
-                  Open app →
+                  {t('mediaKit.openApp')}
                 </a>
               </div>
             </BannerCard>
 
             {/* Minimal mono — for print / merch */}
             <BannerCard
-              title="Minimal mono"
+              title={t('mediaKit.mono')}
               spec="for print / merch"
               filename="obelisk-minimal-mono.png"
               pixelWidth={1600}
@@ -954,7 +956,7 @@ export default function MediaKit() {
         {/* Colors */}
         <Section
           id="colors"
-          title="Palette — La Crypta"
+          title={t('mediaKit.palette')}
           description="Design-system tokens. Tap the HEX to copy it."
         >
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -984,7 +986,7 @@ export default function MediaKit() {
         {/* Typography */}
         <Section
           id="typography"
-          title="Typography"
+          title={t('mediaKit.typography')}
           description="System UI / Inter for everything. Weights: 400, 600, 700, 800."
         >
           <div className="lc-card p-6 space-y-4">
@@ -1007,7 +1009,7 @@ export default function MediaKit() {
         {/* Copy */}
         <Section
           id="copy"
-          title="Short copy"
+          title={t('mediaKit.shortCopy')}
           description="Quick-use phrases."
         >
           <div className="grid gap-3 sm:grid-cols-2">
@@ -1040,12 +1042,12 @@ export default function MediaKit() {
         {/* Embeds */}
         <Section
           id="embeds"
-          title="HTML embeds"
+          title={t('mediaKit.embeds')}
           description="Paste these snippets anywhere to link to Obelisk with style."
         >
           <div className="space-y-6">
             <EmbedPreview
-              title="Banner pill"
+              title={t('mediaKit.bannerPill')}
               html={EMBED_HTML_BANNER}
               filename="obelisk-banner-pill.png"
               pixelWidth={1200}
@@ -1062,7 +1064,7 @@ export default function MediaKit() {
         {/* OG */}
         <Section
           id="og"
-          title="Open Graph"
+          title={t('mediaKit.openGraph')}
           description="Runtime-generated share preview and ready-to-paste meta tags."
         >
           <div className="lc-card overflow-hidden mb-4">
@@ -1070,7 +1072,7 @@ export default function MediaKit() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={OG_IMAGE_URL}
-                alt="Open Graph preview"
+                alt={t('mediaKit.openGraphPreview')}
                 className="absolute inset-0 w-full h-full object-cover"
               />
             </div>
@@ -1082,7 +1084,7 @@ export default function MediaKit() {
                 rel="noopener noreferrer"
                 className="lc-pill-secondary px-3 py-1"
               >
-                Open in new tab
+                {t('mediaKit.openInNewTab')}
               </a>
             </div>
           </div>
@@ -1092,7 +1094,7 @@ export default function MediaKit() {
         {/* Contact */}
         <Section
           id="contact"
-          title="Contact &amp; links"
+          title={t('mediaKit.contact')}
           description="Where to find us if you need anything else for a story or integration."
         >
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -1103,7 +1105,7 @@ export default function MediaKit() {
               className="lc-card p-5 hover:border-lc-green transition-colors"
             >
               <div className="text-xs uppercase tracking-widest text-lc-green mb-1">
-                Website
+                {t('mediaKit.website')}
               </div>
               <div className="text-sm text-lc-white truncate">
                 {LINKS.site}
@@ -1124,7 +1126,7 @@ export default function MediaKit() {
             </a>
             <div className="lc-card p-5">
               <div className="text-xs uppercase tracking-widest text-lc-green mb-1">
-                Default relay
+                {t('mediaKit.defaultRelay')}
               </div>
               <div className="text-sm text-lc-white truncate font-mono">
                 {LINKS.defaultRelay}
@@ -1136,7 +1138,7 @@ export default function MediaKit() {
         {/* Guidelines */}
         <Section
           id="guidelines"
-          title="Brand guidelines"
+          title={t('mediaKit.guidelines')}
           description="Simple rules to keep the brand consistent."
         >
           <div className="grid gap-4 md:grid-cols-2">
@@ -1144,33 +1146,33 @@ export default function MediaKit() {
               <div className="text-lc-green font-semibold mb-2">✓ Do</div>
               <ul className="space-y-1 text-sm text-lc-white list-disc list-inside">
                 <li>
-                  Use the logo on dark backgrounds (#0a0a0a) whenever possible.
+                  {t('mediaKit.rule.dark')}
                 </li>
                 <li>
                   Respect the clear-space area: at least the symbol&apos;s
                   height around it.
                 </li>
                 <li>
-                  Use lime green (#b4f953) only for accents and CTAs.
+                  {t('mediaKit.rule.green')}
                 </li>
                 <li>
-                  Write &quot;Obelisk&quot; with a capital O.
+                  {t('mediaKit.rule.capital')}
                 </li>
               </ul>
             </div>
             <div className="lc-card p-5">
               <div className="text-red-400 font-semibold mb-2">✕ Don&apos;t</div>
               <ul className="space-y-1 text-sm text-lc-white list-disc list-inside">
-                <li>Don&apos;t skew or rotate the logo.</li>
+                <li>{t('mediaKit.rule.noSkew')}</li>
                 <li>
-                  Don&apos;t replace the green with other bright colors.
+                  {t('mediaKit.rule.noColors')}
                 </li>
                 <li>
                   Don&apos;t place the logo on low-contrast backgrounds
                   (mid-grays).
                 </li>
                 <li>
-                  Don&apos;t add your own shadows, outlines, or gradients.
+                  {t('mediaKit.rule.noEffects')}
                 </li>
               </ul>
             </div>
@@ -1179,7 +1181,7 @@ export default function MediaKit() {
 
         <footer className="pt-8 border-t border-lc-border text-sm text-lc-muted flex flex-wrap items-center justify-between gap-3">
           <span>
-            Need anything else? Open an issue or reach out via Nostr.
+            {t('mediaKit.needAnythingElse')}
           </span>
           <Link href="/" className="lc-pill-secondary px-4 py-1">
             ← Back to home

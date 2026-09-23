@@ -10,6 +10,13 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import LoginModal from './LoginModal';
+import { LocaleProvider } from '@/i18n/context';
+
+/** The component reads its copy from the dictionary, so it needs a provider. */
+const renderLocalized = (ui: React.ReactElement) => render(
+  <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,
+);
+
 
 const push = vi.hoisted(() => vi.fn());
 const publish = vi.fn(() => [Promise.resolve('ok')]);
@@ -25,7 +32,7 @@ vi.mock('@nostr-wot/data', async (importOriginal) => ({
 vi.mock('@/lib/blossom', () => ({ uploadToBlossom: vi.fn() }));
 
 async function gotoProfileStep() {
-  render(<LoginModal methods={['generate']} />);
+  renderLocalized(<LoginModal methods={['generate']} />);
 
   const generate = await screen.findByText(/create a new/i, {}, { timeout: 3000 });
   fireEvent.click(generate);

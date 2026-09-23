@@ -134,7 +134,7 @@ export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, ini
                 data-testid="desktop-media-library"
               >
                 <span aria-hidden="true">★</span>
-                <span>Emoji, GIFs &amp; stickers</span>
+                <span>{t('mobile.settings.packs')}</span>
               </button>
             </nav>
             <div className="border-t border-lc-border p-2">
@@ -500,9 +500,9 @@ export function PreferencesPanel() {
       <WotSettings />
       <LocalDataSection />
       <section className="space-y-3 border-t border-lc-border pt-4" data-testid="desktop-developer-settings">
-        <div className="text-xs font-semibold uppercase tracking-wider text-lc-muted">Developer</div>
+        <div className="text-xs font-semibold uppercase tracking-wider text-lc-muted">{t('developer.section')}</div>
         <ToggleRow
-          label="Developer relay logs"
+          label={t('developer.relayLogs')}
           description="Log relay calls to the console."
           checked={prefs.developerRelayDebug}
           onChange={(v) => setPreference('developerRelayDebug', v)}

@@ -15,6 +15,7 @@
 
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { serverLocale } from '@/lib/server/locale';
 import { parseIdentifier } from '@/lib/social/identifier';
 import {
   displayNameFor,
@@ -74,6 +75,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 }
 
 export default async function ProfileViewerPage({ params }: Params) {
+  const { t } = await serverLocale();
   const { id } = await params;
   const target = parseIdentifier(id);
   const pubkey = target?.kind === 'profile' ? target.pubkey : null;
@@ -83,12 +85,12 @@ export default async function ProfileViewerPage({ params }: Params) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-lc-black px-5 text-center text-lc-white">
         <div>
-          <h1 className="text-lg font-semibold">Profile not found</h1>
+          <h1 className="text-lg font-semibold">{t('profileViewer.notFound')}</h1>
           <p className="mt-2 text-sm text-lc-muted">
-            That identifier couldn&apos;t be resolved on the public relays.
+            {t('profileViewer.notFoundHelp')}
           </p>
           <Link href="/app" className="lc-pill-primary mt-6 inline-block px-5 py-2 text-xs">
-            Open in Obelisk
+            {t('viewer.openInObelisk')}
           </Link>
         </div>
       </main>

@@ -11,12 +11,15 @@
  */
 
 import { NOSTR_CLIENTS } from '@/lib/social/clients';
+import { serverLocale } from '@/lib/server/locale';
 
-export default function OpenInClients({ identifier }: { identifier: string }) {
+export default async function OpenInClients({ identifier }: { identifier: string }) {
+  const { t } = await serverLocale();
+
   return (
     <section className="min-w-0" data-testid="open-in-clients">
       <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-lc-muted">
-        Open in
+        {t('note.openIn')}
       </h2>
       {/*
         Wraps on a narrow rail and stays a single flowing row on mobile, so

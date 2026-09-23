@@ -2,10 +2,12 @@
 
 import { useEffect } from 'react';
 import { useToastStore } from '@/store/toast';
+import { useTranslation } from '@/i18n/context';
 
 const AUTO_DISMISS_MS = 5000;
 
 export default function ToastStack() {
+  const { t } = useTranslation();
   const toasts = useToastStore((s) => s.toasts);
   const dismissToast = useToastStore((s) => s.dismissToast);
 
@@ -27,21 +29,21 @@ export default function ToastStack() {
       className="fixed top-4 right-4 z-[60] flex flex-col gap-2 max-w-sm w-[calc(100vw-2rem)] sm:w-96"
       data-testid="toast-stack"
     >
-      {toasts.map((t) => (
+      {toasts.map((toast) => (
         <button
-          key={t.id}
+          key={toast.id}
           type="button"
           onClick={() => {
-            t.onClick?.();
-            dismissToast(t.id);
+            toast.onClick?.();
+            dismissToast(toast.id);
           }}
           className="lc-card text-left px-4 py-3 shadow-lg border border-lc-border hover:border-lc-green/50 transition-colors cursor-pointer group"
           data-testid="toast"
         >
           <div className="flex items-start gap-3">
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-semibold text-lc-white truncate">{t.title}</div>
-              <div className="text-sm text-lc-muted mt-0.5 line-clamp-2 break-words">{t.body}</div>
+              <div className="text-sm font-semibold text-lc-white truncate">{toast.title}</div>
+              <div className="text-sm text-lc-muted mt-0.5 line-clamp-2 break-words">{toast.body}</div>
             </div>
             <span
               role="button"
@@ -49,7 +51,7 @@ export default function ToastStack() {
               tabIndex={-1}
               onClick={(e) => {
                 e.stopPropagation();
-                dismissToast(t.id);
+                dismissToast(toast.id);
               }}
               className="text-lc-muted hover:text-lc-white shrink-0 text-lg leading-none"
               data-testid="toast-dismiss"

@@ -31,6 +31,7 @@ import { nostrActions } from '@/lib/nostr-bridge';
 import { OBELISK_NIP46_PERMISSIONS } from '@/lib/nostr-signing-kinds';
 import GeneratedProfileEnhancements, { randomProfileName } from './GeneratedProfileEnhancements';
 import { profileUrl } from '@/lib/social/note-links';
+import { useTranslation } from '@/i18n/context';
 
 const NIP46_PERMS = OBELISK_NIP46_PERMISSIONS;
 
@@ -285,6 +286,7 @@ export default function LoginModal({
   subtitle = 'Choose your login method',
   headerSlot,
 }: LoginModalProps = {}) {
+  const { t } = useTranslation();
   const router = useRouter();
   const [generatedLogin, setGeneratedLogin] = useState<LoginArgs | null>(null);
   const [finishing, setFinishing] = useState(false);
@@ -355,16 +357,16 @@ export default function LoginModal({
       <Modal
         open
         onClose={onClose ?? backFromGenerated}
-        aria-label="Share your Nostr profile"
+        aria-label={t('login.shareProfile')}
         classes={{ modal: 'obelisk-login-modal obelisk-share-modal' }}
       >
-        <button type="button" className="nui-back obelisk-flow-back" aria-label="Back" onClick={backFromGenerated}>
+        <button type="button" className="nui-back obelisk-flow-back" aria-label={t('common.back')} onClick={backFromGenerated}>
           ‹
         </button>
         <div className="nui-form obelisk-npub-share" data-testid="generated-npub-step">
           <div className="nui-form-head">
             <span className="obelisk-step-done" aria-hidden="true">✓</span>
-            <h3 className="nui-form-title">Your profile is ready</h3>
+            <h3 className="nui-form-title">{t('login.profileReady')}</h3>
             <p className="nui-form-sub">
               Your npub is your public profile address. Share it so people can find
               and follow you. It is safe to share — your nsec is the key that stays private.
@@ -377,7 +379,7 @@ export default function LoginModal({
               className="nui-back obelisk-copy-npub"
               onClick={() => { void Promise.resolve(navigator.clipboard?.writeText(npub)).catch(() => {}); }}
             >
-              Copy my npub
+              {t('login.copyNpub')}
             </button>
             {/*
               An npub is the address; a link is what people can actually open.

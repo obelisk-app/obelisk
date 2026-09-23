@@ -2,6 +2,7 @@ import { ImageResponse } from 'next/og';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { decodeRelayShareCode } from '@/lib/relay-share-link';
+import { serverLocale } from '@/lib/server/locale';
 
 export const runtime = 'nodejs';
 export const size = { width: 1200, height: 630 };
@@ -27,6 +28,7 @@ export default async function OgImage({
 }: {
   params: Promise<{ code: string }>;
 }) {
+  const { t } = await serverLocale();
   const { code } = await params;
   const relayUrl = decodeRelayShareCode(code);
   const brand = relayUrl ? RELAY_OG[relayUrl] : undefined;
@@ -116,7 +118,7 @@ export default async function OgImage({
           }}
         >
           <span style={{ fontSize: 20, color: '#b4f953', fontWeight: 600 }}>
-            No emails. No passwords. Cryptographic identity.
+            {t('relayLanding.ogTagline')}
           </span>
         </div>
       </div>

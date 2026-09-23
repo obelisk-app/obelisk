@@ -7,6 +7,7 @@
  */
 
 import { useEffect, useState } from 'react';
+import { useTranslation } from '@/i18n/context';
 
 const NIP05_RE = /^([a-z0-9._-]+)@([a-z0-9.-]+\.[a-z]{2,})$/i;
 
@@ -33,6 +34,7 @@ export default function DMComposer({
   onClose: () => void;
   onPicked: (pubkeyHex: string) => void;
 }) {
+  const { t } = useTranslation();
   const [input, setInput] = useState('');
   const [resolving, setResolving] = useState(false);
   const [resolved, setResolved] = useState<string | null>(null);
@@ -91,7 +93,7 @@ export default function DMComposer({
         autoFocus
         value={input}
         onChange={(e) => setInput(e.target.value)}
-        placeholder="npub1…, hex, or alice@example.com"
+        placeholder={t('dm.composePlaceholder')}
         spellCheck={false}
         className="w-full rounded border border-lc-border bg-lc-black px-2 py-1.5 font-mono text-xs text-lc-white outline-none focus:border-lc-green"
       />
@@ -101,14 +103,14 @@ export default function DMComposer({
         </span>
         <div className="flex gap-2">
           <button type="button" onClick={onClose} className="text-lc-muted hover:text-lc-white">
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             type="submit"
             disabled={!resolved}
             className="rounded bg-lc-green px-2 py-0.5 font-semibold text-lc-black disabled:opacity-40"
           >
-            Start
+            {t('dm.start')}
           </button>
         </div>
       </div>

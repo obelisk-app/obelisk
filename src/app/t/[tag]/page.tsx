@@ -19,6 +19,7 @@ import {
 } from '@/lib/server/nostr-fetch';
 import { plainTextForPreview, previewImage } from '@/lib/server/note-preview';
 import ViewerHeader from '@/components/social/ViewerHeader';
+import { serverLocale } from '@/lib/server/locale';
 
 export const runtime = 'nodejs';
 export const revalidate = 120;
@@ -54,6 +55,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 }
 
 export default async function HashtagPage({ params }: Params) {
+  const { t } = await serverLocale();
   const { tag } = await params;
   const clean = normalizeTag(tag);
 
@@ -61,8 +63,8 @@ export default async function HashtagPage({ params }: Params) {
     return (
       <Shell>
         <div className="px-5 py-20 text-center">
-          <h1 className="text-lg font-semibold">Tag not found</h1>
-          <p className="mt-2 text-sm text-lc-muted">That doesn&apos;t look like a hashtag.</p>
+          <h1 className="text-lg font-semibold">{t('tagPage.notFound')}</h1>
+          <p className="mt-2 text-sm text-lc-muted">{t('tagPage.notFoundHelp')}</p>
         </div>
       </Shell>
     );

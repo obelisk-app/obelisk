@@ -10,6 +10,7 @@
  */
 
 import Link from 'next/link';
+import { serverLocale } from '@/lib/server/locale';
 import { nip19 } from 'nostr-tools';
 import type { Event as NostrEvent } from 'nostr-tools';
 import {
@@ -44,7 +45,7 @@ function hostOf(url: string): string {
   }
 }
 
-export default function AuthorContext({
+export default async function AuthorContext({
   author,
   notes,
   hashtags,
@@ -57,6 +58,7 @@ export default function AuthorContext({
   follows: ViewerProfile[];
   relays: AuthorRelays;
 }) {
+  const { t } = await serverLocale();
   const name = displayNameFor(author);
   const writeRelays = relays.write.slice(0, 6);
 
@@ -96,7 +98,7 @@ export default function AuthorContext({
       )}
 
       {hashtags.length > 0 && (
-        <Section title="Writes about" testId="author-hashtags">
+        <Section title={t('author.writesAbout')} testId="author-hashtags">
           <div className="flex flex-wrap gap-1.5">
             {hashtags.map((tag) => (
               <Link
@@ -112,7 +114,7 @@ export default function AuthorContext({
       )}
 
       {follows.length > 0 && (
-        <Section title="Follows" testId="author-follows">
+        <Section title={t('author.follows')} testId="author-follows">
           <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-1">
             {follows.map((profile) => (
               <li key={profile.pubkey}>
@@ -148,7 +150,7 @@ export default function AuthorContext({
       )}
 
       {writeRelays.length > 0 && (
-        <Section title="Publishes to" testId="author-relays">
+        <Section title={t('author.publishesTo')} testId="author-relays">
           <ul className="flex flex-wrap gap-1.5">
             {writeRelays.map((relay) => (
               <li
@@ -160,7 +162,7 @@ export default function AuthorContext({
             ))}
           </ul>
           <p className="mt-2 text-[10px] text-lc-muted">
-            From their NIP-65 relay list. These are where to look for their notes.
+            {t('author.relaysHelp')}
           </p>
         </Section>
       )}

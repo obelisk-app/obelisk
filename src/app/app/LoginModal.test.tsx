@@ -3,6 +3,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { nip19 } from 'nostr-tools';
 import { Nip46Signer } from '@nostr-wot/signers';
 import LoginModal, { copyConnectionUri, isTransientNip46Error, signerAppHref } from './LoginModal';
+import { LocaleProvider } from '@/i18n/context';
+
+/** The component reads its copy from the dictionary, so it needs a provider. */
+const renderLocalized = (ui: React.ReactElement) => render(
+  <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,
+);
+
 
 const bunkerFromUri = vi.hoisted(() => vi.fn());
 const push = vi.hoisted(() => vi.fn());
@@ -79,7 +86,7 @@ describe('LoginModal generated identity flow', () => {
   });
 
   it('navigates home when the SDK close button is pressed', () => {
-    render(<LoginModal />);
+    renderLocalized(<LoginModal />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Close' }));
 
@@ -87,7 +94,7 @@ describe('LoginModal generated identity flow', () => {
   });
 
   it('publishes the complete profile before the npub step and enters without another write', async () => {
-    render(<LoginModal />);
+    renderLocalized(<LoginModal />);
 
     expect(sdkProps.profileSetup).toBe(true);
     expect(sdkProps.closeOnSuccess).toBe(false);
@@ -143,7 +150,7 @@ describe('LoginModal generated identity flow', () => {
   });
 
   it('publishes a generated name when profile setup is skipped', async () => {
-    render(<LoginModal />);
+    renderLocalized(<LoginModal />);
 
     await act(async () => {
       await (sdkProps.onLogin as (args: unknown) => Promise<void>)({
@@ -161,7 +168,7 @@ describe('LoginModal generated identity flow', () => {
   });
 
   it('uses the nostr-tools handshake and advertises the Obelisk relay', async () => {
-    render(<LoginModal />);
+    renderLocalized(<LoginModal />);
     const handle = Nip46Signer.startNostrConnect({
       relays: ['wss://public.obelisk.ar'],
       clientSecretKey: new Uint8Array(32).fill(3),
@@ -182,7 +189,7 @@ describe('LoginModal generated identity flow', () => {
   });
 
   it('hands the SDK-paired remote signer to the bridge', async () => {
-    render(<LoginModal />);
+    renderLocalized(<LoginModal />);
     const signer = { getPublicKey: vi.fn(), signEvent: vi.fn() };
 
     await act(async () => {
@@ -202,7 +209,7 @@ describe('LoginModal generated identity flow', () => {
   });
 
   it('places the mobile signer handoff directly below the QR', async () => {
-    render(<LoginModal />);
+    renderLocalized(<LoginModal />);
 
     await waitFor(() => expect(screen.getByText('Open in signer app')).toBeInTheDocument());
 
@@ -211,7 +218,7 @@ describe('LoginModal generated identity flow', () => {
   });
 
   it('copies the exact QR URI for Amber manual import', async () => {
-    render(<LoginModal />);
+    renderLocalized(<LoginModal />);
     const copy = await screen.findByRole('button', { name: 'Copy connection URI' });
 
     fireEvent.click(copy);
@@ -242,7 +249,7 @@ describe('LoginModal generated identity flow', () => {
   it('silently rotates the QR after a transient subscription close', async () => {
     expect(isTransientNip46Error('subscription closed before connection was established.')).toBe(true);
     expect(isTransientNip46Error('Remote signer rejected the request')).toBe(false);
-    render(<LoginModal />);
+    renderLocalized(<LoginModal />);
     const oldQr = screen.getByTestId('sdk-login');
 
     act(() => {
@@ -259,7 +266,7 @@ describe('LoginModal generated identity flow', () => {
     // the link to someone, which is what the share sheet is for.
     const share = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'share', { value: share, configurable: true });
-    render(<LoginModal />);
+    renderLocalized(<LoginModal />);
 
     await act(async () => {
       await (sdkProps.onLogin as (args: unknown) => Promise<void>)({
@@ -277,7 +284,7 @@ describe('LoginModal generated identity flow', () => {
   });
 
   it('shows an aligned back control on the final generated-profile screen', async () => {
-    render(<LoginModal />);
+    renderLocalized(<LoginModal />);
 
     await act(async () => {
       await (sdkProps.onLogin as (args: unknown) => Promise<void>)({

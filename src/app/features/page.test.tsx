@@ -1,5 +1,14 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+
+// The page resolves the request locale on the server now, so the headers
+// and cookies it reads have to exist. English keeps the expectations below
+// readable as copy rather than as key names.
+vi.mock('next/headers', () => ({
+  headers: async () => new Map([['x-obelisk-locale', 'en']]) as unknown as Headers,
+  cookies: async () => ({ get: () => undefined }),
+}));
+
 import FeaturesPage from './page';
 
 vi.mock('@/components/Navbar', () => ({ default: () => <nav>Obelisk</nav> }));
@@ -7,8 +16,8 @@ vi.mock('@/components/Footer', () => ({ default: () => <footer /> }));
 vi.mock('@/components/ShootingStars', () => ({ default: () => null }));
 
 describe('FeaturesPage', () => {
-  it('shows every comeback feature with a screenshot and working calls to action', () => {
-    render(<FeaturesPage />);
+  it('shows every comeback feature with a screenshot and working calls to action', async () => {
+    render(await FeaturesPage());
     for (const title of ['Nostr relay-based groups', 'Voice messages', 'Sticker marketplace', 'Games in the channel', 'Mobile PWA', 'Peer-to-peer video calls', 'Big calls with SFU', 'Nostr profile explorer']) {
       expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
     }
