@@ -1207,5 +1207,11 @@
   "meta.ogTitle": "Obelisk — a alternativa ao Discord com login Nostr",
   "meta.ogDescription": "Chat em grupo para quem é de cripto e privacidade. Entre com suas chaves Nostr: sem e-mail, sem senha. Servidores, voz, DMs criptografados e resistência a spam por rede de confiança.",
   "meta.twitterDescription": "Chat em grupo para quem é de cripto e privacidade. Entre com suas chaves Nostr: sem e-mail, sem senha.",
-  "meta.ogImageAlt": "Obelisk — chat em grupo com identidade Nostr"
+  "meta.ogImageAlt": "Obelisk — chat em grupo com identidade Nostr",
+  "media.kind.emoji": "Emoji",
+  "media.kind.gif": "GIF",
+  "media.kind.sticker": "Figurinha",
+  "media.itemShortcode": "Atalho do item {n}",
+  "media.itemType": "Tipo do item {n}",
+  "media.itemUrl": "URL do item {n}"
 }

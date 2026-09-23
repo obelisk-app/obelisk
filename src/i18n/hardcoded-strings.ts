@@ -51,6 +51,20 @@ const JSX_TEXT_RE = />\s*([A-Za-z][^<>{}\n]{1,120}?)\s*</g;
 const SKIP_FILE = /\.(test|spec)\.[tj]sx?$|\.d\.ts$/;
 
 /**
+ * Source that the crude JSX-text regex swallows: a generic parameter
+ * (`Promise<void>` reads as `>Promise<`), a ternary or a `&&` guard split
+ * across lines. None of it is copy, and leaving it in the baseline made the
+ * baseline look like unfinished work rather than a list of real exemptions.
+ */
+const CODE_SHAPED = /===|!==|&&|\|\||=>|\?\s*\(|\($/;
+
+/** Type names the generic-parameter case produces most often. */
+const TYPE_NAMES = new Set([
+  'Promise', 'Partial', 'Record', 'Array', 'Map', 'Set', 'Readonly',
+  'Omit', 'Pick', 'Awaited', 'ReturnType',
+]);
+
+/**
  * Is this prose a reader would notice, rather than a token?
  *
  * The two-letter floor plus "has a space or starts capitalised" is what
@@ -59,6 +73,11 @@ const SKIP_FILE = /\.(test|spec)\.[tj]sx?$|\.d\.ts$/;
 export function looksLikeProse(value: string): boolean {
   const text = value.trim();
   if (text.length < 3) return false;
+  if (CODE_SHAPED.test(text)) return false;
+  if (TYPE_NAMES.has(text)) return false;
+  // Short acronyms — SFU, GIF, B2B, PWA. A translator has nothing to do
+  // with them, and they are the same word in every language we ship.
+  if (text.length <= 5 && /^[A-Z0-9-]+$/.test(text)) return false;
   // Pure interpolation, or a fragment of one.
   if (/^[{}]/.test(text) || /^\{.*\}$/.test(text)) return false;
   // Identifiers, URLs, protocol words, file paths.

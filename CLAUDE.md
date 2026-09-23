@@ -386,6 +386,7 @@ for where this sits relative to the bridgeCache.
 - [docs/relay-layout-and-branding.md](docs/relay-layout-and-branding.md) — shared NIP-78 layout & branding; multi-author latest-wins, gated on group-admin union
 - [docs/relay-roles.md](docs/relay-roles.md) — operator-defined tiered roles (NIP-78 kind 30078); highest tier held is the badge shown in chat and the member list
 - [docs/dm-metadata-privacy.md](docs/dm-metadata-privacy.md) — why gift-wrapped DMs can still leak the social graph, the ordered relay ladder, AUTH modes, what cannot be fixed client-side, and the rules for changing DM routing
+- [docs/i18n.md](docs/i18n.md) — the three languages: where copy lives, `rich()` for sentences with markup in them, `useFormat()`/`serverLocale()` (a bare `toLocaleDateString()` follows the OS, not the app), the hardcoded-string ratchet and what stays exempt, and how to add a fourth language
 - [docs/social-feeds.md](docs/social-feeds.md) — the Nostr-proper surface: social as a fourth relay tier, the shared SDK pool, feed caching, `until` pagination, and the wire-format matrix (with the Amethyst/Damus/Primal quirks that make it not simply "follow the NIP")
 - [docs/games.md](docs/games.md) — Chain Reaction on the relay: kind 2390 wire format, deterministic replay as the trust model, turn clock without a server, what it doesn't defend against
 - [docs/uploads.md](docs/uploads.md) — Blossom storage + URL format

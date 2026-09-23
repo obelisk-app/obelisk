@@ -638,7 +638,7 @@ function PackEditor({ pack, initialKind, onClose, onSaved }: {
           <label className="text-xs text-lc-muted">
             <span className="mb-1 block">{t('media.newItemsAre')}</span>
             <select value={newItemKind} onChange={(event) => setNewItemKind(event.target.value as JsMediaKind)} aria-label={t('media.newItemType')} className="rounded-lg border border-lc-border bg-lc-black px-3 py-2 text-sm text-lc-white">
-              <option value="emoji">Emoji</option><option value="gif">GIF</option><option value="sticker">Sticker</option>
+              <option value="emoji">{t('media.kind.emoji')}</option><option value="gif">{t('media.kind.gif')}</option><option value="sticker">{t('media.kind.sticker')}</option>
             </select>
           </label>
           <button type="button" disabled={busy} onClick={() => inputRef.current?.click()} className="rounded-lg border border-lc-green px-3 py-2 text-sm text-lc-green">{t('media.upload')}</button>
@@ -648,11 +648,11 @@ function PackEditor({ pack, initialKind, onClose, onSaved }: {
           {draft.items.map((item, index) => (
             <div key={`${index}-${item.url}`} className="grid items-center gap-2 rounded-lg border border-lc-border p-2 sm:grid-cols-[3rem_10rem_7rem_minmax(0,1fr)_auto]">
               <div className="flex h-12 w-12 items-center justify-center rounded bg-lc-black p-1">{item.url && <MediaThumb src={item.url} alt="" className="max-h-full max-w-full object-contain" />}</div>
-              <input value={item.name} onChange={(event) => setDraft({ ...draft, items: draft.items.map((value, itemIndex) => itemIndex === index ? { ...value, name: event.target.value } : value) })} className={fieldClass} placeholder="shortcode" aria-label={`Item ${index + 1} shortcode`} />
-              <select value={item.kind} onChange={(event) => setDraft({ ...draft, items: draft.items.map((value, itemIndex) => itemIndex === index ? { ...value, kind: event.target.value as JsMediaKind } : value) })} className={fieldClass} aria-label={`Item ${index + 1} type`}>
-                <option value="emoji">Emoji</option><option value="gif">GIF</option><option value="sticker">Sticker</option>
+              <input value={item.name} onChange={(event) => setDraft({ ...draft, items: draft.items.map((value, itemIndex) => itemIndex === index ? { ...value, name: event.target.value } : value) })} className={fieldClass} placeholder="shortcode" aria-label={t('media.itemShortcode').replace('{n}', String(index + 1))} />
+              <select value={item.kind} onChange={(event) => setDraft({ ...draft, items: draft.items.map((value, itemIndex) => itemIndex === index ? { ...value, kind: event.target.value as JsMediaKind } : value) })} className={fieldClass} aria-label={t('media.itemType').replace('{n}', String(index + 1))}>
+                <option value="emoji">{t('media.kind.emoji')}</option><option value="gif">{t('media.kind.gif')}</option><option value="sticker">{t('media.kind.sticker')}</option>
               </select>
-              <input value={item.url} onChange={(event) => setDraft({ ...draft, items: draft.items.map((value, itemIndex) => itemIndex === index ? { ...value, url: event.target.value } : value) })} className={fieldClass} placeholder="https://…" aria-label={`Item ${index + 1} URL`} />
+              <input value={item.url} onChange={(event) => setDraft({ ...draft, items: draft.items.map((value, itemIndex) => itemIndex === index ? { ...value, url: event.target.value } : value) })} className={fieldClass} placeholder="https://…" aria-label={t('media.itemUrl').replace('{n}', String(index + 1))} />
               <button type="button" onClick={() => setDraft({ ...draft, items: draft.items.filter((_, itemIndex) => itemIndex !== index) })} className="px-2 py-1 text-xs text-red-300">{t('media.remove')}</button>
             </div>
           ))}

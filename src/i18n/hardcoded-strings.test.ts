@@ -7,16 +7,27 @@ const BASELINE = baseline as Record<string, number>;
 /**
  * A ratchet, not a gate.
  *
- * 654 user-visible strings are written straight into JSX and never reach a
- * dictionary — they are English in the Spanish build too, and translating
- * `pt.json` does nothing for them. Banning them outright today would mean
- * failing the suite until all 654 are extracted, so instead the known set
- * is frozen in `hardcoded-baseline.json` and this test fails on any
- * *increase*: a new file with hardcoded copy, or an existing file gaining
- * more.
+ * 654 user-visible strings were written straight into JSX and never reached
+ * a dictionary — they were English in the Spanish build too, and translating
+ * `pt.json` did nothing for them. Banning them outright in one commit would
+ * have meant a red suite until all 654 were extracted, so the known set was
+ * frozen here and this test fails on any *increase*: a new file with
+ * hardcoded copy, or an existing file gaining more.
  *
- * Every extraction commit lowers a number. When the baseline is empty the
- * file and the arithmetic go away and this becomes a plain ban.
+ * They have since been extracted. What is left in the baseline is exempt on
+ * purpose, and each entry is one of:
+ *
+ *  - **Guide hero SVGs** (`components/guides/svg/**`) — English inside
+ *    `<text>` elements that also feed the OG-image snapshot pipeline.
+ *    Translating them is a build-pipeline change, not a string swap.
+ *  - **Brand names** — "Obelisk", "GitHub", "Nostr WoT", "QuantaKrypto",
+ *    and the media kit's typography and pitch specimens, which are the
+ *    asset itself rather than copy about it.
+ *  - **Scanner misreads** the filter can't distinguish from prose: a
+ *    selector string, a sentence inside a code comment.
+ *
+ * So the number should keep going *down* and never up. When a file leaves
+ * the list, delete its line.
  *
  * Regenerate after extracting:
  *   npx tsx -e "…scanTree…"   (see hardcoded-strings.ts)
