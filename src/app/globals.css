@@ -374,6 +374,37 @@ button:not(:disabled),
 }
 
 /*
+ * A note you can open reads as its own container under the cursor.
+ *
+ * The feed is hairline-separated rows, which is right at rest — a grid of
+ * boxes is heavier to scan. But once the whole row is a click target it has
+ * to say so, or the only feedback for "this does something" is the cursor.
+ */
+.note-card-open {
+  cursor: pointer;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.note-card-open:hover {
+  background: color-mix(in oklab, var(--obelisk-app-bg-panel, #171717) 55%, transparent);
+  /* Inset rather than a border: a border would move the text by a pixel. */
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--obelisk-accent, #b4f953) 14%, transparent);
+}
+
+/* Controls inside the card keep their own pointer, not the card's. */
+.note-card-open :where(a, button, [role='button']) {
+  cursor: pointer;
+}
+
+@media (hover: none) {
+  /* A phone has no hover; the highlight would stick after a tap. */
+  .note-card-open:hover {
+    background: none;
+    box-shadow: none;
+  }
+}
+
+/*
  * Long unbroken tokens are the single most common way a note escapes its
  * column: bech32 ids, hex hashes and query-string URLs have no break
  * opportunity, so the text node itself becomes wider than the card.

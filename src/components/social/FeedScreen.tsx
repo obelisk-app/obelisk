@@ -81,6 +81,9 @@ export default function FeedScreen({
   const [tab, setTab] = useState<FeedTab>('following');
   const [filter, setFilter] = useState<ContentFilter>('all');
   const [sort, setSort] = useState<FeedSort>('recent');
+  // Only meaningful under the Articles filter, which is the one place a
+  // stream of quoted paragraphs is something a reader might be after.
+  const [showHighlights, setShowHighlights] = useState(false);
   const [searching, setSearching] = useState(false);
   const [searchSeed, setSearchSeed] = useState('');
   // A half-width pane has no more room than a phone: the source segment, two
@@ -117,7 +120,7 @@ export default function FeedScreen({
     () => (tab === 'following' ? { kind: 'following', authors: follows } : { kind: 'global' }),
     [tab, follows],
   );
-  const state = useFeed(source, relays, filter, sort);
+  const state = useFeed(source, relays, filter, sort, showHighlights);
 
   // A fresh key follows nobody. "Try the Global tab" pointed at a firehose
   // of strangers and left the actual job — find people worth following — to
@@ -303,6 +306,30 @@ export default function FeedScreen({
             </button>
           ))}
         </div>}
+
+        {/*
+          Highlights are hidden by default because one popular article
+          produces dozens of overlapping ones and they bury the article
+          itself. But they are also how people find good writing, so the
+          filter they belong to carries the switch rather than the app
+          deciding for everyone.
+        */}
+        {!compact && filter === 'articles' && (
+          <button
+            type="button"
+            onClick={() => setShowHighlights((value) => !value)}
+            aria-pressed={showHighlights}
+            className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+              showHighlights
+                ? 'bg-lc-green/20 text-lc-green'
+                : 'text-lc-white/60 hover:bg-white/10 hover:text-lc-white'
+            }`}
+            title={t('social.highlightsHint')}
+            data-testid="feed-highlights-toggle"
+          >
+            {t('social.highlights')}
+          </button>
+        )}
 
         {/*
           Sort sits with the filters: both answer "what am I looking at",
@@ -569,6 +596,8 @@ export default function FeedScreen({
           mobile={mobile}
           onFilter={setFilter}
           onSort={setSort}
+          showHighlights={showHighlights}
+          onToggleHighlights={() => setShowHighlights((value) => !value)}
           onClose={() => setFiltersOpen(false)}
         />
       )}
@@ -590,6 +619,8 @@ function FilterSheet({
   mobile,
   onFilter,
   onSort,
+  showHighlights,
+  onToggleHighlights,
   onClose,
 }: {
   filter: ContentFilter;
@@ -598,6 +629,8 @@ function FilterSheet({
   mobile: boolean;
   onFilter: (value: ContentFilter) => void;
   onSort: (value: FeedSort) => void;
+  showHighlights: boolean;
+  onToggleHighlights: () => void;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
@@ -666,6 +699,41 @@ function FilterSheet({
             </button>
           ))}
         </div>
+
+        {/*
+          Sits under the grid rather than beside the filters: it modifies
+          Articles, it isn't a fifth thing to choose between.
+        */}
+        {filter === 'articles' && (
+          <button
+            type="button"
+            onClick={onToggleHighlights}
+            aria-pressed={showHighlights}
+            className={`mt-2 flex w-full items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition-colors ${
+              showHighlights ? 'border-lc-green bg-lc-green/10' : 'border-lc-border'
+            }`}
+            data-testid="feed-highlights-toggle"
+          >
+            <span className="min-w-0">
+              <span className={`block text-sm font-semibold ${showHighlights ? 'text-lc-green' : 'text-lc-white'}`}>
+                {t('social.highlights')}
+              </span>
+              <span className="block text-[11px] text-lc-muted">{t('social.highlightsHint')}</span>
+            </span>
+            <span
+              className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${
+                showHighlights ? 'bg-lc-green' : 'bg-lc-border'
+              }`}
+              aria-hidden="true"
+            >
+              <span
+                className={`absolute top-0.5 h-4 w-4 rounded-full bg-lc-black transition-all ${
+                  showHighlights ? 'left-[1.125rem]' : 'left-0.5'
+                }`}
+              />
+            </span>
+          </button>
+        )}
 
         <button
           type="button"

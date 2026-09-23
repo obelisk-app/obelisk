@@ -1232,5 +1232,7 @@
   "profilePopover.blockedBody": "Los mensajes de {name} quedarán ocultos",
   "profilePopover.unblockedBody": "Volverás a ver los mensajes de {name}",
   "profilePopover.blockConfirm": "¿Bloquear a {name}? Sus mensajes quedarán ocultos en este dispositivo.",
-  "social.copyAuthorLink": "Copiar el enlace del perfil del autor"
+  "social.copyAuthorLink": "Copiar el enlace del perfil del autor",
+  "social.highlightsHint": "Mostrar los pasajes que la gente marcó en estos artículos",
+  "social.openThread": "Abrir el hilo"
 }

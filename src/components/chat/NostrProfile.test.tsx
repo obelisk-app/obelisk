@@ -323,12 +323,15 @@ describe('NostrProfile', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it('opens a reply composer targeting the note that was replied to', async () => {
+  it('opens the conversation from the reply count, where the composer lives', async () => {
+    // The count says how many replies a note has. Tapping it used to open a
+    // blank composer — an answer to a question nobody asked. It opens the
+    // thread now, which carries its own reply box at the top.
     socialMocks.loadProfileFeed.mockResolvedValue([note('post', 'reply to me')]);
     renderProfile();
     await waitFor(() => expect(screen.getByText('reply to me')).toBeInTheDocument());
 
     fireEvent.click(screen.getByTestId('note-reply'));
-    expect(screen.getByTestId('composer-input')).toBeInTheDocument();
+    expect(await screen.findByTestId('profile-thread-reader')).toBeInTheDocument();
   });
 });

@@ -311,6 +311,27 @@ function PlainNoteCard({
 
   const hidden = warning.sensitive && !revealed;
 
+  /**
+   * The card opens its thread.
+   *
+   * A note in a feed is a fragment: the post it answers, the replies under
+   * it, who reacted. All of that existed behind a ⋯ item and nothing else,
+   * so the obvious gesture — tap the thing you want to read more of — did
+   * nothing at all.
+   *
+   * Guarded rather than wrapped in a button, because the card is full of
+   * real controls (author, tags, media, the action row) and a button can't
+   * legally contain them. A drag that selects text is not a click either.
+   */
+  const openThread = onOpenNote && !quoted && !nested
+    ? (event: React.MouseEvent<HTMLElement>) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('a, button, input, textarea, video, audio, [role="button"], [data-no-thread]')) return;
+      if (window.getSelection()?.toString()) return;
+      onOpenNote(note.id);
+    }
+    : undefined;
+
   return (
     <article
       className={
@@ -318,8 +339,9 @@ function PlainNoteCard({
           ? 'rounded-xl border border-lc-border bg-lc-dark p-3'
           : nested
             ? ''
-            : 'note-card px-5 py-4'
+            : `note-card px-5 py-4${openThread ? ' note-card-open' : ''}`
       }
+      onClick={openThread}
       data-testid="note-card"
       data-kind={note.kind}
     >
@@ -361,9 +383,28 @@ function PlainNoteCard({
             {isThreadReply && <span>↩ {t('social.reply')}</span>}
             {mode === 'article' && <span>{t('social.article')}</span>}
             {mode === 'highlight' && <span>{t('social.highlight')}</span>}
-            <time dateTime={new Date(note.created_at * 1000).toISOString()}>
-              {relativeTime(note.created_at, t, locale)}
-            </time>
+            {/*
+              Also the accessible route into the thread: the card's own
+              click handler is a mouse convenience, and a keyboard needs a
+              real control to land on.
+            */}
+            {onOpenNote && !quoted && !nested ? (
+              <button
+                type="button"
+                className="hover:text-lc-white hover:underline"
+                onClick={() => onOpenNote(note.id)}
+                title={t('social.openThread')}
+                data-testid="note-open-thread"
+              >
+                <time dateTime={new Date(note.created_at * 1000).toISOString()}>
+                  {relativeTime(note.created_at, t, locale)}
+                </time>
+              </button>
+            ) : (
+              <time dateTime={new Date(note.created_at * 1000).toISOString()}>
+                {relativeTime(note.created_at, t, locale)}
+              </time>
+            )}
           </div>
         </div>
         {/*
@@ -405,14 +446,20 @@ function PlainNoteCard({
       */}
       {!quoted && (
         <div className="mt-2 flex items-center justify-between gap-1 pt-1 text-xs sm:justify-start">
+          {/*
+            Opens the conversation rather than a composer. The count says
+            how many replies there are — tapping it and getting a blank
+            compose box answers a question nobody asked. The thread has its
+            own reply box, right at the top.
+          */}
           <ActionButton
             kind="reply"
             label={t('social.replyAction')}
             icon={<ReplyIcon />}
             count={counts.replyCount}
             testId="note-reply"
-            disabled={!canInteract}
-            onClick={() => onReply?.(note)}
+            disabled={!canInteract && !onOpenNote}
+            onClick={() => (onOpenNote ? onOpenNote(note.id) : onReply?.(note))}
           />
           <RepostButton
             count={counts.repostCount}

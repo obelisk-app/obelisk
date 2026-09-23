@@ -120,6 +120,12 @@ export function useFeed(
   relays: readonly string[],
   filter: ContentFilter = 'all',
   sort: FeedSort = 'recent',
+  /**
+   * Show highlights of Nostr events as their own rows. Off by default —
+   * see `filterFeedHighlights`. Not part of the cache key: the REQ already
+   * carries them, this only decides whether they are drawn.
+   */
+  showHighlights = false,
 ): FeedState {
   const cacheId = cacheIdFor(source);
   // The filter is part of the key: a narrowed REQ returns a different page.
@@ -369,10 +375,10 @@ export function useFeed(
       // else's paragraph with no commentary, and it belongs on the article,
       // where the reader can turn it on. Highlights of external pages stay:
       // nothing here can render that page, so the passage IS the content.
-      filterFeedHighlights(notes),
+      filterFeedHighlights(notes, { includeSourced: showHighlights }),
       (pubkey) => isMuted(pubkey) || isBlocked(pubkey),
     ),
-    [notes, isMuted, isBlocked],
+    [notes, isMuted, isBlocked, showHighlights],
   );
 
   // Derived on read rather than stored: the cache holds notes only, and the

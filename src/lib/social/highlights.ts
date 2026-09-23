@@ -60,14 +60,24 @@ export function articleCoordinate(
  * so the quoted passage is the whole content, and the person who chose it
  * is publishing something. A highlight of a Nostr event does not: it shows
  * up inside the thing it highlights.
+ *
+ * `includeSourced` overrides that for a reader who asked to see them
+ * anyway. Highlights are how people find good writing on Nostr — who
+ * marked what is a signal — so hiding them is a sensible default and a
+ * bad rule. The Articles filter carries the switch, because that is where
+ * a wall of quoted paragraphs is something you might actually want.
  */
-export function filterFeedHighlights(notes: readonly NostrEvent[]): NostrEvent[] {
+export function filterFeedHighlights(
+  notes: readonly NostrEvent[],
+  { includeSourced = false }: { includeSourced?: boolean } = {},
+): NostrEvent[] {
   return notes.filter((note) => {
     if (note.kind !== KIND_HIGHLIGHT) return true;
     const source = highlightSource(note);
     // No source at all is unattributable — someone else's words with no way
-    // to check them. Not something to show as a post.
-    return source?.kind === 'url';
+    // to check them. Not something to show as a post, in either mode.
+    if (!source) return false;
+    return includeSourced || source.kind === 'url';
   });
 }
 

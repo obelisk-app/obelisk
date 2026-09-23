@@ -50,7 +50,7 @@ export default function NoteThread({
   const [replies, setReplies] = useState<NostrEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [replying, setReplying] = useState(false);
+
 
   useEffect(() => {
     let cancelled = false;
@@ -118,7 +118,13 @@ export default function NoteThread({
   }
 
   return (
-    <div className="max-h-[70vh] overflow-y-auto" data-testid="note-thread">
+    /*
+      No `max-h`/`overflow` of its own any more: every host that renders a
+      thread — the inline reader, the desktop pane, the phone screen —
+      already scrolls, so this capped the conversation at 70% of the
+      viewport inside a container that had the whole thing.
+    */
+    <div data-testid="note-thread">
       {ancestors.length > 0 && (
         <div className="divide-y divide-lc-border border-b border-lc-border opacity-80">
           {ancestors.map((note) => (
@@ -131,21 +137,21 @@ export default function NoteThread({
         <NoteCard
           note={root}
           onOpenProfile={onOpenProfile}
-          onOpenNote={onOpenNote}
-          onReply={() => setReplying(true)}
         />
       </div>
 
-      {myPubkey && replying && (
-        <div className="border-b border-lc-border p-3">
+      {/*
+        The composer is here, not behind a toggle. You opened a thread: the
+        two things you came for are reading the replies and adding one, and
+        a button that reveals a box is a step in front of the second.
+        `autoFocus` stays off — landing here should show you the
+        conversation, not the keyboard.
+      */}
+      {myPubkey && (
+        <div className="border-b border-lc-border p-3" data-testid="thread-reply-composer">
           <NoteComposer
-            autoFocus
             mode={{ kind: 'reply', parent: root }}
-            onPublished={(event) => {
-              setReplies((current) => [...current, event]);
-              setReplying(false);
-            }}
-            onCancel={() => setReplying(false)}
+            onPublished={(event) => setReplies((current) => [...current, event])}
           />
         </div>
       )}

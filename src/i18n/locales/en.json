@@ -1232,5 +1232,7 @@
   "profilePopover.blockedBody": "{name}'s messages will be hidden",
   "profilePopover.unblockedBody": "You will see {name}'s messages again",
   "profilePopover.blockConfirm": "Block {name}? Their messages will be hidden on this device.",
-  "social.copyAuthorLink": "Copy author profile link"
+  "social.copyAuthorLink": "Copy author profile link",
+  "social.highlightsHint": "Show passages people marked in these articles",
+  "social.openThread": "Open thread"
 }

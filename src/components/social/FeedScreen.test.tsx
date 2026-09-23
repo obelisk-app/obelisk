@@ -490,6 +490,32 @@ describe('FeedScreen', () => {
     expect(screen.getByTestId('feed-search-open').className).toContain('lc-icon-btn');
   });
 
+  it('offers highlights only under Articles, and off by default', async () => {
+    // One popular article produces dozens of overlapping highlights, so
+    // they stay hidden until asked for — but they are also how people find
+    // good writing, so the filter they belong to carries the switch.
+    const highlight = {
+      ...note('h', 'a passage worth marking'),
+      kind: 9802,
+      tags: [['a', '30023:pk:slug']],
+    };
+    socialMocks.loadFollowingFeed.mockResolvedValue([
+      { ...note('art', 'An article', 2000), kind: 30023, tags: [['d', 'slug'], ['title', 'An article']] },
+      highlight,
+    ]);
+    renderFeed();
+    await waitFor(() => expect(screen.getByTestId('feed-list')).toBeInTheDocument());
+
+    expect(screen.queryByTestId('feed-highlights-toggle')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('feed-filter-articles'));
+    const toggle = await screen.findByTestId('feed-highlights-toggle');
+    expect(screen.queryByText('a passage worth marking')).not.toBeInTheDocument();
+
+    fireEvent.click(toggle);
+    await waitFor(() => expect(screen.getByText('a passage worth marking')).toBeInTheDocument());
+  });
+
   it('gives a phone one filter button instead of two chip strips', async () => {
     // The chips were an 11px hairline-scrolling strip; on a phone they're
     // behind a header-sized button that opens a sheet.

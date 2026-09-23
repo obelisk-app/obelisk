@@ -77,6 +77,25 @@ describe('filterFeedHighlights', () => {
     const notes = [ev({ kind: 1, tags: [] }), ev({ kind: 30023, tags: [] })];
     expect(filterFeedHighlights(notes)).toHaveLength(2);
   });
+
+  it('keeps the sourced ones for a reader who asked for them', () => {
+    // Hiding them is a sensible default and a bad rule: who marked what is
+    // how people find good writing here. The Articles filter carries the
+    // switch.
+    const notes = [
+      ev({ id: 'h-article', tags: [['a', '30023:pk:slug']] }),
+      ev({ id: 'h-event', tags: [['e', 'note-1']] }),
+      ev({ id: 'h-url', tags: [['r', 'https://example.com/x']] }),
+    ];
+    expect(filterFeedHighlights(notes, { includeSourced: true }).map((n) => n.id))
+      .toEqual(['h-article', 'h-event', 'h-url']);
+  });
+
+  it('still drops an unattributable one in either mode', () => {
+    // Someone else's words with no way to check them is not a post, and
+    // asking to see highlights is not asking to see those.
+    expect(filterFeedHighlights([ev({ tags: [] })], { includeSourced: true })).toEqual([]);
+  });
 });
 
 describe('articleCoordinate', () => {
