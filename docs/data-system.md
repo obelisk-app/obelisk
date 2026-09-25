@@ -73,7 +73,7 @@ default plan:
 | **P1** | Active channel: kind 9 `limit:50` + `subscribeAdminMember(activeId)` + kind 7 reactions | On `setActiveGroup` | 5000ms / ∞; reactions 3000ms / 2 | no | n/a / yes / no |
 | **P2** | Background channels: kind 9 `limit:50` via `queueGroupMessages` drain (4 per 80ms) | After `ingestGroupMetadata` per group | 5000ms / ∞ | no | no |
 | **P2** | `subscribeAllAdminMember` (relay-wide 39001+39002, no `#d`) — bootstraps layout authors | After P0 EOSE | 5000ms / ∞ | no | yes (per-group) |
-| **P2** | `subscribeIncomingDMs` (kind 4 `#p:[me]` + `authors:[me]`) | After P0 EOSE | 5000ms / ∞ | no | n/a |
+| **P2** | `subscribeIncomingDMs` (kind 4 `#p:[me]` + `authors:[me]`; kind 1059 NIP-17 wraps `#p:[me]`) | On first `subscribeDirectMessages`, only if `directMessagesEnabled` | 5000ms / ∞ | no | n/a |
 | **P2** | `subscribeMyContactList` (kind 3, on PROFILE_RELAYS) | After P0 EOSE | 5000ms / 4 | no | n/a |
 | **P2** | `subscribeMyMuteList` (kind 10000) | After P0 EOSE | 5000ms / 4 | no | n/a |
 | **P2** | `subscribeMyAuthoredGroups` (kind 9007 `authors:[me]`) | After P0 EOSE | 5000ms / ∞ | no | yes (per-group) |
@@ -199,7 +199,7 @@ re-issued with exponential backoff (1s / 2s / 4s / 8s, capped at 30s).
 | Group messages (kind 9, `#h`) | 5000 | ∞ | unbounded |
 | Admin/member (39001+39002, `#d`) | 5000 | ∞ | unbounded |
 | Relay-wide admin/member | 5000 | ∞ | unbounded |
-| Incoming DMs (kind 4) | 5000 | ∞ | unbounded |
+| Incoming DMs (kind 4 + kind 1059) | 5000 | ∞ | unbounded |
 | Own contact list (kind 3) | 5000 | 4 | ~27s |
 | Mute list (kind 10000) | 5000 | 4 | ~27s |
 | Authored groups (kind 9007) | 5000 | ∞ | unbounded |

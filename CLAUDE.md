@@ -13,7 +13,7 @@ Frontend          Next.js 16 + Tailwind v4 (La Crypta UI)
 Auth              Nostr (NIP-07 / nsec / NIP-46 bunker)
 Bridge            src/lib/nostr-bridge/ — SimplePool + nostr-tools singleton
 Group protocol    NIP-29 (kinds 9, 9000-9007, 39000-39002)
-DMs               NIP-04 (kind 4) — see src/lib/dm/
+DMs               NIP-17 gift wraps (kind 14 → 13 → 1059, NIP-44) by default; NIP-04 (kind 4) per-thread opt-out — see docs/direct-messages.md
 Cache             localStorage stale-while-revalidate (src/lib/nostr-bridge/cache.ts)
 Voice (mesh)      P2P WebRTC, Nostr-signaled (kinds 20078 / 25050) + per-pair `obelisk-control` data channel (heartbeat, fast hangup, transitive discovery) — see docs/voice/
 Games             Chain Reaction over kind 2390 — event log replayed client-side (src/lib/games/)
@@ -93,7 +93,7 @@ src/
 │   ├── i18n.ts, json-safe.ts, local-store.ts, promise.ts, preferences.ts
 │   ├── activity-log.ts, favicon-badge.ts, recent-emojis.ts, read-gates.ts
 │   ├── reset.ts                   # `resetAllClientState()` — login/logout teardown
-│   ├── dm/                        # NIP-04 DM cache + relay-list resolution
+│   ├── dm/                        # DM opt-in preference (`directMessagesEnabled`)
 │   ├── wallet/                    # Nostr Wallet Connect (NIP-47)
 │   ├── voice/                     # Mesh + SFU client (`client.ts`, `peer.ts`, `sfu-client.ts`)
 │   ├── wot/                       # Web-of-trust engine + colors
@@ -148,7 +148,7 @@ All four entrypoints (and the page-reload rehydration in `initialize()`) route t
 `connect()` runs the priority orchestrator (`src/lib/nostr-bridge/orchestrator.ts`). Two tiers leave the wire in strict order:
 
 - **P0** (same microtask): whitelist preflight (kind 0 `authors:[me]` limit 1), group metadata (kind 39000), own kind 0.
-- **P2** (next microtask): relay-wide admin/member (kinds 39001+39002, no `#d`), incoming DMs (kind 4 with `#p` and `authors`), own contact list (kind 3), mute list (kind 10000), authored groups (kind 9007), active calls (kind 31314).
+- **P2** (next microtask): relay-wide admin/member (kinds 39001+39002, no `#d`), incoming DMs (kind 4 with `#p` and `authors`, plus kind 1059 gift wraps `#p:[me]`; opened only once DMs are opted in), own contact list (kind 3), mute list (kind 10000), authored groups (kind 9007), active calls (kind 31314).
 
 `ingestGroupMetadata` fans out per-group work for every discovered channel:
 
@@ -173,7 +173,7 @@ predictable:
 | Group metadata / messages / reactions / admin / member (kinds 9, 39000, 39001, 39002, 7, 9007) | **Active relay only** (`this.relays = [activeRelay]`) |
 | Group read-state cursors (NIP-59 wraps over kind 30078) | **Active relay only** — `startGroupsRelaySync(activeRelay, ids)` in `src/lib/read-state/root.tsx` |
 | Mention notifications (kind 9 `@you`) | **Active relay only** — scanned solely while that relay is active; cards are stamped with it and cached per relay (`src/store/notifications.ts`) |
-| DMs (kind 4) | **NIP-65 read+write union** of the user's relay list |
+| DMs (kind 4 + kind 1059 gift wraps) | **NIP-65 read+write union** of the user's relay list, plus our kind-10050 inbox |
 | DM read-state cursors + `inboxLastReadAt` (NIP-59 wraps) | **NIP-65 read+write union** |
 | Voice signaling / SFU RPC (kinds 25050, 31313, 31314) | Per-channel relay set (mesh: active relay; SFU: pinned trust set) |
 | Social feeds / profiles (kinds 1, 6, 7, 16, 20, 1111, 9735, 9802, 30023) | **`preferences.socialRelays`** — user-chosen public relays, never the group relay. See [docs/social-feeds.md](docs/social-feeds.md) |
@@ -219,7 +219,7 @@ Currently wired:
 - kind 30078 (NIP-78) — channel layout + relay branding share this kind under different `d`-tags
 - kind 2390 (game logs) — per **table**, not per channel (a `GameCard` knows only its table id, and seeds itself synchronously in a layout effect before first paint); debounced 200ms; `checkpoint` events omitted whole rather than stripped, and a table over `GAME_CACHE_EVENT_LIMIT` is skipped rather than truncated. Written via `src/lib/games/cache.ts`, not `client.ts`.
 
-Deliberately not cached: kind 4 DMs (the DM store keeps its own per-account persistence). See [docs/data-system.md §9](docs/data-system.md) for the full contract.
+Deliberately not cached: kind 4 DMs and kind 1059 gift wraps. DM threads are in-memory and rebuild from relays on every load, so no DM plaintext is written to disk. See [docs/data-system.md §9](docs/data-system.md) for the full contract.
 
 ## Voice & video
 
@@ -279,7 +279,9 @@ relay-supplied string into a style attribute.
 | NIP | What | Usage |
 |-----|------|-------|
 | NIP-01 | Basic events & profiles | Profile data (kind 0) |
-| NIP-04 | Direct messages | DMs (kind 4) |
+| NIP-04 | Legacy direct messages | Kind 4 DMs, only for threads the user opted out of NIP-17 |
+| NIP-17 | Private direct messages | Default DM protocol: kind 14 rumor, sealed and gift-wrapped (`sealAndGiftWrap`), routed to the recipient's kind-10050 inbox |
+| NIP-44 | Versioned encryption (v2) | NIP-17 seals/wraps, NIP-59 read-state sync, private kind 30015 interest entries; optional post-quantum scheme via NIP-07 (`src/lib/pq/`) |
 | NIP-07 | Browser extension signer | Login method |
 | NIP-29 | Simple groups | Channels (kinds 9, 9000-9007, 39000-39002) |
 | NIP-42 | Authentication of clients to relays | Auto-auth via `automaticallyAuth` callback |
@@ -287,7 +289,7 @@ relay-supplied string into a style attribute.
 | NIP-05 | DNS-based verification | Display verification status |
 | NIP-46 | Nostr Connect (bunker) | Remote signer login |
 | NIP-50 | Search | `bridge.searchMessages` |
-| NIP-59 | Gift wrap (kind 1059) | Encrypted multi-device read-state sync (`src/lib/nip-59.ts`, `src/lib/read-state/relay-sync.ts`) |
+| NIP-59 | Gift wrap (kind 1059) | NIP-17 DMs; encrypted multi-device read-state sync (`src/lib/nip-59.ts`, `src/lib/read-state/relay-sync.ts`) |
 | NIP-65 | Relay list metadata | Auto-fetch user relays; DM-state sync targets the NIP-65 read+write union |
 | NIP-78 | Application-specific data | Channel layout (kind 30078); also the inner rumor kind for NIP-59-wrapped read state |
 | NIP-98 | HTTP authentication | Blossom upload-auth |
