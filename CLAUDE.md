@@ -6,7 +6,11 @@ See [ROADMAP.md](ROADMAP.md) for the development plan.
 
 ## Architecture
 
-Obelisk is **fully Nostr-relay-only**. There is no backend, no Postgres, no API routes, no Socket.io server. The whole app is a thin React shell over a `nostr-tools` `SimplePool` wrapped by `src/lib/nostr-bridge/client.ts`. Group state, members, admins, messages, DMs, and reactions are all NIP-29 / NIP-04 / NIP-17 events delivered straight from the relay to the client.
+Obelisk is **fully Nostr-relay-only**. There is no backend, no Postgres, no Socket.io server. One
+Next.js route exists — `src/app/api/link-preview` — because unfurling an
+OpenGraph card needs a server to make the outbound request, and routing it
+through our own origin is what keeps every URL a reader merely *views* away
+from a third-party OG service. It holds no state and is not on any data path. The whole app is a thin React shell over a `nostr-tools` `SimplePool` wrapped by `src/lib/nostr-bridge/client.ts`. Group state, members, admins, messages, DMs, and reactions are all NIP-29 / NIP-04 / NIP-17 events delivered straight from the relay to the client.
 
 ```
 Frontend          Next.js 16 + Tailwind v4 (La Crypta UI)
@@ -23,7 +27,7 @@ Payments          Nostr Wallet Connect (NIP-47) — src/lib/wallet/
 ```
 
 ## Stack
-- **Next.js 16** + TypeScript + Tailwind CSS v4 (purely client-rendered — no API routes)
+- **Next.js 16** + TypeScript + Tailwind CSS v4 (client-rendered; the only server route is the link-preview unfurler)
 - **nostr-tools** — `SimplePool`, `BunkerSigner`, `finalizeEvent`, NIP-04/NIP-44 helpers. This is the only Nostr client in the running code path.
 - **@nostr-wot/data** + **@nostr-wot/ui** — WoT-aware profile/follow hooks (`useProfile`, `useFollows`, `usePubkey`, `formatPubkey`, `hexToNpub`) consumed by the rail / search / DM list. Orthogonal to the bridge — the bridge owns identity + relay subs; nostr-wot owns WoT scoring + profile cache.
 - **Zustand** — client-side state under `src/store/` (chat, dm, voice, notifications, read-state, moderation, multi-account, toast, locale, messageZap). Identity is NOT a Zustand store — it lives on the bridge.
@@ -373,8 +377,20 @@ for where this sits relative to the bridgeCache.
 > **No exceptions. Tests are part of the implementation, not an afterthought.**
 
 ## Relays
+- **Default for social feeds:** `DEFAULT_SOCIAL_RELAYS` in `src/lib/social/relays.ts` —
+  damus, nos.lol, primal, snort. `relay.nostr.band` is **not** among them: it is a search
+  index that does not reliably connect, and it stays available as a one-click preset and
+  as a `NIP50_RELAYS` search target.
 - **Default for groups:** `wss://public.obelisk.ar` (constant `DEFAULT_RELAY` in `src/lib/nostr-bridge/client.ts`, overridable per session)
-- **Profile relays (kind:0 / kind:3):** relay.damus.io, relay.nostr.band, nos.lol, relay.primal.net, purplepag.es
+- **Profile lookup relays (bridge, kind:0 / kind:3):** `DEFAULT_PROFILE_LOOKUP_RELAYS` in
+  `client.ts` — lacrypta-relay.obelisk.ar, public.obelisk.ar, purplepag.es. Deliberately
+  small: these hold kind 0 for people in your NIP-29 rooms, and normal channel browsing
+  must not fan out across broad public relays.
+- **Social profile relays:** `preferences.socialRelays` ∪ the SDK's profile aggregators,
+  used by `ensureSocialProfiles`. This is the tier that knows people from the wider
+  network. **Anywhere a stranger's name or picture is shown — feeds, DMs, note cards —
+  read `useAuthor`, which merges both tiers.** Reading the bridge alone is why DM rows
+  showed petnames and letter avatars while the same person resolved fine in the feed.
 - **NostrConnect rendezvous:** relay.nsec.app + the profile relays
 - **User relays:** Auto-fetched from NIP-65 (kind 10002) for DM delivery (`fetchMyDmRelays`)
 

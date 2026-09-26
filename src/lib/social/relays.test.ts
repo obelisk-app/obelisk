@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_SOCIAL_RELAYS,
   SOCIAL_RELAY_MAX,
+  SOCIAL_RELAY_PRESETS,
+  WIDER_SOCIAL_RELAYS,
   invalidRelayIndexes,
   normalizeRelayUrl,
   normalizeSocialRelays,
@@ -74,5 +76,45 @@ describe('socialRelayKey', () => {
     // Notes from one set must never be painted for another.
     expect(socialRelayKey(['wss://a.example']))
       .not.toBe(socialRelayKey(['wss://b.example']));
+  });
+});
+
+describe('the shipped relay sets', () => {
+  it('has four defaults, all distinct', () => {
+    expect(DEFAULT_SOCIAL_RELAYS).toHaveLength(4);
+    expect(new Set(DEFAULT_SOCIAL_RELAYS).size).toBe(4);
+  });
+
+  it('does not default to relay.nostr.band', () => {
+    // A search index, and one that does not reliably connect — measured at
+    // an 8s hard timeout while every other relay here answered under a
+    // second, and separately recorded erroring after ~10s by
+    // `useNostrUserSearch`. A default set where one of four never answers is
+    // how the header came to read 3/4 forever.
+    expect(DEFAULT_SOCIAL_RELAYS).not.toContain('wss://relay.nostr.band');
+  });
+
+  it('still offers relay.nostr.band as a one-click preset', () => {
+    // Demoted, not removed — it is the best search index available.
+    expect(SOCIAL_RELAY_PRESETS.map((preset) => preset.url)).toContain('wss://relay.nostr.band');
+  });
+
+  it('offers every default as a preset, so a removed one can be put back', () => {
+    const presets = SOCIAL_RELAY_PRESETS.map((preset) => preset.url);
+    for (const relay of DEFAULT_SOCIAL_RELAYS) expect(presets).toContain(relay);
+  });
+
+  it('widens to a strictly larger set, without repeating a default', () => {
+    // `WIDER_SOCIAL_RELAYS` spreads the defaults, so listing one again
+    // afterwards would make the widen query ask the same relay twice.
+    expect(new Set(WIDER_SOCIAL_RELAYS).size).toBe(WIDER_SOCIAL_RELAYS.length);
+    expect(WIDER_SOCIAL_RELAYS.length).toBeGreaterThan(DEFAULT_SOCIAL_RELAYS.length);
+    for (const relay of DEFAULT_SOCIAL_RELAYS) expect(WIDER_SOCIAL_RELAYS).toContain(relay);
+  });
+
+  it('ships only urls a browser will accept', () => {
+    for (const relay of [...WIDER_SOCIAL_RELAYS, ...SOCIAL_RELAY_PRESETS.map((p) => p.url)]) {
+      expect(normalizeRelayUrl(relay)).toBe(relay);
+    }
   });
 });

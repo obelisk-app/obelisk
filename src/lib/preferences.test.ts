@@ -1,3 +1,4 @@
+import { DEFAULT_SOCIAL_RELAYS } from './social/relays';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 describe('preferences store', () => {
@@ -12,12 +13,10 @@ describe('preferences store', () => {
     expect(getPreferences()).toMatchObject({
       directMessagesEnabled: false,
       developerRelayDebug: false,
-      socialRelays: [
-        'wss://relay.damus.io',
-        'wss://nos.lol',
-        'wss://relay.primal.net',
-        'wss://relay.nostr.band',
-      ],
+      // Against the constant, not a copy of it: which four relays ship as
+      // the default is a config decision, and duplicating the list here
+      // meant changing it failed a test about persisting colors.
+      socialRelays: [...DEFAULT_SOCIAL_RELAYS],
       accentColor: '#b4f953',
       backgroundColor: '#0a0a0a',
       buttonColor: '#b4f953',

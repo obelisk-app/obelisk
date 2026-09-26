@@ -138,6 +138,51 @@ Condition 2 is checked **locally first**, before any relay round trip, because i
 
 **Indicators.** `PqConversationNotice` sits under the thread header on both shells; `PqMessageMark` renders per message, aggregated by `threadMarks` so only protection-level *transitions* are marked. Marking every message would put a pill on every bubble of a Discord-style list, because all pre-NIP-17 history is NIP-04. Both surfaces are gated on the `postQuantumEnabled` preference, which **defaults on**: the indicators are the feature, and defaulting off meant nobody who never opened settings saw the notice, the marks or the guide link at all. Unlike `directMessagesEnabled` the preference grants nothing and reveals nothing, it only decides whether Obelisk tells you what a conversation rests on. Sending stays conservative independently (condition 2 above), so the default cannot produce a false claim of protection.
 
+## Who the thread says you are talking to
+
+DM surfaces resolve the peer's name and picture through **`useAuthor`**
+(`src/lib/social/useAuthor.ts`), never the bridge's `useUserMetadata`
+directly.
+
+The bridge queries only `DEFAULT_PROFILE_LOOKUP_RELAYS` — lacrypta,
+public.obelisk.ar, purplepag.es — which hold kind 0 for people in your NIP-29
+rooms. A DM peer is usually someone from the wider network with no reason to
+have published there, and `public.obelisk.ar` is whitelist-gated so it
+answers for nobody else at all. The lookup always fired; it just asked relays
+that could not know. Every DM row, thread header and compose row therefore
+rendered a petname and a letter avatar, while the *same person* resolved
+fine in the feed — which had hit this first and grown `useAuthor` to merge
+the group tier with the social one.
+
+Two rules for this surface:
+
+- **Lists batch.** Call `ensureSocialProfiles(allPeers)` once in an effect;
+  `useSocialProfile` fires per hook otherwise, so thirty conversations is
+  thirty round trips. Both DM lists do this.
+- **Tests must mock it.** `vi.mock('@/lib/social/useAuthor', …)` — the real
+  hook opens sockets to public relays from jsdom.
+
+The privacy cost is real and worth stating: opening a DM now asks the social
+relays for that peer's kind 0, which tells those relays somebody is
+interested in that pubkey. It is an unauthenticated REQ, batched with
+unrelated lookups, and it is the same exposure the feed has always had — but
+it is new for DMs. See [dm-metadata-privacy.md](./dm-metadata-privacy.md); if
+that trade ever stops being acceptable, the lever is to resolve DM peers from
+cache only and accept the petname fallback.
+
+## The thread header
+
+Three things sit at the top right, and they are not interchangeable:
+
+- **`PqShield`** — conversation-level protection state. Not gated on the
+  post-quantum preference, because two of its three states describe the gift
+  wrap. It is *state*, not a menu, and must stay visible.
+- **`PqMessageMark`** — per-message, aggregated to protocol transitions only.
+  A pill per bubble is unreadable when all of pre-NIP-17 history is NIP-04.
+- **`DMThreadMenu`** — the `⋯` beside the shield: profile, copy npub, mute,
+  block. Added beside the indicators deliberately; folding them into a menu
+  would hide the one thing the header says about safety.
+
 ## Security
 
 `unwrapGiftWrap` verifies the seal's signature and rejects a rumor whose `pubkey` differs from the seal's signer. Both failures raise the same generic error so neither becomes an oracle. Authentication does not rest on the NIP-44 conversation-key binding alone.
@@ -184,3 +229,5 @@ Incoming DMs push a card onto the DM notification stream (`useNotificationsStore
 - `src/lib/nostr-bridge/optimistic-send.test.ts` — placeholder lifecycle.
 - `src/lib/pq/*.test.ts` — attestations, capability, status lattice, send-plan resolution.
 - `src/app/app/DMPanel.pq.test.tsx` — indicator mounting, mark aggregation, on-accent contrast.
+- `src/app/app/DMList.identity.test.tsx` — the peer resolves through the social tier, and one batched lookup per list.
+- `src/components/chat/DMThreadMenu.test.tsx` — the ⋯ actions, and that they close after acting.
