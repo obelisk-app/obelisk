@@ -43,6 +43,8 @@ const fake = vi.hoisted(() => {
     poolOptions: [] as Array<Record<string, unknown>>,
     closeCalls: [] as Array<{ poolId: number; relays: string[] }>,
     closeOpenSubscriptionCounts: [] as Array<{ poolId: number; count: number }>,
+    /** Bumped per test; pools built by an earlier test are ignored. */
+    testNo: 0,
   };
 
   function matchesInternal(f: Record<string, unknown>, ev: { kind: number; pubkey: string; tags: string[][] }): boolean {
@@ -60,13 +62,19 @@ const fake = vi.hoisted(() => {
 
   class FakePool {
     private readonly id: number;
+    private readonly testNo: number;
     constructor(opts: Record<string, unknown> = {}) {
       this.id = ++state.poolSeq;
+      this.testNo = state.testNo;
       state.poolOptions.push(opts);
     }
     subscribe(relays: string[], filter: Record<string, unknown>, opts: { onevent: (ev: any) => void; oneose?: () => void; onclose?: (reasons: string[]) => void; onauth?: unknown; maxWait?: number; label?: string }) {
       if (opts.label === 'obelisk-query') state.querySyncCalls.push({ relays, filter, opts: { maxWait: opts.maxWait } });
       const sub = { filter, sink: opts.onevent, relays, onclose: opts.onclose, poolId: this.id };
+      // A bridge from a finished test can still be unwinding an awaited
+      // switch/reconnect. Its pools must not write into this test's record
+      // (pool ids restart at 1 every test, so it would be indistinguishable).
+      if (this.stale()) return { close: () => {} };
       if (opts.label !== 'obelisk-query') {
         state.subscriptions.push(sub);
         state.subscriptionLog.push({ filter, relays });
@@ -87,7 +95,11 @@ const fake = vi.hoisted(() => {
       });
       return [Promise.resolve('ok')];
     }
+    private stale(): boolean {
+      return this.testNo !== state.testNo;
+    }
     close(relays: string[]): void {
+      if (this.stale()) return;
       state.closeOpenSubscriptionCounts.push({
         poolId: this.id,
         count: state.subscriptions.filter((sub) => sub.poolId === this.id).length,
@@ -182,6 +194,8 @@ function setVisibility(value: DocumentVisibilityState): void {
 }
 
 beforeEach(() => {
+  // Pools remember which test built them; see `FakePool.stale`.
+  fake.state.testNo += 1;
   (() => { fake.state.published = []; fake.state.subscriptions = []; fake.state.subscriptionLog = []; fake.state.ensureRelayCalls = []; fake.state.ensureRelayImpl = null; fake.state.publishImpl = null; fake.state.querySyncCalls = []; fake.state.suppressNextEose = false; fake.state.suppressAllEose = false; fake.state.poolSeq = 0; fake.state.poolOptions = []; fake.state.closeCalls = []; fake.state.closeOpenSubscriptionCounts = []; })();
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
     ok: false,
@@ -3473,7 +3487,7 @@ describe('nostr-bridge', () => {
       expect(cards[0].preview).toBe('hey there');
     });
 
-    it('does NOT push a card for a reply to my message', async () => {
+    it('pushes a reply card for a reply to my message, even without a p tag', async () => {
       const groupId = 'notif-reply';
       const { bridge, impl, useNotificationsStore } = await loginAndSubscribe(groupId);
 
@@ -3483,6 +3497,7 @@ describe('nostr-bridge', () => {
       const mine = impl.messagesByGroup.get()[groupId]?.find((m) => m.content === 'mine');
       expect(mine).toBeTruthy();
 
+      // No `p` tag: the parent is resolved from the local message list.
       deliver(await fakeRelayMessageWithTags({
         groupId,
         content: 'replying to you',
@@ -3490,15 +3505,200 @@ describe('nostr-bridge', () => {
       }));
       await flush();
 
-      // The reply itself must still be ingested — only the notification is
-      // suppressed. Without this the assertion below would pass vacuously.
-      const list = impl.messagesByGroup.get()[groupId] ?? [];
-      const reply = list.find((m) => m.content === 'replying to you');
-      expect(reply).toBeTruthy();
-      expect(reply!.replyToId).toBe(mine!.id);
-
       const relay = impl.currentRelayUrl.get();
-      expect(useNotificationsStore.getState().mentionsByRelay[relay]).toBeUndefined();
+      const cards = useNotificationsStore.getState().mentionsByRelay[relay] ?? [];
+      expect(cards).toHaveLength(1);
+      expect(cards[0].reason).toBe('reply');
+      expect(cards[0].preview).toBe('replying to you');
+    });
+
+    it('still makes a card when the user is watching the channel (seen is decided on screen)', async () => {
+      const groupId = 'notif-watching';
+      const { impl, pkHex, useNotificationsStore } = await loginAndSubscribe(groupId);
+      const { useChatStore } = await import('@/store/chat');
+      useChatStore.setState({ activeChannelId: groupId, isNearBottom: true });
+      const focus = vi.spyOn(document, 'hasFocus').mockReturnValue(true);
+      deliver(await fakeRelayMessageWithTags({ groupId, content: 'look', tags: [['p', pkHex]] }));
+      await flush();
+      focus.mockRestore();
+      const cards = useNotificationsStore.getState().mentionsByRelay[impl.currentRelayUrl.get()] ?? [];
+      expect(cards).toHaveLength(1);
+      expect(cards[0].seen).toBeUndefined();
+    });
+
+    it('does NOT push a card for a reply to someone else', async () => {
+      const groupId = 'notif-reply-other';
+      const { impl, useNotificationsStore } = await loginAndSubscribe(groupId);
+      const parent = await fakeRelayMessageWithTags({ groupId, content: 'theirs' });
+      deliver(parent);
+      deliver(await fakeRelayMessageWithTags({
+        groupId,
+        content: 'answering them',
+        tags: [['e', parent.id, '', 'reply'], ['p', parent.pubkey]],
+      }));
+      await flush();
+
+      expect(impl.messagesByGroup.get()[groupId]).toHaveLength(2);
+      expect(useNotificationsStore.getState().mentionsByRelay[impl.currentRelayUrl.get()]).toBeUndefined();
+    });
+
+    it('p-tags nostr:npub mentions in outgoing messages (NIP-27)', async () => {
+      const groupId = 'notif-ptag-out';
+      const { bridge } = await loginAndSubscribe(groupId);
+      const other = makeKeypair();
+      const { npubEncode } = await import('nostr-tools/nip19');
+      await bridge.sendMessage(groupId, `hi nostr:${npubEncode(other.pkHex)}`);
+      await flush(12);
+      const sent = fake.state.published.filter((e) => e.kind === 9).at(-1);
+      expect(sent?.tags).toContainEqual(['p', other.pkHex]);
+    });
+
+    it('opens a live relay-wide kind 9 REQ so channels without a stream still ping', async () => {
+      const groupId = 'notif-live-sub';
+      const { impl, pkHex, useNotificationsStore } = await loginAndSubscribe(groupId);
+      await flush(8);
+      const live = fake.state.subscriptions.find((s) => {
+        const f = s.filter as Filter;
+        return f.kinds?.length === 1 && f.kinds[0] === 9 && !f['#h'] && typeof f.since === 'number';
+      });
+      expect(live).toBeTruthy();
+
+      // A mention in a channel with no per-channel stream reaches the bell.
+      const far = await fakeRelayMessageWithTags({
+        groupId: 'unsubscribed-channel',
+        content: 'hey nostr:npub-less mention',
+        tags: [['p', pkHex]],
+      });
+      live!.sink(far);
+      await flush();
+      const relay = impl.currentRelayUrl.get();
+      const cards = useNotificationsStore.getState().mentionsByRelay[relay] ?? [];
+      expect(cards.map((c) => c.channelId)).toEqual(['unsubscribed-channel']);
+      // ...without being injected into that channel's message list.
+      expect(impl.messagesByGroup.get()['unsubscribed-channel']).toBeUndefined();
+    });
+
+    it('the live REQ leaves channels with their own stream to ingestMessage (one card)', async () => {
+      const groupId = 'notif-live-dup';
+      const { impl, pkHex, useNotificationsStore } = await loginAndSubscribe(groupId);
+      await flush(8);
+      deliver(await fakeRelayMessageWithTags({ groupId, content: 'hi', tags: [['p', pkHex]] }));
+      await flush();
+      const relay = impl.currentRelayUrl.get();
+      expect(useNotificationsStore.getState().mentionsByRelay[relay]).toHaveLength(1);
+      expect(impl.messagesByGroup.get()[groupId]).toHaveLength(1);
+    });
+
+    it('a background ping stays unread after switching to its relay', async () => {
+      const groupId = 'notif-repro';
+      const { bridge, impl, pkHex, useNotificationsStore } = await loginAndSubscribe(groupId);
+      const { getUnreadMentionCount } = await import('@/store/notifications');
+      const relayA = impl.currentRelayUrl.get();
+      useNotificationsStore.getState().registerRelay(relayA);
+      await new Promise((r) => setTimeout(r, 5));
+      await bridge.switchRelay('wss://relay-b.example.com');
+      await flush(8);
+      const ping = await fakeRelayMessageWithTags({ groupId: 'far', content: 'yo', tags: [['p', pkHex]], createdAt: Math.floor(Date.now() / 1000) + 2 });
+      (impl as unknown as { ingestPing(r: string, e: NostrEvent, s: string): void }).ingestPing(relayA, ping, 'background');
+      expect(getUnreadMentionCount(relayA)).toBe(1);
+      await bridge.switchRelay(relayA);
+      await flush(8);
+      expect(getUnreadMentionCount(relayA)).toBe(1);
+    });
+
+    it('page-reload restore stamps the mention floor, scopes the store, and starts the background watch', async () => {
+      // Regression: initialize() doesn't go through finalizeLogin, and used
+      // to skip all three — every historical mention became an unread card
+      // that could never be seen, and background listening was off until
+      // the user switched relays.
+      const { STORAGE_KEY, RELAYS_KEY } = await import('./client');
+      const { skHex, pkHex } = makeKeypair();
+      const active = 'wss://relay.example.com';
+      const other = 'wss://other.example.com';
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ privKeyHex: skHex, pubKeyHex: pkHex, loginMethod: 'nsec', relayUrl: active }));
+      localStorage.setItem(RELAYS_KEY, JSON.stringify([active, other]));
+      localStorage.setItem(`obelisk-dex/recent-relays/${pkHex}`, JSON.stringify([other]));
+      const { getBridge, getBridgeImpl } = await import('./client');
+      await getBridge();
+      await flush(8);
+      const { useNotificationsStore } = await import('@/store/notifications');
+      expect(useNotificationsStore.getState().mentionCursorByRelay[active]).toBeGreaterThan(0);
+      expect(useNotificationsStore.persist.getOptions().name).toBe(`obelisk-notifications:${pkHex}`);
+      expect(getBridgeImpl()!.getBackgroundWatchedRelays()).toEqual([other]);
+    });
+
+    it('channel prefs: Nothing drops the card; muted keeps it silently; unfollowed still pings on mentions', async () => {
+      const groupId = 'notif-prefs';
+      const { impl, pkHex, useNotificationsStore } = await loginAndSubscribe(groupId);
+      const { useChannelPrefsStore, MUTED_FOREVER } = await import('@/store/channel-prefs');
+      const alert = await import('@/lib/notifications/alert');
+      const announce = vi.spyOn(alert, 'announceIncoming');
+      const relay = impl.currentRelayUrl.get();
+      const cards = () => useNotificationsStore.getState().mentionsByRelay[relay] ?? [];
+      const at = () => Math.floor(Date.now() / 1000) + 2;
+
+      useChannelPrefsStore.getState().setNotify(relay, groupId, 'nothing');
+      deliver(await fakeRelayMessageWithTags({ groupId, content: 'a', tags: [['p', pkHex]], createdAt: at() }));
+      await flush();
+      expect(cards()).toHaveLength(0);
+
+      useChannelPrefsStore.getState().setNotify(relay, groupId, 'mentions');
+      useChannelPrefsStore.getState().setMutedUntil(relay, groupId, MUTED_FOREVER);
+      deliver(await fakeRelayMessageWithTags({ groupId, content: 'b', tags: [['p', pkHex]], createdAt: at() }));
+      await flush();
+      expect(cards()).toHaveLength(1);
+      expect(announce).not.toHaveBeenCalled();
+
+      useChannelPrefsStore.getState().setMutedUntil(relay, groupId, null);
+      useChannelPrefsStore.getState().setFollowing(relay, groupId, false);
+      deliver(await fakeRelayMessageWithTags({ groupId, content: 'c', tags: [['p', pkHex]], createdAt: at() }));
+      await flush();
+      expect(cards()).toHaveLength(2);
+      expect(announce).toHaveBeenCalledTimes(1);
+      announce.mockRestore();
+    });
+
+    it("channel prefs: 'All messages' chimes on ordinary traffic — but not when unfollowed", async () => {
+      const groupId = 'notif-all';
+      const { impl, useNotificationsStore } = await loginAndSubscribe(groupId);
+      const { useChannelPrefsStore } = await import('@/store/channel-prefs');
+      const alert = await import('@/lib/notifications/alert');
+      const announce = vi.spyOn(alert, 'announceIncoming');
+      const relay = impl.currentRelayUrl.get();
+      deliver(await fakeRelayMessageWithTags({ groupId, content: 'hi all' }));
+      await flush();
+      expect(announce).not.toHaveBeenCalled();
+
+      useChannelPrefsStore.getState().setNotify(relay, groupId, 'all');
+      deliver(await fakeRelayMessageWithTags({ groupId, content: 'hi again' }));
+      await flush();
+      expect(announce).toHaveBeenCalledTimes(1);
+      expect(useNotificationsStore.getState().mentionsByRelay[relay]).toBeUndefined(); // no card for plain traffic
+
+      useChannelPrefsStore.getState().setFollowing(relay, groupId, false);
+      deliver(await fakeRelayMessageWithTags({ groupId, content: 'third' }));
+      await flush();
+      expect(announce).toHaveBeenCalledTimes(1);
+      announce.mockRestore();
+    });
+
+    it('background pings land on their own relay and never on the active one', async () => {
+      const groupId = 'notif-bg';
+      const { impl, pkHex, useNotificationsStore } = await loginAndSubscribe(groupId);
+      const other = 'wss://elsewhere.example';
+      const ping = await fakeRelayMessageWithTags({ groupId: 'far-channel', content: 'yo', tags: [['p', pkHex]] });
+      (impl as unknown as { ingestPing(r: string, e: NostrEvent, s: string): void }).ingestPing(other, ping, 'background');
+      const cards = useNotificationsStore.getState().mentionsByRelay[other] ?? [];
+      expect(cards).toHaveLength(1);
+      expect(cards[0].channelId).toBe('far-channel');
+      expect(cards[0].reason).toBe('mention');
+
+      // Arriving via the watcher for the ACTIVE relay is ignored — the main
+      // ingest owns that relay.
+      const active = impl.currentRelayUrl.get();
+      const dup = await fakeRelayMessageWithTags({ groupId, content: 'dup', tags: [['p', pkHex]] });
+      (impl as unknown as { ingestPing(r: string, e: NostrEvent, s: string): void }).ingestPing(active, dup, 'background');
+      expect(useNotificationsStore.getState().mentionsByRelay[active]).toBeUndefined();
     });
 
     it('does NOT push a card for ordinary channel traffic', async () => {

@@ -5,6 +5,9 @@ import { createLocalStore } from './local-store';
 import { DEFAULT_SOCIAL_RELAYS, normalizeSocialRelays } from './social/relays';
 import { DEFAULT_FEED_WIDGETS, normalizeFeedWidgets } from './social/widgets';
 
+export type NotificationRingtone = 'crystal' | 'marimba' | 'aurora' | 'bubble';
+const RINGTONE_VALUES = new Set<NotificationRingtone>(['crystal', 'marimba', 'aurora', 'bubble']);
+
 export type BubbleAnimationStyle = 'float' | 'drift' | 'orbit' | 'still';
 
 export interface Preferences {
@@ -12,6 +15,24 @@ export interface Preferences {
   developerRelayDebug: boolean;
   directMessagesEnabled: boolean;
   postQuantumEnabled: boolean;
+  /** Chime on incoming mentions, replies and DMs. */
+  notificationSounds: boolean;
+  /** Which ringtone chimes — ids in `src/lib/notifications/sound.ts`. */
+  notificationRingtone: NotificationRingtone;
+  /**
+   * Browser (system) notifications. On by default but inert until the
+   * browser grants permission — the permission popup is raised on the
+   * user's first click after login (`permission-prompt.ts`). Turning this
+   * off in Preferences silences them without touching the browser grant.
+   * (Renamed from `desktopNotifications`, whose off-by-default value was
+   * written into every stored blob.)
+   */
+  browserNotifications: boolean;
+  /**
+   * Keep listening for mentions/replies on the last few relays the user
+   * used, not just the active one. See `src/lib/nostr-bridge/background-watch.ts`.
+   */
+  backgroundRelayWatch: boolean;
   /**
    * Relays for ordinary Nostr traffic (feeds, profiles) — NOT the NIP-29
    * group relays in the rail. Formerly `profileFeedRelays`, which was capped
@@ -43,6 +64,10 @@ const DEFAULTS: Preferences = {
   // conservative on its own (`resolvePqSend` only seals post-quantum when the
   // signer advertises it), so this default cannot cause a false claim.
   postQuantumEnabled: true,
+  notificationSounds: true,
+  notificationRingtone: 'crystal',
+  browserNotifications: true,
+  backgroundRelayWatch: true,
   socialRelays: [...DEFAULT_SOCIAL_RELAYS],
   feedWidgets: [...DEFAULT_FEED_WIDGETS],
   accentColor: '#b4f953',
@@ -130,6 +155,12 @@ export function getAppearanceCssVariables(prefs: Pick<Preferences, 'accentColor'
   };
 }
 
+/** Non-React change listener. Returns an unsubscribe. */
+export function subscribePreferences(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => { listeners.delete(listener); };
+}
+
 export function usePreferences(): Preferences {
   return useSyncExternalStore(
     (l) => {
@@ -155,6 +186,16 @@ function normalizePreferences(raw: Partial<Preferences>): Preferences {
     postQuantumEnabled: typeof raw.postQuantumEnabled === 'boolean'
       ? raw.postQuantumEnabled
       : DEFAULTS.postQuantumEnabled,
+    notificationSounds: typeof raw.notificationSounds === 'boolean'
+      ? raw.notificationSounds
+      : DEFAULTS.notificationSounds,
+    notificationRingtone: normalizeRingtone(raw.notificationRingtone),
+    browserNotifications: typeof raw.browserNotifications === 'boolean'
+      ? raw.browserNotifications
+      : DEFAULTS.browserNotifications,
+    backgroundRelayWatch: typeof raw.backgroundRelayWatch === 'boolean'
+      ? raw.backgroundRelayWatch
+      : DEFAULTS.backgroundRelayWatch,
     // Migration: the old key held exactly three relays. Any stored value is
     // a valid input to the new normalizer, so this is lossless — read the
     // legacy key when the new one is absent.
@@ -174,6 +215,9 @@ function normalizePreferenceValue<K extends keyof Preferences>(key: K, value: Pr
   if (key === 'socialRelays') {
     return normalizeSocialRelays(value) as Preferences[K];
   }
+  if (key === 'notificationRingtone') {
+    return normalizeRingtone(value) as Preferences[K];
+  }
   if (key === 'bubbleAnimation') {
     return normalizeBubbleAnimation(value) as Preferences[K];
   }
@@ -189,6 +233,12 @@ function sanitizeHexColor(value: unknown, fallback: string): string {
   if (typeof value !== 'string') return fallback;
   const trimmed = value.trim();
   return HEX_COLOR_RE.test(trimmed) ? trimmed.toLowerCase() : fallback;
+}
+
+function normalizeRingtone(value: unknown): NotificationRingtone {
+  return RINGTONE_VALUES.has(value as NotificationRingtone)
+    ? value as NotificationRingtone
+    : DEFAULTS.notificationRingtone;
 }
 
 function normalizeBubbleAnimation(value: unknown): BubbleAnimationStyle {

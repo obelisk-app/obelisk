@@ -42,12 +42,15 @@ import {
 } from '@/lib/nostr-bridge';
 import { useMyPubkey } from '@/lib/nostr-bridge';
 import { useAutoMarkRead } from '@/hooks/useAutoMarkRead';
+import { useMentionSeen } from '@/hooks/useMentionSeen';
+import { armNotificationPermissionPrompt } from '@/lib/notifications/permission-prompt';
 import { useFaviconBadge } from '@/hooks/useFaviconBadge';
 import { ensureReadStateStoreForAccount } from '@/store/read-state';
 import { ensureNotificationsStoreForAccount } from '@/store/notifications';
 import { ensureDMStoreForAccount } from '@/store/dm';
 import { ensureModerationStoreForAccount } from '@/store/moderation';
 import { ensureHintsStoreForAccount } from '@/store/hints';
+import { ensureChannelPrefsStoreForAccount } from '@/store/channel-prefs';
 import { startGroupsRelaySync, startDMRelaySync } from './relay-sync';
 import { fetchRelayList } from '@nostr-wot/data';
 import { DEFAULT_PROFILE_LOOKUP_RELAYS } from '@/lib/nostr-bridge/client';
@@ -66,6 +69,8 @@ const PER_ACCOUNT_STORES = [
   // Without this, a second account on the same device inherits the first
   // one's "already seen" and gets explained nothing.
   ensureHintsStoreForAccount,
+  // Channel right-click prefs (mute / follow / notify level).
+  ensureChannelPrefsStoreForAccount,
 ] as const;
 
 /**
@@ -100,6 +105,12 @@ export default function ReadStateRoot() {
   useEffect(() => {
     if (!myPubkey) return;
     for (const ensure of PER_ACCOUNT_STORES) ensure(myPubkey);
+  }, [myPubkey]);
+
+  // Browser notification permission: asked on the first click after login.
+  useEffect(() => {
+    if (!myPubkey) return;
+    return armNotificationPermissionPrompt();
   }, [myPubkey]);
 
   // Groups-scope cursor sync runs on the ACTIVE relay only. Fanning out
@@ -153,6 +164,7 @@ export default function ReadStateRoot() {
   }, [readyToSync, myPubkey, dmRelays]);
 
   useAutoMarkRead();
+  useMentionSeen();
   useFaviconBadge();
   return null;
 }

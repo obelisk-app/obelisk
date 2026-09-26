@@ -155,7 +155,7 @@ describe('useFaviconBadge', () => {
     expect(faviconBadge.setBadgeCount).toHaveBeenLastCalledWith(2);
   });
 
-  it('drops the mention from the badge once its channel is read', () => {
+  it('keeps the mention on the badge when only the channel cursor passes it', () => {
     useNotificationsStore.setState({
       mentionsByRelay: { [RELAY]: [mention({ createdAt: Date.now() - 5_000 })] },
     });
@@ -163,8 +163,23 @@ describe('useFaviconBadge', () => {
     const { rerender } = renderHook(() => useFaviconBadge());
     expect(faviconBadge.setBadgeCount).toHaveBeenLastCalledWith(1);
 
+    // Opening the channel at the bottom is not the same as seeing the mention.
     act(() => {
       useReadStateStore.getState().setGroupCursor('ch1', Date.now());
+    });
+    rerender();
+    expect(document.title).toBe(`(1) ${ORIGINAL_TITLE}`);
+  });
+
+  it('drops the mention from the badge once it has been seen', () => {
+    const m = mention({ createdAt: Date.now() - 5_000 });
+    useNotificationsStore.setState({ mentionsByRelay: { [RELAY]: [m] } });
+
+    const { rerender } = renderHook(() => useFaviconBadge());
+    expect(faviconBadge.setBadgeCount).toHaveBeenLastCalledWith(1);
+
+    act(() => {
+      useNotificationsStore.getState().markMentionSeen(RELAY, m.id);
     });
     rerender();
     expect(document.title).toBe(ORIGINAL_TITLE);

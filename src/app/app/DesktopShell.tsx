@@ -4,7 +4,7 @@ import { displayNameFor } from '@/lib/display-name';
 import { useAuthor } from '@/lib/social/useAuthor';
 import DMThreadMenu from '@/components/chat/DMThreadMenu';
 import { dayKey, dayLabel } from '@/lib/day-label';
-import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import {
   nostrActions,
@@ -107,8 +107,41 @@ import {
   useNotificationBadgeCount,
   useUnreadDmNotificationCount,
   useUnreadMentionCount,
+  useUnreadMentionCardsForChannel,
 } from '@/lib/notifications/selectors';
 import { useChannelHighlights, useCachedChannelHighlights } from '@/lib/read-state/selectors';
+import { ChannelContextMenu } from '@/components/chat/ChannelContextMenu';
+import {
+  BellOffIcon,
+  BookIcon,
+  ChevronRightIcon,
+  CopyIcon,
+  ForwardIcon,
+  GearIcon,
+  LayersIcon,
+  LinkIcon,
+  MoreIcon,
+  ObeliskReactIcon,
+  ReplyIcon,
+  SmileIcon,
+  SparklesIcon,
+  TerminalIcon,
+  TrashIcon,
+  ZapIcon,
+} from '@/components/ui/icons';
+import { MENU_PANEL_CLASS, MenuDivider, MenuItem } from '@/components/ui/menu';
+import FloatingPanel from '@/components/ui/FloatingPanel';
+import ForwardMessageModal from '@/components/chat/ForwardMessageModal';
+import {
+  getRecentEmojisSnapshot,
+  getServerRecentEmojisSnapshot,
+  pushRecentEmoji,
+  quickReactions,
+  subscribeRecentEmojis,
+  type RecentEmoji,
+} from '@/lib/recent-emojis';
+import { shortNpubLabel } from '@/lib/short-npub';
+import { isChannelMuted, useChannelPref } from '@/store/channel-prefs';
 import { guidesHref } from '@/lib/guide-urls';
 import { MESSAGE_INPUT_PROPS } from '@/lib/message-input-props';
 import { HELP_TOPICS, HELP_VIEW_MORE } from '@/lib/help-topics';
@@ -1044,7 +1077,6 @@ export function RelayTopBar({
   const mentionCursor = useMentionCursor(relay);
   const dmNotifications = useDmNotifications();
   const dmCursor = useReadStateStore((s) => s.inboxLastReadAt);
-  const groupCursors = useReadStateStore((s) => s.groupCursors);
   const unreadMentions = useUnreadMentionCount(relay);
   const unreadDms = useUnreadDmNotificationCount();
   const unreadInboxCount = useNotificationBadgeCount(relay);
@@ -1278,7 +1310,7 @@ export function RelayTopBar({
             ) : notifTab === 'mentions' ? (
               <ul className="flex flex-col">
                 {mentions.map((m) => {
-                  const isRead = isMentionRead(m, mentionCursor, groupCursors[m.channelId] ?? 0);
+                  const isRead = isMentionRead(m, mentionCursor);
                   return (
                   <li key={m.id}>
                     <button
@@ -1288,7 +1320,7 @@ export function RelayTopBar({
                       <span className={`mt-1 inline-block w-2 h-2 rounded-full shrink-0 ${isRead ? 'bg-transparent' : 'bg-lc-green'}`} />
                       <div className="flex-1 min-w-0">
                         <div className="text-xs uppercase tracking-wider text-lc-muted font-mono mb-0.5">
-                          {t('desktop.inbox.type.mention')}
+                          {t(m.reason === 'reply' ? 'desktop.inbox.type.reply' : 'desktop.inbox.type.mention')}
                           <span className="ml-2 text-lc-muted/70 normal-case tracking-normal">{formatTime(m.createdAt)}</span>
                         </div>
                         {m.preview && (
@@ -1362,14 +1394,17 @@ export function RelayTopBar({
                     href={guidesHref(locale, topic.slug)}
                     data-testid={`help-popover-topic-${topic.slug}`}
                     onClick={() => setHelpOpen(false)}
-                    className="lc-card group block p-3 hover:border-lc-green/50"
+                    className="lc-card group flex items-start gap-3 p-3 hover:border-lc-green/50"
                   >
-                    <div className="text-sm font-semibold text-lc-white group-hover:text-lc-green">
-                      {topic.title}
-                    </div>
-                    <div className="mt-1 text-xs leading-5 text-lc-muted">
-                      {topic.description}
-                    </div>
+                    <HelpTopicIcon slug={topic.slug} />
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold text-lc-white group-hover:text-lc-green">
+                        {topic.title}
+                      </span>
+                      <span className="mt-1 block text-xs leading-5 text-lc-muted">
+                        {topic.description}
+                      </span>
+                    </span>
                   </a>
                 </li>
               ))}
@@ -1380,8 +1415,9 @@ export function RelayTopBar({
               href={guidesHref(locale)}
               data-testid="help-popover-view-more"
               onClick={() => setHelpOpen(false)}
-              className="inline-flex w-full items-center justify-center rounded-full border border-lc-green/40 bg-lc-green/10 px-4 py-2 text-xs font-semibold text-lc-green transition-colors hover:border-lc-green/70 hover:bg-lc-green/20"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-lc-green/40 bg-lc-green/10 px-4 py-2 text-xs font-semibold text-lc-green transition-colors hover:border-lc-green/70 hover:bg-lc-green/20"
             >
+              <BookIcon size={14} />
               {HELP_VIEW_MORE[locale]}
             </a>
             {/*
@@ -1392,9 +1428,10 @@ export function RelayTopBar({
             <button
               type="button"
               onClick={() => { resetHints(); setHelpOpen(false); }}
-              className="w-full rounded-full px-4 py-2 text-xs text-lc-muted transition-colors hover:bg-white/5 hover:text-lc-white"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-lc-border bg-lc-card/60 px-4 py-2 text-xs font-semibold text-lc-white transition-colors hover:border-lc-white/40 hover:bg-white/10"
               data-testid="help-popover-replay-hints"
             >
+              <SparklesIcon size={14} />
               {t('hints.replay')}
             </button>
           </div>
@@ -2064,8 +2101,20 @@ function GroupNode({
   // count flash. Matches the existing favicon-badge subtraction at
   // useFaviconBadge.ts.
   const showBadges = !active;
-  const unread = showBadges ? highlights.unread : 0;
-  const mentionsOrReplies = showBadges ? (highlights.mentions + highlights.replies) : 0;
+  const relay = useCurrentRelayUrl();
+  const pref = useChannelPref(relay, group.id);
+  const muted = isChannelMuted(pref);
+  // Unfollowed: its traffic stops asking for attention. Mentions still do.
+  const unread = showBadges && !pref.unfollowed ? highlights.unread : 0;
+  // Mention cards stay until the message has actually been on screen
+  // (`useMentionSeen`), so they show even on the active row.
+  const mentionCards = useUnreadMentionCardsForChannel(relay, group.id);
+  // Right-click → channel menu (mark read, follow, mute, notify, copy link).
+  const [menuAt, setMenuAt] = useState<{ x: number; y: number } | null>(null);
+  const mentionsOrReplies = Math.max(
+    showBadges ? (highlights.mentions + highlights.replies) : 0,
+    mentionCards,
+  );
   // Forum containers default to expanded so newly-created threads are
   // immediately visible. Persisted per-group in localStorage so the user's
   // choice survives reloads. Non-forum groups stay always-expanded (no
@@ -2092,9 +2141,29 @@ function GroupNode({
           'flex w-full items-center gap-1 rounded text-left text-base transition ' +
           (active
             ? 'bg-lc-olive text-lc-white'
-            : 'text-lc-muted hover:bg-lc-card hover:text-lc-white')
+            : 'text-lc-muted hover:bg-lc-card hover:text-lc-white') +
+          ((pref.unfollowed || muted) && !active ? ' opacity-55' : '')
         }
+        onContextMenu={(e) => {
+          if (!relay) return;
+          e.preventDefault();
+          setMenuAt({ x: e.clientX, y: e.clientY });
+        }}
+        data-testid={`channel-row-${group.id}`}
       >
+        {menuAt && relay && (
+          <ChannelContextMenu
+            target={{
+              relay,
+              channelId: group.id,
+              name: group.name ?? group.id.slice(0, 12),
+              hasUnread: highlights.unread > 0 || mentionCards > 0,
+            }}
+            x={menuAt.x}
+            y={menuAt.y}
+            onClose={() => setMenuAt(null)}
+          />
+        )}
         {depth > 0 && !isCollapsible && <span className="pl-1 text-lc-muted lc-tree-marker">↳</span>}
         <button
           onClick={() => onSelect(group.id)}
@@ -2110,6 +2179,7 @@ function GroupNode({
           {!group.isPublic && <span title={t('mobile.channel.private')} className="text-[10px]">🔒</span>}
           {!group.isOpen && <span title={t('desktop.channel.closed')} className="text-[10px]">⊝</span>}
           <ActiveCallBadge groupId={group.id} kind={group.kind} />
+          {muted && <span title={t('channelMenu.muted')} aria-label={t('channelMenu.muted')} className="text-[11px]">🔕</span>}
           {unread > 0 && (
             <span
               aria-label={`${unread} unread message${unread === 1 ? '' : 's'}`}
@@ -2704,6 +2774,8 @@ export function SidebarMe({ collapsible = false }: { collapsible?: boolean }) {
     setEditing(true);
     revealSettingsSection(section);
   }), []);
+  // The gear is "preferences"; editing the profile is on the profile card.
+  const openPreferences = () => { setPendingSection('general'); setEditing(true); };
 
   if (!myPubkey) return null;
   // Reveal on the PARENT's hover (`group/me`), not this element's, so the
@@ -2727,29 +2799,29 @@ export function SidebarMe({ collapsible = false }: { collapsible?: boolean }) {
           <div className="truncate text-sm font-semibold text-lc-white">
             {meta?.displayName || meta?.name || 'You'}
           </div>
-          <div className="truncate font-mono text-[10px] text-lc-muted">{myPubkey.slice(0, 16)}…</div>
+          {/* NIP-05 when there is one, else a short npub — never raw hex. */}
+          <div className="truncate text-[11px] text-lc-muted" data-testid="sidebar-profile-handle">
+            {meta?.nip05 ? meta.nip05.replace(/^_@/, '') : shortNpubLabel(myPubkey)}
+          </div>
         </div>
       </button>
       <button
-        onClick={() => setEditing(true)}
-        className={`shrink-0 rounded p-1.5 text-lc-muted transition-colors hover:bg-lc-card hover:text-lc-white ${
+        onClick={openPreferences}
+        className={`shrink-0 rounded-md p-1.5 text-lc-white/80 transition-colors hover:bg-lc-green/15 hover:text-lc-green ${
           collapsible ? 'hidden group-hover/me:block group-focus-within/me:block' : ''
         }`}
-        title={t('desktop.me.settings')}
-        aria-label={t('desktop.me.settings')}
+        title={t('settings.openPreferences')}
+        aria-label={t('settings.openPreferences')}
         data-testid="user-settings-button"
       >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="3"/>
-          <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
-        </svg>
+        <GearIcon size={18} />
       </button>
       {editing && (
         <UserPanel
           pubkey={myPubkey}
           isMe
           initialEditing
-          initialTab={pendingSection ? 'preferences' : 'profile'}
+          initialTab={pendingSection ?? 'profile'}
           onClose={() => { setEditing(false); setPendingSection(null); }}
         />
       )}
@@ -3707,7 +3779,8 @@ function ChatPanel({
   );
 }
 
-const QUICK_REACTIONS = ['🔥', '⚡', '😂', '🤔'];
+/** One slot of the message hover toolbar. */
+const TOOLBAR_BTN = 'flex h-8 w-8 items-center justify-center rounded-md text-lc-white/85 transition-colors hover:bg-lc-green/15 hover:text-lc-white';
 
 function CopyInviteLinkButton({ groupId }: { groupId: string }) {
   const { t } = useTranslation();
@@ -3849,7 +3922,7 @@ function ReplyPreviewRow({
   );
 }
 
-function MessageRow({
+export function MessageRow({
   msg,
   allMessages,
   reactions,
@@ -3890,11 +3963,19 @@ function MessageRow({
   const meta = useProfile(msg.pubkey);
   const relay = useCurrentRelayUrl();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [menuPlacement, setMenuPlacement] = useState<'down' | 'up'>('down');
   const [panelPinned, setPanelPinned] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [pickerPlacement, setPickerPlacement] = useState<'above' | 'below'>('above');
+  const [forwarding, setForwarding] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  // The ⋯ menu and the picker render in portals (`FloatingPanel`) so they
+  // can't be clipped by, or scroll away inside, the message list.
+  const moreBtnRef = useRef<HTMLButtonElement | null>(null);
+  const menuPanelRef = useRef<HTMLDivElement | null>(null);
+  const pickerPanelRef = useRef<HTMLDivElement | null>(null);
+  // Quick reactions = your most recent picks (shared snapshot across rows).
+  const recentEmojis = useSyncExternalStore(subscribeRecentEmojis, getRecentEmojisSnapshot, getServerRecentEmojisSnapshot);
+  const quick4 = useMemo(() => quickReactions(recentEmojis, 4), [recentEmojis]);
+  const quick3 = quick4.slice(0, 3);
   const myPubkey = useMyPubkey();
   const serverEmojis = useChatStore((s) => s.serverEmojis);
   const myMutes = useMyMutes();
@@ -3910,18 +3991,14 @@ function MessageRow({
     }
   };
   const closeAll = () => { setMenuOpen(false); setPanelPinned(false); setPickerOpen(false); };
-  const updatePickerPlacement = () => {
-    if (!menuRef.current || typeof window === 'undefined') return;
-    const rect = menuRef.current.getBoundingClientRect();
-    const estimatedPickerHeight = 440;
-    const spaceAbove = rect.top;
-    const spaceBelow = window.innerHeight - rect.bottom;
-    setPickerPlacement(spaceAbove < estimatedPickerHeight && spaceBelow > spaceAbove ? 'below' : 'above');
-  };
   useEffect(() => {
     if (!menuOpen && !panelPinned && !pickerOpen) return;
     const onDocClick = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) closeAll();
+      const target = e.target as Node;
+      if (menuRef.current?.contains(target)) return;
+      if (menuPanelRef.current?.contains(target)) return;
+      if (pickerPanelRef.current?.contains(target)) return;
+      closeAll();
     };
     const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') closeAll(); };
     document.addEventListener('mousedown', onDocClick);
@@ -3956,6 +4033,11 @@ function MessageRow({
     if (myReactedEmojis.has(emoji)) return;
     const emojiTags = emojiTagsForContent(emoji, mergeCustomEmojiMaps(serverEmojis, customEmojis));
     void nostrActions.sendReaction(msg.id, msg.pubkey, emoji, groupId, emojiTags);
+  };
+  const reactWith = (e: RecentEmoji) => {
+    const name = e.char.replace(/^:|:$/g, '');
+    onReactionClick(e.char, e.url ? { [name]: e.url } : undefined);
+    pushRecentEmoji(e.char, e.url ? { url: e.url, packAddress: e.packAddress } : undefined);
   };
   const openZap = useMessageZapStore((s) => s.open);
   const onZapClick = () => {
@@ -4126,109 +4208,152 @@ function MessageRow({
           </div>
         )}
       </div>
-      <div ref={menuRef} className="absolute right-3 top-0 flex items-start gap-1" data-no-msg-menu>
-        {/* Frequent emoji panel — visible on hover, click to pin */}
+      <div ref={menuRef} className="absolute right-3 -top-3 flex items-start gap-1" data-no-msg-menu>
+        {/*
+          Hover toolbar — 7 slots: your 3 most recent reactions, the Obelisk
+          face (open the full picker), reply, forward, and ⋯. Hidden while
+          the ⋯ menu is open; pinned while the picker is.
+        */}
         <div
+          role="toolbar"
+          aria-label={t('desktop.message.moreActions')}
           className={
-            'rounded-md border border-lc-border bg-lc-dark p-0.5 shadow-md ' +
-            (menuOpen ? 'hidden' : (panelPinned || pickerOpen ? 'flex' : 'hidden group-hover:flex'))
+            'items-center gap-0.5 rounded-lg border border-lc-border bg-lc-dark p-0.5 shadow-lg ' +
+            (menuOpen || panelPinned || pickerOpen ? 'flex' : 'hidden group-hover:flex')
           }
+          data-testid="message-toolbar"
         >
-          {QUICK_REACTIONS.map((e) => {
-            const mine = myReactedEmojis.has(e);
+          {quick3.map((e) => {
+            const mine = myReactedEmojis.has(e.char);
             return (
               <button
-                key={e}
-                onClick={() => { onReactionClick(e); closeAll(); }}
+                key={e.char}
+                type="button"
+                onClick={() => { reactWith(e); closeAll(); }}
                 disabled={mine}
-                className="rounded px-1.5 py-0.5 text-sm hover:bg-lc-card disabled:opacity-40 disabled:cursor-default"
-                title={mine ? t('desktop.reactions.alreadyReacted') : t('desktop.reactions.reactEmoji').replace('{emoji}', e)}
+                className={`${TOOLBAR_BTN} text-lg disabled:cursor-default disabled:opacity-40`}
+                title={mine ? t('desktop.reactions.alreadyReacted') : t('desktop.reactions.reactEmoji').replace('{emoji}', e.char)}
+                data-testid="message-quick-reaction"
               >
-                {e}
+                {e.url
+                  ? <img src={e.url} alt={e.char} className="h-5 w-5 object-contain" />
+                  : <span className="leading-none">{e.char}</span>}
               </button>
             );
           })}
           <button
+            type="button"
             onClick={() => {
-              updatePickerPlacement();
               setPickerOpen((v) => !v);
               setPanelPinned(true);
+              setMenuOpen(false);
             }}
-            className="rounded px-1.5 py-0.5 text-sm text-lc-muted hover:bg-lc-card hover:text-lc-white"
+            className={TOOLBAR_BTN}
             title={t('desktop.reactions.moreEmojis')}
             aria-label={t('desktop.reactions.openEmojiPicker')}
+            data-testid="message-add-reaction"
           >
-            ➕
+            <ObeliskReactIcon size={22} />
           </button>
-        </div>
-        {/* ⋯ menu trigger */}
-        <div
-          className={
-            'rounded-md border border-lc-border bg-lc-dark p-0.5 shadow-md ' +
-            (menuOpen || panelPinned ? 'flex' : 'hidden group-hover:flex')
-          }
-        >
+          <span className="mx-0.5 h-5 w-px bg-lc-border" aria-hidden="true" />
           <button
+            type="button"
+            onClick={() => { onReply(msg); closeAll(); }}
+            className={TOOLBAR_BTN}
+            title={t('desktop.message.reply')}
+            aria-label={t('desktop.message.reply')}
+            data-testid="message-reply"
+          >
+            <ReplyIcon size={18} />
+          </button>
+          <button
+            type="button"
+            onClick={() => { setForwarding(true); closeAll(); }}
+            className={TOOLBAR_BTN}
+            title={t('message.forward')}
+            aria-label={t('message.forward')}
+            data-testid="message-forward"
+          >
+            <ForwardIcon size={18} />
+          </button>
+          <button
+            ref={moreBtnRef}
+            type="button"
             onClick={(e) => {
               e.stopPropagation();
-              if (!menuOpen && menuRef.current) {
-                const rect = menuRef.current.getBoundingClientRect();
-                const estimatedMenuHeight = isAdmin ? 280 : 240;
-                const spaceBelow = window.innerHeight - rect.bottom;
-                setMenuPlacement(spaceBelow < estimatedMenuHeight ? 'up' : 'down');
-              }
               setMenuOpen((v) => !v);
               setPickerOpen(false);
             }}
-            className="rounded px-1.5 py-0.5 text-sm text-lc-muted hover:bg-lc-card hover:text-lc-white"
+            className={`${TOOLBAR_BTN} ${menuOpen ? 'bg-lc-green/15 text-lc-white' : ''}`}
             title={t('desktop.message.moreActions')}
             aria-label={t('desktop.message.moreActions')}
             aria-haspopup="menu"
             aria-expanded={menuOpen}
+            data-testid="message-more"
           >
-            ⋯
+            <MoreIcon size={18} />
           </button>
         </div>
         {menuOpen && (
+          <FloatingPanel anchorRef={moreBtnRef} panelRef={menuPanelRef} onClose={() => setMenuOpen(false)}>
           <div
             role="menu"
-            className={
-              'absolute right-0 z-20 w-48 rounded-md border border-lc-border bg-lc-dark p-1 shadow-2xl ' +
-              (menuPlacement === 'up' ? 'bottom-full mb-1' : 'top-7')
-            }
+            className={`w-64 ${MENU_PANEL_CLASS}`}
+            data-testid="message-menu"
           >
-            <button
-              role="menuitem"
-              onClick={() => { onReply(msg); setMenuOpen(false); }}
-              className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-lc-white hover:bg-lc-card"
-            >
-              <span className="w-4 text-center">↩</span> {t('desktop.message.reply')}
-            </button>
-            <button
-              role="menuitem"
+            <div className="mb-1 grid grid-cols-4 gap-1.5 p-0.5">
+              {quick4.map((e) => {
+                const mine = myReactedEmojis.has(e.char);
+                return (
+                  <button
+                    key={e.char}
+                    type="button"
+                    onClick={() => { reactWith(e); closeAll(); }}
+                    disabled={mine}
+                    className="flex h-11 items-center justify-center rounded-lg bg-lc-card text-xl transition-colors hover:bg-lc-green/15 disabled:cursor-default disabled:opacity-40"
+                    title={mine ? t('desktop.reactions.alreadyReacted') : t('desktop.reactions.reactEmoji').replace('{emoji}', e.char)}
+                    data-testid="message-menu-quick-reaction"
+                  >
+                    {e.url ? <img src={e.url} alt={e.char} className="h-6 w-6 object-contain" /> : e.char}
+                  </button>
+                );
+              })}
+            </div>
+            <MenuItem
+              icon={<SmileIcon />}
+              label={t('desktop.reactions.addReaction')}
+              trailing={<ChevronRightIcon size={14} />}
               onClick={() => {
-                updatePickerPlacement();
-                setMenuOpen(false);
+                  setMenuOpen(false);
                 setPickerOpen(true);
                 setPanelPinned(true);
               }}
-              className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-lc-white hover:bg-lc-card"
-            >
-              <span className="w-4 text-center">😊</span> {t('desktop.reactions.react')}
-            </button>
-            <button
-              role="menuitem"
-              onClick={() => { onZapClick(); setMenuOpen(false); }}
+              testId="message-menu-add-reaction"
+            />
+            <MenuDivider />
+            <MenuItem icon={<ReplyIcon />} label={t('desktop.message.reply')} onClick={() => { onReply(msg); setMenuOpen(false); }} testId="message-menu-reply" />
+            <MenuItem icon={<ForwardIcon />} label={t('message.forward')} onClick={() => { setForwarding(true); setMenuOpen(false); }} testId="message-menu-forward" />
+            <MenuItem
+              icon={<ZapIcon />}
+              label={t('desktop.message.zap')}
               disabled={msg.pubkey === myPubkey}
-              className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-yellow-400 hover:bg-lc-card disabled:opacity-40 disabled:hover:bg-transparent"
-            >
-              <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12" aria-hidden="true" className="ml-0.5">
-                <path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z" />
-              </svg>
-              {t('desktop.message.zap')}
-            </button>
-            <button
-              role="menuitem"
+              onClick={() => { onZapClick(); setMenuOpen(false); }}
+              testId="message-menu-zap"
+            />
+            <MenuDivider />
+            <MenuItem
+              icon={<CopyIcon />}
+              label={t('desktop.message.copyText')}
+              onClick={() => {
+                void Promise.resolve(navigator.clipboard?.writeText(msg.content)).catch(() => {});
+                useToastStore.getState().pushToast({ title: t('desktop.message.textCopied'), body: '' });
+                setMenuOpen(false);
+              }}
+              testId="message-menu-copy-text"
+            />
+            <MenuItem
+              icon={<LinkIcon />}
+              label={t('desktop.message.copyLink')}
               onClick={() => {
                 if (typeof window !== 'undefined') {
                   const url = new URL(window.location.href);
@@ -4236,48 +4361,52 @@ function MessageRow({
                   url.searchParams.set('c', groupId);
                   url.searchParams.set('m', msg.id);
                   if (relay) url.searchParams.set('relay', shortHost(relay));
-                  navigator.clipboard.writeText(url.toString());
-                  useToastStore.getState().pushToast({ title: `🔗 ${t('desktop.message.linkCopied')}`, body: '' });
+                  void Promise.resolve(navigator.clipboard?.writeText(url.toString())).catch(() => {});
+                  useToastStore.getState().pushToast({ title: t('desktop.message.linkCopied'), body: '' });
                 }
                 setMenuOpen(false);
               }}
-              className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-lc-white hover:bg-lc-card"
-            >
-              <span className="w-4 text-center">🔗</span> {t('desktop.message.copyLink')}
-            </button>
-            <button
-              role="menuitem"
-              onClick={() => { void toggleMute(); setMenuOpen(false); }}
+              testId="message-menu-copy-link"
+            />
+            <MenuDivider />
+            <MenuItem
+              icon={<BellOffIcon />}
+              label={isMuted ? t('desktop.message.unmuteUser') : t('desktop.message.muteUser')}
               disabled={msg.pubkey === myPubkey}
-              className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-red-400 hover:bg-lc-card disabled:opacity-40 disabled:hover:bg-transparent"
-            >
-              <span className="w-4 text-center">🔕</span>
-              {isMuted ? t('desktop.message.unmuteUser') : t('desktop.message.muteUser')}
-            </button>
+              onClick={() => { void toggleMute(); setMenuOpen(false); }}
+              testId="message-menu-mute"
+            />
             {canDeleteMessage && (
-              <button
-                role="menuitem"
-                onClick={() => {
-                  deleteMessage();
-                  setMenuOpen(false);
-                }}
-                className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-red-400 hover:bg-lc-card"
-              >
-                <span className="w-4 text-center">🗑</span>
-                {isAdmin ? t('desktop.message.deleteEveryone') : t('desktop.message.deleteMessage')}
-              </button>
+              <MenuItem
+                icon={<TrashIcon />}
+                danger
+                label={isAdmin ? t('desktop.message.deleteEveryone') : t('desktop.message.deleteMessage')}
+                onClick={() => { deleteMessage(); setMenuOpen(false); }}
+                testId="message-menu-delete"
+              />
             )}
           </div>
+          </FloatingPanel>
         )}
         {pickerOpen && (
-          <EmojiPicker
-            disabledEmojis={myReactedEmojis}
-            placement={pickerPlacement}
-            onPick={(e, custom) => {
-              onReactionClick(e, custom ? { [custom.name]: custom.url } : undefined);
-              closeAll();
-            }}
-            onClose={() => setPickerOpen(false)}
+          <FloatingPanel anchorRef={menuRef} panelRef={pickerPanelRef} prefer="above" onClose={() => setPickerOpen(false)}>
+            <EmojiPicker
+              variant="floating"
+              disabledEmojis={myReactedEmojis}
+              onPick={(e, custom) => {
+                onReactionClick(e, custom ? { [custom.name]: custom.url } : undefined);
+                closeAll();
+              }}
+              onClose={() => setPickerOpen(false)}
+            />
+          </FloatingPanel>
+        )}
+        {forwarding && (
+          <ForwardMessageModal
+            message={msg}
+            authorName={displayNameFor(msg.pubkey, meta)}
+            fromGroupId={groupId}
+            onClose={() => setForwarding(false)}
           />
         )}
       </div>
@@ -5484,3 +5613,22 @@ function MobileVoiceStatusBar({ currentView }: { currentView: View }) {
 
 // silence unused-import warning when JsUserMetadata is referenced indirectly
 export type { JsUserMetadata };
+
+/** Icon tile for a help-popover guide card, keyed by guide slug. */
+function HelpTopicIcon({ slug }: { slug: string }) {
+  const Icon = slug === 'how-obelisk-works'
+    ? LayersIcon
+    : slug === 'admin-cli'
+      ? TerminalIcon
+      : slug === 'bitcoin-zaps'
+        ? ZapIcon
+        : SparklesIcon;
+  return (
+    <span
+      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-lc-green/30 bg-lc-green/10 text-lc-green"
+      data-testid={`help-topic-icon-${slug}`}
+    >
+      <Icon size={18} />
+    </span>
+  );
+}

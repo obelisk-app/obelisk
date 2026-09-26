@@ -34,6 +34,7 @@ export default function AnchoredMenu({
   width = 240,
   testId,
   align = 'end',
+  panelClassName,
 }: {
   open: boolean;
   onClose: () => void;
@@ -43,6 +44,8 @@ export default function AnchoredMenu({
   testId?: string;
   /** Which edge of the trigger the panel lines up with. */
   align?: 'start' | 'end';
+  /** Replaces the panel's default look (e.g. `MENU_PANEL_CLASS`). */
+  panelClassName?: string;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
@@ -112,7 +115,7 @@ export default function AnchoredMenu({
         // Hidden until measured, so it never flashes at the wrong place.
         visibility: pos ? 'visible' : 'hidden',
       }}
-      className="z-[200] overflow-hidden rounded-xl border border-lc-border bg-lc-dark py-1 shadow-2xl"
+      className={`z-[200] overflow-hidden ${panelClassName ?? 'rounded-xl border border-lc-border bg-lc-dark py-1 shadow-2xl'}`}
     >
       {children}
     </div>,

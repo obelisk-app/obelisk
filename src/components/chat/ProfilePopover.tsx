@@ -5,7 +5,6 @@ import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, type ReactNode }
 import { useChatStore } from '@/store/chat';
 import { useGroupMemberInfo, useMyPubkey, useUserMetadata } from '@/lib/nostr-bridge';
 import { useToastStore } from '@/store/toast';
-import { useModerationStore } from '@/store/moderation';
 import { formatPubkey, hexToNpub, hexToNpub as pubkeyToNpub } from '@nostr-wot/data';
 import {
   replaceShortcodes,
@@ -15,6 +14,12 @@ import WotBadge from './WotBadge';
 import UserAvatar from '@/components/UserAvatar';
 import { useTranslation } from '@/i18n/context';
 import ProfileMenu from '@/components/social/ProfileMenu';
+import { ICON_BUTTON_CLASS } from '@/components/ui/menu';
+import { CheckBadgeIcon, CompassIcon, CopyIcon, EditIcon, GlobeIcon, MessageIcon, SettingsIcon, ZapIcon } from '@/components/ui/icons';
+import { openSettings } from '@/lib/open-settings';
+
+/** Bordered secondary button — white text, visible border (contrast rule). */
+const SECONDARY_ACTION = 'flex items-center justify-center gap-2 rounded-full border border-lc-border bg-lc-card/60 px-3 py-2 text-xs font-semibold text-lc-white transition-colors hover:border-lc-green/50 hover:bg-lc-green/10';
 
 function renderWithEmojis(text: string, serverEmojis: Record<string, string>): ReactNode {
   if (!text) return text;
@@ -100,10 +105,6 @@ export default function ProfilePopover({ pubkey, onClose, onExplore, onMessage }
   const panelRef = useRef<HTMLDivElement>(null);
   const viewerPubkey = useMyPubkey();
   const isSelf = viewerPubkey === pubkey;
-  const muted = useModerationStore((s) => s.mutedPubkeys.includes(pubkey));
-  const blocked = useModerationStore((s) => s.blockedPubkeys.includes(pubkey));
-  const toggleMute = useModerationStore((s) => s.toggleMute);
-  const toggleBlock = useModerationStore((s) => s.toggleBlock);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -166,7 +167,7 @@ export default function ProfilePopover({ pubkey, onClose, onExplore, onMessage }
       >
         {/* Banner */}
         <div
-          className="h-20 w-full bg-gradient-to-br from-lc-olive to-lc-black rounded-t-xl"
+          className="h-24 w-full rounded-t-xl bg-gradient-to-br from-lc-olive to-lc-black"
           style={
             member?.banner
               ? { backgroundImage: `url(${member.banner})`, backgroundSize: 'cover', backgroundPosition: 'center' }
@@ -175,8 +176,9 @@ export default function ProfilePopover({ pubkey, onClose, onExplore, onMessage }
           data-testid="profile-banner"
         />
 
-        {/* Avatar (overlaps banner) */}
-        <div className="relative px-4">
+        {/* Avatar overlaps the banner; the action cluster sits on the banner's
+            lower edge opposite it, so name and handle get the full width. */}
+        <div className="relative px-4" data-testid="profile-name-row">
           <div className="absolute -top-10 left-4">
             <UserAvatar
               pubkey={pubkey}
@@ -188,184 +190,151 @@ export default function ProfilePopover({ pubkey, onClose, onExplore, onMessage }
               initialClassName="text-2xl"
             />
           </div>
-        </div>
-
-        <div className="pt-12 pb-4 px-4 space-y-3">
-          {/* Name + handle */}
-          <div className="flex items-start justify-between gap-3" data-testid="profile-name-row">
-            <div className="min-w-0">
-              <h3 className="text-lg font-semibold text-lc-white break-words flex items-center gap-2" data-testid="profile-name">
-                <span>{renderWithEmojis(displayName, serverEmojis)}</span>
-                <WotBadge pubkey={pubkey} />
-              </h3>
-              <div className="mt-0.5 space-y-0.5 text-xs text-lc-muted" data-testid="profile-handle">
-                {member?.nip05 && <div className="truncate">{member.nip05}</div>}
-                {npub ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigator.clipboard?.writeText(npub).catch(() => {});
-                      useToastStore.getState().pushToast({ title: t('profileFeed.npubCopied'), body: npubShort });
-                    }}
-                    className="flex max-w-full items-center gap-1.5 font-mono text-[11px] hover:text-lc-white"
-                    title={t('profileFeed.copyNpub')}
-                    data-testid="profile-copy-npub-btn"
-                  >
-                    <span className="truncate">{npubShort}</span>
-                    <svg className="shrink-0" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h3"/></svg>
-                  </button>
-                ) : pubkey}
-              </div>
-            </div>
-            {/*
-              The popover used to end at "zap": no way to copy the link to
-              this person, no way to open their page, no ⋯ at all — while the
-              profile screen had one. Same menu, same items, both places.
-            */}
-            <div className="flex shrink-0 items-center gap-1.5">
+          <div className="flex justify-end gap-1.5 pt-2.5">
+            {!isSelf && (
               <button
                 type="button"
                 onClick={zap}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-lc-green/40 bg-lc-green/10 text-lc-green hover:bg-lc-green/20"
+                className={`${ICON_BUTTON_CLASS} h-8 w-8 text-lc-green`}
                 aria-label={t('profilePopover.zap')}
                 title={t('profilePopover.zap')}
                 data-testid="profile-zap-btn"
               >
-                ⚡
+                <ZapIcon size={16} fill="currentColor" />
               </button>
-              <ProfileMenu
-                pubkey={pubkey}
-                displayName={displayName}
-                canModerate={!isSelf}
-                size="sm"
-              />
+            )}
+            <ProfileMenu
+              pubkey={pubkey}
+              displayName={displayName}
+              canModerate={!isSelf}
+              size="sm"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-3 px-4 pb-4 pt-4">
+          {/* Identity */}
+          <div className="min-w-0">
+            <h3 className="flex items-center gap-2 break-words text-lg font-semibold leading-tight text-lc-white" data-testid="profile-name">
+              <span>{renderWithEmojis(displayName, serverEmojis)}</span>
+              <WotBadge pubkey={pubkey} />
+            </h3>
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs" data-testid="profile-handle">
+              {member?.nip05 && (
+                <span className="flex min-w-0 items-center gap-1 text-lc-green" title={member.nip05}>
+                  <CheckBadgeIcon size={14} />
+                  <span className="truncate">{member.nip05.replace(/^_@/, '')}</span>
+                </span>
+              )}
+              {npub ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard?.writeText(npub).catch(() => {});
+                    useToastStore.getState().pushToast({ title: t('profileFeed.npubCopied'), body: npubShort });
+                  }}
+                  className="flex max-w-full items-center gap-1.5 rounded-full border border-lc-border bg-lc-black/60 px-2 py-0.5 font-mono text-[11px] text-lc-white/85 transition-colors hover:border-lc-green/50 hover:text-lc-white"
+                  title={t('profileFeed.copyNpub')}
+                  data-testid="profile-copy-npub-btn"
+                >
+                  <span className="truncate">{npubShort}</span>
+                  <CopyIcon size={12} />
+                </button>
+              ) : null}
             </div>
           </div>
 
-          {/* About */}
           {member?.about && (
-            <p className="line-clamp-3 text-sm text-lc-white/80 whitespace-pre-wrap break-words" data-testid="profile-about">
+            <p className="line-clamp-3 whitespace-pre-wrap break-words text-sm leading-relaxed text-lc-white/85" data-testid="profile-about">
               {renderWithEmojis(member.about, serverEmojis)}
             </p>
           )}
 
-          {/* Roles */}
-          {baseRole && (
-            <div>
-              <div className="text-[10px] uppercase tracking-wider text-lc-muted font-semibold mb-1.5">{t('profilePopover.roles')}</div>
-              <div className="flex flex-wrap gap-1.5" data-testid="profile-roles">
-                <span
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border"
-                  style={{ borderColor: baseRole.color, color: baseRole.color }}
-                >
-                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: baseRole.color }} />
-                  {t(baseRole.key)}
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* Contact / links */}
-          {(member?.website || member?.lud16) && (
-            <div className="space-y-1.5" data-testid="profile-links">
-              {member?.website && (
-                <a
-                  href={/^https?:\/\//i.test(member.website) ? member.website : `https://${member.website}`}
-                  target="_blank"
-                  rel="noopener noreferrer nofollow"
-                  className="flex items-center gap-2 truncate text-xs text-lc-green hover:underline"
-                  data-testid="profile-website"
-                >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
-                  {member.website.replace(/^https?:\/\//i, '')}
-                </a>
+          {/* Roles + links, recessed so they read as details, not actions. */}
+          {(baseRole || member?.website || member?.lud16) && (
+            <div className="space-y-2.5 rounded-lg border border-lc-border bg-lc-black/50 p-3">
+              {baseRole && (
+                <div className="flex flex-wrap items-center gap-1.5" data-testid="profile-roles">
+                  <span className="mr-1 text-[10px] font-semibold uppercase tracking-wider text-lc-muted">{t('profilePopover.roles')}</span>
+                  <span
+                    className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs"
+                    style={{ borderColor: baseRole.color, color: baseRole.color }}
+                  >
+                    <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: baseRole.color }} />
+                    {t(baseRole.key)}
+                  </span>
+                </div>
               )}
-              {member?.lud16 && (
-                <div
-                  className="flex items-center gap-2 text-xs text-lc-white/80 break-all"
-                  data-testid="profile-lud16"
-                >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="text-lc-green">
-                    <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" />
-                  </svg>
-                  {member.lud16}
+              {(member?.website || member?.lud16) && (
+                <div className="space-y-1.5" data-testid="profile-links">
+                  {member?.website && (
+                    <a
+                      href={/^https?:\/\//i.test(member.website) ? member.website : `https://${member.website}`}
+                      target="_blank"
+                      rel="noopener noreferrer nofollow"
+                      className="flex items-center gap-2 truncate text-xs text-lc-green hover:underline"
+                      data-testid="profile-website"
+                    >
+                      <GlobeIcon size={14} />
+                      {member.website.replace(/^https?:\/\//i, '')}
+                    </a>
+                  )}
+                  {member?.lud16 && (
+                    <div className="flex items-center gap-2 break-all text-xs text-lc-white/85" data-testid="profile-lud16">
+                      <span className="text-lc-green"><ZapIcon size={14} /></span>
+                      {member.lud16}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           )}
 
           {/* Actions */}
-          <div className="pt-3 border-t border-lc-border space-y-2">
+          <div className="space-y-2 border-t border-lc-border pt-3" data-testid="profile-compact-actions">
+            {isSelf ? (
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => { onClose(); openSettings('profile'); }}
+                  className={SECONDARY_ACTION}
+                  data-testid="profile-edit-btn"
+                >
+                  <EditIcon size={15} /> {t('settings.editProfile')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { onClose(); openSettings('general'); }}
+                  className={SECONDARY_ACTION}
+                  data-testid="profile-preferences-btn"
+                >
+                  <SettingsIcon size={15} /> {t('settings.openPreferences')}
+                </button>
+              </div>
+            ) : onMessage && (
+              <button
+                type="button"
+                className={`${SECONDARY_ACTION} w-full`}
+                onClick={() => {
+                  onClose();
+                  onMessage(pubkey);
+                }}
+                data-testid="profile-message-btn"
+              >
+                <MessageIcon size={15} /> {t('mobile.profile.message')}
+              </button>
+            )}
             <button
               type="button"
               onClick={() => {
                 onClose();
                 onExplore(pubkey);
               }}
-              className="lc-pill-primary w-full text-xs"
+              className="lc-pill-primary flex w-full items-center justify-center gap-2 text-xs"
               data-testid="profile-explore-btn"
             >
-              {t('profileFeed.explore')}
+              <CompassIcon size={15} /> {t('profileFeed.explore')}
             </button>
-            {!isSelf && (
-              <div className={`grid gap-2 ${onMessage ? 'grid-cols-3' : 'grid-cols-2'}`} data-testid="profile-compact-actions">
-                {onMessage && (
-                  <button
-                    type="button"
-                    className="rounded-lg border border-lc-border px-2 py-1.5 text-xs text-lc-white hover:bg-white/5"
-                    onClick={() => {
-                      onClose();
-                      onMessage(pubkey);
-                    }}
-                    data-testid="profile-message-btn"
-                  >
-                    {t('mobile.profile.message')}
-                  </button>
-                )}
-                <button
-                  onClick={() => {
-                    const nowMuted = toggleMute(pubkey);
-                    useToastStore.getState().pushToast({
-                      title: t(nowMuted ? 'profilePopover.muted' : 'profilePopover.unmuted'),
-                      body: t(nowMuted ? 'profilePopover.mutedBody' : 'profilePopover.unmutedBody')
-                        .replace('{name}', displayName),
-                    });
-                  }}
-                  className={`rounded-lg border px-2 py-1.5 text-xs transition-colors ${
-                    muted
-                      ? 'border-lc-green/60 text-lc-green bg-lc-green/10 hover:bg-lc-green/20'
-                      : 'border-lc-border text-lc-muted hover:text-lc-white hover:border-lc-white/40'
-                  }`}
-                  data-testid="profile-mute-btn"
-                  title={t('profilePopover.muteHint')}
-                >
-                  {muted ? `🔕 ${t('profileFeed.unmute')}` : `🔕 ${t('profileFeed.mute')}`}
-                </button>
-                <button
-                  onClick={() => {
-                    if (!blocked && !window.confirm(t('profilePopover.blockConfirm').replace('{name}', displayName))) {
-                      return;
-                    }
-                    const nowBlocked = toggleBlock(pubkey);
-                    useToastStore.getState().pushToast({
-                      title: t(nowBlocked ? 'profilePopover.blocked' : 'profilePopover.unblocked'),
-                      body: t(nowBlocked ? 'profilePopover.blockedBody' : 'profilePopover.unblockedBody')
-                        .replace('{name}', displayName),
-                    });
-                    if (nowBlocked) onClose();
-                  }}
-                  className={`rounded-lg border px-2 py-1.5 text-xs transition-colors ${
-                    blocked
-                      ? 'border-red-500/60 text-red-400 bg-red-500/10 hover:bg-red-500/20'
-                      : 'border-lc-border text-lc-muted hover:text-red-400 hover:border-red-500/40'
-                  }`}
-                  data-testid="profile-block-btn"
-                  title={t('profilePopover.hideHint')}
-                >
-                  {blocked ? `🚫 ${t('profileFeed.unblock')}` : `🚫 ${t('profileFeed.block')}`}
-                </button>
-              </div>
-            )}
           </div>
         </div>
       </div>

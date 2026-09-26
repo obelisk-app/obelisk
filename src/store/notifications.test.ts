@@ -79,6 +79,14 @@ describe('useNotificationsStore', () => {
     });
   });
 
+  describe('push return values', () => {
+    it('pushMention reports whether a card was added', () => {
+      const store = useNotificationsStore.getState();
+      expect(store.pushMention(mention({ id: 'r1', createdAt: 9_000 }))).toBe(true);
+      expect(useNotificationsStore.getState().pushMention(mention({ id: 'r1', createdAt: 9_000 }))).toBe(false);
+    });
+  });
+
   describe('pushMention', () => {
     it('dedupes by event id', () => {
       useNotificationsStore.getState().pushMention(mention());
@@ -201,19 +209,21 @@ describe('useNotificationsStore', () => {
   });
 
   describe('read predicates', () => {
-    it('a mention is read once the channel cursor passes it', () => {
+    it('a mention is read only once seen or dismissed — not when the channel cursor passes it', () => {
       const m = mention({ createdAt: 1_000 });
-      expect(isMentionRead(m, 0, 0)).toBe(false);
-      expect(isMentionRead(m, 0, 2_000)).toBe(true);   // read the channel
-      expect(isMentionRead(m, 2_000, 0)).toBe(true);   // dismissed the bell
+      expect(isMentionRead(m, 0)).toBe(false);
+      expect(isMentionRead({ ...m, seen: true }, 0)).toBe(true);   // saw it on screen
+      expect(isMentionRead(m, 2_000)).toBe(true);                  // dismissed the bell
     });
 
-    it('getUnreadMentionCount honours the channel cursor', () => {
+    it('getUnreadMentionCount ignores the channel cursor and honours seen', () => {
       useNotificationsStore.getState().pushMention(mention({ id: 'a', createdAt: 1_000 }));
       useNotificationsStore.getState().pushMention(
         mention({ id: 'b', channelId: 'ch2', createdAt: 1_000 }),
       );
       useReadStateStore.getState().setGroupCursor('ch1', 5_000);
+      expect(getUnreadMentionCount(RELAY_A)).toBe(2);
+      useNotificationsStore.getState().markMentionSeen(RELAY_A, 'a');
       expect(getUnreadMentionCount(RELAY_A)).toBe(1);
     });
 

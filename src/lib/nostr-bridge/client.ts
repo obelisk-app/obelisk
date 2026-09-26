@@ -32,7 +32,13 @@ import { wotEngine } from '@/lib/wot/engine';
 import { useModerationStore } from '@/store/moderation';
 import { resetAllClientState } from '@/lib/reset';
 import { pushActivity, resolveActivity, failActivity, trackActivity, dismissActivity } from '@/lib/activity-log';
-import { getPreferences } from '@/lib/preferences';
+import { getPreferences, subscribePreferences } from '@/lib/preferences';
+import {
+  BackgroundRelayWatcher,
+  backgroundTargets,
+  loadRecentRelays,
+  touchRecentRelay,
+} from './background-watch';
 import { pushRelayDebug } from './relay-debug';
 import {
   ensureNotificationsStoreForAccount,
@@ -40,6 +46,15 @@ import {
 } from '@/store/notifications';
 import { isUserWatchingDM, isUserWatchingChannel } from '@/lib/read-gates';
 import { extractMentionPubkeysFromMessage } from '@/lib/mentions';
+import { announceIncoming } from '@/lib/notifications/alert';
+import { classifyGroupPing, groupPingTitle, previewText, replyTargetId } from '@/lib/notifications/classify';
+import type { MentionReason } from '@/store/notifications';
+import {
+  ensureChannelPrefsStoreForAccount,
+  getChannelPref,
+  isChannelMuted,
+  notifyLevel,
+} from '@/store/channel-prefs';
 import { customEmojiMapFromTags } from '@/lib/custom-emoji-tags';
 import { stickerFromTags } from '@/lib/sticker-tags';
 import { voiceNoteFromTags } from '@/lib/voice-note-tags';
@@ -919,6 +934,14 @@ export class BridgeImpl {
     this.pool = this.createPool();
     this.wireWotEngine();
     this.wireAuthSettledHook();
+    subscribePreferences(() => this.syncBackgroundWatch());
+    // Every way of becoming logged in — fresh login, page-reload restore,
+    // background reconnect — flips this store; hanging the watch off it
+    // means no path can forget to start it (the reload path did).
+    this.isLoggedIn.subscribe((loggedIn) => {
+      if (loggedIn) this.touchRecentRelay(this.currentRelayUrl.get());
+      this.syncBackgroundWatch();
+    });
     // `window.__obeliskSignerQueue.stats()` — mirrors `window.wot`.
     installSignerQueueDebug();
   }
@@ -1072,6 +1095,176 @@ export class BridgeImpl {
         return (evt: EventTemplate) => this.signAuthEvent(evt);
       },
     } as ConstructorParameters<typeof SimplePool>[0]);
+  }
+
+  /**
+   * Mentions/replies on the last few relays the user used but isn't
+   * browsing. See `background-watch.ts` for the scope and privacy argument.
+   */
+  private backgroundWatcher = new BackgroundRelayWatcher({
+    createPool: (isWatched) => new SimplePool({
+      websocketImplementation: TextCoercingWebSocket as unknown as typeof WebSocket,
+      enablePing: true,
+      enableReconnect: true,
+      automaticallyAuth: (relayUrl: string) => {
+        if (!this.session || !isWatched(relayUrl)) return null;
+        return (evt: EventTemplate) => this.signAuthEvent(evt);
+      },
+    } as ConstructorParameters<typeof SimplePool>[0]),
+    onEvent: (relay, ev) => this.ingestPing(relay, ev, 'background'),
+    signAuth: (evt) => this.signAuthEvent(evt),
+    // Start from the relay's mention cursor so pings that landed while the
+    // app was closed still produce a card (they're too old to chime).
+    sinceFor: (relay) => Math.floor((useNotificationsStore.getState().mentionCursorByRelay[relay] ?? Date.now()) / 1000),
+  });
+
+  /** Record that the user used `relay` (opened it, posted on it). */
+  private touchRecentRelay(relay: string): void {
+    const me = this.session?.pubKeyHex;
+    if (!me) return;
+    const before = loadRecentRelays(me).join('|');
+    const after = touchRecentRelay(me, relay).join('|');
+    if (before !== after) this.syncBackgroundWatch();
+  }
+
+  /** Converge the background watcher on the current session/relay/prefs. */
+  private syncBackgroundWatch(): void {
+    const me = this.session?.pubKeyHex ?? null;
+    if (!me || !this.isLoggedIn.get() || !getPreferences().backgroundRelayWatch) {
+      this.backgroundWatcher.stop();
+      return;
+    }
+    this.backgroundWatcher.sync(
+      me,
+      backgroundTargets(loadRecentRelays(me), this.currentRelayUrl.get(), this.configuredRelays.get()),
+    );
+  }
+
+  /** Relays the background watcher is listening on right now. */
+  getBackgroundWatchedRelays(): string[] {
+    return this.backgroundWatcher.watched;
+  }
+
+  /**
+   * Live relay-wide kind 9 on the ACTIVE relay (`since: now`, no `#h`).
+   *
+   * Per-channel message REQs only exist for the active channel plus at most
+   * {@link MAX_BACKGROUND_MESSAGE_STREAMS} others, so on a relay with more
+   * channels than that, an `@you` in the rest would never reach
+   * `ingestMessage`. This one extra REQ sees every new message the user can
+   * read; `ingestPing` ignores the ones a per-channel stream already owns.
+   */
+  private subscribeLivePings(): void {
+    const sub = this.subscribeWatched(
+      this.relays,
+      { kinds: [KIND_GROUP_MESSAGE], since: Math.floor(Date.now() / 1000) - 30 },
+      (ev) => this.ingestPing(this.currentRelayUrl.get(), ev, 'active'),
+      undefined,
+      { affectsRelayAccess: false },
+    );
+    this.subs.push(sub);
+  }
+
+  /**
+   * A kind 9 that may ping us, arriving outside the per-channel ingest:
+   * from the background watcher (`source: 'background'`, relay ≠ active)
+   * or from {@link subscribeLivePings} (`'active'`). Same classification
+   * and card as `ingestMessage`, stamped with `relay`.
+   */
+  private ingestPing(relay: string, ev: NostrEvent, source: 'active' | 'background'): void {
+    if (ev.kind !== KIND_GROUP_MESSAGE) return;
+    const relayKey = normalizeRelayUrl(relay);
+    const isActive = relayKey === normalizeRelayUrl(this.currentRelayUrl.get());
+    // The watcher may still hold a relay the user just switched to; the
+    // main pool owns it now.
+    if (source === 'background' && isActive) return;
+    if (source === 'active' && !isActive) return;
+    const channelId = getTag(ev, 'h');
+    if (!channelId) return;
+    if (isActive) {
+      // A live per-channel stream runs the full ingest (and the same
+      // notification) — don't race it.
+      if (this.messageSubscribedGroups.has(channelId)) return;
+    }
+    if (this.myMutes.get().includes(ev.pubkey)) return;
+    const me = this.session?.pubKeyHex ?? null;
+    if (!me || ev.pubkey === me) return;
+    const mentions = extractMentionPubkeysFromMessage(ev.content, ev.tags);
+    const replyTo = replyTargetId(ev.tags);
+    let parentAuthor: string | null = null;
+    if (replyTo) {
+      const known = isActive
+        ? this.messagesByGroup.get()[channelId]
+        : cacheGet<JsMessage[]>(relayKey, KIND_GROUP_MESSAGE, channelId)?.value;
+      parentAuthor = known?.find((m) => m.id === replyTo)?.pubkey ?? null;
+    }
+    const reason = classifyGroupPing({ pubkey: ev.pubkey, tags: ev.tags, mentions, parentAuthor }, me);
+    const channelName = isActive
+      ? (this.groups.get().find((g) => g.id === channelId)?.name ?? null)
+      : (cacheGet<{ group: JsGroup }>(relayKey, KIND_GROUP_METADATA, channelId)?.value.group.name ?? null);
+    const host = relayKey.replace(/^wss?:\/\//, '');
+    const where = isActive
+      ? (channelName ? `#${channelName}` : null)
+      : (channelName ? `#${channelName} · ${host}` : host);
+    this.deliverGroupPing({ relay: relayKey, channelId, ev, reason, watching: false, where });
+  }
+
+  /**
+   * The one place a group message becomes a notification, so the channel's
+   * right-click preferences (`src/store/channel-prefs.ts`) apply the same on
+   * every path — per-channel ingest, the active relay's live REQ, and the
+   * background watch:
+   *
+   *   notify 'nothing' → no card, no sound
+   *   muted            → card (and badge) kept, no sound / popup
+   *   @mention / reply → card + sound, even on an unfollowed channel
+   *   notify 'all'     → ordinary messages chime too, unless unfollowed
+   */
+  private deliverGroupPing(opts: {
+    relay: string;
+    channelId: string;
+    ev: NostrEvent;
+    reason: MentionReason | null;
+    watching: boolean;
+    where: string | null;
+  }): void {
+    const { relay, channelId, ev, reason, watching, where } = opts;
+    const me = this.session?.pubKeyHex ?? null;
+    if (!me || ev.pubkey === me) return;
+    const pref = getChannelPref(relay, channelId);
+    const level = notifyLevel(pref);
+    if (level === 'nothing') return;
+    const quiet = watching || isChannelMuted(pref);
+    if (reason) {
+      const added = useNotificationsStore.getState().pushMention({
+        id: ev.id,
+        relay,
+        channelId,
+        senderPubkey: ev.pubkey,
+        preview: ev.content.slice(0, 280),
+        createdAt: ev.created_at * 1000,
+        reason,
+      });
+      if (!added) return;
+      this.ensureUserMetadata(ev.pubkey);
+      if (quiet) return;
+      announceIncoming({
+        kind: reason,
+        id: ev.id,
+        createdAt: ev.created_at * 1000,
+        title: groupPingTitle(reason, this.displayNameFor(ev.pubkey), where),
+        body: previewText(ev.content),
+      });
+      return;
+    }
+    if (level !== 'all' || pref.unfollowed || quiet) return;
+    announceIncoming({
+      kind: 'mention',
+      id: ev.id,
+      createdAt: ev.created_at * 1000,
+      title: where ? `${this.displayNameFor(ev.pubkey)} in ${where}` : this.displayNameFor(ev.pubkey),
+      body: previewText(ev.content),
+    });
   }
 
   /**
@@ -1487,6 +1680,14 @@ export class BridgeImpl {
       this.relays = [parsed.relayUrl];
       // Make sure the session relay is in the configured list.
       this.ensureRelayInList(parsed.relayUrl);
+      // Same two steps finalizeLogin takes, and for the same reason — this
+      // page-reload path doesn't go through it. Without them the first
+      // kind-9 backfill lands in the unscoped store AND with no floor, so
+      // every historical mention on the relay became an unread card whose
+      // message is far up in history and can never be "seen".
+      ensureNotificationsStoreForAccount(parsed.pubKeyHex);
+      ensureChannelPrefsStoreForAccount(parsed.pubKeyHex);
+      useNotificationsStore.getState().registerRelay(parsed.relayUrl);
       // Seed admin/member StateStores from localStorage so the sidebar paints
       // last-known admin status instantly while the live REQ catches up.
       // Stale-while-revalidate: arriving relay events overwrite via the
@@ -1575,6 +1776,8 @@ export class BridgeImpl {
 
   dispose(): void {
     this.unwireBrowserConnectionEvents();
+    this.backgroundWatcher.stop();
+    this.clearPendingKind0Queue();
     this.authSignatures.clear();
     this.cancelReconnectTimer();
     this.reconnectInFlight = false;
@@ -1922,12 +2125,19 @@ export class BridgeImpl {
     // so a relay the user has never opened doesn't backfill 50 historical
     // mentions into the bell. `ReadStateRoot` re-runs the account ensure
     // on mount; both calls are idempotent.
-    if (this.session) ensureNotificationsStoreForAccount(this.session.pubKeyHex);
+    if (this.session) {
+      ensureNotificationsStoreForAccount(this.session.pubKeyHex);
+      ensureChannelPrefsStoreForAccount(this.session.pubKeyHex);
+    }
     useNotificationsStore.getState().registerRelay(sessionRelay);
     await this.connect();
     this.myPubkey.set(this.session?.pubKeyHex ?? null);
     this.myLoginMethod.set(this.session?.loginMethod ?? null);
     this.isLoggedIn.set(true);
+    // Idempotent with the `isLoggedIn` subscription; needed for an account
+    // switch, where the flag stays true and the subscription doesn't fire.
+    this.touchRecentRelay(sessionRelay);
+    this.syncBackgroundWatch();
     void this.syncOwnProfileToActiveRelay('login');
     // Best-effort, fire-and-forget: without a published kind-10050, no
     // NIP-17 client (including another Obelisk session) can find where to
@@ -2305,6 +2515,7 @@ export class BridgeImpl {
     this.dispose();
     this.pool = this.createPool();
     this.isLoggedIn.set(false);
+    this.backgroundWatcher.stop();
     this.bunkerSignerReady.set(false);
     this.myPubkey.set(null);
     this.myLoginMethod.set(null);
@@ -2466,6 +2677,7 @@ export class BridgeImpl {
         this.subscribeMyMuteList();
         this.subscribeMyAuthoredGroups();
         this.subscribeActiveCalls();
+        this.subscribeLivePings();
         this.applyPendingResubscribe(pending);
       });
       this.connectionState.set('Connected');
@@ -2584,6 +2796,10 @@ export class BridgeImpl {
     // unread; a brand-new relay starts from "now" and ignores its history.
     useNotificationsStore.getState().registerRelay(normalized);
     this.ensureRelayInList(normalized);
+    // The relay we just left joins the background watch; the one we just
+    // opened leaves it (its full ingest now runs on the main pool).
+    this.touchRecentRelay(normalized);
+    this.syncBackgroundWatch();
     if (this.session) this.session.relayUrl = normalized;
     this.persist();
     this.groups.set([]);
@@ -2705,6 +2921,7 @@ export class BridgeImpl {
     if (list.length === 0) return; // never empty the rail
     this.configuredRelays.set(list);
     this.persistRelays();
+    this.syncBackgroundWatch();
     if (normalizeRelayUrl(this.currentRelayUrl.get()) === normalized) {
       await this.switchRelay(list[0]);
     }
@@ -3064,6 +3281,7 @@ export class BridgeImpl {
       clientTag,
     };
     this.pendingGroupSends.set(clientTag, { groupId, content, replyTo: replyToCopy, emojiTags: emojiTagsCopy, createdAt });
+    this.touchRecentRelay(this.currentRelayUrl.get());
     this.upsertPendingGroupMessage(groupId, pendingMsg);
     void this.publishGroupMessage(groupId, content, replyToCopy, emojiTagsCopy, clientTag, createdAt);
   }
@@ -3389,6 +3607,12 @@ export class BridgeImpl {
     if (replyTo) {
       tags.push(['e', replyTo.id, '', 'reply']);
       tags.push(['p', replyTo.pubkey]);
+    }
+    // NIP-27: p-tag every `nostr:npub` mentioned in the content, so a
+    // recipient can find the ping with a cheap `#p` filter — that is what
+    // the background relay watcher listens on.
+    for (const pk of extractMentionPubkeysFromMessage(content, [])) {
+      if (!tags.some((t) => t[0] === 'p' && t[1] === pk)) tags.push(['p', pk]);
     }
     try {
       const event = await this.signAndPublish({
@@ -6526,35 +6750,47 @@ export class BridgeImpl {
       // {@link flushMessageCache} for the cap + sanitization.
       this.scheduleMessageCacheFlush(groupId);
     }
-    // Mention notification. ONLY an explicit `@you` pings — ordinary
-    // channel traffic and replies-to-you do not. Per-channel unread dots
-    // are a separate concern, derived in the UI from
+    // Mention/reply notification. An explicit `@you` or a reply to one of
+    // our own messages pings; ordinary channel traffic does not. Per-channel
+    // unread dots are a separate concern, derived in the UI from
     // `useReadStateStore.groupCursors[groupId]` vs `messages[].createdAt`.
     //
-    // This runs exclusively on the active relay: kind-9 subscriptions only
-    // exist for the relay the user is browsing (CLAUDE.md, "Single-relay
-    // rule for groups"), so mention scanning is inherently scoped to the
-    // relay the user is connected to right now. The card is stamped with
-    // that relay so it can never surface while browsing a different one.
+    // This path covers the active relay. Relays the user used recently but
+    // isn't browsing are covered by the background watcher
+    // (`background-watch.ts`), which stamps cards with its own relay. The
+    // card is stamped with the relay so it never surfaces while browsing a
+    // different one.
     //
     // Backfill is filtered by the relay's mention cursor inside
     // `pushMention` — `registerRelay` stamps a floor on first connect so
     // the history of a relay the user just joined doesn't flood the bell.
     if (!isNew) return;
     const me = this.session?.pubKeyHex ?? null;
-    if (!me || ev.pubkey === me) return;
-    if (!mentions.includes(me)) return;
-    if (isUserWatchingChannel(groupId)) return;
+    const parentAuthor = replyTo
+      ? (this.messagesByGroup.get()[groupId]?.find((m) => m.id === replyTo)?.pubkey ?? null)
+      : null;
+    const reason = classifyGroupPing({ pubkey: ev.pubkey, tags: ev.tags, mentions, parentAuthor }, me);
     const relay = this.currentRelayUrl.get();
     if (!relay) return;
-    useNotificationsStore.getState().pushMention({
-      id: ev.id,
+    const channelName = this.groups.get().find((g) => g.id === groupId)?.name ?? null;
+    // Watching the channel is NOT the same as having seen the mention (it
+    // may be off-screen, or the channel just opened). The card is always
+    // made; `useMentionSeen` clears it once the message is actually on
+    // screen. Only the chime is skipped — it would fire in your face.
+    this.deliverGroupPing({
       relay,
       channelId: groupId,
-      senderPubkey: ev.pubkey,
-      preview: ev.content.slice(0, 280),
-      createdAt: ev.created_at * 1000,
+      ev,
+      reason,
+      watching: isUserWatchingChannel(groupId),
+      where: channelName ? `#${channelName}` : null,
     });
+  }
+
+  /** Best-effort display name for OS popups — never blocks on a fetch. */
+  displayNameFor(pubkey: string): string {
+    const meta = this.userMetadata.get()[pubkey];
+    return meta?.displayName || meta?.name || `${pubkey.slice(0, 8)}…`;
   }
 
   private ingestReaction(groupId: string, ev: NostrEvent): void {
@@ -6844,11 +7080,21 @@ export class BridgeImpl {
     // the active relay the way mentions are.
     if (!isNew || outgoing) return;
     if (isUserWatchingDM(counterparty)) return;
-    useNotificationsStore.getState().pushDmNotification({
+    const added = useNotificationsStore.getState().pushDmNotification({
       id: notifyId,
       senderPubkey: counterparty,
       preview: plaintext.slice(0, 280),
       createdAt: createdAt * 1000,
+    });
+    if (!added) return;
+    announceIncoming({
+      kind: 'dm',
+      id: notifyId,
+      createdAt: createdAt * 1000,
+      title: this.displayNameFor(counterparty),
+      // The OS shade is visible to anyone looking at the screen and may be
+      // mirrored to other devices; never put DM plaintext there.
+      body: 'New direct message',
     });
   }
 

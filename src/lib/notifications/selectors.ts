@@ -34,14 +34,37 @@ export function useMentionCursor(relay: string | null | undefined): number {
 export function useUnreadMentionCount(relay: string | null | undefined): number {
   const mentions = useMentionNotifications(relay);
   const cursor = useMentionCursor(relay);
-  const groupCursors = useReadStateStore((s) => s.groupCursors);
   return useMemo(() => {
     let n = 0;
     for (const m of mentions) {
-      if (!isMentionRead(m, cursor, groupCursors[m.channelId] ?? 0)) n++;
+      if (!isMentionRead(m, cursor)) n++;
     }
     return n;
-  }, [mentions, cursor, groupCursors]);
+  }, [mentions, cursor]);
+}
+
+/**
+ * Unread mention/reply cards for one channel on `relay`.
+ *
+ * The channel list's own highlight is derived from *loaded* messages, and
+ * most channels have none loaded right after a relay switch (the message
+ * store resets and only a handful of channels get a live stream). The
+ * card is the durable record — a row shows `max(derived, cards)`.
+ */
+export function useUnreadMentionCardsForChannel(
+  relay: string | null | undefined,
+  channelId: string | null | undefined,
+): number {
+  const mentions = useMentionNotifications(relay);
+  const cursor = useMentionCursor(relay);
+  return useMemo(() => {
+    if (!channelId) return 0;
+    let n = 0;
+    for (const m of mentions) {
+      if (m.channelId === channelId && !isMentionRead(m, cursor)) n++;
+    }
+    return n;
+  }, [mentions, cursor, channelId]);
 }
 
 /** DM cards, newest first. Relay-agnostic — DMs follow NIP-65. */
