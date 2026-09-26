@@ -5321,7 +5321,9 @@ export function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string)
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      <header className="flex shrink-0 items-center gap-3 border-b border-lc-border bg-lc-dark px-5 py-3">
+      {/* Fixed height, matching the DM list header (`DMList`) so their
+          bottom borders line up; padding-derived height drifted from it. */}
+      <header className="flex h-[60px] shrink-0 items-center gap-3 border-b border-lc-border bg-lc-dark px-5" data-testid="dm-thread-header">
         <button
           type="button"
           onClick={(event) => useChatStore.getState().openProfilePopup(peer, { x: event.clientX, y: event.clientY })}

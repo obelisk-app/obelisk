@@ -24,6 +24,8 @@ import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 import { useModerationStore } from '@/store/moderation';
 import { useTranslation } from '@/i18n/context';
 import { hexToNpub } from '@nostr-wot/data';
+import { ICON_BUTTON_CLASS, MENU_PANEL_CLASS, MenuDivider, MenuItem } from '@/components/ui/menu';
+import { BanIcon, BellIcon, BellOffIcon, CheckBadgeIcon, KeyIcon, MoreIcon, UserIcon } from '@/components/ui/icons';
 
 export default function DMThreadMenu({
   peer,
@@ -55,75 +57,62 @@ export default function DMThreadMenu({
     }
   })();
 
-  const item = 'w-full rounded-lg px-2.5 py-2 text-left text-[12px] transition-colors hover:bg-white/5';
-
   return (
     <>
       <button
         ref={triggerRef}
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-lc-muted transition-colors hover:bg-lc-border/40 hover:text-lc-white ${className}`}
+        // Same square as the call buttons beside it, so the header's actions
+        // read as one set.
+        className={`${ICON_BUTTON_CLASS} h-8 w-8 ${open ? 'border-lc-green/50 bg-lc-green/10' : ''} ${className}`}
         aria-label={t('dm.conversationOptions')}
         title={t('dm.conversationOptions')}
         aria-expanded={open}
+        aria-haspopup="menu"
         data-testid="dm-thread-menu"
       >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-          <circle cx="5" cy="12" r="1.8" />
-          <circle cx="12" cy="12" r="1.8" />
-          <circle cx="19" cy="12" r="1.8" />
-        </svg>
+        <MoreIcon size={16} />
       </button>
 
       <AnchoredMenu
         open={open}
         onClose={() => setOpen(false)}
         anchorRef={triggerRef}
-        width={224}
+        width={220}
+        panelClassName={MENU_PANEL_CLASS}
         testId="dm-thread-menu-panel"
       >
-        <div className="p-1">
-          {onOpenProfile && (
-            <button
-              type="button"
-              className={`${item} text-lc-white`}
-              onClick={() => { setOpen(false); onOpenProfile(peer); }}
-              data-testid="dm-menu-profile"
-            >
-              {t('dm.viewProfile')}
-            </button>
-          )}
-          <button
-            type="button"
-            className={`${item} text-lc-white`}
-            onClick={() => void copy(npub)}
-            data-testid="dm-menu-copy-npub"
-          >
-            {copied ? t('common.copied') : t('user.copyNpub')}
-          </button>
-
-          <div className="my-1 h-px bg-lc-border" aria-hidden="true" />
-
-          <button
-            type="button"
-            className={`${item} text-lc-white`}
-            onClick={() => { toggleMute(peer); setOpen(false); }}
-            data-testid="dm-menu-mute"
-          >
-            {t(muted ? 'profileFeed.unmute' : 'profileFeed.mute')}
-          </button>
-          {/* Destructive last and in red, so it can't be hit on the way to
-              something harmless. */}
-          <button
-            type="button"
-            className={`${item} text-red-400 hover:bg-red-500/10`}
-            onClick={() => { toggleBlock(peer); setOpen(false); }}
-            data-testid="dm-menu-block"
-          >
-            {t(blocked ? 'profileFeed.unblock' : 'profileFeed.block')}
-          </button>
-        </div>
+        {onOpenProfile && (
+          <MenuItem
+            icon={<UserIcon />}
+            label={t('dm.viewProfile')}
+            onClick={() => { setOpen(false); onOpenProfile(peer); }}
+            testId="dm-menu-profile"
+          />
+        )}
+        <MenuItem
+          icon={copied ? <CheckBadgeIcon /> : <KeyIcon />}
+          label={copied ? t('common.copied') : t('user.copyNpub')}
+          onClick={() => void copy(npub)}
+          testId="dm-menu-copy-npub"
+        />
+        <MenuDivider />
+        <MenuItem
+          icon={muted ? <BellIcon /> : <BellOffIcon />}
+          label={t(muted ? 'profileFeed.unmute' : 'profileFeed.mute')}
+          onClick={() => { toggleMute(peer); setOpen(false); }}
+          testId="dm-menu-mute"
+        />
+        {/* Destructive last and in red, so it can't be hit on the way to
+            something harmless. */}
+        <MenuItem
+          icon={<BanIcon />}
+          label={t(blocked ? 'profileFeed.unblock' : 'profileFeed.block')}
+          onClick={() => { toggleBlock(peer); setOpen(false); }}
+          danger={!blocked}
+          testId="dm-menu-block"
+        />
       </AnchoredMenu>
     </>
   );

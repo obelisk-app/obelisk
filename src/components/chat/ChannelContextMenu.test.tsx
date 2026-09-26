@@ -83,6 +83,34 @@ describe('channel menu', () => {
     expect(writeText).toHaveBeenCalledWith(channelLink(R, target.channelId));
   });
 
+  it('every row carries an icon', () => {
+    wrap(<ChannelContextMenu target={target} x={10} y={10} onClose={() => {}} />);
+    for (const id of ['channel-menu-mark-read', 'channel-menu-follow', 'channel-menu-copy-link', 'channel-menu-mute', 'channel-menu-notify']) {
+      expect(screen.getByTestId(id).querySelector('svg')).not.toBeNull();
+    }
+    fireEvent.click(screen.getByTestId('channel-menu-notify'));
+    for (const level of ['all', 'mentions', 'nothing']) {
+      expect(screen.getByTestId(`channel-menu-notify-${level}`).querySelector('svg')).not.toBeNull();
+    }
+  });
+
+  it('slides a submenu up instead of letting it hang off the bottom of the screen', () => {
+    vi.stubGlobal('innerHeight', 700);
+    const real = HTMLElement.prototype.getBoundingClientRect;
+    HTMLElement.prototype.getBoundingClientRect = function (this: HTMLElement) {
+      // The submenu opens next to a row near the bottom: 600..780 → 88px too low.
+      if (this.dataset.testid === 'channel-menu-notify-sub') return { top: 600, bottom: 780, left: 0, right: 230, width: 230, height: 180, x: 0, y: 600, toJSON: () => ({}) } as DOMRect;
+      return real.call(this);
+    };
+    try {
+      wrap(<ChannelContextMenu target={target} x={10} y={500} onClose={() => {}} />);
+      fireEvent.click(screen.getByTestId('channel-menu-notify'));
+      expect(screen.getByTestId('channel-menu-notify-sub').style.top).toBe('-88px');
+    } finally {
+      HTMLElement.prototype.getBoundingClientRect = real;
+    }
+  });
+
   it('closes on Escape and on a click outside', () => {
     const onClose = vi.fn();
     wrap(<ChannelContextMenu target={target} x={10} y={10} onClose={onClose} />);

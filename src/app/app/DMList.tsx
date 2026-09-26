@@ -68,7 +68,9 @@ export default function DMList({
       className="relative flex h-full w-full flex-col overflow-hidden bg-lc-dark"
       data-tour="dm-list"
     >
-      <div className="flex h-14 shrink-0 items-center justify-between border-b border-lc-border px-4 shadow-sm">
+      {/* Same fixed height as the thread header beside it (`DMPanel`), so the
+          two bottom borders form one line across the whole surface. */}
+      <div className="flex h-[60px] shrink-0 items-center justify-between border-b border-lc-border px-4 shadow-sm" data-testid="dm-list-header">
         <h3 className="truncate text-sm font-bold text-lc-white">{t('dm.title')}</h3>
         <div className="flex items-center gap-1">
           <button

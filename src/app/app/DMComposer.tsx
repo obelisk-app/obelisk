@@ -1,30 +1,50 @@
 'use client';
 
 /**
- * DM composer — paste an npub/hex pubkey or NIP-05 to start a conversation.
- * Drops obelisk's API user-search; keeps NIP-05 resolution since that's
- * pure-protocol.
+ * "New message" on desktop: type a name, a NIP-05 or an npub and pick a
+ * person from live results.
+ *
+ * It used to be a bare text box with Cancel / Start buttons that only
+ * understood a pasted npub, hex key or exact NIP-05 — no names, no results, no
+ * way to see who you were about to message. It now runs the same people
+ * search the rest of the app uses (`useNostrUserSearch`: NIP-19 decode, NIP-05
+ * resolution and NIP-50 name search on the index relays), and picking a
+ * result opens the thread. Keyboard: ↑/↓ to move, Enter to open, Esc to close.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '@/i18n/context';
+import { useNostrUserSearch, type UserHit } from '@/lib/hooks/useNostrUserSearch';
+import { useAuthor } from '@/lib/social/useAuthor';
+import { displayNameFor } from '@/lib/display-name';
+import { shortNpubLabel } from '@/lib/short-npub';
+import UserAvatar from '@/components/UserAvatar';
+import { CloseIcon } from '@/components/ui/icons';
 
-const NIP05_RE = /^([a-z0-9._-]+)@([a-z0-9.-]+\.[a-z]{2,})$/i;
-
-async function resolveNip05(identifier: string, signal: AbortSignal): Promise<string | null> {
-  const m = NIP05_RE.exec(identifier.trim());
-  if (!m) return null;
-  const [, name, domain] = m;
-  try {
-    const res = await fetch(`https://${domain}/.well-known/nostr.json?name=${encodeURIComponent(name)}`, { signal, mode: 'cors' });
-    if (!res.ok) return null;
-    const data = (await res.json()) as { names?: Record<string, string> };
-    const pk = data.names?.[name] ?? data.names?.[name.toLowerCase()];
-    if (typeof pk !== 'string' || !/^[0-9a-f]{64}$/i.test(pk)) return null;
-    return pk.toLowerCase();
-  } catch {
-    return null;
-  }
+function ResultRow({ hit, active, onPick, onHover }: { hit: UserHit; active: boolean; onPick: () => void; onHover: () => void }) {
+  // A pasted npub comes back with no profile; resolve it the way the rest of
+  // the DM surface does, so the row shows who it is before you open it.
+  const author = useAuthor(hit.pubkey);
+  const name = hit.displayName || displayNameFor(hit.pubkey, author);
+  const picture = hit.picture ?? author.picture;
+  const sub = hit.nip05 ?? author.nip05 ?? shortNpubLabel(hit.pubkey);
+  return (
+    <button
+      type="button"
+      role="option"
+      aria-selected={active}
+      onClick={onPick}
+      onMouseEnter={onHover}
+      className={`flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors ${active ? 'bg-lc-green/15' : 'hover:bg-white/5'}`}
+      data-testid="dm-compose-result"
+    >
+      <UserAvatar pubkey={hit.pubkey} picture={picture} name={name} size={8} />
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-semibold text-lc-white">{name}</span>
+        <span className="block truncate text-[11px] text-lc-muted">{sub}</span>
+      </span>
+    </button>
+  );
 }
 
 export default function DMComposer({
@@ -35,85 +55,90 @@ export default function DMComposer({
   onPicked: (pubkeyHex: string) => void;
 }) {
   const { t } = useTranslation();
-  const [input, setInput] = useState('');
-  const [resolving, setResolving] = useState(false);
-  const [resolved, setResolved] = useState<string | null>(null);
-  const [err, setErr] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+  const [active, setActive] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const { directHit, nip05Hit, nostrResults, loading } = useNostrUserSearch(query);
 
-  // Auto-resolve npub / hex / NIP-05
-  useEffect(() => {
-    setErr(null);
-    setResolved(null);
-    const v = input.trim();
-    if (!v) return;
+  const results = useMemo(() => {
+    const seen = new Set<string>();
+    return [directHit, nip05Hit, ...nostrResults]
+      .filter((hit): hit is UserHit => !!hit && !seen.has(hit.pubkey) && !!seen.add(hit.pubkey))
+      .slice(0, 8);
+  }, [directHit, nip05Hit, nostrResults]);
+  const searching = query.trim().length >= 2 || results.length > 0;
+  // Keep the highlight on the list as it changes under the cursor.
+  const selected = Math.min(active, Math.max(0, results.length - 1));
 
-    if (/^[0-9a-f]{64}$/i.test(v)) {
-      setResolved(v.toLowerCase());
-      return;
-    }
-    if (v.startsWith('npub1')) {
-      let cancelled = false;
-      (async () => {
-        try {
-          const { nip19 } = await import('nostr-tools');
-          const dec = nip19.decode(v);
-          if (cancelled) return;
-          if (dec.type === 'npub') setResolved(dec.data as string);
-          else setErr('Not an npub');
-        } catch (e) {
-          if (!cancelled) setErr((e as Error).message);
-        }
-      })();
-      return () => { cancelled = true; };
-    }
-    if (NIP05_RE.test(v)) {
-      const ac = new AbortController();
-      setResolving(true);
-      resolveNip05(v, ac.signal)
-        .then((pk) => {
-          if (ac.signal.aborted) return;
-          if (pk) setResolved(pk);
-          else setErr('NIP-05 not found');
-        })
-        .catch(() => setErr('NIP-05 lookup failed'))
-        .finally(() => setResolving(false));
-      return () => ac.abort();
-    }
-  }, [input]);
+  useEffect(() => { inputRef.current?.focus(); }, []);
 
-  function submit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!resolved) return;
-    onPicked(resolved);
-  }
+  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      onClose();
+    } else if (e.key === 'ArrowDown' && results.length > 0) {
+      e.preventDefault();
+      setActive((selected + 1) % results.length);
+    } else if (e.key === 'ArrowUp' && results.length > 0) {
+      e.preventDefault();
+      setActive((selected - 1 + results.length) % results.length);
+    } else if (e.key === 'Enter' && results[selected]) {
+      e.preventDefault();
+      onPicked(results[selected].pubkey);
+    }
+  };
 
   return (
-    <form onSubmit={submit} className="border-b border-lc-border bg-lc-card/30 p-3">
-      <input
-        autoFocus
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        placeholder={t('dm.composePlaceholder')}
-        spellCheck={false}
-        className="w-full rounded border border-lc-border bg-lc-black px-2 py-1.5 font-mono text-xs text-lc-white outline-none focus:border-lc-green"
-      />
-      <div className="mt-2 flex items-center justify-between text-[10px]">
-        <span className={resolved ? 'text-lc-green' : err ? 'text-red-400' : 'text-lc-muted'}>
-          {resolving ? 'Resolving NIP-05…' : resolved ? `→ ${resolved.slice(0, 24)}…` : err ?? ' '}
-        </span>
-        <div className="flex gap-2">
-          <button type="button" onClick={onClose} className="text-lc-muted hover:text-lc-white">
-            {t('common.cancel')}
-          </button>
-          <button
-            type="submit"
-            disabled={!resolved}
-            className="rounded bg-lc-green px-2 py-0.5 font-semibold text-lc-black disabled:opacity-40"
-          >
-            {t('dm.start')}
-          </button>
-        </div>
+    <div className="border-b border-lc-border bg-lc-card/30 p-3" data-testid="dm-composer-search">
+      <div className="flex items-center gap-2 rounded-lg border border-lc-border bg-lc-black px-2.5 focus-within:border-lc-green">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="shrink-0 text-lc-muted" aria-hidden="true">
+          <circle cx="11" cy="11" r="7" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <input
+          ref={inputRef}
+          value={query}
+          onChange={(e) => { setQuery(e.target.value); setActive(0); }}
+          onKeyDown={onKeyDown}
+          placeholder={t('dm.compose.placeholder')}
+          spellCheck={false}
+          autoComplete="off"
+          role="combobox"
+          aria-expanded={results.length > 0}
+          aria-controls="dm-compose-results"
+          aria-label={t('dm.newMessage')}
+          className="min-w-0 flex-1 bg-transparent py-2 text-sm text-lc-white outline-none placeholder:text-lc-muted"
+          data-testid="dm-compose-input"
+        />
+        {loading && <span className="lc-spinner h-3.5 w-3.5 shrink-0" role="status" aria-label={t('search.searching')} />}
+        <button
+          type="button"
+          onClick={onClose}
+          className="shrink-0 rounded p-1 text-lc-white/70 hover:bg-white/5 hover:text-lc-white"
+          aria-label={t('search.close')}
+          title={t('search.close')}
+        >
+          <CloseIcon size={14} />
+        </button>
       </div>
-    </form>
+      {searching && (
+        <div id="dm-compose-results" role="listbox" className="mt-2 max-h-72 space-y-0.5 overflow-y-auto">
+          {results.map((hit, i) => (
+            <ResultRow
+              key={hit.pubkey}
+              hit={hit}
+              active={i === selected}
+              onPick={() => onPicked(hit.pubkey)}
+              onHover={() => setActive(i)}
+            />
+          ))}
+          {results.length === 0 && (
+            <p className="px-2 py-1.5 text-xs text-lc-muted" role="status">
+              {loading ? t('search.searching') : t('search.noMatches')}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
   );
 }

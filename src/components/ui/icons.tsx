@@ -146,6 +146,15 @@ export const StarIcon = ({ filled = false, ...p }: IconProps & { filled?: boolea
 export const ChevronRightIcon = (p: IconProps) => (
   <Svg {...p}><path d="m9 6 6 6-6 6" /></Svg>
 );
+export const CheckCircleIcon = (p: IconProps) => (
+  <Svg {...p}><circle cx="12" cy="12" r="9" /><path d="m8 12.5 2.7 2.7L16.5 9.5" /></Svg>
+);
+export const ClockIcon = (p: IconProps) => (
+  <Svg {...p}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3.5 2" /></Svg>
+);
+export const AtIcon = (p: IconProps) => (
+  <Svg {...p}><circle cx="12" cy="12" r="4" /><path d="M16 8v5.5a2.5 2.5 0 0 0 5 0V12a9 9 0 1 0-3.5 7.1" /></Svg>
+);
 export const PaperclipIcon = (p: IconProps) => (
   <Svg {...p}><path d="m21 11.5-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l7.9-7.9" /></Svg>
 );
