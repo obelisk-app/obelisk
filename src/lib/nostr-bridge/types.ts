@@ -1,4 +1,5 @@
 import type { DMProtocol } from '@/store/dm';
+import type { JsDmFile } from '@/lib/dm-file';
 
 export interface JsForumTag {
   /** Short opaque slug. Stable across edits — threads reference this id. */
@@ -195,6 +196,16 @@ export interface JsDirectMessage {
    * optimistic: a send that falls back to classic records `false`.
    */
   readonly pq?: boolean;
+  /**
+   * Set when this message is a NIP-17 kind-15 file message: `content` is then
+   * the encrypted blob's URL, and this carries what the reader needs to
+   * fetch, verify and decrypt it. Never set on NIP-04 messages.
+   */
+  readonly file?: JsDmFile;
+  /** NIP-30 custom emoji carried on the rumor (NIP-17 only). */
+  readonly customEmojis?: Readonly<Record<string, string>>;
+  /** Obelisk `["sticker", name, url]` extension, same as group chat (NIP-17 only). */
+  readonly sticker?: { readonly name: string; readonly url: string; readonly packAddress?: string };
   /**
    * Optimistic-send fields, set only on outgoing placeholders the bridge
    * inserted for an in-flight or failed publish. See {@link JsMessage} for

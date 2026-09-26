@@ -35,6 +35,12 @@ export const KIND_GROUP_MEMBERS = 39002;
 /** NIP-17 — private message rumor (the inner unsigned event inside a 1059 gift wrap). */
 export const KIND_DM_RUMOR = 14;
 
+/**
+ * NIP-17 — file message rumor. `content` is the URL of an AES-GCM-encrypted
+ * Blossom blob; key, nonce and hashes ride in tags. See `src/lib/dm-file.ts`.
+ */
+export const KIND_DM_FILE_RUMOR = 15;
+
 /** NIP-59 — seal (kind 13), the inner signed event between rumor and gift wrap. */
 export const KIND_SEAL = 13;
 

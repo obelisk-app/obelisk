@@ -4,6 +4,7 @@ import {
   KIND_EMOJI_FAVORITES,
   KIND_EMOJI_SET,
   KIND_VOICE_PRESENCE,
+  KIND_DM_FILE_RUMOR,
 } from '@/lib/nip-kinds';
 import { EMPTY_MEDIA_FAVORITES, mediaFavoriteTags, mediaPackTags, parseMediaFavorites, parseMediaPack } from '@/lib/media-packs';
 import { BunkerSigner, parseBunkerInput, createNostrConnectURI } from 'nostr-tools/nip46';
@@ -59,6 +60,7 @@ import {
 import { customEmojiMapFromTags } from '@/lib/custom-emoji-tags';
 import { stickerFromTags } from '@/lib/sticker-tags';
 import { voiceNoteFromTags } from '@/lib/voice-note-tags';
+import { buildDmFileTags, parseDmFileRumor, type JsDmFile } from '@/lib/dm-file';
 import { matchesTerms, relaySearchTerm } from '@/lib/search-query';
 import { isTagColorKey } from '@/lib/forum-tag-colors';
 import type {
@@ -752,6 +754,20 @@ async function withDeadline<T>(promise: Promise<T>, timeoutMs: number, message: 
   }
 }
 
+/** Custom-emoji and sticker fields for a DM, parsed the same way group messages are. */
+function dmTagExtras(
+  content: string,
+  tags: ReadonlyArray<ReadonlyArray<string>>,
+): Pick<JsDirectMessage, 'customEmojis' | 'sticker'> {
+  if (tags.length === 0) return {};
+  const customEmojis = customEmojiMapFromTags(tags);
+  const sticker = stickerFromTags(content, tags);
+  return {
+    ...(Object.keys(customEmojis).length > 0 ? { customEmojis } : {}),
+    ...(sticker ? { sticker } : {}),
+  };
+}
+
 export class BridgeImpl {
   private pool: SimplePool;
   private relays: string[] = [DEFAULT_RELAY];
@@ -1372,6 +1388,8 @@ export class BridgeImpl {
     content: string;
     createdAt: number;
     protocol: DMProtocol;
+    file?: JsDmFile;
+    tags?: string[][];
   }>();
   adminsByGroup = new StateStore<Record<string, string[]>>({});
   membersByGroup = new StateStore<Record<string, string[]>>({});
@@ -1501,6 +1519,16 @@ export class BridgeImpl {
   private groupModerationDeletionSubscribedGroups = new Set<string>();
   private groupModerationDeletionSubByGroup = new Map<string, { close: () => void; markClosed?: () => void }>();
   private dmSubscribed = false;
+  /**
+   * Something asked for DMs this page-load (`subscribeDirectMessages`).
+   * `switchRelay` and `resetPoolForSessionChange` drop `dmSubscribed` along
+   * with the old pool, and the hook that opened the REQs only re-runs when
+   * `directMessagesEnabled` flips — so without this, the kind-1059 REQ stayed
+   * closed after a relay switch until something remounted. Invisible for
+   * chat (the next remount caught up on history), fatal for a call invite,
+   * which is only worth anything live. `connect()` reopens from this.
+   */
+  private dmWanted = false;
   private dmSubHandles: Array<{ close: () => void; markClosed?: () => void }> = [];
   private adminMemberSubscribedGroups = new Set<string>();
   private adminMemberSubByGroup = new Map<string, { close: () => void; markClosed?: () => void }>();
@@ -2716,6 +2744,8 @@ export class BridgeImpl {
         this.subscribeActiveCalls();
         this.subscribeLivePings();
         this.applyPendingResubscribe(pending);
+        // Reopen DM REQs the pool swap closed — see `dmWanted`.
+        if (this.dmWanted && !this.dmSubscribed) this.subscribeIncomingDMs();
       });
       this.connectionState.set('Connected');
       this.cancelReconnectTimer();
@@ -3105,6 +3135,7 @@ export class BridgeImpl {
       cb({});
       return () => {};
     }
+    this.dmWanted = true;
     if (!this.dmSubscribed) this.subscribeIncomingDMs();
     return this.dmsByPeer.subscribe(cb);
   }
@@ -3115,6 +3146,7 @@ export class BridgeImpl {
     }
     this.dmSubHandles = [];
     this.dmSubscribed = false;
+    this.dmWanted = false;
     this.authAllowedRelays.clear();
     this.myDmRelays = [];
   }
@@ -3373,18 +3405,48 @@ export class BridgeImpl {
     this.ingestEventDeletion(groupId, event);
   }
 
-  async sendDirectMessage(recipientPubkey: string, content: string): Promise<void> {
+  /**
+   * `extraTags` carries the same NIP-30 `emoji` / Obelisk `sticker` tags a
+   * group message does. They ride inside the rumor, so on NIP-17 they are as
+   * private as the text. A NIP-04 thread drops them: a kind 4's tags are in
+   * the clear, and a sticker tag would publish what was said.
+   */
+  async sendDirectMessage(recipientPubkey: string, content: string, extraTags: string[][] = []): Promise<void> {
+    this.startDirectSend(recipientPubkey, content, undefined, extraTags);
+  }
+
+  /**
+   * Send an already-encrypted, already-uploaded file as a NIP-17 kind-15
+   * rumor. The caller (`src/lib/dm-attachments.ts`) does the AES-GCM
+   * encryption and the anonymous Blossom upload; this only seals the
+   * metadata — URL, key, nonce, hashes — into a gift wrap.
+   *
+   * NIP-04 has no file message, and quietly sending the key in a kind-4
+   * would put it on a wire format with a visible sender and recipient, so a
+   * thread the user pinned to NIP-04 refuses outright.
+   */
+  async sendDirectFile(recipientPubkey: string, file: JsDmFile): Promise<void> {
+    if (resolveDmProtocol(recipientPubkey) !== 'nip17') {
+      throw new Error('Encrypted files need NIP-17 for this conversation');
+    }
+    this.startDirectSend(recipientPubkey, file.url, file);
+  }
+
+  private startDirectSend(recipientPubkey: string, content: string, file?: JsDmFile, extraTags: string[][] = []): void {
     if (!this.session) throw new Error('Not logged in');
     const clientTag = generateClientTag();
     const createdAt = Math.floor(Date.now() / 1000);
     // Per-thread override (`useDMStore.protocolOverrides`) if the user
     // picked one, otherwise NIP-17. See `resolveDmProtocol`.
     const protocol = resolveDmProtocol(recipientPubkey);
+    const tags = protocol === 'nip17' ? extraTags : [];
     const pendingMsg: JsDirectMessage = {
       id: `pending:${clientTag}`,
       counterparty: recipientPubkey,
       outgoing: true,
       content,
+      file,
+      ...dmTagExtras(content, tags),
       createdAt,
       pending: true,
       clientTag,
@@ -3397,9 +3459,9 @@ export class BridgeImpl {
       // marks on in-flight messages so this never flickers a wrong claim.
       pq: false,
     };
-    this.pendingDMSends.set(clientTag, { recipientPubkey, content, createdAt, protocol });
+    this.pendingDMSends.set(clientTag, { recipientPubkey, content, createdAt, protocol, file, tags });
     this.upsertPendingDM(recipientPubkey, pendingMsg);
-    void this.publishDirectMessage(recipientPubkey, content, clientTag, createdAt, protocol);
+    void this.publishDirectMessage(recipientPubkey, content, clientTag, createdAt, protocol, file, tags);
   }
 
   private async publishDirectMessage(
@@ -3408,9 +3470,12 @@ export class BridgeImpl {
     clientTag: string,
     createdAt: number,
     protocol: DMProtocol,
+    file?: JsDmFile,
+    extraTags: string[][] = [],
   ): Promise<void> {
     try {
       if (protocol === 'nip04') {
+        if (file) throw new Error('NIP-04 cannot carry an encrypted file');
         const cipher = await this.encryptNip04(recipientPubkey, content);
         // NIP-04 DMs are delivered to the recipient's NIP-65 read relays; without
         // this, sends to anyone whose read set doesn't include `this.relays` will
@@ -3455,10 +3520,17 @@ export class BridgeImpl {
       // committed to, rather than `buildChatMessage`'s own `Date.now()`, so
       // the placeholder, the finalized local copy and the self-copy that
       // comes back off the relay all agree to the second.
-      const inner: UnsignedEvent = {
-        ...buildChatMessage(me, recipientPubkey, content),
-        created_at: createdAt,
-      };
+      const chat = buildChatMessage(me, recipientPubkey, content);
+      // A file message is the same rumor shape with kind 15 and the
+      // decryption metadata appended to the chat message's `p` tag.
+      const inner: UnsignedEvent = file
+        ? {
+          ...chat,
+          kind: KIND_DM_FILE_RUMOR,
+          tags: [...chat.tags, ...buildDmFileTags(file)],
+          created_at: createdAt,
+        }
+        : { ...chat, tags: [...chat.tags, ...extraTags], created_at: createdAt };
       const rumorId = getEventHash(inner);
       // Post-quantum when the conversation qualifies, classic otherwise.
       // `resolvePqSend` never throws and returns null for every negative
@@ -3514,7 +3586,7 @@ export class BridgeImpl {
         // NIP-17 fuzzes both the seal's and the wrap's timestamps up to 2
         // days into the past for privacy, so the wrap's own timestamp would
         // make the just-sent message appear to have been sent days ago.
-        { id: rumorId, createdAt, protocol: 'nip17', pq },
+        { id: rumorId, createdAt, protocol: 'nip17', pq, file, tags: extraTags },
         content,
       );
       // Second wrap, addressed to us. Deliberately after the recipient's
@@ -3683,7 +3755,7 @@ export class BridgeImpl {
     const msg = list.find((m) => m.clientTag === clientTag);
     if (!msg || !msg.failed) return;
     this.flipPendingDMToPending(counterparty, clientTag);
-    void this.publishDirectMessage(args.recipientPubkey, args.content, clientTag, args.createdAt, args.protocol);
+    void this.publishDirectMessage(args.recipientPubkey, args.content, clientTag, args.createdAt, args.protocol, args.file, args.tags);
   }
 
   cancelPendingMessage(groupId: string, clientTag: string): void {
@@ -3776,7 +3848,7 @@ export class BridgeImpl {
     // belong to the ephemeral-keyed wrap, and the wrap's timestamp is
     // fuzzed up to 2 days into the past for privacy — neither is what the
     // sender's own thread should display.
-    params: { id: string; createdAt: number; protocol: DMProtocol; pq: boolean },
+    params: { id: string; createdAt: number; protocol: DMProtocol; pq: boolean; file?: JsDmFile; tags?: string[][] },
     plaintext: string,
   ): void {
     this.pendingDMSends.delete(clientTag);
@@ -3785,6 +3857,8 @@ export class BridgeImpl {
       counterparty,
       outgoing: true,
       content: plaintext,
+      ...(params.file ? { file: params.file } : {}),
+      ...dmTagExtras(plaintext, params.tags ?? []),
       createdAt: params.createdAt,
       protocol: params.protocol,
       pq: params.pq,
@@ -7061,7 +7135,15 @@ export class BridgeImpl {
     // prompt) and deserves a retry. Deliberately after the session/generation
     // guard, since a mid-flight account switch means a different ledger.
     markWrapSeen('dm', ev.id);
-    if (message.kind !== KIND_NIP44_DM) return; // ignore non-chat NIP-17 rumor kinds
+    let file: JsDmFile | undefined;
+    if (message.kind === KIND_DM_FILE_RUMOR) {
+      // An undecryptable file message (unknown algorithm, non-http URL) is
+      // dropped like any other rumor we cannot render.
+      file = parseDmFileRumor(message.content, message.tags) ?? undefined;
+      if (!file) return;
+    } else if (message.kind !== KIND_NIP44_DM) {
+      return; // ignore other NIP-17 rumor kinds
+    }
     const outgoing = senderPubkey === me;
     // Mirrors @nostr-wot/dm's own `handleGiftWrap`: an outgoing wrap (e.g. a
     // self-copy from another device) carries the real recipient in the
@@ -7077,6 +7159,8 @@ export class BridgeImpl {
       protocol: 'nip17',
       pq: pqTrack.current,
       notifyId: ev.id,
+      file,
+      tags: message.tags,
     });
   }
 
@@ -7090,8 +7174,11 @@ export class BridgeImpl {
     pq: boolean;
     /** Event id to attribute the notification card to (the on-the-wire id — the gift wrap's, not the inner rumor's — for NIP-17). */
     notifyId: string;
+    file?: JsDmFile;
+    /** Rumor tags (NIP-17 only) — custom emoji and sticker. */
+    tags?: ReadonlyArray<ReadonlyArray<string>>;
   }): void {
-    const { id, createdAt, plaintext, outgoing, counterparty, protocol, pq, notifyId } = params;
+    const { id, createdAt, plaintext, outgoing, counterparty, protocol, pq, notifyId, file, tags } = params;
     const dm: JsDirectMessage = {
       id,
       counterparty,
@@ -7100,6 +7187,8 @@ export class BridgeImpl {
       createdAt,
       protocol,
       pq,
+      ...(file ? { file } : {}),
+      ...(tags && !file ? dmTagExtras(plaintext, tags) : {}),
     };
     let isNew = false;
     let replacedClientTag: string | null = null;
@@ -7148,7 +7237,9 @@ export class BridgeImpl {
     const added = useNotificationsStore.getState().pushDmNotification({
       id: notifyId,
       senderPubkey: counterparty,
-      preview: plaintext.slice(0, 280),
+      // A file message's `content` is a Blossom URL; the card shows the
+      // filename instead (or nothing — the UI labels it an attachment).
+      preview: file ? (file.name ?? '') : plaintext.slice(0, 280),
       createdAt: createdAt * 1000,
     });
     if (!added) return;

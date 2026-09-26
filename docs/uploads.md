@@ -29,6 +29,16 @@ Obelisk validates HTTP(S) URLs before accepting media-pack, sticker, and voice
 markers. Availability, retention, abuse controls, and deletion remain policies
 of the selected Blossom server.
 
+## Encrypted DM attachments
+
+DM files and voice notes do not use `uploadToBlossom`. `uploadEncryptedBlob`
+uploads AES-256-GCM **ciphertext** as `application/octet-stream`, signs the
+kind `24242` auth with a throwaway key minted per upload (so the server never
+learns the uploader's npub), and binds each attempt to its server with a
+`server` tag. The key travels only inside the NIP-17 gift wrap. The ciphertext
+URL is still public by possession and cannot be revoked — it is just useless
+without the key. See [direct-messages.md](direct-messages.md#files-voice-notes-stickers).
+
 ## Media packs
 
 Emoji, GIF, and sticker pack files use this same flow. Named packs, item

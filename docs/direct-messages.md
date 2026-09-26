@@ -20,6 +20,9 @@ DMs live **in the bridge**, delegating the wire format to `@nostr-wot/dm`. There
 | `src/app/app/DesktopShell.tsx` (`DMPanel`) | Desktop thread view. |
 | `src/app/app/mobile/PhoneShell.tsx` (`DmThreadScreen`) | Mobile thread view. |
 | `src/components/chat/PqConversationNotice.tsx`, `PqMessageMark.tsx` | Post-quantum indicators. |
+| `src/components/chat/DmComposer.tsx` | The thread's message bar — the channel bar's widgets (attach, voice note, emoji / GIF / sticker picker, drop, paste) with encrypted uploads. Both shells mount it with `key={peer}`. |
+| `src/components/chat/DmMessageBody.tsx`, `EncryptedDmAttachment.tsx` | What goes inside a bubble; the fetch → verify → decrypt path for file messages. |
+| `src/lib/dm-file.ts`, `src/lib/dm-attachments.ts`, `src/lib/crypto/file-cipher.ts` | Kind-15 tag layout, encrypt + anonymous upload, AES-256-GCM. |
 
 `@nostr-wot/dm` types never leave `src/lib/nostr-bridge/`. That boundary is deliberate: if the SDK integration turns out wrong, the blast radius is the bridge's DM methods rather than every component.
 
@@ -30,6 +33,25 @@ DMs live **in the bridge**, delegating the wire format to `@nostr-wot/dm`. There
 - **Post-quantum is an optional third layer inside NIP-17**, described below. It is never a separate protocol and never changes anything outside the seal.
 
 Both inbound paths are live: kind-4 events and kind-1059 wraps ingest into the same `dmsByPeer` store, and each message records which one carried it.
+
+Rumor kinds the bridge reads out of a wrap: **14** (chat) and **15** (file message, below). Every other kind is marked seen in the wrap ledger and dropped — which is why a new rumor kind must ship its receive path in the same release as its send path: a wrap opened by a build that did not understand it is never re-opened.
+
+## Files, voice notes, stickers
+
+The DM bar is the channel bar (`DmComposer`), with one change: **every file and voice note is encrypted in the browser before it leaves**, and sent as a NIP-17 **kind-15 file message** rather than a URL in the text.
+
+1. `checkDmAttachment` — the channel's mime allowlist and size caps (`src/lib/attachments.ts`), on the base type (`MediaRecorder` reports `audio/webm;codecs=opus`).
+2. `encryptFile` — AES-256-GCM, fresh random key and 12-byte nonce per file.
+3. `uploadEncryptedBlob` — the **ciphertext** goes to Blossom as `application/octet-stream`, with a BUD-01 auth signed by a **throwaway key minted per upload** and bound to each server with a `server` tag. The server learns the blob's size and hash, not who stored it or what it is.
+4. `sendDirectFile` — a kind-15 rumor whose content is the blob URL and whose tags carry `file-type`, `encryption-algorithm: aes-gcm`, `decryption-key`, `decryption-nonce` (hex), `x` (SHA-256 of the ciphertext), `ox`, `size`, `dim`, plus Obelisk's `name` and, for a voice note, `duration`. Sealed, wrapped and routed exactly like a kind 14, including the self-copy and the post-quantum seal.
+
+On receipt `parseDmFileRumor` drops anything we could not decrypt (another algorithm, a non-http URL, a missing key). `EncryptedDmAttachment` fetches the blob, checks `x`, decrypts in memory and shows it from an object URL that is revoked on unmount — images, video and voice notes on mount, other files only on click. Nothing decrypted is written to disk.
+
+Stickers, GIFs and custom emoji are references to public pack URLs, as in a channel; their NIP-30 `emoji` / Obelisk `sticker` tags ride inside the rumor. On a NIP-04 thread the tags are dropped (a kind 4's tags are in the clear) and attach / voice are hidden — NIP-04 has no file message, and `sendDirectFile` refuses one.
+
+Bubbles render through `DmMessageBody`, not `MessageContent`: no link unfurls (that would hand our own `/api/link-preview` every URL two people send each other), and text keeps the bubble's colour.
+
+**What this does not hide.** The ciphertext URL is public by possession and cannot be revoked; anyone holding the URL *and* the rumor can decrypt. The blob's size is visible to the Blossom server, and fetching it reveals the reader's IP to that server, as any image does.
 
 ## Opt-in
 
@@ -48,6 +70,8 @@ DMs are the **one** thing in Obelisk that runs cross-relay. Everything group-rel
 | `{ kinds: [1059], '#p': [me] }` | `ingestIncomingGiftWrap` |
 
 Then `fetchMyDmRelays()` resolves our own kind-10050 (NIP-17 inbox) and kind-10002 (NIP-65 read/write) sets and duplicates all three filters onto any relay not already covered. Without this, DMs sent by clients that respect our published inbox would never arrive.
+
+A relay switch or a pool reset closes these REQs along with the old sockets. `connect()` reopens them itself when anything has asked for DMs this page-load (`dmWanted`), rather than waiting for a component to remount — a call invite is worth nothing a minute late.
 
 There is no "gift wraps authored by me" filter, and there cannot be: the wrap is signed by a fresh ephemeral key, not by us. That is why every NIP-17 send publishes a **second wrap addressed to ourselves** (below). The `{ kinds: [1059], '#p': [me] }` filter picks it up like any other inbound wrap, which is how the sender's own outgoing history survives a reload and reaches their other devices.
 
@@ -227,6 +251,9 @@ Incoming DMs push a card onto the DM notification stream (`useNotificationsStore
 - `src/lib/nostr-bridge/dm-nip17.test.ts` — NIP-17 default, inbox routing, forged-authorship rejection, all three login methods.
 - `src/lib/nostr-bridge/dm-pq-send.test.ts` — post-quantum send and receive, every negative case, the classic fallback.
 - `src/lib/nostr-bridge/optimistic-send.test.ts` — placeholder lifecycle.
+- `dm-nip17.test.ts` also covers kind-15 send and receive, the NIP-04 refusal, and the 1059 REQ reopening after `switchRelay`.
+- `src/lib/crypto/file-cipher.test.ts`, `src/lib/dm-file.test.ts`, `src/lib/dm-attachments.test.ts`, `src/lib/blossom.test.ts` — the file path end to end, without a relay.
+- `src/components/chat/DmComposer.test.tsx`, `DmMessageBody.test.tsx`, `EncryptedDmAttachment.test.tsx` — the bar, the bubble body, decrypt / integrity failure / revoke.
 - `src/lib/pq/*.test.ts` — attestations, capability, status lattice, send-plan resolution.
 - `src/app/app/DMPanel.pq.test.tsx` — indicator mounting, mark aggregation, on-accent contrast.
 - `src/app/app/DMList.identity.test.tsx` — the peer resolves through the social tier, and one batched lookup per list.

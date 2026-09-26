@@ -146,6 +146,27 @@ export const StarIcon = ({ filled = false, ...p }: IconProps & { filled?: boolea
 export const ChevronRightIcon = (p: IconProps) => (
   <Svg {...p}><path d="m9 6 6 6-6 6" /></Svg>
 );
+export const PaperclipIcon = (p: IconProps) => (
+  <Svg {...p}><path d="m21 11.5-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l7.9-7.9" /></Svg>
+);
+export const FileIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z" /><path d="M14 3v5h5" /></Svg>
+);
+export const DownloadIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></Svg>
+);
+export const LockIcon = (p: IconProps) => (
+  <Svg {...p}><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></Svg>
+);
+export const PhoneIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M5 4h3.5l1.8 4.4-2.3 1.5a11 11 0 0 0 6.1 6.1l1.5-2.3L20 15.5V19a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2Z" /></Svg>
+);
+export const PhoneOffIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M3 12.5c5-4.4 13-4.4 18 0l-2.2 2.9-3.3-1.4v-2.4a10 10 0 0 0-7 0V14l-3.3 1.4Z" /></Svg>
+);
+export const VideoIcon = (p: IconProps) => (
+  <Svg {...p}><rect x="3" y="6" width="13" height="12" rx="2" /><path d="m16 10.5 5-3v9l-5-3" /></Svg>
+);
 
 /**
  * "Add a reaction" — the Obelisk mark as a face, in accent green, with a

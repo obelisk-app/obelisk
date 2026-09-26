@@ -144,6 +144,8 @@ import { shortNpubLabel } from '@/lib/short-npub';
 import { isChannelMuted, useChannelPref } from '@/store/channel-prefs';
 import { guidesHref } from '@/lib/guide-urls';
 import { MESSAGE_INPUT_PROPS } from '@/lib/message-input-props';
+import { DmComposer } from '@/components/chat/DmComposer';
+import { DmMessageBody } from '@/components/chat/DmMessageBody';
 import { HELP_TOPICS, HELP_VIEW_MORE } from '@/lib/help-topics';
 import { subscribeVoiceJump } from '@/lib/voice/jump-to-voice';
 import { useVoiceChatPane } from '@/hooks/chat/useVoiceChatPane';
@@ -5270,7 +5272,6 @@ export function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string)
         })),
       )
     : [];
-  const [draft, setDraft] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   const stickToBottomRef = useRef(true);
   // Mirror the open peer into the DM store so `isUserWatchingDM` reflects
@@ -5306,19 +5307,6 @@ export function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string)
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [thread.length]);
-
-  function onSend(e: React.FormEvent) {
-    e.preventDefault();
-    if (!peer) return;
-    const content = draft.trim();
-    if (!content) return;
-    // Optimistic — bridge inserts a pending placeholder; the bubble surfaces
-    // its own retry button on failure, so we don't need a form-level error.
-    setDraft('');
-    nostrActions.sendDirectMessage(peer, content).catch((err) => {
-      console.warn('[desktop] sendDirectMessage scheduling failed', err);
-    });
-  }
 
   if (!peer) {
     return (
@@ -5405,7 +5393,7 @@ export function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string)
                   (m.failed ? ' ring-1 ring-red-500/60' : '')
                 }
               >
-                <div className="whitespace-pre-wrap break-words">{m.content}</div>
+                <DmMessageBody message={m} />
                 <div className={'mt-1 flex items-center justify-end gap-1.5 text-[10px] ' + (m.outgoing ? 'text-black/60' : 'text-lc-muted')}>
                   {/* `onAccent` because the outgoing bubble is `bg-lc-green`:
                       the default `text-lc-muted` is ~2:1 against it. This row
@@ -5449,24 +5437,9 @@ export function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string)
           })
         )}
       </div>
-      <form onSubmit={onSend} className="shrink-0 px-5 pt-3 pb-3">
-        <div className="flex min-h-[3.5rem] items-center gap-2 rounded-xl border border-lc-border bg-lc-card px-4 focus-within:border-lc-green">
-          <input
-            {...MESSAGE_INPUT_PROPS}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder={t('dm.placeholderEncrypted')}
-            className="flex-1 bg-transparent text-sm text-lc-white outline-none placeholder:text-lc-muted disabled:opacity-50"
-          />
-          <button
-            type="submit"
-            disabled={!draft.trim()}
-            className="text-xs font-semibold text-lc-green disabled:opacity-30"
-          >
-            {t('common.send')}
-          </button>
-        </div>
-      </form>
+      {/* The channel's message bar, with every file and voice note
+          encrypted before upload — see `DmComposer`. */}
+      <DmComposer key={peer} peer={peer} variant="desktop" />
     </div>
   );
 }

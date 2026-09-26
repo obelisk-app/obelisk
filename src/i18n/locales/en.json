@@ -1352,5 +1352,16 @@
   "roles.confirmDelete": "Delete “{name}”?",
   "roles.confirmDeleteBody": "Everyone holding it loses the badge.",
   "media.confirmDeletePack": "Delete “{title}”?",
-  "media.confirmDeletePackBody": "This sends a Nostr deletion request and cannot be undone."
+  "media.confirmDeletePackBody": "This sends a Nostr deletion request and cannot be undone.",
+  "dm.file.decrypting": "Decrypting…",
+  "dm.file.failed": "Couldn't open this encrypted file",
+  "dm.file.integrity": "This file doesn't match what was sent",
+  "dm.file.download": "Download",
+  "dm.file.open": "Decrypt and show",
+  "dm.file.attachment": "Encrypted attachment",
+  "dm.file.uploading": "Encrypting and uploading…",
+  "dm.file.tooLarge": "That file is too large",
+  "dm.file.badType": "That file type isn't supported",
+  "dm.file.uploadFailed": "Upload failed",
+  "dm.file.needsNip17": "Encrypted files need NIP-17 for this conversation"
 }

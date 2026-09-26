@@ -1352,5 +1352,16 @@
   "roles.confirmDelete": "¿Eliminar “{name}”?",
   "roles.confirmDeleteBody": "Todos los que lo tienen pierden la insignia.",
   "media.confirmDeletePack": "¿Eliminar “{title}”?",
-  "media.confirmDeletePackBody": "Esto envía una solicitud de borrado de Nostr y no se puede deshacer."
+  "media.confirmDeletePackBody": "Esto envía una solicitud de borrado de Nostr y no se puede deshacer.",
+  "dm.file.decrypting": "Descifrando…",
+  "dm.file.failed": "No se pudo abrir este archivo cifrado",
+  "dm.file.integrity": "Este archivo no coincide con el que se envió",
+  "dm.file.download": "Descargar",
+  "dm.file.open": "Descifrar y mostrar",
+  "dm.file.attachment": "Adjunto cifrado",
+  "dm.file.uploading": "Cifrando y subiendo…",
+  "dm.file.tooLarge": "Ese archivo es demasiado grande",
+  "dm.file.badType": "Ese tipo de archivo no está soportado",
+  "dm.file.uploadFailed": "Falló la subida",
+  "dm.file.needsNip17": "Los archivos cifrados necesitan NIP-17 en esta conversación"
 }

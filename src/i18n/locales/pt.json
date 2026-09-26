@@ -1352,5 +1352,16 @@
   "roles.confirmDelete": "Excluir “{name}”?",
   "roles.confirmDeleteBody": "Todos que o possuem perdem a insígnia.",
   "media.confirmDeletePack": "Excluir “{title}”?",
-  "media.confirmDeletePackBody": "Isso envia uma solicitação de exclusão do Nostr e não pode ser desfeito."
+  "media.confirmDeletePackBody": "Isso envia uma solicitação de exclusão do Nostr e não pode ser desfeito.",
+  "dm.file.decrypting": "Descriptografando…",
+  "dm.file.failed": "Não foi possível abrir este arquivo criptografado",
+  "dm.file.integrity": "Este arquivo não corresponde ao que foi enviado",
+  "dm.file.download": "Baixar",
+  "dm.file.open": "Descriptografar e mostrar",
+  "dm.file.attachment": "Anexo criptografado",
+  "dm.file.uploading": "Criptografando e enviando…",
+  "dm.file.tooLarge": "Esse arquivo é grande demais",
+  "dm.file.badType": "Esse tipo de arquivo não é suportado",
+  "dm.file.uploadFailed": "Falha no envio",
+  "dm.file.needsNip17": "Arquivos criptografados precisam de NIP-17 nesta conversa"
 }

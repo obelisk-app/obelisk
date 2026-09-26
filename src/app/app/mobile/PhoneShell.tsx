@@ -198,6 +198,8 @@ import { type ScreenName, type NavState, initialNav, urlFor, parseUrl } from './
 import { buildSeedHistory, decideSnap, decideSwipeNav, decideTabPress, isAdjacentTabSwitch, neighborsFor, NAV_ORDER, resolveParent } from './swipe-nav';
 import { useKeyboardInset } from './use-keyboard';
 import { MESSAGE_INPUT_PROPS } from '@/lib/message-input-props';
+import { DmComposer } from '@/components/chat/DmComposer';
+import { DmMessageBody } from '@/components/chat/DmMessageBody';
 import { channelScrollPositionKey } from '@/lib/channel-scroll-position';
 import { channelInitialAnchorFromCursor } from '@/lib/channel-scroll-anchor';
 import { useChannelScrollPosition } from '@/hooks/chat/useChannelScrollPosition';
@@ -3863,7 +3865,6 @@ function DmThreadScreen({
   const dms = useDirectMessages();
   const meta = useAuthor(peer);
   const myPubkey = useMyPubkey();
-  const [draft, setDraft] = useState('');
   const msgsRef = useRef<HTMLDivElement>(null);
   // Same gate and same aggregation as desktop (`DMPanel`) — mobile is a
   // first-class surface here, not a reduced one: it is where the default
@@ -3901,17 +3902,6 @@ function DmThreadScreen({
     if (!el) return;
     requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
   }, [messages.length]);
-
-  const send = () => {
-    const text = draft.trim();
-    if (!text) return;
-    // Optimistic — placeholder appears with a spinner; the bubble surfaces a
-    // retry button on failure so we don't gate the composer on send state.
-    setDraft('');
-    nostrActions.sendDirectMessage(peer, text).catch((err) => {
-      console.warn('[mobile] sendDirectMessage scheduling failed', err);
-    });
-  };
 
   const onRetry = (clientTag: string) => {
     void nostrActions.retryDirectMessage(peer, clientTag);
@@ -3989,7 +3979,7 @@ function DmThreadScreen({
                 + (it.msg.failed ? ' failed' : '')
               }
             >
-              <div className="dm-bubble-text">{it.msg.content}</div>
+              <div className="dm-bubble-text"><DmMessageBody message={it.msg} /></div>
               <div className="dm-bubble-meta">
                 {/* `onAccent` on outgoing: the bubble is `var(--accent)` with
                     `var(--accent-ink)` text, the same contrast trap as
@@ -4024,37 +4014,7 @@ function DmThreadScreen({
         )}
       </div>
 
-      <div className="composer">
-        <div className="composer-inner">
-          <button className="composer-attach" aria-label={t('dm.attach')}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
-          </button>
-          <input
-            {...MESSAGE_INPUT_PROPS}
-            className="composer-input"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder={t('dm.placeholderEncrypted')}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                send();
-              }
-            }}
-          />
-          <div className="composer-btns">
-            {draft.trim() ? (
-              <button className="composer-send" onClick={() => send()} aria-label={t('common.send')}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 14-7-7 14-2-5-5-2z" /></svg>
-              </button>
-            ) : (
-              <button className="composer-emoji" aria-label={t('mobile.composer.emoji')}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01" /></svg>
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
+      <DmComposer key={peer} peer={peer} variant="mobile" />
     </div>
   );
 }
