@@ -41,6 +41,15 @@ export const KIND_DM_RUMOR = 14;
  */
 export const KIND_DM_FILE_RUMOR = 15;
 
+/**
+ * Obelisk DM calls — the rumor kind for call control (invite / accept /
+ * decline / cancel / hangup / busy). Never on the wire in the clear: it only
+ * ever travels sealed and gift-wrapped like a kind 14, so a relay sees an
+ * ordinary kind 1059. The WebRTC negotiation that follows runs on per-call
+ * throwaway keys (kind 25050, NIP-44 content) — see docs/voice/dm-calls.md.
+ */
+export const KIND_DM_CALL_RUMOR = 25055;
+
 /** NIP-59 — seal (kind 13), the inner signed event between rumor and gift wrap. */
 export const KIND_SEAL = 13;
 

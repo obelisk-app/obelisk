@@ -13,6 +13,7 @@ import LanguagePreference from '@/components/LanguagePreference';
 import AppearancePreferenceControls from '@/components/AppearancePreferenceControls';
 import NotificationSettings from '@/components/settings/NotificationSettings';
 import SocialRelaySettings from '@/components/settings/SocialRelaySettings';
+import CallSettings from '@/components/settings/CallSettings';
 import MutedAndBlocked from '@/components/settings/MutedAndBlocked';
 import ProfileAppearanceEditor from '@/components/ProfileAppearanceEditor';
 import { uploadToBlossom } from '@/lib/blossom';
@@ -539,6 +540,7 @@ export function PrivacySettingsSection() {
         />
         <PostQuantumStatusRow />
       </div>
+      <CallSettings />
       <MutedAndBlocked />
       <WotSettings />
     </div>

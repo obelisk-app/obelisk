@@ -130,6 +130,7 @@ import { ChannelActionSheet } from '@/components/chat/ChannelContextMenu';
 import { isChannelMuted, useChannelPref } from '@/store/channel-prefs';
 import SocialRelaySettings from '@/components/settings/SocialRelaySettings';
 import MutedAndBlocked from '@/components/settings/MutedAndBlocked';
+import CallSettings from '@/components/settings/CallSettings';
 import AccountBackupExport from '@/components/settings/AccountBackupExport';
 import DeveloperSignatureTest from '@/components/settings/DeveloperSignatureTest';
 import { clearAllClientCacheExceptSession } from '@/lib/nostr-bridge/cache-clear';
@@ -199,6 +200,8 @@ import { buildSeedHistory, decideSnap, decideSwipeNav, decideTabPress, isAdjacen
 import { useKeyboardInset } from './use-keyboard';
 import { MESSAGE_INPUT_PROPS } from '@/lib/message-input-props';
 import { DmComposer } from '@/components/chat/DmComposer';
+import { DmCallButtons } from '@/components/call/DmCallButtons';
+import { DmCallLayer } from '@/components/call/DmCallLayer';
 import { DmMessageBody } from '@/components/chat/DmMessageBody';
 import { channelScrollPositionKey } from '@/lib/channel-scroll-position';
 import { channelInitialAnchorFromCursor } from '@/lib/channel-scroll-anchor';
@@ -3952,6 +3955,7 @@ function DmThreadScreen({
             are about the gift wrap, which matters to every user. One icon,
             tapped rather than hovered on a phone. */}
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 2 }}>
+          <DmCallButtons peer={peer} variant="mobile" />
           <PqShield
             level={protectionLevel({ giftWrapped: sendProtocol !== 'nip04', status: pqStatus })}
             guideHref={guidesHref(locale, 'quantum-safe-dms')}
@@ -6060,6 +6064,7 @@ export function SettingsPrefsScreen({ go }: { go: (s: ScreenName, dir?: 'forward
         </div>
         <NotificationSettings mobile />
         <SocialRelaySettings mobile />
+        <CallSettings mobile />
         <MutedAndBlocked mobile />
         <DeveloperSignatureTest mobile />
         <div className="settings-section">
@@ -7044,6 +7049,7 @@ export default function MobileShell() {
       <MessageZapModal />
       <GameModalHost />
       <BackgroundVoiceAudio />
+      <DmCallLayer />
       <div className="screens-host" ref={screensHostRef}>
         <div ref={dragLayerRef} className={`drag-layer ${isDragging ? 'is-dragging' : ''}`}>
           {/* All four top-level screens are persistently mounted with stable

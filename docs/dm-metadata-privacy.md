@@ -119,6 +119,17 @@ needs a second, anonymous pool, which is a larger change than this branch.
 
 These are worth stating plainly rather than implying the fix is total.
 
+## Calls
+
+DM calls ride this same routing for their control messages (invite,
+accept, …), with two differences:
+
+- The wraps carry an `expiration`, which makes them distinguishable from chat wraps.
+- The WebRTC negotiation runs on separate, user-chosen call relays, under per-call throwaway keys.
+
+The call relays never see a real npub. The inbox relays see one more
+expiring wrap. See [voice/dm-calls.md](voice/dm-calls.md#what-this-does-not-hide).
+
 ## Rules for anyone changing DM routing
 
 - Adding a relay to a publish target is a privacy decision, not a delivery

@@ -8,6 +8,9 @@
  *   • `mention` — rising two-note motif (someone said `@you`)
  *   • `reply`   — falling two-note motif (someone answered you)
  *   • `dm`      — four-note arpeggio (a private message)
+ *   • `ring`    — a longer rising-and-answering figure, looped while a DM
+ *                 call is ringing you (`startRingLoop`)
+ *   • `ringback`— two quiet notes, looped for the caller while it rings
  *
  * The signal path is voice → master gain → compressor → out, with a send
  * to a convolver whose impulse is generated noise (a short "room"), so the
@@ -23,7 +26,7 @@
 
 import { getPreferences, type NotificationRingtone } from '@/lib/preferences';
 
-export type NotificationSoundKind = 'mention' | 'reply' | 'dm';
+export type NotificationSoundKind = 'mention' | 'reply' | 'dm' | 'ring' | 'ringback';
 
 export type RingtoneId = NotificationRingtone;
 
@@ -67,7 +70,17 @@ const PHRASES: Record<NotificationSoundKind, Phrase> = {
   mention: [[0, 0, 0.8], [7, 0.11, 1]],
   reply: [[7, 0, 0.9], [4, 0.12, 0.8]],
   dm: [[0, 0, 0.7], [4, 0.085, 0.75], [7, 0.17, 0.85], [12, 0.255, 1]],
+  // Call-and-answer: the arpeggio up, then the top two notes again, so it
+  // reads as "phone" rather than as another message chime.
+  ring: [
+    [0, 0, 0.8], [4, 0.12, 0.85], [7, 0.24, 0.9], [12, 0.36, 1],
+    [7, 0.72, 0.85], [12, 0.84, 1],
+  ],
+  ringback: [[0, 0, 0.45], [7, 0.3, 0.4]],
 };
+
+/** Seconds between the starts of two ring phrases. */
+export const RING_PERIOD_MS: Record<'ring' | 'ringback', number> = { ring: 2400, ringback: 3000 };
 
 const RINGTONE_DEFS: Record<RingtoneId, Ringtone> = {
   // Glassy bell: slightly inharmonic upper partials, long shimmering tail.
@@ -302,6 +315,37 @@ export function previewRingtone(ringtone: RingtoneId, kind: NotificationSoundKin
   } catch {
     return false;
   }
+}
+
+/**
+ * Loop a call sound until the returned stop function is called. Bypasses the
+ * burst throttle (a ring is one sound repeated on purpose) and uses the
+ * user's ringtone, so a call sounds like the rest of their notifications.
+ *
+ * Returns the first attempt's result too: `'blocked'` means the page has had
+ * no gesture yet and nothing will be heard, so the caller should lean on the
+ * OS notification. The loop keeps trying anyway — the first click on the
+ * page unblocks it mid-ring.
+ */
+export function startRingLoop(kind: 'ring' | 'ringback'): { stop: () => void; first: PlayResult } {
+  const attempt = (): PlayResult => {
+    try {
+      return play(kind, currentRingtone());
+    } catch {
+      return 'unavailable';
+    }
+  };
+  const first = attempt();
+  const timer = setInterval(attempt, RING_PERIOD_MS[kind]);
+  let stopped = false;
+  return {
+    first,
+    stop: () => {
+      if (stopped) return;
+      stopped = true;
+      clearInterval(timer);
+    },
+  };
 }
 
 /** Test seam — forget the throttle and the cached context. */

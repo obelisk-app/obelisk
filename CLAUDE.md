@@ -180,6 +180,7 @@ predictable:
 | DMs (kind 4 + kind 1059 gift wraps) | **NIP-65 read+write union** of the user's relay list, plus our kind-10050 inbox |
 | DM read-state cursors + `inboxLastReadAt` (NIP-59 wraps) | **NIP-65 read+write union** |
 | Voice signaling / SFU RPC (kinds 20078, 25050, 31313, 31314) | Per-channel relay set (mesh: the relay the call was joined on, kept while browsing elsewhere — its NIP-42 AUTH is answered only while the call's roster/signal subs are open; SFU: pinned trust set). Mesh REQs are tag-indexed (`#e` roster, `#p` signals) — see [docs/voice/mesh-protocol.md](docs/voice/mesh-protocol.md) |
+| DM call negotiation (kind 25050, `t: obelisk-dm-call`) | **`preferences.callRelays`**, the caller's list carried in the gift-wrapped invite. Separate pool, signed by per-call throwaway keys, AUTH only as that throwaway key — never the group relay, never the real key. Control messages (kind 25055 rumors) ride the DM inbox ladder. See [docs/voice/dm-calls.md](docs/voice/dm-calls.md) |
 | Social feeds / profiles (kinds 1, 6, 7, 16, 20, 1111, 9735, 9802, 30023) | **`preferences.socialRelays`** — user-chosen public relays, never the group relay. See [docs/social-feeds.md](docs/social-feeds.md) |
 
 Publishing has one extra rule that reads do not, because a publish rides an
@@ -348,7 +349,7 @@ relay-supplied string into a style attribute.
 | NIP-78 | Application-specific data | Channel layout (kind 30078); also the inner rumor kind for NIP-59-wrapped read state |
 | NIP-98 | HTTP authentication | Blossom upload-auth |
 
-Obelisk-specific kinds (voice 20078/25050/25052, SFU 31313/31314, games 2390)
+Obelisk-specific kinds (voice 20078/25050/25052, DM call rumor 25055, SFU 31313/31314, games 2390)
 are documented in `src/lib/nip-kinds.ts` — that file is the single source of
 truth for every kind the app publishes.
 

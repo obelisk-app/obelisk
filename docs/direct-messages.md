@@ -34,7 +34,7 @@ DMs live **in the bridge**, delegating the wire format to `@nostr-wot/dm`. There
 
 Both inbound paths are live: kind-4 events and kind-1059 wraps ingest into the same `dmsByPeer` store, and each message records which one carried it.
 
-Rumor kinds the bridge reads out of a wrap: **14** (chat) and **15** (file message, below). Every other kind is marked seen in the wrap ledger and dropped — which is why a new rumor kind must ship its receive path in the same release as its send path: a wrap opened by a build that did not understand it is never re-opened.
+Rumor kinds the bridge reads out of a wrap: **14** (chat), **15** (file message, below) and **25055** (call control — never enters `dmsByPeer`; see [docs/voice/dm-calls.md](voice/dm-calls.md)). Every other kind is marked seen in the wrap ledger and dropped — which is why a new rumor kind must ship its receive path in the same release as its send path: a wrap opened by a build that did not understand it is never re-opened.
 
 ## Files, voice notes, stickers
 

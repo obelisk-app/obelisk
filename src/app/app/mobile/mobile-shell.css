@@ -2366,6 +2366,15 @@
   flex-shrink: 0;
   padding-top: max(10px, env(safe-area-inset-top));
 }
+.obelisk-mobile .dm-header-action {
+  color: var(--app-text);
+  background: transparent;
+  border: 0;
+  flex-shrink: 0;
+}
+.obelisk-mobile .dm-header-action:active {
+  background: var(--app-line-soft);
+}
 .obelisk-mobile .dm-header .dm-ava-list {
   width: 40px;
   height: 40px;

@@ -5,6 +5,8 @@ import {
   KIND_EMOJI_SET,
   KIND_VOICE_PRESENCE,
   KIND_DM_FILE_RUMOR,
+  KIND_DM_CALL_RUMOR,
+  KIND_SEAL,
 } from '@/lib/nip-kinds';
 import { EMPTY_MEDIA_FAVORITES, mediaFavoriteTags, mediaPackTags, parseMediaFavorites, parseMediaPack } from '@/lib/media-packs';
 import { BunkerSigner, parseBunkerInput, createNostrConnectURI } from 'nostr-tools/nip46';
@@ -61,6 +63,13 @@ import { customEmojiMapFromTags } from '@/lib/custom-emoji-tags';
 import { stickerFromTags } from '@/lib/sticker-tags';
 import { voiceNoteFromTags } from '@/lib/voice-note-tags';
 import { buildDmFileTags, parseDmFileRumor, type JsDmFile } from '@/lib/dm-file';
+import {
+  encodeDmCallMessage,
+  isFreshCallMessage,
+  parseDmCallMessage,
+  type DmCallMessage,
+  type IncomingDmCallMessage,
+} from '@/lib/dm-call/protocol';
 import { matchesTerms, relaySearchTerm } from '@/lib/search-query';
 import { isTagColorKey } from '@/lib/forum-tag-colors';
 import type {
@@ -753,6 +762,9 @@ async function withDeadline<T>(promise: Promise<T>, timeoutMs: number, message: 
     if (timer) clearTimeout(timer);
   }
 }
+
+/** NIP-40 lifetime of a call-control gift wrap. */
+const CALL_WRAP_TTL_S = 5 * 60;
 
 /** Custom-emoji and sticker fields for a DM, parsed the same way group messages are. */
 function dmTagExtras(
@@ -1529,6 +1541,8 @@ export class BridgeImpl {
    * which is only worth anything live. `connect()` reopens from this.
    */
   private dmWanted = false;
+  /** Listeners for DM call control messages — see {@link subscribeDmCallMessages}. */
+  private dmCallListeners = new Set<(msg: IncomingDmCallMessage & { peer: string }) => void>();
   private dmSubHandles: Array<{ close: () => void; markClosed?: () => void }> = [];
   private adminMemberSubscribedGroups = new Set<string>();
   private adminMemberSubByGroup = new Map<string, { close: () => void; markClosed?: () => void }>();
@@ -3701,6 +3715,121 @@ export class BridgeImpl {
         eventKind: KIND_GIFT_WRAP,
         reason: e instanceof Error ? e.message : String(e),
       });
+    }
+  }
+
+  /**
+   * Send a DM call control message (invite / accept / decline / cancel /
+   * hangup / busy), sealed and gift-wrapped exactly like a chat message and
+   * routed to the recipient's NIP-17 inbox by the same ladder.
+   *
+   * Two differences from a chat send, both because the message is only worth
+   * anything for a minute:
+   *
+   * - The wrap carries a NIP-40 `expiration` a few minutes out, so an inbox
+   *   relay drops it instead of keeping a record of every call forever. The
+   *   cost is that a relay can tell a short-lived wrap from a message wrap —
+   *   see docs/voice/dm-calls.md.
+   * - No self-copy for history. The one exception is `selfNotice`: an accept
+   *   or decline is also wrapped to ourselves so our *other* devices stop
+   *   ringing ("answered elsewhere").
+   */
+  async sendDmCallMessage(
+    recipientPubkey: string,
+    msg: DmCallMessage,
+    opts: { selfNotice?: boolean } = {},
+  ): Promise<void> {
+    const me = this.session?.pubKeyHex;
+    if (!me) throw new Error('Not logged in');
+    if (!getPreferences().directMessagesEnabled) throw new Error('Direct messages are off');
+    const signer = this.getDmSigner();
+    if (!signer) throw new Error('Not logged in');
+    const now = Math.floor(Date.now() / 1000);
+    const rumor: UnsignedEvent = {
+      pubkey: me,
+      kind: KIND_DM_CALL_RUMOR,
+      created_at: now,
+      tags: [['p', recipientPubkey]],
+      content: encodeDmCallMessage(msg),
+    };
+    const expiresAt = now + CALL_WRAP_TTL_S;
+    const wrap = await this.sealAndWrapExpiring(signer, recipientPubkey, rumor, expiresAt);
+    const { relays } = await this.resolveGiftWrapRelays(recipientPubkey);
+    // Same rule as chat: never volunteer a NIP-42 identity on the socket
+    // carrying an ephemeral-keyed wrap.
+    await this.publishSignedEvent(wrap, relays, { quiet: true, authMode: 'last-resort' });
+    if (opts.selfNotice) {
+      try {
+        const selfWrap = await this.sealAndWrapExpiring(signer, me, rumor, expiresAt);
+        const ownInbox = Array.from(new Set([...this.relays, ...this.myDmRelays]));
+        await this.publishSignedEvent(selfWrap, ownInbox, { quiet: true, authMode: 'last-resort' });
+      } catch {
+        // Other devices keep ringing until the caller's cancel or the timeout.
+      }
+    }
+  }
+
+  /**
+   * `sealAndGiftWrap` with an `expiration` tag on the outer wrap, which the
+   * SDK's version does not take. Same construction otherwise: rumor sealed by
+   * us (kind 13, NIP-44 to the recipient, fuzzed timestamp), then wrapped by
+   * a fresh ephemeral key per call.
+   */
+  private async sealAndWrapExpiring(
+    signer: DmNostrSigner,
+    recipientPubkey: string,
+    rumor: UnsignedEvent,
+    expiresAt: number,
+  ): Promise<NostrEvent> {
+    if (!signer.nip44Encrypt) throw new Error('Signer does not support NIP-44');
+    const fuzzed = () => Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 2 * 24 * 3600);
+    const inner = { ...rumor, id: getEventHash(rumor) };
+    const seal = await signer.signEvent({
+      kind: KIND_SEAL,
+      created_at: fuzzed(),
+      tags: [],
+      content: await signer.nip44Encrypt(recipientPubkey, JSON.stringify(inner)),
+    });
+    const ephSk = generateSecretKey();
+    const conv = nip44.utils.getConversationKey(ephSk, recipientPubkey);
+    return finalizeEvent(
+      {
+        kind: KIND_GIFT_WRAP,
+        created_at: fuzzed(),
+        tags: [['p', recipientPubkey], ['expiration', String(expiresAt)]],
+        content: nip44.encrypt(JSON.stringify(seal), conv),
+      },
+      ephSk,
+    );
+  }
+
+  /**
+   * Call control messages never enter `dmsByPeer`; they go to whoever is
+   * listening (the DM call store). Stale ones are dropped here — a
+   * reconnect's backlog must not ring you for a call that ended an hour ago.
+   *
+   * `peer` is the other party: the sender for an inbound message, the rumor's
+   * `p` tag for our own notice from another device.
+   */
+  subscribeDmCallMessages(cb: (msg: IncomingDmCallMessage & { peer: string }) => void): Unsubscribe {
+    this.dmCallListeners.add(cb);
+    return () => { this.dmCallListeners.delete(cb); };
+  }
+
+  private ingestDmCallMessage(message: UnsignedEvent & { id: string }, senderPubkey: string): void {
+    if (!isFreshCallMessage(message.created_at)) return;
+    const parsed = parseDmCallMessage(message.content);
+    if (!parsed) return;
+    const me = this.session?.pubKeyHex;
+    if (!me) return;
+    const pTag = message.tags.find((t) => t[0] === 'p')?.[1];
+    const peer = senderPubkey === me ? pTag : senderPubkey;
+    if (!peer || peer === me) return;
+    // An inbound message must be addressed to us, not merely delivered to us.
+    if (senderPubkey !== me && pTag !== me) return;
+    const incoming = { ...parsed, from: senderPubkey, sentAt: message.created_at, peer };
+    for (const cb of this.dmCallListeners) {
+      try { cb(incoming); } catch (e) { console.warn('[dm-call] listener failed', e); }
     }
   }
 
@@ -7135,6 +7264,10 @@ export class BridgeImpl {
     // prompt) and deserves a retry. Deliberately after the session/generation
     // guard, since a mid-flight account switch means a different ledger.
     markWrapSeen('dm', ev.id);
+    if (message.kind === KIND_DM_CALL_RUMOR) {
+      this.ingestDmCallMessage(message, senderPubkey);
+      return;
+    }
     let file: JsDmFile | undefined;
     if (message.kind === KIND_DM_FILE_RUMOR) {
       // An undecryptable file message (unknown algorithm, non-http URL) is

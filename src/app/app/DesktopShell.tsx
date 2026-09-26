@@ -145,6 +145,8 @@ import { isChannelMuted, useChannelPref } from '@/store/channel-prefs';
 import { guidesHref } from '@/lib/guide-urls';
 import { MESSAGE_INPUT_PROPS } from '@/lib/message-input-props';
 import { DmComposer } from '@/components/chat/DmComposer';
+import { DmCallButtons } from '@/components/call/DmCallButtons';
+import { DmCallLayer } from '@/components/call/DmCallLayer';
 import { DmMessageBody } from '@/components/chat/DmMessageBody';
 import { HELP_TOPICS, HELP_VIEW_MORE } from '@/lib/help-topics';
 import { subscribeVoiceJump } from '@/lib/voice/jump-to-voice';
@@ -559,6 +561,7 @@ export default function AppShell() {
       <RelayAccessModal />
       <BackgroundVoiceAudio />
       <DirectMessageSubscriptionAnchor />
+      <DmCallLayer />
       <RelayTopBar
         relay={relay}
         onSocialSurface={view.kind === 'feed'}
@@ -5343,6 +5346,7 @@ export function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string)
             a user who turned that off still benefits from knowing whether the
             wrap is hiding who they talk to. It is one icon, so it cannot nag. */}
         <span className="ml-auto flex items-center gap-1">
+          <DmCallButtons peer={peer} />
           <PqShield
             level={protectionLevel({ giftWrapped: sendProtocol !== 'nip04', status: pqStatus })}
             guideHref={guidesHref(locale, 'quantum-safe-dms')}

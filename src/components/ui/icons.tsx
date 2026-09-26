@@ -164,6 +164,21 @@ export const PhoneIcon = (p: IconProps) => (
 export const PhoneOffIcon = (p: IconProps) => (
   <Svg {...p}><path d="M3 12.5c5-4.4 13-4.4 18 0l-2.2 2.9-3.3-1.4v-2.4a10 10 0 0 0-7 0V14l-3.3 1.4Z" /></Svg>
 );
+export const MicIcon = (p: IconProps) => (
+  <Svg {...p}><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" /></Svg>
+);
+export const MicOffIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M15 10V6a3 3 0 0 0-5.7-1.3M9 9v2a3 3 0 0 0 4.6 2.5M5 11a7 7 0 0 0 11.3 5.5M19 11a7 7 0 0 1-.6 2.9M12 18v3M3 3l18 18" /></Svg>
+);
+export const VideoOffIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M10 6h4a2 2 0 0 1 2 2v2.5l5-3v9l-3-1.8M16 16a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2M3 3l18 18" /></Svg>
+);
+export const ScreenShareIcon = (p: IconProps) => (
+  <Svg {...p}><rect x="3" y="4" width="18" height="12" rx="2" /><path d="M8 20h8M12 16v4M12 13V8M9.5 10.5 12 8l2.5 2.5" /></Svg>
+);
+export const FlipCameraIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M4 8h3l2-3h6l2 3h3v11H4Z" /><path d="M9.5 13.5a2.5 2.5 0 0 1 4.3-1.8M14.5 13.5a2.5 2.5 0 0 1-4.3 1.8M13.8 10.2v1.5h-1.5M10.2 16.8v-1.5h1.5" /></Svg>
+);
 export const VideoIcon = (p: IconProps) => (
   <Svg {...p}><rect x="3" y="6" width="13" height="12" rx="2" /><path d="m16 10.5 5-3v9l-5-3" /></Svg>
 );
