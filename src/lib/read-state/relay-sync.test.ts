@@ -14,7 +14,7 @@ const subscribeMock = vi.fn<SubFn>(() => () => {});
 const publishMock = vi.fn(
   async (
     _e: NostrEvent,
-    _opts?: { extraRelays?: readonly string[]; mode?: 'replace' | 'append' },
+    _opts?: { extraRelays?: readonly string[]; mode?: 'replace' | 'append'; quiet?: boolean },
   ) => {},
 );
 const publishSignedMock = vi.fn(
@@ -336,7 +336,9 @@ describe('startGroupsRelaySync publish (debounced)', () => {
     // cursor advances replace rather than accumulate.
     expect(event.kind).toBe(30078);
     expect(event.tags).toEqual([['d', D_TAG_GROUPS]]);
-    expect(opts).toEqual({ extraRelays: ['wss://relay.test'], mode: 'replace' });
+    // `quiet`: this flush fires on every channel open, and logging it put a
+    // "Publishing to relays · kind 30078" toast on every screen.
+    expect(opts).toEqual({ extraRelays: ['wss://relay.test'], mode: 'replace', quiet: true });
     // Payload is encrypted to self: the relay stores an opaque blob.
     expect(event.content).not.toContain('g1');
     expect(() => JSON.parse(event.content)).toThrow();

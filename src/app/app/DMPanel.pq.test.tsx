@@ -35,6 +35,15 @@ vi.mock('@/lib/nostr-bridge', () => ({
   },
 }));
 
+// The panel resolves the peer through the social tier now (see `useAuthor`),
+// which would otherwise open real sockets to the public relays from jsdom.
+vi.mock('@/lib/social/useAuthor', () => ({
+  useAuthor: () => ({
+    displayName: 'Bob', name: null, picture: null,
+    nip05: null, about: null, banner: null, lud16: null,
+  }),
+}));
+
 vi.mock('@/lib/pq/attestations', () => ({
   hasUsableKeys: (pk: string) => hasUsableKeys(pk),
   getAttestation: vi.fn(),
@@ -186,5 +195,30 @@ describe('DMPanel — per-message marks', () => {
 
     await screen.findByText('a');
     expect(screen.queryAllByTestId('pq-mark')).toHaveLength(0);
+  });
+});
+
+describe('thread day separators', () => {
+  it('breaks the column where the calendar day changes', async () => {
+    // The panel rendered every message in one unbroken column, so a
+    // conversation held over weeks read as a single sitting.
+    const day = 24 * 60 * 60;
+    const now = Math.floor(Date.now() / 1000);
+    dms.current = {
+      [PEER]: [
+        msg({ id: 'old1', createdAt: now - day * 3 }),
+        msg({ id: 'old2', createdAt: now - day * 3 + 60 }),
+        msg({ id: 'new1', createdAt: now }),
+      ],
+    };
+    renderPanel();
+    await waitFor(() => expect(screen.getAllByTestId('dm-day-divider')).toHaveLength(2));
+  });
+
+  it('shows one divider for a thread that all happened today', async () => {
+    const now = Math.floor(Date.now() / 1000);
+    dms.current = { [PEER]: [msg({ id: 'a', createdAt: now }), msg({ id: 'b', createdAt: now + 30 })] };
+    renderPanel();
+    await waitFor(() => expect(screen.getAllByTestId('dm-day-divider')).toHaveLength(1));
   });
 });

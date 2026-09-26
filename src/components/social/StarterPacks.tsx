@@ -13,6 +13,7 @@
  * Follow one and the feed fills.
  */
 
+import { displayNameFor } from '@/lib/display-name';
 import { useCallback, useEffect, useState } from 'react';
 import { getBridge, useMyContactList, useMyFollows } from '@/lib/nostr-bridge';
 import { usePreferences } from '@/lib/preferences';
@@ -28,8 +29,14 @@ import { useToastStore } from '@/store/toast';
 import { useTranslation } from '@/i18n/context';
 import UserAvatar from '@/components/UserAvatar';
 
-/** Faces shown per pack — enough to judge it, few enough to fit a row. */
-const FACES = 6;
+/**
+ * How many members to name per pack.
+ *
+ * Six was too few to tell packs apart at a glance, but this also bounds a
+ * profile fan-out on a discovery surface — every face is a kind-0 lookup
+ * across the social relays, for every pack on screen.
+ */
+const FACES = 12;
 
 export default function StarterPacks({
   onOpenProfile,
@@ -80,9 +87,25 @@ export default function StarterPacks({
     }
   }, [contactEvent, relays, t]);
 
+  /*
+    The heading paints immediately, in every state.
+
+    A brand-new account's whole first impression was two anonymous grey
+    rectangles for several seconds while this fetch ran — the screen didn't
+    even say what was coming. Saying "Find people to follow" costs nothing
+    and turns the wait into a labelled one.
+  */
+  const heading = (
+    <div className="px-1">
+      <h2 className="text-base font-semibold text-lc-white">{t('social.packsTitle')}</h2>
+      <p className="mt-0.5 text-[13px] text-lc-muted">{t('social.packsSubtitle')}</p>
+    </div>
+  );
+
   if (packs === null) {
     return (
-      <div className="space-y-3 p-5" data-testid="starter-packs-loading">
+      <div className="space-y-3 p-4" data-testid="starter-packs-loading">
+        {heading}
         {[0, 1].map((index) => <div key={index} className="lc-skeleton h-28 rounded-xl" />)}
       </div>
     );
@@ -90,18 +113,18 @@ export default function StarterPacks({
 
   if (packs.length === 0) {
     return (
-      <p className="px-6 py-10 text-center text-sm text-lc-muted" data-testid="starter-packs-empty">
-        {t('social.packsEmpty')}
-      </p>
+      <div className="space-y-3 p-4" data-testid="starter-packs-empty">
+        {heading}
+        <p className="px-1 py-6 text-center text-sm text-lc-muted">
+          {t('social.packsEmpty')}
+        </p>
+      </div>
     );
   }
 
   return (
     <div className="space-y-3 p-4" data-testid="starter-packs">
-      <div className="px-1">
-        <h2 className="text-base font-semibold text-lc-white">{t('social.packsTitle')}</h2>
-        <p className="mt-0.5 text-[13px] text-lc-muted">{t('social.packsSubtitle')}</p>
-      </div>
+      {heading}
 
       {packs.map((pack) => {
         const already = followedCount(pack, follows);
@@ -163,7 +186,9 @@ function PackFace({
   onOpen?: (pubkey: string) => void;
 }) {
   const author = useAuthor(pubkey);
-  const name = author.displayName || author.name || pubkey.slice(0, 8);
+  // Not `pubkey.slice(0, 8)`: every chip in every pack read as an 8-char hex
+  // prefix, so a newcomer could not tell who they were about to follow.
+  const name = displayNameFor(pubkey, author);
   return (
     <button
       type="button"

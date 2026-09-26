@@ -82,6 +82,58 @@ describe('parseStarterPack', () => {
     expect(parseStarterPack(packEvent({ tags }))).toBeNull();
   });
 
+  it('does not render the encrypted content as a description', () => {
+    // A NIP-51 list's `content` is the NIP-44 private section. It was being
+    // shown to readers as a wall of base64 where the description goes.
+    const event = packEvent({ content: 'AiS2GCOBOLmlegWq8OkraYmR2GZ0000=' });
+    expect(parseStarterPack(event)?.description).toBe('');
+  });
+
+  it('still shows a real description tag', () => {
+    const tags = [...packEvent().tags, ['description', 'People who build on nostr']];
+    expect(parseStarterPack(packEvent({ tags }))?.description).toBe('People who build on nostr');
+  });
+
+  it('rejects a mute list published as a kind-30000 set', () => {
+    // The whole point: this was offered as a pack titled "Mute" with a
+    // "Follow 31" button, which follows people someone chose to silence.
+    const event = packEvent({
+      kind: KIND_FOLLOW_SET,
+      content: 'AiS2GCOBOLmlegWq8OkraYmR2GZ0000=',
+      tags: [['d', 'mute'], ['p', pk(1)], ['p', pk(2)], ['p', pk(3)]],
+    });
+    expect(parseStarterPack(event)).toBeNull();
+  });
+
+  it.each(['mute', 'Muted', 'blocked', 'bookmarks', 'pin'])(
+    'rejects the non-follow category %s',
+    (category) => {
+      const tags = [['d', category], ['title', 'Looks innocent'], ['p', pk(1)], ['p', pk(2)], ['p', pk(3)]];
+      expect(parseStarterPack(packEvent({ kind: KIND_FOLLOW_SET, tags }))).toBeNull();
+    },
+  );
+
+  it('rejects a kind-30000 set that carries a private section', () => {
+    // Encrypted entries mean a personal list, whatever it is categorised as.
+    const tags = [['d', 'friends'], ['title', 'Friends'], ['p', pk(1)], ['p', pk(2)], ['p', pk(3)]];
+    const event = packEvent({ kind: KIND_FOLLOW_SET, content: 'encrypted', tags });
+    expect(parseStarterPack(event)).toBeNull();
+  });
+
+  it('rejects a kind-30000 set with no title of its own', () => {
+    // Its `d` tag is a category key, not a name — that is how "Mute"
+    // ended up on screen as a pack title.
+    const tags = [['d', 'people'], ['p', pk(1)], ['p', pk(2)], ['p', pk(3)]];
+    expect(parseStarterPack(packEvent({ kind: KIND_FOLLOW_SET, tags }))).toBeNull();
+  });
+
+  it('accepts a genuine public kind-30000 follow set', () => {
+    const tags = [['d', 'devs'], ['title', 'Devs'], ['p', pk(1)], ['p', pk(2)], ['p', pk(3)]];
+    const pack = parseStarterPack(packEvent({ kind: KIND_FOLLOW_SET, tags }));
+    expect(pack).toMatchObject({ title: 'Devs' });
+    expect(pack?.members).toHaveLength(3);
+  });
+
   it('ignores malformed p tags and duplicates', () => {
     const tags = [['d', 'x'], ['p', pk(1)], ['p', pk(1).toUpperCase()], ['p', 'not-a-key'], ['p', pk(2)], ['p', pk(3)]];
     expect(parseStarterPack(packEvent({ tags }))?.members).toHaveLength(3);
@@ -97,13 +149,24 @@ describe('dedupePacks', () => {
     expect(result[0].members).toHaveLength(4);
   });
 
-  it('puts bigger packs first', () => {
+  it('puts bigger packs first when they are equally recent', () => {
     const small = parseStarterPack(packEvent({ pubkey: pk(8) }))!;
     const big = parseStarterPack(packEvent({
       pubkey: pk(7),
       tags: [...packEvent().tags, ['p', pk(4)], ['p', pk(5)]],
     }))!;
     expect(dedupePacks([small, big])[0].id).toBe(big.id);
+  });
+
+  it('ranks by recency before size', () => {
+    // Size-first is how a big stale list outranked every curated pack.
+    const newerSmall = parseStarterPack(packEvent({ pubkey: pk(8), created_at: 200 }))!;
+    const olderBig = parseStarterPack(packEvent({
+      pubkey: pk(7),
+      created_at: 100,
+      tags: [...packEvent().tags, ['p', pk(4)], ['p', pk(5)]],
+    }))!;
+    expect(dedupePacks([olderBig, newerSmall])[0].id).toBe(newerSmall.id);
   });
 });
 

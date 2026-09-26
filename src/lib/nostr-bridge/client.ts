@@ -119,6 +119,13 @@ function parseRelayRejection(reason: string): RelayAccessState | null {
 export interface PublishOpts {
   readonly extraRelays?: readonly string[];
   readonly mode?: 'merge' | 'replace';
+  /**
+   * Suppress the sign/publish entries in the activity log. For background
+   * writes the user did not ask for and cannot act on — a read-state cursor
+   * flush is the motivating case, since it fires on every channel open and
+   * made the app look like it was saving settings on navigation.
+   */
+  readonly quiet?: boolean;
 }
 
 /**
@@ -158,6 +165,8 @@ function eventKindDescription(kind: number): string {
   if (kind === 39001) return 'Group admins';
   if (kind === 39002) return 'Group members';
   if (kind === 7) return 'Reaction';
+  if (kind === 30078) return 'App data';
+  if (kind === 10002) return 'Relay list';
   return 'Nostr event';
 }
 
@@ -4142,6 +4151,7 @@ export class BridgeImpl {
         created_at: template.created_at ?? Math.floor(Date.now() / 1000),
       },
       opts,
+      opts.quiet ? { quiet: true } : undefined,
     );
     if (event.kind === KIND_CONTACT_LIST) this.ingestMyContactList(event);
     if (event.kind === KIND_EMOJI_SET) this.ingestMediaPack(event);

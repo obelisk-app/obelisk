@@ -25,9 +25,22 @@ export type TrendingTag = {
 /** Tags this common are noise: everyone uses them, so they say nothing. */
 const STOPWORDS = new Set(['nostr', 'plebchain', 'grownostr', 'asknostr']);
 
+/**
+ * One note is not a trend.
+ *
+ * With no floor the panel filled up with `#esim · 1` — tags that appeared
+ * exactly once in the window. A "Trending" list whose entries all read `1`
+ * is worse than an empty one: it looks broken rather than quiet.
+ */
+const MIN_COUNT = 3;
+
 export function trendingTags(
   notes: readonly NostrEvent[],
-  { limit = 10, includeCommon = false }: { limit?: number; includeCommon?: boolean } = {},
+  {
+    limit = 10,
+    includeCommon = false,
+    minCount = MIN_COUNT,
+  }: { limit?: number; includeCommon?: boolean; minCount?: number } = {},
 ): TrendingTag[] {
   const byTag = new Map<string, { count: number; authors: Set<string> }>();
 
@@ -48,6 +61,7 @@ export function trendingTags(
 
   return [...byTag.entries()]
     .map(([tag, entry]) => ({ tag, count: entry.count, authors: entry.authors.size }))
+    .filter((entry) => entry.count >= minCount)
     // Distinct authors first: that's the difference between a conversation
     // and one person posting a lot. Count breaks the tie, then the name, so
     // the list doesn't reshuffle on every re-render.

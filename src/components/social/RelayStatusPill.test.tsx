@@ -128,3 +128,54 @@ describe('RelayStatusPill', () => {
     expect(pill).toHaveAttribute('aria-label', expect.stringContaining('2/2'));
   });
 });
+
+describe('which tier the button reports', () => {
+  it('reports the active chat relay, not the social count, when asked', () => {
+    // The chat header mounts this. Reporting the social tier there showed a
+    // red 0/4 over a perfectly healthy chat, because a chat screen never
+    // reads the social relays at all.
+    mocks.statuses = {};
+    mocks.access = 'ok';
+    renderPill({ indicate: 'active', activeRelay: 'wss://chat.example' });
+    const pill = screen.getByTestId('relay-status-pill');
+    expect(pill).toHaveAttribute('data-indicate', 'active');
+    expect(pill).toHaveAttribute('data-state', 'connected');
+    // The misleading count is gone.
+    expect(pill).not.toHaveTextContent('0/');
+  });
+
+  it('goes red only when the chat relay itself is refusing', () => {
+    mocks.access = 'denied';
+    renderPill({ indicate: 'active', activeRelay: 'wss://chat.example' });
+    expect(screen.getByTestId('relay-status-pill')).toHaveAttribute('data-state', 'failed');
+  });
+
+  it('reads as connecting while the relay is still authenticating', () => {
+    mocks.access = 'authenticating';
+    renderPill({ indicate: 'active', activeRelay: 'wss://chat.example' });
+    expect(screen.getByTestId('relay-status-pill')).toHaveAttribute('data-state', 'connecting');
+  });
+
+  it('falls back to the social summary when there is no active relay', () => {
+    renderPill({ indicate: 'active' });
+    const pill = screen.getByTestId('relay-status-pill');
+    expect(pill).toHaveAttribute('data-indicate', 'social');
+    expect(pill).toHaveTextContent('2/2');
+  });
+
+  it('still reports the social set on a social surface', () => {
+    renderPill({ indicate: 'social', activeRelay: 'wss://chat.example' });
+    const pill = screen.getByTestId('relay-status-pill');
+    expect(pill).toHaveAttribute('data-indicate', 'social');
+    expect(pill).toHaveTextContent('2/2');
+  });
+
+  it('still lists every social relay in the popover either way', () => {
+    // The button narrows; the popover must not — "which one is down" is the
+    // question behind the click.
+    renderPill({ indicate: 'active', activeRelay: 'wss://chat.example' });
+    fireEvent.click(screen.getByTestId('relay-status-pill'));
+    expect(screen.getAllByTestId('relay-status-row')).toHaveLength(2);
+    expect(screen.getByTestId('relay-status-active')).toBeInTheDocument();
+  });
+});

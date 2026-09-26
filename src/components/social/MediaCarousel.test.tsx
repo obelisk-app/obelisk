@@ -110,3 +110,43 @@ describe('MediaCarousel', () => {
     expect(document.querySelector('video')).toHaveAttribute('controls');
   });
 });
+
+describe('video slides', () => {
+  const render1 = (item: Record<string, unknown>) => render(<MediaCarousel items={[item as never]} />);
+
+  it('uses the imeta poster frame so the card shows something', () => {
+    // Without a poster a video note is a grey box reading 0:00 — nothing to
+    // look at until you press play.
+    render1({ url: 'https://v.example/a.mp4', mimeType: 'video/mp4', poster: 'https://v.example/a.jpg' });
+    expect(screen.getByTestId('carousel-video')).toHaveAttribute('poster', 'https://v.example/a.jpg');
+  });
+
+  it('skips the metadata round trip when it already has a poster', () => {
+    render1({ url: 'https://v.example/a.mp4', mimeType: 'video/mp4', poster: 'https://v.example/a.jpg' });
+    expect(screen.getByTestId('carousel-video')).toHaveAttribute('preload', 'none');
+  });
+
+  it('still asks for metadata when there is no poster', () => {
+    render1({ url: 'https://v.example/a.mp4', mimeType: 'video/mp4' });
+    const video = screen.getByTestId('carousel-video');
+    expect(video).toHaveAttribute('preload', 'metadata');
+    expect(video).not.toHaveAttribute('poster');
+  });
+
+  it('recognises a video by extension when the publisher wrote no mime type', () => {
+    // These were falling through to <img> and rendering as a broken image.
+    render1({ url: 'https://v.example/clip.webm' });
+    expect(screen.getByTestId('carousel-video')).toBeInTheDocument();
+  });
+
+  it('does not mistake an image url for a video', () => {
+    render1({ url: 'https://v.example/photo.jpg' });
+    expect(screen.queryByTestId('carousel-video')).toBeNull();
+    expect(screen.getByTestId('carousel-image')).toBeInTheDocument();
+  });
+
+  it('is not fooled by a query string after the extension', () => {
+    render1({ url: 'https://v.example/clip.mp4?token=abc' });
+    expect(screen.getByTestId('carousel-video')).toBeInTheDocument();
+  });
+});

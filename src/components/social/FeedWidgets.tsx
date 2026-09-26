@@ -70,12 +70,23 @@ export default function FeedWidgets({
         of reach — the control that changes how many widgets there are must
         not be the thing that disappears when you add one.
       */}
-      <div className="sticky bottom-0 -mx-1 bg-gradient-to-t from-lc-black via-lc-black/90 to-transparent px-1 pb-1 pt-3">
+      {/*
+        Blur, not a painted gradient.
+
+        This was `bg-gradient-to-t from-lc-black`, a flat fill over a page
+        whose background is a tinted radial gradient — so it read as a dark
+        rectangle floating behind the button rather than a fade. Blurring
+        what is actually behind works against any background, including the
+        user's own `backgroundColor`.
+      */}
+      <div className="sticky bottom-0 -mx-1 px-1 pb-1 pt-3 backdrop-blur-sm">
         <button
           ref={pickerRef}
           type="button"
           onClick={() => setPickerOpen((open) => !open)}
-          className="w-full rounded-xl border border-dashed border-lc-border bg-lc-dark/60 px-3 py-2 text-[11px] font-medium text-lc-muted backdrop-blur-sm transition-colors hover:border-lc-green/40 hover:text-lc-white"
+          // Solid border: the dashed one was the only dashed control in the
+          // app and read as a placeholder rather than a button.
+          className="w-full rounded-xl border border-lc-border bg-lc-dark/70 px-3 py-2 text-[11px] font-medium text-lc-muted transition-colors hover:border-lc-green/40 hover:text-lc-white"
           aria-expanded={pickerOpen}
           data-testid="feed-widgets-picker"
         >

@@ -1,6 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { displayNameFor } from '@/lib/display-name';
+import { useAuthor } from '@/lib/social/useAuthor';
+import DMThreadMenu from '@/components/chat/DMThreadMenu';
+import { dayKey, dayLabel } from '@/lib/day-label';
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   nostrActions,
@@ -521,6 +525,7 @@ export default function AppShell() {
       <DirectMessageSubscriptionAnchor />
       <RelayTopBar
         relay={relay}
+        onSocialSurface={view.kind === 'feed'}
         onOpenSidebar={() => setSidebarOpen(true)}
         onJumpToChannel={(channelId) => setView({ kind: 'group', groupId: channelId })}
         onJumpToDm={(peer) => setView({ kind: 'dm', peer })}
@@ -1015,11 +1020,14 @@ export function RelayTopBar({
   onOpenSidebar,
   onJumpToChannel,
   onJumpToDm,
+  onSocialSurface = false,
 }: {
   relay: string;
   onOpenSidebar?: () => void;
   onJumpToChannel?: (channelId: string) => void;
   onJumpToDm?: (peer: string) => void;
+  /** True on the feed, the only surface that reads the social relay tier. */
+  onSocialSurface?: boolean;
 }) {
   const { formatTime } = useFormat();
   const { t, locale } = useTranslation();
@@ -1159,6 +1167,7 @@ export function RelayTopBar({
           relays={socialRelays}
           activeRelay={relay}
           onOpenSettings={() => openSettings('relays')}
+          indicate={onSocialSurface ? 'social' : 'active'}
         />
         <button
           data-notif-trigger
@@ -1746,7 +1755,12 @@ function Sidebar({
       )}
 
       <div
-        className={`flex-1 overflow-y-auto px-2 pb-2 ${inVoice ? 'md:pb-52' : 'md:pb-20'}`}
+        // `pb-28`, not `pb-20`: the panel is `bottom-3` (12px) plus a pill
+        // whose `min-h-[3.5rem]` is only a floor — `SidebarMe` stacks the
+        // name over a truncated npub and puts a gear beside them, so the
+        // real height overran the 80px reserved and the last channel
+        // (`HACKATONS 2026` on La Crypta) scrolled in behind it.
+        className={`flex-1 overflow-y-auto px-2 pb-2 ${inVoice ? 'md:pb-52' : 'md:pb-28'}`}
         data-tour="channels-list"
       >
         {/* Relay/AUTH state lives in the unified bottom-right activity stack. */}
@@ -3041,7 +3055,7 @@ function ChatPanel({
       const m = metaMap[pk];
       return {
         pubkey: pk,
-        displayName: m?.displayName || m?.name || `${pk.slice(0, 8)}…`,
+        displayName: displayNameFor(pk, m),
         picture: m?.picture ?? undefined,
         lud16: m?.lud16 ?? undefined,
       };
@@ -3735,13 +3749,13 @@ function CopyInviteLinkButton({ groupId }: { groupId: string }) {
 
 function ReplyAuthorName({ pubkey }: { pubkey: string }) {
   const meta = useProfile(pubkey);
-  const name = meta?.displayName || meta?.name || pubkey.slice(0, 8);
+  const name = displayNameFor(pubkey, meta);
   return <span className="font-semibold text-lc-white">{name}</span>;
 }
 
 function PubkeyName({ pubkey }: { pubkey: string }) {
   const meta = useProfile(pubkey);
-  return <>{meta?.displayName || meta?.name || pubkey.slice(0, 10)}</>;
+  return <>{displayNameFor(pubkey, meta)}</>;
 }
 
 function HoverCardShell({ title, children }: { title: string; children: React.ReactNode }) {
@@ -3819,7 +3833,7 @@ function ReplyPreviewRow({
 }) {
   const { t } = useTranslation();
   const meta = useProfile(parent.pubkey);
-  const name = meta?.displayName || meta?.name || parent.pubkey.slice(0, 8);
+  const name = displayNameFor(parent.pubkey, meta);
   const preview = parent.content.replace(/\s+/g, ' ').slice(0, 120);
   return (
     <button
@@ -3953,11 +3967,11 @@ function MessageRow({
       messageId: msg.id,
       recipientPubkey: msg.pubkey,
       recipientLud16: meta?.lud16 ?? null,
-      displayName: meta?.displayName || meta?.name || msg.pubkey.slice(0, 8),
+      displayName: displayNameFor(msg.pubkey, meta),
       groupId,
     });
   };
-  const displayName = meta?.displayName || meta?.name || msg.pubkey.slice(0, 8);
+  const displayName = displayNameFor(msg.pubkey, meta);
   const openProfile = (event: React.MouseEvent<HTMLElement>) => useChatStore.getState().openProfilePopup(
     msg.pubkey,
     { x: event.clientX, y: event.clientY },
@@ -5091,7 +5105,10 @@ export function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string)
   const { formatTime } = useFormat();
   const { t, locale } = useTranslation();
   const dms = useDirectMessages();
-  const meta = useProfile(peer);
+  // Two-tier identity, same as the feed — see `useAuthor`. The bridge alone
+  // only knows people from your NIP-29 rooms, so a DM peer from the wider
+  // network rendered as a truncated pubkey with a letter avatar.
+  const meta = useAuthor(peer);
   const thread = peer ? dms[peer] ?? [] : [];
   // Post-quantum provenance. The notice is capability state for the whole
   // conversation; the marks are per-message and aggregated to transitions
@@ -5188,9 +5205,14 @@ export function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string)
           <Avatar pubkey={peer} size={9} picture={meta?.picture ?? null} />
           <div className="min-w-0">
             <div className="truncate text-sm font-bold text-lc-white">
-              {meta?.displayName || meta?.name || peer.slice(0, 16) + '…'}
+              {displayNameFor(peer, meta)}
             </div>
-            <div className="truncate font-mono text-[10px] text-lc-muted">{peer}</div>
+            {/* An npub, not the raw 64 hex characters. The full key was
+                rendered here in full, which is unreadable, unverifiable at a
+                glance and the widest thing in the header. */}
+            <div className="truncate font-mono text-[10px] text-lc-muted">
+              {meta?.nip05 ?? formatPubkey(peer)}
+            </div>
           </div>
         </button>
         {/* Unlike the per-message marks below, this is not gated on the
@@ -5198,10 +5220,16 @@ export function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string)
             and two of its three states have nothing to do with post-quantum —
             a user who turned that off still benefits from knowing whether the
             wrap is hiding who they talk to. It is one icon, so it cannot nag. */}
-        <span className="ml-auto">
+        <span className="ml-auto flex items-center gap-1">
           <PqShield
             level={protectionLevel({ giftWrapped: sendProtocol !== 'nip04', status: pqStatus })}
             guideHref={guidesHref(locale, 'quantum-safe-dms')}
+          />
+          {/* Beside the shield, not instead of it — the shield is state the
+              header has to keep saying out loud. */}
+          <DMThreadMenu
+            peer={peer}
+            onOpenProfile={(pubkey) => useChatStore.getState().openProfilePopup(pubkey, { x: 0, y: 0 })}
           />
         </span>
       </header>
@@ -5210,6 +5238,10 @@ export function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string)
           <div className="text-sm text-lc-muted">{t('dm.emptyEncrypted')}</div>
         ) : (
           thread.map((m, i) => {
+            // A divider whenever the calendar day changes. Without these the
+            // panel was one unbroken column — a conversation held over three
+            // weeks read as a single sitting.
+            const showDay = i === 0 || dayKey(thread[i - 1].createdAt) !== dayKey(m.createdAt);
             const onRetryDM = () => {
               if (!m.clientTag || !peer) return;
               void nostrActions.retryDirectMessage(peer, m.clientTag);
@@ -5219,8 +5251,17 @@ export function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string)
               void nostrActions.cancelPendingDirectMessage(peer, m.clientTag);
             };
             return (
+              <Fragment key={m.id}>
+              {showDay && (
+                <div className="my-3 flex items-center gap-3" data-testid="dm-day-divider">
+                  <span className="h-px flex-1 bg-lc-border" />
+                  <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-lc-muted">
+                    {dayLabel(m.createdAt, t, locale)}
+                  </span>
+                  <span className="h-px flex-1 bg-lc-border" />
+                </div>
+              )}
               <div
-                key={m.id}
                 className={
                   'mb-2 max-w-md rounded-2xl px-4 py-2 text-sm shadow-sm ' +
                   (m.outgoing
@@ -5269,6 +5310,7 @@ export function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string)
                   </div>
                 )}
               </div>
+              </Fragment>
             );
           })
         )}

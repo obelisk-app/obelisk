@@ -47,13 +47,50 @@ function MentionChip({ pubkey, displayName }: { pubkey: string; displayName: str
     <button
       type="button"
       onClick={(event) => openProfilePopup(pubkey, { x: event.clientX, y: event.clientY })}
-      className="bg-lc-green/20 text-lc-green rounded px-1 py-0.5 text-sm font-medium hover:bg-lc-green/30 transition-colors cursor-pointer"
+      // Same reason as the hashtag anchor below: a mention is one token, and
+      // the note body's inherited `overflow-wrap: anywhere` would otherwise
+      // split a display name down the middle.
+      className="bg-lc-green/20 text-lc-green rounded px-1 py-0.5 text-sm font-medium hover:bg-lc-green/30 transition-colors cursor-pointer [overflow-wrap:normal] [word-break:normal]"
       title={pubkey}
       data-testid="mention-highlight"
     >
       @{resolvedName}
     </button>
   );
+}
+
+/** Longest URL we'll print in full before shortening it for display. */
+const MAX_URL_LABEL = 48;
+
+/**
+ * A readable stand-in for a bare URL.
+ *
+ * Markdown autolinks arrive with the URL as their own link text, so a
+ * `nostr:`-style `naddr1…` share link printed as five lines of unbroken
+ * characters in the middle of a note. The href is untouched — only the label
+ * shortens, and the full URL stays in `title`.
+ *
+ * Returns null when the link has real link text (`[label](href)`), which the
+ * author chose and we must not rewrite.
+ */
+export function autolinkLabel(href: string, children: React.ReactNode): string | null {
+  const text = typeof children === 'string'
+    ? children
+    : Array.isArray(children) && children.length === 1 && typeof children[0] === 'string'
+      ? children[0]
+      : null;
+  if (text === null || text !== href) return null;
+  if (text.length <= MAX_URL_LABEL) return null;
+
+  let shown = text;
+  try {
+    const url = new URL(text);
+    const tail = `${url.pathname}${url.search}${url.hash}`;
+    shown = `${url.host}${tail === '/' ? '' : tail}`;
+  } catch {
+    // Not parseable — fall back to trimming the raw string.
+  }
+  return shown.length > MAX_URL_LABEL ? `${shown.slice(0, MAX_URL_LABEL - 1)}…` : shown;
 }
 
 function EveryoneChip() {
@@ -489,13 +526,17 @@ export default function MessageContent({
     [shortcodeResolved, memberList]
   );
 
-  // NOTE: there are deliberately no OpenGraph link-preview cards. Fetching them
-  // needs a server to do the outbound request, and this app has no backend —
-  // `src/app/api/` went away with the relay-only migration, so the old
-  // <LinkPreview> just 404'd on `/api/link-preview` for every URL in every
-  // message and every note in a profile feed. Restoring it would mean sending
-  // every URL a user merely *views* to a third-party OG service, which is not a
-  // trade we want next to the DM-metadata work. Links render as plain anchors.
+  // Link-preview cards ARE rendered, via <LinkPreview> below — fetching
+  // OpenGraph needs a server to make the outbound request, and
+  // `src/app/api/link-preview` is back for exactly that (see "Unfurl links in
+  // messages, including x.com"). The unfurl is same-origin: the URL goes to
+  // our own route, not to a third-party OG service, which is the part that
+  // mattered next to the DM-metadata work.
+  //
+  // A link with no OG tags simply gets no card — `LinkPreview` renders null —
+  // so the anchor itself still has to be readable on its own. That is what
+  // `autolinkLabel` is for: a bare `naddr1…` share URL used to print as five
+  // lines of unbroken characters.
 
   const components: Components = useMemo(() => ({
     // Code blocks and inline code
@@ -526,7 +567,12 @@ export default function MessageContent({
         return (
           <a
             href={href}
-            className="break-all text-sky-400 hover:underline"
+            // Not `break-all`: it split `#RUNSTR` across lines as `#RU` /
+            // `NSTR`. A hashtag is one token and wraps at its own
+            // boundaries. These also reset the `overflow-wrap: anywhere` /
+            // `word-break: break-word` that `.note-media` sets on the whole
+            // note body, which is inherited and would otherwise win.
+            className="[overflow-wrap:normal] [word-break:normal] text-sky-400 hover:underline"
             data-testid="nostr-hashtag"
           >
             {children}
@@ -606,8 +652,14 @@ export default function MessageContent({
 
       // Regular link
       return (
-        <a href={href} target="_blank" rel="noopener noreferrer" className="text-lc-green/80 hover:underline break-all">
-          {children}
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={href}
+          className="text-lc-green/80 hover:underline break-all"
+        >
+          {autolinkLabel(href, children) ?? children}
         </a>
       );
     },

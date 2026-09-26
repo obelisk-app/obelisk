@@ -15,8 +15,24 @@
 
 import { nip19 } from 'nostr-tools';
 
-/** `nostr:` followed by a bech32 entity. Case-insensitive scheme, per NIP-21. */
-const NOSTR_URI_RE = /nostr:((?:npub|nprofile|nevent|note|naddr)1[023456789acdefghjklmnpqrstuvwxyz]+)/gi;
+/**
+ * A bech32 entity, with the `nostr:` scheme optional.
+ *
+ * The scheme is what NIP-21 specifies and what Primal/Amethyst/Damus write,
+ * but people paste bare `naddr1…` and `nevent1…` all the time, and those
+ * were rendering as sixty unbroken characters of raw bech32 mid-sentence.
+ *
+ * A bare entity is only taken when it stands on its own — see
+ * `STANDS_ALONE_BEFORE`. Without that, the `naddr1…` inside a
+ * `https://zap.cooking/naddr1…` URL gets eaten and the link breaks.
+ */
+const NOSTR_URI_RE = /(nostr:)?((?:npub|nprofile|nevent|note|naddr)1[023456789acdefghjklmnpqrstuvwxyz]+)/gi;
+
+/**
+ * Characters that mean a bare bech32 run is part of something larger — a URL
+ * path, a domain, a handle — rather than a reference in its own right.
+ */
+const STANDS_ALONE_BEFORE = /[\w/:.@-]/;
 
 export type NostrRef =
   | { type: 'pubkey'; pubkey: string; relays: string[]; raw: string }
@@ -28,14 +44,13 @@ export type ContentToken =
   | { kind: 'ref'; ref: NostrRef };
 
 /** Decode one bech32 entity. Returns null for anything we can't use. */
-export function decodeNostrEntity(entity: string): NostrRef | null {
+export function decodeNostrEntity(entity: string, raw = `nostr:${entity}`): NostrRef | null {
   let decoded: nip19.DecodedResult;
   try {
     decoded = nip19.decode(entity);
   } catch {
     return null;
   }
-  const raw = `nostr:${entity}`;
   switch (decoded.type) {
     case 'npub':
       return { type: 'pubkey', pubkey: decoded.data, relays: [], raw };
@@ -79,7 +94,10 @@ export function tokenizeContent(content: string): ContentToken[] {
   NOSTR_URI_RE.lastIndex = 0;
   for (const match of content.matchAll(NOSTR_URI_RE)) {
     const index = match.index ?? 0;
-    const ref = decodeNostrEntity(match[1]);
+    // A bare entity must stand on its own; with a `nostr:` scheme in front
+    // it is unambiguous wherever it appears.
+    if (!match[1] && index > 0 && STANDS_ALONE_BEFORE.test(content[index - 1])) continue;
+    const ref = decodeNostrEntity(match[2], match[0]);
     if (!ref) continue;
     if (index > lastIndex) tokens.push({ kind: 'text', value: content.slice(lastIndex, index) });
     tokens.push({ kind: 'ref', ref });

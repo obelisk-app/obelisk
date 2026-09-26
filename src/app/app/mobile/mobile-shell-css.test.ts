@@ -63,13 +63,19 @@ describe('mobile shell CSS', () => {
     const nativeY = ruleBody('.obelisk-mobile :where(.native-scroll-y)');
     expect(nativeY).toContain('-webkit-overflow-scrolling: touch');
     expect(nativeY).toContain('overscroll-behavior-y: contain');
-    expect(nativeY).toContain('scroll-behavior: smooth');
+    // NOT `scroll-behavior: smooth`: as a property on the scroller it
+    // animates programmatic scrolls too, so a deep link into a long feed
+    // crawled down hundreds of rows instead of arriving. Callers that want
+    // the animation ask for it per call.
+    // Anchored: `overscroll-behavior-y` contains the same substring.
+    expect(nativeY).not.toMatch(/(^|[\s;])scroll-behavior\s*:/);
 
     const nativeX = ruleBody('.obelisk-mobile :where(.native-scroll-x)');
     expect(nativeX).toContain('-webkit-overflow-scrolling: touch');
     expect(nativeX).toContain('touch-action: pan-x pan-y');
     expect(nativeX).toContain('overscroll-behavior-x: contain');
     expect(nativeX).toContain('overscroll-behavior-y: auto');
+    expect(nativeX).not.toMatch(/(^|[\s;])scroll-behavior\s*:/);
     expect(css).not.toContain('touch-action: pan-x;');
   });
 
@@ -169,4 +175,32 @@ describe('mobile shell CSS', () => {
     expect(css).not.toContain(".obelisk-share-modal { min-height: 100dvh; }");
   });
 
+});
+
+describe('the sub-screen overlay must not eat taps', () => {
+  it('lets pointer events through the overlay slot', () => {
+    // The slot is `position: absolute; inset: 0` at z-index 1, so it covered
+    // the whole viewport including the header underneath — and swallowed
+    // taps meant for the back button.
+    expect(ruleBody('.obelisk-mobile .drag-slot.drag-overlay')).toContain('pointer-events: none');
+  });
+
+  it('gives them back to the screen inside it', () => {
+    expect(ruleBody('.obelisk-mobile .drag-slot.drag-overlay > .screen-anim'))
+      .toContain('pointer-events: auto');
+  });
+
+  it('parks off-screen neighbours out of the hit-test too', () => {
+    expect(ruleBody(`.obelisk-mobile .drag-slot.drag-prev,
+.obelisk-mobile .drag-slot.drag-next`)).toContain('pointer-events: none');
+  });
+});
+
+describe('server rail labels', () => {
+  it('wraps to a second line instead of ellipsing distinct names', () => {
+    // 74px of rail left ~58px of text, so every relay read `Obelisk …`.
+    const body = ruleBody('.obelisk-mobile .space-name');
+    expect(body).toContain('-webkit-line-clamp: 2');
+    expect(body).not.toContain('white-space: nowrap');
+  });
 });

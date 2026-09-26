@@ -316,7 +316,12 @@ function watchAndPublish(
             content: await signer.nip44Encrypt(signer.pubkey, JSON.stringify(payload)),
             created_at: createdAt,
           },
-          { extraRelays: [...opts.relays], mode: 'replace' },
+          // `quiet`: this fires on every channel open (the cursor moves, the
+          // fingerprint changes, the debounce flushes). Logging it put a
+          // "Publishing to relays · kind 30078" toast on every screen, which
+          // reads as the app writing settings on navigation. The gift-wrap
+          // branch below has always been quiet for the same reason.
+          { extraRelays: [...opts.relays], mode: 'replace', quiet: true },
         );
       } else {
         const wrap = await wrapForSelf(

@@ -11,8 +11,8 @@
  * text runs to `MessageContent`, and render the references as real UI.
  */
 
+import { displayNameFor } from '@/lib/display-name';
 import { useMemo } from 'react';
-import { hexToNpub } from '@nostr-wot/data';
 import { useAuthor } from '@/lib/social/useAuthor';
 import { useNotePreview } from '@/lib/social/useNotePreview';
 import { useTranslation } from '@/i18n/context';
@@ -109,14 +109,46 @@ function NostrRefChip({
   if (refValue.type === 'event') {
     return <EventRefChip refValue={refValue} onOpenNote={onOpenNote} />;
   }
-  // naddr — long-form and other addressable content. We don't render those
-  // inline yet; a link out beats printing bech32.
+  return <AddressRefChip refValue={refValue} />;
+}
+
+/**
+ * Addressable content (`naddr`) — a long-form post, a list, a wiki page.
+ *
+ * This used to be a bare underlined link labelled with the raw `d`
+ * identifier, which for most articles is a slug like
+ * `1712000000-why-nostr` — so a reference to an article read as a fragment
+ * of a URL. It now names the author the same way a quoted note does, which
+ * is the part that tells a reader whether to follow it.
+ *
+ * The body is deliberately not fetched: resolving an addressable event means
+ * a query per reference, and unlike `nevent` there is no id to dedupe on.
+ * The author comes free — `naddr` carries the pubkey.
+ */
+function AddressRefChip({
+  refValue,
+}: {
+  refValue: Extract<NostrRef, { type: 'address' }>;
+}) {
+  const { t } = useTranslation();
+  const meta = useAuthor(refValue.pubkey);
+  const name = displayNameFor(refValue.pubkey, meta);
+  const slug = refValue.identifier.replace(/^\d+-/, '').replace(/[-_]+/g, ' ').trim();
+
   return (
     <a
       href={`/notes/${refValue.raw.replace(/^nostr:/, '')}`}
-      className="text-xs text-lc-green underline"
+      className="my-1 flex w-full max-w-full flex-col gap-0.5 rounded-lg border border-lc-border bg-lc-dark/60 px-2.5 py-1.5 text-left text-xs no-underline transition-colors hover:border-lc-green/40"
+      data-testid="address-ref"
+      title={t('social.openNote')}
     >
-      {refValue.identifier || 'article'}
+      <span className="flex min-w-0 items-center gap-1 text-lc-muted">
+        <span aria-hidden="true">↗</span>
+        <span className="min-w-0 truncate font-medium text-lc-green">{name}</span>
+        <span className="shrink-0">·</span>
+        <span className="shrink-0">{t('social.article')}</span>
+      </span>
+      {slug && <span className="line-clamp-2 min-w-0 text-lc-white/75">{slug}</span>}
     </a>
   );
 }
@@ -145,7 +177,7 @@ function EventRefChip({
   const meta = useAuthor(authorPubkey);
 
   const name = authorPubkey
-    ? meta?.displayName || meta?.name || shortNpub(authorPubkey)
+    ? displayNameFor(authorPubkey, meta)
     : null;
   const snippet = preview?.content?.replace(/\s+/g, ' ').trim();
   const loading = preview === undefined;
@@ -178,7 +210,7 @@ function EventRefChip({
 function MentionChip({ pubkey, onOpen }: { pubkey: string; onOpen?: (pubkey: string) => void }) {
   const meta = useAuthor(pubkey);
 
-  const label = meta?.displayName || meta?.name || shortNpub(pubkey);
+  const label = displayNameFor(pubkey, meta);
 
   return (
     <button
@@ -192,11 +224,3 @@ function MentionChip({ pubkey, onOpen }: { pubkey: string; onOpen?: (pubkey: str
   );
 }
 
-function shortNpub(pubkey: string): string {
-  try {
-    const npub = hexToNpub(pubkey);
-    return `${npub.slice(0, 10)}…`;
-  } catch {
-    return `${pubkey.slice(0, 8)}…`;
-  }
-}

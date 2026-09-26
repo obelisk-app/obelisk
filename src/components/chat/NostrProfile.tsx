@@ -11,6 +11,7 @@
  * appears.
  */
 
+import { displayNameFor } from '@/lib/display-name';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { hexToNpub } from '@nostr-wot/data';
@@ -121,7 +122,7 @@ export default function NostrProfile({
 
   const isMe = myPubkey === pubkey;
   const following = !!contactEvent?.tags.some((tag) => tag[0] === 'p' && tag[1] === pubkey);
-  const displayName = meta?.displayName || meta?.name || shortNpub(pubkey);
+  const displayName = displayNameFor(pubkey, meta);
 
   const visibleNotes = useMemo(
     () => filterProfileFeed(state.notes, tab),

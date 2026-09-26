@@ -23,6 +23,7 @@
  *   nothing is reported in the pane rather than silently dropped — the old
  *   behaviour made `from:alice` look like "no results".
  */
+import { displayNameFor } from '@/lib/display-name';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { nip19 } from 'nostr-tools';
 import {
@@ -705,7 +706,7 @@ function ResultRow({ id, active, msg, groupName, t, onJump, onAuthor }: {
   const meta = useProfile(msg.pubkey);
   // `formatPubkey` gives `npub1abc…xyz`; a raw hex slice is not an identity
   // a human can recognise or copy.
-  const name = meta?.displayName || meta?.name || formatPubkey(msg.pubkey);
+  const name = displayNameFor(msg.pubkey, meta);
   const channel = groupName ?? (msg.groupId ? formatPubkey(msg.groupId) : '?');
   return (
     <div

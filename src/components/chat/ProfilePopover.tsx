@@ -1,5 +1,6 @@
 'use client';
 
+import { displayNameFor } from '@/lib/display-name';
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
 import { useChatStore } from '@/store/chat';
 import { useGroupMemberInfo, useMyPubkey, useUserMetadata } from '@/lib/nostr-bridge';
@@ -86,7 +87,7 @@ export default function ProfilePopover({ pubkey, onClose, onExplore, onMessage }
     if (!memberFromList && !meta) return undefined;
     return {
       pubkey,
-      displayName: meta?.displayName ?? meta?.name ?? memberFromList?.displayName ?? formatPubkey(pubkey),
+      displayName: meta?.displayName ?? meta?.name ?? memberFromList?.displayName ?? displayNameFor(pubkey),
       picture: meta?.picture ?? memberFromList?.picture,
       banner: meta?.banner ?? undefined,
       nip05: meta?.nip05 ?? memberFromList?.nip05,
@@ -138,8 +139,9 @@ export default function ProfilePopover({ pubkey, onClose, onExplore, onMessage }
 
   let npub = '';
   try { npub = hexToNpub(pubkey); } catch {}
-  const safeFallback = npub ? formatPubkey(pubkey) : pubkey;
-  const displayName = member?.displayName || safeFallback;
+  // Never the raw 64-char hex: when bech32 encoding threw, this popover
+  // printed the whole pubkey as the person's name.
+  const displayName = member?.displayName || displayNameFor(pubkey);
   const npubShort = npub ? shortNpub(pubkey) : pubkey;
   const baseRole = member?.role ? BASE_ROLE[member.role] : undefined;
   const zap = () => {

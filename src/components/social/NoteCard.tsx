@@ -10,9 +10,9 @@
  * Amethyst and Primal don't show up as "unsupported".
  */
 
+import { displayNameFor } from '@/lib/display-name';
 import { memo, useEffect, useMemo, useState } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
-import { hexToNpub } from '@nostr-wot/data';
 import { useCurrentRelayUrl, useMyFollows, useMyPubkey } from '@/lib/nostr-bridge';
 import { useAuthor } from '@/lib/social/useAuthor';
 import { useTranslation } from '@/i18n/context';
@@ -108,6 +108,25 @@ export default memo(NoteCardInner, (prev, next) => (
   && (prev.reposters?.length ?? 0) === (next.reposters?.length ?? 0)
 ));
 
+/**
+ * Turn a bare `onOpenNote` into a card-body click handler.
+ *
+ * Guarded rather than wrapped in a button, because a card is full of real
+ * controls (author, tags, media, the action row) and a button can't legally
+ * contain them. A drag that selects text is not a click either.
+ */
+function bodyClickHandler(
+  onOpen: (() => void) | undefined,
+): ((event: React.MouseEvent<HTMLElement>) => void) | undefined {
+  if (!onOpen) return undefined;
+  return (event: React.MouseEvent<HTMLElement>) => {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('a, button, input, textarea, video, audio, [role="button"], [data-no-thread]')) return;
+    if (window.getSelection()?.toString()) return;
+    onOpen();
+  };
+}
+
 function NoteCardInner(props: NoteCardProps) {
   const { note } = props;
 
@@ -133,8 +152,22 @@ function RepostCard(props: NoteCardProps) {
     return [...new Set(list)];
   }, [note.pubkey, reposters]);
 
+  // The reposted note is the content of this row, so the row opens it. The
+  // inner card renders with `nested` and has no handler of its own, so this
+  // is the single owner of a body click — and `bodyClickHandler` steps aside
+  // for the real controls inside, including the inner timestamp button.
+  const openReposted = bodyClickHandler(
+    props.onOpenNote && (inner || target)
+      ? () => props.onOpenNote?.((inner ?? target!).id)
+      : undefined,
+  );
+
   return (
-    <article className="note-card px-5 py-4" data-testid="repost-card">
+    <article
+      className={`note-card px-5 py-4${openReposted ? ' note-card-open' : ''}`}
+      onClick={openReposted}
+      data-testid="repost-card"
+    >
       {/*
         The attribution was 11px muted text with a `⇄` glyph — small enough to
         miss, and the glyph rendered at a different weight than the SVG icons
@@ -217,7 +250,7 @@ function ReposterName({
   onOpenProfile?: (pubkey: string) => void;
 }) {
   const author = useAuthor(pubkey);
-  const name = author?.displayName || author?.name || shortNpub(pubkey);
+  const name = displayNameFor(pubkey, author);
   return (
     <button
       type="button"
@@ -261,7 +294,7 @@ function PlainNoteCard({
 
   useEffect(() => subscribeCounts(note.id, setCounts), [note.id]);
 
-  const displayName = meta?.displayName || meta?.name || shortNpub(note.pubkey);
+  const displayName = displayNameFor(note.pubkey, meta);
   const canInteract = !!myPubkey;
   const isMine = myPubkey === note.pubkey;
   // Set lookup: a follow list runs to thousands and this renders per card.
@@ -320,18 +353,40 @@ function PlainNoteCard({
    * so the obvious gesture — tap the thing you want to read more of — did
    * nothing at all.
    *
-   * Guarded rather than wrapped in a button, because the card is full of
-   * real controls (author, tags, media, the action row) and a button can't
-   * legally contain them. A drag that selects text is not a click either.
+   * `nested` is excluded because the repost wrapper around it owns the click
+   * for the whole row; two handlers would fire on one tap.
    */
   const openThread = onOpenNote && !quoted && !nested
-    ? (event: React.MouseEvent<HTMLElement>) => {
-      const target = event.target as HTMLElement | null;
-      if (target?.closest('a, button, input, textarea, video, audio, [role="button"], [data-no-thread]')) return;
-      if (window.getSelection()?.toString()) return;
-      onOpenNote(note.id);
-    }
+    ? bodyClickHandler(() => onOpenNote(note.id))
     : undefined;
+
+  /**
+   * The second header row only earns its space when it has something to say
+   * — who this answers, or what kind of thing it is. Otherwise the
+   * timestamp joins the name row rather than sitting alone under it.
+   */
+  const hasMetaRow = !!replyParent || mode === 'article' || mode === 'highlight';
+
+  const time = (
+    <time dateTime={new Date(note.created_at * 1000).toISOString()}>
+      {relativeTime(note.created_at, t, locale)}
+    </time>
+  );
+
+  // Also the accessible route into the thread, and the only one a `nested`
+  // card has — its body click belongs to the repost wrapper, but a keyboard
+  // still needs a real control to land on.
+  const timestamp = onOpenNote && !quoted ? (
+    <button
+      type="button"
+      className="hover:text-lc-white hover:underline"
+      onClick={() => onOpenNote(note.id)}
+      title={t('social.openThread')}
+      data-testid="note-open-thread"
+    >
+      {time}
+    </button>
+  ) : time;
 
   return (
     <article
@@ -379,42 +434,32 @@ function PlainNoteCard({
                 {t('social.followingBadge')}
               </span>
             )}
-          </div>
-          <div className="flex items-center gap-2 text-[11px] text-lc-muted">
-            {/* Names who is being answered and links to them — a reply
-                that only says "reply" is half a conversation. */}
-            {replyParent && (
-              <ReplyLine
-                parent={replyParent}
-                onOpenNote={onOpenNote}
-                onOpenProfile={onOpenProfile}
-              />
-            )}
-            {mode === 'article' && <span>{t('social.article')}</span>}
-            {mode === 'highlight' && <span>{t('social.highlight')}</span>}
             {/*
-              Also the accessible route into the thread: the card's own
-              click handler is a mouse convenience, and a keyboard needs a
-              real control to land on.
+              On a note with nothing else to say about itself, the timestamp
+              rides the name row. It used to sit alone on a second line,
+              leaving an empty indented band under every non-reply — a whole
+              wasted row per card, which on a phone is most of the feed.
             */}
-            {onOpenNote && !quoted && !nested ? (
-              <button
-                type="button"
-                className="hover:text-lc-white hover:underline"
-                onClick={() => onOpenNote(note.id)}
-                title={t('social.openThread')}
-                data-testid="note-open-thread"
-              >
-                <time dateTime={new Date(note.created_at * 1000).toISOString()}>
-                  {relativeTime(note.created_at, t, locale)}
-                </time>
-              </button>
-            ) : (
-              <time dateTime={new Date(note.created_at * 1000).toISOString()}>
-                {relativeTime(note.created_at, t, locale)}
-              </time>
+            {!hasMetaRow && (
+              <span className="ml-auto shrink-0 pl-1 text-[11px] text-lc-muted">{timestamp}</span>
             )}
           </div>
+          {hasMetaRow && (
+            <div className="flex items-center gap-2 text-[11px] text-lc-muted">
+              {/* Names who is being answered and links to them — a reply
+                  that only says "reply" is half a conversation. */}
+              {replyParent && (
+                <ReplyLine
+                  parent={replyParent}
+                  onOpenNote={onOpenNote}
+                  onOpenProfile={onOpenProfile}
+                />
+              )}
+              {mode === 'article' && <span>{t('social.article')}</span>}
+              {mode === 'highlight' && <span>{t('social.highlight')}</span>}
+              {timestamp}
+            </div>
+          )}
         </div>
         {/*
           Top-right, where every client puts it and where it can't be
@@ -665,10 +710,3 @@ function relativeTime(createdAt: number, t: (key: string) => string, locale: Loc
   return formatDate(locale, createdAt, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
-function shortNpub(pubkey: string): string {
-  try {
-    return `${hexToNpub(pubkey).slice(0, 12)}…`;
-  } catch {
-    return `${pubkey.slice(0, 10)}…`;
-  }
-}

@@ -133,9 +133,10 @@ describe('FeedScreen', () => {
     expect(lastCall?.[1]).toMatchObject({ until: 2000 });
   });
 
-  it('shows new notes immediately while you are at the top of the feed', async () => {
-    // A feed that makes you click a pill to see new posts when you're
-    // already looking at the top of the list isn't live, it's just slow.
+  it('offers new notes through the pill instead of inserting them', async () => {
+    // Splicing a note in under a reader re-sorts the whole list — the feed
+    // rearranged itself while you were halfway through reading it. The pill
+    // says how many are waiting and moves nothing until it is tapped.
     socialMocks.loadFollowingFeed.mockResolvedValue([note('a', 'first')]);
     const live: { emit?: (event: NostrEvent) => void } = {};
     socialMocks.subscribeSocial.mockImplementation((...args: unknown[]) => {
@@ -147,8 +148,13 @@ describe('FeedScreen', () => {
     await waitFor(() => expect(screen.getByText('first')).toBeInTheDocument());
 
     live.emit?.(note('live', 'just arrived', Math.floor(Date.now() / 1000) + 5));
+    await waitFor(() => expect(screen.getByTestId('feed-pending')).toBeInTheDocument());
+    expect(screen.queryByText('just arrived')).not.toBeInTheDocument();
+
+    // And the pill is reachable at the top, where it used to be hidden
+    // because the notes let themselves in up there.
+    fireEvent.click(screen.getByTestId('feed-pending'));
     await waitFor(() => expect(screen.getByText('just arrived')).toBeInTheDocument());
-    expect(screen.queryByTestId('feed-pending')).not.toBeInTheDocument();
   });
 
   it('does not splice a late Following page into Global, or its cache', async () => {
@@ -430,10 +436,10 @@ describe('FeedScreen', () => {
     expect(socialMocks.loadFollowingFeed.mock.calls.length).toBe(before);
   });
 
-  it('refreshes on the way back up, without needing the pull gesture', async () => {
-    // The pull was the *only* way to fetch new notes, and it required being
-    // at an exact offset and over-scrolling from there — on a phone the
-    // browser eats that as rubber-banding, so scrolling up did nothing.
+  it('does not refetch the feed just because you scrolled back up', async () => {
+    // Scrolling to the top used to fire a full refresh, which replaces the
+    // list and re-sorts it — so going back for a note you had just read was
+    // the most reliable way to lose it.
     socialMocks.loadFollowingFeed.mockResolvedValue([note('a', 'first')]);
     renderFeed();
     await waitFor(() => expect(screen.getByText('first')).toBeInTheDocument());
@@ -445,9 +451,9 @@ describe('FeedScreen', () => {
 
     (scroller as HTMLElement & { scrollTop: number }).scrollTop = 0;
     fireEvent.scroll(scroller);
-    await waitFor(() => expect(
-      socialMocks.loadFollowingFeed.mock.calls.length,
-    ).toBeGreaterThan(before));
+    await Promise.resolve();
+    expect(socialMocks.loadFollowingFeed.mock.calls.length).toBe(before);
+    expect(screen.getByText('first')).toBeInTheDocument();
   });
 
   it('offers a way back to the top once you have scrolled away', async () => {
@@ -627,9 +633,11 @@ describe('FeedScreen', () => {
   it('opens a tag in its own search, seeded, rather than leaving for /t', async () => {
     // Clicking #bitcoin used to navigate to a standalone page, and the feed
     // you were reading was gone. Same handler a hashtag inside a note uses.
-    socialMocks.loadFollowingFeed.mockResolvedValue([
-      { ...note('a', 'gm'), tags: [['t', 'bitcoin']] },
-    ]);
+    // Three notes, because one tag on one note is not trending — the panel
+    // used to list `#esim · 1` and now holds a floor.
+    socialMocks.loadFollowingFeed.mockResolvedValue(
+      ['a', 'b', 'c'].map((id) => ({ ...note(id, 'gm'), tags: [['t', 'bitcoin']] })),
+    );
     renderFeed();
     await waitFor(() => expect(screen.getByTestId('trending-tag')).toBeInTheDocument());
 

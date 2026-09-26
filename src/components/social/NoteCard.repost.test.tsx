@@ -158,3 +158,49 @@ describe('repost rendering', () => {
     expect(inner?.className).not.toContain('px-5');
   });
 });
+
+describe('opening the note that was reposted', () => {
+  it('opens the original when the repost body is clicked', () => {
+    // The inner card rendered with `nested`, which stripped both the card
+    // click and the timestamp control — so a reposted note was the one row
+    // in the feed you could not open.
+    const onOpenNote = vi.fn();
+    renderRepost({ onOpenNote });
+    fireEvent.click(screen.getByText('the original note'));
+    expect(onOpenNote).toHaveBeenCalledWith(ORIGINAL.id);
+  });
+
+  it('opens it exactly once — the wrapper owns the click, not both cards', () => {
+    const onOpenNote = vi.fn();
+    renderRepost({ onOpenNote });
+    fireEvent.click(screen.getByText('the original note'));
+    expect(onOpenNote).toHaveBeenCalledTimes(1);
+  });
+
+  it('marks the row as openable so it gets the affordance', () => {
+    renderRepost({ onOpenNote: vi.fn() });
+    expect(screen.getByTestId('repost-card').className).toContain('note-card-open');
+  });
+
+  it('gives the reposted note a keyboard route via its timestamp', () => {
+    const onOpenNote = vi.fn();
+    renderRepost({ onOpenNote });
+    fireEvent.click(screen.getByTestId('note-open-thread'));
+    expect(onOpenNote).toHaveBeenCalledWith(ORIGINAL.id);
+    expect(onOpenNote).toHaveBeenCalledTimes(1);
+  });
+
+  it('still opens the reposter profile without opening the thread', () => {
+    const onOpenNote = vi.fn();
+    const onOpenProfile = vi.fn();
+    renderRepost({ onOpenNote, onOpenProfile });
+    fireEvent.click(screen.getByRole('button', { name: 'Gigi' }));
+    expect(onOpenProfile).toHaveBeenCalledWith(REPOST.pubkey);
+    expect(onOpenNote).not.toHaveBeenCalled();
+  });
+
+  it('is inert when the host gave it nowhere to go', () => {
+    renderRepost();
+    expect(screen.getByTestId('repost-card').className).not.toContain('note-card-open');
+  });
+});

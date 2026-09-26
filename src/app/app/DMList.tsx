@@ -6,14 +6,16 @@
  * NIP-02 follows to split Follows / Others.
  */
 
-import { useMemo, useState } from 'react';
+import { displayNameFor } from '@/lib/display-name';
+import { useEffect, useMemo, useState } from 'react';
 import {
   nostrActions,
   useDirectMessages,
   useMyFollows,
   type JsDirectMessage,
 } from '@/lib/nostr-bridge';
-import { useUserMetadata as useProfile } from '@/lib/nostr-bridge';
+import { useAuthor } from '@/lib/social/useAuthor';
+import { ensureSocialProfiles } from '@/lib/social/profiles';
 import { useDMUnreadCount } from '@/lib/read-state/selectors';
 import DMComposer from './DMComposer';
 import UserAvatar from '@/components/UserAvatar';
@@ -45,6 +47,15 @@ export default function DMList({
       };
     }).sort((a, b) => b.sortKey - a.sortKey);
   }, [dms]);
+
+  // Resolve every peer in one batched REQ instead of letting each row fire
+  // its own — a list of thirty conversations is thirty round trips
+  // otherwise. `ensureSocialProfiles` already filters to what's missing.
+  const peerKey = peers.map((p) => p.pubkey).join(',');
+  useEffect(() => {
+    if (peers.length > 0) void ensureSocialProfiles(peers.map((p) => p.pubkey));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [peerKey]);
 
   const followsThreads = useMemo(() => peers.filter((p) => followSet.has(p.pubkey)), [peers, followSet]);
   const othersThreads = useMemo(() => peers.filter((p) => !followSet.has(p.pubkey)), [peers, followSet]);
@@ -96,27 +107,55 @@ export default function DMList({
         />
       )}
 
-      <div className="flex shrink-0 border-b border-lc-border" role="tablist">
-        {(['follows', 'others'] as const).map((tabId) => {
-          const active = effectiveTab === tabId;
-          const count = tabId === 'follows' ? followsThreads.length : othersThreads.length;
-          return (
-            <button
-              key={tabId}
-              role="tab"
-              aria-selected={active}
-              onClick={() => setTab(tabId)}
-              className={`relative flex-1 py-2 text-xs font-medium capitalize transition-colors ${
-                active ? '-mb-px border-b-2 border-lc-green text-lc-green' : 'text-lc-muted hover:text-lc-white'
-              }`}
-            >
-              {tabId === 'follows' ? t('dm.follows') : t('dm.others')} <span className="text-[10px] opacity-70">({count})</span>
-            </button>
-          );
-        })}
+      {/*
+        A segmented control rather than an underlined tab strip.
+
+        The underline read as a page-level tab bar — the same affordance the
+        rail and the channel list use for navigation — when this only filters
+        the list underneath it. A filled pill inside a track says "one of
+        these two" and takes the same room. The count moves into its own
+        badge: parentheses next to a label are easy to read as part of the
+        label, and this is the number that tells you which side has anything
+        in it.
+      */}
+      <div className="shrink-0 border-b border-lc-border p-2">
+        <div className="flex gap-1 rounded-xl bg-lc-black/40 p-1" role="tablist">
+          {(['follows', 'others'] as const).map((tabId) => {
+            const active = effectiveTab === tabId;
+            const count = tabId === 'follows' ? followsThreads.length : othersThreads.length;
+            return (
+              <button
+                key={tabId}
+                role="tab"
+                aria-selected={active}
+                onClick={() => setTab(tabId)}
+                data-testid={`dm-tab-${tabId}`}
+                className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-semibold transition-colors ${
+                  active
+                    ? 'bg-lc-border/70 text-lc-white shadow-sm'
+                    : 'text-lc-muted hover:text-lc-white'
+                }`}
+              >
+                <span>{tabId === 'follows' ? t('dm.follows') : t('dm.others')}</span>
+                <span
+                  className={`rounded-full px-1.5 py-px text-[10px] font-bold tabular-nums ${
+                    active ? 'bg-lc-green/20 text-lc-green' : 'bg-lc-border/60 text-lc-muted'
+                  }`}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      {/*
+        Same reservation as the channel list: `FloatingUserPanel` is absolute
+        over the bottom of this column too, and this scroller had none — so
+        the last conversation sat permanently behind the "You" pill.
+      */}
+      <div className="flex-1 overflow-y-auto pb-2 md:pb-28">
         {peers.length === 0 ? (
           <div className="p-4 text-center">
             <p className="text-sm text-lc-muted">{t('dm.noConversations')}</p>
@@ -165,9 +204,15 @@ function DMRow({
   active: boolean;
   onClick: () => void;
 }) {
-  const meta = useProfile(pubkey);
+  // `useAuthor`, not the bridge's `useUserMetadata`: the bridge only queries
+  // the group/profile-lookup relay tier, which holds kind 0 for people in
+  // your NIP-29 rooms. A DM peer is usually someone from the wider network
+  // who has no reason to have published there — which is why every row here
+  // showed an npub and a letter avatar while the same person resolved fine
+  // in the feed. `useAuthor` merges both tiers field by field.
+  const meta = useAuthor(pubkey);
   const unread = useDMUnreadCount(pubkey);
-  const display = meta?.displayName || meta?.name || npubLike(pubkey);
+  const display = displayNameFor(pubkey, meta);
   const preview = last
     ? (last.outgoing ? youPrefix : '') + last.content.replace(/\s+/g, ' ').slice(0, 60)
     : null;
@@ -211,8 +256,3 @@ function DMRow({
 }
 
 export { default as Avatar } from '@/components/UserAvatar';
-
-function npubLike(pubkey: string): string {
-  // Pretty-print a hex pubkey like "npub1xxxx…yyyy" without bech32.
-  return 'npub1' + pubkey.slice(0, 6) + '…' + pubkey.slice(-4);
-}
