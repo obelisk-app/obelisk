@@ -2366,6 +2366,15 @@
   flex-shrink: 0;
   padding-top: max(10px, env(safe-area-inset-top));
 }
+.obelisk-mobile .dm-header-action {
+  color: var(--app-text);
+  background: transparent;
+  border: 0;
+  flex-shrink: 0;
+}
+.obelisk-mobile .dm-header-action:active {
+  background: var(--app-line-soft);
+}
 .obelisk-mobile .dm-header .dm-ava-list {
   width: 40px;
   height: 40px;
@@ -2415,11 +2424,13 @@
   -webkit-overflow-scrolling: touch;
 }
 .obelisk-mobile .dm-bubble {
+  /* The ⋯ chip (DmMessageMenu) sits in the top-right corner. */
+  position: relative;
   max-width: 78%;
   /* min-width fits "16:29" + a status spinner with padding; without it,
      short messages let the timestamp row collide with text. */
   min-width: 88px;
-  padding: 8px 12px 8px;
+  padding: 8px 44px 8px 12px;
   border-radius: 16px;
   font-size: 15px;
   line-height: 1.45;

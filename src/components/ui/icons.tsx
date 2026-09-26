@@ -146,6 +146,57 @@ export const StarIcon = ({ filled = false, ...p }: IconProps & { filled?: boolea
 export const ChevronRightIcon = (p: IconProps) => (
   <Svg {...p}><path d="m9 6 6 6-6 6" /></Svg>
 );
+export const CheckCircleIcon = (p: IconProps) => (
+  <Svg {...p}><circle cx="12" cy="12" r="9" /><path d="m8 12.5 2.7 2.7L16.5 9.5" /></Svg>
+);
+export const ClockIcon = (p: IconProps) => (
+  <Svg {...p}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3.5 2" /></Svg>
+);
+export const AtIcon = (p: IconProps) => (
+  <Svg {...p}><circle cx="12" cy="12" r="4" /><path d="M16 8v5.5a2.5 2.5 0 0 0 5 0V12a9 9 0 1 0-3.5 7.1" /></Svg>
+);
+export const PaperclipIcon = (p: IconProps) => (
+  <Svg {...p}><path d="m21 11.5-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l7.9-7.9" /></Svg>
+);
+export const FileIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z" /><path d="M14 3v5h5" /></Svg>
+);
+export const DownloadIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></Svg>
+);
+export const LockIcon = (p: IconProps) => (
+  <Svg {...p}><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></Svg>
+);
+export const PhoneIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M5 4h3.5l1.8 4.4-2.3 1.5a11 11 0 0 0 6.1 6.1l1.5-2.3L20 15.5V19a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2Z" /></Svg>
+);
+export const PhoneOffIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M3 12.5c5-4.4 13-4.4 18 0l-2.2 2.9-3.3-1.4v-2.4a10 10 0 0 0-7 0V14l-3.3 1.4Z" /></Svg>
+);
+export const MicIcon = (p: IconProps) => (
+  <Svg {...p}><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" /></Svg>
+);
+export const MicOffIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M15 10V6a3 3 0 0 0-5.7-1.3M9 9v2a3 3 0 0 0 4.6 2.5M5 11a7 7 0 0 0 11.3 5.5M19 11a7 7 0 0 1-.6 2.9M12 18v3M3 3l18 18" /></Svg>
+);
+export const VideoOffIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M10 6h4a2 2 0 0 1 2 2v2.5l5-3v9l-3-1.8M16 16a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2M3 3l18 18" /></Svg>
+);
+export const ScreenShareIcon = (p: IconProps) => (
+  <Svg {...p}><rect x="3" y="4" width="18" height="12" rx="2" /><path d="M8 20h8M12 16v4M12 13V8M9.5 10.5 12 8l2.5 2.5" /></Svg>
+);
+export const FlipCameraIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M4 8h3l2-3h6l2 3h3v11H4Z" /><path d="M9.5 13.5a2.5 2.5 0 0 1 4.3-1.8M14.5 13.5a2.5 2.5 0 0 1-4.3 1.8M13.8 10.2v1.5h-1.5M10.2 16.8v-1.5h1.5" /></Svg>
+);
+export const MaximizeIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></Svg>
+);
+export const MinimizeIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" /></Svg>
+);
+export const VideoIcon = (p: IconProps) => (
+  <Svg {...p}><rect x="3" y="6" width="13" height="12" rx="2" /><path d="m16 10.5 5-3v9l-5-3" /></Svg>
+);
 
 /**
  * "Add a reaction" — the Obelisk mark as a face, in accent green, with a

@@ -109,6 +109,31 @@ describe('preferences store', () => {
     });
   });
 
+  describe('DM call preferences', () => {
+    it('default to contacts-only, auto IP protection and the default call relays', async () => {
+      const { getPreferences, DEFAULT_CALL_RELAYS } = await import('./preferences');
+      expect(getPreferences()).toMatchObject({
+        callsFrom: 'contacts',
+        callIpProtection: 'auto',
+        callRelays: [...DEFAULT_CALL_RELAYS],
+      });
+    });
+
+    it('keeps only wss relays, deduped and capped, and never an empty list', async () => {
+      const { getPreferences, setPreference, DEFAULT_CALL_RELAYS, CALL_RELAY_MAX } = await import('./preferences');
+      setPreference('callRelays', ['wss://a.example/', 'wss://a.example', 'https://b.example', 'ws://c.example', 'wss://u:p@d.example', 'wss://e.example', 'wss://f.example', 'wss://g.example', 'wss://h.example']);
+      expect(getPreferences().callRelays).toEqual(['wss://a.example', 'wss://e.example', 'wss://f.example', 'wss://g.example'].slice(0, CALL_RELAY_MAX));
+      setPreference('callRelays', []);
+      expect(getPreferences().callRelays).toEqual([...DEFAULT_CALL_RELAYS]);
+    });
+
+    it('falls back from junk in storage', async () => {
+      localStorage.setItem('obelisk:preferences', JSON.stringify({ callsFrom: 'everyone!', callIpProtection: 7, callRelays: 'nope' }));
+      const { getPreferences, DEFAULT_CALL_RELAYS } = await import('./preferences');
+      expect(getPreferences()).toMatchObject({ callsFrom: 'contacts', callIpProtection: 'auto', callRelays: [...DEFAULT_CALL_RELAYS] });
+    });
+  });
+
   describe('postQuantumEnabled', () => {
     // On by default: the toggle gates the conversation notice and the
     // per-message marks as well as post-quantum sending, so defaulting off

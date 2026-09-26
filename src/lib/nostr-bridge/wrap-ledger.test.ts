@@ -21,22 +21,22 @@ describe('wrap ledger', () => {
   });
 
   it('is inert with no active account so pre-login wraps are still processed', () => {
-    markWrapSeen('dm', 'wrap1');
-    expect(hasSeenWrap('dm', 'wrap1')).toBe(false);
+    markWrapSeen('dm:inert', 'wrap1');
+    expect(hasSeenWrap('dm:inert', 'wrap1')).toBe(false);
   });
 
   it('remembers a wrap once an account is active', () => {
     resetWrapLedger(ALICE);
-    expect(hasSeenWrap('dm', 'wrap1')).toBe(false);
-    markWrapSeen('dm', 'wrap1');
-    expect(hasSeenWrap('dm', 'wrap1')).toBe(true);
+    expect(hasSeenWrap('dm:inert', 'wrap1')).toBe(false);
+    markWrapSeen('dm:inert', 'wrap1');
+    expect(hasSeenWrap('dm:inert', 'wrap1')).toBe(true);
   });
 
   it('tracks scopes independently — one consumer cannot starve another', () => {
     resetWrapLedger(ALICE);
     // The DM path opens a wrap first; both read-state scopes must still get it.
-    markWrapSeen('dm', 'wrap1');
-    expect(hasSeenWrap('dm', 'wrap1')).toBe(true);
+    markWrapSeen('dm:inert', 'wrap1');
+    expect(hasSeenWrap('dm:inert', 'wrap1')).toBe(true);
     expect(hasSeenWrap('readstate:groups', 'wrap1')).toBe(false);
     expect(hasSeenWrap('readstate:dms', 'wrap1')).toBe(false);
 
@@ -47,7 +47,7 @@ describe('wrap ledger', () => {
 
   it('stores all scopes of one wrap as a single entry', () => {
     resetWrapLedger(ALICE);
-    markWrapSeen('dm', 'wrap1');
+    markWrapSeen('dm:inert', 'wrap1');
     markWrapSeen('readstate:groups', 'wrap1');
     markWrapSeen('readstate:dms', 'wrap1');
     expect(__INTERNAL.size()).toBe(1);
@@ -56,7 +56,7 @@ describe('wrap ledger', () => {
   it('survives a reload', () => {
     vi.useFakeTimers();
     resetWrapLedger(ALICE);
-    markWrapSeen('dm', 'wrap1');
+    markWrapSeen('dm:inert', 'wrap1');
     markWrapSeen('readstate:groups', 'wrap2');
     vi.advanceTimersByTime(__INTERNAL.PERSIST_DEBOUNCE_MS + 1);
 
@@ -64,43 +64,43 @@ describe('wrap ledger', () => {
     resetWrapLedger(null);
     resetWrapLedger(ALICE);
 
-    expect(hasSeenWrap('dm', 'wrap1')).toBe(true);
+    expect(hasSeenWrap('dm:inert', 'wrap1')).toBe(true);
     expect(hasSeenWrap('readstate:groups', 'wrap2')).toBe(true);
-    expect(hasSeenWrap('dm', 'wrap2')).toBe(false);
+    expect(hasSeenWrap('dm:inert', 'wrap2')).toBe(false);
   });
 
   it('is per account — switching identity does not inherit the other one', () => {
     vi.useFakeTimers();
     resetWrapLedger(ALICE);
-    markWrapSeen('dm', 'wrap1');
+    markWrapSeen('dm:inert', 'wrap1');
     vi.advanceTimersByTime(__INTERNAL.PERSIST_DEBOUNCE_MS + 1);
 
     resetWrapLedger(BOB);
-    expect(hasSeenWrap('dm', 'wrap1')).toBe(false);
+    expect(hasSeenWrap('dm:inert', 'wrap1')).toBe(false);
 
     resetWrapLedger(ALICE);
-    expect(hasSeenWrap('dm', 'wrap1')).toBe(true);
+    expect(hasSeenWrap('dm:inert', 'wrap1')).toBe(true);
   });
 
   it('logout clears the in-memory view', () => {
     resetWrapLedger(ALICE);
-    markWrapSeen('dm', 'wrap1');
+    markWrapSeen('dm:inert', 'wrap1');
     resetWrapLedger(null);
-    expect(hasSeenWrap('dm', 'wrap1')).toBe(false);
+    expect(hasSeenWrap('dm:inert', 'wrap1')).toBe(false);
   });
 
   it('evicts the oldest ids past the cap', () => {
     resetWrapLedger(ALICE);
-    for (let i = 0; i < __INTERNAL.MAX_IDS + 50; i++) markWrapSeen('dm', `wrap${i}`);
+    for (let i = 0; i < __INTERNAL.MAX_IDS + 50; i++) markWrapSeen('dm:inert', `wrap${i}`);
     expect(__INTERNAL.size()).toBe(__INTERNAL.MAX_IDS);
-    expect(hasSeenWrap('dm', 'wrap0')).toBe(false);
-    expect(hasSeenWrap('dm', `wrap${__INTERNAL.MAX_IDS + 49}`)).toBe(true);
+    expect(hasSeenWrap('dm:inert', 'wrap0')).toBe(false);
+    expect(hasSeenWrap('dm:inert', `wrap${__INTERNAL.MAX_IDS + 49}`)).toBe(true);
   });
 
   it('persists debounced rather than on every mark', () => {
     vi.useFakeTimers();
     resetWrapLedger(ALICE);
-    markWrapSeen('dm', 'wrap1');
+    markWrapSeen('dm:inert', 'wrap1');
     expect(localStorage.getItem(key(ALICE))).toBeNull();
     vi.advanceTimersByTime(__INTERNAL.PERSIST_DEBOUNCE_MS + 1);
     expect(localStorage.getItem(key(ALICE))).not.toBeNull();
@@ -109,15 +109,27 @@ describe('wrap ledger', () => {
   it('tolerates a corrupted payload', () => {
     localStorage.setItem(key(ALICE), 'not json');
     resetWrapLedger(ALICE);
-    expect(hasSeenWrap('dm', 'wrap1')).toBe(false);
-    markWrapSeen('dm', 'wrap1');
-    expect(hasSeenWrap('dm', 'wrap1')).toBe(true);
+    expect(hasSeenWrap('dm:inert', 'wrap1')).toBe(false);
+    markWrapSeen('dm:inert', 'wrap1');
+    expect(hasSeenWrap('dm:inert', 'wrap1')).toBe(true);
   });
 
   it('marking the same scope twice is idempotent', () => {
     resetWrapLedger(ALICE);
-    markWrapSeen('dm', 'wrap1');
-    markWrapSeen('dm', 'wrap1');
+    markWrapSeen('dm:inert', 'wrap1');
+    markWrapSeen('dm:inert', 'wrap1');
     expect(__INTERNAL.size()).toBe(1);
+  });
+});
+
+describe('retired dm scope', () => {
+  it('a ledger stored by the old `dm` scope (bit 1) no longer hides anything', async () => {
+    const pk = 'f'.repeat(64);
+    localStorage.setItem(`obelisk-wrap-ledger:${pk}`, JSON.stringify({ oldChatWrap: 1 }));
+    const { resetWrapLedger, hasSeenWrap } = await import('./wrap-ledger');
+    resetWrapLedger(pk);
+    expect(hasSeenWrap('dm:inert', 'oldChatWrap')).toBe(false);
+    expect(hasSeenWrap('readstate:groups', 'oldChatWrap')).toBe(false);
+    expect(hasSeenWrap('readstate:dms', 'oldChatWrap')).toBe(false);
   });
 });

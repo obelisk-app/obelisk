@@ -29,6 +29,10 @@ This directory documents the **mesh** engine in depth. SFU docs are at
 - **[remote-signing-optimization.md](remote-signing-optimization.md)** —
   proposal to reduce mesh beacon pressure on NIP-46 and extension
   signers, followed by an optional scoped voice-session key design.
+- **[dm-calls.md](dm-calls.md)** — 1:1 voice/video calls from a DM
+  thread: gift-wrapped invites, negotiation on per-call throwaway keys,
+  user-chosen call relays, IP protection, ringing. Reuses the mesh `Peer`
+  without `VoiceClient`'s room machinery.
 - **[testing.md](testing.md)** — Playwright harness usage; how the
   two-peer / three-peer / glare specs run; how to add a new failure
   injection.

@@ -27,6 +27,8 @@ import {
 } from '@/store/channel-prefs';
 import { useNotificationsStore } from '@/store/notifications';
 import { useReadStateStore } from '@/store/read-state';
+import { MENU_PANEL_CLASS, MenuDivider, MenuItem } from '@/components/ui/menu';
+import { AtIcon, BellIcon, BellOffIcon, CheckCircleIcon, ChevronRightIcon, ClockIcon, LinkIcon, StarIcon } from '@/components/ui/icons';
 
 export interface ChannelMenuTarget {
   readonly relay: string;
@@ -95,6 +97,36 @@ function useMutedLabel(until: number | undefined): string | null {
 
 // -- desktop ---------------------------------------------------------------
 
+/**
+ * A flyout next to its row that never leaves the viewport: it measures itself
+ * after rendering and slides up by however much it would overflow the bottom
+ * edge. (It used to hang off the bottom of the screen for channels low in the
+ * sidebar.)
+ */
+function SubMenu({ flip, testId, children }: { flip: boolean; testId: string; children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [shift, setShift] = useState(0);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const overflow = r.bottom - (window.innerHeight - 8);
+    // Never push it above the top edge either.
+    setShift(overflow > 0 ? -Math.min(overflow, Math.max(0, r.top - 8)) : 0);
+  }, []);
+  return (
+    <div
+      ref={ref}
+      role="menu"
+      className={`absolute min-w-[230px] ${MENU_PANEL_CLASS} ${flip ? 'right-full mr-1' : 'left-full ml-1'}`}
+      style={{ top: shift }}
+      data-testid={testId}
+    >
+      {children}
+    </div>
+  );
+}
+
 export function ChannelContextMenu({
   target,
   x,
@@ -141,10 +173,10 @@ export function ChannelContextMenu({
   }, [onClose]);
 
   const act = (fn: () => void) => () => { fn(); onClose(); };
-  const itemCls = 'flex w-full items-center justify-between gap-6 rounded-md px-3 py-2 text-left text-sm text-lc-white hover:bg-lc-green/15 disabled:cursor-default disabled:text-lc-muted/60 disabled:hover:bg-transparent';
-  const sep = <div className="my-1 h-px bg-lc-border" />;
-  const chevron = <span aria-hidden="true" className="text-lc-muted">›</span>;
-  const subCls = `absolute top-0 min-w-[230px] rounded-lg border border-lc-border bg-lc-dark p-1.5 shadow-2xl ${flipSub ? 'right-full mr-1' : 'left-full ml-1'}`;
+  const chevron = <ChevronRightIcon size={14} />;
+  const radio = (on: boolean) => (
+    <span aria-hidden="true" className={`h-3.5 w-3.5 rounded-full border-2 ${on ? 'border-lc-green bg-lc-green' : 'border-lc-muted'}`} />
+  );
 
   if (typeof document === 'undefined') return null;
   return createPortal(
@@ -153,91 +185,89 @@ export function ChannelContextMenu({
       role="menu"
       aria-label={target.name}
       data-testid="channel-context-menu"
-      className="fixed z-[200] min-w-[240px] rounded-lg border border-lc-border bg-lc-dark p-1.5 shadow-2xl"
+      className={`fixed z-[200] min-w-[240px] ${MENU_PANEL_CLASS}`}
       style={{ left: pos.left, top: pos.top }}
       onContextMenu={(e) => e.preventDefault()}
     >
-      <button type="button" role="menuitem" className={itemCls} disabled={!target.hasUnread} onClick={act(a.markRead)} data-testid="channel-menu-mark-read">
-        {t('channelMenu.markRead')}
-      </button>
-      {sep}
-      <button type="button" role="menuitem" className={itemCls} onClick={act(a.toggleFollow)} data-testid="channel-menu-follow">
-        {a.following ? t('channelMenu.unfollow') : t('channelMenu.follow')}
-      </button>
-      <button
-        type="button"
-        role="menuitem"
-        className={itemCls}
+      <MenuItem
+        icon={<CheckCircleIcon />}
+        label={t('channelMenu.markRead')}
+        disabled={!target.hasUnread}
+        onClick={act(a.markRead)}
+        testId="channel-menu-mark-read"
+      />
+      <MenuDivider />
+      <MenuItem
+        icon={<StarIcon filled={a.following} />}
+        label={a.following ? t('channelMenu.unfollow') : t('channelMenu.follow')}
+        onClick={act(a.toggleFollow)}
+        testId="channel-menu-follow"
+      />
+      <MenuItem
+        icon={<LinkIcon />}
+        label={t('channelMenu.copyLink')}
         onClick={act(() => void a.copyLink())}
-        data-testid="channel-menu-copy-link"
-      >
-        {t('channelMenu.copyLink')}
-      </button>
-      {sep}
+        testId="channel-menu-copy-link"
+      />
+      <MenuDivider />
       <div className="relative" onMouseEnter={() => setSub('mute')} onMouseLeave={() => setSub(null)}>
         {a.muted ? (
-          <button type="button" role="menuitem" className={itemCls} onClick={act(a.unmute)} data-testid="channel-menu-unmute">
-            <span className="flex flex-col">
-              <span>{t('channelMenu.unmute')}</span>
-              {mutedLabel && <span className="text-[11px] text-lc-muted">{mutedLabel}</span>}
-            </span>
-          </button>
+          <MenuItem
+            icon={<BellIcon />}
+            label={t('channelMenu.unmute')}
+            hint={mutedLabel}
+            onClick={act(a.unmute)}
+            testId="channel-menu-unmute"
+          />
         ) : (
-          <button
-            type="button"
-            role="menuitem"
-            aria-haspopup="menu"
-            aria-expanded={sub === 'mute'}
-            className={itemCls}
+          <MenuItem
+            icon={<BellOffIcon />}
+            label={t('channelMenu.mute')}
+            trailing={chevron}
             onClick={() => setSub(sub === 'mute' ? null : 'mute')}
-            data-testid="channel-menu-mute"
-          >
-            {t('channelMenu.mute')} {chevron}
-          </button>
+            buttonProps={{ 'aria-haspopup': 'menu', 'aria-expanded': sub === 'mute' }}
+            testId="channel-menu-mute"
+          />
         )}
         {!a.muted && sub === 'mute' && (
-          <div role="menu" className={subCls} data-testid="channel-menu-mute-sub">
+          <SubMenu flip={flipSub} testId="channel-menu-mute-sub">
             {MUTE_OPTIONS.map((o) => (
-              <button key={o.key} type="button" role="menuitem" className={itemCls} onClick={act(() => a.mute(o.ms))} data-testid={`channel-menu-mute-${o.ms}`}>
-                {t(o.key)}
-              </button>
+              <MenuItem
+                key={o.key}
+                icon={o.ms === MUTED_FOREVER ? <BellOffIcon /> : <ClockIcon />}
+                label={t(o.key)}
+                onClick={act(() => a.mute(o.ms))}
+                testId={`channel-menu-mute-${o.ms}`}
+              />
             ))}
-          </div>
+          </SubMenu>
         )}
       </div>
       <div className="relative" onMouseEnter={() => setSub('notify')} onMouseLeave={() => setSub(null)}>
-        <button
-          type="button"
-          role="menuitem"
-          aria-haspopup="menu"
-          aria-expanded={sub === 'notify'}
-          className={itemCls}
+        <MenuItem
+          icon={<BellIcon />}
+          label={t('channelMenu.notify')}
+          hint={t(`channelMenu.notify.${a.level}`)}
+          trailing={chevron}
           onClick={() => setSub(sub === 'notify' ? null : 'notify')}
-          data-testid="channel-menu-notify"
-        >
-          <span className="flex flex-col">
-            <span>{t('channelMenu.notify')}</span>
-            <span className="text-[11px] text-lc-muted">{t(`channelMenu.notify.${a.level}`)}</span>
-          </span>
-          {chevron}
-        </button>
+          buttonProps={{ 'aria-haspopup': 'menu', 'aria-expanded': sub === 'notify' }}
+          testId="channel-menu-notify"
+        />
         {sub === 'notify' && (
-          <div role="menu" className={subCls} data-testid="channel-menu-notify-sub">
+          <SubMenu flip={flipSub} testId="channel-menu-notify-sub">
             {NOTIFY_OPTIONS.map((o) => (
-              <button
+              <MenuItem
                 key={o.level}
-                type="button"
                 role="menuitemradio"
-                aria-checked={a.level === o.level}
-                className={itemCls}
+                icon={o.level === 'all' ? <BellIcon /> : o.level === 'mentions' ? <AtIcon /> : <BellOffIcon />}
+                label={t(o.key)}
+                trailing={radio(a.level === o.level)}
                 onClick={act(() => a.setLevel(o.level))}
-                data-testid={`channel-menu-notify-${o.level}`}
-              >
-                {t(o.key)}
-                <span aria-hidden="true" className={`h-3.5 w-3.5 rounded-full border-2 ${a.level === o.level ? 'border-lc-green bg-lc-green' : 'border-lc-muted'}`} />
-              </button>
+                buttonProps={{ 'aria-checked': a.level === o.level }}
+                testId={`channel-menu-notify-${o.level}`}
+              />
             ))}
-          </div>
+          </SubMenu>
         )}
       </div>
     </div>,

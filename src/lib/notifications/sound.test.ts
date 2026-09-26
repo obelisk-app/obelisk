@@ -3,7 +3,9 @@ import {
   __resetNotificationSoundForTests,
   playNotificationSound,
   previewRingtone,
+  RING_PERIOD_MS,
   RINGTONES,
+  startRingLoop,
   SOUND_MIN_GAP_MS,
 } from './sound';
 import { setPreference } from '@/lib/preferences';
@@ -76,7 +78,7 @@ describe('playNotificationSound', () => {
   it('every ringtone plays every kind', () => {
     const oscs = installFakeAudio();
     for (const id of RINGTONES) {
-      for (const kind of ['mention', 'reply', 'dm'] as const) {
+      for (const kind of ['mention', 'reply', 'dm', 'ring', 'ringback'] as const) {
         const before = oscs.length;
         expect(previewRingtone(id, kind)).toBe(true);
         expect(oscs.length).toBeGreaterThan(before);
@@ -124,5 +126,24 @@ describe('playNotificationSound', () => {
     vi.stubGlobal('navigator', { ...navigator, userActivation: { hasBeenActive: true } });
     expect(playNotificationSound('mention', 10_100)).toBe('played');
     vi.unstubAllGlobals();
+  });
+
+  it('loops the call ring in the chosen ringtone until stopped', () => {
+    vi.useFakeTimers();
+    try {
+      const oscs = installFakeAudio();
+      setPreference('notificationRingtone', 'marimba');
+      const loop = startRingLoop('ring');
+      expect(loop.first).toBe('played');
+      const once = oscs.length;
+      expect(once).toBeGreaterThan(0);
+      vi.advanceTimersByTime(RING_PERIOD_MS.ring * 2);
+      expect(oscs.length).toBe(once * 3);
+      loop.stop();
+      vi.advanceTimersByTime(RING_PERIOD_MS.ring * 3);
+      expect(oscs.length).toBe(once * 3);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

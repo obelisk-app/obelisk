@@ -4,6 +4,7 @@
  */
 import { getBridge, type RemoteSigner } from './client';
 import type { JsSearchOptions, JsSearchResponse } from './types';
+import type { JsDmFile } from '@/lib/dm-file';
 
 export const nostrActions = {
   loginWithNsec: async (privKeyHex: string, pubKeyHex: string) =>
@@ -50,10 +51,12 @@ export const nostrActions = {
     (await getBridge()).removeReaction(groupId, reactionEventId),
   removeMessage: async (groupId: string, eventId: string) =>
     (await getBridge()).removeMessage(groupId, eventId),
-  sendDirectMessage: async (recipientPubkey: string, content: string) =>
-    (await getBridge()).sendDirectMessage(recipientPubkey, content),
+  sendDirectMessage: async (recipientPubkey: string, content: string, extraTags?: string[][]) =>
+    (await getBridge()).sendDirectMessage(recipientPubkey, content, extraTags),
   retryMessage: async (groupId: string, clientTag: string) =>
     (await getBridge()).retryMessage(groupId, clientTag),
+  sendDirectFile: async (recipientPubkey: string, file: JsDmFile) =>
+    (await getBridge()).sendDirectFile(recipientPubkey, file),
   retryDirectMessage: async (counterparty: string, clientTag: string) =>
     (await getBridge()).retryDirectMessage(counterparty, clientTag),
   cancelPendingMessage: async (groupId: string, clientTag: string) =>

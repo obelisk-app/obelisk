@@ -18,7 +18,8 @@
  *
  *   | scope              | keeps                                       |
  *   |--------------------|---------------------------------------------|
- *   | `dm`               | NIP-17 chat rumors (kind 14/15)             |
+ *   | `dm:inert`         | DM-inbox wraps that never reach a thread:   |
+ *   |                    | call signals, unknown or unreadable kinds   |
  *   | `readstate:groups` | kind 30078 rumors, `d=obelisk:readstate:v1` |
  *   | `readstate:dms`    | kind 30078 rumors, `d=obelisk:dm-readstate:v1` |
  *
@@ -32,10 +33,18 @@
  * ## Why skipping is safe
  *
  * A wrap's effects are already persisted by the time we mark it seen:
- * DM messages live in the DM store, and read-state cursors are written to
+ * read-state cursors are written to
  * the bridgeCache under `(relay, KIND_GIFT_WRAP, dTag)`, which
  * `subscribeAndIngest` re-seeds from on mount. Skipping the wrap does not
  * skip its outcome.
+ *
+ * **DM messages are the exception, and are never recorded.** Decrypted DMs
+ * are deliberately kept in memory only (docs/direct-messages.md, "no DM
+ * plaintext on disk"), so their wrap *is* the only way back to them after a
+ * reload. The old `dm` scope recorded chat wraps as seen and so hid every
+ * already-opened NIP-17 message after a page reload — only new ones showed.
+ * `dm:inert` records only wraps with nothing to show; stored masks still
+ * carry the old `dm` bit (1), which nothing reads any more.
  *
  * That invariant is why **`clearAllClientCacheExceptSession` must wipe this
  * ledger too** (see the `obelisk-wrap-ledger:` prefix in `cache-clear.ts`).
@@ -52,12 +61,13 @@ import { createLocalStore, type LocalStore } from '@/lib/local-store';
 
 const KEY_PREFIX = 'obelisk-wrap-ledger:';
 
-export type WrapLedgerScope = 'dm' | 'readstate:groups' | 'readstate:dms';
+export type WrapLedgerScope = 'dm:inert' | 'readstate:groups' | 'readstate:dms';
 
 const SCOPE_BIT: Record<WrapLedgerScope, number> = {
-  dm: 1,
+  // Bit 1 was the retired `dm` scope — never reuse it: stored masks still set it.
   'readstate:groups': 2,
   'readstate:dms': 4,
+  'dm:inert': 8,
 };
 
 /**

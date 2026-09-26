@@ -315,6 +315,252 @@ describe('NIP-17 send/receive', () => {
   });
 });
 
+describe('DM subscription survives a relay switch', () => {
+  it('reopens the kind-1059 REQ after switchRelay without a remount', async () => {
+    const { getBridge } = await import('./client');
+    const { setPreference } = await import('@/lib/preferences');
+    const me = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(me.skHex, me.pkHex);
+    setPreference('directMessagesEnabled', true);
+    bridge.subscribeDirectMessages(() => {});
+    const wrapSubs = () => fake.state.subscriptions.filter((s) =>
+      (s.filter.kinds as number[] | undefined)?.includes(1059)
+      && (s.filter['#p'] as string[] | undefined)?.includes(me.pkHex));
+    expect(wrapSubs().length).toBeGreaterThan(0);
+
+    await bridge.switchRelay('wss://another.example');
+    await vi.waitFor(() => { if (wrapSubs().length === 0) throw new Error('1059 REQ not reopened'); }, { timeout: 5000, interval: 5 });
+  });
+});
+
+describe('NIP-17 history across a real page reload', () => {
+  it('a message opened before the reload is still in the thread after it', { timeout: 15_000 }, async () => {
+    const { PrivateKeySigner } = await import('@nostr-wot/signers');
+    const { buildChatMessage, sealAndGiftWrap } = await import('@nostr-wot/dm');
+    const alice = makeKeypair();
+    const bob = makeKeypair();
+    fake.state.published.push(await sealAndGiftWrap(new PrivateKeySigner(alice.sk), bob.pkHex, buildChatMessage(alice.pkHex, bob.pkHex, 'before the reload')));
+
+    const load = async () => {
+      const { getBridge } = await import('./client');
+      const { setPreference } = await import('@/lib/preferences');
+      const bridge = await getBridge();
+      await bridge.loginWithNsec(bob.skHex, bob.pkHex);
+      setPreference('directMessagesEnabled', true);
+      let thread: ReadonlyArray<{ content: string }> = [];
+      bridge.subscribeDirectMessages((byPeer) => { thread = byPeer[alice.pkHex] ?? []; });
+      await vi.waitFor(() => { if (thread.length === 0) throw new Error('not ingested'); }, { timeout: 3000, interval: 5 });
+      return thread;
+    };
+    expect((await load())[0].content).toBe('before the reload');
+    // A reload: fresh modules and a fresh bridge, same localStorage.
+    const { getBridgeImpl } = await import('./client');
+    await new Promise((r) => setTimeout(r, 1500)); // let the ledger's debounced persist run
+    getBridgeImpl()?.dispose();
+    vi.resetModules();
+    expect((await load())[0].content).toBe('before the reload');
+  });
+});
+
+describe('NIP-17 kind-15 file messages', () => {
+  const file = {
+    url: 'https://blossom.example/abc',
+    mimeType: 'image/png',
+    algorithm: 'aes-gcm',
+    key: 'ab'.repeat(32),
+    nonce: 'cd'.repeat(12),
+    x: 'ef'.repeat(32),
+    size: 42,
+    name: 'cat.png',
+  };
+
+  it('sends a kind-15 rumor carrying the decryption tags, sealed and wrapped', async () => {
+    const { getBridge } = await import('./client');
+    const { setPreference } = await import('@/lib/preferences');
+    const { PrivateKeySigner } = await import('@nostr-wot/signers');
+    const { unwrapGiftWrap } = await import('@nostr-wot/dm');
+    const alice = makeKeypair();
+    const bob = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(alice.skHex, alice.pkHex);
+    setPreference('directMessagesEnabled', true);
+
+    let thread: ReadonlyArray<{ file?: unknown; pending?: boolean; content: string }> = [];
+    bridge.subscribeDirectMessages((byPeer) => { thread = byPeer[bob.pkHex] ?? []; });
+    await bridge.sendDirectFile(bob.pkHex, file);
+    expect(thread[0]).toMatchObject({ pending: true, content: file.url, file });
+
+    const wraps = await waitForWraps(2);
+    const toBob = wraps.find((w) => w.tags.some((t) => t[0] === 'p' && t[1] === bob.pkHex))!;
+    // The key must never be on the wire in the clear.
+    for (const w of wraps) expect(w.content).not.toContain(file.key);
+    const { message } = await unwrapGiftWrap(new PrivateKeySigner(bob.sk), toBob);
+    expect(message.kind).toBe(15);
+    expect(message.content).toBe(file.url);
+    const tag = (n: string) => message.tags.find((t) => t[0] === n)?.[1];
+    expect(tag('p')).toBe(bob.pkHex);
+    expect(tag('file-type')).toBe('image/png');
+    expect(tag('encryption-algorithm')).toBe('aes-gcm');
+    expect(tag('decryption-key')).toBe(file.key);
+    expect(tag('decryption-nonce')).toBe(file.nonce);
+    expect(tag('x')).toBe(file.x);
+
+    await vi.waitFor(() => { if (thread[0]?.pending) throw new Error('still pending'); });
+    expect(thread).toHaveLength(1);
+    expect(thread[0].file).toEqual(file);
+    // The raw layers for "View raw event": our rumor and the wrap bob got.
+    const raw = (thread[0] as { raw?: { rumor?: { kind: number; id: string }; wire?: { id: string } } }).raw;
+    expect(raw?.rumor?.kind).toBe(15);
+    expect(raw?.wire?.id).toBe(toBob.id);
+  });
+
+  it('refuses to send a file on a thread pinned to NIP-04', async () => {
+    const { getBridge } = await import('./client');
+    const { setPreference } = await import('@/lib/preferences');
+    const { useDMStore } = await import('@/store/dm');
+    const alice = makeKeypair();
+    const bob = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(alice.skHex, alice.pkHex);
+    setPreference('directMessagesEnabled', true);
+    useDMStore.getState().setProtocolOverride(bob.pkHex, 'nip04');
+    await expect(bridge.sendDirectFile(bob.pkHex, file)).rejects.toThrow(/NIP-17/);
+    expect(fake.state.published.filter((e) => e.kind === 4 || e.kind === 1059)).toHaveLength(0);
+  });
+
+  it('ingests a received kind-15 with its file metadata and a filename-only notification', async () => {
+    const { getBridge } = await import('./client');
+    const { setPreference } = await import('@/lib/preferences');
+    const { PrivateKeySigner } = await import('@nostr-wot/signers');
+    const { buildChatMessage, sealAndGiftWrap } = await import('@nostr-wot/dm');
+    const { buildDmFileTags } = await import('@/lib/dm-file');
+    const { useNotificationsStore } = await import('@/store/notifications');
+    const alice = makeKeypair();
+    const bob = makeKeypair();
+    const chat = buildChatMessage(alice.pkHex, bob.pkHex, file.url);
+    const { url: _url, ...meta } = file;
+    const inner = { ...chat, kind: 15, tags: [...chat.tags, ...buildDmFileTags(meta)] };
+    fake.state.published.push(await sealAndGiftWrap(new PrivateKeySigner(alice.sk), bob.pkHex, inner));
+
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(bob.skHex, bob.pkHex);
+    setPreference('directMessagesEnabled', true);
+    let thread: ReadonlyArray<{ file?: unknown; content: string; outgoing: boolean }> = [];
+    bridge.subscribeDirectMessages((byPeer) => { thread = byPeer[alice.pkHex] ?? []; });
+    await vi.waitFor(() => { if (thread.length === 0) throw new Error('not ingested'); }, { timeout: 5000, interval: 5 });
+    expect(thread[0]).toMatchObject({ outgoing: false, content: file.url, file });
+    const raw = (thread[0] as { raw?: { rumor?: { kind: number }; wire?: { kind: number } } }).raw;
+    expect(raw?.rumor?.kind).toBe(15);
+    expect(raw?.wire?.kind).toBe(1059);
+    const card = useNotificationsStore.getState().dmNotifications.find((n) => n.senderPubkey === alice.pkHex);
+    expect(card?.preview).toBe('cat.png');
+  });
+
+  it('drops a kind-15 it could not decrypt', async () => {
+    const { getBridge } = await import('./client');
+    const { setPreference } = await import('@/lib/preferences');
+    const { PrivateKeySigner } = await import('@nostr-wot/signers');
+    const { buildChatMessage, sealAndGiftWrap } = await import('@nostr-wot/dm');
+    const alice = makeKeypair();
+    const bob = makeKeypair();
+    const chat = buildChatMessage(alice.pkHex, bob.pkHex, 'https://x.example/y');
+    const inner = { ...chat, kind: 15, tags: [...chat.tags, ['encryption-algorithm', 'rot13']] };
+    fake.state.published.push(await sealAndGiftWrap(new PrivateKeySigner(alice.sk), bob.pkHex, inner));
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(bob.skHex, bob.pkHex);
+    setPreference('directMessagesEnabled', true);
+    let thread: ReadonlyArray<unknown> = [];
+    bridge.subscribeDirectMessages((byPeer) => { thread = byPeer[alice.pkHex] ?? []; });
+    await flush(200);
+    expect(thread).toHaveLength(0);
+  });
+});
+
+describe('DM call control messages', () => {
+  const callId = 'c'.repeat(64);
+  const eph = 'e'.repeat(64);
+
+  it('gift-wraps an invite with an expiration and never renders it as a message', async () => {
+    const { getBridge } = await import('./client');
+    const { setPreference } = await import('@/lib/preferences');
+    const { PrivateKeySigner } = await import('@nostr-wot/signers');
+    const { unwrapGiftWrap } = await import('@nostr-wot/dm');
+    const alice = makeKeypair();
+    const bob = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(alice.skHex, alice.pkHex);
+    setPreference('directMessagesEnabled', true);
+    let thread: ReadonlyArray<unknown> = [];
+    bridge.subscribeDirectMessages((byPeer) => { thread = byPeer[bob.pkHex] ?? []; });
+
+    await bridge.sendDmCallMessage(bob.pkHex, { type: 'invite', callId, eph, relays: ['wss://call.example'], video: true });
+    const [wrap] = await waitForWraps(1);
+    expect(wrap.tags.find((t) => t[0] === 'p')?.[1]).toBe(bob.pkHex);
+    const exp = Number(wrap.tags.find((t) => t[0] === 'expiration')?.[1]);
+    expect(exp).toBeGreaterThan(Date.now() / 1000);
+    expect(exp).toBeLessThan(Date.now() / 1000 + 600);
+    expect(wrap.content).not.toContain(callId);
+    const { message, senderPubkey } = await unwrapGiftWrap(new PrivateKeySigner(bob.sk), wrap);
+    expect(senderPubkey).toBe(alice.pkHex);
+    expect(message.kind).toBe(25055);
+    expect(JSON.parse(message.content)).toMatchObject({ type: 'invite', callId, eph, relays: ['wss://call.example'], video: true });
+    // No self-copy for an invite, and nothing in the thread.
+    await flush(50);
+    expect(fake.state.published.filter((e) => e.kind === 1059)).toHaveLength(1);
+    expect(thread).toHaveLength(0);
+  });
+
+  it('delivers a fresh inbound control message to call listeners, and drops stale ones', async () => {
+    const { getBridge } = await import('./client');
+    const { setPreference } = await import('@/lib/preferences');
+    const { PrivateKeySigner } = await import('@nostr-wot/signers');
+    const { sealAndGiftWrap } = await import('@nostr-wot/dm');
+    const alice = makeKeypair();
+    const bob = makeKeypair();
+    const signer = new PrivateKeySigner(alice.sk);
+    const now = Math.floor(Date.now() / 1000);
+    const rumor = (created_at: number, id: string) => ({
+      pubkey: alice.pkHex, kind: 25055, created_at, tags: [['p', bob.pkHex]],
+      content: JSON.stringify({ v: 1, type: 'invite', callId: id, eph, relays: ['wss://call.example'], video: false }),
+    });
+    fake.state.published.push(await sealAndGiftWrap(signer, bob.pkHex, rumor(now - 3600, 'd'.repeat(64))));
+    fake.state.published.push(await sealAndGiftWrap(signer, bob.pkHex, rumor(now - 2, callId)));
+
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(bob.skHex, bob.pkHex);
+    setPreference('directMessagesEnabled', true);
+    const got: Array<{ type: string; callId: string; from: string; peer: string }> = [];
+    bridge.subscribeDmCallMessages((m) => got.push(m));
+    let thread: ReadonlyArray<unknown> = [];
+    bridge.subscribeDirectMessages((byPeer) => { thread = byPeer[alice.pkHex] ?? []; });
+    await vi.waitFor(() => { if (got.length === 0) throw new Error('no call message'); }, { timeout: 5000, interval: 5 });
+    await flush(50);
+    expect(got).toHaveLength(1);
+    expect(got[0]).toMatchObject({ type: 'invite', callId, from: alice.pkHex, peer: alice.pkHex });
+    expect(thread).toHaveLength(0);
+  });
+
+  it('wraps an accept to ourselves too, so other devices stop ringing', async () => {
+    const { getBridge } = await import('./client');
+    const { setPreference } = await import('@/lib/preferences');
+    const bob = makeKeypair();
+    const alice = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(bob.skHex, bob.pkHex);
+    setPreference('directMessagesEnabled', true);
+    const got: Array<{ type: string; from: string; peer: string }> = [];
+    bridge.subscribeDmCallMessages((m) => got.push(m));
+    bridge.subscribeDirectMessages(() => {});
+    await bridge.sendDmCallMessage(alice.pkHex, { type: 'accept', callId, eph }, { selfNotice: true });
+    const wraps = await waitForWraps(2);
+    expect(wraps.map((w) => w.tags.find((t) => t[0] === 'p')?.[1]).sort()).toEqual([alice.pkHex, bob.pkHex].sort());
+    // Our own notice comes back through the 1059 REQ as "answered elsewhere".
+    await vi.waitFor(() => { if (got.length === 0) throw new Error('self notice not ingested'); }, { timeout: 5000, interval: 5 });
+    expect(got[0]).toMatchObject({ type: 'accept', from: bob.pkHex, peer: alice.pkHex });
+  });
+});
+
 describe('NIP-17 signer adapter — all three login methods', () => {
   it('nsec: sends a well-formed, independently-decryptable gift wrap', async () => {
     const { getBridge } = await import('./client');

@@ -144,6 +144,11 @@ import { shortNpubLabel } from '@/lib/short-npub';
 import { isChannelMuted, useChannelPref } from '@/store/channel-prefs';
 import { guidesHref } from '@/lib/guide-urls';
 import { MESSAGE_INPUT_PROPS } from '@/lib/message-input-props';
+import { DmComposer } from '@/components/chat/DmComposer';
+import { DmCallButtons } from '@/components/call/DmCallButtons';
+import { DmCallLayer } from '@/components/call/DmCallLayer';
+import { DmMessageBody } from '@/components/chat/DmMessageBody';
+import { DM_BUBBLE_MENU_GUTTER, DmMessageMenu } from '@/components/chat/DmMessageMenu';
 import { HELP_TOPICS, HELP_VIEW_MORE } from '@/lib/help-topics';
 import { subscribeVoiceJump } from '@/lib/voice/jump-to-voice';
 import { useVoiceChatPane } from '@/hooks/chat/useVoiceChatPane';
@@ -557,6 +562,7 @@ export default function AppShell() {
       <RelayAccessModal />
       <BackgroundVoiceAudio />
       <DirectMessageSubscriptionAnchor />
+      <DmCallLayer />
       <RelayTopBar
         relay={relay}
         onSocialSurface={view.kind === 'feed'}
@@ -5270,7 +5276,6 @@ export function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string)
         })),
       )
     : [];
-  const [draft, setDraft] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   const stickToBottomRef = useRef(true);
   // Mirror the open peer into the DM store so `isUserWatchingDM` reflects
@@ -5307,19 +5312,6 @@ export function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string)
     if (el) el.scrollTop = el.scrollHeight;
   }, [thread.length]);
 
-  function onSend(e: React.FormEvent) {
-    e.preventDefault();
-    if (!peer) return;
-    const content = draft.trim();
-    if (!content) return;
-    // Optimistic — bridge inserts a pending placeholder; the bubble surfaces
-    // its own retry button on failure, so we don't need a form-level error.
-    setDraft('');
-    nostrActions.sendDirectMessage(peer, content).catch((err) => {
-      console.warn('[desktop] sendDirectMessage scheduling failed', err);
-    });
-  }
-
   if (!peer) {
     return (
       <div className="flex h-full items-center justify-center text-sm text-lc-muted">
@@ -5330,7 +5322,9 @@ export function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string)
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      <header className="flex shrink-0 items-center gap-3 border-b border-lc-border bg-lc-dark px-5 py-3">
+      {/* Fixed height, matching the DM list header (`DMList`) so their
+          bottom borders line up; padding-derived height drifted from it. */}
+      <header className="flex h-[60px] shrink-0 items-center gap-3 border-b border-lc-border bg-lc-dark px-5" data-testid="dm-thread-header">
         <button
           type="button"
           onClick={(event) => useChatStore.getState().openProfilePopup(peer, { x: event.clientX, y: event.clientY })}
@@ -5355,6 +5349,7 @@ export function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string)
             a user who turned that off still benefits from knowing whether the
             wrap is hiding who they talk to. It is one icon, so it cannot nag. */}
         <span className="ml-auto flex items-center gap-1">
+          <DmCallButtons peer={peer} />
           <PqShield
             level={protectionLevel({ giftWrapped: sendProtocol !== 'nip04', status: pqStatus })}
             guideHref={guidesHref(locale, 'quantum-safe-dms')}
@@ -5397,7 +5392,7 @@ export function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string)
               )}
               <div
                 className={
-                  'mb-2 max-w-md rounded-2xl px-4 py-2 text-sm shadow-sm ' +
+                  `relative mb-2 max-w-md rounded-2xl py-2 pl-4 ${DM_BUBBLE_MENU_GUTTER} text-sm shadow-sm ` +
                   (m.outgoing
                     ? 'ml-auto bg-lc-green text-lc-black'
                     : 'bg-lc-card text-lc-white') +
@@ -5405,7 +5400,8 @@ export function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string)
                   (m.failed ? ' ring-1 ring-red-500/60' : '')
                 }
               >
-                <div className="whitespace-pre-wrap break-words">{m.content}</div>
+                <DmMessageMenu message={m} />
+                <DmMessageBody message={m} />
                 <div className={'mt-1 flex items-center justify-end gap-1.5 text-[10px] ' + (m.outgoing ? 'text-black/60' : 'text-lc-muted')}>
                   {/* `onAccent` because the outgoing bubble is `bg-lc-green`:
                       the default `text-lc-muted` is ~2:1 against it. This row
@@ -5449,24 +5445,9 @@ export function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string)
           })
         )}
       </div>
-      <form onSubmit={onSend} className="shrink-0 px-5 pt-3 pb-3">
-        <div className="flex min-h-[3.5rem] items-center gap-2 rounded-xl border border-lc-border bg-lc-card px-4 focus-within:border-lc-green">
-          <input
-            {...MESSAGE_INPUT_PROPS}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder={t('dm.placeholderEncrypted')}
-            className="flex-1 bg-transparent text-sm text-lc-white outline-none placeholder:text-lc-muted disabled:opacity-50"
-          />
-          <button
-            type="submit"
-            disabled={!draft.trim()}
-            className="text-xs font-semibold text-lc-green disabled:opacity-30"
-          >
-            {t('common.send')}
-          </button>
-        </div>
-      </form>
+      {/* The channel's message bar, with every file and voice note
+          encrypted before upload — see `DmComposer`. */}
+      <DmComposer key={peer} peer={peer} variant="desktop" />
     </div>
   );
 }

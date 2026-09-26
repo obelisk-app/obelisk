@@ -10,7 +10,7 @@
  * `lc-muted` — a muted label reads as disabled. Only the optional hint line
  * and genuinely disabled rows are muted.
  */
-import type { ReactNode } from 'react';
+import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
 export const MENU_PANEL_CLASS = 'rounded-lg border border-lc-border bg-lc-dark p-1.5 shadow-2xl';
 
@@ -42,6 +42,8 @@ export function MenuItem({
   disabled,
   testId,
   trailing,
+  role = 'menuitem',
+  buttonProps,
 }: {
   icon?: ReactNode;
   label: ReactNode;
@@ -51,9 +53,12 @@ export function MenuItem({
   danger?: boolean;
   disabled?: boolean;
   testId?: string;
+  role?: 'menuitem' | 'menuitemradio';
+  /** ARIA state for submenu triggers and radio rows (`aria-expanded`, `aria-checked`, …). */
+  buttonProps?: Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onClick' | 'className' | 'disabled' | 'type' | 'role'>;
 }) {
   return (
-    <button type="button" role="menuitem" className={rowClass(danger)} onClick={onClick} disabled={disabled} data-testid={testId}>
+    <button {...buttonProps} type="button" role={role} className={rowClass(danger)} onClick={onClick} disabled={disabled} data-testid={testId}>
       <Body icon={icon} label={label} hint={hint} trailing={trailing} />
     </button>
   );

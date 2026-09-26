@@ -14,7 +14,7 @@
 import { getPreferences, setPreference } from '@/lib/preferences';
 import { useToastStore } from '@/store/toast';
 import { getTranslation, isLocale } from '@/i18n';
-import { playNotificationSound, type NotificationSoundKind } from './sound';
+import { playNotificationSound, startRingLoop, type NotificationSoundKind, type PlayResult } from './sound';
 
 export const ALERT_FRESH_WINDOW_MS = 2 * 60 * 1000;
 const SEEN_CAP = 500;
@@ -120,6 +120,56 @@ export function announceIncoming(alert: IncomingAlert, now = Date.now()): boolea
     showSoundsBlockedHint();
   }
   return true;
+}
+
+/**
+ * An incoming DM call: loop the user's ringtone and, when the tab is in the
+ * background or the ring can't play, raise an OS notification. Same gates as
+ * a message — the `notificationSounds` and `browserNotifications`
+ * preferences — so muting chimes mutes the ring too.
+ *
+ * The body says only that a call is coming in, never from whom: the shade is
+ * readable by anyone looking at the screen, the same rule DM popups follow.
+ * The returned `stop` ends the ring and closes the notification.
+ */
+export function ringIncomingCall(alert: { id: string; title: string; body: string }): { stop: () => void } {
+  const prefs = getPreferences();
+  const loop = prefs.notificationSounds ? startRingLoop('ring') : null;
+  const sound: PlayResult | 'off' = loop?.first ?? 'off';
+  let notification: Notification | null = null;
+  const osAllowed = prefs.browserNotifications && canShowOsNotification();
+  if (osAllowed && (pageIsBackgrounded() || sound === 'blocked')) {
+    try {
+      notification = new Notification(alert.title, {
+        body: alert.body,
+        tag: `obelisk-call-${alert.id}`,
+        icon: '/icon-192.png',
+        requireInteraction: true,
+        silent: sound === 'played',
+      });
+      notification.onclick = () => {
+        try { window.focus(); } catch { /* ignore */ }
+        notification?.close();
+      };
+    } catch {
+      notification = null;
+    }
+  } else if (sound === 'blocked') {
+    showSoundsBlockedHint();
+  }
+  return {
+    stop: () => {
+      loop?.stop();
+      try { notification?.close(); } catch { /* ignore */ }
+    },
+  };
+}
+
+/** The caller's side: a quiet ringback until the other side answers. */
+export function startRingback(): { stop: () => void } {
+  if (!getPreferences().notificationSounds) return { stop: () => {} };
+  const loop = startRingLoop('ringback');
+  return { stop: loop.stop };
 }
 
 /**
