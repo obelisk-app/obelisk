@@ -4,12 +4,21 @@ Canonical list of open bugs and tech debt in Obelisk. Fixes are tracked here unt
 
 ## Open questions from the 2026-09-25 UI pass
 
-- **`wss://relay.nostr.band` never completes TLS from the app host.** It is
-  one of the four `DEFAULT_SOCIAL_RELAYS` (`src/lib/social/relays.ts`), so the
-  social relay set is effectively 3/4 for everyone on the default config.
-  Removing or replacing it is a config decision — it changes the
-  `socialRelayKey` that existing users' feed caches are stored under. The
-  header indicator no longer misreports this as an outage either way.
+- ~~`wss://relay.nostr.band` never completes TLS~~ — **resolved 2026-09-25.**
+  Re-measured at an 8s hard timeout while every other relay in the file
+  answered under a second (and `useNostrUserSearch` had already recorded it
+  erroring after ~10s back on 2026-09-17), so it was swapped out of
+  `DEFAULT_SOCIAL_RELAYS` for `relay.snort.social`. It is **not** gone: it
+  remains a one-click preset and a `NIP50_RELAYS` search target, where it is
+  the best index available and its failures are already tolerated.
+  `relay.nostr.bg` was dropped from `WIDER_SOCIAL_RELAYS` in the same pass —
+  it refused the connection outright. Existing feed caches were keyed under
+  the old relay set and re-fetch once; that is expected.
+  *Caveat worth keeping:* this was measured from the app host, and social
+  relays are contacted from the **browser**. The user's own captures showed a
+  persistent 3/4, which corroborates it, but if nostr.band turns out to be
+  reachable from ordinary clients the right response is to re-add it as a
+  fifth relay rather than to revert the swap.
 - **Test content on `public.obelisk.ar`** (`# Stress Test`, channels of
   `test` / `{}` / `.`). Confirmed **not** a leak: the relay answers
   unauthenticated and non-whitelisted clients with
