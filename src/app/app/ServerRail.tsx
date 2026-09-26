@@ -23,6 +23,7 @@ import { normalizeRelayUrl } from '@/lib/nostr-bridge/relay-url';
 import ModalShell from '@/components/ModalShell';
 import HintDot from '@/components/hints/HintDot';
 import { useTranslation } from '@/i18n/context';
+import { confirmDialog } from '@/components/ui/ConfirmDialog';
 
 
 type RailMode = { kind: 'dm' } | { kind: 'feed' } | { kind: 'relay'; url: string };
@@ -95,11 +96,15 @@ export default function ServerRail({
             // control, and a dot on each would read as unread traffic.
             hint={index === 0 ? 'rail-relay' : undefined}
             onClick={() => onPickRelay(url)}
-            onRemove={() => {
+            onRemove={async () => {
               if (relays.length <= 1) return;
-              if (confirm(t('rail.confirmRemove').replace('{host}', shortHost(url)))) {
-                nostrActions.removeRelay(url);
-              }
+              const ok = await confirmDialog({
+                title: t('rail.confirmRemove').replace('{host}', shortHost(url)),
+                message: t('rail.confirmRemoveBody'),
+                confirmLabel: t('confirm.remove'),
+                icon: 'leave',
+              });
+              if (ok) nostrActions.removeRelay(url);
             }}
           />
         );

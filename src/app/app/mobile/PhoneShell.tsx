@@ -203,6 +203,7 @@ import { channelInitialAnchorFromCursor } from '@/lib/channel-scroll-anchor';
 import { useChannelScrollPosition } from '@/hooks/chat/useChannelScrollPosition';
 import { useHistoryPagination } from '@/hooks/chat/useHistoryPagination';
 import { useNostrUserSearch, type UserHit } from '@/lib/hooks/useNostrUserSearch';
+import { confirmDialog } from '@/components/ui/ConfirmDialog';
 // CSS is hoisted to AppGate.tsx so it lands in the route's eagerly-loaded
 // stylesheet, not in this dynamic chunk's late-arriving sidecar.
 
@@ -619,7 +620,13 @@ export function RelayMenuSheet({
   };
 
   const leave = async () => {
-    if (!window.confirm(`Leave ${label}? You can re-add it later.`)) return;
+    const ok = await confirmDialog({
+      title: t('mobile.relay.confirmLeave').replace('{name}', label),
+      message: t('rail.confirmRemoveBody'),
+      confirmLabel: t('confirm.leave'),
+      icon: 'leave',
+    });
+    if (!ok) return;
     setBusy('leave');
     try {
       const others = relays.filter((u) => u !== relayUrl);
@@ -5407,8 +5414,12 @@ export function MessageActionsSheet({
   const canDeleteMessage = !!msg.groupId && (msg.canModerate || msg.canDeleteOwn);
   const deleteMessage = async () => {
     if (!msg.groupId) return;
-    const label = msg.canModerate ? 'Delete this message for everyone?' : 'Delete your message?';
-    if (typeof window !== 'undefined' && !window.confirm(label)) return;
+    const ok = await confirmDialog({
+      title: msg.canModerate ? t('desktop.message.confirmDeleteEveryone') : t('desktop.message.confirmDeleteOwn'),
+      message: msg.canModerate ? t('desktop.message.confirmDeleteEveryoneBody') : t('desktop.message.confirmDeleteOwnBody'),
+      confirmLabel: t('confirm.delete'),
+    });
+    if (!ok) return;
     if (msg.canModerate) await nostrActions.deleteGroupEvent(msg.groupId, msg.id);
     else await nostrActions.removeMessage(msg.groupId, msg.id);
     close();
@@ -5977,8 +5988,13 @@ export function SettingsPrefsScreen({ go }: { go: (s: ScreenName, dir?: 'forward
   const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false);
   const [confirmingLogout, setConfirmingLogout] = useState(false);
 
-  const clearLocalCache = () => {
-    if (!window.confirm(t('preferences.localData.confirm.description'))) return;
+  const clearLocalCache = async () => {
+    const ok = await confirmDialog({
+      title: t('preferences.localData.confirm.title'),
+      message: t('preferences.localData.confirm.description'),
+      confirmLabel: t('preferences.localData.confirm.action'),
+    });
+    if (!ok) return;
     clearAllClientCacheExceptSession();
     setTimeout(() => window.location.reload(), 0);
   };

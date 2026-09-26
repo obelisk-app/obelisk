@@ -1337,5 +1337,20 @@
   "profilePopover.blockConfirm": "Bloquear {name}? As mensagens dessa pessoa ficarão ocultas neste dispositivo.",
   "social.copyAuthorLink": "Copiar o link do perfil do autor",
   "social.highlightsHint": "Mostrar os trechos que as pessoas marcaram nestes artigos",
-  "social.openThread": "Abrir a conversa"
+  "social.openThread": "Abrir a conversa",
+  "confirm.delete": "Excluir",
+  "confirm.remove": "Remover",
+  "confirm.leave": "Sair",
+  "confirm.demote": "Rebaixar",
+  "desktop.message.confirmDeleteEveryoneBody": "Ela será removida do canal para todos.",
+  "desktop.message.confirmDeleteOwnBody": "Ela será removida do canal.",
+  "rail.confirmRemoveBody": "Você pode adicioná-lo novamente depois.",
+  "mobile.relay.confirmLeave": "Sair de {name}?",
+  "admin.bulk.confirmRemove": "Remover {count} entradas?",
+  "admin.bulk.confirmDemote": "Rebaixar {count} entradas?",
+  "admin.bulk.more": "e mais {count}",
+  "roles.confirmDelete": "Excluir “{name}”?",
+  "roles.confirmDeleteBody": "Todos que o possuem perdem a insígnia.",
+  "media.confirmDeletePack": "Excluir “{title}”?",
+  "media.confirmDeletePackBody": "Isso envia uma solicitação de exclusão do Nostr e não pode ser desfeito."
 }

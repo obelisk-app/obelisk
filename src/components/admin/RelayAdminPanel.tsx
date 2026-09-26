@@ -10,6 +10,8 @@ import {
 import { useUserMetadata as useProfile } from '@/lib/nostr-bridge';
 import { getBridgeImpl } from '@/lib/nostr-bridge';
 import { useTranslation } from '@/i18n/context';
+import { confirmDialog } from '@/components/ui/ConfirmDialog';
+import { shortNpubLabel } from '@/lib/short-npub';
 
 interface Row {
   groupId: string;
@@ -78,10 +80,18 @@ export default function RelayAdminPanel({ onClose }: { onClose: () => void }) {
 
   async function bulk(action: 'kick' | 'demote') {
     if (selectedRows.length === 0) return;
-    const verb = action === 'kick' ? 'remove' : 'demote';
-    const sample = selectedRows.slice(0, 3).map((r) => `${r.pubkey.slice(0, 8)}@${r.groupName}`).join(', ');
-    const more = selectedRows.length > 3 ? ` (+${selectedRows.length - 3} more)` : '';
-    if (!confirm(`${verb} ${selectedRows.length} entries?\n${sample}${more}`)) return;
+    const count = String(selectedRows.length);
+    const sample = selectedRows.slice(0, 3).map((r) => `${shortNpubLabel(r.pubkey)} · ${r.groupName}`).join('\n');
+    const more = selectedRows.length > 3
+      ? '\n' + t('admin.bulk.more').replace('{count}', String(selectedRows.length - 3))
+      : '';
+    const ok = await confirmDialog({
+      title: t(action === 'kick' ? 'admin.bulk.confirmRemove' : 'admin.bulk.confirmDemote').replace('{count}', count),
+      message: sample + more,
+      confirmLabel: t(action === 'kick' ? 'confirm.remove' : 'confirm.demote'),
+      icon: action === 'kick' ? 'trash' : 'none',
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       for (const r of selectedRows) {

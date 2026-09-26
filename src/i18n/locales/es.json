@@ -1337,5 +1337,20 @@
   "profilePopover.blockConfirm": "¿Bloquear a {name}? Sus mensajes quedarán ocultos en este dispositivo.",
   "social.copyAuthorLink": "Copiar el enlace del perfil del autor",
   "social.highlightsHint": "Mostrar los pasajes que la gente marcó en estos artículos",
-  "social.openThread": "Abrir el hilo"
+  "social.openThread": "Abrir el hilo",
+  "confirm.delete": "Eliminar",
+  "confirm.remove": "Quitar",
+  "confirm.leave": "Salir",
+  "confirm.demote": "Degradar",
+  "desktop.message.confirmDeleteEveryoneBody": "Se eliminará del canal para todos.",
+  "desktop.message.confirmDeleteOwnBody": "Se eliminará del canal.",
+  "rail.confirmRemoveBody": "Podés volver a agregarlo más tarde.",
+  "mobile.relay.confirmLeave": "¿Salir de {name}?",
+  "admin.bulk.confirmRemove": "¿Quitar {count} entradas?",
+  "admin.bulk.confirmDemote": "¿Degradar {count} entradas?",
+  "admin.bulk.more": "y {count} más",
+  "roles.confirmDelete": "¿Eliminar “{name}”?",
+  "roles.confirmDeleteBody": "Todos los que lo tienen pierden la insignia.",
+  "media.confirmDeletePack": "¿Eliminar “{title}”?",
+  "media.confirmDeletePackBody": "Esto envía una solicitud de borrado de Nostr y no se puede deshacer."
 }

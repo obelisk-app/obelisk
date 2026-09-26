@@ -109,6 +109,7 @@ vi.mock("@/components/chat/NostrProfile", () => ({
 }));
 
 import { LocaleProvider } from '@/i18n/context';
+import { ConfirmDialogHost } from '@/components/ui/ConfirmDialog';
 import type { Locale } from '@/i18n/index';
 import { SettingsProfileScreen, EditProfileScreen, SettingsPrefsScreen } from './PhoneShell';
 
@@ -189,12 +190,14 @@ describe("SettingsPrefsScreen", () => {
     expect(mockLogout).toHaveBeenCalledTimes(1);
   });
 
-  it('exposes the local cache wipe on mobile preferences', () => {
+  it('exposes the local cache wipe on mobile preferences', async () => {
     vi.useFakeTimers();
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
-    renderWithLocale(<SettingsPrefsScreen go={vi.fn()} />);
+    renderWithLocale(<><SettingsPrefsScreen go={vi.fn()} /><ConfirmDialogHost /></>);
 
     fireEvent.click(screen.getByTestId('mobile-clear-cache-button'));
+    expect(mockClearCache).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+    await act(async () => {});
 
     expect(mockClearCache).toHaveBeenCalledTimes(1);
   });
