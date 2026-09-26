@@ -54,7 +54,8 @@ describe('MessageMediaPicker', () => {
 
     expect(screen.queryByRole('button', { name: 'Packs' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Create emoji' })).toBeInTheDocument();
-    expect(screen.getByRole('searchbox', { name: 'Search emoji' }).parentElement).toHaveClass('rounded-xl', 'border-lc-green/80');
+    // A well on the panel surface; green only while focused.
+    expect(screen.getByRole('searchbox', { name: 'Search emoji' }).parentElement).toHaveClass('rounded-xl', 'bg-lc-black', 'border-lc-border', 'focus-within:border-lc-green');
     expect(screen.getByText('Server emojis')).toBeInTheDocument();
     expect(screen.queryByAltText(':dance:')).not.toBeInTheDocument();
     expect(screen.getByAltText(':wave:')).toBeInTheDocument();
@@ -77,7 +78,7 @@ describe('MessageMediaPicker', () => {
     expect(mediaCategories.querySelectorAll('svg')).toHaveLength(9);
     expect(within(screen.getByRole('button', { name: 'Recent' })).getByTestId('recent-icon')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Close media picker' })).not.toBeInTheDocument();
-    expect(screen.getByRole('searchbox', { name: 'Search GIFs' }).parentElement).toHaveClass('rounded-xl', 'border-lc-green/80');
+    expect(screen.getByRole('searchbox', { name: 'Search GIFs' }).parentElement).toHaveClass('rounded-xl', 'bg-lc-black', 'focus-within:border-lc-green');
     expect(within(screen.getByTestId('media-section-server_gifs')).getByAltText(':dance:')).toBeInTheDocument();
     const defaultGifs = screen.getByTestId('media-section-default_gifs');
     expect(within(defaultGifs).getByAltText(':applause:')).toBeInTheDocument();
@@ -98,7 +99,7 @@ describe('MessageMediaPicker', () => {
     expect(screen.getByTestId('media-grid').compareDocumentPosition(gifTab) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Stickers' }));
-    expect(screen.getByRole('searchbox', { name: 'Search stickers' }).parentElement).toHaveClass('rounded-xl', 'border-lc-green/80');
+    expect(screen.getByRole('searchbox', { name: 'Search stickers' }).parentElement).toHaveClass('rounded-xl', 'bg-lc-black', 'focus-within:border-lc-green');
     expect(within(screen.getByTestId('media-section-server_stickers')).getByAltText(':stamp:')).toBeInTheDocument();
     const defaultSticker = within(screen.getByTestId('media-section-default_stickers')).getByAltText(':laugh_cry:');
     expect(defaultSticker).toBeInTheDocument();
@@ -168,7 +169,9 @@ describe('MessageMediaPicker', () => {
       />,
     );
 
-    expect(screen.getByRole('dialog', { name: 'Media picker' })).toHaveClass('bg-lc-black');
+    // The shell owns the surface; the dialog inside must not paint the page colour over it.
+    expect(screen.getByRole('dialog', { name: 'Media picker' })).not.toHaveClass('bg-lc-black');
+    expect(screen.getByTestId('media-picker-shell')).toHaveClass('border-lc-border', '[--picker-surface:var(--color-lc-dark)]');
     const waveButton = screen.getByRole('button', { name: ':wave:' });
     expect(waveButton).toHaveClass('min-w-0', 'overflow-hidden');
     expect(waveButton).not.toHaveAttribute('title');

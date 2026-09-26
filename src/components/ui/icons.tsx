@@ -134,6 +134,15 @@ export const ForwardIcon = (p: IconProps) => (
 export const TrashIcon = (p: IconProps) => (
   <Svg {...p}><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6" /></Svg>
 );
+export const CloseIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M18 6 6 18M6 6l12 12" /></Svg>
+);
+/** Outline by default; pass `filled` for the "on" state (favorited). */
+export const StarIcon = ({ filled = false, ...p }: IconProps & { filled?: boolean }) => (
+  <Svg {...p} fill={filled ? 'currentColor' : 'none'}>
+    <path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3l-5.6 2.9 1.1-6.2L3 9.6l6.2-.9L12 3Z" />
+  </Svg>
+);
 export const ChevronRightIcon = (p: IconProps) => (
   <Svg {...p}><path d="m9 6 6 6-6 6" /></Svg>
 );

@@ -12,6 +12,7 @@ import MediaLibraryModal from '@/components/media/MediaLibraryModal';
 import MediaThumb from '@/components/media/MediaThumb';
 import { detectGifPresentation, inferMediaKind } from '@/lib/media-kind';
 import { useTranslation } from '@/i18n/context';
+import { StarIcon } from '@/components/ui/icons';
 
 export type MediaPickerTab = 'emoji' | 'gif' | 'sticker';
 
@@ -218,9 +219,12 @@ export default function MessageMediaPicker({
   const favoriteUrls = new Set(mediaFavorites.items.map((item) => item.url));
   const isSheet = variant === 'sheet';
   const placementClass = placement === 'below' ? 'top-full mt-1' : 'bottom-full mb-1';
+  // Same surfaces as every other panel: raised `lc-dark` on desktop, the
+  // `lc-card` sheet surface on mobile. `--picker-surface` carries the colour
+  // down to the sticky section headers and to the nested EmojiPicker.
   const shellClass = isSheet
-    ? 'flex h-full w-full flex-col overflow-hidden bg-lc-black text-lc-white'
-    : `absolute left-0 ${placementClass} z-40 flex h-[520px] max-h-[calc(100vh-1rem)] w-[600px] max-w-[calc(100vw-1rem)] flex-col overflow-hidden rounded-2xl border border-lc-border bg-lc-black text-lc-white shadow-2xl`;
+    ? 'flex h-full w-full flex-col overflow-hidden [--picker-surface:var(--color-lc-card)] bg-[var(--picker-surface)] text-lc-white'
+    : `absolute left-0 ${placementClass} z-40 flex h-[520px] max-h-[calc(100vh-1rem)] w-[600px] max-w-[calc(100vw-1rem)] flex-col overflow-hidden rounded-xl border border-lc-border [--picker-surface:var(--color-lc-dark)] bg-[var(--picker-surface)] text-lc-white shadow-2xl`;
 
   const createMedia = async (file: File | undefined, kind: JsMediaKind) => {
     if (!file) return;
@@ -259,7 +263,7 @@ export default function MessageMediaPicker({
         type="button"
         disabled={uploading}
         onClick={() => fileRef.current?.click()}
-        className={(square ? "aspect-square w-full " : "h-full ") + "flex min-h-0 min-w-0 flex-col items-center justify-center gap-1 overflow-hidden rounded-xl border border-lc-border bg-lc-dark text-lc-muted hover:border-lc-green/50 hover:text-lc-white disabled:opacity-50"}
+        className={(square ? "aspect-square w-full " : "h-full ") + "flex min-h-0 min-w-0 flex-col items-center justify-center gap-1 overflow-hidden rounded-xl border border-dashed border-lc-border bg-lc-card/60 text-lc-white transition-colors hover:border-lc-green/60 hover:text-lc-green disabled:opacity-50"}
         aria-label={"Create " + label}
       >
         <span className="text-3xl font-light leading-none" aria-hidden="true">+</span>
@@ -333,7 +337,7 @@ export default function MessageMediaPicker({
 
   return (
     <div className={shellClass} data-testid="media-picker-shell">
-      <div role="dialog" aria-label={t('mediaPicker.title')} className="flex h-full w-full flex-col overflow-hidden bg-lc-black p-2 text-lc-white" onClick={(event) => event.stopPropagation()}>
+      <div role="dialog" aria-label={t('mediaPicker.title')} className="flex h-full w-full flex-col overflow-hidden p-2 text-lc-white" onClick={(event) => event.stopPropagation()}>
       <nav className="mb-2 grid shrink-0 grid-cols-9 border-b border-lc-border px-1 pb-1" aria-label={t('mediaPicker.categories')}>
         {MEDIA_CATEGORIES.map((value) => (
           <button
@@ -343,7 +347,7 @@ export default function MessageMediaPicker({
             aria-label={value}
             aria-pressed={category === value}
             title={value}
-            className={['flex h-10 min-w-0 items-center justify-center rounded-lg border-b-2', category === value ? 'border-lc-green bg-lc-green/10 text-lc-green' : 'border-transparent text-lc-muted hover:bg-white/5'].join(' ')}
+            className={['flex h-10 min-w-0 items-center justify-center rounded-lg border-b-2', category === value ? 'border-lc-green bg-lc-green/10 text-lc-green' : 'border-transparent text-lc-white/80 hover:bg-lc-border/60 hover:text-lc-white'].join(' ')}
           >
             <MediaCategoryIcon category={value} />
           </button>
@@ -402,7 +406,7 @@ function MediaSection({ title, entries, onPick, favoriteUrls, onFavorite, onMedi
   if (!children && entries.length === 0) return null;
   return (
     <section className="mb-3" data-testid={'media-section-' + normalizeCustomEmojiName(title)}>
-      <h3 className="sticky top-0 z-10 mb-2 border-b border-lc-border bg-lc-black/95 py-2 text-[11px] font-bold uppercase tracking-wider text-lc-muted backdrop-blur">{title}</h3>
+      <h3 className="sticky top-0 z-10 mb-2 border-b border-lc-border bg-[var(--picker-surface,var(--color-lc-dark))] py-2 text-[11px] font-bold uppercase tracking-wider text-lc-muted">{title}</h3>
       <div className="grid grid-cols-4 auto-rows-[82px] content-start gap-2">
         {children}
         {entries.map((entry) => {
@@ -412,7 +416,7 @@ function MediaSection({ title, entries, onPick, favoriteUrls, onFavorite, onMedi
               <button
                 type="button"
                 onClick={() => onPick(entry)}
-                className="flex h-full w-full min-h-0 min-w-0 items-center justify-center overflow-hidden rounded-xl border border-lc-border/60 bg-lc-dark p-2 hover:border-lc-green/50 hover:bg-lc-card"
+                className="flex h-full w-full min-h-0 min-w-0 items-center justify-center overflow-hidden rounded-xl border border-lc-border bg-lc-black/60 p-2 transition-colors hover:border-lc-green/50 hover:bg-lc-black"
               >
                 <MediaThumb
                   src={entry.url}
@@ -426,9 +430,10 @@ function MediaSection({ title, entries, onPick, favoriteUrls, onFavorite, onMedi
                 type="button"
                 onClick={() => onFavorite(entry)}
                 aria-label={(favorite ? 'Remove :' : 'Add :') + entry.name + ': ' + (favorite ? 'from favorites' : 'to favorites')}
-                className={"absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full border bg-lc-black/85 text-sm " + (favorite ? "border-lc-green text-lc-green" : "border-white/20 text-lc-white")}
+                aria-pressed={favorite}
+                className={"absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full border bg-lc-black/85 transition-colors " + (favorite ? "border-lc-green text-lc-green" : "border-lc-border text-lc-white hover:border-lc-green/50")}
               >
-                {favorite ? '★' : '☆'}
+                <StarIcon size={14} filled={favorite} />
               </button>
             </div>
           );
@@ -459,14 +464,14 @@ function PickerTabs({
   onTab: (tab: MediaPickerTab) => void;
 }) {
   return (
-    <div className="flex h-12 shrink-0 items-center border-t border-white/10 px-2">
+    <div className="flex h-12 shrink-0 items-center border-t border-lc-border px-2">
       {(['emoji', 'gif', 'sticker'] as const).map((value) => (
         <button
           type="button"
           key={value}
           onClick={() => onTab(value)}
           aria-pressed={tab === value}
-          className={`h-full flex-1 border-b-2 text-xs font-semibold uppercase tracking-wide ${tab === value ? 'border-lc-green text-lc-green' : 'border-transparent text-lc-muted'}`}
+          className={`h-full flex-1 border-b-2 text-xs font-semibold uppercase tracking-wide ${tab === value ? 'border-lc-green text-lc-green' : 'border-transparent text-lc-white/80 hover:text-lc-white'}`}
         >
           {value === 'sticker' ? 'Stickers' : value}
         </button>
