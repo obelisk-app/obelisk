@@ -1199,6 +1199,7 @@
   "voice.syncing": "Sincronizando",
   "voice.channel": "Canal de voz",
   "voice.goToChannel": "Ir para o canal de voz",
+  "voice.reconnectingSignaling": "Reconectando a voz…",
   "voice.connected": "Voz conectada",
   "dm.composePlaceholder": "npub1…, hex ou alice@exemplo.com",
   "dm.start": "Começar",

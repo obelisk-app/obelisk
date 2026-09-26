@@ -346,7 +346,7 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
           admins: gate.admins,
           open: gate.open,
           expectSfu: expectSfu,
-          remoteSigning: loginMethod === 'bunker',
+          signer: loginMethod ?? 'nsec',
           originRelayUrl: currentRelayUrl,
           events,
         });

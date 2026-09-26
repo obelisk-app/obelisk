@@ -66,7 +66,6 @@ vi.mock('./transport', () => ({
     for (const p of roster) {
       set.add(p.pubkey);
       for (const pk of p.connectedTo) set.add(pk);
-      for (const pk of p.knownPeers ?? []) set.add(pk);
     }
     return Array.from(set);
   },
@@ -250,5 +249,31 @@ describe('VoiceClient slot release on stop', () => {
     await client.leave();
     // After leave, building the slot list returns 0 — internal state cleared.
     expect(client.getVideoSlotsAvailable()).toBe(4);
+  });
+
+  it('stops the screen track once when its ended handler fires during teardown', async () => {
+    // The fake track fires `ended` from stop(). The screen-share `onended`
+    // handler used to re-enter setScreenShareEnabled(false) with the same
+    // track, looping until the stack overflowed.
+    const members = [SELF, ...PEERS];
+    const client = new VoiceClient('ch1', { members });
+    await client.join();
+    transportFake.fireRoster([]);
+    await flushMicrotasks(8);
+    await client.setScreenShareEnabled(true);
+    const screen = client.getLocalTracks().screen!;
+    const stop = vi.spyOn(screen, 'stop');
+
+    await client.setScreenShareEnabled(false);
+    await flushMicrotasks(8);
+    expect(stop).toHaveBeenCalledTimes(1);
+    expect(client.getLocalTracks().screen).toBeNull();
+
+    await client.setScreenShareEnabled(true);
+    const second = client.getLocalTracks().screen!;
+    const stopSecond = vi.spyOn(second, 'stop');
+    await client.leave();
+    await flushMicrotasks(8);
+    expect(stopSecond).toHaveBeenCalledTimes(1);
   });
 });

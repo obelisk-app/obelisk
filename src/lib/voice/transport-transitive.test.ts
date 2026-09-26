@@ -176,13 +176,25 @@ describe('subscribeRoster captures connectedTo and knownPeers', () => {
 });
 
 describe('transitiveParticipants', () => {
-  it('unions publishers with their connectedTo and knownPeers lists', () => {
+  it('unions publishers with their connectedTo lists, not their knownPeers', () => {
     const now = Math.floor(Date.now() / 1000);
     const result = transitiveParticipants([
       { pubkey: 'A', channelId: 'ch1', createdAt: now, expiresAt: now + 45, connectedTo: ['B', 'C'], knownPeers: ['F'], videoTracks: [], isSfu: false },
       { pubkey: 'D', channelId: 'ch1', createdAt: now, expiresAt: now + 45, connectedTo: ['E'], knownPeers: [], videoTracks: [], isSfu: false },
     ]);
-    expect(result.sort()).toEqual(['A', 'B', 'C', 'D', 'E', 'F']);
+    expect(result.sort()).toEqual(['A', 'B', 'C', 'D', 'E']);
+  });
+
+  it('does not resurrect a departed peer that live peers still gossip', () => {
+    // G left; its beacon expired and nobody holds a PC to it. A and B
+    // still list it in `peer` tags (older clients re-gossip each other's
+    // lists). It must not count as present — that was the ghost loop.
+    const now = Math.floor(Date.now() / 1000);
+    const result = transitiveParticipants([
+      { pubkey: 'A', channelId: 'ch1', createdAt: now, expiresAt: now + 45, connectedTo: ['B'], knownPeers: ['B', 'G'], videoTracks: [], isSfu: false },
+      { pubkey: 'B', channelId: 'ch1', createdAt: now, expiresAt: now + 45, connectedTo: ['A'], knownPeers: ['A', 'G'], videoTracks: [], isSfu: false },
+    ]);
+    expect(result.sort()).toEqual(['A', 'B']);
   });
 
   it('survives a missing publisher beacon when another peer mentions them', () => {

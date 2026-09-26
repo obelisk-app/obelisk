@@ -21,6 +21,7 @@
  * later without changing the transport surface.
  */
 import { getBridge, getBridgeImpl } from '@/lib/nostr-bridge/client';
+import { resubscribeOnQuotaClose } from '@/lib/nostr-bridge/quota-resubscribe';
 import {
   KIND_VOICE_PRESENCE,
   KIND_VOICE_SIGNAL,
@@ -31,6 +32,13 @@ import { pushVoiceDebug } from './debug';
 const PRESENCE_TTL_SECONDS = 45;
 const VOICE_SUB_WATCHDOG_MS = 2500;
 const SEEN_SIGNAL_IDS_MAX = 2048;
+/**
+ * How long a signal may wait for a NIP-07 / NIP-46 signer before it is
+ * dropped unsigned. An SDP or candidate that sat behind other signer work
+ * this long belongs to a negotiation the peer has likely abandoned, and
+ * signing it would only delay the fresh one queued after it.
+ */
+const SIGNAL_SIGN_START_DEADLINE_MS = 15_000;
 
 export interface VoiceTransportOptions {
   /**
@@ -39,6 +47,13 @@ export interface VoiceTransportOptions {
    * signaling alive while the user browses other servers.
    */
   relayUrl?: string | null;
+  /**
+   * A relay closed the roster or signal subscription for quota / rate-limit
+   * reasons (`true`) and it is backing off before reopening, or it is being
+   * served again (`false`). Lets the UI say "reconnecting" instead of
+   * showing a call that silently stopped hearing its peers.
+   */
+  onSubscriptionDegraded?: (which: 'roster' | 'signals', degraded: boolean) => void;
 }
 
 export interface VoiceTransport {
@@ -58,20 +73,22 @@ export interface VoiceTransport {
   ): Promise<() => void>;
 }
 
+// `authRetryOnRestricted`: a whitelist relay refuses an EVENT sent before
+// NIP-42 AUTH completes with `restricted:`, which nostr-tools never retries.
+// Every beacon and signal from a fresh or reconnected socket was lost to it.
 function publishOpts(options?: VoiceTransportOptions) {
   return options?.relayUrl
-    ? { extraRelays: [options.relayUrl], mode: 'replace' as const }
-    : undefined;
+    ? { extraRelays: [options.relayUrl], mode: 'replace' as const, authRetryOnRestricted: true }
+    : { authRetryOnRestricted: true };
 }
 
 async function publishViaBridge(
   b: Awaited<ReturnType<typeof bridge>>,
   template: { kind: number; content: string; tags: string[][] },
   options?: VoiceTransportOptions,
+  extra?: { signStartDeadlineMs?: number },
 ): Promise<void> {
-  const opts = publishOpts(options);
-  if (opts) await b.publishEvent(template, opts);
-  else await b.publishEvent(template);
+  await b.publishEvent(template, { ...publishOpts(options), ...extra });
 }
 
 function subscribeOpts(options?: VoiceTransportOptions) {
@@ -87,13 +104,33 @@ function subscribeOpts(options?: VoiceTransportOptions) {
   };
 }
 
+/**
+ * Open a voice subscription that survives quota / rate-limit CLOSEs. The
+ * bridge's watchdog already reissues on silence and on auth CLOSEs, but a
+ * rate-limit CLOSE is final there — and a call cannot work without its
+ * roster and signal feed.
+ */
 function subscribeVoice(
   b: Awaited<ReturnType<typeof bridge>>,
+  which: 'roster' | 'signals',
   filter: Parameters<typeof b.subscribeFilterWatched>[0],
   onEvent: Parameters<typeof b.subscribeFilterWatched>[1],
-  options?: ReturnType<typeof subscribeOpts>,
+  options: VoiceTransportOptions,
 ): () => void {
-  return b.subscribeVoiceFilterWatched(filter, onEvent, options);
+  return resubscribeOnQuotaClose(
+    ({ onQuotaOrRateLimitClose, alive }) => b.subscribeVoiceFilterWatched(
+      filter,
+      (ev) => { alive(); onEvent(ev); },
+      { ...subscribeOpts(options), onQuotaOrRateLimitClose, onEose: alive, answerAuth: true },
+    ),
+    {
+      onDegraded: (degraded) => {
+        if (degraded) console.warn('[voice]', which, 'subscription rate-limited; reopening with backoff');
+        pushVoiceDebug({ kind: 'relay-error', payload: { subscription: which, rateLimited: degraded } });
+        options.onSubscriptionDegraded?.(which, degraded);
+      },
+    },
+  );
 }
 
 export function createVoiceTransport(options: VoiceTransportOptions = {}): VoiceTransport {
@@ -124,10 +161,10 @@ async function bridge() {
  *   discover them transitively when their relay drops the publisher's
  *   own beacon. Empty / omitted = "no successful connections yet"
  *   (cold-started client).
- * @param knownPeers - Pubkeys the publisher believes are active in the
- *   call from any source: own PCs, relay beacons, or WebRTC control
- *   snapshots. Emitted as `peer` tags so peers can gossip participants
- *   before every direct connection is established.
+ * @param knownPeers - Pubkeys the publisher has itself observed in the
+ *   call: its own PCs plus live beacons it received. Emitted as `peer`
+ *   tags. Readers no longer treat them as participants (see
+ *   `transitiveParticipants`); the tags stay for older clients.
  * @param videoTracks - Outbound video tracks the publisher is currently
  *   sending (any of `camera`, `screen`). Emitted as `v` tags so every
  *   participant can compute the independent four-camera and one-screen caps (see `client.ts`). Empty for audio-only joiners.
@@ -189,9 +226,10 @@ export async function publishPresenceBeacon(
 
 /**
  * Publish a terminal mesh presence update. This is intentionally the same
- * kind/tag family as the normal beacon, but with a past expiration and an
+ * kind/tag family as the normal beacon, but with a short expiration and an
  * explicit status marker so subscribers can remove the publisher immediately
- * instead of waiting for the previous beacon's TTL.
+ * instead of waiting for the previous beacon's TTL. The expiration is a few
+ * seconds out, not in the past, so NIP-40 relays still deliver it.
  */
 export async function publishLeavePresence(
   channelId: string,
@@ -208,7 +246,11 @@ export async function publishLeavePresence(
         ['e', channelId],
         ['t', 'obelisk-voice-presence'],
         ['status', 'left'],
-        ['expiration', String(now - 1)],
+        // Short but in the future: a relay enforcing NIP-40 drops an event
+        // that is already expired before delivering it, and then everyone
+        // waits out the previous beacon's TTL. `status: left` is what makes
+        // it terminal; this only bounds how long the relay keeps it.
+        ['expiration', String(now + 10)],
       ],
     },
     options,
@@ -250,12 +292,19 @@ export async function subscribeRoster(
   // logs "WebSocket is already in CLOSING or CLOSED state" while another
   // never sees a new joiner because its sub went dead. The watchdog detects
   // the silence (5 s no EVENT/EOSE) and re-issues the REQ with backoff.
+  //
+  // `#e` keeps the filter indexed. A kind-only REQ reads as a scrape to a
+  // relay's unindexed-query budget, and the watchdog's reissues burned
+  // through it until the relay started refusing the roster outright.
   const unsub = subscribeVoice(
     b,
+    'roster',
     {
       kinds: [KIND_VOICE_PRESENCE],
+      '#e': [channelId],
     },
     (ev) => {
+      // Still checked: a relay may ignore tag filters on ephemeral kinds.
       if (!ev.tags.some((t) => t[0] === 'e' && t[1] === channelId)) return;
       const expirationTag = ev.tags.find((t) => t[0] === 'expiration')?.[1];
       const expiresAt = expirationTag
@@ -313,7 +362,7 @@ export async function subscribeRoster(
       });
       emit();
     },
-    subscribeOpts(options),
+    options,
   );
 
   emit();
@@ -348,6 +397,8 @@ export async function sendSignal(
       ],
     },
     options,
+    // A `bye` is still worth delivering late; negotiation traffic is not.
+    payload.type === 'bye' ? undefined : { signStartDeadlineMs: SIGNAL_SIGN_START_DEADLINE_MS },
   );
   console.log('[voice] →', payload.type, 'to', toPubkey.slice(0, 8), 'seq', payload.seq);
   pushVoiceDebug({ kind: 'signal-sent', peer: toPubkey, payload: { type: payload.type, seq: payload.seq } });
@@ -361,8 +412,10 @@ export async function sendSignal(
 
 /**
  * Subscribe to incoming signaling events addressed to the local user in the
- * given channel. Some relays don't reliably index tags for ephemeral kinds,
- * so we subscribe by kind and gate channel/recipient in the handler.
+ * given channel. The REQ filters by `#p` (a kind-only filter counts against
+ * a relay's unindexed-query budget and gets rate-limited closed), and the
+ * handler still gates channel and recipient, for relays that ignore tag
+ * filters on ephemeral kinds.
  */
 export async function subscribeSignals(
   channelId: string,
@@ -391,8 +444,10 @@ export async function subscribeSignals(
   // existing peers but a third joiner appears to "not be detected".
   return subscribeVoice(
     b,
+    'signals',
     {
       kinds: [KIND_VOICE_SIGNAL],
+      '#p': [selfPubkey],
       since,
     },
     (ev) => {
@@ -422,7 +477,7 @@ export async function subscribeSignals(
         console.warn('[voice] malformed signal', e);
       }
     },
-    subscribeOpts(options),
+    options,
   );
 }
 
@@ -435,10 +490,14 @@ export function getSelfPubkey(): string | null {
  *
  * The relay only tells us about publishers we directly received beacons
  * from. To survive dropped beacons, each beacon also lists who its
- * publisher has confirmed live connections with — `connectedTo` — and
- * who the publisher currently knows about from relay/control gossip —
- * `knownPeers`. Union those into the publisher set and you get every
- * pubkey known to be in the room.
+ * publisher has confirmed live connections with — `connectedTo`, `p` tags.
+ * Union those into the publisher set and you get every pubkey known to be
+ * in the room.
+ *
+ * `knownPeers` (`peer` tags) is deliberately left out. It is second-hand:
+ * two live clients that each re-advertised the other's `peer` list kept a
+ * departed pubkey alive between them forever, and every such ghost cost a
+ * 9 s dial timeout and a slot under the four-person cap.
  *
  * Self is included as a transitive hint when other peers list us — but
  * `VoiceClient` always filters `selfPubkey` out before opening peers, so
@@ -451,7 +510,6 @@ export function transitiveParticipants(
   for (const p of roster) {
     set.add(p.pubkey);
     for (const pk of p.connectedTo) set.add(pk);
-    for (const pk of p.knownPeers ?? []) set.add(pk);
   }
   return Array.from(set);
 }

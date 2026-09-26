@@ -24,6 +24,7 @@ export default function VoiceStatusBar() {
   const isDeafened = useVoiceStore((s) => s.isDeafened);
   const isCameraOn = useVoiceStore((s) => s.isCameraOn);
   const isScreenSharing = useVoiceStore((s) => s.isScreenSharing);
+  const isSignalingDegraded = useVoiceStore((s) => s.isSignalingDegraded);
   const groups = useGroups();
   const group = channelId ? groups.find((g) => g.id === channelId) : null;
   const [hasMultipleCameras, setHasMultipleCameras] = useState(false);
@@ -134,7 +135,13 @@ export default function VoiceStatusBar() {
               <SignalIcon />
             </span>
             <span className="min-w-0 flex-1 leading-tight">
-              <span className="block text-sm text-lc-green font-semibold">{t('voice.connected')}</span>
+              {isSignalingDegraded ? (
+                <span className="block text-sm text-amber-300 font-semibold" data-testid="voice-bar-reconnecting">
+                  {t('voice.reconnectingSignaling')}
+                </span>
+              ) : (
+                <span className="block text-sm text-lc-green font-semibold">{t('voice.connected')}</span>
+              )}
               <span className="block text-xs text-lc-muted truncate">
                 {group?.name ?? `${channelId.slice(0, 8)}…`}
               </span>

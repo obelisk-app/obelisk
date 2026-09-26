@@ -91,6 +91,21 @@ const BEACON_BRINGUP_DELAYS_MS = [300, 900, 1800, 3500, 7000, 12_000, 18_000];
  * a coordinator. See `isWithinRoomCap`.
  */
 const MAX_PARTICIPANTS = 4;
+
+export type VoiceSigner = 'nsec' | 'nip07' | 'bunker';
+
+/**
+ * Per-signer negotiation budget. A local key signs instantly, so trickle ICE
+ * and the 9 s default are fine. An extension signs each event through a
+ * serialized queue (and may prompt): with trickle on, offer + answer + every
+ * candidate queued behind one another routinely overran 9 s and the peer
+ * was torn down mid-negotiation. A bunker adds a relay round trip on top.
+ */
+export const SIGNER_PEER_BUDGET: Readonly<Record<VoiceSigner, { trickle: boolean; connectTimeoutMs?: number }>> = {
+  nsec: { trickle: true },
+  nip07: { trickle: false, connectTimeoutMs: 20_000 },
+  bunker: { trickle: false, connectTimeoutMs: 45_000 },
+};
 /**
  * Independent room-wide media caps: four cameras and one screen share.
  * Beyond this, mesh uplink becomes
@@ -210,8 +225,14 @@ export interface VoiceClientOptions {
   /** Relay where this call was joined. Mesh voice traffic remains pinned here
    *  even when the user browses another server. */
   originRelayUrl?: string | null;
-  /** NIP-46 adds a human/relay round trip to every signed mesh event. */
-  remoteSigning?: boolean;
+  /**
+   * How the session signs. Every offer, answer and trickled ICE candidate
+   * is a separate signed event, and NIP-07 / NIP-46 signatures are
+   * serialized through one signer queue, so anything but a local key
+   * bundles candidates into the SDP and gets a longer connect budget
+   * (see `SIGNER_PEER_BUDGET`). Omitted = local key.
+   */
+  signer?: VoiceSigner;
   events?: VoiceClientEvents;
 }
 
@@ -220,6 +241,8 @@ export class VoiceClient {
   readonly selfPubkey: string;
   private events: VoiceClientEvents;
   private readonly transport: VoiceTransport;
+  /** Client-level id, for signals sent without a Peer (room-full byes). Each
+   *  Peer carries its own per-connection `sessionId`. */
   private readonly sessionId = randomId();
 
   private members: ReadonlySet<string>;
@@ -234,7 +257,9 @@ export class VoiceClient {
    * topology without forcing the user to rejoin.
    */
   private expectSfu: boolean;
+  /** NIP-46: a human/relay round trip per signed event (slower beacon cadence). */
   private readonly remoteSigning: boolean;
+  private readonly signer: VoiceSigner;
 
   private peers = new Map<string, Peer>();
   private openingPeers = new Set<string>();
@@ -402,11 +427,23 @@ export class VoiceClient {
     { payload: VoiceSignalPayload; arrivedAt: number }[]
   >();
   private deferredSweepTimer: ReturnType<typeof setInterval> | null = null;
+  /** Roster / signal subs currently backing off after a rate-limit CLOSE. */
+  private degradedSubscriptions = new Set<'roster' | 'signals'>();
 
   constructor(channelId: string, options: VoiceClientOptions = {}) {
     this.channelId = channelId;
     this.events = options.events ?? {};
-    this.transport = createVoiceTransport({ relayUrl: options.originRelayUrl ?? null });
+    this.transport = createVoiceTransport({
+      relayUrl: options.originRelayUrl ?? null,
+      onSubscriptionDegraded: (which, degraded) => {
+        if (!this.joined) return;
+        if (degraded) this.degradedSubscriptions.add(which);
+        else this.degradedSubscriptions.delete(which);
+        try {
+          useVoiceStore.getState().setSignalingDegraded(this.degradedSubscriptions.size > 0);
+        } catch { /* test envs */ }
+      },
+    });
     this.members = new Set(options.members ?? []);
     this.admins = new Set(options.admins ?? []);
     // Honor the explicit `open` flag from kind 39000 first. Falling back
@@ -422,7 +459,8 @@ export class VoiceClient {
     // `expectSfu: channelKind === 'voice-sfu'`, so the default only
     // affects ad-hoc / test constructions which should be mesh.
     this.expectSfu = options.expectSfu === true;
-    this.remoteSigning = options.remoteSigning === true;
+    this.signer = options.signer ?? 'nsec';
+    this.remoteSigning = this.signer === 'bunker';
     const pk = getSelfPubkey();
     if (!pk) throw new Error('Not logged in to nostr');
     this.selfPubkey = pk;
@@ -1109,6 +1147,10 @@ export class VoiceClient {
     this.deferredSignals.clear();
     this.seenRosterPubkeys.clear();
     this.discovery.reset();
+    if (this.degradedSubscriptions.size > 0) {
+      this.degradedSubscriptions.clear();
+      try { useVoiceStore.getState().setSignalingDegraded(false); } catch { /* test envs */ }
+    }
     if (this.dialDebounceTimer) { clearTimeout(this.dialDebounceTimer); this.dialDebounceTimer = null; }
     if (this.controlSnapshotTimer) { clearTimeout(this.controlSnapshotTimer); this.controlSnapshotTimer = null; }
     if (this.unloadHandler) { this.unloadHandler.uninstall(); this.unloadHandler = null; }
@@ -1160,6 +1202,7 @@ export class VoiceClient {
 
     this.stopTrack(this.micTrack); this.micTrack = null;
     this.stopTrack(this.camTrack); this.camTrack = null;
+    if (this.screenTrack) this.screenTrack.onended = null;
     this.stopTrack(this.screenTrack); this.screenTrack = null;
     this.stopTrack(this.screenAudioTrack); this.screenAudioTrack = null;
     this.emitLocal();
@@ -1169,16 +1212,20 @@ export class VoiceClient {
   // ── Beacon publishing ──────────────────────────────────────────────────
 
   /**
-   * Known active mesh pubkeys from every source we currently trust:
-   * connected PCs, relay beacons, control-channel snapshots, and active-call
-   * hints. This set is what we gossip as `peer` tags and `peerSnapshot`
-   * messages, so partially formed meshes can converge without re-advertising
-   * stale PCs that never connected.
+   * Mesh pubkeys we have observed *ourselves*: connected PCs, live beacons
+   * we received, and active-call hints (also beacons). This set is what we
+   * gossip as `peer` tags and `peerSnapshot` messages.
+   *
+   * It must not include `discovery.effectivePeers()`: that folds in other
+   * clients' gossip, so two live clients re-advertised each other's lists
+   * and a departed pubkey never aged out — it cost a 9 s dial timeout per
+   * redial and a slot under MAX_PARTICIPANTS, until real joiners got
+   * `room-full`.
    */
   private meshKnownPubkeys(): string[] {
     const known = new Set<string>();
     for (const pk of this.connectedPubkeys) known.add(pk);
-    for (const pk of this.discovery.effectivePeers()) known.add(pk);
+    for (const p of this.currentRoster) known.add(p.pubkey);
     for (const pk of this.passiveParticipantHints) known.add(pk);
     known.delete(this.selfPubkey);
     return Array.from(known).filter((pk) => this.isMember(pk)).sort();
@@ -1328,13 +1375,27 @@ export class VoiceClient {
    * violators. Called from `handleRoster` (relay-driven) and from
    * `scheduleDialFromDiscovery` (control-channel-driven). Idempotent.
    */
-  private runDialLoop(): void {
-    const others = Array.from(new Set([
+  /**
+   * Everyone we believe is in the room, minus self: discovery (beacons,
+   * their `p` tags, control snapshots), active-call hints and live peers.
+   * The single input to both cap checks — `runDialLoop` deciding whom to
+   * dial and `isWithinRoomCap` deciding whom to answer — so they agree on
+   * who the fifth person is.
+   */
+  private roomCandidates(): string[] {
+    const set = new Set<string>([
       ...this.discovery.effectivePeers(),
       ...this.passiveParticipantHints,
-    ]))
-      .filter((p) => p !== this.selfPubkey)
-      .filter((p) => this.isMember(p));
+    ]);
+    for (const [pk, peer] of this.peers.entries()) {
+      if (this.connectedPubkeys.has(pk) || peer.isControlOpen()) set.add(pk);
+    }
+    set.delete(this.selfPubkey);
+    return Array.from(set).filter((p) => this.isMember(p));
+  }
+
+  private runDialLoop(): void {
+    const others = this.roomCandidates();
 
     // Hard cap: if more than MAX_PARTICIPANTS would be present and we're
     // not in the leading slice, deterministically (lex) trim the tail so
@@ -1654,9 +1715,10 @@ export class VoiceClient {
       const createdPeer = new Peer({
         remotePubkey,
         polite,
-        sessionId: this.sessionId,
-        trickle: !this.remoteSigning,
-        ...(this.remoteSigning ? { connectTimeoutMs: 45_000 } : {}),
+        // Per connection, not per client: a rebuilt Peer must not accept
+        // answers and candidates the remote sent to the one it replaced.
+        sessionId: randomId(),
+        ...SIGNER_PEER_BUDGET[this.signer],
         bootstrapRecvOnlyMedia: shouldKickRecvOnly,
         send: (payload) => withRateLimitBackoff(
           () => this.transport.sendSignal(this.channelId, remotePubkey, payload),
@@ -1730,8 +1792,20 @@ export class VoiceClient {
             this.discovery.dropClaimsFromPeer(remotePubkey);
             this.scheduleBeaconRefresh();
             this.scheduleControlPeerSnapshot();
+            // A silent rebuild (timeout, lost heartbeat) must take the remote
+            // with it, or it keeps negotiating against a Peer that is gone.
+            // Not when the remote asked for this reset — that would echo.
+            if (!reason.startsWith('bye:') && reason !== 'reset-requested') peer?.requestReset();
             this.tearDownPeer(remotePubkey, !reason.startsWith('bye:'));
             if (!reason.startsWith('bye:')) this.scheduleDialFromDiscovery();
+          },
+          onRemoteSessionChanged: (offer) => {
+            if (this.peers.get(remotePubkey) !== peer) return;
+            pushVoiceDebug({ kind: 'pc-state', peer: remotePubkey, payload: { event: 'remote-session-changed' } });
+            // The remote already rebuilt — no requestReset. Replace our Peer
+            // and give the new one the offer that revealed the new session.
+            this.tearDownPeer(remotePubkey, true);
+            void this.routeSignal(remotePubkey, offer);
           },
           onRemoteTrack: (track, stream, kind, originPubkey) => {
             // Apply current deafen state to brand-new audio arrivals so a peer
@@ -1812,6 +1886,7 @@ export class VoiceClient {
               // where discovery should create a fresh connection.
               const p = this.peers.get(remotePubkey);
               if (p && p === peer) {
+                p.requestReset();
                 this.tearDownPeer(remotePubkey, true);
                 this.scheduleDialFromDiscovery();
               }
@@ -2032,14 +2107,13 @@ export class VoiceClient {
    * (self + currently-known peers). Symmetric across the room — every
    * peer agrees on the same in/out partition without a coordinator.
    *
-   * "Currently-known" = effective discovery set ∪ already-open peers ∪
-   * self ∪ the candidate pubkey. Including the candidate matters: an
+   * "Currently-known" = `roomCandidates()` ∪ self ∪ the candidate
+   * pubkey — the same set the dial loop caps. Including the candidate matters: an
    * over-cap joiner who happens to be lex-leading should be
    * accepted, displacing the lex-trailing existing peer.
    */
   private isWithinRoomCap(pubkey: string): boolean {
-    const candidates = new Set<string>(this.discovery.effectivePeers());
-    for (const pk of this.peers.keys()) candidates.add(pk);
+    const candidates = new Set<string>(this.roomCandidates());
     candidates.add(this.selfPubkey);
     candidates.add(pubkey);
     const sorted = Array.from(candidates).sort();
@@ -2230,17 +2304,24 @@ export class VoiceClient {
       }
       this.scheduleBeaconRefresh();
     } else if (!on) {
-      if (this.screenTrack) {
+      // Take the tracks off `this` and detach `onended` before any await:
+      // the browser's "Stop sharing" and our own toggle can race, and a
+      // track whose `ended` fires on stop() would otherwise re-enter here
+      // with the same track forever.
+      const screen = this.screenTrack;
+      const screenAudio = this.screenAudioTrack;
+      this.screenTrack = null;
+      this.screenAudioTrack = null;
+      if (screen) {
+        screen.onended = null;
         for (const peer of this.peers.values()) await peer.setLocalTrack('screen', null);
         if (this.sfuClient) await this.sfuClient.unpublishTrack('screen').catch(() => undefined);
-        this.stopTrack(this.screenTrack);
-        this.screenTrack = null;
+        this.stopTrack(screen);
       }
-      if (this.screenAudioTrack) {
+      if (screenAudio) {
         for (const peer of this.peers.values()) await peer.setLocalTrack('screen-audio', null);
         if (this.sfuClient) await this.sfuClient.unpublishTrack('screen-audio').catch(() => undefined);
-        this.stopTrack(this.screenAudioTrack);
-        this.screenAudioTrack = null;
+        this.stopTrack(screenAudio);
       }
       if (this.localVideoClaimedAt.delete('screen')) {
         this.scheduleBeaconRefresh();

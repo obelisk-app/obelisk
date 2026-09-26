@@ -84,12 +84,11 @@ export interface VoicePresence {
    */
   connectedTo: readonly string[];
   /**
-   * Pubkeys this publisher currently believes are active in the call,
-   * whether or not it already has a direct RTCPeerConnection to them.
-   * This is the mesh gossip set: relay beacons and established
-   * `obelisk-control` data channels both propagate it so a partially
-   * connected room can converge without waiting for every peer's own
-   * beacon to arrive.
+   * `peer` tags: pubkeys this publisher has itself observed in the call
+   * (its PCs plus live beacons it received). Parsed for diagnostics and
+   * older clients; not counted as participants, because re-gossiping
+   * second-hand claims kept departed peers alive (see
+   * `transitiveParticipants`).
    */
   knownPeers?: readonly string[];
   /**

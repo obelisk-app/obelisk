@@ -23,6 +23,9 @@ expected)**.
 | Rate-limit response (`OK ... false "rate-limit:..."` or "slow down") | Exponential backoff: 1s, 2s, 4s, 8s with ±25% jitter, max 4 retries | `rateLimit.hit`, `rateLimit.backoffMs` |
 | Publish fails for any non-rate-limit reason (signing error, network down, relay reject) | Re-thrown to caller; counter incremented | `relay.publishFail` **(zero expected)**, `relay.lastError` |
 | NIP-42 AUTH not yet complete when first beacon publishes | Best-effort: wait up to 5 s for auth (fire-and-forget — beacon goes out anyway, bring-up burst covers retry) | `relay.authWaited`, `relay.authTimedOut` (occasional non-zero on slow relays — ok) |
+| Relay refuses a pre-AUTH EVENT with `restricted:` instead of `auth-required:` | `authRetryOnRestricted`: AUTH that socket, republish once; not repeated on the same challenge | relay-debug `publish-retry` |
+| Voice REQ CLOSEd for quota / rate limit (e.g. obelisk-relay's unindexed-query budget) | Filters are tag-indexed so this should not happen; if it does, reopen on 5 → 60 s backoff and show "Reconnecting to voice…" | voice-debug `relay-error` with `rateLimited: true` |
+| Pinned voice relay is not the one being browsed | Bridge answers its AUTH while the call's subs are open (`answerAuth`) | — |
 
 ## Peer
 
@@ -31,7 +34,10 @@ expected)**.
 | Peer PC reaches a terminal close | `VoiceClient` silently rebuilds the peer (no `bye`), preserves kind 20078 presence, and redials from discovery | `peers.tornDown` |
 | Peer crashed / network blackout (no traffic for 20 s) | Silent local teardown + discovery-driven redial; no reciprocal leave signal | `peers.tornDown` |
 | Peer cleanly leaves | Control-channel `bye` (sub-100 ms) → `tearDownPeer` | `peers.tornDown`, `signals.byeViaControl` |
-| Peer never opens (9 s timeout) | Silent local teardown + discovery-driven redial while the beacon remains live | `peers.tornDown` |
+| Peer never opens (9 s local key / 20 s NIP-07 / 45 s bunker) | Silent local teardown, one relay `requestReset` so the remote rebuilds too, then discovery-driven redial while the beacon remains live | `peers.tornDown` |
+| Late answer / ICE / bye from a connection that was already replaced | Per-`Peer` `sessionId`: dropped at the receiving `Peer` | — |
+| Remote rebuilt and sends an offer under a new session | Replace the local `Peer` and hand it the offer | voice-debug `remote-session-changed` |
+| Departed peer kept alive by `peer`-tag gossip (ghost) | `peer` tags no longer count as presence, and clients only advertise first-hand observations | Verified by `client.test.ts` (ghost peers) |
 | Local tab close / refresh | `beforeunload` / `pagehide` → control-channel `bye` to all peers, then `pc.close()` | `peers.tornDownByUnload` (on the leaver), `signals.byeViaControl` (on the receivers) |
 | Both browsers try to negotiate | Deterministic pubkey ordering makes exactly one `simple-peer` instance the initiator; the other sends library `renegotiate`/`transceiverRequest` signals | Covered by `peer.test.ts` and `client.test.ts` |
 

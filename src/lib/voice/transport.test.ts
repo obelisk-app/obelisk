@@ -78,6 +78,10 @@ const bridgeFake = vi.hoisted(() => {
     inject: (ev: FakeEvent) => {
       for (const s of subs) if (matches(s.filter, ev)) s.sink(ev);
     },
+    /** A relay that ignores tag filters on ephemeral kinds: kind match only. */
+    injectIgnoringTags: (ev: FakeEvent) => {
+      for (const s of subs) if (!s.filter.kinds || s.filter.kinds.includes(ev.kind)) s.sink(ev);
+    },
     setSelf: (pk: string) => { selfPubkey = pk; },
     advanceClock: (s: number) => { nextEventCreatedAt += s; },
     setClock: (t: number) => { nextEventCreatedAt = t; },
@@ -129,6 +133,7 @@ describe('publishPresenceBeacon', () => {
           ['t', 'obelisk-voice-presence'],
         ]),
       }),
+      { authRetryOnRestricted: true },
     );
     const call = bridgeFake.impl.publishEvent.mock.calls[0][0] as { tags: string[][] };
     const exp = call.tags.find((t) => t[0] === 'expiration');
@@ -138,7 +143,7 @@ describe('publishPresenceBeacon', () => {
 });
 
 describe('publishLeavePresence', () => {
-  it('publishes a terminal kind 20078 leave beacon with a past expiration', async () => {
+  it('publishes a terminal kind 20078 leave beacon that a NIP-40 relay still delivers', async () => {
     await publishLeavePresence('ch1');
 
     expect(bridgeFake.impl.publishEvent).toHaveBeenCalledWith(
@@ -151,11 +156,15 @@ describe('publishLeavePresence', () => {
           ['status', 'left'],
         ]),
       }),
+      { authRetryOnRestricted: true },
     );
+    // Already-expired events are dropped by NIP-40 relays before delivery,
+    // so the leave must expire shortly *after* now — well inside the TTL.
     const call = bridgeFake.impl.publishEvent.mock.calls[0][0] as { tags: string[][] };
-    const exp = call.tags.find((t) => t[0] === 'expiration');
-    expect(exp).toBeDefined();
-    expect(parseInt(exp![1], 10)).toBeLessThanOrEqual(Math.floor(Date.now() / 1000));
+    const exp = parseInt(call.tags.find((t) => t[0] === 'expiration')![1], 10);
+    const now = Math.floor(Date.now() / 1000);
+    expect(exp).toBeGreaterThan(now);
+    expect(exp).toBeLessThanOrEqual(now + 15);
   });
 });
 
@@ -165,7 +174,7 @@ describe('pinned relay voice transport', () => {
     await transport.publishPresenceBeacon('ch1');
     expect(bridgeFake.impl.publishEvent).toHaveBeenCalledWith(
       expect.objectContaining({ kind: KIND_VOICE_PRESENCE }),
-      { extraRelays: ['wss://origin.example'], mode: 'replace' },
+      { extraRelays: ['wss://origin.example'], mode: 'replace', authRetryOnRestricted: true },
     );
   });
 
@@ -176,22 +185,26 @@ describe('pinned relay voice transport', () => {
 
     expect(bridgeFake.impl.subscribeVoiceFilterWatched).toHaveBeenNthCalledWith(
       1,
-      expect.objectContaining({ kinds: [KIND_VOICE_PRESENCE] }),
+      { kinds: [KIND_VOICE_PRESENCE], '#e': ['ch1'] },
       expect.any(Function),
       expect.objectContaining({
         relays: ['wss://origin.example'],
         relayMode: 'replace',
         affectsRelayAccess: false,
+        answerAuth: true,
+        onQuotaOrRateLimitClose: expect.any(Function),
       }),
     );
     expect(bridgeFake.impl.subscribeVoiceFilterWatched).toHaveBeenNthCalledWith(
       2,
-      expect.objectContaining({ kinds: [KIND_VOICE_SIGNAL] }),
+      expect.objectContaining({ kinds: [KIND_VOICE_SIGNAL], '#p': ['me'] }),
       expect.any(Function),
       expect.objectContaining({
         relays: ['wss://origin.example'],
         relayMode: 'replace',
         affectsRelayAccess: false,
+        answerAuth: true,
+        onQuotaOrRateLimitClose: expect.any(Function),
       }),
     );
 
@@ -204,8 +217,17 @@ describe('pinned relay voice transport', () => {
     await transport.sendSignal('ch1', 'recipient-pk', { type: 'bye', sessionId: 's1', seq: 1 });
     expect(bridgeFake.impl.publishEvent).toHaveBeenCalledWith(
       expect.objectContaining({ kind: KIND_VOICE_SIGNAL }),
-      { extraRelays: ['wss://origin.example'], mode: 'replace' },
+      { extraRelays: ['wss://origin.example'], mode: 'replace', authRetryOnRestricted: true },
     );
+  });
+
+  it('lets negotiation signals wait at most 15 s for the signer, but not byes', async () => {
+    const transport = createVoiceTransport({ relayUrl: 'wss://origin.example' });
+    await transport.sendSignal('ch1', 'recipient-pk', { type: 'offer', sdp: 'v=0', sessionId: 's1', seq: 1 });
+    await transport.sendSignal('ch1', 'recipient-pk', { type: 'bye', sessionId: 's1', seq: 2 });
+    const [offerOpts, byeOpts] = bridgeFake.impl.publishEvent.mock.calls.map((c) => (c as unknown[])[1]);
+    expect(offerOpts).toMatchObject({ signStartDeadlineMs: 15_000 });
+    expect(byeOpts).not.toHaveProperty('signStartDeadlineMs');
   });
 
   it('publishes leave beacons to the origin relay only', async () => {
@@ -216,7 +238,7 @@ describe('pinned relay voice transport', () => {
         kind: KIND_VOICE_PRESENCE,
         tags: expect.arrayContaining([['status', 'left']]),
       }),
-      { extraRelays: ['wss://origin.example'], mode: 'replace' },
+      { extraRelays: ['wss://origin.example'], mode: 'replace', authRetryOnRestricted: true },
     );
   });
 });
@@ -285,7 +307,7 @@ describe('subscribeRoster', () => {
     const unsub = await subscribeRoster('ch1', (r) => { lastRoster = r; });
     const now = Math.floor(Date.now() / 1000);
 
-    bridgeFake.inject({
+    bridgeFake.injectIgnoringTags({
       pubkey: 'p-other', kind: KIND_VOICE_PRESENCE, content: '',
       tags: [['e', 'other-channel'], ['expiration', String(now + 30)]],
       created_at: now,
@@ -393,16 +415,16 @@ describe('signal addressing', () => {
       tags: [['e', 'ch1'], ['p', 'me']],
       created_at: Math.floor(Date.now() / 1000),
     });
-    // Event for another channel — should be dropped even though the relay
-    // subscription is intentionally kind-only for tag-index reliability.
-    bridgeFake.inject({
+    // Event for another channel — should be dropped even from a relay
+    // that ignores the REQ's tag filter on ephemeral kinds.
+    bridgeFake.injectIgnoringTags({
       pubkey: 'peer1', kind: KIND_VOICE_SIGNAL,
       content: JSON.stringify({ type: 'offer', sdp: 'v=0', sessionId: 's', seq: 4 }),
       tags: [['e', 'other-channel'], ['p', 'me']],
       created_at: Math.floor(Date.now() / 1000),
     });
-    // Event addressed to someone else — should be dropped.
-    bridgeFake.inject({
+    // Event addressed to someone else — should be dropped, same reason.
+    bridgeFake.injectIgnoringTags({
       pubkey: 'peer1', kind: KIND_VOICE_SIGNAL,
       content: JSON.stringify({ type: 'offer', sdp: 'v=0', sessionId: 's', seq: 2 }),
       tags: [['e', 'ch1'], ['p', 'someone-else']],

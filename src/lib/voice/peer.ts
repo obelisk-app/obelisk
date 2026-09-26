@@ -34,12 +34,30 @@ export interface PeerEvents {
   onControlPeerAdded?(pubkey: string): void;
   onControlPeerRemoved?(pubkey: string): void;
   onPeerDead?(reason: string): void;
+  /**
+   * The remote rebuilt its side and opened a new negotiation (an offer
+   * under a different `sessionId`). This Peer is bound to the old session
+   * and cannot accept it; the owner should replace the Peer and hand the
+   * offer to the new one.
+   */
+  onRemoteSessionChanged?(offer: VoiceSignalPayload): void;
+}
+
+function isOffer(payload: VoiceSignalPayload): boolean {
+  if (payload.type === 'offer') return true;
+  return payload.type === 'peer'
+    && (payload.peerSignal as { type?: string } | undefined)?.type === 'offer';
 }
 
 export interface PeerOptions {
   remotePubkey: string;
   /** Preserved public name: the polite side is the non-initiator. */
   polite: boolean;
+  /**
+   * Identifies this connection attempt, not the client: a rebuilt Peer gets
+   * a new one, so signals still in flight for the old attempt can be told
+   * apart from the new negotiation.
+   */
   sessionId: string;
   /** Disable trickle for remote signers so ICE candidates share one signed SDP. */
   trickle?: boolean;
@@ -140,6 +158,8 @@ export class Peer {
   private remoteTrackOrigins = new Map<string, string>();
   private remoteVideoMuteTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private outboundSeq = 0;
+  /** Remote's `sessionId` for this connection, learned from its first signal. */
+  private remoteSessionId: string | null = null;
   private connected = false;
   private controlStarted = false;
   private closed = false;
@@ -378,6 +398,7 @@ export class Peer {
 
   async handleSignal(payload: VoiceSignalPayload): Promise<void> {
     if (this.closed) return;
+    if (!this.acceptsSession(payload)) return;
     if (payload.type === 'bye') {
       this.events.onPeerDead?.(`bye:${payload.byeReason ?? 'remote-bye'}`);
       return;
@@ -412,6 +433,46 @@ export class Peer {
     } catch (error) {
       console.warn('[voice] simple-peer rejected signal', error);
     }
+  }
+
+  /**
+   * Bind to the remote's session on first contact; afterwards, anything
+   * from another session belongs to a connection attempt that no longer
+   * exists on one side or the other.
+   *
+   * Exempt: `requestReset` (it is how a rebuilt remote announces itself)
+   * and a `room-full` bye (sent by the remote client, not by a Peer).
+   * Signals without a `sessionId` — older clients — are accepted as before.
+   */
+  private acceptsSession(payload: VoiceSignalPayload): boolean {
+    const incoming = payload.sessionId;
+    if (!incoming) return true;
+    if (payload.type === 'requestReset') return true;
+    if (payload.type === 'bye' && payload.byeReason === 'room-full') return true;
+    if (this.remoteSessionId === null || this.remoteSessionId === incoming) {
+      this.remoteSessionId = incoming;
+      return true;
+    }
+    if (isOffer(payload) && this.events.onRemoteSessionChanged) {
+      this.events.onRemoteSessionChanged(payload);
+      return false;
+    }
+    console.debug('[voice] dropped', payload.type, 'from stale session of', this.remotePubkey.slice(0, 8));
+    return false;
+  }
+
+  /**
+   * Ask the remote to rebuild its side too. Sent when we rebuild ours
+   * without a bye (open timeout, closed PC): otherwise the remote keeps
+   * waiting on a connection that no longer exists until its own timeout.
+   */
+  requestReset(): void {
+    if (this.closed) return;
+    void Promise.resolve(this.send({
+      type: 'requestReset',
+      sessionId: this.sessionId,
+      seq: ++this.outboundSeq,
+    })).catch(() => {});
   }
 
   async setLocalVideoCap(cap: { maxBitrate: number | null; maxFramerate: number } | null): Promise<void> {

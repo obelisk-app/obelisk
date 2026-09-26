@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   enqueueSignerOp,
   signerQueueStats,
   resetSignerQueue,
   MAX_IN_FLIGHT,
+  SignerQueueTimeoutError,
 } from './signer-queue';
 
 /** A promise plus the handles to settle it from the test body. */
@@ -146,5 +147,50 @@ describe('signer queue', () => {
     await expect(
       enqueueSignerOp('interactive', 'post-reset', async () => 42),
     ).resolves.toBe(42);
+  });});
+
+describe('signer queue start deadline', () => {
+  beforeEach(() => {
+    resetSignerQueue();
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    resetSignerQueue();
+    vi.useRealTimers();
+  });
+
+  it('drops an op that is still queued when its deadline passes, without running it', async () => {
+    const blocker = deferred();
+    const busy = enqueueSignerOp('interactive', 'busy', () => blocker.promise);
+    const run = vi.fn(async () => 'late');
+    const stale = enqueueSignerOp('interactive', 'voice-answer', run, { startDeadlineMs: 15_000 });
+    const staleResult = expect(stale).rejects.toBeInstanceOf(SignerQueueTimeoutError);
+
+    await vi.advanceTimersByTimeAsync(15_000);
+    await staleResult;
+    expect(signerQueueStats().interactive).toBe(0);
+
+    blocker.resolve();
+    await busy;
+    await vi.advanceTimersByTimeAsync(0);
+    expect(run).not.toHaveBeenCalled();
+  });
+
+  it('never interrupts an op that already started', async () => {
+    const gate = deferred<string>();
+    const started = enqueueSignerOp('interactive', 'slow-signer', () => gate.promise, { startDeadlineMs: 1_000 });
+    await vi.advanceTimersByTimeAsync(5_000);
+    gate.resolve('signed');
+    await expect(started).resolves.toBe('signed');
+  });
+
+  it('lets the op run when it reaches the slot before the deadline', async () => {
+    const blocker = deferred();
+    void enqueueSignerOp('interactive', 'busy', () => blocker.promise);
+    const next = enqueueSignerOp('interactive', 'next', async () => 'ok', { startDeadlineMs: 10_000 });
+    await vi.advanceTimersByTimeAsync(2_000);
+    blocker.resolve();
+    await expect(next).resolves.toBe('ok');
+    await vi.advanceTimersByTimeAsync(20_000);
   });
 });

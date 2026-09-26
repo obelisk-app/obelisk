@@ -8,6 +8,7 @@ import {
 import { EMPTY_MEDIA_FAVORITES, mediaFavoriteTags, mediaPackTags, parseMediaFavorites, parseMediaPack } from '@/lib/media-packs';
 import { BunkerSigner, parseBunkerInput, createNostrConnectURI } from 'nostr-tools/nip46';
 import { generateSecretKey } from 'nostr-tools/pure';
+import { resubscribeOnQuotaClose } from './quota-resubscribe';
 import { v2 as nip44 } from 'nostr-tools/nip44';
 import type { NipSigner } from '@/lib/nip-59';
 import { parseRelayList, parseInboxRelayList } from '@nostr-wot/data';
@@ -141,6 +142,21 @@ export interface PublishOpts {
    * made the app look like it was saving settings on navigation.
    */
   readonly quiet?: boolean;
+  /**
+   * On a `restricted:` or `auth-required:` refusal, AUTH that socket
+   * explicitly and publish once more. For writes to a relay the pool never
+   * AUTHs on its own — a voice relay pinned while the user browses another
+   * — where a whitelist relay refuses the pre-AUTH EVENT with `restricted:`
+   * and nostr-tools, which only retries on `auth-required: `, gives up.
+   */
+  readonly authRetryOnRestricted?: boolean;
+  /**
+   * Give up if the NIP-07 / NIP-46 signer hasn't *started* on this event
+   * within this many ms (it is queued behind other signer work). For events
+   * that are worthless late — a voice SDP answer the peer stopped waiting
+   * for. Rejects with `SignerQueueTimeoutError`; a local key never waits.
+   */
+  readonly signStartDeadlineMs?: number;
 }
 
 /**
@@ -773,6 +789,18 @@ export class BridgeImpl {
   private authAllowedRelays = new Set<string>();
 
   /**
+   * Relays carrying a live voice subscription, refcounted by normalized URL.
+   * The pinned voice relay may not be the one the user is browsing, but the
+   * user explicitly joined a call there, so its AUTH challenge is answered
+   * for exactly as long as the call's subscriptions are open.
+   */
+  private voiceAuthRelays = new Map<string, number>();
+
+  private isVoiceAuthRelay(url: string): boolean {
+    return (this.voiceAuthRelays.get(normalizeRelayUrl(url)) ?? 0) > 0;
+  }
+
+  /**
    * Update the relay-access store for the active relay. No-op for any URL
    * that isn't the currently-opened relay — we only surface auth/whitelist
    * state for the relay the user is actually looking at.
@@ -1085,7 +1113,13 @@ export class BridgeImpl {
         // rendezvous, NIP-65 DM relays) may issue AUTH too, but we don't
         // want to leak the user's pubkey to relays they're not browsing —
         // and a slow/unresponsive auxiliary signer should not block reads.
-        if (!this.isActiveRelay(relayUrl)) return null;
+        if (!this.isActiveRelay(relayUrl)) {
+          // A voice relay pinned away from the active one: AUTH so its
+          // whitelist admits our beacons and signals, but leave the
+          // access indicator alone — it describes the relay being browsed.
+          if (!this.isVoiceAuthRelay(relayUrl)) return null;
+          return (evt: EventTemplate) => this.signAuthEvent(evt);
+        }
         // Flip the relay into 'authenticating' synchronously so the UI can
         // gate cached groups/messages on a positive AUTH signal before any
         // signer round-trip. The activity-log entry tied to this state
@@ -2466,6 +2500,8 @@ export class BridgeImpl {
       label?: string;
       deadlineMs?: number;
       deadlineMessage?: string;
+      /** See `enqueueSignerOp`: how long it may wait for the slot. */
+      startDeadlineMs?: number;
     },
   ): Promise<T> {
     const lane = opts?.lane ?? 'interactive';
@@ -2475,6 +2511,7 @@ export class BridgeImpl {
         opts?.deadlineMs
           ? withDeadline(operation(s), opts.deadlineMs, opts.deadlineMessage ?? 'Remote signer timed out')
           : operation(s),
+        opts?.startDeadlineMs !== undefined ? { startDeadlineMs: opts.startDeadlineMs } : undefined,
       );
     const signer = await this.ensureBunkerSigner();
     try {
@@ -4413,6 +4450,17 @@ export class BridgeImpl {
       relays?: readonly string[];
       relayMode?: 'merge' | 'replace';
       affectsRelayAccess?: boolean;
+      /** See subscribeWatched: without it a quota/rate-limit CLOSE is final. */
+      onQuotaOrRateLimitClose?: () => void;
+      onEose?: () => void;
+      /**
+       * Answer NIP-42 AUTH on these relays while the sub is open, even when
+       * they aren't the relay being browsed. Only for the mesh call's own
+       * roster/signal feed: the user joined a call there, and every beacon
+       * it publishes already carries their pubkey. Other override-relay
+       * readers stay anonymous.
+       */
+      answerAuth?: boolean;
     },
   ): () => void {
     const targetRelays = options?.relays && options.relays.length > 0
@@ -4420,6 +4468,10 @@ export class BridgeImpl {
           ? [...options.relays]
           : [...this.relays, ...options.relays]))
       : this.relays;
+    // Register before the pool opens a socket: nostr-tools asks
+    // `automaticallyAuth` once per socket, at creation.
+    const authKeys = options?.answerAuth ? targetRelays.map((r) => normalizeRelayUrl(r)) : [];
+    for (const k of authKeys) this.voiceAuthRelays.set(k, (this.voiceAuthRelays.get(k) ?? 0) + 1);
     const pool = this.voicePool ?? (this.voicePool = this.createPool());
     for (const r of targetRelays) this.voicePoolRelays.add(r);
     this.voicePoolRefs += 1;
@@ -4427,7 +4479,7 @@ export class BridgeImpl {
       targetRelays,
       filter,
       onEvent,
-      undefined,
+      options?.onEose,
       { ...options, affectsRelayAccess: options?.affectsRelayAccess ?? false },
       pool,
       () => true,
@@ -4438,6 +4490,11 @@ export class BridgeImpl {
       if (closed) return;
       closed = true;
       sub.close();
+      for (const k of authKeys) {
+        const n = (this.voiceAuthRelays.get(k) ?? 0) - 1;
+        if (n > 0) this.voiceAuthRelays.set(k, n);
+        else this.voiceAuthRelays.delete(k);
+      }
       this.voicePoolRefs = Math.max(0, this.voicePoolRefs - 1);
       if (this.voicePoolRefs === 0 && this.voicePool === pool) {
         this.closeVoicePool();
@@ -6250,14 +6307,22 @@ export class BridgeImpl {
     );
     this.subs.push(sfuSub);
 
-    const meshSub = this.subscribeWatched(
-      this.relays,
-      { kinds: [KIND_VOICE_PRESENCE] } as Filter,
-      (ev) => this.ingestMeshVoicePresence(ev),
-      undefined,
-      { affectsRelayAccess: false },
-    );
-    this.subs.push(meshSub);
+    // `#t` keeps the filter indexed while still covering every channel —
+    // every beacon carries it. Kind-only reads as a scrape to the relay's
+    // unindexed-query budget, which then CLOSEs it rate-limited; unlike the
+    // bulk subs, the LIVE badges have nothing else to fall back on, so reopen.
+    const relays = this.relays;
+    const closeMesh = resubscribeOnQuotaClose(({ onQuotaOrRateLimitClose, alive }) => {
+      const sub = this.subscribeWatched(
+        relays,
+        { kinds: [KIND_VOICE_PRESENCE], '#t': ['obelisk-voice-presence'] } as Filter,
+        (ev) => { alive(); this.ingestMeshVoicePresence(ev); },
+        alive,
+        { affectsRelayAccess: false, onQuotaOrRateLimitClose },
+      );
+      return () => sub.close();
+    });
+    this.subs.push({ close: closeMesh });
     this.ensureMeshPresenceSweep();
   }
 
@@ -7653,6 +7718,9 @@ export class BridgeImpl {
       : (relayOpts as PublishOpts);
     const extraRelays = normalized.extraRelays ?? [];
     const mode = normalized.mode ?? 'merge';
+    const queueOpts = normalized.signStartDeadlineMs !== undefined
+      ? { startDeadlineMs: normalized.signStartDeadlineMs }
+      : undefined;
     if (!this.session) throw new Error('Not logged in');
 
     const signLabel =
@@ -7682,11 +7750,12 @@ export class BridgeImpl {
           'interactive',
           `signEvent:${template.kind}`,
           () => win.signEvent(template) as Promise<NostrEvent>,
+          queueOpts,
         )) as NostrEvent;
       } else if (this.session.loginMethod === 'bunker') {
         event = await this.withBunkerSigner(
           (b) => b.signEvent(template) as Promise<NostrEvent>,
-          { lane: 'interactive', label: `signEvent:${template.kind}` },
+          { lane: 'interactive', label: `signEvent:${template.kind}`, ...queueOpts },
         );
       } else {
         throw new Error(`Login method ${this.session.loginMethod} cannot sign events in this build`);
@@ -7705,7 +7774,10 @@ export class BridgeImpl {
     const targetRelays = mode === 'replace'
       ? Array.from(new Set(extraRelays))
       : Array.from(new Set([...this.relays, ...extraRelays]));
-    return this.publishSignedEvent(event, targetRelays, opts);
+    return this.publishSignedEvent(event, targetRelays, {
+      ...opts,
+      ...(normalized.authRetryOnRestricted ? { authRetryOnRestricted: true } : {}),
+    });
   }
 
   /**
@@ -7747,7 +7819,11 @@ export class BridgeImpl {
   async publishSignedEvent(
     event: NostrEvent,
     targetRelays: string[],
-    opts?: { quiet?: boolean; authMode?: 'always' | 'last-resort' | 'never' },
+    opts?: {
+      quiet?: boolean;
+      authMode?: 'always' | 'last-resort' | 'never';
+      authRetryOnRestricted?: boolean;
+    },
   ): Promise<NostrEvent> {
     const authMode = opts?.authMode ?? 'always';
     const authSigner = authMode === 'always' ? this.getAuthSigner() : undefined;
@@ -7835,6 +7911,27 @@ export class BridgeImpl {
       });
       accepted = finalResults.filter((r) => r.status === 'fulfilled');
     }
+    // `authRetryOnRestricted` — see PublishOpts. Per relay, not all-or-none:
+    // the voice relay can refuse while another target accepted.
+    if (opts?.authRetryOnRestricted && authMode === 'always') {
+      const signer = this.getAuthSigner();
+      const refused = finalResults.flatMap((r, i) => {
+        if (r.status === 'fulfilled') return [];
+        const state = parseRelayRejection(r.reason instanceof Error ? r.reason.message : String(r.reason));
+        return state === 'auth-required' || state === 'restricted' ? [i] : [];
+      });
+      if (signer && refused.length > 0) {
+        const retried = await Promise.all(
+          refused.map((i) => this.authAndRepublish(targetRelays[i], event, signer)),
+        );
+        finalResults = [...finalResults];
+        refused.forEach((i, k) => {
+          const r = retried[k];
+          if (r) finalResults[i] = r;
+        });
+        accepted = finalResults.filter((r) => r.status === 'fulfilled');
+      }
+    }
     // `authMode: 'last-resort'` — the anonymous attempt above found no home
     // and at least one relay said so in NIP-42 terms. Delivery beats
     // metadata-minimisation at this point (the spec forbids letting privacy
@@ -7893,6 +7990,59 @@ export class BridgeImpl {
     );
     pushRelayDebug({ kind: "publish-ok", relays: targetRelays, eventKind: event.kind, payload: { accepted: accepted.length, total: targetRelays.length, alreadyJoined } });
     return event;
+  }
+
+  /**
+   * Challenge for which an AUTH-then-republish was already refused, per
+   * socket. A key the relay refuses *after* AUTH isn't whitelisted, and
+   * retrying every beacon would just double the signing load. Keyed by
+   * challenge so a reconnect (fresh challenge, pre-AUTH race again) retries.
+   */
+  private authRetryRefused = new WeakMap<object, string>();
+
+  /**
+   * AUTH one relay socket explicitly and republish `event` on it. Returns
+   * null when AUTH can't help — no challenge was ever sent, the signer
+   * failed, or this socket already refused us after AUTH.
+   */
+  private async authAndRepublish(
+    url: string,
+    event: NostrEvent,
+    signer: (evt: EventTemplate) => Promise<VerifiedEvent>,
+  ): Promise<PromiseSettledResult<string> | null> {
+    let relay: Awaited<ReturnType<SimplePool['ensureRelay']>>;
+    try {
+      relay = await this.pool.ensureRelay(url);
+    } catch {
+      return null;
+    }
+    // `challenge` is public at runtime; nostr-tools only marks it private in
+    // its typings. Without one the relay never asked for AUTH.
+    const challenge = (relay as unknown as { challenge?: string }).challenge;
+    if (!challenge || this.authRetryRefused.get(relay) === challenge) return null;
+    try {
+      await relay.auth(signer);
+    } catch {
+      return null;
+    }
+    pushRelayDebug({ kind: 'publish-retry', relays: [url], eventKind: event.kind, reason: 'refused before AUTH; retrying authenticated' });
+    const isEphemeral = event.kind >= 20000 && event.kind < 30000;
+    const publish = relay.publish(event);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const settled = await Promise.race([
+      Promise.allSettled([publish]).then(([r]) => r),
+      // Same bounded wait as the first attempt: some relays never ACK
+      // ephemeral events.
+      ...(isEphemeral
+        ? [new Promise<PromiseSettledResult<string>>((resolve) => {
+            timer = setTimeout(() => resolve({ status: 'fulfilled', value: 'no ack (ephemeral)' }), 750);
+          })]
+        : []),
+    ]);
+    if (timer) clearTimeout(timer);
+    publish.catch(() => undefined);
+    if (settled.status === 'rejected') this.authRetryRefused.set(relay, challenge);
+    return settled;
   }
 
   private persist(): void {
