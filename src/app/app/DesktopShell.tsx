@@ -148,7 +148,7 @@ import { DmComposer } from '@/components/chat/DmComposer';
 import { DmCallButtons } from '@/components/call/DmCallButtons';
 import { DmCallLayer } from '@/components/call/DmCallLayer';
 import { DmMessageBody } from '@/components/chat/DmMessageBody';
-import { DmMessageMenu } from '@/components/chat/DmMessageMenu';
+import { DM_BUBBLE_MENU_GUTTER, DmMessageMenu } from '@/components/chat/DmMessageMenu';
 import { HELP_TOPICS, HELP_VIEW_MORE } from '@/lib/help-topics';
 import { subscribeVoiceJump } from '@/lib/voice/jump-to-voice';
 import { useVoiceChatPane } from '@/hooks/chat/useVoiceChatPane';
@@ -5392,7 +5392,7 @@ export function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string)
               )}
               <div
                 className={
-                  'group mb-2 max-w-md rounded-2xl px-4 py-2 text-sm shadow-sm ' +
+                  `relative mb-2 max-w-md rounded-2xl py-2 pl-4 ${DM_BUBBLE_MENU_GUTTER} text-sm shadow-sm ` +
                   (m.outgoing
                     ? 'ml-auto bg-lc-green text-lc-black'
                     : 'bg-lc-card text-lc-white') +
@@ -5400,14 +5400,9 @@ export function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string)
                   (m.failed ? ' ring-1 ring-red-500/60' : '')
                 }
               >
+                <DmMessageMenu message={m} />
                 <DmMessageBody message={m} />
                 <div className={'mt-1 flex items-center justify-end gap-1.5 text-[10px] ' + (m.outgoing ? 'text-black/60' : 'text-lc-muted')}>
-                  {/* Shown on hover (and while open) so a thread isn't a
-                      column of dots. */}
-                  <DmMessageMenu
-                    message={m}
-                    className="mr-auto opacity-0 group-hover:opacity-100 focus-visible:opacity-100 aria-expanded:opacity-100"
-                  />
                   {/* `onAccent` because the outgoing bubble is `bg-lc-green`:
                       the default `text-lc-muted` is ~2:1 against it. This row
                       already switches the timestamp the same way. */}

@@ -3984,9 +3984,9 @@ function DmThreadScreen({
                 + (it.msg.failed ? ' failed' : '')
               }
             >
+              <DmMessageMenu message={it.msg} />
               <div className="dm-bubble-text"><DmMessageBody message={it.msg} /></div>
               <div className="dm-bubble-meta">
-                <DmMessageMenu message={it.msg} className="dm-bubble-more" />
                 {/* `onAccent` on outgoing: the bubble is `var(--accent)` with
                     `var(--accent-ink)` text, the same contrast trap as
                     desktop's `bg-lc-green`. */}

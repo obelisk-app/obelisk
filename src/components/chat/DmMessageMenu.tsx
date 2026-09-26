@@ -44,6 +44,9 @@ function copy(value: string, message: string) {
 
 const json = (ev: DmRawEvent) => JSON.stringify(ev, null, 2);
 
+/** Right padding a bubble needs so its text never runs under the ⋯ chip. */
+export const DM_BUBBLE_MENU_GUTTER = 'pr-11';
+
 function RawEventView({ event, hint, warning, testId }: { event: DmRawEvent; hint: string; warning?: string | null; testId: string }) {
   const { t } = useTranslation();
   return (
@@ -139,6 +142,12 @@ export function DmRawEventDialog({ message, onClose }: { message: JsDirectMessag
   );
 }
 
+/**
+ * Pinned to the bubble's top-right corner (the bubble must be `relative` and
+ * leave room on the right — see `DM_BUBBLE_MENU_GUTTER`). A filled chip,
+ * dark on the green outgoing bubble and light on the grey incoming one, so it
+ * reads as a control on both rather than a faint glyph.
+ */
 export function DmMessageMenu({ message, className = '' }: { message: JsDirectMessage; className?: string }) {
   const { t } = useTranslation();
   const me = useMyPubkey();
@@ -147,6 +156,9 @@ export function DmMessageMenu({ message, className = '' }: { message: JsDirectMe
   const triggerRef = useRef<HTMLButtonElement>(null);
   const sender = message.outgoing ? me : message.counterparty;
   const done = (fn: () => void) => () => { fn(); setOpen(false); };
+  const tone = message.outgoing
+    ? 'bg-black/15 text-black hover:bg-black/30 aria-expanded:bg-black/30'
+    : 'bg-white/10 text-lc-white hover:bg-white/20 aria-expanded:bg-white/20';
 
   return (
     <>
@@ -154,14 +166,14 @@ export function DmMessageMenu({ message, className = '' }: { message: JsDirectMe
         ref={triggerRef}
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className={`flex h-5 w-5 items-center justify-center rounded-full transition-colors hover:bg-black/15 ${className}`}
+        className={`absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-lc-green ${tone} ${className}`}
         aria-label={t('dm.msg.options')}
         title={t('dm.msg.options')}
         aria-haspopup="menu"
         aria-expanded={open}
         data-testid="dm-message-menu"
       >
-        <MoreIcon size={14} />
+        <MoreIcon size={18} />
       </button>
       <AnchoredMenu
         open={open}
