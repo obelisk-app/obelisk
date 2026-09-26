@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import MediaLibraryModal from './MediaLibraryModal';
 import { LocaleProvider } from '@/i18n/context';
+import { ConfirmDialogHost } from '@/components/ui/ConfirmDialog';
 
 /** The component reads its copy from the dictionary, so it needs a provider. */
 const renderLocalized = (ui: React.ReactElement) => render(
@@ -112,12 +113,23 @@ describe('MediaLibraryModal', () => {
   });
 
   it('deletes an owned pack after confirmation', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
-    renderLocalized(<MediaLibraryModal onClose={() => {}} initialTab="mine" />);
+    renderLocalized(<><MediaLibraryModal onClose={() => {}} initialTab="mine" /><ConfirmDialogHost /></>);
 
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    expect(mocks.deleteMediaPack).not.toHaveBeenCalled();
+    fireEvent.click(await screen.findByTestId('confirm-dialog-confirm'));
 
     await waitFor(() => expect(mocks.deleteMediaPack).toHaveBeenCalledWith(pack.address));
+  });
+
+  it('keeps the pack when the confirmation is cancelled', async () => {
+    renderLocalized(<><MediaLibraryModal onClose={() => {}} initialTab="mine" /><ConfirmDialogHost /></>);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    fireEvent.click(await screen.findByTestId('confirm-dialog-cancel'));
+
+    await waitFor(() => expect(screen.queryByTestId('confirm-dialog')).toBeNull());
+    expect(mocks.deleteMediaPack).not.toHaveBeenCalled();
   });
 
   it('creates and edits an independent named pack', async () => {

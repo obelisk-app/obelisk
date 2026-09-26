@@ -13,6 +13,7 @@ import { inferMediaKind } from '@/lib/media-kind';
 import MediaThumb from '@/components/media/MediaThumb';
 import type { JsMediaKind } from '@/lib/nostr-bridge';
 import { useTranslation } from '@/i18n/context';
+import { CloseIcon } from '@/components/ui/icons';
 
 const EMOJI_SECTIONS = [
   { name: 'Smileys', icon: '😀', label: 'Smileys & people', categories: ['Smileys', 'Gestures'] },
@@ -92,7 +93,7 @@ export function MediaPickerSearch({
   autoFocus?: boolean;
 }) {
   return (
-    <label className="flex h-11 min-w-0 flex-1 items-center gap-3 rounded-xl border border-lc-green/80 bg-lc-dark px-3 text-lc-muted focus-within:border-lc-green">
+    <label className="flex h-11 min-w-0 flex-1 items-center gap-3 rounded-xl border border-lc-border bg-lc-black px-3 text-lc-muted transition-colors focus-within:border-lc-green">
       <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
         <circle cx="11" cy="11" r="7" />
         <path d="m20 20-3.5-3.5" />
@@ -217,25 +218,31 @@ export default function EmojiPicker({
 
   const isSheet = variant === 'sheet';
   const popoverPlacementClass = placement === 'below' ? 'top-full mt-1' : 'bottom-full mb-1';
+  // Surfaces follow the rest of the app: a raised `lc-dark` panel on desktop
+  // (menus, modals), the `lc-card` sheet surface on mobile — never the page's
+  // own `lc-black`, which made the picker read as a hole in the chat. The
+  // colour lives in `--picker-surface` so the sticky section headers can
+  // match it exactly, including when MessageMediaPicker hosts this one.
+  const panelClass = 'flex h-[430px] w-[360px] flex-col overflow-hidden rounded-xl border border-lc-border [--picker-surface:var(--color-lc-dark)] bg-[var(--picker-surface)] text-lc-white shadow-2xl ';
   const containerClass = isSheet
-    ? 'flex h-full w-full flex-col bg-lc-black p-2 text-lc-white '
+    ? 'flex h-full w-full flex-col bg-[var(--picker-surface,var(--color-lc-card))] p-2 text-lc-white '
     : variant === 'floating'
-      ? 'flex h-[430px] w-[360px] flex-col overflow-hidden rounded-lg border border-lc-border bg-lc-black text-lc-white shadow-2xl '
-      : `absolute ${align === 'left' ? 'left-0' : 'right-0'} ${popoverPlacementClass} z-30 flex h-[430px] w-[360px] flex-col overflow-hidden rounded-lg border border-lc-border bg-lc-black text-lc-white shadow-2xl `;
+      ? panelClass
+      : `absolute ${align === 'left' ? 'left-0' : 'right-0'} ${popoverPlacementClass} z-30 ${panelClass}`;
   const gridClass = columns === 12
     ? 'grid grid-cols-12 gap-0.5'
     : isSheet
       ? 'grid grid-cols-7 gap-1.5'
       : 'grid grid-cols-8 gap-1 px-3';
   const emojiBtnClass = isSheet
-    ? 'flex aspect-square items-center justify-center rounded-md text-2xl active:bg-[#3f4147] disabled:cursor-default disabled:opacity-40'
-    : 'flex aspect-square items-center justify-center rounded-md text-2xl hover:bg-[#3f4147] disabled:cursor-default disabled:opacity-40';
+    ? 'flex aspect-square items-center justify-center rounded-md text-2xl active:bg-lc-border disabled:cursor-default disabled:opacity-40'
+    : 'flex aspect-square items-center justify-center rounded-md text-2xl hover:bg-lc-border disabled:cursor-default disabled:opacity-40';
   const scrollClass = isSheet
     ? 'relative min-h-0 flex-1 overflow-y-auto'
     : 'relative min-h-0 flex-1 overflow-y-auto pb-3';
   const sectionTitleClass = isSheet
-    ? 'sticky top-0 z-10 mb-2 border-b border-lc-border bg-lc-black/95 px-1 py-2 text-[11px] font-bold uppercase tracking-wider text-[#b5bac1] backdrop-blur'
-    : 'sticky top-0 z-10 mb-2 bg-lc-black/95 px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-[#b5bac1] backdrop-blur';
+    ? 'sticky top-0 z-10 mb-2 border-b border-lc-border bg-[var(--picker-surface,var(--color-lc-card))] px-1 py-2 text-[11px] font-bold uppercase tracking-wider text-lc-muted'
+    : 'sticky top-0 z-10 mb-2 bg-[var(--picker-surface,var(--color-lc-dark))] px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-lc-muted';
   const customImageClass = isSheet
     ? 'h-[1.45em] w-[1.45em] object-contain'
     : 'h-8 w-8 object-contain';
@@ -286,7 +293,7 @@ export default function EmojiPicker({
                 aria-label={meta.label}
                 aria-pressed={activeCategory === category}
                 title={meta.label}
-                className={['flex h-10 min-w-0 items-center justify-center rounded-lg border-b-2 text-xl', activeCategory === category ? 'border-lc-green bg-lc-green/10' : 'border-transparent hover:bg-white/5'].join(' ')}
+                className={['flex h-10 min-w-0 items-center justify-center rounded-lg border-b-2 text-xl', activeCategory === category ? 'border-lc-green bg-lc-green/10' : 'border-transparent hover:bg-lc-border/60'].join(' ')}
               >
                 {category === 'Recent' ? <RecentIcon /> : <span aria-hidden="true">{meta.icon}</span>}
               </button>
@@ -294,20 +301,20 @@ export default function EmojiPicker({
           })}
         </nav>
       )}
-      <div className={isSheet ? 'my-2 flex items-center gap-2' : 'border-b border-black/20 p-3'}>
+      <div className={isSheet ? 'my-2 flex items-center gap-2' : 'border-b border-lc-border p-3'}>
         {!isSheet && (
           <div className="mb-2 flex items-center justify-between">
             <div>
               <div className="text-sm font-bold text-lc-white">{t('emoji.title')}</div>
-              <div className="text-[11px] text-[#b5bac1]">{t('emoji.subtitle')}</div>
+              <div className="text-[11px] text-lc-muted">{t('emoji.subtitle')}</div>
             </div>
             <button
               onClick={onClose}
-              className="flex h-7 w-7 items-center justify-center rounded text-[#b5bac1] hover:bg-[#3f4147] hover:text-lc-white"
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-lc-border bg-lc-card/60 text-lc-white transition-colors hover:border-lc-green/50 hover:bg-lc-border"
               aria-label={t('emoji.close')}
               title={t('common.close')}
             >
-              x
+              <CloseIcon size={16} />
             </button>
           </div>
         )}
@@ -320,11 +327,11 @@ export default function EmojiPicker({
         {isSheet && showClose && (
           <button
             onClick={onClose}
-            className="h-9 w-9 rounded text-lc-muted hover:bg-[#3f4147] hover:text-lc-white"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-lc-border bg-lc-card/60 text-lc-white transition-colors hover:border-lc-green/50 hover:bg-lc-border"
             aria-label={t('emoji.close')}
             title={t('common.close')}
           >
-            x
+            <CloseIcon size={18} />
           </button>
         )}
       </div>

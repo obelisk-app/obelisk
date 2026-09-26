@@ -1337,5 +1337,20 @@
   "profilePopover.blockConfirm": "Block {name}? Their messages will be hidden on this device.",
   "social.copyAuthorLink": "Copy author profile link",
   "social.highlightsHint": "Show passages people marked in these articles",
-  "social.openThread": "Open thread"
+  "social.openThread": "Open thread",
+  "confirm.delete": "Delete",
+  "confirm.remove": "Remove",
+  "confirm.leave": "Leave",
+  "confirm.demote": "Demote",
+  "desktop.message.confirmDeleteEveryoneBody": "It will be removed from the channel for everyone.",
+  "desktop.message.confirmDeleteOwnBody": "It will be removed from the channel.",
+  "rail.confirmRemoveBody": "You can add it back later.",
+  "mobile.relay.confirmLeave": "Leave {name}?",
+  "admin.bulk.confirmRemove": "Remove {count} entries?",
+  "admin.bulk.confirmDemote": "Demote {count} entries?",
+  "admin.bulk.more": "and {count} more",
+  "roles.confirmDelete": "Delete “{name}”?",
+  "roles.confirmDeleteBody": "Everyone holding it loses the badge.",
+  "media.confirmDeletePack": "Delete “{title}”?",
+  "media.confirmDeletePackBody": "This sends a Nostr deletion request and cannot be undone."
 }

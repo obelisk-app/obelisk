@@ -209,6 +209,7 @@ import { voiceNoteTagForContent, type MessageVoiceNote } from '@/lib/voice-note-
 import { useTranslation } from '@/i18n/context';
 import { rich } from '@/i18n/rich';
 import { useFormat } from '@/i18n/useFormat';
+import { confirmDialog } from '@/components/ui/ConfirmDialog';
 
 type View =
   | { kind: 'group'; groupId: string }
@@ -4068,9 +4069,13 @@ export function MessageRow({
     void nostrActions.cancelPendingMessage(groupId, msg.clientTag);
   };
   const canDeleteMessage = isAdmin || msg.pubkey === myPubkey;
-  const deleteMessage = () => {
-    const label = isAdmin ? t('desktop.message.confirmDeleteEveryone') : t('desktop.message.confirmDeleteOwn');
-    if (!confirm(label)) return;
+  const deleteMessage = async () => {
+    const ok = await confirmDialog({
+      title: isAdmin ? t('desktop.message.confirmDeleteEveryone') : t('desktop.message.confirmDeleteOwn'),
+      message: isAdmin ? t('desktop.message.confirmDeleteEveryoneBody') : t('desktop.message.confirmDeleteOwnBody'),
+      confirmLabel: t('confirm.delete'),
+    });
+    if (!ok) return;
     if (isAdmin) void nostrActions.deleteGroupEvent(groupId, msg.id);
     else void nostrActions.removeMessage(groupId, msg.id);
   };
@@ -4381,7 +4386,7 @@ export function MessageRow({
                 icon={<TrashIcon />}
                 danger
                 label={isAdmin ? t('desktop.message.deleteEveryone') : t('desktop.message.deleteMessage')}
-                onClick={() => { deleteMessage(); setMenuOpen(false); }}
+                onClick={() => { void deleteMessage(); setMenuOpen(false); }}
                 testId="message-menu-delete"
               />
             )}

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { LocaleProvider } from '@/i18n/context';
+import { ConfirmDialogHost } from '@/components/ui/ConfirmDialog';
 import { fireEvent, render, screen } from '@testing-library/react';
 
 // PhoneShell imports the whole bridge surface. The two components under
@@ -254,7 +255,6 @@ describe('MessageActionsSheet reactions', () => {
 describe('MessageActionsSheet deletion', () => {
   it('deletes a message for everyone when moderation is allowed', async () => {
     const close = vi.fn();
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
 
     renderLocalized(
       <MessageActionsSheet
@@ -269,19 +269,19 @@ describe('MessageActionsSheet deletion', () => {
         onZap={() => {}}
       />,
     );
+    render(<LocaleProvider initialLocale="en"><ConfirmDialogHost /></LocaleProvider>);
 
     fireEvent.click(screen.getByTestId('mobile-msg-actions-delete'));
+    fireEvent.click(await screen.findByTestId('confirm-dialog-confirm'));
     await vi.waitFor(() => {
       expect(nostrActions.deleteGroupEvent).toHaveBeenCalledWith('rly/group', 'msg-9');
     });
     expect(nostrActions.removeMessage).not.toHaveBeenCalled();
     expect(close).toHaveBeenCalledTimes(1);
-    confirm.mockRestore();
   });
 
   it('removes my own message with NIP-09 when I am not a moderator', async () => {
     const close = vi.fn();
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
 
     renderLocalized(
       <MessageActionsSheet
@@ -296,13 +296,14 @@ describe('MessageActionsSheet deletion', () => {
         onZap={() => {}}
       />,
     );
+    render(<LocaleProvider initialLocale="en"><ConfirmDialogHost /></LocaleProvider>);
 
     fireEvent.click(screen.getByTestId('mobile-msg-actions-delete'));
+    fireEvent.click(await screen.findByTestId('confirm-dialog-confirm'));
     await vi.waitFor(() => {
       expect(nostrActions.removeMessage).toHaveBeenCalledWith('rly/group', 'msg-10');
     });
     expect(nostrActions.deleteGroupEvent).not.toHaveBeenCalled();
     expect(close).toHaveBeenCalledTimes(1);
-    confirm.mockRestore();
   });
 });

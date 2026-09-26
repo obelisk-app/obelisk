@@ -10,6 +10,7 @@ import { publishRelayEmojiSet, type RelayEmojiSet } from '@/lib/relay-emojis';
 import { inferMediaKind } from '@/lib/media-kind';
 import MediaThumb from '@/components/media/MediaThumb';
 import { useTranslation } from '@/i18n/context';
+import { confirmDialog } from '@/components/ui/ConfirmDialog';
 
 type LibraryTab = 'discover' | 'mine' | 'favorites' | 'server';
 type MediaFilter = 'all' | JsMediaKind;
@@ -153,7 +154,12 @@ export default function MediaLibraryModal({
   };
 
   const deletePack = async (pack: JsMediaPack) => {
-    if (!window.confirm('Delete “' + pack.title + '”? This sends a Nostr deletion request and cannot be undone.')) return;
+    const ok = await confirmDialog({
+      title: t('media.confirmDeletePack').replace('{title}', pack.title),
+      message: t('media.confirmDeletePackBody'),
+      confirmLabel: t('confirm.delete'),
+    });
+    if (!ok) return;
     setBusy(true);
     setMessage(null);
     try {

@@ -19,6 +19,7 @@ import {
   type RelayRoles,
 } from '@/lib/relay-roles';
 import { useTranslation } from '@/i18n/context';
+import { confirmDialog } from '@/components/ui/ConfirmDialog';
 
 const fieldClass = 'rounded-lg border border-lc-border bg-lc-black px-3 py-2 text-sm text-lc-white outline-none focus:border-lc-green';
 
@@ -110,8 +111,15 @@ export default function RelayRolesAdminModal({
     setDraft(retier(next));
   };
 
-  const removeRole = (role: RelayRole) => {
-    if (savedIds.has(role.id) && !confirm(`Delete “${role.name}”? Everyone holding it loses the badge.`)) return;
+  const removeRole = async (role: RelayRole) => {
+    if (savedIds.has(role.id)) {
+      const ok = await confirmDialog({
+        title: t('roles.confirmDelete').replace('{name}', role.name),
+        message: t('roles.confirmDeleteBody'),
+        confirmLabel: t('confirm.delete'),
+      });
+      if (!ok) return;
+    }
     setDraft(retier(draft.filter((value) => value.id !== role.id)));
     if (expanded === role.id) setExpanded(null);
   };
@@ -206,7 +214,7 @@ export default function RelayRolesAdminModal({
                   </svg>
                   {(roles.holders[role.id] ?? []).length} members
                 </button>
-                <button type="button" onClick={() => removeRole(role)} className="rounded border border-red-500/30 px-2 py-1 text-xs text-red-300" aria-label={`Delete ${role.name}`}>{t('mobile.layout.delete')}</button>
+                <button type="button" onClick={() => { void removeRole(role); }} className="rounded border border-red-500/30 px-2 py-1 text-xs text-red-300" aria-label={`Delete ${role.name}`}>{t('mobile.layout.delete')}</button>
               </div>
               {expanded === role.id && savedIds.has(role.id) && (
                 <RoleMembers

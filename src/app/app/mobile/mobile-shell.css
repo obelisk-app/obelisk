@@ -3417,7 +3417,9 @@
 }
 .obelisk-mobile .emoji-sheet {
   width: 100%;
-  background: var(--app-bg);
+  /* Same surface and green hairline as every other bottom sheet (.sheet);
+     --app-bg made the picker look like the page showing through. */
+  background: var(--app-surface-2);
   border-top-left-radius: 22px;
   border-top-right-radius: 22px;
   padding: 6px 0 calc(8px + env(safe-area-inset-bottom));
@@ -3425,7 +3427,7 @@
   max-height: 75vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.6), 0 -1px 0 rgba(180, 249, 83, 0.15);
   animation: obelisk-sheet-up 240ms cubic-bezier(0.2, 0.9, 0.3, 1);
   overflow: hidden;
 }

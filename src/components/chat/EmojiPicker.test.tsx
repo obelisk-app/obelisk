@@ -31,7 +31,10 @@ describe('EmojiPicker', () => {
       />,
     );
 
-    expect(screen.getByRole('dialog', { name: 'Emoji picker' })).toHaveClass('bg-lc-black');
+    // A raised panel like the app's menus and modals, not the page colour.
+    const panel = screen.getByRole('dialog', { name: 'Emoji picker' });
+    expect(panel).toHaveClass('rounded-xl', 'border-lc-border', 'bg-[var(--picker-surface)]', '[--picker-surface:var(--color-lc-dark)]');
+    expect(panel).not.toHaveClass('bg-lc-black');
     expect(screen.getByText('Server GIFs')).toBeInTheDocument();
     expect(screen.getByText('Server emojis')).toBeInTheDocument();
     expect(screen.getByAltText(':party_dance:')).toHaveAttribute('src', gifUrl);
