@@ -125,6 +125,9 @@ import { rolesByPubkey, useRelayRoles, type RelayRole, type RelayRoles } from '@
 import LanguagePreference from '@/components/LanguagePreference';
 import MediaLibraryModal from '@/components/media/MediaLibraryModal';
 import AppearancePreferenceControls from '@/components/AppearancePreferenceControls';
+import NotificationSettings from '@/components/settings/NotificationSettings';
+import { ChannelActionSheet } from '@/components/chat/ChannelContextMenu';
+import { isChannelMuted, useChannelPref } from '@/store/channel-prefs';
 import SocialRelaySettings from '@/components/settings/SocialRelaySettings';
 import MutedAndBlocked from '@/components/settings/MutedAndBlocked';
 import AccountBackupExport from '@/components/settings/AccountBackupExport';
@@ -165,6 +168,7 @@ import {
   useNotificationBadgeCount,
   useUnreadDmNotificationCount,
   useUnreadMentionCount,
+  useUnreadMentionCardsForChannel,
 } from '@/lib/notifications/selectors';
 import {
   useChannelHighlights,
@@ -1968,6 +1972,7 @@ export function RelayTile({
   onClick: () => void;
   onLongPress?: (info: { url: string; label: string; iconUrl: string | null }) => void;
 }) {
+  const { t } = useTranslation();
   const [iconFailed, setIconFailed] = useState(false);
   const [nip11Name, setNip11Name] = useState<string>('');
   const [operator, setOperator] = useState<string | null>(null);
@@ -1992,6 +1997,9 @@ export function RelayTile({
   const branding = useRelayBranding(url, operator ? [operator] : []);
   const label = branding.name || nip11Name || shortHost(url);
   const showImage = iconUrl && !iconFailed;
+  // Only meaningful for relays you're NOT on: the active relay's pings are
+  // in the bell. Fed by the background relay watch.
+  const backgroundUnread = useUnreadMentionCount(active ? null : normalizeRelayUrl(url));
 
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pressFired = useRef(false);
@@ -2031,6 +2039,15 @@ export function RelayTile({
           label.slice(0, 1).toUpperCase()
         )}
       </div>
+      {backgroundUnread > 0 && (
+        <span
+          className="space-badge"
+          aria-label={t('rail.backgroundUnread').replace('{count}', String(backgroundUnread))}
+          data-testid="relay-background-unread"
+        >
+          {backgroundUnread > 99 ? '99+' : backgroundUnread}
+        </span>
+      )}
       <span className="space-name">{label}</span>
     </button>
   );
@@ -2166,16 +2183,7 @@ export function MobileServerBanner({
 // and surfaces the live-call indicator on voice channels. The `unread` and
 // `mentioned` variants are derived from the read-state cursor (per-channel
 // unix-ms read marker) compared against bridge-supplied `messages.createdAt`.
-function ChannelRow({
-  group,
-  live,
-  active,
-  onClick,
-  expandable,
-  expanded,
-  onToggleExpand,
-  indent,
-}: {
+type ChannelRowProps = {
   group: JsGroup;
   live: boolean;
   active?: boolean;
@@ -2184,12 +2192,84 @@ function ChannelRow({
   expanded?: boolean;
   onToggleExpand?: () => void;
   indent?: boolean;
-}) {
+};
+
+/**
+ * Long-press (or right-click) a channel for the channel menu — mark read,
+ * follow, mute, notification level, copy link. `display: contents` keeps the
+ * wrapper out of the list's layout.
+ */
+function ChannelRow(props: ChannelRowProps) {
+  const relay = useCurrentRelayUrl();
   const myPubkey = useMyPubkey();
+  const highlights = useCachedChannelHighlights(props.group.id, myPubkey);
+  const mentionCards = useUnreadMentionCardsForChannel(relay, props.group.id);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pressFired = useRef(false);
+  const cancelPress = () => {
+    if (pressTimer.current) clearTimeout(pressTimer.current);
+    pressTimer.current = null;
+  };
+  const isVoice = props.group.kind === 'voice' || props.group.kind === 'voice-sfu';
+  if (isVoice || !relay) return <ChannelRowBody {...props} />;
+  return (
+    <div
+      style={{ display: 'contents' }}
+      data-testid={`channel-row-menu-${props.group.id}`}
+      onContextMenu={(e) => { e.preventDefault(); setMenuOpen(true); }}
+      onTouchStart={() => {
+        pressFired.current = false;
+        cancelPress();
+        pressTimer.current = setTimeout(() => { pressFired.current = true; setMenuOpen(true); }, 500);
+      }}
+      onTouchEnd={cancelPress}
+      onTouchMove={cancelPress}
+      onTouchCancel={cancelPress}
+      onClickCapture={(e) => {
+        // The long-press already opened the menu; don't also navigate.
+        if (pressFired.current) { e.stopPropagation(); e.preventDefault(); pressFired.current = false; }
+      }}
+    >
+      <ChannelRowBody {...props} />
+      {menuOpen && (
+        <ChannelActionSheet
+          target={{
+            relay,
+            channelId: props.group.id,
+            name: props.group.name ?? props.group.id.slice(0, 8),
+            hasUnread: highlights.unread > 0 || mentionCards > 0,
+          }}
+          onClose={() => setMenuOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+function ChannelRowBody({
+  group,
+  live,
+  active,
+  onClick,
+  expandable,
+  expanded,
+  onToggleExpand,
+  indent,
+}: ChannelRowProps) {
+  const myPubkey = useMyPubkey();
+  const relay = useCurrentRelayUrl();
   const highlights = useCachedChannelHighlights(group.id, myPubkey);
-  const unread = highlights.unread;
-  const mentionsOrReplies = highlights.mentions + highlights.replies;
+  const pref = useChannelPref(relay, group.id);
+  const muted = isChannelMuted(pref);
+  // Unfollowed: its traffic stops asking for attention. Mentions still do.
+  const unread = pref.unfollowed ? 0 : highlights.unread;
+  // Cards survive a relay switch; loaded-message highlights don't.
+  const mentionCards = useUnreadMentionCardsForChannel(relay, group.id);
+  const mentionsOrReplies = Math.max(highlights.mentions + highlights.replies, mentionCards);
   const name = group.name ?? group.id.slice(0, 8);
+  const quietStyle = pref.unfollowed || muted ? { opacity: 0.55 } : undefined;
+  const mutedIcon = muted ? <span aria-label="muted" title="muted" style={{ fontSize: 11 }}>🔕</span> : null;
   if (group.kind === 'voice' || group.kind === 'voice-sfu') {
     return (
       <button className={`ch-row voice ${active ? 'active' : ''}`} onClick={onClick}>
@@ -2219,12 +2299,13 @@ function ChannelRow({
     if (expandable && onToggleExpand) {
       cls.push('ch-row-split');
       return (
-        <div className={cls.join(String.fromCharCode(10))}>
+        <div className={cls.join(String.fromCharCode(10))} style={quietStyle}>
           <button className="ch-row-body" onClick={onClick}>
             <span className="ch-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M3 5h18M3 12h18M3 19h18" /></svg>
             </span>
             <span className="ch-name">{name}</span>
+            {mutedIcon}
             {unread > 0 && <span className="ch-meta">{unread > 99 ? '99+' : unread}</span>}
             {mentionsOrReplies > 0 && (
               <span className="mention-pill" aria-label={`${mentionsOrReplies} mentions or replies`}>
@@ -2246,11 +2327,12 @@ function ChannelRow({
       );
     }
     return (
-      <button className={cls.join(String.fromCharCode(10))} onClick={onClick}>
+      <button className={cls.join(String.fromCharCode(10))} onClick={onClick} style={quietStyle}>
         <span className="ch-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M3 5h18M3 12h18M3 19h18" /></svg>
         </span>
         <span className="ch-name">{name}</span>
+        {mutedIcon}
         {unread > 0 && <span className="ch-meta">{unread > 99 ? '99+' : unread}</span>}
         {mentionsOrReplies > 0 && (
           <span className="mention-pill" aria-label={`${mentionsOrReplies} mentions or replies`}>
@@ -2264,9 +2346,10 @@ function ChannelRow({
     );
   }
   return (
-    <button className={cls.join(String.fromCharCode(10))} onClick={onClick}>
+    <button className={cls.join(String.fromCharCode(10))} onClick={onClick} style={quietStyle}>
       <span className="ch-icon">#</span>
       <span className="ch-name">{name}</span>
+      {mutedIcon}
       {unread > 0 && <span className="ch-meta">{unread > 99 ? '99+' : unread}</span>}
       {mentionsOrReplies > 0 && (
         <span className="mention-pill" aria-label={`${mentionsOrReplies} mentions or replies`}>
@@ -4118,15 +4201,14 @@ function NotificationCard({
 function MentionInboxCard({ mention, onJump }: { mention: MentionNotification; onJump: () => void }) {
   const { t } = useTranslation();
   const cursor = useMentionCursor(mention.relay);
-  const groupCursor = useReadStateStore((s) => s.groupCursors[mention.channelId] ?? 0);
   return (
     <NotificationCard
       senderPubkey={mention.senderPubkey}
       preview={mention.preview}
       createdAt={mention.createdAt}
-      isRead={isMentionRead(mention, cursor, groupCursor)}
+      isRead={isMentionRead(mention, cursor)}
       urgent
-      label={t('mobile.inbox.type.mention')}
+      label={t(mention.reason === 'reply' ? 'mobile.inbox.type.reply' : 'mobile.inbox.type.mention')}
       typeClass="mention"
       onJump={onJump}
     />
@@ -6000,6 +6082,7 @@ export function SettingsPrefsScreen({ go }: { go: (s: ScreenName, dir?: 'forward
             {t('preferences.localData.clear.button')}
           </button>
         </div>
+        <NotificationSettings mobile />
         <SocialRelaySettings mobile />
         <MutedAndBlocked mobile />
         <DeveloperSignatureTest mobile />
@@ -6159,7 +6242,7 @@ export default function MobileShell() {
   // banner sits outside the screens host, same as the voice bar below, so it
   // asks through the settings pub/sub rather than reaching for `go`.
   useEffect(() => onOpenSettings(({ section }) => {
-    go('settings-prefs');
+    go(section === 'profile' ? 'settings-profile' : 'settings-prefs');
     revealSettingsSection(section);
   }), [go]);
 

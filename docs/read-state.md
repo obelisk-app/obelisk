@@ -90,24 +90,74 @@ channel mention read.
 
 Rules:
 
-- **Only an explicit `@you` pings.** Not ordinary traffic, not
-  replies-to-you. `ingestMessage` returns early unless
-  `mentions.includes(me)`.
-- **Mentions are scanned only while their relay is active.** Group kind-9
-  subscriptions exist only for the active relay (see CLAUDE.md,
-  "Single-relay rule for groups"), so this falls out of the architecture
-  rather than being enforced separately. Each card is stamped with the
-  relay it was scanned on and is never rendered while browsing another.
+- **`@you` and replies-to-you ping; ordinary traffic does not.**
+  `classifyGroupPing` (`src/lib/notifications/classify.ts`) returns
+  `'reply'` when the NIP-10 `reply` parent is ours (resolved from the local
+  message list, or from the `p` tag when the parent isn't loaded) and
+  `'mention'` when we're in `mentions`. The card carries that `reason`;
+  cards persisted before it existed read as `'mention'`.
+- **Where pings are heard.**
+  - Active relay: the per-channel kind-9 ingest, plus one live relay-wide
+    `{kinds:[9], since: now}` REQ (`subscribeLivePings`). Only the active
+    channel and ≤8 others get a per-channel stream, so without the live REQ
+    a mention in any other channel never arrived. `ingestPing` skips
+    channels that have their own stream.
+  - The **background relay watch** (`src/lib/nostr-bridge/background-watch.ts`)
+    on the 3 most-recently-used *other* relays, on a separate pool: a
+    `#p:[me]` REQ from the relay's mention cursor (catch-up while the app
+    was closed — needs the sender to p-tag, which Obelisk does per NIP-27)
+    and a live relay-wide kind-9 REQ from now (catches un-tagged mentions).
+    Both pass `onauth`: a whitelist relay CLOSEs the first REQ on a fresh
+    socket with `auth-required:`, and nostr-tools re-issues it only when
+    `onauth` is given. Without it the watch silently heard nothing.
+  - Each card is stamped with its relay; background relays' unread counts
+    badge their rail tiles, and the bell only shows the active relay's.
+- **Sound and OS popups.** A card that was actually added (the push
+  actions return `true`) is handed to `announceIncoming`
+  (`src/lib/notifications/alert.ts`): a chime per kind (`sound.ts`) and,
+  when the page is hidden/unfocused and `preferences.desktopNotifications`
+  is on, a `Notification`. Only events < 2 minutes old alert, once per event
+  id, and chimes are throttled to one per 1.2s so a reconnect burst is one
+  sound. DM popups show the sender only, never plaintext.
 - **Cards persist per relay.** Leaving a relay and coming back restores
   its mention cards with their unread state intact.
 - **First connect to an unseen relay ignores history.** `registerRelay`
   stamps `Date.now()` as that relay's cursor the first time the bridge
-  connects to it — called from `finalizeLogin` and `switchRelay`, both
-  *before* subscriptions open. A relay whose cursor already exists keeps
+  connects to it — called from `finalizeLogin`, `switchRelay` **and the
+  page-reload restore in `initialize()`** (which does not go through
+  `finalizeLogin`), all *before* subscriptions open. Missing it on the
+  reload path turned every historical mention into an unread card that
+  could never be seen. A relay whose cursor already exists keeps
   it, so a reconnect never silences cards the user hasn't read.
-- **A mention also clears when its channel is read.** `isMentionRead`
-  takes `max(relay cursor, channel cursor)`, so scrolling past the
-  mention in-channel dismisses the bell without a second interaction.
+- **A mention clears only when it has actually been seen** — or the bell
+  is dismissed (relay mention cursor). `isMentionRead(m, relayCursor)` is
+  `m.seen || m.createdAt <= relayCursor`; the channel cursor is deliberately
+  NOT consulted, because it jumps to the newest message the moment a
+  channel opens at the bottom and used to clear mentions the user never
+  laid eyes on. `useMentionSeen` (`src/hooks/useMentionSeen.ts`, mounted in
+  `ReadStateRoot`) sets `seen` once the `[data-msg-id]` row is ≥60% visible
+  (IntersectionObserver, so scroll-container clipping counts) for 1s with
+  the tab visible and focused. A mention in the channel you're watching
+  still gets a card (no chime); the observer clears it once it's really on
+  screen. `seen` is per device — only the relay mention cursor syncs.
+- **Per-channel preferences** (`src/store/channel-prefs.ts`, set from the
+  channel right-click / long-press menu, `ChannelContextMenu.tsx`), keyed
+  `relay|channelId`, persisted per account. Applied in one place, the
+  bridge's `deliverGroupPing`:
+  - *Notification settings* `nothing` → no card, no sound; `all` → ordinary
+    messages chime too (no card); `mentions` (default).
+  - *Mute* (15 min … forever) → cards and badges kept, no sound or popup.
+  - *Stop following* → no unread count, dimmed row, no `all` pings — but
+    @mentions and replies still card and chime.
+  - *Mark as read* → channel cursor to now + every card for the channel
+    marked seen. The escape hatch for any card the seen-detection can't
+    reach.
+- **Channel rows read the cards too.** The row's `@` pill is
+  `max(loaded-message highlights, unread cards for that channel)`
+  (`useUnreadMentionCardsForChannel`). Right after a relay switch the
+  message store is empty and most channels never get a live stream, so a
+  row built from loaded messages alone showed nothing for a mention the
+  rail tile had just badged.
 
 The DM cursor deliberately stays in the read-state store: it is already
 the wire field in the DM-scope gift wrap, so multi-device convergence
@@ -139,10 +189,9 @@ render.
 Root-only e-tags (`marker === "root"` or unmarked positional) are NOT
 replies — those denote thread membership.
 
-Replies feed the **channel highlight** views only (the `↑↓`
-MentionNavigator and the green channel-row pill). They deliberately do
-**not** produce a notification card and do not badge the tab — only an
-explicit `@you` does. See §2b.
+Replies feed the **channel highlight** views (the `↑↓` MentionNavigator
+and the green channel-row pill) and, since the notification-sounds work,
+also produce a notification card with `reason: 'reply'`. See §2b.
 
 ## 5. Highlights selector
 
@@ -371,7 +420,7 @@ Two tabs on the same account converge automatically:
 2. **Reply-to-me requires the parent in local state** — backfill that
    arrives before the parent does won't count toward the channel's reply
    highlight. Acceptable because messages stream in chronologically.
-   (Replies don't produce notifications at all — see §2b.)
+   (Replies produce a `reason: 'reply'` card — see §2b.)
 3. **Gift wrap accumulation** — handled by the 8-second debounce, but
    long-running users on a single relay will accumulate ~10-30 KB of
    stale wraps per month. Future cleanup pass (NIP-09 deletions) is a

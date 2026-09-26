@@ -136,7 +136,7 @@ See [docs/data-system.md](docs/data-system.md) for the complete contract.
 | **nsec** | `finalizeEvent(template, sk)` | `bridge.loginWithNsec(privKeyHex, pubKeyHex)` |
 | **NIP-46 bunker** | `BunkerSigner` (nostr-tools/nip46) | `bridge.loginWithBunker(bunkerUrl)` or `bridge.createNostrConnectSession()` (QR) |
 
-All four entrypoints (and the page-reload rehydration in `initialize()`) route through the private `finalizeLogin()`:
+All four entrypoints route through the private `finalizeLogin()`. The page-reload rehydration in `initialize()` does **not** — it repeats the steps inline, so anything added to `finalizeLogin` must be mirrored there (or hung off the `isLoggedIn` store, as the background relay watch is):
 
 ```
 1. persist()                       — write session to localStorage
@@ -176,7 +176,7 @@ predictable:
 |----------------------------------|--------------------------------------------|
 | Group metadata / messages / reactions / admin / member (kinds 9, 39000, 39001, 39002, 7, 9007) | **Active relay only** (`this.relays = [activeRelay]`) |
 | Group read-state cursors (NIP-59 wraps over kind 30078) | **Active relay only** — `startGroupsRelaySync(activeRelay, ids)` in `src/lib/read-state/root.tsx` |
-| Mention notifications (kind 9 `@you`) | **Active relay only** — scanned solely while that relay is active; cards are stamped with it and cached per relay (`src/store/notifications.ts`) |
+| Mention/reply notifications (kind 9 `@you` or reply to you) | **Active relay**: per-channel ingest plus one live relay-wide `{kinds:[9], since: now}` REQ (`subscribeLivePings` — only ~8 channels get their own stream, so without it most channels never ping). **Background watch** of the 3 most-recently-used other relays on a separate pool (`src/lib/nostr-bridge/background-watch.ts`): `#p:[me]` catch-up from the mention cursor + live relay-wide kind 9 from now, both with `onauth` (a whitelist relay CLOSEs the first REQ `auth-required:` and nostr-tools only re-issues it when `onauth` is passed). Cards are stamped with their relay and cached per relay (`src/store/notifications.ts`) |
 | DMs (kind 4 + kind 1059 gift wraps) | **NIP-65 read+write union** of the user's relay list, plus our kind-10050 inbox |
 | DM read-state cursors + `inboxLastReadAt` (NIP-59 wraps) | **NIP-65 read+write union** |
 | Voice signaling / SFU RPC (kinds 25050, 31313, 31314) | Per-channel relay set (mesh: active relay; SFU: pinned trust set) |
@@ -202,14 +202,37 @@ belongs to. If it's not DMs, it goes on the active relay only — never on
 sockets to whitelist-gated relays the user hasn't authenticated against
 and produces the `Tried to send AUTH on a closed connection` loop.
 
-Future: in-OS background notifications (browser Notification API,
-service-worker push) are DM-only too. Group mentions only notify while
-the user has the group's relay open as the active relay.
+The **background relay watch** is the one sanctioned exception for groups,
+and it is deliberately narrow: only relays the user *used* recently (opened
+or posted on — an MRU in `obelisk-dex/recent-relays/{pubkey}`), capped at
+3, never the active relay, only relays still in the rail, and only kind 9
+(`#p:[me]` catch-up + live-from-now; no history, metadata or members). It runs on its own `SimplePool` whose
+`automaticallyAuth` answers only for its current targets — relays the user
+already authenticated to — so it never reveals the pubkey anywhere new.
+Toggle: `preferences.backgroundRelayWatch`. Do not grow it into a general
+cross-relay sync.
 
 **Notifications are two separate streams** — private DMs and group
-`@`-mentions — with independent logs and independent read cursors.
-Only an explicit mention pings; ordinary channel traffic and
-replies-to-you do not. See [docs/read-state.md §2b](docs/read-state.md).
+pings — with independent logs and independent read cursors. A group ping
+is an explicit `@you` or a reply to one of your messages (`reason:
+'mention' | 'reply'`, `src/lib/notifications/classify.ts`); ordinary
+channel traffic never pings. Each new card chimes
+(`src/lib/notifications/sound.ts`: synthesized ringtones — Crystal,
+Marimba, Aurora, Bubble — picked in Preferences as
+`preferences.notificationRingtone`, each with distinct mention/reply/DM
+phrases) and, when the
+tab is backgrounded and the user opted in, raises an OS notification
+(`alert.ts`) — DM popups never contain plaintext. Only events under 2
+minutes old alert; older backfill just gets a card. Outgoing kind 9
+p-tags every `nostr:npub` it mentions (NIP-27) so the `#p` watch can see
+it. A mention card is read only once its message has actually been on
+screen (`useMentionSeen`, IntersectionObserver + 1s dwell) or the bell is
+dismissed — never because the channel cursor moved past it. Channel
+right-click / long-press (`ChannelContextMenu.tsx`) sets per-channel
+follow / mute / notify-level prefs (`src/store/channel-prefs.ts`), applied
+only in the bridge's `deliverGroupPing`; mentions ping even on an
+unfollowed channel. See
+[docs/read-state.md §2b](docs/read-state.md).
 
 ## bridgeCache (stale-while-revalidate)
 
@@ -277,6 +300,33 @@ relay-supplied string into a style attribute.
 - **Text:** `lc-white` (#fafafa), `lc-muted` (#a3a3a3)
 - **Buttons:** Pill-shaped (9999px radius) — `lc-pill-primary` / `lc-pill-secondary`
 - **CSS classes:** `lc-card`, `lc-glow`, `lc-spinner`, `lc-skeleton`, `lc-img-skeleton`
+
+### Design rules — contrast, icons, menus
+
+- **Anything you can click must read as clickable.** Actionable text is
+  `lc-white` (or `lc-green` for the primary/accent action) — never
+  `lc-muted`. Muted grey is for *descriptions, hints and disabled states*;
+  on `lc-dark` it reads as disabled, which is how "Show tips again" ended up
+  looking like a caption. A secondary or tertiary action gets a visible
+  affordance too: a border (`border-lc-border`) and a faint fill
+  (`bg-lc-card/60`), brightening on hover. Target WCAG AA — 4.5:1 for text
+  under 18px — against the surface it actually sits on (`lc-dark` panels,
+  `lc-black` wells, `lc-card` tiles), and check the hover state as well as
+  the resting one.
+- **UI chrome uses SVG icons, not emoji or text glyphs.** Menus, buttons,
+  help cards, settings nav: use `src/components/ui/icons.tsx` (24×24,
+  1.8 stroke, `currentColor`) or add to it. A glyph (`⋯`, `★`, `↪`, `🔕`,
+  `🗑️`) renders in whatever font the OS picks — wrong size, weight and
+  baseline per platform — and emoji ignore `currentColor`, so hover,
+  active and danger colours can't reach them. Emoji belong in *content*
+  (messages, reactions, names), not in controls.
+- **One menu look.** Popover menus use `src/components/ui/menu.tsx`
+  (`MENU_PANEL_CLASS`, `MenuItem`, `MenuLink`, `MenuDivider`): rounded
+  panel with inner padding, icon + `lc-white` label rows, a green-tinted
+  hover, red only for destructive items. Square icon buttons next to a name
+  (⋯, ⚡) share `ICON_BUTTON_CLASS` so a row of them reads as one set.
+- **Keys are never labels.** Show NIP-05 or a short `npub1abcd…wxyz`
+  (`shortNpubLabel`), never raw hex, anywhere a person is identified.
 
 ## Key NIPs Used
 

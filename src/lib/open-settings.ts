@@ -14,8 +14,23 @@
 
 export const OPEN_SETTINGS_EVENT = 'obelisk:open-settings';
 
-/** Sections a caller can ask to land on. Extend as more become targets. */
-export type SettingsSection = 'relays';
+/**
+ * Sections a caller can ask to land on — one per entry in the settings
+ * sidebar (`UserPanel`). `profile` is the edit-profile form.
+ */
+export type SettingsSection =
+  | 'profile'
+  | 'general'
+  | 'appearance'
+  | 'notifications'
+  | 'relays'
+  | 'privacy'
+  | 'media'
+  | 'advanced';
+
+export const SETTINGS_SECTIONS: ReadonlyArray<SettingsSection> = [
+  'profile', 'general', 'appearance', 'notifications', 'relays', 'privacy', 'media', 'advanced',
+];
 
 export interface OpenSettingsDetail {
   section: SettingsSection;

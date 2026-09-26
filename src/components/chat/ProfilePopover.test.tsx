@@ -21,9 +21,11 @@ const bridge = vi.hoisted(() => ({
   },
 }));
 
+const me = vi.hoisted(() => ({ pubkey: null as string | null }));
+
 vi.mock('@/lib/nostr-bridge', () => ({
   useGroupMemberInfo: () => bridge.members,
-  useMyPubkey: () => null,
+  useMyPubkey: () => me.pubkey,
   useUserMetadata: () => bridge.metadata,
 }));
 
@@ -44,6 +46,7 @@ function renderProfile(onClose = vi.fn(), onExplore = vi.fn(), onMessage?: (pubk
 
 describe('ProfilePopover', () => {
   beforeEach(() => {
+    me.pubkey = null;
     useChatStore.setState({ ...useChatStore.getInitialState(), activeChannelId: 'group' });
     bridge.members = [{
       pubkey: PUBKEY,
@@ -137,7 +140,38 @@ describe('ProfilePopover', () => {
     expect(screen.getByTestId('profile-popover')).not.toHaveClass('overflow-y-auto');
     expect(screen.queryByTestId('profile-open-nostr-btn')).not.toBeInTheDocument();
     expect(screen.getByTestId('profile-name-row')).toContainElement(screen.getByTestId('profile-zap-btn'));
-    expect(screen.getByTestId('profile-compact-actions')).toContainElement(screen.getByTestId('profile-mute-btn'));
-    expect(screen.getByTestId('profile-compact-actions')).toContainElement(screen.getByTestId('profile-block-btn'));
+    // Mute / block live in the ⋯ menu now, not as a second row of buttons.
+    expect(screen.queryByTestId('profile-mute-btn')).toBeNull();
+    fireEvent.click(screen.getByTestId('profile-more-button'));
+    expect(screen.getByTestId('profile-menu-mute')).toBeInTheDocument();
+    expect(screen.getByTestId('profile-menu-block')).toBeInTheDocument();
+  });
+
+  it('my own card offers Edit profile and Preferences, and no zap', async () => {
+    me.pubkey = PUBKEY;
+    const { OPEN_SETTINGS_EVENT } = await import('@/lib/open-settings');
+    const seen: string[] = [];
+    const listener = (e: Event) => seen.push((e as CustomEvent).detail.section);
+    window.addEventListener(OPEN_SETTINGS_EVENT, listener);
+    const onClose = vi.fn();
+    renderProfile(onClose);
+    expect(screen.queryByTestId('profile-zap-btn')).toBeNull();
+    fireEvent.click(screen.getByTestId('profile-edit-btn'));
+    fireEvent.click(screen.getByTestId('profile-preferences-btn'));
+    expect(seen).toEqual(['profile', 'general']);
+    expect(onClose).toHaveBeenCalledTimes(2);
+    window.removeEventListener(OPEN_SETTINGS_EVENT, listener);
+  });
+
+  it('the ⋯ trigger is an SVG icon button and its menu rows carry icons', () => {
+    renderProfile();
+    const trigger = screen.getByTestId('profile-more-button');
+    expect(trigger.textContent).not.toContain('⋯');
+    expect(trigger.querySelector('svg')).not.toBeNull();
+    fireEvent.click(trigger);
+    for (const id of ['profile-menu-share', 'profile-menu-copy-link', 'profile-menu-copy-npub', 'profile-menu-copy-hex', 'profile-menu-mute', 'profile-menu-block']) {
+      expect(screen.getByTestId(id).querySelector('svg')).not.toBeNull();
+    }
+    expect(screen.getByTestId('profile-more-menu').className).toContain('p-1.5');
   });
 });

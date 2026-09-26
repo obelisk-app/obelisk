@@ -25,7 +25,10 @@ vi.mock('@/lib/nostr-bridge', () => ({
   useRelayAccess: () => 'ok',
   useUserMetadata: () => ({ displayName: 'Alice', picture: null }),
   getBridgeImpl: () => null,
+  useMyLoginMethod: () => 'nsec',
+  useSignerReady: () => true,
   nostrActions: {
+    ensureUserMetadata: () => Promise.resolve(),
     removePermission: (...a: unknown[]) => mockRemovePermission(...a),
     removeUser: (...a: unknown[]) => mockRemoveUser(...a),
   },
@@ -71,6 +74,20 @@ describe('SidebarMe', () => {
   it('keeps the avatar visible while collapsed', () => {
     renderLocalized(<SidebarMe collapsible />);
     expect(screen.getByTestId('sidebar-profile-button')).toBeInTheDocument();
+  });
+
+  it('never shows raw hex under the name — NIP-05 or a short npub', () => {
+    renderLocalized(<SidebarMe />);
+    const handle = screen.getByTestId('sidebar-profile-handle').textContent ?? '';
+    expect(handle).toMatch(/^npub1/);
+    expect(handle).not.toContain('a'.repeat(12));
+  });
+
+  it('the gear opens settings on Preferences (General), not the profile editor', () => {
+    renderLocalized(<SidebarMe />);
+    fireEvent.click(screen.getByTestId('user-settings-button'));
+    expect(screen.getByTestId('settings-section-general')).toBeInTheDocument();
+    expect(screen.getByTestId('user-settings-button').querySelector('svg')).not.toBeNull();
   });
 
   it('opens my profile in the shared anchored preview', () => {
@@ -188,6 +205,19 @@ describe('RelayTopBar help popover', () => {
     expect(viewMore.getAttribute('href')).toBe('/guides');
     // "pill" == fully rounded, per the La Crypta convention.
     expect(viewMore.className).toContain('rounded-full');
+  });
+
+  it('gives every guide an SVG icon and the tips button real contrast', () => {
+    renderTopBar();
+    fireEvent.click(screen.getByLabelText('Help'));
+    for (const slug of ['what-is-obelisk', 'how-obelisk-works', 'admin-cli', 'bitcoin-zaps']) {
+      expect(screen.getByTestId(`help-topic-icon-${slug}`).querySelector('svg')).not.toBeNull();
+    }
+    const replay = screen.getByTestId('help-popover-replay-hints');
+    // Design rule: an actionable control is white text with a visible border, never muted grey.
+    expect(replay.className).toContain('text-lc-white');
+    expect(replay.className).not.toContain('text-lc-muted');
+    expect(replay.className).toContain('border');
   });
 
   it('wraps each topic in its own card container', () => {

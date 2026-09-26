@@ -1,5 +1,13 @@
-import { beforeEach, describe, expect, it } from 'vitest';
-import { loadRecentEmojis, pushRecentEmoji, saveRecentEmojis } from './recent-emojis';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  __resetRecentEmojiSnapshotForTests,
+  getRecentEmojisSnapshot,
+  loadRecentEmojis,
+  pushRecentEmoji,
+  quickReactions,
+  saveRecentEmojis,
+  subscribeRecentEmojis,
+} from './recent-emojis';
 
 const KEY = 'obelisk:recent-emojis';
 
@@ -38,5 +46,35 @@ describe('recent-emojis', () => {
     saveRecentEmojis(Array.from({ length: 40 }, (_, index) => ({ char: `e${index}` })));
 
     expect(loadRecentEmojis()).toHaveLength(24);
+  });
+});
+
+describe('recent emojis → quick reactions', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    __resetRecentEmojiSnapshotForTests();
+  });
+
+  it('pads with the defaults until the user has recents', () => {
+    expect(quickReactions([], 3).map((e) => e.char)).toEqual(['🔥', '⚡', '😂']);
+  });
+
+  it('puts recents first, without duplicates', () => {
+    const recent = [{ char: '🙏' }, { char: '⚡' }];
+    expect(quickReactions(recent, 4).map((e) => e.char)).toEqual(['🙏', '⚡', '🔥', '😂']);
+  });
+
+  it('the shared snapshot updates and notifies on push', () => {
+    const listener = vi.fn();
+    const unsub = subscribeRecentEmojis(listener);
+    pushRecentEmoji('🦀');
+    expect(listener).toHaveBeenCalled();
+    expect(getRecentEmojisSnapshot()[0].char).toBe('🦀');
+    unsub();
+  });
+
+  it('keeps custom emoji media', () => {
+    pushRecentEmoji(':party:', { url: 'https://x/p.gif' });
+    expect(quickReactions(getRecentEmojisSnapshot(), 1)[0]).toMatchObject({ char: ':party:', url: 'https://x/p.gif' });
   });
 });

@@ -50,8 +50,10 @@ export interface EmojiPickerProps {
   /**
    * `popover` (default): small absolute-positioned floating panel for desktop.
    * `sheet`: fills its parent (used inside the mobile bottom-sheet host).
+   * `floating`: the popover panel without its own positioning — for a host
+   * that places it (`FloatingPanel`, which escapes scroll containers).
    */
-  variant?: 'popover' | 'sheet';
+  variant?: 'popover' | 'sheet' | 'floating';
   /** Popover direction relative to the trigger. Ignored for sheet variant. */
   placement?: 'above' | 'below';
   /**
@@ -217,7 +219,9 @@ export default function EmojiPicker({
   const popoverPlacementClass = placement === 'below' ? 'top-full mt-1' : 'bottom-full mb-1';
   const containerClass = isSheet
     ? 'flex h-full w-full flex-col bg-lc-black p-2 text-lc-white '
-    : `absolute ${align === 'left' ? 'left-0' : 'right-0'} ${popoverPlacementClass} z-30 flex h-[430px] w-[360px] flex-col overflow-hidden rounded-lg border border-lc-border bg-lc-black text-lc-white shadow-2xl `;
+    : variant === 'floating'
+      ? 'flex h-[430px] w-[360px] flex-col overflow-hidden rounded-lg border border-lc-border bg-lc-black text-lc-white shadow-2xl '
+      : `absolute ${align === 'left' ? 'left-0' : 'right-0'} ${popoverPlacementClass} z-30 flex h-[430px] w-[360px] flex-col overflow-hidden rounded-lg border border-lc-border bg-lc-black text-lc-white shadow-2xl `;
   const gridClass = columns === 12
     ? 'grid grid-cols-12 gap-0.5'
     : isSheet

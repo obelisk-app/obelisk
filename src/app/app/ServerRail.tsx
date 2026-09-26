@@ -18,6 +18,8 @@ import { nostrActions, useConfiguredRelays, useCurrentRelayUrl, useMyPubkey } fr
 import { faviconFor, fetchRelayInfo, SUGGESTED_RELAYS, type RelayInfo } from '@/lib/relay-info';
 import { encodeRelayShareCode } from '@/lib/relay-share-link';
 import { useHasAnyHighlights } from '@/lib/read-state/selectors';
+import { useUnreadMentionCount } from '@/lib/notifications/selectors';
+import { normalizeRelayUrl } from '@/lib/nostr-bridge/relay-url';
 import ModalShell from '@/components/ModalShell';
 import HintDot from '@/components/hints/HintDot';
 import { useTranslation } from '@/i18n/context';
@@ -194,7 +196,11 @@ function RelayTile({
   // highlights signal is meaningful on the active tile only. Cross-relay
   // mention surveillance ships in a follow-up — see docs/read-state.md.
   const hasHighlights = useHasAnyHighlights(myPubkey);
-  const showHighlight = active && hasHighlights;
+  const activeCards = useUnreadMentionCount(active ? normalizeRelayUrl(url) : null);
+  const showHighlight = active && (hasHighlights || activeCards > 0);
+  // Relays you're not on: unread mentions/replies heard by the background
+  // relay watch (`background-watch.ts`). The active relay's live in the bell.
+  const backgroundUnread = useUnreadMentionCount(active ? null : normalizeRelayUrl(url));
 
   async function copyShareLink() {
     const origin = typeof window !== 'undefined' ? window.location.origin : 'https://obelisk.ar';
@@ -262,6 +268,16 @@ function RelayTile({
           <span className="relative">{initials}</span>
         )}
       </button>
+      {backgroundUnread > 0 && (
+        <span
+          aria-label={t('rail.backgroundUnread').replace('{count}', String(backgroundUnread))}
+          title={t('rail.backgroundUnread').replace('{count}', String(backgroundUnread))}
+          data-testid="relay-background-unread"
+          className="pointer-events-none absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-lc-green px-1 text-[9px] font-bold text-lc-black ring-2 ring-lc-black"
+        >
+          {backgroundUnread > 99 ? '99+' : backgroundUnread}
+        </span>
+      )}
       {showHighlight && (
         <span
           aria-label={t('rail.unreadAria')}

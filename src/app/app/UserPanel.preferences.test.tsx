@@ -130,8 +130,7 @@ describe('PreferencesPanel appearance controls', () => {
       </LocaleProvider>,
     );
 
-    expect(screen.queryByTestId('appearance-accent-color')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByTestId('desktop-appearance-submenu'));
+    // Appearance is its own settings section now — no collapsed submenu.
     expect(screen.getByTestId('appearance-accent-color')).toBeInTheDocument();
     expect(screen.getByTestId('appearance-background-color')).toBeInTheDocument();
     expect(screen.getByTestId('appearance-button-color')).toBeInTheDocument();
@@ -292,5 +291,48 @@ describe('post-quantum status row', () => {
       'href',
       '/guides/quantum-safe-dms',
     );
+  });
+});
+
+describe('settings modal sections', () => {
+  const open = async (initialTab?: 'profile' | 'preferences' | 'general' | 'notifications' | 'relays') => {
+    const { default: UserPanel } = await import('./UserPanel');
+    render(
+      <LocaleProvider initialLocale="en">
+        <UserPanel pubkey={'a'.repeat(64)} isMe initialEditing initialTab={initialTab} onClose={() => {}} />
+      </LocaleProvider>,
+    );
+  };
+
+  it('lists every section in the sidebar and switches between them', async () => {
+    await open();
+    for (const id of ['general', 'appearance', 'notifications', 'relays', 'privacy', 'advanced']) {
+      expect(screen.getByTestId(`settings-nav-${id}`)).toBeInTheDocument();
+    }
+    expect(screen.getByTestId('settings-section-profile')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('settings-nav-notifications'));
+    expect(screen.getByTestId('settings-section-notifications')).toBeInTheDocument();
+    expect(screen.getByTestId('notification-settings')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('settings-nav-privacy'));
+    expect(screen.getByText('Direct messages')).toBeInTheDocument();
+    expect(screen.getByTestId('settings-nav-privacy')).toHaveAttribute('aria-current', 'page');
+  });
+
+  it("the legacy 'preferences' tab lands on General", async () => {
+    await open('preferences');
+    expect(screen.getByTestId('settings-section-general')).toBeInTheDocument();
+  });
+
+  it('a deep link can land straight on Relays', async () => {
+    await open('relays');
+    expect(screen.getByTestId('settings-section-relays')).toBeInTheDocument();
+  });
+
+  it('nav items use SVG icons, not glyphs', async () => {
+    await open();
+    for (const id of ['general', 'appearance', 'notifications']) {
+      expect(screen.getByTestId(`settings-nav-${id}`).querySelector('svg')).not.toBeNull();
+    }
+    expect(screen.getByTestId('desktop-logout').textContent).not.toContain('↪');
   });
 });

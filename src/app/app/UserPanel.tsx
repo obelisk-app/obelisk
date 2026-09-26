@@ -11,6 +11,7 @@ import { setDmOptInEnabled } from '@/lib/dm/opt-in';
 import WotSettings from '@/components/settings/WotSettings';
 import LanguagePreference from '@/components/LanguagePreference';
 import AppearancePreferenceControls from '@/components/AppearancePreferenceControls';
+import NotificationSettings from '@/components/settings/NotificationSettings';
 import SocialRelaySettings from '@/components/settings/SocialRelaySettings';
 import MutedAndBlocked from '@/components/settings/MutedAndBlocked';
 import ProfileAppearanceEditor from '@/components/ProfileAppearanceEditor';
@@ -24,6 +25,37 @@ import { clearAllClientCacheExceptSession } from '@/lib/nostr-bridge/cache-clear
 import { selfPqState, type SelfPqState } from '@/lib/pq/capability';
 import { guidesHref } from '@/lib/guide-urls';
 import { useTranslation } from '@/i18n/context';
+import type { SettingsSection } from '@/lib/open-settings';
+import {
+  BellIcon,
+  LogOutIcon,
+  PaletteIcon,
+  ServerIcon,
+  SettingsIcon,
+  ShieldIcon,
+  SmileIcon,
+  UserIcon,
+  WrenchIcon,
+} from '@/components/ui/icons';
+
+const SETTINGS_NAV: ReadonlyArray<{
+  label: string;
+  items: ReadonlyArray<{ id: SettingsTab; Icon: (p: { size?: number }) => React.ReactElement }>;
+}> = [
+  { label: 'settings.group.user', items: [{ id: 'profile', Icon: UserIcon }] },
+  {
+    label: 'settings.group.app',
+    items: [
+      { id: 'general', Icon: SettingsIcon },
+      { id: 'appearance', Icon: PaletteIcon },
+      { id: 'notifications', Icon: BellIcon },
+      { id: 'relays', Icon: ServerIcon },
+      { id: 'privacy', Icon: ShieldIcon },
+      { id: 'media', Icon: SmileIcon },
+      { id: 'advanced', Icon: WrenchIcon },
+    ],
+  },
+];
 
 interface UserPanelProps {
   pubkey: string;
@@ -39,14 +71,16 @@ interface UserPanelProps {
    * wants — the relay block lives there, and the panel otherwise always
    * opens on the profile tab.
    */
-  initialTab?: 'profile' | 'preferences' | 'media';
+  initialTab?: SettingsTab | 'preferences';
 }
 
 export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, initialEditing = false, initialTab = 'profile' }: UserPanelProps) {
   const { t } = useTranslation();
   const meta = useProfile(pubkey);
   const [editing, setEditing] = useState(initialEditing);
-  const [settingsTab, setSettingsTab] = useState<'profile' | 'preferences' | 'media'>(initialTab);
+  // `preferences` is the pre-sections name for "the app settings" — land on
+  // the first of them.
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>(initialTab === 'preferences' ? 'general' : initialTab);
 
   useEffect(() => {
     nostrActions.ensureUserMetadata(pubkey).catch(() => {});
@@ -117,32 +151,32 @@ export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, ini
                 </div>
               </div>
             </div>
-            <nav className="flex-1 overflow-y-auto p-2 space-y-1">
-              <button
-                type="button"
-                onClick={() => setSettingsTab('profile')}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm ${settingsTab === 'profile' ? 'bg-lc-green/15 text-lc-green' : 'text-lc-white hover:bg-lc-border/40'}`}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                <span>{t('settings.profile')}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setSettingsTab('preferences')}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm ${settingsTab === 'preferences' ? 'bg-lc-green/15 text-lc-green' : 'text-lc-white hover:bg-lc-border/40'}`}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-                <span>{t('settings.preferences')}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setSettingsTab('media')}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm ${settingsTab === 'media' ? 'bg-lc-green/15 text-lc-green' : 'text-lc-white hover:bg-lc-border/40'}`}
-                data-testid="desktop-media-library"
-              >
-                <span aria-hidden="true">★</span>
-                <span>{t('mobile.settings.packs')}</span>
-              </button>
+            <nav className="flex-1 overflow-y-auto p-2" aria-label={t('user.settings')}>
+              {SETTINGS_NAV.map((group) => (
+                <div key={group.label} className="mb-3">
+                  {/* The header card above already says "User settings". */}
+                  {group.label !== 'settings.group.user' && (
+                    <div className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-lc-muted">
+                      {t(group.label)}
+                    </div>
+                  )}
+                  <div className="space-y-0.5">
+                    {group.items.map(({ id, Icon }) => (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => setSettingsTab(id)}
+                        aria-current={settingsTab === id ? 'page' : undefined}
+                        className={`flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors ${settingsTab === id ? 'bg-lc-green/15 text-lc-green' : 'text-lc-white hover:bg-lc-border/40'}`}
+                        data-testid={id === 'media' ? 'desktop-media-library' : `settings-nav-${id}`}
+                      >
+                        <Icon size={16} />
+                        <span>{t(`settings.section.${id}`)}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </nav>
             <div className="border-t border-lc-border p-2">
               <button
@@ -151,7 +185,7 @@ export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, ini
                 className="flex w-full items-center gap-2.5 rounded-md bg-red-500/20 px-3 py-2 text-sm font-semibold text-red-300 hover:bg-red-500/30"
                 data-testid="desktop-logout"
               >
-                <span aria-hidden="true">↪</span>
+                <LogOutIcon size={16} />
                 <span>{t('user.logOut')}</span>
               </button>
             </div>
@@ -159,29 +193,27 @@ export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, ini
           <main className={`flex-1 min-w-0 ${settingsTab === 'media' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
             {settingsTab === 'media' ? (
               <MediaLibraryModal embedded onClose={() => setSettingsTab('profile')} />
-            ) : <div className="max-w-3xl mx-auto px-10 py-10">
-              {settingsTab === 'profile' ? (
-                <>
-                  <div className="mb-6">
-                    <div className="text-xs uppercase tracking-wider text-lc-muted font-semibold">{t('settings.profile')}</div>
-                    <h2 className="text-lc-white text-xl font-semibold mt-2">{t('user.editProfile')}</h2>
-                  </div>
+            ) : (
+              <div className="max-w-3xl mx-auto px-10 py-10" data-testid={`settings-section-${settingsTab}`}>
+                <div className="mb-6">
+                  <h2 className="text-lc-white text-xl font-semibold">{t(`settings.section.${settingsTab}`)}</h2>
+                  <p className="mt-1 text-sm text-lc-muted">{t(`settings.section.${settingsTab}.desc`)}</p>
+                </div>
+                {settingsTab === 'profile' && (
                   <EditProfileForm
                     initial={meta}
                     onCancel={() => { setEditing(false); onClose(); }}
                     onSaved={() => { setEditing(false); onClose(); }}
                   />
-                </>
-              ) : settingsTab === 'preferences' ? (
-                <>
-                  <div className="mb-6">
-                    <div className="text-xs uppercase tracking-wider text-lc-muted font-semibold">{t('settings.preferences')}</div>
-                    <h2 className="text-lc-white text-xl font-semibold mt-2">{t('user.appPreferences')}</h2>
-                  </div>
-                  <PreferencesPanel />
-                </>
-              ) : null}
-            </div>}
+                )}
+                {settingsTab === 'general' && <GeneralSettingsSection />}
+                {settingsTab === 'appearance' && <AppearanceSettingsSection />}
+                {settingsTab === 'notifications' && <NotificationsSettingsSection />}
+                {settingsTab === 'relays' && <RelaysSettingsSection />}
+                {settingsTab === 'privacy' && <PrivacySettingsSection />}
+                {settingsTab === 'advanced' && <AdvancedSettingsSection />}
+              </div>
+            )}
           </main>
         </div>
       </div>,
@@ -456,39 +488,42 @@ function EditProfileForm({
   );
 }
 
-export function PreferencesPanel() {
+/** Settings sections — one per entry in the settings sidebar. */
+export type SettingsTab = SettingsSection;
+
+export function GeneralSettingsSection() {
   const prefs = usePreferences();
   const { t } = useTranslation();
-  const [appearanceOpen, setAppearanceOpen] = useState(false);
   return (
-    <div className="space-y-4 p-4">
+    <div className="space-y-4">
       <LanguagePreference />
-      <button
-        type="button"
-        onClick={() => setAppearanceOpen((open) => !open)}
-        className="flex w-full items-center justify-between rounded-lg border border-lc-border bg-lc-black p-4 text-left hover:border-lc-green/50"
-        data-testid="desktop-appearance-submenu"
-        aria-expanded={appearanceOpen}
-      >
-        <span className="text-sm font-semibold text-lc-white">{t('preferences.appearance.title')}</span>
-        <span className="text-lc-muted" aria-hidden="true">{appearanceOpen ? '⌄' : '›'}</span>
-      </button>
-      {appearanceOpen && <AppearancePreferenceControls />}
-
-      <SocialRelaySettings />
-      <MutedAndBlocked />
-      <section className="space-y-2 rounded-lg border border-lc-border bg-lc-dark/30 p-3">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-lc-muted">
-          {t("preferences.backup.advanced")}
-        </h3>
-        <AccountBackupExport />
-      </section>
       <ToggleRow
         label={t('preferences.activity.label')}
         description={t('preferences.activity.description')}
         checked={prefs.showActivityIndicator}
         onChange={(v) => setPreference('showActivityIndicator', v)}
       />
+    </div>
+  );
+}
+
+export function AppearanceSettingsSection() {
+  return <AppearancePreferenceControls />;
+}
+
+export function NotificationsSettingsSection() {
+  return <NotificationSettings />;
+}
+
+export function RelaysSettingsSection() {
+  return <SocialRelaySettings />;
+}
+
+export function PrivacySettingsSection() {
+  const prefs = usePreferences();
+  const { t } = useTranslation();
+  return (
+    <div className="space-y-5">
       <ToggleRow
         label={t('preferences.directMessages.label')}
         description={t('preferences.directMessages.description')}
@@ -504,7 +539,23 @@ export function PreferencesPanel() {
         />
         <PostQuantumStatusRow />
       </div>
+      <MutedAndBlocked />
       <WotSettings />
+    </div>
+  );
+}
+
+export function AdvancedSettingsSection() {
+  const prefs = usePreferences();
+  const { t } = useTranslation();
+  return (
+    <div className="space-y-4">
+      <section className="space-y-2 rounded-lg border border-lc-border bg-lc-dark/30 p-3">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-lc-muted">
+          {t("preferences.backup.advanced")}
+        </h3>
+        <AccountBackupExport />
+      </section>
       <LocalDataSection />
       <section className="space-y-3 border-t border-lc-border pt-4" data-testid="desktop-developer-settings">
         <div className="text-xs font-semibold uppercase tracking-wider text-lc-muted">{t('developer.section')}</div>
@@ -516,6 +567,23 @@ export function PreferencesPanel() {
         />
         <DeveloperSignatureTest />
       </section>
+    </div>
+  );
+}
+
+/**
+ * Every app section stacked — for surfaces with no sidebar. The desktop
+ * settings modal shows one section at a time instead.
+ */
+export function PreferencesPanel() {
+  return (
+    <div className="space-y-8 p-4">
+      <GeneralSettingsSection />
+      <AppearanceSettingsSection />
+      <NotificationsSettingsSection />
+      <RelaysSettingsSection />
+      <PrivacySettingsSection />
+      <AdvancedSettingsSection />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { useChatStore } from '@/store/chat';
 import { useReadStateStore } from '@/store/read-state';
 import { useNotificationsStore } from '@/store/notifications';
+import { useChannelPrefsStore } from '@/store/channel-prefs';
 import { useVoiceStore } from "@/store/voice";
 import { useDMStore } from "@/store/dm";
 
@@ -32,6 +33,7 @@ export function resetAllClientState(): void {
   useChatStore.getState().reset();
   useReadStateStore.getState().reset();
   useNotificationsStore.getState().reset();
+  useChannelPrefsStore.getState().reset();
   useVoiceStore.getState().leaveVoice();
   for (const hook of resetHooks) {
     // One subsystem failing to tear down must not strand the rest — the next

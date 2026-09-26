@@ -138,6 +138,40 @@ describe('preferences store', () => {
       expect(getPreferences().postQuantumEnabled).toBe(true);
     });
   });
+
+  describe('notification preferences', () => {
+    it('defaults: sounds on, Crystal ringtone, browser notifications on, background watch on', async () => {
+      const { getPreferences } = await import('./preferences');
+      expect(getPreferences()).toMatchObject({
+        notificationSounds: true,
+        notificationRingtone: 'crystal',
+        browserNotifications: true,
+        backgroundRelayWatch: true,
+      });
+    });
+
+    it('ignores the retired desktopNotifications key (its old default was persisted as false)', async () => {
+      localStorage.setItem('obelisk:preferences', JSON.stringify({ desktopNotifications: false }));
+      const { getPreferences } = await import('./preferences');
+      expect(getPreferences().browserNotifications).toBe(true);
+    });
+
+    it('persists a chosen ringtone', async () => {
+      const { setPreference } = await import('./preferences');
+      setPreference('notificationRingtone', 'marimba');
+      vi.resetModules();
+      const { getPreferences } = await import('./preferences');
+      expect(getPreferences().notificationRingtone).toBe('marimba');
+    });
+
+    it('falls back to Crystal for an unknown ringtone from storage or a caller', async () => {
+      localStorage.setItem('obelisk:preferences', JSON.stringify({ notificationRingtone: 'airhorn' }));
+      const { getPreferences, setPreference } = await import('./preferences');
+      expect(getPreferences().notificationRingtone).toBe('crystal');
+      setPreference('notificationRingtone', 'nope' as never);
+      expect(getPreferences().notificationRingtone).toBe('crystal');
+    });
+  });
 });
 
 /**

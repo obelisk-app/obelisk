@@ -45,6 +45,50 @@ export function loadRecentEmojis(): RecentEmoji[] {
 
 export function saveRecentEmojis(list: ReadonlyArray<RecentEmoji>): void {
   store.save(list.slice(0, MAX).map((entry) => (entry.url ? { ...entry } : entry.char)));
+  snapshot = list.slice(0, MAX);
+  listeners.forEach((l) => l());
+}
+
+// -- reactive snapshot ----------------------------------------------------
+// Every message row's quick-reaction bar reads the recents; one shared
+// snapshot (refreshed on save) instead of a localStorage parse per row.
+
+let snapshot: RecentEmoji[] | null = null;
+const listeners = new Set<() => void>();
+const EMPTY: RecentEmoji[] = [];
+
+export function getRecentEmojisSnapshot(): RecentEmoji[] {
+  if (snapshot === null) snapshot = typeof window === 'undefined' ? EMPTY : loadRecentEmojis();
+  return snapshot;
+}
+
+export function getServerRecentEmojisSnapshot(): RecentEmoji[] {
+  return EMPTY;
+}
+
+export function subscribeRecentEmojis(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => { listeners.delete(listener); };
+}
+
+/** Default quick reactions, used to fill the bar until the user has recents. */
+export const DEFAULT_QUICK_REACTIONS: ReadonlyArray<RecentEmoji> = [
+  { char: '🔥' }, { char: '⚡' }, { char: '😂' }, { char: '🤔' },
+];
+
+/** The first `n` distinct recents, padded with the defaults. */
+export function quickReactions(recent: ReadonlyArray<RecentEmoji>, n: number): RecentEmoji[] {
+  const out: RecentEmoji[] = [];
+  for (const e of [...recent, ...DEFAULT_QUICK_REACTIONS]) {
+    if (out.length >= n) break;
+    if (!out.some((x) => x.char === e.char)) out.push(e);
+  }
+  return out;
+}
+
+/** Test seam. */
+export function __resetRecentEmojiSnapshotForTests(): void {
+  snapshot = null;
 }
 
 export function pushRecentEmoji(

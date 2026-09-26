@@ -163,6 +163,33 @@ The SFU server is a separate repo: **[obelisk-app/obelisk-sfu](https://github.co
 - **Buttons:** Pill-shaped (9999px radius) — `lc-pill-primary` / `lc-pill-secondary`
 - **CSS classes:** `lc-card`, `lc-glow`, `lc-spinner`, `lc-skeleton`, `lc-img-skeleton`
 
+### Design rules — contrast, icons, menus
+
+- **Anything you can click must read as clickable.** Actionable text is
+  `lc-white` (or `lc-green` for the primary/accent action) — never
+  `lc-muted`. Muted grey is for *descriptions, hints and disabled states*;
+  on `lc-dark` it reads as disabled, which is how "Show tips again" ended up
+  looking like a caption. A secondary or tertiary action gets a visible
+  affordance too: a border (`border-lc-border`) and a faint fill
+  (`bg-lc-card/60`), brightening on hover. Target WCAG AA — 4.5:1 for text
+  under 18px — against the surface it actually sits on (`lc-dark` panels,
+  `lc-black` wells, `lc-card` tiles), and check the hover state as well as
+  the resting one.
+- **UI chrome uses SVG icons, not emoji or text glyphs.** Menus, buttons,
+  help cards, settings nav: use `src/components/ui/icons.tsx` (24×24,
+  1.8 stroke, `currentColor`) or add to it. A glyph (`⋯`, `★`, `↪`, `🔕`,
+  `🗑️`) renders in whatever font the OS picks — wrong size, weight and
+  baseline per platform — and emoji ignore `currentColor`, so hover,
+  active and danger colours can't reach them. Emoji belong in *content*
+  (messages, reactions, names), not in controls.
+- **One menu look.** Popover menus use `src/components/ui/menu.tsx`
+  (`MENU_PANEL_CLASS`, `MenuItem`, `MenuLink`, `MenuDivider`): rounded
+  panel with inner padding, icon + `lc-white` label rows, a green-tinted
+  hover, red only for destructive items. Square icon buttons next to a name
+  (⋯, ⚡) share `ICON_BUTTON_CLASS` so a row of them reads as one set.
+- **Keys are never labels.** Show NIP-05 or a short `npub1abcd…wxyz`
+  (`shortNpubLabel`), never raw hex, anywhere a person is identified.
+
 ## Key NIPs Used
 
 | NIP | What | Usage |

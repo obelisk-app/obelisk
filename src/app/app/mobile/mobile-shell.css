@@ -749,6 +749,26 @@
   font-size: 25px;
 }
 
+/* Unread mentions/replies on a relay you're not browsing — fed by the
+ * background relay watch. Sits outside `.space-icon`, which clips. */
+.obelisk-mobile .space-badge {
+  position: absolute;
+  top: 0;
+  right: calc(50% - 30px);
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--app-accent);
+  color: var(--accent-ink);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  box-shadow: 0 0 0 2px var(--app-bg);
+  pointer-events: none;
+}
+
 .obelisk-mobile .spaces-rail .space-name {
   width: 60px;
   font-size: 10.5px;

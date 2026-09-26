@@ -1,11 +1,11 @@
 /**
  * Notification log — two independent streams, never mixed.
  *
- *   • **Mentions** (group scope): an explicit `@you` in a NIP-29 channel.
- *     Scoped per relay, because group state binds to the active relay
- *     (see CLAUDE.md "Single-relay rule for groups"). Mentions are only
- *     ever *scanned* while that relay is the active one — there is no
- *     background cross-relay mention watch, by design.
+ *   • **Mentions** (group scope): an explicit `@you`, or a reply to one of
+ *     your messages, in a NIP-29 channel. Scoped per relay. Scanned on the
+ *     active relay by the bridge, and on the last few relays the user used
+ *     by the background watcher (`src/lib/nostr-bridge/background-watch.ts`),
+ *     which listens only for events that tag you.
  *   • **DMs** (account scope): incoming NIP-04 messages. DMs follow the
  *     user across relays via NIP-65, so this stream is relay-agnostic.
  *
@@ -24,7 +24,8 @@
  * owns the card logs and the per-relay mention cursors only — one source
  * of truth per value.
  *
- * Replies-to-you are NOT notifications. Only an explicit mention pings.
+ * Ordinary channel traffic is NOT a notification. Only `@you` and replies
+ * to your own messages ping.
  */
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
@@ -37,6 +38,9 @@ export const MENTION_CAP_PER_RELAY = 50;
 /** Max DM cards retained account-wide. */
 export const DM_NOTIFICATION_CAP = 50;
 
+/** Why a group message pinged: an explicit `@you`, or a reply to your message. */
+export type MentionReason = 'mention' | 'reply';
+
 export interface MentionNotification {
   /** The mentioning message's event id — also the dedupe key. */
   readonly id: string;
@@ -47,6 +51,15 @@ export interface MentionNotification {
   readonly preview: string;
   /** Unix **milliseconds**. */
   readonly createdAt: number;
+  /** Absent on cards persisted before replies were tracked — read as `'mention'`. */
+  readonly reason?: MentionReason;
+  /**
+   * The mentioning message was actually on screen (see `useMentionSeen`).
+   * Deliberately NOT inferred from the channel read cursor: that cursor
+   * jumps to the newest message the moment a channel opens at the bottom,
+   * which cleared mentions the user never laid eyes on.
+   */
+  readonly seen?: boolean;
 }
 
 export interface DmNotification {
@@ -83,10 +96,17 @@ interface NotificationsActions {
    * the last session stay unread until actually read.
    */
   registerRelay: (relay: string) => void;
-  /** Append a mention card. Drops anything at/older than the relay cursor. */
-  pushMention: (n: MentionNotification) => void;
-  /** Append a DM card. Drops anything at/older than the DM cursor. */
-  pushDmNotification: (n: DmNotification) => void;
+  /**
+   * Append a mention card. Drops anything at/older than the relay cursor.
+   * Returns `true` only when a new card was added — the caller's cue to chime.
+   */
+  pushMention: (n: MentionNotification) => boolean;
+  /** Append a DM card. Drops anything at/older than the DM cursor. Returns `true` when added. */
+  pushDmNotification: (n: DmNotification) => boolean;
+  /** The user actually saw mention `id` on `relay`. */
+  markMentionSeen: (relay: string, id: string) => void;
+  /** Channel right-click → "Mark as read": every card for that channel. */
+  markChannelMentionsSeen: (relay: string, channelId: string) => void;
   /** Mark every mention on `relay` read (cursor := now). */
   markMentionsRead: (relay: string) => void;
   /** Drop `relay`'s mention log and mark it read. */
@@ -114,7 +134,7 @@ function dmCursor(): number {
 
 export const useNotificationsStore = create<NotificationsStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       ...NOTIFICATIONS_INITIAL,
 
       registerRelay: (relay) => set((state) => {
@@ -127,23 +147,49 @@ export const useNotificationsStore = create<NotificationsStore>()(
         };
       }),
 
-      pushMention: (n) => set((state) => {
-        if (n.createdAt <= (state.mentionCursorByRelay[n.relay] ?? 0)) return state;
+      pushMention: (n) => {
+        const state = get();
+        if (n.createdAt <= (state.mentionCursorByRelay[n.relay] ?? 0)) return false;
         const existing = state.mentionsByRelay[n.relay] ?? [];
-        if (existing.some((m) => m.id === n.id)) return state;
+        if (existing.some((m) => m.id === n.id)) return false;
         const next = [n, ...existing]
           .sort((a, b) => b.createdAt - a.createdAt)
           .slice(0, MENTION_CAP_PER_RELAY);
-        return { mentionsByRelay: { ...state.mentionsByRelay, [n.relay]: next } };
-      }),
+        set({ mentionsByRelay: { ...state.mentionsByRelay, [n.relay]: next } });
+        return next.some((m) => m.id === n.id);
+      },
 
-      pushDmNotification: (n) => set((state) => {
-        if (n.createdAt <= dmCursor()) return state;
-        if (state.dmNotifications.some((d) => d.id === n.id)) return state;
+      pushDmNotification: (n) => {
+        const state = get();
+        if (n.createdAt <= dmCursor()) return false;
+        if (state.dmNotifications.some((d) => d.id === n.id)) return false;
         const next = [n, ...state.dmNotifications]
           .sort((a, b) => b.createdAt - a.createdAt)
           .slice(0, DM_NOTIFICATION_CAP);
-        return { dmNotifications: next };
+        set({ dmNotifications: next });
+        return next.some((d) => d.id === n.id);
+      },
+
+      markMentionSeen: (relay, id) => set((state) => {
+        const list = state.mentionsByRelay[relay];
+        if (!list?.some((m) => m.id === id && !m.seen)) return state;
+        return {
+          mentionsByRelay: {
+            ...state.mentionsByRelay,
+            [relay]: list.map((m) => (m.id === id ? { ...m, seen: true } : m)),
+          },
+        };
+      }),
+
+      markChannelMentionsSeen: (relay, channelId) => set((state) => {
+        const list = state.mentionsByRelay[relay];
+        if (!list?.some((m) => m.channelId === channelId && !m.seen)) return state;
+        return {
+          mentionsByRelay: {
+            ...state.mentionsByRelay,
+            [relay]: list.map((m) => (m.channelId === channelId && !m.seen ? { ...m, seen: true } : m)),
+          },
+        };
       }),
 
       markMentionsRead: (relay) => set((state) => ({
@@ -199,17 +245,14 @@ export const ensureNotificationsStoreForAccount = createEnsureForAccount(
 // -- read predicates ----------------------------------------------------
 
 /**
- * A mention is read once EITHER cursor has passed it: the relay's mention
- * cursor (bell "mark read") or the channel's own read cursor (the user
- * scrolled past it in the channel). The second clause is what makes the
- * bell badge clear naturally when you just go read the conversation.
+ * A mention is read once the user has actually seen it (`seen`, set by
+ * `useMentionSeen` when the message was on screen) or dismissed the bell
+ * for its relay (the relay mention cursor). Reading *around* it — the
+ * channel cursor advancing because the channel opened at the bottom — does
+ * not count.
  */
-export function isMentionRead(
-  m: MentionNotification,
-  relayCursor: number,
-  groupCursor = 0,
-): boolean {
-  return m.createdAt <= relayCursor || m.createdAt <= groupCursor;
+export function isMentionRead(m: MentionNotification, relayCursor: number): boolean {
+  return m.seen === true || m.createdAt <= relayCursor;
 }
 
 export function isDmNotificationRead(d: DmNotification, cursor: number): boolean {
@@ -224,10 +267,9 @@ export function getUnreadMentionCount(relay: string | null | undefined): number 
   const list = mentionsByRelay[relay];
   if (!list || list.length === 0) return 0;
   const cursor = mentionCursorByRelay[relay] ?? 0;
-  const groupCursors = useReadStateStore.getState().groupCursors;
   let n = 0;
   for (const m of list) {
-    if (!isMentionRead(m, cursor, groupCursors[m.channelId] ?? 0)) n++;
+    if (!isMentionRead(m, cursor)) n++;
   }
   return n;
 }
