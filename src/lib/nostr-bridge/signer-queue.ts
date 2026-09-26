@@ -70,6 +70,19 @@ interface QueueEntry {
   readonly run: () => Promise<unknown>;
   readonly resolve: (value: unknown) => void;
   readonly reject: (reason: unknown) => void;
+  /** Start-deadline timer, cleared the moment the entry takes the slot. */
+  deadline?: ReturnType<typeof setTimeout>;
+}
+
+/**
+ * The op was still waiting for the signer when its start deadline passed.
+ * It never reached the signer, so nothing was signed.
+ */
+export class SignerQueueTimeoutError extends Error {
+  constructor(label: string, ms: number) {
+    super(`Signer queue: ${label} did not start within ${ms} ms`);
+    this.name = 'SignerQueueTimeoutError';
+  }
 }
 
 const lanes: Record<SignerLane, QueueEntry[]> = {
@@ -101,6 +114,7 @@ function drain(): void {
   while (inFlight < MAX_IN_FLIGHT) {
     const entry = nextEntry();
     if (!entry) return;
+    if (entry.deadline) clearTimeout(entry.deadline);
     inFlight += 1;
     // `run` may throw synchronously — Promise.resolve().then keeps that on the
     // rejection path instead of escaping into the drain loop.
@@ -119,20 +133,39 @@ function drain(): void {
  * backlog; within a lane, order is preserved.
  *
  * `label` is for diagnostics only (relay-debug panel, `window.__obeliskSignerQueue`).
+ *
+ * `startDeadlineMs`: reject with {@link SignerQueueTimeoutError} if the op is
+ * still queued after this long. For signatures that are worthless late — a
+ * voice SDP answer the peer stopped waiting for — so they don't occupy the
+ * signer ahead of fresher work. An op that already started runs to the end:
+ * a request handed to the extension cannot be recalled.
  */
 export function enqueueSignerOp<T>(
   lane: SignerLane,
   label: string,
   run: () => Promise<T>,
+  opts?: { startDeadlineMs?: number },
 ): Promise<T> {
   return new Promise<T>((resolve, reject) => {
-    lanes[lane].push({
+    const entry: QueueEntry = {
       lane,
       label,
       run: run as () => Promise<unknown>,
       resolve: resolve as (value: unknown) => void,
       reject,
-    });
+    };
+    const ms = opts?.startDeadlineMs;
+    if (ms !== undefined) {
+      entry.deadline = setTimeout(() => {
+        const queue = lanes[lane];
+        const i = queue.indexOf(entry);
+        if (i < 0) return;
+        queue.splice(i, 1);
+        pushRelayDebug({ kind: 'signer-queue', status: `${label} · dropped after ${ms} ms queued` });
+        reject(new SignerQueueTimeoutError(label, ms));
+      }, ms);
+    }
+    lanes[lane].push(entry);
     const stats = signerQueueStats();
     // Only surface a depth that means something — a queue that is keeping up
     // shouldn't spam the debug panel on every keystroke.
@@ -160,6 +193,7 @@ export function resetSignerQueue(): void {
   lanes.background = [];
   inFlight = 0;
   for (const entry of pending) {
+    if (entry.deadline) clearTimeout(entry.deadline);
     try {
       entry.reject(new Error('Signer queue reset'));
     } catch {

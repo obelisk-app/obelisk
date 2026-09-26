@@ -22,6 +22,9 @@ describe('four-peer mesh convergence', () => {
       presence(a, [b, c], [d]),
       presence(b, [a]),
     ]);
-    expect(new Set(discovered)).toEqual(new Set([a, b, c, d]));
+    // C is vouched for by a live connection (A's `p` tag). D is only in A's
+    // `peer` gossip — second-hand, so it is not counted from the relay; D is
+    // found through its own beacon or A's control-channel snapshot instead.
+    expect(new Set(discovered)).toEqual(new Set([a, b, c]));
   });
 });

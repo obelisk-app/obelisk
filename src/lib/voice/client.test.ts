@@ -55,7 +55,7 @@ const transportFake = vi.hoisted(() => {
   };
 });
 
-vi.mock('./transport', () => ({
+vi.mock('./transport', async (importOriginal) => ({
   publishPresenceBeacon: transportFake.publishPresenceBeacon,
   publishLeavePresence: transportFake.publishLeavePresence,
   subscribeRoster: transportFake.subscribeRoster,
@@ -69,18 +69,9 @@ vi.mock('./transport', () => ({
     subscribeSignals: transportFake.subscribeSignals,
   })),
   getSelfPubkey: transportFake.getSelfPubkey,
-  // Pure function — pass through unchanged for tests. Roster types now
-  // carry `videoTracks` too; the transitive computation only unions
-  // pubkeys, so the body stays the same.
-  transitiveParticipants: (roster: VoicePresence[]) => {
-    const set = new Set<string>();
-    for (const p of roster) {
-      set.add(p.pubkey);
-      for (const pk of p.connectedTo) set.add(pk);
-      for (const pk of p.knownPeers ?? []) set.add(pk);
-    }
-    return Array.from(set);
-  },
+  // Pure function — the real one, so a change to what counts as a
+  // participant (e.g. dropping `peer`-tag gossip) is tested here too.
+  transitiveParticipants: (await importOriginal<typeof import('./transport')>()).transitiveParticipants,
 }));
 
 // ── sfu-control mock ────────────────────────────────────────────────────
@@ -258,7 +249,7 @@ vi.mock('@/lib/nostr-bridge/client', () => ({
 }));
 
 // Import VoiceClient after mocks.
-import { VoiceClient } from './client';
+import { VoiceClient, SIGNER_PEER_BUDGET } from './client';
 
 let webrtc: ReturnType<typeof installWebRtcMocks>;
 let media: ReturnType<typeof installMediaDevicesMocks>;
@@ -377,6 +368,36 @@ describe('VoiceClient.join', () => {
     await client.join();
     expect(client.canJoin()).toBe(true);
     await client.leave();
+  });
+});
+
+describe('VoiceClient signaling degradation', () => {
+  type TransportOpts = { onSubscriptionDegraded?: (w: 'roster' | 'signals', d: boolean) => void };
+  const lastTransportOpts = async () => {
+    const mod = await import('./transport');
+    const calls = vi.mocked(mod.createVoiceTransport).mock.calls as unknown as TransportOpts[][];
+    return calls.at(-1)![0];
+  };
+
+  it('flags the store while either subscription is rate-limited, and clears on leave', async () => {
+    const { useVoiceStore } = await import('@/store/voice');
+    useVoiceStore.getState().setSignalingDegraded(false);
+    const client = new VoiceClient('ch1', { members: [SELF] });
+    await client.join();
+    const { onSubscriptionDegraded } = await lastTransportOpts();
+
+    onSubscriptionDegraded!('roster', true);
+    onSubscriptionDegraded!('signals', true);
+    expect(useVoiceStore.getState().isSignalingDegraded).toBe(true);
+    onSubscriptionDegraded!('roster', false);
+    // Signals still backing off — a joiner's offer would still be lost.
+    expect(useVoiceStore.getState().isSignalingDegraded).toBe(true);
+
+    await client.leave();
+    expect(useVoiceStore.getState().isSignalingDegraded).toBe(false);
+    // A late callback from a torn-down sub must not resurrect the banner.
+    onSubscriptionDegraded!('signals', true);
+    expect(useVoiceStore.getState().isSignalingDegraded).toBe(false);
   });
 });
 
@@ -673,6 +694,66 @@ describe('VoiceClient roster → peer lifecycle', () => {
     await client.leave();
   });
 
+  it('asks the remote to reset once when it rebuilds after an open timeout', async () => {
+    vi.useFakeTimers();
+    const client = new VoiceClient('ch1', { members: [SELF, PEER1] });
+    await client.join();
+    transportFake.fireRoster([presence(PEER1)]);
+    await flushMicrotasks(8);
+    transportFake.sentSignals.length = 0;
+
+    await vi.advanceTimersByTimeAsync(9_000);
+    await flushMicrotasks(8);
+
+    const resets = transportFake.sentSignals.filter(({ to, payload }) => to === PEER1 && payload.type === 'requestReset');
+    expect(resets).toHaveLength(1);
+    await client.leave();
+  });
+
+  it('rebuilds on a remote requestReset without asking for one back', async () => {
+    const client = new VoiceClient('ch1', { members: [SELF, PEER1] });
+    await client.join();
+    transportFake.fireRoster([presence(PEER1)]);
+    await flushMicrotasks(8);
+    const pcsBefore = webrtc.pcs().length;
+    transportFake.sentSignals.length = 0;
+
+    transportFake.fireSignal(PEER1, { type: 'requestReset', sessionId: 'remote-2', seq: 1 });
+    await flushMicrotasks(8);
+    await new Promise((r) => setTimeout(r, 150)); // dial debounce
+    await flushMicrotasks(8);
+
+    expect(webrtc.pcs().length).toBeGreaterThan(pcsBefore);
+    expect(transportFake.sentSignals.some(({ payload }) => payload.type === 'requestReset')).toBe(false);
+    await client.leave();
+  });
+
+  it('replaces the peer when the remote opens a new session, and hands it the offer', async () => {
+    const client = new VoiceClient('ch1', { members: [SELF, PEER1] });
+    await client.join();
+    transportFake.fireRoster([presence(PEER1)]);
+    await flushMicrotasks(8);
+    transportFake.fireSignal(PEER1, { type: 'ice', candidates: [], sessionId: 'remote-1', seq: 1 });
+    await flushMicrotasks(8);
+    const pcsBefore = webrtc.pcs().length;
+    const beforeSessions = new Set(transportFake.sentSignals.filter((s) => s.to === PEER1).map((s) => s.payload.sessionId));
+    transportFake.sentSignals.length = 0;
+
+    const remotePc = new FakeRTCPeerConnection();
+    remotePc.addTrack(new FakeMediaStreamTrack('audio'));
+    const offer = await remotePc.createOffer();
+    transportFake.fireSignal(PEER1, { type: 'offer', sdp: offer.sdp, sessionId: 'remote-2', seq: 1 });
+    await flushMicrotasks(8);
+
+    expect(webrtc.pcs().length).toBe(pcsBefore + 1); // the replacement (remotePc is untracked)
+    expect(transportFake.sentSignals.some(({ payload }) => payload.type === 'requestReset')).toBe(false);
+    // Whatever the new Peer sends goes out under a fresh session of its own.
+    for (const { payload } of transportFake.sentSignals.filter((s) => s.to === PEER1)) {
+      expect(beforeSessions.has(payload.sessionId)).toBe(false);
+    }
+    await client.leave();
+  });
+
   it('emits mesh peer connection states while media channels connect', async () => {
     const onPeerConnectionStatesChange = vi.fn();
     const client = new VoiceClient('ch1', {
@@ -872,11 +953,21 @@ describe('VoiceClient quality propagation', () => {
   });
 });
 
+describe('SIGNER_PEER_BUDGET', () => {
+  it('bundles ICE into the SDP and waits longer for every non-local signer', () => {
+    expect(SIGNER_PEER_BUDGET.nsec).toEqual({ trickle: true });
+    // An extension signs offer, answer and each candidate one at a time;
+    // 9 s with trickle on tore peers down mid-negotiation.
+    expect(SIGNER_PEER_BUDGET.nip07).toEqual({ trickle: false, connectTimeoutMs: 20_000 });
+    expect(SIGNER_PEER_BUDGET.bunker).toEqual({ trickle: false, connectTimeoutMs: 45_000 });
+  });
+});
+
 describe('VoiceClient bring-up beacon burst', () => {
   it('skips the burst and uses a 30 s cadence with a remote signer', async () => {
     vi.useFakeTimers();
     try {
-      const client = new VoiceClient('ch1', { members: [SELF], remoteSigning: true });
+      const client = new VoiceClient('ch1', { members: [SELF], signer: 'bunker' });
       await client.join();
       expect(transportFake.publishPresenceBeacon).toHaveBeenCalledTimes(1);
 
@@ -1236,6 +1327,50 @@ describe('VoiceClient room-full rejection', () => {
       (s) => s.to === bPub && s.payload.type === 'bye' && s.payload.byeReason === 'room-full',
     );
     expect(byeToB, 'no room-full bye to in-cap peer').toBeUndefined();
+    await client.leave();
+  });
+});
+
+describe('VoiceClient ghost peers', () => {
+  // G ('0'×64, lex-first) left: no beacon, no PC. B and C are live and
+  // still list G in their `peer` tags, as older clients keep doing.
+  const ghost = '0'.repeat(64);
+  const dPub = 'd'.repeat(64);
+  const gossipingRoster = () => [
+    { ...presence(PEER1), knownPeers: [PEER2, ghost] },
+    { ...presence(PEER2), knownPeers: [PEER1, ghost] },
+  ];
+
+  it('neither dials nor re-advertises a peer known only from gossip', async () => {
+    transportFake.setSelfPubkey(SELF);
+    const client = new VoiceClient('ch1', { members: [SELF, PEER1, PEER2, ghost] });
+    await client.join();
+    transportFake.fireRoster(gossipingRoster());
+    await flushMicrotasks(20);
+
+    expect(client.getParticipants()).not.toContain(ghost);
+    expect(transportFake.sentSignals.some((s) => s.to === ghost)).toBe(false);
+    await client.publishBeacon();
+    const lastBeacon = transportFake.publishPresenceBeacon.mock.calls.at(-1) as unknown as [string, string[], string[]];
+    expect(lastBeacon[2]).toEqual([PEER1, PEER2]);
+    await client.leave();
+  });
+
+  it('does not let a ghost take a real joiner\'s slot under the cap', async () => {
+    transportFake.setSelfPubkey(SELF);
+    const client = new VoiceClient('ch1', { members: [SELF, PEER1, PEER2, dPub, ghost] });
+    await client.join();
+    transportFake.fireRoster(gossipingRoster());
+    await flushMicrotasks(20);
+    transportFake.sentSignals.length = 0;
+
+    // Fourth real participant. Counting the ghost would make D fifth.
+    transportFake.fireSignal(dPub, { type: 'offer', sdp: 'v=0', sessionId: 'd-sid', seq: 1 });
+    await flushMicrotasks(10);
+    const roomFull = transportFake.sentSignals.find(
+      (s) => s.to === dPub && s.payload.type === 'bye' && s.payload.byeReason === 'room-full',
+    );
+    expect(roomFull).toBeUndefined();
     await client.leave();
   });
 });

@@ -179,7 +179,7 @@ predictable:
 | Mention/reply notifications (kind 9 `@you` or reply to you) | **Active relay**: per-channel ingest plus one live relay-wide `{kinds:[9], since: now}` REQ (`subscribeLivePings` — only ~8 channels get their own stream, so without it most channels never ping). **Background watch** of the 3 most-recently-used other relays on a separate pool (`src/lib/nostr-bridge/background-watch.ts`): `#p:[me]` catch-up from the mention cursor + live relay-wide kind 9 from now, both with `onauth` (a whitelist relay CLOSEs the first REQ `auth-required:` and nostr-tools only re-issues it when `onauth` is passed). Cards are stamped with their relay and cached per relay (`src/store/notifications.ts`) |
 | DMs (kind 4 + kind 1059 gift wraps) | **NIP-65 read+write union** of the user's relay list, plus our kind-10050 inbox |
 | DM read-state cursors + `inboxLastReadAt` (NIP-59 wraps) | **NIP-65 read+write union** |
-| Voice signaling / SFU RPC (kinds 25050, 31313, 31314) | Per-channel relay set (mesh: active relay; SFU: pinned trust set) |
+| Voice signaling / SFU RPC (kinds 20078, 25050, 31313, 31314) | Per-channel relay set (mesh: the relay the call was joined on, kept while browsing elsewhere — its NIP-42 AUTH is answered only while the call's roster/signal subs are open; SFU: pinned trust set). Mesh REQs are tag-indexed (`#e` roster, `#p` signals) — see [docs/voice/mesh-protocol.md](docs/voice/mesh-protocol.md) |
 | Social feeds / profiles (kinds 1, 6, 7, 16, 20, 1111, 9735, 9802, 30023) | **`preferences.socialRelays`** — user-chosen public relays, never the group relay. See [docs/social-feeds.md](docs/social-feeds.md) |
 
 Publishing has one extra rule that reads do not, because a publish rides an

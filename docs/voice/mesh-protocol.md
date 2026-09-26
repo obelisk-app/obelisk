@@ -4,7 +4,7 @@ Two Nostr event kinds + one in-PC data channel:
 
 | Kind | Direction | Purpose |
 |---|---|---|
-| **20078** (presence beacon) | broadcast (`#e` = channel id) | publisher-is-alive, with `p` connected tags and `peer` known-active gossip tags |
+| **20078** (presence beacon) | broadcast (`#e` = channel id) | publisher-is-alive, with `p` connected tags and `peer` first-hand-observed tags |
 | **25050** (signal envelope) | directed (`#p` = recipient) | SDP offer/answer/ICE/trackinfo/qualityhint/bye/requestReset, JSON-encoded in `content` |
 | **`obelisk-control` data channel** | per-peer-pair, ordered | hello, peerSnapshot, ping/pong, peerAdded/peerRemoved, bye |
 
@@ -19,7 +19,7 @@ Two Nostr event kinds + one in-PC data channel:
     ["t", "obelisk-voice-presence"],
     ["expiration", "<unix-seconds, +45 from publish>"],
     ["p", "<connected-peer-pubkey>"], // 0..N — peers we have a live PC to
-    ["peer", "<known-active-peer-pubkey>"], // 0..N — peers known from relay/control/local state
+    ["peer", "<observed-peer-pubkey>"], // 0..N — our PCs + live beacons we received (first-hand only)
     ["v", "camera"], ["v", "screen"],  // 0..2 — outbound video tracks
     ["sfu", "1"],                       // present iff this client is an SFU node
     ["client", "obelisk-mesh-test-peer"], // diagnostic mesh test peer marker
@@ -30,7 +30,8 @@ Two Nostr event kinds + one in-PC data channel:
 
 Cadence:
 
-- **Steady state**: every 10 s (`BEACON_INTERVAL_MS`).
+- **Steady state**: every 10 s (`BEACON_INTERVAL_MS`); 30 s with a NIP-46
+  bunker (`REMOTE_SIGNER_BEACON_INTERVAL_MS`), which also skips the burst.
 - **Bring-up burst**: at join, additional publishes scheduled at
   `[300, 900, 1800, 3500, 7000, 12000, 18000]` ms
   (`BEACON_BRINGUP_DELAYS_MS`) so a peer who joined a few seconds
@@ -53,10 +54,45 @@ user can fix access and retry without a beacon/redial loop.
 The receiver dedups by `(pubkey, created_at)` — newer beacons replace
 older ones; expired beacons (`expiration` past, normally 45 s after
 publish) are swept out by `subscribeRoster`'s
-`(PRESENCE_TTL_SECONDS / 2) * 1000` interval. Older clients that only
-understand `p` tags still get connected-peer transitive discovery; newer
-clients use `peer` tags to learn about participants that a publisher has
-seen but not directly connected to yet.
+`(PRESENCE_TTL_SECONDS / 2) * 1000` interval.
+
+Only publishers and their `p` tags count as participants
+(`transitiveParticipants`). `peer` tags are parsed but **not** counted: they
+used to be, and each client re-advertised everything it had learned, so two
+live clients kept a departed pubkey alive between them indefinitely — a ghost
+that cost a 9 s dial timeout per redial and a slot under the four-person cap.
+A client now puts only what it saw itself (its PCs, live beacons, active-call
+hints) in `peer` tags and control snapshots; the tag stays for older clients.
+
+The leave beacon carries `["status", "left"]` and an `expiration` **10 s in
+the future**. It used to be `now - 1`, which a NIP-40 relay drops before
+delivery — leavers then lingered for the previous beacon's full TTL.
+
+### Subscriptions
+
+Both REQs are tag-indexed and run on the dedicated voice pool:
+
+- roster: `{ kinds: [20078], "#e": [channelId] }`
+- signals: `{ kinds: [25050], "#p": [self], since: now - 60 }`
+- the bridge's relay-wide LIVE badge sub: `{ kinds: [20078], "#t": ["obelisk-voice-presence"] }`
+
+A kind-only filter reads as a scrape to obelisk-relay's unindexed-query
+budget (10/min per connection) and was CLOSEd rate-limited, which the bridge
+used to treat as final. Handlers still check `e`/`p` for relays that ignore
+tag filters on ephemeral kinds. A quota / rate-limit CLOSE is now reopened
+on a 5 → 10 → 20 → 60 s backoff (`resubscribeOnQuotaClose`), and the status
+bar reads "Reconnecting to voice…" until the feed serves again.
+
+### NIP-42 on the pinned relay
+
+A call stays on the relay it was joined on while the user browses others.
+While its roster/signal subs are open, the bridge answers that relay's AUTH
+challenge (`answerAuth` → `voiceAuthRelays`), without touching the browsed
+relay's access indicator. Publishes pass `authRetryOnRestricted`: a
+whitelist relay refuses an EVENT that beats AUTH with `restricted:` — not
+`auth-required:`, the only prefix nostr-tools retries — so the bridge AUTHs
+that socket and republishes once. A socket that still refuses after AUTH is
+not retried again until it reconnects with a new challenge.
 
 ### Diagnostic mesh test peers
 
@@ -96,7 +132,20 @@ Variants:
 | `trackinfo` | `trackInfo: { trackId, kind }`, `sessionId`, `seq` |
 | `qualityhint` | `qualityHint: { maxBitrate, maxFramerate }`, `sessionId`, `seq` |
 | `bye` | `sessionId`, `seq`, optional `byeReason: 'local-leave' \| 'room-full' \| string`. `'room-full'` is sent by every in-cap peer to a 5th arrival. |
-| `offer`, `answer`, `ice`, `requestReset` | accepted on receive for rolling compatibility with the former custom negotiator; new clients publish `peer` |
+| `requestReset` | `sessionId`, `seq`. Sent once when a client silently rebuilds its side (open timeout, lost heartbeat, closed PC) so the remote rebuilds too; never sent in reply to one. |
+| `offer`, `answer`, `ice` | accepted on receive for rolling compatibility with the former custom negotiator; new clients publish `peer` |
+
+`sessionId` identifies one **connection attempt**, not the client: every
+`Peer` gets a fresh one. A `Peer` binds to the remote's `sessionId` on its
+first signal and drops anything from another session (a late answer or bye
+for the connection it replaced). An offer under a new session means the
+remote rebuilt: the client replaces its `Peer` and hands it that offer.
+`requestReset`, a `room-full` bye (sent by the client, not a `Peer`) and
+signals without a `sessionId` (older clients) are always accepted.
+
+Negotiation signals may wait at most 15 s for a NIP-07 / NIP-46 signer to
+start on them (`signStartDeadlineMs`); past that the negotiation is stale
+and the unsigned signal is dropped. `bye` has no deadline.
 
 The relay transport treats `peerSignal` as opaque JSON. Nostr pubkeys remain
 the identity/admission boundary; `simple-peer` never chooses participant IDs.
@@ -112,8 +161,12 @@ kind-25050 `type: 'peer'` event, and the recipient passes `peerSignal` to
 
 ### Recovery
 
-`simple-peer` owns browser SDP, ICE, and media renegotiation. A 9 s initial
-connection watchdog tears down peers that never open. Terminal library/PC
+`simple-peer` owns browser SDP, ICE, and media renegotiation. An initial
+connection watchdog tears down peers that never open. Its budget depends on
+the signer (`SIGNER_PEER_BUDGET`): a local key trickles ICE with 9 s; NIP-07
+bundles candidates into the SDP (`trickle: false`) with 20 s; a bunker does
+the same with 45 s. Every signal is a separately signed event, and an
+extension signs them one at a time — trickle plus 9 s overran routinely. Terminal library/PC
 closure and heartbeat loss converge on `VoiceClient.tearDownPeer`; if the
 pubkey remains present in relay or control discovery, the debounced dial loop
 creates a fresh library peer and reattaches local tracks.
@@ -191,7 +244,9 @@ remote user is present. This prevents reciprocal kind 25050 leave/redial loops.
   signal is answered with relay `bye { byeReason: 'room-full' }`; the rejected
   client surfaces the error and leaves instead of retrying indefinitely.
 - **Full mesh:** `DiscoveryEngine` unions relay beacon publishers, beacon `p`
-  and `peer` tags, active-call hints, and attributed control-channel claims.
+  tags, active-call hints, and attributed control-channel claims. The same
+  set (`roomCandidates()`) feeds both cap checks — whom we dial and whom we
+  answer — so they agree on who the fifth person is.
   `VoiceClient.runDialLoop()` opens one `Peer` to every admitted pubkey. Thus,
   when A is connected to B and C, A's beacon/control snapshot teaches B about
   C and C about B; both run the same dial loop until all three pairwise links

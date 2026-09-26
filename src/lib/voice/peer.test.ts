@@ -195,3 +195,67 @@ describe('Peer simple-peer adapter', () => {
     expect(simple.destroyed).toBe(true);
   });
 });
+
+describe('Peer session binding', () => {
+  const answer = (sessionId?: string): VoiceSignalPayload => ({
+    type: 'peer', peerSignal: { type: 'answer', sdp: 'v=0' }, sessionId: sessionId as string, seq: 1,
+  });
+  const offer = (sessionId: string): VoiceSignalPayload => ({
+    type: 'peer', peerSignal: { type: 'offer', sdp: 'v=0' }, sessionId, seq: 1,
+  });
+
+  it('drops signals from a remote session other than the one it bound to', async () => {
+    const { peer, simple } = makePeer();
+    await peer.handleSignal(answer('remote-1'));
+    await peer.handleSignal(answer('remote-old'));
+    expect(simple.signaled).toHaveLength(1);
+  });
+
+  it('hands a new-session offer to its owner instead of feeding the old connection', async () => {
+    const onRemoteSessionChanged = vi.fn();
+    const { peer, simple, events } = makePeer();
+    events.onRemoteSessionChanged = onRemoteSessionChanged;
+    await peer.handleSignal(answer('remote-1'));
+    const fresh = offer('remote-2');
+    await peer.handleSignal(fresh);
+    expect(onRemoteSessionChanged).toHaveBeenCalledWith(fresh);
+    expect(simple.signaled).toHaveLength(1);
+  });
+
+  it('honours requestReset and room-full byes from any session', async () => {
+    const onPeerDead = vi.fn();
+    const { peer, events } = makePeer();
+    events.onPeerDead = onPeerDead;
+    await peer.handleSignal(answer('remote-1'));
+    await peer.handleSignal({ type: 'requestReset', sessionId: 'remote-2', seq: 1 });
+    await peer.handleSignal({ type: 'bye', byeReason: 'room-full', sessionId: 'client-id', seq: 0 });
+    expect(onPeerDead.mock.calls.map((c) => c[0])).toEqual(['reset-requested', 'bye:room-full']);
+  });
+
+  it('ignores a stale bye from the connection it replaced', async () => {
+    const onPeerDead = vi.fn();
+    const { peer, events } = makePeer();
+    events.onPeerDead = onPeerDead;
+    await peer.handleSignal(answer('remote-2'));
+    await peer.handleSignal({ type: 'bye', byeReason: 'local-leave', sessionId: 'remote-1', seq: 9 });
+    expect(onPeerDead).not.toHaveBeenCalled();
+  });
+
+  it('accepts signals without a sessionId, as older clients send', async () => {
+    const { peer, simple } = makePeer();
+    await peer.handleSignal(answer('remote-1'));
+    await peer.handleSignal(answer(undefined));
+    expect(simple.signaled).toHaveLength(2);
+  });
+
+  it('sends requestReset under its own session', async () => {
+    const { peer, sent } = makePeer({ sessionId: 'mine' });
+    peer.requestReset();
+    await Promise.resolve();
+    expect(sent).toEqual([expect.objectContaining({ type: 'requestReset', sessionId: 'mine' })]);
+    peer.close({ notifyRemote: false });
+    peer.requestReset();
+    await Promise.resolve();
+    expect(sent).toHaveLength(1);
+  });
+});

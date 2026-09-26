@@ -25,6 +25,12 @@ interface VoiceState {
   isCameraOn: boolean;
   isScreenSharing: boolean;
   isConnecting: boolean;
+  /**
+   * A relay rate-limited the call's roster or signal subscription closed
+   * and it is backing off before reopening. Peers already connected keep
+   * talking; new joiners and renegotiations stall until it recovers.
+   */
+  isSignalingDegraded: boolean;
   error: string | null;
   /** Whether the right-side text-chat rail is visible inside the voice room. */
   isVoiceChatOpen: boolean;
@@ -56,6 +62,7 @@ interface VoiceState {
   setCameraOn: (on: boolean) => void;
   setScreenSharing: (on: boolean) => void;
   setConnecting: (connecting: boolean) => void;
+  setSignalingDegraded: (degraded: boolean) => void;
   setError: (error: string | null) => void;
   setVoiceChatOpen: (open: boolean) => void;
   setVideoQuality: (q: VideoQuality) => void;
@@ -84,6 +91,7 @@ export const useVoiceStore = create<VoiceState>()(
   isCameraOn: false,
   isScreenSharing: false,
   isConnecting: false,
+  isSignalingDegraded: false,
   error: null,
   isVoiceChatOpen: false,
   videoQuality: 'auto' as VideoQuality,
@@ -104,6 +112,7 @@ export const useVoiceStore = create<VoiceState>()(
   setCameraOn: (isCameraOn) => set({ isCameraOn }),
   setScreenSharing: (isScreenSharing) => set({ isScreenSharing }),
   setConnecting: (isConnecting) => set({ isConnecting }),
+  setSignalingDegraded: (isSignalingDegraded) => set({ isSignalingDegraded }),
   setError: (error) => set({ error }),
   setVoiceChatOpen: (isVoiceChatOpen) => set({ isVoiceChatOpen }),
   setVideoQuality: (videoQuality) => set({ videoQuality }),
@@ -150,6 +159,7 @@ export const useVoiceStore = create<VoiceState>()(
       isCameraOn: false,
       isScreenSharing: false,
       isConnecting: false,
+      isSignalingDegraded: false,
       error: null,
       peerQuality: {},
       speakingPubkeys: {},

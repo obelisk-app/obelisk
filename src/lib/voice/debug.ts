@@ -15,6 +15,7 @@ export type VoiceDebugReason =
   | 'membership-final'
   | 'self'
   | 'not-for-me'
+  | 'wrong-channel'
   | 'duplicate'
   | 'unknown-payload'
   | 'sfu-routed'
