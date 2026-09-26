@@ -142,6 +142,13 @@ export const useDmCallStore = create<DmCallState>((set, get) => {
       video,
       iceTransportPolicy: relayOnly ? 'relay' : 'all',
       onMedia: (media) => { if (session === s) set({ media }); },
+      // The callee's hello reached us on the call relay — usually before the
+      // gift-wrapped accept does. Stop ringing; the session is connecting.
+      onPeerJoined: () => {
+        if (session !== s || get().status !== 'outgoing') return;
+        clearRinging();
+        set({ status: 'connecting' });
+      },
       onPhase: (phase: DmCallPhase, reason?: string) => {
         if (session !== s) return;
         if (phase === 'connected') {
@@ -191,6 +198,9 @@ export const useDmCallStore = create<DmCallState>((set, get) => {
         return;
       }
       if (session !== s) return;
+      // Subscribe on the call relays now, while it rings: by the time the
+      // callee answers, our REQ is long live.
+      s.listen();
       stopRing = startRingback().stop;
       ringTimer = setTimeout(() => {
         if (session !== s || get().status !== 'outgoing') return;
@@ -222,15 +232,15 @@ export const useDmCallStore = create<DmCallState>((set, get) => {
         return;
       }
       if (session !== s) return;
-      // Subscribe before accepting, so the caller's first offer has somewhere to land.
-      s.openSignaling(invite.eph);
-      s.connect();
-      try {
-        await send(invite.from, { type: 'accept', callId: invite.callId, eph: s.selfEph }, true);
-      } catch (e) {
-        set({ error: (e as Error).message || 'could not answer' });
-        finishCall('error');
-      }
+      // Two paths to the caller, raced: the hello on the call relay (fast —
+      // no signer, no inbox lookup) and the gift-wrapped accept (the one that
+      // also tells our other devices to stop ringing). Either is enough.
+      void s.answer(invite.eph);
+      void send(invite.from, { type: 'accept', callId: invite.callId, eph: s.selfEph }, true).catch((e) => {
+        // The hello may already have connected us; only a call still waiting
+        // on the other side is lost without this.
+        console.warn('[dm-call] accept gift wrap failed', e);
+      });
     },
 
     declineCall() {
@@ -323,11 +333,10 @@ export function handleDmCallMessage(msg: IncomingDmCallMessage & { peer: string 
         if (status === 'incoming') finishCall('answered-elsewhere');
         return;
       }
-      if (status !== 'outgoing' || !session || !msg.eph) return;
+      if ((status !== 'outgoing' && status !== 'connecting') || !session || !msg.eph) return;
       clearRinging();
-      useDmCallStore.setState({ status: 'connecting' });
-      session.openSignaling(msg.eph);
-      session.connect();
+      if (status === 'outgoing') useDmCallStore.setState({ status: 'connecting' });
+      session.peerAccepted(msg.eph);
       return;
     case 'decline':
       if (fromMe) {

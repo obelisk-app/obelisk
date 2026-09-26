@@ -53,55 +53,78 @@ Differences from a chat message:
   - Anything older than 60 s is dropped in the bridge, so a reconnect's backlog never rings.
 - **Control messages never enter `dmsByPeer`.** They go to `subscribeDmCallMessages` listeners.
 
-### 2. Negotiation: throwaway keys on the call relays
+### 2. Negotiation: throwaway keys on the call relays, delivered reliably
 
 Each side mints a keypair for the call and reveals only the public half,
-inside the gift-wrapped invite or accept. Negotiation events then go out as
-follows:
+inside the gift-wrapped invite / accept. Negotiation events are kind 25050
+signed by that throwaway key, `["p", <other throwaway key>]`,
+`["t", "obelisk-dm-call"]`, `["expiration", now+120]`, with NIP-44 content
+between the two throwaway keys:
 
-- Kind 25050, signed by the throwaway key.
-- `["p", <other throwaway key>]`, `["t", "obelisk-dm-call"]` and `["expiration", now+120]`.
-- Content is NIP-44 between the two throwaway keys, holding `{ callId, payload }`.
-- `payload` is the mesh's `VoiceSignalPayload` (simple-peer SDP, ICE, trackinfo, bye).
+```json
+{ "v": 2, "callId": "…", "m": [{ "i": 3, "b": { "t": "sig", "s": <VoiceSignalPayload> } }], "a": [5, 6] }
+```
 
-`CallSignalChannel` uses its **own** `SimplePool`. The bridge's pool answers
-NIP-42 AUTH with the user's real key; this one answers only with the
-throwaway key. Consequences:
+**Kind 25050 is ephemeral**: a relay forwards it to REQs open at that
+instant and stores nothing. The first version sent the offer the moment the
+accept arrived, and the answer the moment the offer did. Whenever the other
+side's REQ wasn't live yet, or a relay dropped an event under rate limiting,
+the message was gone and the call sat out a 12 s connect timeout — the
+"sometimes instant, sometimes never" behaviour. `CallSignalChannel` now:
 
-- The call relay sees two random keys trading opaque blobs for a few seconds.
-  - It does not see who is calling whom.
-  - It does not see the call id.
-  - It does not see the SDP, and so not the IP addresses inside it.
-- A relay that whitelists real npubs cannot carry a call.
-  - Group relays such as `public.obelisk.ar` are in that category.
-  - This is why call relays are a separate list, `preferences.callRelays`.
-  - It defaults to `relay.damus.io` and `nos.lol`, and is editable in Settings → Privacy → Calls.
-  - The caller's list travels in the invite, so both sides use the same relays.
+- **numbers every message** (`i`), **acks** what it received (`a`), and
+  **re-sends** anything unacked every ~1.2 s (jittered ±25 %, so the two
+  sides never re-send in lockstep), up to 10 times; each number is delivered
+  once;
+- **batches** — an offer and its trickle of ICE candidates, plus acks, ride
+  in one event (40 ms window, capped well under NIP-44's 64 KiB);
+- exposes **`ready`**, resolved on EOSE: the REQ is live from then on;
+- lets a side **drop the re-sends of a torn-down negotiation**
+  (`dropSession`), and the receiver ignores any message numbered before the
+  newest offer that belongs to another session — so a late re-send can never
+  drag a rebuilt connection back.
 
-No presence beacon (kind 20078) is published for a DM call. The two sides
-found each other through the invite, so nothing announces the call on any
-relay.
+`CallSignalChannel` uses its **own** `SimplePool` (with reconnect, so a
+socket that drops mid-call re-issues the REQ and a later renegotiation still
+gets through). The bridge's pool answers NIP-42 AUTH with the user's real
+key; this one answers only with the throwaway key. So the call relay sees
+two random keys trading opaque blobs — not who is calling whom, not the call
+id, not the SDP (and so not the IP addresses in it) — and a relay that
+whitelists real npubs (the group relays, `public.obelisk.ar`) cannot carry a
+call. That is why call relays are a separate list, `preferences.callRelays`
+(default `relay.damus.io`, `nos.lol`; Settings → Privacy → Calls). The
+caller's list travels in the invite, so both sides use the same ones.
+
+No presence beacon (kind 20078) is published for a DM call.
 
 ## Call flow
 
 ```
-caller                                   callee
-startCall ─ acquire mic/cam, ringback
-          ─ invite (gift wrap) ────────▶ rings (if mayRing)
-                                         acceptCall ─ acquire media
-                                                     ─ openSignaling(caller eph)   ← subscribe first
-          ◀──────── accept (gift wrap) ─ ─ accept(own eph) + self notice
-openSignaling(callee eph), connect ─ offer (kind 25050) ─▶ Peer answers
+caller                                        callee
+startCall ─ acquire media ─ listen()  (REQ on own eph, live while it rings)
+          ─ invite (gift wrap) ─────────────▶ rings (if mayRing)
+                                              acceptCall ─ acquire media
+                                                ├─ answer(): REQ on own eph → EOSE → hello ─┐
+                                                └─ accept (gift wrap, + self notice) ───┐   │
+learns callee eph from the hello ◀──────────── (call relay, re-sent until acked) ───────┼───┘
+  (or from the accept, whichever first)  ◀──────────────────────────────────────────────┘
+build Peer, offer ── reliable ──────────────▶ Peer answers ── reliable ──▶
           ◀══════════ WebRTC media (DTLS-SRTP), control data channel ══════════▶
 hangup ─ Peer bye (call relay) + hangup (gift wrap) ─▶ ends
 ```
 
-Recovery reuses the mesh semantics:
-- **Caller is the impolite side.** simple-peer's initiator.
-- **Timeout or lost heartbeat:**
-  - The caller rebuilds with a fresh `sessionId` and sends `requestReset`.
-  - The callee follows the new offer through `onRemoteSessionChanged`.
-- **Gives up:** after 4 rebuilds on a call that never connected (`connect-failed`), or after 30 s down on one that did (`connection-lost`).
+The caller offers only once it has heard the callee's hello (or the accept)
+*and* its own REQ is live, so both subscriptions exist before anything that
+matters is sent. The hello usually beats the gift-wrapped accept, which
+needs a signer round trip and an inbox relay.
+
+Recovery reuses the mesh semantics — the caller is the impolite side; on an
+open timeout or lost heartbeat it rebuilds with a fresh `sessionId` and
+`requestReset`, and the callee follows the new offer
+(`onRemoteSessionChanged`) — but with reliable delivery a rebuild is now the
+exception rather than the normal cost of a lost event. A call that hasn't
+connected 40 s after the rendezvous ends `connect-failed`; one that connected
+and stays down 30 s ends `connection-lost`.
 
 ## Policies
 
@@ -137,8 +160,8 @@ Recovery reuses the mesh semantics:
 ## Tests
 
 - `src/lib/dm-call/protocol.test.ts`: parse, validation, freshness.
-- `src/lib/dm-call/signaling.test.ts`: throwaway-key round trip, opacity on the wire, peer pinning, close.
-- `src/lib/dm-call/session.test.ts`: roles, attach, bye, rebuild and give-up, reconnect timeout, hangup.
+- `src/lib/dm-call/signaling.test.ts` — learning the peer from its hello, delivery to a REQ that went live late, re-send until acked / exactly-once, batching, give-up, stale-session purge, strangers ignored, size cap.
+- `src/lib/dm-call/session.test.ts` — two real sessions over `fake-ephemeral-relay.ts` (a relay that keeps nothing and forwards only to live REQs): connect via hello alone, via the accept alone, and without a rebuild under slow REQs and 30–50 % seeded random loss; bye, give-up, reconnect timeout, caller rebuild followed by the callee, hangup.
 - `src/store/dm-call.test.ts`: the state machine, contacts-only, busy, answered elsewhere, IP policy.
 - `src/lib/nostr-bridge/dm-nip17.test.ts` (`DM call control messages`): expiring wrap, listener delivery, stale drop, self notice.
 - `src/lib/notifications/sound.test.ts`: the ring loop.

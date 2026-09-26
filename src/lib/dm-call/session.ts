@@ -9,12 +9,28 @@
  * so there is no roster, no presence beacon (nothing announces the call on a
  * relay), no membership gate and no SFU.
  *
- * Who offers: the caller is the impolite side (simple-peer initiator), and
- * only builds its `Peer` once the callee's `accept` arrives — the callee opens
- * its signaling subscription *before* sending that accept, so the caller's
- * first offer has somewhere to land. If the connection doesn't come up, or
- * drops later, the caller rebuilds with a fresh session and the callee follows
- * the new offer (`onRemoteSessionChanged`), the same recovery the mesh uses.
+ * ## Rendezvous
+ *
+ * Negotiation events are ephemeral, so both subscriptions must be live
+ * before anything that matters is sent. The order is:
+ *
+ * 1. Caller subscribes to its throwaway key as soon as it rings (`listen()`),
+ *    so its REQ is long live by the time anyone answers.
+ * 2. Callee accepts: subscribes to its own key, waits for EOSE (`ready`),
+ *    then says `hello` on the call relays — reliably, re-sent until acked.
+ * 3. The caller learns the callee's key from that hello (or from the
+ *    gift-wrapped accept, whichever lands first), and only then builds its
+ *    `Peer` and offers. Both REQs are provably live at that point.
+ *
+ * Everything after that is re-sent until acknowledged (`CallSignalChannel`),
+ * so a dropped event costs one re-send interval, not a connect timeout.
+ *
+ * Recovery: the caller is the impolite side (simple-peer initiator). If the
+ * connection doesn't come up, or drops later, the caller rebuilds with a fresh
+ * session and the callee follows the new offer (`onRemoteSessionChanged`),
+ * the same recovery the mesh uses. Messages from a session either side has
+ * torn down are dropped on both ends, so a late re-send can't pull the call
+ * back to it.
  */
 
 import { Peer, type PeerOptions } from '@/lib/voice/peer';
@@ -47,6 +63,8 @@ export interface DmCallSessionOptions {
   iceTransportPolicy: RTCIceTransportPolicy;
   onPhase: (phase: DmCallPhase, reason?: string) => void;
   onMedia: (media: DmCallMediaState) => void;
+  /** Caller only: the callee is on the call relay (its hello arrived). */
+  onPeerJoined?: () => void;
   /** Test seams. */
   pool?: CallPoolLike;
   createPeer?: (opts: PeerOptions) => Peer;
@@ -58,6 +76,13 @@ export interface DmCallSessionOptions {
 const MAX_REBUILDS = 4;
 /** How long a connected call may stay down before it is ended. */
 const RECONNECT_GIVE_UP_MS = 30_000;
+/** A call that hasn't connected this long after the rendezvous is given up. */
+const CONNECT_DEADLINE_MS = 40_000;
+
+function isOffer(payload: VoiceSignalPayload): boolean {
+  if (payload.type === 'offer') return true;
+  return payload.type === 'peer' && (payload.peerSignal as { type?: string } | undefined)?.type === 'offer';
+}
 
 function sessionId(): string {
   const b = crypto.getRandomValues(new Uint8Array(8));
@@ -66,10 +91,16 @@ function sessionId(): string {
 
 export class DmCallSession {
   private readonly opts: DmCallSessionOptions;
-  private channel: CallSignalChannel | null = null;
-  private peerEph: string | null = null;
+  private readonly channel: CallSignalChannel;
   readonly selfEph: string;
   private peer: Peer | null = null;
+  /** Our `sessionId` on the current `Peer`, to purge its re-sends when dropped. */
+  private peerSession: string | null = null;
+  /** Newest offer seen from the other side: its message number and session. */
+  private lastOffer: { id: number; session: string } | null = null;
+  private listening = false;
+  private building = false;
+  private connectDeadline: ReturnType<typeof setTimeout> | null = null;
   private phase: DmCallPhase = 'connecting';
   private everConnected = false;
   private rebuilds = 0;
@@ -87,6 +118,18 @@ export class DmCallSession {
   constructor(opts: DmCallSessionOptions) {
     this.opts = opts;
     this.selfEph = getPublicKey(opts.selfSk);
+    this.channel = new CallSignalChannel({
+      relays: opts.relays,
+      selfSk: opts.selfSk,
+      callId: opts.callId,
+      onSignal: (p, id) => this.onSignal(p, id),
+      onHello: () => {
+        if (this.opts.role !== 'caller' || this.ended) return;
+        this.opts.onPeerJoined?.();
+        void this.connectWhenReady();
+      },
+      pool: opts.pool,
+    });
   }
 
   /** Acquire the mic (and camera for a video call). Call before `connect`. */
@@ -106,43 +149,77 @@ export class DmCallSession {
   }
 
   /**
-   * Open the signaling subscription to the other side's throwaway key. The
-   * callee does this before sending its accept; the caller when the accept
-   * arrives (it only learns the key then).
+   * Caller: subscribe to our throwaway key now, while it rings, so the REQ is
+   * long live by the time the callee answers.
    */
-  openSignaling(peerEph: string): void {
-    if (this.ended || this.channel) return;
-    this.peerEph = peerEph;
-    this.channel = new CallSignalChannel({
-      relays: this.opts.relays,
-      selfSk: this.opts.selfSk,
-      peerEph,
-      callId: this.opts.callId,
-      onSignal: (p) => this.onSignal(p),
-      pool: this.opts.pool,
-    });
+  listen(): void {
+    if (this.ended || this.listening) return;
+    this.listening = true;
     this.channel.start();
   }
 
-  /** Build the `Peer`. Needs `openSignaling` first. */
+  /**
+   * Caller: the gift-wrapped accept named the callee's key. Usually the
+   * callee's hello on the call relay got here first; either one is enough.
+   */
+  peerAccepted(peerEph: string): void {
+    if (this.ended) return;
+    this.channel.setPeer(peerEph);
+    void this.connectWhenReady();
+  }
+
+  /**
+   * Callee: subscribe to our key, wait until the REQ is live, then say hello
+   * and build the (polite) `Peer`. Resolves once the hello is queued.
+   */
+  async answer(callerEph: string): Promise<void> {
+    if (this.ended) return;
+    this.channel.setPeer(callerEph);
+    this.listen();
+    await this.channel.ready;
+    if (this.ended) return;
+    this.channel.sendHello();
+    this.connect();
+  }
+
+  private async connectWhenReady(): Promise<void> {
+    if (this.peer || this.building) return;
+    this.building = true;
+    try {
+      await this.channel.ready;
+    } finally {
+      this.building = false;
+    }
+    this.connect();
+  }
+
+  /** Build the `Peer`, once the other side's key is known. */
   connect(): void {
-    if (this.ended || this.peer || !this.channel) return;
+    if (this.ended || this.peer || !this.channel.peer) return;
+    if (!this.connectDeadline && !this.everConnected) {
+      this.connectDeadline = setTimeout(() => {
+        if (!this.everConnected) this.end('connect-failed');
+      }, CONNECT_DEADLINE_MS);
+    }
     this.buildPeer();
   }
 
   private buildPeer(): void {
     const channel = this.channel;
-    if (!channel || !this.peerEph) return;
+    const remote = channel.peer;
+    if (!remote) return;
     const create = this.opts.createPeer ?? ((o: PeerOptions) => new Peer(o));
+    const ownSession = sessionId();
+    this.peerSession = ownSession;
     const peer = create({
-      remotePubkey: this.peerEph,
+      remotePubkey: remote,
       polite: this.opts.role === 'callee',
-      sessionId: sessionId(),
+      sessionId: ownSession,
       iceTransportPolicy: this.opts.iceTransportPolicy,
       // Relay-only needs TURN allocation before the first candidate; give it
       // longer than a LAN mesh gets.
       connectTimeoutMs: this.opts.iceTransportPolicy === 'relay' ? 15_000 : 12_000,
-      send: (payload) => channel.send(payload).catch((e) => console.warn('[dm-call] signal publish failed', e)),
+      send: (payload) => channel.send(payload),
       control: { selfBuild: 'dm-call', metrics: emptyVoiceMetrics(), getCurrentPeers: () => [] },
       events: {
         onRemoteTrack: (track, _stream, kind) => this.addRemoteTrack(track, kind),
@@ -176,8 +253,16 @@ export class DmCallSession {
     if (this.screenAudioTrack) await peer.setLocalTrack('screen-audio', this.screenAudioTrack);
   }
 
-  private onSignal(payload: VoiceSignalPayload): void {
+  private onSignal(payload: VoiceSignalPayload, id: number): void {
     if (this.ended) return;
+    // Message numbers are monotonic per sender. Anything numbered before the
+    // newest offer but belonging to another session is a late re-send from a
+    // negotiation the other side already replaced — never let it through.
+    if (this.lastOffer && id < this.lastOffer.id && payload.sessionId && payload.sessionId !== this.lastOffer.session) return;
+    if (isOffer(payload) && payload.sessionId) {
+      if (this.lastOffer && id < this.lastOffer.id) return;
+      this.lastOffer = { id, session: payload.sessionId };
+    }
     if (!this.peer) {
       // The callee builds on the first offer if it hasn't already.
       if (this.opts.role === 'callee') this.buildPeer();
@@ -189,6 +274,10 @@ export class DmCallSession {
   private onConnected(): void {
     this.everConnected = true;
     this.rebuilds = 0;
+    if (this.connectDeadline) {
+      clearTimeout(this.connectDeadline);
+      this.connectDeadline = null;
+    }
     if (this.giveUpTimer) {
       clearTimeout(this.giveUpTimer);
       this.giveUpTimer = null;
@@ -238,6 +327,8 @@ export class DmCallSession {
   private dropPeer(notifyRemote: boolean): void {
     const peer = this.peer;
     this.peer = null;
+    if (this.peerSession) this.channel.dropSession(this.peerSession);
+    this.peerSession = null;
     peer?.close({ notifyRemote });
     this.remote = {};
     this.remoteTrackKind.clear();
@@ -333,12 +424,13 @@ export class DmCallSession {
     if (this.ended) return;
     this.ended = true;
     if (this.giveUpTimer) clearTimeout(this.giveUpTimer);
+    if (this.connectDeadline) clearTimeout(this.connectDeadline);
     const peer = this.peer;
     this.peer = null;
     peer?.close({ notifyRemote });
-    // Give the bye a moment to leave before the sockets go.
+    // Give the bye a moment (and a re-send or two) before the sockets go.
     const channel = this.channel;
-    setTimeout(() => channel?.close(), notifyRemote ? 1500 : 0);
+    setTimeout(() => channel.close(), notifyRemote ? 2500 : 0);
     for (const t of [this.micTrack, this.camTrack, this.screenTrack, this.screenAudioTrack]) t?.stop();
     this.micTrack = this.camTrack = this.screenTrack = this.screenAudioTrack = null;
     this.remote = {};

@@ -34,8 +34,9 @@ vi.mock('@/lib/dm-call/session', () => ({
       sessions.push(this as never);
     }
     async acquireMedia() { this.calls.push('acquire'); }
-    openSignaling(eph: string) { this.calls.push(`open:${eph}`); }
-    connect() { this.calls.push('connect'); }
+    listen() { this.calls.push('listen'); }
+    peerAccepted(eph: string) { this.calls.push(`accepted:${eph}`); }
+    async answer(eph: string) { this.calls.push(`answer:${eph}`); }
     hangup() { this.calls.push('hangup'); }
     end(reason: string) { this.calls.push(`end:${reason}`); }
     setMic() {}
@@ -81,12 +82,23 @@ describe('dm-call store', () => {
 
     handleDmCallMessage({ type: 'accept', callId, eph: EPH, from: BOB, sentAt: 0, peer: BOB }, ME);
     expect(useDmCallStore.getState().status).toBe('connecting');
-    expect(sessions[0].calls).toEqual(['acquire', `open:${EPH}`, 'connect']);
+    expect(sessions[0].calls).toEqual(['acquire', 'listen', `accepted:${EPH}`]);
     expect(ring.ringbackStopped).toBe(1);
 
     sessions[0].opts.onPhase('connected');
     expect(useDmCallStore.getState().status).toBe('active');
     expect(useDmCallStore.getState().connectedAt).not.toBeNull();
+  });
+
+  it("the callee's hello on the call relay moves the call on before the accept lands", async () => {
+    await useDmCallStore.getState().startCall(BOB, false);
+    (sessions[0].opts as unknown as { onPeerJoined: () => void }).onPeerJoined();
+    expect(useDmCallStore.getState().status).toBe('connecting');
+    expect(ring.ringbackStopped).toBe(1);
+    // The late accept still reaches the session, and doesn't regress the state.
+    handleDmCallMessage({ type: 'accept', callId: sent[0].msg.callId, eph: EPH, from: BOB, sentAt: 0, peer: BOB }, ME);
+    expect(sessions[0].calls).toContain(`accepted:${EPH}`);
+    expect(useDmCallStore.getState().status).toBe('connecting');
   });
 
   it('ignores an accept for another call or from someone else', async () => {
@@ -121,7 +133,7 @@ describe('dm-call store', () => {
     expect(ring.incomingStopped).toBe(1);
     expect(sessions[0].opts.role).toBe('callee');
     expect(sessions[0].opts.relays).toEqual(['wss://call.example']);
-    expect(sessions[0].calls).toEqual(['acquire', `open:${EPH}`, 'connect']);
+    expect(sessions[0].calls).toEqual(['acquire', `answer:${EPH}`]);
     const acc = sent.find((s) => s.msg.type === 'accept')!;
     expect(acc.msg.eph).toBe(sessions[0].selfEph);
     expect(acc.opts.selfNotice).toBe(true);
