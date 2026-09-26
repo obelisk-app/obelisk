@@ -7230,10 +7230,12 @@ export class BridgeImpl {
    */
   private async ingestIncomingGiftWrap(ev: NostrEvent): Promise<void> {
     if (!this.session) return;
-    // Before any decrypt: a wrap we opened in an earlier session has already
-    // landed in the persisted DM store, and re-opening it would cost two
-    // signer round-trips to learn nothing. See `./wrap-ledger.ts`.
-    if (hasSeenWrap('dm', ev.id)) return;
+    // Before any decrypt: a wrap we already know produces nothing for a
+    // thread (a call signal, a kind we don't read) isn't worth two signer
+    // round-trips again. Chat wraps are never in this set — decrypted DMs are
+    // memory-only, so re-opening their wrap is how a reload gets them back.
+    // See `./wrap-ledger.ts`.
+    if (hasSeenWrap('dm:inert', ev.id)) return;
     const me = this.session.pubKeyHex;
     const generation = this.connectGeneration;
     // A fresh signer + tracker per call: `unwrapGiftWrap` doesn't report
@@ -7257,14 +7259,14 @@ export class BridgeImpl {
       return; // can't decrypt/verify → skip silently, same as the NIP-04 path
     }
     if (this.session?.pubKeyHex !== me || this.connectGeneration !== generation) return;
-    // Mark here, not after the kind check: "this wrap is not a chat rumor" is
-    // a permanent property of an immutable event, and re-deriving it next
-    // session would cost the same two round-trips. A *failed* decrypt above
-    // stays unmarked — that one can be transient (locked extension, declined
-    // prompt) and deserves a retry. Deliberately after the session/generation
-    // guard, since a mid-flight account switch means a different ledger.
-    markWrapSeen('dm', ev.id);
+    // Only wraps that will never show anything are recorded. A *failed*
+    // decrypt above stays unmarked — that can be transient (locked
+    // extension, declined prompt) and deserves a retry. Deliberately after
+    // the session/generation guard, since a mid-flight account switch means
+    // a different ledger.
     if (message.kind === KIND_DM_CALL_RUMOR) {
+      // Worthless a minute after it was sent.
+      markWrapSeen('dm:inert', ev.id);
       this.ingestDmCallMessage(message, senderPubkey);
       return;
     }
@@ -7273,8 +7275,9 @@ export class BridgeImpl {
       // An undecryptable file message (unknown algorithm, non-http URL) is
       // dropped like any other rumor we cannot render.
       file = parseDmFileRumor(message.content, message.tags) ?? undefined;
-      if (!file) return;
+      if (!file) { markWrapSeen('dm:inert', ev.id); return; }
     } else if (message.kind !== KIND_NIP44_DM) {
+      markWrapSeen('dm:inert', ev.id);
       return; // ignore other NIP-17 rumor kinds
     }
     const outgoing = senderPubkey === me;

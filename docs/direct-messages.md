@@ -34,7 +34,9 @@ DMs live **in the bridge**, delegating the wire format to `@nostr-wot/dm`. There
 
 Both inbound paths are live: kind-4 events and kind-1059 wraps ingest into the same `dmsByPeer` store, and each message records which one carried it.
 
-Rumor kinds the bridge reads out of a wrap: **14** (chat), **15** (file message, below) and **25055** (call control — never enters `dmsByPeer`; see [docs/voice/dm-calls.md](voice/dm-calls.md)). Every other kind is marked seen in the wrap ledger and dropped — which is why a new rumor kind must ship its receive path in the same release as its send path: a wrap opened by a build that did not understand it is never re-opened.
+Rumor kinds the bridge reads out of a wrap: **14** (chat), **15** (file message, below) and **25055** (call control — never enters `dmsByPeer`; see [docs/voice/dm-calls.md](voice/dm-calls.md)).
+
+The wrap ledger (`wrap-ledger.ts`, scope `dm:inert`) remembers only wraps that **never produce a thread entry** — call signals, kinds we don't read, file messages we can't decrypt — so they aren't re-opened on the next load. **Chat wraps are never recorded**: decrypted DMs live in memory only, so re-opening the wrap is how a reload gets the message back. (The retired `dm` scope recorded chat wraps too, and from 2026-08-22 to 2026-09-26 every already-opened NIP-17 message was missing after a page reload; stored ledgers still carry its bit, which nothing reads.) A new rumor kind must still ship its receive path with its send path: an older build files it as inert and won't open it again.
 
 ## Files, voice notes, stickers
 
@@ -236,6 +238,7 @@ Incoming DMs push a card onto the DM notification stream (`useNotificationsStore
 ## Troubleshooting
 
 - **"Sent a message but they never got it."** Check whether the recipient has published a kind-10050. Without one the wrap falls to their NIP-65 read set, and without that to our own active relay — neither of which is guaranteed to overlap with what they actually read. They can fix it once, for everyone, with any modern client.
+- **"Older NIP-17 messages vanish after a reload, only new ones show."** That was the wrap ledger recording chat wraps as seen (fixed 2026-09-26, see Protocols). If it comes back, check what `hasSeenWrap` is being asked in `ingestIncomingGiftWrap`.
 - **"My own DMs are missing after a reload."** Nothing is cached, so the whole thread rebuilds from relays on every load and takes a moment. If an outgoing NIP-17 message never comes back, its self-copy did not land: check whether we have a published kind-10050 (`ensureDmInboxRelaysPublished`) and whether the relay accepted the second wrap. Messages sent before the self-copy shipped are gone from the sender's side for good; the recipient still has them.
 - **"The post-quantum toggle is on but nothing is post-quantum."** Almost certainly `capabilityUnknown`: the extension does not advertise `nip44.schemes`. The settings status row says so explicitly.
 - **"Every old message shows a mark."** It should not: marks aggregate to transitions. If you see one per bubble, `threadMarks` is not being used.

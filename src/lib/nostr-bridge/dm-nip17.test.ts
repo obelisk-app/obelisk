@@ -334,6 +334,35 @@ describe('DM subscription survives a relay switch', () => {
   });
 });
 
+describe('NIP-17 history across a real page reload', () => {
+  it('a message opened before the reload is still in the thread after it', { timeout: 15_000 }, async () => {
+    const { PrivateKeySigner } = await import('@nostr-wot/signers');
+    const { buildChatMessage, sealAndGiftWrap } = await import('@nostr-wot/dm');
+    const alice = makeKeypair();
+    const bob = makeKeypair();
+    fake.state.published.push(await sealAndGiftWrap(new PrivateKeySigner(alice.sk), bob.pkHex, buildChatMessage(alice.pkHex, bob.pkHex, 'before the reload')));
+
+    const load = async () => {
+      const { getBridge } = await import('./client');
+      const { setPreference } = await import('@/lib/preferences');
+      const bridge = await getBridge();
+      await bridge.loginWithNsec(bob.skHex, bob.pkHex);
+      setPreference('directMessagesEnabled', true);
+      let thread: ReadonlyArray<{ content: string }> = [];
+      bridge.subscribeDirectMessages((byPeer) => { thread = byPeer[alice.pkHex] ?? []; });
+      await vi.waitFor(() => { if (thread.length === 0) throw new Error('not ingested'); }, { timeout: 3000, interval: 5 });
+      return thread;
+    };
+    expect((await load())[0].content).toBe('before the reload');
+    // A reload: fresh modules and a fresh bridge, same localStorage.
+    const { getBridgeImpl } = await import('./client');
+    await new Promise((r) => setTimeout(r, 1500)); // let the ledger's debounced persist run
+    getBridgeImpl()?.dispose();
+    vi.resetModules();
+    expect((await load())[0].content).toBe('before the reload');
+  });
+});
+
 describe('NIP-17 kind-15 file messages', () => {
   const file = {
     url: 'https://blossom.example/abc',
