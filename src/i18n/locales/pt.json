@@ -1416,5 +1416,21 @@
   "settings.calls.saved": "Salvo",
   "settings.calls.invalid": "Apenas endereços de relé wss://",
   "call.fullscreen": "Tela cheia",
-  "call.exitFullscreen": "Sair da tela cheia"
+  "call.exitFullscreen": "Sair da tela cheia",
+  "dm.msg.options": "Opções da mensagem",
+  "dm.msg.copyText": "Copiar texto",
+  "dm.msg.copyFileLink": "Copiar link do arquivo",
+  "dm.msg.copyId": "Copiar ID da mensagem",
+  "dm.msg.copySender": "Copiar npub do remetente",
+  "dm.msg.viewRaw": "Ver evento bruto",
+  "dm.msg.copied": "Copiado",
+  "dm.raw.title": "Evento bruto",
+  "dm.raw.tabMessage": "Mensagem descriptografada",
+  "dm.raw.tabWire": "No relé",
+  "dm.raw.rumorHint": "A mensagem em si (kind {kind}), como só você e a outra pessoa podem lê-la. Não é assinada de propósito: o selo dentro do gift wrap é o que prova quem a enviou.",
+  "dm.raw.wrapHint": "O que os relés guardam: um gift wrap (kind 1059) assinado por uma chave de uso único. Os relés só veem para quem é endereçado — não o remetente, a hora nem o conteúdo.",
+  "dm.raw.nip04Hint": "Uma mensagem direta NIP-04 legada (kind 4). O conteúdo é criptografado, mas remetente, destinatário e hora ficam visíveis para qualquer relé.",
+  "dm.raw.decrypted": "Conteúdo descriptografado",
+  "dm.raw.keyWarning": "Contém a chave de descriptografia do arquivo — qualquer pessoa a quem você der este JSON pode abri-lo.",
+  "dm.raw.unavailable": "Ainda não disponível para esta mensagem."
 }

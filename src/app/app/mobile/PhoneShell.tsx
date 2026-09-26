@@ -203,6 +203,7 @@ import { DmComposer } from '@/components/chat/DmComposer';
 import { DmCallButtons } from '@/components/call/DmCallButtons';
 import { DmCallLayer } from '@/components/call/DmCallLayer';
 import { DmMessageBody } from '@/components/chat/DmMessageBody';
+import { DmMessageMenu } from '@/components/chat/DmMessageMenu';
 import { channelScrollPositionKey } from '@/lib/channel-scroll-position';
 import { channelInitialAnchorFromCursor } from '@/lib/channel-scroll-anchor';
 import { useChannelScrollPosition } from '@/hooks/chat/useChannelScrollPosition';
@@ -3985,6 +3986,7 @@ function DmThreadScreen({
             >
               <div className="dm-bubble-text"><DmMessageBody message={it.msg} /></div>
               <div className="dm-bubble-meta">
+                <DmMessageMenu message={it.msg} className="dm-bubble-more" />
                 {/* `onAccent` on outgoing: the bubble is `var(--accent)` with
                     `var(--accent-ink)` text, the same contrast trap as
                     desktop's `bg-lc-green`. */}

@@ -51,6 +51,8 @@ On receipt `parseDmFileRumor` drops anything we could not decrypt (another algor
 
 Stickers, GIFs and custom emoji are references to public pack URLs, as in a channel; their NIP-30 `emoji` / Obelisk `sticker` tags ride inside the rumor. On a NIP-04 thread the tags are dropped (a kind 4's tags are in the clear) and attach / voice are hidden — NIP-04 has no file message, and `sendDirectFile` refuses one.
 
+Each bubble has a ⋯ (`DmMessageMenu`): copy text / file link / message id / sender npub, and **View raw event**, which shows both layers kept in memory on `JsDirectMessage.raw` — the decrypted rumor (kind 14/15) and what the relay stores (the kind-1059 wrap; for NIP-04, the kind-4 event plus its decrypted text). A file rumor's raw JSON carries its decryption key, and the dialog says so.
+
 Bubbles render through `DmMessageBody`, not `MessageContent`: no link unfurls (that would hand our own `/api/link-preview` every URL two people send each other), and text keeps the bubble's colour.
 
 **What this does not hide.** The ciphertext URL is public by possession and cannot be revoked; anyone holding the URL *and* the rumor can decrypt. The blob's size is visible to the Blossom server, and fetching it reveals the reader's IP to that server, as any image does.

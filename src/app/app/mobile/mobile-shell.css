@@ -2464,6 +2464,16 @@
   font-family: 'JetBrains Mono', monospace;
   opacity: 0.6;
 }
+.obelisk-mobile .dm-bubble-more {
+  color: inherit;
+  background: transparent;
+  border: 0;
+  /* A bigger hit area than the 20px glyph box, without moving the row. */
+  margin: -6px -2px -6px -6px;
+  padding: 6px;
+  width: auto;
+  height: auto;
+}
 .obelisk-mobile .dm-bubble.incoming .dm-bubble-meta {
   color: var(--app-text-mute);
   opacity: 1;

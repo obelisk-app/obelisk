@@ -1416,5 +1416,21 @@
   "settings.calls.saved": "Guardado",
   "settings.calls.invalid": "Solo direcciones de relé wss://",
   "call.fullscreen": "Pantalla completa",
-  "call.exitFullscreen": "Salir de pantalla completa"
+  "call.exitFullscreen": "Salir de pantalla completa",
+  "dm.msg.options": "Opciones del mensaje",
+  "dm.msg.copyText": "Copiar texto",
+  "dm.msg.copyFileLink": "Copiar enlace del archivo",
+  "dm.msg.copyId": "Copiar ID del mensaje",
+  "dm.msg.copySender": "Copiar npub del remitente",
+  "dm.msg.viewRaw": "Ver evento en bruto",
+  "dm.msg.copied": "Copiado",
+  "dm.raw.title": "Evento en bruto",
+  "dm.raw.tabMessage": "Mensaje descifrado",
+  "dm.raw.tabWire": "En el relé",
+  "dm.raw.rumorHint": "El mensaje en sí (kind {kind}), tal como solo tú y la otra persona pueden leerlo. No está firmado a propósito: el sello dentro del gift wrap es lo que prueba quién lo envió.",
+  "dm.raw.wrapHint": "Lo que guardan los relés: un gift wrap (kind 1059) firmado por una clave de un solo uso. Los relés solo ven a quién va dirigido, no el remitente, la hora ni el contenido.",
+  "dm.raw.nip04Hint": "Un mensaje directo NIP-04 heredado (kind 4). El contenido está cifrado, pero remitente, destinatario y hora son visibles para cualquier relé.",
+  "dm.raw.decrypted": "Contenido descifrado",
+  "dm.raw.keyWarning": "Contiene la clave de descifrado del archivo: cualquiera a quien le des este JSON puede abrirlo.",
+  "dm.raw.unavailable": "Aún no disponible para este mensaje."
 }

@@ -409,6 +409,10 @@ describe('NIP-17 kind-15 file messages', () => {
     await vi.waitFor(() => { if (thread[0]?.pending) throw new Error('still pending'); });
     expect(thread).toHaveLength(1);
     expect(thread[0].file).toEqual(file);
+    // The raw layers for "View raw event": our rumor and the wrap bob got.
+    const raw = (thread[0] as { raw?: { rumor?: { kind: number; id: string }; wire?: { id: string } } }).raw;
+    expect(raw?.rumor?.kind).toBe(15);
+    expect(raw?.wire?.id).toBe(toBob.id);
   });
 
   it('refuses to send a file on a thread pinned to NIP-04', async () => {
@@ -446,6 +450,9 @@ describe('NIP-17 kind-15 file messages', () => {
     bridge.subscribeDirectMessages((byPeer) => { thread = byPeer[alice.pkHex] ?? []; });
     await vi.waitFor(() => { if (thread.length === 0) throw new Error('not ingested'); }, { timeout: 5000, interval: 5 });
     expect(thread[0]).toMatchObject({ outgoing: false, content: file.url, file });
+    const raw = (thread[0] as { raw?: { rumor?: { kind: number }; wire?: { kind: number } } }).raw;
+    expect(raw?.rumor?.kind).toBe(15);
+    expect(raw?.wire?.kind).toBe(1059);
     const card = useNotificationsStore.getState().dmNotifications.find((n) => n.senderPubkey === alice.pkHex);
     expect(card?.preview).toBe('cat.png');
   });

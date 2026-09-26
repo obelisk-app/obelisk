@@ -1416,5 +1416,21 @@
   "settings.calls.saved": "Saved",
   "settings.calls.invalid": "Only wss:// relay addresses",
   "call.fullscreen": "Full screen",
-  "call.exitFullscreen": "Exit full screen"
+  "call.exitFullscreen": "Exit full screen",
+  "dm.msg.options": "Message options",
+  "dm.msg.copyText": "Copy text",
+  "dm.msg.copyFileLink": "Copy file link",
+  "dm.msg.copyId": "Copy message ID",
+  "dm.msg.copySender": "Copy sender npub",
+  "dm.msg.viewRaw": "View raw event",
+  "dm.msg.copied": "Copied",
+  "dm.raw.title": "Raw event",
+  "dm.raw.tabMessage": "Decrypted message",
+  "dm.raw.tabWire": "On the relay",
+  "dm.raw.rumorHint": "The message itself (kind {kind}), as only you and the other person can read it. It is unsigned on purpose: the seal inside the gift wrap is what proves who sent it.",
+  "dm.raw.wrapHint": "What relays store: a gift wrap (kind 1059) signed by a one-time key. Relays see only who it is addressed to — not the sender, the time, or the content.",
+  "dm.raw.nip04Hint": "A legacy NIP-04 direct message (kind 4). The content is encrypted, but sender, recipient and time are visible to every relay.",
+  "dm.raw.decrypted": "Decrypted content",
+  "dm.raw.keyWarning": "Contains the file's decryption key — anyone you give this JSON to can open the file.",
+  "dm.raw.unavailable": "Not available for this message yet."
 }

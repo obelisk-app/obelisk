@@ -3507,7 +3507,7 @@ export class BridgeImpl {
         this.replacePendingDM(
           recipientPubkey,
           clientTag,
-          { id: event.id, createdAt: event.created_at, protocol: 'nip04', pq: false },
+          { id: event.id, createdAt: event.created_at, protocol: 'nip04', pq: false, raw: { wire: event } },
           content,
         );
         return;
@@ -3600,7 +3600,7 @@ export class BridgeImpl {
         // NIP-17 fuzzes both the seal's and the wrap's timestamps up to 2
         // days into the past for privacy, so the wrap's own timestamp would
         // make the just-sent message appear to have been sent days ago.
-        { id: rumorId, createdAt, protocol: 'nip17', pq, file, tags: extraTags },
+        { id: rumorId, createdAt, protocol: 'nip17', pq, file, tags: extraTags, raw: { rumor: { ...inner, id: rumorId }, wire: wrap } },
         content,
       );
       // Second wrap, addressed to us. Deliberately after the recipient's
@@ -3977,7 +3977,7 @@ export class BridgeImpl {
     // belong to the ephemeral-keyed wrap, and the wrap's timestamp is
     // fuzzed up to 2 days into the past for privacy — neither is what the
     // sender's own thread should display.
-    params: { id: string; createdAt: number; protocol: DMProtocol; pq: boolean; file?: JsDmFile; tags?: string[][] },
+    params: { id: string; createdAt: number; protocol: DMProtocol; pq: boolean; file?: JsDmFile; tags?: string[][]; raw?: JsDirectMessage['raw'] },
     plaintext: string,
   ): void {
     this.pendingDMSends.delete(clientTag);
@@ -3988,6 +3988,7 @@ export class BridgeImpl {
       content: plaintext,
       ...(params.file ? { file: params.file } : {}),
       ...dmTagExtras(plaintext, params.tags ?? []),
+      ...(params.raw ? { raw: params.raw } : {}),
       createdAt: params.createdAt,
       protocol: params.protocol,
       pq: params.pq,
@@ -7218,6 +7219,7 @@ export class BridgeImpl {
       protocol: 'nip04',
       pq: false,
       notifyId: ev.id,
+      raw: { wire: ev },
     });
   }
 
@@ -7297,6 +7299,7 @@ export class BridgeImpl {
       notifyId: ev.id,
       file,
       tags: message.tags,
+      raw: { rumor: message, wire: ev },
     });
   }
 
@@ -7313,8 +7316,9 @@ export class BridgeImpl {
     file?: JsDmFile;
     /** Rumor tags (NIP-17 only) — custom emoji and sticker. */
     tags?: ReadonlyArray<ReadonlyArray<string>>;
+    raw?: JsDirectMessage['raw'];
   }): void {
-    const { id, createdAt, plaintext, outgoing, counterparty, protocol, pq, notifyId, file, tags } = params;
+    const { id, createdAt, plaintext, outgoing, counterparty, protocol, pq, notifyId, file, tags, raw } = params;
     const dm: JsDirectMessage = {
       id,
       counterparty,
@@ -7325,6 +7329,7 @@ export class BridgeImpl {
       pq,
       ...(file ? { file } : {}),
       ...(tags && !file ? dmTagExtras(plaintext, tags) : {}),
+      ...(raw ? { raw } : {}),
     };
     let isNew = false;
     let replacedClientTag: string | null = null;
