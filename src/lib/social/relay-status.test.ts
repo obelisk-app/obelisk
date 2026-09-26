@@ -173,6 +173,13 @@ describe('relayStatusSummary', () => {
     expect(relayStatusSummary([A], status(A, 'failed')).state).toBe('failed');
   });
 
+  it('is connecting, not failed, while other relays are still unresolved', () => {
+    // One relay that failed its probe beside three we have not heard from is
+    // not an outage. Calling it red is how the header showed a scarlet 0/4
+    // on chat screens, which never touch the social relays at all.
+    expect(relayStatusSummary([A, B], status(A, 'failed')).state).toBe('connecting');
+  });
+
   it('collapses to offline rather than N separate failures', () => {
     // The laptop's wifi dropping is one problem, not one per relay.
     expect(relayStatusSummary([A, B], {

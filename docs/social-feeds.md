@@ -153,7 +153,25 @@ sockets. Following queries the configured social relay set only.
 - **`NoteThread`** — parent chain + replies, via `fetchThread`.
 
 New notes from the live tail are buffered behind a "N new notes" pill rather
-than spliced into the list under a reading user.
+than spliced into the list under a reading user. The pill is the **only** way
+they enter the list — there is deliberately no auto-merge at the top and no
+refresh-on-scroll-to-top. Both existed, and both moved the list under
+whoever was reading it: `showPending` runs the buffer through `mergeNotes`,
+which re-sorts everything, so a note arriving while you were on row three
+reshuffled the rows above it, and scrolling back up to re-read something
+replaced the page it was on. `applySort`'s settling window is bounded
+(`SETTLE_TICKS`) for the same reason — "Top" used to re-rank every four
+seconds for as long as the feed stayed mounted.
+
+### Guarding what reaches a feed
+
+`querySocial` reads through the shared coalescer, which fans **every**
+consumer's events into every handle on the same relay set. Guarding by author
+is not enough: `fetchInterests` (kind 10015) and the starter-pack query
+(30000/39089) ride the same sockets, and a kind-10015 list reached the feed
+and rendered as "this client can't display this note yet". Every page merge
+goes through `filterForSource` (`feed.ts`) — kind **and** author — not just
+the live tail.
 
 ---
 

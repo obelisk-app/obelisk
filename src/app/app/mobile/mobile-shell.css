@@ -264,13 +264,20 @@
   overflow: hidden;
 }
 
+/* No `scroll-behavior: smooth` here.
+ *
+ * As a property on the scroller it applies to EVERY scroll, including the
+ * programmatic ones — a deep link into a long feed, restoring a position,
+ * jumping to a message — so those animated their way down hundreds of rows
+ * instead of arriving. Callers that genuinely want the animation pass
+ * `behavior: 'smooth'` to `scrollTo` themselves; the back-to-top button
+ * already does. */
 .obelisk-mobile :where(.native-scroll-y) {
   overflow-y: auto;
   min-height: 0;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
   overscroll-behavior-x: none;
-  scroll-behavior: smooth;
 }
 
 .obelisk-mobile :where(.native-scroll-x) {
@@ -281,13 +288,6 @@
   touch-action: pan-x pan-y;
   overscroll-behavior-x: contain;
   overscroll-behavior-y: auto;
-  scroll-behavior: smooth;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .obelisk-mobile :where(.native-scroll-y, .native-scroll-x) {
-    scroll-behavior: auto;
-  }
 }
 
 /* ===== drag-tracking carousel ===== */
@@ -346,11 +346,27 @@
  * (.obelisk-mobile::after) live behind the screens-host at z-0, so the
  * opaque overlay would cover them anyway — replicating only the radials
  * lands close enough that the seam disappears. */
+/* `pointer-events: none` on the SLOT, restored on its content.
+ *
+ * The slot is `position: absolute; inset: 0` at `z-index: 1`, so it covered
+ * the whole viewport — including the header beneath it — and swallowed taps
+ * that were meant for the back button. Only `.drag-hidden` opted out. The
+ * inner `.screen-anim` carries the actual screen and takes its clicks back,
+ * so nothing that should be interactive loses anything. */
 .obelisk-mobile .drag-slot.drag-overlay {
   transform: translateX(0);
   z-index: 1;
+  pointer-events: none;
+}
+/* Off-screen neighbours stay mounted to keep their subscriptions warm, but
+ * they must not be hit-testable while parked. */
+.obelisk-mobile .drag-slot.drag-prev,
+.obelisk-mobile .drag-slot.drag-next {
+  pointer-events: none;
 }
 .obelisk-mobile .drag-slot.drag-overlay > .screen-anim {
+  /* Takes back the clicks the slot above gave up. */
+  pointer-events: auto;
   background:
     radial-gradient(1100px 620px at 85% -8%, rgba(180, 249, 83, 0.14) 0%, transparent 62%),
     radial-gradient(900px 540px at -5% 105%, rgba(180, 249, 83, 0.10) 0%, transparent 58%),
@@ -636,6 +652,12 @@
 .obelisk-mobile .space:active .space-icon.s-add {
   background: var(--app-accent-bg);
 }
+/* Two lines, not one ellipsed one.
+ *
+ * The rail is 74px wide, which left ~58px of text at 12.5px — so distinct
+ * relays all read `Obelisk …` / `La Crypt…` under icons that were already
+ * telling them apart. Wrapping to a second line fits most names whole; the
+ * clamp keeps a long one from pushing the rail out of alignment. */
 .obelisk-mobile .space-name {
   font-size: 12.5px;
   color: var(--app-text-dim);
@@ -643,8 +665,11 @@
   line-height: 1.2;
   width: 100%;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow-wrap: anywhere;
   padding: 0 2px;
 }
 .obelisk-mobile .space.active .space-name {
@@ -1260,7 +1285,11 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 65vw;
+  /* `min-width: 0` inside the flex row is what actually lets the ellipsis
+   * work; the old hard `max-width: 65vw` capped the name well short of the
+   * space available once the category moved to its own line. */
+  min-width: 0;
+  flex: 1 1 auto;
 }
 .obelisk-mobile .chat-channel .hash {
   color: var(--app-text-mute);

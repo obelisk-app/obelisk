@@ -220,6 +220,29 @@ function reconcileCounts(): void {
   }
 }
 
+/**
+ * Re-probe rows that went quiet.
+ *
+ * `watchRelays` probes once, at mount. After that the only way a row moved
+ * was a connection callback — and those only fire inside `subscribe`/
+ * `publish`, so on a surface that reads no social data the sockets go idle,
+ * the pool drops them, `reconcileCounts` demotes every row to `unknown`, and
+ * the count sat at `0/N` for the rest of the session with nothing to bring
+ * it back. Bounded and slow: this answers "is it still there", not "give me
+ * a live heartbeat".
+ */
+const REPROBE_MS = 60_000;
+let lastReprobe = 0;
+
+function reprobeStale(): void {
+  const now = Date.now();
+  if (now - lastReprobe < REPROBE_MS) return;
+  const stale = [...statuses.values()].filter((status) => status.state === 'unknown');
+  if (stale.length === 0) return;
+  lastReprobe = now;
+  for (const status of stale) void probeRelay(status.url);
+}
+
 let watching = false;
 let reconcileTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -249,7 +272,10 @@ export function watchRelays(relays: readonly string[]): void {
       window.addEventListener('online', () => applyOffline(false));
       window.addEventListener('offline', () => applyOffline(true));
     }
-    reconcileTimer = setInterval(reconcileCounts, RECONCILE_MS);
+    reconcileTimer = setInterval(() => {
+      reconcileCounts();
+      reprobeStale();
+    }, RECONCILE_MS);
   }
 
   keys.forEach((url) => {
@@ -277,6 +303,7 @@ export function _resetRelayStatus(): void {
   if (reconcileTimer) clearInterval(reconcileTimer);
   reconcileTimer = null;
   watching = false;
+  lastReprobe = 0;
 }
 
 /**
@@ -326,10 +353,15 @@ export function relayStatusSummary(
           // Partial connectivity still reads green — the feed works. The
           // count next to it is what says "not all of them".
           ? 'connected'
-          : anyFailed
-            ? 'failed'
-            : anyPending
-              ? 'connecting'
+          // Nothing connected. A single failed relay beside three we simply
+          // have not heard from is not an outage — and reporting it red was
+          // how the header came to show a scarlet `0/4` on chat screens,
+          // which never read the social relays at all. Only report failure
+          // once there is nothing left that might still answer.
+          : anyPending
+            ? 'connecting'
+            : anyFailed
+              ? 'failed'
               : 'unknown';
 
   return { total, connected, state };

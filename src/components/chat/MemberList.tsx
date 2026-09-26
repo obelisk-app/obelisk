@@ -1,10 +1,10 @@
 'use client';
 
+import { avatarInitials } from '@/lib/display-name';
 import { useMemo, useState } from 'react';
 import { useChatStore } from '@/store/chat';
 import { useCurrentRelayUrl, useGroupMemberInfo } from '@/lib/nostr-bridge';
 import type { JsMemberInfo } from '@/lib/nostr-bridge';
-import { shortNpub } from '@/lib/mentions';
 import { presenceActivityKey, useNostrPresence, PRESENCE_WINDOW_MS } from '@/hooks/chat/useNostrPresence';
 import RoleBadge from '@/components/chat/RoleBadge';
 import type { RelayRole } from '@/lib/relay-roles';
@@ -12,7 +12,9 @@ import { useTranslation } from '@/i18n/context';
 
 function MemberItem({ member, isOnline }: { member: JsMemberInfo; isOnline: boolean }) {
   const { t } = useTranslation();
-  const name = member.displayName || shortNpub(member.pubkey);
+  // `displayName` is always set — `useGroupMemberInfo` resolves it through
+  // `displayNameFor`, so there is nothing left to fall back to here.
+  const name = member.displayName;
   const openProfilePopup = useChatStore((state) => state.openProfilePopup);
 
   return (
@@ -27,7 +29,9 @@ function MemberItem({ member, isOnline }: { member: JsMemberInfo; isOnline: bool
           <img src={member.picture} alt="" className="w-8 h-8 rounded-full object-cover" />
         ) : (
           <div className="w-8 h-8 rounded-full bg-lc-olive flex items-center justify-center">
-            <span className="text-xs font-medium text-lc-green">{name.slice(0, 2).toUpperCase()}</span>
+            {/* Not `name.slice(0, 2)`: that used to read letters off a hex
+                pubkey and render an avatar labelled `6A`. */}
+            <span className="text-xs font-medium text-lc-green">{avatarInitials(name, member.pubkey)}</span>
           </div>
         )}
         <div

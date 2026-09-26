@@ -126,3 +126,27 @@ describe('HintCallout', () => {
     expect(screen.getByRole('dialog', { name: 'Relays are communities' })).toBeInTheDocument();
   });
 });
+
+describe('reading as an overlay', () => {
+  it('dims the page behind it', () => {
+    // Without this the card landed on the heading below the header and the
+    // page looked mis-rendered — the first tip clipped the pack title under
+    // "Find people to follow".
+    renderCallout(anchorAt({}));
+    expect(screen.getByTestId('hint-scrim')).toBeInTheDocument();
+  });
+
+  it('sits above the scrim, not under it', () => {
+    renderCallout(anchorAt({}));
+    const scrim = Number.parseInt(screen.getByTestId('hint-scrim').className.match(/z-\[(\d+)\]/)![1], 10);
+    const card = Number.parseInt(screen.getByTestId('hint-callout').className.match(/z-\[(\d+)\]/)![1], 10);
+    expect(card).toBeGreaterThan(scrim);
+  });
+
+  it('dismisses when the page behind it is clicked', () => {
+    const onDismiss = vi.fn();
+    renderCallout(anchorAt({}), { onDismiss });
+    fireEvent.click(screen.getByTestId('hint-scrim'));
+    expect(onDismiss).toHaveBeenCalled();
+  });
+});

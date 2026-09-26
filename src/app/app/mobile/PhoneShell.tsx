@@ -7,6 +7,11 @@
  * wired to the existing Nostr bridge.
  */
 
+import { avatarInitials, displayNameFor } from '@/lib/display-name';
+import { useAuthor } from '@/lib/social/useAuthor';
+import { ensureSocialProfiles } from '@/lib/social/profiles';
+import DMThreadMenu from '@/components/chat/DMThreadMenu';
+import { dayLabel } from '@/lib/day-label';
 import {
   Fragment,
   useCallback,
@@ -221,6 +226,29 @@ function avatarStyle(seed: string): React.CSSProperties {
   return { background: `linear-gradient(135deg, ${p.from}, ${p.to})`, color: p.text };
 }
 
+/**
+ * The two halves of a channel header, kept apart.
+ *
+ * This used to be one string, `"<category>/<channel>"`, rendered into a
+ * single nowrap line capped at `max-width: 65vw`. With a back button and
+ * three icon buttons beside it the category ate the width budget and the
+ * ellipsis fell on the channel name, so the header truncated exactly the
+ * part you needed to read.
+ *
+ * The category goes on the existing `.chat-breadcrumb` line above instead,
+ * where clipping it costs nothing.
+ */
+export function channelHeaderLabel(
+  group: { name?: string | null } | null,
+  parentGroup: { name?: string | null; id: string } | null,
+  groupId: string,
+): { category: string | null; channel: string } {
+  return {
+    category: parentGroup ? (parentGroup.name ?? parentGroup.id.slice(0, 8)) : null,
+    channel: group?.name ?? groupId.slice(0, 8),
+  };
+}
+
 function initialsFor(name: string | null | undefined, fallback: string): string {
   const s = (name && name.trim()) || fallback;
   const parts = s.split(/\s+/).filter(Boolean);
@@ -258,18 +286,6 @@ function dayKey(ts: number): string {
   return d.toDateString();
 }
 
-function dayLabel(ts: number, t: Translate, locale: Locale): string {
-  const d = new Date(ts * 1000);
-  const today = new Date();
-  const yest = new Date();
-  yest.setDate(today.getDate() - 1);
-  if (d.toDateString() === today.toDateString()) {
-    return t('time.today').replace('{time}', formatTime(locale, d));
-  }
-  if (d.toDateString() === yest.toDateString()) return t('time.yesterday');
-  return formatDate(locale, d, { month: 'short', day: 'numeric' });
-}
-
 function timeOfDay(ts: number, locale: Locale): string {
   return formatTime(locale, new Date(ts * 1000), {
     hour: '2-digit', minute: '2-digit', hour12: false,
@@ -300,6 +316,11 @@ const MOBILE_SWIPE_IGNORE_SELECTOR = [
   '.server-banner-actions',
   '.app-header .icon-btn',
   '.chat-actions .icon-btn',
+  // Back was missing from this list while the icon buttons beside it were
+  // on it. A thumb tap on Back drifts a few pixels, crosses the 8px
+  // horizontal threshold in onTouchMove, and becomes a carousel drag — so
+  // Back did nothing, or navigated somewhere else entirely.
+  '.back-btn',
   '.search-header',
   // Mention autocomplete floats above the composer. A thumb tap on a row
   // drifts a few px, which crosses the 8px horizontal threshold in
@@ -334,7 +355,8 @@ function NameAvatar({
   size?: number;
   className?: string;
 }) {
-  const initials = initialsFor(name ?? '', shortNpub(pubkey).slice(0, 2).toUpperCase());
+  // Never letters off an npub: that rendered avatars reading `NP`.
+  const initials = avatarInitials(name, pubkey);
   const style: React.CSSProperties = {
     width: size,
     height: size,
@@ -1812,7 +1834,7 @@ function ManageMemberRowMobile({
 }) {
   const { t } = useTranslation();
   const meta = useUserMetadata(pubkey);
-  const name = meta?.displayName || meta?.name || shortNpub(pubkey);
+  const name = displayNameFor(pubkey, meta);
   // Inline confirm rather than `window.confirm` — a native dialog on mobile
   // covers the sheet and names the person out of context.
   const [confirming, setConfirming] = useState<null | 'demote' | 'kick'>(null);
@@ -1871,7 +1893,7 @@ function ManageMemberRowMobile({
   return (
     <div style={rowStyle}>
       <div className="msg-ava" style={{ ...avatarStyle(pubkey), width: 32, height: 32 }}>
-        {meta?.picture ? <img src={meta.picture} alt="" /> : initialsFor(name, shortNpub(pubkey))}
+        {meta?.picture ? <img src={meta.picture} alt="" /> : avatarInitials(name, pubkey)}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--app-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -2088,10 +2110,15 @@ export function MobileServerBanner({
       <div className="server-banner-actions">
         {/* Beside the signing indicator, because it answers the same kind of
             question: is the thing underneath this app working right now. */}
+        {/* `active`: this banner only ever sits above the server/channel
+            surface, which reads the NIP-29 relay and never the social tier.
+            Reporting the social count here showed a red 0/4 over a working
+            chat. The popover still answers both. */}
         <RelayStatusPill
           relays={socialRelays}
           activeRelay={relayUrl}
           onOpenSettings={() => openSettings('relays')}
+          indicate="active"
           compact
         />
         <MobileSigningIndicator />
@@ -2638,7 +2665,7 @@ function ServerScreen({
 
 function ReplyAuthorName({ pubkey }: { pubkey: string }) {
   const meta = useUserMetadata(pubkey);
-  const name = meta?.displayName || meta?.name || shortNpub(pubkey);
+  const name = displayNameFor(pubkey, meta);
   return <span className="composer-reply-author">{name}</span>;
 }
 
@@ -2714,11 +2741,14 @@ export function MobileMentionAutocomplete({
             <img src={m.picture} alt="" className="composer-mention-avatar" />
           ) : (
             <div className="composer-mention-avatar fallback">
-              {m.displayName[0]?.toUpperCase() || '?'}
+              {avatarInitials(m.displayName, m.pubkey)}
             </div>
           )}
           <span className="composer-mention-name">{m.displayName}</span>
-          <span className="composer-mention-key">{m.pubkey.slice(0, 8)}…</span>
+          {/* An npub, not a hex slice: this line is the disambiguator when
+              two people share a display name, and hex is not an identity
+              anyone can check against what they were given. */}
+          <span className="composer-mention-key">{shortNpub(m.pubkey)}</span>
         </button>
       ))}
     </div>
@@ -2750,9 +2780,7 @@ function ChannelScreen({
   const group = useGroupById(groupId);
   const groups = useGroups();
   const parentGroup = group?.parent ? groups.find((g) => g.id === group.parent) ?? null : null;
-  const headerLabel = parentGroup
-    ? `${parentGroup.name ?? parentGroup.id.slice(0, 8)}/${group?.name ?? groupId.slice(0, 8)}`
-    : (group?.name ?? groupId.slice(0, 8));
+  const header = channelHeaderLabel(group, parentGroup, groupId);
   const messages = useMessages(groupId);
   // Game tables ride the channel's relay — see src/lib/games/protocol.ts.
   useChannelGamesSubscription(groupId);
@@ -2849,7 +2877,7 @@ function ChannelScreen({
       const m = metaMap[pk];
       return {
         pubkey: pk,
-        displayName: m?.displayName || m?.name || `${pk.slice(0, 8)}…`,
+        displayName: displayNameFor(pk, m),
         picture: m?.picture ?? undefined,
         lud16: m?.lud16 ?? undefined,
       };
@@ -3087,12 +3115,19 @@ function ChannelScreen({
         />
       )}
       <div className="chat-header chat-header-compact">
+        {/* The category rides its own line, so the ellipsis lands here
+            rather than on the channel name. */}
+        {header.category && (
+          <div className="chat-breadcrumb" data-testid="channel-category">
+            <span className="space-name-bc">{header.category}</span>
+          </div>
+        )}
         <div className="chat-row">
           <div className="chat-title-block">
             <button className="back-btn" onClick={back} aria-label={t('common.back')}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
             </button>
-            <div className="chat-channel"><span className="hash">#</span>{headerLabel}</div>
+            <div className="chat-channel" data-testid="channel-name"><span className="hash">#</span>{header.channel}</div>
           </div>
           <div className="chat-actions">
             <MobileSigningIndicator />
@@ -3323,7 +3358,7 @@ function MobileReplyPreviewRow({
   onJump: () => void;
 }) {
   const meta = useUserMetadata(parent.pubkey);
-  const name = meta?.displayName || meta?.name || shortNpub(parent.pubkey);
+  const name = displayNameFor(parent.pubkey, meta);
   const preview = parent.content.replace(/\s+/g, ' ').slice(0, 120);
   return (
     <button
@@ -3364,7 +3399,7 @@ export function ChannelMessage({
 }) {
   const { t, locale } = useTranslation();
   const meta = useUserMetadata(msg.pubkey);
-  const name = meta?.displayName || meta?.name || shortNpub(msg.pubkey);
+  const name = displayNameFor(msg.pubkey, meta);
   const serverEmojis = useChatStore((s) => s.serverEmojis);
 
   const grouped = useMemo(
@@ -3429,7 +3464,7 @@ export function ChannelMessage({
       className={'msg' + (msg.pending ? ' pending' : '') + (msg.failed ? ' failed' : '')}
     >
       <div className="msg-ava" style={avatarStyle(msg.pubkey)} onClick={onAvatar} role="button">
-        {meta?.picture ? <img src={meta.picture} alt="" /> : initialsFor(name, shortNpub(msg.pubkey))}
+        {meta?.picture ? <img src={meta.picture} alt="" /> : avatarInitials(name, msg.pubkey)}
       </div>
       <div className="msg-body">
         {parent && <MobileReplyPreviewRow parent={parent} onJump={onJumpToParent} />}
@@ -3626,6 +3661,13 @@ export function DmsListScreen({
     return list;
   }, [dms]);
 
+  // One batched kind-0 REQ for the whole list rather than one per row.
+  const peerKey = peers.map((p) => p.peer).join(',');
+  useEffect(() => {
+    if (peers.length > 0) void ensureSocialProfiles(peers.map((p) => p.peer));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [peerKey]);
+
   const followsSet = useMemo(() => new Set(myFollows), [myFollows]);
   const filtered = peers.filter((p) =>
     tab === 'follows' ? followsSet.has(p.peer) : !followsSet.has(p.peer),
@@ -3689,13 +3731,16 @@ function DmRow({
   onClick: () => void;
 }) {
   const { t, locale } = useTranslation();
-  const meta = useUserMetadata(peer);
+  // `useAuthor` merges the bridge (group tier) with the social resolver —
+  // the bridge alone only knows people from your NIP-29 rooms, which is why
+  // DM rows showed npubs and letter avatars while the feed showed faces.
+  const meta = useAuthor(peer);
   const unreadCount = useDMUnreadCount(peer);
-  const name = meta?.displayName || meta?.name || shortNpub(peer);
+  const name = displayNameFor(peer, meta);
   return (
     <button className={`dm-row ${unreadCount > 0 ? 'unread' : ''}`} onClick={onClick}>
       <div className="dm-ava-list" style={avatarStyle(peer)}>
-        {meta?.picture ? <img src={meta.picture} alt="" /> : initialsFor(name, shortNpub(peer))}
+        {meta?.picture ? <img src={meta.picture} alt="" /> : avatarInitials(name, peer)}
       </div>
       <div className="dm-meta">
         <div className="dm-row-top">
@@ -3726,7 +3771,7 @@ function DmThreadScreen({
 }) {
   const { t, locale } = useTranslation();
   const dms = useDirectMessages();
-  const meta = useUserMetadata(peer);
+  const meta = useAuthor(peer);
   const myPubkey = useMyPubkey();
   const [draft, setDraft] = useState('');
   const msgsRef = useRef<HTMLDivElement>(null);
@@ -3785,7 +3830,7 @@ function DmThreadScreen({
     void nostrActions.cancelPendingDirectMessage(peer, clientTag);
   };
 
-  const peerName = meta?.displayName || meta?.name || shortNpub(peer);
+  const peerName = displayNameFor(peer, meta);
 
   // Day dividers + bubbles
   const grouped = useMemo(() => {
@@ -3812,7 +3857,7 @@ function DmThreadScreen({
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
         </button>
         <div className="dm-ava-list" style={avatarStyle(peer)} onClick={() => openProfile(peer)}>
-          {meta?.picture ? <img src={meta.picture} alt="" /> : initialsFor(peerName, shortNpub(peer))}
+          {meta?.picture ? <img src={meta.picture} alt="" /> : avatarInitials(peerName, peer)}
         </div>
         <div className="dm-header-meta" onClick={() => openProfile(peer)}>
           <div className="dm-header-name">{peerName}</div>
@@ -3826,11 +3871,13 @@ function DmThreadScreen({
         {/* Not gated on the post-quantum preference: two of its three states
             are about the gift wrap, which matters to every user. One icon,
             tapped rather than hovered on a phone. */}
-        <div style={{ marginLeft: 'auto' }}>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 2 }}>
           <PqShield
             level={protectionLevel({ giftWrapped: sendProtocol !== 'nip04', status: pqStatus })}
             guideHref={guidesHref(locale, 'quantum-safe-dms')}
           />
+          {/* Beside the shield, not instead of it. */}
+          <DMThreadMenu peer={peer} onOpenProfile={openProfile} />
         </div>
       </div>
 
@@ -4041,7 +4088,7 @@ function NotificationCard({
 }) {
   const { t, locale } = useTranslation();
   const meta = useUserMetadata(senderPubkey);
-  const name = meta?.displayName || meta?.name || shortNpub(senderPubkey);
+  const name = displayNameFor(senderPubkey, meta);
   return (
     <button
       className={`mention-card ${urgent ? 'urgent' : ''}`}
@@ -4057,7 +4104,7 @@ function NotificationCard({
       </div>
       <div className="mc-msg" style={{ marginTop: 6 }}>
         <div className="mc-ava" style={avatarStyle(senderPubkey)}>
-          {meta?.picture ? <img src={meta.picture} alt="" /> : initialsFor(name, shortNpub(senderPubkey))}
+          {meta?.picture ? <img src={meta.picture} alt="" /> : avatarInitials(name, senderPubkey)}
         </div>
         <div className="mc-body">
           <div className="mc-name" style={{ color: 'var(--app-text)' }}>{name}</div>
@@ -4129,9 +4176,7 @@ export function MemberListScreen({ groupId, back, openProfile }: { groupId: stri
   const relayUrl = useCurrentRelayUrl();
   const group = groups.find((g) => g.id === groupId) ?? null;
   const parentGroup = group?.parent ? groups.find((g) => g.id === group.parent) ?? null : null;
-  const headerLabel = parentGroup
-    ? `${parentGroup.name ?? parentGroup.id.slice(0, 8)}/${group?.name ?? groupId.slice(0, 8)}`
-    : (group?.name ?? groupId.slice(0, 8));
+  const header = channelHeaderLabel(group, parentGroup, groupId);
   const admins = useAdmins(groupId);
   const members = useMembers(groupId);
   const membershipReady = useMembershipReady(groupId);
@@ -4196,7 +4241,7 @@ export function MemberListScreen({ groupId, back, openProfile }: { groupId: stri
             <button className="back-btn" onClick={back} aria-label={t('common.back')}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
             </button>
-            <div className="chat-channel"><span className="hash">#</span>{headerLabel} · {t('mobile.members.label')}</div>
+            <div className="chat-channel"><span className="hash">#</span>{header.channel} · {t('mobile.members.label')}</div>
           </div>
           <div className="member-presence-count">{onlineCount}/{allPubkeys.length}</div>
         </div>
@@ -4238,11 +4283,11 @@ export function MemberListScreen({ groupId, back, openProfile }: { groupId: stri
 function MemberRow({ pubkey, role, online, onClick }: { pubkey: string; role?: 'admin'; online: boolean; onClick: () => void }) {
   const { t } = useTranslation();
   const meta = useUserMetadata(pubkey);
-  const name = meta?.displayName || meta?.name || shortNpub(pubkey);
+  const name = displayNameFor(pubkey, meta);
   return (
     <button className="member-row" onClick={onClick}>
       <div className={`dm-ava-list ${online ? '' : 'offline'}`} style={{ ...avatarStyle(pubkey), width: 36, height: 36, fontSize: 12 }}>
-        {meta?.picture ? <img src={meta.picture} alt="" /> : initialsFor(name, shortNpub(pubkey))}
+        {meta?.picture ? <img src={meta.picture} alt="" /> : avatarInitials(name, pubkey)}
       </div>
       <div className="member-row-meta">
         <span className="member-row-name">{name}</span>
@@ -4319,11 +4364,11 @@ export function ComposeDmScreen({ back, selectPeer }: { back: () => void; select
 }
 
 function ComposeUserRow({ hit, onClick }: { hit: UserHit; onClick: () => void }) {
-  const name = hit.displayName || shortNpub(hit.pubkey);
+  const name = hit.displayName || displayNameFor(hit.pubkey);
   return (
     <button className="dm-row" onClick={onClick} data-testid="mobile-user-search-result">
       <div className="dm-ava-list" style={avatarStyle(hit.pubkey)}>
-        {hit.picture ? <img src={hit.picture} alt="" /> : initialsFor(name, shortNpub(hit.pubkey))}
+        {hit.picture ? <img src={hit.picture} alt="" /> : avatarInitials(name, hit.pubkey)}
       </div>
       <div className="dm-meta">
         <div className="dm-row-top"><span className="dm-name">{name}</span></div>
@@ -4334,12 +4379,12 @@ function ComposeUserRow({ hit, onClick }: { hit: UserHit; onClick: () => void })
 }
 
 function ComposeRecentRow({ peer, onClick }: { peer: string; onClick: () => void }) {
-  const meta = useUserMetadata(peer);
-  const name = meta?.displayName || meta?.name || shortNpub(peer);
+  const meta = useAuthor(peer);
+  const name = displayNameFor(peer, meta);
   return (
     <button className="dm-row" onClick={onClick}>
       <div className="dm-ava-list" style={avatarStyle(peer)}>
-        {meta?.picture ? <img src={meta.picture} alt="" /> : initialsFor(name, shortNpub(peer))}
+        {meta?.picture ? <img src={meta.picture} alt="" /> : avatarInitials(name, peer)}
       </div>
       <div className="dm-meta">
         <div className="dm-row-top">
@@ -4941,8 +4986,8 @@ function MobileForumCard({
       </button>
     );
   }
-  const opName = opMeta?.displayName || opMeta?.name || `${op.pubkey.slice(0, 8)}…`;
-  const lastName = lastMeta?.displayName || lastMeta?.name || `${lastMsg.pubkey.slice(0, 8)}…`;
+  const opName = displayNameFor(op.pubkey, opMeta);
+  const lastName = displayNameFor(lastMsg.pubkey, lastMeta);
   return (
     <button
       className="forum-card"
@@ -5275,7 +5320,7 @@ export function MessageActionsSheet({
 }) {
   const { t } = useTranslation();
   const meta = useUserMetadata(msg.pubkey);
-  const name = meta?.displayName || meta?.name || shortNpub(msg.pubkey);
+  const name = displayNameFor(msg.pubkey, meta);
   const [pickerOpen, setPickerOpen] = useState(false);
   const canDeleteMessage = !!msg.groupId && (msg.canModerate || msg.canDeleteOwn);
   const deleteMessage = async () => {
@@ -5392,7 +5437,7 @@ function ZapModalSheet({
 }) {
   const { t, locale } = useTranslation();
   const meta = useUserMetadata(msg.pubkey);
-  const name = meta?.displayName || meta?.name || shortNpub(msg.pubkey);
+  const name = displayNameFor(msg.pubkey, meta);
   const [amount, setAmount] = useState(2100);
   const presets = [
     { v: 21, label: '21' },

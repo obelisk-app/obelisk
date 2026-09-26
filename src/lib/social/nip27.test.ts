@@ -96,3 +96,47 @@ describe('encoders', () => {
     expect(encodeMention('not-hex')).toBe('');
   });
 });
+
+describe('bare bech32 entities', () => {
+  const naddr = nip19.naddrEncode({ identifier: 'my-post', pubkey: PK, kind: 30023 });
+
+  it('tokenizes an entity pasted without the nostr: scheme', () => {
+    // People paste these constantly; they were rendering as sixty unbroken
+    // characters of bech32 in the middle of a sentence.
+    const tokens = tokenizeContent(`look at ${nevent} please`);
+    expect(tokens.map((token) => token.kind)).toEqual(['text', 'ref', 'text']);
+    expect(tokens[1]).toMatchObject({ ref: { type: 'event', id: ID } });
+  });
+
+  it('tokenizes a bare entity at the very start of the content', () => {
+    expect(tokenizeContent(naddr)[0]).toMatchObject({ ref: { type: 'address', identifier: 'my-post' } });
+  });
+
+  it('leaves an entity inside a URL alone', () => {
+    // `https://zap.cooking/naddr1…` must stay one link. Eating the naddr out
+    // of the path breaks the URL and renders half of it as text.
+    const url = `https://zap.cooking/${naddr}`;
+    expect(tokenizeContent(url)).toEqual([{ kind: 'text', value: url }]);
+  });
+
+  it('leaves an entity glued to a word alone', () => {
+    const glued = `x${nevent}`;
+    expect(tokenizeContent(glued)).toEqual([{ kind: 'text', value: glued }]);
+  });
+
+  it('still tokenizes the scheme form wherever it appears', () => {
+    const tokens = tokenizeContent(`see/nostr:${npub}`);
+    expect(tokens.some((token) => token.kind === 'ref')).toBe(true);
+  });
+
+  it('reports the matched text as `raw`, scheme or not', () => {
+    const bare = tokenizeContent(nevent)[0];
+    expect(bare).toMatchObject({ ref: { raw: nevent } });
+    const schemed = tokenizeContent(`nostr:${nevent}`)[0];
+    expect(schemed).toMatchObject({ ref: { raw: `nostr:${nevent}` } });
+  });
+
+  it('finds mentions written without the scheme', () => {
+    expect(mentionedPubkeys(`hi ${npub}`)).toEqual([PK]);
+  });
+});

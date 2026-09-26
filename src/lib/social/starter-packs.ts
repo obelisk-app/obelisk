@@ -20,6 +20,23 @@
  * We read both and normalise, because a user doesn't care which kind a pack
  * happened to be published as. We never publish either.
  *
+ * ## Why 30000 needs more screening than 39089
+ *
+ * Kind 39089 exists to be a starter pack. Kind 30000 is NIP-51's generic
+ * "categorized people" list, and the category is the `d` tag — so the same
+ * kind carries follow sets, mute lists, block lists and bookmarks. A mute
+ * list was being offered as a pack titled "Mute" with a `Follow 31` button,
+ * which would have made a new user follow thirty-one people somebody else
+ * chose to *silence*. Three screens stop that, all of them on 30000 only:
+ *
+ *  - the `d` tag must not name a known non-follow category,
+ *  - `content` must be empty, because on a NIP-51 list that field is the
+ *    NIP-44 encrypted private section — a list with one is somebody's
+ *    personal list, not a thing to hand to a stranger,
+ *  - and it must carry a real `title`/`name`. For 39089 the `d` tag is a
+ *    slug of the title and is a fine fallback; for 30000 it is a category
+ *    key, which is exactly how "Mute" ended up on screen as a pack name.
+ *
  * ## Following a pack
  *
  * Follows are one kind-3 contact list, so following a pack is a read-merge-
@@ -34,6 +51,21 @@ import { querySocial } from './pool';
 
 export const KIND_STARTER_PACK = 39089;
 export const KIND_FOLLOW_SET = 30000;
+
+/**
+ * NIP-51 `d` values that are categories, not curation. A kind-30000 event
+ * carrying one of these is a mute/block/bookmark list that happens to share
+ * the kind with follow sets; it is never something to offer as a pack.
+ */
+const NON_FOLLOW_CATEGORIES = new Set([
+  'mute', 'muted', 'mutelist', 'mute-list',
+  'block', 'blocked', 'blocklist', 'block-list',
+  'bookmark', 'bookmarks',
+  'pin', 'pinned',
+  'read', 'unread',
+  'communities', 'community',
+  'hashtags', 'interests',
+]);
 
 /** Packs with fewer than this are noise — someone's two-person test list. */
 const MIN_MEMBERS = 3;
@@ -68,6 +100,17 @@ export function parseStarterPack(event: NostrEvent): StarterPack | null {
   const identifier = tagValue(event, 'd');
   if (!identifier) return null;
 
+  // Amethyst writes `title`, some clients write `name`.
+  const named = tagValue(event, 'title') || tagValue(event, 'name');
+
+  if (event.kind === KIND_FOLLOW_SET) {
+    if (NON_FOLLOW_CATEGORIES.has(identifier.trim().toLowerCase())) return null;
+    // A private section means a personal list, whatever it is categorised as.
+    if (event.content.trim() !== '') return null;
+    // No name of its own: the `d` tag here is a category key, not a title.
+    if (!named) return null;
+  }
+
   const members = [...new Set(
     event.tags
       .filter((tag) => tag[0] === 'p' && /^[0-9a-f]{64}$/i.test(tag[1] ?? ''))
@@ -77,10 +120,12 @@ export function parseStarterPack(event: NostrEvent): StarterPack | null {
 
   return {
     id: `${event.kind}:${event.pubkey}:${identifier}`,
-    // Amethyst writes `title`, some clients write `name`; fall back to the
-    // `d` tag, which is usually a slug of the title.
-    title: tagValue(event, 'title') || tagValue(event, 'name') || identifier,
-    description: tagValue(event, 'description') || event.content || '',
+    // For 39089 the `d` tag is usually a slug of the title, so it is a
+    // reasonable last resort. For 30000 we required `named` above.
+    title: named || identifier,
+    // Never `event.content`: on a NIP-51 list that is the encrypted private
+    // section, and it rendered as a wall of base64 where a description goes.
+    description: tagValue(event, 'description') || '',
     image: tagValue(event, 'image') || tagValue(event, 'picture') || null,
     curator: event.pubkey,
     members,
@@ -88,15 +133,18 @@ export function parseStarterPack(event: NostrEvent): StarterPack | null {
   };
 }
 
-/** Newest edit of each pack wins; then bigger packs first. */
+/** Newest edit of each pack wins; then newest pack first, bigger breaking ties. */
 export function dedupePacks(packs: readonly StarterPack[]): StarterPack[] {
   const byId = new Map<string, StarterPack>();
   for (const pack of packs) {
     const existing = byId.get(pack.id);
     if (!existing || pack.createdAt > existing.createdAt) byId.set(pack.id, pack);
   }
+  // Recency first, size only as a tiebreak. Sorting by size put whichever
+  // list happened to be longest at the top, which is how a 31-member mute
+  // list outranked every curated pack on the relay.
   return [...byId.values()].sort(
-    (a, b) => b.members.length - a.members.length || b.createdAt - a.createdAt,
+    (a, b) => b.createdAt - a.createdAt || b.members.length - a.members.length,
   );
 }
 

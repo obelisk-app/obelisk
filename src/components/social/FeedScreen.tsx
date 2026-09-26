@@ -9,6 +9,7 @@
  * one).
  */
 
+import { scrollBehavior } from '@/lib/scroll-behavior';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
 import {
@@ -436,7 +437,14 @@ export default function FeedScreen({
           is nowhere near wide enough for two columns.
         */}
         <div className="mx-auto flex w-full max-w-[1100px] items-start gap-4">
-        <div className="min-w-0 flex-1 xl:max-w-[42rem]">
+        {/*
+          The trailing padding clears the floating controls. They are
+          `absolute` over this scroller, so without it the last notes — and
+          any link card at the end — sat underneath the ↑ and + buttons with
+          no way to scroll them out. Sized for the taller stack: the compose
+          FAB at `bottom-6` plus the back-to-top pill at `bottom-24`.
+        */}
+        <div className="min-w-0 flex-1 pb-28 md:pb-24 xl:max-w-[42rem]">
         {/*
           Desktop only. On a phone the row was a link to an input dressed as
           an input; the FAB below opens the full-screen composer instead,
@@ -543,7 +551,7 @@ export default function FeedScreen({
           type="button"
           onClick={() => {
             state.showPending();
-            scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+            scrollRef.current?.scrollTo({ top: 0, behavior: scrollBehavior() });
           }}
           aria-label={t('social.backToTop')}
           title={t('social.backToTop')}

@@ -22,6 +22,7 @@ import { useModerationStore } from '@/store/moderation';
 import {
   FEED_PAGE_SIZE,
   applyModeration,
+  filterForSource,
   noteMatchesSource,
   loadFollowingFeed,
   loadGlobalFeed,
@@ -114,6 +115,11 @@ async function fetchPage(
   }
   return loadGlobalFeed({ until, relays, limit: FEED_PAGE_SIZE, filter });
 }
+
+/** How often to re-score while late signals are still arriving. */
+const SETTLE_INTERVAL_MS = 4000;
+/** How many of those passes to run before the order is left alone. */
+const SETTLE_TICKS = 5;
 
 export function useFeed(
   source: FeedSource,
@@ -225,7 +231,11 @@ export function useFeed(
       .then((page) => {
         if (cancelled) return;
         setNotes((current) => {
-          const merged = groupReposts(mergeNotes(current, page)).notes;
+          // Guard the page, not just the live tail: `fetchPage` reads through
+          // the shared coalescer, which fans every consumer's events into
+          // this handle. See `filterForSource`.
+          const guarded = filterForSource(page, source, allowedAuthors, filter);
+          const merged = groupReposts(mergeNotes(current, guarded)).notes;
           persist(merged);
           return merged;
         });
@@ -333,7 +343,8 @@ export function useFeed(
         if (keyRef.current !== requestedFor) return;
         if (widened) widenedRef.current = true;
         setNotes((current) => {
-          const merged = groupReposts(mergeNotes(current, events)).notes;
+          const guarded = filterForSource(events, source, allowedAuthors, filter);
+          const merged = groupReposts(mergeNotes(current, guarded)).notes;
           // A page that adds nothing new means we've reached the end of what
           // these relays will serve — `until` overlap guarantees at least the
           // boundary note comes back, so "no growth" is the honest signal.
@@ -387,6 +398,12 @@ export function useFeed(
 
   // Re-rank when late signals land. Counts and WoT verdicts resolve after the
   // notes do, so a score computed once would be a score computed on zeros.
+  //
+  // Bounded, though. This used to poll every four seconds for as long as the
+  // feed was mounted, which meant a "Top" feed quietly resorted itself under
+  // whoever was reading it — forever, long after every count had arrived.
+  // Signals settle within seconds of a page landing; after that, movement is
+  // just the list rearranging for no reason the reader can see.
   const [signalTick, setSignalTick] = useState(0);
   useEffect(() => {
     if (sort !== 'top') return;
@@ -394,9 +411,16 @@ export function useFeed(
     const offWot = wotEngine.on('verdicts-changed', bump);
     // Counts arrive in batches; a slow poll is cheaper than subscribing to
     // every note id and re-rendering per arrival.
-    const timer = setInterval(bump, 4000);
+    let ticks = 0;
+    const timer = setInterval(() => {
+      bump();
+      if (++ticks >= SETTLE_TICKS) clearInterval(timer);
+    }, SETTLE_INTERVAL_MS);
     return () => { offWot(); clearInterval(timer); };
-  }, [sort]);
+    // `key` restarts the window when the feed changes; `notes.length` when a
+    // page lands, which is when fresh signals are actually pending.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sort, key, notes.length]);
 
   const followSet = useMemo(() => new Set(follows), [follows]);
 

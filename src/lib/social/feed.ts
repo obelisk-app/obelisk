@@ -55,6 +55,24 @@ export function noteMatchesSource(
   return true;
 }
 
+/**
+ * `noteMatchesSource` over a whole page.
+ *
+ * The author half of this guard was applied at the loaders and the kind half
+ * only on the live tail, so a page fetched from the coalescer could carry
+ * kinds nobody asked for. A follower's NIP-51 interests list (kind 10015)
+ * reached the feed that way and rendered as "this client can't display this
+ * note yet" — about an event that was never a note.
+ */
+export function filterForSource(
+  notes: readonly NostrEvent[],
+  source: { kind: 'following'; authors: readonly string[] } | { kind: 'global' } | { kind: 'profile'; pubkey: string },
+  allowedAuthors?: ReadonlySet<string>,
+  filter: ContentFilter = 'all',
+): NostrEvent[] {
+  return notes.filter((note) => noteMatchesSource(note, source, allowedAuthors, filter));
+}
+
 export function chunkAuthors(
   authors: readonly string[],
   size = AUTHORS_PER_FILTER,
@@ -120,7 +138,9 @@ export async function loadGlobalFeed(
   const events = await querySocial([baseFilter(opts.limit ?? FEED_PAGE_SIZE, opts.until, opts.filter)], {
     ...(opts.relays ? { relays: opts.relays } : {}),
   });
-  return dedupeReposts(mergeNotes([], events));
+  // Global has no author to filter on, so the kind guard is the only thing
+  // standing between the coalescer's other consumers and the reader's feed.
+  return dedupeReposts(mergeNotes([], filterForSource(events, { kind: 'global' }, undefined, opts.filter)));
 }
 
 /**
@@ -144,9 +164,12 @@ export async function loadFollowingFeed(
   const events = await querySocial(filters, {
     ...(opts.relays ? { relays: opts.relays } : {}),
   });
-  // Filter by author on the way in: see `noteMatchesSource`.
+  // Filter by author AND kind on the way in: see `noteMatchesSource`.
   const allowed = new Set(authors);
-  return dedupeReposts(mergeNotes([], events.filter((event) => allowed.has(event.pubkey))));
+  return dedupeReposts(mergeNotes(
+    [],
+    filterForSource(events, { kind: 'following', authors }, allowed, opts.filter),
+  ));
 }
 
 /**
@@ -212,7 +235,7 @@ export async function loadProfileFeed(
 
   // Same guard as the following feed: the coalescer fans other consumers'
   // events into this handle too.
-  return mergeNotes([], events.filter((event) => event.pubkey === pubkey));
+  return mergeNotes([], filterForSource(events, { kind: 'profile', pubkey }, undefined, opts.filter));
 }
 
 /**

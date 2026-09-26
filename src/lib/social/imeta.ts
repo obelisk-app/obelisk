@@ -33,6 +33,15 @@ export type ImetaFields = {
   alt: string | null;
   contentWarning: string | null;
   fallbacks: string[];
+  /**
+   * NIP-71 poster frame. A video with no poster renders as a grey box
+   * reading `0:00` — there is nothing to look at until you press play, so
+   * a video note in a feed says nothing about itself. Publishers write
+   * either `image` (NIP-71's name) or `thumb`; take whichever is there.
+   */
+  poster: string | null;
+  /** NIP-71 `duration`, in seconds. */
+  durationSec: number | null;
 };
 
 /**
@@ -76,7 +85,15 @@ export function parseImetaTag(tag: readonly string[]): ImetaFields | null {
     // way a multi-image post can gate one image and not the rest.
     contentWarning: multi.get('content-warning')?.[0] ?? null,
     fallbacks: multi.get('fallback') ?? [],
+    poster: multi.get('image')?.[0] ?? multi.get('thumb')?.[0] ?? null,
+    durationSec: parsePositiveInt(multi.get('duration')?.[0]),
   };
+}
+
+function parsePositiveInt(value: string | undefined): number | null {
+  if (!value) return null;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
 /** All imeta entries on a note, keyed by URL. */

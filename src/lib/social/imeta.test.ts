@@ -81,3 +81,36 @@ describe('aspectRatio', () => {
     expect(aspectRatio({ width: null, height: 400 })).toBeNull();
   });
 });
+
+describe('NIP-71 video fields', () => {
+  it('reads the poster frame from `image`', () => {
+    const fields = parseImetaTag(['imeta', 'url https://v.example/a.mp4', 'm video/mp4', 'image https://v.example/a.jpg']);
+    expect(fields?.poster).toBe('https://v.example/a.jpg');
+  });
+
+  it('accepts `thumb`, which some publishers write instead', () => {
+    const fields = parseImetaTag(['imeta', 'url https://v.example/a.mp4', 'thumb https://v.example/t.jpg']);
+    expect(fields?.poster).toBe('https://v.example/t.jpg');
+  });
+
+  it('prefers `image` over `thumb` when both are present', () => {
+    const fields = parseImetaTag([
+      'imeta', 'url https://v.example/a.mp4',
+      'image https://v.example/a.jpg', 'thumb https://v.example/t.jpg',
+    ]);
+    expect(fields?.poster).toBe('https://v.example/a.jpg');
+  });
+
+  it('has no poster when the tag carries none', () => {
+    expect(parseImetaTag(['imeta', 'url https://v.example/a.mp4'])?.poster).toBeNull();
+  });
+
+  it('reads duration in seconds', () => {
+    expect(parseImetaTag(['imeta', 'url https://v.example/a.mp4', 'duration 93'])?.durationSec).toBe(93);
+  });
+
+  it('ignores a nonsense duration rather than rendering NaN', () => {
+    expect(parseImetaTag(['imeta', 'url https://v.example/a.mp4', 'duration soon'])?.durationSec).toBeNull();
+    expect(parseImetaTag(['imeta', 'url https://v.example/a.mp4', 'duration -5'])?.durationSec).toBeNull();
+  });
+});

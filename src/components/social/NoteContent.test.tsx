@@ -1,5 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { nip19 } from 'nostr-tools';
+import { LocaleProvider } from '@/i18n/context';
 
 // Stands in for the markdown renderer: `linkifyHashtags` rewrites `#tag`
 // into `[#tag](/t/tag)`, and what reaches the DOM is an anchor. The
@@ -65,5 +67,38 @@ describe('hashtags in a note', () => {
     render(<NoteContent content="gm #café" onOpenTag={onOpenTag} />);
     fireEvent.click(screen.getByText('#café'));
     expect(onOpenTag).toHaveBeenCalledWith('café');
+  });
+});
+
+describe('addressable references', () => {
+  const PK = 'a'.repeat(64);
+  const naddr = nip19.naddrEncode({ identifier: '1712000000-why-nostr', pubkey: PK, kind: 30023 });
+  const renderChip = (content: string) => render(
+    <LocaleProvider initialLocale="en"><NoteContent content={content} /></LocaleProvider>,
+  );
+
+  it('names the author instead of printing a url slug', () => {
+    // It used to render a bare underlined link labelled with the raw `d`
+    // tag, so a reference to an article read as a fragment of a URL.
+    renderChip(`read this nostr:${naddr}`);
+    const chip = screen.getByTestId('address-ref');
+    expect(chip).toHaveTextContent('Alice');
+  });
+
+  it('shows the slug as readable words, not a timestamped identifier', () => {
+    renderChip(`nostr:${naddr}`);
+    expect(screen.getByTestId('address-ref')).toHaveTextContent('why nostr');
+    expect(screen.getByTestId('address-ref')).not.toHaveTextContent('1712000000');
+  });
+
+  it('links to the note viewer with the bech32 intact', () => {
+    renderChip(`nostr:${naddr}`);
+    expect(screen.getByTestId('address-ref')).toHaveAttribute('href', `/notes/${naddr}`);
+  });
+
+  it('renders a bare naddr too, not sixty characters of bech32', () => {
+    renderChip(`look ${naddr}`);
+    expect(screen.getByTestId('address-ref')).toBeInTheDocument();
+    expect(screen.queryByText(new RegExp(naddr))).not.toBeInTheDocument();
   });
 });

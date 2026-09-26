@@ -50,6 +50,7 @@ export default function RelayStatusPill({
   activeRelay,
   onOpenSettings,
   compact = false,
+  indicate = 'social',
 }: {
   relays: readonly string[];
   /**
@@ -63,6 +64,17 @@ export default function RelayStatusPill({
   onOpenSettings?: () => void;
   /** Dot only — for a header with no room for the count. */
   compact?: boolean;
+  /**
+   * Which relay tier the button itself reports.
+   *
+   * The popover always answers both questions, but the *button* has to be
+   * about the surface behind it. Mounted in the chat header it reported the
+   * social relay count — a tier a chat screen never reads — so it sat at a
+   * red `0/4` while chat was perfectly healthy and the popover's own
+   * active-relay dot was green. `'active'` reports the NIP-29 relay this
+   * session is bound to, which is the one that has to work for chat.
+   */
+  indicate?: 'social' | 'active';
 }) {
   const { t } = useTranslation();
   const statuses = useSyncExternalStore(subscribeRelayStatus, getRelayStatuses, getRelayStatuses);
@@ -77,9 +89,23 @@ export default function RelayStatusPill({
 
   const summary = useMemo(() => relayStatusSummary(relays, statuses), [relays, statuses]);
 
-  const label = summary.state === 'offline'
-    ? t('social.relayOffline')
-    : `${summary.connected}/${summary.total} ${t('social.relayCount')}`;
+  // `access` is the bridge's NIP-42/whitelist verdict for the active relay:
+  // connected AND allowed to read, which is what "chat works" means.
+  const activeState: RelayState = access === 'ok'
+    ? 'connected'
+    : access === 'authenticating' || access === 'unknown'
+      ? 'connecting'
+      : 'failed';
+
+  const reportsActive = indicate === 'active' && !!activeRelay;
+  const dotState = reportsActive ? activeState : summary.state;
+  const showCount = !compact && !reportsActive;
+
+  const label = reportsActive
+    ? `${shortHost(activeRelay)} · ${t(`social.auth.${access}`)}`
+    : summary.state === 'offline'
+      ? t('social.relayOffline')
+      : `${summary.connected}/${summary.total} ${t('social.relayCount')}`;
 
   return (
     <>
@@ -95,10 +121,11 @@ export default function RelayStatusPill({
         aria-expanded={open}
         data-testid="relay-status-pill"
         data-tour="relay-status"
-        data-state={summary.state}
+        data-state={dotState}
+        data-indicate={reportsActive ? 'active' : 'social'}
       >
-        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${DOT[summary.state]}`} aria-hidden="true" />
-        {!compact && <span className="tabular-nums">{summary.connected}/{summary.total}</span>}
+        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${DOT[dotState]}`} aria-hidden="true" />
+        {showCount && <span className="tabular-nums">{summary.connected}/{summary.total}</span>}
       </button>
 
       <AnchoredMenu

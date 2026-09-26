@@ -2,6 +2,25 @@
 
 Canonical list of open bugs and tech debt in Obelisk. Fixes are tracked here until shipped; items that grow into full initiatives get promoted to the [ROADMAP.md](../ROADMAP.md) phases.
 
+## Open questions from the 2026-09-25 UI pass
+
+- **`wss://relay.nostr.band` never completes TLS from the app host.** It is
+  one of the four `DEFAULT_SOCIAL_RELAYS` (`src/lib/social/relays.ts`), so the
+  social relay set is effectively 3/4 for everyone on the default config.
+  Removing or replacing it is a config decision — it changes the
+  `socialRelayKey` that existing users' feed caches are stored under. The
+  header indicator no longer misreports this as an outage either way.
+- **Test content on `public.obelisk.ar`** (`# Stress Test`, channels of
+  `test` / `{}` / `.`). Confirmed **not** a leak: the relay answers
+  unauthenticated and non-whitelisted clients with
+  `auth-required: this relay only accepts whitelisted pubkeys` and serves
+  zero events, so only admitted pubkeys ever see those channels. Tidying them
+  is relay-operator housekeeping, not a client change. Note that filtering
+  `isHidden` groups out of the **live** stream client-side would be wrong —
+  it is how members reach legitimately private channels; the cache-seed skip
+  in `client.ts` exists only so hidden metadata is never painted from a
+  previous identity's snapshot.
+
 ## Realtime & presence
 
 - **Online users not updating** — all users appear online regardless of actual status. Presence state is not driven by socket connect/disconnect events.

@@ -4,6 +4,7 @@
  * Each hook subscribes on mount, replays the latest value, and
  * unsubscribes on unmount.
  */
+import { displayNameFor } from '@/lib/display-name';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getBridge, getBridgeImpl } from './client';
 import type { NipSigner } from '@/lib/nip-59';
@@ -489,7 +490,7 @@ export function useRelayPeople(): ReadonlyArray<JsMemberInfo> {
       const meta = metadata[pubkey];
       return {
         pubkey,
-        displayName: meta?.displayName ?? meta?.name ?? pubkey.slice(0, 10),
+        displayName: displayNameFor(pubkey, meta),
         ...(meta?.picture ? { picture: meta.picture } : {}),
         ...(meta?.nip05 ? { nip05: meta.nip05 } : {}),
         role: admins.has(pubkey) ? 'admin' as const : 'member' as const,
@@ -517,7 +518,7 @@ export function useGroupMemberInfo(groupId: string | null): ReadonlyArray<JsMemb
     const meta = metadata[pubkey];
     return {
       pubkey,
-      displayName: meta?.displayName ?? meta?.name ?? pubkey.slice(0, 10),
+      displayName: displayNameFor(pubkey, meta),
       ...(meta?.picture ? { picture: meta.picture } : {}),
       ...(meta?.nip05 ? { nip05: meta.nip05 } : {}),
       role: adminSet.has(pubkey) ? 'admin' : 'member',

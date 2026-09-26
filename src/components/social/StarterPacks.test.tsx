@@ -130,3 +130,17 @@ describe('StarterPacks', () => {
     expect(onOpenProfile).toHaveBeenCalledWith(pk(1));
   });
 });
+
+describe('who is in a pack', () => {
+  it('names members instead of printing a hex prefix', async () => {
+    // Every chip read as an 8-char pubkey prefix with a letter avatar, so a
+    // newcomer could not tell who they were about to follow.
+    mocks.fetchStarterPacks.mockResolvedValue([pack()]);
+    renderPacks();
+    const faces = await screen.findAllByTestId('starter-pack-face');
+    for (const face of faces) {
+      expect(face.textContent).not.toMatch(/^[0-9a-f]{8}$/);
+      expect(face.textContent?.trim()).toBeTruthy();
+    }
+  });
+});

@@ -14,9 +14,9 @@
  * neutral label rather than popping into existence a second later.
  */
 
+import { displayNameFor } from '@/lib/display-name';
 import { useAuthor } from '@/lib/social/useAuthor';
 import { useNotePreview } from '@/lib/social/useNotePreview';
-import { shortNpub } from '@nostr-wot/data';
 import { useTranslation } from '@/i18n/context';
 import type { ReplyParent } from '@/lib/social/feed';
 
@@ -37,7 +37,7 @@ export default function ReplyLine({
   const meta = useAuthor(authorPubkey);
 
   const name = authorPubkey
-    ? meta?.displayName || meta?.name || shortNpub(authorPubkey)
+    ? displayNameFor(authorPubkey, meta)
     : t('social.replyingToUnknown');
 
   return (
@@ -71,7 +71,12 @@ export default function ReplyLine({
           title={t('social.openParent')}
           data-testid="reply-line-open-parent"
         >
-          {t('social.reply')}
+          {/*
+            Not `social.reply`: beside "Replying to Alice" a control simply
+            labelled "Reply" reads as the compose action repeated, and the
+            row came out as "Replying to Alice · Reply · 50m".
+          */}
+          {t('social.openParentShort')}
         </button>
       )}
     </span>

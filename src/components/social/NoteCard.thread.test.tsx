@@ -113,3 +113,42 @@ describe('opening a note', () => {
     expect(onOpenNote).not.toHaveBeenCalled();
   });
 });
+
+describe('header layout', () => {
+  const REPLY: NostrEvent = {
+    ...NOTE,
+    id: 'f'.repeat(64),
+    tags: [['e', 'd'.repeat(64), '', 'root', 'b'.repeat(64)]],
+  };
+
+  const renderNote = (note: NostrEvent, props: Record<string, unknown> = {}) => render(
+    <LocaleProvider initialLocale="en">
+      <NoteCard note={note} {...props} />
+    </LocaleProvider>,
+  );
+
+  it('keeps the timestamp on the name row when there is nothing else to say', () => {
+    // It used to sit alone on a second line, leaving an empty indented band
+    // under every non-reply — a wasted row per card.
+    renderNote(NOTE, { onOpenNote: vi.fn() });
+    const stamp = screen.getByTestId('note-open-thread');
+    // The row the timestamp sits in is the one carrying the author's name.
+    const row = stamp.closest('div');
+    expect(row).toContainElement(screen.getByText('Alice'));
+  });
+
+  it('gives a reply its own row, because that row carries the attribution', () => {
+    renderNote(REPLY, { onOpenNote: vi.fn() });
+    const stamp = screen.getByTestId('note-open-thread');
+    const row = stamp.closest('div');
+    // The timestamp joins the attribution rather than claiming a row of
+    // its own — that second row is already earning its space here.
+    expect(row).toContainElement(screen.getByTestId('reply-line-author'));
+  });
+
+  it('still shows the time on a note with no thread handler', () => {
+    renderNote(NOTE);
+    expect(screen.queryByTestId('note-open-thread')).toBeNull();
+    expect(document.querySelector('time')).toBeInTheDocument();
+  });
+});

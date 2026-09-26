@@ -3,21 +3,23 @@
 /**
  * The scrolling list of notes.
  *
- * Paging used to be a "Load more" button at the bottom and the live tail sat
- * behind a pill you had to click even when you were already looking at the
- * top of the list. Both made the feed feel inert: scrolling did nothing, and
- * new notes arrived but didn't appear.
+ * Paging used to be a "Load more" button at the bottom, which made the feed
+ * feel inert — scrolling did nothing.
  *
- * Now:
  *  - An IntersectionObserver sentinel pages the next batch as it comes into
  *    view, with a manual button left as the fallback for when the observer
  *    is unavailable (jsdom, very old browsers) or a page failed.
- *  - The live-tail buffer merges itself when the user is at the top. The pill
- *    only appears once they've scrolled away, where splicing notes in would
- *    shift what they're reading.
+ *  - The live-tail buffer enters the list ONLY through the pill. It briefly
+ *    auto-merged while the reader was at the top, and arriving at the top
+ *    also triggered a refresh; both moved the list under whoever was reading
+ *    it, because `showPending` and `refresh` each re-sort through
+ *    `mergeNotes`. Going back up to re-read something is precisely when the
+ *    rows must not move.
+ *  - Pull-to-refresh stays: it is a deliberate gesture, not a side effect of
+ *    scrolling.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { useTranslation } from '@/i18n/context';
 import type { FeedState } from '@/lib/social/useFeed';
@@ -77,10 +79,6 @@ export default function FeedList({
   const { t } = useTranslation();
   const { notes, loading, loadingMore, error, exhausted, pendingCount, repostersByTarget } = state;
   const sentinelRef = useRef<HTMLDivElement>(null);
-  // Starts unknown rather than `true`: before the first scroll measurement
-  // a default of "at the top" let live notes splice in above a reader who
-  // was nowhere near it.
-  const [atTop, setAtTop] = useState(false);
 
   const { loadMore, showPending, refresh } = state;
 
@@ -97,7 +95,8 @@ export default function FeedList({
     return () => observer.disconnect();
   }, [loadMore, exhausted, notes.length]);
 
-  // Track whether the reader is at the top, to decide auto-merge vs. pill.
+  // Reported upward so the host can hide its back-to-top control; nothing
+  // in here branches on it any more.
   const findScroller = useCallback((): HTMLElement | Window | null => {
     if (scrollRef?.current) return scrollRef.current;
     let node: HTMLElement | null = sentinelRef.current?.parentElement ?? null;
@@ -109,37 +108,27 @@ export default function FeedList({
     return typeof window === 'undefined' ? null : window;
   }, [scrollRef]);
 
-  // Shared with the pull gesture below so the two can't double-fetch: both
-  // mean "show me what's new", and arriving at the top is the commoner of
-  // the two — a pull only happens once there's nowhere left to scroll.
+  /** Throttles the deliberate pull gesture below — each pull is a round trip. */
   const lastRefreshRef = useRef(0);
 
   useEffect(() => {
     const scroller = findScroller();
     if (!scroller) return;
-    let wasAtTop = true;
     const read = () => {
       const top = scroller instanceof Window ? scroller.scrollY : scroller.scrollTop;
-      const next = top <= AT_TOP_PX;
-      setAtTop(next);
-      onAtTopChange?.(next);
-      // Scrolling back up to the top refreshes. Without this the only way to
-      // pull new notes was a deliberate over-pull at an exact scroll offset,
-      // which on a phone is a gesture nobody discovers and the browser often
-      // swallows as rubber-banding.
-      if (next && !wasAtTop) {
-        const now = Date.now();
-        if (now - lastRefreshRef.current >= PULL_REFRESH_COOLDOWN_MS) {
-          lastRefreshRef.current = now;
-          refresh();
-        }
-      }
-      wasAtTop = next;
+      // Deliberately does NOT refresh.
+      //
+      // Scrolling back to the top used to fire a full `refresh()`, which
+      // replaces the list and re-sorts it. Scrolling up is how you re-read
+      // something, so the reliable way to lose the note you were going back
+      // for was to go back for it. New notes arrive through the pending
+      // pill, which says how many there are and moves nothing until asked.
+      onAtTopChange?.(top <= AT_TOP_PX);
     };
     read();
     scroller.addEventListener('scroll', read, { passive: true });
     return () => scroller.removeEventListener('scroll', read);
-  }, [findScroller, refresh, onAtTopChange]);
+  }, [findScroller, onAtTopChange]);
 
   // Pull-to-refresh, for mouse wheels and touch alike. Replaces the refresh
   // button: at the top of a feed, pulling further up means "show me what's
@@ -197,10 +186,12 @@ export default function FeedList({
     };
   }, [findScroller, refresh]);
 
-  // At the top, new notes just appear — that's what "live" should mean.
-  useEffect(() => {
-    if (atTop && pendingCount > 0) showPending();
-  }, [atTop, pendingCount, showPending]);
+  // No auto-merge, even at the top.
+  //
+  // `showPending` runs the buffer through `mergeNotes`, which re-sorts the
+  // whole list — so a note arriving while you were reading row three
+  // reshuffled everything under you. The pill is one tap and it is the
+  // reader's call.
 
   if (loading && notes.length === 0) {
     return (
@@ -227,7 +218,13 @@ export default function FeedList({
     <div data-testid="feed-list">
       {header}
 
-      {pendingCount > 0 && !atTop && (
+      {/*
+        Shown at the top too, now that arriving at the top no longer merges
+        the buffer by itself. Gating it on `!atTop` used to be fine because
+        the notes let themselves in up there; without that the pill was the
+        only route in, and it was the one place it stayed hidden.
+      */}
+      {pendingCount > 0 && (
         <div className="pointer-events-none sticky top-2 z-[3] flex justify-center">
           <button
             type="button"

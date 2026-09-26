@@ -21,7 +21,22 @@ export type CarouselItem = {
   mimeType?: string | null;
   width?: number | null;
   height?: number | null;
+  /** NIP-71 poster frame, from the `imeta` `image`/`thumb` field. */
+  poster?: string | null;
 };
+
+/**
+ * Extensions we treat as video when the publisher wrote no `m` field.
+ *
+ * Without this an `imeta` carrying only a URL rendered through `<img>`, so a
+ * video note showed as a broken image rather than a player.
+ */
+const VIDEO_EXTENSIONS = /\.(mp4|webm|mov|m4v|ogv)(\?|#|$)/i;
+
+function isVideo(item: CarouselItem): boolean {
+  if (item.mimeType) return item.mimeType.startsWith('video/');
+  return VIDEO_EXTENSIONS.test(item.url);
+}
 
 export default function MediaCarousel({ items }: { items: readonly CarouselItem[] }) {
   const trackRef = useRef<HTMLDivElement>(null);
@@ -124,15 +139,22 @@ export default function MediaCarousel({ items }: { items: readonly CarouselItem[
 
 function Slide({ item, onOpen }: { item: CarouselItem; onOpen?: (url: string) => void }) {
   const ratio = item.width && item.height ? `${item.width}/${item.height}` : undefined;
-  if (item.mimeType?.startsWith('video/')) {
+  if (isVideo(item)) {
     return (
       <video
         src={item.url}
         controls
         playsInline
-        preload="metadata"
+        // `poster` is the difference between a video note and a grey box
+        // reading `0:00`. Without one there is nothing to look at until you
+        // press play, so the card says nothing about itself in the feed.
+        poster={item.poster ?? undefined}
+        // With a poster there is already something to show, so don't spend
+        // a metadata round trip on every video in the viewport.
+        preload={item.poster ? 'none' : 'metadata'}
         className="w-full rounded-xl"
         style={ratio ? { aspectRatio: ratio } : undefined}
+        data-testid="carousel-video"
       />
     );
   }

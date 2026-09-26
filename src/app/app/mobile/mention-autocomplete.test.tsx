@@ -92,7 +92,7 @@ describe('MobileMentionAutocomplete', () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it('renders one row per candidate with display name and short pubkey', () => {
+  it('renders one row per candidate with display name and npub', () => {
     render(
       <MobileMentionAutocomplete
         members={[ALICE, BOB]}
@@ -104,7 +104,10 @@ describe('MobileMentionAutocomplete', () => {
     const rows = screen.getAllByTestId('mobile-mention-option');
     expect(rows).toHaveLength(2);
     expect(rows[0].textContent).toContain('Alice');
-    expect(rows[0].textContent).toContain('aaaaaaaa');
+    // An npub, not a hex slice — this line disambiguates two people with
+    // the same display name, and hex is not something a reader can check.
+    expect(rows[0].textContent).toContain('npub1');
+    expect(rows[0].textContent).not.toContain('aaaaaaaa');
     expect(rows[1].textContent).toContain('Bob');
   });
 

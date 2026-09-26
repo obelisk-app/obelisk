@@ -94,44 +94,60 @@ export default function HintCallout({
   if (typeof document === 'undefined') return null;
 
   return createPortal(
-    <div
-      ref={cardRef}
-      role="dialog"
-      aria-label={title}
-      className="lc-card fixed z-[150] p-3 shadow-2xl shadow-black/50"
-      style={{
-        top: pos?.top ?? -9999,
-        left: pos?.left ?? -9999,
-        width: WIDTH,
-        visibility: pos ? 'visible' : 'hidden',
-      }}
-      data-testid="hint-callout"
-      data-placement={pos?.below ? 'below' : 'above'}
-    >
-      <p className="text-sm font-semibold text-lc-white">{title}</p>
-      <p className="mt-1 text-[13px] leading-relaxed text-lc-muted">{body}</p>
-      <div className="mt-3 flex items-center justify-between gap-2">
-        <button
-          type="button"
-          onClick={onMuteAll}
-          className="rounded-full px-2 py-1 text-[11px] text-lc-muted transition-colors hover:text-lc-white"
-          data-testid="hint-mute"
-        >
-          {t('hints.dismissAll')}
-        </button>
-        <button
-          type="button"
-          onClick={onDismiss}
-          // Focused on mount: Enter closes the thing that just appeared,
-          // which is what a keyboard user will try first.
-          autoFocus
-          className="lc-pill-primary px-4 py-1.5 text-xs"
-          data-testid="hint-dismiss"
-        >
-          {t('hints.gotIt')}
-        </button>
+    <>
+      {/*
+        A scrim, because the card is an overlay and used to read as broken
+        layout. Anchored under the header it lands squarely on the heading
+        below — the first tip sat on "Find people to follow" and clipped the
+        pack title under it, so the page looked mis-rendered rather than
+        annotated. Dimming what is behind says "this is on top of the page",
+        and gives the click-outside dismissal the card otherwise lacked.
+      */}
+      <div
+        className="fixed inset-0 z-[149] bg-black/40"
+        onClick={onDismiss}
+        aria-hidden="true"
+        data-testid="hint-scrim"
+      />
+      <div
+        ref={cardRef}
+        role="dialog"
+        aria-label={title}
+        className="lc-card fixed z-[150] p-3 shadow-2xl shadow-black/50"
+        style={{
+          top: pos?.top ?? -9999,
+          left: pos?.left ?? -9999,
+          width: WIDTH,
+          visibility: pos ? 'visible' : 'hidden',
+        }}
+        data-testid="hint-callout"
+        data-placement={pos?.below ? 'below' : 'above'}
+      >
+        <p className="text-sm font-semibold text-lc-white">{title}</p>
+        <p className="mt-1 text-[13px] leading-relaxed text-lc-muted">{body}</p>
+        <div className="mt-3 flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={onMuteAll}
+            className="rounded-full px-2 py-1 text-[11px] text-lc-muted transition-colors hover:text-lc-white"
+            data-testid="hint-mute"
+          >
+            {t('hints.dismissAll')}
+          </button>
+          <button
+            type="button"
+            onClick={onDismiss}
+            // Focused on mount: Enter closes the thing that just appeared,
+            // which is what a keyboard user will try first.
+            autoFocus
+            className="lc-pill-primary px-4 py-1.5 text-xs"
+            data-testid="hint-dismiss"
+          >
+            {t('hints.gotIt')}
+          </button>
+        </div>
       </div>
-    </div>,
+    </>,
     document.body,
   );
 }

@@ -1,5 +1,6 @@
 'use client';
 
+import { displayNameFor } from '@/lib/display-name';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
@@ -66,7 +67,7 @@ export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, ini
   const npub = (() => {
     try { return hexToNpub(pubkey); } catch { return null; }
   })();
-  const displayName = meta?.displayName || meta?.name || pubkey.slice(0, 10);
+  const displayName = displayNameFor(pubkey, meta);
   const logout = () => {
     onClose();
     if (onLogout) onLogout();

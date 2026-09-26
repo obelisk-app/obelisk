@@ -25,20 +25,30 @@ const renderPanel = (notes: NostrEvent[], props: Record<string, unknown> = {}) =
 );
 
 describe('TrendingWidget', () => {
+  // A tag needs to clear `trendingTags`' floor to be listed at all — one
+  // note is not a trend, and the panel used to show rows reading "1".
+  const trending = (tag: string) => ['a', 'b', 'c'].map((author, i) => note(String(i), author, [tag]));
+
   it('lists what the loaded feed is about', () => {
-    renderPanel([note('1', 'a', ['bitcoin']), note('2', 'b', ['bitcoin'])]);
+    renderPanel(trending('bitcoin'));
     expect(screen.getByTestId('trending-tag')).toHaveTextContent('#bitcoin');
   });
 
   it('searches the tag when one is clicked', () => {
     const onOpenTag = vi.fn();
-    renderPanel([note('1', 'a', ['art'])], { onOpenTag });
+    renderPanel(trending('art'), { onOpenTag });
     fireEvent.click(screen.getByTestId('trending-tag'));
     expect(onOpenTag).toHaveBeenCalledWith('art');
   });
 
   it('says so rather than rendering an empty box', () => {
     renderPanel([note('1', 'a', [])]);
+    expect(screen.getByTestId('feed-trending-empty')).toBeInTheDocument();
+  });
+
+  it('stays quiet rather than listing a tag seen once', () => {
+    // `#esim · 1` was being presented as trending.
+    renderPanel([note('1', 'a', ['esim'])]);
     expect(screen.getByTestId('feed-trending-empty')).toBeInTheDocument();
   });
 
