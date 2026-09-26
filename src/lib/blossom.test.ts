@@ -1,6 +1,8 @@
 import { getPublicKey } from 'nostr-tools/pure';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { uploadEncryptedBlob, uploadToBlossom } from './blossom';
+import { sha256 } from '@noble/hashes/sha2.js';
+import { bytesToHex } from '@noble/hashes/utils.js';
+import { ENCRYPTED_BLOSSOM_SERVERS, uploadEncryptedBlob, uploadToBlossom } from './blossom';
 
 const { signEventTemplate } = vi.hoisted(() => ({ signEventTemplate: vi.fn() }));
 vi.mock('@/lib/nostr-bridge', () => ({ nostrActions: { signEventTemplate } }));
@@ -34,12 +36,14 @@ describe('uploadEncryptedBlob', () => {
 
   it('signs with a throwaway key, never the session, and hides the mime type', async () => {
     signEventTemplate.mockClear();
+    const blob = new Uint8Array([9, 9, 9]);
+    const hash = bytesToHex(sha256(blob));
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({ ok: false, status: 401, text: async () => 'unknown key' })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ url: 'https://cdn.example/blob' }) });
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ url: `https://cdn.example/${hash}` }) });
     vi.stubGlobal('fetch', fetchMock);
 
-    await expect(uploadEncryptedBlob(new Uint8Array([9, 9, 9]))).resolves.toBe('https://cdn.example/blob');
+    await expect(uploadEncryptedBlob(blob)).resolves.toBe(`https://cdn.example/${hash}`);
     expect(signEventTemplate).not.toHaveBeenCalled();
     expect(fetchMock).toHaveBeenCalledTimes(2);
     const events = fetchMock.mock.calls.map((c) => {
@@ -57,12 +61,30 @@ describe('uploadEncryptedBlob', () => {
   });
 
   it('uses a different throwaway key per upload', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ url: 'https://cdn.example/b' }) });
+    const hash = bytesToHex(sha256(new Uint8Array([1])));
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ url: `https://cdn.example/${hash}` }) });
     vi.stubGlobal('fetch', fetchMock);
     await uploadEncryptedBlob(new Uint8Array([1]));
     await uploadEncryptedBlob(new Uint8Array([1]));
     const pubkeys = fetchMock.mock.calls.map((c) =>
       JSON.parse(atob((c[1].headers.Authorization as string).slice(6))).pubkey);
     expect(pubkeys[0]).not.toBe(pubkeys[1]);
+  });
+
+  it('goes to the servers that accept opaque blobs, not the media-sniffing ones', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 500, text: async () => '' });
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(uploadEncryptedBlob(new Uint8Array([1]))).rejects.toThrow();
+    const hosts = fetchMock.mock.calls.map((c) => new URL(c[0]).origin);
+    expect(hosts).toEqual(ENCRYPTED_BLOSSOM_SERVERS);
+    expect(hosts).not.toContain('https://blossom.primal.net');
+  });
+
+  it("treats an HTML 200 or a URL that doesn't name the blob as a failure, and says why", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => { throw new SyntaxError('Unexpected token <'); } })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ url: 'https://cdn.example/something-else' }) });
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(uploadEncryptedBlob(new Uint8Array([2]))).rejects.toThrow(/not a Blossom JSON response.*does not name the uploaded blob/);
   });
 });

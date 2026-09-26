@@ -19,7 +19,7 @@ import { useTranslation } from '@/i18n/context';
 import UserAvatar from '@/components/UserAvatar';
 import { initDmCalls, useDmCallStore, type DmCallStatus } from '@/store/dm-call';
 import {
-  CloseIcon, FlipCameraIcon, LockIcon, MicIcon, MicOffIcon, PhoneIcon, PhoneOffIcon,
+  CloseIcon, FlipCameraIcon, LockIcon, MaximizeIcon, MicIcon, MicOffIcon, MinimizeIcon, PhoneIcon, PhoneOffIcon,
   ScreenShareIcon, ShieldIcon, VideoIcon, VideoOffIcon,
 } from '@/components/ui/icons';
 
@@ -144,9 +144,56 @@ function ControlButton({
   );
 }
 
+/**
+ * Fullscreen for the call view. Uses the Fullscreen API on the view itself
+ * (true fullscreen, the browser chrome goes away); where that isn't available
+ * — iOS Safari only allows it on `<video>` — the view just fills the window.
+ * Esc leaves either way.
+ */
+function useCallFullscreen(ref: React.RefObject<HTMLDivElement | null>) {
+  const [native, setNative] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  useEffect(() => {
+    const onChange = () => setNative(document.fullscreenElement === ref.current && ref.current !== null);
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, [ref]);
+  useEffect(() => {
+    if (!expanded) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setExpanded(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [expanded]);
+  // Leaving the call must not leave the page stuck in fullscreen.
+  useEffect(() => () => {
+    if (typeof document !== 'undefined' && document.fullscreenElement && document.fullscreenElement === ref.current) {
+      void document.exitFullscreen?.().catch(() => {});
+    }
+  }, [ref]);
+  const toggle = () => {
+    const el = ref.current;
+    if (native) {
+      void document.exitFullscreen?.().catch(() => {});
+      return;
+    }
+    if (expanded) {
+      setExpanded(false);
+      return;
+    }
+    if (el && typeof el.requestFullscreen === 'function' && document.fullscreenEnabled !== false) {
+      el.requestFullscreen().catch(() => setExpanded(true));
+    } else {
+      setExpanded(true);
+    }
+  };
+  return { full: native || expanded, toggle };
+}
+
 export function DmCallView() {
   const { t } = useTranslation();
   const s = useDmCallStore();
+  const viewRef = useRef<HTMLDivElement>(null);
+  const { full, toggle: toggleFullscreen } = useCallFullscreen(viewRef);
   const author = useAuthor(s.peer);
   const remoteVideoRef = useStreamRef<HTMLVideoElement>(s.media.remoteScreen ?? s.media.remoteVideo);
   const localVideoRef = useStreamRef<HTMLVideoElement>(s.media.localVideo);
@@ -159,13 +206,29 @@ export function DmCallView() {
 
   return (
     <div
-      className="fixed inset-0 z-[80] flex flex-col bg-lc-black/95 backdrop-blur-sm sm:inset-auto sm:bottom-4 sm:right-4 sm:h-[32rem] sm:w-[26rem] sm:overflow-hidden sm:rounded-2xl sm:border sm:border-lc-border sm:shadow-2xl"
+      ref={viewRef}
+      className={full
+        ? 'fixed inset-0 z-[80] flex flex-col bg-black'
+        : 'fixed inset-0 z-[80] flex flex-col bg-lc-black/95 backdrop-blur-sm sm:inset-auto sm:bottom-4 sm:right-4 sm:h-[32rem] sm:w-[26rem] sm:overflow-hidden sm:rounded-2xl sm:border sm:border-lc-border sm:shadow-2xl'}
       role="dialog"
       aria-label={name}
       data-testid="dm-call-view"
       data-status={s.status}
+      data-fullscreen={full || undefined}
     >
-      <div className="relative flex min-h-0 flex-1 items-center justify-center bg-black">
+      <div className="relative flex min-h-0 flex-1 items-center justify-center bg-black" onDoubleClick={ended ? undefined : toggleFullscreen}>
+        {!ended && (
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            className="absolute right-3 top-3 z-10 hidden h-9 w-9 items-center justify-center rounded-full bg-black/60 text-lc-white hover:bg-black/80 sm:flex"
+            aria-label={full ? t('call.exitFullscreen') : t('call.fullscreen')}
+            title={full ? t('call.exitFullscreen') : t('call.fullscreen')}
+            data-testid="dm-call-fullscreen"
+          >
+            {full ? <MinimizeIcon size={18} /> : <MaximizeIcon size={18} />}
+          </button>
+        )}
         {showRemoteVideo ? (
           <video ref={remoteVideoRef} autoPlay playsInline className="h-full w-full object-contain" data-testid="dm-call-remote-video" />
         ) : (
@@ -185,7 +248,7 @@ export function DmCallView() {
             autoPlay
             playsInline
             muted
-            className="absolute bottom-3 right-3 h-32 w-24 rounded-xl border border-lc-border object-cover shadow-lg [transform:scaleX(-1)] sm:h-28 sm:w-20"
+            className={`absolute bottom-3 right-3 rounded-xl border border-lc-border object-cover shadow-lg [transform:scaleX(-1)] ${full ? 'h-40 w-56 sm:h-44 sm:w-64' : 'h-32 w-24 sm:h-28 sm:w-20'}`}
             data-testid="dm-call-local-video"
           />
         )}

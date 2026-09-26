@@ -1414,5 +1414,7 @@
   "settings.calls.removeRelay": "Remove",
   "settings.calls.reset": "Reset to defaults",
   "settings.calls.saved": "Saved",
-  "settings.calls.invalid": "Only wss:// relay addresses"
+  "settings.calls.invalid": "Only wss:// relay addresses",
+  "call.fullscreen": "Full screen",
+  "call.exitFullscreen": "Exit full screen"
 }

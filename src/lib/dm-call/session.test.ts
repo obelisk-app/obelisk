@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { generateSecretKey, getPublicKey } from 'nostr-tools';
+import { generateSecretKey } from 'nostr-tools';
 import { DmCallSession, type DmCallMediaState, type DmCallPhase } from './session';
 import { fakeEphemeralRelay, type FakeEphemeralRelay } from './fake-ephemeral-relay';
 import type { Peer, PeerOptions } from '@/lib/voice/peer';
@@ -208,9 +208,10 @@ describe('DmCallSession', () => {
     expect(caller.peers).toHaveLength(2);
     expect(callee.peers).toHaveLength(2);
     expect(callee.peers[1].closed).toBeNull();
-    // A late re-send of the first session's offer must not pull the callee back.
-    callee.peers[1].opts.events.onRemoteSessionChanged; // noop reference
-    expect(callee.peers.length).toBe(2);
+    // Settles: no further rebuild ping-pong from old-session re-sends.
+    await vi.advanceTimersByTimeAsync(15_000);
+    expect(caller.peers).toHaveLength(2);
+    expect(callee.peers).toHaveLength(2);
   });
 
   it('mute flips the mic track, hangup stops every track', async () => {

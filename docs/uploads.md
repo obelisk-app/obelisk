@@ -32,7 +32,10 @@ of the selected Blossom server.
 ## Encrypted DM attachments
 
 DM files and voice notes do not use `uploadToBlossom`. `uploadEncryptedBlob`
-uploads AES-256-GCM **ciphertext** as `application/octet-stream`, signs the
+uploads AES-256-GCM **ciphertext** as `application/octet-stream` to its own
+server list (`ENCRYPTED_BLOSSOM_SERVERS`: nostr.download,
+blossom.yakihonne.com — the media hosts above sniff uploads and refuse bytes
+that aren't a recognisable image/video/audio, which ciphertext never is), signs the
 kind `24242` auth with a throwaway key minted per upload (so the server never
 learns the uploader's npub), and binds each attempt to its server with a
 `server` tag. The key travels only inside the NIP-17 gift wrap. The ciphertext

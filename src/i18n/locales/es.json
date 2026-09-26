@@ -1414,5 +1414,7 @@
   "settings.calls.removeRelay": "Quitar",
   "settings.calls.reset": "Restablecer",
   "settings.calls.saved": "Guardado",
-  "settings.calls.invalid": "Solo direcciones de relé wss://"
+  "settings.calls.invalid": "Solo direcciones de relé wss://",
+  "call.fullscreen": "Pantalla completa",
+  "call.exitFullscreen": "Salir de pantalla completa"
 }

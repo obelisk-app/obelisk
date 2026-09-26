@@ -68,6 +68,41 @@ describe('DM call UI', () => {
     expect(actions.hangup).toHaveBeenCalled();
   });
 
+  it('toggles fullscreen with the button and double-click, falling back to filling the window', async () => {
+    useDmCallStore.setState({ status: 'active', peer: BOB, connectedAt: Date.now() });
+    renderLocalized(<DmCallLayer />);
+    const view = screen.getByTestId('dm-call-view');
+    // jsdom has no Fullscreen API: the fallback path.
+    expect(view).not.toHaveAttribute('data-fullscreen');
+    fireEvent.click(screen.getByTestId('dm-call-fullscreen'));
+    expect(view).toHaveAttribute('data-fullscreen', 'true');
+    expect(screen.getByTestId('dm-call-fullscreen')).toHaveAttribute('aria-label', 'Exit full screen');
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(view).not.toHaveAttribute('data-fullscreen');
+    fireEvent.doubleClick(view.firstElementChild!);
+    expect(view).toHaveAttribute('data-fullscreen', 'true');
+  });
+
+  it('uses the Fullscreen API when the browser has it', async () => {
+    const requestFullscreen = vi.fn(function (this: HTMLElement) {
+      Object.defineProperty(document, 'fullscreenElement', { configurable: true, get: () => this });
+      document.dispatchEvent(new Event('fullscreenchange'));
+      return Promise.resolve();
+    });
+    (HTMLElement.prototype as unknown as { requestFullscreen: unknown }).requestFullscreen = requestFullscreen;
+    try {
+      useDmCallStore.setState({ status: 'active', peer: BOB, connectedAt: Date.now() });
+      renderLocalized(<DmCallLayer />);
+      fireEvent.click(screen.getByTestId('dm-call-fullscreen'));
+      expect(requestFullscreen).toHaveBeenCalled();
+      await Promise.resolve();
+      expect(screen.getByTestId('dm-call-view')).toHaveAttribute('data-fullscreen', 'true');
+    } finally {
+      delete (HTMLElement.prototype as unknown as { requestFullscreen?: unknown }).requestFullscreen;
+      Object.defineProperty(document, 'fullscreenElement', { configurable: true, get: () => null });
+    }
+  });
+
   it('shows why a call ended, with a close button', () => {
     useDmCallStore.setState({ status: 'ended', peer: BOB, endReason: 'declined' });
     renderLocalized(<DmCallLayer />);

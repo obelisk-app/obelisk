@@ -12,6 +12,23 @@ const BLOSSOM_SERVERS = [
   'https://blossom.band',
 ];
 
+/**
+ * Servers for encrypted DM attachments — a separate list on purpose.
+ *
+ * Every server above sniffs the upload and only stores recognisable media:
+ * measured 2026-09-26, primal and blossom.band answer 415 to
+ * `application/octet-stream` (and 400 "does not match the file content" if
+ * the ciphertext is labelled as an image), and nostr.build returns an HTML
+ * page. AES-GCM ciphertext is indistinguishable from random bytes, so it can
+ * never pass that check. These two store arbitrary blobs from a key they have
+ * never seen, serve them back byte-for-byte with `Access-Control-Allow-Origin:
+ * *`, and were verified with 4 KB and 3 MB round trips the same day.
+ */
+export const ENCRYPTED_BLOSSOM_SERVERS = [
+  'https://nostr.download',
+  'https://blossom.yakihonne.com',
+];
+
 async function createAuthEvent(fileHash: string, secretKey?: Uint8Array, server?: string): Promise<string> {
   const tags = [
     ['t', 'upload'],
@@ -80,12 +97,15 @@ export async function uploadToBlossom(file: File, secretKey?: Uint8Array): Promi
  * The blob is sent as `application/octet-stream`: the real mime type lives
  * only inside the gift-wrapped rumor.
  */
-export async function uploadEncryptedBlob(ciphertext: Uint8Array): Promise<string> {
+export async function uploadEncryptedBlob(
+  ciphertext: Uint8Array,
+  servers: readonly string[] = ENCRYPTED_BLOSSOM_SERVERS,
+): Promise<string> {
   const hash = bytesToHex(sha256(ciphertext));
   const throwaway = generateSecretKey();
-  let lastError: Error | null = null;
+  const reasons: string[] = [];
 
-  for (const server of BLOSSOM_SERVERS) {
+  for (const server of servers) {
     try {
       const authToken = await createAuthEvent(hash, throwaway, server);
       const res = await fetch(`${server}/upload`, {
@@ -98,16 +118,27 @@ export async function uploadEncryptedBlob(ciphertext: Uint8Array): Promise<strin
       });
       if (!res.ok) {
         const text = await res.text().catch(() => res.statusText);
-        throw new Error(`${server}: ${res.status} ${text}`);
+        throw new Error(`${res.status} ${text.slice(0, 120)}`);
       }
-      const data = await res.json();
-      if (typeof data?.url !== 'string') throw new Error(`${server}: no url in response`);
-      return data.url;
+      let data: { url?: unknown };
+      try {
+        data = await res.json();
+      } catch {
+        // nostr.build, for one, answers an upload it won't take with a 200
+        // HTML page.
+        throw new Error('not a Blossom JSON response');
+      }
+      const url = typeof data?.url === 'string' ? data.url : '';
+      // A Blossom URL names the blob by its hash. One that doesn't is not the
+      // blob we sent, and the reader's integrity check would reject it anyway.
+      if (!/^https:\/\//.test(url) || !url.includes(hash)) throw new Error('response URL does not name the uploaded blob');
+      return url;
     } catch (err) {
-      lastError = err as Error;
-      console.warn(`Encrypted Blossom upload failed on ${server}:`, err);
+      const reason = `${new URL(server).host}: ${(err as Error).message}`;
+      reasons.push(reason);
+      console.warn('Encrypted Blossom upload failed —', reason);
     }
   }
 
-  throw lastError || new Error('All Blossom servers failed');
+  throw new Error(`Upload failed (${reasons.join('; ') || 'no servers'})`);
 }

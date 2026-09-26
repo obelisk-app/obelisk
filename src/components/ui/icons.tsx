@@ -179,6 +179,12 @@ export const ScreenShareIcon = (p: IconProps) => (
 export const FlipCameraIcon = (p: IconProps) => (
   <Svg {...p}><path d="M4 8h3l2-3h6l2 3h3v11H4Z" /><path d="M9.5 13.5a2.5 2.5 0 0 1 4.3-1.8M14.5 13.5a2.5 2.5 0 0 1-4.3 1.8M13.8 10.2v1.5h-1.5M10.2 16.8v-1.5h1.5" /></Svg>
 );
+export const MaximizeIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></Svg>
+);
+export const MinimizeIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" /></Svg>
+);
 export const VideoIcon = (p: IconProps) => (
   <Svg {...p}><rect x="3" y="6" width="13" height="12" rx="2" /><path d="m16 10.5 5-3v9l-5-3" /></Svg>
 );
