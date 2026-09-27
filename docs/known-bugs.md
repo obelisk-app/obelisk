@@ -71,6 +71,27 @@ The read-state foundation (server-side `lastReadAt`, in-app toasts via `ToastSta
 
 - **No way to delete servers from /admin** — once a server is created there is no UI path to remove it. Schema-wise, `Server` already cascades deletes to its children, so the API/UI is the only missing piece.
 
+## Apps (games moving to obelisk-apps, in progress 2026-09-27)
+
+Games are moving out of this repo into [obelisk-apps](https://github.com/obelisk-app/obelisk-apps). They are becoming sandboxed apps that users publish as kind 32390 manifests, with the bundle on Blossom. Nothing below is built yet. These are the host-side risks the switch brings, recorded now so the dex PR lands with them tracked. The full model is in obelisk-apps `docs/security.md` and `docs/known-issues.md`, and the cross-project policy in obelisk-design `security-workflows/app-sandbox.md`.
+
+- **Stranger code next to the signer.** An app is written by anyone who can publish to the active relay.
+  - The dex host must mount it as `sandbox="allow-scripts"` (never `allow-same-origin`) with `allow=""`, from `https://frame.obelisk.ar`.
+  - It must build every kind 2390 itself: forced `h`/`e`/`t`/`op`, `n` the only tag an app may add, a host-side rate limit.
+  - It must never pass a signer, relay URL, group id or avatar URL across the port.
+- **Exfiltration the sandbox can't stop:**
+  - An app can navigate its own frame to a URL carrying data. The host must kill the frame on a second `load`, but only after the request has gone out.
+  - An app can open `RTCPeerConnection` to any STUN/TURN server. There's no page-level fix.
+  - What can leak: session events, participant names and avatars, and the user's IP.
+- **Phishing inside the frame** (a fake "paste your nsec"). The only mitigations are host-drawn chrome ("by <name> · third-party app") and app-prefixed toasts.
+- **CPU and battery abuse** lasts until the modal is closed. Frames must never run in the background.
+- **`src/proxy.ts` and obelisk-tauri must agree.** `frame-src` needs `https://frame.obelisk.ar` in both, kept in step by hand. Tauri's embed list has already drifted from dex's.
+- **The Blossom servers in `src/lib/blossom.ts` reject JS bundles.** They sniff uploads and 415 anything that isn't media, so app bundles live on the Obelisk-run `https://blossom.obelisk.ar` (obelisk-apps `packages/blossom`, WoT-gated uploads using the obelisk-relay ladder), with `nostr.download` as a secondary hint. Bundle fetches must use the manifest's `server` hints, never the attachment list. That server is a single host with no mirror yet.
+- **The first open of an app is slow** (the bundle is fetched from Blossom, then cached by hash). An app whose blobs are gone can't be opened at all.
+- **Legacy `[[game:<id>]]` tables** are mapped to the official apps and run their *current* bundle, with no version pin. Remove the mapping one week after the switch, once kind 2390 retention has pruned every pre-switch `create`.
+- **Chat cards stop being live boards.** An `AppCard` shows the manifest, participants and the app's `status` line. The board is only in the modal, because mounting an iframe per card is too heavy.
+- **App moderation** is only what the relay operator already has: deleting events and banning authors. There's no per-app hide, no review and no trust signal in the catalog.
+
 ## Schema / tech debt
 
 - **`Channel.emoji` should be folded into `Channel.name`** — emoji and name are stored as separate columns in admin, forcing every renderer to stitch them (`<ChannelEmoji value={channel.emoji} /> {channel.name}`) and complicating slugs, share-links and mentions. Migrate admin UX so the emoji is typed inline in the single name input (e.g. `💬 chat-general`), store it inline in `name`, and drop the `emoji` column in a follow-up migration.
