@@ -72,6 +72,13 @@ export default function AppFrameModal({ sessionId, onClose }: { sessionId: strin
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const hostRef = useRef<AppHost | null>(null);
   const connectedSince = useRef<number | null>(null);
+  // What the boot handler reads when the loader says hello. A ref, not the
+  // render's values: the handler is registered once per boot, and a pubkey
+  // captured on the first render is still null (the identity hook hasn't
+  // answered yet) — the app then thinks the host is a signed-out spectator
+  // and shows no Start, Join or Cancel.
+  const latest = useRef({ me, locale, connection, summary, channelName: '' });
+  latest.current = { me, locale, connection, summary, channelName: latest.current.channelName };
 
   useEffect(() => {
     if (!summary) {
@@ -93,9 +100,11 @@ export default function AppFrameModal({ sessionId, onClose }: { sessionId: strin
   const title = manifest?.title ?? pin?.address.split(':')[2] ?? 'App';
   const author = pin?.address.split(':')[1] ?? null;
   const channelName = groups.find((g) => g.id === summary?.channelId)?.name ?? '';
+  latest.current.channelName = channelName;
 
   // Boot once per pin: wait for the loader's hello from THIS iframe, then hand over the port.
-  const bootKey = pin ? `${sessionId}:${pin.aggregate}` : null;
+  // Re-boot when the account changes: the app's `me` is fixed at init.
+  const bootKey = pin ? `${sessionId}:${pin.aggregate}:${me ?? 'anon'}` : null;
   useEffect(() => {
     if (!bootKey || !pin || !summary) return;
     if (pin.api !== 1) {
@@ -136,14 +145,16 @@ export default function AppFrameModal({ sessionId, onClose }: { sessionId: strin
         return;
       }
       if (disposed) return;
+      const now = latest.current;
+      const sum = now.summary ?? summary;
       const host = new AppHost({
-        me,
+        me: now.me,
         app: { address: pin.address, title, version: manifest?.version ?? undefined, author: author ?? '' },
-        session: { id: summary.id, channelId: summary.channelId, createdBy: summary.createdBy, createdAt: summary.createdAt, channelName },
+        session: { id: sum.id, channelId: sum.channelId, createdBy: sum.createdBy, createdAt: sum.createdAt, channelName: now.channelName },
         paths: pin.paths,
-        locale,
+        locale: now.locale,
         theme: { mode: 'dark', accent: readAccent() },
-        connection: { connected: connection === 'Connected', since: connectedSince.current },
+        connection: { connected: now.connection === 'Connected', since: connectedSince.current },
         publish: (t) => publishSessionEvent(t),
         loadPath: (p: AppPath) => loadPathBlob(p, servers),
         profile: resolvePerson,
@@ -153,7 +164,7 @@ export default function AppFrameModal({ sessionId, onClose }: { sessionId: strin
       });
       hostRef.current = host;
       const { port1, port2 } = new MessageChannel();
-      host.attach(port1, await resolvePeople(summary.participants), summary.events);
+      host.attach(port1, await resolvePeople(sum.participants), (latest.current.summary ?? sum).events);
       iframe.contentWindow?.postMessage({ obelisk: 1, type: 'boot', entry }, '*', [port2]);
       setPhase({ kind: 'running' });
     };
@@ -234,6 +245,7 @@ export default function AppFrameModal({ sessionId, onClose }: { sessionId: strin
       <div className="relative min-h-0 flex-1">
         {pin && phase.kind !== 'error' && !runError && (
           <iframe
+            key={bootKey}
             ref={iframeRef}
             src={APP_FRAME_URL}
             title={title}

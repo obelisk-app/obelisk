@@ -159,6 +159,30 @@ describe('AppFrameModal', () => {
     expect(mocks.loadPathBlob).toHaveBeenCalledWith(PATHS[0], expect.any(Array));
   });
 
+  it('boots with the identity known at hello time, not the one from the first render', async () => {
+    // The bug: the pubkey was captured on the first render, before the
+    // identity hook answered, so the app saw a signed-out spectator and showed
+    // the host no Start / Join / Cancel.
+    seedSession();
+    mocks.me = null;
+    mocks.loadPathBlob.mockResolvedValue(new Blob(['x']));
+    const { rerender } = render(<AppFrameModal sessionId={SESSION} onClose={vi.fn()} />);
+    mocks.me = HOST;
+    rerender(<AppFrameModal sessionId={SESSION} onClose={vi.fn()} />);
+    const frame = (await screen.findByTestId('app-frame')) as HTMLIFrameElement;
+    const post = vi.spyOn(frame.contentWindow!, 'postMessage');
+    await act(async () => {
+      window.dispatchEvent(new MessageEvent('message', { data: { obelisk: 1, type: 'hello' }, source: frame.contentWindow }));
+    });
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
+    const port = (post.mock.calls[0] as unknown as [unknown, string, MessagePort[]])[2][0];
+    const init = await new Promise<Record<string, unknown>>((resolve) => {
+      port.onmessage = (e) => { if (e.data?.type === 'init') resolve(e.data); };
+      port.start();
+    });
+    expect(init.me).toBe(HOST);
+  });
+
   it('tears the frame down when the app navigates it away', async () => {
     seedSession();
     mocks.loadPathBlob.mockResolvedValue(new Blob(['x']));
