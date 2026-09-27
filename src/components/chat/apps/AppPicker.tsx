@@ -15,7 +15,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import ModalShell from '@/components/ModalShell';
 import { useTranslation } from '@/i18n/context';
-import { AppsIcon, CloseIcon, GamepadIcon } from '@/components/ui/icons';
+import { CloseIcon } from '@/components/ui/icons';
 import { subscribeCatalog } from '@/lib/apps/catalog';
 import type { AppManifest } from '@/lib/apps/manifest';
 import { appMarker } from '@/lib/apps/session';
@@ -23,6 +23,8 @@ import { publishSessionCreate } from '@/lib/apps/transport';
 import { useAuthor } from '@/lib/social/useAuthor';
 import { shortNpubLabel } from '@/lib/short-npub';
 import { useAppsStore } from '@/store/apps';
+
+import AppIcon from './AppIcon';
 
 function Author({ pubkey }: { pubkey: string }) {
   const a = useAuthor(pubkey);
@@ -106,9 +108,7 @@ export default function AppPicker({
               className="flex w-full items-start gap-3 rounded-lg border border-lc-border bg-lc-card/60 p-3 text-left transition-colors hover:border-lc-green/60 disabled:opacity-50"
               data-testid={`app-option-${m.slug}`}
             >
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-lc-green/15 text-lc-green">
-                {m.types.includes('game') ? <GamepadIcon size={18} /> : <AppsIcon size={18} />}
-              </span>
+              <AppIcon manifest={m} size={56} />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-xs font-semibold text-lc-white">{m.title}</span>
                 {m.description && <span className="mt-0.5 block text-[11px] text-lc-muted">{m.description}</span>}

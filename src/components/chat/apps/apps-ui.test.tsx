@@ -44,6 +44,7 @@ vi.mock('@/lib/apps/people', () => ({
 }));
 
 import AppCard from './AppCard';
+import AppIcon from './AppIcon';
 import AppFrameModal from './AppFrameModal';
 import AppPicker from './AppPicker';
 
@@ -187,5 +188,34 @@ describe('AppFrameModal', () => {
     render(<AppFrameModal sessionId={SESSION} onClose={vi.fn()} />);
     await screen.findByTestId('app-frame');
     expect(screen.getByTestId('app-frame-author').textContent).not.toContain(AUTHOR);
+  });
+});
+
+describe('AppIcon', () => {
+  const withIcon = parseManifest(manifestEvent())!; // icon: '/music/a.mp3', a pinned path
+
+  it('shows the verified icon file as an image', async () => {
+    const svg = new Blob(['<svg xmlns="http://www.w3.org/2000/svg"/>'], { type: 'image/svg+xml' });
+    mocks.loadPathBlob.mockResolvedValue(svg);
+    const created = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:icon');
+    render(<AppIcon manifest={withIcon} />);
+    const img = await screen.findByTestId('app-icon-image');
+    expect(img.getAttribute('src')).toBe('blob:icon');
+    expect(mocks.loadPathBlob).toHaveBeenCalledWith({ path: '/music/a.mp3', sha256: PATHS[1].sha256 }, expect.any(Array));
+    created.mockRestore();
+  });
+
+  it('refuses a file that is not an image and keeps the generic mark', async () => {
+    mocks.loadPathBlob.mockResolvedValue(new Blob(['mp3'], { type: 'audio/mpeg' }));
+    render(<AppIcon manifest={withIcon} />);
+    await waitFor(() => expect(mocks.loadPathBlob).toHaveBeenCalled());
+    expect(screen.getByTestId('app-icon-fallback')).toBeInTheDocument();
+    expect(screen.queryByTestId('app-icon-image')).not.toBeInTheDocument();
+  });
+
+  it('shows the generic mark when the app declares no icon', () => {
+    render(<AppIcon manifest={parseManifest(manifestEvent({ drop: ['icon'] }))!} />);
+    expect(screen.getByTestId('app-icon-fallback')).toBeInTheDocument();
+    expect(mocks.loadPathBlob).not.toHaveBeenCalled();
   });
 });

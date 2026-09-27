@@ -12,7 +12,6 @@ import { memo, useEffect, useLayoutEffect, useState } from 'react';
 
 import UserAvatar from '@/components/UserAvatar';
 import { useTranslation } from '@/i18n/context';
-import { AppsIcon, GamepadIcon } from '@/components/ui/icons';
 import { useSessionSummary } from '@/hooks/chat/useAppSessions';
 import { subscribeCatalog } from '@/lib/apps/catalog';
 import { seedSessionFromCache } from '@/lib/apps/ingest';
@@ -22,6 +21,8 @@ import { requestSessionLoad } from '@/lib/apps/resolve';
 import { useMyPubkey } from '@/lib/nostr-bridge';
 import { useAuthor } from '@/lib/social/useAuthor';
 import { isStale, useAppsStore } from '@/store/apps';
+
+import AppIcon from './AppIcon';
 
 /** Give the channel subscription a moment before asking the relay for this one session by id. */
 export const RESOLVE_GRACE_MS = 400;
@@ -69,7 +70,6 @@ function AppCard({ sessionId }: { sessionId: string }) {
   const address = summary.pin?.address ?? (summary.legacyGame ? legacyAppAddress(summary.legacyGame) : null);
   const manifest = address ? catalog.find((m) => m.address === address) : undefined;
   const title = manifest?.title ?? (summary.legacyGame ? LEGACY_TITLES[summary.legacyGame] ?? summary.legacyGame : address?.split(':')[2] ?? 'App');
-  const isGame = manifest ? manifest.types.includes('game') : true;
   const stale = isStale(summary);
   const closed = summary.cancelled || stale;
   const joined = !!me && summary.participants.includes(me);
@@ -83,9 +83,7 @@ function AppCard({ sessionId }: { sessionId: string }) {
       className="mt-1 flex w-full max-w-sm items-center gap-3 rounded-lg border border-lc-border bg-lc-dark p-3 text-left transition-colors hover:border-lc-green/60"
       data-testid="app-card"
     >
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-lc-green/15 text-lc-green">
-        {isGame ? <GamepadIcon size={18} /> : <AppsIcon size={18} />}
-      </span>
+      <AppIcon manifest={manifest} size={36} />
       <span className="min-w-0 flex-1">
         <span className="block truncate text-xs font-semibold text-lc-white" data-testid="app-card-title">{title}</span>
         <span className="block truncate text-[11px] text-lc-muted" data-testid="app-card-status">{line}</span>
