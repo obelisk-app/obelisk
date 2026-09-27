@@ -71,9 +71,9 @@ The read-state foundation (server-side `lastReadAt`, in-app toasts via `ToastSta
 
 - **No way to delete servers from /admin** — once a server is created there is no UI path to remove it. Schema-wise, `Server` already cascades deletes to its children, so the API/UI is the only missing piece.
 
-## Apps (games moving to obelisk-apps, in progress 2026-09-27)
+## Apps (games moved to obelisk-apps, 2026-09-27)
 
-Games are moving out of this repo into [obelisk-apps](https://github.com/obelisk-app/obelisk-apps). They are becoming sandboxed apps that users publish as kind 32390 manifests, with the bundle on Blossom. Nothing below is built yet. These are the host-side risks the switch brings, recorded now so the dex PR lands with them tracked. The full model is in obelisk-apps `docs/security.md` and `docs/known-issues.md`, and the cross-project policy in obelisk-design `security-workflows/app-sandbox.md`.
+Games left this repo for [obelisk-apps](https://github.com/obelisk-app/obelisk-apps): sandboxed apps published as kind 32390 manifests with bundles on Blossom; this repo is only the host (`src/lib/apps/`, [apps.md](apps.md)). These are the host-side risks and open items. The full model is in obelisk-apps `docs/security.md` and `docs/known-issues.md`, and the cross-project policy in obelisk-design `security-workflows/app-sandbox.md`.
 
 - **Stranger code next to the signer.** An app is written by anyone who can publish to the active relay.
   - The dex host must mount it as `sandbox="allow-scripts"` (never `allow-same-origin`) with `allow=""`, from `https://frame.obelisk.ar`.
@@ -85,6 +85,7 @@ Games are moving out of this repo into [obelisk-apps](https://github.com/obelisk
   - What can leak: session events, participant names and avatars, and the user's IP.
 - **Phishing inside the frame** (a fake "paste your nsec"). The only mitigations are host-drawn chrome ("by <name> · third-party app") and app-prefixed toasts.
 - **CPU and battery abuse** lasts until the modal is closed. Frames must never run in the background.
+- **Legacy tables need `NEXT_PUBLIC_OBELISK_APPS_PUBKEY`.** Without it, pre-migration `[[game:…]]` cards can't find the official app and show an error instead of opening.
 - **`src/proxy.ts` and obelisk-tauri must agree.** `frame-src` needs `https://frame.obelisk.ar` in both, kept in step by hand. Tauri's embed list has already drifted from dex's.
 - **The Blossom servers in `src/lib/blossom.ts` reject JS bundles.** They sniff uploads and 415 anything that isn't media, so app bundles live on the Obelisk-run `https://blossom.obelisk.ar` (hzrd149 blossom-server via the `obelisk-app/blossom-server` fork; WoT-gated uploads written by obelisk-apps `packages/blossom-wot` using the obelisk-relay ladder), with `nostr.download` as a secondary hint. Bundle fetches must use the manifest's `server` hints, never the attachment list. That server is a single host with no mirror yet.
 - **The first open of an app is slow** (the bundle is fetched from Blossom, then cached by hash). An app whose blobs are gone can't be opened at all.

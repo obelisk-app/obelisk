@@ -22,8 +22,8 @@ import LinkPreview from './LinkPreview';
 import AttachmentCard from './AttachmentCard';
 import ImageGallery from './ImageGallery';
 import InvoiceCard from './InvoiceCard';
-import GameCard from './games/GameCard';
-import { extractGameMarkers, GAME_MARKER_REGEX } from '@/lib/games/protocol';
+import AppCard from './apps/AppCard';
+import { APP_MARKER_REGEX, extractAppMarkers } from '@/lib/apps/session';
 import MediaLibraryModal from '@/components/media/MediaLibraryModal';
 import { INVOICE_REGEX } from '@/lib/bolt11';
 import ShootingStars from '../ShootingStars';
@@ -491,10 +491,11 @@ export default function MessageContent({
     return matches.filter((m) => { const k = m.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
   }, [content]);
 
-  // Hoist `[[game:<id>]]` markers out of the body — the host posts one when
-  // they open a table, and it renders as a card whose status is replayed from
-  // the table's own event log rather than frozen into this message.
-  const gameIds = useMemo(() => extractGameMarkers(content), [content]);
+  // Hoist `[[app:<id>]]` (and pre-migration `[[game:<id>]]`) markers out of
+  // the body — posted when someone opens an app in the channel — and render
+  // each as a card whose status comes from the session's own events rather
+  // than being frozen into this message.
+  const sessionIds = useMemo(() => extractAppMarkers(content), [content]);
 
   const bodyContent = useMemo(() => {
     if (sticker || voiceNote) return '';
@@ -507,10 +508,10 @@ export default function MessageContent({
     for (const inv of invoices) {
       stripped = stripped.split(inv).join('');
     }
-    if (gameIds.length > 0) stripped = stripped.replace(GAME_MARKER_REGEX, '');
+    if (sessionIds.length > 0) stripped = stripped.replace(APP_MARKER_REGEX, '');
     // collapse stray whitespace/newlines left behind
     return stripped.replace(/\n{3,}/g, '\n\n').trim();
-  }, [content, imageUrls, videoUrls, audioUrls, youtubeUrls, welcomeBanner, invoices, gameIds, sticker, voiceNote]);
+  }, [content, imageUrls, videoUrls, audioUrls, youtubeUrls, welcomeBanner, invoices, sessionIds, sticker, voiceNote]);
 
   // Resolve `:name:` shortcodes before markdown parsing. Unicode shortcodes
   // are replaced inline (no placeholder — the char is just a char), while
@@ -746,8 +747,8 @@ export default function MessageContent({
       {invoices.map((inv) => (
         <InvoiceCard key={inv} invoice={inv} messageId={messageId} channelId={channelId} />
       ))}
-      {gameIds.map((id) => (
-        <GameCard key={id} gameId={id} />
+      {sessionIds.map((id) => (
+        <AppCard key={id} sessionId={id} />
       ))}
     </span>
   );

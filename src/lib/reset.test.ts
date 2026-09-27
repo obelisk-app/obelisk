@@ -95,21 +95,21 @@ describe('registered teardown hooks', () => {
     warn.mockRestore();
   });
 
-  it('is what wires the games subsystem in, without reset.ts importing it', async () => {
+  it('is what wires the apps subsystem in, without reset.ts importing it', async () => {
     // The import is the registration: `client.ts` imports reset.ts, so pulling
-    // the games store in here would put all three engines on the login path
-    // and make a cycle out of client -> reset -> games/resolve -> client.
-    const { useGamesStore } = await import('@/store/games');
-    await import('@/lib/games/ingest');
+    // the apps store in here would make a cycle out of
+    // client -> reset -> apps/resolve -> client.
+    const { useAppsStore } = await import('@/store/apps');
+    await import('@/lib/apps/ingest');
 
-    const { parseGameEvent, buildCreate } = await import('@/lib/games/protocol');
-    const { chainReaction } = await import('@/lib/games/chain-reaction');
-    const tmpl = buildCreate('channel-1', { game: chainReaction.type, turnTimeoutS: 45 });
-    const ev = parseGameEvent({ id: 'g1', pubkey: 'pk-host', created_at: 1000, kind: tmpl.kind, tags: tmpl.tags, content: tmpl.content })!;
-    useGamesStore.getState().ingest(ev);
-    expect(useGamesStore.getState().logs.g1).toHaveLength(1);
+    const create = {
+      id: '1'.repeat(64), pubkey: 'a'.repeat(64), created_at: 1000, kind: 2390, sig: '',
+      tags: [['h', 'channel-1'], ['t', 'obelisk-app'], ['op', 'create']], content: '{}',
+    };
+    useAppsStore.getState().ingestMany([create]);
+    expect(useAppsStore.getState().logs['1'.repeat(64)]).toHaveLength(1);
 
     resetAllClientState();
-    expect(useGamesStore.getState().logs.g1).toBeUndefined();
+    expect(useAppsStore.getState().logs['1'.repeat(64)]).toBeUndefined();
   });
 });

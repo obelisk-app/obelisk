@@ -88,7 +88,7 @@ Cada botão passa pelo validador do próprio motor, e o tabuleiro destaca exatam
 
 ## Para quem quiser se aprofundar
 
-Tudo viaja como eventos kind `2390` no grupo NIP-29 do canal e é reproduzido por `deriveSession`. O sequenciamento que o upstream mantém no cliente — virar etapas de preparação, distribuir os recursos da segunda rodada, decidir quando o ladrão pode se mover — acontece deterministicamente em cada reprodução, sob uma chave com espaço de nomes dentro do estado, para sobreviver a uma ida e volta pelos redutores do upstream. Os detalhes estão em [docs/games.md](https://github.com/obelisk-app/obelisk-dex/blob/main/docs/games.md).
+Tudo viaja como eventos kind `2390` no grupo NIP-29 do canal e é reproduzido por `deriveSession`. O sequenciamento que o upstream mantém no cliente — virar etapas de preparação, distribuir os recursos da segunda rodada, decidir quando o ladrão pode se mover — acontece deterministicamente em cada reprodução, sob uma chave com espaço de nomes dentro do estado, para sobreviver a uma ida e volta pelos redutores do upstream. Os detalhes estão em [obelisk-apps](https://github.com/obelisk-app/obelisk-apps).
 
 <RelatedGuides items={[
   { slug: "chain-reaction", note: "o pequeno: um clique, uma cascata" },

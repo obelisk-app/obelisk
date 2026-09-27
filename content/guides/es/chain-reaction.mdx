@@ -86,7 +86,7 @@ El resultado no es un anuncio aparte que alguien podría falsificar — es lo qu
 
 ## Para los curiosos
 
-Todo esto son eventos de kind `2390` en el grupo del canal, reproducidos por `src/lib/games/session.ts`. El motor — `chain-reaction.ts` — es una función pura: sin reloj, sin azar, sin mutación. Esa es exactamente la razón por la que se le puede confiar a un cliente. El formato de cable, operación por operación, está en [docs/games.md](https://github.com/obelisk-app/obelisk-dex/blob/main/docs/games.md).
+Todo esto son eventos de kind `2390` en el grupo del canal, reproducidos por `packages/sdk/src/turn/session.ts` (obelisk-apps). El motor — `chain-reaction.ts` — es una función pura: sin reloj, sin azar, sin mutación. Esa es exactamente la razón por la que se le puede confiar a un cliente. El formato de cable, operación por operación, está en [obelisk-apps](https://github.com/obelisk-app/obelisk-apps).
 
 <RelatedGuides items={[
   { slug: "stacker", note: "el de tiempo real, donde las líneas que hacés entierran a otro" },

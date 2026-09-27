@@ -32,6 +32,14 @@ describe('CSP', () => {
     expect(styleSrc).toBeDefined();
     expect(styleSrc).toContain("'self'");
   });
+
+  it('lets apps frame only the Obelisk Apps sandbox origin, nothing broader', () => {
+    const csp = proxy(new NextRequest('https://obelisk.test/')).headers.get('Content-Security-Policy')!;
+    const frameSrc = csp.split(';').map((d) => d.trim()).find((d) => d.startsWith('frame-src'))!;
+    expect(frameSrc.split(' ')).toContain('https://frame.obelisk.ar');
+    // No wildcard that would let an arbitrary origin host "the" frame.
+    expect(frameSrc).not.toMatch(/https:\/\/\*\.obelisk\.ar|\bhttps:(\s|$)|\*(\s|$)/);
+  });
 });
 
 describe('locale proxy', () => {

@@ -1,6 +1,15 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { detectLocale, LOCALE_COOKIE, LOCALE_HEADER } from './i18n/index';
 
+/** Origin of the Obelisk Apps sandbox frame (frame.obelisk.ar unless overridden). */
+export const APP_FRAME_ORIGIN = (() => {
+  try {
+    return new URL(process.env.NEXT_PUBLIC_APP_FRAME_URL ?? 'https://frame.obelisk.ar/v1/').origin;
+  } catch {
+    return 'https://frame.obelisk.ar';
+  }
+})();
+
 /**
  * Per-request CSP nonce generator + locale-cookie initializer.
  *
@@ -71,6 +80,11 @@ export function proxy(request: NextRequest) {
       'https://gist.github.com',
       'https://www.google.com',
       'https://docs.google.com',
+      // Obelisk Apps: the sandbox frame loader. Apps are third-party code;
+      // they run in `<iframe sandbox="allow-scripts">` from this origin and
+      // talk to us over a MessagePort only (obelisk-apps docs/security.md).
+      // Keep in step with obelisk-tauri's CSP and the loader's frame-ancestors.
+      APP_FRAME_ORIGIN,
     ].join(' '),
     "frame-ancestors 'none'",
     "object-src 'none'",

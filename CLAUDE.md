@@ -20,7 +20,7 @@ Group protocol    NIP-29 (kinds 9, 9000-9007, 39000-39002)
 DMs               NIP-17 gift wraps (kind 14 → 13 → 1059, NIP-44) by default; NIP-04 (kind 4) per-thread opt-out — see docs/direct-messages.md
 Cache             localStorage stale-while-revalidate (src/lib/nostr-bridge/cache.ts)
 Voice (mesh)      P2P WebRTC, Nostr-signaled (kinds 20078 / 25050) + per-pair `obelisk-control` data channel (heartbeat, fast hangup, transitive discovery) — see docs/voice/
-Games             Chain Reaction over kind 2390 — event log replayed client-side (src/lib/games/)
+Apps / games      Host for sandboxed apps published as kind 32390 manifests + Blossom bundles; sessions on kind 2390 (src/lib/apps/, docs/apps.md). The games themselves live in obelisk-app/obelisk-apps
 Voice (SFU)      mediasoup engine, Nostr-RPC signaling (kind 25050 envelopes) — src/lib/voice/sfu-client.ts (server: obelisk-app/obelisk-sfu)
 Social feeds     Ordinary Nostr (kinds 1/6/7/16/20/9802/30023/…) over user-chosen public relays — src/lib/social/
 Payments          Nostr Wallet Connect (NIP-47) — src/lib/wallet/
@@ -245,7 +245,8 @@ Currently wired:
 - kind 9 (messages) — per-channel list, debounced 200ms, capped at `MESSAGE_CACHE_LIMIT` (50/channel); optimistic placeholders are filtered out before write
 - kind 9007 (creators), 39000 (group metadata), 39001/39002 (admin/member lists)
 - kind 30078 (NIP-78) — channel layout + relay branding share this kind under different `d`-tags
-- kind 2390 (game logs) — per **table**, not per channel (a `GameCard` knows only its table id, and seeds itself synchronously in a layout effect before first paint); debounced 200ms; `checkpoint` events omitted whole rather than stripped, and a table over `GAME_CACHE_EVENT_LIMIT` is skipped rather than truncated. Written via `src/lib/games/cache.ts`, not `client.ts`.
+- kind 2390 (app session logs) — per **session**, not per channel (an `AppCard` knows only its session id, and seeds itself synchronously in a layout effect before first paint); debounced 200ms; events over 4 KiB of content omitted whole rather than stripped, and a session over `CACHE_EVENT_LIMIT` is skipped rather than truncated. Written via `src/lib/apps/ingest.ts`, not `client.ts`.
+- kind 32390 (app manifests) — the active relay's catalog, raw events re-validated on seed (`src/lib/apps/catalog.ts`).
 
 Deliberately not cached: kind 4 DMs and kind 1059 gift wraps. DM threads are in-memory and rebuild from relays on every load, so no DM plaintext is written to disk. See [docs/data-system.md §9](docs/data-system.md) for the full contract.
 
@@ -349,7 +350,7 @@ relay-supplied string into a style attribute.
 | NIP-78 | Application-specific data | Channel layout (kind 30078); also the inner rumor kind for NIP-59-wrapped read state |
 | NIP-98 | HTTP authentication | Blossom upload-auth |
 
-Obelisk-specific kinds (voice 20078/25050/25052, DM call rumor 25055, SFU 31313/31314, games 2390)
+Obelisk-specific kinds (voice 20078/25050/25052, DM call rumor 25055, SFU 31313/31314, app sessions 2390, app manifests 32390)
 are documented in `src/lib/nip-kinds.ts` — that file is the single source of
 truth for every kind the app publishes.
 
@@ -457,7 +458,7 @@ for where this sits relative to the bridgeCache.
 - [docs/dm-metadata-privacy.md](docs/dm-metadata-privacy.md) — why gift-wrapped DMs can still leak the social graph, the ordered relay ladder, AUTH modes, what cannot be fixed client-side, and the rules for changing DM routing
 - [docs/i18n.md](docs/i18n.md) — the three languages: where copy lives, `rich()` for sentences with markup in them, `useFormat()`/`serverLocale()` (a bare `toLocaleDateString()` follows the OS, not the app), the hardcoded-string ratchet and what stays exempt, and how to add a fourth language
 - [docs/social-feeds.md](docs/social-feeds.md) — the Nostr-proper surface: social as a fourth relay tier, the shared SDK pool, feed caching, `until` pagination, and the wire-format matrix (with the Amethyst/Damus/Primal quirks that make it not simply "follow the NIP")
-- [docs/games.md](docs/games.md) — Chain Reaction on the relay: kind 2390 wire format, deterministic replay as the trust model, turn clock without a server, what it doesn't defend against
+- [docs/apps.md](docs/apps.md) — the host for sandboxed apps (games moved to obelisk-app/obelisk-apps): security model first, what the sandbox doesn't stop, flow, legacy tables. Spec and known issues live in obelisk-apps `docs/`
 - [docs/uploads.md](docs/uploads.md) — Blossom storage + URL format
 - [docs/cloudflare-tunnel.md](docs/cloudflare-tunnel.md) — `npm run dev:tunnel` exposes localhost:3000 at https://obelisk.fabri.lat
 - [docs/known-bugs.md](docs/known-bugs.md) — open bugs & tech debt

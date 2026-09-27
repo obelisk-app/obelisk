@@ -138,18 +138,28 @@ export const KIND_SFU_ADVERTISE = 31313;
 export const KIND_SFU_ACTIVE_CALL = 31314;
 
 /**
- * Obelisk games — every turn-based game event (create / join / start / move /
- * timeout / resign / cancel) rides this single stored kind, scoped to a
- * channel with `["h", channelId]` and to a table with `["e", gameId]`.
+ * Obelisk app sessions — every event of a running app (a game table, a poll,
+ * a board) rides this single stored kind, scoped to a channel with
+ * `["h", channelId]` and to a session with `["e", sessionId]`.
  *
- * Why a stored (regular) kind and not the ephemeral 25xxx voice signaling
- * uses: a game's state IS its event log. A player who opens the tab
- * mid-match replays the log through the pure engine to rebuild the board,
- * so the relay has to keep the events. Voice signaling can be ephemeral
- * because SDP is worthless a second after it's sent.
+ * The host (this app) publishes the session's `create`, pinning the exact
+ * bundle, and interprets only create / join / leave / cancel / status. Every
+ * other op belongs to the app and is replayed by it inside the sandbox.
  *
- * 2390 sits in the regular range (1000-9999, relays persist) and is
- * unclaimed by any NIP — 2003/2004 (torrents) are the nearest neighbours.
- * See docs/games.md for the wire format.
+ * A stored (regular) kind, not ephemeral: a session's state IS its log, and a
+ * late joiner replays it. 2390 is unclaimed by any NIP (checked 2026-09-27).
+ * Wire format: obelisk-app/obelisk-apps docs/app-format.md §2; host side:
+ * docs/apps.md.
  */
-export const KIND_GAME = 2390;
+export const KIND_APP_SESSION = 2390;
+/** @deprecated the pre-migration name; same number. */
+export const KIND_GAME = KIND_APP_SESSION;
+
+/**
+ * Obelisk app manifest (addressable) — an app published as an event: its
+ * title, host-API version and the sha256 of every file on Blossom
+ * (NIP-5A `path` / aggregate `x` / `server` vocabulary). Read from the active
+ * relay only; whoever can write to that relay can publish one. Unclaimed by
+ * any NIP (checked 2026-09-27). Spec: obelisk-apps docs/app-format.md §1.
+ */
+export const KIND_APP_MANIFEST = 32390;

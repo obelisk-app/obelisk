@@ -14,22 +14,19 @@ const localIPs = Object.values(networkInterfaces())
 /**
  * `*.dev.tsx` routes exist only while `next dev` is running.
  *
- * The screenshot harness at /dev/game-shots mounts real game components over
- * fixture logs so `npm run snap-games` can photograph them. It has no business
- * in a production bundle, and a `NODE_ENV` check inside the page would still
- * ship the route. Leaving the extension out of the production list means the
- * file is not a route at all when it matters.
+ * Development harnesses (a page mounting real components over fixture data)
+ * have no business in a production bundle, and a `NODE_ENV` check inside the
+ * page would still ship the route. Leaving the extension out of the
+ * production list means the file is not a route at all when it matters. The
+ * games screenshot harness that used to live here moved out with the games
+ * (obelisk-app/obelisk-apps).
  */
 const pageExtensions = ['tsx', 'ts', 'jsx', 'js'];
 if (process.env.NODE_ENV === 'development') pageExtensions.unshift('dev.tsx');
 
 const nextConfig: NextConfig = {
   pageExtensions,
-  // `vesta` is consumed straight from its GitHub source (its package `main`
-  // is `src/vesta.ts`), so Next has to compile it like first-party code.
-  // That is deliberate: it keeps us tracking upstream by version range
-  // instead of forking the rules into this repo. See docs/games.md.
-  transpilePackages: ['@nostr-wot/ui', '@nostr-wot/data', 'vesta'],
+  transpilePackages: ['@nostr-wot/ui', '@nostr-wot/data'],
   /*
    * The public note/profile viewers (`/notes/[id]`, `/p/[id]`) open real
    * relay sockets on the server so link previews have content. Bundling

@@ -203,6 +203,15 @@ export const VideoIcon = (p: IconProps) => (
  * small plus badge. Replaces a bare `+`, which read as "add" of anything.
  * Filled, not stroked: at 18px a line face is unreadable.
  */
+/** A game controller — the /play picker and game cards. */
+export const GamepadIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M6 11h4M8 9v4" /><path d="M15 12h.01M18 10h.01" /><path d="M17.3 5H6.7a4 4 0 0 0-3.95 3.37L2 14.5a3 3 0 0 0 5.4 2.3L9 15h6l1.6 1.8a3 3 0 0 0 5.4-2.3l-.75-6.13A4 4 0 0 0 17.3 5Z" /></Svg>
+);
+/** Four tiles — third-party apps in general. */
+export const AppsIcon = (p: IconProps) => (
+  <Svg {...p}><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></Svg>
+);
+
 export function ObeliskReactIcon({ size = 18, ...rest }: IconProps) {
   const green = 'var(--color-lc-green, #b4f953)';
   const ink = 'var(--obelisk-accent-ink, #0a0a0a)';

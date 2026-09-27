@@ -162,9 +162,9 @@ import { AttachmentMenu, FileDropZone, StickerIcon, VoiceNoteButton, VoiceNoteDr
 import { useMessageZaps, type MessageZapTotal } from '@/hooks/chat/useMessageZaps';
 import { useMessageZapStore } from '@/store/messageZap';
 import MessageZapModal from '@/components/chat/MessageZapModal';
-import { GameModalHost } from '@/components/chat/games/GameModal';
-import NewGameModal from '@/components/chat/games/NewGameModal';
-import { useChannelGamesSubscription } from '@/hooks/chat/useChannelGames';
+import { AppFrameHost } from '@/components/chat/apps/AppFrameModal';
+import AppPicker from '@/components/chat/apps/AppPicker';
+import { useChannelSessionsSubscription } from '@/hooks/chat/useAppSessions';
 import ModalShell from '@/components/ModalShell';
 import { parseZapCommand } from '@/lib/wallet/parse-zap-command';
 import MentionAutocomplete from '@/components/chat/MentionAutocomplete';
@@ -558,7 +558,7 @@ export default function AppShell() {
       onTouchEnd={(e) => { delete (e.currentTarget as HTMLElement).dataset.swipeStart; }}
     >
       <MessageZapModal />
-      <GameModalHost />
+      <AppFrameHost />
       <RelayAccessModal />
       <BackgroundVoiceAudio />
       <DirectMessageSubscriptionAnchor />
@@ -2886,8 +2886,9 @@ function ChatPanel({
   const messages = useMessages(groupId);
   // Game tables live on the channel's relay and are replayed from their own
   // kind 2390 log — see src/lib/games/protocol.ts.
-  useChannelGamesSubscription(groupId);
-  const [newGameOpen, setNewGameOpen] = useState(false);
+  useChannelSessionsSubscription(groupId);
+  // /play opens the picker filtered to games, /app to everything; null = closed.
+  const [appPicker, setAppPicker] = useState<null | 'game' | 'all'>(null);
   // Retry-backed confidence enum — the bridge runs an internal retry
   // ladder on empty EOSE before promoting to `empty-confirmed`, so the
   // UI doesn't need its own dwell timer or auto-refresh effect. See
@@ -3312,11 +3313,11 @@ function ChatPanel({
       return;
     }
 
-    // /play — open the table picker. Frontend-only like /zap: the table is
-    // created by NewGameModal (kind 2390), and the chat message it posts is
-    // just the `[[game:<id>]]` card pointing at it.
-    if (/^\/play(\s|$)/.test(content)) {
-      setNewGameOpen(true);
+    // /play and /app — open the app picker. Frontend-only like /zap: the
+    // session is created by AppPicker (kind 2390, pinning the app's files),
+    // and the chat message it posts is just the `[[app:<id>]]` card.
+    if (/^\/(play|app)(\s|$)/.test(content)) {
+      setAppPicker(content.startsWith('/play') ? 'game' : 'all');
       setDraft('');
       setReplyingTo(null);
       return;
@@ -3539,13 +3540,14 @@ function ChatPanel({
       <MentionNavigator scrollRef={scrollRef} eventIds={channelHighlights.eventIds} />
       </div>
 
-      {newGameOpen && (
-        <NewGameModal
+      {appPicker && (
+        <AppPicker
           channelId={groupId}
-          onClose={() => setNewGameOpen(false)}
+          filter={appPicker === 'game' ? 'game' : undefined}
+          onClose={() => setAppPicker(null)}
           onPostMarker={(marker) => {
             nostrActions.sendMessage(groupId, marker, null, []).catch((err) => {
-              console.error('[games] posting the table card failed', err);
+              console.error('[apps] posting the app card failed', err);
             });
           }}
         />

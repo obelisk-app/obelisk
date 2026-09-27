@@ -86,7 +86,7 @@ O resultado não é um anúncio separado que alguém poderia forjar — é o que
 
 ## Para quem quiser se aprofundar
 
-A coisa toda são eventos kind `2390` no grupo do canal, reproduzidos por `src/lib/games/session.ts`. O motor — `chain-reaction.ts` — é uma função pura: sem relógio, sem aleatoriedade, sem mutação. É exatamente por isso que dá para confiá-lo a um cliente. Se você quiser o formato do fio operação por operação, ele está em [docs/games.md](https://github.com/obelisk-app/obelisk-dex/blob/main/docs/games.md).
+A coisa toda são eventos kind `2390` no grupo do canal, reproduzidos por `packages/sdk/src/turn/session.ts` (obelisk-apps). O motor — `chain-reaction.ts` — é uma função pura: sem relógio, sem aleatoriedade, sem mutação. É exatamente por isso que dá para confiá-lo a um cliente. Se você quiser o formato do fio operação por operação, ele está em [obelisk-apps](https://github.com/obelisk-app/obelisk-apps).
 
 <RelatedGuides items={[
   { slug: "stacker", note: "o de tempo real, em que limpar linhas soterra outra pessoa" },

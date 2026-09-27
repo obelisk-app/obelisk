@@ -192,9 +192,9 @@ import type { SurfaceId } from '@/lib/hints/registry';
 import { useMessageZapStore } from '@/store/messageZap';
 import { presenceActivityKey, useNostrPresence, PRESENCE_WINDOW_MS } from '@/hooks/chat/useNostrPresence';
 import MessageZapModal from '@/components/chat/MessageZapModal';
-import { GameModalHost } from '@/components/chat/games/GameModal';
-import NewGameModal from '@/components/chat/games/NewGameModal';
-import { useChannelGamesSubscription } from '@/hooks/chat/useChannelGames';
+import { AppFrameHost } from '@/components/chat/apps/AppFrameModal';
+import AppPicker from '@/components/chat/apps/AppPicker';
+import { useChannelSessionsSubscription } from '@/hooks/chat/useAppSessions';
 import { type ScreenName, type NavState, initialNav, urlFor, parseUrl } from './url-state';
 import { buildSeedHistory, decideSnap, decideSwipeNav, decideTabPress, isAdjacentTabSwitch, neighborsFor, NAV_ORDER, resolveParent } from './swipe-nav';
 import { useKeyboardInset } from './use-keyboard';
@@ -2879,8 +2879,9 @@ function ChannelScreen({
   const header = channelHeaderLabel(group, parentGroup, groupId);
   const messages = useMessages(groupId);
   // Game tables ride the channel's relay — see src/lib/games/protocol.ts.
-  useChannelGamesSubscription(groupId);
-  const [newGameOpen, setNewGameOpen] = useState(false);
+  useChannelSessionsSubscription(groupId);
+  // /play opens the picker filtered to games, /app to everything; null = closed.
+  const [appPicker, setAppPicker] = useState<null | 'game' | 'all'>(null);
   // Retry-backed confidence: bridge owns the dwell + retry ladder so
   // this surface never needs to second-guess an empty EOSE. See
   // `MessagesStatus` in src/lib/nostr-bridge/types.ts.
@@ -3141,10 +3142,10 @@ function ChannelScreen({
   });
 
   const send = () => {
-    // /play opens the table picker instead of publishing — same
-    // frontend-only shape the desktop shell gives the command.
-    if (/^\/play(\s|$)/.test(draft.trim())) {
-      setNewGameOpen(true);
+    // /play and /app open the app picker instead of publishing — same
+    // frontend-only shape the desktop shell gives the commands.
+    if (/^\/(play|app)(\s|$)/.test(draft.trim())) {
+      setAppPicker(draft.trim().startsWith('/play') ? 'game' : 'all');
       setDraft('');
       setReplyingTo(null);
       return;
@@ -3199,13 +3200,14 @@ function ChannelScreen({
       disabled={uploading}
       onFiles={(files) => void handleAttach(files)}
     >
-      {newGameOpen && (
-        <NewGameModal
+      {appPicker && (
+        <AppPicker
           channelId={groupId}
-          onClose={() => setNewGameOpen(false)}
+          filter={appPicker === 'game' ? 'game' : undefined}
+          onClose={() => setAppPicker(null)}
           onPostMarker={(marker) => {
             nostrActions.sendMessage(groupId, marker, null, []).catch((err) => {
-              console.warn('[games] posting the table card failed', err);
+              console.warn('[apps] posting the app card failed', err);
             });
           }}
         />
@@ -7049,7 +7051,7 @@ export default function MobileShell() {
       onTouchCancel={onTouchCancel}
     >
       <MessageZapModal />
-      <GameModalHost />
+      <AppFrameHost />
       <BackgroundVoiceAudio />
       <DmCallLayer />
       <div className="screens-host" ref={screensHostRef}>
