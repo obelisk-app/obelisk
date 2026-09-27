@@ -31,7 +31,12 @@ MessagePort, and **every rule is enforced there**:
 | `ui.toast` | ≤ 120 chars, one per 3 s, prefixed with the app's title |
 
 Never crosses the port: the signer, relay URLs, group ids, avatar URLs.
-Avatars go over as Blobs fetched by the host (`people.ts`).
+Avatars go over as Blobs fetched by the host (`people.ts`) through
+`/api/avatar` — a stateless server fetch with the link-preview route's SSRF
+guards (every redirect hop checked for private addresses, 1 MiB cap, raster
+images only, never SVG, nosniff + sandbox CSP, per-IP budget). A browser
+fetch failed for most image hosts (no CORS), which left players as initials;
+the server fetch also means image hosts see us, not the player.
 
 The frame chrome — title, **"by <author> · third-party app"**, close — is
 drawn by `AppFrameModal` outside the frame, and is the main defence against an

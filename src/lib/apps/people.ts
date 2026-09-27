@@ -4,8 +4,9 @@
  * Both profile tiers, like `useAuthor`: the bridge's group-relay metadata and
  * the social tier. The name follows the "keys are never labels" rule — display
  * name, then NIP-05, then a short npub, never raw hex. The avatar is fetched
- * here and handed over as a Blob so the app never learns a URL (a URL would be
- * a network request the app could use to leak data or track the user).
+ * here — through dex's own /api/avatar — and handed over as a Blob so the app
+ * never learns a URL (a URL would be a network request the app could use to
+ * leak data or track the user).
  */
 import { getBridgeImpl } from '@/lib/nostr-bridge/client';
 import { shortNpubLabel } from '@/lib/short-npub';
@@ -27,8 +28,11 @@ function metadataOf(pubkey: string): { name: string | null; picture: string | nu
 async function fetchAvatar(url: string): Promise<Blob | undefined> {
   try {
     const u = new URL(url);
-    if (u.protocol !== 'https:') return undefined;
-    const res = await fetch(u.href, { referrerPolicy: 'no-referrer', credentials: 'omit' });
+    if (u.protocol !== 'https:' && u.protocol !== 'http:') return undefined;
+    // Through our own /api/avatar: most image hosts send no CORS headers, so a
+    // browser fetch failed and players showed as initials in every game. The
+    // server fetch works for all of them, and the host sees us, not the player.
+    const res = await fetch(`/api/avatar?url=${encodeURIComponent(u.href)}`, { credentials: 'omit' });
     if (!res.ok) return undefined;
     const type = res.headers.get('content-type') ?? '';
     if (!/^image\/(png|jpeg|webp|gif|avif)/.test(type)) return undefined;

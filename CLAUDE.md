@@ -6,11 +6,11 @@ See [ROADMAP.md](ROADMAP.md) for the development plan.
 
 ## Architecture
 
-Obelisk is **fully Nostr-relay-only**. There is no backend, no Postgres, no Socket.io server. One
-Next.js route exists — `src/app/api/link-preview` — because unfurling an
-OpenGraph card needs a server to make the outbound request, and routing it
+Obelisk is **fully Nostr-relay-only**. There is no backend, no Postgres, no Socket.io server. Two
+Next.js routes exist, both stateless outbound fetchers with the same SSRF guards, neither on any data path:
+`src/app/api/link-preview` — because unfurling an OpenGraph card needs a server to make the outbound request, and routing it
 through our own origin is what keeps every URL a reader merely *views* away
-from a third-party OG service. It holds no state and is not on any data path. The whole app is a thin React shell over a `nostr-tools` `SimplePool` wrapped by `src/lib/nostr-bridge/client.ts`. Group state, members, admins, messages, DMs, and reactions are all NIP-29 / NIP-04 / NIP-17 events delivered straight from the relay to the client.
+from a third-party OG service — and `src/app/api/avatar`, which fetches a profile picture for a sandboxed app (most image hosts send no CORS headers, and an app must never get a URL; see docs/apps.md). The whole app is a thin React shell over a `nostr-tools` `SimplePool` wrapped by `src/lib/nostr-bridge/client.ts`. Group state, members, admins, messages, DMs, and reactions are all NIP-29 / NIP-04 / NIP-17 events delivered straight from the relay to the client.
 
 ```
 Frontend          Next.js 16 + Tailwind v4 (La Crypta UI)
@@ -27,7 +27,7 @@ Payments          Nostr Wallet Connect (NIP-47) — src/lib/wallet/
 ```
 
 ## Stack
-- **Next.js 16** + TypeScript + Tailwind CSS v4 (client-rendered; the only server route is the link-preview unfurler)
+- **Next.js 16** + TypeScript + Tailwind CSS v4 (client-rendered; the only server routes are the link-preview unfurler and the app avatar fetcher)
 - **nostr-tools** — `SimplePool`, `BunkerSigner`, `finalizeEvent`, NIP-04/NIP-44 helpers. This is the only Nostr client in the running code path.
 - **@nostr-wot/data** + **@nostr-wot/ui** — WoT-aware profile/follow hooks (`useProfile`, `useFollows`, `usePubkey`, `formatPubkey`, `hexToNpub`) consumed by the rail / search / DM list. Orthogonal to the bridge — the bridge owns identity + relay subs; nostr-wot owns WoT scoring + profile cache.
 - **Zustand** — client-side state under `src/store/` (chat, dm, voice, notifications, read-state, moderation, multi-account, toast, locale, messageZap). Identity is NOT a Zustand store — it lives on the bridge.
