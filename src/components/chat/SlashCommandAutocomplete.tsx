@@ -3,6 +3,7 @@
 import { memo, useCallback, useEffect, useRef } from 'react';
 import { gameCatalog } from '@/lib/games/catalog';
 import { RecentIcon } from './EmojiPicker';
+import ObeliskIcon from '../ObeliskIcon';
 import { useTranslation } from '@/i18n/context';
 
 export interface SlashCommandParam {
@@ -68,7 +69,7 @@ function sectionTitle(sec: SlashCommandSection, recentLabel: string, profiles?: 
 
 function RailIcon({ sec, profiles }: { sec: SlashCommandSection; profiles?: BotProfiles }) {
   if (sec.key === 'recent') return <span className="flex h-9 w-9 items-center justify-center rounded-full bg-lc-border text-lc-white"><RecentIcon /></span>;
-  if (sec.key === 'obelisk') return <span className="flex h-9 w-9 items-center justify-center rounded-full bg-lc-green/20 text-lc-green">⚡</span>;
+  if (sec.key === 'obelisk') return <span className="flex h-9 w-9 items-center justify-center rounded-full bg-lc-black text-lc-green"><ObeliskIcon className="h-6 w-6" /></span>;
   return <BotAvatar picture={profiles?.[sec.key]?.picture} size="md" />;
 }
 
@@ -94,8 +95,8 @@ const CommandRow = memo(function CommandRow({
       data-testid="slash-option"
     >
       {cmd.bot ? <BotAvatar picture={picture} size="sm" /> : (
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-lc-green/20 text-lc-green">
-          {cmd.name === 'play' ? '🎮' : '⚡'}
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-lc-black text-lc-green">
+          <ObeliskIcon className="h-5 w-5" />
         </span>
       )}
       <span className="min-w-0 flex-1">
