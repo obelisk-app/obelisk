@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { SLASH_COMMANDS } from '@/components/chat/SlashCommandAutocomplete';
-import { BOT_ALIVE_SECS, filterSlashCommands, mergeSlashCommands, parseBotCommands, slashNameFor } from './bot-commands';
+import { BOT_ALIVE_SECS, buildSlashSections, slashCommandId, filterSlashCommands, mergeSlashCommands, parseBotCommands, slashNameFor } from './bot-commands';
 
 const NOW = 1_800_000_000;
 
@@ -66,5 +66,24 @@ describe('bot slash commands', () => {
     const empty = { ...ranks, commands: [] };
     expect(mergeSlashCommands([], [stale], NOW)).toEqual([]);
     expect(mergeSlashCommands([], [empty], NOW)).toEqual([]);
+  });
+});
+
+describe('picker sections', () => {
+  const merged = mergeSlashCommands(SLASH_COMMANDS, [ranks], NOW);
+  const milugar = merged.find((c) => c.name === 'milugar')!;
+
+  it('puts built-ins first, then recent bot commands, then each bot', () => {
+    const recent = [slashCommandId(milugar), slashCommandId(SLASH_COMMANDS[0])];
+    const sections = buildSlashSections(merged, '', recent);
+    expect(sections.map((s) => s.key)).toEqual(['obelisk', 'recent', ranks.pubkey]);
+    // Built-ins never move into recents — they already lead.
+    expect(sections[1].commands).toEqual([milugar]);
+  });
+
+  it('narrows to one bot when filtered from the rail', () => {
+    const sections = buildSlashSections(merged, '', [], ranks.pubkey);
+    expect(sections).toHaveLength(1);
+    expect(sections[0].commands.every((c) => c.bot?.pubkey === ranks.pubkey)).toBe(true);
   });
 });

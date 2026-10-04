@@ -1432,5 +1432,7 @@
   "dm.raw.nip04Hint": "A legacy NIP-04 direct message (kind 4). The content is encrypted, but sender, recipient and time are visible to every relay.",
   "dm.raw.decrypted": "Decrypted content",
   "dm.raw.keyWarning": "Contains the file's decryption key — anyone you give this JSON to can open the file.",
-  "dm.raw.unavailable": "Not available for this message yet."
+  "dm.raw.unavailable": "Not available for this message yet.",
+  "slash.recent": "Recent",
+  "slash.noMatch": "No commands match."
 }
