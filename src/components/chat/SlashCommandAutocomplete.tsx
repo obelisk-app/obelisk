@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { gameCatalog } from '@/lib/games/catalog';
+import { useUserMetadata } from '@/lib/nostr-bridge/stores';
 
 export interface SlashCommandParam {
   name: string;
@@ -14,6 +15,10 @@ export interface SlashCommand {
   name: string;
   description: string;
   params?: SlashCommandParam[];
+  /** Bot commands: the literal text the bot parses (e.g. `!milugar`). */
+  insert?: string;
+  /** Set for commands advertised by a bot alive on this relay. */
+  bot?: { pubkey: string; name: string };
 }
 
 interface Props {
@@ -44,44 +49,68 @@ export default function SlashCommandAutocomplete({ commands, selectedIndex, onSe
   return (
     <div
       ref={ref}
-      className="absolute bottom-full left-0 right-0 z-50 mb-1 max-h-56 overflow-y-auto rounded-xl border border-lc-border bg-lc-dark shadow-lg"
+      className="absolute bottom-full left-0 right-0 z-50 mb-1 max-h-80 overflow-y-auto rounded-xl border border-lc-border bg-lc-dark shadow-lg"
       data-testid="slash-autocomplete"
     >
-      <div className="px-3 py-1.5 text-[10px] uppercase tracking-wide text-lc-muted border-b border-lc-border">
-        Commands matching /{commands[0]?.name.slice(0, 0)}
-      </div>
       {commands.map((cmd, i) => {
         const required = (cmd.params ?? []).filter((p) => !p.optional);
         const optional = (cmd.params ?? []).filter((p) => p.optional);
         return (
           <button
-            key={cmd.name}
+            key={cmd.bot ? `${cmd.bot.pubkey}:${cmd.name}` : cmd.name}
             ref={(el) => { itemRefs.current[i] = el; }}
             type="button"
             onMouseDown={(e) => { e.preventDefault(); onSelect(cmd); }}
-            className={`flex w-full items-center gap-2 px-3 py-2 text-left transition-colors ${
+            className={`flex w-full items-center gap-3 px-3 py-2 text-left transition-colors ${
               i === selectedIndex ? 'bg-lc-border/60' : 'hover:bg-lc-border/40'
             }`}
             data-testid="slash-option"
           >
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-lc-green/20 text-lc-green">
-              ⚡
-            </span>
-            <span className="font-mono text-sm text-lc-white">/{cmd.name}</span>
-            {required.map((p) => (
-              <span key={p.name} className="rounded bg-lc-border/70 px-1.5 py-0.5 text-[10px] font-mono text-lc-muted">
-                {p.name}
+            {cmd.bot ? <BotAvatar pubkey={cmd.bot.pubkey} /> : (
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-lc-green/20 text-lc-green">
+                {cmd.name === 'play' ? '🎮' : '⚡'}
               </span>
-            ))}
-            {optional.length > 0 && (
-              <span className="text-[10px] text-lc-muted">+{optional.length} optional</span>
             )}
-            <span className="ml-2 truncate text-xs text-lc-muted">{cmd.description}</span>
+            <span className="min-w-0 flex-1">
+              <span className="flex items-center gap-2">
+                <span className="font-mono text-sm text-lc-white">/{cmd.name}</span>
+                {required.map((p) => (
+                  <span key={p.name} className="rounded bg-lc-border/70 px-1.5 py-0.5 text-[10px] font-mono text-lc-muted">
+                    {p.name}
+                  </span>
+                ))}
+                {optional.length > 0 && (
+                  <span className="text-[10px] text-lc-muted">+{optional.length} optional</span>
+                )}
+              </span>
+              {cmd.description && (
+                <span className="block truncate text-xs text-lc-muted">{cmd.description}</span>
+              )}
+            </span>
+            <span className="max-w-[9rem] shrink-0 truncate text-xs text-lc-muted">
+              {cmd.bot ? <BotName pubkey={cmd.bot.pubkey} fallback={cmd.bot.name} /> : 'Obelisk'}
+            </span>
           </button>
         );
       })}
     </div>
   );
+}
+
+function BotAvatar({ pubkey }: { pubkey: string }) {
+  const meta = useUserMetadata(pubkey);
+  if (meta?.picture) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={meta.picture} alt="" className="h-8 w-8 shrink-0 rounded-full object-cover" />;
+  }
+  return (
+    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-lc-border text-sm">🤖</span>
+  );
+}
+
+function BotName({ pubkey, fallback }: { pubkey: string; fallback: string }) {
+  const meta = useUserMetadata(pubkey);
+  return <>{meta?.displayName || meta?.name || fallback}</>;
 }
 
 export const SLASH_COMMANDS: SlashCommand[] = [
