@@ -1432,5 +1432,7 @@
   "dm.raw.nip04Hint": "Uma mensagem direta NIP-04 legada (kind 4). O conteúdo é criptografado, mas remetente, destinatário e hora ficam visíveis para qualquer relé.",
   "dm.raw.decrypted": "Conteúdo descriptografado",
   "dm.raw.keyWarning": "Contém a chave de descriptografia do arquivo — qualquer pessoa a quem você der este JSON pode abri-lo.",
-  "dm.raw.unavailable": "Ainda não disponível para esta mensagem."
+  "dm.raw.unavailable": "Ainda não disponível para esta mensagem.",
+  "slash.recent": "Usados recentemente",
+  "slash.noMatch": "Nenhum comando corresponde."
 }

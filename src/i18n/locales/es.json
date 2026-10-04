@@ -1432,5 +1432,7 @@
   "dm.raw.nip04Hint": "Un mensaje directo NIP-04 heredado (kind 4). El contenido está cifrado, pero remitente, destinatario y hora son visibles para cualquier relé.",
   "dm.raw.decrypted": "Contenido descifrado",
   "dm.raw.keyWarning": "Contiene la clave de descifrado del archivo: cualquiera a quien le des este JSON puede abrirlo.",
-  "dm.raw.unavailable": "Aún no disponible para este mensaje."
+  "dm.raw.unavailable": "Aún no disponible para este mensaje.",
+  "slash.recent": "Usados recientemente",
+  "slash.noMatch": "Ningún comando coincide."
 }

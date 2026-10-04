@@ -168,8 +168,9 @@ import { useChannelGamesSubscription } from '@/hooks/chat/useChannelGames';
 import ModalShell from '@/components/ModalShell';
 import { parseZapCommand } from '@/lib/wallet/parse-zap-command';
 import MentionAutocomplete from '@/components/chat/MentionAutocomplete';
-import SlashCommandAutocomplete, { SLASH_COMMANDS, type SlashCommand } from '@/components/chat/SlashCommandAutocomplete';
-import { useBotCommands, mergeSlashCommands, filterSlashCommands } from '@/lib/bot-commands';
+import SlashCommandAutocomplete, { SLASH_COMMANDS, type SlashCommand, type BotProfiles } from '@/components/chat/SlashCommandAutocomplete';
+import { useBotCommands, mergeSlashCommands, buildSlashSections, slashCommandId, type SlashFilter } from '@/lib/bot-commands';
+import { loadRecentSlashCommands, pushRecentSlashCommand } from '@/lib/recent-slash-commands';
 import SlashCommandScaffold, { scaffoldMentionSlotQuery, scaffoldMentionSlotRange } from '@/components/chat/SlashCommandScaffold';
 import { applyMentionToDraft, filterMembers, relayMentionCandidates, resolveDraftMentions, type DraftMention } from '@/lib/mentions';
 import { npubToHex, hexToNpub, formatPubkey } from '@nostr-wot/data';
@@ -3145,10 +3146,42 @@ function ChatPanel({
   // Built-ins (/zap, /play) first, then commands of bots alive on this relay.
   const botCommandSets = useBotCommands(relay);
   const allSlashCommands = useMemo(() => mergeSlashCommands(SLASH_COMMANDS, botCommandSets), [botCommandSets]);
-  const slashResults = useMemo<SlashCommand[]>(
-    () => slashQuery === null ? [] : filterSlashCommands(allSlashCommands, slashQuery),
-    [slashQuery, allSlashCommands],
+  const [slashFilter, setSlashFilter] = useState<SlashFilter>('all');
+  const [recentSlash, setRecentSlash] = useState<string[]>(() => loadRecentSlashCommands());
+  const slashSections = useMemo(
+    () => slashQuery === null ? [] : buildSlashSections(allSlashCommands, slashQuery, recentSlash, slashFilter),
+    [slashQuery, allSlashCommands, recentSlash, slashFilter],
   );
+  // Left rail: every source, regardless of what's typed or filtered.
+  const slashOpen = slashQuery !== null;
+  const slashRail = useMemo(
+    () => slashOpen ? buildSlashSections(allSlashCommands, '', recentSlash) : [],
+    [slashOpen, allSlashCommands, recentSlash],
+  );
+  // Flattened in display order — what arrow keys / Enter walk.
+  const slashResults = useMemo<SlashCommand[]>(() => slashSections.flatMap((sec) => sec.commands), [slashSections]);
+  // One kind 0 lookup per bot (not per row); names/pictures come from metaMap.
+  const botPubkeysKey = botCommandSets.map((b) => b.pubkey).sort().join(',');
+  useEffect(() => {
+    if (!botPubkeysKey) return;
+    const impl = getBridgeImpl();
+    if (!impl) return;
+    const unsubs = botPubkeysKey.split(',').map((pk) => impl.subscribeUserMetadata(pk, () => {}));
+    return () => { unsubs.forEach((u) => u()); };
+  }, [botPubkeysKey]);
+  // Keyed on the bots' own name/picture so unrelated kind 0 traffic
+  // (metaMap churns on every profile ingest) doesn't rebuild the picker.
+  const botProfilesKey = (botPubkeysKey ? botPubkeysKey.split(',') : [])
+    .map((pk) => `${pk}\t${metaMap[pk]?.displayName || metaMap[pk]?.name || ''}\t${metaMap[pk]?.picture || ''}`)
+    .join('\n');
+  const botProfiles = useMemo<BotProfiles>(() => {
+    const out: Record<string, { name?: string | null; picture?: string | null }> = {};
+    for (const line of botProfilesKey ? botProfilesKey.split('\n') : []) {
+      const [pk, name, picture] = line.split('\t');
+      out[pk] = { name: name || null, picture: picture || null };
+    }
+    return out;
+  }, [botProfilesKey]);
   const activeSlashCommand = useMemo<SlashCommand | null>(() => {
     const m = /^\/([a-zA-Z]+)(?:\s|$)/.exec(draft);
     if (!m) return null;
@@ -3158,6 +3191,7 @@ function ChatPanel({
     setCaret(cursor);
     const sm = /^\/([a-zA-Z0-9_-]*)$/.exec(value);
     if (sm) {
+      if (slashQuery === null) setSlashFilter('all');
       setSlashQuery(sm[1]);
       setSlashIndex(0);
       setMentionQuery(null);
@@ -3186,6 +3220,7 @@ function ChatPanel({
   function insertSlashCommand(cmd: SlashCommand) {
     // Bot commands insert what the bot parses (`!milugar`), not `/milugar`.
     const next = `${cmd.insert ?? `/${cmd.name}`} `;
+    setRecentSlash(pushRecentSlashCommand(slashCommandId(cmd)));
     setDraft(next);
     setSlashQuery(null);
     requestAnimationFrame(() => {
@@ -3657,9 +3692,13 @@ function ChatPanel({
           </div>
           </>)}
           <div className="relative flex-1">
-            {slashQuery !== null && slashResults.length > 0 && (
+            {slashQuery !== null && (slashResults.length > 0 || (slashFilter !== 'all' && slashRail.length > 0)) && (
               <SlashCommandAutocomplete
-                commands={slashResults}
+                sections={slashSections}
+                rail={slashRail}
+                filter={slashFilter}
+                onFilter={(f) => { setSlashFilter(f); setSlashIndex(0); }}
+                botProfiles={botProfiles}
                 selectedIndex={slashIndex}
                 onSelect={insertSlashCommand}
                 onClose={() => setSlashQuery(null)}

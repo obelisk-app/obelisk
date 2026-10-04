@@ -109,6 +109,55 @@ export function mergeSlashCommands(
   return [...builtIn, ...fromBots];
 }
 
+/** Stable id for recents: built-ins by name, bot commands by bot + name. */
+export function slashCommandId(cmd: SlashCommand): string {
+  return cmd.bot ? `${cmd.bot.pubkey}:${cmd.name}` : `obelisk:${cmd.name}`;
+}
+
+/** `all`, `recent`, `obelisk` (built-ins) or a bot pubkey. */
+export type SlashFilter = string;
+
+export interface SlashSection {
+  /** `recent`, `obelisk` or the bot pubkey — also the rail filter value. */
+  readonly key: SlashFilter;
+  readonly bot?: { pubkey: string; name: string };
+  readonly commands: SlashCommand[];
+}
+
+/**
+ * Picker sections, Discord-style. Built-ins always lead (`/zap`, `/play`),
+ * then recently used bot commands, then one section per bot. `filter`
+ * narrows to a single section (the left rail); `all` shows every one.
+ */
+export function buildSlashSections(
+  commands: ReadonlyArray<SlashCommand>,
+  query: string,
+  recentIds: ReadonlyArray<string>,
+  filter: SlashFilter = 'all',
+): SlashSection[] {
+  const matches = filterSlashCommands(commands, query);
+  const builtIn = matches.filter((c) => !c.bot);
+  const byId = new Map(matches.map((c) => [slashCommandId(c), c]));
+  const recent = recentIds
+    .map((id) => byId.get(id))
+    .filter((c): c is SlashCommand => !!c && !!c.bot);
+  const sections: SlashSection[] = [];
+  if (builtIn.length) sections.push({ key: 'obelisk', commands: builtIn });
+  if (recent.length) sections.push({ key: 'recent', commands: recent });
+  const bots = new Map<string, SlashSection>();
+  for (const c of matches) {
+    if (!c.bot) continue;
+    let sec = bots.get(c.bot.pubkey);
+    if (!sec) {
+      sec = { key: c.bot.pubkey, bot: c.bot, commands: [] };
+      bots.set(c.bot.pubkey, sec);
+    }
+    sec.commands.push(c);
+  }
+  sections.push(...bots.values());
+  return filter === 'all' ? sections : sections.filter((s) => s.key === filter);
+}
+
 export function filterSlashCommands(commands: ReadonlyArray<SlashCommand>, query: string): SlashCommand[] {
   const q = query.toLowerCase();
   return commands.filter((c) => c.name.startsWith(q));
