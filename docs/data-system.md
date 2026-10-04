@@ -52,18 +52,23 @@ the error.
 
 Inside `connect()`, the handshake itself is a first-response-wins race:
 
-- Per-relay `ensureRelay` timeout: `PER_RELAY_TIMEOUT_MS = 3000`.
-- Hard ceiling across all relays: `HARD_CEILING_MS = 1500`.
+- Per-relay `ensureRelay` timeout: `PER_RELAY_TIMEOUT_MS = 10_000` (3s tore
+  healthy relays down behind Cloudflare after a resume).
+- `Promise.any` over the handshakes: the first relay to connect flips the
+  gate, and slower relays handshake in the background.
 
-If at least one relay handshakes within 1500ms the gate flips and slower
-relays handshake in the background. Subscriptions registered after that
+The first successful handshake triggers the fan-out. Subscriptions registered after that
 queue on the pool and bind as each socket comes online.
 
 ## 4. Priority tiers (the orchestrator)
 
-`src/lib/nostr-bridge/orchestrator.ts` declares the tier plan, and the
-bridge dispatches each action via `dispatchOrchestratorAction`. The
-default plan:
+> `orchestrator.ts` was folded into `client.ts` (b3d77af, "simplify nostr
+> bridge"). `connect()` now calls `preflightRelayAccess()`,
+> `subscribeGroupMetadata()` and the rest directly after the first
+> handshake, in the order below. The table still describes the ordering
+> and the watchdog/cache behaviour of each REQ.
+
+The plan:
 
 | Tier | Action | When | Watchdog | Affects relay-access | Cache |
 |---|---|---|---|---|---|
@@ -136,15 +141,101 @@ affectsRelayAccess: true
 immediateAccessDowngrade: true
 ```
 
-`immediateAccessDowngrade` is new: when the preflight sub closes with an
-`auth-required:` or `restricted:` reason, `setRelayAccess(url, state)`
-runs directly instead of going through `setRelayAccessDeferred` (the
-default 4s soak that absorbs transient AUTH races for the rest of the
-fan-out). The user sees the whitelist banner within ~1.5s.
+`immediateAccessDowngrade`: when the preflight sub closes with an
+access rejection, `setRelayAccess(url, state, { override: true })` runs
+directly instead of going through `setRelayAccessDeferred` (the default 4s
+soak that absorbs transient AUTH races for the rest of the fan-out).
 
-EOSE on the preflight filter is harmless (the relay just doesn't have
-the user's kind 0 yet) and flips `relayAccess` to `'ok'` via the
-standard onevent/oneose path.
+**How a refusal is told apart from an AUTH problem** (`classifyAccessClose`
+in `client.ts`). Every watched sub passes `onauth`, and nostr-tools
+(`abstract-pool.js` `subscribeMap`) handles a CLOSED whose reason starts
+with `auth-required: ` itself: it swallows the CLOSED, runs NIP-42 AUTH, and
+resubscribes. What the bridge then sees is one of:
+
+| Reason reaching `onclose` | Meaning | State |
+|---|---|---|
+| `auth-required: …` (bare) | AUTH got `OK true` and the resubscribed REQ was **still** refused | `restricted` |
+| `auth was required and attempted, but failed with: <inner>` | AUTH itself failed (signer declined/threw, `auth timed out`, `OK false`) | the inner reason's class, else `auth-required` |
+| `restricted: …` / `blocked` / `whitelist` / `forbidden` … | explicit refusal | `restricted` |
+| quota / rate-limit wording | transient load shedding | none — never a verdict |
+
+A post-AUTH refusal skips the soak on **every** access-affecting sub, not
+just the preflight (non-preflight subs still respect sticky-OK).
+
+**Timing.** The probe goes out right after the first handshake. The relay
+challenges on connect, so `automaticallyAuth` is usually already signing.
+The 1.5s watchdog pauses while *any* NIP-42 signature is pending
+(`pendingAuthSigns`), not only one started by this sub's own `onauth`:
+nostr-tools dedupes AUTH per socket, so the probe's `onauth` often never
+runs, and a slow extension or bunker approval used to kill the probe with no
+verdict. The banner now appears one round-trip after the user approves AUTH
+(or at once for nsec).
+
+**Verdicts are sticky.** nostr-tools calls `automaticallyAuth` on *every*
+`ensureRelay` — every REQ, retry and publish — not only when a challenge
+arrives. It only enters `'authenticating'` from `unknown` / `unreachable` /
+`error` (or no state), so later traffic can't flip a refusal back to
+"Authenticating…". `'restricted'` also ignores a later `'auth-required'`.
+Only `'ok'` (an EVENT or EOSE, e.g. after the operator whitelists the key)
+or a relay/session change clears it.
+
+**EOSE is not proof of access.** nostr-tools' pool fires a synthetic EOSE
+for every relay-sent CLOSED (`handleClose` → `handleEose`, in the same tick,
+just before `onclose`). So on a refusing relay *every* REQ reports EOSE, then
+CLOSED. Two rules follow:
+- an EOSE can't lift `'restricted'`; only a delivered EVENT can;
+- a relay-wide refusal (post-AUTH `auth-required:`, or `restricted:` naming the
+  whitelist) overrides sticky-OK on any access-affecting sub.
+
+Without them, the next refused sub's EOSE flipped the verdict back to `'ok'`, and
+the phone shell said "No channels found" instead of "Whitelisting required".
+
+EOSE on the preflight filter flips `relayAccess` to `'ok'` via the standard
+onevent/oneose path. An EOSE-then-CLOSED refusal still downgrades, because
+the preflight overrides sticky-OK.
+
+### 5a. Relay-side contract for access rejection
+
+The client can only show "Not whitelisted" quickly if the relay says so in
+a form it can classify. A relay that gates on pubkey should:
+
+1. **Send the NIP-42 challenge on connect**, before any REQ. The client
+   starts signing immediately, so the first REQ isn't stuck waiting on a
+   human.
+2. **Accept any validly signed AUTH** with `OK true`. Enforce the allowlist
+   per REQ/EVENT, not in the AUTH reply. (An `OK false` on AUTH reaches the
+   client only inside nostr-tools' `auth was required and attempted, but
+   failed with:` wrapper.)
+3. **Use `auth-required:` only for a socket that has not authenticated.**
+   nostr-tools AUTHs and retries only on that exact prefix (with the trailing
+   space); `restricted:` on an unauthenticated socket makes every write on a
+   fresh socket fail for good.
+4. **Use `restricted:` for an authenticated key that isn't admitted** — on
+   REQ (`CLOSED <sub> "restricted: …"`) and on EVENT (`OK <id> false
+   "restricted: …"`). Put the word `whitelist` in the message: the client
+   treats a publish refusal that names the whitelist as a relay-wide verdict
+   (no soak), while other `restricted:` OKs such as NIP-29 membership stay
+   per-group.
+5. **Never use whitelist wording for quota or rate limits.** The client
+   drops reasons containing `rate limit`, `too many`, `slow down`, `quota` or
+   `concurrent` before classifying, even with a `restricted:` prefix.
+6. **Don't answer a refused key with a silent empty EOSE.** That can't be
+   told apart from an empty relay. The client reads it as `'ok'` and the user
+   sees an empty sidebar with no explanation.
+
+**obelisk-relay today.** The write path already follows (3)/(4)
+(`groups_event_processor.rs`, "Access denied: your pubkey is not whitelisted
+on this relay"). The read path (`verify_filters`) answers every non-admitted
+pubkey with `auth-required: Authentication required: this relay only accepts
+whitelisted pubkeys`, authenticated or not. The client copes, via the
+post-AUTH rule above. The relay-side fix mirrors the write path in
+`verify_filters`: it returns `Error::restricted("Access denied: your pubkey is
+not whitelisted on this relay")` when `context.authed_pubkey.is_some()`. The
+fix is made on top of the live `obelisk-apps-manifest` branch (test
+`an_authenticated_unadmitted_read_is_restricted`) but not yet deployed. It saves
+a round-trip (no pointless AUTH-and-resubscribe) and makes the verdict
+unambiguous to every client, not just this one. Keep the client rule anyway:
+other relays, and older obelisk-relay builds, still answer the old way.
 
 `switchRelay` resets the pool and re-runs `connect()`, so the preflight
 fires for the new relay automatically.
@@ -162,24 +253,36 @@ fires for the new relay automatically.
 `relay.onclose` flips the state to `'Disconnected'` (or keeps `'Offline'`) and kicks
 `reconnectInBackground()` with capped, jittered exponential backoff. Native relay pings detect half-open sockets; browser `online` and visible-tab events wake a pending retry immediately, while `offline` pauses retry traffic.
 
-UI surface: `src/app/app/ConnectionBanner.tsx` mounts above the chat pane
-in both shells. Visible when `useIsLoggedIn() === true` AND
-`useConnectionState() !== 'Connected'`. Renders a thin red bar with the
-state label + detail; unmounts as soon as the connection recovers. The
-banner has `data-testid="connection-loss-banner"` and `data-state`.
+UI surface: `src/app/app/RelayStatusBanner.tsx` (desktop, inside
+`ActivityIndicator`) folds connection state and relay access into one
+line. Connection problems win, then access: `authenticating` (yellow
+spinner), `auth-required` (yellow "Not authenticated"), `restricted` (red
+"Not whitelisted"), `unreachable`/`error` (red). It carries
+`data-testid="relay-access-banner"` / `"connection-loss-banner"` and
+`data-state`. Desktop also raises `RelayAccessModal` (`DesktopShell.tsx`)
+for `restricted` / `auth-required` / `unreachable`. Mobile shows
+`RelayStatusPill` in the header and "Whitelisting required" in the empty
+channel list.
 
 ## 7. NIP-42 AUTH
 
-`BridgeImpl.createPool()` registers `automaticallyAuth(_relayUrl)` with
-SimplePool. When a relay sends an AUTH challenge:
+`BridgeImpl.createPool()` registers `automaticallyAuth(relayUrl)` with
+SimplePool. nostr-tools calls it on **every** `ensureRelay` (each REQ,
+retry and publish), not only when a challenge arrives. It returns a signer
+only for the active relay (or a pinned voice relay) and moves access to
+`'authenticating'` only when no verdict is held (see §5). When the relay
+sends a challenge:
 
-1. SimplePool calls the callback with the challenge event template.
-2. The callback dispatches by `loginMethod`:
+1. nostr-tools calls the returned signer with the challenge event template
+   (deduped per socket through its cached `authPromise`).
+2. `signAuthEvent` dispatches by `loginMethod`:
    - **nsec**: `finalizeEvent(template, sk)` — synchronous local crypto.
    - **nip07**: `window.nostr.signEvent(template)` — extension RPC.
    - **bunker**: `await ensureBunkerSigner()` then `signer.signEvent(template)`.
-3. SimplePool sends the signed event back as an AUTH frame and retries
-   the queued REQ.
+3. SimplePool sends the signed event back as an AUTH frame. A REQ that
+   was CLOSED with `auth-required: ` is resubscribed once AUTH gets
+   `OK true`. If AUTH fails, the sub closes with `auth was required and
+   attempted, but failed with: …`.
 
 The bunker path is special: cold `BunkerSigner.connect()` takes 1-3s, so
 `initialize()` pre-warms the bunker signer fire-and-forget before
@@ -253,8 +356,8 @@ data load first.
 | Chat pane → "Load earlier" on scroll-to-top | `useLoadEarlier` returns `false` once `reachedStart` | scroll listener at top of `messagesRef` |
 | Members panel (desktop) | `lc-spinner` + "Loading members…" | `useMembershipReady(groupId)` |
 | Members screen (mobile) | `lc-spinner` + "Loading members…" → "No members" | `useMembershipReady(groupId)` |
-| `ConnectionBanner` | always visible while `loggedIn && connectionState !== 'Connected'` | `useConnectionState()` |
-| `RelayAccessBanner` | visible when `relayAccess !== 'ok'` (preflight or normal subs) | `useRelayAccess()` |
+| `RelayStatusBanner` (connection) | visible while `loggedIn && connectionState !== 'Connected'` | `useConnectionState()` |
+| `RelayStatusBanner` (access) | visible for `authenticating` / `auth-required` / `restricted` / `unreachable` / `error` | `useRelayAccess()` |
 
 Each loader has a stable `data-testid` so the Playwright specs can assert
 paint order — see [`testing-strategy`](#13-test-coverage).
@@ -300,10 +403,14 @@ For each login method, clear localStorage then:
    info…" then "Loading messages…"; member panel shows "Loading members…".
    No empty-sidebar flash, no layout shift when the banner image arrives.
 5. **Whitelist preflight on a restricted relay** — point a fresh nsec at
-   `wss://lacrypta-relay.obelisk.ar`; assert `RelayAccessBanner` flips to
-   `data-state="restricted"` within ~1.5s. No 4s soak.
+   `wss://lacrypta-relay.obelisk.ar` (or `public.obelisk.ar`); assert
+   the relay-access banner shows `data-state="restricted"` ("Not
+   whitelisted") within ~1.5s, with no 4s soak, and stays there instead of
+   flickering back to "Authenticating…". With NIP-07, delay approving the
+   AUTH popup past 1.5s: the verdict must still land right after you
+   approve.
 6. **Connection loss** — disconnect Wi-Fi mid-session;
-   `ConnectionBanner` appears within 1s. Reconnect — banner disappears.
+   the connection banner appears within 1s. Reconnect — banner disappears.
 7. **Preferences → Clear cache** — confirm; reload; sidebar paints from a
    clean cache. Session and preferences preserved.
 

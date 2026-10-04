@@ -158,7 +158,7 @@ describe('preflight — whitelist detection', () => {
     expect(restricted!.at - triggeredAt).toBeLessThan(200);
   });
 
-  it('flips relayAccess to "auth-required" immediately on CLOSED auth-required', async () => {
+  it('flips relayAccess to "auth-required" immediately when AUTH itself failed', async () => {
     const { getBridge } = await import('./client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
@@ -173,7 +173,8 @@ describe('preflight — whitelist detection', () => {
     const preflight = findPreflightSub(pkHex);
     expect(preflight).toBeDefined();
 
-    preflight!.onclose?.(preflight!.relays.map(() => 'auth-required: must authenticate'));
+    // nostr-tools' wrapper when its AUTH-and-resubscribe attempt failed.
+    preflight!.onclose?.(preflight!.relays.map(() => 'auth was required and attempted, but failed with: Error: auth timed out'));
 
     const authRequired = accessSnapshots.find((s) =>
       Object.values(s).includes('auth-required'),
@@ -202,7 +203,7 @@ describe('preflight — whitelist detection', () => {
     expect(ok).toBeDefined();
   });
 
-  it('downgrades preflight EOSE-then-CLOSED auth-required instead of sticking on ok', async () => {
+  it('downgrades preflight EOSE-then-CLOSED post-AUTH refusal to restricted instead of sticking on ok', async () => {
     const { getBridge } = await import('./client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
@@ -222,10 +223,37 @@ describe('preflight — whitelist detection', () => {
 
     preflight!.onclose?.(preflight!.relays.map(() => 'auth-required: this relay only accepts whitelisted pubkeys'));
 
-    const authRequired = accessSnapshots.find((s) =>
-      Object.values(s).includes('auth-required'),
-    );
-    expect(authRequired).toBeDefined();
+    expect(accessSnapshots.at(-1) && Object.values(accessSnapshots.at(-1)!)).toContain('restricted');
+  });
+
+  // obelisk-relay answers an authenticated-but-unlisted REQ with the same
+  // `auth-required:` string it uses before AUTH. On an `onauth` sub
+  // nostr-tools swallows the first one, AUTHs and resubscribes, so the bare
+  // reason we see is the post-AUTH refusal: that is "not whitelisted".
+  it('reads a bare auth-required CLOSED after AUTH as "restricted", immediately', async () => {
+    const { getBridge } = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+
+    const accessSnapshots: Array<{ value: Record<string, string>; at: number }> = [];
+    bridge.subscribeRelayAccess((snap) => {
+      accessSnapshots.push({ value: { ...snap }, at: performance.now() });
+    });
+
+    await bridge.loginWithNsec(skHex, pkHex);
+    await Promise.resolve();
+    const preflight = findPreflightSub(pkHex);
+    expect(preflight).toBeDefined();
+
+    const triggeredAt = performance.now();
+    preflight!.onclose?.(preflight!.relays.map(
+      () => 'auth-required: Authentication required: this relay only accepts whitelisted pubkeys',
+    ));
+
+    const restricted = accessSnapshots.find((s) => Object.values(s.value).includes('restricted'));
+    expect(restricted).toBeDefined();
+    expect(restricted!.at - triggeredAt).toBeLessThan(200);
+    expect(accessSnapshots.some((s) => Object.values(s.value).includes('auth-required'))).toBe(false);
   });
 
   it('does not retry preflight after the single attempt (maxAttempts=1)', async () => {

@@ -1381,7 +1381,7 @@ describe('nostr-bridge', () => {
     for (const sub of fake.state.subscriptions) {
       const f = sub.filter as { kinds?: number[]; authors?: string[]; limit?: number };
       if (f.kinds?.includes(0) && f.authors?.includes(pkHex) && f.limit === 1) continue;
-      const reasons = (sub.relays ?? [activeRelay]).map(() => 'auth-required: please AUTH');
+      const reasons = (sub.relays ?? [activeRelay]).map(() => 'auth was required and attempted, but failed with: Error: auth timed out');
       sub.onclose?.(reasons);
     }
     await flush();
@@ -1390,7 +1390,10 @@ describe('nostr-bridge', () => {
     for (const sub of fake.state.subscriptions) {
       const f = sub.filter as { kinds?: number[]; authors?: string[]; limit?: number };
       if (f.kinds?.includes(0) && f.authors?.includes(pkHex) && f.limit === 1) continue;
-      const reasons = (sub.relays ?? [activeRelay]).map(() => 'restricted: pubkey not whitelisted');
+      // A per-sub refusal that doesn't name the whitelist (a private group, a
+      // NIP-29 membership race). One that does is a relay-wide verdict and
+      // overrides sticky-OK — see relay-auth-state.test.ts.
+      const reasons = (sub.relays ?? [activeRelay]).map(() => 'restricted: not a member of this group');
       sub.onclose?.(reasons);
     }
     await flush();
@@ -1844,9 +1847,14 @@ describe('nostr-bridge', () => {
         limit === 1
       );
     };
+    // The reason is nostr-tools' failed-AUTH wrapper: on a sub carrying
+    // `onauth` the pool swallows a bare `auth-required: ` and retries AUTH
+    // itself, so a transient race only ever reaches us in this form. (A bare
+    // `auth-required:` reaching us means AUTH succeeded and we were refused —
+    // see classifyAccessClose.)
     for (const sub of fake.state.subscriptions) {
       if (isPreflight(sub)) continue;
-      const reasons = (sub.relays ?? [activeRelay]).map(() => 'auth-required: please AUTH');
+      const reasons = (sub.relays ?? [activeRelay]).map(() => 'auth was required and attempted, but failed with: Error: auth timed out');
       sub.onclose?.(reasons);
     }
     await flush();

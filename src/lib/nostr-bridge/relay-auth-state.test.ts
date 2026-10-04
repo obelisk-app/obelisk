@@ -312,7 +312,9 @@ describe('relay-access "authenticating" state', () => {
       Array.isArray((s.filter as any).kinds) && (s.filter as any).kinds.includes(39000),
     );
     expect(sub).toBeTruthy();
-    sub!.onclose?.(['auth-required: please sign']);
+    // nostr-tools' failed-AUTH wrapper — the only form a transient AUTH race
+    // reaches an `onauth` sub in (see classifyAccessClose).
+    sub!.onclose?.(['auth was required and attempted, but failed with: Error: auth timed out']);
 
     // During the soak window, state stays 'authenticating' — we don't
     // want to flash a "Not authenticated" banner if the very next retry
@@ -328,6 +330,206 @@ describe('relay-access "authenticating" state', () => {
     expect(impl.relayAccess.get()[key]).toBe('auth-required');
   });
 
+
+  it('a later ensureRelay (new REQ) does not overwrite "restricted" with "authenticating"', async () => {
+    const clientMod = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await clientMod.getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+
+    const impl = clientMod.getBridgeImpl()!;
+    const url = impl.currentRelayUrl.get();
+    const key = normalizeRelayUrl(url);
+    const pool = fake.state.pools.at(-1)!;
+
+    // Post-AUTH refusal on a relay-wide sub: nostr-tools only hands a bare
+    // `auth-required:` to an `onauth` sub once AUTH succeeded.
+    const sub = fake.state.subscriptions.find((s) =>
+      Array.isArray((s.filter as any).kinds) && (s.filter as any).kinds.includes(39000),
+    );
+    sub!.onclose?.(['auth-required: Authentication required: this relay only accepts whitelisted pubkeys']);
+    expect(impl.relayAccess.get()[key]).toBe('restricted');
+
+    // nostr-tools calls automaticallyAuth on every ensureRelay — every
+    // retry, REQ and publish. None of them may undo the verdict.
+    pool.authHandler!(url);
+    pool.authHandler!(url);
+    expect(impl.relayAccess.get()[key]).toBe('restricted');
+
+    // A failed-AUTH CLOSED is weaker news than "restricted" — ignored too.
+    vi.useFakeTimers();
+    const other = fake.state.subscriptions.find((s) =>
+      Array.isArray((s.filter as any).kinds) && (s.filter as any).kinds.includes(39001),
+    );
+    other?.onclose?.(['auth was required and attempted, but failed with: Error: auth timed out']);
+    vi.advanceTimersByTime(4500);
+    expect(impl.relayAccess.get()[key]).toBe('restricted');
+  });
+
+  it('"restricted" still clears to "ok" when the relay starts serving us', async () => {
+    const clientMod = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await clientMod.getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+
+    const impl = clientMod.getBridgeImpl()!;
+    const key = normalizeRelayUrl(impl.currentRelayUrl.get());
+    // findLast: the previous test's bridge (a stale module instance) can
+    // still push retry subs into the shared fake; ours are the newest.
+    const metaSub = () => fake.state.subscriptions.findLast((s) =>
+      Array.isArray((s.filter as any).kinds) && (s.filter as any).kinds.includes(39000),
+    );
+    metaSub()!.onclose?.(['auth-required: Authentication required: this relay only accepts whitelisted pubkeys']);
+    expect(impl.relayAccess.get()[key]).toBe('restricted');
+
+    // e.g. an operator whitelisted the key and the immediate retry got through.
+    await new Promise((r) => setTimeout(r, 10));
+    const ev: NostrEvent = {
+      id: 'meta-1', pubkey: 'relay-pk', created_at: 1, kind: 39000, sig: '', content: '',
+      tags: [['d', 'group-x'], ['name', 'X']],
+    };
+    for (const sub of fake.state.subscriptions) {
+      if (fake.matches(sub.filter, ev)) sub.sink(ev);
+    }
+    expect(impl.relayAccess.get()[key]).toBe('ok');
+  });
+
+  it('a publish refused with a whitelist reason flips to "restricted" without the soak', async () => {
+    const clientMod = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await clientMod.getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+
+    const impl = clientMod.getBridgeImpl()!;
+    const url = impl.currentRelayUrl.get();
+    const key = normalizeRelayUrl(url);
+    const pool = fake.state.pools.at(-1)! as unknown as { publish: (...a: unknown[]) => Promise<string>[] };
+    pool.publish = () => [Promise.reject(new Error('restricted: Access denied: your pubkey is not whitelisted on this relay'))];
+
+    const ev = finalizeEvent(
+      { kind: 9, content: 'hi', tags: [['h', 'g']], created_at: Math.floor(Date.now() / 1000) },
+      Uint8Array.from(skHex.match(/../g)!.map((b) => parseInt(b, 16))),
+    );
+    await impl.publishSignedEvent(ev, [url], { quiet: true }).catch(() => {});
+    expect(impl.relayAccess.get()[key]).toBe('restricted');
+  });
+
+  it('a group-level "restricted:" publish refusal keeps the soak', async () => {
+    const clientMod = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await clientMod.getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+
+    const impl = clientMod.getBridgeImpl()!;
+    const url = impl.currentRelayUrl.get();
+    const key = normalizeRelayUrl(url);
+    const pool = fake.state.pools.at(-1)! as unknown as { publish: (...a: unknown[]) => Promise<string>[] };
+    pool.publish = () => [Promise.reject(new Error('restricted: you are not a member of this group'))];
+
+    const ev = finalizeEvent(
+      { kind: 9, content: 'hi', tags: [['h', 'g']], created_at: Math.floor(Date.now() / 1000) },
+      Uint8Array.from(skHex.match(/../g)!.map((b) => parseInt(b, 16))),
+    );
+    await impl.publishSignedEvent(ev, [url], { quiet: true }).catch(() => {});
+    expect(impl.relayAccess.get()[key]).not.toBe('restricted');
+  });
+
+  it('the preflight watchdog waits out a slow NIP-42 approval started by automaticallyAuth', async () => {
+    const clientMod = await import('./client');
+    const { skHex, pkHex } = makeKeypair();
+    const sk = Uint8Array.from(skHex.match(/../g)!.map((b) => parseInt(b, 16)));
+    let approve!: () => void;
+    const approved = new Promise<void>((r) => { approve = r; });
+    const signEvent = vi.fn(async (template: any) => {
+      if (template.kind === 22242) await approved; // human staring at the popup
+      return finalizeEvent({ ...template }, sk);
+    });
+    Object.defineProperty(window, 'nostr', { configurable: true, value: { signEvent, getPublicKey: async () => pkHex } });
+    const bridge = await clientMod.getBridge();
+    await bridge.loginWithNip07(pkHex);
+
+    const impl = clientMod.getBridgeImpl()!;
+    const url = impl.currentRelayUrl.get();
+    const key = normalizeRelayUrl(url);
+    const isPreflight = (s: { filter: Record<string, unknown> }) =>
+      (s.filter.kinds as number[] | undefined)?.[0] === 0
+      && (s.filter.authors as string[] | undefined)?.includes(pkHex)
+      && s.filter.limit === 1;
+    expect(fake.state.subscriptions.some(isPreflight)).toBe(true);
+
+    vi.useFakeTimers();
+    // The pool's automaticallyAuth starts the signature; the preflight's own
+    // onauth never runs (nostr-tools dedupes AUTH per socket).
+    const signer = fake.state.pools.at(-1)!.authHandler!(url)!;
+    const signing = signer({ kind: 22242, content: 'c', tags: [], created_at: 1, pubkey: pkHex });
+
+    vi.advanceTimersByTime(6000); // well past the 1.5s preflight watchdog
+    const preflight = fake.state.subscriptions.find(isPreflight);
+    expect(preflight).toBeDefined();
+
+    vi.useRealTimers();
+    approve();
+    await signing;
+    preflight!.onclose?.(['auth-required: Authentication required: this relay only accepts whitelisted pubkeys']);
+    expect(impl.relayAccess.get()[key]).toBe('restricted');
+  });
+
+  // What a whitelist relay actually produces through nostr-tools: for every
+  // REQ, the pool fires a synthetic EOSE (handleClose → handleEose) and then
+  // onclose, in the same tick. The preflight lands first; the rest of the
+  // fan-out follows. The verdict must survive every later EOSE.
+  for (const reason of [
+    'restricted: Access denied: your pubkey is not whitelisted on this relay',
+    'auth-required: Authentication required: this relay only accepts whitelisted pubkeys',
+  ]) {
+    it(`stays "restricted" through the pool's EOSE-then-CLOSED on every sub (${reason.split(':')[0]})`, async () => {
+      const clientMod = await import('./client');
+      const { skHex, pkHex } = makeKeypair();
+      const bridge = await clientMod.getBridge();
+      await bridge.loginWithNsec(skHex, pkHex);
+
+      const impl = clientMod.getBridgeImpl()!;
+      const key = normalizeRelayUrl(impl.currentRelayUrl.get());
+      const ours = fake.state.subscriptions.slice();
+      const isPreflight = (s: { filter: Record<string, unknown> }) =>
+        (s.filter.kinds as number[] | undefined)?.[0] === 0
+        && (s.filter.authors as string[] | undefined)?.includes(pkHex)
+        && s.filter.limit === 1;
+      const ordered = [...ours.filter(isPreflight), ...ours.filter((s) => !isPreflight(s))];
+      expect(ordered.length).toBeGreaterThan(3);
+
+      for (const sub of ordered) {
+        sub.oneose?.();
+        sub.onclose?.(sub.relays.map(() => reason));
+      }
+      expect(impl.relayAccess.get()[key]).toBe('restricted');
+
+      // Retries re-REQ, get the same EOSE-then-CLOSED, and re-enter
+      // automaticallyAuth — still nothing may dislodge the verdict.
+      await new Promise((r) => setTimeout(r, 10));
+      fake.state.pools.at(-1)!.authHandler!(impl.currentRelayUrl.get());
+      for (const sub of fake.state.subscriptions.slice()) {
+        sub.oneose?.();
+        sub.onclose?.(sub.relays.map(() => reason));
+      }
+      expect(impl.relayAccess.get()[key]).toBe('restricted');
+    });
+  }
+
+  it('classifyAccessClose separates post-AUTH refusals from AUTH failures', async () => {
+    const { classifyAccessClose } = await import('./client');
+    const refusal = 'auth-required: Authentication required: this relay only accepts whitelisted pubkeys';
+    expect(classifyAccessClose(refusal, true)).toBe('restricted');
+    expect(classifyAccessClose(refusal, false)).toBe('auth-required');
+    expect(classifyAccessClose('auth was required and attempted, but failed with: Error: auth timed out', true))
+      .toBe('auth-required');
+    expect(classifyAccessClose('auth was required and attempted, but failed with: restricted: blocked', true))
+      .toBe('restricted');
+    expect(classifyAccessClose('restricted: Access denied: your pubkey is not whitelisted on this relay', true))
+      .toBe('restricted');
+    expect(classifyAccessClose('restricted: Subscription quota exceeded: 50/50', true)).toBeNull();
+    expect(classifyAccessClose('closed by caller', true)).toBeNull();
+  });
 
   it('does not AUTH an override relay used by a watched subscription', async () => {
     const clientMod = await import('./client');
