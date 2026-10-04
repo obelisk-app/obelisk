@@ -169,6 +169,7 @@ import ModalShell from '@/components/ModalShell';
 import { parseZapCommand } from '@/lib/wallet/parse-zap-command';
 import MentionAutocomplete from '@/components/chat/MentionAutocomplete';
 import SlashCommandAutocomplete, { SLASH_COMMANDS, type SlashCommand } from '@/components/chat/SlashCommandAutocomplete';
+import { useBotCommands, mergeSlashCommands, filterSlashCommands } from '@/lib/bot-commands';
 import SlashCommandScaffold, { scaffoldMentionSlotQuery, scaffoldMentionSlotRange } from '@/components/chat/SlashCommandScaffold';
 import { applyMentionToDraft, filterMembers, relayMentionCandidates, resolveDraftMentions, type DraftMention } from '@/lib/mentions';
 import { npubToHex, hexToNpub, formatPubkey } from '@nostr-wot/data';
@@ -3141,9 +3142,12 @@ function ChatPanel({
     });
     return filterMembers(candidates, mentionQuery).slice(0, 8);
   }, [mentionCandidatePubkeys, metaMap, mentionQuery]);
+  // Built-ins (/zap, /play) first, then commands of bots alive on this relay.
+  const botCommandSets = useBotCommands(relay);
+  const allSlashCommands = useMemo(() => mergeSlashCommands(SLASH_COMMANDS, botCommandSets), [botCommandSets]);
   const slashResults = useMemo<SlashCommand[]>(
-    () => slashQuery === null ? [] : SLASH_COMMANDS.filter((c) => c.name.startsWith(slashQuery.toLowerCase())),
-    [slashQuery],
+    () => slashQuery === null ? [] : filterSlashCommands(allSlashCommands, slashQuery),
+    [slashQuery, allSlashCommands],
   );
   const activeSlashCommand = useMemo<SlashCommand | null>(() => {
     const m = /^\/([a-zA-Z]+)(?:\s|$)/.exec(draft);
@@ -3152,7 +3156,7 @@ function ChatPanel({
   }, [draft]);
   function detectMention(value: string, cursor: number) {
     setCaret(cursor);
-    const sm = /^\/([a-zA-Z]*)$/.exec(value);
+    const sm = /^\/([a-zA-Z0-9_-]*)$/.exec(value);
     if (sm) {
       setSlashQuery(sm[1]);
       setSlashIndex(0);
@@ -3180,7 +3184,8 @@ function ChatPanel({
     }
   }
   function insertSlashCommand(cmd: SlashCommand) {
-    const next = `/${cmd.name} `;
+    // Bot commands insert what the bot parses (`!milugar`), not `/milugar`.
+    const next = `${cmd.insert ?? `/${cmd.name}`} `;
     setDraft(next);
     setSlashQuery(null);
     requestAnimationFrame(() => {
