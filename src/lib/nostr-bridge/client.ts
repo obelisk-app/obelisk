@@ -121,6 +121,13 @@ function parseRelayRejection(reason: string): RelayAccessState | null {
   // them as 'restricted' would wrongly flash "Not whitelisted" to legitimate
   // users.
   if (isRelayQuotaOrRateLimit(reason)) return null;
+  // nostr-tools' wrapper when its own AUTH-and-resubscribe failed (signer
+  // threw, AUTH timed out, or the relay answered OK false). The relay's OK
+  // reason, if any, is inside — classify that; otherwise it's an AUTH problem.
+  const AUTH_FAILED = 'auth was required and attempted, but failed with: ';
+  if (r.startsWith(AUTH_FAILED)) {
+    return parseRelayRejection(reason.slice(AUTH_FAILED.length)) ?? 'auth-required';
+  }
   if (r.includes('auth-required') || r.includes('auth_required') || r.includes('auth required')) {
     return 'auth-required';
   }
@@ -135,6 +142,35 @@ function parseRelayRejection(reason: string): RelayAccessState | null {
     return 'restricted';
   }
   return null;
+}
+
+/**
+ * Classify a CLOSED reason for the relay-access indicator, using what
+ * nostr-tools already did with it before we saw it.
+ *
+ * On a sub that carries `onauth`, nostr-tools swallows a CLOSED whose
+ * reason starts with `auth-required: `, runs NIP-42 AUTH, and resubscribes
+ * (abstract-pool.js `subscribeMap`). If AUTH fails we get `auth was required
+ * and attempted, but failed with: …` instead. So a bare `auth-required: `
+ * reaching us on such a sub can only be the *resubscribed* REQ's answer: the
+ * relay accepted our AUTH and still refused us. That is a whitelist refusal,
+ * not an authentication problem — obelisk-relay's read path answers both
+ * cases with the same `auth-required:` string (see docs/data-system.md
+ * "Relay-side contract for access rejection").
+ */
+export function classifyAccessClose(reason: string, hadOnAuth: boolean): RelayAccessState | null {
+  if (hadOnAuth && reason.startsWith('auth-required: ')) return 'restricted';
+  return parseRelayRejection(reason);
+}
+
+/**
+ * A publish rejection that names the whitelist is a relay-wide verdict,
+ * authoritative enough to show without the soak. Other `restricted:` OKs
+ * (NIP-29 membership, a private group) are per-group and keep the soak.
+ */
+function isWhitelistRefusal(reason: string): boolean {
+  const r = reason.toLowerCase();
+  return r.startsWith('restricted:') && r.includes('whitelist');
 }
 
 /**
@@ -801,6 +837,13 @@ export class BridgeImpl {
    */
   private authActivityIds = new Map<string, number>();
   private authSignatures = new Map<string, Promise<VerifiedEvent>>();
+  /**
+   * NIP-42 AUTH signatures currently awaiting the signer. nostr-tools dedupes
+   * AUTH per socket, so a sub whose own `onauth` never runs (because
+   * `automaticallyAuth` already started signing) can't see the approval is
+   * pending — watchdogs consult this instead.
+   */
+  private pendingAuthSigns = 0;
 
   /**
    * True if `url` is the relay the user is currently viewing — the only
@@ -843,7 +886,7 @@ export class BridgeImpl {
    * be allowed to downgrade from 'ok'; otherwise the banner never surfaces
    * a non-whitelisted user who first saw an EOSE on an empty filter.
    */
-  private setRelayAccess(url: string, state: RelayAccessState, opts?: { override?: boolean }): void {
+  private setRelayAccess(url: string, state: RelayAccessState, opts?: { override?: boolean; fromEose?: boolean }): void {
     if (!this.isActiveRelay(url)) return;
     const key = normalizeRelayUrl(url);
     const cur = this.relayAccess.get();
@@ -853,6 +896,17 @@ export class BridgeImpl {
     // channels the user isn't a member of, NIP-29 publish races) are normal
     // mid-session noise — letting them flip the banner causes flashing.
     if (cur[key] === 'ok' && state !== 'ok' && !opts?.override) return;
+    // 'restricted' is the relay saying "I know who you are, and no". A later
+    // AUTH-flavoured signal can't make that less true — only a successful
+    // read ('ok') or a relay/session change (which resets the map) clears it.
+    if (cur[key] === 'restricted' && (state === 'auth-required' || state === 'authenticating')) return;
+    // Nor can an EOSE. nostr-tools' pool fires a synthetic EOSE for every
+    // relay-sent CLOSED (`handleClose` → `handleEose`, same tick, just before
+    // `onclose`), so on a refusing relay each REQ reports EOSE→CLOSED: without
+    // this, the next refused sub's EOSE flipped a 'restricted' verdict back
+    // to 'ok' and the user saw "No channels found". Only a delivered EVENT is
+    // proof the relay now serves us.
+    if (cur[key] === 'restricted' && state === 'ok' && opts?.fromEose) return;
     // Any state transition supersedes a pending deferred downgrade — most
     // importantly, a flip to 'ok' must cancel a pending 'auth-required' so
     // the banner never appears for transient AUTH races that healed via
@@ -1153,7 +1207,16 @@ export class BridgeImpl {
         // signer round-trip. The activity-log entry tied to this state
         // (managed by setRelayAccess) keeps the bottom-right indicator
         // visible until the relay accepts/rejects us.
-        this.setRelayAccess(relayUrl, 'authenticating');
+        //
+        // nostr-tools calls this on *every* ensureRelay, not only when a
+        // challenge arrives, so each new REQ / retry / publish lands here.
+        // Only enter 'authenticating' from a state that carries no verdict:
+        // overwriting 'restricted' / 'auth-required' would flip a rejection
+        // back to "Authenticating…" and cancel its pending soak.
+        const cur = this.relayAccess.get()[normalizeRelayUrl(relayUrl)];
+        if (cur === undefined || cur === 'unknown' || cur === 'unreachable' || cur === 'error') {
+          this.setRelayAccess(relayUrl, 'authenticating');
+        }
         return (evt: EventTemplate) => this.signAuthEvent(evt);
       },
     } as ConstructorParameters<typeof SimplePool>[0]);
@@ -5010,8 +5073,11 @@ export class BridgeImpl {
 
     const onWatchdog = () => {
       if (closed || alive || !armed) return;
-      if (authPending) {
-        // Don't kill the sub while a human is staring at an approval popup.
+      if (authPending || this.pendingAuthSigns > 0) {
+        // Don't kill the sub while a human is staring at an approval popup —
+        // whether it was opened by this sub's onauth or by the pool's
+        // automaticallyAuth (which this sub then rides via nostr-tools'
+        // per-socket AUTH dedupe).
         timer = setTimeout(onWatchdog, WATCHDOG_MS);
         return;
       }
@@ -5069,7 +5135,7 @@ export class BridgeImpl {
           // the onclose handler below schedule a retry.
           clearTimer();
           if (AFFECTS_ACCESS) {
-            for (const url of relays) this.setRelayAccess(url, 'ok');
+            for (const url of relays) this.setRelayAccess(url, 'ok', { fromEose: true });
           }
           oneose?.();
         },
@@ -5090,7 +5156,15 @@ export class BridgeImpl {
           reasons.forEach((reason, i) => {
             if (!reason) return;
             const url = relays[i];
-            const state = parseRelayRejection(reason);
+            const state = classifyAccessClose(reason, !!wrappedSigner);
+            // A relay-wide refusal: refused after a successful AUTH (see
+            // classifyAccessClose), or an explicit `restricted:` naming the
+            // whitelist. The relay's final answer, not an AUTH race — so no
+            // soak, and it overrides sticky-OK: nostr-tools fires a synthetic
+            // EOSE just before every relay CLOSED, so a refused sub has always
+            // "confirmed" 'ok' a moment before it is refused.
+            const refusedAfterAuth =
+              (!!wrappedSigner && reason.startsWith('auth-required: ')) || isWhitelistRefusal(reason);
             if (state) {
               if (state === 'auth-required' || state === 'restricted') {
                 // A per-channel CLOSED ("you can't read this one") still
@@ -5100,6 +5174,8 @@ export class BridgeImpl {
                   if (IMMEDIATE_ACCESS_DOWNGRADE) {
                     // Preflight path — surface "Not whitelisted" within the
                     // sub's own watchdog window, no 4s soak.
+                    this.setRelayAccess(url, state, { override: true });
+                  } else if (refusedAfterAuth) {
                     this.setRelayAccess(url, state, { override: true });
                   } else {
                     this.setRelayAccessDeferred(url, state);
@@ -5234,6 +5310,7 @@ export class BridgeImpl {
     const cached = this.authSignatures.get(key);
     if (cached) return cached;
 
+    this.pendingAuthSigns++;
     const pending = (async (): Promise<VerifiedEvent> => {
       if (session.loginMethod === 'nsec' && session.privKeyHex) {
         return finalizeEvent(unsigned, hexToBytes(session.privKeyHex)) as VerifiedEvent;
@@ -5277,6 +5354,8 @@ export class BridgeImpl {
     })().catch((error) => {
       this.authSignatures.delete(key);
       throw error;
+    }).finally(() => {
+      this.pendingAuthSigns = Math.max(0, this.pendingAuthSigns - 1);
     });
     this.authSignatures.set(key, pending);
     return pending;
@@ -5287,10 +5366,13 @@ export class BridgeImpl {
   }
 
   /**
-   * P0 whitelist preflight — fires a tight kind:0 `authors:[me]` REQ on the
-   * active relay so an `auth-required:` or `restricted:` rejection downgrades
-   * `relayAccess` within ~1.5s, well before the rest of the fan-out hits
-   * the 4s deferred soak. EOSE on this filter is harmless (the relay
+   * Whitelist preflight — fires a tight kind:0 `authors:[me]` REQ on the
+   * active relay as soon as the handshake completes, so a refusal downgrades
+   * `relayAccess` within one round-trip of AUTH, well before the rest of the
+   * fan-out hits the 4s deferred soak. The 1.5s watchdog pauses while any
+   * NIP-42 signature is pending, so a slow extension/bunker approval doesn't
+   * kill the probe before the relay answers. A bare `auth-required:` after
+   * AUTH is read as 'restricted' (see classifyAccessClose). EOSE on this filter is harmless (the relay
    * just doesn't have my kind:0 yet) and still flips `relayAccess` to
    * 'ok' through the standard onevent/oneose path.
    *
@@ -8108,7 +8190,9 @@ export class BridgeImpl {
       // a publish are usually transient (NIP-42 AUTH not yet completed for
       // the session, NIP-29 membership write race). Defer the banner flip so
       // the soak window can absorb the transient failure.
-      if (state === 'auth-required' || state === 'restricted') {
+      if (isWhitelistRefusal(reason)) {
+        this.setRelayAccess(targetRelays[i], 'restricted', { override: true });
+      } else if (state === 'auth-required' || state === 'restricted') {
         this.setRelayAccessDeferred(targetRelays[i], state);
       } else {
         this.setRelayAccess(targetRelays[i], state);

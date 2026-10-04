@@ -23,7 +23,10 @@ Canonical list of open bugs and tech debt in Obelisk. Fixes are tracked here unt
   `test` / `{}` / `.`). Confirmed **not** a leak: the relay answers
   unauthenticated and non-whitelisted clients with
   `auth-required: this relay only accepts whitelisted pubkeys` and serves
-  zero events, so only admitted pubkeys ever see those channels. Tidying them
+  zero events, so only admitted pubkeys ever see those channels. (The client
+  reads that same string, arriving after a successful AUTH, as "not
+  whitelisted"; the relay should send `restricted:` instead — see
+  [data-system.md §5a](./data-system.md#5a-relay-side-contract-for-access-rejection).) Tidying them
   is relay-operator housekeeping, not a client change. Note that filtering
   `isHidden` groups out of the **live** stream client-side would be wrong —
   it is how members reach legitimately private channels; the cache-seed skip
