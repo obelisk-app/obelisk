@@ -8,8 +8,9 @@ import { connectWallet, isWalletAvailable } from './wallet';
 
 /**
  * Sending a zap from a channel: pay through the user's wallet (`./wallet`, the
- * same path invoice cards pay through), then post a ⚡ reaction carrying the
- * invoice so everyone in the channel sees it.
+ * same path invoice cards pay through: a connected NWC wallet, else WebLN),
+ * then post a ⚡ reaction carrying the invoice so everyone in the channel
+ * sees it.
  *
  * Why not `zapViaWebLN` from @nostr-wot/wallet: it returns only the preimage,
  * and the in-channel marker needs the invoice and the signed zap request. If
@@ -54,7 +55,7 @@ export type ZapCheck = { ok: true; zap: ReadyZap } | { ok: false; reason: ZapErr
 /** The first reason this zap cannot start, before anything leaves the browser. */
 export function checkZap(draft: ZapDraft): ZapCheck {
   if (!draft.lud16) return { ok: false, reason: 'noAddress' };
-  if (!isWalletAvailable()) return { ok: false, reason: 'noWallet' };
+  if (!isWalletAvailable(draft.signer?.pubkey ?? null)) return { ok: false, reason: 'noWallet' };
   if (!draft.amountSats || draft.amountSats <= 0) return { ok: false, reason: 'invalidAmount' };
   if (!draft.signer) return { ok: false, reason: 'noSigner' };
   return { ok: true, zap: { ...draft, lud16: draft.lud16, signer: draft.signer } };
@@ -72,13 +73,15 @@ export interface ZapResult {
 }
 
 /**
- * Pays the zap, then posts its marker. Throws only while no money has moved;
- * once the payment succeeds the result is always a success, with
- * `markerError` set if the marker could not be posted, so the UI never offers
- * a retry that would pay twice.
+ * Pays the zap, then posts its marker. Throws only while no money has moved,
+ * or with an error `mayHavePaid` recognises when the wallet went silent
+ * after the request was sent (the UI must not offer a retry then: a retry
+ * asks for a fresh invoice, which would pay twice). Once the payment
+ * succeeds the result is always a success, with `markerError` set if the
+ * marker could not be posted.
  */
 export async function sendZap(zap: ReadyZap): Promise<ZapResult> {
-  const wallet = await connectWallet();
+  const wallet = await connectWallet(zap.signer.pubkey);
   if (!wallet) throw new ZapError('noWallet');
 
   const relays = Array.from(new Set([

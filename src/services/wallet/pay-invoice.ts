@@ -5,7 +5,7 @@ import { connectWallet, isWalletAvailable } from './wallet';
 
 /**
  * Paying a BOLT11 invoice posted in chat, through the same wallet path zaps
- * use (`./wallet`).
+ * use (`./wallet`: the account's Nostr Wallet Connect wallet, else WebLN).
  *
  * The double-pay rules, which the UI relies on:
  * - the invoice is claimed in the payments store before the first `await`,
@@ -35,35 +35,46 @@ export function isInvoiceExpired(parsed: ParsedInvoice, nowMs: number = Date.now
 }
 
 /**
- * The first reason this browser cannot pay the invoice now, or null.
+ * The first reason `account` cannot pay the invoice from this browser now,
+ * or null.
  *
- * An invoice with no amount is refused rather than asking for one: WebLN's
- * `sendPayment` takes only the invoice, so there is no way to hand the
+ * An invoice with no amount is refused rather than asking for one: the
+ * wallet path takes only the invoice, so there is no way to hand the
  * wallet an amount to pay it with.
  */
-export function invoiceRefusal(parsed: ParsedInvoice, nowMs: number = Date.now()): InvoicePayRefusal | null {
+export function invoiceRefusal(
+  parsed: ParsedInvoice,
+  account: string | null = null,
+  nowMs: number = Date.now(),
+): InvoicePayRefusal | null {
   const record = useInvoicePaymentsStore.getState().byHash[parsed.paymentHash];
   if (record?.status === 'paid') return 'alreadyPaid';
   if (record?.status === 'paying') return 'inProgress';
   if (parsed.amountMsats <= 0) return 'noAmount';
   if (isInvoiceExpired(parsed, nowMs)) return 'expired';
-  if (!isWalletAvailable()) return 'noWallet';
+  if (!isWalletAvailable(account)) return 'noWallet';
   return null;
 }
 
 /**
- * Pays the invoice once. Rejects with an `InvoicePayError` when it is
- * refused, or with the wallet's own error when the wallet failed (then the
- * invoice is payable again). Resolves once the invoice is recorded as paid.
+ * Pays the invoice once, from `payerPubkey`'s wallet. Rejects with an
+ * `InvoicePayError` when it is refused, or with the wallet's own error when
+ * the wallet failed (then the invoice is payable again). Resolves once the
+ * invoice is recorded as paid.
+ *
+ * A wallet that went silent after the request was sent (an NWC timeout) may
+ * still have paid. The claim is given back all the same: a Lightning
+ * invoice settles once, so paying it again fails at the wallet rather than
+ * paying twice, and the error the card shows says to check the wallet first.
  */
 export async function payInvoice(invoice: string, parsed: ParsedInvoice, payerPubkey: string | null): Promise<void> {
-  const refusal = invoiceRefusal(parsed);
+  const refusal = invoiceRefusal(parsed, payerPubkey);
   if (refusal) throw new InvoicePayError(refusal);
   const payments = useInvoicePaymentsStore.getState();
   if (!payments.claim(parsed.paymentHash)) throw new InvoicePayError('inProgress');
 
   try {
-    const wallet = await connectWallet();
+    const wallet = await connectWallet(payerPubkey);
     if (!wallet) throw new InvoicePayError('noWallet');
     await wallet.pay(invoice);
   } catch (e) {

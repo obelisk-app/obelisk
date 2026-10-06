@@ -9,8 +9,8 @@ This is the one instruction file for every agent in this repo; `CLAUDE.md` only 
 - Next.js 16 (App Router) + TypeScript + Tailwind v4 (La Crypta design system). Pages are client-rendered over the bridge; the server side is small: `src/proxy.ts` (CSP nonce, first-visit locale), server metadata and the public `/notes`, `/p` viewers (`src/services/server/`), and one API route, `src/app/api/link-preview/route.ts` (OpenGraph unfurl, so a link a reader only *views* never reaches a third-party OG service). No database, no session server.
 - `nostr-tools` for events, signing and sockets. The RelayHub (`src/lib/relay-hub/`) owns the app's relay sockets; the exceptions are the NIP-46 `BunkerSigner` (its own connection to the bunker's relays) and the SFU's direct WebSocket RPC (`src/services/voice/sfu-rpc-direct.ts`).
 - `@nostr-wot/*`: `data` and `ui` (WoT-aware profiles, the login widget), `dm` (NIP-17 wire format), `pq` (post-quantum DM scheme), `signers`, `wallet` (NIP-57 zap requests and receipt validation).
-- Zustand stores in `src/store/`: `chat`, `dm`, `dm-call` (with `dm-call-store`, `-policy`, `-runtime`), `voice`, `notifications`, `read-state`, `channel-prefs`, `games`, `hints`, `moderation`, `multi-account`, `toast`, `messageZap`, `invoice-payments`. Identity is not a store: it lives on the bridge.
-- Payments (zaps and paying an invoice posted in chat) go through WebLN only, via one module, `src/services/wallet/wallet.ts`; `pay-invoice.ts` and `send-zap.ts` sit beside it. Nostr Wallet Connect (NIP-47) is not used anywhere. See [docs/bitcoin-zaps-nwc.md](docs/bitcoin-zaps-nwc.md).
+- Zustand stores in `src/store/`: `chat`, `dm`, `dm-call` (with `dm-call-store`, `-policy`, `-runtime`), `voice`, `notifications`, `read-state`, `channel-prefs`, `games`, `hints`, `moderation`, `multi-account`, `toast`, `messageZap`, `invoice-payments`, `nwc-wallet`. Identity is not a store: it lives on the bridge.
+- Payments (zaps and paying an invoice posted in chat) go through one module, `src/services/wallet/wallet.ts`, which picks the wallet: the account's Nostr Wallet Connect (NIP-47) wallet when one is connected (Settings > Wallet; `nwc-wallet.ts`, protocol in `src/lib/nwc/`), else a WebLN extension, else none. `pay-invoice.ts` and `send-zap.ts` sit beside it and keep their double-pay guards. The NWC link is a spending credential: sealed per account under its own vault key (`nwc-storage.ts`), never in the clear, deleted on disconnect and logout; its relay traffic rides the hub as `nwc:<client pubkey>`. See [docs/bitcoin-zaps-nwc.md](docs/bitcoin-zaps-nwc.md).
 - next-intl for the three languages (see i18n).
 - Vitest + React Testing Library + jsdom; Playwright for the end-to-end specs in `scripts/e2e/`.
 - NDK is not a dependency. Do not add it.
@@ -45,7 +45,7 @@ The owner's folder rules, enforced by the guard tests listed under Testing:
 
 | Folder | Holds |
 |---|---|
-| `src/lib/` | Mini-packages: no app imports, publishable as they stand (`relay-hub/`, `games/`, `emoji/`, `crypto/`, `nip-59.ts`, `remark-spoiler.ts`) |
+| `src/lib/` | Mini-packages: no app imports, publishable as they stand (`relay-hub/`, `nwc/`, `games/`, `emoji/`, `crypto/`, `nip-59.ts`, `remark-spoiler.ts`) |
 | `src/utils/<topic>/` | Small stateless helpers by topic (`identity/`, `relay-url/`, `format/`, `message-text/`, `errors/`, `shell/`, ...) |
 | `src/services/` | Business logic and integrations: anything that talks to a relay, the bridge, a store, `fetch`, storage, WebRTC or the clipboard |
 | `src/hooks/<module>/` | The hooks layer: every React hook, mirroring the module it serves (`src/components/chat/gallery/` -> `src/hooks/chat/gallery/`, `src/app/[locale]/app/mobile/` -> `src/hooks/app/mobile/`) |
@@ -66,11 +66,11 @@ The owner's folder rules, enforced by the guard tests listed under Testing:
 
 The single connection owner for the page. It imports only `nostr-tools` and itself (`tests/lib/relay-hub/isolation.test.ts`), so it can move into the SDK unchanged. The bridge, the social pool, the background watch and DM calls make every REQ, query and publish through `hub.subscribe` / `hub.query` / `hub.publish`. Read the file headers in `index.ts`, `hub.ts`, `auth.ts` and `registry.ts` before changing it.
 
-- **One socket per relay per identity.** Sockets are keyed on `(relay, identity)`. The session is one identity; a DM call is another (`ephemeral:<callId>`, `authPolicy: 'never-auth'`), so a call's throwaway key never shares a socket with the user's real key.
+- **One socket per relay per identity.** Sockets are keyed on `(relay, identity)`. The session is one identity; a DM call is another (`ephemeral:<callId>`, `authPolicy: 'never-auth'`), so a call's throwaway key never shares a socket with the user's real key. A connected NWC wallet is a third (`nwc:<client pubkey>`, `src/services/wallet/nwc-transport.ts`): its only possible AUTH signer is the NWC client key, and it takes a `'wallet'` lease only after the wallet relay answers `auth-required:`.
 - **NIP-42 AUTH once per relay + pubkey.** `AuthLayer` keeps one record per `(relayUrl, pubkey)`, not per challenge, so a reconnect does not mean a new signer prompt. Where AUTH may be answered is decided by leases (`auth-policy.ts`, `auth-leases.ts`).
 - **A shared request registry.** `SubscriptionRegistry` dedupes live REQs by canonical filter (refcounted, never merged), re-issues them in priority order (`voice > active > dm > background`) on the next socket generation, runs the silence watchdog, and interprets CLOSED reasons (`restricted:`, `auth-required:`, quotas).
 - **Bounded caches with eviction.** Every cache is a `BoundedMap` / `BoundedSet` (`bounded-map.ts`: LRU or FIFO, entry and byte caps, TTL). `ProfileCache` is the kind 0 cache. The bridge's own stores that grow with relay traffic are capped too (`tests/services/nostr-bridge/bounded-stores.test.ts`).
-- The page's hub is created by `pageRelayHub()` (`src/services/nostr-bridge/page-hub.ts`); the social pool (`src/services/social/pool.ts`) shares it.
+- The page's hub is created by `pageRelayHub()` (`src/services/nostr-bridge/page-hub.ts`, also exported from the front door); the social pool (`src/services/social/pool.ts`) and a connected NWC wallet share it.
 
 ### The bridge (`src/services/nostr-bridge/`)
 
@@ -129,7 +129,7 @@ Three login methods, four entry points on the bridge (`session/login.ts`, `sessi
 
 The page-reload path (`session/restore.ts`) repeats these steps rather than calling `finalizeLogin`, so a step added to one must be added to the other. `isLoggedIn` is the contract for "the chat UI may mount". Do not add an auth store or a backend session.
 
-No secret is stored in the clear. `src/lib/crypto/session-vault.ts` holds one non-extractable AES-GCM key in IndexedDB (`obelisk-vault`); the nsec, bunker URL and bunker client key are sealed with it before the record is written to `obelisk-dex/session` (`session/persistence.ts`), and a pre-vault plaintext record is migrated on load. When the browser cannot keep a key the login stays in memory and `useSessionNotice` says it will not be remembered. The SDK login widget runs on memory-only storage (`src/services/login/signer-storage.ts`). Details: [docs/data-system.md](docs/data-system.md).
+No secret is stored in the clear. `src/lib/crypto/session-vault.ts` holds one non-extractable AES-GCM key in IndexedDB (`obelisk-vault`); the nsec, bunker URL and bunker client key are sealed with it before the record is written to `obelisk-dex/session` (`session/persistence.ts`), and a pre-vault plaintext record is migrated on load. When the browser cannot keep a key the login stays in memory and `useSessionNotice` says it will not be remembered. A connected NWC wallet is sealed the same way under a second key (`wallet-key`), so the rotation every login does never touches it; with no IndexedDB it too lasts for the visit only, and Settings says so. The SDK login widget runs on memory-only storage (`src/services/login/signer-storage.ts`). Details: [docs/data-system.md](docs/data-system.md).
 
 ## i18n
 

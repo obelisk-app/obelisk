@@ -59,7 +59,7 @@ export function useInvoiceCard(invoice: string) {
   /** Pay: check what can be checked without the wallet, then ask for one confirm click. */
   const requestPay = () => {
     if (!parsed || view !== 'ready') return;
-    const refusal = invoiceRefusal(parsed);
+    const refusal = invoiceRefusal(parsed, myPubkey);
     setError(refusal ? t(REFUSAL_KEY[refusal]) : null);
     setConfirming(!refusal);
   };

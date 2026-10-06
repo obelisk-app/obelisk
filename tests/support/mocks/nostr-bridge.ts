@@ -150,6 +150,10 @@ const hookDefaults = {
   // Like the real hook under a provider whose bridge never arrives; follows
   // the suite's `getBridge` override when it has one (see `bridgeMock`).
   useAwaitBridge: () => () => new Promise<BridgeImpl>(() => {}),
+  // A mocked bridge has no relay hub: a wallet connection in such a suite fails here, loudly.
+  pageRelayHub: () => {
+    throw new Error('pageRelayHub: the bridge is mocked in this suite');
+  },
 } satisfies Partial<Bridge> satisfies Required<Omit<Bridge, 'nostrActions' | 'getBridge' | 'getBridgeImpl'>>;
 
 /**

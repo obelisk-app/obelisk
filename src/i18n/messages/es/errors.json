@@ -31,7 +31,20 @@
     "bunker-no-session": "No hay una sesión de firmante remoto para restaurar. Entrá de nuevo.",
     "nostrconnect-cancelled": "Conexión cancelada.",
     "call-relay-failed": "No se pudo llegar a un relay para la llamada.",
-    "game-unconfirmed": "El relay nunca confirmó la mesa. Puede que aparezca en un momento, así que revisá el canal antes de crear otra."
+    "game-unconfirmed": "El relay nunca confirmó la mesa. Puede que aparezca en un momento, así que revisá el canal antes de crear otra.",
+    "nwc-invalid-uri": "Eso no es un enlace de Nostr Wallet Connect. Empieza con nostr+walletconnect:// e indica un relay y un secreto.",
+    "nwc-unreachable": "No pudimos contactar a esa billetera en su relay. Fijate que la billetera esté en línea y que el enlace siga vigente.",
+    "nwc-cannot-pay": "Esa conexión no tiene permiso para pagar invoices. Creá una con permiso de pago en tu billetera.",
+    "wallet-timeout": "Tu billetera no respondió a tiempo. El pago todavía puede salir: revisá tu billetera antes de volver a intentar.",
+    "wallet-relay-failed": "No pudimos llegar al relay de tu billetera. No se pagó nada.",
+    "wallet-rate-limited": "Tu billetera está recibiendo demasiados pedidos. Esperá un momento y probá de nuevo.",
+    "wallet-not-supported": "Tu billetera no admite este pedido.",
+    "wallet-insufficient-balance": "Tu billetera no tiene fondos suficientes.",
+    "wallet-quota-exceeded": "Esto supera el límite de gasto que tu billetera le puso a Obelisk.",
+    "wallet-restricted": "Tu billetera no permite que esta conexión haga ese pago.",
+    "wallet-unauthorized": "Tu billetera ya no acepta esta conexión. Volvé a conectarla en Ajustes.",
+    "wallet-payment-failed": "Tu billetera intentó el pago y falló. No se pagó nada.",
+    "wallet-failed": "Tu billetera informó un error."
   },
   "activity": {
     "signExtension": {

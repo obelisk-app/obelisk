@@ -176,11 +176,11 @@
     "paying": "Pagando…",
     "amount": "{amount} sats",
     "noAmount": "Sin monto",
-    "noAmountReason": "Esta invoice no dice cuánto pagar, y las billeteras del navegador solo pueden pagar invoices con monto. Pedile a quien la mandó una con monto.",
+    "noAmountReason": "Esta invoice no dice cuánto pagar, y Obelisk solo puede pagar invoices con monto. Pedile a quien la mandó una con monto.",
     "confirmPrompt": "¿Pagar {amount} sats desde tu billetera?",
     "confirmFor": "Concepto: {description}",
     "confirm": "Confirmar pago",
-    "noWallet": "No se encontró ninguna billetera Lightning en este navegador. Instalá una extensión WebLN como Alby (también puede conectar una billetera que ya tengas, por Nostr Wallet Connect), recargá la página y probá de nuevo.",
+    "noWallet": "No hay ninguna billetera Lightning para pagar. Conectá una en Ajustes > Billetera con Nostr Wallet Connect, o instalá una extensión WebLN como Alby y recargá la página.",
     "expiredReason": "Esta invoice expiró. Pedile una nueva a quien la mandó.",
     "alreadyPaid": "Esta invoice ya está pagada.",
     "inProgress": "Esta invoice ya se está pagando.",
@@ -254,7 +254,7 @@
     "comment": "Comentario (opcional)",
     "noAddress": "El destinatario no tiene dirección Lightning, así que el zap va a fallar.",
     "errorNoAddress": "Este usuario no tiene dirección Lightning (lud16).",
-    "errorNoWallet": "No se detectó ninguna extensión WebLN. Instalá Alby (o similar) para hacer zaps.",
+    "errorNoWallet": "No hay billetera para pagar. Conectá una en Ajustes > Billetera (Nostr Wallet Connect) o instalá una extensión WebLN como Alby.",
     "errorInvalidAmount": "Ingresá un monto válido.",
     "errorNoSigner": "No hay un firmante activo: iniciá sesión primero.",
     "sent": "⚡ Enviaste {amount} sats a {name}",
@@ -264,7 +264,8 @@
     "title": "Zap a {name}",
     "noBridge": "La app no estaba conectada al relay.",
     "failed": "El zap no se pudo enviar.",
-    "markerRejected": "El relay no la aceptó."
+    "markerRejected": "El relay no la aceptó.",
+    "unconfirmed": "Tu billetera no confirmó este zap. Revisá tu billetera antes de volver a hacer zap."
   },
   "profilePopover": {
     "zap": "Zap",
@@ -332,5 +333,9 @@
   "sticker": {
     "open": "Ver detalles de :{name}:",
     "alt": "Sticker :{name}:"
+  },
+  "wallet": {
+    "paysWithNwc": "Paga con {wallet} (Nostr Wallet Connect)",
+    "paysWithWebln": "Paga con tu extensión del navegador (WebLN)"
   }
 }

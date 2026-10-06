@@ -1,41 +1,56 @@
 import { isWebLNAvailable } from '@nostr-wot/wallet';
+import { ensureNwcWalletLoaded, hasNwcWallet, nwcPayerFor } from './nwc-wallet';
+import type { WalletConnection, WalletKind } from './wallet-types';
+
+export type { WalletConnection, WalletKind } from './wallet-types';
 
 /**
- * The one way the app reaches a Lightning wallet: the WebLN provider a
- * browser extension (Alby and similar) puts on `window.webln`. Zaps and
- * invoice payments both go through here, so there is no second wallet path.
+ * The one way the app reaches a Lightning wallet. Zaps (`./send-zap`) and
+ * invoice payments (`./pay-invoice`) both go through here, so there is no
+ * second wallet path. Two backends, one rule:
  *
- * Why only WebLN: the app has no screen to connect a Nostr Wallet Connect
- * (NIP-47) URI and nowhere to keep one, so the SDK's `NwcClient` has no
- * caller. An extension like Alby can itself be linked to an NWC wallet, which
- * is the route the "no wallet" message points people to. If the app ever
- * stores an NWC connection, it plugs in behind `connectWallet` and every
- * caller gets it for free.
+ * 1. a Nostr Wallet Connect (NIP-47) wallet the account connected in
+ *    Settings (`./nwc-wallet`), when there is one;
+ * 2. otherwise the WebLN provider a browser extension (Alby and similar)
+ *    puts on `window.webln`;
+ * 3. otherwise no wallet.
  *
- * WebLN's `sendPayment` takes only the invoice, so an invoice that sets no
- * amount cannot be paid through this path.
+ * The connected wallet wins because connecting one is an explicit choice
+ * made in this app, while an extension is simply present. Settings, the zap
+ * modal and the invoice confirm all say which one will pay.
+ *
+ * Both backends take only the invoice, so an invoice that sets no amount
+ * cannot be paid through this path.
  */
 
-export interface WalletConnection {
-  /** Pays a BOLT11 invoice. Resolves once the wallet reports it paid; rejects when it did not. */
-  pay(invoice: string): Promise<{ preimage: string | null }>;
+/** Which wallet would pay for `account` right now, without asking it anything. */
+export function walletKindFor(account: string | null): WalletKind | null {
+  if (hasNwcWallet(account)) return 'nwc';
+  return isWebLNAvailable() ? 'webln' : null;
 }
 
-/** Whether a wallet is there to ask, without asking it anything. */
-export function isWalletAvailable(): boolean {
-  return isWebLNAvailable();
+/** Whether a wallet is there to ask for `account`, without asking it anything. */
+export function isWalletAvailable(account: string | null): boolean {
+  return walletKindFor(account) !== null;
 }
 
 /**
- * Asks the wallet for permission (`enable`) and hands back a connection, or
- * `null` when no wallet is installed. A refused `enable` rejects with the
- * wallet's own error.
+ * The wallet that pays for `account`: its connected NWC wallet (loaded from
+ * its sealed record if this page has not yet), else WebLN after asking the
+ * extension for permission (`enable`), else `null`. A refused `enable`
+ * rejects with the extension's own error.
  */
-export async function connectWallet(): Promise<WalletConnection | null> {
+export async function connectWallet(account: string | null): Promise<WalletConnection | null> {
+  if (account) {
+    await ensureNwcWalletLoaded(account);
+    const nwc = nwcPayerFor(account);
+    if (nwc) return nwc;
+  }
   const webln = typeof window === 'undefined' ? undefined : window.webln;
   if (!webln) return null;
   await webln.enable();
   return {
+    kind: 'webln',
     pay: async (invoice) => {
       const res = await webln.sendPayment(invoice);
       return { preimage: res?.preimage || null };

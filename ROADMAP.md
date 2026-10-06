@@ -100,8 +100,9 @@ mirror the pieces each repo owns.
 - Access Control tab unifying join-mode + WoT + invitations.
 
 ### Lightning
-- Zaps (NIP-57) from a message or with `/zap`, with custom amounts or presets and an optional comment, paid through a WebLN browser wallet; per-message totals from zap receipts.
+- Zaps (NIP-57) from a message or with `/zap`, with custom amounts or presets and an optional comment; per-message totals from zap receipts.
 - Pay a Lightning invoice posted in chat, through the same wallet path, with a confirm step and a double-pay guard.
+- One wallet path for both: a Nostr Wallet Connect (NIP-47) wallet connected in Settings > Wallet (desktop and phone), else a WebLN browser extension. The connection link is sealed per account with the session vault, rides the relay hub under its own client-key identity, and is deleted on disconnect and logout. The zap modal and the invoice confirm say which wallet pays.
 - See [docs/bitcoin-zaps-nwc.md](docs/bitcoin-zaps-nwc.md).
 
 ### Testing & ops
@@ -159,8 +160,9 @@ mirror the pieces each repo owns.
 - [ ] Semantic search over the indexed knowledge base + auto-tagging.
 
 ### Fase 6 - Lightning zaps (remaining)
-- [ ] Connect a Nostr Wallet Connect (NIP-47) wallet directly. Today the app pays only through WebLN; an NWC connection would plug in behind `src/services/wallet/wallet.ts`.
-- [ ] Balance in UI + transaction history.
+- [x] Connect a Nostr Wallet Connect (NIP-47) wallet directly (Settings > Wallet).
+- [ ] Pay an invoice that sets no amount (NWC's `pay_invoice` takes an `amount`; WebLN cannot).
+- [ ] Balance in UI + transaction history (the budget the wallet reports is shown; balance and history are not).
 - [ ] Receive animation for zaps.
 - [ ] Emoji zaps (⚡=21, 🔥=100, 🚀=500, 💎=1000 sats) + per-channel / per-server leaderboards.
 - [ ] Zap splits.

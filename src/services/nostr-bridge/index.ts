@@ -1,5 +1,7 @@
 export { getBridge, getBridgeImpl, type BridgeImpl } from './client';
 export { isImportableRelayUrl } from './relay-list';
+// The page's relay hub, for a service that rides it under its own identity (a wallet connection).
+export { pageRelayHub } from './page-hub';
 export { DEFAULT_PROFILE_LOOKUP_RELAYS } from './profile-sync-cache';
 export { cacheGet, cacheSet, cacheDelete } from './cache';
 export { resubscribeOnQuotaClose } from './quota-resubscribe';

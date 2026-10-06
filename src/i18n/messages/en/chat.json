@@ -176,11 +176,11 @@
     "paying": "Paying…",
     "amount": "{amount} sats",
     "noAmount": "No amount set",
-    "noAmountReason": "This invoice does not say how much to pay, and browser wallets can only pay invoices that do. Ask the sender for one with an amount.",
+    "noAmountReason": "This invoice does not say how much to pay, and Obelisk can only pay invoices that do. Ask the sender for one with an amount.",
     "confirmPrompt": "Pay {amount} sats from your wallet?",
     "confirmFor": "For: {description}",
     "confirm": "Confirm payment",
-    "noWallet": "No Lightning wallet found in this browser. Install a WebLN extension such as Alby (it can also connect a wallet you already have, through Nostr Wallet Connect), then reload the page and try again.",
+    "noWallet": "No Lightning wallet to pay with. Connect one in Settings > Wallet with Nostr Wallet Connect, or install a WebLN extension such as Alby and reload the page.",
     "expiredReason": "This invoice has expired. Ask the sender for a new one.",
     "alreadyPaid": "This invoice is already paid.",
     "inProgress": "This invoice is already being paid.",
@@ -254,7 +254,7 @@
     "comment": "Comment (optional)",
     "noAddress": "Recipient has no Lightning address, so the zap will fail.",
     "errorNoAddress": "This user has no Lightning address (lud16).",
-    "errorNoWallet": "No WebLN extension detected. Install Alby (or similar) to zap.",
+    "errorNoWallet": "No wallet to pay with. Connect one in Settings > Wallet (Nostr Wallet Connect), or install a WebLN extension such as Alby.",
     "errorInvalidAmount": "Enter a valid amount.",
     "errorNoSigner": "No active signer: log in first.",
     "sent": "⚡ Sent {amount} sats to {name}",
@@ -264,7 +264,8 @@
     "title": "Zap {name}",
     "noBridge": "The app was not connected to the relay.",
     "failed": "The zap did not go through.",
-    "markerRejected": "The relay did not accept it."
+    "markerRejected": "The relay did not accept it.",
+    "unconfirmed": "Your wallet did not confirm this zap. Check your wallet before zapping again."
   },
   "profilePopover": {
     "zap": "Zap",
@@ -332,5 +333,9 @@
   "sticker": {
     "open": "Open :{name}: details",
     "alt": "Sticker :{name}:"
+  },
+  "wallet": {
+    "paysWithNwc": "Pays with {wallet} (Nostr Wallet Connect)",
+    "paysWithWebln": "Pays with your browser extension (WebLN)"
   }
 }

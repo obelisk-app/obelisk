@@ -25,11 +25,12 @@ export type SettingsSection =
   | 'notifications'
   | 'relays'
   | 'privacy'
+  | 'wallet'
   | 'media'
   | 'advanced';
 
 export const SETTINGS_SECTIONS: ReadonlyArray<SettingsSection> = [
-  'profile', 'general', 'appearance', 'notifications', 'relays', 'privacy', 'media', 'advanced',
+  'profile', 'general', 'appearance', 'notifications', 'relays', 'privacy', 'wallet', 'media', 'advanced',
 ];
 
 export interface OpenSettingsDetail {

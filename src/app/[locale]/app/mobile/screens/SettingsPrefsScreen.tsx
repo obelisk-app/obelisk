@@ -9,6 +9,7 @@ import NotificationSettings from '@/components/settings/NotificationSettings';
 import SocialRelaySettings from '@/components/settings/SocialRelaySettings';
 import MutedAndBlocked from '@/components/settings/MutedAndBlocked';
 import CallSettings from '@/components/settings/CallSettings';
+import WalletSettings from '@/components/settings/WalletSettings';
 import AccountBackupExport from '@/components/settings/AccountBackupExport';
 import DeveloperSignatureTest from '@/components/settings/DeveloperSignatureTest';
 import { clearAllClientCacheExceptSession } from '@/services/cache-clear';
@@ -132,6 +133,7 @@ export function SettingsPrefsScreen({ go }: { go: (s: ScreenName, dir?: 'forward
         <NotificationSettings mobile />
         <SocialRelaySettings mobile />
         <CallSettings mobile />
+        <WalletSettings mobile />
         <MutedAndBlocked mobile />
         <DeveloperSignatureTest mobile />
         <div className="settings-section">

@@ -14,6 +14,7 @@ import {
   type ZapRecipient,
 } from '@/services/wallet/send-zap';
 import { errorText } from '@/utils/errors/error-text';
+import { mayHavePaid } from '@/lib/nwc';
 
 const ERROR_KEY = {
   noAddress: 'chat.zap.errorNoAddress',
@@ -41,6 +42,10 @@ export function useSendZap({ recipient, amountSats, comment, lud16, displayName,
   const currentRelay = useCurrentRelayUrl();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The wallet went silent after the request was sent: it may have paid.
+  // Zap stays disabled until the modal is closed, since a retry would ask
+  // for a fresh invoice and could pay twice.
+  const [unconfirmed, setUnconfirmed] = useState(false);
   // Set before the first await, so a second click in the same tick (before
   // `busy` has re-rendered the button disabled) cannot start a second payment.
   const inFlight = useRef(false);
@@ -59,6 +64,12 @@ export function useSendZap({ recipient, amountSats, comment, lud16, displayName,
     try {
       ({ markerError } = await sendZap(check.zap));
     } catch (e) {
+      if (mayHavePaid(e)) {
+        setError(t('chat.zap.unconfirmed'));
+        setUnconfirmed(true);
+        setBusy(false);
+        return; // inFlight stays set: no second payment from this modal
+      }
       setError(e instanceof ZapError ? t(ERROR_KEY[e.code]) : errorText(t, e, 'chat.zap.failed'));
       inFlight.current = false;
       setBusy(false);
@@ -84,5 +95,5 @@ export function useSendZap({ recipient, amountSats, comment, lud16, displayName,
     onSent();
   };
 
-  return { send, busy, error };
+  return { send, busy, error, unconfirmed };
 }

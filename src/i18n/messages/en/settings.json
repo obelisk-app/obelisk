@@ -213,6 +213,10 @@
     "advanced": {
       "label": "Advanced",
       "desc": "Backups, local data and developer tools."
+    },
+    "wallet": {
+      "label": "Wallet",
+      "desc": "Connect a Lightning wallet with Nostr Wallet Connect to zap and pay invoices."
     }
   },
   "openPreferences": "Preferences",
@@ -305,5 +309,41 @@
   "relayShare": {
     "invalid": "Invalid relay share link.",
     "failed": "Failed to add relay."
+  },
+  "wallet": {
+    "title": "Lightning wallet",
+    "intro": "Connect a wallet with Nostr Wallet Connect (NIP-47) to zap and pay invoices from any browser or phone, no extension needed. Your wallet's app gives you the connection link.",
+    "warning": "Connecting lets Obelisk spend from that wallet, up to the limits you set in the wallet. Anyone with this link can do the same, so keep it private and set a budget in your wallet.",
+    "uriLabel": "Connection link",
+    "uriPlaceholder": "nostr+walletconnect://…",
+    "show": "Show link",
+    "hide": "Hide link",
+    "connect": "Connect wallet",
+    "connecting": "Checking the wallet…",
+    "connectFailed": "Could not connect the wallet.",
+    "connected": "Connected with Nostr Wallet Connect",
+    "walletLabel": "Wallet",
+    "relayLabel": "Relay",
+    "addressLabel": "Lightning address",
+    "budget": "Spending limit: {used} of {total} sats used",
+    "budgetRenews": "Spending limit: {used} of {total} sats used, renews {period}",
+    "renewal": {
+      "daily": "every day",
+      "weekly": "every week",
+      "monthly": "every month",
+      "yearly": "every year"
+    },
+    "noBudget": "Your wallet did not share a spending limit for this app. Check it in your wallet.",
+    "remembered": "Stored encrypted in this browser, for this account only. Logging out removes it.",
+    "notRemembered": "This browser cannot store the connection safely, so it lasts only until you close or reload this page.",
+    "precedence": "While a wallet is connected here, it pays for zaps and invoices, even if a browser extension (WebLN) is also installed.",
+    "disconnect": "Disconnect wallet",
+    "disconnected": "Wallet disconnected.",
+    "current": {
+      "label": "Payments now use: {wallet}",
+      "nwc": "This connected wallet",
+      "webln": "Your browser extension (WebLN)",
+      "none": "No wallet yet"
+    }
   }
 }

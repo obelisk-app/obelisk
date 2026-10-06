@@ -19,7 +19,7 @@ Detailed specs, plans and references for Obelisk subsystems. Start with [../AGEN
 - [uploads.md](uploads.md) - Blossom storage, URL format, and voice-note event contract.
 - [chat-composer-attachments.md](chat-composer-attachments.md) - image and video attachments in the channel composer, and the gallery that renders them.
 - [search.md](search.md) - NIP-50 search (`bridge.searchMessages`) and query syntax.
-- [bitcoin-zaps-nwc.md](bitcoin-zaps-nwc.md) - the one wallet path (WebLN), zaps, and paying invoices posted in chat.
+- [bitcoin-zaps-nwc.md](bitcoin-zaps-nwc.md) - the one wallet path (a connected Nostr Wallet Connect wallet, else WebLN), zaps, and paying invoices posted in chat.
 - [games.md](games.md) - games on the relay (kind 2390, deterministic replay); moving to obelisk-apps.
 - [mobile-navigation.md](mobile-navigation.md) - the phone shell's history-driven screen state machine.
 - [onboarding.md](onboarding.md) - the discovery hints new accounts see.

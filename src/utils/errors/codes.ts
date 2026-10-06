@@ -27,6 +27,10 @@ export const ERROR_CODES = [
   'profile-load-failed', 'profile-lookup-timeout', 'mute-list-load-failed',
   'invalid-bunker-url', 'bunker-missing-secret', 'bunker-no-session', 'nostrconnect-cancelled',
   'call-relay-failed', 'game-unconfirmed',
+  // A Nostr Wallet Connect wallet (`src/lib/nwc`, whose `NwcErrorCode` is this subset).
+  'nwc-invalid-uri', 'nwc-unreachable', 'nwc-cannot-pay', 'wallet-timeout', 'wallet-relay-failed',
+  'wallet-rate-limited', 'wallet-not-supported', 'wallet-insufficient-balance', 'wallet-quota-exceeded',
+  'wallet-restricted', 'wallet-unauthorized', 'wallet-payment-failed', 'wallet-failed',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];

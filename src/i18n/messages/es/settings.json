@@ -213,6 +213,10 @@
     "advanced": {
       "label": "Avanzado",
       "desc": "Copias de seguridad, datos locales y herramientas de desarrollo."
+    },
+    "wallet": {
+      "label": "Billetera",
+      "desc": "Conectá una billetera Lightning con Nostr Wallet Connect para hacer zaps y pagar invoices."
     }
   },
   "openPreferences": "Preferencias",
@@ -305,5 +309,41 @@
   "relayShare": {
     "invalid": "El link para compartir el relay no es válido.",
     "failed": "No se pudo agregar el relay."
+  },
+  "wallet": {
+    "title": "Billetera Lightning",
+    "intro": "Conectá una billetera con Nostr Wallet Connect (NIP-47) para hacer zaps y pagar invoices desde cualquier navegador o celular, sin extensión. La app de tu billetera te da el enlace de conexión.",
+    "warning": "Conectarla le permite a Obelisk gastar de esa billetera, hasta los límites que pongas en la billetera. Cualquiera que tenga este enlace puede hacer lo mismo: guardalo en privado y ponele un presupuesto en tu billetera.",
+    "uriLabel": "Enlace de conexión",
+    "uriPlaceholder": "nostr+walletconnect://…",
+    "show": "Mostrar enlace",
+    "hide": "Ocultar enlace",
+    "connect": "Conectar billetera",
+    "connecting": "Revisando la billetera…",
+    "connectFailed": "No se pudo conectar la billetera.",
+    "connected": "Conectada con Nostr Wallet Connect",
+    "walletLabel": "Billetera",
+    "relayLabel": "Relay",
+    "addressLabel": "Dirección Lightning",
+    "budget": "Límite de gasto: usaste {used} de {total} sats",
+    "budgetRenews": "Límite de gasto: usaste {used} de {total} sats, se renueva {period}",
+    "renewal": {
+      "daily": "cada día",
+      "weekly": "cada semana",
+      "monthly": "cada mes",
+      "yearly": "cada año"
+    },
+    "noBudget": "Tu billetera no informó un límite de gasto para esta app. Revisalo en tu billetera.",
+    "remembered": "Se guarda cifrada en este navegador, solo para esta cuenta. Al cerrar sesión se borra.",
+    "notRemembered": "Este navegador no puede guardar la conexión de forma segura, así que dura hasta que cierres o recargues esta página.",
+    "precedence": "Mientras haya una billetera conectada acá, paga los zaps y las invoices, aunque también tengas una extensión del navegador (WebLN).",
+    "disconnect": "Desconectar billetera",
+    "disconnected": "Billetera desconectada.",
+    "current": {
+      "label": "Los pagos ahora usan: {wallet}",
+      "nwc": "Esta billetera conectada",
+      "webln": "Tu extensión del navegador (WebLN)",
+      "none": "Todavía ninguna billetera"
+    }
   }
 }

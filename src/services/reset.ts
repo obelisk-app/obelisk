@@ -4,6 +4,7 @@ import { useNotificationsStore } from '@/store/notifications';
 import { useChannelPrefsStore } from '@/store/channel-prefs';
 import { useVoiceStore } from "@/store/voice";
 import { useDMStore } from "@/store/dm";
+import { forgetNwcRecords } from "@/services/wallet/nwc-storage";
 
 /**
  * Teardown for subsystems this module must NOT import.
@@ -35,6 +36,10 @@ export function resetAllClientState(): void {
   useNotificationsStore.getState().reset();
   useChannelPrefsStore.getState().reset();
   useVoiceStore.getState().leaveVoice();
+  // A connected wallet is a spending credential: it never outlives the
+  // account's session. Erased here, not only in the wallet module's own hook,
+  // so the sealed record goes even on a page that never loaded the wallet.
+  forgetNwcRecords();
   for (const hook of resetHooks) {
     // One subsystem failing to tear down must not strand the rest: the next
     // account would inherit whatever came after it in the list.

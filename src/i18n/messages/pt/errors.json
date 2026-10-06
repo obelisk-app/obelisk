@@ -31,7 +31,20 @@
     "bunker-no-session": "Não há sessão de assinador remoto para restaurar. Entre de novo.",
     "nostrconnect-cancelled": "Conexão cancelada.",
     "call-relay-failed": "Não foi possível alcançar um relay para a chamada.",
-    "game-unconfirmed": "O relay nunca confirmou a mesa. Ela ainda pode aparecer em instantes, então confira o canal antes de criar outra."
+    "game-unconfirmed": "O relay nunca confirmou a mesa. Ela ainda pode aparecer em instantes, então confira o canal antes de criar outra.",
+    "nwc-invalid-uri": "Isso não é um link do Nostr Wallet Connect. Ele começa com nostr+walletconnect:// e indica um relay e um segredo.",
+    "nwc-unreachable": "Não foi possível alcançar essa carteira no relay dela. Verifique se a carteira está on-line e se o link ainda vale.",
+    "nwc-cannot-pay": "Essa conexão não tem permissão para pagar invoices. Crie uma com permissão de pagamento na sua carteira.",
+    "wallet-timeout": "Sua carteira não respondeu a tempo. O pagamento ainda pode sair: confira sua carteira antes de tentar de novo.",
+    "wallet-relay-failed": "Não foi possível alcançar o relay da sua carteira. Nada foi pago.",
+    "wallet-rate-limited": "Sua carteira está recebendo pedidos demais. Aguarde um pouco e tente de novo.",
+    "wallet-not-supported": "Sua carteira não suporta este pedido.",
+    "wallet-insufficient-balance": "Sua carteira não tem saldo suficiente.",
+    "wallet-quota-exceeded": "Isso passaria do limite de gastos que sua carteira definiu para o Obelisk.",
+    "wallet-restricted": "Sua carteira não permite que esta conexão faça esse pagamento.",
+    "wallet-unauthorized": "Sua carteira não aceita mais esta conexão. Conecte de novo nas Configurações.",
+    "wallet-payment-failed": "Sua carteira tentou o pagamento e ele falhou. Nada foi pago.",
+    "wallet-failed": "Sua carteira informou um erro."
   },
   "activity": {
     "signExtension": {

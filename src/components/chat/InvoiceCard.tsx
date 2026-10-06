@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/Button';
 import { useInvoiceCard } from '@/hooks/chat/useInvoiceCard';
+import PayingWalletNote from './PayingWalletNote';
 
 interface Props {
   invoice: string;
@@ -13,8 +14,8 @@ interface Props {
 
 /**
  * A BOLT11 invoice posted in chat, as a payable card. Pay asks for one
- * confirm click showing the amount and description, then pays through the
- * same browser wallet zaps use (`src/services/wallet/`).
+ * confirm click showing the amount, the description and which wallet will
+ * pay, then pays through the same wallet path zaps use (`src/services/wallet/`).
  *
  * Paid state is this browser's own record: other members, and this browser
  * after a reload, do not see who paid. Publishing an "invoice paid" event in
@@ -85,6 +86,7 @@ export default function InvoiceCard({ invoice }: Props) {
               {t('chat.invoice.confirmFor', { description: card.description })}
             </span>
           )}
+          <PayingWalletNote className="mt-1" />
           <span className="mt-2 flex gap-2">
             <Button variant="pill" size="xs" onClick={card.confirm} data-testid="invoice-confirm-btn">
               {t('chat.invoice.confirm')}

@@ -240,9 +240,11 @@ export interface PublishResult {
 /**
  * Why a caller holds NIP-42 permission on a relay. `'publish'` is the
  * transient lease a publish takes for one AUTH-then-republish round when the
- * caller explicitly opted into authenticating for that event.
+ * caller explicitly opted into authenticating for that event. `'wallet'` is
+ * a wallet connection's own client-key identity, taken only once its relay
+ * has asked for AUTH.
  */
-export type AuthLeaseReason = 'active' | 'dm' | 'voice' | 'watch' | 'publish';
+export type AuthLeaseReason = 'active' | 'dm' | 'voice' | 'watch' | 'publish' | 'wallet';
 
 export interface AuthLease {
   release(): void;

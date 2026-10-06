@@ -16,6 +16,7 @@ vi.mock('@/services/wallet/send-zap', async (importOriginal) => {
 });
 
 import { useSendZap } from '@/hooks/chat/useSendZap';
+import { NwcError } from '@/lib/nwc';
 import { useToastStore } from '@/store/toast';
 import { fakeBridge } from '@tests/support/fake-bridge';
 import { bridgeWrapper } from '@tests/support/render-with-bridge';
@@ -79,6 +80,31 @@ describe('useSendZap', () => {
     expect(result.current.error).toBe('The zap did not go through.');
     expect(result.current.busy).toBe(false);
     expect(onSent).not.toHaveBeenCalled();
+    await act(async () => { await result.current.send(); });
+    expect(zap.sendZap).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps Zap disabled when the wallet went silent after the request was sent, so a retry cannot pay twice', async () => {
+    zap.sendZap.mockRejectedValueOnce(new NwcError('wallet-timeout', 'unknown'));
+    const { result, onSent } = renderSend();
+
+    await act(async () => { await result.current.send(); });
+
+    expect(result.current.error).toBe('Your wallet did not confirm this zap. Check your wallet before zapping again.');
+    expect(result.current.unconfirmed).toBe(true);
+    expect(onSent).not.toHaveBeenCalled();
+    await act(async () => { await result.current.send(); });
+    expect(zap.sendZap).toHaveBeenCalledTimes(1);
+  });
+
+  it('lets a wallet error that moved no money be retried', async () => {
+    zap.sendZap.mockRejectedValueOnce(new NwcError('wallet-insufficient-balance', 'not-paid', 'INSUFFICIENT_BALANCE'));
+    const { result } = renderSend();
+
+    await act(async () => { await result.current.send(); });
+
+    expect(result.current.error).toBe('Your wallet does not have enough funds.');
+    expect(result.current.unconfirmed).toBe(false);
     await act(async () => { await result.current.send(); });
     expect(zap.sendZap).toHaveBeenCalledTimes(2);
   });

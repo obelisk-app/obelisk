@@ -190,3 +190,14 @@ export const KIND_SFU_ACTIVE_CALL = 31314;
  * See docs/games.md for the wire format.
  */
 export const KIND_GAME = 2390;
+
+/**
+ * Nostr Wallet Connect (NIP-47): the wallet service's info event (13194,
+ * replaceable: its methods and encryption), a client's request (23194) and
+ * the wallet's answer (23195), both ephemeral. The protocol itself lives in
+ * `src/lib/nwc/` (a mini-package with its own copy, `NWC_KINDS`, pinned
+ * equal to these by `tests/lib/nwc/kinds.test.ts`). See docs/bitcoin-zaps-nwc.md.
+ */
+export const KIND_NWC_INFO = 13194;
+export const KIND_NWC_REQUEST = 23194;
+export const KIND_NWC_RESPONSE = 23195;

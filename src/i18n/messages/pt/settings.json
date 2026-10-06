@@ -213,6 +213,10 @@
     "advanced": {
       "label": "Avançado",
       "desc": "Backups, dados locais e ferramentas de desenvolvedor."
+    },
+    "wallet": {
+      "label": "Carteira",
+      "desc": "Conecte uma carteira Lightning com Nostr Wallet Connect para enviar zaps e pagar invoices."
     }
   },
   "openPreferences": "Preferências",
@@ -305,5 +309,41 @@
   "relayShare": {
     "invalid": "O link de compartilhamento do relay não é válido.",
     "failed": "Não foi possível adicionar o relay."
+  },
+  "wallet": {
+    "title": "Carteira Lightning",
+    "intro": "Conecte uma carteira com Nostr Wallet Connect (NIP-47) para enviar zaps e pagar invoices de qualquer navegador ou celular, sem extensão. O app da sua carteira fornece o link de conexão.",
+    "warning": "Conectar permite que o Obelisk gaste dessa carteira, até os limites que você definir na carteira. Quem tiver este link pode fazer o mesmo: guarde-o em segredo e defina um orçamento na sua carteira.",
+    "uriLabel": "Link de conexão",
+    "uriPlaceholder": "nostr+walletconnect://…",
+    "show": "Mostrar link",
+    "hide": "Ocultar link",
+    "connect": "Conectar carteira",
+    "connecting": "Verificando a carteira…",
+    "connectFailed": "Não foi possível conectar a carteira.",
+    "connected": "Conectada com Nostr Wallet Connect",
+    "walletLabel": "Carteira",
+    "relayLabel": "Relay",
+    "addressLabel": "Endereço Lightning",
+    "budget": "Limite de gastos: {used} de {total} sats usados",
+    "budgetRenews": "Limite de gastos: {used} de {total} sats usados, renova {period}",
+    "renewal": {
+      "daily": "todo dia",
+      "weekly": "toda semana",
+      "monthly": "todo mês",
+      "yearly": "todo ano"
+    },
+    "noBudget": "Sua carteira não informou um limite de gastos para este app. Confira na sua carteira.",
+    "remembered": "Guardada criptografada neste navegador, só para esta conta. Sair da conta a apaga.",
+    "notRemembered": "Este navegador não consegue guardar a conexão com segurança, então ela dura até você fechar ou recarregar esta página.",
+    "precedence": "Enquanto houver uma carteira conectada aqui, ela paga os zaps e as invoices, mesmo que você também tenha uma extensão do navegador (WebLN).",
+    "disconnect": "Desconectar carteira",
+    "disconnected": "Carteira desconectada.",
+    "current": {
+      "label": "Os pagamentos agora usam: {wallet}",
+      "nwc": "Esta carteira conectada",
+      "webln": "Sua extensão do navegador (WebLN)",
+      "none": "Nenhuma carteira ainda"
+    }
   }
 }

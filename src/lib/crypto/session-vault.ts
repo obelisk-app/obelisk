@@ -2,7 +2,8 @@
  * A browser-held key for encrypting a secret at rest.
  *
  * One AES-GCM 256 key, generated with `extractable: false`, lives as a
- * `CryptoKey` object in IndexedDB (`obelisk-vault` / `keys` / `session-key`).
+ * `CryptoKey` object in IndexedDB (`obelisk-vault` / `keys` / `session-key`;
+ * a caller with a secret of a different lifetime names its own key id).
  * The browser can use it to encrypt and decrypt, but no script, this one
  * included, can read its bytes: `exportKey` on it rejects. What the caller
  * stores elsewhere (localStorage) is only the sealed box: a fresh 12-byte IV
@@ -59,6 +60,13 @@ export interface SessionVault {
 export interface VaultEnvironment {
   readonly indexedDB?: IDBFactory | null;
   readonly subtle?: SubtleCrypto | null;
+  /**
+   * Which key in the store this vault uses. Default `VAULT_KEY_ID`, the
+   * session's. A secret with its own lifetime (a wallet connection, which
+   * must survive the rotation every login does) uses its own id, so rotating
+   * or destroying one key never touches a box sealed under the other.
+   */
+  readonly keyId?: string;
 }
 
 /** A structural check for a value read back from storage. */
@@ -101,6 +109,7 @@ export function isVaultAvailable(env: VaultEnvironment = {}): boolean {
 export async function openSessionVault(env: VaultEnvironment = {}): Promise<SessionVault> {
   const { factory, subtle } = resolveEnv(env);
   if (!factory || !subtle) throw new VaultError('unavailable');
+  const keyId = env.keyId ?? VAULT_KEY_ID;
 
   async function withDb<T>(op: (db: IDBDatabase) => Promise<T>): Promise<T> {
     let db: IDBDatabase;
@@ -120,7 +129,7 @@ export async function openSessionVault(env: VaultEnvironment = {}): Promise<Sess
   }
 
   const readKey = () => withDb(async (db) => {
-    const key = await getRecord<unknown>(db, VAULT_STORE, VAULT_KEY_ID);
+    const key = await getRecord<unknown>(db, VAULT_STORE, keyId);
     return isCryptoKey(key) ? key : null;
   });
 
@@ -131,7 +140,7 @@ export async function openSessionVault(env: VaultEnvironment = {}): Promise<Sess
     } catch {
       throw new VaultError('unavailable');
     }
-    await withDb((db) => putRecord(db, VAULT_STORE, VAULT_KEY_ID, key));
+    await withDb((db) => putRecord(db, VAULT_STORE, keyId, key));
     return key;
   }
 
@@ -177,7 +186,7 @@ export async function openSessionVault(env: VaultEnvironment = {}): Promise<Sess
     },
 
     async destroy() {
-      await withDb((db) => deleteRecord(db, VAULT_STORE, VAULT_KEY_ID));
+      await withDb((db) => deleteRecord(db, VAULT_STORE, keyId));
     },
   };
 }

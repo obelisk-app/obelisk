@@ -74,6 +74,7 @@ describe('InvoiceCard paying', () => {
     const confirm = screen.getByTestId('invoice-confirm');
     expect(confirm).toHaveTextContent('Pay 21 sats from your wallet?');
     expect(confirm).toHaveTextContent('For: coffee');
+    expect(screen.getByTestId('paying-wallet')).toHaveTextContent('Pays with your browser extension (WebLN)');
     expect(webln.sendPayment).not.toHaveBeenCalled();
 
     await act(async () => { fireEvent.click(screen.getByTestId('invoice-confirm-btn')); });
@@ -160,7 +161,7 @@ describe('InvoiceCard paying', () => {
     renderCard();
     fireEvent.click(screen.getByTestId('invoice-pay-btn'));
     expect(screen.queryByTestId('invoice-confirm')).toBeNull();
-    expect(screen.getByRole('alert')).toHaveTextContent(/No Lightning wallet found in this browser\. Install a WebLN extension such as Alby/);
+    expect(screen.getByRole('alert')).toHaveTextContent(/No Lightning wallet to pay with\. Connect one in Settings > Wallet with Nostr Wallet Connect, or install a WebLN extension such as Alby/);
   });
 
   it('shows a wallet error in the reader\'s language and lets them try again', async () => {
@@ -179,7 +180,7 @@ describe('InvoiceCard paying', () => {
     setInvoice({ amountSats: 0, amountMsats: 0 });
     renderCard();
     expect(screen.getByText('No amount set')).toBeInTheDocument();
-    expect(screen.getByTestId('invoice-no-amount')).toHaveTextContent(/browser wallets can only pay invoices that do/);
+    expect(screen.getByTestId('invoice-no-amount')).toHaveTextContent(/Obelisk can only pay invoices that do/);
     expect(screen.queryByTestId('invoice-pay-btn')).toBeNull();
   });
 

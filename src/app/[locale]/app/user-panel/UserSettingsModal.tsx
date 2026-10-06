@@ -17,6 +17,7 @@ import {
   SmileIcon,
   UserIcon,
   WrenchIcon,
+  ZapIcon,
 } from '@/components/ui/icons';
 import { EditProfileForm } from '../settings/EditProfileForm';
 import {
@@ -26,6 +27,7 @@ import {
   NotificationsSettingsSection,
   PrivacySettingsSection,
   RelaysSettingsSection,
+  WalletSettingsSection,
   type SettingsTab,
 } from '../settings/SettingsSections';
 import type { MessageKey } from '@/i18n/keys';
@@ -43,6 +45,7 @@ const SETTINGS_NAV: ReadonlyArray<{
       { id: 'notifications', Icon: BellIcon },
       { id: 'relays', Icon: ServerIcon },
       { id: 'privacy', Icon: ShieldIcon },
+      { id: 'wallet', Icon: ZapIcon },
       { id: 'media', Icon: SmileIcon },
       { id: 'advanced', Icon: WrenchIcon },
     ],
@@ -150,6 +153,7 @@ export function UserSettingsModal({ pubkey, meta, displayName, settingsTab, setS
               {settingsTab === 'notifications' && <NotificationsSettingsSection />}
               {settingsTab === 'relays' && <RelaysSettingsSection />}
               {settingsTab === 'privacy' && <PrivacySettingsSection />}
+              {settingsTab === 'wallet' && <WalletSettingsSection />}
               {settingsTab === 'advanced' && <AdvancedSettingsSection />}
             </div>
           )}

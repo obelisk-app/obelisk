@@ -11,6 +11,7 @@ import { ZapIcon } from '@/components/ui/icons';
 import { useTranslations } from 'next-intl';
 import { useFormat } from '@/i18n/useFormat';
 import Button from '@/components/ui/Button';
+import PayingWalletNote from './PayingWalletNote';
 
 export default function MessageZapModal() {
   const target = useMessageZapStore((s) => s.target);
@@ -34,7 +35,7 @@ function MessageZapModalInner({ target, close }: { target: ZapTarget; close: () 
   const lud16 = meta?.lud16 ?? target.recipientLud16 ?? null;
   const displayName = meta?.displayName || meta?.name || target.displayName;
 
-  const { send, busy, error: err } = useSendZap({
+  const { send, busy, error: err, unconfirmed } = useSendZap({
     recipient: target,
     amountSats: amount,
     comment,
@@ -92,6 +93,7 @@ function MessageZapModalInner({ target, close }: { target: ZapTarget; close: () 
         {!lud16 && (
           <p className="mb-3 text-xs text-yellow-400">{t('chat.zap.noAddress')}</p>
         )}
+        <PayingWalletNote className="mb-3" />
         <div className="flex justify-end gap-2">
           <Button variant="pillSecondary" size="xs" onClick={close}>
             {t('common.cancel')}
@@ -99,7 +101,7 @@ function MessageZapModalInner({ target, close }: { target: ZapTarget; close: () 
           <button
             type="button"
             onClick={send}
-            disabled={busy || !amount}
+            disabled={busy || unconfirmed || !amount}
             className="inline-flex items-center gap-1 rounded-full bg-yellow-400 px-4 py-1.5 text-xs font-semibold text-lc-black hover:bg-yellow-300 disabled:opacity-50"
           >
             <ZapIcon filled className="h-3.5 w-3.5" />

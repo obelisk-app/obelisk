@@ -14,6 +14,7 @@ import AppearancePreferenceControls from '@/components/settings/AppearancePrefer
 import NotificationSettings from '@/components/settings/NotificationSettings';
 import SocialRelaySettings from '@/components/settings/SocialRelaySettings';
 import CallSettings from '@/components/settings/CallSettings';
+import WalletSettings from '@/components/settings/WalletSettings';
 import MutedAndBlocked from '@/components/settings/MutedAndBlocked';
 import AccountBackupExport from '@/components/settings/AccountBackupExport';
 import DeveloperSignatureTest from '@/components/settings/DeveloperSignatureTest';
@@ -80,6 +81,10 @@ export function PrivacySettingsSection() {
   );
 }
 
+export function WalletSettingsSection() {
+  return <WalletSettings />;
+}
+
 export function AdvancedSettingsSection() {
   const prefs = usePreferences();
   const t = useTranslations();
@@ -118,6 +123,7 @@ export function PreferencesPanel() {
       <NotificationsSettingsSection />
       <RelaysSettingsSection />
       <PrivacySettingsSection />
+      <WalletSettingsSection />
       <AdvancedSettingsSection />
     </div>
   );

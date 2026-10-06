@@ -31,7 +31,20 @@
     "bunker-no-session": "There is no remote signer session to restore. Log in again.",
     "nostrconnect-cancelled": "Connection cancelled.",
     "call-relay-failed": "Could not reach a relay for the call.",
-    "game-unconfirmed": "The relay never confirmed the table. It may still appear in a moment, so check the channel before creating another."
+    "game-unconfirmed": "The relay never confirmed the table. It may still appear in a moment, so check the channel before creating another.",
+    "nwc-invalid-uri": "That is not a Nostr Wallet Connect link. It starts with nostr+walletconnect:// and names a relay and a secret.",
+    "nwc-unreachable": "Could not reach that wallet on its relay. Check that the wallet is online and the link is still valid.",
+    "nwc-cannot-pay": "That connection is not allowed to pay invoices. Create one with payment permission in your wallet.",
+    "wallet-timeout": "Your wallet did not answer in time. The payment may still go through: check your wallet before trying again.",
+    "wallet-relay-failed": "Could not reach your wallet's relay. Nothing was paid.",
+    "wallet-rate-limited": "Your wallet is getting too many requests. Wait a moment and try again.",
+    "wallet-not-supported": "Your wallet does not support this request.",
+    "wallet-insufficient-balance": "Your wallet does not have enough funds.",
+    "wallet-quota-exceeded": "This would go over the spending limit your wallet set for Obelisk.",
+    "wallet-restricted": "Your wallet does not allow this connection to make that payment.",
+    "wallet-unauthorized": "Your wallet no longer accepts this connection. Connect it again in Settings.",
+    "wallet-payment-failed": "Your wallet tried the payment and it failed. Nothing was paid.",
+    "wallet-failed": "Your wallet reported an error."
   },
   "activity": {
     "signExtension": {

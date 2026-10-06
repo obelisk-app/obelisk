@@ -176,11 +176,11 @@
     "paying": "Pagando…",
     "amount": "{amount} sats",
     "noAmount": "Sem valor",
-    "noAmountReason": "Esta invoice não diz quanto pagar, e as carteiras do navegador só pagam invoices com valor. Peça a quem enviou uma com valor.",
+    "noAmountReason": "Esta invoice não diz quanto pagar, e o Obelisk só paga invoices com valor. Peça a quem enviou uma com valor.",
     "confirmPrompt": "Pagar {amount} sats com a sua carteira?",
     "confirmFor": "Referente a: {description}",
     "confirm": "Confirmar pagamento",
-    "noWallet": "Nenhuma carteira Lightning encontrada neste navegador. Instale uma extensão WebLN como o Alby (ela também conecta uma carteira que você já tem, via Nostr Wallet Connect), recarregue a página e tente de novo.",
+    "noWallet": "Nenhuma carteira Lightning para pagar. Conecte uma em Configurações > Carteira com Nostr Wallet Connect, ou instale uma extensão WebLN como o Alby e recarregue a página.",
     "expiredReason": "Esta invoice expirou. Peça uma nova a quem enviou.",
     "alreadyPaid": "Esta invoice já foi paga.",
     "inProgress": "Esta invoice já está sendo paga.",
@@ -254,7 +254,7 @@
     "comment": "Comentário (opcional)",
     "noAddress": "O destinatário não tem endereço Lightning, então o zap vai falhar.",
     "errorNoAddress": "Este usuário não tem endereço Lightning (lud16).",
-    "errorNoWallet": "Nenhuma extensão WebLN detectada. Instale o Alby (ou similar) para enviar zaps.",
+    "errorNoWallet": "Nenhuma carteira para pagar. Conecte uma em Configurações > Carteira (Nostr Wallet Connect) ou instale uma extensão WebLN como o Alby.",
     "errorInvalidAmount": "Digite um valor válido.",
     "errorNoSigner": "Nenhum assinante ativo: faça login primeiro.",
     "sent": "⚡ Você enviou {amount} sats para {name}",
@@ -264,7 +264,8 @@
     "title": "Zap para {name}",
     "noBridge": "O app não estava conectado ao relay.",
     "failed": "O zap não foi enviado.",
-    "markerRejected": "O relay não a aceitou."
+    "markerRejected": "O relay não a aceitou.",
+    "unconfirmed": "Sua carteira não confirmou este zap. Confira sua carteira antes de enviar outro zap."
   },
   "profilePopover": {
     "zap": "Zap",
@@ -332,5 +333,9 @@
   "sticker": {
     "open": "Ver detalhes de :{name}:",
     "alt": "Figurinha :{name}:"
+  },
+  "wallet": {
+    "paysWithNwc": "Paga com {wallet} (Nostr Wallet Connect)",
+    "paysWithWebln": "Paga com sua extensão do navegador (WebLN)"
   }
 }
