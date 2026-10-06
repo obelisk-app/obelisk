@@ -17,8 +17,10 @@ Nothing here needs a server. The only infrastructure a call touches is:
 | `src/services/dm-call/protocol.ts` | Control messages (invite / accept / decline / cancel / hangup / busy), parsing, freshness |
 | `src/services/dm-call/signaling.ts` | `CallSignalChannel`: kind 25050 on throwaway keys, NIP-44 content, its own `SimplePool` |
 | `src/services/dm-call/session.ts` | `DmCallSession`: local media, one mesh `Peer`, rebuild / reconnect |
-| `src/store/dm-call.ts` | The state machine, "who can ring me", IP policy, ringing |
-| `src/services/nostr-bridge/client.ts` | `sendDmCallMessage`, `subscribeDmCallMessages`, `sealAndWrapExpiring` |
+| `src/services/dm-call/load-session.ts` | Fetches `session.ts` (and with it simple-peer) on demand: when a call starts, when an invite rings, when the pointer reaches the call buttons. Nothing in the shell imports the session statically |
+| `src/store/dm-call.ts` | The state machine, "who can ring me", IP policy, ringing (none of which needs the session) |
+| `src/hooks/useDmCallListener.ts` | Listens for call messages while logged in; mounted by `LazyDmCallLayer`, which ships with the shell, so an invite never waits on a download |
+| `src/services/nostr-bridge/dm/calls.ts` | `sendDmCallMessage`, `subscribeDmCallMessages`, `sealAndWrapExpiring`; holds a fresh message that arrives before anyone listens and hands it to the first listener |
 | `src/services/notifications/sound.ts`, `alert.ts` | `ring` / `ringback` phrases per ringtone; `ringIncomingCall`, `startRingback` |
 | `src/components/call/` | `DmCallButtons`, `DmCallLayer` (banner + call view + remote audio) |
 | `src/components/settings/CallSettings.tsx` | Who can call, IP protection, call relays |

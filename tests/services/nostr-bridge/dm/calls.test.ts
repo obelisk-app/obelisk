@@ -76,6 +76,49 @@ describe('dm/calls', () => {
     expect(none).not.toHaveBeenCalled();
   });
 
+  it('holds a message that arrives before anyone listens, and hands it to the first listener', async () => {
+    const { mod } = setup();
+    mod.ingest(rumor(PEER, ME), PEER);
+    const cb = vi.fn();
+    mod.subscribe(cb);
+    expect(cb).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(cb).toHaveBeenCalledTimes(1);
+    expect(cb).toHaveBeenCalledWith(expect.objectContaining({ type: 'hangup', from: PEER, peer: PEER }));
+    // Handed over once, not to every later listener.
+    const later = vi.fn();
+    mod.subscribe(later);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(later).not.toHaveBeenCalled();
+    // Nor handed to a different account than the one it was for.
+    let who: PersistedSession | null = session;
+    const switching = new DmCallsModule({ session: () => who }, setup().deps);
+    switching.ingest(rumor(PEER, ME), PEER);
+    who = { ...session, pubKeyHex: OTHER };
+    const otherAccount = vi.fn();
+    switching.subscribe(otherAccount);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(otherAccount).not.toHaveBeenCalled();
+  });
+
+  it('drops a held message that went stale before anyone listened, and caps what it holds', async () => {
+    const { mod } = setup();
+    for (let i = 0; i < 40; i++) mod.ingest(rumor(PEER, ME), PEER);
+    vi.advanceTimersByTime(60 * 60 * 1000);
+    mod.ingest(rumor(PEER, ME), PEER);
+    const cb = vi.fn();
+    mod.subscribe(cb);
+    await vi.advanceTimersByTimeAsync(0);
+    // The 40 went stale; only the one that arrived after the hour is fresh.
+    expect(cb).toHaveBeenCalledTimes(1);
+    const fresh = setup().mod;
+    for (let i = 0; i < 40; i++) fresh.ingest(rumor(PEER, ME), PEER);
+    const many = vi.fn();
+    fresh.subscribe(many);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(many).toHaveBeenCalledTimes(16);
+  });
+
   it('refuses to send while logged out or with DMs off, before touching the relays', async () => {
     await expect(setup(null).mod.send(PEER, { type: 'hangup', callId: CALL_ID })).rejects.toThrow(/Not logged in/);
     setPreference('directMessagesEnabled', false);

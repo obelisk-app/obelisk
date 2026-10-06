@@ -1,3 +1,4 @@
+import '@tests/support/game-engines';
 import { render, screen, act } from '@testing-library/react';
 import { LocaleProvider } from '@/i18n/context';
 import { describe, expect, it, vi, beforeAll, beforeEach, afterEach } from 'vitest';

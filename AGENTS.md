@@ -97,7 +97,7 @@ src/
 ├── i18n/                          # context, rich(), useFormat, locales/{en,es,pt}.json, hardcoded-strings ratchet
 ├── lib/                           # Mini-packages: no app imports, publishable as they stand
 │   ├── relay-hub/                 # Relay socket hub; imports only nostr-tools (pinned by isolation.test.ts)
-│   ├── games/                     # Engines, protocol codec, session replay, registry, clock, stacker/, vesta/
+│   ├── games/                     # Engines, protocol codec, session replay, registry (each engine loads on demand; names in game-meta.ts), clock, stacker/, vesta/
 │   ├── emoji/                     # Bilingual emoji dataset + keyword search
 │   ├── crypto/file-cipher.ts      # AES-256-GCM for encrypted DM uploads
 │   ├── nip-59.ts                  # Gift wrap helpers
@@ -135,7 +135,7 @@ src/
 │   ├── account-backup, activity-log, bot-commands, forum-prefs, group-search, guides, nip05-verify
 │   ├── personal-stickers, quota-safe-storage, read-gates, recent-emojis, recent-slash-commands, remote-media(-gate)
 │   ├── dm/opt-in.ts               # The `directMessagesEnabled` gate (the only file under dm/)
-│   ├── dm-call/                   # DM call protocol, session, signaling
+│   ├── dm-call/                   # DM call protocol, session (fetched on demand by load-session.ts), signaling
 │   ├── wallet/                    # parse-zap-command, send-zap, zap-constants
 │   ├── voice/                     # Mesh + SFU client (`client.ts`, `peer.ts`, `sfu-client.ts`, `sfu-rpc.ts`, ...)
 │   ├── social/                    # Feeds, profiles, publish, relays, note-preview, interests-store, profile-feed, ...

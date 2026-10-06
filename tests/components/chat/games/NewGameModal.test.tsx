@@ -1,3 +1,4 @@
+import '@tests/support/game-engines';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import NewGameModal from '@/components/chat/games/NewGameModal';

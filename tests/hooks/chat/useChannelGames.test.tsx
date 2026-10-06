@@ -1,3 +1,4 @@
+import '@tests/support/game-engines';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import type { GameSession } from '@/lib/games/session';

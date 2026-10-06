@@ -1,6 +1,7 @@
 import type { ApplyResult, GameDefinition } from './types';
+import { CHAIN_REACTION_META } from './game-meta';
 
-export const CR_MAX_PLAYERS = 8;
+export const CR_MAX_PLAYERS = CHAIN_REACTION_META.maxPlayers;
 
 export const CR_SIZES = {
   small: { rows: 7, cols: 5, label: 'Chico (5×7)' },
@@ -142,12 +143,7 @@ function resolveSize(opts?: unknown): { rows: number; cols: number } {
 }
 
 export const chainReaction: GameDefinition<CRState, CRAction> = {
-  type: 'chain-reaction',
-  displayName: 'Chain Reaction',
-  description: 'Colocá orbes, detoná cadenas y capturá el tablero. 2–8 jugadores.',
-  minPlayers: 2,
-  maxPlayers: CR_MAX_PLAYERS,
-  defaultTurnTimeoutS: 45,
+  ...CHAIN_REACTION_META,
 
   initialState(participants, opts) {
     const { rows, cols } = resolveSize(opts);

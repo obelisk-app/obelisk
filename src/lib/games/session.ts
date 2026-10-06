@@ -25,6 +25,7 @@
 import { WAITING_EXPIRY_MINUTES, type ParsedGameEvent } from './protocol';
 import type { GameSession } from './session-types';
 import { replayLog } from './session-replay';
+import { getGameDef, isKnownGame } from './registry';
 
 export type { GameSession, GameStatus } from './session-types';
 export { replayLog } from './session-replay';
@@ -71,4 +72,31 @@ export function applyWaitingExpiry(session: GameSession, now: number): GameSessi
   if (session.status !== 'waiting') return session;
   if (now - session.createdAt <= WAITING_EXPIRY_MINUTES * 60) return session;
   return { ...session, status: 'cancelled' };
+}
+
+/**
+ * The game a log's replay needs: that of its earliest `create`, the one
+ * `replayLog` uses. Null when there is no create yet.
+ */
+export function tableGame(events: readonly ParsedGameEvent[]): string | null {
+  let first: ParsedGameEvent | null = null;
+  for (const e of events) {
+    if (e.op !== 'create') continue;
+    if (!first || e.createdAt < first.createdAt || (e.createdAt === first.createdAt && e.id < first.id)) first = e;
+  }
+  return first && first.op === 'create' ? first.game : null;
+}
+
+/**
+ * The game whose engine this log is waiting for, or null when replay can
+ * run now: the engine is loaded, the game is unknown (replay says null and
+ * always will), or there is no create to replay yet.
+ *
+ * A null replay means "nothing to show" in the first three cases and
+ * "not yet" in this one, so a cache of replays must not keep this one.
+ */
+export function pendingEngine(events: readonly ParsedGameEvent[]): string | null {
+  const game = tableGame(events);
+  if (game === null || !isKnownGame(game) || getGameDef(game)) return null;
+  return game;
 }

@@ -34,6 +34,16 @@ export interface ApplyResult<S> {
   eliminated?: string[];
 }
 
+/**
+ * The match reducer of a real-time game (Stacker's is `stacker/match.ts`).
+ * It hangs off the definition so replay reaches it through the registry,
+ * which loads it on demand, instead of importing one game's engine itself.
+ */
+export interface RealtimeRules<M = unknown, E = unknown> {
+  initialMatch(seed: number, seats: readonly string[]): M;
+  applyMatchEvent(match: M, event: E): M;
+}
+
 export interface GameDefinition<S = unknown, A = unknown> {
   type: string;
   displayName: string;
@@ -48,6 +58,8 @@ export interface GameDefinition<S = unknown, A = unknown> {
    * all turn machinery for these: there is no seat "to move".
    */
   realtime?: boolean;
+  /** Required when `realtime` is set: the reducer for `session.match`. */
+  match?: RealtimeRules;
 
   initialState(participants: string[], opts?: unknown): S;
   firstTurn(participants: string[]): string;

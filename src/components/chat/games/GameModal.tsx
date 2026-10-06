@@ -9,8 +9,7 @@ import { publishAttack, publishCheckpoint, publishStart, publishTopOut } from '@
 import { useGameSession, useNowSeconds, useTurnClockEnforcer } from '@/hooks/chat/useChannelGames';
 import ChainReactionBoard from './ChainReactionBoard';
 import GameOverOverlay from './GameOverOverlay';
-import VestaTable from './vesta/VestaTable';
-import StackerTable from './stacker/StackerTable';
+import { LazyStackerTable as StackerTable, LazyVestaTable as VestaTable } from './LazyTables';
 import StartTableModal from './StartTableModal';
 import GameResults from './GameResults';
 import GameModalHeader from './modal/GameModalHeader';

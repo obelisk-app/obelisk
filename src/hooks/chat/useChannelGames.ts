@@ -61,10 +61,15 @@ export const SESSION_CLOCK_MS = 30_000;
  */
 export function useGameSession(gameId: string | null): GameSession | null {
   const log = useGamesStore((s) => (gameId ? s.logs[gameId] : undefined));
+  // Re-derive when a game's engine lands: it loads on demand (registry.ts).
+  const engines = useGamesStore((s) => s.enginesLoaded);
   const now = useNowSeconds(SESSION_CLOCK_MS);
   return useMemo(
     () => (gameId && log ? selectSession({ logs: { [gameId]: log } }, gameId, now) : null),
-    [log, gameId, now],
+    // `engines` is read by no code here, only by the replay cache's choice
+    // to wait; listing it is what re-runs the selector when an engine lands.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [log, gameId, now, engines],
   );
 }
 
@@ -72,10 +77,13 @@ export function useGameSession(gameId: string | null): GameSession | null {
 export function useChannelSessions(channelId: string | null): GameSession[] {
   const logs = useGamesStore((s) => s.logs);
   const channelOf = useGamesStore((s) => s.channelOf);
+  const engines = useGamesStore((s) => s.enginesLoaded);
   const now = useNowSeconds(SESSION_CLOCK_MS);
   return useMemo(
     () => (channelId ? selectChannelSessions({ logs, channelOf }, channelId, now) : []),
-    [logs, channelOf, channelId, now],
+    // See useGameSession for why `engines` is listed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [logs, channelOf, channelId, now, engines],
   );
 }
 

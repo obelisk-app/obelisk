@@ -23,26 +23,18 @@
  */
 import { applyMove, createGame, type GameState } from 'vesta';
 import type { ApplyResult, GameDefinition } from '../types';
+import { VESTA_META } from '../game-meta';
 import { seatIndex, toMove, type VestaAction } from './moves';
 import { dryRun } from './rules';
 import { sequence } from './sequence';
+import { normalizeSeed, readResumeState } from './resume';
 
 export type { VestaAction } from './moves';
 export { isRobberPending, isStealPending } from './sequence';
+export { normalizeSeed, playerCountOf, readResumeState } from './resume';
 
-export const VESTA_MIN_PLAYERS = 2;
-export const VESTA_MAX_PLAYERS = 4;
-
-/** Board seeds are chosen by the host; keep them small and human-quotable. */
-export function normalizeSeed(raw: unknown): number {
-  if (typeof raw === 'number' && Number.isFinite(raw)) return Math.floor(Math.abs(raw)) % 1_000_000;
-  if (typeof raw === 'string' && raw.trim() !== '') {
-    const n = Number(raw);
-    if (Number.isFinite(n)) return Math.floor(Math.abs(n)) % 1_000_000;
-  }
-  return 0;
-}
-
+export const VESTA_MIN_PLAYERS = VESTA_META.minPlayers;
+export const VESTA_MAX_PLAYERS = VESTA_META.maxPlayers;
 
 /**
  * Resume a saved game. Upstream's export is `{startState, turns, endState}`;
@@ -60,26 +52,6 @@ function stateFromOpts(opts: unknown, participants: string[]): GameState {
   });
 }
 
-/** Accept either a bare GameState or a full `{endState}` record. */
-export function readResumeState(raw: unknown): GameState | null {
-  if (!raw || typeof raw !== 'object') return null;
-  const candidate = 'endState' in (raw as Record<string, unknown>)
-    ? (raw as { endState: unknown }).endState
-    : 'startState' in (raw as Record<string, unknown>)
-      ? (raw as { startState: unknown }).startState
-      : raw;
-  if (!candidate || typeof candidate !== 'object') return null;
-  const s = candidate as Partial<GameState>;
-  if (!s.board || !Array.isArray(s.players) || typeof s.currentPlayer !== 'number') return null;
-  return s as GameState;
-}
-
-/** How many seats a saved game expects. Used to size the table on import. */
-export function playerCountOf(resume: unknown): number | null {
-  const state = readResumeState(resume);
-  return state ? state.players.length : null;
-}
-
 function result(state: GameState, participants: string[]): ApplyResult<GameState> {
   if (state.winner !== null && state.winner !== undefined) {
     return { state, nextTurn: null, winner: participants[state.winner] ?? null };
@@ -88,15 +60,8 @@ function result(state: GameState, participants: string[]): ApplyResult<GameState
 }
 
 export const vesta: GameDefinition<GameState, VestaAction> = {
-  type: 'vesta',
-  displayName: 'Vesta',
-  description: 'Expanding Settlements Through Accord: build, trade, and take the board. 2–4 players.',
-  minPlayers: VESTA_MIN_PLAYERS,
-  maxPlayers: VESTA_MAX_PLAYERS,
-  // No clock by default. Our clock is per ACTION, and a Vesta turn is many
-  // actions (roll, build, trade, end) - a short timer would guillotine people
-  // mid-thought. Hosts who want one should pick something generous.
-  defaultTurnTimeoutS: 0,
+  // Name, limits and the (absent) default clock: see VESTA_META.
+  ...VESTA_META,
 
   initialState(participants, opts) {
     return stateFromOpts(opts, participants);

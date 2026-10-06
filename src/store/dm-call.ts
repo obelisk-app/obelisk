@@ -21,11 +21,16 @@
  * This file is the entry point. The store and its actions live in
  * `dm-call-store.ts`, the policy helpers in `dm-call-policy.ts`, and the
  * shared runtime (session, timers) in `dm-call-runtime.ts`.
+ *
+ * Nothing here imports the media stack (`DmCallSession`, simple-peer): an
+ * invite rings with only this module loaded, and the session is fetched on
+ * demand (`services/dm-call/load-session.ts`).
  */
 
 import { getBridge, getBridgeImpl } from '@/services/nostr-bridge';
 import { ringIncomingCall } from '@/services/notifications/alert';
 import { CALL_RING_TIMEOUT_MS, type IncomingDmCallMessage } from '@/services/dm-call/protocol';
+import { prefetchDmCallSession } from '@/services/dm-call/load-session';
 import { lost, mayRing, send, tr } from './dm-call-policy';
 import { clearRinging, rt } from './dm-call-runtime';
 import { EMPTY_MEDIA, finishCall, useDmCallStore } from './dm-call-store';
@@ -60,6 +65,9 @@ export function handleDmCallMessage(msg: IncomingDmCallMessage & { peer: string 
     // The name is in the title, as for a DM; the body never says more than
     // that a call is coming in.
     rt.stopRing = ringIncomingCall({ id: msg.callId, title, body: tr(msg.video ? 'call.incomingVideo' : 'call.incomingVoice') }).stop;
+    // Ringing needs none of the media stack. Fetch it now, after the ring has
+    // started, so it is in place by the time the user reaches "Accept".
+    prefetchDmCallSession();
     rt.ringTimer = setTimeout(() => {
       if (useDmCallStore.getState().callId !== msg.callId || useDmCallStore.getState().status !== 'incoming') return;
       finishCall('missed');

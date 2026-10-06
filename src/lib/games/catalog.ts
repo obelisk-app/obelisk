@@ -7,8 +7,11 @@
  * as a different game than the one it is running. (It could, once: the card
  * and the modal both hardcoded "Chain Reaction", which made a Vesta table
  * look like a Chain Reaction table in chat.)
+ *
+ * It reads `game-meta.ts`, never an engine: a chat card or the picker can
+ * name a game without downloading its rules (see `registry.ts`).
  */
-import { GAMES, getGameDef } from './registry';
+import { GAME_META, gameMeta } from './game-meta';
 
 export interface GameInfo {
   type: string;
@@ -33,7 +36,7 @@ const ICONS: Record<string, string> = {
 };
 
 export function gameInfo(type: string): GameInfo | null {
-  const def = getGameDef(type);
+  const def = gameMeta(type);
   if (!def) return null;
   return {
     type: def.type,
@@ -49,8 +52,8 @@ export function gameInfo(type: string): GameInfo | null {
 
 /** Everything playable, for the picker. */
 export function gameCatalog(): GameInfo[] {
-  return Object.keys(GAMES)
-    .map((type) => gameInfo(type))
+  return GAME_META
+    .map((g) => gameInfo(g.type))
     .filter((g): g is GameInfo => g !== null);
 }
 

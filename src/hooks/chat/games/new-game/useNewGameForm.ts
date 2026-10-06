@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { CRSizeKey } from '@/lib/games/chain-reaction';
-import { readResumeState, playerCountOf } from '@/lib/games/vesta/definition';
+import { readResumeState, playerCountOf } from '@/lib/games/vesta/resume';
 import type { GameInfo } from '@/lib/games/catalog';
 import { publishCreate, publishStart } from '@/services/games/transport';
 import { localSeatId, gameMarker } from '@/lib/games/protocol';

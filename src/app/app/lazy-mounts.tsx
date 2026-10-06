@@ -7,6 +7,7 @@ import Modal from '@/components/ui/Modal';
 import Spinner from '@/components/ui/Spinner';
 import { useGamesStore } from '@/store/games';
 import { useTranslation } from '@/i18n/context';
+import { useDmCallListener } from '@/hooks/useDmCallListener';
 
 /**
  * The heavy features, loaded only when they are used.
@@ -86,11 +87,13 @@ export function LazyNewGameModal(props: ComponentProps<typeof NewGameModalCompon
 }
 
 /**
- * Always mounted while logged in (it wires incoming calls), but it draws
- * nothing until a call starts, so it needs no placeholder and no longer has
- * to arrive before the shell can paint.
+ * Listens for incoming calls from the moment the shell mounts: the listener
+ * ships with the shell, so an invite never waits on this download (nor on
+ * the media stack, which loads only when a call starts or rings). The layer
+ * draws nothing until a call starts, so it needs no placeholder.
  */
 export function LazyDmCallLayer() {
+  useDmCallListener();
   return (
     <Suspense fallback={null}>
       <DmCallLayer />

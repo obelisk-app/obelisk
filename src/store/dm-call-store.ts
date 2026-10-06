@@ -8,7 +8,8 @@ import { generateSecretKey } from 'nostr-tools';
 import { getPreferences } from '@/services/preferences';
 import { startRingback } from '@/services/notifications/alert';
 import { CALL_RING_TIMEOUT_MS, newCallId } from '@/services/dm-call/protocol';
-import { DmCallSession, type DmCallMediaState, type DmCallPhase } from '@/services/dm-call/session';
+import type { DmCallMediaState, DmCallPhase, DmCallSession } from '@/services/dm-call/session';
+import { loadDmCallSession } from '@/services/dm-call/load-session';
 import { iceTransportPolicyFor, leaveGroupVoice, lost, send } from './dm-call-policy';
 import { clearRinging, rt } from './dm-call-runtime';
 
@@ -59,10 +60,13 @@ export interface DmCallState {
 }
 
 export const useDmCallStore = create<DmCallState>((set, get) => {
-  function makeSession(role: 'caller' | 'callee', callId: string, relays: readonly string[], video: boolean, peer: string): DmCallSession {
+  function makeSession(
+    Session: typeof DmCallSession,
+    role: 'caller' | 'callee', callId: string, relays: readonly string[], video: boolean, peer: string,
+  ): DmCallSession {
     const relayOnly = iceTransportPolicyFor(peer) === 'relay';
     set({ relayOnly });
-    const s = new DmCallSession({
+    const s = new Session({
       role,
       callId,
       selfSk: generateSecretKey(),
@@ -112,12 +116,26 @@ export const useDmCallStore = create<DmCallState>((set, get) => {
       const st = get().status;
       if (st !== 'idle' && st !== 'ended') return;
       if (rt.lingerTimer) clearTimeout(rt.lingerTimer);
-      await leaveGroupVoice();
       const callId = newCallId();
       const relays = getPreferences().callRelays;
-      const s = makeSession('caller', callId, relays, video, peer);
-      rt.session = s;
+      // "Calling..." shows at once, and a second click finds the call already
+      // under way. The media stack downloads meanwhile (load-session.ts).
       set({ status: 'outgoing', peer, callId, video, relays, endReason: null, error: null, connectedAt: null });
+      const loading = loadDmCallSession();
+      await leaveGroupVoice();
+      let Session: typeof DmCallSession;
+      try {
+        Session = (await loading).DmCallSession;
+      } catch (e) {
+        if (get().callId !== callId) return;
+        set({ error: (e as Error).message || 'could not load the call' });
+        finishCall('error');
+        return;
+      }
+      // Hung up (or replaced) while the call was still loading.
+      if (get().callId !== callId || get().status !== 'outgoing') return;
+      const s = makeSession(Session, 'caller', callId, relays, video, peer);
+      rt.session = s;
       try {
         await s.acquireMedia();
       } catch (e) {
@@ -147,8 +165,22 @@ export const useDmCallStore = create<DmCallState>((set, get) => {
       const invite = rt.pendingInvite;
       if (!invite || get().status !== 'incoming' || !invite.eph || !invite.relays) return;
       clearRinging();
+      // Usually already here: ringing started the download.
+      const loading = loadDmCallSession();
       await leaveGroupVoice();
-      const s = makeSession('callee', invite.callId, invite.relays, video, invite.from);
+      let Session: typeof DmCallSession;
+      try {
+        Session = (await loading).DmCallSession;
+      } catch (e) {
+        if (rt.pendingInvite !== invite || get().status !== 'incoming') return;
+        set({ error: (e as Error).message || 'could not load the call' });
+        void send(invite.from, { type: 'decline', callId: invite.callId }, true).catch(lost('decline'));
+        finishCall('error');
+        return;
+      }
+      // Cancelled, declined elsewhere or accepted twice while it loaded.
+      if (rt.pendingInvite !== invite || get().status !== 'incoming') return;
+      const s = makeSession(Session, 'callee', invite.callId, invite.relays, video, invite.from);
       rt.session = s;
       set({ status: 'connecting', video });
       try {
@@ -183,7 +215,8 @@ export const useDmCallStore = create<DmCallState>((set, get) => {
       if (!peer || !callId) return;
       if (status === 'incoming') { get().declineCall(); return; }
       if (status === 'outgoing') {
-        void send(peer, { type: 'cancel', callId }).catch(lost('cancel'));
+        // No session yet means the call was still loading: no invite went out.
+        if (rt.session) void send(peer, { type: 'cancel', callId }).catch(lost('cancel'));
         finishCall('cancelled');
         return;
       }

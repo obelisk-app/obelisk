@@ -83,6 +83,18 @@ describe('ProfilesModule', () => {
     profiles.dispose();
   });
 
+  it('turns a burst of profiles into one view update, not one full copy per profile', async () => {
+    const { profiles } = makeProfiles();
+    const seen: number[] = [];
+    const stop = profiles.userMetadata.subscribe((view) => seen.push(Object.keys(view).length));
+    for (let i = 0; i < 500; i++) profiles.ingest(kind0(pk(i)), { cacheRelayScoped: false });
+    await Promise.resolve();
+    expect(seen).toEqual([0, 500]); // the replay on subscribe, then one update for the burst
+    expect(profiles.displayNameFor(pk(7))).not.toMatch(/…$/);
+    stop();
+    profiles.dispose();
+  });
+
   it('trims to 2,000 after five hidden minutes, keeping what was read, and the view follows', async () => {
     const { profiles, visibility } = makeProfiles();
     for (let i = 0; i < 5000; i++) profiles.ingest(kind0(pk(i)), { cacheRelayScoped: false });

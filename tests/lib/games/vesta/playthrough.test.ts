@@ -1,3 +1,4 @@
+import '@tests/support/game-engines';
 import { describe, it, expect } from 'vitest';
 import { getValidPositions, type GameState } from 'vesta';
 import { deriveSession, type GameSession } from '@/lib/games/session';

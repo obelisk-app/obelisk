@@ -82,7 +82,13 @@ export class ProfilesModule {
   private readonly requested = new BoundedMap<string, true>({ maxEntries: BOOKKEEPING_MAX, policy: 'fifo' });
   private readonly lookup: ProfileLookup;
   private readonly batch: ProfileBatcher;
-  private readonly evicted = new Set<string>();
+  /**
+   * View changes waiting for the next flush: a profile to show, or `null` to
+   * drop one. A burst of kind 0 events (a member list, a relay replaying
+   * profiles) becomes one store update instead of one full copy of the view
+   * per event, which made a 5,000-profile burst quadratic.
+   */
+  private readonly pendingView = new Map<string, JsUserMetadata | null>();
   private readonly now: () => number;
   private readonly own: OwnProfileModule;
 
@@ -99,7 +105,7 @@ export class ProfilesModule {
       trimTo: opts.trimTo,
       hiddenTrimAfterMs: opts.hiddenTrimAfterMs,
       negativeCooldownMs: opts.negativeCooldownMs,
-      onEvict: (pubkey) => this.dropFromView(pubkey),
+      onEvict: (pubkey) => this.queueView(pubkey, null),
     });
     this.lookup = new ProfileLookup(ctx, {
       now: () => this.now(),
@@ -151,7 +157,7 @@ export class ProfilesModule {
 
   /** Best-effort display name for OS popups; never blocks on a fetch. */
   displayNameFor(pubkey: string): string {
-    const meta = this.userMetadata.get()[pubkey];
+    const meta = this.cache.peek(pubkey)?.meta;
     return meta?.displayName || meta?.name || `${pubkey.slice(0, 8)}…`;
   }
 
@@ -174,6 +180,7 @@ export class ProfilesModule {
 
   dispose(): void {
     this.clearPendingQueue();
+    this.pendingView.clear();
     this.cache.dispose();
   }
 
@@ -212,16 +219,14 @@ export class ProfilesModule {
 
   /** Paint up to 500 cached profiles for `relay` at once; newest-wins against what is already held. */
   seedFromCache(relay: string, pubkeys: readonly string[]): void {
-    const seeded: Record<string, JsUserMetadata> = {};
     for (const pubkey of pubkeys.slice(0, 500)) {
       const entry = cacheGet<{ meta: JsUserMetadata; createdAt: number }>(relay, KIND_METADATA, pubkey);
       if (!entry) continue;
       const { meta, createdAt } = entry.value;
       if ((this.cache.peek(pubkey)?.createdAt ?? 0) >= createdAt) continue;
       this.cache.set(pubkey, { meta, createdAt });
-      seeded[pubkey] = meta;
+      this.queueView(pubkey, meta);
     }
-    if (Object.keys(seeded).length > 0) this.userMetadata.update((prev) => ({ ...prev, ...seeded }));
   }
 
   /** The signed-in user's own kind 0: see `profile-own.ts`. */
@@ -237,23 +242,27 @@ export class ProfilesModule {
 
   private remember(pubkey: string, meta: JsUserMetadata, createdAt: number): void {
     this.cache.set(pubkey, { meta, createdAt });
-    this.userMetadata.update((prev) => ({ ...prev, [pubkey]: meta }));
+    this.queueView(pubkey, meta);
   }
 
-  /** An LRU or trim eviction: the view loses the key too, one store update per burst. */
-  private dropFromView(pubkey: string): void {
-    const flush = this.evicted.size === 0;
-    this.evicted.add(pubkey);
-    if (!flush) return;
-    queueMicrotask(() => {
-      const gone = Array.from(this.evicted);
-      this.evicted.clear();
-      this.userMetadata.update((prev) => {
-        const next = { ...prev };
-        for (const pk of gone) delete next[pk];
-        return next;
-      });
+  /** Queue one view change; the first in a burst schedules the flush. */
+  private queueView(pubkey: string, meta: JsUserMetadata | null): void {
+    const first = this.pendingView.size === 0;
+    this.pendingView.set(pubkey, meta);
+    if (first) queueMicrotask(() => this.flushView());
+  }
+
+  private flushView(): void {
+    if (this.pendingView.size === 0) return;
+    const changes = Array.from(this.pendingView);
+    this.pendingView.clear();
+    this.userMetadata.update((prev) => {
+      const next = { ...prev };
+      for (const [pubkey, meta] of changes) {
+        if (meta) next[pubkey] = meta;
+        else delete next[pubkey];
+      }
+      return next;
     });
   }
-
 }

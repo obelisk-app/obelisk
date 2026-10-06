@@ -25,6 +25,10 @@ import type { Unsubscribe } from '../types';
 
 /** NIP-40 lifetime of a call-control gift wrap. */
 const CALL_WRAP_TTL_S = 5 * 60;
+/** Messages held while nobody listens, see {@link DmCallsModule.subscribe}. */
+const HELD_MAX = 16;
+
+type Incoming = IncomingDmCallMessage & { peer: string };
 
 export type DmCallListener = (msg: IncomingDmCallMessage & { peer: string }) => void;
 
@@ -41,6 +45,8 @@ export interface DmCallsDeps {
 export class DmCallsModule {
   /** Listeners for DM call control messages, see {@link subscribe}. */
   private readonly listeners = new Set<DmCallListener>();
+  /** Fresh messages that arrived while nobody listened, with the account they were for. */
+  private held: Array<{ me: string; msg: Incoming }> = [];
 
   constructor(
     private readonly ctx: DmCallsContext,
@@ -140,8 +146,27 @@ export class DmCallsModule {
    * `peer` is the other party: the sender for an inbound message, the rumor's
    * `p` tag for our own notice from another device.
    */
+  /**
+   * A message that arrives while nobody listens is held, not dropped, and
+   * handed to the next listener (still fresh, still for the same account).
+   * The DM inbox is often open before the call listener is: the read-state
+   * root reads DMs as soon as the /app route runs, while the shell that
+   * listens for calls is still downloading. Without this, an invite that
+   * landed in that window was decrypted, marked seen, and never rang.
+   */
   subscribe(cb: DmCallListener): Unsubscribe {
     this.listeners.add(cb);
+    const held = this.held;
+    this.held = [];
+    if (held.length > 0) {
+      queueMicrotask(() => {
+        const me = this.ctx.session()?.pubKeyHex;
+        for (const h of held) {
+          if (!this.listeners.has(cb) || h.me !== me || !isFreshCallMessage(h.msg.sentAt)) continue;
+          try { cb(h.msg); } catch (e) { console.warn('[dm-call] listener failed', e); }
+        }
+      });
+    }
     return () => { this.listeners.delete(cb); };
   }
 
@@ -156,7 +181,12 @@ export class DmCallsModule {
     if (!peer || peer === me) return;
     // An inbound message must be addressed to us, not merely delivered to us.
     if (senderPubkey !== me && pTag !== me) return;
-    const incoming = { ...parsed, from: senderPubkey, sentAt: message.created_at, peer };
+    const incoming: Incoming = { ...parsed, from: senderPubkey, sentAt: message.created_at, peer };
+    if (this.listeners.size === 0) {
+      this.held.push({ me, msg: incoming });
+      if (this.held.length > HELD_MAX) this.held.shift();
+      return;
+    }
     for (const cb of this.listeners) {
       try { cb(incoming); } catch (e) { console.warn('[dm-call] listener failed', e); }
     }

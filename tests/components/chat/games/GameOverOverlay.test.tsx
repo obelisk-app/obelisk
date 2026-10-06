@@ -1,3 +1,4 @@
+import '@tests/support/game-engines';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import GameOverOverlay from '@/components/chat/games/GameOverOverlay';

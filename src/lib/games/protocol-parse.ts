@@ -4,7 +4,7 @@
  * from `protocol.ts`.
  */
 import { KIND_GAME } from '@/utils/nip-kinds';
-import { MAX_GARBAGE_LINES } from './stacker/engine';
+import { MAX_GARBAGE_LINES } from './stacker/dimensions';
 import type { GameEvent, GameOp, ParsedGameEvent, SeatSpec } from './protocol-types';
 
 function tag(tags: string[][], name: string): string | undefined {

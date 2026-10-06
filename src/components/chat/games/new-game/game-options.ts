@@ -1,5 +1,5 @@
 import type { CRSizeKey } from '@/lib/games/chain-reaction';
-import { normalizeSeed } from '@/lib/games/vesta/definition';
+import { normalizeSeed } from '@/lib/games/vesta/resume';
 import type { GameInfo } from '@/lib/games/catalog';
 
 export const TIMEOUTS: Array<{ label: string; seconds: number }> = [

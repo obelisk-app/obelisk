@@ -15,7 +15,8 @@
  */
 import { create } from 'zustand';
 import type { ParsedGameEvent } from '@/lib/games/protocol';
-import { replayLog, applyWaitingExpiry, type GameSession } from '@/lib/games/session';
+import { replayLog, applyWaitingExpiry, pendingEngine, type GameSession } from '@/lib/games/session';
+import { onGameDefLoaded, requestGameDef } from '@/lib/games/registry';
 
 interface GamesStore {
   /** gameId → its log, unsorted. `replayLog` owns ordering. */
@@ -24,6 +25,12 @@ interface GamesStore {
   channelOf: Record<string, string>;
   /** Table currently open in the game modal. */
   openGameId: string | null;
+  /**
+   * Bumped each time a game's rules engine finishes loading. A table whose
+   * engine was still downloading replayed to null; selecting this makes its
+   * readers derive it again once the engine is here.
+   */
+  enginesLoaded: number;
 
   ingest: (ev: ParsedGameEvent) => void;
   ingestMany: (evs: readonly ParsedGameEvent[]) => void;
@@ -49,6 +56,7 @@ export const useGamesStore = create<GamesStore>((set) => ({
   logs: {},
   channelOf: {},
   openGameId: null,
+  enginesLoaded: 0,
 
   ingest: (ev) => set((s) => mergeEvents(s, [ev])),
   ingestMany: (evs) => set((s) => mergeEvents(s, evs)),
@@ -72,6 +80,10 @@ export const useGamesStore = create<GamesStore>((set) => ({
     set({ logs: {}, channelOf: {}, openGameId: null });
   },
 }));
+
+onGameDefLoaded(() => {
+  useGamesStore.setState((s) => ({ enginesLoaded: s.enginesLoaded + 1 }));
+});
 
 function mergeEvents(
   s: { logs: Record<string, ParsedGameEvent[]>; channelOf: Record<string, string> },
@@ -123,7 +135,10 @@ function mergeEvents(
 const BASE = new WeakMap<readonly ParsedGameEvent[], GameSession | null>();
 const EXPIRED = new WeakMap<readonly ParsedGameEvent[], GameSession>();
 
-/** Rebuild one table. Returns `null` until its `create` event has arrived. */
+/**
+ * Rebuild one table. Returns `null` until its `create` event has arrived and
+ * its game's engine has loaded, and for a game this client does not know.
+ */
 export function selectSession(
   state: { logs: Record<string, ParsedGameEvent[]> },
   gameId: string,
@@ -134,6 +149,15 @@ export function selectSession(
 
   let base = BASE.get(log);
   if (base === undefined) {
+    // The engine for this table is still downloading: say "not yet" without
+    // caching it, and make sure the download is on its way. Reading a table
+    // is what fetches its game's rules (registry.ts); `enginesLoaded` brings
+    // the reader back when they land.
+    const waiting = pendingEngine(log);
+    if (waiting) {
+      requestGameDef(waiting);
+      return null;
+    }
     base = replayLog(log);
     // Sessions are now shared between renders and between cards, so a consumer
     // mutating one would corrupt everybody's view without changing the object

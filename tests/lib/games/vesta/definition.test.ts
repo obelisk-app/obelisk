@@ -1,3 +1,4 @@
+import '@tests/support/game-engines';
 import { describe, it, expect } from 'vitest';
 import { createGame, applyMove } from 'vesta';
 import { vesta, normalizeSeed, readResumeState, playerCountOf } from '@/lib/games/vesta/definition';

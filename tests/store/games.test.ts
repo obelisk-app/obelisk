@@ -1,3 +1,4 @@
+import '@tests/support/game-engines';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useGamesStore, selectSession, selectChannelSessions } from '@/store/games';
 import { buildCreate, buildGameOp, parseGameEvent, type GameEvent, type ParsedGameEvent } from '@/lib/games/protocol';

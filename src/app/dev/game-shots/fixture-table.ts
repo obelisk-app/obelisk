@@ -6,6 +6,11 @@
  * `fixtures.ts`.
  */
 import { deriveSession, type GameSession } from '@/lib/games/session';
+import { registerGameDef } from '@/lib/games/registry';
+import type { GameDefinition } from '@/lib/games/types';
+import { chainReaction } from '@/lib/games/chain-reaction';
+import { vesta } from '@/lib/games/vesta/definition';
+import { stacker } from '@/lib/games/stacker/definition';
 import {
   buildCreate,
   buildGameOp,
@@ -14,6 +19,10 @@ import {
   type ParsedGameEvent,
   type SeatSpec,
 } from '@/lib/games/protocol';
+
+// The harness replays synchronously, so it installs every engine up front.
+// (Dev only: the app loads each engine on demand, see registry.ts.)
+for (const def of [chainReaction, vesta, stacker]) registerGameDef(def as unknown as GameDefinition);
 
 const CHANNEL = 'obelisk-guides-channel';
 

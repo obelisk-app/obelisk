@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import type { GameSession } from '@/lib/games/session';
 import { localSeatId, type SeatSpec } from '@/lib/games/protocol';
-import { readResumeState } from '@/lib/games/vesta/definition';
+import { readResumeState } from '@/lib/games/vesta/resume';
 
 export interface Row {
   /** Stable identity while editing; the published seat id is derived at the end. */

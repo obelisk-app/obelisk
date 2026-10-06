@@ -1,3 +1,4 @@
+import '@tests/support/game-engines';
 import { describe, expect, it } from 'vitest';
 import { replayLog } from '@/lib/games/session-replay';
 import * as entry from '@/lib/games/session';

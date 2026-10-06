@@ -1,3 +1,4 @@
+import '@tests/support/game-engines';
 import { act, render, screen } from '@testing-library/react';
 import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
 

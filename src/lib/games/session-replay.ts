@@ -4,7 +4,7 @@
  * `replayLog` and adds the one clock-dependent read on top.
  */
 import { getGameDef } from './registry';
-import { applyMatchEvent, initialMatch } from './stacker/match';
+import type { MatchState } from './stacker/match';
 import type { ParsedGameEvent } from './protocol';
 import type { GameSession } from './session-types';
 import { resolveSeat } from './session-queries';
@@ -48,8 +48,11 @@ export function replayLog(events: readonly ParsedGameEvent[]): GameSession | nul
   const create = log.find((e) => e.op === 'create');
   if (!create || create.op !== 'create') return null;
 
+  // Null for an unknown game, and for a known one whose engine has not
+  // loaded yet: `pendingEngine` (session.ts) tells those apart.
   const def = getGameDef(create.game);
   if (!def) return null;
+  const rules = def.realtime ? def.match : undefined;
 
   const session: GameSession = {
     id: create.gameId,
@@ -164,7 +167,14 @@ export function replayLog(events: readonly ParsedGameEvent[]): GameSession | nul
         session.turnIndex = 0;
         if (def.realtime) {
           // Nobody is "to move" in a real-time match: every board runs at once.
-          session.match = initialMatch(realtimeSeed(session), session.participants);
+          // A real-time definition without its reducer cannot start a match.
+          if (!rules) {
+            session.seats = [];
+            session.participants = [];
+            session.status = 'waiting';
+            break;
+          }
+          session.match = rules.initialMatch(realtimeSeed(session), session.participants) as MatchState;
           session.state = null;
           setTurn(null, ev.createdAt);
           session.startedAt = ev.createdAt;
@@ -232,12 +242,12 @@ export function replayLog(events: readonly ParsedGameEvent[]): GameSession | nul
       case 'attack':
       case 'topout':
       case 'checkpoint': {
-        if (!session.match || session.status !== 'in_progress') break;
+        if (!session.match || !rules || session.status !== 'in_progress') break;
         // Same attribution rule as a turn-based move: an event only speaks for
         // a seat whose controller signed it.
         const seat = resolveSeat(session, ev.pubkey, ev.seat);
         if (!seat || seat !== ev.seat) break;
-        session.match = applyMatchEvent(session.match, { ...ev, at: ev.createdAt } as Parameters<typeof applyMatchEvent>[1]);
+        session.match = rules.applyMatchEvent(session.match, { ...ev, at: ev.createdAt }) as MatchState;
         if (session.match.over) {
           // No winner is only a draw when there was somebody to draw WITH. A
           // solo run ends with nobody winning because nobody else was playing;

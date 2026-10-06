@@ -1,3 +1,4 @@
+import '@tests/support/game-engines';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi, beforeAll } from 'vitest';
 import { createGame, applyMove, type GameState } from 'vesta';

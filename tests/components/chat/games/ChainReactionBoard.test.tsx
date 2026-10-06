@@ -1,3 +1,4 @@
+import '@tests/support/game-engines';
 import { render, screen, act } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import ChainReactionBoard from '@/components/chat/games/ChainReactionBoard';

@@ -1,3 +1,4 @@
+import '@tests/support/game-engines';
 import { describe, it, expect } from 'vitest';
 import { deriveSession, type GameSession } from '@/lib/games/session';
 import { buildCreate, buildGameOp, parseGameEvent, type GameEvent, type ParsedGameEvent } from '@/lib/games/protocol';

@@ -273,7 +273,11 @@ of a fresh board (a serialized state is ~4 KB, comfortably inside one event).
 range, and its default clock), then that game's own options (board size for
 Chain Reaction, seed or a loaded save for Vesta).
 
-Names and icons come from `src/lib/games/catalog.ts`, keyed by game type.
+Names and icons come from `src/lib/games/catalog.ts`, keyed by game type,
+which reads `src/lib/games/game-meta.ts` and never an engine. Each rules
+engine is its own download, fetched by `src/lib/games/registry.ts` the first
+time a table of that game is replayed; until it lands the card shows its
+skeleton.
 Nothing user-facing hardcodes a game's name: the card and the modal both used
 to say "Chain Reaction" outright, which made a Vesta table read as a Chain
 Reaction table everywhere in chat.
@@ -409,6 +413,8 @@ with no file on disk fails `Shot.test.tsx`.
 
 The runtime is game-agnostic. Port the engine from classic (`chess.ts`,
 `tic-tac-toe.ts` are both already pure), make sure it obeys the contract in
-`src/lib/games/types.ts` (no wall clock, no randomness, no mutation) and add
-it to `src/lib/games/registry.ts`. Everything in `session.ts`, `transport.ts`,
+`src/lib/games/types.ts` (no wall clock, no randomness, no mutation), give it
+an entry in `src/lib/games/game-meta.ts` (which the definition spreads) and a
+loader in `src/lib/games/registry.ts`. Never import the engine from anything the
+chat shell loads: `tests/app/app/lazy-mounts.test.tsx` fails if you do. Everything in `session.ts`, `transport.ts`,
 and the store works unchanged; only the board component is new.

@@ -12,6 +12,7 @@ import { useTranslation } from '@/i18n/context';
 import { usePreferences } from '@/hooks/usePreferences';
 import { useDmCallStore } from '@/store/dm-call';
 import { PhoneIcon, VideoIcon } from '@/components/ui/icons';
+import { prefetchDmCallSession } from '@/services/dm-call/load-session';
 
 export function DmCallButtons({ peer, variant = 'desktop' }: { peer: string; variant?: 'desktop' | 'mobile' }) {
   const { t } = useTranslation();
@@ -27,7 +28,8 @@ export function DmCallButtons({ peer, variant = 'desktop' }: { peer: string; var
     ? 'flex w-9 items-center justify-center text-lc-white transition-colors hover:bg-lc-green/15 hover:text-lc-green active:bg-lc-green/25 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-lc-white'
     : 'dm-header-action flex h-9 w-9 items-center justify-center rounded-full disabled:opacity-40';
   return (
-    <span className={group} role="group" aria-label={t('call.voice')}>
+    // Pointing at the buttons starts the call stack's download (load-session.ts).
+    <span className={group} role="group" aria-label={t('call.voice')} onPointerEnter={prefetchDmCallSession} onFocus={prefetchDmCallSession}>
       <button
         type="button"
         className={btn}

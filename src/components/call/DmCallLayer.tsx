@@ -3,7 +3,6 @@
 /**
  * Everything a DM call puts on screen, mounted once per shell:
  *
- * - wires the call store to the bridge (`initDmCalls`) while logged in;
  * - the incoming-call banner (ringing is done by the store, through the
  *   notification stack - `ringIncomingCall`);
  * - the call view, from "Calling…" through the "Call ended" card;
@@ -12,7 +11,6 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { useIsLoggedIn } from '@/services/nostr-bridge';
 import { useAuthor } from '@/hooks/social/useAuthor';
 import { displayNameFor } from '@/utils/identity/display-name';
 import { useTranslation } from '@/i18n/context';
@@ -20,7 +18,7 @@ import { useCallFullscreen } from '@/hooks/useCallFullscreen';
 import { useStreamRef } from '@/hooks/useStreamRef';
 import { formatElapsed } from '@/utils/format/format-elapsed';
 import UserAvatar from '@/components/ui/UserAvatar';
-import { initDmCalls, useDmCallStore, type DmCallStatus } from '@/store/dm-call';
+import { useDmCallStore, type DmCallStatus } from '@/store/dm-call';
 import {
   CloseIcon, FlipCameraIcon, LockIcon, MaximizeIcon, MicIcon, MicOffIcon, MinimizeIcon, PhoneIcon, PhoneOffIcon,
   ScreenShareIcon, ShieldIcon, VideoIcon, VideoOffIcon,
@@ -264,24 +262,11 @@ export function DmCallView() {
   );
 }
 
+/** Listening for calls is not done here: see `useDmCallListener`, mounted by `LazyDmCallLayer`. */
 export function DmCallLayer() {
-  const loggedIn = useIsLoggedIn();
   const status = useDmCallStore((s) => s.status);
   const remoteAudio = useDmCallStore((s) => s.media.remoteAudio);
   const audioRef = useStreamRef<HTMLAudioElement>(remoteAudio);
-
-  useEffect(() => {
-    if (!loggedIn) return;
-    let off: (() => void) | null = null;
-    let cancelled = false;
-    void initDmCalls().then((u) => { if (cancelled) u(); else off = u; });
-    return () => {
-      cancelled = true;
-      off?.();
-      // Logging out or switching account ends whatever call was going on.
-      useDmCallStore.getState().hangup();
-    };
-  }, [loggedIn]);
 
   return (
     <>
