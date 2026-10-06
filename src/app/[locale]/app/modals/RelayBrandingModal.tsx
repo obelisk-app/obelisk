@@ -35,7 +35,7 @@ export function RelayBrandingModal({
     >
         <ModalHeader
           title={t('shell.desktop.branding.title')}
-          subtitle={<>Shown to everyone on {shortHost(relayUrl)} · NIP-78 kind 30078</>}
+          subtitle={t('shell.desktop.branding.subtitle', { host: shortHost(relayUrl) })}
           onClose={onClose}
         />
         <form

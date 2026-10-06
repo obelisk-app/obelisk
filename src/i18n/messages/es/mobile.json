@@ -148,7 +148,7 @@
     "moveDown": "Bajar categoría",
     "deleteCategory": "Eliminar categoría",
     "title": "Categorías y orden",
-    "help": "Diseño compartido por todos en este relay · cualquier admin del grupo puede editarlo · NIP-78 kind 30078.",
+    "help": "Diseño compartido por todos en este relay · solo el operador del relay puede editarlo · NIP-78 kind 30078.",
     "newCategory": "Nueva categoría",
     "categories": "Categorías",
     "empty": "Todavía no hay categorías. Los canales aparecen en “Sin categoría” hasta que agregues una.",

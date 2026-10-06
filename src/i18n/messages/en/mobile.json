@@ -148,7 +148,7 @@
     "moveDown": "Move category down",
     "deleteCategory": "Delete category",
     "title": "Categories & order",
-    "help": "Shared layout for everyone on this relay · any group admin can edit · NIP-78 kind 30078.",
+    "help": "Shared layout for everyone on this relay · only the relay operator can edit · NIP-78 kind 30078.",
     "newCategory": "New category",
     "categories": "Categories",
     "empty": "No categories yet. Channels render under “Uncategorized” until you add one.",

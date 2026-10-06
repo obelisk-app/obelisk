@@ -216,9 +216,11 @@
     },
     "branding": {
       "appearance": "Appearance",
-      "title": "Relay branding"
+      "title": "Relay branding",
+      "subtitle": "Shown to everyone on {host} · NIP-78 kind 30078"
     },
     "layout": {
+      "subtitle": "Shared layout for {host} · operator only · NIP-78 kind 30078",
       "dragCategory": "Drag category",
       "categoryName": "Category name",
       "channelCategory": "Category for {channel}",

@@ -11,7 +11,9 @@ const BASELINE = baseline as Record<string, number>;
  * scanner (src/i18n/hardcoded-strings.ts, rules in src/i18n/hardcoded/)
  * reads JSX text, reader-facing attributes and their expressions, object
  * copy, toasts and dialogs, ternaries, fallbacks, templates, `.ts` files,
- * and prose in src/lib; comments are stripped first. Round 18 widened it
+ * and prose in src/lib; comments are stripped first. JSX text comes from
+ * the syntax tree, so wrapped and inline-split sentences count (round 25;
+ * cases in tests/i18n/hardcoded/jsx-text.test.ts). Round 18 widened it
  * from "JSX text and five quoted attributes" to all of that, and the
  * baseline was regenerated honestly: several hundred strings, owned by the
  * translation waves listed in audits/obelisk/round18/I18N-WAVE2.md.

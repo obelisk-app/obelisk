@@ -216,9 +216,11 @@
     },
     "branding": {
       "appearance": "Aparência",
-      "title": "Identidade do relay"
+      "title": "Identidade do relay",
+      "subtitle": "Aparece para todos em {host} · NIP-78 kind 30078"
     },
     "layout": {
+      "subtitle": "Layout compartilhado para {host} · só o operador pode editar · NIP-78 kind 30078",
       "dragCategory": "Arrastar categoria",
       "categoryName": "Nome da categoria",
       "channelCategory": "Categoria de {channel}",

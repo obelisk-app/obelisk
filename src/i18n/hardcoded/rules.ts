@@ -3,7 +3,9 @@
  * Each rule yields candidate strings with their offsets; `scanFile` runs
  * them through `looksLikeProse` and the `i18n-exempt:` line marker.
  *
- *  1. `jsxText`: text between tags, `<p>No messages yet</p>`.
+ *  1. `jsxText`: text between tags, `<p>No messages yet</p>`, read from the
+ *     syntax tree in `jsx-text.ts` so a paragraph that wraps lines, or is
+ *     split by `{' '}`, `<strong>` or `<a>`, is one candidate.
  *  2. `attr`: a quoted reader-facing attribute, `title="Remove"`.
  *  3. `attrExpr`: any literal inside such an attribute's braces,
  *     `aria-label={muted ? 'Unmute' : 'Mute'}`, templates included.
@@ -20,7 +22,15 @@
  *     exports codes and the app translates them; errors and logs excepted.
  */
 
-export type Candidate = { readonly text: string; readonly index: number; readonly rule: string };
+export type Candidate = {
+  readonly text: string;
+  readonly index: number;
+  readonly rule: string;
+  /** What is judged as prose, when it differs from `text` (JSX runs drop their `{…}`). */
+  readonly probe?: string;
+  /** Zero-based first and last line an `i18n-exempt:` marker may sit on; the finding's own line otherwise. */
+  readonly span?: readonly [number, number];
+};
 
 const READ_ATTRS = 'placeholder|title|aria-label|alt|label|aria-description';
 const ATTR = new RegExp(`\\b(?:${READ_ATTRS})\\s*=\\s*"([^"]{2,})"`, 'g');
@@ -83,8 +93,11 @@ export function candidates(source: string, file: { isLib: boolean; isTsx: boolea
     }
     return out;
   }
-  // `.ts` has no JSX; there the pattern only ever matches generics.
-  if (file.isTsx) for (const m of source.matchAll(JSX_TEXT)) add(m[1], m.index ?? 0, 'jsxText');
+  // `.ts` has no JSX; there the pattern only ever matches generics. In
+  // `.tsx` the syntax tree (`jsx-text.ts`) reads JSX text; this regex stays
+  // for markup the tree does not see as JSX (HTML in a string), and
+  // `scanFile` drops its matches that fall inside a JSX text node.
+  if (file.isTsx) for (const m of source.matchAll(JSX_TEXT)) add(m[1], (m.index ?? 0) + m[0].indexOf(m[1]), 'jsxText');
   for (const m of source.matchAll(ATTR)) add(m[1], m.index ?? 0, 'attr');
   for (const m of source.matchAll(ATTR_EXPR)) {
     const start = (m.index ?? 0) + m[0].length;

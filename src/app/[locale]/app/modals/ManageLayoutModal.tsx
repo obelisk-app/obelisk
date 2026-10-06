@@ -55,7 +55,7 @@ export function ManageLayoutModal({
     >
         <ModalHeader
           title={t('mobile.layout.title')}
-          subtitle={<>Shared layout for {shortHost(relayUrl)} · operator only · NIP-78 kind 30078</>}
+          subtitle={t('shell.desktop.layout.subtitle', { host: shortHost(relayUrl) })}
           onClose={onClose}
         />
         <div className="flex-1 overflow-y-auto p-5 space-y-6">
@@ -113,7 +113,7 @@ export function ManageLayoutModal({
           {/* Uncategorized channels */}
           <section className="space-y-2">
             <div className="text-xs font-bold uppercase tracking-wider text-lc-muted">
-              Uncategorized · {laidOut.uncategorized.length}
+              {t('mobile.layout.uncategorizedCount', { count: laidOut.uncategorized.length })}
             </div>
             <div
               className="space-y-1 rounded-lg"

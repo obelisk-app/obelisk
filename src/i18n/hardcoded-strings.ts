@@ -20,7 +20,8 @@
  *
  * A line carrying `i18n-exempt: <reason>` (in any comment on that line) is
  * not reported: brand names, protocol terms, endonyms, artwork text that
- * feeds the OG snapshots. The reason is mandatory, so the exemption reads
+ * feeds the OG snapshots. JSX text that spans lines is exempt when the
+ * marker is on any of its lines or on its parent's opening tag. The reason is mandatory, so the exemption reads
  * as a decision rather than a suppression.
  */
 
@@ -28,7 +29,8 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { looksLikeProse } from './hardcoded/prose';
 import { stripComments } from './hardcoded/strip';
-import { candidates } from './hardcoded/rules';
+import { candidates, type Candidate } from './hardcoded/rules';
+import { scanJsxText } from './hardcoded/jsx-text';
 
 export { looksLikeProse };
 
@@ -63,12 +65,17 @@ export function scanFile(file: string, source: string): Finding[] {
     return lo + 1;
   };
   const kind = { isLib: file.startsWith('lib/'), isTsx: file.endsWith('.tsx') };
+  const exempt = (c: Candidate, line: number) => {
+    const [from, to] = c.span ?? [line - 1, line - 1];
+    for (let l = from; l <= to; l++) if (EXEMPT.test(lines[l] ?? '')) return true;
+    return false;
+  };
   const seen = new Set<string>();
   const out: Finding[] = [];
-  for (const c of candidates(stripped, kind)) {
-    if (!looksLikeProse(c.text)) continue;
+  for (const c of allCandidates(source, stripped, kind)) {
+    if (!looksLikeProse(c.probe ?? c.text)) continue;
     const line = lineAt(c.index);
-    if (EXEMPT.test(lines[line - 1] ?? '')) continue;
+    if (exempt(c, line)) continue;
     const text = c.text.trim();
     const key = `${line}\u0000${text}`;
     if (seen.has(key)) continue;
@@ -76,6 +83,19 @@ export function scanFile(file: string, source: string): Finding[] {
     out.push({ file, line, text, rule: c.rule });
   }
   return out;
+}
+
+/**
+ * The regex rules over comment-stripped source, plus JSX text from the
+ * syntax tree of the original (a `//` inside JSX text is text, not a
+ * comment). Offsets agree because stripping keeps every character's place.
+ */
+function allCandidates(source: string, stripped: string, kind: { isLib: boolean; isTsx: boolean }): Candidate[] {
+  const regex = candidates(stripped, kind);
+  if (kind.isLib || !kind.isTsx) return regex;
+  const jsx = scanJsxText(source);
+  const inJsxText = (i: number) => jsx.ranges.some(([from, to]) => i >= from && i < to);
+  return [...jsx.candidates, ...regex.filter((c) => c.rule !== 'jsxText' || !inJsxText(c.index))];
 }
 
 export function sourceFiles(dir: string, root = dir): string[] {

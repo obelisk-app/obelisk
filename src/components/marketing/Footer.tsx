@@ -192,7 +192,7 @@ export default function Footer() {
 
         <div className="mt-12 pt-6 border-t border-lc-border/40 flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs text-lc-muted">{t('marketing.footer.tagline')}</p>
-          <p className="text-xs text-lc-muted">© {new Date().getFullYear()} Fabricio Acosta · AGPL-3.0</p>
+          <p className="text-xs text-lc-muted">© {new Date().getFullYear()} Fabricio Acosta · AGPL-3.0</p> {/* i18n-exempt: copyright line, a person's name and a license id */}
         </div>
       </div>
     </footer>
