@@ -1,17 +1,18 @@
 import type { MetadataRoute } from 'next';
 import { listAllGuides, listSlugs, type Guide } from '@/services/guides';
-import { LOCALES } from '@/i18n';
+import { LOCALES, type Locale } from '@/i18n';
 import { guidePath } from '@/utils/guides/guide-urls';
 import { snapshotPaths } from '@/utils/guides/asset-meta';
 import { SITE_URL, absoluteUrl, languageAlternates } from '@/utils/seo/alternates';
 
 const ASSET_REF_RE = /<(?:Diagram|SvgHero)\s+[^>]*name=["']([^"']+)["']/g;
 
-function guideImageUrls(g: Guide): string[] {
+/** The guide's hero and inline diagrams, as the snapshots of its own language. */
+function guideImageUrls(g: Guide, locale: Locale): string[] {
   const names = new Set<string>();
   if (g.frontmatter.heroComponent) names.add(g.frontmatter.heroComponent);
   for (const m of g.content.matchAll(ASSET_REF_RE)) names.add(m[1]);
-  return Array.from(names).map((n) => `${SITE_URL}${snapshotPaths(n).png}`);
+  return Array.from(names).map((n) => `${SITE_URL}${snapshotPaths(n, locale).png}`);
 }
 
 type Freq = NonNullable<MetadataRoute.Sitemap[number]['changeFrequency']>;
@@ -56,7 +57,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         lastModified: g?.frontmatter.updatedAt ? new Date(g.frontmatter.updatedAt) : now,
         changeFrequency: 'monthly',
         priority: 0.6,
-        images: g ? guideImageUrls(g) : undefined,
+        images: g ? guideImageUrls(g, locale) : undefined,
         alternates: { languages: languageAlternates(guidePath(slug)) },
       });
     }

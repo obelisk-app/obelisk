@@ -20,6 +20,7 @@ import type games from './messages/en/games.json';
 import type voice from './messages/en/voice.json';
 import type admin from './messages/en/admin.json';
 import type guides from './messages/en/guides.json';
+import type help from './messages/en/help.json';
 import type mediaKit from './messages/en/mediaKit.json';
 import type errors from './messages/en/errors.json';
 import type { Locale } from './index';
@@ -41,6 +42,7 @@ export type AppMessages = {
   voice: typeof voice;
   admin: typeof admin;
   guides: typeof guides;
+  help: typeof help;
   mediaKit: typeof mediaKit;
   errors: typeof errors;
 };

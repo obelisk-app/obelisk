@@ -12,6 +12,7 @@ import {
   type RelayRole,
   type RelayRoles,
 } from '@/services/relay-roles';
+import { errorText } from '@/utils/errors/error-text';
 
 /**
  * The editable role catalog behind RelayRolesAdminModal: the draft ladder,
@@ -49,7 +50,7 @@ export function useRelayRolesDraft(relayUrl: string, roles: RelayRoles) {
       await action();
       setMessage(label);
     } catch (error) {
-      setMessage(error instanceof Error && error.message ? error.message : t('admin.roles.unreachable'));
+      setMessage(errorText(t, error, 'admin.roles.publishFailed'));
     } finally {
       setBusy(false);
     }

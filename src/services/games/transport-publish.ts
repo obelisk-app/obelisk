@@ -5,6 +5,7 @@
  */
 import type { Event as NostrEvent } from 'nostr-tools';
 import { KIND_GAME } from '@/utils/nip-kinds';
+import { CodedError } from '@/utils/errors/codes';
 import { ingestGameEvent } from './ingest';
 import {
   buildCreate,
@@ -101,9 +102,11 @@ export async function publishCreate(
 
     const recovered = await findCreateByNonce(channelId, nonce);
     if (recovered) return recovered;
-    throw new Error(
-      'The relay never confirmed the table. It may still appear in a moment; '
-      + `check the channel before creating another. (${message})`,
+    // The reader sees `errors.codes.game-unconfirmed`; the English, with the
+    // relay's own words, stays on the message for the console.
+    throw new CodedError(
+      'game-unconfirmed',
+      `The relay never confirmed the table; it may still appear. (${message})`, // i18n-exempt: developer message of the game-unconfirmed CodedError
     );
   }
 }

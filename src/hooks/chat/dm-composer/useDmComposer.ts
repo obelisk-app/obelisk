@@ -20,6 +20,7 @@ import {
   type PendingFile,
   type PendingVoice,
 } from '@/utils/chat/dm/pending';
+import { errorText } from '@/utils/errors/error-text';
 
 /**
  * Draft, pending encrypted uploads, voice note and picker state of a DM
@@ -114,12 +115,12 @@ export function useDmComposer(peer: string, inputRef: RefObject<HTMLInputElement
     // Optimistic, like the text path: the bridge inserts a pending bubble per
     // message and each bubble carries its own retry.
     if (voice?.meta) {
-      void nostrActions.sendDirectFile(peer, voice.meta).catch((err) => setError((err as Error).message));
+      void nostrActions.sendDirectFile(peer, voice.meta).catch((err) => setError(errorText(t, err, 'dm.file.sendFailed')));
       release(voice.previewUrl);
       setVoice(null);
     }
     for (const f of ready) {
-      void nostrActions.sendDirectFile(peer, f.meta!).catch((err) => setError((err as Error).message));
+      void nostrActions.sendDirectFile(peer, f.meta!).catch((err) => setError(errorText(t, err, 'dm.file.sendFailed')));
       release(f.previewUrl);
     }
     setFiles((cur) => cur.filter((f) => !f.meta));

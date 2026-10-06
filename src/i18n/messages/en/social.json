@@ -199,5 +199,6 @@
   "followingN": "{count} following",
   "packPeopleCount": "{count, plural, one {# person} other {# people}}",
   "packAlreadyCount": "{count} already followed",
-  "minReadCount": "{minutes} min read"
+  "minReadCount": "{minutes} min read",
+  "uploadFailed": "Could not upload the file."
 }

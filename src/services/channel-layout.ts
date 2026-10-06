@@ -14,7 +14,6 @@
  * at the bottom. Categories with no children still render (operator can
  * drop channels into them).
  */
-import { translate } from '@/i18n/runtime';
 import { CodedError } from '@/utils/errors/codes';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import { getBridge, getBridgeImpl, cacheGet, cacheSet } from '@/services/nostr-bridge';
@@ -52,8 +51,9 @@ function parseLayout(ev: NostrEvent): ChannelLayout {
     if (t[0] === 'category' && t[1] && t[2] !== undefined) {
       categories.push({
         id: t[1],
-        // A category saved with an empty name; the app shell's translator names it.
-        name: t[2] || translate('errors.status.untitledCategory'),
+        // Kept as it came, even empty: `categoryLabel` names an empty one
+        // at render time, in the reader's current language.
+        name: t[2],
         position: parseInt(t[3] ?? '0', 10) || 0,
       });
     } else if (t[0] === 'channel' && t[1]) {

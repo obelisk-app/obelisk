@@ -16,7 +16,8 @@ vi.mock('@/services/dm-attachments', async (orig) => ({
 }));
 
 import { DmComposer } from '@/components/chat/DmComposer';
-import { LocaleProvider } from '@tests/support/intl';
+import { LocaleProvider, translator } from '@tests/support/intl';
+import { CodedError } from '@/utils/errors/codes';
 import { useDMStore } from '@/store/dm';
 
 const PEER = 'b'.repeat(64);
@@ -62,6 +63,17 @@ describe('DmComposer', () => {
     expect(actions.sendDirectFile).toHaveBeenCalledWith(PEER, meta('cat.png'));
     expect(actions.sendDirectMessage).toHaveBeenCalledWith(PEER, 'look', []);
     expect(screen.queryByTestId('dm-pending-file')).toBeNull();
+  });
+
+  it('says a failed file send in the reader\'s language, with its code when it has one', async () => {
+    encryptAndUploadDmFile.mockResolvedValue(meta('cat.png'));
+    actions.sendDirectFile.mockRejectedValueOnce(new CodedError('files-need-nip17', 'encrypted files need NIP-17'));
+    const { container } = render(<LocaleProvider initialLocale="es"><DmComposer peer={PEER} variant="desktop" /></LocaleProvider>);
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [new File(['px'], 'cat.png', { type: 'image/png' })] } });
+    await waitFor(() => expect(screen.getByTestId('dm-send')).not.toBeDisabled());
+    fireEvent.submit(screen.getByTestId('dm-composer'));
+    expect(await screen.findByText(translator('es')('errors.codes.files-need-nip17'))).toBeInTheDocument();
   });
 
   it('refuses a file type outside the allowlist without uploading', () => {

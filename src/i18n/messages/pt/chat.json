@@ -104,7 +104,20 @@
     "noMatchTags": "Nenhuma publicação tem as etiquetas escolhidas.",
     "createFromSearch": "Criar “{query}”",
     "addTag": "+ Adicionar etiqueta",
-    "maxTags": "Limite de {count} etiquetas atingido."
+    "maxTags": "Limite de {count} etiquetas atingido.",
+    "colors": {
+      "lime": "Lima",
+      "cyan": "Ciano",
+      "violet": "Violeta",
+      "amber": "Âmbar",
+      "rose": "Rosa",
+      "emerald": "Esmeralda",
+      "sky": "Azul-celeste",
+      "orange": "Laranja",
+      "fuchsia": "Fúcsia",
+      "slate": "Ardósia"
+    },
+    "createFailed": "Não foi possível criar a publicação."
   },
   "composer": {
     "dropFiles": "Solte arquivos para anexar",
@@ -234,10 +247,12 @@
     "errorNoSigner": "Nenhum assinante ativo: faça login primeiro.",
     "sent": "⚡ Você enviou {amount} sats para {name}",
     "send": "Zap de {amount} sats",
-    "markerFailed": "O pagamento deu certo, mas a marca de zap do grupo não foi publicada: {error}",
+    "markerFailed": "O pagamento deu certo, mas a marca de zap do grupo não foi publicada. {error}",
     "sendAmount": "⚡ Enviar {amount} sats",
     "title": "Zap para {name}",
-    "noBridge": "o app não estava conectado ao relay"
+    "noBridge": "O app não estava conectado ao relay.",
+    "failed": "O zap não foi enviado.",
+    "markerRejected": "O relay não a aceitou."
   },
   "profilePopover": {
     "zap": "Zap",
@@ -292,12 +307,15 @@
     "self": "Você não pode fazer um zap para si mesmo."
   },
   "relayForm": {
-    "invalidUrl": "URL inválida"
+    "invalidUrl": "URL inválida",
+    "addFailed": "Não foi possível adicionar esse relay."
   },
   "channelSettings": {
     "sfuUrlRequired": "A URL do SFU é obrigatória",
     "notNpub": "Não é um npub",
-    "badMember": "Informe um npub ou uma chave pública hex de 64 caracteres"
+    "badMember": "Informe um npub ou uma chave pública hex de 64 caracteres",
+    "saveFailed": "Não foi possível salvar as configurações do canal.",
+    "memberFailed": "Não foi possível adicionar esse membro."
   },
   "sticker": {
     "open": "Ver detalhes de :{name}:",

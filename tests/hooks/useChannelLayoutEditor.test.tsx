@@ -2,6 +2,12 @@ import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { ChannelLayout } from '@/services/channel-layout';
 import { useChannelLayoutEditor } from '@/hooks/useChannelLayoutEditor';
+import { LocaleProvider } from '@tests/support/intl';
+import type { ReactNode } from 'react';
+
+/** The hook words its errors through next-intl, so it needs a provider. */
+const wrapper = ({ children }: { children: ReactNode }) => <LocaleProvider initialLocale="en">{children}</LocaleProvider>;
+
 
 const emptyLayout: ChannelLayout = { categories: [], channels: [], updatedAt: 0 };
 
@@ -14,6 +20,7 @@ describe('useChannelLayoutEditor', () => {
         [{ id: 'one' }, { id: 'two' }],
         vi.fn(),
       ),
+      { wrapper },
     );
 
     act(() => {
@@ -48,6 +55,7 @@ describe('useChannelLayoutEditor', () => {
     };
     const { result } = renderHook(() =>
       useChannelLayoutEditor('wss://relay.test', layout, [{ id: 'one' }, { id: 'two' }, { id: 'three' }], vi.fn()),
+      { wrapper },
     );
 
     act(() => result.current.placeChannel('one', 'voice', 'three'));
@@ -62,10 +70,19 @@ describe('useChannelLayoutEditor', () => {
       channels: [],
       updatedAt: 0,
     };
-    const { result } = renderHook(() => useChannelLayoutEditor('wss://relay.test', layout, [], vi.fn()));
+    const { result } = renderHook(() => useChannelLayoutEditor('wss://relay.test', layout, [], vi.fn()), { wrapper });
 
     act(() => result.current.placeCategory('one', 2));
 
     expect(result.current.laidOut.categories.map((category) => category.id)).toEqual(['two', 'three', 'one']);
+  });
+
+  it('says a failed publish in the reader\'s language', async () => {
+    const onSaved = vi.fn();
+    const { result } = renderHook(() => useChannelLayoutEditor('wss://relay.test', emptyLayout, [], onSaved), { wrapper });
+    // Nobody is logged in here, so the publish fails with the bridge's `not-logged-in` code.
+    await act(() => result.current.save());
+    expect(result.current.error).toBe('You are not logged in. Log in and try again.');
+    expect(onSaved).not.toHaveBeenCalled();
   });
 });

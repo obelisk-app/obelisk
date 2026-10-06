@@ -96,7 +96,7 @@ describe('useChannelSettingsForm: metadata', () => {
     editGroupMetadata.mockRejectedValueOnce(new Error('restricted: not an admin'));
     const { result, onSaved } = await mount();
     await act(() => result.current.saveMeta());
-    expect(result.current.metaError).toBe('restricted: not an admin');
+    expect(result.current.metaError).toBe('Could not save the channel settings.');
     expect(onSaved).not.toHaveBeenCalled();
     expect(result.current.savingMeta).toBe(false);
   });
@@ -111,7 +111,8 @@ describe('useChannelSettingsForm: SFU guard', () => {
     expect(fetchSfuInfo).toHaveBeenCalledTimes(1);
     expect(editGroupMetadata).not.toHaveBeenCalled();
     expect(publishSfuPin).not.toHaveBeenCalled();
-    expect(result.current.metaError).toBe('sfu unreachable');
+    // Not a VoiceError, so the generic SFU check line, in the reader's language.
+    expect(result.current.metaError).toBe('The SFU did not answer its /info check.');
     expect(onSaved).not.toHaveBeenCalled();
   });
 

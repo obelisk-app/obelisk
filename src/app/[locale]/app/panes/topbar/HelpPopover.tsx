@@ -3,7 +3,7 @@
 import { createPortal } from 'react-dom';
 import { useHintsStore } from '@/store/hints';
 import Button from '@/components/ui/Button';
-import { BookIcon, LayersIcon, SparklesIcon, TerminalIcon, ZapIcon } from '@/components/ui/icons';
+import { BookIcon, LayersIcon, ShieldIcon, SparklesIcon, ZapIcon } from '@/components/ui/icons';
 import { guidePath } from '@/utils/guides/guide-urls';
 import { localizedPath } from '@/utils/seo/alternates';
 import { HELP_TOPICS } from '@/utils/guides/help-topics';
@@ -72,7 +72,7 @@ export function HelpPopover({ onClose }: { onClose: () => void }) {
           className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-lc-green/40 bg-lc-green/10 px-4 py-2 text-xs font-semibold text-lc-green transition-colors hover:border-lc-green/70 hover:bg-lc-green/20"
         >
           <BookIcon size={14} />
-          {t('guides.help.viewMore')}
+          {t('help.viewMore')}
         </a>
         {/*
           The in-app hints are one-shot by design, so this is the only
@@ -100,7 +100,9 @@ function HelpTopicIcon({ slug }: { slug: string }) {
   const Icon = slug === 'how-obelisk-works'
     ? LayersIcon
     : slug === 'admin-cli'
-      ? TerminalIcon
+      // "Run a community": moderation, roles and bans. The guide's slug is
+      // older than its copy; the CLI it was named for is gone.
+      ? ShieldIcon
       : slug === 'bitcoin-zaps'
         ? ZapIcon
         : SparklesIcon;

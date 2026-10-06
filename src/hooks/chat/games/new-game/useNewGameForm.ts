@@ -10,6 +10,7 @@ import { localSeatId, gameMarker } from '@/lib/games/protocol';
 import { useGamesStore } from '@/store/games';
 import { useMyPubkey } from '@/services/nostr-bridge';
 import { gameCreateOptions, type ResumeSave } from '@/components/chat/games/new-game/game-options';
+import { errorText } from '@/utils/errors/error-text';
 
 /**
  * The new-table form: which game, its options, who plays and the clock, and
@@ -94,7 +95,7 @@ export function useNewGameForm({
       setOpenGame(gameId);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('games.newGame.createFailed'));
+      setError(errorText(t, err, 'games.newGame.createFailed'));
       setBusy(false);
     }
   }

@@ -19,3 +19,17 @@ export function warmBridgeModules(): void {
     await import('@/services/nostr-bridge/client');
   }, 120_000);
 }
+
+/**
+ * The same, for a component that imports the bridge's front door lazily
+ * (the marketing Navbar's Disconnect, `await import('@/services/nostr-bridge')`).
+ * Alone, that first import takes three to four seconds, most of the 5 s a
+ * `waitFor` allows; under a full parallel run it overran it. Warmed here, the
+ * click's import resolves from the module cache and the test waits only on
+ * what it asserts.
+ */
+export function warmBridgeFrontDoor(): void {
+  beforeAll(async () => {
+    await import('@/services/nostr-bridge');
+  }, 120_000);
+}

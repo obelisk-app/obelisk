@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { categoryLabel } from '@/utils/chat/category-label';
 import type { JsGroup } from '@/services/nostr-bridge';
 import type { LaidOutSidebar } from '@/services/channel-layout';
 import type { View } from '@/utils/shell/view';
@@ -43,7 +44,7 @@ export function ChannelTree({ laidOut, groupsById, childrenByParent, view, onSel
       {laidOut.categories.map((cat) => (
         <CategorySection
           key={cat.id}
-          name={cat.name}
+          name={categoryLabel(cat.name, t)}
           collapsed={!!collapsed[cat.id]}
           onToggle={() => toggleCollapsed(cat.id)}
           channelCount={cat.channelIds.length}

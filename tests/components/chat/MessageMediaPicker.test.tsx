@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { nostrActions } from '@/services/nostr-bridge';
 import MessageMediaPicker from '@/components/chat/MessageMediaPicker';
 import { useChatStore } from '@/store/chat';
+import { useToastStore } from '@/store/toast';
+import { CodedError } from '@/utils/errors/codes';
 import { LocaleProvider } from '@tests/support/intl';
 
 /** The component reads its copy from the dictionary, so it needs a provider. */
@@ -23,35 +25,37 @@ vi.mock('@/services/nostr-bridge', async (importOriginal) => {
 
 afterEach(() => vi.restoreAllMocks());
 
+const SERVER_MEDIA = {
+  dance: 'https://cdn.example/dance.gif',
+  wave: 'https://cdn.example/wave.webp',
+  stamp: 'https://cdn.example/stamp.webp',
+  applause_copy: 'https://media.giphy.com/media/l3q2XhfQ8oCkm1Ts4/giphy.gif',
+};
+
+/** The picker with server media of every kind, on `initialTab`. */
+function renderWithServerMedia(initialTab?: 'emoji' | 'gif' | 'sticker') {
+  const onPick = vi.fn();
+  useChatStore.getState().setServerEmojis(
+    SERVER_MEDIA,
+    { dance: 'gif', wave: 'emoji', stamp: 'sticker', applause_copy: 'gif' },
+  );
+  renderLocalized(
+    <MessageMediaPicker initialTab={initialTab} onPick={onPick} onClose={() => {}} customEmojis={SERVER_MEDIA} />,
+  );
+  return { onPick };
+}
+
 describe('MessageMediaPicker', () => {
   beforeEach(() => {
     localStorage.clear();
     useChatStore.getState().reset();
   });
 
-  it('separates emoji, GIF, and sticker views', () => {
-    const onPick = vi.fn();
-    useChatStore.getState().setServerEmojis(
-      {
-        dance: 'https://cdn.example/dance.gif',
-        wave: 'https://cdn.example/wave.webp',
-        stamp: 'https://cdn.example/stamp.webp',
-        applause_copy: 'https://media.giphy.com/media/l3q2XhfQ8oCkm1Ts4/giphy.gif',
-      },
-      { dance: 'gif', wave: 'emoji', stamp: 'sticker', applause_copy: 'gif' },
-    );
-    renderLocalized(
-      <MessageMediaPicker
-        onPick={onPick}
-        onClose={() => {}}
-        customEmojis={{
-          dance: 'https://cdn.example/dance.gif',
-          wave: 'https://cdn.example/wave.webp',
-          stamp: 'https://cdn.example/stamp.webp',
-          applause_copy: 'https://media.giphy.com/media/l3q2XhfQ8oCkm1Ts4/giphy.gif',
-        }}
-      />,
-    );
+  // One view per test: these used to be a single test that walked all three
+  // tabs, about a second of jsdom accessibility queries on its own and far
+  // more under a full parallel run. Split, each view carries its own share.
+  it('emoji view: server emojis only, the emoji grid and its category bar', () => {
+    renderWithServerMedia();
 
     expect(screen.queryByRole('button', { name: 'Packs' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Create emoji' })).toBeInTheDocument();
@@ -65,12 +69,16 @@ describe('MessageMediaPicker', () => {
     expect(categoryNav).toHaveClass('grid-cols-9');
     expect(categoryNav.compareDocumentPosition(emojiTab) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Close emoji picker' })).not.toBeInTheDocument();
-    const shell = screen.getByTestId('media-picker-shell');
-    const shellClass = shell.className;
-    expect(shell).toHaveClass('h-[520px]', 'w-[600px]');
+    expect(screen.getByTestId('media-picker-shell')).toHaveClass('h-[520px]', 'w-[600px]');
     expect(screen.getByTitle('grinning').parentElement).toHaveClass('grid-cols-12');
     expect(screen.getByText('Smileys & people')).toHaveClass('sticky', 'border-b');
     expect(screen.getByText('Smileys & people').parentElement?.parentElement).toHaveClass('overflow-y-auto');
+  });
+
+  it('GIF view: server and default GIFs, categories, recents, and the same shell size', () => {
+    const { onPick } = renderWithServerMedia();
+    const shellClass = screen.getByTestId('media-picker-shell').className;
+
     fireEvent.click(screen.getByRole('button', { name: 'GIF' }));
     expect(screen.getByRole('button', { name: 'Create GIF' })).toBeInTheDocument();
     expect(screen.getByTestId('media-picker-shell')).toHaveAttribute('class', shellClass);
@@ -98,8 +106,11 @@ describe('MessageMediaPicker', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Trending' }));
     const gifTab = screen.getByRole('button', { name: 'GIF' });
     expect(screen.getByTestId('media-grid').compareDocumentPosition(gifTab) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Stickers' }));
+  it('sticker view: server and default stickers, recents, and the create tile', () => {
+    renderWithServerMedia('sticker');
+
     expect(screen.getByRole('searchbox', { name: 'Search stickers' }).parentElement).toHaveClass('rounded-xl', 'bg-lc-black', 'focus-within:border-lc-green');
     expect(within(screen.getByTestId('media-section-server_stickers')).getByAltText(':stamp:')).toBeInTheDocument();
     const defaultSticker = within(screen.getByTestId('media-section-default_stickers')).getByAltText(':laugh_cry:');
@@ -245,5 +256,18 @@ describe('MessageMediaPicker', () => {
     expect(savePack).not.toHaveBeenCalled();
     expect(screen.getByTestId("media-library-modal")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Favorites" }).some((button) => button.className.includes("text-lc-green"))).toBe(true);
+  });
+
+  it('says why creating media failed instead of failing silently', async () => {
+    useToastStore.getState().clearToasts();
+    vi.spyOn(nostrActions, 'saveMediaFavorites').mockRejectedValue(new CodedError('publish-rejected', 'Relay rejected event (kind 10030). blocked'));
+    renderLocalized(<MessageMediaPicker initialTab="sticker" onPick={() => {}} onClose={() => {}} customEmojis={{}} />);
+
+    const input = document.querySelector<HTMLInputElement>('input[type="file"]');
+    fireEvent.change(input!, { target: { files: [new File(['image'], 'cat.webp', { type: 'image/webp' })] } });
+
+    await waitFor(() => expect(useToastStore.getState().toasts).toHaveLength(1));
+    expect(useToastStore.getState().toasts[0]).toMatchObject({ title: "Couldn't upload media.", body: 'No relay accepted this.' });
+    expect(screen.queryByTestId('media-library-modal')).not.toBeInTheDocument();
   });
 });

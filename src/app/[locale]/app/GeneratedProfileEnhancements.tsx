@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { nsecToBytes } from '@nostr-wot/data';
 import { randomProfileName } from '@/utils/identity/display-name';
+import { errorText } from '@/utils/errors/error-text';
 
 type ProfileDraft = { name?: string; about?: string; picture?: string; banner?: string };
 
@@ -160,7 +161,7 @@ export default function GeneratedProfileEnhancements({
           // input. The upload reaches publish through the draft instead.
           onDraftChange({ [kind]: url });
         } catch (uploadError) {
-          error.textContent = uploadError instanceof Error ? uploadError.message : t('shell.login.profile.uploadFailed');
+          error.textContent = errorText(t, uploadError, 'shell.login.profile.uploadFailed');
           if (prompt) prompt.textContent = kind === 'picture' ? t('shell.login.profile.retry') : t('shell.login.profile.retryBanner');
         } finally {
           if (input) input.disabled = false;

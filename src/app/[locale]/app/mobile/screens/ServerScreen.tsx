@@ -16,6 +16,7 @@ import {
 } from '@/services/nostr-bridge';
 import { applyLayout } from '@/services/channel-layout';
 import { useTranslations } from 'next-intl';
+import { categoryLabel } from '@/utils/chat/category-label';
 import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
 import { type ScreenName } from '@/utils/shell/mobile/url-state';
 import { MobileServerBanner, MobileServerRail } from '../MobileServerRail';
@@ -169,7 +170,7 @@ export function ServerScreen({
                 className="channel-section-label collapsible"
                 onClick={() => setCollapsedCats((c) => ({ ...c, [cat.id]: !c[cat.id] }))}
               >
-                <span>{cat.name} · {list.length}</span>
+                <span>{categoryLabel(cat.name, t)} · {list.length}</span>
                 <span className={`cat-caret ${collapsed ? '' : 'expanded'}`} aria-hidden="true">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 6 15 12 9 18" /></svg>
                 </span>

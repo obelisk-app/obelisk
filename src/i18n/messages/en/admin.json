@@ -59,7 +59,8 @@
     "tooMany": "A relay can define up to {max} roles.",
     "saved": "Roles saved.",
     "granted": "Granted “{name}”.",
-    "revoked": "Revoked “{name}”."
+    "revoked": "Revoked “{name}”.",
+    "publishFailed": "Could not publish the roles."
   },
   "bulk": {
     "confirmRemove": "Remove {count} entries?",

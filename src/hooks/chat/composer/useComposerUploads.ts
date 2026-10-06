@@ -4,6 +4,7 @@ import type { MessageSticker } from '@/utils/media-tags/sticker-tags';
 import type { MessageVoiceNote } from '@/utils/media-tags/voice-note-tags';
 import { appendMediaUrls } from './draft-text';
 import { MAX_COMPOSER_ATTACHMENTS } from './types';
+import { errorText } from '@/utils/errors/error-text';
 
 export interface ComposerUploadTargets {
   setDraft: Dispatch<SetStateAction<string>>;
@@ -34,7 +35,7 @@ export function useComposerUploads({ setDraft, setDraftSticker, setDraftVoiceNot
       const urls = await Promise.all(batch.map((f) => uploadToBlossom(f)));
       setDraft((d) => appendMediaUrls(d, urls));
     } catch (err) {
-      setSendError((err as Error).message || t('chat.composer.uploadFailed'));
+      setSendError(errorText(t, err, 'chat.composer.uploadFailed'));
     } finally {
       setUploading(false);
     }
@@ -51,7 +52,7 @@ export function useComposerUploads({ setDraft, setDraftSticker, setDraftVoiceNot
       setDraftSticker(null);
       setDraftVoiceNote({ url, durationSeconds });
     } catch (err) {
-      setSendError((err as Error).message || t('chat.composer.uploadFailed'));
+      setSendError(errorText(t, err, 'chat.composer.uploadFailed'));
     } finally {
       setUploading(false);
     }

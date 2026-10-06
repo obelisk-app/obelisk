@@ -1,0 +1,25 @@
+{
+  "title": "Como podemos ajudar?",
+  "subtitle": "Comece pelo básico ou vá direto ao assunto que você precisa.",
+  "back": "← Voltar ao Obelisk",
+  "all": "Ver todos os guias →",
+  "viewMore": "Ver mais guias",
+  "topics": {
+    "start": {
+      "title": "Primeiros passos",
+      "description": "Entenda o que é o Obelisk e como funciona a sua identidade Nostr."
+    },
+    "how": {
+      "title": "Como o Obelisk funciona",
+      "description": "Entenda grupos, relays, mensagens e privacidade."
+    },
+    "community": {
+      "title": "Administrar uma comunidade",
+      "description": "Modere um grupo com os papéis, expulsões e bans do NIP-29."
+    },
+    "payments": {
+      "title": "Pagamentos e zaps",
+      "description": "Mande pagamentos Lightning sem sair da conversa."
+    }
+  }
+}

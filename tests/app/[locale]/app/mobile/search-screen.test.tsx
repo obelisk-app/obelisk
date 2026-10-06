@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { CodedError } from '@/utils/errors/codes';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { LocaleProvider } from '@tests/support/intl';
 import { useChatStore } from '@/store/chat';
@@ -151,11 +152,20 @@ describe('mobile SearchScreen', () => {
   });
 
   it('surfaces a search error', async () => {
-    mockSearchMessages.mockRejectedValue(new Error('Search timed out. Try again.'));
+    mockSearchMessages.mockRejectedValue(new CodedError('search-timeout', 'search timed out'));
     const { input } = renderScreen();
     await type(input, 'boom');
     await waitFor(() => expect(screen.getByTestId('mobile-search-error').textContent)
-      .toContain('Search timed out'));
+      .toContain('Search timed out. Try again.'));
+  });
+
+  it('says an uncoded search failure in the reader\'s language, not the relay\'s', async () => {
+    mockSearchMessages.mockRejectedValue(new Error('ERROR: bad query syntax near "boom"'));
+    const { input } = renderScreen();
+    await type(input, 'boom');
+    await waitFor(() => expect(screen.getByTestId('mobile-search-error').textContent)
+      .toContain('Search failed. Try again.'));
+    expect(screen.getByTestId('mobile-search-error').textContent).not.toContain('bad query');
   });
 
   it('reports an unresolvable token', async () => {

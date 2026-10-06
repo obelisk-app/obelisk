@@ -230,7 +230,8 @@
       "publish": "Publicar diseño",
       "grabChannel": "Agarrar el canal {name}",
       "grabCategory": "Agarrar la categoría {name}",
-      "uncategorizedOption": "(sin categoría)"
+      "uncategorizedOption": "(sin categoría)",
+      "publishFailed": "No se pudo publicar el diseño."
     },
     "me": {
       "profile": "Perfil",
@@ -329,7 +330,8 @@
     "noNip50": "Este relay no admite búsqueda del lado del servidor, así que solo se revisaron los mensajes recientes.",
     "loadMore": "Cargar más resultados",
     "localFilterNote": "Algunos términos se filtraron en este dispositivo.",
-    "scopeThisRelay": "en {server}"
+    "scopeThisRelay": "en {server}",
+    "failed": "La búsqueda falló. Probá de nuevo."
   },
   "hints": {
     "gotIt": "Entendido",
@@ -441,7 +443,9 @@
       "copied": "Copiado",
       "copyFailed": "No se pudo copiar: seleccioná la URI de abajo",
       "fallbackHint": "Alternativa: copiala y después, en Amber, abrí New application → Paste from clipboard."
-    }
+    },
+    "keyLoginFailed": "No se pudo iniciar sesión con esa clave.",
+    "finishFailed": "No se pudo terminar de configurar tu cuenta. Probá de nuevo."
   },
   "channel": {
     "create": {
@@ -452,7 +456,9 @@
       "help": "Los canales son públicos y abiertos por defecto: cualquiera que el relay acepte puede leer y publicar. Podés restringirlo después en <settings></settings>.",
       "nameOn": "Nombre del canal · en {relay}",
       "examplePlaceholder": "general"
-    }
+    },
+    "untitledCategory": "Sin título",
+    "createFailed": "No se pudo crear el canal."
   },
   "status": {
     "offline": {

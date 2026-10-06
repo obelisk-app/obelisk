@@ -104,7 +104,20 @@
     "noMatchTags": "Ninguna publicación tiene las etiquetas elegidas.",
     "createFromSearch": "Crear “{query}”",
     "addTag": "+ Agregar etiqueta",
-    "maxTags": "Llegaste al máximo de {count} etiquetas."
+    "maxTags": "Llegaste al máximo de {count} etiquetas.",
+    "colors": {
+      "lime": "Lima",
+      "cyan": "Cian",
+      "violet": "Violeta",
+      "amber": "Ámbar",
+      "rose": "Rosa",
+      "emerald": "Esmeralda",
+      "sky": "Celeste",
+      "orange": "Naranja",
+      "fuchsia": "Fucsia",
+      "slate": "Pizarra"
+    },
+    "createFailed": "No se pudo crear la publicación."
   },
   "composer": {
     "dropFiles": "Soltá archivos para adjuntar",
@@ -234,10 +247,12 @@
     "errorNoSigner": "No hay un firmante activo: iniciá sesión primero.",
     "sent": "⚡ Enviaste {amount} sats a {name}",
     "send": "Zap de {amount} sats",
-    "markerFailed": "El pago salió bien, pero no se publicó la marca de zap del grupo: {error}",
+    "markerFailed": "El pago salió bien, pero no se publicó la marca de zap del grupo. {error}",
     "sendAmount": "⚡ Enviar {amount} sats",
     "title": "Zap a {name}",
-    "noBridge": "la app no estaba conectada al relay"
+    "noBridge": "La app no estaba conectada al relay.",
+    "failed": "El zap no se pudo enviar.",
+    "markerRejected": "El relay no la aceptó."
   },
   "profilePopover": {
     "zap": "Zap",
@@ -292,12 +307,15 @@
     "self": "No podés hacerte un zap a vos mismo."
   },
   "relayForm": {
-    "invalidUrl": "URL inválida"
+    "invalidUrl": "URL inválida",
+    "addFailed": "No se pudo agregar ese relay."
   },
   "channelSettings": {
     "sfuUrlRequired": "Falta la URL del SFU",
     "notNpub": "No es un npub",
-    "badMember": "Ingresá un npub o una clave pública hex de 64 caracteres"
+    "badMember": "Ingresá un npub o una clave pública hex de 64 caracteres",
+    "saveFailed": "No se pudo guardar la configuración del canal.",
+    "memberFailed": "No se pudo agregar a ese miembro."
   },
   "sticker": {
     "open": "Ver detalles de :{name}:",

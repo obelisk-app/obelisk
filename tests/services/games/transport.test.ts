@@ -115,8 +115,10 @@ describe('publishing a game event when the relay never answers', () => {
 
     it('says so plainly when the table really did not land', async () => {
       publishEvent.mockRejectedValue(new Error('publish timed out'));
-      await expect(publishCreate(CH, { game: 'stacker', turnTimeoutS: 0 }, ))
-        .rejects.toThrow(/never confirmed/i);
+      const failure = publishCreate(CH, { game: 'stacker', turnTimeoutS: 0 });
+      await expect(failure).rejects.toThrow(/never confirmed/i);
+      // The modal reads the code, in the reader's language, not this English.
+      await expect(failure).rejects.toMatchObject({ code: 'game-unconfirmed' });
     }, 10000);
   });
 });

@@ -112,7 +112,7 @@ describe('MobileComposer', () => {
     fireEvent.change(screen.getByTestId('composer-input'), { target: { value: 'gm' } });
     fireEvent.click(screen.getByTestId('mobile-composer-post'));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('no relay accepted it');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not publish to the feed relays.');
     expect(onPublished).not.toHaveBeenCalled();
   });
 

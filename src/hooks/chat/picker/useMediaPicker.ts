@@ -12,6 +12,10 @@ import type { MediaCategory, MediaEntry, MediaPickerTab, RecentMediaEntry } from
 import { loadRecentMedia, saveRecentMedia } from '@/services/recent-media';
 import { useGiphyResults } from './useGiphyResults';
 import { emojiTabMaps, personalMediaEntries, serverMediaEntries, visibleMediaSections } from '@/utils/chat/picker/media-entries';
+import { useTranslations } from 'next-intl';
+import { errorReason } from '@/utils/errors/error-text';
+import { useToastStore } from '@/store/toast';
+import { CodedError } from '@/utils/errors/codes';
 
 /**
  * State and actions of the media picker: tab, category and query; the
@@ -29,6 +33,7 @@ export function useMediaPicker({
   customEmojis: CustomEmojiMap;
   onPick: (emoji: string, custom?: PickedCustomEmoji, kind?: MediaPickerTab) => void;
 }) {
+  const t = useTranslations();
   const [tab, setTab] = useState<MediaPickerTab>(initialTab);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<MediaCategory>('Trending');
@@ -62,7 +67,7 @@ export function useMediaPicker({
     if (!file) return;
     setUploading(true);
     try {
-      if (!myPubkey) throw new Error("Log in to create media.");
+      if (!myPubkey) throw new CodedError('not-logged-in', 'Log in to create media.');
       const url = await uploadToBlossom(file);
       const name = normalizeCustomEmojiName(file.name) || kind;
       await nostrActions.saveMediaFavorites({
@@ -73,6 +78,9 @@ export function useMediaPicker({
         packAddresses: mediaFavorites.packAddresses,
       });
       setLibraryOpen("favorites");
+    } catch (err) {
+      console.warn('[media] creating media from a file failed', err);
+      useToastStore.getState().pushToast({ title: t('media.error.upload'), body: errorReason(t, err) });
     } finally {
       setUploading(false);
     }

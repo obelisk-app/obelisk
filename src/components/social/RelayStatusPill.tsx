@@ -40,6 +40,7 @@ import { shortHost } from '@/utils/relay-url/url-host';
 import Text from '@/components/ui/Text';
 import { MenuDivider } from '@/components/ui/menu';
 import TextButton from '@/components/ui/TextButton';
+import { connectionLabel } from '@/utils/shell/relay-status';
 
 const DOT: Record<RelayState, string> = {
   connected: 'bg-lc-green',
@@ -158,7 +159,7 @@ export default function RelayStatusPill({
                   <span className="min-w-0 flex-1 truncate text-[11px] text-lc-white">
                     {shortHost(activeRelay)}
                   </span>
-                  <span className="shrink-0 font-mono text-[10px] text-lc-muted">{connection}</span>
+                  <span className="shrink-0 text-[10px] text-lc-muted" data-testid="relay-status-connection">{connectionLabel(connection, t)}</span>
                 </div>
                 {/* AUTH is the difference between "connected" and "can read
                     this relay's groups": a relay can be up and still hand

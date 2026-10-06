@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { downloadAccountBackup } from '@/services/account-backup';
 import { useTranslations } from 'next-intl';
+import { errorText } from '@/utils/errors/error-text';
 
 export default function AccountBackupExport({ mobile = false }: { mobile?: boolean }) {
   const t = useTranslations();
@@ -21,7 +22,7 @@ export default function AccountBackupExport({ mobile = false }: { mobile?: boole
         : t('settings.preferences.backup.done'));
     } catch (error) {
       setStatus('error');
-      setMessage(error instanceof Error ? error.message : t('settings.preferences.backup.error'));
+      setMessage(errorText(t, error, 'settings.preferences.backup.error'));
     }
   };
 

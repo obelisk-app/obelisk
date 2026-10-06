@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import { npubToHex } from '@nostr-wot/data';
 import { nostrActions, useAdmins, useMembers, type JsForumTag, type JsGroup } from '@/services/nostr-bridge';
+import { errorText } from '@/utils/errors/error-text';
+import { voiceErrorMessage } from '@/utils/voice/error-text';
 
 export type ChannelAccess = 'public' | 'read-only' | 'private';
 export type ChannelKind = JsGroup['kind'];
@@ -129,7 +131,7 @@ export function useChannelSettingsForm(group: JsGroup, onSaved: () => void): Cha
       return info;
     } catch (err) {
       setSfuVerified(null);
-      setMetaError((err as Error).message);
+      setMetaError(voiceErrorMessage(t, err, 'sfuInfoHttp'));
       throw err;
     } finally {
       setSfuChecking(false);
@@ -142,10 +144,12 @@ export function useChannelSettingsForm(group: JsGroup, onSaved: () => void): Cha
     setMetaError(null);
     try {
       // Validate first so a bad SFU URL cannot leave the channel metadata
-      // switched to voice-sfu without a usable pin.
-      const verifiedSfu = channelKind === 'voice-sfu' && sfuUrl.trim()
-        ? await verifySfu()
-        : null;
+      // switched to voice-sfu without a usable pin. `verifySfu` has already
+      // said why it failed.
+      let verifiedSfu: Awaited<ReturnType<typeof verifySfu>> | null = null;
+      if (channelKind === 'voice-sfu' && sfuUrl.trim()) {
+        try { verifiedSfu = await verifySfu(); } catch { return; }
+      }
       await nostrActions.editGroupMetadata({
         groupId: group.id,
         name,
@@ -174,7 +178,7 @@ export function useChannelSettingsForm(group: JsGroup, onSaved: () => void): Cha
       }
       onSaved();
     } catch (err) {
-      setMetaError((err as Error).message);
+      setMetaError(errorText(t, err, 'chat.channelSettings.saveFailed'));
     } finally {
       setSavingMeta(false);
     }
@@ -205,7 +209,7 @@ export function useChannelSettingsForm(group: JsGroup, onSaved: () => void): Cha
       setNewMember('');
       setMakeAdmin(false);
     } catch (err) {
-      setMemberError((err as Error).message);
+      setMemberError(errorText(t, err, 'chat.channelSettings.memberFailed'));
     } finally {
       setMemberBusy(false);
     }

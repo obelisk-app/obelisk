@@ -21,6 +21,7 @@ import type { Event as NostrEvent } from 'nostr-tools';
 import { useTranslations } from 'next-intl';
 import { uploadToBlossom } from '@/services/blossom';
 import { publishNote, publishQuote, publishReply, type Attachment } from '@/services/social/publish';
+import { errorText } from '@/utils/errors/error-text';
 
 export type ComposerMode =
   | { kind: 'note' }
@@ -144,7 +145,7 @@ export function useNoteDraft({
       // every client that doesn't parse imeta.
       setDraft((current) => [current.trim(), ...uploaded.map((a) => a.url)].filter(Boolean).join('\n'));
     } catch (uploadError) {
-      setError(uploadError instanceof Error ? uploadError.message : t('social.actionFailed'));
+      setError(errorText(t, uploadError, 'social.uploadFailed'));
     } finally {
       setBusy(false);
       if (fileRef.current) fileRef.current.value = '';
@@ -197,7 +198,7 @@ export function useNoteDraft({
       setSensitive(false);
       onPublished?.(published);
     } catch (publishError) {
-      setError(publishError instanceof Error ? publishError.message : t('social.actionFailed'));
+      setError(errorText(t, publishError, 'social.actionFailed'));
     } finally {
       setBusy(false);
     }

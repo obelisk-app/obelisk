@@ -13,9 +13,13 @@ vi.mock('@/services/nostr-bridge', async () => {
   });
 });
 const uploadToBlossom = vi.fn();
-vi.mock('@/services/blossom', () => ({ uploadToBlossom: (...a: unknown[]) => uploadToBlossom(...a) }));
+vi.mock('@/services/blossom', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/services/blossom')>()),
+  uploadToBlossom: (...a: unknown[]) => uploadToBlossom(...a),
+}));
 
 import { useProfileEditorForm } from '@/hooks/chat/useProfileEditorForm';
+import { BlossomUploadError } from '@/services/blossom';
 
 const wrapper = ({ children }: { children: ReactNode }) => <LocaleProvider initialLocale="en">{children}</LocaleProvider>;
 const INITIAL = { displayName: 'Alice', name: 'alice', about: 'hi', picture: 'https://cdn/a.png', banner: '', nip05: 'alice@x', lud16: '', website: '' };
@@ -99,7 +103,16 @@ describe('useProfileEditorForm', () => {
     await act(() => result.current.save());
     expect(uploadToBlossom).not.toHaveBeenCalled();
     expect(editUserMetadata).toHaveBeenCalledWith(expect.objectContaining({ picture: 'https://cdn/new.png' }));
-    expect(result.current.error).toBe('relay refused');
+    expect(result.current.error).toBe('Failed to publish');
     expect(result.current.saving).toBe(false);
+  });
+
+  it('names a failed upload as an upload, not a publish', async () => {
+    uploadToBlossom.mockRejectedValueOnce(new BlossomUploadError(['blossom.example: HTTP 413']));
+    const { result } = renderHook(() => useProfileEditorForm(INITIAL, () => {}), { wrapper });
+    act(() => result.current.setPictureFile(file('a.png')));
+    await act(() => result.current.save());
+    expect(result.current.error).toBe('Upload failed.');
+    expect(editUserMetadata).not.toHaveBeenCalled();
   });
 });

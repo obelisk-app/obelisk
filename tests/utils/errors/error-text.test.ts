@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { translator } from '@tests/support/intl';
 import { CodedError, ERROR_CODES, codeOrMessage, errorCodeOf, isErrorCode } from '@/utils/errors/codes';
-import { errorText } from '@/utils/errors/error-text';
+import { errorReason, errorText } from '@/utils/errors/error-text';
 import en from '@/i18n/messages/en/errors.json';
 
 describe('errorCodeOf', () => {
@@ -55,5 +55,14 @@ describe('errorText', () => {
       const t = translator(locale);
       for (const code of ERROR_CODES) expect(errorText(t, code)).not.toContain('errors.codes');
     }
+  });
+});
+
+describe('errorReason', () => {
+  it('gives a coded error\'s sentence and nothing for anything else', () => {
+    const t = translator('pt');
+    expect(errorReason(t, new CodedError('publish-timeout', 'timed out'))).toBe(t('errors.codes.publish-timeout'));
+    expect(errorReason(t, new Error('blocked: not a member'))).toBe('');
+    expect(errorReason(t, 'boom')).toBe('');
   });
 });

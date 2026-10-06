@@ -230,7 +230,8 @@
       "publish": "Publish layout",
       "grabChannel": "Grab channel {name}",
       "grabCategory": "Grab category {name}",
-      "uncategorizedOption": "(uncategorized)"
+      "uncategorizedOption": "(uncategorized)",
+      "publishFailed": "Could not publish the layout."
     },
     "me": {
       "profile": "Profile",
@@ -329,7 +330,8 @@
     "noNip50": "This relay doesn't support server-side search, so only recent messages were scanned.",
     "loadMore": "Load more results",
     "localFilterNote": "Some terms were matched on this device.",
-    "scopeThisRelay": "in {server}"
+    "scopeThisRelay": "in {server}",
+    "failed": "Search failed. Try again."
   },
   "hints": {
     "gotIt": "Got it",
@@ -441,7 +443,9 @@
       "copied": "Copied",
       "copyFailed": "Copy failed: select the URI below",
       "fallbackHint": "Fallback: copy it, then in Amber open New application → Paste from clipboard."
-    }
+    },
+    "keyLoginFailed": "Could not log in with that key.",
+    "finishFailed": "Could not finish setting up your account. Try again."
   },
   "channel": {
     "create": {
@@ -452,7 +456,9 @@
       "help": "Channels are public and open by default: anyone the relay accepts can read and post. You can lock it down later in <settings></settings>.",
       "nameOn": "Channel name · on {relay}",
       "examplePlaceholder": "general"
-    }
+    },
+    "untitledCategory": "Untitled",
+    "createFailed": "Could not create the channel."
   },
   "status": {
     "offline": {

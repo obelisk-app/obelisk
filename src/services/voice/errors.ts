@@ -4,6 +4,7 @@
  * `voice.error.<code>` (`voiceErrorText` in `src/utils/voice/error-text.ts`).
  * A `VoiceError`'s message stays English and is for logs and tests only.
  */
+import { errorCodeOf, type ErrorCode } from '@/utils/errors/codes';
 
 export const VOICE_ERROR_CODES = [
   'notLoggedIn', 'membership', 'notMember',
@@ -52,14 +53,25 @@ export function mediaDeviceProblem(err: unknown): MediaDeviceProblem | null {
 /** NIP-01 machine-readable prefixes a relay puts on a refused event or REQ. */
 const RELAY_REFUSAL = /\b(?:restricted|blocked|auth-required):/;
 
+/** Bridge error codes (`src/utils/errors/codes.ts`) that already say what went wrong in a call. */
+const FROM_BRIDGE_CODE: Partial<Record<ErrorCode, VoiceErrorCode>> = {
+  'not-logged-in': 'notLoggedIn',
+  'auth-refused': 'relayRefused',
+  'not-whitelisted': 'relayRefused',
+};
+
 /**
  * The code to show for `err`: a `VoiceError`'s own code, a media-device
- * problem by name, a relay refusal by its NIP-01 prefix, otherwise
- * `fallback` (what the user was trying to do).
+ * problem by name, a bridge error code that has a voice counterpart, a relay
+ * refusal by its NIP-01 prefix, otherwise `fallback` (what the user was
+ * trying to do).
  */
 export function voiceErrorCode(err: unknown, fallback: VoiceErrorCode): VoiceErrorCode {
   if (err instanceof VoiceError) return err.code;
   const device = mediaDeviceProblem(err);
   if (device) return device;
+  const bridgeCode = errorCodeOf(err);
+  const mapped = bridgeCode ? FROM_BRIDGE_CODE[bridgeCode] : undefined;
+  if (mapped) return mapped;
   return err instanceof Error && RELAY_REFUSAL.test(err.message) ? 'relayRefused' : fallback;
 }

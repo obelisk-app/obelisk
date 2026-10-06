@@ -21,6 +21,7 @@ import { ForwardIcon, HashIcon } from '@/components/ui/icons';
 import Spinner from '@/components/ui/Spinner';
 import EmptyState from '@/components/ui/EmptyState';
 import { MenuItem } from '@/components/ui/menu';
+import { errorReason } from '@/utils/errors/error-text';
 
 /** The forwarded message body. Exported for tests. */
 export function forwardedContent(
@@ -70,7 +71,7 @@ export default function ForwardMessageModal({
       });
       onClose();
     } catch (e) {
-      useToastStore.getState().pushToast({ title: t('chat.message.forwardFailed'), body: e instanceof Error ? e.message : String(e) });
+      useToastStore.getState().pushToast({ title: t('chat.message.forwardFailed'), body: errorReason(t, e) });
       setSending(null);
     }
   };

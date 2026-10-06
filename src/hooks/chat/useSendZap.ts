@@ -13,6 +13,7 @@ import {
   type ZapErrorCode,
   type ZapRecipient,
 } from '@/services/wallet/send-zap';
+import { errorText } from '@/utils/errors/error-text';
 
 const ERROR_KEY = {
   noAddress: 'chat.zap.errorNoAddress',
@@ -56,13 +57,15 @@ export function useSendZap({ recipient, amountSats, comment, lud16, displayName,
         ? {
           title,
           body: t('chat.zap.markerFailed', {
-            error: markerError === MARKER_NO_BRIDGE ? t('chat.zap.noBridge') : markerError,
+            error: markerError === MARKER_NO_BRIDGE
+              ? t('chat.zap.noBridge')
+              : errorText(t, markerError, 'chat.zap.markerRejected'),
           }),
         }
         : { title, body: comment.trim() || '' });
       onSent();
     } catch (e) {
-      setError(e instanceof ZapError ? t(ERROR_KEY[e.code]) : (e as Error).message);
+      setError(e instanceof ZapError ? t(ERROR_KEY[e.code]) : errorText(t, e, 'chat.zap.failed'));
     } finally {
       setBusy(false);
     }

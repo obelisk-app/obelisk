@@ -326,7 +326,7 @@ src/utils/shell/mobile/  (the pure navigation rules, no React)
 │                         buildSeedHistory)
 ├── carousel-slots.ts    (slot roles, swipe axis, rubber band)
 ├── swipe-target.ts      (which touch targets never start a swipe)
-└── labels.ts            (channel header halves, CHANNEL_KIND_LABEL)
+└── labels.ts            (channel header halves, time of day)
 ```
 
 The shell's hooks live in the hooks layer, `src/hooks/app/mobile/`

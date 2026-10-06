@@ -81,7 +81,7 @@ describe('LoginModal: a pasted key', () => {
     await sdkLogin({ method: 'import', nsec: NSEC });
     fireEvent.click(screen.getByRole('button', { name: 'Continue with this key' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('relay unreachable');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not log in with that key.');
     expect(screen.getByRole('button', { name: 'Continue with this key' })).toBeEnabled();
   });
 

@@ -162,7 +162,7 @@ describe('useChannelComposer: send', () => {
     act(() => result.current.onInput('hello', 5));
     await act(() => result.current.send());
     expect(sendMessage).not.toHaveBeenCalled();
-    expect(result.current.sendError).toBe('user rejected');
+    expect(result.current.sendError).toBe('Could not join this channel');
     expect(result.current.draft).toBe('hello');
   });
 
@@ -202,7 +202,7 @@ describe('useChannelComposer: channel change', () => {
     await act(async () => { await Promise.resolve(); });
     uploadToBlossom.mockRejectedValueOnce(new Error('offline'));
     await act(() => result.current.onPickFiles([new File(['x'], 'a.png', { type: 'image/png' })]));
-    expect(result.current.sendError).toBe('offline');
+    expect(result.current.sendError).toBe('Upload failed');
     act(() => result.current.onInput('@al', 3));
     expect(result.current.mentionQuery).toBe('al');
 
@@ -232,7 +232,7 @@ describe('useChannelComposer: attachments', () => {
     uploadToBlossom.mockRejectedValueOnce(new Error('blossom 413'));
     const { result } = mount();
     await act(() => result.current.onPickFiles([new File(['x'], 'a.png', { type: 'image/png' })]));
-    expect(result.current.sendError).toBe('blossom 413');
+    expect(result.current.sendError).toBe('Upload failed');
     expect(result.current.uploading).toBe(false);
     expect(result.current.draft).toBe('');
   });
@@ -252,7 +252,7 @@ describe('useChannelComposer: attachments', () => {
     uploadToBlossom.mockRejectedValueOnce(new Error('offline'));
     const { result } = mount();
     await act(() => result.current.onVoiceRecorded(new File(['x'], 'n.webm', { type: 'audio/webm' }), 3));
-    expect(result.current.sendError).toBe('offline');
+    expect(result.current.sendError).toBe('Upload failed');
     expect(result.current.draftVoiceNote).toBeNull();
   });
 });

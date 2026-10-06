@@ -1,6 +1,8 @@
 'use client';
 
 import { useCallback, useState } from 'react';
+import { useTranslations } from 'next-intl';
+import { errorText } from '@/utils/errors/error-text';
 
 /**
  * Holds a pasted nsec back from the bridge until its owner has read the
@@ -10,6 +12,7 @@ import { useCallback, useState } from 'react';
  * other method passes straight through to `onLogin`.
  */
 export function usePastedKeyStep<A extends { method: string }>(onLogin: (args: A) => Promise<void>) {
+  const t = useTranslations();
   const [pending, setPending] = useState<A | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -28,7 +31,7 @@ export function usePastedKeyStep<A extends { method: string }>(onLogin: (args: A
       await onLogin(pending);
       setPending(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(errorText(t, err, 'shell.login.keyLoginFailed'));
     } finally {
       setBusy(false);
     }

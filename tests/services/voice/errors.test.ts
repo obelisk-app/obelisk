@@ -3,6 +3,7 @@ import {
   VOICE_ERROR_CODES, VoiceError, isVoiceErrorCode, mediaDeviceProblem, voiceErrorCode,
 } from '@/services/voice/errors';
 import { readModule } from '@tests/support/messages';
+import { CodedError } from '@/utils/errors/codes';
 
 describe('voice error codes', () => {
   it('every code has an English message, and every message has a code', () => {
@@ -38,5 +39,11 @@ describe('voice error codes', () => {
     expect(voiceErrorCode(new Error('auth-required: please authenticate'), 'join')).toBe('relayRefused');
     expect(voiceErrorCode(new Error('rpc timeout: produce'), 'screen')).toBe('screen');
     expect(voiceErrorCode('not an error', 'mic')).toBe('mic');
+  });
+
+  it('reads a bridge error code that has a voice counterpart', () => {
+    expect(voiceErrorCode(new CodedError('not-logged-in', 'Not logged in'), 'join')).toBe('notLoggedIn');
+    expect(voiceErrorCode(new CodedError('not-whitelisted', 'not on the list'), 'join')).toBe('relayRefused');
+    expect(voiceErrorCode(new CodedError('signer-timeout', 'signer timed out'), 'join')).toBe('join');
   });
 });

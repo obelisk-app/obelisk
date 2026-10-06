@@ -26,7 +26,7 @@ export const ERROR_CODES = [
   'invalid-relay-url', 'dms-off', 'files-need-nip17', 'search-timeout', 'own-packs-only',
   'profile-load-failed', 'profile-lookup-timeout', 'mute-list-load-failed',
   'invalid-bunker-url', 'bunker-missing-secret', 'bunker-no-session', 'nostrconnect-cancelled',
-  'call-relay-failed',
+  'call-relay-failed', 'game-unconfirmed',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];

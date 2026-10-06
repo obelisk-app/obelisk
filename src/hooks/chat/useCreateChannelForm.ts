@@ -8,6 +8,8 @@
  */
 import { useCallback, useState, type FormEvent } from 'react';
 import { nostrActions } from '@/services/nostr-bridge';
+import { useTranslations } from 'next-intl';
+import { errorText } from '@/utils/errors/error-text';
 
 export interface CreateChannelForm {
   readonly name: string;
@@ -23,6 +25,7 @@ export interface CreateChannelForm {
 }
 
 export function useCreateChannelForm(onCreated: (groupId: string) => void): CreateChannelForm {
+  const t = useTranslations();
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,11 +47,11 @@ export function useCreateChannelForm(onCreated: (groupId: string) => void): Crea
       setName('');
       onCreated(id);
     } catch (err) {
-      setError((err as Error).message);
+      setError(errorText(t, err, 'shell.channel.createFailed'));
     } finally {
       setBusy(false);
     }
-  }, [canSubmit, trimmed, onCreated]);
+  }, [canSubmit, trimmed, onCreated, t]);
 
   return { name, setName, busy, error, canSubmit, submit, reset };
 }

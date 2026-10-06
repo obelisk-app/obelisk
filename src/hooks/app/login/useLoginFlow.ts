@@ -7,6 +7,7 @@ import type { LoginMethodId } from '@nostr-wot/ui';
 import { profileUrl } from '@/services/social/note-links';
 import { publishGeneratedProfile, routeToBridge, type GeneratedProfileDraft, type LoginArgs } from '@/services/login/login-bridge';
 import { isTransientNip46Error } from '@/utils/nip46/signer-link';
+import { errorText } from '@/utils/errors/error-text';
 
 type SdkLogin = {
   pubkey: string;
@@ -87,7 +88,7 @@ export function useLoginFlow({ onSuccess, onClose }: { onSuccess?: () => void; o
       await routeToBridge(generatedLogin);
       onSuccess?.();
     } catch (error) {
-      setFinishError(error instanceof Error ? error.message : String(error));
+      setFinishError(errorText(t, error, 'shell.login.finishFailed'));
       setFinishing(false);
     }
   };

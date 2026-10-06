@@ -30,7 +30,8 @@
     "bunker-missing-secret": "La vinculación con el firmante remoto quedó incompleta. Vinculalo de nuevo.",
     "bunker-no-session": "No hay una sesión de firmante remoto para restaurar. Entrá de nuevo.",
     "nostrconnect-cancelled": "Conexión cancelada.",
-    "call-relay-failed": "No se pudo llegar a un relay para la llamada."
+    "call-relay-failed": "No se pudo llegar a un relay para la llamada.",
+    "game-unconfirmed": "El relay nunca confirmó la mesa. Puede que aparezca en un momento, así que revisá el canal antes de crear otra."
   },
   "activity": {
     "signExtension": {
@@ -91,9 +92,6 @@
     "appData": "Datos de la app",
     "relayList": "Lista de relays",
     "event": "Evento de Nostr"
-  },
-  "status": {
-    "untitledCategory": "Sin título"
   },
   "panel": {
     "title": "Algo se rompió en esta pantalla",

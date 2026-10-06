@@ -59,7 +59,8 @@
     "tooMany": "Um relay pode definir até {max} cargos.",
     "saved": "Cargos salvos.",
     "granted": "“{name}” concedido.",
-    "revoked": "“{name}” revogado."
+    "revoked": "“{name}” revogado.",
+    "publishFailed": "Não foi possível publicar os cargos."
   },
   "bulk": {
     "confirmRemove": "Remover {count} entradas?",

@@ -29,6 +29,7 @@ import {
 } from '@/hooks/chat/useMessageActions';
 import { useTranslations } from 'next-intl';
 import { messageLink } from '@/utils/channel-link';
+import { errorReason } from '@/utils/errors/error-text';
 
 /**
  * Everything a desktop message row can do to its message: react (from
@@ -60,7 +61,7 @@ export function useMessageRowActions({
     } catch (e) {
       useToastStore.getState().pushToast({
         title: t('shell.desktop.message.muteFailed'),
-        body: e instanceof Error ? e.message : String(e),
+        body: errorReason(t, e),
       });
     }
   };

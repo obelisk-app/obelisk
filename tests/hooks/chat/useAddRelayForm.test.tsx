@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { LocaleProvider } from '@tests/support/intl';
+import { LocaleProvider, translator } from '@tests/support/intl';
+import { CodedError } from '@/utils/errors/codes';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const addRelay = vi.fn();
@@ -53,13 +54,14 @@ describe('useAddRelayForm', () => {
     expect(addRelay).not.toHaveBeenCalled();
   });
 
-  it('surfaces the bridge error and does not switch when add fails', async () => {
+  it('says the add failed, in the reader\'s language, and does not switch', async () => {
     addRelay.mockRejectedValueOnce(new Error('relay down'));
     const onAdded = vi.fn();
     const { result } = renderHook(() => useAddRelayForm(onAdded), { wrapper });
     act(() => result.current.setUrl('wss://relay.example'));
     await act(() => result.current.submit());
-    expect(result.current.error).toBe('relay down');
+    // The relay's English stays in the console; the form speaks one language.
+    expect(result.current.error).toBe('Could not add that relay.');
     expect(switchRelay).not.toHaveBeenCalled();
     expect(onAdded).not.toHaveBeenCalled();
     expect(result.current.busy).toBe(false);
@@ -75,6 +77,14 @@ describe('useSuggestedRelayAdd', () => {
     expect(addRelay).toHaveBeenCalledWith('wss://s.example');
     expect(switchRelay).not.toHaveBeenCalled();
     expect(onAdded).toHaveBeenCalledTimes(1);
+  });
+
+  it('reads a coded bridge error in the reader\'s language', async () => {
+    addRelay.mockRejectedValueOnce(new CodedError('invalid-relay-url', 'relay URL must be a public wss:// hostname'));
+    const es = ({ children }: { children: ReactNode }) => <LocaleProvider initialLocale="es">{children}</LocaleProvider>;
+    const { result } = renderHook(() => useSuggestedRelayAdd('wss://10.0.0.1', false, () => {}), { wrapper: es });
+    await act(() => result.current.add());
+    expect(result.current.error).toBe(translator('es')('errors.codes.invalid-relay-url'));
   });
 
   it('is a no-op when the relay is already configured', async () => {

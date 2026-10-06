@@ -17,6 +17,7 @@ vi.mock('@/i18n/navigation', async () => (await import('@tests/support/mocks/i18
 import Navbar from '@/components/marketing/Navbar';
 import { registerBridge, unregisterBridge } from '@/services/nostr-bridge/bridge-slot';
 import { fakeBridge } from '@tests/support/fake-bridge';
+import { warmBridgeFrontDoor } from '@tests/support/warm-bridge-modules';
 import { PROFILE_CACHE_KEY } from '@/hooks/marketing/useSavedAccount';
 import { STORAGE_KEY } from '@/services/nostr-bridge/session-storage';
 
@@ -31,6 +32,9 @@ const renderNavbar = () => render(<LocaleProvider initialLocale="en"><Navbar /><
 
 // Only the disconnect path reaches the bridge, through a dynamic import of
 // the real front door; its getBridge() resolves to this registered fake.
+// The import is paid once, before any test's clock starts.
+warmBridgeFrontDoor();
+
 beforeEach(() => {
   registerBridge(fakeBridge({}, { logout }));
   localStorage.clear();

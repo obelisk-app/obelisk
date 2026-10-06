@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { nostrActions, useSignerReady } from '@/services/nostr-bridge';
-import { uploadToBlossom } from '@/services/blossom';
+import { BlossomUploadError, uploadToBlossom } from '@/services/blossom';
 import { useTranslations } from 'next-intl';
+import { errorText } from '@/utils/errors/error-text';
 
 export interface ProfileEditorInitial {
   readonly displayName?: string | null;
@@ -98,10 +99,10 @@ export function useProfileEditorForm(initial: ProfileEditorInitial | null, onSav
   async function save() {
     if (busy) return;
     if (!nameValid) { setError(t('shell.user.nameRequired')); return; }
+    if (!signerReady) { setError(t('shell.user.notSignedIn')); return; }
     setSaving(true);
     setError(null);
     try {
-      if (!signerReady) throw new Error(t('shell.user.notSignedIn'));
       // Uploads are deferred to save so an abandoned edit doesn't burn
       // Blossom storage for every image the user tried.
       let finalPicture = picture.trim();
@@ -127,7 +128,9 @@ export function useProfileEditorForm(initial: ProfileEditorInitial | null, onSav
       });
       onSaved();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('shell.user.publishFailed'));
+      setError(err instanceof BlossomUploadError
+        ? t('media.error.uploadFailed')
+        : errorText(t, err, 'shell.user.publishFailed'));
     } finally {
       setUploading(null);
       setSaving(false);

@@ -57,3 +57,25 @@ describe('ManageCategoriesSheet accessibility', () => {
     expect(picker.className).toBe('');
   });
 });
+
+describe('ManageCategoriesSheet: a category saved with no name', () => {
+  it('is named at render time, so a language switch renames it and the field stays empty', async () => {
+    const { groupFixture } = await import('@tests/support/mocks/nostr-bridge');
+    const sheet = (
+      <ManageCategoriesSheet
+        relayUrl="wss://relay.test"
+        layout={{ categories: [{ id: 'c1', name: '', position: 0 }], channels: [{ id: 'rly/general', categoryId: 'c1', position: 0 }], updatedAt: 0 }}
+        channels={[groupFixture({ id: 'rly/general', name: 'general' })]}
+        close={vi.fn()}
+      />
+    );
+    const { rerender } = render(<LocaleProvider initialLocale="es">{sheet}</LocaleProvider>);
+    expect(screen.getByLabelText('Nombre de la categoría')).toHaveValue('');
+    expect(screen.getByLabelText('Nombre de la categoría')).toHaveAttribute('placeholder', 'Sin título');
+    expect(screen.getByText('Sin título · 1')).toBeInTheDocument();
+
+    rerender(<LocaleProvider initialLocale="en">{sheet}</LocaleProvider>);
+    expect(screen.getByText('Untitled · 1')).toBeInTheDocument();
+    expect(screen.queryByText(/Sin título/)).toBeNull();
+  });
+});

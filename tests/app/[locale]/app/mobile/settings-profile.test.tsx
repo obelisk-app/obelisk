@@ -93,6 +93,7 @@ vi.mock('@/components/media/BlossomImageInput', () => ({
 
 vi.mock('@/services/blossom', () => ({
   uploadToBlossom: vi.fn().mockResolvedValue('https://blossom.example/img.jpg'),
+  BlossomUploadError: class extends Error {},
 }));
 
 vi.mock('@/components/admin/RelayAdminPanel', () => ({

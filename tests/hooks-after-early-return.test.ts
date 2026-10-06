@@ -18,7 +18,8 @@ import { describe, expect, it } from 'vitest';
  */
 
 const HOOK = /^\s{2,6}(?:const\s+[\w{},:\s[\]]+=\s*)?use[A-Z]\w*\s*\(/;
-const COMPONENT_START = /^(?:export\s+)?(?:export\s+default\s+)?function\s/;
+/** `function X(`, or a component wrapped as `const X = memo(function X(` / `forwardRef(function X(`. */
+const COMPONENT_START = /^(?:export\s+)?(?:(?:export\s+)?default\s+)?(?:function\s|const\s+\w+\s*=\s*(?:React\.)?(?:memo|forwardRef)\(\s*function\s)/;
 
 /** Find hook calls that a `return` inside an `if` block can skip. */
 export function hooksAfterEarlyReturn(source: string): string[] {
@@ -95,6 +96,22 @@ describe('hooks after an early return', () => {
       '}',
     ].join('\n');
     expect(hooksAfterEarlyReturn(fine)).toEqual([]);
+  });
+
+  it('treats a memo- or forwardRef-wrapped function as a new component', () => {
+    // Without this, an early return in the component above leaked into the
+    // next one, so a file had to put its memo component first to pass.
+    const twoComponents = [
+      'export function Picker() {',
+      '  if (!open) return null;',
+      '  return <div />;',
+      '}',
+      'export const Row = memo(function Row() {',
+      '  const [hover, setHover] = useState(false);',
+      '  return <div />;',
+      '});',
+    ].join('\n');
+    expect(hooksAfterEarlyReturn(twoComponents)).toEqual([]);
   });
 
   it('finds none in src', () => {

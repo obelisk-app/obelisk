@@ -139,7 +139,8 @@
     "hint": "nome · ícone · capa",
     "iconHint": "Logo quadrado exibido ao lado do nome do relay.",
     "bannerHint": "Imagem larga exibida acima do nome do relay.",
-    "save": "Salvar identidade visual"
+    "save": "Salvar identidade visual",
+    "saveFailed": "Não foi possível salvar a identidade visual do relay."
   },
   "layout": {
     "categoryPlaceholder": "ex.: Geral, Trading, Voz",

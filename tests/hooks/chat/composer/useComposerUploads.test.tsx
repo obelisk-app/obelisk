@@ -42,7 +42,7 @@ describe('useComposerUploads', () => {
     uploadToBlossom.mockRejectedValue(new Error('blossom down'));
     const { hook, targets } = setup();
     await act(async () => { await hook.result.current.onPickFiles([new File(['x'], 'a')]); });
-    expect(targets.setSendError).toHaveBeenLastCalledWith('blossom down');
+    expect(targets.setSendError).toHaveBeenLastCalledWith('Upload failed');
   });
 
   it('a voice note becomes the whole draft and is remembered with its duration', async () => {

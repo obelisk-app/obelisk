@@ -7,6 +7,8 @@ import {
   publishLayout,
   type ChannelLayout,
 } from '@/services/channel-layout';
+import { useTranslations } from 'next-intl';
+import { errorText } from '@/utils/errors/error-text';
 
 export function useChannelLayoutEditor(
   relayUrl: string,
@@ -14,6 +16,7 @@ export function useChannelLayoutEditor(
   channels: ReadonlyArray<{ id: string }>,
   onSaved: () => void,
 ) {
+  const t = useTranslations();
   const [draft, setDraft] = useState(layout);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [saving, setSaving] = useState(false);
@@ -142,7 +145,7 @@ export function useChannelLayoutEditor(
       });
       onSaved();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause));
+      setError(errorText(t, cause, 'shell.desktop.layout.publishFailed'));
     } finally {
       setSaving(false);
     }

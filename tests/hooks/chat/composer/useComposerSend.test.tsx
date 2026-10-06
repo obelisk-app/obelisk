@@ -82,7 +82,7 @@ describe('useComposerSend', () => {
     const { send, s } = run('hi', groupFixture({ id: 'g', isOpen: true }));
     await act(async () => { await send(); });
     expect(joinGroup).toHaveBeenCalledWith('g');
-    expect(s.setSendError).toHaveBeenLastCalledWith('user rejected');
+    expect(s.setSendError).toHaveBeenLastCalledWith('Could not join this channel');
     expect(s.setDraft).not.toHaveBeenCalled();
     expect(sendMessage).not.toHaveBeenCalled();
   });

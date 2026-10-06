@@ -14,13 +14,18 @@
  * A tag's color is either chosen by the forum admin (persisted as slot 4 of
  * the `forum-tag` metadata tag) or derived from a stable hash of its id, so
  * every tag is colored without anyone having to configure anything.
+ *
+ * The swatch names are copy, `chat.forum.colors.<key>`, read by the picker
+ * itself: public pages reach this file without shipping the `chat` module.
  */
 
+/** The palette's wire values, in picker order. */
+export type TagColorKey =
+  | 'lime' | 'cyan' | 'violet' | 'amber' | 'rose' | 'emerald' | 'sky' | 'orange' | 'fuchsia' | 'slate';
+
 export interface TagPalette {
-  /** Stable key: this is what goes on the wire. */
-  readonly key: string;
-  /** Human label for the swatch picker. */
-  readonly label: string;
+  /** Stable key: this is what goes on the wire, and names the swatch (`chat.forum.colors.<key>`). */
+  readonly key: TagColorKey;
   /** Full-strength hue: chip text and the leading dot. */
   readonly text: string;
   /** ~40% alpha: chip border. */
@@ -31,10 +36,9 @@ export interface TagPalette {
   readonly bgActive: string;
 }
 
-function palette(key: string, label: string, rgb: string): TagPalette {
+function palette(key: TagColorKey, rgb: string): TagPalette {
   return {
     key,
-    label,
     text: `rgb(${rgb})`,
     border: `rgba(${rgb}, 0.42)`,
     bg: `rgba(${rgb}, 0.12)`,
@@ -48,19 +52,19 @@ function palette(key: string, label: string, rgb: string): TagPalette {
  * the existing accent stays available to admins.
  */
 export const TAG_PALETTES: ReadonlyArray<TagPalette> = [
-  palette('lime', 'Lime', '180, 249, 83'),
-  palette('cyan', 'Cyan', '34, 211, 238'),
-  palette('violet', 'Violet', '167, 139, 250'),
-  palette('amber', 'Amber', '251, 191, 36'),
-  palette('rose', 'Rose', '251, 113, 133'),
-  palette('emerald', 'Emerald', '52, 211, 153'),
-  palette('sky', 'Sky', '56, 189, 248'),
-  palette('orange', 'Orange', '251, 146, 60'),
-  palette('fuchsia', 'Fuchsia', '232, 121, 249'),
-  palette('slate', 'Slate', '148, 163, 184'),
+  palette('lime', '180, 249, 83'),
+  palette('cyan', '34, 211, 238'),
+  palette('violet', '167, 139, 250'),
+  palette('amber', '251, 191, 36'),
+  palette('rose', '251, 113, 133'),
+  palette('emerald', '52, 211, 153'),
+  palette('sky', '56, 189, 248'),
+  palette('orange', '251, 146, 60'),
+  palette('fuchsia', '232, 121, 249'),
+  palette('slate', '148, 163, 184'),
 ];
 
-const BY_KEY = new Map(TAG_PALETTES.map((p) => [p.key, p] as const));
+const BY_KEY: ReadonlyMap<string, TagPalette> = new Map(TAG_PALETTES.map((p) => [p.key, p] as const));
 
 /** Whether a string is a palette key we can safely render. */
 export function isTagColorKey(value: string | null | undefined): boolean {

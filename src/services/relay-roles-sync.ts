@@ -3,6 +3,7 @@
  * holder events (stale-while-revalidate from the local cache) and publishes
  * them. The model and codec live in `relay-roles-model.ts`.
  */
+import { CodedError } from '@/utils/errors/codes';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import { getBridge, getBridgeImpl, cacheGet, cacheSet } from '@/services/nostr-bridge';
 import { KIND_NIP78_APP_DATA as KIND_ROLES } from '@/utils/nip-kinds';
@@ -124,7 +125,7 @@ export function subscribeRelayRoles(
 async function publishRoleEvent(relayUrl: string, dTag: string, tags: string[][]): Promise<NostrEvent> {
   await getBridge();
   const impl = getBridgeImpl();
-  if (!impl) throw new Error('nostr bridge not initialized');
+  if (!impl) throw new CodedError('not-ready', 'nostr bridge not initialized');
   const previousAt = publishedAt.get(dTag) ?? 0;
   const event = await impl.publishEvent(
     {

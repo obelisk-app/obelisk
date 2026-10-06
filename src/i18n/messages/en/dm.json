@@ -63,7 +63,8 @@
     "tooLarge": "That file is too large",
     "badType": "That file type isn't supported",
     "uploadFailed": "Upload failed",
-    "needsNip17": "Encrypted files need NIP-17 for this conversation"
+    "needsNip17": "Encrypted files need NIP-17 for this conversation",
+    "sendFailed": "Could not send the file."
   },
   "msg": {
     "options": "Message options",

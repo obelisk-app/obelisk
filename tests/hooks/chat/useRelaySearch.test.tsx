@@ -29,6 +29,12 @@ vi.mock('@/services/relay-info', () => ({
 }));
 
 import { useRelaySearch, SEARCH_DEBOUNCE_MS } from '@/hooks/chat/useRelaySearch';
+import { LocaleProvider } from '@tests/support/intl';
+import type { ReactNode } from 'react';
+
+/** The hook words its errors through next-intl, so it needs a provider. */
+const wrapper = ({ children }: { children: ReactNode }) => <LocaleProvider initialLocale="en">{children}</LocaleProvider>;
+
 
 const hit = (id: string, content: string, createdAt = 1_700_000_000): JsSearchHit => ({
   id, pubkey: 'f'.repeat(64), content, createdAt, kind: 9, replyToId: null, mentions: [], groupId: 'rly/abc',
@@ -51,14 +57,14 @@ afterEach(() => vi.useRealTimers());
 
 describe('useRelaySearch', () => {
   it('is quiet for an empty query and shows every channel', () => {
-    const { result } = renderHook(() => useRelaySearch());
+    const { result } = renderHook(() => useRelaySearch(), { wrapper });
     expect(result.current.busy).toBe(false);
     expect(result.current.channelMatches).toHaveLength(2);
     expect(searchMessages).not.toHaveBeenCalled();
   });
 
   it('debounces typing into one request for the final text, with the terms split', async () => {
-    const { result } = renderHook(() => useRelaySearch());
+    const { result } = renderHook(() => useRelaySearch(), { wrapper });
     act(() => result.current.setRaw('h'));
     act(() => result.current.setRaw('ho'));
     act(() => result.current.setRaw('hola mundo'));
@@ -76,7 +82,7 @@ describe('useRelaySearch', () => {
     searchMessages
       .mockImplementationOnce(() => new Promise((r) => { resolveFirst = r; }))
       .mockResolvedValueOnce(ok([hit('new', 'NEWER')]));
-    const { result } = renderHook(() => useRelaySearch());
+    const { result } = renderHook(() => useRelaySearch(), { wrapper });
     act(() => result.current.setRaw('first'));
     await settle();
     act(() => result.current.setRaw('second'));
@@ -87,7 +93,7 @@ describe('useRelaySearch', () => {
   });
 
   it('resolves from: by name and in: by channel, and reports what it cannot resolve', async () => {
-    const { result } = renderHook(() => useRelaySearch());
+    const { result } = renderHook(() => useRelaySearch(), { wrapper });
     act(() => result.current.setRaw('from:Alice in:General'));
     await settle();
     expect(searchMessages).toHaveBeenCalledWith(expect.objectContaining({
@@ -99,7 +105,7 @@ describe('useRelaySearch', () => {
   });
 
   it('scopes to the open channel only when asked, and only when in: is absent', async () => {
-    const { result } = renderHook(() => useRelaySearch({ activeGroupId: 'g1' }));
+    const { result } = renderHook(() => useRelaySearch({ activeGroupId: 'g1' }), { wrapper });
     act(() => result.current.setRaw('hello'));
     await settle();
     expect(searchMessages.mock.calls[0][0].groupIds).toBeUndefined();
@@ -113,7 +119,7 @@ describe('useRelaySearch', () => {
 
   it('tells the skin when the relay has no NIP-50 and re-runs once that is known', async () => {
     relayInfo.current = { supportedNips: [1, 29] };
-    const { result } = renderHook(() => useRelaySearch());
+    const { result } = renderHook(() => useRelaySearch(), { wrapper });
     act(() => result.current.setRaw('hello'));
     await settle();
     await settle();
@@ -123,7 +129,7 @@ describe('useRelaySearch', () => {
 
   it('pages with until from the oldest hit and appends without duplicates', async () => {
     searchMessages.mockResolvedValueOnce(ok([hit('m1', 'ONE', 500)], true));
-    const { result } = renderHook(() => useRelaySearch());
+    const { result } = renderHook(() => useRelaySearch(), { wrapper });
     act(() => result.current.setRaw('a'));
     await settle();
     expect(result.current.partial).toBe(true);
@@ -136,7 +142,7 @@ describe('useRelaySearch', () => {
 
   it('wraps keyboard selection at both ends', async () => {
     searchMessages.mockResolvedValue(ok([hit('m1', 'A'), hit('m2', 'B')]));
-    const { result } = renderHook(() => useRelaySearch());
+    const { result } = renderHook(() => useRelaySearch(), { wrapper });
     act(() => result.current.setRaw('x'));
     await settle();
     expect(result.current.activeIndex).toBe(-1);
@@ -148,7 +154,7 @@ describe('useRelaySearch', () => {
 
   it('jumpTo asks the shell to navigate and remembers the query; typing alone does not', async () => {
     searchMessages.mockResolvedValue(ok([hit('m1', 'A')]));
-    const { result } = renderHook(() => useRelaySearch());
+    const { result } = renderHook(() => useRelaySearch(), { wrapper });
     act(() => result.current.setRaw('hello'));
     await settle();
     expect(result.current.history).toEqual([]);
@@ -161,7 +167,7 @@ describe('useRelaySearch', () => {
   });
 
   it('applyFilter appends a token to whatever is typed', () => {
-    const { result } = renderHook(() => useRelaySearch());
+    const { result } = renderHook(() => useRelaySearch(), { wrapper });
     act(() => result.current.applyFilter('from:'));
     expect(result.current.raw).toBe('from:');
     act(() => result.current.setRaw('hello '));

@@ -13,6 +13,7 @@ vi.mock('@/services/nostr-bridge', () => ({
   isImportableRelayUrl: (u: string) => u.startsWith('wss://'),
 }) satisfies Partial<typeof import('@/services/nostr-bridge')>);
 
+import { CodedError } from '@/utils/errors/codes';
 import { checkZap, sendZap, ZapError, type ZapDraft } from '@/services/wallet/send-zap';
 import { KIND_REACTION } from '@/utils/nip-kinds';
 
@@ -133,6 +134,11 @@ describe('sendZap', () => {
     publishEvent.mockRejectedValue(new Error('relay said no'));
     await expect(sendZap(ready())).resolves.toEqual({ markerError: 'relay said no' });
     expect(webln.sendPayment).toHaveBeenCalledTimes(1);
+  });
+
+  it('hands back the code, not the English, when the marker publish was coded', async () => {
+    publishEvent.mockRejectedValue(new CodedError('publish-rejected', 'Relay rejected event (kind 7). blocked'));
+    await expect(sendZap(ready())).resolves.toEqual({ markerError: 'publish-rejected' });
   });
 
   // Regression: this used to throw after the payment had already gone through,

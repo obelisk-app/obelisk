@@ -1,0 +1,25 @@
+{
+  "title": "How can we help?",
+  "subtitle": "Start with the basics or jump straight to the topic you need.",
+  "back": "← Back to Obelisk",
+  "all": "Browse all guides →",
+  "viewMore": "View more guides",
+  "topics": {
+    "start": {
+      "title": "Getting started",
+      "description": "Learn what Obelisk is and how your Nostr identity works."
+    },
+    "how": {
+      "title": "How Obelisk works",
+      "description": "Understand groups, relays, messages, and privacy."
+    },
+    "community": {
+      "title": "Run a community",
+      "description": "Moderate a group with NIP-29 roles, kicks and bans."
+    },
+    "payments": {
+      "title": "Payments and zaps",
+      "description": "Send Lightning payments without leaving the conversation."
+    }
+  }
+}

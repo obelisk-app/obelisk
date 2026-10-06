@@ -30,7 +30,8 @@
     "bunker-missing-secret": "O pareamento com o assinador remoto ficou incompleto. Pareie de novo.",
     "bunker-no-session": "Não há sessão de assinador remoto para restaurar. Entre de novo.",
     "nostrconnect-cancelled": "Conexão cancelada.",
-    "call-relay-failed": "Não foi possível alcançar um relay para a chamada."
+    "call-relay-failed": "Não foi possível alcançar um relay para a chamada.",
+    "game-unconfirmed": "O relay nunca confirmou a mesa. Ela ainda pode aparecer em instantes, então confira o canal antes de criar outra."
   },
   "activity": {
     "signExtension": {
@@ -91,9 +92,6 @@
     "appData": "Dados do app",
     "relayList": "Lista de relays",
     "event": "Evento Nostr"
-  },
-  "status": {
-    "untitledCategory": "Sem título"
   },
   "panel": {
     "title": "Algo quebrou nesta tela",

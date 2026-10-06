@@ -24,3 +24,13 @@ export function errorText(t: Translate, err: unknown, fallback?: MessageKey): st
   const raw = err instanceof Error ? err.message : typeof err === 'string' ? err : '';
   return raw.trim() || t('errors.generic');
 }
+
+/**
+ * The reason line under a title that already says what failed (a toast):
+ * the code's sentence, or nothing for an error without a code, so a relay's
+ * English never sits under a translated title.
+ */
+export function errorReason(t: Translate, err: unknown): string {
+  const code = errorCodeOf(err);
+  return code ? t(`errors.codes.${code}`) : '';
+}

@@ -59,4 +59,14 @@ describe('sitemap: every page in every language', () => {
     expect(imgs.some((u) => u.endsWith(snapshotPaths('swap-anything').png))).toBe(true);
     expect(imgs.some((u) => u.endsWith(snapshotPaths('swap-matrix').png))).toBe(true);
   });
+
+  it('lists each language\'s own snapshots: es and pt guides never point at the English images', () => {
+    for (const locale of ['es', 'pt'] as const) {
+      const entry = entries.find((e) => e.url === `${SITE}/${locale}/guides/swap-anything`);
+      const imgs = entry?.images ?? [];
+      expect(imgs.length).toBeGreaterThan(0);
+      expect(imgs).toContain(`${SITE}${snapshotPaths('swap-anything', locale).png}`);
+      for (const url of imgs) expect(url, url).toContain(`/og/guides/${locale}/`);
+    }
+  });
 });

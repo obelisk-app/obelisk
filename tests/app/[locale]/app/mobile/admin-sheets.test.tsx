@@ -255,7 +255,7 @@ describe('ChannelSettingsSheet SFU guard', () => {
     fireEvent.click(screen.getByTestId('mobile-channel-settings-save'));
 
     await vi.waitFor(() => expect(mockFetchSfuInfo).toHaveBeenCalledTimes(1));
-    await screen.findByText('sfu unreachable');
+    await screen.findByText('The SFU did not answer its /info check.');
     expect(mockEditGroupMetadata).not.toHaveBeenCalled();
     expect(mockPublishSfuPin).not.toHaveBeenCalled();
     expect(close).not.toHaveBeenCalled();

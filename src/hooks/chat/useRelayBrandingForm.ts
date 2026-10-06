@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { publishBranding, type RelayBranding } from '@/services/relay-branding';
+import { useTranslations } from 'next-intl';
+import { errorText } from '@/utils/errors/error-text';
 
 export interface RelayBrandingForm {
   readonly icon: string;
@@ -28,6 +30,7 @@ export function useRelayBrandingForm(
   branding: RelayBranding,
   onSaved: () => void,
 ): RelayBrandingForm {
+  const t = useTranslations();
   const [icon, setIcon] = useState(branding.icon);
   const [banner, setBanner] = useState(branding.banner);
   const [name, setName] = useState(branding.name);
@@ -48,7 +51,7 @@ export function useRelayBrandingForm(
       });
       onSaved();
     } catch (err) {
-      setError((err as Error).message);
+      setError(errorText(t, err, 'mobile.branding.saveFailed'));
     } finally {
       setSaving(false);
     }

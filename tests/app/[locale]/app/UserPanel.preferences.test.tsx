@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { LocaleProvider } from '@tests/support/intl';
 import { DM_OPT_IN_STORAGE_KEY } from '@/services/dm/opt-in';
@@ -55,6 +55,15 @@ vi.mock('@/services/social/relay-status', () => ({
 vi.mock('@/components/media/MediaLibraryModal', () => ({
   default: ({ embedded }: { embedded?: boolean }) => <div data-testid="media-library-stub" data-embedded={embedded ? 'true' : 'false'} />,
 }));
+
+// Every test imports UserPanel lazily (so the mocks above are in place).
+// The first import compiles the whole settings graph: about two seconds
+// alone, and far more under a full parallel run, which the first test used
+// to pay inside its own time limit. Pay it once here, under a limit meant
+// for compiling.
+beforeAll(async () => {
+  await import('@/app/[locale]/app/UserPanel');
+}, 120_000);
 
 beforeEach(() => {
   mockSelfPqState.mockReset();

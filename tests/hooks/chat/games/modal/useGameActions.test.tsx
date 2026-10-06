@@ -25,11 +25,11 @@ describe('useGameActions', () => {
     expect(result.current.busy).toBe(false);
   });
 
-  it('shows the relay error and clears it on the next try', async () => {
+  it('says the relay refused, in the reader\'s language, and clears it on the next try', async () => {
     publishMove.mockRejectedValueOnce(new Error('blocked: not a member'));
     const { result } = renderHook(() => useGameActions(SESSION), { wrapper });
     await act(() => result.current.onAction({ cell: 0 }, 'seat-a'));
-    expect(result.current.error).toBe('blocked: not a member');
+    expect(result.current.error).toBe('Relay rejected that');
     publishMove.mockResolvedValueOnce(undefined);
     await act(() => result.current.onAction({ cell: 1 }, 'seat-a'));
     expect(result.current.error).toBeNull();

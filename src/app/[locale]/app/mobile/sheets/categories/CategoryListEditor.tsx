@@ -1,6 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { categoryLabel } from '@/utils/chat/category-label';
 import Input from '@/components/ui/Input';
 
 const arrowBtnStyle: React.CSSProperties = {
@@ -58,6 +59,7 @@ export function CategoryListEditor({ categories, moveCategory, renameCategory, d
               variant="mobile"
               style={{ flex: 1 }}
               value={c.name}
+              placeholder={categoryLabel('', t)}
               aria-label={t('shell.desktop.layout.categoryName')}
               onChange={(e) => renameCategory(c.id, e.target.value)}
             />

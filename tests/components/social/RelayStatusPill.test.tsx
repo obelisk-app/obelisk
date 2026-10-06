@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { LocaleProvider } from '@tests/support/intl';
+import { LocaleProvider, translator } from '@tests/support/intl';
 import type { RelayAccessState } from '@/services/nostr-bridge';
 
 const mocks = vi.hoisted(() => ({
@@ -89,6 +89,19 @@ describe('RelayStatusPill', () => {
     expect(screen.getByTestId('relay-status-active')).toHaveAttribute('data-access', 'authenticating');
     expect(screen.getByTestId('relay-status-auth')).toHaveTextContent(/NIP-42/);
     expect(screen.getByTestId('relay-status-active')).toHaveTextContent('public.obelisk.ar');
+  });
+
+  it('names the connection state in the reader\'s language, a coded error included', () => {
+    mocks.connection = 'Error:no-relays-connected';
+    render(
+      <LocaleProvider initialLocale="es">
+        <RelayStatusPill relays={[A, B]} activeRelay="wss://public.obelisk.ar" />
+      </LocaleProvider>,
+    );
+    fireEvent.click(screen.getByTestId('relay-status-pill'));
+    const line = screen.getByTestId('relay-status-connection');
+    expect(line.textContent).not.toContain('no-relays-connected');
+    expect(line.textContent).toContain(translator('es')('errors.codes.no-relays-connected'));
   });
 
   it('names a rejected challenge rather than just showing a red dot', () => {

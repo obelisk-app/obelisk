@@ -15,12 +15,12 @@ export default function HelpPage() {
       <Navbar />
       <main className="mx-auto max-w-5xl px-6 pb-24 pt-28">
         <Link href="/app" className="text-sm font-medium text-lc-green hover:text-lc-green-dark">
-          {t('guides.help.back')}
+          {t('help.back')}
         </Link>
         <h1 className="mt-5 text-4xl font-extrabold tracking-tight text-lc-white md:text-5xl">
-          {t('guides.help.title')}
+          {t('help.title')}
         </h1>
-        <p className="mt-3 max-w-2xl text-lg text-lc-muted">{t('guides.help.subtitle')}</p>
+        <p className="mt-3 max-w-2xl text-lg text-lc-muted">{t('help.subtitle')}</p>
 
         <div className="mt-10 grid gap-4 md:grid-cols-2">
           {HELP_TOPICS.map((topic) => (
@@ -40,7 +40,7 @@ export default function HelpPage() {
           href={guidePath()}
           className="lc-pill-primary mt-8 inline-flex px-6 py-3 text-sm font-semibold"
         >
-          {t('guides.help.all')}
+          {t('help.all')}
         </Link>
       </main>
       <Footer />

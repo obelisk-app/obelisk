@@ -360,10 +360,13 @@ Nothing below the UI changed, and none of it should:
 | `obelisk-dex/forum-prefs/*`, `obelisk-dex/forum-collapsed/*` | localStorage |
 
 So: renaming an identifier is a wire/compat change, renaming a string is
-copy. When adding a user-visible label, say "publication". The one place
-that maps kind id -> label is `CHANNEL_KIND_LABEL` in
-`src/utils/shell/mobile/labels.ts`; the mobile picker used to derive its label from the kind id and therefore
-printed "Forum" no matter what the strings said.
+copy. When adding a user-visible label, say "publication". A kind id is
+never shown: each shell names a kind through message keys
+(`mobile.channel.kind.*` in the phone's `ChannelSettingsSheet`,
+`shell.desktop.channel.kind*` in the desktop `ChannelSettingsModal`), and
+`tests/i18n/locales.test.ts` fails on "forum" in any language. The mobile
+picker once derived its label from the kind id and therefore printed "Forum"
+no matter what the strings said.
 
 Tag colors live in `src/utils/forum-tag-colors.ts`: a curated palette, chosen
 by the admin (persisted as slot 4 of `forum-tag`) or derived from a hash of
@@ -371,7 +374,8 @@ the tag id. Returns raw color strings rather than Tailwind classes, because
 desktop styles with `lc-*` utilities and mobile with `--app-*` CSS
 variables; inline `style` is the only thing both consume. An unrecognised
 color key from a relay falls back to the derived color; never pass a
-relay-supplied string into a style attribute.
+relay-supplied string into a style attribute. The swatch names are copy,
+`chat.forum.colors.<key>`, read by `TagColorPicker`.
 
 ## Design System (La Crypta)
 - **Background:** `lc-black` (#0a0a0a) with subtle grid pattern

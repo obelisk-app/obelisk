@@ -68,7 +68,7 @@ describe('useRelayRolesDraft', () => {
     vi.spyOn(roles, 'publishRoleHolders').mockRejectedValue(new Error('relay said no'));
     const { result } = renderHook(() => useRelayRolesDraft(RELAY, SAVED), { wrapper });
     await act(async () => { await result.current.grant(SAVED.roles[1], 'b'.repeat(64)); });
-    expect(result.current.message).toBe('relay said no');
+    expect(result.current.message).toBe('Could not publish the roles.');
   });
 
   it('removing an unsaved role needs no confirmation and collapses it', () => {

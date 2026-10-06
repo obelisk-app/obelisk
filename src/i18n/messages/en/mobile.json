@@ -139,7 +139,8 @@
     "hint": "name · icon · banner",
     "iconHint": "Square logo shown next to the relay name.",
     "bannerHint": "Wide image shown above the relay name.",
-    "save": "Save branding"
+    "save": "Save branding",
+    "saveFailed": "Could not save the branding."
   },
   "layout": {
     "categoryPlaceholder": "e.g. General, Trading, Voice",

@@ -12,6 +12,7 @@
  *   ["name", displayName]
  *   ["description", text]
  */
+import { CodedError } from '@/utils/errors/codes';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import { getBridge, getBridgeImpl, cacheGet, cacheSet } from '@/services/nostr-bridge';
 import { KIND_NIP78_APP_DATA as KIND_BRANDING } from '@/utils/nip-kinds';
@@ -105,7 +106,7 @@ export function subscribeBranding(
 export async function publishBranding(relayUrl: string, branding: RelayBranding): Promise<void> {
   await getBridge();
   const impl = getBridgeImpl();
-  if (!impl) throw new Error('nostr bridge not initialized');
+  if (!impl) throw new CodedError('not-ready', 'nostr bridge not initialized');
   await impl.publishEvent({
     kind: KIND_BRANDING,
     content: '',

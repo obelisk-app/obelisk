@@ -16,7 +16,7 @@
 
 export const MODULES = [
   'common', 'seo', 'marketing', 'showcase', 'shell', 'mobile', 'chat', 'dm', 'calls', 'social',
-  'settings', 'media', 'games', 'voice', 'admin', 'guides', 'mediaKit', 'errors',
+  'settings', 'media', 'games', 'voice', 'admin', 'guides', 'help', 'mediaKit', 'errors',
 ] as const;
 
 export type Module = (typeof MODULES)[number];
@@ -30,18 +30,22 @@ export const SCOPES = {
   /** `/desktop`, `/mobile`. */
   showcase: ['common', 'marketing', 'showcase'],
   /** `/guides`, `/guides/<slug>`, `/help`. */
-  guides: ['common', 'marketing', 'guides'],
+  guides: ['common', 'marketing', 'guides', 'help'],
   /** `/media-kit`. */
   mediaKit: ['common', 'marketing', 'mediaKit'],
   /**
    * `/notes/<id>`, `/p/<id>`, `/t/<tag>`: note cards embed media, packs and
-   * games, and the profile header carries its menus.
+   * games, and the profile header carries its menus. `errors` because the
+   * reply composer names a failed publish by its code.
    */
-  viewer: ['common', 'marketing', 'social', 'chat', 'media', 'games', 'mobile', 'settings'],
-  /** `/app`, `/voice`, `/r/<code>`: everything but the public-page modules. */
+  viewer: ['common', 'marketing', 'social', 'chat', 'media', 'games', 'mobile', 'settings', 'errors'],
+  /**
+   * `/app`, `/voice`, `/r/<code>`: everything but the public-page modules.
+   * `help` is the help popover's four topics; the rest of `guides` stays out.
+   */
   app: [
     'common', 'shell', 'mobile', 'chat', 'dm', 'calls', 'social', 'settings', 'media', 'games',
-    'voice', 'admin', 'errors', 'guides',
+    'voice', 'admin', 'errors', 'help',
   ],
 } as const satisfies Record<string, readonly Module[]>;
 

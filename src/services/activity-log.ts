@@ -1,5 +1,6 @@
 'use client';
 
+import { codeOrMessage } from '@/utils/errors/codes';
 
 export type ActivityStatus = 'pending' | 'ok' | 'error';
 
@@ -84,7 +85,8 @@ export async function trackActivity<T>(
     resolveActivity(id);
     return out;
   } catch (e) {
-    failActivity(id, e instanceof Error ? e.message : String(e));
+    // The code when there is one, so the indicator says it in the reader's language.
+    failActivity(id, codeOrMessage(e));
     throw e;
   }
 }

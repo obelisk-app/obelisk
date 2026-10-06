@@ -30,7 +30,8 @@
     "bunker-missing-secret": "The remote signer pairing is incomplete. Pair it again.",
     "bunker-no-session": "There is no remote signer session to restore. Log in again.",
     "nostrconnect-cancelled": "Connection cancelled.",
-    "call-relay-failed": "Could not reach a relay for the call."
+    "call-relay-failed": "Could not reach a relay for the call.",
+    "game-unconfirmed": "The relay never confirmed the table. It may still appear in a moment, so check the channel before creating another."
   },
   "activity": {
     "signExtension": {
@@ -91,9 +92,6 @@
     "appData": "App data",
     "relayList": "Relay list",
     "event": "Nostr event"
-  },
-  "status": {
-    "untitledCategory": "Untitled"
   },
   "panel": {
     "title": "Something broke on this screen",

@@ -32,7 +32,7 @@ export function TagColorPicker({
         onClick={() => setOpen((v) => !v)}
         className="flex h-7 w-7 items-center justify-center rounded-md border border-lc-border bg-lc-dark hover:border-lc-muted"
         style={{ borderColor: current.border }}
-        aria-label={t('chat.forum.tagColor', { color: tag.color ? current.label : t('chat.forum.tagColorAuto') })}
+        aria-label={t('chat.forum.tagColor', { color: tag.color ? t(`chat.forum.colors.${current.key}`) : t('chat.forum.tagColorAuto') })}
         aria-haspopup="menu"
         aria-expanded={open}
         data-testid={`forum-tag-color-${tag.id}`}
@@ -54,8 +54,8 @@ export function TagColorPicker({
                 key={p.key}
                 type="button"
                 onClick={() => { onPick(p.key); setOpen(false); }}
-                title={p.label}
-                aria-label={p.label}
+                title={t(`chat.forum.colors.${p.key}`)}
+                aria-label={t(`chat.forum.colors.${p.key}`)}
                 aria-pressed={tag.color === p.key}
                 className={
                   'flex h-6 w-6 items-center justify-center rounded-full border transition-transform hover:scale-110 ' +

@@ -104,7 +104,20 @@
     "noMatchTags": "No publications match the selected tags.",
     "createFromSearch": "Create “{query}”",
     "addTag": "+ Add tag",
-    "maxTags": "Maximum {count} tags reached."
+    "maxTags": "Maximum {count} tags reached.",
+    "colors": {
+      "lime": "Lime",
+      "cyan": "Cyan",
+      "violet": "Violet",
+      "amber": "Amber",
+      "rose": "Rose",
+      "emerald": "Emerald",
+      "sky": "Sky",
+      "orange": "Orange",
+      "fuchsia": "Fuchsia",
+      "slate": "Slate"
+    },
+    "createFailed": "Could not create the publication."
   },
   "composer": {
     "dropFiles": "Drop files to attach",
@@ -234,10 +247,12 @@
     "errorNoSigner": "No active signer: log in first.",
     "sent": "⚡ Sent {amount} sats to {name}",
     "send": "Zap {amount} sats",
-    "markerFailed": "Payment succeeded, but the group zap marker was not published: {error}",
+    "markerFailed": "Payment succeeded, but the group zap marker was not published. {error}",
     "sendAmount": "⚡ Send {amount} sats",
     "title": "Zap {name}",
-    "noBridge": "the app was not connected to the relay"
+    "noBridge": "The app was not connected to the relay.",
+    "failed": "The zap did not go through.",
+    "markerRejected": "The relay did not accept it."
   },
   "profilePopover": {
     "zap": "Zap",
@@ -292,12 +307,15 @@
     "self": "Cannot zap yourself."
   },
   "relayForm": {
-    "invalidUrl": "Invalid URL"
+    "invalidUrl": "Invalid URL",
+    "addFailed": "Could not add that relay."
   },
   "channelSettings": {
     "sfuUrlRequired": "SFU URL is required",
     "notNpub": "Not an npub",
-    "badMember": "Provide an npub or 64-char hex pubkey"
+    "badMember": "Provide an npub or 64-char hex pubkey",
+    "saveFailed": "Could not save the channel settings.",
+    "memberFailed": "Could not add that member."
   },
   "sticker": {
     "open": "Open :{name}: details",

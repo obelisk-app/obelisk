@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import type { GameSession } from '@/lib/games/session';
 import { publishMove } from '@/services/games/transport';
 import type { VestaAction } from '@/lib/games/vesta/definition';
+import { errorText } from '@/utils/errors/error-text';
 
 /**
  * Publishing from the table: `run` wraps one relay publish with the busy
@@ -22,7 +23,7 @@ export function useGameActions(session: GameSession | null | undefined) {
     try {
       await fn();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('games.relayRejected'));
+      setError(errorText(t, err, 'games.relayRejected'));
     } finally {
       setBusy(false);
     }

@@ -4,6 +4,8 @@ import { useState, type FormEvent } from 'react';
 import { nostrActions, useMyPubkey, useSignerReady } from '@/services/nostr-bridge';
 import { emojiTagsForContent } from '@/utils/media-tags/custom-emoji-tags';
 import { useChatStore } from '@/store/chat';
+import { useTranslations } from 'next-intl';
+import { errorText } from '@/utils/errors/error-text';
 
 export const MAX_THREAD_TAGS = 5;
 
@@ -42,6 +44,7 @@ export function useNewThreadForm(
   initialTitle: string,
   onCreated: (childId: string) => void,
 ): NewThreadForm {
+  const t = useTranslations();
   const [title, setTitle] = useState(initialTitle);
   const [body, setBody] = useState('');
   const [selectedTagIds, setSelectedTagIds] = useState<ReadonlyArray<string>>([]);
@@ -79,7 +82,7 @@ export function useNewThreadForm(
       await nostrActions.sendMessage(childId, text, null, emojiTagsForContent(text, serverEmojis));
       onCreated(childId);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(errorText(t, err, 'chat.forum.createFailed'));
     } finally {
       setSubmitting(false);
     }

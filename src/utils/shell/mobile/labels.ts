@@ -1,4 +1,3 @@
-import type { JsGroup } from '@/services/nostr-bridge';
 import { formatTime } from '@/utils/format/format';
 import type { Locale } from '@/i18n';
 
@@ -30,17 +29,3 @@ export function timeOfDay(ts: number, locale: Locale): string {
     hour: '2-digit', minute: '2-digit', hour12: false,
   });
 }
-
-/**
- * User-facing names for each channel kind.
- *
- * The kind ids are wire values (`["t","forum"]` and friends) and never
- * change; this is the only place that decides what a human sees. Without it
- * the picker derived its label from the id itself, so it printed "Forum".
- */
-export const CHANNEL_KIND_LABEL: Record<JsGroup['kind'], string> = {
-  text: 'Text',
-  voice: 'Voice',
-  'voice-sfu': 'Voice (SFU)',
-  forum: 'Publications',
-};

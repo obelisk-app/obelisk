@@ -2,6 +2,7 @@
 
 import type { JsGroup } from '@/services/nostr-bridge';
 import { useTranslations } from 'next-intl';
+import { categoryLabel } from '@/utils/chat/category-label';
 import Input from '@/components/ui/Input';
 import { ChannelOrderRow, DragHandleIcon, MoveButtons } from './ChannelOrderRow';
 import type { useLayoutDrag } from '@/hooks/app/modals/layout/useLayoutDrag';
@@ -45,7 +46,7 @@ export function LayoutCategoryCard({
           onDragStart={(event) => { event.dataTransfer.effectAllowed = 'move'; drag.grabCategory(cat.id); }}
           onDragEnd={drag.endDrag}
           className="cursor-grab active:cursor-grabbing"
-          aria-label={t('shell.desktop.layout.grabCategory', { name: cat.name })}
+          aria-label={t('shell.desktop.layout.grabCategory', { name: categoryLabel(cat.name, t) })}
           title={t('shell.desktop.layout.dragCategory')}
         >
           <DragHandleIcon />
@@ -54,6 +55,7 @@ export function LayoutCategoryCard({
           size="xs"
           fontSize="sm"
           value={cat.name}
+          placeholder={categoryLabel('', t)}
           onChange={(e) => renameCategory(cat.id, e.target.value)}
           aria-label={t('shell.desktop.layout.categoryName')}
           className="flex-1 font-semibold"

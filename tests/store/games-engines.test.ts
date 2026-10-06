@@ -22,7 +22,7 @@ vi.mock('@/lib/games/vesta/definition', async (importOriginal) => {
 import { useGamesStore, selectSession, selectChannelSessions } from '@/store/games';
 import { useGameSession } from '@/hooks/chat/useChannelGames';
 import { buildCreate, buildGameOp, parseGameEvent, type GameEvent, type ParsedGameEvent } from '@/lib/games/protocol';
-import { getGameDef } from '@/lib/games/registry';
+import { getGameDef, onGameDefLoaded } from '@/lib/games/registry';
 
 const CH = 'channel-1';
 const HOST = 'pk-host';
@@ -72,10 +72,19 @@ describe('games store while an engine downloads', () => {
     expect(hook.result.current).toBeNull();
     expect(gate.evaluated).toBe(0);
 
+    // Wait for the download the store started to land, not for a polled
+    // condition: under a loaded run the engine's compile outlasted
+    // `vi.waitFor`'s one-second default. Listening (rather than calling
+    // `loadGameDef`) starts nothing, so this still fails if the store never
+    // asked for the engine.
+    const landed = new Promise<void>((resolve) => {
+      const off = onGameDefLoaded((type) => { if (type === 'vesta') { off(); resolve(); } });
+    });
     await act(async () => {
       gate.open();
-      await vi.waitFor(() => expect(useGamesStore.getState().enginesLoaded).toBeGreaterThan(0));
+      await landed;
     });
+    expect(useGamesStore.getState().enginesLoaded).toBeGreaterThan(0);
     expect(gate.evaluated).toBe(1);
 
     const session = hook.result.current;

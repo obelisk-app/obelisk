@@ -34,6 +34,7 @@
  *   as hits; `relaySearchable` tells the skin to say so.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   nostrActions,
   useCurrentRelayUrl,
@@ -48,6 +49,7 @@ import { useChatStore } from '@/store/chat';
 import { parsePubkeyInput } from '@/utils/identity/parse-pubkey';
 import { loadHistory, pushHistory, wipeHistory } from './relay-search/search-history';
 import type { RelaySearch, RelaySearchOptions } from './relay-search/types';
+import { errorText } from '@/utils/errors/error-text';
 
 export type { RelaySearch, RelaySearchOptions } from './relay-search/types';
 
@@ -55,6 +57,7 @@ export const SEARCH_DEBOUNCE_MS = 250;
 const PAGE_SIZE = 30;
 
 export function useRelaySearch({ activeGroupId = null }: RelaySearchOptions = {}): RelaySearch {
+  const t = useTranslations();
   const [raw, setRaw] = useState('');
   const [thisChannelOnly, setThisChannelOnly] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -137,13 +140,13 @@ export function useRelaySearch({ activeGroupId = null }: RelaySearchOptions = {}
       setRelayFiltered(res.relayFiltered);
     } catch (e) {
       if (reqRef.current !== seq) return;
-      setError((e as Error).message);
+      setError(errorText(t, e, 'shell.search.failed'));
     } finally {
       if (reqRef.current === seq) {
         if (append) setLoadingMore(false); else setBusy(false);
       }
     }
-  }, [activeGroupId, thisChannelOnly, relaySearchable]);
+  }, [activeGroupId, thisChannelOnly, relaySearchable, t]);
 
   // `parsed` is rebuilt every render; this is its stable identity. The
   // other two inputs are what `runSearch` closes over, so a change in any of

@@ -5,12 +5,13 @@ import {
   tagChipStyle,
   isTagColorKey,
 } from '@/utils/forum-tag-colors';
+import { flatMessages } from '@tests/support/messages';
 
 describe('TAG_PALETTES', () => {
   it('every entry is complete and has a unique key', () => {
     for (const p of TAG_PALETTES) {
       expect(p.key).toBeTruthy();
-      expect(p.label).toBeTruthy();
+      expect(flatMessages('en')[`chat.forum.colors.${p.key}`]).toBeTruthy();
       expect(p.text).toMatch(/^rgb\(/);
       expect(p.border).toMatch(/^rgba\(/);
       expect(p.bg).toMatch(/^rgba\(/);

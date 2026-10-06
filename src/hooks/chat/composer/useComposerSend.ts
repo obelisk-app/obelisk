@@ -9,6 +9,7 @@ import { parseZapCommand } from '@/services/wallet/parse-zap-command';
 import { zapCommandErrorKey } from '@/utils/chat/slash/zap-command-error';
 import { useMessageZapStore } from '@/store/messageZap';
 import { outgoingTags } from './draft-text';
+import { errorText } from '@/utils/errors/error-text';
 
 /** The draft state `send` reads and clears. */
 export interface ComposerDraftState {
@@ -105,7 +106,7 @@ export function useComposerSend({
       try {
         await nostrActions.joinGroup(groupId);
       } catch (err) {
-        state.setSendError(err instanceof Error ? err.message : t('chat.composer.joinFailed'));
+        state.setSendError(errorText(t, err, 'chat.composer.joinFailed'));
         return;
       }
     }

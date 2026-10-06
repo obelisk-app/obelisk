@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import { nostrActions } from '@/services/nostr-bridge';
 import { normalizeRelayInput } from '@/utils/relay-url/relay-url-input';
+import { errorText } from '@/utils/errors/error-text';
 
 export interface AddRelayForm {
   readonly url: string;
@@ -40,7 +41,7 @@ export function useAddRelayForm(onAdded: () => void): AddRelayForm {
       await nostrActions.switchRelay(value);
       onAdded();
     } catch (err) {
-      setError((err as Error).message);
+      setError(errorText(t, err, 'chat.relayForm.addFailed'));
     } finally {
       setBusy(false);
     }
@@ -62,6 +63,7 @@ export interface SuggestedRelayAdd {
  * typing a destination.
  */
 export function useSuggestedRelayAdd(url: string, alreadyAdded: boolean, onAdded: () => void): SuggestedRelayAdd {
+  const t = useTranslations();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -73,7 +75,7 @@ export function useSuggestedRelayAdd(url: string, alreadyAdded: boolean, onAdded
       await nostrActions.addRelay(url);
       onAdded();
     } catch (err) {
-      setError((err as Error).message);
+      setError(errorText(t, err, 'chat.relayForm.addFailed'));
     } finally {
       setBusy(false);
     }

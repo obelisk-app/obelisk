@@ -5,6 +5,7 @@ import { type JsGroup } from '@/services/nostr-bridge';
 import { type ChannelLayout } from '@/services/channel-layout';
 import { useChannelLayoutEditor } from '@/hooks/useChannelLayoutEditor';
 import { useTranslations } from 'next-intl';
+import { categoryLabel } from '@/utils/chat/category-label';
 import Sheet from '@/components/ui/Sheet';
 import Input from '@/components/ui/Input';
 import { CategoryChannelsBlock, NO_CATEGORY, categoryOptions } from './categories/CategoryChannelsBlock';
@@ -48,7 +49,10 @@ export function ManageCategoriesSheet({
     [channels],
   );
 
-  const catOptions = categoryOptions(draft.categories, t('mobile.layout.uncategorized'));
+  const catOptions = categoryOptions(
+    draft.categories.map((c) => ({ id: c.id, name: categoryLabel(c.name, t) })),
+    t('mobile.layout.uncategorized'),
+  );
 
   return (
     <Sheet onClose={close} screen="manage-categories" label={t('mobile.layout.title')} zIndex={20} maxHeight="94%">
@@ -112,7 +116,7 @@ export function ManageCategoriesSheet({
             {laidOut.categories.map((cat) => (
               <CategoryChannelsBlock
                 key={cat.id}
-                catName={cat.name}
+                catName={categoryLabel(cat.name, t)}
                 channelIds={cat.channelIds}
                 channelsById={channelsById}
                 catOptions={catOptions}

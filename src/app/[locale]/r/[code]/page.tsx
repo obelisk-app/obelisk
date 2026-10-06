@@ -7,6 +7,7 @@ import { nostrActions } from '@/services/nostr-bridge';
 import { decodeRelayShareCode } from '@/utils/relay-url/relay-share-link';
 import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/Button';
+import { errorText } from '@/utils/errors/error-text';
 
 const RELAY_BRANDING: Record<string, { logo: string; alt: string }> = {
   'wss://lacrypta-relay.obelisk.ar': { logo: '/lacrypta-logo.png', alt: 'La Crypta' }, // i18n-exempt: the relay's brand name
@@ -48,7 +49,7 @@ export default function RelayShareLinkPage({ params }: { params: Promise<{ code:
         })();
         router.replace(`/app?relay=${encodeURIComponent(host)}`);
       } catch (e) {
-        if (!cancelled) setJoinError((e as Error).message || t('settings.relayShare.failed'));
+        if (!cancelled) setJoinError(errorText(t, e, 'settings.relayShare.failed'));
       }
     })();
     return () => {

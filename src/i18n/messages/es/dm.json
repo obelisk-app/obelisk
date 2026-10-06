@@ -63,7 +63,8 @@
     "tooLarge": "Ese archivo es demasiado grande",
     "badType": "Ese tipo de archivo no está soportado",
     "uploadFailed": "Falló la subida",
-    "needsNip17": "Los archivos cifrados necesitan NIP-17 en esta conversación"
+    "needsNip17": "Los archivos cifrados necesitan NIP-17 en esta conversación",
+    "sendFailed": "No se pudo enviar el archivo."
   },
   "msg": {
     "options": "Opciones del mensaje",

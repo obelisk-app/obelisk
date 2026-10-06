@@ -2,6 +2,7 @@
 
 import type { JsGroup } from '@/services/nostr-bridge';
 import { useTranslations } from 'next-intl';
+import { categoryLabel } from '@/utils/chat/category-label';
 import Select from '@/components/ui/Select';
 import Button from '@/components/ui/Button';
 import { ChevronRightIcon } from '@/components/ui/icons';
@@ -69,7 +70,7 @@ export function ChannelOrderRow({
         <option value="">{t('shell.desktop.layout.uncategorizedOption')}</option>
         {categories.map((c) => (
           <option key={c.id} value={c.id}>
-            {c.name}
+            {categoryLabel(c.name, t)}
           </option>
         ))}
       </Select>
