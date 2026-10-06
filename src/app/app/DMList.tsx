@@ -13,9 +13,9 @@ import {
   useMyFollows,
   type JsDirectMessage,
 } from '@/services/nostr-bridge';
-import { useAuthor } from '@/services/social/useAuthor';
+import { useAuthor } from '@/hooks/social/useAuthor';
 import { ensureSocialProfiles } from '@/services/social/profiles';
-import { useDMUnreadCount } from '@/services/read-state/selectors';
+import { useDMUnreadCount } from '@/hooks/read-state/useUnreadCounts';
 import DMComposer from './DMComposer';
 import UserAvatar from '@/components/ui/UserAvatar';
 import { useTranslation } from '@/i18n/context';

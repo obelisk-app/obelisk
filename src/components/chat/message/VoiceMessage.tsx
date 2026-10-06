@@ -6,7 +6,7 @@ import { useFormat } from '@/i18n/useFormat';
 import Range from '@/components/ui/Range';
 import RemoteImage from '@/components/ui/RemoteImage';
 import { formatAudioTime, VOICE_WAVEFORM } from './audio-time';
-import { useVoicePlayback } from './useVoicePlayback';
+import { useVoicePlayback } from '@/hooks/chat/message/useVoicePlayback';
 
 export function VoiceMessage({
   note,

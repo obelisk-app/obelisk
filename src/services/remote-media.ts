@@ -30,7 +30,6 @@
  * exists, not loading is the only option that does not leak.
  */
 
-import { useSyncExternalStore } from 'react';
 import { createLocalStore } from '@/utils/storage/local-store';
 
 export type RemoteMediaSurface = 'channel' | 'dm';
@@ -77,14 +76,6 @@ export function setRemoteMediaMode(surface: RemoteMediaSurface, mode: RemoteMedi
 export function subscribeRemoteMedia(listener: () => void): () => void {
   listeners.add(listener);
   return () => { listeners.delete(listener); };
-}
-
-export function useRemoteMediaSettings(): RemoteMediaSettings {
-  return useSyncExternalStore(
-    subscribeRemoteMedia,
-    () => current,
-    () => REMOTE_MEDIA_DEFAULTS,
-  );
 }
 
 /** @internal Test helper: back to defaults, in memory and on disk. */

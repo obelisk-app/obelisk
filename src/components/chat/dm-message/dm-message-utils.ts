@@ -1,6 +1,6 @@
 import { hexToNpub } from '@nostr-wot/data';
 import { extractUrls, isImageUrl } from '@/utils/message-text/markdown';
-import type { DmRawEvent, JsDirectMessage } from '@/services/nostr-bridge/types';
+import type { DmRawEvent, JsDirectMessage } from '@/services/nostr-bridge';
 import { useToastStore } from '@/store/toast';
 
 /** The npub for a pubkey, or the input itself when it does not encode. */

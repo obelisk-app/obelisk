@@ -1,6 +1,6 @@
 'use client';
 
-import { useWotDistance, useWotEnabled } from '@/services/wot';
+import { useWotDistance, useWotEnabled } from '@/hooks/wot/useWot';
 
 /**
  * Pill showing WoT distance for `pubkey`. Hidden when WoT is disabled or

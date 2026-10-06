@@ -7,7 +7,7 @@ import { useTranslation } from '@/i18n/context';
 import { SEAT_COLORS } from './chain-reaction/seat-colors';
 import type { CSSVars } from './chain-reaction/css-vars';
 import type { CellSnapshot } from './chain-reaction/cascade';
-import { useCascadeReveal } from './chain-reaction/useCascadeReveal';
+import { useCascadeReveal } from '@/hooks/chat/games/chain-reaction/useCascadeReveal';
 import Orbs from './chain-reaction/Orbs';
 import Explosion from './chain-reaction/Explosion';
 

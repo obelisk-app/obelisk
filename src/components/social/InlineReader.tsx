@@ -17,7 +17,7 @@
  * the same exit.
  */
 
-import { useHistoryDismiss } from '@/app/app/useHistoryDismiss';
+import { useHistoryDismiss } from '@/hooks/app/useHistoryDismiss';
 import { useTranslation } from '@/i18n/context';
 import Button from '@/components/ui/Button';
 

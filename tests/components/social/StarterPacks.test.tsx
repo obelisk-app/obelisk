@@ -17,6 +17,8 @@ vi.mock('@/services/social/starter-packs', async (importOriginal) => {
 
 vi.mock('@/services/social/profiles', () => ({
   ensureSocialProfiles: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock('@/hooks/social/useSocialProfile', () => ({
   useSocialProfile: () => null,
 }));
 

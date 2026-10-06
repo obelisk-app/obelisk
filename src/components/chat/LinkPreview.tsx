@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import RemoteImage from '@/components/ui/RemoteImage';
-import { previewHost, useLinkPreview } from './hooks/useLinkPreview';
+import { useLinkPreview } from '@/hooks/chat/useLinkPreview';
+import { previewHost } from '@/utils/link-preview';
 
 /**
  * Unfurled card for a plain link in a message.

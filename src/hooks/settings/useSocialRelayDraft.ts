@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { useMyPubkey } from '@/services/nostr-bridge';
-import { setPreference, usePreferences } from '@/services/preferences';
+import { setPreference } from '@/services/preferences';
+import { usePreferences } from '@/hooks/usePreferences';
 import {
   DEFAULT_SOCIAL_RELAYS,
   SOCIAL_RELAY_MAX,

@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { displayNameFor } from '@/utils/identity/display-name';
 import { useMyFollows, useMyPubkey } from '@/services/nostr-bridge';
-import { useAuthor } from '@/services/social/useAuthor';
+import { useAuthor } from '@/hooks/social/useAuthor';
 import { useTranslation } from '@/i18n/context';
 import { replyParentOf } from '@/services/social/feed';
 import { parseImeta } from '@/services/social/imeta';
@@ -12,7 +12,7 @@ import { sensitiveInfo } from '@/services/social/sensitive';
 import NoteHeader from './NoteHeader';
 import NoteBody from './NoteBody';
 import NoteActionRow from './NoteActionRow';
-import { useNoteEngagement } from './useNoteEngagement';
+import { useNoteEngagement } from '@/hooks/social/note-card/useNoteEngagement';
 import { bodyClickHandler } from './helpers';
 import type { NoteCardProps } from './types';
 

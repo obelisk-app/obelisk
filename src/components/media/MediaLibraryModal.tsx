@@ -17,7 +17,7 @@ import MediaItemMenu from './library/MediaItemMenu';
 import MediaItemGrid from './library/MediaItemGrid';
 import PackEditor from './library/PackEditor';
 import { newPack } from './library/pack-utils';
-import { useMediaLibrary, type LibraryServer } from './library/useMediaLibrary';
+import { useMediaLibrary, type LibraryServer } from '@/hooks/media/library/useMediaLibrary';
 import type { LibraryTab, MediaFilter, SelectedMedia } from './library/types';
 
 /**

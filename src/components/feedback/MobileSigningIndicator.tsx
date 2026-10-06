@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useActivityLog, type ActivityEntry } from '@/services/activity-log';
+import { type ActivityEntry } from '@/services/activity-log';
+import { useActivityLog } from '@/hooks/useActivityLog';
 import { useTranslation } from '@/i18n/context';
 import CloseButton from '@/components/ui/CloseButton';
 import Overlay from '@/components/ui/Overlay';

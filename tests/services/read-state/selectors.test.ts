@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { JsDirectMessage, JsMessage } from '@/services/nostr-bridge/types';
+import type { JsDirectMessage, JsMessage } from '@/services/nostr-bridge';
 import {
   countDMUnread,
   countChannelUnread,

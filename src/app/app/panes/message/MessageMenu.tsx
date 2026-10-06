@@ -15,8 +15,8 @@ import {
 import { MENU_PANEL_CLASS, MenuDivider, MenuItem } from '@/components/ui/menu';
 import FloatingPanel from '@/components/ui/FloatingPanel';
 import { useTranslation } from '@/i18n/context';
-import type { MessageRowActions } from './useMessageRowActions';
-import type { MessageRowMenus } from './useMessageRowMenus';
+import type { MessageRowActions } from '@/hooks/app/panes/message/useMessageRowActions';
+import type { MessageRowMenus } from '@/hooks/app/panes/message/useMessageRowMenus';
 import RemoteImage from '@/components/ui/RemoteImage';
 
 /** The ⋯ menu: four quick reactions, then reply / forward / zap / copy / mute / delete. */

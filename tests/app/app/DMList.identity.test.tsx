@@ -44,10 +44,14 @@ vi.mock('@/services/nostr-bridge', async () => {
 
 vi.mock('@/services/social/profiles', () => ({
   ensureSocialProfiles: mocks.ensureSocialProfiles,
+}));
+vi.mock('@/hooks/social/useSocialProfile', () => ({
   useSocialProfile: (pubkey: string | null) => (pubkey ? mocks.social[pubkey] ?? null : null),
 }));
 
-vi.mock('@/services/read-state/selectors', () => ({ useDMUnreadCount: () => 0 }));
+vi.mock('@/hooks/read-state/useUnreadCounts', () => ({
+  useDMUnreadCount: () => 0,
+}));
 vi.mock('@/app/app/DMComposer', () => ({ default: () => <div /> }));
 
 import DMList from '@/app/app/DMList';

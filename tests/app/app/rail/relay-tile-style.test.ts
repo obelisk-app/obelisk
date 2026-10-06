@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { colorFor, letterFor, relayShareLink } from '@/app/app/rail/relay-tile-style';
+import { colorFor, letterFor } from '@/app/app/rail/relay-tile-style';
+import { relayShareLink } from '@/utils/relay-url/relay-share-link';
 import { decodeRelayShareCode } from '@/utils/relay-url/relay-share-link';
 
 describe('letterFor', () => {

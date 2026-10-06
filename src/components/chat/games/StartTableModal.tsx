@@ -6,7 +6,7 @@ import type { GameSession } from '@/lib/games/session';
 import type { SeatSpec } from '@/lib/games/protocol';
 import { gameInfo, gameName } from '@/lib/games/catalog';
 import { useTranslation } from '@/i18n/context';
-import { useSeatRows } from './start-table/useSeatRows';
+import { useSeatRows } from '@/hooks/chat/games/start-table/useSeatRows';
 import Button from '@/components/ui/Button';
 import Chip from '@/components/ui/Chip';
 import { CloseIcon } from '@/components/ui/icons';

@@ -1,7 +1,7 @@
 import { renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { draftAfterPick, dmTextTags, filesFromClipboard, nextId } from '@/components/chat/dm-composer/pending';
-import { usePreviewUrls } from '@/components/chat/dm-composer/usePreviewUrls';
+import { usePreviewUrls } from '@/hooks/chat/dm-composer/usePreviewUrls';
 
 describe('DM composer helpers', () => {
   it('mints distinct ids', () => {

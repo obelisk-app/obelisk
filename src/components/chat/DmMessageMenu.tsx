@@ -20,7 +20,7 @@
 import { useRef, useState } from 'react';
 import { useTranslation } from '@/i18n/context';
 import { useMyPubkey } from '@/services/nostr-bridge';
-import type { JsDirectMessage } from '@/services/nostr-bridge/types';
+import type { JsDirectMessage } from '@/services/nostr-bridge';
 import AnchoredMenu from '@/components/social/AnchoredMenu';
 import { MENU_PANEL_CLASS, MenuDivider, MenuItem } from '@/components/ui/menu';
 import { CopyIcon, HashIcon, KeyIcon, LinkIcon, MoreIcon, TerminalIcon } from '@/components/ui/icons';

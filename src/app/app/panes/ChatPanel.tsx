@@ -19,7 +19,7 @@ import MentionNavigator from '@/components/chat/MentionNavigator';
 import HistoryPaginationStatus from '@/components/chat/HistoryPaginationStatus';
 import ForumView from '@/components/chat/ForumView';
 import { useVoiceStore } from '@/store/voice';
-import { useChannelHighlights } from '@/services/read-state/selectors';
+import { useChannelHighlights } from '@/hooks/read-state/useChannelHighlights';
 import { useVoiceChatPane } from '@/hooks/chat/useVoiceChatPane';
 import { FileDropZone } from '@/components/chat/ComposerActions';
 import { useMessageZaps } from '@/hooks/chat/useMessageZaps';
@@ -34,8 +34,8 @@ import { ChannelHeader } from './channel/ChannelHeader';
 import { ChannelMessageList } from './channel/ChannelMessageList';
 import { VoiceChatRail } from './channel/VoiceChatRail';
 import { channelEmptyStage } from './channel/channel-list-state';
-import { useChannelLoadGates, useCreatorAdminClaim } from './channel/useChannelPanelState';
-import { useChannelViewport } from './channel/useChannelViewport';
+import { useChannelLoadGates, useCreatorAdminClaim } from '@/hooks/app/panes/channel/useChannelPanelState';
+import { useChannelViewport } from '@/hooks/app/panes/channel/useChannelViewport';
 
 type ChatPanelProps = {
   groupId: string;

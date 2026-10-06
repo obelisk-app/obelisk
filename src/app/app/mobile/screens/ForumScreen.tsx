@@ -7,7 +7,7 @@ import { ForumSortSheet } from '../sheets/ForumSortSheet';
 import { NewThreadSheet } from '../sheets/NewThreadSheet';
 import { ForumChrome } from './forum/ForumChrome';
 import { MobileForumCard } from './forum/MobileForumCard';
-import { useForumScreen } from './forum/useForumScreen';
+import { useForumScreen } from '@/hooks/app/mobile/screens/forum/useForumScreen';
 import BackButton from '../BackButton';
 
 /**

@@ -1,6 +1,6 @@
 'use client';
 
-import { useHistoryPill } from './hooks/useHistoryPill';
+import { useHistoryPill } from '@/hooks/chat/useHistoryPill';
 
 interface HistoryPaginationStatusProps {
   readonly loading: boolean;

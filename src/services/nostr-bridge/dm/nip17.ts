@@ -14,7 +14,7 @@ import { buildDmFileTags } from '@/utils/attachments/dm-file';
 import type { BridgeContext } from '../context';
 import type { PublishSignedOpts } from '../publish';
 import { pushRelayDebug } from '../relay-debug';
-import { normalizeRelayUrl } from '../relay-url';
+import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
 import type { DmSend, DmSettle } from './send';
 
 export type Nip17Context = Pick<BridgeContext, 'session'>;

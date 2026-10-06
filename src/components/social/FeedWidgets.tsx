@@ -15,7 +15,8 @@
 
 import type { Event as NostrEvent } from 'nostr-tools';
 import { useRef, useState } from 'react';
-import { setPreference, usePreferences } from '@/services/preferences';
+import { setPreference } from '@/services/preferences';
+import { usePreferences } from '@/hooks/usePreferences';
 import {
   FEED_WIDGETS,
   normalizeFeedWidgets,

@@ -22,7 +22,6 @@
  * filter.
  */
 
-import { useEffect, useState } from 'react';
 import { createKeyedObservable, getProfileAggregators, parseKind0 } from '@nostr-wot/data';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { cacheGet, cacheSet } from '@/services/nostr-bridge';
@@ -150,28 +149,11 @@ export async function ensureSocialProfiles(pubkeys: readonly string[]): Promise<
 }
 
 /**
- * One author's profile, resolving in the background.
- *
- * Returns `null` until something is known, so callers keep their existing
- * npub fallback rather than flashing a placeholder name.
+ * Listen for one author's profile resolving or changing. Returns an
+ * unsubscribe. The React side is `useSocialProfile` in `src/hooks/social/`.
  */
-export function useSocialProfile(pubkey: string | null | undefined): SocialProfile | null {
-  const [profile, setProfile] = useState<SocialProfile | null>(
-    () => (pubkey ? getSocialProfile(pubkey) : null),
-  );
-
-  useEffect(() => {
-    if (!pubkey) {
-      setProfile(null);
-      return;
-    }
-    setProfile(getSocialProfile(pubkey));
-    const unsubscribe = store.subscribe(pubkey, (slot) => setProfile(slot.value ?? null));
-    void ensureSocialProfiles([pubkey]);
-    return unsubscribe;
-  }, [pubkey]);
-
-  return profile;
+export function subscribeSocialProfile(pubkey: string, onChange: (profile: SocialProfile | null) => void): () => void {
+  return store.subscribe(pubkey, (slot) => onChange(slot.value ?? null));
 }
 
 /** Test helper. */

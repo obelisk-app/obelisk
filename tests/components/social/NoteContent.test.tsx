@@ -19,7 +19,7 @@ vi.mock('@/components/chat/MessageContent', () => ({
   ),
 }));
 
-vi.mock('@/services/social/useAuthor', () => ({ useAuthor: () => ({ displayName: 'Alice' }) }));
+vi.mock('@/hooks/social/useAuthor', () => ({ useAuthor: () => ({ displayName: 'Alice' }) }));
 
 import NoteContent from '@/components/social/NoteContent';
 

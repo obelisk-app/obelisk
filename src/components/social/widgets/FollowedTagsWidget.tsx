@@ -1,6 +1,6 @@
 'use client';
 
-import { useInterests } from '@/services/social/useInterests';
+import { useInterests } from '@/hooks/social/useInterests';
 import { useTranslation } from '@/i18n/context';
 import WidgetCard, { WidgetEmpty } from './WidgetCard';
 import Button from '@/components/ui/Button';

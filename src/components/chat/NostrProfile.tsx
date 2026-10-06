@@ -16,13 +16,13 @@ import { useCallback, useState } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { hexToNpub } from '@nostr-wot/data';
 import type { JsUserMetadata } from '@/services/nostr-bridge';
-import { usePreferences } from '@/services/preferences';
+import { usePreferences } from '@/hooks/usePreferences';
 import { useTranslation } from '@/i18n/context';
 import FeedList from '@/components/social/FeedList';
 import { ComposeButton } from '@/components/social/FeedControls';
 import NoteComposer from '@/components/social/NoteComposer';
 import MobileComposer from '@/components/social/MobileComposer';
-import type { ComposerMode } from '@/components/social/useNoteDraft';
+import type { ComposerMode } from '@/hooks/social/useNoteDraft';
 import NoteThread from '@/components/social/NoteThread';
 import ArticleReader from '@/components/social/ArticleCard';
 import Modal from '@/components/ui/Modal';
@@ -34,9 +34,9 @@ import { ProfileActions } from './profile/ProfileActions';
 import { ProfileFeedTabs } from './profile/ProfileFeedTabs';
 import { ProfileMediaLightbox } from './profile/ProfileMediaLightbox';
 import { copyWithToast } from './profile/profile-labels';
-import { useProfileMeta } from './profile/useProfileMeta';
-import { useProfileFollow } from './profile/useProfileFollow';
-import { useProfileFeed } from './profile/useProfileFeed';
+import { useProfileMeta } from '@/hooks/chat/profile/useProfileMeta';
+import { useProfileFollow } from '@/hooks/chat/profile/useProfileFollow';
+import { useProfileFeed } from '@/hooks/chat/profile/useProfileFeed';
 
 type NostrProfileProps = {
   pubkey: string;

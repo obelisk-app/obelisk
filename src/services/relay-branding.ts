@@ -12,7 +12,6 @@
  *   ["name", displayName]
  *   ["description", text]
  */
-import { useEffect, useState } from 'react';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import { getBridge, getBridgeImpl, cacheGet, cacheSet } from '@/services/nostr-bridge';
 import { KIND_NIP78_APP_DATA as KIND_BRANDING } from '@/utils/nip-kinds';
@@ -114,21 +113,3 @@ export async function publishBranding(relayUrl: string, branding: RelayBranding)
   }, { extraRelays: [relayUrl], mode: 'replace' });
 }
 
-export function useRelayBranding(
-  relayUrl: string | null,
-  authors: ReadonlyArray<string>,
-): RelayBranding {
-  const [b, setB] = useState<RelayBranding>(EMPTY_BRANDING);
-  const authorsKey = [...authors].sort().join(',');
-  // Reset only on relay change: authors arriving after the first paint
-  // would otherwise blank the banner/name briefly mid-load.
-  useEffect(() => {
-    setB(EMPTY_BRANDING);
-  }, [relayUrl]);
-  useEffect(() => {
-    if (!relayUrl || authors.length === 0) return;
-    return subscribeBranding(relayUrl, authors, setB);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [relayUrl, authorsKey]);
-  return b;
-}

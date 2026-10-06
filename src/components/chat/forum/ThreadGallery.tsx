@@ -6,7 +6,7 @@ import RemoteImage from '@/components/ui/RemoteImage';
 import { InlineTagChip } from './InlineTagChip';
 import { ThreadGalleryCardSkeleton } from './ThreadCardSkeletons';
 import { formatTimeAgo, posterName } from './thread-card-utils';
-import { useThreadCardData } from './useThreadCardData';
+import { useThreadCardData } from '@/hooks/chat/forum/useThreadCardData';
 
 export function ThreadGallery({
   threads,

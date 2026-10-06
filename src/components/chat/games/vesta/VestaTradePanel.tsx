@@ -4,7 +4,7 @@ import type { GameState } from 'vesta';
 import { useTranslation } from '@/i18n/context';
 import { RESOURCES, RESOURCE_EMOJI, tradeAction } from './resources';
 import { Chip, ResourceRow as Row } from './table-controls';
-import type { VestaTurn } from './useVestaTurn';
+import type { VestaTurn } from '@/hooks/chat/games/vesta/useVestaTurn';
 import Button from '@/components/ui/Button';
 import Text from '@/components/ui/Text';
 

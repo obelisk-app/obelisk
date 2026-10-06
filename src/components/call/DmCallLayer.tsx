@@ -13,7 +13,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useIsLoggedIn } from '@/services/nostr-bridge';
-import { useAuthor } from '@/services/social/useAuthor';
+import { useAuthor } from '@/hooks/social/useAuthor';
 import { displayNameFor } from '@/utils/identity/display-name';
 import { useTranslation } from '@/i18n/context';
 import { useCallFullscreen } from '@/hooks/useCallFullscreen';

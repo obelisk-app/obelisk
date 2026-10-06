@@ -15,7 +15,7 @@ import {
   uniqueRelayUrls,
   validateRelayUrl,
 } from '../relay-list';
-import { normalizeRelayUrl } from '../relay-url';
+import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
 import { LEGACY_RELAYS_KEY, RELAYS_KEY, readMigrated } from '../session-storage';
 import { RELAY_SWITCH_GRACE_MS } from '../subscriptions/pinned';
 import type { PerGroupReqs } from './fanout';

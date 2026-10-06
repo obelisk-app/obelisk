@@ -16,7 +16,7 @@
 
 import { useMemo } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
-import { useAuthor } from '@/services/social/useAuthor';
+import { useAuthor } from '@/hooks/social/useAuthor';
 import { useTranslation } from '@/i18n/context';
 import Badge from '@/components/ui/Badge';
 import Chip from '@/components/ui/Chip';
@@ -25,7 +25,7 @@ import Text from '@/components/ui/Text';
 import UserAvatar from '@/components/ui/UserAvatar';
 import MessageContent from '@/components/chat/MessageContent';
 import { articleDate, articleMeta, readingMinutes } from './article-meta';
-import { useArticleHighlights } from './useArticleHighlights';
+import { useArticleHighlights } from '@/hooks/social/useArticleHighlights';
 export { articleMeta, readingMinutes, type ArticleMeta } from './article-meta';
 
 /** Compact card for a feed row. */

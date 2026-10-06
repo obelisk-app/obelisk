@@ -6,7 +6,7 @@ import { CheckBadgeIcon, CopyIcon } from '@/components/ui/icons';
 import Spinner from '@/components/ui/Spinner';
 import WotBadge from '../WotBadge';
 import { renderWithEmojis } from './popover-emoji';
-import type { PopoverMember } from './usePopoverMember';
+import type { PopoverMember } from '@/hooks/chat/profile/usePopoverMember';
 
 /** Name, WoT badge, NIP-05 handle and the copyable npub. */
 export function PopoverIdentity({

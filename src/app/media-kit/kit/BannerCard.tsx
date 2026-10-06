@@ -2,7 +2,7 @@
 
 import { useRef } from 'react';
 import { CodeBlock } from './kit-ui';
-import { usePngDownload } from './usePngDownload';
+import { usePngDownload } from '@/hooks/media-kit/kit/usePngDownload';
 import Button from '@/components/ui/Button';
 
 function DownloadPngButton({

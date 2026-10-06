@@ -16,7 +16,7 @@
 import { displayNameFor } from '@/utils/identity/display-name';
 import { useCallback, useEffect, useState } from 'react';
 import { getBridge, useMyContactList, useMyFollows } from '@/services/nostr-bridge';
-import { usePreferences } from '@/services/preferences';
+import { usePreferences } from '@/hooks/usePreferences';
 import { ensureSocialProfiles } from '@/services/social/profiles';
 import {
   fetchStarterPacks,
@@ -24,7 +24,7 @@ import {
   mergedFollowTags,
   type StarterPack,
 } from '@/services/social/starter-packs';
-import { useAuthor } from '@/services/social/useAuthor';
+import { useAuthor } from '@/hooks/social/useAuthor';
 import { useToastStore } from '@/store/toast';
 import { useTranslation } from '@/i18n/context';
 import Button from '@/components/ui/Button';

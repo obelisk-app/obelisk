@@ -32,7 +32,7 @@ import { useCurrentRelayUrl, useMessages } from '@/services/nostr-bridge';
 import { isUserWatchingChannel } from '@/services/read-gates';
 import { useChatStore } from '@/store/chat';
 import { useNotificationsStore } from '@/store/notifications';
-import { useMentionNotifications } from '@/services/notifications/selectors';
+import { useMentionNotifications } from '@/hooks/notifications/useNotificationSelectors';
 
 export const MENTION_SEEN_THRESHOLD = 0.6;
 /** A row taller than the viewport counts once it covers this share of it. */

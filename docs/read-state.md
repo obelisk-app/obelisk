@@ -461,12 +461,12 @@ in-page and the browser owns the OS handoff.
 | `tests/services/read-state/selectors.test.ts` | unread counts, own-message exclusion, `computeChannelHighlights` ordering, mention + reply union |
 | `tests/services/read-state/replies.test.ts` | NIP-10 strict reply detection, parent lookup, edge cases |
 | `tests/services/read-state/relay-sync.test.ts` | sub/ingest with merged cursors, debounced publish, d-tag filtering, cache-first paint |
-| `tests/services/read-state/root.test.tsx` | `useReadyToSync` gate: false before connect, flips on EOSE, flips after 1000ms grace, no flip if connection drops mid-grace |
+| `tests/hooks/read-state/useReadyToSync.test.tsx` | `useReadyToSync` gate: false before connect, flips on EOSE, flips after 1000ms grace, no flip if connection drops mid-grace |
 | `tests/lib/nip-59.test.ts` | wrap/unwrap roundtrip, null-on-junk, recipient mismatch, ephemeral pubkey privacy |
 | `tests/utils/message-text/mentions.test.ts` | content-only and `#p`-tag mention extraction |
 | `src/components/chat/MentionNavigator.test.tsx` | ↑↓ clamping, F7 / Shift+F7 keys, scrollIntoView, hidden when no highlights |
-| `src/hooks/useAutoMarkRead.test.tsx` | cursor advances on watching, halts on hidden, monotonic on backfill |
-| `src/hooks/useFaviconBadge.test.tsx` | tab title + favicon count DMs + active-relay mentions only, ignore ordinary traffic and other relays' mentions |
+| `tests/hooks/useAutoMarkRead.test.tsx` | cursor advances on watching, halts on hidden, monotonic on backfill |
+| `tests/hooks/useFaviconBadge.test.tsx` | tab title + favicon count DMs + active-relay mentions only, ignore ordinary traffic and other relays' mentions |
 
 End-to-end (Playwright):
 

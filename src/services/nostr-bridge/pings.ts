@@ -23,7 +23,7 @@ import {
 } from './background-watch';
 import { cacheGet } from './cache';
 import { getTag } from './event-tags';
-import { normalizeRelayUrl } from './relay-url';
+import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
 import type { BridgeContext } from './context';
 import type { JsGroup, JsMessage } from './types';
 

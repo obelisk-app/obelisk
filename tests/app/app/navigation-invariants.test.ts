@@ -25,9 +25,16 @@ const read = (p: string) =>
     .replace(/\/\*[\s\S]*?\*\//g, '')
     .replace(/(^|[^:])\/\/.*$/gm, '$1');
 
-/** Every file of the desktop shell: the entry plus the parts under `shell/`. */
+/**
+ * Every file of the desktop shell: the entry, the parts under `shell/`, and
+ * the shell's hooks under `src/hooks/app/shell/`.
+ */
 const desktopShell = () =>
-  ['DesktopShell.tsx', ...readdirSync(join(process.cwd(), 'src/app/app/shell')).map((f) => `shell/${f}`)]
+  [
+    'DesktopShell.tsx',
+    ...readdirSync(join(process.cwd(), 'src/app/app/shell')).map((f) => `shell/${f}`),
+    ...readdirSync(join(process.cwd(), 'src/hooks/app/shell')).map((f) => `../../hooks/app/shell/${f}`),
+  ]
     .map(read)
     .join('\n');
 
@@ -79,7 +86,7 @@ describe('desktop navigation invariants', () => {
   it('threads open in a side pane on desktop, not a modal', () => {
     // A modal hides the list you were reading, which is the context you need
     // while following a conversation.
-    // The pane is `shell/ReaderPaneSlot.tsx`, its state `shell/useShellPanes.ts`.
+    // The pane is `shell/ReaderPaneSlot.tsx`, its state `src/hooks/app/shell/useShellPanes.ts`.
     const slot = read('shell/ReaderPaneSlot.tsx');
     expect(slot).toContain('desktop-thread-pane');
     expect(slot).toContain('THREAD_PANE_KEY');
@@ -90,7 +97,7 @@ describe('desktop navigation invariants', () => {
     expect(main).toContain('onOpenThread={');
     expect(main).toContain('onOpenArticle={');
     // One pane holds one thing: opening an article clears the thread stack.
-    const panes = read('shell/useShellPanes.ts');
+    const panes = read('../../hooks/app/shell/useShellPanes.ts');
     expect(panes).toContain('setThreadStack([]); setPaneArticle(note);');
     /*
      * Threads stack. Opening a note from inside a thread used to overwrite
@@ -107,15 +114,15 @@ describe('desktop navigation invariants', () => {
     // The public viewer's "Open in Obelisk" points at /app?s=feed. Mobile
     // already understands `?s=<screen>`; desktop had to learn it so one link
     // works whichever shell picks it up.
-    // The deep-link effect lives in `shell/useDesktopNavigation.ts`.
-    const nav = read('shell/useDesktopNavigation.ts');
+    // The deep-link effect lives in `src/hooks/app/shell/useDesktopNavigation.ts`.
+    const nav = read('../../hooks/app/shell/useDesktopNavigation.ts');
     expect(nav).toContain("params.get('s') === 'feed'");
     // A channel deep-link is more specific and must still win.
     expect(nav).toContain("if (!c && params.get('s') === 'feed')");
   });
 
   it('the shell answers a pendingJump by changing `view`, not the bridge', () => {
-    const shell = read('shell/useDesktopNavigation.ts');
+    const shell = read('../../hooks/app/shell/useDesktopNavigation.ts');
     expect(read('DesktopShell.tsx')).toContain('useDesktopNavigation(');
     const effect = shell.slice(
       shell.indexOf('const pendingJump ='),

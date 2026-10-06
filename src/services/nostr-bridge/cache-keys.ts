@@ -3,7 +3,7 @@
  * and the sweeps (`cache-sweep.ts`): one prefix per cache generation, then
  * `{relay}/{kind}/{id}`.
  */
-import { normalizeRelayUrl } from './relay-url';
+import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
 
 // v4, evicts metadata and message cache entries written before hidden NIP-29
 // groups were privacy-gated. Relays repopulate visible groups after login.

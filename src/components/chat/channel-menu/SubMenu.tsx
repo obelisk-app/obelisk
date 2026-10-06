@@ -2,7 +2,7 @@
 
 import { useRef, type ReactNode } from 'react';
 import { MENU_PANEL_CLASS } from '@/components/ui/menu';
-import { useSubMenuShift } from './useMenuPlacement';
+import { useSubMenuShift } from '@/hooks/chat/channel-menu/useMenuPlacement';
 
 /**
  * A flyout next to its row that never leaves the viewport: it measures itself

@@ -4,7 +4,7 @@ import { hexToNpub } from '@nostr-wot/data';
 import { json, rawEventFacts, safeNpub, splitDmImages } from '@/components/chat/dm-message/dm-message-utils';
 import { TextWithEmoji } from '@/components/chat/dm-message/TextWithEmoji';
 import { emojiForOptionText, isEmojiUrl } from '@/components/chat/channel-emoji';
-import type { JsDirectMessage } from '@/services/nostr-bridge/types';
+import type { JsDirectMessage } from '@/services/nostr-bridge';
 
 const HEX = '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d';
 

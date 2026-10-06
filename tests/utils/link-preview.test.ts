@@ -3,9 +3,11 @@ import {
   decodeEntities,
   isBlockedAddress,
   isX,
+  previewHost,
   readMeta,
   syndicationToken,
   tweetIdFrom,
+  type LinkPreview,
 } from '@/utils/link-preview';
 
 describe('isBlockedAddress', () => {
@@ -160,5 +162,15 @@ describe('X helpers', () => {
   it('derives the same token X\'s own widget uses', () => {
     // Verified against the live endpoint for this id.
     expect(syndicationToken('1349129669258448897')).toBe('39qeyy97t9x');
+  });
+});
+
+describe('previewHost', () => {
+  const preview = (over: Partial<LinkPreview> = {}) =>
+    ({ url: 'https://www.example.com/a', siteName: 'Example', title: 'T', ...over }) as LinkPreview;
+
+  it('drops www., and falls back to the site name for a bad URL', () => {
+    expect(previewHost(preview())).toBe('example.com');
+    expect(previewHost(preview({ url: 'not a url' }))).toBe('Example');
   });
 });

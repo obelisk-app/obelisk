@@ -9,7 +9,7 @@ const mockLogout = vi.fn();
 const mockPublishProfile = vi.fn().mockResolvedValue(undefined);
 const mockClearCache = vi.fn();
 
-vi.mock('@/services/nostr-bridge/cache-clear', () => ({
+vi.mock('@/services/cache-clear', () => ({
   clearAllClientCacheExceptSession: () => mockClearCache(),
 }));
 
@@ -69,16 +69,22 @@ vi.mock('@/services/relay-info', () => ({
 }));
 
 vi.mock('@/services/relay-branding', () => ({
-  useRelayBranding: () => ({}),
   publishBranding: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock('@/hooks/relay/useRelayBranding', () => ({
+  useRelayBranding: () => ({}),
 }));
 
 vi.mock('@/services/channel-layout', () => ({
-  useChannelLayout: () => ({ categories: [], channels: [], updatedAt: 0 }),
-  useRelayOperatorPubkey: () => null,
   applyLayout: () => ({ categories: [], uncategorized: [] }),
   publishLayout: vi.fn().mockResolvedValue(undefined),
   newCategoryId: () => 'cat-test',
+}));
+vi.mock('@/hooks/relay/useChannelLayout', () => ({
+  useChannelLayout: () => ({ categories: [], channels: [], updatedAt: 0 }),
+}));
+vi.mock('@/hooks/relay/useRelayOperatorPubkey', () => ({
+  useRelayOperatorPubkey: () => null,
 }));
 
 vi.mock('@/components/media/BlossomImageInput', () => ({

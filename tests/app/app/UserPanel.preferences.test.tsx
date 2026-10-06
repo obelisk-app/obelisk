@@ -10,7 +10,7 @@ vi.mock('@/components/settings/WotSettings', () => ({
   default: () => <div data-testid="wot-settings" />,
 }));
 
-vi.mock('@/services/nostr-bridge/cache-clear', () => ({
+vi.mock('@/services/cache-clear', () => ({
   clearAllClientCacheExceptSession: () => 0,
 }));
 

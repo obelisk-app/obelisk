@@ -12,7 +12,7 @@ import { failActivity, pushActivity, resolveActivity } from '@/services/activity
 import { CONNECT_HANDSHAKE_TIMEOUT_MS } from '../page-hub';
 import { pushRelayDebug } from '../relay-debug';
 import { validateRelayUrl } from '../relay-list';
-import { normalizeRelayUrl } from '../relay-url';
+import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
 import type { RelayAccessState } from '../types';
 import { isBrowserOffline } from './browser-events';
 import type { PerGroupReqs } from './fanout';

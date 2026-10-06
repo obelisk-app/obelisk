@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import { getBridge, getBridgeImpl, cacheGet, cacheSet } from '@/services/nostr-bridge';
 import type { JsMediaKind, JsMediaPack } from '@/services/nostr-bridge';
@@ -216,25 +215,6 @@ export async function publishRelayEmojiSet(
   relayEmojiLatestAt.set(relayUrl, published.updatedAt);
   cacheSet(relayUrl, KIND_EMOJI_SET, relayEmojiSetDTag(relayUrl), published);
   notifyRelayEmojiSet(relayUrl, published);
-}
-
-export function useRelayEmojiSet(
-  relayUrl: string | null,
-  authors: ReadonlyArray<string>,
-): RelayEmojiSet {
-  const authorsKey = useMemo(() => [...authors].sort().join(','), [authors]);
-  const stateKey = `${relayUrl ?? ''}|${authorsKey}`;
-  const [state, setState] = useState<{ key: string; set: RelayEmojiSet }>({
-    key: '',
-    set: EMPTY_RELAY_EMOJI_SET,
-  });
-  useEffect(() => {
-    if (!relayUrl || authors.length === 0) return;
-    const key = stateKey;
-    return subscribeRelayEmojiSet(relayUrl, authors, (set) => setState({ key, set }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [relayUrl, authorsKey, stateKey]);
-  return state.key === stateKey ? state.set : EMPTY_RELAY_EMOJI_SET;
 }
 
 export { customEmojiMapFromTags };

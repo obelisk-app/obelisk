@@ -15,10 +15,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '@/i18n/context';
 import { useNostrUserSearch, type UserHit } from '@/hooks/useNostrUserSearch';
-import { useAuthor } from '@/services/social/useAuthor';
+import { useAuthor } from '@/hooks/social/useAuthor';
 import { displayNameFor } from '@/utils/identity/display-name';
 import { shortNpubLabel } from '@/utils/identity/short-npub';
-import { recordNip05Resolution, useNip05Status } from '@/services/nip05-verify';
+import { recordNip05Resolution } from '@/services/nip05-verify';
+import { useNip05Status } from '@/hooks/useNip05Status';
 import UserAvatar from '@/components/ui/UserAvatar';
 import { CheckBadgeIcon } from '@/components/ui/icons';
 import Input from '@/components/ui/Input';

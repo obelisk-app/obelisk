@@ -3,12 +3,12 @@
 import { shortHost } from '@/utils/relay-url/url-host';
 import { useEffect, useRef, useState } from 'react';
 import { faviconFor, fetchRelayInfo } from '@/services/relay-info';
-import { useRelayBranding } from '@/services/relay-branding';
+import { useRelayBranding } from '@/hooks/relay/useRelayBranding';
 import MobileSigningIndicator from '@/components/feedback/MobileSigningIndicator';
 import { useTranslation } from '@/i18n/context';
-import { useUnreadMentionCount } from '@/services/notifications/selectors';
-import { usePreferences } from '@/services/preferences';
-import { normalizeRelayUrl, relayWebsiteUrl } from '@/services/nostr-bridge/relay-url';
+import { useUnreadMentionCount } from '@/hooks/notifications/useNotificationSelectors';
+import { usePreferences } from '@/hooks/usePreferences';
+import { normalizeRelayUrl, relayWebsiteUrl } from '@/utils/relay-url/normalize';
 import RelayStatusPill from '@/components/social/RelayStatusPill';
 import { openSettings } from '@/utils/open-settings';
 import { avatarStyle } from './avatar';

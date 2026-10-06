@@ -57,3 +57,8 @@ export function encodeRelayShareCode(url: string): string {
   }
   return base64urlEncode(url);
 }
+
+/** The public `/r/<code>` link that opens a relay's branded landing page. */
+export function relayShareLink(origin: string, url: string): string {
+  return `${origin}/r/${encodeRelayShareCode(url)}`;
+}

@@ -6,7 +6,7 @@ import { nostrActions, useUserMetadata as useProfile } from '@/services/nostr-br
 import type { SettingsTab } from './settings/SettingsSections';
 import { UserProfileCard } from './user-panel/UserProfileCard';
 import { UserSettingsModal } from './user-panel/UserSettingsModal';
-import { panelPositionStyle, safeNpub, useUserPanelEffects, type PanelAnchor } from './user-panel/useUserPanel';
+import { panelPositionStyle, safeNpub, useUserPanelEffects, type PanelAnchor } from '@/hooks/app/user-panel/useUserPanel';
 
 // The sections live in `./settings`; re-exported so existing importers of
 // this module keep working.

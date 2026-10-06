@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import { clearAllClientCacheExceptSession } from '@/services/nostr-bridge/cache-clear';
+import { clearAllClientCacheExceptSession } from '@/services/cache-clear';
 import Button from '@/components/ui/Button';
 import TextButton from '@/components/ui/TextButton';
 

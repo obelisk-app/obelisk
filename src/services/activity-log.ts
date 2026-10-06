@@ -1,6 +1,5 @@
 'use client';
 
-import { useSyncExternalStore } from 'react';
 
 export type ActivityStatus = 'pending' | 'ok' | 'error';
 
@@ -90,19 +89,13 @@ export async function trackActivity<T>(
   }
 }
 
-function subscribe(l: Listener) {
+/** Non-React change listener. Returns an unsubscribe. */
+export function subscribeActivity(l: Listener): () => void {
   listeners.add(l);
-  return () => listeners.delete(l);
+  return () => { listeners.delete(l); };
 }
 
-function getSnapshot() {
+/** The entries, newest first; the same array until something changes. */
+export function getActivitySnapshot(): ActivityEntry[] {
   return snapshot;
-}
-
-function getServerSnapshot() {
-  return snapshot;
-}
-
-export function useActivityLog(): ActivityEntry[] {
-  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }

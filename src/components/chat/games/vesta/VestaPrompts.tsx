@@ -5,7 +5,7 @@ import type { VestaAction } from '@/lib/games/vesta/definition';
 import { useTranslation } from '@/i18n/context';
 import { RESOURCES, RESOURCE_EMOJI, describe, filled, sum } from './resources';
 import { Counter } from './table-controls';
-import type { VestaTurn } from './useVestaTurn';
+import type { VestaTurn } from '@/hooks/chat/games/vesta/useVestaTurn';
 import Button from '@/components/ui/Button';
 
 /**

@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { setPreference, usePreferences, type Preferences } from '@/services/preferences';
+import { setPreference, type Preferences } from '@/services/preferences';
+import { usePreferences } from '@/hooks/usePreferences';
 import {
   desktopNotificationPermission,
   requestDesktopNotificationPermission,

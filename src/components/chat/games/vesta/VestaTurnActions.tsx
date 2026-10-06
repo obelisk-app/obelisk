@@ -5,7 +5,7 @@ import type { VestaAction } from '@/lib/games/vesta/definition';
 import { useTranslation } from '@/i18n/context';
 import { DEV_EMOJI } from './resources';
 import { ActionButton as Action, ModeToggle as Toggle } from './table-controls';
-import type { VestaTurn } from './useVestaTurn';
+import type { VestaTurn } from '@/hooks/chat/games/vesta/useVestaTurn';
 import Button from '@/components/ui/Button';
 
 /** Roll, build modes, development card, end turn; then the development cards in hand. */

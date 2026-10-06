@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { DmMessageBody } from '@/components/chat/DmMessageBody';
 import { LocaleProvider } from '@/i18n/context';
 import { _resetRemoteMediaForTest, setRemoteMediaMode } from '@/services/remote-media';
-import type { JsDirectMessage } from '@/services/nostr-bridge/types';
+import type { JsDirectMessage } from '@/services/nostr-bridge';
 
 const renderLocalized = (ui: React.ReactElement) => render(<LocaleProvider initialLocale="en">{ui}</LocaleProvider>);
 

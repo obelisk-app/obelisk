@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getBridgeImpl, type JsUserMetadata } from '@/services/nostr-bridge';
-import { buildSlashSections, mergeSlashCommands, useBotCommands, type SlashFilter } from '@/services/bot-commands';
+import { buildSlashSections, mergeSlashCommands, type SlashFilter } from '@/services/bot-commands';
+import { useBotCommands } from '@/hooks/relay/useBotCommands';
 import { loadRecentSlashCommands } from '@/services/recent-slash-commands';
 import { SLASH_COMMANDS, type BotProfiles, type SlashCommand } from '@/components/chat/SlashCommandAutocomplete';
 

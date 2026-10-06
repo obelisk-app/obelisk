@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { guidesHref } from '@/utils/guides/guide-urls';
 import { useTranslation } from '@/i18n/context';
-import { usePostQuantumProbe } from './usePostQuantumProbe';
+import { usePostQuantumProbe } from '@/hooks/app/settings/usePostQuantumProbe';
 
 /**
  * Read-only status line beneath the post-quantum toggle. Reports the three

@@ -1,9 +1,7 @@
 'use client';
 
-import { useSyncExternalStore } from 'react';
 import { createLocalStore } from '@/utils/storage/local-store';
 import {
-  DEFAULTS,
   normalizePreferenceValue,
   normalizePreferences,
   APPEARANCE_DEFAULTS,
@@ -12,6 +10,7 @@ import {
 
 export {
   APPEARANCE_DEFAULTS,
+  DEFAULTS as PREFERENCE_DEFAULTS,
   CALL_RELAY_MAX,
   DEFAULT_CALL_RELAYS,
   normalizeCallRelays,
@@ -56,15 +55,4 @@ export function resetAppearancePreferences(): void {
 export function subscribePreferences(listener: () => void): () => void {
   listeners.add(listener);
   return () => { listeners.delete(listener); };
-}
-
-export function usePreferences(): Preferences {
-  return useSyncExternalStore(
-    (l) => {
-      listeners.add(l);
-      return () => listeners.delete(l);
-    },
-    () => current,
-    () => DEFAULTS,
-  );
 }

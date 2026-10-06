@@ -2,7 +2,7 @@
 
 import type { ComponentPropsWithoutRef } from 'react';
 import { useTranslation } from '@/i18n/context';
-import { useFileDrag } from './useFileDrag';
+import { useFileDrag } from '@/hooks/chat/composer/useFileDrag';
 
 type FileDropZoneProps = Omit<
   ComponentPropsWithoutRef<'div'>,

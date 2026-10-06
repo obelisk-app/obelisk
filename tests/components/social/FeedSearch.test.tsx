@@ -25,6 +25,8 @@ vi.mock('@/hooks/useNostrUserSearch', () => ({
 
 vi.mock('@/services/social/profiles', () => ({
   ensureSocialProfiles: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock('@/hooks/social/useSocialProfile', () => ({
   useSocialProfile: () => null,
 }));
 

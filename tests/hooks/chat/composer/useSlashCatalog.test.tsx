@@ -1,10 +1,7 @@
 import { renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('@/services/bot-commands', async (orig) => {
-  const actual = await orig<Record<string, unknown>>();
-  return { ...actual, useBotCommands: () => [] };
-});
+vi.mock('@/hooks/relay/useBotCommands', () => ({ useBotCommands: () => [] }));
 vi.mock('@/services/nostr-bridge', async () => {
   const { bridgeMock } = await import('@tests/support/mocks/nostr-bridge');
   return bridgeMock({ getBridgeImpl: () => null });

@@ -4,15 +4,6 @@ import type { ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useDismiss } from '@/hooks/useDismiss';
 
-/**
- * Close on Escape while mounted. Shared by Modal and Sheet. Kept under this
- * name for its importers; it is `useDismiss` with the outside press left to
- * the backdrop.
- */
-export function useEscapeToClose(onClose: () => void, enabled: boolean): void {
-  useDismiss({ onDismiss: onClose, enabled, outside: 'none' });
-}
-
 export interface OverlayProps {
   onClose: () => void;
   /** Clicking the backdrop (not the panel) closes. Default true. */
@@ -47,7 +38,8 @@ export default function Overlay({
   testId,
   children,
 }: OverlayProps) {
-  useEscapeToClose(onClose, closeOnEscape);
+  // Escape only: the outside press is the backdrop's own click below.
+  useDismiss({ onDismiss: onClose, enabled: closeOnEscape, outside: 'none' });
   // The panel stops propagation (see Modal), so a click inside it neither
   // closes the overlay nor reaches the React parent that opened it.
   const node = (

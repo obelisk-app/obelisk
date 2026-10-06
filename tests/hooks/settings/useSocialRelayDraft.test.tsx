@@ -9,8 +9,10 @@ const watchRelays = vi.fn();
 let pubkey: string | null = 'f'.repeat(64);
 
 vi.mock('@/services/preferences', () => ({
-  usePreferences: () => saved,
   setPreference: (key: string, value: unknown) => setPreference(key, value),
+}));
+vi.mock('@/hooks/usePreferences', () => ({
+  usePreferences: () => saved,
 }));
 vi.mock('@/services/nostr-bridge', async () => {
   const { bridgeMock } = await import('@tests/support/mocks/nostr-bridge');

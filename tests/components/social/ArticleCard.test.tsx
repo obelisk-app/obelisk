@@ -20,6 +20,8 @@ vi.mock('@/services/nostr-bridge', async () => {
 // by the bridge stub above; the resolver is not what this file tests.
 vi.mock('@/services/social/profiles', () => ({
   ensureSocialProfiles: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock('@/hooks/social/useSocialProfile', () => ({
   useSocialProfile: () => null,
 }));
 

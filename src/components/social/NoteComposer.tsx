@@ -19,7 +19,7 @@ import Button from '@/components/ui/Button';
 import Text from '@/components/ui/Text';
 import MessageContent from '@/components/chat/MessageContent';
 import { linkifyHashtags } from '@/services/social/profile-feed';
-import { useNoteDraft, type ComposerMode } from './useNoteDraft';
+import { useNoteDraft, type ComposerMode } from '@/hooks/social/useNoteDraft';
 import ErrorState from '@/components/ui/ErrorState';
 import FileInput from '@/components/ui/FileInput';
 

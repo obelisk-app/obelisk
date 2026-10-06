@@ -23,7 +23,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { useTranslation } from '@/i18n/context';
 import Button from '@/components/ui/Button';
-import type { FeedState } from '@/services/social/useFeed';
+import type { FeedState } from '@/hooks/social/useFeed';
 import NoteCard from './NoteCard';
 
 /** How close to the top counts as "still at the top" for auto-merge. */

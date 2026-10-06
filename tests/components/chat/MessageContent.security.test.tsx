@@ -14,7 +14,7 @@ vi.mock('@/services/nostr-bridge', async () => {
 vi.mock('@/components/chat/LinkPreview', () => ({ default: () => null }));
 
 import MessageContent from '@/components/chat/MessageContent';
-import { preloadMarkdownBody } from '@/components/chat/message/useMarkdownBody';
+import { preloadMarkdownBody } from '@/hooks/chat/message/useMarkdownBody';
 
 // The markdown renderer loads on demand; load it first so every render below is the real one.
 beforeAll(async () => { await preloadMarkdownBody(); });

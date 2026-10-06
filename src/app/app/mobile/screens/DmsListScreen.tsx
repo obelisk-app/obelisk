@@ -1,7 +1,7 @@
 'use client';
 
 import { avatarInitials, displayNameFor } from '@/utils/identity/display-name';
-import { useAuthor } from '@/services/social/useAuthor';
+import { useAuthor } from '@/hooks/social/useAuthor';
 import { ensureSocialProfiles } from '@/services/social/profiles';
 import { relativeTime } from '@/utils/format/relative-time';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -9,10 +9,10 @@ import { useDirectMessages, type JsDirectMessage } from '@/services/nostr-bridge
 import DMOptInGate from '../../DMOptInGate';
 import MobileSigningIndicator from '@/components/feedback/MobileSigningIndicator';
 import { useTranslation } from '@/i18n/context';
-import { useDMUnreadCount } from '@/services/read-state/selectors';
+import { useDMUnreadCount } from '@/hooks/read-state/useUnreadCounts';
 import { type ScreenName } from '../url-state';
 import { avatarStyle } from '../avatar';
-import { useScreenScrollMemo } from '../useScreenScrollMemo';
+import { useScreenScrollMemo } from '@/hooks/app/mobile/useScreenScrollMemo';
 import RemoteImage from '@/components/ui/RemoteImage';
 
 export function MobileDmOptInScreen({

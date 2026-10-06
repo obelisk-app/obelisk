@@ -5,7 +5,7 @@ import type { JsMessage } from '@/services/nostr-bridge';
 import { ForwardIcon, MoreIcon, ObeliskReactIcon, ReplyIcon } from '@/components/ui/icons';
 import { useTranslation } from '@/i18n/context';
 import Button from '@/components/ui/Button';
-import type { MessageRowActions } from './useMessageRowActions';
+import type { MessageRowActions } from '@/hooks/app/panes/message/useMessageRowActions';
 import RemoteImage from '@/components/ui/RemoteImage';
 
 /**

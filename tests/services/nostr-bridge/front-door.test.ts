@@ -23,10 +23,6 @@ const SRC = join(ROOT, 'src');
 const BRIDGE = join(SRC, 'services', 'nostr-bridge');
 const FRONT_DOOR = join(BRIDGE, 'index');
 
-const OUTSIDE_THIS_BRANCH =
-  'outside the folders the round 14 bridge-door branch owned; move it to the front door ' +
-  '(exporting the name from index.ts if needed) together with any test that mocks the internal path';
-
 /**
  * Files that still use a side entrance, keyed by path from the repo root,
  * with the exact internal paths they may name and why.
@@ -55,20 +51,6 @@ const SIDE_ENTRANCE_ALLOW_LIST: Readonly<Record<string, { paths: readonly string
       'documented in the file: component suites partially mock the index for their own hooks ' +
       'and leave useMyFollows/useMyPubkey out; moving needs those mocks onto bridgeMock first',
   },
-  'src/app/app/settings/useClearLocalData.ts': { paths: ['@/services/nostr-bridge/cache-clear'], why: OUTSIDE_THIS_BRANCH },
-  'src/app/app/mobile/MobileServerRail.tsx': { paths: ['@/services/nostr-bridge/relay-url'], why: OUTSIDE_THIS_BRANCH },
-  'src/app/app/mobile/screens/ServerScreen.tsx': { paths: ['@/services/nostr-bridge/relay-url'], why: OUTSIDE_THIS_BRANCH },
-  'src/app/app/mobile/screens/SettingsPrefsScreen.tsx': {
-    paths: ['@/services/nostr-bridge/cache-clear'],
-    why: OUTSIDE_THIS_BRANCH,
-  },
-  'src/app/app/panes/RelayTopBar.tsx': { paths: ['@/services/nostr-bridge/relay-url'], why: OUTSIDE_THIS_BRANCH },
-  'src/app/app/rail/useRelayTile.ts': { paths: ['@/services/nostr-bridge/relay-url'], why: OUTSIDE_THIS_BRANCH },
-  'src/components/chat/DmMessageBody.tsx': { paths: ['@/services/nostr-bridge/types'], why: OUTSIDE_THIS_BRANCH },
-  'src/components/chat/DmMessageMenu.tsx': { paths: ['@/services/nostr-bridge/types'], why: OUTSIDE_THIS_BRANCH },
-  'src/components/chat/dm-message/dm-message-utils.ts': { paths: ['@/services/nostr-bridge/types'], why: OUTSIDE_THIS_BRANCH },
-  'src/components/chat/dm-message/DmRawEventDialog.tsx': { paths: ['@/services/nostr-bridge/types'], why: OUTSIDE_THIS_BRANCH },
-  'src/components/feedback/ErrorPanel.tsx': { paths: ['@/services/nostr-bridge/cache-clear'], why: OUTSIDE_THIS_BRANCH },
 };
 
 /** `from '...'`, `import '...'` and `import('...')`, across line breaks. */

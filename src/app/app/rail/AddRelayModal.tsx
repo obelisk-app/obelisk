@@ -11,7 +11,7 @@ import ErrorState from '@/components/ui/ErrorState';
 import Input from '@/components/ui/Input';
 import { useTranslation } from '@/i18n/context';
 import { colorFor, letterFor } from './relay-tile-style';
-import { useRelayInfo } from './useRelayInfo';
+import { useRelayInfo } from '@/hooks/app/rail/useRelayInfo';
 import CloseButton from '@/components/ui/CloseButton';
 import RemoteImage from '@/components/ui/RemoteImage';
 

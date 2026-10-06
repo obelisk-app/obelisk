@@ -18,7 +18,7 @@ import HistoryPaginationStatus from '@/components/chat/HistoryPaginationStatus';
 import { FileDropZone } from '@/components/chat/ComposerActions';
 import { type ComposerHandle } from '@/hooks/chat/useChannelComposer';
 import { useTranslation } from '@/i18n/context';
-import { useChannelHighlights } from '@/services/read-state/selectors';
+import { useChannelHighlights } from '@/hooks/read-state/useChannelHighlights';
 import { useChannelGamesSubscription } from '@/hooks/chat/useChannelGames';
 import { LazyNewGameModal } from '../../lazy-mounts';
 import { type ScreenName } from '../url-state';
@@ -28,7 +28,7 @@ import { ChannelComposer } from './ChannelComposer';
 import { ChannelHeaderBar } from './channel/ChannelHeaderBar';
 import { ChannelTimeline } from './channel/ChannelTimeline';
 import { buildTimeline } from './channel/channel-timeline';
-import { useEnsureGroupMetadata, usePhoneChannelViewport, useReplyTarget } from './channel/usePhoneChannel';
+import { useEnsureGroupMetadata, usePhoneChannelViewport, useReplyTarget } from '@/hooks/app/mobile/screens/channel/usePhoneChannel';
 
 export function ChannelScreen({
   groupId,

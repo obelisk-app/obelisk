@@ -19,7 +19,9 @@ vi.mock('@/services/relay-info', () => ({
   SUGGESTED_RELAYS: [],
 }));
 
-vi.mock('@/services/read-state/selectors', () => ({ useHasAnyHighlights: () => false }));
+vi.mock('@/hooks/read-state/useChannelHighlights', () => ({
+  useHasAnyHighlights: () => false,
+}));
 
 import ServerRail from '@/app/app/ServerRail';
 import { useHintsStore } from '@/store/hints';

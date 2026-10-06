@@ -8,7 +8,7 @@
 import type { Event as NostrEvent } from 'nostr-tools';
 import { KIND_METADATA } from '@/utils/nip-kinds';
 import { cacheFreeSpaceForQuota } from './cache';
-import { normalizeRelayUrl } from './relay-url';
+import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
 import { LACRYPTA_RELAY } from './relay-list';
 
 // Quiet outbox/profile relays for bounded kind:0 metadata lookups. Keep this

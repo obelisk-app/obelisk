@@ -8,7 +8,7 @@ import {
   type RelayState,
 } from '@/services/social/relay-status';
 import { normalizeRelayUrl } from '@/services/social/relays';
-import { usePreferences } from '@/services/preferences';
+import { usePreferences } from '@/hooks/usePreferences';
 import { openSettings } from '@/utils/open-settings';
 import { useTranslation } from '@/i18n/context';
 import WidgetCard from './WidgetCard';

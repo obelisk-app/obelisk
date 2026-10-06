@@ -4,7 +4,7 @@ import { useState } from 'react';
 import MediaLibraryModal from '@/components/media/MediaLibraryModal';
 import RemoteImage from '@/components/ui/RemoteImage';
 import type { MessageSticker } from '@/utils/media-tags/sticker-tags';
-import { useStickerSelection } from './useStickerSelection';
+import { useStickerSelection } from '@/hooks/chat/message/useStickerSelection';
 
 export function StickerImg({ sticker }: { sticker: MessageSticker }) {
   const [open, setOpen] = useState(false);

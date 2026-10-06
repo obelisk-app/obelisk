@@ -169,7 +169,7 @@ Condition 2 is checked **locally first**, before any relay round trip, because i
 ## Who the thread says you are talking to
 
 DM surfaces resolve the peer's name and picture through **`useAuthor`**
-(`src/services/social/useAuthor.ts`), never the bridge's `useUserMetadata`
+(`src/hooks/social/useAuthor.ts`), never the bridge's `useUserMetadata`
 directly.
 
 The bridge queries only `DEFAULT_PROFILE_LOOKUP_RELAYS` (lacrypta,
@@ -187,7 +187,7 @@ Two rules for this surface:
 - **Lists batch.** Call `ensureSocialProfiles(allPeers)` once in an effect;
   `useSocialProfile` fires per hook otherwise, so thirty conversations is
   thirty round trips. Both DM lists do this.
-- **Tests must mock it.** `vi.mock('@/services/social/useAuthor', …)`; the real
+- **Tests must mock it.** `vi.mock('@/hooks/social/useAuthor', …)`; the real
   hook opens sockets to public relays from jsdom.
 
 The privacy cost is real and worth stating: opening a DM now asks the social

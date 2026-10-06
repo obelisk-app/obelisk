@@ -27,9 +27,9 @@ import { CenteredPanel, Spinner, StageBackdrop } from './room/chrome';
 import { MeshSyncStatusPill, RoomHeader } from './room/header';
 import { JoinLanding } from './room/JoinLanding';
 import { StageArea } from './room/StageArea';
-import { useVoiceRoomGate } from './room/useVoiceRoomGate';
-import { useVoiceRoomClient } from './room/useVoiceRoomClient';
-import { useStagePin } from './room/useStagePin';
+import { useVoiceRoomGate } from '@/hooks/voice/room/useVoiceRoomGate';
+import { useVoiceRoomClient } from '@/hooks/voice/room/useVoiceRoomClient';
+import { useStagePin } from '@/hooks/voice/room/useStagePin';
 import {
   countMeshSyncing,
   groupTracksByPubkey,

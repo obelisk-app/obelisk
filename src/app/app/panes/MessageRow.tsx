@@ -19,8 +19,8 @@ import { MessageToolbar } from './message/MessageToolbar';
 import { ReactionPills } from './message/ReactionPills';
 import { ReplyPreviewRow } from './message/ReplyPreviewRow';
 import { flashMessage } from './message/message-link';
-import { useMessageRowActions } from './message/useMessageRowActions';
-import { useMessageRowMenus } from './message/useMessageRowMenus';
+import { useMessageRowActions } from '@/hooks/app/panes/message/useMessageRowActions';
+import { useMessageRowMenus } from '@/hooks/app/panes/message/useMessageRowMenus';
 import Button from '@/components/ui/Button';
 import CloseButton from '@/components/ui/CloseButton';
 

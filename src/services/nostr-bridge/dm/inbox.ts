@@ -14,7 +14,7 @@ import { getPreferences } from '@/services/preferences';
 import { wotEngine } from '@/services/wot/engine';
 import { parseDmFileRumor, type JsDmFile } from '@/utils/attachments/dm-file';
 import type { BridgeContext, TrackedSub } from '../context';
-import { normalizeRelayUrl } from '../relay-url';
+import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
 import type { SignerLane } from '../signer-queue';
 import { hasSeenWrap, markWrapSeen } from '../wrap-ledger';
 import type { IngestDmParams } from './thread';

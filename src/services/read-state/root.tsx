@@ -17,7 +17,7 @@
  *
  * Architectural rule: groups bind to the active relay only; only DMs and
  * DM-state sync run cross-relay. See CLAUDE.md and docs/data-system.md §4.
- * The {@link useReadyToSync} hook gates the two `useEffect`s on either:
+ * The `useReadyToSync` hook (`src/hooks/read-state/`) gates the two `useEffect`s on either:
  *   1. `groupMetadataEose === true`: the relay has finished streaming kind
  *      39000; channels are painted. OR
  *   2. 1000ms post-`Connected`: even on a relay that silently filters
@@ -36,9 +36,7 @@ import { useEffect, useState } from 'react';
 import {
   DEFAULT_PROFILE_LOOKUP_RELAYS,
   useConfiguredRelays,
-  useConnectionState,
   useCurrentRelayUrl,
-  useGroupMetadataEose,
   useGroups,
 } from '@/services/nostr-bridge';
 import { useMyPubkey } from '@/services/nostr-bridge';
@@ -46,6 +44,7 @@ import { useAutoMarkRead } from '@/hooks/useAutoMarkRead';
 import { useMentionSeen } from '@/hooks/useMentionSeen';
 import { armNotificationPermissionPrompt } from '@/services/notifications/permission-prompt';
 import { useFaviconBadge } from '@/hooks/useFaviconBadge';
+import { useReadyToSync } from '@/hooks/read-state/useReadyToSync';
 import { ensureReadStateStoreForAccount } from '@/store/read-state';
 import { ensureNotificationsStoreForAccount } from '@/store/notifications';
 import { ensureDMStoreForAccount } from '@/store/dm';
@@ -55,7 +54,6 @@ import { ensureChannelPrefsStoreForAccount } from '@/store/channel-prefs';
 import { startGroupsRelaySync, startDMRelaySync } from './relay-sync';
 import { fetchRelayList } from '@nostr-wot/data';
 import { leasedRelays } from '@/services/social/pool';
-
 
 /**
  * Per-account persistence wiring. Add new per-account stores here: the
@@ -73,28 +71,6 @@ const PER_ACCOUNT_STORES = [
   // Channel right-click prefs (mute / follow / notify level).
   ensureChannelPrefsStoreForAccount,
 ] as const;
-
-/**
- * Gate the P2 relay-sync subscriptions on either the channel-menu having
- * painted (`groupMetadataEose`) or a 1000ms post-`Connected` timer. Exposed
- * as a hook so it's straightforward to mock in unit tests.
- */
-export function useReadyToSync(): boolean {
-  const groupMetadataEose = useGroupMetadataEose();
-  const conn = useConnectionState();
-  // The grace-timer half of the contract is the only stateful piece:
-  // once it fires we latch true and never tear it down. The EOSE half
-  // is a pure derivation, which keeps setState out of the effect body
-  // (only inside the setTimeout callback).
-  const [graceReady, setGraceReady] = useState(false);
-  useEffect(() => {
-    if (graceReady) return;
-    if (conn !== 'Connected') return;
-    const t = setTimeout(() => setGraceReady(true), 1000);
-    return () => clearTimeout(t);
-  }, [graceReady, conn]);
-  return groupMetadataEose || graceReady;
-}
 
 export default function ReadStateRoot() {
   const myPubkey = useMyPubkey();

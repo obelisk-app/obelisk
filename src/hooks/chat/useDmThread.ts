@@ -18,12 +18,12 @@
  */
 import { useCallback, useEffect, useMemo, useRef, type RefObject } from 'react';
 import { nostrActions, useDirectMessages, type JsDirectMessage } from '@/services/nostr-bridge';
-import { useAuthor } from '@/services/social/useAuthor';
+import { useAuthor } from '@/hooks/social/useAuthor';
 import { displayNameFor } from '@/utils/identity/display-name';
 import { dayKey, dayLabel } from '@/utils/format/day-label';
-import { usePqConversationStatus } from '@/services/pq/hooks';
+import { usePqConversationStatus } from '@/hooks/pq/usePqConversationStatus';
 import { protectionLevel, threadMarks } from '@/services/pq/status';
-import { usePreferences } from '@/services/preferences';
+import { usePreferences } from '@/hooks/usePreferences';
 import { useDMStore } from '@/store/dm';
 import { useTranslation } from '@/i18n/context';
 

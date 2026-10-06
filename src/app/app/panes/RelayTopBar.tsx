@@ -1,16 +1,17 @@
 'use client';
 
 import { useState } from 'react';
-import { relayWebsiteUrl } from '@/services/nostr-bridge/relay-url';
+import { relayWebsiteUrl } from '@/utils/relay-url/normalize';
 import RelayStatusPill from '@/components/social/RelayStatusPill';
 import { openSettings } from '@/utils/open-settings';
-import { usePreferences } from '@/services/preferences';
+import { usePreferences } from '@/hooks/usePreferences';
 import type { DmNotification, MentionNotification } from '@/store/notifications';
 import { shortHost } from '@/utils/relay-url/url-host';
 import { useTranslation } from '@/i18n/context';
 import { HelpPopover } from './topbar/HelpPopover';
 import { InboxPopover } from './topbar/InboxPopover';
-import { useDismissOnOutside, useInboxStreams, useRelayHeaderInfo } from './topbar/useTopBarPopovers';
+import { useDismissOnOutside, useInboxStreams } from '@/hooks/app/panes/topbar/useTopBarPopovers';
+import { useRelayHeaderInfo } from '@/hooks/app/useRelayHeaderInfo';
 import Button from '@/components/ui/Button';
 import RemoteImage from '@/components/ui/RemoteImage';
 

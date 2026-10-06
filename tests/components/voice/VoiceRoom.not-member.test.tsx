@@ -12,10 +12,10 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
 vi.mock('@/components/marketing/ShootingStars', () => ({ default: () => null }));
 vi.mock('@/components/voice/VoiceControls', () => ({ default: () => null }));
 vi.mock('@/components/voice/DebugOverlay', () => ({ DebugOverlay: () => null }));
-vi.mock('@/components/voice/room/useVoiceRoomGate', () => ({
+vi.mock('@/hooks/voice/room/useVoiceRoomGate', () => ({
   useVoiceRoomGate: () => ({ gate: { phase: 'not-a-member' }, selfPubkey: 'me' }),
 }));
-vi.mock('@/components/voice/room/useVoiceRoomClient', () => ({
+vi.mock('@/hooks/voice/room/useVoiceRoomClient', () => ({
   useVoiceRoomClient: () => ({
     joined: false,
     join: vi.fn(),

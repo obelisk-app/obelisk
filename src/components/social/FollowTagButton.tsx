@@ -9,7 +9,7 @@
 
 import { useState } from 'react';
 import { useMyPubkey } from '@/services/nostr-bridge';
-import { useInterests } from '@/services/social/useInterests';
+import { useInterests } from '@/hooks/social/useInterests';
 import { useToastStore } from '@/store/toast';
 import { useTranslation } from '@/i18n/context';
 import Chip from '@/components/ui/Chip';

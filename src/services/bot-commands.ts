@@ -14,7 +14,6 @@
  * doubles as a heartbeat: anything older than {@link BOT_ALIVE_SECS} is a
  * bot that stopped and is not shown.
  */
-import { useEffect, useState } from 'react';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import { getBridge, getBridgeImpl } from '@/services/nostr-bridge';
 import { KIND_NIP78_APP_DATA } from '@/utils/nip-kinds';
@@ -22,7 +21,6 @@ import type { SlashCommand } from '@/components/chat/SlashCommandAutocomplete';
 
 export const BOT_ALIVE_SECS = 60 * 60;
 
-const EMPTY: BotCommandSet[] = [];
 
 export interface BotCommand {
   /** What the bot actually parses, e.g. `!milugar`. */
@@ -195,12 +193,3 @@ export function subscribeBotCommands(
   }, { relays: [relayUrl] });
 }
 
-export function useBotCommands(relayUrl: string | null): BotCommandSet[] {
-  // Keyed by relay so switching relays never shows the previous one's bots.
-  const [state, setState] = useState<{ relay: string | null; sets: BotCommandSet[] }>({ relay: null, sets: [] });
-  useEffect(() => {
-    if (!relayUrl) return;
-    return subscribeBotCommands(relayUrl, (sets) => setState({ relay: relayUrl, sets }));
-  }, [relayUrl]);
-  return state.relay === relayUrl ? state.sets : EMPTY;
-}

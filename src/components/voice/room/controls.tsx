@@ -2,7 +2,8 @@
 
 /** Per-tile controls: mute-for-me (local only, via the voice store) and fullscreen. */
 import { useVoiceStore } from '@/store/voice';
-import { toggleFullscreen, useFullscreenState } from '../fullscreen';
+import { toggleFullscreen } from '@/utils/fullscreen';
+import { useFullscreenState } from '@/hooks/voice/useFullscreenState';
 
 export function MuteForMeButton({ pubkey, compact = false }: { pubkey: string; compact?: boolean }) {
   const muted = useVoiceStore((s) => !!s.localMutedPubkeys[pubkey]);

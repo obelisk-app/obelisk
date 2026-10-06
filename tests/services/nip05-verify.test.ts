@@ -1,17 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, renderHook } from '@testing-library/react';
-import {
-  NIP05_CACHE_MAX,
-  NIP05_UNVERIFIED_TTL_MS,
-  NIP05_VERIFIED_TTL_MS,
-  nip05CacheSize,
-  parseNip05,
-  peekNip05,
-  recordNip05Resolution,
-  resetNip05Cache,
-  useNip05Status,
-  verifyNip05,
-} from '@/services/nip05-verify';
+import { NIP05_CACHE_MAX, NIP05_UNVERIFIED_TTL_MS, NIP05_VERIFIED_TTL_MS, nip05CacheSize, parseNip05, peekNip05, recordNip05Resolution, resetNip05Cache, verifyNip05 } from '@/services/nip05-verify';
 
 const PUBKEY = 'a'.repeat(64);
 const OTHER = 'b'.repeat(64);
@@ -214,41 +202,5 @@ describe('peekNip05', () => {
   it('is unchecked without a pubkey or identifier', () => {
     expect(peekNip05(null, 'alice@example.com')).toBe('unchecked');
     expect(peekNip05(PUBKEY, null)).toBe('unchecked');
-  });
-});
-
-describe('useNip05Status', () => {
-  it('in peek mode reports the cache and never fetches', () => {
-    const { result } = renderHook(() => useNip05Status(PUBKEY, 'alice@example.com'));
-    expect(result.current).toBe('unchecked');
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  it('in verify mode goes unchecked → checking → verified', async () => {
-    let resolve: (r: Response) => void = () => {};
-    fetchMock.mockImplementation(() => new Promise<Response>((r) => { resolve = r; }));
-    const { result } = renderHook(() => useNip05Status(PUBKEY, 'alice@example.com', 'verify'));
-    expect(result.current).toBe('checking');
-    await act(async () => {
-      resolve(jsonResponse({ names: { alice: PUBKEY } }));
-      await Promise.resolve();
-    });
-    expect(result.current).toBe('verified');
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-  });
-
-  it('in verify mode settles on unverified for a mismatch', async () => {
-    fetchMock.mockResolvedValue(jsonResponse({ names: { alice: OTHER } }));
-    const { result } = renderHook(() => useNip05Status(PUBKEY, 'alice@example.com', 'verify'));
-    await act(async () => { await Promise.resolve(); });
-    expect(result.current).toBe('unverified');
-  });
-
-  it('a peek-mode row sees a result another surface established', async () => {
-    fetchMock.mockResolvedValue(jsonResponse({ names: { alice: PUBKEY } }));
-    const row = renderHook(() => useNip05Status(PUBKEY, 'alice@example.com'));
-    expect(row.result.current).toBe('unchecked');
-    await act(async () => { await verifyNip05(PUBKEY, 'alice@example.com'); });
-    expect(row.result.current).toBe('verified');
   });
 });

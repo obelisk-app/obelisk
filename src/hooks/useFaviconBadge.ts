@@ -2,8 +2,8 @@
 
 import { useEffect, useReducer, useRef } from 'react';
 import { useCurrentRelayUrl } from '@/services/nostr-bridge';
-import { useTotalDMUnread } from '@/services/read-state/selectors';
-import { useUnreadMentionCount } from '@/services/notifications/selectors';
+import { useTotalDMUnread } from '@/hooks/read-state/useUnreadCounts';
+import { useUnreadMentionCount } from '@/hooks/notifications/useNotificationSelectors';
 import { setBadgeCount, clearBadge } from '@/utils/favicon-badge';
 
 const BASE_TITLE = 'Obelisk';

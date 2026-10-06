@@ -28,24 +28,37 @@ vi.mock('@/hooks/chat/useNostrPresence', () => ({
 
 vi.mock('@/hooks/useNostrUserSearch', () => ({ useNostrUserSearch: () => ({ results: [], loading: false }) }));
 vi.mock('@/services/relay-info', () => ({ faviconFor: () => '', fetchRelayInfo: vi.fn().mockResolvedValue(null) }));
-vi.mock('@/services/relay-branding', () => ({ useRelayBranding: () => ({}), publishBranding: vi.fn() }));
+vi.mock('@/services/relay-branding', () => ({
+  publishBranding: vi.fn(),
+}));
+vi.mock('@/hooks/relay/useRelayBranding', () => ({
+  useRelayBranding: () => ({}),
+}));
 vi.mock('@/services/relay-emojis', () => ({
-  useRelayEmojiSet: () => ({ title: '', emojis: [], updatedAt: 0 }),
   relayEmojiMap: () => ({}),
   relayMediaKindMap: () => ({}),
   resolveRelayEmojiSet: (set: unknown) => set,
   publishRelayEmojiSet: vi.fn(),
 }));
+vi.mock('@/hooks/relay/useRelayEmojiSet', () => ({
+  useRelayEmojiSet: () => ({ title: '', emojis: [], updatedAt: 0 }),
+}));
 vi.mock('@/services/channel-layout', () => ({
-  useChannelLayout: () => ({ categories: [], channels: [], updatedAt: 0 }),
-  useRelayOperatorPubkey: () => null,
   applyLayout: () => ({ categories: [], uncategorized: [] }),
   publishLayout: vi.fn(),
   newCategoryId: () => 'cat-test',
 }));
+vi.mock('@/hooks/relay/useChannelLayout', () => ({
+  useChannelLayout: () => ({ categories: [], channels: [], updatedAt: 0 }),
+}));
+vi.mock('@/hooks/relay/useRelayOperatorPubkey', () => ({
+  useRelayOperatorPubkey: () => null,
+}));
 vi.mock('@/services/relay-roles', () => ({
-  useRelayRoles: () => ({ roles: [], holders: {}, updatedAt: 0 }),
   rolesByPubkey: () => ({}),
+}));
+vi.mock('@/hooks/relay/useRelayRoles', () => ({
+  useRelayRoles: () => ({ roles: [], holders: {}, updatedAt: 0 }),
 }));
 vi.mock('@/components/media/BlossomImageInput', () => ({
   default: () => null,

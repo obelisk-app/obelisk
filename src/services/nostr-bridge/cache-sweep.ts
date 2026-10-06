@@ -4,7 +4,7 @@
  * cold-load seed reads. Moved from `cache.ts`, which re-exports them.
  */
 import { KEY_PREFIX, LEGACY_KEY_PREFIXES, buildKey, isAvailable } from './cache-keys';
-import { normalizeRelayUrl } from './relay-url';
+import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
 
 /**
  * Evict the oldest half of all bridgeCache entries (by write time `t`).

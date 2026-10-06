@@ -2,7 +2,7 @@
 
 import { useTranslation } from '@/i18n/context';
 import { GlobeIcon, ZapIcon } from '@/components/ui/icons';
-import { BASE_ROLE, websiteHref, type PopoverMember } from './usePopoverMember';
+import { BASE_ROLE, websiteHref, type PopoverMember } from '@/hooks/chat/profile/usePopoverMember';
 
 /** Roles + links, recessed so they read as details, not actions. */
 export function PopoverDetails({ member }: { member: PopoverMember | undefined }) {

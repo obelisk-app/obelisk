@@ -3,7 +3,7 @@
 import type { GameState } from 'vesta';
 import { VESTA_PLAYER_COLORS } from './palette';
 import { RESOURCES, RESOURCE_EMOJI } from './resources';
-import type { VestaTurn } from './useVestaTurn';
+import type { VestaTurn } from '@/hooks/chat/games/vesta/useVestaTurn';
 
 /** One tile per seat (colour, name, points, cards) and the status line under them. */
 export default function VestaPlayers({ state, mySeats, seatLabel, turn }: {

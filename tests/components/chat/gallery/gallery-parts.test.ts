@@ -1,8 +1,8 @@
 import { act, fireEvent, renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { buildGifSelections } from '@/components/chat/gallery/gif-selections';
-import { useLightboxIndex } from '@/components/chat/gallery/useLightboxIndex';
-import { useZoomPan } from '@/components/chat/gallery/useZoomPan';
+import { useLightboxIndex } from '@/hooks/chat/gallery/useLightboxIndex';
+import { useZoomPan } from '@/hooks/chat/gallery/useZoomPan';
 import type { JsMediaPack } from '@/services/nostr-bridge';
 
 describe('buildGifSelections', () => {

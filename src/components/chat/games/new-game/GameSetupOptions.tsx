@@ -5,7 +5,7 @@ import { CR_SIZES, type CRSizeKey } from '@/lib/games/chain-reaction';
 import { useTranslation } from '@/i18n/context';
 import FileInput from '@/components/ui/FileInput';
 import Input from '@/components/ui/Input';
-import type { NewGameForm } from './useNewGameForm';
+import type { NewGameForm } from '@/hooks/chat/games/new-game/useNewGameForm';
 import Text from '@/components/ui/Text';
 import Button from '@/components/ui/Button';
 

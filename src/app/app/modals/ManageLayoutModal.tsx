@@ -12,7 +12,7 @@ import { useChannelLayoutEditor } from '@/hooks/useChannelLayoutEditor';
 import { useTranslation } from '@/i18n/context';
 import { ChannelOrderRow } from './layout/ChannelOrderRow';
 import { LayoutCategoryCard } from './layout/LayoutCategoryCard';
-import { useLayoutDrag } from './layout/useLayoutDrag';
+import { useLayoutDrag } from '@/hooks/app/modals/layout/useLayoutDrag';
 
 export function ManageLayoutModal({
   relayUrl,

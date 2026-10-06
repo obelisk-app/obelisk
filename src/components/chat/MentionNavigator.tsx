@@ -20,7 +20,7 @@
 
 import { useTranslation } from '@/i18n/context';
 import Button from '@/components/ui/Button';
-import { useMentionNavigation } from './mentions/useMentionNavigation';
+import { useMentionNavigation } from '@/hooks/chat/mentions/useMentionNavigation';
 import IconButton from '@/components/ui/IconButton';
 
 export interface MentionNavigatorProps {

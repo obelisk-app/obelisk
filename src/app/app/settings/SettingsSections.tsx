@@ -5,7 +5,8 @@
  * desktop `UserPanel` shows one at a time; `PreferencesPanel` stacks them
  * for surfaces with no sidebar (the phone's preferences screen).
  */
-import { usePreferences, setPreference } from '@/services/preferences';
+import { setPreference } from '@/services/preferences';
+import { usePreferences } from '@/hooks/usePreferences';
 import { setDmOptInEnabled } from '@/services/dm/opt-in';
 import WotSettings from '@/components/settings/WotSettings';
 import LanguagePreference from '@/components/settings/LanguagePreference';

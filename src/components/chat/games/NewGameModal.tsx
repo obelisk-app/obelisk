@@ -8,7 +8,7 @@ import ErrorState from '@/components/ui/ErrorState';
 import GamePickList from './new-game/GamePickList';
 import GameSetupOptions from './new-game/GameSetupOptions';
 import PlayersAndClock from './new-game/PlayersAndClock';
-import { useNewGameForm } from './new-game/useNewGameForm';
+import { useNewGameForm } from '@/hooks/chat/games/new-game/useNewGameForm';
 import Button from '@/components/ui/Button';
 
 /**

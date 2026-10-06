@@ -4,8 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useMessages, useMyPubkey, useCurrentRelayUrl, type JsGroup } from '@/services/nostr-bridge';
 import { ChannelActionSheet } from '@/components/chat/ChannelContextMenu';
 import { isChannelMuted, useChannelPref } from '@/store/channel-prefs';
-import { useUnreadMentionCardsForChannel } from '@/services/notifications/selectors';
-import { useCachedChannelHighlights } from '@/services/read-state/selectors';
+import { useUnreadMentionCardsForChannel } from '@/hooks/notifications/useNotificationSelectors';
+import { useCachedChannelHighlights } from '@/hooks/read-state/useChannelHighlights';
 
 // Single row in the channel list - picks the right icon for text/voice/forum
 // and surfaces the live-call indicator on voice channels. The `unread` and

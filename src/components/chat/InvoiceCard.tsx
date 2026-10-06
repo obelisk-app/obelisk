@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { parseBolt11, type ParsedInvoice } from '@/utils/bolt11';
 import { useMyPubkey, useNipSigner, useUserMetadata } from '@/services/nostr-bridge';
 import { formatPubkey } from '@nostr-wot/data';
-import { useLocalWallet } from '@/services/wallet/local-client';
+import { useLocalWallet } from '@/hooks/wallet/useLocalWallet';
 import { useTranslation } from '@/i18n/context';
 import { useFormat } from '@/i18n/useFormat';
 import { useHasExpired } from '@/hooks/useHasExpired';

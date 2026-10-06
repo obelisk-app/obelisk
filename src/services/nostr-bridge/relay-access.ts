@@ -10,7 +10,7 @@ import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import { BoundedMap } from '@/lib/relay-hub';
 import { KIND_METADATA } from '@/utils/nip-kinds';
 import { dismissActivity, failActivity, pushActivity, resolveActivity } from '@/services/activity-log';
-import { normalizeRelayUrl } from './relay-url';
+import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
 import type { BridgeContext, SetRelayAccessOpts, TrackedSub } from './context';
 import type { RelayAccessState, Unsubscribe } from './types';
 

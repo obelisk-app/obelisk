@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('@/services/social/useAuthor', () => ({
+vi.mock('@/hooks/social/useAuthor', () => ({
   useAuthor: () => ({ name: 'Bob', displayName: 'Bob', picture: null, nip05: null, about: null, banner: null, lud16: null }),
 }));
 vi.mock('@/services/nostr-bridge', async (orig) => {

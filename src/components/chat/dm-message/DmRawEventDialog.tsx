@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslation } from '@/i18n/context';
-import type { DmRawEvent, JsDirectMessage } from '@/services/nostr-bridge/types';
+import type { DmRawEvent, JsDirectMessage } from '@/services/nostr-bridge';
 import Modal from '@/components/ui/Modal';
 import { LockIcon } from '@/components/ui/icons';
 import Button from '@/components/ui/Button';

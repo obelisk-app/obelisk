@@ -16,7 +16,8 @@ The rules in this file are the intended design. The tree does not fully obey the
 - **`ingestGroupMetadata` does not fan out the way older docs said.** It calls only `queueGroupMessages(groupId)`. `subscribeGroupCreator` (`client.ts:6374`) has no caller at all, yet its two containers (`creatorSubscribedGroups`, the sub list) are still declared, cleared on session change and iterated when voice trims subscriptions. Creator lookup actually happens through the relay-wide kind 9007 sub (`subscribeMyAuthoredGroups` / `ingestGroupCreator`). Delete or re-wire; do not document it as live.
 - **`src/services/voice/client.ts` wraps 16 production store calls in `catch { /* test envs */ }`.** It is a test seam leaking into production; any real store error is swallowed. Do not add a seventeenth. The fix is an injected store sink, not another catch.
 - **Utilities are duplicated with diverging semantics.** `shortHost` is defined seven times (`DesktopShell`, `ServerRail`, `RelayStatusBanner`, `PhoneShell`, `mobile/url-state.ts`, `social/RelayStatusPill`, `social/widgets/RelaysWidget`); `normalizeRelayUrl` three times with three signatures (`nostr-bridge/relay-url.ts` is the bridge's canonical one, `social/relays.ts` the social tier's, `PhoneShell.tsx:310` a stray). `getBridgeSync` and `getBridgeImpl` (`client.ts:8534-8541`) are byte-identical.
-- **`src/services/wallet/local-client.ts` is a stub** (its own header says the original module was never committed). Live zap and invoice flows use `@nostr-wot/wallet` (`MessageZapModal.tsx`, `useMessageZaps.ts`, `InvoiceCard.tsx`).
+- **`useLocalWallet` (`src/hooks/wallet/useLocalWallet.ts`) is a stub** that always returns no client (its own header says the original module was never committed), so `InvoiceCard.tsx`'s Pay does nothing. Live zap flows use `@nostr-wot/wallet` (`MessageZapModal.tsx`, `useMessageZaps.ts`).
+- **A few hooks still sit outside the hooks layer.** `src/services/remote-media-gate.ts` (`useRemoteMediaGate`) waits on the bridge front-door allow-list (`tests/services/nostr-bridge/front-door.test.ts`), which names it by path. The bridge's own hooks are in `src/services/nostr-bridge/hooks/`, the Web-of-Trust Zustand store in `src/services/wot/store.ts`, and `ReadStateRoot` (`src/services/read-state/root.tsx`) is a render-nothing component in services. `tests/hooks/hooks-layer.test.ts` exempts nothing.
 - **Leftovers from the removed NDK stack:** `tests/support/mocks/ndk.ts` mocks a dependency that is no longer in `package.json`. `docs/README.md` still describes `direct-messages.md` as "NIP-04 DMs"; `docs/known-bugs.md` says `subscribeAdminMember` is fired from `ingestGroupMetadata` (it is not, see Data subscriptions).
 
 ## Architecture
@@ -56,13 +57,13 @@ src/
 │   │   ├── page.tsx                # Mounts <AppGate />
 │   │   ├── AppGate.tsx             # Viewport switch: DesktopShell or mobile/PhoneShell (`useIsMobile`)
 │   │   ├── DesktopShell.tsx        # Desktop chat shell (default export named AppShell), 5664 lines
-│   │   ├── mobile/                 # PhoneShell.tsx (7174 lines) + swipe-nav, url-state, use-keyboard, mobile-shell.css
+│   │   ├── mobile/                 # PhoneShell.tsx (7174 lines) + swipe-nav, url-state, mobile-shell.css
 │   │   ├── LoginModal.tsx          # 3 auth methods + QR bunker flow
 │   │   ├── RelayStatusBanner.tsx   # Unified connection + access banner
 │   │   ├── ServerRail.tsx          # Relay-list rail
 │   │   ├── DMList.tsx, DMComposer.tsx, DMOptInGate.tsx
 │   │   ├── SearchBar.tsx, UserPanel.tsx, GeneratedProfileEnhancements.tsx
-│   │   └── feed-pane.ts, useHistoryDismiss.ts
+│   │   └── feed-pane.ts
 │   ├── api/link-preview/route.ts # The one server route (OG unfurl proxy)
 │   ├── guides/                   # Markdown guides + SVG diagrams (en, es, pt)
 │   ├── r/[code]/                 # Per-relay branded share-link routes (+ opengraph-image)
@@ -86,10 +87,13 @@ src/
 │   ├── settings/                    # AccountBackupExport, CallSettings, MutedAndBlocked, NotificationSettings, SocialRelaySettings, WotSettings
 │   ├── ui/                          # icons.tsx, menu.tsx, ConfirmDialog, FloatingPanel
 │   └── voice/                       # VoiceRoom, VoiceStatusBar
-├── hooks/
-│   ├── useAutoMarkRead, useCopyToClipboard, useFaviconBadge, useMentionSeen, useChannelLayoutEditor, useNostrUserSearch
-│   └── chat/                      # useNostrPresence, useMessageZaps, useVoiceChatPane, useChannelGames,
-│                                   # useChannelScrollPosition, useHistoryPagination, useStackerLoop
+├── hooks/                         # THE hooks layer: every React hook, by module (see "Where new code goes")
+│   ├── useDismiss, useAnchoredPosition, usePreferences, useKeyedValue, useAutoMarkRead, useFaviconBadge, ...
+│   ├── app/                       # The /app shells' hooks, mirroring src/app/app (mobile/, shell/, panes/, ...)
+│   ├── chat/                      # Chat hooks, mirroring src/components/chat (composer/, gallery/, games/, ...)
+│   ├── relay/                     # Operator data per relay: useChannelLayout, useRelayBranding, useRelayRoles, ...
+│   ├── social/                    # useFeed, useAuthor, useSocialProfile, useNotePreview, useInterests, ...
+│   └── read-state/, notifications/, wot/, pq/, dm/, voice/, media/, admin/, settings/, marketing/, media-kit/, wallet/
 ├── i18n/                          # context, rich(), useFormat, locales/{en,es,pt}.json, hardcoded-strings ratchet
 ├── lib/                           # Mini-packages: no app imports, publishable as they stand
 │   ├── relay-hub/                 # Relay socket hub; imports only nostr-tools (pinned by isolation.test.ts)
@@ -125,28 +129,28 @@ src/
 │   ├── channel-layout.ts          # NIP-78 (kind 30078) channel layout + operator authors
 │   ├── relay-branding.ts, relay-emojis.ts, relay-roles.ts (+ -model, -sync)   # Operator-controlled kind 30078 data
 │   ├── relay-info.ts              # NIP-11 fetcher + `operatorPubkeyFromRelayInfo`
-│   ├── preferences.ts (+ -schema, -appearance)   # Persisted app settings + hook
+│   ├── preferences.ts (+ -schema, -appearance)   # Persisted app settings (the hook is `usePreferences` in src/hooks)
 │   ├── blossom, dm-attachments, dm-file-decrypt  # Encrypted DM uploads (kind 15)
 │   ├── reset.ts                   # `resetAllClientState()`: login/logout teardown
 │   ├── account-backup, activity-log, bot-commands, forum-prefs, group-search, guides, nip05-verify
 │   ├── personal-stickers, quota-safe-storage, read-gates, recent-emojis, recent-slash-commands, remote-media(-gate)
 │   ├── dm/opt-in.ts               # The `directMessagesEnabled` gate (the only file under dm/)
 │   ├── dm-call/                   # DM call protocol, session, signaling
-│   ├── wallet/                    # local-client.ts (stub), parse-zap-command, send-zap
+│   ├── wallet/                    # parse-zap-command, send-zap, zap-constants
 │   ├── voice/                     # Mesh + SFU client (`client.ts`, `peer.ts`, `sfu-client.ts`, `sfu-rpc.ts`, ...)
-│   ├── social/                    # Feeds, profiles, publish, relays, useAuthor, profile-feed, ...
+│   ├── social/                    # Feeds, profiles, publish, relays, note-preview, interests-store, profile-feed, ...
 │   ├── games/                     # Relay side of games: transport, ingest, cache, resolve
 │   ├── pq/                        # Post-quantum DM attestations, capability, status, send plan
 │   ├── wot/                       # Web-of-trust engine + colors
 │   ├── read-state/                # Read-state root, selectors, relay-sync (NIP-59 gift wrap)
-│   ├── notifications/             # classify, sound, alert, permission-prompt, selectors
+│   ├── notifications/             # classify, sound, alert, permission-prompt
 │   └── server/                    # Server-only: locale, nostr-fetch, note-preview
 ├── store/                         # Zustand stores (see Stack)
 ├── types/nostr.d.ts               # `Window.nostr` typing
 └── test/                          # setup.ts, fixtures/, mocks/ (webrtc, stale ndk)
 ```
 
-Where new code goes: a self-contained building block with no app imports, formal enough to publish, goes in `lib/`; a small stateless helper that belongs to no feature goes in `utils/` (in a topic subfolder when it has siblings); anything that talks to a relay, the bridge, a store, `fetch`, `localStorage` on behalf of a feature, WebRTC or the filesystem goes in `services/`. React hooks go in `src/hooks/` unless they wrap one service and live beside it.
+Where new code goes: a self-contained building block with no app imports, formal enough to publish, goes in `lib/`; a small stateless helper that belongs to no feature goes in `utils/` (in a topic subfolder when it has siblings); anything that talks to a relay, the bridge, a store, `fetch`, `localStorage` on behalf of a feature, WebRTC or the filesystem goes in `services/`. React hooks go in the hooks layer, `src/hooks/<module>/`, never in a component file or folder and never in `services/`: a hook file under `src/hooks/` mirrors the module it serves (`src/components/chat/gallery/` -> `src/hooks/chat/gallery/`, `src/app/app/mobile/` -> `src/hooks/app/mobile/`, `src/services/social/` -> `src/hooks/social/`), and the store, cache or fetch it reads stays in `services/`. Before writing one, look for an existing hook that does the job (`useDismiss` for click-outside and Escape, `useAnchoredPosition` for popovers). `tests/hooks/hooks-layer.test.ts` fails on a hook file or hook definition under `src/components/` or `src/app/`.
 
 The `prisma/` and `server.ts` of the legacy stack are gone, and `src/app/api/` holds only the link-preview route. References to `useAuthStore`, `restoreSession`, `syncProfile`, `/api/auth/*`, `/api/members/*`, `getNDK`, `src/lib/nostr.ts`, `src/hooks/useIdentity.ts` are no longer in the tree: if you find one, it slipped through and should be removed.
 
@@ -477,8 +481,8 @@ for where this sits relative to the bridgeCache.
 - **Playwright**: end-to-end specs in `scripts/e2e/` (`npm run test:e2e`), see [docs/data-system.md §14](docs/data-system.md)
 
 ### Conventions
-- Tests live in `tests/`, mirroring `src/`: `src/components/chat/Foo.tsx` is tested by `tests/components/chat/Foo.test.tsx`, which imports it as `@/components/chat/Foo`. `src/` holds no test files (`vitest.config.ts` only collects `tests/**` and `scripts/**`). Repo-wide invariant tests (`csp`, `service-worker-cache`, `hooks-after-early-return`, `no-em-dash`, `eslint-config`) sit at the top of `tests/`.
-- Two house rules are enforced, not just written down: `eslint.config.mjs` makes `max-lines` (300, blank and comment-only lines not counted) an error for `src/**`, and `tests/no-em-dash.test.ts` fails on a literal em dash (U+2014) anywhere in `src/`, `tests/`, `scripts/`, `docs/`, `content/` (the guides), `.github/`, `.claude/`, the text assets under `public/` (SVG, JSON, TXT, JS, manifest) or any file at the repo root (only the generated `package-lock.json` is left out). Both carry dated, temporary allow-lists that fail when an entry is no longer needed, so they only shrink. `tests/eslint-config.test.ts` also fails if a path-scoped glob in the lint config matches no file.
+- Tests live in `tests/`, mirroring `src/`: `src/components/chat/Foo.tsx` is tested by `tests/components/chat/Foo.test.tsx`, which imports it as `@/components/chat/Foo`. `src/` holds no test files (`vitest.config.ts` only collects `tests/**` and `scripts/**`). Repo-wide invariant tests (`csp`, `service-worker-cache`, `hooks-after-early-return`, `no-em-dash`, `eslint-config`) sit at the top of `tests/`. The hooks-layer guard sits with the hooks it guards, `tests/hooks/hooks-layer.test.ts`; a hook's test lives under `tests/hooks/` like the hook (`src/hooks/chat/gallery/useZoomPan.ts` -> `tests/hooks/chat/gallery/`).
+- Two house rules are enforced, not just written down: `eslint.config.mjs` makes `max-lines` (300, blank and comment-only lines not counted) an error for `src/**`, and `tests/no-em-dash.test.ts` fails on a literal em dash (U+2014) anywhere in `src/`, `tests/`, `scripts/`, `docs/`, `content/` (the guides), `.github/`, `.claude/`, the text assets under `public/` (SVG, JSON, TXT, JS, manifest) or any file at the repo root (only the generated `package-lock.json` is left out). Neither has any exemption left. `tests/eslint-config.test.ts` also fails if a path-scoped glob in the lint config matches no file.
 - Shared setup, mocks and fixtures in `tests/support/` (`setup.ts`, `warm-bridge-modules.ts`, `mocks/webrtc.ts`, `mocks/nostr-bridge.ts`, `fixtures/`), imported as `@tests/support/...`; `mocks/ndk.ts` is a leftover
 - Use `data-testid` attributes for reliable test selectors
 - Bridge integration tests use a `FakePool` that mocks `SimplePool` (see `bridge.test.ts`, 4806 lines / 144 cases, and `login-race.test.ts`). The fake must implement `subscribe`, `publish`, `close`, AND `ensureRelay` because `connect()` awaits the handshake.
@@ -512,7 +516,7 @@ for where this sits relative to the bridgeCache.
 - **Social profile relays:** `preferences.socialRelays` plus the SDK's profile aggregators,
   used by `ensureSocialProfiles`. This is the tier that knows people from the wider
   network. **Anywhere a stranger's name or picture is shown (feeds, DMs, note cards),
-  read `useAuthor` (`src/services/social/useAuthor.ts`), which merges both tiers.** Reading the bridge alone is why DM rows
+  read `useAuthor` (`src/hooks/social/useAuthor.ts`), which merges both tiers.** Reading the bridge alone is why DM rows
   showed petnames and letter avatars while the same person resolved fine in the feed.
 - **NostrConnect rendezvous:** `NOSTRCONNECT_RELAYS` in `client.ts`: relay.nsec.app, relay.damus.io, nos.lol
 - **DM call relays:** `DEFAULT_CALL_RELAYS` in `src/services/preferences.ts`: relay.damus.io, nos.lol

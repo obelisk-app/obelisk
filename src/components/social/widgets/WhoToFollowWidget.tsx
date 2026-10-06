@@ -5,7 +5,7 @@ import { useMemo } from 'react';
 import { shortNpubLabel } from '@/utils/identity/short-npub';
 import { useMyFollows, useMyPubkey } from '@/services/nostr-bridge';
 import { suggestedAuthors } from '@/services/social/feed-people';
-import { useAuthor } from '@/services/social/useAuthor';
+import { useAuthor } from '@/hooks/social/useAuthor';
 import { useTranslation } from '@/i18n/context';
 import UserAvatar from '@/components/ui/UserAvatar';
 import FollowButton from '@/app/notes/[id]/FollowButton';

@@ -14,10 +14,8 @@
  * at the bottom. Categories with no children still render (operator can
  * drop channels into them).
  */
-import { useEffect, useState } from 'react';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import { getBridge, getBridgeImpl, cacheGet, cacheSet } from '@/services/nostr-bridge';
-import { fetchRelayInfo, operatorPubkeyFromRelayInfo } from '@/services/relay-info';
 import { KIND_NIP78_APP_DATA as KIND_LAYOUT } from '@/utils/nip-kinds';
 
 export interface ChannelLayoutCategory {
@@ -135,48 +133,6 @@ export async function publishLayout(relayUrl: string, layout: ChannelLayout): Pr
     content: '',
     tags: toTags(layout, relayUrl),
   }, { extraRelays: [relayUrl], mode: 'replace' });
-}
-
-export function useChannelLayout(
-  relayUrl: string | null,
-  authors: ReadonlyArray<string>,
-): ChannelLayout {
-  const [layout, setLayout] = useState<ChannelLayout>(EMPTY_LAYOUT);
-  const authorsKey = [...authors].sort().join(',');
-  // Reset only when the relay changes: authors growing as admin events
-  // stream in would otherwise flash categories/order to empty mid-load.
-  // The newest-wins guard inside subscribeLayout already drops stale events.
-  useEffect(() => {
-    setLayout(EMPTY_LAYOUT);
-  }, [relayUrl]);
-  useEffect(() => {
-    if (!relayUrl || authors.length === 0) return;
-    return subscribeLayout(relayUrl, authors, setLayout);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [relayUrl, authorsKey]);
-  return layout;
-}
-
-/**
- * Resolve the human operator from NIP-11 contact, falling back to pubkey. Returns
- * `null` until the fetch completes (or if the relay doesn't advertise a
- * usable operator identity).
- */
-export function useRelayOperatorPubkey(relayUrl: string | null): string | null {
-  const [pk, setPk] = useState<string | null>(null);
-  useEffect(() => {
-    setPk(null);
-    if (!relayUrl) return;
-    let cancelled = false;
-    void fetchRelayInfo(relayUrl).then((info) => {
-      if (cancelled) return;
-      setPk(operatorPubkeyFromRelayInfo(info));
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [relayUrl]);
-  return pk;
 }
 
 export function relayOperatorAuthors(operatorPubkey: string | null): string[] {

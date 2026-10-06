@@ -3,7 +3,7 @@
 import { createPortal } from 'react-dom';
 import { useTranslation } from '@/i18n/context';
 import RemoteImage from '@/components/ui/RemoteImage';
-import { useZoomPan } from './useZoomPan';
+import { useZoomPan } from '@/hooks/chat/gallery/useZoomPan';
 import IconButton from '@/components/ui/IconButton';
 
 /** Exported so other media surfaces (the feed's carousel) zoom identically. */

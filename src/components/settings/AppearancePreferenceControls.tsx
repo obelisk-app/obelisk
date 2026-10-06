@@ -1,13 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  APPEARANCE_DEFAULTS,
-  resetAppearancePreferences,
-  setPreference,
-  usePreferences,
-  type Preferences,
-} from '@/services/preferences';
+import { APPEARANCE_DEFAULTS, resetAppearancePreferences, setPreference, type Preferences } from '@/services/preferences';
+import { usePreferences } from '@/hooks/usePreferences';
 import { useTranslation } from '@/i18n/context';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';

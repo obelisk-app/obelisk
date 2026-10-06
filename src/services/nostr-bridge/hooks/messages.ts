@@ -3,7 +3,7 @@
  * older history, reactions, profiles, and the DM threads.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { usePreferences } from '@/services/preferences';
+import { usePreferences } from '@/hooks/usePreferences';
 import { getBridge } from '../client';
 import type { JsDirectMessage, JsMessage, JsReaction, JsUserMetadata, LoadMoreMessagesResult, MessagesStatus } from '../types';
 import { useSubscription } from './subscription';

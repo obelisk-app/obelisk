@@ -26,9 +26,9 @@ import { EncryptedDmAttachment } from '@/components/chat/EncryptedDmAttachment';
 import { RemoteMediaPlaceholder } from '@/components/chat/RemoteMediaPlaceholder';
 import { dmFileCategory } from '@/utils/attachments/dm-file';
 import { useRemoteMediaGate } from '@/services/remote-media-gate';
-import type { JsDirectMessage } from '@/services/nostr-bridge/types';
+import type { JsDirectMessage } from '@/services/nostr-bridge';
 import { TextWithEmoji } from './dm-message/TextWithEmoji';
-import { useDmEmojis } from './dm-message/useDmEmojis';
+import { useDmEmojis } from '@/hooks/chat/dm-message/useDmEmojis';
 import { splitDmImages } from './dm-message/dm-message-utils';
 
 export function DmMessageBody({ message }: { message: JsDirectMessage }) {

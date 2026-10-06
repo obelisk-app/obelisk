@@ -13,8 +13,10 @@ const setPreference = vi.fn((key: string, value: unknown) => {
 });
 
 vi.mock('@/services/preferences', () => ({
-  usePreferences: () => prefs,
   setPreference: (key: string, value: unknown) => setPreference(key, value),
+}));
+vi.mock('@/hooks/usePreferences', () => ({
+  usePreferences: () => prefs,
 }));
 
 vi.mock('@/services/nostr-bridge', async () => {
@@ -35,7 +37,7 @@ vi.mock('@/services/social/relay-status', () => ({
   watchRelays: vi.fn(),
 }));
 
-vi.mock('@/services/social/useInterests', () => ({
+vi.mock('@/hooks/social/useInterests', () => ({
   useInterests: () => ({ tags: [], isFollowing: () => false, toggle: vi.fn(), ready: true }),
 }));
 

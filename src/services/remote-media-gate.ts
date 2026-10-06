@@ -14,11 +14,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { useMyPubkey } from '@/services/nostr-bridge/hooks/session';
 import { useMyFollows } from '@/services/nostr-bridge/hooks/lists';
 import { wotEngine } from '@/services/wot/engine';
-import {
-  mayAutoLoadRemoteMedia,
-  useRemoteMediaSettings,
-  type RemoteMediaSurface,
-} from './remote-media';
+import { mayAutoLoadRemoteMedia, type RemoteMediaSurface } from './remote-media';
+import { useRemoteMediaSettings } from '@/hooks/useRemoteMediaSettings';
 
 export interface RemoteMediaGate {
   /** Render sender-chosen media now (policy allows it, or the reader asked). */

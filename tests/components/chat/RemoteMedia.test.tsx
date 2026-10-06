@@ -10,13 +10,13 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { LocaleProvider } from '@/i18n/context';
 import { DmMessageBody } from '@/components/chat/DmMessageBody';
 import MessageContent from '@/components/chat/MessageContent';
-import { preloadMarkdownBody } from '@/components/chat/message/useMarkdownBody';
+import { preloadMarkdownBody } from '@/hooks/chat/message/useMarkdownBody';
 
 // The markdown renderer loads on demand; load it first so every render below is the real one.
 beforeAll(async () => { await preloadMarkdownBody(); });
 import LinkPreview from '@/components/chat/LinkPreview';
 import { _resetRemoteMediaForTest, setRemoteMediaMode } from '@/services/remote-media';
-import type { JsDirectMessage } from '@/services/nostr-bridge/types';
+import type { JsDirectMessage } from '@/services/nostr-bridge';
 
 const alice = 'a'.repeat(64);
 const renderLocalized = (ui: React.ReactElement) => render(<LocaleProvider initialLocale="en">{ui}</LocaleProvider>);

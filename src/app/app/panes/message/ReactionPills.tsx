@@ -6,7 +6,7 @@ import { useTranslation } from '@/i18n/context';
 import { useFormat } from '@/i18n/useFormat';
 import { ZapIcon } from '@/components/ui/icons';
 import { ReactorHoverCard, ZapperHoverCard } from '../MessageHoverCards';
-import type { MessageRowActions } from './useMessageRowActions';
+import type { MessageRowActions } from '@/hooks/app/panes/message/useMessageRowActions';
 import RemoteImage from '@/components/ui/RemoteImage';
 
 /** The zap total and one pill per reaction emoji under a message. */

@@ -320,11 +320,16 @@ src/app/app/mobile/
 ├── swipe-nav.ts         (NAV_ORDER, SUB_TO_NAV, resolveParent,
 │                         neighborsFor, decideSwipeNav, decideSnap,
 │                         buildSeedHistory)
-├── mobile-shell.css     (.drag-layer, .drag-slot.*, .drag-overlay,
-│                         .screen-anim slide keyframes, sheet keyframes)
-├── use-keyboard.ts      (visualViewport keyboard inset)
-└── navigation.test.tsx  (scripted nav sequences, history-stack assertions)
+└── mobile-shell.css     (.drag-layer, .drag-slot.*, .drag-overlay,
+                          .screen-anim slide keyframes, sheet keyframes)
 ```
+
+The shell's hooks live in the hooks layer, `src/hooks/app/mobile/`
+(`useMobileNavState`, `useMobileNavActions`, `useMobileHistorySync`,
+`useScreenCarousel`, `useCarouselDrag`, `useKeyboardInset` for the
+visualViewport keyboard inset, ...). Their tests are under
+`tests/hooks/app/mobile/`; `tests/app/app/mobile/swipe-nav.test.ts` covers
+the swipe decisions.
 
 When you add a new screen or transition, the order of operations is:
 

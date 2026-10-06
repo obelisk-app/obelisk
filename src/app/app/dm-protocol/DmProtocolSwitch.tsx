@@ -5,7 +5,7 @@ import SegmentedControl from '@/components/ui/SegmentedControl';
 import { cn } from '@/components/ui/cn';
 import { useTranslation } from '@/i18n/context';
 import type { DMProtocol } from '@/store/dm';
-import type { DmProtocolChoice } from './useDmProtocolChoice';
+import type { DmProtocolChoice } from '@/hooks/app/dm-protocol/useDmProtocolChoice';
 
 /**
  * The NIP-17 / NIP-04 switch and its one-line NIP-04 explanation. Both DM

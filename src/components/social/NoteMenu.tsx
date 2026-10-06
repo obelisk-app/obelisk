@@ -14,7 +14,7 @@ import { useRef, useState } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { safeNpub } from './pubkey-npub';
 import { copyRaw } from './copy-raw';
-import { usePreferences } from '@/services/preferences';
+import { usePreferences } from '@/hooks/usePreferences';
 import { useTranslation } from '@/i18n/context';
 import { useModerationStore } from '@/store/moderation';
 import { useToastStore } from '@/store/toast';

@@ -1,5 +1,5 @@
 /**
- * Derived read-state selectors.
+ * Derived read-state selectors (the React side is `src/hooks/read-state/`).
  *
  * Counts are pure functions over the bridge's `dmsByPeer` / `messagesByGroup`
  * stores filtered by the persisted cursor in `useReadStateStore`. There is
@@ -15,20 +15,13 @@
  * with for years and converges to a real cursor as soon as they open the
  * thread for the first time.
  */
-import { useMemo } from 'react';
 import type { JsDirectMessage, JsMessage } from '@/services/nostr-bridge';
-import {
-  useDirectMessages,
-  useMessages,
-  useMessagesByGroup,
-} from '@/services/nostr-bridge';
-import { useReadStateStore } from '@/store/read-state';
 import { buildAuthorIndex, isReplyToMe } from './replies';
-import { useCachedGroupMessages } from './cached-group-messages';
 
 const FALLBACK_WINDOW_MS = 24 * 60 * 60 * 1000;
 
-function effectiveCursor(stored: number | undefined): number {
+/** The stored cursor, or the 24h bootstrap window when there is none yet. */
+export function effectiveCursor(stored: number | undefined): number {
   if (stored && stored > 0) return stored;
   return Date.now() - FALLBACK_WINDOW_MS;
 }
@@ -53,31 +46,6 @@ export function countDMUnread(
   return n;
 }
 
-export function useDMUnreadCount(peer: string | null | undefined): number {
-  const dms = useDirectMessages();
-  const stored = useReadStateStore((s) => (peer ? s.dmCursors[peer] : undefined));
-  return useMemo(() => {
-    if (!peer) return 0;
-    const list = dms[peer];
-    if (!list || list.length === 0) return 0;
-    return countDMUnread(list, effectiveCursor(stored));
-  }, [peer, dms, stored]);
-}
-
-export function useTotalDMUnread(): number {
-  const dms = useDirectMessages();
-  const cursors = useReadStateStore((s) => s.dmCursors);
-  return useMemo(() => {
-    let total = 0;
-    for (const peer of Object.keys(dms)) {
-      const list = dms[peer];
-      if (!list || list.length === 0) continue;
-      total += countDMUnread(list, effectiveCursor(cursors[peer]));
-    }
-    return total;
-  }, [dms, cursors]);
-}
-
 /**
  * Channel unread count. Skips own messages (you wrote them).
  */
@@ -94,39 +62,6 @@ export function countChannelUnread(
     n++;
   }
   return n;
-}
-
-export function useChannelUnreadCount(
-  groupId: string | null | undefined,
-  ownPubkey: string | null,
-): number {
-  const messages = useMessages(groupId ?? null);
-  const stored = useReadStateStore((s) =>
-    groupId ? s.groupCursors[groupId] : undefined,
-  );
-  return useMemo(() => {
-    if (!groupId || !messages || messages.length === 0) return 0;
-    return countChannelUnread(messages, effectiveCursor(stored), ownPubkey);
-  }, [groupId, messages, stored, ownPubkey]);
-}
-
-/**
- * Sum of `useChannelUnreadCount` across every channel the bridge has
- * messages for. Subscribes to `messagesByGroup` so it re-evaluates when
- * any channel's message list changes.
- */
-export function useTotalChannelUnread(ownPubkey: string | null): number {
-  const byGroup = useMessagesByGroup();
-  const cursors = useReadStateStore((s) => s.groupCursors);
-  return useMemo(() => {
-    let total = 0;
-    for (const groupId of Object.keys(byGroup)) {
-      const list = byGroup[groupId];
-      if (!list || list.length === 0) continue;
-      total += countChannelUnread(list, effectiveCursor(cursors[groupId]), ownPubkey);
-    }
-    return total;
-  }, [byGroup, cursors, ownPubkey]);
 }
 
 /**
@@ -148,20 +83,6 @@ export function channelHasMention(
     if (m.mentions.includes(ownPubkey)) return true;
   }
   return false;
-}
-
-export function useChannelHasMention(
-  groupId: string | null | undefined,
-  ownPubkey: string | null,
-): boolean {
-  const messages = useMessages(groupId ?? null);
-  const stored = useReadStateStore((s) =>
-    groupId ? s.groupCursors[groupId] : undefined,
-  );
-  return useMemo(() => {
-    if (!groupId || !messages || messages.length === 0) return false;
-    return channelHasMention(messages, effectiveCursor(stored), ownPubkey);
-  }, [groupId, messages, stored, ownPubkey]);
 }
 
 /**
@@ -213,66 +134,7 @@ export function computeChannelHighlights(
   return { unread, mentions, replies, eventIds };
 }
 
-export function useChannelHighlights(
-  groupId: string | null | undefined,
-  ownPubkey: string | null,
-): ChannelHighlights {
-  const messages = useMessages(groupId ?? null);
-  const stored = useReadStateStore((s) =>
-    groupId ? s.groupCursors[groupId] : undefined,
-  );
-  return useMemo(() => {
-    if (!groupId || !messages || messages.length === 0) return EMPTY_HIGHLIGHTS;
-    return computeChannelHighlights(messages, effectiveCursor(stored), ownPubkey);
-  }, [groupId, messages, stored, ownPubkey]);
-}
-
-/**
- * Highlight selector for channel lists. Unlike {@link useChannelHighlights},
- * this reads the already-loaded messages map and does not open a per-channel
- * message subscription. Channel menus can render dozens of rows; subscribing
- * each row would turn one menu paint into a relay REQ burst.
- *
- * Each row reads only its own channel (`useCachedGroupMessages`), so a new
- * message re-renders the row it belongs to and no other.
- */
-export function useCachedChannelHighlights(
-  groupId: string | null | undefined,
-  ownPubkey: string | null,
-): ChannelHighlights {
-  const messages = useCachedGroupMessages(groupId);
-  const stored = useReadStateStore((s) =>
-    groupId ? s.groupCursors[groupId] : undefined,
-  );
-  return useMemo(() => {
-    if (!groupId || !messages || messages.length === 0) return EMPTY_HIGHLIGHTS;
-    return computeChannelHighlights(messages, effectiveCursor(stored), ownPubkey);
-  }, [groupId, messages, stored, ownPubkey]);
-}
-
-/**
- * `true` when ANY currently-loaded channel has unread mentions or replies.
- * Used by the ServerRail to overlay an `@`-icon on the active relay tile.
- *
- * Limitation: only reflects channels the bridge has messages for, i.e.
- * the active relay. Inactive relays don't get a badge until cross-relay
- * mention-watch ships in a follow-up PR.
- */
-export function useHasAnyHighlights(ownPubkey: string | null): boolean {
-  const byGroup = useMessagesByGroup();
-  const cursors = useReadStateStore((s) => s.groupCursors);
-  return useMemo(() => {
-    for (const groupId of Object.keys(byGroup)) {
-      const list = byGroup[groupId];
-      if (!list || list.length === 0) continue;
-      const h = computeChannelHighlights(list, effectiveCursor(cursors[groupId]), ownPubkey);
-      if (h.mentions > 0 || h.replies > 0) return true;
-    }
-    return false;
-  }, [byGroup, cursors, ownPubkey]);
-}
-
-// Notification counts moved to `@/services/notifications/selectors` when the
-// single mixed inbox was split into independent DM and mention streams.
-// See `useNotificationBadgeCount` / `useUnreadMentionCount` /
+// Notification counts live in `src/hooks/notifications/useNotificationSelectors.ts`
+// since the single mixed inbox was split into independent DM and mention
+// streams. See `useNotificationBadgeCount` / `useUnreadMentionCount` /
 // `useUnreadDmNotificationCount` there.

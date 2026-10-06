@@ -45,10 +45,7 @@ vi.mock('@/services/nostr-bridge', async () => {
 
 const uploadToBlossom = vi.fn();
 vi.mock('@/services/blossom', () => ({ uploadToBlossom: (...a: unknown[]) => uploadToBlossom(...a) }));
-vi.mock('@/services/bot-commands', async (orig) => {
-  const actual = await orig<Record<string, unknown>>();
-  return { ...actual, useBotCommands: () => [] };
-});
+vi.mock('@/hooks/relay/useBotCommands', () => ({ useBotCommands: () => [] }));
 
 import { useChannelComposer } from '@/hooks/chat/useChannelComposer';
 import { useMessageZapStore } from '@/store/messageZap';

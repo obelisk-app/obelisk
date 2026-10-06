@@ -11,7 +11,7 @@ import { wotEngine } from '@/services/wot/engine';
 import type { SetRelayAccessOpts, TrackedSub, WatchedSubOptions } from '../context';
 import { pushRelayDebug } from '../relay-debug';
 import { classifyAccessClose, isRelayQuotaOrRateLimit, isWhitelistRefusal } from '../relay-rejection';
-import { normalizeRelayUrl } from '../relay-url';
+import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
 import type { RelayAccessState } from '../types';
 
 export interface WatchedReqDeps {

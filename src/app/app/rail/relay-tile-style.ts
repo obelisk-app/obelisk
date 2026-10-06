@@ -1,5 +1,3 @@
-import { encodeRelayShareCode } from '@/utils/relay-url/relay-share-link';
-
 /** The letter a relay tile shows without an icon: the first letter of the registrable name. */
 export function letterFor(host: string): string {
   const segs = host.split('.');
@@ -12,9 +10,4 @@ export function colorFor(host: string): string {
   let h = 0;
   for (let i = 0; i < host.length; i++) h = (h * 31 + host.charCodeAt(i)) >>> 0;
   return `hsl(${h % 360} 60% 45%)`;
-}
-
-/** The public `/r/<code>` link that opens a relay's branded landing page. */
-export function relayShareLink(origin: string, url: string): string {
-  return `${origin}/r/${encodeRelayShareCode(url)}`;
 }

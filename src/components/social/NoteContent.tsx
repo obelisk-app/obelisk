@@ -13,8 +13,8 @@
 
 import { displayNameFor } from '@/utils/identity/display-name';
 import { useMemo } from 'react';
-import { useAuthor } from '@/services/social/useAuthor';
-import { useNotePreview } from '@/services/social/useNotePreview';
+import { useAuthor } from '@/hooks/social/useAuthor';
+import { useNotePreview } from '@/hooks/social/useNotePreview';
 import { useTranslation } from '@/i18n/context';
 import { tokenizeContent, type NostrRef } from '@/services/social/nip27';
 import { linkifyHashtags } from '@/services/social/profile-feed';

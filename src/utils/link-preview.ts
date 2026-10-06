@@ -16,6 +16,15 @@ export interface LinkPreview {
   author?: string;
 }
 
+/** The host a preview card labels itself with: `www.` dropped, the site name if the URL will not parse. */
+export function previewHost(preview: LinkPreview): string {
+  try {
+    return new URL(preview.url).hostname.replace(/^www\./, '');
+  } catch {
+    return preview.siteName ?? '';
+  }
+}
+
 /**
  * An address as 16-bit words: two for IPv4, eight for IPv6. One shape lets a
  * single prefix matcher serve both families, and lets the IPv4 ranges be

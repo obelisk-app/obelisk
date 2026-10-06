@@ -5,7 +5,7 @@ const search = vi.hoisted(() => ({ result: { directHit: null, nip05Hit: null, no
 vi.mock('@/hooks/useNostrUserSearch', () => ({
   useNostrUserSearch: (q: string) => { search.queries.push(q); return search.result; },
 }));
-vi.mock('@/services/social/useAuthor', () => ({
+vi.mock('@/hooks/social/useAuthor', () => ({
   useAuthor: () => ({ name: null, displayName: null, picture: null, nip05: null, about: null, banner: null, lud16: null }),
 }));
 

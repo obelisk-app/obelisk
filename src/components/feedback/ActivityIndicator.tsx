@@ -1,7 +1,8 @@
 'use client';
 
-import { useActivityLog, dismissActivity, type ActivityEntry } from '@/services/activity-log';
-import { usePreferences } from '@/services/preferences';
+import { dismissActivity, type ActivityEntry } from '@/services/activity-log';
+import { useActivityLog } from '@/hooks/useActivityLog';
+import { usePreferences } from '@/hooks/usePreferences';
 import RelayStatusBanner from '@/app/app/RelayStatusBanner';
 import { useTranslation } from '@/i18n/context';
 import { CloseIcon } from '@/components/ui/icons';

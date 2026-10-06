@@ -3,7 +3,7 @@
  * and the validators a relay URL passes before it is connected to or kept
  * in the rail. Pure string and URL logic; `relay-url.ts` owns equality.
  */
-import { normalizeRelayUrl } from './relay-url';
+import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
 
 export const DEFAULT_RELAY = 'wss://public.obelisk.ar';
 export const LACRYPTA_RELAY = 'wss://lacrypta-relay.obelisk.ar';

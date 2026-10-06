@@ -16,7 +16,7 @@
 import { useCallback } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
 import type { UserHit } from '@/hooks/useNostrUserSearch';
-import { useAuthor } from '@/services/social/useAuthor';
+import { useAuthor } from '@/hooks/social/useAuthor';
 import { useTranslation } from '@/i18n/context';
 import { shortNpubLabel } from '@/utils/identity/short-npub';
 import Button from '@/components/ui/Button';
@@ -26,7 +26,7 @@ import NoteCard from './NoteCard';
 import Spinner from '@/components/ui/Spinner';
 import Input from '@/components/ui/Input';
 import EmptyState from '@/components/ui/EmptyState';
-import { useFeedSearch } from './useFeedSearch';
+import { useFeedSearch } from '@/hooks/social/useFeedSearch';
 
 export default function FeedSearch({
   initialQuery = '',

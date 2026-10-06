@@ -14,7 +14,7 @@ import { extractMentionPubkeysFromMessage } from '@/utils/message-text/mentions'
 import { classifyGroupPing } from '@/services/notifications/classify';
 import { isUserWatchingChannel } from '@/services/read-gates';
 import { cacheDelete, cacheSet } from '../../cache';
-import { normalizeRelayUrl } from '../../relay-url';
+import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
 import type { JsMessage, LoadMoreMessagesResult } from '../../types';
 import { CACHE_FLUSH_DELAY_MS, LOAD_MORE_PAGE_SIZE, MESSAGE_CACHE_LIMIT, type MessagesState } from './state';
 

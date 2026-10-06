@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { JsMessage } from '@/services/nostr-bridge/types';
+import type { JsMessage } from '@/services/nostr-bridge';
 import { buildAuthorIndex, isReplyToMe } from '@/services/read-state/replies';
 
 const me = 'a'.repeat(64);

@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect } from 'react';
-import { getAppearanceCssVariables, usePreferences } from '@/services/preferences';
+import { getAppearanceCssVariables } from '@/services/preferences';
+import { usePreferences } from '@/hooks/usePreferences';
 
 export default function AppearancePreferencesRoot() {
   const prefs = usePreferences();

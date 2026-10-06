@@ -17,7 +17,7 @@ import { timeOfDay } from '../labels';
 import BackButton from '../BackButton';
 import RemoteImage from '@/components/ui/RemoteImage';
 import { DmProtocolNotice, DmProtocolSwitch } from '../../dm-protocol/DmProtocolSwitch';
-import { useDmProtocolChoice } from '../../dm-protocol/useDmProtocolChoice';
+import { useDmProtocolChoice } from '@/hooks/app/dm-protocol/useDmProtocolChoice';
 
 /**
  * Phone skin of a DM conversation. Order, dividers, post-quantum marks,

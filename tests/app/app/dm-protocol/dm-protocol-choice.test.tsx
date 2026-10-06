@@ -24,7 +24,7 @@ vi.mock('@/services/nostr-bridge', async () => {
     getBridgeImpl: () => null,
   });
 });
-vi.mock('@/services/social/useAuthor', () => ({
+vi.mock('@/hooks/social/useAuthor', () => ({
   useAuthor: () => ({
     displayName: 'Bob', name: null, picture: null,
     nip05: null, about: null, banner: null, lud16: null,

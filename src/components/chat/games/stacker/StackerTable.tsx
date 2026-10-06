@@ -7,8 +7,8 @@ import { useStackerLoop } from '@/hooks/chat/useStackerLoop';
 import { MUSIC_CREDIT } from '@/lib/games/stacker/audio';
 import StackerBoard, { MiniBoard, PieceChip } from './StackerBoard';
 import StackerKeysPanel from './StackerKeysPanel';
-import { useStackerCellSize } from './useStackerCellSize';
-import { useTrackTitle } from './useTrackTitle';
+import { useStackerCellSize } from '@/hooks/chat/games/stacker/useStackerCellSize';
+import { useTrackTitle } from '@/hooks/chat/games/stacker/useTrackTitle';
 import { useTranslation } from '@/i18n/context';
 import Button from '@/components/ui/Button';
 

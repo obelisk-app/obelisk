@@ -8,7 +8,7 @@ vi.mock('@/services/nostr-bridge', async (orig) => {
 
 import { DmMessageMenu } from '@/components/chat/DmMessageMenu';
 import { LocaleProvider } from '@/i18n/context';
-import type { JsDirectMessage } from '@/services/nostr-bridge/types';
+import type { JsDirectMessage } from '@/services/nostr-bridge';
 
 const renderLocalized = (ui: React.ReactElement) => render(<LocaleProvider initialLocale="en">{ui}</LocaleProvider>);
 const PEER = 'b'.repeat(64);

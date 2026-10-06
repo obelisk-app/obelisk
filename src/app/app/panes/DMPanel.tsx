@@ -19,7 +19,7 @@ import { Avatar } from '../Avatar';
 import Button from '@/components/ui/Button';
 import CloseButton from '@/components/ui/CloseButton';
 import { DmProtocolNotice, DmProtocolSwitch } from '../dm-protocol/DmProtocolSwitch';
-import { useDmProtocolChoice } from '../dm-protocol/useDmProtocolChoice';
+import { useDmProtocolChoice } from '@/hooks/app/dm-protocol/useDmProtocolChoice';
 
 // Exported for tests only - mounted internally by `AppShell`, same as
 // `RelayTopBar` / `SidebarMe`. The conversation itself (order, dividers,

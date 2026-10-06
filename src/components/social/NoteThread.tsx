@@ -9,7 +9,7 @@
  */
 
 import { useTranslation } from '@/i18n/context';
-import { useNoteThread } from './useNoteThread';
+import { useNoteThread } from '@/hooks/social/useNoteThread';
 import NoteCard from './NoteCard';
 import NoteComposer from './NoteComposer';
 import { useMyPubkey } from '@/services/nostr-bridge';

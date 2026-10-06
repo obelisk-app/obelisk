@@ -19,7 +19,7 @@ vi.mock('@/services/nostr-bridge', async () => {
   });
 });
 
-vi.mock('@/services/preferences', () => ({
+vi.mock('@/hooks/usePreferences', () => ({
   usePreferences: () => ({ socialRelays: ['wss://a.example'] }),
 }));
 

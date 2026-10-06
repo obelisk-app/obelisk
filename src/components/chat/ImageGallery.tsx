@@ -4,8 +4,8 @@ import { useState } from 'react';
 import MediaLibraryModal from '@/components/media/MediaLibraryModal';
 import RemoteImage from '@/components/ui/RemoteImage';
 import { Lightbox } from './gallery/Lightbox';
-import { useGifSelections } from './gallery/useGifSelections';
-import { useLightboxIndex } from './gallery/useLightboxIndex';
+import { useGifSelections } from '@/hooks/chat/gallery/useGifSelections';
+import { useLightboxIndex } from '@/hooks/chat/gallery/useLightboxIndex';
 import type { GifSelection } from './gallery/gif-selections';
 
 export { Lightbox, type LightboxProps } from './gallery/Lightbox';

@@ -10,7 +10,7 @@ import {
   ShareIcon,
   ZapIcon,
 } from '../NoteActions';
-import type { NoteEngagement } from './useNoteEngagement';
+import type { NoteEngagement } from '@/hooks/social/note-card/useNoteEngagement';
 
 /**
  * Reply, repost, like, zap, share: the row under a full card.

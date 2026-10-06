@@ -15,12 +15,12 @@ vi.mock('@nostr-wot/data', () => ({
   shortNpub: (hex: string) => `npub1${hex.slice(0, 6)}…`,
 }));
 
-vi.mock('@/services/social/useAuthor', () => ({
+vi.mock('@/hooks/social/useAuthor', () => ({
   useAuthor: (pubkey: string | null) => (pubkey === AUTHOR ? { displayName: 'Alice' } : null),
 }));
 
 import ReplyLine from '@/components/social/ReplyLine';
-import { __resetNotePreviewCache } from '@/services/social/useNotePreview';
+import { __resetNotePreviewCache } from '@/services/social/note-preview';
 
 const renderLocalized = (ui: React.ReactElement) => render(
   <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,

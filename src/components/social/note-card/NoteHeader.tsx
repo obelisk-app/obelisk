@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
-import type { AuthorIdentity } from '@/services/social/useAuthor';
+import type { AuthorIdentity } from '@/hooks/social/useAuthor';
 import { useTranslation } from '@/i18n/context';
 import type { renderModeFor } from '@/services/social/kinds';
 import type { replyParentOf } from '@/services/social/feed';

@@ -3,7 +3,7 @@
 import { useTranslation } from '@/i18n/context';
 import { TrashIcon } from './composer-icons';
 import { formatDuration } from './recording-time';
-import { useVoiceRecorder } from './useVoiceRecorder';
+import { useVoiceRecorder } from '@/hooks/chat/composer/useVoiceRecorder';
 import IconButton from '@/components/ui/IconButton';
 
 export function VoiceNoteButton({

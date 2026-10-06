@@ -3,7 +3,7 @@
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import { useTranslation } from '@/i18n/context';
-import { useClearLocalData } from './useClearLocalData';
+import { useClearLocalData } from '@/hooks/app/settings/useClearLocalData';
 
 /** The "clear local data" row and its confirmation. */
 export function LocalDataSection() {

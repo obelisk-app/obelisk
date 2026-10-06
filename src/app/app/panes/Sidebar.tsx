@@ -17,7 +17,7 @@ import { SidebarMe } from './SidebarMe';
 import { ChannelTree } from './sidebar/ChannelTree';
 import { RelayAdminModals } from './sidebar/RelayAdminModals';
 import { SidebarHeader } from './sidebar/SidebarHeader';
-import { useGroupWotDistances, useSidebarOperatorData } from './sidebar/useSidebarData';
+import { useGroupWotDistances, useSidebarOperatorData } from '@/hooks/app/panes/sidebar/useSidebarData';
 
 export function Sidebar({
   relay,

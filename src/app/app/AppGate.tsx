@@ -22,7 +22,7 @@ import './mobile/mobile-shell.css';
 import { useIsLoggedIn } from '@/services/nostr-bridge';
 import ReadStateRoot from '@/services/read-state/root';
 import ActivityIndicator from '@/components/feedback/ActivityIndicator';
-import { usePreferences } from '@/services/preferences';
+import { usePreferences } from '@/hooks/usePreferences';
 import { initSocial } from '@/services/social/pool';
 import { useIsMobile } from '@/hooks/useIsMobile';
 

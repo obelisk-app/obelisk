@@ -16,7 +16,7 @@ import ErrorState from '@/components/ui/ErrorState';
 import FileInput from '@/components/ui/FileInput';
 import Input from '@/components/ui/Input';
 import RemoteImage from '@/components/ui/RemoteImage';
-import { useBlossomUpload } from './useBlossomUpload';
+import { useBlossomUpload } from '@/hooks/media/useBlossomUpload';
 
 interface Props {
   label: string;

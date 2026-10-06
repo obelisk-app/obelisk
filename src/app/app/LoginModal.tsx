@@ -23,8 +23,8 @@ import { OBELISK_NIP46_PERMISSIONS } from '@/utils/nostr-signing-kinds';
 import GeneratedProfileEnhancements from './GeneratedProfileEnhancements';
 import { GeneratedNpubStep } from './login/GeneratedNpubStep';
 import { LOGIN_METHOD_ICONS } from './login/LoginIcons';
-import { Nip46SignerDeepLink } from './login/useNip46SignerDeepLink';
-import { useLoginFlow } from './login/useLoginFlow';
+import { Nip46SignerDeepLink } from '@/hooks/app/login/useNip46SignerDeepLink';
+import { useLoginFlow } from '@/hooks/app/login/useLoginFlow';
 
 export { copyConnectionUri, isTransientNip46Error, signerAppHref } from './login/signer-link';
 

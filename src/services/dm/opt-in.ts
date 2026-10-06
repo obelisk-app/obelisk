@@ -1,7 +1,7 @@
 'use client';
 
 import { getBridgeImpl } from '@/services/nostr-bridge';
-import { getPreferences, setPreference, usePreferences } from '@/services/preferences';
+import { getPreferences, setPreference } from '@/services/preferences';
 
 export const DM_OPT_IN_STORAGE_KEY = 'obelisk:preferences';
 export const DM_OPT_IN_PREFERENCE_KEY = 'directMessagesEnabled';
@@ -16,8 +16,4 @@ export function setDmOptInEnabled(enabled: boolean): void {
   if (wasEnabled && !enabled) {
     getBridgeImpl()?.disableDirectMessages();
   }
-}
-
-export function useDmOptInEnabled(): boolean {
-  return usePreferences().directMessagesEnabled;
 }

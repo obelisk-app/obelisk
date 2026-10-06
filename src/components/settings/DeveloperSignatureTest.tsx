@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { nostrActions, useSignerReady } from '@/services/nostr-bridge';
 import { OBELISK_SIGNING_KINDS } from '@/utils/nostr-signing-kinds';
-import { setPreference, usePreferences } from '@/services/preferences';
+import { setPreference } from '@/services/preferences';
+import { usePreferences } from '@/hooks/usePreferences';
 import { useTranslation } from '@/i18n/context';
 
 type Result = 'pending' | 'accepted' | 'rejected';

@@ -5,7 +5,7 @@ import { useTranslation } from '@/i18n/context';
 import Chip from '@/components/ui/Chip';
 import Text from '@/components/ui/Text';
 import { TIMEOUTS, localPlayerChoices } from './game-options';
-import type { NewGameForm } from './useNewGameForm';
+import type { NewGameForm } from '@/hooks/chat/games/new-game/useNewGameForm';
 
 /** Who plays (people in the channel, or N on this machine) and the turn clock. */
 export default function PlayersAndClock({ form }: { form: NewGameForm }) {

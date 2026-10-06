@@ -9,7 +9,7 @@
  */
 
 import { useTranslation } from '@/i18n/context';
-import { usePreferences } from '@/services/preferences';
+import { usePreferences } from '@/hooks/usePreferences';
 import { useDmCallStore } from '@/store/dm-call';
 import { PhoneIcon, VideoIcon } from '@/components/ui/icons';
 

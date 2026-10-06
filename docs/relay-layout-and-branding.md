@@ -51,11 +51,13 @@ relay; a modified client can always attempt to publish them.
 
 ```
 src/services/channel-layout.ts         subscribeLayout(relay, authors[], cb)
-                                  useChannelLayout(relay, authors[])
                                   publishLayout, applyLayout, relayOperatorAuthors
 src/services/relay-branding.ts         subscribeBranding(relay, authors[], cb)
-                                  useRelayBranding(relay, authors[])
                                   publishBranding
+src/hooks/relay/                  useChannelLayout(relay, authors[]),
+                                  useRelayBranding(relay, authors[]),
+                                  useRelayRoles, useRelayEmojiSet,
+                                  useRelayOperatorPubkey(relay)
 src/app/app/DesktopShell.tsx      Sidebar - gates the server settings gear
                                   and relay-wide modals
 ```

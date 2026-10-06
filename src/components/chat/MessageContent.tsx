@@ -25,9 +25,9 @@ import { VoiceMessage } from './message/VoiceMessage';
 import { VideoMedia } from './message/VideoMedia';
 import { StickerImg } from './message/StickerImg';
 import { WelcomeBanner } from './message/WelcomeBanner';
-import { useMessageBody } from './message/useMessageBody';
-import { useMarkdownComponents, useMessageMediaGate } from './message/useMessageMedia';
-import { useMarkdownBody } from './message/useMarkdownBody';
+import { useMessageBody } from '@/hooks/chat/message/useMessageBody';
+import { useMarkdownComponents, useMessageMediaGate } from '@/hooks/chat/message/useMessageMedia';
+import { useMarkdownBody } from '@/hooks/chat/message/useMarkdownBody';
 
 export { autolinkLabel } from './message/autolink-label';
 export { VoiceMessage } from './message/VoiceMessage';

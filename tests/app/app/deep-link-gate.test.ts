@@ -29,9 +29,9 @@ function deepLinkEffect(source: string, start: string, end: string): string {
 
 describe('deep-link relay gate', () => {
   it('the desktop shell hands ?relay= to useRelayDeepLink and never switches directly', () => {
-    // The shell's navigation, deep link included, is `shell/useDesktopNavigation.ts`.
+    // The shell's navigation, deep link included, is `src/hooks/app/shell/useDesktopNavigation.ts`.
     expect(read('DesktopShell.tsx')).toContain('useDesktopNavigation(relay');
-    const shell = read('shell/useDesktopNavigation.ts');
+    const shell = read('../../hooks/app/shell/useDesktopNavigation.ts');
     expect(shell).toContain("import { useRelayDeepLink } from '@/hooks/chat/useRelayDeepLink'");
     const effect = deepLinkEffect(shell, "const r = params.get('relay')", "params.get('s') === 'feed'");
     expect(effect).toContain('switchFromDeepLink(r)');
@@ -39,9 +39,9 @@ describe('deep-link relay gate', () => {
   });
 
   it('the phone shell hands the parsed relay to useRelayDeepLink and never switches directly', () => {
-    // The URL parse and history seeding live in `mobile/useMobileHistorySync.ts`.
+    // The URL parse and history seeding live in `src/hooks/app/mobile/useMobileHistorySync.ts`.
     expect(read('mobile/PhoneShell.tsx')).toContain('useMobileHistorySync(');
-    const shell = read('mobile/useMobileHistorySync.ts');
+    const shell = read('../../hooks/app/mobile/useMobileHistorySync.ts');
     expect(shell).toContain("from '@/hooks/chat/useRelayDeepLink'");
     const effect = deepLinkEffect(shell, 'parseUrl(window.location.search)', 'buildSeedHistory(');
     expect(effect).toContain('switchFromDeepLink(relay)');

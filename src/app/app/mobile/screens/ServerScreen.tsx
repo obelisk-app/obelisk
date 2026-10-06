@@ -16,15 +16,16 @@ import {
 } from '@/services/nostr-bridge';
 import { applyLayout } from '@/services/channel-layout';
 import { useTranslation } from '@/i18n/context';
-import { normalizeRelayUrl } from '@/services/nostr-bridge/relay-url';
+import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
 import { type ScreenName } from '../url-state';
 import { MobileServerBanner, MobileServerRail } from '../MobileServerRail';
 import { AddRelaySheet } from '../sheets/AddRelaySheet';
 import { CreateChannelSheet } from '../sheets/CreateChannelSheet';
 import { RelayMenuSheet } from '../sheets/RelayMenuSheet';
-import { useScreenScrollMemo } from '../useScreenScrollMemo';
-import { useRelayOperatorData } from '../../useRelayOperatorData';
-import { useActiveRelayInfo, useForumCollapsed } from './server/useServerScreenState';
+import { useScreenScrollMemo } from '@/hooks/app/mobile/useScreenScrollMemo';
+import { useRelayOperatorData } from '@/hooks/app/useRelayOperatorData';
+import { useForumCollapsed } from '@/hooks/app/mobile/screens/server/useForumCollapsed';
+import { useRelayHeaderInfo } from '@/hooks/app/useRelayHeaderInfo';
 import { ChannelListEmptyState, ChannelRow, ForumThreadChildRow } from './ChannelRow';
 
 export function ServerScreen({
@@ -50,7 +51,7 @@ export function ServerScreen({
   const channelListRef = useRef<HTMLDivElement>(null);
   useScreenScrollMemo(`server:${relay ?? ''}`, channelListRef);
 
-  const activeRelayInfo = useActiveRelayInfo(relay);
+  const activeRelayInfo = useRelayHeaderInfo(relay);
 
   // Match the desktop's exact roots/layout pipeline so categories render the
   // same as ServerRail. Critically: a group whose parent isn't in the local
@@ -123,8 +124,8 @@ export function ServerScreen({
   // Active "space" label - prefer the operator-published kind-30078 branding
   // name (matches desktop banner), fall back to NIP-11 doc, then to the URL
   // host while everything resolves.
-  const activeSpaceLabel = branding.name || activeRelayInfo?.name || (relay ? shortHost(relay) : 'Obelisk');
-  const activeSpaceIcon = branding.icon || activeRelayInfo?.icon || null;
+  const activeSpaceLabel = branding.name || activeRelayInfo.name || (relay ? shortHost(relay) : 'Obelisk');
+  const activeSpaceIcon = branding.icon || activeRelayInfo.icon || null;
   const activeSpaceBanner = branding.banner || null;
   const openActiveRelayMenu = () => {
     if (!relay) return;

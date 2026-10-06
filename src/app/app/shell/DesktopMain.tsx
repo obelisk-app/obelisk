@@ -10,7 +10,7 @@ import { DMPanel } from '../panes/DMPanel';
 import { FeedPaneActions } from '../panes/ReaderPane';
 import { EmptyState } from '../panes/ShellStates';
 import type { View } from '../view';
-import type { FeedPaneControls } from './useDesktopLayout';
+import type { FeedPaneControls } from '@/hooks/app/shell/useDesktopLayout';
 
 type Props = {
   view: View;

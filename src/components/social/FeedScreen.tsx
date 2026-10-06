@@ -25,8 +25,8 @@ import FeedToolbar from './feed-screen/FeedToolbar';
 import FeedColumn from './feed-screen/FeedColumn';
 import FeedFloatingControls from './feed-screen/FeedFloatingControls';
 import FilterSheet from './feed-screen/FilterSheet';
-import { useFeedScreen } from './feed-screen/useFeedScreen';
-import { useComposeRowVisible } from './feed-screen/useComposeRowVisible';
+import { useFeedScreen } from '@/hooks/social/feed-screen/useFeedScreen';
+import { useComposeRowVisible } from '@/hooks/social/feed-screen/useComposeRowVisible';
 
 export type { FeedTab } from './feed-screen/types';
 

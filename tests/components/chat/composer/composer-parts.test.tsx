@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { LocaleProvider } from '@/i18n/context';
 import { formatDuration } from '@/components/chat/composer/recording-time';
 import { AttachmentMenu, promptForContact } from '@/components/chat/composer/AttachmentMenu';
-import { useFileDrag } from '@/components/chat/composer/useFileDrag';
+import { useFileDrag } from '@/hooks/chat/composer/useFileDrag';
 
 const renderLocalized = (ui: React.ReactElement) => render(<LocaleProvider initialLocale="en">{ui}</LocaleProvider>);
 

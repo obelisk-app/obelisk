@@ -1,7 +1,8 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { setDmOptInEnabled, useDmOptInEnabled } from '@/services/dm/opt-in';
+import { setDmOptInEnabled } from '@/services/dm/opt-in';
+import { useDmOptInEnabled } from '@/hooks/dm/useDmOptInEnabled';
 import { useTranslation } from '@/i18n/context';
 import Button from '@/components/ui/Button';
 

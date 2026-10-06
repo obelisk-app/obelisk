@@ -14,7 +14,7 @@ import RemoteImage from '@/components/ui/RemoteImage';
 import { InlineTagChip } from './InlineTagChip';
 import { ThreadCardSkeleton } from './ThreadCardSkeletons';
 import { formatTimeAgo, posterName } from './thread-card-utils';
-import { useThreadCardData } from './useThreadCardData';
+import { useThreadCardData } from '@/hooks/chat/forum/useThreadCardData';
 
 export { ThreadGallery } from './ThreadGallery';
 export { LoadingThreads, EmptyForum, NoMatchingThreads } from './ThreadListStates';

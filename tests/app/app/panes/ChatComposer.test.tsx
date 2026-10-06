@@ -3,10 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { LocaleProvider } from '@/i18n/context';
 
 vi.mock('@/services/nostr-bridge', async () => (await import('@tests/support/composer-mount')).composerBridgeMock());
-vi.mock('@/services/bot-commands', async (orig) => {
-  const actual = await orig<Record<string, unknown>>();
-  return { ...actual, useBotCommands: () => [] };
-});
+vi.mock('@/hooks/relay/useBotCommands', () => ({ useBotCommands: () => [] }));
 
 import { ChatComposer } from '@/app/app/panes/ChatComposer';
 import { GROUP } from '@tests/support/composer-mount';

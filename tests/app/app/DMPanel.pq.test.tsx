@@ -40,7 +40,7 @@ vi.mock('@/services/nostr-bridge', async () => {
 
 // The panel resolves the peer through the social tier now (see `useAuthor`),
 // which would otherwise open real sockets to the public relays from jsdom.
-vi.mock('@/services/social/useAuthor', () => ({
+vi.mock('@/hooks/social/useAuthor', () => ({
   useAuthor: () => ({
     displayName: 'Bob', name: null, picture: null,
     nip05: null, about: null, banner: null, lud16: null,

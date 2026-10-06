@@ -15,9 +15,9 @@
  * per-channel stream, a REQ burst for a long channel list).
  *
  * Built on the bridge's public `getBridge()` + `subscribeMessagesByGroup`,
- * not on the bridge's `useSubscription` hook.
+ * not on the bridge's `useSubscription` hook. The React side is
+ * `useCachedGroupMessages` in `src/hooks/read-state/`.
  */
-import { useSyncExternalStore } from 'react';
 import { getBridge, type JsMessage } from '@/services/nostr-bridge';
 
 type ByGroup = Readonly<Record<string, ReadonlyArray<JsMessage>>>;
@@ -49,7 +49,11 @@ function detach(): void {
   latest = EMPTY;
 }
 
-function subscribe(listener: () => void): () => void {
+/**
+ * Listen for any channel's loaded messages changing. The first listener opens
+ * the one shared bridge subscription and the last one closes it.
+ */
+export function subscribeCachedGroupMessages(listener: () => void): () => void {
   listeners.add(listener);
   if (listeners.size === 1) attach();
   return () => {
@@ -59,10 +63,6 @@ function subscribe(listener: () => void): () => void {
 }
 
 /** `groupId`'s loaded messages, or `undefined` when there are none (or no group). */
-export function useCachedGroupMessages(groupId: string | null | undefined): ReadonlyArray<JsMessage> | undefined {
-  return useSyncExternalStore(
-    subscribe,
-    () => (groupId ? latest[groupId] : undefined),
-    () => undefined,
-  );
+export function getCachedGroupMessages(groupId: string | null | undefined): ReadonlyArray<JsMessage> | undefined {
+  return groupId ? latest[groupId] : undefined;
 }

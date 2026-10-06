@@ -8,7 +8,7 @@ import VestaPlayers from './VestaPlayers';
 import VestaPrompts from './VestaPrompts';
 import VestaTurnActions from './VestaTurnActions';
 import VestaTradePanel from './VestaTradePanel';
-import { useVestaTurn } from './useVestaTurn';
+import { useVestaTurn } from '@/hooks/chat/games/vesta/useVestaTurn';
 
 export interface VestaTableProps {
   session: GameSession;

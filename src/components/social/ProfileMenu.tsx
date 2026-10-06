@@ -17,7 +17,7 @@
 import { useRef, useState } from 'react';
 import { safeNpub } from './pubkey-npub';
 import { useTranslation } from '@/i18n/context';
-import { usePreferences } from '@/services/preferences';
+import { usePreferences } from '@/hooks/usePreferences';
 import { useModerationStore } from '@/store/moderation';
 import { useToastStore } from '@/store/toast';
 import { profileUrl } from '@/services/social/note-links';

@@ -29,7 +29,7 @@ import { MESSAGE_INPUT_PROPS } from '@/utils/message-input-props';
 import Input from '@/components/ui/Input';
 import MessageMediaPicker from './MessageMediaPicker';
 import { FileDropZone } from './ComposerActions';
-import { useDmComposer } from './dm-composer/useDmComposer';
+import { useDmComposer } from '@/hooks/chat/dm-composer/useDmComposer';
 import { DmPendingFiles } from './dm-composer/DmPendingFiles';
 import { DmVoiceDraft } from './dm-composer/DmVoiceDraft';
 import { DmComposerActions, DmSendControl } from './dm-composer/DmComposerControls';

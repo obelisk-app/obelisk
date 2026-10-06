@@ -4,7 +4,7 @@ import { tagChipStyle } from '@/utils/forum-tag-colors';
 import { useTranslation } from '@/i18n/context';
 import Input from '@/components/ui/Input';
 import { MobileTagDot } from './MobileTagDot';
-import type { ForumScreenState } from './useForumScreen';
+import type { ForumScreenState } from '@/hooks/app/mobile/screens/forum/useForumScreen';
 
 /** Search-or-create, the + pill, the sort chip and the tag filter chips. */
 export function ForumChrome({ forum }: { forum: ForumScreenState }) {

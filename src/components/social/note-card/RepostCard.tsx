@@ -12,7 +12,7 @@
 
 import { useMemo } from 'react';
 import { displayNameFor } from '@/utils/identity/display-name';
-import { useAuthor } from '@/services/social/useAuthor';
+import { useAuthor } from '@/hooks/social/useAuthor';
 import { useTranslation } from '@/i18n/context';
 import { embeddedRepostEvent, repostTarget } from '@/services/social/repost';
 import { RepostIcon } from '../NoteActions';

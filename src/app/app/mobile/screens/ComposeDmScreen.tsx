@@ -1,7 +1,7 @@
 'use client';
 
 import { avatarInitials, displayNameFor } from '@/utils/identity/display-name';
-import { useAuthor } from '@/services/social/useAuthor';
+import { useAuthor } from '@/hooks/social/useAuthor';
 import { shortNpubLabel } from '@/utils/identity/short-npub';
 import { useId, useMemo, useState } from 'react';
 import { useDirectMessages } from '@/services/nostr-bridge';

@@ -6,7 +6,7 @@ import SegmentedControl from '@/components/ui/SegmentedControl';
 import Text from '@/components/ui/Text';
 import { CONTENT_FILTERS, type ContentFilter } from '@/services/social/kinds';
 import type { FeedSort } from '@/services/social/rank';
-import { useHistoryDismiss } from '@/app/app/useHistoryDismiss';
+import { useHistoryDismiss } from '@/hooks/app/useHistoryDismiss';
 
 /**
  * The phone's answer to the chip strips.

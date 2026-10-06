@@ -22,7 +22,7 @@ import {
   MobileVoiceStatusBar,
   RehydratingScreen,
 } from './panes/ShellStates';
-import { useEdgeSwipeOpen } from './useEdgeSwipeOpen';
+import { useEdgeSwipeOpen } from '@/hooks/app/useEdgeSwipeOpen';
 import { surfaceForView } from './view';
 import { DesktopDrawer } from './shell/DesktopDrawer';
 import { DesktopMain } from './shell/DesktopMain';
@@ -30,9 +30,9 @@ import { FeedSplitPane } from './shell/FeedSplitPane';
 import { LoggedOutScreen } from './shell/LoggedOutScreen';
 import { ReaderPaneSlot } from './shell/ReaderPaneSlot';
 import { PROFILE_PANE_KEY, railModeFor } from './shell/desktop-layout';
-import { useDesktopChrome, useFeedPane } from './shell/useDesktopLayout';
-import { useDesktopNavigation } from './shell/useDesktopNavigation';
-import { useExploredProfile, useReaderPane } from './shell/useShellPanes';
+import { useDesktopChrome, useFeedPane } from '@/hooks/app/shell/useDesktopLayout';
+import { useDesktopNavigation } from '@/hooks/app/shell/useDesktopNavigation';
+import { useExploredProfile, useReaderPane } from '@/hooks/app/shell/useShellPanes';
 
 /** "Is this the client" never changes for the life of the document. */
 const subscribeToNothing = () => () => {};

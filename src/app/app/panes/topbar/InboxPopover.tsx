@@ -10,7 +10,7 @@ import {
 } from '@/store/notifications';
 import { useTranslation } from '@/i18n/context';
 import { useFormat } from '@/i18n/useFormat';
-import type { InboxStreams } from './useTopBarPopovers';
+import type { InboxStreams } from '@/hooks/app/panes/topbar/useTopBarPopovers';
 import SegmentedControl from '@/components/ui/SegmentedControl';
 
 /** The bell's popover: mentions on this relay and DMs, each with its own read cursor. */

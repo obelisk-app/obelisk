@@ -22,7 +22,7 @@ vi.mock('@/services/nostr-bridge', async () => {
   });
 });
 
-vi.mock('@/services/social/useAuthor', () => ({
+vi.mock('@/hooks/social/useAuthor', () => ({
   useAuthor: (pubkey: string | null) => (pubkey ? { displayName: 'Bob', picture: null, nip05: null } : null),
 }));
 

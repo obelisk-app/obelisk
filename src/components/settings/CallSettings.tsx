@@ -7,15 +7,8 @@
 
 import { useState } from 'react';
 import { useTranslation } from '@/i18n/context';
-import {
-  CALL_RELAY_MAX,
-  DEFAULT_CALL_RELAYS,
-  normalizeCallRelays,
-  setPreference,
-  usePreferences,
-  type CallIpProtection,
-  type CallsFrom,
-} from '@/services/preferences';
+import { CALL_RELAY_MAX, DEFAULT_CALL_RELAYS, normalizeCallRelays, setPreference, type CallIpProtection, type CallsFrom } from '@/services/preferences';
+import { usePreferences } from '@/hooks/usePreferences';
 import { CloseIcon } from '@/components/ui/icons';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';

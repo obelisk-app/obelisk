@@ -14,8 +14,10 @@ const setPreference = vi.fn((key: string, value: unknown) => {
 });
 
 vi.mock('@/services/preferences', () => ({
-  usePreferences: () => saved,
   setPreference: (key: string, value: unknown) => setPreference(key, value),
+}));
+vi.mock('@/hooks/usePreferences', () => ({
+  usePreferences: () => saved,
 }));
 
 vi.mock('@/services/nostr-bridge', async () => {

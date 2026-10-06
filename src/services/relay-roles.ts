@@ -29,11 +29,8 @@
  *
  * This file is the entry point: the model lives in `relay-roles-model.ts`,
  * relay I/O in `relay-roles-sync.ts`, and both are re-exported from here.
+ * The React side is `useRelayRoles` in `src/hooks/relay/`.
  */
-import { useEffect, useMemo, useState } from 'react';
-import { EMPTY_RELAY_ROLES, type RelayRoles } from './relay-roles-model';
-import { subscribeRelayRoles } from './relay-roles-sync';
-
 export {
   DEFAULT_ROLE_COLOR,
   EMPTY_RELAY_ROLES,
@@ -56,20 +53,3 @@ export {
 export type { RelayRole, RelayRoles, RoleHolders } from './relay-roles-model';
 export { publishRoleCatalog, publishRoleHolders, subscribeRelayRoles } from './relay-roles-sync';
 
-export function useRelayRoles(
-  relayUrl: string | null,
-  authors: ReadonlyArray<string>,
-): RelayRoles {
-  const authorsKey = useMemo(() => [...authors].sort().join(','), [authors]);
-  const [state, setState] = useState<RelayRoles>(EMPTY_RELAY_ROLES);
-  // Reset on relay change only - authors arriving after first paint would
-  // otherwise blank every badge mid-load.
-  useEffect(() => {
-    setState(EMPTY_RELAY_ROLES);
-  }, [relayUrl]);
-  useEffect(() => {
-    if (!relayUrl || authorsKey.length === 0) return;
-    return subscribeRelayRoles(relayUrl, authorsKey.split(','), setState);
-  }, [relayUrl, authorsKey]);
-  return state;
-}

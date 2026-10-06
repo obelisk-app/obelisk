@@ -4,7 +4,7 @@ import type { JsGroup } from '@/services/nostr-bridge';
 import { useTranslation } from '@/i18n/context';
 import Input from '@/components/ui/Input';
 import { ChannelOrderRow, DragHandleIcon, MoveButtons } from './ChannelOrderRow';
-import type { useLayoutDrag } from './useLayoutDrag';
+import type { useLayoutDrag } from '@/hooks/app/modals/layout/useLayoutDrag';
 import Button from '@/components/ui/Button';
 
 type Category = { id: string; name: string; channelIds: ReadonlyArray<string> };

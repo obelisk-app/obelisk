@@ -82,22 +82,26 @@ const eslintConfig = defineConfig([
   },
   {
     // TEMPORARY (opened 2026-10-05 in round 9, recounted 2026-10-06 in round
-    // 16): the react-hooks family stays `warn`, not `error`, in the files
+    // 17): the react-hooks family stays `warn`, not `error`, in the files
     // below only, because each still has hits and turning them into errors
     // would break CI before the people fixing them are done. Every hit is a
     // real finding to read and fix by hand (DECISION-lint.md), never to
     // suppress in bulk.
     //
-    // Count on 2026-10-06 (`npx eslint .`, commit b5798457): 30 warnings in
-    // 13 files.
-    //   src/components/voice/** and the two voice/search hooks came off when
-    //     audit/r16-comp fixed their 16 hits (three were real bugs).
+    // Count on 2026-10-06 (`npx eslint .`, round 17): 4 warnings in 3 files,
+    // all inside the bridge folder:
     //   src/services/nostr-bridge/hooks/messages.ts 2, groups.ts 1,
-    //     session.ts 1: inside the bridge folder (audit/r16-bridge's folder
-    //     this round, but not on its list of fixes).
-    //   src/services/social/useFeed.ts 4, profiles.ts 1, useNotePreview.ts 1;
-    //     src/services/channel-layout.ts 2, relay-branding.ts 1,
-    //     relay-roles.ts 1: no owner in round 16.
+    //     session.ts 1 (audit/r16-bridge's folder this round, but not on its
+    //     list of fixes).
+    // Came off in round 17 (audit/r17-hooks), fixed by hand when the hooks
+    // moved out of src/services into src/hooks: the operator-data hooks
+    // (channel layout, operator pubkey, branding, roles; one real bug: right
+    // after a relay switch they subscribed the new relay's data with the old
+    // relay's operator as its author) and the social hooks (useFeed,
+    // useSocialProfile, useNotePreview; the last two painted the previous
+    // author or note for one render).
+    // src/components/voice/** and the two voice/search hooks came off in
+    // round 16 when audit/r16-comp fixed their 16 hits (three were real bugs).
     // `src/lib/**` was on this list until round 16. No file under src/lib has
     // had a hit since round 15 moved the React code out, so it came off: a
     // hook added there now fails lint like anywhere else.
@@ -109,15 +113,9 @@ const eslintConfig = defineConfig([
     // move cannot leave an entry that silently matches nothing.
     name: "obelisk/react-hooks-temporary-warn",
     files: [
-      "src/services/channel-layout.ts",
-      "src/services/relay-branding.ts",
-      "src/services/relay-roles.ts",
       "src/services/nostr-bridge/hooks/groups.ts",
       "src/services/nostr-bridge/hooks/messages.ts",
       "src/services/nostr-bridge/hooks/session.ts",
-      "src/services/social/profiles.ts",
-      "src/services/social/useFeed.ts",
-      "src/services/social/useNotePreview.ts",
     ],
     rules: {
       "react-hooks/set-state-in-effect": "warn",

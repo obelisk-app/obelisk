@@ -1,7 +1,7 @@
 'use client';
 
 import type { CSSProperties, FormEventHandler, ReactNode } from 'react';
-import { useEscapeToClose } from './Overlay';
+import { useDismiss } from '@/hooks/useDismiss';
 
 export type SheetHeight = '88%' | '92%' | '94%';
 
@@ -50,7 +50,7 @@ export default function Sheet({
   stacked,
   children,
 }: SheetProps) {
-  useEscapeToClose(onClose, closeOnEscape);
+  useDismiss({ onDismiss: onClose, enabled: closeOnEscape, outside: 'none' });
   const hostStyle: CSSProperties | undefined = zIndex === undefined ? undefined : { zIndex };
   const panel = {
     className: 'sheet native-scroll-y',

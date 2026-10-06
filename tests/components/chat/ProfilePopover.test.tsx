@@ -43,7 +43,7 @@ const nip05 = vi.hoisted(() => ({
   state: 'unchecked' as 'unchecked' | 'checking' | 'verified' | 'unverified',
   calls: [] as Array<[string, string | null | undefined, string | undefined]>,
 }));
-vi.mock('@/services/nip05-verify', () => ({
+vi.mock('@/hooks/useNip05Status', () => ({
   useNip05Status: (pubkey: string, handle: string | null | undefined, mode?: string) => {
     nip05.calls.push([pubkey, handle, mode]);
     return nip05.state;

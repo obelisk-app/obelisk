@@ -5,7 +5,7 @@
 import { useEffect, useState } from 'react';
 import type { NipSigner } from '@/lib/nip-59';
 import { getBridgeImpl } from '../client';
-import { normalizeRelayUrl } from '../relay-url';
+import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
 import type { RelayAccessState } from '../types';
 import { useSubscription } from './subscription';
 

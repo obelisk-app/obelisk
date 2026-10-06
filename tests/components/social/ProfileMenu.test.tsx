@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { LocaleProvider } from '@/i18n/context';
 
-vi.mock('@/services/preferences', () => ({
+vi.mock('@/hooks/usePreferences', () => ({
   usePreferences: () => ({ socialRelays: ['wss://relay.example'] }),
 }));
 

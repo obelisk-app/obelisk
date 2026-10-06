@@ -66,6 +66,7 @@ export type {
   JsUserMetadata,
   JsReaction,
   JsDirectMessage,
+  DmRawEvent,
   JsMediaFavorites,
   JsMediaItem,
   JsMediaKind,

@@ -15,8 +15,8 @@
  */
 
 import { displayNameFor } from '@/utils/identity/display-name';
-import { useAuthor } from '@/services/social/useAuthor';
-import { useNotePreview } from '@/services/social/useNotePreview';
+import { useAuthor } from '@/hooks/social/useAuthor';
+import { useNotePreview } from '@/hooks/social/useNotePreview';
 import { useTranslation } from '@/i18n/context';
 import type { ReplyParent } from '@/services/social/feed';
 import TextButton from '@/components/ui/TextButton';

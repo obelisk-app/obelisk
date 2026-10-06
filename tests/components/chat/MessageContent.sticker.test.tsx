@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { nip19 } from 'nostr-tools';
 import MessageContent from '@/components/chat/MessageContent';
-import { preloadMarkdownBody } from '@/components/chat/message/useMarkdownBody';
+import { preloadMarkdownBody } from '@/hooks/chat/message/useMarkdownBody';
 
 // The markdown renderer loads on demand; load it first so every render below is the real one.
 beforeAll(async () => { await preloadMarkdownBody(); });

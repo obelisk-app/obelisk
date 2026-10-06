@@ -11,7 +11,7 @@ import FileInput from '@/components/ui/FileInput';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import { useTranslation } from '@/i18n/context';
-import { usePackEditor } from './usePackEditor';
+import { usePackEditor } from '@/hooks/media/library/usePackEditor';
 import type { EditablePack } from './types';
 
 function KindOptions() {

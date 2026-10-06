@@ -25,11 +25,11 @@
 import type { Event as NostrEvent } from 'nostr-tools';
 import { useMyPubkey, useUserMetadata } from '@/services/nostr-bridge';
 import { useTranslation } from '@/i18n/context';
-import { useHistoryDismiss } from '@/app/app/useHistoryDismiss';
+import { useHistoryDismiss } from '@/hooks/app/useHistoryDismiss';
 import Button from '@/components/ui/Button';
 import RemoteImage from '@/components/ui/RemoteImage';
 import UserAvatar from '@/components/ui/UserAvatar';
-import { useNoteDraft, type ComposerMode } from './useNoteDraft';
+import { useNoteDraft, type ComposerMode } from '@/hooks/social/useNoteDraft';
 import Spinner from '@/components/ui/Spinner';
 import ErrorState from '@/components/ui/ErrorState';
 import FileInput from '@/components/ui/FileInput';

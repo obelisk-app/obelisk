@@ -26,7 +26,7 @@ import {
   useMentionNotifications,
   useUnreadDmNotificationCount,
   useUnreadMentionCount,
-} from '@/services/notifications/selectors';
+} from '@/hooks/notifications/useNotificationSelectors';
 import { type ScreenName } from '../url-state';
 import { avatarStyle } from '../avatar';
 import RemoteImage from '@/components/ui/RemoteImage';

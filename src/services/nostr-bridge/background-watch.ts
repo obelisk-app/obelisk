@@ -33,7 +33,7 @@
  */
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import { createLocalStore } from '@/utils/storage/local-store';
-import { normalizeRelayUrl } from './relay-url';
+import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
 import { KIND_GROUP_CHAT_MESSAGE } from '@/utils/nip-kinds';
 
 /** How many non-active relays stay watched. */
