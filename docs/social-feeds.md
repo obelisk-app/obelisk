@@ -80,8 +80,9 @@ the component destroyed any warm connection.
   `sig` roughly doubles the payload on a quota-limited origin.
 - Keyed by relay **set** (sorted, so member order doesn't split the cache).
   Notes read from one relay set are never painted for another.
-- Swept by the existing `obelisk-cache-v4/` prefix in `cache-clear.ts`. The
-  SDK's own TTL cache (`obelisk-social-sdk/`) is swept alongside it.
+- Part of the "Messages and channel cache" local-data category (the
+  `obelisk-cache-v4/` prefix; see [data-system.md §11](data-system.md)), so
+  Settings > Data on this device and the error panel's Clear cache remove it.
 
 The old behaviour, for contrast: notes lived in `useState` behind a
 `key={pubkey:relays}` remount, so any navigation threw them away. The shipped

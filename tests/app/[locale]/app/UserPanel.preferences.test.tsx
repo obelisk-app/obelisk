@@ -10,10 +10,6 @@ vi.mock('@/components/settings/WotSettings', () => ({
   default: () => <div data-testid="wot-settings" />,
 }));
 
-vi.mock('@/services/cache-clear', () => ({
-  clearAllClientCacheExceptSession: () => 0,
-}));
-
 vi.mock('@/services/pq/capability', () => ({
   selfPqState: (...args: unknown[]) => mockSelfPqState(...args),
 }));
@@ -148,7 +144,8 @@ describe('PreferencesPanel appearance controls', () => {
     expect(screen.getByTestId('appearance-button-color')).toBeInTheDocument();
     expect(screen.getByTestId('desktop-download-backup')).toBeInTheDocument();
     expect(screen.getByTestId('developer-signature-test')).toBeInTheDocument();
-    expect(screen.getByTestId('clear-cache-button')).toHaveClass('bg-red-600', 'text-white');
+    // Data on this device stacks before Advanced; its last action is the red one.
+    expect(screen.getByTestId('local-data-remove-all')).toHaveClass('bg-red-600', 'text-white');
     expect(screen.getByTestId('desktop-developer-settings')).toBe(screen.getByTestId('desktop-developer-settings').parentElement?.lastElementChild);
   });
 

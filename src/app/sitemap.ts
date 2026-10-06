@@ -25,6 +25,7 @@ const PAGES: ReadonlyArray<{ path: string; changeFrequency: Freq; priority: numb
   { path: '/desktop', changeFrequency: 'monthly', priority: 0.7 },
   { path: '/features', changeFrequency: 'monthly', priority: 0.8 },
   { path: '/help', changeFrequency: 'monthly', priority: 0.7 },
+  { path: '/help/local-data', changeFrequency: 'monthly', priority: 0.5 },
   { path: '/media-kit', changeFrequency: 'monthly', priority: 0.5 },
   { path: guidePath(), changeFrequency: 'weekly', priority: 0.7 },
 ];

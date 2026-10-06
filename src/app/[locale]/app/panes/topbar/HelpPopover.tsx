@@ -3,17 +3,17 @@
 import { createPortal } from 'react-dom';
 import { useHintsStore } from '@/store/hints';
 import Button from '@/components/ui/Button';
-import { BookIcon, LayersIcon, ShieldIcon, SparklesIcon, ZapIcon } from '@/components/ui/icons';
+import { BookIcon, LayersIcon, LockIcon, ShieldIcon, SparklesIcon, ZapIcon } from '@/components/ui/icons';
 import { guidePath } from '@/utils/guides/guide-urls';
 import { localizedPath } from '@/utils/seo/alternates';
-import { HELP_TOPICS } from '@/utils/guides/help-topics';
+import { HELP_TOPICS, helpTopicPath } from '@/utils/guides/help-topics';
 import { useLocale, useTranslations } from 'next-intl';
 
 /**
  * Help panel, deliberately the same shell as the notification popover
  * (width, radius, border, shadow) so the top-right corner reads as one
  * family of panels. Replaces the old hard link to /help, which threw the
- * user out of the chat to read four cards; the full page still exists
+ * user out of the chat to read a few cards; the full page still exists
  * behind "view more".
  */
 export function HelpPopover({ onClose }: { onClose: () => void }) {
@@ -31,7 +31,7 @@ export function HelpPopover({ onClose }: { onClose: () => void }) {
         <span className="text-sm font-semibold text-lc-white">{t('common.help')}</span>
       </div>
       {/* One `lc-card` per topic, the same card treatment the /help
-          page gives these four, just at popover scale. Flat list rows
+          page gives these, just at popover scale. Flat list rows
           read as a menu; discrete cards match where the user has seen
           this content before.
 
@@ -45,7 +45,7 @@ export function HelpPopover({ onClose }: { onClose: () => void }) {
           {HELP_TOPICS.map((topic) => (
             <li key={topic.slug}>
               <a
-                href={localizedPath(locale, guidePath(topic.slug))}
+                href={localizedPath(locale, helpTopicPath(topic))}
                 data-testid={`help-popover-topic-${topic.slug}`}
                 onClick={onClose}
                 className="lc-card group flex items-start gap-3 p-3 hover:border-lc-green/50"
@@ -105,7 +105,9 @@ function HelpTopicIcon({ slug }: { slug: string }) {
       ? ShieldIcon
       : slug === 'bitcoin-zaps'
         ? ZapIcon
-        : SparklesIcon;
+        : slug === 'local-data'
+          ? LockIcon
+          : SparklesIcon;
   return (
     <span
       className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-lc-green/30 bg-lc-green/10 text-lc-green"

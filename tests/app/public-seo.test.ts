@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { translator } from '@tests/support/intl';
 import { generateMetadata as featuresMetadata } from '@/app/[locale]/features/page';
 import { generateMetadata as helpMetadata } from '@/app/[locale]/help/layout';
+import { generateMetadata as localDataHelpMetadata } from '@/app/[locale]/help/local-data/page';
 import { generateMetadata as desktopMetadata } from '@/app/[locale]/desktop/page';
 import { generateMetadata as mobileMetadata } from '@/app/[locale]/mobile/page';
 import { generateMetadata as mediaKitMetadata } from '@/app/[locale]/media-kit/page';
@@ -21,6 +22,7 @@ const PAGES: Array<[string, Load, string, boolean]> = [
   ['landing', landingMetadata, '/', false],
   ['features', featuresMetadata, '/features', true],
   ['help', helpMetadata, '/help', true],
+  ['help: local data', localDataHelpMetadata, '/help/local-data', true],
   ['desktop', desktopMetadata, '/desktop', true],
   ['mobile', mobileMetadata, '/mobile', true],
   ['media kit', mediaKitMetadata, '/media-kit', false],
@@ -54,6 +56,7 @@ describe('public page SEO metadata', () => {
       const t = translator(locale);
       expect((await featuresMetadata(at(locale))).title).toBe(t('seo.features.title'));
       expect((await helpMetadata(at(locale))).description).toBe(t('seo.help.description'));
+      expect((await localDataHelpMetadata(at(locale))).title).toBe(t('seo.helpLocalData.title'));
       expect((await desktopMetadata(at(locale))).title).toBe(t('seo.desktop.title'));
       expect((await mobileMetadata(at(locale))).description).toBe(t('seo.mobile.description'));
       expect((await mediaKitMetadata(at(locale))).title).toBe(t('seo.mediaKit.title'));

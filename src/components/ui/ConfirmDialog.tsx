@@ -54,6 +54,9 @@ function ConfirmDialogPanel({ pending }: { pending: PendingConfirm }) {
     <Modal
       onClose={() => settleConfirm(false)}
       testId="confirm-dialog"
+      // Above everything, the settings modal included: a confirmation asked
+      // from inside it was painted behind it, out of reach.
+      layerClassName="z-[210]"
       panelClassName="w-full max-w-sm mx-4 rounded-2xl bg-lc-dark border border-lc-border p-6 shadow-xl"
       role="alertdialog"
       aria-labelledby={titleId}

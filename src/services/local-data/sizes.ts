@@ -1,0 +1,47 @@
+/**
+ * How much each category takes, for the settings screen. Web storage is
+ * measured exactly (characters, as UTF-16 bytes); the offline files from
+ * their Content-Length headers; the vault key and the language cookie are
+ * a few bytes each and are reported as present or not, not sized.
+ */
+import { LOCAL_DATA_CATEGORIES } from './categories';
+import { cookiesIn, offlineFilesBytes } from './browser-stores';
+import { keysIn, localStorageBytes } from './web-storage';
+import type { LocalDataCategoryId } from './types';
+
+export interface CategoryUsage {
+  /** Approximate bytes, or `null` when it cannot be measured. */
+  readonly bytes: number | null;
+  /** Anything stored at all. */
+  readonly present: boolean;
+}
+
+export type LocalDataUsage = Record<LocalDataCategoryId, CategoryUsage>;
+
+/** The synchronous part: every category, with the offline files not yet measured. */
+export function measureWebStorage(doc?: Document): LocalDataUsage {
+  const out = {} as Record<LocalDataCategoryId, CategoryUsage>;
+  for (const { id } of LOCAL_DATA_CATEGORIES) {
+    const bytes = localStorageBytes([id]);
+    const tabKeys = keysIn('sessionStorage', [id]).length;
+    out[id] = { bytes, present: bytes > 0 || tabKeys > 0 };
+  }
+  // Cookies are a few bytes each: reported as present or not.
+  for (const id of ['language', 'analytics'] as const) {
+    out[id] = { bytes: null, present: cookiesIn([id], doc).length > 0 };
+  }
+  // The vault key (IndexedDB) is not sized: it exists exactly when the
+  // session record does, which `login` already counts.
+  return out;
+}
+
+/** Add the offline files' size (async: Cache Storage). */
+export async function measureLocalData(store?: CacheStorage, doc?: Document): Promise<LocalDataUsage> {
+  const usage = measureWebStorage(doc);
+  const offline = await offlineFilesBytes(store);
+  const base = usage.offline.bytes ?? 0;
+  usage.offline = offline === null
+    ? usage.offline
+    : { bytes: base + offline, present: base + offline > 0 };
+  return usage;
+}

@@ -84,6 +84,10 @@
     "q10": {
       "question": "Does Obelisk work on mobile?",
       "answer": "Yes. Obelisk is a responsive web app that works in any modern mobile browser, and you can install it to your home screen as a PWA from the browser menu, no app store needed. On a phone, log in with a signer app over NIP-46 (Amber, nsec.app), generate a new key, or paste an nsec."
+    },
+    "q11": {
+      "question": "What does Obelisk keep on my device, and how do I remove it?",
+      "answer": "To open quickly and remember where you were, Obelisk keeps a copy of channels, messages and profiles, your read positions, your preferences, your login (encrypted) and the app's own files in your browser. None of it is sent to an Obelisk server: there is no account server, and what you publish lives on relays (the site does load Google Analytics, which counts visits with its own cookies). Remove any of it in Settings > Data on this device, or all of it with Remove everything from this device. You can also log out, clear the site data for obelisk.ar in your browser's settings, or use a private window, which keeps nothing once you close it. Clearing your device does not delete what you published: delete a message from its menu to send a deletion request (NIP-09), which each relay may or may not honour. Step by step: obelisk.ar/help/local-data."
     }
   },
   "hero": {

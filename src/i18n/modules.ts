@@ -41,7 +41,8 @@ export const SCOPES = {
   viewer: ['common', 'marketing', 'social', 'chat', 'media', 'games', 'mobile', 'settings', 'errors'],
   /**
    * `/app`, `/voice`, `/r/<code>`: everything but the public-page modules.
-   * `help` is the help popover's four topics; the rest of `guides` stays out.
+   * `help` is the help popover's topics (and the category copy of Settings >
+   * Data on this device); the rest of `guides` stays out.
    */
   app: [
     'common', 'shell', 'mobile', 'chat', 'dm', 'calls', 'social', 'settings', 'media', 'games',

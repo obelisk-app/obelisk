@@ -58,6 +58,9 @@ if (process.env.NODE_ENV === 'development') pageExtensions.unshift('dev.tsx');
 
 const nextConfig: NextConfig = {
   pageExtensions,
+  // `next dev` would otherwise append its own agent-rules block to AGENTS.md
+  // (with an em dash the repo's guard rejects); AGENTS.md is written by hand.
+  agentRules: false,
   /*
    * The proxy sees the request's own URL. Normalised, Next rebuilds it from
    * the server's fetch hostname (`localhost`) while it resolves rewrites

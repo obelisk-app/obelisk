@@ -56,21 +56,6 @@
         }
       }
     },
-    "localData": {
-      "title": "Local data",
-      "clear": {
-        "title": "Clear local cache",
-        "description": "Wipes cached channels, profiles, branding, member lists, read positions, and DM cache. Live data re-streams from the relay on next paint. Your session and preferences are kept.",
-        "button": "Clear cache"
-      },
-      "confirm": {
-        "title": "Clear local cache?",
-        "description": "This wipes every locally-cached relay response (channels, profiles, branding, members, read positions, DM cache, UI flags) and reloads the page. Your session and preferences stay; you stay logged in.",
-        "cancel": "Cancel",
-        "action": "Clear & reload",
-        "clearing": "Clearing..."
-      }
-    },
     "mobile": {
       "app": "App",
       "theme": "Theme",
@@ -212,11 +197,15 @@
     },
     "advanced": {
       "label": "Advanced",
-      "desc": "Backups, local data and developer tools."
+      "desc": "Backups and developer tools."
     },
     "wallet": {
       "label": "Wallet",
       "desc": "Connect a Lightning wallet with Nostr Wallet Connect to zap and pay invoices."
+    },
+    "data": {
+      "label": "Data on this device",
+      "desc": "What Obelisk keeps in this browser and why. Remove any of it here."
     }
   },
   "openPreferences": "Preferences",
@@ -344,6 +333,37 @@
       "nwc": "This connected wallet",
       "webln": "Your browser extension (WebLN)",
       "none": "No wallet yet"
+    }
+  },
+  "localData": {
+    "intro": "Obelisk keeps these in this browser to open quickly and remember where you were. None of it is sent to an Obelisk server, and removing it does not touch what you published to relays.",
+    "size": "About {size}",
+    "present": "Stored",
+    "empty": "Nothing stored",
+    "remove": "Remove",
+    "removing": "Removing...",
+    "learnMore": "Why it is there, and other ways to remove it",
+    "removeAll": {
+      "title": "Remove everything from this device",
+      "description": "Logs you out, deletes your encrypted login and everything listed above, then reloads.",
+      "button": "Remove everything"
+    },
+    "confirm": {
+      "action": "Remove",
+      "titleAll": "Remove everything from this device?",
+      "actionAll": "Remove everything",
+      "all": "Everything Obelisk keeps here is deleted: your login, the wallet connection, cached messages and profiles, read positions and alerts, preferences, mutes, blocks and saved stickers, offline files, your language choice and the analytics cookies. You are logged out and the page reloads. To log in again you need your key, your browser extension or your signer app. What you published to relays is not affected.",
+      "channels": "Cached channels and messages are deleted from this device and the page reloads. Everything loads again from the relays; nothing you published is affected.",
+      "profiles": "Saved names and pictures are deleted and the page reloads. They load again from the relays.",
+      "readState": "Read positions, unread counts and alerts on this device are deleted and the page reloads. Read positions synced through your relays come back; alerts do not.",
+      "dms": "Your encryption choice for each person is forgotten and the page reloads. Your messages are not affected.",
+      "preferences": "Your settings, layout and recent items go back to the defaults and the page reloads.",
+      "personal": "Mutes, blocks, channel notification choices and saved stickers made on this device are deleted for good and the page reloads. They are not stored anywhere else.",
+      "login": "You are logged out on this device and the page reloads. To log in again you need your key, your browser extension or your signer app. Cached channels and messages and the wallet connection are cleared too.",
+      "wallet": "The wallet connection is deleted from this device and the page reloads. To zap or pay again from Obelisk, paste the connection link from your wallet's app. The wallet itself and its funds are not affected.",
+      "offline": "The saved app files are deleted. Obelisk downloads them again the next time it loads, and will not open offline until then.",
+      "language": "Obelisk forgets the language you picked and goes back to your browser's language. The page reloads.",
+      "analytics": "The Google Analytics cookies are deleted. They are set again the next time a page loads; to keep them away, block trackers in your browser."
     }
   }
 }

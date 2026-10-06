@@ -19,6 +19,7 @@ describe('HelpPage', () => {
       'href',
       '/es/guides/what-is-obelisk',
     );
+    expect(screen.getByTestId('help-topic-local-data')).toHaveAttribute('href', '/es/help/local-data');
     expect(screen.getByRole('link', { name: 'Ver todas las guías →' })).toHaveAttribute(
       'href',
       '/es/guides',

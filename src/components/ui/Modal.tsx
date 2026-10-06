@@ -16,6 +16,11 @@ export interface ModalProps {
   panelClassName?: string;
   /** Identifies the backdrop in tests; individual modals add their own ids. */
   testId?: string;
+  /**
+   * Stacking class of the backdrop. `z-50` sits under the fullscreen
+   * settings modal (`z-[100]`); a dialog opened from inside it needs more.
+   */
+  layerClassName?: string;
   /** `alertdialog` for a confirmation that interrupts; `dialog` otherwise. */
   role?: 'dialog' | 'alertdialog';
   'aria-label'?: string;
@@ -42,6 +47,7 @@ export default function Modal({
   closeOnEscape = true,
   panelClassName = 'w-full max-w-lg mx-4 rounded-xl bg-lc-dark border border-lc-border p-6 shadow-xl',
   testId,
+  layerClassName = 'z-50',
   role = 'dialog',
   'aria-label': ariaLabel,
   'aria-labelledby': ariaLabelledBy,
@@ -53,7 +59,7 @@ export default function Modal({
       onClose={onClose}
       closeOnBackdrop={closeOnBackdrop}
       closeOnEscape={closeOnEscape}
-      backdropClassName="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+      backdropClassName={`fixed inset-0 ${layerClassName} flex items-center justify-center bg-black/60`}
       portal
       testId={testId}
     >

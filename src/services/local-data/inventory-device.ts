@@ -1,0 +1,160 @@
+/**
+ * Inventory, part 2: what this device decided or holds for the person
+ * (preferences, mutes and stickers, the login, offline files, language).
+ * Unlike the caches, some of it exists nowhere else.
+ */
+import { VAULT_DB } from '@/lib/crypto/session-vault';
+import type { LocalDataEntry } from './types';
+
+const LS = 'localStorage' as const;
+const SS = 'sessionStorage' as const;
+
+/** One small preference or layout key: device-wide, not sensitive. */
+function pref(id: string, key: string, match: 'exact' | 'prefix', holds: string, source: string, legacy = false): LocalDataEntry {
+  return {
+    id, area: LS, key, match, category: 'preferences', holds,
+    why: 'Remembers a choice or a layout; without it the default comes back.',
+    perAccount: false, sensitive: false, legacy, source,
+  };
+}
+
+export const DEVICE_ENTRIES: ReadonlyArray<LocalDataEntry> = [
+  // ---- preferences and layout ---------------------------------------------
+  pref('preferences', 'obelisk:preferences', 'exact', 'App settings: sounds, notifications, feed, call and social relays, DM opt-in, post-quantum, appearance.', 'src/services/preferences.ts'),
+  pref('remote-media', 'obelisk:remote-media', 'exact', 'Whether to load images and embeds from other servers.', 'src/services/remote-media.ts'),
+  pref('voice-quality', 'obelisk:voice:quality', 'exact', 'Voice and video quality choice.', 'src/store/voice.ts'),
+  pref('wot', 'obelisk:wot', 'exact', 'Web of trust on or off, hops and minimum paths.', 'src/services/wot/store.ts'),
+  pref('hints', 'obelisk:hints:', 'prefix', 'Which tips this account has seen, or that tips are off.', 'src/store/hints.ts'),
+  pref('hints-base', 'obelisk:hints', 'exact', 'The unscoped key of the hints store.', 'src/store/multi-account.ts'),
+  pref('sidebar-width', 'obelisk-dex/sidebar-width', 'exact', 'Desktop channel sidebar width.', 'src/utils/shell/desktop-layout.ts'),
+  pref('profile-pane-width', 'obelisk-dex/profile-pane-width', 'exact', 'Desktop profile pane width.', 'src/utils/shell/desktop-layout.ts'),
+  pref('thread-pane-width', 'obelisk-dex/thread-pane-width', 'exact', 'Desktop thread pane width.', 'src/utils/shell/desktop-layout.ts'),
+  pref('feed-pane-width', 'obelisk-dex/feed-pane-width', 'exact', 'Desktop feed pane width.', 'src/utils/shell/desktop-layout.ts'),
+  pref('show-members', 'obelisk-dex/show-members', 'exact', 'Whether the desktop member list is open.', 'src/utils/shell/desktop-layout.ts'),
+  pref('voice-chat-width', 'obelisk:voice-chat-width', 'exact', 'Width of the chat rail beside a voice room.', 'src/hooks/chat/useVoiceChatPane.ts'),
+  pref('forum-collapsed', 'obelisk-dex/forum-collapsed/', 'prefix', 'Collapsed publication groups in the sidebar, per group.', 'src/hooks/app/mobile/screens/server/useForumCollapsed.ts'),
+  pref('forum-prefs', 'obelisk-dex/forum-prefs/', 'prefix', 'Sort and view choice per publication.', 'src/services/forum-prefs.ts'),
+  pref('forum-prefs-mobile', 'obelisk-dex/forum-prefs-mobile/', 'prefix', 'Sort and view choice per publication on the phone.', 'src/services/forum-prefs.ts'),
+  pref('recent-emojis', 'obelisk:recent-emojis', 'exact', 'Recently used emoji.', 'src/services/recent-emojis.ts'),
+  pref('recent-media', 'obelisk:recent-media', 'exact', 'Recently used GIFs and stickers.', 'src/services/recent-media.ts'),
+  pref('recent-slash-commands', 'obelisk:recent-slash-commands', 'exact', 'Recently used slash commands.', 'src/services/recent-slash-commands.ts'),
+  pref('search-history', 'obelisk-dex/search-history', 'exact', 'Recent relay searches.', 'src/hooks/chat/relay-search/search-history.ts'),
+  pref('stacker-audio', 'obelisk-dex/stacker/audio', 'exact', 'Stacker game sound and music switches.', 'src/lib/games/stacker/audio.ts'),
+  pref('stacker-keys', 'obelisk-dex/stacker/keys', 'exact', 'Stacker game key bindings.', 'src/lib/games/stacker/keymap.ts'),
+  pref('claimed-admin', 'obelisk:claimed-admin:', 'prefix', 'Groups where this account already claimed creator admin rights, per relay.', 'src/hooks/app/panes/channel/useChannelPanelState.ts'),
+  pref('mobile-setup-seen', 'obelisk-dex/mobile-setup-seen/', 'prefix', 'An old "phone tutorial seen" flag.', 'src/services/cache-clear.ts', true),
+  pref('just-generated', 'obelisk-dex/just-generated/', 'prefix', 'An old "key just generated" flag.', 'src/services/cache-clear.ts', true),
+  pref('forum-follow', 'obelisk-forum-follow', 'prefix', 'An old per-account publication follow store.', 'src/services/cache-clear.ts', true),
+  pref('followed-migrated', 'obelisk:followed-migrated', 'exact', 'An old migration flag.', 'src/services/reset.ts', true),
+  pref('followed-posts', 'obelisk:followed-posts', 'exact', 'An old followed-posts list.', 'src/services/reset.ts', true),
+  // ---- mutes, blocks, channel choices and saved stickers -------------------
+  {
+    id: 'moderation', area: LS, key: 'obelisk:moderation:', match: 'prefix', category: 'personal',
+    holds: 'People muted or blocked from this device (the published kind 10000 mute list is separate and lives on relays).',
+    why: 'Their messages stay hidden. Exists only here.', perAccount: true, sensitive: true, source: 'src/store/moderation.ts',
+  },
+  {
+    id: 'moderation-base', area: LS, key: 'obelisk:moderation', match: 'exact', category: 'personal',
+    holds: 'The unscoped key of the moderation store.', why: 'See read-state-base.',
+    perAccount: false, sensitive: false, source: 'src/store/multi-account.ts',
+  },
+  {
+    id: 'channel-prefs', area: LS, key: 'obelisk-channel-prefs:', match: 'prefix', category: 'personal',
+    holds: 'Per channel: followed or not, muted until when, which messages ping.',
+    why: 'The channel menu choices. Exists only here.', perAccount: true, sensitive: false, source: 'src/store/channel-prefs.ts',
+  },
+  {
+    id: 'channel-prefs-base', area: LS, key: 'obelisk-channel-prefs', match: 'exact', category: 'personal',
+    holds: 'The unscoped key of the channel-prefs store.', why: 'See read-state-base.',
+    perAccount: false, sensitive: false, source: 'src/store/multi-account.ts',
+  },
+  {
+    id: 'personal-stickers', area: LS, key: 'obelisk:personal-stickers', match: 'exact', category: 'personal',
+    holds: 'Name to URL of stickers saved from chat (the images stay on their file servers).',
+    why: 'The "saved" tab of the sticker picker. Exists only here.', perAccount: false, sensitive: false, source: 'src/services/personal-stickers.ts',
+  },
+  // ---- the login ----------------------------------------------------------
+  {
+    id: 'session', area: LS, key: 'obelisk-dex/session', match: 'exact', category: 'login',
+    holds: 'Public key, login method, active relay, and for nsec and bunker logins the secrets as an AES-GCM box.',
+    why: 'Stays logged in across reloads.', perAccount: false, sensitive: true, source: 'src/services/nostr-bridge/session/persistence.ts',
+  },
+  {
+    id: 'relays', area: LS, key: 'obelisk-dex/relays', match: 'exact', category: 'login',
+    holds: 'The relay rail: the group relays added.', why: 'The rail survives a reload.',
+    perAccount: false, sensitive: true, source: 'src/services/nostr-bridge/session/relays.ts',
+  },
+  {
+    id: 'vault', area: 'indexedDB', key: VAULT_DB, match: 'exact', category: 'login',
+    holds: 'One non-extractable AES-GCM key that seals the session secrets.',
+    why: 'Keeps the nsec and bunker secrets off disk in the clear.', perAccount: false, sensitive: true, source: 'src/lib/crypto/session-vault.ts',
+  },
+  {
+    id: 'session-legacy', area: LS, key: 'obeliskord/session', match: 'exact', category: 'login',
+    holds: 'The session record under the pre-rename key; migrated on load.', why: 'None any more.',
+    perAccount: false, sensitive: true, legacy: true, source: 'src/services/nostr-bridge/session-storage.ts',
+  },
+  {
+    id: 'relays-legacy', area: LS, key: 'obeliskord/relays', match: 'exact', category: 'login',
+    holds: 'The relay rail under the pre-rename key; migrated on load.', why: 'None any more.',
+    perAccount: false, sensitive: false, legacy: true, source: 'src/services/nostr-bridge/session-storage.ts',
+  },
+  {
+    id: 'sdk-signer', area: LS, key: '@nostr-wot/ui:', match: 'prefix', category: 'login',
+    holds: 'The SDK login widget\'s plaintext NIP-46 pairing and remembered nsec, from before it ran on memory-only storage.',
+    why: 'None: erased on every load and logout.', perAccount: false, sensitive: true, legacy: true, source: 'src/services/nostr-bridge/session/vault.ts',
+  },
+  {
+    id: 'auth-in-progress', area: LS, key: 'obelisk-auth-in-progress', match: 'exact', category: 'login',
+    holds: 'An old "login in progress" flag.', why: 'None any more.',
+    perAccount: false, sensitive: false, legacy: true, source: 'src/services/reset.ts',
+  },
+  {
+    id: 'session-tab', area: SS, key: 'obelisk-dex/session', match: 'exact', category: 'login',
+    holds: 'A per-tab session record an old version kept; still read as a fallback by the landing page.',
+    why: 'None any more.', perAccount: false, sensitive: true, legacy: true, source: 'src/hooks/marketing/useSavedAccount.ts',
+  },
+  {
+    id: 'session-tab-legacy', area: SS, key: 'obeliskord/session', match: 'exact', category: 'login',
+    holds: 'The same, under the pre-rename key.', why: 'None any more.',
+    perAccount: false, sensitive: true, legacy: true, source: 'src/hooks/marketing/useSavedAccount.ts',
+  },
+  // ---- the wallet connection ----------------------------------------------
+  {
+    id: 'nwc-wallet', area: LS, key: 'obelisk-dex/nwc:', match: 'prefix', category: 'wallet',
+    holds: 'The Nostr Wallet Connect link (its client secret is a spending credential) and the wallet alias, sealed with the vault\'s separate `wallet-key`.',
+    why: 'Zaps and invoice payments keep working after a reload without pasting the link again.',
+    perAccount: true, sensitive: true, source: 'src/services/wallet/nwc-storage.ts',
+  },
+  // ---- offline app files --------------------------------------------------
+  {
+    id: 'sw-caches', area: 'cacheStorage', key: 'obelisk-v', match: 'prefix', category: 'offline',
+    holds: 'The service worker\'s caches: hashed static assets, icons, fonts, the manifest, and the /app shell per language.',
+    why: 'Fast loads, and the app opens offline. No user data (public/sw.js never caches API or storage routes).',
+    perAccount: false, sensitive: false, source: 'public/sw.js',
+  },
+  {
+    id: 'sw-version', area: LS, key: 'obelisk-sw-version', match: 'exact', category: 'offline',
+    holds: 'The service worker version the page last reloaded for.', why: 'Reloads once per worker update, not in a loop.',
+    perAccount: false, sensitive: false, source: 'src/app/[locale]/layout.tsx',
+  },
+  // ---- language -----------------------------------------------------------
+  {
+    id: 'locale-cookie', area: 'cookie', key: 'locale', match: 'exact', category: 'language',
+    holds: 'The language picked (en, es or pt), for a year.', why: 'The language picked wins over the guess from the browser.',
+    perAccount: false, sensitive: false, source: 'src/i18n/routing.ts',
+  },
+  // ---- analytics ----------------------------------------------------------
+  {
+    id: 'ga-client', area: 'cookie', key: '_ga', match: 'exact', category: 'analytics',
+    holds: 'Google Analytics\' random client id, set by gtag.js (G-BZ4NB66WY0) on the site\'s domain for two years.',
+    why: 'Counts returning visitors. Set again on every page load while the layout loads gtag.js.',
+    perAccount: false, sensitive: false, source: 'src/app/[locale]/layout.tsx',
+  },
+  {
+    id: 'ga-session', area: 'cookie', key: '_ga_', match: 'prefix', category: 'analytics',
+    holds: 'Google Analytics\' session state for the property (`_ga_<id>`).',
+    why: 'Groups page views into visits. Set again on every page load.',
+    perAccount: false, sensitive: false, source: 'src/app/[locale]/layout.tsx',
+  },
+];

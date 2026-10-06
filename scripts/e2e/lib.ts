@@ -348,29 +348,27 @@ export function restrictedNsecSession(id: FreshIdentity): PersistedSession {
 }
 
 /**
- * Open the PreferencesPanel and click the "Clear local cache" button,
- * confirming the modal. The page is expected to reload as part of the
- * confirm action; the caller should wait for `domcontentloaded` again.
+ * Settings > Data on this device: remove one category and confirm. The page
+ * reloads for every category but `offline`; the caller then asserts on
+ * storage. Desktop only: the phone reaches the same panel through
+ * Preferences > Data on this device.
  */
-export async function clearLocalCacheViaSettings(page: Page): Promise<void> {
-  // The desktop chat header has a Settings icon (gear) that opens
-  // UserPanel into the Preferences tab via `setSettingsTab('preferences')`.
-  // Mobile lives behind the bottom-nav "you" tab → preferences.
-  // The shared affordance: a `[data-testid="clear-cache-button"]` is in
-  // PreferencesPanel regardless of how the user navigated there.
-  //
-  // Tests open the user-edit modal directly via the avatar pill on
-  // desktop. We just rely on the button's testid being unique.
-  const button = page.getByTestId('clear-cache-button');
-  await button.waitFor({ state: 'visible', timeout: 10_000 });
-  await button.click();
-  const confirm = page.getByTestId('clear-cache-confirm-button');
+export async function removeLocalDataViaSettings(page: Page, category: string): Promise<void> {
+  await page.getByTestId('user-settings-button').click();
+  await page.getByTestId('user-edit-modal').waitFor({ state: 'visible', timeout: 10_000 });
+  await page.getByTestId('settings-nav-data').click();
+  const remove = page.getByTestId(`local-data-remove-${category}`);
+  await expectEnabled(remove);
+  await remove.click();
+  const confirm = page.getByTestId('confirm-dialog-confirm');
   await confirm.waitFor({ state: 'visible', timeout: 2_000 });
   await confirm.click();
-  // The implementation reloads via window.location.reload() after a small
-  // pause. Wait for the next domcontentloaded so callers can assert the
-  // post-clear state cleanly.
   await page.waitForLoadState('domcontentloaded');
+}
+
+async function expectEnabled(locator: ReturnType<Page['getByTestId']>): Promise<void> {
+  await locator.waitFor({ state: 'visible', timeout: 10_000 });
+  for (let i = 0; i < 50 && !(await locator.isEnabled()); i++) await locator.page().waitForTimeout(100);
 }
 
 /**

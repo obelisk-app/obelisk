@@ -4,7 +4,7 @@ Detailed specs, plans and references for Obelisk subsystems. Start with [../AGEN
 
 ## Architecture & platform
 
-- [data-system.md](data-system.md) - priority tiers (P0/P1/P2/P3), login → connect contract, whitelist preflight, connection banner, bridgeCache, NIP-42 AUTH, watchdog tunables, UI loading states, "Clear cache" semantics.
+- [data-system.md](data-system.md) - priority tiers (P0/P1/P2/P3), login → connect contract, whitelist preflight, connection banner, bridgeCache, NIP-42 AUTH, watchdog tunables, UI loading states, local data (the inventory, Settings > Data on this device, the write fence).
 - [read-state.md](read-state.md) - per-channel and per-DM cursors, mention/reply detection, MentionNavigator, encrypted multi-device sync via NIP-59 gift wrap, deferred-mount gating for relay-sync subs.
 - [i18n.md](i18n.md) - the three languages: URL locales, message modules and route scopes, `errorText`, the hardcoded-string ratchet, adding a language.
 - [direct-messages.md](direct-messages.md) - where the DM code is, NIP-17 by default and NIP-04 per thread, the inbox ladder, encrypted uploads.

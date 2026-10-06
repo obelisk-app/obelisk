@@ -84,6 +84,10 @@
     "q10": {
       "question": "Funciona no celular?",
       "answer": "Sim. O Obelisk é um app web responsivo que funciona em qualquer navegador móvel moderno, e você pode instalá-lo na tela inicial como PWA pelo menu do navegador, sem loja de apps. No celular, entre com um app de assinatura via NIP-46 (Amber, nsec.app), gere uma chave nova ou cole uma nsec."
+    },
+    "q11": {
+      "question": "O que o Obelisk guarda no meu dispositivo, e como eu apago?",
+      "answer": "Para abrir rápido e lembrar onde você estava, o Obelisk guarda no seu navegador uma cópia de canais, mensagens e perfis, suas posições de leitura, suas preferências, seu login (criptografado) e os arquivos do próprio app. Nada disso é enviado a um servidor do Obelisk: não existe servidor de contas, e o que você publica fica nos relays (o site carrega, sim, o Google Analytics, que conta as visitas com os próprios cookies). Apague o que quiser em Configurações > Dados neste dispositivo, ou tudo de uma vez com Apagar tudo deste dispositivo. Você também pode sair da conta, apagar os dados do site obelisk.ar nas configurações do navegador, ou usar uma janela privada, que não guarda nada depois de fechada. Limpar o dispositivo não apaga o que você publicou: apague uma mensagem pelo menu dela para enviar um pedido de exclusão (NIP-09), que cada relay pode atender ou não. Passo a passo: obelisk.ar/pt/help/local-data."
     }
   },
   "hero": {

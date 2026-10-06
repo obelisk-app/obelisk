@@ -107,5 +107,9 @@
   },
   "manifest": {
     "description": "Discord-style group chat with Nostr cryptographic identity. No emails, no passwords."
+  },
+  "helpLocalData": {
+    "title": "What Obelisk keeps on your device - Help",
+    "description": "What Obelisk stores in your browser and why, how to remove it from Settings or your browser, and what clearing your device does not remove."
   }
 }

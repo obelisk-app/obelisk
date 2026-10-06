@@ -14,21 +14,27 @@ const wiped = [
   // cache. Keeping it while wiping those would suppress the only events that
   // could rebuild them.
   "obelisk-wrap-ledger:" + PUBKEY,
-  "obelisk-forum-follow:" + PUBKEY,
-  "obelisk-dex/forum-collapsed/group-1",
-  "obelisk-dex/mobile-setup-seen/" + PUBKEY,
-  "obelisk-dex/just-generated/" + PUBKEY,
+  "obelisk-notifications:" + PUBKEY,
+  "obelisk-dex/recent-relays/" + PUBKEY,
   "obelisk:relay-info-v3",
   "obelisk:relay-info-v2",
-  "obelisk:voice-chat-width",
   "obelisk/profile-sync-cache/v1",
   "obelisk/profile-sync-state/v1",
 ];
 
+// The login, preferences and layout, and what exists only on this device
+// (mutes, channel choices, saved stickers): "clear cache" is a recovery
+// tool and must not cost the person anything the relays cannot send back.
 const preserved = [
   "obelisk-dex/session",
   "obelisk-dex/relays",
   "obelisk:preferences",
+  "obelisk:voice-chat-width",
+  "obelisk-dex/forum-collapsed/group-1",
+  "obelisk-forum-follow:" + PUBKEY,
+  "obelisk:moderation:" + PUBKEY,
+  "obelisk-channel-prefs:" + PUBKEY,
+  "obelisk:personal-stickers",
   "unrelated-key",
 ];
 
@@ -41,7 +47,7 @@ describe("clearAllClientCacheExceptSession", () => {
     expect(localStorage.getItem(key)).toBeNull();
   });
 
-  it("preserves session, relay configuration, preferences, and unrelated data", () => {
+  it("preserves the login, preferences, device-only data and unrelated keys", () => {
     preserved.forEach((key) => localStorage.setItem(key, "value"));
     expect(clearAllClientCacheExceptSession()).toBe(0);
     preserved.forEach((key) => expect(localStorage.getItem(key)).toBe("value"));

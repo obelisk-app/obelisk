@@ -46,10 +46,11 @@
  * `dm:inert` records only wraps with nothing to show; stored masks still
  * carry the old `dm` bit (1), which nothing reads any more.
  *
- * That invariant is why **`clearAllClientCacheExceptSession` must wipe this
- * ledger too** (see the `obelisk-wrap-ledger:` prefix in `cache-clear.ts`).
- * "Clear cache" removes the persisted cursors; a ledger that survived would
- * suppress the only events that could rebuild them.
+ * That invariant is why **the ledger is in the same local-data category as
+ * the read-state cursors** (`readState` in
+ * `src/services/local-data/inventory-cache.ts`): removing the cursors, from
+ * Settings or the error panel's "Clear cache", removes it too. A ledger
+ * that survived would suppress the only events that could rebuild them.
  *
  * It also does not interfere with the rumor-level dedupe in `ingestDM`: the
  * recipient copy and the self copy of one DM are distinct *wrap* ids

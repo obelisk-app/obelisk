@@ -222,7 +222,7 @@ An outgoing wrap that arrives from another device carries the real recipient in 
 
 ## Storage
 
-**No DM plaintext is written to disk, and no DM events are cached.** kind 4 and kind 1059 are deliberately excluded from `bridgeCache` (see [docs/data-system.md §9](data-system.md)). `dmsByPeer` is in-memory and rebuilds from relays on every load.
+**No DM thread is written to disk, and no DM events are cached.** kind 4 and kind 1059 are deliberately excluded from `bridgeCache` (see [docs/data-system.md §9](data-system.md)). `dmsByPeer` is in-memory and rebuilds from relays on every load. One exception: the bell's DM alert card (`pushDmNotification` in `dm/thread.ts`) keeps up to 280 characters of the decrypted message as its `preview`, and the notifications store persists it in `obelisk-notifications:{myPubkey}` until the card is cleared. Settings > Data on this device removes it with the read positions.
 
 The only persisted DM state is `obelisk-dm-store:{myPubkey}`, holding the per-peer protocol overrides. Its `merge` explicitly discards `threads` / `messages` so a legacy PWA install that still has them on disk never merges them back into memory. Read cursors live in `obelisk-read-state:{myPubkey}` (see [docs/read-state.md](read-state.md)).
 

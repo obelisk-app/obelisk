@@ -7,11 +7,6 @@ import { DM_OPT_IN_STORAGE_KEY, setDmOptInEnabled } from '@/services/dm/opt-in';
 // drive the rendered values without a real relay connection.
 const mockLogout = vi.fn();
 const mockPublishProfile = vi.fn().mockResolvedValue(undefined);
-const mockClearCache = vi.fn();
-
-vi.mock('@/services/cache-clear', () => ({
-  clearAllClientCacheExceptSession: () => mockClearCache(),
-}));
 
 let mockMeta: {
   pubkey: string;
@@ -148,7 +143,6 @@ beforeEach(() => {
 afterEach(() => {
   mockLogout.mockReset();
   mockPublishProfile.mockReset().mockResolvedValue(undefined);
-  mockClearCache.mockReset();
   vi.clearAllTimers();
   vi.useRealTimers();
 });
@@ -199,16 +193,21 @@ describe("SettingsPrefsScreen", () => {
     expect(mockLogout).toHaveBeenCalledTimes(1);
   });
 
-  it('exposes the local cache wipe on mobile preferences', async () => {
-    vi.useFakeTimers();
+  it('opens Data on this device from mobile preferences, and asks before removing', async () => {
+    localStorage.setItem('obelisk:preferences', '{}');
     renderWithLocale(<><SettingsPrefsScreen go={vi.fn()} /><ConfirmDialogHost /></>);
 
-    fireEvent.click(screen.getByTestId('mobile-clear-cache-button'));
-    expect(mockClearCache).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+    fireEvent.click(screen.getByTestId('mobile-local-data-submenu'));
+    expect(screen.getByTestId('local-data-panel')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('local-data-remove-all'));
     await act(async () => {});
+    expect(screen.getByTestId('confirm-dialog')).toHaveTextContent('Remove everything from this device?');
+    fireEvent.click(screen.getByTestId('confirm-dialog-cancel'));
+    await act(async () => {});
+    expect(localStorage.getItem('obelisk:preferences')).toBe('{}');
 
-    expect(mockClearCache).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByTestId('local-data-back'));
+    expect(screen.getByTestId('mobile-local-data-submenu')).toBeInTheDocument();
   });
 
   it("lets users enable or reset DM opt-in from preferences", () => {

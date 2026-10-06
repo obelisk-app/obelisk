@@ -56,21 +56,6 @@
         }
       }
     },
-    "localData": {
-      "title": "Dados locais",
-      "clear": {
-        "title": "Limpar cache local",
-        "description": "Apaga canais, perfis, identidade visual, listas de membros, posições de leitura e o cache de DMs. Os dados ao vivo voltam a ser transmitidos pelo relay no próximo carregamento. A sua sessão e as suas preferências ficam.",
-        "button": "Limpar cache"
-      },
-      "confirm": {
-        "title": "Limpar o cache local?",
-        "description": "Isso apaga toda resposta de relay guardada localmente (canais, perfis, identidade visual, membros, posições de leitura, cache de DMs, marcadores de interface) e recarrega a página. A sua sessão e as suas preferências ficam; você continua conectado.",
-        "cancel": "Cancelar",
-        "action": "Limpar e recarregar",
-        "clearing": "Limpando..."
-      }
-    },
     "mobile": {
       "app": "App",
       "theme": "Tema",
@@ -212,11 +197,15 @@
     },
     "advanced": {
       "label": "Avançado",
-      "desc": "Backups, dados locais e ferramentas de desenvolvedor."
+      "desc": "Backups e ferramentas de desenvolvedor."
     },
     "wallet": {
       "label": "Carteira",
       "desc": "Conecte uma carteira Lightning com Nostr Wallet Connect para enviar zaps e pagar invoices."
+    },
+    "data": {
+      "label": "Dados neste dispositivo",
+      "desc": "O que o Obelisk guarda neste navegador e para quê. Apague o que quiser aqui."
     }
   },
   "openPreferences": "Preferências",
@@ -344,6 +333,37 @@
       "nwc": "Esta carteira conectada",
       "webln": "Sua extensão do navegador (WebLN)",
       "none": "Nenhuma carteira ainda"
+    }
+  },
+  "localData": {
+    "intro": "O Obelisk guarda isto neste navegador para abrir rápido e lembrar onde você estava. Nada disso é enviado a um servidor do Obelisk, e apagar não mexe no que você publicou nos relays.",
+    "size": "Cerca de {size}",
+    "present": "Guardado",
+    "empty": "Nada guardado",
+    "remove": "Apagar",
+    "removing": "Apagando...",
+    "learnMore": "Para que serve, e outras formas de apagar",
+    "removeAll": {
+      "title": "Apagar tudo deste dispositivo",
+      "description": "Desconecta você, apaga o seu login criptografado e tudo o que está acima, e depois recarrega.",
+      "button": "Apagar tudo"
+    },
+    "confirm": {
+      "action": "Apagar",
+      "titleAll": "Apagar tudo deste dispositivo?",
+      "actionAll": "Apagar tudo",
+      "all": "Tudo o que o Obelisk guarda aqui é apagado: seu login, a conexão da carteira, o cache de mensagens e perfis, posições de leitura e alertas, preferências, silenciados, bloqueados e figurinhas salvas, arquivos para uso sem conexão, o idioma escolhido e os cookies de análise. Você é desconectado e a página recarrega. Para entrar de novo você precisa da sua chave, da extensão do navegador ou do seu app assinador. O que você publicou nos relays não é afetado.",
+      "channels": "Os canais e mensagens em cache são apagados deste dispositivo e a página recarrega. Tudo volta a carregar pelos relays; nada do que você publicou é afetado.",
+      "profiles": "Os nomes e fotos salvos são apagados e a página recarrega. Eles voltam a carregar pelos relays.",
+      "readState": "As posições de leitura, contagens de não lidas e alertas deste dispositivo são apagados e a página recarrega. As posições sincronizadas pelos seus relays voltam; os alertas não.",
+      "dms": "A criptografia que você escolheu para cada pessoa é esquecida e a página recarrega. Suas mensagens não são afetadas.",
+      "preferences": "Suas configurações, layout e itens recentes voltam ao padrão e a página recarrega.",
+      "personal": "Silenciados, bloqueados, escolhas de notificação por canal e figurinhas salvas neste dispositivo são apagados de vez e a página recarrega. Eles não estão guardados em nenhum outro lugar.",
+      "login": "Você é desconectado neste dispositivo e a página recarrega. Para entrar de novo você precisa da sua chave, da extensão do navegador ou do seu app assinador. O cache de canais e mensagens e a conexão da carteira também são apagados.",
+      "wallet": "A conexão da carteira é apagada deste dispositivo e a página recarrega. Para fazer zaps ou pagar de novo pelo Obelisk, cole o link de conexão do app da sua carteira. A carteira e o saldo dela não são afetados.",
+      "offline": "Os arquivos salvos do app são apagados. O Obelisk baixa tudo de novo da próxima vez que carregar, e até lá não abre sem conexão.",
+      "language": "O Obelisk esquece o idioma que você escolheu e volta ao idioma do seu navegador. A página recarrega.",
+      "analytics": "Os cookies do Google Analytics são apagados. Eles voltam da próxima vez que uma página carregar; para evitá-los, bloqueie rastreadores no seu navegador."
     }
   }
 }

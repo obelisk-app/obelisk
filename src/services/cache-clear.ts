@@ -1,118 +1,24 @@
 /**
- * "Clear local cache" implementation backing the Settings → Preferences button.
+ * "Clear cache": the error panel's recovery button (`ErrorPanel.tsx`).
  *
- * Scope (decided in `the-priority-should-be-snug-brooks.md`): wipe every
- * per-account and per-relay client-side cache, BUT keep the login session
- * and the user's preferences. The next paint after this runs re-fetches
- * everything from the relay and rebuilds local stores from scratch.
+ * Wipes what the relays can send again (the categories in
+ * `CACHE_CATEGORIES`: channel cache, profiles, read positions and alerts,
+ * DM settings) and keeps the login, preferences and anything that exists
+ * only on this device. What each category holds, and the per-category and
+ * "remove everything" actions behind Settings > Data on this device, live
+ * in `src/services/local-data/`.
  *
- * Preserved keys (NOT wiped):
- *   - `obelisk-dex/session`: the active session; wiping it would log the
- *     user out, which is not what "clear cache" should do.
- *     Its secrets are sealed by the session vault, whose key lives in
- *     IndexedDB (`obelisk-vault`, `src/lib/crypto/session-vault.ts`). This
- *     sweep touches only localStorage, so the key survives it; do not add
- *     IndexedDB to it, or the kept record could no longer be opened.
- *   - `obelisk-dex/relays`: the configured relay list; tied to the session.
- *   - `obelisk:preferences`: explicit settings the user just chose.
+ * The wrap ledger (`obelisk-wrap-ledger:*`) is in the read-positions
+ * category on purpose: it suppresses re-opening gift wraps whose effects
+ * are already in the cursors, so it must go whenever they do.
  *
- * Wiped (prefix scans, account-agnostic):
- *   - `obelisk-cache-v4/*`: `bridgeCache` namespace (every kind on every relay).
- *   - `obelisk-cache/*`, `obelisk-cache-v2/*`, `obelisk-cache-v3/*`: legacy bridgeCache prefixes (defensive).
- *   - `obelisk:relay-info-v2/v3`: NIP-11 relay-info caches (singleton keys).
- *   - `obelisk-read-state:*`: per-account read cursors + inbox events.
- *   - `obelisk-dm-store:*`: per-account DM store.
- *   - `obelisk-wrap-ledger:*`: per-account seen-gift-wrap ledger.
- *     MUST be wiped alongside the two above: the ledger suppresses re-opening
- *     wraps on the grounds that their effects are already persisted in the DM
- *     store and the bridgeCache cursors. Wiping those while keeping the ledger
- *     would suppress the only events that could rebuild them.
- *   - `obelisk-forum-follow:*`: per-account forum-follow store.
- *   - `obelisk-dex/forum-collapsed/*`: per-group collapsed-state flag.
- *   - `obelisk-dex/mobile-setup-seen/*`: per-account "tutorial seen" flag.
- *   - `obelisk-dex/just-generated/*`: per-account "fresh nsec" flag.
- *   - `obelisk:voice-chat-width`: sidebar panel width.
- *   - `obelisk/profile-sync-cache/v1`, `obelisk/profile-sync-state/v1`: kind-0 profile-sync blobs.
- *
- * The function never throws: localStorage can be unavailable (SSR) or
- * quota-limited (private mode); silent degradation matches the rest of the
- * cache surface. The return value is the number of keys removed, surfaced
- * to the UI so the "Cleared N keys" toast is honest.
+ * Never throws; returns the number of keys removed so the panel's
+ * "cleared N" line is honest.
  */
+// Not the folder's index: that would pull the categories (and their
+// message keys) onto the error page, which ships `common` only.
+import { CACHE_CATEGORIES, removeWebStorageKeys } from './local-data/web-storage';
 
-const PRESERVED_EXACT = new Set<string>([
-  'obelisk-dex/session',
-  'obelisk-dex/relays',
-  'obelisk:preferences',
-]);
-
-const WIPED_PREFIXES = [
-  'obelisk-cache-v4/',
-  // @nostr-wot/data's own TTL cache (configurePersistence in
-  // src/services/social/pool.ts). Holds profiles, relay lists and notes fetched
-  // for the social feed: without this, "Clear cache" leaves the feed
-  // serving the same stale content it just claimed to clear.
-  'obelisk-social-sdk/',
-  'obelisk-cache-v3/',
-  'obelisk-cache-v2/',
-  'obelisk-cache/',
-  'obelisk-read-state:',
-  'obelisk-read-state',
-  'obelisk-dm-store:',
-  'obelisk-dm-store',
-  'obelisk-wrap-ledger:',
-  'obelisk-forum-follow:',
-  'obelisk-forum-follow',
-  'obelisk-dex/forum-collapsed/',
-  'obelisk-dex/mobile-setup-seen/',
-  'obelisk-dex/just-generated/',
-];
-
-const WIPED_EXACT = new Set<string>([
-  'obelisk:relay-info-v3',
-  'obelisk:relay-info-v2',
-  'obelisk:voice-chat-width',
-  // Profile-sync blobs (see client.ts PROFILE_SYNC_*_KEY). The kind-0
-  // cache is one of the largest keys on the origin: leaving it out of
-  // the sweep made "Clear cache" useless against quota exhaustion.
-  'obelisk/profile-sync-cache/v1',
-  'obelisk/profile-sync-state/v1',
-]);
-
-function isAvailable(): boolean {
-  return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
-}
-
-function shouldWipe(key: string): boolean {
-  if (PRESERVED_EXACT.has(key)) return false;
-  if (WIPED_EXACT.has(key)) return true;
-  return WIPED_PREFIXES.some((p) => key.startsWith(p));
-}
-
-/**
- * Wipe every client-side cache except the session and preferences.
- * Returns the number of keys removed (or `0` when localStorage is unavailable).
- */
 export function clearAllClientCacheExceptSession(): number {
-  if (!isAvailable()) return 0;
-  let removed = 0;
-  try {
-    const toRemove: string[] = [];
-    for (let i = 0; i < window.localStorage.length; i++) {
-      const key = window.localStorage.key(i);
-      if (!key) continue;
-      if (shouldWipe(key)) toRemove.push(key);
-    }
-    for (const key of toRemove) {
-      try {
-        window.localStorage.removeItem(key);
-        removed += 1;
-      } catch {
-        // ignore: quota / private mode races
-      }
-    }
-  } catch {
-    // ignore: best-effort
-  }
-  return removed;
+  return removeWebStorageKeys(CACHE_CATEGORIES);
 }

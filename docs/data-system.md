@@ -379,8 +379,8 @@ replaces entries through `cacheSet`.
 Invalidation is explicit only:
 - `cacheClearAll()` runs on logout: wipes every `obelisk-cache-v4/*` key.
 - `cacheDelete(relay, kind?, id?)` for surgical removal.
-- The Preferences-panel "Clear cache" button calls
-  `clearAllClientCacheExceptSession()` (see §11).
+- Settings > Data on this device removes it by category, and the error
+  panel's "Clear cache" calls `clearAllClientCacheExceptSession()` (see §11).
 
 Cache is **never** invalidated on relay switch: caches for the previous
 relay stay on disk and re-paint instantly on switch-back.
@@ -406,28 +406,51 @@ data load first.
 Each loader has a stable `data-testid` so the Playwright specs can assert
 paint order; see [`testing-strategy`](#13-test-coverage).
 
-## 11. "Clear local cache" semantics
+## 11. Local data: the inventory and removing it
 
-The Preferences panel exposes a "Clear local cache" button backed by
-`clearAllClientCacheExceptSession()` (`src/services/cache-clear.ts`).
+Everything the app keeps in the browser is listed, as one typed list, in
+`src/services/local-data/` (`inventory-cache.ts` for what the relays can
+send again, `inventory-device.ts` for choices and secrets). Each entry says
+what it holds, why it exists, whether it is per account and whether it is
+sensitive, and belongs to one of eleven categories a person sees in
+**Settings > Data on this device** (desktop: its own sidebar section; phone:
+Preferences > Data on this device) and on `/help/local-data`:
 
-**Wiped** (prefix scans):
-- `obelisk-cache-v4/*` and the older `obelisk-cache-v3/*`, `obelisk-cache-v2/*`, `obelisk-cache/*`
-- `obelisk:relay-info-v3` and legacy `v2` (NIP-11 cache singleton)
-- `obelisk-read-state:*`, `obelisk-dm-store:*`, `obelisk-forum-follow:*`
-- `obelisk-dex/forum-collapsed/*`, `obelisk-dex/mobile-setup-seen/*`,
-  `obelisk-dex/just-generated/*`
-- `obelisk:voice-chat-width`
+| Category | What | After removal |
+|---|---|---|
+| `channels` | bridge cache (all but profiles and read-state), relay info, recent relays | reload |
+| `profiles` | bridge cache kinds 0 and 3, profile-sync blobs, SDK TTL caches | reload |
+| `readState` | `obelisk-read-state:*`, `obelisk-notifications:*`, `obelisk-wrap-ledger:*`, the read-state sync cache | reload |
+| `dms` | `obelisk-dm-store:*` (per-peer protocol only) | reload |
+| `preferences` | `obelisk:preferences`, layout widths, collapsed groups, hints, recents, game keys | reload |
+| `personal` | `obelisk:moderation:*`, `obelisk-channel-prefs:*`, `obelisk:personal-stickers` (exist only here) | reload |
+| `login` | `obelisk-dex/session`, `obelisk-dex/relays`, the `obelisk-vault` IndexedDB database | logout, delete the database, reload |
+| `wallet` | `obelisk-dex/nwc:*`, the sealed Nostr Wallet Connect link | `disconnectNwcWallet()` (memory and the `wallet-key`), then reload |
+| `offline` | the service worker's `obelisk-v*` caches, `obelisk-sw-version` | delete caches, unregister the worker |
+| `language` | the `locale` cookie | reload without the language prefix |
+| `analytics` | the `_ga` and `_ga_<id>` cookies Google Analytics (gtag.js, loaded by `src/app/[locale]/layout.tsx`) sets | expire them; they return on the next page load |
 
-**Preserved**:
-- `obelisk-dex/session`: the active session. Its sealed secrets need the
-  vault key in IndexedDB, which the sweep does not touch.
-- `obelisk-dex/relays`: the configured relay list.
-- `obelisk:preferences`: settings the user just chose.
+**Remove everything from this device** logs out, empties localStorage and
+sessionStorage, deletes the vault database, the offline caches and the
+service worker registration, expires the language and analytics cookies,
+and reloads.
 
-After the wipe, the page reloads via `window.location.reload()`. The next
-paint re-fetches every store from the relay through the session's
-P0/P2 fan-out.
+A removal that reloads first raises a **write fence**
+(`write-fence.ts`): until the page goes away, `setItem` for a key of the
+removed category is dropped. Memory still holds the old state (a persisted
+store writes it all on its next `set`, the bridge cache on the next event);
+the fence keeps it from landing back on disk, without resetting stores that
+would then, for instance, publish empty read cursors from their `pagehide`
+flush.
+
+The error panel's **Clear cache** (`clearAllClientCacheExceptSession()`,
+`src/services/cache-clear.ts`) removes the categories the relays can rebuild
+(`CACHE_CATEGORIES`: channels, profiles, readState, dms) and reloads; it
+keeps the login, preferences and the device-only `personal` data.
+
+`tests/services/local-data/inventory-guard.test.ts` reads the source and
+fails when a storage key, a persisted store name or an IndexedDB database
+is not in the inventory, so new storage cannot be added silently.
 
 ## 12. Manual verification
 
@@ -456,15 +479,18 @@ For each login method, clear localStorage then:
    approve.
 6. **Connection loss**: disconnect Wi-Fi mid-session;
    the connection banner appears within 1s. Reconnect: banner disappears.
-7. **Preferences → Clear cache**: confirm; reload; sidebar paints from a
-   clean cache. Session and preferences preserved.
+7. **Settings > Data on this device**: remove "Messages and channel cache",
+   confirm; reload; sidebar paints from a clean cache. Session and
+   preferences preserved. "Remove everything" lands logged out with
+   nothing under the origin in DevTools > Application.
 
 ## 13. Test coverage
 
 | File | Covers |
 |---|---|
 | `tests/services/nostr-bridge/cache.test.ts` | round-trip, isolation by relay/kind, prefix-wipe deletion, JSON corruption resilience, kind 0 shape |
-| `tests/services/cache-clear.test.ts` | every prefix is wiped, session + preferences preserved, idempotent |
+| `tests/services/cache-clear.test.ts` | the error panel's wipe: cache categories gone, login, preferences and device-only data kept, idempotent |
+| `tests/services/local-data/*.test.ts` | the inventory guard, one owner per key, each category removes exactly its keys, remove everything, the write fence |
 | `tests/services/nostr-bridge/session/connection.test.ts` (`session/fanout`) | P0 opens at once, P2 on the next microtask, then the per-group REQs, active channel first |
 | `tests/services/nostr-bridge/preflight.test.ts` | preflight REQ fires, CLOSED restricted/auth-required flips access within ~50ms, EOSE flips to 'ok', no retry on maxAttempts=1 |
 | `tests/services/nostr-bridge/bridge.test.ts` and the `bridge-*.test.ts` suites (groups, messages, message cache, mentions, lists, profiles, relay access, voice) | end-to-end ingest/subscribe behavior on the pool-level fake; deferred soak still holds for non-preflight subs |
@@ -493,7 +519,7 @@ talking to real relays.
 | `whitelist-rejection.spec.ts` | preflight surfaces `RelayAccessBanner[data-state="restricted"]` within ~3s | `wss://lacrypta-relay.obelisk.ar` (restricted; configurable via `OBELISK_E2E_RESTRICTED_RELAY`) |
 | `connection-loss.spec.ts` | banner appears on socket drop, disappears on recovery | `wss://public.obelisk.ar` |
 | `cache-second-load.spec.ts` | reload paints first channel row within 1500ms of `navigationStart` | `wss://public.obelisk.ar` |
-| `clear-cache.spec.ts` | Preferences → Clear cache wipes the right keys, preserves session | `wss://public.obelisk.ar` |
+| `clear-cache.spec.ts` | Settings > Data on this device removes one category and keeps the rest | `wss://public.obelisk.ar` |
 | `read-state-convergence.spec.ts` | two contexts, same nsec → cursor converges within 12s | `wss://public.obelisk.ar` |
 
 Per-spec retries: 1. Each spec uses `attachClientCapture` (see

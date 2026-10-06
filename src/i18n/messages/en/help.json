@@ -20,6 +20,93 @@
     "payments": {
       "title": "Payments and zaps",
       "description": "Send Lightning payments without leaving the conversation."
+    },
+    "localData": {
+      "title": "Your data on this device",
+      "description": "What Obelisk keeps in your browser, why, and how to remove it."
+    }
+  },
+  "localData": {
+    "title": "What Obelisk keeps on your device",
+    "intro": "Obelisk has no account server. To open quickly and remember where you were, it keeps some things in this browser. Here is what it keeps, why, and how to remove it.",
+    "back": "← All help topics",
+    "why": {
+      "title": "Why it is there",
+      "speed": "Speed: channels, messages and profiles appear at once from the copy on your device, then update from the relays.",
+      "place": "Not losing your place: read positions and unread counts survive a reload.",
+      "login": "Staying logged in: your login is kept, and any secret in it is encrypted with a key the browser keeps and will not hand out.",
+      "offline": "Offline: the app's own files are saved, so Obelisk opens quickly even on a bad connection."
+    },
+    "server": {
+      "title": "None of it goes to an Obelisk server",
+      "body": "Everything on this page stays in your browser. Obelisk has no server that stores accounts or messages. What you publish (messages, reactions, your profile, files you upload) goes to the relays and file servers you use, including the two relays the Obelisk team runs, and lives there. The obelisk.ar web server only sends you the app and fetches link previews; it keeps no accounts and no copy of your messages. One exception goes to a third party: the site loads Google Analytics, which sets its own cookies and tells Google which pages are opened."
+    },
+    "categories": {
+      "title": "What is kept, and what it is for",
+      "perAccount": "When more than one account uses this browser, read positions, alerts, mutes and similar choices are kept separately for each one.",
+      "channels": {
+        "title": "Messages and channel cache",
+        "purpose": "Channels, recent messages, reactions, member lists and relay details from the relays you visit, so they appear at once instead of loading from scratch. The relays send it again after you remove it."
+      },
+      "profiles": {
+        "title": "Profiles",
+        "purpose": "Names, pictures and follow lists of the people you see, so names and faces show up without waiting."
+      },
+      "readState": {
+        "title": "Read positions, unread counts and alerts",
+        "purpose": "Where you stopped reading, what is unread, and your mention and message alerts, with a short preview of each. Read positions are also synced, encrypted, through your relays, so they usually come back."
+      },
+      "dms": {
+        "title": "Direct message settings",
+        "purpose": "Which encryption to use with each person. The messages themselves are not kept here: they are downloaded and decrypted again each time."
+      },
+      "preferences": {
+        "title": "Preferences and layout",
+        "purpose": "Your settings, panel sizes, collapsed sections, tips you have seen, recent emoji, searches and commands, and game keys. Without them everything goes back to the defaults."
+      },
+      "personal": {
+        "title": "Mutes, blocks and saved stickers",
+        "purpose": "People you muted or blocked on this device, your notification choices for each channel, and the stickers you saved. These exist only on this device."
+      },
+      "login": {
+        "title": "Your login on this device (encrypted)",
+        "purpose": "What keeps you logged in after a reload: your public key, how you logged in and your relay list. A pasted key or a signer connection is encrypted with a key the browser keeps and will not hand out."
+      },
+      "wallet": {
+        "title": "Wallet connection (encrypted)",
+        "purpose": "The Nostr Wallet Connect link you added in Settings > Wallet, so zaps and payments keep working after a reload. The link can spend from your wallet, so it is encrypted with its own key that the browser keeps and will not hand out."
+      },
+      "offline": {
+        "title": "Offline app files",
+        "purpose": "Copies of the app's own pages, scripts, icons and fonts, so Obelisk opens quickly and still opens on a bad connection. Nothing of yours is in them."
+      },
+      "language": {
+        "title": "Language choice",
+        "purpose": "A small cookie that remembers the language you picked. Without it, Obelisk goes by your browser's language."
+      },
+      "analytics": {
+        "title": "Analytics cookies",
+        "purpose": "Two cookies Google Analytics sets so the Obelisk team can count visits: a random visitor id and the current visit. They hold no key and no messages, but Google receives the pages you open. They come back on the next page load; your browser's tracker blocking keeps them away."
+      }
+    },
+    "settings": {
+      "title": "Remove it from Settings",
+      "body": "In the app, open Settings and choose Data on this device (on a phone: Settings, then Preferences, then Data on this device). Each kind of data has its own Remove button and shows roughly how much space it takes. Remove everything from this device clears it all, logs you out and reloads. Obelisk asks before removing anything."
+    },
+    "other": {
+      "title": "Other ways to remove it",
+      "logout": "Log out. Your login, the wallet connection and the cached channels and messages are removed from this device. Preferences, read positions and mutes stay, ready for when you come back.",
+      "browser": "Clear the site data for obelisk.ar in your browser. It deletes everything on this page at once, the login included:",
+      "chrome": "Chrome: Settings > Privacy and security > Site settings > View permissions and data stored across sites. Search for obelisk.ar and delete its data.",
+      "firefox": "Firefox: click the padlock in the address bar, then Clear cookies and site data.",
+      "safari": "Safari on a Mac: Safari > Settings > Privacy > Manage Website Data. Search for obelisk.ar and choose Remove.",
+      "ios": "iPhone and iPad: Settings > Apps > Safari > Advanced > Website Data (on older versions, Settings > Safari > Advanced > Website Data). Find obelisk.ar and swipe left to delete it.",
+      "android": "Android, in Chrome: menu > Settings > Site settings > All sites > obelisk.ar, then Delete & reset (Clear & reset on older versions).",
+      "private": "Use a private window. In a private or incognito window Obelisk works the same, and the browser throws all of it away when you close the window. You log in again each time."
+    },
+    "published": {
+      "title": "What clearing your device does not remove",
+      "body": "Clearing this device does not touch what you published. Your messages, reactions and profile stay on the relays, and files you uploaded stay on their file servers. To take back a message, delete it from its menu: Obelisk sends the relay a deletion request (NIP-09). Each relay decides whether to honour it, and copies already on other relays or devices may remain."
     }
   }
 }

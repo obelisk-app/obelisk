@@ -197,17 +197,18 @@ describe('RelayTopBar help popover', () => {
     expect(screen.getByTestId('help-popover')).toBeTruthy();
   });
 
-  it('lists the four help topics and a view-more pill', () => {
+  it('lists the help topics and a view-more pill', () => {
     renderTopBar();
     fireEvent.click(screen.getByLabelText('Help'));
 
     const topics = screen.getAllByTestId(/^help-popover-topic-/);
-    expect(topics).toHaveLength(4);
+    expect(topics).toHaveLength(5);
     expect(topics.map((a) => a.getAttribute('href'))).toEqual([
       '/guides/what-is-obelisk',
       '/guides/how-obelisk-works',
       '/guides/admin-cli',
       '/guides/bitcoin-zaps',
+      '/help/local-data',
     ]);
 
     const viewMore = screen.getByTestId('help-popover-view-more');
@@ -219,7 +220,7 @@ describe('RelayTopBar help popover', () => {
   it('gives every guide an SVG icon and the tips button real contrast', () => {
     renderTopBar();
     fireEvent.click(screen.getByLabelText('Help'));
-    for (const slug of ['what-is-obelisk', 'how-obelisk-works', 'admin-cli', 'bitcoin-zaps']) {
+    for (const slug of ['what-is-obelisk', 'how-obelisk-works', 'admin-cli', 'bitcoin-zaps', 'local-data']) {
       expect(screen.getByTestId(`help-topic-icon-${slug}`).querySelector('svg')).not.toBeNull();
     }
     const replay = screen.getByTestId('help-popover-replay-hints');
@@ -234,7 +235,7 @@ describe('RelayTopBar help popover', () => {
     fireEvent.click(screen.getByLabelText('Help'));
 
     const topics = screen.getAllByTestId(/^help-popover-topic-/);
-    expect(topics).toHaveLength(4);
+    expect(topics).toHaveLength(5);
     // Each option is a discrete lc-card, not a flat menu row.
     expect(topics.every((a) => a.className.includes('lc-card'))).toBe(true);
     // Cards need a recessed well behind them, otherwise .lc-card's #171717

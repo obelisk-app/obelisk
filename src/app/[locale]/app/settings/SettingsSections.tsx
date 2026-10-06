@@ -96,7 +96,6 @@ export function AdvancedSettingsSection() {
         </h3>
         <AccountBackupExport />
       </section>
-      <LocalDataSection />
       <section className="space-y-3 border-t border-lc-border pt-4" data-testid="desktop-developer-settings">
         <div className="text-xs font-semibold uppercase tracking-wider text-lc-muted">{t('settings.developer.section')}</div>
         <ToggleRow
@@ -124,6 +123,7 @@ export function PreferencesPanel() {
       <RelaysSettingsSection />
       <PrivacySettingsSection />
       <WalletSettingsSection />
+      <LocalDataSection />
       <AdvancedSettingsSection />
     </div>
   );

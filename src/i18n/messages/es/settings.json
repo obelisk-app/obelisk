@@ -56,21 +56,6 @@
         }
       }
     },
-    "localData": {
-      "title": "Datos locales",
-      "clear": {
-        "title": "Limpiar caché local",
-        "description": "Borra canales, perfiles, branding, miembros, posiciones de lectura y DMs cacheados. Los datos vuelven a streamearse desde el relay. Tu sesión y preferencias se conservan.",
-        "button": "Limpiar caché"
-      },
-      "confirm": {
-        "title": "¿Limpiar caché local?",
-        "description": "Esto borra todas las respuestas del relay cacheadas localmente (canales, perfiles, branding, miembros, lecturas, DMs y flags de UI) y recarga la página. Tu sesión y preferencias quedan; seguís logueado.",
-        "cancel": "Cancelar",
-        "action": "Limpiar y recargar",
-        "clearing": "Limpiando..."
-      }
-    },
     "mobile": {
       "app": "App",
       "theme": "Tema",
@@ -212,11 +197,15 @@
     },
     "advanced": {
       "label": "Avanzado",
-      "desc": "Copias de seguridad, datos locales y herramientas de desarrollo."
+      "desc": "Copias de seguridad y herramientas para desarrolladores."
     },
     "wallet": {
       "label": "Billetera",
       "desc": "Conectá una billetera Lightning con Nostr Wallet Connect para hacer zaps y pagar invoices."
+    },
+    "data": {
+      "label": "Datos en este dispositivo",
+      "desc": "Qué guarda Obelisk en este navegador y para qué. Borrá lo que quieras desde acá."
     }
   },
   "openPreferences": "Preferencias",
@@ -344,6 +333,37 @@
       "nwc": "Esta billetera conectada",
       "webln": "Tu extensión del navegador (WebLN)",
       "none": "Todavía ninguna billetera"
+    }
+  },
+  "localData": {
+    "intro": "Obelisk guarda esto en este navegador para abrir rápido y acordarse de dónde estabas. Nada de esto se manda a un servidor de Obelisk, y borrarlo no toca lo que publicaste en los relays.",
+    "size": "Unos {size}",
+    "present": "Guardado",
+    "empty": "No hay nada guardado",
+    "remove": "Borrar",
+    "removing": "Borrando...",
+    "learnMore": "Para qué está y otras formas de borrarlo",
+    "removeAll": {
+      "title": "Borrar todo de este dispositivo",
+      "description": "Cierra tu sesión, borra tu login cifrado y todo lo de arriba, y después recarga.",
+      "button": "Borrar todo"
+    },
+    "confirm": {
+      "action": "Borrar",
+      "titleAll": "¿Borrar todo de este dispositivo?",
+      "actionAll": "Borrar todo",
+      "all": "Se borra todo lo que Obelisk guarda acá: tu login, la conexión de billetera, la caché de mensajes y perfiles, las posiciones de lectura y los avisos, las preferencias, los silenciados, bloqueados y stickers guardados, los archivos sin conexión, el idioma elegido y las cookies de analítica. Se cierra tu sesión y la página se recarga. Para volver a entrar necesitás tu clave, la extensión del navegador o tu app firmadora. Lo que publicaste en los relays no se toca.",
+      "channels": "Se borran de este dispositivo los canales y mensajes en caché y la página se recarga. Todo vuelve a cargar desde los relays; nada de lo que publicaste se toca.",
+      "profiles": "Se borran los nombres y fotos guardados y la página se recarga. Vuelven a cargar desde los relays.",
+      "readState": "Se borran las posiciones de lectura, los no leídos y los avisos de este dispositivo y la página se recarga. Las posiciones sincronizadas en tus relays vuelven; los avisos no.",
+      "dms": "Se olvida el cifrado que elegiste para cada persona y la página se recarga. Tus mensajes no se tocan.",
+      "preferences": "Tus ajustes, el diseño y los recientes vuelven a los valores por defecto y la página se recarga.",
+      "personal": "Los silenciados, bloqueados, elecciones de notificación por canal y stickers guardados en este dispositivo se borran para siempre y la página se recarga. No están guardados en ningún otro lado.",
+      "login": "Se cierra tu sesión en este dispositivo y la página se recarga. Para volver a entrar necesitás tu clave, la extensión del navegador o tu app firmadora. También se borran la caché de canales y mensajes y la conexión de billetera.",
+      "wallet": "Se borra la conexión de billetera de este dispositivo y la página se recarga. Para volver a hacer zaps o pagar desde Obelisk, pegá el enlace de conexión de la app de tu billetera. La billetera y sus fondos no se tocan.",
+      "offline": "Se borran los archivos guardados de la app. Obelisk los vuelve a descargar la próxima vez que cargue, y hasta entonces no abre sin conexión.",
+      "language": "Obelisk se olvida del idioma que elegiste y vuelve al idioma de tu navegador. La página se recarga.",
+      "analytics": "Se borran las cookies de Google Analytics. Se vuelven a poner la próxima vez que cargue una página; para evitarlas, bloqueá los rastreadores en tu navegador."
     }
   }
 }

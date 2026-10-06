@@ -20,6 +20,93 @@
     "payments": {
       "title": "Pagos y zaps",
       "description": "Enviá pagos Lightning sin salir de la conversación."
+    },
+    "localData": {
+      "title": "Tus datos en este dispositivo",
+      "description": "Qué guarda Obelisk en tu navegador, para qué, y cómo borrarlo."
+    }
+  },
+  "localData": {
+    "title": "Qué guarda Obelisk en tu dispositivo",
+    "intro": "Obelisk no tiene un servidor de cuentas. Para abrir rápido y acordarse de dónde estabas, guarda algunas cosas en este navegador. Acá tenés qué guarda, para qué, y cómo borrarlo.",
+    "back": "← Todos los temas de ayuda",
+    "why": {
+      "title": "Para qué está",
+      "speed": "Velocidad: los canales, mensajes y perfiles aparecen al instante desde la copia en tu dispositivo, y después se actualizan desde los relays.",
+      "place": "No perder el hilo: las posiciones de lectura y los no leídos sobreviven a una recarga.",
+      "login": "Seguir con la sesión iniciada: tu login queda guardado, y cualquier secreto que tenga va cifrado con una clave que el navegador guarda y no entrega.",
+      "offline": "Sin conexión: se guardan los archivos de la propia app, así Obelisk abre rápido aunque la conexión sea mala."
+    },
+    "server": {
+      "title": "Nada de esto va a un servidor de Obelisk",
+      "body": "Todo lo de esta página queda en tu navegador. Obelisk no tiene un servidor que guarde cuentas ni mensajes. Lo que publicás (mensajes, reacciones, tu perfil, archivos que subís) va a los relays y servidores de archivos que usás, incluidos los dos relays que opera el equipo de Obelisk, y vive ahí. El servidor web de obelisk.ar solo te manda la app y busca las vistas previas de los enlaces; no guarda cuentas ni copias de tus mensajes. Una excepción va a un tercero: el sitio carga Google Analytics, que pone sus propias cookies y le avisa a Google qué páginas se abren."
+    },
+    "categories": {
+      "title": "Qué se guarda y para qué sirve",
+      "perAccount": "Si más de una cuenta usa este navegador, las posiciones de lectura, los avisos, los silenciados y otras elecciones parecidas se guardan por separado para cada una.",
+      "channels": {
+        "title": "Mensajes y caché de canales",
+        "purpose": "Canales, mensajes recientes, reacciones, listas de miembros y datos de los relays que visitás, para que aparezcan al instante en vez de cargar de cero. Los relays los vuelven a mandar después de que los borrás."
+      },
+      "profiles": {
+        "title": "Perfiles",
+        "purpose": "Nombres, fotos y listas de seguidos de la gente que ves, para que nombres y caras aparezcan sin esperar."
+      },
+      "readState": {
+        "title": "Posiciones de lectura, no leídos y avisos",
+        "purpose": "Dónde dejaste de leer, qué está sin leer, y tus avisos de menciones y mensajes, cada uno con una vista previa corta. Las posiciones de lectura también se sincronizan, cifradas, a través de tus relays, así que normalmente vuelven."
+      },
+      "dms": {
+        "title": "Ajustes de mensajes directos",
+        "purpose": "Qué cifrado usar con cada persona. Los mensajes en sí no se guardan acá: se descargan y se descifran de nuevo cada vez."
+      },
+      "preferences": {
+        "title": "Preferencias y diseño",
+        "purpose": "Tus ajustes, el tamaño de los paneles, las secciones plegadas, los consejos que ya viste, emojis, búsquedas y comandos recientes, y las teclas de los juegos. Sin esto todo vuelve a los valores por defecto."
+      },
+      "personal": {
+        "title": "Silenciados, bloqueados y stickers guardados",
+        "purpose": "La gente que silenciaste o bloqueaste en este dispositivo, tus elecciones de notificación de cada canal y los stickers que guardaste. Esto existe solo en este dispositivo."
+      },
+      "login": {
+        "title": "Tu login en este dispositivo (cifrado)",
+        "purpose": "Lo que te mantiene con la sesión iniciada después de recargar: tu clave pública, cómo entraste y tu lista de relays. Una clave pegada o la conexión con un firmador van cifradas con una clave que el navegador guarda y no entrega."
+      },
+      "wallet": {
+        "title": "Conexión de billetera (cifrada)",
+        "purpose": "El enlace de Nostr Wallet Connect que agregaste en Ajustes > Billetera, para que los zaps y pagos sigan funcionando después de recargar. El enlace puede gastar de tu billetera, así que va cifrado con su propia clave, que el navegador guarda y no entrega."
+      },
+      "offline": {
+        "title": "Archivos de la app para usar sin conexión",
+        "purpose": "Copias de las páginas, scripts, íconos y fuentes de la propia app, para que Obelisk abra rápido y siga abriendo con mala conexión. No tienen nada tuyo."
+      },
+      "language": {
+        "title": "Idioma elegido",
+        "purpose": "Una cookie chiquita que recuerda el idioma que elegiste. Sin ella, Obelisk usa el idioma de tu navegador."
+      },
+      "analytics": {
+        "title": "Cookies de analítica",
+        "purpose": "Dos cookies que pone Google Analytics para que el equipo de Obelisk cuente las visitas: un identificador de visitante al azar y la visita actual. No tienen tu clave ni tus mensajes, pero Google recibe las páginas que abrís. Vuelven en la próxima carga de página; el bloqueo de rastreadores de tu navegador las mantiene afuera."
+      }
+    },
+    "settings": {
+      "title": "Borralo desde Ajustes",
+      "body": "En la app, abrí Ajustes y elegí Datos en este dispositivo (en el celular: Ajustes, después Preferencias, después Datos en este dispositivo). Cada tipo de dato tiene su propio botón Borrar y muestra más o menos cuánto espacio ocupa. Borrar todo de este dispositivo lo elimina todo, cierra tu sesión y recarga. Obelisk te pregunta antes de borrar cualquier cosa."
+    },
+    "other": {
+      "title": "Otras formas de borrarlo",
+      "logout": "Cerrá sesión. Tu login, la conexión de billetera y la caché de canales y mensajes se borran de este dispositivo. Las preferencias, las posiciones de lectura y los silenciados quedan, listos para cuando vuelvas.",
+      "browser": "Borrá los datos del sitio obelisk.ar en tu navegador. Elimina todo lo de esta página de una vez, login incluido:",
+      "chrome": "Chrome: Configuración > Privacidad y seguridad > Configuración de sitios > Ver los permisos y datos almacenados en sitios. Buscá obelisk.ar y borrá sus datos.",
+      "firefox": "Firefox: hacé clic en el candado de la barra de direcciones y después en Limpiar cookies y datos del sitio.",
+      "safari": "Safari en Mac: Safari > Ajustes > Privacidad > Gestionar datos de sitios web. Buscá obelisk.ar y elegí Eliminar.",
+      "ios": "iPhone y iPad: Ajustes > Apps > Safari > Avanzado > Datos de sitios web (en versiones anteriores, Ajustes > Safari > Avanzado > Datos de sitios web). Buscá obelisk.ar y deslizá a la izquierda para borrarlo.",
+      "android": "Android, en Chrome: menú > Configuración > Configuración de sitios > Todos los sitios > obelisk.ar, y después Borrar y restablecer.",
+      "private": "Usá una ventana privada. En una ventana privada o de incógnito Obelisk funciona igual, y el navegador tira todo cuando cerrás la ventana. Tenés que entrar de nuevo cada vez."
+    },
+    "published": {
+      "title": "Lo que borrar tu dispositivo no elimina",
+      "body": "Borrar este dispositivo no toca lo que publicaste. Tus mensajes, reacciones y perfil quedan en los relays, y los archivos que subiste quedan en sus servidores. Para retirar un mensaje, borralo desde su menú: Obelisk le manda al relay un pedido de borrado (NIP-09). Cada relay decide si lo cumple, y pueden quedar copias en otros relays o dispositivos."
     }
   }
 }

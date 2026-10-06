@@ -9,6 +9,7 @@ import Button from '@/components/ui/Button';
 import {
   BellIcon,
   CloseIcon,
+  FileIcon,
   LogOutIcon,
   PaletteIcon,
   ServerIcon,
@@ -20,6 +21,7 @@ import {
   ZapIcon,
 } from '@/components/ui/icons';
 import { EditProfileForm } from '../settings/EditProfileForm';
+import { LocalDataSection } from '../settings/LocalDataSection';
 import {
   AdvancedSettingsSection,
   AppearanceSettingsSection,
@@ -47,6 +49,7 @@ const SETTINGS_NAV: ReadonlyArray<{
       { id: 'privacy', Icon: ShieldIcon },
       { id: 'wallet', Icon: ZapIcon },
       { id: 'media', Icon: SmileIcon },
+      { id: 'data', Icon: FileIcon },
       { id: 'advanced', Icon: WrenchIcon },
     ],
   },
@@ -154,6 +157,7 @@ export function UserSettingsModal({ pubkey, meta, displayName, settingsTab, setS
               {settingsTab === 'relays' && <RelaysSettingsSection />}
               {settingsTab === 'privacy' && <PrivacySettingsSection />}
               {settingsTab === 'wallet' && <WalletSettingsSection />}
+              {settingsTab === 'data' && <LocalDataSection />}
               {settingsTab === 'advanced' && <AdvancedSettingsSection />}
             </div>
           )}

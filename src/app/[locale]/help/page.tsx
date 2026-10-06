@@ -4,7 +4,7 @@ import { Link } from '@/i18n/navigation';
 import Footer from '@/components/marketing/Footer';
 import Navbar from '@/components/marketing/Navbar';
 import { guidePath } from '@/utils/guides/guide-urls';
-import { HELP_TOPICS } from '@/utils/guides/help-topics';
+import { HELP_TOPICS, helpTopicPath } from '@/utils/guides/help-topics';
 import { useTranslations } from 'next-intl';
 
 export default function HelpPage() {
@@ -26,7 +26,7 @@ export default function HelpPage() {
           {HELP_TOPICS.map((topic) => (
             <Link
               key={topic.slug}
-              href={guidePath(topic.slug)}
+              href={helpTopicPath(topic)}
               data-testid={`help-topic-${topic.slug}`}
               className="lc-card group p-6 transition-colors hover:border-lc-green/50"
             >

@@ -35,6 +35,16 @@ export function localizedPath(locale: Locale, path: string): string {
   return clean === '/' ? `/${locale}` : `/${locale}${clean}`;
 }
 
+/** `/es/app` is `/app`, `/pt` is `/`: the same page with no language forced. */
+export function unlocalizedPath(pathname: string): string {
+  for (const locale of LOCALES) {
+    if (locale === DEFAULT_LOCALE) continue;
+    if (pathname === `/${locale}`) return '/';
+    if (pathname.startsWith(`/${locale}/`)) return pathname.slice(locale.length + 1);
+  }
+  return pathname;
+}
+
 export function absoluteUrl(locale: Locale, path: string): string {
   const p = localizedPath(locale, path);
   return p === '/' ? SITE_URL : `${SITE_URL}${p}`;

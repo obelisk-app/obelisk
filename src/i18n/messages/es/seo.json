@@ -107,5 +107,9 @@
   },
   "manifest": {
     "description": "Chat grupal estilo Discord con identidad criptográfica Nostr. Sin email, sin contraseña."
+  },
+  "helpLocalData": {
+    "title": "Qué guarda Obelisk en tu dispositivo - Ayuda",
+    "description": "Qué guarda Obelisk en tu navegador y para qué, cómo borrarlo desde Ajustes o desde el navegador, y qué no se borra al limpiar tu dispositivo."
   }
 }

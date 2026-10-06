@@ -31,7 +31,7 @@ import { SESSION_IDENTITY_ID } from '@/lib/relay-hub';
 import { pageRelayHub } from '@/services/nostr-bridge/page-hub';
 import { DEFAULT_SOCIAL_RELAYS, SOCIAL_RELAY_MAX, normalizeSocialRelays } from './relays';
 
-/** localStorage namespace for the SDK's own TTL cache. Swept by cache-clear.ts. */
+/** localStorage namespace for the SDK's own TTL cache. Listed in the local-data inventory (`sdk-data-cache`). */
 export const SOCIAL_SDK_CACHE_NAMESPACE = 'obelisk-social-sdk/';
 
 const SDK_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
